@@ -338,6 +338,26 @@ export const COLLECTIONS = {
   DXF_TEMPLATE_CATEGORIES:
     process.env.NEXT_PUBLIC_DXF_TEMPLATE_CATEGORIES_COLLECTION || 'dxf_template_categories',
 
+  // 🏗️ DXF BIM DRAWING MODE — ADR-363 (companyId-scoped, Phase 0 Bootstrap)
+  /** Parametric wall entities (3 kinds: straight/curved/polyline). IDs via wall_* prefix. */
+  FLOORPLAN_WALLS: process.env.NEXT_PUBLIC_FLOORPLAN_WALLS_COLLECTION || 'floorplan_walls',
+  /** Door/window/sliding-door/french-door/fixed openings hosted in walls. IDs via opening_* prefix. */
+  FLOORPLAN_OPENINGS: process.env.NEXT_PUBLIC_FLOORPLAN_OPENINGS_COLLECTION || 'floorplan_openings',
+  /** Floor/ceiling/roof/ground/foundation slabs with polygon outline. IDs via slab_* prefix. */
+  FLOORPLAN_SLABS: process.env.NEXT_PUBLIC_FLOORPLAN_SLABS_COLLECTION || 'floorplan_slabs',
+  /** Slab cutouts: elevator shaft, stair well, duct, chimney. IDs via slbopn_* prefix. */
+  FLOORPLAN_SLAB_OPENINGS: process.env.NEXT_PUBLIC_FLOORPLAN_SLAB_OPENINGS_COLLECTION || 'floorplan_slab_openings',
+  /** Rectangular/circular/L-shape/T-shape columns. IDs via col_* prefix. */
+  FLOORPLAN_COLUMNS: process.env.NEXT_PUBLIC_FLOORPLAN_COLUMNS_COLLECTION || 'floorplan_columns',
+  /** Straight/curved/cantilever beams. IDs via beam_* prefix. */
+  FLOORPLAN_BEAMS: process.env.NEXT_PUBLIC_FLOORPLAN_BEAMS_COLLECTION || 'floorplan_beams',
+  /** BIM element presets (system/company/project/user scope). IDs via bpst_* prefix. */
+  BIM_PRESETS: process.env.NEXT_PUBLIC_BIM_PRESETS_COLLECTION || 'bim_presets',
+  /** Material library — 25 seeded generics (Phase 6+). IDs via bmat_* prefix. */
+  BIM_MATERIALS: process.env.NEXT_PUBLIC_BIM_MATERIALS_COLLECTION || 'bim_materials',
+  /** Per-company BIM configuration (hotkeys, defaults, layer convention). IDs via bset_* prefix. */
+  BIM_SETTINGS: process.env.NEXT_PUBLIC_BIM_SETTINGS_COLLECTION || 'bim_settings',
+
   // ✏️ DXF TEXT ENGINE — ADR-344 (companyId-scoped, Phase 0)
   /** Hybrid text templates: TS built-in defaults + per-company overrides. Schema: { id, companyId, name, category, content (DxfTextNode), placeholders[], isDefault }. IDs via tpl_text_* prefix. */
   TEXT_TEMPLATES: process.env.NEXT_PUBLIC_TEXT_TEMPLATES_COLLECTION || 'text_templates',
