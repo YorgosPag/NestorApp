@@ -256,5 +256,122 @@
   },
   "common": {
     "settings": "Settings"
+  },
+  "layerFilters": {
+    "title": "Filters",
+    "section": {
+      "smart": "Smart",
+      "groups": "Groups",
+      "properties": "Properties"
+    },
+    "smart": {
+      "visible": "Visible",
+      "locked": "Locked",
+      "frozen": "Frozen",
+      "notPlotted": "Not plotted",
+      "emptyLayers": "Empty layers",
+      "category": "Category: {name}"
+    },
+    "aecCategory": {
+      "architectural": "Architectural",
+      "structural": "Structural",
+      "electrical": "Electrical",
+      "mechanical": "Mechanical",
+      "plumbing": "Plumbing",
+      "fire": "Fire",
+      "civil": "Civil",
+      "telecom": "Telecom",
+      "interior": "Interior",
+      "general": "General"
+    },
+    "field": {
+      "name": "Name",
+      "category": "Category",
+      "tag": "Tag",
+      "visible": "Visible",
+      "frozen": "Frozen",
+      "locked": "Locked",
+      "plottable": "Plottable",
+      "color_aci": "Color ACI",
+      "linetype": "Linetype",
+      "lineweight": "Lineweight",
+      "memberKind": "Member kind"
+    },
+    "operator": {
+      "equals": "equals",
+      "contains": "contains",
+      "startsWith": "starts with",
+      "endsWith": "ends with",
+      "matches": "matches",
+      "is": "is",
+      "isNot": "is not",
+      "isOneOf": "is one of",
+      "has": "has",
+      "hasAny": "has any",
+      "hasAll": "has all",
+      "oneOf": "one of",
+      "gte": "≥",
+      "lte": "≤",
+      "between": "between"
+    },
+    "combinator": {
+      "and": "AND",
+      "or": "OR"
+    },
+    "kind": {
+      "group": "Group",
+      "properties": "Properties",
+      "smart": "Smart"
+    },
+    "value": {
+      "true": "yes",
+      "false": "no",
+      "textPlaceholder": "Enter value"
+    },
+    "memberKind": {
+      "entity": "Entity",
+      "region": "Region"
+    },
+    "action": {
+      "rename": "Rename",
+      "edit": "Edit",
+      "duplicate": "Duplicate",
+      "delete": "Delete",
+      "pinToTop": "Pin to top",
+      "export": "Export",
+      "import": "Import",
+      "save": "Save",
+      "cancel": "Cancel",
+      "addRule": "Add rule",
+      "addNested": "Add nested group",
+      "removeNested": "Remove",
+      "newGroup": "New group",
+      "newProperty": "New property filter"
+    },
+    "builder": {
+      "createTitle": "New property filter",
+      "editTitle": "Edit filter",
+      "nameLabel": "Filter name",
+      "namePlaceholder": "e.g. Red walls"
+    },
+    "group": {
+      "createTitle": "New layer group",
+      "editTitle": "Edit group",
+      "namePlaceholder": "e.g. Floor 2",
+      "searchPlaceholder": "Search layer",
+      "selectedCount": "Selected: {count}"
+    },
+    "placeholder": {
+      "untitled": "Untitled"
+    },
+    "warn": {
+      "depthExceeded": "Deep nesting (>3 levels)"
+    },
+    "aria": {
+      "ruleChip": "Filter rule",
+      "removeRule": "Remove rule",
+      "ruleset": "Ruleset",
+      "contextMenu": "Filter menu"
+    }
   }
 }

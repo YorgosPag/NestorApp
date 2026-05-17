@@ -256,5 +256,122 @@
   },
   "common": {
     "settings": "Ρυθμίσεις"
+  },
+  "layerFilters": {
+    "title": "Φίλτρα",
+    "section": {
+      "smart": "Προτεινόμενα",
+      "groups": "Ομάδες",
+      "properties": "Ιδιότητες"
+    },
+    "smart": {
+      "visible": "Ορατά",
+      "locked": "Κλειδωμένα",
+      "frozen": "Παγωμένα",
+      "notPlotted": "Μη εκτυπώσιμα",
+      "emptyLayers": "Κενά επίπεδα",
+      "category": "Κατηγορία: {name}"
+    },
+    "aecCategory": {
+      "architectural": "Αρχιτεκτονικά",
+      "structural": "Δομικά",
+      "electrical": "Ηλεκτρολογικά",
+      "mechanical": "Μηχανολογικά",
+      "plumbing": "Υδραυλικά",
+      "fire": "Πυρόσβεση",
+      "civil": "Έργα πολιτικού μηχανικού",
+      "telecom": "Τηλεπικοινωνίες",
+      "interior": "Εσωτερικός χώρος",
+      "general": "Γενικά"
+    },
+    "field": {
+      "name": "Όνομα",
+      "category": "Κατηγορία",
+      "tag": "Ετικέτα",
+      "visible": "Ορατό",
+      "frozen": "Παγωμένο",
+      "locked": "Κλειδωμένο",
+      "plottable": "Εκτυπώσιμο",
+      "color_aci": "Χρώμα ACI",
+      "linetype": "Τύπος γραμμής",
+      "lineweight": "Πάχος γραμμής",
+      "memberKind": "Είδος μέλους"
+    },
+    "operator": {
+      "equals": "ίσο με",
+      "contains": "περιέχει",
+      "startsWith": "αρχίζει με",
+      "endsWith": "τελειώνει με",
+      "matches": "ταιριάζει",
+      "is": "είναι",
+      "isNot": "δεν είναι",
+      "isOneOf": "είναι ένα από",
+      "has": "έχει",
+      "hasAny": "έχει κάποιο",
+      "hasAll": "έχει όλα",
+      "oneOf": "ένα από",
+      "gte": "μεγαλύτερο ή ίσο",
+      "lte": "μικρότερο ή ίσο",
+      "between": "ανάμεσα"
+    },
+    "combinator": {
+      "and": "ΚΑΙ",
+      "or": "Η"
+    },
+    "kind": {
+      "group": "Ομάδα",
+      "properties": "Ιδιότητες",
+      "smart": "Προτεινόμενο"
+    },
+    "value": {
+      "true": "ναι",
+      "false": "όχι",
+      "textPlaceholder": "Πληκτρολόγησε τιμή"
+    },
+    "memberKind": {
+      "entity": "Σχήμα",
+      "region": "Περιοχή"
+    },
+    "action": {
+      "rename": "Μετονομασία",
+      "edit": "Επεξεργασία",
+      "duplicate": "Αντιγραφή",
+      "delete": "Διαγραφή",
+      "pinToTop": "Καρφίτσωμα",
+      "export": "Εξαγωγή",
+      "import": "Εισαγωγή",
+      "save": "Αποθήκευση",
+      "cancel": "Άκυρο",
+      "addRule": "Νέος κανόνας",
+      "addNested": "Νέα εμφωλιασμένη ομάδα",
+      "removeNested": "Αφαίρεση",
+      "newGroup": "Νέα ομάδα",
+      "newProperty": "Νέο φίλτρο ιδιοτήτων"
+    },
+    "builder": {
+      "createTitle": "Νέο φίλτρο ιδιοτήτων",
+      "editTitle": "Επεξεργασία φίλτρου",
+      "nameLabel": "Όνομα φίλτρου",
+      "namePlaceholder": "π.χ. Κόκκινοι τοίχοι"
+    },
+    "group": {
+      "createTitle": "Νέα ομάδα επιπέδων",
+      "editTitle": "Επεξεργασία ομάδας",
+      "namePlaceholder": "π.χ. Όροφος 2",
+      "searchPlaceholder": "Αναζήτηση επιπέδου",
+      "selectedCount": "Επιλεγμένα: {count}"
+    },
+    "placeholder": {
+      "untitled": "Χωρίς όνομα"
+    },
+    "warn": {
+      "depthExceeded": "Πολλά επίπεδα εμφώλευσης (>3)"
+    },
+    "aria": {
+      "ruleChip": "Κανόνας φίλτρου",
+      "removeRule": "Αφαίρεση κανόνα",
+      "ruleset": "Ομάδα κανόνων",
+      "contextMenu": "Μενού φίλτρου"
+    }
   }
 }
