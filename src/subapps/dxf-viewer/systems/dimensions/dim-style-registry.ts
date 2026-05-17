@@ -24,10 +24,16 @@ type RegistryListener = () => void;
 export type CreateCustomStyleInput = Omit<DimStyle, 'id' | 'isBuiltIn'>;
 export type UpdateCustomStylePatch = Partial<Omit<DimStyle, 'id' | 'isBuiltIn'>>;
 
+export interface DimStyleSnapshot {
+  readonly styles: readonly DimStyle[];
+  readonly activeStyleId: string;
+}
+
 export class DimStyleRegistry {
   private readonly styles = new Map<string, DimStyle>();
   private activeStyleId: string = DEFAULT_ACTIVE_DIM_STYLE_ID;
   private readonly listeners = new Set<RegistryListener>();
+  private cachedSnapshot: DimStyleSnapshot | null = null;
 
   constructor() {
     for (const builtIn of BUILTIN_DIM_STYLES) {
@@ -47,6 +53,21 @@ export class DimStyleRegistry {
 
   getActiveStyleId(): string {
     return this.activeStyleId;
+  }
+
+  /**
+   * Returns a stable snapshot object for use with `useSyncExternalStore`.
+   * The same object reference is returned between mutations; it is replaced
+   * atomically on every `notify()` call.
+   */
+  getSnapshot(): DimStyleSnapshot {
+    if (!this.cachedSnapshot) {
+      this.cachedSnapshot = {
+        styles: Array.from(this.styles.values()),
+        activeStyleId: this.activeStyleId,
+      };
+    }
+    return this.cachedSnapshot;
   }
 
   /** Returns the active style, falling back to the default built-in if missing. */
@@ -120,6 +141,7 @@ export class DimStyleRegistry {
   }
 
   private notify(): void {
+    this.cachedSnapshot = null;
     this.listeners.forEach((cb) => cb());
   }
 }
