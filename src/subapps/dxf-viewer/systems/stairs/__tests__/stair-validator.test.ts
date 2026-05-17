@@ -177,6 +177,75 @@ describe('validateStairParams — NOK δευτερεύουσα (secondary)', () 
   });
 });
 
+// ─── ADR-358 Phase 3g — NOK 4-scope coverage (Άρθρο 13 Κτιριοδομικού) ────────
+
+describe('validateStairParams — NOK Phase 3g scope thresholds', () => {
+  test('low-rise: width 850 emits nok.widthMin (legal min 900)', () => {
+    const r = validateStairParams(
+      buildParams({ codeProfile: 'nok', nokSubType: 'low-rise', width: 850 }),
+    );
+    expect(r.violationKeys).toContain('tools.stair.validator.nok.widthMin');
+  });
+
+  test('low-rise: width 950 emits widthBelowComfort (comfort 1000)', () => {
+    const r = validateStairParams(
+      buildParams({ codeProfile: 'nok', nokSubType: 'low-rise', width: 950, rise: 175, tread: 260 }),
+    );
+    expect(r.comfortViolations ?? []).toContain('tools.stair.validator.nok.widthBelowComfort');
+    expect(r.violationKeys).not.toContain('tools.stair.validator.nok.widthMin');
+  });
+
+  test('low-rise: width 1000 silences comfort warning', () => {
+    const r = validateStairParams(
+      buildParams({ codeProfile: 'nok', nokSubType: 'low-rise', width: 1000, rise: 175, tread: 260 }),
+    );
+    expect(r.comfortViolations ?? []).toHaveLength(0);
+  });
+
+  test('internal: width 550 emits nok.widthMin (legal min 600)', () => {
+    const r = validateStairParams(
+      buildParams({ codeProfile: 'nok', nokSubType: 'internal', width: 550 }),
+    );
+    expect(r.violationKeys).toContain('tools.stair.validator.nok.widthMin');
+  });
+
+  test('internal: width 700 emits widthBelowComfort (comfort 800)', () => {
+    const r = validateStairParams(
+      buildParams({ codeProfile: 'nok', nokSubType: 'internal', width: 700, rise: 175, tread: 260 }),
+    );
+    expect(r.comfortViolations ?? []).toContain('tools.stair.validator.nok.widthBelowComfort');
+    expect(r.violationKeys).not.toContain('tools.stair.validator.nok.widthMin');
+  });
+
+  test('internal: width 800 silences comfort warning', () => {
+    const r = validateStairParams(
+      buildParams({ codeProfile: 'nok', nokSubType: 'internal', width: 800, rise: 175, tread: 260 }),
+    );
+    expect(r.comfortViolations ?? []).toHaveLength(0);
+  });
+
+  test('auxiliary: width 550 emits nok.widthMin (legal min 600)', () => {
+    const r = validateStairParams(
+      buildParams({ codeProfile: 'nok', nokSubType: 'auxiliary', width: 550 }),
+    );
+    expect(r.violationKeys).toContain('tools.stair.validator.nok.widthMin');
+  });
+
+  test('auxiliary: width 600 no comfort warning (legal == comfort)', () => {
+    const r = validateStairParams(
+      buildParams({ codeProfile: 'nok', nokSubType: 'auxiliary', width: 600, rise: 175, tread: 260 }),
+    );
+    expect(r.comfortViolations ?? []).toHaveLength(0);
+  });
+
+  test('main: width 1200 no comfort warning (legal == comfort)', () => {
+    const r = validateStairParams(
+      buildParams({ codeProfile: 'nok', width: 1200, rise: 175, tread: 280 }),
+    );
+    expect(r.comfortViolations ?? []).toHaveLength(0);
+  });
+});
+
 // ─── IBC ─────────────────────────────────────────────────────────────────────
 
 describe('validateStairParams — IBC', () => {
