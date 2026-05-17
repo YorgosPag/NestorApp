@@ -46,6 +46,7 @@ import { computeWinder } from './stair-geometry-winder';
 import { computeTriangularFan } from './stair-geometry-triangular-fan';
 import { computeTriangularOutline } from './stair-geometry-triangular-outline';
 import { computeSketch } from './stair-geometry-sketch';
+import { computeVShape } from './stair-geometry-vshape';
 
 // ─── Public entry point (kind dispatch) ──────────────────────────────────────
 
@@ -79,6 +80,8 @@ export function computeStairGeometry(params: Readonly<StairParams>): StairGeomet
       return computeTriangularOutline(params, variant);
     case 'sketch':
       return computeSketch(params, variant);
+    case 'v-shape':
+      return computeVShape(params, variant);
     default: {
       const _exhaustive: never = variant;
       throw new Error(`StairGeometryService: unhandled variant ${JSON.stringify(_exhaustive)}`);

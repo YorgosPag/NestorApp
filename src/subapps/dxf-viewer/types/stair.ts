@@ -143,7 +143,8 @@ export type StairVariantParams =
   | StairVariantWinder
   | StairVariantTriangularFan
   | StairVariantTriangularOutline
-  | StairVariantSketch;
+  | StairVariantSketch
+  | StairVariantVShape;
 
 export interface StairVariantStraight {
   readonly kind: 'straight';
@@ -227,6 +228,26 @@ export interface StairVariantTriangularOutline {
 export interface StairVariantSketch {
   readonly kind: 'sketch';
   readonly walklinePath: readonly Point3D[];
+}
+
+/**
+ * ADR-358 Phase 3c — V-shape: two straight arms diverging from a shared
+ * basePoint at the apex (z=0). No landing; arms ascend independently in
+ * directions `d` and `d + armAngleDeg` (math frame, CCW positive). Arm i
+ * yields `armSplit[i]` treads at z = j·rise for j=0..armSplit[i]−1.
+ *
+ * `stepCount = armSplit[0] + armSplit[1]`. Industry analogue: Revit
+ * "Multi-Story / Custom Sketched Run" without a connecting landing.
+ *
+ * Constraints (validated in `computeVShape`):
+ *   - `armAngleDeg ∈ [15, 170]` (excludes near-overlap and near-180°
+ *     degenerate "two straights back-to-back" which is just `straight`).
+ *   - `armSplit[i] ≥ 1`.
+ */
+export interface StairVariantVShape {
+  readonly kind: 'v-shape';
+  readonly armAngleDeg: number;
+  readonly armSplit: readonly [number, number];
 }
 
 // ============================================================================
