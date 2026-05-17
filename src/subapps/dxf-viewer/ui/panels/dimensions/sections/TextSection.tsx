@@ -20,9 +20,10 @@ const TEXT_PLACEMENTS: DimTextVerticalPlacement[] = ['centered', 'above', 'outsi
 interface TextSectionProps {
   style: DimStyle;
   onChange: (patch: UpdateCustomStylePatch) => void;
+  readOnly?: boolean;
 }
 
-export function TextSection({ style, onChange }: TextSectionProps) {
+export function TextSection({ style, onChange, readOnly = false }: TextSectionProps) {
   const { t } = useTranslation('dxf-viewer-panels');
   const f = (key: string) => t(`panels.dimensions.editor.fields.${key}`);
   const tadLabel = (v: string) => t(`panels.dimensions.editor.dimtad.${v}`);
@@ -37,6 +38,7 @@ export function TextSection({ style, onChange }: TextSectionProps) {
           min={0.1}
           step={0.1}
           value={style.dimtxt}
+          disabled={readOnly}
           onChange={(e) => onChange({ dimtxt: parseFloat(e.target.value) || 0.1 })}
           className="h-6 text-xs w-20 px-1.5"
         />
@@ -44,7 +46,7 @@ export function TextSection({ style, onChange }: TextSectionProps) {
 
       <div className="flex items-center justify-between gap-2">
         <Label className="text-xs shrink-0 w-36">{f('dimtad')}</Label>
-        <Select value={style.dimtad} onValueChange={(v) => onChange({ dimtad: v as DimTextVerticalPlacement })}>
+        <Select value={style.dimtad} onValueChange={(v) => onChange({ dimtad: v as DimTextVerticalPlacement })} disabled={readOnly}>
           <SelectTrigger className="h-6 text-xs w-40">
             <SelectValue />
           </SelectTrigger>
@@ -64,18 +66,19 @@ export function TextSection({ style, onChange }: TextSectionProps) {
           min={0}
           step={0.1}
           value={style.dimgap}
+          disabled={readOnly}
           onChange={(e) => onChange({ dimgap: parseFloat(e.target.value) || 0 })}
           className="h-6 text-xs w-20 px-1.5"
         />
       </div>
 
       <div className="flex items-center gap-2">
-        <Checkbox id="dimtih" checked={style.dimtih} onCheckedChange={(v) => onChange({ dimtih: Boolean(v) })} />
+        <Checkbox id="dimtih" checked={style.dimtih} onCheckedChange={(v) => onChange({ dimtih: Boolean(v) })} disabled={readOnly} />
         <Label htmlFor="dimtih" className="text-xs cursor-pointer">{f('dimtih')}</Label>
       </div>
 
       <div className="flex items-center gap-2">
-        <Checkbox id="dimtoh" checked={style.dimtoh} onCheckedChange={(v) => onChange({ dimtoh: Boolean(v) })} />
+        <Checkbox id="dimtoh" checked={style.dimtoh} onCheckedChange={(v) => onChange({ dimtoh: Boolean(v) })} disabled={readOnly} />
         <Label htmlFor="dimtoh" className="text-xs cursor-pointer">{f('dimtoh')}</Label>
       </div>
     </div>
