@@ -27,10 +27,10 @@ function makeLayer(over: Partial<SceneLayer>): SceneLayer {
   return { name: 'L', color: '#fff', visible: true, locked: false, ...over };
 }
 
-function makeScene(layers: Record<string, SceneLayer>): SceneModel {
+function makeScene(layersById: Record<string, SceneLayer>): SceneModel {
   return {
     entities: [],
-    layers,
+    layersById,
     bounds: { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } },
     units: 'mm',
   };

@@ -4,8 +4,8 @@
  * Displays a single layer with its entities and controls
  */
 
-import React from 'react';
-import { Eye, EyeOff, Trash2, Edit2, ChevronRight, ChevronDown } from 'lucide-react';
+import React, { useState } from 'react';
+import { Eye, EyeOff, Trash2, Edit2, ChevronRight, ChevronDown, Lock } from 'lucide-react';
 import { EntityCard } from './components/EntityCard';
 import type { AnySceneEntity, SceneModel } from '../../../types/scene';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useTranslation } from '@/i18n';
 // ADR-358 Phase 9E-4: compat bridge for name-keyed layer lookup.
 import { getSceneLayerByName } from '../../../utils/scene-layer-utils';
+import { validateLayerName, type LayerNameValidationResult } from '../../../services/layer-name-validator';
 
 export interface LayerItemProps {
   layerName: string;
@@ -123,7 +124,11 @@ export function LayerItem({
   // ADR-358 Phase 9E-4: compat bridge — name-keyed lookup (Phase 9E-6 will switch to id-keyed).
   // Non-null: LayerItem is only rendered for layers that exist in the scene.
   const layer = getSceneLayerByName(scene, layerName)!;
+  const isSystemLayer = layer.name === '0';
   const isEditing = editingLayer === layerName;
+  const [renameValidation, setRenameValidation] =
+    useState<LayerNameValidationResult | null>(null);
+  const existingLayers = Object.values(scene.layersById);
   const showColorPicker = colorPickerLayer === layerName;
   
   // Get filtered entities in this layer
@@ -168,29 +173,40 @@ export function LayerItem({
   };
 
   const handleNameDoubleClick = () => {
+    if (isSystemLayer) return;
     setEditingLayer(layerName);
     setEditingName(layerName);
   };
 
   const handleNameKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
+      if (renameValidation && !renameValidation.valid) return;
       if (editingName.trim() && editingName !== layerName) {
         onLayerRename?.(layerName, editingName.trim());
       }
       setEditingLayer(null);
       setEditingName('');
+      setRenameValidation(null);
     } else if (e.key === 'Escape') {
       setEditingLayer(null);
       setEditingName('');
+      setRenameValidation(null);
     }
   };
 
   const handleNameBlur = () => {
+    if (renameValidation && !renameValidation.valid) {
+      setEditingLayer(null);
+      setEditingName('');
+      setRenameValidation(null);
+      return;
+    }
     if (editingName.trim() && editingName !== layerName) {
       onLayerRename?.(layerName, editingName.trim());
     }
     setEditingLayer(null);
     setEditingName('');
+    setRenameValidation(null);
   };
 
   const handleVisibilityToggle = (e: React.MouseEvent) => {
@@ -200,6 +216,7 @@ export function LayerItem({
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isSystemLayer) return;
     setEditingLayer(layerName);
     setEditingName(layerName);
   };
@@ -255,23 +272,59 @@ export function LayerItem({
 
           {/* Layer Name */}
           {isEditing ? (
-            <input
-              type="text"
-              value={editingName}
-              onChange={(e) => setEditingName(e.target.value)}
-              onKeyDown={handleNameKeyDown}
-              onBlur={handleNameBlur}
-              className={`${colors.bg.secondary} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.INPUT.PADDING_X} rounded border ${getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring}`}
-              autoFocus
-            />
+            <div className="flex flex-col gap-0.5 flex-1">
+              <input
+                type="text"
+                value={editingName}
+                onChange={(e) => {
+                  setEditingName(e.target.value);
+                  setRenameValidation(
+                    validateLayerName({
+                      name: e.target.value,
+                      existingLayers,
+                      excludeId: layer.id,
+                    }),
+                  );
+                }}
+                onKeyDown={handleNameKeyDown}
+                onBlur={handleNameBlur}
+                className={`${colors.bg.secondary} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.INPUT.PADDING_X} rounded border ${renameValidation && !renameValidation.valid ? 'border-red-500' : getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring}`}
+                autoFocus
+              />
+              {renameValidation && !renameValidation.valid && (
+                <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} text-red-500`}>
+                  {t(`layerValidation.${renameValidation.error}`, { ns: 'dxf-viewer-panels' })}
+                  {renameValidation.suggestion &&
+                    ` ${t(`layerValidation.${renameValidation.error}_suggestion`, {
+                      ns: 'dxf-viewer-panels',
+                      suggestion: renameValidation.suggestion,
+                    })}`}
+                </span>
+              )}
+            </div>
           ) : (
-            <span
-              className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE} ${PANEL_LAYOUT.CURSOR.POINTER}`}
-              title={layerName}
-              onDoubleClick={handleNameDoubleClick}
-            >
-              {layerName}
-            </span>
+            <>
+              <span
+                className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE} ${PANEL_LAYOUT.CURSOR.POINTER}`}
+                title={layerName}
+                onDoubleClick={handleNameDoubleClick}
+              >
+                {layerName}
+              </span>
+              {isSystemLayer && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={`inline-flex items-center gap-0.5 ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} select-none`}>
+                      <Lock className={iconSizes.xs} />
+                      {t('layerActions.layer0Badge', { ns: 'dxf-viewer-panels' })}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('layerActions.layer0Tooltip', { ns: 'dxf-viewer-panels' })}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </>
           )}
         </div>
         
@@ -293,33 +346,37 @@ export function LayerItem({
             <TooltipContent>{layer.visible ? t('layerActions.hide') : t('layerActions.show')}</TooltipContent>
           </Tooltip>
 
-          {/* Edit Button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={handleEditClick}
-                aria-label={t('layerActions.rename')}
-                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-              >
-                <Edit2 className={iconSizes.xs} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{t('layerActions.rename')}</TooltipContent>
-          </Tooltip>
+          {/* Edit Button — hidden for system layer "0" */}
+          {!isSystemLayer && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleEditClick}
+                  aria-label={t('layerActions.rename')}
+                  className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                >
+                  <Edit2 className={iconSizes.xs} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{t('layerActions.rename')}</TooltipContent>
+            </Tooltip>
+          )}
 
-          {/* Delete Button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={handleDeleteClick}
-                aria-label={t('layerActions.delete')}
-                className={`${PANEL_LAYOUT.SPACING.XS} ${HOVER_TEXT_EFFECTS.RED}`}
-              >
-                <Trash2 className={iconSizes.xs} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{t('layerActions.delete')}</TooltipContent>
-          </Tooltip>
+          {/* Delete Button — hidden for system layer "0" */}
+          {!isSystemLayer && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleDeleteClick}
+                  aria-label={t('layerActions.delete')}
+                  className={`${PANEL_LAYOUT.SPACING.XS} ${HOVER_TEXT_EFFECTS.RED}`}
+                >
+                  <Trash2 className={iconSizes.xs} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{t('layerActions.delete')}</TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </div>
 

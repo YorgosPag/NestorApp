@@ -659,6 +659,29 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 
 ## 7. Changelog
 
+- **2026-05-17 (Phase B1 DONE — Linear + Aligned + Rotated geometry builder)** — Group B Phase B1 implementata.
+  - **NEW** `src/subapps/dxf-viewer/systems/dimensions/dim-geometry-builder.ts` (~70 LOC) — orchestrator esporta `DimGeometry` + `DimLineSegment` + `buildDimensionGeometry(entity, style)`. Dispatch via switch su `dimensionType`; Phase B1 chiude solo `linear` + `aligned`, le altre varianti tirano `Error` con prefix sentinel `[dim-geometry-builder]` (Phase B2/B3 estenderanno il switch senza toccare il payload).
+  - **NEW** `src/subapps/dxf-viewer/systems/dimensions/builders/linear-aligned-builder.ts` (~205 LOC) — `buildLinearGeometry` + `buildAlignedGeometry`. defPoints semantic: `[extOrigin1, extOrigin2, dimLineRef]`. Linear usa `rotation` (deg) per l'asse della dim line; `obliqueAngle?` (deg, default 0 = perpendicolare) inclina le ext line ruotando il vettore perpendicolare. Aligned ricava l'asse da `unit(extOrigin2 - extOrigin1)`. Foot points = intersezione line-line tra (ext origin + ext direction) e (dimLineRef + axis). `measurementValue` = `|dot(extOrigin2 - extOrigin1, axis)|` per linear, `distance(extOrigin1, extOrigin2)` per aligned. Helper module-local: `rotateVector`, `intersectLines` (epsilon 1e-12), `buildExtLine` (DIMEXO start offset + DIMEXE end overshoot, null se origine coincide col foot), `computeTextAnchor` (entity.textMidpoint override → midpoint dim line), `computeTextRotation` (DIMTIH=true → 0; altrimenti angle dim line normalizzato a (-π/2, π/2] per readability), `perpendicularOf`, `assembleGeometry` (back-half condivisa tra le due varianti — riduce duplicazione e onora `suppressExtLine1/2`). Vector math (`addPoints`, `subtractPoints`, `scalePoint`, `getUnitVector`, `dotProduct`, `vectorAngle`, `calculateDistance`) tutta importata da `rendering/entities/shared/geometry-vector-utils.ts` (ADR-065 SSoT) — zero duplicati.
+  - **NEW** `src/subapps/dxf-viewer/systems/dimensions/__tests__/linear-aligned-builder.test.ts` (~240 LOC, 17 test) — copre i 10 casi spec del plan + 7 extra:
+    1. horizontal linear (rot=0) measurement+dimLine+ext lines verticali ✓
+    2. vertical linear (rot=90) measurement+dimLine+ext lines orizzontali ✓
+    3. rotated linear (rot=30) projection math (`100·cos30° = 50√3`) ✓
+    4. negative direction (extOrigin2 sinistra di extOrigin1) → measurement positivo, arrows invertiti ✓
+    5. textMidpoint override ✓
+    6. suppressExtLine1=true → extLine1 null, extLine2 presente ✓
+    7. suppressExtLine2=true → extLine2 null, extLine1 presente ✓
+    8. DIMEXO=0 → ext line start su ext origin esatta ✓
+    9. obliqueAngle=45 → ext lines tilted, measurement preservato ✓
+    10. degenerate linear (ext dir parallela a axis, obliqueAngle=90 su rot=0) → throw `Degenerate linear dim` ✓
+    11. aligned 3-4-5 triangle → measurement=100, foot positions calcolate ✓
+    12. aligned horizontal degenera a comportamento linear orizzontale ✓
+    13. aligned con ext origins coincidenti → throw `Degenerate aligned dim` ✓
+    14-15. orchestrator dispatch linear/aligned ✓
+    16-17. orchestrator throw per `radius`/`angular2L` ("not implemented in Phase B1") ✓
+  - **Verification**: `npx jest linear-aligned-builder.test.ts` → 17/17 PASS, ~3s. Coverage isolato sui 2 builder file: **stmts 95.58% / branch 89.65% / funcs 100% / lines 100%** (target ≥80% rispettato). Uncovered: una branch su `computeTextRotation` (a ≤ -π/2 ramo) — angolo negativo grande non raggiunto nei test correnti (acceptable, sarà esercitato in Phase C1 rendering test). `npx tsc --noEmit` filter `dim-geometry-builder|linear-aligned-builder`: 0 errori.
+  - **Constraints honored**: zero `any` / `as any` / `@ts-ignore` (in produzione; test ha 1 `as unknown as` per costruire entity invalida apposta per testare orchestrator throw). Funzioni ≤40 LOC ciascuna (`buildLinearGeometry` 22 LOC, `buildAlignedGeometry` 17 LOC, `assembleGeometry` 28 LOC, helper ≤10 LOC). File ≤500 LOC (orchestrator 70, builder 205, test 240). Comments solo su semantica non ovvia (DimGeometry convention block, defPoints semantic). No integrazione con renderer (Phase C1), tool handlers (Phase D1), registry/store/scene builder.
+  - **Next**: Phase B2 — Angular (2-line + 3-point) + Radial (radius/diameter/arcLength/joggedRadius) geometry builders (`builders/angular-builder.ts` + `builders/radial-builder.ts` + tests).
+
 - **2026-05-17 (Phase A3 DONE — Text Formatter + i18n skeleton)** — Foundation Phase A3 implementata.
   - **NEW** `src/subapps/dxf-viewer/systems/dimensions/dim-text-formatter.ts` (185 LOC) — pure formatters consuming the resolved `DimStyle`:
     - `formatLinearMeasurement(valueMm, style)` — DIMLFAC → DIMRND → DIMLUNIT/DIMDEC → DIMDSEP → DIMPOST.

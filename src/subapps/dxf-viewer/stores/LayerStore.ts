@@ -105,10 +105,9 @@ export function getLayerByName(name: string): SceneLayer | null {
  *
  * Id-only post-schema-flip: `entity.layer` name backref no longer used.
  *   1. If `entity.layerId` is set AND registered in store → return layer name.
- *   2. Otherwise → return undefined.
- *
- * Pre-9D entities without `layerId` resolve to undefined — callers must handle
- * with a safe fallback (e.g. DXF_DEFAULT_LAYER).
+ *   2. Legacy fallback: if `entity.layer` (name backref) is present → return it.
+ *      Covers pre-9F entities and unit-test mocks where the store singleton is empty.
+ *   3. Otherwise → return undefined.
  */
 export function resolveEntityLayerName(
   entity: { layerId?: string } | null | undefined
@@ -118,7 +117,9 @@ export function resolveEntityLayerName(
     const layer = layersById.get(entity.layerId);
     if (layer) return layer.name;
   }
-  return undefined;
+  // Legacy: pre-9F entities may carry the `layer` name field.
+  const legacy = (entity as Record<string, unknown>)['layer'];
+  return typeof legacy === 'string' ? legacy : undefined;
 }
 
 export function getAllLayers(): ReadonlyArray<SceneLayer> {

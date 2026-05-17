@@ -151,7 +151,21 @@
     "collapseEntities": "Σύμπτυξη στοιχείων",
     "show": "Εμφάνιση",
     "hide": "Απόκρυψη",
-    "doubleClickToRename": "Διπλό κλικ για μετονομασία"
+    "doubleClickToRename": "Διπλό κλικ για μετονομασία",
+    "layer0Badge": "🔒 Σύστημα",
+    "layer0Tooltip": "Επίπεδο συστήματος — δεν επιτρέπεται μετονομασία ή διαγραφή"
+  },
+  "layerValidation": {
+    "EMPTY": "Το όνομα δεν μπορεί να είναι κενό",
+    "WHITESPACE_ONLY": "Το όνομα δεν μπορεί να περιέχει μόνο κενά",
+    "LEADING_TRAILING_WS": "Αφαιρέστε τα κενά στην αρχή ή στο τέλος",
+    "LEADING_TRAILING_WS_suggestion": "Πρόταση: {suggestion}",
+    "TOO_LONG": "Το όνομα υπερβαίνει τους 255 χαρακτήρες",
+    "INVALID_CHARS": "Απαγορευμένοι χαρακτήρες: < > / \\ \" : ; ? * | , = ` '",
+    "INVALID_CHARS_suggestion": "Πρόταση: {suggestion}",
+    "RESERVED": "Το επίπεδο «0» είναι δεσμευμένο από το σύστημα",
+    "DUPLICATE": "Υπάρχει ήδη επίπεδο με αυτό το όνομα",
+    "DUPLICATE_suggestion": "Πρόταση: {suggestion}"
   },
   "search": {
     "layersAndEntities": "Αναζήτηση επιπέδων και οντοτήτων..."

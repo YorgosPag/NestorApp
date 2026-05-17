@@ -18,14 +18,15 @@ import type {
 // ── Fixture helpers ───────────────────────────────────────────────────────────
 
 function makeLine(id: string, x1: number, y1: number, x2: number, y2: number, layer = 'L0'): LineEntity {
-  return { id, type: 'line', start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, layer, layerId: 'lyr_test_default' };
+  // layerId mirrors `layer` name — allows tests to key layersById by name for simplicity.
+  return { id, type: 'line', start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, layer, layerId: layer };
 }
 
 function makeScene(
   entities: LineEntity[],
   layers: Record<string, Partial<SceneLayer>> = {},
 ): SceneModel {
-  return { entities, layers: layers as Record<string, SceneLayer> } as SceneModel;
+  return { entities, layersById: layers as Record<string, SceneLayer> } as SceneModel;
 }
 
 const DEFAULT_ARGS = { mode: 'quick' as const, cuttingEdgeIds: [] as string[] };

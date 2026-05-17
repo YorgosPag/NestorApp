@@ -151,7 +151,21 @@
     "collapseEntities": "Collapse entities",
     "show": "Show",
     "hide": "Hide",
-    "doubleClickToRename": "Double-click to rename"
+    "doubleClickToRename": "Double-click to rename",
+    "layer0Badge": "🔒 System",
+    "layer0Tooltip": "System layer — rename and delete not allowed"
+  },
+  "layerValidation": {
+    "EMPTY": "Name cannot be empty",
+    "WHITESPACE_ONLY": "Name cannot contain only spaces",
+    "LEADING_TRAILING_WS": "Remove leading/trailing spaces",
+    "LEADING_TRAILING_WS_suggestion": "Suggestion: {suggestion}",
+    "TOO_LONG": "Name exceeds 255 characters",
+    "INVALID_CHARS": "Invalid characters: < > / \\ \" : ; ? * | , = ` '",
+    "INVALID_CHARS_suggestion": "Suggestion: {suggestion}",
+    "RESERVED": "Layer \"0\" is reserved by the system",
+    "DUPLICATE": "A layer with this name already exists",
+    "DUPLICATE_suggestion": "Suggestion: {suggestion}"
   },
   "search": {
     "layersAndEntities": "Search layers and entities..."

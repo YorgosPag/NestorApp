@@ -130,7 +130,7 @@ describe('ExplodeArrayCommand', () => {
     expect(scene.size).toBe(0);
   });
 
-  it('throws for unsupported array kind (polar)', () => {
+  it('materializes count items for a polar array (full circle)', () => {
     const source = makeLine('src1');
     const polarArr: SceneEntity = {
       id: 'arr1',
@@ -142,9 +142,11 @@ describe('ExplodeArrayCommand', () => {
       hiddenSources: [source],
       params: { kind: 'polar', count: 6, fillAngle: 360, startAngle: 0, rotateItems: true, center: { x: 0, y: 0 }, radius: 50 },
     };
-    const { sm } = makeMockScene([polarArr]);
+    const { scene, sm } = makeMockScene([polarArr]);
     const cmd = new ExplodeArrayCommand('arr1', sm);
-    expect(() => cmd.execute()).toThrow('not yet supported');
+    cmd.execute();
+    expect(scene.has('arr1')).toBe(false);
+    expect(scene.size).toBe(6); // 6 transforms × 1 source
   });
 
   it('created entity IDs are unique (no collisions in 100-item array)', () => {
