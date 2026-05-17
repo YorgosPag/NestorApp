@@ -3248,13 +3248,15 @@
     },
     "layer-state-system": {
       "ssotFile": "src/subapps/dxf-viewer/stores/LayerStateStore.ts",
-      "description": "ADR-358 §5.9 Q12 (FULL Enterprise — Phase 12 Save/Restore subset). `LayerStateStore.ts` is the SSoT for saved LayerState runtime state. `layer-state-persistence.ts` owns the localStorage Firestore-shaped pub/sub layer. `types/layer-state.ts` exports `createLayerState` / `createLayerStateEntry` factories — direct `LayerState` literal construction outside this allowlist is forbidden. `RestoreLayerStateCommand` is the ONLY caller of `applyLayerSnapshotEntries`. Phase 13 will widen the allowlist to add `las-parser.ts` / `las-exporter.ts` once `.las` lands.",
+      "description": "ADR-358 §5.9 Q12 (FULL Enterprise). `LayerStateStore.ts` is the SSoT for saved LayerState runtime state. `layer-state-persistence.ts` owns the localStorage Firestore-shaped pub/sub layer. `types/layer-state.ts` exports `createLayerState` / `createLayerStateEntry` factories — direct `LayerState` literal construction outside this allowlist is forbidden. `RestoreLayerStateCommand` is the ONLY caller of `applyLayerSnapshotEntries`. Phase 13A 2026-05-17: extended with `.las` parser/exporter SSoT — `las-parser.ts` and `las-exporter.ts` are the ONLY modules permitted to parse / serialize `.las` content (forbiddenPatterns `parseLasContent` + `serializeLasContent`).",
       "forbiddenPatterns": [
         "\\bsaveCurrentLayerState\\b",
         "\\brenameLayerState\\b",
         "\\bdeleteLayerStateById\\b",
         "\\bapplyLayerSnapshotEntries\\b",
-        "\\bcaptureCurrentSnapshot\\b"
+        "\\bcaptureCurrentSnapshot\\b",
+        "\\bparseLasContent\\b",
+        "\\bserializeLasContent\\b"
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/stores/LayerStateStore.ts",
@@ -3263,6 +3265,10 @@
         "src/subapps/dxf-viewer/stores/__tests__/LayerStore.test.ts",
         "src/subapps/dxf-viewer/services/layer-state-persistence.ts",
         "src/subapps/dxf-viewer/services/__tests__/layer-state-persistence.test.ts",
+        "src/subapps/dxf-viewer/services/las-parser.ts",
+        "src/subapps/dxf-viewer/services/las-exporter.ts",
+        "src/subapps/dxf-viewer/services/__tests__/las-parser.test.ts",
+        "src/subapps/dxf-viewer/services/__tests__/las-exporter.test.ts",
         "src/subapps/dxf-viewer/types/layer-state.ts",
         "src/subapps/dxf-viewer/core/commands/layer/RestoreLayerStateCommand.ts",
         "src/subapps/dxf-viewer/core/commands/layer/__tests__/RestoreLayerStateCommand.test.ts",
