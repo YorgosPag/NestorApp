@@ -69,6 +69,8 @@ import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-099: Centralized Polygon Tolerances
 import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
+// 🏢 ADR-362 Phase D1: Dim tool routing layer (Smart DIM + 4 manual overrides)
+import { useDimToolRouting } from '../dimensions/useDimToolRouting';
 
 type Pt = { x: number, y: number };
 
@@ -127,6 +129,9 @@ export function useDrawingHandlers(
 ) {
   // Canvas operations hook
   const canvasOps = useCanvasOperations();
+
+  // 🏢 ADR-362 Phase D1: dim creation flow (Smart DIM + 4 manual overrides)
+  const dimRouting = useDimToolRouting({ activeTool, onEntityCreated, previewCanvasRef });
 
   // Drawing system
   const {
@@ -205,6 +210,12 @@ export function useDrawingHandlers(
   // The return value from addPoint() indicates if drawing completed (e.g., 2nd click on line)
   // 🎯 ENTERPRISE (2026-01-27): ADR-047 - Close polygon on first-point click
   const onDrawingPoint = useCallback((p: Pt) => {
+    // 🏢 ADR-362 Phase D1: route dim tools through the dedicated orchestrator.
+    if (dimRouting.isDimTool) {
+      const snapped = applySnap(p);
+      dimRouting.handlePoint(snapped);
+      return;
+    }
     // 🔍 DEBUG (2026-01-31): Log drawing point for circle debugging
     if (DEBUG_DRAWING_HANDLERS) {
       console.debug('🎯 [onDrawingPoint]', {
@@ -274,6 +285,12 @@ export function useDrawingHandlers(
   }, [activeTool, drawingState.tempPoints, addPoint, finishPolyline, onEntityCreated, onToolChange, canvasOps, applySnap, previewCanvasRef, onMeasurementComplete]);
 
   const onDrawingHover = useCallback((p: Pt | null) => {
+    // 🏢 ADR-362 Phase D1: route dim tools through the dedicated orchestrator.
+    if (dimRouting.isDimTool) {
+      const snapped = p ? applySnap(p) : null;
+      dimRouting.handleHover(snapped);
+      return;
+    }
     // 🔍 STOP 1 DEBUG TRACE (2026-02-01): Comprehensive preview flow tracing
     if (DEBUG_DRAWING_HANDLERS) {
       console.debug('🔍 [onDrawingHover] ENTRY', {
@@ -344,10 +361,12 @@ export function useDrawingHandlers(
   }, [updatePreview, canvasOps, getLatestPreviewEntity, previewCanvasRef, activeTool, drawingState.tempPoints]);
   
   const onDrawingCancel = useCallback(() => {
+    // 🏢 ADR-362 Phase D1: cancel dim flow if active (does not stop tool deselect).
+    if (dimRouting.isDimTool) dimRouting.handleCancel();
     cancelDrawing();
     // 🏢 ENTERPRISE: Force select on cancel (user explicitly cancelled)
     handleToolCompletion(activeTool, true); // forceSelect=true for cancel
-  }, [activeTool, cancelDrawing, onToolChange]);
+  }, [activeTool, cancelDrawing, dimRouting, onToolChange]);
 
   // Double click handler for finishing operations
   const onDrawingDoubleClick = useCallback(() => {

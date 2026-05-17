@@ -85,6 +85,20 @@ const LOCK_TTL_MS = 5 * 60 * 1000;
 // ============================================================================
 
 /**
+ * ADR-358 Phase 3f — back-compat hydration for legacy `StairDoc.params` saved
+ * before the `cornerStyle` discriminator landed on `StairVariantLShape`.
+ * Legacy l-shape docs are mapped to `cornerStyle: 'landing'` (the only
+ * behavior pre-Phase 3f). Other kinds pass through unchanged.
+ */
+function hydrateLegacyParams(params: StairParams): StairParams {
+  const v = params.variant;
+  if (v.kind === 'l-shape' && (v as { cornerStyle?: string }).cornerStyle === undefined) {
+    return { ...params, variant: { ...v, cornerStyle: 'landing' } as typeof v };
+  }
+  return params;
+}
+
+/**
  * Build a scene-side `StairEntity` from a persisted `StairDoc`. Geometry is
  * recomputed via the SSoT `computeStairGeometry` — ADR §G6: geometry is NOT
  * persisted (re-derivable from params).
@@ -95,12 +109,13 @@ function docToEntity(doc: StairDoc): StairEntity {
     violationKeys: [],
     lastValidatedAt: Timestamp.now(),
   };
+  const params = hydrateLegacyParams(doc.params);
   return {
     id: doc.id,
     type: 'stair',
     kind: doc.kind,
-    params: doc.params,
-    geometry: computeStairGeometry(doc.params),
+    params,
+    geometry: computeStairGeometry(params),
     validation,
     layer: doc.layer ?? 'STAIRS',
     levelId: doc.levelId,
