@@ -27,7 +27,7 @@ import {
   buildCutLineForFlights,
   buildStringersFromWalkline,
 } from './stair-geometry-shared';
-import { buildTreadLabels } from './stair-geometry-labels';
+import { buildTreadLabelsWithLandings } from './stair-geometry-labels';
 
 // ─── L-SHAPE entry ────────────────────────────────────────────────────────────
 
@@ -63,8 +63,9 @@ export function computeLShape(
   const cutLine = buildCutLineForFlights(
     allTreads, [n1, n2], [u1, u2], width, cutPlaneHeight,
   );
-  const treadLabels = buildTreadLabels(
+  const treadLabels = buildTreadLabelsWithLandings(
     allTreads,
+    [landing],
     [n1, n2],
     params.treadLabelDisplay,
     params.treadLabelEveryN,
