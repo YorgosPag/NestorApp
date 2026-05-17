@@ -517,7 +517,8 @@
       "dimStyle": "Στυλ",
       "dimOverride": "Παράκαμψη",
       "dimText": "Κείμενο",
-      "dimProperties": "Ιδιότητες"
+      "dimProperties": "Ιδιότητες",
+      "bim": "Δομικά"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -557,6 +558,21 @@
       "polygon": "Πολύγωνο",
       "ellipse": "Έλλειψη",
       "stair": "Σκάλα",
+      "bim": {
+        "wall": "Τοίχος",
+        "opening": "Άνοιγμα",
+        "openingVariants": {
+          "door": "Θύρα",
+          "window": "Παράθυρο",
+          "slidingDoor": "Συρόμενη Θύρα",
+          "frenchDoor": "Γαλλική Θύρα",
+          "fixed": "Σταθερό Άνοιγμα"
+        },
+        "slab": "Πλάκα",
+        "slabOpening": "Διανοιγμα Πλάκας",
+        "column": "Κολώνα",
+        "beam": "Δοκάρι"
+      },
       "select": "Επιλογή",
       "gripEdit": "Επεξ/σία Λαβών",
       "move": "Μετακίνηση",
