@@ -187,14 +187,6 @@ export function buildStairEntity(
     violationKeys: [],
     lastValidatedAt: Timestamp.now(),
   };
-  // eslint-disable-next-line no-console
-  console.info('[StairTool] buildStairEntity', {
-    basePoint: params.basePoint,
-    width: params.width,
-    rise: params.rise,
-    tread: params.tread,
-    bbox: geometry.bbox,
-  });
   return {
     id: generateStairId(),
     type: 'stair',
