@@ -217,6 +217,11 @@ export const ENTERPRISE_ID_PREFIXES = {
   STAIR: 'stair',              // floorplan_stairs collection — parametric stair entity (11 kinds)
   STAIR_PRESET: 'sprst',       // stair_presets collection — library presets (user/company/project scope)
 
+  // DXF Layer Filters Builder (ADR-358 §5.7.bis Q11 — Phase 11)
+  LAYER_FILTER_GROUP: 'lfg',     // group filter (manual layer list)
+  LAYER_FILTER_PROPERTY: 'lfp',  // property filter (rule-based, AND/OR nested)
+  // NOTE: smart filter ids (`lfs_*`) are DETERMINISTIC strings — not enterprise IDs.
+
   // DXF Enterprise Dimension System (ADR-362)
   DIMENSION: 'dim',            // dimension entity (10 variants: linear/aligned/angular/radial/diameter/ordinate/baseline/continued/arcLength/joggedRadius)
   DIM_STYLE: 'dimstyle',       // DIMSTYLE — ~60 vars, 3 built-in templates + user customs
