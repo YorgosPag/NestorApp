@@ -71,6 +71,12 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-17 — ADR-358 Phase 9E-1 interop: DxfRenderer id-first layersById lookup
+
+`DxfRenderer.resolveLayerStyle` updated to use `entity.layerId → layersById[entity.layerId]` as the primary lookup path (O(1), id-keyed). Previous path used `resolveEntityLayerName(entity)` then `layersById[name]` (name-keyed, double-call). New path: id-keyed first; IIFE fallback to name-keyed for legacy scenes without `layersById` or entities without `layerId`. **Bitmap cache key untouched** — cardinal rule #3 holds. **ADR-040 leaf rules**: no `useSyncExternalStore` added; `DxfRenderer` remains a render-pipeline leaf; change is purely a lookup-path optimisation.
+
+---
+
 ### 2026-05-17 — ADR-358 Phase 9D-5a interop: DxfRenderer drops `layer` from canvas base shape (id-only)
 
 `DxfRenderer.entityToDxfEntity` now mirrors only `entity.layerId` onto the canvas base shape; the legacy `entity.layer` field is no longer copied. ByLayer/ByBlock style resolution is unchanged — `resolveStyleForRender` reads from the id-keyed `layersById` map (ADR-358 Phase 9D-2). **Bitmap cache key untouched** — cardinal rule #3 holds (no high-frequency identity entries added). Render-path is now strictly id-aware in writes; transitional id-first readers (`resolveEntityLayerName`) still tolerate `.layer` name backref until Phase 9D-5b schema flip.
