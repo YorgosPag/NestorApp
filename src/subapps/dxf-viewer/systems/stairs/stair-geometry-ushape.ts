@@ -68,7 +68,8 @@ export function computeUShape(
   const risers: readonly Segment3D[] = [...flight1.risers, ...flight2.risers];
   const walkline = buildUShapeWalkline(basePoint, u1, v1, u2, turnSign, rise, tread, width, n1, n2);
   const stringers = buildStringersFromWalkline(walkline, width);
-  const arrow = arrowSymbol(basePoint, walkline[walkline.length - 1], upDirection);
+  // ADR-358 Phase 3d hotfix — arrow on FIRST flight segment (see lshape rationale).
+  const arrow = arrowSymbol(walkline[0], walkline[1], upDirection);
   const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
   const split = splitTreadsByCutPlaneUShape(allTreads, cutPlaneHeight);
   const cutLine = buildCutLineForFlights(allTreads, [n1, n2], [u1, u2], width, cutPlaneHeight);
