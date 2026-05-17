@@ -13,6 +13,7 @@ import {
   type StairRiserType,
   type StairStructureType,
   type StairTurnDirectionLR,
+  type StairWinderMethod,
 } from '../../../../types/stair';
 import {
   STAIR_RIBBON_KEYS,
@@ -24,7 +25,11 @@ import {
   mmFactorFromWidth,
   reconcileLinkedStair,
 } from '../../../../systems/stairs/stair-floor-link';
-import { buildDefaultVariantFor } from '../../../../systems/stairs/stair-variant-defaults';
+import {
+  buildDefaultVariantFor,
+  buildLShapeWindersVariant,
+  splitTwoFlightsForWinders,
+} from '../../../../systems/stairs/stair-variant-defaults';
 
 // ── Module-private constants ─────────────────────────────────────────────────
 
@@ -82,6 +87,12 @@ export function readStairStringField(
       return readFlightTurnDirection(p, 1);
     case STAIR_RIBBON_KEYS.stringParams.variantKind:
       return p.variant.kind;
+    case STAIR_RIBBON_KEYS.stringParams.cornerStyle:
+      return p.variant.kind === 'l-shape' ? p.variant.cornerStyle : null;
+    case STAIR_RIBBON_KEYS.stringParams.winderMethod:
+      return p.variant.kind === 'l-shape' && p.variant.cornerStyle === 'winders'
+        ? p.variant.winderMethod
+        : null;
     default: return null;
   }
 }
@@ -124,6 +135,10 @@ export function readStairNumericField(
     case STAIR_RIBBON_KEYS.params.storyCount:  return p.multiStoryConfig ? String(p.multiStoryConfig.storyCount) : null;
     // storyHeight stays in mm in StairMultiStoryConfig (Phase 7a contract).
     case STAIR_RIBBON_KEYS.params.storyHeight: return p.multiStoryConfig ? String(p.multiStoryConfig.storyHeight) : null;
+    case STAIR_RIBBON_KEYS.params.winderCount:
+      return p.variant.kind === 'l-shape' && p.variant.cornerStyle === 'winders'
+        ? String(p.variant.winderCount)
+        : null;
     default: return null;
   }
 }
@@ -156,6 +171,10 @@ export function patchStairStringParam(
       return patchFlightTurnDirection(prev, 1, value);
     case STAIR_RIBBON_KEYS.stringParams.variantKind:
       return patchVariantKind(prev, value);
+    case STAIR_RIBBON_KEYS.stringParams.cornerStyle:
+      return patchLShapeCornerStyle(prev, value);
+    case STAIR_RIBBON_KEYS.stringParams.winderMethod:
+      return patchLShapeWinderMethod(prev, value);
     default: return null;
   }
 }
@@ -171,6 +190,37 @@ function patchVariantKind(prev: StairParams, value: string): StairParams | null 
   const targetKind = value as StairKind;
   if (prev.variant.kind === targetKind) return null;
   return { ...prev, variant: buildDefaultVariantFor(targetKind, prev) };
+}
+
+/**
+ * ADR-358 Phase 3f — toggle l-shape corner detail between 'landing' and
+ * 'winders'. landing→winders builds a fresh winders variant (NOK defaults:
+ * winderCount=3, equal-going) preserving turnDirection; winders→landing
+ * falls back to `buildDefaultVariantFor` landing default. No-op when not
+ * l-shape or same style.
+ */
+function patchLShapeCornerStyle(prev: StairParams, value: string): StairParams | null {
+  if (value !== 'landing' && value !== 'winders') return null;
+  if (prev.variant.kind !== 'l-shape') return null;
+  if (prev.variant.cornerStyle === value) return null;
+  if (value === 'winders') {
+    return { ...prev, variant: buildLShapeWindersVariant(prev) };
+  }
+  // winders → landing: build fresh landing variant from factory + preserve turnDirection.
+  const landing = buildDefaultVariantFor('l-shape', prev);
+  if (landing.kind !== 'l-shape') return null;
+  return {
+    ...prev,
+    variant: { ...landing, turnDirection: prev.variant.turnDirection },
+  };
+}
+
+function patchLShapeWinderMethod(prev: StairParams, value: string): StairParams | null {
+  if (value !== 'equal-going' && value !== 'pie') return null;
+  if (prev.variant.kind !== 'l-shape' || prev.variant.cornerStyle !== 'winders') return null;
+  if (prev.variant.winderMethod === value) return null;
+  const method = value as StairWinderMethod;
+  return { ...prev, variant: { ...prev.variant, winderMethod: method } };
 }
 
 /**
@@ -231,8 +281,27 @@ export function patchStairNumericParam(
     case STAIR_RIBBON_KEYS.params.stepCount:     return patchStepCount(prev, numeric);
     case STAIR_RIBBON_KEYS.params.storyCount:    return patchStoryCount(prev, numeric, ctx);
     case STAIR_RIBBON_KEYS.params.storyHeight:   return patchStoryHeight(prev, numeric);
+    case STAIR_RIBBON_KEYS.params.winderCount:   return patchLShapeWinderCount(prev, numeric);
     default: return null;
   }
+}
+
+/**
+ * ADR-358 Phase 3f — winder count edit for l-shape with winders. Clamps
+ * to `[1, min(5, stepCount - 2)]` so both straight flights keep ≥1 tread.
+ * Recomputes `flightSplit` so invariant `n1 + winderCount + n2 = stepCount`
+ * holds; `totalRise` unaffected (winders consume rise like treads).
+ */
+function patchLShapeWinderCount(prev: StairParams, raw: number): StairParams | null {
+  if (prev.variant.kind !== 'l-shape' || prev.variant.cornerStyle !== 'winders') return null;
+  const maxAllowed = Math.max(1, Math.min(5, prev.stepCount - 2));
+  const winderCount = Math.max(1, Math.min(maxAllowed, Math.round(raw)));
+  if (winderCount === prev.variant.winderCount) return null;
+  const flightSplit = splitTwoFlightsForWinders(prev.stepCount, winderCount);
+  return {
+    ...prev,
+    variant: { ...prev.variant, winderCount, flightSplit },
+  };
 }
 
 // ADR-358 Phase 9 — input arrives in mm (combobox option strings are mm).
