@@ -281,6 +281,7 @@ export function validateStairParams(
   return {
     hasCodeViolations: violationKeys.length > 0,
     violationKeys,
+    ...(gate.hardErrors.length > 0 ? { hardErrors: gate.hardErrors } : {}),
     ...(headroomViolations.length > 0 ? { headroomViolations } : {}),
     ...(gate.egressViolations.length > 0 ? { egressViolations: gate.egressViolations } : {}),
     ...(gate.adaViolations.length > 0 ? { adaViolations: gate.adaViolations } : {}),

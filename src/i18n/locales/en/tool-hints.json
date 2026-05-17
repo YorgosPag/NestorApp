@@ -132,7 +132,7 @@
           "widthMin": "NOK: insufficient stair width.",
           "riseRange": "NOK: riser height outside allowed range.",
           "treadRange": "NOK: tread depth outside allowed range.",
-          "twoRPlusG": "NOK: comfort formula 2R+G outside allowed range."
+          "twoRPlusG": "NOK: comfort formula 2R+G (2×riser + tread) outside allowed range 600–640 mm."
         },
         "ibc": {
           "widthMin": "IBC: insufficient stair width (below 1117 mm / 44 in).",
@@ -143,7 +143,7 @@
           "widthMin": "Eurocode: insufficient stair width.",
           "riseRange": "Eurocode: riser height outside allowed range.",
           "treadRange": "Eurocode: tread depth outside allowed range.",
-          "twoRPlusG": "Eurocode: comfort formula 2R+G outside allowed range."
+          "twoRPlusG": "Eurocode: comfort formula 2R+G (2×riser + tread) outside allowed range 600–650 mm."
         },
         "ada": {
           "riseMax": "ADA: riser height exceeds accessibility limit.",

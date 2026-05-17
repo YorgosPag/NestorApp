@@ -340,6 +340,14 @@ export interface StairValidationState {
   readonly hasCodeViolations: boolean;
   /** i18n message keys (no hardcoded strings). */
   readonly violationKeys: readonly string[];
+  /**
+   * ADR-358 Phase 9 — hard errors (blocking) surfaced separately from
+   * soft code violations so the UI can render them red (stop) while
+   * the warnings stay orange. Subset of `violationKeys`. Hard errors
+   * include zero/invalid geometry (`stepCount`, `width`, `rise`,
+   * `tread`, `totalRise`).
+   */
+  readonly hardErrors?: readonly string[];
   readonly headroomViolations?: readonly string[];
   readonly egressViolations?: readonly string[];
   readonly adaViolations?: readonly string[];
