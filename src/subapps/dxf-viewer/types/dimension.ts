@@ -157,6 +157,10 @@ export interface DimStyle {
   dimtix: boolean;
   /** DIMTOFL — force dim line inside even if text outside. */
   dimtofl: boolean;
+  /** DIMATFIT — arrowhead/text placement when space is insufficient (0=both outside, 1=arrows first, 2=text first, 3=best fit). */
+  dimatfit: number;
+  /** DIMTMOVE — text move rule when manually relocated (0=with dim line, 1=add leader, 2=free move). */
+  dimtmove: number;
   /**
    * DIMSCALE — global scale factor for all paper-mm values.
    * D3 (Revit-style baked annotative): set to `currentScale` per session at render time.
@@ -185,6 +189,8 @@ export interface DimStyle {
   dimrnd: number;
   /** DIMLFAC — linear measurement scale factor. */
   dimlfac: number;
+  /** DIMZIN — zero suppression bitmask (0=none, 1=leading, 2=trailing, 4=alt-leading, 8=alt-trailing). */
+  dimzin: number;
 
   // ── Alternate units (D8) ───────────────────────────────────────────────────
   /** DIMALT — display alternate units. */
