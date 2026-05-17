@@ -18,6 +18,7 @@ function makeRectArray(id: string, rows: number, cols: number, sources: SceneEnt
     id,
     type: 'array',
     layer: '0',
+    layerId: 'lyr_test_default',
     visible: true,
     arrayKind: 'rect',
     hiddenSources: sources,
@@ -26,7 +27,7 @@ function makeRectArray(id: string, rows: number, cols: number, sources: SceneEnt
 }
 
 function makeLine(id: string): SceneEntity {
-  return { id, type: 'line', layer: '0', visible: true, start: { x: 0, y: 0 }, end: { x: 10, y: 0 } };
+  return { id, type: 'line', layer: '0', layerId: 'lyr_test_default', visible: true, start: { x: 0, y: 0 }, end: { x: 10, y: 0 } };
 }
 
 function makeMockScene(initial: SceneEntity[] = []): { scene: Map<string, SceneEntity>; sm: ISceneManager } {
@@ -135,6 +136,7 @@ describe('ExplodeArrayCommand', () => {
       id: 'arr1',
       type: 'array',
       layer: '0',
+      layerId: 'lyr_test_default',
       visible: true,
       arrayKind: 'polar',
       hiddenSources: [source],

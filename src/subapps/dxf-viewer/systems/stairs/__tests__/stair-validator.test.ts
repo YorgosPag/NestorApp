@@ -78,6 +78,7 @@ function ceilingEntity(elevationMm: number, layer = 'CEILING'): Entity {
     id: `ceiling-${elevationMm}`,
     type: 'line',
     layer,
+    layerId: 'lyr_test_default',
     startPoint: { x: -1000, y: -1000 },
     endPoint: { x: 1000, y: 1000 },
     metadata: { elevation: elevationMm },

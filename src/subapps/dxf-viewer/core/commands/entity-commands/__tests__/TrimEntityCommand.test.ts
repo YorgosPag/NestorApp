@@ -33,11 +33,11 @@ function makeSceneManager(initial: SceneEntity[] = []): { sm: ISceneManager; sto
 // ── Entity fixtures ───────────────────────────────────────────────────────────
 
 function makeLine(id: string, x1 = 0, y1 = 0, x2 = 10, y2 = 0): LineEntity {
-  return { id, type: 'line', start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, layer: '0' };
+  return { id, type: 'line', start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, layer: '0', layerId: 'lyr_test_default' };
 }
 
 function makeArc(id: string): ArcEntity {
-  return { id, type: 'arc', center: { x: 0, y: 0 }, radius: 5, startAngle: 0, endAngle: Math.PI, layer: '0' };
+  return { id, type: 'arc', center: { x: 0, y: 0 }, radius: 5, startAngle: 0, endAngle: Math.PI, layer: '0', layerId: 'lyr_test_default' };
 }
 
 const PICK = { x: 5, y: 0 };
@@ -106,7 +106,7 @@ describe('TrimEntityCommand — split', () => {
 
 describe('TrimEntityCommand — promote', () => {
   it('execute removes original and adds promoted entity', () => {
-    const orig = { id: 'c1', type: 'circle' as const, center: { x: 0, y: 0 }, radius: 5, layer: '0' };
+    const orig = { id: 'c1', type: 'circle' as const, center: { x: 0, y: 0 }, radius: 5, layer: '0', layerId: 'lyr_test_default' };
     const promoted = makeArc('c1');
     const op: TrimOperation = {
       kind: 'promote', entityId: 'c1',
@@ -119,7 +119,7 @@ describe('TrimEntityCommand — promote', () => {
   });
 
   it('undo removes promoted entity and restores original', () => {
-    const orig = { id: 'c1', type: 'circle' as const, center: { x: 0, y: 0 }, radius: 5, layer: '0' };
+    const orig = { id: 'c1', type: 'circle' as const, center: { x: 0, y: 0 }, radius: 5, layer: '0', layerId: 'lyr_test_default' };
     const promoted = makeArc('c1');
     const op: TrimOperation = {
       kind: 'promote', entityId: 'c1',

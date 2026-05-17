@@ -9,6 +9,7 @@ function makeArrayEntity(id: string, params: RectParams): SceneEntity {
     id,
     type: 'array',
     layer: '0',
+    layerId: 'lyr_test_default',
     visible: true,
     arrayKind: 'rect',
     hiddenSources: [],

@@ -11,10 +11,11 @@ function makeArrayEntity(id: string): SceneEntity {
     id,
     type: 'array',
     layer: '0',
+    layerId: 'lyr_test_default',
     visible: true,
     arrayKind: 'rect',
     hiddenSources: [
-      { id: 'src1', type: 'line', layer: '0', start: { x: 0, y: 0 }, end: { x: 10, y: 0 } },
+      { id: 'src1', type: 'line', layer: '0', layerId: 'lyr_test_default', start: { x: 0, y: 0 }, end: { x: 10, y: 0 } },
     ],
     params,
   };

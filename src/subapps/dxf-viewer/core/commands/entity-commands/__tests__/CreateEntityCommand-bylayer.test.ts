@@ -30,6 +30,7 @@ function makeFakeSceneManager(): ISceneManager & { added: SceneEntity[] } {
 const baseLine: Omit<SceneEntity, 'id'> = {
   type: 'line',
   layer: 'WALLS',
+  layerId: 'lyr_test_default',
   start: { x: 0, y: 0 },
   end: { x: 10, y: 0 },
   visible: true,

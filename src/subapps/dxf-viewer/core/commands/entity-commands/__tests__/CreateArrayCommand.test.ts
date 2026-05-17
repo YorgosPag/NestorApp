@@ -6,7 +6,7 @@ import type { RectParams } from '../../../../systems/array/types';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function makeLine(id: string): SceneEntity {
-  return { id, type: 'line', layer: '0', visible: true, start: { x: 0, y: 0 }, end: { x: 10, y: 0 } };
+  return { id, type: 'line', layer: '0', layerId: 'lyr_test_default', visible: true, start: { x: 0, y: 0 }, end: { x: 10, y: 0 } };
 }
 
 function makeMockScene(initial: SceneEntity[] = []): { scene: Map<string, SceneEntity>; sm: ISceneManager } {

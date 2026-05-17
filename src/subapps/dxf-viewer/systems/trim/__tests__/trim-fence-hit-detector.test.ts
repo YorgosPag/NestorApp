@@ -18,7 +18,7 @@ import type {
 // ── Fixture helpers ───────────────────────────────────────────────────────────
 
 function makeLine(id: string, x1: number, y1: number, x2: number, y2: number, layer = 'L0'): LineEntity {
-  return { id, type: 'line', start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, layer };
+  return { id, type: 'line', start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, layer, layerId: 'lyr_test_default' };
 }
 
 function makeScene(
@@ -82,7 +82,7 @@ describe('detectFenceHits', () => {
   });
 
   it('skips non-trimmable entity types (hatch)', () => {
-    const scene = { entities: [{ id: 'h1', type: 'hatch', layer: 'L0' }], layers: {} } as unknown as SceneModel;
+    const scene = { entities: [{ id: 'h1', type: 'hatch', layer: 'L0', layerId: 'lyr_test_default' }], layers: {} } as unknown as SceneModel;
     const hits = detectFenceHits({ fenceStart: { x: 0, y: 0 }, fenceEnd: { x: 10, y: 0 }, scene, ...DEFAULT_ARGS });
     expect(hits).toHaveLength(0);
   });
@@ -123,7 +123,7 @@ describe('detectFenceHits', () => {
   it('pick point is closest intersection to fenceStart', () => {
     // Circle centred at (5,0) radius 3 — fence horizontal at y=0, x=0→10.
     // Two intersections: (2,0) and (8,0). fenceStart=(0,0) → closest is (2,0).
-    const circle = { id: 'c1', type: 'circle', center: { x: 5, y: 0 }, radius: 3, layer: 'L0' } as CircleEntity;
+    const circle = { id: 'c1', type: 'circle', center: { x: 5, y: 0 }, radius: 3, layer: 'L0', layerId: 'lyr_test_default' } as CircleEntity;
     const scene = { entities: [circle], layers: {} } as unknown as SceneModel;
     const hits = detectFenceHits({ fenceStart: { x: 0, y: 0 }, fenceEnd: { x: 10, y: 0 }, scene, ...DEFAULT_ARGS });
     expect(hits).toHaveLength(1);
@@ -135,7 +135,7 @@ describe('detectFenceHits', () => {
 
 describe('buildEntityPreviewPath', () => {
   it('LINE → 2 points [start, end]', () => {
-    const line: LineEntity = { id: 'l1', type: 'line', start: { x: 0, y: 0 }, end: { x: 10, y: 0 }, layer: '' };
+    const line: LineEntity = { id: 'l1', type: 'line', start: { x: 0, y: 0 }, end: { x: 10, y: 0 }, layer: '', layerId: 'lyr_test_default' };
     const path = buildEntityPreviewPath(line);
     expect(path).toHaveLength(2);
     expect(path[0]).toEqual({ x: 0, y: 0 });
@@ -143,7 +143,7 @@ describe('buildEntityPreviewPath', () => {
   });
 
   it('ARC → n+1 points along arc sweep', () => {
-    const arc: ArcEntity = { id: 'a1', type: 'arc', center: { x: 0, y: 0 }, radius: 5, startAngle: 0, endAngle: Math.PI, layer: '' };
+    const arc: ArcEntity = { id: 'a1', type: 'arc', center: { x: 0, y: 0 }, radius: 5, startAngle: 0, endAngle: Math.PI, layer: '', layerId: 'lyr_test_default' };
     const path = buildEntityPreviewPath(arc);
     expect(path.length).toBeGreaterThan(2);
     expect(path[0].x).toBeCloseTo(5);   // cos(0)*5
@@ -151,7 +151,7 @@ describe('buildEntityPreviewPath', () => {
   });
 
   it('CIRCLE → closed loop of points', () => {
-    const circle: CircleEntity = { id: 'ci1', type: 'circle', center: { x: 0, y: 0 }, radius: 3, layer: '' };
+    const circle: CircleEntity = { id: 'ci1', type: 'circle', center: { x: 0, y: 0 }, radius: 3, layer: '', layerId: 'lyr_test_default' };
     const path = buildEntityPreviewPath(circle);
     expect(path.length).toBeGreaterThan(4);
     // First and last point should be on the circle
@@ -159,7 +159,7 @@ describe('buildEntityPreviewPath', () => {
   });
 
   it('ELLIPSE → tessellated points', () => {
-    const ell: EllipseEntity = { id: 'ell1', type: 'ellipse', center: { x: 0, y: 0 }, majorAxis: 4, minorAxis: 2, layer: '' };
+    const ell: EllipseEntity = { id: 'ell1', type: 'ellipse', center: { x: 0, y: 0 }, majorAxis: 4, minorAxis: 2, layer: '', layerId: 'lyr_test_default' };
     const path = buildEntityPreviewPath(ell);
     expect(path.length).toBeGreaterThan(4);
   });
@@ -168,7 +168,7 @@ describe('buildEntityPreviewPath', () => {
     const poly: LWPolylineEntity = {
       id: 'pl1', type: 'lwpolyline',
       vertices: [{ x: 0, y: 0 }, { x: 5, y: 0 }, { x: 5, y: 5 }],
-      closed: false, layer: '',
+      closed: false, layer: '', layerId: 'lyr_test_default',
     };
     const path = buildEntityPreviewPath(poly);
     expect(path).toHaveLength(3);

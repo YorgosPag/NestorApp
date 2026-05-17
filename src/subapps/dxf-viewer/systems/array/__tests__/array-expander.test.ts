@@ -5,7 +5,7 @@ import type { RectParams, PolarParams } from '../types';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function makeLine(id: string, x1: number, y1: number, x2: number, y2: number): Entity {
-  return { id, type: 'line', layer: '0', visible: true, start: { x: x1, y: y1 }, end: { x: x2, y: y2 } } as Entity;
+  return { id, type: 'line', layer: '0', layerId: 'lyr_test_default', visible: true, start: { x: x1, y: y1 }, end: { x: x2, y: y2 } } as Entity;
 }
 
 function makeRectArray(
@@ -21,6 +21,7 @@ function makeRectArray(
     id,
     type: 'array',
     layer: '0',
+    layerId: 'lyr_test_default',
     visible: true,
     arrayKind: 'rect',
     hiddenSources: sources,
@@ -99,6 +100,7 @@ describe('expandArrayEntity', () => {
       id: 'arr1',
       type: 'array',
       layer: '0',
+      layerId: 'lyr_test_default',
       visible: true,
       arrayKind: 'polar',
       hiddenSources: [src],
@@ -113,6 +115,7 @@ describe('expandArrayEntity', () => {
       id: 'polar-arr',
       type: 'array',
       layer: '0',
+      layerId: 'lyr_test_default',
       visible: true,
       arrayKind: 'polar',
       hiddenSources: [src],

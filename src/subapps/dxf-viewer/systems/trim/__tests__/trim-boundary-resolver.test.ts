@@ -16,7 +16,7 @@ import type { LineEntity } from '../../../types/entities';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function makeLine(id: string, layer = 'Layer0'): LineEntity {
-  return { id, type: 'line', start: { x: 0, y: 0 }, end: { x: 10, y: 0 }, layer };
+  return { id, type: 'line', start: { x: 0, y: 0 }, end: { x: 10, y: 0 }, layer, layerId: 'lyr_test_default' };
 }
 
 function makeScene(
