@@ -27,18 +27,19 @@ export interface BaseEntity {
   name?: string;             // Optional user-friendly name for the entity
   type: EntityType;
   /**
-   * @deprecated ADR-358 Phase 9D — Layer NAME backref. Transitional alias kept until
-   * downstream type-chain (`SceneEntity`, `PreviewPoint`, `DxfTextSceneEntity`) is migrated
-   * to id-only in Phase 9D-5b-ii (Google LSC consumer migration step). Stable identifier
-   * is `layerId` (`lyr_<UUID-v4>`). Schema flip atomic deferred to Phase 9D-5b-iii.
-   * Writers MUST keep both fields in sync until then.
+   * @deprecated ADR-358 Phase 9D — Layer NAME backref. Resolver (`resolveEntityLayerName`)
+   * collapsed to id-only in Phase 9D-5b-iii — this field is NO LONGER read by production code.
+   * Pending full drop: `StairEntity` still writes `layer` for level-id storage (design
+   * smell — migrate to dedicated `levelId` field in a future session before type removal).
+   * DO NOT add new usages. Prefer `layerId` exclusively.
    */
   layer?: string;
   /**
    * Stable layer identifier — `lyr_<UUID-v4>` matching `SceneLayer.id` (ADR-358 Phase 9C v2.13).
-   * Optional in Phase 9D-1 to keep TS green during ~55-file callsite migration. Becomes
-   * REQUIRED at end of Phase 9D-5b-iii (schema flip atomic). Resolve display name via
-   * `LayerStore.getLayer(id)?.name` or `LayerStore.resolveEntityLayerName(entity)`.
+   * Phase 9D-5b-iii: resolver is id-only. STRONGLY REQUIRED — all new entity construction
+   * MUST set this field. Full TypeScript enforcement (`layerId: string` required) pending
+   * stair-level-id migration (see `layer?` above).
+   * Resolve display name via `LayerStore.getLayer(id)?.name`.
    */
   layerId?: string;
   color?: string;

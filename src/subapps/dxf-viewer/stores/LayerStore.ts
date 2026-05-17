@@ -93,13 +93,14 @@ export function getLayer(idOrName: string): SceneLayer | null {
 }
 
 /**
- * Resolve an entity's layer NAME with id-first preference (ADR-358 Phase 9D-3).
+ * Resolve an entity's layer NAME via stable id only (ADR-358 Phase 9D-5b-iii schema flip).
  *
- * Dual-read transitional helper:
- *   1. If `entity.layerId` is set → look up SceneLayer by stable id (post-9C path).
- *   2. Fallback to legacy `entity.layer` name backref (pre-9D entities or unresolved id).
+ * Id-only post-schema-flip: `entity.layer` name backref no longer used.
+ *   1. If `entity.layerId` is set AND registered in store → return layer name.
+ *   2. Otherwise → return undefined.
  *
- * Collapses to id-only after Phase 9D-5b-iii schema flip (post type-chain migration 9D-5b-ii).
+ * Pre-9D entities without `layerId` resolve to undefined — callers must handle
+ * with a safe fallback (e.g. DXF_DEFAULT_LAYER).
  */
 export function resolveEntityLayerName(
   entity: { layerId?: string; layer?: string } | null | undefined
@@ -109,7 +110,7 @@ export function resolveEntityLayerName(
     const layer = layersById.get(entity.layerId);
     if (layer) return layer.name;
   }
-  return entity.layer;
+  return undefined;
 }
 
 export function getAllLayers(): ReadonlyArray<SceneLayer> {

@@ -1,15 +1,15 @@
 /**
- * resolveEntityLayerName — ADR-358 Phase 9D-3 dual-read contract.
+ * resolveEntityLayerName — ADR-358 Phase 9D-5b-iii id-only contract.
  *
- * Verifies the id-first / name-fallback resolution helper used by all
- * reader sites during the transitional Phase 9D-3 → 9D-5 sweep.
+ * Post-schema-flip: resolver no longer reads `entity.layer` fallback.
+ * Only `entity.layerId` + LayerStore lookup is used.
  *
  * Cases:
- *   1. Legacy entity (only `.layer`) → returns `.layer`
- *   2. Post-9D entity (only `.layerId` registered in store) → returns store name
+ *   1. Entity only has `.layer` (no layerId) → undefined (legacy fallback dropped)
+ *   2. Post-9D entity (`.layerId` registered in store) → returns store name
  *   3. Mixed (both set, id resolves) → id wins
- *   4. Stale id (not in store) → falls back to `.layer`
- *   5. Empty entity → returns undefined (null-safe)
+ *   4. Stale id (not in store, `.layer` present) → undefined (no fallback post flip)
+ *   5. Empty entity → undefined (null-safe)
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
@@ -24,10 +24,10 @@ beforeEach(() => {
   __resetLayerStoreForTesting();
 });
 
-describe('resolveEntityLayerName — ADR-358 Phase 9D-3 dual-read', () => {
-  it('returns legacy `.layer` when only legacy field is set', () => {
+describe('resolveEntityLayerName — ADR-358 Phase 9D-5b-iii id-only', () => {
+  it('returns undefined when only legacy `.layer` is set (no layerId fallback post-flip)', () => {
     const entity = { layer: 'Walls' };
-    expect(resolveEntityLayerName(entity)).toBe('Walls');
+    expect(resolveEntityLayerName(entity)).toBeUndefined();
   });
 
   it('returns SceneLayer.name when `.layerId` resolves via LayerStore', () => {
@@ -42,15 +42,13 @@ describe('resolveEntityLayerName — ADR-358 Phase 9D-3 dual-read', () => {
     const layer = createSceneLayer({ id: 'lyr_foundations_001', name: 'Foundations' });
     setLayers([layer]);
 
-    // entity.layer is stale legacy name — id-first must override
     const entity = { layerId: layer.id, layer: 'StaleOldName' };
     expect(resolveEntityLayerName(entity)).toBe('Foundations');
   });
 
-  it('falls back to `.layer` when `.layerId` does not resolve in store', () => {
-    // stale id not registered; legacy `.layer` is the safety net
+  it('returns undefined when `.layerId` does not resolve in store (no legacy fallback)', () => {
     const entity = { layerId: 'lyr_missing_xyz', layer: 'FallbackName' };
-    expect(resolveEntityLayerName(entity)).toBe('FallbackName');
+    expect(resolveEntityLayerName(entity)).toBeUndefined();
   });
 
   it('returns undefined for entity with neither field set', () => {

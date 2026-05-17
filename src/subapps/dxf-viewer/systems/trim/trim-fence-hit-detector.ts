@@ -96,7 +96,6 @@ function buildFenceEdge(start: Point2D, end: Point2D): CuttingEdge {
     type: 'line',
     start,
     end,
-    layer: '',
   };
   return { sourceEntityId: FENCE_ENTITY_ID, entity, extended: false };
 }
