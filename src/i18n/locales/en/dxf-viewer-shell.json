@@ -116,6 +116,44 @@
         "working": "Working",
         "custom": "Custom"
       }
+    },
+    "manage": {
+      "title": "Manage Layer States",
+      "searchPlaceholder": "Search…",
+      "categoryFilterAll": "All categories",
+      "empty": "No layer states",
+      "loading": "Loading…",
+      "column": {
+        "name": "Name",
+        "category": "Category",
+        "tags": "Tags",
+        "updated": "Updated",
+        "createdBy": "Created by",
+        "actions": "Actions"
+      },
+      "bulkBar": {
+        "selected": "{count} selected",
+        "delete": "Delete"
+      },
+      "contextMenu": {
+        "rename": "Rename",
+        "editCategory": "Edit category",
+        "duplicate": "Duplicate",
+        "delete": "Delete"
+      },
+      "restoreDialog": {
+        "title": "Restore State",
+        "description": "Apply this saved state to the current scene.",
+        "createMissingLayersLabel": "Create missing layers",
+        "createMissingLayersHint": "Layers in this state that don't exist will be created",
+        "unmatchedWarning": "{count} layer(s) from this state are not in the current scene",
+        "entryCount": "{count} layers",
+        "apply": "Apply",
+        "cancel": "Cancel"
+      },
+      "toastDuplicated": "Duplicated: \"{name}\"",
+      "toastBulkDeleted": "Deleted {count} state(s)",
+      "errorBulkDelete": "Failed to delete some states"
     }
   },
   "toolbar": {
@@ -429,7 +467,8 @@
       "textEditor": "Text Editor",
       "arrayEditor": "Array",
       "stairProperties": "Stair Properties",
-      "validationBadge": "Code violation"
+      "validationBadge": "Code violation",
+      "dimension": "Dimension"
     },
     "panels": {
       "draw": "Draw",
@@ -474,7 +513,11 @@
       "developer": "Developer",
       "ai": "AI",
       "window": "Window",
-      "dimensions": "Dimensions"
+      "dimensions": "Dimensions",
+      "dimStyle": "Style",
+      "dimOverride": "Override",
+      "dimText": "Text",
+      "dimProperties": "Properties"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -759,6 +802,38 @@
       },
       "dimBaseline": "Baseline",
       "dimContinued": "Continued",
+      "dimStyleChooser": "Dimension Style",
+      "dimApplyStyle": "Apply Style",
+      "dimEditStyle": "Edit Style...",
+      "dimColorOverride": "Color",
+      "dimArrowStyle": "Arrow",
+      "dimResetOverrides": "Reset Overrides",
+      "dimTextHeight": "Text Height",
+      "dimTextPosition": "Text Position",
+      "dimTextRotation": "Text Rotation",
+      "dimResetTextPosition": "Reset Text Position",
+      "dimLayer": "Layer",
+      "dimAnnotationScale": "Scale",
+      "dimOpenPanel": "Properties...",
+      "dimContextual": {
+        "styleOptions": {
+          "iso": "ISO 129",
+          "asme": "ASME Y14.5",
+          "architectural": "Architectural"
+        },
+        "arrowOptions": {
+          "closedFilled": "Closed Filled",
+          "open": "Open",
+          "dot": "Dot",
+          "slash": "Slash",
+          "none": "None"
+        },
+        "textPositionOptions": {
+          "above": "Above",
+          "centered": "Centered",
+          "below": "Below"
+        }
+      },
       "dropdown": {
         "openVariants": "Open variants"
       },
