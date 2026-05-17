@@ -196,9 +196,9 @@ export function useLayerOperations({
     const entity = scene.entities.find(e => e.id === entityId);
     if (!entity) return;
 
-    const existingLayerWithColor = Object.keys(scene.layers).find(layerName =>
-      scene.layers[layerName].color === color
-    );
+    // ADR-358 Phase 9E-4: id-first iteration (layersById preferred, layers fallback).
+    const existingLayerWithColor = Object.values(scene.layersById ?? scene.layers ?? {})
+      .find((l) => l.color === color)?.name;
 
     let targetLayerName = existingLayerWithColor;
     let updatedLayers = { ...scene.layers };

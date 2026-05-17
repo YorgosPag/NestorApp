@@ -17,6 +17,8 @@ import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
+// ADR-358 Phase 9E-4: compat bridge for name-keyed layer lookup.
+import { getSceneLayerByName } from '../../../utils/scene-layer-utils';
 
 export interface LayerItemProps {
   layerName: string;
@@ -118,7 +120,9 @@ export function LayerItem({
   const iconSizes = useIconSizes();
   // 🌐 i18n
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  const layer = scene.layers[layerName];
+  // ADR-358 Phase 9E-4: compat bridge — name-keyed lookup (Phase 9E-6 will switch to id-keyed).
+  // Non-null: LayerItem is only rendered for layers that exist in the scene.
+  const layer = getSceneLayerByName(scene, layerName)!;
   const isEditing = editingLayer === layerName;
   const showColorPicker = colorPickerLayer === layerName;
   

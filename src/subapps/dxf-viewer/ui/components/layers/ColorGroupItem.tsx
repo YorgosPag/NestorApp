@@ -23,6 +23,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
+// ADR-358 Phase 9E-4: compat bridge for name-keyed layer lookup.
+import { getSceneLayerByName } from '../../../utils/scene-layer-utils';
 
 interface ColorGroupItemProps extends Pick<ColorGroupCommonProps, 
   'setExpandedColorGroups' | 'setColorPickerColorGroup' | 'setEditingColorGroup' | 
@@ -70,14 +72,15 @@ export function ColorGroupItem({
   // 🌐 i18n
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
 
-  const representativeColor = scene.layers[layerNames[0]]?.color || DEFAULT_LAYER_COLOR;
+  // ADR-358 Phase 9E-4: compat bridge — name-keyed lookups (Phase 9E-6 will switch to id-keyed).
+  const representativeColor = getSceneLayerByName(scene, layerNames[0])?.color || DEFAULT_LAYER_COLOR;
 
   // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
   const colorBgClass = useDynamicBackgroundClass(representativeColor);
-  
+
   // undefined treated as visible (canvas defaults entity.visible ?? true)
-  const allVisible = layerNames.every((layerName: string) => scene.layers[layerName]?.visible !== false);
-  const someVisible = layerNames.some((layerName: string) => scene.layers[layerName]?.visible !== false);
+  const allVisible = layerNames.every((layerName: string) => getSceneLayerByName(scene, layerName)?.visible !== false);
+  const someVisible = layerNames.some((layerName: string) => getSceneLayerByName(scene, layerName)?.visible !== false);
 
   const handleExpandToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
