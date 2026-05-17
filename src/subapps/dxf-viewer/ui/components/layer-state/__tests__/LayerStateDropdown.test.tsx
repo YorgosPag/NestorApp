@@ -11,8 +11,55 @@
  * unit suites; this file only checks the React glue.
  */
 
+// Phase 13B.3 — `LayerStateDropdown.tsx` resolves auth via `useAuth` +
+// `useCompanyId`; we stub the chain (incl. firebase) so the harness doesn't
+// need a real AuthProvider. Mocks declared before any other imports so the
+// swc-jest hoister keeps them ahead of the source-file resolution chain.
+jest.mock('@/lib/firebase', () => ({
+  db: {},
+  auth: { onAuthStateChanged: jest.fn() },
+  functions: {},
+  storage: {},
+  default: {},
+}));
+jest.mock('firebase/auth', () => ({
+  getAuth: jest.fn(() => ({ onAuthStateChanged: jest.fn() })),
+  connectAuthEmulator: jest.fn(),
+  signInWithEmailAndPassword: jest.fn(),
+  signOut: jest.fn(),
+  onAuthStateChanged: jest.fn(),
+  GoogleAuthProvider: jest.fn(),
+  signInWithPopup: jest.fn(),
+}));
+jest.mock('@/auth/contexts/AuthContext', () => ({
+  AuthContext: { Provider: ({ children }: { children: unknown }) => children },
+  useAuth: () => ({ user: { uid: 'usr_test' } }),
+}));
+jest.mock('@/auth/hooks/useAuth', () => ({
+  useAuth: () => ({ user: { uid: 'usr_test' } }),
+}));
+jest.mock('@/contexts/SuperAdminCompanyContext', () => ({
+  useSuperAdminCompany: () => ({ isSuperAdmin: false, activeCompanyId: null }),
+}));
+jest.mock('@/hooks/useCompanyId', () => ({
+  useCompanyId: () => ({ companyId: 'comp_test', source: 'user' }),
+}));
+jest.mock('../useLayerStateTemplates', () => ({
+  useLayerStateTemplates: () => ({
+    isReady: true,
+    categories: [],
+    saveCurrentAsTemplate: jest.fn(),
+    importTemplateAsState: jest.fn(),
+    searchTemplateSummaries: jest.fn(async () => []),
+    refreshCategories: jest.fn(async () => undefined),
+  }),
+}));
+jest.mock('@/i18n', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
+
 import React from 'react';
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { LayerStateDropdown } from '../LayerStateDropdown';
@@ -27,10 +74,6 @@ import { __resetLayerStoreForTesting, setLayers } from '../../../../stores/Layer
 import { __resetLayerStatePersistenceForTesting } from '../../../../services/layer-state-persistence';
 import { createSceneLayer } from '../../../../types/entities';
 import type { ICommand } from '../../../../core/commands/interfaces';
-
-jest.mock('@/i18n', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}));
 
 beforeEach(() => {
   __resetLayerStoreForTesting();
