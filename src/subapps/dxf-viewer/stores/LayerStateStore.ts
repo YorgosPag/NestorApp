@@ -190,6 +190,33 @@ export function deleteLayerStateById(id: string): void {
   }
 }
 
+/** Duplicate a saved state with a new name. `nameSuffix` is passed by the UI (localized). */
+export function duplicateLayerState(id: string, nameSuffix: string): LayerState | null {
+  if (!projectId) return null;
+  const source = cached.states.find((s) => s.id === id);
+  if (!source) return null;
+  const copy = createLayerState({
+    name: `${source.name} ${nameSuffix}`,
+    snapshot: source.snapshot,
+    createdByUserId: currentUserId,
+    description: source.description,
+    category: source.category,
+    tags: source.tags,
+  });
+  persistSave(projectId, copy);
+  return copy;
+}
+
+/** Update the category of a saved state. Bumps `updatedAt`. */
+export function updateLayerStateCategory(id: string, category: string): LayerState | null {
+  if (!projectId) return null;
+  const current = cached.states.find((s) => s.id === id);
+  if (!current) return null;
+  const next: LayerState = { ...current, category: category.trim() || undefined, updatedAt: nowISO() };
+  persistSave(projectId, next);
+  return next;
+}
+
 /**
  * Mark a state as the current applied one. Called by `RestoreLayerStateCommand`
  * after a successful apply; the store does NOT mutate `LayerStore` itself.
