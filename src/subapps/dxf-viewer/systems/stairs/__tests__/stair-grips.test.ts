@@ -123,9 +123,13 @@ describe('stair-grips (Phase 5b)', () => {
     expect(newParams.totalRun).toBeCloseTo(280 * 3, 4);
   });
 
-  it('9. stair-split drag on l-shape → updates flightSplit clamped to [0.1, 0.9]', () => {
+  it('9. stair-split drag on l-shape → updates flightSplit to integer step counts summing to stepCount', () => {
+    // ADR-358 Phase 3d hotfix — `flightSplit` carries integer step counts
+    // (consumed by `new Array(n_i)` in flight builders), not ratios. Pushing
+    // the split far past the end clamps the ratio to MAX_FLIGHT_SPLIT_RATIO
+    // and then rounds to step counts that satisfy `n1 + n2 === stepCount`
+    // and `n_i >= 1`.
     const entity = makeLShape();
-    // Push the split far past the end so it gets clamped.
     const newParams = applyStairGripDrag('stair-split', {
       originalParams: entity.params,
       delta: { x: 100000, y: 0 },
@@ -134,9 +138,12 @@ describe('stair-grips (Phase 5b)', () => {
     expect(newParams.variant.kind).toBe('l-shape');
     if (newParams.variant.kind === 'l-shape') {
       const [a, b] = newParams.variant.flightSplit;
-      expect(a).toBeLessThanOrEqual(0.9);
-      expect(a).toBeGreaterThanOrEqual(0.1);
-      expect(a + b).toBeCloseTo(1, 6);
+      expect(Number.isInteger(a)).toBe(true);
+      expect(Number.isInteger(b)).toBe(true);
+      expect(a).toBeGreaterThanOrEqual(1);
+      expect(b).toBeGreaterThanOrEqual(1);
+      expect(a).toBeLessThanOrEqual(newParams.stepCount - 1);
+      expect(a + b).toBe(newParams.stepCount);
     }
   });
 
