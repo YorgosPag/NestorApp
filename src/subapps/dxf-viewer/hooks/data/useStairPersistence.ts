@@ -38,6 +38,7 @@ import type {
   StairValidationState,
 } from '../../types/stair';
 import { computeStairGeometry } from '../../systems/stairs/StairGeometryService';
+import { EventBus } from '../../systems/events/EventBus';
 import {
   createStairFirestoreService,
   entityToSaveInput,
@@ -207,8 +208,16 @@ export function useStairPersistence(
 
         for (const [id, entity] of sceneStairs) {
           if (docsById.has(id)) continue;
-          // Doc deleted remotely. Preserve only if we're holding a local edit.
-          if (dirty.has(id)) {
+          // ADR-358 Phase Q17 9B-6 — preserve local stairs that have NEVER
+          // been persisted yet (optimistic insert). Without this guard, a
+          // freshly drawn stair flickers in then out: tool adds it to the
+          // local scene → snapshot fires → diff-merge sees "in scene but
+          // not in docs" and drops it. Industry pattern (Revit transaction
+          // model + Firestore optimistic UI 5/5): local-never-saved always
+          // wins until either a save round-trip completes OR the user
+          // explicitly deletes it via a delete command.
+          const neverSaved = !lastSavedParamsRef.current.has(id);
+          if (dirty.has(id) || neverSaved) {
             nextStairs.push(entity);
           } else {
             mutated = true;
@@ -332,6 +341,23 @@ export function useStairPersistence(
       saveTimerRef.current = null;
     }
     await persist(stair);
+  }, [persist]);
+
+  // ADR-358 Phase Q17 9B-6 — listen for `drawing:entity-created` so the
+  // first persistence of a freshly drawn stair fires immediately, without
+  // requiring the user to select + edit it. Pairs with the diff-merge
+  // preserve guard above: the local stair survives the next Firestore
+  // snapshot AND lands in `floorplan_stairs/{stairId}` on the same tick.
+  useEffect(() => {
+    const cleanup = EventBus.on('drawing:entity-created', (payload) => {
+      if (payload.tool !== 'stair') return;
+      const entity = payload.entity as StairEntity | undefined;
+      if (!entity || (entity as { type?: string }).type !== 'stair') return;
+      if (!serviceRef.current) return;
+      dirtyIdsRef.current.add(entity.id);
+      void persist(entity);
+    });
+    return cleanup;
   }, [persist]);
 
   // Unmount cleanup — release lock + flush pending timers.

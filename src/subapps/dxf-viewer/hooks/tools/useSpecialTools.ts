@@ -17,6 +17,7 @@
  */
 
 import { useEffect } from 'react';
+import { EventBus } from '../../systems/events/EventBus';
 import { useCircleTTT } from '../drawing/useCircleTTT';
 import { clearAutoAreaState } from '../../systems/auto-area/AutoAreaResultStore';
 import { clearAutoAreaPreview } from '../../systems/auto-area/AutoAreaPreviewStore';
@@ -276,6 +277,15 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       };
       levelManager.setLevelScene(levelId, updatedScene);
       console.debug('[StairTool] Stair added to scene:', stairEntity.id);
+      // ADR-358 Phase Q17 9B-6 — broadcast creation so persistence layer
+      // can immediately schedule the Firestore save. Without this, a freshly
+      // drawn stair is local-only until the user explicitly selects + edits
+      // it, and a Firestore snapshot in between drops it from the scene
+      // (see useStairPersistence diff-merge guard).
+      EventBus.emit('drawing:entity-created', {
+        entity: stairEntity,
+        tool: 'stair',
+      });
     },
   });
 
