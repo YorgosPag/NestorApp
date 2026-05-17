@@ -147,7 +147,9 @@
         "egress": {
           "widthBelowOccupancy": "Ανεπαρκές πλάτος σκάλας για το φορτίο πληρότητας ({occupancyLoad} άτομα)."
         },
-        "headroomBelowMin": "Ελεύθερο ύψος (headroom) κάτω από το ελάχιστο όριο του κώδικα."
+        "headroomBelowMin": "Ελεύθερο ύψος (headroom) κάτω από το ελάχιστο όριο του κώδικα.",
+        "singleFlightOverLimit": "Πάρα πολλά σκαλοπάτια σε ένα σκέλος — απαιτείται πλατύσκαλο (landing) σύμφωνα με τον κώδικα.",
+        "totalRiseOverStoryHeight": "Το συνολικό ύψος της σκάλας υπερβαίνει το ύψος ορόφου που έχει δηλωθεί."
       }
     },
     "circle": {

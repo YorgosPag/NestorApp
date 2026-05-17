@@ -16,6 +16,10 @@ import type { StairGeometry, StairParams } from '../../../types/stair';
 import { computeStairGeometry } from '../../../systems/stairs/StairGeometryService';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { DEFAULT_MERGE_CONFIG } from '../interfaces';
+// ADR-358 Phase 6.1 — re-validate on every grip/edit commit so the red
+// badge (Phase 7b1) reflects the live state and the user sees overflow
+// warnings the moment they exceed code/story-height limits.
+import { validateStairParams } from '../../../systems/stairs/stair-validator';
 
 export class UpdateStairParamsCommand implements ICommand {
   readonly id: string;
@@ -38,9 +42,11 @@ export class UpdateStairParamsCommand implements ICommand {
 
   execute(): void {
     const geometry: StairGeometry = computeStairGeometry(this.params);
+    const validation = validateStairParams(this.params);
     this.sceneManager.updateEntity(this.stairId, {
       params: this.params,
       geometry,
+      validation,
     } as unknown as Record<string, unknown>);
     this.wasExecuted = true;
   }
@@ -48,17 +54,21 @@ export class UpdateStairParamsCommand implements ICommand {
   undo(): void {
     if (!this.wasExecuted) return;
     const geometry: StairGeometry = computeStairGeometry(this.previousParams);
+    const validation = validateStairParams(this.previousParams);
     this.sceneManager.updateEntity(this.stairId, {
       params: this.previousParams,
       geometry,
+      validation,
     } as unknown as Record<string, unknown>);
   }
 
   redo(): void {
     const geometry: StairGeometry = computeStairGeometry(this.params);
+    const validation = validateStairParams(this.params);
     this.sceneManager.updateEntity(this.stairId, {
       params: this.params,
       geometry,
+      validation,
     } as unknown as Record<string, unknown>);
   }
 

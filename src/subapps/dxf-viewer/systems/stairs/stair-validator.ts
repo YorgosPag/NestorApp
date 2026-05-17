@@ -55,6 +55,66 @@ const MIN_HEADROOM_MM: Readonly<Record<StairCodeProfile, number>> = {
 
 const CEILING_LAYER_RE = /ceiling|slab|roof/i;
 
+// ─── Single-flight max risers (industry: landing required beyond limit) ──────
+//
+// Building codes cap the number of risers in one uninterrupted flight to
+// force a landing — fatigue + fall-safety + egress rules. Source:
+//   NOK (Greek)  art. 18 §1 — 18 max
+//   IBC §1011.8 — 16 max (12 in some occupancies; we use the relaxed 16)
+//   Eurocode EN 17210 §6.6.4 — 16 max
+//   ADA / ICC A117.1 — 16 max
+//   AS1657      — 18 max
+//   DIN 18065   — 18 max
+//   NBC         — 18 max
+//   NFPA 101    — 16 max (means-of-egress)
+//
+// When `params.stepCount` exceeds the limit, a non-blocking code-violation
+// surfaces in the red badge so the user knows the flight needs a landing.
+const MAX_FLIGHT_RISERS: Readonly<Record<StairCodeProfile, number>> = {
+  nok: 18,
+  ibc: 16,
+  eurocode: 16,
+  ada: 16,
+  nbc: 18,
+  nfpa: 16,
+  as1657: 18,
+  din: 18,
+  none: Number.POSITIVE_INFINITY,
+};
+
+function checkSingleFlightLimit(
+  params: Readonly<StairParams>,
+): readonly string[] {
+  const limit = MAX_FLIGHT_RISERS[params.codeProfile];
+  if (!Number.isFinite(limit)) return [];
+  if (params.stepCount > limit) {
+    return ['tools.stair.validator.singleFlightOverLimit'];
+  }
+  return [];
+}
+
+// ─── Story-height overflow (G11 multi-storey check) ──────────────────────────
+//
+// When the stair declares a `multiStoryConfig`, the parametric `totalRise`
+// must not exceed `storyHeight × storyCount`. Industry: Revit Multistory,
+// ArchiCAD Multi-Level — both refuse to commit a flight that overflows the
+// declared story group. We surface as non-blocking code-violation so the
+// user can resize via grip / panel without losing work.
+function checkStoryHeightOverflow(
+  params: Readonly<StairParams>,
+): readonly string[] {
+  const cfg = params.multiStoryConfig;
+  if (!cfg) return [];
+  const allowed = cfg.storyHeight * cfg.storyCount;
+  if (!Number.isFinite(allowed) || allowed <= 0) return [];
+  // 1 mm tolerance (in scene units → divide by 1000 for metres etc.).
+  const tolerance = Math.max(0.001, allowed * 1e-6);
+  if (params.totalRise > allowed + tolerance) {
+    return ['tools.stair.validator.totalRiseOverStoryHeight'];
+  }
+  return [];
+}
+
 // ─── Headroom check (cheap 2D, Phase 6) ──────────────────────────────────────
 
 function extractEntityElevation(entity: Readonly<Entity>): number | null {
@@ -113,12 +173,16 @@ export function validateStairParams(
     occupancyLoad,
   });
   const headroomViolations = checkHeadroom(params, contextEntities);
+  const flightLimitViolations = checkSingleFlightLimit(params);
+  const storyOverflowViolations = checkStoryHeightOverflow(params);
   const violationKeys: readonly string[] = [
     ...gate.hardErrors,
     ...gate.codeViolations,
     ...gate.adaViolations,
     ...gate.egressViolations,
     ...headroomViolations,
+    ...flightLimitViolations,
+    ...storyOverflowViolations,
   ];
   return {
     hasCodeViolations: violationKeys.length > 0,

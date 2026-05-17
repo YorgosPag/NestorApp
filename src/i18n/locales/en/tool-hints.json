@@ -157,7 +157,9 @@
         "egress": {
           "widthBelowOccupancy": "Insufficient stair width for declared occupancy load ({occupancyLoad} persons)."
         },
-        "headroomBelowMin": "Headroom clearance is below the code minimum."
+        "headroomBelowMin": "Headroom clearance is below the code minimum.",
+        "singleFlightOverLimit": "Too many risers in one flight — code requires a landing.",
+        "totalRiseOverStoryHeight": "Total rise exceeds the declared story height."
       }
     },
     "circle": {
