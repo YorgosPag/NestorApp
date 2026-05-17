@@ -231,6 +231,17 @@ export const generateDimStyleId = () => enterpriseIdService.generateDimStyleId()
 export const generateCenterMarkId = () => enterpriseIdService.generateCenterMarkId();
 export const generateCenterLineId = () => enterpriseIdService.generateCenterLineId();
 
+// DXF BIM Drawing Mode (ADR-363)
+export const generateWallId = () => enterpriseIdService.generateWallId();
+export const generateOpeningId = () => enterpriseIdService.generateOpeningId();
+export const generateSlabId = () => enterpriseIdService.generateSlabId();
+export const generateSlabOpeningId = () => enterpriseIdService.generateSlabOpeningId();
+export const generateColumnId = () => enterpriseIdService.generateColumnId();
+export const generateBeamId = () => enterpriseIdService.generateBeamId();
+export const generateBimPresetId = () => enterpriseIdService.generateBimPresetId();
+export const generateBimMaterialId = () => enterpriseIdService.generateBimMaterialId();
+export const generateBimSettingsId = () => enterpriseIdService.generateBimSettingsId();
+
 // Optimistic & Temporary
 export const generateOptimisticId = () => enterpriseIdService.generateOptimisticId();
 export const generateTempId = () => enterpriseIdService.generateTempId();
