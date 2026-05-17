@@ -44,7 +44,7 @@ import {
   buildCutLineForFlights,
   buildStringersFromWalkline,
 } from './stair-geometry-shared';
-import { buildTreadLabels } from './stair-geometry-labels';
+import { buildTreadLabelsWithLandings } from './stair-geometry-labels';
 
 export function computeUShape(
   params: Readonly<StairParams>,
@@ -73,8 +73,9 @@ export function computeUShape(
   const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
   const split = splitTreadsByCutPlaneUShape(allTreads, cutPlaneHeight);
   const cutLine = buildCutLineForFlights(allTreads, [n1, n2], [u1, u2], width, cutPlaneHeight);
-  const treadLabels = buildTreadLabels(
+  const treadLabels = buildTreadLabelsWithLandings(
     allTreads,
+    [landing],
     [n1, n2],
     params.treadLabelDisplay,
     params.treadLabelEveryN,
