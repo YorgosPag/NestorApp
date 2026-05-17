@@ -87,7 +87,7 @@ export function StairAdvancedPanel({
           </h3>
         </header>
       )}
-      <StairWarningsSection stair={stair} />
+      <StairWarningsSection stair={stair} dispatchPatch={dispatchPatch} />
       {persistence && (
         <StairPersistenceSection
           stair={stair}

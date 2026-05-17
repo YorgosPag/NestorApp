@@ -653,7 +653,8 @@
     "emptyState": "Select a stair to see its properties.",
     "sections": {
       "warnings": {
-        "title": "Warnings"
+        "title": "Warnings",
+        "autoFix": "Auto-Fix"
       },
       "treadLabelSize": {
         "title": "Number Size",

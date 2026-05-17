@@ -12,17 +12,32 @@
  * single line; clicking a future "Fix" affordance is deferred to Phase 9.
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { StairEntity } from '../../../types/entities';
+import type { DispatchStairParamPatch } from '../commands/dispatchStairParamPatch';
+import { autoFixStairParams } from '../../../systems/stairs/stair-auto-fix';
 
 export interface StairWarningsSectionProps {
   readonly stair: StairEntity;
+  readonly dispatchPatch?: DispatchStairParamPatch;
 }
 
-export function StairWarningsSection({ stair }: StairWarningsSectionProps): React.ReactElement | null {
+export function StairWarningsSection({ stair, dispatchPatch }: StairWarningsSectionProps): React.ReactElement | null {
   const { t } = useTranslation(['dxf-viewer-shell', 'tool-hints']);
   const keys = stair.validation?.violationKeys ?? [];
+
+  const onAutoFix = useCallback(() => {
+    if (!dispatchPatch) return;
+    const fixed = autoFixStairParams(stair.params);
+    if (fixed === stair.params) return;
+    dispatchPatch(stair, {
+      rise: fixed.rise,
+      tread: fixed.tread,
+      width: fixed.width,
+      stepCount: fixed.stepCount,
+    });
+  }, [stair, dispatchPatch]);
 
   if (keys.length === 0) return null;
 
@@ -30,13 +45,24 @@ export function StairWarningsSection({ stair }: StairWarningsSectionProps): Reac
     <section
       role="alert"
       aria-label={t('stairAdvancedPanel.sections.warnings.title')}
-      className="flex flex-col gap-1 rounded border border-rose-600/40 bg-rose-900/20 p-2"
+      className="flex flex-col gap-1.5 rounded border border-rose-600/40 bg-rose-900/20 p-2"
     >
-      <header className="flex items-center gap-2">
-        <span aria-hidden="true" className="text-rose-300">!</span>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-rose-200">
-          {t('stairAdvancedPanel.sections.warnings.title')}
-        </h4>
+      <header className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2">
+          <span aria-hidden="true" className="text-rose-300">!</span>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-rose-200">
+            {t('stairAdvancedPanel.sections.warnings.title')}
+          </h4>
+        </span>
+        {dispatchPatch && (
+          <button
+            type="button"
+            onClick={onAutoFix}
+            className="rounded border border-rose-500/60 bg-rose-700/50 px-2 py-1 text-xs font-medium text-rose-50 hover:bg-rose-600/70"
+          >
+            {t('stairAdvancedPanel.sections.warnings.autoFix')}
+          </button>
+        )}
       </header>
       <ul className="flex flex-col gap-1 text-xs text-rose-100">
         {keys.map((key) => {
