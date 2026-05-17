@@ -13,6 +13,7 @@ export type {
   BimEntity,
   BimValidation,
   BimQuantityTakeoff,
+  BimLock,
   SoftLock,
   Point3D,
   Polyline3D,
@@ -21,3 +22,16 @@ export type {
   AtoeCategoryCode,
   BimParams,
 } from './types/bim-base';
+
+// Stair types (Phase 0.5 — migrated from types/stair.ts)
+export type {
+  StairKind,
+  StairParams,
+  StairVariantParams,
+  StairGeometry,
+  StairDoc,
+  StairPresetDoc,
+  StairQTO,
+  StairValidationState,
+  StairEditingLock,
+} from './types/stair-types';

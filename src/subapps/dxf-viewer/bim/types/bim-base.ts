@@ -41,6 +41,9 @@ export type BimElementType = 'wall' | 'opening' | 'slab' | 'slab-opening' | 'col
 /**
  * Union of all BIM sub-type discriminators (one per element type).
  * Narrowed to specific kind union at the concrete entity interface level.
+ *
+ * NOTE: Does NOT include stair kinds — stair uses its own StairKind union.
+ * BimEntity<TKind> uses `TKind extends string` (not this) so stair can extend BimEntity too.
  */
 export type BimElementKind =
   | 'straight' | 'curved' | 'polyline'           // wall kinds
@@ -78,8 +81,13 @@ export interface BimQuantityTakeoff {
 
 // ─── Multi-user soft lock (ADR-358 G24 pattern) ───────────────────────────────
 
-export interface SoftLock {
+/** Minimal lock shape — all BIM entities satisfy this. Concrete types can extend it. */
+export interface BimLock {
   readonly userId: string;
+}
+
+/** Full soft lock for Phase 1+ BIM entities (Wall/Slab/Column/Beam/Opening). */
+export interface SoftLock extends BimLock {
   readonly displayName: string;
   readonly lockedAt: Timestamp;
 }
@@ -88,21 +96,24 @@ export interface SoftLock {
 
 /**
  * Generic parametric building element.
- * TKind narrows to the element's sub-type union (e.g. WallKind).
+ * TKind narrows to the element's sub-type union (e.g. WallKind, StairKind).
  * TParams holds user-editable parameters.
  * TGeometry holds computed geometry cache (re-derivable from params on corruption).
+ * TQto holds quantity take-off metadata (defaults to BimQuantityTakeoff; stair uses StairQTO).
+ *
+ * Constraint: TKind extends string (not BimElementKind) so that StairKind can also use this generic.
  */
-export interface BimEntity<TKind extends BimElementKind, TParams, TGeometry>
+export interface BimEntity<TKind extends string, TParams, TGeometry, TQto = BimQuantityTakeoff>
   extends BaseEntity {
   readonly kind: TKind;
   readonly params: TParams;
   /** Computed geometry cache. Source of truth = params. */
   readonly geometry: TGeometry;
   readonly validation: BimValidation;
-  /** BOQ feed metadata — populated after first save, updated on param change */
-  readonly qto: BimQuantityTakeoff;
+  /** BOQ feed metadata — optional; populated after first save, updated on param change */
+  readonly qto?: TQto;
   /** Display-only multi-user lock (never blocks writes) */
-  readonly editingBy?: SoftLock;
+  readonly editingBy?: BimLock;
   // Firestore tenant fields (present on persisted entities)
   readonly companyId?: string;
   readonly projectId?: string;
