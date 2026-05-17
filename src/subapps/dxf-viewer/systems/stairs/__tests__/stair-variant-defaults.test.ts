@@ -9,7 +9,11 @@
  * @see ../stair-variant-defaults.ts
  */
 
-import { buildDefaultVariantFor } from '../stair-variant-defaults';
+import {
+  buildDefaultVariantFor,
+  splitTwoFlightsWithLanding,
+  splitThreeFlightsWithLandings,
+} from '../stair-variant-defaults';
 import type { StairKind, StairParams } from '../../../types/stair';
 
 function makeParams(overrides?: {
@@ -69,21 +73,22 @@ describe('buildDefaultVariantFor — Phase 3d factory', () => {
     }
   });
 
-  it('Test 2: l-shape / u-shape splits stepCount into 2 flights summing to N', () => {
+  it('Test 2: l-shape / u-shape splits (stepCount-1) into 2 flights (γ landing consumes 1)', () => {
     for (const kind of ['l-shape', 'u-shape'] as const) {
       const v = buildDefaultVariantFor(kind, makeParams({ stepCount: 10 }));
       if (v.kind !== kind) throw new Error('narrow');
-      expect(v.flightSplit[0] + v.flightSplit[1]).toBe(10);
+      // Convention γ: n1 + landing(1) + n2 = stepCount → n1 + n2 = stepCount - 1
+      expect(v.flightSplit[0] + v.flightSplit[1]).toBe(9);
       expect(v.flightSplit[0]).toBeGreaterThanOrEqual(1);
       expect(v.flightSplit[1]).toBeGreaterThanOrEqual(1);
     }
   });
 
-  it('Test 3: gamma splits stepCount into 3 flights summing to N', () => {
+  it('Test 3: gamma splits (stepCount-2) into 3 flights (γ 2 landings consume 2)', () => {
     const v = buildDefaultVariantFor('gamma', makeParams({ stepCount: 12 }));
     if (v.kind !== 'gamma') throw new Error('narrow');
     const sum = v.flightSplit[0] + v.flightSplit[1] + v.flightSplit[2];
-    expect(sum).toBe(12);
+    expect(sum).toBe(10); // 12 - 2 landings
     for (const f of v.flightSplit) expect(f).toBeGreaterThanOrEqual(1);
   });
 
@@ -138,5 +143,37 @@ describe('buildDefaultVariantFor — Phase 3d factory', () => {
     buildDefaultVariantFor('spiral', params);
     buildDefaultVariantFor('triangular-outline', params);
     expect(JSON.stringify(params)).toBe(before);
+  });
+
+  // ADR-358 Phase 3e — split helpers (convention γ count conservation).
+
+  it('Test 11: splitTwoFlightsWithLanding(17) === [8, 8] (split of 16)', () => {
+    expect(splitTwoFlightsWithLanding(17)).toEqual([8, 8]);
+  });
+
+  it('Test 12: splitThreeFlightsWithLandings(17) sums to 15 (17 − 2 landings)', () => {
+    const s = splitThreeFlightsWithLandings(17);
+    expect(s[0] + s[1] + s[2]).toBe(15);
+    for (const f of s) expect(f).toBeGreaterThanOrEqual(1);
+  });
+
+  it('Test 13: splitTwoFlightsWithLanding(3) === [1, 1] (edge: stepCount=3 → split of 2)', () => {
+    expect(splitTwoFlightsWithLanding(3)).toEqual([1, 1]);
+  });
+
+  it('Test 14: splitTwoFlightsWithLanding(2) clamps to [1, 1] (min buildable)', () => {
+    expect(splitTwoFlightsWithLanding(2)).toEqual([1, 1]);
+  });
+
+  it('Test 15: splitThreeFlightsWithLandings(4) clamps to ≥1 per flight', () => {
+    const s = splitThreeFlightsWithLandings(4);
+    for (const f of s) expect(f).toBeGreaterThanOrEqual(1);
+  });
+
+  it('Test 16: switching straight (stepCount=17) → l-shape preserves total surfaces = 17', () => {
+    const v = buildDefaultVariantFor('l-shape', makeParams({ stepCount: 17 }));
+    if (v.kind !== 'l-shape') throw new Error('narrow');
+    // n1 + landing(1) + n2 = 17
+    expect(v.flightSplit[0] + 1 + v.flightSplit[1]).toBe(17);
   });
 });
