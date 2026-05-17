@@ -1164,6 +1164,16 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // — DXF Layer State Templates (ADR-358 §5.9 Q12 Phase 13B, 2026-05-17) —
   'dxf_layer_state_templates',  // lines 4154-4192 — tenant-scoped CRUD; full matrix in Phase 13B.X
   'dxf_template_categories',    // lines 4209-4236 — tenant-scoped read + admin write; full matrix in Phase 13B.X
+  // — BIM Drawing Mode (ADR-363 Phase 0, 2026-05-17) —
+  'floorplan_walls',            // lines 3536-3558 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
+  'floorplan_openings',         // lines 3560-3582 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
+  'floorplan_slabs',            // lines 3584-3606 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
+  'floorplan_slab_openings',    // lines 3608-3630 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
+  'floorplan_columns',          // lines 3632-3654 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
+  'floorplan_beams',            // lines 3656-3678 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
+  'bim_presets',                // lines 3680-3702 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
+  'bim_materials',              // lines 3704-3723 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
+  'bim_settings',               // lines 3725-3737 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
 ] as const;
 
 // ---------------------------------------------------------------------------
