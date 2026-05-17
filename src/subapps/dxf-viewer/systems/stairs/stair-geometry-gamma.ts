@@ -44,7 +44,7 @@ import {
   buildCutLineForFlights,
   buildStringersFromWalkline,
 } from './stair-geometry-shared';
-import { buildTreadLabels } from './stair-geometry-labels';
+import { buildTreadLabelsWithLandings } from './stair-geometry-labels';
 
 export function computeGamma(
   params: Readonly<StairParams>,
@@ -110,8 +110,9 @@ export function computeGamma(
   const cutLine = buildCutLineForFlights(
     allTreads, [n1, n2, n3], [u1, u2, u3], width, cutPlaneHeight,
   );
-  const treadLabels = buildTreadLabels(
+  const treadLabels = buildTreadLabelsWithLandings(
     allTreads,
+    [landing1, landing2],
     [n1, n2, n3],
     params.treadLabelDisplay,
     params.treadLabelEveryN,
