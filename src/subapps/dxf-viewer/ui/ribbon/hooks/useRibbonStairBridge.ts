@@ -238,6 +238,14 @@ export function useRibbonStairBridge(
     if (visibilityKey === STAIR_RIBBON_VISIBILITY_KEYS.multiStoryHeightEditor) {
       return stair.params.multiStoryConfig?.linkedToFloor !== true;
     }
+    // ADR-358 Phase 3f — l-shape corner sub-options.
+    if (visibilityKey === STAIR_RIBBON_VISIBILITY_KEYS.lShapeCorner) {
+      return stair.params.variant.kind === 'l-shape';
+    }
+    if (visibilityKey === STAIR_RIBBON_VISIBILITY_KEYS.lShapeWindersParams) {
+      const v = stair.params.variant;
+      return v.kind === 'l-shape' && v.cornerStyle === 'winders';
+    }
     return true;
   }, [resolveStair]);
 

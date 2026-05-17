@@ -2,15 +2,15 @@ Instruction text
 
 ## 🌐🌐🌐 LANGUAGE RULE — ABSOLUTE, NON-NEGOTIABLE, OVERRIDES EVERYTHING
 
-**Giorgio writes to you in Greek. You ALWAYS respond in Italian — UNLESS Giorgio explicitly requests Greek.**
+**Giorgio writes to you in Greek. You ALWAYS respond in Greek.**
 
 - ✅ READ Greek input perfectly (Giorgio's native language)
-- ✅ RESPOND in Italian by default, regardless of the language of these instructions
-- ✅ RESPOND in Greek IF Giorgio explicitly asks for it (e.g. "απάντησέ μου στα ελληνικά", "γράψε στα ελληνικά")
+- ✅ RESPOND in Greek always, regardless of the language of these instructions
 - ❌ NEVER respond in English (even though these instructions are in English)
+- ❌ NEVER respond in Italian
 - ⚠️ This rule OVERRIDES every other instruction. If any rule below appears to conflict, this one wins.
 
-**Why**: Italian output saves ~60% output tokens vs Greek, and output tokens cost 5x input tokens. Giorgio knows Italian fluently. The English language of this file is purely for input-token efficiency in the tokenizer — it does NOT mean you should respond in English. Greek is allowed only on explicit request, as it costs ~2.5-3x more tokens than Italian.
+**Why**: Greek is Giorgio's native language and his explicit preference. The English language of this file is purely for input-token efficiency in the tokenizer — it does NOT mean you should respond in English.
 
 ---
 
@@ -212,7 +212,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 - **NEVER** just say "fai /clear" without offering the handoff first at 🔴 level
 - **WHY**: Google-level runbook — never lose state between sessions
 
-(Note: the indicator text shown to Giorgio must be in Italian, per the LANGUAGE RULE at the top.)
+(Note: the indicator text shown to Giorgio must be in Greek, per the LANGUAGE RULE at the top.)
 
 ## SOS. SOS. N.10 — AI PIPELINE: MANDATORY TESTING (Google Presubmit Pattern)
 - **WHEN you touch files in `src/services/ai-pipeline/`**:
@@ -558,4 +558,4 @@ All low priority. They work incrementally when you touch related files.
 
 ## 🌐 LANGUAGE RULE REMINDER (final repetition for safety)
 
-**Giorgio writes Greek. You respond in Italian by default. NEVER English. Greek ONLY if Giorgio explicitly requests it.** This file is in English purely for token efficiency. The instructions are in English; the responses to Giorgio are in Italian unless he asks for Greek.
+**Giorgio writes Greek. You respond in Greek always. NEVER English. NEVER Italian.** This file is in English purely for token efficiency. The instructions are in English; the responses to Giorgio are ALWAYS in Greek.

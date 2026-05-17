@@ -102,7 +102,13 @@ export type ToolType =
   | 'polygon-crop'            // Crop scene to click-to-add-points polygon
   | 'lasso-crop'              // Crop scene to freehand drawn polygon
   // ADR-358: Stair drawing tool (Phase 0 stub — ribbon button + hotkey wire-up only)
-  | 'stair';
+  | 'stair'
+  // ADR-362 Phase D1: Enterprise Dimension System — Smart DIM + 4 manual overrides
+  | 'dim-smart'           // AutoCAD 2016+ Smart DIM — detector auto-picks type from hover
+  | 'dim-linear'          // Manual linear (horizontal/vertical/rotated)
+  | 'dim-aligned'         // Manual aligned (parallel to measured segment)
+  | 'dim-angular2L'       // Manual angular between 2 line picks
+  | 'dim-angular3P';      // Manual angular from vertex + 2 rays
 
 
 export interface ToolDefinition {

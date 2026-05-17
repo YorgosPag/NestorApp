@@ -11,8 +11,10 @@
 
 import {
   buildDefaultVariantFor,
+  buildLShapeWindersVariant,
   splitTwoFlightsWithLanding,
   splitThreeFlightsWithLandings,
+  splitTwoFlightsForWinders,
 } from '../stair-variant-defaults';
 import type { StairKind, StairParams } from '../../../types/stair';
 
@@ -175,5 +177,55 @@ describe('buildDefaultVariantFor — Phase 3d factory', () => {
     if (v.kind !== 'l-shape') throw new Error('narrow');
     // n1 + landing(1) + n2 = 17
     expect(v.flightSplit[0] + 1 + v.flightSplit[1]).toBe(17);
+  });
+
+  // ADR-358 Phase 3f — l-shape winders factory + split helper.
+
+  it('Test 17: buildDefaultVariantFor("l-shape") returns cornerStyle="landing" by default', () => {
+    const v = buildDefaultVariantFor('l-shape', makeParams({ stepCount: 10 }));
+    if (v.kind !== 'l-shape') throw new Error('narrow');
+    expect(v.cornerStyle).toBe('landing');
+  });
+
+  it('Test 18: buildLShapeWindersVariant seeds NOK defaults (winderCount=3, equal-going)', () => {
+    const params = makeParams({ stepCount: 17 });
+    const v = buildLShapeWindersVariant(params);
+    expect(v.kind).toBe('l-shape');
+    expect(v.cornerStyle).toBe('winders');
+    expect(v.winderCount).toBe(3);
+    expect(v.winderMethod).toBe('equal-going');
+    expect(v.flightSplit[0] + v.flightSplit[1]).toBe(14); // 17 − 3 winders
+    expect(v.flightSplit[0]).toBeGreaterThanOrEqual(1);
+    expect(v.flightSplit[1]).toBeGreaterThanOrEqual(1);
+  });
+
+  it('Test 19: buildLShapeWindersVariant preserves turnDirection from prev l-shape', () => {
+    const base = makeParams({ stepCount: 12 });
+    const prev: StairParams = {
+      ...base,
+      variant: {
+        kind: 'l-shape',
+        cornerStyle: 'landing',
+        turnDirection: 'left',
+        landingDepth: 'auto',
+        flightSplit: [5, 6],
+      },
+    };
+    const v = buildLShapeWindersVariant(prev);
+    expect(v.turnDirection).toBe('left');
+  });
+
+  it('Test 20: splitTwoFlightsForWinders(17, 3) === [7, 7]', () => {
+    expect(splitTwoFlightsForWinders(17, 3)).toEqual([7, 7]);
+  });
+
+  it('Test 21: splitTwoFlightsForWinders(5, 3) === [1, 1] (edge: stepCount=5)', () => {
+    expect(splitTwoFlightsForWinders(5, 3)).toEqual([1, 1]);
+  });
+
+  it('Test 22: splitTwoFlightsForWinders clamps so both flights ≥ 1', () => {
+    const s = splitTwoFlightsForWinders(4, 3);
+    expect(s[0]).toBeGreaterThanOrEqual(1);
+    expect(s[1]).toBeGreaterThanOrEqual(1);
   });
 });

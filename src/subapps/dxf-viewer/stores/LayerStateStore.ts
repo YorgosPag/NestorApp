@@ -35,6 +35,14 @@ import {
 } from '../services/layer-state-persistence';
 import { parseLasContent } from '../services/las-parser';
 import { serializeLasContent } from '../services/las-exporter';
+import type {
+  DxfLayerStateTemplateService,
+  SearchTemplatesQuery,
+} from '@/services/dxf-layer-state-template.service';
+import type {
+  LayerStateTemplate,
+  LayerStateTemplateSummary,
+} from '../types/layer-state-template';
 
 type Listener = () => void;
 
@@ -64,6 +72,7 @@ let currentStateId: string | null = null;
 let hydrationStatus: LayerStateHydrationStatus = 'idle';
 let cached: LayerStateStoreSnapshot = EMPTY_SNAPSHOT;
 let persistenceHandle: LayerStatePersistenceHandle | null = null;
+let templateService: DxfLayerStateTemplateService | null = null;
 
 const subscribers = new Set<Listener>();
 
@@ -240,6 +249,91 @@ export function importLayerStatesFromLas(content: string): LasImportSummary {
   return { added, skipped, errors };
 }
 
+// ─── Cross-project templates (Phase 13B.2 — ADR-358 §5.9 Q12) ────────────────
+
+/**
+ * Inject (or clear) the Firestore-backed template service. The orchestrator
+ * hook `useLayerStateTemplates` owns the lifecycle: it constructs a service
+ * once `companyId` + `userId` are available and clears it on unmount. The
+ * store itself does NOT instantiate Firebase — keeps the SSoT mockable.
+ *
+ * Pre-commit ratchet `layer-state-system` blocks setter calls outside the
+ * orchestrator hook + tests.
+ */
+export function setLayerStateTemplateService(
+  svc: DxfLayerStateTemplateService | null,
+): void {
+  templateService = svc;
+}
+
+/**
+ * Snapshot the live LayerStore and persist it as a company-scoped template.
+ * Throws if no service is injected (caller must mount the orchestrator hook
+ * first). Snapshot capture is delegated to `captureCurrentSnapshot()` so
+ * template and saved-state share the exact same per-layer shape.
+ */
+export async function saveCurrentAsTemplate(input: {
+  name: string;
+  description?: string;
+  category?: string;
+  tags?: ReadonlyArray<string>;
+  sourceStateId?: string;
+}): Promise<LayerStateTemplate> {
+  const svc = requireTemplateService('saveCurrentAsTemplate');
+  const snapshot = captureCurrentSnapshot();
+  return svc.saveAsTemplate({
+    name: input.name,
+    description: input.description,
+    category: input.category,
+    tags: input.tags,
+    snapshot,
+    sourceStateId: input.sourceStateId,
+  });
+}
+
+/**
+ * Fetch a company template and clone it as a project-local `LayerState`
+ * (source `'template-shared'`, retains `sourceTemplateId` for audit). Returns
+ * null when no project is attached (the store has no place to persist it).
+ */
+export async function importTemplateAsState(
+  templateId: string,
+): Promise<LayerState | null> {
+  if (!projectId) return null;
+  const svc = requireTemplateService('importTemplateAsState');
+  const template = await svc.getTemplate(templateId);
+  const state = createLayerState({
+    name: template.name,
+    description: template.description,
+    snapshot: template.snapshot,
+    createdByUserId: currentUserId,
+    source: 'template-shared',
+    sourceTemplateId: template.id,
+  });
+  persistSave(projectId, state);
+  return state;
+}
+
+/**
+ * Forward a search to the injected service. Pure passthrough — keeps the
+ * orchestrator hook + UI layer decoupled from the service shape.
+ */
+export async function searchTemplateSummaries(
+  q?: SearchTemplatesQuery,
+): Promise<readonly LayerStateTemplateSummary[]> {
+  const svc = requireTemplateService('searchTemplateSummaries');
+  return svc.listTemplateSummaries(q);
+}
+
+function requireTemplateService(caller: string): DxfLayerStateTemplateService {
+  if (!templateService) {
+    throw new Error(
+      `LayerStateStore.${caller}: no template service injected — mount useLayerStateTemplates first`,
+    );
+  }
+  return templateService;
+}
+
 // ─── Capture helper (pure) ───────────────────────────────────────────────────
 
 /**
@@ -295,5 +389,11 @@ export function __resetLayerStateStoreForTesting(): void {
   currentStateId = null;
   hydrationStatus = 'idle';
   cached = EMPTY_SNAPSHOT;
+  templateService = null;
   subscribers.clear();
+}
+
+/** @internal Read the injected template service ref. Tests only. */
+export function __getLayerStateTemplateServiceForTesting(): DxfLayerStateTemplateService | null {
+  return templateService;
 }
