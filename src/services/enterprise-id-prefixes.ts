@@ -235,6 +235,17 @@ export const ENTERPRISE_ID_PREFIXES = {
   CENTER_MARK: 'cmark',        // standalone center mark (D13)
   CENTER_LINE: 'cline',        // standalone centerline (D13)
 
+  // DXF BIM Drawing Mode (ADR-363)
+  WALL: 'wall',                // floorplan_walls collection — parametric wall entity (3 kinds)
+  OPENING: 'opening',          // floorplan_openings collection — door/window/etc (5 kinds)
+  SLAB: 'slab',                // floorplan_slabs collection — floor/ceiling/roof/ground/foundation (5 kinds)
+  SLAB_OPENING: 'slbopn',      // floorplan_slab_openings collection — elevator shaft, stair well, duct, chimney
+  COLUMN: 'col',               // floorplan_columns collection — rectangular/circular/L-shape/T-shape (4 kinds)
+  BEAM: 'beam',                // floorplan_beams collection — straight/curved/cantilever (3 kinds)
+  BIM_PRESET: 'bpst',          // bim_presets collection — element type presets (system/company/project/user scope)
+  BIM_MATERIAL: 'bmat',        // bim_materials collection — material library (Phase 6+)
+  BIM_SETTINGS: 'bset',        // bim_settings collection — per-company BIM configuration
+
   // Optimistic & Temporary
   OPTIMISTIC: 'opt',
   TEMP: 'tmp',
