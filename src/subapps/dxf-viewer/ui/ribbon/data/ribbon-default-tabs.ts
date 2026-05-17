@@ -14,6 +14,7 @@ import { VIEW_VISUAL_STYLES_PANEL } from './view-tab-visual-styles';
 import { VIEW_VIEWPORTS_PANEL } from './view-tab-viewports';
 import { VIEW_WINDOW_PANEL } from './view-tab-window';
 import { ANNOTATE_MEASURE_PANEL } from './home-tab-measure';
+import { HOME_DIMENSIONS_PANEL } from './home-tab-dimensions';
 import { HOME_HISTORY_PANEL } from './home-tab-history';
 import { HOME_GUIDES_PANEL } from './home-tab-guides';
 import { HOME_AI_PANEL } from './home-tab-ai';
@@ -41,6 +42,7 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
       HOME_MODIFY_EDIT_PANEL,
       HOME_GUIDES_PANEL,
       ANNOTATE_MEASURE_PANEL,
+      HOME_DIMENSIONS_PANEL,
       HOME_AI_PANEL,
     ],
   },
