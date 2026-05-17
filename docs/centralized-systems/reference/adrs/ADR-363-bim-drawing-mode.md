@@ -1262,9 +1262,23 @@ await entityAuditService.recordChange({
   - `detectExistingLayer(elementType, kind): Layer | null` — semantic match (case-insensitive, fuzzy: "Walls" matches "WALLS", "walls")
 - Existing layer detection UX: όταν DXF φορτώνεται με layer `WALLS`, ο dropdown στο TypePickerDialog δείχνει: "🔍 Εντοπίστηκε: WALLS — Χρήση υπάρχοντος | Δημιουργία Τοίχοι-Εξωτερικοί"
 - Per-session override: ο χρήστης μπορεί να αλλάξει layer για ένα μόνο entity χωρίς να αλλάξει default. Δεν επηρεάζει project setting.
-- **PENDING sub-question Q6b**: ποιο convention default; (ελληνικά / English / AIA-US) — βλ. επόμενο μήνυμα
+- **Q6b ✅ ΑΠΑΝΤΗΘΗΚΕ**: **English default** (`Walls-Exterior`, `Openings-Doors`, ...). Layer NAMES = Latin (interop safety με legacy DWG editors + xξένη συνεργασία). UI CONTROLS = ελληνικά (CLAUDE.md language rule). User μπορεί να αλλάξει σε `'greek'` ή `'aia-us'` μέσω `bim_settings.layerConvention` setting
 
-**Q7**: Hotkeys — προτείνω `W` για τοίχο, `O` για άνοιγμα, `SL` για πλάκα, `CO` για κολώνα, `BM` για δοκό. Έχεις αντιπρόταση; (Conflict check: `W` δεν χρησιμοποιείται, `O` δεν χρησιμοποιείται, `SL` καθαρό, `CO` καθαρό, `BM` καθαρό.)
+**Q7** ✅ **ΑΠΑΝΤΗΘΗΚΕ 2026-05-17**: **(A) Mixed 1+2 letter hotkeys**. Conflicts βρέθηκαν στην αρχική πρόταση (`CO`=COPY, `O`=OFFSET) και διορθώθηκαν. Τελικά:
+
+| Element | Hotkey | Mnemonic | Industry alignment |
+|---|---|---|---|
+| Wall | `W` | Wall | AutoCAD WALL=W, Revit WA |
+| Opening | `OP` | OPening | unique |
+| Slab | `SL` | SLab | unique |
+| SlabOpening | `SO` | SlabOpening | unique |
+| Column | `CL` | CoLumn | unique |
+| Beam | `BM` | BeaM | unique |
+| Stair | `ST` | STair | already in ADR-358 |
+
+Pattern: industry `W` για Wall = international standard, δεν spaπει. Υπόλοιπα 2-letter αποφεύγουν conflicts με υπάρχοντα `O`(Offset), `S`(Stretch), `C`(Circle), `CO`(Copy) shortcuts.
+
+**Implementation**: στο `TOOL_DEFINITIONS` (ToolStateManager.ts) entries + `home-tab-bim.ts` ribbon panel + `useKeyboardShortcuts` hook επέκταση. Hotkey activation flow: keypress → `BimTypePickerDialog` opens (Q1) → user selects type → tool activates.
 
 **Q8**: Material library — Phase 6+ θες προ-φορτωμένη ελληνική αγορά (Knauf, Hellas Tiles, AlumilΛ, etc.) ή empty-by-default που γεμίζει ο χρήστης ανά project;
 
@@ -1324,3 +1338,5 @@ Phase 6 (BOQ Auto-Feed) θεωρείται **complete** όταν:
 | 2026-05-17 | **Q4 ANSWERED** — Hybrid group+expand BOQ items per wall. 1 parent (summary) + N children (per DNA layer). BoqItem schema extended (parentBoqItemId, layerIndex, isGroupParent). Phase 6 split: 6.0 single-item MVP → 6.1 DNA breakdown → 6.2 material→ΑΤΟΕ centralized SSoT. Cost rollup parent = Σ(children). | Claude Opus 4.7 |
 | 2026-05-17 | **Q5 ANSWERED** — Full migration stair → `bim/` (GOL+SSOT). Compromise (γ) rejected as technical debt (παραβιάζει N.0/N.7/N.12). New **Phase 0.5 "Stair Migration"** prerequisite για Phase 1. 45+ files moved via `git mv`, atomic commit, bulk find/replace imports, StairEntity extends BimEntity<>, ADR-358 paths updated same commit. SSoT registry new module `bim-folder-residency`. §5.8 folder layout updated με stairs/ + geometry/stairs/ split. | Claude Opus 4.7 |
 | 2026-05-17 | **Q6 ANSWERED** — Hybrid auto+override layer creation. New `bim_settings/{projectId}` Firestore collection + `BimLayerService` SSoT + 3 built-in conventions (Greek/English/AIA-US) με auto-naming + auto-color (10 entries). Existing layer detection με semantic fuzzy match. Per-session override. Q6b pending: which default convention. | Claude Opus 4.7 |
+| 2026-05-17 | **Q6b ANSWERED** — English default layer names (`Walls-Exterior`, etc.). Layer NAMES Latin (legacy DWG interop + ξένη συνεργασία). UI CONTROLS ελληνικά (CLAUDE.md language rule). User-switchable convention μέσω `bim_settings.layerConvention`. | Claude Opus 4.7 |
+| 2026-05-17 | **Q7 ANSWERED** — Hotkeys finalized: W, OP, SL, SO, CL, BM, ST. Original `O`/`CO` conflicts με Offset/Copy detected and corrected. W kept (industry standard για Wall). Pattern: mixed 1+2 letter, industry alignment > forced consistency. | Claude Opus 4.7 |
