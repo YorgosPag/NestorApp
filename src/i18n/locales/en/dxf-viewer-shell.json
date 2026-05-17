@@ -576,6 +576,7 @@
             "title": "Floor Level"
           },
           "number": "Number",
+          "totalFloors": "Total floors",
           "name": "Name",
           "elevation": "Start elevation",
           "endElevation": "End elevation",

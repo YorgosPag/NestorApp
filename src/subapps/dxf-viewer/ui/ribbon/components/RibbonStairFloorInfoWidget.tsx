@@ -38,6 +38,7 @@ import { isStairEntity } from '../../../types/entities';
 import type { StairEntity } from '../../../types/entities';
 import type { StairMultiStoryConfig, StairParams } from '../../../types/stair';
 import { useFloorMetadata, type FloorMetadata } from '../../../hooks/data/useFloorMetadata';
+import { useBuildingTotalFloors } from '../../../hooks/data/useBuildingTotalFloors';
 
 const M_TO_MM = 1000;
 
@@ -72,6 +73,10 @@ export function RibbonStairFloorInfoWidget(): React.JSX.Element | null {
   // miss entityType (legacy import paths) still surface the floor link.
   const floorId = levelManager.saveContext?.floorId ?? null;
   const floor = useFloorMetadata(floorId);
+  // ADR-358 Phase 9B-1 — surface the building total floor count so the
+  // engineer always sees "this floor of N" context. Same SSoT subscription
+  // used by BuildingTabs (no duplicate cost).
+  const { floorsCount: totalFloors } = useBuildingTotalFloors(floor?.buildingId);
 
   if (typeof window !== 'undefined') {
     // Diagnostic — remove once Phase 9 UX is validated end-to-end.
@@ -164,7 +169,11 @@ export function RibbonStairFloorInfoWidget(): React.JSX.Element | null {
             {t('ribbon.commands.stairEditor.floor.number')}
           </span>
           <span className="dxf-ribbon-stair-floor-value">
-            {floor.number !== null ? String(floor.number) : '—'}
+            {floor.number !== null
+              ? (totalFloors > 0
+                  ? `${floor.number} / ${totalFloors}`
+                  : String(floor.number))
+              : '—'}
           </span>
         </span>
         <span className="dxf-ribbon-stair-floor-row">
@@ -173,6 +182,14 @@ export function RibbonStairFloorInfoWidget(): React.JSX.Element | null {
           </span>
           <span className="dxf-ribbon-stair-floor-value">
             {floor.name || '—'}
+          </span>
+        </span>
+        <span className="dxf-ribbon-stair-floor-row">
+          <span className="dxf-ribbon-stair-floor-label">
+            {t('ribbon.commands.stairEditor.floor.totalFloors')}
+          </span>
+          <span className="dxf-ribbon-stair-floor-value">
+            {totalFloors > 0 ? String(totalFloors) : '—'}
           </span>
         </span>
         <span className="dxf-ribbon-stair-floor-row">

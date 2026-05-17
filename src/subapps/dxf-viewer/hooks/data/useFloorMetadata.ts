@@ -24,6 +24,11 @@ import { firestoreQueryService } from '@/services/firestore';
 
 export interface FloorMetadata {
   readonly id: string;
+  /**
+   * Floor ordinal (0 = ground, 1 = first floor, -1 = basement). Reused by
+   * Phase 9B-1 as `currentFloorNumber` for "this floor / total floors"
+   * context display in the stair ribbon widget.
+   */
   readonly number: number | null;
   readonly name: string;
   /** Meters. `null` when the floor row has no elevation set. */
