@@ -12,6 +12,8 @@ import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { calculateDistance } from '../entities/shared/geometry-rendering-utils';
 import { pointToArcDistance } from '../../utils/angle-entity-math';
+import { pointToInfiniteLineDistance } from '../utils/point-to-line-distance';
+import { pointToRayDistance } from '../utils/point-to-line-distance';
 
 /** Dispatch hit test to the correct entity-type handler */
 export function performDetailedHitTest(
@@ -29,6 +31,9 @@ export function performDetailedHitTest(
     case 'arc': return hitTestArc(entity, point, tolerance);
     case 'angle-measurement': return hitTestAngleMeasurement(entity, point, tolerance);
     case 'dimension': return hitTestDimension(entity as DimensionEntity, point, tolerance);
+    // ADR-359 Phase 11 — precise hit-test for construction lines.
+    case 'xline': return hitTestXLine(entity, point, tolerance);
+    case 'ray': return hitTestRay(entity, point, tolerance);
     default: return { hitType: 'entity', hitPoint: point };
   }
 }
@@ -296,4 +301,24 @@ export function closestPointOnLine(point: Point2D, lineStart: Point2D, lineEnd: 
     x: lineStart.x + param * C,
     y: lineStart.y + param * D,
   };
+}
+
+// ===== XLINE =====
+
+function hitTestXLine(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+  type XLike = { basePoint?: Point2D; direction?: Point2D };
+  const { basePoint, direction } = entity as XLike;
+  if (!basePoint || !direction) return null;
+  const dist = pointToInfiniteLineDistance(point, basePoint, direction);
+  return dist <= tolerance ? { hitType: 'entity', hitPoint: point } : null;
+}
+
+// ===== RAY =====
+
+function hitTestRay(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+  type RLike = { basePoint?: Point2D; direction?: Point2D };
+  const { basePoint, direction } = entity as RLike;
+  if (!basePoint || !direction) return null;
+  const dist = pointToRayDistance(point, basePoint, direction);
+  return dist <= tolerance ? { hitType: 'entity', hitPoint: point } : null;
 }

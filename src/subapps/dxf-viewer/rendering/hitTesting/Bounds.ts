@@ -9,6 +9,7 @@ import type { DxfTextNode } from '../../text-engine/types';
 // 🏢 ADR-142: Centralized Default Font Size
 import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 import { resolveEntityText } from '../../utils/text-node-utils';
+import { calculateXLineBounds, calculateRayBounds } from './bounds-parametric-line';
 
 // 🏢 ENTERPRISE: Entity-specific type interfaces for safe type casting
 interface LineEntityProperties {
@@ -124,6 +125,11 @@ export class BoundsCalculator {
       case 'column':
       case 'beam':
         return this.calculateBimEntityBounds(entity, tolerance);
+      // ADR-359 Phase 11 follow-up — XLINE/RAY bounds extracted to sibling module.
+      case 'xline':
+        return calculateXLineBounds(entity, tolerance);
+      case 'ray':
+        return calculateRayBounds(entity, tolerance);
       default:
         console.warn(`BoundsCalculator: Unknown entity type: ${entity.type}`);
         return null;

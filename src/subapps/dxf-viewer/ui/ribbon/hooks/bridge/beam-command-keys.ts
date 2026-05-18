@@ -12,6 +12,8 @@ export const BEAM_RIBBON_KEYS = {
     kind: 'beam.params.kind',
     /** Structural support type (simple/fixed/cantilever). */
     supportType: 'beam.params.supportType',
+    /** ADR-363 Phase 5.5c — Material picker (rc/steel/glulam). */
+    material: 'beam.params.material',
   },
   params: {
     /** mm — beam cross-section width. */
@@ -30,7 +32,8 @@ export type BeamRibbonNumberCommandKey =
 
 export type BeamRibbonStringCommandKey =
   | typeof BEAM_RIBBON_KEYS.stringParams.kind
-  | typeof BEAM_RIBBON_KEYS.stringParams.supportType;
+  | typeof BEAM_RIBBON_KEYS.stringParams.supportType
+  | typeof BEAM_RIBBON_KEYS.stringParams.material;
 
 export const BEAM_RIBBON_NUMBER_KEYS: readonly BeamRibbonNumberCommandKey[] = [
   BEAM_RIBBON_KEYS.params.width,
@@ -41,6 +44,7 @@ export const BEAM_RIBBON_NUMBER_KEYS: readonly BeamRibbonNumberCommandKey[] = [
 export const BEAM_RIBBON_STRING_KEYS: readonly BeamRibbonStringCommandKey[] = [
   BEAM_RIBBON_KEYS.stringParams.kind,
   BEAM_RIBBON_KEYS.stringParams.supportType,
+  BEAM_RIBBON_KEYS.stringParams.material,
 ];
 
 export const BEAM_RIBBON_KEYS_ACTIONS = {

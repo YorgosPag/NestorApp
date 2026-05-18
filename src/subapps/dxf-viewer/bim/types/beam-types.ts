@@ -122,6 +122,13 @@ export const DEFAULT_BEAM_WIDTH_MM = 250;
 /** Default structural depth (mm). 50cm RC beam typical (Greek residential). */
 export const DEFAULT_BEAM_DEPTH_MM = 500;
 
+/**
+ * Ελάχιστο structural depth (mm) — Eurocode floor για RC beam. Out-of-plane
+ * dimension (gravity axis): δεν φαίνεται σε plan view, αλλά clampάρει το
+ * `beam-depth` grip drag (ADR-363 Phase 5.5c).
+ */
+export const MIN_BEAM_DEPTH_MM = 200;
+
 /** Ελάχιστο μήκος δοκαριού (mm) — degenerate guard. */
 export const MIN_BEAM_LENGTH_MM = 200;
 

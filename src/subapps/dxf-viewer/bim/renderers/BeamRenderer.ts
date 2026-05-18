@@ -1,26 +1,27 @@
 /**
- * BeamRenderer — ADR-363 Phase 5.
+ * BeamRenderer — ADR-363 Phase 5 + 5.5c.
  *
  * 2D plan-view renderer για `BeamEntity`. Reads `entity.geometry`
  * (populated by `computeBeamGeometry()` — SSoT) και draws:
  *   - dashed outline polygon (industry convention για beam hidden above
  *     floor — dashed stroke + light translucent fill)
+ *   - per-material hatch pattern (Phase 5.5c) — polygon-clipped pass μεταξύ
+ *     fill και stroke, mirror του Phase 4.5c.2 `ColumnRenderer.drawMaterialHatch`.
  *   - axis centerline (thinner dashed)
  *   - hover halo via outline glow
+ *   - depth indicator (Phase 5.5c) — dashed leader line + "d=X" label από
+ *     axis midpoint προς το depth handle, μόνο όταν highlighted. Communicates
+ *     το out-of-plane structural depth που δεν είναι ορατό σε plan view.
  *
  * Per-kind palette:
  *   - straight    → steel grey (γενική RC δοκός)
  *   - curved      → warm brown (καμπυλωτή — visual distinction)
  *   - cantilever  → red-accent (πρόβολος — emphasize structural risk)
  *
- * Phase 5 NOT implemented (deferred Phase 5.5+):
- *   - Width/depth dimension grips
- *   - Hatch patterns per material (RC / steel / glulam)
- *
  * ADR-040 micro-leaf compliance: pure renderer class με ZERO subscriptions
  * σε high-frequency stores. Called by canvas με entity resolved upstream.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7 §6 Phase 5.5c
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
@@ -32,7 +33,16 @@ import type { BeamEntity, BeamKind } from '../types/beam-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
-import { getBeamGrips } from '../beams/beam-grips';
+import { getBeamGrips, beamDepthHandlePosition } from '../beams/beam-grips';
+import {
+  computeBeamHatchPlan,
+  resolveBeamMaterialKey,
+  BEAM_HATCH_STROKE_RGBA,
+  BEAM_HATCH_LINE_WIDTH_PX,
+  BEAM_RC_DOT_RADIUS_PX,
+  type BeamMaterialKey,
+  type BeamHatchPlan,
+} from '../beams/beam-hatch-patterns';
 
 /** Stroke colour per kind. */
 const KIND_STROKE: Readonly<Record<BeamKind, string>> = {
@@ -82,6 +92,9 @@ export class BeamRenderer extends BaseEntityRenderer {
     this.drawPolygonPath(verts);
     this.ctx.fill();
 
+    // Phase 5.5c — per-material hatch clipped inside footprint.
+    this.drawMaterialHatch(beam);
+
     // Dashed outline (industry convention για hidden beam in plan view).
     this.ctx.strokeStyle = KIND_STROKE[beam.kind];
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
@@ -98,16 +111,108 @@ export class BeamRenderer extends BaseEntityRenderer {
     }
 
     this.ctx.restore();
+
+    // Phase 5.5c — depth indicator (out-of-plane visual hint) μόνο όταν
+    // highlighted. Renderάρει dashed leader line από axis midpoint προς το
+    // depth handle + label "d=Xmm". Outside save/restore ώστε να μη
+    // κληρονομεί το dash pattern του outline.
+    if (phaseState.phase === 'highlighted') {
+      this.drawDepthIndicator(beam);
+    }
+  }
+
+  /**
+   * Phase 5.5c — per-material hatch pattern inside footprint clip. Mirror του
+   * `ColumnRenderer.drawMaterialHatch` (Phase 4.5c.2). Axis orientation
+   * περνάει στο pattern computer ώστε `glulam` grain να ευθυγραμμίζεται με
+   * την κατεύθυνση του δοκαριού. Skip σε extreme zoom-out (perf saver).
+   */
+  private drawMaterialHatch(beam: BeamEntity): void {
+    if (this.transform.scale < 0.001) return;
+
+    const key: BeamMaterialKey = resolveBeamMaterialKey(beam.params.material);
+    const start = beam.params.startPoint;
+    const end = beam.params.endPoint;
+    const plan: BeamHatchPlan = computeBeamHatchPlan(
+      beam.geometry.bbox,
+      { ux: end.x - start.x, uy: end.y - start.y },
+      key,
+    );
+
+    if (plan.lines.length === 0 && plan.dots.length === 0) return;
+
+    this.ctx.save();
+    this.drawPolygonPath(beam.geometry.outline.vertices);
+    this.ctx.clip();
+    this.ctx.strokeStyle = BEAM_HATCH_STROKE_RGBA;
+    this.ctx.fillStyle = BEAM_HATCH_STROKE_RGBA;
+    this.ctx.lineWidth = BEAM_HATCH_LINE_WIDTH_PX[key];
+    this.ctx.setLineDash([]);
+
+    for (const line of plan.lines) {
+      const a = this.worldToScreen(line.start);
+      const b = this.worldToScreen(line.end);
+      this.ctx.beginPath();
+      this.ctx.moveTo(a.x, a.y);
+      this.ctx.lineTo(b.x, b.y);
+      this.ctx.stroke();
+    }
+    for (const dot of plan.dots) {
+      const s = this.worldToScreen(dot.center);
+      this.ctx.beginPath();
+      this.ctx.arc(s.x, s.y, BEAM_RC_DOT_RADIUS_PX, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+    this.ctx.restore();
+  }
+
+  /**
+   * Phase 5.5c — out-of-plane depth indicator. Dashed leader line από axis
+   * midpoint προς το `beam-depth` grip θέση + small label "d=Xmm" δίπλα στο
+   * grip. Communicates ότι το depth ζει στον z-axis (δεν φαίνεται σε plan).
+   * Renderάρει μόνο όταν highlighted ώστε να μην προσθέτει visual noise.
+   * Skip σε degenerate axis (depth handle position = null).
+   */
+  private drawDepthIndicator(beam: BeamEntity): void {
+    const handlePos = beamDepthHandlePosition(beam.params);
+    if (!handlePos) return;
+
+    const start = beam.params.startPoint;
+    const end = beam.params.endPoint;
+    const midWorld: Point2D = {
+      x: (start.x + end.x) / 2,
+      y: (start.y + end.y) / 2,
+    };
+    const a = this.worldToScreen(midWorld);
+    const b = this.worldToScreen(handlePos);
+
+    this.ctx.save();
+    this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+    this.ctx.lineWidth = 0.8;
+    this.ctx.setLineDash([3, 3]);
+    this.ctx.beginPath();
+    this.ctx.moveTo(a.x, a.y);
+    this.ctx.lineTo(b.x, b.y);
+    this.ctx.stroke();
+    this.ctx.restore();
+
+    this.ctx.save();
+    this.ctx.font = '9px sans-serif';
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.70)';
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'middle';
+    const label = `d=${Math.round(beam.params.depth)}`;
+    this.ctx.fillText(label, b.x + 6, b.y);
+    this.ctx.restore();
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
-    // ADR-363 Phase 5.5a + 5.5b — parametric beam grips (start / end / midpoint /
-    // curve control + width dimension handle). Commit routed through
-    // `applyBeamGripDrag()` + `UpdateBeamParamsCommand` by `commitBeamGripDrag`
-    // (grip-commit-adapter). Mapping below is generic: `center` → 'center'
-    // (midpoint translate), όλα τα υπόλοιπα ('vertex' / 'edge') → 'vertex' στο
-    // canvas renderer — επαρκές για endpoint + curve + width handle.
-    // Depth dimension grip (out-of-plane) DEFERRED στο Phase 5.5c.
+    // ADR-363 Phase 5.5a + 5.5b + 5.5c — parametric beam grips (start / end /
+    // midpoint / curve control + width + depth dimension handles). Commit
+    // routed through `applyBeamGripDrag()` + `UpdateBeamParamsCommand` by
+    // `commitBeamGripDrag` (grip-commit-adapter). Mapping below is generic:
+    // `center` → 'center' (midpoint translate), όλα τα υπόλοιπα
+    // ('vertex' / 'edge') → 'vertex' στο canvas renderer.
     if (!isBeamEntity(entity)) return [];
     return getBeamGrips(entity as BeamEntity).map((g) => ({
       id: `${g.entityId}-grip-${g.gripIndex}`,

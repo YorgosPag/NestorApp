@@ -23,6 +23,8 @@ import { resolveEntityLayerName } from '../stores/LayerStore';
 // ADR-358 Phase 8 — fallback to recompute stair geometry when missing (StairDoc
 // from Firestore is persisted without geometry, ADR §G6 re-derivable contract).
 import { computeStairGeometry } from '../systems/stairs/StairGeometryService';
+import { buildBimEntityModel } from '../bim/utils/bim-entity-passthrough';
+import type { BimElementType } from '../bim/types/bim-base';
 
 export interface HitTestResult {
   entityId: string | null;
@@ -308,23 +310,17 @@ export class HitTestingService {
           validation: stairData.validation,
         } as unknown as EntityModel;
       }
-      // ADR-363 Phase 1B — wall passthrough so hit-testing can index walls.
-      // Mirrors the stair branch: `geometry.bbox` powers spatial broad-phase
-      // via BoundsCalculator (`case 'wall'`). Without this branch the entity
-      // would fall through to the `never` default and silently drop from the
-      // spatial index → unselectable on canvas.
-      case 'wall': {
-        type WallLike = Partial<import('../bim/types/wall-types').WallEntity>;
-        const wall = entity as unknown as WallLike;
-        return {
-          ...baseModel,
-          type: 'wall',
-          kind: wall.kind,
-          params: wall.params,
-          geometry: wall.geometry,
-          validation: wall.validation,
-        } as unknown as EntityModel;
-      }
+      // ADR-363 Phases 1B–5 — BIM entity passthrough (wall/opening/slab/slab-opening/column/beam).
+      // `geometry.bbox` powers spatial broad-phase via BoundsCalculator.calculateBimEntityBounds.
+      // Without these branches the default spread drops `geometry` → entity never indexed → unselectable.
+      // SSoT: buildBimEntityModel in bim/utils/bim-entity-passthrough.ts (stair excluded — see that file).
+      case 'wall':
+      case 'opening':
+      case 'slab':
+      case 'slab-opening':
+      case 'column':
+      case 'beam':
+        return buildBimEntityModel(entity.type as BimElementType, entity, baseModel);
       // ADR-362 Phase I3 — dimension passthrough so hit-testing can index
       // DimensionEntity via the spatial index. The DxfDimension wrapper carries
       // the full discriminated-union DimensionEntity (with defPoints + textMidpoint).
@@ -343,6 +339,32 @@ export class HitTestingService {
           selected: baseModel.selected,
           lineType: baseModel.lineType,
           lineweight: baseModel.lineweight,
+        } as unknown as EntityModel;
+      }
+      // ADR-359 Phase 11 — xline/ray passthrough so hit-testing can index
+      // construction lines. Without this branch `basePoint`/`direction` are
+      // dropped by the default spread → BoundsCalculator returns null →
+      // entity never inserted in the spatial index → unselectable on canvas.
+      case 'xline': {
+        type XLineLike = Partial<import('../types/entities').XLineEntity>;
+        const xline = entity as unknown as XLineLike;
+        return {
+          ...baseModel,
+          type: 'xline',
+          basePoint: xline.basePoint,
+          direction: xline.direction,
+          secondPoint: xline.secondPoint,
+        } as unknown as EntityModel;
+      }
+      case 'ray': {
+        type RayLike = Partial<import('../types/entities').RayEntity>;
+        const ray = entity as unknown as RayLike;
+        return {
+          ...baseModel,
+          type: 'ray',
+          basePoint: ray.basePoint,
+          direction: ray.direction,
+          secondPoint: ray.secondPoint,
         } as unknown as EntityModel;
       }
       default: {

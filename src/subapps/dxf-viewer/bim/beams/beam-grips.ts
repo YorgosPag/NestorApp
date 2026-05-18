@@ -1,9 +1,9 @@
 /**
- * ADR-363 Phase 5.5a + 5.5b — Beam parametric grip handlers.
+ * ADR-363 Phase 5.5a + 5.5b + 5.5c — Beam parametric grip handlers.
  *
  * Pure functions: zero React / DOM / Firestore / canvas deps. Mirrors the
  * pattern of `bim/walls/wall-grips.ts` (Phase 1C) και exposes τα grips που
- * περιγράφει το ADR-363 §6 Phase 5.5a/5.5b:
+ * περιγράφει το ADR-363 §6 Phase 5.5a/5.5b/5.5c:
  *
  *   - `beam-start`     → translate axis start endpoint (no other params change)
  *   - `beam-end`       → translate axis end endpoint
@@ -16,6 +16,15 @@
  *                        στο axis midpoint, offset κατά `width/2` along
  *                        `rot90(axis_unit)`. Drag projection × 2 (symmetric)
  *                        → new width, clamped σε `MIN_BEAM_WIDTH_MM`.
+ *   - `beam-depth`     → Phase 5.5c — out-of-plane (gravity axis) dimension
+ *                        indicator. Stands στην ΑΝΤΙΘΕΤΗ πλευρά του width
+ *                        handle (NEGATIVE perpendicular), με offset
+ *                        `width/2 + DEPTH_GRIP_OFFSET_MM` ώστε ο user να βλέπει
+ *                        ξεκάθαρα ότι είναι out-of-plane control. Renderer
+ *                        ζωγραφίζει dashed leader line + "d=X" label.
+ *                        Symmetric drag projection × 2 → new depth, clamps
+ *                        στο `MIN_BEAM_DEPTH_MM`. ΟΧΙ footprint mutation
+ *                        (depth ζει στον z-axis, μόνο το `params.depth` αλλάζει).
  *
  * SSoT:
  *   - Geometry math via `computeBeamGeometry()` (called by
@@ -23,20 +32,24 @@
  *     `BeamParams`).
  *   - Grip wire-up via the unified grip system (`BeamRenderer.getGrips`).
  *
- * Phase 5.5b adds the in-plane width handle. Depth dimension grip
- * (out-of-plane / gravity axis) DEFERRED στο Phase 5.5c — δεν φαίνεται σε plan
- * view χωρίς ξεχωριστό visual indicator.
- *
- * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7 §6 Phase 5.5a/5.5b
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7 §6 Phase 5.5a/5.5b/5.5c
  */
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, BeamGripKind } from '../../hooks/useGripMovement';
 import type { BeamEntity, BeamParams } from '../types/beam-types';
-import { MIN_BEAM_WIDTH_MM } from '../types/beam-types';
+import { MIN_BEAM_WIDTH_MM, MIN_BEAM_DEPTH_MM } from '../types/beam-types';
 import type { Point3D } from '../types/bim-base';
 
 const DEGENERATE_EPS = 0.001;
+
+/**
+ * Phase 5.5c — Extra perpendicular offset (mm) πέρα από `width/2` ώστε το
+ * depth handle να στέκεται ξεκάθαρα έξω από το footprint. Παρέχει visual
+ * separation από το width handle (που στέκεται στο όριο του footprint).
+ * Renderer χρησιμοποιεί την ίδια σταθερά για το dashed leader line endpoint.
+ */
+export const DEPTH_GRIP_OFFSET_MM = 250;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -81,6 +94,22 @@ export function beamWidthHandlePosition(params: BeamParams): Point2D | null {
   const mid = axisMidpoint2D(params);
   const halfW = params.width / 2;
   return { x: mid.x + halfW * p.x, y: mid.y + halfW * p.y };
+}
+
+/**
+ * Phase 5.5c — Depth-handle position: axis midpoint offset κατά
+ * `−(width/2 + DEPTH_GRIP_OFFSET_MM)` along perpendicular (ΑΝΤΙΘΕΤΗ πλευρά
+ * από το width handle). Stands έξω από το footprint ώστε ο user να
+ * διαφοροποιεί το depth (out-of-plane indicator) από το width (in-plane).
+ * Returns null όταν το axis είναι degenerate.
+ */
+export function beamDepthHandlePosition(params: BeamParams): Point2D | null {
+  const u = unitAxis(params);
+  if (!u) return null;
+  const p = perpUnit(u);
+  const mid = axisMidpoint2D(params);
+  const offset = -(params.width / 2 + DEPTH_GRIP_OFFSET_MM);
+  return { x: mid.x + offset * p.x, y: mid.y + offset * p.y };
 }
 
 // ─── Grip position computation (ADR-363 §6 Phase 5.5a) ───────────────────────
@@ -153,6 +182,7 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
   // 3 ή 4 — width dimension handle (Phase 5.5b). Mid-axis offset κατά
   // `width/2` along perpendicular. Skip σε degenerate axis (start === end).
   const widthPos = beamWidthHandlePosition(params);
+  let depthGripIndex = widthGripIndex;
   if (widthPos) {
     grips.push({
       entityId: entity.id,
@@ -161,6 +191,22 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
       position: widthPos,
       movesEntity: false,
       beamGripKind: 'beam-width',
+    });
+    depthGripIndex = widthGripIndex + 1;
+  }
+
+  // 4 / 5 — depth dimension handle (Phase 5.5c). Opposite perpendicular side
+  // του width handle, με extra offset (`DEPTH_GRIP_OFFSET_MM`) ώστε ο user να
+  // καταλαβαίνει ότι είναι out-of-plane indicator. Skip σε degenerate axis.
+  const depthPos = beamDepthHandlePosition(params);
+  if (depthPos) {
+    grips.push({
+      entityId: entity.id,
+      gripIndex: depthGripIndex,
+      type: 'edge',
+      position: depthPos,
+      movesEntity: false,
+      beamGripKind: 'beam-depth',
     });
   }
 
@@ -195,6 +241,7 @@ export function applyBeamGripDrag(
   if (gripKind === 'beam-midpoint') return moveMidpoint(input);
   if (gripKind === 'beam-curve') return moveCurveControl(input);
   if (gripKind === 'beam-width') return resizeWidth(input);
+  if (gripKind === 'beam-depth') return resizeDepth(input);
   return input.originalParams;
 }
 
@@ -256,4 +303,29 @@ function resizeWidth(input: Readonly<BeamGripDragInput>): BeamParams {
   const rawWidth = originalParams.width + 2 * deltaPerp;
   const clamped = Math.max(MIN_BEAM_WIDTH_MM, rawWidth);
   return { ...originalParams, width: clamped };
+}
+
+/**
+ * Phase 5.5c — symmetric depth resize. Handle stands στην NEGATIVE-perpendicular
+ * πλευρά (αντίθετα από το width handle), οπότε drag προς τα έξω (μακριά από
+ * τον axis → δηλαδή προς MORE-NEGATIVE perpendicular) σημαίνει INCREASE depth.
+ *
+ * Math:
+ *   deltaPerp = delta · perpUnit  (CCW perpendicular, ίδιος που χρησιμοποιεί
+ *                                  το width handle)
+ *   Drag "outward" από το handle = delta·p < 0 (γιατί το handle έχει NEGATIVE
+ *   perpendicular offset). Άρα newDepth = depth + 2·(-deltaPerp) = depth − 2·deltaPerp.
+ *
+ * Parallel-to-axis drag projects σε 0 → depth unchanged. Degenerate axis → no-op.
+ * Clamps στο `MIN_BEAM_DEPTH_MM`.
+ */
+function resizeDepth(input: Readonly<BeamGripDragInput>): BeamParams {
+  const { originalParams, delta } = input;
+  const u = unitAxis(originalParams);
+  if (!u) return originalParams;
+  const p = perpUnit(u);
+  const deltaPerp = delta.x * p.x + delta.y * p.y;
+  const rawDepth = originalParams.depth - 2 * deltaPerp;
+  const clamped = Math.max(MIN_BEAM_DEPTH_MM, rawDepth);
+  return { ...originalParams, depth: clamped };
 }

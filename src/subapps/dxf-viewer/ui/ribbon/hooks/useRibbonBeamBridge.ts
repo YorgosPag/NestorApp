@@ -84,6 +84,7 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof BeamParams>> = {
 const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof BeamParams>> = {
   [BEAM_RIBBON_KEYS.stringParams.kind]:        'kind',
   [BEAM_RIBBON_KEYS.stringParams.supportType]: 'supportType',
+  [BEAM_RIBBON_KEYS.stringParams.material]:    'material',
 };
 
 export function useRibbonBeamBridge(
@@ -131,7 +132,14 @@ export function useRibbonBeamBridge(
       if (isBeamRibbonStringKey(commandKey)) {
         const field = STRING_KEY_TO_FIELD[commandKey];
         const raw = beam.params[field];
-        return raw == null ? null : { value: String(raw), options: [] };
+        // ADR-363 Phase 5.5c — surface 'rc' as the active selection when
+        // `params.material` is undefined; mirrors the `resolveBeamMaterialKey`
+        // fallback used by `BeamRenderer.drawMaterialHatch`.
+        if (raw == null) {
+          if (field === 'material') return { value: 'rc', options: [] };
+          return null;
+        }
+        return { value: String(raw), options: [] };
       }
       if (isBeamRibbonKey(commandKey)) {
         const field = NUMBER_KEY_TO_FIELD[commandKey];
@@ -158,6 +166,14 @@ export function useRibbonBeamBridge(
         }
         if (field === 'supportType') {
           const nextParams: BeamParams = { ...beam.params, supportType: value as BeamSupportType };
+          dispatchParams(beam, nextParams);
+          return;
+        }
+        if (field === 'material') {
+          // ADR-363 Phase 5.5c — material patch. `isDragging=false` so every
+          // pick is its own undo entry. Renderer hatch updates on the next
+          // frame via the standard beam bitmap-cache invalidation path.
+          const nextParams: BeamParams = { ...beam.params, material: value };
           dispatchParams(beam, nextParams);
         }
         return;
