@@ -938,7 +938,7 @@ Ogni phase = 1 commit autonomo, passa CI, no breaking. **Nessuna dipendenza fort
 | **1** ✅ | Tool registration: `ToolType` + `TOOL_DEFINITIONS` | 2 | S | Q1 | 🟢 Low |
 | **2** ✅ | `XLineModeStore` micro-leaf + status bar mode indicator + context menu | 3 | S | Q2 | 🟢 Low |
 | **3** ✅ | Entity builders + preview + completion (Through/Hor/Ver modes) | 4 | M | Q1, Q6 | 🟡 Medium |
-| **3.5** | Sub-modes Ang + Bisect + Offset entity builders + preview | 3 | M | Q1 | 🟡 Medium |
+| **3.5** ✅ | Sub-modes Ang + Bisect + Offset entity builders + preview | 3 | M | Q1 | 🟡 Medium |
 | **4.a** | Liang-Barsky clip pure module + unit tests (15+ cases) | 2 | S | Q4 | 🟢 Low |
 | **4.b** | `XLineRenderer` + `RayRenderer` + `EntityRendererComposite` registry | 3 | M | Q5 | 🟡 Medium |
 | **5** | Hit-test `pointToInfiniteLineDistance` + `HitTester` wire | 3 | S | G7 | 🟢 Low |
@@ -1089,6 +1089,7 @@ Pre-implementazione: 0 violations (file nuovi). Post-Phase 1-12: ratchet enforce
 
 | Date | Change |
 |---|---|
+| 2026-05-18 | Phase 3.5 DONE: `createEntityFromTool('xline')` extended with `angle` (1pt + angleValue, fallback through if null), `bisect` (3pts → normalize+sum bisect direction, edge-case guard len<1e-10 → null), `offset` (→ null, Phase 4+). `isEntityComplete('xline')` extended: angle = 1pt if angleValue≠null else 2pts, bisect = 3pts, offset = false. `generateXLinePreview()` extended: angle (preview at cursor/firstPoint via cos/sin), bisect (0pts=null, 1pt=rubberband arm1, 2pts=bisect XLine), offset (null). Import switched from `getMode` to `getXLineModeState` in both builders + preview files. |
 | 2026-05-18 | Phase 3 DONE: `'xline' \| 'ray'` added to `DrawingTool` union (`hooks/drawing/drawing-types.ts`). `createEntityFromTool()` — cases `'xline'` (Through/Hor/Ver modes via `XLineModeStore.getMode()`) + `'ray'` (2-point normalize). `isEntityComplete()` — `'ray'` = 2pts, `'xline'` = 1pt (hor/ver) or 2pts (through). `generatePreviewEntity()` — `generateXLinePreview()` + `generateRayPreview()` helpers: zero-point preview for hor/ver modes (follows cursor), 1-point rubber-band for all modes. `normalizeDir` inline helpers in both builders + preview files. `useDrawingHandlers.ts` — no changes needed (keyboard shortcuts are Phase 3 keyboard handler in `useKeyboardShortcuts.ts`). |
 | 2026-05-18 | Phase 2 DONE: `XLineModeStore` singleton micro-leaf (`systems/tools/xline-mode-store.ts`) — `getMode()` / `setMode()` / `subscribe()` / `reset()`, localStorage persistence `dxf:xlineMode.lastUsed`. `StatusBarXLineModeSlot.tsx` — Radix Popover with 6 modes, sub-info for angle/offset. `XLineToolContextMenu.tsx` — imperative handle, 6 mode items + separator + cancelCurrent/finishChain. i18n keys added to `dxf-viewer.json` (el + en): `tools.xline.*` + `tools.ray.*`. SSoT module `xline-mode-store` added to `.ssot-registry.json`. |
 | 2026-05-18 | Phase 1 DONE: `'xline' \| 'ray'` added to `ToolType` union (`ui/toolbar/types.ts`). `TOOL_DEFINITIONS['xline']` + `TOOL_DEFINITIONS['ray']` added to `ToolStateManager.ts` (category=drawing, canInterrupt=false, allowsContinuous=true, allowsChain=true). |

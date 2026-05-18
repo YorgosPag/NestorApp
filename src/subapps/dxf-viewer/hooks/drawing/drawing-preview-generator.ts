@@ -367,7 +367,48 @@ function generateXLinePreview(
   tempPoints: readonly Point2D[],
   cursorPoint: Point2D,
 ): ExtendedSceneEntity | null {
-  const mode = getMode();
+  const xlineState = getXLineModeState();
+  const mode = xlineState.mode;
+  if (mode === 'offset') return null; // Phase 4+ — entity pick not yet implemented
+  if (mode === 'bisect') {
+    if (tempPoints.length === 0) return null;
+    if (tempPoints.length === 1) {
+      return makeRubberBandPolyline('preview_bisect_arm1', [tempPoints[0], cursorPoint]);
+    }
+    // tempPoints.length >= 2: p1=vertex, p2=angleStart, cursor=angleEnd direction
+    const p1 = tempPoints[0];
+    const p2 = tempPoints[1];
+    const d2x = p2.x - p1.x, d2y = p2.y - p1.y;
+    const dcx = cursorPoint.x - p1.x, dcy = cursorPoint.y - p1.y;
+    const len2 = Math.sqrt(d2x * d2x + d2y * d2y);
+    const lenc = Math.sqrt(dcx * dcx + dcy * dcy);
+    if (len2 < 1e-10 || lenc < 1e-10) return null;
+    return {
+      id: 'preview_xline',
+      type: 'xline',
+      basePoint: p1,
+      direction: normDir(d2x / len2 + dcx / lenc, d2y / len2 + dcy / lenc),
+      visible: true,
+      layerId: defaultLayerId(),
+      preview: true,
+    } as XLineEntity & { preview: true };
+  }
+  if (mode === 'angle') {
+    if (xlineState.angleValue === null) return null;
+    const angleRad = xlineState.angleValue * Math.PI / 180;
+    const dir = { x: Math.cos(angleRad), y: Math.sin(angleRad) };
+    const basePoint = tempPoints.length >= 1 ? tempPoints[0] : cursorPoint;
+    return {
+      id: 'preview_xline',
+      type: 'xline',
+      basePoint,
+      direction: dir,
+      visible: true,
+      layerId: defaultLayerId(),
+      preview: true,
+    } as XLineEntity & { preview: true };
+  }
+  // horizontal / vertical / through
   if (tempPoints.length === 0) {
     if (mode === 'horizontal') {
       return {
@@ -391,8 +432,7 @@ function generateXLinePreview(
         preview: true,
       } as XLineEntity & { preview: true };
     }
-    // through — no preview without 2 points
-    return null;
+    return null; // through — no preview without 2 points
   }
   const firstPoint = tempPoints[0];
   const dir = mode === 'horizontal'
