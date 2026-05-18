@@ -447,6 +447,72 @@ describe('DimensionRenderer — arrowhead block variants', () => {
   });
 });
 
+describe('DimensionRenderer — alternate units + inspection (Phase G3)', () => {
+  it('alternate units dim=true emits extra fillText call for [value]', () => {
+    const { renderer, mock } = makeRenderer();
+    const entity = linear(
+      [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 20 }],
+      {
+        overrides: {
+          dimalt: true,
+          dimaltf: 25.4,
+          dimaltd: 2,
+          dimaltu: 'decimal' as const,
+          dimaltrnd: 0,
+          dimapost: '',
+        } as Partial<DimStyle>,
+      },
+    );
+    renderer.render(entity);
+    // Primary fillText + alt unit fillText = ≥2
+    expect(countCalls(mock, 'fillText')).toBeGreaterThanOrEqual(2);
+  });
+
+  it('inspection mode draws arc calls (pill oval caps)', () => {
+    const { renderer, mock } = makeRenderer();
+    const entity = linear(
+      [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 20 }],
+      {
+        overrides: {
+          dimInspect: 'rate100' as const,
+          dimInspectRate: 100,
+        } as Partial<DimStyle>,
+      },
+    );
+    renderer.render(entity);
+    // Pill has 2 arc() calls (left + right caps).
+    expect(countCalls(mock, 'arc')).toBeGreaterThanOrEqual(2);
+  });
+
+  it('inspection mode off emits no extra arc calls for linear dim', () => {
+    const { renderer, mock } = makeRenderer();
+    const entity = linear(
+      [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 20 }],
+      { overrides: { dimInspect: 'off' as const } as Partial<DimStyle> },
+    );
+    renderer.render(entity);
+    // Linear dim: no arc in normal rendering.
+    expect(countCalls(mock, 'arc')).toBe(0);
+  });
+
+  it('rateCustom inspection mode uses dimInspectRate value', () => {
+    const { renderer, mock } = makeRenderer();
+    const entity = linear(
+      [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 20 }],
+      {
+        overrides: {
+          dimInspect: 'rateCustom' as const,
+          dimInspectRate: 75,
+        } as Partial<DimStyle>,
+      },
+    );
+    renderer.render(entity);
+    // Should render: pill arcs + rate label fillText + primary fillText
+    expect(countCalls(mock, 'arc')).toBeGreaterThanOrEqual(2);
+    expect(countCalls(mock, 'fillText')).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe('DimensionRenderer — tolerance + limits rendering (Phase G2)', () => {
   it('tolerance mode draws 3 fillText calls (primary + plus + minus)', () => {
     const { renderer, mock } = makeRenderer();
