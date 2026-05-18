@@ -467,6 +467,7 @@
       "textEditor": "Επεξεργαστής Κειμένου",
       "arrayEditor": "Πίνακας",
       "stairProperties": "Ιδιότητες Κλίμακας",
+      "wallProperties": "Ιδιότητες Τοίχου",
       "validationBadge": "Παραβίαση κανονισμών",
       "dimension": "Διάσταση"
     },
@@ -502,6 +503,9 @@
       "stairMultiStoryHeight": "Ύψος Ορόφου",
       "stairMultiFlight": "Πολλαπλά Σκέλη",
       "stairActions": "Ενέργειες",
+      "wallCategory": "Κατηγορία",
+      "wallGeometry": "Γεωμετρία",
+      "wallActions": "Ενέργειες",
       "placeholder": "Σε φάση ανάπτυξης",
       "history": "Ιστορικό",
       "guides": "Οδηγοί",
@@ -782,6 +786,28 @@
           "lowRise": "Κτίριο έως 3 ορόφους",
           "internal": "Εσωτερική Σκάλα Κατοικίας",
           "auxiliary": "Βοηθητική Σκάλα"
+        }
+      },
+      "wallEditor": {
+        "height": "Ύψος",
+        "thickness": "Πάχος",
+        "close": "Κλείσιμο",
+        "category": {
+          "section": {
+            "title": "Κατηγορία"
+          },
+          "exterior": "Εξωτερικός",
+          "interior": "Εσωτερικός",
+          "partition": "Διαχωριστικός",
+          "parapet": "Στηθαίο",
+          "fence": "Περίφραξη"
+        },
+        "flip": {
+          "section": {
+            "title": "Εξωτερική Όψη"
+          },
+          "off": "Φυσιολογική",
+          "on": "Αντίστροφη"
         }
       },
       "measureAngle": "Γωνία",
