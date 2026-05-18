@@ -39,6 +39,8 @@ export enum ExtendedSnapType {
   GRID = 'grid',
   GUIDE = 'guide',  // ADR-189: Construction guide snap
   CONSTRUCTION_POINT = 'construction_point',  // ADR-189 §3.7-3.16: Construction snap points
+  DIM_DEF_POINT = 'dim_def_point',  // ADR-362 I1: snap to dimension def points (AutoCAD DIMSNAP)
+  DIM_LINE = 'dim_line',            // ADR-362 I1: snap to dimension line for baseline/continued chains
   AUTO = 'auto'
 }
 
@@ -108,8 +110,10 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.CENTER,
     ExtendedSnapType.INTERSECTION,
     ExtendedSnapType.GRID,
-    ExtendedSnapType.GUIDE,  // ADR-189: Guide snap enabled by default
-    ExtendedSnapType.CONSTRUCTION_POINT  // ADR-189: Construction point snap
+    ExtendedSnapType.GUIDE,             // ADR-189: Guide snap enabled by default
+    ExtendedSnapType.CONSTRUCTION_POINT, // ADR-189: Construction point snap
+    ExtendedSnapType.DIM_DEF_POINT,     // ADR-362 I1: dimension def point snap
+    ExtendedSnapType.DIM_LINE           // ADR-362 I1: dimension line snap
   ]),
   showSnapMarkers: true,
   showSnapTooltips: true,
@@ -127,8 +131,10 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.INSERTION,
     ExtendedSnapType.NEAREST,
     ExtendedSnapType.NEAR,
-    ExtendedSnapType.GUIDE,  // ADR-189: Construction guide snap
-    ExtendedSnapType.CONSTRUCTION_POINT,  // ADR-189: Construction snap points
+    ExtendedSnapType.GUIDE,              // ADR-189: Construction guide snap
+    ExtendedSnapType.CONSTRUCTION_POINT, // ADR-189: Construction snap points
+    ExtendedSnapType.DIM_DEF_POINT,     // ADR-362 I1: dimension def point snap (high priority — exact point)
+    ExtendedSnapType.DIM_LINE,          // ADR-362 I1: dimension line snap
     ExtendedSnapType.GRID,
     ExtendedSnapType.AUTO
   ],
@@ -148,8 +154,10 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     [ExtendedSnapType.NEAREST]: 10,
     [ExtendedSnapType.QUADRANT]: 10,
     [ExtendedSnapType.PARALLEL]: 10,
-    [ExtendedSnapType.GUIDE]: 12,          // ADR-189: intentionally wider for easy grab
-    [ExtendedSnapType.CONSTRUCTION_POINT]: 10
+    [ExtendedSnapType.GUIDE]: 12,               // ADR-189: intentionally wider for easy grab
+    [ExtendedSnapType.CONSTRUCTION_POINT]: 10,
+    [ExtendedSnapType.DIM_DEF_POINT]: 10,      // ADR-362 I1: exact definition point — AutoCAD APERTURE default
+    [ExtendedSnapType.DIM_LINE]: 10             // ADR-362 I1: dim line reference point
   }
 };
 
