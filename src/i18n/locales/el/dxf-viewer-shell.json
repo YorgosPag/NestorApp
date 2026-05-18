@@ -583,7 +583,8 @@
       "slabOpeningProperties": "Ιδιότητες Διάνοιξης Πλάκας",
       "validationBadge": "Παραβίαση κανονισμών",
       "dimension": "Διάσταση",
-      "lineToolStyle": "Στυλ Γραμμής"
+      "lineToolStyle": "Στυλ Γραμμής",
+      "xlineMode": "Γραμμή Κατασκευής"
     },
     "panels": {
       "draw": "Σχεδίαση",
@@ -653,7 +654,8 @@
       "dimModify": "Τροποποίηση",
       "bim": "Δομικά",
       "layers": "Επίπεδα",
-      "lineToolQuickStyle": "Γρήγορο Στυλ"
+      "lineToolQuickStyle": "Γρήγορο Στυλ",
+      "xlineMode": "Λειτουργία"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -694,6 +696,11 @@
       "polygon": "Πολύγωνο",
       "ellipse": "Έλλειψη",
       "stair": "Σκάλα",
+      "xline": "Γραμμή Κατασκευής",
+      "xlineTooltip": "Άπειρη γραμμή αναφοράς και για τις δύο κατευθύνσεις",
+      "ray": "Ακτίνα",
+      "rayTooltip": "Ημι-άπειρη γραμμή από αρχή προς κατεύθυνση",
+      "xlineModeSelector": "Λειτουργία",
       "bim": {
         "wall": "Τοίχος",
         "opening": "Άνοιγμα",

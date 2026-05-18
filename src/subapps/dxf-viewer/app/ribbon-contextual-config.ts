@@ -14,6 +14,7 @@ import { CONTEXTUAL_BEAM_TAB, BEAM_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/
 import { CONTEXTUAL_SLAB_OPENING_TAB, SLAB_OPENING_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-slab-opening-tab';
 import { DIMENSION_CONTEXTUAL_TAB, DIMENSION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimension-tab';
 import { CONTEXTUAL_LINE_TOOL_TAB, LINE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-line-tool-tab';
+import { CONTEXTUAL_XLINE_MODE_TAB, XLINE_MODE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-xline-mode-tab';
 
 export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_TEXT_EDITOR_TAB,
@@ -29,6 +30,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_SLAB_OPENING_TAB,
   DIMENSION_CONTEXTUAL_TAB,
   CONTEXTUAL_LINE_TOOL_TAB,
+  CONTEXTUAL_XLINE_MODE_TAB,
 ] as const;
 
 type EntityLike = { readonly type: string; readonly params?: unknown };
@@ -60,6 +62,8 @@ export function useActiveContextualTrigger({
     if (activeTool === 'column') return COLUMN_CONTEXTUAL_TRIGGER;
     if (activeTool === 'beam') return BEAM_CONTEXTUAL_TRIGGER;
     if (activeTool === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;
+    // ADR-359 Phase 10.b: xline active → show mode selection panel.
+    if (activeTool === 'xline') return XLINE_MODE_CONTEXTUAL_TRIGGER;
     // ADR-357 Phase 17: drawing tools show Quick Style override panel.
     if (
       activeTool === 'line' ||

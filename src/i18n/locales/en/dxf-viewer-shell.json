@@ -583,7 +583,8 @@
       "slabOpeningProperties": "Slab Opening Properties",
       "validationBadge": "Code violation",
       "dimension": "Dimension",
-      "lineToolStyle": "Line Style"
+      "lineToolStyle": "Line Style",
+      "xlineMode": "Construction Line"
     },
     "panels": {
       "draw": "Draw",
@@ -653,7 +654,8 @@
       "dimModify": "Modify",
       "bim": "Structural",
       "layers": "Layers",
-      "lineToolQuickStyle": "Quick Style"
+      "lineToolQuickStyle": "Quick Style",
+      "xlineMode": "Mode"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -694,6 +696,11 @@
       "polygon": "Polygon",
       "ellipse": "Ellipse",
       "stair": "Stair",
+      "xline": "Construction Line",
+      "xlineTooltip": "Infinite reference line in both directions",
+      "ray": "Ray",
+      "rayTooltip": "Semi-infinite line from origin in a direction",
+      "xlineModeSelector": "Mode",
       "bim": {
         "wall": "Wall",
         "opening": "Opening",

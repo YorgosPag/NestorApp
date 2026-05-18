@@ -76,6 +76,7 @@ import { useArrayRibbonActions } from '../ui/ribbon/hooks/useArrayRibbonActions'
 // 📐 ADR-358 Phase 7a / ADR-363: BIM contextual bridges aggregated
 import { useDxfBimBridges } from './useDxfBimBridges';
 import { useRibbonLineToolBridge } from '../ui/ribbon/hooks/useRibbonLineToolBridge';
+import { useRibbonXlineModeBridge } from '../ui/ribbon/hooks/useRibbonXlineModeBridge';
 // 📐 ADR-358 Phase 8: top-bar wrapper (RibbonRoot + StairAdvancedPanelHost) — N.7.1 size split
 import { DxfViewerTopBar } from './DxfViewerTopBar';
 // 📐 ADR-345 Fase 5.5: bridge text-engine ↔ ribbon contextual tab (toggles + comboboxes)
@@ -284,11 +285,12 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge } =
     useDxfBimBridges({ levelManager, universalSelection });
   const lineToolBridge = useRibbonLineToolBridge();
+  const xlineModeBridge = useRibbonXlineModeBridge();
   const ribbonCommands = useRibbonCommands({
     activeTool, handleToolChange, handleRibbonComingSoon,
     wrappedHandleAction: arrayActionInterceptor,
     textEditorBridge, arrayBridge, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge,
-    slabOpeningBridge, lineToolBridge,
+    slabOpeningBridge, lineToolBridge, xlineModeBridge,
   });
   return (
       <TransformProvider

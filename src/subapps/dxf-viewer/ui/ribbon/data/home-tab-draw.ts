@@ -234,6 +234,31 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
             shortcut: 'ST',
           },
         },
+        // ADR-359 Phase 10.b: Construction Line (XLINE) — infinite reference line.
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            id: 'draw.xline',
+            labelKey: 'ribbon.commands.xline',
+            tooltipKey: 'ribbon.commands.xlineTooltip',
+            icon: 'xline',
+            commandKey: 'xline',
+            shortcut: 'XL',
+          },
+        },
+        // ADR-359 Phase 10.b: Ray — semi-infinite reference line.
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            id: 'draw.ray',
+            labelKey: 'ribbon.commands.ray',
+            tooltipKey: 'ribbon.commands.rayTooltip',
+            icon: 'ray',
+            commandKey: 'ray',
+          },
+        },
       ],
     },
   ],

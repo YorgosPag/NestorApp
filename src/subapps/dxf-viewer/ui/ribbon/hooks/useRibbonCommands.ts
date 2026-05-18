@@ -32,6 +32,8 @@ import { isColumnRibbonKey, isColumnRibbonStringKey, isColumnActionKey } from '.
 import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamActionKey } from './bridge/beam-command-keys';
 import { isSlabOpeningRibbonStringKey, isSlabOpeningActionKey } from './bridge/slab-opening-command-keys';
 import { isLineToolRibbonKey } from './bridge/line-tool-command-keys';
+import { isXlineRibbonKey } from './bridge/xline-command-keys';
+import type { RibbonXlineModeBridge } from './useRibbonXlineModeBridge';
 
 interface UseRibbonCommandsProps {
   /** ADR-345 Fase 5.6 — current tool from useDxfViewerState. Drives Large /
@@ -59,6 +61,8 @@ interface UseRibbonCommandsProps {
   slabOpeningBridge: RibbonSlabOpeningBridge;
   /** ADR-357 Phase 17 — Line tool Quick Style bridge. */
   lineToolBridge: RibbonLineToolBridge;
+  /** ADR-359 Phase 10.b — XLine mode bridge. */
+  xlineModeBridge: RibbonXlineModeBridge;
 }
 
 export function useRibbonCommands({
@@ -76,6 +80,7 @@ export function useRibbonCommands({
   beamBridge,
   slabOpeningBridge,
   lineToolBridge,
+  xlineModeBridge,
 }: UseRibbonCommandsProps): RibbonCommandsApi {
   // Compose: stair-prefixed keys → stairBridge; array-prefixed → arrayBridge;
   // everything else falls through to the text-editor bridge. All bridges
@@ -118,9 +123,13 @@ export function useRibbonCommands({
         lineToolBridge.onComboboxChange(key, value);
         return;
       }
+      if (isXlineRibbonKey(key)) {
+        xlineModeBridge.onComboboxChange(key, value);
+        return;
+      }
       textEditorBridge.onComboboxChange(key, value);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, arrayBridge, lineToolBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const getComboboxState = React.useCallback(
@@ -134,9 +143,10 @@ export function useRibbonCommands({
       if (isSlabOpeningRibbonStringKey(key)) return slabOpeningBridge.getComboboxState(key);
       if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) return arrayBridge.getComboboxState(key);
       if (isLineToolRibbonKey(key)) return lineToolBridge.getComboboxState(key);
+      if (isXlineRibbonKey(key)) return xlineModeBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, arrayBridge, lineToolBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const onToggle = React.useCallback(

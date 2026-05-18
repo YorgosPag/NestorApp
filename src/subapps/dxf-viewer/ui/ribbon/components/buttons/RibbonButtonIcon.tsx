@@ -36,6 +36,7 @@ import {
   MEASURE_AREA_PATH, MEASURE_AREA_AUTO_PATH,
 } from './RibbonButtonIconPaths';
 import { STAIR_PATH_STRAIGHT, STAIR_PATH_SPIRAL, STAIR_PATH_USHAPE } from './stair-kind-icon-paths';
+import { XLINE_PATH, RAY_PATH } from './xline-ray-icon-paths';
 
 export type RibbonIconSize = 'large' | 'small';
 
@@ -89,6 +90,8 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'polygon': return inlineSvg(size, POLYGON_PATH);
     case 'rectangle': return inlineSvg(size, RECTANGLE_PATH);
     case 'ellipse': return inlineSvg(size, ELLIPSE_PATH);
+    case 'xline': return inlineSvg(size, XLINE_PATH);
+    case 'ray': return inlineSvg(size, RAY_PATH);
     case 'stair': return inlineSvg(size, STAIR_PATH);
     case 'stair-straight': return inlineSvg(size, STAIR_PATH_STRAIGHT);
     case 'stair-spiral': return inlineSvg(size, STAIR_PATH_SPIRAL);
