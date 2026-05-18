@@ -16,15 +16,18 @@ import type { StairEntity } from '../../types/stair';
 import type { WallEntity, WallKind } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
+import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
 import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/UpdateWallParamsCommand';
 import { UpdateOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateOpeningParamsCommand';
 import { UpdateSlabParamsCommand } from '../../core/commands/entity-commands/UpdateSlabParamsCommand';
+import { UpdateSlabOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateSlabOpeningParamsCommand';
 import { applyStairGripDrag } from '../../systems/stairs/stair-grips';
 import { applyWallGripDrag } from '../../bim/walls/wall-grips';
 import { applyOpeningGripDrag } from '../../bim/walls/opening-grips';
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
+import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
 import { applyDimensionGripDrag } from '../dimensions/useDimensionGrips';
 import { EventBus } from '../../systems/events/EventBus';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
@@ -208,6 +211,49 @@ export function commitSlabGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   EventBus.emit('bim:slab-params-updated', { slabId: grip.entityId });
+}
+
+/**
+ * ADR-363 Phase 3.7a — Parametric slab-opening grip commit (per-vertex
+ * translate + edge-midpoint vertex insertion). Mirrors `commitSlabGripDrag`
+ * semantics: routes through `applySlabOpeningGripDrag()` +
+ * `UpdateSlabOpeningParamsCommand` so geometry + validation recompute
+ * atomically και merge window (ADR-031) collapses συνεχόμενο drag σε ένα undo
+ * entry. Emits `bim:slab-opening-params-updated` after dispatch ώστε consumers
+ * (auto-save / BOQ feed) να αντιδρούν. Shift διαβάζεται από τον
+ * `ShiftKeyTracker` (rectilinear constraint, mirror Phase 3.6).
+ */
+export function commitSlabOpeningGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.slabOpeningGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<SlabOpeningEntity>;
+  if (candidate.type !== 'slab-opening' || !candidate.params) return;
+  const opening = candidate as SlabOpeningEntity;
+  const originalParams = opening.params;
+  const rectilinear = ShiftKeyTracker.getSnapshot();
+  const newParams = applySlabOpeningGripDrag(grip.slabOpeningGripKind, {
+    originalParams,
+    delta,
+    rectilinear,
+  });
+  if (newParams === originalParams) return;
+  const command = new UpdateSlabOpeningParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+  EventBus.emit('bim:slab-opening-params-updated', { slabOpeningId: grip.entityId });
 }
 
 /** ADR-362 Phase I2 — Dimension grip commit via `applyDimensionGripDrag` + scene patch. */

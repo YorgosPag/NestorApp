@@ -72,7 +72,7 @@ export class NearestSnapEngine extends BaseSnapEngine {
 
   private getNearestPointOnEntity(entity: EntityModel, point: Point2D): Point2D | null {
     const entityType = entity.type.toLowerCase();
-    
+
     if (entityType === 'line') {
       if ('start' in entity && 'end' in entity && entity.start && entity.end) {
         return getNearestPointOnLine(point, entity.start as Point2D, entity.end as Point2D);
@@ -88,8 +88,27 @@ export class NearestSnapEngine extends BaseSnapEngine {
         const isClosed = 'closed' in entity ? Boolean(entity.closed) : false;
         return this.getNearestPointOnPolyline(point, points, isClosed);
       }
+    } else if (entityType === 'xline') {
+      if ('basePoint' in entity && 'direction' in entity && entity.basePoint && entity.direction) {
+        const base = entity.basePoint as Point2D;
+        const dir = entity.direction as Point2D;
+        // Projection on infinite line (no clamping)
+        return getNearestPointOnLine(point, base, { x: base.x + dir.x, y: base.y + dir.y }, false);
+      }
+    } else if (entityType === 'ray') {
+      if ('basePoint' in entity && 'direction' in entity && entity.basePoint && entity.direction) {
+        const base = entity.basePoint as Point2D;
+        const dir = entity.direction as Point2D;
+        const len = Math.sqrt(dir.x * dir.x + dir.y * dir.y);
+        if (len < 1e-10) return null;
+        const nx = dir.x / len;
+        const ny = dir.y / len;
+        const t = (point.x - base.x) * nx + (point.y - base.y) * ny;
+        if (t < 0) return { x: base.x, y: base.y };
+        return { x: base.x + t * nx, y: base.y + t * ny };
+      }
     }
-    
+
     return null;
   }
 

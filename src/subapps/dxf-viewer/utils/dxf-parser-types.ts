@@ -24,7 +24,9 @@ export const SUPPORTED_ENTITY_TYPES = [
   'MULTILINETEXT',
   'DIMENSION',
   'HATCH',
-  'SOLID'
+  'SOLID',
+  'XLINE',
+  'RAY'
 ] as const;
 
 export const DXF_SECTION_MARKERS = [

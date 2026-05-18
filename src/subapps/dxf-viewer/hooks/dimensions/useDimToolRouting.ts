@@ -37,6 +37,7 @@ import {
   type DimensionCreateStartInput,
 } from './useDimensionCreate';
 import { useDimensionKeyboardRouting } from './useDimensionKeyboardRouting';
+import { handleToolCompletion } from '../drawing/drawing-handler-utils';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Tool → creation-flow input mapping
@@ -130,8 +131,11 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
     if (key === 'Escape') {
       previewRef.current?.current?.clear();
       onToolChangeRef.current?.('select');
+      // Belt-and-suspenders: bypass React props chain timing — directly set
+      // activeTool='select' in the store. Fixes 2-press Escape (ADR-362 hotfix).
+      handleToolCompletion(activeTool, true);
     }
-  }, [dimCreate]);
+  }, [dimCreate, activeTool]);
 
   // Phase D3 — Q-C live Tab/Space/Escape routing from the canvas.
   useDimensionKeyboardRouting({
@@ -164,7 +168,8 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
     dimCreate.cancel();
     previewRef.current?.current?.clear();
     onToolChangeRef.current?.('select');
-  }, [dimCreate]);
+    handleToolCompletion(activeTool, true);
+  }, [dimCreate, activeTool]);
 
   return {
     isDimTool: isDimTool(activeTool),

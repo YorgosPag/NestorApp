@@ -20,7 +20,9 @@ import {
   isPolylineEntity,
   isLWPolylineEntity,
   isRectangleEntity,
-  isCircleEntity
+  isCircleEntity,
+  isXLineEntity,
+  isRayEntity
 } from '../../types/entities';
 // 🏢 ADR-087: Centralized Snap Engine Configuration
 import { SNAP_RADIUS_MULTIPLIERS, SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
@@ -111,6 +113,30 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
           y: entity.center.y + dy * scale
         };
         perpendicularPoints.push({point: perpPoint, type: 'Circle'});
+      }
+    } else if (isXLineEntity(entity)) {
+      // Foot of perpendicular on infinite line — always valid (no clamping)
+      const base = entity.basePoint;
+      const dir = entity.direction;
+      const foot = getNearestPointOnLine(cursorPoint, base, { x: base.x + dir.x, y: base.y + dir.y }, false);
+      if (calculateDistance(cursorPoint, foot) <= maxDistance) {
+        perpendicularPoints.push({ point: foot, type: 'XLine' });
+      }
+    } else if (isRayEntity(entity)) {
+      // Foot of perpendicular — only valid if t >= 0 (on the ray, not behind origin)
+      const base = entity.basePoint;
+      const dir = entity.direction;
+      const len = Math.sqrt(dir.x * dir.x + dir.y * dir.y);
+      if (len > 1e-10) {
+        const nx = dir.x / len;
+        const ny = dir.y / len;
+        const t = (cursorPoint.x - base.x) * nx + (cursorPoint.y - base.y) * ny;
+        if (t >= 0) {
+          const foot = { x: base.x + t * nx, y: base.y + t * ny };
+          if (calculateDistance(cursorPoint, foot) <= maxDistance) {
+            perpendicularPoints.push({ point: foot, type: 'Ray' });
+          }
+        }
       }
     }
 

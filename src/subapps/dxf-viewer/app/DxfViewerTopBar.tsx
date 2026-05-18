@@ -22,6 +22,7 @@ import { OpeningPersistenceHost } from './OpeningPersistenceHost';
 import { SlabPersistenceHost } from './SlabPersistenceHost';
 import { ColumnPersistenceHost } from './ColumnPersistenceHost';
 import { BeamPersistenceHost } from './BeamPersistenceHost';
+import { SlabOpeningPersistenceHost } from './SlabOpeningPersistenceHost';
 
 type LevelManager = ReturnType<typeof useLevels>;
 
@@ -90,6 +91,14 @@ export function DxfViewerTopBar({
         buildingId={levelManager.saveContext?.buildingId ?? undefined}
       />
       <BeamPersistenceHost
+        primarySelectedId={primarySelectedId}
+        currentScene={currentScene}
+        levelManager={levelManager}
+        projectId={levelManager.saveContext?.projectId ?? undefined}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+        buildingId={levelManager.saveContext?.buildingId ?? undefined}
+      />
+      <SlabOpeningPersistenceHost
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}

@@ -36,6 +36,7 @@ import type {
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { getSlabOpeningGrips } from '../slab-openings/slab-opening-grips';
 
 /** Stroke colour per kind. */
 const KIND_STROKE: Readonly<Record<SlabOpeningKind, string>> = {
@@ -99,18 +100,19 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
-    // Phase 3.7 ships base outline grips per vertex; advanced midpoint/edge
-    // grips (mirror slab) defer to Phase 3.7+.
+    // ADR-363 Phase 3.7a — parametric slab-opening grips (per-vertex translate +
+    // edge-midpoint vertex insertion). Commit routed through
+    // `applySlabOpeningGripDrag()` + `UpdateSlabOpeningParamsCommand` by
+    // `commitSlabOpeningGripDrag` (grip-commit-adapter), with Shift driving
+    // rectilinear quantization.
     if (!isSlabOpeningEntity(entity)) return [];
-    const opening = entity as SlabOpeningEntity;
-    const verts = opening.geometry?.polygon.vertices ?? [];
-    return verts.map((v, i) => ({
-      id: `${opening.id}-grip-${i}`,
-      position: { x: v.x, y: v.y },
-      type: 'vertex' as const,
-      entityId: opening.id,
+    return getSlabOpeningGrips(entity as SlabOpeningEntity).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      position: g.position,
+      type: g.type === 'midpoint' ? ('midpoint' as const) : ('vertex' as const),
+      entityId: g.entityId,
       isVisible: true,
-      gripIndex: i,
+      gripIndex: g.gripIndex,
     }));
   }
 

@@ -418,6 +418,14 @@ export function convertSpline(
 }
 
 // ============================================================================
+// 🏢 ENTERPRISE: AUXILIARY GEOMETRY CONVERTERS (ADR-359 Phase 8)
+// ============================================================================
+// XLINE/RAY converters moved to dxf-xline-ray-converter.ts (Google SRP).
+export { convertXLine, convertRay } from './dxf-xline-ray-converter';
+
+import { convertXLine, convertRay } from './dxf-xline-ray-converter';
+
+// ============================================================================
 // 🏢 ENTERPRISE: MASTER CONVERTER
 // ============================================================================
 
@@ -457,6 +465,10 @@ export function convertEntityToScene(
       return convertSpline(data, layer, index);
     case 'DIMENSION':
       return convertDimension(data, layer, index, header, dimStyles);
+    case 'XLINE':
+      return convertXLine(data, layer, index);
+    case 'RAY':
+      return convertRay(data, layer, index);
     default:
       return null;
   }

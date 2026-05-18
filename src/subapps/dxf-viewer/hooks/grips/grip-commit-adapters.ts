@@ -294,6 +294,7 @@ import {
   commitWallGripDrag,
   commitOpeningGripDrag,
   commitSlabGripDrag,
+  commitSlabOpeningGripDrag,
   commitDimensionGripDrag,
 } from './grip-parametric-commits';
 /**
@@ -350,6 +351,15 @@ export function commitDxfGripDragModeAware(
   // atomically by UpdateSlabParamsCommand.
   if (grip.slabGripKind) {
     commitSlabGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-363 Phase 3.7a — slab-opening parametric grip path (per-vertex
+  // translate + edge-midpoint insertion). Bypasses stretch because
+  // slab-openings are params-driven (outline polygon) και geometry
+  // (area / perimeter / bbox) is recomputed atomically by
+  // UpdateSlabOpeningParamsCommand.
+  if (grip.slabOpeningGripKind) {
+    commitSlabOpeningGripDrag(grip, delta, deps);
     return;
   }
   // ADR-357 Phase 12 — copy toggle gates routing for every mode.

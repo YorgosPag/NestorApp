@@ -80,6 +80,23 @@ export type SlabGripKind =
   | `slab-vertex-${number}`
   | `slab-edge-midpoint-${number}`;
 
+/**
+ * ADR-363 Phase 3.7a — Slab-opening grip kind (parametric grip type).
+ * Routes commit through `applySlabOpeningGripDrag()` +
+ * `UpdateSlabOpeningParamsCommand` instead of the standard `StretchEntityCommand`
+ * vertex path.
+ *
+ * Two grip families exposed by `SlabOpeningEntity`
+ * (`bim/slab-openings/slab-opening-grips.ts`):
+ *   - `slab-opening-vertex-N`        → translate cutout outline vertex N
+ *                                      (XY only, z preserved).
+ *   - `slab-opening-edge-midpoint-N` → insert new vertex at edge N midpoint +
+ *                                      delta (splits edge `[N, N+1]`).
+ */
+export type SlabOpeningGripKind =
+  | `slab-opening-vertex-${number}`
+  | `slab-opening-edge-midpoint-${number}`;
+
 /** Grip information */
 export interface GripInfo {
   entityId: string;
@@ -120,6 +137,13 @@ export interface GripInfo {
    * `applySlabGripDrag()` + `UpdateSlabParamsCommand` (per-vertex translate).
    */
   slabGripKind?: SlabGripKind;
+  /**
+   * ADR-363 Phase 3.7a — parametric slab-opening grip discriminator. Present
+   * only when the grip belongs to a `SlabOpeningEntity`; routes the commit
+   * through `applySlabOpeningGripDrag()` + `UpdateSlabOpeningParamsCommand`
+   * (per-vertex translate + edge-midpoint insertion).
+   */
+  slabOpeningGripKind?: SlabOpeningGripKind;
 }
 
 /** Grip drag state */

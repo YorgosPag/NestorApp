@@ -29,7 +29,8 @@ import {
   isCircleEntity,
   isArcEntity,
   isRectangleEntity,
-  isWallEntity
+  isWallEntity,
+  isRayEntity
 } from '../../types/entities';
 
 export interface IntersectionResult {
@@ -103,7 +104,10 @@ export class GeometricCalculations {
         endpoints.push({ x: params.start.x, y: params.start.y });
         endpoints.push({ x: params.end.x, y: params.end.y });
       }
+    } else if (isRayEntity(entity)) {
+      endpoints.push(entity.basePoint);
     }
+    // XLine: infinite in both directions → no endpoints
 
     return endpoints;
   }
