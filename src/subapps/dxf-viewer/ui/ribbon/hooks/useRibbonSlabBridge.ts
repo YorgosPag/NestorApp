@@ -1,0 +1,213 @@
+'use client';
+
+/**
+ * ADR-363 Phase 3 — Bridge μεταξύ contextual Slab ribbon tab και active
+ * `SlabEntity` params.
+ *
+ * Mirrors `useRibbonOpeningBridge`: read state via `getComboboxState`, write
+ * via `onComboboxChange`. Phase 3 mutations bypass `CommandHistory` (full
+ * undo/redo lands Phase 3.5 με `UpdateSlabParamsCommand`) — αντί αυτού το
+ * bridge patches the scene directly + re-derives geometry/validation.
+ * `useSlabPersistence` picks up την αλλαγή μέσω debounced auto-save.
+ *
+ * No-ops για commandKeys εκτός `SLAB_RIBBON_KEYS` ώστε να composeί με τα
+ * stair / wall / opening / array / text bridges στο `useRibbonCommands`.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5
+ */
+
+import { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { isSlabEntity } from '../../../types/entities';
+import type { SlabEntity, SlabKind, SlabParams, SlabReinforcement } from '../../../bim/types/slab-types';
+import { computeSlabGeometry } from '../../../bim/geometry/slab-geometry';
+import { validateSlabParams } from '../../../bim/validators/slab-validator';
+import {
+  SLAB_RIBBON_KEYS,
+  SLAB_RIBBON_KEYS_ACTIONS,
+  SLAB_RIBBON_BADGE_KEYS,
+  isSlabRibbonKey,
+  isSlabRibbonStringKey,
+} from './bridge/slab-command-keys';
+import { EventBus } from '../../../systems/events/EventBus';
+import type {
+  RibbonComboboxState,
+  RibbonToggleState,
+} from '../context/RibbonCommandContext';
+import type { useLevels } from '../../../systems/levels';
+import type { useUniversalSelection } from '../../../systems/selection';
+
+type LevelManagerLike = Pick<
+  ReturnType<typeof useLevels>,
+  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
+>;
+
+type UniversalSelectionLike = Pick<
+  ReturnType<typeof useUniversalSelection>,
+  'getPrimaryId'
+>;
+
+export interface UseRibbonSlabBridgeProps {
+  readonly levelManager: LevelManagerLike;
+  readonly universalSelection: UniversalSelectionLike;
+}
+
+export interface RibbonSlabBridge {
+  readonly onComboboxChange: (commandKey: string, value: string) => void;
+  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
+  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
+  readonly getToggleState: (commandKey: string) => RibbonToggleState;
+  /** Returns `true` όταν το currently selected slab έχει code violations. */
+  readonly getBadgeState: (badgeKey: string) => boolean;
+  /** Handles ribbon simple-button actions (close / delete). */
+  readonly onAction: (action: string) => void;
+}
+
+const SLAB_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
+  SLAB_RIBBON_BADGE_KEYS.violations,
+]);
+
+const NULL_TOGGLE: RibbonToggleState = false;
+
+const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof SlabParams>> = {
+  [SLAB_RIBBON_KEYS.params.thickness]: 'thickness',
+  [SLAB_RIBBON_KEYS.params.elevation]: 'elevation',
+};
+
+const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof SlabParams>> = {
+  [SLAB_RIBBON_KEYS.stringParams.kind]: 'kind',
+  [SLAB_RIBBON_KEYS.stringParams.reinforcement]: 'reinforcement',
+};
+
+export function useRibbonSlabBridge(
+  props: UseRibbonSlabBridgeProps,
+): RibbonSlabBridge {
+  const { levelManager, universalSelection } = props;
+  const { t } = useTranslation('dxf-viewer-shell');
+
+  const resolveSlab = useCallback((): SlabEntity | null => {
+    const id = universalSelection.getPrimaryId();
+    if (!id || !levelManager.currentLevelId) return null;
+    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
+    if (!scene) return null;
+    const e = scene.entities.find((x) => x.id === id);
+    if (!e || !isSlabEntity(e)) return null;
+    return e;
+  }, [levelManager, universalSelection]);
+
+  /**
+   * Patch slab params σε scene + re-derive geometry + validation. Auto-save
+   * picks up via `useSlabPersistence` debounce.
+   */
+  const dispatchParams = useCallback(
+    (slab: SlabEntity, nextParams: SlabParams): void => {
+      if (!levelManager.currentLevelId) return;
+      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
+      if (!scene) return;
+      const geometry = computeSlabGeometry(nextParams);
+      const validation = validateSlabParams(nextParams).bimValidation;
+      const updated: SlabEntity = { ...slab, kind: nextParams.kind, params: nextParams, geometry, validation };
+      const nextEntities = scene.entities.map((e) => (e.id === slab.id ? updated : e));
+      levelManager.setLevelScene(levelManager.currentLevelId, {
+        ...scene,
+        entities: nextEntities,
+      });
+      EventBus.emit('bim:slab-params-updated', { slabId: slab.id });
+    },
+    [levelManager],
+  );
+
+  const getComboboxState = useCallback(
+    (commandKey: string): RibbonComboboxState | null => {
+      const slab = resolveSlab();
+      if (!slab) return null;
+      if (isSlabRibbonStringKey(commandKey)) {
+        const field = STRING_KEY_TO_FIELD[commandKey];
+        const raw = slab.params[field];
+        return raw == null ? null : { value: String(raw), options: [] };
+      }
+      if (isSlabRibbonKey(commandKey)) {
+        const field = NUMBER_KEY_TO_FIELD[commandKey];
+        const raw = slab.params[field];
+        if (typeof raw !== 'number') return null;
+        return { value: String(Math.round(raw)), options: [] };
+      }
+      return null;
+    },
+    [resolveSlab],
+  );
+
+  const onComboboxChange = useCallback(
+    (commandKey: string, value: string): void => {
+      const slab = resolveSlab();
+      if (!slab) return;
+
+      if (isSlabRibbonStringKey(commandKey)) {
+        const field = STRING_KEY_TO_FIELD[commandKey];
+        if (field === 'kind') {
+          const nextParams: SlabParams = { ...slab.params, kind: value as SlabKind };
+          dispatchParams(slab, nextParams);
+          return;
+        }
+        if (field === 'reinforcement') {
+          const nextParams: SlabParams = { ...slab.params, reinforcement: value as SlabReinforcement };
+          dispatchParams(slab, nextParams);
+        }
+        return;
+      }
+
+      if (isSlabRibbonKey(commandKey)) {
+        const numeric = Number.parseFloat(value);
+        if (Number.isNaN(numeric)) return;
+        const field = NUMBER_KEY_TO_FIELD[commandKey];
+        const nextParams: SlabParams = { ...slab.params, [field]: numeric } as SlabParams;
+        dispatchParams(slab, nextParams);
+      }
+    },
+    [resolveSlab, dispatchParams],
+  );
+
+  // Toggles unused Phase 3 — included για interface parity.
+  const onToggle = useCallback((_key: string, _next: boolean): void => {
+    /* no-op Phase 3 */
+  }, []);
+
+  const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
+
+  const getBadgeState = useCallback((badgeKey: string): boolean => {
+    if (!SLAB_OWNED_BADGE_KEYS.has(badgeKey)) return false;
+    const slab = resolveSlab();
+    if (!slab) return false;
+    if (badgeKey === SLAB_RIBBON_BADGE_KEYS.violations) {
+      return slab.validation.hasCodeViolations;
+    }
+    return false;
+  }, [resolveSlab]);
+
+  const onAction = useCallback(
+    (action: string): void => {
+      if (action !== SLAB_RIBBON_KEYS_ACTIONS.delete) return;
+      const slab = resolveSlab();
+      if (!slab) return;
+      const confirmed = window.confirm(
+        t('ribbon.commands.slabEditor.deleteConfirm'),
+      );
+      if (!confirmed) return;
+      EventBus.emit('bim:slab-delete-requested', { slabId: slab.id });
+    },
+    [resolveSlab, t],
+  );
+
+  return useMemo(
+    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction }),
+    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction],
+  );
+}
+
+/** Type guard used by `useRibbonCommands` composer. */
+export function isSlabBadgeKey(badgeKey: string): boolean {
+  return SLAB_OWNED_BADGE_KEYS.has(badgeKey);
+}
+
+/** Exposed so action interceptor μπορεί να αναγνωρίσει `slab.actions.close`. */
+export const SLAB_BRIDGE_ACTIONS = SLAB_RIBBON_KEYS_ACTIONS;
