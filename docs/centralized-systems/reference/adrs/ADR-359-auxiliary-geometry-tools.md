@@ -951,7 +951,7 @@ Ogni phase = 1 commit autonomo, passa CI, no breaking. **Nessuna dipendenza fort
 | **9** ✅ | DXF exporter `AcDbXline` / `AcDbRay` (export) + roundtrip integration test | 3 | M | Q7 | 🟡 Medium |
 | **10.a** ✅ | i18n keys (10 chiavi el+en) + `i18n-keys:baseline` ratchet update | 2 | S | Q12 | 🟢 Low |
 | **10.b** ✅ | Ribbon button XLINE + RAY + sub-mode submenu UI (consume Q12 keys) | 3 | M | Q12, Q14 | 🟡 Medium |
-| **11** | Grip editing — `xline-grips` + `ray-grips` (consumer ADR-357 Phase 11) | 3 | M | Q9 | 🟡 Medium |
+| **11** ✅ | Grip editing — `xline-grips` + `ray-grips` (consumer ADR-357 Phase 11) | 9 | M | Q9 | 🟡 Medium |
 | **12** | Trim/Extend cutting-edges extension (audit + wire) | 4 | M | Q11 | 🟡 Medium |
 | **13** | Command aliases pre-registration (forward to ADR-357 Phase 13) | 1 | XS | — | 🟢 Trivial |
 | **14** | DXF Construction layer scaffold (optional preset dialog) | 2 | S | Q13, Q14, Q15 | 🟢 Low |
@@ -1089,6 +1089,7 @@ Pre-implementazione: 0 violations (file nuovi). Post-Phase 1-12: ratchet enforce
 
 | Date | Change |
 |---|---|
+| 2026-05-18 | Phase 11 DONE: `systems/xline/xline-grips.ts` (NEW) — `getXLineGrips()` (2 grips: center base + vertex dir, 100-unit handle offset) + `applyXLineGripDrag()` (base→translate, dir→normalize). `systems/ray/ray-grips.ts` (NEW) — mirror for RayEntity. `hooks/grip-types.ts` — `XLineGripKind='xline-base'\|'xline-dir'` + `RayGripKind='ray-base'\|'ray-dir'` + GripInfo fields. `hooks/useGripMovement.ts` re-exports added. `hooks/grips/unified-grip-types.ts` — import + `xlineGripKind?`/`rayGripKind?` added to UnifiedGripInfo. `hooks/grip-computation.ts` — case `'xline'` + case `'ray'` added. `hooks/grips/grip-registry.ts` — forwarding in `wrapDxfGrip`. `hooks/grips/grip-parametric-commits.ts` — `commitXLineGripDrag()` + `commitRayGripDrag()`. `hooks/grips/grip-commit-adapters.ts` — routing after columnGripKind. |
 | 2026-05-18 | Phase 9 DONE: `utils/dxf-xline-ray-writer.ts` — `writeXLineRayEntities(entities)` emits SECTION/ENTITIES/ENDSEC token array, `AcDbEntity` + `AcDbXline`/`AcDbRay` subclass markers, codes 10/20/30 + 11/21/31, direction re-normalised at export boundary. Style code 62 omitted when ByLayer. `utils/__tests__/dxf-roundtrip-xline-ray.test.ts` — 5 describe groups, 22 tests: structure checks, direction normalisation, ByLayer integrity, 3 simulated CAD fixtures (AutoCAD/BricsCAD/ezdxf), write→parse roundtrip diff-zero 4 cases. |
 | 2026-05-18 | Phase 8 DONE: `XLINE` + `RAY` added to `SUPPORTED_ENTITY_TYPES` in `dxf-parser-types.ts`. `convertXLine()` + `convertRay()` added to `dxf-entity-converters.ts` — parse `10/20` basePoint + `11/21` direction, normalize direction (degenerate `len<1e-10` → null), warn on 3D z-coord, `extractEntityColor`. `convertEntityToScene` switch wired: `case 'XLINE'` + `case 'RAY'`. No new imports needed — `XLineEntity`/`RayEntity` already in `AnySceneEntity` union. |
 | 2026-05-18 | Phase 5 DONE: `rendering/utils/point-to-line-distance.ts` — pure SSoT `pointToInfiniteLineDistance(p, base, dir)` (cross/len formula, degenerate → Infinity) + `pointToRayDistance(p, base, dir)` (t<0 → dist-to-base, else perp). 18 unit tests in `rendering/utils/__tests__/point-to-line-distance.test.ts` — all 18 pass. `XLineRenderer.hitTest` wired to `pointToInfiniteLineDistance`. `RayRenderer.hitTest` wired to `pointToRayDistance`. |

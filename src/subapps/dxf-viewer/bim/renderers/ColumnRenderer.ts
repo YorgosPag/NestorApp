@@ -12,9 +12,11 @@
  *   - L-shape     → ochre (γωνία)
  *   - T-shape     → steel-blue
  *
- * Phase 4 NOT implemented (deferred Phase 4.5+):
+ * Phase 4.5 (DONE): center / rotation / width / depth grips routed through
+ * `applyColumnGripDrag()` + `UpdateColumnParamsCommand`.
+ * Phase 4.5b (deferred):
  *   - Hatch patterns per material category
- *   - Position/rotation/dimension grips
+ *   - Variant-specific arm/flange grips (L-shape, T-shape)
  *   - Anchor cycling visual preview (ghost at all 9 positions)
  *
  * ADR-040 micro-leaf compliance: pure renderer class με ZERO subscriptions
@@ -32,6 +34,7 @@ import type { ColumnEntity, ColumnKind } from '../types/column-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { getColumnGrips } from '../columns/column-grips';
 
 /** Stroke colour per kind. */
 const KIND_STROKE: Readonly<Record<ColumnKind, string>> = {
@@ -85,9 +88,21 @@ export class ColumnRenderer extends BaseEntityRenderer {
     this.ctx.restore();
   }
 
-  getGrips(_entity: EntityModel): GripInfo[] {
-    // Phase 4.5 — position + rotation + dimension grips. Phase 4 returns empty.
-    return [];
+  getGrips(entity: EntityModel): GripInfo[] {
+    // ADR-363 Phase 4.5 — parametric column grips (center / rotation / width /
+    // depth). Commit routed through `applyColumnGripDrag()` +
+    // `UpdateColumnParamsCommand` by `commitColumnGripDrag`
+    // (grip-commit-adapter). Phase 4.5b will add variant-specific arm/flange
+    // grips για L-shape / T-shape και anchor-cycle visual preview.
+    if (!isColumnEntity(entity)) return [];
+    return getColumnGrips(entity as ColumnEntity).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      position: g.position,
+      type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
+      entityId: g.entityId,
+      isVisible: true,
+      gripIndex: g.gripIndex,
+    }));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {

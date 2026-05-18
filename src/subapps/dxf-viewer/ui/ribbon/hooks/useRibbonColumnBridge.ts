@@ -1,20 +1,22 @@
 'use client';
 
 /**
- * ADR-363 Phase 4 — Bridge μεταξύ contextual Column ribbon tab και active
- * `ColumnEntity` params.
+ * ADR-363 Phase 4 / 4.5 — Bridge μεταξύ contextual Column ribbon tab και
+ * active `ColumnEntity` params.
  *
- * Mirrors `useRibbonSlabBridge`: read state via `getComboboxState`, write
- * via `onComboboxChange`. Phase 4 mutations bypass `CommandHistory` (full
- * undo/redo lands Phase 4.5 με `UpdateColumnParamsCommand`) — αντί αυτού το
- * bridge patches the scene directly + re-derives geometry/validation.
- * `useColumnPersistence` picks up την αλλαγή μέσω debounced auto-save.
+ * Mirrors `useRibbonBeamBridge`: read state via `getComboboxState`, write via
+ * `onComboboxChange`. Phase 4.5 routes every mutation through
+ * `UpdateColumnParamsCommand` (via `useCommandHistory().execute`) ώστε η
+ * αλλαγή να είναι undoable + geometry/validation να επανυπολογίζονται
+ * atomically. `useColumnPersistence` picks up την αλλαγή μέσω debounced
+ * auto-save. Ribbon edits χρησιμοποιούν `isDragging=false` ώστε κάθε edit
+ * να είναι δικό του undo entry (drag merging ζει στο grip-commit path).
  *
  * No-ops για commandKeys εκτός `COLUMN_RIBBON_KEYS` ώστε να composeί με τα
- * stair / wall / opening / slab / array / text bridges στο
+ * stair / wall / opening / slab / beam / array / text bridges στο
  * `useRibbonCommands`.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6 §6 Phase 4.5
  */
 
 import { useCallback, useMemo } from 'react';
@@ -26,8 +28,9 @@ import type {
   ColumnKind,
   ColumnParams,
 } from '../../../bim/types/column-types';
-import { computeColumnGeometry } from '../../../bim/geometry/column-geometry';
-import { validateColumnParams } from '../../../bim/validators/column-validator';
+import { useCommandHistory } from '../../../core/commands';
+import { UpdateColumnParamsCommand } from '../../../core/commands/entity-commands/UpdateColumnParamsCommand';
+import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   COLUMN_RIBBON_KEYS,
   COLUMN_RIBBON_KEYS_ACTIONS,
@@ -91,6 +94,7 @@ export function useRibbonColumnBridge(
   props: UseRibbonColumnBridgeProps,
 ): RibbonColumnBridge {
   const { levelManager, universalSelection } = props;
+  const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
   const resolveColumn = useCallback((): ColumnEntity | null => {
@@ -104,25 +108,25 @@ export function useRibbonColumnBridge(
   }, [levelManager, universalSelection]);
 
   /**
-   * Patch column params σε scene + re-derive geometry + validation.
-   * Auto-save picks up via `useColumnPersistence` debounce.
+   * Dispatch the params patch through `UpdateColumnParamsCommand` so the
+   * change is undoable + geometry/validation recompute atomically (ADR-363
+   * Phase 4.5). `useColumnPersistence` picks up the patched entity via
+   * debounced auto-save.
    */
   const dispatchParams = useCallback(
     (column: ColumnEntity, nextParams: ColumnParams): void => {
       if (!levelManager.currentLevelId) return;
-      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-      if (!scene) return;
-      const geometry = computeColumnGeometry(nextParams);
-      const validation = validateColumnParams(nextParams).bimValidation;
-      const updated: ColumnEntity = { ...column, kind: nextParams.kind, params: nextParams, geometry, validation };
-      const nextEntities = scene.entities.map((e) => (e.id === column.id ? updated : e));
-      levelManager.setLevelScene(levelManager.currentLevelId, {
-        ...scene,
-        entities: nextEntities,
-      });
+      const sm = new LevelSceneManagerAdapter(
+        levelManager.getLevelScene,
+        levelManager.setLevelScene,
+        levelManager.currentLevelId,
+      );
+      executeCommand(
+        new UpdateColumnParamsCommand(column.id, nextParams, column.params, sm, false),
+      );
       EventBus.emit('bim:column-params-updated', { columnId: column.id });
     },
-    [levelManager],
+    [executeCommand, levelManager],
   );
 
   const getComboboxState = useCallback(

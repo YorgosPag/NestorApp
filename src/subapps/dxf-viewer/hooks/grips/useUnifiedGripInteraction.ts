@@ -35,12 +35,14 @@ import { useGripRegistry } from './grip-registry';
 import { findNearestGrip } from './grip-hit-testing';
 import {
   commitDxfGripDragModeAware,
-  commitOverlayVertexDrag,
-  commitOverlayEdgeMidpointDrag,
-  commitOverlayBodyDrag,
   type DxfCommitDeps,
   type OverlayCommitDeps,
 } from './grip-commit-adapters';
+import {
+  commitOverlayVertexDrag,
+  commitOverlayEdgeMidpointDrag,
+  commitOverlayBodyDrag,
+} from './overlay-grip-commit-adapters';
 import { GripModeStore } from '../../systems/grip/GripModeStore';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';

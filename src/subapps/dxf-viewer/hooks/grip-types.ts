@@ -116,6 +116,44 @@ export type BeamGripKind =
   | 'beam-midpoint'
   | 'beam-curve';
 
+/**
+ * ADR-363 Phase 4.5 — Column grip kind (parametric grip type).
+ * Routes commit through `applyColumnGripDrag()` + `UpdateColumnParamsCommand`
+ * instead of the standard `StretchEntityCommand` vertex path.
+ *
+ * Grips exposed by `ColumnEntity` (`bim/columns/column-grips.ts`):
+ *   - `column-center`   → translate `position` (anchor stays)
+ *   - `column-rotation` → rotate γύρω από `position` (non-circular only)
+ *   - `column-width`    → resize width on the far edge from anchor (= diameter
+ *                          για `circular` kind)
+ *   - `column-depth`    → resize depth on the far edge from anchor (skipped
+ *                          για `circular` kind)
+ *
+ * Variant-specific arm/flange grips (L-shape, T-shape) DEFER στο Phase 4.5b.
+ */
+export type ColumnGripKind =
+  | 'column-center'
+  | 'column-rotation'
+  | 'column-width'
+  | 'column-depth';
+
+/**
+ * ADR-359 Phase 11 — XLine grip kind.
+ * Routes commit through `applyXLineGripDrag()` + direct scene patch instead of
+ * the standard `StretchEntityCommand` vertex path.
+ *   - `xline-base` → translate basePoint (direction invariant).
+ *   - `xline-dir`  → rotate: recompute direction = normalize(cursor − basePoint).
+ */
+export type XLineGripKind = 'xline-base' | 'xline-dir';
+
+/**
+ * ADR-359 Phase 11 — Ray grip kind.
+ * Routes commit through `applyRayGripDrag()` + direct scene patch.
+ *   - `ray-base` → translate basePoint (direction invariant).
+ *   - `ray-dir`  → rotate: recompute direction = normalize(cursor − basePoint).
+ */
+export type RayGripKind = 'ray-base' | 'ray-dir';
+
 /** Grip information */
 export interface GripInfo {
   entityId: string;
@@ -170,6 +208,25 @@ export interface GripInfo {
    * translate + curve control move).
    */
   beamGripKind?: BeamGripKind;
+  /**
+   * ADR-363 Phase 4.5 — parametric column grip discriminator. Present only when
+   * the grip belongs to a `ColumnEntity`; routes the commit through
+   * `applyColumnGripDrag()` + `UpdateColumnParamsCommand` (center translate +
+   * rotation + width/depth resize).
+   */
+  columnGripKind?: ColumnGripKind;
+  /**
+   * ADR-359 Phase 11 — XLine grip discriminator. Present only when the grip
+   * belongs to an `XLineEntity`; routes commit through `applyXLineGripDrag()` +
+   * direct scene patch (translate basePoint or rotate direction).
+   */
+  xlineGripKind?: XLineGripKind;
+  /**
+   * ADR-359 Phase 11 — Ray grip discriminator. Present only when the grip
+   * belongs to a `RayEntity`; routes commit through `applyRayGripDrag()` +
+   * direct scene patch (translate basePoint or rotate direction).
+   */
+  rayGripKind?: RayGripKind;
 }
 
 /** Grip drag state */

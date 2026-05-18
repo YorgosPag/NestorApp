@@ -296,6 +296,9 @@ import {
   commitSlabGripDrag,
   commitSlabOpeningGripDrag,
   commitBeamGripDrag,
+  commitColumnGripDrag,
+  commitXLineGripDrag,
+  commitRayGripDrag,
   commitDimensionGripDrag,
 } from './grip-parametric-commits';
 /**
@@ -372,6 +375,26 @@ export function commitDxfGripDragModeAware(
     commitBeamGripDrag(grip, delta, deps);
     return;
   }
+  // ADR-363 Phase 4.5 — column parametric grip path (center translate +
+  // rotation + width/depth resize). Bypasses stretch because columns are
+  // params-driven (position + kind + anchor + width/depth/height/rotation)
+  // και geometry (footprint / bbox / area / volume) is recomputed atomically
+  // by UpdateColumnParamsCommand.
+  if (grip.columnGripKind) {
+    commitColumnGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-359 Phase 11 — XLine grip path (basePoint translate or direction rotate).
+  // Bypasses stretch because XLine has no vertex array.
+  if (grip.xlineGripKind) {
+    commitXLineGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-359 Phase 11 — Ray grip path (basePoint translate or direction rotate).
+  if (grip.rayGripKind) {
+    commitRayGripDrag(grip, delta, deps);
+    return;
+  }
   // ADR-357 Phase 12 — copy toggle gates routing for every mode.
   const copyOn = GripCopyModeStore.getSnapshot().enabled;
 
@@ -405,95 +428,5 @@ export function commitDxfGripDragModeAware(
   // (Copy toggle is handled inside `commitDxfGripDragViaStretchCommand`).
   commitDxfGripDragViaStretchCommand(grip, delta, deps);
 }
-// ============================================================================
-// OVERLAY GRIP COMMIT
-// ============================================================================
-/**
- * Commit an overlay vertex grip drag (single or multi-vertex).
- * Extracted from useCanvasMouse.ts:520-557.
- */
-export async function commitOverlayVertexDrag(
-  grips: UnifiedGripInfo[],
-  delta: Point2D,
-  deps: OverlayCommitDeps,
-): Promise<void> {
-  const { overlayStore, executeCommand, movementDetectionThreshold } = deps;
-  // 🐛 FIX (2026-05-09): Click-without-drag teleported vertex to (0,0).
-  // Two root causes: (1) no movement threshold guard so a bare click committed
-  // a zero-delta move that, combined with (2) the `?? 0` fallback when the
-  // vertex was missing in the store, produced (0,0) targets. Now: skip commit
-  // entirely if there is no real movement, and skip any grip whose vertex is
-  // not currently in the polygon (no silent (0,0) substitution).
-  const hasMovement = Math.abs(delta.x) > movementDetectionThreshold ||
-                      Math.abs(delta.y) > movementDetectionThreshold;
-  if (!hasMovement) return;
-  const movements: VertexMovement[] = [];
-  for (const grip of grips) {
-    const overlay = overlayStore.overlays[grip.overlayId!];
-    const polygon = overlay?.polygon;
-    const vertexIndex = grip.gripIndex;
-    const vertex = polygon?.[vertexIndex];
-    if (!vertex) continue;
-    const oldX = vertex[0];
-    const oldY = vertex[1];
-    movements.push({
-      overlayId: grip.overlayId!,
-      vertexIndex,
-      oldPosition: [oldX, oldY] as [number, number],
-      newPosition: [oldX + delta.x, oldY + delta.y] as [number, number],
-    });
-  }
-  if (movements.length === 0) return;
-  const { MoveMultipleOverlayVerticesCommand } = await import('../../core/commands');
-  const command = new MoveMultipleOverlayVerticesCommand(movements, overlayStore);
-  executeCommand(command);
-}
-/**
- * Commit an overlay edge midpoint grip drag (vertex insertion).
- * Extracted from useCanvasMouse.ts:559-589.
- */
-export async function commitOverlayEdgeMidpointDrag(
-  grip: UnifiedGripInfo,
-  worldPos: Point2D,
-  newVertexCreated: boolean,
-  deps: OverlayCommitDeps,
-): Promise<void> {
-  const { overlayStore } = deps;
-  if (!grip.overlayId || grip.edgeInsertIndex === undefined) return;
-  if (!newVertexCreated) {
-    await overlayStore.addVertex(
-      grip.overlayId,
-      grip.edgeInsertIndex,
-      [worldPos.x, worldPos.y]
-    );
-  } else {
-    await overlayStore.updateVertex(
-      grip.overlayId,
-      grip.edgeInsertIndex,
-      [worldPos.x, worldPos.y]
-    );
-  }
-}
-/**
- * Commit an overlay body drag (move entire overlay).
- * Extracted from useCanvasMouse.ts:591-626.
- */
-export async function commitOverlayBodyDrag(
-  overlayId: string,
-  delta: Point2D,
-  deps: OverlayCommitDeps,
-): Promise<void> {
-  const { overlayStore, executeCommand, movementDetectionThreshold } = deps;
-  const hasMovement = Math.abs(delta.x) > movementDetectionThreshold ||
-                      Math.abs(delta.y) > movementDetectionThreshold;
-  if (hasMovement) {
-    const { MoveOverlayCommand } = await import('../../core/commands');
-    const command = new MoveOverlayCommand(
-      overlayId,
-      delta,
-      overlayStore,
-      true // isDragging = true
-    );
-    executeCommand(command);
-  }
-}
+// Overlay commit adapters live in `overlay-grip-commit-adapters.ts`
+// (split for N.7.1 file-size compliance — re-exported via grips/index.ts).

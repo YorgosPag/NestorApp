@@ -15,6 +15,8 @@ import type { GripInfo, StairGripKind } from './useGripMovement';
 import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
 import { getStairGrips } from '../systems/stairs/stair-grips';
 import { getDimensionGrips } from './dimensions/useDimensionGrips';
+import { getXLineGrips } from '../systems/xline/xline-grips';
+import { getRayGrips } from '../systems/ray/ray-grips';
 
 // ============================================================================
 // TYPES (still used by grips/ modules and CanvasLayerStack)
@@ -204,6 +206,18 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
     case 'dimension': {
       // ADR-362 Phase I2 — dimension grips (up to 5 per entity, §D9).
       grips.push(...getDimensionGrips(entity));
+      break;
+    }
+
+    case 'xline': {
+      // ADR-359 Phase 11 — basePoint (translate) + direction handle (rotate).
+      grips.push(...getXLineGrips(entity));
+      break;
+    }
+
+    case 'ray': {
+      // ADR-359 Phase 11 — basePoint (translate) + direction handle (rotate).
+      grips.push(...getRayGrips(entity));
       break;
     }
   }

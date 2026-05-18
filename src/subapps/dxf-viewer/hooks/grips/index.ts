@@ -32,12 +32,14 @@ export { findNearestGrip } from './grip-hit-testing';
 export {
   commitDxfGripDragViaStretchCommand,
   commitDxfGripDragModeAware,
-  commitOverlayVertexDrag,
-  commitOverlayEdgeMidpointDrag,
-  commitOverlayBodyDrag,
   createSceneManagerAdapter,
 } from './grip-commit-adapters';
 export type { DxfCommitDeps, OverlayCommitDeps } from './grip-commit-adapters';
+export {
+  commitOverlayVertexDrag,
+  commitOverlayEdgeMidpointDrag,
+  commitOverlayBodyDrag,
+} from './overlay-grip-commit-adapters';
 
 // === Legacy (deprecated — ADR-183) ===
 /** @deprecated Use useUnifiedGripInteraction instead */

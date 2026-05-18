@@ -18,6 +18,8 @@ import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
+import type { ColumnEntity } from '../../bim/types/column-types';
+import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
 import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/UpdateWallParamsCommand';
@@ -25,12 +27,16 @@ import { UpdateOpeningParamsCommand } from '../../core/commands/entity-commands/
 import { UpdateSlabParamsCommand } from '../../core/commands/entity-commands/UpdateSlabParamsCommand';
 import { UpdateSlabOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateSlabOpeningParamsCommand';
 import { UpdateBeamParamsCommand } from '../../core/commands/entity-commands/UpdateBeamParamsCommand';
+import { UpdateColumnParamsCommand } from '../../core/commands/entity-commands/UpdateColumnParamsCommand';
 import { applyStairGripDrag } from '../../systems/stairs/stair-grips';
 import { applyWallGripDrag } from '../../bim/walls/wall-grips';
 import { applyOpeningGripDrag } from '../../bim/walls/opening-grips';
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
+import { applyColumnGripDrag } from '../../bim/columns/column-grips';
+import { applyXLineGripDrag } from '../../systems/xline/xline-grips';
+import { applyRayGripDrag } from '../../systems/ray/ray-grips';
 import { applyDimensionGripDrag } from '../dimensions/useDimensionGrips';
 import { EventBus } from '../../systems/events/EventBus';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
@@ -298,6 +304,91 @@ export function commitBeamGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   EventBus.emit('bim:beam-params-updated', { beamId: grip.entityId });
+}
+
+/**
+ * ADR-363 Phase 4.5 — Parametric column grip commit. Bypasses the standard
+ * stretch / move strategies because `ColumnEntity` is parametric: geometry is
+ * fully derived from `params`, so the grip drag transforms params (via
+ * `applyColumnGripDrag`) και το command (`UpdateColumnParamsCommand`)
+ * recomputes geometry + validation atomically. Merge window enabled
+ * (isDragging=true) so a continuous drag collapses σε ένα undo entry
+ * (ADR-031). Emits `bim:column-params-updated` after dispatch ώστε consumers
+ * (auto-save / BOQ feed) να αντιδρούν.
+ */
+export function commitColumnGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.columnGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<ColumnEntity>;
+  if (candidate.type !== 'column' || !candidate.params) return;
+  const column = candidate as ColumnEntity;
+  const originalParams = column.params;
+  const newParams = applyColumnGripDrag(grip.columnGripKind, {
+    originalParams,
+    delta,
+  });
+  if (newParams === originalParams) return;
+  const command = new UpdateColumnParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+  EventBus.emit('bim:column-params-updated', { columnId: grip.entityId });
+}
+
+/**
+ * ADR-359 Phase 11 — XLine grip commit via `applyXLineGripDrag` + direct scene
+ * patch. Bypasses stretch/move because XLine has no vertex array: only
+ * `basePoint` (translate) and `direction` (rotate) fields. Follows the
+ * dimension-grip pattern (scene patch without a dedicated command).
+ */
+export function commitXLineGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.xlineGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw || (raw as Record<string, unknown>).type !== 'xline') return;
+  const entity = raw as unknown as XLineEntity;
+  const currentPos: Point2D = { x: grip.position.x + delta.x, y: grip.position.y + delta.y };
+  const updates = applyXLineGripDrag(grip.xlineGripKind, { entity, delta, currentPos });
+  if (Object.keys(updates).length === 0) return;
+  sceneManager.updateEntity(grip.entityId, updates as unknown as Partial<SceneEntity>);
+}
+
+/**
+ * ADR-359 Phase 11 — Ray grip commit via `applyRayGripDrag` + direct scene
+ * patch. Mirrors `commitXLineGripDrag` for semi-infinite lines.
+ */
+export function commitRayGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.rayGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw || (raw as Record<string, unknown>).type !== 'ray') return;
+  const entity = raw as unknown as RayEntity;
+  const currentPos: Point2D = { x: grip.position.x + delta.x, y: grip.position.y + delta.y };
+  const updates = applyRayGripDrag(grip.rayGripKind, { entity, delta, currentPos });
+  if (Object.keys(updates).length === 0) return;
+  sceneManager.updateEntity(grip.entityId, updates as unknown as Partial<SceneEntity>);
 }
 
 /** ADR-362 Phase I2 — Dimension grip commit via `applyDimensionGripDrag` + scene patch. */

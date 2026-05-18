@@ -9,7 +9,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, BeamGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, BeamGripKind, ColumnGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
 import type {
   VertexHoverInfo,
   EdgeHoverInfo,
@@ -130,6 +130,25 @@ export interface UnifiedGripInfo {
    * move).
    */
   readonly beamGripKind?: BeamGripKind;
+  /**
+   * ADR-363 Phase 4.5 — parametric column grip discriminator (forwarded from
+   * `GripInfo.columnGripKind`). Routes commit through `applyColumnGripDrag()` +
+   * `UpdateColumnParamsCommand` (center translate + rotation + width/depth
+   * resize).
+   */
+  readonly columnGripKind?: ColumnGripKind;
+  /**
+   * ADR-359 Phase 11 — XLine grip discriminator (forwarded from
+   * `GripInfo.xlineGripKind`). Routes commit through `applyXLineGripDrag()` +
+   * direct scene patch (translate basePoint or rotate direction).
+   */
+  readonly xlineGripKind?: XLineGripKind;
+  /**
+   * ADR-359 Phase 11 — Ray grip discriminator (forwarded from
+   * `GripInfo.rayGripKind`). Routes commit through `applyRayGripDrag()` +
+   * direct scene patch (translate basePoint or rotate direction).
+   */
+  readonly rayGripKind?: RayGripKind;
 }
 
 /**
