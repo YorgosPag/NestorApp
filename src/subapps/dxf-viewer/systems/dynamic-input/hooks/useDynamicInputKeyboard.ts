@@ -29,6 +29,7 @@ import {
   type DynamicSubmitPayload,
   type Phase
 } from '../keyboard-handlers';
+import type { DisplayUnit } from '../../../config/units';
 
 interface UseDynamicInputKeyboardArgs extends FieldValueSetters, FieldValues {
   // visibility
@@ -87,6 +88,9 @@ interface UseDynamicInputKeyboardArgs extends FieldValueSetters, FieldValues {
   // circle center coordinates
   firstClickPoint: Point2D | null;
   setFirstClickPoint: (p: Point2D | null) => void;
+
+  // ADR-357 Phase 2b: user-selected display unit
+  displayUnit: DisplayUnit;
 }
 
 /**
@@ -114,6 +118,8 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
     setRiseValue, setTreadValue, setWidthValue,
     activeStairField, setActiveStairField,
     riseInputRef, treadInputRef, widthInputRef,
+    // ADR-357 Phase 2b
+    displayUnit,
   } = args;
 
   // 🏢 ENTERPRISE: Helper for focus with timeout
@@ -145,12 +151,19 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
     lengthValue,
     radiusValue,
     diameterValue,
+    // ADR-358 Phase 7b2b-β Stream E
+    riseValue,
+    treadValue,
+    widthValue,
+    activeStairField,
     activeField,
     drawingPhase,
     firstClickPoint,
     activeTool,
     normalizeNumber,
     isValidNumber,
+    // ADR-357 Phase 2b
+    displayUnit,
   };
 
   // Update actions ref on each render
@@ -173,6 +186,11 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
     CADFeedback,
     focusSoon,
     focusAndSelect,
+    // ADR-358 Phase 7b2b-β Stream E
+    setRiseValue,
+    setTreadValue,
+    setWidthValue,
+    setActiveStairField,
   };
 
   // Update refs ref on each render
@@ -184,6 +202,10 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
     radiusInputRef,
     diameterInputRef,
     drawingPhaseRef,
+    // ADR-358 Phase 7b2b-β Stream E
+    riseInputRef,
+    treadInputRef,
+    widthInputRef,
   };
 
   // 🏢 ENTERPRISE PATTERN: Single useEffect with MINIMAL dependencies
