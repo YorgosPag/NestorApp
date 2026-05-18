@@ -23,6 +23,8 @@ import type {
 import { INPUT_TIMING } from '../../../config/timing-config';
 // 🏢 ADR-067: Centralized degrees → radians conversion.
 import { degToRad } from '../../../rendering/entities/shared/geometry-utils';
+// ADR-357 Phase 2b: convert user-typed display-unit length → internal mm.
+import { fromDisplay } from '../../../config/units';
 
 export const handleLineKeyboard: KeyboardHandler = (
   _e,
@@ -108,17 +110,19 @@ function handleLineEnter(
     return true;
   }
 
-  const lengthNum = parseFloat(normalizeNumber(lengthValue));
+  const lengthDisplay = parseFloat(normalizeNumber(lengthValue));
   const angleNum = parseFloat(normalizeNumber(angleValue));
-  if (!Number.isFinite(lengthNum) || !Number.isFinite(angleNum)) {
+  if (!Number.isFinite(lengthDisplay) || !Number.isFinite(angleNum)) {
     CADFeedback.onError();
     return true;
   }
 
+  // ADR-357 Phase 2b: user typed in display unit → convert to internal mm for world coords.
+  const lengthMm = fromDisplay(lengthDisplay, context.displayUnit);
   const angleRad = degToRad(angleNum);
   const worldPoint = {
-    x: firstClickPoint.x + lengthNum * Math.cos(angleRad),
-    y: firstClickPoint.y + lengthNum * Math.sin(angleRad),
+    x: firstClickPoint.x + lengthMm * Math.cos(angleRad),
+    y: firstClickPoint.y + lengthMm * Math.sin(angleRad),
   };
 
   // Dispatch through the drawing pipeline — NO direct entity creation here.
@@ -127,7 +131,7 @@ function handleLineEnter(
     tool: activeTool,
     action: 'add-point',
     coordinates: worldPoint,
-    length: lengthNum,
+    length: lengthMm,
     angle: angleNum,
   });
 
