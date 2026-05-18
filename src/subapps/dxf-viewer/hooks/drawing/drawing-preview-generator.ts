@@ -19,7 +19,7 @@ import type {
   PreviewPoint,
 } from './drawing-types';
 import type { XLineEntity, RayEntity } from '../../types/entities';
-import { getMode } from '../../systems/tools/xline-mode-store';
+import { getXLineModeState } from '../../systems/tools/xline-mode-store';
 // ADR-358 Phase 5a — stair preview via SSoT `computeStairGeometry`.
 import { buildDefaultStairParams } from './stair-completion';
 import { computeStairGeometry } from '../../systems/stairs/StairGeometryService';

@@ -17,7 +17,7 @@ import type {
   ArcEntity,
 } from '../../types/scene';
 import type { XLineEntity, RayEntity } from '../../types/entities';
-import { getMode } from '../../systems/tools/xline-mode-store';
+import { getXLineModeState } from '../../systems/tools/xline-mode-store';
 import type {
   DrawingTool,
   ExtendedSceneEntity,
@@ -397,38 +397,41 @@ export function createEntityFromTool(
       }
       break;
     case 'xline': {
-      const mode = getMode();
-      if (mode === 'horizontal' && points.length >= 1) {
-        return {
-          id,
-          type: 'xline',
-          basePoint: points[0],
-          direction: { x: 1, y: 0 },
-          visible: true,
-          layerId: defaultLayerId,
-        } as XLineEntity;
+      const xlineState = getXLineModeState();
+      if (xlineState.mode === 'horizontal' && points.length >= 1) {
+        return { id, type: 'xline', basePoint: points[0], direction: { x: 1, y: 0 }, visible: true, layerId: defaultLayerId } as XLineEntity;
       }
-      if (mode === 'vertical' && points.length >= 1) {
-        return {
-          id,
-          type: 'xline',
-          basePoint: points[0],
-          direction: { x: 0, y: 1 },
-          visible: true,
-          layerId: defaultLayerId,
-        } as XLineEntity;
+      if (xlineState.mode === 'vertical' && points.length >= 1) {
+        return { id, type: 'xline', basePoint: points[0], direction: { x: 0, y: 1 }, visible: true, layerId: defaultLayerId } as XLineEntity;
       }
-      // through (default) — requires 2 points
+      if (xlineState.mode === 'angle') {
+        if (xlineState.angleValue !== null && points.length >= 1) {
+          const angleRad = xlineState.angleValue * Math.PI / 180;
+          return { id, type: 'xline', basePoint: points[0], direction: { x: Math.cos(angleRad), y: Math.sin(angleRad) }, visible: true, layerId: defaultLayerId } as XLineEntity;
+        }
+        if (points.length >= 2) {
+          return { id, type: 'xline', basePoint: points[0], direction: normalizeDir(points[1].x - points[0].x, points[1].y - points[0].y), visible: true, layerId: defaultLayerId } as XLineEntity;
+        }
+        break;
+      }
+      if (xlineState.mode === 'bisect') {
+        if (points.length >= 3) {
+          const [p1, p2, p3] = points;
+          const d2x = p2.x - p1.x, d2y = p2.y - p1.y;
+          const d3x = p3.x - p1.x, d3y = p3.y - p1.y;
+          const len2 = Math.sqrt(d2x * d2x + d2y * d2y);
+          const len3 = Math.sqrt(d3x * d3x + d3y * d3y);
+          if (len2 < 1e-10 || len3 < 1e-10) return null;
+          const dir = normalizeDir(d2x / len2 + d3x / len3, d2y / len2 + d3y / len3);
+          return { id, type: 'xline', basePoint: p1, direction: dir, visible: true, layerId: defaultLayerId } as XLineEntity;
+        }
+        break;
+      }
+      if (xlineState.mode === 'offset') return null; // Phase 4+ — needs entity pick
+      // through (default)
       if (points.length >= 2) {
         const dir = normalizeDir(points[1].x - points[0].x, points[1].y - points[0].y);
-        return {
-          id,
-          type: 'xline',
-          basePoint: points[0],
-          direction: dir,
-          visible: true,
-          layerId: defaultLayerId,
-        } as XLineEntity;
+        return { id, type: 'xline', basePoint: points[0], direction: dir, visible: true, layerId: defaultLayerId } as XLineEntity;
       }
       break;
     }
@@ -476,9 +479,12 @@ export function isEntityComplete(tool: DrawingTool, pointCount: number): boolean
     case 'circle-2p-radius':
       return pointCount >= 3;
     case 'xline': {
-      const mode = getMode();
-      if (mode === 'horizontal' || mode === 'vertical') return pointCount >= 1;
-      return pointCount >= 2; // through (default)
+      const state = getXLineModeState();
+      if (state.mode === 'horizontal' || state.mode === 'vertical') return pointCount >= 1;
+      if (state.mode === 'angle') return state.angleValue !== null ? pointCount >= 1 : pointCount >= 2;
+      if (state.mode === 'bisect') return pointCount >= 3;
+      if (state.mode === 'offset') return false;
+      return pointCount >= 2; // through default
     }
     case 'measure-distance-continuous':
     case 'polyline':
