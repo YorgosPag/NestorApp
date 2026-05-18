@@ -6,30 +6,32 @@
  * - Escape → cancel rotation / cancel grip interaction / clear draft polygon / clear grips / deselect entities
  * - Enter → finish continuous drawing tool or overlay polygon
  * - X → flip arc direction during arc drawing
+ * - ADR-357 Phase 3: Direct Distance Entry (digit + Enter while drawing line)
  *
  * EXTRACTED FROM: CanvasSection.tsx — ~61 lines of keyboard handler useEffect
  *
  * @see ADR-032: Command History / Undo-Redo
  * @see ADR-083: Continuous drawing tools
+ * @see ADR-357: DXF Line Tool Google-Level (Phase 3 — Direct Distance Entry)
  */
-
 'use client';
-
-import { useEffect, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
 import { LassoFreehandStore } from '../../systems/lasso/LassoFreehandStore';
 import { CanvasNumericInputStore } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
 import type { SelectedGrip } from '../grips/useGripSystem';
-
+import type { Point2D } from '../../rendering/types/Types';
+// ADR-357 Phase 3: DDE — cursor world position + unit conversion
+import { getImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
+import { fromDisplay } from '../../config/units';
+import type { DisplayUnit } from '../../config/units';
 // ============================================================================
 // TYPES
 // ============================================================================
-
 /** Subset of useDxfGripInteraction return — only the methods used by this hook */
 interface DxfGripInteractionLike {
   handleGripEscape: () => boolean;
 }
-
 export interface UseCanvasKeyboardShortcutsParams {
   /** Context-aware delete handler */
   handleSmartDelete: () => Promise<boolean>;
@@ -113,12 +115,26 @@ export interface UseCanvasKeyboardShortcutsParams {
   hasAnySelection?: boolean;
   /** PageUp/PageDown: bring selected entity to front / send to back */
   handleReorderEntity?: (direction: 'front' | 'back') => void;
+  /**
+   * ADR-357 Phase 3: Direct Distance Entry.
+   * Temp points of the active drawing (line). Length >= 1 = COLLECTING_POINTS.
+   * DDE activates when tool='line', tempPoints.length >= 1, no input focused.
+   */
+  drawingTempPoints?: Point2D[];
+  /** ADR-357 Phase 3: DDE callback — called with the computed world point. */
+  onDirectDistanceEntry?: (pt: { x: number; y: number }) => void;
+  /** ADR-357 Phase 5: Undo last chain vertex (U / Ctrl+Z during line chain mode). */
+  onUndoChainVertex?: () => void;
+  /** ADR-357 Phase 5: Finish chain (Enter during chain, no DDE pending) — exits chain, tool deselects. */
+  onChainFinish?: () => void;
+  /** ADR-357 Phase 7: Shift+Right-click snap override — open snap override menu at (x, y). */
+  onSnapOverrideMenuRequest?: (x: number, y: number) => void;
+  /** ADR-357 Phase 7: Number of drawing temp points — needed to gate Shift+Right-click. */
+  drawingTempPointCount?: number;
 }
-
 // ============================================================================
 // HOOK
 // ============================================================================
-
 export function useCanvasKeyboardShortcuts({
   handleSmartDelete,
   dxfGripInteraction,
@@ -161,8 +177,19 @@ export function useCanvasKeyboardShortcuts({
   clearEntitySelection,
   hasAnySelection = false,
   handleReorderEntity,
+  drawingTempPoints,
+  onDirectDistanceEntry,
+  onUndoChainVertex,
+  onChainFinish,
+  onSnapOverrideMenuRequest,
+  drawingTempPointCount = 0,
 }: UseCanvasKeyboardShortcutsParams): void {
-
+  // ADR-357 Phase 3: DDE digit accumulation buffer (persists across renders, no re-render needed)
+  const ddeBufferRef = useRef('');
+  // Clear DDE buffer when tool changes (e.g. ESC → select, next tool activation)
+  useEffect(() => {
+    ddeBufferRef.current = '';
+  }, [activeTool]);
   // Handle keyboard shortcuts for drawing, delete, and local operations
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -171,7 +198,6 @@ export function useCanvasKeyboardShortcuts({
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
         return;
       }
-
       // ADR-348: Scale tool — intercepts before global shortcuts when active
       if (scaleIsActive && handleScaleKeyDown) {
         const consumed = handleScaleKeyDown(e.key);
@@ -194,6 +220,43 @@ export function useCanvasKeyboardShortcuts({
       if (extendIsActive && handleExtendKeyDown) {
         const consumed = handleExtendKeyDown(e.key, e.shiftKey);
         if (consumed) { e.preventDefault(); return; }
+      }
+
+      // ADR-357 Phase 5: Ctrl+Z intercept during line chain mode → undo chain vertex.
+      // Must run before CommandHistory's global Ctrl+Z listener (capture order).
+      const isInChain = activeTool === 'line' && (drawingTempPoints?.length ?? 0) >= 1;
+      if (isInChain && e.ctrlKey && (e.key === 'z' || e.key === 'Z') && onUndoChainVertex) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        onUndoChainVertex();
+        return;
+      }
+
+      // ADR-357 Phase 3: Direct Distance Entry — capture digit/decimal keys during line drawing.
+      // Guard: tool='line', COLLECTING_POINTS (>= 1 temp point), no input focused, no CanvasNumericInput.
+      const isDde = activeTool === 'line'
+        && (drawingTempPoints?.length ?? 0) >= 1
+        && !CanvasNumericInputStore.isActive();
+
+      if (isDde) {
+        if (/^[\d.]$/.test(e.key)) {
+          // Avoid double-decimal: only allow one dot in the buffer
+          if (e.key === '.' && ddeBufferRef.current.includes('.')) return;
+          e.preventDefault();
+          ddeBufferRef.current += e.key;
+          return;
+        }
+        if (e.key === 'Backspace' && ddeBufferRef.current.length > 0) {
+          e.preventDefault();
+          ddeBufferRef.current = ddeBufferRef.current.slice(0, -1);
+          return;
+        }
+        // ESC clears the DDE buffer but does NOT consume the event
+        // (let the existing Escape handler below cancel the drawing)
+        if (e.key === 'Escape') {
+          ddeBufferRef.current = '';
+          // fall through to Escape handler
+        }
       }
 
       // Canvas numeric input — intercepts before generic Delete/Backspace/Escape (ADR-189)
@@ -308,6 +371,39 @@ export function useCanvasKeyboardShortcuts({
             PolygonCropStore.close();
             break;
           }
+
+          // ADR-357 Phase 3: Direct Distance Entry — fires when DDE buffer is non-empty.
+          // User typed a number (in display units) while cursor points direction. Enter applies it.
+          // Pipeline: display-unit distance → mm → lastRef + dir*dist → onDirectDistanceEntry
+          const ddeStr = ddeBufferRef.current.trim();
+          if (isDde && ddeStr.length > 0 && onDirectDistanceEntry && drawingTempPoints?.length) {
+            ddeBufferRef.current = '';
+            const rawDistance = parseFloat(ddeStr);
+            if (!isNaN(rawDistance) && rawDistance > 0) {
+              const lastRef = drawingTempPoints[drawingTempPoints.length - 1];
+              const cursor = getImmediateWorldPosition();
+              if (cursor && lastRef) {
+                const dx = cursor.x - lastRef.x;
+                const dy = cursor.y - lastRef.y;
+                const cursorDist = Math.sqrt(dx * dx + dy * dy);
+                if (cursorDist > 0) {
+                  const unit = (localStorage.getItem('dxf:displayUnit') ?? 'cm') as DisplayUnit;
+                  const distMm = fromDisplay(rawDistance, unit);
+                  e.preventDefault();
+                  onDirectDistanceEntry({ x: lastRef.x + (dx / cursorDist) * distMm, y: lastRef.y + (dy / cursorDist) * distMm });
+                  break;
+                }
+              }
+            }
+          }
+
+          // ADR-357 Phase 5: Enter during line chain mode (no DDE pending) → finish chain.
+          if (isInChain && ddeStr.length === 0 && onChainFinish) {
+            e.preventDefault();
+            onChainFinish();
+            break;
+          }
+
           // 🏢 ENTERPRISE (2026-01-31): Handle Enter for continuous drawing tools - ADR-083
           const continuousTools = ['polyline', 'polygon', 'measure-area', 'measure-angle', 'measure-distance-continuous', 'circle-best-fit'];
           if (continuousTools.includes(activeTool)) {
@@ -318,6 +414,14 @@ export function useCanvasKeyboardShortcuts({
           }
           break;
         }
+        // ADR-357 Phase 5: U key → undo last chain vertex during line chain mode
+        case 'u':
+        case 'U':
+          if (isInChain && onUndoChainVertex) {
+            e.preventDefault();
+            onUndoChainVertex();
+          }
+          break;
         // 🏢 ENTERPRISE (2026-01-31): "X" key for flip arc direction during arc drawing
         case 'x':
         case 'X':
@@ -356,7 +460,7 @@ export function useCanvasKeyboardShortcuts({
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive, handleMirrorEscape, mirrorIsActive, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleEscape, handleScaleKeyDown, scaleIsActive, handleStretchEscape, handleStretchKeyDown, stretchIsActive, handleTrimEscape, handleTrimKeyDown, trimIsActive, handleExtendEscape, handleExtendKeyDown, extendIsActive, clearEntitySelection, hasAnySelection, dxfGripInteraction, setDraftPolygon, setSelectedGrips, handleReorderEntity]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive, handleMirrorEscape, mirrorIsActive, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleEscape, handleScaleKeyDown, scaleIsActive, handleStretchEscape, handleStretchKeyDown, stretchIsActive, handleTrimEscape, handleTrimKeyDown, trimIsActive, handleExtendEscape, handleExtendKeyDown, extendIsActive, clearEntitySelection, hasAnySelection, dxfGripInteraction, setDraftPolygon, setSelectedGrips, handleReorderEntity, drawingTempPoints, onDirectDistanceEntry, onUndoChainVertex, onChainFinish]);
 
   // ADR-350 B2: SHIFT keyup → immediately reset inverseMode when trim is active
   useEffect(() => {
@@ -377,4 +481,19 @@ export function useCanvasKeyboardShortcuts({
     window.addEventListener('keyup', onKeyUp, { capture: true });
     return () => window.removeEventListener('keyup', onKeyUp, { capture: true });
   }, [extendIsActive, handleExtendKeyDown]);
+
+  // ADR-357 Phase 7: Shift+Right-click → open snap override menu (AutoCAD/BricsCAD UX).
+  // Gate: only during line COLLECTING_POINTS (drawingTempPointCount >= 1).
+  useEffect(() => {
+    if (!onSnapOverrideMenuRequest) return;
+    const handleContextMenu = (e: MouseEvent) => {
+      if (!e.shiftKey) return;
+      if (activeTool !== 'line' || drawingTempPointCount < 1) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      onSnapOverrideMenuRequest(e.clientX, e.clientY);
+    };
+    window.addEventListener('contextmenu', handleContextMenu, { capture: true });
+    return () => window.removeEventListener('contextmenu', handleContextMenu, { capture: true });
+  }, [activeTool, drawingTempPointCount, onSnapOverrideMenuRequest]);
 }
