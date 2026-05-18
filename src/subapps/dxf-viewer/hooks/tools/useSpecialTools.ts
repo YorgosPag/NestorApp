@@ -25,11 +25,17 @@ import { useLinePerpendicular } from '../drawing/useLinePerpendicular';
 import { useLineParallel } from '../drawing/useLineParallel';
 import { useStairTool } from '../drawing/useStairTool';
 import { useWallTool } from '../drawing/useWallTool';
+import { useOpeningTool } from '../drawing/useOpeningTool';
+import { useSlabTool } from '../drawing/useSlabTool';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { useFloorMetadata } from '../data/useFloorMetadata';
 import type { StairFloorLinkInput } from '../drawing/stair-completion';
 import { useAngleEntityMeasurement, type AngleEntityVariant } from './useAngleEntityMeasurement';
-import type { AngleMeasurementEntity } from '../../types/entities';
+import type { AngleMeasurementEntity, Entity } from '../../types/entities';
+import { isWallEntity } from '../../types/entities';
+import type { WallEntity } from '../../bim/types/wall-types';
+import type { Point2D } from '../../rendering/types/Types';
+import { computeWallTrims, applyTrimPatches } from '../../bim/walls/wall-trims';
 // 🏢 ENTERPRISE: Import actual level system types for type safety
 import type { LevelsHookReturn } from '../../systems/levels';
 
@@ -64,6 +70,10 @@ export interface UseSpecialToolsReturn {
   stairTool: ReturnType<typeof useStairTool>;
   /** ADR-363 Phase 1B — Wall tool hook return */
   wallTool: ReturnType<typeof useWallTool>;
+  /** ADR-363 Phase 2 — Opening tool hook return */
+  openingTool: ReturnType<typeof useOpeningTool>;
+  /** ADR-363 Phase 3 — Slab tool hook return */
+  slabTool: ReturnType<typeof useSlabTool>;
 }
 
 // ============================================================================
@@ -300,11 +310,9 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       deactivateStair();
     }
   }, [activeTool, activateStair, deactivateStair]);
-
   // ============================================================================
   // ADR-363 Phase 1B — WALL TOOL
   // ============================================================================
-
   /**
    * Wall drawing tool — 2-click placement (startPoint → endPoint) + commit.
    * State machine in `useWallTool`. Default kind = 'straight' (Phase 1B);
@@ -325,19 +333,18 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       if (!levelId) return;
       const scene = levelManager.getLevelScene(levelId);
       if (!scene) return;
-      const updatedScene = {
-        ...scene,
-        entities: [...(scene.entities || []), wallEntity],
-      };
-      levelManager.setLevelScene(levelId, updatedScene);
-      console.debug('[WallTool] Wall added to scene:', wallEntity.id);
-      EventBus.emit('drawing:entity-created', {
-        entity: wallEntity,
-        tool: 'wall',
-      });
+      // Include new wall before computing trims so neighbors are also patched.
+      const entitiesWithNew = [...(scene.entities || []), wallEntity];
+      const allWalls = entitiesWithNew.filter(isWallEntity);
+      const trims = computeWallTrims(allWalls);
+      const patchedEntities = applyTrimPatches(entitiesWithNew, trims);
+      levelManager.setLevelScene(levelId, { ...scene, entities: patchedEntities });
+      console.debug('[WallTool] Wall added to scene:', wallEntity.id, 'trims:', trims.size);
+      // Broadcast with trim-patched entity so persistence layer saves correct params.
+      const patchedNewWall = (patchedEntities.find(e => e.id === wallEntity.id) as (typeof wallEntity) | undefined) ?? wallEntity;
+      EventBus.emit('drawing:entity-created', { entity: patchedNewWall, tool: 'wall' });
     },
   });
-
   const { activate: activateWall, deactivate: deactivateWall } = wallTool;
   useEffect(() => {
     if (activeTool === 'wall') {
@@ -346,22 +353,138 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       deactivateWall();
     }
   }, [activeTool, activateWall, deactivateWall]);
-
+  // ============================================================================
+  // ADR-363 Phase 2 — OPENING TOOL
+  // ============================================================================
+  /**
+   * Opening drawing tool — 2-state FSM (await host wall → await position). The
+   * created `OpeningEntity` is appended to the scene AND broadcast via
+   * `EventBus` so `useOpeningPersistence` can schedule the first Firestore save.
+   *
+   * Host resolution: `getWallAtPoint` reads the current scene and returns the
+   * first wall whose `geometry.bbox` contains the click — sufficient για Phase 2
+   * placement (full hit-test integration lands Phase 2.5).
+   */
+  const openingTool = useOpeningTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    getWallById: (wallId: string): WallEntity | null => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return null;
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene) return null;
+      const e = scene.entities.find((x) => x.id === wallId);
+      return e && isWallEntity(e) ? (e as WallEntity) : null;
+    },
+    getWallAtPoint: (point: Readonly<Point2D>): WallEntity | null => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return null;
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene) return null;
+      const walls = scene.entities.filter(isWallEntity) as WallEntity[];
+      // Bbox containment — adequate for Phase 2 click placement.
+      return walls.find((w: WallEntity) => {
+        const bb = w.geometry?.bbox;
+        if (!bb) return false;
+        return point.x >= bb.min.x && point.x <= bb.max.x
+            && point.y >= bb.min.y && point.y <= bb.max.y;
+      }) ?? null;
+    },
+    onOpeningCreated: (openingEntity) => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return;
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene) return;
+      // Update host wall's `hostedOpeningIds` mirror so the wall renderer
+      // and BOQ pipeline can find the opening from the host side.
+      const nextEntities: Entity[] = scene.entities.map((e) => {
+        if (!isWallEntity(e)) return e as Entity;
+        if (e.id !== openingEntity.params.wallId) return e as Entity;
+        const existing = (e as WallEntity).hostedOpeningIds ?? [];
+        if (existing.includes(openingEntity.id)) return e as Entity;
+        return { ...(e as WallEntity), hostedOpeningIds: [...existing, openingEntity.id] } as Entity;
+      });
+      levelManager.setLevelScene(levelId, {
+        ...scene,
+        entities: [...nextEntities, openingEntity],
+      });
+      EventBus.emit('drawing:entity-created', { entity: openingEntity, tool: 'opening' });
+    },
+  });
+  const { activate: activateOpening, deactivate: deactivateOpening } = openingTool;
+  useEffect(() => {
+    if (activeTool === 'opening') {
+      activateOpening();
+    } else {
+      deactivateOpening();
+    }
+  }, [activeTool, activateOpening, deactivateOpening]);
+  // ============================================================================
+  // ADR-363 Phase 3 — SLAB TOOL
+  // ============================================================================
+  /**
+   * Slab drawing tool — polygon N-click + Enter (or auto-close near first vertex).
+   * State machine in `useSlabTool`. Default kind = 'floor'. Continuous chain.
+   * The created `SlabEntity` is appended to the scene AND broadcast via
+   * `EventBus` so `useSlabPersistence` can schedule the first Firestore save.
+   */
+  const slabTool = useSlabTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onSlabCreated: (slabEntity) => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return;
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene) return;
+      levelManager.setLevelScene(levelId, {
+        ...scene,
+        entities: [...(scene.entities || []), slabEntity],
+      });
+      EventBus.emit('drawing:entity-created', { entity: slabEntity, tool: 'slab' });
+    },
+  });
+  const { activate: activateSlab, deactivate: deactivateSlab } = slabTool;
+  useEffect(() => {
+    if (activeTool === 'slab') {
+      activateSlab();
+    } else {
+      deactivateSlab();
+    }
+  }, [activeTool, activateSlab, deactivateSlab]);
+  // ADR-363 Phase 1E — Re-trim all walls after a grip commit settles (200 ms).
+  // Only runs when ≥2 walls exist and at least one bevel is needed.
+  useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const cleanup = EventBus.on('bim:wall-params-updated', () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        const levelId = levelManager.currentLevelId;
+        if (!levelId) return;
+        const scene = levelManager.getLevelScene(levelId);
+        if (!scene) return;
+        const allWalls = scene.entities.filter(isWallEntity);
+        if (allWalls.length < 2) return;
+        const trims = computeWallTrims(allWalls);
+        if (trims.size === 0) return;
+        const patched = applyTrimPatches(scene.entities, trims);
+        levelManager.setLevelScene(levelId, { ...scene, entities: patched });
+      }, 200);
+    });
+    return () => {
+      cleanup();
+      if (debounceTimer) clearTimeout(debounceTimer);
+    };
+  }, [levelManager]);
   // ============================================================================
   // AUTO AREA — clear result panel when tool changes away
   // ============================================================================
-
   useEffect(() => {
     if (activeTool !== 'auto-measure-area') {
       clearAutoAreaState();
       clearAutoAreaPreview();
     }
   }, [activeTool]);
-
   // ============================================================================
   // RETURN
   // ============================================================================
-
   return {
     circleTTT,
     linePerpendicular,
@@ -369,7 +492,8 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     angleEntityMeasurement,
     stairTool,
     wallTool,
+    openingTool,
+    slabTool,
   };
 }
-
 export default useSpecialTools;
