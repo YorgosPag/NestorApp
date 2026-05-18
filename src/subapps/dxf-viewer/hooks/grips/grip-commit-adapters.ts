@@ -10,7 +10,6 @@
  * @see useDxfGripInteraction.ts — original DXF commit (commitGripDelta, createSceneManagerAdapter)
  * @see useCanvasMouse.ts — original overlay commit (handleContainerMouseUp)
  */
-
 import type { Point2D } from '../../rendering/types/Types';
 import type { ISceneManager, SceneEntity, ICommand } from '../../core/commands/interfaces';
 import type { VertexMovement } from '../../core/commands';
@@ -23,36 +22,22 @@ import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
 import { gripToVertexRefs } from '../../systems/grip/grip-to-vertex-refs';
 import { StretchEntityCommand, type StretchParams } from '../../core/commands/entity-commands/StretchEntityCommand';
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
+import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/UpdateWallParamsCommand';
 import { applyStairGripDrag } from '../../systems/stairs/stair-grips';
+import { applyWallGripDrag } from '../../bim/walls/wall-grips';
+import { applyDimensionGripDrag } from '../dimensions/useDimensionGrips';
+import { EventBus } from '../../systems/events/EventBus';
 import type { Entity } from '../../types/entities';
 import type { StairEntity } from '../../types/stair';
-
+import type { WallEntity, WallKind } from '../../bim/types/wall-types';
+import type { DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
+export type { DxfCommitDeps, OverlayCommitDeps } from './unified-grip-types';
 // ============================================================================
 // TYPES
 // ============================================================================
-
-/** Dependencies needed for DXF grip commits */
-export interface DxfCommitDeps {
-  moveEntities: (ids: string[], delta: Point2D, opts: { isDragging: boolean }) => void;
-  execute: (command: ICommand) => void;
-  currentLevelId: string | null;
-  getLevelScene: (levelId: string) => SceneModel | null;
-  setLevelScene: (levelId: string, scene: SceneModel) => void;
-  /** Switch active tool — required for rotate/scale/mirror grip handoff (ADR-349 Phase 1c-B2). */
-  onToolChange: (tool: string) => void;
-}
-
-/** Dependencies needed for overlay grip commits */
-export interface OverlayCommitDeps {
-  overlayStore: ReturnType<typeof useOverlayStore>;
-  executeCommand: (command: ICommand) => void;
-  movementDetectionThreshold: number;
-}
-
 // ============================================================================
 // DXF GRIP COMMIT
 // ============================================================================
-
 /** Recalculate angle (degrees) between two arms meeting at a vertex */
 function computeAngleDegrees(vertex: Point2D, p1: Point2D, p2: Point2D): number {
   const a1 = Math.atan2(p1.y - vertex.y, p1.x - vertex.x);
@@ -61,7 +46,6 @@ function computeAngleDegrees(vertex: Point2D, p1: Point2D, p2: Point2D): number 
   if (deg > 180) deg = 360 - deg;
   return deg;
 }
-
 /**
  * Create ISceneManager adapter for MoveVertexCommand.
  * Extracted from useDxfGripInteraction.ts:378-551.
@@ -69,7 +53,6 @@ function computeAngleDegrees(vertex: Point2D, p1: Point2D, p2: Point2D): number 
 export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | null {
   const { currentLevelId, getLevelScene, setLevelScene } = deps;
   if (!currentLevelId) return null;
-
   return {
     addEntity: (entity: SceneEntity) => {
       const scene = getLevelScene(currentLevelId);
@@ -107,12 +90,10 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
     updateVertex: (id: string, vertexIndex: number, position: Point2D) => {
       const scene = getLevelScene(currentLevelId);
       if (!scene) return;
-
       setLevelScene(currentLevelId, {
         ...scene,
         entities: scene.entities.map((e) => {
           if (e.id !== id) return e;
-
           // Polyline/polygon: has vertices array
           if ('vertices' in e && Array.isArray(e.vertices)) {
             const vertices = [...e.vertices] as Point2D[];
@@ -121,20 +102,17 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
             }
             return { ...e, vertices };
           }
-
           // Line: gripIndex 0→start, 1→end
           if ('start' in e && 'end' in e && !('vertices' in e)) {
             if (vertexIndex === 0) return { ...e, start: position };
             if (vertexIndex === 1) return { ...e, end: position };
             return e;
           }
-
           // Circle: gripIndex 1-4 = quadrant → update radius
           if ('center' in e && 'radius' in e && !('startAngle' in e)) {
             const center = e.center as Point2D;
             return { ...e, radius: calculateDistance(center, position) };
           }
-
           // Arc: gripIndex 1→startAngle, 2→endAngle
           if ('center' in e && 'radius' in e && 'startAngle' in e && 'endAngle' in e) {
             const center = e.center as Point2D;
@@ -145,7 +123,6 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
             if (vertexIndex === 2) return { ...e, endAngle: angleDeg, radius: newRadius };
             return e;
           }
-
           // Rectangle: corners from corner1/corner2
           if ('corner1' in e && 'corner2' in e) {
             const c1 = e.corner1 as Point2D;
@@ -156,7 +133,6 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
             if (vertexIndex === 3) return { ...e, corner1: { x: position.x, y: c1.y }, corner2: { x: c2.x, y: position.y } };
             return e;
           }
-
           // Angle-measurement
           if ('vertex' in e && 'point1' in e && 'point2' in e) {
             const vertex = vertexIndex === 0 ? position : e.vertex as Point2D;
@@ -168,7 +144,6 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
               angle: computeAngleDegrees(vertex, point1, point2),
             };
           }
-
           return e;
         }),
       });
@@ -183,7 +158,6 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
       const scene = getLevelScene(currentLevelId);
       const entity = scene?.entities?.find((e) => e.id === id);
       if (!entity) return undefined;
-
       if ('vertices' in entity && Array.isArray(entity.vertices)) {
         return entity.vertices as Point2D[];
       }
@@ -235,7 +209,6 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
     },
   };
 }
-
 /**
  * Commit a DXF grip drag through the unified `StretchEntityCommand` (ADR-349
  * Phase 1c-B3). Replaces the legacy fragmented `commitDxfGripDrag` (manual
@@ -258,26 +231,19 @@ export function commitDxfGripDragViaStretchCommand(
 ): void {
   if (delta.x === 0 && delta.y === 0) return;
   if (!grip.entityId) return;
-
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
-
   const entity = sceneManager.getEntity(grip.entityId);
   if (!entity) return;
-
   const refs = gripToVertexRefs(entity as unknown as Entity, grip);
-
   const vertexMoves = refs.length > 0 ? [{ entityId: grip.entityId, refs }] : [];
   const anchorMoves = refs.length === 0 && grip.movesEntity ? [grip.entityId] : [];
-
   if (vertexMoves.length === 0 && anchorMoves.length === 0) return;
-
   const params: StretchParams = { vertexMoves, anchorMoves, displacement: delta };
   const command = new StretchEntityCommand(params, sceneManager);
   if (command.validate() !== null) return;
   deps.execute(command);
 }
-
 /**
  * ADR-358 Phase 5b — Parametric stair grip commit. Bypasses the standard
  * stretch / move / rotate strategies because `StairEntity` is parametric:
@@ -291,15 +257,12 @@ function commitStairGripDrag(
   deps: DxfCommitDeps,
 ): void {
   if (!grip.entityId || !grip.stairGripKind) return;
-
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
-
   const raw = sceneManager.getEntity(grip.entityId);
   if (!raw) return;
   const candidate = raw as unknown as Partial<StairEntity>;
   if (candidate.type !== 'stair' || !candidate.params) return;
-
   const stair = candidate as StairEntity;
   const originalParams = stair.params;
   // Reconstruct current cursor position from the drag anchor (grip.position is
@@ -308,13 +271,11 @@ function commitStairGripDrag(
     x: grip.position.x + delta.x,
     y: grip.position.y + delta.y,
   };
-
   const newParams = applyStairGripDrag(grip.stairGripKind, {
     originalParams,
     delta,
     currentPos,
   });
-
   const command = new UpdateStairParamsCommand(
     grip.entityId,
     newParams,
@@ -325,7 +286,70 @@ function commitStairGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
 }
-
+/**
+ * ADR-363 Phase 1C — Parametric wall grip commit. Bypasses the standard
+ * stretch / move strategies because `WallEntity` is parametric: geometry is
+ * fully derived from `params`, so the grip drag transforms params (via
+ * `applyWallGripDrag`) and the command (`UpdateWallParamsCommand`) recomputes
+ * geometry + validation atomically. Merge window enabled (isDragging=true) so
+ * a continuous drag collapses into a single undo entry (ADR-031).
+ */
+function commitWallGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.wallGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<WallEntity>;
+  if (candidate.type !== 'wall' || !candidate.params) return;
+  const wall = candidate as WallEntity;
+  const originalParams = wall.params;
+  // Reconstruct current cursor position from the drag anchor (grip.position is
+  // captured at mouseDown — mirror `commitStairGripDrag` semantics).
+  const currentPos: Point2D = {
+    x: grip.position.x + delta.x,
+    y: grip.position.y + delta.y,
+  };
+  const newParams = applyWallGripDrag(grip.wallGripKind, {
+    originalParams,
+    delta,
+    currentPos,
+  });
+  const kind: WallKind = wall.kind ?? 'straight';
+  const command = new UpdateWallParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true, // isDragging — enable merge window for continuous drag
+    kind,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+  // ADR-363 Phase 1E — notify scene that a wall's params changed so the
+  // debounced re-trim listener in useSpecialTools can recompute bevel joins.
+  EventBus.emit('bim:wall-params-updated', { wallId: grip.entityId });
+}
+/** ADR-362 Phase I2 — Dimension grip commit via `applyDimensionGripDrag` + scene patch. */
+function commitDimensionGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.dimGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw || (raw as Record<string, unknown>).type !== 'dimension') return;
+  const dxfDim = raw as unknown as DxfDimension;
+  const newDimEntity = applyDimensionGripDrag(grip.dimGripKind, dxfDim.dimensionEntity, delta, grip.position);
+  if (newDimEntity === dxfDim.dimensionEntity) return;
+  sceneManager.updateEntity(grip.entityId, { dimensionEntity: newDimEntity } as unknown as Partial<SceneEntity>);
+}
 /**
  * Mode-aware DXF grip commit (ADR-349 Phase 1c-A / 1c-B2 / 1c-B3).
  *
@@ -349,32 +373,38 @@ export function commitDxfGripDragModeAware(
 ): void {
   if (delta.x === 0 && delta.y === 0) return;
   if (!grip.entityId) return;
-
   // ADR-358 Phase 5b — stair parametric grip path (5 kinds, §5.12).
   if (grip.stairGripKind) {
     commitStairGripDrag(grip, delta, deps);
     return;
   }
-
+  // ADR-362 Phase I2 — dimension grip path (defPoints / textMidpoint / rotation).
+  if (grip.dimGripKind) {
+    commitDimensionGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-363 Phase 1C — wall parametric grip path (endpoint / midpoint /
+  // thickness / curve / polyline-vertex). Bypasses stretch because walls are
+  // params-driven (geometry recomputed atomically by UpdateWallParamsCommand).
+  if (grip.wallGripKind) {
+    commitWallGripDrag(grip, delta, deps);
+    return;
+  }
   if (mode === 'move') {
     deps.moveEntities([grip.entityId], delta, { isDragging: false });
     return;
   }
-
   if (mode === 'rotate' || mode === 'scale' || mode === 'mirror') {
     GripHandoffStore.set(mode, grip.position);
     deps.onToolChange(mode);
     return;
   }
-
   // mode === 'stretch' (default): unified StretchEntityCommand path.
   commitDxfGripDragViaStretchCommand(grip, delta, deps);
 }
-
 // ============================================================================
 // OVERLAY GRIP COMMIT
 // ============================================================================
-
 /**
  * Commit an overlay vertex grip drag (single or multi-vertex).
  * Extracted from useCanvasMouse.ts:520-557.
@@ -385,7 +415,6 @@ export async function commitOverlayVertexDrag(
   deps: OverlayCommitDeps,
 ): Promise<void> {
   const { overlayStore, executeCommand, movementDetectionThreshold } = deps;
-
   // 🐛 FIX (2026-05-09): Click-without-drag teleported vertex to (0,0).
   // Two root causes: (1) no movement threshold guard so a bare click committed
   // a zero-delta move that, combined with (2) the `?? 0` fallback when the
@@ -395,7 +424,6 @@ export async function commitOverlayVertexDrag(
   const hasMovement = Math.abs(delta.x) > movementDetectionThreshold ||
                       Math.abs(delta.y) > movementDetectionThreshold;
   if (!hasMovement) return;
-
   const movements: VertexMovement[] = [];
   for (const grip of grips) {
     const overlay = overlayStore.overlays[grip.overlayId!];
@@ -412,14 +440,11 @@ export async function commitOverlayVertexDrag(
       newPosition: [oldX + delta.x, oldY + delta.y] as [number, number],
     });
   }
-
   if (movements.length === 0) return;
-
   const { MoveMultipleOverlayVerticesCommand } = await import('../../core/commands');
   const command = new MoveMultipleOverlayVerticesCommand(movements, overlayStore);
   executeCommand(command);
 }
-
 /**
  * Commit an overlay edge midpoint grip drag (vertex insertion).
  * Extracted from useCanvasMouse.ts:559-589.
@@ -432,7 +457,6 @@ export async function commitOverlayEdgeMidpointDrag(
 ): Promise<void> {
   const { overlayStore } = deps;
   if (!grip.overlayId || grip.edgeInsertIndex === undefined) return;
-
   if (!newVertexCreated) {
     await overlayStore.addVertex(
       grip.overlayId,
@@ -447,7 +471,6 @@ export async function commitOverlayEdgeMidpointDrag(
     );
   }
 }
-
 /**
  * Commit an overlay body drag (move entire overlay).
  * Extracted from useCanvasMouse.ts:591-626.
@@ -458,10 +481,8 @@ export async function commitOverlayBodyDrag(
   deps: OverlayCommitDeps,
 ): Promise<void> {
   const { overlayStore, executeCommand, movementDetectionThreshold } = deps;
-
   const hasMovement = Math.abs(delta.x) > movementDetectionThreshold ||
                       Math.abs(delta.y) > movementDetectionThreshold;
-
   if (hasMovement) {
     const { MoveOverlayCommand } = await import('../../core/commands');
     const command = new MoveOverlayCommand(

@@ -9,7 +9,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind } from '../useGripMovement';
 import type {
   VertexHoverInfo,
   EdgeHoverInfo,
@@ -91,6 +91,19 @@ export interface UnifiedGripInfo {
    * through `UpdateStairParamsCommand` instead of `StretchEntityCommand`.
    */
   readonly stairGripKind?: StairGripKind;
+  /**
+   * ADR-362 Phase I2 — dimension grip discriminator (forwarded from
+   * `GripInfo.dimGripKind` in `grip-registry.wrapDxfGrip`). Routes commit
+   * through `applyDimensionGripDrag` + direct scene patch.
+   */
+  readonly dimGripKind?: DimensionGripKind;
+  /**
+   * ADR-363 Phase 1C — parametric wall grip discriminator (forwarded from
+   * `GripInfo.wallGripKind`). Routes commit through `applyWallGripDrag()` +
+   * `UpdateWallParamsCommand` instead of the standard `StretchEntityCommand`
+   * vertex path.
+   */
+  readonly wallGripKind?: WallGripKind;
 }
 
 /**
@@ -201,4 +214,22 @@ export interface UseUnifiedGripInteractionReturn {
   draggingOverlayBody: DraggingOverlayBodyState | null;
   draggingVertices: DraggingVertexState[] | null;
   draggingEdgeMidpoint: DraggingEdgeMidpointState | null;
+}
+
+/** Dependencies needed for DXF grip commits */
+export interface DxfCommitDeps {
+  moveEntities: (ids: string[], delta: Point2D, opts: { isDragging: boolean }) => void;
+  execute: (command: ICommand) => void;
+  currentLevelId: string | null;
+  getLevelScene: (levelId: string) => import('../../types/scene').SceneModel | null;
+  setLevelScene: (levelId: string, scene: import('../../types/scene').SceneModel) => void;
+  /** Switch active tool — required for rotate/scale/mirror grip handoff (ADR-349 Phase 1c-B2). */
+  onToolChange: (tool: string) => void;
+}
+
+/** Dependencies needed for overlay grip commits */
+export interface OverlayCommitDeps {
+  overlayStore: ReturnType<typeof useOverlayStore>;
+  executeCommand: (command: ICommand) => void;
+  movementDetectionThreshold: number;
 }
