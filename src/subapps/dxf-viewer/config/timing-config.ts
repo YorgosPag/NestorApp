@@ -93,6 +93,14 @@ export const UI_TIMING = {
 
   /** Anchor highlight display duration (1000ms / 1s) - yellow coordinate highlight */
   ANCHOR_DISPLAY_DURATION: 1000,
+
+  /**
+   * Escape reactivation lock (200ms) - after ESC cancels a tool, ignore any
+   * selectTool() calls for the same tool within this window.
+   * Fixes: RibbonSplitDropdown onClick re-fires after ESC and re-activates
+   * the just-cancelled dim tool (ADR-362 hotfix 2026-05-18).
+   */
+  ESCAPE_REACTIVATION_LOCK: 200,
 } as const;
 
 // ============================================

@@ -414,8 +414,6 @@ export function useDrawingHandlers(
   }, [activeTool, dimRouting, centerMarkCreate, drawingState.tempPoints, applySnap, canvasOps, previewCanvasRef, updatePreview, getLatestPreviewEntity, currentScene]);
   
   const onDrawingCancel = useCallback(() => {
-    // 🔴 DEBUG ESC (remove after fix confirmed)
-    console.error(`🔴 [onDrawingCancel] called, activeTool=${activeTool}, dimRouting.isDimTool=${dimRouting.isDimTool}`);
     // 🏢 ADR-362 Phase D1: cancel dim flow if active (does not stop tool deselect).
     if (dimRouting.isDimTool) dimRouting.handleCancel();
     // ADR-362 Phase L2: cancel center mark flow.

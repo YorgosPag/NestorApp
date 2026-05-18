@@ -97,8 +97,6 @@ export const useKeyboardShortcuts = ({
       // 🎯 ADR-047: ESC - Cancel drawing OR close color palette
       if (matchesShortcut(e, 'escape')) {
         // PRIORITY 1: Cancel active drawing (measure-area, polyline, polygon, etc.)
-        // 🔴 DEBUG ESC (remove after fix confirmed)
-        console.error(`🔴 [useKeyboardShortcuts] ESC fired, activeTool=${activeTool}, onDrawingCancel=${!!onDrawingCancel}`);
         const isDrawingTool = [
           'line', 'polyline', 'polygon', 'measure-area', 'measure-distance', 'measure-angle', 'rectangle', 'circle', 'stair', 'wall',
           // ADR-362 hotfix: dim tools must route ESC through onDrawingCancel → dimRouting.handleCancel()
@@ -108,17 +106,12 @@ export const useKeyboardShortcuts = ({
         ].includes(activeTool);
 
         if (isDrawingTool && onDrawingCancel) {
-          // 🔴 DEBUG ESC (remove after fix confirmed)
-          console.error(`🔴 [useKeyboardShortcuts] ESC → onDrawingCancel() called`);
           e.preventDefault();
           onDrawingCancel();
           return;
         }
 
         // PRIORITY 2: Close color palette (fallback if not drawing)
-        // 🔴 DEBUG ESC (remove after fix confirmed)
-        console.error(`🔴 [useKeyboardShortcuts] ESC → FALLBACK (isDrawingTool=${isDrawingTool}, onDrawingCancel=${!!onDrawingCancel})`);
-        console.debug(`🎨 [useKeyboardShortcuts] ESC → Close color palette (fallback)`);
         onColorMenuClose();
         return;
       }

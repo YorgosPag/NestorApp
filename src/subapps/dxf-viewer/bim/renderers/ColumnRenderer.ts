@@ -19,9 +19,16 @@
  * `getColumnGrips()` και διοχετεύονται μέσω του ίδιου command path. Το
  * `edge`-typed grip mapping πέφτει στο `'vertex'` bucket — αρκετό για το
  * canvas pass.
- * Phase 4.5c+ (deferred):
- *   - Hatch patterns per material category
- *   - Anchor cycling visual preview (ghost at all 9 positions)
+ * Phase 4.5c.1 (DONE — Phase 4.5c.1 module): anchor cycling visual preview
+ * (9 ghost footprints at the cursor world position) γίνεται από
+ * `ColumnAnchorGhostRenderer` ως ξεχωριστή leaf — δεν παρεμβαίνει στο
+ * παρόν renderer pipeline.
+ * Phase 4.5c.2 (DONE): per-material hatch patterns inside footprint clip
+ * (rc dots / steel cross-hatch / masonry brick / wood diagonal). Circular kind
+ * skipped — deferred 4.5c.3.
+ * Phase 4.5c.3+ (deferred):
+ *   - Circular column material hatch (visual conventions TBD)
+ *   - Snap-to-wall corners / grid intersections
  *
  * ADR-040 micro-leaf compliance: pure renderer class με ZERO subscriptions
  * σε high-frequency stores. Called by canvas με entity resolved upstream.
@@ -39,6 +46,14 @@ import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getColumnGrips } from '../columns/column-grips';
+import {
+  computeHatchPlan,
+  resolveMaterialKey,
+  HATCH_STROKE_RGBA,
+  HATCH_LINE_WIDTH_PX,
+  RC_DOT_RADIUS_PX,
+  type ColumnMaterialKey,
+} from '../columns/column-hatch-patterns';
 
 /** Stroke colour per kind. */
 const KIND_STROKE: Readonly<Record<ColumnKind, string>> = {
@@ -80,15 +95,62 @@ export class ColumnRenderer extends BaseEntityRenderer {
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
-    // Fill first, stroke on top so outline stays sharp.
+    // Fill first, hatch clipped inside, stroke on top so outline stays sharp.
     this.ctx.fillStyle = KIND_FILL[column.kind];
     this.drawPolygonPath(verts);
     this.ctx.fill();
+
+    // ADR-363 Phase 4.5c.2 — per-material hatch (skipped για circular kind).
+    this.drawMaterialHatch(column);
 
     this.ctx.strokeStyle = KIND_STROKE[column.kind];
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
     this.drawPolygonPath(verts);
     this.ctx.stroke();
+    this.ctx.restore();
+  }
+
+  /**
+   * Phase 4.5c.2 — per-material hatch pattern inside footprint clip. Mirror
+   * του `SlabRenderer.drawReinforcementHatch` pattern (save → polygon path →
+   * clip → hatch → restore). Skip cases:
+   *   - `circular` kind → deferred Phase 4.5c.3 (visual conventions TBD)
+   *   - `transform.scale < 0.001` → invisible at extreme zoom-out, perf saver
+   *
+   * Material resolved μέσω case-insensitive `resolveMaterialKey` (unknown
+   * → `'rc'` fallback). Plan computed από bbox σε world coords; rendering
+   * εδώ μετατρέπει σε screen px μέσω `worldToScreen`.
+   */
+  private drawMaterialHatch(column: ColumnEntity): void {
+    if (column.kind === 'circular') return;
+    if (this.transform.scale < 0.001) return;
+
+    const key: ColumnMaterialKey = resolveMaterialKey(column.params.material);
+    const plan = computeHatchPlan(column.geometry.bbox, key);
+    if (plan.lines.length === 0 && plan.dots.length === 0) return;
+
+    this.ctx.save();
+    this.drawPolygonPath(column.geometry.footprint.vertices);
+    this.ctx.clip();
+    this.ctx.strokeStyle = HATCH_STROKE_RGBA;
+    this.ctx.fillStyle = HATCH_STROKE_RGBA;
+    this.ctx.lineWidth = HATCH_LINE_WIDTH_PX[key];
+    this.ctx.setLineDash([]);
+
+    for (const line of plan.lines) {
+      const a = this.worldToScreen(line.start);
+      const b = this.worldToScreen(line.end);
+      this.ctx.beginPath();
+      this.ctx.moveTo(a.x, a.y);
+      this.ctx.lineTo(b.x, b.y);
+      this.ctx.stroke();
+    }
+    for (const dot of plan.dots) {
+      const s = this.worldToScreen(dot.center);
+      this.ctx.beginPath();
+      this.ctx.arc(s.x, s.y, RC_DOT_RADIUS_PX, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
     this.ctx.restore();
   }
 

@@ -56,6 +56,12 @@ let current: ToolStateSnapshot = {
 
 const listeners = new Set<Listener>();
 
+// Escape reactivation lock (ADR-362 hotfix): after ESC cancels a tool, block
+// selectTool() for the same tool for ESCAPE_REACTIVATION_LOCK ms.
+// Prevents RibbonSplitDropdown onClick from re-activating the just-escaped tool.
+let escapedTool: ToolType | null = null;
+let escapeExpiresAt = 0;
+
 /**
  * Notify all subscribers of state change
  */
@@ -103,8 +109,10 @@ export const toolStateStore = {
    * @param tool - The tool to select
    */
   selectTool(tool: ToolType): void {
-    // 🔴 DEBUG ESC (remove after fix confirmed)
-    console.error(`🔴 [ToolStateStore.selectTool] tool=${tool} current=${current.activeTool}`, new Error().stack?.split('\n')[2]);
+    // Escape reactivation lock: ignore same-tool re-activation within lock window
+    if (tool === escapedTool && Date.now() < escapeExpiresAt) {
+      return;
+    }
     if (current.activeTool === tool) {
       return; // No change needed
     }
@@ -150,10 +158,10 @@ export const toolStateStore = {
    * @param forceDeselect - Force return to 'select' (e.g., on ESC/cancel)
    */
   handleToolCompletion(tool: ToolType, forceDeselect: boolean = false): void {
-    // 🔴 DEBUG ESC (remove after fix confirmed)
-    console.error(`🔴 [ToolStateStore.handleToolCompletion] tool=${tool} force=${forceDeselect} current=${current.activeTool}`, new Error().stack?.split('\n')[2]);
     if (forceDeselect) {
-      // Explicit cancel - always return to select
+      // Set escape lock to block RibbonSplitDropdown re-activation race
+      escapedTool = tool;
+      escapeExpiresAt = Date.now() + UI_TIMING.ESCAPE_REACTIVATION_LOCK;
       current = {
         activeTool: 'select',
         previousTool: tool,
@@ -198,6 +206,8 @@ export const toolStateStore = {
    * Reset store to initial state
    */
   reset(): void {
+    escapedTool = null;
+    escapeExpiresAt = 0;
     current = {
       activeTool: 'select',
       previousTool: null,
