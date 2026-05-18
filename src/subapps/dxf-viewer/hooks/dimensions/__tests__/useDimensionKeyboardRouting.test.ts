@@ -83,7 +83,7 @@ describe('useDimensionKeyboardRouting — gate', () => {
     expect(esc.defaultPrevented).toBe(false);
   });
 
-  it('suppresses dispatch when an INPUT is focused (editable target)', () => {
+  it('suppresses Tab / Space when an INPUT is focused (editable target)', () => {
     const onKey = jest.fn<void, [DimensionCreateKey]>();
     renderHook(() =>
       useDimensionKeyboardRouting({ activeTool: 'dim-smart', isDimTool, onKey }),
@@ -95,6 +95,44 @@ describe('useDimensionKeyboardRouting — gate', () => {
       fireKey('Tab');
       fireKey('Space', 'Space');
       expect(onKey).not.toHaveBeenCalled();
+    } finally {
+      input.remove();
+    }
+  });
+
+  it('dispatches Enter even when INPUT is focused — blurs input and prevents default', () => {
+    const onKey = jest.fn<void, [DimensionCreateKey]>();
+    renderHook(() =>
+      useDimensionKeyboardRouting({ activeTool: 'dim-smart', isDimTool, onKey }),
+    );
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+    try {
+      const ev = fireKey('Enter');
+      expect(onKey).toHaveBeenCalledWith('Enter');
+      expect(ev.defaultPrevented).toBe(true);
+      // input should no longer be the active element after blur
+      expect(document.activeElement).not.toBe(input);
+    } finally {
+      input.remove();
+    }
+  });
+
+  it('dispatches Escape even when INPUT is focused — blurs input, does NOT prevent default', () => {
+    const onKey = jest.fn<void, [DimensionCreateKey]>();
+    renderHook(() =>
+      useDimensionKeyboardRouting({ activeTool: 'dim-smart', isDimTool, onKey }),
+    );
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+    try {
+      const ev = fireKey('Escape');
+      expect(onKey).toHaveBeenCalledWith('Escape');
+      // Legacy ESC handler must still be able to fire → no preventDefault
+      expect(ev.defaultPrevented).toBe(false);
+      expect(document.activeElement).not.toBe(input);
     } finally {
       input.remove();
     }

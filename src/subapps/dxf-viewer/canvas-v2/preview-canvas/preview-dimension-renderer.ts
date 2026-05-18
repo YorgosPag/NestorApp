@@ -100,16 +100,25 @@ function resolveOpts(o: PreviewDimensionRenderOptions | undefined): ResolvedOpts
  * are swallowed so a half-built dim doesn't crash the overlay.
  */
 export function renderPreviewDimension(params: PreviewDimensionRenderParams): void {
-  const opts = resolveOpts(params.opts);
-  const geometry = tryBuildGeometry(params.entity, params.style);
+  // Auto-scale DIMSCALE so arrows + text appear at ~10 px on screen regardless
+  // of the drawing's unit scale. Formula: target_px = dimasz * dimscale * scale
+  // → dimscale = 4 / scale keeps arrows ≈ 10px (2.5 * 4 = 10).
+  const autoScale = 4 / Math.max(params.transform.scale, 1e-6);
+  const scaledParams: PreviewDimensionRenderParams = {
+    ...params,
+    style: { ...params.style, dimscale: autoScale },
+  };
+
+  const opts = resolveOpts(scaledParams.opts);
+  const geometry = tryBuildGeometry(scaledParams.entity, scaledParams.style);
 
   // AutoCAD/Revit rubber-band: when geometry isn't yet buildable (e.g. only 1
   // click placed so far and we're waiting for the 2nd), derive a dashed
   // polyline from the available defPoints so the user sees real-time feedback.
   // Explicit opts.helperPath always wins over auto-derived.
   const autoHelper: readonly Point2D[] | null =
-    !geometry && !opts.helperPath && params.entity.defPoints.length >= 2
-      ? params.entity.defPoints
+    !geometry && !opts.helperPath && scaledParams.entity.defPoints.length >= 2
+      ? scaledParams.entity.defPoints
       : null;
   const resolvedOpts: ResolvedOpts = autoHelper
     ? { ...opts, helperPath: autoHelper }
@@ -117,21 +126,21 @@ export function renderPreviewDimension(params: PreviewDimensionRenderParams): vo
 
   if (!geometry && !resolvedOpts.helperPath) return;
 
-  params.ctx.save();
-  params.ctx.globalAlpha = resolvedOpts.opacity;
+  scaledParams.ctx.save();
+  scaledParams.ctx.globalAlpha = resolvedOpts.opacity;
 
   if (geometry) {
-    drawExtensionLines(params, geometry, resolvedOpts);
-    drawDimLineOrArc(params, geometry, resolvedOpts);
-    drawArrowheads(params, geometry, resolvedOpts);
-    drawText(params, geometry, resolvedOpts);
+    drawExtensionLines(scaledParams, geometry, resolvedOpts);
+    drawDimLineOrArc(scaledParams, geometry, resolvedOpts);
+    drawArrowheads(scaledParams, geometry, resolvedOpts);
+    drawText(scaledParams, geometry, resolvedOpts);
   }
 
   if (resolvedOpts.helperPath) {
-    drawHelperPolyline(params, resolvedOpts);
+    drawHelperPolyline(scaledParams, resolvedOpts);
   }
 
-  params.ctx.restore();
+  scaledParams.ctx.restore();
 }
 
 function tryBuildGeometry(entity: DimensionEntity, style: DimStyle): DimGeometry | null {

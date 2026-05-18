@@ -5,10 +5,10 @@ import { isSlabEntity } from '../../types/entities';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { Point2D } from '../../rendering/types/Types';
-import { EventBus } from '../../core/EventBus';
-import type { useLevelManager } from '../data/useLevelManager';
+import { EventBus } from '../../systems/events/EventBus';
+import type { LevelsHookReturn } from '../../systems/levels';
 
-type LevelManagerLike = ReturnType<typeof useLevelManager>;
+type LevelManagerLike = LevelsHookReturn;
 
 export interface SlabOpeningToolResolvers {
   currentLevelId: string;

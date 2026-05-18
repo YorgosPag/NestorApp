@@ -23,6 +23,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { DimensionEntity, DimensionType } from '../../types/dimension';
 import type { Entity } from '../../types/entities';
 import type { ToolType } from '../../ui/toolbar/types';
+import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -101,6 +102,20 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
   useEffect(() => {
     return manageDimToolLifecycle(activeTool, lastDimToolRef, dimCreate, previewRef);
   }, [activeTool, dimCreate]);
+
+  // RAF persist: re-push dim preview every frame while dim tool is active.
+  // Survives any external canvas.clear() calls (e.g. markAllCanvasDirty path)
+  // that would otherwise erase the rubber-band line when the cursor stops.
+  useEffect(() => {
+    if (!isDimTool(activeTool)) return;
+    const unregister = registerRenderCallback(
+      'dim-preview-persist',
+      'Dim Preview Persist',
+      RENDER_PRIORITIES.NORMAL,
+      () => { pushPreview(previewRef); },
+    );
+    return unregister;
+  }, [activeTool, previewRef]);
 
   // Phase D3 — Q-C live Tab/Space/Escape routing from the canvas. Active only
   // when the current tool is a dim tool; gate inside the hook prevents stray

@@ -44,9 +44,26 @@ export function useDimensionKeyboardRouting(
     if (!params.isDimTool(params.activeTool)) return;
 
     const handler = (e: KeyboardEvent): void => {
-      if (isEditableFocus()) return;
       const key = mapKey(e);
       if (!key) return;
+
+      if (isEditableFocus()) {
+        // Dynamic Input has focus: Enter/Escape still control dim creation.
+        // Blur the field first so the value is committed, then dispatch.
+        if (key === 'Enter') {
+          e.preventDefault();
+          (document.activeElement as HTMLElement | null)?.blur?.();
+          onKeyRef.current(key);
+        } else if (key === 'Escape') {
+          // Don't preventDefault: let the legacy useKeyboardShortcuts ESC
+          // path still fire (overlay / color-panel reset).
+          (document.activeElement as HTMLElement | null)?.blur?.();
+          onKeyRef.current(key);
+        }
+        // Tab / Space: normal browser behaviour when an input owns focus.
+        return;
+      }
+
       if (key !== 'Escape') e.preventDefault();
       onKeyRef.current(key);
     };
