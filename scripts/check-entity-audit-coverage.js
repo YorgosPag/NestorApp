@@ -84,6 +84,8 @@ const TRACKED_COLLECTION_KEYS = new Set([
   'PURCHASE_ORDERS',
   // ADR-344 Phase 7.B — DXF text templates (audit entityType: 'text_template')
   'TEXT_TEMPLATES',
+  // ADR-363 Phase 1D-C — BIM wall entities (audit via wall-audit-client.ts → /api/audit-trail/record)
+  'FLOORPLAN_WALLS',
 ]);
 
 /**
@@ -115,6 +117,8 @@ const HARD_EXEMPT_PATTERNS = [
   /[\\/]components[\\/]debug[\\/]FirestoreTestData\.tsx$/,                   // debug test-data seeder
   /[\\/]database[\\/]migrations[\\/]002_normalize_floors_collection\.ts$/,   // client-SDK migration
   /[\\/]services[\\/]ownership[\\/]ownership-table-service\.ts$/,            // client-SDK; millesimalShares writes in finalizeTable
+  // ADR-363 Phase 1D-C — client-SDK wall service; audit is recorded via wall-audit-client.ts in the hook layer
+  /[\\/]bim[\\/]walls[\\/]wall-firestore-service\.ts$/,
 ];
 
 /**
