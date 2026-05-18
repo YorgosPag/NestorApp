@@ -24,6 +24,12 @@ import type { WallParams, WallGeometry, WallKind } from '../types/wall-types';
 const MM_TO_M = 1 / 1000;
 /** Minimum axis length (mm) below which geometry degenerates. */
 const DEGENERATE_LENGTH_EPS_MM = 0.001;
+/**
+ * ADR-363 Phase 1C — quadratic Bezier subdivision count for `curved` kind.
+ * 16 segments give a visually smooth curve while keeping the offset-polyline
+ * vertex-normal approximation accurate (mirrors AutoCAD `SPLINESEGS` default).
+ */
+const CURVED_SUBDIVISIONS = 16;
 
 /**
  * Compute `WallGeometry` from `WallParams`. SSoT for all wall-derived geometry.
@@ -45,7 +51,8 @@ export function computeWallGeometry(
   params: WallParams,
   kind: WallKind = 'straight',
 ): WallGeometry {
-  const vertices = pickAxisVertices(params, kind);
+  const rawVertices = pickAxisVertices(params, kind);
+  const vertices = applyAxisBevels(rawVertices, params.startBevel ?? 0, params.endBevel ?? 0);
   const axisPolyline: Polyline3D = { points: vertices, closed: false };
 
   const halfThicknessMm = params.thickness / 2;
@@ -80,13 +87,85 @@ export function computeWallGeometry(
 /**
  * Pick the axis vertices based on wall kind:
  *   - `polyline` + `polylineVertices` present → use them
- *   - else → [start, end] (covers straight + curved fallback)
+ *   - `curved` + `curveControl` present → subdivide quadratic Bezier
+ *   - else → [start, end] (straight kind, or curved fallback)
  */
 function pickAxisVertices(params: WallParams, kind: WallKind): readonly Point3D[] {
   if (kind === 'polyline' && params.polylineVertices && params.polylineVertices.length >= 2) {
     return params.polylineVertices;
   }
+  if (kind === 'curved' && params.curveControl) {
+    return subdivideQuadraticBezier(params.start, params.curveControl, params.end, CURVED_SUBDIVISIONS);
+  }
   return [params.start, params.end];
+}
+
+/**
+ * Shorten the axis polyline at each end by the corresponding bevel amount (mm).
+ * Start bevel: moves the first point toward the second along the opening segment.
+ * End bevel:   moves the last point toward the second-to-last.
+ * Bevel > segment length is silently clamped to keep at least 1mm of axis.
+ * Phase 1D-B: applied after vertex selection so all kinds benefit.
+ */
+function applyAxisBevels(
+  pts: readonly Point3D[],
+  startBevelMm: number,
+  endBevelMm: number,
+): readonly Point3D[] {
+  if (pts.length < 2 || (startBevelMm <= 0 && endBevelMm <= 0)) return pts;
+  const result = [...pts];
+  const n = result.length;
+
+  if (startBevelMm > 0) {
+    const dx = pts[1].x - pts[0].x;
+    const dy = pts[1].y - pts[0].y;
+    const seg = Math.hypot(dx, dy);
+    const clamped = Math.min(startBevelMm, seg - 1);
+    if (clamped > 0) {
+      const t = clamped / seg;
+      result[0] = { x: pts[0].x + dx * t, y: pts[0].y + dy * t, z: pts[0].z ?? 0 };
+    }
+  }
+
+  if (endBevelMm > 0) {
+    const dx = pts[n - 2].x - pts[n - 1].x;
+    const dy = pts[n - 2].y - pts[n - 1].y;
+    const seg = Math.hypot(dx, dy);
+    const clamped = Math.min(endBevelMm, seg - 1);
+    if (clamped > 0) {
+      const t = clamped / seg;
+      result[n - 1] = { x: pts[n - 1].x + dx * t, y: pts[n - 1].y + dy * t, z: pts[n - 1].z ?? 0 };
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Quadratic Bezier subdivision: `P(t) = (1-t)² P0 + 2(1-t)t P1 + t² P2`.
+ * Returns N+1 vertices including endpoints. Z is interpolated linearly between
+ * start/end (control point Z is ignored — walls are 2D-extruded in Phase 1).
+ */
+function subdivideQuadraticBezier(
+  start: Point3D,
+  control: Point3D,
+  end: Point3D,
+  segments: number,
+): Point3D[] {
+  const pts: Point3D[] = [];
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const oneMinusT = 1 - t;
+    const w0 = oneMinusT * oneMinusT;
+    const w1 = 2 * oneMinusT * t;
+    const w2 = t * t;
+    pts.push({
+      x: w0 * start.x + w1 * control.x + w2 * end.x,
+      y: w0 * start.y + w1 * control.y + w2 * end.y,
+      z: oneMinusT * (start.z ?? 0) + t * (end.z ?? 0),
+    });
+  }
+  return pts;
 }
 
 /**
