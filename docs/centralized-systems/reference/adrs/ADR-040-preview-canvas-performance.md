@@ -1741,3 +1741,7 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-18: ADR-357 Phase 2a — DynamicInputSubscriber micro-leaf + CanvasLayerStack mount
 
 `DynamicInputSubscriber.tsx` added as micro-leaf subscriber in `CanvasLayerStack.tsx` (ADR-040 pattern). Subscribes to drawing state for live length/angle readout. CanvasLayerStack remains orchestrator — no high-frequency store subscriptions added. Cardinal rules maintained.
+
+## 2026-05-18: ADR-363 Phase 1 — canvas-click-types WallClickContext
+
+`canvas-click-types.ts` extended with `WallClickContext` type for wall tool canvas interactions. No store subscriptions added — pure type extension. Cardinal rules maintained.
