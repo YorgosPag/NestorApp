@@ -20,6 +20,7 @@
  */
 
 import { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateWallParamsCommand } from '../../../core/commands/entity-commands/UpdateWallParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -32,6 +33,7 @@ import {
   WALL_RIBBON_KEYS_ACTIONS,
   WALL_RIBBON_BADGE_KEYS,
 } from './bridge/wall-command-keys';
+import { EventBus } from '../../../systems/events/EventBus';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -69,6 +71,8 @@ export interface RibbonWallBridge {
   readonly getToggleState: (commandKey: string) => RibbonToggleState;
   /** Returns `true` when the currently selected wall has code violations. */
   readonly getBadgeState: (badgeKey: string) => boolean;
+  /** Handles ribbon simple-button actions (e.g. delete). */
+  readonly onAction: (action: string) => void;
 }
 
 const WALL_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
@@ -82,6 +86,7 @@ export function useRibbonWallBridge(
 ): RibbonWallBridge {
   const { levelManager, universalSelection } = props;
   const { execute: executeCommand } = useCommandHistory();
+  const { t } = useTranslation('dxf-viewer-shell');
 
   const resolveWall = useCallback((): WallEntity | null => {
     const id = universalSelection.getPrimaryId();
@@ -190,10 +195,24 @@ export function useRibbonWallBridge(
     return false;
   }, [resolveWall]);
 
+  const onAction = useCallback(
+    (action: string): void => {
+      if (action !== WALL_RIBBON_KEYS_ACTIONS.delete) return;
+      const wall = resolveWall();
+      if (!wall) return;
+      const confirmed = window.confirm(
+        t('ribbon.commands.wallEditor.deleteConfirm'),
+      );
+      if (!confirmed) return;
+      EventBus.emit('bim:wall-delete-requested', { wallId: wall.id });
+    },
+    [resolveWall, t],
+  );
+
   // Memoize return so RibbonCommandProvider deps stay stable (ADR-040 Phase XIX).
   return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState],
+    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction }),
+    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction],
   );
 }
 

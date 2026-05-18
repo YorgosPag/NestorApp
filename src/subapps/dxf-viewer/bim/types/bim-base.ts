@@ -8,7 +8,7 @@
  */
 
 import type { Timestamp } from 'firebase/firestore';
-import type { BaseEntity } from '../types/entities';
+import type { BaseEntity } from '../../types/base-entity';
 
 // ─── 3D Geometry primitives ───────────────────────────────────────────────────
 

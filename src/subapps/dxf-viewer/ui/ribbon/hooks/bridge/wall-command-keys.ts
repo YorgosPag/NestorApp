@@ -52,7 +52,16 @@ export const WALL_RIBBON_TOGGLE_KEYS: readonly WallRibbonToggleCommandKey[] = [
 
 export const WALL_RIBBON_KEYS_ACTIONS = {
   close: 'wall.actions.close',
+  delete: 'wall.actions.delete',
 } as const;
+
+const WALL_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+  Object.values(WALL_RIBBON_KEYS_ACTIONS),
+);
+
+export function isWallActionKey(action: string): boolean {
+  return WALL_ACTION_KEY_SET.has(action);
+}
 
 /** Visibility key (red badge when `validation.hasCodeViolations === true`). */
 export const WALL_RIBBON_BADGE_KEYS = {

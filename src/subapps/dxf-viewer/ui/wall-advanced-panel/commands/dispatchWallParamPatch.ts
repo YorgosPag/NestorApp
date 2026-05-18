@@ -1,0 +1,63 @@
+'use client';
+
+/**
+ * ADR-363 Phase 1D — SSoT writer for wall param mutations originating from
+ * the Floating Advanced Properties panel (DNA editor).
+ *
+ * Mirrors `dispatchStairParamPatch` (ADR-358 Phase 7b2a). All panel writes
+ * go through `UpdateWallParamsCommand` (ADR-031 command-history) — same
+ * pipeline as `useRibbonWallBridge` (Phase 1B) so undo/redo + geometry
+ * recompute behave identically regardless of write origin. `isDragging=false`
+ * — each panel mutation is a discrete undo step.
+ *
+ * Patch semantics: shallow merge over `WallParams`. Callers compose nested
+ * patches (e.g. `dna`, `thickness`) before calling.
+ *
+ * Idempotency + geometry recompute live in `UpdateWallParamsCommand`.
+ */
+
+import { useCallback } from 'react';
+import { useCommandHistory } from '../../../core/commands';
+import { UpdateWallParamsCommand } from '../../../core/commands/entity-commands/UpdateWallParamsCommand';
+import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import type { WallEntity, WallParams } from '../../../bim/types/wall-types';
+import type { useLevels } from '../../../systems/levels';
+
+type LevelManagerLike = Pick<
+  ReturnType<typeof useLevels>,
+  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
+>;
+
+export interface UseWallParamsDispatcherProps {
+  readonly levelManager: LevelManagerLike;
+}
+
+export type WallParamsPatch = Partial<WallParams>;
+
+export type DispatchWallParamPatch = (
+  wall: WallEntity,
+  patch: WallParamsPatch,
+) => void;
+
+export function useWallParamsDispatcher(
+  props: UseWallParamsDispatcherProps,
+): DispatchWallParamPatch {
+  const { levelManager } = props;
+  const { execute: executeCommand } = useCommandHistory();
+
+  return useCallback<DispatchWallParamPatch>(
+    (wall, patch) => {
+      if (!levelManager.currentLevelId) return;
+      const next: WallParams = { ...wall.params, ...patch };
+      const sm = new LevelSceneManagerAdapter(
+        levelManager.getLevelScene,
+        levelManager.setLevelScene,
+        levelManager.currentLevelId,
+      );
+      executeCommand(
+        new UpdateWallParamsCommand(wall.id, next, wall.params, sm, false, wall.kind),
+      );
+    },
+    [executeCommand, levelManager],
+  );
+}

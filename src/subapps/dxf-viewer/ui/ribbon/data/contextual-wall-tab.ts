@@ -153,6 +153,17 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
                 action: WALL_RIBBON_KEYS_ACTIONS.close,
               },
             },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'wall.delete',
+                labelKey: 'ribbon.commands.wallEditor.delete',
+                icon: 'trash',
+                commandKey: WALL_RIBBON_KEYS_ACTIONS.delete,
+                action: WALL_RIBBON_KEYS_ACTIONS.delete,
+              },
+            },
           ],
         },
       ],

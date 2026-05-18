@@ -39,6 +39,7 @@ export interface WallPersistenceHostProps {
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
+  readonly buildingId?: string;
 }
 
 export function WallPersistenceHost({
@@ -47,6 +48,7 @@ export function WallPersistenceHost({
   levelManager,
   projectId,
   floorplanId,
+  buildingId,
 }: WallPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -57,12 +59,11 @@ export function WallPersistenceHost({
     return e;
   }, [primarySelectedId, currentScene]);
 
-  // Hook is always called (rules of hooks). It no-ops internally until
-  // companyId/projectId/floorplanId/userId are set.
   useWallPersistence({
     companyId: user?.companyId ?? null,
     projectId,
     floorplanId,
+    buildingId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedWall,
