@@ -1,5 +1,4 @@
 'use client';
-
 /**
  * 🏢 ENTERPRISE: useSpecialTools Hook
  *
@@ -15,7 +14,6 @@
  * Pattern: Single Responsibility Principle - Tool Management
  * Extracted from: CanvasSection.tsx
  */
-
 import { useEffect } from 'react';
 import { EventBus } from '../../systems/events/EventBus';
 import { useCircleTTT } from '../drawing/useCircleTTT';
@@ -27,6 +25,7 @@ import { useStairTool } from '../drawing/useStairTool';
 import { useWallTool } from '../drawing/useWallTool';
 import { useOpeningTool } from '../drawing/useOpeningTool';
 import { useSlabTool } from '../drawing/useSlabTool';
+import { useColumnTool } from '../drawing/useColumnTool';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { useFloorMetadata } from '../data/useFloorMetadata';
 import type { StairFloorLinkInput } from '../drawing/stair-completion';
@@ -38,11 +37,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import { computeWallTrims, applyTrimPatches } from '../../bim/walls/wall-trims';
 // 🏢 ENTERPRISE: Import actual level system types for type safety
 import type { LevelsHookReturn } from '../../systems/levels';
-
-// ============================================================================
 // TYPES & INTERFACES
-// ============================================================================
-
 /**
  * Props for useSpecialTools hook
  */
@@ -52,7 +47,6 @@ export interface UseSpecialToolsProps {
   /** Level manager for scene access - uses actual LevelsHookReturn type */
   levelManager: LevelsHookReturn;
 }
-
 /**
  * Return type of useSpecialTools hook
  * Uses ReturnType to automatically match the actual hook return types
@@ -74,12 +68,10 @@ export interface UseSpecialToolsReturn {
   openingTool: ReturnType<typeof useOpeningTool>;
   /** ADR-363 Phase 3 — Slab tool hook return */
   slabTool: ReturnType<typeof useSlabTool>;
+  /** ADR-363 Phase 4 — Column tool hook return */
+  columnTool: ReturnType<typeof useColumnTool>;
 }
-
-// ============================================================================
 // HOOK IMPLEMENTATION
-// ============================================================================
-
 /**
  * 🏢 ENTERPRISE: Special entity creation tools hook
  *
@@ -100,7 +92,6 @@ export interface UseSpecialToolsReturn {
  */
 export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsReturn {
   const { activeTool, levelManager } = props;
-
   // ADR-358 Phase 9 — Q17 floor link source for the stair tool. Any populated
   // `floorId` on the save context activates the bridge; the builder seeds
   // `multiStoryConfig.storyHeight` (mm) from the floor `height` (m) at commit
@@ -108,11 +99,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   // builder falls back to Phase 7a behavior (no auto-init).
   const floorIdForStair = levelManager.saveContext?.floorId ?? null;
   const floorForStair = useFloorMetadata(floorIdForStair);
-
-  // ============================================================================
   // CIRCLE TTT TOOL
-  // ============================================================================
-
   /**
    * Circle tangent to 3 lines tool
    */
@@ -121,7 +108,6 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     onCircleCreated: (circleEntity) => {
       const levelId = levelManager.currentLevelId;
       if (!levelId) return;
-
       const scene = levelManager.getLevelScene(levelId);
       if (!scene) return;
 
@@ -144,9 +130,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     }
   }, [activeTool, activateCircleTTT, deactivateCircleTTT]);
 
-  // ============================================================================
   // LINE PERPENDICULAR TOOL
-  // ============================================================================
 
   /**
    * Line perpendicular to reference line tool
@@ -179,9 +163,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     }
   }, [activeTool, activateLinePerpendicular, deactivateLinePerpendicular]);
 
-  // ============================================================================
   // LINE PARALLEL TOOL
-  // ============================================================================
 
   /**
    * Line parallel to reference line tool
@@ -214,9 +196,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     }
   }, [activeTool, activateLineParallel, deactivateLineParallel]);
 
-  // ============================================================================
   // ANGLE ENTITY MEASUREMENT TOOL (constraint, line-arc, two-arcs)
-  // ============================================================================
 
   const angleEntityMeasurement = useAngleEntityMeasurement({
     onMeasurementCreated: (measurementEntity: AngleMeasurementEntity) => {
@@ -248,9 +228,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     }
   }, [activeTool, activateAngle, deactivateAngle]);
 
-  // ============================================================================
   // ADR-358 Phase 5a — STAIR TOOL
-  // ============================================================================
 
   /**
    * Stair drawing tool — 2-click placement (basePoint + direction) + commit.
@@ -310,9 +288,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       deactivateStair();
     }
   }, [activeTool, activateStair, deactivateStair]);
-  // ============================================================================
   // ADR-363 Phase 1B — WALL TOOL
-  // ============================================================================
   /**
    * Wall drawing tool — 2-click placement (startPoint → endPoint) + commit.
    * State machine in `useWallTool`. Default kind = 'straight' (Phase 1B);
@@ -353,9 +329,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       deactivateWall();
     }
   }, [activeTool, activateWall, deactivateWall]);
-  // ============================================================================
   // ADR-363 Phase 2 — OPENING TOOL
-  // ============================================================================
   /**
    * Opening drawing tool — 2-state FSM (await host wall → await position). The
    * created `OpeningEntity` is appended to the scene AND broadcast via
@@ -418,9 +392,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       deactivateOpening();
     }
   }, [activeTool, activateOpening, deactivateOpening]);
-  // ============================================================================
   // ADR-363 Phase 3 — SLAB TOOL
-  // ============================================================================
   /**
    * Slab drawing tool — polygon N-click + Enter (or auto-close near first vertex).
    * State machine in `useSlabTool`. Default kind = 'floor'. Continuous chain.
@@ -449,6 +421,35 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       deactivateSlab();
     }
   }, [activeTool, activateSlab, deactivateSlab]);
+  // ADR-363 Phase 4 — COLUMN TOOL
+  /**
+   * Column drawing tool — single-click placement με 9-position anchor + Tab
+   * cycling + free rotation. State machine in `useColumnTool`. Continuous chain.
+   * The created `ColumnEntity` is appended to the scene AND broadcast via
+   * `EventBus` so `useColumnPersistence` can schedule the first Firestore save.
+   */
+  const columnTool = useColumnTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onColumnCreated: (columnEntity) => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return;
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene) return;
+      levelManager.setLevelScene(levelId, {
+        ...scene,
+        entities: [...(scene.entities || []), columnEntity],
+      });
+      EventBus.emit('drawing:entity-created', { entity: columnEntity, tool: 'column' });
+    },
+  });
+  const { activate: activateColumn, deactivate: deactivateColumn } = columnTool;
+  useEffect(() => {
+    if (activeTool === 'column') {
+      activateColumn();
+    } else {
+      deactivateColumn();
+    }
+  }, [activeTool, activateColumn, deactivateColumn]);
   // ADR-363 Phase 1E — Re-trim all walls after a grip commit settles (200 ms).
   // Only runs when ≥2 walls exist and at least one bevel is needed.
   useEffect(() => {
@@ -473,18 +474,14 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       if (debounceTimer) clearTimeout(debounceTimer);
     };
   }, [levelManager]);
-  // ============================================================================
   // AUTO AREA — clear result panel when tool changes away
-  // ============================================================================
   useEffect(() => {
     if (activeTool !== 'auto-measure-area') {
       clearAutoAreaState();
       clearAutoAreaPreview();
     }
   }, [activeTool]);
-  // ============================================================================
   // RETURN
-  // ============================================================================
   return {
     circleTTT,
     linePerpendicular,
@@ -494,6 +491,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     wallTool,
     openingTool,
     slabTool,
+    columnTool,
   };
 }
 export default useSpecialTools;
