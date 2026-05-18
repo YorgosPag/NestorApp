@@ -2,9 +2,9 @@
 
 | Field | Value |
 |---|---|
-| **Status** | 🟡 IN PROGRESS — Groups A-F done (F3 pending commit), G1 done (pending commit), G2/G3 next |
+| **Status** | 🟡 IN PROGRESS — Groups A-F done (F3 pending commit), G1 done (pending commit), G2 done (pending commit), G3 next |
 | **Date** | 2026-05-17 |
-| **Last Updated** | 2026-05-17 |
+| **Last Updated** | 2026-05-18 |
 | **Category** | DXF Viewer — Annotation / Dimensions |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-362-enterprise-dimension-system.md` |
 | **Author** | Claude Opus 4.7 + Giorgio Pagonis (Q&A iterativo) |
@@ -671,7 +671,14 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
   - **MOD** `src/subapps/dxf-viewer/ui/ribbon/components/buttons/RibbonButtonIcon.tsx` — added `Type` to lucide-react import; added `case 'dim-text-override': return <Type …/>`.
   - **MOD** `src/i18n/locales/el/dxf-viewer-shell.json` + `en/dxf-viewer-shell.json` — `ribbon.commands.dimTextOverride` key (Παράκαμψη Κειμένου / Text Override).
   - **MOD** `src/i18n/locales/el/dxf-viewer-panels.json` + `en/dxf-viewer-panels.json` — `panels.dimensions.textOverride` block: dialogTitle, mode.{measured,prefixSuffix,free}, placeholderPrefix, placeholderSuffix, placeholderFree, preview, previewMeasured, previewEmpty, noEntitySelected, cancel, apply.
-  - **Next**: Phase G2 — Tolerance + Limits rendering in `dim-text-formatter.ts` stacking pass + `DimensionRenderer.ts` multi-line text draw.
+  - **Next**: Phase G2 — Tolerance + Limits rendering in `dim-text-formatter.ts` stacking pass + `dim-text-renderer.ts` multi-line text draw. ✅ DONE 2026-05-18.
+
+- **2026-05-18 (Phase G2 DONE — Tolerance + Limits stacked rendering; 14 new formatter tests + 3 renderer tests PASS; 35 total.)** — `composeFullDimText()` added to `dim-text-formatter.ts` returning a `FullDimText` interface (primary + optional tolerancePlus/toleranceMinus or limitsUpper/limitsLower). `dim-text-renderer.ts` extended with `buildFullText()` + two private helpers (`drawToleranceStack`, `drawLimitsStack`) handling visual stacking. DIMTOLJ (`'bottom'|'middle'|'top'`) controls vertical alignment of tolerance block vs primary. DIMLIM overrides DIMTOL when both flags true (AutoCAD parity). Angular and radial dims keep their existing single-text path (tolerance/limits on radial = rare, deferred). File sizes remain ≤500 LOC.
+  - **MOD** `src/subapps/dxf-viewer/systems/dimensions/dim-text-formatter.ts` — Added `FullDimText` interface (exported) + `composeFullDimText(valueMm, style, userText?)` public function. DIMLIM takes precedence when both `dimlim` and `dimtol` are true. Returns plain `{ primary }` when neither flag is set.
+  - **MOD** `src/subapps/dxf-viewer/rendering/entities/dimension/dim-text-renderer.ts` — Import extended with `composeFullDimText`, `FullDimText`, `DimToleranceJustify`. `renderDimensionText` refactored: angular path preserved as-is (no tolerance G2), linear/radial path delegates to `buildFullText()` then branches on `limitsUpper` / `tolerancePlus` / plain. `drawLimitsStack` draws upper+lower at `dimtxt × 0.75` (fixed ratio, limits convention). `drawToleranceStack` draws primary at full `dimtxt`, ± lines at `dimtxt × dimtfac`, with `primaryOffsetY` driven by `dimtolj` ('bottom'/'middle'/'top').
+  - **NEW** `src/subapps/dxf-viewer/systems/dimensions/__tests__/dim-text-formatter.test.ts` (~175 LOC) — 14 tests in 5 suites: `formatToleranceText` (3), `formatLimitsText` (2), `composeFullDimText — plain` (3), `composeFullDimText — tolerance` (3), `composeFullDimText — limits` (3). **14/14 PASS**, ~6s.
+  - **MOD** `src/subapps/dxf-viewer/rendering/entities/__tests__/DimensionRenderer.test.ts` — Added suite `DimensionRenderer — tolerance + limits rendering (Phase G2)`: 3 tests (tolerance mode = 3 fillText, limits mode = 2 fillText, DIMLIM override). **21/21 PASS** (was 18), ~8s.
+  - **Next**: Phase G3 — Alternate Units + Inspection dimension.
 
 - **2026-05-17 (Phase F1 DONE — left FloatingPanel 4° tab "Διαστάσεις" skeleton + DIMSTYLE Manager CRUD; 9/9 unit tests PASS.)** — 4th tab added to the left sidebar alongside Levels/Colors/Properties. DIMSTYLE list with active badge, built-in badge, set-active, duplicate, delete (AlertDialog confirm), and "New Style..." create flow. `getSnapshot()` added to `DimStyleRegistry` for stable `useSyncExternalStore` references (prevents infinite render loop). Create/Duplicate dialogs with name uniqueness validation. Edit stub = comingSoon (Phase F2 scope).
   - **MOD** `src/subapps/dxf-viewer/types/panel-types.ts` — `FloatingPanelType` union + `FLOATING_PANEL_TYPES` + `PANEL_METADATA` + `isFloatingPanelType` + `PANEL_LAYOUT.topRow` extended with `'dimensions'`. `PanelMetadata.iconName` extended with `'Ruler'`.
