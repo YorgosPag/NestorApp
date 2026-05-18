@@ -69,19 +69,110 @@ export interface DxfHeaderData {
 
 /**
  * Parsed values from DIMSTYLE table entries in TABLES section.
- * Contains the actual text height for dimensions (DIMTXT - code 140).
+ *
+ * Extends the legacy 4-field version (Phase A pre-ADR-362) with all rendering-
+ * relevant fields so that `parseDimStyles()` can participate in full roundtrip
+ * tests (ADR-362 Phase H1). Non-rendering fields (handles, xdata, Nestor internals)
+ * are intentionally omitted — the parser does not emit them.
  */
 export interface DimStyleEntry {
-  /** Style name (code 2) - e.g., "Standard", "ISO-25", "Annotative" */
+  // ── Identity ───────────────────────────────────────────────────────────────
+  /** Style name (code 2) */
   name: string;
-  /** DIMTXT - Text height for dimensions (code 140) */
-  dimtxt: number;
-  /** DIMSCALE - Dimension scale factor for this style (code 40) */
+
+  // ── Scale / geometry ───────────────────────────────────────────────────────
+  /** DIMSCALE — overall scale factor (code 40) */
   dimscale: number;
-  /** DIMTFAC - Tolerance text height factor (code 146) */
-  dimtfac: number;
-  /** DIMASZ - Arrow size (code 41) - useful for proportional sizing */
+  /** DIMASZ — arrow size (code 41) */
   dimasz: number;
+  /** DIMEXO — extension offset from object (code 42) */
+  dimexo: number;
+  /** DIMDLI — baseline/continued chain spacing (code 43) */
+  dimdli: number;
+  /** DIMEXE — extension beyond dim line (code 44) */
+  dimexe: number;
+  /** DIMRND — rounding factor (code 45) */
+  dimrnd: number;
+  /** DIMTP — tolerance plus (code 47) */
+  dimtp: number;
+  /** DIMTM — tolerance minus, stored negative (code 48, parsed positive then negated) */
+  dimtm: number;
+
+  // ── Text ───────────────────────────────────────────────────────────────────
+  /** DIMTXT — text height (code 140) */
+  dimtxt: number;
+  /** DIMCEN — center mark size (code 141) */
+  dimcen: number;
+  /** DIMALTF — alternate unit scale (code 143) */
+  dimaltf: number;
+  /** DIMLFAC — linear measurement scale (code 144) */
+  dimlfac: number;
+  /** DIMTFAC — tolerance text height factor (code 146) */
+  dimtfac: number;
+  /** DIMGAP — text gap (code 147) */
+  dimgap: number;
+  /** DIMALTRND — alternate rounding (code 148) */
+  dimaltrnd: number;
+
+  // ── Flags ──────────────────────────────────────────────────────────────────
+  /** DIMTOL — show tolerance flag (code 71) */
+  dimtol: boolean;
+  /** DIMLIM — show limits flag (code 72) */
+  dimlim: boolean;
+  /** DIMTIH — text inside horizontal (code 73) */
+  dimtih: boolean;
+  /** DIMTOH — text outside horizontal (code 74) */
+  dimtoh: boolean;
+  /** DIMSE1 — suppress ext line 1 (code 75) */
+  suppressExtLine1: boolean;
+  /** DIMSE2 — suppress ext line 2 (code 76) */
+  suppressExtLine2: boolean;
+  /** DIMTAD — text vertical placement (code 77, integer 0-4) */
+  dimtad: number;
+  /** DIMZIN — zero suppression bitmask (code 78) */
+  dimzin: number;
+
+  // ── Alternate / color ──────────────────────────────────────────────────────
+  /** DIMALT — alternate units on (code 170) */
+  dimalt: boolean;
+  /** DIMALTD — alternate precision (code 171) */
+  dimaltd: number;
+  /** DIMTOFL — force dim line inside (code 172) */
+  dimtofl: boolean;
+  /** DIMTIX — force text inside (code 174) */
+  dimtix: boolean;
+  /** DIMCLRD — dim line color (code 176) */
+  dimclrd: number;
+  /** DIMCLRE — ext line color (code 177) */
+  dimclre: number;
+  /** DIMCLRT — text color (code 178) */
+  dimclrt: number;
+  /** DIMADEC — angular decimal precision (code 179) */
+  dimadec: number;
+
+  // ── Units ──────────────────────────────────────────────────────────────────
+  /** DIMLUNIT — linear unit format (code 270, 1-6) */
+  dimlunit: number;
+  /** DIMDEC — linear decimal precision (code 271) */
+  dimdec: number;
+  /** DIMTDEC — tolerance decimal precision (code 272) */
+  dimtdec: number;
+  /** DIMALTU — alternate unit format (code 273, 1-6) */
+  dimaltu: number;
+  /** DIMAUNIT — angular unit format (code 275, 0-4) */
+  dimaunit: number;
+  /** DIMDSEP — decimal separator ASCII code (code 278; 46='.', 44=',') */
+  dimdsep: number;
+  /** DIMTMOVE — text move rule (code 279, 0-2) */
+  dimtmove: number;
+  /** DIMSD1 — suppress dim line 1 (code 281) */
+  suppressDimLine1: boolean;
+  /** DIMSD2 — suppress dim line 2 (code 282) */
+  suppressDimLine2: boolean;
+  /** DIMTOLJ — tolerance justify (code 283, 0=bottom/1=middle/2=top) */
+  dimtolj: number;
+  /** DIMATFIT — arrowhead/text fit (code 289, 0-3) */
+  dimatfit: number;
 }
 
 /** Map of DIMSTYLE names to their properties */
@@ -90,10 +181,48 @@ export type DimStyleMap = Record<string, DimStyleEntry>;
 /** Default DIMSTYLE as fallback (AutoCAD "Standard" defaults) */
 export const DEFAULT_DIMSTYLE: DimStyleEntry = {
   name: 'Standard',
-  dimtxt: 2.5,
   dimscale: 1.0,
+  dimasz: 2.5,
+  dimexo: 0.625,
+  dimdli: 3.75,
+  dimexe: 1.25,
+  dimrnd: 0,
+  dimtp: 0,
+  dimtm: 0,
+  dimtxt: 2.5,
+  dimcen: 2.5,
+  dimaltf: 25.4,
+  dimlfac: 1.0,
   dimtfac: 1.0,
-  dimasz: 2.5
+  dimgap: 0.625,
+  dimaltrnd: 0,
+  dimtol: false,
+  dimlim: false,
+  dimtih: true,
+  dimtoh: true,
+  suppressExtLine1: false,
+  suppressExtLine2: false,
+  dimtad: 0,
+  dimzin: 0,
+  dimalt: false,
+  dimaltd: 2,
+  dimtofl: false,
+  dimtix: false,
+  dimclrd: 0,
+  dimclre: 0,
+  dimclrt: 0,
+  dimadec: 0,
+  dimlunit: 2,
+  dimdec: 4,
+  dimtdec: 4,
+  dimaltu: 2,
+  dimaunit: 0,
+  dimdsep: 46,
+  dimtmove: 0,
+  suppressDimLine1: false,
+  suppressDimLine2: false,
+  dimtolj: 1,
+  dimatfit: 3,
 };
 
 // ============================================================================
