@@ -53,21 +53,16 @@
  *   0 — no blocking violations
  *   1 — at least one new or regressed violation
  */
-
 'use strict';
-
 const fs = require('node:fs');
 const path = require('node:path');
 const { execSync } = require('node:child_process');
-
 // ---------------------------------------------------------------------------
 // Paths & constants
 // ---------------------------------------------------------------------------
-
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const BASELINE_FILE = path.join(PROJECT_ROOT, '.entity-audit-coverage-baseline.json');
 const SRC_ROOT = path.join(PROJECT_ROOT, 'src');
-
 /**
  * COLLECTIONS keys that map to an AuditEntityType (see src/types/audit-trail.ts).
  * Only these trigger the check — unlisted collections are out of scope.
@@ -86,8 +81,13 @@ const TRACKED_COLLECTION_KEYS = new Set([
   'TEXT_TEMPLATES',
   // ADR-363 Phase 1D-C — BIM wall entities (audit via wall-audit-client.ts → /api/audit-trail/record)
   'FLOORPLAN_WALLS',
+  // ADR-363 Phase 2 — BIM opening entities (audit via opening-audit-client.ts → /api/audit-trail/record)
+  'FLOORPLAN_OPENINGS',
+  // ADR-363 Phase 3 — BIM slab entities (audit via slab-audit-client.ts → /api/audit-trail/record)
+  'FLOORPLAN_SLABS',
+  // ADR-363 Phase 4 — BIM column entities (audit via column-audit-client.ts → /api/audit-trail/record)
+  'FLOORPLAN_COLUMNS',
 ]);
-
 /**
  * Files that are allowed to write to tracked collections without recording
  * an audit entry themselves. These fall into three categories:
@@ -119,8 +119,13 @@ const HARD_EXEMPT_PATTERNS = [
   /[\\/]services[\\/]ownership[\\/]ownership-table-service\.ts$/,            // client-SDK; millesimalShares writes in finalizeTable
   // ADR-363 Phase 1D-C — client-SDK wall service; audit is recorded via wall-audit-client.ts in the hook layer
   /[\\/]bim[\\/]walls[\\/]wall-firestore-service\.ts$/,
+  // ADR-363 Phase 2 — client-SDK opening service; audit via opening-audit-client.ts in the hook layer
+  /[\\/]bim[\\/]walls[\\/]opening-firestore-service\.ts$/,
+  // ADR-363 Phase 3 — client-SDK slab service; audit via slab-audit-client.ts in the hook layer
+  /[\\/]bim[\\/]slabs[\\/]slab-firestore-service\.ts$/,
+  // ADR-363 Phase 4 — client-SDK column service; audit via column-audit-client.ts in the hook layer
+  /[\\/]bim[\\/]columns[\\/]column-firestore-service\.ts$/,
 ];
-
 /**
  * Write operations to detect.
  *
@@ -146,11 +151,9 @@ const CHAIN_DIRECT_RE =
 const CHAIN_VAR_RE =
   /\b(?:\w*Ref|\w*Doc|ref|doc|batch|transaction|tx|writeBatch)\s*\.\s*(?:set|update|delete|create)\s*\(/g;
 const MODULE_WRITE_RE = /\b(?:setDoc|updateDoc|deleteDoc|addDoc)\s*\(/g;
-
 // ---------------------------------------------------------------------------
 // ANSI colours (no-op on non-TTY)
 // ---------------------------------------------------------------------------
-
 const useColour = process.stdout.isTTY;
 const c = {
   red:    (s) => (useColour ? `\x1b[31m${s}\x1b[0m` : s),
@@ -159,11 +162,9 @@ const c = {
   cyan:   (s) => (useColour ? `\x1b[36m${s}\x1b[0m` : s),
   bold:   (s) => (useColour ? `\x1b[1m${s}\x1b[0m` : s),
 };
-
 // ---------------------------------------------------------------------------
 // Target selection
 // ---------------------------------------------------------------------------
-
 /** @returns {string[]} absolute paths */
 function listStagedFiles() {
   try {
@@ -180,7 +181,6 @@ function listStagedFiles() {
     return [];
   }
 }
-
 /** @returns {string[]} absolute paths */
 function listAllSrcFiles() {
   /** @type {string[]} */
@@ -197,12 +197,10 @@ function listAllSrcFiles() {
   walk(SRC_ROOT);
   return out;
 }
-
 /** @param {string} abs @returns {string} relative POSIX-style path */
 function relPosix(abs) {
   return path.relative(PROJECT_ROOT, abs).split(path.sep).join('/');
 }
-
 /** @param {string} abs @returns {boolean} */
 function isExempt(abs) {
   return HARD_EXEMPT_PATTERNS.some((re) => re.test(abs));
