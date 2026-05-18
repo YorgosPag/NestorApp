@@ -229,7 +229,22 @@
         "previewEmpty": "(κενό)",
         "noEntitySelected": "Δεν επιλέχθηκε διάσταση.",
         "cancel": "Άκυρο",
-        "apply": "Εφαρμογή"
+        "apply": "Εφαρμογή",
+        "fieldHint": "Πληκτρολογήστε < για εισαγωγή πεδίου",
+        "fieldTokens": {
+          "measurement": "Μετρούμενη τιμή",
+          "length": "Μήκος",
+          "area": "Εμβαδό",
+          "angle": "Γωνία",
+          "perimeter": "Περίμετρος",
+          "x": "Συντεταγμένη X",
+          "y": "Συντεταγμένη Y",
+          "scale": "Κλίμακα",
+          "filename": "Αρχείο",
+          "date": "Ημερομηνία",
+          "time": "Ώρα",
+          "author": "Δημιουργός"
+        }
       }
     },
     "textProperties": {
