@@ -191,6 +191,8 @@ export interface UseUnifiedGripInteractionReturn {
   handleEscape: () => boolean;
   /** Currently hovered grip (cold/hovering/warm phases) — null in idle/dragging. ADR-349 Phase 1b.2. */
   hoveredGrip: UnifiedGripInfo | null;
+  /** Currently dragging grip (`dragging` phase) — null otherwise. ADR-357 Phase 11 (right-click context menu needs the active grip during drag). */
+  activeGrip: UnifiedGripInfo | null;
   /** Current state machine phase — needed by grip menu controller to skip during drags. ADR-349 Phase 1b.2. */
   phase: UnifiedGripPhase;
   dxfProjection: DxfProjection;

@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-18 — ADR-357 Phase 11 interop: GripContextMenu micro-leaf (right-click hot grip context menu, AutoCAD-style)
+
+CanvasSection now mounts `<GripContextMenu />` as a micro-leaf subscriber to `GripContextMenuStore` (zero React state in orchestrator). The new `useGripContextMenuController` opens the menu on right-click during cold/hovering/warm phases AND during active drag (`activeGrip` exposed via `unified.activeGrip`). Closing the menu via "Cancel" triggers `unified.handleEscape()` for proper drag cleanup. Pattern: store SSoT + `useSyncExternalStore` only inside the leaf component, never in the orchestrator (ADR-040 cardinal rule #1).
+
 ### 2026-05-18 — ADR-357 Phase 4 interop: PreviewRenderer Object Snap Tracking layer (markers persist across drawPreview cycles)
 
 `PreviewRenderer` gains persistent state `trackingMarkers: AcquiredTrackingPoint[]` and two new methods: `setTrackingMarkers(markers)` (idempotent setter + immediate paint) and `drawTrackingAlignment(paths, intersections, snappedPoint, label, transform, viewport)` (overlay called AFTER `drawPreview`). The `render()` paint pipeline is rewritten: the early-exit gate moves from `currentPreview` to `hasViewport` so marker-only paints are admitted (no preview entity required), then markers paint FIRST so the rubber-band preview overlays on top. The canvas is now ALWAYS cleared at the start of `render()` (previously only when `currentPreview` was truthy) — this handles `setTrackingMarkers([])` and other transitions to empty content uniformly so stale glyphs never linger.

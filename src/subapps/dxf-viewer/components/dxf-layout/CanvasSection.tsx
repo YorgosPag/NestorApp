@@ -40,7 +40,9 @@ import { useSpecialTools } from '../../hooks/tools';
 import { useModifyTools } from '../../hooks/tools/useModifyTools';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useGripHoverMenuController } from '../../hooks/grips/useGripHoverMenuController';
+import { useGripContextMenuController } from '../../hooks/grips/useGripContextMenuController';
 import { GripHoverMenu } from '../grip/GripHoverMenu';
+import { GripContextMenu } from '../grip/GripContextMenu';
 import { QuickPropertiesHoverPopover } from '../../systems/properties/QuickPropertiesHoverPopover';
 import { QuickPropertiesMiniPanel } from '../../systems/properties/QuickPropertiesMiniPanel';
 import { PropertiesPalette } from '../../systems/properties/PropertiesPalette';
@@ -174,6 +176,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
   });
   useGripHoverMenuController({ hoveredGrip: unified.hoveredGrip, phase: unified.phase, activeTool, levelManager, executeCommand, showPromptDialog, t });
+  // ADR-357 Phase 11 — right-click hot grip context menu (AutoCAD-style).
+  useGripContextMenuController({ hoveredGrip: unified.hoveredGrip, activeGrip: unified.activeGrip, phase: unified.phase, activeTool, levelManager, handleEscape: unified.handleEscape });
   // === Polygon drawing ===
   const { draftPolygon, setDraftPolygon, draftPolygonRef, isSavingPolygon, setIsSavingPolygon, finishDrawingWithPolygonRef, finishDrawing } = usePolygonCompletion({
     levelManager, overlayStore, eventBus, currentStatus, currentKind, activeTool, overlayMode,
@@ -453,6 +457,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         onCancel={() => guideBatchMenuRef.current?.close()} />
       <PromptDialog />
       <GripHoverMenu />
+      {/* ADR-357 Phase 11 — Right-click hot grip context menu (AutoCAD, micro-leaf, ADR-040) */}
+      <GripContextMenu />
       {/* ADR-357 Phase 8 — Quick Properties hover tooltip (micro-leaf, ADR-040) */}
       <QuickPropertiesHoverPopover dxfScene={dxfScene} activeTool={activeTool} />
       {/* ADR-357 Phase 9 — Quick Properties mini-panel on double-click (micro-leaf, ADR-040) */}

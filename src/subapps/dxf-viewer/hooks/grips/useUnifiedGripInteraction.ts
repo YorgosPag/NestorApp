@@ -449,14 +449,14 @@ export function useUnifiedGripInteraction(
 
   return useMemo(() => ({
     handleMouseMove, handleMouseDown, handleMouseUp, handleEscape,
-    hoveredGrip, phase,
+    hoveredGrip, activeGrip, phase,
     dxfProjection, overlayProjection, gripStateForStack,
     selectedGrips, setSelectedGrips, setDragPreviewPosition,
     isDragging, gripHoverThrottleRef, justFinishedDragRef, markDragFinished,
     setDraggingOverlayBody, draggingOverlayBody, draggingVertices, draggingEdgeMidpoint,
   }), [
     handleMouseMove, handleMouseDown, handleMouseUp, handleEscape,
-    hoveredGrip, phase,
+    hoveredGrip, activeGrip, phase,
     dxfProjection, overlayProjection, gripStateForStack,
     selectedGrips, isDragging, markDragFinished,
     draggingOverlayBody, draggingVertices, draggingEdgeMidpoint,
