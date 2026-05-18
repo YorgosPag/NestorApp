@@ -126,7 +126,6 @@
           "width": "Invalid stair width.",
           "rise": "Invalid riser height.",
           "tread": "Invalid tread depth.",
-<<<<<<< Updated upstream
           "totalRise": "Invalid total rise.",
           "totalRiseOverFloor": "Stair exceeds the floor height. Reduce the riser or step count.",
           "totalRiseUnderFloor": "Stair does not reach the next floor. Increase the riser or step count."
@@ -137,15 +136,6 @@
           "riseRange": "NOK: riser height outside allowed range.",
           "treadRange": "NOK: tread depth outside allowed range.",
           "twoRPlusG": "NOK: comfort formula 2R+G (2×riser + tread) outside allowed range 600–640 mm."
-=======
-          "totalRise": "Invalid total rise."
-        },
-        "nok": {
-          "widthMin": "NOK: insufficient stair width.",
-          "riseRange": "NOK: riser height outside allowed range.",
-          "treadRange": "NOK: tread depth outside allowed range.",
-          "twoRPlusG": "NOK: comfort formula 2R+G outside allowed range."
->>>>>>> Stashed changes
         },
         "ibc": {
           "widthMin": "IBC: insufficient stair width (below 1117 mm / 44 in).",
@@ -156,11 +146,7 @@
           "widthMin": "Eurocode: insufficient stair width.",
           "riseRange": "Eurocode: riser height outside allowed range.",
           "treadRange": "Eurocode: tread depth outside allowed range.",
-<<<<<<< Updated upstream
           "twoRPlusG": "Eurocode: comfort formula 2R+G (2×riser + tread) outside allowed range 600–650 mm."
-=======
-          "twoRPlusG": "Eurocode: comfort formula 2R+G outside allowed range."
->>>>>>> Stashed changes
         },
         "ada": {
           "riseMax": "ADA: riser height exceeds accessibility limit.",
@@ -171,7 +157,6 @@
           "bottomExtension": "ADA: bottom handrail extension must equal one tread depth.",
           "contrastStrip": "ADA: contrasting nosing strip is missing."
         },
-<<<<<<< Updated upstream
         "egress": {
           "widthBelowOccupancy": "Insufficient stair width for declared occupancy load ({occupancyLoad} persons)."
         },
@@ -180,9 +165,6 @@
         "totalRiseOverStoryHeight": "Total rise exceeds the declared story height.",
         "totalRiseBelowStoryHeight": "Stair does not reach the next level — total rise is below the declared story height.",
         "totalRiseTooLow": "Total rise is suspiciously short (< 1 m). Check that the step count is enough."
-=======
-        "headroomBelowMin": "Headroom clearance is below the code minimum."
->>>>>>> Stashed changes
       }
     },
     "circle": {
