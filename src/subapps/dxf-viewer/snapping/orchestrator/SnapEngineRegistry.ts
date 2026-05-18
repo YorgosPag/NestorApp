@@ -39,6 +39,8 @@ import { OrthoSnapEngine } from '../engines/OrthoSnapEngine';
 import { GridSnapEngine } from '../engines/GridSnapEngine';
 import { GuideSnapEngine } from '../engines/GuideSnapEngine';
 import { ConstructionPointSnapEngine } from '../engines/ConstructionPointSnapEngine';
+import { DimDefPointSnapEngine } from '../engines/DimDefPointSnapEngine';
+import { DimLineSnapEngine } from '../engines/DimLineSnapEngine';
 
 interface Viewport {
   worldPerPixelAt(p: Point2D): number;
@@ -78,7 +80,9 @@ export class SnapEngineRegistry {
     this.engines.set(ExtendedSnapType.GUIDE, new GuideSnapEngine());
     // ADR-189 §3.7-3.16: Construction snap points
     this.engines.set(ExtendedSnapType.CONSTRUCTION_POINT, new ConstructionPointSnapEngine());
-
+    // ADR-362 I1: Dimension snap — def points + dim line
+    this.engines.set(ExtendedSnapType.DIM_DEF_POINT, new DimDefPointSnapEngine());
+    this.engines.set(ExtendedSnapType.DIM_LINE, new DimLineSnapEngine());
   }
 
   initializeEnginesWithEntities(entities: Entity[], settings: ProSnapSettings): void {
