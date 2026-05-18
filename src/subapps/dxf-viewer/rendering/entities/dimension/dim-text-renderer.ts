@@ -24,12 +24,14 @@ import type {
   DimensionEntity,
   DimStyle,
   DimToleranceJustify,
+  DimInspectionMode,
 } from '../../../types/dimension';
 import type { DimGeometry } from '../../../systems/dimensions/dim-geometry-builder';
 import {
   composePrimaryText,
   composeFullDimText,
   formatAngularMeasurement,
+  formatAlternateUnit,
   type FullDimText,
 } from '../../../systems/dimensions/dim-text-formatter';
 import { resolveDimColor } from './dim-color-resolver';
@@ -65,7 +67,7 @@ export function renderDimensionText(
   const colour = resolveDimColor(params.style.dimclrt, params.layerColour);
   const fontFamily = params.style.textFontFamily || 'arial';
 
-  // Angular dims have their own formatting path — no tolerance/limits support in G2.
+  // Angular dims: simplified path (no tolerance/limits/inspection in G2/G3).
   if (params.geometry.kind === 'angular') {
     const text = buildPrimaryText(params.geometry, params.style, params.entity.userText);
     if (!text) return;
@@ -90,20 +92,110 @@ export function renderDimensionText(
   ctx.fillStyle = colour;
   ctx.textAlign = 'center';
 
+  // Inspection marker drawn before text so text renders on top.
+  if (params.style.dimInspect !== 'off' && full.primary) {
+    drawInspectionMarker(
+      ctx, full.primary, params.style.dimInspect,
+      params.style.dimInspectRate, primaryHeight, colour,
+    );
+  }
+
+  let mainBottomY: number;
   if (full.limitsUpper !== undefined && full.limitsLower !== undefined) {
     drawLimitsStack(ctx, full.limitsUpper, full.limitsLower, primaryHeight, fontFamily);
+    mainBottomY = primaryHeight * 0.75 + primaryHeight * 0.75 * 0.1 / 2 + primaryHeight * 0.75 / 2;
   } else if (full.tolerancePlus !== undefined && full.toleranceMinus !== undefined) {
     drawToleranceStack(
       ctx, full.primary, full.tolerancePlus, full.toleranceMinus,
       primaryHeight, params.style.dimtfac, params.style.dimtolj, fontFamily,
     );
+    mainBottomY = primaryHeight / 2 + primaryHeight * Math.max(params.style.dimtfac, 0.1) * 1.1;
   } else {
     if (!full.primary) { ctx.restore(); return; }
     ctx.font = buildUIFont(primaryHeight, fontFamily);
     ctx.textBaseline = 'middle';
     ctx.fillText(full.primary, 0, 0);
+    mainBottomY = primaryHeight / 2;
   }
 
+  // Alternate units drawn on a second line below primary stack (linear/aligned only).
+  const altText = formatAlternateUnit(params.geometry.measurementValue, params.style);
+  if (altText) {
+    drawAltUnit(ctx, altText, primaryHeight, params.style.dimtfac, mainBottomY, fontFamily);
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Draws alternate unit text `[value]` below the main text stack.
+ * `mainBottomY` = canvas Y where the main text block ends (positive = down in screen coords).
+ */
+function drawAltUnit(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  primaryHeight: number,
+  dimtfac: number,
+  mainBottomY: number,
+  fontFamily: string,
+): void {
+  const altHeight = primaryHeight * Math.max(dimtfac, 0.1);
+  const gap = primaryHeight * 0.15;
+  const y = mainBottomY + gap + altHeight / 2;
+  ctx.font = buildUIFont(altHeight, fontFamily);
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 0, y);
+}
+
+/**
+ * Draws an ASME-style inspection frame (pill oval) around the primary label.
+ * When `mode !== 'off'` the pill is stroked with `colour`; the rate label is
+ * drawn to the right of the measurement, separated by a vertical divider line.
+ */
+function drawInspectionMarker(
+  ctx: CanvasRenderingContext2D,
+  label: string,
+  mode: DimInspectionMode,
+  rate: number,
+  primaryHeight: number,
+  colour: string,
+): void {
+  const rateText =
+    mode === 'rate0' ? '0%' :
+    mode === 'rate100' ? '100%' :
+    `${Math.round(rate)}%`;
+
+  const charWidth = primaryHeight * 0.55;
+  const labelW = (ctx.measureText ? ctx.measureText(label).width : label.length * charWidth);
+  const rateW = (ctx.measureText ? ctx.measureText(rateText).width : rateText.length * charWidth);
+  const hPad = primaryHeight * 0.4;
+  const halfH = primaryHeight * 0.65;
+
+  // Total pill half-width: label + padding + optional (divider + rate + padding).
+  const halfW = labelW / 2 + hPad + rateW / 2 + hPad / 2;
+  const dividerX = labelW / 2 + hPad / 2;
+
+  ctx.save();
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = Math.max(primaryHeight * 0.06, 0.5);
+  ctx.setLineDash([]);
+
+  ctx.beginPath();
+  ctx.arc(-halfW, 0, halfH, Math.PI / 2, -Math.PI / 2, true);
+  ctx.lineTo(halfW, -halfH);
+  ctx.arc(halfW, 0, halfH, -Math.PI / 2, Math.PI / 2, false);
+  ctx.lineTo(-halfW, halfH);
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(dividerX, -halfH);
+  ctx.lineTo(dividerX, halfH);
+  ctx.stroke();
+
+  ctx.font = buildUIFont(primaryHeight * 0.75, 'arial');
+  ctx.textBaseline = 'middle';
+  ctx.fillText(rateText, dividerX + rateW / 2 + hPad / 4, 0);
   ctx.restore();
 }
 
