@@ -20,7 +20,8 @@ export class SnapPresets {
         ExtendedSnapType.INTERSECTION,
         ExtendedSnapType.PERPENDICULAR,
         ExtendedSnapType.CENTER,
-        ExtendedSnapType.GRID
+        ExtendedSnapType.GRID,
+        ExtendedSnapType.DIM_DEF_POINT  // ADR-362 I1: snap to existing dim anchor points
       ]),
       snapDistance: 7,
       showSnapMarkers: true,
@@ -31,7 +32,8 @@ export class SnapPresets {
         [ExtendedSnapType.MIDPOINT]: 5,
         [ExtendedSnapType.CENTER]: 5,
         [ExtendedSnapType.PERPENDICULAR]: 8,
-        [ExtendedSnapType.GRID]: 8
+        [ExtendedSnapType.GRID]: 8,
+        [ExtendedSnapType.DIM_DEF_POINT]: 8
       }
     });
   }
@@ -48,7 +50,9 @@ export class SnapPresets {
         ExtendedSnapType.CENTER,
         ExtendedSnapType.TANGENT,
         ExtendedSnapType.QUADRANT,
-        ExtendedSnapType.PERPENDICULAR
+        ExtendedSnapType.PERPENDICULAR,
+        ExtendedSnapType.DIM_DEF_POINT, // ADR-362 I1: snap to existing dim anchor points
+        ExtendedSnapType.DIM_LINE       // ADR-362 I1: snap to dim line for baseline/continued chains
       ]),
       snapDistance: 8,
       showSnapMarkers: true,
@@ -60,7 +64,9 @@ export class SnapPresets {
         [ExtendedSnapType.CENTER]: 5,
         [ExtendedSnapType.TANGENT]: 8,
         [ExtendedSnapType.QUADRANT]: 6,
-        [ExtendedSnapType.PERPENDICULAR]: 8
+        [ExtendedSnapType.PERPENDICULAR]: 8,
+        [ExtendedSnapType.DIM_DEF_POINT]: 8,
+        [ExtendedSnapType.DIM_LINE]: 8
       }
     });
   }
