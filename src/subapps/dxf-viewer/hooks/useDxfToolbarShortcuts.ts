@@ -117,6 +117,7 @@ export function useDxfToolbarShortcuts(
       if (matchesShortcut(e, 'circle')) { e.preventDefault(); handleToolChange('circle'); return; }
       if (matchesShortcut(e, 'polyline')) { e.preventDefault(); handleToolChange('polyline'); return; }
       if (matchesShortcut(e, 'polygon')) { e.preventDefault(); handleToolChange('polygon'); return; }
+      if (matchesShortcut(e, 'wall')) { e.preventDefault(); handleToolChange('wall'); return; }
       if (matchesShortcut(e, 'move')) { e.preventDefault(); handleToolChange('move'); return; }
       if (matchesShortcut(e, 'measureDistance')) { e.preventDefault(); handleToolChange('measure-distance'); return; }
       if (matchesShortcut(e, 'measureArea')) { e.preventDefault(); handleToolChange('measure-area'); return; }
