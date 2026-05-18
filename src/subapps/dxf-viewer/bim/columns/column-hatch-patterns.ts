@@ -1,34 +1,32 @@
 /**
- * ADR-363 Phase 4.5c.2 — Column material hatch patterns (pure SSoT module).
+ * ADR-363 Phase 4.5c.2/4.5c.3 — Column material hatch patterns (pure SSoT module).
  *
- * Generates per-material `HatchPlan` (lines + dots σε world coords / mm) από
- * το column bbox. ZERO dependencies σε React / DOM / Firestore / canvas-state —
- * rendering side κάνει polygon clip + `worldToScreen` per segment.
+ * Generates per-material `HatchPlan` (lines + dots + arcs σε world coords / mm)
+ * από το column bbox. ZERO dependencies σε React / DOM / Firestore / canvas-state —
+ * rendering side κάνει polygon clip + `worldToScreen` per segment/arc.
  *
  * 4 industry-convention plan-view families (κρατώντας τις conventions του
  * AutoCAD architectural set):
- *   - `'rc'`      → dot grid (Reinforced Concrete). Spacing 150mm, rendered
- *                   dot radius `RC_DOT_RADIUS_PX` (1.5px world-independent).
+ *   - `'rc'`      → dot grid για non-circular; concentric rings για circular.
+ *                   Spacing 150mm (dots) ή 3 rings @ 25/50/75% radius.
  *   - `'steel'`   → diagonal cross-hatch @45° + @135°. Spacing 100mm.
  *   - `'masonry'` → horizontal brick rows + staggered vertical joints
  *                   (brick 200×80 mm). Mirror AR-B816 ish.
  *   - `'wood'`    → single-direction diagonal @45°. Spacing 80mm.
  *
- * Lookup: case-insensitive. Unknown / undefined → `'rc'` fallback (RC = most
- * common construction default, matches existing `ColumnParams.material`
- * convention).
+ * Lookup: case-insensitive. Unknown / undefined → `'rc'` fallback.
  *
  * SSoT linkage:
- *   - Consumed by `ColumnRenderer.drawMaterialHatch()` (Phase 4.5c.2) ως
- *     polygon-clipped pass μεταξύ fill και stroke (mirror του Phase 3.6
- *     `SlabRenderer.drawReinforcementHatch`).
+ *   - Consumed by `ColumnRenderer.drawMaterialHatch()` ως polygon-clipped pass
+ *     μεταξύ fill και stroke (mirror Phase 3.6 `SlabRenderer.drawReinforcementHatch`).
  *   - Constants exported για unit-test reuse + downstream UI inspection.
  *
- * Circular column kind: out of scope για το 1st pass — visual conventions
- * διαφέρουν (στρογγυλό RC συνήθως solid-fill ή radial pattern). Deferred
- * Phase 4.5c.3.
+ * Phase 4.5c.3: circular column hatch added via `computeCircularHatchPlan()`.
+ *   RC circular → 3 concentric arcs (rings) inside footprint.
+ *   Steel/Masonry/Wood circular → same bbox-based line patterns (clip handles circle).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §6 Phase 4.5c.2
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §6 Phase 4.5c.3
  */
 
 import type { Point2D } from '../../rendering/types/Types';
@@ -70,9 +68,22 @@ export interface HatchDot {
   readonly radiusMm: number;
 }
 
+/**
+ * Phase 4.5c.3 — Circular arc descriptor σε world coords. Used για RC circular
+ * column concentric rings. `center` + `radiusMm` → renderer calls `ctx.arc()`.
+ * Clip (to circular footprint polygon) εφαρμόζεται από τον renderer, same pattern
+ * as lines + dots.
+ */
+export interface HatchArc {
+  readonly center: Readonly<Point2D>;
+  readonly radiusMm: number;
+}
+
 export interface HatchPlan {
   readonly lines: readonly HatchLineSegment[];
   readonly dots: readonly HatchDot[];
+  /** Phase 4.5c.3: circular arcs (RC concentric rings). Empty για non-circular. */
+  readonly arcs: readonly HatchArc[];
 }
 
 // ─── Constants (exported για test + UI reuse) ───────────────────────────────
@@ -106,6 +117,13 @@ export const MASONRY_BRICK_HEIGHT_MM = 80;
 /** Safety cap για degenerate / huge bbox — αποφεύγει busy loops. */
 const MAX_HATCH_STEPS = 4000;
 
+/**
+ * Phase 4.5c.3 — RC circular column: concentric ring fractions.
+ * 3 rings at these radii = r × fraction. Industry convention: inner rings show
+ * the reinforced concrete core in plan view.
+ */
+export const CIRCULAR_RC_RING_FRACTIONS: readonly number[] = [0.25, 0.50, 0.75];
+
 // ─── Plan computation ────────────────────────────────────────────────────────
 
 /**
@@ -123,19 +141,60 @@ export function computeHatchPlan(
   const dx = bbox.max.x - bbox.min.x;
   const dy = bbox.max.y - bbox.min.y;
   if (dx <= 0 || dy <= 0 || !Number.isFinite(dx) || !Number.isFinite(dy)) {
-    return { lines: [], dots: [] };
+    return { lines: [], dots: [], arcs: [] };
   }
 
   switch (material) {
     case 'rc':
-      return { lines: [], dots: buildDotGrid(bbox, HATCH_SPACING_MM.rc) };
+      return { lines: [], dots: buildDotGrid(bbox, HATCH_SPACING_MM.rc), arcs: [] };
     case 'steel':
-      return { lines: buildSteelCrossHatch(bbox), dots: [] };
+      return { lines: buildSteelCrossHatch(bbox), dots: [], arcs: [] };
     case 'masonry':
-      return { lines: buildMasonryPattern(bbox), dots: [] };
+      return { lines: buildMasonryPattern(bbox), dots: [], arcs: [] };
     case 'wood':
-      return { lines: buildDiagonalHatch(bbox, HATCH_SPACING_MM.wood, +1), dots: [] };
+      return { lines: buildDiagonalHatch(bbox, HATCH_SPACING_MM.wood, +1), dots: [], arcs: [] };
   }
+}
+
+/**
+ * Phase 4.5c.3 — Compute hatch plan for circular column kind.
+ *
+ * RC: 3 concentric rings at `CIRCULAR_RC_RING_FRACTIONS` × radius. Industry
+ *   convention για στρογγυλές RC κολώνες σε κάτοψη (εσωτερικοί δακτύλιοι
+ *   δηλώνουν οπλισμένο σκυρόδεμα). Renderer applies polygon clip to the
+ *   32-vertex footprint — arcs beyond the circle are naturally invisible.
+ *
+ * Steel / Masonry / Wood: same bbox-based line patterns as non-circular (the
+ *   circular footprint polygon clip handles the circular boundary).
+ *
+ * Degenerate (radius ≤ 0) → empty plan.
+ *
+ * @param center column position σε world mm.
+ * @param radiusMm half-diameter of the circular column.
+ * @param material resolved material key.
+ */
+export function computeCircularHatchPlan(
+  center: Readonly<Point2D>,
+  radiusMm: number,
+  material: ColumnMaterialKey,
+): HatchPlan {
+  if (radiusMm <= 0 || !Number.isFinite(radiusMm)) {
+    return { lines: [], dots: [], arcs: [] };
+  }
+
+  if (material === 'rc') {
+    const arcs: HatchArc[] = CIRCULAR_RC_RING_FRACTIONS.map((f) => ({
+      center,
+      radiusMm: radiusMm * f,
+    }));
+    return { lines: [], dots: [], arcs };
+  }
+
+  const bbox: BoundingBox3D = {
+    min: { x: center.x - radiusMm, y: center.y - radiusMm, z: 0 },
+    max: { x: center.x + radiusMm, y: center.y + radiusMm, z: 0 },
+  };
+  return computeHatchPlan(bbox, material);
 }
 
 // ─── Per-material builders ───────────────────────────────────────────────────

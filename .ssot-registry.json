@@ -3425,6 +3425,26 @@
       "addedDate": "2026-05-17",
       "addedByAdr": "ADR-363",
       "tier": 3
+    },
+    "escape-command-bus": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/escape-bus/EscapeCommandBus.ts",
+      "description": "All Escape-key dispatch in the DXF viewer MUST go through escapeBus.register() or the useEscapeHandler() hook (ADR-364). Direct window/document keydown listeners that branch on e.key === 'Escape' are forbidden outside the escape-bus folder. Allowlist contains the three legacy capture hooks that retain non-ESC keys + the registrations shim + tooling that needs to synthesize a fake Escape event for Strategy-handler routing.",
+      "forbiddenPatterns": [
+        "e\\.key\\s*===\\s*['\"]Escape['\"]",
+        "key\\s*===\\s*['\"]Escape['\"]"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/escape-bus/",
+        "src/subapps/dxf-viewer/hooks/dimensions/useDimensionKeyboardRouting.ts",
+        "src/subapps/dxf-viewer/hooks/dimensions/useDimToolRouting.ts",
+        "src/subapps/dxf-viewer/hooks/canvas/useCanvasKeyboardShortcuts.ts",
+        "src/subapps/dxf-viewer/hooks/canvas/useCanvasEscapeRegistrations.ts",
+        "src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputKeyboard.ts",
+        "src/subapps/dxf-viewer/systems/dynamic-input/keyboard-handlers/"
+      ],
+      "addedDate": "2026-05-18",
+      "addedByAdr": "ADR-364",
+      "tier": 1
     }
   }
 }
