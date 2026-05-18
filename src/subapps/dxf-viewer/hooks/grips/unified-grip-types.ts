@@ -9,7 +9,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, BeamGripKind } from '../useGripMovement';
 import type {
   VertexHoverInfo,
   EdgeHoverInfo,
@@ -123,6 +123,13 @@ export interface UnifiedGripInfo {
    * (per-vertex translate + edge-midpoint insertion).
    */
   readonly slabOpeningGripKind?: SlabOpeningGripKind;
+  /**
+   * ADR-363 Phase 5.5a — parametric beam grip discriminator (forwarded from
+   * `GripInfo.beamGripKind`). Routes commit through `applyBeamGripDrag()` +
+   * `UpdateBeamParamsCommand` (start/end/midpoint translate + curve control
+   * move).
+   */
+  readonly beamGripKind?: BeamGripKind;
 }
 
 /**

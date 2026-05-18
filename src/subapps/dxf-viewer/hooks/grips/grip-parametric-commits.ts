@@ -17,17 +17,20 @@ import type { WallEntity, WallKind } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
+import type { BeamEntity } from '../../bim/types/beam-types';
 import type { DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
 import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/UpdateWallParamsCommand';
 import { UpdateOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateOpeningParamsCommand';
 import { UpdateSlabParamsCommand } from '../../core/commands/entity-commands/UpdateSlabParamsCommand';
 import { UpdateSlabOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateSlabOpeningParamsCommand';
+import { UpdateBeamParamsCommand } from '../../core/commands/entity-commands/UpdateBeamParamsCommand';
 import { applyStairGripDrag } from '../../systems/stairs/stair-grips';
 import { applyWallGripDrag } from '../../bim/walls/wall-grips';
 import { applyOpeningGripDrag } from '../../bim/walls/opening-grips';
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
+import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyDimensionGripDrag } from '../dimensions/useDimensionGrips';
 import { EventBus } from '../../systems/events/EventBus';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
@@ -254,6 +257,47 @@ export function commitSlabOpeningGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   EventBus.emit('bim:slab-opening-params-updated', { slabOpeningId: grip.entityId });
+}
+
+/**
+ * ADR-363 Phase 5.5a — Parametric beam grip commit. Bypasses the standard
+ * stretch / move strategies because `BeamEntity` is parametric: geometry is
+ * fully derived from `params`, so the grip drag transforms params (via
+ * `applyBeamGripDrag`) and the command (`UpdateBeamParamsCommand`) recomputes
+ * geometry + validation atomically. Merge window enabled (isDragging=true) so
+ * a continuous drag collapses σε ένα undo entry (ADR-031). Emits
+ * `bim:beam-params-updated` after dispatch ώστε consumers (auto-save / BOQ
+ * feed) να αντιδρούν.
+ */
+export function commitBeamGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.beamGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<BeamEntity>;
+  if (candidate.type !== 'beam' || !candidate.params) return;
+  const beam = candidate as BeamEntity;
+  const originalParams = beam.params;
+  const newParams = applyBeamGripDrag(grip.beamGripKind, {
+    originalParams,
+    delta,
+  });
+  if (newParams === originalParams) return;
+  const command = new UpdateBeamParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+  EventBus.emit('bim:beam-params-updated', { beamId: grip.entityId });
 }
 
 /** ADR-362 Phase I2 — Dimension grip commit via `applyDimensionGripDrag` + scene patch. */

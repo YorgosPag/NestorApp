@@ -97,6 +97,25 @@ export type SlabOpeningGripKind =
   | `slab-opening-vertex-${number}`
   | `slab-opening-edge-midpoint-${number}`;
 
+/**
+ * ADR-363 Phase 5.5a — Beam grip kind (parametric grip type).
+ * Routes commit through `applyBeamGripDrag()` + `UpdateBeamParamsCommand`
+ * instead of the standard `StretchEntityCommand` vertex path.
+ *
+ * Grips exposed by `BeamEntity` (`bim/beams/beam-grips.ts`):
+ *   - `beam-start`    → translate axis start endpoint
+ *   - `beam-end`      → translate axis end endpoint
+ *   - `beam-midpoint` → translate whole beam (axis midpoint anchor, moves
+ *                       startPoint + endPoint + curveControl όπου υπάρχει)
+ *   - `beam-curve`    → move quadratic Bezier control point (curved kind only;
+ *                       seeded από axis midpoint όταν undefined)
+ */
+export type BeamGripKind =
+  | 'beam-start'
+  | 'beam-end'
+  | 'beam-midpoint'
+  | 'beam-curve';
+
 /** Grip information */
 export interface GripInfo {
   entityId: string;
@@ -144,6 +163,13 @@ export interface GripInfo {
    * (per-vertex translate + edge-midpoint insertion).
    */
   slabOpeningGripKind?: SlabOpeningGripKind;
+  /**
+   * ADR-363 Phase 5.5a — parametric beam grip discriminator. Present only when
+   * the grip belongs to a `BeamEntity`; routes the commit through
+   * `applyBeamGripDrag()` + `UpdateBeamParamsCommand` (start/end/midpoint
+   * translate + curve control move).
+   */
+  beamGripKind?: BeamGripKind;
 }
 
 /** Grip drag state */
