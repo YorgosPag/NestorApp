@@ -80,7 +80,7 @@ export const useKeyboardShortcuts = ({
       // 🎯 ADR-047: ESC - Cancel drawing OR close color palette
       if (matchesShortcut(e, 'escape')) {
         // PRIORITY 1: Cancel active drawing (measure-area, polyline, polygon, etc.)
-        const isDrawingTool = ['line', 'polyline', 'polygon', 'measure-area', 'measure-distance', 'measure-angle', 'rectangle', 'circle', 'stair'].includes(activeTool);
+        const isDrawingTool = ['line', 'polyline', 'polygon', 'measure-area', 'measure-distance', 'measure-angle', 'rectangle', 'circle', 'stair', 'wall'].includes(activeTool);
 
         if (isDrawingTool && onDrawingCancel) {
           e.preventDefault();
