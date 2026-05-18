@@ -7,7 +7,6 @@
  * - createEntityFromTool(): Creates a scene entity based on tool type and clicked points
  * - isEntityComplete(): Determines if enough points have been collected to complete an entity
  */
-
 import type { Point2D } from '../../rendering/types/Types';
 import type {
   LineEntity,
@@ -17,6 +16,8 @@ import type {
   AngleMeasurementEntity,
   ArcEntity,
 } from '../../types/scene';
+import type { XLineEntity, RayEntity } from '../../types/entities';
+import { getMode } from '../../systems/tools/xline-mode-store';
 import type {
   DrawingTool,
   ExtendedSceneEntity,
@@ -40,10 +41,12 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
 import { LINEWEIGHT_ISO_VALUES } from '../../config/lineweight-iso-catalog';
-
 const LINEWEIGHT_1MM = LINEWEIGHT_ISO_VALUES[17];
-
-
+function normalizeDir(dx: number, dy: number): { x: number; y: number } {
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len < 1e-10) return { x: 1, y: 0 };
+  return { x: dx / len, y: dy / len };
+}
 /**
  * Creates a scene entity from a drawing tool and a set of world-space points.
  *
@@ -66,7 +69,6 @@ export function createEntityFromTool(
   const id = entityId;
   // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
   const defaultLayerId = getLayer(DXF_DEFAULT_LAYER)?.id;
-
   switch (tool) {
     case 'line':
       if (points.length >= 2) {
@@ -95,7 +97,6 @@ export function createEntityFromTool(
         return measureEntity;
       }
       break;
-
     case 'measure-distance-continuous':
       if (points.length >= 2) {
         const lastTwoPoints = points.slice(-2);
@@ -112,7 +113,6 @@ export function createEntityFromTool(
         return continuousMeasureEntity;
       }
       break;
-
     case 'rectangle':
       if (points.length >= 2) {
         const [p1, p2] = points;
@@ -174,7 +174,6 @@ export function createEntityFromTool(
         } as CircleEntity;
       }
       break;
-
     // Circle from 3 points (circumcircle) - ADR-083
     case 'circle-3p':
       if (points.length >= 3) {
@@ -192,7 +191,6 @@ export function createEntityFromTool(
         }
       }
       break;
-
     // Circle from chord and sagitta - ADR-083
     case 'circle-chord-sagitta':
       if (points.length >= 3) {
@@ -210,7 +208,6 @@ export function createEntityFromTool(
         }
       }
       break;
-
     // Circle from 2 points + radius indicator - ADR-083
     case 'circle-2p-radius':
       if (points.length >= 3) {
@@ -228,7 +225,6 @@ export function createEntityFromTool(
         }
       }
       break;
-
     // Circle best-fit (least squares) - ADR-083
     case 'circle-best-fit':
       if (points.length >= 3) {
@@ -245,7 +241,6 @@ export function createEntityFromTool(
         }
       }
       break;
-
     case 'polyline':
       if (points.length >= 2) {
         return {
@@ -274,24 +269,19 @@ export function createEntityFromTool(
             opacity: 1.0,
             lineType: 'solid' as const,
           };
-
           const extendedPolyline: ExtendedPolylineEntity = {
             ...polyline,
             preview: true,
             showEdgeDistances: true,
             isOverlayPreview: false,
           } as ExtendedPolylineEntity;
-
           return extendedPolyline;
         } else if (points.length >= 3) {
           const [point1, vertex, point2] = points;
-
           const vector1 = subtractPoints(point1, vertex);
           const vector2 = subtractPoints(point2, vertex);
-
           const angleRad = angleBetweenVectors(vector1, vector2);
           const angleDeg = normalizeAngleDeg(radToDeg(angleRad));
-
           return {
             id,
             type: 'angle-measurement',
@@ -331,7 +321,6 @@ export function createEntityFromTool(
         } as PolylineEntity;
       }
       break;
-
     // Arc drawing tools - ADR-059
     case 'arc-3p':
       // 3-Point Arc: Start -> Point on Arc -> End
@@ -356,7 +345,6 @@ export function createEntityFromTool(
         }
       }
       break;
-
     case 'arc-cse':
       // Center -> Start -> End Arc
       if (points.length >= 3) {
@@ -378,7 +366,6 @@ export function createEntityFromTool(
         } as ArcEntity;
       }
       break;
-
     case 'arc-sce':
       // Start -> Center -> End Arc
       if (points.length >= 3) {
@@ -409,11 +396,59 @@ export function createEntityFromTool(
         return arcEntity as ArcEntity;
       }
       break;
+    case 'xline': {
+      const mode = getMode();
+      if (mode === 'horizontal' && points.length >= 1) {
+        return {
+          id,
+          type: 'xline',
+          basePoint: points[0],
+          direction: { x: 1, y: 0 },
+          visible: true,
+          layerId: defaultLayerId,
+        } as XLineEntity;
+      }
+      if (mode === 'vertical' && points.length >= 1) {
+        return {
+          id,
+          type: 'xline',
+          basePoint: points[0],
+          direction: { x: 0, y: 1 },
+          visible: true,
+          layerId: defaultLayerId,
+        } as XLineEntity;
+      }
+      // through (default) — requires 2 points
+      if (points.length >= 2) {
+        const dir = normalizeDir(points[1].x - points[0].x, points[1].y - points[0].y);
+        return {
+          id,
+          type: 'xline',
+          basePoint: points[0],
+          direction: dir,
+          visible: true,
+          layerId: defaultLayerId,
+        } as XLineEntity;
+      }
+      break;
+    }
+    case 'ray': {
+      if (points.length >= 2) {
+        const dir = normalizeDir(points[1].x - points[0].x, points[1].y - points[0].y);
+        return {
+          id,
+          type: 'ray',
+          basePoint: points[0],
+          direction: dir,
+          visible: true,
+          layerId: defaultLayerId,
+        } as RayEntity;
+      }
+      break;
+    }
   }
   return null;
 }
-
-
 /**
  * Determines whether enough points have been collected to complete an entity for the given tool.
  *
@@ -429,6 +464,7 @@ export function isEntityComplete(tool: DrawingTool, pointCount: number): boolean
     case 'circle':
     case 'circle-diameter':
     case 'circle-2p-diameter':
+    case 'ray':
       return pointCount >= 2;
     case 'measure-angle':
     case 'measure-angle-measuregeom':
@@ -439,6 +475,11 @@ export function isEntityComplete(tool: DrawingTool, pointCount: number): boolean
     case 'circle-chord-sagitta':
     case 'circle-2p-radius':
       return pointCount >= 3;
+    case 'xline': {
+      const mode = getMode();
+      if (mode === 'horizontal' || mode === 'vertical') return pointCount >= 1;
+      return pointCount >= 2; // through (default)
+    }
     case 'measure-distance-continuous':
     case 'polyline':
     case 'polygon':

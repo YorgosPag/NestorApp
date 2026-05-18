@@ -91,7 +91,9 @@ export type DrawingTool =
   | 'wall'
   | 'slab'
   | 'column'
-  | 'beam';
+  | 'beam'
+  | 'xline'
+  | 'ray';
 
 export interface DrawingState {
   currentTool: DrawingTool;
