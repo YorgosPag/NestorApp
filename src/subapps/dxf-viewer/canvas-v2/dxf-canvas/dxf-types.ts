@@ -11,11 +11,13 @@ import type { DimensionEntity } from '../../types/dimension';
 // ADR-363 Phase 3.7 — BIM slab / slab-opening wrappers for DXF render pipeline.
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
+// ADR-359 Phase 11 — construction line wrappers for grip computation pipeline.
+import type { XLineEntity, RayEntity } from '../../types/entities';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'xline' | 'ray';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -163,7 +165,19 @@ export interface DxfSlabOpening extends DxfEntity {
   slabOpeningEntity: SlabOpeningEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening;
+/** ADR-359 Phase 11 — XLine wrapper for grip computation pipeline. */
+export interface DxfXLine extends DxfEntity {
+  type: 'xline';
+  xlineEntity: XLineEntity;
+}
+
+/** ADR-359 Phase 11 — Ray wrapper for grip computation pipeline. */
+export interface DxfRay extends DxfEntity {
+  type: 'ray';
+  rayEntity: RayEntity;
+}
+
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfXLine | DxfRay;
 
 // === DXF SCENE ===
 export interface DxfScene {

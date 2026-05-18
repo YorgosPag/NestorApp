@@ -211,13 +211,13 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
 
     case 'xline': {
       // ADR-359 Phase 11 — basePoint (translate) + direction handle (rotate).
-      grips.push(...getXLineGrips(entity));
+      grips.push(...getXLineGrips(entity.xlineEntity));
       break;
     }
 
     case 'ray': {
       // ADR-359 Phase 11 — basePoint (translate) + direction handle (rotate).
-      grips.push(...getRayGrips(entity));
+      grips.push(...getRayGrips(entity.rayEntity));
       break;
     }
   }

@@ -21,7 +21,8 @@ import type { DxfScene, DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity, Entity } from '../../types/entities';
-import { isArrayEntity, isStairEntity, isSlabEntity, isSlabOpeningEntity } from '../../types/entities';
+import { isArrayEntity, isStairEntity, isSlabEntity, isSlabOpeningEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../types/stair';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
@@ -273,6 +274,18 @@ function convertEntity(entity: SceneEntity, layers: SceneLayers, layersById?: Sc
       // dashed outline + kind annotation over the host slab cutout.
       return isSlabOpeningEntity(entity)
         ? { ...base, type: 'slab-opening' as const, slabOpeningEntity: entity as SlabOpeningEntity } as DxfEntityUnion
+        : null;
+    }
+    case 'xline': {
+      // ADR-359 Phase 11 — wrap XLineEntity for grip computation pipeline.
+      return isXLineEntity(entity)
+        ? { ...base, type: 'xline' as const, xlineEntity: entity as XLineEntity } as DxfEntityUnion
+        : null;
+    }
+    case 'ray': {
+      // ADR-359 Phase 11 — wrap RayEntity for grip computation pipeline.
+      return isRayEntity(entity)
+        ? { ...base, type: 'ray' as const, rayEntity: entity as RayEntity } as DxfEntityUnion
         : null;
     }
     default:

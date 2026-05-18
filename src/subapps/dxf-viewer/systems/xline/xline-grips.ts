@@ -2,16 +2,14 @@
  * ADR-359 Phase 11 — XLine grip computation + drag transform.
  *
  * Two grips per XLineEntity:
- *   - base (square, gripIndex 0): translate basePoint
+ *   - base (center, gripIndex 0): translate basePoint
  *   - dir  (vertex, gripIndex 1): rotate direction around basePoint
  *
  * Consumer of ADR-357 Phase 11/12 grip infrastructure (no new GripStore).
  */
 import type { Point2D } from '../../rendering/types/Types';
 import type { XLineEntity } from '../../types/entities';
-import type { GripInfo } from '../../hooks/grip-types';
-
-export type XLineGripKind = 'xline-base' | 'xline-dir';
+import type { GripInfo, XLineGripKind } from '../../hooks/useGripMovement';
 
 /** Fixed world-space offset for the direction handle. Normalized dir × OFFSET. */
 const DIR_HANDLE_OFFSET = 100;

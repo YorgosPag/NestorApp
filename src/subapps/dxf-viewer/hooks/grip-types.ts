@@ -98,7 +98,7 @@ export type SlabOpeningGripKind =
   | `slab-opening-edge-midpoint-${number}`;
 
 /**
- * ADR-363 Phase 5.5a — Beam grip kind (parametric grip type).
+ * ADR-363 Phase 5.5a + 5.5b — Beam grip kind (parametric grip type).
  * Routes commit through `applyBeamGripDrag()` + `UpdateBeamParamsCommand`
  * instead of the standard `StretchEntityCommand` vertex path.
  *
@@ -109,12 +109,18 @@ export type SlabOpeningGripKind =
  *                       startPoint + endPoint + curveControl όπου υπάρχει)
  *   - `beam-curve`    → move quadratic Bezier control point (curved kind only;
  *                       seeded από axis midpoint όταν undefined)
+ *   - `beam-width`    → resize width perpendicular to axis (symmetric γύρω από
+ *                       axis midpoint). Clamps στο `MIN_BEAM_WIDTH_MM`. Mirror
+ *                       του `wall-thickness` pattern (Phase 1C).
+ *
+ * Depth dimension grip (out-of-plane) DEFERRED στο Phase 5.5c.
  */
 export type BeamGripKind =
   | 'beam-start'
   | 'beam-end'
   | 'beam-midpoint'
-  | 'beam-curve';
+  | 'beam-curve'
+  | 'beam-width';
 
 /**
  * ADR-363 Phase 4.5 — Column grip kind (parametric grip type).

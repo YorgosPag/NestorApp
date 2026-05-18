@@ -1,19 +1,25 @@
 /**
- * ADR-363 Phase 5.5a — `beam-grips` pure-function tests.
+ * ADR-363 Phase 5.5a + 5.5b — `beam-grips` pure-function tests.
  *
  * Verifies:
  *   - `getBeamGrips` emits the correct count + ordering per kind
- *     (straight/cantilever → 3 grips, curved → 4 grips).
+ *     (straight/cantilever → 4 grips, curved → 5 grips, including the Phase 5.5b
+ *     width handle).
  *   - Grip positions correspond to params.startPoint / endPoint / midpoint /
- *     curveControl in scene-unit (mm) space.
+ *     curveControl και width-handle (axis midpoint + perpendicular × width/2)
+ *     in scene-unit (mm) space.
  *   - `applyBeamGripDrag` translates the right endpoint(s) per kind, seeds the
  *     curve control point when previously undefined, preserves foreign params
  *     (width/depth/elevation/material/supportType), and short-circuits zero
  *     delta + unknown grip kinds to the original params (referential identity).
+ *   - Phase 5.5b — width drag: perpendicular projection × 2 → new width
+ *     (symmetric γύρω από axis), parallel delta = no-op, clamps σε
+ *     `MIN_BEAM_WIDTH_MM`.
  */
 
-import { getBeamGrips, applyBeamGripDrag } from '../beam-grips';
+import { getBeamGrips, applyBeamGripDrag, beamWidthHandlePosition } from '../beam-grips';
 import { buildDefaultBeamParams } from '../../../hooks/drawing/beam-completion';
+import { MIN_BEAM_WIDTH_MM } from '../../types/beam-types';
 import type { BeamEntity, BeamParams } from '../../types/beam-types';
 import type { BeamGripKind } from '../../../hooks/grip-types';
 
@@ -62,37 +68,40 @@ function makeCurvedWithoutControl(): BeamEntity {
 describe('beam-grips (Phase 5.5a)', () => {
   // ─── getBeamGrips ──────────────────────────────────────────────────────────
 
-  it('1. straight beam emits 3 grips (start / end / midpoint)', () => {
+  it('1. straight beam emits 4 grips (start / end / midpoint / width)', () => {
     const beam = makeStraight();
-    const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(3);
-    expect(grips.map((g) => g.beamGripKind)).toEqual([
-      'beam-start',
-      'beam-end',
-      'beam-midpoint',
-    ]);
-  });
-
-  it('2. cantilever beam emits 3 grips (same as straight)', () => {
-    const beam = makeCantilever();
-    const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(3);
-    expect(grips.map((g) => g.beamGripKind)).toEqual([
-      'beam-start',
-      'beam-end',
-      'beam-midpoint',
-    ]);
-  });
-
-  it('3. curved beam emits 4 grips (start / end / midpoint / curve)', () => {
-    const beam = makeCurvedWithControl();
     const grips = getBeamGrips(beam);
     expect(grips).toHaveLength(4);
     expect(grips.map((g) => g.beamGripKind)).toEqual([
       'beam-start',
       'beam-end',
       'beam-midpoint',
+      'beam-width',
+    ]);
+  });
+
+  it('2. cantilever beam emits 4 grips (same layout as straight)', () => {
+    const beam = makeCantilever();
+    const grips = getBeamGrips(beam);
+    expect(grips).toHaveLength(4);
+    expect(grips.map((g) => g.beamGripKind)).toEqual([
+      'beam-start',
+      'beam-end',
+      'beam-midpoint',
+      'beam-width',
+    ]);
+  });
+
+  it('3. curved beam emits 5 grips (start / end / midpoint / curve / width)', () => {
+    const beam = makeCurvedWithControl();
+    const grips = getBeamGrips(beam);
+    expect(grips).toHaveLength(5);
+    expect(grips.map((g) => g.beamGripKind)).toEqual([
+      'beam-start',
+      'beam-end',
+      'beam-midpoint',
       'beam-curve',
+      'beam-width',
     ]);
   });
 
@@ -114,13 +123,14 @@ describe('beam-grips (Phase 5.5a)', () => {
     expect(grips[3].position).toEqual({ x: 2000, y: 0 });
   });
 
-  it('6. midpoint grip carries movesEntity=true, others false', () => {
+  it('6. midpoint grip carries movesEntity=true, others false (incl. width)', () => {
     const beam = makeCurvedWithControl();
     const grips = getBeamGrips(beam);
     expect(grips[0].movesEntity).toBe(false);
     expect(grips[1].movesEntity).toBe(false);
     expect(grips[2].movesEntity).toBe(true);
     expect(grips[3].movesEntity).toBe(false);
+    expect(grips[4].movesEntity).toBe(false);
   });
 
   // ─── applyBeamGripDrag ─────────────────────────────────────────────────────
@@ -221,5 +231,53 @@ describe('beam-grips (Phase 5.5a)', () => {
     expect(next.elevation).toBe(2750);
     expect(next.supportType).toBe('fixed');
     expect(next.material).toBe('rc-c25');
+  });
+
+  // ─── Phase 5.5b — width dimension grip ─────────────────────────────────────
+
+  it('16. width grip position = axis midpoint + perpendicular × width/2 (horizontal axis)', () => {
+    const base = buildDefaultBeamParams({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'straight');
+    const params: BeamParams = { ...base, width: 300 };
+    const beam = makeBeamEntity(params);
+    const grips = getBeamGrips(beam);
+    const widthGrip = grips.find((g) => g.beamGripKind === 'beam-width');
+    expect(widthGrip).toBeDefined();
+    // Axis = (0,0)→(4000,0). perp = rot90(unit) = (0,1). mid = (2000,0).
+    // Handle = mid + (width/2) × perp = (2000, 150).
+    expect(widthGrip!.position).toEqual({ x: 2000, y: 150 });
+    expect(beamWidthHandlePosition(params)).toEqual({ x: 2000, y: 150 });
+  });
+
+  it('17. width drag perpendicular to axis doubles delta into width (symmetric resize)', () => {
+    const base = buildDefaultBeamParams({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'straight');
+    const params: BeamParams = { ...base, width: 300 };
+    const next = applyBeamGripDrag('beam-width', {
+      originalParams: params,
+      delta: { x: 0, y: 100 },
+    });
+    // axis horizontal → perp = (0,1). delta·perp = 100. newWidth = 300 + 2*100 = 500.
+    expect(next.width).toBe(500);
+  });
+
+  it('18. width drag parallel to axis leaves width unchanged (projection = 0)', () => {
+    const base = buildDefaultBeamParams({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'straight');
+    const params: BeamParams = { ...base, width: 300 };
+    const next = applyBeamGripDrag('beam-width', {
+      originalParams: params,
+      delta: { x: 100, y: 0 },
+    });
+    // axis horizontal → perp = (0,1). delta·perp = 0. width stays 300.
+    expect(next.width).toBe(300);
+  });
+
+  it('19. width drag clamps to MIN_BEAM_WIDTH_MM on large negative perpendicular delta', () => {
+    const base = buildDefaultBeamParams({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'straight');
+    const params: BeamParams = { ...base, width: 300 };
+    const next = applyBeamGripDrag('beam-width', {
+      originalParams: params,
+      delta: { x: 0, y: -10000 },
+    });
+    // raw = 300 + 2*(-10000) = -19700 → clamped to MIN_BEAM_WIDTH_MM (150).
+    expect(next.width).toBe(MIN_BEAM_WIDTH_MM);
   });
 });

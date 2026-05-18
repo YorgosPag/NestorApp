@@ -101,10 +101,13 @@ export class BeamRenderer extends BaseEntityRenderer {
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
-    // ADR-363 Phase 5.5a — parametric beam grips (start / end / midpoint /
-    // curve control). Commit routed through `applyBeamGripDrag()` +
-    // `UpdateBeamParamsCommand` by `commitBeamGripDrag` (grip-commit-adapter).
-    // Phase 5.5b will add width/depth dimension grips.
+    // ADR-363 Phase 5.5a + 5.5b — parametric beam grips (start / end / midpoint /
+    // curve control + width dimension handle). Commit routed through
+    // `applyBeamGripDrag()` + `UpdateBeamParamsCommand` by `commitBeamGripDrag`
+    // (grip-commit-adapter). Mapping below is generic: `center` → 'center'
+    // (midpoint translate), όλα τα υπόλοιπα ('vertex' / 'edge') → 'vertex' στο
+    // canvas renderer — επαρκές για endpoint + curve + width handle.
+    // Depth dimension grip (out-of-plane) DEFERRED στο Phase 5.5c.
     if (!isBeamEntity(entity)) return [];
     return getBeamGrips(entity as BeamEntity).map((g) => ({
       id: `${g.entityId}-grip-${g.gripIndex}`,

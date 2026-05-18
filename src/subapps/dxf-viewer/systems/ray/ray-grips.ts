@@ -9,9 +9,7 @@
  */
 import type { Point2D } from '../../rendering/types/Types';
 import type { RayEntity } from '../../types/entities';
-import type { GripInfo } from '../../hooks/grip-types';
-
-export type RayGripKind = 'ray-base' | 'ray-dir';
+import type { GripInfo, RayGripKind } from '../../hooks/useGripMovement';
 
 /** Fixed world-space offset for the direction handle. Normalized dir × OFFSET. */
 const DIR_HANDLE_OFFSET = 100;
