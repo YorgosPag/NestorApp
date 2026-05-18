@@ -330,9 +330,27 @@ interface BimGeometryStub {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type BimParamsStub = Record<string, any>;
 
-// ADR-363 Phase 1: Wall concrete types re-exported from bim/types/wall-types.ts.
-export type { WallKind, WallCategory, WallParams, WallGeometry, WallEntity } from '../bim/types/wall-types';
-export type { WallDna, WallDnaLayer, WallLayerSide } from '../bim/types/wall-dna-types';
+// ADR-363 Phase 1: Wall concrete types live in bim/types/wall-types.ts (SRP).
+// Imported here for local references (Entity union, isWallEntity guard) and
+// re-exported so legacy `@/.../types/entities` imports keep working.
+import type {
+  WallKind,
+  WallCategory,
+  WallParams,
+  WallGeometry,
+  WallEntity,
+} from '../bim/types/wall-types';
+import type { WallDna, WallDnaLayer, WallLayerSide } from '../bim/types/wall-dna-types';
+export type {
+  WallKind,
+  WallCategory,
+  WallParams,
+  WallGeometry,
+  WallEntity,
+  WallDna,
+  WallDnaLayer,
+  WallLayerSide,
+};
 
 export interface OpeningEntity extends BimEntity<OpeningKind, BimParamsStub, BimGeometryStub> {
   type: 'opening';
