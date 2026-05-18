@@ -35,9 +35,10 @@ export class XLineRenderer extends BaseEntityRenderer {
     return [];
   }
 
-  hitTest(_entity: EntityModel, _point: Point2D, _tolerance: number): boolean {
-    // Phase 5 — pointToInfiniteLineDistance not yet wired
-    return false;
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
+    if (!isXLineEntity(entity)) return false;
+    const dist = pointToInfiniteLineDistance(point, entity.basePoint, entity.direction);
+    return dist <= tolerance;
   }
 
   private getViewportWorldBounds() {

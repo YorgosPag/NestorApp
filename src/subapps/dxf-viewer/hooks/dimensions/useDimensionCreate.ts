@@ -44,6 +44,7 @@ import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
 import { dimensionCreateStore } from '../../stores/DimensionCreateStore';
 import { buildCommittedDimensionEntity } from './dimension-create-entity-builder';
+import { requiredClickCount } from './dimension-create-state';
 import type { DimensionCreateMode } from './dimension-create-state';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -54,7 +55,7 @@ import type { DimensionCreateMode } from './dimension-create-state';
 export type DimensionCreateStartInput = 'smart' | DimensionType;
 
 /** Modifier keys recognised by the creation flow (subset of physical events). */
-export type DimensionCreateKey = 'Tab' | 'Space' | 'Escape';
+export type DimensionCreateKey = 'Tab' | 'Space' | 'Escape' | 'Enter';
 
 export interface DimensionCreateAPI {
   start(initial: DimensionCreateStartInput): void;
@@ -178,6 +179,21 @@ export function useDimensionCreate(params: UseDimensionCreateParams): DimensionC
       lastStartRef.current = null;
       lastChainableRef.current = null;
       return dimensionCreateStore.cancel();
+    }
+    if (key === 'Enter') {
+      // AutoCAD/Revit pattern: Enter commits the current cursor position as the
+      // next click, allowing the user to skip the final physical click when the
+      // cursor is already positioned correctly (e.g. finish linear with 2 clicks
+      // instead of 3 by pressing Enter after placing the 2nd point).
+      const state = dimensionCreateStore.get();
+      if (state.status !== 'collecting' || !state.cursorWorld || !state.currentType) return;
+      const needed = requiredClickCount(state.currentType);
+      if (state.clicks.length === needed - 1) {
+        dimensionCreateStore.click({
+          world: state.cursorWorld,
+          hoveredEntity: state.hoveredEntity ?? undefined,
+        });
+      }
     }
   }, []);
 

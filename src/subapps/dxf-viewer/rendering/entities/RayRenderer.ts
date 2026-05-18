@@ -3,6 +3,7 @@ import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
 import { isRayEntity } from '../../types/entities';
 import { clipParametricLine } from '../utils/line-clipping';
+import { pointToRayDistance } from '../utils/point-to-line-distance';
 
 export class RayRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -34,9 +35,10 @@ export class RayRenderer extends BaseEntityRenderer {
     return [];
   }
 
-  hitTest(_entity: EntityModel, _point: Point2D, _tolerance: number): boolean {
-    // Phase 5 — pointToInfiniteLineDistance not yet wired
-    return false;
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
+    if (!isRayEntity(entity)) return false;
+    const dist = pointToRayDistance(point, entity.basePoint, entity.direction);
+    return dist <= tolerance;
   }
 
   private getViewportWorldBounds() {

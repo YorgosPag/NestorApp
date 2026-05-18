@@ -80,6 +80,8 @@ import { resolveTrackingSnap } from '../../systems/tracking/tracking-resolver';
 import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 // 🏢 ADR-362 Phase D1: Dim tool routing layer (Smart DIM + 4 manual overrides)
 import { useDimToolRouting } from '../dimensions/useDimToolRouting';
+// ADR-362 hotfix: DetectableEntity for smart dim type detection via snap entityId
+import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
 // ADR-362 Phase L2: Center mark + centerline standalone tools
 import { useCenterMarkCreate } from '../dimensions/useCenterMarkCreate';
 // ADR-357 Phase 7: Snap Override orchestrator (single-use snap modifiers)
@@ -208,7 +210,13 @@ export function useDrawingHandlers(
     // 🏢 ADR-362 Phase D1: route dim tools through the dedicated orchestrator.
     if (dimRouting.isDimTool) {
       const snapped = applySnap(p);
-      dimRouting.handlePoint(snapped);
+      // ADR-362 hotfix: resolve entity from snap result so smart dim detector
+      // can suggest the correct dim type (line→aligned, circle→diameter, etc.)
+      const snapResult = findSnapPoint?.(p.x, p.y);
+      const hoveredEntity: DetectableEntity | undefined = snapResult?.entityId
+        ? (currentScene?.entities.find((e) => e.id === snapResult.entityId) as DetectableEntity | undefined)
+        : undefined;
+      dimRouting.handlePoint(snapped, hoveredEntity);
       return;
     }
     // ADR-362 Phase L2: route center mark / centerline tools.
@@ -384,7 +392,8 @@ export function useDrawingHandlers(
     processDrawingHover(p, {
       activeTool,
       isDimTool: dimRouting.isDimTool,
-      handleDimHover: (pt) => dimRouting.handleHover(pt),
+      // ADR-362 hotfix: forward hoveredEntity so smart dim detector sees the entity
+      handleDimHover: (pt, hoveredEntity) => dimRouting.handleHover(pt, hoveredEntity),
       isCenterMarkTool: centerMarkCreate.isCenterMarkTool,
       handleCenterMarkHover: centerMarkCreate.handleHover,
       tempPoints: drawingState.tempPoints,
@@ -398,8 +407,11 @@ export function useDrawingHandlers(
       trackingHoverRef,
       updatePreview,
       getLatestPreviewEntity,
+      // ADR-362 hotfix: entity resolver — snap entityId → DetectableEntity
+      resolveEntity: (id) =>
+        currentScene?.entities.find((e) => e.id === id) as DetectableEntity | undefined,
     });
-  }, [activeTool, dimRouting, centerMarkCreate, drawingState.tempPoints, applySnap, canvasOps, previewCanvasRef, updatePreview, getLatestPreviewEntity]);
+  }, [activeTool, dimRouting, centerMarkCreate, drawingState.tempPoints, applySnap, canvasOps, previewCanvasRef, updatePreview, getLatestPreviewEntity, currentScene]);
   
   const onDrawingCancel = useCallback(() => {
     // 🏢 ADR-362 Phase D1: cancel dim flow if active (does not stop tool deselect).

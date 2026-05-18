@@ -941,7 +941,7 @@ Ogni phase = 1 commit autonomo, passa CI, no breaking. **Nessuna dipendenza fort
 | **3.5** ✅ | Sub-modes Ang + Bisect + Offset entity builders + preview | 3 | M | Q1 | 🟡 Medium |
 | **4.a** ✅ | Liang-Barsky clip pure module + unit tests (15+ cases) | 2 | S | Q4 | 🟢 Low |
 | **4.b** ✅ | `XLineRenderer` + `RayRenderer` + `EntityRendererComposite` registry | 3 | M | Q5 | 🟡 Medium |
-| **5** | Hit-test `pointToInfiniteLineDistance` + `HitTester` wire | 3 | S | G7 | 🟢 Low |
+| **5** ✅ | Hit-test `pointToInfiniteLineDistance` + `HitTester` wire | 3 | S | G7 | 🟢 Low |
 | **6.a** | `IntersectionSnapEngine` switch extension + 6 XLine-primitives calcs (LINE/CIRCLE/ARC) + tests | 4 | M | G5 | 🟡 Medium |
 | **6.b** | 6 XLine-self/complex calcs (XLINE/POLYLINE/ELLIPSE) + tests | 3 | M | G5 | 🟡 Medium |
 | **6.5.a** | 6 Ray-primitives intersection calcs (LINE/CIRCLE/ARC) + tests | 3 | M | G5 | 🟡 Medium |
@@ -1089,6 +1089,7 @@ Pre-implementazione: 0 violations (file nuovi). Post-Phase 1-12: ratchet enforce
 
 | Date | Change |
 |---|---|
+| 2026-05-18 | Phase 5 DONE: `rendering/utils/point-to-line-distance.ts` — pure SSoT `pointToInfiniteLineDistance(p, base, dir)` (cross/len formula, degenerate → Infinity) + `pointToRayDistance(p, base, dir)` (t<0 → dist-to-base, else perp). 18 unit tests in `rendering/utils/__tests__/point-to-line-distance.test.ts` — all 18 pass. `XLineRenderer.hitTest` wired to `pointToInfiniteLineDistance`. `RayRenderer.hitTest` wired to `pointToRayDistance`. |
 | 2026-05-18 | Phase 4.b DONE: `rendering/entities/XLineRenderer.ts` + `rendering/entities/RayRenderer.ts` — extend `BaseEntityRenderer`, consume `clipParametricLine` (tRange `{-∞,+∞}` / `{0,+∞}`), `renderWithPhases` template for style/hover/glow pipeline. `getViewportWorldBounds()` private helper (transform → CSS rect → world AABB). `getGrips` → `[]` (Phase 11), `hitTest` → `false` (Phase 5). `EntityRendererComposite.initializeRenderers()` registers `'xline'` + `'ray'`. `rendering/entities/index.ts` exports both. |
 | 2026-05-18 | Phase 4.a DONE: `rendering/utils/line-clipping.ts` — Liang-Barsky pure fn `clipParametricLine(base, dir, tRange, viewport)`. Guards: degenerate dir `|d|<1e-10` → null, parallel+outside → null, `±Infinity` tRange → clamp `±1e15`. 17 unit tests in `rendering/utils/__tests__/line-clipping.test.ts` (horizontal/vertical/diagonal, above/left viewport null, ray inward/outward, degenerate, tangent edge, zero-width VP, negative-dir, large coords). All 17 pass. |
 | 2026-05-18 | Phase 3.5 DONE: `createEntityFromTool('xline')` extended with `angle` (1pt + angleValue, fallback through if null), `bisect` (3pts → normalize+sum bisect direction, edge-case guard len<1e-10 → null), `offset` (→ null, Phase 4+). `isEntityComplete('xline')` extended: angle = 1pt if angleValue≠null else 2pts, bisect = 3pts, offset = false. `generateXLinePreview()` extended: angle (preview at cursor/firstPoint via cos/sin), bisect (0pts=null, 1pt=rubberband arm1, 2pts=bisect XLine), offset (null). Import switched from `getMode` to `getXLineModeState` in both builders + preview files. |

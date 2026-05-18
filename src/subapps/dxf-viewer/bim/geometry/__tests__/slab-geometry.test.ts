@@ -12,12 +12,17 @@
  */
 
 import { computeSlabGeometry, getSlabMaxBboxDimensionM } from '../slab-geometry';
+import { computeSlabOpeningGeometry } from '../slab-opening-geometry';
 import {
   isPolygonSelfIntersecting,
   isPolygonCCW,
   shoelaceArea,
 } from '../shared/polygon-utils';
 import type { SlabParams } from '../../types/slab-types';
+import type {
+  SlabOpeningEntity,
+  SlabOpeningParams,
+} from '../../types/slab-opening-types';
 
 const FLOAT_TOL = 1e-6;
 
@@ -111,7 +116,7 @@ describe('computeSlabGeometry — perimeter + bbox + volume', () => {
     expect(g.volume).toBeCloseTo(20, FLOAT_TOL);
   });
 
-  it('Phase 3 netArea === area (slab-openings deferred Phase 3.5)', () => {
+  it('netArea === area όταν slabOpenings παραλείπεται (legacy behaviour)', () => {
     const g = computeSlabGeometry(makeSlab([
       { x: 0, y: 0 }, { x: 4000, y: 0 }, { x: 4000, y: 4000 }, { x: 0, y: 4000 },
     ]));
@@ -123,6 +128,87 @@ describe('computeSlabGeometry — perimeter + bbox + volume', () => {
       { x: 0, y: 0 }, { x: 8000, y: 0 }, { x: 8000, y: 3000 }, { x: 0, y: 3000 },
     ]);
     expect(getSlabMaxBboxDimensionM(params)).toBeCloseTo(8, FLOAT_TOL);
+  });
+});
+
+describe('computeSlabGeometry — Phase 3.7 netArea subtraction', () => {
+  function makeShaftEntity(
+    cx: number,
+    cy: number,
+    half: number,
+  ): SlabOpeningEntity {
+    const params: SlabOpeningParams = {
+      kind: 'shaft',
+      slabId: 'slab_test',
+      outline: {
+        vertices: [
+          { x: cx - half, y: cy - half, z: 0 },
+          { x: cx + half, y: cy - half, z: 0 },
+          { x: cx + half, y: cy + half, z: 0 },
+          { x: cx - half, y: cy + half, z: 0 },
+        ],
+      },
+    };
+    return {
+      id: `slbopn_${cx}_${cy}`,
+      type: 'slab-opening',
+      kind: 'shaft',
+      layerId: '0',
+      params,
+      geometry: computeSlabOpeningGeometry(params),
+      validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+      visible: true,
+    } as SlabOpeningEntity;
+  }
+
+  it('αφαιρεί ένα cutout από netArea (100m² - 2.25m² = 97.75m²)', () => {
+    const slab = makeSlab([
+      { x: 0, y: 0 }, { x: 10000, y: 0 }, { x: 10000, y: 10000 }, { x: 0, y: 10000 },
+    ]);
+    // 1.5×1.5m shaft → 2.25m².
+    const shaft = makeShaftEntity(3000, 3000, 750);
+    const g = computeSlabGeometry(slab, [shaft]);
+    expect(g.area).toBeCloseTo(100, FLOAT_TOL);
+    expect(g.netArea).toBeCloseTo(97.75, FLOAT_TOL);
+  });
+
+  it('αφαιρεί πολλά cutouts (100m² - 2 × 1m² = 98m²)', () => {
+    const slab = makeSlab([
+      { x: 0, y: 0 }, { x: 10000, y: 0 }, { x: 10000, y: 10000 }, { x: 0, y: 10000 },
+    ]);
+    // 1m × 1m squares (1m²) × 2.
+    const a = makeShaftEntity(2000, 2000, 500);
+    const b = makeShaftEntity(7000, 7000, 500);
+    const g = computeSlabGeometry(slab, [a, b]);
+    expect(g.netArea).toBeCloseTo(98, FLOAT_TOL);
+  });
+
+  it('clamp στο 0 όταν openings ξεπερνούν το slab area', () => {
+    // 1m² slab, 4m² opening.
+    const slab = makeSlab([
+      { x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }, { x: 0, y: 1000 },
+    ]);
+    const oversize = makeShaftEntity(0, 0, 1000); // 2×2m = 4m²
+    const g = computeSlabGeometry(slab, [oversize]);
+    expect(g.netArea).toBeCloseTo(0, FLOAT_TOL);
+  });
+
+  it('volume συνυπολογίζεται από netArea (όχι area)', () => {
+    const slab = makeSlab([
+      { x: 0, y: 0 }, { x: 10000, y: 0 }, { x: 10000, y: 10000 }, { x: 0, y: 10000 },
+    ], { thickness: 200 });
+    const shaft = makeShaftEntity(3000, 3000, 750);
+    const g = computeSlabGeometry(slab, [shaft]);
+    // 97.75 m² × 0.2m = 19.55 m³.
+    expect(g.volume).toBeCloseTo(19.55, 4);
+  });
+
+  it('παραλειπόμενα openings → netArea === area (legacy path)', () => {
+    const slab = makeSlab([
+      { x: 0, y: 0 }, { x: 4000, y: 0 }, { x: 4000, y: 4000 }, { x: 0, y: 4000 },
+    ]);
+    const g = computeSlabGeometry(slab);
+    expect(g.netArea).toBeCloseTo(g.area, FLOAT_TOL);
   });
 });
 

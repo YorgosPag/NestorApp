@@ -20,6 +20,8 @@ import { polarTrackingStore } from '../../systems/constraints/polar-tracking-sto
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
 import { hardOrtho } from './drawing-handler-utils';
+// ADR-362 hotfix: DetectableEntity for smart dim type detection via snap entityId
+import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
 // ADR-357 Phase 13 G14: length/angle lock geometry constraint
 import { DynamicInputLockStore } from '../../systems/dynamic-input/DynamicInputLockStore';
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
@@ -28,12 +30,13 @@ const DEBUG_DRAWING_HANDLERS = false;
 
 type Pt = Point2D;
 type TransformUtils = { worldToScreen: (pt: Pt) => Pt; screenToWorld: (pt: Pt) => Pt };
-type FindSnapResult = { found?: boolean; activeMode?: string | null; snappedPoint?: Pt };
+type FindSnapResult = { found?: boolean; activeMode?: string | null; snappedPoint?: Pt; entityId?: string };
 
 export interface DrawingHoverCtx {
   activeTool: ToolType;
   isDimTool: boolean;
-  handleDimHover: (p: Pt | null) => void;
+  /** ADR-362 hotfix: entity param added so smart dim detector sees the hovered entity. */
+  handleDimHover: (p: Pt | null, hoveredEntity?: DetectableEntity) => void;
   isCenterMarkTool: boolean;
   handleCenterMarkHover: (p: Pt | null) => void;
   tempPoints: readonly Pt[];
@@ -47,6 +50,8 @@ export interface DrawingHoverCtx {
   trackingHoverRef: React.MutableRefObject<{ point: Pt | null; snapType: string | null; hoverStartedAt: number }>;
   updatePreview: (pt: Pt, transformUtils: TransformUtils) => void;
   getLatestPreviewEntity: () => ExtendedSceneEntity | null;
+  /** ADR-362 hotfix: resolve snap entityId → DetectableEntity for smart dim type detection. */
+  resolveEntity: (id: string) => DetectableEntity | undefined;
 }
 
 export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
@@ -58,11 +63,19 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     previewCanvasRef, orthoOnRef, polarOnRef,
     findSnapPointRef, trackingHoverRef,
     updatePreview, getLatestPreviewEntity,
+    resolveEntity,
   } = ctx;
   // 🏢 ADR-362 Phase D1: route dim tools through the dedicated orchestrator.
   if (isDimTool) {
     const snapped = p ? applySnap(p) : null;
-    handleDimHover(snapped);
+    // ADR-362 hotfix: pass hovered entity to smart dim detector so it can resolve
+    // correct dim type (line→aligned, circle→diameter, arc→radius, etc.)
+    let hoveredEntity: DetectableEntity | undefined;
+    if (p) {
+      const snap = findSnapPointRef.current?.(p.x, p.y);
+      if (snap?.entityId) hoveredEntity = resolveEntity(snap.entityId);
+    }
+    handleDimHover(snapped, hoveredEntity);
     return;
   }
   // ADR-362 Phase L2: center mark hover (rubber-band preview).

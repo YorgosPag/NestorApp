@@ -60,6 +60,7 @@ function mapKey(e: KeyboardEvent): DimensionCreateKey | null {
   if (e.key === 'Tab') return 'Tab';
   if (e.key === ' ' || e.code === 'Space') return 'Space';
   if (e.key === 'Escape') return 'Escape';
+  if (e.key === 'Enter') return 'Enter';
   return null;
 }
 

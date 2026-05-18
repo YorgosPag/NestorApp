@@ -102,18 +102,33 @@ function resolveOpts(o: PreviewDimensionRenderOptions | undefined): ResolvedOpts
 export function renderPreviewDimension(params: PreviewDimensionRenderParams): void {
   const opts = resolveOpts(params.opts);
   const geometry = tryBuildGeometry(params.entity, params.style);
-  if (!geometry) return;
+
+  // AutoCAD/Revit rubber-band: when geometry isn't yet buildable (e.g. only 1
+  // click placed so far and we're waiting for the 2nd), derive a dashed
+  // polyline from the available defPoints so the user sees real-time feedback.
+  // Explicit opts.helperPath always wins over auto-derived.
+  const autoHelper: readonly Point2D[] | null =
+    !geometry && !opts.helperPath && params.entity.defPoints.length >= 2
+      ? params.entity.defPoints
+      : null;
+  const resolvedOpts: ResolvedOpts = autoHelper
+    ? { ...opts, helperPath: autoHelper }
+    : opts;
+
+  if (!geometry && !resolvedOpts.helperPath) return;
 
   params.ctx.save();
-  params.ctx.globalAlpha = opts.opacity;
+  params.ctx.globalAlpha = resolvedOpts.opacity;
 
-  drawExtensionLines(params, geometry, opts);
-  drawDimLineOrArc(params, geometry, opts);
-  drawArrowheads(params, geometry, opts);
-  drawText(params, geometry, opts);
+  if (geometry) {
+    drawExtensionLines(params, geometry, resolvedOpts);
+    drawDimLineOrArc(params, geometry, resolvedOpts);
+    drawArrowheads(params, geometry, resolvedOpts);
+    drawText(params, geometry, resolvedOpts);
+  }
 
-  if (opts.helperPath) {
-    drawHelperPolyline(params, opts);
+  if (resolvedOpts.helperPath) {
+    drawHelperPolyline(params, resolvedOpts);
   }
 
   params.ctx.restore();
