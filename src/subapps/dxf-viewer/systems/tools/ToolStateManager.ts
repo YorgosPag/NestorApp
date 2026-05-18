@@ -147,6 +147,7 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // ADR-189 B37: Batch guide from selection
   'guide-from-selection': { id: 'guide-from-selection', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'stair': { id: 'stair', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false }, // ADR-358 Phase 0
+  'wall':  { id: 'wall',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true,  preservesOverlayMode: false }, // ADR-363 Phase 1 — continuous draw (chain walls)
   // ADR-362 Phase D1: Enterprise Dimension creation tools (Smart DIM + 4 manual overrides)
   'dim-smart':      { id: 'dim-smart',      category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'dim-linear':     { id: 'dim-linear',     category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
@@ -414,7 +415,6 @@ export function useToolStateManager({
     if (newTool === activeTool) {
       return true;
     }
-
     if (!canTransitionTo(newTool)) {
       return false;
     }
