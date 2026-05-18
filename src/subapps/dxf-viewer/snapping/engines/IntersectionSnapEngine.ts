@@ -28,6 +28,11 @@ import {
   rayLineIntersection,
   rayCircleIntersection,
   rayArcIntersection,
+  rayRayIntersection,
+  rayXlineIntersection,
+  rayPolylineIntersection,
+  rayEllipseIntersection,
+  rayRectangleIntersection,
 } from './intersection-calculators';
 import type { XLineEntity, LineEntity, CircleEntity, ArcEntity, EllipseEntity, RayEntity } from '../../types/entities';
 // 🏢 ADR-149: Centralized Snap Engine Priorities
@@ -273,6 +278,26 @@ export class IntersectionSnapEngine extends BaseSnapEngine {
     if ((type1 === 'ray' && type2 === 'arc') || (type1 === 'arc' && type2 === 'ray')) {
       const [ra, ar] = type1 === 'ray' ? [entity1, entity2] : [entity2, entity1];
       return rayArcIntersection(ra as RayEntity, ar as ArcEntity);
+    }
+    if (type1 === 'ray' && type2 === 'ray') {
+      return rayRayIntersection(entity1 as RayEntity, entity2 as RayEntity);
+    }
+    if ((type1 === 'ray' && type2 === 'xline') || (type1 === 'xline' && type2 === 'ray')) {
+      const [ra, xl] = type1 === 'ray' ? [entity1, entity2] : [entity2, entity1];
+      return rayXlineIntersection(ra as RayEntity, xl as XLineEntity);
+    }
+    if ((type1 === 'ray' && (type2 === 'polyline' || type2 === 'lwpolyline')) ||
+        ((type1 === 'polyline' || type1 === 'lwpolyline') && type2 === 'ray')) {
+      const [ra, pl] = type1 === 'ray' ? [entity1, entity2] : [entity2, entity1];
+      return rayPolylineIntersection(ra as RayEntity, pl);
+    }
+    if ((type1 === 'ray' && type2 === 'ellipse') || (type1 === 'ellipse' && type2 === 'ray')) {
+      const [ra, el] = type1 === 'ray' ? [entity1, entity2] : [entity2, entity1];
+      return rayEllipseIntersection(ra as RayEntity, el as EllipseEntity);
+    }
+    if ((type1 === 'ray' && type2 === 'rectangle') || (type1 === 'rectangle' && type2 === 'ray')) {
+      const [ra, re] = type1 === 'ray' ? [entity1, entity2] : [entity2, entity1];
+      return rayRectangleIntersection(ra as RayEntity, re);
     }
 
     return [];

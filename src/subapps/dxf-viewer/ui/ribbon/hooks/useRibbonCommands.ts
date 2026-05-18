@@ -20,6 +20,8 @@ import type { RibbonColumnBridge } from './useRibbonColumnBridge';
 import { isColumnBadgeKey } from './useRibbonColumnBridge';
 import type { RibbonBeamBridge } from './useRibbonBeamBridge';
 import { isBeamBadgeKey } from './useRibbonBeamBridge';
+import type { RibbonSlabOpeningBridge } from './useRibbonSlabOpeningBridge';
+import { isSlabOpeningBadgeKey } from './useRibbonSlabOpeningBridge';
 import type { RibbonLineToolBridge } from './useRibbonLineToolBridge';
 import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
 import { isStairRibbonKey, isStairRibbonStringKey } from './bridge/stair-command-keys';
@@ -28,6 +30,7 @@ import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningActionKey } from
 import { isSlabRibbonKey, isSlabRibbonStringKey, isSlabActionKey } from './bridge/slab-command-keys';
 import { isColumnRibbonKey, isColumnRibbonStringKey, isColumnActionKey } from './bridge/column-command-keys';
 import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamActionKey } from './bridge/beam-command-keys';
+import { isSlabOpeningRibbonStringKey, isSlabOpeningActionKey } from './bridge/slab-opening-command-keys';
 import { isLineToolRibbonKey } from './bridge/line-tool-command-keys';
 
 interface UseRibbonCommandsProps {
@@ -52,6 +55,8 @@ interface UseRibbonCommandsProps {
   columnBridge: RibbonColumnBridge;
   /** ADR-363 Phase 5 — Beam contextual tab bridge. */
   beamBridge: RibbonBeamBridge;
+  /** ADR-363 Phase 3.7 — Slab-opening contextual tab bridge. */
+  slabOpeningBridge: RibbonSlabOpeningBridge;
   /** ADR-357 Phase 17 — Line tool Quick Style bridge. */
   lineToolBridge: RibbonLineToolBridge;
 }
@@ -69,6 +74,7 @@ export function useRibbonCommands({
   slabBridge,
   columnBridge,
   beamBridge,
+  slabOpeningBridge,
   lineToolBridge,
 }: UseRibbonCommandsProps): RibbonCommandsApi {
   // Compose: stair-prefixed keys → stairBridge; array-prefixed → arrayBridge;
@@ -100,6 +106,10 @@ export function useRibbonCommands({
         beamBridge.onComboboxChange(key, value);
         return;
       }
+      if (isSlabOpeningRibbonStringKey(key)) {
+        slabOpeningBridge.onComboboxChange(key, value);
+        return;
+      }
       if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) {
         arrayBridge.onComboboxChange(key, value);
         return;
@@ -110,7 +120,7 @@ export function useRibbonCommands({
       }
       textEditorBridge.onComboboxChange(key, value);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, arrayBridge, lineToolBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, arrayBridge, lineToolBridge, textEditorBridge],
   );
 
   const getComboboxState = React.useCallback(
@@ -121,11 +131,12 @@ export function useRibbonCommands({
       if (isSlabRibbonKey(key) || isSlabRibbonStringKey(key)) return slabBridge.getComboboxState(key);
       if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key)) return columnBridge.getComboboxState(key);
       if (isBeamRibbonKey(key) || isBeamRibbonStringKey(key)) return beamBridge.getComboboxState(key);
+      if (isSlabOpeningRibbonStringKey(key)) return slabOpeningBridge.getComboboxState(key);
       if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) return arrayBridge.getComboboxState(key);
       if (isLineToolRibbonKey(key)) return lineToolBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, arrayBridge, lineToolBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, arrayBridge, lineToolBridge, textEditorBridge],
   );
 
   const onToggle = React.useCallback(
@@ -162,9 +173,10 @@ export function useRibbonCommands({
       if (isSlabBadgeKey(badgeKey)) return slabBridge.getBadgeState(badgeKey);
       if (isColumnBadgeKey(badgeKey)) return columnBridge.getBadgeState(badgeKey);
       if (isBeamBadgeKey(badgeKey)) return beamBridge.getBadgeState(badgeKey);
+      if (isSlabOpeningBadgeKey(badgeKey)) return slabOpeningBridge.getBadgeState(badgeKey);
       return false;
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge],
   );
 
   // ADR-358 Phase 7b2b-β Stream F — Only the stair bridge owns visibility
@@ -202,9 +214,13 @@ export function useRibbonCommands({
         beamBridge.onAction(action);
         return;
       }
+      if (isSlabOpeningActionKey(action)) {
+        slabOpeningBridge.onAction(action);
+        return;
+      }
       wrappedHandleAction(action, data);
     },
-    [wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, wrappedHandleAction],
+    [wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, wrappedHandleAction],
   );
 
   return React.useMemo(

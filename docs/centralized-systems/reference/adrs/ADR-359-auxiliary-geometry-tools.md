@@ -945,7 +945,7 @@ Ogni phase = 1 commit autonomo, passa CI, no breaking. **Nessuna dipendenza fort
 | **6.a** ✅ | `IntersectionSnapEngine` switch extension + 6 XLine-primitives calcs (LINE/CIRCLE/ARC) + tests | 4 | M | G5 | 🟡 Medium |
 | **6.b** ✅ | 6 XLine-self/complex calcs (XLINE/POLYLINE/ELLIPSE) + tests | 3 | M | G5 | 🟡 Medium |
 | **6.5.a** ✅ | 6 Ray-primitives intersection calcs (LINE/CIRCLE/ARC) + tests | 3 | M | G5 | 🟡 Medium |
-| **6.5.b** | 6 Ray-self/complex calcs (RAY/XLINE/POLYLINE) + numerical-stability suite | 3 | M | G5 | 🟡 Medium |
+| **6.5.b** ✅ | 6 Ray-self/complex calcs (RAY/XLINE/POLYLINE) + numerical-stability suite | 3 | M | G5 | 🟡 Medium |
 | **7** | Secondary snap engines audit (Endpoint/Midpoint/Nearest/Perpendicular) | 4 | M | G6 | 🟡 Medium |
 | **8** | DXF parser `XLINE` / `RAY` (import) | 3 | M | Q7 | 🟡 Medium |
 | **9** | DXF exporter `AcDbXline` / `AcDbRay` (export) + roundtrip integration test | 3 | M | Q7 | 🟡 Medium |
@@ -1118,6 +1118,7 @@ Pre-implementazione: 0 violations (file nuovi). Post-Phase 1-12: ratchet enforce
 | 2026-05-18 | **Phase 6.a DONE**: `xlineLineIntersection`, `xlineXlineIntersection`, `xlineCircleIntersection`, `xlineArcIntersection` added to `intersection-calculators.ts`. `IntersectionSnapEngine.calculateIntersections` extended with 4 new cases. 21 unit tests (`__tests__/xline-intersection-calculators.test.ts`) all ✅. |
 | 2026-05-18 | **Phase 6.b DONE**: `xlinePolylineIntersection` (segments via `getPolylineSegments`), `xlineEllipseIntersection` (parametric quadratic + `startParam`/`endParam` arc filter), `xlineRectangleIntersection` (via `getRectangleLines`) added to `intersection-calculators.ts`. Private helper `xlineSegmentPoint` extracted. `IntersectionSnapEngine.calculateIntersections` extended with 3 new cases (polyline/lwpolyline, ellipse, rectangle). 13 unit tests (`__tests__/xline-intersection-calculators-complex.test.ts`) all ✅. Total xline intersection suite: 34/34 ✅. |
 | 2026-05-18 | **Phase 6.5.a DONE**: `rayLineIntersection`, `rayCircleIntersection`, `rayArcIntersection` added to `intersection-calculators.ts` with `t >= -XLINE_EPSILON` guard (ray semi-infinite constraint). `RayEntity` import added. `IntersectionSnapEngine.calculateIntersections` extended with 3 new ray cases (ray×line, ray×circle, ray×arc). 15 unit tests (`__tests__/xline-ray-intersection-calculators.test.ts`) all ✅. |
+| 2026-05-18 | **Phase 6.5.b DONE**: `rayRayIntersection` (t1 >= 0 AND t2 >= 0), `rayXlineIntersection` (tRay >= 0 only), `rayPolylineIntersection` (segment loop with tRay/sSeg guards), `rayEllipseIntersection` (parametric quadratic + startParam/endParam arc filter, t >= -XLINE_EPSILON), `rayRectangleIntersection` (getRectangleLines + tRay guard) added to `intersection-calculators.ts`. `IntersectionSnapEngine.calculateIntersections` extended with 5 new ray cases (ray×ray, ray×xline, ray×polyline, ray×ellipse, ray×rectangle). 25 unit tests (`__tests__/xline-ray-intersection-calculators-complex.test.ts`) all ✅. Full ray intersection suite: 40/40 ✅. |
 
 ---
 

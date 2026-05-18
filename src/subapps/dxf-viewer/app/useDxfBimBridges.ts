@@ -9,6 +9,7 @@ import { useRibbonOpeningBridge, type UseRibbonOpeningBridgeProps } from '../ui/
 import { useRibbonSlabBridge, type UseRibbonSlabBridgeProps } from '../ui/ribbon/hooks/useRibbonSlabBridge';
 import { useRibbonColumnBridge, type UseRibbonColumnBridgeProps } from '../ui/ribbon/hooks/useRibbonColumnBridge';
 import { useRibbonBeamBridge, type UseRibbonBeamBridgeProps } from '../ui/ribbon/hooks/useRibbonBeamBridge';
+import { useRibbonSlabOpeningBridge, type UseRibbonSlabOpeningBridgeProps } from '../ui/ribbon/hooks/useRibbonSlabOpeningBridge';
 
 export type UseDxfBimBridgesProps =
   & UseRibbonStairBridgeProps
@@ -16,7 +17,8 @@ export type UseDxfBimBridgesProps =
   & UseRibbonOpeningBridgeProps
   & UseRibbonSlabBridgeProps
   & UseRibbonColumnBridgeProps
-  & UseRibbonBeamBridgeProps;
+  & UseRibbonBeamBridgeProps
+  & UseRibbonSlabOpeningBridgeProps;
 
 export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const stairBridge = useRibbonStairBridge(p);
@@ -25,5 +27,6 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const slabBridge = useRibbonSlabBridge(p);
   const columnBridge = useRibbonColumnBridge(p);
   const beamBridge = useRibbonBeamBridge(p);
-  return { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge };
+  const slabOpeningBridge = useRibbonSlabOpeningBridge(p);
+  return { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge };
 }

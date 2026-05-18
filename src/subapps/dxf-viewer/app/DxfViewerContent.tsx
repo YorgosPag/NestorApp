@@ -281,14 +281,14 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-362 Phase J2 — Dimension associativity observer (auto-follow geometry).
   useDimAssociationObserver(levelManager.getLevelScene, levelManager.setLevelScene, () => levelManager.currentLevelId);
   // ADR-358 Phase 7a / ADR-363 — BIM contextual bridges (stair / wall / opening / slab / column / beam).
-  const { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge } =
+  const { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge } =
     useDxfBimBridges({ levelManager, universalSelection });
   const lineToolBridge = useRibbonLineToolBridge();
   const ribbonCommands = useRibbonCommands({
     activeTool, handleToolChange, handleRibbonComingSoon,
     wrappedHandleAction: arrayActionInterceptor,
     textEditorBridge, arrayBridge, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge,
-    lineToolBridge,
+    slabOpeningBridge, lineToolBridge,
   });
   return (
       <TransformProvider

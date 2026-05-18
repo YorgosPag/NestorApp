@@ -11,6 +11,7 @@ import { CONTEXTUAL_OPENING_TAB, OPENING_CONTEXTUAL_TRIGGER } from '../ui/ribbon
 import { CONTEXTUAL_SLAB_TAB, SLAB_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-slab-tab';
 import { CONTEXTUAL_COLUMN_TAB, COLUMN_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-column-tab';
 import { CONTEXTUAL_BEAM_TAB, BEAM_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-beam-tab';
+import { CONTEXTUAL_SLAB_OPENING_TAB, SLAB_OPENING_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-slab-opening-tab';
 import { DIMENSION_CONTEXTUAL_TAB, DIMENSION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimension-tab';
 import { CONTEXTUAL_LINE_TOOL_TAB, LINE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-line-tool-tab';
 
@@ -25,6 +26,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_SLAB_TAB,
   CONTEXTUAL_COLUMN_TAB,
   CONTEXTUAL_BEAM_TAB,
+  CONTEXTUAL_SLAB_OPENING_TAB,
   DIMENSION_CONTEXTUAL_TAB,
   CONTEXTUAL_LINE_TOOL_TAB,
 ] as const;
@@ -57,6 +59,7 @@ export function useActiveContextualTrigger({
     if (activeTool === 'slab') return SLAB_CONTEXTUAL_TRIGGER;
     if (activeTool === 'column') return COLUMN_CONTEXTUAL_TRIGGER;
     if (activeTool === 'beam') return BEAM_CONTEXTUAL_TRIGGER;
+    if (activeTool === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;
     // ADR-357 Phase 17: drawing tools show Quick Style override panel.
     if (
       activeTool === 'line' ||
@@ -86,6 +89,7 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
   if (entity.type === 'slab') return SLAB_CONTEXTUAL_TRIGGER;
   if (entity.type === 'column') return COLUMN_CONTEXTUAL_TRIGGER;
   if (entity.type === 'beam') return BEAM_CONTEXTUAL_TRIGGER;
+  if (entity.type === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;
   if (entity.type === 'text' || entity.type === 'mtext') return TEXT_EDITOR_CONTEXTUAL_TRIGGER;
   if (entity.type === 'array') {
     const kind = readArrayKind(entity.params);

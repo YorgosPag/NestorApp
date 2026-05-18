@@ -12,7 +12,7 @@ import type { Entity } from '../extended-types';
 import type { IntersectionResult } from '../shared/GeometricCalculations';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { getPolylineSegments } from '../../rendering/entities/shared/geometry-rendering-utils';
-import type { LineEntity, CircleEntity, ArcEntity, XLineEntity, EllipseEntity, RayEntity } from '../../types/entities';
+import type { LineEntity, CircleEntity, ArcEntity, XLineEntity, EllipseEntity } from '../../types/entities';
 import {
   isLineEntity,
   isPolylineEntity,
@@ -24,7 +24,7 @@ import {
 
 // ─── Helper: Extract vertices from polyline/lwpolyline ────────────────────
 
-function getPolylineVertices(entity: Entity): { vertices: Point2D[] | undefined; closed: boolean } {
+export function getPolylineVertices(entity: Entity): { vertices: Point2D[] | undefined; closed: boolean } {
   if (isPolylineEntity(entity)) return { vertices: entity.vertices, closed: entity.closed || false };
   if (isLWPolylineEntity(entity)) return { vertices: entity.vertices, closed: entity.closed || false };
   return { vertices: undefined, closed: false };
@@ -217,14 +217,14 @@ export function rectangleRectangleIntersection(rect1: Entity, rect2: Entity): In
 
 // ─── XLine Intersection Calculators (Phase 6.a — ADR-359) ────────────────────
 
-const XLINE_EPSILON = 1e-10;
+export const XLINE_EPSILON = 1e-10;
 const XLINE_MAX_T = 1e8;
 
-function cross2D(a: Point2D, b: Point2D): number {
+export function cross2D(a: Point2D, b: Point2D): number {
   return a.x * b.y - a.y * b.x;
 }
 
-function isAngleInRange(angleDeg: number, startDeg: number, endDeg: number): boolean {
+export function isAngleInRange(angleDeg: number, startDeg: number, endDeg: number): boolean {
   const a = ((angleDeg % 360) + 360) % 360;
   const s = ((startDeg % 360) + 360) % 360;
   const e = ((endDeg % 360) + 360) % 360;
@@ -393,65 +393,14 @@ export function xlineRectangleIntersection(xline: XLineEntity, rectangle: Entity
   return results;
 }
 
-// ─── Ray Phase 6.5.a (ADR-359) ───────────────────────────────────────────────
-
-export function rayLineIntersection(ray: RayEntity, line: LineEntity): IntersectionResult[] {
-  const dirL: Point2D = { x: line.end.x - line.start.x, y: line.end.y - line.start.y };
-  const denom = cross2D(ray.direction, dirL);
-  if (Math.abs(denom) < XLINE_EPSILON) return [];
-  const diff: Point2D = { x: line.start.x - ray.basePoint.x, y: line.start.y - ray.basePoint.y };
-  const t = cross2D(diff, dirL) / denom;
-  const s = cross2D(diff, ray.direction) / denom;
-  if (t < -XLINE_EPSILON) return [];
-  if (s < -XLINE_EPSILON || s > 1 + XLINE_EPSILON) return [];
-  return [{ point: { x: line.start.x + s * dirL.x, y: line.start.y + s * dirL.y }, type: 'Ray-Line' }];
-}
-
-export function rayCircleIntersection(ray: RayEntity, circle: CircleEntity): IntersectionResult[] {
-  const dir = ray.direction;
-  const dx = ray.basePoint.x - circle.center.x;
-  const dy = ray.basePoint.y - circle.center.y;
-  const A = dir.x * dir.x + dir.y * dir.y;
-  if (A < XLINE_EPSILON) return [];
-  const B = 2 * (dx * dir.x + dy * dir.y);
-  const C = dx * dx + dy * dy - circle.radius * circle.radius;
-  const disc = B * B - 4 * A * C;
-  if (disc < 0) return [];
-  const results: IntersectionResult[] = [];
-  if (disc < XLINE_EPSILON) {
-    const t = -B / (2 * A);
-    if (t >= -XLINE_EPSILON)
-      results.push({ point: { x: ray.basePoint.x + t * dir.x, y: ray.basePoint.y + t * dir.y }, type: 'Ray-Circle' });
-  } else {
-    const sqrtDisc = Math.sqrt(disc);
-    for (const t of [(-B - sqrtDisc) / (2 * A), (-B + sqrtDisc) / (2 * A)]) {
-      if (t >= -XLINE_EPSILON)
-        results.push({ point: { x: ray.basePoint.x + t * dir.x, y: ray.basePoint.y + t * dir.y }, type: 'Ray-Circle' });
-    }
-  }
-  return results;
-}
-
-export function rayArcIntersection(ray: RayEntity, arc: ArcEntity): IntersectionResult[] {
-  const dir = ray.direction;
-  const dx = ray.basePoint.x - arc.center.x;
-  const dy = ray.basePoint.y - arc.center.y;
-  const A = dir.x * dir.x + dir.y * dir.y;
-  if (A < XLINE_EPSILON) return [];
-  const B = 2 * (dx * dir.x + dy * dir.y);
-  const C = dx * dx + dy * dy - arc.radius * arc.radius;
-  const disc = B * B - 4 * A * C;
-  if (disc < 0) return [];
-  const tValues: number[] = disc < XLINE_EPSILON
-    ? [-B / (2 * A)]
-    : [(-B - Math.sqrt(disc)) / (2 * A), (-B + Math.sqrt(disc)) / (2 * A)];
-  const results: IntersectionResult[] = [];
-  for (const t of tValues) {
-    if (t < -XLINE_EPSILON) continue;
-    const p: Point2D = { x: ray.basePoint.x + t * dir.x, y: ray.basePoint.y + t * dir.y };
-    const angleDeg = (Math.atan2(p.y - arc.center.y, p.x - arc.center.x) * 180 / Math.PI + 360) % 360;
-    if (isAngleInRange(angleDeg, arc.startAngle, arc.endAngle))
-      results.push({ point: p, type: 'Ray-Arc' });
-  }
-  return results;
-}
+// ─── Ray Phase 6.5.a + 6.5.b (ADR-359) — moved to ray-intersection-calculators.ts ───
+export {
+  rayLineIntersection,
+  rayCircleIntersection,
+  rayArcIntersection,
+  rayRayIntersection,
+  rayXlineIntersection,
+  rayPolylineIntersection,
+  rayEllipseIntersection,
+  rayRectangleIntersection,
+} from './ray-intersection-calculators';
