@@ -22,8 +22,11 @@ import {
   xlineCircleIntersection,
   xlineArcIntersection,
   xlineXlineIntersection,
+  xlinePolylineIntersection,
+  xlineEllipseIntersection,
+  xlineRectangleIntersection,
 } from './intersection-calculators';
-import type { XLineEntity, LineEntity, CircleEntity, ArcEntity } from '../../types/entities';
+import type { XLineEntity, LineEntity, CircleEntity, ArcEntity, EllipseEntity } from '../../types/entities';
 // 🏢 ADR-149: Centralized Snap Engine Priorities
 import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
@@ -241,6 +244,20 @@ export class IntersectionSnapEngine extends BaseSnapEngine {
       return xlineArcIntersection(xl as XLineEntity, ar as ArcEntity);
     }
     if (type1 === 'xline' && type2 === 'xline') return xlineXlineIntersection(entity1 as XLineEntity, entity2 as XLineEntity);
+
+    if ((type1 === 'xline' && (type2 === 'polyline' || type2 === 'lwpolyline')) ||
+        ((type1 === 'polyline' || type1 === 'lwpolyline') && type2 === 'xline')) {
+      const [xl, pl] = type1 === 'xline' ? [entity1, entity2] : [entity2, entity1];
+      return xlinePolylineIntersection(xl as XLineEntity, pl);
+    }
+    if ((type1 === 'xline' && type2 === 'ellipse') || (type1 === 'ellipse' && type2 === 'xline')) {
+      const [xl, el] = type1 === 'xline' ? [entity1, entity2] : [entity2, entity1];
+      return xlineEllipseIntersection(xl as XLineEntity, el as EllipseEntity);
+    }
+    if ((type1 === 'xline' && type2 === 'rectangle') || (type1 === 'rectangle' && type2 === 'xline')) {
+      const [xl, re] = type1 === 'xline' ? [entity1, entity2] : [entity2, entity1];
+      return xlineRectangleIntersection(xl as XLineEntity, re);
+    }
 
     return [];
   }

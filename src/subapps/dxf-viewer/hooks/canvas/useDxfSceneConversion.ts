@@ -21,8 +21,10 @@ import type { DxfScene, DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity, Entity } from '../../types/entities';
-import { isArrayEntity, isStairEntity } from '../../types/entities';
+import { isArrayEntity, isStairEntity, isSlabEntity, isSlabOpeningEntity } from '../../types/entities';
 import type { StairEntity } from '../../types/stair';
+import type { SlabEntity } from '../../bim/types/slab-types';
+import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { PathParams } from '../../systems/array/types';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
 import { extractFlatText } from '../../utils/text-node-utils';
@@ -258,6 +260,20 @@ function convertEntity(entity: SceneEntity, layers: SceneLayers, layersById?: Sc
       // `getStairGrips()`. SSoT: zero geometry duplication.
       const e = entity as StairEntity;
       return { ...base, type: 'stair' as const, stairEntity: e } as DxfEntityUnion;
+    }
+    case 'slab': {
+      // ADR-363 Phase 3.7 — wrap SlabEntity. SlabRenderer renders geometry.polygon
+      // fill + hatch. Per-frame slabOpeningsBySlab map cuts boolean holes.
+      return isSlabEntity(entity)
+        ? { ...base, type: 'slab' as const, slabEntity: entity as SlabEntity } as DxfEntityUnion
+        : null;
+    }
+    case 'slab-opening': {
+      // ADR-363 Phase 3.7 — wrap SlabOpeningEntity. SlabOpeningRenderer draws
+      // dashed outline + kind annotation over the host slab cutout.
+      return isSlabOpeningEntity(entity)
+        ? { ...base, type: 'slab-opening' as const, slabOpeningEntity: entity as SlabOpeningEntity } as DxfEntityUnion
+        : null;
     }
     default:
       dwarn('useDxfSceneConversion', 'Unsupported entity type:', entity.type);

@@ -19,6 +19,9 @@ import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver'
 // ADR-362 Phase C1 — DimensionLookup builder for baseline/continued parent resolution.
 import type { DimensionEntity } from '../../types/dimension';
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
+// ADR-363 Phase 3.7 — slab-opening per-frame map for SlabRenderer boolean cutouts.
+import type { DxfSlabOpening } from './dxf-types';
+import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 function mapDxfLineTypeToEnterprise(dxfLineType: string | undefined): 'solid' | 'dashed' | 'dotted' | 'dashdot' {
   const mapping: Record<string, 'solid' | 'dashed' | 'dotted' | 'dashdot'> = {
     'solid': 'solid',
@@ -83,25 +86,19 @@ export class DxfRenderer {
     const cssW = canvasRect.width || viewport.width;
     const cssH = canvasRect.height || viewport.height;
     const actualViewport: Viewport = { width: cssW, height: cssH };
-
     // Clear canvas using exact same CSS-space dimensions as rendering viewport.
     // DPR ctx.setTransform is active → clearRect in CSS coords = full physical clear.
     this.ctx.clearRect(0, 0, cssW, cssH);
-
     // 🏢 Origin marker now rendered by GridRenderer (consolidated — no duplication)
-    // Early return if no scene
-      if (!scene || !scene.entities.length) {
-        return;
-      }
-
+    if (!scene || !scene.entities.length) return;
     this.ctx.save();
-
     // ✅ ΝΕΟ: Update composite settings
     this.entityComposite.setTransform(transform);
     // ADR-362 Phase C1 — build the per-frame DimensionLookup map once and
     // forward it to the dimension leaf. Cheap O(n) scene scan; only dim
     // entities land in the map (typically <100 per scene).
     this.entityComposite.setDimensionLookup(this.buildDimensionLookup(scene.entities));
+    this.entityComposite.setSlabOpeningsBySlab(this.buildSlabOpeningsBySlab(scene.entities));
 
     // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): bitmap cache passes skipInteractive=true
     // to render entities in pure normal-state. Interactive overlays are drawn separately.
@@ -115,14 +112,9 @@ export class DxfRenderer {
           gripInteractionState: undefined,
         }
       : options;
-
     // 🏢 GRIP EDITING: Update grip interaction state for visual feedback (always set, even when empty)
     const gripOpts = effectiveOptions.gripInteractionState;
-    this.setGripInteractionState(gripOpts
-      ? { hovered: gripOpts.hoveredGrip, active: gripOpts.activeGrip }
-      : {}
-    );
-
+    this.setGripInteractionState(gripOpts ? { hovered: gripOpts.hoveredGrip, active: gripOpts.activeGrip } : {});
     // Rebuild selection Set for O(1) lookups in renderEntityUnified
     this._selectionSet = new Set(effectiveOptions.selectedEntityIds);
     // ADR-040 Phase IX: viewport culling — skip entities whose bbox does not
@@ -177,7 +169,6 @@ export class DxfRenderer {
       this.ctx.stroke();
       this.ctx.restore();
     }
-
     // Per-entity rendering — non-line entities + interactive lines (selected/hovered/measurement)
     for (const entity of scene.entities) {
       if (!entity.visible) continue;
@@ -210,38 +201,23 @@ export class DxfRenderer {
     } = {},
   ): void {
     if (!entity.visible) return;
-
-    // 🚀 PERF (ADR-040, 2026-05-11): getBounds (cached). Called per selected/hovered
-    // entity — using refreshBounds here forced N+1 layout reflows per frame (one per overlay).
+    // 🚀 PERF (ADR-040, 2026-05-11): getBounds (cached). N+1 layout reflows avoided.
     const canvasRect = canvasBoundsService.getBounds(this.canvas);
     const actualViewport: Viewport = { width: canvasRect.width, height: canvasRect.height };
-
     this.ctx.save();
     this.entityComposite.setTransform(transform);
-
-    // Apply grip interaction state only for selected mode.
-    // ADR-049 SSOT (2026-05-12): the 'drag-preview' mode was removed — the
-    // dragged entity now renders as 'selected' here and the translucent
-    // ghost lives on PreviewCanvas via useGripGhostPreview.
+    // ADR-049 SSOT (2026-05-12): 'drag-preview' mode removed — dragged entity renders as 'selected'.
     const gripOpts = mode === 'selected' ? interaction.gripInteractionState : undefined;
-    this.setGripInteractionState(gripOpts
-      ? { hovered: gripOpts.hoveredGrip, active: gripOpts.activeGrip }
-      : {}
-    );
-
+    this.setGripInteractionState(gripOpts ? { hovered: gripOpts.hoveredGrip, active: gripOpts.activeGrip } : {});
     const syntheticOptions: DxfRenderOptions = {
-      showGrid: false,
-      showLayerNames: false,
-      wireframeMode: false,
+      showGrid: false, showLayerNames: false, wireframeMode: false,
       selectedEntityIds: mode === 'selected' ? [entity.id] : [],
       hoveredEntityId: mode === 'hovered' ? entity.id : null,
       gripInteractionState: gripOpts,
       layersById: interaction.layersById,
     };
-
     this._selectionSet = new Set(syntheticOptions.selectedEntityIds);
     this.renderEntityUnified(entity, transform, actualViewport, syntheticOptions);
-
     this.ctx.restore();
   }
 
@@ -373,6 +349,16 @@ export class DxfRenderer {
         // internally (via registry singleton + per-frame DimensionLookup).
         return { ...base, ...entity.dimensionEntity } as unknown as Entity;
       }
+      case 'slab': {
+        // ADR-363 Phase 3.7 — unwrap DxfSlab: SlabRenderer reads geometry.polygon + params.
+        const s = entity.slabEntity;
+        return { ...base, type: 'slab', kind: s.kind, params: s.params, geometry: s.geometry, validation: s.validation } as unknown as Entity;
+      }
+      case 'slab-opening': {
+        // ADR-363 Phase 3.7 — unwrap DxfSlabOpening: SlabOpeningRenderer reads geometry + kind.
+        const so = entity.slabOpeningEntity;
+        return { ...base, type: 'slab-opening', kind: so.kind, params: so.params, geometry: so.geometry, validation: so.validation } as unknown as Entity;
+      }
       default: {
         const exhaustiveCheck: never = entity;
         return exhaustiveCheck;
@@ -419,6 +405,19 @@ export class DxfRenderer {
       },
       entity,
     );
+  }
+
+  /** ADR-363 Phase 3.7 — build per-frame Map<slabId, SlabOpeningEntity[]> for SlabRenderer cutouts. */
+  private buildSlabOpeningsBySlab(entities: readonly DxfEntityUnion[]): Map<string, SlabOpeningEntity[]> {
+    const m = new Map<string, SlabOpeningEntity[]>();
+    for (const e of entities) {
+      if (e.type !== 'slab-opening') continue;
+      const so = (e as DxfSlabOpening).slabOpeningEntity;
+      const arr = m.get(so.params.slabId) ?? [];
+      arr.push(so);
+      m.set(so.params.slabId, arr);
+    }
+    return m;
   }
 
   /**

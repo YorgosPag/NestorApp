@@ -1806,3 +1806,7 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-18: ADR-363 Phase 3.7 — CanvasSection wires slabOpeningTool from useSpecialTools
 
 `CanvasSection.tsx` (orchestrator) destructures `slabOpeningTool` from `useSpecialTools` and passes it to `useCanvasClickHandler`. `useSpecialTools.ts` instantiates `useSlabOpeningTool` with `getSlabById` / `getSlabAtPoint` / `onSlabOpeningCreated` resolvers (bidirectional `slab.slabOpeningIds` mirror on creation). `useToolLifecycle` activates/deactivates on `activeTool === 'slab-opening'`. No high-frequency store subscriptions added — pure prop drilling through orchestrator. Cardinal rules maintained.
+
+## 2026-05-18: ADR-363 Phase 3.7 — DxfRenderer slab + slab-opening unwrap + per-frame openings map
+
+`dxf-types.ts` extends `DxfEntity['type']` union with `'slab' | 'slab-opening'` and adds `DxfSlab` / `DxfSlabOpening` wrappers in `DxfEntityUnion`. `useDxfSceneConversion.ts` converts `SlabEntity` / `SlabOpeningEntity` via `isSlabEntity` / `isSlabOpeningEntity` guards. `DxfRenderer.ts` unwraps both kinds in `convertDxfEntityToRenderEntity` (so `SlabRenderer` / `SlabOpeningRenderer` see plain entities) and builds an O(n) `Map<slabId, SlabOpeningEntity[]>` per frame via `buildSlabOpeningsBySlab()`, forwarded to `entityComposite.setSlabOpeningsBySlab()` for boolean cutout consumption by `SlabRenderer`. Per-frame map mirrors the `DimensionLookup` pattern. Cardinal rules maintained.

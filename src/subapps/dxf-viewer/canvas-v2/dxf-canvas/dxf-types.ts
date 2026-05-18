@@ -8,11 +8,14 @@ import type { SceneLayer, LineweightMm } from '../../types/entities';
 import type { StairEntity } from '../../types/stair';
 // ADR-362 Phase C1 — Dimension entity wrapper for DXF render pipeline.
 import type { DimensionEntity } from '../../types/dimension';
+// ADR-363 Phase 3.7 — BIM slab / slab-opening wrappers for DXF render pipeline.
+import type { SlabEntity } from '../../bim/types/slab-types';
+import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -148,7 +151,19 @@ export interface DxfDimension extends DxfEntity {
   dimensionEntity: DimensionEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension;
+/** ADR-363 Phase 3.7 — DxfSlab wrapper. SlabRenderer renders from `slabEntity.geometry`. */
+export interface DxfSlab extends DxfEntity {
+  type: 'slab';
+  slabEntity: SlabEntity;
+}
+
+/** ADR-363 Phase 3.7 — DxfSlabOpening wrapper. SlabOpeningRenderer renders from `slabOpeningEntity`. */
+export interface DxfSlabOpening extends DxfEntity {
+  type: 'slab-opening';
+  slabOpeningEntity: SlabOpeningEntity;
+}
+
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening;
 
 // === DXF SCENE ===
 export interface DxfScene {
