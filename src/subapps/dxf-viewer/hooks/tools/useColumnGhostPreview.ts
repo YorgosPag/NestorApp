@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { ColumnKind } from '../../bim/types/column-types';
 import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
+import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import type { AnchorGhost } from '../../bim/columns/column-anchor-ghosts';
 import { ColumnAnchorGhostRenderer } from '../../bim/columns/ColumnAnchorGhostRenderer';
 
@@ -51,7 +52,18 @@ export function useColumnGhostPreview(props: Readonly<UseColumnGhostPreviewProps
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     if (!isAwaitingPosition || !cursorWorld) return;
-    const ghosts = getGhostFootprints(cursorWorld);
+    // ADR-363 Phase 4.5c.4 — use snapped position for ghost so preview
+    // locks to wall corners / grid intersections visually, matching the
+    // snapped commit point that mouse-handler-up will use on click.
+    // Read imperatively inside RAF: by the time this fires, both
+    // ImmediatePositionStore and ImmediateSnapStore are already written
+    // by the synchronous mouse-move handler (mouse-handler-move.ts).
+    const snapState = getImmediateSnap();
+    const effectiveCursor: Point2D =
+      snapState?.found === true && snapState.point != null
+        ? snapState.point
+        : cursorWorld;
+    const ghosts = getGhostFootprints(effectiveCursor);
     if (!ghosts || ghosts.length === 0) return;
 
     const viewportElement = getViewportElement?.() ?? canvas;
