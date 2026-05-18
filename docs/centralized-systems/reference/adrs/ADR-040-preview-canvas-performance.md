@@ -1745,3 +1745,7 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-18: ADR-363 Phase 1 — canvas-click-types WallClickContext
 
 `canvas-click-types.ts` extended with `WallClickContext` type for wall tool canvas interactions. No store subscriptions added — pure type extension. Cardinal rules maintained.
+
+## 2026-05-18: ADR-363 Phase 1B — CanvasSection wires wallTool from useSpecialTools
+
+`CanvasSection.tsx` (orchestrator) now receives `wallTool` from `useSpecialTools` and passes it to `useCanvasClickHandler`. No high-frequency store subscriptions added — pure prop drilling through orchestrator. Cardinal rules maintained.
