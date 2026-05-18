@@ -50,12 +50,11 @@
 // DEBUG FLAG - 🔍 ENABLE FOR TRACING PREVIEW ISSUES
 const DEBUG_DRAWING_HANDLERS = false; // 🔧 DISABLED (2026-02-02) - performance investigation
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { ToolType } from '../../ui/toolbar/types';
 import { useCadToggles } from '../common/useCadToggles';
 // 🏢 ENTERPRISE (2026-01-30): Centralized tool metadata for continuous mode
 // 🏢 ENTERPRISE (2026-01-30): Centralized Tool State Store - ADR Tool Persistence
-import { toolStateStore } from '../../stores/ToolStateStore';
 import type { Entity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
 import { useUnifiedDrawing } from './useUnifiedDrawing';
@@ -68,59 +67,29 @@ import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 // 🎯 ADR-047: Distance calculation for close-on-first-point
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // ADR-357 Phase 1: Polar Tracking
-import { applyPolar, formatPolarLabel } from '../../systems/constraints/polar-utils';
-import type { PolarSnapResult } from '../../systems/constraints/polar-utils';
+import { applyPolar } from '../../systems/constraints/polar-utils';
 import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
+// ADR-357 Phase 4: Object Snap Tracking
+import {
+  TrackingPointStore,
+  subscribeTrackingPoints,
+  getTrackingPointsSnapshot,
+} from '../../systems/tracking/TrackingPointStore';
+import { resolveTrackingSnap } from '../../systems/tracking/tracking-resolver';
 // 🏢 ADR-099: Centralized Polygon Tolerances
 import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 // 🏢 ADR-362 Phase D1: Dim tool routing layer (Smart DIM + 4 manual overrides)
 import { useDimToolRouting } from '../dimensions/useDimToolRouting';
+// ADR-362 Phase L2: Center mark + centerline standalone tools
+import { useCenterMarkCreate } from '../dimensions/useCenterMarkCreate';
+// ADR-357 Phase 7: Snap Override orchestrator (single-use snap modifiers)
+import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
+import { ExtendedSnapType } from '../../snapping/extended-types';
+import { handleToolCompletion, hardOrtho } from './drawing-handler-utils';
+import { processDrawingHover } from './drawing-hover-handler';
+export { MEASURE_TOOLS_FOR_GUIDES } from './drawing-handler-utils';
 
 type Pt = { x: number, y: number };
-
-/**
- * 🏢 ENTERPRISE (2026-01-30): Centralized Tool Completion Handler
- *
- * Pattern: AutoCAD/BricsCAD - Tools with allowsContinuous=true stay active after completion
- *
- * REFACTORED: Now delegates to ToolStateStore for SINGLE SOURCE OF TRUTH
- * The store manages all tool state and notifies all subscribers (React components)
- *
- * @param tool - The current tool type
- * @param forceSelect - If true, always return to select (used for cancel operations)
- */
-function handleToolCompletion(
-  tool: ToolType,
-  forceSelect: boolean = false
-): void {
-  // 🏢 ENTERPRISE: Delegate to centralized store
-  // The store will:
-  // 1. Check allowsContinuous metadata
-  // 2. Update internal state (activeTool, previousTool)
-  // 3. Notify all subscribers (React components auto-update)
-  toolStateStore.handleToolCompletion(tool, forceSelect);
-}
-
-// 🏢 ENTERPRISE: Type-safe entity created callback
-// 🏢 ADR-040: Optional previewCanvasRef for direct preview rendering (performance optimization)
-/**
- * B36 (ADR-189): Measurement tools that support "Create Guides" prompt via
- * the dedicated `onMeasurementComplete` callback (raw point list, no entity).
- * Re-exported so the B39 entity→guide listener can skip these tools and
- * avoid raising a second notification on the same completion.
- */
-export const MEASURE_TOOLS_FOR_GUIDES = new Set<string>([
-  'measure-distance', 'measure-distance-continuous', 'measure-angle',
-]);
-
-/** AutoCAD-style hard ortho: projects point onto H or V axis from referencePoint */
-function hardOrtho(point: Pt, ref: Pt): Pt {
-  const dx = point.x - ref.x;
-  const dy = point.y - ref.y;
-  return Math.abs(dx) >= Math.abs(dy)
-    ? { x: point.x, y: ref.y }
-    : { x: ref.x, y: point.y };
-}
 
 export function useDrawingHandlers(
   activeTool: ToolType,
@@ -136,6 +105,8 @@ export function useDrawingHandlers(
 
   // 🏢 ADR-362 Phase D1: dim creation flow (Smart DIM + 4 manual overrides)
   const dimRouting = useDimToolRouting({ activeTool, onEntityCreated, previewCanvasRef });
+  // ADR-362 Phase L2: center mark + centerline tools
+  const centerMarkCreate = useCenterMarkCreate({ activeTool, onEntityCreated, previewCanvasRef });
 
   // Drawing system
   const {
@@ -179,14 +150,32 @@ export function useDrawingHandlers(
     }
   });
 
-  // 🚀 PERFORMANCE: Throttle preview updates to requestAnimationFrame rate
-  const previewThrottleRef = useRef<{
-    rafId: number | null;
-    pendingPoint: Pt | null;
-  }>({
-    rafId: null,
-    pendingPoint: null
-  });
+  // ADR-357 Phase 7: Stable ref for findSnapPoint — used inside onDrawingPoint /
+  // onDrawingHover for override-filtered snap without adding findSnapPoint to
+  // callback deps (prevents unnecessary re-creation on every scene update).
+  const findSnapPointRef = useRef(findSnapPoint);
+  findSnapPointRef.current = findSnapPoint;
+
+  // ADR-357 Phase 4: hover-based Object Snap Tracking acquisition. We watch
+  // the ImmediateSnapStore for a stable snap candidate — once the same point
+  // has been hovered for `ACQUISITION_DURATION_MS`, the point joins the
+  // TrackingPointStore FIFO and emits dashed alignment paths from then on.
+  const trackingHoverRef = useRef<{
+    point: Pt | null;
+    snapType: string | null;
+    hoverStartedAt: number;
+  }>({ point: null, snapType: null, hoverStartedAt: 0 });
+
+  // Propagate acquired points to the PreviewCanvas so the persistent `+`
+  // markers stay anchored across drawPreview cycles (Phase 4 §5.3).
+  useEffect(() => {
+    if (!previewCanvasRef) return;
+    const push = () => {
+      previewCanvasRef.current?.setTrackingMarkers(getTrackingPointsSnapshot());
+    };
+    push();
+    return subscribeTrackingPoints(push);
+  }, [previewCanvasRef]);
 
   // Unified snap function
   const applySnap = useCallback((point: Pt): Pt => {
@@ -220,6 +209,11 @@ export function useDrawingHandlers(
     if (dimRouting.isDimTool) {
       const snapped = applySnap(p);
       dimRouting.handlePoint(snapped);
+      return;
+    }
+    // ADR-362 Phase L2: route center mark / centerline tools.
+    if (centerMarkCreate.isCenterMarkTool) {
+      centerMarkCreate.handlePoint(applySnap(p));
       return;
     }
     // 🔍 DEBUG (2026-01-31): Log drawing point for circle debugging
@@ -262,6 +256,8 @@ export function useDrawingHandlers(
         if (previewCanvasRef?.current) {
           previewCanvasRef.current.clear();
         }
+        // ADR-357 Phase 4: polygon auto-close also decays acquired points.
+        TrackingPointStore.clearAll();
         return;
       }
     }
@@ -277,10 +273,81 @@ export function useDrawingHandlers(
           angleTolerance: 3,
         }).point
       : afterOrtho;
-    const snappedPoint = applySnap(afterPolar);
+
+    // ADR-357 Phase 7: Snap Override — handle special multi-click modes before normal snap.
+    const snapOverride = SnapOverrideOrchestrator.getOverride();
+
+    // M2P: accumulate 2 clicks → commit midpoint (first click does NOT add a drawing point)
+    if (snapOverride === 'm2p') {
+      const midPoint = SnapOverrideOrchestrator.advanceM2P(applySnap(afterPolar));
+      if (!midPoint) return; // first M2P click — waiting for second
+      // second click: midPoint is ready → commit it, clear override
+      SnapOverrideOrchestrator.clearOverride();
+      const transformUtils = canvasOps.getTransformUtils();
+      const completed = addPoint(midPoint, transformUtils);
+      if (!completed) {
+        window.dispatchEvent(new CustomEvent('canvas-click', { detail: { worldPoint: midPoint } }));
+      }
+      if (completed && previewCanvasRef?.current) previewCanvasRef.current.clear();
+      if (completed) TrackingPointStore.clearAll();
+      if (completed && onMeasurementComplete && MEASURE_TOOLS_FOR_GUIDES.has(activeTool)) {
+        const allPoints = [...drawingState.tempPoints, midPoint];
+        onMeasurementComplete(allPoints, activeTool as ToolType);
+      }
+      return;
+    }
+
+    // From: first click = reference point (stored, not committed) → second click commits normally
+    if (snapOverride === 'from') {
+      const refAlreadySet = SnapOverrideOrchestrator.getFromReference() !== null;
+      if (!refAlreadySet) {
+        SnapOverrideOrchestrator.advanceFrom(applySnap(afterPolar));
+        return; // reference stored — don't add to drawing
+      }
+      // second click: commit normally with snap, then consume override
+      SnapOverrideOrchestrator.consumeOverride();
+      // fall through to normal snappedPoint flow below
+    }
+
+    // Single-use engine override (including 'app' → INTERSECTION):
+    // consume the override and apply override-filtered snap for this commit.
+    let snappedPoint: Pt;
+    if (snapOverride && snapOverride !== 'from' && snapOverride !== 'm2p') {
+      SnapOverrideOrchestrator.consumeOverride();
+      const engineTarget = snapOverride === 'app'
+        ? ExtendedSnapType.INTERSECTION
+        : snapOverride as ExtendedSnapType;
+      let overrideSnapped: Pt | null = null;
+      const findSnapFn = findSnapPointRef.current;
+      if (findSnapFn) {
+        try {
+          const overrideResult = findSnapFn(afterPolar.x, afterPolar.y);
+          if (overrideResult?.found && overrideResult.activeMode === engineTarget && overrideResult.snappedPoint) {
+            overrideSnapped = overrideResult.snappedPoint;
+          }
+        } catch { /* snap error — fall back to applySnap */ }
+      }
+      snappedPoint = overrideSnapped ?? applySnap(afterPolar);
+    } else {
+      snappedPoint = applySnap(afterPolar);
+    }
+
+    // ADR-357 Phase 4: Object Snap Tracking — promote alignment-path hit to
+    // the committed point so clicks lock onto path intersections / projections.
+    const acquired = TrackingPointStore.getPoints();
+    let finalPoint = snappedPoint;
+    if (acquired.length > 0) {
+      const worldTolerance = 3 / Math.max(canvasOps.getTransform().scale, 0.001);
+      const trackingResult = resolveTrackingSnap(snappedPoint, acquired, {
+        incrementAngle: polarTrackingStore.incrementAngle,
+        additionalAngles: polarTrackingStore.additionalAngles,
+        polarEnabled: polarOnRef.current && !orthoOnRef.current,
+      }, worldTolerance);
+      if (trackingResult) finalPoint = trackingResult.point;
+    }
 
     const transformUtils = canvasOps.getTransformUtils();
-    const completed = addPoint(snappedPoint, transformUtils);
+    const completed = addPoint(finalPoint, transformUtils);
 
     // ADR-357 Phase 2a — re-enable the legacy `canvas-click` window event so the
     // Dynamic Input phase hook (`useDynamicInputPhase`) can advance its anchor
@@ -288,7 +355,7 @@ export function useDrawingHandlers(
     // was never mounted and no dispatcher existed; mounting it without this
     // signal would leave the live readout permanently in `first-point` phase.
     if (!completed) {
-      window.dispatchEvent(new CustomEvent('canvas-click', { detail: { worldPoint: snappedPoint } }));
+      window.dispatchEvent(new CustomEvent('canvas-click', { detail: { worldPoint: finalPoint } }));
     }
 
     // 🏢 ENTERPRISE (2026-01-30): Clear preview canvas when drawing completes
@@ -299,113 +366,51 @@ export function useDrawingHandlers(
       previewCanvasRef.current.clear();
     }
 
+    // ADR-357 Phase 4: entity completion → decay all acquired tracking points
+    // (matches AutoCAD: tracking memory is per-command, not cross-command).
+    if (completed) {
+      TrackingPointStore.clearAll();
+    }
+
     // B36 (ADR-189): Notify parent when a measurement tool completes
     // Parent can then offer "Create Guides at measurement points"
     if (completed && onMeasurementComplete && MEASURE_TOOLS_FOR_GUIDES.has(activeTool)) {
-      const allPoints = [...drawingState.tempPoints, snappedPoint];
+      const allPoints = [...drawingState.tempPoints, finalPoint];
       onMeasurementComplete(allPoints, activeTool as ToolType);
     }
   }, [activeTool, drawingState.tempPoints, addPoint, finishPolyline, onEntityCreated, onToolChange, canvasOps, applySnap, previewCanvasRef, onMeasurementComplete]);
 
   const onDrawingHover = useCallback((p: Pt | null) => {
-    // 🏢 ADR-362 Phase D1: route dim tools through the dedicated orchestrator.
-    if (dimRouting.isDimTool) {
-      const snapped = p ? applySnap(p) : null;
-      dimRouting.handleHover(snapped);
-      return;
-    }
-    // 🔍 STOP 1 DEBUG TRACE (2026-02-01): Comprehensive preview flow tracing
-    if (DEBUG_DRAWING_HANDLERS) {
-      console.debug('🔍 [onDrawingHover] ENTRY', {
-        activeTool,
-        hasPoint: !!p,
-        worldPos: p ? `(${p.x.toFixed(2)}, ${p.y.toFixed(2)})` : 'null',
-        hasPreviewRef: !!previewCanvasRef?.current,
-        timestamp: performance.now().toFixed(1)
-      });
-    }
-
-    if (p) {
-      // 🔍 PERF DEBUG (2026-02-02): Measure where the bottleneck is
-      const t0 = performance.now();
-
-      // 🚀 PERFORMANCE (2026-01-27): REMOVED RAF throttling for synchronous preview rendering
-      // Now that CrosshairOverlay uses ImmediatePositionStore for zero-latency updates,
-      // the preview grips must also update synchronously to avoid visible lag.
-      // The mouse event handler is already called on each mousemove - no need to batch.
-      const transformUtils = canvasOps.getTransformUtils();
-      const t1 = performance.now();
-
-      // Apply ortho (F8) or polar (F10) constraint before preview — mutually exclusive
-      const lastRefPt = drawingState.tempPoints[drawingState.tempPoints.length - 1];
-      const afterOrtho = orthoOnRef.current && lastRefPt ? hardOrtho(p, lastRefPt) : p;
-      let polarSnapResult: PolarSnapResult | null = null;
-      let previewPt = afterOrtho;
-      if (!orthoOnRef.current && polarOnRef.current && lastRefPt) {
-        polarSnapResult = applyPolar(afterOrtho, lastRefPt, {
-          incrementAngle: polarTrackingStore.incrementAngle,
-          additionalAngles: polarTrackingStore.additionalAngles,
-          angleTolerance: 3,
-        });
-        previewPt = polarSnapResult.point;
-      }
-
-      // Update the preview entity (calculates geometry, updates ref)
-      updatePreview(previewPt, transformUtils);
-      const t2 = performance.now();
-
-      // 🏢 ADR-040: Direct rendering to PreviewCanvas (ZERO React overhead)
-      if (previewCanvasRef?.current) {
-        const previewEntity = getLatestPreviewEntity();
-        const t3 = performance.now();
-
-        // 🔍 DEBUG TRACE: Log preview entity details
-        if (DEBUG_DRAWING_HANDLERS) {
-          console.debug('🔍 [onDrawingHover] PREVIEW ENTITY', {
-            entityType: previewEntity?.type,
-            hasEntity: !!previewEntity,
-            callingDrawPreview: !!previewEntity,
-            timestamp: performance.now().toFixed(1)
-          });
-        }
-
-        if (previewEntity) {
-          previewCanvasRef.current.drawPreview(previewEntity);
-          // ADR-357 Phase 1: Polar tracking line overlay (dashed alignment path + tooltip)
-          if (polarSnapResult?.isSnapped && lastRefPt && polarSnapResult.snappedAngle !== null) {
-            previewCanvasRef.current.drawPolarTrackingLine(
-              lastRefPt,
-              polarSnapResult.snappedAngle,
-              formatPolarLabel(polarSnapResult.snappedAngle, polarSnapResult.distance),
-              previewPt,
-            );
-          }
-        } else {
-          // 🔧 FIX (2026-01-27): Clear canvas when preview entity is null
-          // This happens when drawing is completed (2nd click on line/measure-distance)
-          // Without this, the old preview distance label stays visible
-          previewCanvasRef.current.clear();
-        }
-        const t4 = performance.now();
-
-        // 🔍 PERF DEBUG: Log timing only when explicitly enabled
-        if (DEBUG_DRAWING_HANDLERS) {
-          const total = t4 - t0;
-          console.debug(`PERF_DRAWHOVER ${total.toFixed(1)}ms transform=${(t1-t0).toFixed(1)} preview=${(t2-t1).toFixed(1)} entity=${(t3-t2).toFixed(1)} draw=${(t4-t3).toFixed(1)}`);
-        }
-      }
-    } else {
-      // 🏢 ADR-040: Clear preview when mouse leaves
-      if (previewCanvasRef?.current) {
-        previewCanvasRef.current.clear();
-      }
-    }
-  }, [updatePreview, canvasOps, getLatestPreviewEntity, previewCanvasRef, activeTool, drawingState.tempPoints]);
+    processDrawingHover(p, {
+      activeTool,
+      isDimTool: dimRouting.isDimTool,
+      handleDimHover: (pt) => dimRouting.handleHover(pt),
+      isCenterMarkTool: centerMarkCreate.isCenterMarkTool,
+      handleCenterMarkHover: centerMarkCreate.handleHover,
+      tempPoints: drawingState.tempPoints,
+      applySnap,
+      getTransformUtils: () => canvasOps.getTransformUtils(),
+      getTransformScale: () => canvasOps.getTransform().scale,
+      previewCanvasRef,
+      orthoOnRef,
+      polarOnRef,
+      findSnapPointRef,
+      trackingHoverRef,
+      updatePreview,
+      getLatestPreviewEntity,
+    });
+  }, [activeTool, dimRouting, centerMarkCreate, drawingState.tempPoints, applySnap, canvasOps, previewCanvasRef, updatePreview, getLatestPreviewEntity]);
   
   const onDrawingCancel = useCallback(() => {
     // 🏢 ADR-362 Phase D1: cancel dim flow if active (does not stop tool deselect).
     if (dimRouting.isDimTool) dimRouting.handleCancel();
+    // ADR-362 Phase L2: cancel center mark flow.
+    if (centerMarkCreate.isCenterMarkTool) centerMarkCreate.handleCancel();
     cancelDrawing();
+    // ADR-357 Phase 4: ESC / cancel decays acquired tracking points.
+    TrackingPointStore.clearAll();
+    // ADR-357 Phase 7: ESC clears any pending snap override.
+    SnapOverrideOrchestrator.clearOverride();
     // 🏢 ENTERPRISE: Force select on cancel (user explicitly cancelled)
     handleToolCompletion(activeTool, true); // forceSelect=true for cancel
   }, [activeTool, cancelDrawing, dimRouting, onToolChange]);
@@ -451,6 +456,8 @@ export function useDrawingHandlers(
   // Cancel all operations
   const cancelAllOperations = useCallback(() => {
     cancelDrawing();
+    // ADR-357 Phase 4: hard cancel also decays acquired tracking points.
+    TrackingPointStore.clearAll();
   }, [cancelDrawing]);
 
   return {

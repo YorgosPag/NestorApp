@@ -23,6 +23,8 @@ import type {
 import { buildDefaultStairParams } from './stair-completion';
 import { computeStairGeometry } from '../../systems/stairs/StairGeometryService';
 import type { SceneUnits, StairParamOverrides } from './stair-completion';
+// ADR-363 Phase 1C — wall preview extracted to wall-preview-helpers.ts.
+import { generateWallPreview } from './wall-preview-helpers';
 import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
 import {
   arcFrom3Points,
@@ -102,6 +104,11 @@ export function generatePreviewEntity(
   // ── ADR-358 Phase 5a — Stair tool preview branch ─────────────────────────
   if (tool === 'stair') {
     return generateStairPreview(tempPoints, cursorPoint, {}, sceneUnits);
+  }
+
+  // ── ADR-363 Phase 1C — Wall tool preview branch ──────────────────────────
+  if (tool === 'wall') {
+    return generateWallPreview(tempPoints, cursorPoint, sceneUnits);
   }
 
   // ── Zero-point preview: show start indicator ─────────────────────────────
@@ -399,4 +406,3 @@ function makeStairWalklinePreview(
   };
   return { ...polyline, preview: true, showPreviewGrips: true } as ExtendedPolylineEntity;
 }
-
