@@ -33,6 +33,11 @@ import {
   buildDefaultColumnParams,
   type ColumnParamOverrides,
 } from './column-completion';
+import {
+  computeAnchorGhostFootprints,
+  type AnchorGhost,
+  type ColumnGhostOverrides,
+} from '../../bim/columns/column-anchor-ghosts';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -83,6 +88,16 @@ export interface UseColumnToolResult {
   setParamOverrides(overrides: ColumnParamOverrides): void;
   /** Status text για status-bar / Dynamic Input prompt (i18n key). */
   getStatusText(): string;
+  /**
+   * ADR-363 Phase 4.5c.1 — projection helper για το anchor ghost preview.
+   * Returns null όταν phase !== 'awaitingPosition' ή cursorPos === null.
+   * Διαφορετικά επιστρέφει 9 ghosts (1 για circular) με state.anchor flag-marked.
+   *
+   * Pure projection: ΔΕΝ mutate-άρει state, ΔΕΝ subscribes σε cursor store.
+   * Caller (leaf) supplies το current cursor world position — ώστε το hook
+   * να μην τραβάει re-renders του CanvasSection σε κάθε mousemove (ADR-040).
+   */
+  getGhostFootprints(cursorPos: Readonly<Point2D> | null): readonly AnchorGhost[] | null;
   readonly isActive: boolean;
   readonly isAwaitingPosition: boolean;
 }
@@ -196,6 +211,28 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     return s.phase === 'awaitingPosition' ? 'tools.column.statusPosition' : '';
   }, []);
 
+  // ── ADR-363 Phase 4.5c.1 — anchor ghost preview projection ──────────────
+  const getGhostFootprints = useCallback(
+    (cursorPos: Readonly<Point2D> | null): readonly AnchorGhost[] | null => {
+      const s = stateRef.current;
+      if (s.phase !== 'awaitingPosition' || cursorPos === null) return null;
+      // ColumnGhostOverrides is structurally a subset of ColumnParamOverrides
+      // (kind+anchor flattened to args). Spread keeps width/depth/height/
+      // rotation/material/lshape/tshape only — kind/anchor passed explicitly.
+      const ghostOverrides: ColumnGhostOverrides = {
+        ...(s.overrides.width !== undefined ? { width: s.overrides.width } : {}),
+        ...(s.overrides.depth !== undefined ? { depth: s.overrides.depth } : {}),
+        ...(s.overrides.height !== undefined ? { height: s.overrides.height } : {}),
+        ...(s.overrides.rotation !== undefined ? { rotation: s.overrides.rotation } : {}),
+        ...(s.overrides.material !== undefined ? { material: s.overrides.material } : {}),
+        ...(s.overrides.lshape !== undefined ? { lshape: s.overrides.lshape } : {}),
+        ...(s.overrides.tshape !== undefined ? { tshape: s.overrides.tshape } : {}),
+      };
+      return computeAnchorGhostFootprints(cursorPos, s.kind, s.anchor, ghostOverrides);
+    },
+    [],
+  );
+
   // ── Tab cycles anchor / ESC resets ───────────────────────────────────────
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -244,6 +281,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     onCanvasClick,
     setParamOverrides,
     getStatusText,
+    getGhostFootprints,
     isActive: state.phase !== 'idle',
     isAwaitingPosition: state.phase === 'awaitingPosition',
   };

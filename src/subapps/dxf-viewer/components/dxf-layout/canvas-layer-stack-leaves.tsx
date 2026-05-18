@@ -28,6 +28,7 @@ import { useGripGhostPreview } from '../../hooks/tools/useGripGhostPreview';
 import { useMirrorPreview } from '../../hooks/tools/useMirrorPreview';
 import { useScalePreview } from '../../hooks/tools/useScalePreview';
 import { useStretchPreview } from '../../hooks/tools/useStretchPreview';
+import { ColumnGhostPreviewMount, type ColumnGhostPreviewMountProps } from './canvas-layer-stack-column-ghost';
 import { TrimPreviewMount } from './TrimPreviewMount';
 import { ExtendPreviewOverlay } from './ExtendPreviewOverlay';
 import type { MovePhase } from '../../hooks/tools/useMoveTool';
@@ -399,6 +400,7 @@ export const GripDragPreviewMount = React.memo(function GripDragPreviewMount(
   useGripGhostPreview(props);
   return null;
 });
+
 // ============================================================================
 // PREVIEW CANVAS MOUNTS — composite of the 3 zero-jsx preview mounts
 // ============================================================================
@@ -410,6 +412,8 @@ interface PreviewCanvasMountsProps {
   stretch: Omit<StretchPreviewMountProps, 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
   /** ADR-350: TRIM overlay has no extra payload — full state lives in TrimToolStore. */
   trim?: Record<string, never>;
+  /** ADR-363 Phase 4.5c.1 — column anchor ghost preview payload. */
+  columnGhost: Omit<ColumnGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   gripDragPreview: DxfGripDragPreview | null;
   selectedEntityIds: string[];
   levelManager: MovePreviewMountProps['levelManager'];
@@ -425,7 +429,7 @@ interface PreviewCanvasMountsProps {
 export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
   props: PreviewCanvasMountsProps,
 ) {
-  const { rotation, move, mirror, scale, stretch, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
+  const { rotation, move, mirror, scale, stretch, columnGhost, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
   return (
     <>
       <RotationPreviewMount
@@ -479,6 +483,12 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       <GripDragPreviewMount
         dragPreview={gripDragPreview}
         levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <ColumnGhostPreviewMount
+        {...columnGhost}
         transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}

@@ -103,6 +103,8 @@ export const toolStateStore = {
    * @param tool - The tool to select
    */
   selectTool(tool: ToolType): void {
+    // 🔴 DEBUG ESC (remove after fix confirmed)
+    console.error(`🔴 [ToolStateStore.selectTool] tool=${tool} current=${current.activeTool}`, new Error().stack?.split('\n')[2]);
     if (current.activeTool === tool) {
       return; // No change needed
     }
@@ -148,6 +150,8 @@ export const toolStateStore = {
    * @param forceDeselect - Force return to 'select' (e.g., on ESC/cancel)
    */
   handleToolCompletion(tool: ToolType, forceDeselect: boolean = false): void {
+    // 🔴 DEBUG ESC (remove after fix confirmed)
+    console.error(`🔴 [ToolStateStore.handleToolCompletion] tool=${tool} force=${forceDeselect} current=${current.activeTool}`, new Error().stack?.split('\n')[2]);
     if (forceDeselect) {
       // Explicit cancel - always return to select
       current = {

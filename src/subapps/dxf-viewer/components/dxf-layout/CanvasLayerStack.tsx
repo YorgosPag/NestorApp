@@ -62,7 +62,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   entityPickingActive,
   selectedGuideIds, constructionPoints,
   guideWorkflowState, guideStateObj, cpStateObj,
-  rotationPreview, movePreview, mirrorPreview, scalePreview, stretchPreview, levelManager,
+  rotationPreview, movePreview, mirrorPreview, scalePreview, stretchPreview, columnGhostPreview, levelManager,
 }: CanvasLayerStackProps) {
   // --- Destructure grouped props ---
   const {
@@ -386,7 +386,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               layerCanvasPassthroughProps={layerCanvasPassthroughProps}
             />
           )}
-
           {showDxfCanvas && (
             <DxfCanvasSubscriber
               dxfCanvasRef={dxfCanvasRef}
@@ -438,6 +437,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             mirror={mirrorPreview}
             scale={scalePreview}
             stretch={stretchPreview}
+            columnGhost={columnGhostPreview}
             gripDragPreview={dxfGripInteraction.dragPreview}
             selectedEntityIds={selectedEntityIds}
             levelManager={levelManager}

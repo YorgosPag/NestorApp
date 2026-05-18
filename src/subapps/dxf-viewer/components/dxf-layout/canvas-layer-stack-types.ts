@@ -218,6 +218,14 @@ export interface CanvasLayerStackProps {
   scalePreview: Record<string, never>;
   // === ADR-349 Phase 1c-B1: Stretch tool preview (StretchToolStore-driven, zero props needed) ===
   stretchPreview: Record<string, never>;
+  // === ADR-363 Phase 4.5c.1: Column anchor ghost preview payload ===
+  columnGhostPreview: {
+    isAwaitingPosition: boolean;
+    kind: import('../../bim/types/column-types').ColumnKind;
+    getGhostFootprints: (
+      cursorPos: Readonly<Point2D> | null,
+    ) => readonly import('../../bim/columns/column-anchor-ghosts').AnchorGhost[] | null;
+  };
   /** Level manager — needed by useRotationPreview + useMovePreview for entity reads */
   levelManager: ReturnType<typeof useLevels>;
 

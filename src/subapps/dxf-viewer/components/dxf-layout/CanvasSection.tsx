@@ -413,6 +413,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         mirrorPreview={{ phase: mirrorTool.phase, firstPoint: mirrorTool.firstPoint, secondPoint: mirrorTool.secondPoint }}
         scalePreview={{}}
         stretchPreview={{}}
+        columnGhostPreview={{ isAwaitingPosition: columnTool.isAwaitingPosition, kind: columnTool.state.kind, getGhostFootprints: columnTool.getGhostFootprints }}
         levelManager={levelManager}
       />
       <DrawingContextMenu ref={drawingMenuRef} activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}

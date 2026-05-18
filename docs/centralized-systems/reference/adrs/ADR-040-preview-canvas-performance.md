@@ -1814,3 +1814,7 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-18: ADR-359 Phase 11 — DxfRenderer xline/ray unwrap
 
 `DxfRenderer.toEntityModel` extended με xline/ray cases: `entity.xlineEntity` → `basePoint+direction` στο `EntityModel` root (mirror για ray). Χωρίς αυτό, οι Phase 11 wrappers (`DxfXLine.xlineEntity` / `DxfRay.rayEntity`) άφηναν `basePoint`/`direction` undefined όταν τα entities έμπαιναν στο render pipeline. Pure unwrap — zero new subscriptions, ADR-040 micro-leaf invariant intact.
+
+## 2026-05-18: ADR-363 Phase 4.5c.1 — ColumnGhostPreviewMount micro-leaf (column anchor cycling preview)
+
+`ColumnGhostPreviewMount` added as micro-leaf subscriber in `canvas-layer-stack-leaves.tsx` via `PreviewCanvasMounts` (extracted to its own module `canvas-layer-stack-column-ghost.tsx` for N.7.1 SRP / file-size compliance — shell `canvas-layer-stack-leaves.tsx` stays <500 lines). `useColumnGhostPreview` subscribes to `ImmediatePositionStore` (cursor world position) and `useColumnTool.getGhostFootprints()` projection — RAF-scheduled draw of 9 anchor ghosts (active highlighted + 8 inactive outlines) on the preview canvas. `CanvasSection` (orchestrator) only forwards stable `{ isAwaitingPosition, kind, getGhostFootprints }` payload — zero `useSyncExternalStore` on shell, no re-render on mousemove. Cardinal rules maintained.

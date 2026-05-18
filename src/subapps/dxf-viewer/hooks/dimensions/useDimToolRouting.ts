@@ -129,6 +129,8 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
   const wrappedOnKey = useCallback((key: DimensionCreateKey) => {
     dimCreate.onKey(key);
     if (key === 'Escape') {
+      // 🔴 DEBUG ESC (remove after fix confirmed)
+      console.error(`🔴 [useDimToolRouting.wrappedOnKey] Escape, activeTool=${activeTool}, hasPreview=${!!previewRef.current?.current}`);
       previewRef.current?.current?.clear();
       onToolChangeRef.current?.('select');
       // Belt-and-suspenders: bypass React props chain timing — directly set
