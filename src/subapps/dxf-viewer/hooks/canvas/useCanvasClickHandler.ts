@@ -23,11 +23,8 @@
  * @see ADR-046: World Coordinate Click Pattern
  * @see ADR-147: Centralized Hit Tolerance
  */
-
 'use client';
-
 import { useCallback } from 'react';
-
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import {
@@ -46,7 +43,6 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import { dlog, dwarn } from '../../debug';
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
 import { resolveEntityText } from '../../utils/text-node-utils';
-
 // ── Re-exports for backward compatibility ───────────────────────────────────
 export type {
   ArcPickableEntity,
@@ -54,7 +50,6 @@ export type {
   UseCanvasClickHandlerParams,
   UseCanvasClickHandlerReturn,
 } from './canvas-click-types';
-
 import type { UseCanvasClickHandlerParams, UseCanvasClickHandlerReturn } from './canvas-click-types';
 import { handleGuideToolClick } from './guide-click-handlers';
 import type { GuideClickContext } from './guide-click-handlers';
@@ -65,11 +60,9 @@ import {
   handleLineParallelPick,
 } from './entity-pick-handlers';
 import type { EntityPickContext } from './entity-pick-handlers';
-
 // ============================================================================
 // HOOK
 // ============================================================================
-
 export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseCanvasClickHandlerReturn {
   const {
     viewportReady, viewport, transform,
@@ -77,6 +70,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, dxfGripInteraction,
     stairTool,
     wallTool,
+    slabTool,
+    columnTool,
     rotationIsActive = false, handleRotationClick,
     moveIsActive = false, handleMoveClick,
     mirrorIsActive = false, handleMirrorClick,
@@ -215,6 +210,18 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
+    // PRIORITY 4.7: ADR-363 Phase 3 — Slab tool N-click polygon (Enter to commit).
+    if (activeTool === 'slab' && slabTool?.isActive) {
+      slabTool.onCanvasClick(worldPoint);
+      return;
+    }
+
+    // PRIORITY 4.8: ADR-363 Phase 4 — Column tool single-click placement.
+    if (activeTool === 'column' && columnTool?.isActive) {
+      columnTool.onCanvasClick(worldPoint);
+      return;
+    }
+
     // PRIORITY 5: Overlay polygon drawing
     if (overlayMode === 'draw') {
       if (isSavingPolygon) return;
@@ -293,6 +300,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, dxfGripInteraction,
     stairTool,
     wallTool,
+    slabTool,
+    columnTool,
     rotationIsActive, handleRotationClick,
     moveIsActive, handleMoveClick,
     mirrorIsActive, handleMirrorClick,
@@ -382,18 +391,15 @@ function testEntityHit(
   if (isLineEntity(entity)) {
     return pointToLineDistance(worldPoint, entity.start, entity.end) <= hitTolerance;
   }
-
   if (isArcEntity(entity)) {
     return pointToArcDistance(worldPoint, entity) <= hitTolerance;
   }
-
   if (isCircleEntity(entity)) {
     const dx = worldPoint.x - entity.center.x;
     const dy = worldPoint.y - entity.center.y;
     const distFromCenter = Math.sqrt(dx * dx + dy * dy);
     return Math.abs(distFromCenter - entity.radius) <= hitTolerance;
   }
-
   if (isPolylineEntity(entity)) {
     return testPolylineHit(worldPoint, entity.vertices, entity.closed, hitTolerance);
   }
@@ -412,7 +418,6 @@ function testEntityHit(
     }
     return false;
   }
-
   if (isEllipseEntity(entity)) {
     const dx = worldPoint.x - entity.center.x;
     const dy = worldPoint.y - entity.center.y;
@@ -421,7 +426,6 @@ function testEntityHit(
     const normalizedDist = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry);
     return Math.abs(normalizedDist - 1) <= hitTolerance / Math.min(rx, ry);
   }
-
   if (isTextEntity(entity)) {
     const height = entity.height ?? entity.fontSize ?? 2.5;
     const width = resolveEntityText(entity).length * height * 0.6;
@@ -430,7 +434,6 @@ function testEntityHit(
            worldPoint.y >= entity.position.y - height - hitTolerance &&
            worldPoint.y <= entity.position.y + hitTolerance;
   }
-
   if (isMTextEntity(entity)) {
     const height = entity.height ?? entity.fontSize ?? 2.5;
     const width = entity.width || (resolveEntityText(entity).length * height * 0.6);
@@ -439,14 +442,11 @@ function testEntityHit(
            worldPoint.y >= entity.position.y - height - hitTolerance &&
            worldPoint.y <= entity.position.y + hitTolerance;
   }
-
   return false;
 }
-
 // ============================================================================
 // AUTO AREA CLICK (PRIORITY 1.7)
 // ============================================================================
-
 /** Finds smallest closed polygon at worldPoint → writes result to AutoAreaResultStore. */
 function handleAutoAreaClick(worldPoint: Point2D, p: UseCanvasClickHandlerParams): void {
   const screen = CoordinateTransforms.worldToScreen(worldPoint, p.transform, p.viewport);
