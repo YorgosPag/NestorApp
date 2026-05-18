@@ -229,7 +229,22 @@
         "previewEmpty": "(empty)",
         "noEntitySelected": "No dimension selected.",
         "cancel": "Cancel",
-        "apply": "Apply"
+        "apply": "Apply",
+        "fieldHint": "Type < to insert a field token",
+        "fieldTokens": {
+          "measurement": "Measured value",
+          "length": "Geometry length",
+          "area": "Area",
+          "angle": "Geometry angle",
+          "perimeter": "Perimeter",
+          "x": "X coordinate",
+          "y": "Y coordinate",
+          "scale": "Annotation scale",
+          "filename": "Filename",
+          "date": "Current date",
+          "time": "Current time",
+          "author": "Author"
+        }
       }
     },
     "textProperties": {
