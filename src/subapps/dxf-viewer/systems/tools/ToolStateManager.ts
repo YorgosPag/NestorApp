@@ -14,12 +14,14 @@ export interface ToolInfo {
   allowsContinuous: boolean;
   /** 🏢 ENTERPRISE (2026-01-26): ADR-033 - Whether this tool preserves overlay draw mode when active */
   preservesOverlayMode: boolean;
+  /** ADR-357 Phase 5: Chain mode — last endpoint seeds start of next segment (AutoCAD LINE pattern) */
+  allowsChain?: boolean;
 }
 const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // Selection tools - preserve overlay mode for editing
   'select': { id: 'select', category: 'selection', requiresCanvas: true, canInterrupt: false, allowsContinuous: true, preservesOverlayMode: true },
   // Drawing tools - cancel overlay mode (CAD drawing ≠ overlay drawing)
-  'line': { id: 'line', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'line': { id: 'line', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false, allowsChain: true },
   'line-perpendicular': { id: 'line-perpendicular', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'line-parallel': { id: 'line-parallel', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'rectangle': { id: 'rectangle', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
@@ -148,6 +150,8 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'guide-from-selection': { id: 'guide-from-selection', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'stair': { id: 'stair', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false }, // ADR-358 Phase 0
   'wall':  { id: 'wall',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true,  preservesOverlayMode: false }, // ADR-363 Phase 1 — continuous draw (chain walls)
+  'opening': { id: 'opening', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 2 — continuous draw
+  'slab':    { id: 'slab',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 3 — polygon N-click + Enter
   // ADR-362 Phase D1: Enterprise Dimension creation tools (Smart DIM + 4 manual overrides)
   'dim-smart':      { id: 'dim-smart',      category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'dim-linear':     { id: 'dim-linear',     category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
@@ -308,6 +312,13 @@ export function allowsContinuous(tool: string | undefined | null): boolean {
   const info = TOOL_DEFINITIONS[tool as ToolType];
   return info?.allowsContinuous ?? false;
 }
+
+/** ADR-357 Phase 5: Returns true if tool uses chain mode (last endpoint seeds next segment) */
+export function isChainTool(tool: string | undefined | null): boolean {
+  if (!tool) return false;
+  const info = TOOL_DEFINITIONS[tool as ToolType];
+  return info?.allowsChain ?? false;
+}
 export interface ToolStateManagerOptions {
   initialTool?: ToolType;
   onToolChange?: (newTool: ToolType, previousTool: ToolType) => void;
@@ -444,55 +455,44 @@ export function useToolStateManager({
     }
     return cancelCurrentTool();
   }, [activeTool, setTool, cancelCurrentTool]);
-
   // ============================================================================
   // STATE QUERIES
   // ============================================================================
-
   const getCurrentToolInfo = useCallback((): ToolInfo => {
     return getToolInfo(activeTool);
   }, [activeTool, getToolInfo]);
-
   const getTransitionHistory = useCallback((): readonly ToolTransition[] => {
     return [...transitionHistory.current];
   }, []);
-
   const canContinue = useCallback((): boolean => {
     return getCurrentToolInfo().allowsContinuous;
   }, [getCurrentToolInfo]);
-
   // ============================================================================
   // PUBLIC API
   // ============================================================================
-
   return {
     // Current state
     activeTool,
     isTransitioning,
     previousTool: previousTool.current,
-    
     // Tool information
     getToolInfo,
     getToolCategory,
     getCurrentToolInfo,
-    
     // Tool validation
     validateTool,
     isDrawingTool,
     isMeasurementTool,
     isZoomTool,
     isInteractiveTool,
-    
     // State transitions
     setTool,
     canTransitionTo,
     cancelCurrentTool,
     returnToPreviousTool,
-    
     // State queries
     canContinue,
     getTransitionHistory,
-    
     // Utility
     isCurrentTool: (tool: ToolType) => activeTool === tool,
     isCategory: (category: ToolCategory) => getToolCategory(activeTool) === category
