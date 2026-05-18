@@ -24,7 +24,8 @@ const DEFAULTS: CadTogglesSettingsSlice = {
   snap: false,
   ortho: false,
   polar: false,
-  dynInput: false,
+  // ADR-357 §5.1: Dynamic Input "sempre ON di default" (AutoCAD/BricsCAD parity).
+  dynInput: true,
 };
 
 export const useCadToggles = (): CadToggles => {
