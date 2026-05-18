@@ -522,6 +522,7 @@
       "dimOverride": "Override",
       "dimText": "Text",
       "dimProperties": "Properties",
+      "dimModify": "Modify",
       "bim": "Structural",
       "layers": "Layers"
     },
@@ -794,6 +795,8 @@
         "height": "Height",
         "thickness": "Thickness",
         "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete wall? This action cannot be undone.",
         "category": {
           "section": {
             "title": "Category"
@@ -846,6 +849,8 @@
       },
       "dimBaseline": "Baseline",
       "dimContinued": "Continued",
+      "dimCenterMark": "Center Mark",
+      "dimCenterLine": "Centerline",
       "dimStyleChooser": "Dimension Style",
       "dimApplyStyle": "Apply Style",
       "dimEditStyle": "Edit Style...",
@@ -860,6 +865,11 @@
       "dimLayer": "Layer",
       "dimAnnotationScale": "Scale",
       "dimOpenPanel": "Properties...",
+      "dimBreak": "Dimension Break",
+      "dimSpace": "Dimension Space",
+      "dimTfillToggle": "Text Mask",
+      "dimCenterMark": "Center Mark",
+      "dimCenterLine": "Centerline",
       "dimContextual": {
         "styleOptions": {
           "iso": "ISO 129",
@@ -878,6 +888,26 @@
           "centered": "Centered",
           "below": "Below"
         }
+      },
+      "dimContextMenu": {
+        "precision": "Precision",
+        "precision0": "0",
+        "precision1": "0.0",
+        "precision2": "0.00",
+        "precision3": "0.000",
+        "precision4": "0.0000",
+        "flipArrows": "Flip Arrows",
+        "resetText": "Reset Text Position",
+        "textOverride": "Text Override...",
+        "applyStyle": "Apply Style",
+        "reassociate": "Reassociate",
+        "explode": "Explode to Lines",
+        "explodeWarning": "Irreversible action. Continue?",
+        "cut": "Cut",
+        "copy": "Copy",
+        "paste": "Paste",
+        "delete": "Delete",
+        "properties": "Properties..."
       },
       "dropdown": {
         "openVariants": "Open variants"
@@ -1059,6 +1089,70 @@
         "glass": "Glass",
         "terrazzo": "Terrazzo",
         "tile": "Tile",
+        "custom": "Custom"
+      }
+    }
+  },
+  "wallAdvancedPanel": {
+    "title": "Wall Advanced Properties",
+    "emptyState": "Select a wall to see its properties.",
+    "sections": {
+      "warnings": {
+        "title": "Warnings"
+      },
+      "persistence": {
+        "title": "Persistence",
+        "saveButton": "Save now",
+        "idle": "Idle",
+        "saving": "Saving…",
+        "savedAt": "Saved at {time}",
+        "error": "Save error",
+        "editingByOther": "Another user is editing this wall"
+      },
+      "dna": {
+        "title": "Layer Composition",
+        "totalThickness": "Total: {value} mm",
+        "loadPreset": "Load preset",
+        "addLayer": "Add layer",
+        "removeLayer": "Remove layer",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "detach": "No composition",
+        "detachedHint": "This wall has no layers (manual thickness). Load a preset to start composition.",
+        "customPlaceholder": "Material name",
+        "fields": {
+          "side": "Side",
+          "name": "Name",
+          "thickness": "Thickness (mm)",
+          "material": "Material"
+        },
+        "side": {
+          "exterior": "Exterior",
+          "core": "Core",
+          "interior": "Interior"
+        }
+      }
+    },
+    "materials": {
+      "preset": {
+        "mat-concrete-c20": "Concrete C20",
+        "mat-concrete-c25": "Concrete C25",
+        "mat-concrete-c30": "Concrete C30",
+        "mat-brick-masonry": "Brick masonry",
+        "mat-stone-masonry": "Stone masonry",
+        "mat-concrete-block": "Concrete block",
+        "mat-eps": "Expanded polystyrene (EPS)",
+        "mat-xps": "Extruded polystyrene (XPS)",
+        "mat-mineral-wool": "Mineral wool",
+        "mat-plaster-int": "Interior plaster",
+        "mat-plaster-ext": "Exterior plaster",
+        "mat-plaster-thermal": "Thermal plaster",
+        "mat-gypsum-board": "Gypsum board",
+        "mat-osb": "OSB board",
+        "mat-vapor-barrier": "Vapor barrier",
+        "mat-tile": "Tile",
+        "mat-marble": "Marble",
+        "mat-aluminum-cladding": "Aluminum cladding",
         "custom": "Custom"
       }
     }
