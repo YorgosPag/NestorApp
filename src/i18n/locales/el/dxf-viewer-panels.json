@@ -477,7 +477,9 @@
       "polarIncrement": "Γωνία Αύξησης",
       "polarAdditional": "Επιπλέον Γωνίες",
       "polarAddAngle": "Προσθήκη",
-      "polarCustomPlaceholder": "π.χ. 33"
+      "polarCustomPlaceholder": "π.χ. 33",
+      "displayUnit": "ΜΟΝΑΔΑ",
+      "displayUnitDesc": "Μονάδα εμφάνισης μετρήσεων"
     },
     "panels": {
       "objectSnap": "Σημεία Πρόσδεσης",

@@ -477,7 +477,9 @@
       "polarIncrement": "Increment Angle",
       "polarAdditional": "Additional Angles",
       "polarAddAngle": "Add",
-      "polarCustomPlaceholder": "e.g. 33"
+      "polarCustomPlaceholder": "e.g. 33",
+      "displayUnit": "UNIT",
+      "displayUnitDesc": "Measurement display unit"
     },
     "panels": {
       "objectSnap": "Object Snap",
