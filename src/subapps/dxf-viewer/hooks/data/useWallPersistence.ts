@@ -37,6 +37,7 @@ import {
   WallFirestoreService,
   type WallDoc,
 } from '../../bim/walls/wall-firestore-service';
+import { recordWallChange } from '../../bim/walls/wall-audit-client';
 
 // ============================================================================
 // TYPES
@@ -64,6 +65,7 @@ export interface UseWallPersistenceResult {
   readonly lastSavedAt: number | null;
   readonly error: string | null;
   readonly saveNow: () => Promise<void>;
+  readonly deleteWall: (wallId: string) => Promise<void>;
 }
 
 // ============================================================================
@@ -272,6 +274,7 @@ export function useWallPersistence(
   const persist = useCallback(async (entity: WallEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;
+    const isNew = !lastSavedParamsRef.current.has(entity.id);
     setSaveState('saving');
     setError(null);
     try {
@@ -281,6 +284,7 @@ export function useWallPersistence(
       dirtyIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
+      void recordWallChange(isNew ? 'created' : 'updated', entity);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'WALL_SAVE_ERROR');
       setSaveState('error');
@@ -318,6 +322,46 @@ export function useWallPersistence(
     await persist(wall);
   }, [persist]);
 
+  // ADR-363 Phase 1E — Delete wall: remove from Firestore + scene + audit.
+  const deleteWall = useCallback(async (wallId: string) => {
+    const svc = serviceRef.current;
+    if (!svc) return;
+    const levelId = levelManager.currentLevelId;
+    if (!levelId) return;
+
+    // Cancel pending auto-save for this wall to prevent a save-after-delete race.
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+
+    const scene = levelManager.getLevelScene(levelId);
+    const deletedEntity = scene?.entities.find((e) => e.id === wallId);
+
+    try {
+      await svc.deleteWall(wallId);
+      void recordWallChange(
+        'deleted',
+        { id: wallId, kind: (deletedEntity as Partial<WallEntity>)?.kind ?? 'straight' },
+      );
+    } catch {
+      // Non-fatal: deletion failure is silent — user can retry.
+    }
+
+    // Remove from local scene optimistically (already done Firestore-side).
+    if (scene) {
+      const nextEntities = scene.entities.filter((e) => e.id !== wallId);
+      levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
+    }
+
+    dirtyIdsRef.current.delete(wallId);
+    lastSavedParamsRef.current.delete(wallId);
+
+    if (lockHeldRef.current === wallId) {
+      void releaseLock();
+    }
+  }, [levelManager, releaseLock]);
+
   // First-save listener — fires immediately for freshly drawn walls so the
   // local scene survives the next Firestore snapshot AND lands in
   // `floorplan_walls/{wallId}` on the same tick (stair Q17 9B-6 parallel).
@@ -333,6 +377,14 @@ export function useWallPersistence(
     return cleanup;
   }, [persist]);
 
+  // ADR-363 Phase 1E — Delete-requested listener (bridge emits after confirm).
+  useEffect(() => {
+    const cleanup = EventBus.on('bim:wall-delete-requested', ({ wallId }) => {
+      void deleteWall(wallId);
+    });
+    return cleanup;
+  }, [deleteWall]);
+
   // Unmount cleanup — release lock + flush pending timers.
   useEffect(() => {
     return () => {
@@ -343,7 +395,7 @@ export function useWallPersistence(
   }, [releaseLock]);
 
   return useMemo(
-    () => ({ saveState, lastSavedAt, error, saveNow }),
-    [saveState, lastSavedAt, error, saveNow],
+    () => ({ saveState, lastSavedAt, error, saveNow, deleteWall }),
+    [saveState, lastSavedAt, error, saveNow, deleteWall],
   );
 }
