@@ -16,15 +16,16 @@
  */
 'use client';
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
-import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
-import { LassoFreehandStore } from '../../systems/lasso/LassoFreehandStore';
 import { CanvasNumericInputStore } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
+import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
 import type { SelectedGrip } from '../grips/useGripSystem';
 import type { Point2D } from '../../rendering/types/Types';
 // ADR-357 Phase 3: DDE — cursor world position + unit conversion
 import { getImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { fromDisplay } from '../../config/units';
 import type { DisplayUnit } from '../../config/units';
+// ADR-364 — Escape Command Bus SSoT (priority chain extracted to registrations module)
+import { useCanvasEscapeRegistrations } from './useCanvasEscapeRegistrations';
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -251,19 +252,16 @@ export function useCanvasKeyboardShortcuts({
           ddeBufferRef.current = ddeBufferRef.current.slice(0, -1);
           return;
         }
-        // ESC clears the DDE buffer but does NOT consume the event
-        // (let the existing Escape handler below cancel the drawing)
-        if (e.key === 'Escape') {
-          ddeBufferRef.current = '';
-          // fall through to Escape handler
-        }
+        // ADR-364: Escape no longer fall-throughs here — DDE buffer is cleared
+        // by the auto-reset effect below when tempPoints empties (after the
+        // DRAW_TOOL bus handler in useKeyboardShortcuts cancels the drawing).
       }
 
-      // Canvas numeric input — intercepts before generic Delete/Backspace/Escape (ADR-189)
+      // Canvas numeric input — intercepts before generic Delete/Backspace (ADR-189).
+      // ADR-364: Escape moved to the EscapeCommandBus (CANVAS_NUMERIC slot).
       if (CanvasNumericInputStore.isActive()) {
         if (e.key === 'Backspace') { e.preventDefault(); CanvasNumericInputStore.backspace(); return; }
         if (e.key === 'Enter') { e.preventDefault(); CanvasNumericInputStore.confirm(); return; }
-        if (e.key === 'Escape') { e.preventDefault(); CanvasNumericInputStore.cancel(); return; }
         if (e.key === ',' || e.key === '.') { e.preventDefault(); CanvasNumericInputStore.addChar(e.key); return; }
         if (/^[\d-]$/.test(e.key)) { e.preventDefault(); CanvasNumericInputStore.addChar(e.key); return; }
         return; // block all other keys during numeric input
@@ -289,81 +287,9 @@ export function useCanvasKeyboardShortcuts({
       }
 
       switch (e.key) {
-        case 'Escape':
-          // Polygon crop: Escape cancels the in-progress polygon
-          if (activeTool === 'polygon-crop') {
-            PolygonCropStore.cancel();
-            break;
-          }
-          // Freehand lasso-crop: Escape cancels the freehand trace
-          if (activeTool === 'lasso-crop') {
-            LassoFreehandStore.cancel();
-            break;
-          }
-          // ADR-049: Move tool cancel (highest priority — intercepts before rotation)
-          if (moveIsActive && handleMoveEscape) {
-            handleMoveEscape();
-            break;
-          }
-          // Mirror tool cancel
-          if (mirrorIsActive && handleMirrorEscape) {
-            handleMirrorEscape();
-            break;
-          }
-          // ADR-348: Scale tool cancel
-          if (scaleIsActive && handleScaleEscape) {
-            handleScaleEscape();
-            break;
-          }
-          // ADR-349: Stretch / MStretch tool cancel
-          if (stretchIsActive && handleStretchEscape) {
-            handleStretchEscape();
-            break;
-          }
-          // ADR-350: Trim tool cancel
-          if (trimIsActive && handleTrimEscape) {
-            handleTrimEscape();
-            break;
-          }
-          // ADR-353: Extend tool cancel
-          if (extendIsActive && handleExtendEscape) {
-            handleExtendEscape();
-            break;
-          }
-          // ADR-353 Phase B: Polar Array centre-pick cancel
-          if (arrayPolarIsActive && handleArrayPolarEscape) {
-            handleArrayPolarEscape();
-            break;
-          }
-          // ADR-353 Phase C: Path Array path-entity-pick cancel
-          if (arrayPathIsActive && handleArrayPathEscape) {
-            handleArrayPathEscape();
-            break;
-          }
-          // ADR-188: Escape cancels rotation tool
-          if (rotationIsActive && handleRotationEscape) {
-            handleRotationEscape();
-            break;
-          }
-          // 🏢 ENTERPRISE (2026-02-15): Escape cancels grip following mode first
-          if (dxfGripInteraction.handleGripEscape()) {
-            break; // Consumed by grip interaction
-          }
-          setDraftPolygon([]);
-          // 🏢 FIX (2026-02-19): Escape must also exit overlay draw mode
-          // Previously only cleared draft points but overlayMode stayed 'draw',
-          // causing next click to resume polygon drawing unexpectedly
-          onExitDrawMode?.();
-          // 🏢 ENTERPRISE: Escape also clears grip selection
-          if (selectedGrips.length > 0) {
-            setSelectedGrips([]);
-          }
-          // SSoT deselect-all: Escape clears entity selection (AutoCAD/BricsCAD pattern)
-          // hasAnySelection covers non-DXF selections (e.g. overlays)
-          if (selectedEntityIds.length > 0 || hasAnySelection) {
-            clearEntitySelection?.();
-          }
-          break;
+        // ADR-364: Escape dispatch moved entirely to EscapeCommandBus.
+        // See useCanvasEscapeRegistrations() below for the full priority chain
+        // (CANVAS_NUMERIC → CROP_TOOL → MODIFY_TOOL × 9 → GRIP_DRAG → composite fallback).
         case 'Enter': {
           // Polygon crop: Enter closes the polygon and triggers the clip
           if (activeTool === 'polygon-crop') {
@@ -460,7 +386,47 @@ export function useCanvasKeyboardShortcuts({
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive, handleMirrorEscape, mirrorIsActive, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleEscape, handleScaleKeyDown, scaleIsActive, handleStretchEscape, handleStretchKeyDown, stretchIsActive, handleTrimEscape, handleTrimKeyDown, trimIsActive, handleExtendEscape, handleExtendKeyDown, extendIsActive, clearEntitySelection, hasAnySelection, dxfGripInteraction, setDraftPolygon, setSelectedGrips, handleReorderEntity, drawingTempPoints, onDirectDistanceEntry, onUndoChainVertex, onChainFinish]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleKeyDown, scaleIsActive, handleStretchKeyDown, stretchIsActive, handleTrimKeyDown, trimIsActive, handleExtendKeyDown, extendIsActive, handleReorderEntity, drawingTempPoints, onDirectDistanceEntry, onUndoChainVertex, onChainFinish]);
+
+  // ADR-364 — auto-clear DDE buffer when the active drawing flow resets
+  // (tempPoints empties on cancel / commit). Replaces the legacy ESC fall-through.
+  useEffect(() => {
+    if ((drawingTempPoints?.length ?? 0) === 0) {
+      ddeBufferRef.current = '';
+    }
+  }, [drawingTempPoints]);
+
+  // ADR-364 — Register every canvas-level ESC consumer in the EscapeCommandBus.
+  useCanvasEscapeRegistrations({
+    activeTool,
+    dxfGripInteraction,
+    draftPolygon,
+    setDraftPolygon,
+    selectedGrips,
+    setSelectedGrips,
+    selectedEntityIds,
+    hasAnySelection,
+    onExitDrawMode,
+    clearEntitySelection,
+    handleMoveEscape,
+    moveIsActive,
+    handleMirrorEscape,
+    mirrorIsActive,
+    handleScaleEscape,
+    scaleIsActive,
+    handleStretchEscape,
+    stretchIsActive,
+    handleTrimEscape,
+    trimIsActive,
+    handleExtendEscape,
+    extendIsActive,
+    handleArrayPolarEscape,
+    arrayPolarIsActive,
+    handleArrayPathEscape,
+    arrayPathIsActive,
+    handleRotationEscape,
+    rotationIsActive,
+  });
 
   // ADR-350 B2: SHIFT keyup → immediately reset inverseMode when trim is active
   useEffect(() => {
