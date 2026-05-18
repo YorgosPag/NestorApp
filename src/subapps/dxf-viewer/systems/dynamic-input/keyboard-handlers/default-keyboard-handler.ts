@@ -16,6 +16,8 @@ import type {
 } from './types';
 // 🏢 ADR-098: Centralized Timing Constants
 import { INPUT_TIMING } from '../../../config/timing-config';
+// ADR-364 Group 3 follow-up — DI cleanup SSoT
+import { closeDynamicInput } from './dynamic-input-actions';
 
 /**
  * 🏢 ENTERPRISE: Default Keyboard Handler
@@ -181,16 +183,13 @@ function createPoint(
 }
 
 /**
- * Escape handler - clear values and close input
+ * Escape handler — delegates to the shared `closeDynamicInput` SSoT
+ * (ADR-364 Group 3 follow-up). Returns true so legacy callers that still
+ * dispatch through the Strategy outside the EscapeCommandBus retain the
+ * "consumed" contract.
  */
 function handleDefaultEscape(actions: KeyboardHandlerActions): boolean {
-  const { setXValue, setYValue, setLengthValue, setShowInput } = actions;
-
-  setXValue('');
-  setYValue('');
-  setLengthValue('');
-  setShowInput(false);
-
+  closeDynamicInput(actions);
   return true;
 }
 

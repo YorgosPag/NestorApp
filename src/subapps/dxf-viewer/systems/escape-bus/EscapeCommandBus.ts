@@ -60,9 +60,14 @@ function sortBySnapshot(entries: Iterable<EscapeHandler>): EscapeHandler[] {
 }
 
 function runHandlerChain(snapshot: readonly EscapeHandler[]): EscapeDispatchResult {
-  const editable = isEditableFocus();
+  // ADR-364 §3.4 (2026-05-19 update — Group 3 cascade): editable focus is
+  // re-evaluated per iteration so a higher-priority handler with
+  // `allowWhenEditable: true` can blur the focused element + return false, and
+  // a lower-priority handler without `allowWhenEditable` will then run.
+  // Industry parallel: AutoCAD command system re-evaluates context per
+  // command; Revit modal stack re-checks editable state on each pop.
   for (const handler of snapshot) {
-    if (editable && !handler.allowWhenEditable) continue;
+    if (isEditableFocus() && !handler.allowWhenEditable) continue;
     if (!safeCanHandle(handler)) continue;
     if (safeHandle(handler)) {
       return { consumed: true, consumedBy: handler.id };

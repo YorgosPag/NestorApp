@@ -24,6 +24,7 @@ import { INPUT_TIMING } from '../../../config/timing-config';
 import {
   getKeyboardHandler,
   looksLikeCoordSyntax,
+  closeDynamicInput,
   type KeyboardHandlerContext,
   type KeyboardHandlerActions,
   type KeyboardHandlerRefs,
@@ -272,10 +273,19 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
   }, [showInput, activeTool]); // 🎯 ONLY 2 dependencies!
 
-  // ADR-364 — DYNAMIC_INPUT priority slot in the EscapeCommandBus.
+  // ADR-364 §3.4 (2026-05-19 Group 3) — DYNAMIC_INPUT priority slot in the bus.
   // `allowWhenEditable: true` because the dynamic-input fields own focus while
-  // the overlay is visible. Routes ESC through the same tool-specific handler
-  // strategy as Tab/Enter so the per-tool reset semantics are preserved.
+  // the overlay is visible. Semantic: ESC during Dynamic Input does TWO things,
+  // matching AutoCAD/Revit/ArchiCAD parity:
+  //   (1) Close the overlay + clear all field values (handler-specific cleanup
+  //       via Strategy Pattern keyboard-handlers — handleDefaultEscape clears,
+  //       line/circle/stair return false and the explicit cleanup below covers
+  //       them too).
+  //   (2) Blur the focused input + fall through (return false) so the bus
+  //       continues to the DRAW_TOOL slot, which calls onDrawingCancel and
+  //       exits the tool to 'select'. Bus re-evaluates editable focus per
+  //       iteration (ADR-364 §3.4), so blurring synchronously here lets the
+  //       DRAW_TOOL handler (allowWhenEditable: false) run on the next loop.
   useEscapeHandler({
     id: 'dynamic-input/escape',
     priority: ESC_PRIORITY.DYNAMIC_INPUT,
@@ -283,10 +293,23 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
     canHandle: () => showInput,
     handle: () => {
       if (!contextRef.current || !actionsRef.current || !refsRef.current) return false;
-      const handler = getKeyboardHandler(activeTool);
+      // (1) Route through Strategy Pattern for tool-specific cleanup.
+      const strategy = getKeyboardHandler(activeTool);
       const fakeEvent = new KeyboardEvent('keydown', { key: 'Escape' });
-      handler(fakeEvent, 'Escape', contextRef.current, actionsRef.current, refsRef.current);
-      return true;
+      strategy(fakeEvent, 'Escape', contextRef.current, actionsRef.current, refsRef.current);
+      // (2) SSoT cleanup — line/circle/stair strategies return false for
+      // Escape (no per-strategy reset). The default strategy already calls
+      // closeDynamicInput; this call is idempotent for it and adds parity for
+      // the others. Single source of truth: keyboard-handlers/dynamic-input-actions.ts.
+      closeDynamicInput(actionsRef.current);
+      // (3) Blur the focused input so the bus's per-iteration editable check
+      // sees document.activeElement === <body> on the next handler, allowing
+      // the DRAW_TOOL slot (allowWhenEditable: false) to run.
+      const active = typeof document !== 'undefined' ? (document.activeElement as HTMLElement | null) : null;
+      if (active && typeof active.blur === 'function') active.blur();
+      // (4) Return false → fall through to DRAW_TOOL → onDrawingCancel exits
+      // the tool to 'select'. AutoCAD/Revit/ArchiCAD parity.
+      return false;
     },
   });
 }

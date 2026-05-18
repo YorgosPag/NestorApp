@@ -21,19 +21,16 @@ import { EventBus } from '../systems/events';
 import { CommandLineStore } from '../systems/command-line/CommandLineStore';
 // ADR-364 — Escape Command Bus SSoT
 import { useEscapeHandler, ESC_PRIORITY } from '../systems/escape-bus';
-
-// ADR-364 — drawing tools that consume ESC as "cancel drawing".
-// Dim tools are NOT listed here — they own their own DIM_TOOL priority slot
-// inside useDimToolRouting (ADR-362 Phase D3). Modify tools (move/mirror/...)
-// own MODIFY_TOOL slots inside useCanvasKeyboardShortcuts.
-// ADR-363 Phase 4.5c/5.5c BIM tools (column/beam/slab/opening/slab-opening)
-// migrated here 2026-05-19 — ESC fully exits tool to 'select' via
-// handleToolCompletion(activeTool, true), matching AutoCAD/Revit parity.
-const DRAWING_TOOLS_WITH_CANCEL: ReadonlySet<string> = new Set([
-  'line', 'polyline', 'polygon', 'measure-area', 'measure-distance',
-  'measure-angle', 'rectangle', 'circle', 'stair', 'wall',
-  'column', 'beam', 'slab', 'opening', 'slab-opening',
-]);
+// ADR-036 / ADR-364 Group 3 follow-up (2026-05-19): Single Source of Truth for
+// "is this tool a drawing or measurement tool?" lives in TOOL_DEFINITIONS via
+// `isInteractiveTool`. Eliminates the previously-hand-maintained
+// `DRAWING_TOOLS_WITH_CANCEL` Set. New tools added to `TOOL_DEFINITIONS`
+// (`systems/tools/ToolStateManager.ts`) with category 'drawing' or
+// 'measurement' automatically get ESC=cancel-and-exit semantics.
+// Dim tools are also category 'drawing' in TOOL_DEFINITIONS, but the bus's
+// DIM_TOOL slot (priority 550) sits above the DRAW_TOOL slot (priority 500)
+// and consumes ESC first, so this remains correct.
+import { isInteractiveTool } from '../systems/tools/ToolStateManager';
 
 // Hook parameters interface
 interface KeyboardShortcutsConfig {
@@ -216,13 +213,16 @@ export const useKeyboardShortcuts = ({
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
   }, [selectedEntityIds, onNudgeSelection, activeTool, overlayMode, overlayStore, onColorMenuClose, onSelectAll]);
 
-  // ADR-364 — ESC bus registration #1: cancel drawing tool (excluding dim tools)
+  // ADR-364 — ESC bus registration #1: cancel drawing/measurement tool.
+  // Single Source of Truth: `isInteractiveTool` reads category from
+  // TOOL_DEFINITIONS in ToolStateManager (ADR-036). Dim tools also match but
+  // the higher-priority DIM_TOOL bus slot (550) consumes ESC first.
   useEscapeHandler(
     onDrawingCancel
       ? {
           id: 'use-keyboard-shortcuts/cancel-drawing',
           priority: ESC_PRIORITY.DRAW_TOOL,
-          canHandle: () => DRAWING_TOOLS_WITH_CANCEL.has(activeTool),
+          canHandle: () => isInteractiveTool(activeTool),
           handle: () => { onDrawingCancel(); return true; },
         }
       : null,

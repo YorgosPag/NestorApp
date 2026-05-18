@@ -205,6 +205,37 @@ describe('editable-focus guard', () => {
     expect(blocked).not.toHaveBeenCalled();
     expect(allowed).toHaveBeenCalledTimes(1);
   });
+
+  // ADR-364 §3.4 Group 3 (2026-05-19) — editable re-evaluated per iteration:
+  // an editable-allowed handler that blurs + returns false lets a lower
+  // editable-blocked handler run. Mirrors the AutoCAD/Revit pattern where
+  // ESC inside a Dynamic-Input field closes the field AND cancels the tool.
+  it('editable-allowed handler blurs + returns false → editable-blocked handler at lower priority runs', () => {
+    const input = focusInput();
+    const blockedRan = jest.fn(() => true);
+    const allowedRan = jest.fn(() => {
+      input.blur();
+      return false; // fall through
+    });
+    // Lower-priority editable-blocked handler (e.g., DRAW_TOOL).
+    escapeBus.register({
+      id: 'blocked-lower',
+      priority: 500,
+      canHandle: () => true,
+      handle: blockedRan,
+    });
+    // Higher-priority editable-allowed handler (e.g., DYNAMIC_INPUT).
+    escapeBus.register({
+      id: 'allowed-higher',
+      priority: 900,
+      canHandle: () => true,
+      handle: allowedRan,
+      allowWhenEditable: true,
+    });
+    fireKey('Escape');
+    expect(allowedRan).toHaveBeenCalledTimes(1);
+    expect(blockedRan).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ────────────────────────────────────────────────────────────────────────────

@@ -77,3 +77,6 @@ export { handleLineKeyboard } from './line-keyboard-handler';
 export { handleCircleKeyboard } from './circle-keyboard-handler';
 export { handleDefaultKeyboard } from './default-keyboard-handler';
 export { handleStairKeyboard, validateStairField, STAIR_FIELD_RANGES } from './stair-keyboard-handler';
+
+// ADR-364 Group 3 follow-up — shared DI cleanup SSoT.
+export { closeDynamicInput } from './dynamic-input-actions';
