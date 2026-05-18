@@ -745,6 +745,11 @@
       "angle": "Γωνία:",
       "segments": "Τμήματα:",
       "total": "Σύνολο:"
+    },
+    "coordMode": {
+      "abs": "Απόλ",
+      "rel": "Σχετ",
+      "polar": "Πολικ"
     }
   },
   "cursorPalette": {
