@@ -139,6 +139,16 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     category: 'tool',
     toolType: 'stair',
   },
+  // ADR-363 Phase 1B: Wall drawing tool — single-char 'W'. Industry-aligned
+  // (Revit `WA`, AutoCAD `_WALL` → 'W' is the closest single-key analogue).
+  wall: {
+    key: 'W',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.wall',
+    action: 'tool:wall',
+    category: 'tool',
+    toolType: 'wall',
+  },
 
   // Editing Tools
   move: {
