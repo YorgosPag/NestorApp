@@ -472,7 +472,12 @@
       "orthoDesc": "Ορθογώνια Λειτουργία",
       "polarDesc": "Πολική Ιχνηλάτηση",
       "dynInputDesc": "Δυναμική Εισαγωγή",
-      "modeInfo": "CAD Mode | F-keys"
+      "modeInfo": "CAD Mode | F-keys",
+      "polarSettingsTitle": "Ρυθμίσεις Polar",
+      "polarIncrement": "Γωνία Αύξησης",
+      "polarAdditional": "Επιπλέον Γωνίες",
+      "polarAddAngle": "Προσθήκη",
+      "polarCustomPlaceholder": "π.χ. 33"
     },
     "panels": {
       "objectSnap": "Σημεία Πρόσδεσης",
