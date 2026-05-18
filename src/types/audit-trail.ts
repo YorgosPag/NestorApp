@@ -30,7 +30,10 @@ export type AuditEntityType =
   | 'framework_agreement'
   | 'text_template'
   | 'custom_dictionary_entry'
-  | 'wall';
+  | 'wall'
+  | 'opening'
+  | 'slab'
+  | 'column';
 
 /** Actions that can be recorded in the audit trail */
 export type AuditAction =
