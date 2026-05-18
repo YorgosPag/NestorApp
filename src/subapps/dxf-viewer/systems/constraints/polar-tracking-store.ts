@@ -14,10 +14,16 @@ const DEFAULT_INCREMENT = 90;
 
 type Listener = () => void;
 
+interface PolarSnapshot {
+  readonly incrementAngle: number;
+  readonly additionalAngles: readonly number[];
+}
+
 class PolarTrackingStore {
   private _incrementAngle = DEFAULT_INCREMENT;
   private _additionalAngles: number[] = [];
   private readonly listeners = new Set<Listener>();
+  private _cachedSnapshot: PolarSnapshot | null = null;
 
   constructor() {
     if (typeof window === 'undefined') return;
@@ -67,9 +73,15 @@ class PolarTrackingStore {
     this.notify();
   }
 
-  /** For useSyncExternalStore — stable snapshot object reference changes on every store mutation. */
-  getSnapshot(): { incrementAngle: number; additionalAngles: number[] } {
-    return { incrementAngle: this._incrementAngle, additionalAngles: this._additionalAngles };
+  /** For useSyncExternalStore — stable reference; only replaced on mutation. */
+  getSnapshot(): PolarSnapshot {
+    if (!this._cachedSnapshot) {
+      this._cachedSnapshot = {
+        incrementAngle: this._incrementAngle,
+        additionalAngles: this._additionalAngles,
+      };
+    }
+    return this._cachedSnapshot;
   }
 
   subscribe(fn: Listener): () => void {
@@ -78,6 +90,7 @@ class PolarTrackingStore {
   }
 
   private notify(): void {
+    this._cachedSnapshot = null;
     this.listeners.forEach(fn => fn());
   }
 }
