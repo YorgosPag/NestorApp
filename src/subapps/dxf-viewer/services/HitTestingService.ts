@@ -275,6 +275,23 @@ export class HitTestingService {
           validation: stairData.validation,
         } as unknown as EntityModel;
       }
+      // ADR-363 Phase 1B — wall passthrough so hit-testing can index walls.
+      // Mirrors the stair branch: `geometry.bbox` powers spatial broad-phase
+      // via BoundsCalculator (`case 'wall'`). Without this branch the entity
+      // would fall through to the `never` default and silently drop from the
+      // spatial index → unselectable on canvas.
+      case 'wall': {
+        type WallLike = Partial<import('../bim/types/wall-types').WallEntity>;
+        const wall = entity as unknown as WallLike;
+        return {
+          ...baseModel,
+          type: 'wall',
+          kind: wall.kind,
+          params: wall.params,
+          geometry: wall.geometry,
+          validation: wall.validation,
+        } as unknown as EntityModel;
+      }
       default: {
         const exhaustiveCheck: never = entity;
         return exhaustiveCheck;
