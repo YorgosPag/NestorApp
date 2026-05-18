@@ -522,6 +522,7 @@
       "dimOverride": "Παράκαμψη",
       "dimText": "Κείμενο",
       "dimProperties": "Ιδιότητες",
+      "dimModify": "Τροποποίηση",
       "bim": "Δομικά",
       "layers": "Επίπεδα"
     },
@@ -794,6 +795,8 @@
         "height": "Ύψος",
         "thickness": "Πάχος",
         "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή τοίχου; Η ενέργεια δεν μπορεί να αναιρεθεί.",
         "category": {
           "section": {
             "title": "Κατηγορία"
@@ -846,6 +849,8 @@
       },
       "dimBaseline": "Από Βάση",
       "dimContinued": "Συνεχόμενη",
+      "dimCenterMark": "Σταυρός Κέντρου",
+      "dimCenterLine": "Κεντρική Γραμμή",
       "dimStyleChooser": "Στυλ Διάστασης",
       "dimApplyStyle": "Εφαρμογή Στυλ",
       "dimEditStyle": "Επεξεργασία Στυλ...",
@@ -860,6 +865,11 @@
       "dimLayer": "Layer",
       "dimAnnotationScale": "Κλίμακα",
       "dimOpenPanel": "Ιδιότητες...",
+      "dimBreak": "Σπάσιμο Διάστασης",
+      "dimSpace": "Απόσταση Διαστάσεων",
+      "dimTfillToggle": "Μάσκα Κειμένου",
+      "dimCenterMark": "Σταυρός Κέντρου",
+      "dimCenterLine": "Κεντρική Γραμμή",
       "dimContextual": {
         "styleOptions": {
           "iso": "ISO 129",
@@ -878,6 +888,26 @@
           "centered": "Κεντρικά",
           "below": "Κάτω"
         }
+      },
+      "dimContextMenu": {
+        "precision": "Ακρίβεια",
+        "precision0": "0",
+        "precision1": "0.0",
+        "precision2": "0.00",
+        "precision3": "0.000",
+        "precision4": "0.0000",
+        "flipArrows": "Αναστροφή Βελών",
+        "resetText": "Επαναφορά Θέσης Κειμένου",
+        "textOverride": "Παράκαμψη Κειμένου...",
+        "applyStyle": "Εφαρμογή Στυλ",
+        "reassociate": "Επανασύνδεση",
+        "explode": "Σπάσιμο σε Γραμμές",
+        "explodeWarning": "Μη αναστρέψιμη ενέργεια. Συνέχεια;",
+        "cut": "Αποκοπή",
+        "copy": "Αντιγραφή",
+        "paste": "Επικόλληση",
+        "delete": "Διαγραφή",
+        "properties": "Ιδιότητες..."
       },
       "dropdown": {
         "openVariants": "Άνοιγμα παραλλαγών"
@@ -1059,6 +1089,70 @@
         "glass": "Γυαλί",
         "terrazzo": "Βενετσιάνικο",
         "tile": "Πλακάκι",
+        "custom": "Προσαρμοσμένο"
+      }
+    }
+  },
+  "wallAdvancedPanel": {
+    "title": "Προηγμένες Ιδιότητες Τοίχου",
+    "emptyState": "Επίλεξε έναν τοίχο για να δεις τις ιδιότητες.",
+    "sections": {
+      "warnings": {
+        "title": "Προειδοποιήσεις"
+      },
+      "persistence": {
+        "title": "Αποθήκευση",
+        "saveButton": "Αποθήκευση τώρα",
+        "idle": "Έτοιμο",
+        "saving": "Αποθήκευση…",
+        "savedAt": "Αποθηκεύτηκε στις {time}",
+        "error": "Σφάλμα αποθήκευσης",
+        "editingByOther": "Άλλος χρήστης επεξεργάζεται αυτόν τον τοίχο"
+      },
+      "dna": {
+        "title": "Σύνθεση Στρώσεων",
+        "totalThickness": "Σύνολο: {value} χιλ.",
+        "loadPreset": "Φόρτωση προεπιλογής",
+        "addLayer": "Προσθήκη στρώσης",
+        "removeLayer": "Αφαίρεση στρώσης",
+        "moveUp": "Μετακίνηση πάνω",
+        "moveDown": "Μετακίνηση κάτω",
+        "detach": "Χωρίς σύνθεση",
+        "detachedHint": "Ο τοίχος δεν έχει στρώσεις (χειροκίνητο πάχος). Φόρτωσε προεπιλογή για να ξεκινήσεις σύνθεση.",
+        "customPlaceholder": "Όνομα υλικού",
+        "fields": {
+          "side": "Πλευρά",
+          "name": "Ονομασία",
+          "thickness": "Πάχος (χιλ.)",
+          "material": "Υλικό"
+        },
+        "side": {
+          "exterior": "Εξωτερική",
+          "core": "Πυρήνας",
+          "interior": "Εσωτερική"
+        }
+      }
+    },
+    "materials": {
+      "preset": {
+        "mat-concrete-c20": "Σκυρόδεμα C20",
+        "mat-concrete-c25": "Σκυρόδεμα C25",
+        "mat-concrete-c30": "Σκυρόδεμα C30",
+        "mat-brick-masonry": "Οπτοπλινθοδομή",
+        "mat-stone-masonry": "Λιθοδομή",
+        "mat-concrete-block": "Τσιμεντόλιθος",
+        "mat-eps": "Διογκωμένη πολυστερίνη",
+        "mat-xps": "Εξηλασμένη πολυστερίνη",
+        "mat-mineral-wool": "Πετροβάμβακας",
+        "mat-plaster-int": "Εσωτερικός σοβάς",
+        "mat-plaster-ext": "Εξωτερικός σοβάς",
+        "mat-plaster-thermal": "Θερμοσοβάς",
+        "mat-gypsum-board": "Γυψοσανίδα",
+        "mat-osb": "Σανίδα κατευθυνόμενης ίνας",
+        "mat-vapor-barrier": "Φραγμός υδρατμών",
+        "mat-tile": "Πλακάκι",
+        "mat-marble": "Μάρμαρο",
+        "mat-aluminum-cladding": "Επένδυση αλουμινίου",
         "custom": "Προσαρμοσμένο"
       }
     }
