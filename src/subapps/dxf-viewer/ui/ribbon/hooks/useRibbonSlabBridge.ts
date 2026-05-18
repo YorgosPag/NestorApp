@@ -1,27 +1,30 @@
 'use client';
 
 /**
- * ADR-363 Phase 3 — Bridge μεταξύ contextual Slab ribbon tab και active
+ * ADR-363 Phase 3 / 3.5 — Bridge μεταξύ contextual Slab ribbon tab και active
  * `SlabEntity` params.
  *
  * Mirrors `useRibbonOpeningBridge`: read state via `getComboboxState`, write
- * via `onComboboxChange`. Phase 3 mutations bypass `CommandHistory` (full
- * undo/redo lands Phase 3.5 με `UpdateSlabParamsCommand`) — αντί αυτού το
- * bridge patches the scene directly + re-derives geometry/validation.
- * `useSlabPersistence` picks up την αλλαγή μέσω debounced auto-save.
+ * via `onComboboxChange`. Phase 3.5 routes every mutation through
+ * `UpdateSlabParamsCommand` (via `useCommandHistory().execute`) so the change
+ * is undoable + geometry/validation recompute atomically. `useSlabPersistence`
+ * picks up την αλλαγή μέσω debounced auto-save. Ribbon edits use
+ * `isDragging=false` so each edit is its own undo entry (drag merging lives
+ * in the grip-commit path).
  *
  * No-ops για commandKeys εκτός `SLAB_RIBBON_KEYS` ώστε να composeί με τα
  * stair / wall / opening / array / text bridges στο `useRibbonCommands`.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5 §6 Phase 3.5
  */
 
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isSlabEntity } from '../../../types/entities';
 import type { SlabEntity, SlabKind, SlabParams, SlabReinforcement } from '../../../bim/types/slab-types';
-import { computeSlabGeometry } from '../../../bim/geometry/slab-geometry';
-import { validateSlabParams } from '../../../bim/validators/slab-validator';
+import { useCommandHistory } from '../../../core/commands';
+import { UpdateSlabParamsCommand } from '../../../core/commands/entity-commands/UpdateSlabParamsCommand';
+import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   SLAB_RIBBON_KEYS,
   SLAB_RIBBON_KEYS_ACTIONS,
@@ -83,6 +86,7 @@ export function useRibbonSlabBridge(
   props: UseRibbonSlabBridgeProps,
 ): RibbonSlabBridge {
   const { levelManager, universalSelection } = props;
+  const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
   const resolveSlab = useCallback((): SlabEntity | null => {
@@ -96,25 +100,24 @@ export function useRibbonSlabBridge(
   }, [levelManager, universalSelection]);
 
   /**
-   * Patch slab params σε scene + re-derive geometry + validation. Auto-save
-   * picks up via `useSlabPersistence` debounce.
+   * Dispatch the params patch through `UpdateSlabParamsCommand` so the change
+   * is undoable + geometry/validation recompute atomically.
+   * `useSlabPersistence` picks up the patched entity via debounced auto-save.
    */
   const dispatchParams = useCallback(
     (slab: SlabEntity, nextParams: SlabParams): void => {
       if (!levelManager.currentLevelId) return;
-      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-      if (!scene) return;
-      const geometry = computeSlabGeometry(nextParams);
-      const validation = validateSlabParams(nextParams).bimValidation;
-      const updated: SlabEntity = { ...slab, kind: nextParams.kind, params: nextParams, geometry, validation };
-      const nextEntities = scene.entities.map((e) => (e.id === slab.id ? updated : e));
-      levelManager.setLevelScene(levelManager.currentLevelId, {
-        ...scene,
-        entities: nextEntities,
-      });
+      const sm = new LevelSceneManagerAdapter(
+        levelManager.getLevelScene,
+        levelManager.setLevelScene,
+        levelManager.currentLevelId,
+      );
+      executeCommand(
+        new UpdateSlabParamsCommand(slab.id, nextParams, slab.params, sm, false),
+      );
       EventBus.emit('bim:slab-params-updated', { slabId: slab.id });
     },
-    [levelManager],
+    [executeCommand, levelManager],
   );
 
   const getComboboxState = useCallback(

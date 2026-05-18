@@ -20,6 +20,7 @@ import type { RibbonColumnBridge } from './useRibbonColumnBridge';
 import { isColumnBadgeKey } from './useRibbonColumnBridge';
 import type { RibbonBeamBridge } from './useRibbonBeamBridge';
 import { isBeamBadgeKey } from './useRibbonBeamBridge';
+import type { RibbonLineToolBridge } from './useRibbonLineToolBridge';
 import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
 import { isStairRibbonKey, isStairRibbonStringKey } from './bridge/stair-command-keys';
 import { isWallRibbonKey, isWallRibbonStringKey, isWallRibbonToggleKey, isWallActionKey } from './bridge/wall-command-keys';
@@ -27,6 +28,7 @@ import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningActionKey } from
 import { isSlabRibbonKey, isSlabRibbonStringKey, isSlabActionKey } from './bridge/slab-command-keys';
 import { isColumnRibbonKey, isColumnRibbonStringKey, isColumnActionKey } from './bridge/column-command-keys';
 import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamActionKey } from './bridge/beam-command-keys';
+import { isLineToolRibbonKey } from './bridge/line-tool-command-keys';
 
 interface UseRibbonCommandsProps {
   /** ADR-345 Fase 5.6 — current tool from useDxfViewerState. Drives Large /
@@ -50,6 +52,8 @@ interface UseRibbonCommandsProps {
   columnBridge: RibbonColumnBridge;
   /** ADR-363 Phase 5 — Beam contextual tab bridge. */
   beamBridge: RibbonBeamBridge;
+  /** ADR-357 Phase 17 — Line tool Quick Style bridge. */
+  lineToolBridge: RibbonLineToolBridge;
 }
 
 export function useRibbonCommands({
@@ -65,6 +69,7 @@ export function useRibbonCommands({
   slabBridge,
   columnBridge,
   beamBridge,
+  lineToolBridge,
 }: UseRibbonCommandsProps): RibbonCommandsApi {
   // Compose: stair-prefixed keys → stairBridge; array-prefixed → arrayBridge;
   // everything else falls through to the text-editor bridge. All bridges
@@ -99,9 +104,13 @@ export function useRibbonCommands({
         arrayBridge.onComboboxChange(key, value);
         return;
       }
+      if (isLineToolRibbonKey(key)) {
+        lineToolBridge.onComboboxChange(key, value);
+        return;
+      }
       textEditorBridge.onComboboxChange(key, value);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, arrayBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, arrayBridge, lineToolBridge, textEditorBridge],
   );
 
   const getComboboxState = React.useCallback(
@@ -113,9 +122,10 @@ export function useRibbonCommands({
       if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key)) return columnBridge.getComboboxState(key);
       if (isBeamRibbonKey(key) || isBeamRibbonStringKey(key)) return beamBridge.getComboboxState(key);
       if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) return arrayBridge.getComboboxState(key);
+      if (isLineToolRibbonKey(key)) return lineToolBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, arrayBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, arrayBridge, lineToolBridge, textEditorBridge],
   );
 
   const onToggle = React.useCallback(

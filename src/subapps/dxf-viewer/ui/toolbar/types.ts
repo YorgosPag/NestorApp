@@ -113,6 +113,9 @@ export type ToolType =
   | 'column'
   // ADR-363 Phase 5: BIM Beam drawing tool (straight/curved/cantilever)
   | 'beam'
+  // ADR-359 Phase 1: Auxiliary geometry tools (infinite/semi-infinite construction lines)
+  | 'xline'             // Infinite line through basePoint in direction (AutoCAD XLINE)
+  | 'ray'               // Semi-infinite line from basePoint in direction (AutoCAD RAY)
   // ADR-362 Phase D1: Enterprise Dimension System — Smart DIM + 4 manual overrides
   | 'dim-smart'           // AutoCAD 2016+ Smart DIM — detector auto-picks type from hover
   | 'dim-linear'          // Manual linear (horizontal/vertical/rotated)

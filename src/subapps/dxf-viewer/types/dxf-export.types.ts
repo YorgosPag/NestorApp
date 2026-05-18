@@ -459,6 +459,26 @@ export interface EzdxfHatch extends EzdxfBaseEntity {
 }
 
 /**
+ * ezdxf XLINE entity (infinite construction line — AcDbXline)
+ * DXF codes: start 10/20/30, unit_vector 11/21/31 (normalized direction)
+ */
+export interface EzdxfXLine extends EzdxfBaseEntity {
+  dxftype: 'XLINE';
+  start: [number, number, number];         // basePoint — any point on the line
+  unit_vector: [number, number, number];   // normalized direction (already unit-length)
+}
+
+/**
+ * ezdxf RAY entity (semi-infinite ray — AcDbRay)
+ * DXF codes: start 10/20/30, unit_vector 11/21/31 (normalized direction)
+ */
+export interface EzdxfRay extends EzdxfBaseEntity {
+  dxftype: 'RAY';
+  start: [number, number, number];         // origin (basePoint)
+  unit_vector: [number, number, number];   // normalized direction
+}
+
+/**
  * Union of all ezdxf entity types
  */
 export type EzdxfEntity =
@@ -471,7 +491,9 @@ export type EzdxfEntity =
   | EzdxfMText
   | EzdxfSpline
   | EzdxfPoint
-  | EzdxfHatch;
+  | EzdxfHatch
+  | EzdxfXLine
+  | EzdxfRay;
 
 // ============================================================================
 // API REQUEST TYPES

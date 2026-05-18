@@ -41,6 +41,8 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     ...(grip.wallGripKind ? { wallGripKind: grip.wallGripKind } : {}),
     // ADR-363 Phase 2.5 — forward opening parametric grip discriminator.
     ...(grip.openingGripKind ? { openingGripKind: grip.openingGripKind } : {}),
+    // ADR-363 Phase 3.5 — forward slab parametric grip discriminator.
+    ...(grip.slabGripKind ? { slabGripKind: grip.slabGripKind } : {}),
   };
 }
 

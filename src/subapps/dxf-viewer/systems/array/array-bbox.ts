@@ -7,7 +7,7 @@
 
 import type { Entity } from '../../types/entities';
 import type { SourceBbox } from './types';
-import { getEntityBounds } from '../../types/entities';
+import { getEntityRenderBounds } from '../../types/entities';
 import { EMPTY_SPATIAL_BOUNDS } from '../../config/geometry-constants';
 
 /**
@@ -29,7 +29,7 @@ export function computeSourceGroupBbox(entities: Entity[]): SourceBbox {
   let maxY = -Infinity;
 
   for (const entity of entities) {
-    const b = getEntityBounds(entity);
+    const b = getEntityRenderBounds(entity);
     if (b === EMPTY_SPATIAL_BOUNDS) continue;
     if (b.minX < minX) minX = b.minX;
     if (b.minY < minY) minY = b.minY;

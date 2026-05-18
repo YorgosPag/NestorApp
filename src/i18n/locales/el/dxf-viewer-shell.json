@@ -573,7 +573,8 @@
       "columnProperties": "Ιδιότητες Κολώνας",
       "beamProperties": "Ιδιότητες Δοκαριού",
       "validationBadge": "Παραβίαση κανονισμών",
-      "dimension": "Διάσταση"
+      "dimension": "Διάσταση",
+      "lineToolStyle": "Στυλ Γραμμής"
     },
     "panels": {
       "draw": "Σχεδίαση",
@@ -640,7 +641,8 @@
       "dimProperties": "Ιδιότητες",
       "dimModify": "Τροποποίηση",
       "bim": "Δομικά",
-      "layers": "Επίπεδα"
+      "layers": "Επίπεδα",
+      "lineToolQuickStyle": "Γρήγορο Στυλ"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -1168,7 +1170,12 @@
       "togglePerf": "Παρακολ. Απόδοσης",
       "aiAssistant": "Βοηθός AI",
       "layering": "Σχεδίαση Επιπέδων",
-      "fullscreen": "Πλήρης Οθόνη"
+      "fullscreen": "Πλήρης Οθόνη",
+      "quickStyle": {
+        "lineweight": "Πάχος",
+        "linetype": "Τύπος Γραμμής",
+        "color": "Χρώμα"
+      }
     }
   },
   "layerPicker": {

@@ -573,7 +573,8 @@
       "columnProperties": "Column Properties",
       "beamProperties": "Beam Properties",
       "validationBadge": "Code violation",
-      "dimension": "Dimension"
+      "dimension": "Dimension",
+      "lineToolStyle": "Line Style"
     },
     "panels": {
       "draw": "Draw",
@@ -640,7 +641,8 @@
       "dimProperties": "Properties",
       "dimModify": "Modify",
       "bim": "Structural",
-      "layers": "Layers"
+      "layers": "Layers",
+      "lineToolQuickStyle": "Quick Style"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -1168,7 +1170,12 @@
       "togglePerf": "Performance Monitor",
       "aiAssistant": "AI Assistant",
       "layering": "Layer Drawing",
-      "fullscreen": "Full Screen"
+      "fullscreen": "Full Screen",
+      "quickStyle": {
+        "lineweight": "Lineweight",
+        "linetype": "Linetype",
+        "color": "Color"
+      }
     }
   },
   "layerPicker": {

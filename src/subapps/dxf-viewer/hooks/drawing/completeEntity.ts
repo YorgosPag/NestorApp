@@ -50,6 +50,8 @@ import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSce
 import type { SceneEntity } from '../../core/commands/interfaces';
 import type { DrawingTool } from './drawing-types';
 import type { PersistEntityOptions, PersistEntityResult } from './useOverlayPersistence';
+import { getQuickStyleSnapshot, isQuickStyleAllByLayer } from '../../stores/QuickStyleStore';
+import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
 
 /**
  * ADR-340 Phase 9 STEP G — opt-in persistence to floorplan_overlays.
@@ -191,6 +193,8 @@ export function completeEntity(
   const styledEntity = entity as Entity & Record<string, unknown>;
   const { id: existingId, ...entityWithoutId } = styledEntity as { id: string } & Record<string, unknown>;
   const adapter = new LevelSceneManagerAdapter(getScene, setScene, levelId);
+  // ADR-357 Phase 17: overlay QuickStyleStore overrides when not all-ByLayer.
+  const quickStyle = isQuickStyleAllByLayer() ? null : getQuickStyleSnapshot();
   const command = new CreateEntityCommand(
     entityWithoutId as unknown as Omit<SceneEntity, 'id'>,
     adapter,
@@ -201,6 +205,20 @@ export function completeEntity(
       color: typeof styledEntity.color === 'string' ? styledEntity.color : undefined,
       lineweight: typeof styledEntity.lineweight === 'number' ? styledEntity.lineweight : undefined,
       opacity: typeof styledEntity.opacity === 'number' ? styledEntity.opacity : undefined,
+      // QuickStyle overrides — only forwarded when user set a non-ByLayer override.
+      ...(quickStyle && quickStyle.lineweightMm !== LINEWEIGHT_SPECIAL.BYLAYER
+        ? { lineweightMm: quickStyle.lineweightMm }
+        : {}),
+      ...(quickStyle && quickStyle.linetypeName !== 'ByLayer'
+        ? { linetypeName: quickStyle.linetypeName }
+        : {}),
+      ...(quickStyle && quickStyle.colorMode === 'Concrete'
+        ? {
+            colorMode: 'Concrete' as const,
+            ...(quickStyle.colorAci !== null ? { colorAci: quickStyle.colorAci } : {}),
+            ...(quickStyle.colorTrueColor !== null ? { colorTrueColor: quickStyle.colorTrueColor } : {}),
+          }
+        : {}),
     }
   );
   perfMark('completeEntity.execute(CreateEntityCommand)', () => {

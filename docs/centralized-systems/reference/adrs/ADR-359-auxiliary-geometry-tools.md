@@ -934,9 +934,9 @@ Ogni phase = 1 commit autonomo, passa CI, no breaking. **Nessuna dipendenza fort
 
 | Phase | Titolo | Files | Effort | Q-ref | Context risk |
 |---|---|---|---|---|---|
-| **0** | Audit DXF exporter + render bounds split (G10) | 3 | S | G10 | 🟢 Low |
-| **1** | Tool registration: `ToolType` + `TOOL_DEFINITIONS` | 2 | S | Q1 | 🟢 Low |
-| **2** | `XLineModeStore` micro-leaf + status bar mode indicator | 3 | S | Q2 | 🟢 Low |
+| **0** ✅ | Audit DXF exporter + render bounds split (G10) | 4 | S | G10 | 🟢 Low |
+| **1** ✅ | Tool registration: `ToolType` + `TOOL_DEFINITIONS` | 2 | S | Q1 | 🟢 Low |
+| **2** ✅ | `XLineModeStore` micro-leaf + status bar mode indicator + context menu | 3 | S | Q2 | 🟢 Low |
 | **3** | Entity builders + preview + completion (Through/Hor/Ver modes) | 4 | M | Q1, Q6 | 🟡 Medium |
 | **3.5** | Sub-modes Ang + Bisect + Offset entity builders + preview | 3 | M | Q1 | 🟡 Medium |
 | **4.a** | Liang-Barsky clip pure module + unit tests (15+ cases) | 2 | S | Q4 | 🟢 Low |
@@ -1089,6 +1089,9 @@ Pre-implementazione: 0 violations (file nuovi). Post-Phase 1-12: ratchet enforce
 
 | Date | Change |
 |---|---|
+| 2026-05-18 | Phase 2 DONE: `XLineModeStore` singleton micro-leaf (`systems/tools/xline-mode-store.ts`) — `getMode()` / `setMode()` / `subscribe()` / `reset()`, localStorage persistence `dxf:xlineMode.lastUsed`. `StatusBarXLineModeSlot.tsx` — Radix Popover with 6 modes, sub-info for angle/offset. `XLineToolContextMenu.tsx` — imperative handle, 6 mode items + separator + cancelCurrent/finishChain. i18n keys added to `dxf-viewer.json` (el + en): `tools.xline.*` + `tools.ray.*`. SSoT module `xline-mode-store` added to `.ssot-registry.json`. |
+| 2026-05-18 | Phase 1 DONE: `'xline' \| 'ray'` added to `ToolType` union (`ui/toolbar/types.ts`). `TOOL_DEFINITIONS['xline']` + `TOOL_DEFINITIONS['ray']` added to `ToolStateManager.ts` (category=drawing, canInterrupt=false, allowsContinuous=true, allowsChain=true). |
+| 2026-05-18 | Phase 0 DONE: `getEntityRenderBounds` + `getEntityExtentsBounds` split in `entity-bounds.ts` (G10). `EzdxfXLine` + `EzdxfRay` interfaces added to `dxf-export.types.ts`. `array-bbox.ts` migrated to `getEntityRenderBounds`. |
 | 2026-05-16 | Initial draft (Phase 1 ADR-driven workflow). Open Questions Q1-Q15 da compilare in Q&A greca con Giorgio. |
 | 2026-05-16 | Q1 risolta: Full v1 — tutti i 5 sub-modes XLINE (Through/Hor/Ver/Ang/Bisect/Offset). Industry convergence + completeness over MVP. |
 | 2026-05-16 | Q2 risolta: Full Enterprise multi-surface (keyboard `H/V/A/B/O/T` + status bar indicator + right-click context menu). Unico SSoT `XLineModeStore`, tre consumer zero-duplicazione. |

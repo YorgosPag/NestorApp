@@ -12,6 +12,7 @@ import { CONTEXTUAL_SLAB_TAB, SLAB_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/
 import { CONTEXTUAL_COLUMN_TAB, COLUMN_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-column-tab';
 import { CONTEXTUAL_BEAM_TAB, BEAM_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-beam-tab';
 import { DIMENSION_CONTEXTUAL_TAB, DIMENSION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimension-tab';
+import { CONTEXTUAL_LINE_TOOL_TAB, LINE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-line-tool-tab';
 
 export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_TEXT_EDITOR_TAB,
@@ -25,6 +26,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_COLUMN_TAB,
   CONTEXTUAL_BEAM_TAB,
   DIMENSION_CONTEXTUAL_TAB,
+  CONTEXTUAL_LINE_TOOL_TAB,
 ] as const;
 
 type EntityLike = { readonly type: string; readonly params?: unknown };
@@ -55,6 +57,23 @@ export function useActiveContextualTrigger({
     if (activeTool === 'slab') return SLAB_CONTEXTUAL_TRIGGER;
     if (activeTool === 'column') return COLUMN_CONTEXTUAL_TRIGGER;
     if (activeTool === 'beam') return BEAM_CONTEXTUAL_TRIGGER;
+    // ADR-357 Phase 17: drawing tools show Quick Style override panel.
+    if (
+      activeTool === 'line' ||
+      activeTool === 'line-perpendicular' ||
+      activeTool === 'line-parallel' ||
+      activeTool === 'circle' ||
+      activeTool === 'circle-diameter' ||
+      activeTool === 'circle-2p-diameter' ||
+      activeTool === 'circle-3p' ||
+      activeTool === 'rectangle' ||
+      activeTool === 'polyline' ||
+      activeTool === 'arc-3p' ||
+      activeTool === 'arc-sce' ||
+      activeTool === 'arc-cse' ||
+      activeTool === 'polygon' ||
+      activeTool === 'ellipse'
+    ) return LINE_TOOL_CONTEXTUAL_TRIGGER;
     return null;
   }, [primarySelectedId, currentScene, activeTool]);
 }

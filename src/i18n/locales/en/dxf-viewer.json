@@ -386,5 +386,29 @@
   },
   "selectionCycling": {
     "label": "Select entity"
+  },
+  "tools": {
+    "xline": {
+      "statusBarPrefix": "Construction Line:",
+      "modes": {
+        "through": "Through Point",
+        "horizontal": "Horizontal",
+        "vertical": "Vertical",
+        "angle": "Angle",
+        "bisect": "Bisect",
+        "offset": "Offset"
+      },
+      "contextMenu": {
+        "cancelCurrent": "Cancel Current",
+        "finishChain": "Finish Chain"
+      }
+    },
+    "ray": {
+      "statusBarPrefix": "Ray:",
+      "contextMenu": {
+        "cancelCurrent": "Cancel Current",
+        "finishChain": "Finish Chain"
+      }
+    }
   }
 }

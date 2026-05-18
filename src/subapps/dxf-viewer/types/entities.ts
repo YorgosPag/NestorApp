@@ -608,7 +608,8 @@ export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntit
 // Re-export from centralized location for backward compatibility
 export { generateEntityId } from '../systems/entity-creation/utils';
 
-export { getEntityBounds } from './entity-bounds';
+export { getEntityBounds, getEntityRenderBounds, getEntityExtentsBounds } from './entity-bounds';
+export type { SpatialBounds } from './entity-bounds';
 
 // Scene aliases — simple Entity re-names kept here for backward compat.
 // Full scene types (SceneLayer, SceneModel, etc.) live in ./scene-types.

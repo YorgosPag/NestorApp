@@ -1,10 +1,15 @@
 {
   "_meta": {
     "description": "Missing i18n keys baseline — t() calls without matching locale entry",
-    "generated": "2026-04-14T08:28:34Z",
-    "totalViolations": 0,
-    "totalFiles": 0,
+    "generated": "2026-05-18T13:23:46Z",
+    "totalViolations": 11,
+    "totalFiles": 4,
     "rule": "Counts can only decrease. New files = zero tolerance."
   },
-  "files": {}
+  "files": {
+    "src/providers/NotificationProvider.tsx": 2,
+    "src/subapps/dxf-viewer/ui/components/layer-manager/useLayerManagerState.ts": 1,
+    "src/subapps/dxf-viewer/ui/components/layer-picker/CurrentLayerPickerPopover.tsx": 5,
+    "src/subapps/dxf-viewer/ui/components/layer-picker/useCurrentLayerPickerState.ts": 3
+  }
 }

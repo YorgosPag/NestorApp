@@ -3153,7 +3153,9 @@
         "src/subapps/dxf-viewer/config/default-lineweight-resolver.ts",
         "src/subapps/dxf-viewer/config/__tests__/lineweight-iso-catalog.test.ts",
         "src/subapps/dxf-viewer/config/__tests__/default-lineweight-resolver.test.ts",
-        "src/subapps/dxf-viewer/types/entities.ts"
+        "src/subapps/dxf-viewer/types/entities.ts",
+        "src/subapps/dxf-viewer/stores/QuickStyleStore.ts",
+        "src/subapps/dxf-viewer/ui/ribbon/hooks/useRibbonLineToolBridge.ts"
       ],
       "addedDate": "2026-05-16",
       "addedByAdr": "ADR-358",

@@ -34,6 +34,7 @@ import type { SlabEntity, SlabKind } from '../types/slab-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { getSlabGrips } from '../slabs/slab-grips';
 
 /** Stroke colour per kind. */
 const KIND_STROKE: Readonly<Record<SlabKind, string>> = {
@@ -89,9 +90,19 @@ export class SlabRenderer extends BaseEntityRenderer {
     this.ctx.restore();
   }
 
-  getGrips(_entity: EntityModel): GripInfo[] {
-    // Phase 3.5 — vertex grips για polygon edit. Phase 3 returns empty.
-    return [];
+  getGrips(entity: EntityModel): GripInfo[] {
+    // ADR-363 Phase 3.5 — parametric slab grips (per-vertex translate).
+    // Commit routed through `applySlabGripDrag()` + `UpdateSlabParamsCommand`
+    // by `commitSlabGripDrag` (grip-commit-adapter).
+    if (!isSlabEntity(entity)) return [];
+    return getSlabGrips(entity as SlabEntity).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      position: g.position,
+      type: 'vertex' as const,
+      entityId: g.entityId,
+      isVisible: true,
+      gripIndex: g.gripIndex,
+    }));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
