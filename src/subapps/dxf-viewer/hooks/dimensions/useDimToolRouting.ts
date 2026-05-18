@@ -38,6 +38,8 @@ import {
 } from './useDimensionCreate';
 import { useDimensionKeyboardRouting } from './useDimensionKeyboardRouting';
 import { handleToolCompletion } from '../drawing/drawing-handler-utils';
+// ADR-364 — Escape Command Bus SSoT
+import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Tool → creation-flow input mapping
@@ -137,11 +139,31 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
     }
   }, [dimCreate, activeTool]);
 
-  // Phase D3 — Q-C live Tab/Space/Escape routing from the canvas.
+  // Phase D3 — Q-C live Tab / Space / Enter routing from the canvas.
+  // ADR-364: Escape moved to the centralized EscapeCommandBus (below).
   useDimensionKeyboardRouting({
     activeTool,
     isDimTool,
     onKey: wrappedOnKey,
+  });
+
+  // ADR-364 — DIM_TOOL priority slot in the EscapeCommandBus.
+  // `allowWhenEditable: true` so ESC still cancels the dim flow when focus
+  // is parked inside the dynamic-input field (we blur it first to commit
+  // any pending value, matching the legacy useDimensionKeyboardRouting path).
+  useEscapeHandler({
+    id: 'dim-tool/cancel',
+    priority: ESC_PRIORITY.DIM_TOOL,
+    allowWhenEditable: true,
+    canHandle: () => isDimTool(activeTool),
+    handle: () => {
+      const el = typeof document !== 'undefined' ? document.activeElement : null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.getAttribute('contenteditable') === 'true')) {
+        (el as HTMLElement).blur?.();
+      }
+      wrappedOnKey('Escape');
+      return true;
+    },
   });
 
   const handlePoint = useCallback(

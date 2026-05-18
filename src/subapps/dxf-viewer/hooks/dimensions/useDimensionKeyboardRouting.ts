@@ -1,8 +1,12 @@
 'use client';
 
 /**
- * ADR-362 Phase D3 — `useDimensionKeyboardRouting`: live Tab / Space / Escape
+ * ADR-362 Phase D3 — `useDimensionKeyboardRouting`: live Tab / Space / Enter
  * dispatch from the canvas to the dim creation flow.
+ *
+ * ADR-364 (2026-05-18) — Escape REMOVED from this hook. ESC is now dispatched
+ * by the centralized EscapeCommandBus via a DIM_TOOL-priority registration
+ * inside `useDimToolRouting`. This hook owns the non-ESC dim keys only.
  *
  * Q-C industry default — global `window` listener gated by `isDimTool(activeTool)`.
  * Canvas-scoped onKeyDown was rejected because focus drifts to the ribbon /
@@ -15,9 +19,7 @@
  * pattern used in `useKeyboardShortcuts`, so dynamic-input boxes (Phase F)
  * keep regular browser behaviour. `preventDefault()` is fired for Tab + Space
  * so browser focus traversal / page scroll don't run while a dim tool is
- * active. Escape is observed but NOT prevented — the legacy
- * `useKeyboardShortcuts` ESC handler still needs to fire its overlay/color
- * fallback paths after we cancel the dim flow.
+ * active.
  *
  * Capture phase + cleanup on unmount + tool deactivation mirror the ADR-040
  * micro-leaf pattern: zero high-frequency store subscriptions, listener torn
@@ -48,15 +50,10 @@ export function useDimensionKeyboardRouting(
       if (!key) return;
 
       if (isEditableFocus()) {
-        // Dynamic Input has focus: Enter/Escape still control dim creation.
+        // Dynamic Input has focus: Enter still controls dim creation.
         // Blur the field first so the value is committed, then dispatch.
         if (key === 'Enter') {
           e.preventDefault();
-          (document.activeElement as HTMLElement | null)?.blur?.();
-          onKeyRef.current(key);
-        } else if (key === 'Escape') {
-          // Don't preventDefault: let the legacy useKeyboardShortcuts ESC
-          // path still fire (overlay / color-panel reset).
           (document.activeElement as HTMLElement | null)?.blur?.();
           onKeyRef.current(key);
         }
@@ -64,7 +61,7 @@ export function useDimensionKeyboardRouting(
         return;
       }
 
-      if (key !== 'Escape') e.preventDefault();
+      e.preventDefault();
       onKeyRef.current(key);
     };
 
@@ -76,8 +73,8 @@ export function useDimensionKeyboardRouting(
 function mapKey(e: KeyboardEvent): DimensionCreateKey | null {
   if (e.key === 'Tab') return 'Tab';
   if (e.key === ' ' || e.code === 'Space') return 'Space';
-  if (e.key === 'Escape') return 'Escape';
   if (e.key === 'Enter') return 'Enter';
+  // ADR-364 — Escape handled by EscapeCommandBus (DIM_TOOL slot in useDimToolRouting)
   return null;
 }
 

@@ -1818,3 +1818,13 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-18: ADR-363 Phase 4.5c.1 — ColumnGhostPreviewMount micro-leaf (column anchor cycling preview)
 
 `ColumnGhostPreviewMount` added as micro-leaf subscriber in `canvas-layer-stack-leaves.tsx` via `PreviewCanvasMounts` (extracted to its own module `canvas-layer-stack-column-ghost.tsx` for N.7.1 SRP / file-size compliance — shell `canvas-layer-stack-leaves.tsx` stays <500 lines). `useColumnGhostPreview` subscribes to `ImmediatePositionStore` (cursor world position) and `useColumnTool.getGhostFootprints()` projection — RAF-scheduled draw of 9 anchor ghosts (active highlighted + 8 inactive outlines) on the preview canvas. `CanvasSection` (orchestrator) only forwards stable `{ isAwaitingPosition, kind, getGhostFootprints }` payload — zero `useSyncExternalStore` on shell, no re-render on mousemove. Cardinal rules maintained.
+
+## 2026-05-18: ADR-040 perf — RulerCornerBox memo + CanvasLayerStack stable callbacks
+
+`RulerCornerBox` wrapped σε `React.memo` (zero subscriptions, depends μόνο σε zoom state + stable callbacks, βλέπει re-renders από parent dxfScene changes pre-memo). Prop `viewport` removed (unused).
+
+`CanvasLayerStack.tsx` ruler zoom callbacks (`handleRulerZoomToFit` / `handleRulerWheelZoom` / `handleZoom100` / `handleZoomIn` / `handleZoomOut` / `handleZoomPrevious` / `handleZoomToScale`) μετατράπηκαν σε `useCallback` με `dxfSceneRef` + `colorLayersRef` (avoid stale-closure χωρίς να αναιρείται η referential stability). Combined: stable callback identities → `RulerCornerBox` memo πραγματικά skipάρει re-renders σε scene mutations. Cardinal rules maintained.
+
+## 2026-05-18: ADR-364 — ESC migration για dim tools
+
+`useDimToolRouting.ts` registers DIM_TOOL-priority handler στο `EscapeCommandBus` (`allowWhenEditable=true`, blur active editable element πριν dispatch). `useDimensionKeyboardRouting.ts` αφαιρεί το Escape branch — πλέον owns Tab/Space/Enter μόνο. ESC dispatch χωρίς duplicate paths · `useKeyboardShortcuts` legacy ESC fallback τραβιέται από νέα bus registration (DRAW_TOOL + COLOR_MENU priorities). Cardinal rules maintained.

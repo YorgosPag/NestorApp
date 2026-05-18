@@ -18,7 +18,7 @@
  * @see ADR-009 in docs/centralized-systems/reference/adr-index.md
  */
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { memo, useCallback, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n';
 import {
   Tooltip,
@@ -78,8 +78,6 @@ interface RulerCornerBoxProps {
   onWheelZoom?: (delta: number) => void;
   /** Optional className for custom styling */
   className?: string;
-  /** Viewport dimensions for calculations */
-  viewport: { width: number; height: number };
 }
 
 // ===== ZOOM PRESETS =====
@@ -95,7 +93,9 @@ const ZOOM_PRESETS = [
 
 // ===== MAIN COMPONENT =====
 
-export default function RulerCornerBox({
+// ADR-040 perf: React.memo prevents re-renders on scene change (parent CanvasLayerStack re-renders
+// when dxfScene changes, but RulerCornerBox only depends on zoom state and stable callbacks).
+const RulerCornerBox = memo(function RulerCornerBox({
   rulerWidth,
   rulerHeight,
   backgroundColor,
@@ -108,7 +108,6 @@ export default function RulerCornerBox({
   onZoomToScale,
   onWheelZoom,
   className,
-  viewport,
 }: RulerCornerBoxProps) {
   const { t } = useTranslation('dxf-viewer-panels');
   // ADR-040 Phase VIII: subscribe to ZoomStore directly (micro-leaf pattern)
@@ -354,4 +353,6 @@ export default function RulerCornerBox({
       </Popover>
     </TooltipProvider>
   );
-}
+});
+
+export default RulerCornerBox;

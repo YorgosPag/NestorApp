@@ -9,7 +9,7 @@
  * Shell itself MUST NOT call useSyncExternalStore (enforced: CHECK 6C).
  */
 'use client';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { PreviewCanvas } from '../../canvas-v2/preview-canvas';
 import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
 import RulerCornerBox from '../../canvas-v2/overlays/RulerCornerBox';
@@ -42,12 +42,10 @@ import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
 import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay';
 // ADR-357 Phase 2a — Dynamic Input overlay leaf.
 import { DynamicInputSubscriber } from './DynamicInputSubscriber';
-
 // Re-export props type for consumers
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 // Stable empty array — passed to renderOptions.snapResults to avoid creating a new array literal on every render.
 const EMPTY_SNAP_RESULTS: readonly never[] = Object.freeze([]);
-
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   transform, viewport, activeTool, overlayMode, showLayers,
   showDxfCanvas, showLayerCanvas,
@@ -90,7 +88,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     setTransform(newTransform);
     zoomSystem.setTransform(newTransform);
   };
-
   const handleDxfEntitiesSelected = (entityIds: string[]) => {
     setSelectedEntityIds(entityIds);
     universalSelection.clearByType('dxf-entity');
@@ -164,7 +161,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       entitySelectedOnMouseDownRef.current = false;
     }
   };
-
   const handleDxfMouseMove = useCallback(
     (screenPos: Point2D, worldPos: Point2D) => {
       if (worldPos) {
@@ -188,9 +184,13 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     },
     [handleUnifiedMouseMove, onMouseMove, activeTool, overlayMode, drawingHandlersRef],
   );
-
-  const handleRulerZoomToFit = () => {
-    const combinedBounds = createCombinedBounds(dxfScene, colorLayers, true);
+  // ADR-040 perf: refs so callbacks don't capture stale scene/colorLayers while staying stable.
+  const dxfSceneRef = useRef(dxfScene);
+  dxfSceneRef.current = dxfScene;
+  const colorLayersRef = useRef(colorLayers);
+  colorLayersRef.current = colorLayers;
+  const handleRulerZoomToFit = useCallback(() => {
+    const combinedBounds = createCombinedBounds(dxfSceneRef.current, colorLayersRef.current, true);
     if (combinedBounds && viewport.width > 0 && viewport.height > 0) {
       zoomSystem.zoomToFit(combinedBounds, viewport, true);
     } else {
@@ -199,13 +199,18 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
         viewport,
       });
     }
-  };
-  const handleRulerWheelZoom = (delta: number) => {
+  }, [viewport, zoomSystem]);
+  const handleRulerWheelZoom = useCallback((delta: number) => {
     const cssPos = getImmediatePosition();
     if (cssPos) {
       zoomSystem.handleWheelZoom(delta, cssPos);
     }
-  };
+  }, [zoomSystem]);
+  const handleZoom100 = useCallback(() => zoomSystem.zoomTo100(), [zoomSystem]);
+  const handleZoomIn = useCallback(() => zoomSystem.zoomIn(), [zoomSystem]);
+  const handleZoomOut = useCallback(() => zoomSystem.zoomOut(), [zoomSystem]);
+  const handleZoomPrevious = useCallback(() => zoomSystem.zoomPrevious(), [zoomSystem]);
+  const handleZoomToScale = useCallback((scale: number) => zoomSystem.zoomToScale(scale), [zoomSystem]);
   // --- Computed props ---
   const draggingOverlayDelta =
     draggingOverlayBody && dragPreviewPosition
@@ -217,7 +222,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           },
         }
       : null;
-
   const dxfRulerSettings = useMemo(() => ({
     enabled:
       (globalRulerSettings?.horizontal?.enabled && globalRulerSettings?.vertical?.enabled) ?? true,
@@ -246,7 +250,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     borderColor: globalRulerSettings.horizontal.borderColor,
     borderWidth: globalRulerSettings.horizontal.borderWidth,
   }), [globalRulerSettings, gridSettings.size, gridMajorInterval]);
-
   // --- Stable references for downstream memos (avoid fresh-spread per render) ---
   const gridSettingsDisabled = useMemo(
     () => ({ ...gridSettings, enabled: false }),
@@ -290,7 +293,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     const canvas = dxfCanvasRef?.current?.getCanvas?.();
     return canvas instanceof HTMLElement ? canvas : null;
   }, [dxfCanvasRef]);
-
   // --- LayerCanvas passthrough props (ref and layers excluded — injected by DraftLayerSubscriber) ---
   const layerCanvasPassthroughProps: LayerCanvasPassthroughProps = useMemo(() => ({
     transform,
@@ -328,7 +330,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     handleMultiOverlayClickWithEntityClear, handleCanvasClick,
     draggingOverlayDelta, onMouseMoveStable, layerClassName, layerStyle,
   ]);
-
   // DxfCanvas renderOptions base (hoveredEntityId injected by DxfCanvasSubscriber).
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): memoized for stable identity so
   // DxfCanvasSubscriber's useMemo on { ...base, hoveredEntityId } stays effective.
@@ -470,13 +471,12 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             backgroundColor={globalRulerSettings.horizontal.backgroundColor}
             textColor={globalRulerSettings.horizontal.textColor}
             onZoomToFit={handleRulerZoomToFit}
-            onZoom100={() => zoomSystem.zoomTo100()}
-            onZoomIn={() => zoomSystem.zoomIn()}
-            onZoomOut={() => zoomSystem.zoomOut()}
-            onZoomPrevious={() => zoomSystem.zoomPrevious()}
-            onZoomToScale={(scale) => zoomSystem.zoomToScale(scale)}
+            onZoom100={handleZoom100}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onZoomPrevious={handleZoomPrevious}
+            onZoomToScale={handleZoomToScale}
             onWheelZoom={handleRulerWheelZoom}
-            viewport={viewport}
             className={PANEL_LAYOUT.Z_INDEX['30']}
           />
           <AutoAreaPreviewOverlay transform={transform} viewport={viewport} />
