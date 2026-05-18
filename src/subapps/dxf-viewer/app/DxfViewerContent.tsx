@@ -59,9 +59,7 @@ const FloatingPanelsSection = React.lazy(() => import('../layout/FloatingPanelsS
 import { TransformProvider } from '../contexts/TransformContext';
 // ADR-040 Phase XIII: TransformStore SSoT — used for initialTransform read
 import { getImmediateTransform } from '../systems/cursor/ImmediateTransformStore';
-// 🧪 UNIFIED TEST RUNNER
 import { type UnifiedTestReport } from '../debug/unified-test-runner';
-// 🏢 ENTERPRISE: Performance Monitor
 import { usePerformanceMonitorToggle } from '../hooks/usePerformanceMonitorToggle';
 import { PerformanceCategory } from '@/core/performance/types/performance.types';
 import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
@@ -78,6 +76,9 @@ import { useArrayRibbonActions } from '../ui/ribbon/hooks/useArrayRibbonActions'
 // 📐 ADR-358 Phase 7a: bridge stair-params ↔ ribbon contextual tab
 import { useRibbonStairBridge } from '../ui/ribbon/hooks/useRibbonStairBridge';
 import { useRibbonWallBridge } from '../ui/ribbon/hooks/useRibbonWallBridge';
+import { useRibbonOpeningBridge } from '../ui/ribbon/hooks/useRibbonOpeningBridge';
+import { useRibbonSlabBridge } from '../ui/ribbon/hooks/useRibbonSlabBridge';
+import { useRibbonColumnBridge } from '../ui/ribbon/hooks/useRibbonColumnBridge';
 // 📐 ADR-358 Phase 8: top-bar wrapper (RibbonRoot + StairAdvancedPanelHost) — N.7.1 size split
 import { DxfViewerTopBar } from './DxfViewerTopBar';
 // 📐 ADR-345 Fase 5.5: bridge text-engine ↔ ribbon contextual tab (toggles + comboboxes)
@@ -86,7 +87,6 @@ import { useRibbonCommands } from '../ui/ribbon/hooks/useRibbonCommands';
 // ADR-344 Phase 6.E: selection→toolbar + toolbar→CommandHistory always-on bridges
 import { useTextToolbarSelectionSync } from '../ui/text-toolbar/hooks/useTextToolbarSelectionSync';
 import { useTextToolbarCommandBridge } from '../ui/text-toolbar/hooks/useTextToolbarCommandBridge';
-// ✅ PERFORMANCE: Memoize the main component
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-345 — mark the document root while the DXF viewer route is mounted
   // so route-scoped CSS (e.g. hiding the global header border-bottom) only
@@ -286,10 +286,13 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-358 Phase 7a — Stair contextual bridge.
   const stairBridge = useRibbonStairBridge({ levelManager, universalSelection });
   const wallBridge = useRibbonWallBridge({ levelManager, universalSelection });
+  const openingBridge = useRibbonOpeningBridge({ levelManager, universalSelection });
+  const slabBridge = useRibbonSlabBridge({ levelManager, universalSelection });
+  const columnBridge = useRibbonColumnBridge({ levelManager, universalSelection });
   const ribbonCommands = useRibbonCommands({
     activeTool, handleToolChange, handleRibbonComingSoon,
     wrappedHandleAction: arrayActionInterceptor,
-    textEditorBridge, arrayBridge, stairBridge, wallBridge,
+    textEditorBridge, arrayBridge, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge,
   });
   return (
       <TransformProvider
@@ -494,4 +497,4 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       </TransformProvider>
   );
 });
-export default DxfViewerContent;
+export default DxfViewerContent;
