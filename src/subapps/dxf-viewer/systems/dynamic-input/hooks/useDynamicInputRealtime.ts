@@ -4,6 +4,9 @@ import { useEffect } from 'react';
 import type { Point2D } from '../../../rendering/types/Types';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../../../rendering/entities/shared/geometry-rendering-utils';
+// ADR-357 Phase 2b: Display unit conversion
+import type { DisplayUnit } from '../../../config/units';
+import { formatDisplayValue } from '../../../config/units';
 
 interface UseDynamicInputRealtimeArgs {
   mouseWorldPosition: Point2D | null;
@@ -12,6 +15,8 @@ interface UseDynamicInputRealtimeArgs {
   firstClickPoint: Point2D | null;
   isManualInput: { x: boolean; y: boolean; radius?: boolean };
   showLengthDuringDraw: boolean;
+  /** ADR-357 Phase 2b: user-selected display unit for numeric readouts. */
+  displayUnit: DisplayUnit;
 
   // Setters
   setXValue: (v: string) => void;
@@ -36,6 +41,7 @@ export function useDynamicInputRealtime({
   activeTool,
   firstClickPoint,
   isManualInput,
+  displayUnit,
   setXValue,
   setYValue,
   setLengthValue,
@@ -47,17 +53,17 @@ export function useDynamicInputRealtime({
     if (!mouseWorldPosition || !showInput) return;
 
     if (!isManualInput.x) {
-      setXValue(mouseWorldPosition.x.toFixed(3));
+      setXValue(formatDisplayValue(mouseWorldPosition.x, displayUnit));
     }
     if (!isManualInput.y) {
-      setYValue(mouseWorldPosition.y.toFixed(3));
+      setYValue(formatDisplayValue(mouseWorldPosition.y, displayUnit));
     }
 
     if (!firstClickPoint) return;
 
     if (RADIUS_TOOLS.has(activeTool)) {
       const distance = calculateDistance(mouseWorldPosition, firstClickPoint);
-      setRadiusValue(distance.toFixed(3));
+      setRadiusValue(formatDisplayValue(distance, displayUnit));
       setShowLengthDuringDraw(true);
       return;
     }
@@ -66,13 +72,13 @@ export function useDynamicInputRealtime({
       const dx = mouseWorldPosition.x - firstClickPoint.x;
       const dy = mouseWorldPosition.y - firstClickPoint.y;
       const distance = Math.hypot(dx, dy);
-      setLengthValue(distance.toFixed(3));
-      // ADR-357 §4 G2 — live angle (degrees, normalized 0..360, AutoCAD convention).
+      setLengthValue(formatDisplayValue(distance, displayUnit));
+      // ADR-357 §4 G2 — live angle: degrees, normalized 0..360, AutoCAD convention. No unit conversion.
       const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
       const normalized = angleDeg < 0 ? angleDeg + 360 : angleDeg;
       setAngleValue(normalized.toFixed(3));
       setShowLengthDuringDraw(true);
     }
-  }, [mouseWorldPosition, showInput, isManualInput, activeTool, firstClickPoint,
+  }, [mouseWorldPosition, showInput, isManualInput, activeTool, firstClickPoint, displayUnit,
       setXValue, setYValue, setLengthValue, setAngleValue, setRadiusValue, setShowLengthDuringDraw]);
 }
