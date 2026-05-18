@@ -154,6 +154,7 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'slab':    { id: 'slab',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 3 — polygon N-click + Enter
   'column':  { id: 'column',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 4 — single-click + Tab anchor cycle
   'beam':    { id: 'beam',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 5 — 2-click straight/cantilever, 3-click curved
+  'slab-opening': { id: 'slab-opening', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 3.7 — 2-click (host slab + position), continuous chain
   // ADR-359 Phase 1: Auxiliary geometry tools (XLINE = infinite, RAY = semi-infinite)
   'xline': { id: 'xline', category: 'drawing', requiresCanvas: true, canInterrupt: false, allowsContinuous: true, preservesOverlayMode: false, allowsChain: true },
   'ray':   { id: 'ray',   category: 'drawing', requiresCanvas: true, canInterrupt: false, allowsContinuous: true, preservesOverlayMode: false, allowsChain: true },

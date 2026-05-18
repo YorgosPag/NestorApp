@@ -73,6 +73,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     slabTool,
     columnTool,
     beamTool,
+    slabOpeningTool,
     rotationIsActive = false, handleRotationClick,
     moveIsActive = false, handleMoveClick,
     mirrorIsActive = false, handleMirrorClick,
@@ -207,6 +208,11 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       beamTool.onCanvasClick(worldPoint);
       return;
     }
+    // PRIORITY 4.95: ADR-363 Phase 3.7 — Slab-opening tool 2-click (host slab + position).
+    if (activeTool === 'slab-opening' && slabOpeningTool?.isActive) {
+      slabOpeningTool.onCanvasClick(worldPoint);
+      return;
+    }
     // PRIORITY 5: Overlay polygon drawing
     if (overlayMode === 'draw') {
       if (isSavingPolygon) return;
@@ -280,6 +286,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     slabTool,
     columnTool,
     beamTool,
+    slabOpeningTool,
     rotationIsActive, handleRotationClick,
     moveIsActive, handleMoveClick,
     mirrorIsActive, handleMirrorClick,

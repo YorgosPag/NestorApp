@@ -1798,3 +1798,7 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-18: ADR-357 Phase 8 — QuickPropertiesHoverPopover micro-leaf added to CanvasSection
 
 `CanvasSection.tsx` mounts `QuickPropertiesHoverPopover` as sibling of `GripHoverMenu`. New micro-leaf pattern: `QuickPropertiesStore` singleton subscribes to `HoverStore` internally (zero React state), fires after 800ms stable hover, captures position from `ImmediatePositionStore`. `QuickPropertiesHoverPopover` is the ONLY `useSyncExternalStore` consumer — `CanvasSection` does NOT subscribe. Cardinal rules maintained.
+
+## 2026-05-18: ADR-363 Phase 3.7 — canvas-click-types SlabOpeningToolLike + click routing
+
+`canvas-click-types.ts` extended with `SlabOpeningToolLike` interface (`isActive` + `onCanvasClick`) and `slabOpeningTool?` param on `UseCanvasClickHandlerParams`. `useCanvasClickHandler.ts` adds PRIORITY 4.95 routing arm for `activeTool === 'slab-opening'`. `'slab-opening'` registered in `DrawingTool` union and `ToolStateManager.TOOL_DEFINITIONS`. Pure type/routing extension — no store subscriptions added. Cardinal rules maintained.

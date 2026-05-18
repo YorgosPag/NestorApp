@@ -93,7 +93,8 @@ export type DrawingTool =
   | 'column'
   | 'beam'
   | 'xline'
-  | 'ray';
+  | 'ray'
+  | 'slab-opening';
 
 export interface DrawingState {
   currentTool: DrawingTool;
