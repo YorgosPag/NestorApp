@@ -18,6 +18,8 @@ import { SplineRenderer } from '../entities/SplineRenderer';
 import { AngleMeasurementRenderer } from '../entities/AngleMeasurementRenderer';
 import { PointRenderer } from '../entities/PointRenderer';
 import { StairRenderer } from '../entities/StairRenderer';
+// ADR-363 Phase 1B — parametric wall leaf (2D plan view).
+import { WallRenderer } from '../../bim/renderers/WallRenderer';
 // ADR-362 Phase C1 — persistent dimension leaf (consumes DimGeometry discriminated union).
 import { DimensionRenderer } from '../entities/DimensionRenderer';
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
@@ -59,6 +61,8 @@ export class EntityRendererComposite {
     const pointRenderer = new PointRenderer(this.ctx);
     // ADR-358 Phase 5b — parametric stair renderer (2D plan view).
     const stairRenderer = new StairRenderer(this.ctx);
+    // ADR-363 Phase 1B — parametric wall renderer (2D plan view).
+    const wallRenderer = new WallRenderer(this.ctx);
     // ADR-362 Phase C1 — dimension renderer (10 variants via DimGeometry union).
     const dimensionRenderer = new DimensionRenderer(this.ctx);
 
@@ -77,6 +81,7 @@ export class EntityRendererComposite {
     this.renderers.set('point', pointRenderer as BaseEntityRenderer); // ✅ ENTERPRISE FIX: Type compatibility resolved
     this.renderers.set('angle-measurement', angleMeasurementRenderer);
     this.renderers.set('stair', stairRenderer);
+    this.renderers.set('wall', wallRenderer);
     this.renderers.set('dimension', dimensionRenderer);
   }
 

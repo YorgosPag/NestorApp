@@ -1749,3 +1749,7 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-18: ADR-363 Phase 1B — CanvasSection wires wallTool from useSpecialTools
 
 `CanvasSection.tsx` (orchestrator) now receives `wallTool` from `useSpecialTools` and passes it to `useCanvasClickHandler`. No high-frequency store subscriptions added — pure prop drilling through orchestrator. Cardinal rules maintained.
+
+## 2026-05-18: ADR-363 Phase 1B — EntityRendererComposite registers WallRenderer
+
+`EntityRendererComposite.ts` registers `WallRenderer` for `'wall'` entity type (ADR-040 micro-leaf pattern). WallRenderer renders plan-view BIM walls (hover halo, fill, edges, axis). Cardinal rules maintained.
