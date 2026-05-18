@@ -233,38 +233,26 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     [],
   );
 
-  // ── Tab cycles anchor / ESC resets ───────────────────────────────────────
+  // ── Tab cycles anchor (ADR-363 Phase 4.5c) ───────────────────────────────
+  // ESC handled centrally by EscapeCommandBus (ADR-364 §4.1 BIM migration
+  // 2026-05-19) — DRAW_TOOL slot in useKeyboardShortcuts calls
+  // handleToolCompletion(activeTool, true) which deactivates this tool.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
       const s = stateRef.current;
       if (s.phase !== 'awaitingPosition') return;
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
-
-      if (e.key === 'Tab') {
-        const direction: 1 | -1 = e.shiftKey ? -1 : 1;
-        setState((prev) => {
-          const idx = ANCHOR_CYCLE_ORDER.indexOf(prev.anchor);
-          const len = ANCHOR_CYCLE_ORDER.length;
-          const nextIdx = (idx + direction + len) % len;
-          return { ...prev, anchor: ANCHOR_CYCLE_ORDER[nextIdx] };
-        });
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-
-      if (e.key === 'Escape') {
-        setState({
-          ...INITIAL_STATE,
-          kind: s.kind,
-          anchor: s.anchor,
-          overrides: s.overrides,
-          phase: 'awaitingPosition',
-        });
-        e.preventDefault();
-        e.stopPropagation();
-      }
+      const direction: 1 | -1 = e.shiftKey ? -1 : 1;
+      setState((prev) => {
+        const idx = ANCHOR_CYCLE_ORDER.indexOf(prev.anchor);
+        const len = ANCHOR_CYCLE_ORDER.length;
+        const nextIdx = (idx + direction + len) % len;
+        return { ...prev, anchor: ANCHOR_CYCLE_ORDER[nextIdx] };
+      });
+      e.preventDefault();
+      e.stopPropagation();
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);

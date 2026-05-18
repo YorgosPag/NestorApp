@@ -21,7 +21,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7 §6 Phase 5
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type {
   BeamEntity,
@@ -245,26 +245,10 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
     }
   }, []);
 
-  // ── ESC reset ────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      const s = stateRef.current;
-      if (s.phase === 'idle') return;
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
-      setState({
-        ...INITIAL_STATE,
-        kind: s.kind,
-        overrides: s.overrides,
-        phase: 'awaitingStart',
-      });
-      e.preventDefault();
-      e.stopPropagation();
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, []);
+  // ── ESC handled by EscapeCommandBus (ADR-364 §4.1 BIM migration 2026-05-19)
+  // DRAW_TOOL slot in useKeyboardShortcuts.DRAWING_TOOLS_WITH_CANCEL routes ESC
+  // through onDrawingCancel → handleToolCompletion(activeTool, true) → tool
+  // deactivates via useToolLifecycle. AutoCAD/Revit parity.
 
   return {
     state,

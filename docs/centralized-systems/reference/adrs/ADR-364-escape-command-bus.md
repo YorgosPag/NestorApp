@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟢 **APPROVED** 2026-05-18 — Group 1+2 implemented, awaiting commit |
+| **Status** | 🟢 **APPROVED** 2026-05-18 — Group 1+2 implemented; Group 3 (BIM tools) migrated 2026-05-19, awaiting commit |
 | **Date** | 2026-05-18 |
 | **Category** | DXF Viewer — Tools & Keyboard |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-364-escape-command-bus.md` |
@@ -150,6 +150,25 @@ Per-handler check, εκτελούμενο **εντός** της iteration του
 
 ### 4.1 Pending Boy-Scout migrations
 
+> **Update 2026-05-19 (Group 3 — BIM tools)**: Οι 5 BIM drawing tools που εισήχθησαν μετά το ADR-364 (ADR-363 Phase 4.5c/5.5c) είχαν δικούς τους capture-phase `window.addEventListener('keydown', ...)` ESC listeners με semantics "soft reset within tool" (κρατούσαν το tool active, επανέφεραν phase). Αυτό:
+>
+> 1. **Παραβίαζε το SSoT** του ADR-364 (parallel listeners σε capture phase).
+> 2. **Διαφωνούσε με την AutoCAD/Revit/ArchiCAD σύγκλιση**: ESC = exit tool to select, όχι soft reset.
+> 3. **Έσπαγε το user expectation** — το bus DRAW_TOOL slot στο `useKeyboardShortcuts` παρέλειπε αυτά τα tools από το `DRAWING_TOOLS_WITH_CANCEL` set, άρα το ESC είτε δεν φαινόταν να κάνει τίποτα (column/beam/slab) είτε κρατούσε το tool ενεργό αντί να το βγάλει στο select.
+>
+> Migration:
+>
+> | File | Πριν (2026-05-18) | Μετά (2026-05-19) |
+> |---|---|---|
+> | `hooks/drawing/useColumnTool.ts` | Tab+ESC useEffect (capture window listener) | Μόνο Tab. ESC αφαιρέθηκε — bus DRAW_TOOL deactivates. |
+> | `hooks/drawing/useBeamTool.ts` | ESC useEffect (capture window listener) | Αφαιρέθηκε ολόκληρο. `useEffect` import dropped. |
+> | `hooks/drawing/useSlabTool.ts` | Enter+ESC useEffect | Μόνο Enter (commit polygon). ESC αφαιρέθηκε. |
+> | `hooks/drawing/useOpeningTool.ts` | ESC useEffect (release host) | Αφαιρέθηκε ολόκληρο. `useEffect` import dropped. |
+> | `hooks/drawing/useSlabOpeningTool.ts` | ESC useEffect (release host) | Αφαιρέθηκε ολόκληρο. `useEffect` import dropped. |
+> | `hooks/useKeyboardShortcuts.ts` | `DRAWING_TOOLS_WITH_CANCEL` = 10 tools | + `column, beam, slab, opening, slab-opening` (15 tools). |
+>
+> Αποτέλεσμα: ESC = exit tool to select για ΟΛΑ τα drawing tools. Tool's `deactivate()` καλείται από το `useToolLifecycle` όταν `activeTool` αλλάζει σε 'select' — επαναφέρει state σε `INITIAL_STATE` (idle phase). AutoCAD/Revit/ArchiCAD parity επιτυγχάνεται.
+
 Τα παρακάτω components έχουν τοπικά ESC handlers και μεταναστεύουν στο bus την επόμενη φορά που τα αγγίξουμε (Boy Scout rule):
 
 - `ui/components/layer-state/LayerStateDropdown.tsx`
@@ -259,3 +278,4 @@ Baseline: `npm run ssot:baseline` μετά το commit του Group 2 → κατ
 | Date | Change | Author |
 |---|---|---|
 | 2026-05-18 | Initial draft + Group 1 (core 6 files) + Group 2 (8 migrations) implemented; pending commit. | Claude Opus 4.7 + Γιώργος Παγώνης |
+| 2026-05-19 | Group 3 — BIM tools migration (column/beam/slab/opening/slab-opening). 5 per-tool window listeners removed, all 5 added to `DRAWING_TOOLS_WITH_CANCEL`. ESC now exits BIM tools to 'select' (AutoCAD/Revit/ArchiCAD parity), aligning with Group 2 line/polyline/rectangle behavior. Bug fix: `ΟΤΑΝ ΔΙΝΩ ΕΝΤΟΛΗ ΓΙΑ ΝΑ ΣΧΕΔΙΑΣΩ ΟΠΟΙΑΔΗΠΟΤΕ ΟΝΤΟΤΗΤΑ, ΤΟ ESCAPE ΔΕΝ ΛΕΙΤΟΥΡΓΕΙ` — reported by Giorgio, fixed same session. | Claude Opus 4.7 + Γιώργος Παγώνης |

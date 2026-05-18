@@ -18,7 +18,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5 §11.Q3
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type {
   SlabOpeningEntity,
@@ -222,21 +222,8 @@ export function useSlabOpeningTool(
     }
   }, []);
 
-  // ── ESC handling ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      const s = stateRef.current;
-      if (s.phase === 'idle') return;
-      if (s.phase === 'awaitingPosition') {
-        setState({ ...s, phase: 'awaitingHostSlab', hostSlabId: null, error: null });
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, []);
+  // ── ESC handled by EscapeCommandBus (ADR-364 §4.1 BIM migration 2026-05-19)
+  // DRAW_TOOL slot in useKeyboardShortcuts deactivates tool to 'select'.
 
   return {
     state,

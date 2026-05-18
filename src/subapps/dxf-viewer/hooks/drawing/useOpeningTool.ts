@@ -22,7 +22,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4 §6 Phase 2
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { OpeningEntity, OpeningKind } from '../../bim/types/opening-types';
 import type { WallEntity } from '../../bim/types/wall-types';
@@ -210,22 +210,8 @@ export function useOpeningTool(options: UseOpeningToolOptions): UseOpeningToolRe
     }
   }, []);
 
-  // ── ESC handling ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      const s = stateRef.current;
-      if (s.phase === 'idle') return;
-      // ESC mid-flow → release host and restart awaitingHostWall.
-      if (s.phase === 'awaitingPosition') {
-        setState({ ...s, phase: 'awaitingHostWall', hostWallId: null, error: null });
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, []);
+  // ── ESC handled by EscapeCommandBus (ADR-364 §4.1 BIM migration 2026-05-19)
+  // DRAW_TOOL slot in useKeyboardShortcuts deactivates tool to 'select'.
 
   return {
     state,

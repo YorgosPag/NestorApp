@@ -220,30 +220,17 @@ export function useSlabTool(options: UseSlabToolOptions = {}): UseSlabToolResult
     }
   }, []);
 
-  // ── Enter to commit / ESC to reset ───────────────────────────────────────
+  // ── Enter to commit polygon (ADR-363 Phase 5.5c) ─────────────────────────
+  // ESC handled by EscapeCommandBus (ADR-364 §4.1 BIM migration 2026-05-19).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter') return;
       const s = stateRef.current;
-      if (s.phase !== 'awaitingNextVertex' && s.phase !== 'awaitingFirstVertex') return;
+      if (s.phase !== 'awaitingNextVertex') return;
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
-      if (e.key === 'Enter') {
-        if (s.phase === 'awaitingNextVertex') {
-          const ok = commitFromState(s);
-          if (ok) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }
-        return;
-      }
-      if (e.key === 'Escape') {
-        setState({
-          ...INITIAL_STATE,
-          kind: s.kind,
-          overrides: s.overrides,
-          phase: 'awaitingFirstVertex',
-        });
+      const ok = commitFromState(s);
+      if (ok) {
         e.preventDefault();
         e.stopPropagation();
       }

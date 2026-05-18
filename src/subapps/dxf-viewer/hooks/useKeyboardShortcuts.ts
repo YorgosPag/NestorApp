@@ -26,9 +26,13 @@ import { useEscapeHandler, ESC_PRIORITY } from '../systems/escape-bus';
 // Dim tools are NOT listed here — they own their own DIM_TOOL priority slot
 // inside useDimToolRouting (ADR-362 Phase D3). Modify tools (move/mirror/...)
 // own MODIFY_TOOL slots inside useCanvasKeyboardShortcuts.
+// ADR-363 Phase 4.5c/5.5c BIM tools (column/beam/slab/opening/slab-opening)
+// migrated here 2026-05-19 — ESC fully exits tool to 'select' via
+// handleToolCompletion(activeTool, true), matching AutoCAD/Revit parity.
 const DRAWING_TOOLS_WITH_CANCEL: ReadonlySet<string> = new Set([
   'line', 'polyline', 'polygon', 'measure-area', 'measure-distance',
   'measure-angle', 'rectangle', 'circle', 'stair', 'wall',
+  'column', 'beam', 'slab', 'opening', 'slab-opening',
 ]);
 
 // Hook parameters interface
