@@ -113,6 +113,14 @@ export class BoundsCalculator {
         return this.calculateAngleMeasurementBounds(entity, tolerance);
       case 'stair':
         return this.calculateStairBounds(entity, tolerance);
+      // ADR-363 Phase 1B — BIM parametric entities project `geometry.bbox` to 2D.
+      case 'wall':
+      case 'opening':
+      case 'slab':
+      case 'slab-opening':
+      case 'column':
+      case 'beam':
+        return this.calculateBimEntityBounds(entity, tolerance);
       default:
         console.warn(`BoundsCalculator: Unknown entity type: ${entity.type}`);
         return null;
@@ -141,6 +149,28 @@ export class BoundsCalculator {
     };
     const stair = entity as StairLike;
     const bbox = stair.geometry?.bbox ?? stair.stairEntity?.geometry?.bbox;
+    if (!bbox || !bbox.min || !bbox.max) return null;
+    return this.createBoundingBox(
+      bbox.min.x - tolerance,
+      bbox.min.y - tolerance,
+      bbox.max.x + tolerance,
+      bbox.max.y + tolerance,
+    );
+  }
+
+  /**
+   * 🧱 ADR-363 Phase 1B — BIM parametric entity bounds via pre-computed
+   * `geometry.bbox` (BoundingBox3D, populated by per-type `compute*Geometry()`).
+   * Projects to 2D plan view (XY). Same fallback contract as stair: if `geometry`
+   * is missing (legacy / partially-serialized), returns null → caller drops
+   * from spatial index gracefully.
+   */
+  private static calculateBimEntityBounds(entity: EntityModel, tolerance: number): BoundingBox | null {
+    type BimLike = {
+      geometry?: { bbox?: { min?: { x: number; y: number }; max?: { x: number; y: number } } };
+    };
+    const bim = entity as BimLike;
+    const bbox = bim.geometry?.bbox;
     if (!bbox || !bbox.min || !bbox.max) return null;
     return this.createBoundingBox(
       bbox.min.x - tolerance,

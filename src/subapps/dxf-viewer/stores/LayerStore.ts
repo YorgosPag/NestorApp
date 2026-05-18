@@ -204,6 +204,7 @@ export function getEffectiveTransparency(layerId: string): number {
   return dimOpacityToTransparency(isolate.dimOpacityPercent);
 }
 
+
 // ─── Mutations ───────────────────────────────────────────────────────────────
 
 /** Replace the entire layer set (DXF scene load, project switch). */
@@ -360,6 +361,7 @@ function matchLayerForSnapshotEntry(entry: LayerSnapshotEntryInput): SceneLayer 
   }
   return null;
 }
+
 
 function pushRecentInternal(id: string): void {
   const filtered = recentLayerIds.filter((existing) => existing !== id);
