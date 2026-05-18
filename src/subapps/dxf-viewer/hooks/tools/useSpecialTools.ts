@@ -26,6 +26,8 @@ import { useWallTool } from '../drawing/useWallTool';
 import { useOpeningTool } from '../drawing/useOpeningTool';
 import { useSlabTool } from '../drawing/useSlabTool';
 import { useColumnTool } from '../drawing/useColumnTool';
+import { useBeamTool } from '../drawing/useBeamTool';
+import { useToolLifecycle } from './useToolLifecycle';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { useFloorMetadata } from '../data/useFloorMetadata';
 import type { StairFloorLinkInput } from '../drawing/stair-completion';
@@ -70,6 +72,8 @@ export interface UseSpecialToolsReturn {
   slabTool: ReturnType<typeof useSlabTool>;
   /** ADR-363 Phase 4 — Column tool hook return */
   columnTool: ReturnType<typeof useColumnTool>;
+  /** ADR-363 Phase 5 — Beam tool hook return */
+  beamTool: ReturnType<typeof useBeamTool>;
 }
 // HOOK IMPLEMENTATION
 /**
@@ -280,14 +284,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     },
   });
 
-  const { activate: activateStair, deactivate: deactivateStair } = stairTool;
-  useEffect(() => {
-    if (activeTool === 'stair') {
-      activateStair();
-    } else {
-      deactivateStair();
-    }
-  }, [activeTool, activateStair, deactivateStair]);
+  useToolLifecycle(activeTool === 'stair', stairTool.activate, stairTool.deactivate);
   // ADR-363 Phase 1B — WALL TOOL
   /**
    * Wall drawing tool — 2-click placement (startPoint → endPoint) + commit.
@@ -321,14 +318,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       EventBus.emit('drawing:entity-created', { entity: patchedNewWall, tool: 'wall' });
     },
   });
-  const { activate: activateWall, deactivate: deactivateWall } = wallTool;
-  useEffect(() => {
-    if (activeTool === 'wall') {
-      activateWall();
-    } else {
-      deactivateWall();
-    }
-  }, [activeTool, activateWall, deactivateWall]);
+  useToolLifecycle(activeTool === 'wall', wallTool.activate, wallTool.deactivate);
   // ADR-363 Phase 2 — OPENING TOOL
   /**
    * Opening drawing tool — 2-state FSM (await host wall → await position). The
@@ -384,14 +374,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       EventBus.emit('drawing:entity-created', { entity: openingEntity, tool: 'opening' });
     },
   });
-  const { activate: activateOpening, deactivate: deactivateOpening } = openingTool;
-  useEffect(() => {
-    if (activeTool === 'opening') {
-      activateOpening();
-    } else {
-      deactivateOpening();
-    }
-  }, [activeTool, activateOpening, deactivateOpening]);
+  useToolLifecycle(activeTool === 'opening', openingTool.activate, openingTool.deactivate);
   // ADR-363 Phase 3 — SLAB TOOL
   /**
    * Slab drawing tool — polygon N-click + Enter (or auto-close near first vertex).
@@ -413,14 +396,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       EventBus.emit('drawing:entity-created', { entity: slabEntity, tool: 'slab' });
     },
   });
-  const { activate: activateSlab, deactivate: deactivateSlab } = slabTool;
-  useEffect(() => {
-    if (activeTool === 'slab') {
-      activateSlab();
-    } else {
-      deactivateSlab();
-    }
-  }, [activeTool, activateSlab, deactivateSlab]);
+  useToolLifecycle(activeTool === 'slab', slabTool.activate, slabTool.deactivate);
   // ADR-363 Phase 4 — COLUMN TOOL
   /**
    * Column drawing tool — single-click placement με 9-position anchor + Tab
@@ -442,14 +418,31 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       EventBus.emit('drawing:entity-created', { entity: columnEntity, tool: 'column' });
     },
   });
-  const { activate: activateColumn, deactivate: deactivateColumn } = columnTool;
-  useEffect(() => {
-    if (activeTool === 'column') {
-      activateColumn();
-    } else {
-      deactivateColumn();
-    }
-  }, [activeTool, activateColumn, deactivateColumn]);
+  useToolLifecycle(activeTool === 'column', columnTool.activate, columnTool.deactivate);
+  // ============================================================================
+  // ADR-363 Phase 5 — BEAM TOOL
+  // ============================================================================
+  /**
+   * Beam drawing tool — 2-click (straight/cantilever) ή 3-click (curved).
+   * State machine in `useBeamTool`. Continuous chain. The created `BeamEntity`
+   * is appended to the scene AND broadcast via `EventBus` so
+   * `useBeamPersistence` can schedule the first Firestore save.
+   */
+  const beamTool = useBeamTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onBeamCreated: (beamEntity) => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return;
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene) return;
+      levelManager.setLevelScene(levelId, {
+        ...scene,
+        entities: [...(scene.entities || []), beamEntity],
+      });
+      EventBus.emit('drawing:entity-created', { entity: beamEntity, tool: 'beam' });
+    },
+  });
+  useToolLifecycle(activeTool === 'beam', beamTool.activate, beamTool.deactivate);
   // ADR-363 Phase 1E — Re-trim all walls after a grip commit settles (200 ms).
   // Only runs when ≥2 walls exist and at least one bevel is needed.
   useEffect(() => {
@@ -492,6 +485,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     openingTool,
     slabTool,
     columnTool,
+    beamTool,
   };
 }
 export default useSpecialTools;
