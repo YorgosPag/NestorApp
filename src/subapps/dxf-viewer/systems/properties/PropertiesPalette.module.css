@@ -1,0 +1,290 @@
+/**
+ * Properties Palette — ADR-357 Phase 10
+ * AutoCAD-style Full Properties Panel (F11 / Ctrl+1).
+ * Fixed right-side panel, persistent, shows all entity properties.
+ */
+
+.palette {
+  position: fixed;
+  right: 12px;
+  top: 68px;
+  z-index: 9900;
+  width: 260px;
+  max-height: calc(100vh - 88px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.15));
+  background: var(--color-surface, #fff);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+:global(.dark) .palette {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: #1c1c1f;
+  color: #f4f4f5;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px 6px;
+  border-bottom: 1px solid var(--color-border, rgba(0, 0, 0, 0.1));
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted-foreground, #71717a);
+  flex-shrink: 0;
+}
+
+:global(.dark) .header {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
+}
+
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.entityBadge {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  background: var(--color-accent, rgba(59, 130, 246, 0.12));
+  color: var(--color-primary, #3b82f6);
+  padding: 1px 5px;
+  border-radius: 3px;
+  letter-spacing: 0.03em;
+}
+
+.closeBtn {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  color: var(--color-muted-foreground, #71717a);
+  transition: background 0.1s;
+}
+
+.closeBtn:hover {
+  background: var(--color-accent, rgba(0, 0, 0, 0.08));
+}
+
+/* ── Entity type label (no selection / unsupported) ── */
+.emptyMsg {
+  padding: 16px 12px;
+  color: var(--color-muted-foreground, #71717a);
+  font-size: 11px;
+  text-align: center;
+}
+
+/* ── Property groups ── */
+.group {
+  border-bottom: 1px solid var(--color-border, rgba(0, 0, 0, 0.06));
+}
+
+:global(.dark) .group {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.groupHeader {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 5px 10px;
+  background: var(--color-muted-bg, rgba(0, 0, 0, 0.02));
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground, #71717a);
+  box-sizing: border-box;
+}
+
+:global(.dark) .groupHeader {
+  background: rgba(255, 255, 255, 0.04);
+  color: #a1a1aa;
+}
+
+.groupHeader:hover {
+  background: var(--color-accent, rgba(0, 0, 0, 0.05));
+}
+
+.chevron {
+  font-size: 8px;
+  transition: transform 0.15s;
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+.groupBody {
+  padding: 5px 10px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Property row ── */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+}
+
+.label {
+  width: 70px;
+  flex-shrink: 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted-foreground, #71717a);
+}
+
+:global(.dark) .label {
+  color: #a1a1aa;
+}
+
+.inputWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.input,
+.select {
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.2));
+  border-radius: 3px;
+  background: var(--color-input-bg, #fafafa);
+  color: var(--color-foreground, #18181b);
+  font-size: 11px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input:focus,
+.select:focus {
+  border-color: var(--color-primary, #3b82f6);
+  background: #fff;
+}
+
+.inputReadonly {
+  composes: input;
+  background: var(--color-muted-bg, rgba(0, 0, 0, 0.03));
+  color: var(--color-muted-foreground, #71717a);
+  cursor: default;
+}
+
+:global(.dark) .input,
+:global(.dark) .select {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: #27272a;
+  color: #f4f4f5;
+}
+
+:global(.dark) .inputReadonly {
+  background: rgba(255, 255, 255, 0.04);
+  color: #a1a1aa;
+}
+
+:global(.dark) .input:focus,
+:global(.dark) .select:focus {
+  border-color: #60a5fa;
+  background: #1c1c1f;
+}
+
+.unit {
+  color: var(--color-muted-foreground, #71717a);
+  font-size: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.colorSwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+  background: var(--qp-swatch, transparent);
+}
+
+/* ── Footer ── */
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 6px 10px 8px;
+  border-top: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  background: var(--color-surface, #fff);
+}
+
+:global(.dark) .footer {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: #1c1c1f;
+}
+
+.btn {
+  all: unset;
+  cursor: pointer;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  transition: background 0.1s;
+}
+
+.btnCancel {
+  composes: btn;
+  background: var(--color-secondary, #f4f4f5);
+  color: var(--color-secondary-foreground, #18181b);
+}
+
+.btnCancel:hover {
+  background: var(--color-secondary-hover, #e4e4e7);
+}
+
+.btnApply {
+  composes: btn;
+  background: var(--color-primary, #3b82f6);
+  color: #fff;
+}
+
+.btnApply:hover {
+  background: var(--color-primary-hover, #2563eb);
+}
+
+:global(.dark) .btnCancel {
+  background: #3f3f46;
+  color: #f4f4f5;
+}
+
+:global(.dark) .btnCancel:hover {
+  background: #52525b;
+}

@@ -1,0 +1,78 @@
+/**
+ * Quick Properties Hover Popover — ADR-357 §4 G9 Phase 8
+ * AutoCAD-style hover tooltip with entity properties.
+ */
+
+.popover {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  user-select: none;
+  min-width: 180px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.12));
+  background: var(--color-surface, rgba(255, 255, 255, 0.96));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 6px 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  backdrop-filter: blur(4px);
+}
+
+:global(.dark) .popover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(24, 24, 27, 0.96);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.label {
+  width: 68px;
+  flex-shrink: 0;
+  color: var(--color-muted-foreground, #71717a);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.value {
+  flex: 1;
+  font-weight: 500;
+  color: var(--color-foreground, #18181b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+:global(.dark) .label {
+  color: #a1a1aa;
+}
+
+:global(.dark) .value {
+  color: #f4f4f5;
+}
+
+.colorSwatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+  background: var(--qp-color-swatch);
+}

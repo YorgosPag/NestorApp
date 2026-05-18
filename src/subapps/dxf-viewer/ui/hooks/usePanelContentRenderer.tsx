@@ -27,8 +27,8 @@ import type { ToolType } from '../toolbar/types';
 import type { PanelType } from './useFloatingPanelState';
 import type { LayerOperationsCallbacks } from './useLayerOperations';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
-// ADR-358 Phase 8 sidebar dock — Stair properties tab content.
-import { StairPropertiesTab } from '../stair-advanced-panel/StairPropertiesTab';
+// ADR-363 Phase 1D — BIM-aware properties tab router (stair/wall/...).
+import { BimPropertiesRouter } from '../wall-advanced-panel/BimPropertiesRouter';
 // ADR-362 Phase F1 — Dimensions style manager tab.
 import { DimensionsTab } from '../panels/dimensions/DimensionsTab';
 
@@ -117,7 +117,7 @@ export function usePanelContentRenderer({
 
       case 'properties':
         return (
-          <StairPropertiesTab
+          <BimPropertiesRouter
             primarySelectedId={primarySelectedId ?? selectedEntityIds[0] ?? null}
             currentScene={scene}
             projectId={projectId}
