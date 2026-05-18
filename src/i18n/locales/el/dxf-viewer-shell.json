@@ -517,12 +517,16 @@
       "developer": "Εργαλεία Ανάπτυξης",
       "ai": "AI",
       "window": "Παράθυρο",
+<<<<<<< Updated upstream
       "dimensions": "Διαστάσεις",
       "dimStyle": "Στυλ",
       "dimOverride": "Παράκαμψη",
       "dimText": "Κείμενο",
       "dimProperties": "Ιδιότητες",
       "bim": "Δομικά"
+=======
+      "layers": "Επίπεδα"
+>>>>>>> Stashed changes
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -549,6 +553,7 @@
       "unpin": "Αποκαρφίτσωμα πανελ"
     },
     "commands": {
+      "currentLayerPicker": "Τρέχον Επίπεδο",
       "line": "Γραμμή",
       "lineVariants": {
         "line": "Γραμμή",
@@ -907,6 +912,29 @@
       "aiAssistant": "Βοηθός AI",
       "layering": "Σχεδίαση Επιπέδων",
       "fullscreen": "Πλήρης Οθόνη"
+    }
+  },
+  "layerPicker": {
+    "placeholder": "Επιλέξτε επίπεδο",
+    "tooltipCurrent": "Τρέχον επίπεδο: {name}",
+    "tooltipEmpty": "Δεν έχει επιλεγεί επίπεδο",
+    "searchPlaceholder": "Αναζήτηση επιπέδου…",
+    "empty": "Δεν βρέθηκαν επίπεδα",
+    "mostUsed": "Πρόσφατα",
+    "newLayer": "Νέο Επίπεδο",
+    "openManager": "Διαχείριση Επιπέδων",
+    "toastChanged": "Τρέχον επίπεδο: {name}",
+    "category": {
+      "architectural": "Αρχιτεκτονικά",
+      "structural": "Στατικά",
+      "electrical": "Ηλεκτρολογικά",
+      "mechanical": "Μηχανολογικά",
+      "plumbing": "Υδραυλικά",
+      "fire": "Πυρόσβεση",
+      "civil": "Έργα Υποδομής",
+      "telecom": "Τηλεπικοινωνίες",
+      "interior": "Εσωτερικός Σχεδιασμός",
+      "general": "Γενικά"
     }
   },
   "array": {
