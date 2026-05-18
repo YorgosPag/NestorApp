@@ -33,6 +33,7 @@ export type AuditEntityType =
   | 'wall'
   | 'opening'
   | 'slab'
+  | 'slab-opening'
   | 'column'
   | 'beam';
 

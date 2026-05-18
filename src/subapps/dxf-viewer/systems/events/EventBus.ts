@@ -189,6 +189,9 @@ export interface DrawingEventMap {
   // ADR-363 Phase 3 — BIM slab params + delete events
   'bim:slab-params-updated': { slabId: string };
   'bim:slab-delete-requested': { slabId: string };
+  // ADR-363 Phase 3.7 — BIM slab-opening params + delete events
+  'bim:slab-opening-params-updated': { slabOpeningId: string };
+  'bim:slab-opening-delete-requested': { slabOpeningId: string };
   // ADR-363 Phase 4 — BIM column params + delete events
   'bim:column-params-updated': { columnId: string };
   'bim:column-delete-requested': { columnId: string };
