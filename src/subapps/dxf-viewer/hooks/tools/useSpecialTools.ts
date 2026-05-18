@@ -24,6 +24,7 @@ import { clearAutoAreaPreview } from '../../systems/auto-area/AutoAreaPreviewSto
 import { useLinePerpendicular } from '../drawing/useLinePerpendicular';
 import { useLineParallel } from '../drawing/useLineParallel';
 import { useStairTool } from '../drawing/useStairTool';
+import { useWallTool } from '../drawing/useWallTool';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { useFloorMetadata } from '../data/useFloorMetadata';
 import type { StairFloorLinkInput } from '../drawing/stair-completion';
@@ -61,6 +62,8 @@ export interface UseSpecialToolsReturn {
   angleEntityMeasurement: ReturnType<typeof useAngleEntityMeasurement>;
   /** ADR-358 Phase 5a — Stair tool hook return */
   stairTool: ReturnType<typeof useStairTool>;
+  /** ADR-363 Phase 1B — Wall tool hook return */
+  wallTool: ReturnType<typeof useWallTool>;
 }
 
 // ============================================================================
@@ -299,6 +302,52 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   }, [activeTool, activateStair, deactivateStair]);
 
   // ============================================================================
+  // ADR-363 Phase 1B — WALL TOOL
+  // ============================================================================
+
+  /**
+   * Wall drawing tool — 2-click placement (startPoint → endPoint) + commit.
+   * State machine in `useWallTool`. Default kind = 'straight' (Phase 1B);
+   * curved + polyline land Phase 1.5. Continuous draw (chains walls back-to-
+   * back, ESC returns to 'select'). The created `WallEntity` is appended to
+   * the scene AND broadcast via `EventBus` so `useWallPersistence` can
+   * schedule the first Firestore save without waiting for user selection.
+   */
+  const wallTool = useWallTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    getSceneUnits: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return 'mm';
+      return resolveSceneUnits(levelManager.getLevelScene(levelId));
+    },
+    onWallCreated: (wallEntity) => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return;
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene) return;
+      const updatedScene = {
+        ...scene,
+        entities: [...(scene.entities || []), wallEntity],
+      };
+      levelManager.setLevelScene(levelId, updatedScene);
+      console.debug('[WallTool] Wall added to scene:', wallEntity.id);
+      EventBus.emit('drawing:entity-created', {
+        entity: wallEntity,
+        tool: 'wall',
+      });
+    },
+  });
+
+  const { activate: activateWall, deactivate: deactivateWall } = wallTool;
+  useEffect(() => {
+    if (activeTool === 'wall') {
+      activateWall();
+    } else {
+      deactivateWall();
+    }
+  }, [activeTool, activateWall, deactivateWall]);
+
+  // ============================================================================
   // AUTO AREA — clear result panel when tool changes away
   // ============================================================================
 
@@ -319,6 +368,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     lineParallel,
     angleEntityMeasurement,
     stairTool,
+    wallTool,
   };
 }
 
