@@ -14,6 +14,8 @@ import type { RibbonCommand } from '../../types/ribbon-types';
 import type { ToolType } from '../../../toolbar/types';
 import { useRibbonCommand } from '../../context/RibbonCommandContext';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
+// ADR-364 — Escape Command Bus SSoT
+import { useEscapeHandler, ESC_PRIORITY } from '../../../../systems/escape-bus';
 
 interface RibbonSplitDropdownProps {
   parentCommandId: string;
@@ -61,21 +63,27 @@ export const RibbonSplitDropdown: React.FC<RibbonSplitDropdownProps> = ({
       if (anchorRef.current?.contains(target)) return;
       onClose();
     };
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
+    // ADR-364: Escape moved to EscapeCommandBus (POPOVER_DROPDOWN priority).
     const handleScroll = () => onClose();
     document.addEventListener('mousedown', handleDown);
-    document.addEventListener('keydown', handleKey);
     window.addEventListener('scroll', handleScroll, true);
     window.addEventListener('resize', handleScroll);
     return () => {
       document.removeEventListener('mousedown', handleDown);
-      document.removeEventListener('keydown', handleKey);
       window.removeEventListener('scroll', handleScroll, true);
       window.removeEventListener('resize', handleScroll);
     };
   }, [anchorRef, onClose, applyPosition]);
+
+  // ADR-364 — POPOVER_DROPDOWN priority slot. The component is rendered
+  // conditionally by its parent, so registration only exists while the
+  // dropdown is mounted (cleanup on unmount via the hook).
+  useEscapeHandler({
+    id: 'ribbon/split-dropdown',
+    priority: ESC_PRIORITY.POPOVER_DROPDOWN,
+    canHandle: () => true,
+    handle: () => { onClose(); return true; },
+  });
 
   const handleSelect = useCallback(
     (variant: RibbonCommand) => {

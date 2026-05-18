@@ -18,6 +18,8 @@ import {
 } from '../../systems/command-line/CommandAliasRegistry';
 import { toolStateStore } from '../../stores/ToolStateStore';
 import { CommandAutocompleteList } from './CommandAutocompleteList';
+// ADR-364 — Escape Command Bus SSoT
+import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
 
 export function CommandLineInput() {
   const { t } = useTranslation('dxf-viewer-shell');
@@ -83,12 +85,7 @@ export function CommandLineInput() {
         executeCommand(chosen);
         break;
       }
-      case 'Escape':
-        e.preventDefault();
-        e.stopPropagation();
-        setInput('');
-        CommandLineStore.hide();
-        break;
+      // ADR-364: Escape moved to EscapeCommandBus (COMMAND_LINE priority, allowWhenEditable).
       case 'ArrowUp': {
         e.preventDefault();
         if (matches.length > 0) {
@@ -127,6 +124,21 @@ export function CommandLineInput() {
   function handleBlur() {
     if (!input) CommandLineStore.hide();
   }
+
+  // ADR-364 — COMMAND_LINE priority slot in the EscapeCommandBus.
+  // `allowWhenEditable: true` because the command-line widget owns its own
+  // text input — ESC dismisses the widget even with focus inside it.
+  useEscapeHandler({
+    id: 'command-line/dismiss',
+    priority: ESC_PRIORITY.COMMAND_LINE,
+    allowWhenEditable: true,
+    canHandle: () => clState.visible,
+    handle: () => {
+      setInput('');
+      CommandLineStore.hide();
+      return true;
+    },
+  });
 
   return (
     <div className="relative flex items-center shrink-0">

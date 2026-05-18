@@ -19,6 +19,8 @@ import { SelectionCyclingStore, type CyclingCandidate } from './SelectionCycling
 import { hitTestingService } from '../../services/HitTestingService';
 import { getImmediatePosition } from '../cursor/ImmediatePositionStore';
 import { getImmediateTransform } from '../cursor/ImmediateTransformStore';
+// ADR-364 — Escape Command Bus SSoT
+import { useEscapeHandler, ESC_PRIORITY } from '../escape-bus';
 
 export interface UseSelectionCyclingParams {
   activeTool: string;
@@ -110,17 +112,18 @@ export function useSelectionCycling({ activeTool, onSelectEntity }: UseSelection
         return;
       }
 
-      // Escape: dismiss without selecting.
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        SelectionCyclingStore.cancel();
-        return;
-      }
+      // ADR-364: Escape moved to EscapeCommandBus (SELECTION_CYCLING priority).
     };
 
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
   }, [activeTool, triggerCycling]);
 
+  // ADR-364 — SELECTION_CYCLING priority slot.
+  useEscapeHandler({
+    id: 'selection-cycling/cancel',
+    priority: ESC_PRIORITY.SELECTION_CYCLING,
+    canHandle: () => SelectionCyclingStore.isActive(),
+    handle: () => { SelectionCyclingStore.cancel(); return true; },
+  });
 }

@@ -32,6 +32,8 @@ import {
   type CoordMode,
 } from '../keyboard-handlers';
 import type { DisplayUnit } from '../../../config/units';
+// ADR-364 — Escape Command Bus SSoT
+import { useEscapeHandler, ESC_PRIORITY } from '../../escape-bus';
 
 interface UseDynamicInputKeyboardArgs extends FieldValueSetters, FieldValues {
   // visibility
@@ -226,11 +228,11 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
       // Guard: only when overlay is active
       if (!showInput) return;
 
-      // Determine key type
-      let keyType: 'Tab' | 'Enter' | 'Escape' | null = null;
+      // Determine key type. ADR-364: Escape moved to EscapeCommandBus
+      // (DYNAMIC_INPUT priority slot below).
+      let keyType: 'Tab' | 'Enter' | null = null;
       if (e.key === 'Tab') keyType = 'Tab';
       else if (e.key === 'Enter') keyType = 'Enter';
-      else if (e.key === 'Escape') keyType = 'Escape';
 
       if (!keyType) return;
 
@@ -269,6 +271,24 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
   }, [showInput, activeTool]); // 🎯 ONLY 2 dependencies!
+
+  // ADR-364 — DYNAMIC_INPUT priority slot in the EscapeCommandBus.
+  // `allowWhenEditable: true` because the dynamic-input fields own focus while
+  // the overlay is visible. Routes ESC through the same tool-specific handler
+  // strategy as Tab/Enter so the per-tool reset semantics are preserved.
+  useEscapeHandler({
+    id: 'dynamic-input/escape',
+    priority: ESC_PRIORITY.DYNAMIC_INPUT,
+    allowWhenEditable: true,
+    canHandle: () => showInput,
+    handle: () => {
+      if (!contextRef.current || !actionsRef.current || !refsRef.current) return false;
+      const handler = getKeyboardHandler(activeTool);
+      const fakeEvent = new KeyboardEvent('keydown', { key: 'Escape' });
+      handler(fakeEvent, 'Escape', contextRef.current, actionsRef.current, refsRef.current);
+      return true;
+    },
+  });
 }
 
 /**
