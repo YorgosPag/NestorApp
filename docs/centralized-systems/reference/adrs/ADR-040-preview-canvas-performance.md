@@ -1802,3 +1802,7 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-18: ADR-363 Phase 3.7 — canvas-click-types SlabOpeningToolLike + click routing
 
 `canvas-click-types.ts` extended with `SlabOpeningToolLike` interface (`isActive` + `onCanvasClick`) and `slabOpeningTool?` param on `UseCanvasClickHandlerParams`. `useCanvasClickHandler.ts` adds PRIORITY 4.95 routing arm for `activeTool === 'slab-opening'`. `'slab-opening'` registered in `DrawingTool` union and `ToolStateManager.TOOL_DEFINITIONS`. Pure type/routing extension — no store subscriptions added. Cardinal rules maintained.
+
+## 2026-05-18: ADR-363 Phase 3.7 — CanvasSection wires slabOpeningTool from useSpecialTools
+
+`CanvasSection.tsx` (orchestrator) destructures `slabOpeningTool` from `useSpecialTools` and passes it to `useCanvasClickHandler`. `useSpecialTools.ts` instantiates `useSlabOpeningTool` with `getSlabById` / `getSlabAtPoint` / `onSlabOpeningCreated` resolvers (bidirectional `slab.slabOpeningIds` mirror on creation). `useToolLifecycle` activates/deactivates on `activeTool === 'slab-opening'`. No high-frequency store subscriptions added — pure prop drilling through orchestrator. Cardinal rules maintained.

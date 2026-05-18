@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import {
   xlineLineIntersection,
   xlineXlineIntersection,
@@ -163,8 +162,9 @@ describe('xlineCircleIntersection', () => {
 
 describe('xlineArcIntersection', () => {
   it('xline through circle, both intersections in arc range → 2 points', () => {
-    // xline y=0, circle (0,0) r=1, arc 270°→90° (covers left+right on y=0)
-    const result = xlineArcIntersection(xline(0, 0, 1, 0), arc(0, 0, 1, 270, 90));
+    // xline y=0 intersects at (1,0)=0° and (-1,0)=180°.
+    // arc 180°→0° wraps: covers a>=180 OR a<=0 → both 0° and 180° included.
+    const result = xlineArcIntersection(xline(0, 0, 1, 0), arc(0, 0, 1, 180, 0));
     expect(result).toHaveLength(2);
     const xs = result.map(r => r.point.x).sort((a, b) => a - b);
     expect(xs[0]).toBeCloseTo(-1, PREC);
@@ -173,17 +173,17 @@ describe('xlineArcIntersection', () => {
   });
 
   it('xline through circle, only 1 intersection in arc range → 1 point', () => {
-    // xline y=0, arc 0°→90° (top-right quarter) → only (1,0) at boundary
-    // Use arc 0→180 → only right half → (1,0) in, (-1,0) out
-    const result = xlineArcIntersection(xline(0, 0, 1, 0), arc(0, 0, 1, 0, 180));
+    // xline y=0 intersects at (1,0)=0° and (-1,0)=180°.
+    // arc 270°→45° wraps: covers a>=270 OR a<=45 → 0° in, 180° out.
+    const result = xlineArcIntersection(xline(0, 0, 1, 0), arc(0, 0, 1, 270, 45));
     expect(result).toHaveLength(1);
     expect(result[0].point.x).toBeCloseTo(1, PREC);
     expect(result[0].point.y).toBeCloseTo(0, PREC);
   });
 
   it('xline through circle, both intersections outside arc range → 0 points', () => {
-    // xline y=0, circle (0,0) r=1, arc 91°→269° (top-to-left, no y=0 endpoints)
-    const result = xlineArcIntersection(xline(0, 0, 1, 0), arc(0, 0, 1, 91, 269));
+    // xline y=0 intersects at 0° and 180°. arc 45°→135° → neither 0° nor 180° in [45,135].
+    const result = xlineArcIntersection(xline(0, 0, 1, 0), arc(0, 0, 1, 45, 135));
     expect(result).toHaveLength(0);
   });
 

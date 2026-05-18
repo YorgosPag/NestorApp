@@ -942,7 +942,7 @@ Ogni phase = 1 commit autonomo, passa CI, no breaking. **Nessuna dipendenza fort
 | **4.a** ✅ | Liang-Barsky clip pure module + unit tests (15+ cases) | 2 | S | Q4 | 🟢 Low |
 | **4.b** ✅ | `XLineRenderer` + `RayRenderer` + `EntityRendererComposite` registry | 3 | M | Q5 | 🟡 Medium |
 | **5** ✅ | Hit-test `pointToInfiniteLineDistance` + `HitTester` wire | 3 | S | G7 | 🟢 Low |
-| **6.a** | `IntersectionSnapEngine` switch extension + 6 XLine-primitives calcs (LINE/CIRCLE/ARC) + tests | 4 | M | G5 | 🟡 Medium |
+| **6.a** ✅ | `IntersectionSnapEngine` switch extension + 6 XLine-primitives calcs (LINE/CIRCLE/ARC) + tests | 4 | M | G5 | 🟡 Medium |
 | **6.b** | 6 XLine-self/complex calcs (XLINE/POLYLINE/ELLIPSE) + tests | 3 | M | G5 | 🟡 Medium |
 | **6.5.a** | 6 Ray-primitives intersection calcs (LINE/CIRCLE/ARC) + tests | 3 | M | G5 | 🟡 Medium |
 | **6.5.b** | 6 Ray-self/complex calcs (RAY/XLINE/POLYLINE) + numerical-stability suite | 3 | M | G5 | 🟡 Medium |
@@ -1115,6 +1115,7 @@ Pre-implementazione: 0 violations (file nuovi). Post-Phase 1-12: ratchet enforce
 | 2026-05-16 | Q15 risolta: Pure ByLayer color default, no hardcoded per-entity. Cyan ACI 4 solo via Construction scaffold (Q8). Mirror esatto Q14. Ratchet vieta `color: { aci }` / `color: '#hex'` hardcoded in tool factories. Industry 4/4. |
 | 2026-05-16 | **ADR-359 STATUS: 🟡 DRAFT → ✅ ACCEPTED**. Tutte Q1-Q15 risolte. Pronto per implementation Phase 0 (subordinato a ADR-358 Phase 4 minimum viable). Sequenza ADR-357 §7.1: ADR-358 → ADR-359 → impl. |
 | 2026-05-16 | **§7 Implementation Phases split anti-context-noise**: 15 → 19 phases. Split: 4 → 4.a/4.b (clip pure vs renderer), 6 → 6.a/6.b (XLine primitives vs self/complex), 6.5 → 6.5.a/6.5.b (Ray primitives vs self/complex+stability), 10 → 10.a/10.b (i18n keys+baseline vs Ribbon UI). Target ≤50% context per sessione. Grafo dipendenze + pre-flight checklist + trigger split mid-phase aggiunti §7.1/7.2. |
+| 2026-05-18 | **Phase 6.a DONE**: `xlineLineIntersection`, `xlineXlineIntersection`, `xlineCircleIntersection`, `xlineArcIntersection` added to `intersection-calculators.ts`. `IntersectionSnapEngine.calculateIntersections` extended with 4 new cases. 21 unit tests (`__tests__/xline-intersection-calculators.test.ts`) all ✅. |
 
 ---
 

@@ -27,6 +27,8 @@ import { useOpeningTool } from '../drawing/useOpeningTool';
 import { useSlabTool } from '../drawing/useSlabTool';
 import { useColumnTool } from '../drawing/useColumnTool';
 import { useBeamTool } from '../drawing/useBeamTool';
+import { useSlabOpeningTool } from '../drawing/useSlabOpeningTool';
+import { buildSlabOpeningResolvers } from './useSpecialTools-slab-opening';
 import { useToolLifecycle } from './useToolLifecycle';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { useFloorMetadata } from '../data/useFloorMetadata';
@@ -74,6 +76,8 @@ export interface UseSpecialToolsReturn {
   columnTool: ReturnType<typeof useColumnTool>;
   /** ADR-363 Phase 5 — Beam tool hook return */
   beamTool: ReturnType<typeof useBeamTool>;
+  /** ADR-363 Phase 3.7 — Slab-Opening tool hook return */
+  slabOpeningTool: ReturnType<typeof useSlabOpeningTool>;
 }
 // HOOK IMPLEMENTATION
 /**
@@ -443,6 +447,9 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     },
   });
   useToolLifecycle(activeTool === 'beam', beamTool.activate, beamTool.deactivate);
+  // ADR-363 Phase 3.7 — SLAB-OPENING TOOL (resolvers extracted: useSpecialTools-slab-opening.ts)
+  const slabOpeningTool = useSlabOpeningTool(buildSlabOpeningResolvers(levelManager));
+  useToolLifecycle(activeTool === 'slab-opening', slabOpeningTool.activate, slabOpeningTool.deactivate);
   // ADR-363 Phase 1E — Re-trim all walls after a grip commit settles (200 ms).
   // Only runs when ≥2 walls exist and at least one bevel is needed.
   useEffect(() => {
@@ -486,6 +493,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     slabTool,
     columnTool,
     beamTool,
+    slabOpeningTool,
   };
 }
 export default useSpecialTools;
