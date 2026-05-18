@@ -389,6 +389,8 @@
   },
   "tools": {
     "xline": {
+      "name": "Construction Line",
+      "tooltip": "Infinite reference line in both directions",
       "statusBarPrefix": "Construction Line:",
       "modes": {
         "through": "Through Point",
@@ -404,6 +406,8 @@
       }
     },
     "ray": {
+      "name": "Ray",
+      "tooltip": "Semi-infinite line from origin in a direction",
       "statusBarPrefix": "Ray:",
       "contextMenu": {
         "cancelCurrent": "Cancel Current",
