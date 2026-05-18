@@ -97,7 +97,13 @@ export const useKeyboardShortcuts = ({
       // 🎯 ADR-047: ESC - Cancel drawing OR close color palette
       if (matchesShortcut(e, 'escape')) {
         // PRIORITY 1: Cancel active drawing (measure-area, polyline, polygon, etc.)
-        const isDrawingTool = ['line', 'polyline', 'polygon', 'measure-area', 'measure-distance', 'measure-angle', 'rectangle', 'circle', 'stair', 'wall'].includes(activeTool);
+        const isDrawingTool = [
+          'line', 'polyline', 'polygon', 'measure-area', 'measure-distance', 'measure-angle', 'rectangle', 'circle', 'stair', 'wall',
+          // ADR-362 hotfix: dim tools must route ESC through onDrawingCancel → dimRouting.handleCancel()
+          'dim-smart', 'dim-linear', 'dim-aligned', 'dim-angular2L', 'dim-angular3P',
+          'dim-radius', 'dim-diameter', 'dim-arc-length', 'dim-jogged-radius', 'dim-ordinate',
+          'dim-baseline', 'dim-continued',
+        ].includes(activeTool);
 
         if (isDrawingTool && onDrawingCancel) {
           e.preventDefault();

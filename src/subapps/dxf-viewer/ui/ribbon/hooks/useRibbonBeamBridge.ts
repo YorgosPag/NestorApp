@@ -1,19 +1,21 @@
 'use client';
 
 /**
- * ADR-363 Phase 5 — Bridge μεταξύ contextual Beam ribbon tab και active
+ * ADR-363 Phase 5 / 5.5a — Bridge μεταξύ contextual Beam ribbon tab και active
  * `BeamEntity` params.
  *
- * Mirrors `useRibbonColumnBridge`: read state via `getComboboxState`, write
- * via `onComboboxChange`. Phase 5 mutations bypass `CommandHistory` (full
- * undo/redo lands Phase 5.5 με `UpdateBeamParamsCommand`) — αντί αυτού το
- * bridge patches the scene directly + re-derives geometry/validation.
- * `useBeamPersistence` picks up την αλλαγή μέσω debounced auto-save.
+ * Mirrors `useRibbonSlabBridge`: read state via `getComboboxState`, write via
+ * `onComboboxChange`. Phase 5.5a routes every mutation through
+ * `UpdateBeamParamsCommand` (via `useCommandHistory().execute`) ώστε η αλλαγή
+ * να είναι undoable + geometry/validation να επανυπολογίζονται atomically.
+ * `useBeamPersistence` picks up την αλλαγή μέσω debounced auto-save. Ribbon
+ * edits χρησιμοποιούν `isDragging=false` ώστε κάθε edit να είναι δικό του
+ * undo entry (drag merging ζει στο grip-commit path).
  *
  * No-ops για commandKeys εκτός `BEAM_RIBBON_KEYS` ώστε να composeί με τα
  * άλλα bridges στο `useRibbonCommands`.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7 §6 Phase 5.5a
  */
 
 import { useCallback, useMemo } from 'react';
@@ -25,8 +27,9 @@ import type {
   BeamParams,
   BeamSupportType,
 } from '../../../bim/types/beam-types';
-import { computeBeamGeometry } from '../../../bim/geometry/beam-geometry';
-import { validateBeamParams } from '../../../bim/validators/beam-validator';
+import { useCommandHistory } from '../../../core/commands';
+import { UpdateBeamParamsCommand } from '../../../core/commands/entity-commands/UpdateBeamParamsCommand';
+import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   BEAM_RIBBON_KEYS,
   BEAM_RIBBON_KEYS_ACTIONS,
@@ -87,6 +90,7 @@ export function useRibbonBeamBridge(
   props: UseRibbonBeamBridgeProps,
 ): RibbonBeamBridge {
   const { levelManager, universalSelection } = props;
+  const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
   const resolveBeam = useCallback((): BeamEntity | null => {
@@ -100,25 +104,24 @@ export function useRibbonBeamBridge(
   }, [levelManager, universalSelection]);
 
   /**
-   * Patch beam params σε scene + re-derive geometry + validation.
-   * Auto-save picks up via `useBeamPersistence` debounce.
+   * Dispatch the params patch through `UpdateBeamParamsCommand` so the change
+   * is undoable + geometry/validation recompute atomically (ADR-363 Phase 5.5a).
+   * `useBeamPersistence` picks up the patched entity via debounced auto-save.
    */
   const dispatchParams = useCallback(
     (beam: BeamEntity, nextParams: BeamParams): void => {
       if (!levelManager.currentLevelId) return;
-      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-      if (!scene) return;
-      const geometry = computeBeamGeometry(nextParams);
-      const validation = validateBeamParams(nextParams).bimValidation;
-      const updated: BeamEntity = { ...beam, kind: nextParams.kind, params: nextParams, geometry, validation };
-      const nextEntities = scene.entities.map((e) => (e.id === beam.id ? updated : e));
-      levelManager.setLevelScene(levelManager.currentLevelId, {
-        ...scene,
-        entities: nextEntities,
-      });
+      const sm = new LevelSceneManagerAdapter(
+        levelManager.getLevelScene,
+        levelManager.setLevelScene,
+        levelManager.currentLevelId,
+      );
+      executeCommand(
+        new UpdateBeamParamsCommand(beam.id, nextParams, beam.params, sm, false),
+      );
       EventBus.emit('bim:beam-params-updated', { beamId: beam.id });
     },
-    [levelManager],
+    [executeCommand, levelManager],
   );
 
   const getComboboxState = useCallback(

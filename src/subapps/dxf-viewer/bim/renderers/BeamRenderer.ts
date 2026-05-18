@@ -14,7 +14,6 @@
  *   - cantilever  → red-accent (πρόβολος — emphasize structural risk)
  *
  * Phase 5 NOT implemented (deferred Phase 5.5+):
- *   - Start/end/midpoint/curveControl grips
  *   - Width/depth dimension grips
  *   - Hatch patterns per material (RC / steel / glulam)
  *
@@ -33,6 +32,7 @@ import type { BeamEntity, BeamKind } from '../types/beam-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { getBeamGrips } from '../beams/beam-grips';
 
 /** Stroke colour per kind. */
 const KIND_STROKE: Readonly<Record<BeamKind, string>> = {
@@ -100,10 +100,20 @@ export class BeamRenderer extends BaseEntityRenderer {
     this.ctx.restore();
   }
 
-  getGrips(_entity: EntityModel): GripInfo[] {
-    // Phase 5.5 — start/end/midpoint/curveControl + width/depth grips.
-    // Phase 5 returns empty.
-    return [];
+  getGrips(entity: EntityModel): GripInfo[] {
+    // ADR-363 Phase 5.5a — parametric beam grips (start / end / midpoint /
+    // curve control). Commit routed through `applyBeamGripDrag()` +
+    // `UpdateBeamParamsCommand` by `commitBeamGripDrag` (grip-commit-adapter).
+    // Phase 5.5b will add width/depth dimension grips.
+    if (!isBeamEntity(entity)) return [];
+    return getBeamGrips(entity as BeamEntity).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      position: g.position,
+      type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
+      entityId: g.entityId,
+      isVisible: true,
+      gripIndex: g.gripIndex,
+    }));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {

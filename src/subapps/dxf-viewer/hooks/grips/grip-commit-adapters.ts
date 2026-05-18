@@ -295,6 +295,7 @@ import {
   commitOpeningGripDrag,
   commitSlabGripDrag,
   commitSlabOpeningGripDrag,
+  commitBeamGripDrag,
   commitDimensionGripDrag,
 } from './grip-parametric-commits';
 /**
@@ -360,6 +361,15 @@ export function commitDxfGripDragModeAware(
   // UpdateSlabOpeningParamsCommand.
   if (grip.slabOpeningGripKind) {
     commitSlabOpeningGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-363 Phase 5.5a — beam parametric grip path (start/end/midpoint
+  // translate + curve control move). Bypasses stretch because beams are
+  // params-driven (axis endpoints + optional Bezier control) και geometry
+  // (axisPolyline / outline / length / area / volume / bbox) is recomputed
+  // atomically by UpdateBeamParamsCommand.
+  if (grip.beamGripKind) {
+    commitBeamGripDrag(grip, delta, deps);
     return;
   }
   // ADR-357 Phase 12 — copy toggle gates routing for every mode.
