@@ -106,7 +106,7 @@ export function useDrawingHandlers(
   const canvasOps = useCanvasOperations();
 
   // 🏢 ADR-362 Phase D1: dim creation flow (Smart DIM + 4 manual overrides)
-  const dimRouting = useDimToolRouting({ activeTool, onEntityCreated, previewCanvasRef });
+  const dimRouting = useDimToolRouting({ activeTool, onEntityCreated, previewCanvasRef, onToolChange });
   // ADR-362 Phase L2: center mark + centerline tools
   const centerMarkCreate = useCenterMarkCreate({ activeTool, onEntityCreated, previewCanvasRef });
 

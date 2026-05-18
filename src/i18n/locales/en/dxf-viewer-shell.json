@@ -422,6 +422,14 @@
         "cantileverSpanDepthExceeded": "Cantilever span/depth ratio exceeds threshold (10)"
       }
     },
+    "slabOpening": {
+      "statusHostSlab": "Click on a slab to place an opening",
+      "statusPosition": "Click to set opening position",
+      "errors": {
+        "missingHostSlab": "No slab found at the selected point",
+        "hostMissing": "Host slab no longer exists — pick another"
+      }
+    },
     "text": "Text",
     "mtext": "Multiline Text",
     "arc": "Arc",
@@ -572,6 +580,7 @@
       "slabProperties": "Slab Properties",
       "columnProperties": "Column Properties",
       "beamProperties": "Beam Properties",
+      "slabOpeningProperties": "Slab Opening Properties",
       "validationBadge": "Code violation",
       "dimension": "Dimension",
       "lineToolStyle": "Line Style"
@@ -623,6 +632,8 @@
       "beamKind": "Type",
       "beamGeometry": "Geometry",
       "beamActions": "Actions",
+      "slabOpeningKind": "Type",
+      "slabOpeningActions": "Actions",
       "placeholder": "Coming soon",
       "history": "History",
       "guides": "Guides",
@@ -1015,6 +1026,18 @@
           "cantilever": "Cantilever"
         }
       },
+      "slabOpeningEditor": {
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete slab opening? This action cannot be undone.",
+        "kind": {
+          "section": { "title": "Type" },
+          "shaft": "Shaft",
+          "well": "Stair Well",
+          "duct": "Duct",
+          "chimney": "Chimney"
+        }
+      },
       "columnEditor": {
         "width": "Width",
         "depth": "Depth",
@@ -1391,6 +1414,13 @@
         "mat-marble": "Marble",
         "mat-aluminum-cladding": "Aluminum cladding",
         "custom": "Custom"
+      }
+    }
+  },
+  "slabOpening": {
+    "validation": {
+      "codeViolations": {
+        "tooSmallForKind": "Opening is smaller than the minimum for this type"
       }
     }
   }

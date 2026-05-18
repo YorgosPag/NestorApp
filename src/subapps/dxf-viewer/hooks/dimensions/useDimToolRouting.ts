@@ -71,6 +71,8 @@ export interface UseDimToolRoutingParams {
   readonly activeTool: ToolType;
   readonly onEntityCreated: (entity: Entity) => void;
   readonly previewCanvasRef?: React.RefObject<PreviewCanvasHandle>;
+  /** Called when Escape is pressed — allows the parent to switch back to 'select'. */
+  readonly onToolChange?: (tool: ToolType) => void;
 }
 
 export interface DimToolRoutingAPI {
@@ -88,6 +90,9 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
 
   const onEntityCreatedRef = useRef(onEntityCreated);
   onEntityCreatedRef.current = onEntityCreated;
+
+  const onToolChangeRef = useRef(params.onToolChange);
+  onToolChangeRef.current = params.onToolChange;
 
   const dimCreate = useDimensionCreate({
     onDimensionCreated: (entity: DimensionEntity) => {
@@ -117,13 +122,22 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
     return unregister;
   }, [activeTool, previewRef]);
 
-  // Phase D3 — Q-C live Tab/Space/Escape routing from the canvas. Active only
-  // when the current tool is a dim tool; gate inside the hook prevents stray
-  // events from reaching the store when focus is on the ribbon / input fields.
+  // Wrap onKey: on Escape → also clear preview + switch back to 'select'.
+  // AutoCAD pattern: Escape exits the active command entirely, not just the
+  // current collection step. `onToolChangeRef` avoids stale closure.
+  const wrappedOnKey = useCallback((key: DimensionCreateKey) => {
+    dimCreate.onKey(key);
+    if (key === 'Escape') {
+      previewRef.current?.current?.clear();
+      onToolChangeRef.current?.('select');
+    }
+  }, [dimCreate]);
+
+  // Phase D3 — Q-C live Tab/Space/Escape routing from the canvas.
   useDimensionKeyboardRouting({
     activeTool,
     isDimTool,
-    onKey: dimCreate.onKey,
+    onKey: wrappedOnKey,
   });
 
   const handlePoint = useCallback(
@@ -149,6 +163,7 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
   const handleCancel = useCallback(() => {
     dimCreate.cancel();
     previewRef.current?.current?.clear();
+    onToolChangeRef.current?.('select');
   }, [dimCreate]);
 
   return {
@@ -156,7 +171,7 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
     handlePoint,
     handleHover,
     handleCancel,
-    handleKey: dimCreate.onKey,
+    handleKey: wrappedOnKey,
   };
 }
 

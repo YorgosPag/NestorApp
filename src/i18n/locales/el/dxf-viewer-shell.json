@@ -422,6 +422,14 @@
         "cantileverSpanDepthExceeded": "Λόγος προβόλου πάνω από το όριο (10)"
       }
     },
+    "slabOpening": {
+      "statusHostSlab": "Κλικ πάνω σε πλάκα για τοποθέτηση διάνοιξης",
+      "statusPosition": "Κλικ για θέση διάνοιξης",
+      "errors": {
+        "missingHostSlab": "Δεν βρέθηκε πλάκα στο σημείο",
+        "hostMissing": "Η πλάκα δεν υπάρχει πλέον — δοκίμασε άλλη"
+      }
+    },
     "text": "Κείμενο",
     "mtext": "Πολλαπλές Γραμμές",
     "arc": "Τόξο",
@@ -572,6 +580,7 @@
       "slabProperties": "Ιδιότητες Πλάκας",
       "columnProperties": "Ιδιότητες Κολώνας",
       "beamProperties": "Ιδιότητες Δοκαριού",
+      "slabOpeningProperties": "Ιδιότητες Διάνοιξης Πλάκας",
       "validationBadge": "Παραβίαση κανονισμών",
       "dimension": "Διάσταση",
       "lineToolStyle": "Στυλ Γραμμής"
@@ -623,6 +632,8 @@
       "beamKind": "Τύπος",
       "beamGeometry": "Γεωμετρία",
       "beamActions": "Ενέργειες",
+      "slabOpeningKind": "Τύπος",
+      "slabOpeningActions": "Ενέργειες",
       "placeholder": "Σε φάση ανάπτυξης",
       "history": "Ιστορικό",
       "guides": "Οδηγοί",
@@ -1015,6 +1026,18 @@
           "cantilever": "Πρόβολος"
         }
       },
+      "slabOpeningEditor": {
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή διάνοιξης; Η ενέργεια δεν μπορεί να αναιρεθεί.",
+        "kind": {
+          "section": { "title": "Τύπος" },
+          "shaft": "Φρέαρ",
+          "well": "Κλιμακοστάσιο",
+          "duct": "Αεραγωγός",
+          "chimney": "Καπνοδόχος"
+        }
+      },
       "columnEditor": {
         "width": "Πλάτος",
         "depth": "Βάθος",
@@ -1391,6 +1414,13 @@
         "mat-marble": "Μάρμαρο",
         "mat-aluminum-cladding": "Επένδυση αλουμινίου",
         "custom": "Προσαρμοσμένο"
+      }
+    }
+  },
+  "slabOpening": {
+    "validation": {
+      "codeViolations": {
+        "tooSmallForKind": "Η διάνοιξη είναι μικρότερη από το ελάχιστο για τον τύπο"
       }
     }
   }
