@@ -467,6 +467,7 @@
       "textEditor": "Text Editor",
       "arrayEditor": "Array",
       "stairProperties": "Stair Properties",
+      "wallProperties": "Wall Properties",
       "validationBadge": "Code violation",
       "dimension": "Dimension"
     },
@@ -502,6 +503,9 @@
       "stairMultiStoryHeight": "Story Height",
       "stairMultiFlight": "Multi-Flight",
       "stairActions": "Actions",
+      "wallCategory": "Category",
+      "wallGeometry": "Geometry",
+      "wallActions": "Actions",
       "placeholder": "Coming soon",
       "history": "History",
       "guides": "Guides",
@@ -782,6 +786,28 @@
           "lowRise": "Residential ≤3 floors",
           "internal": "Internal Apartment Stair",
           "auxiliary": "Auxiliary Stair"
+        }
+      },
+      "wallEditor": {
+        "height": "Height",
+        "thickness": "Thickness",
+        "close": "Close",
+        "category": {
+          "section": {
+            "title": "Category"
+          },
+          "exterior": "Exterior",
+          "interior": "Interior",
+          "partition": "Partition",
+          "parapet": "Parapet",
+          "fence": "Fence"
+        },
+        "flip": {
+          "section": {
+            "title": "Exterior Face"
+          },
+          "off": "Normal",
+          "on": "Flipped"
         }
       },
       "measureAngle": "Angle",
