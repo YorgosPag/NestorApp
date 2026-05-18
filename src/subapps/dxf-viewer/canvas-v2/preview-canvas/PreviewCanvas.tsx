@@ -29,6 +29,9 @@ import { PreviewRenderer, type PreviewRenderOptions } from './PreviewRenderer';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity } from '../../hooks/drawing/useUnifiedDrawing';
+// ADR-357 Phase 4: Object Snap Tracking handle types.
+import type { AcquiredTrackingPoint } from '../../systems/tracking/TrackingPointStore';
+import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-resolver';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE (2026-01-27): Event Bus for drawing completion notification - ADR-040
 import { EventBus } from '../../systems/events';
@@ -87,6 +90,24 @@ export interface PreviewCanvasHandle {
     snappedAngle: number,
     label: string,
     cursorWorld: Point2D,
+  ) => void;
+
+  /**
+   * Update acquired Object Snap Tracking markers (ADR-357 Phase 4). Markers
+   * persist across `drawPreview` cycles — pass `[]` to clear.
+   */
+  setTrackingMarkers: (markers: readonly AcquiredTrackingPoint[]) => void;
+
+  /**
+   * Draw the Object Snap Tracking alignment overlay (ADR-357 Phase 4).
+   * Call AFTER `drawPreview` — overlays alignment paths + intersection halo
+   * + snapped-distance tooltip. Wiped on the next `drawPreview`/`clear`.
+   */
+  drawTrackingAlignment: (
+    paths: readonly TrackingAlignmentPath[],
+    intersections: readonly Point2D[],
+    snappedPoint: Point2D,
+    label: string | null,
   ) => void;
 }
 
@@ -301,6 +322,30 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
             snappedAngle,
             label,
             cursorWorld,
+            transformRef.current,
+            viewportRef.current,
+          );
+        },
+
+        /** ADR-357 Phase 4: Object Snap Tracking persistent markers */
+        setTrackingMarkers: (markers: readonly AcquiredTrackingPoint[]) => {
+          rendererRef.current?.setTrackingMarkers(markers);
+        },
+
+        /** ADR-357 Phase 4: Object Snap Tracking alignment + intersection overlay */
+        drawTrackingAlignment: (
+          paths: readonly TrackingAlignmentPath[],
+          intersections: readonly Point2D[],
+          snappedPoint: Point2D,
+          label: string | null,
+        ) => {
+          const renderer = rendererRef.current;
+          if (!renderer) return;
+          renderer.drawTrackingAlignment(
+            paths,
+            intersections,
+            snappedPoint,
+            label,
             transformRef.current,
             viewportRef.current,
           );
