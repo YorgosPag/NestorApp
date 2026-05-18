@@ -104,10 +104,7 @@ export class StairRenderer extends BaseEntityRenderer {
     );
     this.drawTreadLabels(stair);
 
-    // Grips (selected only, mirrors `renderWithPhases` behaviour).
-    if (options.grips) {
-      this.renderGrips(entity, options);
-    }
+    this.finalizeRender(entity, options);
   }
 
   getGrips(entity: EntityModel): GripInfo[] {

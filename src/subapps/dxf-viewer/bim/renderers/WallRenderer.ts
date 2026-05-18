@@ -102,9 +102,7 @@ export class WallRenderer extends BaseEntityRenderer {
     this.drawFootprint(wall);
     this.drawAxis(wall);
 
-    if (options.grips) {
-      this.renderGrips(entity, options);
-    }
+    this.finalizeRender(entity, options);
   }
 
   getGrips(entity: EntityModel): GripInfo[] {

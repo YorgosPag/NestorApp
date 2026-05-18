@@ -72,9 +72,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
     this.drawOutline(opening);
     this.drawKindOverlay(opening);
 
-    if (options.grips) {
-      this.renderGrips(entity, options);
-    }
+    this.finalizeRender(entity, options);
   }
 
   getGrips(entity: EntityModel): GripInfo[] {

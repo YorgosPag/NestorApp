@@ -107,9 +107,7 @@ export class ColumnRenderer extends BaseEntityRenderer {
       this.drawVariantDimensionLabels(column);
     }
 
-    if (options.grips) {
-      this.renderGrips(entity, options);
-    }
+    this.finalizeRender(entity, options);
   }
 
   /**

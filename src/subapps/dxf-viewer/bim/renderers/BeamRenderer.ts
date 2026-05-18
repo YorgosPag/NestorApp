@@ -120,9 +120,7 @@ export class BeamRenderer extends BaseEntityRenderer {
       this.drawDepthIndicator(beam);
     }
 
-    if (options.grips) {
-      this.renderGrips(entity, options);
-    }
+    this.finalizeRender(entity, options);
   }
 
   /**

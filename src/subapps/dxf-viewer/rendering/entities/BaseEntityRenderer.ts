@@ -467,14 +467,15 @@ export abstract class BaseEntityRenderer {
    * Common rendering finalization - grips and cleanup
    */
   protected finalizeRendering(entity: EntityModel, options: RenderOptions): void {
-    // Draw grips if needed
-    // ✅ ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Επιτρέπουμε grips σε preview entities!
     if (options.grips) {
-      this.renderGrips(entity);
+      this.renderGrips(entity, options);
     }
-
-    // Cleanup
     this.cleanupStyle();
+  }
+
+  /** SSoT grip hook for BIM renderers that manage their own ctx save/restore */
+  protected finalizeRender(entity: EntityModel, options: RenderOptions): void {
+    if (options.grips) this.renderGrips(entity, options);
   }
 
 

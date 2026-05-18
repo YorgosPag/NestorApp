@@ -45,18 +45,6 @@
 
 ---
 
-### 🎨 DXF RENDERER — BIM renderGrips centralization (priorità media)
-
-**Πρόβλημα:** Το `if (options.grips) { this.renderGrips(entity, options); }` είναι copy-pasted σε 7 BIM renderers (WallRenderer, ColumnRenderer, BeamRenderer, OpeningRenderer, SlabOpeningRenderer, SlabRenderer, StairRenderer). SSoT υπάρχει ήδη στο `renderWithPhases` της `BaseEntityRenderer`.
-
-**Λύση:** Προσθήκη `protected finalizeRender(entity: EntityModel, options: RenderOptions): void { if (options.grips) this.renderGrips(entity, options); }` στη `BaseEntityRenderer`. Κάθε BIM renderer καλεί `this.finalizeRender(entity, options)` αντί inline `if`.
-
-**Files:** `BaseEntityRenderer.ts` (νέα method) + 7 BIM renderers (αντικατάσταση inline `if` με `this.finalizeRender()`).
-
-**Identified:** 2026-05-19 κατά τη διόρθωση selection visual για slab/xline.
-
----
-
 ### 🪜 ADR-358 STAIR DOMAIN — pre-existing TS residual (priorità bassa)
 
 - [ ] **HitTestingService.ts:236 — DxfStair exhaustive check failure** — `convertToEntityModel` switch manca branch `case 'stair'`. Pre-esistente dal Phase 9C base (commit `9970706a`). Richiede decisione campi `EntityModel` stair-specific (treads, riserHeight, run, ecc.) — domain stair-tool (`ADR-358-dxf-stair-tool-google-level.md`). Identificato 2026-05-16 durante Phase 9D-3a TS check. Defer a sessione dedicata stair-tool.
@@ -113,3 +101,4 @@
 | 2026-04-14 | ADR-301 Phase A DONE — Storage Rules Coverage SSoT. 4 path patterns → COVERAGE (canonical_with_project, canonical_no_project, cad, temp). Harness: emulator.ts + auth-contexts.ts + seed-helpers.ts + assertions.ts. Registry: personas.ts + operations.ts + coverage-manifest.ts. 4 test suites, 48 cells. CHECK 3.19 (zero-tolerance, pre-commit). jest.config.storage-rules.js + 5 npm scripts. ADR-298 Phase E chiusa. |
 | 2026-04-26 | ADR-233 uniqueness validation + ADR-314 SSoT discovery aggiunti come pending. STATUS tornato ACTIVE. SSoT violations (53→0) già DONE dal 2026-04-09 — entry MEMORY.md corretta. |
 | 2026-04-14 | CHECK 3.8 i18n Missing Keys DONE — ZERO BASELINE. 4,750→0 violazioni in 3 fasi: (1) 730 file single-ns→array (ADR-280 namespace split: dxf-viewer+5 subs, common+9 subs, building+5 subs, contacts+5 subs, properties+3 subs, projects+2 subs, accounting+2 subs, crm+1 sub, files+1 sub); (2) 479 chiavi genuinamente mancanti aggiunte a 30 locale files el+en; (3) settings.json creato (el+en). Baseline regenerated: 0 violations / 0 files. |
+| 2026-05-19 | BIM renderGrips centralization DONE (Boy Scout N.0.2). `protected finalizeRender(entity, options)` aggiunta a `BaseEntityRenderer`. 7 BIM renderers (`WallRenderer`, `ColumnRenderer`, `BeamRenderer`, `OpeningRenderer`, `SlabOpeningRenderer`, `SlabRenderer`, `StairRenderer`) ora chiamano `this.finalizeRender()`. Bug fix bonus: `finalizeRendering` ora passa `options` a `renderGrips`. ADR-363 changelog aggiornato. |

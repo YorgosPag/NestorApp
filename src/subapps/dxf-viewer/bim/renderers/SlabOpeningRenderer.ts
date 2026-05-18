@@ -98,9 +98,7 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
     this.ctx.stroke();
     this.ctx.restore();
 
-    if (options.grips) {
-      this.renderGrips(entity, options);
-    }
+    this.finalizeRender(entity, options);
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
