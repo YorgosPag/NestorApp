@@ -472,7 +472,12 @@
       "orthoDesc": "Orthogonal Mode",
       "polarDesc": "Polar Tracking",
       "dynInputDesc": "Dynamic Input",
-      "modeInfo": "CAD Mode | F-keys"
+      "modeInfo": "CAD Mode | F-keys",
+      "polarSettingsTitle": "Polar Settings",
+      "polarIncrement": "Increment Angle",
+      "polarAdditional": "Additional Angles",
+      "polarAddAngle": "Add",
+      "polarCustomPlaceholder": "e.g. 33"
     },
     "panels": {
       "objectSnap": "Object Snap",
