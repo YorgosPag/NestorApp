@@ -517,16 +517,13 @@
       "developer": "Εργαλεία Ανάπτυξης",
       "ai": "AI",
       "window": "Παράθυρο",
-<<<<<<< Updated upstream
       "dimensions": "Διαστάσεις",
       "dimStyle": "Στυλ",
       "dimOverride": "Παράκαμψη",
       "dimText": "Κείμενο",
       "dimProperties": "Ιδιότητες",
-      "bim": "Δομικά"
-=======
+      "bim": "Δομικά",
       "layers": "Επίπεδα"
->>>>>>> Stashed changes
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",

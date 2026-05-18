@@ -517,16 +517,13 @@
       "developer": "Developer",
       "ai": "AI",
       "window": "Window",
-<<<<<<< Updated upstream
       "dimensions": "Dimensions",
       "dimStyle": "Style",
       "dimOverride": "Override",
       "dimText": "Text",
       "dimProperties": "Properties",
-      "bim": "Structural"
-=======
+      "bim": "Structural",
       "layers": "Layers"
->>>>>>> Stashed changes
     },
     "minimizeStates": {
       "full": "Full Ribbon",
