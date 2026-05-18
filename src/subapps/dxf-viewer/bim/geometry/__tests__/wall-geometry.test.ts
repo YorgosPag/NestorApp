@@ -169,3 +169,53 @@ describe('computeWallGeometry — geometry sanity', () => {
     expect(g.outerEdge.points[0].y).toBeCloseTo(expectedDy, EDGE_TOL);
   });
 });
+
+// ─── ADR-363 Phase 1C — curved kind ──────────────────────────────────────────
+
+describe('computeWallGeometry — curved kind (Phase 1C)', () => {
+  function makeCurvedParams(curveControl: Point3D | undefined = { x: 500, y: 300, z: 0 }): WallParams {
+    return makeParams({ curveControl });
+  }
+
+  it('subdivides axis into N+1 vertices when curveControl set', () => {
+    const g = computeWallGeometry(makeCurvedParams(), 'curved');
+    // CURVED_SUBDIVISIONS = 16 → 17 axis points.
+    expect(g.axisPolyline.points).toHaveLength(17);
+  });
+
+  it('axis first/last vertex pin to params.start/end', () => {
+    const g = computeWallGeometry(makeCurvedParams(), 'curved');
+    const first = g.axisPolyline.points[0];
+    const last = g.axisPolyline.points[g.axisPolyline.points.length - 1];
+    expect(first.x).toBeCloseTo(0, EDGE_TOL);
+    expect(first.y).toBeCloseTo(0, EDGE_TOL);
+    expect(last.x).toBeCloseTo(1000, EDGE_TOL);
+    expect(last.y).toBeCloseTo(0, EDGE_TOL);
+  });
+
+  it('quadratic Bezier midpoint matches analytic value', () => {
+    const g = computeWallGeometry(makeCurvedParams({ x: 500, y: 400, z: 0 }), 'curved');
+    // P(0.5) = 0.25·P0 + 0.5·P1 + 0.25·P2 → (0.25·0 + 0.5·500 + 0.25·1000, 0.25·0 + 0.5·400 + 0.25·0)
+    //                                      = (500, 200)
+    const mid = g.axisPolyline.points[8];
+    expect(mid.x).toBeCloseTo(500, EDGE_TOL);
+    expect(mid.y).toBeCloseTo(200, EDGE_TOL);
+  });
+
+  it('falls back to straight 2-point axis when curveControl missing on curved kind', () => {
+    const g = computeWallGeometry(makeParams(), 'curved');
+    expect(g.axisPolyline.points).toHaveLength(2);
+  });
+
+  it('outer/inner edges have the same vertex count as the subdivided axis', () => {
+    const g = computeWallGeometry(makeCurvedParams(), 'curved');
+    expect(g.outerEdge.points.length).toBe(g.axisPolyline.points.length);
+    expect(g.innerEdge.points.length).toBe(g.axisPolyline.points.length);
+  });
+
+  it('arc-length (curved) ≥ straight chord length 1.0 m', () => {
+    const g = computeWallGeometry(makeCurvedParams({ x: 500, y: 500, z: 0 }), 'curved');
+    // For control well off-axis, axis polyline length exceeds 1.0 m chord.
+    expect(g.length).toBeGreaterThan(1.0);
+  });
+});
