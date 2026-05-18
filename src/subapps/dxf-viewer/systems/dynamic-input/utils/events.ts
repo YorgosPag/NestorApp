@@ -48,6 +48,17 @@ export interface DynamicSubmitDetail {
   rise?: number;
   tread?: number;
   width?: number;
+
+  /**
+   * ADR-363 Phase 1C — wall tool inline param overrides.
+   * Carried by `action: 'commit-wall'` so `useWallTool` can apply
+   * `setParamOverrides({ height, thickness, category, flip })` ahead of commit.
+   * `category` is the string variant of `WallCategory`; consumers cast it.
+   */
+  height?: number;
+  thickness?: number;
+  category?: string;
+  flip?: boolean;
 }
 
 /**

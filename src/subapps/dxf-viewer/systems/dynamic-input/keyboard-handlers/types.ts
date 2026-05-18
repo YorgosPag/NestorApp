@@ -18,6 +18,7 @@ import type {
   ManualInputState,
   StairField
 } from '../types/common-interfaces';
+import type { DisplayUnit } from '../../../config/units';
 
 // Re-export Phase type for convenience
 export type Phase = 'first-point' | 'second-point' | 'continuous';
@@ -47,6 +48,9 @@ export interface KeyboardHandlerContext {
   readonly drawingPhase: Phase;
   readonly firstClickPoint: Point2D | null;
   readonly activeTool: string;
+
+  /** ADR-357 Phase 2b — user-selected display unit (mm internal → display conversion). */
+  readonly displayUnit: DisplayUnit;
 
   // Validators
   readonly normalizeNumber: (v: string) => string;
