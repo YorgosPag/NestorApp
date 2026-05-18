@@ -11,10 +11,12 @@
  * @see ISceneManager.getEntityIndex / reorderEntity / moveEntityToIndex
  */
 
-import type { ICommand, ISceneManager } from '../interfaces';
+import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
 
 export class ReorderEntityCommand implements ICommand {
   readonly id: string;
+  readonly name = 'ReorderEntity';
+  readonly type = 'reorder-entity';
   readonly timestamp: number;
 
   /** Index captured at execute() time — used to restore exact position on undo. */
@@ -42,5 +44,24 @@ export class ReorderEntityCommand implements ICommand {
 
   redo(): void {
     this.sceneManager.reorderEntity(this.entityId, this.direction);
+  }
+
+  getDescription(): string {
+    return `Reorder entity ${this.direction === 'front' ? 'to front' : 'to back'}`;
+  }
+
+  serialize(): SerializedCommand {
+    return {
+      type: this.type,
+      id: this.id,
+      name: this.name,
+      timestamp: this.timestamp,
+      data: { entityId: this.entityId, direction: this.direction, originalIndex: this.originalIndex },
+      version: 1,
+    };
+  }
+
+  getAffectedEntityIds(): string[] {
+    return [this.entityId];
   }
 }

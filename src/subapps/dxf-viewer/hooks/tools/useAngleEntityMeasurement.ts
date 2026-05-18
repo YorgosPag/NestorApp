@@ -245,7 +245,7 @@ export function useAngleEntityMeasurement(
         angle: result.angleDeg,
         visible: true,
         // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
-        layerId: getLayer(DXF_DEFAULT_LAYER)?.id,
+        layerId: getLayer(DXF_DEFAULT_LAYER)?.id ?? '',
         measurement: true,
       };
 

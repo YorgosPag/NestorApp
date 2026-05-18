@@ -38,6 +38,7 @@ import {
   type WallDoc,
 } from '../../bim/walls/wall-firestore-service';
 import { recordWallChange } from '../../bim/walls/wall-audit-client';
+import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 
 // ============================================================================
 // TYPES
@@ -55,6 +56,7 @@ export interface UseWallPersistenceParams {
   readonly companyId: string | null;
   readonly projectId: string | null | undefined;
   readonly floorplanId: string | null | undefined;
+  readonly buildingId: string | null | undefined;
   readonly userId: string | null;
   readonly levelManager: LevelManagerLike;
   readonly primarySelectedWall: WallEntity | null;
@@ -114,6 +116,7 @@ export function useWallPersistence(
     companyId,
     projectId,
     floorplanId,
+    buildingId,
     userId,
     levelManager,
     primarySelectedWall,
@@ -285,11 +288,19 @@ export function useWallPersistence(
       setSaveState('saved');
       setLastSavedAt(Date.now());
       void recordWallChange(isNew ? 'created' : 'updated', entity);
+      if (companyId && projectId && buildingId) {
+        void bimToBoqBridge.upsertBoqItemForBim(
+          'wall',
+          { id: entity.id, kind: entity.kind, params: entity.params as unknown as Readonly<{ category?: string; [key: string]: unknown }>, geometry: entity.geometry },
+          { companyId, projectId, buildingId },
+          isNew ? 'created' : 'updated',
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'WALL_SAVE_ERROR');
       setSaveState('error');
     }
-  }, [acquireLock]);
+  }, [acquireLock, companyId, projectId, buildingId]);
 
   // Auto-save debounce on selected wall params change.
   useEffect(() => {
@@ -344,6 +355,7 @@ export function useWallPersistence(
         'deleted',
         { id: wallId, kind: (deletedEntity as Partial<WallEntity>)?.kind ?? 'straight' },
       );
+      void bimToBoqBridge.deleteBoqItemForBim(wallId);
     } catch {
       // Non-fatal: deletion failure is silent — user can retry.
     }

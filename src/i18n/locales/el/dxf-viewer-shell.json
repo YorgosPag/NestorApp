@@ -3,6 +3,56 @@
     "confirm": "Επιβεβαίωση",
     "cancel": "Ακύρωση"
   },
+  "commandLine": {
+    "placeholder": "Εντολή…",
+    "label": "Γραμμή εντολών",
+    "prompt": ">",
+    "noMatch": "Άγνωστη εντολή",
+    "repeatLast": "Επανάληψη τελευταίας εντολής",
+    "hint": "Enter για εκτέλεση · Esc για ακύρωση · ↑↓ για ιστορικό"
+  },
+  "quickProperties": {
+    "layer": "Επίπεδο",
+    "color": "Χρώμα",
+    "length": "Μήκος",
+    "angle": "Γωνία",
+    "linetype": "Τύπος γραμμής",
+    "byLayer": "ΑπόΕπίπεδο",
+    "miniPanel": {
+      "title": "Γρήγορες Ιδιότητες",
+      "apply": "Εφαρμογή",
+      "cancel": "Ακύρωση",
+      "layer": "Επίπεδο",
+      "color": "Χρώμα",
+      "length": "Μήκος",
+      "angle": "Γωνία",
+      "linetype": "Τύπος γραμμής"
+    }
+  },
+  "propertiesPalette": {
+    "title": "Ιδιότητες",
+    "entityLine": "ΓΡΑΜΜΗ",
+    "close": "Κλείσιμο",
+    "apply": "Εφαρμογή",
+    "noSelection": "Δεν επιλέχθηκε οντότητα",
+    "unsupported": "Δεν υπάρχουν ιδιότητες για αυτόν τον τύπο οντότητας",
+    "cmdLabel": "Επεξεργασία ιδιοτήτων",
+    "groups": {
+      "geometry": "Γεωμετρία",
+      "style": "Στυλ"
+    },
+    "props": {
+      "startX": "Αρχή Χ",
+      "startY": "Αρχή Υ",
+      "endX": "Τέλος Χ",
+      "endY": "Τέλος Υ",
+      "length": "Μήκος",
+      "angle": "Γωνία",
+      "layer": "Επίπεδο",
+      "color": "Χρώμα",
+      "linetype": "Τύπος γραμμής"
+    }
+  },
   "layerPicker": {
     "toastChanged": "Επίπεδο άλλαξε σε \"{name}\"",
     "toastLocked": "Το επίπεδο \"{name}\" είναι κλειδωμένο — δεν επιτρέπεται σχεδίαση",
@@ -322,6 +372,56 @@
     "polygon": "Πολύγωνο",
     "stair": "Σκάλα",
     "stairStatus": "Εργαλείο σκάλας ενεργό (stub) — Φάση 0",
+    "wall": {
+      "statusStart": "Επίλεξε αρχή τοίχου",
+      "statusEnd": "Επίλεξε τέλος τοίχου",
+      "statusCurveEnd": "Επίλεξε τέλος καμπυλωτού τοίχου",
+      "statusCurveControl": "Επίλεξε σημείο ελέγχου καμπύλης",
+      "statusPolyNext": "Επίλεξε επόμενη κορυφή (Enter για ολοκλήρωση)"
+    },
+    "opening": {
+      "statusHostWall": "Επίλεξε τοίχο για να τοποθετήσεις το άνοιγμα",
+      "statusPosition": "Επίλεξε θέση πάνω στον τοίχο",
+      "errors": {
+        "noHostWall": "Δεν βρέθηκε τοίχος στο σημείο που επέλεξες",
+        "hostMissing": "Ο τοίχος δεν υπάρχει πλέον — δοκίμασε άλλον"
+      }
+    },
+    "slab": {
+      "statusFirstVertex": "Κλικ για πρώτη κορυφή πλάκας",
+      "statusNextVertex": "Κλικ για επόμενη κορυφή — Enter για κλείσιμο",
+      "errors": {
+        "tooFewVertices": "Η πλάκα χρειάζεται τουλάχιστον 3 κορυφές",
+        "selfIntersecting": "Το πολύγωνο τέμνει τον εαυτό του",
+        "zeroArea": "Μηδενικό εμβαδό — έλεγξε τις κορυφές"
+      }
+    },
+    "column": {
+      "statusPosition": "Κλικ για τοποθέτηση κολώνας — Tab αλλάζει σημείο στήριξης",
+      "errors": {
+        "nonPositiveWidth": "Το πλάτος πρέπει να είναι μεγαλύτερο από 0",
+        "nonPositiveDepth": "Το βάθος πρέπει να είναι μεγαλύτερο από 0",
+        "nonPositiveHeight": "Το ύψος πρέπει να είναι μεγαλύτερο από 0",
+        "invalidLshapeArm": "Άκυρες διαστάσεις βραχίονα Γ",
+        "invalidTshapeWeb": "Άκυρο πάχος κορμού Τ",
+        "invalidTshapeFlange": "Άκυρο μήκος πέλματος Τ"
+      }
+    },
+    "beam": {
+      "statusStart": "Επίλεξε αρχή δοκαριού",
+      "statusEnd": "Επίλεξε τέλος δοκαριού",
+      "statusCurveEnd": "Επίλεξε τέλος καμπυλωτού δοκαριού",
+      "statusCurveControl": "Επίλεξε σημείο ελέγχου καμπύλης",
+      "errors": {
+        "nonPositiveWidth": "Το πλάτος πρέπει να είναι μεγαλύτερο από 0",
+        "nonPositiveDepth": "Το βάθος πρέπει να είναι μεγαλύτερο από 0",
+        "lengthTooShort": "Πολύ μικρό μήκος δοκαριού",
+        "missingCurveControl": "Λείπει σημείο ελέγχου καμπύλης",
+        "widthTooSmall": "Πλάτος κάτω από το όριο Eurocode (150mm)",
+        "spanDepthExceeded": "Λόγος ανοίγματος/ύψους πάνω από το όριο (20)",
+        "cantileverSpanDepthExceeded": "Λόγος προβόλου πάνω από το όριο (10)"
+      }
+    },
     "text": "Κείμενο",
     "mtext": "Πολλαπλές Γραμμές",
     "arc": "Τόξο",
@@ -468,6 +568,10 @@
       "arrayEditor": "Πίνακας",
       "stairProperties": "Ιδιότητες Κλίμακας",
       "wallProperties": "Ιδιότητες Τοίχου",
+      "openingProperties": "Ιδιότητες Ανοίγματος",
+      "slabProperties": "Ιδιότητες Πλάκας",
+      "columnProperties": "Ιδιότητες Κολώνας",
+      "beamProperties": "Ιδιότητες Δοκαριού",
       "validationBadge": "Παραβίαση κανονισμών",
       "dimension": "Διάσταση"
     },
@@ -506,6 +610,18 @@
       "wallCategory": "Κατηγορία",
       "wallGeometry": "Γεωμετρία",
       "wallActions": "Ενέργειες",
+      "openingKind": "Τύπος",
+      "openingSize": "Διαστάσεις",
+      "openingActions": "Ενέργειες",
+      "slabKind": "Τύπος",
+      "slabGeometry": "Γεωμετρία",
+      "slabActions": "Ενέργειες",
+      "columnKind": "Τύπος",
+      "columnGeometry": "Γεωμετρία",
+      "columnActions": "Ενέργειες",
+      "beamKind": "Τύπος",
+      "beamGeometry": "Γεωμετρία",
+      "beamActions": "Ενέργειες",
       "placeholder": "Σε φάση ανάπτυξης",
       "history": "Ιστορικό",
       "guides": "Οδηγοί",
@@ -813,6 +929,120 @@
           },
           "off": "Φυσιολογική",
           "on": "Αντίστροφη"
+        }
+      },
+      "openingEditor": {
+        "width": "Πλάτος",
+        "height": "Ύψος",
+        "sillHeight": "Ύψος Ποδιάς",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή ανοίγματος; Η ενέργεια δεν μπορεί να αναιρεθεί.",
+        "kind": {
+          "section": {
+            "title": "Τύπος"
+          },
+          "door": "Θύρα",
+          "window": "Παράθυρο",
+          "slidingDoor": "Συρόμενη Θύρα",
+          "frenchDoor": "Γαλλική Θύρα",
+          "fixed": "Σταθερό"
+        },
+        "handing": {
+          "section": {
+            "title": "Φορά Ανοίγματος"
+          },
+          "left": "Αριστερά",
+          "right": "Δεξιά"
+        },
+        "openDirection": {
+          "section": {
+            "title": "Κατεύθυνση"
+          },
+          "inward": "Εσωτερικά",
+          "outward": "Εξωτερικά"
+        }
+      },
+      "slabEditor": {
+        "thickness": "Πάχος",
+        "elevation": "Στάθμη",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή πλάκας; Η ενέργεια δεν μπορεί να αναιρεθεί.",
+        "kind": {
+          "section": {
+            "title": "Τύπος"
+          },
+          "floor": "Πάτωμα",
+          "ceiling": "Οροφή",
+          "roof": "Στέγη",
+          "ground": "Έδαφος",
+          "foundation": "Θεμελίωση"
+        },
+        "reinforcement": {
+          "section": {
+            "title": "Οπλισμός"
+          },
+          "oneWay": "Μονής Διεύθυνσης",
+          "twoWay": "Διπλής Διεύθυνσης",
+          "waffle": "Πλέγμα",
+          "flat": "Επίπεδη"
+        }
+      },
+      "beamEditor": {
+        "width": "Πλάτος",
+        "depth": "Βάθος",
+        "elevation": "Στάθμη",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή δοκαριού; Η ενέργεια δεν μπορεί να αναιρεθεί.",
+        "kind": {
+          "section": {
+            "title": "Τύπος"
+          },
+          "straight": "Ευθύγραμμη",
+          "curved": "Καμπυλωτή",
+          "cantilever": "Πρόβολος"
+        },
+        "supportType": {
+          "section": {
+            "title": "Στήριξη"
+          },
+          "simple": "Απλή",
+          "fixed": "Πάκτωση",
+          "cantilever": "Πρόβολος"
+        }
+      },
+      "columnEditor": {
+        "width": "Πλάτος",
+        "depth": "Βάθος",
+        "height": "Ύψος",
+        "rotation": "Στροφή",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή κολώνας; Η ενέργεια δεν μπορεί να αναιρεθεί.",
+        "kind": {
+          "section": {
+            "title": "Τύπος"
+          },
+          "rectangular": "Ορθογώνια",
+          "circular": "Κυκλική",
+          "lShape": "Σχήμα Γ",
+          "tShape": "Σχήμα Τ"
+        },
+        "anchor": {
+          "section": {
+            "title": "Σημείο Στήριξης"
+          },
+          "center": "Κέντρο",
+          "n": "Βορράς",
+          "s": "Νότος",
+          "e": "Ανατολή",
+          "w": "Δύση",
+          "nw": "Βορειοδυτικά",
+          "ne": "Βορειοανατολικά",
+          "sw": "Νοτιοδυτικά",
+          "se": "Νοτιοανατολικά"
         }
       },
       "measureAngle": "Γωνία",

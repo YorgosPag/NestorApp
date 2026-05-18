@@ -73,12 +73,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { RIBBON_CONTEXTUAL_TABS, useActiveContextualTrigger } from './ribbon-contextual-config';
 import { useRibbonArrayBridge } from '../ui/ribbon/hooks/useRibbonArrayBridge';
 import { useArrayRibbonActions } from '../ui/ribbon/hooks/useArrayRibbonActions';
-// 📐 ADR-358 Phase 7a: bridge stair-params ↔ ribbon contextual tab
-import { useRibbonStairBridge } from '../ui/ribbon/hooks/useRibbonStairBridge';
-import { useRibbonWallBridge } from '../ui/ribbon/hooks/useRibbonWallBridge';
-import { useRibbonOpeningBridge } from '../ui/ribbon/hooks/useRibbonOpeningBridge';
-import { useRibbonSlabBridge } from '../ui/ribbon/hooks/useRibbonSlabBridge';
-import { useRibbonColumnBridge } from '../ui/ribbon/hooks/useRibbonColumnBridge';
+// 📐 ADR-358 Phase 7a / ADR-363: BIM contextual bridges aggregated
+import { useDxfBimBridges } from './useDxfBimBridges';
+import { useRibbonLineToolBridge } from '../ui/ribbon/hooks/useRibbonLineToolBridge';
 // 📐 ADR-358 Phase 8: top-bar wrapper (RibbonRoot + StairAdvancedPanelHost) — N.7.1 size split
 import { DxfViewerTopBar } from './DxfViewerTopBar';
 // 📐 ADR-345 Fase 5.5: bridge text-engine ↔ ribbon contextual tab (toggles + comboboxes)
@@ -191,7 +188,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // Auto fit-to-view on FileRecord transition (extracted hook, ADR-340 Phase 9).
   useAutoFitOnFileChange({
     currentScene,
-    fileRecordId: levelManager.fileRecordId,
+    fileRecordId: levelManager.fileRecordId ?? null,
     handleAction,
   });
   // ✅ ADR-065 SRP: Extracted callbacks
@@ -283,16 +280,15 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   });
   // ADR-362 Phase J2 — Dimension associativity observer (auto-follow geometry).
   useDimAssociationObserver(levelManager.getLevelScene, levelManager.setLevelScene, () => levelManager.currentLevelId);
-  // ADR-358 Phase 7a — Stair contextual bridge.
-  const stairBridge = useRibbonStairBridge({ levelManager, universalSelection });
-  const wallBridge = useRibbonWallBridge({ levelManager, universalSelection });
-  const openingBridge = useRibbonOpeningBridge({ levelManager, universalSelection });
-  const slabBridge = useRibbonSlabBridge({ levelManager, universalSelection });
-  const columnBridge = useRibbonColumnBridge({ levelManager, universalSelection });
+  // ADR-358 Phase 7a / ADR-363 — BIM contextual bridges (stair / wall / opening / slab / column / beam).
+  const { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge } =
+    useDxfBimBridges({ levelManager, universalSelection });
+  const lineToolBridge = useRibbonLineToolBridge();
   const ribbonCommands = useRibbonCommands({
     activeTool, handleToolChange, handleRibbonComingSoon,
     wrappedHandleAction: arrayActionInterceptor,
-    textEditorBridge, arrayBridge, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge,
+    textEditorBridge, arrayBridge, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge,
+    lineToolBridge,
   });
   return (
       <TransformProvider

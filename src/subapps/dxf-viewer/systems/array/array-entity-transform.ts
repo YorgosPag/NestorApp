@@ -202,9 +202,9 @@ function transformDimension(
 ): Entity {
   return {
     ...e,
-    startPoint: transformPoint(e.startPoint, t, pivot),
-    endPoint: transformPoint(e.endPoint, t, pivot),
-    textPosition: transformPoint(e.textPosition, t, pivot),
+    ...(e.startPoint !== undefined && { startPoint: transformPoint(e.startPoint, t, pivot) }),
+    ...(e.endPoint !== undefined && { endPoint: transformPoint(e.endPoint, t, pivot) }),
+    ...(e.textPosition !== undefined && { textPosition: transformPoint(e.textPosition, t, pivot) }),
   };
 }
 

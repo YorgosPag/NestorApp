@@ -227,7 +227,7 @@ export function convertDimension(
   entities.push({
     id: `dimension_${index}`,
     type: 'text',
-    layer,
+    layerId: layer,
     visible: true,
     position: { x: posX, y: posY },
     text: dimensionText,
@@ -260,7 +260,7 @@ export function convertDimension(
     entities.push({
       id: `dim_line_${index}`,
       type: 'line',
-      layer,
+      layerId: layer,
       visible: true,
       start: p1,
       end: p2,
@@ -273,7 +273,7 @@ export function convertDimension(
       entities.push({
         id: `dim_ext1_${index}`,
         type: 'line',
-        layer,
+        layerId: layer,
         visible: true,
         start: { x: defPt1X, y: defPt1Y },
         end: p1,
@@ -287,7 +287,7 @@ export function convertDimension(
       entities.push({
         id: `dim_ext2_${index}`,
         type: 'line',
-        layer,
+        layerId: layer,
         visible: true,
         start: { x: defPt2X, y: defPt2Y },
         end: p2,

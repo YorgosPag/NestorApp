@@ -30,8 +30,6 @@ export function convertLineToPolyline(
   return {
     id: lineEntity.id,
     type: 'polyline',
-    layer: lineEntity.layer,
-    // ADR-358 Phase 9D-2 — preserve stable layerId across line→polyline conversion.
     layerId: lineEntity.layerId,
     color: lineEntity.color,
     lineweight: lineEntity.lineweight,

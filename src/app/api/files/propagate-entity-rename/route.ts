@@ -46,6 +46,12 @@ const ENTITY_COLLECTION_MAP: Readonly<Record<AuditEntityType, string>> = {
   custom_dictionary_entry: COLLECTIONS.TEXT_CUSTOM_DICTIONARY,
   parking_spot: COLLECTIONS.PARKING_SPACES,
   storage_unit: COLLECTIONS.STORAGE,
+  // BIM entities (ADR-363) — no rename propagation at this stage
+  wall: '',
+  opening: '',
+  slab: '',
+  column: '',
+  beam: '',
 };
 
 interface PropagateRenameRequest {
@@ -77,6 +83,9 @@ async function assertEntityOwnership(
   callerCompanyId: string,
 ): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
   const collection = ENTITY_COLLECTION_MAP[entityType];
+  if (!collection) {
+    return { ok: false, status: 400, error: 'Entity type does not support rename propagation' };
+  }
   const snap = await getAdminFirestore().collection(collection).doc(entityId).get();
   if (!snap.exists) {
     return { ok: false, status: 404, error: 'Entity not found' };

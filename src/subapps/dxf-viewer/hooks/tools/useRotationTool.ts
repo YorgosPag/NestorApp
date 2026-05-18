@@ -104,6 +104,11 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
   // Ref for start angle (angle from pivot to reference point — set explicitly by click)
   const startAngleRef = useRef(0);
 
+  // ADR-357 Phase 12 — armed when the grip-context-menu "Copy" toggle was on at
+  // handoff. Forwarded to `RotateEntityCommand` so the rotation produces clones
+  // and leaves the originals intact. Auto-clears after the first execute.
+  const copyModeHandoffRef = useRef(false);
+
   // isActive: rotation tool is the current tool (even without selection)
   const isActive = activeTool === 'rotate';
 
@@ -133,13 +138,30 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
 
     if (toolIsRotate && !wasActiveRef.current) {
       // Transition: entering rotation mode
-      const handoffPt = GripHandoffStore.consume('rotate');
-      if (hasEntities && handoffPt) {
-        // Grip drag pre-seeded the base point → skip straight to reference
-        setBasePoint(handoffPt);
-        setReferencePoint(null);
-        setCurrentAngle(0);
-        setPhase('awaiting-reference');
+      const handoff = GripHandoffStore.consume('rotate');
+      if (hasEntities && handoff) {
+        // ADR-357 Phase 12 — `copyMode` modifier: arm Rotation's clone path.
+        copyModeHandoffRef.current = handoff.options.copyMode === true;
+        if (handoff.options.refStart && handoff.options.refEnd) {
+          // ADR-357 Phase 12 — Reference modifier: refStart/refEnd were picked
+          // through the grip menu's Reference flow. Pivot stays at the handoff
+          // anchor; reference direction is derived from the picked vector and
+          // we fast-forward past `awaiting-reference` straight to `awaiting-angle`.
+          setBasePoint(handoff.point);
+          setReferencePoint(handoff.options.refEnd);
+          startAngleRef.current = angleBetweenPointsDeg(
+            handoff.options.refStart,
+            handoff.options.refEnd,
+          );
+          setCurrentAngle(0);
+          setPhase('awaiting-angle');
+        } else {
+          // Grip drag pre-seeded the base point → skip straight to reference
+          setBasePoint(handoff.point);
+          setReferencePoint(null);
+          setCurrentAngle(0);
+          setPhase('awaiting-reference');
+        }
       } else if (hasEntities) {
         setBasePoint(null);
         setReferencePoint(null);
@@ -236,12 +258,16 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
         const sm = getSceneManager();
         if (!sm) return;
 
+        // ADR-357 Phase 12 — honor `copyMode` from the grip handoff (one-shot).
+        const useCopy = copyModeHandoffRef.current;
+        copyModeHandoffRef.current = false;
         const cmd = new RotateEntityCommand(
           selectedEntityIds,
           basePoint,
           finalAngle,
           sm,
-          false
+          false,
+          useCopy,
         );
         executeCommand(cmd);
       }
@@ -307,12 +333,16 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
       const sm = getSceneManager();
       if (!sm) return;
 
+      // ADR-357 Phase 12 — honor `copyMode` from the grip handoff (one-shot).
+      const useCopy = copyModeHandoffRef.current;
+      copyModeHandoffRef.current = false;
       const cmd = new RotateEntityCommand(
         selectedEntityIds,
         basePoint,
         angleDeg,
         sm,
-        false
+        false,
+        useCopy,
       );
       executeCommand(cmd);
     }

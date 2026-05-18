@@ -3,12 +3,31 @@
 import React from 'react';
 import { matchesShortcut, DXF_GUIDE_CHORD_MAP, GUIDE_CHORD_TIMEOUT_MS } from '../config/keyboard-shortcuts';
 import type { ToolType } from '../ui/toolbar/types';
+import {
+  MultiCharKeySequence,
+  type ChordDefinition,
+  type FallbackDefinition,
+} from '../keyboard/MultiCharKeySequence';
 
-// ADR-358 Phase 5a — multi-char sequence dispatcher window for 2-char shortcuts
-// ('ST' → stair). Industry pattern: AutoCAD command line. Single key still
-// activates the primary shortcut (S = select) after the window times out, so
-// the only perceptible UX cost on plain S is a 350ms tool-activation delay.
-const STAIR_CHORD_TIMEOUT_MS = 350;
+// ADR-363 Phase 7: BIM multi-char hotkeys — AutoCAD command-line pattern.
+// Leader keys open a 350ms window; second key within window resolves to a tool.
+// Leader key alone fires its fallback (e.g. S → select, C → circle, O → layering).
+const BIM_CHORD_TIMEOUT_MS = 350;
+
+const BIM_CHORDS: readonly ChordDefinition[] = [
+  { firstKey: 'S', secondKey: 'T', action: 'tool:stair' },   // S+T → stair  (ADR-358)
+  { firstKey: 'S', secondKey: 'L', action: 'tool:slab' },    // S+L → slab   (ADR-363)
+  { firstKey: 'O', secondKey: 'P', action: 'tool:opening' }, // O+P → opening (ADR-363)
+  { firstKey: 'C', secondKey: 'L', action: 'tool:column' },  // C+L → column  (ADR-363)
+  { firstKey: 'B', secondKey: 'M', action: 'tool:beam' },    // B+M → beam    (ADR-363)
+];
+
+const BIM_FALLBACKS: readonly FallbackDefinition[] = [
+  { firstKey: 'S', action: 'tool:select' },   // S alone → select
+  { firstKey: 'O', action: 'tool:layering' }, // O alone → layering
+  { firstKey: 'C', action: 'tool:circle' },   // C alone → circle
+  // B has no fallback (no existing single-B shortcut)
+];
 
 export function useDxfToolbarShortcuts(
   activeTool: ToolType,
@@ -16,8 +35,27 @@ export function useDxfToolbarShortcuts(
   onAction: (action: string, data?: number | string | Record<string, unknown>) => void,
 ): void {
   const chordRef = React.useRef<{ timer: ReturnType<typeof setTimeout> } | null>(null);
-  // ADR-358 §13 carryover — 'S' → 'T' chord buffer for stair hotkey 'ST'.
-  const stairChordRef = React.useRef<{ timer: ReturnType<typeof setTimeout> } | null>(null);
+
+  // Stable ref so MultiCharKeySequence timeout callbacks always read latest functions
+  const callbacksRef = React.useRef({ onToolChange, activeTool });
+  callbacksRef.current = { onToolChange, activeTool };
+
+  // BIM multi-char dispatcher — created once, outlives re-renders
+  const bimDispatcherRef = React.useRef<MultiCharKeySequence | null>(null);
+  if (!bimDispatcherRef.current) {
+    bimDispatcherRef.current = new MultiCharKeySequence(
+      BIM_CHORDS, BIM_FALLBACKS, BIM_CHORD_TIMEOUT_MS,
+      (action) => {
+        if (!action) return;
+        const { onToolChange: otc, activeTool: at } = callbacksRef.current;
+        if (action === 'tool:layering') {
+          otc(at === 'layering' ? 'select' : 'layering');
+        } else if (action.startsWith('tool:')) {
+          otc(action.slice(5) as ToolType);
+        }
+      },
+    );
+  }
 
   React.useEffect(() => {
     return () => {
@@ -25,10 +63,8 @@ export function useDxfToolbarShortcuts(
         clearTimeout(chordRef.current.timer);
         chordRef.current = null;
       }
-      if (stairChordRef.current) {
-        clearTimeout(stairChordRef.current.timer);
-        stairChordRef.current = null;
-      }
+      bimDispatcherRef.current?.destroy();
+      bimDispatcherRef.current = null;
     };
   }, []);
 
@@ -52,24 +88,7 @@ export function useDxfToolbarShortcuts(
         return;
       }
 
-      // ADR-358 §13 carryover — 'S' → 'T' stair chord resolution.
-      if (stairChordRef.current) {
-        const secondKey = e.key.toUpperCase();
-        if (secondKey === 'T') {
-          clearTimeout(stairChordRef.current.timer);
-          stairChordRef.current = null;
-          e.preventDefault();
-          handleToolChange('stair');
-          return;
-        }
-        // Any other key: cancel the stair chord and fall back to immediate
-        // select activation (the original 'S' shortcut).
-        clearTimeout(stairChordRef.current.timer);
-        stairChordRef.current = null;
-        handleToolChange('select');
-      }
-
-      // ADR-189: Guide chord resolution (G → X/Z/P/D/V)
+      // ADR-189: Guide chord resolution (G → X/Z/P/D/V/...)
       if (chordRef.current) {
         clearTimeout(chordRef.current.timer);
         chordRef.current = null;
@@ -87,6 +106,33 @@ export function useDxfToolbarShortcuts(
         handleToolChange('grip-edit');
       }
 
+      // ADR-363 Phase 7: BIM multi-char dispatcher — only intercepts unmodified keys.
+      // Handles: S→select/stair/slab, O→layering/opening, C→circle/column, B→beam.
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        const bimResult = bimDispatcherRef.current!.feed(e.key.toUpperCase());
+
+        if (bimResult.kind === 'chord-started') {
+          e.preventDefault();
+          return;
+        }
+
+        if (bimResult.kind === 'chord-completed') {
+          e.preventDefault();
+          const action = bimResult.action;
+          if (action.startsWith('tool:')) handleToolChange(action.slice(5) as ToolType);
+          return;
+        }
+
+        if (bimResult.kind === 'fallback-fired') {
+          const { fallbackAction } = bimResult;
+          if (fallbackAction?.startsWith('tool:')) {
+            handleToolChange(fallbackAction.slice(5) as ToolType);
+          }
+          // DO NOT return — fall through to process the current key via other shortcuts
+        }
+        // 'miss' falls through to normal shortcut checks below
+      }
+
       if (matchesShortcut(e, 'undo')) { e.preventDefault(); onAction('undo'); return; }
       if (matchesShortcut(e, 'redo')) { e.preventDefault(); onAction('redo'); return; }
       if (matchesShortcut(e, 'redoAlt')) { e.preventDefault(); onAction('redo'); return; }
@@ -95,26 +141,10 @@ export function useDxfToolbarShortcuts(
       if (matchesShortcut(e, 'toggleLayers')) { e.preventDefault(); onAction('toggle-layers'); return; }
       if (matchesShortcut(e, 'toggleProperties')) { e.preventDefault(); onAction('toggle-properties'); return; }
       if (matchesShortcut(e, 'export')) { e.preventDefault(); onAction('export'); return; }
-      if (matchesShortcut(e, 'select')) {
-        // ADR-358 §13 carryover — open a 350ms chord window: 'S' then 'T'
-        // within window → stair tool; otherwise → select fallback.
-        e.preventDefault();
-        const prev = stairChordRef.current;
-        if (prev) clearTimeout(prev.timer);
-        stairChordRef.current = {
-          timer: setTimeout(() => {
-            if (stairChordRef.current) {
-              stairChordRef.current = null;
-              handleToolChange('select');
-            }
-          }, STAIR_CHORD_TIMEOUT_MS),
-        };
-        return;
-      }
+      // Note: S (select), C (circle), O (layering) are now via bimDispatcher above.
       if (matchesShortcut(e, 'pan')) { e.preventDefault(); handleToolChange('pan'); return; }
       if (matchesShortcut(e, 'line')) { e.preventDefault(); handleToolChange('line'); return; }
       if (matchesShortcut(e, 'rectangle')) { e.preventDefault(); handleToolChange('rectangle'); return; }
-      if (matchesShortcut(e, 'circle')) { e.preventDefault(); handleToolChange('circle'); return; }
       if (matchesShortcut(e, 'polyline')) { e.preventDefault(); handleToolChange('polyline'); return; }
       if (matchesShortcut(e, 'polygon')) { e.preventDefault(); handleToolChange('polygon'); return; }
       if (matchesShortcut(e, 'wall')) { e.preventDefault(); handleToolChange('wall'); return; }
@@ -137,7 +167,6 @@ export function useDxfToolbarShortcuts(
         };
         return;
       }
-      if (matchesShortcut(e, 'layering')) { e.preventDefault(); handleToolChange('layering'); return; }
       if (matchesShortcut(e, 'grid')) { e.preventDefault(); onAction('grid'); return; }
       if (matchesShortcut(e, 'fit')) { e.preventDefault(); onAction('fit'); return; }
       if (matchesShortcut(e, 'autocrop')) { e.preventDefault(); onAction('autocrop'); return; }

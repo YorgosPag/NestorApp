@@ -169,7 +169,7 @@ export interface ISpatialIndex {
   /**
    * Find items for snapping operations
    */
-  querySnap(point: Point2D, tolerance: number, snapType: 'endpoint' | 'midpoint' | 'center'): SpatialQueryResult[];
+  querySnap(point: Point2D, tolerance: number, snapType: 'endpoint' | 'midpoint' | 'center' | 'dim_def_point' | 'dim_line'): SpatialQueryResult[];
 
   /**
    * Find items for selection operations

@@ -25,7 +25,7 @@ import { getLayer } from '../../stores/LayerStore';
 import type { SceneUnits } from './stair-completion';
 
 // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped.
-const defaultLayerId = (): string | undefined => getLayer(DXF_DEFAULT_LAYER)?.id;
+const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 
 // ─── ADR-363 Phase 1C — Wall preview helpers ────────────────────────────────
 

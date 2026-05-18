@@ -170,7 +170,7 @@ export function cutCircle(circle: CircleEntity, ctx: CutContext): TrimResult {
     startAngle: a,
     endAngle: b,
     counterclockwise: true,
-    layer: circle.layer,
+    layerId: circle.layerId,
     visible: circle.visible,
   };
   return { operations: [promoteOp(circle, arc, 'arc')] };

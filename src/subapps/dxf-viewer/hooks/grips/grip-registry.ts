@@ -35,6 +35,12 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     edgeVertexIndices: grip.edgeVertexIndices,
     // ADR-358 Phase 5b — forward stair parametric grip discriminator.
     ...(grip.stairGripKind ? { stairGripKind: grip.stairGripKind } : {}),
+    // ADR-362 Phase I2 — forward dimension grip discriminator.
+    ...(grip.dimGripKind ? { dimGripKind: grip.dimGripKind } : {}),
+    // ADR-363 Phase 1C — forward wall parametric grip discriminator.
+    ...(grip.wallGripKind ? { wallGripKind: grip.wallGripKind } : {}),
+    // ADR-363 Phase 2.5 — forward opening parametric grip discriminator.
+    ...(grip.openingGripKind ? { openingGripKind: grip.openingGripKind } : {}),
   };
 }
 

@@ -36,7 +36,6 @@
  * @see systems/grip-interaction/GripInteractionManager.ts
  * @see core/commands/vertex-commands/MoveVertexCommand.ts
  */
-
 import { useCallback, useRef, useState, useMemo } from 'react';
 import type { Point2D } from '../rendering/types/Types';
 import { useMoveEntities } from './useMoveEntities';
@@ -48,11 +47,9 @@ import { useLevels } from '../systems/levels';
 import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { createZeroPoint } from '../config/geometry-constants';
-
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration Constants
 // ============================================================================
-
 /**
  * Grip interaction configuration
  * Based on AutoCAD/MicroStation grip behavior
@@ -67,18 +64,15 @@ export const GRIP_CONFIG = {
   /** Command merge window for smooth drag (ms) */
   MERGE_WINDOW_MS: 500,
 } as const;
-
 /**
  * Debug mode flag
  */
 const DEBUG_MODE = process.env.NODE_ENV === 'development';
-
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (extracted to grip-types.ts — SRP)
 // ============================================================================
-
-export type { GripType, StairGripKind, GripInfo, GripDragState } from './grip-types';
-
+export type { GripType, StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, GripInfo, GripDragState } from './grip-types';
+import type { GripInfo, GripDragState } from './grip-types';
 /**
  * Options for useGripMovement hook
  */
@@ -100,7 +94,6 @@ export interface UseGripMovementOptions {
   /** Whether grip movement is enabled */
   enabled?: boolean;
 }
-
 /**
  * Return type for useGripMovement hook
  */
@@ -122,11 +115,9 @@ export interface UseGripMovementReturn {
   /** Check if a point is near a grip */
   isNearGrip: (position: Point2D, grips: GripInfo[]) => GripInfo | null;
 }
-
 // ============================================================================
 // 🏢 ENTERPRISE: Initial State
 // ============================================================================
-
 // 🏢 ADR-118: Use createZeroPoint() for mutable state initialization
 const INITIAL_GRIP_STATE: GripDragState = {
   isDragging: false,
@@ -136,11 +127,9 @@ const INITIAL_GRIP_STATE: GripDragState = {
   totalDelta: createZeroPoint(),
   hasMoved: false,
 };
-
 // ============================================================================
 // 🏢 ENTERPRISE: Utility Functions
 // ============================================================================
-
 /**
  * Debug logger
  */
@@ -149,7 +138,6 @@ function debugLog(message: string, ...args: unknown[]): void {
     console.debug(`[GripMovement] ${message}`, ...args);
   }
 }
-
 /**
  * Apply grid snapping to delta
  */
@@ -159,18 +147,15 @@ function snapDeltaToGrid(delta: Point2D, gridSize: number): Point2D {
     y: Math.round(delta.y / gridSize) * gridSize,
   };
 }
-
 /**
  * Default screen to world transform (identity)
  */
 function defaultScreenToWorld(point: Point2D): Point2D {
   return point;
 }
-
 // ============================================================================
 // 🏢 ENTERPRISE: Main Hook Implementation
 // ============================================================================
-
 /**
  * React hook for grip-based entity movement
  *
@@ -192,20 +177,16 @@ export function useGripMovement({
   const { moveEntities } = useMoveEntities();
   const { execute } = useCommandHistory();
   const { currentLevelId, getLevelScene, setLevelScene } = useLevels();
-
   // Grip state
   const [gripState, setGripState] = useState<GripDragState>(INITIAL_GRIP_STATE);
-
   // Refs for performance
   const startWorldPositionRef = useRef<Point2D | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
-
   /**
    * Create SceneManager adapter for vertex commands
    */
   const createSceneManagerAdapter = useCallback((): ISceneManager | null => {
     if (!currentLevelId) return null;
-
     return {
       addEntity: (entity: SceneEntity) => {
         const scene = getLevelScene(currentLevelId);
@@ -288,9 +269,45 @@ export function useGripMovement({
         }
         return undefined;
       },
+      updateEntities: (updates: ReadonlyMap<string, Partial<SceneEntity>>) => {
+        const scene = getLevelScene(currentLevelId);
+        if (!scene) return;
+        setLevelScene(currentLevelId, {
+          ...scene,
+          entities: scene.entities.map((e) => {
+            const patch = updates.get(e.id);
+            return patch ? ({ ...e, ...patch } as AnySceneEntity) : e;
+          }),
+        });
+      },
+      getEntityIndex: (entityId: string): number => {
+        const scene = getLevelScene(currentLevelId);
+        if (!scene) return -1;
+        return scene.entities.findIndex((e) => e.id === entityId);
+      },
+      reorderEntity: (entityId: string, direction: 'front' | 'back') => {
+        const scene = getLevelScene(currentLevelId);
+        if (!scene) return;
+        const idx = scene.entities.findIndex((e) => e.id === entityId);
+        if (idx === -1) return;
+        const entities = [...scene.entities];
+        const [entity] = entities.splice(idx, 1);
+        if (direction === 'front') entities.push(entity);
+        else entities.unshift(entity);
+        setLevelScene(currentLevelId, { ...scene, entities });
+      },
+      moveEntityToIndex: (entityId: string, targetIndex: number) => {
+        const scene = getLevelScene(currentLevelId);
+        if (!scene) return;
+        const idx = scene.entities.findIndex((e) => e.id === entityId);
+        if (idx === -1) return;
+        const entities = [...scene.entities];
+        const [entity] = entities.splice(idx, 1);
+        entities.splice(targetIndex, 0, entity);
+        setLevelScene(currentLevelId, { ...scene, entities });
+      },
     };
   }, [currentLevelId, getLevelScene, setLevelScene]);
-
   /**
    * Start grip drag operation
    */
@@ -299,10 +316,8 @@ export function useGripMovement({
       debugLog('Cannot start grip drag: disabled or no entity');
       return;
     }
-
     const worldPoint = screenToWorld(screenPoint);
     startWorldPositionRef.current = worldPoint;
-
     // 🏢 ADR-118: Use createZeroPoint() for mutable state initialization
     setGripState({
       isDragging: true,
@@ -312,11 +327,9 @@ export function useGripMovement({
       totalDelta: createZeroPoint(),
       hasMoved: false,
     });
-
     debugLog(`Started grip drag: entity=${grip.entityId}, grip=${grip.gripIndex}, type=${grip.type}`);
     onGripDragStart?.(grip);
   }, [enabled, entityId, screenToWorld, onGripDragStart]);
-
   /**
    * Update grip drag position
    */
@@ -324,46 +337,37 @@ export function useGripMovement({
     if (!gripState.isDragging || !gripState.activeGrip || !startWorldPositionRef.current) {
       return;
     }
-
     // Throttle updates
     const now = Date.now();
     if (now - lastUpdateTimeRef.current < GRIP_CONFIG.DEBOUNCE_MS) {
       return;
     }
     lastUpdateTimeRef.current = now;
-
     const currentWorldPoint = screenToWorld(screenPoint);
-
     // Calculate delta
     let delta: Point2D = {
       x: currentWorldPoint.x - startWorldPositionRef.current.x,
       y: currentWorldPoint.y - startWorldPositionRef.current.y,
     };
-
     // Check minimum drag distance (in world units, approximate)
     // 🏢 ADR-065: Use centralized distance calculation
     const dragDistance = calculateDistance(startWorldPositionRef.current, currentWorldPoint);
     const hasMoved = dragDistance >= GRIP_CONFIG.MIN_DRAG_DISTANCE / 10; // Rough conversion
-
     if (!hasMoved && !gripState.hasMoved) {
       return;
     }
-
     // Apply grid snapping if enabled
     if (snapToGrid && gridSize > 0) {
       delta = snapDeltaToGrid(delta, gridSize);
     }
-
     setGripState(prev => ({
       ...prev,
       currentPosition: currentWorldPoint,
       totalDelta: delta,
       hasMoved: true,
     }));
-
     onGripDragMove?.(gripState.activeGrip, delta);
   }, [gripState, screenToWorld, snapToGrid, gridSize, onGripDragMove]);
-
   /**
    * End grip drag and apply movement via command
    */
@@ -371,13 +375,10 @@ export function useGripMovement({
     if (!gripState.isDragging || !gripState.activeGrip) {
       return;
     }
-
     const { activeGrip, totalDelta, hasMoved } = gripState;
-
     // Only execute if actually moved
     if (hasMoved && (totalDelta.x !== 0 || totalDelta.y !== 0)) {
       debugLog(`Ending grip drag: delta=(${totalDelta.x.toFixed(2)}, ${totalDelta.y.toFixed(2)})`);
-
       if (activeGrip.movesEntity) {
         // Use MoveEntityCommand for center/entity grips
         moveEntities([activeGrip.entityId], totalDelta, { isDragging: false });
@@ -392,7 +393,6 @@ export function useGripMovement({
               x: oldPosition.x + totalDelta.x,
               y: oldPosition.y + totalDelta.y,
             };
-
             // Execute via command for undo support
             // 🏢 ENTERPRISE: Type-safe casting for ISceneManager interface
             const command = new MoveVertexCommand(
@@ -406,17 +406,14 @@ export function useGripMovement({
           }
         }
       }
-
       onGripDragEnd?.(activeGrip, totalDelta);
     } else {
       debugLog('Grip drag ended without movement');
     }
-
     // Reset state
     setGripState(INITIAL_GRIP_STATE);
     startWorldPositionRef.current = null;
   }, [gripState, moveEntities, createSceneManagerAdapter, execute, onGripDragEnd]);
-
   /**
    * Cancel grip drag without applying
    */
@@ -424,12 +421,10 @@ export function useGripMovement({
     if (!gripState.isDragging) {
       return;
     }
-
     debugLog('Grip drag cancelled');
     setGripState(INITIAL_GRIP_STATE);
     startWorldPositionRef.current = null;
   }, [gripState.isDragging]);
-
   /**
    * Check if a point is near any grip
    */
@@ -442,11 +437,9 @@ export function useGripMovement({
     }
     return null;
   }, []);
-
   // ============================================================================
   // Return Hook Interface
   // ============================================================================
-
   return useMemo(() => ({
     gripState,
     isGripDragging: gripState.isDragging,
@@ -465,7 +458,6 @@ export function useGripMovement({
     isNearGrip,
   ]);
 }
-
 /**
  * Alias for backward compatibility
  */

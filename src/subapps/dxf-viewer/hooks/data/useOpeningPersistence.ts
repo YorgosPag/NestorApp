@@ -39,6 +39,7 @@ import {
   type OpeningDoc,
 } from '../../bim/walls/opening-firestore-service';
 import { recordOpeningChange } from '../../bim/walls/opening-audit-client';
+import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 
 // ============================================================================
 // TYPES
@@ -56,6 +57,7 @@ export interface UseOpeningPersistenceParams {
   readonly companyId: string | null;
   readonly projectId: string | null | undefined;
   readonly floorplanId: string | null | undefined;
+  readonly buildingId: string | null | undefined;
   readonly userId: string | null;
   readonly levelManager: LevelManagerLike;
   readonly primarySelectedOpening: OpeningEntity | null;
@@ -121,6 +123,7 @@ export function useOpeningPersistence(
     companyId,
     projectId,
     floorplanId,
+    buildingId,
     userId,
     levelManager,
     primarySelectedOpening,
@@ -254,11 +257,19 @@ export function useOpeningPersistence(
       setSaveState('saved');
       setLastSavedAt(Date.now());
       void recordOpeningChange(isNew ? 'created' : 'updated', entity);
+      if (companyId && projectId && buildingId) {
+        void bimToBoqBridge.upsertBoqItemForBim(
+          'opening',
+          { id: entity.id, kind: entity.kind },
+          { companyId, projectId, buildingId },
+          isNew ? 'created' : 'updated',
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'OPENING_SAVE_ERROR');
       setSaveState('error');
     }
-  }, []);
+  }, [companyId, projectId, buildingId]);
 
   // Auto-save debounce on selected opening params change.
   useEffect(() => {
@@ -313,6 +324,7 @@ export function useOpeningPersistence(
         'deleted',
         { id: openingId, kind: (deletedEntity as Partial<OpeningEntity>)?.kind ?? 'door' },
       );
+      void bimToBoqBridge.deleteBoqItemForBim(openingId);
     } catch {
       // Non-fatal: deletion failure silent — user can retry.
     }

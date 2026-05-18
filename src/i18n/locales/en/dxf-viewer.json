@@ -116,7 +116,17 @@
     "iso88597Desc": "Older Greek encoding"
   },
   "contextMenu": {
-    "flipArc": "Reverse"
+    "flipArc": "Reverse",
+    "snapOverride": {
+      "title": "Snap Override",
+      "from": "From",
+      "m2p": "Mid Between 2 Points",
+      "app": "Apparent Intersection",
+      "once": "once",
+      "fromActive": "Click reference point…",
+      "m2pFirst": "Click first point…",
+      "m2pSecond": "Click second point…"
+    }
   },
   "breadcrumb": {
     "ariaLabel": "Drawing location"
@@ -373,5 +383,8 @@
       "ruleset": "Ruleset",
       "contextMenu": "Filter menu"
     }
+  },
+  "selectionCycling": {
+    "label": "Select entity"
   }
 }

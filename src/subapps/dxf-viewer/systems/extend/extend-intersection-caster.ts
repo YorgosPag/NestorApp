@@ -122,7 +122,7 @@ function extendArc(
     type: 'circle',
     center: arc.center,
     radius: arc.radius,
-    layer: arc.layer,
+    layerId: arc.layerId,
     visible: arc.visible,
   } as unknown as Entity;
 

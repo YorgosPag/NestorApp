@@ -91,6 +91,11 @@ export interface SubscribeDocOptions<T = unknown> extends EqualityGuardOptions {
    * `EqualitySlot.reset()`.
    */
   readonly equalityFn?: (prev: T | null | undefined, next: T | null) => boolean;
+  /**
+   * Pass `'skip'` to bypass tenant-isolation guards for collections that are
+   * scoped by userId rather than companyId (e.g. user_preferences).
+   */
+  readonly tenantOverride?: 'skip';
 }
 
 // ============================================================================

@@ -176,6 +176,41 @@ function createSceneManagerAdapter(
       }
       return undefined;
     },
+    updateEntities(updates: ReadonlyMap<string, Partial<SceneEntity>>): void {
+      const scene = getLevelScene(levelId);
+      if (!scene) return;
+      const updatedEntities = scene.entities.map((e) => {
+        const patch = updates.get(e.id);
+        return patch ? ({ ...e, ...patch } as SceneEntity) : e;
+      });
+      setLevelScene(levelId, { ...scene, entities: updatedEntities });
+    },
+    getEntityIndex(entityId: string): number {
+      const scene = getLevelScene(levelId);
+      if (!scene) return -1;
+      return scene.entities.findIndex((e) => e.id === entityId);
+    },
+    reorderEntity(entityId: string, direction: 'front' | 'back'): void {
+      const scene = getLevelScene(levelId);
+      if (!scene) return;
+      const idx = scene.entities.findIndex((e) => e.id === entityId);
+      if (idx === -1) return;
+      const entities = [...scene.entities];
+      const [entity] = entities.splice(idx, 1);
+      if (direction === 'front') entities.push(entity);
+      else entities.unshift(entity);
+      setLevelScene(levelId, { ...scene, entities });
+    },
+    moveEntityToIndex(entityId: string, targetIndex: number): void {
+      const scene = getLevelScene(levelId);
+      if (!scene) return;
+      const idx = scene.entities.findIndex((e) => e.id === entityId);
+      if (idx === -1) return;
+      const entities = [...scene.entities];
+      const [entity] = entities.splice(idx, 1);
+      entities.splice(targetIndex, 0, entity);
+      setLevelScene(levelId, { ...scene, entities });
+    },
   };
 }
 

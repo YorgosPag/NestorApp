@@ -295,7 +295,7 @@ export function useLinePerpendicular(options: {
       start: result.start,
       end: result.end,
       visible: true,
-      layer: currentLevelId,
+      layerId: currentLevelId,
       color: UI_COLORS.BRIGHT_GREEN, // 🏢 ENTERPRISE: Consistent green color for new entities
     };
 

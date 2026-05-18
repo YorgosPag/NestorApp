@@ -61,7 +61,7 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
           type: 'lwpolyline' as const,
           vertices: polygon.vertices,
           closed: true,
-          layer: layer.name,
+          layerId: layer.id,
           color: layer.color,
         } satisfies Entity);
       }
@@ -147,14 +147,19 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
 
     // Pan initialization
     const isToolInteractive = isInDrawingMode(activeTool, overlayMode);
-    const shouldStartPan = (e.button === 1) || (activeTool === 'pan' && e.button === 0);
+    // button 1 = middle drag (AutoCAD standard), button 2 = right drag (BricsCAD style)
+    const shouldStartPan = (e.button === 1) || (e.button === 2) || (activeTool === 'pan' && e.button === 0);
 
     if (shouldStartPan) {
       panStateRef.current.isPanning = true;
       panStateRef.current.lastMousePos = screenPos;
       panStateRef.current.pendingTransform = { ...transform };
-      e.preventDefault();
-      e.stopPropagation();
+      if (e.button !== 2) {
+        // Middle button: prevent browser autoscroll. Pan tool: prevent text selection.
+        // Right button: do NOT preventDefault — allows contextmenu on non-drag right clicks.
+        e.preventDefault();
+        e.stopPropagation();
+      }
     }
 
     const worldPos = screenToWorldWithSnapshot(screenPos, transform, pointerSnap);

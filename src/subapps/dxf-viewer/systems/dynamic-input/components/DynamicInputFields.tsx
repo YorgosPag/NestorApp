@@ -24,6 +24,9 @@ type RefObj = React.RefObject<HTMLInputElement>;
 export interface DynamicInputFieldsProps {
   readonly fieldsToShow: readonly string[];
   readonly t: TFunction;
+  // ADR-357 Phase 13 G14 — active length/angle lock indicator.
+  readonly lockedField?: 'length' | 'angle' | null;
+  readonly onUnlock?: () => void;
   // Core values
   readonly xValue: string;
   readonly yValue: string;
@@ -46,10 +49,10 @@ export interface DynamicInputFieldsProps {
   readonly setRiseValue: (v: string) => void;
   readonly setTreadValue: (v: string) => void;
   readonly setWidthValue: (v: string) => void;
-  readonly setIsManualInput: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  readonly setIsManualInput: React.Dispatch<React.SetStateAction<{x: boolean; y: boolean; radius: boolean}>>;
   // Active field
   readonly activeField: string;
-  readonly setActiveField: (f: string) => void;
+  readonly setActiveField: (f: 'x' | 'y' | 'angle' | 'length' | 'radius' | 'diameter') => void;
   readonly activeStairField: string;
   readonly setActiveStairField: (f: 'rise' | 'tread' | 'width') => void;
   // Lock / anchor state
@@ -78,6 +81,7 @@ export function DynamicInputFields(props: DynamicInputFieldsProps): React.ReactE
     activeField, setActiveField,
     activeStairField, setActiveStairField,
     fieldUnlocked, isCoordinateAnchored,
+    lockedField, onUnlock,
     xInputRef, yInputRef, angleInputRef, lengthInputRef, radiusInputRef, diameterInputRef,
     riseInputRef, treadInputRef, widthInputRef,
   } = props;
@@ -128,67 +132,87 @@ export function DynamicInputFields(props: DynamicInputFieldsProps): React.ReactE
       )}
 
       {fieldsToShow.includes('angle') && (
-        <DynamicInputField
-          label="°"
-          value={angleValue}
-          onChange={(e) => {
-            if (fieldUnlocked.angle) {
-              setAngleValue(e.target.value);
-            }
-          }}
-          onKeyDown={(e) => {
-            if (!fieldUnlocked.angle) {
-              e.preventDefault();
-              return;
-            }
-          }}
-          onFocus={() => {
-            if (fieldUnlocked.angle) {
-              setActiveField('angle');
-            } else {
-              setTimeout(() => yInputRef.current?.focus(), PANEL_LAYOUT.TIMING.FOCUS_DELAY);
-            }
-          }}
-          inputRef={angleInputRef}
-          disabled={!fieldUnlocked.angle}
-          isActive={activeField === 'angle' && fieldUnlocked.angle}
-          placeholder={t('dynamicInput.placeholders.angle')}
-          fieldType="angle"
-        />
+        <div className={`relative${lockedField === 'angle' ? ' ring-2 ring-orange-500 rounded' : ''}`}>
+          <DynamicInputField
+            label="°"
+            value={angleValue}
+            onChange={(e) => {
+              if (fieldUnlocked.angle) {
+                setAngleValue(e.target.value);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (!fieldUnlocked.angle) {
+                e.preventDefault();
+                return;
+              }
+            }}
+            onFocus={() => {
+              if (fieldUnlocked.angle) {
+                setActiveField('angle');
+              } else {
+                setTimeout(() => yInputRef.current?.focus(), PANEL_LAYOUT.TIMING.FOCUS_DELAY);
+              }
+            }}
+            inputRef={angleInputRef}
+            disabled={!fieldUnlocked.angle}
+            isActive={activeField === 'angle' && fieldUnlocked.angle}
+            placeholder={t('dynamicInput.placeholders.angle')}
+            fieldType="angle"
+          />
+          {lockedField === 'angle' && (
+            <button
+              type="button"
+              onClick={onUnlock}
+              aria-label={t('dynamicInput.lock.unlock')}
+              className="absolute right-1 top-1/2 -translate-y-1/2 text-orange-500 text-xs leading-none cursor-pointer bg-transparent border-0 p-0"
+            >🔒</button>
+          )}
+        </div>
       )}
 
       {fieldsToShow.includes('length') && (
-        <DynamicInputField
-          label="L"
-          value={lengthValue}
-          onChange={(e) => {
-            if (fieldUnlocked.length) {
-              setLengthValue(e.target.value);
-            }
-          }}
-          onKeyDown={(e) => {
-            if (!fieldUnlocked.length) {
-              e.preventDefault();
-              return;
-            }
-          }}
-          onFocus={() => {
-            if (fieldUnlocked.length) {
-              setActiveField('length');
-            } else {
-              const prevField = fieldUnlocked.y ? 'y' : 'x';
-              setTimeout(() => {
-                if (prevField === 'y') yInputRef.current?.focus();
-                else xInputRef.current?.focus();
-              }, 10);
-            }
-          }}
-          inputRef={lengthInputRef}
-          disabled={!fieldUnlocked.length}
-          isActive={activeField === 'length' && fieldUnlocked.length}
-          placeholder={t('dynamicInput.placeholders.length')}
-          fieldType="length"
-        />
+        <div className={`relative${lockedField === 'length' ? ' ring-2 ring-orange-500 rounded' : ''}`}>
+          <DynamicInputField
+            label="L"
+            value={lengthValue}
+            onChange={(e) => {
+              if (fieldUnlocked.length) {
+                setLengthValue(e.target.value);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (!fieldUnlocked.length) {
+                e.preventDefault();
+                return;
+              }
+            }}
+            onFocus={() => {
+              if (fieldUnlocked.length) {
+                setActiveField('length');
+              } else {
+                const prevField = fieldUnlocked.y ? 'y' : 'x';
+                setTimeout(() => {
+                  if (prevField === 'y') yInputRef.current?.focus();
+                  else xInputRef.current?.focus();
+                }, 10);
+              }
+            }}
+            inputRef={lengthInputRef}
+            disabled={!fieldUnlocked.length}
+            isActive={activeField === 'length' && fieldUnlocked.length}
+            placeholder={t('dynamicInput.placeholders.length')}
+            fieldType="length"
+          />
+          {lockedField === 'length' && (
+            <button
+              type="button"
+              onClick={onUnlock}
+              aria-label={t('dynamicInput.lock.unlock')}
+              className="absolute right-1 top-1/2 -translate-y-1/2 text-orange-500 text-xs leading-none cursor-pointer bg-transparent border-0 p-0"
+            >🔒</button>
+          )}
+        </div>
       )}
 
       {fieldsToShow.includes('radius') && (

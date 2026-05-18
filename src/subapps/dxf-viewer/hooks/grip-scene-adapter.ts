@@ -212,5 +212,46 @@ export function createGripSceneAdapter(access: LevelSceneAccess): ISceneManager 
       }
       return undefined;
     },
+
+    updateEntities: (updates: ReadonlyMap<string, Partial<SceneEntity>>) => {
+      const scene = getLevelScene(currentLevelId);
+      if (!scene) return;
+      setLevelScene(currentLevelId, {
+        ...scene,
+        entities: scene.entities.map((e) => {
+          const patch = updates.get(e.id);
+          return patch ? ({ ...e, ...patch } as AnySceneEntity) : e;
+        }),
+      });
+    },
+
+    getEntityIndex: (entityId: string): number => {
+      const scene = getLevelScene(currentLevelId);
+      if (!scene) return -1;
+      return scene.entities.findIndex((e) => e.id === entityId);
+    },
+
+    reorderEntity: (entityId: string, direction: 'front' | 'back') => {
+      const scene = getLevelScene(currentLevelId);
+      if (!scene) return;
+      const idx = scene.entities.findIndex((e) => e.id === entityId);
+      if (idx === -1) return;
+      const entities = [...scene.entities];
+      const [entity] = entities.splice(idx, 1);
+      if (direction === 'front') entities.push(entity);
+      else entities.unshift(entity);
+      setLevelScene(currentLevelId, { ...scene, entities });
+    },
+
+    moveEntityToIndex: (entityId: string, targetIndex: number) => {
+      const scene = getLevelScene(currentLevelId);
+      if (!scene) return;
+      const idx = scene.entities.findIndex((e) => e.id === entityId);
+      if (idx === -1) return;
+      const entities = [...scene.entities];
+      const [entity] = entities.splice(idx, 1);
+      entities.splice(targetIndex, 0, entity);
+      setLevelScene(currentLevelId, { ...scene, entities });
+    },
   };
 }

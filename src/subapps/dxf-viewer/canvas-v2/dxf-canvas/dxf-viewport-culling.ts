@@ -107,6 +107,10 @@ export function getEntityBBox(entity: DxfEntityUnion): BBox {
         maxY: bb.max.y,
       };
     }
+    default: {
+      // Conservative fallback for entity types not yet handled (e.g. dimension).
+      return { minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 };
+    }
   }
 }
 

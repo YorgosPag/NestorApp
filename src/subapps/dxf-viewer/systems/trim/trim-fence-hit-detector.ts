@@ -94,6 +94,8 @@ function buildFenceEdge(start: Point2D, end: Point2D): CuttingEdge {
   const entity: LineEntity = {
     id: FENCE_ENTITY_ID,
     type: 'line',
+    layerId: '',
+    visible: true,
     start,
     end,
   };

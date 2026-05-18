@@ -750,6 +750,13 @@
       "abs": "Απόλ",
       "rel": "Σχετ",
       "polar": "Πολικ"
+    },
+    "lock": {
+      "lengthLocked": "Κλειδωμένο μήκος",
+      "angleLocked": "Κλειδωμένη γωνία",
+      "unlock": "Ξεκλείδωμα",
+      "hintLength": "Ctrl+L: κλείδωμα μήκους",
+      "hintAngle": "Ctrl+A: κλείδωμα γωνίας"
     }
   },
   "cursorPalette": {

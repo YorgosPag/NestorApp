@@ -34,6 +34,7 @@ export interface OpeningPersistenceHostProps {
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
+  readonly buildingId?: string;
 }
 
 export function OpeningPersistenceHost({
@@ -42,6 +43,7 @@ export function OpeningPersistenceHost({
   levelManager,
   projectId,
   floorplanId,
+  buildingId,
 }: OpeningPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -56,6 +58,7 @@ export function OpeningPersistenceHost({
     companyId: user?.companyId ?? null,
     projectId,
     floorplanId,
+    buildingId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedOpening,

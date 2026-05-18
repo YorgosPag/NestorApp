@@ -7,6 +7,8 @@ import { calculateDistance } from '../../../rendering/entities/shared/geometry-r
 // ADR-357 Phase 2b: Display unit conversion
 import type { DisplayUnit } from '../../../config/units';
 import { formatDisplayValue } from '../../../config/units';
+// ADR-357 Phase 13 G14: length/angle lock constraint
+import { DynamicInputLockStore } from '../DynamicInputLockStore';
 
 interface UseDynamicInputRealtimeArgs {
   mouseWorldPosition: Point2D | null;
@@ -72,11 +74,18 @@ export function useDynamicInputRealtime({
       const dx = mouseWorldPosition.x - firstClickPoint.x;
       const dy = mouseWorldPosition.y - firstClickPoint.y;
       const distance = Math.hypot(dx, dy);
-      setLengthValue(formatDisplayValue(distance, displayUnit));
-      // ADR-357 §4 G2 — live angle: degrees, normalized 0..360, AutoCAD convention. No unit conversion.
       const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
       const normalized = angleDeg < 0 ? angleDeg + 360 : angleDeg;
-      setAngleValue(normalized.toFixed(3));
+
+      // ADR-357 Phase 13 G14: skip live update for the locked field — keep locked value displayed.
+      const { lockedField } = DynamicInputLockStore.getLocked();
+      if (lockedField !== 'length') {
+        setLengthValue(formatDisplayValue(distance, displayUnit));
+      }
+      // ADR-357 §4 G2 — live angle: degrees, normalized 0..360, AutoCAD convention.
+      if (lockedField !== 'angle') {
+        setAngleValue(normalized.toFixed(3));
+      }
       setShowLengthDuringDraw(true);
     }
   }, [mouseWorldPosition, showInput, isManualInput, activeTool, firstClickPoint, displayUnit,

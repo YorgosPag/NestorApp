@@ -17,6 +17,8 @@ import { matchesShortcut } from '../config/keyboard-shortcuts';
 import { useUniversalSelection } from '../systems/selection';
 // 🏢 ENTERPRISE: Unified EventBus for type-safe event dispatch
 import { EventBus } from '../systems/events';
+// ADR-357 Phase 14-B: Command line activation
+import { CommandLineStore } from '../systems/command-line/CommandLineStore';
 
 // Hook parameters interface
 interface KeyboardShortcutsConfig {
@@ -76,6 +78,21 @@ export const useKeyboardShortcuts = ({
          document.activeElement.getAttribute('contenteditable') === 'true');
 
       // ⌨️ SPECIAL SHORTCUTS - Using centralized matchesShortcut()
+
+      // ADR-357 Phase 14-B: letter/digit in select mode → open command line.
+      // Gate: select tool, no input focused, no modifier keys.
+      // Exclusion: 'J' is reserved for entity Join (useCanvasKeyboardShortcuts).
+      if (
+        activeTool === 'select' &&
+        !inputFocused &&
+        !e.ctrlKey && !e.metaKey && !e.altKey &&
+        e.key !== 'j' && e.key !== 'J' &&
+        /^[A-Za-z0-9]$/.test(e.key)
+      ) {
+        e.preventDefault();
+        CommandLineStore.show(e.key.toUpperCase());
+        return;
+      }
 
       // 🎯 ADR-047: ESC - Cancel drawing OR close color palette
       if (matchesShortcut(e, 'escape')) {

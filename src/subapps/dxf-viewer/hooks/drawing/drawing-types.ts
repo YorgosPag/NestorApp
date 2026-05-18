@@ -25,10 +25,8 @@ export interface PreviewPoint {
   position: Point2D;
   size: number;
   visible: boolean;
-  /** @deprecated ADR-358 Phase 9D — transitional name backref. */
-  layer?: string;
   /** Stable layer id — `lyr_<UUID-v4>`. */
-  layerId?: string;
+  layerId: string;
   preview: boolean;
 }
 
@@ -90,7 +88,10 @@ export type DrawingTool =
   | 'measure-angle-line-arc' | 'measure-angle-two-arcs' | 'measure-angle-measuregeom' | 'measure-angle-constraint'
   | 'arc-3p' | 'arc-cse' | 'arc-sce'
   | 'stair'
-  | 'wall';
+  | 'wall'
+  | 'slab'
+  | 'column'
+  | 'beam';
 
 export interface DrawingState {
   currentTool: DrawingTool;

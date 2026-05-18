@@ -92,7 +92,7 @@ export class DxfSceneBuilder {
         // emits `.layer` (group 8 string) at runtime; narrow cast preserves boundary read
         // since BaseEntity.layer field was dropped from SceneEntity schema in 9D-5b-i.
         // TODO Phase 9E candidate: extract formal `RawDxfEntity` type for parse boundary.
-        const layerName = getLayerNameOrDefault((entity as { layer?: string }).layer);
+        const layerName = getLayerNameOrDefault(entity.layerId);
 
         // Register layer with REAL ACI colors from parsed LAYER table
         DxfSceneBuilder.registerLayer(layers, layerName, layerColors);
@@ -182,7 +182,6 @@ export class DxfSceneBuilder {
 
     return {
       entities,
-      layers,
       layersById,
       bounds,
       units: resolvedUnits

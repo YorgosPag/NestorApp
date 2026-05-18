@@ -88,6 +88,11 @@ export function useMirrorTool(props: UseMirrorToolProps): UseMirrorToolReturn {
   orthoOnRef.current = ortho.on;
   const shiftHeldRef = useRef(false);
 
+  // ADR-357 Phase 12 — armed when the grip drag handoff carried `copyMode:true`.
+  // On second-point click we auto-confirm with `keepOriginals=true` and skip
+  // the manual Y/N prompt (which would otherwise interrupt the grip flow).
+  const copyModeHandoffRef = useRef(false);
+
   useEffect(() => {
     const onDown = (e: KeyboardEvent) => { if (e.key === 'Shift') shiftHeldRef.current = true; };
     const onUp = (e: KeyboardEvent) => { if (e.key === 'Shift') shiftHeldRef.current = false; };
@@ -118,16 +123,21 @@ export function useMirrorTool(props: UseMirrorToolProps): UseMirrorToolReturn {
     const hasEntities = selectedEntityIds.length > 0;
 
     if (toolIsMirror && !wasActiveRef.current) {
-      const handoffPt = GripHandoffStore.consume('mirror');
-      if (hasEntities && handoffPt) {
-        // Grip drag pre-seeded the first axis point → skip straight to second point
-        setFirstPoint(handoffPt);
+      const handoff = GripHandoffStore.consume('mirror');
+      if (hasEntities && handoff) {
+        // Grip drag pre-seeded the first axis point → skip straight to second point.
+        setFirstPoint(handoff.point);
         setSecondPoint(null);
         setPhase('awaiting-second-point');
+        // ADR-357 Phase 12 — `copyMode` modifier: arm `keepOriginals=true` to
+        // be applied at confirm time without the Y/N prompt. The auto-confirm
+        // wiring lives in the second-point click handler below.
+        copyModeHandoffRef.current = handoff.options.copyMode === true;
       } else {
         setPhase(hasEntities ? 'awaiting-first-point' : 'awaiting-entity');
         setFirstPoint(null);
         setSecondPoint(null);
+        copyModeHandoffRef.current = false;
       }
       previewCanvasRef.current?.clear();
     } else if (!toolIsMirror && wasActiveRef.current) {
@@ -166,8 +176,30 @@ export function useMirrorTool(props: UseMirrorToolProps): UseMirrorToolReturn {
 
       setSecondPoint(snapped);
       setPhase('awaiting-keep-originals');
+
+      // ADR-357 Phase 12 — auto-confirm when the grip handoff carried
+      // `copyMode:true`. Skips the manual Y/N prompt and runs the mirror with
+      // `keepOriginals=true` immediately (`secondPoint` setState is async so
+      // we pass the snapped value directly to a synchronous executor).
+      if (copyModeHandoffRef.current) {
+        copyModeHandoffRef.current = false;
+        const sm = getSceneManager();
+        if (sm) {
+          const cmd = new MirrorEntityCommand(
+            selectedEntityIds,
+            { p1: firstPoint, p2: snapped },
+            true,
+            sm,
+          );
+          executeCommand(cmd);
+          previewCanvasRef.current?.clear();
+          setPhase('awaiting-first-point');
+          setFirstPoint(null);
+          setSecondPoint(null);
+        }
+      }
     }
-  }, [isCollectingInput, phase, firstPoint]);
+  }, [isCollectingInput, phase, firstPoint, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef]);
 
   const handleMirrorConfirm = useCallback((keepOriginals: boolean) => {
     if (phase !== 'awaiting-keep-originals' || !firstPoint || !secondPoint) return;

@@ -5,7 +5,7 @@
  */
 
 import type { Point2D } from '../types/Types';
-import type { Entity } from '../../types/entities';
+import type { Entity, DimensionEntity } from '../../types/entities';
 import type { HitTestResult, SnapResult } from './hit-tester-types';
 import { pointToLineDistance, clamp, degToRad } from '../entities/shared/geometry-utils';
 import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
@@ -28,6 +28,7 @@ export function performDetailedHitTest(
     case 'mtext': return hitTestText(entity, point, tolerance);
     case 'arc': return hitTestArc(entity, point, tolerance);
     case 'angle-measurement': return hitTestAngleMeasurement(entity, point, tolerance);
+    case 'dimension': return hitTestDimension(entity as DimensionEntity, point, tolerance);
     default: return { hitType: 'entity', hitPoint: point };
   }
 }
@@ -203,6 +204,60 @@ function hitTestAngleMeasurement(entity: Entity, point: Point2D, tolerance: numb
   if (distArm2 <= tolerance) {
     return { hitType: 'entity', hitPoint: closestPointOnLine(point, angleMeasurement.vertex, angleMeasurement.point2) };
   }
+  return null;
+}
+
+// ===== DIMENSION =====
+
+/**
+ * ADR-362 Phase I3 — Geometry-aware hit test for DimensionEntity.
+ *
+ * defPoints semantic (all variants):
+ *   [0] = ext-line origin 1  [1] = ext-line origin 2  [2] = dim-line ref
+ * textMidpoint = label position (computed fallback: midpt(pts[0], pts[1]))
+ *
+ * Tests (in priority order):
+ *   1. Text label — point in circle (tolerance × 1.5)
+ *   2. Approximate ext lines — segments pts[0]→pts[2] and pts[1]→pts[2]
+ *   3. Approximate dim line — segment pts[0]→pts[1] (radial/ordinate: only pts)
+ *   4. Proximity to any individual defPoint (catch clicks on extension origins)
+ */
+function hitTestDimension(entity: DimensionEntity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+  const pts = entity.defPoints;
+  if (!pts || pts.length === 0) return null;
+
+  const textPt = entity.textMidpoint ?? (pts.length >= 2 ? { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 } : pts[0]);
+  if (calculateDistance(point, textPt) <= tolerance * 1.5) {
+    return { hitType: 'entity', hitPoint: textPt };
+  }
+
+  // Extension lines: pts[0]→pts[2] and pts[1]→pts[2] (linear/aligned/angular)
+  if (pts.length >= 3) {
+    const d0 = pointToLineDistance(point, pts[0], pts[2]);
+    if (d0 <= tolerance) {
+      return { hitType: 'entity', hitPoint: closestPointOnLine(point, pts[0], pts[2]) };
+    }
+    const d1 = pointToLineDistance(point, pts[1], pts[2]);
+    if (d1 <= tolerance) {
+      return { hitType: 'entity', hitPoint: closestPointOnLine(point, pts[1], pts[2]) };
+    }
+  }
+
+  // Dimension line / leader: segment between first two defPoints
+  if (pts.length >= 2) {
+    const dLine = pointToLineDistance(point, pts[0], pts[1]);
+    if (dLine <= tolerance) {
+      return { hitType: 'entity', hitPoint: closestPointOnLine(point, pts[0], pts[1]) };
+    }
+  }
+
+  // Fallback: proximity to any defPoint (catches clicks on arrowhead endpoints)
+  for (const pt of pts) {
+    if (calculateDistance(point, pt) <= tolerance) {
+      return { hitType: 'entity', hitPoint: pt };
+    }
+  }
+
   return null;
 }
 

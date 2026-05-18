@@ -69,7 +69,7 @@ export default function CoordinateCalibrationOverlay({
 
   // Scene info
   const entitiesCount = currentScene?.entities?.length ?? 0;
-  const layersCount = currentScene?.layers ? Object.keys(currentScene.layers).length : 0;
+  const layersCount = currentScene?.layersById ? Object.keys(currentScene.layersById).length : 0;
   const dpr = getDevicePixelRatio(); // 🏢 ADR-094
 
   // ✅ Χρήση κεντρικού CoordinateTransforms για round-trip test

@@ -37,6 +37,8 @@ const SNAP_MODE_KEYS: Record<ExtendedSnapType, string> = {
   [ExtendedSnapType.ORTHO]: 'ortho',
   [ExtendedSnapType.GUIDE]: 'guide',  // ADR-189: Construction guide snap
   [ExtendedSnapType.CONSTRUCTION_POINT]: 'constructionPoint',  // ADR-189 §3.7-3.16: Construction snap points
+  [ExtendedSnapType.DIM_DEF_POINT]: 'dimDefPoint',             // ADR-362 I1
+  [ExtendedSnapType.DIM_LINE]: 'dimLine',                      // ADR-362 I1
 };
 
 // 🏢 ENTERPRISE: Get translated snap label

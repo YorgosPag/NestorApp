@@ -1,29 +1,45 @@
 /**
- * GRIP CONTEXT MENU ACTIONS — ADR-357 Phase 11 / G10.A
+ * GRIP CONTEXT MENU ACTIONS — ADR-357 Phase 11 / G10.A + Phase 12 / G10 extras
  *
  * Action dispatcher that turns a resolved {@link GripContextActionId} into a
  * bound `onSelect` callback. No React, no DOM. Receives a context with the
- * `GripModeStore` setter and the `handleEscape` callback exposed by
- * `useUnifiedGripInteraction` so a right-click `Exit` cancels the active drag
- * cleanly (same code path the unified hook used when right-click was an alias
- * of escape).
+ * setters / arming hooks needed by each action family:
+ *
+ *   - `mode:*`             → set {@link GripModeStore} → update tool hint
+ *   - `exit`               → call `ctx.handleEscape` (cancel active drag)
+ *   - `extras:basePoint`   → arm {@link GripBasePointStore} pick + status hint
+ *   - `extras:copyToggle`  → toggle {@link GripCopyModeStore} + status hint
+ *   - `extras:reference`   → arm {@link GripReferenceStore} pick (Scale/Rotate)
+ *   - `extras:sessionUndo` → call `ctx.sessionUndo` (delegates to CommandHistory)
  *
  * @see grip-context-menu-resolver — pure resolver
  * @see GripContextMenuStore       — UI state container
  * @see GripModeStore              — mode SSoT consumed by `commitDxfGripDragModeAware`
+ * @see GripBasePointStore         — Base Point override anchor SSoT
+ * @see GripCopyModeStore          — Copy toggle SSoT
+ * @see GripReferenceStore         — Reference pick SSoT
+ * @see GripSessionUndoStore       — Session-scoped undo SSoT
  */
 
 import i18next from 'i18next';
 import { GripModeStore } from './GripModeStore';
 import { gripModeMeta, type GripMode } from './grip-mode-cycle';
 import { toolHintOverrideStore } from '../../hooks/toolHintOverrideStore';
-import type { GripContextActionId, GripContextActionMeta } from './grip-context-menu-resolver';
+import { GripBasePointStore } from './GripBasePointStore';
+import { GripCopyModeStore } from './GripCopyModeStore';
+import { GripReferenceStore } from './GripReferenceStore';
+import type {
+  GripContextActionId,
+  GripContextActionMeta,
+} from './grip-context-menu-resolver';
 
 export interface GripContextActionBindContext {
   /** Cancel the active grip drag (mirror of `useUnifiedGripInteraction.handleEscape`). */
   readonly handleEscape: () => void;
   /** Close the context menu after dispatch — usually `GripContextMenuStore.hide`. */
   readonly onAfterDispatch: () => void;
+  /** ADR-357 Phase 12 — run a session-scoped undo (delegates to `CommandHistory.undo`). */
+  readonly sessionUndo: () => void;
 }
 
 function updateModeHint(): void {
@@ -44,6 +60,51 @@ function actionExit(ctx: GripContextActionBindContext): void {
   ctx.onAfterDispatch();
 }
 
+function actionBasePoint(ctx: GripContextActionBindContext): void {
+  GripBasePointStore.armBasePointPick();
+  // Status-bar prompt: next click on the canvas captures the new anchor. The
+  // pick is consumed in `useUnifiedGripInteraction.handleMouseDown` when
+  // pickPhase === 'awaiting-click'.
+  toolHintOverrideStore.setOverride(
+    i18next.t('tool-hints:gripContextMenu.prompts.pickBasePoint'),
+  );
+  ctx.onAfterDispatch();
+}
+
+function actionCopyToggle(ctx: GripContextActionBindContext): void {
+  GripCopyModeStore.toggle();
+  const enabled = GripCopyModeStore.getSnapshot().enabled;
+  toolHintOverrideStore.setOverride(
+    i18next.t(
+      enabled
+        ? 'tool-hints:gripContextMenu.prompts.copyOn'
+        : 'tool-hints:gripContextMenu.prompts.copyOff',
+    ),
+  );
+  ctx.onAfterDispatch();
+}
+
+function actionReference(ctx: GripContextActionBindContext): void {
+  // Reference only applies to Scale and Rotate; the controller has already
+  // gated `disabled` for other modes, but we guard here for safety in case
+  // the action is dispatched from a non-UI path.
+  const mode = GripModeStore.getSnapshot();
+  if (mode !== 'scale' && mode !== 'rotate') {
+    ctx.onAfterDispatch();
+    return;
+  }
+  GripReferenceStore.startPick(mode);
+  toolHintOverrideStore.setOverride(
+    i18next.t('tool-hints:gripContextMenu.prompts.pickRefStart'),
+  );
+  ctx.onAfterDispatch();
+}
+
+function actionSessionUndo(ctx: GripContextActionBindContext): void {
+  ctx.sessionUndo();
+  ctx.onAfterDispatch();
+}
+
 /**
  * Build the live `onSelect` callback for a given action meta, bound to the
  * caller-supplied context. Returns `null` only for ids the dispatcher does not
@@ -60,6 +121,14 @@ export function bindContextMenuAction(
   switch (meta.id satisfies GripContextActionId) {
     case 'exit':
       return () => { actionExit(ctx); };
+    case 'extras:basePoint':
+      return () => { actionBasePoint(ctx); };
+    case 'extras:copyToggle':
+      return () => { actionCopyToggle(ctx); };
+    case 'extras:reference':
+      return () => { actionReference(ctx); };
+    case 'extras:sessionUndo':
+      return () => { actionSessionUndo(ctx); };
     default:
       return null;
   }

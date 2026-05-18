@@ -7,6 +7,10 @@ import {
 } from '../ui/ribbon/data/contextual-array-tab';
 import { CONTEXTUAL_STAIR_TAB, STAIR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-stair-tab';
 import { CONTEXTUAL_WALL_TAB, WALL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-wall-tab';
+import { CONTEXTUAL_OPENING_TAB, OPENING_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-opening-tab';
+import { CONTEXTUAL_SLAB_TAB, SLAB_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-slab-tab';
+import { CONTEXTUAL_COLUMN_TAB, COLUMN_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-column-tab';
+import { CONTEXTUAL_BEAM_TAB, BEAM_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-beam-tab';
 import { DIMENSION_CONTEXTUAL_TAB, DIMENSION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimension-tab';
 
 export const RIBBON_CONTEXTUAL_TABS = [
@@ -16,6 +20,10 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_ARRAY_PATH_TAB,
   CONTEXTUAL_STAIR_TAB,
   CONTEXTUAL_WALL_TAB,
+  CONTEXTUAL_OPENING_TAB,
+  CONTEXTUAL_SLAB_TAB,
+  CONTEXTUAL_COLUMN_TAB,
+  CONTEXTUAL_BEAM_TAB,
   DIMENSION_CONTEXTUAL_TAB,
 ] as const;
 
@@ -43,6 +51,10 @@ export function useActiveContextualTrigger({
     if (fromSelection) return fromSelection;
     if (activeTool === 'stair') return STAIR_CONTEXTUAL_TRIGGER;
     if (activeTool === 'wall') return WALL_CONTEXTUAL_TRIGGER;
+    if (activeTool === 'opening') return OPENING_CONTEXTUAL_TRIGGER;
+    if (activeTool === 'slab') return SLAB_CONTEXTUAL_TRIGGER;
+    if (activeTool === 'column') return COLUMN_CONTEXTUAL_TRIGGER;
+    if (activeTool === 'beam') return BEAM_CONTEXTUAL_TRIGGER;
     return null;
   }, [primarySelectedId, currentScene, activeTool]);
 }
@@ -51,6 +63,10 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
   if (entity.type === 'dimension') return DIMENSION_CONTEXTUAL_TRIGGER;
   if (entity.type === 'stair') return STAIR_CONTEXTUAL_TRIGGER;
   if (entity.type === 'wall') return WALL_CONTEXTUAL_TRIGGER;
+  if (entity.type === 'opening') return OPENING_CONTEXTUAL_TRIGGER;
+  if (entity.type === 'slab') return SLAB_CONTEXTUAL_TRIGGER;
+  if (entity.type === 'column') return COLUMN_CONTEXTUAL_TRIGGER;
+  if (entity.type === 'beam') return BEAM_CONTEXTUAL_TRIGGER;
   if (entity.type === 'text' || entity.type === 'mtext') return TEXT_EDITOR_CONTEXTUAL_TRIGGER;
   if (entity.type === 'array') {
     const kind = readArrayKind(entity.params);

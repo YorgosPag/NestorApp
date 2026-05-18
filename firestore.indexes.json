@@ -3847,6 +3847,14 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_beams",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "floorplanId", "order": "ASCENDING" },
+        { "fieldPath": "projectId", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "bim_presets",
       "queryScope": "COLLECTION",
       "fields": [

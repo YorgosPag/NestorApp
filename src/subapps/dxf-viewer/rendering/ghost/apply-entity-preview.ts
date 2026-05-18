@@ -26,10 +26,8 @@ import { calculateDistance } from '../entities/shared/geometry-rendering-utils';
 // ADR-358 Phase 5d — parametric stair drag preview rebuilds full geometry
 // from new params; reuse the SSoT helpers so the ghost matches what the
 // commit adapter eventually persists.
-import {
-  applyStairGripDrag,
-  type StairGripKind,
-} from '../../systems/stairs/stair-grips';
+import { applyStairGripDrag } from '../../systems/stairs/stair-grips';
+import type { StairGripKind } from '../../hooks/grip-types';
 import { computeStairGeometry } from '../../systems/stairs/StairGeometryService';
 import type { StairEntity } from '../../types/stair';
 

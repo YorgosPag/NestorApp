@@ -280,7 +280,7 @@ export function useCircleTTT(options: {
         center: result.center,
         radius: result.radius,
         visible: true,
-        layer: currentLevelId,
+        layerId: currentLevelId,
       };
 
       console.debug('🎯 [CircleTTT] Circle created:', circleEntity);

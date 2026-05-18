@@ -388,11 +388,12 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       if (ce.detail.action !== 'commit-wall') return;
       const s = stateRef.current;
       // Apply inline overrides ahead of commit (parity with stair Stream E).
-      const inlineOverrides: WallParamOverrides = {};
-      if (typeof ce.detail.height === 'number') inlineOverrides.height = ce.detail.height;
-      if (typeof ce.detail.thickness === 'number') inlineOverrides.thickness = ce.detail.thickness;
-      if (typeof ce.detail.category === 'string') inlineOverrides.category = ce.detail.category as WallParamOverrides['category'];
-      if (typeof ce.detail.flip === 'boolean') inlineOverrides.flip = ce.detail.flip;
+      const inlineOverrides: WallParamOverrides = {
+        ...(typeof ce.detail.height === 'number' ? { height: ce.detail.height } : {}),
+        ...(typeof ce.detail.thickness === 'number' ? { thickness: ce.detail.thickness } : {}),
+        ...(typeof ce.detail.category === 'string' ? { category: ce.detail.category as WallParamOverrides['category'] } : {}),
+        ...(typeof ce.detail.flip === 'boolean' ? { flip: ce.detail.flip } : {}),
+      };
       const mergedState: WallToolState = Object.keys(inlineOverrides).length > 0
         ? { ...s, overrides: { ...s.overrides, ...inlineOverrides } }
         : s;

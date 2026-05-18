@@ -25,6 +25,8 @@ import { INPUT_TIMING } from '../../../config/timing-config';
 import { degToRad } from '../../../rendering/entities/shared/geometry-utils';
 // ADR-357 Phase 2b: convert user-typed display-unit length → internal mm.
 import { fromDisplay } from '../../../config/units';
+// ADR-357 Phase 6: coordinate input parser.
+import { parseCoordInput, applyCoordMode } from '../coordinate-parser';
 
 export const handleLineKeyboard: KeyboardHandler = (
   _e,
@@ -79,21 +81,43 @@ function handleLineEnter(
 ): boolean {
   const {
     activeField, firstClickPoint, lengthValue, angleValue, normalizeNumber, activeTool,
+    coordMode, displayUnit,
   } = context;
   const {
     setActiveField, setFieldUnlocked, setIsCoordinateAnchored, setDrawingPhase,
     dispatchDynamicSubmit, resetForNextPointFirstPhase, CADFeedback, focusSoon,
   } = actions;
 
-  // X / Y are not part of the line Tab cycle — fall through to default handler
-  // (Phase 6 coordinate syntax will parse direct typing into worldPoint).
+  // X / Y are not part of the line Tab cycle — fall through to default handler.
   if (activeField !== 'length' && activeField !== 'angle') {
     return false;
   }
 
-  // Length pressed without a value → no-op (let user type, no error feedback).
+  // Length pressed without a value → no-op.
   if (activeField === 'length' && lengthValue.trim() === '') {
     return false;
+  }
+
+  // ADR-357 Phase 6: try coordinate input BEFORE length/angle calc.
+  // Applies coordMode prefix then parses all 4 syntax patterns.
+  const rawFieldText = activeField === 'length' ? lengthValue : angleValue;
+  const coordText = applyCoordMode(rawFieldText, coordMode);
+  const coordPoint = parseCoordInput(coordText, firstClickPoint, displayUnit);
+  if (coordPoint) {
+    dispatchDynamicSubmit({
+      tool: activeTool,
+      action: 'add-point',
+      coordinates: coordPoint,
+    });
+    CADFeedback.onInputConfirm();
+    setIsCoordinateAnchored({ x: true, y: true });
+    refs.drawingPhaseRef.current = 'first-point';
+    setDrawingPhase('first-point');
+    resetForNextPointFirstPhase();
+    setActiveField('length');
+    setFieldUnlocked(prev => ({ ...prev, length: true, angle: false }));
+    focusSoon(refs.lengthInputRef, INPUT_TIMING.FOCUS_DEFAULT);
+    return true;
   }
 
   // Length committed but Angle not yet entered → advance the cycle.
@@ -118,7 +142,7 @@ function handleLineEnter(
   }
 
   // ADR-357 Phase 2b: user typed in display unit → convert to internal mm for world coords.
-  const lengthMm = fromDisplay(lengthDisplay, context.displayUnit);
+  const lengthMm = fromDisplay(lengthDisplay, displayUnit);
   const angleRad = degToRad(angleNum);
   const worldPoint = {
     x: firstClickPoint.x + lengthMm * Math.cos(angleRad),

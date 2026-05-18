@@ -100,6 +100,8 @@ export function paramOnSpline(entity: SplineEntity, point: Point2D): PolylinePar
   const fakePoly: PolylineEntity = {
     id: entity.id,
     type: 'polyline',
+    layerId: entity.layerId,
+    visible: true,
     vertices: poly,
     closed: entity.closed === true,
   };

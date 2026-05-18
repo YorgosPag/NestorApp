@@ -225,8 +225,7 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
         const target = scene.entities.find((e) => e.id === hit.entityId) as Entity | undefined;
         if (!target) continue;
         if (target.type === 'hatch') { TrimToolStore.incrementWarning('hatch'); continue; }
-        const layer = (target.layerId ? fenceLayers[target.layerId] : undefined)
-          ?? (target.layer ? fenceLayers[target.layer] : undefined);
+        const layer = target.layerId ? fenceLayers[target.layerId] : undefined;
         if (layer?.locked) { TrimToolStore.incrementWarning('locked'); continue; }
         const intersections = computeIntersectionPoints(target, edges);
         const result = trimEntity({

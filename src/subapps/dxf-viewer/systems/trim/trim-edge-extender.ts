@@ -53,7 +53,7 @@ function lineToXLine(line: LineEntity): XLineEntity {
     type: 'xline',
     basePoint: line.start,
     direction: { x: dx, y: dy },
-    layer: line.layer,
+    layerId: line.layerId,
     visible: line.visible,
   };
 }
@@ -64,7 +64,7 @@ function arcToCircle(arc: ArcEntity): Entity {
     type: 'circle',
     center: arc.center,
     radius: arc.radius,
-    layer: arc.layer,
+    layerId: arc.layerId,
     visible: arc.visible,
   };
 }
@@ -81,7 +81,7 @@ function rayToXLine(ray: RayEntity): XLineEntity {
     type: 'xline',
     basePoint: ray.basePoint,
     direction: ray.direction,
-    layer: ray.layer,
+    layerId: ray.layerId,
     visible: ray.visible,
   };
 }

@@ -85,7 +85,7 @@ import { useCenterMarkCreate } from '../dimensions/useCenterMarkCreate';
 // ADR-357 Phase 7: Snap Override orchestrator (single-use snap modifiers)
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
-import { handleToolCompletion, hardOrtho } from './drawing-handler-utils';
+import { handleToolCompletion, hardOrtho, MEASURE_TOOLS_FOR_GUIDES } from './drawing-handler-utils';
 import { processDrawingHover } from './drawing-hover-handler';
 export { MEASURE_TOOLS_FOR_GUIDES } from './drawing-handler-utils';
 

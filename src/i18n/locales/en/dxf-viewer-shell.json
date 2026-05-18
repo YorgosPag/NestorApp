@@ -3,6 +3,56 @@
     "confirm": "Confirm",
     "cancel": "Cancel"
   },
+  "commandLine": {
+    "placeholder": "Command…",
+    "label": "Command line",
+    "prompt": ">",
+    "noMatch": "Unknown command",
+    "repeatLast": "Repeat last command",
+    "hint": "Enter to execute · Esc to cancel · ↑↓ for history"
+  },
+  "quickProperties": {
+    "layer": "Layer",
+    "color": "Color",
+    "length": "Length",
+    "angle": "Angle",
+    "linetype": "Linetype",
+    "byLayer": "ByLayer",
+    "miniPanel": {
+      "title": "Quick Properties",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "layer": "Layer",
+      "color": "Color",
+      "length": "Length",
+      "angle": "Angle",
+      "linetype": "Linetype"
+    }
+  },
+  "propertiesPalette": {
+    "title": "Properties",
+    "entityLine": "LINE",
+    "close": "Close",
+    "apply": "Apply",
+    "noSelection": "No entity selected",
+    "unsupported": "No properties available for this entity type",
+    "cmdLabel": "Properties edit",
+    "groups": {
+      "geometry": "Geometry",
+      "style": "Style"
+    },
+    "props": {
+      "startX": "Start X",
+      "startY": "Start Y",
+      "endX": "End X",
+      "endY": "End Y",
+      "length": "Length",
+      "angle": "Angle",
+      "layer": "Layer",
+      "color": "Color",
+      "linetype": "Linetype"
+    }
+  },
   "layerPicker": {
     "toastChanged": "Layer changed to \"{name}\"",
     "toastLocked": "Layer \"{name}\" is locked — cannot draw here",
@@ -322,6 +372,56 @@
     "polygon": "Polygon",
     "stair": "Stair",
     "stairStatus": "Stair tool active (stub) — Phase 0",
+    "wall": {
+      "statusStart": "Pick wall start point",
+      "statusEnd": "Pick wall end point",
+      "statusCurveEnd": "Pick curved wall end point",
+      "statusCurveControl": "Pick curve control point",
+      "statusPolyNext": "Pick next vertex (Enter to finish)"
+    },
+    "opening": {
+      "statusHostWall": "Pick a host wall to place the opening",
+      "statusPosition": "Pick a position along the wall",
+      "errors": {
+        "noHostWall": "No wall found at that point",
+        "hostMissing": "Host wall no longer exists — try another"
+      }
+    },
+    "slab": {
+      "statusFirstVertex": "Click for first slab vertex",
+      "statusNextVertex": "Click for next vertex — Enter to close",
+      "errors": {
+        "tooFewVertices": "Slab requires at least 3 vertices",
+        "selfIntersecting": "Polygon is self-intersecting",
+        "zeroArea": "Zero area — check vertices"
+      }
+    },
+    "column": {
+      "statusPosition": "Click to place column — Tab cycles anchor",
+      "errors": {
+        "nonPositiveWidth": "Width must be greater than 0",
+        "nonPositiveDepth": "Depth must be greater than 0",
+        "nonPositiveHeight": "Height must be greater than 0",
+        "invalidLshapeArm": "Invalid L-shape arm dimensions",
+        "invalidTshapeWeb": "Invalid T-shape web thickness",
+        "invalidTshapeFlange": "Invalid T-shape flange length"
+      }
+    },
+    "beam": {
+      "statusStart": "Pick beam start point",
+      "statusEnd": "Pick beam end point",
+      "statusCurveEnd": "Pick curved beam end point",
+      "statusCurveControl": "Pick curve control point",
+      "errors": {
+        "nonPositiveWidth": "Width must be greater than 0",
+        "nonPositiveDepth": "Depth must be greater than 0",
+        "lengthTooShort": "Beam length is too short",
+        "missingCurveControl": "Curved beam requires a control point",
+        "widthTooSmall": "Width below Eurocode minimum (150mm)",
+        "spanDepthExceeded": "Span/depth ratio exceeds threshold (20)",
+        "cantileverSpanDepthExceeded": "Cantilever span/depth ratio exceeds threshold (10)"
+      }
+    },
     "text": "Text",
     "mtext": "Multiline Text",
     "arc": "Arc",
@@ -468,6 +568,10 @@
       "arrayEditor": "Array",
       "stairProperties": "Stair Properties",
       "wallProperties": "Wall Properties",
+      "openingProperties": "Opening Properties",
+      "slabProperties": "Slab Properties",
+      "columnProperties": "Column Properties",
+      "beamProperties": "Beam Properties",
       "validationBadge": "Code violation",
       "dimension": "Dimension"
     },
@@ -506,6 +610,18 @@
       "wallCategory": "Category",
       "wallGeometry": "Geometry",
       "wallActions": "Actions",
+      "openingKind": "Type",
+      "openingSize": "Size",
+      "openingActions": "Actions",
+      "slabKind": "Type",
+      "slabGeometry": "Geometry",
+      "slabActions": "Actions",
+      "columnKind": "Type",
+      "columnGeometry": "Geometry",
+      "columnActions": "Actions",
+      "beamKind": "Type",
+      "beamGeometry": "Geometry",
+      "beamActions": "Actions",
       "placeholder": "Coming soon",
       "history": "History",
       "guides": "Guides",
@@ -813,6 +929,120 @@
           },
           "off": "Normal",
           "on": "Flipped"
+        }
+      },
+      "openingEditor": {
+        "width": "Width",
+        "height": "Height",
+        "sillHeight": "Sill Height",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete opening? This action cannot be undone.",
+        "kind": {
+          "section": {
+            "title": "Type"
+          },
+          "door": "Door",
+          "window": "Window",
+          "slidingDoor": "Sliding Door",
+          "frenchDoor": "French Door",
+          "fixed": "Fixed"
+        },
+        "handing": {
+          "section": {
+            "title": "Handing"
+          },
+          "left": "Left",
+          "right": "Right"
+        },
+        "openDirection": {
+          "section": {
+            "title": "Swing"
+          },
+          "inward": "Inward",
+          "outward": "Outward"
+        }
+      },
+      "slabEditor": {
+        "thickness": "Thickness",
+        "elevation": "Elevation",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete this slab? This action cannot be undone.",
+        "kind": {
+          "section": {
+            "title": "Type"
+          },
+          "floor": "Floor",
+          "ceiling": "Ceiling",
+          "roof": "Roof",
+          "ground": "Ground",
+          "foundation": "Foundation"
+        },
+        "reinforcement": {
+          "section": {
+            "title": "Reinforcement"
+          },
+          "oneWay": "One-Way",
+          "twoWay": "Two-Way",
+          "waffle": "Waffle",
+          "flat": "Flat"
+        }
+      },
+      "beamEditor": {
+        "width": "Width",
+        "depth": "Depth",
+        "elevation": "Elevation",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete this beam? This action cannot be undone.",
+        "kind": {
+          "section": {
+            "title": "Type"
+          },
+          "straight": "Straight",
+          "curved": "Curved",
+          "cantilever": "Cantilever"
+        },
+        "supportType": {
+          "section": {
+            "title": "Support"
+          },
+          "simple": "Simple",
+          "fixed": "Fixed",
+          "cantilever": "Cantilever"
+        }
+      },
+      "columnEditor": {
+        "width": "Width",
+        "depth": "Depth",
+        "height": "Height",
+        "rotation": "Rotation",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete this column? This action cannot be undone.",
+        "kind": {
+          "section": {
+            "title": "Type"
+          },
+          "rectangular": "Rectangular",
+          "circular": "Circular",
+          "lShape": "L-shape",
+          "tShape": "T-shape"
+        },
+        "anchor": {
+          "section": {
+            "title": "Anchor"
+          },
+          "center": "Center",
+          "n": "North",
+          "s": "South",
+          "e": "East",
+          "w": "West",
+          "nw": "Northwest",
+          "ne": "Northeast",
+          "sw": "Southwest",
+          "se": "Southeast"
         }
       },
       "measureAngle": "Angle",

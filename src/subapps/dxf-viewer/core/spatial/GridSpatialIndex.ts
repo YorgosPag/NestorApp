@@ -232,7 +232,7 @@ export class GridSpatialIndex implements ISpatialIndex {
   // SPECIALIZED QUERIES
   // ========================================
 
-  querySnap(point: Point2D, tolerance: number, snapType: 'endpoint' | 'midpoint' | 'center'): SpatialQueryResult[] {
+  querySnap(point: Point2D, tolerance: number, snapType: 'endpoint' | 'midpoint' | 'center' | 'dim_def_point' | 'dim_line'): SpatialQueryResult[] {
     // Grid is optimized για snapping - use smaller search radius
     const snapRadius = Math.min(tolerance, this.cellSize / 2);
     const results = this.queryNear(point, snapRadius);

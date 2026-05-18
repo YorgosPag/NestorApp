@@ -65,6 +65,8 @@ import { MirrorConfirmOverlay } from '../../ui/components/MirrorConfirmOverlay';
 import { useFloorplanAutoFit } from '../../hooks/canvas/useFloorplanAutoFit';
 import { useCanvasEditActions } from '../../hooks/canvas/useCanvasEditActions';
 import { useCanvasSectionUI } from '../../hooks/canvas/useCanvasSectionUI';
+import { useSelectionCycling } from '../../systems/selection/use-selection-cycling';
+import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover';
 /**
  * Canvas orchestrator — wires hooks together and delegates rendering to CanvasLayerStack.
  * No business logic beyond hook composition.
@@ -131,6 +133,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     us.clearByType('dxf-entity');
     if (next.length > 0) us.addMultiple(next.map(id => ({ id, type: 'dxf-entity' as const })));
   }, []);
+  // ADR-357 Phase 15 (G13): Selection Cycling — Shift+Space to cycle overlapping entities.
+  const handleCycleEntitySelect = useCallback((id: string) => { setSelectedEntityIds([id]); }, [setSelectedEntityIds]);
+  useSelectionCycling({ activeTool, onSelectEntity: handleCycleEntitySelect });
   // ADR-040 rule 2 — getter for event-time reads (useTextDoubleClickEditor).
   const getSelectedEntityIds = useCallback(() => universalSelectionRef.current.getIdsByType('dxf-entity'), []);
   const entitySelectedOnMouseDownRef = useRef(false);
@@ -182,7 +187,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { draftPolygon, setDraftPolygon, draftPolygonRef, isSavingPolygon, setIsSavingPolygon, finishDrawingWithPolygonRef, finishDrawing } = usePolygonCompletion({
     levelManager, overlayStore, eventBus, currentStatus, currentKind, activeTool, overlayMode,
   });
-  const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, stairTool, wallTool, slabTool, columnTool } = useSpecialTools({ activeTool, levelManager });
+  const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, stairTool, wallTool, slabTool, columnTool, beamTool } = useSpecialTools({ activeTool, levelManager });
   // === Cursor + touch gestures ===
   const { updatePosition, setActive } = useCursorActions();
   const { layoutMode: canvasLayoutMode } = useResponsiveLayoutForCanvas();
@@ -295,6 +300,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     wallTool,
     slabTool,
     columnTool,
+    beamTool,
     dxfGripInteraction: unified.dxfProjection,
     rotationIsActive: rotationTool.isCollectingInput, handleRotationClick: rotationTool.handleRotationClick,
     moveIsActive: moveTool.isCollectingInput, handleMoveClick: moveTool.handleMoveClick,
@@ -484,6 +490,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           onCancel={textCreation.onCancel}
         />
       )}
+      {/* ADR-357 Phase 15 — G13 Selection Cycling popover (portal, micro-leaf, ADR-040) */}
+      <SelectionCyclingPopover onSelectEntity={handleCycleEntitySelect} />
     </>
   );
 };

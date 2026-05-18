@@ -1,8 +1,15 @@
 /**
- * USE GRIP CONTEXT MENU CONTROLLER — ADR-357 Phase 11 / G10.A
+ * USE GRIP CONTEXT MENU CONTROLLER — ADR-357 Phase 11 / G10.A + Phase 12 / G10 extras
  *
  * Right-click handler that opens the {@link GripContextMenuStore} when the
  * user right-clicks while a DXF grip is hot (hovering / warm / dragging).
+ *
+ * Phase 12 — the controller is now also responsible for filling in the
+ * dynamic `checked` / `disabled` flags on each resolved action by reading
+ * from the relevant micro-leaf SSoT stores ({@link GripModeStore},
+ * {@link GripCopyModeStore}, {@link GripSessionUndoStore}). The resolver
+ * stays pure (no Store reads); gating lives here so the menu reflects the
+ * live state at the moment the user opens it.
  *
  * Architectural twin of {@link useGripHoverMenuController} (400ms hold-time)
  * but driven by the `contextmenu` DOM event instead of a timer. Suppresses the
@@ -25,8 +32,11 @@ import type { UnifiedGripInfo, UnifiedGripPhase } from './unified-grip-types';
 import type { useLevels } from '../../systems/levels';
 import { GripContextMenuStore, type GripContextMenuSection } from '../../systems/grip/GripContextMenuStore';
 import { GripModeStore } from '../../systems/grip/GripModeStore';
-import { resolveContextMenuSections } from '../../systems/grip/grip-context-menu-resolver';
+import { resolveContextMenuSections, type GripContextActionMeta } from '../../systems/grip/grip-context-menu-resolver';
 import { bindContextMenuAction } from '../../systems/grip/grip-context-menu-actions';
+import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
+import { GripSessionUndoStore } from '../../systems/grip/GripSessionUndoStore';
+import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -53,6 +63,44 @@ function pickTargetGrip(
   if (phase === 'dragging') return activeGrip;
   if (phase === 'hovering' || phase === 'warm') return hoveredGrip;
   return null;
+}
+
+/**
+ * Fill in `checked` / `disabled` flags from the live state of the relevant
+ * micro-leaf SSoT stores. Keeps the resolver pure while still reflecting
+ * dynamic state at menu-open time.
+ */
+function applyDynamicFlags(actionMeta: GripContextActionMeta): {
+  checked: boolean;
+  disabled: boolean;
+} {
+  // Mode items: check-mark on the currently active GripMode.
+  if (actionMeta.mode) {
+    return { checked: actionMeta.mode === GripModeStore.getSnapshot(), disabled: false };
+  }
+
+  switch (actionMeta.extraKind) {
+    case 'copyToggle':
+      // Persistent toggle — show check-mark while enabled (AutoCAD MULTIPLE-style).
+      return { checked: GripCopyModeStore.getSnapshot().enabled, disabled: false };
+
+    case 'reference': {
+      // Reference is only meaningful in Scale / Rotate (Mirror has no reference
+      // axis flow; Stretch / Move have no reference math).
+      const mode = GripModeStore.getSnapshot();
+      return { checked: false, disabled: mode !== 'scale' && mode !== 'rotate' };
+    }
+
+    case 'sessionUndo':
+      return { checked: false, disabled: !GripSessionUndoStore.canSessionUndo() };
+
+    case 'basePoint':
+      // Always available during a drag — controller already enforces grip phase.
+      return { checked: false, disabled: false };
+
+    default:
+      return { checked: false, disabled: false };
+  }
 }
 
 export function useGripContextMenuController(
@@ -84,9 +132,15 @@ export function useGripContextMenuController(
       e.preventDefault();
       e.stopPropagation();
 
-      const currentMode = GripModeStore.getSnapshot();
       const sectionsMeta = resolveContextMenuSections(entity, grip);
       const sections: GripContextMenuSection[] = [];
+      // ADR-357 Phase 12 — session undo delegates to the global CommandHistory.
+      // Closed over here so the bound `bindContextMenuAction` ctx stays stable.
+      const sessionUndo = () => {
+        if (GripSessionUndoStore.canSessionUndo()) {
+          getGlobalCommandHistory().undo();
+        }
+      };
 
       for (const sectionMeta of sectionsMeta) {
         const items: GripContextMenuSection['items'][number][] = [];
@@ -94,13 +148,16 @@ export function useGripContextMenuController(
           const onSelect = bindContextMenuAction(actionMeta, {
             handleEscape: () => depsRef.current.handleEscape(),
             onAfterDispatch: () => GripContextMenuStore.hide(),
+            sessionUndo,
           });
           if (!onSelect) continue;
+          const { checked, disabled } = applyDynamicFlags(actionMeta);
           items.push({
             id: actionMeta.id,
             labelKey: actionMeta.labelKey,
             onSelect,
-            checked: actionMeta.mode !== undefined && actionMeta.mode === currentMode,
+            checked,
+            disabled,
             destructive: actionMeta.destructive,
           });
         }

@@ -117,7 +117,33 @@ export function useCanvasContextMenu({
     const container = containerRef.current;
     if (!container) return;
 
+    // Right-drag detection: right-drag = pan (BricsCAD hybrid), right-click = context menu.
+    // Track drag distance; if > 5px, suppress contextmenu on release.
+    let rightButtonDownX = 0;
+    let rightButtonDownY = 0;
+    let rightDragMoved = false;
+
+    const handleRightMouseDown = (e: MouseEvent) => {
+      if (e.button !== 2) return;
+      rightButtonDownX = e.clientX;
+      rightButtonDownY = e.clientY;
+      rightDragMoved = false;
+    };
+
+    const handleRightMouseMove = (e: MouseEvent) => {
+      if (!(e.buttons & 2)) return;
+      const dx = e.clientX - rightButtonDownX;
+      const dy = e.clientY - rightButtonDownY;
+      if (dx * dx + dy * dy > 25) rightDragMoved = true; // 5px threshold
+    };
+
     const handleNativeContextMenu = (e: MouseEvent) => {
+      if (rightDragMoved) {
+        rightDragMoved = false;
+        e.preventDefault();
+        return;
+      }
+
       // RulerCornerBox owns its own context menu — let the event pass through to React
       if ((e.target as Element)?.closest('[data-ruler-corner-box]')) {
         e.preventDefault();
@@ -203,9 +229,13 @@ export function useCanvasContextMenu({
       }
     };
 
+    container.addEventListener('mousedown', handleRightMouseDown);
+    container.addEventListener('mousemove', handleRightMouseMove);
     container.addEventListener('contextmenu', handleNativeContextMenu, { capture: true });
 
     return () => {
+      container.removeEventListener('mousedown', handleRightMouseDown);
+      container.removeEventListener('mousemove', handleRightMouseMove);
       container.removeEventListener('contextmenu', handleNativeContextMenu, { capture: true });
     };
   }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, selectedEntityIds, drawingMenuRef, entityMenuRef, rotationPhase, onRotationAnglePrompt, guideMenuRef, getGuides, guidesSnapshot, transformRef, guideBatchMenuRef, selectedGuideIds, dimContextMenuRef, selectedDimensionIds]);

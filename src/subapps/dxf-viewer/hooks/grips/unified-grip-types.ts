@@ -9,7 +9,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind } from '../useGripMovement';
 import type {
   VertexHoverInfo,
   EdgeHoverInfo,
@@ -104,6 +104,12 @@ export interface UnifiedGripInfo {
    * vertex path.
    */
   readonly wallGripKind?: WallGripKind;
+  /**
+   * ADR-363 Phase 2.5 — parametric opening grip discriminator (forwarded from
+   * `GripInfo.openingGripKind`). Routes commit through
+   * `applyOpeningGripDrag()` + `UpdateOpeningParamsCommand` (drag-along-wall).
+   */
+  readonly openingGripKind?: OpeningGripKind;
 }
 
 /**

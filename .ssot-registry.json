@@ -2906,6 +2906,7 @@
         "src/subapps/dxf-viewer/text-engine/templates/",
         "src/subapps/dxf-viewer/ui/text-templates/",
         "src/app/api/dxf/text-templates/",
+        "src/app/api/files/propagate-entity-rename/route.ts",
         "src/config/firestore-collections.ts"
       ],
       "addedDate": "2026-05-11",
@@ -3083,6 +3084,7 @@
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/types/entities.ts",
+        "src/subapps/dxf-viewer/types/scene-types.ts",
         "src/subapps/dxf-viewer/utils/dxf-layer-table-parser.ts",
         "src/subapps/dxf-viewer/utils/dxf-layer-table-writer.ts",
         "src/subapps/dxf-viewer/services/dxf-scene-migration.ts"
@@ -3099,6 +3101,7 @@
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/types/entities.ts",
+        "src/subapps/dxf-viewer/types/scene-types.ts",
         "src/subapps/dxf-viewer/utils/dxf-layer-table-parser.ts",
         "src/subapps/dxf-viewer/utils/dxf-layer-table-writer.ts",
         "src/subapps/dxf-viewer/services/dxf-scene-migration.ts"
@@ -3248,6 +3251,20 @@
       "addedByAdr": "ADR-358",
       "tier": 3
     },
+    "quick-style-store": {
+      "ssotFile": "src/subapps/dxf-viewer/stores/QuickStyleStore.ts",
+      "description": "ADR-357 Phase 17 — `QuickStyleStore` is the SSoT for per-session drawing style overrides (lineweightMm / linetypeName / colorMode+colorAci+colorTrueColor). Applied by `completeEntity()` to newly created entities when overrides are non-ByLayer. Direct reads/writes of `localStorage` keys `dxf:quickStyle.*` outside this store are forbidden (must use exported setters/getters).",
+      "forbiddenPatterns": [
+        "dxf:quickStyle\\."
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/stores/QuickStyleStore.ts",
+        "src/subapps/dxf-viewer/stores/__tests__/QuickStyleStore.test.ts"
+      ],
+      "addedDate": "2026-05-18",
+      "addedByAdr": "ADR-357",
+      "tier": 3
+    },
     "layer-state-system": {
       "ssotFile": "src/subapps/dxf-viewer/stores/LayerStateStore.ts",
       "_phase13b_note": "Phase 13B.1 added cross-project templates SSoT: types/layer-state-template.ts + services/dxf-layer-state-template.service.ts. Construction factories `createLayerStateTemplate` / `createDxfTemplateCategory` are forbidden outside the types + service + their tests. Phase 13B.2 added the store extension (`saveCurrentAsTemplate` / `importTemplateAsState` / `searchTemplateSummaries`) + service injection (`setLayerStateTemplateService`) + orchestrator hook `useLayerStateTemplates` — these symbols are forbidden outside the store + hook + their tests.",
@@ -3373,6 +3390,24 @@
       "addedDate": "2026-05-17",
       "addedByAdr": "ADR-363",
       "tier": 1
+    },
+    "xline-mode-store": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/tools/xline-mode-store.ts",
+      "description": "XLine construction mode SSoT (ADR-359 Phase 2): XLineModeStore owns mode, angleValue, offsetDistance, sourceEntityId, bisect points. Three surfaces (keyboard/status-bar/context-menu) all read/write via getMode()/setMode()/subscribe(). Forbids direct xlineMode state access outside the store.",
+      "forbiddenPatterns": [
+        "xlineMode\\.mode(?!Store)",
+        "xlineMode\\.angleValue(?!Store)",
+        "xlineMode\\.offsetDistance(?!Store)"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/tools/xline-mode-store.ts",
+        "src/subapps/dxf-viewer/ui/status-bar/StatusBarXLineModeSlot.tsx",
+        "src/subapps/dxf-viewer/ui/canvas/context-menus/XLineToolContextMenu.tsx",
+        "src/subapps/dxf-viewer/hooks/canvas/useKeyboardShortcuts.ts"
+      ],
+      "addedDate": "2026-05-18",
+      "addedByAdr": "ADR-359",
+      "tier": 3
     },
     "bim-to-boq-bridge": {
       "ssotFile": "src/subapps/dxf-viewer/bim/services/BimToBoqBridge.ts",

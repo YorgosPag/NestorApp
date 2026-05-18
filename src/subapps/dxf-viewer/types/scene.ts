@@ -44,6 +44,7 @@ export type {
   SceneLayer,
   SceneBounds,
   SceneModel,
+  LayerId,
   DxfImportResult,
 
   // Utility types

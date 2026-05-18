@@ -60,7 +60,7 @@ export function useSceneState() {
       // 🏢 ADR-118: Use centralized EMPTY_BOUNDS for empty scene
       const emptyScene = {
         entities: [],
-        layers: {}, // ← Empty layers object - no default "0" layer!
+        layersById: {},
         bounds: { ...EMPTY_BOUNDS },
         units: 'mm' as const
       };

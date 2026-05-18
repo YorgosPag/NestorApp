@@ -21,7 +21,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { FileRecord, DxfSceneData, DxfSceneEntity } from '@/types/file-record';
+import type { FileRecord, DxfSceneData, DxfSceneEntity, DxfSceneLayer } from '@/types/file-record';
 
 // ============================================================================
 // TYPES
@@ -176,14 +176,17 @@ export function useFloorplanSceneLoader(
         const result = await dxfImportService.importDxfFile(file);
         if (cancelled) return;
         if (!result.success || !result.scene) throw new Error(result.error || 'Parse failed');
+        const importedScene = result.scene;
 
         const scene: DxfSceneData = {
-          entities: result.scene.entities.map((entity) => {
-            const { type, layer, ...rest } = entity;
-            return { type, layer: layer || '0', ...rest } as DxfSceneEntity;
-          }),
-          layers: result.scene.layers,
-          bounds: result.scene.bounds,
+          entities: importedScene.entities.map((entity) => ({
+            ...entity,
+            layer: importedScene.layersById[entity.layerId]?.name ?? '0',
+          } as unknown as DxfSceneEntity)),
+          layers: Object.fromEntries(
+            Object.values(importedScene.layersById).map((l) => [l.name, l])
+          ) as Record<string, DxfSceneLayer>,
+          bounds: importedScene.bounds,
         };
 
         if (!cancelled) setLoadedScene(scene);

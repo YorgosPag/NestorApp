@@ -21,17 +21,11 @@ import { type GripMode } from '../../systems/grip/grip-mode-cycle';
 import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
 import { gripToVertexRefs } from '../../systems/grip/grip-to-vertex-refs';
 import { StretchEntityCommand, type StretchParams } from '../../core/commands/entity-commands/StretchEntityCommand';
-import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
-import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/UpdateWallParamsCommand';
-import { applyStairGripDrag } from '../../systems/stairs/stair-grips';
-import { applyWallGripDrag } from '../../bim/walls/wall-grips';
-import { applyDimensionGripDrag } from '../dimensions/useDimensionGrips';
-import { EventBus } from '../../systems/events/EventBus';
+import { CopyEntityCommand, type CopyEntityParams } from '../../core/commands/entity-commands/CopyEntityCommand';
+import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
 import type { Entity } from '../../types/entities';
-import type { StairEntity } from '../../types/stair';
-import type { WallEntity, WallKind } from '../../bim/types/wall-types';
-import type { DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
 export type { DxfCommitDeps, OverlayCommitDeps } from './unified-grip-types';
+import type { DxfCommitDeps, OverlayCommitDeps } from './unified-grip-types';
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -207,6 +201,43 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
       }
       return undefined;
     },
+    updateEntities: (updates: ReadonlyMap<string, Partial<SceneEntity>>) => {
+      const scene = getLevelScene(currentLevelId);
+      if (!scene) return;
+      setLevelScene(currentLevelId, {
+        ...scene,
+        entities: scene.entities.map((e) => {
+          const patch = updates.get(e.id);
+          return patch ? ({ ...e, ...patch } as AnySceneEntity) : e;
+        }),
+      });
+    },
+    getEntityIndex: (entityId: string): number => {
+      const scene = getLevelScene(currentLevelId);
+      if (!scene) return -1;
+      return scene.entities.findIndex((e) => e.id === entityId);
+    },
+    reorderEntity: (entityId: string, direction: 'front' | 'back') => {
+      const scene = getLevelScene(currentLevelId);
+      if (!scene) return;
+      const idx = scene.entities.findIndex((e) => e.id === entityId);
+      if (idx === -1) return;
+      const entities = [...scene.entities];
+      const [entity] = entities.splice(idx, 1);
+      if (direction === 'front') entities.push(entity);
+      else entities.unshift(entity);
+      setLevelScene(currentLevelId, { ...scene, entities });
+    },
+    moveEntityToIndex: (entityId: string, targetIndex: number) => {
+      const scene = getLevelScene(currentLevelId);
+      if (!scene) return;
+      const idx = scene.entities.findIndex((e) => e.id === entityId);
+      if (idx === -1) return;
+      const entities = [...scene.entities];
+      const [entity] = entities.splice(idx, 1);
+      entities.splice(targetIndex, 0, entity);
+      setLevelScene(currentLevelId, { ...scene, entities });
+    },
   };
 }
 /**
@@ -239,117 +270,32 @@ export function commitDxfGripDragViaStretchCommand(
   const vertexMoves = refs.length > 0 ? [{ entityId: grip.entityId, refs }] : [];
   const anchorMoves = refs.length === 0 && grip.movesEntity ? [grip.entityId] : [];
   if (vertexMoves.length === 0 && anchorMoves.length === 0) return;
+
+  // ADR-357 Phase 12 — when the grip-context-menu "Copy" toggle is ON, route
+  // through `CopyEntityCommand` so the source entity is preserved and a fresh
+  // clone receives the displacement. Same vertex / anchor split as Stretch.
+  if (GripCopyModeStore.getSnapshot().enabled) {
+    const params: CopyEntityParams = { vertexMoves, anchorMoves, displacement: delta };
+    const command = new CopyEntityCommand(params, sceneManager);
+    if (command.validate() !== null) return;
+    deps.execute(command);
+    GripCopyModeStore.bumpCount();
+    return;
+  }
+
   const params: StretchParams = { vertexMoves, anchorMoves, displacement: delta };
   const command = new StretchEntityCommand(params, sceneManager);
   if (command.validate() !== null) return;
   deps.execute(command);
 }
-/**
- * ADR-358 Phase 5b — Parametric stair grip commit. Bypasses the standard
- * stretch / move / rotate strategies because `StairEntity` is parametric:
- * geometry is fully derived from `params`, so the grip drag transforms params
- * (via `applyStairGripDrag`) and the command (`UpdateStairParamsCommand`)
- * recomputes geometry atomically. Idempotent + undo/redo-safe.
- */
-function commitStairGripDrag(
-  grip: UnifiedGripInfo,
-  delta: Point2D,
-  deps: DxfCommitDeps,
-): void {
-  if (!grip.entityId || !grip.stairGripKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<StairEntity>;
-  if (candidate.type !== 'stair' || !candidate.params) return;
-  const stair = candidate as StairEntity;
-  const originalParams = stair.params;
-  // Reconstruct current cursor position from the drag anchor (grip.position is
-  // captured at mouseDown — see `useUnifiedGripInteraction.handleMouseDown`).
-  const currentPos: Point2D = {
-    x: grip.position.x + delta.x,
-    y: grip.position.y + delta.y,
-  };
-  const newParams = applyStairGripDrag(grip.stairGripKind, {
-    originalParams,
-    delta,
-    currentPos,
-  });
-  const command = new UpdateStairParamsCommand(
-    grip.entityId,
-    newParams,
-    originalParams,
-    sceneManager,
-    false,
-  );
-  if (command.validate() !== null) return;
-  deps.execute(command);
-}
-/**
- * ADR-363 Phase 1C — Parametric wall grip commit. Bypasses the standard
- * stretch / move strategies because `WallEntity` is parametric: geometry is
- * fully derived from `params`, so the grip drag transforms params (via
- * `applyWallGripDrag`) and the command (`UpdateWallParamsCommand`) recomputes
- * geometry + validation atomically. Merge window enabled (isDragging=true) so
- * a continuous drag collapses into a single undo entry (ADR-031).
- */
-function commitWallGripDrag(
-  grip: UnifiedGripInfo,
-  delta: Point2D,
-  deps: DxfCommitDeps,
-): void {
-  if (!grip.entityId || !grip.wallGripKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<WallEntity>;
-  if (candidate.type !== 'wall' || !candidate.params) return;
-  const wall = candidate as WallEntity;
-  const originalParams = wall.params;
-  // Reconstruct current cursor position from the drag anchor (grip.position is
-  // captured at mouseDown — mirror `commitStairGripDrag` semantics).
-  const currentPos: Point2D = {
-    x: grip.position.x + delta.x,
-    y: grip.position.y + delta.y,
-  };
-  const newParams = applyWallGripDrag(grip.wallGripKind, {
-    originalParams,
-    delta,
-    currentPos,
-  });
-  const kind: WallKind = wall.kind ?? 'straight';
-  const command = new UpdateWallParamsCommand(
-    grip.entityId,
-    newParams,
-    originalParams,
-    sceneManager,
-    true, // isDragging — enable merge window for continuous drag
-    kind,
-  );
-  if (command.validate() !== null) return;
-  deps.execute(command);
-  // ADR-363 Phase 1E — notify scene that a wall's params changed so the
-  // debounced re-trim listener in useSpecialTools can recompute bevel joins.
-  EventBus.emit('bim:wall-params-updated', { wallId: grip.entityId });
-}
-/** ADR-362 Phase I2 — Dimension grip commit via `applyDimensionGripDrag` + scene patch. */
-function commitDimensionGripDrag(
-  grip: UnifiedGripInfo,
-  delta: Point2D,
-  deps: DxfCommitDeps,
-): void {
-  if (!grip.entityId || !grip.dimGripKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw || (raw as Record<string, unknown>).type !== 'dimension') return;
-  const dxfDim = raw as unknown as DxfDimension;
-  const newDimEntity = applyDimensionGripDrag(grip.dimGripKind, dxfDim.dimensionEntity, delta, grip.position);
-  if (newDimEntity === dxfDim.dimensionEntity) return;
-  sceneManager.updateEntity(grip.entityId, { dimensionEntity: newDimEntity } as unknown as Partial<SceneEntity>);
-}
+// Parametric commit handlers moved to ./grip-parametric-commits.ts
+import {
+  commitStairGripDrag,
+  commitWallGripDrag,
+  commitOpeningGripDrag,
+  commitSlabGripDrag,
+  commitDimensionGripDrag,
+} from './grip-parametric-commits';
 /**
  * Mode-aware DXF grip commit (ADR-349 Phase 1c-A / 1c-B2 / 1c-B3).
  *
@@ -390,16 +336,53 @@ export function commitDxfGripDragModeAware(
     commitWallGripDrag(grip, delta, deps);
     return;
   }
+  // ADR-363 Phase 2.5 — opening parametric grip path (drag-along-wall).
+  // Bypasses stretch because openings are params-driven (offsetFromStart) and
+  // their geometry is host-wall-relative; commit recomputes via
+  // `UpdateOpeningParamsCommand` after axis projection + clamp.
+  if (grip.openingGripKind) {
+    commitOpeningGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-363 Phase 3.5 — slab parametric grip path (per-vertex translate).
+  // Bypasses stretch because slabs are params-driven (outline polygon) and
+  // geometry (area / netArea / volume / perimeter / bbox) is recomputed
+  // atomically by UpdateSlabParamsCommand.
+  if (grip.slabGripKind) {
+    commitSlabGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-357 Phase 12 — copy toggle gates routing for every mode.
+  const copyOn = GripCopyModeStore.getSnapshot().enabled;
+
   if (mode === 'move') {
+    if (copyOn) {
+      // Copy + Move = clone-with-anchor-translation through `CopyEntityCommand`.
+      const sceneManager = createSceneManagerAdapter(deps);
+      if (!sceneManager) return;
+      const params: CopyEntityParams = {
+        vertexMoves: [],
+        anchorMoves: [grip.entityId],
+        displacement: delta,
+      };
+      const command = new CopyEntityCommand(params, sceneManager);
+      if (command.validate() !== null) return;
+      deps.execute(command);
+      GripCopyModeStore.bumpCount();
+      return;
+    }
     deps.moveEntities([grip.entityId], delta, { isDragging: false });
     return;
   }
   if (mode === 'rotate' || mode === 'scale' || mode === 'mirror') {
-    GripHandoffStore.set(mode, grip.position);
+    // Phase 12 — forward the copy flag through the handoff so the downstream
+    // tool starts with its native copyMode / keepOriginals path armed.
+    GripHandoffStore.set(mode, grip.position, copyOn ? { copyMode: true } : undefined);
     deps.onToolChange(mode);
     return;
   }
-  // mode === 'stretch' (default): unified StretchEntityCommand path.
+  // mode === 'stretch' (default): unified StretchEntityCommand path
+  // (Copy toggle is handled inside `commitDxfGripDragViaStretchCommand`).
   commitDxfGripDragViaStretchCommand(grip, delta, deps);
 }
 // ============================================================================

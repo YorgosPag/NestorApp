@@ -5,9 +5,12 @@
  * Industry standard (AutoCAD / BricsCAD): cycle order is
  *   Stretch → Move → Rotate → Scale → Mirror → (back to Stretch)
  *
- * Phase 1c-A: only `stretch` and `move` have full commit handlers; the other
- * three are present in the cycle UI for industry parity but currently emit a
- * "deferred" status hint instead of committing.
+ * Phase 1c-A: `stretch` and `move` commit in place via StretchEntityCommand /
+ * `moveEntities`. Phase 1c-B2: `rotate`, `scale`, `mirror` commit via
+ * `GripHandoffStore.set(mode, grip.position)` + `onToolChange(mode)` — the
+ * grip drag pre-seeds the target tool's base point and switches `activeTool`.
+ * All 5 modes are fully implemented end-to-end (ADR-357 Phase 11 fix
+ * 2026-05-18 — previous `implemented: false` flags were stale).
  *
  * @see GripModeStore
  * @see useGripSpacebarCycle
@@ -28,9 +31,9 @@ const ORDER: ReadonlyArray<GripMode> = ['stretch', 'move', 'rotate', 'scale', 'm
 const META: Readonly<Record<GripMode, GripModeMeta>> = {
   stretch: { id: 'stretch', labelKey: 'gripMode.stretch', implemented: true },
   move:    { id: 'move',    labelKey: 'gripMode.move',    implemented: true },
-  rotate:  { id: 'rotate',  labelKey: 'gripMode.rotate',  implemented: false },
-  scale:   { id: 'scale',   labelKey: 'gripMode.scale',   implemented: false },
-  mirror:  { id: 'mirror',  labelKey: 'gripMode.mirror',  implemented: false },
+  rotate:  { id: 'rotate',  labelKey: 'gripMode.rotate',  implemented: true },
+  scale:   { id: 'scale',   labelKey: 'gripMode.scale',   implemented: true },
+  mirror:  { id: 'mirror',  labelKey: 'gripMode.mirror',  implemented: true },
 };
 
 export const DEFAULT_GRIP_MODE: GripMode = 'stretch';

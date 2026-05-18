@@ -5,102 +5,16 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfTextNode } from '../text-engine/types';
-// 🏢 ADR-107: Centralized Text Metrics Ratios
-// 🏢 ADR-142: Centralized Default Font Size
-import { TEXT_METRICS_RATIOS, TEXT_SIZE_LIMITS } from '../config/text-rendering-config';
-// 🏢 ADR-034: Centralized Empty Spatial Bounds
-import { EMPTY_SPATIAL_BOUNDS } from '../config/geometry-constants';
-// 🏢 ADR-358 Phase 9C: enterprise-id SSoT for SceneLayer.id (prefix `lyr_<UUID-v4>`)
-import { generateLayerId } from '@/services/enterprise-id-convenience';
+import type { LineweightMm } from './scene-types';
 
-// ✅ ENTERPRISE FIX: Enhanced grip point interface for preview system
-// 🎯 ADR-047: Added 'close' type and optional color for close-on-first-point indicator
-export interface PreviewGripPoint {
-  position: Point2D;
-  type: 'start' | 'end' | 'cursor' | 'vertex' | 'close'; // 🎯 ADR-047: 'close' for polygon closing
-  color?: string; // 🎯 ADR-047: Optional custom color (e.g., '#00ff00' for close indicator)
-}
+// ─── BaseEntity + EntityType extracted to break circular import (ADR-363 fix) ─
+// bim-base.ts used to import BaseEntity from here → created:
+//   entities.ts → bim/wall-types.ts → bim/bim-base.ts → entities.ts (circular)
+// Now bim-base.ts imports from base-entity.ts directly — no cycle.
+export type { PreviewGripPoint, EntityType, BaseEntity } from './base-entity';
+import type { PreviewGripPoint, EntityType, BaseEntity } from './base-entity';
 
-// Base entity interface
-export interface BaseEntity {
-  id: string;
-  name?: string;             // Optional user-friendly name for the entity
-  type: EntityType;
-  /** ADR-358 Phase 9E-6e: stable layer identifier `lyr_<UUID-v4>`. Required on all entities. */
-  layerId: string;
-  color?: string;
-  selected?: boolean;
-  preview?: boolean;
-  measurement?: boolean;
-  isOverlayPreview?: boolean;
-  showPreviewGrips?: boolean;
-  previewGripPoints?: Point2D[] | PreviewGripPoint[];
-  visible?: boolean;
-  locked?: boolean;
-  metadata?: Record<string, unknown>;
-
-  // Line styling properties (CAD Standard)
-  lineweight?: number;        // Line thickness (ISO 128 standard)
-  opacity?: number;           // 0.0 to 1.0
-  lineType?: 'solid' | 'dashed' | 'dotted' | 'dashdot';  // Line pattern
-  dashScale?: number;         // Dash pattern scale factor
-  lineCap?: 'butt' | 'round' | 'square';  // Line cap style
-  lineJoin?: 'miter' | 'round' | 'bevel'; // Line join style
-  dashOffset?: number;        // Dash pattern offset
-
-  // Preview/Completion flags
-  breakAtCenter?: boolean;    // Split line at center for distance label
-  showEdgeDistances?: boolean; // Show distance labels on preview
-
-  // ─── ADR-358 §G7 — ByLayer / ByBlock pipeline (Phase 4) ───────────────
-  // Additive optional fields. Missing = ByLayer (current behaviour preserved).
-  // Active resolution at render via `systems/properties/resolve-entity-style.ts`.
-  /** Explicit color resolution mode. Missing or 'ByLayer' → inherit from layer. */
-  colorMode?: 'ByLayer' | 'ByBlock' | 'Concrete';
-  /** ACI 1-255 — DXF group 62. Takes priority over legacy `color` hex when set. */
-  colorAci?: number;
-  /** TrueColor 0xRRGGBB — DXF group 420. Takes priority over ACI + hex. */
-  colorTrueColor?: number | null;
-  /** Linetype DXF name — case-sensitive. Literal 'ByLayer'/'ByBlock' opts into inheritance. */
-  linetypeName?: string;
-  /** Lineweight mm — DXF group 370. Accepts -3/-2/-1 sentinels. */
-  lineweightMm?: LineweightMm;
-  /** Transparency 0-90 — DXF group 1071. 0 = opaque. */
-  transparency?: number;
-}
-
-// Supported entity types
-export type EntityType =
-  | 'line'
-  | 'polyline'
-  | 'lwpolyline'           // ✅ ENTERPRISE: AutoCAD lightweight polyline support
-  | 'circle'
-  | 'arc'
-  | 'ellipse'              // ✅ ENTERPRISE: AutoCAD ellipse entity support
-  | 'text'
-  | 'mtext'                // ✅ ENTERPRISE: AutoCAD multiline text entity support
-  | 'spline'               // ✅ ENTERPRISE: AutoCAD spline curve entity support
-  | 'rectangle'
-  | 'rect'                 // ✅ ENTERPRISE: Alternative rectangle entity naming convention
-  | 'point'
-  | 'dimension'
-  | 'block'
-  | 'angle-measurement'
-  | 'leader'               // ✅ ENTERPRISE: AutoCAD leader/annotation entity support
-  | 'hatch'                // ✅ ENTERPRISE: AutoCAD hatch pattern entity support
-  | 'xline'                // ✅ ENTERPRISE: AutoCAD construction line (infinite) support
-  | 'ray'                  // ✅ ENTERPRISE: AutoCAD ray (semi-infinite line) support
-  | 'array'                // ADR-353: Associative array entity (rect/polar/path)
-  | 'stair'                // ADR-358: Parametric stair entity (11 kinds, Phase 1+)
-  | 'center-mark'          // ADR-362 Phase A1: standalone center mark (D13)
-  | 'centerline'           // ADR-362 Phase A1: standalone centerline (D13)
-  // ADR-363 BIM Drawing Mode (Phase 0 Bootstrap — renderers/tools in Phase 1+):
-  | 'wall'                 // Parametric wall (straight/curved/polyline)
-  | 'opening'              // Door/window/sliding-door/french-door/fixed — hosted in wall
-  | 'slab'                 // Floor/ceiling/roof/ground/foundation slab
-  | 'slab-opening'         // Elevator shaft, stair well, duct, chimney cutout
-  | 'column'               // Rectangular/circular/L-shape/T-shape column
-  | 'beam';                // Straight/curved/cantilever beam
+// EntityType is re-exported from base-entity.ts above (duplicate removed)
 
 // Geometric entities
 export interface LineEntity extends BaseEntity {
@@ -312,14 +226,13 @@ import type {
 
 // ─── BIM entity concrete types ──────────────────────────────────────────────
 // ADR-363 Phase 1: Wall promoted to concrete types (WallParams + WallGeometry).
-// Other entities (opening/slab/slab-opening/column/beam) remain stubs until
-// their respective phases (Phase 2-5). Wall types live in `bim/types/wall-types.ts`
-// per N.7.1 SRP — this file re-exports them so legacy imports keep working.
-export type OpeningKind = 'door' | 'window' | 'sliding-door' | 'french-door' | 'fixed';
-export type SlabKind = 'floor' | 'ceiling' | 'roof' | 'ground' | 'foundation';
+// Phase 2: Opening promoted. Phase 3: Slab promoted.
+// Other entities (slab-opening/column/beam) remain stubs until their phases.
+// BIM types live in `bim/types/*-types.ts` per N.7.1 SRP — this file re-exports
+// them so legacy imports keep working.
+// `OpeningKind` re-exported below from `bim/types/opening-types` (Phase 2 concrete).
+// `SlabKind` re-exported below from `bim/types/slab-types` (Phase 3 concrete).
 export type SlabOpeningKind = 'shaft' | 'well' | 'duct' | 'chimney';
-export type ColumnKind = 'rectangular' | 'circular' | 'L-shape' | 'T-shape';
-export type BeamKind = 'straight' | 'curved' | 'cantilever';
 
 // Minimal geometry stub — full geometry types in bim/types/*-types.ts (Phase 2+)
 interface BimGeometryStub {
@@ -352,24 +265,58 @@ export type {
   WallLayerSide,
 };
 
-export interface OpeningEntity extends BimEntity<OpeningKind, BimParamsStub, BimGeometryStub> {
-  type: 'opening';
-}
+// ADR-363 Phase 2: Opening concrete types live in bim/types/opening-types.ts (SRP).
+// Re-export through this barrel for legacy `@/.../types/entities` imports.
+export type {
+  OpeningKind,
+  OpeningHanding,
+  OpeningSwing,
+  OpeningParams,
+  OpeningGeometry,
+  OpeningEntity,
+} from '../bim/types/opening-types';
+// Re-import the concrete OpeningEntity here so the Entity union (below) keeps
+// using it instead of the stub-based placeholder.
+import type { OpeningEntity } from '../bim/types/opening-types';
 
-export interface SlabEntity extends BimEntity<SlabKind, BimParamsStub, BimGeometryStub> {
-  type: 'slab';
-}
+// ADR-363 Phase 3: Slab concrete types live in bim/types/slab-types.ts (SRP).
+// Re-export through this barrel for legacy `@/.../types/entities` imports.
+export type {
+  SlabKind,
+  SlabReinforcement,
+  SlabParams,
+  SlabGeometry,
+  SlabEntity,
+} from '../bim/types/slab-types';
+// Re-import the concrete SlabEntity here so the Entity union (below) keeps
+// using it instead of the stub-based placeholder.
+import type { SlabEntity } from '../bim/types/slab-types';
+
+// ADR-363 Phase 4: Column concrete types live in bim/types/column-types.ts (SRP).
+// Re-export through this barrel for legacy `@/.../types/entities` imports.
+export type {
+  ColumnKind,
+  ColumnAnchor,
+  ColumnParams,
+  ColumnGeometry,
+  ColumnEntity,
+  ColumnLshapeParams,
+  ColumnTshapeParams,
+} from '../bim/types/column-types';
+import type { ColumnEntity } from '../bim/types/column-types';
+
+// ADR-363 Phase 5: Beam concrete types live in bim/types/beam-types.ts (SRP).
+export type {
+  BeamKind,
+  BeamSupportType,
+  BeamParams,
+  BeamGeometry,
+  BeamEntity,
+} from '../bim/types/beam-types';
+import type { BeamEntity } from '../bim/types/beam-types';
 
 export interface SlabOpeningEntity extends BimEntity<SlabOpeningKind, BimParamsStub, BimGeometryStub> {
   type: 'slab-opening';
-}
-
-export interface ColumnEntity extends BimEntity<ColumnKind, BimParamsStub, BimGeometryStub> {
-  type: 'column';
-}
-
-export interface BeamEntity extends BimEntity<BeamKind, BimParamsStub, BimGeometryStub> {
-  type: 'beam';
 }
 
 // Re-export BIM base types for downstream consumers
@@ -509,7 +456,15 @@ export type Entity = (
   | SlabOpeningEntity
   | ColumnEntity
   | BeamEntity
-) & Pick<BaseEntity, 'name'>; // ✅ ENTERPRISE: Ensures name property is always available on Entity type
+) & Pick<BaseEntity,
+  // Required identifiers — needed everywhere (ADR-363 fix: BIM entities now in union)
+  'id' | 'name' | 'layerId' |
+  // Optional styling/state — accessed broadly across hooks/renderers
+  'visible' | 'color' | 'colorMode' | 'colorAci' | 'colorTrueColor' |
+  'linetypeName' | 'lineweightMm' | 'transparency' |
+  'showPreviewGrips' | 'previewGripPoints' |
+  'selected' | 'preview' | 'measurement'
+>; // ✅ ADR-363: exposes all BaseEntity props used via Entity union (Autodesk pattern)
 
 // Entity collection types
 export interface EntityCollection {
@@ -653,382 +608,22 @@ export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntit
 // Re-export from centralized location for backward compatibility
 export { generateEntityId } from '../systems/entity-creation/utils';
 
-export const getEntityBounds = (entity: Entity): { minX: number; minY: number; maxX: number; maxY: number } => {
-  switch (entity.type) {
-    case 'line':
-      return {
-        minX: Math.min(entity.start.x, entity.end.x),
-        minY: Math.min(entity.start.y, entity.end.y),
-        maxX: Math.max(entity.start.x, entity.end.x),
-        maxY: Math.max(entity.start.y, entity.end.y)
-      };
-    case 'polyline':
-    case 'lwpolyline':  // ✅ ENTERPRISE: AutoCAD lightweight polyline bounds
-      if ('vertices' in entity && entity.vertices && entity.vertices.length > 0) {
-        const xs = entity.vertices.map(v => v.x);
-        const ys = entity.vertices.map(v => v.y);
-        return {
-          minX: Math.min(...xs),
-          minY: Math.min(...ys),
-          maxX: Math.max(...xs),
-          maxY: Math.max(...ys)
-        };
-      }
-      // 🏢 ADR-034: Centralized Empty Spatial Bounds
-      return EMPTY_SPATIAL_BOUNDS;
-    case 'circle':
-      return {
-        minX: entity.center.x - entity.radius,
-        minY: entity.center.y - entity.radius,
-        maxX: entity.center.x + entity.radius,
-        maxY: entity.center.y + entity.radius
-      };
-    case 'ellipse':  // ✅ ENTERPRISE: AutoCAD ellipse bounds calculation
-      const maxAxisRadius = Math.max(entity.majorAxis, entity.minorAxis);
-      return {
-        minX: entity.center.x - maxAxisRadius,
-        minY: entity.center.y - maxAxisRadius,
-        maxX: entity.center.x + maxAxisRadius,
-        maxY: entity.center.y + maxAxisRadius
-      };
-    case 'rectangle':
-    case 'rect':     // ✅ ENTERPRISE: Alternative rectangle entity bounds
-      return {
-        minX: entity.x,
-        minY: entity.y,
-        maxX: entity.x + entity.width,
-        maxY: entity.y + entity.height
-      };
-    case 'point':
-      return {
-        minX: entity.position.x,
-        minY: entity.position.y,
-        maxX: entity.position.x,
-        maxY: entity.position.y
-      };
-    case 'text':
-      // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
-      // 🏢 FIX (2026-02-20): Use entity.height (DXF standard) before fontSize fallback
-      // DXF entities store text size in `height` (e.g. 2.5), NOT `fontSize`
-      const textWidth = entity.text.length * (entity.height || entity.fontSize || 2.5) * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
-      const textHeight = entity.height || entity.fontSize || 2.5;
-      return {
-        minX: entity.position.x,
-        minY: entity.position.y - textHeight,
-        maxX: entity.position.x + textWidth,
-        maxY: entity.position.y
-      };
-    case 'mtext':    // ✅ ENTERPRISE: AutoCAD multiline text bounds
-      // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
-      const mtextHeight = entity.height || (entity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE);
-      return {
-        minX: entity.position.x,
-        minY: entity.position.y - mtextHeight,
-        maxX: entity.position.x + entity.width,
-        maxY: entity.position.y
-      };
-    case 'spline':   // ✅ ENTERPRISE: AutoCAD spline bounds from control points
-      if ('controlPoints' in entity && entity.controlPoints && entity.controlPoints.length > 0) {
-        const xs = entity.controlPoints.map(p => p.x);
-        const ys = entity.controlPoints.map(p => p.y);
-        return {
-          minX: Math.min(...xs),
-          minY: Math.min(...ys),
-          maxX: Math.max(...xs),
-          maxY: Math.max(...ys)
-        };
-      }
-      // 🏢 ADR-034: Centralized Empty Spatial Bounds
-      return EMPTY_SPATIAL_BOUNDS;
-    case 'leader':   // ✅ ENTERPRISE: AutoCAD leader bounds from vertices
-      if ('vertices' in entity && entity.vertices && entity.vertices.length > 0) {
-        const leaderXs = entity.vertices.map(v => v.x);
-        const leaderYs = entity.vertices.map(v => v.y);
-        return {
-          minX: Math.min(...leaderXs),
-          minY: Math.min(...leaderYs),
-          maxX: Math.max(...leaderXs),
-          maxY: Math.max(...leaderYs)
-        };
-      }
-      // 🏢 ADR-034: Centralized Empty Spatial Bounds
-      return EMPTY_SPATIAL_BOUNDS;
-    case 'hatch':    // ✅ ENTERPRISE: AutoCAD hatch bounds from boundary paths
-      if ('boundaryPaths' in entity && entity.boundaryPaths && entity.boundaryPaths.length > 0) {
-        const allPoints = entity.boundaryPaths.flat();
-        if (allPoints.length > 0) {
-          const hatchXs = allPoints.map(p => p.x);
-          const hatchYs = allPoints.map(p => p.y);
-          return {
-            minX: Math.min(...hatchXs),
-            minY: Math.min(...hatchYs),
-            maxX: Math.max(...hatchXs),
-            maxY: Math.max(...hatchYs)
-          };
-        }
-      }
-      // 🏢 ADR-034: Centralized Empty Spatial Bounds
-      return EMPTY_SPATIAL_BOUNDS;
-    case 'xline':    // ✅ ENTERPRISE: XLine is infinite - return basePoint as bounds center
-      if ('basePoint' in entity && entity.basePoint) {
-        // XLines are infinite, so we return a nominal bounds around the base point
-        // Real rendering should handle infinite extent separately
-        const NOMINAL_EXTENT = 10000; // Nominal extent for bounds calculation
-        return {
-          minX: entity.basePoint.x - NOMINAL_EXTENT,
-          minY: entity.basePoint.y - NOMINAL_EXTENT,
-          maxX: entity.basePoint.x + NOMINAL_EXTENT,
-          maxY: entity.basePoint.y + NOMINAL_EXTENT
-        };
-      }
-      // 🏢 ADR-034: Centralized Empty Spatial Bounds
-      return EMPTY_SPATIAL_BOUNDS;
-    case 'stair':    // ADR-358: project StairGeometry.bbox (3D) to 2D plan bounds
-      if ('geometry' in entity && entity.geometry && entity.geometry.bbox) {
-        const { min, max } = entity.geometry.bbox;
-        return { minX: min.x, minY: min.y, maxX: max.x, maxY: max.y };
-      }
-      return EMPTY_SPATIAL_BOUNDS;
-    // ADR-363 BIM entities — all carry geometry.bbox (BoundingBox3D), project to 2D
-    case 'wall':
-    case 'opening':
-    case 'slab':
-    case 'slab-opening':
-    case 'column':
-    case 'beam':
-      if ('geometry' in entity && entity.geometry && entity.geometry.bbox) {
-        const { min, max } = entity.geometry.bbox;
-        return { minX: min.x, minY: min.y, maxX: max.x, maxY: max.y };
-      }
-      return EMPTY_SPATIAL_BOUNDS;
-    case 'ray':      // ✅ ENTERPRISE: Ray is semi-infinite - return basePoint to direction extent
-      if ('basePoint' in entity && entity.basePoint) {
-        // Rays are semi-infinite, so we return bounds from origin in direction
-        const NOMINAL_EXTENT = 10000; // Nominal extent for bounds calculation
-        const dirX = entity.direction?.x ?? 1;
-        const dirY = entity.direction?.y ?? 0;
-        return {
-          minX: Math.min(entity.basePoint.x, entity.basePoint.x + dirX * NOMINAL_EXTENT),
-          minY: Math.min(entity.basePoint.y, entity.basePoint.y + dirY * NOMINAL_EXTENT),
-          maxX: Math.max(entity.basePoint.x, entity.basePoint.x + dirX * NOMINAL_EXTENT),
-          maxY: Math.max(entity.basePoint.y, entity.basePoint.y + dirY * NOMINAL_EXTENT)
-        };
-      }
-      // 🏢 ADR-034: Centralized Empty Spatial Bounds
-      return EMPTY_SPATIAL_BOUNDS;
-    default:
-      // ✅ ENTERPRISE FIX: Type-safe fallback for entities with vertices
-      if ('vertices' in entity && entity.vertices && Array.isArray(entity.vertices) && entity.vertices.length > 0) {
-        // ✅ ENTERPRISE: Type guard to ensure vertices are Point2D objects
-        const vertices = entity.vertices as Point2D[];
-        const xs = vertices.map(v => v.x);
-        const ys = vertices.map(v => v.y);
-        return {
-          minX: Math.min(...xs),
-          minY: Math.min(...ys),
-          maxX: Math.max(...xs),
-          maxY: Math.max(...ys)
-        };
-      }
-      // 🏢 ADR-034: Centralized Empty Spatial Bounds
-      return EMPTY_SPATIAL_BOUNDS;
-  }
-};
+export { getEntityBounds } from './entity-bounds';
 
-// ============================================================================
-// 🔄 SCENE MANAGEMENT TYPES - Unified from scene.ts
-// ============================================================================
-// ✅ ENTERPRISE: Scene-specific types integrated for complete entity system
+// Scene aliases — simple Entity re-names kept here for backward compat.
+// Full scene types (SceneLayer, SceneModel, etc.) live in ./scene-types.
+export type AnySceneEntity = Entity;
+export type EntityModel = Entity;
 
-export type AnySceneEntity = Entity; // ✅ UNIFIED: Now alias to main Entity type
-
-// ✅ ENTERPRISE: Legacy compatibility aliases
-export type EntityModel = Entity; // ✅ FIX: Use full Entity type to preserve fontSize, position, text, etc.
-
-/**
- * SceneLayer — ADR-358 §5.1 (FULL Enterprise + GOL + SSoT)
- *
- * Phase 1 shape: 12 base fields + Q15 `bimCategory` scaffold + Q16 `vpOverrides` scaffold.
- *
- * Required (always-on): name, color, visible, locked.
- * Optional in Phase 1 (default-fill at boundary I/O — DXF parser Phase 3, factory below):
- *   id, colorAci, colorTrueColor, linetype, lineweight, transparency, frozen,
- *   plottable, description, source, createdAt, category, tags, bimCategory, vpOverrides.
- *
- * All construction sites must use `createSceneLayer()` factory (ratchet `scene-layer-shape`).
- */
-export interface SceneLayer {
-  /** Stable identifier — `lyr_<UUID-v4>` from enterprise-id.service . REQUIRED (ADR-358 Phase 9C v2.13). Auto-generated by `createSceneLayer()` factory when input.id is omitted. Preserved across DXF round-trip via XDATA AppId `NestorLayerId`. */
-  readonly id: string;
-  /** Display name — DXF group 2. Mutable. */
-  name: string;
-  /** Legacy display color hex — kept for backward compatibility through Phase 9. Prefer `colorAci`/`colorTrueColor`. */
-  color: string;
-  /** ACI 1-255 — DXF group 62. Source of truth when `colorTrueColor` is null/undefined. */
-  colorAci?: number;
-  /** TrueColor 0xRRGGBB — DXF group 420. Overrides ACI if set. */
-  colorTrueColor?: number | null;
-  /** Linetype name — DXF group 6. Default "Continuous". */
-  linetype?: string;
-  /** Lineweight mm — DXF group 370. ISO catalog + special enums (-3/-2/-1). */
-  lineweight?: LineweightMm;
-  /** Transparency 0-90% — DXF group 1071 XDATA. 0 = opaque. */
-  transparency?: number;
-  /** ON/OFF — fast toggle, no regen. */
-  visible: boolean;
-  /** Freeze — skip regen (perf). DXF group 70 bit 1. */
-  frozen?: boolean;
-  /** Lock — no edit. DXF group 70 bit 4. */
-  locked: boolean;
-  /** Plottable — DXF group 290. False = not plotted. */
-  plottable?: boolean;
-  /** User metadata — DXF group 1000 XDATA. */
-  description?: string;
-  /** Provenance — internal, not DXF. */
-  source?: SceneLayerSource;
-  /** ISO timestamp creation — internal. */
-  createdAt?: string;
-  /** AEC category (Q7 §5.3.quinquies). Auto-suggested from AIA prefix. */
-  category?: AecLayerCategory;
-  /** Free-text tags — lowercase normalized, ≤8 entries. */
-  tags?: ReadonlyArray<string>;
-  /**
-   * Q15 SCAFFOLD — Future BIM mode placeholder.
-   * Optional IFC category string (e.g. "IfcWall", "IfcSlab").
-   * Pre-commit ratchet `bim-category-scaffolding-no-active-use` BLOCKS read/write.
-   * Active use deferred to Future BIM ADR (Phase 11+).
-   */
-  readonly bimCategory?: string | null;
-  /**
-   * Q16 SCAFFOLD — Future per-viewport overrides (VPLAYER).
-   * Map keyed by viewportId → partial layer property overrides.
-   * Pre-commit ratchet `vp-overrides-scaffolding-no-active-use` BLOCKS read/write.
-   * DXF parser preserves these via XDATA round-trip but never reads in active code path (Phase 3).
-   * Active use deferred to Future paperspace ADR.
-   */
-  readonly vpOverrides?: Record<string, Partial<VpLayerProps>> | null;
-}
-
-/** Source of a layer's creation — internal provenance, not DXF. */
-export type SceneLayerSource = 'dxf-import' | 'user-created' | 'system-default';
-
-/**
- * DXF group 370 lineweight catalog — 24 ISO values (mm) + 3 special enums.
- * Special: -3 = Default, -2 = ByLayer, -1 = ByBlock.
- */
-export type LineweightMm =
-  | 0 | 0.05 | 0.09 | 0.13 | 0.15 | 0.18 | 0.20 | 0.25
-  | 0.30 | 0.35 | 0.40 | 0.50 | 0.53 | 0.60 | 0.70 | 0.80
-  | 0.90 | 1.00 | 1.06 | 1.20 | 1.40 | 1.58 | 2.00 | 2.11
-  | -3 | -2 | -1;
-
-/** AEC discipline taxonomy — ADR-358 §5.3.quinquies (Q7). AIA prefix per category. */
-export type AecLayerCategory =
-  | 'architectural' | 'structural' | 'electrical' | 'mechanical'
-  | 'plumbing' | 'fire' | 'civil' | 'telecom' | 'interior' | 'general';
-
-/**
- * Q16 SCAFFOLD — VP overridable layer properties.
- * Subset of `SceneLayer` props that VPLAYER can override per-viewport.
- * Active wiring deferred; type only used for round-trip preservation in DXF I/O.
- */
-export interface VpLayerProps {
-  visible?: boolean;
-  frozen?: boolean;
-  colorAci?: number;
-  colorTrueColor?: number | null;
-  linetype?: string;
-  lineweight?: LineweightMm;
-  transparency?: number;
-}
-
-/**
- * SSoT factory for `SceneLayer` (ADR-358 §5.1).
- * Boundary I/O default-fill (DXF import, UI create, system seed) MUST go through here.
- * Pre-commit ratchet `scene-layer-shape` blocks inline literal construction outside allowlist.
- */
-export function createSceneLayer(input: {
-  name: string;
-  color?: string;
-  visible?: boolean;
-  locked?: boolean;
-  id?: string;
-  colorAci?: number;
-  colorTrueColor?: number | null;
-  linetype?: string;
-  lineweight?: LineweightMm;
-  transparency?: number;
-  frozen?: boolean;
-  plottable?: boolean;
-  description?: string;
-  source?: SceneLayerSource;
-  createdAt?: string;
-  category?: AecLayerCategory;
-  tags?: ReadonlyArray<string>;
-  /**
-   * Q15 SCAFFOLD round-trip — accepted only from DXF I/O sites (parser/writer/tests).
-   * Active product code MUST NOT pass this; ratchet `bim-category-scaffolding-no-active-use`
-   * blocks `.bimCategory` reads/writes outside the DXF round-trip whitelist.
-   */
-  bimCategory?: string | null;
-  /**
-   * Q16 SCAFFOLD round-trip — accepted only from DXF I/O sites (parser/writer/tests).
-   * Active product code MUST NOT pass this; ratchet `vp-overrides-scaffolding-no-active-use`
-   * blocks `.vpOverrides` reads/writes outside the DXF round-trip whitelist.
-   */
-  vpOverrides?: Record<string, Partial<VpLayerProps>> | null;
-}): SceneLayer {
-  return {
-    id: input.id ?? generateLayerId(),
-    name: input.name,
-    color: input.color ?? '#ffffff',
-    colorAci: input.colorAci ?? 7,
-    colorTrueColor: input.colorTrueColor ?? null,
-    linetype: input.linetype ?? 'Continuous',
-    lineweight: input.lineweight ?? -3,
-    transparency: input.transparency ?? 0,
-    visible: input.visible ?? true,
-    frozen: input.frozen ?? false,
-    locked: input.locked ?? false,
-    plottable: input.plottable ?? true,
-    description: input.description,
-    source: input.source ?? 'user-created',
-    createdAt: input.createdAt,
-    category: input.category ?? 'general',
-    tags: input.tags ?? [],
-    bimCategory: input.bimCategory ?? null,
-    vpOverrides: input.vpOverrides ?? null,
-  };
-}
-
-export interface SceneBounds {
-  min: Point2D;
-  max: Point2D;
-}
-
-/**
- * Stable layer identifier — `lyr_<UUID-v4>` generated by enterprise-id.service.
- * ADR-358 Phase 9E: SceneModel.layersById is keyed by this type.
- */
-export type LayerId = string;
-
-export interface SceneModel {
-  entities: AnySceneEntity[];
-  /** ADR-358 Phase 9E-6e: id-keyed layer map. Required on all scenes. */
-  layersById: Record<LayerId, SceneLayer>;
-  bounds: SceneBounds;
-  units: 'mm' | 'cm' | 'm' | 'in' | 'ft';
-  version?: string;
-}
-
-export interface DxfImportResult {
-  success: boolean;
-  scene?: SceneModel;
-  error?: string;
-  warnings?: string[];
-  stats: {
-    entityCount: number;
-    layerCount: number;
-    parseTimeMs: number;
-  };
-}
+export type {
+  LineweightMm,
+  SceneLayerSource,
+  AecLayerCategory,
+  VpLayerProps,
+  SceneLayer,
+  SceneBounds,
+  LayerId,
+  SceneModel,
+  DxfImportResult,
+} from './scene-types';
+export { createSceneLayer } from './scene-types';

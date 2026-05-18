@@ -31,6 +31,7 @@ import { isHingedKind, isGlazedKind } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { getOpeningGrips } from '../walls/opening-grips';
 
 /** Stroke colour per kind (industry convention — door warm, window cool). */
 const KIND_STROKE: Readonly<Record<OpeningKind, string>> = {
@@ -72,9 +73,19 @@ export class OpeningRenderer extends BaseEntityRenderer {
     this.drawKindOverlay(opening);
   }
 
-  getGrips(_entity: EntityModel): GripInfo[] {
-    // Phase 2.5 — drag-along-wall grips. Phase 2 returns empty.
-    return [];
+  getGrips(entity: EntityModel): GripInfo[] {
+    // ADR-363 Phase 2.5 — drag-along-wall grip (single `opening-offset` kind).
+    // Commit routed through `applyOpeningGripDrag()` + `UpdateOpeningParamsCommand`
+    // by `commitOpeningGripDrag` (grip-commit-adapter).
+    if (!isOpeningEntity(entity)) return [];
+    return getOpeningGrips(entity as OpeningEntity).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      position: g.position,
+      type: 'center' as const,
+      entityId: g.entityId,
+      isVisible: true,
+      gripIndex: g.gripIndex,
+    }));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {

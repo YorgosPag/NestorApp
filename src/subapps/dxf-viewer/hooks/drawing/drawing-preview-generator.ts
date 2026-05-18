@@ -45,7 +45,7 @@ import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
 
 // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
-const defaultLayerId = (): string | undefined => getLayer(DXF_DEFAULT_LAYER)?.id;
+const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 
 // ─── Callback types for dependency injection ───────────────────────────────
 

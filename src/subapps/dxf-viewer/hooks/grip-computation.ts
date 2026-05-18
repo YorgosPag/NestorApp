@@ -11,9 +11,10 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
-import type { GripInfo } from './useGripMovement';
+import type { GripInfo, StairGripKind } from './useGripMovement';
 import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
 import { getStairGrips } from '../systems/stairs/stair-grips';
+import { getDimensionGrips } from './dimensions/useDimensionGrips';
 
 // ============================================================================
 // TYPES (still used by grips/ modules and CanvasLayerStack)
@@ -43,7 +44,7 @@ export interface DxfGripDragPreview {
    * so the preview can reconstruct `currentPos = anchorPos + delta` (the same
    * value the commit path uses).
    */
-  stairGripKind?: import('../systems/stairs/stair-grips').StairGripKind;
+  stairGripKind?: StairGripKind;
   anchorPos?: Point2D;
 }
 
@@ -197,6 +198,12 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
     case 'stair': {
       // ADR-358 Phase 5b — parametric stair grips (5 kinds, §5.12).
       grips.push(...getStairGrips(entity.stairEntity));
+      break;
+    }
+
+    case 'dimension': {
+      // ADR-362 Phase I2 — dimension grips (up to 5 per entity, §D9).
+      grips.push(...getDimensionGrips(entity));
       break;
     }
   }

@@ -99,9 +99,9 @@ function scalePoint2(e: Entity & { type: 'point' }, base: Point2D, sx: number, s
 
 function scaleDimension(e: Entity & { type: 'dimension' }, base: Point2D, sx: number, sy: number) {
   return {
-    startPoint: scalePoint(e.startPoint, base, sx, sy),
-    endPoint: scalePoint(e.endPoint, base, sx, sy),
-    textPosition: scalePoint(e.textPosition, base, sx, sy),
+    ...(e.startPoint !== undefined && { startPoint: scalePoint(e.startPoint, base, sx, sy) }),
+    ...(e.endPoint !== undefined && { endPoint: scalePoint(e.endPoint, base, sx, sy) }),
+    ...(e.textPosition !== undefined && { textPosition: scalePoint(e.textPosition, base, sx, sy) }),
   };
 }
 

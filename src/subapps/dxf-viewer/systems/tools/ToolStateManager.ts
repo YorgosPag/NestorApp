@@ -153,6 +153,10 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'opening': { id: 'opening', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 2 — continuous draw
   'slab':    { id: 'slab',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 3 — polygon N-click + Enter
   'column':  { id: 'column',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 4 — single-click + Tab anchor cycle
+  'beam':    { id: 'beam',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 5 — 2-click straight/cantilever, 3-click curved
+  // ADR-359 Phase 1: Auxiliary geometry tools (XLINE = infinite, RAY = semi-infinite)
+  'xline': { id: 'xline', category: 'drawing', requiresCanvas: true, canInterrupt: false, allowsContinuous: true, preservesOverlayMode: false, allowsChain: true },
+  'ray':   { id: 'ray',   category: 'drawing', requiresCanvas: true, canInterrupt: false, allowsContinuous: true, preservesOverlayMode: false, allowsChain: true },
   // ADR-362 Phase D1: Enterprise Dimension creation tools (Smart DIM + 4 manual overrides)
   'dim-smart':      { id: 'dim-smart',      category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'dim-linear':     { id: 'dim-linear',     category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
@@ -168,6 +172,9 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // ADR-362 Phase D3: Chained dim creation (Baseline / Continued) — same metadata as D1/D2 dim tools.
   'dim-baseline':      { id: 'dim-baseline',      category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'dim-continued':     { id: 'dim-continued',     category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-362 Phase A1: Center mark + centerline tools
+  'dim-center-mark':   { id: 'dim-center-mark',   category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'dim-centerline':    { id: 'dim-centerline',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 };
 // ============================================================================
 // 🏢 ENTERPRISE HELPER FUNCTIONS (ADR-033)
@@ -312,7 +319,6 @@ export function allowsContinuous(tool: string | undefined | null): boolean {
   const info = TOOL_DEFINITIONS[tool as ToolType];
   return info?.allowsContinuous ?? false;
 }
-
 /** ADR-357 Phase 5: Returns true if tool uses chain mode (last endpoint seeds next segment) */
 export function isChainTool(tool: string | undefined | null): boolean {
   if (!tool) return false;
@@ -367,11 +373,9 @@ export function useToolStateManager({
   const validateTool = useCallback((tool: ToolType): boolean => {
     const isValid = tool in TOOL_DEFINITIONS;
     onToolValidation?.(tool, isValid);
-    
     if (!isValid) {
       console.warn(`⚠️ ToolStateManager: Invalid tool "${tool}"`);
     }
-    
     return isValid;
   }, [onToolValidation]);
   // ============================================================================
@@ -379,26 +383,19 @@ export function useToolStateManager({
   // ============================================================================
   const canTransitionTo = useCallback((newTool: ToolType): boolean => {
     if (!validateTool(newTool)) return false;
-    
     const currentInfo = getToolInfo(activeTool);
     const newInfo = getToolInfo(newTool);
-    
     // Always allow transition to select
     if (newTool === 'select') return true;
-    
     // Allow zoom tools from any state
     if (newInfo.category === 'zoom') return true;
-    
     // Allow interruption if current tool supports it
     if (currentInfo.canInterrupt) return true;
-    
     // Allow if not currently in an interactive tool
     if (!isInteractiveTool(activeTool)) return true;
-    
     console.warn(`⚠️ ToolStateManager: Cannot transition from ${activeTool} to ${newTool}`);
     return false;
   }, [activeTool, validateTool, getToolInfo, isInteractiveTool]);
-
   const recordTransition = useCallback((
     from: ToolType, 
     to: ToolType, 
@@ -410,15 +407,12 @@ export function useToolStateManager({
       timestamp: Date.now(),
       reason
     };
-    
     transitionHistory.current.push(transition);
-    
     // Keep only last 50 transitions
     if (transitionHistory.current.length > 50) {
       transitionHistory.current = transitionHistory.current.slice(-50);
     }
   }, []);
-
   const setTool = useCallback((
     newTool: ToolType,
     reason: ToolTransition['reason'] = 'user'
@@ -429,26 +423,19 @@ export function useToolStateManager({
     if (!canTransitionTo(newTool)) {
       return false;
     }
-
     setIsTransitioning(true);
-    
     const oldTool = activeTool;
     previousTool.current = oldTool;
-    
     setActiveTool(newTool);
     recordTransition(oldTool, newTool, reason);
     onToolChange?.(newTool, oldTool);
-    
     // Brief transition state
     setTimeout(() => setIsTransitioning(false), PANEL_LAYOUT.TIMING.TOOL_TRANSITION);
-    
     return true;
   }, [activeTool, canTransitionTo, recordTransition, onToolChange]);
-
   const cancelCurrentTool = useCallback((): boolean => {
     return setTool('select', 'system');
   }, [setTool]);
-
   const returnToPreviousTool = useCallback((): boolean => {
     if (previousTool.current && previousTool.current !== activeTool) {
       return setTool(previousTool.current, 'system');

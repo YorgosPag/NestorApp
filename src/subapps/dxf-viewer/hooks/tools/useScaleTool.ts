@@ -117,11 +117,25 @@ export function useScaleTool(props: UseScaleToolProps): UseScaleToolReturn {
 
     if (toolIsScale && !wasActiveRef.current) {
       ScaleToolStore.setSelectedEntityIds(selectedEntityIds);
-      const handoffPt = GripHandoffStore.consume('scale');
-      if (hasEntities && handoffPt) {
-        // Grip drag pre-seeded the base point → skip straight to scale_input
-        ScaleToolStore.setBasePoint(handoffPt);
-        ScaleToolStore.setPhase('scale_input', 'direct');
+      const handoff = GripHandoffStore.consume('scale');
+      if (hasEntities && handoff) {
+        // Grip drag pre-seeded the base point → skip straight to scale_input.
+        ScaleToolStore.setBasePoint(handoff.point);
+        // ADR-357 Phase 12 — `copyMode` modifier: start with Scale's native
+        // copy toggle ON (`ScaleEntityCommand` clones instead of mutating).
+        if (handoff.options.copyMode) {
+          ScaleToolStore.setCopyMode(true);
+        }
+        // ADR-357 Phase 12 — `refStart`/`refEnd` modifier: skip the two pick
+        // sub-phases and land on `ref_new_x` (Scale's "Enter new length" prompt)
+        // with the picked vector already loaded into the uniform-X ref slots.
+        if (handoff.options.refStart && handoff.options.refEnd) {
+          ScaleToolStore.setRefPoint('refP1x', handoff.options.refStart);
+          ScaleToolStore.setRefPoint('refP2x', handoff.options.refEnd);
+          ScaleToolStore.setPhase('scale_input', 'ref_new_x');
+        } else {
+          ScaleToolStore.setPhase('scale_input', 'direct');
+        }
       } else {
         ScaleToolStore.setPhase(hasEntities ? 'base_point' : 'selecting');
       }

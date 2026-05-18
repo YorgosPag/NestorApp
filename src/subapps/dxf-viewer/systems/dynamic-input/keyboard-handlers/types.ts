@@ -19,6 +19,7 @@ import type {
   StairField
 } from '../types/common-interfaces';
 import type { DisplayUnit } from '../../../config/units';
+import type { CoordMode } from '../coordinate-parser';
 
 // Re-export Phase type for convenience
 export type Phase = 'first-point' | 'second-point' | 'continuous';
@@ -51,6 +52,9 @@ export interface KeyboardHandlerContext {
 
   /** ADR-357 Phase 2b — user-selected display unit (mm internal → display conversion). */
   readonly displayUnit: DisplayUnit;
+
+  /** ADR-357 Phase 6 — active coordinate input mode (abs/rel/polar). */
+  readonly coordMode: CoordMode;
 
   // Validators
   readonly normalizeNumber: (v: string) => string;

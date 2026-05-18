@@ -23,6 +23,7 @@ import {
   DISPLAY_UNIT_LABELS,
   isValidDisplayUnit,
 } from '../config/units';
+import { CommandLineInput } from '../ui/command-line/CommandLineInput';
 
 export default function CadStatusBar() {
   const { osnap, grid, snap, ortho, polar, dynInput } = useCadToggles();
@@ -64,6 +65,8 @@ export default function CadStatusBar() {
         className="w-full border-t border-border bg-background/95 backdrop-blur-sm shrink-0"
       >
         <div className="flex items-center gap-4 px-4 py-1.5 overflow-x-auto">
+          {/* ADR-357 Phase 14-B: Command line input — leftmost, always visible */}
+          <CommandLineInput />
           {stairStatusText && (
             <span
               className="shrink-0 text-xs font-semibold text-amber-400"

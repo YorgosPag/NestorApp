@@ -39,7 +39,7 @@ import { dwarn } from '../../debug';
 // ============================================================================
 
 type SceneEntity = NonNullable<SceneModel['entities']>[number];
-type SceneLayers = NonNullable<SceneModel['layers']>;
+type SceneLayers = NonNullable<SceneModel['layersById']>;
 
 export interface UseDxfSceneConversionParams {
   currentScene: SceneModel | null;
@@ -282,7 +282,7 @@ export function useDxfSceneConversion({
 
   const dxfScene = useMemo<DxfScene>(() => perfMark('useDxfSceneConversion.memo', () => {
     const entities = currentScene?.entities ?? [];
-    const layers = currentScene?.layers ?? {};
+    const layers = currentScene?.layersById ?? {};
     // ADR-358 Phase 9E-5: id-keyed primary for buildBase layerInfo lookup.
     const layersById = currentScene?.layersById;
     const cache = cacheRef.current;
@@ -324,7 +324,7 @@ export function useDxfSceneConversion({
       entities: converted,
       layers: Object.keys(layers),
       // ADR-358 Phase 9E-5 — id-first primary; name-keyed layers as legacy fallback.
-      layersById: currentScene?.layersById ?? currentScene?.layers,
+      layersById: currentScene?.layersById,
       bounds: currentScene?.bounds ?? null,
     };
   }), [currentScene]);

@@ -28,7 +28,8 @@ import {
   isLWPolylineEntity,
   isCircleEntity,
   isArcEntity,
-  isRectangleEntity
+  isRectangleEntity,
+  isWallEntity
 } from '../../types/entities';
 
 export interface IntersectionResult {
@@ -90,6 +91,18 @@ export class GeometricCalculations {
     } else if (isRectangleEntity(entity)) {
       const corners = GeometricCalculations.getRectangleCorners(entity);
       endpoints.push(...corners);
+    } else if (isWallEntity(entity)) {
+      // ADR-363 Phase 1C — wall endpoints = axis endpoints. For polyline kind
+      // every spine vertex is a corner endpoint (mirrors closed-polyline rule).
+      const params = entity.params;
+      if (entity.kind === 'polyline' && params.polylineVertices && params.polylineVertices.length >= 2) {
+        for (const v of params.polylineVertices) {
+          endpoints.push({ x: v.x, y: v.y });
+        }
+      } else {
+        endpoints.push({ x: params.start.x, y: params.start.y });
+        endpoints.push({ x: params.end.x, y: params.end.y });
+      }
     }
 
     return endpoints;
@@ -133,6 +146,24 @@ export class GeometricCalculations {
           });
         }
       }
+    } else if (isWallEntity(entity)) {
+      // ADR-363 Phase 1C — wall midpoints. Straight/curved kind exposes axis
+      // midpoint; polyline kind exposes per-segment midpoints (mirror polyline).
+      const params = entity.params;
+      if (entity.kind === 'polyline' && params.polylineVertices && params.polylineVertices.length >= 2) {
+        const verts = params.polylineVertices;
+        for (let i = 1; i < verts.length; i++) {
+          midpoints.push({
+            x: (verts[i - 1].x + verts[i].x) / 2,
+            y: (verts[i - 1].y + verts[i].y) / 2,
+          });
+        }
+      } else {
+        midpoints.push({
+          x: (params.start.x + params.end.x) / 2,
+          y: (params.start.y + params.end.y) / 2,
+        });
+      }
     }
 
     return midpoints;
@@ -140,6 +171,22 @@ export class GeometricCalculations {
 
   static getEntityMidpoint(entity: Entity): Point2D | null {
     // 🏢 ENTERPRISE: Use type guards for safe property access
+    if (isWallEntity(entity)) {
+      // ADR-363 Phase 1C — single midpoint = axis midpoint (straight/curved).
+      // Polyline kind picks the median segment midpoint.
+      const params = entity.params;
+      if (entity.kind === 'polyline' && params.polylineVertices && params.polylineVertices.length >= 2) {
+        const verts = params.polylineVertices;
+        const mid = Math.floor(verts.length / 2);
+        const a = verts[Math.max(0, mid - 1)];
+        const b = verts[mid];
+        return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      }
+      return {
+        x: (params.start.x + params.end.x) / 2,
+        y: (params.start.y + params.end.y) / 2,
+      };
+    }
     if (isLineEntity(entity)) {
       return {
         x: (entity.start.x + entity.end.x) / 2,

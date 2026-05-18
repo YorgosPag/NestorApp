@@ -152,7 +152,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
 
       const newScene: SceneModel = {
         entities: [sceneEntity],
-        layers: { [DXF_DEFAULT_LAYER]: defaultLayer },
+        layersById: { [defaultLayer.id]: defaultLayer },
         bounds: defaultBounds,
         units: 'mm',
       };

@@ -123,7 +123,7 @@ function docToEntity(doc: StairDoc): StairEntity {
     params,
     geometry: computeStairGeometry(params),
     validation,
-    layer: doc.layer ?? 'STAIRS',
+    layerId: doc.layer ?? 'STAIRS',
     levelId: doc.levelId,
     visible: true,
     editingBy: doc.editingBy,

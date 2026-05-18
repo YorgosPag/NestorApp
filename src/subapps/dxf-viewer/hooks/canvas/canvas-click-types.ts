@@ -88,6 +88,24 @@ export interface WallToolLike {
   onCanvasClick: (point: Point2D) => boolean;
 }
 
+/** ADR-363 Phase 3 — Minimal slab tool interface for click routing. */
+export interface SlabToolLike {
+  readonly isActive: boolean;
+  onCanvasClick: (point: Point2D) => boolean;
+}
+
+/** ADR-363 Phase 4 — Minimal column tool interface for click routing. */
+export interface ColumnToolLike {
+  readonly isActive: boolean;
+  onCanvasClick: (point: Point2D) => boolean;
+}
+
+/** ADR-363 Phase 5 — Minimal beam tool interface for click routing. */
+export interface BeamToolLike {
+  readonly isActive: boolean;
+  onCanvasClick: (point: Point2D) => boolean;
+}
+
 /** Minimal interface for level manager (read-only for click handling) */
 export interface LevelManagerLike {
   currentLevelId: string | null;
@@ -116,6 +134,12 @@ export interface UseCanvasClickHandlerParams {
   stairTool?: StairToolLike;
   /** ADR-363 Phase 1B — Wall tool click pipeline. */
   wallTool?: WallToolLike;
+  /** ADR-363 Phase 3 — Slab tool click pipeline. */
+  slabTool?: SlabToolLike;
+  /** ADR-363 Phase 4 — Column tool click pipeline. */
+  columnTool?: ColumnToolLike;
+  /** ADR-363 Phase 5 — Beam tool click pipeline. */
+  beamTool?: BeamToolLike;
 
   // ── ADR-188: Rotation tool ────────────────────────────────────────────
   /** Whether the rotation tool is active and collecting input */

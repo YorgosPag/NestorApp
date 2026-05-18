@@ -5,6 +5,7 @@ import { calculateDistance } from '../../../rendering/entities/shared/geometry-r
 // 🏢 ADR-065: Centralized ID Generation (crypto-secure, collision-resistant)
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { DXF_DEFAULT_LAYER } from '../../../config/layer-config';
+import { getLayer } from '../../../stores/LayerStore';
 
 interface UseDynamicInputHandlerProps {
   activeTool: string;
@@ -56,7 +57,7 @@ export function useDynamicInputHandler({
             type: 'circle',
             center: { x: center.x, y: center.y },
             radius: radius,
-            layer: DXF_DEFAULT_LAYER
+            layerId: getLayer(DXF_DEFAULT_LAYER)?.id ?? ''
           };
 
           onEntityCreated(circleEntity);
@@ -68,7 +69,7 @@ export function useDynamicInputHandler({
             type: 'circle',
             center: { x: coordinates.x, y: coordinates.y },
             radius: length, // For circle: direct radius, for circle-diameter: converted from diameter to radius
-            layer: DXF_DEFAULT_LAYER
+            layerId: getLayer(DXF_DEFAULT_LAYER)?.id ?? ''
           };
 
           onEntityCreated(circleEntity);
@@ -80,7 +81,7 @@ export function useDynamicInputHandler({
           id: generateEntityId(),
           type: 'point',
           position: { x: coordinates.x, y: coordinates.y },
-          layer: DXF_DEFAULT_LAYER
+          layerId: getLayer(DXF_DEFAULT_LAYER)?.id ?? ''
         };
 
         onEntityCreated(pointEntity);

@@ -28,8 +28,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import type { SnapOverrideMode } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { cn } from '@/lib/utils';
 import styles from './DrawingContextMenu.module.css';
 import type { ToolType } from '../toolbar/types';
@@ -66,7 +70,22 @@ interface DrawingContextMenuProps {
   onCancel: () => void;
   /** 🏢 ENTERPRISE (2026-01-31): Callback for Flip Arc direction */
   onFlipArc?: () => void;
+  /** ADR-357 Phase 7: Snap Override — activates single-use engine override */
+  onSnapOverride?: (mode: SnapOverrideMode) => void;
 }
+
+// ADR-357 Phase 7: Single-use engine overrides available in the Snap Override submenu.
+// Maps ExtendedSnapType string values to their i18n label keys (reuses snapModes.labels).
+const SNAP_OVERRIDE_ENGINES: ReadonlyArray<{ type: string; labelKey: string }> = [
+  { type: 'endpoint',     labelKey: 'snapModes.labels.endpoint' },
+  { type: 'midpoint',     labelKey: 'snapModes.labels.midpoint' },
+  { type: 'center',       labelKey: 'snapModes.labels.center' },
+  { type: 'intersection', labelKey: 'snapModes.labels.intersection' },
+  { type: 'perpendicular',labelKey: 'snapModes.labels.perpendicular' },
+  { type: 'tangent',      labelKey: 'snapModes.labels.tangent' },
+  { type: 'quadrant',     labelKey: 'snapModes.labels.quadrant' },
+  { type: 'nearest',      labelKey: 'snapModes.labels.nearest' },
+] as const;
 
 // ===== HELPER FUNCTIONS =====
 
@@ -97,6 +116,10 @@ function getMinPointsForFinish(tool: ToolType): number {
   if (tool === 'circle-best-fit') {
     return 3; // Circle best-fit needs at least 3 points
   }
+  // ADR-357 Phase 5: line chain mode — allow Finish with 1 seeded chain start point
+  if (tool === 'line') {
+    return 1;
+  }
   return 2; // Polyline needs at least 2
 }
 
@@ -118,6 +141,7 @@ const DrawingContextMenuInner = forwardRef<DrawingContextMenuHandle, DrawingCont
   onUndoLastPoint,
   onCancel,
   onFlipArc,
+  onSnapOverride,
 }, ref) => {
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const triggerRef = useRef<HTMLSpanElement>(null);
@@ -176,6 +200,14 @@ const DrawingContextMenuInner = forwardRef<DrawingContextMenuHandle, DrawingCont
     setIsOpen(false);
   }, [onFlipArc]);
 
+  // ADR-357 Phase 7: Snap Override handler
+  const handleSnapOverride = useCallback((mode: SnapOverrideMode) => {
+    if (onSnapOverride) {
+      onSnapOverride(mode);
+    }
+    setIsOpen(false);
+  }, [onSnapOverride]);
+
   // Close menu when tool/points change (user switched context)
   const prevToolRef = useRef(activeTool);
   useEffect(() => {
@@ -193,6 +225,8 @@ const DrawingContextMenuInner = forwardRef<DrawingContextMenuHandle, DrawingCont
   const showCloseOption = supportsClose(activeTool);
   // 🏢 ENTERPRISE (2026-01-31): Arc flip option visibility
   const showFlipArcOption = isArcTool(activeTool) && pointCount >= 2 && onFlipArc !== undefined;
+  // ADR-357 Phase 7: Snap Override submenu — only during line COLLECTING_POINTS
+  const showSnapOverride = activeTool === 'line' && pointCount >= 1 && onSnapOverride !== undefined;
 
   // ===== RENDER =====
 
@@ -262,6 +296,53 @@ const DrawingContextMenuInner = forwardRef<DrawingContextMenuHandle, DrawingCont
           <span className={styles.menuItemLabel}>Undo</span>
           <span className={styles.menuItemShortcut}>U</span>
         </DropdownMenuItem>
+
+        {/* ADR-357 Phase 7: Snap Override submenu */}
+        {showSnapOverride && (
+          <>
+            <DropdownMenuSeparator className={styles.menuSeparator} />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className={styles.menuItem}>
+                <span className={styles.menuItemLabel}>{t('contextMenu.snapOverride.title')}</span>
+                <span className={styles.menuItemShortcut}>▶</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className={styles.menuContent}>
+                {/* Special overrides */}
+                <DropdownMenuItem
+                  className={styles.menuItem}
+                  onClick={() => handleSnapOverride('from')}
+                >
+                  <span className={styles.menuItemLabel}>{t('contextMenu.snapOverride.from')}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className={styles.menuItem}
+                  onClick={() => handleSnapOverride('m2p')}
+                >
+                  <span className={styles.menuItemLabel}>{t('contextMenu.snapOverride.m2p')}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className={styles.menuItem}
+                  onClick={() => handleSnapOverride('app')}
+                >
+                  <span className={styles.menuItemLabel}>{t('contextMenu.snapOverride.app')}</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className={styles.menuSeparator} />
+                {/* Single-use engine overrides */}
+                {SNAP_OVERRIDE_ENGINES.map(engine => (
+                  <DropdownMenuItem
+                    key={engine.type}
+                    className={styles.menuItem}
+                    onClick={() => handleSnapOverride(engine.type)}
+                  >
+                    <span className={styles.menuItemLabel}>
+                      {t(engine.labelKey)} ({t('contextMenu.snapOverride.once')})
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </>
+        )}
 
         <DropdownMenuSeparator className={styles.menuSeparator} />
 

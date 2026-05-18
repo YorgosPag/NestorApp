@@ -53,6 +53,8 @@ function makeContext(over: Partial<KeyboardHandlerContext> = {}): KeyboardHandle
     activeTool: 'line',
     normalizeNumber: (v: string) => v.replace(',', '.'),
     isValidNumber: (v: string) => !Number.isNaN(parseFloat(v)),
+    displayUnit: 'mm',
+    coordMode: 'abs',
     ...over,
   };
 }

@@ -20,6 +20,9 @@ import { polarTrackingStore } from '../../systems/constraints/polar-tracking-sto
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
 import { hardOrtho } from './drawing-handler-utils';
+// ADR-357 Phase 13 G14: length/angle lock geometry constraint
+import { DynamicInputLockStore } from '../../systems/dynamic-input/DynamicInputLockStore';
+import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 
 const DEBUG_DRAWING_HANDLERS = false;
 
@@ -162,6 +165,25 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     if (trackingResult) {
       previewPt = trackingResult.point;
     }
+
+    // ADR-357 Phase 13 G14: length/angle lock — constrain preview geometry to locked value.
+    // Runs after all snaps so the lock takes priority (matches AutoCAD/BricsCAD behaviour).
+    if (lastRefPt && activeTool === 'line') {
+      const { lockedField, lockedValue } = DynamicInputLockStore.getLocked();
+      if (lockedField && lockedValue !== null) {
+        const dx = previewPt.x - lastRefPt.x;
+        const dy = previewPt.y - lastRefPt.y;
+        const dist = Math.hypot(dx, dy);
+        if (lockedField === 'length' && dist > 0.001) {
+          const scale = lockedValue / dist;
+          previewPt = { x: lastRefPt.x + dx * scale, y: lastRefPt.y + dy * scale };
+        } else if (lockedField === 'angle') {
+          const rad = degToRad(lockedValue);
+          previewPt = { x: lastRefPt.x + dist * Math.cos(rad), y: lastRefPt.y + dist * Math.sin(rad) };
+        }
+      }
+    }
+
     // Update the preview entity (calculates geometry, updates ref)
     updatePreview(previewPt, transformUtils);
     const t2 = performance.now();

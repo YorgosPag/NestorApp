@@ -12,9 +12,21 @@ import type { RibbonStairBridge } from './useRibbonStairBridge';
 import { isStairBadgeKey, isStairPanelVisibilityKey } from './useRibbonStairBridge';
 import type { RibbonWallBridge } from './useRibbonWallBridge';
 import { isWallBadgeKey } from './useRibbonWallBridge';
+import type { RibbonOpeningBridge } from './useRibbonOpeningBridge';
+import { isOpeningBadgeKey } from './useRibbonOpeningBridge';
+import type { RibbonSlabBridge } from './useRibbonSlabBridge';
+import { isSlabBadgeKey } from './useRibbonSlabBridge';
+import type { RibbonColumnBridge } from './useRibbonColumnBridge';
+import { isColumnBadgeKey } from './useRibbonColumnBridge';
+import type { RibbonBeamBridge } from './useRibbonBeamBridge';
+import { isBeamBadgeKey } from './useRibbonBeamBridge';
 import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
 import { isStairRibbonKey, isStairRibbonStringKey } from './bridge/stair-command-keys';
-import { isWallRibbonKey, isWallRibbonStringKey, isWallRibbonToggleKey } from './bridge/wall-command-keys';
+import { isWallRibbonKey, isWallRibbonStringKey, isWallRibbonToggleKey, isWallActionKey } from './bridge/wall-command-keys';
+import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningActionKey } from './bridge/opening-command-keys';
+import { isSlabRibbonKey, isSlabRibbonStringKey, isSlabActionKey } from './bridge/slab-command-keys';
+import { isColumnRibbonKey, isColumnRibbonStringKey, isColumnActionKey } from './bridge/column-command-keys';
+import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamActionKey } from './bridge/beam-command-keys';
 
 interface UseRibbonCommandsProps {
   /** ADR-345 Fase 5.6 — current tool from useDxfViewerState. Drives Large /
@@ -30,6 +42,14 @@ interface UseRibbonCommandsProps {
   stairBridge: RibbonStairBridge;
   /** ADR-363 Phase 1B — Wall contextual tab bridge. */
   wallBridge: RibbonWallBridge;
+  /** ADR-363 Phase 2 — Opening contextual tab bridge. */
+  openingBridge: RibbonOpeningBridge;
+  /** ADR-363 Phase 3 — Slab contextual tab bridge. */
+  slabBridge: RibbonSlabBridge;
+  /** ADR-363 Phase 4 — Column contextual tab bridge. */
+  columnBridge: RibbonColumnBridge;
+  /** ADR-363 Phase 5 — Beam contextual tab bridge. */
+  beamBridge: RibbonBeamBridge;
 }
 
 export function useRibbonCommands({
@@ -41,6 +61,10 @@ export function useRibbonCommands({
   arrayBridge,
   stairBridge,
   wallBridge,
+  openingBridge,
+  slabBridge,
+  columnBridge,
+  beamBridge,
 }: UseRibbonCommandsProps): RibbonCommandsApi {
   // Compose: stair-prefixed keys → stairBridge; array-prefixed → arrayBridge;
   // everything else falls through to the text-editor bridge. All bridges
@@ -55,23 +79,43 @@ export function useRibbonCommands({
         wallBridge.onComboboxChange(key, value);
         return;
       }
+      if (isOpeningRibbonKey(key) || isOpeningRibbonStringKey(key)) {
+        openingBridge.onComboboxChange(key, value);
+        return;
+      }
+      if (isSlabRibbonKey(key) || isSlabRibbonStringKey(key)) {
+        slabBridge.onComboboxChange(key, value);
+        return;
+      }
+      if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key)) {
+        columnBridge.onComboboxChange(key, value);
+        return;
+      }
+      if (isBeamRibbonKey(key) || isBeamRibbonStringKey(key)) {
+        beamBridge.onComboboxChange(key, value);
+        return;
+      }
       if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) {
         arrayBridge.onComboboxChange(key, value);
         return;
       }
       textEditorBridge.onComboboxChange(key, value);
     },
-    [stairBridge, wallBridge, arrayBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, arrayBridge, textEditorBridge],
   );
 
   const getComboboxState = React.useCallback(
     (key: string): RibbonComboboxState | null => {
       if (isStairRibbonKey(key) || isStairRibbonStringKey(key)) return stairBridge.getComboboxState(key);
       if (isWallRibbonKey(key) || isWallRibbonStringKey(key) || isWallRibbonToggleKey(key)) return wallBridge.getComboboxState(key);
+      if (isOpeningRibbonKey(key) || isOpeningRibbonStringKey(key)) return openingBridge.getComboboxState(key);
+      if (isSlabRibbonKey(key) || isSlabRibbonStringKey(key)) return slabBridge.getComboboxState(key);
+      if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key)) return columnBridge.getComboboxState(key);
+      if (isBeamRibbonKey(key) || isBeamRibbonStringKey(key)) return beamBridge.getComboboxState(key);
       if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) return arrayBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [stairBridge, wallBridge, arrayBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, arrayBridge, textEditorBridge],
   );
 
   const onToggle = React.useCallback(
@@ -104,9 +148,13 @@ export function useRibbonCommands({
     (badgeKey: string): boolean => {
       if (isStairBadgeKey(badgeKey)) return stairBridge.getBadgeState(badgeKey);
       if (isWallBadgeKey(badgeKey)) return wallBridge.getBadgeState(badgeKey);
+      if (isOpeningBadgeKey(badgeKey)) return openingBridge.getBadgeState(badgeKey);
+      if (isSlabBadgeKey(badgeKey)) return slabBridge.getBadgeState(badgeKey);
+      if (isColumnBadgeKey(badgeKey)) return columnBridge.getBadgeState(badgeKey);
+      if (isBeamBadgeKey(badgeKey)) return beamBridge.getBadgeState(badgeKey);
       return false;
     },
-    [stairBridge, wallBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge],
   );
 
   // ADR-358 Phase 7b2b-β Stream F — Only the stair bridge owns visibility
@@ -120,12 +168,41 @@ export function useRibbonCommands({
     [stairBridge],
   );
 
+  // ADR-363 Phase 1E — Wall action keys (delete) handled by bridge before
+  // falling through to the generic DxfViewerContent action handler.
+  const onAction = React.useCallback(
+    (action: string, data?: RibbonActionPayload) => {
+      if (isWallActionKey(action)) {
+        wallBridge.onAction(action);
+        return;
+      }
+      if (isOpeningActionKey(action)) {
+        openingBridge.onAction(action);
+        return;
+      }
+      if (isSlabActionKey(action)) {
+        slabBridge.onAction(action);
+        return;
+      }
+      if (isColumnActionKey(action)) {
+        columnBridge.onAction(action);
+        return;
+      }
+      if (isBeamActionKey(action)) {
+        beamBridge.onAction(action);
+        return;
+      }
+      wrappedHandleAction(action, data);
+    },
+    [wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, wrappedHandleAction],
+  );
+
   return React.useMemo(
     () => ({
       activeTool,
       onToolChange: handleToolChange,
       onComingSoon: handleRibbonComingSoon,
-      onAction: wrappedHandleAction,
+      onAction,
       onToggle,
       onComboboxChange,
       getToggleState,
@@ -137,7 +214,7 @@ export function useRibbonCommands({
       activeTool,
       handleToolChange,
       handleRibbonComingSoon,
-      wrappedHandleAction,
+      onAction,
       onToggle,
       onComboboxChange,
       getToggleState,

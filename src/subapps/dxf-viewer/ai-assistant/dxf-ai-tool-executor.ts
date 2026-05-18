@@ -49,7 +49,7 @@ function buildLineEntity(args: DrawLineArgs): LineEntity {
     visible: true,
     start: { x: args.start_x, y: args.start_y },
     end: { x: args.end_x, y: args.end_y },
-    layer: args.layer ?? DXF_AI_DEFAULTS.LAYER,
+    layerId: args.layer ?? DXF_AI_DEFAULTS.LAYER,
     color: args.color ?? DXF_AI_DEFAULTS.COLOR,
   };
 }
@@ -63,7 +63,7 @@ function buildRectangleEntity(args: DrawRectangleArgs): RectangleEntity {
     y: args.y,
     width: args.width,
     height: args.height,
-    layer: args.layer ?? DXF_AI_DEFAULTS.LAYER,
+    layerId: args.layer ?? DXF_AI_DEFAULTS.LAYER,
     color: args.color ?? DXF_AI_DEFAULTS.COLOR,
   };
 }
@@ -75,7 +75,7 @@ function buildCircleEntity(args: DrawCircleArgs): CircleEntity {
     visible: true,
     center: { x: args.center_x, y: args.center_y },
     radius: args.radius,
-    layer: args.layer ?? DXF_AI_DEFAULTS.LAYER,
+    layerId: args.layer ?? DXF_AI_DEFAULTS.LAYER,
     color: args.color ?? DXF_AI_DEFAULTS.COLOR,
   };
 }
@@ -87,7 +87,7 @@ function buildPolylineEntity(args: DrawPolylineArgs): PolylineEntity {
     visible: true,
     vertices: args.vertices.map(v => ({ x: v.x, y: v.y })),
     closed: args.closed,
-    layer: args.layer ?? DXF_AI_DEFAULTS.LAYER,
+    layerId: args.layer ?? DXF_AI_DEFAULTS.LAYER,
     color: args.color ?? DXF_AI_DEFAULTS.COLOR,
   };
 }
@@ -431,16 +431,15 @@ export function executeDxfAiToolCalls(
   if (entitiesToCreate.length > 0) {
     const scene = getScene(levelId);
 
+    const defaultLayer = createSceneLayer({
+      name: DXF_AI_DEFAULTS.LAYER,
+      color: DXF_AI_DEFAULTS.COLOR,
+      visible: true,
+      locked: false,
+    });
     const baseScene: SceneModel = scene ?? {
       entities: [],
-      layers: {
-        [DXF_AI_DEFAULTS.LAYER]: createSceneLayer({
-          name: DXF_AI_DEFAULTS.LAYER,
-          color: DXF_AI_DEFAULTS.COLOR,
-          visible: true,
-          locked: false,
-        }),
-      },
+      layersById: { [defaultLayer.id]: defaultLayer },
       bounds: { min: { x: 0, y: 0 }, max: { x: 1000, y: 1000 } },
       units: 'mm',
     };

@@ -23,11 +23,13 @@ import { INPUT_TIMING } from '../../../config/timing-config';
 // 🏢 ENTERPRISE: Strategy Pattern - Keyboard Handlers
 import {
   getKeyboardHandler,
+  looksLikeCoordSyntax,
   type KeyboardHandlerContext,
   type KeyboardHandlerActions,
   type KeyboardHandlerRefs,
   type DynamicSubmitPayload,
-  type Phase
+  type Phase,
+  type CoordMode,
 } from '../keyboard-handlers';
 import type { DisplayUnit } from '../../../config/units';
 
@@ -91,6 +93,9 @@ interface UseDynamicInputKeyboardArgs extends FieldValueSetters, FieldValues {
 
   // ADR-357 Phase 2b: user-selected display unit
   displayUnit: DisplayUnit;
+
+  // ADR-357 Phase 6: active coordinate input mode (abs/rel/polar)
+  coordMode: CoordMode;
 }
 
 /**
@@ -120,6 +125,8 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
     riseInputRef, treadInputRef, widthInputRef,
     // ADR-357 Phase 2b
     displayUnit,
+    // ADR-357 Phase 6
+    coordMode,
   } = args;
 
   // 🏢 ENTERPRISE: Helper for focus with timeout
@@ -164,6 +171,8 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
     isValidNumber,
     // ADR-357 Phase 2b
     displayUnit,
+    // ADR-357 Phase 6
+    coordMode,
   };
 
   // Update actions ref on each render
@@ -230,12 +239,15 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
       e.stopPropagation();
       e.stopImmediatePropagation();
 
-      // Validate current field value (for Enter only)
+      // Validate current field value (for Enter only).
+      // ADR-357 Phase 6: coord syntax (@100,50 / 100<45) bypasses isValidNumber guard.
       if (keyType === 'Enter' && contextRef.current && actionsRef.current) {
         const currentValue = getCurrentFieldValue(contextRef.current);
         if (currentValue !== '' && !contextRef.current.isValidNumber(currentValue)) {
-          actionsRef.current.CADFeedback.onError();
-          return;
+          if (!looksLikeCoordSyntax(currentValue)) {
+            actionsRef.current.CADFeedback.onError();
+            return;
+          }
         }
       }
 

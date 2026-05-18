@@ -54,7 +54,7 @@ export function cutSpline(sp: SplineEntity, ctx: CutContext): TrimResult {
     type: 'polyline',
     vertices: tess,
     closed: sp.closed === true,
-    layer: sp.layer,
+    layerId: sp.layerId,
     visible: sp.visible,
   };
   const result = cutPolyline(pseudoPoly, ctx);

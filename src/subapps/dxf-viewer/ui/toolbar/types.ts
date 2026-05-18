@@ -105,6 +105,14 @@ export type ToolType =
   | 'stair'
   // ADR-363 Phase 1: BIM Wall drawing tool (parametric wall με WallDna composition)
   | 'wall'
+  // ADR-363 Phase 2: BIM Opening drawing tool (5 kinds — door/window/sliding/french/fixed)
+  | 'opening'
+  // ADR-363 Phase 3: BIM Slab drawing tool (polygon — floor/ceiling/roof/ground/foundation)
+  | 'slab'
+  // ADR-363 Phase 4: BIM Column drawing tool (rectangular/circular/L-shape/T-shape)
+  | 'column'
+  // ADR-363 Phase 5: BIM Beam drawing tool (straight/curved/cantilever)
+  | 'beam'
   // ADR-362 Phase D1: Enterprise Dimension System — Smart DIM + 4 manual overrides
   | 'dim-smart'           // AutoCAD 2016+ Smart DIM — detector auto-picks type from hover
   | 'dim-linear'          // Manual linear (horizontal/vertical/rotated)
@@ -119,7 +127,10 @@ export type ToolType =
   | 'dim-ordinate'        // AutoCAD DIMORDINATE — feature + leader endpoint (axis auto, datum {0,0})
   // ADR-362 Phase D3: Chained dim creation tools (parent = auto-last linear/aligned/chained)
   | 'dim-baseline'        // AutoCAD DIMBASELINE — share extOrigin1 with parent; offset += DIMDLI per ancestor
-  | 'dim-continued';      // AutoCAD DIMCONTINUE — chain end-to-end on parent's dim line
+  | 'dim-continued'       // AutoCAD DIMCONTINUE — chain end-to-end on parent's dim line
+  // ADR-362 Phase L2: Standalone center mark + centerline tools
+  | 'dim-center-mark'     // AutoCAD CENTERMARK — click circle/arc → CenterMarkEntity
+  | 'dim-centerline';     // AutoCAD CENTERLINE — 2-click on 2 circles/arcs → CenterLineEntity
 
 
 export interface ToolDefinition {

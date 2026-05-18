@@ -68,6 +68,10 @@ export type {
   Phase
 } from './types';
 
+// ADR-357 Phase 6: coord-mode type + parser utilities
+export type { CoordMode } from '../coordinate-parser';
+export { looksLikeCoordSyntax, applyCoordMode, parseCoordInput } from '../coordinate-parser';
+
 // Export individual handlers for testing
 export { handleLineKeyboard } from './line-keyboard-handler';
 export { handleCircleKeyboard } from './circle-keyboard-handler';

@@ -26,6 +26,7 @@ import type {
   FloorplanProcessedData,
   DxfSceneData,
   DxfSceneEntity,
+  DxfSceneLayer,
   FloorplanFileType,
 } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -228,25 +229,23 @@ export class FloorplanProcessor {
     if (!result.success || !result.scene) {
       throw new Error(result.error || 'DXF parsing failed');
     }
+    const importedScene = result.scene;
 
     logger.info('DXF parsed', {
-      entities: result.scene.entities.length,
-      layers: Object.keys(result.scene.layers).length,
+      entities: importedScene.entities.length,
+      layers: Object.keys(importedScene.layersById).length,
     });
 
     // Convert to our DxfSceneData type
     const scene: DxfSceneData = {
-      entities: result.scene.entities.map((entity) => {
-        // Extract type and layer first, spread rest
-        const { type, layer, ...rest } = entity;
-        return {
-          type,
-          layer: layer || '0', // Default layer if undefined
-          ...rest,
-        } as DxfSceneEntity;
-      }),
-      layers: result.scene.layers,
-      bounds: result.scene.bounds,
+      entities: importedScene.entities.map((entity) => ({
+        ...entity,
+        layer: importedScene.layersById[entity.layerId]?.name ?? '0',
+      } as unknown as DxfSceneEntity)),
+      layers: Object.fromEntries(
+        Object.values(importedScene.layersById).map((l) => [l.name, l])
+      ) as Record<string, DxfSceneLayer>,
+      bounds: importedScene.bounds,
     };
 
     // Calculate sizes for stats

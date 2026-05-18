@@ -1,0 +1,174 @@
+import type { Entity } from './entities';
+import { TEXT_METRICS_RATIOS, TEXT_SIZE_LIMITS } from '../config/text-rendering-config';
+import { EMPTY_SPATIAL_BOUNDS } from '../config/geometry-constants';
+
+export const getEntityBounds = (entity: Entity): { minX: number; minY: number; maxX: number; maxY: number } => {
+  switch (entity.type) {
+    case 'line':
+      return {
+        minX: Math.min(entity.start.x, entity.end.x),
+        minY: Math.min(entity.start.y, entity.end.y),
+        maxX: Math.max(entity.start.x, entity.end.x),
+        maxY: Math.max(entity.start.y, entity.end.y)
+      };
+    case 'polyline':
+    case 'lwpolyline':
+      if ('vertices' in entity && entity.vertices && entity.vertices.length > 0) {
+        const xs = entity.vertices.map(v => v.x);
+        const ys = entity.vertices.map(v => v.y);
+        return {
+          minX: Math.min(...xs),
+          minY: Math.min(...ys),
+          maxX: Math.max(...xs),
+          maxY: Math.max(...ys)
+        };
+      }
+      return EMPTY_SPATIAL_BOUNDS;
+    case 'circle':
+      return {
+        minX: entity.center.x - entity.radius,
+        minY: entity.center.y - entity.radius,
+        maxX: entity.center.x + entity.radius,
+        maxY: entity.center.y + entity.radius
+      };
+    case 'ellipse': {
+      const maxAxisRadius = Math.max(entity.majorAxis, entity.minorAxis);
+      return {
+        minX: entity.center.x - maxAxisRadius,
+        minY: entity.center.y - maxAxisRadius,
+        maxX: entity.center.x + maxAxisRadius,
+        maxY: entity.center.y + maxAxisRadius
+      };
+    }
+    case 'rectangle':
+    case 'rect':
+      return {
+        minX: entity.x,
+        minY: entity.y,
+        maxX: entity.x + entity.width,
+        maxY: entity.y + entity.height
+      };
+    case 'point':
+      return {
+        minX: entity.position.x,
+        minY: entity.position.y,
+        maxX: entity.position.x,
+        maxY: entity.position.y
+      };
+    case 'text': {
+      // ADR-107: centralized text metrics ratio; DXF stores size in `height`, not `fontSize`
+      const textWidth = entity.text.length * (entity.height || entity.fontSize || 2.5) * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
+      const textHeight = entity.height || entity.fontSize || 2.5;
+      return {
+        minX: entity.position.x,
+        minY: entity.position.y - textHeight,
+        maxX: entity.position.x + textWidth,
+        maxY: entity.position.y
+      };
+    }
+    case 'mtext': {
+      // ADR-142: centralized DEFAULT_FONT_SIZE fallback
+      const mtextHeight = entity.height || (entity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE);
+      return {
+        minX: entity.position.x,
+        minY: entity.position.y - mtextHeight,
+        maxX: entity.position.x + entity.width,
+        maxY: entity.position.y
+      };
+    }
+    case 'spline':
+      if ('controlPoints' in entity && entity.controlPoints && entity.controlPoints.length > 0) {
+        const xs = entity.controlPoints.map(p => p.x);
+        const ys = entity.controlPoints.map(p => p.y);
+        return {
+          minX: Math.min(...xs),
+          minY: Math.min(...ys),
+          maxX: Math.max(...xs),
+          maxY: Math.max(...ys)
+        };
+      }
+      return EMPTY_SPATIAL_BOUNDS;
+    case 'leader':
+      if ('vertices' in entity && entity.vertices && entity.vertices.length > 0) {
+        const leaderXs = entity.vertices.map(v => v.x);
+        const leaderYs = entity.vertices.map(v => v.y);
+        return {
+          minX: Math.min(...leaderXs),
+          minY: Math.min(...leaderYs),
+          maxX: Math.max(...leaderXs),
+          maxY: Math.max(...leaderYs)
+        };
+      }
+      return EMPTY_SPATIAL_BOUNDS;
+    case 'hatch':
+      if ('boundaryPaths' in entity && entity.boundaryPaths && entity.boundaryPaths.length > 0) {
+        const allPoints = entity.boundaryPaths.flat();
+        if (allPoints.length > 0) {
+          const hatchXs = allPoints.map(p => p.x);
+          const hatchYs = allPoints.map(p => p.y);
+          return {
+            minX: Math.min(...hatchXs),
+            minY: Math.min(...hatchYs),
+            maxX: Math.max(...hatchXs),
+            maxY: Math.max(...hatchYs)
+          };
+        }
+      }
+      return EMPTY_SPATIAL_BOUNDS;
+    case 'xline':
+      if ('basePoint' in entity && entity.basePoint) {
+        const NOMINAL_EXTENT = 10000;
+        return {
+          minX: entity.basePoint.x - NOMINAL_EXTENT,
+          minY: entity.basePoint.y - NOMINAL_EXTENT,
+          maxX: entity.basePoint.x + NOMINAL_EXTENT,
+          maxY: entity.basePoint.y + NOMINAL_EXTENT
+        };
+      }
+      return EMPTY_SPATIAL_BOUNDS;
+    case 'stair':
+      if ('geometry' in entity && entity.geometry && entity.geometry.bbox) {
+        const { min, max } = entity.geometry.bbox;
+        return { minX: min.x, minY: min.y, maxX: max.x, maxY: max.y };
+      }
+      return EMPTY_SPATIAL_BOUNDS;
+    case 'wall':
+    case 'opening':
+    case 'slab':
+    case 'slab-opening':
+    case 'column':
+    case 'beam':
+      if ('geometry' in entity && entity.geometry && entity.geometry.bbox) {
+        const { min, max } = entity.geometry.bbox;
+        return { minX: min.x, minY: min.y, maxX: max.x, maxY: max.y };
+      }
+      return EMPTY_SPATIAL_BOUNDS;
+    case 'ray':
+      if ('basePoint' in entity && entity.basePoint) {
+        const NOMINAL_EXTENT = 10000;
+        const dirX = entity.direction?.x ?? 1;
+        const dirY = entity.direction?.y ?? 0;
+        return {
+          minX: Math.min(entity.basePoint.x, entity.basePoint.x + dirX * NOMINAL_EXTENT),
+          minY: Math.min(entity.basePoint.y, entity.basePoint.y + dirY * NOMINAL_EXTENT),
+          maxX: Math.max(entity.basePoint.x, entity.basePoint.x + dirX * NOMINAL_EXTENT),
+          maxY: Math.max(entity.basePoint.y, entity.basePoint.y + dirY * NOMINAL_EXTENT)
+        };
+      }
+      return EMPTY_SPATIAL_BOUNDS;
+    default: {
+      if ('vertices' in entity && entity.vertices && Array.isArray(entity.vertices) && entity.vertices.length > 0) {
+        const vertices = entity.vertices as Array<{ x: number; y: number }>;
+        const xs = vertices.map(v => v.x);
+        const ys = vertices.map(v => v.y);
+        return {
+          minX: Math.min(...xs),
+          minY: Math.min(...ys),
+          maxX: Math.max(...xs),
+          maxY: Math.max(...ys)
+        };
+      }
+      return EMPTY_SPATIAL_BOUNDS;
+    }
+  }
+};

@@ -1,28 +1,29 @@
 'use client';
 
 /**
- * ADR-363 Phase 2 — Bridge μεταξύ contextual Opening ribbon tab και
+ * ADR-363 Phase 2.5 — Bridge μεταξύ contextual Opening ribbon tab και
  * active `OpeningEntity` params.
  *
  * Mirrors `useRibbonWallBridge`: read state via `getComboboxState`, write via
- * `onComboboxChange`. Phase 2 mutations bypass `CommandHistory` (full undo/
- * redo lands Phase 2.5 με `UpdateOpeningParamsCommand`) — instead the bridge
- * patches the scene directly + re-derives geometry. `useOpeningPersistence`
- * picks up the change via debounced auto-save.
+ * `onComboboxChange`. Phase 2.5 routes every mutation through
+ * `UpdateOpeningParamsCommand` (via `useCommandHistory().execute`) so the
+ * change is undoable + auto-save picks up the patched entity via
+ * `useOpeningPersistence` debounce. Ribbon edits use `isDragging=false` so each
+ * edit is its own undo entry (drag merging lives in the grip-commit path).
  *
  * No-ops for commandKeys outside `OPENING_RIBBON_KEYS` so it composes με τα
  * stair / wall / array / text bridges στο `useRibbonCommands`.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4 §5.9
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4 §6
  */
 
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isOpeningEntity, isWallEntity } from '../../../types/entities';
+import { isOpeningEntity } from '../../../types/entities';
 import type { OpeningEntity, OpeningKind, OpeningParams } from '../../../bim/types/opening-types';
-import { computeOpeningGeometry } from '../../../bim/geometry/opening-geometry';
-import { validateOpeningParams } from '../../../bim/validators/opening-validator';
-import type { WallEntity } from '../../../bim/types/wall-types';
+import { useCommandHistory } from '../../../core/commands';
+import { UpdateOpeningParamsCommand } from '../../../core/commands/entity-commands/UpdateOpeningParamsCommand';
+import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   OPENING_RIBBON_KEYS,
   OPENING_RIBBON_KEYS_ACTIONS,
@@ -86,6 +87,7 @@ export function useRibbonOpeningBridge(
   props: UseRibbonOpeningBridgeProps,
 ): RibbonOpeningBridge {
   const { levelManager, universalSelection } = props;
+  const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
   const resolveOpening = useCallback((): OpeningEntity | null => {
@@ -98,37 +100,26 @@ export function useRibbonOpeningBridge(
     return e;
   }, [levelManager, universalSelection]);
 
-  const resolveHostWall = useCallback((opening: OpeningEntity): WallEntity | null => {
-    if (!levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const w = scene.entities.find((x) => x.id === opening.params.wallId);
-    if (!w || !isWallEntity(w)) return null;
-    return w;
-  }, [levelManager]);
-
   /**
-   * Patch the opening's params in scene + re-derive geometry + validation.
-   * Auto-save picks it up via `useOpeningPersistence` debounce.
+   * Dispatch the params patch through `UpdateOpeningParamsCommand` so the
+   * change is undoable + geometry/validation recompute atomically against
+   * the live host wall. `useOpeningPersistence` picks up the patched entity
+   * via debounced auto-save.
    */
   const dispatchParams = useCallback(
     (opening: OpeningEntity, nextParams: OpeningParams): void => {
       if (!levelManager.currentLevelId) return;
-      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-      if (!scene) return;
-      const host = resolveHostWall(opening);
-      if (!host) return;
-      const geometry = computeOpeningGeometry(nextParams, host);
-      const validation = validateOpeningParams(nextParams, host).bimValidation;
-      const updated: OpeningEntity = { ...opening, params: nextParams, geometry, validation };
-      const nextEntities = scene.entities.map((e) => (e.id === opening.id ? updated : e));
-      levelManager.setLevelScene(levelManager.currentLevelId, {
-        ...scene,
-        entities: nextEntities,
-      });
+      const sm = new LevelSceneManagerAdapter(
+        levelManager.getLevelScene,
+        levelManager.setLevelScene,
+        levelManager.currentLevelId,
+      );
+      executeCommand(
+        new UpdateOpeningParamsCommand(opening.id, nextParams, opening.params, sm, false),
+      );
       EventBus.emit('bim:opening-params-updated', { openingId: opening.id });
     },
-    [levelManager, resolveHostWall],
+    [executeCommand, levelManager],
   );
 
   const getComboboxState = useCallback(

@@ -750,6 +750,13 @@
       "abs": "Abs",
       "rel": "Rel",
       "polar": "Polar"
+    },
+    "lock": {
+      "lengthLocked": "Length locked",
+      "angleLocked": "Angle locked",
+      "unlock": "Unlock",
+      "hintLength": "Ctrl+L: lock length",
+      "hintAngle": "Ctrl+A: lock angle"
     }
   },
   "cursorPalette": {

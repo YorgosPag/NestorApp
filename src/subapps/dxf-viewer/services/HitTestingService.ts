@@ -12,7 +12,7 @@ import type {
   Viewport,
   EntityModel
 } from '../rendering/types/Types';
-import type { DxfScene, DxfEntityUnion, DxfLine, DxfCircle, DxfPolyline, DxfArc, DxfText } from '../canvas-v2/dxf-canvas/dxf-types';
+import type { DxfScene, DxfEntityUnion, DxfLine, DxfCircle, DxfPolyline, DxfArc, DxfText, DxfDimension } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { BaseEntity } from '../types/entities';
 // 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
 import { TOLERANCE_CONFIG } from '../config/tolerance-config';
@@ -125,6 +125,40 @@ export class HitTestingService {
   }
 
   /**
+   * ADR-357 Phase 15 (G13): Return ALL entities at a screen point for cycling.
+   * Unlike hitTest() which returns only the first hit, this returns up to maxResults entries.
+   */
+  hitTestAll(
+    screenPos: Point2D,
+    transform: ViewTransform,
+    viewport: Viewport,
+    options: HitTestOptions = {}
+  ): HitTestResult[] {
+    if (!this.currentScene || !this.currentScene.entities.length) return [];
+    try {
+      const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
+      const pixelTolerance = options.tolerance || TOLERANCE_CONFIG.ENTITY_HOVER_PIXELS;
+      const worldTolerance = pixelTolerance / transform.scale;
+      const hits = this.hitTester.hitTestPoint(worldPos, {
+        tolerance: worldTolerance,
+        maxResults: options.maxResults || 50,
+        useSpatialIndex: true,
+        layerFilter: options.layerFilter,
+        typeFilter: options.typeFilter,
+        includeInvisible: options.includeInvisible || false,
+      });
+      return hits.map((hit) => ({
+        entityId: hit.data?.id || null,
+        entityType: hit.data?.type || 'unknown',
+        layer: hit.layer,
+        distance: hit.distance,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * ✅ BULK HIT TEST for multiple positions
    * Χρήσιμο για selection rectangles, κλπ
    */
@@ -162,19 +196,18 @@ export class HitTestingService {
     // Type guard: Τα DXF entities μπορεί να έχουν optional lineType property
     const entityWithLineType = entity as typeof entity & { lineType?: string };
 
-    const baseModel: Omit<BaseEntity, 'type'> & { type: DxfEntityUnion['type'] } = {
+    const baseModel: Omit<BaseEntity, 'type'> & { type: string } = {
       id: entity.id,
       type: entity.type,
       visible: entity.visible,
       selected: false,
-      // ADR-130 + ADR-358 Phase 9D-3: id-first name via LayerStore, fallback to legacy
-      layer: getLayerNameOrDefault(resolveEntityLayerName(entity)),
+      layerId: entity.layerId ?? '',
       color: entity.color,
       lineType: (entityWithLineType.lineType as "solid" | "dashed" | "dotted" | "dashdot") || 'solid',
       lineweight: entity.lineWidth
     };
 
-    switch (entity.type) {
+    switch (entity.type as string) {
       case 'line': {
         const lineEntity = entity as DxfLine;
         return {
@@ -292,9 +325,28 @@ export class HitTestingService {
           validation: wall.validation,
         } as unknown as EntityModel;
       }
+      // ADR-362 Phase I3 — dimension passthrough so hit-testing can index
+      // DimensionEntity via the spatial index. The DxfDimension wrapper carries
+      // the full discriminated-union DimensionEntity (with defPoints + textMidpoint).
+      // We spread it so BoundsCalculator `case 'dimension'` + performDetailedHitTest
+      // `case 'dimension'` can access defPoints directly on the EntityModel.
+      case 'dimension': {
+        const dxfDim = entity as unknown as DxfDimension;
+        const dimEntity = dxfDim.dimensionEntity;
+        return {
+          ...dimEntity,
+          // Override base fields with scene-resolved values (layerId via LayerStore SSoT)
+          id: baseModel.id,
+          layerId: baseModel.layerId,
+          color: baseModel.color,
+          visible: baseModel.visible,
+          selected: baseModel.selected,
+          lineType: baseModel.lineType,
+          lineweight: baseModel.lineweight,
+        } as unknown as EntityModel;
+      }
       default: {
-        const exhaustiveCheck: never = entity;
-        return exhaustiveCheck;
+        return { ...baseModel } as unknown as EntityModel;
       }
     }
   }

@@ -113,6 +113,9 @@ export class BoundsCalculator {
         return this.calculateAngleMeasurementBounds(entity, tolerance);
       case 'stair':
         return this.calculateStairBounds(entity, tolerance);
+      // ADR-362 Phase I3 — dimension spatial-index bounds via defPoints + textMidpoint.
+      case 'dimension':
+        return this.calculateDimensionBounds(entity, tolerance);
       // ADR-363 Phase 1B — BIM parametric entities project `geometry.bbox` to 2D.
       case 'wall':
       case 'opening':
@@ -156,6 +159,31 @@ export class BoundsCalculator {
       bbox.max.x + tolerance,
       bbox.max.y + tolerance,
     );
+  }
+
+  /**
+   * 📐 ADR-362 Phase I3 — Dimension entity bounds from defPoints + textMidpoint.
+   * defPoints cover extension-line origins + dim-line reference for all 10 variants.
+   * The resulting AABB is used for spatial broad-phase (not final hit accept).
+   */
+  private static calculateDimensionBounds(entity: EntityModel, tolerance: number): BoundingBox | null {
+    type DimLike = {
+      defPoints?: readonly { x: number; y: number }[];
+      textMidpoint?: { x: number; y: number };
+    };
+    const dim = entity as DimLike;
+    const pts: { x: number; y: number }[] = [...(dim.defPoints ?? [])];
+    if (dim.textMidpoint) pts.push(dim.textMidpoint);
+    if (pts.length === 0) return null;
+
+    let minX = pts[0].x, minY = pts[0].y, maxX = pts[0].x, maxY = pts[0].y;
+    for (const p of pts) {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    }
+    return this.createBoundingBox(minX - tolerance, minY - tolerance, maxX + tolerance, maxY + tolerance);
   }
 
   /**

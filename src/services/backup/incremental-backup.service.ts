@@ -71,6 +71,12 @@ const ENTITY_TYPE_TO_COLLECTION_KEY: Record<AuditEntityType, string> = {
   custom_dictionary_entry: 'TEXT_CUSTOM_DICTIONARY',
   parking_spot: 'PARKING_SPACES',
   storage_unit: 'STORAGE',
+  // BIM entities (ADR-363) — not backed up via this service at this stage
+  wall: '',
+  opening: '',
+  slab: '',
+  column: '',
+  beam: '',
 };
 
 /** Actions that indicate a document was removed */

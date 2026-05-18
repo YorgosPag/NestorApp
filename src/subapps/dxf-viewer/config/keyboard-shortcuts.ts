@@ -149,6 +149,43 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     category: 'tool',
     toolType: 'wall',
   },
+  // ADR-363 Phase 7: BIM 2-char hotkeys — resolved by MultiCharKeySequence dispatcher.
+  // 'O' alone → layering (fallback); O+P → opening.
+  opening: {
+    key: 'OP',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.opening',
+    action: 'tool:opening',
+    category: 'tool',
+    toolType: 'opening',
+  },
+  // 'S' alone → select (fallback); S+T → stair; S+L → slab.
+  slab: {
+    key: 'SL',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.slab',
+    action: 'tool:slab',
+    category: 'tool',
+    toolType: 'slab',
+  },
+  // 'C' alone → circle (fallback); C+L → column.
+  column: {
+    key: 'CL',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.column',
+    action: 'tool:column',
+    category: 'tool',
+    toolType: 'column',
+  },
+  // 'B' alone → no fallback; B+M → beam.
+  beam: {
+    key: 'BM',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.beam',
+    action: 'tool:beam',
+    category: 'tool',
+    toolType: 'beam',
+  },
 
   // Editing Tools
   move: {

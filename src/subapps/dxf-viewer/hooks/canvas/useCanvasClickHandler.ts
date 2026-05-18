@@ -72,6 +72,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     wallTool,
     slabTool,
     columnTool,
+    beamTool,
     rotationIsActive = false, handleRotationClick,
     moveIsActive = false, handleMoveClick,
     mirrorIsActive = false, handleMirrorClick,
@@ -93,73 +94,61 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     draggingOverlayBody, setSelectedEntityIds,
     currentOverlays, handleOverlayClick,
   } = params;
-
   const handleCanvasClick = useCallback((worldPoint: Point2D, shiftKey: boolean = false) => {
     // Block interactions until viewport is ready
     if (!viewportReady) {
       dwarn('useCanvasClickHandler', 'Click blocked: viewport not ready', viewport);
       return;
     }
-
     // PRIORITY 0.5: Polygon crop — accumulate click-to-add polygon point
     if (activeTool === 'polygon-crop') {
       PolygonCropStore.addPoint(worldPoint.x, worldPoint.y);
       return;
     }
-
     // PRIORITY 1: DXF entity grip interaction (ONLY in select mode — not during drawing)
     if (!isInteractiveTool(activeTool) && activeTool !== 'rotate' && activeTool !== 'scale' && activeTool !== 'stretch' && activeTool !== 'mstretch' && dxfGripInteraction.handleGripClick(worldPoint)) {
       return;
     }
-
     // PRIORITY 1.3: ADR-188 — Rotation tool entity selection (awaiting-entity phase)
     if (activeTool === 'rotate' && !rotationIsActive) {
       if (handleRotationEntitySelection(worldPoint, params)) return;
       return; // Click on empty space during awaiting-entity → stay in phase
     }
-
     // PRIORITY 1.5: ADR-188 — Rotation tool click (base point or angle confirmation)
     if (rotationIsActive && handleRotationClick) {
       handleRotationClick(worldPoint);
       return;
     }
-
     // PRIORITY 1.55: ADR-049 — Move tool click (base point or destination)
     if (moveIsActive && handleMoveClick) {
       handleMoveClick(worldPoint);
       return;
     }
-
     // PRIORITY 1.56: Mirror tool click (axis point 1 or 2)
     if (mirrorIsActive && handleMirrorClick) {
       handleMirrorClick(worldPoint);
       return;
     }
-
     // PRIORITY 1.57: ADR-348 — Scale tool click (base point or reference point)
     if (scaleIsActive && handleScaleClick) {
       handleScaleClick(worldPoint);
       return;
     }
-
     // PRIORITY 1.58: ADR-349 — Stretch / MStretch tool click (base point or displacement)
     if (stretchIsActive && handleStretchClick) {
       handleStretchClick(worldPoint);
       return;
     }
-
     // PRIORITY 1.59: ADR-350 — Trim tool click (single pick / SHIFT+click = EXTEND)
     if (trimIsActive && handleTrimClick) {
       handleTrimClick(worldPoint, shiftKey);
       return;
     }
-
     // PRIORITY 1.60: ADR-353 — Extend tool click (single pick / SHIFT+click = TRIM inverse)
     if (extendIsActive && handleExtendClick) {
       handleExtendClick(worldPoint, shiftKey);
       return;
     }
-
     // PRIORITY 1.605: ADR-353 Phase B/C — Array interactive picks
     //   Polar: (a) re-pick center from ribbon, (b) initial center during tool
     //   Path:  (a) re-pick path entity from ribbon, (b) initial pick during tool
@@ -177,55 +166,50 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       handleArrayPathClick();
       return;
     }
-
     // PRIORITY 1.6: ADR-189 — Construction guide tools
     const guideCtx: GuideClickContext = { worldPoint, shiftKey, transform, levelManager };
     if (handleGuideToolClick(guideCtx, params)) {
       return;
     }
-
     // PRIORITY 1.7: Auto area measurement — point-in-polygon click
     if (activeTool === 'auto-measure-area') {
       handleAutoAreaClick(worldPoint, params);
       return;
     }
-
     // PRIORITY 1.9-4: Entity picking tools (angle, circle-ttt, perpendicular, parallel)
     const entityCtx: EntityPickContext = { worldPoint, transform, levelManager };
-
     if (handleAngleEntityPick(entityCtx, angleEntityMeasurement, setSelectedEntityIds)) return;
     if (handleCircleTTTPick(entityCtx, circleTTT, activeTool)) return;
     if (handleLinePerpendicularPick(entityCtx, linePerpendicular, activeTool)) return;
     if (handleLineParallelPick(entityCtx, lineParallel, activeTool)) return;
-
     // PRIORITY 4.5: ADR-358 Phase 5a — Stair tool 2-click placement.
     if (activeTool === 'stair' && stairTool?.isActive) {
       stairTool.onCanvasClick(worldPoint);
       return;
     }
-
     // PRIORITY 4.6: ADR-363 Phase 1B — Wall tool 2-click placement (continuous).
     if (activeTool === 'wall' && wallTool?.isActive) {
       wallTool.onCanvasClick(worldPoint);
       return;
     }
-
     // PRIORITY 4.7: ADR-363 Phase 3 — Slab tool N-click polygon (Enter to commit).
     if (activeTool === 'slab' && slabTool?.isActive) {
       slabTool.onCanvasClick(worldPoint);
       return;
     }
-
     // PRIORITY 4.8: ADR-363 Phase 4 — Column tool single-click placement.
     if (activeTool === 'column' && columnTool?.isActive) {
       columnTool.onCanvasClick(worldPoint);
       return;
     }
-
+    // PRIORITY 4.9: ADR-363 Phase 5 — Beam tool 2-click (straight/cantilever) or 3-click (curved).
+    if (activeTool === 'beam' && beamTool?.isActive) {
+      beamTool.onCanvasClick(worldPoint);
+      return;
+    }
     // PRIORITY 5: Overlay polygon drawing
     if (overlayMode === 'draw') {
       if (isSavingPolygon) return;
-
       // Auto-close: click near first point with 3+ points → save.
       // 🚀 PERF (2026-05-09): isNearFirstPoint computed inline at click time
       // (was a reactive prop forcing CanvasSection to re-render on mousemove).
@@ -245,24 +229,20 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
         });
         return;
       }
-
       const worldPointArray: [number, number] = [worldPoint.x, worldPoint.y];
       setDraftPolygon(prev => [...prev, worldPointArray]);
       return;
     }
-
     // PRIORITY 5.5: ADR-344 Phase 6.E/6.F — text / mtext creation tool
     // Both 'text' and 'mtext' open an in-canvas TipTap overlay at the click point.
     if ((activeTool === 'text' || activeTool === 'mtext') && params.onTextToolClick) {
       if (params.onTextToolClick(worldPoint)) return;
     }
-
     // PRIORITY 6: Unified drawing/measurement tools
     if (isInteractiveTool(activeTool) && drawingHandlersRef.current) {
       drawingHandlersRef.current.onDrawingPoint?.(worldPoint);
       return;
     }
-
     // PRIORITY 7: Move tool — overlay body hit-test
     if (activeTool === 'move' && !draggingOverlayBody) {
       for (const overlay of currentOverlays) {
@@ -274,12 +254,10 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
         }
       }
     }
-
     // Move tool during drag — skip (drag-end handled by handleContainerMouseUp)
     if (activeTool === 'move' && draggingOverlayBody) {
       return;
     }
-
     // PRIORITY 8: Clear overlay + grip selection on empty canvas click.
     // DXF entity selection is intentionally preserved — deselect happens only on Escape
     // (AutoCAD / BricsCAD pattern: Escape is the canonical deselect trigger).
@@ -287,7 +265,6 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       const isClickOnGrip = hoveredVertexInfo !== null || hoveredEdgeInfo !== null;
       const hasSelectedGrip = selectedGrip !== null;
       const justFinishedDrag = justFinishedDragRef.current;
-
       if (!isClickOnGrip && !hasSelectedGrip && !justFinishedDrag && !entitySelectedOnMouseDownRef.current) {
         universalSelection.clearByType('overlay');
         setSelectedGrips([]);
@@ -302,6 +279,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     wallTool,
     slabTool,
     columnTool,
+    beamTool,
     rotationIsActive, handleRotationClick,
     moveIsActive, handleMoveClick,
     mirrorIsActive, handleMirrorClick,
@@ -324,14 +302,11 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     setDraftPolygon, setIsSavingPolygon,
     params,
   ]);
-
   return { handleCanvasClick };
 }
-
 // ============================================================================
 // ROTATION ENTITY SELECTION (PRIORITY 1.3)
 // ============================================================================
-
 /**
  * ADR-188: Rotation tool entity selection in awaiting-entity phase.
  * Checks scene entities + overlays for hit. Returns true if entity was selected.
@@ -343,10 +318,8 @@ function handleRotationEntitySelection(
   const scene = p.levelManager.currentLevelId
     ? p.levelManager.getLevelScene(p.levelManager.currentLevelId)
     : null;
-
   if (scene?.entities) {
     const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / p.transform.scale;
-
     for (const entity of scene.entities) {
       if (testEntityHit(worldPoint, entity, hitTolerance)) {
         p.setSelectedEntityIds([entity.id]);
@@ -357,7 +330,6 @@ function handleRotationEntitySelection(
       }
     }
   }
-
   // Check overlays (colored layers)
   for (const overlay of p.currentOverlays) {
     if (!overlay.polygon || overlay.polygon.length < 3) continue;
@@ -371,14 +343,11 @@ function handleRotationEntitySelection(
       return true;
     }
   }
-
   return false;
 }
-
 // ============================================================================
 // ENTITY HIT-TESTING (used by rotation selection)
 // ============================================================================
-
 /**
  * Tests if a world point hits any entity type. Returns true if hit.
  * Supports: LINE, ARC, CIRCLE, POLYLINE, LWPOLYLINE, RECTANGLE, ELLIPSE, TEXT, MTEXT.
@@ -475,7 +444,6 @@ function handleAutoAreaClick(worldPoint: Point2D, p: UseCanvasClickHandlerParams
   });
   dlog('handleAutoAreaClick', `area=${best.area.toFixed(2)} netArea=${(best.area - holesArea).toFixed(2)} holes=${holes.length} source=${best.source}`);
 }
-
 /** Helper: Test if point hits a polyline (vertices + optional closed) */
 function testPolylineHit(
   worldPoint: Point2D,
@@ -484,7 +452,6 @@ function testPolylineHit(
   hitTolerance: number,
 ): boolean {
   if (!vertices || vertices.length < 2) return false;
-
   for (let i = 0; i < vertices.length - 1; i++) {
     if (pointToLineDistance(worldPoint, vertices[i], vertices[i + 1]) <= hitTolerance) {
       return true;

@@ -1,6 +1,6 @@
 # ADR-358 — Layer Management System (DXF-grade, Google-Level)
 
-**Status**: ✅ ACCEPTED (Q1-Q13 finalizzate 2026-05-16 — Full Enterprise + GOL + SSoT. Pronto per implementazione Phase 1 — minimum viable per ADR-357 Phase 0 = phases 1-4)
+**Status**: ✅ ACCEPTED + FULLY IMPLEMENTED (2026-05-18) — Phases 1-15 + 6.5 + 8.5 + 9A-G + 9E-1…9E-6 + 13A/B/C all ✅ v2.19. ADR-357 Phase 0 + Phase 17 unblocked.
 **Date**: 2026-05-16
 **Category**: Drawing System / DXF Viewer / Core Architecture
 **Author**: Giorgio Pagonis + Claude (Opus 4.7)
@@ -1575,7 +1575,6 @@ LINE tool → completeEntity()
 
 > **Regola §7.1 ADR-357**: Una phase = una sessione. ≤ 70% context. ≤ 500 lines per file. Se troppo grande → suddividere PRIMA.
 
-<<<<<<< Updated upstream
 | Phase | Titolo | Files | Effort | Q-ref | Status |
 |---|---|---|---|---|---|
 | **1** | Estendere `SceneLayer` interface + migration default-fill + tipi `Lineweight`, `LayerColor` | 3 | S | Q1, Q2 | ✅ v2.1 |
@@ -1626,37 +1625,17 @@ LINE tool → completeEntity()
 | **13C** *(opt)* | "Manage…" full panel (grid + sorting + filters + bulk + right-click ContextMenu + Apply policy "Create missing layers" toggle + LayerStateRestoreDialog) | ~5 | M | Q12 | ✅ v2.19-pre0 |
 | **14** | Migration utility per snapshot pre-ADR-358 + Firestore schema update | 3 | M | Q13 | ✅ v2.19 |
 | **15** | Integration test suite — layer round-trip, isolate/unisolate, rename backref | 3 | M | — | ✅ v2.19 |
-=======
-| Phase | Titolo | Files | Effort | Q-ref |
-|---|---|---|---|---|
-| **1** | Estendere `SceneLayer` interface + migration default-fill + tipi `Lineweight`, `LayerColor` | 3 | S | Q1, Q2 |
-| **2** | `LayerStore` singleton (micro-leaf) + `useLayerStore` hook + bridge con `SceneModel` | 4 | M | Q3 |
-| **3** | Catalog SSoT — `linetype-catalog.ts`, `lineweight-catalog.ts`, `aci-color-palette.ts` consolidato | 3 | M | Q4 |
-| **4** | `resolveEntityStyle` pure fn + wire-up in `DxfRenderer.drawEntity` + unit test ByLayer/ByBlock/Direct | 4 | M | Q5 |
-| **5** | DXF parser esteso (group 6, 70, 290, 370, 420, 1071) + roundtrip integrity test su 5 file reference | 4 | L | Q6 |
-| **6** | `AdminLayerManager` wired al `LayerStore` — drop mock data — preserve UI props | 5 | M | Q7 |
-| ✅ **7** | `CurrentLayerPicker` ribbon/status-bar + persistence `dxf:currentLayer:{projectId}:{levelId}` + recent FIFO + Firestore slice — DONE 2026-05-16 v2.8 | 3 | S | Q8 |
-| **8** | `LayerOperationsService` esteso (setLineweight/setLinetype/setTransparency/setPlottable/setFrozen) | 3 | S | — |
-| **9** | Layer rename con backref completi (entity.layerId migration + audit commandHistory/regions) | 5 | L | Q9 |
-| **10** | Comandi `LayerIsolate / Unisolate / Dim / Off` + click-driven UX | 5 | M | Q10 |
-| **11** | Layer Filters Builder (Group + Properties) nel manager | 4 | M | Q11 |
-| **12** *(opt)* | `LayerStateStore` + UI Save/Restore (no export `.las`) | 4 | M | Q12 |
-| **13** *(opt)* | `.las` export/import file format | 3 | M | Q12 |
-| **14** | Migration utility per snapshot pre-ADR-358 + Firestore schema update | 3 | M | Q13 |
-| **15** | Integration test suite — layer round-trip, isolate/unisolate, rename backref | 3 | M | — |
->>>>>>> Stashed changes
 
 **Totale**: 13-15 phases (opzionali 12 e 13 dipendono da Q12).
 
 **Prerequisite per ADR-357 Phase 0**: phases 1-4 (SceneLayer extension + LayerStore + Catalog + resolveEntityStyle) — minimum viable per consumare `currentLayerId` e ereditare ByLayer.
 
 ### 7.1 Ordine vincolante (rispetta §7.1 ADR-357)
-1. ✅ ADR-357 ACCEPTED (questo file precedente)
-2. ⏳ **ADR-358 Q&A** (questa sessione + successive)
-3. ⏳ **ADR-358 implementation phases 1-4** (minimum viable per ADR-357 Phase 0)
-4. ⏳ **ADR-357 implementation Phase 0** (consume LayerStore)
-5. ⏳ ADR-358 phases 5-15 (parallelizzabili con ADR-357 phases 1-18 dove non c'è dipendenza)
-6. ⏳ ADR-359 (XLINE/RAY) — eredita pipeline ByLayer
+1. ✅ ADR-357 ACCEPTED + 17/19 IMPLEMENTED (2026-05-18)
+2. ✅ **ADR-358 Q&A + FULLY IMPLEMENTED** (phases 1-15 ✅ v2.19, 2026-05-18)
+3. ⏳ **ADR-357 Phase 0** (consume LayerStore — ora UNBLOCKED) 
+4. ⏳ **ADR-357 Phase 17** (Quick Style Override ribbon — ora UNBLOCKED)
+5. ⏳ ADR-359 (XLINE/RAY) — eredita pipeline ByLayer
 
 ### 7.2 Backwards compatibility
 - Scene caricate prima di ADR-358: migration helper `migrateSceneLayerV1ToV2` riempie default per nuovi campi:

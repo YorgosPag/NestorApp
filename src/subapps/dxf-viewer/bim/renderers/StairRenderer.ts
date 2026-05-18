@@ -114,7 +114,14 @@ export class StairRenderer extends BaseEntityRenderer {
     if (!isStairEntity(entity)) return [];
     const stair = entity as StairEntity;
     if (!stair.params || !stair.geometry) return [];
-    return getStairGrips(stair);
+    return getStairGrips(stair).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      position: g.position,
+      type: 'vertex' as const,
+      entityId: g.entityId,
+      isVisible: true,
+      gripIndex: g.gripIndex,
+    }));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {

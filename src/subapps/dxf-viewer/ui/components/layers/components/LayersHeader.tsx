@@ -18,7 +18,7 @@ export const LayersHeader = ({ scene, isCollapsed, onToggle }: LayersHeaderProps
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { t } = useTranslation(['dxf-viewer-panels']);
-  const count = Object.keys(scene?.layers || {}).length;
+  const count = Object.keys(scene?.layersById || {}).length;
   return (
     <button
       type="button"

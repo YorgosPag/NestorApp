@@ -93,7 +93,7 @@ export function extractEntityKeyPoints(entity: Entity): readonly Point2D[] {
       return [entity.position];
 
     case 'dimension':
-      return [entity.startPoint, entity.endPoint];
+      return [entity.startPoint, entity.endPoint].filter((p): p is Point2D => p !== undefined);
 
     case 'spline':
       return entity.controlPoints ?? [];

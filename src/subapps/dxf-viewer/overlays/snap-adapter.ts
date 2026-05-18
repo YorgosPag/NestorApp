@@ -24,7 +24,7 @@ export function regionsToSnapEntities(regions: Region[]): Entity[] {
         vertices: points,          // 🏢 ENTERPRISE: PolylineEntity uses vertices, not points
         closed: true,              // 🏢 ENTERPRISE: Mark as closed polygon
         visible: region.visible !== false,
-        layer: region.layer || 'overlay',
+        layerId: region.layer || 'overlay',
         // Store original region data for reference
         metadata: {                // 🏢 ENTERPRISE: Use metadata instead of data
           originalRegion: region,

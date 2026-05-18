@@ -304,7 +304,7 @@ export class DxfRenderer {
       id: entity.id,
       visible: entity.visible,
       selected: isSelected,
-      layerId: entity.layerId,
+      layerId: entity.layerId ?? '',
       color: resolved.colorHex,
       lineType: mapDxfLineTypeToEnterprise(entityWithLineType.lineType),
       lineweight: resolved.lineWidthPx,

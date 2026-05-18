@@ -54,6 +54,8 @@ import { generatePreviewEntity, applyPreviewStyling, createPartialPreview } from
 // ADR-358 Phase 8 preview hotfix — read stair tool state (basePoint+direction)
 // from the SSoT store so the rubber-band preview renders during 2-click placement.
 import { stairPreviewStore } from '../../systems/stairs/stair-preview-store';
+// ADR-363 Phase 1C — wall preview SSoT (same single-writer pattern as stair).
+import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 import { toolStateStore } from '../../stores/ToolStateStore';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { applyPreviewSettingsToEntity } from './apply-preview-settings';
@@ -193,6 +195,7 @@ export function useUnifiedDrawing() {
 
     // ── Entity completion ────────────────────────────────────────────────
     if (isEntityComplete(currentTool, newTempPoints.length)) {
+      const meta = getToolMetadata(currentTool as ToolType);
       const newEntity = createEntityFromTool(currentTool, newTempPoints);
       const effectiveLevelId = getEffectiveLevelId(currentTool, currentLevelId);
 
@@ -206,12 +209,25 @@ export function useUnifiedDrawing() {
         });
       }
 
+      // ADR-357 Phase 5 G5: Chain mode — seed next segment from last endpoint.
+      // Same pattern as measure-distance-continuous; returns false so onDrawingPoint
+      // emits canvas-click (DynamicInput anchor resets to new chain start) and does
+      // NOT clear TrackingPoints (per spec: tracking persists between chain segments).
+      if (meta.allowsChain) {
+        const lastEndPoint = newTempPoints[newTempPoints.length - 1];
+        machineReset();
+        machineSelectTool(currentTool);
+        machineAddPoint(lastEndPoint);
+        setLocalState(prev => ({ ...prev, previewEntity: null }));
+        return false;
+      }
+
       setMode('normal');
       machineComplete();
       machineReset();
 
       // Re-select for continuous tools, deselect for one-shot tools
-      if (getToolMetadata(currentTool as ToolType).allowsContinuous) {
+      if (meta.allowsContinuous) {
         machineSelectTool(currentTool);
       } else {
         machineDeselectTool();
@@ -234,9 +250,13 @@ export function useUnifiedDrawing() {
     // NOT route `'stair'` through `onDrawingStart`, so `machineTool` stays at
     // `'select'` even when the stair tool is active. Source the authoritative
     // active tool from the SSoT `toolStateStore` so the preview surfaces.
-    const isStair = toolStateStore.get().activeTool === 'stair';
-    const currentTool: DrawingTool = isStair ? 'stair' : machineTool;
-    if (!isStair && (!machineTool || machineTool === 'select')) return;
+    const activeTool = toolStateStore.get().activeTool;
+    const isStair = activeTool === 'stair';
+    // ADR-363 Phase 1C — wall tool runs its own state machine (mirror stair),
+    // so `machineTool` stays at `'select'`. Resolve via toolStateStore SSoT.
+    const isWall = activeTool === 'wall';
+    const currentTool: DrawingTool = isStair ? 'stair' : isWall ? 'wall' : machineTool;
+    if (!isStair && !isWall && (!machineTool || machineTool === 'select')) return;
 
     // machineMoveCursor intentionally removed — it updated cursorPosition in machine context
     // (never read by any component) and notified React useSyncExternalStore subscribers on
@@ -259,6 +279,19 @@ export function useUnifiedDrawing() {
         tempPoints = [];
       }
     }
+    if (isWall) {
+      // ADR-363 Phase 1C — reconstruct wall tempPoints from `wallPreviewStore`.
+      // Polyline mode → spine vertices array; otherwise straight/curved → start
+      // point only (cursor becomes the end during makeWallFootprintGhost).
+      const wp = wallPreviewStore.get();
+      if (wp.polylineVertices.length > 0) {
+        tempPoints = wp.polylineVertices;
+      } else if (wp.startPoint) {
+        tempPoints = [wp.startPoint];
+      } else {
+        tempPoints = [];
+      }
+    }
 
     // ADR-358 Phase 8 — scene units propagated to stair preview so the
     // ghost rubber-band + walkline match the host floorplan scale.
@@ -266,7 +299,7 @@ export function useUnifiedDrawing() {
     // `$INSUNITS` propagated by dxf-scene-builder, falls back to bounds
     // heuristic for legacy / unitless scenes.
     const sceneUnitsForPreview = (() => {
-      if (!isStair) return 'mm' as const;
+      if (!isStair && !isWall) return 'mm' as const;
       const levelId = currentLevelId;
       if (!levelId) return 'mm' as const;
       return resolveSceneUnits(getLevelScene(levelId));

@@ -71,6 +71,19 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-18 — Batch commit interop: ADR-357 Ph12-16+18 + ADR-358 v2.19 + ADR-363 Ph7A
+
+`CanvasSection.tsx` / `DxfRenderer.ts` / `hooks/canvas/useCanvasContextMenu.ts` / `hooks/canvas/canvas-click-types.ts` touched in atomic batch. **All cardinal rules preserved**:
+
+- **Rule 1 (no orchestrator subscriptions)**: `CanvasSection` additions are micro-leaf mounts only (`<CommandLineInput />`, `<SelectionCyclingPopover />`, `<DimensionContextMenu />`) — each leaf subscribes to its own SSoT store (`CommandLineStore` / `SelectionCyclingStore` / dimension menu = imperative handle). Orchestrator stays subscription-free.
+- **Rule 2 (getter-based event reads)**: `useCanvasContextMenu` extended to detect dimension-only selection and route to `DimensionContextMenu` instead of `DrawingContextMenu`; selection read happens at event time via store getter, no snapshot capture.
+- **Rule 3 (bitmap cache key untouched)**: `DxfRenderer` change is layer-style resolution path only (ByLayer ↔ Direct via `resolveEntityStyle` from ADR-358). No selection/hover/grip identity added to `dxf-bitmap-cache.ts`.
+- **Rule 4 (≤1 canvas element / ≤2 high-freq hooks per leaf)**: new leaves (`CommandLineInput`, `SelectionCyclingPopover`) each consume ≤1 store via `useSyncExternalStore`. No leaf-fanout regression.
+
+Bundled with ADR-357 / ADR-358 / ADR-363 same-commit (CHECK 6B compliance).
+
+---
+
 ### 2026-05-18 — ADR-357 Phase 11 interop: GripContextMenu micro-leaf (right-click hot grip context menu, AutoCAD-style)
 
 CanvasSection now mounts `<GripContextMenu />` as a micro-leaf subscriber to `GripContextMenuStore` (zero React state in orchestrator). The new `useGripContextMenuController` opens the menu on right-click during cold/hovering/warm phases AND during active drag (`activeGrip` exposed via `unified.activeGrip`). Closing the menu via "Cancel" triggers `unified.handleEscape()` for proper drag cleanup. Pattern: store SSoT + `useSyncExternalStore` only inside the leaf component, never in the orchestrator (ADR-040 cardinal rule #1).

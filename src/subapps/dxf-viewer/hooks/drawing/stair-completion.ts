@@ -234,6 +234,7 @@ export function buildStairEntity(
   return {
     id: generateStairId(),
     type: 'stair',
+    layerId: '',
     kind: params.variant.kind,
     params,
     geometry,

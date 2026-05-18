@@ -9,7 +9,7 @@ import type { Level } from '../config';
 // 🔺 FIXED: Helper για ΠΡΑΓΜΑΤΙΚΑ κενή σκηνή χωρίς default layer
 const createEmptyScene = () => ({
   entities: [],
-  layers: {}, // ← Εντελώς άδειο! Δεν δημιουργούμε layer "0" μέχρι να φορτωθεί DXF
+  layersById: {},
   bounds: { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } },
   units: 'mm' as const,
 });

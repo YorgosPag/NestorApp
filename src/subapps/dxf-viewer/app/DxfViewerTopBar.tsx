@@ -18,6 +18,10 @@ import type { useLevels } from '../systems/levels';
 import { RibbonRoot } from '../ui/ribbon/components/RibbonRoot';
 import { StairAdvancedPanelHost } from './StairAdvancedPanelHost';
 import { WallPersistenceHost } from './WallPersistenceHost';
+import { OpeningPersistenceHost } from './OpeningPersistenceHost';
+import { SlabPersistenceHost } from './SlabPersistenceHost';
+import { ColumnPersistenceHost } from './ColumnPersistenceHost';
+import { BeamPersistenceHost } from './BeamPersistenceHost';
 
 type LevelManager = ReturnType<typeof useLevels>;
 
@@ -59,6 +63,39 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
+        buildingId={levelManager.saveContext?.buildingId ?? undefined}
+      />
+      <OpeningPersistenceHost
+        primarySelectedId={primarySelectedId}
+        currentScene={currentScene}
+        levelManager={levelManager}
+        projectId={levelManager.saveContext?.projectId ?? undefined}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+        buildingId={levelManager.saveContext?.buildingId ?? undefined}
+      />
+      <SlabPersistenceHost
+        primarySelectedId={primarySelectedId}
+        currentScene={currentScene}
+        levelManager={levelManager}
+        projectId={levelManager.saveContext?.projectId ?? undefined}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+        buildingId={levelManager.saveContext?.buildingId ?? undefined}
+      />
+      <ColumnPersistenceHost
+        primarySelectedId={primarySelectedId}
+        currentScene={currentScene}
+        levelManager={levelManager}
+        projectId={levelManager.saveContext?.projectId ?? undefined}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+        buildingId={levelManager.saveContext?.buildingId ?? undefined}
+      />
+      <BeamPersistenceHost
+        primarySelectedId={primarySelectedId}
+        currentScene={currentScene}
+        levelManager={levelManager}
+        projectId={levelManager.saveContext?.projectId ?? undefined}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+        buildingId={levelManager.saveContext?.buildingId ?? undefined}
       />
       {false && (
         <StairAdvancedPanelHost

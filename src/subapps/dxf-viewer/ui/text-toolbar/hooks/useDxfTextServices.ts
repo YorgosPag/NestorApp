@@ -49,7 +49,7 @@ function makeLayerProvider(
 ): ILayerAccessProvider {
   return {
     getLayer(name: string): LayerSnapshot | undefined {
-      const layer = scene?.layers[name];
+      const layer = Object.values(scene?.layersById ?? {}).find((l) => l.name === name);
       if (!layer) return undefined;
       return { name: layer.name, locked: layer.locked, frozen: false };
     },

@@ -74,7 +74,7 @@ export function convertLine(
   return {
     id: `line_${index}`,
     type: 'line',
-    layer,
+    layerId: layer,
     visible: true,
     start: { x: x1, y: y1 },
     end: { x: x2, y: y2 },
@@ -104,7 +104,7 @@ export function convertLwPolyline(
   return {
     id: `polyline_${index}`,
     type: 'polyline',
-    layer,
+    layerId: layer,
     visible: true,
     vertices,
     closed: isClosed,
@@ -141,7 +141,7 @@ export function convertCircle(
   return {
     id: `circle_${index}`,
     type: 'circle',
-    layer,
+    layerId: layer,
     visible: true,
     center: { x: centerX, y: centerY },
     radius,
@@ -176,7 +176,7 @@ export function convertArc(
   return {
     id: `arc_${index}`,
     type: 'arc',
-    layer,
+    layerId: layer,
     visible: true,
     center: { x: centerX, y: centerY },
     radius,
@@ -220,7 +220,7 @@ export function convertEllipse(
   return {
     id: `ellipse_${index}`,
     type: 'circle',
-    layer,
+    layerId: layer,
     visible: true,
     center: { x: centerX, y: centerY },
     radius: approxRadius,
@@ -325,7 +325,7 @@ export function convertText(
   return {
     id: `text_${index}`,
     type: 'text',
-    layer,
+    layerId: layer,
     visible: true,
     position: { x, y },
     text: text.trim(),
@@ -368,7 +368,7 @@ export function convertMText(
   return {
     id: `mtext_${index}`,
     type: 'text',
-    layer,
+    layerId: layer,
     visible: true,
     position: { x, y },
     text: text.trim(),
@@ -409,7 +409,7 @@ export function convertSpline(
   return {
     id: `spline_${index}`,
     type: 'polyline',
-    layer,
+    layerId: layer,
     visible: true,
     vertices,
     closed: false,

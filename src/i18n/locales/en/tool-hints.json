@@ -828,6 +828,26 @@
       "radiusInvalid": "Radius must be a positive number"
     }
   },
+  "gripContextMenu": {
+    "ariaLabel": "Grip right-click menu",
+    "exit": "Exit",
+    "basePoint": "Base Point",
+    "copy": "Copy",
+    "reference": "Reference",
+    "undo": "Undo",
+    "section": {
+      "modes": "Mode",
+      "extras": "Extras",
+      "terminal": "Actions"
+    },
+    "prompts": {
+      "pickBasePoint": "Click for new base point",
+      "pickRefStart": "Click for 1st reference point",
+      "pickRefEnd": "Click for 2nd reference point",
+      "copyOn": "Copy mode: ON",
+      "copyOff": "Copy mode: OFF"
+    }
+  },
   "common": {
     "step": "Step",
     "of": "of",

@@ -57,7 +57,7 @@ function cutRaySingle(ray: RayEntity, cut: number, pickT: number, ux: number, uy
     type: 'line',
     start: ray.basePoint,
     end: cutPt,
-    layer: ray.layer,
+    layerId: ray.layerId,
     visible: ray.visible,
   };
   return { operations: [promoteOp(ray, line, 'line')] };
@@ -78,7 +78,7 @@ function rayPieceToEntity(
     type: 'line',
     start: p0,
     end: p1,
-    layer: ray.layer,
+    layerId: ray.layerId,
     visible: ray.visible,
   } as LineEntity;
 }
@@ -116,7 +116,7 @@ function xlPieceToEntity(
       type: 'ray',
       basePoint: p1,
       direction: { x: -ux, y: -uy },
-      layer: xl.layer,
+      layerId: xl.layerId,
       visible: xl.visible,
     } as RayEntity;
   }
@@ -127,7 +127,7 @@ function xlPieceToEntity(
       type: 'ray',
       basePoint: p0,
       direction: { x: ux, y: uy },
-      layer: xl.layer,
+      layerId: xl.layerId,
       visible: xl.visible,
     } as RayEntity;
   }
@@ -138,7 +138,7 @@ function xlPieceToEntity(
     type: 'line',
     start: p0,
     end: p1,
-    layer: xl.layer,
+    layerId: xl.layerId,
     visible: xl.visible,
   } as LineEntity;
 }

@@ -13,6 +13,7 @@ import type {
   FloorplanProcessedData,
   DxfSceneData,
   DxfSceneEntity,
+  DxfSceneLayer,
 } from '@/types/file-record';
 import type { FileRecordData } from './floorplan-process.types';
 
@@ -86,11 +87,11 @@ export async function processDxf(
   const parseTimeMs = Date.now() - parseStart;
 
   const dxfSceneData: DxfSceneData = {
-    entities: scene.entities.map((entity) => {
-      const { type, layer, ...rest } = entity;
-      return { type, layer: layer || '0', ...rest } as DxfSceneEntity;
-    }),
-    layers: scene.layers,
+    entities: scene.entities.map((entity) => ({
+      ...entity,
+      layer: scene.layersById[entity.layerId]?.name ?? '0',
+    } as unknown as DxfSceneEntity)),
+    layers: Object.fromEntries(Object.values(scene.layersById).map((l) => [l.name, l])) as Record<string, DxfSceneLayer>,
     bounds: scene.bounds,
   };
 

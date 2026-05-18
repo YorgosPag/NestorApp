@@ -1,7 +1,7 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState, useSyncExternalStore } from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
@@ -20,6 +20,9 @@ import { DynamicInputFields } from './DynamicInputFields';
 import { DynamicInputHeader } from './DynamicInputHeader';
 import { DynamicInputFooter } from './DynamicInputFooter';
 import { DynamicInputContainer } from './DynamicInputContainer';
+import { type CoordMode } from '../keyboard-handlers';
+// ADR-357 Phase 13 G14: length/angle lock
+import { DynamicInputLockStore } from '../DynamicInputLockStore';
 import {
   useDynamicInputKeyboard,
   useDynamicInputPhase,
@@ -54,6 +57,16 @@ export default function DynamicInputOverlay({
   // ADR-357 Phase 2b — display unit for numeric readouts (mm internal → configurable display).
   const { displayUnit } = useDisplayUnit();
   const colors = useSemanticColors();
+
+  // ADR-357 Phase 6 — coordinate input mode (abs/rel/polar). Local UI state, not a store.
+  const [coordMode, setCoordMode] = useState<CoordMode>('abs');
+
+  // ADR-357 Phase 13 G14 — lock state (LOW-freq: only on Ctrl+L/A).
+  const lockState = useSyncExternalStore(
+    DynamicInputLockStore.subscribe,
+    DynamicInputLockStore.getSnapshot,
+    DynamicInputLockStore.getSnapshot,
+  );
   
   // Centralized state management
   const {
@@ -90,6 +103,38 @@ export default function DynamicInputOverlay({
   } = useDynamicInputState({
     activeTool: activeTool || 'select'
   });
+
+  // ADR-357 Phase 6 — auto-switch to Rel mode after first click (matches AutoCAD behaviour).
+  useEffect(() => {
+    if (activeTool !== 'line') return;
+    setCoordMode(firstClickPoint ? 'rel' : 'abs');
+  }, [activeTool, firstClickPoint]);
+
+  // ADR-357 Phase 13 G14 — unlock on tool change.
+  useEffect(() => {
+    DynamicInputLockStore.unlock();
+  }, [activeTool]);
+
+  // ADR-357 Phase 13 G14 — Ctrl+L (length lock) / Ctrl+A (angle lock).
+  useEffect(() => {
+    if (activeTool !== 'line') return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || !firstClickPoint) return;
+      if (e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const val = parseFloat(lengthValue);
+        if (Number.isFinite(val) && val > 0) DynamicInputLockStore.toggle('length', val);
+      } else if (e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const val = parseFloat(angleValue);
+        if (Number.isFinite(val)) DynamicInputLockStore.toggle('angle', val);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [activeTool, firstClickPoint, lengthValue, angleValue]);
 
   // ADR-357 Phase 2a §5.1 — Dynamic Input visibility gate.
   // Source of truth: `useCadToggles().dynInput.on` (status-bar toggle, Firestore-persisted).
@@ -203,6 +248,8 @@ export default function DynamicInputOverlay({
     widthInputRef,
     // ADR-357 Phase 2b
     displayUnit,
+    // ADR-357 Phase 6
+    coordMode,
   });
 
   // Phase management hook
@@ -364,6 +411,8 @@ export default function DynamicInputOverlay({
         <DynamicInputFields
           fieldsToShow={fieldsToShow}
           t={t}
+          lockedField={lockState.lockedField}
+          onUnlock={() => DynamicInputLockStore.unlock()}
           xValue={xValue}
           yValue={yValue}
           angleValue={angleValue}
@@ -399,6 +448,27 @@ export default function DynamicInputOverlay({
           treadInputRef={treadInputRef}
           widthInputRef={widthInputRef}
         />
+
+        {/* ADR-357 Phase 6 — Coordinate mode buttons (line tool only) */}
+        {activeTool === 'line' && showInput && (
+          <div className={`flex gap-1 ${PANEL_LAYOUT.MARGIN.TOP_SM}`} role="group">
+            {(['abs', 'rel', 'polar'] as CoordMode[]).map(mode => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setCoordMode(mode)}
+                aria-pressed={coordMode === mode}
+                className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.SPACING.COMPACT_XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS} rounded transition-colors ${
+                  coordMode === mode
+                    ? `${colors.bg.accent} text-white`
+                    : `${colors.bg.muted} ${colors.text.tertiary}`
+                }`}
+              >
+                {t(`dynamicInput.coordMode.${mode}`)}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Multi-point information για polyline/polygon */}
         {/* 🏢 ENTERPRISE ADR-082: Uses FormatterRegistry for locale-aware formatting */}

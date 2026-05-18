@@ -25,6 +25,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isWallEntity } from '../../types/entities';
 import type { WallCategory, WallEntity } from '../types/wall-types';
+import type { OpeningEntity } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -50,7 +51,27 @@ const CATEGORY_LINE_WIDTH: Readonly<Record<WallCategory, number>> = {
 
 const AXIS_DASH: readonly [number, number] = [6, 4];
 
+/** ADR-363 Phase 2.5 — per-frame opening index keyed by host wall id. */
+export type OpeningsByWall = ReadonlyMap<string, ReadonlyArray<OpeningEntity>>;
+
 export class WallRenderer extends BaseEntityRenderer {
+  /**
+   * ADR-363 Phase 2.5 — per-frame map of openings keyed by host wall id.
+   * Forwarded by `EntityRendererComposite.setOpeningsByWall()` so the renderer
+   * can punch a boolean cutout into the wall fill at each hosted opening's
+   * outline (visual "hole" replacing the Phase 2 "draw-on-top" approximation).
+   *
+   * Empty map ⇒ legacy behaviour (no cutout). Renderer never subscribes — the
+   * caller rebuilds the map once per frame and pushes via setter (micro-leaf
+   * compliant, ADR-040).
+   */
+  private openingsByWall: OpeningsByWall = new Map();
+
+  /** Inject per-frame opening index. Composite calls this once per render. */
+  setOpeningsByWall(map: OpeningsByWall): void {
+    this.openingsByWall = map;
+  }
+
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isWallEntity(entity)) return;
     const wall = entity as WallEntity;
@@ -87,7 +108,14 @@ export class WallRenderer extends BaseEntityRenderer {
     // / curve / polyline-vertex). Commit routed through `applyWallGripDrag()`
     // + `UpdateWallParamsCommand` by `commitWallGripDrag` (grip-commit-adapter).
     if (!isWallEntity(entity)) return [];
-    return getWallGrips(entity as WallEntity);
+    return getWallGrips(entity as WallEntity).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      position: g.position,
+      type: 'vertex' as const,
+      entityId: g.entityId,
+      isVisible: true,
+      gripIndex: g.gripIndex,
+    }));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
@@ -108,8 +136,13 @@ export class WallRenderer extends BaseEntityRenderer {
   /**
    * Draws the outer + inner edges as a closed polygon, filled translucent
    * with the category tint, then stroked at category-specific line weight.
-   * The fill is suppressed when only edges are wanted (e.g. preview phase
-   * before commit) — Phase 1 always fills since walls are committed entities.
+   *
+   * ADR-363 Phase 2.5 — Boolean cutout: when openings are registered for this
+   * wall (via `setOpeningsByWall`), each opening outline is subtracted from
+   * the wall fill with `globalCompositeOperation='destination-out'`. The
+   * cutout pass is scoped (save/restore) so neither the upcoming stroke nor
+   * neighbouring renderers see the temporary composite mode. Strokes follow
+   * the cutout so the wall outline stays intact around the opening jambs.
    */
   private drawFootprint(wall: WallEntity): void {
     const outer = wall.geometry.outerEdge.points;
@@ -135,7 +168,39 @@ export class WallRenderer extends BaseEntityRenderer {
     }
     this.ctx.closePath();
     this.ctx.fill();
+
+    // ADR-363 Phase 2.5 — subtract hosted opening outlines from the fill.
+    this.punchHostedOpenings(wall);
+
     this.ctx.stroke();
+  }
+
+  /**
+   * ADR-363 Phase 2.5 — subtract each hosted opening's outline from the
+   * already-painted wall fill via `destination-out`. Scoped save/restore
+   * keeps the composite mode local to this pass. Skips silently when no
+   * openings are registered (legacy behaviour preserved).
+   */
+  private punchHostedOpenings(wall: WallEntity): void {
+    const openings = this.openingsByWall.get(wall.id);
+    if (!openings || openings.length === 0) return;
+
+    this.ctx.save();
+    this.ctx.globalCompositeOperation = 'destination-out';
+    for (const opening of openings) {
+      const verts = opening.geometry?.outline.vertices;
+      if (!verts || verts.length < 3) continue;
+      this.ctx.beginPath();
+      const start = this.worldToScreen({ x: verts[0].x, y: verts[0].y });
+      this.ctx.moveTo(start.x, start.y);
+      for (let i = 1; i < verts.length; i++) {
+        const s = this.worldToScreen({ x: verts[i].x, y: verts[i].y });
+        this.ctx.lineTo(s.x, s.y);
+      }
+      this.ctx.closePath();
+      this.ctx.fill();
+    }
+    this.ctx.restore();
   }
 
   /** Axis polyline rendered dashed-thin (centerline visual aid). */

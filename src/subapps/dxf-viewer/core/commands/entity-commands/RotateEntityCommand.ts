@@ -31,6 +31,8 @@ export class RotateEntityCommand implements ICommand {
   readonly timestamp: number;
 
   private entitySnapshots: Map<string, SceneEntity> = new Map();
+  /** ADR-357 Phase 12 — IDs of clones created when `copyMode === true`. */
+  private createdEntityIds: string[] = [];
   private wasExecuted = false;
 
   constructor(
@@ -39,38 +41,60 @@ export class RotateEntityCommand implements ICommand {
     private angleDeg: number,
     private readonly sceneManager: ISceneManager,
     /** Mark as dragging for merge purposes */
-    private readonly isDragging: boolean = false
+    private readonly isDragging: boolean = false,
+    /**
+     * ADR-357 Phase 12 — when `true`, rotate clones of the sources rather than
+     * mutating in place (mirrors `ScaleEntityCommand.copyMode`). Used by the
+     * grip-context-menu "Copy" toggle when current mode is Rotate.
+     */
+    private readonly copyMode: boolean = false,
   ) {
     this.id = generateEntityId();
     this.timestamp = Date.now();
   }
 
   /**
-   * Execute: Rotate all entities around pivot by angleDeg
+   * Execute: Rotate all entities around pivot by angleDeg. When `copyMode` is
+   * on, the rotated geometry is applied to fresh clones (sources untouched).
    */
   execute(): void {
     this.entitySnapshots.clear();
+    this.createdEntityIds = [];
 
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId);
-      if (entity) {
-        // Store snapshot before rotation (for undo)
-        this.entitySnapshots.set(entityId, deepClone(entity));
+      if (!entity) continue;
+      const updates = rotateEntity(entity as unknown as Entity, this.pivot, this.angleDeg);
 
-        // Calculate and apply rotated geometry
-        const updates = rotateEntity(entity as unknown as Entity, this.pivot, this.angleDeg);
+      if (this.copyMode) {
+        const newId = generateEntityId();
+        const clone: SceneEntity = { ...entity, ...(updates as Partial<SceneEntity>), id: newId };
+        this.sceneManager.addEntity(clone);
+        this.createdEntityIds.push(newId);
+      } else {
+        this.entitySnapshots.set(entityId, deepClone(entity));
         this.sceneManager.updateEntity(entityId, updates as Partial<SceneEntity>);
       }
     }
 
-    this.wasExecuted = this.entitySnapshots.size > 0;
+    this.wasExecuted = this.copyMode
+      ? this.createdEntityIds.length > 0
+      : this.entitySnapshots.size > 0;
   }
 
   /**
-   * Undo: Restore all entities from snapshots
+   * Undo: Restore all entities from snapshots (or remove the created clones
+   * when running in copyMode).
    */
   undo(): void {
     if (!this.wasExecuted) return;
+
+    if (this.copyMode) {
+      for (const id of this.createdEntityIds) {
+        this.sceneManager.removeEntity(id);
+      }
+      return;
+    }
 
     for (const [entityId, snapshot] of this.entitySnapshots) {
       // Extract geometry fields from snapshot (exclude id, type, layer, visible which are identity fields)
@@ -80,9 +104,30 @@ export class RotateEntityCommand implements ICommand {
   }
 
   /**
-   * Redo: Re-apply rotation from snapshots (more accurate than re-executing)
+   * Redo: Re-apply rotation from snapshots (more accurate than re-executing).
+   * In copyMode, re-applies the snapshots as freshly cloned entities so the
+   * clone IDs are deterministic across the undo/redo cycle.
    */
   redo(): void {
+    if (this.copyMode) {
+      this.createdEntityIds = [];
+      for (const entityId of this.entityIds) {
+        const snapshot = this.entitySnapshots.get(entityId)
+          ?? (this.sceneManager.getEntity(entityId) as SceneEntity | undefined);
+        if (!snapshot) continue;
+        // Cache the snapshot for any subsequent undo/redo cycle.
+        if (!this.entitySnapshots.has(entityId)) {
+          this.entitySnapshots.set(entityId, deepClone(snapshot));
+        }
+        const updates = rotateEntity(snapshot as unknown as Entity, this.pivot, this.angleDeg);
+        const newId = generateEntityId();
+        const clone: SceneEntity = { ...snapshot, ...(updates as Partial<SceneEntity>), id: newId };
+        this.sceneManager.addEntity(clone);
+        this.createdEntityIds.push(newId);
+      }
+      return;
+    }
+
     for (const entityId of this.entityIds) {
       const snapshot = this.entitySnapshots.get(entityId);
       if (snapshot) {

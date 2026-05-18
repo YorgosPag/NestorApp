@@ -180,6 +180,22 @@ export interface DrawingEventMap {
     };
     offsetPoint: { x: number; y: number };
   };
+  // ADR-363 Phase 1E — BIM wall grip + delete events
+  'bim:wall-params-updated': { wallId: string };
+  'bim:wall-delete-requested': { wallId: string };
+  // ADR-363 Phase 2 — BIM opening grip + delete events
+  'bim:opening-params-updated': { openingId: string };
+  'bim:opening-delete-requested': { openingId: string };
+  // ADR-363 Phase 3 — BIM slab params + delete events
+  'bim:slab-params-updated': { slabId: string };
+  'bim:slab-delete-requested': { slabId: string };
+  // ADR-363 Phase 4 — BIM column params + delete events
+  'bim:column-params-updated': { columnId: string };
+  'bim:column-delete-requested': { columnId: string };
+  // ADR-363 Phase 5 — BIM beam params + delete events
+  'bim:beam-params-updated': { beamId: string };
+  'bim:beam-delete-requested': { beamId: string };
+
   // Crop-window: marquee drawn by user → clip scene to that world-space rectangle
   'crop:marquee-rect': { xMin: number; yMin: number; xMax: number; yMax: number };
   // Polygon-crop: click-to-add-points polygon → clip scene
