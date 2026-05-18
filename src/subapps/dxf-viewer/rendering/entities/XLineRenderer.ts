@@ -41,9 +41,15 @@ export class XLineRenderer extends BaseEntityRenderer {
     });
   }
 
-  getGrips(_entity: EntityModel): GripInfo[] {
-    // Phase 11 — grip strategy not yet implemented
-    return [];
+  getGrips(entity: EntityModel): GripInfo[] {
+    if (!isXLineEntity(entity)) return [];
+    return [{
+      id: `${entity.id}-basepoint`,
+      position: entity.basePoint,
+      type: 'center',
+      entityId: entity.id,
+      isVisible: true,
+    }];
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {

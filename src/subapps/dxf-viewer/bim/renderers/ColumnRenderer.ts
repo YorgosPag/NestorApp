@@ -106,6 +106,10 @@ export class ColumnRenderer extends BaseEntityRenderer {
     if (phaseState.phase === 'highlighted') {
       this.drawVariantDimensionLabels(column);
     }
+
+    if (options.grips) {
+      this.renderGrips(entity, options);
+    }
   }
 
   /**

@@ -136,6 +136,10 @@ export class SlabRenderer extends BaseEntityRenderer {
     this.drawPolygonPath(verts);
     this.ctx.stroke();
     this.ctx.restore();
+
+    if (options.grips) {
+      this.renderGrips(entity, options);
+    }
   }
 
   /**

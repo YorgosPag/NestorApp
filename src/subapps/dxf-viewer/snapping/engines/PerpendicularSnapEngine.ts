@@ -22,10 +22,13 @@ import {
   isRectangleEntity,
   isCircleEntity,
   isXLineEntity,
-  isRayEntity
+  isRayEntity,
+  isWallEntity
 } from '../../types/entities';
 // 🏢 ADR-087: Centralized Snap Engine Configuration
 import { SNAP_RADIUS_MULTIPLIERS, SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
+// ADR-363 Phase 5.5e — wall axis perpendicular feet (unclamped per-segment).
+import { getWallAxisPerpendicularFeet } from '../../bim/walls/wall-axis-projection';
 
 export class PerpendicularSnapEngine extends BaseSnapEngine {
 
@@ -121,6 +124,15 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
       const foot = getNearestPointOnLine(cursorPoint, base, { x: base.x + dir.x, y: base.y + dir.y }, false);
       if (calculateDistance(cursorPoint, foot) <= maxDistance) {
         perpendicularPoints.push({ point: foot, type: 'XLine' });
+      }
+    } else if (isWallEntity(entity)) {
+      // ADR-363 Phase 5.5e — unclamped foot ανά axis segment (cached
+      // `geometry.axisPolyline.points` καλύπτει straight/curved/polyline).
+      // Επιτρέπει "perpendicular extension" snap όταν cursor είναι πέρα από
+      // wall endpoint (mirror AutoCAD Line PERPENDICULAR semantics).
+      const feet = getWallAxisPerpendicularFeet(entity, cursorPoint, maxDistance);
+      for (const f of feet) {
+        perpendicularPoints.push({ point: f.point, type: `Wall Axis Segment ${f.segmentIndex + 1}` });
       }
     } else if (isRayEntity(entity)) {
       // Foot of perpendicular — only valid if t >= 0 (on the ray, not behind origin)

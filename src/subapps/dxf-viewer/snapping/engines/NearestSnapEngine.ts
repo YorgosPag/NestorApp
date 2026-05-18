@@ -11,6 +11,9 @@ import { calculateDistance } from '../../rendering/entities/shared/geometry-rend
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-149: Centralized Snap Engine Priorities
 import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
+// ADR-363 Phase 5.5e — wall axis projection (clamped NEAREST semantics).
+import { isWallEntity } from '../../types/entities';
+import { projectPointOnWallAxis } from '../../bim/walls/wall-axis-projection';
 
 export class NearestSnapEngine extends BaseSnapEngine {
 
@@ -71,6 +74,15 @@ export class NearestSnapEngine extends BaseSnapEngine {
   }
 
   private getNearestPointOnEntity(entity: EntityModel, point: Point2D): Point2D | null {
+    // ADR-363 Phase 5.5e — wall axis projection. Διαβάζει cached
+    // `wall.geometry.axisPolyline.points` (Phase 1 invariant) → uniform για
+    // straight/curved/polyline kinds. Clamped semantics: αν cursor πέσει πέρα
+    // από wall endpoint, foot = endpoint (όχι προέκταση — αυτό το καλύπτει
+    // το PerpendicularSnapEngine στο Phase 5.5e).
+    if (isWallEntity(entity)) {
+      return projectPointOnWallAxis(entity, point);
+    }
+
     const entityType = entity.type.toLowerCase();
 
     if (entityType === 'line') {

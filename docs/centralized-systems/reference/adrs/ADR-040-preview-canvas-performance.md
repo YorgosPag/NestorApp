@@ -1828,3 +1828,7 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-18: ADR-364 — ESC migration για dim tools
 
 `useDimToolRouting.ts` registers DIM_TOOL-priority handler στο `EscapeCommandBus` (`allowWhenEditable=true`, blur active editable element πριν dispatch). `useDimensionKeyboardRouting.ts` αφαιρεί το Escape branch — πλέον owns Tab/Space/Enter μόνο. ESC dispatch χωρίς duplicate paths · `useKeyboardShortcuts` legacy ESC fallback τραβιέται από νέα bus registration (DRAW_TOOL + COLOR_MENU priorities). Cardinal rules maintained.
+
+## 2026-05-19: BIM selection visual feedback — DxfRenderer passes `selected` flag downstream
+
+`renderEntityUnified` adds `selected: isSelected` to the `RenderOptions` it forwards to entity-specific renderers, so `PhaseManager.determinePhase` correctly resolves `'highlighted'` instead of `'hover'` when an entity is BOTH hovered and selected. No new subscriptions — `isSelected` already came from the existing selectionInfo argument, only the field forwarding was missing. Pure render-time data passthrough. Cardinal rules maintained (orchestrator already wraps renderer; no high-freq store added; bitmap cache key untouched).

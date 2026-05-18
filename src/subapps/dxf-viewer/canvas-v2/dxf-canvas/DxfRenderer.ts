@@ -249,6 +249,7 @@ export class DxfRenderer {
       showGrips: isSelected,
       grips: isSelected,
       hovered: isHovered,
+      selected: isSelected,
       alpha: (entity.visible ? 1.0 : 0.3) * resolved.alpha
     };
 

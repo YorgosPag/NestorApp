@@ -119,6 +119,10 @@ export class BeamRenderer extends BaseEntityRenderer {
     if (phaseState.phase === 'highlighted') {
       this.drawDepthIndicator(beam);
     }
+
+    if (options.grips) {
+      this.renderGrips(entity, options);
+    }
   }
 
   /**
