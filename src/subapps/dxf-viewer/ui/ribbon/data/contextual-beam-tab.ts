@@ -55,10 +55,10 @@ const DEPTH_MM_OPTIONS = [
   { value: '800', labelKey: '800', isLiteralLabel: true },
 ] as const;
 
-// ADR-363 Phase 4.5d — material picker (DISABLED, comingSoon placeholder).
-// Activation deferred to Phase 5.5c (beam material library + hatch patterns).
-// `comingSoon: true` on the combobox command disables the select and routes
-// any click through the global `onComingSoon` toast.
+// ADR-363 Phase 5.5c — material picker (ENABLED). 3 options matching
+// `BeamMaterialKey` union από `beam-hatch-patterns.ts` (rc/steel/glulam).
+// Bridge wiring routes patch through `UpdateBeamParamsCommand` (mirror του
+// column-material path Phase 4.5d) ⇒ undoable, atomic recompute, isDragging=false.
 const BEAM_MATERIAL_OPTIONS = [
   { value: 'rc',     labelKey: 'ribbon.commands.beamEditor.material.rc',     isLiteralLabel: false },
   { value: 'steel',  labelKey: 'ribbon.commands.beamEditor.material.steel',  isLiteralLabel: false },
@@ -161,9 +161,9 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
       ],
     },
     {
-      // ADR-363 Phase 4.5d — material picker placeholder. Visible + disabled,
-      // mirrors the ADR-345 comingSoon pattern (greyed combobox + toast).
-      // Activation lands with Phase 5.5c (beam material library).
+      // ADR-363 Phase 5.5c — material picker ENABLED. Inserted between
+      // `beam-geometry` και `beam-actions` (visual grouping: kind → geometry →
+      // material → actions, mirror του column-editor layout).
       id: 'beam-material',
       labelKey: 'ribbon.panels.beamMaterial',
       rows: [
@@ -176,11 +176,9 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
               command: {
                 id: 'beam.material',
                 labelKey: 'ribbon.commands.beamEditor.material.section.title',
-                tooltipKey: 'ribbon.commands.beamEditor.material.comingSoon',
-                commandKey: 'beam.params.material',
+                commandKey: BEAM_RIBBON_KEYS.stringParams.material,
                 comboboxWidthPx: 180,
                 options: BEAM_MATERIAL_OPTIONS,
-                comingSoon: true,
               },
             },
           ],
