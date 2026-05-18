@@ -103,6 +103,8 @@ export type ToolType =
   | 'lasso-crop'              // Crop scene to freehand drawn polygon
   // ADR-358: Stair drawing tool (Phase 0 stub — ribbon button + hotkey wire-up only)
   | 'stair'
+  // ADR-363 Phase 1: BIM Wall drawing tool (parametric wall με WallDna composition)
+  | 'wall'
   // ADR-362 Phase D1: Enterprise Dimension System — Smart DIM + 4 manual overrides
   | 'dim-smart'           // AutoCAD 2016+ Smart DIM — detector auto-picks type from hover
   | 'dim-linear'          // Manual linear (horizontal/vertical/rotated)
