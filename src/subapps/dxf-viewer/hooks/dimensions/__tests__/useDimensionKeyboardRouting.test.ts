@@ -46,8 +46,18 @@ describe('useDimensionKeyboardRouting — gate', () => {
       useDimensionKeyboardRouting({ activeTool: 'dim-linear', isDimTool, onKey }),
     );
     fireKey('a');
-    fireKey('Enter');
+    fireKey('ArrowLeft');
     expect(onKey).not.toHaveBeenCalled();
+  });
+
+  it('dispatches Enter and prevents default (ADR-362 hotfix: early-commit)', () => {
+    const onKey = jest.fn<void, [DimensionCreateKey]>();
+    renderHook(() =>
+      useDimensionKeyboardRouting({ activeTool: 'dim-linear', isDimTool, onKey }),
+    );
+    const ev = fireKey('Enter');
+    expect(onKey).toHaveBeenCalledWith('Enter');
+    expect(ev.defaultPrevented).toBe(true);
   });
 
   it('does NOT attach the listener when activeTool is not a dim tool', () => {

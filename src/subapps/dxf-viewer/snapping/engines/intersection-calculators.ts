@@ -12,7 +12,7 @@ import type { Entity } from '../extended-types';
 import type { IntersectionResult } from '../shared/GeometricCalculations';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { getPolylineSegments } from '../../rendering/entities/shared/geometry-rendering-utils';
-import type { CircleEntity, ArcEntity } from '../../types/entities';
+import type { LineEntity, CircleEntity, ArcEntity, XLineEntity } from '../../types/entities';
 import {
   isLineEntity,
   isPolylineEntity,
@@ -213,4 +213,92 @@ export function rectangleRectangleIntersection(rect1: Entity, rect2: Entity): In
   }
 
   return intersections;
+}
+
+// ─── XLine Intersection Calculators (Phase 6.a — ADR-359) ────────────────────
+
+const XLINE_EPSILON = 1e-10;
+const XLINE_MAX_T = 1e8;
+
+function cross2D(a: Point2D, b: Point2D): number {
+  return a.x * b.y - a.y * b.x;
+}
+
+function isAngleInRange(angleDeg: number, startDeg: number, endDeg: number): boolean {
+  const a = ((angleDeg % 360) + 360) % 360;
+  const s = ((startDeg % 360) + 360) % 360;
+  const e = ((endDeg % 360) + 360) % 360;
+  if (s <= e) return a >= s && a <= e;
+  return a >= s || a <= e;
+}
+
+export function xlineLineIntersection(xline: XLineEntity, line: LineEntity): IntersectionResult[] {
+  const dirXl = xline.direction;
+  const dirL: Point2D = { x: line.end.x - line.start.x, y: line.end.y - line.start.y };
+  const denom = cross2D(dirXl, dirL);
+  if (Math.abs(denom) < XLINE_EPSILON) return [];
+  const diff: Point2D = { x: line.start.x - xline.basePoint.x, y: line.start.y - xline.basePoint.y };
+  const tXl = cross2D(diff, dirL) / denom;
+  const sLine = cross2D(diff, dirXl) / denom;
+  if (Math.abs(tXl) > XLINE_MAX_T) return [];
+  if (sLine < -XLINE_EPSILON || sLine > 1 + XLINE_EPSILON) return [];
+  return [{ point: { x: line.start.x + sLine * dirL.x, y: line.start.y + sLine * dirL.y }, type: 'XLine-Line' }];
+}
+
+export function xlineXlineIntersection(a: XLineEntity, b: XLineEntity): IntersectionResult[] {
+  const denom = cross2D(a.direction, b.direction);
+  if (Math.abs(denom) < XLINE_EPSILON) return [];
+  const diff: Point2D = { x: b.basePoint.x - a.basePoint.x, y: b.basePoint.y - a.basePoint.y };
+  const t = cross2D(diff, b.direction) / denom;
+  if (Math.abs(t) > XLINE_MAX_T) return [];
+  return [{ point: { x: a.basePoint.x + t * a.direction.x, y: a.basePoint.y + t * a.direction.y }, type: 'XLine-XLine' }];
+}
+
+export function xlineCircleIntersection(xline: XLineEntity, circle: CircleEntity): IntersectionResult[] {
+  const dir = xline.direction;
+  const dx = xline.basePoint.x - circle.center.x;
+  const dy = xline.basePoint.y - circle.center.y;
+  const A = dir.x * dir.x + dir.y * dir.y;
+  if (A < XLINE_EPSILON) return [];
+  const B = 2 * (dx * dir.x + dy * dir.y);
+  const C = dx * dx + dy * dy - circle.radius * circle.radius;
+  const disc = B * B - 4 * A * C;
+  if (disc < 0) return [];
+  const results: IntersectionResult[] = [];
+  if (disc < XLINE_EPSILON) {
+    const t = -B / (2 * A);
+    if (Math.abs(t) <= XLINE_MAX_T)
+      results.push({ point: { x: xline.basePoint.x + t * dir.x, y: xline.basePoint.y + t * dir.y }, type: 'XLine-Circle' });
+  } else {
+    const sqrtDisc = Math.sqrt(disc);
+    for (const t of [(-B - sqrtDisc) / (2 * A), (-B + sqrtDisc) / (2 * A)]) {
+      if (Math.abs(t) <= XLINE_MAX_T)
+        results.push({ point: { x: xline.basePoint.x + t * dir.x, y: xline.basePoint.y + t * dir.y }, type: 'XLine-Circle' });
+    }
+  }
+  return results;
+}
+
+export function xlineArcIntersection(xline: XLineEntity, arc: ArcEntity): IntersectionResult[] {
+  const dir = xline.direction;
+  const dx = xline.basePoint.x - arc.center.x;
+  const dy = xline.basePoint.y - arc.center.y;
+  const A = dir.x * dir.x + dir.y * dir.y;
+  if (A < XLINE_EPSILON) return [];
+  const B = 2 * (dx * dir.x + dy * dir.y);
+  const C = dx * dx + dy * dy - arc.radius * arc.radius;
+  const disc = B * B - 4 * A * C;
+  if (disc < 0) return [];
+  const tValues: number[] = disc < XLINE_EPSILON
+    ? [-B / (2 * A)]
+    : [(-B - Math.sqrt(disc)) / (2 * A), (-B + Math.sqrt(disc)) / (2 * A)];
+  const results: IntersectionResult[] = [];
+  for (const t of tValues) {
+    if (Math.abs(t) > XLINE_MAX_T) continue;
+    const p: Point2D = { x: xline.basePoint.x + t * dir.x, y: xline.basePoint.y + t * dir.y };
+    const angleDeg = (Math.atan2(p.y - arc.center.y, p.x - arc.center.x) * 180 / Math.PI + 360) % 360;
+    if (isAngleInRange(angleDeg, arc.startAngle, arc.endAngle))
+      results.push({ point: p, type: 'XLine-Arc' });
+  }
+  return results;
 }
