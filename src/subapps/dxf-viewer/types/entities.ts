@@ -315,9 +315,15 @@ export type {
 } from '../bim/types/beam-types';
 import type { BeamEntity } from '../bim/types/beam-types';
 
-export interface SlabOpeningEntity extends BimEntity<SlabOpeningKind, BimParamsStub, BimGeometryStub> {
-  type: 'slab-opening';
-}
+// ADR-363 Phase 3.7: Slab-opening concrete types live in
+// bim/types/slab-opening-types.ts (SRP). Re-export through this barrel.
+export type {
+  SlabOpeningKind as SlabOpeningKindBim,
+  SlabOpeningParams,
+  SlabOpeningGeometry,
+  SlabOpeningEntity,
+} from '../bim/types/slab-opening-types';
+import type { SlabOpeningEntity } from '../bim/types/slab-opening-types';
 
 // Re-export BIM base types for downstream consumers
 export type { BimEntity, BimElementKind, BimValidation, BimQuantityTakeoff, SoftLock, Point3D, AtoeCategoryCode } from '../bim/types/bim-base';

@@ -35,6 +35,7 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import { isSlabEntity } from '../../types/entities';
 import type { SlabEntity, SlabKind, SlabReinforcement } from '../types/slab-types';
+import type { SlabOpeningEntity } from '../types/slab-opening-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -74,7 +75,27 @@ const HATCH_SPACING_MM: Readonly<Record<SlabReinforcement, number>> = {
   'flat':    250,
 };
 
+/** ADR-363 Phase 3.7 — per-frame slab-opening index keyed by host slab id. */
+export type SlabOpeningsBySlab = ReadonlyMap<string, ReadonlyArray<SlabOpeningEntity>>;
+
 export class SlabRenderer extends BaseEntityRenderer {
+  /**
+   * ADR-363 Phase 3.7 — per-frame map of slab-openings keyed by host slab id.
+   * Forwarded by `EntityRendererComposite.setSlabOpeningsBySlab()` ώστε ο
+   * renderer να τρυπάει boolean cutouts στο slab fill σε κάθε hosted
+   * opening outline (visual "hole" κατ' αντιστοιχία με WallRenderer Phase 2.5).
+   *
+   * Empty map ⇒ legacy behaviour (no cutout). Renderer never subscribes —
+   * caller rebuilds the map once per frame and pushes via setter (micro-leaf
+   * compliant, ADR-040).
+   */
+  private slabOpeningsBySlab: SlabOpeningsBySlab = new Map();
+
+  /** Inject per-frame slab-opening index. Composite calls this once per render. */
+  setSlabOpeningsBySlab(map: SlabOpeningsBySlab): void {
+    this.slabOpeningsBySlab = map;
+  }
+
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isSlabEntity(entity)) return;
     const slab = entity as SlabEntity;
@@ -107,10 +128,41 @@ export class SlabRenderer extends BaseEntityRenderer {
       this.drawReinforcementHatch(slab);
     }
 
+    // ADR-363 Phase 3.7 — subtract hosted slab-opening outlines από το fill.
+    this.punchHostedSlabOpenings(slab);
+
     this.ctx.strokeStyle = KIND_STROKE[slab.kind];
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
     this.drawPolygonPath(verts);
     this.ctx.stroke();
+    this.ctx.restore();
+  }
+
+  /**
+   * ADR-363 Phase 3.7 — subtract κάθε hosted slab-opening outline από το ήδη
+   * ζωγραφισμένο slab fill via `destination-out`. Scoped save/restore κρατά
+   * το composite mode τοπικά. Silent skip όταν δεν υπάρχουν openings
+   * (legacy behaviour preserved). Mirrors WallRenderer.punchHostedOpenings.
+   */
+  private punchHostedSlabOpenings(slab: SlabEntity): void {
+    const openings = this.slabOpeningsBySlab.get(slab.id);
+    if (!openings || openings.length === 0) return;
+
+    this.ctx.save();
+    this.ctx.globalCompositeOperation = 'destination-out';
+    for (const opening of openings) {
+      const verts = opening.geometry?.polygon.vertices;
+      if (!verts || verts.length < 3) continue;
+      this.ctx.beginPath();
+      const start = this.worldToScreen({ x: verts[0].x, y: verts[0].y });
+      this.ctx.moveTo(start.x, start.y);
+      for (let i = 1; i < verts.length; i++) {
+        const s = this.worldToScreen({ x: verts[i].x, y: verts[i].y });
+        this.ctx.lineTo(s.x, s.y);
+      }
+      this.ctx.closePath();
+      this.ctx.fill();
+    }
     this.ctx.restore();
   }
 

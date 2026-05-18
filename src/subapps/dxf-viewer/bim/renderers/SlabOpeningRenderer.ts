@@ -1,0 +1,147 @@
+/**
+ * SlabOpeningRenderer — ADR-363 Phase 3.7.
+ *
+ * 2D plan-view renderer για `SlabOpeningEntity`. Reads `entity.geometry`
+ * (populated by `computeSlabOpeningGeometry()` — SSoT) και draws:
+ *   - dashed polygon outline ανά kind colour (industry convention για
+ *     cutouts: red dashed για shaft/chimney, neutral για duct/well)
+ *   - light translucent fill ανά kind
+ *   - hover halo (continuous outline ring με glow)
+ *
+ * Per-kind palette:
+ *   - shaft   → cool blue (lift)
+ *   - well    → warm grey (stair-well)
+ *   - duct    → neutral grey
+ *   - chimney → warm red (καπνοδόχος)
+ *
+ * Boolean cutout στο host slab γίνεται στον `SlabRenderer.punchHostedSlabOpenings`
+ * (mirror WallRenderer.punchHostedOpenings). Αυτός ο renderer δείχνει το ίδιο
+ * το cutout entity σαν αυτόνομο visual element.
+ *
+ * ADR-040 micro-leaf compliance: pure renderer class με ZERO subscriptions
+ * σε high-frequency stores.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5 §11.Q3
+ * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
+ */
+
+import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
+import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
+import type { Entity } from '../../types/entities';
+import { isSlabOpeningEntity } from '../../types/entities';
+import type {
+  SlabOpeningEntity,
+  SlabOpeningKind,
+} from '../types/slab-opening-types';
+import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+import { HOVER_HIGHLIGHT } from '../../config/color-config';
+
+/** Stroke colour per kind. */
+const KIND_STROKE: Readonly<Record<SlabOpeningKind, string>> = {
+  'shaft':   '#3a5f86',
+  'well':    '#7d6a55',
+  'duct':    '#5a5a5a',
+  'chimney': '#a04a2b',
+};
+
+/** Translucent fill (rgba) per kind. ~18% opacity. */
+const KIND_FILL: Readonly<Record<SlabOpeningKind, string>> = {
+  'shaft':   'rgba(108, 152, 198, 0.18)',
+  'well':    'rgba(170, 150, 120, 0.18)',
+  'duct':    'rgba(140, 140, 140, 0.16)',
+  'chimney': 'rgba(192, 92, 56, 0.22)',
+};
+
+/** Dash pattern για κάθε kind (mm-agnostic — screen px). */
+const KIND_DASH: Readonly<Record<SlabOpeningKind, readonly [number, number]>> = {
+  'shaft':   [8, 4],
+  'well':    [6, 3],
+  'duct':    [4, 2],
+  'chimney': [8, 4],
+};
+
+export class SlabOpeningRenderer extends BaseEntityRenderer {
+  render(entity: EntityModel, options: RenderOptions = {}): void {
+    if (!isSlabOpeningEntity(entity)) return;
+    const opening = entity as SlabOpeningEntity;
+    if (!opening.geometry || !opening.params) return;
+    const verts = opening.geometry.polygon.vertices;
+    if (verts.length < 3) return;
+
+    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
+
+    // Hover halo via outline thicker glow.
+    if (phaseState.phase === 'highlighted') {
+      this.ctx.save();
+      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
+      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
+      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
+      this.ctx.setLineDash([]);
+      this.drawPolygonPath(verts);
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
+
+    this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
+    this.ctx.save();
+
+    this.ctx.fillStyle = KIND_FILL[opening.kind];
+    this.drawPolygonPath(verts);
+    this.ctx.fill();
+
+    this.ctx.strokeStyle = KIND_STROKE[opening.kind];
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+    this.ctx.setLineDash(KIND_DASH[opening.kind] as unknown as number[]);
+    this.drawPolygonPath(verts);
+    this.ctx.stroke();
+    this.ctx.restore();
+  }
+
+  getGrips(entity: EntityModel): GripInfo[] {
+    // Phase 3.7 ships base outline grips per vertex; advanced midpoint/edge
+    // grips (mirror slab) defer to Phase 3.7+.
+    if (!isSlabOpeningEntity(entity)) return [];
+    const opening = entity as SlabOpeningEntity;
+    const verts = opening.geometry?.polygon.vertices ?? [];
+    return verts.map((v, i) => ({
+      id: `${opening.id}-grip-${i}`,
+      position: { x: v.x, y: v.y },
+      type: 'vertex' as const,
+      entityId: opening.id,
+      isVisible: true,
+      gripIndex: i,
+    }));
+  }
+
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
+    if (!isSlabOpeningEntity(entity)) return false;
+    const opening = entity as SlabOpeningEntity;
+    const bb = opening.geometry?.bbox;
+    if (!bb) return false;
+    if (
+      point.x < bb.min.x - tolerance ||
+      point.x > bb.max.x + tolerance ||
+      point.y < bb.min.y - tolerance ||
+      point.y > bb.max.y + tolerance
+    ) {
+      return false;
+    }
+    const verts = opening.geometry.polygon.vertices;
+    return pointInPolygon(point, verts);
+  }
+
+  // ─── Internal helpers ────────────────────────────────────────────────────
+
+  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
+    if (vertices.length < 3) return;
+    this.ctx.beginPath();
+    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
+    this.ctx.moveTo(first.x, first.y);
+    for (let i = 1; i < vertices.length; i++) {
+      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
+      this.ctx.lineTo(s.x, s.y);
+    }
+    this.ctx.closePath();
+  }
+}

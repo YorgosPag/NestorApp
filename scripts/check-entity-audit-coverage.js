@@ -85,6 +85,8 @@ const TRACKED_COLLECTION_KEYS = new Set([
   'FLOORPLAN_OPENINGS',
   // ADR-363 Phase 3 — BIM slab entities (audit via slab-audit-client.ts → /api/audit-trail/record)
   'FLOORPLAN_SLABS',
+  // ADR-363 Phase 3.7 — BIM slab-opening entities (audit via slab-opening-audit-client.ts → /api/audit-trail/record)
+  'FLOORPLAN_SLAB_OPENINGS',
   // ADR-363 Phase 4 — BIM column entities (audit via column-audit-client.ts → /api/audit-trail/record)
   'FLOORPLAN_COLUMNS',
   // ADR-363 Phase 5 — BIM beam entities (audit via beam-audit-client.ts → /api/audit-trail/record)
@@ -125,6 +127,8 @@ const HARD_EXEMPT_PATTERNS = [
   /[\\/]bim[\\/]walls[\\/]opening-firestore-service\.ts$/,
   // ADR-363 Phase 3 — client-SDK slab service; audit via slab-audit-client.ts in the hook layer
   /[\\/]bim[\\/]slabs[\\/]slab-firestore-service\.ts$/,
+  // ADR-363 Phase 3.7 — client-SDK slab-opening service; audit via slab-opening-audit-client.ts in the hook layer
+  /[\\/]bim[\\/]slab-openings[\\/]slab-opening-firestore-service\.ts$/,
   // ADR-363 Phase 4 — client-SDK column service; audit via column-audit-client.ts in the hook layer
   /[\\/]bim[\\/]columns[\\/]column-firestore-service\.ts$/,
   // ADR-363 Phase 5 — client-SDK beam service; audit via beam-audit-client.ts in the hook layer

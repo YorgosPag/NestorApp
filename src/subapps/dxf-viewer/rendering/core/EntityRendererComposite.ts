@@ -18,12 +18,17 @@ import { SplineRenderer } from '../entities/SplineRenderer';
 import { AngleMeasurementRenderer } from '../entities/AngleMeasurementRenderer';
 import { PointRenderer } from '../entities/PointRenderer';
 import { StairRenderer } from '../entities/StairRenderer';
+// ADR-359 Phase 4.b — XLINE (infinite) + RAY (semi-infinite) construction line renderers.
+import { XLineRenderer } from '../entities/XLineRenderer';
+import { RayRenderer } from '../entities/RayRenderer';
 // ADR-363 Phase 1B — parametric wall leaf (2D plan view).
 import { WallRenderer, type OpeningsByWall } from '../../bim/renderers/WallRenderer';
 // ADR-363 Phase 2 — opening leaf (door/window/sliding-door/french-door/fixed).
 import { OpeningRenderer } from '../../bim/renderers/OpeningRenderer';
 // ADR-363 Phase 3 — slab leaf (floor/ceiling/roof/ground/foundation).
-import { SlabRenderer } from '../../bim/renderers/SlabRenderer';
+import { SlabRenderer, type SlabOpeningsBySlab } from '../../bim/renderers/SlabRenderer';
+// ADR-363 Phase 3.7 — slab-opening leaf (shaft/well/duct/chimney).
+import { SlabOpeningRenderer } from '../../bim/renderers/SlabOpeningRenderer';
 // ADR-363 Phase 4 — column leaf (rectangular/circular/L-shape/T-shape).
 import { ColumnRenderer } from '../../bim/renderers/ColumnRenderer';
 // ADR-363 Phase 5 — beam leaf (straight/curved/cantilever).
@@ -75,12 +80,17 @@ export class EntityRendererComposite {
     const openingRenderer = new OpeningRenderer(this.ctx);
     // ADR-363 Phase 3 — slab renderer (5 kinds, polygon outline + translucent fill).
     const slabRenderer = new SlabRenderer(this.ctx);
+    // ADR-363 Phase 3.7 — slab-opening renderer (4 kinds, dashed outline + cutout).
+    const slabOpeningRenderer = new SlabOpeningRenderer(this.ctx);
     // ADR-363 Phase 4 — column renderer (4 kinds, footprint outline + fill).
     const columnRenderer = new ColumnRenderer(this.ctx);
     // ADR-363 Phase 5 — beam renderer (3 kinds, dashed outline + axis centerline).
     const beamRenderer = new BeamRenderer(this.ctx);
     // ADR-362 Phase C1 — dimension renderer (10 variants via DimGeometry union).
     const dimensionRenderer = new DimensionRenderer(this.ctx);
+    // ADR-359 Phase 4.b — Liang-Barsky clipped construction line renderers.
+    const xlineRenderer = new XLineRenderer(this.ctx);
+    const rayRenderer = new RayRenderer(this.ctx);
 
     // Register renderers by entity type
     this.renderers.set('line', lineRenderer);
@@ -100,9 +110,12 @@ export class EntityRendererComposite {
     this.renderers.set('wall', wallRenderer);
     this.renderers.set('opening', openingRenderer);
     this.renderers.set('slab', slabRenderer);
+    this.renderers.set('slab-opening', slabOpeningRenderer);
     this.renderers.set('column', columnRenderer);
     this.renderers.set('beam', beamRenderer);
     this.renderers.set('dimension', dimensionRenderer);
+    this.renderers.set('xline', xlineRenderer);
+    this.renderers.set('ray', rayRenderer);
   }
 
   /**
@@ -137,6 +150,18 @@ export class EntityRendererComposite {
     const wall = this.renderers.get('wall');
     if (wall instanceof WallRenderer) {
       wall.setOpeningsByWall(map);
+    }
+  }
+
+  /**
+   * ADR-363 Phase 3.7 — forward the per-frame slab-opening-by-slab index ώστε
+   * ο slab renderer να τρυπάει boolean cutouts στο fill. No-op όταν ο slab
+   * renderer απουσιάζει (defensive για partial test setups).
+   */
+  setSlabOpeningsBySlab(map: SlabOpeningsBySlab): void {
+    const slab = this.renderers.get('slab');
+    if (slab instanceof SlabRenderer) {
+      slab.setSlabOpeningsBySlab(map);
     }
   }
 

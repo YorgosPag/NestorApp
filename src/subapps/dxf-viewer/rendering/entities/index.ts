@@ -16,6 +16,8 @@ export { EllipseRenderer } from './EllipseRenderer';
 export { SplineRenderer } from './SplineRenderer';
 export { AngleMeasurementRenderer } from './AngleMeasurementRenderer';
 export { PointRenderer } from './PointRenderer';
+export { XLineRenderer } from './XLineRenderer';
+export { RayRenderer } from './RayRenderer';
 
 // ✅ ΔΙΟΡΑΘΩΣΗ ΔΙΠΛΟΤΥΠΟΥ: EntityRendererComposite αφαιρέθηκε - χρήση direct import από ../core/EntityRendererComposite
 

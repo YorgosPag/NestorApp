@@ -15,6 +15,7 @@
  */
 
 import type { SlabGeometry, SlabParams } from '../types/slab-types';
+import type { SlabOpeningEntity } from '../types/slab-opening-types';
 import {
   polygonArea,
   polygonBbox,
@@ -28,9 +29,16 @@ const MM_TO_M = 1 / 1000;
  * γεωμετρία. Caller MUST ensure `outline.vertices.length >= 3` (validator
  * guard upstream). Όταν λιγότερες κορυφές, area/perimeter/volume = 0.
  *
+ * Phase 3.7: Όταν δοθεί `slabOpenings`, το `netArea` = `area − Σ(opening.area)`
+ * (clamped σε ≥ 0). Το `volume` υπολογίζεται με το `netArea`. Όταν παραλειφθεί
+ * → netArea == area (legacy behaviour).
+ *
  * Throws nothing — validation σε `validateSlabParams()`.
  */
-export function computeSlabGeometry(params: SlabParams): SlabGeometry {
+export function computeSlabGeometry(
+  params: SlabParams,
+  slabOpenings?: readonly SlabOpeningEntity[],
+): SlabGeometry {
   const vertices = params.outline.vertices;
   const bbox = polygonBbox(vertices);
   const areaMm2 = polygonArea(vertices);
@@ -38,9 +46,8 @@ export function computeSlabGeometry(params: SlabParams): SlabGeometry {
   const areaM2 = areaMm2 * (MM_TO_M * MM_TO_M);
   const perimeterM = perimeterMm * MM_TO_M;
 
-  // Phase 3: slab-openings δεν υπάρχουν → netArea === area. Phase 3.5
-  // αφαιρεί Σ(opening.area) εδώ, μέσω resolved slab-opening entities.
-  const netAreaM2 = areaM2;
+  const openingsAreaM2 = sumSlabOpeningAreasM2(slabOpenings);
+  const netAreaM2 = Math.max(0, areaM2 - openingsAreaM2);
   const thicknessMm = Math.max(0, params.thickness);
   const volumeM3 = netAreaM2 * thicknessMm * MM_TO_M;
 
@@ -52,6 +59,24 @@ export function computeSlabGeometry(params: SlabParams): SlabGeometry {
     volume: volumeM3,
     perimeter: perimeterM,
   };
+}
+
+/**
+ * Sum των m² εμβαδών όλων των slab-openings που ζουν πάνω σε ένα slab.
+ * Pure helper — caller φιλτράρει ήδη ανά slabId πριν δώσει τη λίστα. Όταν
+ * `openings` undefined ή κενό → 0.
+ */
+function sumSlabOpeningAreasM2(
+  openings: readonly SlabOpeningEntity[] | undefined,
+): number {
+  if (!openings || openings.length === 0) return 0;
+  let total = 0;
+  for (const o of openings) {
+    if (o.geometry && Number.isFinite(o.geometry.area)) {
+      total += o.geometry.area;
+    }
+  }
+  return total;
 }
 
 /**
