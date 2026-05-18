@@ -181,6 +181,10 @@ const BUILT_IN: ReadonlyArray<readonly [string, ToolType]> = [
   ['GUIDE',       'guide-x'],
   ['GP',          'guide-parallel'],
   ['GD',          'guide-delete'],
+  // ── Construction Lines (ADR-359) ──────────────────────────────────────────
+  ['XL',          'xline'],
+  ['XLINE',       'xline'],
+  ['RAY',         'ray'],
 ] as const;
 
 // Build lookup map (uppercase → toolId). Built-ins loaded once at module init.
