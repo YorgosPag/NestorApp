@@ -413,6 +413,13 @@
         "cancelCurrent": "Ακύρωση τρέχοντος",
         "finishChain": "Τέλος αλυσίδας"
       }
+    },
+    "constructionLayerScaffold": {
+      "title": "Δημιουργία layer Κατασκευής;",
+      "body": "Συνιστούμε ξεχωριστό layer για XLINE/RAY:\n• Όνομα: Construction\n• Linetype: Dashed\n• Χρώμα: Cyan (ACI 4)\n• Plottable: Όχι",
+      "create": "Δημιουργία και χρήση",
+      "skip": "Όχι ευχαριστώ",
+      "neverAsk": "Μην ξαναρωτήσεις"
     }
   }
 }

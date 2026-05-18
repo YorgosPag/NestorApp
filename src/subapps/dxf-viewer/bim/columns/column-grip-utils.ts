@@ -1,0 +1,86 @@
+/**
+ * ADR-363 Phase 4.5 + 4.5b — Shared local-frame math για column grips.
+ *
+ * Pure, side-effect-free primitives reused από `column-grips.ts` (base) και
+ * `column-variant-grips.ts` (Phase 4.5b L/T variant grips). Extracted ώστε το
+ * core module να μένει εντός του 500-line Google budget (CLAUDE.md N.7.1) και
+ * το variant module να μην επανυλοποιεί τη rotated-frame γεωμετρία.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6 §6 Phase 4.5/4.5b
+ */
+
+import type { Point2D } from '../../rendering/types/Types';
+import type { ColumnParams } from '../types/column-types';
+import { ANCHOR_OFFSETS } from '../types/column-types';
+
+export const DEG_TO_RAD = Math.PI / 180;
+export const RAD_TO_DEG = 180 / Math.PI;
+
+/** mm. Offset της λαβής rotation πάνω από το north edge (visual separation). */
+export const ROTATION_HANDLE_OFFSET_MM = 200;
+
+/**
+ * Rotate vector `v` by `rotDeg` (CCW) around the origin. Returns new vector.
+ */
+export function rotate(v: Point2D, rotDeg: number): Point2D {
+  const r = rotDeg * DEG_TO_RAD;
+  const c = Math.cos(r);
+  const s = Math.sin(r);
+  return { x: v.x * c - v.y * s, y: v.x * s + v.y * c };
+}
+
+/**
+ * Project world delta onto the column's local rotated axes. Returns
+ * `{ dxLocal, dyLocal }` where dxLocal is the component along the rotated +X
+ * axis και dyLocal along rotated +Y.
+ */
+export function projectDeltaToLocal(
+  delta: Point2D,
+  rotDeg: number,
+): { dxLocal: number; dyLocal: number } {
+  const r = rotDeg * DEG_TO_RAD;
+  const c = Math.cos(r);
+  const s = Math.sin(r);
+  return { dxLocal: delta.x * c + delta.y * s, dyLocal: -delta.x * s + delta.y * c };
+}
+
+/**
+ * Compute the centroid (bbox centre) of the column footprint σε world coords.
+ * For non-circular: `centroid = position + rotatedR(-dx*width, -dy*depth)`.
+ * For circular: anchor effectively 'center', `centroid = position`.
+ */
+export function computeCentroidWorld(params: ColumnParams): Point2D {
+  if (params.kind === 'circular') {
+    return { x: params.position.x, y: params.position.y };
+  }
+  const { dx, dy } = ANCHOR_OFFSETS[params.anchor];
+  const shift = rotate({ x: -dx * params.width, y: -dy * params.depth }, params.rotation);
+  return { x: params.position.x + shift.x, y: params.position.y + shift.y };
+}
+
+/**
+ * Convert a local-frame point (centered on centroid, ΧΩΡΙΣ anchor shift,
+ * ΧΩΡΙΣ rotation) σε world coords, εφαρμόζοντας params.rotation γύρω από το
+ * centroid.
+ */
+export function localToWorld(local: Point2D, params: ColumnParams): Point2D {
+  const centroid = computeCentroidWorld(params);
+  const rotated = rotate(local, params.rotation);
+  return { x: centroid.x + rotated.x, y: centroid.y + rotated.y };
+}
+
+/**
+ * Resolve far-edge sign along local X axis. Returns `+1` (east edge) for
+ * `dx <= 0`, `-1` (west edge) for `dx > 0`. Guarantees non-zero coefficient
+ * for width handle even when anchor sits on east/west edge.
+ */
+export function farEdgeSignX(dx: number): number {
+  return dx <= 0 ? +1 : -1;
+}
+
+/**
+ * Same as `farEdgeSignX` but for local Y axis (north / south).
+ */
+export function farEdgeSignY(dy: number): number {
+  return dy <= 0 ? +1 : -1;
+}

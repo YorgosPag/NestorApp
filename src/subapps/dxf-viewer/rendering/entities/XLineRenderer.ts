@@ -8,7 +8,18 @@ import { pointToInfiniteLineDistance } from '../utils/point-to-line-distance';
 export class XLineRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isXLineEntity(entity)) return;
-    const { basePoint, direction } = entity;
+    const { basePoint, secondPoint } = entity;
+    const direction = entity.direction ?? (
+      secondPoint
+        ? (() => {
+            const dx = secondPoint.x - basePoint.x;
+            const dy = secondPoint.y - basePoint.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            return len < 1e-10 ? null : { x: dx / len, y: dy / len };
+          })()
+        : null
+    );
+    if (!direction) return;
 
     this.renderWithPhases(entity, options, () => {
       const viewport = this.getViewportWorldBounds();
@@ -37,6 +48,7 @@ export class XLineRenderer extends BaseEntityRenderer {
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
     if (!isXLineEntity(entity)) return false;
+    if (!entity.direction) return false;
     const dist = pointToInfiniteLineDistance(point, entity.basePoint, entity.direction);
     return dist <= tolerance;
   }

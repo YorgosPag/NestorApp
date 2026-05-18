@@ -48,6 +48,7 @@ const CalibrationDialog = React.lazy(() => import('../floorplan-background').the
 const DxfAiChatPanel = React.lazy(() => import('../ai-assistant/components/DxfAiChatPanel'));
 const DxfImportModal = React.lazy(() => import('../components/DxfImportModal'));
 const SimpleProjectDialog = React.lazy(() => import('../components/SimpleProjectDialog').then(mod => ({ default: mod.SimpleProjectDialog })));
+const ConstructionLayerScaffoldDialog = React.lazy(() => import('../hooks/useConstructionLayerScaffold').then(mod => ({ default: mod.ConstructionLayerScaffoldDialog })));
 const FloorplanImportWizard = React.lazy(() => import('@/features/floorplan-import').then(mod => ({ default: mod.FloorplanImportWizard })));
 // Layout Components - Canvas V2
 import { SidebarSection } from '../layout/SidebarSection';
@@ -469,6 +470,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           }}
         />
       </React.Suspense>
+      <React.Suspense fallback={<div className="hidden" />}><ConstructionLayerScaffoldDialog /></React.Suspense>
       {USE_AI_DRAWING_ASSISTANT && (
         <React.Suspense fallback={<div className="hidden" />}>
           <DxfAiChatPanel

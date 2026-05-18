@@ -14,9 +14,13 @@
  *
  * Phase 4.5 (DONE): center / rotation / width / depth grips routed through
  * `applyColumnGripDrag()` + `UpdateColumnParamsCommand`.
- * Phase 4.5b (deferred):
+ * Phase 4.5b (DONE): variant-specific grips για L-shape (arm-length / arm-width)
+ * + T-shape (flange-length / web-thickness) εκπέμπονται από το
+ * `getColumnGrips()` και διοχετεύονται μέσω του ίδιου command path. Το
+ * `edge`-typed grip mapping πέφτει στο `'vertex'` bucket — αρκετό για το
+ * canvas pass.
+ * Phase 4.5c+ (deferred):
  *   - Hatch patterns per material category
- *   - Variant-specific arm/flange grips (L-shape, T-shape)
  *   - Anchor cycling visual preview (ghost at all 9 positions)
  *
  * ADR-040 micro-leaf compliance: pure renderer class με ZERO subscriptions
@@ -89,11 +93,14 @@ export class ColumnRenderer extends BaseEntityRenderer {
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
-    // ADR-363 Phase 4.5 — parametric column grips (center / rotation / width /
-    // depth). Commit routed through `applyColumnGripDrag()` +
-    // `UpdateColumnParamsCommand` by `commitColumnGripDrag`
-    // (grip-commit-adapter). Phase 4.5b will add variant-specific arm/flange
-    // grips για L-shape / T-shape και anchor-cycle visual preview.
+    // ADR-363 Phase 4.5 + 4.5b — parametric column grips:
+    //   base (4): center / rotation / width / depth
+    //   L-shape (+2): arm-length / arm-width (Phase 4.5b)
+    //   T-shape (+2): flange-length / web-thickness (Phase 4.5b)
+    //   circular (2): center / width-as-diameter
+    // Commit routed through `applyColumnGripDrag()` + `UpdateColumnParamsCommand`
+    // by `commitColumnGripDrag` (grip-parametric-commits). Phase 4.5c+ will
+    // add hatch patterns, anchor-cycle preview, snap-to-wall corners.
     if (!isColumnEntity(entity)) return [];
     return getColumnGrips(entity as ColumnEntity).map((g) => ({
       id: `${g.entityId}-grip-${g.gripIndex}`,

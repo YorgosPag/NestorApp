@@ -123,11 +123,11 @@ export type BeamGripKind =
   | 'beam-width';
 
 /**
- * ADR-363 Phase 4.5 — Column grip kind (parametric grip type).
+ * ADR-363 Phase 4.5 + 4.5b — Column grip kind (parametric grip type).
  * Routes commit through `applyColumnGripDrag()` + `UpdateColumnParamsCommand`
  * instead of the standard `StretchEntityCommand` vertex path.
  *
- * Grips exposed by `ColumnEntity` (`bim/columns/column-grips.ts`):
+ * Base grips exposed by `ColumnEntity` (`bim/columns/column-grips.ts`):
  *   - `column-center`   → translate `position` (anchor stays)
  *   - `column-rotation` → rotate γύρω από `position` (non-circular only)
  *   - `column-width`    → resize width on the far edge from anchor (= diameter
@@ -135,13 +135,39 @@ export type BeamGripKind =
  *   - `column-depth`    → resize depth on the far edge from anchor (skipped
  *                          για `circular` kind)
  *
- * Variant-specific arm/flange grips (L-shape, T-shape) DEFER στο Phase 4.5b.
+ * Variant-specific grips (Phase 4.5b):
+ *   - `column-arm-length`    → L-shape only (`params.lshape.armLength`,
+ *                               Y-axis δευτερεύοντος βραχίονα). Asymmetric
+ *                               edge handle στο inner-corner edge κατά τοπικό
+ *                               +Y. Drag projection × 1.
+ *   - `column-arm-width`     → L-shape only (`params.lshape.armWidth`,
+ *                               πάχος δευτερεύοντος βραχίονα). Asymmetric
+ *                               edge handle στο inner-corner edge κατά τοπικό
+ *                               +X. Drag projection × 1.
+ *   - `column-flange-length` → T-shape only (`params.tshape.flangeLength`,
+ *                               X-axis πέλματος). Symmetric — handle στη
+ *                               δεξιά πλευρά πέλματος. Drag projection × 2
+ *                               (mirror του column-width symmetric pattern).
+ *   - `column-web-thickness` → T-shape only (`params.tshape.webThickness`,
+ *                               πάχος κορμού κατά X). Symmetric — handle
+ *                               στη δεξιά πλευρά κορμού. Drag projection × 2.
+ *
+ * Όλες οι νέες διαστάσεις clamp στο `MIN_COLUMN_DIMENSION_MM` (250 mm). Όταν
+ * `params.lshape` / `params.tshape` undefined, ο handler materializes defaults
+ * από `width/3 + depth/3` (L) ή `width + depth/3` (T) — mirror των
+ * `computeColumnGeometry` defaults — ώστε το επόμενο drag να ξεκινά από τα
+ * ήδη υπολογισμένα values. Circular και rectangular kinds δεν εκπέμπουν
+ * variant-specific grips.
  */
 export type ColumnGripKind =
   | 'column-center'
   | 'column-rotation'
   | 'column-width'
-  | 'column-depth';
+  | 'column-depth'
+  | 'column-arm-length'
+  | 'column-arm-width'
+  | 'column-flange-length'
+  | 'column-web-thickness';
 
 /**
  * ADR-359 Phase 11 — XLine grip kind.

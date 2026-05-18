@@ -413,6 +413,13 @@
         "cancelCurrent": "Cancel Current",
         "finishChain": "Finish Chain"
       }
+    },
+    "constructionLayerScaffold": {
+      "title": "Create Construction Layer?",
+      "body": "We recommend a separate layer for XLINE/RAY:\n• Name: Construction\n• Linetype: Dashed\n• Color: Cyan (ACI 4)\n• Plottable: No",
+      "create": "Create and use",
+      "skip": "No thanks",
+      "neverAsk": "Don't ask again"
     }
   }
 }

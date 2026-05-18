@@ -359,6 +359,10 @@ export class DxfRenderer {
         const so = entity.slabOpeningEntity;
         return { ...base, type: 'slab-opening', kind: so.kind, params: so.params, geometry: so.geometry, validation: so.validation } as unknown as Entity;
       }
+      case 'xline':
+        return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
+      case 'ray':
+        return { ...base, type: 'ray', basePoint: entity.rayEntity.basePoint, direction: entity.rayEntity.direction } as unknown as Entity;
       default: {
         const exhaustiveCheck: never = entity;
         return exhaustiveCheck;
