@@ -517,12 +517,16 @@
       "developer": "Developer",
       "ai": "AI",
       "window": "Window",
+<<<<<<< Updated upstream
       "dimensions": "Dimensions",
       "dimStyle": "Style",
       "dimOverride": "Override",
       "dimText": "Text",
       "dimProperties": "Properties",
       "bim": "Structural"
+=======
+      "layers": "Layers"
+>>>>>>> Stashed changes
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -549,6 +553,7 @@
       "unpin": "Unpin panel"
     },
     "commands": {
+      "currentLayerPicker": "Current Layer",
       "line": "Line",
       "lineVariants": {
         "line": "Line",
@@ -907,6 +912,29 @@
       "aiAssistant": "AI Assistant",
       "layering": "Layer Drawing",
       "fullscreen": "Full Screen"
+    }
+  },
+  "layerPicker": {
+    "placeholder": "Select layer",
+    "tooltipCurrent": "Current layer: {name}",
+    "tooltipEmpty": "No layer selected",
+    "searchPlaceholder": "Search layers…",
+    "empty": "No layers found",
+    "mostUsed": "Recent",
+    "newLayer": "New Layer",
+    "openManager": "Layer Manager",
+    "toastChanged": "Current layer: {name}",
+    "category": {
+      "architectural": "Architectural",
+      "structural": "Structural",
+      "electrical": "Electrical",
+      "mechanical": "Mechanical",
+      "plumbing": "Plumbing",
+      "fire": "Fire",
+      "civil": "Civil",
+      "telecom": "Telecom",
+      "interior": "Interior",
+      "general": "General"
     }
   },
   "array": {
