@@ -21,6 +21,11 @@ export const DIM_RIBBON_KEYS = {
     rotation:      'dim.text.rotation',
     resetPosition: 'dim.text.resetPosition',
     override:      'dim.text.override',
+    tfillToggle:   'dim.text.tfillToggle',
+  },
+  modify: {
+    dimBreak: 'dim.modify.dimBreak',
+    dimSpace: 'dim.modify.dimSpace',
   },
   properties: {
     layer:           'dim.properties.layer',
