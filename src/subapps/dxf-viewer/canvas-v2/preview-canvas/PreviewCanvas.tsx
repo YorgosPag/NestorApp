@@ -27,7 +27,7 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { PreviewRenderer, type PreviewRenderOptions } from './PreviewRenderer';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
-import type { ViewTransform } from '../../rendering/types/Types';
+import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity } from '../../hooks/drawing/useUnifiedDrawing';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE (2026-01-27): Event Bus for drawing completion notification - ADR-040
@@ -77,6 +77,17 @@ export interface PreviewCanvasHandle {
    * Get the underlying canvas element
    */
   getCanvas: () => HTMLCanvasElement | null;
+
+  /**
+   * Draw polar tracking alignment path + tooltip (ADR-357 Phase 1).
+   * Call AFTER drawPreview — overlays on top without clearing.
+   */
+  drawPolarTrackingLine: (
+    ref: Point2D,
+    snappedAngle: number,
+    label: string,
+    cursorWorld: Point2D,
+  ) => void;
 }
 
 // ============================================================================
@@ -275,6 +286,25 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
          * 🏢 ENTERPRISE: Get canvas element
          */
         getCanvas: () => canvasRef.current,
+
+        /** ADR-357 Phase 1: Polar tracking alignment path overlay */
+        drawPolarTrackingLine: (
+          ref: Point2D,
+          snappedAngle: number,
+          label: string,
+          cursorWorld: Point2D,
+        ) => {
+          const renderer = rendererRef.current;
+          if (!renderer) return;
+          renderer.drawPolarTrackingLine(
+            ref,
+            snappedAngle,
+            label,
+            cursorWorld,
+            transformRef.current,
+            viewportRef.current,
+          );
+        },
       }),
       []
     );

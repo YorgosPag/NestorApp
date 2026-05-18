@@ -11,6 +11,7 @@ import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils'
 import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS } from '../../rendering/entities/shared/distance-label-utils';
 import { getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
 import { OPACITY } from '../../config/color-config';
+import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { PreviewGripPoint } from '../../types/entities';
 
@@ -105,6 +106,50 @@ export class PreviewRenderer {
 
     // Immediate render (no RAF wait)
     this.render();
+  }
+
+  /**
+   * Draw polar tracking alignment path + tooltip (ADR-357 Phase 1).
+   * Called AFTER drawPreview so it overlays on top without clearing.
+   * The next drawPreview call will clear this automatically.
+   */
+  drawPolarTrackingLine(
+    ref: Point2D,
+    snappedAngle: number,
+    label: string,
+    cursorWorld: Point2D,
+    transform: ViewTransform,
+    viewport: Viewport,
+  ): void {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+
+    const refScreen = CoordinateTransforms.worldToScreen(ref, transform, viewport);
+    const cursorScreen = CoordinateTransforms.worldToScreen(cursorWorld, transform, viewport);
+
+    // Direction in screen space — flip Y since screen Y is down
+    const rad = degToRad(snappedAngle);
+    const dx = Math.cos(rad);
+    const dy = -Math.sin(rad);
+    const EXTEND = 6000;
+
+    ctx.save();
+    ctx.setLineDash([8, 5]);
+    ctx.strokeStyle = '#00CC44';
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.75;
+    ctx.beginPath();
+    ctx.moveTo(refScreen.x, refScreen.y);
+    ctx.lineTo(refScreen.x + dx * EXTEND, refScreen.y + dy * EXTEND);
+    ctx.stroke();
+
+    // Tooltip near cursor
+    ctx.setLineDash([]);
+    ctx.font = '11px monospace';
+    ctx.fillStyle = '#00CC44';
+    ctx.globalAlpha = 0.9;
+    ctx.fillText(label, cursorScreen.x + 14, cursorScreen.y - 8);
+    ctx.restore();
   }
 
   /** Clear preview immediately */

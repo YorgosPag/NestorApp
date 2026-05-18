@@ -1753,3 +1753,11 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-18: ADR-363 Phase 1B — EntityRendererComposite registers WallRenderer
 
 `EntityRendererComposite.ts` registers `WallRenderer` for `'wall'` entity type (ADR-040 micro-leaf pattern). WallRenderer renders plan-view BIM walls (hover halo, fill, edges, axis). Cardinal rules maintained.
+
+## 2026-05-18: ADR-357 Phase 1 — PreviewRenderer/PreviewCanvas polar tracking line
+
+`PreviewRenderer.ts` adds `drawPolarTrackingLine(ctx, snap, angle)` for dashed green alignment path. `PreviewCanvas.tsx` passes polar state to renderer. No store subscriptions added. Cardinal rules maintained.
+
+## 2026-05-18: ADR-357 Phase 1 — PreviewRenderer drawPolarTrackingLine
+
+`PreviewRenderer.ts` adds `drawPolarTrackingLine(ctx, snapPoint, angleDeg)`: dashed green radial path at locked polar angle. Stateless render function — receives all state as params. Cardinal rules maintained.
