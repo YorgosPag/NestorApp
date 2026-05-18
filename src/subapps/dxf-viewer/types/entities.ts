@@ -310,27 +310,29 @@ import type {
   BoundingBox3D,
 } from '../bim/types/bim-base';
 
-// ─── BIM entity concrete types (Phase 0 stubs — params/geometry filled Phase 1+) ─
-export type WallKind = 'straight' | 'curved' | 'polyline';
+// ─── BIM entity concrete types ──────────────────────────────────────────────
+// ADR-363 Phase 1: Wall promoted to concrete types (WallParams + WallGeometry).
+// Other entities (opening/slab/slab-opening/column/beam) remain stubs until
+// their respective phases (Phase 2-5). Wall types live in `bim/types/wall-types.ts`
+// per N.7.1 SRP — this file re-exports them so legacy imports keep working.
 export type OpeningKind = 'door' | 'window' | 'sliding-door' | 'french-door' | 'fixed';
 export type SlabKind = 'floor' | 'ceiling' | 'roof' | 'ground' | 'foundation';
 export type SlabOpeningKind = 'shaft' | 'well' | 'duct' | 'chimney';
 export type ColumnKind = 'rectangular' | 'circular' | 'L-shape' | 'T-shape';
 export type BeamKind = 'straight' | 'curved' | 'cantilever';
 
-// Minimal geometry stub — full geometry types in bim/types/*-types.ts (Phase 1+)
+// Minimal geometry stub — full geometry types in bim/types/*-types.ts (Phase 2+)
 interface BimGeometryStub {
   readonly bbox: BoundingBox3D;
 }
 
-// Minimal params stubs — full params in bim/types/*-types.ts (Phase 1+)
+// Minimal params stubs — full params in bim/types/*-types.ts (Phase 2+)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type BimParamsStub = Record<string, any>;
 
-export interface WallEntity extends BimEntity<WallKind, BimParamsStub, BimGeometryStub> {
-  type: 'wall';
-  hostedOpeningIds?: readonly string[];
-}
+// ADR-363 Phase 1: Wall concrete types re-exported from bim/types/wall-types.ts.
+export type { WallKind, WallCategory, WallParams, WallGeometry, WallEntity } from '../bim/types/wall-types';
+export type { WallDna, WallDnaLayer, WallLayerSide } from '../bim/types/wall-dna-types';
 
 export interface OpeningEntity extends BimEntity<OpeningKind, BimParamsStub, BimGeometryStub> {
   type: 'opening';
