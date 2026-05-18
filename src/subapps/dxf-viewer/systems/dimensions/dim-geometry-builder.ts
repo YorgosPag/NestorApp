@@ -116,13 +116,16 @@ export interface AngularDimGeometry extends DimGeometryBase {
  * Radial family (radius / diameter / arcLength / joggedRadius) — main dim
  * geometry is a polyline leader (`leaderPath`). `isDiameter` selects Ø vs R
  * prefix in the text formatter (consumer). `centerMarkExtent` carries DIMCEN
- * forward for Phase L1 (renderer ignores until then).
+ * and `centerPoint` carries the circle/arc center for Phase L1 rendering.
  */
 export interface RadialDimGeometry extends DimGeometryBase {
   kind: 'radial';
   leaderPath: readonly Point2D[];
   isDiameter: boolean;
+  /** DIMCEN value (positive=mark, negative=mark+extensions, 0=none). Phase L1. */
   centerMarkExtent?: number;
+  /** Center of the circle/arc for center mark rendering. Phase L1. */
+  centerPoint?: Point2D;
 }
 
 export type DimGeometry =

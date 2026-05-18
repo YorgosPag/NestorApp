@@ -246,6 +246,57 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
             },
           ],
         },
+        // ADR-362 Phase K3 — DIMTFILL background mask toggle
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'dim.text.tfillToggle',
+                labelKey: 'ribbon.commands.dimTfillToggle',
+                icon: 'dim-tfill-toggle',
+                commandKey: DIM_RIBBON_KEYS.text.tfillToggle,
+                comingSoon: true,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    // (E) Τροποποίηση — DIMBREAK + DIMSPACE (ADR-362 Phase K)
+    {
+      id: 'dim-modify',
+      labelKey: 'ribbon.panels.dimModify',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'dim.modify.dimBreak',
+                labelKey: 'ribbon.commands.dimBreak',
+                icon: 'dim-break',
+                commandKey: DIM_RIBBON_KEYS.modify.dimBreak,
+                comingSoon: true,
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'dim.modify.dimSpace',
+                labelKey: 'ribbon.commands.dimSpace',
+                icon: 'dim-space',
+                commandKey: DIM_RIBBON_KEYS.modify.dimSpace,
+                comingSoon: true,
+              },
+            },
+          ],
+        },
       ],
     },
     // (D) Ιδιότητες — layer + annotation scale

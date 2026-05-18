@@ -2,19 +2,176 @@
 
 /**
  * ADR-362 Phase G1 — Pure UI component for dimension text override.
+ * ADR-362 Phase N4 — Field token autocomplete + syntax highlighting.
  *
  * Three modes:
  *   measured    — shows the computed measurement (userText = undefined / '<>')
  *   prefixSuffix — wraps the measurement: "<prefix><><suffix>"
- *   free        — replaces it entirely with user text (no '<>' token)
+ *   free        — replaces it entirely with user text (supports field tokens)
+ *
+ * N4 additions:
+ *   - FieldTokenInput: shows autocomplete dropdown when user types `<`
+ *   - ColoredPreview: renders field tokens in blue, DIESEL in orange
+ *   - Applied to all text inputs (prefix, suffix, free)
  *
  * No stores, no Firestore. Caller is responsible for saving via updateEntity.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useTranslation } from '@/i18n';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { parseFieldAST, FIELD_TOKEN_NAMES, type FieldTokenName } from '../../../systems/dimensions/dim-text-field-parser';
+import styles from './TextOverrideEditor.module.css';
+
+// ── Field token autocomplete data ─────────────────────────────────────────────
+
+interface TokenOption {
+  readonly token: FieldTokenName | '';
+  readonly display: string;
+}
+
+const AUTOCOMPLETE_OPTIONS: ReadonlyArray<TokenOption> = [
+  { token: '', display: '<>' },
+  ...FIELD_TOKEN_NAMES.map((name) => ({ token: name, display: `<${name}>` })),
+];
+
+function findOpenAngle(text: string, cursor: number): number | null {
+  const before = text.slice(0, cursor);
+  const lastOpen = before.lastIndexOf('<');
+  if (lastOpen === -1) return null;
+  return before.slice(lastOpen + 1).includes('>') ? null : lastOpen;
+}
+
+// ── ColoredPreview ─────────────────────────────────────────────────────────────
+
+function ColoredPreview({ text }: { text: string }) {
+  const ast = useMemo(() => parseFieldAST(text), [text]);
+  return (
+    <span className="font-mono">
+      {ast.map((node, i) => {
+        if (node.kind === 'literal') {
+          return <React.Fragment key={i}>{node.text}</React.Fragment>;
+        }
+        if (node.kind === 'diesel') {
+          return <span key={i} className={styles.dieselToken}>{node.raw}</span>;
+        }
+        const label = node.kind === 'measurement' ? '<>' : `<${node.name}>`;
+        return <span key={i} className={styles.fieldToken}>{label}</span>;
+      })}
+    </span>
+  );
+}
+
+// ── FieldTokenInput ────────────────────────────────────────────────────────────
+
+interface FieldTokenInputProps {
+  value: string;
+  onChange: (val: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  className?: string;
+  tokenLabels: Record<string, string>;
+}
+
+function FieldTokenInput({ value, onChange, disabled, placeholder, className, tokenLabels }: FieldTokenInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [openAngle, setOpenAngle] = useState<number | null>(null);
+  const [partial, setPartial] = useState('');
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  const suggestions = useMemo(() => {
+    if (openAngle === null) return [];
+    return AUTOCOMPLETE_OPTIONS.filter((opt) =>
+      opt.display.slice(1).toLowerCase().startsWith(partial),
+    );
+  }, [openAngle, partial]);
+
+  useEffect(() => { setActiveIdx(0); }, [suggestions.length]);
+
+  const insertToken = useCallback((option: TokenOption) => {
+    const cursor = inputRef.current?.selectionStart ?? value.length;
+    const anchor = openAngle ?? cursor;
+    const newVal = value.slice(0, anchor) + option.display + value.slice(cursor);
+    onChange(newVal);
+    setOpenAngle(null);
+    setPartial('');
+    const newCursor = anchor + option.display.length;
+    requestAnimationFrame(() => {
+      inputRef.current?.setSelectionRange(newCursor, newCursor);
+      inputRef.current?.focus();
+    });
+  }, [value, openAngle, onChange]);
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const newVal = e.target.value;
+    const cursor = e.target.selectionStart ?? newVal.length;
+    const newOpenAngle = findOpenAngle(newVal, cursor);
+    setOpenAngle(newOpenAngle);
+    setPartial(newOpenAngle !== null ? newVal.slice(newOpenAngle + 1, cursor).toLowerCase() : '');
+    onChange(newVal);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!suggestions.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIdx((i) => Math.min(i + 1, suggestions.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIdx((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      if (activeIdx >= 0 && activeIdx < suggestions.length) {
+        e.preventDefault();
+        insertToken(suggestions[activeIdx]);
+      }
+    } else if (e.key === 'Escape') {
+      setOpenAngle(null);
+    }
+  }
+
+  function handleBlur() {
+    setTimeout(() => setOpenAngle(null), 120);
+  }
+
+  return (
+    <div className={styles.fieldInputWrap}>
+      <Input
+        ref={inputRef}
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
+        disabled={disabled}
+        placeholder={placeholder}
+        className={className}
+        autoComplete="off"
+      />
+      {suggestions.length > 0 && (
+        <ul className={styles.suggestionList} role="listbox">
+          {suggestions.map((opt, i) => (
+            <li
+              key={opt.display}
+              role="option"
+              aria-selected={i === activeIdx}
+              className={i === activeIdx ? styles.suggestionItemActive : styles.suggestionItem}
+              onMouseDown={(e) => { e.preventDefault(); insertToken(opt); }}
+            >
+              <span className={styles.suggestionToken}>{opt.display}</span>
+              {opt.token !== '' && (
+                <span className={styles.suggestionLabel}>
+                  {tokenLabels[opt.token] ?? opt.token}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
 
 type OverrideMode = 'measured' | 'prefixSuffix' | 'free';
 
@@ -54,6 +211,14 @@ export function TextOverrideEditor({
   const [freeText, setFreeText] = useState<string>(() =>
     detectMode(userText) === 'free' ? (userText ?? '') : '',
   );
+
+  const tokenLabels = useMemo<Record<string, string>>(() => {
+    const result: Record<string, string> = {};
+    for (const name of FIELD_TOKEN_NAMES) {
+      result[name] = t(`panels.dimensions.textOverride.fieldTokens.${name}`);
+    }
+    return result;
+  }, [t]);
 
   useEffect(() => {
     const newMode = detectMode(userText);
@@ -97,14 +262,9 @@ export function TextOverrideEditor({
     onChange(val || undefined);
   }
 
-  const preview =
-    mode === 'measured'
-      ? k('previewMeasured')
-      : mode === 'prefixSuffix'
-        ? `${prefix || ''}<Τιμή>${suffix || ''}`
-        : freeText || k('previewEmpty');
-
   const MODES: OverrideMode[] = ['measured', 'prefixSuffix', 'free'];
+
+  const showFieldInputs = mode === 'prefixSuffix' || mode === 'free';
 
   return (
     <div className="flex flex-col gap-3 py-1">
@@ -127,37 +287,54 @@ export function TextOverrideEditor({
 
       {mode === 'prefixSuffix' && (
         <div className="flex items-center gap-2">
-          <Input
+          <FieldTokenInput
             value={prefix}
-            onChange={(e) => handlePrefixChange(e.target.value)}
+            onChange={handlePrefixChange}
             disabled={readOnly}
             placeholder={k('placeholderPrefix')}
             className="h-7 text-xs w-24"
+            tokenLabels={tokenLabels}
           />
           <span className="text-xs font-mono text-muted-foreground select-none">&lt;&gt;</span>
-          <Input
+          <FieldTokenInput
             value={suffix}
-            onChange={(e) => handleSuffixChange(e.target.value)}
+            onChange={handleSuffixChange}
             disabled={readOnly}
             placeholder={k('placeholderSuffix')}
             className="h-7 text-xs w-24"
+            tokenLabels={tokenLabels}
           />
         </div>
       )}
 
       {mode === 'free' && (
-        <Input
+        <FieldTokenInput
           value={freeText}
-          onChange={(e) => handleFreeChange(e.target.value)}
+          onChange={handleFreeChange}
           disabled={readOnly}
           placeholder={k('placeholderFree')}
           className="h-7 text-xs"
+          tokenLabels={tokenLabels}
         />
+      )}
+
+      {showFieldInputs && !readOnly && (
+        <p className="text-xs text-muted-foreground">{k('fieldHint')}</p>
       )}
 
       <p className="text-xs text-muted-foreground leading-tight">
         <span className="font-medium">{k('preview')}: </span>
-        <span className="font-mono">{preview}</span>
+        {mode === 'measured' ? (
+          <span className="font-mono">{k('previewMeasured')}</span>
+        ) : mode === 'prefixSuffix' ? (
+          <span className="font-mono">
+            <ColoredPreview text={prefix} />
+            <span className="text-blue-400 font-semibold">&lt;&gt;</span>
+            <ColoredPreview text={suffix} />
+          </span>
+        ) : (
+          <ColoredPreview text={freeText || k('previewEmpty')} />
+        )}
       </p>
     </div>
   );

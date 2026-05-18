@@ -1,0 +1,70 @@
+.fieldInputWrap {
+  position: relative;
+  width: 100%;
+}
+
+.suggestionList {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  min-width: 180px;
+  margin-top: 2px;
+  padding: 4px 0;
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  list-style: none;
+}
+
+.suggestionItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: hsl(var(--foreground));
+}
+
+.suggestionItem:hover {
+  background: hsl(var(--accent));
+}
+
+.suggestionItemActive {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.suggestionToken {
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  color: #60a5fa;
+}
+
+.suggestionItemActive .suggestionToken {
+  color: #93c5fd;
+}
+
+.suggestionLabel {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.7rem;
+}
+
+/* Syntax highlight classes used in ColoredPreview */
+.fieldToken {
+  color: #60a5fa;
+  font-weight: 600;
+}
+
+.dieselToken {
+  color: #fb923c;
+  font-weight: 600;
+}

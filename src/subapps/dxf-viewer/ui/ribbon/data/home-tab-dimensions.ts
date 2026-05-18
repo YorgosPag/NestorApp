@@ -126,5 +126,34 @@ export const HOME_DIMENSIONS_PANEL: RibbonPanelDef = {
         },
       ],
     },
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'split',
+          size: 'small',
+          command: {
+            id: 'dim.centerMark',
+            labelKey: 'ribbon.commands.dimCenterMark',
+            icon: 'dim-center-mark',
+            commandKey: 'dim-center-mark',
+          },
+          variants: [
+            {
+              id: 'dim.centerMark',
+              labelKey: 'ribbon.commands.dimCenterMark',
+              icon: 'dim-center-mark',
+              commandKey: 'dim-center-mark',
+            },
+            {
+              id: 'dim.centerLine',
+              labelKey: 'ribbon.commands.dimCenterLine',
+              icon: 'dim-centerline',
+              commandKey: 'dim-centerline',
+            },
+          ],
+        },
+      ],
+    },
   ],
 };

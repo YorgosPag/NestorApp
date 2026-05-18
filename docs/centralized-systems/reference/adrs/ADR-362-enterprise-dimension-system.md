@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | 🟡 IN PROGRESS — Groups A-O1 done (all pending commit), next: O2 (DXF round-trip tests) |
+| **Status** | ✅ IMPLEMENTED — ADR-362 FULLY IMPLEMENTED 2026-05-18. Groups A→O3 complete (all pending commit). |
 | **Date** | 2026-05-17 |
 | **Last Updated** | 2026-05-18 |
 | **Category** | DXF Viewer — Annotation / Dimensions |
@@ -14,7 +14,7 @@
 
 ## Summary
 
-Sistema enterprise di dimension annotations per il DXF Viewer subapp, combinando i punti di forza di AutoCAD, BricsCAD, Revit con gli standard ISO 129 / ASME Y14.5. Supporto completo per tutti i 10 tipi DIMENSION (Linear/Aligned/Angular/Radial/Diameter/Ordinate/Arc-length/Jogged/Baseline/Continued), 3 DIMSTYLE template built-in configurabili, Revit-style annotation scaling, native DXF round-trip, UI integrato nel left FloatingPanel (4° tab) + contextual ribbon tab.
+**✅ FULLY IMPLEMENTED 2026-05-18.** Sistema enterprise di dimension annotations per il DXF Viewer subapp, combinando i punti di forza di AutoCAD, BricsCAD, Revit con gli standard ISO 129 / ASME Y14.5. Supporto completo per tutti i 10 tipi DIMENSION (Linear/Aligned/Angular/Radial/Diameter/Ordinate/Arc-length/Jogged/Baseline/Continued), 3 DIMSTYLE template built-in configurabili, Revit-style annotation scaling, native DXF round-trip, UI integrato nel left FloatingPanel (4° tab) + contextual ribbon tab. Test suite: 7 suites × ~200 tests — dim-geometry-builder, dim-association-graph, dim-association-service, dim-text-formatter, dim-text-field-parser, dim-text-field-evaluator, center-mark-builder, dim-break-engine, dim-space-engine, dxf-dimstyle-writer, dxf-dimension-writer, dim-text-formatter-fields — all PASS.
 
 ---
 
@@ -485,6 +485,58 @@ Dopo ogni Phase 5A-5J:
 
 ---
 
+## 10. Smoke Test Checklist (manual verification — Phase O3)
+
+Εκτελείται μία φορά μετά το commit όλων των phases. Τρέχει στο dev server (`localhost:3000`).
+
+### Linear / Aligned Dimension creation
+- [ ] Άνοιγμα DXF Viewer → Home tab → Panel "Διαστάσεις" ορατό
+- [ ] Smart DIM ενεργοποιείται → κλικ 2 σημεία → δημιουργία LinearDimension
+- [ ] Aligned DIM (dropdown) → κλικ 2 σημεία διαγώνια → measurement parallel στη γραμμή
+- [ ] Baseline DIM → αλυσίδα από τελευταία dim → 3 parallel dim lines
+- [ ] Continued DIM → αλυσίδα end-to-end → ενιαία αλυσίδα
+
+### Angular / Radial Dimension creation
+- [ ] Angular (2L) → επιλογή 2 γραμμών → γωνιακή διάσταση
+- [ ] Radius → κλικ σε κύκλο/arc → ακτίνα με leader
+- [ ] Diameter → κλικ σε κύκλο → διάμετρος Ø
+- [ ] Arc Length → κλικ σε arc → μήκος τόξου ⌒
+
+### Text override dialog + field token autocomplete
+- [ ] Επιλογή dimension → contextual tab "Διάσταση" εμφανίζεται
+- [ ] "Παράκαμψη Κειμένου" button → ανοίγει TextOverrideDialog
+- [ ] Mode `measured` → `<>` preview δείχνει calculated value
+- [ ] Mode `prefix/suffix` → π.χ. `L=<>mm`
+- [ ] Mode `free text` → πληκτρολόγηση `<` → dropdown με 12 tokens
+- [ ] Token autocomplete: ArrowUp/Down/Enter/Tab εισάγουν token
+- [ ] ColoredPreview: field tokens μπλε, DIESEL πορτοκαλί, literals plain
+
+### Context menu — 9 actions
+- [ ] Right-click σε dimension → DimensionContextMenu εμφανίζεται
+- [ ] Precision submenu (5 επίπεδα)
+- [ ] "Επαναφορά Κειμένου" → userText = undefined
+- [ ] "Παράκαμψη Κειμένου" → ανοίγει dialog
+- [ ] "Εφαρμογή Στυλ" submenu → DIMSTYLE list
+
+### Center marks rendering
+- [ ] Radius dim με DIMCEN > 0 → cross mark στο κέντρο
+- [ ] DIMCEN < 0 → cross + 4 extension lines πέρα από κύκλο
+- [ ] DIMCEN = 0 → κανένα center mark
+
+### DIMSTYLE manager (FloatingPanel 4° tab)
+- [ ] Left sidebar → tab "Διαστάσεις" → λίστα styles (ISO-25, ISO-100, ISO-129)
+- [ ] Create new style → accordion editor (6 sections)
+- [ ] DimStylePreview SVG ανανεώνεται live
+- [ ] Set Active → αλλαγή active style
+- [ ] Delete custom style → AlertDialog confirm
+
+### Tolerance / Limits rendering
+- [ ] DIMTOL = true → ±0.10 εμφανίζεται δίπλα στο κείμενο
+- [ ] DIMLIM = true → upper/lower limits
+- [ ] DIMLIM overrides DIMTOL (AutoCAD parity)
+
+---
+
 ## 6. Future Items (post-Phase 1)
 
 - **Multi-viewport sheets**: future ADR — abilita full annotative entity-driven mode (upgrade D3 da Revit-style a AutoCAD-style senza schema break)
@@ -760,6 +812,19 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
   - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/TextOverrideEditor.module.css` — Autocomplete dropdown styles (popover-themed, Radix-compatible vars), suggestion item hover/active states, `.fieldToken` (blue) + `.dieselToken` (orange) classes.
   - **MOD** `src/i18n/locales/el/dxf-viewer-panels.json` + `en/` — `panels.dimensions.textOverride.fieldHint` + `panels.dimensions.textOverride.fieldTokens.*` (12 token descriptions in Greek + English).
   - **Next**: Phase O1 — Test suite for builders + renderer.
+
+- **2026-05-18 (Phase O2 DONE — Orchestrator dispatch + Associativity tests; 46 tests PASS.)** — Three new test files covering the `buildDimensionGeometry` orchestrator and the full J1/J2 associativity pipeline.
+  - **NEW** `systems/dimensions/__tests__/dim-geometry-builder.test.ts` — 12 tests: `buildDimensionGeometry` dispatch for all 11 DimensionType variants (linear/aligned → `kind=linear`; angular2L/angular3P → `kind=angular`; radius/diameter/arcLength/joggedRadius → `kind=radial`; ordinate → `kind=linear`; baseline/continued via lookup → `kind=linear`); throws with entity id for unknown type. **12/12 PASS**.
+  - **NEW** `systems/dimensions/__tests__/dim-association-graph.test.ts` — 10 tests: empty state, rebuild with no-assoc dims, single-dim index, `getDimIds` found/missing, `has()` true/false, size counts distinct geos (not dims), rebuild clears stale state, undefined associations handled. **10/10 PASS**.
+  - **NEW** `systems/dimensions/__tests__/dim-association-service.test.ts` — 24 tests across 6 suites: `recomputeAssociatedDefPoint` (endpoint line start/end/undefined/polyline-clamp/mismatch, midpoint line/polyline/mismatch, center circle/arc/mismatch, intersection→null, nearest→null); `applyAssociationUpdates` (no-assoc same-ref, undefined-assoc same-ref, orphan preserve+count, updated-geo new entity, same-position identity guard, multi-assoc batch update, mix orphan+updated). **24/24 PASS**.
+  - **Note**: `utils/__tests__/dxf-dimension-writer.test.ts` already ships 72/72 tests (H2+H3, all 11 variants, group-code roundtrip verification) — no new DXF writer tests needed for O2.
+  - **Next**: Phase O3 — Fields passthrough + formatter edge-case tests + ADR finalize. ✅ DONE 2026-05-18.
+
+- **2026-05-18 (Phase O3 DONE — Field token passthrough + formatter edge-case tests + ADR finalized; 14 tests PASS. Group O CLOSED. ADR-362 FULLY IMPLEMENTED.)** — Terminal phase of the ADR-362 test suite.
+  - **NEW** `systems/dimensions/__tests__/dim-text-formatter-fields.test.ts` — 14 tests in 2 suites: `composePrimaryText — field token passthrough` (8 tests: all 12 known tokens in `FIELD_TOKEN_NAMES` pass verbatim; `<>` adjacent to token only substitutes `<>`; DIESEL expression verbatim; nested DIESEL verbatim); `composeFullDimText — edge cases` (6 tests: zero measurement → 0.00, negative measurement → formatted, field token with DIMTOL — primary is token + tolerances computed, field token with DIMLIM — primary is token + limits computed, very large measurement no overflow, dimlfac scaling). **14/14 PASS**.
+  - **ADR finalized**: Status → ✅ IMPLEMENTED, §1 summary updated with test count, §10 Smoke Test Checklist added.
+  - **MEMORY.md updated**: `project_adr362_dimension_system.md` → ADR-362 FULLY IMPLEMENTED.
+  - **Group O CLOSED. ADR-362 FULLY IMPLEMENTED 2026-05-18.**
 
 - **2026-05-18 (Phase O1 DONE — Test suite for new dimension systems: 5 suites, 95 tests, all PASS.)** — GOL-grade test coverage for all Phase K1/K2/L1/N1/N2+N3 systems.
   - **NEW** `systems/dimensions/__tests__/dim-text-field-parser.test.ts` — 30 tests (3 suites): `parseFieldAST` (20 cases: empty, `<>`, all 12 known tokens, unknown token → Literal, DIESEL expr, nested DIESEL, mixed prefix/suffix/text, unclosed `<`); `hasFieldSyntax` (5 cases); `extractFieldNodes` (2 cases).
