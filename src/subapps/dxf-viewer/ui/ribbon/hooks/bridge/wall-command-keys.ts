@@ -58,3 +58,21 @@ export const WALL_RIBBON_KEYS_ACTIONS = {
 export const WALL_RIBBON_BADGE_KEYS = {
   violations: 'wall.badge.violations',
 } as const;
+
+// ─── Type guards (used by useRibbonCommands composer) ────────────────────────
+
+const WALL_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(WALL_RIBBON_NUMBER_KEYS);
+const WALL_STRING_KEY_SET: ReadonlySet<string> = new Set<string>(WALL_RIBBON_STRING_KEYS);
+const WALL_TOGGLE_KEY_SET: ReadonlySet<string> = new Set<string>(WALL_RIBBON_TOGGLE_KEYS);
+
+export function isWallRibbonKey(commandKey: string): boolean {
+  return WALL_NUMBER_KEY_SET.has(commandKey);
+}
+
+export function isWallRibbonStringKey(commandKey: string): boolean {
+  return WALL_STRING_KEY_SET.has(commandKey);
+}
+
+export function isWallRibbonToggleKey(commandKey: string): boolean {
+  return WALL_TOGGLE_KEY_SET.has(commandKey);
+}
