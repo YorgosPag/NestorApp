@@ -9,7 +9,10 @@ import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE ADR-082: Centralized number formatting (replaces .toFixed())
 import { getFormatter } from '../../../formatting';
-import { useCursor } from '../../cursor';
+// ADR-357 Phase 2a: SSoT toggle for Dynamic Input (status bar / Firestore-backed) —
+// replaces legacy `settings.behavior.dynamic_input` cursor flag.
+import { useCadToggles } from '../../../hooks/common/useCadToggles';
+import { isInteractiveTool } from '../../tools/ToolStateManager';
 import { CADFeedback } from '../../../utils/feedback-utils';
 import { DynamicInputFields } from './DynamicInputFields';
 import { DynamicInputHeader } from './DynamicInputHeader';
@@ -44,7 +47,8 @@ export default function DynamicInputOverlay({
   tempPoints = null
 }: DynamicInputOverlayProps) {
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  const { settings } = useCursor();
+  // ADR-357 Phase 2a — dynInput is the canonical Dynamic Input enable flag (status-bar toggle).
+  const { dynInput } = useCadToggles();
   const colors = useSemanticColors();
   
   // Centralized state management
@@ -83,37 +87,32 @@ export default function DynamicInputOverlay({
     activeTool: activeTool || 'select'
   });
 
-  // Ενεργοποίηση δυναμικής εισαγωγής για συγκεκριμένα εργαλεία
+  // ADR-357 Phase 2a §5.1 — Dynamic Input visibility gate.
+  // Source of truth: `useCadToggles().dynInput.on` (status-bar toggle, Firestore-persisted).
+  // Mount window: any interactive tool (drawing/measurement) + stair edge case.
   const shouldShowDynamicInput = useCallback(() => {
-    if (!settings.behavior.dynamic_input || !isActive) {
+    if (!dynInput.on || !isActive) {
       return false;
     }
-    
-    // Εμφάνιση για εργαλεία σχεδίασης και μέτρησης
-    // ADR-358 Phase 7b2b-β Stream E — 'stair' added: rise/tread/width inline editor
-    // visible from tool activation (industry convergence, see useDynamicInputLayout).
-    const drawingTools = ['line', 'rectangle', 'circle', 'circle-diameter', 'circle-2p-diameter', 'polyline', 'measure-angle', 'polygon', 'ruler', 'measure-distance', 'measure-area', 'measure-distance', 'stair'];
 
-    // Stair tool: show as soon as activated, no cursorPosition prerequisite
-    // (params editable before first click — industry pre-set workflow).
+    // Stair tool — params editable before first click (ADR-358 Phase 7b2b-β Stream E).
     if (activeTool === 'stair') {
       return true;
     }
-    
-    // Για circle tools, εμφάνιση ανεξάρτητα από cursorPosition
-    if ((activeTool === 'circle' || activeTool === 'circle-diameter' || activeTool === 'circle-2p-diameter') && drawingTools.includes(activeTool)) {
+
+    // Circle and measurement tools — show immediately on activation.
+    const showWithoutCursor = new Set([
+      'circle', 'circle-diameter', 'circle-2p-diameter',
+      'measure-distance', 'measure-area', 'measure-angle',
+    ]);
+    if (showWithoutCursor.has(activeTool)) {
       return true;
     }
-    
-    // Για measurement tools που χρειάζονται πολλαπλά clicks, εμφάνιση πάντα
-    const measurementTools = ['measure-distance', 'measure-area', 'measure-angle'];
-    if (measurementTools.includes(activeTool)) {
-      return true;
-    }
-    
-    // Για άλλα tools, χρειάζεται cursorPosition
-    return cursorPosition && drawingTools.includes(activeTool);
-  }, [settings.behavior.dynamic_input, isActive, cursorPosition, activeTool]);
+
+    // Other interactive drawing tools — require a cursor position so the overlay
+    // anchors to the viewport (avoids stale render on tool switch).
+    return Boolean(cursorPosition) && isInteractiveTool(activeTool);
+  }, [dynInput.on, isActive, cursorPosition, activeTool]);
 
   // Create remaining interface implementations για το keyboard hook
   const validationActions = { normalizeNumber, isValidNumber };
@@ -250,7 +249,7 @@ export default function DynamicInputOverlay({
     hideAngleLengthFieldsRef,
   });
 
-  // Real-time coordinates hook
+  // Real-time coordinates hook (ADR-357 Phase 2a — live Length + Angle readout).
   useDynamicInputRealtime({
     mouseWorldPosition,
     showInput,
@@ -261,6 +260,7 @@ export default function DynamicInputOverlay({
     setXValue,
     setYValue,
     setLengthValue,
+    setAngleValue,
     setRadiusValue,
     setShowLengthDuringDraw,
   });
