@@ -16,11 +16,19 @@ import type { ExtendedSnapType } from '../snapping/extended-types';
 import { useStairStatusKey } from './stair-status-store';
 import { IsolateStatusIndicator } from './IsolateStatusIndicator';
 import { polarTrackingStore } from '../systems/constraints/polar-tracking-store';
+import { useDisplayUnit } from '../hooks/common/useDisplayUnit';
+import {
+  type DisplayUnit,
+  DISPLAY_UNIT_OPTIONS,
+  DISPLAY_UNIT_LABELS,
+  isValidDisplayUnit,
+} from '../config/units';
 
 export default function CadStatusBar() {
   const { osnap, grid, snap, ortho, polar, dynInput } = useCadToggles();
   const { t } = useTranslation('dxf-viewer-panels');
   const { t: tTools } = useTranslation('tool-hints');
+  const { displayUnit, setDisplayUnit } = useDisplayUnit();
   const { enabledModes, toggleMode } = useSnapContext();
   // ADR-358 Phase 7b1 — Inline stair prompt left of the toggles.
   const stairStatusKey = useStairStatusKey();
@@ -96,6 +104,8 @@ export default function CadStatusBar() {
             description={t('cadDock.statusBar.polarDesc')}
             toggle={polar}
           />
+          {/* ADR-357 Phase 2b: Display unit selector */}
+          <DisplayUnitSelector displayUnit={displayUnit} onUnitChange={setDisplayUnit} t={t} />
           <CurrentLayerPicker variant="status-bar" className="ml-auto" />
           <IsolateStatusIndicator />
           <span className="shrink-0 text-xs text-muted-foreground">
@@ -260,6 +270,42 @@ function PolarToggleWithPopover({ id, label, fkey, description, toggle }: {
         </PopoverContent>
       </Popover>
     </div>
+  );
+}
+
+function DisplayUnitSelector({ displayUnit, onUnitChange, t }: {
+  displayUnit: DisplayUnit;
+  onUnitChange: (unit: DisplayUnit) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="shrink-0">
+          <Select
+            value={displayUnit}
+            onValueChange={(v) => {
+              if (isValidDisplayUnit(v)) onUnitChange(v);
+            }}
+          >
+            <SelectTrigger
+              className="h-6 min-w-0 w-auto text-xs font-semibold text-muted-foreground border-none bg-transparent px-1 gap-0.5 hover:bg-muted focus:ring-0 focus:ring-offset-0"
+              aria-label={t('cadDock.statusBar.displayUnitDesc')}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent side="top" className="min-w-[4rem]">
+              {DISPLAY_UNIT_OPTIONS.map(unit => (
+                <SelectItem key={unit} value={unit} className="text-xs">
+                  {DISPLAY_UNIT_LABELS[unit]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="top">{t('cadDock.statusBar.displayUnitDesc')}</TooltipContent>
+    </Tooltip>
   );
 }
 
