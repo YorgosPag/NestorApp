@@ -3700,6 +3700,14 @@
       "collectionGroup": "floorplan_openings",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "floorplanId", "order": "ASCENDING" },
+        { "fieldPath": "projectId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_openings",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "projectId", "order": "ASCENDING" },
         { "fieldPath": "floorId", "order": "ASCENDING" },
         { "fieldPath": "updatedAt", "order": "DESCENDING" }
