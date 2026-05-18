@@ -745,6 +745,11 @@
       "angle": "Angle:",
       "segments": "Segments:",
       "total": "Total:"
+    },
+    "coordMode": {
+      "abs": "Abs",
+      "rel": "Rel",
+      "polar": "Polar"
     }
   },
   "cursorPalette": {
