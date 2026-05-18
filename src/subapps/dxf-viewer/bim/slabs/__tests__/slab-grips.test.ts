@@ -1,13 +1,17 @@
 /**
- * ADR-363 Phase 3.5 — `slab-grips` pure handlers tests.
+ * ADR-363 Phase 3.5 + 3.6 — `slab-grips` pure handlers tests.
  *
  * Coverage:
- *   - `getSlabGrips()` returns one `slab-vertex-N` grip per polygon outline
- *     vertex, in stable index order, with positions matching the outline.
+ *   - `getSlabGrips()` returns `2N` grips per closed polygon (N vertex +
+ *     N edge-midpoint), in stable index order, with positions matching
+ *     the outline + edge midpoints.
  *   - `getSlabGrips()` returns empty array for degenerate polygons (<3 vertices).
  *   - `applySlabGripDrag()`:
- *       · translates the indexed vertex by `delta` (XY), preserves z
- *       · leaves other vertices untouched
+ *       · `slab-vertex-N`        → translates the indexed vertex by `delta`
+ *                                   (XY), preserves z, leaves others untouched
+ *       · `slab-edge-midpoint-N` → inserts a fresh vertex at edge midpoint +
+ *                                   delta, original vertices untouched, length+1
+ *       · `rectilinear=true`     → quantizes delta to the dominant world axis
  *       · ignores unknown grip kinds gracefully
  *       · short-circuits on zero delta + out-of-range index
  */
@@ -24,7 +28,7 @@ function unwrapSlab(r: ReturnType<typeof buildSlabEntity>): SlabEntity {
   return r.entity;
 }
 
-describe('slab-grips (Phase 3.5)', () => {
+describe('slab-grips (Phase 3.5 + 3.6)', () => {
   function makeRectSlab(): SlabEntity {
     const verts = [
       { x: 0, y: 0 },
@@ -37,19 +41,23 @@ describe('slab-grips (Phase 3.5)', () => {
 
   // ─── getSlabGrips ────────────────────────────────────────────────────────
 
-  it('1. rectangle slab → 4 vertex grips in stable order', () => {
+  it('1. rectangle slab → 4 vertex + 4 edge-midpoint grips in stable order', () => {
     const slab = makeRectSlab();
     const grips = getSlabGrips(slab);
-    expect(grips).toHaveLength(4);
+    expect(grips).toHaveLength(8);
     expect(grips.map((g) => g.slabGripKind)).toEqual([
       'slab-vertex-0',
       'slab-vertex-1',
       'slab-vertex-2',
       'slab-vertex-3',
+      'slab-edge-midpoint-0',
+      'slab-edge-midpoint-1',
+      'slab-edge-midpoint-2',
+      'slab-edge-midpoint-3',
     ]);
   });
 
-  it('2. grip positions match outline vertices (XY projection)', () => {
+  it('2. vertex grip positions match outline vertices (XY projection)', () => {
     const slab = makeRectSlab();
     const grips = getSlabGrips(slab);
     expect(grips[0].position).toEqual({ x: 0, y: 0 });
@@ -58,9 +66,10 @@ describe('slab-grips (Phase 3.5)', () => {
     expect(grips[3].position).toEqual({ x: 0, y: 3000 });
   });
 
-  it('3. grips carry type=vertex + movesEntity=false', () => {
+  it('3. vertex grips carry type=vertex + movesEntity=false', () => {
     const slab = makeRectSlab();
-    const grips = getSlabGrips(slab);
+    const grips = getSlabGrips(slab).filter((g) => g.slabGripKind?.startsWith('slab-vertex-'));
+    expect(grips).toHaveLength(4);
     for (const g of grips) {
       expect(g.type).toBe('vertex');
       expect(g.movesEntity).toBe(false);

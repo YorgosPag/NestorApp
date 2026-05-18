@@ -67,16 +67,18 @@ export type WallGripKind =
 export type OpeningGripKind = 'opening-offset';
 
 /**
- * ADR-363 Phase 3.5 — Slab grip kind (parametric grip type).
+ * ADR-363 Phase 3.5 + 3.6 — Slab grip kind (parametric grip type).
  * Routes commit through `applySlabGripDrag()` + `UpdateSlabParamsCommand`
  * instead of the standard `StretchEntityCommand` vertex path.
  *
- * Single grip family exposed by `SlabEntity` (`bim/slabs/slab-grips.ts`):
- *   - `slab-vertex-N` → translate polygon outline vertex N (XY only, z preserved).
- *
- * Edge-midpoint vertex insertion deferred to Phase 3.6.
+ * Two grip families exposed by `SlabEntity` (`bim/slabs/slab-grips.ts`):
+ *   - `slab-vertex-N`        → translate polygon outline vertex N (XY only, z preserved).
+ *   - `slab-edge-midpoint-N` → insert new vertex at edge N midpoint + delta
+ *                              (Phase 3.6 — splits edge `[N, N+1]`).
  */
-export type SlabGripKind = `slab-vertex-${number}`;
+export type SlabGripKind =
+  | `slab-vertex-${number}`
+  | `slab-edge-midpoint-${number}`;
 
 /** Grip information */
 export interface GripInfo {

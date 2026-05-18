@@ -1,12 +1,21 @@
 /**
- * ADR-363 Phase 3.5 — Slab parametric grip handlers.
+ * ADR-363 Phase 3.5 + 3.6 — Slab parametric grip handlers.
  *
  * Pure functions: zero React / DOM / Firestore / canvas deps. Mirrors the
- * pattern of `bim/walls/opening-grips.ts` (ADR-363 Phase 2.5) and exposes one
- * grip family described in ADR-363 §6 Phase 3.5:
+ * pattern of `bim/walls/opening-grips.ts` (ADR-363 Phase 2.5) and exposes two
+ * grip families described in ADR-363 §6 Phase 3.5 / 3.6:
  *
- *   - `slab-vertex-N` → translate polygon outline vertex N (XY only,
- *     z preserved). Edge-midpoint vertex insertion is deferred to Phase 3.6.
+ *   - `slab-vertex-N`        → translate polygon outline vertex N (XY only,
+ *                              z preserved). Phase 3.5.
+ *   - `slab-edge-midpoint-N` → insert a new vertex at edge `[N, N+1]`
+ *                              midpoint + delta. Phase 3.6. Index `N`
+ *                              wraps modulo `vertices.length` so the closing
+ *                              edge (last → first) is reachable.
+ *
+ * Rectilinear constraint (Phase 3.6): when `input.rectilinear` is true the
+ * caller's `delta` is quantized to the dominant world axis before mutation
+ * (`|dx| ≥ |dy|` → keep dx, dy=0; otherwise keep dy, dx=0). Mirrors AutoCAD
+ * "Ortho" + Revit Shift-constrained vertex drag.
  *
  * SSoT:
  *   - Geometry math via `computeSlabGeometry()` (called by
@@ -14,7 +23,7 @@
  *     new `SlabParams`).
  *   - Grip wire-up via the unified grip system (`SlabRenderer.getGrips`).
  *
- * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5 §6 Phase 3.5
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5 §6 Phase 3.5 / 3.6
  */
 
 import type { Point2D } from '../../rendering/types/Types';
@@ -22,12 +31,15 @@ import type { GripInfo, SlabGripKind } from '../../hooks/useGripMovement';
 import type { Point3D } from '../types/bim-base';
 import type { SlabEntity, SlabParams } from '../types/slab-types';
 
-// ─── Grip position computation (ADR-363 §6 Phase 3.5) ────────────────────────
+// ─── Grip position computation (ADR-363 §6 Phase 3.5 / 3.6) ──────────────────
 
 /**
- * Compute the parametric grip positions for a `SlabEntity`. One vertex grip
- * per polygon outline vertex, in stable index order so `gripIndex` is a
- * deterministic identifier across drags.
+ * Compute the parametric grip positions for a `SlabEntity`. For a polygon
+ * with `N` vertices returns `2N` grips in stable index order:
+ *
+ *   - indices `[0, N)`     → `slab-vertex-i` at vertex `i`
+ *   - indices `[N, 2N)`    → `slab-edge-midpoint-(i - N)` at the midpoint of
+ *                            edge `[i - N, ((i - N) + 1) mod N]`
  *
  * Returns an empty array when the polygon is degenerate (<3 vertices).
  */
@@ -46,6 +58,20 @@ export function getSlabGrips(entity: Readonly<SlabEntity>): GripInfo[] {
       slabGripKind: `slab-vertex-${i}`,
     });
   }
+  const offset = verts.length;
+  for (let i = 0; i < verts.length; i++) {
+    const a = verts[i];
+    const b = verts[(i + 1) % verts.length];
+    grips.push({
+      entityId: entity.id,
+      gripIndex: offset + i,
+      type: 'midpoint',
+      position: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+      movesEntity: false,
+      edgeVertexIndices: [i, (i + 1) % verts.length],
+      slabGripKind: `slab-edge-midpoint-${i}`,
+    });
+  }
   return grips;
 }
 
@@ -56,6 +82,11 @@ export interface SlabGripDragInput {
   readonly originalParams: SlabParams;
   /** World-space delta from drag anchor to current cursor position. */
   readonly delta: Point2D;
+  /**
+   * Phase 3.6 — when true, quantize `delta` to the dominant world axis
+   * (orthogonal constraint). Surfaced via Shift modifier at commit time.
+   */
+  readonly rectilinear?: boolean;
 }
 
 /**
@@ -66,35 +97,84 @@ export interface SlabGripDragInput {
  *
  * For `slab-vertex-N` the numeric index `N` is parsed from the discriminator
  * suffix; an out-of-range index yields `originalParams` unchanged so the
- * caller can short-circuit the commit (no-op).
+ * caller can short-circuit the commit (no-op). For `slab-edge-midpoint-N`
+ * a fresh vertex is inserted at `midpoint(verts[N], verts[(N+1) mod len]) +
+ * delta`, splitting that edge.
  */
 export function applySlabGripDrag(
   gripKind: SlabGripKind,
   input: Readonly<SlabGripDragInput>,
 ): SlabParams {
-  if (!gripKind.startsWith('slab-vertex-')) return input.originalParams;
-  const idx = parseInt(gripKind.slice('slab-vertex-'.length), 10);
-  if (!Number.isFinite(idx) || idx < 0) return input.originalParams;
-  return moveOutlineVertex(input, idx);
+  const delta = input.rectilinear ? quantizeToDominantAxis(input.delta) : input.delta;
+  if (gripKind.startsWith('slab-vertex-')) {
+    const idx = parseInt(gripKind.slice('slab-vertex-'.length), 10);
+    if (!Number.isFinite(idx) || idx < 0) return input.originalParams;
+    return moveOutlineVertex(input.originalParams, delta, idx);
+  }
+  if (gripKind.startsWith('slab-edge-midpoint-')) {
+    const idx = parseInt(gripKind.slice('slab-edge-midpoint-'.length), 10);
+    if (!Number.isFinite(idx) || idx < 0) return input.originalParams;
+    return insertVertexOnEdge(input.originalParams, delta, idx);
+  }
+  return input.originalParams;
+}
+
+function quantizeToDominantAxis(delta: Point2D): Point2D {
+  return Math.abs(delta.x) >= Math.abs(delta.y)
+    ? { x: delta.x, y: 0 }
+    : { x: 0, y: delta.y };
 }
 
 function moveOutlineVertex(
-  input: Readonly<SlabGripDragInput>,
+  originalParams: SlabParams,
+  delta: Point2D,
   index: number,
 ): SlabParams {
-  const { originalParams, delta } = input;
   const verts = originalParams.outline.vertices;
   if (index >= verts.length) return originalParams;
   if (delta.x === 0 && delta.y === 0) return originalParams;
   const next: Point3D[] = verts.map((v, i) =>
-    i === index
-      ? { x: v.x + delta.x, y: v.y + delta.y, ...(v.z !== undefined ? { z: v.z } : {}) }
-      : v.z !== undefined
-        ? { x: v.x, y: v.y, z: v.z }
-        : { x: v.x, y: v.y },
+    i === index ? translateVertex(v, delta) : cloneVertex(v),
   );
   return {
     ...originalParams,
     outline: { vertices: next },
   };
+}
+
+function insertVertexOnEdge(
+  originalParams: SlabParams,
+  delta: Point2D,
+  edgeIndex: number,
+): SlabParams {
+  const verts = originalParams.outline.vertices;
+  if (edgeIndex >= verts.length) return originalParams;
+  const a = verts[edgeIndex];
+  const b = verts[(edgeIndex + 1) % verts.length];
+  const inserted: Point3D = {
+    x: (a.x + b.x) / 2 + delta.x,
+    y: (a.y + b.y) / 2 + delta.y,
+    ...(a.z !== undefined || b.z !== undefined
+      ? { z: ((a.z ?? 0) + (b.z ?? 0)) / 2 }
+      : {}),
+  };
+  const next: Point3D[] = [];
+  for (let i = 0; i < verts.length; i++) {
+    next.push(cloneVertex(verts[i]));
+    if (i === edgeIndex) next.push(inserted);
+  }
+  return {
+    ...originalParams,
+    outline: { vertices: next },
+  };
+}
+
+function translateVertex(v: Point3D, delta: Point2D): Point3D {
+  return v.z !== undefined
+    ? { x: v.x + delta.x, y: v.y + delta.y, z: v.z }
+    : { x: v.x + delta.x, y: v.y + delta.y };
+}
+
+function cloneVertex(v: Point3D): Point3D {
+  return v.z !== undefined ? { x: v.x, y: v.y, z: v.z } : { x: v.x, y: v.y };
 }

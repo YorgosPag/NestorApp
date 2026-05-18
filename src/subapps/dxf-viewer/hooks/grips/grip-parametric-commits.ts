@@ -27,6 +27,7 @@ import { applyOpeningGripDrag } from '../../bim/walls/opening-grips';
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import { applyDimensionGripDrag } from '../dimensions/useDimensionGrips';
 import { EventBus } from '../../systems/events/EventBus';
+import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
 /**
@@ -186,9 +187,15 @@ export function commitSlabGripDrag(
   if (candidate.type !== 'slab' || !candidate.params) return;
   const slab = candidate as SlabEntity;
   const originalParams = slab.params;
+  // ADR-363 Phase 3.6 — Shift quantizes the drag to the dominant world axis
+  // (rectilinear constraint). Read from the keyboard tracker so the modifier
+  // can travel from `keydown` → commit without plumbing through 4 handler
+  // layers (mouse-handler-up loses the native event by design).
+  const rectilinear = ShiftKeyTracker.getSnapshot();
   const newParams = applySlabGripDrag(grip.slabGripKind, {
     originalParams,
     delta,
+    rectilinear,
   });
   if (newParams === originalParams) return;
   const command = new UpdateSlabParamsCommand(
