@@ -76,6 +76,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, dxfGripInteraction,
     stairTool,
+    wallTool,
     rotationIsActive = false, handleRotationClick,
     moveIsActive = false, handleMoveClick,
     mirrorIsActive = false, handleMirrorClick,
@@ -208,6 +209,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
+    // PRIORITY 4.6: ADR-363 Phase 1B — Wall tool 2-click placement (continuous).
+    if (activeTool === 'wall' && wallTool?.isActive) {
+      wallTool.onCanvasClick(worldPoint);
+      return;
+    }
+
     // PRIORITY 5: Overlay polygon drawing
     if (overlayMode === 'draw') {
       if (isSavingPolygon) return;
@@ -285,6 +292,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, dxfGripInteraction,
     stairTool,
+    wallTool,
     rotationIsActive, handleRotationClick,
     moveIsActive, handleMoveClick,
     mirrorIsActive, handleMirrorClick,
@@ -389,11 +397,9 @@ function testEntityHit(
   if (isPolylineEntity(entity)) {
     return testPolylineHit(worldPoint, entity.vertices, entity.closed, hitTolerance);
   }
-
   if (isLWPolylineEntity(entity)) {
     return testPolylineHit(worldPoint, entity.vertices, entity.closed, hitTolerance);
   }
-
   if (isRectangleEntity(entity) || isRectEntity(entity)) {
     const { x, y, width: w, height: h } = entity;
     const corners = [
