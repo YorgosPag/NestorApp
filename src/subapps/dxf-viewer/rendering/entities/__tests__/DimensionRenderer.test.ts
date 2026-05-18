@@ -447,6 +447,76 @@ describe('DimensionRenderer — arrowhead block variants', () => {
   });
 });
 
+describe('DimensionRenderer — tolerance + limits rendering (Phase G2)', () => {
+  it('tolerance mode draws 3 fillText calls (primary + plus + minus)', () => {
+    const { renderer, mock } = makeRenderer();
+    const entity = linear(
+      [
+        { x: 0, y: 0 },
+        { x: 100, y: 0 },
+        { x: 50, y: 20 },
+      ],
+      {
+        overrides: {
+          dimtol: true,
+          dimlim: false,
+          dimtp: 0.1,
+          dimtm: -0.05,
+          dimtdec: 2,
+          dimtfac: 0.75,
+          dimtolj: 'middle',
+        } as Partial<DimStyle>,
+      },
+    );
+    renderer.render(entity);
+    expect(countCalls(mock, 'fillText')).toBeGreaterThanOrEqual(3);
+  });
+
+  it('limits mode draws 2 fillText calls (upper + lower, no primary)', () => {
+    const { renderer, mock } = makeRenderer();
+    const entity = linear(
+      [
+        { x: 0, y: 0 },
+        { x: 100, y: 0 },
+        { x: 50, y: 20 },
+      ],
+      {
+        overrides: {
+          dimlim: true,
+          dimtol: false,
+          dimtp: 0.5,
+          dimtm: -0.3,
+        } as Partial<DimStyle>,
+      },
+    );
+    renderer.render(entity);
+    expect(countCalls(mock, 'fillText')).toBeGreaterThanOrEqual(2);
+  });
+
+  it('DIMLIM overrides DIMTOL when both true — still 2 fillText calls', () => {
+    const { renderer, mock } = makeRenderer();
+    const entity = linear(
+      [
+        { x: 0, y: 0 },
+        { x: 100, y: 0 },
+        { x: 50, y: 20 },
+      ],
+      {
+        overrides: {
+          dimlim: true,
+          dimtol: true,
+          dimtp: 0.1,
+          dimtm: -0.1,
+          dimtdec: 2,
+        } as Partial<DimStyle>,
+      },
+    );
+    renderer.render(entity);
+    // Limits mode: upper + lower = 2 fillText (not 3 from tolerance mode).
+    expect(countCalls(mock, 'fillText')).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe('DimensionRenderer — stubs for Phase I', () => {
   it('getGrips returns empty (Phase I deferred)', () => {
     const { renderer } = makeRenderer();
