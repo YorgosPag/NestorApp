@@ -30,8 +30,11 @@ import {
   isArcEntity,
   isRectangleEntity,
   isWallEntity,
+  isColumnEntity,
   isRayEntity
 } from '../../types/entities';
+// ADR-363 Phase 5.5d — Column anchor SSoT για beam-end auto-snap.
+import { getColumnAnchorWorldPoints } from '../../bim/columns/column-anchors';
 
 export interface IntersectionResult {
   point: Point2D;
@@ -103,6 +106,14 @@ export class GeometricCalculations {
       } else {
         endpoints.push({ x: params.start.x, y: params.start.y });
         endpoints.push({ x: params.end.x, y: params.end.y });
+      }
+    } else if (isColumnEntity(entity)) {
+      // ADR-363 Phase 5.5d — Column anchor points (9-point grid: center + 8
+      // cardinals/diagonals για rect/L/T, center + 4 perimeter cardinals + 4
+      // perimeter diagonals για circular) feed στο spatial index ώστε beam
+      // endpoints να κουμπώνουν auto-magically στις κολώνες (Revit smart-connect).
+      for (const a of getColumnAnchorWorldPoints(entity)) {
+        endpoints.push(a.point);
       }
     } else if (isRayEntity(entity)) {
       endpoints.push(entity.basePoint);

@@ -310,17 +310,26 @@ export class HitTestingService {
           validation: stairData.validation,
         } as unknown as EntityModel;
       }
-      // ADR-363 Phases 1B–5 — BIM entity passthrough (wall/opening/slab/slab-opening/column/beam).
+      // ADR-363 Phases 1B/4/5 — wall/opening/column/beam are direct entities (no DXF wrapper).
       // `geometry.bbox` powers spatial broad-phase via BoundsCalculator.calculateBimEntityBounds.
-      // Without these branches the default spread drops `geometry` → entity never indexed → unselectable.
-      // SSoT: buildBimEntityModel in bim/utils/bim-entity-passthrough.ts (stair excluded — see that file).
+      // SSoT: buildBimEntityModel in bim/utils/bim-entity-passthrough.ts.
       case 'wall':
       case 'opening':
-      case 'slab':
-      case 'slab-opening':
       case 'column':
       case 'beam':
         return buildBimEntityModel(entity.type as BimElementType, entity, baseModel);
+      // ADR-363 Phase 3.7 — slab/slab-opening ARE wrapped (DxfSlab.slabEntity / DxfSlabOpening.slabOpeningEntity).
+      // Must unwrap to inner entity so geometry/kind/params reach BoundsCalculator and hit-tests.
+      case 'slab': {
+        type DxfSlabLike = { slabEntity: unknown };
+        const inner = (entity as unknown as DxfSlabLike).slabEntity;
+        return buildBimEntityModel('slab', inner, baseModel);
+      }
+      case 'slab-opening': {
+        type DxfSlabOpeningLike = { slabOpeningEntity: unknown };
+        const inner = (entity as unknown as DxfSlabOpeningLike).slabOpeningEntity;
+        return buildBimEntityModel('slab-opening', inner, baseModel);
+      }
       // ADR-362 Phase I3 — dimension passthrough so hit-testing can index
       // DimensionEntity via the spatial index. The DxfDimension wrapper carries
       // the full discriminated-union DimensionEntity (with defPoints + textMidpoint).
@@ -331,7 +340,6 @@ export class HitTestingService {
         const dimEntity = dxfDim.dimensionEntity;
         return {
           ...dimEntity,
-          // Override base fields with scene-resolved values (layerId via LayerStore SSoT)
           id: baseModel.id,
           layerId: baseModel.layerId,
           color: baseModel.color,
@@ -341,31 +349,17 @@ export class HitTestingService {
           lineweight: baseModel.lineweight,
         } as unknown as EntityModel;
       }
-      // ADR-359 Phase 11 — xline/ray passthrough so hit-testing can index
-      // construction lines. Without this branch `basePoint`/`direction` are
-      // dropped by the default spread → BoundsCalculator returns null →
-      // entity never inserted in the spatial index → unselectable on canvas.
+      // ADR-359 Phase 11 — xline/ray ARE wrapped (DxfXLine.xlineEntity / DxfRay.rayEntity).
+      // Must unwrap to get basePoint/direction into the EntityModel for BoundsCalculator + hit-tests.
       case 'xline': {
-        type XLineLike = Partial<import('../types/entities').XLineEntity>;
-        const xline = entity as unknown as XLineLike;
-        return {
-          ...baseModel,
-          type: 'xline',
-          basePoint: xline.basePoint,
-          direction: xline.direction,
-          secondPoint: xline.secondPoint,
-        } as unknown as EntityModel;
+        type DxfXLineLike = { xlineEntity: { basePoint?: unknown; direction?: unknown; secondPoint?: unknown } };
+        const xl = (entity as unknown as DxfXLineLike).xlineEntity;
+        return { ...baseModel, type: 'xline', basePoint: xl.basePoint, direction: xl.direction, secondPoint: xl.secondPoint } as unknown as EntityModel;
       }
       case 'ray': {
-        type RayLike = Partial<import('../types/entities').RayEntity>;
-        const ray = entity as unknown as RayLike;
-        return {
-          ...baseModel,
-          type: 'ray',
-          basePoint: ray.basePoint,
-          direction: ray.direction,
-          secondPoint: ray.secondPoint,
-        } as unknown as EntityModel;
+        type DxfRayLike = { rayEntity: { basePoint?: unknown; direction?: unknown; secondPoint?: unknown } };
+        const r = (entity as unknown as DxfRayLike).rayEntity;
+        return { ...baseModel, type: 'ray', basePoint: r.basePoint, direction: r.direction, secondPoint: r.secondPoint } as unknown as EntityModel;
       }
       default: {
         return { ...baseModel } as unknown as EntityModel;
