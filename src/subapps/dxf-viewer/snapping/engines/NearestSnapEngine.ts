@@ -12,8 +12,10 @@ import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-
 // 🏢 ADR-149: Centralized Snap Engine Priorities
 import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 // ADR-363 Phase 5.5e — wall axis projection (clamped NEAREST semantics).
-import { isWallEntity } from '../../types/entities';
+import { isWallEntity, isSlabEntity } from '../../types/entities';
 import { projectPointOnWallAxis } from '../../bim/walls/wall-axis-projection';
+// ADR-363 Phase 5.5f — slab edge projection (clamped NEAREST semantics).
+import { projectPointOnSlabEdge } from '../../bim/slabs/slab-edge-projection';
 
 export class NearestSnapEngine extends BaseSnapEngine {
 
@@ -81,6 +83,12 @@ export class NearestSnapEngine extends BaseSnapEngine {
     // το PerpendicularSnapEngine στο Phase 5.5e).
     if (isWallEntity(entity)) {
       return projectPointOnWallAxis(entity, point);
+    }
+    // ADR-363 Phase 5.5f — slab edge projection. Reads cached
+    // `slab.geometry.polygon.points` (Phase 3 invariant). Closed polygon:
+    // closing edge [last→first] included. Clamped semantics.
+    if (isSlabEntity(entity)) {
+      return projectPointOnSlabEdge(entity, point);
     }
 
     const entityType = entity.type.toLowerCase();

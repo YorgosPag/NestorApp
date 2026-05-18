@@ -23,12 +23,15 @@ import {
   isCircleEntity,
   isXLineEntity,
   isRayEntity,
-  isWallEntity
+  isWallEntity,
+  isSlabEntity,
 } from '../../types/entities';
 // 🏢 ADR-087: Centralized Snap Engine Configuration
 import { SNAP_RADIUS_MULTIPLIERS, SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 // ADR-363 Phase 5.5e — wall axis perpendicular feet (unclamped per-segment).
 import { getWallAxisPerpendicularFeet } from '../../bim/walls/wall-axis-projection';
+// ADR-363 Phase 5.5f — slab edge perpendicular feet (unclamped per-edge).
+import { getSlabEdgePerpendicularFeet } from '../../bim/slabs/slab-edge-projection';
 
 export class PerpendicularSnapEngine extends BaseSnapEngine {
 
@@ -133,6 +136,15 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
       const feet = getWallAxisPerpendicularFeet(entity, cursorPoint, maxDistance);
       for (const f of feet) {
         perpendicularPoints.push({ point: f.point, type: `Wall Axis Segment ${f.segmentIndex + 1}` });
+      }
+    } else if (isSlabEntity(entity)) {
+      // ADR-363 Phase 5.5f — unclamped foot ανά slab outline edge (cached
+      // `geometry.polygon.points`, closed CCW — closing edge [last→first]
+      // συμπεριλαμβάνεται). Mirror Phase 5.5e: foot on infinite edge extension
+      // εντός maxDistance (AutoCAD PERPENDICULAR semantics για polygons).
+      const feet = getSlabEdgePerpendicularFeet(entity, cursorPoint, maxDistance);
+      for (const f of feet) {
+        perpendicularPoints.push({ point: f.point, type: `Slab Edge ${f.edgeIndex + 1}` });
       }
     } else if (isRayEntity(entity)) {
       // Foot of perpendicular — only valid if t >= 0 (on the ray, not behind origin)
