@@ -71,6 +71,22 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-18 — ADR-357 Phase 4 interop: PreviewRenderer Object Snap Tracking layer (markers persist across drawPreview cycles)
+
+`PreviewRenderer` gains persistent state `trackingMarkers: AcquiredTrackingPoint[]` and two new methods: `setTrackingMarkers(markers)` (idempotent setter + immediate paint) and `drawTrackingAlignment(paths, intersections, snappedPoint, label, transform, viewport)` (overlay called AFTER `drawPreview`). The `render()` paint pipeline is rewritten: the early-exit gate moves from `currentPreview` to `hasViewport` so marker-only paints are admitted (no preview entity required), then markers paint FIRST so the rubber-band preview overlays on top. The canvas is now ALWAYS cleared at the start of `render()` (previously only when `currentPreview` was truthy) — this handles `setTrackingMarkers([])` and other transitions to empty content uniformly so stale glyphs never linger.
+
+**Cardinal rule compliance**:
+- **Rule 1 (no orchestrator subscriptions)**: untouched. Acquisition wiring lives in `useDrawingHandlers` (a leaf-equivalent micro-hook). `CanvasSection` and `CanvasLayerStack` do NOT subscribe to `TrackingPointStore` — the subscription happens inside `useDrawingHandlers.useEffect` and pushes to the imperative `previewCanvasRef`.
+- **Rule 2 (getter-based event reads)**: respected. `useDrawingHandlers.onDrawingPoint` reads live tracking state via `TrackingPointStore.getPoints()` (getter), not a stale snapshot captured at render time.
+- **Rule 3 (bitmap cache key untouched)**: respected. No tracking-related identity (acquired list, marker count) is added to `dxf-bitmap-cache.ts`. The DXF entity cache is unaware of tracking.
+- **Rule 4 (≤1 canvas element / ≤2 high-freq hooks per leaf)**: respected. `useDrawingHandlers` already owns the drawing-handler high-frequency surface; adding the tracking subscription is one additional low-frequency hook (`TrackingPointStore` fires on acquire/clear, not on mousemove).
+
+Companion files: `systems/tracking/TrackingPointStore.ts` (new singleton — zero React state, `subscribe`/`getSnapshot` for future `useSyncExternalStore` leaves), `systems/tracking/tracking-resolver.ts` (new pure fn), `canvas-v2/preview-canvas/tracking-colors.ts` (new theme palette SSoT), `canvas-v2/preview-canvas/PreviewCanvas.tsx` (handle extension), `canvas-v2/preview-canvas/index.ts` (palette re-exports), `hooks/drawing/useDrawingHandlers.ts` (subscription + acquisition timer + resolver wire-up).
+
+Bundled in atomic commit with ADR-357 Phase 4 changelog entry (CHECK 6B compliance).
+
+---
+
 ### 2026-05-17 — ADR-358 Phase 9E-1 interop: DxfRenderer id-first layersById lookup + SceneModel layersById mirror
 
 `DxfRenderer.resolveLayerStyle` updated to use `entity.layerId → layersById[entity.layerId]` as the primary lookup path (O(1), id-keyed). Previous path used `resolveEntityLayerName(entity)` then `layersById[name]` (name-keyed, double-call). New path: id-keyed first; IIFE fallback to name-keyed for legacy scenes without `layersById` or entities without `layerId`. **Bitmap cache key untouched** — cardinal rule #3 holds. **ADR-040 leaf rules**: no `useSyncExternalStore` added; `DxfRenderer` remains a render-pipeline leaf; change is purely a lookup-path optimisation.

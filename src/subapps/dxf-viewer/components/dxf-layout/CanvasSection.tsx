@@ -29,8 +29,7 @@ import {
   useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion,
   useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler,
   useFitToView, useCanvasPan, usePolygonCompletion, useCanvasKeyboardShortcuts,
-  useCanvasEffects, useOverlayInteraction, useCanvasContainerHandlers,
-  useAutoAreaMouseMove,
+  useCanvasEffects, useOverlayInteraction, useCanvasContainerHandlers, useAutoAreaMouseMove,
 } from '../../hooks/canvas';
 import { useGuideToolWorkflows, useEntityCompleteGuideListener } from '../../hooks/guides';
 import { useOverlayLayers } from '../../hooks/layers';
@@ -64,7 +63,6 @@ import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSce
 import { useArrayRepickHandlers } from '../../hooks/canvas/useArrayRepickHandlers';
 import { useFloorplanAutoFit } from '../../hooks/canvas/useFloorplanAutoFit';
 import { ReorderEntityCommand } from '../../core/commands/entity-commands';
-
 /**
  * Canvas orchestrator — wires hooks together and delegates rendering to CanvasLayerStack.
  * No business logic beyond hook composition.
@@ -289,7 +287,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onToolChange: (tool) => props.onToolChange?.(tool),
     executeCommand,
   });
-
   // ADR-353 §B2/C3 — interactive re-pick handlers for polar/path arrays.
   const { handleArrayPolarCenterRepick, handleArrayPathEntityRepick } = useArrayRepickHandlers({ levelManager, executeCommand });
   const { handleCanvasClick } = useCanvasClickHandler({
@@ -341,7 +338,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // ADR-344 Phase 6.E follow-up — text creation tool click handler
     onTextToolClick: textCreation.handleCanvasClick,
   });
-
   const { handleSmartDelete } = useSmartDelete({
     selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
     executeCommand, overlayStoreRef, universalSelectionRef, levelManager, setSelectedEntityIds, eventBus,
@@ -352,14 +348,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     const preview = canJoin ? entityJoinHook.getJoinPreview(selectedEntityIds) : null;
     return { canJoin, joinResultLabel: preview?.resultType !== 'not-joinable' ? preview?.resultType : undefined };
   }, [entityJoinHook, selectedEntityIds]);
-
   const handleExitDrawMode = useCallback(() => { if (overlayMode === 'draw' && setOverlayMode) setOverlayMode('select'); }, [overlayMode, setOverlayMode]);
   const handleReorderEntity = useCallback((direction: 'front' | 'back') => {
     if (selectedEntityIds.length !== 1 || !levelManager.currentLevelId) return;
     const adapter = new LevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelManager.currentLevelId);
     executeCommand(new ReorderEntityCommand(selectedEntityIds[0], direction, adapter));
   }, [selectedEntityIds, levelManager, executeCommand]);
-
   useCanvasKeyboardShortcuts({
     handleSmartDelete, dxfGripInteraction: unified.dxfProjection,
     setDraftPolygon, draftPolygon, selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
@@ -379,8 +373,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     hasAnySelection: universalSelection.count() > selectedEntityIds.length,
     clearEntitySelection: () => universalSelectionRef.current.clearAll(),
     handleReorderEntity,
+    // ADR-357 Phase 3: Direct Distance Entry — provide temp points + point callback
+    drawingTempPoints: drawingHandlers?.drawingState?.tempPoints,
+    onDirectDistanceEntry: drawingHandlers?.onDrawingPoint,
+    // ADR-357 Phase 5: Chain mode keyboard shortcuts
+    onUndoChainVertex: handleDrawingUndoLastPoint,
+    onChainFinish: handleDrawingCancel,
   });
-
   // === ADR-344 Phase 6.E — In-canvas text editor (DBLCLKEDIT) ===
   // Holds local React state only — no useSyncExternalStore, no high-freq
   // subscription. Overlay renders only when a TEXT/MTEXT entity is being
@@ -430,7 +429,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       />
       <DrawingContextMenu ref={drawingMenuRef} activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}
         pointCount={overlayMode === 'draw' ? draftPolygon.length : (drawingHandlers?.drawingState?.tempPoints?.length ?? 0)}
-        onFinish={handleDrawingFinish} onClose={handleDrawingClose} onUndoLastPoint={handleDrawingUndoLastPoint} onCancel={handleDrawingCancel} onFlipArc={handleFlipArc} />
+        onFinish={activeTool === 'line' ? handleDrawingCancel : handleDrawingFinish}
+        onClose={handleDrawingClose} onUndoLastPoint={handleDrawingUndoLastPoint} onCancel={handleDrawingCancel} onFlipArc={handleFlipArc} />
       <EntityContextMenu ref={entityMenuRef} selectedCount={selectedEntityIds.length}
         canJoin={entityJoinState.canJoin} joinResultLabel={entityJoinState.joinResultLabel}
         onJoin={() => entityJoinHook.joinEntities(selectedEntityIds)} onDelete={() => handleSmartDelete()} onCancel={() => entityMenuRef.current?.close()}

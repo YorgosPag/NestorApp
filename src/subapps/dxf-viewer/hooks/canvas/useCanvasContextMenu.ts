@@ -26,6 +26,8 @@ import type { EntityContextMenuHandle } from '../../ui/components/EntityContextM
 import type { GuideContextMenuHandle } from '../../ui/components/GuideContextMenu';
 import type { Guide } from '../../systems/guides/guide-types';
 import type { ViewTransform } from '../../rendering/types/Types';
+// ADR-362 Phase M1: Dimension entity context menu
+import type { DimensionContextMenuHandle } from '../../ui/context-menus/DimensionContextMenu';
 
 // ============================================================================
 // TYPES
@@ -66,6 +68,11 @@ export interface UseCanvasContextMenuParams {
   guideBatchMenuRef?: RefObject<import('../../ui/components/GuideBatchContextMenu').GuideBatchContextMenuHandle | null>;
   /** Currently selected guide IDs */
   selectedGuideIds?: ReadonlySet<string>;
+  // ADR-362 Phase M1: Dimension context menu
+  /** Imperative ref to DimensionContextMenu */
+  dimContextMenuRef?: RefObject<DimensionContextMenuHandle | null>;
+  /** IDs of currently selected dimension entities (drives dim menu priority). */
+  selectedDimensionIds?: readonly string[];
 }
 
 export interface UseCanvasContextMenuReturn {
@@ -94,6 +101,8 @@ export function useCanvasContextMenu({
   transformRef,
   guideBatchMenuRef,
   selectedGuideIds,
+  dimContextMenuRef,
+  selectedDimensionIds,
 }: UseCanvasContextMenuParams): UseCanvasContextMenuReturn {
 
   // React handler — ALWAYS prevent browser context menu on canvas
@@ -175,6 +184,17 @@ export function useCanvasContextMenu({
         return;
       }
 
+      // PRIORITY 1.5: ADR-362 Phase M1 — Dimension context menu (select mode, dims selected)
+      if (
+        activeTool === 'select' &&
+        dimContextMenuRef?.current &&
+        selectedDimensionIds &&
+        selectedDimensionIds.length > 0
+      ) {
+        dimContextMenuRef.current.open(e.clientX, e.clientY);
+        return;
+      }
+
       // PRIORITY 2: Entity context menu (select mode with entities selected)
       if (activeTool === 'select' && selectedEntityIds.length > 0) {
         // 🏢 PERF: Imperative call — no setState, no parent re-render
@@ -188,7 +208,7 @@ export function useCanvasContextMenu({
     return () => {
       container.removeEventListener('contextmenu', handleNativeContextMenu, { capture: true });
     };
-  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, selectedEntityIds, drawingMenuRef, entityMenuRef, rotationPhase, onRotationAnglePrompt, guideMenuRef, getGuides, guidesSnapshot, transformRef, guideBatchMenuRef, selectedGuideIds]);
+  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, selectedEntityIds, drawingMenuRef, entityMenuRef, rotationPhase, onRotationAnglePrompt, guideMenuRef, getGuides, guidesSnapshot, transformRef, guideBatchMenuRef, selectedGuideIds, dimContextMenuRef, selectedDimensionIds]);
 
   return {
     handleDrawingContextMenu,
