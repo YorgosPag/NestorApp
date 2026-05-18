@@ -1,9 +1,10 @@
 'use client';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ChevronUp } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChevronUp, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { matchesShortcut, getShortcutDisplayLabel } from '../config/keyboard-shortcuts';
 import { useCadToggles } from '../hooks/common/useCadToggles';
@@ -14,6 +15,7 @@ import { CurrentLayerPicker } from '../ui/components/layer-picker/CurrentLayerPi
 import type { ExtendedSnapType } from '../snapping/extended-types';
 import { useStairStatusKey } from './stair-status-store';
 import { IsolateStatusIndicator } from './IsolateStatusIndicator';
+import { polarTrackingStore } from '../systems/constraints/polar-tracking-store';
 
 export default function CadStatusBar() {
   const { osnap, grid, snap, ortho, polar, dynInput } = useCadToggles();
@@ -44,7 +46,6 @@ export default function CadStatusBar() {
     { key: 'grid',     toggle: grid,     shortcut: 'gridDisplay',   labelKey: 'cadDock.statusBar.grid',     descKey: 'cadDock.statusBar.gridDesc' },
     { key: 'snap',     toggle: snap,     shortcut: 'gridSnap',      labelKey: 'cadDock.statusBar.snap',     descKey: 'cadDock.statusBar.snapDesc' },
     { key: 'ortho',    toggle: ortho,    shortcut: 'orthoMode',     labelKey: 'cadDock.statusBar.ortho',    descKey: 'cadDock.statusBar.orthoDesc' },
-    { key: 'polar',    toggle: polar,    shortcut: 'polarTracking', labelKey: 'cadDock.statusBar.polar',    descKey: 'cadDock.statusBar.polarDesc' },
     { key: 'dynInput', toggle: dynInput, shortcut: 'dynamicInput',  labelKey: 'cadDock.statusBar.dynInput', descKey: 'cadDock.statusBar.dynInputDesc' },
   ] as const;
 
@@ -87,6 +88,14 @@ export default function CadStatusBar() {
               />
             )
           )}
+          {/* ADR-357 Phase 1: Polar toggle with angle settings popover */}
+          <PolarToggleWithPopover
+            id="cad-toggle-polar"
+            label={t('cadDock.statusBar.polar')}
+            fkey={getShortcutDisplayLabel('polarTracking')}
+            description={t('cadDock.statusBar.polarDesc')}
+            toggle={polar}
+          />
           <CurrentLayerPicker variant="status-bar" className="ml-auto" />
           <IsolateStatusIndicator />
           <span className="shrink-0 text-xs text-muted-foreground">
@@ -132,6 +141,125 @@ function CadToggleRow({ id, label, fkey, description, toggle }: {
         {`${description} (${fkey})`}
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+const POLAR_INCREMENT_OPTIONS = ['5', '10', '15', '18', '22.5', '30', '45', '90'] as const;
+
+function PolarToggleWithPopover({ id, label, fkey, description, toggle }: {
+  id: string;
+  label: string;
+  fkey: string;
+  description: string;
+  toggle: CadToggle;
+}) {
+  const { t } = useTranslation('dxf-viewer-panels');
+  const snapshot = useSyncExternalStore(
+    (fn) => polarTrackingStore.subscribe(fn),
+    () => polarTrackingStore.getSnapshot(),
+    () => polarTrackingStore.getSnapshot(),
+  );
+  const [customInput, setCustomInput] = useState('');
+
+  const handleAddAngle = () => {
+    const val = parseFloat(customInput);
+    if (isNaN(val) || val <= 0 || val >= 360) return;
+    const next = [...snapshot.additionalAngles, val];
+    polarTrackingStore.setAdditionalAngles(next);
+    setCustomInput('');
+  };
+
+  const handleRemoveAngle = (angle: number) => {
+    polarTrackingStore.setAdditionalAngles(snapshot.additionalAngles.filter(a => a !== angle));
+  };
+
+  return (
+    <div className="flex items-center gap-0.5 shrink-0">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-1.5">
+            <label htmlFor={id} className="flex items-center gap-1 cursor-pointer select-none">
+              <span className={`text-xs leading-none font-semibold ${toggle.on ? 'text-green-400' : 'text-muted-foreground'}`}>{label}</span>
+              {fkey && (
+                <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded border border-border leading-none py-0.5">
+                  {fkey}
+                </span>
+              )}
+            </label>
+            <Switch
+              id={id}
+              checked={toggle.on}
+              onCheckedChange={() => toggle.toggle()}
+              className="scale-75 origin-left data-[state=checked]:bg-green-500"
+            />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top">{`${description} (${fkey})`}</TooltipContent>
+      </Tooltip>
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            className="flex items-center justify-center h-4 w-4 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            aria-label={t('cadDock.statusBar.polarSettingsTitle')}
+          >
+            <ChevronUp className="h-3 w-3" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="top" align="center" className="z-[1800] w-56 p-3 space-y-3">
+          <p className="text-xs font-semibold">{t('cadDock.statusBar.polarSettingsTitle')}</p>
+          <div className="space-y-1">
+            <p className="text-[10px] text-muted-foreground">{t('cadDock.statusBar.polarIncrement')}</p>
+            <Select
+              value={String(snapshot.incrementAngle)}
+              onValueChange={(v) => polarTrackingStore.setIncrementAngle(parseFloat(v))}
+            >
+              <SelectTrigger className="h-7 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {POLAR_INCREMENT_OPTIONS.map(opt => (
+                  <SelectItem key={opt} value={opt} className="text-xs">{opt}°</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] text-muted-foreground">{t('cadDock.statusBar.polarAdditional')}</p>
+            <div className="flex gap-1">
+              <input
+                type="number"
+                value={customInput}
+                onChange={(e) => setCustomInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddAngle(); }}
+                placeholder={t('cadDock.statusBar.polarCustomPlaceholder')}
+                className="flex-1 h-7 text-xs px-2 rounded border border-border bg-background"
+                min={0}
+                max={360}
+                step={0.5}
+              />
+              <button
+                onClick={handleAddAngle}
+                className="px-2 h-7 text-xs rounded bg-muted hover:bg-muted/80 border border-border"
+              >
+                {t('cadDock.statusBar.polarAddAngle')}
+              </button>
+            </div>
+            {snapshot.additionalAngles.length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {snapshot.additionalAngles.map(angle => (
+                  <span key={angle} className="flex items-center gap-0.5 text-[10px] bg-muted rounded px-1.5 py-0.5">
+                    {angle}°
+                    <button onClick={() => handleRemoveAngle(angle)} aria-label="remove">
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }
 
