@@ -92,7 +92,8 @@ export type BOQSource =
   | 'dxf_auto'        // Αυτόματη εξαγωγή DXF
   | 'dxf_verified'    // DXF verified
   | 'imported'        // Import από εξωτερικό αρχείο
-  | 'duplicate';      // Αντίγραφο από άλλο item
+  | 'duplicate'       // Αντίγραφο από άλλο item
+  | 'bim-auto';       // Αυτόματη δημιουργία από BIM entity (ADR-363 Phase 6)
 
 /** Κατάσταση QA — ποιοτικός έλεγχος */
 export type QAStatus =

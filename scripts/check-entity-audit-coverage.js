@@ -87,6 +87,8 @@ const TRACKED_COLLECTION_KEYS = new Set([
   'FLOORPLAN_SLABS',
   // ADR-363 Phase 4 — BIM column entities (audit via column-audit-client.ts → /api/audit-trail/record)
   'FLOORPLAN_COLUMNS',
+  // ADR-363 Phase 5 — BIM beam entities (audit via beam-audit-client.ts → /api/audit-trail/record)
+  'FLOORPLAN_BEAMS',
 ]);
 /**
  * Files that are allowed to write to tracked collections without recording
@@ -125,6 +127,8 @@ const HARD_EXEMPT_PATTERNS = [
   /[\\/]bim[\\/]slabs[\\/]slab-firestore-service\.ts$/,
   // ADR-363 Phase 4 — client-SDK column service; audit via column-audit-client.ts in the hook layer
   /[\\/]bim[\\/]columns[\\/]column-firestore-service\.ts$/,
+  // ADR-363 Phase 5 — client-SDK beam service; audit via beam-audit-client.ts in the hook layer
+  /[\\/]bim[\\/]beams[\\/]beam-firestore-service\.ts$/,
 ];
 /**
  * Write operations to detect.

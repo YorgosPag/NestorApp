@@ -3750,6 +3750,14 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_slabs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "floorplanId", "order": "ASCENDING" },
+        { "fieldPath": "projectId", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "floorplan_slab_openings",
       "queryScope": "COLLECTION",
       "fields": [
@@ -3801,6 +3809,14 @@
         { "fieldPath": "projectId", "order": "ASCENDING" },
         { "fieldPath": "validation.hasCodeViolations", "order": "ASCENDING" },
         { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_columns",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "floorplanId", "order": "ASCENDING" },
+        { "fieldPath": "projectId", "order": "ASCENDING" }
       ]
     },
     {

@@ -127,6 +127,19 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
     [updateStatus]
   );
 
+  const handleDetach = useCallback(
+    async (item: BOQItem) => {
+      const confirmed = await confirm({
+        title: t('tabs.measurements.actions.detachFromBim'),
+        description: t('tabs.measurements.actions.detachFromBimConfirm'),
+        variant: 'destructive',
+      });
+      if (!confirmed) return;
+      await updateItem(item.id, { detached: true });
+    },
+    [updateItem, t, confirm]
+  );
+
   const handleSave = useCallback(
     async (data: CreateBOQItemInput | UpdateBOQItemInput, isNew: boolean) => {
       if (isNew) {
@@ -284,6 +297,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
         onEdit={handleEdit}
         onDelete={(item) => void handleDelete(item)}
         onStatusChange={handleStatusChange}
+        onDetach={(item) => void handleDetach(item)}
         expandedCategories={expandedCategories}
         onExpandedChange={(expanded) => setExpandedCategories(expanded as string[])}
       />

@@ -33,7 +33,8 @@ export type AuditEntityType =
   | 'wall'
   | 'opening'
   | 'slab'
-  | 'column';
+  | 'column'
+  | 'beam';
 
 /** Actions that can be recorded in the audit trail */
 export type AuditAction =

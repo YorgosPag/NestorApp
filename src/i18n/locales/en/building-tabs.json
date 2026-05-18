@@ -315,7 +315,13 @@
         "collapseAll": "Collapse all",
         "createRfqFromBoq": "Create RFQ from BOQ",
         "rfqWarningTitle": "Items without sub-category",
-        "rfqWarningBody": "{count} work items have no sub-category. Continue?"
+        "rfqWarningBody": "{count} work items have no sub-category. Continue?",
+        "detachFromBim": "Detach from BIM",
+        "detachFromBimConfirm": "This item will no longer auto-update from the BIM model. Continue?"
+      },
+      "badge": {
+        "bimAuto": "Auto from BIM",
+        "bimDetached": "Detached from BIM"
       },
       "units": {
         "m": "m",

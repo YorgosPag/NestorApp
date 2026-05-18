@@ -1477,3 +1477,22 @@ added to every field label and section header in the BOQItemEditor drawer (7 fie
 Existing `CategoryLevel = 'group' | 'subgroup' | 'item'` and `parentId` field reused — no schema changes, no breaking changes.
 **Impact:** Documentation only — no code changes in this commit. Implementation tracked as separate ticket post-approval (~4–5 h dev time).
 **Ref:** **ADR-337** §4.2 (full 78-entry list), §4.4 (cascading dropdown UI plan), §4.6 (Boy Scout backward compatibility).
+
+### 2026-05-18 — BIM Auto-Feed Integration (ADR-363 Phase 6)
+**Change:** BOQ schema extended with 4 BIM-specific fields to support automatic BOQ item generation from DXF viewer BIM entities (wall/opening/slab/column/beam):
+- `BOQSource` union += `'bim-auto'`
+- `BOQItem` += `sourceType?: 'manual' | 'bim-auto'`, `sourceEntityId?: string | null`, `sourceEntityType?: 'wall' | 'opening' | 'slab' | 'column' | 'beam' | null`, `detached?: boolean | null`
+- `UpdateBOQItemInput` += `detached?: boolean | null`
+- `normalizeBOQItem()` updated to hydrate all 4 new fields
+
+**New services (ADR-363 §6):**
+- `bim/config/bim-to-atoe-mapping.ts` — ATOE mapping table (5 entity types → OIK-x.xx codes + units + Greek titles)
+- `bim/services/BimToBoqBridge.ts` — singleton with deterministic IDs (`boq_bim_${entityId}`), detach guard, createdAt preservation
+
+**UI changes:**
+- `BOQCategoryAccordion`: BIM badge (cyan for auto, muted for detached) + Detach button (Unlink icon)
+- `MeasurementsTabContent`: `handleDetach` → confirm dialog → `updateItem(id, { detached: true })`
+- i18n: `tabs.measurements.badge.*` + `tabs.measurements.actions.detachFromBim*` (el+en)
+
+**Impact:** BIM entities now auto-generate BOQ items on first-save. User can detach any auto-item to take manual control. Detached items survive BIM delete/update. Phase 6.1 adds DNA layer sub-items.
+**Ref:** **ADR-363 §6** (Phase 6 spec + implementation)

@@ -315,7 +315,13 @@
         "collapseAll": "Σύμπτυξη όλων",
         "createRfqFromBoq": "Δημιουργία RFQ από BOQ",
         "rfqWarningTitle": "Εργασίες χωρίς υποκατηγορία",
-        "rfqWarningBody": "{count} εργασίες δεν έχουν υποκατηγορία. Θέλεις να συνεχίσεις;"
+        "rfqWarningBody": "{count} εργασίες δεν έχουν υποκατηγορία. Θέλεις να συνεχίσεις;",
+        "detachFromBim": "Αποσύνδεση από BIM",
+        "detachFromBimConfirm": "Αυτή η εργασία δεν θα ενημερώνεται πλέον αυτόματα από το BIM μοντέλο. Συνέχεια;"
+      },
+      "badge": {
+        "bimAuto": "Αυτόματο από BIM",
+        "bimDetached": "Αποσυνδεδεμένο από BIM"
       },
       "units": {
         "m": "μ.",

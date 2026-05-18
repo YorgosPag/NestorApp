@@ -28,7 +28,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Unlink } from 'lucide-react';
 import type { BOQItem, BOQItemStatus } from '@/types/boq';
 import type { MasterBOQCategory } from '@/config/boq-categories';
 import { findSubCategory } from '@/config/boq-subcategories';
@@ -46,6 +46,7 @@ interface BOQCategoryAccordionProps {
   onEdit: (item: BOQItem) => void;
   onDelete: (item: BOQItem) => void;
   onStatusChange: (item: BOQItem, status: BOQItemStatus) => void;
+  onDetach?: (item: BOQItem) => void;
   /** Controlled expanded categories (for expand/collapse all) */
   expandedCategories?: string[];
   /** Callback when user manually expands/collapses a category */
@@ -101,6 +102,7 @@ export function BOQCategoryAccordion({
   onEdit,
   onDelete,
   onStatusChange,
+  onDetach,
   expandedCategories,
   onExpandedChange,
 }: BOQCategoryAccordionProps) {
@@ -159,6 +161,7 @@ export function BOQCategoryAccordion({
         onEdit={onEdit}
         onDelete={onDelete}
         onStatusChange={onStatusChange}
+        onDetach={onDetach}
         t={t}
       />
     ),
@@ -203,10 +206,11 @@ interface CategoryItemsTableProps {
   onEdit: (item: BOQItem) => void;
   onDelete: (item: BOQItem) => void;
   onStatusChange: (item: BOQItem, status: BOQItemStatus) => void;
+  onDetach?: (item: BOQItem) => void;
   t: (key: string) => string;
 }
 
-function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, t }: CategoryItemsTableProps) {
+function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, onDetach, t }: CategoryItemsTableProps) {
   const colors = useSemanticColors();
   return (
     <Table>
@@ -236,6 +240,19 @@ function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, 
                   <p className={cn('text-xs mt-0.5', colors.text.muted)}>
                     {findSubCategory(item.subCategoryCode)?.nameEL ?? item.subCategoryCode}
                   </p>
+                )}
+                {item.sourceType === 'bim-auto' && (
+                  <Badge
+                    variant="secondary"
+                    className={cn('text-xs mt-1', item.detached
+                      ? 'bg-muted text-muted-foreground'
+                      : 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300'
+                    )}
+                  >
+                    {item.detached
+                      ? t('tabs.measurements.badge.bimDetached')
+                      : t('tabs.measurements.badge.bimAuto')}
+                  </Badge>
                 )}
                 {variance && (
                   <p className={cn('text-xs tabular-nums mt-0.5', getVarianceClass(variance.percent))}>
@@ -274,6 +291,17 @@ function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, 
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
+                  {item.sourceType === 'bim-auto' && !item.detached && onDetach && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDetach(item)}
+                      aria-label={t('tabs.measurements.actions.detachFromBim')}
+                      className="h-7 w-7 text-cyan-600 hover:text-cyan-700"
+                    >
+                      <Unlink className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                   {item.status === 'draft' && (
                     <Button
                       variant="ghost"

@@ -177,6 +177,20 @@ export interface BOQItem {
 
   /** Ημερομηνία τελευταίας ενημέρωσης (ISO string) */
   updatedAt: string;
+
+  // --- BIM Auto-Feed (ADR-363 Phase 6) ---
+
+  /** Discriminator για BIM-generated items: 'bim-auto' | 'manual'. Optional for backwards compat. */
+  sourceType?: 'manual' | 'bim-auto';
+
+  /** ID του BIM entity που δημιούργησε αυτό το item (wall/opening/slab/column/beam ID). */
+  sourceEntityId?: string | null;
+
+  /** Τύπος BIM entity πηγής. */
+  sourceEntityType?: 'wall' | 'opening' | 'slab' | 'column' | 'beam' | null;
+
+  /** Αν true: ο χρήστης το αποσύνδεσε από BIM — δεν ενημερώνεται αυτόματα πλέον. */
+  detached?: boolean | null;
 }
 
 // ============================================================================
@@ -311,6 +325,8 @@ export interface UpdateBOQItemInput {
   measurementMethod?: MeasurementMethod;
   qaStatus?: QAStatus;
   notes?: string | null;
+  /** BIM auto-feed: set true to detach item from BIM sync (user override). */
+  detached?: boolean | null;
 }
 
 /** Φίλτρα αναζήτησης BOQ items */
