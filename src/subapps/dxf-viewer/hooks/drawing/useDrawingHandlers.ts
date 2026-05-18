@@ -67,6 +67,10 @@ import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 // 🎯 ADR-047: Distance calculation for close-on-first-point
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// ADR-357 Phase 1: Polar Tracking
+import { applyPolar, formatPolarLabel } from '../../systems/constraints/polar-utils';
+import type { PolarSnapResult } from '../../systems/constraints/polar-utils';
+import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
 // 🏢 ADR-099: Centralized Polygon Tolerances
 import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 // 🏢 ADR-362 Phase D1: Dim tool routing layer (Smart DIM + 4 manual overrides)
@@ -153,10 +157,12 @@ export function useDrawingHandlers(
   const canvasElement = canvasOps.getCanvas();
   const canvasRef = { current: canvasElement };
 
-  // Ortho mode (F8) — read via ref to avoid recreating callbacks on every toggle
-  const { ortho } = useCadToggles();
+  // Ortho (F8) + Polar (F10) — read via refs to avoid recreating callbacks on every toggle
+  const { ortho, polar } = useCadToggles();
   const orthoOnRef = useRef(ortho.on);
   orthoOnRef.current = ortho.on;
+  const polarOnRef = useRef(polar.on);
+  polarOnRef.current = polar.on;
 
   // 🔲 GRID SNAP: Get grid step from RulersGrid context for grid snapping
   const { state: rulersGridState } = useRulersGridContext();
@@ -262,8 +268,16 @@ export function useDrawingHandlers(
 
     // Normal point addition (not closing)
     const lastRef = drawingState.tempPoints[drawingState.tempPoints.length - 1];
-    const orthoConstrained = orthoOnRef.current && lastRef ? hardOrtho(p, lastRef) : p;
-    const snappedPoint = applySnap(orthoConstrained);
+    const afterOrtho = orthoOnRef.current && lastRef ? hardOrtho(p, lastRef) : p;
+    // ADR-357 Phase 1: Polar snap after ortho (mutually exclusive — ensured by useCadToggles)
+    const afterPolar = !orthoOnRef.current && polarOnRef.current && lastRef
+      ? applyPolar(afterOrtho, lastRef, {
+          incrementAngle: polarTrackingStore.incrementAngle,
+          additionalAngles: polarTrackingStore.additionalAngles,
+          angleTolerance: 3,
+        }).point
+      : afterOrtho;
+    const snappedPoint = applySnap(afterPolar);
 
     const transformUtils = canvasOps.getTransformUtils();
     const completed = addPoint(snappedPoint, transformUtils);
@@ -313,9 +327,19 @@ export function useDrawingHandlers(
       const transformUtils = canvasOps.getTransformUtils();
       const t1 = performance.now();
 
-      // Apply ortho constraint (F8) before preview — hard H/V lock like AutoCAD
+      // Apply ortho (F8) or polar (F10) constraint before preview — mutually exclusive
       const lastRefPt = drawingState.tempPoints[drawingState.tempPoints.length - 1];
-      const previewPt = orthoOnRef.current && lastRefPt ? hardOrtho(p, lastRefPt) : p;
+      const afterOrtho = orthoOnRef.current && lastRefPt ? hardOrtho(p, lastRefPt) : p;
+      let polarSnapResult: PolarSnapResult | null = null;
+      let previewPt = afterOrtho;
+      if (!orthoOnRef.current && polarOnRef.current && lastRefPt) {
+        polarSnapResult = applyPolar(afterOrtho, lastRefPt, {
+          incrementAngle: polarTrackingStore.incrementAngle,
+          additionalAngles: polarTrackingStore.additionalAngles,
+          angleTolerance: 3,
+        });
+        previewPt = polarSnapResult.point;
+      }
 
       // Update the preview entity (calculates geometry, updates ref)
       updatePreview(previewPt, transformUtils);
@@ -338,6 +362,15 @@ export function useDrawingHandlers(
 
         if (previewEntity) {
           previewCanvasRef.current.drawPreview(previewEntity);
+          // ADR-357 Phase 1: Polar tracking line overlay (dashed alignment path + tooltip)
+          if (polarSnapResult?.isSnapped && lastRefPt && polarSnapResult.snappedAngle !== null) {
+            previewCanvasRef.current.drawPolarTrackingLine(
+              lastRefPt,
+              polarSnapResult.snappedAngle,
+              formatPolarLabel(polarSnapResult.snappedAngle, polarSnapResult.distance),
+              previewPt,
+            );
+          }
         } else {
           // 🔧 FIX (2026-01-27): Clear canvas when preview entity is null
           // This happens when drawing is completed (2nd click on line/measure-distance)
