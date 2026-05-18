@@ -1,3 +1,5 @@
+import React from 'react';
+import type { SceneModel } from '../types/scene';
 import { CONTEXTUAL_TEXT_EDITOR_TAB, TEXT_EDITOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-text-editor-tab';
 import {
   CONTEXTUAL_ARRAY_RECT_TAB, CONTEXTUAL_ARRAY_POLAR_TAB, CONTEXTUAL_ARRAY_PATH_TAB,
@@ -25,6 +27,24 @@ function readArrayKind(params: unknown): string | undefined {
     return typeof k === 'string' ? k : undefined;
   }
   return undefined;
+}
+
+export function useActiveContextualTrigger({
+  primarySelectedId, currentScene, activeTool,
+}: {
+  primarySelectedId: string | null;
+  currentScene: SceneModel | null;
+  activeTool: string;
+}): string | null {
+  return React.useMemo<string | null>(() => {
+    const entity = primarySelectedId && currentScene
+      ? currentScene.entities.find((e) => e.id === primarySelectedId) : null;
+    const fromSelection = entity ? resolveContextualTrigger(entity) : null;
+    if (fromSelection) return fromSelection;
+    if (activeTool === 'stair') return STAIR_CONTEXTUAL_TRIGGER;
+    if (activeTool === 'wall') return WALL_CONTEXTUAL_TRIGGER;
+    return null;
+  }, [primarySelectedId, currentScene, activeTool]);
 }
 
 export function resolveContextualTrigger(entity: EntityLike): string | null {

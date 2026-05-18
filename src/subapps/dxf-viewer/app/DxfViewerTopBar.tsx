@@ -17,6 +17,7 @@ import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import { RibbonRoot } from '../ui/ribbon/components/RibbonRoot';
 import { StairAdvancedPanelHost } from './StairAdvancedPanelHost';
+import { WallPersistenceHost } from './WallPersistenceHost';
 
 type LevelManager = ReturnType<typeof useLevels>;
 
@@ -52,6 +53,13 @@ export function DxfViewerTopBar({
         disabled to free the canvas right side; flip the conditional back
         on if a future option wants both surfaces.
       */}
+      <WallPersistenceHost
+        primarySelectedId={primarySelectedId}
+        currentScene={currentScene}
+        levelManager={levelManager}
+        projectId={levelManager.saveContext?.projectId ?? undefined}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+      />
       {false && (
         <StairAdvancedPanelHost
           primarySelectedId={primarySelectedId}
