@@ -12,6 +12,8 @@ import { getFormatter } from '../../../formatting';
 // ADR-357 Phase 2a: SSoT toggle for Dynamic Input (status bar / Firestore-backed) —
 // replaces legacy `settings.behavior.dynamic_input` cursor flag.
 import { useCadToggles } from '../../../hooks/common/useCadToggles';
+// ADR-357 Phase 2b: display unit for numeric readouts.
+import { useDisplayUnit } from '../../../hooks/common/useDisplayUnit';
 import { isInteractiveTool } from '../../tools/ToolStateManager';
 import { CADFeedback } from '../../../utils/feedback-utils';
 import { DynamicInputFields } from './DynamicInputFields';
@@ -49,6 +51,8 @@ export default function DynamicInputOverlay({
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   // ADR-357 Phase 2a — dynInput is the canonical Dynamic Input enable flag (status-bar toggle).
   const { dynInput } = useCadToggles();
+  // ADR-357 Phase 2b — display unit for numeric readouts (mm internal → configurable display).
+  const { displayUnit } = useDisplayUnit();
   const colors = useSemanticColors();
   
   // Centralized state management
@@ -197,6 +201,8 @@ export default function DynamicInputOverlay({
     riseInputRef,
     treadInputRef,
     widthInputRef,
+    // ADR-357 Phase 2b
+    displayUnit,
   });
 
   // Phase management hook
@@ -257,6 +263,7 @@ export default function DynamicInputOverlay({
     firstClickPoint,
     isManualInput,
     showLengthDuringDraw,
+    displayUnit,
     setXValue,
     setYValue,
     setLengthValue,
