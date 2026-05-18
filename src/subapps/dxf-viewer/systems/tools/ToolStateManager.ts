@@ -152,6 +152,7 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'wall':  { id: 'wall',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true,  preservesOverlayMode: false }, // ADR-363 Phase 1 — continuous draw (chain walls)
   'opening': { id: 'opening', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 2 — continuous draw
   'slab':    { id: 'slab',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 3 — polygon N-click + Enter
+  'column':  { id: 'column',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 4 — single-click + Tab anchor cycle
   // ADR-362 Phase D1: Enterprise Dimension creation tools (Smart DIM + 4 manual overrides)
   'dim-smart':      { id: 'dim-smart',      category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'dim-linear':     { id: 'dim-linear',     category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
@@ -288,7 +289,6 @@ export function isInDrawingMode(
 ): boolean {
   // CAD drawing/measurement tools
   if (isInteractiveTool(tool)) return true;
-
   // Overlay polygon drawing mode
   if (overlayMode === 'draw') return true;
   return false;
