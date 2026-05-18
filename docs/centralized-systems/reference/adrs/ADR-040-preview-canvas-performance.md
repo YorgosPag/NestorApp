@@ -1777,3 +1777,7 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-18: ADR-357 Phase 1 — PreviewRenderer drawPolarTrackingLine
 
 `PreviewRenderer.ts` adds `drawPolarTrackingLine(ctx, snapPoint, angleDeg)`: dashed green radial path at locked polar angle. Stateless render function — receives all state as params. Cardinal rules maintained.
+
+## 2026-05-18: ADR-357 Phase 8 — QuickPropertiesHoverPopover micro-leaf added to CanvasSection
+
+`CanvasSection.tsx` mounts `QuickPropertiesHoverPopover` as sibling of `GripHoverMenu`. New micro-leaf pattern: `QuickPropertiesStore` singleton subscribes to `HoverStore` internally (zero React state), fires after 800ms stable hover, captures position from `ImmediatePositionStore`. `QuickPropertiesHoverPopover` is the ONLY `useSyncExternalStore` consumer — `CanvasSection` does NOT subscribe. Cardinal rules maintained.

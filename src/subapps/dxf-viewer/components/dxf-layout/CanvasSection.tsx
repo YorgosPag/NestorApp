@@ -27,9 +27,9 @@ import { useUniversalSelection } from '../../systems/selection';
 import { useCommandHistory, useCommandHistoryKeyboard } from '../../core/commands';
 import {
   useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion,
-  useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler,
+  useCanvasContextMenu, useDrawingUIHandlers, useCanvasClickHandler,
   useFitToView, useCanvasPan, usePolygonCompletion, useCanvasKeyboardShortcuts,
-  useCanvasEffects, useOverlayInteraction, useCanvasContainerHandlers, useAutoAreaMouseMove,
+  useCanvasEffects, useOverlayInteraction, useCanvasContainerHandlers,
 } from '../../hooks/canvas';
 import { useGuideToolWorkflows, useEntityCompleteGuideListener } from '../../hooks/guides';
 import { useOverlayLayers } from '../../hooks/layers';
@@ -41,7 +41,9 @@ import { useModifyTools } from '../../hooks/tools/useModifyTools';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useGripHoverMenuController } from '../../hooks/grips/useGripHoverMenuController';
 import { GripHoverMenu } from '../grip/GripHoverMenu';
-import { useEntityJoin } from '../../hooks/useEntityJoin';
+import { QuickPropertiesHoverPopover } from '../../systems/properties/QuickPropertiesHoverPopover';
+import { QuickPropertiesMiniPanel } from '../../systems/properties/QuickPropertiesMiniPanel';
+import { PropertiesPalette } from '../../systems/properties/PropertiesPalette';
 import { useGuideActions } from '../../hooks/state/useGuideActions';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { useConstructionPointState } from '../../hooks/state/useConstructionPointState';
@@ -49,20 +51,18 @@ import { PromptDialog, usePromptDialog } from '../../systems/prompt-dialog';
 import { useNotifications } from '../../../../providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import DrawingContextMenu, { type DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
+import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import EntityContextMenu, { type EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
 import GuideContextMenu, { type GuideContextMenuHandle } from '../../ui/components/GuideContextMenu';
 import GuideBatchContextMenu, { type GuideBatchContextMenuHandle } from '../../ui/components/GuideBatchContextMenu';
 import type { ToolType } from '../../ui/toolbar/types';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
-import { useTextDoubleClickEditor } from '../../ui/text-toolbar/hooks/useTextDoubleClickEditor';
 import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
-import { useTextCreationTool } from '../../hooks/canvas/useTextCreationTool';
 import { MirrorConfirmOverlay } from '../../ui/components/MirrorConfirmOverlay';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
-import { useArrayRepickHandlers } from '../../hooks/canvas/useArrayRepickHandlers';
 import { useFloorplanAutoFit } from '../../hooks/canvas/useFloorplanAutoFit';
-import { ReorderEntityCommand } from '../../core/commands/entity-commands';
+import { useCanvasEditActions } from '../../hooks/canvas/useCanvasEditActions';
+import { useCanvasSectionUI } from '../../hooks/canvas/useCanvasSectionUI';
 /**
  * Canvas orchestrator — wires hooks together and delegates rendering to CanvasLayerStack.
  * No business logic beyond hook composition.
@@ -178,7 +178,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { draftPolygon, setDraftPolygon, draftPolygonRef, isSavingPolygon, setIsSavingPolygon, finishDrawingWithPolygonRef, finishDrawing } = usePolygonCompletion({
     levelManager, overlayStore, eventBus, currentStatus, currentKind, activeTool, overlayMode,
   });
-  const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, stairTool, wallTool } = useSpecialTools({ activeTool, levelManager });
+  const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, stairTool, wallTool, slabTool, columnTool } = useSpecialTools({ activeTool, levelManager });
   // === Cursor + touch gestures ===
   const { updatePosition, setActive } = useCursorActions();
   const { layoutMode: canvasLayoutMode } = useResponsiveLayoutForCanvas();
@@ -277,23 +277,20 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     hoveredEdgeInfo, transformScale: transform.scale, fitToOverlay,
     setDraggingOverlayBody: unified.setDraggingOverlayBody, setDragPreviewPosition: unified.setDragPreviewPosition,
   });
-  // ADR-344 Phase 6.E follow-up — text creation tool.
-  // Mounted before useCanvasClickHandler so `handleCanvasClick` is available
-  // to route 'text' tool clicks to the in-canvas TipTap creation overlay.
-  const textCreation = useTextCreationTool({
-    transformRef,
-    containerRef,
-    activeTool,
-    onToolChange: (tool) => props.onToolChange?.(tool),
-    executeCommand,
+  const { textCreation, handleArrayPolarCenterRepick, handleArrayPathEntityRepick, handleSmartDelete, entityJoinHook, entityJoinState, handleExitDrawMode, handleReorderEntity } = useCanvasEditActions({
+    activeTool, overlayMode, setOverlayMode, transformRef, containerRef,
+    onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
+    executeCommand, selectedEntityIds, selectedGrips: unified.selectedGrips,
+    setSelectedGrips: unified.setSelectedGrips, overlayStoreRef, universalSelectionRef,
+    levelManager, setSelectedEntityIds, eventBus, notifyWarning, notifySuccess,
   });
-  // ADR-353 §B2/C3 — interactive re-pick handlers for polar/path arrays.
-  const { handleArrayPolarCenterRepick, handleArrayPathEntityRepick } = useArrayRepickHandlers({ levelManager, executeCommand });
   const { handleCanvasClick } = useCanvasClickHandler({
     viewportReady, viewport, transform, activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement,
     stairTool,
     wallTool,
+    slabTool,
+    columnTool,
     dxfGripInteraction: unified.dxfProjection,
     rotationIsActive: rotationTool.isCollectingInput, handleRotationClick: rotationTool.handleRotationClick,
     moveIsActive: moveTool.isCollectingInput, handleMoveClick: moveTool.handleMoveClick,
@@ -338,22 +335,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // ADR-344 Phase 6.E follow-up — text creation tool click handler
     onTextToolClick: textCreation.handleCanvasClick,
   });
-  const { handleSmartDelete } = useSmartDelete({
-    selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
-    executeCommand, overlayStoreRef, universalSelectionRef, levelManager, setSelectedEntityIds, eventBus,
-  });
-  const entityJoinHook = useEntityJoin({ levelManager, executeCommand, setSelectedEntityIds, onWarning: notifyWarning, onSuccess: notifySuccess });
-  const entityJoinState = useMemo(() => {
-    const canJoin = entityJoinHook.canJoin(selectedEntityIds);
-    const preview = canJoin ? entityJoinHook.getJoinPreview(selectedEntityIds) : null;
-    return { canJoin, joinResultLabel: preview?.resultType !== 'not-joinable' ? preview?.resultType : undefined };
-  }, [entityJoinHook, selectedEntityIds]);
-  const handleExitDrawMode = useCallback(() => { if (overlayMode === 'draw' && setOverlayMode) setOverlayMode('select'); }, [overlayMode, setOverlayMode]);
-  const handleReorderEntity = useCallback((direction: 'front' | 'back') => {
-    if (selectedEntityIds.length !== 1 || !levelManager.currentLevelId) return;
-    const adapter = new LevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelManager.currentLevelId);
-    executeCommand(new ReorderEntityCommand(selectedEntityIds[0], direction, adapter));
-  }, [selectedEntityIds, levelManager, executeCommand]);
   useCanvasKeyboardShortcuts({
     handleSmartDelete, dxfGripInteraction: unified.dxfProjection,
     setDraftPolygon, draftPolygon, selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
@@ -379,19 +360,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // ADR-357 Phase 5: Chain mode keyboard shortcuts
     onUndoChainVertex: handleDrawingUndoLastPoint,
     onChainFinish: handleDrawingCancel,
+    // ADR-357 Phase 7: Shift+Right-click snap override menu
+    drawingTempPointCount: drawingHandlers?.drawingState?.tempPoints?.length ?? 0,
+    onSnapOverrideMenuRequest: (x: number, y: number) => drawingMenuRef.current?.open(x, y),
   });
-  // === ADR-344 Phase 6.E — In-canvas text editor (DBLCLKEDIT) ===
-  // Holds local React state only — no useSyncExternalStore, no high-freq
-  // subscription. Overlay renders only when a TEXT/MTEXT entity is being
-  // edited. Selection passed via getter (ADR-040 cardinal rule 2).
-  const textEditor = useTextDoubleClickEditor({
-    transformRef,
-    containerRef,
-    executeCommand,
-    getSelectedEntityIds,
+  const { textEditor, handleDoubleClick, handleMouseMoveWithAutoArea } = useCanvasSectionUI({
+    transformRef, containerRef, activeTool, executeCommand,
+    getSelectedEntityIds, dxfScene, handleMouseMove: unified.handleMouseMove,
+    levelManager, currentOverlays, transformScale: transform.scale,
   });
-  // === Auto-area hover preview ===
-  const { handleMouseMoveWithAutoArea } = useAutoAreaMouseMove({ handleMouseMove: unified.handleMouseMove, activeTool, levelManager, currentOverlays, transformScale: transform.scale });
   // === Render ===
   return (
     <>
@@ -408,7 +385,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         entityState={{ selectedEntityIds, setSelectedEntityIds }}
         zoomSystem={zoomSystem} dxfGripInteraction={unified.dxfProjection} universalSelection={universalSelection}
         setTransform={setTransform}
-        containerHandlers={{ onMouseMove: handleContainerMouseMove, onMouseDown: handleContainerMouseDown, onMouseUp: handleContainerMouseUp, onMouseEnter: handleContainerMouseEnter, onMouseLeave: handleContainerMouseLeave, onDoubleClick: textEditor.handleDoubleClick }}
+        containerHandlers={{ onMouseMove: handleContainerMouseMove, onMouseDown: handleContainerMouseDown, onMouseUp: handleContainerMouseUp, onMouseEnter: handleContainerMouseEnter, onMouseLeave: handleContainerMouseLeave, onDoubleClick: handleDoubleClick }}
         handleOverlayClick={handleOverlayClick} handleMultiOverlayClick={handleMultiOverlayClick}
         handleCanvasClick={handleCanvasClick} handleUnifiedMouseMove={handleMouseMoveWithAutoArea}
         handleDrawingContextMenu={handleDrawingContextMenu}
@@ -430,7 +407,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       <DrawingContextMenu ref={drawingMenuRef} activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}
         pointCount={overlayMode === 'draw' ? draftPolygon.length : (drawingHandlers?.drawingState?.tempPoints?.length ?? 0)}
         onFinish={activeTool === 'line' ? handleDrawingCancel : handleDrawingFinish}
-        onClose={handleDrawingClose} onUndoLastPoint={handleDrawingUndoLastPoint} onCancel={handleDrawingCancel} onFlipArc={handleFlipArc} />
+        onClose={handleDrawingClose} onUndoLastPoint={handleDrawingUndoLastPoint} onCancel={handleDrawingCancel} onFlipArc={handleFlipArc}
+        onSnapOverride={(mode) => { SnapOverrideOrchestrator.setOverride(mode); }} />
       <EntityContextMenu ref={entityMenuRef} selectedCount={selectedEntityIds.length}
         canJoin={entityJoinState.canJoin} joinResultLabel={entityJoinState.joinResultLabel}
         onJoin={() => entityJoinHook.joinEntities(selectedEntityIds)} onDelete={() => handleSmartDelete()} onCancel={() => entityMenuRef.current?.close()}
@@ -475,6 +453,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         onCancel={() => guideBatchMenuRef.current?.close()} />
       <PromptDialog />
       <GripHoverMenu />
+      {/* ADR-357 Phase 8 — Quick Properties hover tooltip (micro-leaf, ADR-040) */}
+      <QuickPropertiesHoverPopover dxfScene={dxfScene} activeTool={activeTool} />
+      {/* ADR-357 Phase 9 — Quick Properties mini-panel on double-click (micro-leaf, ADR-040) */}
+      <QuickPropertiesMiniPanel dxfScene={dxfScene} activeTool={activeTool} executeCommand={executeCommand} levelManager={levelManager} />
+      {/* ADR-357 Phase 10 — Full Properties Palette F11/Ctrl+1 (micro-leaf, ADR-040) */}
+      <PropertiesPalette dxfScene={dxfScene} selectedEntityIds={selectedEntityIds} activeTool={activeTool} executeCommand={executeCommand} levelManager={levelManager} />
       {mirrorTool.phase === 'awaiting-keep-originals' && <MirrorConfirmOverlay onConfirm={mirrorTool.handleMirrorConfirm} onCancel={mirrorTool.handleMirrorEscape} />}
       {textEditor.editingState && (
         <TextEditorOverlay
