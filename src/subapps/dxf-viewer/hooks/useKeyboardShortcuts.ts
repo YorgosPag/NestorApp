@@ -19,6 +19,17 @@ import { useUniversalSelection } from '../systems/selection';
 import { EventBus } from '../systems/events';
 // ADR-357 Phase 14-B: Command line activation
 import { CommandLineStore } from '../systems/command-line/CommandLineStore';
+// ADR-364 — Escape Command Bus SSoT
+import { useEscapeHandler, ESC_PRIORITY } from '../systems/escape-bus';
+
+// ADR-364 — drawing tools that consume ESC as "cancel drawing".
+// Dim tools are NOT listed here — they own their own DIM_TOOL priority slot
+// inside useDimToolRouting (ADR-362 Phase D3). Modify tools (move/mirror/...)
+// own MODIFY_TOOL slots inside useCanvasKeyboardShortcuts.
+const DRAWING_TOOLS_WITH_CANCEL: ReadonlySet<string> = new Set([
+  'line', 'polyline', 'polygon', 'measure-area', 'measure-distance',
+  'measure-angle', 'rectangle', 'circle', 'stair', 'wall',
+]);
 
 // Hook parameters interface
 interface KeyboardShortcutsConfig {
@@ -94,27 +105,9 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
-      // 🎯 ADR-047: ESC - Cancel drawing OR close color palette
-      if (matchesShortcut(e, 'escape')) {
-        // PRIORITY 1: Cancel active drawing (measure-area, polyline, polygon, etc.)
-        const isDrawingTool = [
-          'line', 'polyline', 'polygon', 'measure-area', 'measure-distance', 'measure-angle', 'rectangle', 'circle', 'stair', 'wall',
-          // ADR-362 hotfix: dim tools must route ESC through onDrawingCancel → dimRouting.handleCancel()
-          'dim-smart', 'dim-linear', 'dim-aligned', 'dim-angular2L', 'dim-angular3P',
-          'dim-radius', 'dim-diameter', 'dim-arc-length', 'dim-jogged-radius', 'dim-ordinate',
-          'dim-baseline', 'dim-continued',
-        ].includes(activeTool);
-
-        if (isDrawingTool && onDrawingCancel) {
-          e.preventDefault();
-          onDrawingCancel();
-          return;
-        }
-
-        // PRIORITY 2: Close color palette (fallback if not drawing)
-        onColorMenuClose();
-        return;
-      }
+      // 🎯 ADR-047 / ADR-364: ESC dispatch moved to EscapeCommandBus.
+      // Two bus registrations live below (DRAW_TOOL + COLOR_MENU). The bus
+      // owns preventDefault + priority across all callers.
 
       // 🏢 ENTERPRISE (2026-01-26): Delete handling MOVED to CanvasSection
       // CanvasSection has access to selectedGrips and handles smart delete:
@@ -218,6 +211,26 @@ export const useKeyboardShortcuts = ({
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
   }, [selectedEntityIds, onNudgeSelection, activeTool, overlayMode, overlayStore, onColorMenuClose, onSelectAll]);
+
+  // ADR-364 — ESC bus registration #1: cancel drawing tool (excluding dim tools)
+  useEscapeHandler(
+    onDrawingCancel
+      ? {
+          id: 'use-keyboard-shortcuts/cancel-drawing',
+          priority: ESC_PRIORITY.DRAW_TOOL,
+          canHandle: () => DRAWING_TOOLS_WITH_CANCEL.has(activeTool),
+          handle: () => { onDrawingCancel(); return true; },
+        }
+      : null,
+  );
+
+  // ADR-364 — ESC bus registration #2: fallback close color/menu palette
+  useEscapeHandler({
+    id: 'use-keyboard-shortcuts/color-menu-close',
+    priority: ESC_PRIORITY.COLOR_MENU,
+    canHandle: () => true,
+    handle: () => { onColorMenuClose(); return true; },
+  });
 
   return {
     handleCanvasMouseMove

@@ -620,18 +620,22 @@
       "stairActions": "Actions",
       "wallCategory": "Category",
       "wallGeometry": "Geometry",
+      "wallMaterial": "Material",
       "wallActions": "Actions",
       "openingKind": "Type",
       "openingSize": "Size",
       "openingActions": "Actions",
       "slabKind": "Type",
       "slabGeometry": "Geometry",
+      "slabMaterial": "Material",
       "slabActions": "Actions",
       "columnKind": "Type",
       "columnGeometry": "Geometry",
+      "columnMaterial": "Material",
       "columnActions": "Actions",
       "beamKind": "Type",
       "beamGeometry": "Geometry",
+      "beamMaterial": "Material",
       "beamActions": "Actions",
       "slabOpeningKind": "Type",
       "slabOpeningActions": "Actions",
@@ -702,8 +706,14 @@
       "rayTooltip": "Semi-infinite line from origin in a direction",
       "xlineModeSelector": "Mode",
       "bim": {
-        "wall": "Wall",
-        "opening": "Opening",
+        "wall": {
+          "label": "Wall",
+          "tooltip": "Draw wall (shortcut W)"
+        },
+        "opening": {
+          "label": "Opening",
+          "tooltip": "Draw opening (shortcut OP)"
+        },
         "openingVariants": {
           "door": "Door",
           "window": "Window",
@@ -711,10 +721,22 @@
           "frenchDoor": "French Door",
           "fixed": "Fixed Opening"
         },
-        "slab": "Slab",
-        "slabOpening": "Slab Opening",
-        "column": "Column",
-        "beam": "Beam"
+        "slab": {
+          "label": "Slab",
+          "tooltip": "Draw slab (shortcut SL)"
+        },
+        "slabOpening": {
+          "label": "Slab Opening",
+          "tooltip": "Draw slab opening (shortcut SO)"
+        },
+        "column": {
+          "label": "Column",
+          "tooltip": "Draw column (shortcut CL)"
+        },
+        "beam": {
+          "label": "Beam",
+          "tooltip": "Draw beam (shortcut BM)"
+        }
       },
       "select": "Select",
       "gripEdit": "Grip Edit",
@@ -949,6 +971,16 @@
           },
           "off": "Normal",
           "on": "Flipped"
+        },
+        "material": {
+          "section": {
+            "title": "Material"
+          },
+          "rc": "Reinforced Concrete",
+          "masonry": "Masonry",
+          "aeratedConcrete": "Aerated Concrete",
+          "gypsum": "Gypsum Board",
+          "comingSoon": "Available with WallDna Phase 1D"
         }
       },
       "openingEditor": {
@@ -1007,6 +1039,15 @@
           "twoWay": "Two-Way",
           "waffle": "Waffle",
           "flat": "Flat"
+        },
+        "material": {
+          "section": {
+            "title": "Material"
+          },
+          "rc": "Reinforced Concrete",
+          "composite": "Composite Slab",
+          "wood": "Timber",
+          "comingSoon": "Available with material library Phase 6+"
         }
       },
       "beamEditor": {
@@ -1031,6 +1072,15 @@
           "simple": "Simple",
           "fixed": "Fixed",
           "cantilever": "Cantilever"
+        },
+        "material": {
+          "section": {
+            "title": "Material"
+          },
+          "rc": "Reinforced Concrete",
+          "steel": "Steel",
+          "glulam": "Glulam",
+          "comingSoon": "Available in a future phase"
         }
       },
       "slabOpeningEditor": {
@@ -1075,6 +1125,15 @@
           "ne": "Northeast",
           "sw": "Southwest",
           "se": "Southeast"
+        },
+        "material": {
+          "section": {
+            "title": "Material"
+          },
+          "rc": "Reinforced Concrete",
+          "steel": "Steel",
+          "masonry": "Masonry",
+          "wood": "Wood"
         }
       },
       "measureAngle": "Angle",

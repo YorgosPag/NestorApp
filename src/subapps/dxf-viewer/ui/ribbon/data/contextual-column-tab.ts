@@ -75,6 +75,16 @@ const HEIGHT_MM_OPTIONS = [
   { value: '4000', labelKey: '4000', isLiteralLabel: true },
 ] as const;
 
+// ADR-363 Phase 4.5d — material picker (ENABLED). 4 options match the hatch
+// pattern keys consumed by `resolveMaterialKey` + `ColumnRenderer.drawMaterialHatch`
+// (Phase 4.5c.2). Lookup is case-insensitive, unknown → 'rc' fallback.
+const COLUMN_MATERIAL_OPTIONS = [
+  { value: 'rc',      labelKey: 'ribbon.commands.columnEditor.material.rc',      isLiteralLabel: false },
+  { value: 'steel',   labelKey: 'ribbon.commands.columnEditor.material.steel',   isLiteralLabel: false },
+  { value: 'masonry', labelKey: 'ribbon.commands.columnEditor.material.masonry', isLiteralLabel: false },
+  { value: 'wood',    labelKey: 'ribbon.commands.columnEditor.material.wood',    isLiteralLabel: false },
+] as const;
+
 const ROTATION_DEG_OPTIONS = [
   { value: '0',   labelKey: '0',   isLiteralLabel: true },
   { value: '15',  labelKey: '15',  isLiteralLabel: true },
@@ -177,6 +187,32 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.rotation,
                 comboboxWidthPx: 80,
                 options: ROTATION_DEG_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-363 Phase 4.5d — material picker panel. ENABLED — sits between
+      // geometry and actions so the engineer can flip RC ↔ Steel ↔ Masonry ↔
+      // Wood and immediately observe the hatch update from Phase 4.5c.2
+      // (`ColumnRenderer.drawMaterialHatch`).
+      id: 'column-material',
+      labelKey: 'ribbon.panels.columnMaterial',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.material',
+                labelKey: 'ribbon.commands.columnEditor.material.section.title',
+                commandKey: COLUMN_RIBBON_KEYS.stringParams.material,
+                comboboxWidthPx: 180,
+                options: COLUMN_MATERIAL_OPTIONS,
               },
             },
           ],

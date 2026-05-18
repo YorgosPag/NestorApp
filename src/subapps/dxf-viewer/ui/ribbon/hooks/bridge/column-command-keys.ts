@@ -13,6 +13,8 @@ export const COLUMN_RIBBON_KEYS = {
     kind: 'column.params.kind',
     /** 9-position anchor selector. */
     anchor: 'column.params.anchor',
+    /** ADR-363 Phase 4.5d — material library ID (4 options: rc/steel/masonry/wood). */
+    material: 'column.params.material',
   },
   params: {
     /** mm — column width (διάμετρος αν circular). */
@@ -34,7 +36,8 @@ export type ColumnRibbonNumberCommandKey =
 
 export type ColumnRibbonStringCommandKey =
   | typeof COLUMN_RIBBON_KEYS.stringParams.kind
-  | typeof COLUMN_RIBBON_KEYS.stringParams.anchor;
+  | typeof COLUMN_RIBBON_KEYS.stringParams.anchor
+  | typeof COLUMN_RIBBON_KEYS.stringParams.material;
 
 export const COLUMN_RIBBON_NUMBER_KEYS: readonly ColumnRibbonNumberCommandKey[] = [
   COLUMN_RIBBON_KEYS.params.width,
@@ -46,6 +49,7 @@ export const COLUMN_RIBBON_NUMBER_KEYS: readonly ColumnRibbonNumberCommandKey[] 
 export const COLUMN_RIBBON_STRING_KEYS: readonly ColumnRibbonStringCommandKey[] = [
   COLUMN_RIBBON_KEYS.stringParams.kind,
   COLUMN_RIBBON_KEYS.stringParams.anchor,
+  COLUMN_RIBBON_KEYS.stringParams.material,
 ];
 
 export const COLUMN_RIBBON_KEYS_ACTIONS = {

@@ -55,6 +55,16 @@ const DEPTH_MM_OPTIONS = [
   { value: '800', labelKey: '800', isLiteralLabel: true },
 ] as const;
 
+// ADR-363 Phase 4.5d — material picker (DISABLED, comingSoon placeholder).
+// Activation deferred to Phase 5.5c (beam material library + hatch patterns).
+// `comingSoon: true` on the combobox command disables the select and routes
+// any click through the global `onComingSoon` toast.
+const BEAM_MATERIAL_OPTIONS = [
+  { value: 'rc',     labelKey: 'ribbon.commands.beamEditor.material.rc',     isLiteralLabel: false },
+  { value: 'steel',  labelKey: 'ribbon.commands.beamEditor.material.steel',  isLiteralLabel: false },
+  { value: 'glulam', labelKey: 'ribbon.commands.beamEditor.material.glulam', isLiteralLabel: false },
+] as const;
+
 const ELEVATION_MM_OPTIONS = [
   { value: '2400', labelKey: '2400', isLiteralLabel: true },
   { value: '2700', labelKey: '2700', isLiteralLabel: true },
@@ -144,6 +154,33 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
                 commandKey: BEAM_RIBBON_KEYS.params.elevation,
                 comboboxWidthPx: 80,
                 options: ELEVATION_MM_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-363 Phase 4.5d — material picker placeholder. Visible + disabled,
+      // mirrors the ADR-345 comingSoon pattern (greyed combobox + toast).
+      // Activation lands with Phase 5.5c (beam material library).
+      id: 'beam-material',
+      labelKey: 'ribbon.panels.beamMaterial',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'beam.material',
+                labelKey: 'ribbon.commands.beamEditor.material.section.title',
+                tooltipKey: 'ribbon.commands.beamEditor.material.comingSoon',
+                commandKey: 'beam.params.material',
+                comboboxWidthPx: 180,
+                options: BEAM_MATERIAL_OPTIONS,
+                comingSoon: true,
               },
             },
           ],

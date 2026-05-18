@@ -60,6 +60,17 @@ const FLIP_OPTIONS = [
   { value: 'true',  labelKey: 'ribbon.commands.wallEditor.flip.on',  isLiteralLabel: false },
 ] as const;
 
+// ADR-363 Phase 4.5d — wall material picker (DISABLED, comingSoon placeholder).
+// Real activation lands with WallDna Phase 1D (composable wall layer stack with
+// per-layer material). Until then the combobox is greyed out and clicks fire
+// the shared `onComingSoon` toast.
+const WALL_MATERIAL_OPTIONS = [
+  { value: 'rc',                labelKey: 'ribbon.commands.wallEditor.material.rc',               isLiteralLabel: false },
+  { value: 'masonry',           labelKey: 'ribbon.commands.wallEditor.material.masonry',          isLiteralLabel: false },
+  { value: 'aerated-concrete',  labelKey: 'ribbon.commands.wallEditor.material.aeratedConcrete',  isLiteralLabel: false },
+  { value: 'gypsum',            labelKey: 'ribbon.commands.wallEditor.material.gypsum',           isLiteralLabel: false },
+] as const;
+
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
 export const CONTEXTUAL_WALL_TAB: RibbonTab = {
@@ -129,6 +140,32 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
                 commandKey: WALL_RIBBON_KEYS.params.thickness,
                 comboboxWidthPx: 80,
                 options: THICKNESS_MM_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-363 Phase 4.5d — wall material picker placeholder. Visible + disabled.
+      // Activation deferred to WallDna Phase 1D.
+      id: 'wall-material',
+      labelKey: 'ribbon.panels.wallMaterial',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'wall.material',
+                labelKey: 'ribbon.commands.wallEditor.material.section.title',
+                tooltipKey: 'ribbon.commands.wallEditor.material.comingSoon',
+                commandKey: 'wall.params.material',
+                comboboxWidthPx: 200,
+                options: WALL_MATERIAL_OPTIONS,
+                comingSoon: true,
               },
             },
           ],

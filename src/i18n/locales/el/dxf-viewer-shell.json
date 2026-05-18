@@ -620,18 +620,22 @@
       "stairActions": "Ενέργειες",
       "wallCategory": "Κατηγορία",
       "wallGeometry": "Γεωμετρία",
+      "wallMaterial": "Υλικό",
       "wallActions": "Ενέργειες",
       "openingKind": "Τύπος",
       "openingSize": "Διαστάσεις",
       "openingActions": "Ενέργειες",
       "slabKind": "Τύπος",
       "slabGeometry": "Γεωμετρία",
+      "slabMaterial": "Υλικό",
       "slabActions": "Ενέργειες",
       "columnKind": "Τύπος",
       "columnGeometry": "Γεωμετρία",
+      "columnMaterial": "Υλικό",
       "columnActions": "Ενέργειες",
       "beamKind": "Τύπος",
       "beamGeometry": "Γεωμετρία",
+      "beamMaterial": "Υλικό",
       "beamActions": "Ενέργειες",
       "slabOpeningKind": "Τύπος",
       "slabOpeningActions": "Ενέργειες",
@@ -702,8 +706,14 @@
       "rayTooltip": "Ημι-άπειρη γραμμή από αρχή προς κατεύθυνση",
       "xlineModeSelector": "Λειτουργία",
       "bim": {
-        "wall": "Τοίχος",
-        "opening": "Άνοιγμα",
+        "wall": {
+          "label": "Τοίχος",
+          "tooltip": "Σχεδίαση τοίχου (πλήκτρο W)"
+        },
+        "opening": {
+          "label": "Κούφωμα",
+          "tooltip": "Σχεδίαση κουφώματος (πλήκτρο OP)"
+        },
         "openingVariants": {
           "door": "Θύρα",
           "window": "Παράθυρο",
@@ -711,10 +721,22 @@
           "frenchDoor": "Γαλλική Θύρα",
           "fixed": "Σταθερό Άνοιγμα"
         },
-        "slab": "Πλάκα",
-        "slabOpening": "Διανοιγμα Πλάκας",
-        "column": "Κολώνα",
-        "beam": "Δοκάρι"
+        "slab": {
+          "label": "Πλάκα",
+          "tooltip": "Σχεδίαση πλάκας (πλήκτρο SL)"
+        },
+        "slabOpening": {
+          "label": "Διάνοιξη Πλάκας",
+          "tooltip": "Σχεδίαση διάνοιξης πλάκας (πλήκτρο SO)"
+        },
+        "column": {
+          "label": "Κολώνα",
+          "tooltip": "Σχεδίαση κολώνας (πλήκτρο CL)"
+        },
+        "beam": {
+          "label": "Δοκός",
+          "tooltip": "Σχεδίαση δοκού (πλήκτρο BM)"
+        }
       },
       "select": "Επιλογή",
       "gripEdit": "Επεξ/σία Λαβών",
@@ -949,6 +971,16 @@
           },
           "off": "Φυσιολογική",
           "on": "Αντίστροφη"
+        },
+        "material": {
+          "section": {
+            "title": "Υλικό"
+          },
+          "rc": "Οπλισμένο Σκυρόδεμα",
+          "masonry": "Τοιχοποιία",
+          "aeratedConcrete": "Πορομπετόν",
+          "gypsum": "Γυψοσανίδα",
+          "comingSoon": "Διαθέσιμο σε επόμενη φάση"
         }
       },
       "openingEditor": {
@@ -1007,6 +1039,15 @@
           "twoWay": "Διπλής Διεύθυνσης",
           "waffle": "Πλέγμα",
           "flat": "Επίπεδη"
+        },
+        "material": {
+          "section": {
+            "title": "Υλικό"
+          },
+          "rc": "Οπλισμένο Σκυρόδεμα",
+          "composite": "Σύνθετη Πλάκα",
+          "wood": "Ξυλεία",
+          "comingSoon": "Διαθέσιμο σε επόμενη φάση"
         }
       },
       "beamEditor": {
@@ -1031,6 +1072,15 @@
           "simple": "Απλή",
           "fixed": "Πάκτωση",
           "cantilever": "Πρόβολος"
+        },
+        "material": {
+          "section": {
+            "title": "Υλικό"
+          },
+          "rc": "Οπλισμένο Σκυρόδεμα",
+          "steel": "Χάλυβας",
+          "glulam": "Σύνθετο Ξύλο",
+          "comingSoon": "Διαθέσιμο σε επόμενη φάση"
         }
       },
       "slabOpeningEditor": {
@@ -1075,6 +1125,15 @@
           "ne": "Βορειοανατολικά",
           "sw": "Νοτιοδυτικά",
           "se": "Νοτιοανατολικά"
+        },
+        "material": {
+          "section": {
+            "title": "Υλικό"
+          },
+          "rc": "Οπλισμένο Σκυρόδεμα",
+          "steel": "Χάλυβας",
+          "masonry": "Τοιχοποιία",
+          "wood": "Ξύλο"
         }
       },
       "measureAngle": "Γωνία",

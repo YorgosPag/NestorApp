@@ -86,8 +86,9 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof ColumnParams>> = {
 };
 
 const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof ColumnParams>> = {
-  [COLUMN_RIBBON_KEYS.stringParams.kind]:   'kind',
-  [COLUMN_RIBBON_KEYS.stringParams.anchor]: 'anchor',
+  [COLUMN_RIBBON_KEYS.stringParams.kind]:     'kind',
+  [COLUMN_RIBBON_KEYS.stringParams.anchor]:   'anchor',
+  [COLUMN_RIBBON_KEYS.stringParams.material]: 'material',
 };
 
 export function useRibbonColumnBridge(
@@ -136,7 +137,14 @@ export function useRibbonColumnBridge(
       if (isColumnRibbonStringKey(commandKey)) {
         const field = STRING_KEY_TO_FIELD[commandKey];
         const raw = column.params[field];
-        return raw == null ? null : { value: String(raw), options: [] };
+        // ADR-363 Phase 4.5d — surface 'rc' as the active selection when
+        // `params.material` is undefined; mirrors the `resolveMaterialKey`
+        // fallback used by `ColumnRenderer.drawMaterialHatch`.
+        if (raw == null) {
+          if (field === 'material') return { value: 'rc', options: [] };
+          return null;
+        }
+        return { value: String(raw), options: [] };
       }
       if (isColumnRibbonKey(commandKey)) {
         const field = NUMBER_KEY_TO_FIELD[commandKey];
@@ -163,6 +171,14 @@ export function useRibbonColumnBridge(
         }
         if (field === 'anchor') {
           const nextParams: ColumnParams = { ...column.params, anchor: value as ColumnAnchor };
+          dispatchParams(column, nextParams);
+          return;
+        }
+        if (field === 'material') {
+          // ADR-363 Phase 4.5d — material patch. `isDragging=false` so every
+          // pick is its own undo entry. Renderer hatch updates on the next
+          // frame via the existing column-bbox bitmap-cache invalidation path.
+          const nextParams: ColumnParams = { ...column.params, material: value };
           dispatchParams(column, nextParams);
         }
         return;

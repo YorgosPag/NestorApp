@@ -261,5 +261,88 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
         },
       ],
     },
+    // ADR-363 Phase 4.5d — BIM launcher row (Home → Draw). Mirrors the Stair
+    // entry pattern (single ToolType commandKey + chord shortcut). Each button
+    // activates the corresponding BIM tool through the existing dispatcher
+    // (FSM hook + geometry + Firestore persistence already in place from
+    // Phases 1–5). Buttons are all ENABLED — keyboard chords W/OP/SL/SO/CL/BM
+    // remain valid in parallel.
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            id: 'draw.bim.wall',
+            labelKey: 'ribbon.commands.bim.wall.label',
+            tooltipKey: 'ribbon.commands.bim.wall.tooltip',
+            icon: 'bim-wall',
+            commandKey: 'wall',
+            shortcut: 'W',
+          },
+        },
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            id: 'draw.bim.opening',
+            labelKey: 'ribbon.commands.bim.opening.label',
+            tooltipKey: 'ribbon.commands.bim.opening.tooltip',
+            icon: 'bim-opening',
+            commandKey: 'opening',
+            shortcut: 'OP',
+          },
+        },
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            id: 'draw.bim.slab',
+            labelKey: 'ribbon.commands.bim.slab.label',
+            tooltipKey: 'ribbon.commands.bim.slab.tooltip',
+            icon: 'bim-slab',
+            commandKey: 'slab',
+            shortcut: 'SL',
+          },
+        },
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            id: 'draw.bim.slabOpening',
+            labelKey: 'ribbon.commands.bim.slabOpening.label',
+            tooltipKey: 'ribbon.commands.bim.slabOpening.tooltip',
+            icon: 'bim-slab-opening',
+            commandKey: 'slab-opening',
+            shortcut: 'SO',
+          },
+        },
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            id: 'draw.bim.column',
+            labelKey: 'ribbon.commands.bim.column.label',
+            tooltipKey: 'ribbon.commands.bim.column.tooltip',
+            icon: 'bim-column',
+            commandKey: 'column',
+            shortcut: 'CL',
+          },
+        },
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            id: 'draw.bim.beam',
+            labelKey: 'ribbon.commands.bim.beam.label',
+            tooltipKey: 'ribbon.commands.bim.beam.tooltip',
+            icon: 'bim-beam',
+            commandKey: 'beam',
+            shortcut: 'BM',
+          },
+        },
+      ],
+    },
   ],
 };
