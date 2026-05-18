@@ -27,3 +27,11 @@ export type {
 
 // 🏢 ADR-040: Viewport re-exported from centralized types
 export type { Viewport } from '../../rendering/types/Types';
+
+// ADR-357 Phase 4: Object Snap Tracking palette SSoT
+export {
+  detectTrackingTheme,
+  getTrackingPalette,
+  getCurrentTrackingPalette,
+} from './tracking-colors';
+export type { TrackingPalette, TrackingTheme } from './tracking-colors';
