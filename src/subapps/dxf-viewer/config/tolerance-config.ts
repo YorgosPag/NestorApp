@@ -422,6 +422,10 @@ export const SNAP_ENGINE_PRIORITIES = {
   GUIDE: 6,
   /** ADR-189 §3.7-3.16: Construction snap points (X markers) */
   CONSTRUCTION_POINT: 1,
+  /** ADR-362 I1: Snap to dimension definition points (AutoCAD DIMSNAP — exact anchor point) */
+  DIM_DEF_POINT: 2,
+  /** ADR-362 I1: Snap to dimension line reference/midpoint (for baseline/continued chaining) */
+  DIM_LINE: 3,
 } as const;
 
 // ===== SNAP UI OFFSETS =====
