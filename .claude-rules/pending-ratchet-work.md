@@ -45,6 +45,18 @@
 
 ---
 
+### 🎨 DXF RENDERER — BIM renderGrips centralization (priorità media)
+
+**Πρόβλημα:** Το `if (options.grips) { this.renderGrips(entity, options); }` είναι copy-pasted σε 7 BIM renderers (WallRenderer, ColumnRenderer, BeamRenderer, OpeningRenderer, SlabOpeningRenderer, SlabRenderer, StairRenderer). SSoT υπάρχει ήδη στο `renderWithPhases` της `BaseEntityRenderer`.
+
+**Λύση:** Προσθήκη `protected finalizeRender(entity: EntityModel, options: RenderOptions): void { if (options.grips) this.renderGrips(entity, options); }` στη `BaseEntityRenderer`. Κάθε BIM renderer καλεί `this.finalizeRender(entity, options)` αντί inline `if`.
+
+**Files:** `BaseEntityRenderer.ts` (νέα method) + 7 BIM renderers (αντικατάσταση inline `if` με `this.finalizeRender()`).
+
+**Identified:** 2026-05-19 κατά τη διόρθωση selection visual για slab/xline.
+
+---
+
 ### 🪜 ADR-358 STAIR DOMAIN — pre-existing TS residual (priorità bassa)
 
 - [ ] **HitTestingService.ts:236 — DxfStair exhaustive check failure** — `convertToEntityModel` switch manca branch `case 'stair'`. Pre-esistente dal Phase 9C base (commit `9970706a`). Richiede decisione campi `EntityModel` stair-specific (treads, riserHeight, run, ecc.) — domain stair-tool (`ADR-358-dxf-stair-tool-google-level.md`). Identificato 2026-05-16 durante Phase 9D-3a TS check. Defer a sessione dedicata stair-tool.

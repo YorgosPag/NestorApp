@@ -86,6 +86,33 @@ Code AND ADR(s) in the same commit.
 
 **WHY**: Many ADRs are out-of-date. If you blindly follow an outdated ADR → you'll break production. First check code, then update, then implement, then re-update.
 
+## 🚨 SOS. SOS. N.0.2 — PROACTIVE CENTRALIZATION (BOY SCOUT RULE)
+
+**DURING EVERY INVESTIGATION** — when reading/grepping code for any task — if you discover duplicate, scattered, or copy-pasted patterns:
+
+### Immediate decision (takes 5 seconds):
+
+| Pattern | Action | When |
+|---------|--------|------|
+| Small duplicate (< 1h fix, 1-3 files) | **FIX IMMEDIATELY** — before continuing the main task | Always |
+| Large duplicate (> 1h, 4+ files) | **ADD TO `.claude-rules/pending-ratchet-work.md`** immediately with: what, where, why, fix | Always |
+| Unsure | Add to pending — Giorgio decides priority | Always |
+
+### How to fix a small duplicate:
+1. Check if SSoT already exists (grep for the pattern in centralized files)
+2. If yes → centralize to existing SSoT
+3. If no → create the SSoT method/function FIRST, then centralize
+4. Never copy-paste a pattern to N files — always ask "where does this belong?"
+
+### NEVER:
+- Wait for Giorgio to ask "is this centralized?"
+- Copy-paste a pattern to multiple files when a central method would do
+- Leave a discovered duplicate unflagged
+
+**WHY**: Giorgio confirmed 2026-05-19. Root incident: `if (options.grips) renderGrips()` was copy-pasted to 7 BIM renderer files instead of using/creating a `BaseEntityRenderer.finalizeRender()` SSoT. Discovered DURING the fix session, should have been caught and fixed on the spot.
+
+**This rule applies to ALL agents, not just the one who discovered the duplicate.**
+
 ## SOS. SOS. N.1 — PROFESSIONAL QUALITY
 Every solution must be **professional**, not a **neighborhood corner-shop hack**.
 
