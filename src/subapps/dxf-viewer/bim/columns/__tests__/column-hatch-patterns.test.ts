@@ -17,12 +17,14 @@
 import {
   resolveMaterialKey,
   computeHatchPlan,
+  computeCircularHatchPlan,
   HATCH_SPACING_MM,
   HATCH_STROKE_RGBA,
   HATCH_LINE_WIDTH_PX,
   RC_DOT_RADIUS_PX,
   MASONRY_BRICK_LENGTH_MM,
   MASONRY_BRICK_HEIGHT_MM,
+  CIRCULAR_RC_RING_FRACTIONS,
 } from '../column-hatch-patterns';
 import type { BoundingBox3D } from '../../types/bim-base';
 
@@ -144,6 +146,81 @@ describe('Exported constants', () => {
   it('masonry brick dimensions', () => {
     expect(MASONRY_BRICK_LENGTH_MM).toBe(200);
     expect(MASONRY_BRICK_HEIGHT_MM).toBe(80);
+  });
+});
+
+describe('computeHatchPlan — backward-compat: arcs field is always present', () => {
+  const B = bbox(0, 0, 400, 400);
+
+  it.each(['rc', 'steel', 'masonry', 'wood'] as const)('%s → arcs array exists and is empty', (mat) => {
+    const plan = computeHatchPlan(B, mat);
+    expect(Array.isArray(plan.arcs)).toBe(true);
+    expect(plan.arcs).toHaveLength(0);
+  });
+});
+
+describe('computeCircularHatchPlan — RC concentric rings', () => {
+  const center = { x: 0, y: 0 };
+  const radius = 200;
+
+  it('rc → 3 concentric arcs, no lines, no dots', () => {
+    const plan = computeCircularHatchPlan(center, radius, 'rc');
+    expect(plan.arcs).toHaveLength(CIRCULAR_RC_RING_FRACTIONS.length);
+    expect(plan.lines).toHaveLength(0);
+    expect(plan.dots).toHaveLength(0);
+  });
+
+  it('rc ring radii match CIRCULAR_RC_RING_FRACTIONS × radius', () => {
+    const plan = computeCircularHatchPlan(center, radius, 'rc');
+    plan.arcs.forEach((arc, i) => {
+      expect(arc.radiusMm).toBeCloseTo(radius * CIRCULAR_RC_RING_FRACTIONS[i], 6);
+    });
+  });
+
+  it('rc ring centers all at column position', () => {
+    const plan = computeCircularHatchPlan({ x: 100, y: 50 }, radius, 'rc');
+    for (const arc of plan.arcs) {
+      expect(arc.center.x).toBe(100);
+      expect(arc.center.y).toBe(50);
+    }
+  });
+
+  it('CIRCULAR_RC_RING_FRACTIONS has 3 entries in ascending order', () => {
+    expect(CIRCULAR_RC_RING_FRACTIONS).toHaveLength(3);
+    for (let i = 1; i < CIRCULAR_RC_RING_FRACTIONS.length; i++) {
+      expect(CIRCULAR_RC_RING_FRACTIONS[i]).toBeGreaterThan(CIRCULAR_RC_RING_FRACTIONS[i - 1]);
+    }
+  });
+});
+
+describe('computeCircularHatchPlan — steel/masonry/wood use bbox clip lines', () => {
+  const center = { x: 0, y: 0 };
+  const radius = 200;
+
+  it.each(['steel', 'masonry', 'wood'] as const)('%s circular → lines populated, arcs empty', (mat) => {
+    const plan = computeCircularHatchPlan(center, radius, mat);
+    expect(plan.arcs).toHaveLength(0);
+    expect(plan.lines.length).toBeGreaterThan(0);
+    expect(plan.dots).toHaveLength(0);
+  });
+});
+
+describe('computeCircularHatchPlan — degenerate inputs', () => {
+  it('radius = 0 → empty plan', () => {
+    const plan = computeCircularHatchPlan({ x: 0, y: 0 }, 0, 'rc');
+    expect(plan.arcs).toHaveLength(0);
+    expect(plan.lines).toHaveLength(0);
+    expect(plan.dots).toHaveLength(0);
+  });
+
+  it('negative radius → empty plan', () => {
+    const plan = computeCircularHatchPlan({ x: 0, y: 0 }, -100, 'rc');
+    expect(plan.arcs).toHaveLength(0);
+  });
+
+  it('NaN radius → empty plan', () => {
+    const plan = computeCircularHatchPlan({ x: 0, y: 0 }, NaN, 'rc');
+    expect(plan.arcs).toHaveLength(0);
   });
 });
 

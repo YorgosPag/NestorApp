@@ -5,6 +5,8 @@
  * (populated by `computeColumnGeometry()` — SSoT) και draws:
  *   - closed footprint polygon outline (stroke per-kind colour)
  *   - translucent fill per kind
+ *   - per-material hatch (Phase 4.5c.2/4.5c.3)
+ *   - variant dimension labels for L/T when highlighted (Phase 4.5c.3)
  *
  * Per-kind palette (industry convention — RC συμπαγή φόντα, steel cooler):
  *   - rectangular → cool grey (γενική RC κολώνα)
@@ -12,26 +14,15 @@
  *   - L-shape     → ochre (γωνία)
  *   - T-shape     → steel-blue
  *
- * Phase 4.5 (DONE): center / rotation / width / depth grips routed through
- * `applyColumnGripDrag()` + `UpdateColumnParamsCommand`.
- * Phase 4.5b (DONE): variant-specific grips για L-shape (arm-length / arm-width)
- * + T-shape (flange-length / web-thickness) εκπέμπονται από το
- * `getColumnGrips()` και διοχετεύονται μέσω του ίδιου command path. Το
- * `edge`-typed grip mapping πέφτει στο `'vertex'` bucket — αρκετό για το
- * canvas pass.
- * Phase 4.5c.1 (DONE — Phase 4.5c.1 module): anchor cycling visual preview
- * (9 ghost footprints at the cursor world position) γίνεται από
- * `ColumnAnchorGhostRenderer` ως ξεχωριστή leaf — δεν παρεμβαίνει στο
- * παρόν renderer pipeline.
- * Phase 4.5c.2 (DONE): per-material hatch patterns inside footprint clip
- * (rc dots / steel cross-hatch / masonry brick / wood diagonal). Circular kind
- * skipped — deferred 4.5c.3.
- * Phase 4.5c.3+ (deferred):
- *   - Circular column material hatch (visual conventions TBD)
- *   - Snap-to-wall corners / grid intersections
+ * Phase 4.5 (DONE): center / rotation / width / depth grips.
+ * Phase 4.5b (DONE): variant-specific grips (L-shape arm / T-shape flange).
+ * Phase 4.5c.1 (DONE): anchor ghost preview via `ColumnAnchorGhostRenderer`.
+ * Phase 4.5c.2 (DONE): per-material hatch for non-circular kinds.
+ * Phase 4.5c.3 (DONE): circular column hatch (RC concentric rings; steel/masonry/
+ *   wood via bbox clip) + variant dimension labels for L/T highlighted state.
+ * Phase 4.5c.4 (deferred): snap-to-wall-corners + grid-intersections.
  *
- * ADR-040 micro-leaf compliance: pure renderer class με ZERO subscriptions
- * σε high-frequency stores. Called by canvas με entity resolved upstream.
+ * ADR-040 micro-leaf compliance: pure renderer class με ZERO subscriptions.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
@@ -48,11 +39,13 @@ import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getColumnGrips } from '../columns/column-grips';
 import {
   computeHatchPlan,
+  computeCircularHatchPlan,
   resolveMaterialKey,
   HATCH_STROKE_RGBA,
   HATCH_LINE_WIDTH_PX,
   RC_DOT_RADIUS_PX,
   type ColumnMaterialKey,
+  type HatchPlan,
 } from '../columns/column-hatch-patterns';
 
 /** Stroke colour per kind. */
@@ -100,7 +93,7 @@ export class ColumnRenderer extends BaseEntityRenderer {
     this.drawPolygonPath(verts);
     this.ctx.fill();
 
-    // ADR-363 Phase 4.5c.2 — per-material hatch (skipped για circular kind).
+    // Phase 4.5c.2/4.5c.3 — per-material hatch (all kinds, incl. circular).
     this.drawMaterialHatch(column);
 
     this.ctx.strokeStyle = KIND_STROKE[column.kind];
@@ -108,26 +101,35 @@ export class ColumnRenderer extends BaseEntityRenderer {
     this.drawPolygonPath(verts);
     this.ctx.stroke();
     this.ctx.restore();
+
+    // Phase 4.5c.3 — variant dimension labels (L/T when highlighted).
+    if (phaseState.phase === 'highlighted') {
+      this.drawVariantDimensionLabels(column);
+    }
   }
 
   /**
-   * Phase 4.5c.2 — per-material hatch pattern inside footprint clip. Mirror
-   * του `SlabRenderer.drawReinforcementHatch` pattern (save → polygon path →
-   * clip → hatch → restore). Skip cases:
-   *   - `circular` kind → deferred Phase 4.5c.3 (visual conventions TBD)
-   *   - `transform.scale < 0.001` → invisible at extreme zoom-out, perf saver
+   * Phase 4.5c.2/4.5c.3 — per-material hatch pattern inside footprint clip.
+   * Mirror του `SlabRenderer.drawReinforcementHatch` pattern.
    *
-   * Material resolved μέσω case-insensitive `resolveMaterialKey` (unknown
-   * → `'rc'` fallback). Plan computed από bbox σε world coords; rendering
-   * εδώ μετατρέπει σε screen px μέσω `worldToScreen`.
+   * Circular kind (Phase 4.5c.3): routes through `computeCircularHatchPlan()`
+   *   which returns concentric arcs for RC, bbox-clipped lines for others.
+   * Non-circular: routes through `computeHatchPlan(bbox, key)` (Phase 4.5c.2).
+   * Skip: `transform.scale < 0.001` (invisible zoom-out, perf saver).
    */
   private drawMaterialHatch(column: ColumnEntity): void {
-    if (column.kind === 'circular') return;
     if (this.transform.scale < 0.001) return;
 
     const key: ColumnMaterialKey = resolveMaterialKey(column.params.material);
-    const plan = computeHatchPlan(column.geometry.bbox, key);
-    if (plan.lines.length === 0 && plan.dots.length === 0) return;
+    const plan: HatchPlan = column.kind === 'circular'
+      ? computeCircularHatchPlan(
+          { x: column.params.position.x, y: column.params.position.y },
+          column.params.width / 2,
+          key,
+        )
+      : computeHatchPlan(column.geometry.bbox, key);
+
+    if (plan.lines.length === 0 && plan.dots.length === 0 && plan.arcs.length === 0) return;
 
     this.ctx.save();
     this.drawPolygonPath(column.geometry.footprint.vertices);
@@ -151,7 +153,80 @@ export class ColumnRenderer extends BaseEntityRenderer {
       this.ctx.arc(s.x, s.y, RC_DOT_RADIUS_PX, 0, Math.PI * 2);
       this.ctx.fill();
     }
+    for (const arc of plan.arcs) {
+      const s = this.worldToScreen(arc.center);
+      const rPx = arc.radiusMm * this.transform.scale;
+      if (rPx < 0.5) continue;
+      this.ctx.beginPath();
+      this.ctx.arc(s.x, s.y, rPx, 0, Math.PI * 2);
+      this.ctx.stroke();
+    }
     this.ctx.restore();
+  }
+
+  /**
+   * Phase 4.5c.3 — Draw dimension labels for L-shape (armLength + armWidth)
+   * and T-shape (flangeLength + webThickness) when column is highlighted.
+   *
+   * Uses footprint vertex midpoints to position labels; vertex order matches
+   * `buildLshapeLocal` and `buildTshapeLocal` in `column-geometry.ts`.
+   * Pure canvas draw — ZERO store subscriptions (ADR-040 compliant).
+   */
+  private drawVariantDimensionLabels(column: ColumnEntity): void {
+    if (column.kind !== 'L-shape' && column.kind !== 'T-shape') return;
+    const verts = column.geometry.footprint.vertices;
+
+    this.ctx.save();
+    this.ctx.font = '8px sans-serif';
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.60)';
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+
+    if (column.kind === 'L-shape' && verts.length === 6) {
+      this.drawDimLabel(verts[3], verts[4], `${Math.round(column.params.depth / 3)} `);
+      this.drawDimLabel(verts[0], verts[3], `${Math.round(column.params.width / 3)} `);
+    } else if (column.kind === 'T-shape' && verts.length === 8) {
+      const fl = column.params.tshape?.flangeLength ?? column.params.width;
+      const wt = column.params.tshape?.webThickness ?? Math.round(column.params.depth / 3);
+      this.drawDimLabel(verts[4], verts[5], `${Math.round(fl)} `);
+      this.drawDimLabel(verts[1], verts[2], `${Math.round(wt)} `);
+    }
+
+    this.ctx.restore();
+  }
+
+  /**
+   * Draw a small dimension label at the midpoint of segment [a, b] with a
+   * short perpendicular tick mark.
+   */
+  private drawDimLabel(
+    a: Readonly<{ x: number; y: number }>,
+    b: Readonly<{ x: number; y: number }>,
+    text: string,
+  ): void {
+    const sa = this.worldToScreen(a);
+    const sb = this.worldToScreen(b);
+    const mx = (sa.x + sb.x) / 2;
+    const my = (sa.y + sb.y) / 2;
+    const dx = sb.x - sa.x;
+    const dy = sb.y - sa.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 6) return;
+    const nx = -dy / len;
+    const ny = dx / len;
+    const OFFSET_PX = 9;
+
+    this.ctx.save();
+    this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+    this.ctx.lineWidth = 0.7;
+    this.ctx.setLineDash([2, 2]);
+    this.ctx.beginPath();
+    this.ctx.moveTo(sa.x, sa.y);
+    this.ctx.lineTo(sb.x, sb.y);
+    this.ctx.stroke();
+    this.ctx.restore();
+
+    this.ctx.fillText(text, mx + nx * OFFSET_PX, my + ny * OFFSET_PX);
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
