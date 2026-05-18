@@ -208,3 +208,59 @@ export function composePrimaryText(
   if (userText === undefined || userText === '<>') return measured;
   return userText.replace('<>', measured);
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Full dim text composition (Phase G2 — tolerance + limits)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Composed result of primary + optional tolerance/limits text.
+ *
+ * Rendering contract:
+ *   - `primary` → drawn at `textAnchor` with `dimtxt` size.
+ *   - Tolerance mode (DIMTOL=true, DIMLIM=false):
+ *       `tolerancePlus` drawn above primary, `toleranceMinus` below,
+ *       both at `dimtxt × dimtfac` size. DIMTOLJ controls vertical alignment
+ *       of the tolerance stack relative to the primary baseline.
+ *   - Limits mode (DIMLIM=true, overrides DIMTOL):
+ *       `limitsUpper` replaces the primary position, `limitsLower` below it.
+ *       `primary` is ignored when limitsUpper is present.
+ *       Both drawn at `dimtxt × dimtfac` size.
+ *   - Neither flag → only `primary` present.
+ */
+export interface FullDimText {
+  readonly primary: string;
+  readonly tolerancePlus?: string;
+  readonly toleranceMinus?: string;
+  readonly limitsUpper?: string;
+  readonly limitsLower?: string;
+}
+
+/**
+ * Composes the complete text payload for a linear dimension.
+ * DIMLIM takes precedence over DIMTOL when both flags are set (AutoCAD parity).
+ */
+export function composeFullDimText(
+  valueMm: number,
+  style: DimStyle,
+  userText?: string,
+): FullDimText {
+  const primary = composePrimaryText(valueMm, style, userText);
+
+  // DIMLIM overrides DIMTOL — limits replace the primary text entirely.
+  if (style.dimlim) {
+    const limits = formatLimitsText(valueMm, style);
+    if (limits) {
+      return { primary, limitsUpper: limits.upper, limitsLower: limits.lower };
+    }
+  }
+
+  if (style.dimtol) {
+    const tol = formatToleranceText(style);
+    if (tol) {
+      return { primary, tolerancePlus: tol.plus, toleranceMinus: tol.minus };
+    }
+  }
+
+  return { primary };
+}
