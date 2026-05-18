@@ -3187,14 +3187,18 @@
         "src/subapps/dxf-viewer/ui/components/layer-picker/CurrentLayerPickerPopover.tsx",
         "src/subapps/dxf-viewer/ui/components/layer-picker/useCurrentLayerPickerState.ts",
         "src/subapps/dxf-viewer/ui/components/layer-picker/__tests__/useCurrentLayerPickerState.test.tsx",
+<<<<<<< Updated upstream
         "src/subapps/dxf-viewer/ui/components/layer-manager/useLayerManagerState.ts",
         "src/subapps/dxf-viewer/ui/components/layer-manager/__tests__/useLayerManagerState.test.ts",
+=======
+>>>>>>> Stashed changes
         "src/subapps/dxf-viewer/statusbar/CadStatusBar.tsx",
         "src/subapps/dxf-viewer/ui/ribbon/components/RibbonPanel.tsx"
       ],
       "addedDate": "2026-05-16",
       "addedByAdr": "ADR-358",
       "tier": 3
+<<<<<<< Updated upstream
     },
     "layer-name-strict-validation": {
       "ssotFile": "src/subapps/dxf-viewer/services/layer-name-validator.ts",
@@ -3388,6 +3392,8 @@
       "addedDate": "2026-05-17",
       "addedByAdr": "ADR-363",
       "tier": 3
+=======
+>>>>>>> Stashed changes
     }
   }
 }
