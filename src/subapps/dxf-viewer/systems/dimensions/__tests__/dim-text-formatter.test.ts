@@ -9,6 +9,7 @@ import {
   composePrimaryText,
   formatToleranceText,
   formatLimitsText,
+  formatAlternateUnit,
   composeFullDimText,
 } from '../dim-text-formatter';
 import type { DimStyle } from '../../../types/dimension';
@@ -21,6 +22,60 @@ import { ISO_129_TEMPLATE } from '../dim-style-templates';
 function makeStyle(overrides: Partial<DimStyle> = {}): DimStyle {
   return { ...ISO_129_TEMPLATE, ...overrides };
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// formatAlternateUnit (Phase G3)
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('formatAlternateUnit', () => {
+  it('returns null when dimalt=false', () => {
+    expect(formatAlternateUnit(100, makeStyle({ dimalt: false }))).toBeNull();
+  });
+
+  it('returns value wrapped in [...] when dimalt=true', () => {
+    const style = makeStyle({
+      dimalt: true,
+      dimaltf: 25.4,
+      dimaltrnd: 0,
+      dimaltu: 'decimal',
+      dimaltd: 2,
+      dimdsep: '.',
+      dimapost: '',
+    });
+    const result = formatAlternateUnit(1, style);
+    // 1mm × 25.4 = 25.4 inches → "[25.40]"
+    expect(result).toBe('[25.40]');
+  });
+
+  it('applies dimapost suffix inside brackets', () => {
+    const style = makeStyle({
+      dimalt: true,
+      dimaltf: 1,
+      dimaltrnd: 0,
+      dimaltu: 'decimal',
+      dimaltd: 0,
+      dimdsep: '.',
+      dimapost: '[]in',
+    });
+    const result = formatAlternateUnit(100, style);
+    expect(result).toBe('[100in]');
+  });
+
+  it('respects dimaltrnd rounding', () => {
+    const style = makeStyle({
+      dimalt: true,
+      dimaltf: 1,
+      dimaltrnd: 5,
+      dimaltu: 'decimal',
+      dimaltd: 0,
+      dimdsep: '.',
+      dimapost: '',
+    });
+    const result = formatAlternateUnit(13, style);
+    // 13 rounded to nearest 5 = 15
+    expect(result).toBe('[15]');
+  });
+});
 
 // ──────────────────────────────────────────────────────────────────────────────
 // formatToleranceText (regression)
