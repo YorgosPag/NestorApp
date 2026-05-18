@@ -1737,3 +1737,7 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-17: ADR-362 Phase C1 — dim-text-renderer wired (DIMTIH/DIMTOH placement)
 
 `dim-text-renderer.ts` companion note: horizontal vs aligned text placement driven by `dimtih` (text inside extension lines) and `dimtoh` (text outside) flags per DIMSTYLE. DIMTFILL background mask reserved as stub for Phase K. Fully stateless — no external reads beyond Canvas2D context + resolved DimStyle. Cardinal rules maintained.
+
+## 2026-05-18: ADR-357 Phase 2a — DynamicInputSubscriber micro-leaf + CanvasLayerStack mount
+
+`DynamicInputSubscriber.tsx` added as micro-leaf subscriber in `CanvasLayerStack.tsx` (ADR-040 pattern). Subscribes to drawing state for live length/angle readout. CanvasLayerStack remains orchestrator — no high-frequency store subscriptions added. Cardinal rules maintained.

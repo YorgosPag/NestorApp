@@ -2,8 +2,6 @@ import { useEffect } from 'react';
 import type { Point2D as Point, AnySceneEntity } from '../../../rendering/types/Types';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../../../rendering/entities/shared/geometry-rendering-utils';
-// 🏢 ADR-067: Centralized Radians/Degrees Conversion
-import { degToRad } from '../../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-065: Centralized ID Generation (crypto-secure, collision-resistant)
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { DXF_DEFAULT_LAYER } from '../../../config/layer-config';
@@ -23,39 +21,17 @@ export function useDynamicInputHandler({
   onDrawingPoint,
   onEntityCreated,
 }: UseDynamicInputHandlerProps): UseDynamicInputHandlerReturn {
-  
   // Listen for Dynamic Input coordinate submission
   useEffect(() => {
     const handleDynamicInputSubmit = (e: CustomEvent) => {
+      const { coordinates, tool, length, action } = e.detail;
 
-      const { coordinates, tool, length, action, angle } = e.detail;
-      
+      // ADR-357 Phase 2a §4 G2 — Line tool routes through the canonical drawing
+      // pipeline (`onDrawingPoint`) so snap, ortho, polar, layer SSoT, styling,
+      // CommandHistory and persistence all apply. No direct entity creation
+      // here for `line` — that was the regression flagged in ADR §4 G2.
       if (tool === 'line' && onDrawingPoint) {
-        if (action === 'create-line-second-point' && angle !== undefined && length !== undefined) {
-          // Complete line with X+Y+Angle+Length: create line entity directly
-          // 🏢 ADR-067: Use centralized angle conversion
-          const angleRad = degToRad(angle);
-          const secondPoint = {
-            x: coordinates.x + length * Math.cos(angleRad),
-            y: coordinates.y + length * Math.sin(angleRad)
-          };
-
-          if (onEntityCreated) {
-            const lineEntity: AnySceneEntity = {
-              // 🏢 ADR-065: Crypto-secure ID generation
-              id: generateEntityId(),
-              type: 'line',
-              start: { x: coordinates.x, y: coordinates.y },
-              end: { x: secondPoint.x, y: secondPoint.y },
-              layer: DXF_DEFAULT_LAYER
-            };
-
-            onEntityCreated(lineEntity);
-          }
-        } else {
-
-          onDrawingPoint(coordinates);
-        }
+        onDrawingPoint(coordinates);
       } else if (tool === 'circle' || tool === 'circle-diameter' || tool === 'circle-2p-diameter') {
         if (action === 'create-circle-center') {
           // Circle center registered - no point entity needed, just log

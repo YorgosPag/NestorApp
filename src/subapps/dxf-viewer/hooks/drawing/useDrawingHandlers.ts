@@ -282,6 +282,15 @@ export function useDrawingHandlers(
     const transformUtils = canvasOps.getTransformUtils();
     const completed = addPoint(snappedPoint, transformUtils);
 
+    // ADR-357 Phase 2a — re-enable the legacy `canvas-click` window event so the
+    // Dynamic Input phase hook (`useDynamicInputPhase`) can advance its anchor
+    // (`firstClickPoint`) and field-unlock cycle. Before Phase 2a the overlay
+    // was never mounted and no dispatcher existed; mounting it without this
+    // signal would leave the live readout permanently in `first-point` phase.
+    if (!completed) {
+      window.dispatchEvent(new CustomEvent('canvas-click', { detail: { worldPoint: snappedPoint } }));
+    }
+
     // 🏢 ENTERPRISE (2026-01-30): Clear preview canvas when drawing completes
     // Note: Tool state is managed by useUnifiedDrawing based on allowsContinuous
     // - allowsContinuous=true → tool stays active for next drawing
