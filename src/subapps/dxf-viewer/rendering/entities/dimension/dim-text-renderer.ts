@@ -36,11 +36,15 @@ import {
 } from '../../../systems/dimensions/dim-text-formatter';
 import { resolveDimColor } from './dim-color-resolver';
 import { buildUIFont } from '../../../config/text-rendering-config';
+import { UI_COLORS } from '../../../config/color-config';
 import type { ViewTransform } from '../../types/Types';
 import { CoordinateTransforms } from '../../core/CoordinateTransforms';
 
 const RADIAL_DIAMETER_PREFIX = 'Ø ';
 const RADIAL_RADIUS_PREFIX = 'R ';
+
+/** Screen-px canvas background used for DIMTFILL='backgroundColor'. */
+const CANVAS_BG_DEFAULT = UI_COLORS.CANVAS_BACKGROUND_AUTOCAD_DARK;
 
 interface DimTextRenderParams {
   readonly entity: DimensionEntity;
@@ -49,6 +53,8 @@ interface DimTextRenderParams {
   readonly transform: ViewTransform;
   readonly viewport: { readonly width: number; readonly height: number };
   readonly layerColour: string | undefined;
+  /** Canvas background color for DIMTFILL='backgroundColor' mode. Defaults to AutoCAD dark. */
+  readonly canvasBackground?: string;
 }
 
 export function renderDimensionText(
@@ -74,10 +80,11 @@ export function renderDimensionText(
     ctx.save();
     ctx.translate(screenAnchor.x, screenAnchor.y);
     ctx.rotate(screenRotation);
-    ctx.fillStyle = colour;
     ctx.font = buildUIFont(primaryHeight, fontFamily);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    drawTextBackgroundMask(ctx, text, primaryHeight, params.style, params.layerColour, params.canvasBackground);
+    ctx.fillStyle = colour;
     ctx.fillText(text, 0, 0);
     ctx.restore();
     return;
@@ -89,8 +96,13 @@ export function renderDimensionText(
   ctx.save();
   ctx.translate(screenAnchor.x, screenAnchor.y);
   ctx.rotate(screenRotation);
-  ctx.fillStyle = colour;
+  ctx.font = buildUIFont(primaryHeight, fontFamily);
   ctx.textAlign = 'center';
+  // ADR-362 Phase K3 — DIMTFILL background mask drawn before text + arrowheads.
+  if (full.primary) {
+    drawTextBackgroundMask(ctx, full.primary, primaryHeight, params.style, params.layerColour, params.canvasBackground);
+  }
+  ctx.fillStyle = colour;
 
   // Inspection marker drawn before text so text renders on top.
   if (params.style.dimInspect !== 'off' && full.primary) {
@@ -112,7 +124,6 @@ export function renderDimensionText(
     mainBottomY = primaryHeight / 2 + primaryHeight * Math.max(params.style.dimtfac, 0.1) * 1.1;
   } else {
     if (!full.primary) { ctx.restore(); return; }
-    ctx.font = buildUIFont(primaryHeight, fontFamily);
     ctx.textBaseline = 'middle';
     ctx.fillText(full.primary, 0, 0);
     mainBottomY = primaryHeight / 2;
@@ -319,4 +330,47 @@ function buildFullText(
   }
 
   return composeFullDimText(geometry.measurementValue, style, userText);
+}
+
+/**
+ * ADR-362 Phase K3 — DIMTFILL background mask.
+ *
+ * Draws a filled rect behind dim text before text is painted (render order:
+ * ext lines → dim line → mask rect → arrowheads → text).
+ *
+ * Must be called after `ctx.translate(anchor)` + `ctx.rotate(angle)` so the
+ * rect is aligned with the text local frame. `ctx.font` MUST be set before
+ * calling so `ctx.measureText` returns correct metrics.
+ *
+ * @param ctx           - Canvas context (already translated + rotated).
+ * @param text          - Primary text string (used only for width measurement).
+ * @param primaryHeight - Text height in screen px.
+ * @param style         - Resolved DimStyle — reads `dimtfill`, `dimtfillclr`, `dimgap`.
+ * @param layerColour   - Layer colour for ACI fallback.
+ * @param canvasBackground - Canvas background for 'backgroundColor' mode.
+ */
+function drawTextBackgroundMask(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  primaryHeight: number,
+  style: DimStyle,
+  layerColour: string | undefined,
+  canvasBackground: string | undefined,
+): void {
+  if (style.dimtfill === 'none') return;
+
+  const fillColor =
+    style.dimtfill === 'customColor'
+      ? resolveDimColor(style.dimtfillclr, layerColour)
+      : (canvasBackground ?? CANVAS_BG_DEFAULT);
+
+  const textWidth = ctx.measureText ? ctx.measureText(text).width : text.length * primaryHeight * 0.6;
+  const gapPx = style.dimgap * primaryHeight * 0.15;
+  const halfW = textWidth / 2 + gapPx;
+  const halfH = primaryHeight / 2 + gapPx;
+
+  ctx.save();
+  ctx.fillStyle = fillColor;
+  ctx.fillRect(-halfW, -halfH, halfW * 2, halfH * 2);
+  ctx.restore();
 }

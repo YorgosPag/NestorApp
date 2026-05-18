@@ -50,6 +50,14 @@ import { renderArrowhead } from './dimension/dim-arrowhead-renderer';
 import { renderDimensionText } from './dimension/dim-text-renderer';
 import { resolveDimColor } from './dimension/dim-color-resolver';
 import { CoordinateTransforms } from '../core/CoordinateTransforms';
+import {
+  computeAutoBreaks,
+  type DimBreakResult,
+} from '../../systems/dimensions/dim-break-engine';
+import {
+  computeCenterMarkGeometry,
+} from '../../systems/dimensions/center-mark-builder';
+import { renderCenterMark } from '../../systems/dimensions/center-mark-renderer';
 
 /**
  * Paper-mm → pixel scale at the current view.
@@ -70,6 +78,10 @@ export class DimensionRenderer extends BaseEntityRenderer {
   private dimensionLookup: DimensionLookup = () => undefined;
   private styleRegistry: DimStyleRegistry = getDimStyleRegistry();
   private layerColour: string | undefined;
+  /** All non-dimension scene entities for auto DIMBREAK intersection detection (Phase K1). */
+  private sceneEntities: readonly Entity[] = [];
+  /** Canvas background for DIMTFILL='backgroundColor' mask (Phase K3). */
+  private canvasBackground: string | undefined;
 
   /**
    * Inject the per-frame parent lookup (built once by `DxfRenderer.render()`
@@ -90,14 +102,33 @@ export class DimensionRenderer extends BaseEntityRenderer {
     this.layerColour = colour;
   }
 
+  /**
+   * Inject scene entities for auto DIMBREAK intersection detection (Phase K1).
+   * Called once per frame by the orchestrating renderer before drawing dims.
+   * Typically all non-dimension entities so break gaps appear at crossings.
+   */
+  setSceneEntities(entities: readonly Entity[]): void {
+    this.sceneEntities = entities;
+  }
+
+  /** Canvas background for DIMTFILL 'backgroundColor' mask (Phase K3). */
+  setCanvasBackground(bg: string): void {
+    this.canvasBackground = bg;
+  }
+
   render(entity: EntityModel, options: RenderOptions = {}): void {
     const resolved = this.resolveFromEntity(entity);
     if (!resolved) return;
 
+    const breaks = this.sceneEntities.length > 0
+      ? computeAutoBreaks(resolved.geometry, this.sceneEntities, resolved.style)
+      : undefined;
+
     this.ctx.save();
-    this.drawExtensionLines(resolved);
-    this.drawDimLineOrArc(resolved);
+    this.drawExtensionLines(resolved, breaks);
+    this.drawDimLineOrArc(resolved, breaks);
     this.drawArrowheads(resolved);
+    this.drawCenterMark(resolved);
     this.drawPrimaryText(resolved, options);
     this.ctx.restore();
   }
@@ -134,29 +165,42 @@ export class DimensionRenderer extends BaseEntityRenderer {
 
   // ── Geometry pieces ──────────────────────────────────────────────────────
 
-  private drawExtensionLines(r: ResolvedDimensionRender): void {
+  private drawExtensionLines(r: ResolvedDimensionRender, breaks?: DimBreakResult): void {
     const ext1 = readExtLine(r.geometry, 1);
     const ext2 = readExtLine(r.geometry, 2);
     if (!ext1 && !ext2) return;
-    this.applyLineStyle(r.style.dimclre, r.style.suppressExtLine1 || r.style.suppressExtLine2);
-    if (ext1 && !r.style.suppressExtLine1) this.strokeSegment(ext1);
-    if (ext2 && !r.style.suppressExtLine2) this.strokeSegment(ext2);
+    this.applyLineStyle(r.style.dimclre, false);
+    if (ext1 && !r.style.suppressExtLine1) {
+      const segs = breaks?.extLine1Segments ?? [ext1];
+      for (const s of segs) this.strokeSegment(s);
+    }
+    if (ext2 && !r.style.suppressExtLine2) {
+      const segs = breaks?.extLine2Segments ?? [ext2];
+      for (const s of segs) this.strokeSegment(s);
+    }
   }
 
-  private drawDimLineOrArc(r: ResolvedDimensionRender): void {
+  private drawDimLineOrArc(r: ResolvedDimensionRender, breaks?: DimBreakResult): void {
     this.applyLineStyle(r.style.dimclrd, false);
     switch (r.geometry.kind) {
       case 'linear':
         if (!r.style.suppressDimLine1 && !r.style.suppressDimLine2) {
-          this.strokeSegment(r.geometry.dimLine);
+          const segs = breaks?.dimLineSegments ?? [r.geometry.dimLine];
+          for (const s of segs) this.strokeSegment(s);
         }
         return;
       case 'angular':
         this.strokeArc(r.geometry);
         return;
-      case 'radial':
-        this.strokeLeader(r.geometry);
+      case 'radial': {
+        const leaderSegs = breaks?.leaderSegments;
+        if (leaderSegs) {
+          for (const s of leaderSegs) this.strokeSegment(s);
+        } else {
+          this.strokeLeader(r.geometry);
+        }
         return;
+      }
       default: {
         const _exhaustive: never = r.geometry;
         throw new Error(`[DimensionRenderer] Unknown geometry kind: ${JSON.stringify(_exhaustive)}`);
@@ -200,6 +244,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
       transform: this.transform,
       viewport: { width: this.ctx.canvas.width, height: this.ctx.canvas.height },
       layerColour: this.layerColour,
+      canvasBackground: this.canvasBackground,
     });
   }
 
@@ -234,6 +279,19 @@ export class DimensionRenderer extends BaseEntityRenderer {
     this.ctx.beginPath();
     this.ctx.arc(centre.x, centre.y, radiusPx, start, end, counterclockwise);
     this.ctx.stroke();
+  }
+
+  private drawCenterMark(r: ResolvedDimensionRender): void {
+    if (r.geometry.kind !== 'radial') return;
+    const { centerMarkExtent, centerPoint, measurementValue } = r.geometry;
+    if (!centerMarkExtent || !centerPoint || centerMarkExtent === 0) return;
+    const geom = computeCenterMarkGeometry(
+      centerPoint,
+      measurementValue,
+      centerMarkExtent,
+      r.style.dimscale,
+    );
+    renderCenterMark(this.ctx, geom, r.style.dimclrd, this.transform, this.layerColour);
   }
 
   private strokeLeader(geom: RadialDimGeometry): void {

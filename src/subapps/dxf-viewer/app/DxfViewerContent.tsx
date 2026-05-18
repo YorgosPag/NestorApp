@@ -25,6 +25,7 @@ import { useColorMenuState } from '../hooks/state/useColorMenuState';
 import { useOverlayStore } from '../overlays/overlay-store';
 import { useUniversalSelection } from '../systems/selection';
 import { useLevelManager } from '../systems/levels/useLevels';
+import { useDimAssociationObserver } from '../hooks/dimensions/useDimAssociationObserver';
 import { useGripContext } from '../providers/GripProvider';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
@@ -280,6 +281,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     levelManager, universalSelection, setSelectedEntityIds,
     handleToolChange, fallback: wrappedHandleAction,
   });
+  // ADR-362 Phase J2 — Dimension associativity observer (auto-follow geometry).
+  useDimAssociationObserver(levelManager.getLevelScene, levelManager.setLevelScene, () => levelManager.currentLevelId);
   // ADR-358 Phase 7a — Stair contextual bridge.
   const stairBridge = useRibbonStairBridge({ levelManager, universalSelection });
   const wallBridge = useRibbonWallBridge({ levelManager, universalSelection });

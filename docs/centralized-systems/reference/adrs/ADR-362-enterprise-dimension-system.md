@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | 🟡 IN PROGRESS — Groups A-M done (all pending commit), next: N1 (Field parser) |
+| **Status** | 🟡 IN PROGRESS — Groups A-O1 done (all pending commit), next: O2 (DXF round-trip tests) |
 | **Date** | 2026-05-17 |
 | **Last Updated** | 2026-05-18 |
 | **Category** | DXF Viewer — Annotation / Dimensions |
@@ -752,6 +752,22 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
   - **MOD** `src/subapps/dxf-viewer/hooks/canvas/useCanvasContextMenu.ts` — `UseCanvasContextMenuParams` +`dimContextMenuRef?: RefObject<DimensionContextMenuHandle>` + `selectedDimensionIds?: readonly string[]`. PRIORITY 1.5 routing: `select` mode + `selectedDimensionIds.length > 0` → opens dim menu before entity menu. Wiring into `CanvasSection.tsx` (mount + pass props) is caller responsibility at commit time.
   - **MOD** `src/i18n/locales/el/dxf-viewer-shell.json` + `en/` — `ribbon.commands.dimContextMenu.*` (18 keys: precision, flipArrows, resetText, textOverride, applyStyle, reassociate, explode, explodeWarning, cut, copy, paste, delete, properties, 5 precision level labels).
   - **Next**: Phase N1 — Field parser + tokenizer (DIESEL `<token>` expressions).
+
+- **2026-05-18 (Phase N1-N4 DONE — Field tokens + DIESEL expression engine + autocomplete UI.)** — Full D15 implementation: field token parser, evaluator, and power-user editor UI.
+  - **NEW** `src/subapps/dxf-viewer/systems/dimensions/dim-text-field-parser.ts` (~115 LOC) — Tokenizer + AST for dimension `userText` field syntax. Parses `<>` → `MeasurementPlaceholder`, `<tokenName>` → `FieldToken` (12 tokens: measurement/length/area/angle/perimeter/x/y/scale/filename/date/time/author), `$(op,...)` → `DieselExpr` (nested paren-aware), everything else → `Literal`. `FieldAST = ReadonlyArray<FieldNode>`. Zero React, zero side effects. Exports: `parseFieldAST`, `FIELD_TOKEN_NAMES`, `hasFieldSyntax`, `extractFieldNodes`.
+  - **NEW** `src/subapps/dxf-viewer/systems/dimensions/dim-text-field-evaluator.ts` (~195 LOC) — N2+N3 combined: token resolvers + DIESEL math/string/conditional engine. `FieldEvalContext` carries measurementValue, style, date, area, length, angle, perimeter, x/y, scale, filename, author. Token resolvers reuse `formatLinearMeasurement` from Phase A3. DIESEL ops: `$(+/-/*//)` arithmetic, `$(if,cond,then,else)` conditional, `$(fmt,val,fmt)` number formatting, `$(strlen,s)`, `$(substr,s,start,len)`, `$(upper/lower/strcat)`. Fully recursive via `splitDieselArgs` (nested paren + quote-aware splitter). Entry: `evaluateFieldAST(ast,ctx)` + `evaluateFieldText(text,ctx)`.
+  - **MOD** `src/subapps/dxf-viewer/ui/panels/dimensions/TextOverrideEditor.tsx` — N4: `FieldTokenInput` sub-component added (wraps `Input`, shows token autocomplete dropdown when user types `<`, keyboard nav: ArrowUp/Down/Enter/Tab/Escape, `insertToken` with cursor restoration via `setSelectionRange`). `ColoredPreview` sub-component: renders parser AST with colored spans (field tokens = blue, DIESEL = orange, literals = plain). Applied to all text inputs (prefix, suffix, free). Field hint shown in edit modes.
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/TextOverrideEditor.module.css` — Autocomplete dropdown styles (popover-themed, Radix-compatible vars), suggestion item hover/active states, `.fieldToken` (blue) + `.dieselToken` (orange) classes.
+  - **MOD** `src/i18n/locales/el/dxf-viewer-panels.json` + `en/` — `panels.dimensions.textOverride.fieldHint` + `panels.dimensions.textOverride.fieldTokens.*` (12 token descriptions in Greek + English).
+  - **Next**: Phase O1 — Test suite for builders + renderer.
+
+- **2026-05-18 (Phase O1 DONE — Test suite for new dimension systems: 5 suites, 95 tests, all PASS.)** — GOL-grade test coverage for all Phase K1/K2/L1/N1/N2+N3 systems.
+  - **NEW** `systems/dimensions/__tests__/dim-text-field-parser.test.ts` — 30 tests (3 suites): `parseFieldAST` (20 cases: empty, `<>`, all 12 known tokens, unknown token → Literal, DIESEL expr, nested DIESEL, mixed prefix/suffix/text, unclosed `<`); `hasFieldSyntax` (5 cases); `extractFieldNodes` (2 cases).
+  - **NEW** `systems/dimensions/__tests__/dim-text-field-evaluator.test.ts` — 34 tests (6 suites): Literal passthrough; `<>` MeasurementPlaceholder; FieldToken resolvers (measurement/length/area/angle/x/y/scale/filename/author/date/time + missing optional fields → ""); DIESEL ops (`+/-/*//, if, fmt, strlen, substr, upper, lower, strcat`, nested `$(+,$(+,1,2),3)`); mixed expressions; `evaluateFieldText` wrapper. Bug fixed: `applyFmt` was using `parseInt('00')=0` instead of `.length` for decimal count.
+  - **NEW** `systems/dimensions/__tests__/center-mark-builder.test.ts` — 12 tests (3 suites): `dimcen=0` → empty; `dimcen>0` → 2 crossLines only; `dimcen<0` → 2 crossLines + 4 extLines; arm length = `abs(dimcen)*dimscale`; extLine positions at circle edge ± arm length; arbitrary center offset.
+  - **NEW** `systems/dimensions/__tests__/dim-break-engine.test.ts` — 11 tests (2 suites): `computeAutoBreaks` (breakGap=0, no crossings, crossing LINE at midpoint → 2 segments, two crossings → 3 segments, null extLine, ordinate kind → {}); `computeManualBreaks` (breakGap=0, empty input, break at midpoint, break at extLine).
+  - **NEW** `systems/dimensions/__tests__/dim-space-engine.test.ts` — 8 tests (4 suites): empty targets, unsupported type (angular) skipped, insufficient defPoints; `align` mode collapses to base offset; `custom` mode shifts target by spacing; target between base and origins; target already at correct position → not in result; `auto` mode uses `2×paperTextHeight`; multiple targets + angular filtering.
+  - **Next**: Phase O2 — DXF round-trip + Associativity tests.
 
 - **2026-05-18 (Phase I3 DONE — Geometry-aware hit-testing for DimensionEntity; click-select now works.)** — `DimensionEntity` wired into all three layers of the hit-testing pipeline.
   - **MOD** `src/subapps/dxf-viewer/services/HitTestingService.ts` — `DxfDimension` added to imports; new `case 'dimension'` in `convertToEntityModel`: spreads `dxfDim.dimensionEntity` (brings `defPoints`, `textMidpoint`, `dimensionType`) then overrides base fields (`id/layer/color/visible/selected`) from the scene-resolved `baseModel`. This promotes a `DimensionEntity` into the spatial index so broad-phase bounds are populated.
