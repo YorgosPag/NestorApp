@@ -2,7 +2,7 @@
   "_meta": {
     "description": "SSoT Ratchet Registry — centralized module patterns (ADR-294)",
     "version": "2.0.0",
-    "lastUpdated": "2026-04-08",
+    "lastUpdated": "2026-05-19",
     "howToAdd": "Add module entry under 'modules', then run: npm run ssot:baseline"
   },
   "exemptPatterns": "(__tests__/|\\.test\\.|\\.spec\\.|\\.d\\.ts$|\\.config\\.|\\.stories\\.|\\.qa\\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/|/scripts/|/i18n/locales/|node_modules/|^functions/|^tests/firestore-rules/)",
@@ -3445,6 +3445,21 @@
       "addedDate": "2026-05-18",
       "addedByAdr": "ADR-364",
       "tier": 1
+    },
+    "bim-renderer-finalize": {
+      "ssotFile": "src/subapps/dxf-viewer/rendering/entities/BaseEntityRenderer.ts",
+      "description": "ADR-363 Boy Scout N.0.2 (2026-05-19): `BaseEntityRenderer.finalizeRender(entity, options)` is the SSoT for grip rendering in BIM renderers. The inline `if (options.grips) { this.renderGrips(entity, options); }` pattern was copy-pasted into 7 BIM renderers (WallRenderer, ColumnRenderer, BeamRenderer, OpeningRenderer, SlabOpeningRenderer, SlabRenderer, StairRenderer) and centralized in this session. All BIM renderers MUST call `this.finalizeRender(entity, options)` — no inline renderGrips calls. Note: `finalizeRendering` (with -ing suffix) is the older method used by TextRenderer (grips + cleanup); BIM renderers use the shorter `finalizeRender` (grips only).",
+      "forbiddenPatterns": [
+        "this\\.renderGrips\\(entity,\\s*options\\)"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/rendering/entities/BaseEntityRenderer.ts",
+        "src/subapps/dxf-viewer/rendering/entities/",
+        "src/subapps/dxf-viewer/bim/renderers/__tests__/"
+      ],
+      "addedDate": "2026-05-19",
+      "addedByAdr": "ADR-363",
+      "tier": 3
     }
   }
 }

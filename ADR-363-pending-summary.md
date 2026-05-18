@@ -13,7 +13,7 @@ _Ενημέρωση 2026-05-19: Phase 5.5e (snap-to-wall-axis projection) ολο
 | 2, 2.5 | Opening core + Advanced Editing |
 | 3, 3.5, 3.6, 3.7, 3.7a | Slab core + grips + polish + slab-opening + grips |
 | 4, 4.5, 4.5b, 4.5c.1-4, 4.5d | Column core + grips + variants + hatch + ghost snap + ribbon |
-| 5, 5.5a, 5.5b, 5.5c, 5.5d, 5.5e, 5.5f | Beam core + grips + width + depth + hatch + auto-snap + wall-axis projection + slab-edge projection |
+| 5, 5.5a, 5.5b, 5.5c, 5.5d, 5.5e, 5.5f, 5.5g | Beam core + grips + width + depth + hatch + auto-snap + wall-axis projection + slab-edge projection + opening-jamb projection |
 | 6 | BOQ Auto-Feed core (5 entities) |
 | 7A | Multi-Char BIM Hotkeys (ST/SL/OP/CL/BM) |
 
@@ -58,10 +58,10 @@ _Ενημέρωση 2026-05-19: Phase 5.5e (snap-to-wall-axis projection) ολο
 
 ---
 
-### Phase 5.5g+ — Beam/Column/Slab extras (~2-4h)
+### Phase 5.5h+ — Beam/Column/Slab extras (~2-4h)
 - [x] ~~Snap-to-wall-axis projection για beam endpoint~~ **✅ DONE Phase 5.5e (2026-05-19)**
 - [x] ~~Snap-to-slab-edge perpendicular~~ **✅ DONE Phase 5.5f (2026-05-19)** — βλ. ADR-363 §Phase 5.5f + `bim/slabs/slab-edge-projection.ts`
-- [ ] Snap-to-opening-jamb perpendicular (door/window frame edges)
+- [x] ~~Snap-to-opening-jamb perpendicular (door/window frame edges)~~ **✅ DONE Phase 5.5g (2026-05-19)** — βλ. ADR-363 §Phase 5.5g + `bim/walls/opening-outline-projection.ts`
 - [ ] Distinct i18n labels "Επί άξονα τοίχου" / "Επί ακμής πλάκας"
 - [ ] Column-center-line 3D wireframe snap
 - [ ] Anchor highlight pulse animation (decorative)
@@ -129,7 +129,7 @@ _Ενημέρωση 2026-05-19: Phase 5.5e (snap-to-wall-axis projection) ολο
 | Phase 2 deferred | 4 | ~3-5h |
 | Phase 3.7b+ | 3 | ~2-4h |
 | Phase 4.5d deferred | 5 | ~3-5h |
-| Phase 5.5g+ (5.5e+5.5f done, opening-jamb + i18n pending) | 5 | ~2-4h |
+| Phase 5.5h+ (5.5e+5.5f+5.5g done, i18n labels + column snap pending) | 3 | ~1-2h |
 | Phase 6.1 + 6.2 + 6.5 | ~8 | ~8-13h |
 | Phase 7 | 4 | ~4-6h |
 | Phase 7B+ | 2 | ~1-2h |

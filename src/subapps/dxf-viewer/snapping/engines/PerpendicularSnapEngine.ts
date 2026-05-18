@@ -25,6 +25,7 @@ import {
   isRayEntity,
   isWallEntity,
   isSlabEntity,
+  isOpeningEntity,
 } from '../../types/entities';
 // 🏢 ADR-087: Centralized Snap Engine Configuration
 import { SNAP_RADIUS_MULTIPLIERS, SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
@@ -32,6 +33,8 @@ import { SNAP_RADIUS_MULTIPLIERS, SNAP_ENGINE_PRIORITIES } from '../../config/to
 import { getWallAxisPerpendicularFeet } from '../../bim/walls/wall-axis-projection';
 // ADR-363 Phase 5.5f — slab edge perpendicular feet (unclamped per-edge).
 import { getSlabEdgePerpendicularFeet } from '../../bim/slabs/slab-edge-projection';
+// ADR-363 Phase 5.5g — opening outline perpendicular feet (unclamped per-edge).
+import { getOpeningOutlinePerpendicularFeet } from '../../bim/walls/opening-outline-projection';
 
 export class PerpendicularSnapEngine extends BaseSnapEngine {
 
@@ -145,6 +148,14 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
       const feet = getSlabEdgePerpendicularFeet(entity, cursorPoint, maxDistance);
       for (const f of feet) {
         perpendicularPoints.push({ point: f.point, type: `Slab Edge ${f.edgeIndex + 1}` });
+      }
+    } else if (isOpeningEntity(entity)) {
+      // ADR-363 Phase 5.5g — unclamped foot ανά edge του 4-vertex cutout outline
+      // (cached `geometry.outline.vertices`, Phase 2 invariant). Closing edge
+      // [3]→[0] included via modulo. Mirror Phase 5.5e/5.5f PERPENDICULAR semantics.
+      const feet = getOpeningOutlinePerpendicularFeet(entity, cursorPoint, maxDistance);
+      for (const f of feet) {
+        perpendicularPoints.push({ point: f.point, type: `Opening Edge ${f.edgeIndex + 1}` });
       }
     } else if (isRayEntity(entity)) {
       // Foot of perpendicular — only valid if t >= 0 (on the ray, not behind origin)
