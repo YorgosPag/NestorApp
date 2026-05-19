@@ -184,7 +184,20 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
         isDimLineRefClick && state.cursorWorld !== null ? state.cursorWorld : world;
 
       dimCreate.onClick(commitWorld, hoveredEntity);
-      pushPreview(previewRef);
+
+      // ADR-362 hotfix (2026-05-19): skip preview re-push when this click
+      // flipped the store to `commit-ready`. The commit runs in a microtask
+      // (`useDimensionCreate` queueMicrotask), so a `pushPreview` here paints
+      // ONE frame of green rubber-band that lingers next to the committed
+      // dim until the microtask clears it — visible as a "double dim" flash.
+      // Synchronous clear here removes the gap; the renderer paints only the
+      // committed entity on the next frame.
+      const postClick = dimensionCreateStore.get();
+      if (postClick.status === 'commit-ready') {
+        previewRef.current?.current?.clear();
+      } else {
+        pushPreview(previewRef);
+      }
     },
     [dimCreate],
   );

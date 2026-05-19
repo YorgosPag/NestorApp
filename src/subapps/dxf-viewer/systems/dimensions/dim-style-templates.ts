@@ -40,8 +40,13 @@ export type BuiltInDimStyleId = (typeof BUILTIN_DIM_STYLE_IDS)[keyof typeof BUIL
 function sharedDefaults(): Omit<DimStyle, 'id' | 'name' | 'isBuiltIn'> {
   return {
     // Lines & extensions
-    dimclrd: 4,
-    dimclre: 4,
+    // ADR-362 hotfix (2026-05-19): ACI 256 = ByLayer so committed dims inherit
+    // the layer color instead of hardcoded cyan (ACI 4). Cyan made every dim
+    // look like a preview/ghost overlay regardless of layer color (jarring on
+    // dark canvas + mismatched the green rubber-band preview). Templates that
+    // intentionally want a colored DIMSTYLE override below (ASME=5, Arch=5).
+    dimclrd: 256,
+    dimclre: 256,
     dimexe: 1.25,
     dimexo: 0.625,
     dimdli: 3.75,
@@ -60,7 +65,8 @@ function sharedDefaults(): Omit<DimStyle, 'id' | 'name' | 'isBuiltIn'> {
 
     // Text
     dimtxt: 2.5,
-    dimclrt: 4,
+    // ByLayer — see dimclrd note above.
+    dimclrt: 256,
     dimgap: 0.625,
     dimtad: 'above',
     dimtih: false,
@@ -144,7 +150,7 @@ export const ISO_129_TEMPLATE: DimStyle = makeBuiltInTemplate(
   'ISO 129',
   {
     // Oblique tick + text-above-aligned, comma decimal separator,
-    // cyan ACI 4, Greek layer name.
+    // ByLayer color (inherits layer), Greek layer name.
     dimblk: 'oblique',
     dimtad: 'above',
     dimtih: false,

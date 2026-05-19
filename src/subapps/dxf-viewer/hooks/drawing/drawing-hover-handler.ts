@@ -22,6 +22,9 @@ import { ExtendedSnapType } from '../../snapping/extended-types';
 import { hardOrtho } from './drawing-handler-utils';
 // ADR-362 hotfix: DetectableEntity for smart dim type detection via snap entityId
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
+// ADR-362 hotfix (2026-05-19): skip-snap helper for dimLineRef phase — preview
+// must follow the raw cursor (not snap) so it agrees with the commit.
+import { isDimLineRefPhase } from '../dimensions/dim-skip-snap';
 // ADR-357 Phase 13 G14: length/angle lock geometry constraint
 import { DynamicInputLockStore } from '../../systems/dynamic-input/DynamicInputLockStore';
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
@@ -67,11 +70,15 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
   } = ctx;
   // 🏢 ADR-362 Phase D1: route dim tools through the dedicated orchestrator.
   if (isDimTool) {
-    const snapped = p ? applySnap(p) : null;
+    // ADR-362 hotfix (2026-05-19): symmetric to onDrawingPoint — skip snap on
+    // the dim-line-offset hover so preview position equals committed position.
+    const skipSnap = isDimLineRefPhase();
+    const snapped = p ? (skipSnap ? p : applySnap(p)) : null;
     // ADR-362 hotfix: pass hovered entity to smart dim detector so it can resolve
     // correct dim type (line→aligned, circle→diameter, arc→radius, etc.)
+    // Skip entity resolution on dimLineRef phase — no entity to hit anyway.
     let hoveredEntity: DetectableEntity | undefined;
-    if (p) {
+    if (p && !skipSnap) {
       const snap = findSnapPointRef.current?.(p.x, p.y);
       if (snap?.entityId) hoveredEntity = resolveEntity(snap.entityId);
     }

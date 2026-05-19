@@ -58,6 +58,10 @@ import {
   computeCenterMarkGeometry,
 } from '../../systems/dimensions/center-mark-builder';
 import { renderCenterMark } from '../../systems/dimensions/center-mark-renderer';
+// ADR-362 Phase I3 hotfix (2026-05-19) — shared dim-line + text anchor geometry.
+import { computeDimHitGeometry } from '../../systems/dimensions/dim-hit-geometry';
+import { pointToLineDistance } from './shared/geometry-utils';
+import { calculateDistance } from './shared/geometry-rendering-utils';
 
 /**
  * Paper-mm → pixel scale at the current view.
@@ -138,9 +142,30 @@ export class DimensionRenderer extends BaseEntityRenderer {
     return [];
   }
 
-  hitTest(_entity: EntityModel, _point: Point2D, _tolerance: number): boolean {
-    // Phase I delivers proper hit testing (geometry-aware). Phase C1 returns false
-    // to keep the entity selectable only via dedicated dim hit paths (none yet).
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
+    // ADR-362 Phase I3 hotfix (2026-05-19) — linear/aligned use computed foot
+    // points (shared SSoT in dim-hit-geometry.ts) so a click near the rendered
+    // dim line or text anchor selects the entity. Radial/angular/ordinate keep
+    // a defPoints-proximity fallback until per-variant geometry lands. The
+    // canonical hit path still runs through `performDetailedHitTest` in the
+    // HitTester; this renderer-level method is the leaf bypass used by
+    // canvas-v2 paths that hit-test directly against renderers.
+    const e = entity as Entity;
+    if (!isDimensionEntity(e)) return false;
+    const dim = e as DimensionEntity;
+    const pts = dim.defPoints;
+    if (!pts || pts.length === 0) return false;
+
+    const hitGeom = computeDimHitGeometry(dim);
+    if (hitGeom) {
+      if (calculateDistance(point, hitGeom.textAnchor) <= tolerance * 1.5) return true;
+      if (pointToLineDistance(point, hitGeom.footStart, hitGeom.footEnd) <= tolerance) return true;
+      if (pointToLineDistance(point, pts[0], hitGeom.footStart) <= tolerance) return true;
+      if (pointToLineDistance(point, pts[1], hitGeom.footEnd) <= tolerance) return true;
+    }
+    for (const pt of pts) {
+      if (calculateDistance(point, pt) <= tolerance) return true;
+    }
     return false;
   }
 

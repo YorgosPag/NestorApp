@@ -14,6 +14,8 @@ import { calculateDistance } from '../entities/shared/geometry-rendering-utils';
 import { pointToArcDistance } from '../../utils/angle-entity-math';
 import { pointToInfiniteLineDistance } from '../utils/point-to-line-distance';
 import { pointToRayDistance } from '../utils/point-to-line-distance';
+// ADR-362 Phase I3 hotfix (2026-05-19) — SSoT for dim foot points / text anchor.
+import { computeDimHitGeometry } from '../../systems/dimensions/dim-hit-geometry';
 
 /** Dispatch hit test to the correct entity-type handler */
 export function performDetailedHitTest(
@@ -217,52 +219,91 @@ function hitTestAngleMeasurement(entity: Entity, point: Point2D, tolerance: numb
 /**
  * ADR-362 Phase I3 — Geometry-aware hit test for DimensionEntity.
  *
- * defPoints semantic (all variants):
+ * defPoints semantic (linear/aligned):
  *   [0] = ext-line origin 1  [1] = ext-line origin 2  [2] = dim-line ref
- * textMidpoint = label position (computed fallback: midpt(pts[0], pts[1]))
  *
- * Tests (in priority order):
- *   1. Text label — point in circle (tolerance × 1.5)
- *   2. Approximate ext lines — segments pts[0]→pts[2] and pts[1]→pts[2]
- *   3. Approximate dim line — segment pts[0]→pts[1] (radial/ordinate: only pts)
- *   4. Proximity to any individual defPoint (catch clicks on extension origins)
+ * Hotfix 2026-05-19: previously approximated the dim line as pts[0]→pts[1]
+ * (the *feature* segment) and the text anchor as midpt(pts[0], pts[1]). For
+ * any dim whose dim line is offset from the feature segment (the normal case)
+ * the dim line and text were hit-untestable from where they were rendered.
+ *
+ * New path for linear+aligned: use `computeDimHitGeometry()` to derive the
+ * actual foot points (projections of pts[0], pts[1] onto the dim line through
+ * pts[2]) and use those for the dim-line + text-anchor tests. Extension lines
+ * test pts[0]→foot1 and pts[1]→foot2 (the rendered extension paths). Radial /
+ * angular / ordinate keep the legacy defPoints-based approximation until a
+ * future Phase I delivers per-variant hit tests.
+ *
+ * Tests (priority order):
+ *   1. Text label — circle around textAnchor (tolerance × 1.5)
+ *   2. Dim line — foot1→foot2 segment (rendered position)
+ *   3. Extension lines — pts[0]→foot1 and pts[1]→foot2
+ *   4. defPoint proximity fallback (catch arrowhead-origin clicks)
  */
 function hitTestDimension(entity: DimensionEntity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
   const pts = entity.defPoints;
   if (!pts || pts.length === 0) return null;
 
-  const textPt = entity.textMidpoint ?? (pts.length >= 2 ? { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 } : pts[0]);
-  if (calculateDistance(point, textPt) <= tolerance * 1.5) {
-    return { hitType: 'entity', hitPoint: textPt };
+  const hitGeom = computeDimHitGeometry(entity);
+  if (hitGeom) {
+    return hitTestStraightDim(entity, point, tolerance, hitGeom);
   }
+  return hitTestLegacyDim(entity, point, tolerance);
+}
 
-  // Extension lines: pts[0]→pts[2] and pts[1]→pts[2] (linear/aligned/angular)
-  if (pts.length >= 3) {
-    const d0 = pointToLineDistance(point, pts[0], pts[2]);
-    if (d0 <= tolerance) {
-      return { hitType: 'entity', hitPoint: closestPointOnLine(point, pts[0], pts[2]) };
-    }
-    const d1 = pointToLineDistance(point, pts[1], pts[2]);
-    if (d1 <= tolerance) {
-      return { hitType: 'entity', hitPoint: closestPointOnLine(point, pts[1], pts[2]) };
-    }
+/** Linear/aligned — uses computed foot points for accurate dim line + text. */
+function hitTestStraightDim(
+  entity: DimensionEntity,
+  point: Point2D,
+  tolerance: number,
+  hitGeom: { footStart: Point2D; footEnd: Point2D; textAnchor: Point2D },
+): Partial<HitTestResult> | null {
+  const { footStart, footEnd, textAnchor } = hitGeom;
+  const pts = entity.defPoints;
+
+  if (calculateDistance(point, textAnchor) <= tolerance * 1.5) {
+    return { hitType: 'entity', hitPoint: textAnchor };
   }
-
-  // Dimension line / leader: segment between first two defPoints
-  if (pts.length >= 2) {
-    const dLine = pointToLineDistance(point, pts[0], pts[1]);
-    if (dLine <= tolerance) {
-      return { hitType: 'entity', hitPoint: closestPointOnLine(point, pts[0], pts[1]) };
-    }
+  if (pointToLineDistance(point, footStart, footEnd) <= tolerance) {
+    return { hitType: 'entity', hitPoint: closestPointOnLine(point, footStart, footEnd) };
   }
-
-  // Fallback: proximity to any defPoint (catches clicks on arrowhead endpoints)
+  if (pointToLineDistance(point, pts[0], footStart) <= tolerance) {
+    return { hitType: 'entity', hitPoint: closestPointOnLine(point, pts[0], footStart) };
+  }
+  if (pointToLineDistance(point, pts[1], footEnd) <= tolerance) {
+    return { hitType: 'entity', hitPoint: closestPointOnLine(point, pts[1], footEnd) };
+  }
   for (const pt of pts) {
     if (calculateDistance(point, pt) <= tolerance) {
       return { hitType: 'entity', hitPoint: pt };
     }
   }
+  return null;
+}
 
+/** Radial/angular/ordinate fallback — legacy defPoints-based approximation. */
+function hitTestLegacyDim(entity: DimensionEntity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+  const pts = entity.defPoints;
+  const textPt = entity.textMidpoint ?? (pts.length >= 2 ? { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 } : pts[0]);
+  if (calculateDistance(point, textPt) <= tolerance * 1.5) {
+    return { hitType: 'entity', hitPoint: textPt };
+  }
+  if (pts.length >= 3) {
+    if (pointToLineDistance(point, pts[0], pts[2]) <= tolerance) {
+      return { hitType: 'entity', hitPoint: closestPointOnLine(point, pts[0], pts[2]) };
+    }
+    if (pointToLineDistance(point, pts[1], pts[2]) <= tolerance) {
+      return { hitType: 'entity', hitPoint: closestPointOnLine(point, pts[1], pts[2]) };
+    }
+  }
+  if (pts.length >= 2 && pointToLineDistance(point, pts[0], pts[1]) <= tolerance) {
+    return { hitType: 'entity', hitPoint: closestPointOnLine(point, pts[0], pts[1]) };
+  }
+  for (const pt of pts) {
+    if (calculateDistance(point, pt) <= tolerance) {
+      return { hitType: 'entity', hitPoint: pt };
+    }
+  }
   return null;
 }
 
