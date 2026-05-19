@@ -62,11 +62,11 @@ const CATEGORY_ICONS = {
  * Parse metadata from ADR file content
  */
 function parseAdrFile(content, filename) {
-  // Normalize line endings
-  content = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  // Strip UTF-8 BOM if present, normalize line endings
+  content = content.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-  // Extract title from first heading
-  const titleMatch = content.match(/^#\s*(ADR-[\w.-]+):\s*(.+)$/m);
+  // Extract title from first heading — supports both "ADR-NNN: Title" and "ADR-NNN — Title"
+  const titleMatch = content.match(/^#\s*(ADR-[\w.-]+)\s*[:—]\s*(.+)$/m);
   if (!titleMatch) {
     console.warn(`⚠️ Could not parse title from ${filename}`);
     return null;

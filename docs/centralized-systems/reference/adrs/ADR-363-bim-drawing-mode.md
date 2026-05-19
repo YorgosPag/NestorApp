@@ -2131,12 +2131,31 @@ generators throw clearly if an unknown kind is passed) / ✅ SSoT
 `updateEntity` runs) / ✅ Lifecycle owner (command class owns the patch
 lifecycle).
 
-### Phase 8 — Schedule Export (1 session)
+### Phase 8 — Schedule Export (1 session) ✅ IMPLEMENTED 2026-05-19
 
-- [ ] `BimScheduleExporter` — generate table per element type ή combined.
-- [ ] Formats: CSV, Excel (xlsx), PDF (via existing print pipeline).
-- [ ] Filterable schedule UI (per floor, per category).
-- [ ] Sample: "Πίνακας Κουφωμάτων" — door schedule με id/width/height/sill/handing/material.
+- [x] `BimScheduleExporter` — generate table per element type ή combined.
+- [x] Formats: CSV, Excel (xlsx), PDF (via existing print pipeline).
+- [x] Filterable schedule UI (per floor, per category, canvas region, selection).
+- [x] 8 presets: door/window/wall/slab/column/beam/stair/slab-opening + combined.
+- [x] Ribbon "Ανάλυση" tab με BIM Schedule button (analyze-tab.ts, ribbon-default-tabs.ts).
+- [x] Region pick FSM (region-pick-store + useScheduleRegionPickTool).
+- [x] i18n: dxf-schedule namespace (el + en, 37 keys, ICU {count}).
+- [x] Tests: 81 passing (filters + builder + exporters).
+- [x] SSoT registry: `bim-schedule` module (Tier 3, ADR-294).
+
+**Files (M1–M7)**:
+- `bim/schedule/types.ts`, `filters.ts`, `schedule-presets.ts`, `schedule-builder.ts`
+- `bim/schedule/exporters/`: `value-formatters.ts`, `csv-exporter.ts`, `xlsx-exporter.ts`, `pdf-exporter.ts`, `index.ts`
+- `bim/schedule/index.ts` (barrel)
+- `bim/schedule/stores/region-pick-store.ts`
+- `bim/schedule/__tests__/`: filters, builder, exporters (81 tests)
+- `ui/bim/schedule/`: ScheduleEntityToggle, ScheduleFilterBar, SchedulePreviewTable, ScheduleFormatPicker, BimScheduleDialog
+- `hooks/tools/useScheduleRegionPickTool.ts`
+- `hooks/useBimScheduleExport.ts`
+- `ui/ribbon/data/analyze-tab.ts` (NEW)
+- `ui/ribbon/data/ribbon-default-tabs.ts` (+ANALYZE_TAB)
+- `ui/ribbon/components/buttons/RibbonButtonIcon.tsx` (+bim-schedule icon)
+- `src/i18n/locales/el/dxf-schedule.json`, `src/i18n/locales/en/dxf-schedule.json`
 
 ### Phase 9+ — Out of Scope (διατυπώνεται για documentation)
 

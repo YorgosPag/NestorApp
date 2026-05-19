@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 298 ADRs | Last Updated: 2026-05-16
+**📊 Stats**: 321 ADRs | Last Updated: 2026-05-19
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 106 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 123 | [View](#uncategorized) |
 
 ---
 
@@ -318,8 +318,16 @@
 | **ADR-296** | File-Type Classification SSoT Unification | ✅ ✅ IMPLEMENTED | 2026-04-21 | File Management / Architectural Integrity | [📄](./adrs/ADR-296-file-type-classification-ssot.md) |
 | **ADR-297** | HQ Address Clear + Undo — Google-level Single-Click UX | ✅ ✅ IMPLEMENTED | 2026-04-21 | Frontend UX / Contacts Form | [📄](./adrs/ADR-297-hq-clear-undo-pattern.md) |
 | **ADR-314** | SSoT Discovery Findings & Centralization Roadmap | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-314-ssot-discovery-findings-roadmap.md) |
+| **ADR-316** | Project Showcase (Επίδειξη Έργου) | ✅ 📋 In Progress | 2026-04-22 | Uncategorized | [📄](./adrs/ADR-316-project-showcase.md) |
+| **ADR-320** | Building Showcase (SSoT Composition) | ✅ ✅ IMPLEMENTED (Phase 6 landed — public `/shared/[token]` viewer for `building_showcase`. All 6 phases green.) | 2026-04-23 | Buildings / Public Share Surfaces | [📄](./adrs/ADR-320-building-showcase.md) |
 | **ADR-327** | Quote Management & Comparison System (Hybrid Scan + Vendor Portal) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-327-quote-management-comparison-system.md) |
+| **ADR-328** | Tabs SSoT Consolidation | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-328-tabs-ssot-consolidation.md) |
 | **ADR-329** | Measurement Task Scope — Property-Granular Selection | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-329-measurement-task-scope-granularity.md) |
+| **ADR-330** | Procurement Hub Scoped Split (Company-wide vs Project-scoped) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-330-procurement-hub-scoped-split.md) |
+| **ADR-331** | Enterprise Spend Analytics Page | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-331-enterprise-spend-analytics-page.md) |
+| **ADR-332** | Enterprise Address Editor System (Full Transparency) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-332-enterprise-address-editor-system.md) |
+| **ADR-340** | Floorplan Background System (PDF + Image, single-per-floor, Procore-grade separation) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-340-raster-background-layers-system.md) |
+| **ADR-341** | UserSettings SSoT (Firestore-backed industry pattern) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-341-user-settings-ssot.md) |
 | **ADR-342** | Voice Input Field SSoT | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-342-voice-input-field-ssot.md) |
 | **ADR-343** | DXF Canvas Visual Regression Test Suite | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-343-dxf-canvas-visual-regression-suite.md) |
 | **ADR-344** | DXF Enterprise Text Engine (Autodesk-Grade Text Creation & Editing Suite) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-344-dxf-enterprise-text-engine.md) |
@@ -333,6 +341,21 @@
 | **ADR-352** | FileRecord Query Ordering & Wipe Completeness | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-352-filerecord-ordering-wipe-completeness.md) |
 | **ADR-353** | Array Commands — Rectangular, Path, Polar | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-353-array-commands.md) |
 | **ADR-353** | Extend Command (Επέκταση) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-353-extend-command.md) |
+| **ADR-354** | Super Admin Company Switcher: SSOT Server + Client Override | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-354-super-admin-company-switcher-ssot-override.md) |
+| **ADR-355** | Real-time Firestore Subscription SSOT Consolidation | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-355-realtime-subscription-ssot-consolidation.md) |
+| **ADR-356** | Super-Admin Project Scope SSOT (server helper + client invalidation hook) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-356-super-admin-project-scope-ssot.md) |
+| **ADR-357** | DXF Line Tool: Allineamento Google-Level a CAD Professionali | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-357-dxf-line-tool-google-level.md) |
+| **ADR-358** | DXF Stair Tool: Google-Level Parametric Staircase System | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-358-dxf-stair-tool-google-level.md) |
+| **ADR-358** | Layer Management System (DXF-grade, Google-Level) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-358-layer-management-system.md) |
+| **ADR-359** | Auxiliary Geometry Tools: XLINE (Construction Lines) + RAY | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-359-auxiliary-geometry-tools.md) |
+| **ADR-360** | Firebase Custom Claims Auto-Refresh Listener | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-360-claims-auto-refresh-listener.md) |
+| **ADR-360** | Claims Auto-Refresh SSoT (Firestore Mirror) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-360-claims-auto-refresh-ssot.md) |
+| **ADR-361** | Firestore Subscribe Equality Guard (SSoT) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-361-firestore-subscribe-equality-guard.md) |
+| **ADR-362** | Enterprise Dimension System | ✅ ✅ IMPLEMENTED — ADR-362 FULLY IMPLEMENTED 2026-05-18. Groups A→O3 complete (all pending commit). | 2026-05-17 | DXF Viewer — Annotation / Dimensions | [📄](./adrs/ADR-362-enterprise-dimension-system.md) |
+| **ADR-363** | BIM Drawing Mode (Parametric Building Elements) | ✅ 🟢 **APPROVED** 2026-05-17 — All Q1-Q8 answered. Ready for Phase 0 implementation. | 2026-05-17 | DXF Viewer — BIM / Parametric Building Modeling | [📄](./adrs/ADR-363-bim-drawing-mode.md) |
+| **ADR-364** | Escape Command Bus (Centralized ESC Dispatcher) | ✅ 🟢 **APPROVED** 2026-05-18 — Group 1+2 implemented; Group 3 (BIM tools) migrated 2026-05-19, awaiting commit | 2026-05-18 | DXF Viewer — Tools & Keyboard | [📄](./adrs/ADR-364-escape-command-bus.md) |
+| **ADR-365** | Tailwind Semantic Palette Enforcement | ✅ 🟢 **PHASE 0 DONE** 2026-05-19 — Ratchet infrastructure deployed (CHECK 3.26). Awaits Phase 1 (DXF Viewer subapp). Actual baseline: **3,659 violations / 440 files** (revised from initial estimate 249/65 — original audit was hover-only) | 2026-05-19 | Design System — Theming & Color Tokens | [📄](./adrs/ADR-365-tailwind-semantic-palette-enforcement.md) |
+| **ADR-366** | 3D BIM Viewer & Photorealistic Rendering | ✅ 🟢 **APPROVED** 2026-05-19 — All §9 open questions resolved Full Enterprise. Phase 0 implementation ready. | 2026-05-19 | DXF Viewer — 3D Rendering / Photorealistic Output | [📄](./adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -651,8 +674,15 @@
 | **ADR-294** | SSoT Ratchet Enforcement System | ✅ APPROVED | [View](./adrs/ADR-294-ssot-ratchet-enforcement.md) |
 | **ADR-295** | Multi-Channel Photo Sharing to CRM Contacts | ✅ APPROVED | [View](./adrs/ADR-295-multi-channel-photo-sharing.md) |
 | **ADR-314** | SSoT Discovery Findings & Centralization Roadmap | ✅ APPROVED | [View](./adrs/ADR-314-ssot-discovery-findings-roadmap.md) |
+| **ADR-316** | Project Showcase (Επίδειξη Έργου) | ✅ 📋 In Progress | [View](./adrs/ADR-316-project-showcase.md) |
 | **ADR-327** | Quote Management & Comparison System (Hybrid Scan + Vendor Portal) | ✅ APPROVED | [View](./adrs/ADR-327-quote-management-comparison-system.md) |
+| **ADR-328** | Tabs SSoT Consolidation | ✅ APPROVED | [View](./adrs/ADR-328-tabs-ssot-consolidation.md) |
 | **ADR-329** | Measurement Task Scope — Property-Granular Selection | ✅ APPROVED | [View](./adrs/ADR-329-measurement-task-scope-granularity.md) |
+| **ADR-330** | Procurement Hub Scoped Split (Company-wide vs Project-scoped) | ✅ APPROVED | [View](./adrs/ADR-330-procurement-hub-scoped-split.md) |
+| **ADR-331** | Enterprise Spend Analytics Page | ✅ APPROVED | [View](./adrs/ADR-331-enterprise-spend-analytics-page.md) |
+| **ADR-332** | Enterprise Address Editor System (Full Transparency) | ✅ APPROVED | [View](./adrs/ADR-332-enterprise-address-editor-system.md) |
+| **ADR-340** | Floorplan Background System (PDF + Image, single-per-floor, Procore-grade separation) | ✅ APPROVED | [View](./adrs/ADR-340-raster-background-layers-system.md) |
+| **ADR-341** | UserSettings SSoT (Firestore-backed industry pattern) | ✅ APPROVED | [View](./adrs/ADR-341-user-settings-ssot.md) |
 | **ADR-342** | Voice Input Field SSoT | ✅ APPROVED | [View](./adrs/ADR-342-voice-input-field-ssot.md) |
 | **ADR-343** | DXF Canvas Visual Regression Test Suite | ✅ APPROVED | [View](./adrs/ADR-343-dxf-canvas-visual-regression-suite.md) |
 | **ADR-344** | DXF Enterprise Text Engine (Autodesk-Grade Text Creation & Editing Suite) | ✅ APPROVED | [View](./adrs/ADR-344-dxf-enterprise-text-engine.md) |
@@ -666,6 +696,16 @@
 | **ADR-352** | FileRecord Query Ordering & Wipe Completeness | ✅ APPROVED | [View](./adrs/ADR-352-filerecord-ordering-wipe-completeness.md) |
 | **ADR-353** | Array Commands — Rectangular, Path, Polar | ✅ APPROVED | [View](./adrs/ADR-353-array-commands.md) |
 | **ADR-353** | Extend Command (Επέκταση) | ✅ APPROVED | [View](./adrs/ADR-353-extend-command.md) |
+| **ADR-354** | Super Admin Company Switcher: SSOT Server + Client Override | ✅ APPROVED | [View](./adrs/ADR-354-super-admin-company-switcher-ssot-override.md) |
+| **ADR-355** | Real-time Firestore Subscription SSOT Consolidation | ✅ APPROVED | [View](./adrs/ADR-355-realtime-subscription-ssot-consolidation.md) |
+| **ADR-356** | Super-Admin Project Scope SSOT (server helper + client invalidation hook) | ✅ APPROVED | [View](./adrs/ADR-356-super-admin-project-scope-ssot.md) |
+| **ADR-357** | DXF Line Tool: Allineamento Google-Level a CAD Professionali | ✅ APPROVED | [View](./adrs/ADR-357-dxf-line-tool-google-level.md) |
+| **ADR-358** | DXF Stair Tool: Google-Level Parametric Staircase System | ✅ APPROVED | [View](./adrs/ADR-358-dxf-stair-tool-google-level.md) |
+| **ADR-358** | Layer Management System (DXF-grade, Google-Level) | ✅ APPROVED | [View](./adrs/ADR-358-layer-management-system.md) |
+| **ADR-359** | Auxiliary Geometry Tools: XLINE (Construction Lines) + RAY | ✅ APPROVED | [View](./adrs/ADR-359-auxiliary-geometry-tools.md) |
+| **ADR-360** | Firebase Custom Claims Auto-Refresh Listener | ✅ APPROVED | [View](./adrs/ADR-360-claims-auto-refresh-listener.md) |
+| **ADR-360** | Claims Auto-Refresh SSoT (Firestore Mirror) | ✅ APPROVED | [View](./adrs/ADR-360-claims-auto-refresh-ssot.md) |
+| **ADR-361** | Firestore Subscribe Equality Guard (SSoT) | ✅ APPROVED | [View](./adrs/ADR-361-firestore-subscribe-equality-guard.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

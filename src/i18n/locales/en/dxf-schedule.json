@@ -1,0 +1,95 @@
+{
+  "dialog": {
+    "title": "BIM Schedule",
+    "description": "Export BIM quantity schedule"
+  },
+  "entityType": {
+    "label": "Element type",
+    "combined": "All elements",
+    "door": "Doors",
+    "window": "Windows",
+    "wall": "Walls",
+    "slab": "Slabs",
+    "column": "Columns",
+    "beam": "Beams",
+    "stair": "Stairs",
+    "slab-opening": "Slab openings"
+  },
+  "filters": {
+    "floor": {
+      "label": "Floor",
+      "empty": "No floors available"
+    },
+    "category": {
+      "label": "Category / Material",
+      "empty": "No categories available"
+    },
+    "region": {
+      "label": "Canvas region",
+      "pick": "Pick region",
+      "active": "Region active",
+      "clear": "Clear"
+    },
+    "selection": {
+      "label": "Selection",
+      "toggle": "Selected only ({count})"
+    }
+  },
+  "preview": {
+    "title": "Preview",
+    "empty": "No elements match the current filters",
+    "rowCount": "{count} elements"
+  },
+  "format": {
+    "label": "Export format",
+    "csv": "CSV",
+    "xlsx": "Excel (xlsx)",
+    "pdf": "PDF"
+  },
+  "export": {
+    "button": "Export"
+  },
+  "regionPick": {
+    "awaitingFirst": "Click first corner of region on canvas",
+    "awaitingSecond": "Click opposite corner"
+  },
+  "col": {
+    "id": "ID",
+    "floor": "Floor",
+    "kind": "Type",
+    "type": "Type",
+    "width": "Width",
+    "height": "Height",
+    "depth": "Depth",
+    "length": "Length",
+    "thickness": "Thickness",
+    "area": "Area",
+    "netArea": "Net area",
+    "volume": "Volume",
+    "perimeter": "Perimeter",
+    "elevation": "Elevation",
+    "rotation": "Rotation",
+    "material": "Material",
+    "category": "Category",
+    "wall": "Wall",
+    "sill": "Sill height",
+    "glazing": "Glazing panes",
+    "handingText": "Handing",
+    "handingCode": "Handing code",
+    "dnaLayers": "DNA layers",
+    "reinforcement": "Reinforcement",
+    "supportType": "Support type",
+    "stepCount": "Step count",
+    "rise": "Rise",
+    "tread": "Tread",
+    "totalRise": "Total rise",
+    "totalRun": "Total run",
+    "pitch": "Pitch",
+    "structureType": "Structure type",
+    "fireRating": "Fire rating",
+    "slabId": "Slab",
+    "primaryQuantity": "Primary quantity",
+    "primaryUnit": "Unit",
+    "atoeCategory": "ATOE category"
+  }
+}

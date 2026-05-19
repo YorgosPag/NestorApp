@@ -3491,6 +3491,27 @@
       "addedByAdr": "ADR-363",
       "tier": 3
     },
+    "bim-schedule": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/schedule/index.ts",
+      "description": "ADR-363 §6 Phase 8 (2026-05-19): BIM Schedule Export system — types, filters, schedule-presets, schedule-builder, exporters (CSV/xlsx/PDF). All BIM schedule generation MUST go through bim/schedule/. Forbidden: re-implementing ScheduleBuilder, CsvScheduleExporter, XlsxScheduleExporter, PdfScheduleExporter, or BimScheduleFilterEngine outside the canonical tree.",
+      "forbiddenPatterns": [
+        "class\\s+BimScheduleBuilder",
+        "class\\s+CsvScheduleExporter",
+        "class\\s+XlsxScheduleExporter",
+        "class\\s+PdfScheduleExporter",
+        "function\\s+buildSchedule\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/schedule/",
+        "src/subapps/dxf-viewer/hooks/useBimScheduleExport.ts",
+        "src/subapps/dxf-viewer/ui/ribbon/data/analyze-tab.ts",
+        "src/subapps/dxf-viewer/ui/ribbon/",
+        "src/subapps/dxf-viewer/ui/bim/"
+      ],
+      "addedDate": "2026-05-19",
+      "addedByAdr": "ADR-363",
+      "tier": 3
+    },
     "tailwind-hardcoded-palette": {
       "ssotFile": "src/design-system/color-bridge.ts",
       "description": "ADR-365 (2026-05-19): Tailwind raw palette utilities (bg|text|border|ring|fill|stroke)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(50..950) and their dark:/hover:/focus:/active:/group-hover:/peer-hover: variants are FORBIDDEN in consumer files. Use semantic tokens from COLOR_BRIDGE (src/design-system/color-bridge.ts), semanticColors (src/design-system/semantics/colors.ts), or shadcn tokens (muted/accent/destructive/primary/ring/background/card/foreground/muted-foreground). For status states use CSS vars: bg-[hsl(var(--bg-success|error|warning|info))]. Dark-mode prefix is unnecessary on consumer files — semantic tokens are theme-aware via CSS vars. Enforced by CHECK 3.26 (scripts/check-tailwind-palette-ratchet.js). Baseline: .tailwind-palette-baseline.json. Phase 0 ratchet only — per-domain migration (Phases 1-8) drives baseline → 0.",

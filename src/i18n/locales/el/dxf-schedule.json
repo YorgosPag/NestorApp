@@ -1,0 +1,95 @@
+{
+  "dialog": {
+    "title": "Πίνακας BIM",
+    "description": "Εξαγωγή πίνακα ποσοτήτων"
+  },
+  "entityType": {
+    "label": "Τύπος στοιχείου",
+    "combined": "Όλα τα στοιχεία",
+    "door": "Πόρτες",
+    "window": "Παράθυρα",
+    "wall": "Τοίχοι",
+    "slab": "Πλάκες",
+    "column": "Υποστυλώματα",
+    "beam": "Δοκοί",
+    "stair": "Κλίμακες",
+    "slab-opening": "Ανοίγματα πλάκας"
+  },
+  "filters": {
+    "floor": {
+      "label": "Όροφος",
+      "empty": "Δεν υπάρχουν όροφοι"
+    },
+    "category": {
+      "label": "Κατηγορία / Υλικό",
+      "empty": "Δεν υπάρχουν κατηγορίες"
+    },
+    "region": {
+      "label": "Περιοχή καμβά",
+      "pick": "Επιλογή περιοχής",
+      "active": "Περιοχή ενεργή",
+      "clear": "Εκκαθάριση"
+    },
+    "selection": {
+      "label": "Επιλογή",
+      "toggle": "Μόνο επιλεγμένα ({count})"
+    }
+  },
+  "preview": {
+    "title": "Προεπισκόπηση",
+    "empty": "Δεν υπάρχουν στοιχεία",
+    "rowCount": "{count} στοιχεία"
+  },
+  "format": {
+    "label": "Μορφή εξαγωγής",
+    "csv": "CSV",
+    "xlsx": "Excel (xlsx)",
+    "pdf": "PDF"
+  },
+  "export": {
+    "button": "Εξαγωγή"
+  },
+  "regionPick": {
+    "awaitingFirst": "Επιλέξτε 1η γωνία περιοχής στον καμβά",
+    "awaitingSecond": "Επιλέξτε 2η γωνία (αντιδιαγώνια)"
+  },
+  "col": {
+    "id": "Κωδικός",
+    "floor": "Όροφος",
+    "kind": "Είδος",
+    "type": "Τύπος",
+    "width": "Πλάτος",
+    "height": "Ύψος",
+    "depth": "Βάθος",
+    "length": "Μήκος",
+    "thickness": "Πάχος",
+    "area": "Επιφάνεια",
+    "netArea": "Καθαρή επιφάνεια",
+    "volume": "Όγκος",
+    "perimeter": "Περίμετρος",
+    "elevation": "Υψόμετρο",
+    "rotation": "Στροφή",
+    "material": "Υλικό",
+    "category": "Κατηγορία",
+    "wall": "Τοίχος",
+    "sill": "Ύψος κουφώματος",
+    "glazing": "Υαλοπίνακες",
+    "handingText": "Άνοιγμα",
+    "handingCode": "Κωδ. ανοίγματος",
+    "dnaLayers": "Στρώσεις DNA",
+    "reinforcement": "Οπλισμός",
+    "supportType": "Τύπος έδρασης",
+    "stepCount": "Αριθμός σκαλιών",
+    "rise": "Ύψος αναβαθμίδας",
+    "tread": "Πλάτος πατήματος",
+    "totalRise": "Συνολικό ύψος",
+    "totalRun": "Συνολικό μήκος",
+    "pitch": "Κλίση",
+    "structureType": "Τύπος κατασκευής",
+    "fireRating": "Πυραντοχή",
+    "slabId": "Πλάκα",
+    "primaryQuantity": "Κύρια ποσότητα",
+    "primaryUnit": "Μονάδα",
+    "atoeCategory": "Κατηγορία ΑΤΟΕ"
+  }
+}
