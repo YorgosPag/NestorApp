@@ -80,10 +80,24 @@ function tagMesh(mesh: THREE.Mesh, id: string, type: string): THREE.Mesh {
   return mesh;
 }
 
+// Wall footprint: outerEdge and innerEdge are each open polylines (not closed polygons).
+// Combine: trace outer forward → inner backward → close to form a proper solid cross-section.
+function buildWallShape(outer: readonly Point3D[], inner: readonly Point3D[]): THREE.Shape | null {
+  if (outer.length < 2 || inner.length < 2) return null;
+  const outerPts = toShapePoints(outer);
+  const innerPts = toShapePoints(inner);
+  const shape = new THREE.Shape();
+  shape.moveTo(outerPts[0].x, outerPts[0].y);
+  for (let i = 1; i < outerPts.length; i++) shape.lineTo(outerPts[i].x, outerPts[i].y);
+  for (let i = innerPts.length - 1; i >= 0; i--) shape.lineTo(innerPts[i].x, innerPts[i].y);
+  shape.closePath();
+  return shape;
+}
+
 // ── Public converters ─────────────────────────────────────────────────────────
 
 export function wallToMesh(wall: WallEntity, floorElevationMm = 0): THREE.Mesh | null {
-  const shape = buildShape(
+  const shape = buildWallShape(
     wall.geometry.outerEdge.points,
     wall.geometry.innerEdge.points,
   );

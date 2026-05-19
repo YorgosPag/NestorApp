@@ -22,7 +22,6 @@ export class BimSceneLayer {
 
   sync(entities: Bim3DEntities, floorElevationMm = 0): void {
     this.clearGroup();
-
     for (const wall of entities.walls) {
       const mesh = wallToMesh(wall, floorElevationMm);
       if (mesh) this.group.add(mesh);
