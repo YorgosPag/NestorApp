@@ -1,6 +1,6 @@
 # ADR-363 BIM Drawing Mode — Πόρισμα Εκκρεμών Φάσεων
 _Ημερομηνία ανάλυσης: 2026-05-19_
-_Ενημέρωση 2026-05-19: Phase 5.5e (snap-to-wall-axis projection) ολοκληρώθηκε παράλληλα με τη συγγραφή του πορίσματος — μετακινήθηκε στις ολοκληρωμένες._
+_Ενημέρωση 2026-05-20: Μεγάλη διόρθωση — πολλά "pending" items ήταν ήδη DONE στον κώδικα. Verified από ADR-363 checklist._
 
 ---
 
@@ -8,85 +8,54 @@ _Ενημέρωση 2026-05-19: Phase 5.5e (snap-to-wall-axis projection) ολο
 
 | Φάση | Περιγραφή |
 |------|-----------|
+| 0, 0.5 | Doc sync + stair SSoT verification (2026-05-20) |
 | 1, 1A, 1B, 1C | Wall core + types + tool + Firestore + ribbon |
-| 1D-A, 1D-B, 1D-C, 1E | WallDna Editor + AutoTrim + EntityAudit + Delete |
+| 1D-A, 1D-B, 1D-C, 1D-D, 1E | WallDna Editor + AutoTrim + EntityAudit + BOQ feed + Delete |
 | 2, 2.5 | Opening core + Advanced Editing |
+| 2 deferred | Wall split mid-opening + cascade delete UX + shortcuts D/Wn (2026-05-19) |
 | 3, 3.5, 3.6, 3.7, 3.7a | Slab core + grips + polish + slab-opening + grips |
-| 4, 4.5, 4.5b, 4.5c.1-4, 4.5d | Column core + grips + variants + hatch + ghost snap + ribbon |
-| 5, 5.5a, 5.5b, 5.5c, 5.5d, 5.5e, 5.5f, 5.5g | Beam core + grips + width + depth + hatch + auto-snap + wall-axis projection + slab-edge projection + opening-jamb projection |
-| 6 | BOQ Auto-Feed core (5 entities) |
-| 7A | Multi-Char BIM Hotkeys (ST/SL/OP/CL/BM) |
+| 4, 4.5, 4.5b, 4.5c.1–6, 4.5d | Column core + grips + variants + hatch + ghost snap + section-profile L/T symbol + ribbon |
+| 5, 5.5a–5.5i+ | Beam core + grips + width + depth + hatch + auto-snap + all projections + section-profile I/H symbol + column-center snap + beam-slab BOQ deduction |
+| 6 | BOQ Auto-Feed core (5 entities) + multi-layer DNA walls + material→ΑΤΟΕ mapping |
+| 7A, 7B | Multi-Char BIM Hotkeys (ST/SL/OP/CL/BM) + Single-char D/Wn shortcuts |
 
 ---
 
 ## Εκκρεμείς Φάσεις ❌
 
-### Phase 0 — ✅ DONE (doc sync 2026-05-19)
-Όλα τα checkboxes ενημερώθηκαν σε [x] στο ADR-363. Κώδικας = SSoT.
-
-### Phase 0.5 — ✅ DONE (2026-05-20 — ανάλυση επαλήθευσε λάθος εκτίμηση)
-- [x] Ενημέρωση checkboxes Phase 0 → ολοκληρώθηκε
-- [x] Επαλήθευση Phase 0.5 → **`bim/stairs/` = ζωντανό SSoT** (12 real imports), `systems/stairs/` δεν υπάρχει. Η αρχική εκτίμηση (2026-05-19) είχε ανάποδα. Καμία migration χρειάστηκε.
-- [x] Stale comment `grip-types.ts:15` διορθώθηκε: `systems/stairs/` → `bim/stairs/`
+### Phase 3.7b+ — Slab-Opening extras (~2-3h)
+- [ ] Multi-storey stack group UI ("Copy to all floors") — bulk-create workflow
+- [ ] Fire-rating + material fields στο ribbon (Phase 6.5+ material library dependency)
+- [ ] Snap-to-edge-midpoint preview ghost while hovering edge-midpoint grip pre-drag
 
 ---
 
-### Phase 1D-D — ✅ DONE (2026-05-19 — stale entry, κώδικας ήταν ήδη υλοποιημένος)
-`bimToBoqBridge.upsertBoqItemForBim('wall', ...)` wired σε `useWallPersistence`. 8 tests pass.
+### Phase 4.5e+ — Material Pickers activation (~2-3h)
+_(Deferred from Phase 4.5d — ribbon buttons exist, pickers disabled/comingSoon)_
+- [ ] Wall material picker → depends on WallDna composable layer stack
+- [ ] Slab material picker → depends on Phase 6.5 material library
+- [ ] Beam material picker → Phase 5.5c hatch DONE, but comingSoon placeholder remains
+- [ ] Tab/Shift+Tab cycling για material picker (lower priority)
 
 ---
 
-### Phase 2 — Deferred items (~3-5h)
-- [ ] Wall split mid-opening (recompute opening positions όταν αλλάζει ο άξονας του wall)
-- [ ] Wall delete cascade UX: dialog "Διαγραφή και των N κουφωμάτων;"
-- [ ] Canvas pipeline call site για `composite.setOpeningsByWall(...)`
-- [ ] Single-char shortcuts `D`/`Wn` → βλ. Phase 7B+
+### Phase 5.5i+ extras — Beam visual polish (~1-2h)
+- [ ] H-beam variant (broader flanges `flangeT/h`=0.33) — requires `params.sectionType` field extension in `BeamParams`
+- [ ] Distinct i18n tooltip for section symbol ("IPE 300"/"HEA 200") — requires `params.profileDesignation` field
+- [ ] Scale-adaptive symbol size (low priority enhancement — fixed 20×26px is readable)
+- [ ] Anchor highlight pulse animation (decorative, lowest priority)
 
 ---
 
-### Phase 3.7b+ — Slab-Opening extras (~2-4h)
-- [ ] Multi-storey stack group UI ("Copy to all floors")
-- [ ] Fire-rating + material fields στο ribbon (Phase 6+ BOQ dependency)
-- [ ] Snap-to-edge-midpoint preview ghost
-
----
-
-### Phase 4.5d — Deferred items (~3-5h)
-- [ ] Wall material picker activation (depends on WallDna composable layer stack)
-- [ ] Slab material picker activation (Phase 6+ material library)
-- [ ] Tab/Shift+Tab cycling για material picker
-- [ ] Material-aware default geometry (steel IPE/HEB profiles)
-- [ ] Section-profile overlay για L-shape + T-shape columns
-
----
-
-### Phase 5.5h+ — Beam/Column/Slab extras (~2-4h)
-- [x] ~~Snap-to-wall-axis projection για beam endpoint~~ **✅ DONE Phase 5.5e (2026-05-19)**
-- [x] ~~Snap-to-slab-edge perpendicular~~ **✅ DONE Phase 5.5f (2026-05-19)** — βλ. ADR-363 §Phase 5.5f + `bim/slabs/slab-edge-projection.ts`
-- [x] ~~Snap-to-opening-jamb perpendicular (door/window frame edges)~~ **✅ DONE Phase 5.5g (2026-05-19)** — βλ. ADR-363 §Phase 5.5g + `bim/walls/opening-outline-projection.ts`
-- [x] ~~Distinct i18n labels~~ **✅ DONE Phase A (2026-05-19)** — βλ. ADR-363 §Phase A + `SnapIndicatorOverlay.tsx`, `NearestSnapEngine.ts`, `PerpendicularSnapEngine.ts`, locale `snapModes.labels.bim.*`
-- [ ] Column-center-line 3D wireframe snap
-- [ ] Anchor highlight pulse animation (decorative)
-- [ ] Beam-supports-slab analytical link (Phase 6 DONE → μπορεί τώρα)
-- [ ] Section-profile preview overlay για steel I/H profile beams
-
----
-
-### Phase 6.1 — DNA Layer Sub-Items per Wall (~2-4h)
-- [ ] Per-layer BOQ breakdown για walls με WallDna
-- [ ] `bim_materials.atoeCode` integration
-
----
-
-### Phase 6.2 — Material → ΑΤΟΕ Lookup Table (~2-3h)
-- [ ] `bimMaterialLibrary.atoeCode` derived mapping
-- [ ] Wall-layer DNA BOQ breakdown μέσω material library
+### Phase 2 leftover (~1-2h)
+- [ ] Polyline/curved host wall positioning (currently chord approximation) — partial
 
 ---
 
 ### Phase 6.5 — Custom Material Library Editor (~4-6h)
 - [ ] ~25 seeded materials (RC/Steel/Masonry/Wood variants)
 - [ ] Material library editor UI
+- [ ] Gates: wall/slab/beam material pickers + Phase 3.7b+ fire-rating
 
 ---
 
@@ -95,12 +64,6 @@ _Ενημέρωση 2026-05-19: Phase 5.5e (snap-to-wall-axis projection) ολο
 - [ ] Multi-select panel (common-denominator bulk edit)
 - [ ] Mirror/rotate/copy semantics για BIM entities
 - [ ] Group operations (move walls + hosted openings as unit)
-
----
-
-### Phase 7B+ — Single-Char Variant Shortcuts (~1-2h)
-- [ ] `D` → door shortcut
-- [ ] `Wn` → wall variant shortcuts
 
 ---
 
@@ -115,7 +78,7 @@ _Ενημέρωση 2026-05-19: Phase 5.5e (snap-to-wall-axis projection) ολο
 ---
 
 ### Phase 9+ — OUT OF SCOPE (δεν υλοποιούνται στο ADR-363)
-- 3D viewer (Three.js port from genarc)
+- 3D viewer (Three.js port from genarc) → ADR-366
 - IFC export
 - MEP entities
 - Real-time clash detection
@@ -126,24 +89,21 @@ _Ενημέρωση 2026-05-19: Phase 5.5e (snap-to-wall-axis projection) ολο
 
 | Κατηγορία | Items | Εκτίμηση |
 |-----------|-------|----------|
-| ~~Phase 0, 0.5~~ | ✅ DONE | — |
-| ~~Phase 1D-D~~ | ✅ DONE | — |
-| Phase 2 deferred | 4 | ~3-5h |
-| Phase 3.7b+ | 3 | ~2-4h |
-| Phase 4.5d deferred | 5 | ~3-5h |
-| Phase 5.5h+ (5.5e–5.5i+ done; anchor pulse + H-beam variant + i18n tooltip pending) | 3 | ~1-2h |
-| Phase 6.1 + 6.2 + 6.5 | ~8 | ~8-13h |
-| Phase 7 | 4 | ~4-6h |
-| Phase 7B+ | 2 | ~1-2h |
-| Phase 8 | 6 | ~5-8h |
-| **ΣΥΝΟΛΟ** | **~36 items** | **~30-50h** |
+| Phase 3.7b+ | 3 | ~2-3h |
+| Phase 4.5e+ (material pickers) | 4 | ~2-3h |
+| Phase 5.5i+ extras (beam polish) | 4 | ~1-2h |
+| Phase 2 leftover (polyline host) | 1 | ~1-2h |
+| Phase 6.5 (material library editor) | ~5 | ~4-6h |
+| Phase 7 (multi-select) | 4 | ~4-6h |
+| Phase 8 (schedule export) | 6 | ~5-8h |
+| **ΣΥΝΟΛΟ** | **~27 items** | **~19-30h** |
 
 ---
 
 ## Κρίσιμα αρχεία
 
 - `src/subapps/dxf-viewer/bim/` — κεντρικό BIM directory
-- `src/subapps/dxf-viewer/bim/persistence/bim-to-boq-bridge.ts` — BOQ bridge (Phase 6, υπάρχει)
+- `src/subapps/dxf-viewer/bim/services/BimToBoqBridge.ts` — BOQ bridge SSoT
 - `src/subapps/dxf-viewer/bim/types/` — BIM types
 - `src/subapps/dxf-viewer/canvas-v2/rendering/bim/` — renderers
 - `docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md` — master ADR
