@@ -711,6 +711,23 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 
 ## 7. Changelog
 
+- **2026-05-20 (Round 8 — scale geometry offsets (dimexo/dimexe/dimdli/dimcen/breakGap) to world units)**
+  - **Symptom**: Both dimension text AND extension lines/geometry at wrong scale. Extension line gaps (dimexo), extensions (dimexe), baseline increments (dimdli), center marks (dimcen), and break gaps (breakGap) were used directly as world-unit offsets in the geometry builder — but they are paper-mm values that must be converted.
+  - **Root cause**: `linear-aligned-builder.ts` (and other geometry builders) receive `DimStyle` and use `style.dimexo`, `style.dimexe` directly as coordinate deltas in world space. For a 1:100 meters DXF: `dimexo=0.625mm` would be used as 0.625m offset (1000× too large) instead of 0.0625m. This makes extension lines start/end at completely wrong positions.
+  - **Fix**: `DimensionRenderer.scaleGeometryOffsets(style)` creates a scaled copy where geometry offsets are multiplied by `dimscale × mmToSceneUnits(sceneUnits)`. This scaled style (`geoStyle`) is passed to `buildDimensionGeometry` and `computeAutoBreaks`. The unscaled `style` is kept in `ResolvedDimensionRender` for rendering (drawArrowheads, drawPrimaryText apply their own scaling). `ResolvedDimensionRender` gains `geoStyle` field.
+  - **Back-compat**: For mm scene + dimscale=1: `factor = 1 × 1 = 1` → no change. For mm scene + dimscale=50: `factor = 50` → dimexo=31.25mm (correct model-space). For m scene + dimscale=100: `factor = 0.1` → dimexo=0.0625m (correct).
+  - **Tests**: existing dim-text-renderer-scene-units.test.ts (7 tests) all pass — geometry builder tests not yet added (extension line offsets not directly testable at the renderer level without full integration test).
+  - ✅ Google-level: YES — consistent factory pattern (one place scales all geometry offsets); unscaled style preserved for renderers that apply their own factor; back-compat guaranteed for dimscale=1/mm.
+  - **File**: `rendering/entities/DimensionRenderer.ts` (MOD — `geoStyle` in interface, `scaleGeometryOffsets` helper, `resolveFromEntity` uses geoStyle, `computeAutoBreaks` receives geoStyle).
+
+- **2026-05-20 (Round 7 — DIMSCALE applied to dimension text height)**
+  - **Symptom**: Dimension text disproportionately sized vs native TEXT entities. In a 1:100 meters DXF (dimscale=100), native texts at height=0.25m rendered at `0.25m × scale px`; dimension texts rendered at `dimtxt × unitFactor × scale = 2.5 × 0.001 × scale` (0.1px at scale=40 — invisible). With wrong sceneUnits='mm', text was `2.5 × 1 × scale` (100px — huge).
+  - **Root cause**: `dim-text-renderer.ts` formula missing `dimscale`. AutoCAD rule: ALL dimension annotation components (lines, arrowheads, text) are scaled by DIMSCALE. Arrowheads already applied `dimasz × dimscale` in `DimensionRenderer.drawArrowheads()`. Text did not.
+  - **Fix**: `dim-text-renderer.ts` line 84 now: `params.style.dimtxt * params.style.dimscale * unitFactor * params.transform.scale`. For dimscale=1, no change (back-compat). For dimscale=100 in m-scene: `2.5 × 100 × 0.001 × 40 = 10px` — matches native TEXT at `0.25m × 40 = 10px` ✓.
+  - **Tests**: 1 new R7 test — dimscale=100, m-scene, view scale 40px/m → 10px. All 7 tests pass.
+  - ✅ Google-level: YES — AutoCAD-parity; mirrors existing arrowhead formula; SSoT (single multiplication, no per-consumer overrides); dimscale=1 is a no-op (back-compat guaranteed).
+  - **File**: `rendering/entities/dimension/dim-text-renderer.ts` (MOD — add `dimscale` factor), `rendering/entities/dimension/__tests__/dim-text-renderer-scene-units.test.ts` (MOD — 1 new R7 test).
+
 - **2026-05-20 (Round 6 — units-resolution fix for DXFs without $INSUNITS)**
   - **Symptom**: Ribbon Dimension text bigger than native DXF texts when DXF has no `$INSUNITS` header. Round 5 wired `scene.units ?? 'mm'` in `DxfRenderer` — but `scene.units = undefined` (no $INSUNITS) caused the fallback 'mm' to fire, making DimensionRenderer treat `dimtxt=2.5` as 2.5 world-units (2.5 m) instead of applying `mmToSceneUnits('m') = 0.001`.
   - **Root cause**: `useDxfSceneConversion` forwarded `currentScene?.units` verbatim (possibly `undefined`). `DxfRenderer` `scene.units ?? 'mm'` used the literal 'mm' fallback for unitless DXFs, bypassing `resolveSceneUnits` which would have correctly identified the bounds as meters-scale.

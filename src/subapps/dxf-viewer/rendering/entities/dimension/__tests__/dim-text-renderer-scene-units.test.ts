@@ -123,12 +123,15 @@ function extractFontHeight(font: string): number {
 // Cases
 // ──────────────────────────────────────────────────────────────────────────────
 
+// ADR-362 R7: formula is `dimtxt × dimscale × mmToSceneUnits(units) × viewScale`.
+// makeStyle() uses dimscale=1, so these cases test the unit-conversion factor only.
+// Formula: 2.5 × 1 × unitFactor × viewScale = 2.5 × unitFactor × viewScale
 const CASES: ReadonlyArray<{ units: SceneUnits; transformScale: number; expectedPx: number }> = [
-  // mm scene, view scale 1 px/mm → 2.5 × 1 × 1 = 2.5 px (back-compat baseline).
+  // mm scene, view scale 1 px/mm → 2.5 × 1 × 1 × 1 = 2.5 px (back-compat baseline).
   { units: 'mm', transformScale: 1, expectedPx: 2.5 },
-  // cm scene, view scale 10 px/cm → 2.5 × 0.1 × 10 = 2.5 px.
+  // cm scene, view scale 10 px/cm → 2.5 × 1 × 0.1 × 10 = 2.5 px.
   { units: 'cm', transformScale: 10, expectedPx: 2.5 },
-  // m scene, view scale 1000 px/m → 2.5 × 0.001 × 1000 = 2.5 px.
+  // m scene, view scale 1000 px/m → 2.5 × 1 × 0.001 × 1000 = 2.5 px.
   { units: 'm',  transformScale: 1000, expectedPx: 2.5 },
 ];
 
@@ -183,13 +186,13 @@ describe('renderDimensionText — paper-mm DIMTXT → world units (ADR-362 Round
   });
 
   it('does NOT double-apply the multiplier when transform scale is unit', () => {
-    // m scene with view scale = 1 px/m means a 2.5 mm text should render at
-    // 2.5 mm × 0.001 m/mm × 1 px/m = 0.0025 px (microscopic — but math correct).
+    // m scene with view scale = 1 px/m, dimscale=1:
+    // 2.5 mm × 1 × 0.001 m/mm × 1 px/m = 0.0025 px (microscopic — math correct).
     const { ctx, calls } = makeCtxSpy();
     renderDimensionText(ctx, {
       entity: makeEntity(),
       geometry: makeLinearGeometry(),
-      style: makeStyle(),
+      style: makeStyle(), // dimscale=1
       transform: { scale: 1, offsetX: 0, offsetY: 0 },
       viewport: { width: 800, height: 600 },
       layerColour: '#888',
@@ -197,5 +200,26 @@ describe('renderDimensionText — paper-mm DIMTXT → world units (ADR-362 Round
     });
     const px = extractFontHeight(calls[0].font);
     expect(px).toBeCloseTo(0.0025, 6);
+  });
+
+  it('R7: dimscale=100 in m-scene scales text to model-space size matching native TEXT', () => {
+    // A 1:100 annotation (dimscale=100) in a meters scene:
+    //   dimtxt=2.5mm × 100 × 0.001 m/mm × 40 px/m = 10 px.
+    // A native TEXT entity stored at height=0.25m renders identically:
+    //   0.25m × 40 px/m = 10 px.
+    // This verifies that DIMSCALE is applied to text (like it is to arrowheads).
+    const style100 = { ...makeStyle(), dimscale: 100 };
+    const { ctx, calls } = makeCtxSpy();
+    renderDimensionText(ctx, {
+      entity: makeEntity(),
+      geometry: makeLinearGeometry(),
+      style: style100,
+      transform: { scale: 40, offsetX: 0, offsetY: 0 },
+      viewport: { width: 800, height: 600 },
+      layerColour: '#888',
+      sceneUnits: 'm',
+    });
+    const px = extractFontHeight(calls[0].font);
+    expect(px).toBeCloseTo(10, 4); // 2.5 × 100 × 0.001 × 40 = 10 px
   });
 });

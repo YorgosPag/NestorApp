@@ -90,6 +90,10 @@ function paperMmToPx(mm: number, scale: number, units: SceneUnits): number {
 interface ResolvedDimensionRender {
   readonly entity: DimensionEntity;
   readonly style: DimStyle;
+  /** Style with paper-mm geometry offsets pre-scaled to world units (used by
+   *  break engine + geometry builder). Rendering fields (dimasz, dimtxt) are
+   *  NOT scaled here — those renderers apply dimscale×unitFactor themselves. */
+  readonly geoStyle: DimStyle;
   readonly geometry: DimGeometry;
 }
 
@@ -155,7 +159,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
     if (!resolved) return;
 
     const breaks = this.sceneEntities.length > 0
-      ? computeAutoBreaks(resolved.geometry, this.sceneEntities, resolved.style)
+      ? computeAutoBreaks(resolved.geometry, this.sceneEntities, resolved.geoStyle)
       : undefined;
 
     this.ctx.save();
@@ -206,16 +210,35 @@ export class DimensionRenderer extends BaseEntityRenderer {
     if (!isDimensionEntity(e)) return null;
     const dim = e as DimensionEntity;
     const style = resolveDimStyle(dim, this.styleRegistry);
+    // ADR-362 R8 — paper-mm geometry offsets must be in world units before the
+    // geometry builder uses them as coordinate deltas. DIMASZ / DIMTXT are NOT
+    // scaled here because their renderers (drawArrowheads / dim-text-renderer)
+    // apply dimscale × mmToSceneUnits themselves.
+    const geoStyle = this.scaleGeometryOffsets(style);
     let geometry: DimGeometry;
     try {
-      geometry = buildDimensionGeometry(dim, style, this.dimensionLookup);
+      geometry = buildDimensionGeometry(dim, geoStyle, this.dimensionLookup);
     } catch {
       // Builder throws on malformed input (e.g. baseline parent missing).
       // Phase C1 swallows + returns null so a single broken dim doesn't crash
       // the whole scene render. Diagnostics ride on the existing logger pipe.
       return null;
     }
-    return { entity: dim, style, geometry };
+    return { entity: dim, style, geoStyle, geometry };
+  }
+
+  /** Scale paper-mm geometry offset fields to world units for the geometry builder
+   *  and break engine. dimscale × mmToSceneUnits gives model-space world units. */
+  private scaleGeometryOffsets(style: DimStyle): DimStyle {
+    const factor = style.dimscale * mmToSceneUnits(this.sceneUnits);
+    return {
+      ...style,
+      dimexo: style.dimexo * factor,
+      dimexe: style.dimexe * factor,
+      dimdli: style.dimdli * factor,
+      dimcen: style.dimcen * factor,
+      breakGap: style.breakGap * factor,
+    };
   }
 
   // ── Geometry pieces ──────────────────────────────────────────────────────

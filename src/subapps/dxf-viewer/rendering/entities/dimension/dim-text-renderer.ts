@@ -79,9 +79,12 @@ export function renderDimensionText(
   );
   // DIMTXT is paper-mm by DIMSTYLE convention. Convert to scene world units
   // first (ADR-362 Round 5), then multiply by the view scale to reach pixels.
-  // For mm-baked scenes the conversion is the identity (back-compat).
+  // DIMSCALE (ADR-362 R7) is the annotation scale factor (e.g. 100 for 1:100
+  // drawings). DIMTXT without DIMSCALE is paper-mm; with DIMSCALE it becomes
+  // model-space mm matching the height stored in native TEXT entities.
+  // Mirrors drawArrowheads which already does `dimasz * dimscale`.
   const unitFactor = mmToSceneUnits(params.sceneUnits ?? 'mm');
-  const primaryHeight = params.style.dimtxt * unitFactor * params.transform.scale;
+  const primaryHeight = params.style.dimtxt * params.style.dimscale * unitFactor * params.transform.scale;
   // DXF angles are CCW, canvas is CW with Y-flip → negate (matches TextRenderer note).
   const screenRotation = -params.geometry.textRotation;
   const colour = resolveDimColor(params.style.dimclrt, params.layerColour);
