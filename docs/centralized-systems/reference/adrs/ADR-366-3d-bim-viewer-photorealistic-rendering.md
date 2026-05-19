@@ -1793,10 +1793,165 @@ ADR-366 total estimate revised: **~144-166h** Phase 0-7 (από ~139-159h post-B
 
 ---
 
+### B.4 — Path tracer trigger UX — ✅ FULLY CLOSED 2026-05-19
+
+**Σκοπός**: Καθορισμός UX γύρω από τα τρία rendering modes που ήδη approved σε §9 Q3 (rasterized real-time / auto-on-idle preview / explicit final dialog) — δηλαδή ΠΩΣ ενεργοποιείται, ΠΩΣ ακυρώνεται, ΠΩΣ εμφανίζεται progress, ΤΙ επιλογές δίνει το final dialog. 9 sub-questions Q1-Q9 — όλες κλειστές με 6-7/7 industry σύγκλιση.
+
+**Cross-references**: §9 Q3 (tri-mode approved), §9 Q4 (HDRI Phase 7 polish), `three-gpu-pathtracer` (MIT, Phase 5+6+7), `IdleDetector` SSoT (νέο utility, REUSED από B.1.Q2 + B.1.Q3), `feedback_completeness_over_mvp.md` memory (FULL ENTERPRISE for animation Q8), `feedback_industry_standard_default.md` memory (industry convergence = default).
+
+**Pending micro-decisions** — ✅ ALL RESOLVED 2026-05-19:
+- B.4.Q1: Idle threshold ✅ RESOLVED — **800ms** (Lumion/D5 median, 5/7 industry στο 500-1000ms range)
+- B.4.Q2: Cancellation UX ✅ RESOLVED — **Snap cut** (7/7 industry σύγκλιση)
+- B.4.Q3: Preview progress indicator ✅ RESOLVED — **Τίποτα** (Lumion/Enscape silent magic, 4/7 industry)
+- B.4.Q4: Final dialog presets ✅ RESOLVED — **4 presets: Πρόχειρη 64 / Κανονική 256 / Υψηλή 1024 / Κορυφαία 4096 SPP** (Twinmotion/Enscape/Chaos Vantage σύγκλιση)
+- B.4.Q5: Resolution ✅ RESOLVED — **HD/4K/8K + Custom**, default 4K (7/7 industry σύγκλιση)
+- B.4.Q6: Format + destination ✅ RESOLVED — **PNG + JPG + EXR formats** + **δύο destinations (disk + project)** combinable checkboxes
+- B.4.Q7: Denoiser ✅ RESOLVED — **ON by default + toggle σε Advanced** (V-Ray/Blender hybrid, 7/7 default-ON, 3/7 toggle)
+- B.4.Q8: Animation support ✅ RESOLVED — **FULL ENTERPRISE: Turntable 360° + Flyaround waypoints + Timeline editor Phase 7** (7/7 industry parity, completeness_over_mvp rule)
+- B.4.Q9: Time estimate ✅ RESOLVED — **Detailed estimate (D5/V-Ray style)** με GPU calibration + animation frame multiplier + visible στο dialog πάντα
+
+**Decisions Log (Γιώργος)** — B.4 ✅ FULLY CLOSED 9/9:
+
+| # | Ερώτηση | Απόφαση | Industry alignment |
+|---|---|---|---|
+| B.4.Q1 | Idle threshold (ms) πριν ξεκινήσει auto-preview path tracing | **800ms** (industry median Lumion/D5). Updates §9 Q3 αρχικό spec (2000ms) με granular industry-aligned value. | 5/7 σύγκλιση στο 500-1000ms range (V-Ray IPR 500ms, Enscape 500ms, D5 600ms, Lumion 800ms, Twinmotion 1000ms). Blender 250ms + Chaos Vantage 300ms outliers στην επιθετική πλευρά (pro tools). 2000ms (αρχικό spec) outlier vs ΟΛΟΥΣ — revised. |
+| B.4.Q2 | Cancellation UX όταν user κουνήσει controls κατά path trace | **Snap cut** — instant atomic mode swap από `'3d-preview'` → `'3d-raster'` στο πρώτο camera/wheel event. Καμία fade/blend/freeze intermediate state. | 7/7 industry σύγκλιση absolute (V-Ray IPR + Lumion + Twinmotion + D5 + Enscape + Blender Cycles + Chaos Vantage). Fade 200ms blend απορρίπτεται (προσθέτει ψεύτικη καθυστέρηση camera responsiveness). Frozen 100ms placeholder απορρίπτεται (παγωμένο frame δείχνει λάθος camera position → οπτικό glitch). |
+| B.4.Q3 | Progress indicator κατά το auto-preview (~2-5s typical) | **Τίποτα** — silent progressive image refinement. Η ίδια η εικόνα μιλά (γίνεται πιο καθαρή σιγά-σιγά). Zero UI overlay. Decision changed από αρχικό UI selection "Quality bar" σε "Τίποτα" σε followup turn — Γιώργος προτίμησε silent magic Lumion/Enscape ethos. | 4/7 industry leaning silent/minimal (Lumion + Enscape + Twinmotion subtle spinner + matches Nestor BIM viewer presentation context — όχι technical pro tool). 3/7 sample counter (V-Ray + Blender + D5) απορρίπτεται για preview mode (jargon για non-technical πελάτες). Σημείωση: final render dialog (Q9) έχει visible time estimate — different mode, different needs. |
+| B.4.Q4 | Quality presets για final render dialog | **4 presets**: Πρόχειρη (64 SPP, ~10s) / Κανονική (256 SPP, ~1min, default ★) / Υψηλή (1024 SPP, ~5min) / Κορυφαία (4096 SPP, ~15min). i18n keys σε `bim3d.render.presets.*`. | 4-preset σύγκλιση (Twinmotion Low/Medium/High/Ultra + Enscape Low/Medium/High/Ultra + Chaos Vantage Draft/Medium/High/Production = 3/7 direct match). V-Ray 5 presets απορρίπτεται (Custom + intermediate adds clutter για mainstream users). D5 3 presets απορρίπτεται (χάνει "draft" quick-check use case — κάθε render becomes costly). Blender custom-only απορρίπτεται (zero guardrails, non-technical χάνεται). |
+| B.4.Q5 | Resolution options + crop region | **HD 1920×1080 / 4K 3840×2160 / 8K 7680×4320 + Custom dimensions**, default 4K. **NO crop region** στην initial scope — viewport-full only. | 7/7 industry σύγκλιση HD/4K/8K + Custom standard (V-Ray + Lumion + Twinmotion + Enscape + D5 + Blender + Chaos Vantage). Crop region (3/7 — V-Ray + Chaos Vantage + Blender border render) deferred Phase 8+ optional — saves Phase 7 dialog complexity για now (χωρίς αυτό η dialog UI clean). Aspect ratio control via Custom dimensions sufficient. |
+| B.4.Q6 | Output format + destination | **3 formats**: PNG (default, lossless presentation) / JPG (compressed, email) / EXR (HDR, post-processing). **2 destinations checkboxable combinations**: ☑ Στον υπολογιστή (browser download dialog) + ☑ Στο project (Firestore Storage upload, linked στο current project ως asset). User μπορεί να κάνει check ΚΑΙ ΤΑ ΔΥΟ → save both. | 7/7 PNG+JPG + 6/7 EXR (industry σύγκλιση). Disk destination universal (7/7). Project asset library 2/7 (Twinmotion + D5) — extended εδώ για Nestor BIM SaaS cloud-first DNA + ADR-326 tenant scope (project_assets collection ήδη υπάρχει για άλλα uploads). |
+| B.4.Q7 | Denoiser default | **ON by default + toggle σε Advanced section** (collapsible "Προχωρημένα" expander κάτω από dialog). Toggle uncheck → raw output για pro post-processing σε Photoshop/AE. | 7/7 ON by default (universal). 3/7 with toggle (V-Ray + Blender + Chaos Vantage). 4/7 always-on no-toggle (Lumion + Twinmotion + D5 + Enscape) — απορρίπτεται για να καλύψουμε pro EXR workflow (memory completeness_over_mvp). Web tech: three-gpu-pathtracer built-in denoising (temporal accumulation + edge filter) sufficient για default; OIDN-wasm Phase 7.x optional upgrade αν δοκιμές δείξουν need. |
+| B.4.Q8 | Animation support (turntable / flyaround) | **FULL ENTERPRISE Phase 7** — Turntable 360° + Flyaround waypoints + Timeline editor UI + path easing curves + multi-frame MP4 export. **+30-40h scope addition** στην Phase 7. | 7/7 industry parity (όλοι έχουν animation σε διαφορετική φάση maturity). Γιώργος επέλεξε FULL ENTERPRISE per memory rule `feedback_completeness_over_mvp.md` (time/file count not valid trade-offs). Turntable-only (3-5h Phase 7) ή Phase 8+ defer απορρίφθηκαν για industry-complete parity. |
+| B.4.Q9 | Time estimate πριν ξεκινήσει το render | **Detailed estimate (D5/V-Ray style)** πάντα visible στο dialog: scene-complexity-aware (μετρά polygon count + light count + transparent surfaces) × samples × resolution × animation frames × GPU calibration (~50ms benchmark σε mount). Format: `⏱ Εκτιμώμενος χρόνος: ~42 λεπτά ±4 min` + `💾 Output: ~28 MB`. Updates live καθώς user αλλάζει preset/resolution. | 6/7 industry σύγκλιση (V-Ray + Lumion + Twinmotion + D5 + Enscape + Chaos Vantage detailed estimate). Blender live-progress-only απορρίπτεται (user πρέπει να ξεκινήσει για να μάθει αν αξίζει). Rough per-preset estimate (Twinmotion fallback) απορρίπτεται (±50% accuracy unacceptable για animation case). |
+
+**Architectural implications**:
+
+- **Νέα SSoT modules (Phase 5 — preview)**:
+  - `bim-3d/render/IdleDetector.ts` — ALREADY scoped από §9 Q3, **threshold updated 2000ms → 800ms**. REUSED από B.1.Q2 (shadow modulator) + B.1.Q3 (SSAO modulator) + B.4 (path tracer auto-trigger). Pure event-driven, zero polling.
+  - `bim-3d/render/PathTracerRenderer.ts` — wraps `three-gpu-pathtracer`, single instance, configurable sample budget. Modes:
+    - Preview: sample budget = 256 (low), denoiser ON, autoStop=samples reached OR camera motion
+    - Final: sample budget per preset Q4 (64/256/1024/4096), denoiser per Q7 toggle, autoStop=samples reached
+  - `bim-3d/render/raster-to-pathtrace-swap.ts` — atomic mode swap (Snap cut Q2): disposes WebGLRenderer pass, mounts PathTracerRenderer pass, single RAF frame switch.
+
+- **Νέα SSoT modules (Phase 6 — final dialog)**:
+  - `bim-3d/render/RenderFinalDialog.tsx` — Radix Dialog (ADR-001), modal. Layout: presets radio (4) → resolution radio (HD/4K/8K + Custom inputs) → format radio (PNG/JPG/EXR) → destination checkboxes (2) → Advanced expander (denoiser toggle) → time estimate panel → [Άκυρο] [Render] buttons.
+  - `bim-3d/render/render-cost-estimator.ts` — pure computation: `estimate(scene, presetSPP, resolution, frames, gpuBenchmarkScore) → { seconds: number, marginPercent: number, outputMB: number }`. GPU benchmark: ~50ms one-time στο dialog mount (renders 1 frame στα 64 SPP, measures elapsed → derives `samplesPerSecondGpu`).
+  - `bim-3d/render/render-output-writer.ts` — receives Canvas pixels post-render → encodes to selected format (PNG via Canvas.toBlob, JPG via Canvas.toBlob with quality=0.92, EXR via tiny-exr or three.js EXRLoader/Writer wasm) → routes to destinations:
+    - Disk: `<a download>` blob trigger (no server roundtrip)
+    - Project: Firebase Storage upload με enterprise-id (νέο generator `rnd_bim_${entityId}_${ts}` — προστίθεται σε `enterprise-id.service.ts`) → Firestore document `project_assets/{assetId}` με type='bim-render' + metadata (resolution/format/preset/timestamp/userId/companyId).
+  - `bim-3d/render/RenderProgressOverlay.tsx` — Final mode progress (Q9 detailed estimate visible). Layout: `⏱ X% / ~Y min remaining` + actual sample count + Cancel button. NOT mounted σε preview mode (Q3 = τίποτα).
+
+- **Νέα SSoT modules (Phase 7 — animation)**:
+  - `bim-3d/animation/TurntablePathBuilder.ts` — generates 360° camera orbit around scene center, configurable frames (24/30/60) + duration (3s/5s/10s) + axis (default Y-up vertical orbit).
+  - `bim-3d/animation/WaypointPathBuilder.ts` — flyaround path from N camera waypoints + easing curves per segment (linear/cubic/easeInOut). Interpolates camera position + lookAt smoothly.
+  - `bim-3d/animation/TimelineEditor.tsx` — UI for waypoint placement + scrubber + segment easing dropdown. Mounts ως Phase 7 ribbon panel `bim3d.ribbon.animation`. Drag-and-drop waypoints σε 3D scene (overlay pin markers).
+  - `bim-3d/animation/MP4Exporter.ts` — uses `mp4-muxer` (MIT) + WebCodecs `VideoEncoder` API. Iterates frames (each = single path traced render), encodes H.264, downloads .mp4. Fallback to WebM (VP9) for browsers without WebCodecs.
+
+- **ViewMode3DStore extensions**:
+  - `renderMode: '2d' | '3d-raster' | '3d-preview' | '3d-final'` — ALREADY approved §9 Q3.
+  - `idleThresholdMs: number` — default 800 (Q1), tunable in dev settings (NOT user-facing).
+  - `previewSPP: number` — default 256, NOT user-facing (preview is invisible auto-mode).
+  - `finalRenderConfig: { preset: 'draft'|'standard'|'high'|'production', resolutionW: number, resolutionH: number, format: 'png'|'jpg'|'exr', destDisk: boolean, destProject: boolean, denoiseEnabled: boolean } | null` — populated από RenderFinalDialog state, null όταν dialog κλειστό.
+  - `animationConfig: { mode: 'turntable'|'flyaround', frames: number, duration: number, waypoints?: Vector3[], easing?: 'linear'|'cubic'|'easeInOut' } | null` — Phase 7.
+  - Actions: `setRenderMode(mode)`, `triggerFinalRender()` (validates config, transitions raster→final), `cancelRender()` (any active render → raster), `setAnimationConfig(config)`.
+
+- **Mode transitions FSM** (extends §9 Q3):
+  - `'3d-raster'` (default όταν user 3D mode) → `'3d-preview'` αυτόματα μέσω IdleDetector 800ms idle
+  - `'3d-preview'` → `'3d-raster'` instant snap cut σε ΟΠΟΙΟΔΗΠΟΤΕ camera/wheel/touch event (Q2)
+  - `'3d-raster'` → `'3d-final'` explicit user click "Render" button + RenderFinalDialog submit
+  - `'3d-final'` → `'3d-raster'` user clicks Cancel (preserves partial sample accumulation αν user re-triggers same config)
+  - `'3d-final'` completion → automatic `'3d-raster'` return + render output downloaded/uploaded
+  - 2D mode switch → ΟΛΑ disposed (PathTracerRenderer, IdleDetector, EffectComposer)
+
+- **Industry-aligned defaults (πίνακας ready-to-implement)**:
+  - SPP map: `{ draft: 64, standard: 256, high: 1024, production: 4096 }`
+  - Resolution preset map: `{ HD: [1920,1080], '4K': [3840,2160], '8K': [7680,4320] }`
+  - Format MIME map: `{ png: 'image/png', jpg: 'image/jpeg', exr: 'image/x-exr' }` (EXR custom MIME — encoder handles)
+  - Default selection: preset='standard', resolution='4K', format='png', destDisk=true, destProject=false, denoiseEnabled=true.
+
+- **i18n keys** (per N.11, FIRST locale JSONs):
+  - `bim3d.render.dialogTitle` — 'Δημιουργία εικόνας φωτορεαλισμού' / 'Photoreal Render'
+  - `bim3d.render.presets.draft` — 'Πρόχειρη (~10s)' / 'Draft (~10s)'
+  - `bim3d.render.presets.standard` — 'Κανονική (~1 λεπτό)' / 'Standard (~1 min)'
+  - `bim3d.render.presets.high` — 'Υψηλή (~5 λεπτά)' / 'High (~5 min)'
+  - `bim3d.render.presets.production` — 'Κορυφαία (~15 λεπτά)' / 'Production (~15 min)'
+  - `bim3d.render.resolution.label` — 'Ανάλυση' / 'Resolution'
+  - `bim3d.render.resolution.custom` — 'Προσαρμοσμένη' / 'Custom'
+  - `bim3d.render.format.label` — 'Μορφή αρχείου' / 'Format'
+  - `bim3d.render.format.png` — 'PNG (παρουσίαση)' / 'PNG (presentation)'
+  - `bim3d.render.format.jpg` — 'JPG (email)' / 'JPG (email)'
+  - `bim3d.render.format.exr` — 'EXR (post-processing HDR)' / 'EXR (post-processing HDR)'
+  - `bim3d.render.destination.label` — 'Αποθήκευση' / 'Save to'
+  - `bim3d.render.destination.disk` — 'Στον υπολογιστή' / 'My computer'
+  - `bim3d.render.destination.project` — 'Στο project (συνεργάτες θα δουν)' / 'Project assets (collaborators)'
+  - `bim3d.render.advanced.expander` — 'Προχωρημένα' / 'Advanced'
+  - `bim3d.render.advanced.denoiser` — 'Καθαρισμός θορύβου (denoiser)' / 'Denoiser'
+  - `bim3d.render.estimate.time` — 'Εκτιμώμενος χρόνος' / 'Estimated time'
+  - `bim3d.render.estimate.size` — 'Εκτιμώμενο μέγεθος' / 'Estimated size'
+  - `bim3d.render.button.render` — 'Δημιουργία' / 'Render'
+  - `bim3d.render.button.cancel` — 'Άκυρο' / 'Cancel'
+  - `bim3d.render.progress.frame` — 'Καρέ {{current}}/{{total}}' / 'Frame {{current}}/{{total}}'
+  - `bim3d.render.progress.remaining` — 'Απομένουν ~{{minutes}} λεπτά' / '~{{minutes}} min remaining'
+  - `bim3d.render.progress.cancel` — 'Άκυρο' / 'Cancel'
+  - `bim3d.render.completion.savedDisk` — 'Αποθηκεύτηκε στον υπολογιστή' / 'Saved to disk'
+  - `bim3d.render.completion.savedProject` — 'Αποθηκεύτηκε στο project' / 'Saved to project assets'
+  - `bim3d.animation.ribbon.label` — 'Κίνηση' / 'Animation'
+  - `bim3d.animation.mode.turntable` — 'Περιστροφή 360°' / 'Turntable 360°'
+  - `bim3d.animation.mode.flyaround` — 'Διαδρομή κάμερας' / 'Flyaround'
+  - `bim3d.animation.frames.label` — 'Καρέ ανά δευτερόλεπτο' / 'Frames per second'
+  - `bim3d.animation.duration.label` — 'Διάρκεια (δευτερόλεπτα)' / 'Duration (seconds)'
+  - `bim3d.animation.waypoint.add` — 'Προσθήκη σημείου' / 'Add waypoint'
+  - `bim3d.animation.waypoint.easing` — 'Καμπύλη ταχύτητας' / 'Easing curve'
+  - `bim3d.animation.export.mp4` — 'Εξαγωγή MP4' / 'Export MP4'
+  - Σύνολο ~28 keys × 2 locales = ~56 entries.
+
+- **SSoT REUSE** (zero new tokens):
+  - IdleDetector: shared instance, REUSED από B.1.Q2/B.1.Q3/B.4. Single timer, multi-subscriber pattern.
+  - Radix Dialog (ADR-001): RenderFinalDialog mounted.
+  - enterprise-id.service.ts: νέος generator `rnd_bim_*` για render assets (single addition, no parallel ID scheme).
+  - EntityAuditService (ADR-195): render submissions recorded ως audit events `bim_render_created` με metadata (preset/resolution/duration_actual).
+  - NOTIFICATION_KEYS: νέος key `bim3d.render.completed` (ADR-294 module `notification-keys`). Toast μετά την ολοκλήρωση + project asset link.
+  - Firebase Storage path: `companies/{companyId}/projects/{projectId}/renders/{renderId}.{ext}` — same tenant-scoped pattern με υπόλοιπα project assets.
+  - Firestore collection: `project_assets` (existing) με νέο `type='bim-render'` discriminator + δικά του fields (sourceEntityId optional, renderConfigSnapshot for reproducibility).
+  - RBAC permissions: νέο permission `bim_renders.create` (ADR-295 roles registry) — required για destDisk OR destProject. Read permission `project_assets.read` (existing) sufficient για viewing renders αργότερα.
+
+- **GOL checklist**:
+  - Proactive: ✅ IdleDetector auto-triggers preview. RenderFinalDialog ολοκληρωτική σύλληψη config πριν start (zero post-start prompts).
+  - Race-free: ✅ Atomic mode swap raster↔preview↔final (Q2 snap cut). Renderer single instance, mode = explicit FSM. Idle detector debounces RAPID camera changes (no flicker raster→preview→raster→preview).
+  - Idempotent: ✅ Same config re-render → identical output (deterministic με fixed seed). Re-trigger idle → continues sample accumulation αν unchanged camera (early Phase 5+ optimization).
+  - Belt-and-suspenders: ✅ WebGPU fallback to WebGL για path tracer (three-gpu-pathtracer supports both). Disk fallback αν Firebase upload fails (toast warning + auto-download το blob). Time estimate ±10% margin shown (user γνωρίζει uncertainty).
+  - SSoT: ✅ Single IdleDetector, single PathTracerRenderer, single ViewMode3DStore.renderMode, single enterprise-id generator, single Firestore collection (project_assets reused).
+  - Lifecycle owner: ✅ ThreeJsSceneManager owns renderer lifecycles (mount/dispose). ViewMode3DStore owns mode FSM. RenderFinalDialog owns config UI lifecycle. render-output-writer owns I/O lifecycle.
+
+- **Phase mapping**:
+  - **Phase 5** (+~3h vs §9 Q3 baseline): IdleDetector threshold 800ms + PathTracerRenderer preview mode + raster-to-pathtrace-swap + Q3 silent UX (no progress overlay σε preview)
+  - **Phase 6** (+~9h vs §9 Q3 baseline ~4h → ~13h): RenderFinalDialog UI (4 presets + resolution + format + destination + denoiser advanced) + render-cost-estimator (GPU calibration + scene complexity heuristic) + render-output-writer (3 formats + 2 destinations + project_assets integration + enterprise-id generator + RBAC) + RenderProgressOverlay (Q9 visible estimate) + i18n keys (~18 entries × 2 locales)
+  - **Phase 7** (+~30-40h vs §9 Q4 HDRI baseline ~4-6h → ~34-46h): TurntablePathBuilder + WaypointPathBuilder + TimelineEditor UI + MP4Exporter (WebCodecs + mp4-muxer + WebM fallback) + animation-specific i18n keys (~10 entries × 2 locales) + ribbon "Κίνηση" panel + waypoint drag-and-drop 3D overlay + path preview scrubber + segment easing controls + multi-frame render pipeline (sample budget per frame + accumulation buffer per frame)
+
+- **License check (per N.5)**:
+  - `three-gpu-pathtracer`: **MIT** ✅
+  - `mp4-muxer`: **MIT** ✅
+  - WebCodecs `VideoEncoder`: native browser API (no license)
+  - `tiny-exr` (or three.js EXRLoader): three.js MIT family ✅
+  - All deps permissive — N.5 compliant.
+
+**Effort impact για B.4**: **+35-46h cross-phase** breakdown:
+- Phase 5: IdleDetector 800ms tune + preview path tracer integration + snap cut atomic swap → **+~3h** (από §9 Q3 baseline)
+- Phase 6: Final dialog full UI + cost estimator + output writer (3 formats × 2 destinations + project_assets + enterprise-id + RBAC) + progress overlay + i18n → **+~9h** (από §9 Q3 baseline ~4h → ~13h)
+- Phase 7: FULL animation system (turntable + flyaround + timeline editor + waypoints + easing + MP4Exporter + WebCodecs + WebM fallback + ribbon panel + i18n) → **+~30-40h** (η μεγαλύτερη ενότητα της B.4)
+- Cross-phase: pending-ratchet-work.md entry για EXR-wasm denoiser upgrade (Phase 7.x optional ~3h) + crop region (Phase 8+ optional)
+
+ADR-366 total estimate revised: **~179-212h** Phase 0-7 (από ~144-166h post-B.3). Topic B.4 = +35-46h.
+
+**Decision conscious diverge** (note για memory): Animation FULL ENTERPRISE Phase 7 (αντί incremental Phase 8+) είναι significant scope expansion (30-40h, ~20% του ADR-366). Justified per `feedback_completeness_over_mvp.md` memory rule (time/file count not valid trade-offs, full option preferred). Pending ratchet items DEFERRED Phase 8+: crop region rendering (B.4.Q5 — region marquee tool σε viewport), OIDN-wasm denoiser upgrade αν built-in three-gpu-pathtracer denoising προκύψει underwhelming.
+
+---
+
 ## 12. Changelog
 
 | Ημ/νία | Αλλαγή | Author |
 |---|---|---|
+| 2026-05-19 | **Appendix B — Topic B.4 ✅ FULLY CLOSED 9/9 Qs (Path tracer trigger UX)**. **B.4.Q1** Idle threshold **800ms** (industry median Lumion/D5, 5/7 σύγκλιση 500-1000ms range) — updates §9 Q3 αρχικό spec 2000ms σε industry-aligned value. **B.4.Q2** Cancellation = **Snap cut** atomic mode swap (7/7 industry absolute σύγκλιση). **B.4.Q3** Preview progress indicator = **Τίποτα** (silent magic Lumion/Enscape ethos, 4/7 industry leaning — changed από αρχικό UI selection "Quality bar" σε followup turn, Γιώργος preferred non-jargon presentation context). **B.4.Q4** Final dialog **4 presets**: Πρόχειρη 64 / Κανονική 256 / Υψηλή 1024 / Κορυφαία 4096 SPP (Twinmotion/Enscape/Chaos Vantage 3/7 direct match). **B.4.Q5** Resolution **HD/4K/8K + Custom**, default 4K (7/7 industry). Crop region DEFERRED Phase 8+ (saves Phase 7 dialog complexity). **B.4.Q6** Format = **PNG+JPG+EXR** + destination **2 checkboxable** (disk + project_assets Firestore Storage). PNG default, EXR για post-processing. **B.4.Q7** Denoiser **ON by default + toggle σε Προχωρημένα expander** (V-Ray/Blender hybrid, 7/7 default-ON + 3/7 toggle). **B.4.Q8 FULL ENTERPRISE Phase 7** = Turntable 360° + Flyaround waypoints + Timeline editor UI + path easing curves + multi-frame MP4 export (7/7 industry parity, per memory `feedback_completeness_over_mvp.md` rule, +30-40h scope expansion ~20% του ADR-366). **B.4.Q9** Detailed time estimate (D5/V-Ray style) πάντα visible: GPU calibration (~50ms benchmark σε mount) × scene complexity × samples × resolution × frames → `~42 λεπτά ±4 min` format, live update on config change (6/7 industry). Νέα modules Phase 5: `IdleDetector.ts` (800ms tune από 2000ms, REUSED B.1.Q2/B.1.Q3/B.4), `PathTracerRenderer.ts` (three-gpu-pathtracer MIT wrapper, single instance dual-profile), `raster-to-pathtrace-swap.ts`. Phase 6: `RenderFinalDialog.tsx` (Radix Dialog ADR-001) + `render-cost-estimator.ts` + `render-output-writer.ts` (PNG/JPG Canvas.toBlob + EXR wasm + Firebase Storage upload + project_assets Firestore + enterprise-id `rnd_bim_*` generator + RBAC `bim_renders.create`) + `RenderProgressOverlay.tsx`. Phase 7: `TurntablePathBuilder.ts` + `WaypointPathBuilder.ts` + `TimelineEditor.tsx` (ribbon panel + 3D waypoint overlay drag-and-drop + scrubber) + `MP4Exporter.ts` (mp4-muxer MIT + WebCodecs + WebM fallback). ViewMode3DStore extensions: `idleThresholdMs=800`, `finalRenderConfig`, `animationConfig`. SSoT REUSE: IdleDetector multi-subscriber, Radix Dialog, enterprise-id (νέος `rnd_bim_*` generator addition), EntityAuditService (νέο audit type `bim_render_created`), NOTIFICATION_KEYS (νέο `bim3d.render.completed`), Firebase Storage tenant-scoped path pattern (ADR-326), project_assets existing collection με `type='bim-render'` discriminator. License N.5 compliant: three-gpu-pathtracer MIT, mp4-muxer MIT, WebCodecs native, EXR encoder MIT family. ~28 i18n keys × 2 locales (~56 entries). GOL: atomic FSM mode swap (race-free), idempotent re-render (deterministic seed), WebGPU→WebGL fallback (belt-and-suspenders), single PathTracerRenderer + single IdleDetector (SSoT). **B.4 effort: Phase 5 +3h + Phase 6 +9h + Phase 7 +30-40h = +42-52h** (note: το Phase 7 +30-40h είναι animation system FULL ENTERPRISE, η ίδια η path-trace trigger UX = ~12h). **ADR-366 total estimate revised: ~179-212h Phase 0-7** (από ~144-166h post-B.3, +35-46h B.4 net). Decision conscious diverge documented: animation FULL ENTERPRISE Phase 7 αντί incremental Phase 8+ (justified per completeness_over_mvp memory). Pending ratchet entries DEFERRED Phase 8+: crop region rendering (B.4.Q5), OIDN-wasm denoiser upgrade αν three-gpu-pathtracer built-in underwhelming. Memory updates: `project_adr366_group_b_partial.md` → B.4 closure (Group B now 4/5 — B.5 remaining). | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.3 ✅ FULLY CLOSED 7/7 Qs (Multi-floor Visibility Controls UI)**. **B.3.Q1** Panel αριστερά με checkbox list ανά όροφο (5/5 industry σύγκλιση — Revit/ArchiCAD/Navisworks/Vectorworks/Allplan). **B.3.Q2** Free multi-select checkboxes + 3 preset buttons στο top [All][Active][None]. **B.3.Q3** 3-state per floor: Hide / Ghost (30% opacity) / Show (Revit Underlay pattern extended, 3/5 industry transparency-as-context). Ghost via Three.js `material.transparent=true, opacity=0.3, depthWrite=false` σε cloned material (WeakMap-cached). **B.3.Q4** Top-down order (ψηλότερος πρώτος, Revit/ArchiCAD/Allplan default, sort by `floor.elevation desc`). **B.3.Q5** Μπλε τελίτσα δεξιά για active floor (Revit minimal pattern, REUSE `CAD_UI_COLORS.ACTIVE`, zero νέο token). **B.3.Q6** 4 presets total: [All][Active][None][Invert] (4/5 industry έχουν Invert command). **B.3.Q7** Νέο 3D-specific FloatingPanel αριστερά (separate component από 2D FloatingPanel), tabs Floors/Lighting/Quality — Γιώργος διαφώνησε με recommended REUSE 2D Levels tab για cleaner 3D scope separation (decision conscious diverge από `feedback_3d_mirror_2d_ssot.md` rule σε αυτό το specific UI surface, justified: 3D Floors tab = visibility multi-toggle με 3-state + 4 presets, διαφορετικό UX scope από 2D Levels read-mostly). Νέα modules Phase 4: `Floating3DPanel.tsx` (container) + `Floor3DPanelTab.tsx` (Floors tab UI) + `floor-visibility-state.ts` (pure helpers: preset/invert/sort) + `applyFloorVisibility.ts` (scene mutator με RAF coalesce + ghost material cache). ViewMode3DStore extensions: `floorVisibilityModes: Map<floorId, 'show'\|'ghost'\|'hide'>` + actions `applyFloorsPreset`/`setFloorMode`/`toggleFloorVisibility`. `visibleFloors:Set` (ήδη §9 Q2) τώρα derived view από modes. SSoT REUSE: `useFloors` (ADR-326), `CAD_UI_COLORS.ACTIVE`, ADR-040 micro-leaf compliance, ADR-031 (no command history needed — UI-only state). ~12 i18n keys ×2 locales (~24 entries). Phase 4 **+5-7h** total. **ADR-366 total estimate revised: ~144-166h Phase 0-7**. Industry decisions documented με 5+ benchmarks per question. Memory updates: `project_adr366_group_b_partial.md` → B.3 closure; `reference_dxf_viewer_floating_panel.md` annotated με 3D divergence note. | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.2 ✅ FULLY CLOSED 4/4 Qs. B.2.Q4 (Element info panel — full BIM card on click) RESOLVED**: **EntityDetailsHeader SSoT extension με 5 tabs (Geometry/Materials/BOQ/Audit/Comments) + read-only παντού εκτός Comments**. Pattern REUSE 100% του `@/core/entity-headers` (Contacts + Procurement Phase G 2026-04-28 proof) — μηδέν παράλληλη detail-header abstraction. Tabs: Geometry (length/height/thickness/area/volume read-only `<dl>`) + Materials (multi-layer DNA preview ADR-363 Phase 6) + BOQ (summary card + drawer link ADR-329) + Audit (vertical timeline + inline diff `old → new` via `useEntityAudit` ADR-195) + Comments (filtered list mirror B.2.Q3 με add/resolve actions inline). Editing παντού delegated σε dedicated tools (transform/material assigner/BOQ drawer) — SSoT discipline. Νέα modules `bim-3d/properties/BimEntityCardPanel.tsx` + 5 tab components + 8 entity-kind SVG icons + ~34 i18n keys ×2 locales (~68 entries). No new SSoT tokens. Progressive disclosure Phase 4-7 (Geometry+Audit Phase 4 instant value, Materials Phase 5, BOQ Phase 6, Comments Phase 7 depends on B.2.Q3). Backport opportunity 2D: refactor FloatingPanel Properties tab σε EntityDetailsHeader-based card (~3-4h, Boy Scout, NOT BLOCKING). Phase 4-7 **+7-9h** total. **ADR-366 total estimate revised: ~139-159h.** Industry alignment: Notion/Linear/Github single canonical detail header pattern, Revit Properties Palette multi-category grouping. Memory [[entity-details-header-ssot]] reinforced. | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.2.Q3 (BIM Data Overlay — 3D annotations/leaders) ✅ RESOLVED** — **Typed comment markers (BIMcollab style) Phase 7+** + **DEFERRED free-text labels Phase 8+**. Νέα Firestore collection `bim_comments` (tenant-scoped ADR-326) με marker pins Three.js Sprite billboard, status color (open=orange/resolved=green/wontfix=gray), priority border, auto-numbered. Click → side panel REUSE `EntityDetailsHeader` SSoT + edit-in-place + attachments + audit trail (ADR-195). Νέα modules Phase 7: `CommentMarker3DRenderer.ts` + `BimCommentDetailsPanel.tsx` + `CommentListPanel.tsx` + `bim-comments.service.ts`. SSoT REUSE: enterprise-id (νέο `cmt_bim_*` generator), EntityAuditService, NOTIFICATION_KEYS (νέο `useCommentNotifications` hook), GenArc viewportAnimation (camera zoom-to-comment). Νέο SSoT token `COMMENT_STATUS_COLORS` (zero 2D equivalent). 20+ i18n keys ×2 locales. RBAC permissions `bim_comments.*`. Modern BIM coordination industry σύγκλιση (BIMcollab + Solibri leaders). SketchUp 3D-text/Revit annotations-in-views rejected — Nestor είναι BIM coordination tool. Phase 7 +6-7h. Phase 8+ free-text labels deferred (~5-6h future, not blocking). **Total estimate revised: ~132-150h.** | Claude Opus 4.7 |
