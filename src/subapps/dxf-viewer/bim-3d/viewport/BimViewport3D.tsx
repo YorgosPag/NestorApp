@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
 
@@ -61,12 +62,42 @@ export function BimViewport3D() {
     );
   }
 
+  // z-50: float above all 2D canvas layers (z-[0..30]).
+  // stopPropagation on React synthetic events: prevents 2D drawing handlers
+  // (containerHandlers.onMouseDown etc.) from firing while in 3D mode.
+  // Three.js camera DOM listeners still fire — DOM bubbling is unaffected by
+  // React stopPropagation, so OrbitControls receives events normally.
   return (
     <div
-      ref={containerRef}
-      className="absolute inset-0"
-      aria-label={t('viewport.loadingLabel')}
-      role="img"
-    />
+      className="absolute inset-0 z-50"
+      onMouseMove={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onMouseUp={(e) => e.stopPropagation()}
+      onContextMenu={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
+    >
+      {/* Three.js appends renderer canvas + ViewCube canvas directly into this div. */}
+      <div
+        ref={containerRef}
+        className="absolute inset-0"
+        aria-label={t('viewport.loadingLabel')}
+        role="img"
+      />
+      {/* Exit button top-left — clear of ViewCube at top-right (ADR-366 §9 Q1). */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => useViewMode3DStore.getState().toggle2D3D()}
+            aria-label={t('modeToggle.aria')}
+            className="absolute left-3 top-3 z-30 flex select-none items-center gap-1 rounded border border-white/20 bg-black/40 px-2 py-1 text-xs font-medium text-white/80 backdrop-blur-sm transition-colors hover:bg-black/60 hover:text-white"
+          >
+            <span aria-hidden="true">←</span>
+            {' 2D'}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{t('modeToggle.tooltip3d')}</TooltipContent>
+      </Tooltip>
+    </div>
   );
 }

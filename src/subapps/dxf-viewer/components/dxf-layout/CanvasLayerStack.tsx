@@ -42,6 +42,8 @@ import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
 import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay';
 // ADR-357 Phase 2a — Dynamic Input overlay leaf.
 import { DynamicInputSubscriber } from './DynamicInputSubscriber';
+import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf';
+import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton';
 // Re-export props type for consumers
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 // Stable empty array — passed to renderOptions.snapResults to avoid creating a new array literal on every render.
@@ -97,7 +99,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       );
     }
   };
-
   const handleUnifiedMarqueeResult = ({
     layerIds,
     entityIds,
@@ -118,17 +119,14 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       );
     }
   };
-
   const handleOverlayClickWithEntityClear = (overlayId: string, point: Point2D) => {
     setSelectedEntityIds([]);
     handleOverlayClick(overlayId, point);
   };
-
   const handleMultiOverlayClickWithEntityClear = (layerIds: string[]) => {
     setSelectedEntityIds([]);
     handleMultiOverlayClick(layerIds);
   };
-
   const handleDxfEntitySelect = (entityId: string | null, additive?: boolean) => {
     if (entityId) {
       if (additive) {
@@ -491,6 +489,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             canvasRect={dxfCanvasRef?.current?.getCanvas?.()?.getBoundingClientRect() ?? null}
             onDrawingPoint={drawingHandlers.onDrawingPoint}
           />
+          <CanvasLayerStack3dLeaf />
+          <ViewMode3DToggleButton />
         </div>
       </div>
       <AutoAreaResultPanel />
