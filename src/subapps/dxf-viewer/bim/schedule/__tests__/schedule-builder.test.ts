@@ -1,0 +1,403 @@
+/**
+ * Tests για bim/schedule/schedule-builder + schedule-presets (ADR-363 Phase 8 §6).
+ */
+
+import type { OpeningEntity, OpeningHanding, OpeningKind, OpeningSwing } from '../../types/opening-types';
+import type { WallEntity } from '../../types/wall-types';
+import type { SlabEntity } from '../../types/slab-types';
+import type { ColumnEntity } from '../../types/column-types';
+import type { BeamEntity } from '../../types/beam-types';
+import type { SlabOpeningEntity } from '../../types/slab-opening-types';
+import type { AnyBimEntity } from '../schedule-presets';
+import {
+  buildSchedule,
+  emptySchedule,
+} from '../schedule-builder';
+import {
+  getPreset,
+  handingToDIN,
+  handingToGreek,
+  openingKindToScheduleType,
+} from '../schedule-presets';
+import type { ScheduleConfig, ScheduleLookups } from '../types';
+
+// ─── Lookups + fixtures ──────────────────────────────────────────────────────
+
+const lookups: ScheduleLookups = {
+  floor: (id) => (id ? `Όροφος ${id}` : ''),
+  material: (id) => (id ? `Υλικό:${id}` : ''),
+};
+
+function emptyValidation() {
+  return { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null };
+}
+
+function bbox(x: number, y: number) {
+  return { min: { x: 0, y: 0 }, max: { x, y } };
+}
+
+function makeWall(id: string, overrides: Partial<WallEntity> = {}): WallEntity {
+  return {
+    id,
+    type: 'wall',
+    kind: 'straight',
+    floorId: 'floor-1',
+    params: {
+      category: 'exterior',
+      start: { x: 0, y: 0 },
+      end: { x: 5000, y: 0 },
+      height: 3000,
+      thickness: 250,
+      flip: false,
+    },
+    geometry: {
+      axisPolyline: { points: [{ x: 0, y: 0 }, { x: 5000, y: 0 }] },
+      outerEdge: { points: [] },
+      innerEdge: { points: [] },
+      bbox: bbox(5000, 250),
+      length: 5,
+      area: 15,
+      volume: 3.75,
+    },
+    validation: emptyValidation(),
+    ...overrides,
+  } as WallEntity;
+}
+
+function makeOpening(
+  id: string,
+  kind: OpeningKind,
+  handing?: OpeningHanding,
+  swing?: OpeningSwing,
+): OpeningEntity {
+  return {
+    id,
+    type: 'opening',
+    kind,
+    floorId: 'floor-1',
+    params: {
+      kind,
+      wallId: 'wall-1',
+      offsetFromStart: 500,
+      width: 900,
+      height: 2100,
+      sillHeight: kind === 'window' ? 900 : 0,
+      handing,
+      openDirection: swing,
+      material: 'mat-wood',
+    },
+    geometry: {
+      position: { x: 1000, y: 0 },
+      rotation: 0,
+      outline: { vertices: [] },
+      bbox: bbox(900, 2100),
+      area: 1.89,
+      perimeter: 6,
+    },
+    validation: emptyValidation(),
+  } as OpeningEntity;
+}
+
+function makeSlab(id: string): SlabEntity {
+  return {
+    id,
+    type: 'slab',
+    kind: 'floor',
+    floorId: 'floor-1',
+    params: {
+      kind: 'floor',
+      outline: { vertices: [] },
+      elevation: 0,
+      thickness: 200,
+      material: 'mat-concrete-c25',
+    },
+    geometry: {
+      polygon: { vertices: [] },
+      bbox: bbox(5000, 5000),
+      area: 25,
+      netArea: 25,
+      volume: 5,
+      perimeter: 20,
+    },
+    validation: emptyValidation(),
+  } as SlabEntity;
+}
+
+function makeColumn(id: string): ColumnEntity {
+  return {
+    id,
+    type: 'column',
+    kind: 'rectangular',
+    floorId: 'floor-1',
+    params: {
+      kind: 'rectangular',
+      position: { x: 0, y: 0 },
+      anchor: 'center',
+      width: 400,
+      depth: 400,
+      height: 3000,
+      rotation: 0,
+    },
+    geometry: {
+      footprint: { vertices: [] },
+      bbox: bbox(400, 400),
+      area: 0.16,
+      volume: 0.48,
+      height: 3000,
+    },
+    validation: emptyValidation(),
+  } as ColumnEntity;
+}
+
+function makeBeam(id: string): BeamEntity {
+  return {
+    id,
+    type: 'beam',
+    kind: 'straight',
+    floorId: 'floor-1',
+    params: {
+      kind: 'straight',
+      startPoint: { x: 0, y: 0 },
+      endPoint: { x: 4000, y: 0 },
+      width: 250,
+      depth: 500,
+      elevation: 3000,
+      supportType: 'simple',
+    },
+    geometry: {
+      axisPolyline: { points: [] },
+      outline: { vertices: [] },
+      bbox: bbox(4000, 250),
+      length: 4,
+      area: 1,
+      volume: 0.5,
+    },
+    validation: emptyValidation(),
+  } as BeamEntity;
+}
+
+function makeSlabOpening(id: string): SlabOpeningEntity {
+  return {
+    id,
+    type: 'slab-opening',
+    kind: 'shaft',
+    floorId: 'floor-1',
+    params: {
+      kind: 'shaft',
+      slabId: 'slab-1',
+      outline: { vertices: [] },
+      fireRating: 90,
+    },
+    geometry: {
+      polygon: { vertices: [] },
+      bbox: bbox(1500, 1500),
+      area: 2.25,
+      perimeter: 6,
+    },
+    validation: emptyValidation(),
+  } as SlabOpeningEntity;
+}
+
+// ─── Handing helpers ─────────────────────────────────────────────────────────
+
+describe('handingToGreek', () => {
+  test('returns empty string when handing undefined', () => {
+    expect(handingToGreek(undefined, undefined)).toBe('');
+  });
+  test('side-only when swing undefined', () => {
+    expect(handingToGreek('left', undefined)).toBe('Αριστερά');
+    expect(handingToGreek('right', undefined)).toBe('Δεξιά');
+  });
+  test('full descriptive label when both set', () => {
+    expect(handingToGreek('right', 'inward')).toBe('Δεξιά · Άνοιγμα προς τα μέσα');
+    expect(handingToGreek('left', 'outward')).toBe('Αριστερά · Άνοιγμα προς τα έξω');
+  });
+});
+
+describe('handingToDIN', () => {
+  test('returns empty string when handing undefined', () => {
+    expect(handingToDIN(undefined, undefined)).toBe('');
+  });
+  test('hand-only when swing undefined', () => {
+    expect(handingToDIN('left', undefined)).toBe('LH');
+    expect(handingToDIN('right', undefined)).toBe('RH');
+  });
+  test('full DIN code when both set', () => {
+    expect(handingToDIN('right', 'inward')).toBe('RH-IN');
+    expect(handingToDIN('left', 'outward')).toBe('LH-OUT');
+  });
+});
+
+// ─── Opening kind routing ────────────────────────────────────────────────────
+
+describe('openingKindToScheduleType', () => {
+  test('door routes to door preset', () => {
+    expect(openingKindToScheduleType('door')).toBe('door');
+  });
+  test('sliding-door routes to door preset', () => {
+    expect(openingKindToScheduleType('sliding-door')).toBe('door');
+  });
+  test('french-door routes to door preset', () => {
+    expect(openingKindToScheduleType('french-door')).toBe('door');
+  });
+  test('window routes to window preset', () => {
+    expect(openingKindToScheduleType('window')).toBe('window');
+  });
+  test('fixed routes to window preset', () => {
+    expect(openingKindToScheduleType('fixed')).toBe('window');
+  });
+});
+
+// ─── Preset registry ─────────────────────────────────────────────────────────
+
+describe('getPreset', () => {
+  test('door preset has dual-handing columns', () => {
+    const preset = getPreset('door');
+    const keys = preset.columns.map((c) => c.key);
+    expect(keys).toContain('handingText');
+    expect(keys).toContain('handingCode');
+    expect(keys).not.toContain('glazing');
+  });
+  test('window preset has glazing column but no handing', () => {
+    const preset = getPreset('window');
+    const keys = preset.columns.map((c) => c.key);
+    expect(keys).toContain('glazing');
+    expect(keys).not.toContain('handingText');
+  });
+  test('combined preset includes qto columns', () => {
+    const preset = getPreset('combined');
+    const keys = preset.columns.map((c) => c.key);
+    expect(keys).toContain('primaryQuantity');
+    expect(keys).toContain('primaryUnit');
+    expect(keys).toContain('atoeCategory');
+  });
+});
+
+// ─── buildSchedule — wall ────────────────────────────────────────────────────
+
+describe('buildSchedule', () => {
+  test('builds wall schedule from wall entities only', () => {
+    const entities: AnyBimEntity[] = [makeWall('w1'), makeWall('w2'), makeSlab('s1')];
+    const config: ScheduleConfig = { entityType: 'wall', filters: {} };
+    const schedule = buildSchedule(entities, config, lookups);
+    expect(schedule.entityType).toBe('wall');
+    expect(schedule.rows).toHaveLength(2);
+    expect(schedule.rows.map((r) => r.entityId)).toEqual(['w1', 'w2']);
+    expect(schedule.rows[0].cells['length']).toBe(5); // m, από makeWall geometry.length
+  });
+
+  test('door schedule routes only door-kind openings', () => {
+    const entities: AnyBimEntity[] = [
+      makeOpening('o1', 'door', 'left', 'inward'),
+      makeOpening('o2', 'window'),
+      makeOpening('o3', 'sliding-door', 'right', 'outward'),
+      makeOpening('o4', 'french-door', 'right', 'inward'),
+      makeOpening('o5', 'fixed'),
+    ];
+    const config: ScheduleConfig = { entityType: 'door', filters: {} };
+    const schedule = buildSchedule(entities, config, lookups);
+    expect(schedule.rows.map((r) => r.entityId)).toEqual(['o1', 'o3', 'o4']);
+  });
+
+  test('window schedule routes only window+fixed openings', () => {
+    const entities: AnyBimEntity[] = [
+      makeOpening('o1', 'door'),
+      makeOpening('o2', 'window'),
+      makeOpening('o3', 'fixed'),
+    ];
+    const config: ScheduleConfig = { entityType: 'window', filters: {} };
+    const schedule = buildSchedule(entities, config, lookups);
+    expect(schedule.rows.map((r) => r.entityId)).toEqual(['o2', 'o3']);
+  });
+
+  test('door schedule populates handing dual columns', () => {
+    const entities: AnyBimEntity[] = [makeOpening('o1', 'door', 'right', 'inward')];
+    const config: ScheduleConfig = { entityType: 'door', filters: {} };
+    const schedule = buildSchedule(entities, config, lookups);
+    const row = schedule.rows[0];
+    expect(row.cells.handingText).toBe('Δεξιά · Άνοιγμα προς τα μέσα');
+    expect(row.cells.handingCode).toBe('RH-IN');
+  });
+
+  test('combined schedule includes ALL entity types', () => {
+    const entities: AnyBimEntity[] = [
+      makeWall('w1'),
+      makeOpening('o1', 'door'),
+      makeSlab('s1'),
+      makeColumn('c1'),
+      makeBeam('b1'),
+      makeSlabOpening('so1'),
+    ];
+    const config: ScheduleConfig = { entityType: 'combined', filters: {} };
+    const schedule = buildSchedule(entities, config, lookups);
+    expect(schedule.rows).toHaveLength(6);
+    expect(schedule.rows.map((r) => r.cells.type)).toEqual([
+      'wall', 'opening', 'slab', 'column', 'beam', 'slab-opening',
+    ]);
+  });
+
+  test('floor filter excludes other floors', () => {
+    const entities: AnyBimEntity[] = [
+      makeWall('w1', { floorId: 'floor-1' }),
+      makeWall('w2', { floorId: 'floor-2' }),
+    ];
+    const config: ScheduleConfig = {
+      entityType: 'wall',
+      filters: { floorIds: ['floor-1'] },
+    };
+    const schedule = buildSchedule(entities, config, lookups);
+    expect(schedule.rows.map((r) => r.entityId)).toEqual(['w1']);
+  });
+
+  test('selection filter narrows to selected ids', () => {
+    const entities: AnyBimEntity[] = [makeWall('w1'), makeWall('w2'), makeWall('w3')];
+    const config: ScheduleConfig = {
+      entityType: 'wall',
+      filters: { selectionIds: ['w2'] },
+    };
+    const schedule = buildSchedule(entities, config, lookups);
+    expect(schedule.rows.map((r) => r.entityId)).toEqual(['w2']);
+  });
+
+  test('preserves caller entity order in output rows', () => {
+    const entities: AnyBimEntity[] = [
+      makeWall('w3'),
+      makeWall('w1'),
+      makeWall('w2'),
+    ];
+    const schedule = buildSchedule(entities, { entityType: 'wall', filters: {} }, lookups);
+    expect(schedule.rows.map((r) => r.entityId)).toEqual(['w3', 'w1', 'w2']);
+  });
+
+  test('lookups resolve floor + material labels into cells', () => {
+    const entities: AnyBimEntity[] = [makeOpening('o1', 'door')];
+    const schedule = buildSchedule(entities, { entityType: 'door', filters: {} }, lookups);
+    const row = schedule.rows[0];
+    expect(row.cells.floor).toBe('Όροφος floor-1');
+    expect(row.cells.material).toBe('Υλικό:mat-wood');
+  });
+
+  test('generatedAt is fresh timestamp', () => {
+    const before = Date.now();
+    const schedule = buildSchedule([], { entityType: 'wall', filters: {} }, lookups);
+    const after = Date.now();
+    expect(schedule.generatedAt).toBeGreaterThanOrEqual(before);
+    expect(schedule.generatedAt).toBeLessThanOrEqual(after);
+  });
+
+  test('columns matches preset schema', () => {
+    const schedule = buildSchedule([], { entityType: 'wall', filters: {} }, lookups);
+    expect(schedule.columns).toBe(getPreset('wall').columns);
+  });
+});
+
+// ─── emptySchedule ───────────────────────────────────────────────────────────
+
+describe('emptySchedule', () => {
+  test('returns preset columns + zero rows', () => {
+    const schedule = emptySchedule('door');
+    expect(schedule.columns.length).toBeGreaterThan(0);
+    expect(schedule.rows).toHaveLength(0);
+    expect(schedule.entityType).toBe('door');
+  });
+});
