@@ -29,6 +29,7 @@ import { PreviewRenderer, type PreviewRenderOptions } from './PreviewRenderer';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity } from '../../hooks/drawing/useUnifiedDrawing';
+import type { SceneUnits } from '../../utils/scene-units';
 // ADR-357 Phase 4: Object Snap Tracking handle types.
 import type { AcquiredTrackingPoint } from '../../systems/tracking/TrackingPointStore';
 import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-resolver';
@@ -55,6 +56,8 @@ export interface PreviewCanvasProps {
   viewport: { width: number; height: number };
   /** Default preview render options */
   defaultOptions?: PreviewRenderOptions;
+  /** ADR-362 R9 — active scene units for dim preview text sizing. Default 'mm'. */
+  sceneUnits?: SceneUnits;
 }
 
 /**
@@ -144,6 +147,7 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
       transform,
       viewport,
       defaultOptions,
+      sceneUnits,
     },
     ref
   ) {
@@ -184,6 +188,11 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
         rendererRef.current = null;
       };
     }, []);
+
+    // ADR-362 R9 — forward scene units to renderer whenever the prop changes.
+    useEffect(() => {
+      rendererRef.current?.setSceneUnits(sceneUnits ?? 'mm');
+    }, [sceneUnits]);
 
     // ============================================================================
     // 🏢 ADR-146: Centralized Canvas Size Observer

@@ -40,14 +40,12 @@ import { LassoFreehandPreviewSubscriber } from './LassoFreehandPreviewSubscriber
 import { AutoAreaResultPanel } from './AutoAreaResultPanel';
 import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
 import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay';
-// ADR-357 Phase 2a — Dynamic Input overlay leaf.
 import { DynamicInputSubscriber } from './DynamicInputSubscriber';
 import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf';
 import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton';
 import { useDxfOverlay3DSync } from './useDxfOverlay3DSync';
-// Re-export props type for consumers
+import { useLevelId3DSync } from './useLevelId3DSync';
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
-// Stable empty array — passed to renderOptions.snapResults to avoid creating a new array literal on every render.
 const EMPTY_SNAP_RESULTS: readonly never[] = Object.freeze([]);
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   transform, viewport, activeTool, overlayMode, showLayers,
@@ -273,6 +271,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     [gripSettings],
   );
   useDxfOverlay3DSync(dxfScene);
+  useLevelId3DSync(levelManager.currentLevelId);
   const layerClassName = `absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']}`;
   const layerStyle = useMemo(
     () => canvasUI.positioning.layers.layerCanvasWithTools(activeTool, crosshairSettings.enabled),
@@ -428,6 +427,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             isActive={isInDrawingMode(activeTool, overlayMode)}
             className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             defaultOptions={PREVIEW_DEFAULTS}
+            sceneUnits={dxfScene?.units ?? 'mm'}
           />
           {/* PreviewCanvas mounts: Rotation / Move / GripDrag (ADR-049 SSOT) */}
           <PreviewCanvasMounts

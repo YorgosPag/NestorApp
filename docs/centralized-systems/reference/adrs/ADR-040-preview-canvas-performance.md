@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-20 — ADR-362 R9: PreviewCanvas `sceneUnits` prop (one new low-freq prop)
+
+CanvasLayerStack adds `sceneUnits={dxfScene?.units ?? 'mm'}` to the PreviewCanvas leaf. The value changes only when a new DXF is loaded (not at 60fps). PreviewRenderer caches it via `setSceneUnits()`; preview-dimension-renderer uses the original (unscaled) params for text so committed dim and preview match. No new useSyncExternalStore in the shell. CHECK 6C unaffected.
+
 ### 2026-05-20 — ADR-363 wall bugfix: DxfRenderer `case 'wall'` (entity unwrap only)
 
 `DxfRenderer.toEntityModel()` gains a `case 'wall'` branch — pure data unwrap from `DxfWall.{kind, params, geometry, validation}` (mirrors `case 'stair'`). No new state, no new subscription, no render-loop change. Cardinal rules 1–4 unaffected.

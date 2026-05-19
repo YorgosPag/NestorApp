@@ -30,6 +30,7 @@ import {
 import { renderPreviewDimension } from './preview-dimension-renderer';
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 import type { DimensionEntity } from '../../types/dimension';
+import type { SceneUnits } from '../../utils/scene-units';
 // ADR-357 Phase 4: Object Snap Tracking visual feedback (markers + paths).
 import {
   detectTrackingTheme,
@@ -52,11 +53,20 @@ export class PreviewRenderer {
   // ADR-357 Phase 4: persistent acquired markers — survive `drawPreview` cycles
   // so the `+` glyphs stay visible while the rubber-band preview repaints.
   private trackingMarkers: readonly AcquiredTrackingPoint[] = [];
+  // ADR-362 R9 — active scene units forwarded from DxfScene so preview dim text
+  // uses the same paper-mm→world-unit formula as the committed DimensionRenderer.
+  private sceneUnits: SceneUnits = 'mm';
 
   // Debug FPS counter (disabled in production)
   private debugFpsCounter = 0;
   private debugFpsLastTime = 0;
   private debugFpsEnabled = false;
+
+  // ===== SCENE UNITS =====
+
+  setSceneUnits(units: SceneUnits): void {
+    this.sceneUnits = units;
+  }
 
   // ===== INITIALIZATION =====
 
@@ -301,6 +311,7 @@ export class PreviewRenderer {
           transform,
           viewport,
           opts: { color: renderOpts.color, opacity: renderOpts.opacity },
+          sceneUnits: this.sceneUnits,
         });
         break;
       }

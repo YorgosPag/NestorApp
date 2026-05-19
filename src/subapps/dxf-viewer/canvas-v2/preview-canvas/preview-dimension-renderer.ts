@@ -140,7 +140,10 @@ export function renderPreviewDimension(params: PreviewDimensionRenderParams): vo
     drawExtensionLines(scaledParams, geometry, resolvedOpts);
     drawDimLineOrArc(scaledParams, geometry, resolvedOpts);
     drawArrowheads(scaledParams, geometry, resolvedOpts);
-    drawText(scaledParams, geometry, resolvedOpts);
+    // ADR-362 R9 — text uses the ORIGINAL params (real dimscale + real sceneUnits)
+    // so preview text matches committed DimensionRenderer output. autoScale applies
+    // only to arrows (keeping them ~10 px on screen) — not to text height.
+    drawText(params, geometry, resolvedOpts);
   }
 
   if (resolvedOpts.helperPath) {
