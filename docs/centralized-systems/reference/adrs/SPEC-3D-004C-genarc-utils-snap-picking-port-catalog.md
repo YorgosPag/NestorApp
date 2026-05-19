@@ -32,7 +32,7 @@
 2. **`gizmoProjection.ts`** (116 LOC) — Pure Three.js drag projection math (`projectOntoAxis`, `projectOntoPlane`, `projectVerticalScreenDrag`, `projectConstrained`). Two-line closest-point + ray-plane + Y-axis top-down fallback. **PORT_AS_IS** (μαζί με `Y_AXIS_TOP_DOWN_THRESHOLD` constant). Required για Phase 7 gizmo editing.
 3. **`cursorProjection.ts`** (48 LOC) — Pattern για 3D cursor → world position (raycaster → geometry hit OR ground plane fallback). **PORT_WITH_ADAPTATION** (swap GenArc types με Nestor BIM types). Feed για Bottom Bar 3D coordinates.
 
-**Συνολικό effort port**: **~3-4h** (2 PORT_AS_IS αρχεία copy + rename ~1.5h, 1 PORT_WITH_ADAPTATION ~1h, constants port + tests ~1h).
+**Συνολικό effort port**: **~3.5h Phase 0** — full enterprise approach (industry alignment 9/9: Revit, AutoCAD, SketchUp, Rhino, Blender, Forge/APS, Speckle, xeokit, Three.js Editor → όλα ports cursor coords στο viewport init, scene-agnostic, empty-safe). Όχι deferred ports σε Phase 7. Βλ. §9.1.
 
 ---
 
@@ -268,14 +268,100 @@ Note: `findClosestBimHit` είναι **νέο Nestor utility** που χτίζε
 
 ## 9. Port Execution Plan
 
-### 9.1 Sub-phase target — Phase 0 + Phase 7 prep
+### 9.1 Industry alignment (Full Enterprise — 2026-05-19 decision)
 
-| Sub-phase | Πότε | Αρχεία | Effort |
+Big players (Revit, AutoCAD 3D, SketchUp, Rhino, Blender, Forge/APS, Speckle, xeokit, Three.js Editor — **9/9 σύγκλιση**) ports cursor coordinates **στο viewport init**, όχι "όταν θα έχουμε meshes". Λόγος: `THREE.Raycaster.intersectObjects([])` είναι empty-safe (επιστρέφει `[]`), και το ground plane fallback (Y=0) είναι σωστή UX απάντηση για κενή σκηνή.
+
+**Συνέπεια**: Όλα τα 3 ports (coordinate transforms + cursor projection + gizmo projection) γίνονται σε **Phase 0 (Infrastructure)** ως single block. Καμία deferred port σε Phase 7.
+
+### 9.2 Sub-phase target — All in Phase 0
+
+| Sub-phase | Αρχεία | Effort | Λόγος εδώ (όχι αργότερα) |
 |---|---|---|---|
-| **0.1 Coordinate primitives** | ADR-366 Phase 0 (Infrastructure) | `coordinateTransforms.ts` | ~30 min |
-| **0.2 Cursor → world** | ADR-366 Phase 0 / Phase 1 | `cursorProjection.ts` (adapt) | ~1h |
-| **7.0 Gizmo math** | ADR-366 Phase 7 prep (gizmo editing) | `gizmoProjection.ts` | ~30 min |
-| **0.3 Tests** | ADR-366 Phase 0 | unit tests για όλα 3 | ~1.5h |
+| **0.1 Coordinate primitives** | `coordinateTransforms.ts` (PORT_AS_IS) | ~30 min | Required για viewport init (NDC, pixel size). |
+| **0.2 Scene raycaster SSoT** | `bim-raycaster.ts` (ΝΕΟ Nestor module, ~30 LOC) | ~30 min | Thin wrapper γύρω από `THREE.Raycaster.intersectObjects(scene.children, true)` + `userData.entityId` extraction. Scene-agnostic, empty-safe. |
+| **0.3 Cursor → world** | `cursorProjection.ts` (PORT_WITH_ADAPTATION) | ~45 min | Bottom Bar coordinate feed από day 1 (ground plane fallback για empty scene). Auto-activates όταν meshes φτάνουν. |
+| **0.4 Gizmo math** | `gizmoProjection.ts` (PORT_AS_IS) | ~30 min | Required για Phase 7 αλλά **scene-agnostic** (pure math). Port τώρα = zero cost, ready από day 1. |
+| **0.5 Tests** | unit tests + integration test (mock scene + raycaster) | ~1.5h | Coordinate round-trip + axis/plane projection + cursor empty-scene fallback + cursor mesh hit. |
+
+**Συνολικό effort Phase 0 (SPEC-3D-004C contribution): ~3.5h.**
+
+### 9.3 Sub-phase 0.1 — Coordinate primitives (30 min)
+
+1. Copy `C:\genarc\src\utils\coordinateTransforms.ts` → `src/subapps/dxf-viewer/bim-3d/utils/coordinate-transforms.ts`.
+2. Adjust import: `@/types/viewport.types` → port `ScreenProjection` interface μαζί.
+3. No code changes.
+
+### 9.4 Sub-phase 0.2 — Scene raycaster SSoT (30 min)
+
+Δημιούργησε `src/subapps/dxf-viewer/bim-3d/scene/bim-raycaster.ts`:
+
+```typescript
+import * as THREE from 'three';
+
+export interface BimRaycastResult {
+  readonly point: THREE.Vector3;
+  readonly object: THREE.Object3D;
+  readonly distance: number;
+  readonly entityId?: string;  // από object.userData.entityId (set στο Phase 1/2 mesh creation)
+}
+
+export function findClosestBimHit(
+  raycaster: THREE.Raycaster,
+  scene: THREE.Scene,
+): BimRaycastResult | null {
+  const hits = raycaster.intersectObjects(scene.children, true);
+  if (hits.length === 0) return null;
+  const closest = hits[0];
+  return {
+    point: closest.point,
+    object: closest.object,
+    distance: closest.distance,
+    entityId: closest.object.userData?.entityId,
+  };
+}
+```
+
+**Empty-scene behavior**: `intersectObjects([])` → `[]` → `findClosestBimHit` returns `null` → consumer `cursorProjection` πέφτει σε ground plane fallback.
+
+**Phase 1/2 contract**: όταν meshes δημιουργούνται, **πρέπει** να γράφουν `mesh.userData.entityId = entity.id`. Documented στο SPEC-3D-001/002.
+
+### 9.5 Sub-phase 0.3 — Cursor → world (45 min)
+
+1. Copy `C:\genarc\src\utils\cursorProjection.ts` → `src/subapps/dxf-viewer/bim-3d/utils/cursor-projection.ts`.
+2. Swap GenArc types → Nestor BIM types (`WallEntity` κ.λπ.). Όμως **απλούστερη προσέγγιση**: αντί να περάσουμε `walls/columns/beams/slabs/openings` arrays, περνάμε **απευθείας τη `THREE.Scene`** — ο raycaster δουλεύει με `scene.children`, scene-agnostic.
+
+```typescript
+// Simplified Nestor signature (no per-type arrays):
+export function projectCursorToWorld(
+  raycaster: THREE.Raycaster,
+  scene: THREE.Scene,
+): CursorWorldPosition | null {
+  const { origin, direction } = raycaster.ray;
+  const hit = findClosestBimHit(raycaster, scene);
+  if (hit) return { x: hit.point.x, y: hit.point.y, z: hit.point.z, entityId: hit.entityId };
+
+  // Ground plane fallback
+  if (Math.abs(direction.y) < 1e-6) return null;
+  const t = -origin.y / direction.y;
+  if (t < 0) return null;
+  return {
+    x: origin.x + t * direction.x,
+    y: 0,
+    z: origin.z + t * direction.z,
+  };
+}
+```
+
+3. Δημιούργησε `bim-3d/types/cursor-types.ts` με `interface CursorWorldPosition { x: number; y: number; z: number; entityId?: string; }`.
+
+### 9.6 Sub-phase 0.4 — Gizmo math (30 min)
+
+1. Copy `C:\genarc\src\utils\gizmoProjection.ts` → `src/subapps/dxf-viewer/bim-3d/utils/gizmo-projection.ts`.
+2. Verify `GizmoDragConstraint` + `Y_AXIS_TOP_DOWN_THRESHOLD` already ported από SPEC-3D-004A §8.3 + §8.4.
+3. No code changes.
+
+**Γιατί τώρα και όχι Phase 7**: Pure math, scene-agnostic, zero deps στο BIM domain. Port τώρα = ready when Phase 7 lands, χωρίς "ξεκινάμε από την αρχή" tax.
 
 ### 9.2 Sub-phase 0.1 — Coordinate primitives (30 min)
 
@@ -296,9 +382,9 @@ Note: `findClosestBimHit` είναι **νέο Nestor utility** που χτίζε
 2. Verify `GizmoDragConstraint` + `Y_AXIS_TOP_DOWN_THRESHOLD` already ported από SPEC-3D-004A §8.3 + §8.4.
 3. No code changes.
 
-### 9.5 Sub-phase 0.3 — Tests (1.5h)
+### 9.7 Sub-phase 0.5 — Tests (1.5h)
 
-Jest pure-math tests (κανείς δεν χρειάζεται Three.js renderer, μόνο `Camera` instances):
+Jest pure-math tests (κανείς δεν χρειάζεται Three.js renderer, μόνο `Camera` + minimal `Scene` instances):
 
 ```typescript
 // __tests__/coordinate-transforms.test.ts
@@ -307,6 +393,7 @@ Jest pure-math tests (κανείς δεν χρειάζεται Three.js renderer
 - ndcToWorld με ortho camera (γνωστή απάντηση: depth = (top+bottom)/2)
 - worldToScreen behindCamera flag (camera position πίσω από target)
 - getPixelWorldSize ortho vs perspective formula verification
+- getVisibleWorldSize aspect ratio correctness
 
 // __tests__/gizmo-projection.test.ts
 - projectOntoAxis: closest point between intersecting lines
@@ -316,13 +403,21 @@ Jest pure-math tests (κανείς δεν χρειάζεται Three.js renderer
 - projectVerticalScreenDrag: top-down camera fallback geometry
 - projectConstrained dispatcher: axis/plane/free routing
 
+// __tests__/bim-raycaster.test.ts
+- empty scene → null (zero allocation, no crash)
+- scene with 1 mesh + userData.entityId → returns entityId
+- scene with 1 mesh + no userData → returns hit, entityId undefined
+- nested children (Group → Mesh) → recursive=true finds it
+
 // __tests__/cursor-projection.test.ts
-- mock raycaster + sceneObjects empty → ground plane fallback
-- mock raycaster + 1 wall mesh hit → returns hit point
-- camera pointing up (direction.y > 0) → null
+- empty scene + ray hits ground → ground plane fallback (Y=0)
+- empty scene + ray pointing up (direction.y > 0) → null
+- scene with mesh + ray hits mesh → returns mesh point + entityId
+- scene with mesh + ray misses mesh + ray hits ground → ground plane fallback
+- camera below ground (origin.y < 0) + ray going up → null
 ```
 
-**Total Phase 0 effort (SPEC-3D-004C contribution): ~3-4h.**
+**Total Phase 0 effort (SPEC-3D-004C contribution): ~3.5h** (1.5h ports + 0.5h νέος bim-raycaster + 1.5h tests).
 
 ---
 
@@ -439,3 +534,4 @@ Jest pure-math tests (κανείς δεν χρειάζεται Three.js renderer
 | Ημ/νία | Αλλαγή | Author |
 |---|---|---|
 | 2026-05-19 | **Initial draft v1.0** — Full catalog 16 αρχείων του GenArc snap/picking/utils domain. **Result: 2 PORT_AS_IS + 1 PORT_WITH_ADAPTATION + 0 EXTRACT + 13 EXCLUDE.** Κεντρικό εύρημα: το GenArc `coordinateTransforms.ts` (Three.js NDC math) + `gizmoProjection.ts` (constrained drag math) είναι **καινούργιο domain για Nestor** (Nestor `CoordinateTransforms` είναι 2D-only). Snap engine είναι **strict subset** του Nestor 17-engine system. `sitePicking` 100% ΝΟΚ-specific (consistent με SPEC-3D-004A §5.5 EXCLUDE plotOverlay). Cross-domain edges προς SPEC-3D-004D υπό observation (`raySceneIntersection`, `buildingSelectors`, `distSqXZ`). 4 open questions για Γιώργο (alignment guide infer, cursorProjection port timing, naming collision, snap zero-port confirmation). | Claude Opus 4.7 |
+| 2026-05-19 | **§9 Port Plan refactor — Full Enterprise (Industry alignment)**. Q2 resolved: όλα τα ports σε Phase 0, όχι deferred σε Phase 7. Industry analysis 9/9 σύγκλιση (Revit, AutoCAD 3D, SketchUp, Rhino, Blender, Forge/APS, Speckle, xeokit, Three.js Editor) → cursor coordinates = viewport infrastructure, scene-agnostic, empty-safe. Νέο sub-phase 0.2 (`bim-raycaster.ts` SSoT) προστέθηκε ~30 LOC. Cursor projection signature simplified: αντί `walls/columns/beams[]` arrays → `THREE.Scene` directly (scene.children agnostic). Contract για Phase 1/2 mesh creation: `mesh.userData.entityId = entity.id`. Effort revised 3-4h → 3.5h Phase 0 (zero Phase 7 cost). Q1 RESOLVED (auto-infer alignment) → pending entry στο `.claude-rules/pending-ratchet-work.md` (~3h independent feature, 4 Giorgio conditions ✅). | Claude Opus 4.7 |
