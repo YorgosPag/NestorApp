@@ -30,6 +30,13 @@ import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getWallGrips } from '../walls/wall-grips';
+import {
+  computeWallHatchPlan,
+  resolveWallMaterialKey,
+  HATCH_STROKE_RGBA,
+  RC_DOT_RADIUS_PX,
+  WALL_HATCH_LINE_WIDTH_PX,
+} from '../walls/wall-hatch-patterns';
 
 /** Translucent fill colour per category (CAD industry convention). */
 const CATEGORY_FILL: Readonly<Record<WallCategory, string>> = {
@@ -97,9 +104,10 @@ export class WallRenderer extends BaseEntityRenderer {
       this.ctx.restore();
     }
 
-    // Main pass — phase style + fill + stroke.
+    // Main pass — phase style + fill + hatch + stroke.
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.drawFootprint(wall);
+    this.drawMaterialHatch(wall);
     this.drawAxis(wall);
 
     this.finalizeRender(entity, options);
@@ -239,6 +247,60 @@ export class WallRenderer extends BaseEntityRenderer {
     }
     this.ctx.closePath();
     this.ctx.stroke();
+  }
+
+  /**
+   * Phase 4.5e-B — per-material hatch inside wall body clip.
+   * Skip for DNA-bearing walls (per-layer DNA rendering governs materials).
+   * Skip at extreme zoom-out (scale < 0.001, perf saver).
+   */
+  private drawMaterialHatch(wall: WallEntity): void {
+    if (wall.params.dna) return;
+    if (this.transform.scale < 0.001) return;
+    const key = resolveWallMaterialKey(wall.params.material);
+    const plan = computeWallHatchPlan(wall.geometry.bbox, key);
+    if (plan.lines.length === 0 && plan.dots.length === 0) return;
+
+    const outer = wall.geometry.outerEdge.points;
+    const inner = wall.geometry.innerEdge.points;
+    if (outer.length < 2 || inner.length < 2) return;
+
+    this.ctx.save();
+    // Clip to wall body polygon (same path as drawFootprint).
+    this.ctx.beginPath();
+    const first = this.worldToScreen({ x: outer[0].x, y: outer[0].y });
+    this.ctx.moveTo(first.x, first.y);
+    for (let i = 1; i < outer.length; i++) {
+      const s = this.worldToScreen({ x: outer[i].x, y: outer[i].y });
+      this.ctx.lineTo(s.x, s.y);
+    }
+    for (let i = inner.length - 1; i >= 0; i--) {
+      const s = this.worldToScreen({ x: inner[i].x, y: inner[i].y });
+      this.ctx.lineTo(s.x, s.y);
+    }
+    this.ctx.closePath();
+    this.ctx.clip();
+
+    this.ctx.strokeStyle = HATCH_STROKE_RGBA;
+    this.ctx.fillStyle = HATCH_STROKE_RGBA;
+    this.ctx.lineWidth = WALL_HATCH_LINE_WIDTH_PX[key];
+    this.ctx.setLineDash([]);
+
+    for (const seg of plan.lines) {
+      const a = this.worldToScreen(seg.start);
+      const b = this.worldToScreen(seg.end);
+      this.ctx.beginPath();
+      this.ctx.moveTo(a.x, a.y);
+      this.ctx.lineTo(b.x, b.y);
+      this.ctx.stroke();
+    }
+    for (const dot of plan.dots) {
+      const s = this.worldToScreen(dot.center);
+      this.ctx.beginPath();
+      this.ctx.arc(s.x, s.y, RC_DOT_RADIUS_PX, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+    this.ctx.restore();
   }
 
   private drawPolyline(points: ReadonlyArray<Point3D>): void {

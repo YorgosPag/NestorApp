@@ -14,6 +14,8 @@ export const WALL_RIBBON_KEYS = {
   stringParams: {
     /** Wall category selector (5 options: exterior/interior/partition/parapet/fence). */
     category: 'wall.params.category',
+    /** Material key (rc/masonry/aerated-concrete/gypsum). DNA walls ignore this. */
+    material: 'wall.params.material',
   },
   params: {
     /** mm — wall height. */
@@ -32,7 +34,8 @@ export type WallRibbonNumberCommandKey =
   | typeof WALL_RIBBON_KEYS.params.thickness;
 
 export type WallRibbonStringCommandKey =
-  | typeof WALL_RIBBON_KEYS.stringParams.category;
+  | typeof WALL_RIBBON_KEYS.stringParams.category
+  | typeof WALL_RIBBON_KEYS.stringParams.material;
 
 export type WallRibbonToggleCommandKey =
   | typeof WALL_RIBBON_KEYS.toggles.flip;
@@ -44,6 +47,7 @@ export const WALL_RIBBON_NUMBER_KEYS: readonly WallRibbonNumberCommandKey[] = [
 
 export const WALL_RIBBON_STRING_KEYS: readonly WallRibbonStringCommandKey[] = [
   WALL_RIBBON_KEYS.stringParams.category,
+  WALL_RIBBON_KEYS.stringParams.material,
 ];
 
 export const WALL_RIBBON_TOGGLE_KEYS: readonly WallRibbonToggleCommandKey[] = [

@@ -78,6 +78,9 @@ export interface WallParams {
   readonly polylineVertices?: readonly Point3D[];
   /** Defined when `kind === 'curved'`. mm. Quadratic Bezier control point. */
   readonly curveControl?: Point3D;
+  /** Material key for wall-level hatch (rc/masonry/aerated-concrete/gypsum).
+   *  Ignored when `dna` is present — DNA layers govern per-layer materials. */
+  readonly material?: string;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────
