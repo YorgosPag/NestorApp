@@ -22,6 +22,7 @@ import type { useLevels } from '../systems/levels';
 import type { SlabEntity } from '../bim/types/slab-types';
 import { isSlabEntity } from '../types/entities';
 import { useSlabPersistence } from '../hooks/data/useSlabPersistence';
+import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -53,6 +54,11 @@ export function SlabPersistenceHost({
     if (!e || !isSlabEntity(e)) return null;
     return e;
   }, [primarySelectedId, currentScene]);
+
+  React.useEffect(() => {
+    const slabs = currentScene?.entities.filter(isSlabEntity) ?? [];
+    useBim3DEntitiesStore.getState().setSlabs(slabs);
+  }, [currentScene]);
 
   useSlabPersistence({
     companyId: user?.companyId ?? null,

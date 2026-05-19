@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
+import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 
 // ── BimViewport3D ─────────────────────────────────────────────────────────────
 // ADR-040 micro-leaf compliant: subscribes to ViewMode3DStore (not high-freq),
@@ -16,7 +17,7 @@ export function BimViewport3D() {
   const managerRef = useRef<ThreeJsSceneManager | null>(null);
   const errorRef = useRef<string | null>(null);
 
-  // Low-frequency store subscription (changes only on user toggle — not 60fps)
+  // Low-frequency store subscriptions (user-triggered entity changes — not 60fps)
   const is3D = useSyncExternalStore(
     useViewMode3DStore.subscribe,
     () => selectIs3D(useViewMode3DStore.getState()),
@@ -51,6 +52,20 @@ export function BimViewport3D() {
       errorRef.current = null;
     };
   }, [is3D]);
+
+  // Subscribe to Bim3DEntitiesStore once; sync scene whenever entity arrays change.
+  // Direct store subscription avoids ref-equality issues of useSyncExternalStore
+  // returning a new object every call (which would re-run this effect every render).
+  useEffect(() => {
+    return useBim3DEntitiesStore.subscribe((s) => {
+      managerRef.current?.syncBimEntities({
+        walls: s.walls,
+        columns: s.columns,
+        beams: s.beams,
+        slabs: s.slabs,
+      });
+    });
+  }, []);
 
   if (!is3D) return null;
 

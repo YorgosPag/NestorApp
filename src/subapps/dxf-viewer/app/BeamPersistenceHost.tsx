@@ -22,6 +22,7 @@ import type { useLevels } from '../systems/levels';
 import type { BeamEntity } from '../bim/types/beam-types';
 import { isBeamEntity } from '../types/entities';
 import { useBeamPersistence } from '../hooks/data/useBeamPersistence';
+import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -53,6 +54,11 @@ export function BeamPersistenceHost({
     if (!e || !isBeamEntity(e)) return null;
     return e;
   }, [primarySelectedId, currentScene]);
+
+  React.useEffect(() => {
+    const beams = currentScene?.entities.filter(isBeamEntity) ?? [];
+    useBim3DEntitiesStore.getState().setBeams(beams);
+  }, [currentScene]);
 
   useBeamPersistence({
     companyId: user?.companyId ?? null,

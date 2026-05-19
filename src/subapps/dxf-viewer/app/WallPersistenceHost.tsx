@@ -29,6 +29,7 @@ import { isWallEntity } from '../types/entities';
 import { useWallPersistence } from '../hooks/data/useWallPersistence';
 import { useWallSplitPersistence } from '../hooks/data/useWallSplitPersistence';
 import { WallCascadeDeleteDialog } from '../ui/dialogs/WallCascadeDeleteDialog';
+import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -70,6 +71,11 @@ export function WallPersistenceHost({
     levelManager,
     primarySelectedWall,
   });
+
+  React.useEffect(() => {
+    const walls = currentScene?.entities.filter(isWallEntity) ?? [];
+    useBim3DEntitiesStore.getState().setWalls(walls);
+  }, [currentScene]);
 
   useWallSplitPersistence({
     companyId: user?.companyId ?? null,

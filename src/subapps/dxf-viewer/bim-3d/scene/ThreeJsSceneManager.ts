@@ -15,6 +15,8 @@ import { createViewportCamera } from '../viewport/viewport-camera';
 import { createViewCube } from '../viewport/view-cube/view-cube';
 import { createPoi } from '../viewport/viewport-poi';
 import { detectSnapCandidate } from '../viewport/view-snap-detector';
+import { BimSceneLayer } from './BimSceneLayer';
+import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
 
@@ -25,6 +27,7 @@ export class ThreeJsSceneManager {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene: THREE.Scene;
   readonly viewport: ViewportCamera;
+  readonly bimLayer: BimSceneLayer;
   private readonly viewCube: ViewCubeEngine;
   private readonly poi: ReturnType<typeof createPoi>;
 
@@ -36,6 +39,7 @@ export class ThreeJsSceneManager {
   constructor(container: HTMLElement) {
     this.renderer = this.initRenderer(container);
     this.scene = this.initScene();
+    this.bimLayer = new BimSceneLayer(this.scene);
     this.viewport = this.initViewportCamera(container);
     this.poi = createPoi();
     this.scene.add(this.poi.root);
@@ -54,9 +58,6 @@ export class ThreeJsSceneManager {
 
   private initScene(): THREE.Scene {
     const scene = new THREE.Scene();
-    const geo = new THREE.BoxGeometry(1, 1, 1);
-    const mat = new THREE.MeshBasicMaterial({ color: 0x4ade80, wireframe: true });
-    scene.add(new THREE.Mesh(geo, mat));
     scene.add(new THREE.AxesHelper(2));
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const dir = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -128,6 +129,10 @@ export class ThreeJsSceneManager {
     this.rafHandle = requestAnimationFrame(animate);
   }
 
+  syncBimEntities(entities: Bim3DEntities, floorElevationMm = 0): void {
+    if (!this.disposed) this.bimLayer.sync(entities, floorElevationMm);
+  }
+
   resize(width: number, height: number): void {
     if (this.disposed || width === 0 || height === 0) return;
     this.viewport.updateAspect(width, height);
@@ -141,6 +146,7 @@ export class ThreeJsSceneManager {
       cancelAnimationFrame(this.rafHandle);
       this.rafHandle = null;
     }
+    this.bimLayer.dispose();
     this.viewport.dispose();
     this.viewCube.dispose();
     this.poi.dispose();

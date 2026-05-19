@@ -22,6 +22,7 @@ import type { useLevels } from '../systems/levels';
 import type { ColumnEntity } from '../bim/types/column-types';
 import { isColumnEntity } from '../types/entities';
 import { useColumnPersistence } from '../hooks/data/useColumnPersistence';
+import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -53,6 +54,11 @@ export function ColumnPersistenceHost({
     if (!e || !isColumnEntity(e)) return null;
     return e;
   }, [primarySelectedId, currentScene]);
+
+  React.useEffect(() => {
+    const columns = currentScene?.entities.filter(isColumnEntity) ?? [];
+    useBim3DEntitiesStore.getState().setColumns(columns);
+  }, [currentScene]);
 
   useColumnPersistence({
     companyId: user?.companyId ?? null,
