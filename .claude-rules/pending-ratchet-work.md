@@ -136,6 +136,50 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 
 ---
 
+### 🧭 ADR-3XX (TBD) — AUTO-INFER ALIGNMENT GUIDES (priorità bassa, ~3h, discovered 2026-05-19 via SPEC-3D-004C)
+
+**Discovered**: 2026-05-19 κατά τη διερεύνηση SPEC-3D-004C (GenArc Utils/Snap/Picking). Το GenArc `resolveSnapV2.ts:61-104` έχει αυτόματη "smart guides" λογική (Revit/AutoCAD-style) που το Nestor **δεν έχει**.
+
+**Gap επιβεβαιωμένο** (3 engines grep):
+- `GuideSnapEngine.ts` → μόνο explicit guides από `GuideStore` singleton.
+- `OrthoSnapEngine.ts` → χρειάζεται explicit `referencePoint` (lastPoint draw flow).
+- `ParallelSnapEngine.ts` → reference **lines**, όχι arbitrary points.
+
+**Συμπεριφορά που λείπει**: όταν ο κέρσορας είναι ≤35cm από κάποιο wall/beam endpoint ή midpoint ή column corner/center → αυτόματη γαλάζια διακεκομμένη γραμμή στοίχισης (vertical ή horizontal), **χωρίς** χρειαζόμενο explicit guide από τον χρήστη.
+
+**Όροι Γιώργου (επιβεβαιωμένοι 2026-05-19)**:
+1. ✅ Δεν υπάρχει στο Nestor (επιβεβαιωμένο grep)
+2. ✅ Θα βοηθήσει (Revit/AutoCAD industry standard)
+3. ✅ Add-only — δεν σπάει υπάρχοντα systems (opt-in flag στα `SnapPresets`, lower priority από Endpoint, cap ≤2 inferred guides)
+4. ✅ Πλήρως SSoT-ενσωματωμένο
+
+**Architecture sketch (όταν προχωρήσει)**:
+- Νέο module `snapping/services/InferredAlignmentService.ts` (Tier 3 SSoT) που εκθέτει `getAlignmentAnchors(scene): Point2D[]`.
+- Reads BIM scene SSoT (`bim/`) — **όχι re-implementation** anchors. Anchors source: wall.start/end/midpoint + beam.start/end/midpoint + column.position + column.4 corners.
+- Νέα `private addAutoInferredAlignmentCandidates()` στον `GuideSnapEngine.ts`, opt-in μέσω `SnapPresets.setArchitecturalPreset({ inferAlignment: true })`.
+- Lower `priority` από `EndpointSnapEngine` (να μην κλέβει snap από explicit endpoints).
+- Cap ≤2 inferred guides per frame (1 vertical + 1 horizontal).
+- Tolerance 35cm (parameter στο preset).
+- Tests: 2-3 jest cases (cursor near wall endpoint → guide emitted, cursor far → no guide, multiple anchors → best two selected).
+
+**SSoT registry entry (when implemented)**:
+```json
+"inferred-alignment-service": {
+  "tier": 3,
+  "canonical": "src/subapps/dxf-viewer/snapping/services/InferredAlignmentService.ts",
+  "forbiddenPatterns": ["wall\\.start.*Math\\.abs.*cursor", "alignment.*infer.*inline"]
+}
+```
+
+**Effort**: ADR proposal ~1h + implementation ~2h + tests ~30min. **Total: ~3-3.5h.** Δεν blocks το ADR-366.
+
+- [ ] Γράψε ADR proposal (επόμενος ελεύθερος αριθμός — αν ADR-366 PROPOSED παραμένει 5-19, ίσως ADR-367 ή επόμενος διαθέσιμος).
+- [ ] Implementation `InferredAlignmentService` + `GuideSnapEngine` enhancement.
+- [ ] Tests + SSoT registry entry.
+- [ ] Boy Scout: όλα τα Architectural presets ενεργοποιούν `inferAlignment: true` by default.
+
+---
+
 ### 🧹 FULL ZERO BACKLOG (Scenario B extras — +~43h expected)
 
 - [x] **ADR-298 Phase C** — COMPLETATO. Phase C.7 DONE 2026-04-14. 11 collezioni → COVERAGE. FIRESTORE_RULES_PENDING ora VUOTA (zero entry). Coverage totale: 92 collezioni. 291 test verdi.
@@ -190,3 +234,4 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 | 2026-05-19 | ADR-183 Phase C completata. Cancellati `hooks/useDxfGripInteraction.ts` (451 righe) + `hooks/grips/useGripSystem.ts` (387 righe), entrambi `@deprecated` dal 2026-02-16 con zero function call-sites. Types migrati inline in `hooks/grips/unified-grip-types.ts` (canonical SSoT). Aggiunta nuova voce Boy Scout: `canvas-mouse-types.ts:19-89` duplicate grip types (~30min). ADR-183 changelog aggiornato. |
 | 2026-05-19 | ADR-365 Tailwind Semantic Palette Enforcement created (Proposed). Hover audit revealed 249 raw palette violations σε 86 files (από τα οποία ~21 SSoT exempt → ~65 consumer files). Plan: 9 phases (Phase 0 infrastructure + Phases 1-8 per-domain migration + Phase 8 closure). Per-session handoff απαιτείται. |
 | 2026-05-19 | ADR-365 Phase 0 DONE. Infrastructure deployed: ratchet script + SSoT registry module (Tier 2) + baseline + CHECK 3.26 in parallel orchestrator + npm scripts. Actual baseline 3,659/440 (revised from 249/65 — original audit was hover-only). Smoke 1-5 PASS. Hook latency ~0.73s staged. |
+| 2026-05-19 | Auto-Infer Alignment Guides discovered via SPEC-3D-004C (GenArc port catalog). 3-engine grep confirmed gap (GuideSnapEngine/OrthoSnapEngine/ParallelSnapEngine — κανένα δεν κάνει auto-infer από arbitrary anchors). New pending entry added (~3h ADR proposal + implementation). 4 Giorgio conditions all ✅ satisfied (independent feature, not blocking ADR-366). |
