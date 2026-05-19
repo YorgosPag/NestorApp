@@ -594,6 +594,7 @@
       "columnProperties": "Column Properties",
       "beamProperties": "Beam Properties",
       "slabOpeningProperties": "Slab Opening Properties",
+      "multiSelection": "Multi-Selection",
       "validationBadge": "Code violation",
       "dimension": "Dimension",
       "lineToolStyle": "Line Style",
@@ -652,6 +653,8 @@
       "beamActions": "Actions",
       "slabOpeningKind": "Type",
       "slabOpeningActions": "Actions",
+      "multiSelectionCommon": "Common Properties",
+      "multiSelectionFilter": "Filter",
       "placeholder": "Coming soon",
       "history": "History",
       "guides": "Guides",
@@ -697,6 +700,31 @@
       "expand": "Expand panel",
       "pin": "Pin panel",
       "unpin": "Unpin panel"
+    },
+    "contextualTabs": {
+      "multiSelection": {
+        "title": "Multi-Selection",
+        "properties": {
+          "height": "Height (mm)",
+          "thickness": "Thickness (mm)",
+          "width": "Width (mm)",
+          "depth": "Depth (mm)",
+          "elevation": "Elevation (mm)",
+          "sillHeight": "Sill Height (mm)"
+        },
+        "differentValues": "Different values",
+        "emptyCommon": "Mixed selection — no shared editable properties. Use Filter to narrow the selection.",
+        "applyHint": "Press Enter to apply",
+        "filterButtons": {
+          "wall": "Walls only",
+          "opening": "Openings only",
+          "slab": "Slabs only",
+          "slabOpening": "Slab openings only",
+          "column": "Columns only",
+          "beam": "Beams only",
+          "stair": "Stairs only"
+        }
+      }
     },
     "commands": {
       "currentLayerPicker": "Current Layer",

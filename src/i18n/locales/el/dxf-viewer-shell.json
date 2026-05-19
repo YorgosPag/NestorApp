@@ -594,6 +594,7 @@
       "columnProperties": "Ιδιότητες Κολώνας",
       "beamProperties": "Ιδιότητες Δοκαριού",
       "slabOpeningProperties": "Ιδιότητες Διάνοιξης Πλάκας",
+      "multiSelection": "Πολλαπλή Επιλογή",
       "validationBadge": "Παραβίαση κανονισμών",
       "dimension": "Διάσταση",
       "lineToolStyle": "Στυλ Γραμμής",
@@ -652,6 +653,8 @@
       "beamActions": "Ενέργειες",
       "slabOpeningKind": "Τύπος",
       "slabOpeningActions": "Ενέργειες",
+      "multiSelectionCommon": "Κοινές Ιδιότητες",
+      "multiSelectionFilter": "Φιλτράρισμα",
       "placeholder": "Σε φάση ανάπτυξης",
       "history": "Ιστορικό",
       "guides": "Οδηγοί",
@@ -697,6 +700,31 @@
       "expand": "Επέκταση πανελ",
       "pin": "Καρφίτσωμα πανελ",
       "unpin": "Αποκαρφίτσωμα πανελ"
+    },
+    "contextualTabs": {
+      "multiSelection": {
+        "title": "Πολλαπλή Επιλογή",
+        "properties": {
+          "height": "Ύψος (mm)",
+          "thickness": "Πάχος (mm)",
+          "width": "Πλάτος (mm)",
+          "depth": "Βάθος (mm)",
+          "elevation": "Υψόμετρο (mm)",
+          "sillHeight": "Ύψος Ποδιάς (mm)"
+        },
+        "differentValues": "Διαφορετικές τιμές",
+        "emptyCommon": "Μικτή επιλογή — δεν υπάρχουν κοινές επεξεργάσιμες ιδιότητες. Χρησιμοποίησε το Φιλτράρισμα για να στενέψεις την επιλογή.",
+        "applyHint": "Πάτησε Enter για εφαρμογή",
+        "filterButtons": {
+          "wall": "Μόνο Τοίχοι",
+          "opening": "Μόνο Ανοίγματα",
+          "slab": "Μόνο Πλάκες",
+          "slabOpening": "Μόνο Διανοίξεις Πλάκας",
+          "column": "Μόνο Κολώνες",
+          "beam": "Μόνο Δοκάρια",
+          "stair": "Μόνο Κλίμακες"
+        }
+      }
     },
     "commands": {
       "currentLayerPicker": "Τρέχον Επίπεδο",
