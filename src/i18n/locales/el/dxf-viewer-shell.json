@@ -599,7 +599,8 @@
       "validationBadge": "Παραβίαση κανονισμών",
       "dimension": "Διάσταση",
       "lineToolStyle": "Στυλ Γραμμής",
-      "xlineMode": "Γραμμή Κατασκευής"
+      "xlineMode": "Γραμμή Κατασκευής",
+      "analyze": "Ανάλυση"
     },
     "panels": {
       "draw": "Σχεδίαση",
@@ -676,7 +677,8 @@
       "bim": "Δομικά",
       "layers": "Επίπεδα",
       "lineToolQuickStyle": "Γρήγορο Στυλ",
-      "xlineMode": "Λειτουργία"
+      "xlineMode": "Λειτουργία",
+      "bimSchedule": "Πίνακας BIM"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -1304,11 +1306,15 @@
       "aiAssistant": "Βοηθός AI",
       "layering": "Σχεδίαση Επιπέδων",
       "fullscreen": "Πλήρης Οθόνη",
+      "bimSchedule": "Πίνακας BIM",
       "quickStyle": {
         "lineweight": "Πάχος",
         "linetype": "Τύπος Γραμμής",
         "color": "Χρώμα"
       }
+    },
+    "tooltips": {
+      "bimSchedule": "Άνοιγμα Πίνακα BIM — εξαγωγή δομικών στοιχείων"
     }
   },
   "layerPicker": {

@@ -599,7 +599,8 @@
       "validationBadge": "Code violation",
       "dimension": "Dimension",
       "lineToolStyle": "Line Style",
-      "xlineMode": "Construction Line"
+      "xlineMode": "Construction Line",
+      "analyze": "Analyze"
     },
     "panels": {
       "draw": "Draw",
@@ -676,7 +677,8 @@
       "bim": "Structural",
       "layers": "Layers",
       "lineToolQuickStyle": "Quick Style",
-      "xlineMode": "Mode"
+      "xlineMode": "Mode",
+      "bimSchedule": "BIM Schedule"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -1304,11 +1306,15 @@
       "aiAssistant": "AI Assistant",
       "layering": "Layer Drawing",
       "fullscreen": "Full Screen",
+      "bimSchedule": "BIM Schedule",
       "quickStyle": {
         "lineweight": "Lineweight",
         "linetype": "Linetype",
         "color": "Color"
       }
+    },
+    "tooltips": {
+      "bimSchedule": "Open BIM Schedule — export structural elements"
     }
   },
   "layerPicker": {

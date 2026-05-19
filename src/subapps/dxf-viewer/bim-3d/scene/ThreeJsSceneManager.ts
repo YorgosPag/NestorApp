@@ -16,7 +16,9 @@ import { createViewCube } from '../viewport/view-cube/view-cube';
 import { createPoi } from '../viewport/viewport-poi';
 import { detectSnapCandidate } from '../viewport/view-snap-detector';
 import { BimSceneLayer } from './BimSceneLayer';
+import { DxfFloorPlanOverlay } from './DxfFloorPlanOverlay';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
+import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
 
@@ -28,6 +30,7 @@ export class ThreeJsSceneManager {
   readonly scene: THREE.Scene;
   readonly viewport: ViewportCamera;
   readonly bimLayer: BimSceneLayer;
+  readonly overlay: DxfFloorPlanOverlay;
   private readonly viewCube: ViewCubeEngine;
   private readonly poi: ReturnType<typeof createPoi>;
 
@@ -40,6 +43,7 @@ export class ThreeJsSceneManager {
     this.renderer = this.initRenderer(container);
     this.scene = this.initScene();
     this.bimLayer = new BimSceneLayer(this.scene);
+    this.overlay = new DxfFloorPlanOverlay(this.scene);
     this.viewport = this.initViewportCamera(container);
     this.poi = createPoi();
     this.scene.add(this.poi.root);
@@ -133,6 +137,10 @@ export class ThreeJsSceneManager {
     if (!this.disposed) this.bimLayer.sync(entities, floorElevationMm);
   }
 
+  syncDxfOverlay(dxfScene: DxfScene | null): void {
+    if (!this.disposed) this.overlay.sync(dxfScene);
+  }
+
   resize(width: number, height: number): void {
     if (this.disposed || width === 0 || height === 0) return;
     this.viewport.updateAspect(width, height);
@@ -147,6 +155,7 @@ export class ThreeJsSceneManager {
       this.rafHandle = null;
     }
     this.bimLayer.dispose();
+    this.overlay.dispose();
     this.viewport.dispose();
     this.viewCube.dispose();
     this.poi.dispose();

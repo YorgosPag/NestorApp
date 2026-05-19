@@ -125,6 +125,7 @@ if (typeof window !== 'undefined') {
       'dxf-viewer-settings', // 🏢 Split from dxf-viewer (ADR-280)
       'dxf-viewer-wizard',  // 🏢 Split from dxf-viewer (ADR-280)
       'dxf-viewer-guides',  // 🏢 Split from dxf-viewer (ADR-280)
+      'bim3d',              // 🏢 BIM 3D Viewer toggle + viewport (ADR-366)
       'geo-canvas',
       'geo-canvas-drawing', // 🏢 Split from geo-canvas (ADR-280)
       'accounting',    // 🏢 Accounting subapp - invoices, journal, VAT, tax, assets

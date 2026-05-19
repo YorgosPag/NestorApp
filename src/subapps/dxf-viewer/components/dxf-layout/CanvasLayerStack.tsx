@@ -44,6 +44,7 @@ import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/Ca
 import { DynamicInputSubscriber } from './DynamicInputSubscriber';
 import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf';
 import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton';
+import { useDxfOverlay3DSync } from './useDxfOverlay3DSync';
 // Re-export props type for consumers
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 // Stable empty array — passed to renderOptions.snapResults to avoid creating a new array literal on every render.
@@ -164,7 +165,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       if (worldPos) {
         handleUnifiedMouseMove(worldPos, screenPos);
       }
-
       if (onMouseMove && worldPos) {
         const mockEvent = {
           clientX: screenPos.x,
@@ -174,7 +174,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
         } as React.MouseEvent;
         onMouseMove(worldPos, mockEvent);
       }
-
       // 🚀 PERF (2026-05-09): ImmediatePositionStore updated upstream.
       if (isInDrawingMode(activeTool, overlayMode) && worldPos && drawingHandlersRef.current?.onDrawingHover) {
         drawingHandlersRef.current.onDrawingHover(worldPos);
@@ -273,6 +272,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     }),
     [gripSettings],
   );
+  useDxfOverlay3DSync(dxfScene);
   const layerClassName = `absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']}`;
   const layerStyle = useMemo(
     () => canvasUI.positioning.layers.layerCanvasWithTools(activeTool, crosshairSettings.enabled),

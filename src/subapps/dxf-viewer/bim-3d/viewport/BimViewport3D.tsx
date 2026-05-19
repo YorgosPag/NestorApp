@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
+import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 
 // ── BimViewport3D ─────────────────────────────────────────────────────────────
 // ADR-040 micro-leaf compliant: subscribes to ViewMode3DStore (not high-freq),
@@ -24,7 +25,11 @@ export function BimViewport3D() {
     () => false,
   );
 
-  // Mount / unmount Three.js scene
+  // Mount / unmount Three.js scene.
+  // Initial data sync happens HERE, immediately after manager creation — the only
+  // safe moment where managerRef.current is guaranteed non-null. The [] subscription
+  // effects below run on component mount (is3D still false → manager null) so their
+  // getState() calls would be no-ops; correct sync must live in this [is3D] effect.
   useEffect(() => {
     const container = containerRef.current;
     if (!container || !is3D) return;
@@ -35,6 +40,11 @@ export function BimViewport3D() {
       errorRef.current = err instanceof Error ? err.message : String(err);
       return;
     }
+
+    // Sync current store state immediately — stores were populated before 3D mode opened.
+    const { walls, columns, beams, slabs } = useBim3DEntitiesStore.getState();
+    managerRef.current.syncBimEntities({ walls, columns, beams, slabs });
+    managerRef.current.syncDxfOverlay(useDxfOverlay3DStore.getState().dxfScene);
 
     // ResizeObserver: propagate container size changes
     const observer = new ResizeObserver((entries) => {
@@ -53,9 +63,7 @@ export function BimViewport3D() {
     };
   }, [is3D]);
 
-  // Subscribe to Bim3DEntitiesStore once; sync scene whenever entity arrays change.
-  // Direct store subscription avoids ref-equality issues of useSyncExternalStore
-  // returning a new object every call (which would re-run this effect every render).
+  // Ongoing subscriptions: fire when store data changes AFTER 3D mode is active.
   useEffect(() => {
     return useBim3DEntitiesStore.subscribe((s) => {
       managerRef.current?.syncBimEntities({
@@ -64,6 +72,12 @@ export function BimViewport3D() {
         beams: s.beams,
         slabs: s.slabs,
       });
+    });
+  }, []);
+
+  useEffect(() => {
+    return useDxfOverlay3DStore.subscribe((s) => {
+      managerRef.current?.syncDxfOverlay(s.dxfScene);
     });
   }, []);
 

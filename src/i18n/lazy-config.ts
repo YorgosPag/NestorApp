@@ -227,6 +227,7 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'dxf-viewer-settings',
     'dxf-viewer-wizard',
     'dxf-viewer-guides',
+    'bim3d',
     'textToolbar',
     'geo-canvas',
     'geo-canvas-drawing',

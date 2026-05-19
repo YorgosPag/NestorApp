@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-20 — ADR-366 Phase 2: CanvasLayerStack shell WRITES to DxfOverlay3DStore (no new subscriptions)
+
+`CanvasLayerStack.tsx` gains a `useEffect([dxfScene]) → useDxfOverlay3DStore.getState().setDxfScene(dxfScene)` — shell pushes the current DxfScene into the 3D overlay store whenever it changes. **Zero new `useSyncExternalStore` calls in the orchestrator** (CHECK 6C still green). The 3D viewport (`BimViewport3D`) is a low-freq leaf subscriber that reads from this store. Pattern: shell WRITES, leaf READS — same as the existing Bim3DEntitiesStore wiring from PersistenceHost components. No canvas drawing path affected.
+
 ### 2026-05-19 — ADR-363 Phase 4.5c.5: GripDimAnnotationMount micro-leaf (drag-time dim annotations)
 
 New `GripDimAnnotationMount` leaf added to `PreviewCanvasMounts` — mirrors `GripDragPreviewMount` pattern. Receives `{ dragPreview, levelManager, transform, getCanvas, getViewportElement }` — all already present in `PreviewCanvasMountsProps`. Hook `useGripDimAnnotation` is RAF-based: triggered by `dragPreview` changes, draws "w=350mm" style labels on PreviewCanvas, clears on drag end. No canvas cleared inside `drawFrame` (ghost hook clears first via FIFO RAF scheduling from mount order). `DxfGripDragPreview` extended with `columnGripKind?` + `beamGripKind?` + `anchorPos` always included for column/beam — populated in `grip-projections.ts:buildDxfDragPreview`. CanvasSection gains zero new subscriptions (rides existing `dragPreview` React-state cycle, same frequency as `GripDragPreviewMount`).
