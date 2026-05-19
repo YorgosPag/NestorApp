@@ -11,7 +11,6 @@
  * pixel height back out. `buildUIFont` emits `${height}px ${family}`.
  */
 
-import { describe, expect, it, vi } from 'vitest';
 import { renderDimensionText } from '../dim-text-renderer';
 import type { DimensionEntity, DimStyle } from '../../../../types/dimension';
 import type { DimGeometry } from '../../../../systems/dimensions/dim-geometry-builder';
@@ -25,10 +24,10 @@ function makeCtxSpy() {
   const calls: Array<{ font: string; text?: string }> = [];
   let fontHeld = '';
   const ctx: Partial<CanvasRenderingContext2D> = {
-    save: vi.fn(),
-    restore: vi.fn(),
-    translate: vi.fn(),
-    rotate: vi.fn(),
+    save: jest.fn(),
+    restore: jest.fn(),
+    translate: jest.fn(),
+    rotate: jest.fn(),
     set font(v: string) { fontHeld = v; },
     get font() { return fontHeld; },
     set textAlign(_v: CanvasTextAlign) {},
@@ -37,20 +36,20 @@ function makeCtxSpy() {
     get textBaseline() { return 'middle' as CanvasTextBaseline; },
     set fillStyle(_v: string | CanvasGradient | CanvasPattern) {},
     get fillStyle() { return '#fff' as string | CanvasGradient | CanvasPattern; },
-    fillText: vi.fn((text: string) => {
+    fillText: jest.fn((text: string) => {
       calls.push({ font: fontHeld, text });
     }),
-    measureText: vi.fn(() => ({ width: 50 } as TextMetrics)),
-    fillRect: vi.fn(),
-    beginPath: vi.fn(),
-    arc: vi.fn(),
-    lineTo: vi.fn(),
-    stroke: vi.fn(),
-    closePath: vi.fn(),
-    moveTo: vi.fn(),
+    measureText: jest.fn(() => ({ width: 50 } as TextMetrics)),
+    fillRect: jest.fn(),
+    beginPath: jest.fn(),
+    arc: jest.fn(),
+    lineTo: jest.fn(),
+    stroke: jest.fn(),
+    closePath: jest.fn(),
+    moveTo: jest.fn(),
     set lineWidth(_v: number) {},
     set strokeStyle(_v: string | CanvasGradient | CanvasPattern) {},
-    setLineDash: vi.fn(),
+    setLineDash: jest.fn(),
   };
   return { ctx: ctx as unknown as CanvasRenderingContext2D, calls };
 }

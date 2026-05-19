@@ -24,6 +24,11 @@ import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
 import type { Entity } from '../../types/entities';
+// ADR-362 Round 5 — scene-units awareness so paper-mm DIMSTYLE values
+// (dimtxt, dimasz, dimgap, dimexe, dimexo) convert to world units before the
+// view-scale multiplier. Without this, meters/cm scenes draw dims at the
+// world-unit size of the paper-mm number (e.g. 2.5 m text in a meters DXF).
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import {
   isDimensionEntity,
   type DimensionEntity,
@@ -65,11 +70,21 @@ import { calculateDistance } from './shared/geometry-rendering-utils';
 
 /**
  * Paper-mm → pixel scale at the current view.
- * AutoCAD DIMSCALE is unit-less; we map 1 mm-paper to 1 world-mm (project
- * convention) and multiply by view scale to land in screen pixels.
+ *
+ * AutoCAD DIMSCALE is unit-less; DIMSTYLE values (dimasz/dimtxt/dimgap/...) are
+ * paper-mm by convention. To land in screen pixels we:
+ *
+ *   1. Convert paper-mm → world units of the active scene via `mmToSceneUnits`.
+ *      For a mm-scene this is the identity (×1); for a meters scene it is
+ *      ×0.001 — i.e. 2.5 paper-mm becomes 0.0025 world-meters.
+ *   2. Multiply by the view scale (px / world-unit) to reach screen pixels.
+ *
+ * Without step 1 a 2.5 mm DIMTXT in a meters DXF would render as 2.5 m worth
+ * of pixels (huge — the "ribbon dim larger than native DXF" bug, ADR-362
+ * Round 5).
  */
-function paperMmToPx(mm: number, scale: number): number {
-  return mm * scale;
+function paperMmToPx(mm: number, scale: number, units: SceneUnits): number {
+  return mm * mmToSceneUnits(units) * scale;
 }
 
 interface ResolvedDimensionRender {
@@ -86,6 +101,12 @@ export class DimensionRenderer extends BaseEntityRenderer {
   private sceneEntities: readonly Entity[] = [];
   /** Canvas background for DIMTFILL='backgroundColor' mask (Phase K3). */
   private canvasBackground: string | undefined;
+  /**
+   * ADR-362 Round 5 — active scene unit system (defaults to `'mm'` for back-compat
+   * with legacy mm-baked DXFs + unit tests that never seed it). Updated per-frame
+   * by `setSceneUnits()` via the composite orchestrator.
+   */
+  private sceneUnits: SceneUnits = 'mm';
 
   /**
    * Inject the per-frame parent lookup (built once by `DxfRenderer.render()`
@@ -118,6 +139,15 @@ export class DimensionRenderer extends BaseEntityRenderer {
   /** Canvas background for DIMTFILL 'backgroundColor' mask (Phase K3). */
   setCanvasBackground(bg: string): void {
     this.canvasBackground = bg;
+  }
+
+  /**
+   * ADR-362 Round 5 — set the active scene unit system. Drives paper-mm →
+   * world-unit conversion in `paperMmToPx()` and downstream text height in
+   * `dim-text-renderer`. Default = `'mm'` (back-compat).
+   */
+  setSceneUnits(units: SceneUnits): void {
+    this.sceneUnits = units;
   }
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -238,7 +268,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
     const block2Name = r.style.dimblk2 || r.style.dimblk;
     const block1 = getArrowheadBlock(block1Name);
     const block2 = getArrowheadBlock(block2Name);
-    const unitPx = paperMmToPx(r.style.dimasz * r.style.dimscale, this.transform.scale);
+    const unitPx = paperMmToPx(r.style.dimasz * r.style.dimscale, this.transform.scale, this.sceneUnits);
     const colour = resolveDimColor(r.style.dimclrd, this.layerColour);
     const screenA1 = this.toScreen(r.geometry.arrowAnchor1);
     const screenA2 = this.toScreen(r.geometry.arrowAnchor2);
@@ -278,6 +308,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
       },
       layerColour: this.layerColour,
       canvasBackground: this.canvasBackground,
+      sceneUnits: this.sceneUnits,
     });
   }
 

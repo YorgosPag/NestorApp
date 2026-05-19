@@ -14,7 +14,6 @@
  *      the first imported entry in iteration order.
  */
 
-import { describe, expect, it, beforeEach } from 'vitest';
 import { registerImportedDimStyles } from '../dim-style-importer';
 import { DimStyleRegistry } from '../dim-style-registry';
 import type { ImportedSceneDimStyle, SceneModel } from '../../../types/scene-types';

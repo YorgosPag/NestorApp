@@ -39,6 +39,10 @@ import { buildUIFont } from '../../../config/text-rendering-config';
 import { UI_COLORS } from '../../../config/color-config';
 import type { ViewTransform } from '../../types/Types';
 import { CoordinateTransforms } from '../../core/CoordinateTransforms';
+// ADR-362 Round 5 — paper-mm DIMSTYLE values must be converted to scene world
+// units before view-scale, otherwise meters/cm scenes draw text at the world-unit
+// size of the paper-mm number (huge).
+import { mmToSceneUnits, type SceneUnits } from '../../../utils/scene-units';
 
 const RADIAL_DIAMETER_PREFIX = 'Ø ';
 const RADIAL_RADIUS_PREFIX = 'R ';
@@ -55,6 +59,13 @@ interface DimTextRenderParams {
   readonly layerColour: string | undefined;
   /** Canvas background color for DIMTFILL='backgroundColor' mode. Defaults to AutoCAD dark. */
   readonly canvasBackground?: string;
+  /**
+   * ADR-362 Round 5 — active scene unit system. Drives the paper-mm →
+   * world-unit conversion for `dimtxt` (and the alternate/tolerance heights
+   * derived from it) before the view-scale multiplier. Defaults to `'mm'` so
+   * tests + legacy mm-baked DXFs keep their historical behaviour.
+   */
+  readonly sceneUnits?: SceneUnits;
 }
 
 export function renderDimensionText(
@@ -66,8 +77,11 @@ export function renderDimensionText(
     params.transform,
     params.viewport,
   );
-  // DIMTXT is world-mm; screen height = DIMTXT × view scale (mirrors TextRenderer ADR-344).
-  const primaryHeight = params.style.dimtxt * params.transform.scale;
+  // DIMTXT is paper-mm by DIMSTYLE convention. Convert to scene world units
+  // first (ADR-362 Round 5), then multiply by the view scale to reach pixels.
+  // For mm-baked scenes the conversion is the identity (back-compat).
+  const unitFactor = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const primaryHeight = params.style.dimtxt * unitFactor * params.transform.scale;
   // DXF angles are CCW, canvas is CW with Y-flip → negate (matches TextRenderer note).
   const screenRotation = -params.geometry.textRotation;
   const colour = resolveDimColor(params.style.dimclrt, params.layerColour);

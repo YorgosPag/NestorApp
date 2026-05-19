@@ -18,7 +18,7 @@ import {
   type StairStructureType,
   type StairTurnDirectionLR,
   type StairWinderMethod,
-} from '../types/stair-types';
+} from '../../types/stair-types';
 import {
   STAIR_RIBBON_KEYS,
   type StairRibbonComboKey,
@@ -28,12 +28,12 @@ import {
   deriveRiseFromStepCount,
   mmFactorFromWidth,
   reconcileLinkedStair,
-} from '../stairs/stair-floor-link';
+} from '../../stairs/stair-floor-link';
 import {
   buildDefaultVariantFor,
   buildLShapeWindersVariant,
   splitTwoFlightsForWinders,
-} from '../stairs/stair-variant-defaults';
+} from '../../stairs/stair-variant-defaults';
 
 // ── Module-private constants ─────────────────────────────────────────────────
 

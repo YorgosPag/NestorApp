@@ -11,7 +11,6 @@
  * `DxfTextNode` carries the height we assert against.
  */
 
-import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useTextCreationTool } from '../useTextCreationTool';
 import type { ICommand } from '../../../core/commands';
@@ -22,7 +21,7 @@ import type { SceneUnits } from '../../../utils/scene-units';
 // Stubs
 // ──────────────────────────────────────────────────────────────────────────────
 
-vi.mock('../../../ui/text-toolbar/hooks/useDxfTextServices', () => ({
+jest.mock('../../../ui/text-toolbar/hooks/useDxfTextServices', () => ({
   useDxfTextServices: () => ({
     sceneManager: {} as never,
     auditRecorder: {} as never,
@@ -33,7 +32,7 @@ interface CapturedCommand extends ICommand {
   readonly _params: { readonly textNode: DxfTextNode };
 }
 
-vi.mock('../../../core/commands/text/CreateTextCommand', () => ({
+jest.mock('../../../core/commands/text/CreateTextCommand', () => ({
   CreateTextCommand: class {
     constructor(public readonly _params: { textNode: DxfTextNode }) {}
     execute() {}
@@ -63,7 +62,7 @@ function renderTool(units: SceneUnits, executeCommand: (cmd: ICommand) => void) 
       transformRef: { current: { scale: 1, offsetX: 0, offsetY: 0 } },
       containerRef: { current: container },
       activeTool: 'text',
-      onToolChange: vi.fn(),
+      onToolChange: jest.fn(),
       executeCommand,
       getSceneUnits: () => units,
     }),
@@ -144,8 +143,8 @@ describe('useTextCreationTool — scene-units awareness (ADR-344 Phase 13)', () 
         transformRef: { current: { scale: 1, offsetX: 0, offsetY: 0 } },
         containerRef: { current: container },
         activeTool: 'text',
-        onToolChange: vi.fn(),
-        executeCommand: vi.fn(),
+        onToolChange: jest.fn(),
+        executeCommand: jest.fn(),
       }),
     );
 

@@ -43,6 +43,19 @@ import {
   type BeamMaterialKey,
   type BeamHatchPlan,
 } from '../beams/beam-hatch-patterns';
+import {
+  computeIProfileOutline,
+  SECTION_PROFILE_W_PX,
+  SECTION_PROFILE_H_PX,
+  SECTION_WEB_W_PX,
+  SECTION_FLANGE_T_PX,
+  SECTION_OFFSET_PX,
+  SECTION_MIN_SCALE,
+  SECTION_MIN_BEAM_LEN_PX,
+  SECTION_FILL_COLOR,
+  SECTION_STROKE_COLOR,
+  SECTION_LINE_WIDTH_PX,
+} from '../beams/beam-section-profile';
 
 /** Stroke colour per kind. */
 const KIND_STROKE: Readonly<Record<BeamKind, string>> = {
@@ -116,8 +129,10 @@ export class BeamRenderer extends BaseEntityRenderer {
     // highlighted. Renderάρει dashed leader line από axis midpoint προς το
     // depth handle + label "d=Xmm". Outside save/restore ώστε να μη
     // κληρονομεί το dash pattern του outline.
+    // Phase 5.5h — steel I/H section-profile symbol (hover+selection only).
     if (phaseState.phase === 'highlighted') {
       this.drawDepthIndicator(beam);
+      this.drawSectionProfile(beam);
     }
 
     this.finalizeRender(entity, options);
@@ -243,6 +258,63 @@ export class BeamRenderer extends BaseEntityRenderer {
     // Detailed point-in-polygon test (ray casting) on outline.
     const verts = beam.geometry.outline.vertices;
     return pointInPolygon(point, verts);
+  }
+
+  /**
+   * Phase 5.5h — steel I/H cross-section profile symbol (Revit/Tekla convention).
+   *
+   * Draws a fixed-size I-profile outline at the beam midpoint, offset
+   * perpendicular to the beam axis. Symbol flanges are perpendicular to the
+   * beam direction (rotated by `screenAngle + PI/2`). Shown only for
+   * `material === 'steel'` at adequate zoom (SECTION_MIN_SCALE) and beam
+   * screen length (SECTION_MIN_BEAM_LEN_PX). No new subscriptions — pure ctx.
+   */
+  private drawSectionProfile(beam: BeamEntity): void {
+    if (resolveBeamMaterialKey(beam.params.material) !== 'steel') return;
+    if (this.transform.scale < SECTION_MIN_SCALE) return;
+
+    const sp = beam.params.startPoint;
+    const ep = beam.params.endPoint;
+
+    const startS = this.worldToScreen({ x: sp.x, y: sp.y });
+    const endS = this.worldToScreen({ x: ep.x, y: ep.y });
+    const dx = endS.x - startS.x;
+    const dy = endS.y - startS.y;
+    const len = Math.hypot(dx, dy);
+    if (len < SECTION_MIN_BEAM_LEN_PX) return;
+
+    // Perpendicular unit vector (screen space).
+    const perpX = -dy / len;
+    const perpY = dx / len;
+
+    const midS = { x: (startS.x + endS.x) / 2, y: (startS.y + endS.y) / 2 };
+    const beamHalfWidthPx = (beam.params.width / 2) * this.transform.scale;
+    const cx = midS.x + perpX * (beamHalfWidthPx + SECTION_OFFSET_PX);
+    const cy = midS.y + perpY * (beamHalfWidthPx + SECTION_OFFSET_PX);
+
+    const screenAngle = Math.atan2(dy, dx);
+    const outline = computeIProfileOutline(
+      SECTION_PROFILE_W_PX, SECTION_PROFILE_H_PX,
+      SECTION_WEB_W_PX, SECTION_FLANGE_T_PX,
+    );
+
+    this.ctx.save();
+    this.ctx.translate(cx, cy);
+    // Rotate: flanges (local ±X) become perpendicular to beam on screen.
+    this.ctx.rotate(screenAngle + Math.PI / 2);
+    this.ctx.setLineDash([]);
+    this.ctx.beginPath();
+    this.ctx.moveTo(outline[0].x, outline[0].y);
+    for (let i = 1; i < outline.length; i++) {
+      this.ctx.lineTo(outline[i].x, outline[i].y);
+    }
+    this.ctx.closePath();
+    this.ctx.fillStyle = SECTION_FILL_COLOR;
+    this.ctx.fill();
+    this.ctx.strokeStyle = SECTION_STROKE_COLOR;
+    this.ctx.lineWidth = SECTION_LINE_WIDTH_PX;
+    this.ctx.stroke();
+    this.ctx.restore();
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────
