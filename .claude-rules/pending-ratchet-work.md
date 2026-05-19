@@ -100,14 +100,13 @@ Discovered 2026-05-19 (SPEC-3D-004D §12 Q4 Full Enterprise resolution, industry
 
 ---
 
-### 🏗️ ADR-363 PHASE 7.2 — BIM Transforms (deferred 2026-05-19, priorità bassa, ~4-5h)
+### 🔧 ADR-363 PHASE 7.2 FOLLOW-UP — useBimCopyTool clipboard wiring (priorità bassa, ~1h)
 
-Phase 7 split into 7.1 (Selection Core) + 7.2 (Transform BIM) per Giorgio Q5 decision (phase-per-session). **7.1 FULLY LANDED 2026-05-19** (marquee bounds + move geometry + cascade resolver + integrations + Multi-Selection Ribbon Contextual Tab με κοινές ιδιότητες/Φίλτρο + bulk-update-builder + bridge hook + dispatcher wiring + i18n + 99 tests). 7.2 scope below.
+Phase 7.2 CORE LANDED 2026-05-19. Mirror/Rotate ribbon tools (`useMirrorTool` + `useRotationTool`) ΗΔΗ wired and now BIM-aware via extended `MirrorEntityCommand` / `RotateEntityCommand`. Copy SSoT (`bim-copy-builder.ts`) + `BimCopyCommand` έτοιμα — ο dedicated `useBimCopyTool` hook για clipboard-style copy (translate delta από user pick → BimCopyCommand) δεν υπάρχει. Ribbon "Copy" button + `CO` shortcut emit `copy-selected` action αλλά κανένα handler αυτή τη στιγμή. UX flow πρέπει να αποφασιστεί ώστε να ταιριάζει με ADR-357 grip-context-menu Copy modifier (γνωστή υπαρκτή flow για grip-based copy).
 
-- [ ] **Mirror BIM** — extend `MirrorEntityCommand` per kind: wall `start`/`end` reflection across axis; opening `handing` flip when applicable; slab/slab-opening polygon mirror; column rotation reflection; beam endpoint mirror; stair basepoint+direction mirror. Each must preserve params + recompute geometry via `compute<Kind>Geometry()`.
-- [ ] **Rotate BIM** — pivot UI (2-click: pivot point → rotation angle). Extend `RotateEntityCommand` for wall endpoints, slab polygon, column position+rotation, beam endpoints, stair basepoint+direction. Group rotation around common pivot.
-- [ ] **Copy BIM** — extend `CopyEntityCommand` for BIM. ID regeneration via `enterprise-id.service` (N.6) — never inline UUID. Independent host references rewired (opening copies point to copied wall, slab-opening copies point to copied slab). Firestore writes through per-type service.
-- [ ] Wire to ribbon Modify panel + context menu. ADR-363 §Phase 7.2 closure entry.
+- [ ] Δημιούργησε `hooks/tools/useBimCopyTool.ts` με FSM `idle → awaiting-base-point → awaiting-target-point → execute → awaiting-base-point` (AutoCAD COPY pattern, continuous mode).
+- [ ] Wire `copy-selected` action: αν selection contains BIM entities → activate tool with `BimCopyCommand`. Mixed selection (BIM + non-BIM) → split: BIM via `BimCopyCommand`, non-BIM via existing grip-flow pipeline. CompoundCommand για single undo step.
+- [ ] L-shape / T-shape column ARM handedness flip on Mirror (currently NOT flipped — uncommon variant). Defer to dedicated column-mirror iteration.
 
 ---
 
@@ -252,3 +251,4 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 | 2026-05-19 | ADR-365 Tailwind Semantic Palette Enforcement created (Proposed). Hover audit revealed 249 raw palette violations σε 86 files (από τα οποία ~21 SSoT exempt → ~65 consumer files). Plan: 9 phases (Phase 0 infrastructure + Phases 1-8 per-domain migration + Phase 8 closure). Per-session handoff απαιτείται. |
 | 2026-05-19 | ADR-365 Phase 0 DONE. Infrastructure deployed: ratchet script + SSoT registry module (Tier 2) + baseline + CHECK 3.26 in parallel orchestrator + npm scripts. Actual baseline 3,659/440 (revised from 249/65 — original audit was hover-only). Smoke 1-5 PASS. Hook latency ~0.73s staged. |
 | 2026-05-19 | Auto-Infer Alignment Guides discovered via SPEC-3D-004C (GenArc port catalog). 3-engine grep confirmed gap (GuideSnapEngine/OrthoSnapEngine/ParallelSnapEngine — κανένα δεν κάνει auto-infer από arbitrary anchors). New pending entry added (~3h ADR proposal + implementation). 4 Giorgio conditions all ✅ satisfied (independent feature, not blocking ADR-366). |
+| 2026-05-19 | **ADR-363 Phase 7.2 CORE LANDED** (Mirror/Rotate/Copy BIM). Files: `bim/transforms/bim-mirror-geometry.ts` + `bim-rotate-geometry.ts` + `bim-copy-builder.ts` (SSoTs, pure functions, 7 BIM kinds each), `core/commands/entity-commands/BimCopyCommand.ts` (ICommand wrapper), MirrorEntityCommand + RotateEntityCommand extended with BIM dispatch (private `computeMirrorUpdates` / `computeRotateUpdates`). Kind-specific enterprise ID gen via `generateWallId/...`, opening↔wall + slab-opening↔slab host rewire on copy. 59 tests across 6 suites (21 mirror-geom + 12 rotate-geom + 10 copy-builder + 5 mirror dispatch + 5 rotate dispatch + 6 BimCopyCommand) all green. Ribbon buttons + MI/RO/CO shortcuts ήδη υπήρχαν; useMirrorTool + useRotationTool ήδη wired και τώρα δουλεύουν σε BIM. Ratchet block 7.2 αντικαθίσταται από smaller follow-up (~1h): `useBimCopyTool` clipboard flow. |

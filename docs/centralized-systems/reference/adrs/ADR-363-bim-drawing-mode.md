@@ -2033,20 +2033,87 @@ bulk-edit ribbon contextual tab. Ratio of original Phase 7 ≈ 70%.
     (per-kind tabs intact after narrow) / ✅ SSoT (registry + builder + bridge) /
     ✅ Await (`executeCommand` sync) / ✅ Lifecycle owner (bridge hook).
 
-#### Phase 7.2 — Transform BIM (deferred, separate session)
+#### Phase 7.2 — Transform BIM ✅ CLOSED 2026-05-19
 
-Scope: matrix transform coverage for BIM. Each currently no-ops on the BIM cases
-of `MirrorEntityCommand` / `RotateEntityCommand` / `CopyEntityCommand`.
+Scope was matrix transform coverage for BIM. The 3 commands (`MirrorEntityCommand`,
+`RotateEntityCommand`, plus a new `BimCopyCommand` wrapping a kind-aware copy
+builder) now produce atomic `{params, geometry}` patches per BIM kind via
+pure-function SSoTs.
 
-- [ ] **Mirror BIM** — per-kind axis-aware mirror (wall `start`/`end` reflection,
-  opening `handing` flip, slab/slab-opening polygon mirror, column/beam endpoint
-  mirror, stair basepoint+direction mirror). Preserves params; recomputes geometry.
-- [ ] **Rotate BIM** — pivot UI (2-click: pivot point → rotation angle). Per-kind
-  rotation of params (wall endpoints, slab polygon, column position, beam endpoints,
-  stair basepoint+direction).
-- [ ] **Copy BIM** — ID regeneration via `enterprise-id.service` (N.6) + Firestore
-  writes through per-type service. Independent host references regenerated (new
-  opening copies must point to copied wall, not original).
+- [x] **Mirror BIM** — `bim/transforms/bim-mirror-geometry.ts` SSoT. Per-kind
+  axis-aware mirror: wall `start`/`end` reflection (+ `polylineVertices` +
+  `curveControl`), opening `handing` flip on hinged kinds (door/french-door),
+  slab + slab-opening polygon mirror, column position+rotation reflection
+  AND anchor re-snap via `(dx,dy)` reflection across the axis (axis-aligned
+  reflections exact; arbitrary axes snap to closest of 9 anchors), beam
+  endpoints + `curveControl` mirror, stair `basePoint` + `direction` mirror.
+  `MirrorEntityCommand` now dispatches BIM through the SSoT (with fallback to
+  `mirrorEntity()` for non-BIM). Caveat: L-shape / T-shape column ARM
+  handedness is NOT flipped (deferred — uncommon variant, separate iteration).
+- [x] **Rotate BIM** — `bim/transforms/bim-rotate-geometry.ts` SSoT. Per-kind
+  pivot rotation: wall endpoints + polylineVertices + curveControl, slab +
+  slab-opening outline vertices, column position rotates around pivot AND
+  `rotation` field accumulates `+angleDeg`, beam endpoints + curveControl,
+  stair `basePoint` rotates AND `direction` accumulates `+angleDeg`.
+  `RotateEntityCommand` now dispatches BIM (in both in-place and copyMode).
+  The existing `useRotationTool` 3-click pivot UI (`awaiting-base-point →
+  awaiting-reference → awaiting-angle`) already covers the AutoCAD-style
+  pivot flow with group rotation around a common pivot — no new hook needed.
+- [x] **Copy BIM** — `bim/transforms/bim-copy-builder.ts` SSoT +
+  `BimCopyCommand` wrapper. ID regeneration via `enterprise-id-convenience`
+  (kind-specific: `generateWallId`, `generateOpeningId`, …) per SOS N.6.
+  Independent host references rewired: opening clones get the cloned wall's
+  ID when the wall is ALSO in the selection (else preserve original wallId);
+  slab-opening clones get the cloned slab's ID likewise. Firestore writes
+  happen automatically via the existing per-type persistence subscriptions
+  (`useWallPersistence`, `useOpeningPersistence`, …) — the kind-specific
+  enterprise ID routes the new entity to the correct collection via
+  `setDoc()`. Three transform paths supported: `translate` / `mirror` /
+  `rotate`. Rationale for new `BimCopyCommand` (rather than extending
+  `CopyEntityCommand`): the existing `CopyEntityCommand` is grip-flow
+  specific (vertex-stretch + anchor-translate displacement) — conflating
+  with BIM clipboard copy would obscure both responsibilities.
+
+**Files created (Phase 7.2):**
+1. `bim/transforms/bim-mirror-geometry.ts` — 7-kind mirror SSoT (pure function).
+2. `bim/transforms/bim-rotate-geometry.ts` — 7-kind rotate SSoT (pure function).
+3. `bim/transforms/bim-copy-builder.ts` — kind-specific ID gen + host rewire SSoT.
+4. `core/commands/entity-commands/BimCopyCommand.ts` — ICommand wrapper.
+5. `bim/transforms/__tests__/bim-mirror-geometry.test.ts` — 21 tests (16 dispatch + 5 anchor reflection).
+6. `bim/transforms/__tests__/bim-rotate-geometry.test.ts` — 12 tests.
+7. `bim/transforms/__tests__/bim-copy-builder.test.ts` — 10 tests.
+8. `core/commands/entity-commands/__tests__/MirrorEntityCommand.bim.test.ts` — 5 tests.
+9. `core/commands/entity-commands/__tests__/RotateEntityCommand.bim.test.ts` — 5 tests.
+10. `core/commands/entity-commands/__tests__/BimCopyCommand.test.ts` — 6 tests.
+
+**Files modified:**
+- `core/commands/entity-commands/MirrorEntityCommand.ts` — added `computeMirrorUpdates()` that dispatches BIM first, falls through to `mirrorEntity()` for non-BIM. Used by `execute` and `redo` paths.
+- `core/commands/entity-commands/RotateEntityCommand.ts` — analogous `computeRotateUpdates()`.
+
+**Tests: 59 passed across 6 suites.**
+
+**Ribbon/context-menu wiring status**: ribbon "Mirror" / "Rotate" / "Copy"
+buttons + shortcuts (`MI` / `RO` / `CO`) ΗΔΗ υπάρχουν στο
+`ui/ribbon/data/home-tab-modify.ts`. `useMirrorTool` + `useRotationTool`
+hooks ΗΔΗ wired και τώρα δουλεύουν σε BIM μέσω της επέκτασης των commands.
+Ένα **dedicated `useBimCopyTool` hook** για clipboard-style BIM copy (που
+χρησιμοποιεί το `BimCopyCommand` με translate delta από user pick) δεν
+υπάρχει ακόμη — η υποδομή (SSoT + command) είναι στη θέση της και θα
+wireθεί σε επόμενη iteration όταν το UX flow αποφασιστεί (πιθανότατα
+ώστε να ταιριάζει με grip-context-menu `Copy` modifier του ADR-357 +
+ribbon `Copy` shortcut). Tracked στο pending-ratchet ως follow-up.
+
+**Google-Level N.7.2 verdict**: ✅ Proactive (pure SSoTs computed at command
+build time, not as side-effects) / ✅ No race (each command writes
+atomically via `sceneManager.updateEntity`) / ✅ Idempotent (mirror twice =
+identity for axis-symmetric anchor; rotate by 360° normalises to 0; copy
+produces deterministic clone via snapshot redo) / ✅ Belt-and-suspenders
+(BIM dispatcher returns null for non-BIM → generic path runs; kind-specific
+generators throw clearly if an unknown kind is passed) / ✅ SSoT
+(geometry + ID gen + host rewire all centralized in `bim/transforms/`) /
+✅ Sync await (no fire-and-forget — every patch returns before
+`updateEntity` runs) / ✅ Lifecycle owner (command class owns the patch
+lifecycle).
 
 ### Phase 8 — Schedule Export (1 session)
 
@@ -2339,6 +2406,7 @@ Phase 6 (BOQ Auto-Feed) θεωρείται **complete** όταν:
 
 | Ημ/νία | Αλλαγή | Author |
 |---|---|---|
+| 2026-05-19 | **Phase 7.2 CLOSED — Mirror/Rotate/Copy BIM IMPLEMENTED**. Files created: (1) `bim/transforms/bim-mirror-geometry.ts` — 7-kind axis-aware mirror SSoT (pure function): `mirrorPoint3D` z-preserving generic, `mirrorPolygon3D`, `mirrorColumnAnchor` reflects `(dx,dy)` across axis with snap to nearest of 9 discrete anchors (exact for axis-aligned reflections, snap for arbitrary axes). Per-kind: wall reflects start/end + polylineVertices + curveControl + recomputes via `computeWallGeometry`; opening flips handing on door/french-door (window/sliding/fixed = no-op); slab + slab-opening reflect outline vertices; column reflects position + `mirrorAngle(rotation, axisAngle)` + anchor snap; beam reflects startPoint+endPoint+curveControl; stair reflects basePoint + direction. (2) `bim/transforms/bim-rotate-geometry.ts` — 7-kind pivot rotation SSoT: wall endpoints + accessory points, slab + slab-opening polygon, column position rotates + `rotation` field accumulates `+angleDeg` (normalized), beam endpoints + curveControl, stair basePoint rotates + `direction` accumulates. Opening = no-op (hosted-derived from wall). (3) `bim/transforms/bim-copy-builder.ts` — kind-specific enterprise ID gen via `generateWallId`/`generateOpeningId`/etc (SOS N.6) + host rewire (opening.wallId → cloned wall ID when both in selection; slab-opening.slabId → cloned slab ID likewise; preserves original host ID when host NOT in selection) + 3 transform paths (translate/mirror/rotate). Non-BIM sources returned in `skipped`. (4) `core/commands/entity-commands/BimCopyCommand.ts` — ICommand wrapper: execute() addEntity clones + records ID list, undo() removeEntity all clones, redo() replays snapshots deterministically. NOT extending CopyEntityCommand (grip-flow specific) — rationale documented inline. Files modified: (a) `MirrorEntityCommand.ts` — new private `computeMirrorUpdates()` tries `calculateBimMirroredGeometry` first, falls through to generic `mirrorEntity()` for non-BIM. Wired in both `execute` and `redo` paths (both keepOriginals modes). (b) `RotateEntityCommand.ts` — analogous `computeRotateUpdates()` (handles `copyMode` clones too). Tests: 59 passed across 6 suites (21 mirror-geometry + 12 rotate-geometry + 10 copy-builder + 5 mirror command dispatch + 5 rotate command dispatch + 6 BimCopyCommand undo/redo). Ribbon buttons + shortcuts (MI/RO/CO) ΗΔΗ υπάρχουν στο home-tab-modify.ts; `useMirrorTool` + `useRotationTool` ΗΔΗ wired και τώρα δουλεύουν σε BIM μέσω επέκτασης commands. Dedicated `useBimCopyTool` hook (clipboard-style BIM copy χρησιμοποιώντας `BimCopyCommand` + translate delta από user pick) deferred — υποδομή έτοιμη, UX flow tied to ADR-357 grip-context-menu Copy modifier. **Google-Level N.7.2 verdict**: ✅ Proactive (pure SSoTs computed at command build time) / ✅ No race (atomic `sceneManager.updateEntity`) / ✅ Idempotent (axis-symmetric mirror twice = identity; rotate 360° normalizes; copy snapshot redo deterministic) / ✅ Belt-and-suspenders (BIM dispatcher null → generic fallback) / ✅ SSoT (geometry + ID gen + host rewire centralized) / ✅ Sync (no fire-and-forget) / ✅ Lifecycle owner (command class). Caveat: L-shape/T-shape column ARM handedness NOT flipped on mirror — uncommon variant, deferred. | Claude Opus 4.7 |
 | 2026-05-19 | **Phase 7 SPLIT into 7.1 + 7.2** per Giorgio Q5 decision (phase-per-session, Google-level scope). **Phase 7.1 partial landing**: BIM marquee bounds via new SSoT `bim/utils/bim-bounds.ts` (fixed silent drop of 7 BIM kinds from `calculateEntityBounds` → `default:null`); BIM move geometry via new SSoT `bim/utils/bim-move-geometry.ts` (fixed `calculateMovedGeometry` no-op on BIM, recomputes geometry atomically per kind); cascade resolver SSoT `bim/cascade/bim-cascade-resolver.ts` (Boy-Scout N.0.2: extracts inline `useSmartDelete` wall→opening sweep + adds slab→slab-opening cascade); `useMoveTool` + `useSmartDelete` wired to resolver. Registry module `bim-cascade-resolver` (Tier 3) added. 37 new tests (13 + 9 + 15). **Pending in 7.1**: multi-selection ribbon contextual tab (Revit/AutoCAD common-properties + Filter panel pattern per Giorgio Q3) — handoff for next session. **Phase 7.2** (deferred): Mirror/Rotate/Copy BIM coverage. | Claude Opus 4.7 |
 | 2026-05-19 | **Phase 7.1 CLOSURE — Multi-Selection Ribbon Contextual Tab IMPLEMENTED**. Files created: (1) SSoT registry `bim/types/bim-common-properties.ts` — 6 editable numeric props × 7 BIM kinds + `getCommonProperties` (Revit common-properties intersection) + `countByKind` + `isHomogeneous`. (2) Bulk command factory `bim/cascade/bim-bulk-update-builder.ts` — per-kind dispatch builds `Update{Wall,Opening,Slab,Column,Beam,Stair}ParamsCommand`, wraps σε `CompoundCommand` (single undo step, atomic rollback). Skip rules: missing entity / kind out-of-registry / patch key not in kind's allow-list. (3) Bridge hook `ui/ribbon/hooks/useMultiSelectionRibbonBridge.ts` — `mode`/`bimEntries`/`kindsCount`/`commonProperties`/`isHomogeneous`/`currentValues` (mixed-detect)/`executeBulkPatch(patch)`/`narrowToKind(kind)`. ADR-040 R1: subscribes inside ribbon leaf, never στο `CanvasSection`. (4) Widget components `ui/ribbon/components/MultiSelectionCommonPropertiesPanel.tsx` (number inputs με Enter/blur commit, Escape revert, mixed-value placeholder) + `MultiSelectionFilterPanel.tsx` (N per-kind narrow buttons + count, hidden όταν homogeneous). Widget dispatcher registration στο `RibbonPanel.tsx`. (5) Tab data `ui/ribbon/data/contextual-multi-selection-tab.ts` — 2 panels (`multi-selection-common-properties`, `multi-selection-filter`). (6) Dispatcher wiring: `app/ribbon-contextual-config.ts.useActiveContextualTrigger` extended με `selectedEntityIds` arg + priority override (2+ BIM → `MULTI_SELECTION_CONTEXTUAL_TRIGGER` υπερτερεί του per-kind tab). `DxfViewerContent` περνάει `selectedEntityIds`. (7) CSS `ribbon-tokens.css` — `dxf-ribbon-multi-{common,filter}*` classes. (8) i18n: `ribbon.tabs.multiSelection`, `ribbon.panels.multiSelection{Common,Filter}`, `ribbon.contextualTabs.multiSelection.{title, properties.*, differentValues, emptyCommon, applyHint, filterButtons.*}` σε el + en (Greek pure — no English words). **62 new tests** (23 registry + 20 builder + 19 bridge), όλα πράσινα. Google-Level N.7.2 verdict: ✅ Proactive / ✅ No race (CompoundCommand atomic) / ✅ Idempotent / ✅ Belt-and-suspenders (per-kind tabs intact post-narrow) / ✅ SSoT (registry+builder+bridge) / ✅ Sync await / ✅ Lifecycle owner (bridge hook). **Phase 7.1 CLOSED. Phase 7.2 (Mirror/Rotate/Copy BIM) remains deferred.** | Claude Opus 4.7 |
 | 2026-05-17 | **Initial draft v1.0** — Full architecture, 8 phases, BOQ integration, port plan από genarc, §9 open questions για Γιώργο. Status: PROPOSED. | Claude Opus 4.7 |
