@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟡 **PROPOSED** 2026-05-19 — Pending open questions §9 |
+| **Status** | 🟢 **APPROVED** 2026-05-19 — All §9 open questions resolved Full Enterprise. Phase 0 implementation ready. |
 | **Date** | 2026-05-19 |
 | **Category** | DXF Viewer — 3D Rendering / Photorealistic Output |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md` |
@@ -10,7 +10,7 @@
 | **Related ADRs** | ADR-040 (Preview Canvas Perf — micro-leaf, 2D SSoT), ADR-055 (Tool State SSoT), ADR-175 (BOQ), ADR-186 (Building Code), ADR-294 (SSoT Ratchet), ADR-340 (Floorplan Background), ADR-345 (Ribbon), ADR-358 (Stair Tool), ADR-362 (Dimensions), ADR-363 (BIM Drawing Mode — **primary consumer**) |
 | **Source codebase referenced** | `C:\genarc` (sibling project — port source για camera/ViewCube/snap/coordinate system) |
 | **Child SPECs** | `SPEC-3D-001` (DXF→Three.js Pipeline), `SPEC-3D-002` (BIM Elements Renderer), `SPEC-3D-003` (Materials & Lighting), `SPEC-3D-004` (GenArc Reuse Catalog — **split per-domain into sub-specs A/B/C/D/E**) |
-| **GenArc Sub-Catalogs** | **`SPEC-3D-004A`** ✅ (Viewport — 45 files catalogued 2026-05-19), **`SPEC-3D-004B`** ✅ (DXF Parser — 8 files, ZERO port, 2026-05-19), **`SPEC-3D-004C`** ✅ (Utils/Snap/Picking — 16 files, 2 PORT/1 ADAPT/13 EXCLUDE, 2026-05-19), **`SPEC-3D-004D`** ✅ (Geometry Helpers — 9 files, 0 PORT/0 ADAPT/3 EXTRACT_CONCEPT/6 EXCLUDE, 2026-05-19), `SPEC-3D-004E` (Materials/Shaders — pending) |
+| **GenArc Sub-Catalogs** | **`SPEC-3D-004A`** ✅ (Viewport — 45 files catalogued 2026-05-19), **`SPEC-3D-004B`** ✅ (DXF Parser — 8 files, ZERO port, 2026-05-19), **`SPEC-3D-004C`** ✅ (Utils/Snap/Picking — 16 files, 2 PORT/1 ADAPT/13 EXCLUDE, 2026-05-19), **`SPEC-3D-004D`** ✅ (Geometry Helpers — 9 files, 0 PORT/0 ADAPT/3 EXTRACT_CONCEPT/6 EXCLUDE, 2026-05-19), **`SPEC-3D-004E`** ✅ (Materials/Shaders — 19 files, 0 PORT/1 ADAPT/4 EXTRACT_CONCEPT/12 EXCLUDE+2 OOS, 2026-05-19). **A→E suite CLOSED — Phase 0 ready.** |
 
 ---
 
@@ -405,7 +405,7 @@ Ground bounce (HemisphereLight): sky=0x87CEEB, ground=0x8B7355, intensity=0.3
 | **SPEC-3D-004B** | DXF Parser → Three.js conversion | `engines/dxf/` (6 files) + `types/dxf*` (2 files) | ✅ **COMPLETE** 2026-05-19 — ZERO port (8 EXCLUDE) | 0h port + ~Phase 1 from scratch on Nestor `DxfEntityUnion` |
 | **SPEC-3D-004C** | Utils / Snap / Picking / Coordinate transforms | `utils/` subset (6 files: cursor/gizmo projection + coordinateTransforms + sitePicking + element/gridSnap) + `engines/snap/` (10 files) | ✅ **COMPLETE** 2026-05-19 — 2 PORT_AS_IS + 1 ADAPT + 13 EXCLUDE | ~3-4h Phase 0 + Phase 7 prep |
 | **SPEC-3D-004D** | Geometry helpers (BIM/BOM math) | `engines/bom/` (3 files) + `utils/{slabBeamSplit,beamLoopSlab,raySceneIntersection,structuralConnectivity,structuralConnectivity.helpers,buildingSelectors}` (6 files) | ✅ **COMPLETE** 2026-05-19 — 0 PORT/0 ADAPT/3 EXTRACT_CONCEPT/6 EXCLUDE | 0h port (Nestor BIM geometry SSoT superset) |
-| **SPEC-3D-004E** | Materials / Shaders (concepts only για PBR mapping) | `engines/sdf/` (12 files) + `shaders/` + `material.types` | ⏳ pending session | TBD |
+| **SPEC-3D-004E** | Materials / Shaders (concepts only για PBR mapping) | `engines/sdf/` (12 files) + `shaders/` (4 files) + `types/{material,wallDna}.types.ts` (2 files) + `constants/materialRegistry.constants.ts` (1 file) = 19 files, ~2.500 LOC | ✅ **COMPLETE** 2026-05-19 — 0 PORT_AS_IS + 1 PORT_WITH_ADAPTATION + 4 EXTRACT_CONCEPT + 12 EXCLUDE + 2 OOS | ~6h Phase 3 (unchanged) + ADR-363 Phase 6.x ~8h reused |
 
 ### 8.2 SPEC-3D-004A Summary (Viewport — completed)
 
@@ -435,6 +435,38 @@ Full details: `SPEC-3D-004A-genarc-viewport-port-catalog.md`.
 
 Full details: `SPEC-3D-004D-genarc-geometry-helpers-port-catalog.md`.
 
+### 8.5 SPEC-3D-004E Summary (Materials & Shaders — completed)
+
+Πλήρης catalog 19 αρχείων (`engines/sdf/` 12 + `shaders/` 4 + `types/material.types.ts` + `types/wallDna.types.ts` + `constants/materialRegistry.constants.ts`):
+- **0 PORT_AS_IS / 0 PORT_WITH_ADAPTATION+** εκτός: `material.types.ts` (1 file, ~67 LOC) **PORT_WITH_ADAPTATION** — strong superset structure (ShaderType extended 8→12, MaterialCategory extended 10→11, mm-units, optional cost/density, drop `GpuMaterialId`)
+- **4 EXTRACT_CONCEPT** (~860 LOC):
+  - `engines/sdf/materialUniforms.ts` (96 LOC) — Wall DNA → 3 face material IDs + flip-aware swap algorithm (lines 44-78). Re-implemented σε `bim-3d/materials/MaterialCatalog3D.ts` Phase 3 ~1.5h.
+  - `constants/materialRegistry.constants.ts` (~150 LOC) — full PBR + cost + density per-preset registry shape. Nestor `material-registry-3d.constants.ts` Phase 3.2 ~3h populated με 18 wall + 9 stair preset IDs από ΑΤΟΕ 2024 (industry σύγκλιση 5/5: Revit/ArchiCAD/Bentley/Tekla/Allplan).
+  - `shaders/materials.glsl.ts` (110 LOC) — procedural concrete/plaster/soil GLSL recipes. **Phase 5+ optional reference** (Phase 3 = flat `MeshStandardMaterial` colors per ADR-366 §7.1).
+  - `shaders/gridPlane.glsl.ts` (158 LOC) — adaptive 3-tier grid με axis colors + horizon. **Phase 0 = Three.js native `GridHelper`** (simple baseline); Phase 7 polish ~3-4h αν Γιώργος ζητήσει visual upgrade.
+- **12 EXCLUDE** (~1.500 LOC): ολόκληρο SDF uniform packing pipeline (`wall/column/beam/slab/opening/slabOpening/staircase/senazUniforms.ts` + `sdfQuad.ts` + `sdfRaymarcher.ts` ADR-366 §3.2.2 rejected) + `noise.glsl.ts` (Ashima MIT, Three.js MeshStandardMaterial δεν χρειάζεται custom GLSL Phase 3) + `wallDna.types.ts` (Nestor `bim/types/wall-dna-types.ts` strict superset: 5 default presets vs 3, mm convention, parapet/fence categories)
+- **2 OUT_OF_SCOPE**: GenArc test files (`__tests__/senazUniforms.test.ts`, `staircaseUniforms.test.ts`)
+
+**Phase 3 strategy**: `MaterialCatalog3D.resolveWallFaceMaterials(wall)` consumes Nestor `WallEntity.params.dna` + `MATERIAL_REGISTRY_3D` registry → returns `{exterior, interior, core}` `MeshStandardMaterial` triple με flip-aware swap. **Zero GenArc runtime dependency** (Three.js native API only).
+
+**ADR-363 Phase 6.x Multi-Layer DNA BOQ (~8h pending)** reused: registry density+cost+unit data unlocks per-layer kg/m²/m³ quantities + per-layer ΑΤΟΕ category override μέσω `material.category` discriminator (insulation→OIK-7.x, masonry→OIK-3.x).
+
+4 Open Questions ΟΛΑ RESOLVED Full Enterprise (Q1 registry data source 5/5 σύγκλιση ΑΤΟΕ+ASTM, Q2 ShaderType extension 4/4 σύγκλιση, Q3 optional cost 5/5 σύγκλιση, Q4 two-tier preset+registry 4/4 σύγκλιση).
+
+Full details: `SPEC-3D-004E-genarc-materials-shaders-port-catalog.md`.
+
+### 8.6 Post-suite consolidation (A→E CLOSED)
+
+Με την ολοκλήρωση του SPEC-3D-004E, **ολόκληρη η σειρά A→E είναι κλειστή**. Συνολικά 97 αρχεία catalogued (45+8+16+9+19) από ~484 GenArc src/ — ~20% του GenArc relevant για ADR-366 (υπόλοιπο σε structural/ai/nok/dxf-import = out of scope).
+
+**Final dependencies (αμετάβλητα από §8.3)**: `three ^0.170.0` + `three-gpu-pathtracer ^0.0.18` + `three-mesh-bvh ^0.7.0` — όλα MIT. SOS N.5 ✅.
+
+**Συνολική εκτίμηση implementation (αναθεωρημένη)**: ~64-70h (αρχική §4.5: 58h). Revision drivers: Phase 4 viewport 6h→8-10h (SPEC-3D-004A), Phase 7 optional adaptive grid +3-4h (SPEC-3D-004E §3.4), όλα τα υπόλοιπα unchanged.
+
+**Pending ratchet από A→E suite**: μόνο **ADR-363 Phase 6.x Multi-Layer DNA BOQ ~8h** (από SPEC-3D-004D Q4, confirmed από SPEC-3D-004E §6.2). Όλα τα υπόλοιπα είναι in-scope ADR-366 phases.
+
+**Phase 0 implementation start**: ✅ **READY** — όλα catalogs locked, dependencies identified, zero blocking questions.
+
 ### 8.3 Dependencies pulled in
 
 ```jsonc
@@ -453,57 +485,186 @@ GenArc **ADR-009** defines Y-up convention explicitly. This ADR **inherits** tha
 
 ---
 
-## 9. Open Questions για Γιώργο
+## 9. Open Questions για Γιώργο — ✅ ALL RESOLVED 2026-05-19
 
-> Αυτές οι ερωτήσεις **block** implementation. Σε κάθε question: επιλέγεις A, B, ή C (ή δίνεις άλλο). Μία ερώτηση τη φορά.
+> Όλες οι 4 ερωτήσεις resolved Full Enterprise. ADR-366 status: PROPOSED → APPROVED. Phase 0 implementation ready.
 
-### Q1 — Mode Toggle UI: Πού μπαίνει το 3D button;
+**Συνοπτικά**:
+- **Q1**: ViewCube top-right widget = unified toggle (AutoCAD style). 4/4 σύγκλιση Autodesk family.
+- **Q2**: Single-floor default + "Show All" toggle. 4/4 σύγκλιση Revit/ArchiCAD/Vectorworks/Allplan.
+- **Q3**: Tri-mode (rasterized real-time + auto-on-idle preview + explicit Render final). 7/7 σύγκλιση industry.
+- **Q4**: HDRI ως Phase 7 polish (όχι Phase 5 prerequisite). Build core first, polish last. 6/6 σύγκλιση industry για HDRI ως final-quality choice.
 
-Οι επιλογές:
+### Q1 — Mode Toggle UI: Πού μπαίνει το 3D button; ✅ RESOLVED 2026-05-19
 
-**A) Ribbon tab — νέο tab "3D View"** στο ribbon bar (δίπλα στο HOME). Ribbon opens automatically on toggle. Pattern: Revit View tab.
+**ΑΠΟΦΑΣΗ Γιώργου**: **AutoCAD-style ViewCube + ring widget πάνω-δεξιά γωνία, στα δύο modes ταυτόχρονα.** Ο ίδιος ο κύβος είναι το toggle — δεν υπάρχει ξεχωριστό κουμπί "πήγαινε σε 3D".
 
-**B) Floating toolbar button** — ένα icon button πάνω δεξιά στο canvas (πχ "3D" ή "⬡"). Δεν ανοίγει ribbon. Minimal UI.
+**Συμπεριφορά**:
+- **2D mode (κάτοψη)**: ViewCube top-right δείχνει πάντα "Top" face highlighted (συμβατό με κάτοψη)
+- **Click σε face/edge/corner του κύβου** (Front/Right/Iso/etc.) → αυτόματη μετάβαση σε 3D με αντίστοιχη κανονική όψη + animated camera transition
+- **Click "Top" face από 3D** → επιστροφή σε 2D mode (κάτοψη)
+- **Compass ring**: orientation control + north angle indicator, διαθέσιμο και στα δύο modes (συμβατό με DXF north από topographic data αν υπάρχει)
+- **Home button**: επαναφορά σε default view (2D=fit-to-extents, 3D=isometric front)
 
-**C) Status bar toggle** — κάτω δεξιά, δίπλα σε zoom/coordinates. Pattern: AutoCAD model/paper space toggle.
+**Architectural implication για ADR-366 §4.3 Mode Toggle Architecture**:
+- Ο `ViewMode3DStore` δεν έχει ξεχωριστό toggle button — input source είναι το `ViewCube` click event
+- `ViewCube` widget πρέπει να υπάρχει σε **Phase 0** σαν skeleton (basic top-down indicator + click-to-3D dispatcher), όχι αποκλειστικά σε Phase 4
+- Phase 4 εμπλουτίζει: tumble integration + full canonical snap (12 directions) + compass north + animated transitions
+- 2D mode rendering θα προσθέσει mount point για `ViewCubeOverlay` σε `CanvasSection` top-right (z-index πάνω από DxfCanvas)
 
-*Προτεινόμενο: **B** (floating button). Λιγότερο ribbon clutter. 3D controls μπαίνουν contextual ribbon tab όταν είναι active.*
+**Industry alignment**: AutoCAD ViewCube (since 2009), Revit ViewCube, Inventor ViewCube, Fusion 360 ViewCube — ΟΛΑ unified widget στα δύο modes. 4/4 σύγκλιση Autodesk family standard.
 
----
+**Effort impact**:
+- Phase 0: +~2h για ViewCube skeleton (αύξηση από 4h → ~6h)
+- Phase 4: -~1h γιατί ένα μέρος ήδη υπάρχει από Phase 0
+- **Net**: +1h συνολικά. Ασήμαντο revision.
 
-### Q2 — Multi-floor: Βλέπουμε ΟΛΑ τα floors ταυτόχρονα, ή μόνο τον active floor;
-
-**A) Όλα τα floors simultaneously** — full building 3D view (όπως Revit 3D View). Διαφορετικά materials/opacity ανά floor. Πολύ impressive.
-
-**B) Active floor only** — μόνο ο floor που έχει ανοιχτεί στο 2D DxfCanvas. Simpler, consistent με 2D workflow.
-
-**C) Toggle** — default active floor, button για "Show All Floors".
-
-*Προτεινόμενο: **C** (toggle). Start simple, add power when needed.*
-
----
-
-### Q3 — Path Tracer trigger: Πότε ενεργοποιείται;
-
-**A) Explicit button "Render"** — user πατάει "Render" → path tracer starts, rasterizer pauses. Pattern: Blender Rendered view.
-
-**B) Αυτόματα όταν ο χρήστης σταματήσει να αλληλεπιδρά** (2 δευτερόλεπτα idle) → path tracer kicks in. Επαναφέρεται σε rasterizer με πρώτη mouse move. Pattern: KeyShot live rendering.
-
-**C) Ξεχωριστό "Render" dialog** (DPI, samples, HDRI selection) — export-only use case.
-
-*Προτεινόμενο: **B** (auto on idle). Seamless UX. Export = επιπλέον save button.*
+**Cross-reference**: SPEC-3D-004A §2.2 (PORT_AS_IS — `viewCubeMesh.ts` + `viewCubeOverlay.ts` + `viewCubeHighlight.ts` 657 LOC) + §3.1 PORT_WITH_ADAPTATION `viewCube.ts` (north-callback swap). Το catalog ήδη καλύπτει τις ανάγκες.
 
 ---
 
-### Q4 — HDRI environment map: Τι default χρησιμοποιούμε;
+### Q2 — Multi-floor: Βλέπουμε ΟΛΑ τα floors ταυτόχρονα, ή μόνο τον active floor; ✅ RESOLVED 2026-05-19
 
-**A) Solid color sky** (0x87CEEB blue) — zero assets, fast load. Phase 3 MVP.
+**ΑΠΟΦΑΣΗ Γιώργου**: **Default = μόνο ο τρέχων όροφος + κουμπί "Δείξε όλο το κτίριο"** (επιλογή C).
 
-**B) Procedural sky shader** (Rayleigh scattering, sun position) — no external files, physics-based. Three.js `Sky` addon (included, no extra deps).
+**Συμπεριφορά**:
+- Όταν ανοίγει η 3D προβολή: εμφανίζεται ΜΟΝΟ ο όροφος που είναι ενεργός στην 2D κάτοψη (current floor από ADR-326 building/floor schema)
+- **Toggle button "Δείξε όλο το κτίριο"** (ribbon ή floating overlay): εμφανίζει όλους τους ορόφους stacked με σωστά Y-elevation offsets
+- **Click σε όροφο σε all-floors view**: επιστροφή σε single-floor mode με αυτόν τον όροφο ως active
+- **Persisted state**: η επιλογή multi-floor visibility αποθηκεύεται στο `ViewMode3DStore` (όχι Firestore — session-only)
 
-**C) HDRI file** (equirectangular EXR/HDR) — gorgeous results. Requires hosting the HDRI (500KB-4MB). Option: Polyhaven free HDRI.
+**Architectural implication για ADR-366 §6.4 Multi-floor stacking**:
+- `BimToThreeConverter` Phase 2 παράγει meshes ΟΛΩΝ των ορόφων (entities από Firestore subscribe είναι πάντα cross-floor)
+- Visibility control μέσω `mesh.visible = true/false` ανά floor group (zero re-creation cost)
+- `ViewMode3DStore.visibleFloors: Set<floorId>` — default = {currentFloorId}, "Show All" → all floor IDs
+- Single-floor mode κρύβει επίσης τα slabs του ΕΠΟΜΕΝΟΥ ορόφου (αλλιώς θα ήταν "ταβάνι" σου)
 
-*Προτεινόμενο: **B** (procedural sky) για Phase 3, **C** (HDRI) ως Phase 5 enhancement.*
+**Industry alignment**: Revit "View Range" + "Crop Region by Level", ArchiCAD "Stories visible on plan", Vectorworks "Story visibility filter", Allplan "Plan layer set" — όλα default single-level + toggle to full building. **4/4 σύγκλιση**.
+
+**Effort impact**: Zero αλλαγή στο ~10h Phase 2 estimate. Visibility toggle = ~1h subset της Phase 2 work, ήδη ενσωματωμένο.
+
+---
+
+### Q3 — Path Tracer trigger: Πότε ενεργοποιείται; ✅ RESOLVED 2026-05-19
+
+**ΑΠΟΦΑΣΗ Γιώργου**: **Tri-mode (B + C συνδυαστικά)** — όχι single trigger, αλλά 3 ταυτόχρονα modes σαν τους μεγάλους industry players.
+
+**Industry analysis (7/7 σύγκλιση)**:
+
+| Πρόγραμμα | Γρήγορο (πάντα) | Photoreal preview | Final export |
+|---|---|---|---|
+| Revit | Realistic mode | Ray Trace in viewport | Render dialog |
+| ArchiCAD | OpenGL view | — | PhotoRender (CineRender) |
+| Twinmotion | Real-time | Path Tracer toggle | Image/Video export |
+| D5 Render | Real-time | Quality boost on idle | Final render button |
+| Enscape | Real-time | Ray Tracing mode | Image/Video export |
+| V-Ray (Rhino/SketchUp) | V-Ray Vision | IPR (interactive) | Final Render button |
+| Blender | EEVEE viewport | Cycles viewport (idle) | F12 final render |
+
+**Συμπέρασμα: 7/7 industry players χρησιμοποιούν tri-mode.** Full Enterprise convergence.
+
+**Nestor tri-mode architecture**:
+
+| Mode | Trigger | Renderer | Quality | Phase |
+|---|---|---|---|---|
+| **1. Rasterized real-time** | Default όταν είσαι σε 3D — πάντα ενεργό όταν κουνάς την οθόνη | Three.js `WebGLRenderer` (Phase 4 fallback) ή `WebGPURenderer` (Phase 5+) | Γρήγορο, flat materials + DirectionalLight shadows | **Phase 3** |
+| **2. Photoreal preview (auto-on-idle)** | Όταν ο χρήστης σταματήσει να αλληλεπιδρά ≥2 δευτερόλεπτα. Παύει με την πρώτη mouse move/wheel. | `three-gpu-pathtracer` progressive, χαμηλό sample budget (~50-200 samples) | Μεσαία — GI + soft shadows + reflections | **Phase 5** |
+| **3. Final export (explicit dialog)** | Κουμπί "Render" στο ribbon ή menu → modal dialog | Same `three-gpu-pathtracer` με υψηλό sample budget (~1000-4000 samples) + denoising | Πλήρης φωτορεαλιστική φωτογραφία | **Phase 6** |
+
+**Mode transitions (SSoT)**:
+- `ViewMode3DStore.renderMode: '3d-raster' | '3d-pathtrace-preview' | '3d-pathtrace-final'`
+- Raster ↔ Preview: αυτόματο μέσω `IdleDetector` στο `ThreeJsSceneManager` (debounce 2s)
+- Preview → Final: explicit user action (όχι auto)
+- Final → cancel: παύει path tracer, επιστρέφει σε Preview
+- Camera movement event → instant cancel preview + restart rasterizer
+
+**Architectural implication για ADR-366 §4.3**:
+- `ViewMode3D` enum επεκτείνεται: ήδη ορίζει `'2d' | '3d' | '3d-path-trace'`. **Αναθεωρείται σε `'2d' | '3d-raster' | '3d-preview' | '3d-final'`**
+- `IdleDetector` νέο utility (`bim-3d/scene/IdleDetector.ts`) με `onIdle(callback, delay)` + `onActive(callback)` — pure event-driven, zero polling
+- "Render" dialog component (`bim-3d/components/RenderFinalDialog.tsx`) Phase 6
+- Reuse single `PathTracerRenderer` instance — αλλάζει μόνο sample budget + denoising flag ανάμεσα σε Preview/Final modes (SSoT: ένα renderer, δύο profiles)
+
+**Google-level checklist (GOL)**:
+- ✅ Proactive: idle detector triggers preview without user request
+- ✅ Race-free: instant cancel on motion + atomic mode swap
+- ✅ Idempotent: re-trigger on same idle state = continue current samples
+- ✅ Belt-and-suspenders: WebGL fallback αν WebGPU unavailable (preview = rasterized HQ instead)
+- ✅ SSoT: single `PathTracerRenderer` instance + single `IdleDetector`
+- ✅ Lifecycle: `ThreeJsSceneManager` owns lifecycle of all 3 renderers, dispose on 2D switch
+
+**Effort impact**:
+- Phase 3 (~6h): unchanged
+- Phase 5 (~12h): +~2h για IdleDetector + auto-trigger logic. Updated estimate: **~14h**.
+- Phase 6 (~4h): unchanged (dialog + sample budget config)
+- Net: +2h. Updated total **~66-72h**.
+
+---
+
+### Q4 — HDRI environment map: Τι default χρησιμοποιούμε; ✅ RESOLVED 2026-05-19
+
+**ΑΠΟΦΑΣΗ Γιώργου**: **HDRI (Polyhaven CC0 default + library picker), αλλά ως Phase 7 polish — όχι Phase 5 prerequisite.**
+
+**Strategy**: Build core first, polish last. Path tracer (Phase 5) δουλεύει μια χαρά με solid color sky + DirectionalLight sun — HDRI = "πέρασμα από καλό σε εντυπωσιακό", όχι prerequisite.
+
+**Industry analysis (6/6 σύγκλιση για HDRI ως final-quality choice)**:
+
+| Πρόγραμμα | Default περιβάλλον για photoreal |
+|---|---|
+| Lumion | HDRI sky library (20+ presets) |
+| Twinmotion | HDRI με time-of-day slider |
+| Enscape | HDRI με dynamic skybox |
+| D5 Render | HDRI library + Polyhaven import |
+| V-Ray | HDRI dome light standard |
+| Blender Cycles | HDRI environment texture default (αλλά λειτουργεί και χωρίς) |
+
+**Per-phase sky/lighting strategy**:
+
+| Phase | Sky | Reason |
+|---|---|---|
+| 0 | — | No 3D scene yet |
+| 1 (DXF→3D) | Solid γαλάζιο (`0x87CEEB`) | Minimal — entities visible without lighting |
+| 2 (BIM→3D) | Solid γαλάζιο | Same |
+| 3 (Materials & Lighting) | Solid γαλάζιο + `DirectionalLight` ήλιος + `AmbientLight` + `HemisphereLight` | Per ADR-366 §7.2 — δεν αλλάζει |
+| 4 (Camera + ViewCube) | Solid γαλάζιο | — |
+| 5 (Path tracer) | **Solid γαλάζιο + DirectionalLight ως sun** | MVP — path tracer producing photoreal output without HDRI bookkeeping. Validates core path tracing pipeline. |
+| 6 (Export) | Solid γαλάζιο | Same — validates export at known quality |
+| **7 (Polish)** | ⭐ **HDRI library + Polyhaven CC0 picker + time-of-day slider** | Final visual upgrade after core proven |
+
+**Polyhaven CC0 default selection** (Phase 7 bundled):
+- **Default**: `kloofendal_48d_partly_cloudy_2k.hdr` (~1.5MB) — εκπληκτική γενική επιλογή για architectural viz, σύννεφα ισορροπημένα
+- **Library picker (Phase 7)**: 5-8 presets — sunny noon / overcast / golden hour / blue hour / studio indoor / urban / coast / mountain
+- **User upload**: Phase 7+ allow custom HDRI upload (drag-drop equirectangular .hdr/.exr file)
+
+**License (SOS N.5)**: Polyhaven = CC0 (Public Domain) → fully MIT-compatible. ✅
+
+**Architectural implication για ADR-366 §4.5 Phase plan**:
+
+| Φάση | Original estimate | Revised estimate | Reason |
+|---|---:|---:|---|
+| Phase 5 (Path tracer) | ~12h → ~14h (Q3 IdleDetector) | **~14h unchanged** | HDRI removed από Phase 5 |
+| Phase 7 (Polish) | ~8h | **~12-14h** | + HDRI library + picker (~3-4h) + Polyhaven bundle + time-of-day slider |
+
+**Net effort change**: Phase 7 +4-6h. Total estimate revised:
+- After Q3 (Phase 5 +2h): ~66-72h
+- After Q4 (Phase 7 +4-6h): **~70-78h**
+
+**Phase 5 fallback during path-trace preview/final**:
+- Background = solid color (matches rasterized Phase 3 default)
+- Environment reflection = synthetic `THREE.PMREMGenerator.fromScene()` από scene's own DirectionalLight + ground plane — Three.js native, no asset
+- Glass/metal materials still reflect "something" — όχι όσο εντυπωσιακό σαν HDRI, αλλά λειτουργικό
+
+**Validation strategy (Google-level)**:
+1. Phase 5 path tracer με solid sky → ξέρεις τι output περιμένεις
+2. Phase 6 export → φέρνεις στον πελάτη ή σε εσένα → ξέρεις αν το core δουλεύει
+3. Phase 7 HDRI → polish μόνο αν προηγούμενα steps validated
+
+**Google-level checklist (GOL)**:
+- ✅ Proactive: Solid color baseline pre-emptively chosen
+- ✅ Race-free: HDRI loading async + cache, fallback to solid color while loading
+- ✅ Idempotent: HDRI re-load = no-op (cached)
+- ✅ Belt-and-suspenders: HDRI fails → fallback solid color + DirectionalLight (no broken render)
+- ✅ SSoT: `EnvironmentStore` Phase 7 owns HDRI URL + time-of-day state (single source)
+- ✅ MVP risk reduction: Core path tracer proven before HDRI complexity added
 
 ---
 
@@ -549,3 +710,5 @@ GenArc **ADR-009** defines Y-up convention explicitly. This ADR **inherits** tha
 | 2026-05-19 | **SPEC-3D-004B (DXF Parser) COMPLETED** — 8 files catalogued (engines/dxf/ + types/dxf*.types.ts). **Result: 0 PORT / 0 ADAPT / 0 EXTRACT / 8 EXCLUDE.** Reasoning: GenArc DXF domain is topographic plot boundary detection (ΕΓΣΑ'87 / ΝΟΚ / GPT-4o pipeline) — orthogonal to ADR-366 BIM rendering. Nestor already has mature 15-entity custom DXF parser με Web Worker + full HEADER/DIMSTYLE/LAYER table support. **Implication**: SPEC-3D-001 (DXF→Three.js Pipeline) χτίζεται from scratch ως νέος `DxfToThreeConverter` πάνω στο Nestor `DxfEntityUnion`, χωρίς αναφορά σε GenArc DXF code. Confirmed clean domain isolation (zero coupling με άλλα GenArc engines). | Claude Opus 4.7 |
 | 2026-05-19 | **SPEC-3D-004D (Geometry Helpers) COMPLETED** — 9 files catalogued (engines/bom/ 3 files + utils/{slabBeamSplit,beamLoopSlab,raySceneIntersection,structuralConnectivity,structuralConnectivity.helpers,buildingSelectors} 6 files, total ~2.344 LOC). **Result: 0 PORT_AS_IS / 0 PORT_WITH_ADAPTATION / 3 EXTRACT_CONCEPT / 6 EXCLUDE.** Κεντρικό εύρημα: Nestor's `bim/geometry/*` (ADR-363 Phases 1-7.1) είναι architectural superset του GenArc — fundamental coordinate basis mismatch (3D Y-up metres vs 2D XY-plan mm + external elevation via floor metadata) + Nestor's mature cached `entity.geometry.{...}` SSoT μέσω idempotent functions (`computeWallGeometry`, `OpeningGeometry`, `SlabGeometry` με slab-opening subtraction, `ColumnGeometry`, `BeamGeometry`) + `wall-trims.ts` strict superset του GenArc `computeWallTrims` (parametric intersection + corner/T-junction/cross classification + MAX_BEVEL_FRACTION anti-inversion guard) + `BimToBoqBridge` Firestore-grade superset του GenArc `bomCalculator` (reactive feed + ΑΤΟΕ mapping + detach guard). Q1/Q2/Q3 RESOLVED με Full Enterprise (5/5, 4/4, 4/4 industry σύγκλιση): slab-beam decomposition + auto-slab from beam loop + analytical CPU raycaster ΟΛΑ out of ADR-366 scope. Q4 RESOLVED (Full Enterprise 6/6 σύγκλιση — Revit + ArchiCAD + Bentley + Tekla + Vectorworks + Allplan ΟΛΟΙ παράγουν per-layer/per-component BOQ quantities): ADR-363 Phase 6.x extension (~8h) προστίθεται για per-layer BOQ entries με `boq_bim_${entityId}_layer_${layerId}` deterministic IDs + per-layer detach guard + backward-compatible migration. Pending entry για `.claude-rules/pending-ratchet-work.md`. **Implication για Phase 2 (BIM → Three.js)**: `BimToThreeConverter` χτίζεται πάνω σε Nestor cached geometry + ADR-366 §4.2 `dxfPlanToWorld` bridge — zero GenArc dependency. SPEC-3D-004A §3.1 EXTRACT_CONCEPT alternative path (αντί navProxy) confirmed feasible χωρίς wallGeometry/slabBeamSplit dependencies. SPEC-3D-004C §10 cross-domain flags (raySceneIntersection, buildingSelectors, distSqXZ) όλα resolved. | Claude Opus 4.7 |
 | 2026-05-19 | **SPEC-3D-004C (Utils/Snap/Picking) COMPLETED** — 16 files catalogued (10 `engines/snap/*` + 6 `utils/{coordinateTransforms,cursorProjection,gizmoProjection,sitePicking,elementSnap,gridSnap}`). **Result: 2 PORT_AS_IS + 1 PORT_WITH_ADAPTATION + 0 EXTRACT + 13 EXCLUDE.** Top ports: `coordinateTransforms.ts` (Three.js NDC math, ⭐ critical — Nestor's `CoordinateTransforms` είναι 2D-only) + `gizmoProjection.ts` (constrained drag math για Phase 7) + `cursorProjection.ts` (adapt for raycaster→world). EXCLUDE rationale: Nestor's 17-engine snap system είναι **strict superset** του GenArc 7-strategy pipeline + `sitePicking` 100% ΝΟΚ-specific (consistent με SPEC-3D-004A §5.5 EXCLUDE plotOverlay). Phase 0 effort: ~3-4h (coordinate primitives + cursor→world + tests). 4 open questions (alignment guide infer in Nestor's GuideSnapEngine, cursorProjection port timing Phase 0/1/2, screenToWorld naming collision 2D vs 3D, snap zero-port confirmation). Cross-domain edges flagged for SPEC-3D-004D: `raySceneIntersection`, `buildingSelectors`, `distSqXZ`. | Claude Opus 4.7 |
+| 2026-05-19 | **§9 ALL OPEN QUESTIONS RESOLVED — Status PROPOSED → APPROVED.** Q1 ViewCube top-right unified toggle (AutoCAD style, 4/4 Autodesk σύγκλιση) — αρχιτεκτονική implication: ViewCube skeleton μπαίνει Phase 0 (+~2h), Phase 4 enrichment (-~1h), net +1h. Q2 Single-floor default + "Show All" toggle (4/4 Revit/ArchiCAD/Vectorworks/Allplan σύγκλιση) — `ViewMode3DStore.visibleFloors: Set<floorId>` + `mesh.visible` visibility control, zero re-creation cost. Q3 Tri-mode rendering: rasterized real-time + auto-on-idle photoreal preview + explicit "Render" final dialog (7/7 industry σύγκλιση — Revit/ArchiCAD/Twinmotion/D5/Enscape/V-Ray/Blender) — `IdleDetector` νέο utility, Phase 5 +2h. Q4 HDRI ως Phase 7 polish (όχι Phase 5 prereq) — build core first, polish last; Polyhaven CC0 default + library picker; Phase 7 +4-6h. **Total estimate revised**: ~70-78h (από 58h αρχική, +12-20h από A→E catalog refinements + Q3/Q4 architectural decisions). **Phase 0 implementation: ✅ READY** — zero blocking decisions remain. | Claude Opus 4.7 |
+| 2026-05-19 | **SPEC-3D-004E (Materials & Shaders) COMPLETED** — 19 files catalogued (12 `engines/sdf/*` + 4 `shaders/*` + `types/material.types.ts` + `types/wallDna.types.ts` + `constants/materialRegistry.constants.ts`, total ~2.500 LOC). **Result: 0 PORT_AS_IS / 1 PORT_WITH_ADAPTATION (`material.types.ts`) / 4 EXTRACT_CONCEPT (`materialUniforms.ts` + `materialRegistry.constants.ts` + `materials.glsl.ts` Phase 5+ optional + `gridPlane.glsl.ts` Phase 7 optional) / 12 EXCLUDE (ολόκληρο SDF pipeline — §3.2.2 rejected — + `noise.glsl.ts` + `wallDna.types.ts` Nestor superset) / 2 OUT_OF_SCOPE (test files).** Κεντρικό εύρημα: `material.types.ts` schema είναι strong superset (ShaderType 8→12 με insulation/composite/membrane/terrazzo, MaterialCategory 10→11 με cladding, optional cost/density, mm units, drop GpuMaterialId) — direct enabler για **ADR-363 Phase 6.x Multi-Layer DNA BOQ (~8h pending)** που χρειάζεται density (kg/m³) + cost (€/unit) + ΑΤΟΕ-aware unit (m²/m³/kg) per material. `materialUniforms.ts` Wall DNA → 3-face dispatch algorithm (exterior/interior/core, flip-aware swap, lines 44-78) re-implemented Three.js context σε `MaterialCatalog3D.resolveWallFaceMaterials(wall)` ~1.5h Phase 3.3. Nestor material surface gap analysis (§8): 9 gaps identified, **all covered by Phase 3 (~6h unchanged) + ADR-363 Phase 6.x (~8h reused)**, zero new pending work. Q1/Q2/Q3/Q4 ΟΛΑ RESOLVED Full Enterprise (5/5 ΑΤΟΕ+ASTM data, 4/4 ShaderType extension, 5/5 optional cost, 4/4 two-tier preset+registry). **GenArc A→E suite CLOSED** (97 files catalogued / ~484 GenArc src/, ~20% relevant για ADR-366). **Total implementation estimate revised 58h → 64-70h** (Phase 4 viewport +2-4h SPEC-3D-004A, Phase 7 optional adaptive grid +3-4h SPEC-3D-004E §3.4). **Phase 0 implementation start: ✅ READY** — zero blocking questions remain. | Claude Opus 4.7 |
