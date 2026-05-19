@@ -30,7 +30,6 @@ import { getLayer } from '../../stores/LayerStore';
 import { dimensionCreateStore } from '../../stores/DimensionCreateStore';
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
 import { buildPreviewDimensionEntity } from './dimension-create-entity-builder';
-import { requiredClickCount } from './dimension-create-state';
 import {
   useDimensionCreate,
   type DimensionCreateAPI,
@@ -169,29 +168,28 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
 
   const handlePoint = useCallback(
     (world: Point2D, hoveredEntity?: DetectableEntity) => {
-      const state = dimensionCreateStore.get();
-      const clickIndex = state.clicks.length;
-      const isDimLineRefClick =
-        (state.currentType === 'linear' || state.currentType === 'aligned') &&
-        clickIndex === requiredClickCount(state.currentType) - 1;
+      // ADR-362 hotfix (2026-05-19 round 2): use the click `world` directly,
+      // not `state.cursorWorld`. The earlier hotfix substituted cursorWorld
+      // for the dimLineRef click to dodge snap-mismatch between hover and
+      // click time — that's now handled upstream by `isDimLineRefPhase()`
+      // gating snap in `useDrawingHandlers` + `drawing-hover-handler`. The
+      // substitution turned out to be HARMFUL: the reducer overwrites
+      // `cursorWorld` with `action.world` on every click
+      // (dimension-create-state.ts:301), so immediately after click#2 and
+      // before any mousemove fires, `state.cursorWorld === click2_world`.
+      // If click#3 lands without a mousemove first, commit position
+      // collapses onto click#2 → dim line jumps onto the feature segment.
+      // Enter-based commits keep using cursorWorld in `useDimensionCreate`
+      // because there's no click event to source `world` from.
+      dimCreate.onClick(world, hoveredEntity);
 
-      // ADR-362 hotfix: dimLineRef click (last click of linear/aligned) uses cursorWorld
-      // (= last hover = preview position) so commit == preview. Without this, snap at
-      // click time can disagree with snap at hover time (tolerance boundary + DIO
-      // mousemove interception) causing the dim line to jump to a wrong Y position.
-      // Enter-based commits already use cursorWorld (useDimensionCreate.ts:189-195).
-      const commitWorld =
-        isDimLineRefClick && state.cursorWorld !== null ? state.cursorWorld : world;
-
-      dimCreate.onClick(commitWorld, hoveredEntity);
-
-      // ADR-362 hotfix (2026-05-19): skip preview re-push when this click
-      // flipped the store to `commit-ready`. The commit runs in a microtask
-      // (`useDimensionCreate` queueMicrotask), so a `pushPreview` here paints
-      // ONE frame of green rubber-band that lingers next to the committed
-      // dim until the microtask clears it — visible as a "double dim" flash.
-      // Synchronous clear here removes the gap; the renderer paints only the
-      // committed entity on the next frame.
+      // Skip preview re-push when this click flipped the store to
+      // `commit-ready`. The commit runs in a microtask (queueMicrotask in
+      // `useDimensionCreate`); a `pushPreview` here paints ONE frame of
+      // green rubber-band that lingers next to the committed dim until the
+      // microtask clears it — visible as a "double dim" flash. NOTE: this
+      // sync clear is reinforced by the `commit-ready` guard inside
+      // `buildPreviewDimensionEntity` (kills the RAF re-paint window).
       const postClick = dimensionCreateStore.get();
       if (postClick.status === 'commit-ready') {
         previewRef.current?.current?.clear();

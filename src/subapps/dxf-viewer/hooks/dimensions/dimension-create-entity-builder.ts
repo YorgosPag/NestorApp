@@ -50,6 +50,15 @@ export function buildPreviewDimensionEntity(
 ): DimensionEntity | null {
   if (!state.currentType || !state.styleId) return null;
   if (state.clicks.length === 0 && !state.cursorWorld) return null;
+  // ADR-362 hotfix (2026-05-19): kill the green-flash window. After the final
+  // click flips status to `commit-ready`, a microtask runs `runCommit` to
+  // materialise the committed entity. Between that flip and the microtask,
+  // any RAF tick (`dim-preview-persist` callback in `useDimToolRouting`) would
+  // rebuild the preview from the now-3 stored clicks and paint a green
+  // rubber-band on top of where the committed dim is about to appear. Returning
+  // null here closes that window — the preview canvas stays cleared until the
+  // commit microtask + next `start()` cycle restart the collection.
+  if (state.status === 'commit-ready') return null;
   return buildFromState(state, {
     id: PREVIEW_ID_SENTINEL,
     layerId: PREVIEW_LAYER_ID_SENTINEL,
