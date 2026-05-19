@@ -47,6 +47,16 @@ import {
   type ColumnMaterialKey,
   type HatchPlan,
 } from '../columns/column-hatch-patterns';
+import {
+  computeLProfileOutline,
+  computeTProfileOutline,
+  COL_SECTION_OFFSET_PX,
+  COL_SECTION_MIN_SCALE,
+  COL_SECTION_MIN_FOOTPRINT_PX,
+  COL_SECTION_FILL_COLOR,
+  COL_SECTION_STROKE_COLOR,
+  COL_SECTION_LINE_WIDTH_PX,
+} from '../columns/column-section-profile';
 
 /** Stroke colour per kind. */
 const KIND_STROKE: Readonly<Record<ColumnKind, string>> = {
@@ -102,9 +112,10 @@ export class ColumnRenderer extends BaseEntityRenderer {
     this.ctx.stroke();
     this.ctx.restore();
 
-    // Phase 4.5c.3 — variant dimension labels (L/T when highlighted).
+    // Phase 4.5c.3 + 4.5c.6 — variant labels + section-profile symbol (L/T when highlighted).
     if (phaseState.phase === 'highlighted') {
       this.drawVariantDimensionLabels(column);
+      this.drawSectionProfile(column);
     }
 
     this.finalizeRender(entity, options);
@@ -229,6 +240,58 @@ export class ColumnRenderer extends BaseEntityRenderer {
     this.ctx.restore();
 
     this.ctx.fillText(text, mx + nx * OFFSET_PX, my + ny * OFFSET_PX);
+  }
+
+  /**
+   * Phase 4.5c.6 — L/T section-profile symbol (hover + selection only).
+   *
+   * Draws a fixed-size section symbol (∟ for L-shape, ⊤ for T-shape) to the
+   * right of the column bbox, vertically centred on the column. Symbol shape
+   * follows `flipY` so it matches the mirrored orientation set by Phase 7.2.
+   * Steel material only (non-steel L/T columns show dimension labels from Phase
+   * 4.5c.3 — section symbol would add visual noise without structural meaning).
+   * ADR-040 compliant: ZERO new store subscriptions, pure ctx.
+   */
+  private drawSectionProfile(column: ColumnEntity): void {
+    if (column.kind !== 'L-shape' && column.kind !== 'T-shape') return;
+    if (resolveMaterialKey(column.params.material) !== 'steel') return;
+    if (this.transform.scale < COL_SECTION_MIN_SCALE) return;
+
+    const bb = column.geometry.bbox;
+    const minS = this.worldToScreen({ x: bb.min.x, y: bb.min.y });
+    const maxS = this.worldToScreen({ x: bb.max.x, y: bb.max.y });
+    const footprintSpan = Math.max(Math.abs(maxS.x - minS.x), Math.abs(maxS.y - minS.y));
+    if (footprintSpan < COL_SECTION_MIN_FOOTPRINT_PX) return;
+
+    // Symbol centre: to the right of bbox, vertically centred in screen space.
+    const rightX = Math.max(minS.x, maxS.x);
+    const centerY = (minS.y + maxS.y) / 2;
+    const cx = rightX + COL_SECTION_OFFSET_PX;
+    const cy = centerY;
+
+    const flipY = column.kind === 'L-shape'
+      ? (column.params.lshape?.flipY ?? false)
+      : (column.params.tshape?.flipY ?? false);
+
+    const outline = column.kind === 'L-shape'
+      ? computeLProfileOutline(undefined, undefined, undefined, flipY)
+      : computeTProfileOutline(undefined, undefined, undefined, undefined, flipY);
+
+    this.ctx.save();
+    this.ctx.translate(cx, cy);
+    this.ctx.setLineDash([]);
+    this.ctx.beginPath();
+    this.ctx.moveTo(outline[0].x, outline[0].y);
+    for (let i = 1; i < outline.length; i++) {
+      this.ctx.lineTo(outline[i].x, outline[i].y);
+    }
+    this.ctx.closePath();
+    this.ctx.fillStyle = COL_SECTION_FILL_COLOR;
+    this.ctx.fill();
+    this.ctx.strokeStyle = COL_SECTION_STROKE_COLOR;
+    this.ctx.lineWidth = COL_SECTION_LINE_WIDTH_PX;
+    this.ctx.stroke();
+    this.ctx.restore();
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
