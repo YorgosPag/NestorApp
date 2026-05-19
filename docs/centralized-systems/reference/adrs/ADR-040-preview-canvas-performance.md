@@ -1908,3 +1908,7 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-19: BIM selection visual feedback — DxfRenderer passes `selected` flag downstream
 
 `renderEntityUnified` adds `selected: isSelected` to the `RenderOptions` it forwards to entity-specific renderers, so `PhaseManager.determinePhase` correctly resolves `'highlighted'` instead of `'hover'` when an entity is BOTH hovered and selected. No new subscriptions — `isSelected` already came from the existing selectionInfo argument, only the field forwarding was missing. Pure render-time data passthrough. Cardinal rules maintained (orchestrator already wraps renderer; no high-freq store added; bitmap cache key untouched).
+
+## 2026-05-19: ADR-362 Round 4.1 cleanup — DIM-DIAG R3 diagnostic logs removed από DxfRenderer
+
+`DxfRenderer.renderScene` αφαιρεί το temporary `[DIM-DIAG R3] frame dimCount=...` `console.warn` (frame-start dimension entity census) που χρησιμοποιήθηκε για το tracing του DPR ≠ 1 viewport bug (Round 4 / Round 4.1). Bug λύθηκε στα commits `25c4dcc9` (DimensionRenderer toScreen) + `d04e8233` (center-mark + EntityRendererComposite hit-test + SSoT module). Pure deletion — zero new subscriptions, zero behavioural change, bitmap cache key untouched. Cardinal rules maintained.

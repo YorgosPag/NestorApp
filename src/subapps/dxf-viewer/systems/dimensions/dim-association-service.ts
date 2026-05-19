@@ -153,15 +153,6 @@ export function applyAssociationUpdates(
     return { updated: dim, orphanCount };
   }
 
-  // [DIM-DIAG R3] TEMPORARY — log every observer-driven defPoint mutation.
-  // eslint-disable-next-line no-console
-  console.warn('[DIM-DIAG R3] applyAssociationUpdates mutated', {
-    dimId: dim.id,
-    before: dim.defPoints.map((p) => ({ x: p.x.toFixed(2), y: p.y.toFixed(2) })),
-    after: (newDefPoints as Point2D[]).map((p) => ({ x: p.x.toFixed(2), y: p.y.toFixed(2) })),
-    associations: dim.associations,
-  });
-
   return {
     updated: { ...dim, defPoints: newDefPoints as readonly Point2D[] },
     orphanCount,

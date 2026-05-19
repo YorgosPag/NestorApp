@@ -124,46 +124,6 @@ export class DimensionRenderer extends BaseEntityRenderer {
     const resolved = this.resolveFromEntity(entity);
     if (!resolved) return;
 
-    // [DIM-DIAG R3] TEMPORARY — log defPoints + canvas + transform + screen coords.
-    {
-      const g = resolved.geometry as {
-        kind: string;
-        dimLine?: { start: { x: number; y: number }; end: { x: number; y: number } };
-        textAnchor?: { x: number; y: number };
-      };
-      const cvw = this.ctx.canvas.width;
-      const cvh = this.ctx.canvas.height;
-      const tr = this.transform;
-      const ent = resolved.entity;
-      const rot = 'rotation' in ent ? (ent as { rotation: number }).rotation : 'n/a';
-      const defPointsStr = ent.defPoints.map((p) => `(${p.x.toFixed(2)},${p.y.toFixed(2)})`).join(' | ');
-      const dl = g.dimLine;
-      const dlStr = dl
-        ? `(${dl.start.x.toFixed(2)},${dl.start.y.toFixed(2)} → ${dl.end.x.toFixed(2)},${dl.end.y.toFixed(2)})`
-        : 'n/a';
-      // Screen-space projection of dimLine + textAnchor.
-      let dlScreenStr = 'n/a';
-      let txtScreenStr = 'n/a';
-      if (dl) {
-        const a = this.toScreen(dl.start);
-        const b = this.toScreen(dl.end);
-        dlScreenStr = `(${a.x.toFixed(1)},${a.y.toFixed(1)} → ${b.x.toFixed(1)},${b.y.toFixed(1)})`;
-      }
-      if (g.textAnchor) {
-        const t = this.toScreen(g.textAnchor);
-        txtScreenStr = `world=(${g.textAnchor.x.toFixed(2)},${g.textAnchor.y.toFixed(2)}) screen=(${t.x.toFixed(1)},${t.y.toFixed(1)})`;
-      }
-      // eslint-disable-next-line no-console
-      console.warn(
-        `[DIM-DIAG R3] render id=${ent.id} type=${ent.dimensionType} ` +
-          `defPoints=[${defPointsStr}] rotation=${rot} ` +
-          `dimLineWorld=${dlStr} dimLineScreen=${dlScreenStr} ` +
-          `textAnchor=${txtScreenStr} ` +
-          `canvas=(${cvw}x${cvh}) transform=(scale=${tr.scale.toFixed(3)},offsetX=${tr.offsetX.toFixed(2)},offsetY=${tr.offsetY.toFixed(2)}) ` +
-          `dimscale=${resolved.style.dimscale} dimtxt=${resolved.style.dimtxt} dimtad=${resolved.style.dimtad ?? 'n/a'}`,
-      );
-    }
-
     const breaks = this.sceneEntities.length > 0
       ? computeAutoBreaks(resolved.geometry, this.sceneEntities, resolved.style)
       : undefined;

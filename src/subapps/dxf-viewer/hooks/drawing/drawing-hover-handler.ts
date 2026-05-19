@@ -74,14 +74,6 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     // the dim-line-offset hover so preview position equals committed position.
     const skipSnap = isDimLineRefPhase();
     const snapped = p ? (skipSnap ? p : applySnap(p)) : null;
-    // [DIM-DIAG R3] hover trace — log only on dimLineRef phase to avoid noise.
-    if (p && skipSnap) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        `[DIM-DIAG R3] hover dimLineRefPhase=true raw=(${p.x.toFixed(2)},${p.y.toFixed(2)}) ` +
-          `snapped=(${snapped ? `${snapped.x.toFixed(2)},${snapped.y.toFixed(2)}` : 'null'})`,
-      );
-    }
     // ADR-362 hotfix: pass hovered entity to smart dim detector so it can resolve
     // correct dim type (line→aligned, circle→diameter, arc→radius, etc.)
     // Skip entity resolution on dimLineRef phase — no entity to hit anyway.

@@ -93,17 +93,6 @@ export const dimensionCreateStore = {
   },
 
   click(action: Omit<Extract<DimensionCreateAction, { kind: 'click' }>, 'kind'>): void {
-    // [DIM-DIAG R3] TEMPORARY — verify every click that lands in the store with stack trace.
-    // eslint-disable-next-line no-console
-    console.warn(
-      `[DIM-DIAG R3] store.click world=(${action.world.x.toFixed(2)},${action.world.y.toFixed(2)}) ` +
-        `clicksBefore=${current.clicks.length} cursorWorldBefore=${
-          current.cursorWorld
-            ? `(${current.cursorWorld.x.toFixed(2)},${current.cursorWorld.y.toFixed(2)})`
-            : 'null'
-        }`,
-      new Error().stack?.split('\n').slice(1, 5).join(' | '),
-    );
     applyAction({ kind: 'click', ...action });
   },
 
