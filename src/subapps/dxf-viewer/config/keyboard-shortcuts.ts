@@ -152,6 +152,8 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
   },
   // ADR-363 Phase 7B: wall variant chords — activate wall tool + set kind.
   // Dispatched via MultiCharKeySequence + EventBus 'bim:set-wall-kind'.
+  // ADR-363 Phase A: wall category chords — activate wall tool + set category.
+  // Dispatched via MultiCharKeySequence + EventBus 'bim:set-wall-category'.
   wallStraight: {
     key: 'W1',
     modifier: 'none',
@@ -173,6 +175,46 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     modifier: 'none',
     descriptionKey: 'shortcuts.tools.wallPolyline',
     action: 'tool:wall:polyline',
+    category: 'tool',
+    toolType: 'wall',
+  },
+  wallExterior: {
+    key: 'WE',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.wallExterior',
+    action: 'wall:category:exterior',
+    category: 'tool',
+    toolType: 'wall',
+  },
+  wallInterior: {
+    key: 'WI',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.wallInterior',
+    action: 'wall:category:interior',
+    category: 'tool',
+    toolType: 'wall',
+  },
+  wallParapet: {
+    key: 'WP',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.wallParapet',
+    action: 'wall:category:parapet',
+    category: 'tool',
+    toolType: 'wall',
+  },
+  wallFence: {
+    key: 'WF',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.wallFence',
+    action: 'wall:category:fence',
+    category: 'tool',
+    toolType: 'wall',
+  },
+  wallPartition: {
+    key: 'WT',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.wallPartition',
+    action: 'wall:category:partition',
     category: 'tool',
     toolType: 'wall',
   },

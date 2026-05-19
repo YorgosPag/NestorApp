@@ -3,7 +3,7 @@
 import React from 'react';
 import { matchesShortcut, DXF_GUIDE_CHORD_MAP, GUIDE_CHORD_TIMEOUT_MS } from '../config/keyboard-shortcuts';
 import type { ToolType } from '../ui/toolbar/types';
-import type { WallKind } from '../bim/types/wall-types';
+import type { WallKind, WallCategory } from '../bim/types/wall-types';
 import {
   MultiCharKeySequence,
   type ChordDefinition,
@@ -26,6 +26,12 @@ const BIM_CHORDS: readonly ChordDefinition[] = [
   { firstKey: 'W', secondKey: '1', action: 'tool:wall:straight' }, // W+1 → wall straight
   { firstKey: 'W', secondKey: '2', action: 'tool:wall:curved' },   // W+2 → wall curved
   { firstKey: 'W', secondKey: '3', action: 'tool:wall:polyline' }, // W+3 → wall polyline
+  // ADR-363 Phase A — wall category chords: W+letter activates wall tool + sets category
+  { firstKey: 'W', secondKey: 'E', action: 'wall:category:exterior' },  // W+E → exterior
+  { firstKey: 'W', secondKey: 'I', action: 'wall:category:interior' },  // W+I → interior
+  { firstKey: 'W', secondKey: 'P', action: 'wall:category:parapet' },   // W+P → parapet
+  { firstKey: 'W', secondKey: 'F', action: 'wall:category:fence' },     // W+F → fence
+  { firstKey: 'W', secondKey: 'T', action: 'wall:category:partition' }, // W+T → partition
 ];
 
 const BIM_FALLBACKS: readonly FallbackDefinition[] = [
@@ -131,6 +137,11 @@ export function useDxfToolbarShortcuts(
             const wallKind = action.slice('tool:wall:'.length) as WallKind;
             handleToolChange('wall');
             EventBus.emit('bim:set-wall-kind', { kind: wallKind });
+          // ADR-363 Phase A: wall category chords emit EventBus category change + activate tool.
+          } else if (action.startsWith('wall:category:')) {
+            const category = action.slice('wall:category:'.length) as WallCategory;
+            handleToolChange('wall');
+            EventBus.emit('bim:set-wall-category', { category });
           } else if (action.startsWith('tool:')) {
             handleToolChange(action.slice(5) as ToolType);
           }

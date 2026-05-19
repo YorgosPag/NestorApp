@@ -8,7 +8,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { AnySceneEntity, SceneModel } from '../../types/scene';
 import type { GridGuide, GridGroup } from '../../ai-assistant/grid-types';
 import type { OpeningKind } from '../../bim/types/opening-types';
-import type { WallEntity, WallKind } from '../../bim/types/wall-types';
+import type { WallEntity, WallKind, WallCategory } from '../../bim/types/wall-types';
 import type { OpeningUpdate } from '../../bim/walls/wall-split';
 
 // Event type definitions - centralized and type-safe
@@ -209,8 +209,10 @@ export interface DrawingEventMap {
     openingUpdates: readonly OpeningUpdate[];
   };
   // ADR-363 Phase 7B — BIM variant kind shortcuts (keyboard D / Wn)
+  // ADR-363 Phase A — BIM wall category chords (We/Wi/Wp/Wf/Wt)
   'bim:set-opening-kind': { kind: OpeningKind };
   'bim:set-wall-kind': { kind: WallKind };
+  'bim:set-wall-category': { category: WallCategory };
 
   // Crop-window: marquee drawn by user → clip scene to that world-space rectangle
   'crop:marquee-rect': { xMin: number; yMin: number; xMax: number; yMax: number };

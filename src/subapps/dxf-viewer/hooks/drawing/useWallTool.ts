@@ -32,7 +32,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../../bim/types/bim-base';
-import type { WallEntity, WallKind } from '../../bim/types/wall-types';
+import type { WallEntity, WallKind, WallCategory } from '../../bim/types/wall-types';
 import type { DynamicSubmitDetail } from '../../systems/dynamic-input/utils/events';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 import {
@@ -164,6 +164,17 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   // ADR-363 Phase 7B — keyboard W+n chord: set wall kind + (re-)activate the tool.
   // setKind is stable (useCallback []) so this listener registers exactly once.
   useEffect(() => EventBus.on('bim:set-wall-kind', ({ kind }) => setKind(kind)), [setKind]);
+
+  const setCategory = useCallback((category: WallCategory) => {
+    setState((prev) => ({
+      ...prev,
+      phase: prev.phase === 'idle' ? 'awaitingStart' : prev.phase,
+      overrides: { ...prev.overrides, category },
+    }));
+  }, []);
+
+  // ADR-363 Phase A — keyboard W+letter chord: set wall category, activates tool if idle.
+  useEffect(() => EventBus.on('bim:set-wall-category', ({ category }) => setCategory(category)), [setCategory]);
 
   const deactivate = useCallback(() => {
     setState(INITIAL_STATE);
