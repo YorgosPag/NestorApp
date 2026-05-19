@@ -39,10 +39,10 @@ _(Deferred from Phase 4.5d — ribbon buttons exist, pickers disabled/comingSoon
 
 ---
 
-### Phase 5.5i+ extras — Beam visual polish (~1-2h)
-- [ ] H-beam variant (broader flanges `flangeT/h`=0.33) — requires `params.sectionType` field extension in `BeamParams`
-- [ ] Distinct i18n tooltip for section symbol ("IPE 300"/"HEA 200") — requires `params.profileDesignation` field
-- [ ] Scale-adaptive symbol size (low priority enhancement — fixed 20×26px is readable)
+### Phase 5.5j — ✅ DONE (2026-05-20)
+- [x] H-beam variant (`sectionType='H'`, `SECTION_H_FLANGE_T_PX=9`, `computeHProfileOutline()`)
+- [x] `profileDesignation` canvas label (screen-space, horizontal, 14 ribbon presets)
+- [ ] Scale-adaptive symbol size (low priority enhancement)
 - [ ] Anchor highlight pulse animation (decorative, lowest priority)
 
 ---

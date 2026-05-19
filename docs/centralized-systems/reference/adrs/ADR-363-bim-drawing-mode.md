@@ -1579,6 +1579,7 @@ Closes the Phase 4.5c.2 follow-up item για ribbon surface αξιοποίησ�
 - [x] **Phase 5.5h IMPLEMENTED** (2026-05-19): steel I/H section-profile symbol overlay (hover + selection, `bim/beams/beam-section-profile.ts` pure SSoT + `BeamRenderer.drawSectionProfile()`). Details § Phase 5.5h below.
 - [x] **Phase 5.5i IMPLEMENTED** (2026-05-20): column center-axis snap (⊕ wireframe symbol, "Επί άξονα κολώνας" i18n label, priority -1 supersedes generic ENDPOINT). Details § Phase 5.5i below.
 - [x] **Phase 5.5i+ IMPLEMENTED** (2026-05-20): beam-supports-slab analytical link — BOQ volume deduction. Details § Phase 5.5i+ below.
+- [x] **Phase 5.5j IMPLEMENTED** (2026-05-20): H-beam variant (`BeamSectionType='H'`, `SECTION_H_FLANGE_T_PX=9`) + `profileDesignation` canvas label + ribbon sectionType/profileDesignation comboboxes. Details § Phase 5.5j below.
 - [x] Hotkey `BM` (Beam 2-char chord) — **implemented Phase 7A** (2026-05-18) via `MultiCharKeySequence`. `B` has no fallback (no existing single-B shortcut), `B+M` → beam.
 
 ### Phase 5.5a — Beam Grips + UpdateBeamParamsCommand *(✅ IMPLEMENTED 2026-05-18)*
@@ -1963,6 +1964,34 @@ Closes the `beam-supports-slab analytical link` deferred item from Phase 5.5a–
 - `bim/geometry/__tests__/slab-geometry-beam-deduction.test.ts` — 17 tests: S-H clip (4), intersection area (4), `computeSlabGeometry` with beam deductions (9). All pass.
 
 ✅ Google-level: YES — pure geometry function (no side effects, idempotent), AABB fast rejection guards hot path, S-H exact for convex beam outline, clamp `min(beamDepth, slabThickness)` respects structural reality, EventBus decoupling (beam persistence doesn't import slab hooks), backward-compat (no beamFootprints arg → identical behaviour), 17/17 tests pass, ADR-040 unaffected (zero new React subscriptions).
+
+---
+
+### Phase 5.5j — H-Beam Variant + Profile Designation Label *(✅ IMPLEMENTED 2026-05-20)*
+
+Closes the two open items from the Phase 5.5h deferred list: H-beam visual variant (HEA/HEB series) and per-beam profile designation canvas label ("IPE 300", "HEA 200").
+
+**Design choices:**
+- **`BeamSectionType = 'I' | 'H'`** — new type in `beam-types.ts`. Optional field `sectionType?: BeamSectionType` on `BeamParams` (default `'I'` at render time — backward-compatible, existing beams keep I-symbol).
+- **`profileDesignation?: string`** — free-text field on `BeamParams`. Empty string treated as `undefined` (bridge clears it: `value || undefined`).
+- **`SECTION_H_FLANGE_T_PX = 9`** — `flangeT/h` = 9/26 ≈ 0.346, within the 0.30–0.40 range of HEA/HEB series (vs 0.15 for IPE). Visually distinct from I-symbol.
+- **`computeHProfileOutline()`** — delegates to `computeIProfileOutline` with `ft = SECTION_H_FLANGE_T_PX`. Single-source: shape logic not duplicated.
+- **Label position** — drawn in screen space (post-symbol, outside `ctx.rotate`). Offset: `SECTION_PROFILE_W_PX/2 + 8 = 18px` from symbol centre in perpendicular direction, i.e. 8px beyond symbol outer flange edge. `bold 8px sans-serif`, `textAlign: 'center'`, `textBaseline: 'middle'`. Stays horizontal regardless of beam angle.
+- **Ribbon** — new row in `beam-material` panel: sectionType combobox (I/H, 80px) + profileDesignation combobox with 14 preset IPE/HEA/HEB designations (110px, free-entry supported).
+- **i18n** — `beamEditor.sectionType.{section.title, I, H}` + `beamEditor.profileDesignation.section.title` in el+en.
+
+**Files modified (7):**
+- `bim/types/beam-types.ts` — `BeamSectionType` type + `sectionType?` + `profileDesignation?` on `BeamParams`.
+- `bim/beams/beam-section-profile.ts` — `SECTION_H_FLANGE_T_PX = 9` + `computeHProfileOutline()`.
+- `bim/renderers/BeamRenderer.ts` — `drawSectionProfile()` branches `sectionType ?? 'I'`; label draw when `profileDesignation` set.
+- `ui/ribbon/hooks/bridge/beam-command-keys.ts` — `sectionType` + `profileDesignation` keys added to `BEAM_RIBBON_KEYS.stringParams` + type union + string key set.
+- `ui/ribbon/data/contextual-beam-tab.ts` — new row in `beam-material` panel: sectionType combobox + profileDesignation combobox (14 presets).
+- `ui/ribbon/hooks/useRibbonBeamBridge.ts` — import `BeamSectionType`; new STRING_KEY_TO_FIELD entries; `sectionType`/`profileDesignation` patch branches in `onComboboxChange`.
+- `src/i18n/locales/el/dxf-viewer-shell.json` + `en/dxf-viewer-shell.json` — new keys.
+
+**Files created (0):** Zero new files — pure extension of existing SSoT modules.
+
+✅ Google-level: YES — backward-compat (`sectionType ?? 'I'` default), idempotent (same params → same symbol), SSoT (`computeHProfileOutline` delegates to I-variant, no geometry duplication), ADR-040 compliant (zero new React subscriptions, no PreviewCanvas changes), ribbon mutation routes through `UpdateBeamParamsCommand` (undoable), `profileDesignation || undefined` prevents empty-string persistence.
 
 ---
 
@@ -2653,6 +2682,7 @@ Phase 6 (BOQ Auto-Feed) θεωρείται **complete** όταν:
 
 | Ημ/νία | Αλλαγή | Author |
 |---|---|---|
+| 2026-05-20 | **Phase 5.5j IMPLEMENTED — H-Beam Variant + Profile Designation Label**. `BeamSectionType = 'I' \| 'H'` + `profileDesignation?: string` added to `BeamParams`. `SECTION_H_FLANGE_T_PX=9` + `computeHProfileOutline()` (delegates to I-variant) added to `beam-section-profile.ts`. `BeamRenderer.drawSectionProfile()` branches on `sectionType ?? 'I'`; canvas label drawn in screen space at `W/2 + 8px` offset when `profileDesignation` set. Ribbon: new sectionType combobox (I/H) + profileDesignation combobox (14 IPE/HEA/HEB presets) in `beam-material` panel. i18n: `beamEditor.sectionType.*` + `beamEditor.profileDesignation.*` in el+en. 7 files modified, 0 new. | Claude Sonnet 4.6 |
 | 2026-05-20 | **Phase 5.5i+ IMPLEMENTED — Beam-Supports-Slab Analytical Link**. Pure geometry SSoT: `clipPolygonBySH` (Sutherland-Hodgman) + `polygonIntersectionAreaMm2` added to `polygon-utils.ts`. `computeSlabGeometry` extended with optional `beamFootprints?: BeamFootprintForDeduction[]` param (mirrors Phase 3.7 slabOpenings pattern). Deduction = Σ(intersectionMm2 × min(beamDepth, slabThickness) / 1e9). `useBeamPersistence` emits `bim:beam-persisted` after save/delete → `useSlabPersistence` listener re-BOQs all scene slabs (fire-and-forget bridge, no Firestore slab save). 6 files modified + 1 test file (17 tests, 100% pass). Backward-compat: no beamFootprints arg → identical behaviour. | Claude Sonnet 4.6 |
 | 2026-05-20 | **Phase 5.5i IMPLEMENTED — Column Center Axis Snap**. New `ColumnCenterSnapEngine` (extends BaseSnapEngine, mirrors DimDefPointSnapEngine pattern): snaps exclusively to structural column center ('center' anchor from 9-point Phase 5.5d grid). New `ExtendedSnapType.BIM_COLUMN_CENTER = 'bim_column_center'` with priority -1 (supersedes ENDPOINT priority 0 at center point). ⊕ SVG shape (circle + crosshair = standard structural plan column symbol) added to `SnapShape` switch in `SnapIndicatorOverlay`. `'bim-column'` description key → `snapModes.labels.bim.columnAxis` i18n path (consistent with Phase A wall/slab/opening pattern). 11 new tests (rect/circular/L/T column centers, radius guard, excludeEntityId, mixed entities, multiple columns). 6 files modified + 1 new engine + 1 new test file. | Claude Sonnet 4.6 |
 | 2026-05-19 | **Phase 5.5h IMPLEMENTED — Steel I/H Section-Profile Symbol Overlay**. Pure `BeamRenderer`-native addition (same pattern as `drawDepthIndicator` Phase 5.5c). New `bim/beams/beam-section-profile.ts` SSoT: `computeIProfileOutline(w,h,ww,ft)` — 12-vertex CW I-profile polygon in local coords + 9 exported constants. Modified `bim/renderers/BeamRenderer.ts`: imports constants from SSoT; `drawSectionProfile(beam)` private method — early-return guards (non-steel / `scale < 0.08` / screen length `< 24px`), screen-space angle via `worldToScreen()` on start+end, perpendicular unit vector → symbol centre at midpoint + `(beamHalfWidthPx + 12px)` offset, `ctx.rotate(screenAngle + PI/2)` aligns flanges perpendicular to beam (Revit/Tekla convention), fill `rgba(60,100,200,0.18)` + stroke `rgba(30,60,160,0.82)` 1.5px solid; called from `render()` alongside `drawDepthIndicator()` under `highlighted` condition. ADR-040: ZERO new React subscriptions, no PreviewCanvas changes, no new micro-leaf. Phase checklist updated (5.5e–5.5h marked ✅, new 5.5i+ deferred line). | Claude Sonnet 4.6 |
