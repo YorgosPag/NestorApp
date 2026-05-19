@@ -148,6 +148,8 @@ reports/junit/
 
 # pnpm state (local cache)
 .pnpm-state/
+# Accidental literal `~` folder (legacy stray path)
+~/
 
 # Claude CLI temporary files
 tmpclaude-*
