@@ -14,6 +14,10 @@ export const BEAM_RIBBON_KEYS = {
     supportType: 'beam.params.supportType',
     /** ADR-363 Phase 5.5c — Material picker (rc/steel/glulam). */
     material: 'beam.params.material',
+    /** ADR-363 Phase 5.5i+ — Steel section type (I / H). */
+    sectionType: 'beam.params.sectionType',
+    /** ADR-363 Phase 5.5i+ — Free-text profile designation (e.g. "IPE 300"). */
+    profileDesignation: 'beam.params.profileDesignation',
   },
   params: {
     /** mm — beam cross-section width. */
@@ -33,7 +37,9 @@ export type BeamRibbonNumberCommandKey =
 export type BeamRibbonStringCommandKey =
   | typeof BEAM_RIBBON_KEYS.stringParams.kind
   | typeof BEAM_RIBBON_KEYS.stringParams.supportType
-  | typeof BEAM_RIBBON_KEYS.stringParams.material;
+  | typeof BEAM_RIBBON_KEYS.stringParams.material
+  | typeof BEAM_RIBBON_KEYS.stringParams.sectionType
+  | typeof BEAM_RIBBON_KEYS.stringParams.profileDesignation;
 
 export const BEAM_RIBBON_NUMBER_KEYS: readonly BeamRibbonNumberCommandKey[] = [
   BEAM_RIBBON_KEYS.params.width,
@@ -45,6 +51,8 @@ export const BEAM_RIBBON_STRING_KEYS: readonly BeamRibbonStringCommandKey[] = [
   BEAM_RIBBON_KEYS.stringParams.kind,
   BEAM_RIBBON_KEYS.stringParams.supportType,
   BEAM_RIBBON_KEYS.stringParams.material,
+  BEAM_RIBBON_KEYS.stringParams.sectionType,
+  BEAM_RIBBON_KEYS.stringParams.profileDesignation,
 ];
 
 export const BEAM_RIBBON_KEYS_ACTIONS = {

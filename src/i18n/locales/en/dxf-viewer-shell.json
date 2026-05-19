@@ -1127,6 +1127,18 @@
           "steel": "Steel",
           "glulam": "Glulam",
           "comingSoon": "Available in a future phase"
+        },
+        "sectionType": {
+          "section": {
+            "title": "Section Type"
+          },
+          "I": "I-section (IPE)",
+          "H": "H-section (HEA/HEB)"
+        },
+        "profileDesignation": {
+          "section": {
+            "title": "Designation"
+          }
         }
       },
       "slabOpeningEditor": {

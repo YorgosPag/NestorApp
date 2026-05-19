@@ -45,10 +45,12 @@ import {
 } from '../beams/beam-hatch-patterns';
 import {
   computeIProfileOutline,
+  computeHProfileOutline,
   SECTION_PROFILE_W_PX,
   SECTION_PROFILE_H_PX,
   SECTION_WEB_W_PX,
   SECTION_FLANGE_T_PX,
+  SECTION_H_FLANGE_T_PX,
   SECTION_OFFSET_PX,
   SECTION_MIN_SCALE,
   SECTION_MIN_BEAM_LEN_PX,
@@ -293,10 +295,10 @@ export class BeamRenderer extends BaseEntityRenderer {
     const cy = midS.y + perpY * (beamHalfWidthPx + SECTION_OFFSET_PX);
 
     const screenAngle = Math.atan2(dy, dx);
-    const outline = computeIProfileOutline(
-      SECTION_PROFILE_W_PX, SECTION_PROFILE_H_PX,
-      SECTION_WEB_W_PX, SECTION_FLANGE_T_PX,
-    );
+    const isHBeam = (beam.params.sectionType ?? 'I') === 'H';
+    const outline = isHBeam
+      ? computeHProfileOutline(SECTION_PROFILE_W_PX, SECTION_PROFILE_H_PX, SECTION_WEB_W_PX, SECTION_H_FLANGE_T_PX)
+      : computeIProfileOutline(SECTION_PROFILE_W_PX, SECTION_PROFILE_H_PX, SECTION_WEB_W_PX, SECTION_FLANGE_T_PX);
 
     this.ctx.save();
     this.ctx.translate(cx, cy);
@@ -315,6 +317,22 @@ export class BeamRenderer extends BaseEntityRenderer {
     this.ctx.lineWidth = SECTION_LINE_WIDTH_PX;
     this.ctx.stroke();
     this.ctx.restore();
+
+    // Profile designation label (e.g. "IPE 300", "HEA 200") — drawn in screen
+    // space after the rotated symbol so it stays horizontal and readable.
+    // Offset further in the perpendicular direction, beyond the symbol's W/2 edge.
+    if (beam.params.profileDesignation) {
+      const labelOffsetPx = SECTION_PROFILE_W_PX / 2 + 8;
+      const labelX = cx + perpX * labelOffsetPx;
+      const labelY = cy + perpY * labelOffsetPx;
+      this.ctx.save();
+      this.ctx.font = 'bold 8px sans-serif';
+      this.ctx.fillStyle = SECTION_STROKE_COLOR;
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText(beam.params.profileDesignation, labelX, labelY);
+      this.ctx.restore();
+    }
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────

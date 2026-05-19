@@ -1127,6 +1127,18 @@
           "steel": "Χάλυβας",
           "glulam": "Σύνθετο Ξύλο",
           "comingSoon": "Διαθέσιμο σε επόμενη φάση"
+        },
+        "sectionType": {
+          "section": {
+            "title": "Τύπος Διατομής"
+          },
+          "I": "I-διατομή (IPE)",
+          "H": "H-διατομή (HEA/HEB)"
+        },
+        "profileDesignation": {
+          "section": {
+            "title": "Χαρακτηρισμός"
+          }
         }
       },
       "slabOpeningEditor": {

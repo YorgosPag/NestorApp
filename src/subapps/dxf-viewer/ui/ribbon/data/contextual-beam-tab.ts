@@ -65,6 +65,33 @@ const BEAM_MATERIAL_OPTIONS = [
   { value: 'glulam', labelKey: 'ribbon.commands.beamEditor.material.glulam', isLiteralLabel: false },
 ] as const;
 
+// ADR-363 Phase 5.5i+ — steel section type (I / H). Shown only for steel
+// material but always visible (bridge returns null for non-steel, combobox
+// stays in unset/placeholder state — consistent with material picker pattern).
+const BEAM_SECTION_TYPE_OPTIONS = [
+  { value: 'I', labelKey: 'ribbon.commands.beamEditor.sectionType.I', isLiteralLabel: false },
+  { value: 'H', labelKey: 'ribbon.commands.beamEditor.sectionType.H', isLiteralLabel: false },
+] as const;
+
+// ADR-363 Phase 5.5i+ — common IPE + HEA/HEB designations as preset options.
+// User can also type freely (combobox with free entry).
+const BEAM_PROFILE_DESIGNATION_OPTIONS = [
+  { value: 'IPE 100', labelKey: 'IPE 100', isLiteralLabel: true },
+  { value: 'IPE 160', labelKey: 'IPE 160', isLiteralLabel: true },
+  { value: 'IPE 200', labelKey: 'IPE 200', isLiteralLabel: true },
+  { value: 'IPE 240', labelKey: 'IPE 240', isLiteralLabel: true },
+  { value: 'IPE 270', labelKey: 'IPE 270', isLiteralLabel: true },
+  { value: 'IPE 300', labelKey: 'IPE 300', isLiteralLabel: true },
+  { value: 'IPE 360', labelKey: 'IPE 360', isLiteralLabel: true },
+  { value: 'IPE 400', labelKey: 'IPE 400', isLiteralLabel: true },
+  { value: 'HEA 200', labelKey: 'HEA 200', isLiteralLabel: true },
+  { value: 'HEA 240', labelKey: 'HEA 240', isLiteralLabel: true },
+  { value: 'HEA 300', labelKey: 'HEA 300', isLiteralLabel: true },
+  { value: 'HEB 200', labelKey: 'HEB 200', isLiteralLabel: true },
+  { value: 'HEB 240', labelKey: 'HEB 240', isLiteralLabel: true },
+  { value: 'HEB 300', labelKey: 'HEB 300', isLiteralLabel: true },
+] as const;
+
 const ELEVATION_MM_OPTIONS = [
   { value: '2400', labelKey: '2400', isLiteralLabel: true },
   { value: '2700', labelKey: '2700', isLiteralLabel: true },
@@ -161,9 +188,8 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
       ],
     },
     {
-      // ADR-363 Phase 5.5c — material picker ENABLED. Inserted between
-      // `beam-geometry` και `beam-actions` (visual grouping: kind → geometry →
-      // material → actions, mirror του column-editor layout).
+      // ADR-363 Phase 5.5c + 5.5i+ — material picker + section type + designation.
+      // Visual grouping: kind → geometry → material → actions.
       id: 'beam-material',
       labelKey: 'ribbon.panels.beamMaterial',
       rows: [
@@ -179,6 +205,34 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
                 commandKey: BEAM_RIBBON_KEYS.stringParams.material,
                 comboboxWidthPx: 180,
                 options: BEAM_MATERIAL_OPTIONS,
+              },
+            },
+          ],
+        },
+        {
+          // ADR-363 Phase 5.5i+ — section type (I/H) + profile designation.
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'beam.sectionType',
+                labelKey: 'ribbon.commands.beamEditor.sectionType.section.title',
+                commandKey: BEAM_RIBBON_KEYS.stringParams.sectionType,
+                comboboxWidthPx: 80,
+                options: BEAM_SECTION_TYPE_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'beam.profileDesignation',
+                labelKey: 'ribbon.commands.beamEditor.profileDesignation.section.title',
+                commandKey: BEAM_RIBBON_KEYS.stringParams.profileDesignation,
+                comboboxWidthPx: 110,
+                options: BEAM_PROFILE_DESIGNATION_OPTIONS,
               },
             },
           ],

@@ -37,8 +37,11 @@ export const SECTION_PROFILE_H_PX = 26;
 /** Web width (X-axis). ~20% of flange width → 4 px. */
 export const SECTION_WEB_W_PX = 4;
 
-/** Flange thickness (Y-axis). ~15% of total height → 4 px. */
+/** Flange thickness (Y-axis) — I-beam (IPE). ~15% of total height → 4 px. */
 export const SECTION_FLANGE_T_PX = 4;
+
+/** Flange thickness (Y-axis) — H-beam (HEA/HEB). ~33% of total height → 9 px. */
+export const SECTION_H_FLANGE_T_PX = 9;
 
 /** Perpendicular offset from beam outer edge to symbol centre (px). */
 export const SECTION_OFFSET_PX = 12;
@@ -89,6 +92,24 @@ export interface SectionPoint {
  * @param ww  Web width (default: SECTION_WEB_W_PX)
  * @param ft  Flange thickness (default: SECTION_FLANGE_T_PX)
  */
+/**
+ * Compute the outline polygon of an H cross-section profile symbol (HEA/HEB).
+ *
+ * Identical shape to `computeIProfileOutline` but with broader flanges
+ * (`flangeT/h` ≈ 0.33 vs 0.15 for I-beams) — the visual distinguisher
+ * between IPE (slender) and HEA/HEB (stocky) sections in plan-view.
+ *
+ * Delegates to `computeIProfileOutline` with `ft = SECTION_H_FLANGE_T_PX`.
+ */
+export function computeHProfileOutline(
+  w: number = SECTION_PROFILE_W_PX,
+  h: number = SECTION_PROFILE_H_PX,
+  ww: number = SECTION_WEB_W_PX,
+  ft: number = SECTION_H_FLANGE_T_PX,
+): ReadonlyArray<SectionPoint> {
+  return computeIProfileOutline(w, h, ww, ft);
+}
+
 export function computeIProfileOutline(
   w: number = SECTION_PROFILE_W_PX,
   h: number = SECTION_PROFILE_H_PX,

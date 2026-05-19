@@ -45,6 +45,14 @@ export type BeamKind = 'straight' | 'curved' | 'cantilever';
  */
 export type BeamSupportType = 'simple' | 'fixed' | 'cantilever';
 
+/**
+ * Steel section profile type.
+ *   - `'I'` → standard I-beam (IPE series, flangeT/h ≈ 0.15)
+ *   - `'H'` → broad-flange H-beam (HEA/HEB series, flangeT/h ≈ 0.33)
+ * Only relevant when `material === 'steel'`. Ignored for rc/glulam.
+ */
+export type BeamSectionType = 'I' | 'H';
+
 // ─── Parameters (user-editable, SSoT for geometry derivation) ────────────────
 
 /**
@@ -73,6 +81,10 @@ export interface BeamParams {
   readonly elevation: number;
   readonly material?: string;
   readonly supportType?: BeamSupportType;
+  /** Steel section profile type ('I' or 'H'). Ignored for rc/glulam. Default: 'I'. */
+  readonly sectionType?: BeamSectionType;
+  /** Free-text profile designation shown on canvas (e.g. "IPE 300", "HEA 200"). */
+  readonly profileDesignation?: string;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

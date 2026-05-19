@@ -25,6 +25,7 @@ import type {
   BeamEntity,
   BeamKind,
   BeamParams,
+  BeamSectionType,
   BeamSupportType,
 } from '../../../bim/types/beam-types';
 import { useCommandHistory } from '../../../core/commands';
@@ -82,9 +83,11 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof BeamParams>> = {
 };
 
 const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof BeamParams>> = {
-  [BEAM_RIBBON_KEYS.stringParams.kind]:        'kind',
-  [BEAM_RIBBON_KEYS.stringParams.supportType]: 'supportType',
-  [BEAM_RIBBON_KEYS.stringParams.material]:    'material',
+  [BEAM_RIBBON_KEYS.stringParams.kind]:                'kind',
+  [BEAM_RIBBON_KEYS.stringParams.supportType]:         'supportType',
+  [BEAM_RIBBON_KEYS.stringParams.material]:            'material',
+  [BEAM_RIBBON_KEYS.stringParams.sectionType]:         'sectionType',
+  [BEAM_RIBBON_KEYS.stringParams.profileDesignation]:  'profileDesignation',
 };
 
 export function useRibbonBeamBridge(
@@ -170,11 +173,19 @@ export function useRibbonBeamBridge(
           return;
         }
         if (field === 'material') {
-          // ADR-363 Phase 5.5c — material patch. `isDragging=false` so every
-          // pick is its own undo entry. Renderer hatch updates on the next
-          // frame via the standard beam bitmap-cache invalidation path.
           const nextParams: BeamParams = { ...beam.params, material: value };
           dispatchParams(beam, nextParams);
+          return;
+        }
+        if (field === 'sectionType') {
+          const nextParams: BeamParams = { ...beam.params, sectionType: value as BeamSectionType };
+          dispatchParams(beam, nextParams);
+          return;
+        }
+        if (field === 'profileDesignation') {
+          const nextParams: BeamParams = { ...beam.params, profileDesignation: value || undefined };
+          dispatchParams(beam, nextParams);
+          return;
         }
         return;
       }

@@ -1902,9 +1902,9 @@ local ±Y = web/depth axis (parallel to beam after rotation)
 
 **Deferred to Phase 5.5i+ / cross-phase:**
 - Scale-adaptive symbol size (clamp between min/max based on beam screen width) — fixed 20×26px is readable; proportional version is an enhancement.
-- H-beam variant (broader flanges, `flangeT/h` ratio = 0.33 vs I-beam 0.15) — `params.sectionType` field not yet in `BeamParams`. Requires Phase 5.5c.3 type extension.
-- Section symbol at beam endpoint vs midpoint toggle (engineer preference).
-- Distinct i18n tooltip for section symbol (hover text "IPE 300" / "HEA 200" — requires `params.profileDesignation` field Phase 5.5i+).
+- [x] ~~H-beam variant (broader flanges, `flangeT/h` ratio = 0.33 vs I-beam 0.15)~~ **✅ IMPLEMENTED Phase 5.5j (2026-05-20)**: `BeamSectionType = 'I' | 'H'` + `profileDesignation?: string` added to `BeamParams`; `computeHProfileOutline()` + `SECTION_H_FLANGE_T_PX=9` added to `beam-section-profile.ts`; `BeamRenderer.drawSectionProfile()` branches on `params.sectionType ?? 'I'`; ribbon sectionType combobox + profileDesignation combobox wired in `contextual-beam-tab.ts` + `useRibbonBeamBridge`.
+- [x] ~~Distinct i18n tooltip for section symbol (hover text "IPE 300" / "HEA 200")~~ **✅ IMPLEMENTED Phase 5.5j (2026-05-20)**: `params.profileDesignation` drawn as `bold 8px` canvas label offset `W/2 + 8px` from symbol centre in perpendicular direction (screen-space, stays horizontal). i18n keys: `beamEditor.sectionType.*` + `beamEditor.profileDesignation.*` in el+en.
+- Section symbol at beam endpoint vs midpoint toggle (engineer preference — lower priority).
 
 ✅ Google-level: YES — pure SSoT module (section outline single-sourced, renderer imports constants), ADR-040 micro-leaf compliance (ZERO new React subscriptions, no PreviewCanvas changes, no new leaf), same pattern as `drawDepthIndicator` (Phase 5.5c), `'steel'` gate via existing `resolveBeamMaterialKey` SSoT, screen-space angle avoids Y-flip arithmetic, idempotent (same params → same symbol), defensive scale + length guards.
 
