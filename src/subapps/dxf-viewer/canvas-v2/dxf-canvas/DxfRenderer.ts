@@ -370,6 +370,12 @@ export class DxfRenderer {
         const o = (entity as DxfOpening).openingEntity;
         return { ...base, type: 'opening', kind: o.kind, params: o.params, geometry: o.geometry, validation: o.validation } as unknown as Entity;
       }
+      case 'wall': {
+        // ADR-363 Phase 1B — direct entity: geometry/params/kind already at top level
+        // (DxfWall uses direct spread, no wallEntity wrapper). WallRenderer reads
+        // geometry.outerEdge/innerEdge/axisPolyline + params.category/thickness/flip.
+        return { ...base, type: 'wall', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
+      }
       case 'xline':
         return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
       case 'ray':

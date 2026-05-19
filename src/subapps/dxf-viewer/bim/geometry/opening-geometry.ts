@@ -13,9 +13,9 @@
  *   6. perimeter (m) = 2 × (width + height) / 1000
  *   7. hingeArc (door / french-door) = quarter arc radius = width
  *
- * Phase 2 limitation: curved + polyline host walls fall back to the straight
- * `start → end` axis approximation (the cutout is computed relative to the
- * chord, not the arc). Per-segment positioning for polyline lands Phase 2.5.
+ * Phase 2 (resolved): curved + polyline host walls use the actual tessellated
+ * axis vertices from `getWallAxisVertices()`. `offsetFromStart` is measured along
+ * the arc; `projectPointToWallOffset` projects onto the polyline, not the chord.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4
  */
@@ -24,6 +24,7 @@ import type { Point3D, Polyline3D, Polygon3D, BoundingBox3D } from '../types/bim
 import type { OpeningParams, OpeningGeometry, OpeningKind } from '../types/opening-types';
 import { isHingedKind } from '../types/opening-types';
 import type { WallEntity } from '../types/wall-types';
+import { getWallAxisVertices } from './wall-geometry';
 
 const MM_TO_M = 1 / 1000;
 const HINGE_ARC_SUBDIVISIONS = 12;
@@ -40,24 +41,12 @@ export function computeOpeningGeometry(
   params: OpeningParams,
   hostWall: WallEntity,
 ): OpeningGeometry {
-  const start = hostWall.params.start;
-  const end = hostWall.params.end;
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const axisLen = Math.hypot(dx, dy) || 1;
-  const ux = dx / axisLen;
-  const uy = dy / axisLen;
+  const axisVertices = getWallAxisVertices(hostWall.params, hostWall.kind);
+  const centerOffset = Math.max(0, params.offsetFromStart + params.width / 2);
+  const { point: center, ux, uy, rotation } = walkPolylineToDistance(axisVertices, centerOffset);
   // Perpendicular (CCW 90°): (-uy, ux).
   const px = -uy;
   const py = ux;
-  const rotation = Math.atan2(dy, dx);
-
-  const centerOffset = params.offsetFromStart + params.width / 2;
-  const center: Point3D = {
-    x: start.x + ux * centerOffset,
-    y: start.y + uy * centerOffset,
-    z: 0,
-  };
 
   const outline = buildOutline(center, ux, uy, px, py, params.width, hostWall.params.thickness);
   const bbox = computeBbox(outline.vertices);
@@ -74,6 +63,89 @@ export function computeOpeningGeometry(
     area: (params.width * params.height) * (MM_TO_M * MM_TO_M),
     perimeter: 2 * (params.width + params.height) * MM_TO_M,
   };
+}
+
+// ─── Polyline axis helpers ────────────────────────────────────────────────────
+
+/**
+ * Walk `vertices` from the start by `distanceMm` mm and return the world
+ * position + local tangent direction at that point. Clamps past the end.
+ */
+function walkPolylineToDistance(
+  vertices: readonly Point3D[],
+  distanceMm: number,
+): { point: Point3D; ux: number; uy: number; rotation: number } {
+  let remaining = distanceMm;
+  for (let i = 0; i < vertices.length - 1; i++) {
+    const a = vertices[i];
+    const b = vertices[i + 1];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const segLen = Math.hypot(dx, dy);
+    if (segLen < 1e-6) continue;
+    const ux = dx / segLen;
+    const uy = dy / segLen;
+    if (remaining <= segLen) {
+      const t = remaining / segLen;
+      return {
+        point: { x: a.x + dx * t, y: a.y + dy * t, z: 0 },
+        ux,
+        uy,
+        rotation: Math.atan2(dy, dx),
+      };
+    }
+    remaining -= segLen;
+  }
+  // Past end — clamp to last vertex, use last segment tangent.
+  const n = vertices.length;
+  const a = vertices[n - 2];
+  const b = vertices[n - 1];
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const segLen = Math.hypot(dx, dy) || 1;
+  return {
+    point: { x: b.x, y: b.y, z: b.z ?? 0 },
+    ux: dx / segLen,
+    uy: dy / segLen,
+    rotation: Math.atan2(dy, dx),
+  };
+}
+
+/**
+ * Project `point` onto the polyline `vertices`, returning the cumulative arc
+ * offset (mm) of the closest foot, clamped to `[0, totalArcLength]`.
+ */
+function projectPointToPolylineOffset(
+  point: { readonly x: number; readonly y: number },
+  vertices: readonly Point3D[],
+): number {
+  let arcOffset = 0;
+  let bestOffset = 0;
+  let bestDist2 = Infinity;
+
+  for (let i = 0; i < vertices.length - 1; i++) {
+    const a = vertices[i];
+    const b = vertices[i + 1];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const segLen = Math.hypot(dx, dy);
+    if (segLen < 1e-6) continue;
+    const ux = dx / segLen;
+    const uy = dy / segLen;
+    const vx = point.x - a.x;
+    const vy = point.y - a.y;
+    const t = Math.max(0, Math.min(vx * ux + vy * uy, segLen));
+    const ex = point.x - (a.x + ux * t);
+    const ey = point.y - (a.y + uy * t);
+    const dist2 = ex * ex + ey * ey;
+    if (dist2 < bestDist2) {
+      bestDist2 = dist2;
+      bestOffset = arcOffset + t;
+    }
+    arcOffset += segLen;
+  }
+
+  return Math.max(0, Math.min(bestOffset, arcOffset));
 }
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
@@ -207,25 +279,15 @@ function buildHingeArc(
 
 /**
  * Project an arbitrary point onto the host wall axis, returning the
- * `offsetFromStart` (mm) clamped to `[0, wallLength]`. Used by the opening
- * tool to convert a canvas click into a host-relative offset (snap-to-host).
+ * `offsetFromStart` (mm) clamped to `[0, arcLength]`. Supports straight,
+ * curved, and polyline walls via the tessellated axis from `getWallAxisVertices`.
+ *
+ * Used by the opening tool to convert a canvas click into a host-relative offset.
  */
 export function projectPointToWallOffset(
   point: { readonly x: number; readonly y: number },
   hostWall: WallEntity,
 ): number {
-  const start = hostWall.params.start;
-  const end = hostWall.params.end;
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const axisLen = Math.hypot(dx, dy);
-  if (axisLen <= 0) return 0;
-  const ux = dx / axisLen;
-  const uy = dy / axisLen;
-  const vx = point.x - start.x;
-  const vy = point.y - start.y;
-  const projected = vx * ux + vy * uy;
-  if (projected < 0) return 0;
-  if (projected > axisLen) return axisLen;
-  return projected;
+  const axisVertices = getWallAxisVertices(hostWall.params, hostWall.kind);
+  return projectPointToPolylineOffset(point, axisVertices);
 }

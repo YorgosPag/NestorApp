@@ -10,14 +10,18 @@ export const SLAB_OPENING_RIBBON_KEYS = {
   stringParams: {
     /** Slab-opening kind (shaft / well / duct / chimney). */
     kind: 'slabOpening.params.kind',
+    /** ADR-363 Phase 3.7b — Fire rating (60 / 90 / 120 min). Stored as number in params. */
+    fireRating: 'slabOpening.params.fireRating',
   },
 } as const;
 
 export type SlabOpeningRibbonStringCommandKey =
-  typeof SLAB_OPENING_RIBBON_KEYS.stringParams.kind;
+  | typeof SLAB_OPENING_RIBBON_KEYS.stringParams.kind
+  | typeof SLAB_OPENING_RIBBON_KEYS.stringParams.fireRating;
 
 export const SLAB_OPENING_RIBBON_STRING_KEYS: readonly SlabOpeningRibbonStringCommandKey[] = [
   SLAB_OPENING_RIBBON_KEYS.stringParams.kind,
+  SLAB_OPENING_RIBBON_KEYS.stringParams.fireRating,
 ];
 
 export const SLAB_OPENING_RIBBON_KEYS_ACTIONS = {

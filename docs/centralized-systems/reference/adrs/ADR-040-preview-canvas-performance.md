@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-20 — ADR-363 wall bugfix: DxfRenderer `case 'wall'` (entity unwrap only)
+
+`DxfRenderer.toEntityModel()` gains a `case 'wall'` branch — pure data unwrap from `DxfWall.{kind, params, geometry, validation}` (mirrors `case 'stair'`). No new state, no new subscription, no render-loop change. Cardinal rules 1–4 unaffected.
+
 ### 2026-05-20 — ADR-366 Phase 2: CanvasLayerStack shell WRITES to DxfOverlay3DStore (no new subscriptions)
 
 `CanvasLayerStack.tsx` gains a `useEffect([dxfScene]) → useDxfOverlay3DStore.getState().setDxfScene(dxfScene)` — shell pushes the current DxfScene into the 3D overlay store whenever it changes. **Zero new `useSyncExternalStore` calls in the orchestrator** (CHECK 6C still green). The 3D viewport (`BimViewport3D`) is a low-freq leaf subscriber that reads from this store. Pattern: shell WRITES, leaf READS — same as the existing Bim3DEntitiesStore wiring from PersistenceHost components. No canvas drawing path affected.

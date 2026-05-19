@@ -308,8 +308,18 @@ function computeBbox(
   };
 }
 
-/** Polyline length in mm (sum of segment lengths). */
-function computePolylineLengthMm(vertices: readonly Point3D[]): number {
+/**
+ * Tessellated axis vertices for a wall — straight (2 pts), polyline (N pts),
+ * or curved (CURVED_SUBDIVISIONS+1 pts after Bezier subdivision). Bevel trim
+ * applied. Exported for opening-geometry and wall-opening-coordinator.
+ */
+export function getWallAxisVertices(params: WallParams, kind: WallKind): readonly Point3D[] {
+  const raw = pickAxisVertices(params, kind);
+  return applyAxisBevels(raw, params.startBevel ?? 0, params.endBevel ?? 0);
+}
+
+/** Polyline length in mm (sum of segment lengths). Exported for coordinators. */
+export function computePolylineLengthMm(vertices: readonly Point3D[]): number {
   let len = 0;
   for (let i = 1; i < vertices.length; i++) {
     const a = vertices[i - 1];

@@ -15,11 +15,13 @@ import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 // ADR-359 Phase 11 — construction line wrappers for grip computation pipeline.
 import type { XLineEntity, RayEntity } from '../../types/entities';
+// ADR-363 Phase 1B — wall wrapper for DXF render pipeline.
+import type { WallEntity } from '../../bim/types/wall-types';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'xline' | 'ray';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'xline' | 'ray';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -173,6 +175,20 @@ export interface DxfOpening extends DxfEntity {
   openingEntity: OpeningEntity;
 }
 
+/**
+ * ADR-363 Phase 1B — DxfWall direct entity (no nested wallEntity wrapper).
+ * WallRenderer reads geometry.outerEdge/innerEdge/axisPolyline + params.category.
+ * Direct pattern matches HitTestingService §1B contract: geometry.bbox accessible
+ * at top level for BoundsCalculator spatial indexing (calculateBimEntityBounds).
+ */
+export interface DxfWall extends DxfEntity {
+  type: 'wall';
+  kind: WallEntity['kind'];
+  params: WallEntity['params'];
+  geometry: WallEntity['geometry'];
+  validation?: WallEntity['validation'];
+}
+
 /** ADR-359 Phase 11 — XLine wrapper for grip computation pipeline. */
 export interface DxfXLine extends DxfEntity {
   type: 'xline';
@@ -185,7 +201,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfXLine | DxfRay;
 
 // === DXF SCENE ===
 export interface DxfScene {

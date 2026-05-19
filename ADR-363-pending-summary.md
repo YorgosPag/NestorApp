@@ -23,10 +23,11 @@ _Ενημέρωση 2026-05-20: Μεγάλη διόρθωση — πολλά "pe
 
 ## Εκκρεμείς Φάσεις ❌
 
-### Phase 3.7b+ — Slab-Opening extras (~2-3h)
-- [ ] Multi-storey stack group UI ("Copy to all floors") — bulk-create workflow
-- [ ] Fire-rating + material fields στο ribbon (Phase 6.5+ material library dependency)
-- [ ] Snap-to-edge-midpoint preview ghost while hovering edge-midpoint grip pre-drag
+### Phase 3.7b+ — Slab-Opening extras (~2-3h remaining)
+- [ ] Multi-storey stack group UI ("Copy to all floors") — cross-level persistence, dedicated session
+- [x] ~~Fire-rating ribbon~~ **✅ DONE Phase 3.7b (2026-05-20)** — fireRating combobox (60/90/120/none)
+- [ ] Snap-to-edge-midpoint preview ghost — needs ADR-040 micro-leaf or grip hover in RenderOptions
+- [ ] Material ribbon field — deferred to Phase 6.5 material library
 
 ---
 
@@ -48,7 +49,7 @@ _(Deferred from Phase 4.5d — ribbon buttons exist, pickers disabled/comingSoon
 ---
 
 ### Phase 2 leftover (~1-2h)
-- [ ] Polyline/curved host wall positioning (currently chord approximation) — partial
+- [x] ~~Polyline/curved host wall positioning~~ **✅ DONE (2026-05-20)** — `getWallAxisVertices` + `walkPolylineToDistance` + `projectPointToPolylineOffset` + arc-length in coordinator. 11 tests. Pre-existing test bug fixed.
 
 ---
 

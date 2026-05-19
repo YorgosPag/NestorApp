@@ -1151,6 +1151,13 @@
           "well": "Stair Well",
           "duct": "Duct",
           "chimney": "Chimney"
+        },
+        "fireRating": {
+          "section": { "title": "Fire Rating" },
+          "none": "None",
+          "60": "60 minutes",
+          "90": "90 minutes",
+          "120": "120 minutes"
         }
       },
       "columnEditor": {

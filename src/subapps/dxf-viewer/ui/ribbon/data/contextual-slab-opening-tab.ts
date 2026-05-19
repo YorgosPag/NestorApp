@@ -30,6 +30,15 @@ const SLAB_OPENING_KIND_OPTIONS = [
   { value: 'chimney', labelKey: 'ribbon.commands.slabOpeningEditor.kind.chimney', isLiteralLabel: false },
 ] as const;
 
+// ADR-363 Phase 3.7b — fire rating options (minutes). Applicable to shaft/chimney.
+// Stored as number in SlabOpeningParams.fireRating (60 | 90 | 120 | undefined).
+const SLAB_OPENING_FIRE_RATING_OPTIONS = [
+  { value: '',    labelKey: 'ribbon.commands.slabOpeningEditor.fireRating.none', isLiteralLabel: false },
+  { value: '60',  labelKey: 'ribbon.commands.slabOpeningEditor.fireRating.60',  isLiteralLabel: false },
+  { value: '90',  labelKey: 'ribbon.commands.slabOpeningEditor.fireRating.90',  isLiteralLabel: false },
+  { value: '120', labelKey: 'ribbon.commands.slabOpeningEditor.fireRating.120', isLiteralLabel: false },
+] as const;
+
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
 export const CONTEXTUAL_SLAB_OPENING_TAB: RibbonTab = {
@@ -55,6 +64,18 @@ export const CONTEXTUAL_SLAB_OPENING_TAB: RibbonTab = {
                 commandKey: SLAB_OPENING_RIBBON_KEYS.stringParams.kind,
                 comboboxWidthPx: 150,
                 options: SLAB_OPENING_KIND_OPTIONS,
+              },
+            },
+            {
+              // ADR-363 Phase 3.7b — fire rating combobox. Applicable to shaft/chimney.
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'slab-opening.fireRating',
+                labelKey: 'ribbon.commands.slabOpeningEditor.fireRating.section.title',
+                commandKey: SLAB_OPENING_RIBBON_KEYS.stringParams.fireRating,
+                comboboxWidthPx: 110,
+                options: SLAB_OPENING_FIRE_RATING_OPTIONS,
               },
             },
           ],

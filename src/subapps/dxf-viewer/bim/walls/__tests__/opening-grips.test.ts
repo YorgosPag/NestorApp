@@ -122,12 +122,13 @@ describe('opening-grips (Phase 2.5)', () => {
     // hand back originalParams unchanged.
     const longHost = makeHorizontalWall();
     const opening = makeDoor(longHost, 2000);
+    const originalParams = { ...opening.params, wallId: shortHost.id };
     const next = applyOpeningGripDrag('opening-offset', {
-      originalParams: { ...opening.params, wallId: shortHost.id },
+      originalParams,
       currentPos: { x: 400, y: 0 },
       hostWall: shortHost,
     });
-    expect(next).toBe(opening.params); // referential identity, no change
+    expect(next).toBe(originalParams); // referential identity, no change
   });
 
   it('7. idempotent when cursor projects to current center', () => {

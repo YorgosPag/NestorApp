@@ -153,3 +153,121 @@ describe('projectPointToWallOffset', () => {
     expect(projectPointToWallOffset({ x: 2500, y: 200 }, wall)).toBeCloseTo(2500, EDGE_TOL);
   });
 });
+
+// ─── Phase 2 leftover — polyline + curved host walls ─────────────────────────
+
+function makePolylineWall(): WallEntity {
+  // L-shaped wall: (0,0)→(1000,0)→(1000,2000), total arc 3000 mm.
+  const params: WallParams = {
+    category: 'exterior',
+    start: { x: 0, y: 0, z: 0 },
+    end: { x: 1000, y: 2000, z: 0 },
+    height: 3000,
+    thickness: 200,
+    flip: false,
+    polylineVertices: [
+      { x: 0, y: 0, z: 0 },
+      { x: 1000, y: 0, z: 0 },
+      { x: 1000, y: 2000, z: 0 },
+    ],
+  };
+  return {
+    id: 'wall_poly',
+    type: 'wall',
+    kind: 'polyline',
+    layerId: '0',
+    params,
+    geometry: computeWallGeometry(params, 'polyline'),
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+    visible: true,
+  } as WallEntity;
+}
+
+function makeCurvedWall(): WallEntity {
+  // Curved wall: start=(0,0), end=(2000,0), control=(1000,800).
+  const params: WallParams = {
+    category: 'exterior',
+    start: { x: 0, y: 0, z: 0 },
+    end: { x: 2000, y: 0, z: 0 },
+    height: 3000,
+    thickness: 200,
+    flip: false,
+    curveControl: { x: 1000, y: 800, z: 0 },
+  };
+  return {
+    id: 'wall_curved',
+    type: 'wall',
+    kind: 'curved',
+    layerId: '0',
+    params,
+    geometry: computeWallGeometry(params, 'curved'),
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+    visible: true,
+  } as WallEntity;
+}
+
+describe('computeOpeningGeometry — polyline wall', () => {
+  it('positions opening on the second segment (past the first corner)', () => {
+    const wall = makePolylineWall();
+    // offset=1200 + width/2=450 = 1650 mm arc. First segment=1000mm → remaining 650mm on second (north).
+    // Position should be (1000, 650).
+    const g = computeOpeningGeometry(
+      makeOpening({ wallId: 'wall_poly', offsetFromStart: 1200, width: 900 }),
+      wall,
+    );
+    expect(g.position.x).toBeCloseTo(1000, 0);
+    expect(g.position.y).toBeCloseTo(650, 0);
+  });
+
+  it('rotation is π/2 for opening on the north-pointing segment', () => {
+    const wall = makePolylineWall();
+    const g = computeOpeningGeometry(
+      makeOpening({ wallId: 'wall_poly', offsetFromStart: 1200, width: 900 }),
+      wall,
+    );
+    expect(g.rotation).toBeCloseTo(Math.PI / 2, 5);
+  });
+
+  it('rotation is 0 for opening on the east-pointing segment', () => {
+    const wall = makePolylineWall();
+    // offset=100 + width/2=450 = 550 mm — within first segment (1000mm east).
+    const g = computeOpeningGeometry(
+      makeOpening({ wallId: 'wall_poly', offsetFromStart: 100, width: 900 }),
+      wall,
+    );
+    expect(g.rotation).toBeCloseTo(0, 5);
+  });
+});
+
+describe('projectPointToWallOffset — polyline wall', () => {
+  it('returns arc offset on the second segment', () => {
+    const wall = makePolylineWall();
+    // Point (1000, 800) is on the second segment at arc offset 1000+800=1800.
+    expect(projectPointToWallOffset({ x: 1000, y: 800 }, wall)).toBeCloseTo(1800, 0);
+  });
+
+  it('returns 0 for a point before the polyline start', () => {
+    const wall = makePolylineWall();
+    expect(projectPointToWallOffset({ x: -300, y: 0 }, wall)).toBe(0);
+  });
+
+  it('returns arc length for a point past the end', () => {
+    const wall = makePolylineWall();
+    // Total arc = 3000. Point far past end.
+    expect(projectPointToWallOffset({ x: 1000, y: 3000 }, wall)).toBeCloseTo(3000, 0);
+  });
+});
+
+describe('computeOpeningGeometry — curved wall', () => {
+  it('position is NOT at the chord midpoint for a curved wall', () => {
+    const wall = makeCurvedWall();
+    // Straight chord midpoint at arc offset 500+450=950 would be (950,0).
+    // Curved arc midpoint is different (near the Bezier apex).
+    const g = computeOpeningGeometry(
+      makeOpening({ wallId: 'wall_curved', offsetFromStart: 500, width: 900 }),
+      wall,
+    );
+    // Curved wall bows north — y must be > 0 near midpoint.
+    expect(g.position.y).toBeGreaterThan(0);
+  });
+});

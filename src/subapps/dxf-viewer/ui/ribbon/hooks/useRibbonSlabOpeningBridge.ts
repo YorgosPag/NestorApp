@@ -65,7 +65,8 @@ const SLAB_OPENING_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
 const NULL_TOGGLE: RibbonToggleState = false;
 
 const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof SlabOpeningParams>> = {
-  [SLAB_OPENING_RIBBON_KEYS.stringParams.kind]: 'kind',
+  [SLAB_OPENING_RIBBON_KEYS.stringParams.kind]:       'kind',
+  [SLAB_OPENING_RIBBON_KEYS.stringParams.fireRating]: 'fireRating',
 };
 
 export function useRibbonSlabOpeningBridge(
@@ -108,6 +109,8 @@ export function useRibbonSlabOpeningBridge(
       if (isSlabOpeningRibbonStringKey(commandKey)) {
         const field = STRING_KEY_TO_FIELD[commandKey];
         const raw = opening.params[field];
+        // fireRating: undefined → '' (no rating) for combobox display.
+        if (field === 'fireRating') return { value: raw == null ? '' : String(raw), options: [] };
         return raw == null ? null : { value: String(raw), options: [] };
       }
       return null;
@@ -124,6 +127,13 @@ export function useRibbonSlabOpeningBridge(
         if (field === 'kind') {
           const nextParams: SlabOpeningParams = { ...opening.params, kind: value as SlabOpeningKind };
           dispatchParams(opening, nextParams);
+          return;
+        }
+        if (field === 'fireRating') {
+          const parsed = value === '' ? undefined : (Number(value) as 60 | 90 | 120);
+          const nextParams: SlabOpeningParams = { ...opening.params, fireRating: parsed };
+          dispatchParams(opening, nextParams);
+          return;
         }
       }
     },

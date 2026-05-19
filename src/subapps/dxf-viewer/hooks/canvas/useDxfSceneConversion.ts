@@ -21,12 +21,14 @@ import type { DxfScene, DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity, Entity } from '../../types/entities';
-import { isArrayEntity, isStairEntity, isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import { isArrayEntity, isStairEntity, isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isXLineEntity, isRayEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
+// ADR-363 Phase 1B — wall wrapper for DXF render pipeline.
+import type { WallEntity } from '../../bim/types/wall-types';
 import type { DimensionEntity } from '../../types/dimension';
 import type { PathParams } from '../../systems/array/types';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
@@ -300,6 +302,15 @@ function convertEntity(entity: SceneEntity, layers: SceneLayers, layersById?: Sc
       return isOpeningEntity(entity)
         ? { ...base, type: 'opening' as const, openingEntity: entity as OpeningEntity } as DxfEntityUnion
         : null;
+    }
+    case 'wall': {
+      // ADR-363 Phase 1B — direct entity (no wallEntity wrapper). Fields spread at
+      // top level so geometry.bbox is accessible to BoundsCalculator spatial index
+      // and HitTestingService without unwrapping (mirrors wall/opening/column/beam
+      // "direct entities" contract in HitTestingService convertToEntityModel).
+      if (!isWallEntity(entity)) return null;
+      const w = entity as WallEntity;
+      return { ...base, type: 'wall' as const, kind: w.kind, params: w.params, geometry: w.geometry, validation: w.validation } as DxfEntityUnion;
     }
     case 'xline': {
       // ADR-359 Phase 11 — wrap XLineEntity for grip computation pipeline.

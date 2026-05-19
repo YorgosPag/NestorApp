@@ -9,24 +9,23 @@
  * Overflow clamp: if wall shrinks and opening overflows → clamp to maxOffset
  * (wall end − opening width). Degenerate walls (length=0) are skipped safely.
  *
- * Limitation (deferred): curved/polyline walls use chord length as
- * approximation — exact arc-length recompute is Phase 0.5+ work.
+ * Curved/polyline walls use the real arc length via `getWallAxisVertices` +
+ * `computePolylineLengthMm` — Phase 2 leftover resolved.
  *
  * @see ADR-363-bim-drawing-mode.md §Wall-Grip-Opening-Recompute
  */
 
 import type { ICommand, ISceneManager } from '../../core/commands/interfaces';
-import type { WallEntity, WallParams } from '../types/wall-types';
+import type { WallEntity, WallParams, WallKind } from '../types/wall-types';
 import type { OpeningEntity } from '../types/opening-types';
+import { getWallAxisVertices, computePolylineLengthMm } from '../geometry/wall-geometry';
 import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/UpdateWallParamsCommand';
 import { UpdateOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateOpeningParamsCommand';
 import { CompoundCommand } from '../../core/commands/CompoundCommand';
 
-/** Axis length in mm. Params are mm — consistent with offsetFromStart. */
-function axisLengthMm(params: WallParams): number {
-  const dx = params.end.x - params.start.x;
-  const dy = params.end.y - params.start.y;
-  return Math.hypot(dx, dy);
+/** True arc length in mm for any wall kind — curved/polyline safe. */
+function axisLengthMm(params: WallParams, kind: WallKind): number {
+  return computePolylineLengthMm(getWallAxisVertices(params, kind));
 }
 
 /**
@@ -54,8 +53,9 @@ export function coordinateWallUpdate(
     return wallCmd;
   }
 
-  const oldLen = axisLengthMm(oldParams);
-  const newLen = axisLengthMm(newParams);
+  const kind: WallKind = wallCandidate.kind ?? 'straight';
+  const oldLen = axisLengthMm(oldParams, kind);
+  const newLen = axisLengthMm(newParams, kind);
   if (oldLen <= 0) return wallCmd;
 
   const openingCmds: UpdateOpeningParamsCommand[] = [];
