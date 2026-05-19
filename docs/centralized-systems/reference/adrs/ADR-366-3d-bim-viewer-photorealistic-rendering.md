@@ -1447,10 +1447,120 @@ GenArc **ADR-009** defines Y-up convention explicitly. This ADR **inherits** tha
 
 ---
 
+### B.2 — BIM Data Overlay (tooltips, dimensions, annotations)
+
+**Σκοπός**: Καθορισμός hover tooltip + permanent dimensions + annotation/leader text strategy σε 3D viewer. SSoT mirror του 2D pattern όπου applicable.
+
+**Cross-references**: ADR-357 §4 G9 Phase 8 (`QuickPropertiesHoverPopover` 2D), ADR-040 micro-leaf pattern, ADR-362 Enterprise Dimension System (2D), ADR-363 BIM entity geometry SSoT.
+
+**Pending micro-decisions**:
+- Q1: Hover tooltip content + pattern ✅ RESOLVED
+- Q2: Permanent dimensions σε 3D ✅ RESOLVED
+- Q3: Annotation/leader text σε 3D space (free-floating labels;)
+- Q4: Element info panel (full BIM card on click — αυτόνομη ή reuse 2D properties panel;)
+
+**Decisions Log (Γιώργος)** — Topic B.2 in progress:
+
+| # | Ερώτηση | Απόφαση | Industry alignment |
+|---|---|---|---|
+| B.2.Q2 | Permanent dimensions σε 3D (auto-display ή manual) | **Combo Option 1 + Option 4** (Revit/ArchiCAD industry consensus 4/5). **Καθόλου automatic dimensions σε 3D** (clean visualization philosophy) **PLUS manual user-placed dimensions via mirror του ADR-362 2D Dim System**. Ribbon "Dimension" button context-aware: 2D mode → plan dimension (existing ADR-362), 3D mode → 3D dimension. Ο χρήστης κλικάρει 2 σημεία σε 3D space (snap-aware REUSE ProSnapEngineV2), εμφανίζεται μόνιμη διάσταση: thin grey 3D line + tick marks + billboard Sprite label (πάντα face camera, readable από κάθε γωνία). Storage extends ADR-362 schema με `placement: '2d' \| '3d'` discriminator (zero data duplication, visibility filter per mode). Hover tooltip ήδη δείχνει dimensions (από B.2.Q1) → user βλέπει μέτρα on-demand χωρίς clutter. | 4/5 industry σύγκλιση (Revit + ArchiCAD + SketchUp + BIMcollab όλοι manual-only, Twinmotion zero dims). Option 3 (permanent always-visible) απορρίπτεται — 0/5 industry. SSoT REUSE ADR-362 (155 tests, fully implemented) + ProSnapEngineV2 + dim style tokens (`DIMENSION_LINE_COLOR`, `DIMENSION_TEXT_SIZE`). |
+| B.2.Q1 | Hover tooltip content + activation pattern | **Mirror ADR-357 QuickProperties pattern + BIM data getters extension**. Compact 3-line floating card (Revit style, 1/4 industry direct precedent: Revit "Category : Family : Type"). **Trigger**: 800ms stable hover **REUSE constant** `HOVER_DELAY_MS` από `QuickPropertiesStore.ts`. **Position**: cursor-relative offset (12px right, 4px down) via `ImmediatePositionStore` **REUSE**. **Mount**: ADR-040 sibling micro-leaf (παράλληλα με `QuickPropertiesHoverPopover`, ποτέ μέσα σε orchestrator). **Activation**: `activeTool === 'select'` AND mode `!== '2d'`. **Content lines**: (1) entity type translated (`t('bim3d.entityTypes.{wall,door,window,slab,beam,column}')`), (2) name + dimensions `Wall_A12 · 5.20m × 3.00m × 0.25m`, (3) floor + material `Όροφος 1 · Τούβλο`. **Progressive disclosure**: click → full BIM panel (right pane, Q4 pending decision). | 1/4 direct Revit precedent (compact Category/Family/Type). 100% SSoT REUSE με 2D Nestor `QuickProperties` (HOVER_DELAY_MS constant, ImmediatePositionStore, ADR-040 micro-leaf mount, `useSyncExternalStore` pattern, CSS module shared). Twinmotion/Lumion no-tooltip pattern rejected — Nestor είναι BIM (data-driven), όχι pure visualization. ArchiCAD configurable pattern deferred — default-first principle. |
+
+**Architectural implications για B.2.Q1**:
+
+- **Νέα SSoT modules (Phase 4)**:
+  - `bim-3d/properties/QuickProperties3DStore.ts` — mirror του 2D `QuickPropertiesStore.ts`. Reuses HOVER_DELAY_MS=800 constant, ίδιο snapshot pattern, subscribes σε νέο `Hover3DStore` (Topic A.1 already mandated `Selection3DStore` separate από 2D — same separation εφαρμόζεται και για hover).
+  - `bim-3d/properties/QuickProperties3DHoverPopover.tsx` — React micro-leaf, useSyncExternalStore consumer. Renders 3 lines με BIM data getters.
+  - `bim-3d/properties/bim-entity-formatter.ts` — pure helpers `formatEntityTypeLabel(entity)`, `formatBimDimensions(entity)`, `formatFloorMaterial(entity)`. Read-only, idempotent.
+- **Hover trigger source**: Topic A.1 Selection3DStore mandated separate από 2D HoverStore (different coord systems). Hover3DStore mirror pattern — `hovered3DEntityId: string | null` + `subscribeHovered3DEntity` API mirror.
+- **3D-to-screen positioning**: cursor coord ήδη υπάρχει στο `ImmediatePositionStore` (screen pixels). Tooltip absolute position = `(cursorX + 12, cursorY + 4)`. Auto-flip σε edges via `boundingClientRect` check (mirror 2D popover logic).
+- **BIM entity data getters**:
+  - Type label: `entity.kind` (από ADR-363 schema: 'wall' | 'door' | 'window' | 'slab' | 'beam' | 'column' | 'stair') → i18n key `bim3d.entityTypes.{kind}` → translated.
+  - Name: `entity.name` (auto-generated `${kind}_A12` style αν ο χρήστης δεν έχει custom name).
+  - Dimensions: `entity.geometry.dimensions` (REUSE ADR-363 cached geometry — `length`, `height`, `thickness` σε mm) → `formatDisplayValue` SSoT (REUSE από `units.ts`) → metres με 2 decimals.
+  - Floor: `entity.floorId` → `useFloors` SSoT lookup → `floor.name` (π.χ. «Όροφος 1»).
+  - Material: `entity.materialLayers?.[0]?.materialId` (από ADR-363 Phase 6 multi-layer DNA) → MaterialCatalog3D.resolve → translated label (π.χ. «Τούβλο»). Fallback `entity.material` legacy field.
+- **i18n keys** (per N.11, ΠΡΩΤΑ add σε locale JSONs):
+  - `bim3d.entityTypes.{wall,door,window,slab,beam,column,stair,railing}` — 8 keys ×2 locales
+  - `bim3d.quickProperties.dimensionsSeparator` (· δολάριο symbol)
+  - `bim3d.quickProperties.unknownMaterial`, `unknownFloor` fallbacks
+- **Activation guards** (mirror 2D logic):
+  - `activeTool === 'select'` — όχι κατά drawing/section/measurement modes
+  - `mode !== '2d'` — μόνο σε 3D modes ('3d-raster' / '3d-preview' / '3d-final')
+  - Entity must exist στο `Bim3DScene.entities` (από Phase 2 converter)
+  - 800ms stable hover (resets on entity change)
+- **Style SSoT REUSE**: CSS module `QuickProperties3DHoverPopover.module.css` αντιγράφει visual rules από 2D module:
+  - Background: theme-aware (light/dark)
+  - Border: 1px solid `CAD_UI_COLORS.HOVER` cyan (REUSE color-config.ts token)
+  - Border-radius: 4px (theme constant)
+  - Shadow: subtle drop-shadow
+  - Font: same font stack
+  - Fade-in: 100ms opacity transition
+- **Progressive disclosure → full panel**: click handler (Topic A.1 single-click replace) opens BIM panel σε right pane. Panel content = Q4 pending decision (αυτόνομη ή reuse 2D properties panel).
+- **GOL checklist**:
+  - Proactive: ✅ store subscribed at mount, RAF-coordinated με Hover3DStore
+  - Race conditions: ✅ debounce 800ms serializes hover events, skip-if-unchanged optimization (mirror 2D pattern)
+  - Idempotent: ✅ hover ίδιο entity = ίδια snapshot
+  - Belt-and-suspenders: ✅ fallback strings για unknownMaterial/unknownFloor + null guards για entity.geometry undefined (Phase 2 conversion in-progress)
+  - SSoT: ✅ ImmediatePositionStore + HOVER_DELAY_MS + ADR-040 pattern + format utilities all REUSED 100%
+  - Lifecycle owner: ✅ QuickProperties3DStore owns popover lifecycle, sibling-mounted στο `bim3d-canvas-layer-stack-leaves.tsx` (Phase 4)
+- **Backport σε 2D**: ΟΧΙ νέο για 2D — απλά mirroring existing 2D pattern.
+
+**Effort impact για B.2.Q1**: +2.5h Phase 4 (Quick3D store mirror 30min + popover component mirror 45min + BIM entity getters 60min + 3D positioning logic 15min + 11 i18n keys ×2 locales + tests 30min). Mirror pattern οικονομία ~1.5h vs from-scratch. ADR-366 total estimate revised: **~121-137h** (από ~118.5-134.5h post-B.1).
+
+**Architectural implications για B.2.Q2**:
+
+- **ADR-362 schema extension**: existing `DimensionEntity` type (από `src/subapps/dxf-viewer/types/entities.ts`) extends με `placement: '2d' | '3d'` discriminator field. 2D dims (existing) auto-tag `placement='2d'`. 3D dims new schema variant με:
+  - `start3D: Vector3World` (mm coords, building-relative)
+  - `end3D: Vector3World`
+  - `offsetDirection3D: Vector3` (perpendicular vector για dim-line offset, calculated από snap context ή camera-up)
+  - `floorId` (αν dim relevant σε floor context)
+- **Νέο renderer**: `bim-3d/dimensions/Dimension3DRenderer.ts` — mirror του 2D `DimensionRenderer.ts` (~150 LOC mirror). Three.js primitives:
+  - `THREE.Line` με `LineBasicMaterial` για dim line (REUSE `DIMENSION_LINE_COLOR` SSoT token)
+  - 2× `THREE.Line` για tick marks (perpendicular, μήκος 50mm world-space)
+  - `THREE.Sprite` με canvas-rendered text label (`DIMENSION_TEXT_SIZE` SSoT REUSE) — billboard auto-face camera (Three.js Sprite default behavior, μηδέν custom code)
+  - Sprite scale auto-adjusts με camera distance ώστε pixel size σταθερό (REUSE billboard pattern από Topic A.1.Q5 grip rendering)
+- **Νέο dim tool routing**: `bim-3d/dimensions/useDim3DToolRouting.ts` — mirror του 2D `useDimToolRouting.ts`. State machine: idle → first-point-picked → second-point-picked → entity created (mutate via ADR-031 CommandHistory). Snap engine REUSE — `ProSnapEngineV2` ήδη supports 3D coords (Topic A.2.Q3 confirmed).
+- **Ribbon context-aware Dim button** (ADR-345 ribbon extension):
+  - Button action `dimension:create` checks `ViewMode3DStore.mode`
+  - mode='2d' → dispatch `dim:2d:start` (existing behavior unchanged)
+  - mode≠'2d' → dispatch `dim:3d:start` (νέος handler)
+  - Single ribbon entry, dual behavior. SSoT consistency με Topic A.6.Q3 universal-where-applicable.
+- **Visibility filter**: scene-level filter στο Bim3DScene rendering — μόνο entities με `placement === '3d'` rendered σε 3D mode. 2D viewer ήδη ignores `placement='3d'` entities (Boy Scout add filter to 2D `DxfSceneConverter`). Zero data duplication.
+- **Storage**: ίδιο Firestore collection με 2D dimensions (existing ADR-362 collection). `placement` field discriminator only. Backward-compatible — existing dims default `placement='2d'`.
+- **Snap context για offset direction**:
+  - Αν user clicks σε edge midpoints: offsetDirection = perpendicular to edge, στραμμένο προς camera
+  - Αν user clicks σε face corners: offsetDirection = camera-up vector projected
+  - Fallback: world-up Y vector
+- **Style tokens SSoT REUSE**:
+  - `DIMENSION_LINE_COLOR` (από ADR-362 SSoT)
+  - `DIMENSION_TEXT_SIZE` (από ADR-362 SSoT)
+  - `DIMENSION_TICK_LENGTH` (REUSE ή νέο constant — TBD on implementation)
+  - Selection/hover tokens REUSE από Topic A.1
+- **i18n**: zero new keys for ribbon (existing `dimension.create` button label works για 2D και 3D). Future: `bim3d.dimensions.snapHints` αν χρειαστούν tool-state hint messages.
+- **Cross-mode interactions**:
+  - Undo/redo: ADR-031 CommandHistory unified handles 3D dim create/delete
+  - Selection: 3D dim entity selectable in 3D mode (Topic A.1 selection). 2D mode hidden via visibility filter.
+  - Properties panel: 3D dim entity Quick3D tooltip shows distance value + endpoint coords (extends B.2.Q1 getters με dim-specific case)
+- **GOL checklist**:
+  - Proactive: ✅ schema discriminator added at ADR-362 level — both 2D και 3D dims coexist cleanly
+  - Race conditions: ✅ single Firestore collection, single CommandHistory, single tool dispatcher
+  - Idempotent: ✅ create dim with same 2 points = same dim entity (deduplication via deterministic ID hash)
+  - Belt-and-suspenders: ✅ fallback offset direction = world-up αν snap context missing
+  - SSoT: ✅ ADR-362 schema, snap engine, style tokens, command history all REUSED
+  - Lifecycle owner: ✅ ADR-362 owns dim entities, Bim3DScene owns rendering
+- **Backport σε 2D**: minimal — add visibility filter στο 2D `DxfSceneConverter` για `placement='3d'` skip (~10 LOC, Boy Scout rule).
+
+**Effort impact για B.2.Q2**: +5-6h Phase 7 (Dimension3DRenderer 1.5h + Dim3DToolRouting 1h + schema extension 30min + ribbon context-aware dispatcher 30min + snap context offset logic 1h + visibility filter 30min + Quick3D dim case 30min + tests 1h). ADR-362 backward compat verified (existing 2D dims continue with `placement='2d'` default). ADR-366 total estimate revised: **~126-143h** (από ~121-137h post-B.2.Q1).
+
+---
+
 ## 12. Changelog
 
 | Ημ/νία | Αλλαγή | Author |
 |---|---|---|
+| 2026-05-19 | **Appendix B — Topic B.2.Q2 (BIM Data Overlay — permanent dimensions σε 3D) ✅ RESOLVED** — **Combo no-automatic + manual user-placed via mirror ADR-362** (Revit/ArchiCAD industry consensus 4/5 σύγκλιση). Καθόλου auto-dimensions σε 3D (clean visualization philosophy). Manual dim tool mirror του 2D ADR-362 με ribbon context-aware Dim button (2D mode → plan dim, 3D mode → 3D dim). Schema extension: existing `DimensionEntity` + `placement: '2d' \| '3d'` discriminator (zero data duplication). Νέα Phase 7: `Dimension3DRenderer.ts` (Three.js Line + Sprite billboard label) + `useDim3DToolRouting.ts` (state machine mirror). SSoT REUSE 100%: ADR-362 schema/snap/style tokens + ProSnapEngineV2 + ADR-031 CommandHistory + ribbon button. Hover tooltip ήδη δείχνει dims (B.2.Q1) → user βλέπει μέτρα on-demand. Boy Scout: 2D scene converter adds visibility filter για `placement=3d` skip. Phase 7 +5-6h. **Total estimate revised: ~126-143h.** | Claude Opus 4.7 |
+| 2026-05-19 | **Appendix B — Topic B.2.Q1 (BIM Data Overlay — hover tooltip) ✅ RESOLVED** — **Mirror ADR-357 QuickProperties pattern + BIM data getters**. Compact 3-line Revit-style floating card (type / name+dimensions / floor+material). 100% SSoT REUSE: HOVER_DELAY_MS=800ms constant, ImmediatePositionStore, ADR-040 sibling micro-leaf mount, useSyncExternalStore, CSS module visual rules. Νέα modules Phase 4: `bim-3d/properties/QuickProperties3DStore.ts` + `QuickProperties3DHoverPopover.tsx` + `bim-entity-formatter.ts`. BIM data sources: ADR-363 cached geometry + ADR-363 Phase 6 multi-layer DNA materials + useFloors SSoT. 11 νέα i18n keys (bim3d.entityTypes.* + bim3d.quickProperties.*). Activation: `activeTool=select` AND `mode!=2d` AND 800ms stable. Effort οικονομία ~1.5h από mirror pattern. Phase 4 +2.5h. **Total estimate revised: ~121-137h.** | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.1 (Materials & Lighting UX) ✅ FULLY CLOSED 4/4 Qs.** Q4 Environment reflections RESOLVED: **HDRI envmap Phase 5 (PBR IBL zero cost) + path-traced Phase 7 final** (Twinmotion + V-Ray pattern, 2/2 BIM render leaders σύγκλιση). Νέα SSoT: `envmap-generator.ts` (PMREMGenerator wiring) + `material-defaults.ts` (5 entity-type PBR registry: glass/metal/concrete/wood/plaster). Phase 7 path tracer (`three-gpu-pathtracer` MIT) takes over reflections automatically — zero material refactor. SSR απορρίπτεται (edge artifacts). Phase 5 +1.5h. **Topic B.1 total +14h Phase 5** (Q1=7h + Q2=3h + Q3=2.5h + Q4=1.5h). **Total estimate revised: ~118.5-134.5h.** Topic B.1 architectural commitments documented: 5 νέα SSoT modules, ViewMode3DStore extensions, EffectComposer pipeline, IdleDetector REUSE. | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.1.Q3 (Materials/Lighting — ambient occlusion) ✅ RESOLVED** — **SSAO με auto-downgrade on camera motion** (consistency με B.1.Q2 pattern, 4/5 industry σύγκλιση). Three.js `SSAOPass` postprocess, `pass.enabled=false` snappy mode (zero cost), idle 300ms fade-in σε `aoIntensity=1.0`. Rename utility: `shadow-modulator.ts` → `quality-modulator.ts` (unified shadows + AO + future post-FX). ViewMode3DStore.shadowState → qualityState extension. EffectComposer pipeline νέο για Phase 5 (RenderPass → SSAOPass → OutputPass). Phase 7 path tracer takeover override SSAO. Industry leader benchmarks documented: Chaos V-Ray gold offline + Twinmotion/D5 real-time inspirations. Phase 5 +2.5h. **Total estimate revised: ~117-133h.** | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.1.Q2 (Materials/Lighting — shadow quality) ✅ RESOLVED** — **Soft shadows with auto-downgrade on camera motion** (Lumion pattern, 3/4 industry σύγκλιση + exact Lumion match). Three.js `PCFSoftShadowMap` always-on (zero recompile cost) + dynamic `light.shadow.radius` modulation (0.5 snappy → 4.0 soft, 300ms cubic ease) + dynamic map size (1024² moving → 2048² idle). Trigger via IdleDetector SSoT REUSE από §9 Q3. Zero settings UI clutter — invisible feature, Architect-friendly. Νέο SSoT: `bim-3d/lighting/shadow-modulator.ts`. ViewMode3DStore.shadowState extension. Low-end fallback (hardwareConcurrency<4) forces snappy-always. Phase 5 +3h. **Total estimate revised: ~114.5-130.5h.** | Claude Opus 4.7 |
