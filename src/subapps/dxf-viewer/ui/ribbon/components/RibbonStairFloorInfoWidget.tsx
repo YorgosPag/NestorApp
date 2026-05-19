@@ -36,7 +36,7 @@ import { UpdateStairParamsCommand } from '../../../core/commands/entity-commands
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { isStairEntity } from '../../../types/entities';
 import type { StairEntity } from '../../../types/entities';
-import type { StairMultiStoryConfig, StairParams } from '../../../types/stair';
+import type { StairMultiStoryConfig, StairParams } from '../../../bim/types/stair-types';
 import { useFloorMetadata, type FloorMetadata } from '../../../hooks/data/useFloorMetadata';
 import { useBuildingTotalFloors } from '../../../hooks/data/useBuildingTotalFloors';
 

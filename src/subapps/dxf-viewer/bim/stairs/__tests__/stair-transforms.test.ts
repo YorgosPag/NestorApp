@@ -23,7 +23,7 @@ import type {
   StairVariantTriangularFan,
   StairVariantTriangularOutline,
   StairVariantWinder,
-} from '../../../types/stair';
+} from '../../../bim/types/stair-types';
 
 const TOL = 1e-6;
 

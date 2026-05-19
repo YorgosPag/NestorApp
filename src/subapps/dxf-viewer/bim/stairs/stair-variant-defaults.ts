@@ -23,7 +23,7 @@ import type {
   StairParams,
   StairVariantParams,
   StairVariantLShapeWinders,
-} from '../../types/stair';
+} from '../../bim/types/stair-types';
 
 const DEFAULT_SWEEP_DEG = 360;
 const HELICAL_SWEEP_DEG = 270;

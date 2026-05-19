@@ -5,7 +5,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneLayer, LineweightMm } from '../../types/entities';
-import type { StairEntity } from '../../types/stair';
+import type { StairEntity } from '../../bim/types/stair-types';
 // ADR-362 Phase C1 — Dimension entity wrapper for DXF render pipeline.
 import type { DimensionEntity } from '../../types/dimension';
 // ADR-363 Phase 3.7 — BIM slab / slab-opening wrappers for DXF render pipeline.

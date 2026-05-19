@@ -17,7 +17,7 @@ import type {
   StairNokSubType,
   StairParams,
   StairVariantStraight,
-} from '../../../types/stair';
+} from '../../../bim/types/stair-types';
 
 const STRAIGHT: StairVariantStraight = { kind: 'straight' };
 

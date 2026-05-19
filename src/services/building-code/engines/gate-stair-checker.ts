@@ -22,7 +22,7 @@ import type {
   StairCodeProfile,
   StairNokSubType,
   StairParams,
-} from '@/subapps/dxf-viewer/types/stair';
+} from '@/subapps/dxf-viewer/bim/types/stair-types';
 
 // ─── Public input / output shapes ────────────────────────────────────────────
 

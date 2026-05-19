@@ -14,7 +14,7 @@
  * Firestore SDK + firestoreQueryService both fully mocked.
  */
 
-import type { StairDoc, StairParams } from '../../../types/stair';
+import type { StairDoc, StairParams } from '../../../bim/types/stair-types';
 
 // ---------------------------------------------------------------------------
 // Firestore mock
@@ -120,7 +120,7 @@ import {
   createStairFirestoreService,
   entityToSaveInput,
 } from '../stair-firestore-service';
-import type { StairEntity } from '../../../types/stair';
+import type { StairEntity } from '../../../bim/types/stair-types';
 
 // ---------------------------------------------------------------------------
 // Fixtures

@@ -21,7 +21,7 @@ import {
   STAIR_RIBBON_KEYS,
   STAIR_RIBBON_VISIBILITY_KEYS,
 } from '../hooks/bridge/stair-command-keys';
-import { STAIR_RIBBON_BADGE_KEYS } from '../hooks/useRibbonStairBridge';
+import { STAIR_RIBBON_BADGE_KEYS } from '../../../bim/hooks/use-ribbon-stair-bridge';
 
 export const STAIR_CONTEXTUAL_TRIGGER = 'stair-selected';
 

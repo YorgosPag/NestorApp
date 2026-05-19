@@ -23,7 +23,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity, Entity } from '../../types/entities';
 import { isArrayEntity, isStairEntity, isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isXLineEntity, isRayEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
-import type { StairEntity } from '../../types/stair';
+import type { StairEntity } from '../../bim/types/stair-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';

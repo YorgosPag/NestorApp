@@ -14,7 +14,7 @@
 import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { StairEntity } from '../../../types/entities';
-import type { StairNosingSide } from '../../../types/stair';
+import type { StairNosingSide } from '../../../bim/types/stair-types';
 import type { DispatchStairParamPatch } from '../commands/dispatchStairParamPatch';
 
 const NOSING_OPTIONS: ReadonlyArray<{ readonly value: StairNosingSide; readonly labelKey: string }> = [

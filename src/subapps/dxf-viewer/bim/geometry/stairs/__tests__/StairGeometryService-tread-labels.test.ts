@@ -14,7 +14,7 @@ import type {
   StairVariantStraight,
   StairVariantLShape,
   StairTreadLabelDisplay,
-} from '../../../../types/stair';
+} from '../../../../bim/types/stair-types';
 
 function makeStraight(overrides: {
   treadLabelDisplay?: StairTreadLabelDisplay;

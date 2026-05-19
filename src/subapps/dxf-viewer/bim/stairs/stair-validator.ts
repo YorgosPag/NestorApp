@@ -36,7 +36,7 @@ import type {
   StairCodeProfile,
   StairParams,
   StairValidationState,
-} from '../../types/stair';
+} from '../../bim/types/stair-types';
 // ─── Headroom thresholds (cheap 2D proxy, Phase 6) ───────────────────────────
 
 const MIN_HEADROOM_MM: Readonly<Record<StairCodeProfile, number>> = {

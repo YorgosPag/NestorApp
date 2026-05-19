@@ -16,7 +16,7 @@
 import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { StairEntity } from '../../../types/entities';
-import type { StairMaterials } from '../../../types/stair';
+import type { StairMaterials } from '../../../bim/types/stair-types';
 import {
   classifyStairMaterial,
   defaultStairMaterialCatalog,

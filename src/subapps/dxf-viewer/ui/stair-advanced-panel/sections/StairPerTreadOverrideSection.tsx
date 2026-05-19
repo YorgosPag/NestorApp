@@ -19,7 +19,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { StairEntity } from '../../../types/entities';
-import type { StairPerTreadOverride } from '../../../types/stair';
+import type { StairPerTreadOverride } from '../../../bim/types/stair-types';
 import {
   classifyStairMaterial,
   defaultStairMaterialCatalog,

@@ -30,7 +30,7 @@ import type {
   StairParams,
   StairValidationState,
   StairVariantParams,
-} from '../../types/stair';
+} from '../../bim/types/stair-types';
 import { generateStairId } from '@/services/enterprise-id.service';
 import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometryService';
 import { reconcileLinkedStair } from '../../bim/stairs/stair-floor-link';

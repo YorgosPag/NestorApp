@@ -17,7 +17,7 @@ import type {
   StairParams,
   StairTreadLabelDisplay,
   StairVariantSketch,
-} from '../../../../types/stair';
+} from '../../../../bim/types/stair-types';
 
 const Z_TOL = 1e-9;
 const XY_TOL = 1e-6;

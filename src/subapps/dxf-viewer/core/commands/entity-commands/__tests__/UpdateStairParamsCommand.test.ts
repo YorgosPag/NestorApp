@@ -10,7 +10,7 @@ import {
   buildDefaultStairParams,
   buildStairEntity,
 } from '../../../../hooks/drawing/stair-completion';
-import type { StairEntity, StairParams } from '../../../../types/stair';
+import type { StairEntity, StairParams } from '../../../../bim/types/stair-types';
 
 function makeMockScene(initial: SceneEntity[] = []): { scene: Map<string, SceneEntity>; sm: ISceneManager } {
   const scene = new Map<string, SceneEntity>(initial.map((e) => [e.id, e]));

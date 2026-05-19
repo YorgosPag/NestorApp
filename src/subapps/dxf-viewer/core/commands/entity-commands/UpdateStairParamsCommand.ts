@@ -12,7 +12,7 @@
  */
 
 import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
-import type { StairGeometry, StairParams } from '../../../types/stair';
+import type { StairGeometry, StairParams } from '../../../bim/types/stair-types';
 import { computeStairGeometry } from '../../../bim/geometry/stairs/StairGeometryService';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { DEFAULT_MERGE_CONFIG } from '../interfaces';

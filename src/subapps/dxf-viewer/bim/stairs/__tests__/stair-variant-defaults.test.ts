@@ -16,7 +16,7 @@ import {
   splitThreeFlightsWithLandings,
   splitTwoFlightsForWinders,
 } from '../stair-variant-defaults';
-import type { StairKind, StairParams } from '../../../types/stair';
+import type { StairKind, StairParams } from '../../../bim/types/stair-types';
 
 function makeParams(overrides?: {
   stepCount?: number;

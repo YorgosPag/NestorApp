@@ -18,7 +18,7 @@
 import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { StairEntity } from '../../../types/entities';
-import type { StairTreadLabelDisplay } from '../../../types/stair';
+import type { StairTreadLabelDisplay } from '../../../bim/types/stair-types';
 import type { DispatchStairParamPatch } from '../commands/dispatchStairParamPatch';
 
 const EVERY_N_DEFAULT = 5;

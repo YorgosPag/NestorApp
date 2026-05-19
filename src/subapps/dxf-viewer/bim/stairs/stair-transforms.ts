@@ -24,7 +24,7 @@ import type {
   StairTurnDirectionCW,
   StairTurnDirectionLR,
   StairVariantParams,
-} from '../../types/stair';
+} from '../../bim/types/stair-types';
 import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-utils';
 import {
   getAxisAngleDeg,

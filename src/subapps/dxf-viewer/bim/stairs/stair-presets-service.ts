@@ -40,7 +40,7 @@ import type {
   StairParams,
   StairPresetDoc,
   StairPresetScope,
-} from '../../types/stair';
+} from '../../bim/types/stair-types';
 
 // ============================================================================
 // CONFIG

@@ -27,7 +27,7 @@ import type {
   StairEntity,
   StairParams,
   StairVariantParams,
-} from '../../types/stair';
+} from '../../bim/types/stair-types';
 import { mmFactorFromWidth } from './stair-floor-link';
 
 // ADR-358 Phase 9B-2 — magnet snap zone for length grip when linked to a

@@ -51,7 +51,7 @@ import type {
   StairEntity,
   StairKind,
   StairParams,
-} from '../../types/stair';
+} from '../../bim/types/stair-types';
 
 // ============================================================================
 // CONFIG

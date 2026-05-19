@@ -21,7 +21,7 @@
  */
 
 import { offsetPolyline } from '../../../rendering/entities/shared/geometry-offset-utils';
-import type { StairGeometry, StairParams, Polygon3D, Polyline3D, Segment3D } from '../../../types/stair';
+import type { StairGeometry, StairParams, Polygon3D, Polyline3D, Segment3D } from '../../../bim/types/stair-types';
 import {
   DEFAULT_CUT_PLANE_HEIGHT,
   type Vec2,

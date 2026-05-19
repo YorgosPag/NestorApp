@@ -14,7 +14,7 @@ import type {
   Segment3D,
   StairArrowSymbol,
   StairUpDirection,
-} from '../../../types/stair';
+} from '../../../bim/types/stair-types';
 
 const DEG2RAD = Math.PI / 180;
 

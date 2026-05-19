@@ -20,7 +20,7 @@ import { useCommandHistory } from '../../../core/commands';
 import { UpdateStairParamsCommand } from '../../../core/commands/entity-commands/UpdateStairParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import type { StairEntity } from '../../../types/entities';
-import type { StairParams } from '../../../types/stair';
+import type { StairParams } from '../../../bim/types/stair-types';
 import type { useLevels } from '../../../systems/levels';
 
 type LevelManagerLike = Pick<

@@ -29,7 +29,7 @@ import { calculateDistance } from '../entities/shared/geometry-rendering-utils';
 import { applyStairGripDrag } from '../../bim/stairs/stair-grips';
 import type { StairGripKind } from '../../hooks/grip-types';
 import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometryService';
-import type { StairEntity } from '../../types/stair';
+import type { StairEntity } from '../../bim/types/stair-types';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

@@ -36,7 +36,7 @@ import type {
   StairGeometry,
   StairParams,
   StairVariantTriangularOutline,
-} from '../../../types/stair';
+} from '../../../bim/types/stair-types';
 import {
   DEFAULT_CUT_PLANE_HEIGHT,
   type Vec2,

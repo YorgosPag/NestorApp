@@ -13,7 +13,7 @@ import type {
   StairParams,
   StairPresetDoc,
   StairPresetScope,
-} from '../../../types/stair';
+} from '../../../bim/types/stair-types';
 
 // ---------------------------------------------------------------------------
 // Firestore mock — in-memory store with per-query filter capture

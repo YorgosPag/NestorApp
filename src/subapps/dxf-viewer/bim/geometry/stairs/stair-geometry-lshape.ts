@@ -15,7 +15,7 @@ import type {
   StairVariantLShape,
   StairVariantLShapeLanding,
   StairVariantLShapeWinders,
-} from '../../../types/stair';
+} from '../../../bim/types/stair-types';
 import {
   DEFAULT_CUT_PLANE_HEIGHT,
   type Vec2,

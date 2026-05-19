@@ -291,8 +291,8 @@ export class HitTestingService {
         //      canvas pipeline (`stairEntity: { params, geometry, ... }`).
         // Resolve from whichever shape so we never publish a stair to the
         // spatial index without its parametric payload.
-        type StairLike = Partial<import('../types/stair').StairEntity> & {
-          stairEntity?: Partial<import('../types/stair').StairEntity>;
+        type StairLike = Partial<import('../bim/types/stair-types').StairEntity> & {
+          stairEntity?: Partial<import('../bim/types/stair-types').StairEntity>;
         };
         const raw = entity as unknown as StairLike;
         const stairData = (raw.params ? raw : raw.stairEntity) ?? raw;

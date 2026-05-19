@@ -22,7 +22,7 @@ import type {
   Polygon3D,
   StairTreadLabel,
   StairTreadLabelDisplay,
-} from '../../../types/stair';
+} from '../../../bim/types/stair-types';
 
 const DEFAULT_NTH = 5;
 

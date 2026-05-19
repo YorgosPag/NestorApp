@@ -25,7 +25,7 @@ import type {
   StairCodeProfile,
   StairNokSubType,
   StairParams,
-} from '../../types/stair';
+} from '../../bim/types/stair-types';
 import { reconcileLinkedStair } from './stair-floor-link';
 
 // ============================================================================

@@ -13,7 +13,7 @@ import {
   buildStairEntity,
 } from '../../../hooks/drawing/stair-completion';
 import { applyStairGripDrag, getStairGrips } from '../stair-grips';
-import type { StairEntity, StairParams } from '../../../types/stair';
+import type { StairEntity, StairParams } from '../../../bim/types/stair-types';
 
 describe('stair-grips (Phase 5b)', () => {
   const basePoint = { x: 0, y: 0 };

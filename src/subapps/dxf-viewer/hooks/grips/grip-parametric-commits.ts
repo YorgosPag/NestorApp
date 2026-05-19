@@ -12,7 +12,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import type { UnifiedGripInfo } from './unified-grip-types';
 import type { DxfCommitDeps } from './unified-grip-types';
-import type { StairEntity } from '../../types/stair';
+import type { StairEntity } from '../../bim/types/stair-types';
 import type { WallEntity, WallKind } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { SlabEntity } from '../../bim/types/slab-types';

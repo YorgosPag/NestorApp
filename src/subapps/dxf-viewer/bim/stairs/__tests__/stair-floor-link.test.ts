@@ -15,7 +15,7 @@ import {
   mmFactorFromWidth,
   reconcileLinkedStair,
 } from '../stair-floor-link';
-import type { StairParams, StairVariantStraight } from '../../../types/stair';
+import type { StairParams, StairVariantStraight } from '../../../bim/types/stair-types';
 
 const STRAIGHT: StairVariantStraight = { kind: 'straight' };
 

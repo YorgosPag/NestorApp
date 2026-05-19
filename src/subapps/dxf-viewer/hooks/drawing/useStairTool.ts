@@ -24,7 +24,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairEntity } from '../../types/stair';
+import type { StairEntity } from '../../bim/types/stair-types';
 import { stairStatusStore } from '../../statusbar/stair-status-store';
 import { stairPreviewStore } from '../../bim/stairs/stair-preview-store';
 import type { DynamicSubmitDetail } from '../../systems/dynamic-input/utils/events';

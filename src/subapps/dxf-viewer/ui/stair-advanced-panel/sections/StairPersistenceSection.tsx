@@ -15,7 +15,7 @@
 
 import React, { useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { StairEntity } from '../../../types/stair';
+import type { StairEntity } from '../../../bim/types/stair-types';
 import type {
   StairSaveState,
   UseStairPersistenceResult,

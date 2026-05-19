@@ -15,7 +15,7 @@ import {
   type StairStructureType,
   type StairTurnDirectionLR,
   type StairWinderMethod,
-} from '../../../../types/stair';
+} from '../../../../bim/types/stair-types';
 import {
   STAIR_RIBBON_KEYS,
   type StairRibbonComboKey,

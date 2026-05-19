@@ -16,7 +16,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { StairEntity } from '../../../types/entities';
-import type { StairPresetDoc, StairPresetScope } from '../../../types/stair';
+import type { StairPresetDoc, StairPresetScope } from '../../../bim/types/stair-types';
 import { useStairPresets } from '../hooks/useStairPresets';
 import type { useLevels } from '../../../systems/levels';
 

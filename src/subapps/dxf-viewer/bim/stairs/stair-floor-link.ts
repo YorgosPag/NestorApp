@@ -21,7 +21,7 @@
  * pipeline (`withRecomputedTotals` ∘ reconcile) never loops.
  */
 
-import type { StairCodeProfile, StairParams } from '../../types/stair';
+import type { StairCodeProfile, StairParams } from '../../bim/types/stair-types';
 
 // ─── Scene units heuristic (mirror of stair-validator / stair-auto-fix) ──────
 //

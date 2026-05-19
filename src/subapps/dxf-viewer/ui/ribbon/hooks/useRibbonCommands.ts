@@ -8,8 +8,8 @@ import type {
 } from '../context/RibbonCommandContext';
 import type { RibbonTextEditorBridge } from './useRibbonTextEditorBridge';
 import type { RibbonArrayBridge } from './useRibbonArrayBridge';
-import type { RibbonStairBridge } from './useRibbonStairBridge';
-import { isStairBadgeKey, isStairPanelVisibilityKey } from './useRibbonStairBridge';
+import type { RibbonStairBridge } from '../../../bim/hooks/use-ribbon-stair-bridge';
+import { isStairBadgeKey, isStairPanelVisibilityKey } from '../../../bim/hooks/use-ribbon-stair-bridge';
 import type { RibbonWallBridge } from './useRibbonWallBridge';
 import { isWallBadgeKey } from './useRibbonWallBridge';
 import type { RibbonOpeningBridge } from './useRibbonOpeningBridge';

@@ -18,7 +18,7 @@ import type {
   StairTreadLabelDisplay,
   StairVariantWinder,
   StairWinderMethod,
-} from '../../../../types/stair';
+} from '../../../../bim/types/stair-types';
 
 const Z_TOL = 1e-9;
 const DEG2RAD = Math.PI / 180;

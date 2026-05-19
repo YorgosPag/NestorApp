@@ -3,7 +3,7 @@
  */
 import { act, renderHook } from '@testing-library/react';
 import { useStairTool } from '../useStairTool';
-import type { StairEntity } from '../../../types/stair';
+import type { StairEntity } from '../../../bim/types/stair-types';
 
 describe('useStairTool state machine (Phase 5a)', () => {
   it('1. initial state is idle until activate()', () => {
