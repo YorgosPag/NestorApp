@@ -30,6 +30,11 @@ import { applyStairGripDrag } from '../../bim/stairs/stair-grips';
 import type { StairGripKind } from '../../hooks/grip-types';
 import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometryService';
 import type { StairEntity } from '../../bim/types/stair-types';
+// ADR-363 Phase 1C — parametric wall drag preview (mirrors stair pattern).
+import { applyWallGripDrag } from '../../bim/walls/wall-grips';
+import type { WallGripKind } from '../../hooks/useGripMovement';
+import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
+import type { WallEntity } from '../../bim/types/wall-types';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,6 +61,11 @@ export interface EntityPreviewTransform {
    * ghost. Anchor is the grip world position captured at mouseDown.
    */
   readonly stairGripKind?: StairGripKind;
+  /**
+   * ADR-363 Phase 1C — parametric wall discriminator. Routes preview through
+   * `applyWallGripDrag` + `computeWallGeometry` (mirrors stair pattern).
+   */
+  readonly wallGripKind?: WallGripKind;
   readonly anchorPos?: Point2D;
 }
 
@@ -102,8 +112,18 @@ export function applyEntityPreview(
   preview: EntityPreviewTransform | undefined,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, anchorPos } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, anchorPos } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
+
+  // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
+  if (wallGripKind && anchorPos && entity.type === 'wall') {
+    const wall = entity as unknown as WallEntity;
+    const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
+    const newParams = applyWallGripDrag(wallGripKind, { originalParams: wall.params, delta, currentPos });
+    if (newParams === wall.params) return entity;
+    const newGeometry = computeWallGeometry(newParams, wall.kind);
+    return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+  }
 
   // ── ADR-358 Phase 5d — parametric stair live preview ─────────────────────
   // Stair grips mutate `StairParams`; geometry is fully derived. Route

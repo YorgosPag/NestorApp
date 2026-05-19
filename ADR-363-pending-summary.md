@@ -31,12 +31,12 @@ _Ενημέρωση 2026-05-20: Μεγάλη διόρθωση — πολλά "pe
 
 ---
 
-### Phase 4.5e+ — Material Pickers activation (~2-3h)
+### Phase 4.5e+ — Material Pickers activation — ✅ DONE (2026-05-20)
 _(Deferred from Phase 4.5d — ribbon buttons exist, pickers disabled/comingSoon)_
-- [ ] Wall material picker → depends on WallDna composable layer stack
-- [ ] Slab material picker → depends on Phase 6.5 material library
-- [ ] Beam material picker → Phase 5.5c hatch DONE, but comingSoon placeholder remains
-- [ ] Tab/Shift+Tab cycling για material picker (lower priority)
+- [x] Wall material picker — ENABLED (wall-hatch-patterns.ts SSoT + drawMaterialHatch + bridge wiring)
+- [x] Slab material picker — ENABLED (slab-command-keys + useRibbonSlabBridge + contextual-slab-tab)
+- [x] Beam material picker — WAS ALREADY ENABLED (Phase 5.5c, not comingSoon)
+- [ ] Tab/Shift+Tab cycling για material picker (lower priority — deferred)
 
 ---
 

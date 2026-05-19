@@ -1026,6 +1026,7 @@
           "masonry": "Masonry",
           "aeratedConcrete": "Aerated Concrete",
           "gypsum": "Gypsum Board",
+          "tooltip": "Select wall material for hatch pattern",
           "comingSoon": "Available with WallDna Phase 1D"
         }
       },

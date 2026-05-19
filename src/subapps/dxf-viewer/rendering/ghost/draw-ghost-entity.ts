@@ -157,6 +157,35 @@ export function drawGhostEntity(
       return;
     }
 
+    // ADR-363 Phase 1C — parametric wall ghost. Renders the closed silhouette
+    // (outerEdge forward + innerEdge reversed) so the ghost matches the wall
+    // footprint during grip drag (mirrors stair perimeter pattern).
+    case 'wall': {
+      const wall = entity as unknown as {
+        geometry?: {
+          outerEdge?: { points: Array<{ x: number; y: number }> };
+          innerEdge?: { points: Array<{ x: number; y: number }> };
+        };
+      };
+      const outer = wall.geometry?.outerEdge?.points ?? [];
+      const inner = wall.geometry?.innerEdge?.points ?? [];
+      if (outer.length < 2 || inner.length < 2) return;
+      ctx.beginPath();
+      const first = toScreen(outer[0]);
+      ctx.moveTo(first.x, first.y);
+      for (let i = 1; i < outer.length; i++) {
+        const p = toScreen(outer[i]);
+        ctx.lineTo(p.x, p.y);
+      }
+      for (let i = inner.length - 1; i >= 0; i--) {
+        const p = toScreen(inner[i]);
+        ctx.lineTo(p.x, p.y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      return;
+    }
+
     default:
       return;
   }

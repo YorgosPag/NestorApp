@@ -104,6 +104,8 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       edgeVertexIndices: dragPreview.edgeVertexIndices,
       // ADR-358 Phase 5d — stair parametric ghost discriminator pass-through.
       ...(dragPreview.stairGripKind ? { stairGripKind: dragPreview.stairGripKind } : {}),
+      // ADR-363 Phase 1C — wall parametric ghost discriminator pass-through.
+      ...(dragPreview.wallGripKind ? { wallGripKind: dragPreview.wallGripKind } : {}),
       ...(dragPreview.anchorPos ? { anchorPos: dragPreview.anchorPos } : {}),
     };
 

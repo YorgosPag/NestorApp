@@ -11,10 +11,12 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
-import type { GripInfo, StairGripKind } from './useGripMovement';
+import type { GripInfo, StairGripKind, WallGripKind } from './useGripMovement';
 import type { ColumnGripKind, BeamGripKind } from './grip-types';
+import type { WallEntity } from '../bim/types/wall-types';
 import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
 import { getStairGrips } from '../bim/stairs/stair-grips';
+import { getWallGrips } from '../bim/walls/wall-grips';
 import { getDimensionGrips } from './dimensions/useDimensionGrips';
 import { getXLineGrips } from '../systems/xline/xline-grips';
 import { getRayGrips } from '../systems/ray/ray-grips';
@@ -49,6 +51,11 @@ export interface DxfGripDragPreview {
    */
   stairGripKind?: StairGripKind;
   anchorPos?: Point2D;
+  /**
+   * ADR-363 Phase 1C — parametric wall grip discriminator. Routes live preview
+   * through `applyWallGripDrag` + `computeWallGeometry` (mirrors stair pattern).
+   */
+  wallGripKind?: WallGripKind;
   /**
    * ADR-363 Phase 4.5c.5 — parametric column/beam grip discriminators. Set
    * when the active grip is a dimensional column or beam grip; consumed by
@@ -227,6 +234,12 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
     case 'ray': {
       // ADR-359 Phase 11 — basePoint (translate) + direction handle (rotate).
       grips.push(...getRayGrips(entity.rayEntity));
+      break;
+    }
+
+    case 'wall': {
+      // ADR-363 Phase 1C — parametric wall grips (start/end/midpoint/thickness).
+      grips.push(...getWallGrips(entity as unknown as WallEntity));
       break;
     }
   }

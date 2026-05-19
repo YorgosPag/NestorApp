@@ -60,7 +60,7 @@ const FLIP_OPTIONS = [
   { value: 'true',  labelKey: 'ribbon.commands.wallEditor.flip.on',  isLiteralLabel: false },
 ] as const;
 
-// ADR-363 Phase 4.5d — wall material picker (DISABLED, comingSoon placeholder).
+// ADR-363 Phase 4.5e-B — wall material picker options (ENABLED).
 // Real activation lands with WallDna Phase 1D (composable wall layer stack with
 // per-layer material). Until then the combobox is greyed out and clicks fire
 // the shared `onComingSoon` toast.
@@ -147,8 +147,8 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
       ],
     },
     {
-      // ADR-363 Phase 4.5d — wall material picker placeholder. Visible + disabled.
-      // Activation deferred to WallDna Phase 1D.
+      // ADR-363 Phase 4.5e-B — wall material picker (ENABLED). Wired to wall-level
+      // hatch; DNA-bearing walls ignore this field (per-layer DNA rendering governs).
       id: 'wall-material',
       labelKey: 'ribbon.panels.wallMaterial',
       rows: [
@@ -161,11 +161,10 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
               command: {
                 id: 'wall.material',
                 labelKey: 'ribbon.commands.wallEditor.material.section.title',
-                tooltipKey: 'ribbon.commands.wallEditor.material.comingSoon',
-                commandKey: 'wall.params.material',
+                tooltipKey: 'ribbon.commands.wallEditor.material.tooltip',
+                commandKey: WALL_RIBBON_KEYS.stringParams.material,
                 comboboxWidthPx: 200,
                 options: WALL_MATERIAL_OPTIONS,
-                comingSoon: true,
               },
             },
           ],

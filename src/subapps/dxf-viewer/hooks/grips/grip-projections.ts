@@ -46,6 +46,8 @@ export function buildDxfDragPreview(
     // inputs the commit adapter uses (origin/delta/currentPos).
     ...(activeGrip.stairGripKind ? { stairGripKind: activeGrip.stairGripKind } : {}),
     ...(activeGrip.stairGripKind ? { anchorPos } : {}),
+    // ADR-363 Phase 1C — parametric wall grip discriminator + anchor.
+    ...(activeGrip.wallGripKind ? { wallGripKind: activeGrip.wallGripKind, anchorPos } : {}),
     // ADR-363 Phase 4.5c.5 — propagate column/beam grip kind so the dim-annotation
     // leaf can compute live "w=350mm" labels without re-subscribing to scene state.
     ...(activeGrip.columnGripKind ? { columnGripKind: activeGrip.columnGripKind } : {}),
