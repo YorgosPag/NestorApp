@@ -302,12 +302,20 @@ export class DimensionRenderer extends BaseEntityRenderer {
   }
 
   private drawPrimaryText(r: ResolvedDimensionRender, _options: RenderOptions): void {
+    // ADR-362 hotfix Round 4 (2026-05-19) — use CSS viewport (getBoundingClientRect)
+    // not backing-store. See `toScreen` for the full reasoning. Without this fix,
+    // dim text lands at the wrong screen Y under non-100% browser zoom / HiDPI
+    // (visible as "dim text jumps to top of canvas").
+    const rect = this.ctx.canvas.getBoundingClientRect();
     renderDimensionText(this.ctx, {
       entity: r.entity,
       geometry: r.geometry,
       style: r.style,
       transform: this.transform,
-      viewport: { width: this.ctx.canvas.width, height: this.ctx.canvas.height },
+      viewport: {
+        width: rect.width || this.ctx.canvas.width,
+        height: rect.height || this.ctx.canvas.height,
+      },
       layerColour: this.layerColour,
       canvasBackground: this.canvasBackground,
     });
@@ -372,24 +380,17 @@ export class DimensionRenderer extends BaseEntityRenderer {
   }
 
   private toScreen(p: Point2D): Point2D {
-    // [DIM-DIAG R3] log canvas vs rect mismatch — DPR scaling bug suspect.
+    // ADR-362 hotfix Round 4 (2026-05-19) — use CSS viewport (getBoundingClientRect)
+    // not backing-store (ctx.canvas.width/height). With DPR ≠ 1 (e.g., browser zoom
+    // ≠ 100% or HiDPI display) the two differ, and all other entity renderers go
+    // through BaseEntityRenderer.getViewport() which uses CSS pixels. Mixing CSS
+    // pixels for clicks (mouse-handler-up uses getBoundingClientRect snapshot) with
+    // backing-store pixels here makes dim line + text land at the wrong Y at render
+    // time — root cause of "dim jumps up" under non-100% browser zoom.
     const rect = this.ctx.canvas.getBoundingClientRect();
-    const cvw = this.ctx.canvas.width;
-    const cvh = this.ctx.canvas.height;
-    if (Math.abs(rect.width - cvw) > 1 || Math.abs(rect.height - cvh) > 1) {
-      const g = (globalThis as { __dimCanvasMismatchLogged?: boolean });
-      if (!g.__dimCanvasMismatchLogged) {
-        g.__dimCanvasMismatchLogged = true;
-        // eslint-disable-next-line no-console
-        console.warn(
-          `[DIM-DIAG R3] CANVAS_VS_RECT_MISMATCH ctx.canvas=(${cvw}x${cvh}) rect=(${rect.width.toFixed(1)}x${rect.height.toFixed(1)}) ratioW=${(cvw / rect.width).toFixed(2)} ratioH=${(cvh / rect.height).toFixed(2)} ` +
-            `devicePixelRatio=${typeof window !== 'undefined' ? window.devicePixelRatio : 'n/a'}`,
-        );
-      }
-    }
     return CoordinateTransforms.worldToScreen(p, this.transform, {
-      width: cvw,
-      height: cvh,
+      width: rect.width || this.ctx.canvas.width,
+      height: rect.height || this.ctx.canvas.height,
     });
   }
 }
