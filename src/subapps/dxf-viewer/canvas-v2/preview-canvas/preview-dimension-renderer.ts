@@ -130,6 +130,33 @@ export function renderPreviewDimension(params: PreviewDimensionRenderParams): vo
   scaledParams.ctx.globalAlpha = resolvedOpts.opacity;
 
   if (geometry) {
+    // [DIM-DIAG R3] preview render trace — kind + screen coords for dim line + text.
+    {
+      const g = geometry as {
+        kind: string;
+        dimLine?: { start: { x: number; y: number }; end: { x: number; y: number } };
+        textAnchor?: { x: number; y: number };
+      };
+      let dlStr = 'n/a';
+      let txtStr = 'n/a';
+      if (g.dimLine) {
+        const a = toScreen(scaledParams, g.dimLine.start);
+        const b = toScreen(scaledParams, g.dimLine.end);
+        dlStr = `world=(${g.dimLine.start.x.toFixed(2)},${g.dimLine.start.y.toFixed(2)} → ${g.dimLine.end.x.toFixed(2)},${g.dimLine.end.y.toFixed(2)}) ` +
+          `screen=(${a.x.toFixed(1)},${a.y.toFixed(1)} → ${b.x.toFixed(1)},${b.y.toFixed(1)})`;
+      }
+      if (g.textAnchor) {
+        const t = toScreen(scaledParams, g.textAnchor);
+        txtStr = `world=(${g.textAnchor.x.toFixed(2)},${g.textAnchor.y.toFixed(2)}) screen=(${t.x.toFixed(1)},${t.y.toFixed(1)})`;
+      }
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[DIM-DIAG R3] preview kind=${g.kind} defPoints=[${scaledParams.entity.defPoints.map((p) => `(${p.x.toFixed(2)},${p.y.toFixed(2)})`).join(' | ')}] ` +
+          `dimLine=${dlStr} text=${txtStr} ` +
+          `viewport=(${scaledParams.viewport.width}x${scaledParams.viewport.height}) ` +
+          `transform=(scale=${scaledParams.transform.scale.toFixed(3)},offY=${scaledParams.transform.offsetY.toFixed(2)})`,
+      );
+    }
     drawExtensionLines(scaledParams, geometry, resolvedOpts);
     drawDimLineOrArc(scaledParams, geometry, resolvedOpts);
     drawArrowheads(scaledParams, geometry, resolvedOpts);
