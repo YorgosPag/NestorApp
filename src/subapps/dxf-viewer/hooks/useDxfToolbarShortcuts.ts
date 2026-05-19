@@ -3,11 +3,13 @@
 import React from 'react';
 import { matchesShortcut, DXF_GUIDE_CHORD_MAP, GUIDE_CHORD_TIMEOUT_MS } from '../config/keyboard-shortcuts';
 import type { ToolType } from '../ui/toolbar/types';
+import type { WallKind } from '../bim/types/wall-types';
 import {
   MultiCharKeySequence,
   type ChordDefinition,
   type FallbackDefinition,
 } from '../keyboard/MultiCharKeySequence';
+import { EventBus } from '../systems/events/EventBus';
 
 // ADR-363 Phase 7: BIM multi-char hotkeys — AutoCAD command-line pattern.
 // Leader keys open a 350ms window; second key within window resolves to a tool.
@@ -15,17 +17,22 @@ import {
 const BIM_CHORD_TIMEOUT_MS = 350;
 
 const BIM_CHORDS: readonly ChordDefinition[] = [
-  { firstKey: 'S', secondKey: 'T', action: 'tool:stair' },   // S+T → stair  (ADR-358)
-  { firstKey: 'S', secondKey: 'L', action: 'tool:slab' },    // S+L → slab   (ADR-363)
-  { firstKey: 'O', secondKey: 'P', action: 'tool:opening' }, // O+P → opening (ADR-363)
-  { firstKey: 'C', secondKey: 'L', action: 'tool:column' },  // C+L → column  (ADR-363)
-  { firstKey: 'B', secondKey: 'M', action: 'tool:beam' },    // B+M → beam    (ADR-363)
+  { firstKey: 'S', secondKey: 'T', action: 'tool:stair' },       // S+T → stair     (ADR-358)
+  { firstKey: 'S', secondKey: 'L', action: 'tool:slab' },        // S+L → slab      (ADR-363)
+  { firstKey: 'O', secondKey: 'P', action: 'tool:opening' },     // O+P → opening   (ADR-363)
+  { firstKey: 'C', secondKey: 'L', action: 'tool:column' },      // C+L → column    (ADR-363)
+  { firstKey: 'B', secondKey: 'M', action: 'tool:beam' },        // B+M → beam      (ADR-363)
+  // ADR-363 Phase 7B — wall variant chords: W+n activates wall tool + sets kind
+  { firstKey: 'W', secondKey: '1', action: 'tool:wall:straight' }, // W+1 → wall straight
+  { firstKey: 'W', secondKey: '2', action: 'tool:wall:curved' },   // W+2 → wall curved
+  { firstKey: 'W', secondKey: '3', action: 'tool:wall:polyline' }, // W+3 → wall polyline
 ];
 
 const BIM_FALLBACKS: readonly FallbackDefinition[] = [
   { firstKey: 'S', action: 'tool:select' },   // S alone → select
   { firstKey: 'O', action: 'tool:layering' }, // O alone → layering
   { firstKey: 'C', action: 'tool:circle' },   // C alone → circle
+  { firstKey: 'W', action: 'tool:wall' },     // W alone → wall (Phase 7B: W moved to BIM chord table)
   // B has no fallback (no existing single-B shortcut)
 ];
 
@@ -119,7 +126,14 @@ export function useDxfToolbarShortcuts(
         if (bimResult.kind === 'chord-completed') {
           e.preventDefault();
           const action = bimResult.action;
-          if (action.startsWith('tool:')) handleToolChange(action.slice(5) as ToolType);
+          // ADR-363 Phase 7B: wall variant chords emit EventBus kind change + activate tool.
+          if (action === 'tool:wall:straight' || action === 'tool:wall:curved' || action === 'tool:wall:polyline') {
+            const wallKind = action.slice('tool:wall:'.length) as WallKind;
+            handleToolChange('wall');
+            EventBus.emit('bim:set-wall-kind', { kind: wallKind });
+          } else if (action.startsWith('tool:')) {
+            handleToolChange(action.slice(5) as ToolType);
+          }
           return;
         }
 
@@ -141,14 +155,20 @@ export function useDxfToolbarShortcuts(
       if (matchesShortcut(e, 'toggleLayers')) { e.preventDefault(); onAction('toggle-layers'); return; }
       if (matchesShortcut(e, 'toggleProperties')) { e.preventDefault(); onAction('toggle-properties'); return; }
       if (matchesShortcut(e, 'export')) { e.preventDefault(); onAction('export'); return; }
-      // Note: S (select), C (circle), O (layering) are now via bimDispatcher above.
+      // Note: S (select), C (circle), O (layering), W (wall) are now via bimDispatcher above.
       if (matchesShortcut(e, 'pan')) { e.preventDefault(); handleToolChange('pan'); return; }
       if (matchesShortcut(e, 'line')) { e.preventDefault(); handleToolChange('line'); return; }
       if (matchesShortcut(e, 'rectangle')) { e.preventDefault(); handleToolChange('rectangle'); return; }
       if (matchesShortcut(e, 'polyline')) { e.preventDefault(); handleToolChange('polyline'); return; }
       if (matchesShortcut(e, 'polygon')) { e.preventDefault(); handleToolChange('polygon'); return; }
-      if (matchesShortcut(e, 'wall')) { e.preventDefault(); handleToolChange('wall'); return; }
       if (matchesShortcut(e, 'move')) { e.preventDefault(); handleToolChange('move'); return; }
+      // ADR-363 Phase 7B: D key = door kind when opening tool active; falls through to
+      // measureDistance otherwise — no conflict in any other tool context.
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && activeTool === 'opening' && e.key.toUpperCase() === 'D') {
+        e.preventDefault();
+        EventBus.emit('bim:set-opening-kind', { kind: 'door' });
+        return;
+      }
       if (matchesShortcut(e, 'measureDistance')) { e.preventDefault(); handleToolChange('measure-distance'); return; }
       if (matchesShortcut(e, 'measureArea')) { e.preventDefault(); handleToolChange('measure-area'); return; }
       if (matchesShortcut(e, 'measureAngle')) { e.preventDefault(); handleToolChange('measure-angle'); return; }

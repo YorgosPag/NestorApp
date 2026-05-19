@@ -139,13 +139,40 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     category: 'tool',
     toolType: 'stair',
   },
-  // ADR-363 Phase 1B: Wall drawing tool — single-char 'W'. Industry-aligned
-  // (Revit `WA`, AutoCAD `_WALL` → 'W' is the closest single-key analogue).
+  // ADR-363 Phase 1B / Phase 7B: Wall drawing tool — 'W' alone (BIM chord fallback).
+  // Phase 7B: W is a BIM chord leader; W+1/2/3 → straight/curved/polyline variant.
+  // Resolved via MultiCharKeySequence (useDxfToolbarShortcuts). matchesShortcut() not used.
   wall: {
     key: 'W',
     modifier: 'none',
     descriptionKey: 'shortcuts.tools.wall',
     action: 'tool:wall',
+    category: 'tool',
+    toolType: 'wall',
+  },
+  // ADR-363 Phase 7B: wall variant chords — activate wall tool + set kind.
+  // Dispatched via MultiCharKeySequence + EventBus 'bim:set-wall-kind'.
+  wallStraight: {
+    key: 'W1',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.wallStraight',
+    action: 'tool:wall:straight',
+    category: 'tool',
+    toolType: 'wall',
+  },
+  wallCurved: {
+    key: 'W2',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.wallCurved',
+    action: 'tool:wall:curved',
+    category: 'tool',
+    toolType: 'wall',
+  },
+  wallPolyline: {
+    key: 'W3',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.wallPolyline',
+    action: 'tool:wall:polyline',
     category: 'tool',
     toolType: 'wall',
   },
@@ -156,6 +183,17 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     modifier: 'none',
     descriptionKey: 'shortcuts.tools.opening',
     action: 'tool:opening',
+    category: 'tool',
+    toolType: 'opening',
+  },
+  // ADR-363 Phase 7B: D key — sets opening kind to 'door' when opening tool is active.
+  // Context-sensitive: D = door only while activeTool === 'opening'; otherwise D = measureDistance.
+  // Dispatched via EventBus 'bim:set-opening-kind'. matchesShortcut() not used for this.
+  openingDoor: {
+    key: 'D',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.openingDoor',
+    action: 'bim:set-opening-kind:door',
     category: 'tool',
     toolType: 'opening',
   },

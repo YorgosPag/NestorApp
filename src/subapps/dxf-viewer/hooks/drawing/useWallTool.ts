@@ -41,6 +41,7 @@ import {
   type SceneUnits,
   type WallParamOverrides,
 } from './wall-completion';
+import { EventBus } from '../../systems/events/EventBus';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -159,6 +160,10 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       overrides: prev.overrides,
     }));
   }, []);
+
+  // ADR-363 Phase 7B — keyboard W+n chord: set wall kind + (re-)activate the tool.
+  // setKind is stable (useCallback []) so this listener registers exactly once.
+  useEffect(() => EventBus.on('bim:set-wall-kind', ({ kind }) => setKind(kind)), [setKind]);
 
   const deactivate = useCallback(() => {
     setState(INITIAL_STATE);

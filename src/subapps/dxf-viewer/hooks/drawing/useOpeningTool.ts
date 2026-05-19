@@ -22,7 +22,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4 §6 Phase 2
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { OpeningEntity, OpeningKind } from '../../bim/types/opening-types';
 import type { WallEntity } from '../../bim/types/wall-types';
@@ -31,6 +31,7 @@ import {
   buildDefaultOpeningParams,
   type OpeningParamOverrides,
 } from './opening-completion';
+import { EventBus } from '../../systems/events/EventBus';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -116,6 +117,10 @@ export function useOpeningTool(options: UseOpeningToolOptions): UseOpeningToolRe
       overrides: prev.overrides,
     }));
   }, []);
+
+  // ADR-363 Phase 7B — keyboard D shortcut: set opening kind without re-activating.
+  // setKind is stable (useCallback []) so this listener registers exactly once.
+  useEffect(() => EventBus.on('bim:set-opening-kind', ({ kind }) => setKind(kind)), [setKind]);
 
   const deactivate = useCallback(() => {
     setState(INITIAL_STATE);

@@ -7,6 +7,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { AnySceneEntity, SceneModel } from '../../types/scene';
 import type { GridGuide, GridGroup } from '../../ai-assistant/grid-types';
+import type { OpeningKind } from '../../bim/types/opening-types';
+import type { WallKind } from '../../bim/types/wall-types';
 
 // Event type definitions - centralized and type-safe
 export interface DrawingEventMap {
@@ -198,6 +200,9 @@ export interface DrawingEventMap {
   // ADR-363 Phase 5 — BIM beam params + delete events
   'bim:beam-params-updated': { beamId: string };
   'bim:beam-delete-requested': { beamId: string };
+  // ADR-363 Phase 7B — BIM variant kind shortcuts (keyboard D / Wn)
+  'bim:set-opening-kind': { kind: OpeningKind };
+  'bim:set-wall-kind': { kind: WallKind };
 
   // Crop-window: marquee drawn by user → clip scene to that world-space rectangle
   'crop:marquee-rect': { xMin: number; yMin: number; xMax: number; yMax: number };
