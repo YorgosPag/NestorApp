@@ -369,9 +369,9 @@ export const CONTEXTUAL_TEXT_EDITOR_TAB: RibbonTab = {
               command: {
                 id: 'text.editor.findReplace',
                 labelKey: 'ribbon.commands.textEditor.editor.findReplace',
-                icon: 'text-placeholder',
+                icon: 'search',
                 commandKey: 'text-find-replace',
-                comingSoon: true,
+                action: 'text-find-replace',
               },
             },
             {
