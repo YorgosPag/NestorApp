@@ -74,14 +74,15 @@ export class ThreeJsSceneManager {
     const sun = new THREE.DirectionalLight(0xfffaf0, 3);
     sun.position.set(-5, 10, 5);
     sun.castShadow = true;
-    sun.shadow.bias = -0.0005;
+    sun.shadow.bias = -0.002;
+    sun.shadow.normalBias = 0.1;
     sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.camera.near = 0.1;
     sun.shadow.camera.far = 200;
-    sun.shadow.camera.left = -50;
-    sun.shadow.camera.right = 50;
-    sun.shadow.camera.top = 50;
-    sun.shadow.camera.bottom = -50;
+    sun.shadow.camera.left = -60;
+    sun.shadow.camera.right = 60;
+    sun.shadow.camera.top = 60;
+    sun.shadow.camera.bottom = -60;
     scene.add(sun);
 
     // Ground bounce (HemisphereLight — sky blue / warm ground)

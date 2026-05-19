@@ -41,8 +41,10 @@ function resolveWallMaterial(wall: WallEntity): THREE.MeshStandardMaterial {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// All BIM params (height, depth, thickness, elevation) are in canvas world units (~meters).
+// Shape XY coords: same units. No unit conversion needed anywhere in this file.
 function toShapePoints(pts: readonly Point3D[]): { x: number; y: number }[] {
-  return pts.map((p) => ({ x: p.x / 1000, y: p.y / 1000 }));
+  return pts.map((p) => ({ x: p.x, y: p.y }));
 }
 
 function buildShape(outer: readonly Point3D[], inner?: readonly Point3D[]): THREE.Shape | null {
@@ -87,9 +89,9 @@ export function wallToMesh(wall: WallEntity, floorElevationMm = 0): THREE.Mesh |
   );
   if (!shape) return null;
 
-  const geo = extrudeAndRotate(shape, wall.params.height / 1000);
+  const geo = extrudeAndRotate(shape, wall.params.height);
   const mesh = new THREE.Mesh(geo, resolveWallMaterial(wall));
-  mesh.position.y = floorElevationMm / 1000;
+  mesh.position.y = floorElevationMm;
   return tagMesh(mesh, wall.id, 'wall');
 }
 
@@ -100,9 +102,9 @@ export function columnToMesh(column: ColumnEntity, floorElevationMm = 0): THREE.
   const shape = buildShape(verts);
   if (!shape) return null;
 
-  const geo = extrudeAndRotate(shape, column.params.height / 1000);
+  const geo = extrudeAndRotate(shape, column.params.height);
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('column'));
-  mesh.position.y = floorElevationMm / 1000;
+  mesh.position.y = floorElevationMm;
   return tagMesh(mesh, column.id, 'column');
 }
 
@@ -113,11 +115,10 @@ export function beamToMesh(beam: BeamEntity): THREE.Mesh | null {
   const shape = buildShape(verts);
   if (!shape) return null;
 
-  const depthM = beam.params.depth / 1000;
-  const geo = extrudeAndRotate(shape, depthM);
+  const geo = extrudeAndRotate(shape, beam.params.depth);
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('beam'));
   // elevation = top of beam; extrusion goes from y=0 → y=depth, so offset down by depth
-  mesh.position.y = (beam.params.elevation - beam.params.depth) / 1000;
+  mesh.position.y = beam.params.elevation - beam.params.depth;
   return tagMesh(mesh, beam.id, 'beam');
 }
 
@@ -128,10 +129,9 @@ export function slabToMesh(slab: SlabEntity): THREE.Mesh | null {
   const shape = buildShape(verts);
   if (!shape) return null;
 
-  const thicknessM = slab.params.thickness / 1000;
-  const geo = extrudeAndRotate(shape, thicknessM);
+  const geo = extrudeAndRotate(shape, slab.params.thickness);
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('slab'));
   // elevation = top surface; position bottom at elevation - thickness
-  mesh.position.y = (slab.params.elevation - slab.params.thickness) / 1000;
+  mesh.position.y = slab.params.elevation - slab.params.thickness;
   return tagMesh(mesh, slab.id, 'slab');
 }
