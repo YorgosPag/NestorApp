@@ -53,7 +53,7 @@ import { createEntityFromTool as createEntityFromToolPure, isEntityComplete } fr
 import { generatePreviewEntity, applyPreviewStyling, createPartialPreview } from './drawing-preview-generator';
 // ADR-358 Phase 8 preview hotfix — read stair tool state (basePoint+direction)
 // from the SSoT store so the rubber-band preview renders during 2-click placement.
-import { stairPreviewStore } from '../../systems/stairs/stair-preview-store';
+import { stairPreviewStore } from '../../bim/stairs/stair-preview-store';
 // ADR-363 Phase 1C — wall preview SSoT (same single-writer pattern as stair).
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 import { toolStateStore } from '../../stores/ToolStateStore';

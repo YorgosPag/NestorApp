@@ -3,7 +3,7 @@
  * slab / column / beam). Extracted from DxfViewerContent.tsx to keep that file
  * under the 500-line SRP limit. Each bridge is a thin contextual-tab wire-up.
  */
-import { useRibbonStairBridge, type UseRibbonStairBridgeProps } from '../ui/ribbon/hooks/useRibbonStairBridge';
+import { useRibbonStairBridge, type UseRibbonStairBridgeProps } from '../bim/hooks/use-ribbon-stair-bridge';
 import { useRibbonWallBridge, type UseRibbonWallBridgeProps } from '../ui/ribbon/hooks/useRibbonWallBridge';
 import { useRibbonOpeningBridge, type UseRibbonOpeningBridgeProps } from '../ui/ribbon/hooks/useRibbonOpeningBridge';
 import { useRibbonSlabBridge, type UseRibbonSlabBridgeProps } from '../ui/ribbon/hooks/useRibbonSlabBridge';

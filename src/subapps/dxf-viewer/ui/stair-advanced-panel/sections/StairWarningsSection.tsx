@@ -16,7 +16,7 @@ import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { StairEntity } from '../../../types/entities';
 import type { DispatchStairParamPatch } from '../commands/dispatchStairParamPatch';
-import { autoFixStairParams } from '../../../systems/stairs/stair-auto-fix';
+import { autoFixStairParams } from '../../../bim/stairs/stair-auto-fix';
 
 export interface StairWarningsSectionProps {
   readonly stair: StairEntity;

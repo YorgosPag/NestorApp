@@ -26,7 +26,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useLevels } from '../../systems/levels';
 import { useSelectedStair } from './hooks/useSelectedStair';
 import { useStairParamsDispatcher } from './commands/dispatchStairParamPatch';
-import { useStairPersistence } from '../../hooks/data/useStairPersistence';
+import { useStairPersistence } from '../../bim/hooks/use-stair-persistence';
 import { StairAdvancedPanel } from './StairAdvancedPanel';
 import type { SceneModel } from '../../types/scene';
 

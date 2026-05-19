@@ -25,12 +25,12 @@ import {
   deriveRiseFromStepCount,
   mmFactorFromWidth,
   reconcileLinkedStair,
-} from '../../../../systems/stairs/stair-floor-link';
+} from '../../../../bim/stairs/stair-floor-link';
 import {
   buildDefaultVariantFor,
   buildLShapeWindersVariant,
   splitTwoFlightsForWinders,
-} from '../../../../systems/stairs/stair-variant-defaults';
+} from '../../../../bim/stairs/stair-variant-defaults';
 
 // ── Module-private constants ─────────────────────────────────────────────────
 

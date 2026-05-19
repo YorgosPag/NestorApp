@@ -19,7 +19,7 @@ import type { StairEntity } from '../../../types/stair';
 import type {
   StairSaveState,
   UseStairPersistenceResult,
-} from '../../../hooks/data/useStairPersistence';
+} from '../../../bim/hooks/use-stair-persistence';
 
 export interface StairPersistenceSectionProps {
   readonly stair: StairEntity;

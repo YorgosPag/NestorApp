@@ -24,34 +24,34 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { useCommandHistory } from '../../../core/commands';
-import { UpdateStairParamsCommand } from '../../../core/commands/entity-commands/UpdateStairParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
-import { isStairEntity } from '../../../types/entities';
-import type { StairEntity } from '../../../types/entities';
-import type { StairParams } from '../../../types/stair';
+import { useCommandHistory } from '../../core/commands';
+import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
+import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { isStairEntity } from '../../types/entities';
+import type { StairEntity } from '../../types/entities';
+import type { StairParams } from '../types/stair-types';
 import {
   STAIR_RIBBON_VISIBILITY_KEYS,
   isStairRibbonKey,
   isStairRibbonStringKey,
   isStairVisibilityKey,
-} from './bridge/stair-command-keys';
+} from '../../ui/ribbon/hooks/bridge/stair-command-keys';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
-} from '../context/RibbonCommandContext';
-import type { useLevels } from '../../../systems/levels';
-import type { useUniversalSelection } from '../../../systems/selection';
-import { mmToSceneUnits, resolveSceneUnits } from '../../../utils/scene-units';
-import { useFloorMetadata } from '../../../hooks/data/useFloorMetadata';
-import { useBuildingTotalFloors } from '../../../hooks/data/useBuildingTotalFloors';
+} from '../../ui/ribbon/context/RibbonCommandContext';
+import type { useLevels } from '../../systems/levels';
+import type { useUniversalSelection } from '../../systems/selection';
+import { mmToSceneUnits, resolveSceneUnits } from '../../utils/scene-units';
+import { useFloorMetadata } from '../../hooks/data/useFloorMetadata';
+import { useBuildingTotalFloors } from '../../hooks/data/useBuildingTotalFloors';
 import {
   type StairPatchContext,
   readStairStringField,
   readStairNumericField,
   patchStairStringParam,
   patchStairNumericParam,
-} from './bridge/stair-param-helpers';
+} from '../../ui/ribbon/hooks/bridge/stair-param-helpers';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,

@@ -37,14 +37,14 @@ import type {
   StairEntity,
   StairParams,
   StairValidationState,
-} from '../../types/stair';
-import { computeStairGeometry } from '../../systems/stairs/StairGeometryService';
+} from '../types/stair-types';
+import { computeStairGeometry } from '../geometry/stairs/StairGeometryService';
 import { EventBus } from '../../systems/events/EventBus';
 import {
   createStairFirestoreService,
   entityToSaveInput,
   StairFirestoreService,
-} from '../../systems/stairs/stair-firestore-service';
+} from '../stairs/stair-firestore-service';
 
 // ============================================================================
 // TYPES

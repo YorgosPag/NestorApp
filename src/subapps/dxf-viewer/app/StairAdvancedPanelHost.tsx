@@ -28,7 +28,7 @@ import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import { useSelectedStair } from '../ui/stair-advanced-panel/hooks/useSelectedStair';
 import { useStairParamsDispatcher } from '../ui/stair-advanced-panel/commands/dispatchStairParamPatch';
-import { useStairPersistence } from '../hooks/data/useStairPersistence';
+import { useStairPersistence } from '../bim/hooks/use-stair-persistence';
 import { StairAdvancedPanel } from '../ui/stair-advanced-panel/StairAdvancedPanel';
 
 type LevelManagerLike = Pick<

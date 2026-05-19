@@ -13,7 +13,7 @@ import type { Point2D } from '../rendering/types/Types';
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo, StairGripKind } from './useGripMovement';
 import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
-import { getStairGrips } from '../systems/stairs/stair-grips';
+import { getStairGrips } from '../bim/stairs/stair-grips';
 import { getDimensionGrips } from './dimensions/useDimensionGrips';
 import { getXLineGrips } from '../systems/xline/xline-grips';
 import { getRayGrips } from '../systems/ray/ray-grips';

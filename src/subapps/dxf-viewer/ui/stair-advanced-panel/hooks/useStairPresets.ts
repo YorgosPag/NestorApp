@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   createStairPresetsService,
   type SavePresetInput,
-} from '../../../systems/stairs/stair-presets-service';
+} from '../../../bim/stairs/stair-presets-service';
 import { UpdateStairParamsCommand } from '../../../core/commands/entity-commands/UpdateStairParamsCommand';
 import { useCommandHistory } from '../../../core/commands';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';

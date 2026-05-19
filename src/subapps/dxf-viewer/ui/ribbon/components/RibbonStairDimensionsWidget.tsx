@@ -29,7 +29,7 @@ import { useLevels } from '../../../systems/levels';
 import { useUniversalSelection } from '../../../systems/selection';
 import { isStairEntity } from '../../../types/entities';
 import type { StairEntity } from '../../../types/entities';
-import { mmFactorFromWidth } from '../../../systems/stairs/stair-floor-link';
+import { mmFactorFromWidth } from '../../../bim/stairs/stair-floor-link';
 
 const MM_PER_M = 1000;
 

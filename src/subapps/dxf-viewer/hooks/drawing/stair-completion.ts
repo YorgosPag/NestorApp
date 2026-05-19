@@ -32,8 +32,8 @@ import type {
   StairVariantParams,
 } from '../../types/stair';
 import { generateStairId } from '@/services/enterprise-id.service';
-import { computeStairGeometry } from '../../systems/stairs/StairGeometryService';
-import { reconcileLinkedStair } from '../../systems/stairs/stair-floor-link';
+import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometryService';
+import { reconcileLinkedStair } from '../../bim/stairs/stair-floor-link';
 
 // ─── Phase 5a defaults (industry-aligned, NOK κύρια per §5.10) ───────────────
 

@@ -25,7 +25,7 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { StairEntity } from '../../types/entities';
 import type { useLevels } from '../../systems/levels';
-import type { UseStairPersistenceResult } from '../../hooks/data/useStairPersistence';
+import type { UseStairPersistenceResult } from '../../bim/hooks/use-stair-persistence';
 import { StairWarningsSection } from './sections/StairWarningsSection';
 import { StairPersistenceSection } from './sections/StairPersistenceSection';
 import { StairPresetsSection } from './sections/StairPresetsSection';

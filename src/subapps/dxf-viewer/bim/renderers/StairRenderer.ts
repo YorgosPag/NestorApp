@@ -25,11 +25,11 @@ import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer'
 import type { EntityModel, GripInfo, RenderOptions } from '../../rendering/types/Types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../../rendering/types/Types';
-import type { StairEntity } from '../../types/stair';
+import type { StairEntity } from '../types/stair-types';
 import type { Entity } from '../../types/entities';
 import { isStairEntity } from '../../types/entities';
-import { getStairGrips } from '../../systems/stairs/stair-grips';
-import { DEFAULT_CUT_PLANE_HEIGHT } from '../../systems/stairs/stair-geometry-shared';
+import { getStairGrips } from '../stairs/stair-grips';
+import { DEFAULT_CUT_PLANE_HEIGHT } from '../geometry/stairs/stair-geometry-shared';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 

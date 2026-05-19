@@ -13,13 +13,13 @@
 
 import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
 import type { StairGeometry, StairParams } from '../../../types/stair';
-import { computeStairGeometry } from '../../../systems/stairs/StairGeometryService';
+import { computeStairGeometry } from '../../../bim/geometry/stairs/StairGeometryService';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { DEFAULT_MERGE_CONFIG } from '../interfaces';
 // ADR-358 Phase 6.1 — re-validate on every grip/edit commit so the red
 // badge (Phase 7b1) reflects the live state and the user sees overflow
 // warnings the moment they exceed code/story-height limits.
-import { validateStairParams } from '../../../systems/stairs/stair-validator';
+import { validateStairParams } from '../../../bim/stairs/stair-validator';
 
 export class UpdateStairParamsCommand implements ICommand {
   readonly id: string;

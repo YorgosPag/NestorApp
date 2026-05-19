@@ -25,7 +25,7 @@ import {
   defaultStairMaterialCatalog,
   STAIR_MATERIAL_CUSTOM_ID,
   type StairMaterialOption,
-} from '../../../systems/stairs/stair-material-catalog';
+} from '../../../bim/stairs/stair-material-catalog';
 import type { DispatchStairParamPatch } from '../commands/dispatchStairParamPatch';
 
 export interface StairPerTreadOverrideSectionProps {

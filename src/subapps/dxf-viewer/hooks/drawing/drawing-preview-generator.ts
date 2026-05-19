@@ -22,7 +22,7 @@ import type { XLineEntity, RayEntity } from '../../types/entities';
 import { getXLineModeState } from '../../systems/tools/xline-mode-store';
 // ADR-358 Phase 5a — stair preview via SSoT `computeStairGeometry`.
 import { buildDefaultStairParams } from './stair-completion';
-import { computeStairGeometry } from '../../systems/stairs/StairGeometryService';
+import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometryService';
 import type { SceneUnits, StairParamOverrides } from './stair-completion';
 // ADR-363 Phase 1C — wall preview extracted to wall-preview-helpers.ts.
 import { generateWallPreview } from './wall-preview-helpers';

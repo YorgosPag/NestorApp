@@ -22,7 +22,7 @@ import { getLayerNameOrDefault } from '../config/layer-config';
 import { resolveEntityLayerName } from '../stores/LayerStore';
 // ADR-358 Phase 8 — fallback to recompute stair geometry when missing (StairDoc
 // from Firestore is persisted without geometry, ADR §G6 re-derivable contract).
-import { computeStairGeometry } from '../systems/stairs/StairGeometryService';
+import { computeStairGeometry } from '../bim/geometry/stairs/StairGeometryService';
 import { buildBimEntityModel } from '../bim/utils/bim-entity-passthrough';
 import type { BimElementType } from '../bim/types/bim-base';
 
