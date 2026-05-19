@@ -71,6 +71,16 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-19 — ADR-363 Phase 4.5c.5: GripDimAnnotationMount micro-leaf (drag-time dim annotations)
+
+New `GripDimAnnotationMount` leaf added to `PreviewCanvasMounts` — mirrors `GripDragPreviewMount` pattern. Receives `{ dragPreview, levelManager, transform, getCanvas, getViewportElement }` — all already present in `PreviewCanvasMountsProps`. Hook `useGripDimAnnotation` is RAF-based: triggered by `dragPreview` changes, draws "w=350mm" style labels on PreviewCanvas, clears on drag end. No canvas cleared inside `drawFrame` (ghost hook clears first via FIFO RAF scheduling from mount order). `DxfGripDragPreview` extended with `columnGripKind?` + `beamGripKind?` + `anchorPos` always included for column/beam — populated in `grip-projections.ts:buildDxfDragPreview`. CanvasSection gains zero new subscriptions (rides existing `dragPreview` React-state cycle, same frequency as `GripDragPreviewMount`).
+
+**Cardinal rule compliance**:
+- **Rule 1 (no orchestrator subscriptions)**: respected — CanvasSection/CanvasLayerStack gain no new `useSyncExternalStore` calls. `GripDimAnnotationMount` is a leaf (mounted inside `PreviewCanvasMounts`).
+- **Rule 3 (bitmap cache key untouched)**: respected — no changes to `dxf-bitmap-cache.ts`. Annotation draws to PreviewCanvas only.
+- **Rule 4 (≤1 canvas element / ≤2 high-freq hooks)**: respected — one preview canvas element, one hook.
+- **Canvas ordering**: `GripDimAnnotationMount` mounted after `GripDragPreviewMount` in tree → RAF FIFO ordering → ghost RAF clears canvas and draws ghost first, annotation RAF draws label on top (no extra clear).
+
 ### 2026-05-19 — ADR-362 DIM-DIAG R3 round-2: temporary `console.warn` σε `DxfRenderer.render` (TEMPORARY)
 
 Προστέθηκε προσωρινό diagnostic log στο `DxfRenderer.render` που μετράει dim entities ανά frame + canvas size + skipInteractive flag, για να εντοπιστεί commit→render defPoints divergence (ADR-362 issue). **Δεν τροποποιεί αρχιτεκτονική** — μόνο `console.warn` πίσω από `if (dims.length > 0)` guard. Zero React state, zero subscription change, zero invalidation logic. **TEMPORARY** — διαγραφή μόλις βρεθεί root cause του ADR-362 bug. Αν διαβάζεις αυτό σε επόμενο PR και τα logs υπάρχουν ακόμα → ασφαλώς αφαίρεσέ τα (Boy Scout).

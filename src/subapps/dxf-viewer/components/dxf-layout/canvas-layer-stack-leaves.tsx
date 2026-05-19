@@ -29,6 +29,7 @@ import { useMirrorPreview } from '../../hooks/tools/useMirrorPreview';
 import { useScalePreview } from '../../hooks/tools/useScalePreview';
 import { useStretchPreview } from '../../hooks/tools/useStretchPreview';
 import { ColumnGhostPreviewMount, type ColumnGhostPreviewMountProps } from './canvas-layer-stack-column-ghost';
+import { GripDimAnnotationMount } from './canvas-layer-stack-grip-dim-annotation';
 import { TrimPreviewMount } from './TrimPreviewMount';
 import { ExtendPreviewOverlay } from './ExtendPreviewOverlay';
 import type { MovePhase } from '../../hooks/tools/useMoveTool';
@@ -54,7 +55,6 @@ const _getGuides = () => _guideStore.getGuides();
 const _getGuidesVisible = () => _guideStore.isVisible();
 
 // --- SNAP INDICATOR SUBSCRIBER ---
-
 interface SnapIndicatorSubscriberProps {
   viewport: { width: number; height: number };
   dxfCanvasRef: React.RefObject<DxfCanvasRef> | undefined;
@@ -88,7 +88,6 @@ export const SnapIndicatorSubscriber = React.memo(function SnapIndicatorSubscrib
 // ============================================================================
 // DRAFT LAYER SUBSCRIBER
 // ============================================================================
-
 // LayerCanvas pass-through props (layers injected by subscriber after computing draft)
 export type LayerCanvasPassthroughProps = Omit<React.ComponentPropsWithoutRef<typeof LayerCanvas>, 'layers'>;
 
@@ -494,6 +493,7 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
+      <GripDimAnnotationMount dragPreview={gripDragPreview} levelManager={levelManager} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
     </>
   );
 });
