@@ -142,6 +142,19 @@ export class EntityRendererComposite {
   }
 
   /**
+   * ADR-362 Round 5 — forward the active scene unit system to the dimension
+   * renderer so paper-mm DIMSTYLE values land in world units regardless of
+   * whether the DXF was authored in mm / cm / m / in / ft. No-op when the dim
+   * renderer is absent (defensive for partial test setups).
+   */
+  setDimensionSceneUnits(units: 'mm' | 'cm' | 'm' | 'in' | 'ft'): void {
+    const dim = this.renderers.get('dimension');
+    if (dim instanceof DimensionRenderer) {
+      dim.setSceneUnits(units);
+    }
+  }
+
+  /**
    * ADR-363 Phase 2.5 — forward the per-frame opening-by-wall index so the
    * wall renderer can punch boolean cutouts into its fill. No-op when the
    * wall renderer is absent (defensive for partial test setups).

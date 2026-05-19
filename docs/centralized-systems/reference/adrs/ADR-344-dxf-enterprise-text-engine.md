@@ -870,6 +870,20 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-05-19 — Phase 13 COMPLETE — Ribbon Text scene-units awareness**.
+  - **Symptom**: After importing a non-mm DXF (typically meters) through the Wizard, the Ribbon Home → "Text" tool produced text that filled most of the canvas (~1000× too big), while native imported texts and DIMENSION text rendered correctly. Identical regression with the Ribbon dimension tool — that path tracked separately in **ADR-362 Round 5**.
+  - **Root cause**: `useTextCreationTool.makeEmptyTextNode()` hardcoded `height: 2.5` as a literal. This value is `paper-mm` by CAD convention, but the TEXT entity stores its height in **scene-world units**. When the active level was authored in meters, the renderer dutifully treated `2.5` as 2.5 m (= 2500 mm equivalent) → huge. Native DXF texts didn't suffer because the parser had already baked the source's world-unit height into each TEXT.
+  - **Fix — `useTextCreationTool.ts`**: hook gains optional `getSceneUnits?: () => SceneUnits` param. `makeEmptyTextNode(units)` now sets `height = 2.5 * mmToSceneUnits(units)`. Callers default to `'mm'` when the resolver isn't wired (back-compat for tests and legacy mm-baked DXFs — `mmToSceneUnits('mm') === 1`).
+  - **Fix — `useCanvasEditActions.ts`**: wires the resolver to the active level via `resolveSceneUnits(levelManager.getLevelScene(currentLevelId))` so every ribbon click reads live state (level switches mid-session pick up the new units immediately, no remount required).
+  - **SSoT alignment**: re-uses the existing `utils/scene-units.ts` helpers (`mmToSceneUnits`, `resolveSceneUnits`) — no new conversion logic introduced. The same helpers feed ADR-358 (stair tool) and now ADR-362 Round 5 (dimension renderer), so the three Ribbon paths (Text / Dim / Stair) share a single scene-units source of truth.
+  - **Renderer untouched**: `TextRenderer.ts` keeps the canonical `screenHeight = text.height × transform.scale` (per ADR-344 §6 — flagged "DO NOT CHANGE"). Conversion happens at creation time, NOT render time, matching DXF semantics (entity heights live in world units).
+  - **Tests (Google Presubmit)**: `hooks/canvas/__tests__/useTextCreationTool-scene-units.test.tsx` — 6 cases covering all 5 unit systems + the back-compat `'mm'` default fallback. Verifies both the in-progress `creatingState` and the committed `CreateTextCommand` payload.
+  - ✅ Google-level: YES — proactive (conversion at creation, not deferred), zero race (synchronous resolver), idempotent (creation is one-shot), SSoT (`scene-units.ts` is the single math source), belt-and-suspenders (default `'mm'` keeps legacy paths intact), explicit lifecycle owner (the tool hook owns scene-unit lookup at click time).
+  - **Files**:
+    - `src/subapps/dxf-viewer/hooks/canvas/useTextCreationTool.ts` (MOD) — `getSceneUnits` param + scaled `height`.
+    - `src/subapps/dxf-viewer/hooks/canvas/useCanvasEditActions.ts` (MOD) — wires the resolver to active level.
+    - `src/subapps/dxf-viewer/hooks/canvas/__tests__/useTextCreationTool-scene-units.test.tsx` (NEW) — 6 unit tests.
+
 - **2026-05-12 — Text hover glow fix (sub-pixel / SHX font outline problem)**.
   - **Root cause**: `fillText` with yellow `fillStyle` at very small `screenHeight` (1–3 px) produces anti-aliased thin strokes that visually resemble outlines rather than filled glyphs. Canvas2D cannot distinguish SHX from any other unknown font — they all fall back to the system default — but the sub-pixel rendering is the same regardless of font family.
   - **Fix**: `renderTextContent` now sets `ctx.shadowBlur = 6` + `ctx.shadowColor = '#FFFF00'` when `isHovered = true` (inside the inner `ctx.save/restore`). The shadow creates a visible yellow halo around every glyph, including tiny ones. GPU cost is acceptable: this code path runs for exactly 1 entity at hover time, not the full scene 60fps render.

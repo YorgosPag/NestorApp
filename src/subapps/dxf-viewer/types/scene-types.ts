@@ -1,6 +1,10 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { Entity } from './entities';
 import { generateLayerId } from '@/services/enterprise-id-convenience';
+// ADR-362 Round 5 — SceneModel carries the DXF-parsed DIMSTYLE table so the
+// runtime DIMSTYLE registry can be seeded on import (canonical type lives next
+// to the parser since it owns the DXF I/O contract).
+import type { DimStyleEntry } from '../utils/dxf-parser-types';
 
 /**
  * DXF group 370 lineweight catalog — 24 ISO values (mm) + 3 special enums.
@@ -126,12 +130,36 @@ export interface SceneBounds {
  */
 export type LayerId = string;
 
+/**
+ * ADR-362 Round 5 — DIMSTYLE table imported from the DXF source. Keys are
+ * DIMSTYLE names (`'Standard'`, etc.) — same as what the entity code 3
+ * reference inside a DIMENSION points at.
+ *
+ * Re-exports `DimStyleEntry` from the parser-types SSoT to avoid duplicating
+ * the 40+ field schema. Consumers (`dim-style-importer`) translate this raw
+ * shape into the runtime `DimStyle` registry entries.
+ */
+export type ImportedSceneDimStyle = DimStyleEntry;
+export type SceneDimStyleMap = Record<string, ImportedSceneDimStyle>;
+
 export interface SceneModel {
   entities: Entity[];
   /** ADR-358 Phase 9E-6e: id-keyed layer map. */
   layersById: Record<LayerId, SceneLayer>;
   bounds: SceneBounds;
   units: 'mm' | 'cm' | 'm' | 'in' | 'ft';
+  /**
+   * ADR-362 Round 5 — DIMSTYLE table carried from the source DXF. Populated by
+   * `dxf-scene-builder.buildScene()` when the file's TABLES section contains
+   * DIMSTYLE entries. Consumed by `dim-style-importer` to seed the runtime
+   * `DimStyleRegistry` so newly-created Ribbon dims pick up the file's styles
+   * instead of falling back to the ISO_129 built-in (wrong sizes when the
+   * source authored its dims at a non-default DIMTXT).
+   *
+   * Optional: legacy/empty DXFs simply omit it, leaving the registry's
+   * built-in defaults active.
+   */
+  dimStyles?: SceneDimStyleMap;
   version?: string;
 }
 

@@ -203,6 +203,13 @@ export interface DxfScene {
     min: Point2D;
     max: Point2D;
   } | null;
+  /**
+   * ADR-362 Round 5 — propagate the active scene unit system so the dimension
+   * renderer can convert paper-mm DIMSTYLE values (dimtxt, dimasz, dimgap) into
+   * world units before applying view scale. Missing => caller falls back to
+   * `'mm'` (back-compat with legacy mm-baked DXFs).
+   */
+  units?: 'mm' | 'cm' | 'm' | 'in' | 'ft';
 }
 
 // === DXF RENDERING ===

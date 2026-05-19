@@ -184,7 +184,8 @@ export class DxfSceneBuilder {
       entities,
       layersById,
       bounds,
-      units: resolvedUnits
+      units: resolvedUnits,
+      dimStyles: Object.keys(dimStyles).length > 0 ? dimStyles : undefined,
     };
   }
 

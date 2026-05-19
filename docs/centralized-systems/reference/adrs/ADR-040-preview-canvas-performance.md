@@ -1923,6 +1923,10 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 
 `DxfRenderer.renderScene` αφαιρεί το temporary `[DIM-DIAG R3] frame dimCount=...` `console.warn` (frame-start dimension entity census) που χρησιμοποιήθηκε για το tracing του DPR ≠ 1 viewport bug (Round 4 / Round 4.1). Bug λύθηκε στα commits `25c4dcc9` (DimensionRenderer toScreen) + `d04e8233` (center-mark + EntityRendererComposite hit-test + SSoT module). Pure deletion — zero new subscriptions, zero behavioural change, bitmap cache key untouched. Cardinal rules maintained.
 
+## 2026-05-19: ADR-362 Round 5 — scene-units propagation through DxfRenderer
+
+`DxfRenderer.render` καλεί `this.entityComposite.setDimensionSceneUnits(scene.units ?? 'mm')` per frame, παράλληλα με τα ήδη υπάρχοντα `setDimensionLayerColour` / `setDimensionLookup`. Plumb-only forwarder (`EntityRendererComposite.setDimensionSceneUnits`) → καμία νέα subscription στον orchestrator, καμία αλλαγή στο bitmap cache key, καμία νέα `useSyncExternalStore`. Το `scene.units` υπάρχει ήδη στο `DxfScene` interface και διαβάζεται μόνο μέσα στο rendering pipeline. Cardinal rules maintained.
+
 ## 2026-05-19: ADR-363 R1 — BIM Copy Tool wiring (CanvasSection + canvas-click-types passthrough)
 
 `canvas-click-types.ts` extended με `BimCopyToolLike` interface (`isActive` + `onCanvasClick`) και `bimCopyTool?` param στο `UseCanvasClickHandlerParams`. `useCanvasClickHandler.ts` adds a routing arm για `activeTool === 'bim-copy'`. `CanvasSection.tsx` (orchestrator) destructures `bimCopyTool` από `useModifyTools` και το περνά plumb-only στο `useCanvasClickHandler` — ZERO new `useSyncExternalStore` subscriptions στον orchestrator. `useBimCopyTool` εσωτερικά subscribe-άρει στο `ImmediatePositionStore` για live cursor world position (high-freq path, mirror του `useWallSplitTool` / `useTrimTool` pattern — Phase 5.6). Cardinal rules maintained (orchestrator stays plumb-only; high-freq subs μένουν εντός tool hook; bitmap cache key untouched).

@@ -100,6 +100,9 @@ export class DxfRenderer {
     // ADR-363 Phase 2 (deferred pipeline) — feed per-frame opening→wall index so
     // WallRenderer can punch boolean cutouts through wall fills.
     this.entityComposite.setOpeningsByWall(buildOpeningsByWall(scene.entities));
+    // ADR-362 Round 5 — propagate active scene units so dim text + arrows scale
+    // correctly in non-mm DXFs (e.g. meters). Default `'mm'` keeps legacy parity.
+    this.entityComposite.setDimensionSceneUnits(scene.units ?? 'mm');
 
     // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): bitmap cache passes skipInteractive=true
     // to render entities in pure normal-state. Interactive overlays are drawn separately.

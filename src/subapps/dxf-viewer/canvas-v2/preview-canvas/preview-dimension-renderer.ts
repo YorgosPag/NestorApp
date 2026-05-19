@@ -65,6 +65,13 @@ export interface PreviewDimensionRenderParams {
   readonly transform: ViewTransform;
   readonly viewport: { readonly width: number; readonly height: number };
   readonly opts?: PreviewDimensionRenderOptions;
+  /**
+   * ADR-362 Round 5 — active scene unit system. Optional because the preview
+   * auto-scales DIMSCALE anyway (≈10px arrows regardless of unit); forwarding
+   * `sceneUnits` keeps text + DIMTFILL math consistent with the persistent
+   * `DimensionRenderer` path. Default `'mm'`.
+   */
+  readonly sceneUnits?: 'mm' | 'cm' | 'm' | 'in' | 'ft';
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -231,6 +238,7 @@ function drawText(
     transform: params.transform,
     viewport: params.viewport,
     layerColour: opts.color,
+    sceneUnits: params.sceneUnits,
   });
 }
 

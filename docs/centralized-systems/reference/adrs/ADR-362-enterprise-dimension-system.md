@@ -711,6 +711,42 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 
 ## 7. Changelog
 
+- **2026-05-19 (Round 5 — Scene-units awareness + DIMSTYLE auto-register on import)** — Παράλληλο fix με ADR-344 Phase 13. User report: μετά από DXF import σε meters scene (Wizard → "Εισαγωγή Κάτοψης"), η Ribbon "Dimension" tool παρήγαγε διαστάσεις μεγαλύτερες από τα native DXF dim texts (text + arrowheads scaled με world-meters αντί world-mm). Παράλληλα, ribbon dims χρησιμοποιούσαν ISO_129 defaults (DIMTXT=2.5) ακόμα κι αν το imported DXF είχε διαφορετικό DIMSTYLE.
+  - **Root cause #1 — paper-mm vs world-units mismatch.** `DimensionRenderer.paperMmToPx(mm, scale)` και `dim-text-renderer.ts primaryHeight = dimtxt × transform.scale` υπέθεταν ότι 1 paper-mm = 1 world unit (το σχόλιο στο dim-text-renderer line 69 το παραδέχεται: "DIMTXT is world-mm"). Σε mm-baked scenes δουλεύει by accident — `transform.scale` είναι px/mm. Σε meters scene, `transform.scale` γίνεται px/m → το ίδιο `dimtxt × scale` παράγει 2.5 m worth of pixels (1000× too big).
+  - **Root cause #2 — runtime registry δεν λάμβανε τα imported DIMSTYLE entries.** Το `dxf-scene-builder.ts:38` παρσάρει τα DIMSTYLE από το TABLES section, αλλά το αποτέλεσμα παίδευε μόνο τα `dxf-dimension-converter.ts` για να υπολογίσει per-entity text height των imported dims. Το `dim-style-registry.ts` singleton (που τροφοδοτεί το `useDimensionCreate.defaultStyleId()`) ποτέ δεν έβλεπε τα entries → νέες ribbon dims έπαιρναν τα ISO_129 defaults.
+  - **Fix — paper-mm → world conversion SSoT.**
+    - `paperMmToPx(mm, scale, units)` (in `DimensionRenderer.ts`) πολλαπλασιάζει πρώτα με `mmToSceneUnits(units)` πριν το view scale. Για mm scene = identity (back-compat). Για meters = ×0.001.
+    - `renderDimensionText` (in `dim-text-renderer.ts`) δέχεται `sceneUnits?: SceneUnits` στα params και εφαρμόζει την ίδια conversion στο `primaryHeight`. Tolerance / limits / alternate-units heights παράγονται από `primaryHeight × dimtfac/0.75/...` ώστε κληρονομούν αυτόματα τη διόρθωση.
+    - DIMTFILL background mask (`drawTextBackgroundMask`) βασίζεται στο διορθωμένο `primaryHeight` + `dimgap` × `primaryHeight × 0.15` — gap επίσης παίρνει σωστή κλίμακα σε δεύτερο βήμα.
+  - **Fix — wiring SceneUnits μέσα στο rendering pipeline.**
+    - `DimensionRenderer.setSceneUnits(units)` (νέο), defaults `'mm'`.
+    - `EntityRendererComposite.setDimensionSceneUnits(units)` (νέο) — orchestrator forwarder, parity με `setDimensionLayerColour` / `setDimensionLookup`.
+    - `DxfRenderer.render` καλεί `this.entityComposite.setDimensionSceneUnits(scene.units ?? 'mm')` per frame.
+    - `DxfScene` interface gains optional `units` field. `useDxfSceneConversion` propagates `currentScene.units` σε κάθε memo-rebuild → renderer πάντα συγχρονισμένος με level switches.
+  - **Fix — DIMSTYLE auto-register on import (`dim-style-importer.ts`, ΝΕΟ SSoT module).**
+    - `SceneModel.dimStyles?: SceneDimStyleMap` (re-export του parser's `DimStyleEntry` — αποφεύγουμε duplicate schema).
+    - `dxf-scene-builder.buildScene` populates `scene.dimStyles` όταν το TABLES section έχει entries.
+    - `registerImportedDimStyles(scene, registry?)`: (a) wipe προηγούμενα imported entries (tagged με prefix `imported:`), (b) translate raw DimStyleEntry → runtime DimStyle (enum maps για DIMLUNIT/DIMAUNIT/DIMTAD/DIMTOLJ + DIMDSEP code → '.'/','), (c) register ως custom styles, (d) activate `imported:Standard` αν υπάρχει αλλιώς first iteration entry. Built-in templates (ISO_129/ASME/Arch) ποτέ δεν αγγίζονται.
+    - Hook point: `useDxfSceneConversion` `useEffect(() => registerImportedDimStyles(currentScene), [currentScene])`. Reconciliation στο level switch.
+  - **Preview path (known limitation, follow-up scope).** Ο `preview-dimension-renderer` έχει `autoScale = 4 / scale` για το dimscale → arrowhead size unit-independent. Το preview **text** όμως καλεί `renderDimensionText` χωρίς να ξέρει το `sceneUnits` (το PreviewRenderer δεν λαμβάνει `scene.units` σήμερα). Default `'mm'` → preview text εμφανίζεται σωστά μόνο για mm scenes· σε meters scenes ο user βλέπει preview text σε μέγεθος που αργότερα μικραίνει στο commit. Αλλαγή κλίμακας μεταξύ preview/commit είναι confusing UX, παρόλο που το commit είναι σωστό — ξεχωριστή follow-up θα plumbάρει `sceneUnits` μέσω `PreviewCanvas` prop.
+  - **Tests (Google Presubmit)**:
+    - `rendering/entities/dimension/__tests__/dim-text-renderer-scene-units.test.ts` — 5 cases (mm/cm/m default + mm fallback + non-trivial m). Verifies `ctx.font` px output ισούται με αναμενόμενη world-equivalent τιμή.
+    - `systems/dimensions/__tests__/dim-style-importer.test.ts` — 11 cases σε 3 groups (translation, reconciliation, active selection). Καλύπτει DIMTXT/DIMASZ/DIMGAP preservation, DIMLUNIT/DIMDSEP enum translation, prefix tagging, multi-import wipe, built-in immutability, Standard-first active selection, fallback σε first entry.
+  - ✅ **Google-level (N.7.2 checklist)**: YES — proactive (registry seeded on scene change, not lazy first-use), zero race (synchronous useEffect, no async window), idempotent (prefix-based reconciliation, repeat calls converge), SSoT (`dim-style-importer` is the only writer; `mmToSceneUnits` is the only converter), belt-and-suspenders (default `'mm'` fallback + prefix tagging + Standard-first selection), explicit lifecycle owner (`useDxfSceneConversion` for registry seed, `DxfRenderer.render` for per-frame units).
+  - **Files**:
+    - `src/subapps/dxf-viewer/types/scene-types.ts` (MOD) — `SceneModel.dimStyles?` + `SceneDimStyleMap` type alias.
+    - `src/subapps/dxf-viewer/utils/dxf-scene-builder.ts` (MOD) — populate `scene.dimStyles`.
+    - `src/subapps/dxf-viewer/rendering/entities/DimensionRenderer.ts` (MOD) — `paperMmToPx(mm, scale, units)` + `setSceneUnits` + arrowhead path.
+    - `src/subapps/dxf-viewer/rendering/entities/dimension/dim-text-renderer.ts` (MOD) — `sceneUnits` param + `unitFactor` multiplier.
+    - `src/subapps/dxf-viewer/rendering/core/EntityRendererComposite.ts` (MOD) — `setDimensionSceneUnits`.
+    - `src/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-types.ts` (MOD) — `DxfScene.units?`.
+    - `src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfRenderer.ts` (MOD) — per-frame units propagation.
+    - `src/subapps/dxf-viewer/canvas-v2/preview-canvas/preview-dimension-renderer.ts` (MOD) — `sceneUnits` param forwarded (preview pipeline still defaults — see known limitation).
+    - `src/subapps/dxf-viewer/hooks/canvas/useDxfSceneConversion.ts` (MOD) — `currentScene.units` forwarding + `registerImportedDimStyles` effect.
+    - `src/subapps/dxf-viewer/systems/dimensions/dim-style-importer.ts` (NEW) — SSoT translator + reconciler.
+    - `src/subapps/dxf-viewer/rendering/entities/dimension/__tests__/dim-text-renderer-scene-units.test.ts` (NEW).
+    - `src/subapps/dxf-viewer/systems/dimensions/__tests__/dim-style-importer.test.ts` (NEW).
+
 - **2026-05-19 (Round 4.1 — SSoT enforcement + Boy Scout + hit-test fix)** — Μετά την επιβεβαίωση του Round 4 fix από τον Giorgio, ακολούθησε proactive centralization (CLAUDE.md N.0.2):
   - **Boy Scout fix** — `systems/dimensions/center-mark-renderer.ts:37` είχε ακριβώς το ίδιο anti-pattern (`viewport = { width: ctx.canvas.width, height: ctx.canvas.height }`). Silent bug: center marks misplaced όταν DPR ≠ 1. Αντικαταστάθηκε με `getBoundingClientRect()` + backing-store fallback (mirror του `DimensionRenderer.toScreen`).
   - **Hit-test fix** — `rendering/core/EntityRendererComposite.ts:234, 252` περνούσε backing-store viewport στο `hitTestingService.hitTest(point, transform, viewport, ...)`. Επειδή το `point` έρχεται από mouse events σε CSS pixels (μέσω `getPointerSnapshotFromElement` / `getBoundingClientRect`), η `screenToWorld` εντός του service απαιτεί CSS viewport. Backing-store viewport προκαλούσε silent mis-hit στα grips όταν browser zoom ≠ 100%. Extracted σε `private getCssViewport()` getter — DRY με το ήδη υπάρχον `worldToScreen` helper (lines 307–311).

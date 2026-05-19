@@ -12,8 +12,7 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo, StairGripKind } from './useGripMovement';
-import type { ColumnGripKind } from './grip-types';
-import type { BeamGripKind } from './grip-types';
+import type { ColumnGripKind, BeamGripKind } from './grip-types';
 import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
 import { getStairGrips } from '../bim/stairs/stair-grips';
 import { getDimensionGrips } from './dimensions/useDimensionGrips';

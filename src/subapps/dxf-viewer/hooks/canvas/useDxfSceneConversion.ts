@@ -35,6 +35,10 @@ import { expandArrayEntity } from '../../systems/array/array-expander';
 import { getLayerNameOrDefault } from '../../config/layer-config';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
 import { resolveEntityLayerName, setLayers as setLayerStoreLayers } from '../../stores/LayerStore';
+// ADR-362 Round 5 — seed the runtime DIMSTYLE registry from the active scene
+// so Ribbon-created dimensions inherit the source DXF's text/arrow sizes
+// instead of falling back to the ISO_129 built-in defaults.
+import { registerImportedDimStyles } from '../../systems/dimensions/dim-style-importer';
 import { UI_COLORS } from '../../config/color-config';
 import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
 import { dwarn } from '../../debug';
@@ -371,6 +375,11 @@ export function useDxfSceneConversion({
       // ADR-358 Phase 9E-5 — id-first primary; name-keyed layers as legacy fallback.
       layersById: currentScene?.layersById,
       bounds: currentScene?.bounds ?? null,
+      // ADR-362 Round 5 — forward active scene units so DimensionRenderer can
+      // convert paper-mm DIMSTYLE values (dimtxt, dimasz, dimgap) → world units
+      // before applying view scale. Without this, meters/cm scenes render dim
+      // text + arrows at the world-unit size of the paper-mm number (huge).
+      units: currentScene?.units,
     };
   }), [currentScene]);
 
@@ -384,6 +393,14 @@ export function useDxfSceneConversion({
     const layersById = currentScene?.layersById;
     if (!layersById) return;
     setLayerStoreLayers(Object.values(layersById));
+  }, [currentScene]);
+
+  // ADR-362 Round 5 — seed the runtime DIMSTYLE registry from the source DXF's
+  // DIMSTYLE table whenever the active scene changes. Reconciliation wipes the
+  // previous import's entries first so switching between DXFs doesn't leak
+  // stale styles. Built-in templates remain untouched.
+  useEffect(() => {
+    registerImportedDimStyles(currentScene);
   }, [currentScene]);
 
   return { dxfScene };

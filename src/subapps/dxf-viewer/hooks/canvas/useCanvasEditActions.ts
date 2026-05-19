@@ -15,6 +15,9 @@ import { useSmartDelete } from './useSmartDelete';
 import { useEntityJoin } from '../useEntityJoin';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { ReorderEntityCommand } from '../../core/commands/entity-commands';
+// ADR-344 Phase 13 — feed active scene units into ribbon text creation so 2.5
+// paper-mm default lands in world units regardless of DXF unit system.
+import { resolveSceneUnits } from '../../utils/scene-units';
 
 interface Params {
   activeTool: ToolType;
@@ -48,6 +51,9 @@ export function useCanvasEditActions({
     transformRef, containerRef, activeTool,
     onToolChange: (tool) => onToolChange?.(tool),
     executeCommand,
+    getSceneUnits: () => resolveSceneUnits(
+      levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null,
+    ),
   });
   const { handleArrayPolarCenterRepick, handleArrayPathEntityRepick } = useArrayRepickHandlers({ levelManager, executeCommand });
   const { handleSmartDelete } = useSmartDelete({

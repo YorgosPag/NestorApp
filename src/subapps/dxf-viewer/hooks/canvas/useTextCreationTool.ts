@@ -24,6 +24,10 @@ import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { DXF_COLOR_BY_LAYER } from '../../text-engine/types/text-toolbar.types';
 import type { DxfTextNode } from '../../text-engine/types';
 import type { ToolType } from '../../ui/toolbar/types';
+// ADR-344 Phase 13 — scene-units awareness for default text height. Without this,
+// `height: 2.5` is interpreted as 2.5 world units (= 2.5m in a meters scene =>
+// huge), instead of the intended 2.5 paper-mm. SSoT helper lives in scene-units.
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 interface CreatingState {
   readonly entityId: string;
@@ -53,6 +57,13 @@ interface UseTextCreationToolParams {
   readonly activeTool: ToolType;
   readonly onToolChange: (tool: ToolType) => void;
   readonly executeCommand: (cmd: ICommand) => void;
+  /**
+   * ADR-344 Phase 13 — active scene units resolver. Returns the unit system of
+   * the level the user is currently editing so the 2.5 mm paper-default lands
+   * in world units (e.g. 0.0025 in a meters scene). Defaults to `'mm'` when
+   * unavailable, preserving back-compat for mm-baked DXFs.
+   */
+  readonly getSceneUnits?: () => SceneUnits;
 }
 
 interface TextCreationToolApi {
@@ -65,7 +76,12 @@ interface TextCreationToolApi {
 // Empty AST: single paragraph, single empty run with default plain CAD style.
 // Mirrors `DEFAULT_RUN_STYLE` from text-engine/templates/defaults/template-helpers
 // without coupling to that private module.
-function makeEmptyTextNode(): DxfTextNode {
+//
+// ADR-344 Phase 13 — the 2.5 default is paper-mm (CAD convention). Convert to
+// the active scene's world units so a meters-scale DXF renders the text at
+// 2.5 mm equivalent (0.0025 world units) instead of 2.5 m (huge).
+function makeEmptyTextNode(units: SceneUnits): DxfTextNode {
+  const height = 2.5 * mmToSceneUnits(units);
   return {
     paragraphs: [{
       runs: [{
@@ -77,7 +93,7 @@ function makeEmptyTextNode(): DxfTextNode {
           underline: false,
           overline: false,
           strikethrough: false,
-          height: 2.5,
+          height,
           widthFactor: 1.0,
           obliqueAngle: 0,
           tracking: 1.0,
@@ -128,7 +144,7 @@ function computeAnchorRect(
 export function useTextCreationTool(
   params: UseTextCreationToolParams,
 ): TextCreationToolApi {
-  const { transformRef, containerRef, activeTool, onToolChange, executeCommand } = params;
+  const { transformRef, containerRef, activeTool, onToolChange, executeCommand, getSceneUnits } = params;
   const services = useDxfTextServices();
   const [creatingState, setCreatingState] = useState<CreatingState | null>(null);
 
@@ -141,17 +157,18 @@ export function useTextCreationTool(
       if (!container || !transform) return false;
       const isMText = activeTool === 'mtext';
       const { worldWidth, ...anchorRect } = computeAnchorRect(worldPoint, transform, container, isMText);
+      const units = getSceneUnits ? getSceneUnits() : 'mm';
       setCreatingState({
         entityId: generateEntityId(),
         position: worldPoint,
-        initial: makeEmptyTextNode(),
+        initial: makeEmptyTextNode(units),
         anchorRect,
         worldWidth,
         forceMText: isMText,
       });
       return true;
     },
-    [activeTool, creatingState, containerRef, transformRef],
+    [activeTool, creatingState, containerRef, transformRef, getSceneUnits],
   );
 
   const finishAndExit = useCallback(() => {
