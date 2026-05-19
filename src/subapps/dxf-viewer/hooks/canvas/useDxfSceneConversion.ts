@@ -27,6 +27,7 @@ import type { StairEntity } from '../../types/stair';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
+import type { DimensionEntity } from '../../types/dimension';
 import type { PathParams } from '../../systems/array/types';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
 import { extractFlatText } from '../../utils/text-node-utils';
@@ -262,6 +263,12 @@ function convertEntity(entity: SceneEntity, layers: SceneLayers, layersById?: Sc
       // `getStairGrips()`. SSoT: zero geometry duplication.
       const e = entity as StairEntity;
       return { ...base, type: 'stair' as const, stairEntity: e } as DxfEntityUnion;
+    }
+    case 'dimension': {
+      // ADR-362 — wrap DimensionEntity into DxfDimension so DxfRenderer +
+      // buildDimensionLookup() see it. Without this case, freshly-committed dims
+      // from useDimensionCreate were silently dropped here → invisible on canvas.
+      return { ...base, type: 'dimension' as const, dimensionEntity: entity as DimensionEntity } as DxfEntityUnion;
     }
     case 'slab': {
       // ADR-363 Phase 3.7 — wrap SlabEntity. SlabRenderer renders geometry.polygon
