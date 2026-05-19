@@ -3411,6 +3411,21 @@
       "addedByAdr": "ADR-359",
       "tier": 3
     },
+    "bim-cascade-resolver": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/cascade/bim-cascade-resolver.ts",
+      "description": "BIM host→hosted entity discovery (ADR-363 Phase 7A): all wall→opening and slab→slab-opening orphan / cascade sweeps must go through findHostedOpenings / findHostedSlabOpenings / expandSelectionForDelete / expandSelectionForMove. Forbids inline `entities.filter(isOpeningEntity)…wallId.has(…)` patterns and equivalent slab→slab-opening inline sweeps outside the canonical module.",
+      "forbiddenPatterns": [
+        "filter\\s*\\(\\s*isOpeningEntity\\s*\\)[\\s\\S]{0,200}wallId",
+        "filter\\s*\\(\\s*isSlabOpeningEntity\\s*\\)[\\s\\S]{0,200}slabId"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/cascade/",
+        "src/subapps/dxf-viewer/bim/walls/wall-cascade-delete-store.ts"
+      ],
+      "addedDate": "2026-05-19",
+      "addedByAdr": "ADR-363",
+      "tier": 3
+    },
     "bim-to-boq-bridge": {
       "ssotFile": "src/subapps/dxf-viewer/bim/services/BimToBoqBridge.ts",
       "description": "BIM→BOQ auto-feed bridge (ADR-363 Phase 6+): all BIM entity saves must trigger BimToBoqBridge.upsertBoqItem() — no direct boqService.upsertItem() calls from BIM entity handlers, no inline BIM→ATOE mapping tables outside BimToBoqBridge.",

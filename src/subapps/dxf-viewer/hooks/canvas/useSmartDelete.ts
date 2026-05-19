@@ -28,8 +28,11 @@ import {
   type ICommand,
 } from '../../core/commands';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
-import { isOpeningEntity } from '../../types/entities';
 import { requestWallCascadeDelete } from '../../bim/walls/wall-cascade-delete-store';
+// ADR-363 Phase 7A — centralized cascade resolver SSoT (Boy Scout N.0.2:
+// replaces the inline wall→opening sweep that previously lived here; adds
+// slab→slab-opening cascade alongside).
+import { findHostedOpenings, findHostedSlabOpenings } from '../../bim/cascade/bim-cascade-resolver';
 import type { SelectedGrip } from '../grips/unified-grip-types';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { UniversalSelectionHook } from '../../systems/selection/SelectionSystem';
@@ -131,30 +134,37 @@ export function useSmartDelete({
         levelManager.currentLevelId,
       );
 
-      // BIM cascade: when deleting walls, find child openings that would be orphaned.
-      // Uses adapter.getEntity (SceneEntity, type: string) for selected IDs, and
-      // isOpeningEntity (type guard on full Entity union) for the scene sweep.
+      // ADR-363 Phase 7A — BIM cascade via centralized resolver (SSoT).
+      // wall→opening: prompts user (existing wall-cascade-delete dialog).
+      // slab→slab-opening: cascades automatically (orphan prevention, no
+      // prompt — slab-openings are structurally less surprising to lose with
+      // their host than wall openings). Phase 8 may add a unified dialog.
       const deletingWallIds = new Set(
-        selectedDxfEntityIds.filter((id) => {
-          const e = adapter.getEntity(id);
-          return e != null && e.type === 'wall';
-        }),
+        selectedDxfEntityIds.filter((id) => adapter.getEntity(id)?.type === 'wall'),
       );
-      const scene = deletingWallIds.size > 0
+      const deletingSlabIds = new Set(
+        selectedDxfEntityIds.filter((id) => adapter.getEntity(id)?.type === 'slab'),
+      );
+      const needsScene = deletingWallIds.size > 0 || deletingSlabIds.size > 0;
+      const scene = needsScene
         ? levelManager.getLevelScene(levelManager.currentLevelId)
         : null;
+      const selectionSet = new Set(selectedDxfEntityIds);
       const orphanedOpeningIds = scene != null
-        ? scene.entities
-            .filter(isOpeningEntity)
-            .filter((e) => !selectedDxfEntityIds.includes(e.id) && deletingWallIds.has(e.params.wallId))
-            .map((e) => e.id)
+        ? findHostedOpenings(deletingWallIds, scene.entities, selectionSet)
+        : [];
+      const orphanedSlabOpeningIds = scene != null
+        ? findHostedSlabOpenings(deletingSlabIds, scene.entities, selectionSet)
         : [];
 
       let idsToDelete = selectedDxfEntityIds;
       if (orphanedOpeningIds.length > 0) {
         const action = await requestWallCascadeDelete(orphanedOpeningIds.length);
         if (action === 'cancel') return false;
-        idsToDelete = [...selectedDxfEntityIds, ...orphanedOpeningIds];
+        idsToDelete = [...idsToDelete, ...orphanedOpeningIds];
+      }
+      if (orphanedSlabOpeningIds.length > 0) {
+        idsToDelete = [...idsToDelete, ...orphanedSlabOpeningIds];
       }
 
       if (idsToDelete.length === 1) {

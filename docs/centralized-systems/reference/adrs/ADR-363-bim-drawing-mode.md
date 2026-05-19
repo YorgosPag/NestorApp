@@ -1957,12 +1957,60 @@ Centralized all multi-character keyboard shortcuts for BIM tools into a single *
 
 ---
 
-### Phase 7 — Multi-Element Selection & Bulk Edit (1 session)
+### Phase 7 — Multi-Element Selection & Bulk Edit (split 2026-05-19 into 7.1 + 7.2 per Giorgio Q5)
 
-- [ ] Selection rubber-band ήδη ξέρει DXF entities — επέκταση για BIM entities.
-- [ ] Multi-select panel: properties common-denominator (π.χ. 3 walls selected → height/material editable bulk).
-- [ ] Mirror/rotate/copy semantics για BIM entities (matrix transforms preserve params).
-- [ ] Group operations: move 5 walls + their hosted openings ως ένα unit.
+> **Naming note**: this ADR already uses the labels "Phase 7A / Phase 7B" elsewhere
+> for the unrelated Multi-Char BIM Hotkeys sub-track (line 1928 + §6 Phase 7A/B).
+> The Phase-7 selection-feature split therefore uses **7.1 / 7.2** to avoid clash.
+
+#### Phase 7.1 — Selection Core (in flight 2026-05-19)
+
+Scope: rubber-band BIM selection, multi-move with cascade, multi-delete with cascade,
+bulk-edit ribbon contextual tab. Ratio of original Phase 7 ≈ 70%.
+
+- [x] **BIM marquee bounds** — `selection-duplicate-utils.calculateEntityBounds()` previously
+  silently dropped 7 BIM kinds (returned `null` in `default:` branch → marquee
+  selection skipped every wall/opening/slab/slab-opening/column/beam/stair).
+  Now delegates to new SSoT `bim/utils/bim-bounds.ts:calculateBimEntity2DBounds()`
+  which projects `geometry.bbox` (BoundingBox3D) to XY plan view. 13 tests.
+- [x] **BIM move geometry** — `move-entity-geometry.calculateMovedGeometry()` was a no-op for
+  BIM (returned empty `Partial`). New `bim/utils/bim-move-geometry.ts:calculateBimMovedGeometry()`
+  produces `{params, geometry}` atomic patch per kind: wall shifts `start`/`end`/`polylineVertices`,
+  slab/slab-opening shift outline vertices, column shifts `position`, beam shifts
+  `startPoint`/`endPoint`/`curveControl`, stair shifts `basePoint`. Geometry recomputed
+  via per-type `compute*Geometry()` SSoT so bbox stays in sync. Opening returns `{}`
+  (derived geometry — follows host wall automatically). 9 tests.
+- [x] **Cascade resolver SSoT** — `bim/cascade/bim-cascade-resolver.ts`: pure functions
+  `findHostedOpenings`, `findHostedSlabOpenings`, `partitionBimHosts`,
+  `expandSelectionForDelete`, `expandSelectionForMove`. Registry module
+  `bim-cascade-resolver` (Tier 3) forbids inline host→hosted sweeps. 15 tests.
+- [x] **useMoveTool slab→slab-opening cascade** — group move auto-expands selection
+  with `expandSelectionForMove()`. Walls do NOT cascade for move (opening derives
+  world geometry from host wall, follows automatically).
+- [x] **useSmartDelete slab→slab-opening cascade** — Boy-Scout N.0.2: previous inline
+  `entities.filter(isOpeningEntity)` sweep replaced by resolver call. Adds
+  slab→slab-opening orphan cascade alongside the existing wall→opening prompt.
+- [ ] **Multi-Selection Ribbon Contextual Tab** — `multi-selection` tab via ADR-345
+  registry, "Κοινές Ιδιότητες" panel + "Φίλτρο" panel (Revit/AutoCAD pattern per
+  Giorgio Q3 decision). Live commit on focus loss / Enter → `CompoundCommand(N × UpdateXxxParamsCommand)`
+  = 1 undo step (Google-Docs pattern). Common-properties registry
+  `bim/types/bim-common-properties.ts` (intersection of properties per selected kind).
+  ⏳ Pending — handoff to next session.
+
+#### Phase 7.2 — Transform BIM (deferred, separate session)
+
+Scope: matrix transform coverage for BIM. Each currently no-ops on the BIM cases
+of `MirrorEntityCommand` / `RotateEntityCommand` / `CopyEntityCommand`.
+
+- [ ] **Mirror BIM** — per-kind axis-aware mirror (wall `start`/`end` reflection,
+  opening `handing` flip, slab/slab-opening polygon mirror, column/beam endpoint
+  mirror, stair basepoint+direction mirror). Preserves params; recomputes geometry.
+- [ ] **Rotate BIM** — pivot UI (2-click: pivot point → rotation angle). Per-kind
+  rotation of params (wall endpoints, slab polygon, column position, beam endpoints,
+  stair basepoint+direction).
+- [ ] **Copy BIM** — ID regeneration via `enterprise-id.service` (N.6) + Firestore
+  writes through per-type service. Independent host references regenerated (new
+  opening copies must point to copied wall, not original).
 
 ### Phase 8 — Schedule Export (1 session)
 
@@ -2255,6 +2303,7 @@ Phase 6 (BOQ Auto-Feed) θεωρείται **complete** όταν:
 
 | Ημ/νία | Αλλαγή | Author |
 |---|---|---|
+| 2026-05-19 | **Phase 7 SPLIT into 7.1 + 7.2** per Giorgio Q5 decision (phase-per-session, Google-level scope). **Phase 7.1 partial landing**: BIM marquee bounds via new SSoT `bim/utils/bim-bounds.ts` (fixed silent drop of 7 BIM kinds from `calculateEntityBounds` → `default:null`); BIM move geometry via new SSoT `bim/utils/bim-move-geometry.ts` (fixed `calculateMovedGeometry` no-op on BIM, recomputes geometry atomically per kind); cascade resolver SSoT `bim/cascade/bim-cascade-resolver.ts` (Boy-Scout N.0.2: extracts inline `useSmartDelete` wall→opening sweep + adds slab→slab-opening cascade); `useMoveTool` + `useSmartDelete` wired to resolver. Registry module `bim-cascade-resolver` (Tier 3) added. 37 new tests (13 + 9 + 15). **Pending in 7.1**: multi-selection ribbon contextual tab (Revit/AutoCAD common-properties + Filter panel pattern per Giorgio Q3) — handoff for next session. **Phase 7.2** (deferred): Mirror/Rotate/Copy BIM coverage. | Claude Opus 4.7 |
 | 2026-05-17 | **Initial draft v1.0** — Full architecture, 8 phases, BOQ integration, port plan από genarc, §9 open questions για Γιώργο. Status: PROPOSED. | Claude Opus 4.7 |
 | 2026-05-17 | **Q1 ANSWERED** — Revit-style Type Picker dialog before drawing. Added §5.9.1 BimTypePickerDialog SSoT + `bim_presets` Firestore collection + 25 system-seeded presets. Pattern επεκτείνεται consistent σε όλα 5 BIM types. | Claude Opus 4.7 |
 | 2026-05-17 | **Q2 ANSWERED** — Absolute mm offset (primary) + % info-only display. Snap 50mm. Constraints: frameWidth min/max. Wall length change → opening stays absolute, orphan warning if out-of-bounds. | Claude Opus 4.7 |

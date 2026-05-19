@@ -83,6 +83,17 @@
 
 ---
 
+### 🏗️ ADR-363 PHASE 7.2 — BIM Transforms (deferred 2026-05-19, priorità bassa, ~4-5h)
+
+Phase 7 split into 7.1 (Selection Core) + 7.2 (Transform BIM) per Giorgio Q5 decision (phase-per-session). 7.1 partially landed 2026-05-19 (marquee bounds + move geometry + cascade resolver + integrations); ribbon contextual tab pending separate handoff. 7.2 scope below.
+
+- [ ] **Mirror BIM** — extend `MirrorEntityCommand` per kind: wall `start`/`end` reflection across axis; opening `handing` flip when applicable; slab/slab-opening polygon mirror; column rotation reflection; beam endpoint mirror; stair basepoint+direction mirror. Each must preserve params + recompute geometry via `compute<Kind>Geometry()`.
+- [ ] **Rotate BIM** — pivot UI (2-click: pivot point → rotation angle). Extend `RotateEntityCommand` for wall endpoints, slab polygon, column position+rotation, beam endpoints, stair basepoint+direction. Group rotation around common pivot.
+- [ ] **Copy BIM** — extend `CopyEntityCommand` for BIM. ID regeneration via `enterprise-id.service` (N.6) — never inline UUID. Independent host references rewired (opening copies point to copied wall, slab-opening copies point to copied slab). Firestore writes through per-type service.
+- [ ] Wire to ribbon Modify panel + context menu. ADR-363 §Phase 7.2 closure entry.
+
+---
+
 ### 🪜 ADR-363 STAIR MIGRATION — Phase 0.5 incomplete (priorità media, ~3-4h)
 
 Ανακαλύφθηκε 2026-05-19 (N.0.2 Boy Scout κατά Phase B doc sync).

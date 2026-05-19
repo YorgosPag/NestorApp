@@ -26,6 +26,8 @@ import { MoveEntityCommand, MoveMultipleEntitiesCommand, CompoundCommand } from 
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { useLevels } from '../../systems/levels';
+// ADR-363 Phase 7A — slab→slab-opening cascade for group move.
+import { expandSelectionForMove } from '../../bim/cascade/bim-cascade-resolver';
 
 // ============================================================================
 // TYPES
@@ -156,10 +158,20 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
         if (selectedEntityIds.length > 0) {
           const sm = getSceneManager();
           if (sm) {
+            // ADR-363 Phase 7A — slab→slab-opening cascade. Wall→opening NOT
+            // cascaded: opening world geometry derives from host wall, so the
+            // wall move alone carries it (computeOpeningGeometry recomputes
+            // off the new wall.params.start downstream).
+            const scene = levelManager.currentLevelId
+              ? levelManager.getLevelScene(levelManager.currentLevelId)
+              : null;
+            const expandedIds = scene
+              ? expandSelectionForMove(selectedEntityIds, scene).ids
+              : selectedEntityIds;
             commands.push(
-              selectedEntityIds.length === 1
-                ? new MoveEntityCommand(selectedEntityIds[0], delta, sm, false)
-                : new MoveMultipleEntitiesCommand(selectedEntityIds, delta, sm, false),
+              expandedIds.length === 1
+                ? new MoveEntityCommand(expandedIds[0], delta, sm, false)
+                : new MoveMultipleEntitiesCommand(expandedIds, delta, sm, false),
             );
           }
         }

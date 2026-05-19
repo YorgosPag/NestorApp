@@ -20,6 +20,8 @@ import {
   isPointEntity,
   type Entity,
 } from '../../../types/entities';
+// ADR-363 Phase 7A — BIM move geometry (params + computed geometry atomic patch).
+import { calculateBimMovedGeometry } from '../../../bim/utils/bim-move-geometry';
 
 /**
  * Apply delta movement to a point
@@ -41,6 +43,14 @@ export function reverseDelta(delta: Point2D): Point2D {
  */
 export function calculateMovedGeometry(entity: SceneEntity, delta: Point2D): Partial<SceneEntity> {
   const e = entity as unknown as Entity;
+
+  // ADR-363 Phase 7A — BIM types first. Returns full `{params, geometry}`
+  // atomic patch (mirrors `UpdateWallParamsCommand.applyPatch` pattern) so
+  // renderer reads stay consistent with the parametric SSoT after move.
+  const bimPatch = calculateBimMovedGeometry(e, delta);
+  if (bimPatch !== null) {
+    return bimPatch;
+  }
 
   if (isLineEntity(e)) {
     return {

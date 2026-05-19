@@ -15,6 +15,8 @@ import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
 // 🏢 ADR-034: Centralized Empty Spatial Bounds
 import { createInfinityBounds, EMPTY_SPATIAL_BOUNDS } from '../../../config/geometry-constants';
 import { TEXT_METRICS_RATIOS } from '../../../config/text-rendering-config';
+// ADR-363 Phase 7A — BIM marquee bounds (SSoT delegation).
+import { calculateBimEntity2DBounds } from '../../../bim/utils/bim-bounds';
 
 /**
  * Calculate bounding box for entities
@@ -205,6 +207,18 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
       
       return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
     }
+    // ADR-363 Phase 7A — BIM parametric entities project pre-computed
+    // `geometry.bbox` (BoundingBox3D) onto the XY plan view. Without these
+    // cases the switch fell through to `default → null` and marquee selection
+    // silently excluded every wall/opening/slab/column/beam/stair.
+    case 'wall':
+    case 'opening':
+    case 'slab':
+    case 'slab-opening':
+    case 'column':
+    case 'beam':
+    case 'stair':
+      return calculateBimEntity2DBounds(entity as unknown as Entity);
     case 'text':
     case 'mtext': {
       const textEntity = entity as unknown as { position?: Point2D; text?: string; height?: number; fontSize?: number; rotation?: number };

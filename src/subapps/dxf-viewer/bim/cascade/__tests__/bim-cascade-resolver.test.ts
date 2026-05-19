@@ -1,0 +1,183 @@
+/**
+ * ADR-363 Phase 7A — BIM cascade resolver unit tests.
+ *
+ * Verifies host→hosted entity discovery, partition logic, and the two
+ * composition helpers (expandSelectionForDelete + expandSelectionForMove).
+ */
+
+import {
+  findHostedOpenings,
+  findHostedSlabOpenings,
+  partitionBimHosts,
+  expandSelectionForDelete,
+  expandSelectionForMove,
+} from '../bim-cascade-resolver';
+import type { Entity } from '../../../types/entities';
+
+function wall(id: string): Entity {
+  return { id, type: 'wall', kind: 'straight' } as unknown as Entity;
+}
+
+function opening(id: string, wallId: string): Entity {
+  return { id, type: 'opening', kind: 'door', params: { wallId } } as unknown as Entity;
+}
+
+function slab(id: string): Entity {
+  return { id, type: 'slab', kind: 'floor' } as unknown as Entity;
+}
+
+function slabOpening(id: string, slabId: string): Entity {
+  return { id, type: 'slab-opening', kind: 'shaft', params: { slabId } } as unknown as Entity;
+}
+
+function line(id: string): Entity {
+  return { id, type: 'line' } as unknown as Entity;
+}
+
+describe('ADR-363 Phase 7A — BIM cascade resolver', () => {
+  // ─── findHostedOpenings ────────────────────────────────────────────────
+
+  describe('findHostedOpenings', () => {
+    it('returns openings whose wallId is in the wall id set', () => {
+      const entities = [
+        wall('w1'),
+        wall('w2'),
+        opening('o1', 'w1'),
+        opening('o2', 'w1'),
+        opening('o3', 'w2'),
+        opening('o4', 'w_other'),
+      ];
+      const result = findHostedOpenings(new Set(['w1']), entities);
+      expect(result).toEqual(['o1', 'o2']);
+    });
+
+    it('excludes openings already in the exclude set (no duplication)', () => {
+      const entities = [opening('o1', 'w1'), opening('o2', 'w1')];
+      const result = findHostedOpenings(new Set(['w1']), entities, new Set(['o1']));
+      expect(result).toEqual(['o2']);
+    });
+
+    it('returns empty array when wall set is empty', () => {
+      const entities = [opening('o1', 'w1')];
+      expect(findHostedOpenings(new Set(), entities)).toEqual([]);
+    });
+
+    it('ignores non-opening entities', () => {
+      const entities = [wall('w1'), line('l1'), opening('o1', 'w1')];
+      expect(findHostedOpenings(new Set(['w1']), entities)).toEqual(['o1']);
+    });
+  });
+
+  // ─── findHostedSlabOpenings ────────────────────────────────────────────
+
+  describe('findHostedSlabOpenings', () => {
+    it('returns slab-openings whose slabId is in the slab id set', () => {
+      const entities = [
+        slab('s1'),
+        slabOpening('so1', 's1'),
+        slabOpening('so2', 's_other'),
+        slabOpening('so3', 's1'),
+      ];
+      const result = findHostedSlabOpenings(new Set(['s1']), entities);
+      expect(result).toEqual(['so1', 'so3']);
+    });
+
+    it('returns empty when slab set is empty', () => {
+      expect(findHostedSlabOpenings(new Set(), [])).toEqual([]);
+    });
+  });
+
+  // ─── partitionBimHosts ─────────────────────────────────────────────────
+
+  describe('partitionBimHosts', () => {
+    it('partitions selection into wall vs slab id sets', () => {
+      const entities = [
+        wall('w1'),
+        wall('w2'),
+        slab('s1'),
+        opening('o1', 'w1'),
+        line('l1'),
+      ];
+      const { wallIds, slabIds } = partitionBimHosts(['w1', 's1', 'o1', 'l1'], entities);
+      expect([...wallIds]).toEqual(['w1']);
+      expect([...slabIds]).toEqual(['s1']);
+    });
+
+    it('returns empty sets when no BIM hosts selected', () => {
+      const { wallIds, slabIds } = partitionBimHosts(['l1'], [line('l1')]);
+      expect(wallIds.size).toBe(0);
+      expect(slabIds.size).toBe(0);
+    });
+  });
+
+  // ─── expandSelectionForDelete ──────────────────────────────────────────
+
+  describe('expandSelectionForDelete', () => {
+    it('cascades wall→opening + slab→slab-opening atomically', () => {
+      const entities = [
+        wall('w1'),
+        slab('s1'),
+        opening('o1', 'w1'),
+        opening('o2', 'w1'),
+        slabOpening('so1', 's1'),
+      ];
+      const result = expandSelectionForDelete(['w1', 's1'], { entities });
+      expect(result.ids).toEqual(['w1', 's1', 'o1', 'o2', 'so1']);
+      expect(result.orphanedOpeningIds).toEqual(['o1', 'o2']);
+      expect(result.orphanedSlabOpeningIds).toEqual(['so1']);
+    });
+
+    it('does not duplicate openings already in the selection', () => {
+      const entities = [wall('w1'), opening('o1', 'w1')];
+      const result = expandSelectionForDelete(['w1', 'o1'], { entities });
+      expect(result.ids).toEqual(['w1', 'o1']);
+      expect(result.orphanedOpeningIds).toEqual([]);
+    });
+
+    it('preserves original selection order, then appends orphans', () => {
+      const entities = [slab('s1'), wall('w1'), opening('o1', 'w1'), slabOpening('so1', 's1')];
+      const result = expandSelectionForDelete(['w1', 's1'], { entities });
+      expect(result.ids[0]).toBe('w1');
+      expect(result.ids[1]).toBe('s1');
+    });
+
+    it('no-op for pure DXF selection', () => {
+      const entities = [line('l1'), line('l2')];
+      const result = expandSelectionForDelete(['l1', 'l2'], { entities });
+      expect(result.ids).toEqual(['l1', 'l2']);
+      expect(result.orphanedOpeningIds).toEqual([]);
+      expect(result.orphanedSlabOpeningIds).toEqual([]);
+    });
+  });
+
+  // ─── expandSelectionForMove ────────────────────────────────────────────
+
+  describe('expandSelectionForMove', () => {
+    it('cascades slab→slab-opening only (walls do not cascade for move)', () => {
+      const entities = [
+        wall('w1'),
+        slab('s1'),
+        opening('o1', 'w1'), // must NOT be cascaded
+        slabOpening('so1', 's1'),
+        slabOpening('so2', 's1'),
+      ];
+      const result = expandSelectionForMove(['w1', 's1'], { entities });
+      expect(result.ids).toEqual(['w1', 's1', 'so1', 'so2']);
+      expect(result.cascadedSlabOpeningIds).toEqual(['so1', 'so2']);
+    });
+
+    it('no slab-openings cascaded when only wall in selection', () => {
+      const entities = [wall('w1'), opening('o1', 'w1')];
+      const result = expandSelectionForMove(['w1'], { entities });
+      expect(result.ids).toEqual(['w1']);
+      expect(result.cascadedSlabOpeningIds).toEqual([]);
+    });
+
+    it('does not duplicate slab-openings already in the selection', () => {
+      const entities = [slab('s1'), slabOpening('so1', 's1')];
+      const result = expandSelectionForMove(['s1', 'so1'], { entities });
+      expect(result.ids).toEqual(['s1', 'so1']);
+      expect(result.cascadedSlabOpeningIds).toEqual([]);
+    });
+  });
+});
