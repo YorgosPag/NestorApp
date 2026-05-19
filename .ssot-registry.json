@@ -252,8 +252,8 @@
     },
     "_comment_tier3": "=== TIER 3: BUSINESS LOGIC (bypass = inconsistency) ===",
     "stair-presets-service": {
-      "ssotFile": "src/subapps/dxf-viewer/systems/stairs/stair-presets-service.ts",
-      "description": "Stair library presets CRUD (ADR-358 G26, Q32) must go through StairPresetsService — no direct collection() writes, no inline `addDoc` on stair_presets, no inline preset ID generation",
+      "ssotFile": "src/subapps/dxf-viewer/bim/stairs/stair-presets-service.ts",
+      "description": "Stair library presets CRUD (ADR-358 G26, Q32) must go through StairPresetsService — no direct collection() writes, no inline `addDoc` on stair_presets, no inline preset ID generation. Path migrated to bim/ per ADR-363 Phase 0.5 (2026-05-19).",
       "forbiddenPatterns": [
         "addDoc\\([^)]*stair_presets",
         "collection\\([^)]*stair_presets[^)]*\\)\\s*,\\s*\\{",
@@ -261,14 +261,14 @@
         "Date\\.now\\(\\)\\.toString\\(\\)[^\\n]*stair[_-]preset"
       ],
       "allowlist": [
-        "src/subapps/dxf-viewer/systems/stairs/stair-presets-service.ts",
-        "src/subapps/dxf-viewer/systems/stairs/__tests__/"
+        "src/subapps/dxf-viewer/bim/stairs/stair-presets-service.ts",
+        "src/subapps/dxf-viewer/bim/stairs/__tests__/"
       ],
       "tier": 3
     },
     "stair-firestore-service": {
-      "ssotFile": "src/subapps/dxf-viewer/systems/stairs/stair-firestore-service.ts",
-      "description": "Stair persistence + soft-lock (ADR-358 Phase 8, G24) must go through StairFirestoreService — no direct collection() writes on floorplan_stairs, no inline addDoc, no inline stair ID generation, no direct onSnapshot bypass of firestoreQueryService SSoT subscribe wrapper",
+      "ssotFile": "src/subapps/dxf-viewer/bim/stairs/stair-firestore-service.ts",
+      "description": "Stair persistence + soft-lock (ADR-358 Phase 8, G24) must go through StairFirestoreService — no direct collection() writes on floorplan_stairs, no inline addDoc, no inline stair ID generation, no direct onSnapshot bypass of firestoreQueryService SSoT subscribe wrapper. Path migrated to bim/ per ADR-363 Phase 0.5 (2026-05-19).",
       "forbiddenPatterns": [
         "addDoc\\([^)]*floorplan_stairs",
         "collection\\([^)]*floorplan_stairs[^)]*\\)\\s*,\\s*\\{",
@@ -277,8 +277,23 @@
         "onSnapshot\\([^)]*floorplan_stairs"
       ],
       "allowlist": [
-        "src/subapps/dxf-viewer/systems/stairs/stair-firestore-service.ts",
-        "src/subapps/dxf-viewer/systems/stairs/__tests__/"
+        "src/subapps/dxf-viewer/bim/stairs/stair-firestore-service.ts",
+        "src/subapps/dxf-viewer/bim/stairs/__tests__/"
+      ],
+      "tier": 3
+    },
+    "bim-folder-residency": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/",
+      "description": "ADR-363 Phase 0.5 — all BIM entity code (stair / wall / opening / slab / column / beam / slab-opening) MUST reside under src/subapps/dxf-viewer/bim/. Legacy paths systems/stairs/, types/stair, rendering/entities/StairRenderer, hooks/data/useStairPersistence, ui/ribbon/hooks/useRibbonStairBridge are removed (2026-05-19); imports targeting any of those paths are forbidden — use the bim/ canonical path instead (bim/stairs/, bim/types/stair-types, bim/renderers/StairRenderer, bim/hooks/use-stair-persistence, bim/hooks/use-ribbon-stair-bridge).",
+      "forbiddenPatterns": [
+        "from ['\"][^'\"]*subapps/dxf-viewer/systems/stairs/",
+        "from ['\"][^'\"]*subapps/dxf-viewer/types/stair['\"]",
+        "from ['\"][^'\"]*subapps/dxf-viewer/rendering/entities/StairRenderer['\"]",
+        "from ['\"][^'\"]*subapps/dxf-viewer/hooks/data/useStairPersistence['\"]",
+        "from ['\"][^'\"]*subapps/dxf-viewer/ui/ribbon/hooks/useRibbonStairBridge['\"]"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/"
       ],
       "tier": 3
     },
