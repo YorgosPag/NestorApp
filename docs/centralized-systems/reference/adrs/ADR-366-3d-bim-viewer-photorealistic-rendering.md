@@ -1686,10 +1686,118 @@ ADR-366 total estimate revised: **~139-159h** Phase 0-7 (από ~132-150h post-B
 
 ---
 
+### B.3 — Multi-floor visibility controls UI — ✅ FULLY CLOSED 2026-05-19
+
+**Σκοπός**: Καθορισμός UI για το multi-floor visibility που ήδη approved σε §9 Q2 (single-floor default + Show All toggle + `ViewMode3DStore.visibleFloors: Set<floorId>`). 7 sub-questions Q1-Q7 — όλες κλειστές με industry-driven decisions.
+
+**Cross-references**: §9 Q2 (state schema approved), ADR-326 Tenant Org Structure (`useFloors` SSoT + Firestore `buildings/{id}/floors/*`), ADR-358 Stair↔Floor linking, ADR-345 Ribbon (mode toggle pattern), `reference_dxf_viewer_floating_panel.md` memory (2D FloatingPanel LEFT pattern Levels/Colors/Properties), `feedback_3d_mirror_2d_ssot.md` memory (3D mirrors 2D SSoT).
+
+**Pending micro-decisions** — ✅ ALL RESOLVED 2026-05-19:
+- B.3.Q1: UI affordance ✅ RESOLVED — Panel με checkboxes ανά όροφο (5/5 industry σύγκλιση)
+- B.3.Q2: Selection mode ✅ RESOLVED — Checkboxes + presets [All][Active][None]
+- B.3.Q3: Non-active rendering ✅ RESOLVED — 3-state per floor: Hide / Ghost (30% opacity) / Show
+- B.3.Q4: Floor order ✅ RESOLVED — Top-down (ψηλότερος πρώτος, industry default)
+- B.3.Q5: Active floor indicator ✅ RESOLVED — Μπλε τελίτσα δεξιά (Revit minimal pattern)
+- B.3.Q6: Extra presets ✅ RESOLVED — 4 presets total: [All][Active][None][Invert]
+- B.3.Q7: Panel placement ✅ RESOLVED — Νέο 3D-specific FloatingPanel αριστερά (tabs Floors/Lighting/Quality, separate component από 2D)
+
+**Decisions Log (Γιώργος)** — B.3 ✅ FULLY CLOSED 7/7:
+
+| # | Ερώτηση | Απόφαση | Industry alignment |
+|---|---|---|---|
+| B.3.Q1 | UI affordance για επιλογή ορατών ορόφων (panel checkboxes / slider / dropdown / ribbon group) | **Dedicated panel αριστερά με checkbox list ανά όροφο**. Λίστα ονομάτων ορόφων, checkbox δίπλα σε κάθε όνομα = ορατός/κρυμμένος, preset action buttons στο top. | 5/5 industry σύγκλιση (Revit Project Browser tree, ArchiCAD Story Settings dialog, Navisworks Saved Views, Vectorworks Layers panel, Allplan Plan Selector) — ΟΛΟΙ χρησιμοποιούν dedicated panel με checkbox list. Slider pattern απορρίπτεται (level-by-level σε 4D/section tools μόνο, όχι BIM static viewer). Dropdown απορρίπτεται (compact αλλά no multi-select). Ribbon group απορρίπτεται (vertical space waste για run-time toggling). |
+| B.3.Q2 | Selection mode (per-floor checkboxes vs single-active radio + "Show All" toggle vs hybrid) | **Free multi-selection με checkboxes + 3 preset action buttons στο top: [All] [Active] [None]**. Ο χρήστης μπορεί να τσεκάρει οποιουσδήποτε ορόφους ταυτόχρονα (π.χ. 1ος+2ος μαζί). Presets accelerate common operations. | Revit/ArchiCAD checkbox + multi-select via Ctrl+click. Hybrid checkbox+presets είναι Revit pattern (Visibility/Graphics dialog). Radio απορρίπτεται (δεν υποστηρίζει 1ος+2ος μαζί). Plain checkboxes χωρίς presets απορρίπτονται (4 clicks για "All" σε 4-floor building). |
+| B.3.Q3 | Non-active floor rendering (hide vs transparency-as-context vs hybrid) | **3-state toggle per floor: Hide / Ghost (30% opacity) / Show** — 3 εικονίδια δίπλα σε κάθε όροφο (👁 show, ⚫ hide, 🙈 ghost). Active state radio-style σε ένα από τα 3. Revit "Underlay" pattern επεκταμένο. Ghost rendering μέσω Three.js `material.transparent=true, opacity=0.3, depthWrite=false`. | Revit Underlay (50% γκρι ghost για context floor) — extend με per-floor control. 3/5 industry tools υποστηρίζουν transparency-as-context (Revit/ArchiCAD/Allplan). Vectorworks/Navisworks hide-only απορρίπτονται (χάνεται context value). Opacity slider per floor απορρίπτεται (UI noise, power-user overkill). Global "Ghost non-active" toggle απορρίπτεται (less προσαρμοσμένο από per-floor 3-state). |
+| B.3.Q4 | Floor order display στο panel (top-down vs bottom-up vs alphabetical vs configurable) | **Top-down: ψηλότερος όροφος πρώτος**. Sort key = `floor.elevation` descending. 2ος → 1ος → Ισόγειο → Υπόγειο. Προσομοιώνει την κάθετη τομή κτιρίου (πάνω στον ουρανό, κάτω στο έδαφος). | Revit/ArchiCAD/Allplan default top-down — matches elevation order + φυσική θέαση κτιρίου από πλάι. Bottom-up απορρίπτεται (minority pattern, construction-centric αντί visualization-centric). Alphabetical απορρίπτεται (χάνει spatial logic). Configurable απορρίπτεται για now (YAGNI — μπορεί να προστεθεί αργότερα reverse toggle αν ζητηθεί). |
+| B.3.Q5 | Active floor visual indicator (bold / highlight row / icon / blue dot) | **Μπλε τελίτσα δεξιά (Revit-style minimal)**. Small blue dot (🔵) στο δεξί άκρο της γραμμής του active floor. Όλα τα υπόλοιπα ορατά παραμένουν ίδια οπτικά. Zero background highlight, zero bold. REUSE existing `CAD_UI_COLORS.ACTIVE` color token (όχι νέο). | Revit blue-dot pattern direct precedent. Minimal noise — δεν συγκρούεται με checkbox states ή 3-state icons. ArchiCAD bold+star απορρίπτεται (heavier visual weight). Background highlight απορρίπτεται (accessibility risk για χρωματοτυφλούς, color-only signal). Triple indicator (highlight+bold+arrow) απορρίπτεται (overkill για frequent change). |
+| B.3.Q6 | Quick action presets (3 [All][Active][None] vs 4 +Invert vs 5 +Above/Below active) | **4 presets total: [All] [Active] [None] [Invert]**. Invert αντιστρέφει checkbox states (unchecked γίνονται checked και vice versa). Πολύ χρήσιμο για BIM workflows ("βλέπω 1ο+2ο" → 1 click → "βλέπω Ισόγειο+Υπόγειο"). | 4/5 industry tools έχουν Invert command (Revit Visibility/Graphics, SketchUp tag isolation, AutoCAD layer manager, ArchiCAD layer panel). Above/Below active απορρίπτεται για now (5 presets = clutter, μπορεί να προστεθεί Phase 5+ αν ζητηθεί). 3 presets only απορρίπτεται (Invert manually = 4 clicks για 4-floor building). |
+| B.3.Q7 | Floor browser placement (REUSE 2D FloatingPanel "Levels" tab vs νέο 3D-specific FloatingPanel vs right pane vs floating draggable) | **Νέο 3D-specific FloatingPanel αριστερά** — separate React component από 2D FloatingPanel, ίδια θέση (LEFT stable, όχι draggable). Δικά του tabs scoped σε 3D: **Floors** (B.3 αυτό) + **Lighting** (B.1 controls) + **Quality** (B.1.Q2/Q3 quality modulator) + future tabs. 2D FloatingPanel μένει unchanged. | Decision diverges from "REUSE 2D" recommendation (mirror SSoT) — Γιώργος προτίμησε clean 3D scope. Justification: 2D Levels tab = floor metadata viewing (read-mostly), 3D Floors tab = visibility multi-toggle (3-state per floor + 4 presets + active marker) — significantly different UX scope. Reusing same component would muddy mode-aware logic και θα γέμιζε το 2D Levels με 3D-only controls. Same physical position (LEFT) preserves spatial memory consistency. Component code duplication: ~150-200 LOC υλοποίηση cost για cleaner separation = αποδεκτό. Right pane απορρίπτεται (σύγκρουση με entity details right pane). Floating draggable απορρίπτεται (σπάει 2D LEFT pattern). |
+
+**Architectural implications**:
+
+- **Νέα SSoT modules (Phase 4)**:
+  - `bim-3d/panels/Floating3DPanel.tsx` — container component, LEFT stable position mirror του 2D FloatingPanel structure, αλλά separate component. Hosts tabs (Floors/Lighting/Quality). Theme-aware, no drag, collapsible mirror 2D pattern.
+  - `bim-3d/floors/Floor3DPanelTab.tsx` — Floors tab content. Renders preset buttons row + ordered floor list με per-row 3-state icons + checkbox + name + active marker dot.
+  - `bim-3d/floors/floor-visibility-state.ts` — pure helpers: `applyPreset(state, preset)` για [All]/[Active]/[None]/[Invert], `setFloorMode(state, floorId, mode)` για 3-state cycle, `sortFloorsTopDown(floors)` με elevation descending.
+  - `bim-3d/floors/applyFloorVisibility.ts` — scene mutator function `applyFloorVisibility(scene, visibleFloors, floorModes)`. Iterates `scene.entities`, sets `mesh.visible = visibleFloors.has(entity.floorId)`, για ghost floors sets `material.transparent=true, opacity=0.3, depthWrite=false` (cloned material per floor για zero cross-floor interference). Zero re-creation cost.
+- **ViewMode3DStore extensions** (πάνω από §9 Q2 already approved):
+  - `visibleFloors: Set<floorId>` (ήδη approved §9 Q2)
+  - `floorVisibilityModes: Map<floorId, 'show' | 'ghost' | 'hide'>` (ΝΕΟ — per-floor 3-state, default 'show' για active + 'hide' για rest)
+  - `activeFloorId: string | null` (ήδη implicit από §9 Q2, formalize ως store field)
+  - Action creators: `setVisibleFloors(set)`, `toggleFloorVisibility(floorId)`, `setFloorMode(floorId, mode)`, `applyFloorsPreset('all' | 'active' | 'none' | 'invert')`, `setActiveFloor(floorId)`
+- **3-state cycle UI**: 3 icon buttons (eye / circle-slash / monkey-mask emoji ή Lucide icons) ANA όροφο. Active state radio-style — μόνο ένα από τα 3 highlighted. Click σε άλλο εικονίδιο = state change. Checkbox είναι derived view (checked iff mode='show' OR mode='ghost').
+  - Φαίνεται προς τα έξω ως: `[👁 ⚫ 🙈] 1ος όροφος 🔵`
+  - Internal state: `floorVisibilityModes.get(floorId) === 'show' | 'hide' | 'ghost'`
+  - Visibility derive: `visibleFloors = new Set([...floors].filter(f => modes.get(f.id) !== 'hide').map(f => f.id))` — single derived computation
+- **Preset semantics**:
+  - `[All]` → όλοι οι όροφοι mode='show' (all visible, no ghost)
+  - `[Active]` → active floor mode='show', υπόλοιποι mode='hide'
+  - `[None]` → όλοι mode='hide' (canvas blank — recovery via [All])
+  - `[Invert]` → swap visible↔hidden (preserving ghost intermediate? Decision: Invert flips show↔hide, ghost παραμένει ghost). Pure helper `invertFloorModes(modes)` με rule:
+    - show → hide
+    - hide → show
+    - ghost → ghost (preserved as third state)
+- **Active floor marker**: CSS pseudo-element `::after` σε row class `[data-active="true"]`, content '🔵' or styled `<span>` με background-color από `CAD_UI_COLORS.ACTIVE` token (REUSE existing — δεν χρειάζεται νέο `FLOOR_ACTIVE_MARKER` token).
+- **Floor order**: `useFloors()` hook ήδη επιστρέφει floors per building. Νέο memoized selector `useFloorsSorted(buildingId)` που εφαρμόζει `sortFloorsTopDown` (descending elevation, fallback alphabetical αν elevation equal/missing).
+- **Floors data**: ADR-326 tenant-scoped Firestore `companies/{companyId}/projects/{projectId}/buildings/{buildingId}/floors/{floorId}` με fields `{name, elevation, order}`. Existing schema sufficient.
+- **i18n keys** (per N.11, FIRST locale JSONs):
+  - `bim3d.floors.tabTitle` — 'Όροφοι' / 'Floors'
+  - `bim3d.floors.presetAll` — 'Όλοι' / 'All'
+  - `bim3d.floors.presetActive` — 'Ενεργός' / 'Active'
+  - `bim3d.floors.presetNone` — 'Κανένας' / 'None'
+  - `bim3d.floors.presetInvert` — 'Αντιστροφή' / 'Invert'
+  - `bim3d.floors.modeShow` (aria-label) — 'Πλήρως ορατός' / 'Fully visible'
+  - `bim3d.floors.modeGhost` (aria-label) — 'Ημιδιάφανος (φάντασμα)' / 'Ghost (translucent)'
+  - `bim3d.floors.modeHide` (aria-label) — 'Κρυμμένος' / 'Hidden'
+  - `bim3d.floors.activeMarker` (aria-label) — 'Ενεργός όροφος' / 'Active floor'
+  - `bim3d.floors.empty` — 'Δεν υπάρχουν όροφοι' / 'No floors defined'
+  - `bim3d.panels.floors` / `bim3d.panels.lighting` / `bim3d.panels.quality` — tab labels
+  - Σύνολο ~12 keys ×2 locales = ~24 entries.
+- **Activation guards**:
+  - Floating3DPanel mounts μόνο αν `ViewMode3DStore.mode !== '2d'`
+  - Floors tab disabled αν `useFloorsSorted(buildingId).length === 0` με empty state message
+- **Style SSoT REUSE**:
+  - Panel container: ίδια CSS module structure με 2D FloatingPanel (border, shadow, theme tokens), διαφορετικό `data-variant="3d"` για future divergence
+  - Row hover: REUSE 2D `HOVER_BG` token
+  - Active marker dot: REUSE `CAD_UI_COLORS.ACTIVE` (blue)
+  - 3-state icons: Lucide React (`Eye`, `EyeOff`, `Ghost`) με size=16, color tokens από theme
+- **Performance**:
+  - `applyFloorVisibility` runs σε store subscriber με RAF coalescing — multiple rapid toggles collapse σε single GPU update
+  - Material cloning για ghost floors: lazy (only όταν floor enters 'ghost' state for first time), cached σε `WeakMap<originalMaterial, ghostMaterial>`. Zero allocation σε steady state.
+  - Zero geometry recreation — only `mesh.visible` and `material` swap. <1ms per floor toggle.
+- **GOL checklist**:
+  - Proactive: ✅ store-driven, single source of truth `ViewMode3DStore.floorVisibilityModes`
+  - Race conditions: ✅ RAF batched scene mutation
+  - Idempotent: ✅ `applyFloorVisibility` idempotent (set same modes → no change)
+  - Belt-and-suspenders: ✅ empty state fallback + `useFloors` loading/error states + missing floor (entity.floorId not in floors collection) renders as 'hide' silent + ghost material cache cleared on scene reset
+  - SSoT: ✅ useFloors SSoT, CAD_UI_COLORS REUSE, ADR-040 micro-leaf compliance, ADR-326 tenant scope unchanged
+  - Lifecycle owner: ✅ Floor3DPanelTab owns UI lifecycle, applyFloorVisibility owns scene mutation lifecycle, ViewMode3DStore owns state lifecycle — clean separation
+- **Backport σε 2D**: ΟΧΙ — 2D Levels tab παραμένει unchanged (Q7 decision). Pure 3D extension.
+- **Future Phase 5+ extensions** (NOT blocking B.3):
+  - Reverse order toggle (αν ζητηθεί)
+  - Above/Below active presets (B.3.Q6 5-preset option deferred)
+  - Floor-color-coding (per-floor tint χρώμα για visual separation)
+  - Floor-level section cut (combine με A.3 Section Box)
+  - Keyboard shortcuts (Alt+1..9 jump to floor, Alt+0 all, Alt+Shift+I invert)
+
+**Effort impact για B.3**: **+5-7h Phase 4** breakdown:
+- Phase 4: Floating3DPanel container + Floors tab UI + 3-state icons + 4 presets → **~2.5h**
+- Phase 4: floor-visibility-state.ts pure helpers + invert logic + sort helpers → **~0.5h**
+- Phase 4: applyFloorVisibility.ts scene mutator + ghost material cache + RAF batching → **~1h**
+- Phase 4: ViewMode3DStore extensions (floorVisibilityModes Map + actions) → **~0.5h**
+- Phase 4: i18n keys (~24 entries) + locale JSONs → **~0.5h**
+- Phase 4: tests (state helpers + applyFloorVisibility snapshot + invert correctness + preset semantics) → **~1.5h**
+- Cross-phase: integration με §9 Q2 already-approved `visibleFloors` (derive from modes) + ribbon/keyboard hook stubs → **~0.5h**
+
+ADR-366 total estimate revised: **~144-166h** Phase 0-7 (από ~139-159h post-B.2).
+
+---
+
 ## 12. Changelog
 
 | Ημ/νία | Αλλαγή | Author |
 |---|---|---|
+| 2026-05-19 | **Appendix B — Topic B.3 ✅ FULLY CLOSED 7/7 Qs (Multi-floor Visibility Controls UI)**. **B.3.Q1** Panel αριστερά με checkbox list ανά όροφο (5/5 industry σύγκλιση — Revit/ArchiCAD/Navisworks/Vectorworks/Allplan). **B.3.Q2** Free multi-select checkboxes + 3 preset buttons στο top [All][Active][None]. **B.3.Q3** 3-state per floor: Hide / Ghost (30% opacity) / Show (Revit Underlay pattern extended, 3/5 industry transparency-as-context). Ghost via Three.js `material.transparent=true, opacity=0.3, depthWrite=false` σε cloned material (WeakMap-cached). **B.3.Q4** Top-down order (ψηλότερος πρώτος, Revit/ArchiCAD/Allplan default, sort by `floor.elevation desc`). **B.3.Q5** Μπλε τελίτσα δεξιά για active floor (Revit minimal pattern, REUSE `CAD_UI_COLORS.ACTIVE`, zero νέο token). **B.3.Q6** 4 presets total: [All][Active][None][Invert] (4/5 industry έχουν Invert command). **B.3.Q7** Νέο 3D-specific FloatingPanel αριστερά (separate component από 2D FloatingPanel), tabs Floors/Lighting/Quality — Γιώργος διαφώνησε με recommended REUSE 2D Levels tab για cleaner 3D scope separation (decision conscious diverge από `feedback_3d_mirror_2d_ssot.md` rule σε αυτό το specific UI surface, justified: 3D Floors tab = visibility multi-toggle με 3-state + 4 presets, διαφορετικό UX scope από 2D Levels read-mostly). Νέα modules Phase 4: `Floating3DPanel.tsx` (container) + `Floor3DPanelTab.tsx` (Floors tab UI) + `floor-visibility-state.ts` (pure helpers: preset/invert/sort) + `applyFloorVisibility.ts` (scene mutator με RAF coalesce + ghost material cache). ViewMode3DStore extensions: `floorVisibilityModes: Map<floorId, 'show'\|'ghost'\|'hide'>` + actions `applyFloorsPreset`/`setFloorMode`/`toggleFloorVisibility`. `visibleFloors:Set` (ήδη §9 Q2) τώρα derived view από modes. SSoT REUSE: `useFloors` (ADR-326), `CAD_UI_COLORS.ACTIVE`, ADR-040 micro-leaf compliance, ADR-031 (no command history needed — UI-only state). ~12 i18n keys ×2 locales (~24 entries). Phase 4 **+5-7h** total. **ADR-366 total estimate revised: ~144-166h Phase 0-7**. Industry decisions documented με 5+ benchmarks per question. Memory updates: `project_adr366_group_b_partial.md` → B.3 closure; `reference_dxf_viewer_floating_panel.md` annotated με 3D divergence note. | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.2 ✅ FULLY CLOSED 4/4 Qs. B.2.Q4 (Element info panel — full BIM card on click) RESOLVED**: **EntityDetailsHeader SSoT extension με 5 tabs (Geometry/Materials/BOQ/Audit/Comments) + read-only παντού εκτός Comments**. Pattern REUSE 100% του `@/core/entity-headers` (Contacts + Procurement Phase G 2026-04-28 proof) — μηδέν παράλληλη detail-header abstraction. Tabs: Geometry (length/height/thickness/area/volume read-only `<dl>`) + Materials (multi-layer DNA preview ADR-363 Phase 6) + BOQ (summary card + drawer link ADR-329) + Audit (vertical timeline + inline diff `old → new` via `useEntityAudit` ADR-195) + Comments (filtered list mirror B.2.Q3 με add/resolve actions inline). Editing παντού delegated σε dedicated tools (transform/material assigner/BOQ drawer) — SSoT discipline. Νέα modules `bim-3d/properties/BimEntityCardPanel.tsx` + 5 tab components + 8 entity-kind SVG icons + ~34 i18n keys ×2 locales (~68 entries). No new SSoT tokens. Progressive disclosure Phase 4-7 (Geometry+Audit Phase 4 instant value, Materials Phase 5, BOQ Phase 6, Comments Phase 7 depends on B.2.Q3). Backport opportunity 2D: refactor FloatingPanel Properties tab σε EntityDetailsHeader-based card (~3-4h, Boy Scout, NOT BLOCKING). Phase 4-7 **+7-9h** total. **ADR-366 total estimate revised: ~139-159h.** Industry alignment: Notion/Linear/Github single canonical detail header pattern, Revit Properties Palette multi-category grouping. Memory [[entity-details-header-ssot]] reinforced. | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.2.Q3 (BIM Data Overlay — 3D annotations/leaders) ✅ RESOLVED** — **Typed comment markers (BIMcollab style) Phase 7+** + **DEFERRED free-text labels Phase 8+**. Νέα Firestore collection `bim_comments` (tenant-scoped ADR-326) με marker pins Three.js Sprite billboard, status color (open=orange/resolved=green/wontfix=gray), priority border, auto-numbered. Click → side panel REUSE `EntityDetailsHeader` SSoT + edit-in-place + attachments + audit trail (ADR-195). Νέα modules Phase 7: `CommentMarker3DRenderer.ts` + `BimCommentDetailsPanel.tsx` + `CommentListPanel.tsx` + `bim-comments.service.ts`. SSoT REUSE: enterprise-id (νέο `cmt_bim_*` generator), EntityAuditService, NOTIFICATION_KEYS (νέο `useCommentNotifications` hook), GenArc viewportAnimation (camera zoom-to-comment). Νέο SSoT token `COMMENT_STATUS_COLORS` (zero 2D equivalent). 20+ i18n keys ×2 locales. RBAC permissions `bim_comments.*`. Modern BIM coordination industry σύγκλιση (BIMcollab + Solibri leaders). SketchUp 3D-text/Revit annotations-in-views rejected — Nestor είναι BIM coordination tool. Phase 7 +6-7h. Phase 8+ free-text labels deferred (~5-6h future, not blocking). **Total estimate revised: ~132-150h.** | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.2.Q2 (BIM Data Overlay — permanent dimensions σε 3D) ✅ RESOLVED** — **Combo no-automatic + manual user-placed via mirror ADR-362** (Revit/ArchiCAD industry consensus 4/5 σύγκλιση). Καθόλου auto-dimensions σε 3D (clean visualization philosophy). Manual dim tool mirror του 2D ADR-362 με ribbon context-aware Dim button (2D mode → plan dim, 3D mode → 3D dim). Schema extension: existing `DimensionEntity` + `placement: '2d' \| '3d'` discriminator (zero data duplication). Νέα Phase 7: `Dimension3DRenderer.ts` (Three.js Line + Sprite billboard label) + `useDim3DToolRouting.ts` (state machine mirror). SSoT REUSE 100%: ADR-362 schema/snap/style tokens + ProSnapEngineV2 + ADR-031 CommandHistory + ribbon button. Hover tooltip ήδη δείχνει dims (B.2.Q1) → user βλέπει μέτρα on-demand. Boy Scout: 2D scene converter adds visibility filter για `placement=3d` skip. Phase 7 +5-6h. **Total estimate revised: ~126-143h.** | Claude Opus 4.7 |
