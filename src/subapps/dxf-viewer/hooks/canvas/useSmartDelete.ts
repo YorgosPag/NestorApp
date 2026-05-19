@@ -28,6 +28,8 @@ import {
   type ICommand,
 } from '../../core/commands';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { isOpeningEntity } from '../../types/entities';
+import { requestWallCascadeDelete } from '../../bim/walls/wall-cascade-delete-store';
 import type { SelectedGrip } from '../grips/unified-grip-types';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { UniversalSelectionHook } from '../../systems/selection/SelectionSystem';
@@ -128,10 +130,37 @@ export function useSmartDelete({
         levelManager.setLevelScene,
         levelManager.currentLevelId,
       );
-      if (selectedDxfEntityIds.length === 1) {
-        executeCommand(new DeleteEntityCommand(selectedDxfEntityIds[0], adapter));
+
+      // BIM cascade: when deleting walls, find child openings that would be orphaned.
+      // Uses adapter.getEntity (SceneEntity, type: string) for selected IDs, and
+      // isOpeningEntity (type guard on full Entity union) for the scene sweep.
+      const deletingWallIds = new Set(
+        selectedDxfEntityIds.filter((id) => {
+          const e = adapter.getEntity(id);
+          return e != null && e.type === 'wall';
+        }),
+      );
+      const scene = deletingWallIds.size > 0
+        ? levelManager.getLevelScene(levelManager.currentLevelId)
+        : null;
+      const orphanedOpeningIds = scene != null
+        ? scene.entities
+            .filter(isOpeningEntity)
+            .filter((e) => !selectedDxfEntityIds.includes(e.id) && deletingWallIds.has(e.params.wallId))
+            .map((e) => e.id)
+        : [];
+
+      let idsToDelete = selectedDxfEntityIds;
+      if (orphanedOpeningIds.length > 0) {
+        const action = await requestWallCascadeDelete(orphanedOpeningIds.length);
+        if (action === 'cancel') return false;
+        idsToDelete = [...selectedDxfEntityIds, ...orphanedOpeningIds];
+      }
+
+      if (idsToDelete.length === 1) {
+        executeCommand(new DeleteEntityCommand(idsToDelete[0], adapter));
       } else {
-        executeCommand(new DeleteMultipleEntitiesCommand(selectedDxfEntityIds, adapter));
+        executeCommand(new DeleteMultipleEntitiesCommand(idsToDelete, adapter));
       }
       universalSelectionRef.current.clearByType('dxf-entity');
       setSelectedEntityIds([]);

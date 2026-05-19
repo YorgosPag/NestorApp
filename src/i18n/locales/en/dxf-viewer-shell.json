@@ -3,6 +3,14 @@
     "confirm": "Confirm",
     "cancel": "Cancel"
   },
+  "bim": {
+    "wallCascadeDelete": {
+      "title": "Delete Wall",
+      "body": "This wall has {count} opening(s). Delete them as well?",
+      "confirmDelete": "Delete wall and openings",
+      "cancel": "Cancel"
+    }
+  },
   "commandLine": {
     "placeholder": "Command…",
     "label": "Command line",
