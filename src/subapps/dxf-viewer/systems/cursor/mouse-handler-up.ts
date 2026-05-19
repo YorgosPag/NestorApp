@@ -19,6 +19,11 @@ import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import type { CentralizedMouseHandlersProps, MouseHandlerRefs, SnapManagerAPI } from './mouse-handler-types';
 // ADR-358 Phase 9D-5b-ii Sub-D — Entity type bridge for performSelection narrow.
 import type { Entity } from '../../types/entities';
+// ADR-362 hotfix Round 3 (2026-05-19) — skip upstream click-snap on dim-line-offset
+// pick so committed defPoints[2] matches the cursor (not a nearby entity endpoint).
+// Round 1+2 gated snap only in the downstream `useDrawingHandlers.onDrawingPoint`,
+// but the click world point was already snapped here BEFORE reaching that gate.
+import { isDimLineRefPhase } from '../../hooks/dimensions/dim-skip-snap';
 
 interface MouseUpHandlerDeps {
   props: CentralizedMouseHandlersProps;
@@ -90,7 +95,12 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
       const freshScreenPos = getScreenPosFromEvent(e, clickSnap);
       let worldPoint = screenToWorldWithSnapshot(freshScreenPos, transform, clickSnap);
 
-      if (snapEnabled && findSnapPoint) {
+      // ADR-362 Round-3 hotfix: linear/aligned dim-line-offset pick is a free
+      // position — AutoCAD disables OSNAP for it. Without this gate the click
+      // gets snapped to a nearby entity endpoint and the committed dim jumps
+      // to a wrong Y. Downstream `useDrawingHandlers` also gates snap on the
+      // same predicate (symmetric with `drawing-hover-handler` on the hover side).
+      if (snapEnabled && findSnapPoint && !isDimLineRefPhase()) {
         const snapResult = findSnapPoint(worldPoint.x, worldPoint.y);
         if (snapResult && snapResult.found && snapResult.snappedPoint) {
           worldPoint = snapResult.snappedPoint;
