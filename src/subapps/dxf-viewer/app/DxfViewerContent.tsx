@@ -29,7 +29,6 @@ import { useDimAssociationObserver } from '../hooks/dimensions/useDimAssociation
 import { useGripContext } from '../providers/GripProvider';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
-// 🚀 LAZY LOADED: Non-Critical UI Components
 const OverlayToolbar = React.lazy(() => import('../ui/OverlayToolbar').then(mod => ({ default: mod.OverlayToolbar })));
 const ColorManager = React.lazy(() => import('../ui/components/ColorManager').then(mod => ({ default: mod.ColorManager })));
 const ProSnapToolbar = React.lazy(() => import('../ui/components/ProSnapToolbar').then(mod => ({ default: mod.ProSnapToolbar })));
@@ -41,11 +40,11 @@ const CentralizedAutoSaveStatus = React.lazy(() => import('../ui/components/Cent
 const OverlayProperties = React.lazy(() => import('../ui/OverlayProperties').then(mod => ({ default: mod.OverlayProperties })));
 const DraggableOverlayToolbar = React.lazy(() => import('../ui/components/DraggableOverlayToolbar').then(mod => ({ default: mod.DraggableOverlayToolbar })));
 const DraggableOverlayProperties = React.lazy(() => import('../ui/components/DraggableOverlayProperties').then(mod => ({ default: mod.DraggableOverlayProperties })));
-// ADR-340 Phase 5-6 — floorplan background panel + dialogs
 const FloorplanBackgroundPanel = React.lazy(() => import('../floorplan-background').then(mod => ({ default: mod.FloorplanBackgroundPanel })));
 const ReplaceConfirmDialog = React.lazy(() => import('../floorplan-background').then(mod => ({ default: mod.ReplaceConfirmDialog })));
 const CalibrationDialog = React.lazy(() => import('../floorplan-background').then(mod => ({ default: mod.CalibrationDialog })));
 const DxfAiChatPanel = React.lazy(() => import('../ai-assistant/components/DxfAiChatPanel'));
+const DxfFindReplaceHost = React.lazy(() => import('../ui/text-toolbar/DxfFindReplaceHost').then(mod => ({ default: mod.DxfFindReplaceHost })));
 const DxfImportModal = React.lazy(() => import('../components/DxfImportModal'));
 const SimpleProjectDialog = React.lazy(() => import('../components/SimpleProjectDialog').then(mod => ({ default: mod.SimpleProjectDialog })));
 const ConstructionLayerScaffoldDialog = React.lazy(() => import('../hooks/useConstructionLayerScaffold').then(mod => ({ default: mod.ConstructionLayerScaffoldDialog })));
@@ -471,6 +470,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         />
       </React.Suspense>
       <React.Suspense fallback={<div className="hidden" />}><ConstructionLayerScaffoldDialog /></React.Suspense>
+      <React.Suspense fallback={<div className="hidden" />}><DxfFindReplaceHost open={state.findReplaceOpen} onOpenChange={state.setFindReplaceOpen} /></React.Suspense>
       {USE_AI_DRAWING_ASSISTANT && (
         <React.Suspense fallback={<div className="hidden" />}>
           <DxfAiChatPanel

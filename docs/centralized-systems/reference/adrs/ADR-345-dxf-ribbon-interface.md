@@ -670,7 +670,7 @@ interface RibbonState {
 - Paragraph panel: toggle align.left/center/right (mutually exclusive via justification) · combobox `lineSpacing` (90px, statico 1.0/1.15/1.5/2.0)
 - Properties panel: combobox `layer` (160px, dinamico) · combobox `annotationScale` (110px, dinamico)
 - Insert panel: button `symbol` (comingSoon) · button `field` (comingSoon)
-- Editor Tools panel: button `findReplace` (comingSoon — FindReplaceDialog wiring di ADR-344 Phase 9) · toggle `spellCheck` (comingSoon — engine assente)
+- Editor Tools panel: button `findReplace` (**✅ WIRED** — `DxfFindReplaceHost` lazy wrapper, state `findReplaceOpen` in `useDxfViewerState`, action `text-find-replace` → 2026-05-19) · toggle `spellCheck` (comingSoon — engine assente)
 
 **Wiring in `DxfViewerContent.tsx`**
 - ✅ `const textEditorBridge = useRibbonTextEditorBridge()` montato sempre (overhead trascurabile, leaf subscriptions ADR-040 friendly)
@@ -695,6 +695,33 @@ interface RibbonState {
 - ✅ SSoT: `useTextToolbarStore` = UI pending values (unica fonte). ViewportStore.activeScale aggiornato consistentemente.
 - ✅ Await: setValue sync; nessun await su catena ribbon→store
 - ✅ Lifecycle: hook leaf-subscribes ad ADR-040-friendly stores; cleanup automatico React
+
+### Fase 5.5-FR — FindReplace button wiring ✅ COMPLETATA 2026-05-19
+
+**Obiettivo**: rimuovere `comingSoon: true` dal button `findReplace` nel panel `text-editor-tools` e montare `FindReplaceDialog` (ADR-344 Phase 9) tramite un host wrapper lazy-loaded.
+
+**Architettura**
+- `comingSoon: true` rimosso da `data/contextual-text-editor-tab.ts`. Icona cambiata `text-placeholder` → `search`. Aggiunto `action: 'text-find-replace'`.
+- `useDxfViewerState.ts`: nuovo state `findReplaceOpen / setFindReplaceOpen (useState(false))`. Case `'text-find-replace'` aggiunto in `handleAction` → `setFindReplaceOpen(true)`.
+- **Nuovo file** `ui/text-toolbar/DxfFindReplaceHost.tsx` — wrapper component che raccoglie le 3 dipendenze pesanti di `FindReplaceDialog` (`sceneManager` + `layerProvider` da `useDxfTextServices()`, `entities: DxfTextSceneEntity[]` filtrati da `useCurrentSceneModel().entities`, `onExecuteCommand` da `getGlobalCommandHistory().execute`). Ritorna `null` quando `services === null` (no level active). Logica di filtraggio: `isTextEntity(e)` type guard `e.type === 'text' || e.type === 'mtext'`.
+- `DxfViewerContent.tsx`: import lazy `React.lazy(() => import('../ui/text-toolbar/DxfFindReplaceHost'))` + mount con `<React.Suspense fallback={<div className="hidden" />}><DxfFindReplaceHost open={state.findReplaceOpen} onOpenChange={state.setFindReplaceOpen} /></React.Suspense>`.
+
+**Files modificati/creati**
+- `ui/ribbon/data/contextual-text-editor-tab.ts` — rimozione comingSoon findReplace
+- `hooks/useDxfViewerState.ts` — `findReplaceOpen` state + `text-find-replace` action case
+- `ui/text-toolbar/DxfFindReplaceHost.tsx` (NUOVO)
+- `app/DxfViewerContent.tsx` — lazy import + Suspense mount
+
+**Google-level checklist**
+- ✅ Proactive: `DxfFindReplaceHost` lazy-loaded → zero bundle impact finché non richiesto
+- ✅ Race-free: Suspense boundary garantisce che il dialog non parte prima del chunk
+- ✅ Idempotent: `setFindReplaceOpen(true)` × 2 = stesso stato
+- ✅ SSoT: `findReplaceOpen` in `useDxfViewerState` = unica fonte di verità
+- ✅ Lifecycle: `useDxfTextServices()` gestisce null (no level active) → `DxfFindReplaceHost` ritorna null
+
+✅ Google-level: YES — lazy wrapper + null guard + SSoT state in viewer-state hook.
+
+---
 
 ### Fase 6.0 — Font panel extras (migrazione controlli FloatingPanel → Ribbon) ✅ COMPLETATA 2026-05-14
 
@@ -772,6 +799,7 @@ interface RibbonState {
 
 | Data | Modifica |
 |------|----------|
+| 2026-05-19 | **Fase 5.5-FR — FindReplace button wired**. `comingSoon: true` rimosso da `contextual-text-editor-tab.ts` (findReplace button: icon `text-placeholder`→`search`, aggiunto `action: 'text-find-replace'`). `useDxfViewerState`: `findReplaceOpen/setFindReplaceOpen` state + `case 'text-find-replace': setFindReplaceOpen(true)` in `handleAction`. Nuovo `DxfFindReplaceHost.tsx`: wrapper lazy-loadable che raccoglie `sceneManager`+`layerProvider` da `useDxfTextServices()` + filtra `entities` da `useCurrentSceneModel()` via type guard `e.type === 'text'|'mtext'` + `onExecuteCommand` da `getGlobalCommandHistory().execute()`. Ritorna null se no level active. `DxfViewerContent`: lazy import + Suspense mount. spellCheck e symbol rimangono `comingSoon` (engine/dialog assenti). ✅ Google-level: YES — lazy bundle, null guard, SSoT state, race-free Suspense. |
 | 2026-05-19 | **ADR-363 Phase 7.1 — Multi-Selection contextual tab registered**. Νέο tab `multi-selection` (`isContextual: true`, `contextualTrigger: 'multi-selection-bim'`) στο registry `RIBBON_CONTEXTUAL_TABS` (`app/ribbon-contextual-config.ts`). Tab data στο `ui/ribbon/data/contextual-multi-selection-tab.ts`: 2 panels (`multi-selection-common` mounts `MultiSelectionCommonPropertiesPanel` widget, `multi-selection-filter` mounts `MultiSelectionFilterPanel` widget). Widget dispatcher `RibbonPanel.tsx` updated με τα δύο νέα widgetId ('multi-selection-common-properties', 'multi-selection-filter'). Trigger resolution στο `useActiveContextualTrigger` extended με `selectedEntityIds` arg + precedence: 2+ BIM-kind selection → multi-selection tab υπερτερεί του per-kind tab από `primarySelectedId`. i18n `ribbon.tabs.multiSelection`, `ribbon.panels.multiSelection{Common,Filter}`, `ribbon.contextualTabs.multiSelection.*` σε el (Πολλαπλή Επιλογή / Κοινές Ιδιότητες / Φιλτράρισμα / κ.λπ.) + en. CSS `dxf-ribbon-multi-{common,filter}*` στο `ribbon-tokens.css`. Widgets self-gate (return null όταν mode!=='multi' ή commonProperties άδειο) — panels collapse-άρουν gracefully. |
 | 2026-05-17 | **Fase 5.6 wire** — `DxfViewerContent` passa `useDxfViewerState.activeTool` come prop a `useRibbonCommands({ activeTool, ... })`, completando il plumbing da viewer-state → ribbon-context → tool buttons. |
 | 2026-05-17 | **Fase 5.6 — activeTool propagation per pressed/active visual state**. `RibbonCommandsApi.activeTool: ToolType \| null` aggiunto; `RibbonCommandProvider` lo memoizza nel context value (deps array updated). `useRibbonCommands` riceve `activeTool` da `useDxfViewerState` e lo forward. `DxfViewerContent` lo plumbing al hook. `RibbonLargeButton` + `RibbonSmallButton` calcolano `isActive = !comingSoon && !action && activeTool === command.commandKey` e settano `aria-pressed` + `data-active`. Industry convergence (Office/AutoCAD/Revit Ribbon): toggle button visual state mandatory per discoverability tool corrente. Pure tool buttons (no action/comingSoon) only — stateless action buttons restano sempre inactive. |
