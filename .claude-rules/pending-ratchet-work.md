@@ -59,6 +59,26 @@
 
 ---
 
+### 🎨 ADR-365 TAILWIND SEMANTIC PALETTE ENFORCEMENT (priorità alta, ~5h totali, 9 φάσεις)
+
+Discovered 2026-05-19 (hover audit follow-up). ADR: `docs/centralized-systems/reference/adrs/ADR-365-tailwind-semantic-palette-enforcement.md`
+
+**Status:** PROPOSED — αναμένει Phase 0 implementation. Per-phase handoff απαιτείται πριν από κάθε νέα session.
+
+- [ ] **Phase 0 — Infrastructure** (~1h) — ratchet script + `.ssot-registry.json` module + baseline file + pre-commit hook + npm scripts
+- [ ] **Phase 1 — DXF Viewer** (~1.5h, ~17 files) — grip menus, wall/stair/dimensions panels, text-toolbar/templates/dictionary, mirror/draggable overlays, statusbar, floorplan-background, prompt-dialog
+- [ ] **Phase 2 — Procurement + Vendor Portal** (~30min, ~9 files)
+- [ ] **Phase 3 — Accounting** (~20min, ~3 files)
+- [ ] **Phase 4 — Properties + Contacts + Building Dialogs** (~40min, ~12 files)
+- [ ] **Phase 5 — Shared Files + File Manager** (~30min, ~9 files)
+- [ ] **Phase 6 — Dashboard + Admin + CRM + Header + Notifications** (~45min, ~10 files)
+- [ ] **Phase 7 — Design System + Showcase + Sales + Geo-canvas** (~45min, ~8 files)
+- [ ] **Phase 8 — Closure** (~20min) — baseline → 0, ADR APPROVED, changelog, pending-ratchet entry remove
+
+Initial baseline: ~249 violations / ~65 consumer files (post-exemption). Target: 0. Mapping table + exempt SSoT list στο ADR-365 §3.1 + §2.3.
+
+---
+
 ### 🧹 GRIP TYPES SSoT — canvas-mouse-types duplicate (priorità bassa, ~30min)
 
 Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecated hook deletion).
@@ -119,3 +139,4 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 | 2026-04-14 | CHECK 3.8 i18n Missing Keys DONE — ZERO BASELINE. 4,750→0 violazioni in 3 fasi: (1) 730 file single-ns→array (ADR-280 namespace split: dxf-viewer+5 subs, common+9 subs, building+5 subs, contacts+5 subs, properties+3 subs, projects+2 subs, accounting+2 subs, crm+1 sub, files+1 sub); (2) 479 chiavi genuinamente mancanti aggiunte a 30 locale files el+en; (3) settings.json creato (el+en). Baseline regenerated: 0 violations / 0 files. |
 | 2026-05-19 | BIM renderGrips centralization DONE (Boy Scout N.0.2). `protected finalizeRender(entity, options)` aggiunta a `BaseEntityRenderer`. 7 BIM renderers (`WallRenderer`, `ColumnRenderer`, `BeamRenderer`, `OpeningRenderer`, `SlabOpeningRenderer`, `SlabRenderer`, `StairRenderer`) ora chiamano `this.finalizeRender()`. Bug fix bonus: `finalizeRendering` ora passa `options` a `renderGrips`. ADR-363 changelog aggiornato. |
 | 2026-05-19 | ADR-183 Phase C completata. Cancellati `hooks/useDxfGripInteraction.ts` (451 righe) + `hooks/grips/useGripSystem.ts` (387 righe), entrambi `@deprecated` dal 2026-02-16 con zero function call-sites. Types migrati inline in `hooks/grips/unified-grip-types.ts` (canonical SSoT). Aggiunta nuova voce Boy Scout: `canvas-mouse-types.ts:19-89` duplicate grip types (~30min). ADR-183 changelog aggiornato. |
+| 2026-05-19 | ADR-365 Tailwind Semantic Palette Enforcement created (Proposed). Hover audit revealed 249 raw palette violations σε 86 files (από τα οποία ~21 SSoT exempt → ~65 consumer files). Plan: 9 phases (Phase 0 infrastructure + Phases 1-8 per-domain migration + Phase 8 closure). Per-session handoff απαιτείται. |
