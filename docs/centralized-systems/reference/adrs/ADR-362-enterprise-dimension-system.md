@@ -711,6 +711,14 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 
 ## 7. Changelog
 
+- **2026-05-19 (DIM-DIAG R3 — temporary diagnostic logs, 5 sites)** — Round-3 fix landed σε `mouse-handler-up.ts`, αλλά παραμένει συμπτωματική απόκλιση commit→render στα defPoints. Προστέθηκαν προσωρινά `console.warn('[DIM-DIAG R3] …')` σε 5 σημεία για να συγκριθεί το ίδιο σημείο πριν/μετά από κάθε layer:
+  - `systems/cursor/mouse-handler-up.ts` — client/screen/world point + snap source/target + transform + dimLineRefPhase flag.
+  - `stores/DimensionCreateStore.click` — world + clicksBefore + cursorWorldBefore + stack (4 frames).
+  - `hooks/dimensions/useDimensionCreate.runCommit` — built defPoints + state.clicks + rotation.
+  - `rendering/entities/DimensionRenderer.draw` — defPoints + dimLine + rotation στο render-time.
+  - `systems/dimensions/dim-association-service.applyAssociationUpdates` — before/after defPoints + associations (observer-driven mutations).
+  - **TEMPORARY** — διαγραφή μόλις εντοπιστεί το layer όπου αλλάζουν τα defPoints. Όχι production code.
+
 - **2026-05-19 (HOTFIX Round 3 — bugs 1 + 3 + 4 persisted after Round 1+2: upstream click-snap was the real root cause)** — User retested after Round-2 fixes. Bugs 1, 3, 4 still present (preview at correct Y, committed dim line jumps to a different Y; brief side-by-side green+cyan flash; committed dim doesn't accept hover/select). Root cause investigation finally identified the actual culprit, missed by both prior rounds.
   - **Two-layer snap, only the downstream layer was gated.** `mouse-handler-up.ts` (the centralized canvas mouse-up handler) applies snap to the click world point **before** calling `onCanvasClick(worldPoint)` (line 93-98). Then `onCanvasClick` flows through `useCanvasClickHandler` → `useDrawingHandlers.onDrawingPoint(p)` where Round-1's `isDimLineRefPhase()` gate sits. That gate is *too late* — `p` has already been corrupted by the upstream snap. So on the dimLineRef click, the world point passed to `dimensionCreateStore.click({world})` is the snapped position (the nearest entity endpoint, often the line start/end far from the cursor), not the raw cursor world. `state.clicks[2].world` → `defPoints[2]` → `buildLinearGeometry` uses `defPoints[2].y` for the dim-line foot Y → dim line lands at the snap target's Y, not the cursor's Y. User sees the committed dim "jump up" to wherever the line endpoint is.
   - **Why preview was correct.** Hover side does NOT apply upstream snap in `mouse-handler-move.ts` (line 122 passes raw `worldPos` to `onDrawingHover`). Downstream `processDrawingHover` has the `isDimLineRefPhase()` gate around its own `applySnap(p)` call. Net: hover→`state.cursorWorld` stays at raw cursor → preview renders correctly. Asymmetry between move (no upstream snap) and up (upstream snap) is what made the bug invisible to symmetry-checks during Round 1+2.

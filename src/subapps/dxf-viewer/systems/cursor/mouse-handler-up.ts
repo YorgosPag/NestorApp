@@ -100,9 +100,27 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
       // gets snapped to a nearby entity endpoint and the committed dim jumps
       // to a wrong Y. Downstream `useDrawingHandlers` also gates snap on the
       // same predicate (symmetric with `drawing-hover-handler` on the hover side).
-      if (snapEnabled && findSnapPoint && !isDimLineRefPhase()) {
+      const dimLineRefPhase = isDimLineRefPhase();
+      // [DIM-DIAG R3] TEMPORARY — log screen + world + DIO target to diagnose stale click position.
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[DIM-DIAG R3] up.click client=(${e.clientX},${e.clientY}) ` +
+          `screen=(${freshScreenPos.x.toFixed(2)},${freshScreenPos.y.toFixed(2)}) ` +
+          `raw=(${worldPoint.x.toFixed(2)},${worldPoint.y.toFixed(2)}) ` +
+          `dimLineRefPhase=${dimLineRefPhase} snapEnabled=${snapEnabled} ` +
+          `target=${(e.target as HTMLElement)?.tagName ?? '?'} ` +
+          `currentTarget=${(e.currentTarget as HTMLElement)?.tagName ?? '?'} ` +
+          `eventPhase=${e.eventPhase} ` +
+          `transform=(scale=${transform.scale.toFixed(3)},offsetX=${transform.offsetX.toFixed(2)},offsetY=${transform.offsetY.toFixed(2)})`,
+      );
+      if (snapEnabled && findSnapPoint && !dimLineRefPhase) {
         const snapResult = findSnapPoint(worldPoint.x, worldPoint.y);
         if (snapResult && snapResult.found && snapResult.snappedPoint) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[DIM-DIAG R3] up.snapped from=(${worldPoint.x.toFixed(2)},${worldPoint.y.toFixed(2)}) ` +
+              `to=(${snapResult.snappedPoint.x.toFixed(2)},${snapResult.snappedPoint.y.toFixed(2)})`,
+          );
           worldPoint = snapResult.snappedPoint;
         }
       }

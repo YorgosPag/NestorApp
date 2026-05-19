@@ -124,6 +124,15 @@ export class DimensionRenderer extends BaseEntityRenderer {
     const resolved = this.resolveFromEntity(entity);
     if (!resolved) return;
 
+    // [DIM-DIAG R3] TEMPORARY — log defPoints at render time to verify against runCommit.
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[DIM-DIAG R3] render type=${resolved.entity.dimensionType} ` +
+        `defPoints=[${resolved.entity.defPoints.map((p) => `(${p.x.toFixed(2)},${p.y.toFixed(2)})`).join(' | ')}] ` +
+        `rotation=${'rotation' in resolved.entity ? (resolved.entity as { rotation: number }).rotation : 'n/a'} ` +
+        `dimLine=(${(resolved.geometry as { dimLine?: { start: { x: number; y: number }; end: { x: number; y: number } } }).dimLine ? `${(resolved.geometry as { dimLine: { start: { x: number; y: number } } }).dimLine.start.x.toFixed(2)},${(resolved.geometry as { dimLine: { start: { x: number; y: number } } }).dimLine.start.y.toFixed(2)} → ${(resolved.geometry as { dimLine: { end: { x: number; y: number } } }).dimLine.end.x.toFixed(2)},${(resolved.geometry as { dimLine: { end: { x: number; y: number } } }).dimLine.end.y.toFixed(2)}` : 'n/a'})`,
+    );
+
     const breaks = this.sceneEntities.length > 0
       ? computeAutoBreaks(resolved.geometry, this.sceneEntities, resolved.style)
       : undefined;

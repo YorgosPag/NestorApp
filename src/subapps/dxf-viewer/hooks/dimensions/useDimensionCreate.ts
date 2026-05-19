@@ -240,6 +240,17 @@ function runCommit(
     return;
   }
 
+  // [DIM-DIAG R3] TEMPORARY — flat string so Firefox console shows values inline.
+  const fmtPts = (pts: readonly { x: number; y: number }[]) =>
+    pts.map((p) => `(${p.x.toFixed(2)},${p.y.toFixed(2)})`).join(' | ');
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[DIM-DIAG R3] runCommit type=${built.entity.dimensionType} ` +
+      `defPoints=[${fmtPts(built.entity.defPoints)}] ` +
+      `clicks=[${fmtPts(state.clicks.map((c) => c.world))}] ` +
+      `rotation=${'rotation' in built.entity ? (built.entity as { rotation: number }).rotation : 'n/a'}`,
+  );
+
   onDimensionCreated(built.entity);
 
   // Phase D3 — Q-B auto-progression: any chainable commit advances the head so
