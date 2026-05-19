@@ -21,10 +21,12 @@ import { HOME_AI_PANEL } from './home-tab-ai';
 import { SETTINGS_CURSOR_PANEL } from './settings-tab-cursor';
 import { SETTINGS_DEVELOPER_PANEL } from './settings-tab-developer';
 import { INSERT_TAB } from './insert-tab';
+import { ANALYZE_TAB } from './analyze-tab';
 
 export const DEFAULT_RIBBON_TAB_ORDER: readonly string[] = [
   'home',
   'insert',
+  'analyze',
   'view',
   'annotate',
   'settings',
@@ -47,6 +49,7 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
     ],
   },
   INSERT_TAB,
+  ANALYZE_TAB,
   {
     id: 'view',
     labelKey: 'ribbon.tabs.view',
