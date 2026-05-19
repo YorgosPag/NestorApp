@@ -71,6 +71,18 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-19 — ADR-363 Phase A interop: BIM snap description propagation through `canvas-layer-stack-leaves`
+
+`SnapIndicatorSubscriber` (one of the micro-leaves) now forwards `snapResult.snapPoint?.description` to `SnapIndicatorOverlay` so the overlay can resolve the BIM-specific i18n label (`bim-wall` → "Επί άξονα τοίχου", `bim-slab` → "Επί ακμής πλάκας", `bim-opening` → "Επί παραστάτη ανοίγματος"). The subscriber keeps its single high-frequency hook (snap-result subscription); no extra subscriptions added.
+
+**Cardinal rule compliance**:
+- **Rule 1 (no orchestrator subscriptions)**: untouched — change isolated inside the existing `SnapIndicatorSubscriber` leaf.
+- **Rule 2 (getter-based event reads)**: N/A — description is part of the already-subscribed `snapResult` payload, not a separate read.
+- **Rule 3 (bitmap cache key untouched)**: respected — no identity propagated to `dxf-bitmap-cache.ts`.
+- **Rule 4 (≤1 canvas element / ≤2 high-freq hooks per leaf)**: respected — same hook surface; only the props passed downstream change. `useTranslation` lives inside `SnapIndicatorOverlay`, not in the subscriber.
+
+Bundled with ADR-363 Phase A (NearestSnapEngine/PerpendicularSnapEngine description dispatch + locale labels) and Phase B doc sync same-commit (CHECK 6B compliance).
+
 ### 2026-05-18 — Batch commit interop: ADR-357 Ph12-16+18 + ADR-358 v2.19 + ADR-363 Ph7A
 
 `CanvasSection.tsx` / `DxfRenderer.ts` / `hooks/canvas/useCanvasContextMenu.ts` / `hooks/canvas/canvas-click-types.ts` touched in atomic batch. **All cardinal rules preserved**:

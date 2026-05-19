@@ -21,10 +21,13 @@ _Ενημέρωση 2026-05-19: Phase 5.5e (snap-to-wall-axis projection) ολο
 
 ## Εκκρεμείς Φάσεις ❌
 
-### Phase 0 + 0.5 — Documentation gap μόνο (~1h)
-Ο κώδικας `bim/` skeleton υπάρχει (Phases 1-6 τρέχουν). Τα checkboxes στο ADR δεν ενημερώθηκαν ποτέ.
-- [ ] Ενημέρωση checkboxes Phase 0 + 0.5 στο ADR-363
-- [ ] Επαλήθευση Phase 0.5: Stair migration στο `bim/`
+### Phase 0 — ✅ DONE (doc sync 2026-05-19)
+Όλα τα checkboxes ενημερώθηκαν σε [x] στο ADR-363. Κώδικας = SSoT.
+
+### Phase 0.5 — ⚠️ DEFERRED (discovered 2026-05-19)
+- [x] Ενημέρωση checkboxes Phase 0 → ολοκληρώθηκε
+- [x] Επαλήθευση Phase 0.5 → `systems/stairs/` παραμένει ζωντανός SSoT (20+ imports), `bim/stairs/` = stale copies
+- [ ] **Στάδιο Β: Ολοκλήρωση Phase 0.5** (import migration + rmdir) → βλ. `.claude-rules/pending-ratchet-work.md`
 
 ---
 
@@ -62,7 +65,7 @@ _Ενημέρωση 2026-05-19: Phase 5.5e (snap-to-wall-axis projection) ολο
 - [x] ~~Snap-to-wall-axis projection για beam endpoint~~ **✅ DONE Phase 5.5e (2026-05-19)**
 - [x] ~~Snap-to-slab-edge perpendicular~~ **✅ DONE Phase 5.5f (2026-05-19)** — βλ. ADR-363 §Phase 5.5f + `bim/slabs/slab-edge-projection.ts`
 - [x] ~~Snap-to-opening-jamb perpendicular (door/window frame edges)~~ **✅ DONE Phase 5.5g (2026-05-19)** — βλ. ADR-363 §Phase 5.5g + `bim/walls/opening-outline-projection.ts`
-- [ ] Distinct i18n labels "Επί άξονα τοίχου" / "Επί ακμής πλάκας"
+- [x] ~~Distinct i18n labels~~ **✅ DONE Phase A (2026-05-19)** — βλ. ADR-363 §Phase A + `SnapIndicatorOverlay.tsx`, `NearestSnapEngine.ts`, `PerpendicularSnapEngine.ts`, locale `snapModes.labels.bim.*`
 - [ ] Column-center-line 3D wireframe snap
 - [ ] Anchor highlight pulse animation (decorative)
 - [ ] Beam-supports-slab analytical link (Phase 6 DONE → μπορεί τώρα)

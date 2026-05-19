@@ -75,6 +75,7 @@ export const SnapIndicatorSubscriber = React.memo(function SnapIndicatorSubscrib
       snapResult={snapResult ? {
         point: snapResult.snappedPoint,
         type: snapResult.activeMode || 'endpoint',
+        description: snapResult.snapPoint?.description,
       } : null}
       viewport={viewport}
       canvasRect={dxfCanvasRef?.current?.getCanvas?.()?.getBoundingClientRect() ?? null}

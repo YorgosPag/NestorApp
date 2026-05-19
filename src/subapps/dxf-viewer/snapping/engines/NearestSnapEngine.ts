@@ -63,14 +63,19 @@ export class NearestSnapEngine extends BaseSnapEngine {
     }
     
     if (closestPoint && closestEntity) {
+      // ADR-363 Phase A: BIM entities get distinct description keys for i18n tooltip.
+      const description = isWallEntity(closestEntity) ? 'bim-wall'
+        : isSlabEntity(closestEntity) ? 'bim-slab'
+        : isOpeningEntity(closestEntity) ? 'bim-opening'
+        : 'Nearest';
       const candidate = this.createCandidate(
         closestPoint,
-        'Nearest',
+        description,
         closestDistance,
         priority,
         closestEntity.id
       );
-      
+
       candidates.push(candidate);
     }
 

@@ -45,6 +45,14 @@
 
 ---
 
+### 🪜 ADR-363 STAIR MIGRATION — Phase 0.5 incomplete (priorità media, ~3-4h)
+
+Ανακαλύφθηκε 2026-05-19 (N.0.2 Boy Scout κατά Phase B doc sync).
+
+- [ ] **`systems/stairs/` → `bim/` import migration** — `bim/stairs/` + `bim/geometry/stairs/` έχουν ΑΝΤΙΓΡΑΦΑ αρχείων (stale duplicates). Ο ζωντανός SSoT παραμένει `systems/stairs/`. 20+ αρχεία import από `systems/stairs/`: `StairGeometryService` (5 sites), `stair-grips` (3), `stair-floor-link` (3), `stair-preview-store` (2), κλπ. Fix: (1) Αλλαγή imports → `bim/stairs/` ή `bim/geometry/stairs/`. (2) Αφαίρεση barrel stubs από `systems/stairs/`. (3) `rmdir systems/stairs/`. (4) tsc zero errors + tests green. (5) SSoT registry module `bim-folder-residency` με baseline 0. (6) ADR-363 Phase 0.5 acceptance criteria tick. Σχετικά: ADR-363 §Phase 0.5.
+
+---
+
 ### 🪜 ADR-358 STAIR DOMAIN — pre-existing TS residual (priorità bassa)
 
 - [ ] **HitTestingService.ts:236 — DxfStair exhaustive check failure** — `convertToEntityModel` switch manca branch `case 'stair'`. Pre-esistente dal Phase 9C base (commit `9970706a`). Richiede decisione campi `EntityModel` stair-specific (treads, riserHeight, run, ecc.) — domain stair-tool (`ADR-358-dxf-stair-tool-google-level.md`). Identificato 2026-05-16 durante Phase 9D-3a TS check. Defer a sessione dedicata stair-tool.

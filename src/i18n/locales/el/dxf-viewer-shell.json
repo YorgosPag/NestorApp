@@ -523,7 +523,12 @@
       "near": "Πλησίον",
       "ortho": "Ορθογώνιος",
       "guide": "Οδηγός",
-      "constructionPoint": "Σημείο"
+      "constructionPoint": "Σημείο",
+      "bim": {
+        "wallAxis": "Επί άξονα τοίχου",
+        "slabEdge": "Επί ακμής πλάκας",
+        "openingJamb": "Επί παραστάτη ανοίγματος"
+      }
     },
     "tooltips": {
       "auto": "Αυτόματο Snap - Ανιχνεύει αυτόματα τα καλύτερα σημεία (F11)",

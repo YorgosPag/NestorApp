@@ -8,7 +8,7 @@
  */
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
-import { ExtendedSnapType } from '../extended-types';
+import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -47,24 +47,60 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
   }
 
   findSnapCandidates(cursorPoint: Point2D, context: SnapEngineContext): SnapEngineResult {
-    // Use shared entity-based snap candidate finder to eliminate duplication
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.PERPENDICULAR);
-    return findEntityBasedSnapCandidates(
-      context.entities,
+    const maxDist = radius * SNAP_RADIUS_MULTIPLIERS.STANDARD;
+    const priority = SNAP_ENGINE_PRIORITIES.PERPENDICULAR;
+
+    // ADR-363 Phase A: BIM entities pre-pass — creates distinct description candidates
+    // before findEntityBasedSnapCandidates (which would overwrite description with generic 'Perpendicular').
+    const bimCandidates: SnapCandidate[] = [];
+    const nonBimEntities: EntityModel[] = [];
+
+    if (!Array.isArray(context.entities)) return { candidates: [] };
+
+    for (const entity of context.entities) {
+      if (!entity.visible) continue;
+      if (context.excludeEntityId && entity.id === context.excludeEntityId) continue;
+
+      if (isWallEntity(entity)) {
+        const feet = getWallAxisPerpendicularFeet(entity, cursorPoint, maxDist);
+        for (const f of feet) {
+          bimCandidates.push(this.createCandidate(f.point, 'bim-wall', calculateDistance(cursorPoint, f.point), priority, entity.id));
+        }
+      } else if (isSlabEntity(entity)) {
+        const feet = getSlabEdgePerpendicularFeet(entity, cursorPoint, maxDist);
+        for (const f of feet) {
+          bimCandidates.push(this.createCandidate(f.point, 'bim-slab', calculateDistance(cursorPoint, f.point), priority, entity.id));
+        }
+      } else if (isOpeningEntity(entity)) {
+        const feet = getOpeningOutlinePerpendicularFeet(entity, cursorPoint, maxDist);
+        for (const f of feet) {
+          bimCandidates.push(this.createCandidate(f.point, 'bim-opening', calculateDistance(cursorPoint, f.point), priority, entity.id));
+        }
+      } else {
+        nonBimEntities.push(entity);
+      }
+    }
+
+    const nonBimResult = findEntityBasedSnapCandidates(
+      nonBimEntities,
       cursorPoint,
       context,
       {
         snapType: ExtendedSnapType.PERPENDICULAR,
         displayName: 'Perpendicular',
-        priority: SNAP_ENGINE_PRIORITIES.PERPENDICULAR
+        priority,
       },
       (entity, cursorPoint, _) => {
-        // Extract only Point2D from the rich point data structure
-        // 🏢 ADR-087: Use centralized snap radius multiplier
-        const richPoints = this.getPerpendicularPoints(entity as EntityModel, cursorPoint, radius * SNAP_RADIUS_MULTIPLIERS.STANDARD);
+        const richPoints = this.getPerpendicularPoints(entity as EntityModel, cursorPoint, maxDist);
         return richPoints.map(p => p.point);
       }
     );
+
+    const allCandidates = [...bimCandidates, ...nonBimResult.candidates]
+      .sort((a, b) => a.distance - b.distance);
+
+    return { candidates: allCandidates };
   }
 
   private getPerpendicularPoints(entity: EntityModel, cursorPoint: Point2D, maxDistance: number): Array<{point: Point2D, type: string}> {

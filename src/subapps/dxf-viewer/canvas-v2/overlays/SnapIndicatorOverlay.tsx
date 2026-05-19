@@ -7,6 +7,7 @@
  */
 'use client';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ViewTransform } from '../../systems/rulers-grid/config';
 // 🏢 ENTERPRISE (2026-02-17): World→Screen conversion for correct indicator positioning
@@ -24,11 +25,17 @@ import {
   getNodeDotRadius
 } from '../../rendering/ui/snap/snap-icon-config';
 
-// 🏢 ENTERPRISE NOTE: This component uses a simplified SnapResult interface
-// TODO: Migrate to use ProSnapResult.snappedPoint instead of point when refactoring
+// ADR-363 Phase A: BIM description → i18n key mapping.
+const BIM_DESCRIPTION_KEY: Record<string, string> = {
+  'bim-wall': 'snapModes.labels.bim.wallAxis',
+  'bim-slab': 'snapModes.labels.bim.slabEdge',
+  'bim-opening': 'snapModes.labels.bim.openingJamb',
+};
+
 interface SnapResult {
   point: Point2D;
   type: string;
+  description?: string;
 }
 
 interface SnapIndicatorOverlayProps {
@@ -239,11 +246,14 @@ export default function SnapIndicatorOverlay({
   transform,
   className = ''
 }: SnapIndicatorOverlayProps) {
+  const { t } = useTranslation('dxf-viewer-shell');
   if (!snapResult || !snapResult.point || !transform) return null;
   // AutoCAD standard: grid snap has no floating visual marker — cursor snaps silently
   if (snapResult.type === 'grid') return null;
 
-  const { point, type } = snapResult;
+  const { point, type, description } = snapResult;
+  const bimLabelKey = description ? BIM_DESCRIPTION_KEY[description] : undefined;
+  const bimLabel = bimLabelKey ? t(bimLabelKey) : undefined;
   const snapColor = canvasUI.overlay.colors.snap.border;
 
   // 🏢 ENTERPRISE (2026-02-17): Convert world coordinates → screen coordinates
@@ -274,6 +284,20 @@ export default function SnapIndicatorOverlay({
       >
         <SnapShape type={type} color={snapColor} />
       </div>
+      {/* ADR-363 Phase A: BIM snap label — shown only for wall/slab/opening snaps */}
+      {bimLabel && (
+        <div
+          className={`absolute ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}
+          style={{
+            left: screenPos.x + SNAP_INDICATOR_SIZE,
+            top: screenPos.y - SNAP_INDICATOR_HALF,
+            color: snapColor,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {bimLabel}
+        </div>
+      )}
     </div>
   );
 }
