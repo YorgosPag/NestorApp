@@ -16,11 +16,29 @@
 
 import type { SlabGeometry, SlabParams } from '../types/slab-types';
 import type { SlabOpeningEntity } from '../types/slab-opening-types';
+import type { Point3D, Polygon3D } from '../types/bim-base';
 import {
   polygonArea,
   polygonBbox,
   polygonPerimeter,
+  polygonIntersectionAreaMm2,
 } from './shared/polygon-utils';
+
+// ─── Beam deduction input (Phase 5.5i+) ──────────────────────────────────────
+
+/**
+ * Minimal beam descriptor for slab volume deduction (Phase 5.5i+).
+ * Passed by `useSlabPersistence` from the current level scene — no Firestore
+ * query needed (beams already in memory).
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5i+
+ */
+export interface BeamFootprintForDeduction {
+  /** Plan-view beam outline (convex polygon, CCW, mm world coords). */
+  readonly outline: Polygon3D;
+  /** Structural depth (mm) — how deep the beam cuts into the slab. */
+  readonly depthMm: number;
+}
 
 const MM_TO_M = 1 / 1000;
 
@@ -38,6 +56,7 @@ const MM_TO_M = 1 / 1000;
 export function computeSlabGeometry(
   params: SlabParams,
   slabOpenings?: readonly SlabOpeningEntity[],
+  beamFootprints?: readonly BeamFootprintForDeduction[],
 ): SlabGeometry {
   const vertices = params.outline.vertices;
   const bbox = polygonBbox(vertices);
@@ -49,7 +68,9 @@ export function computeSlabGeometry(
   const openingsAreaM2 = sumSlabOpeningAreasM2(slabOpenings);
   const netAreaM2 = Math.max(0, areaM2 - openingsAreaM2);
   const thicknessMm = Math.max(0, params.thickness);
-  const volumeM3 = netAreaM2 * thicknessMm * MM_TO_M;
+  const grossVolumeM3 = netAreaM2 * thicknessMm * MM_TO_M;
+  const beamDeductionM3 = sumBeamDeductionsM3(params.outline.vertices, thicknessMm, beamFootprints);
+  const volumeM3 = Math.max(0, grossVolumeM3 - beamDeductionM3);
 
   return {
     polygon: params.outline,
@@ -88,4 +109,29 @@ export function getSlabMaxBboxDimensionM(params: SlabParams): number {
   const dx = bb.max.x - bb.min.x;
   const dy = bb.max.y - bb.min.y;
   return Math.max(dx, dy) * MM_TO_M;
+}
+
+/**
+ * Phase 5.5i+ — Σ beam volume deductions (m³) για ένα slab.
+ *
+ * Για κάθε beam footprint: intersection area (S-H clip) × min(beamDepth, slabThickness)
+ * → mm³ → m³. Αθροίζεται στο total deduction που αφαιρείται από το slab volume.
+ *
+ * Industry precedent: Revit Material Takeoff, ArchiCAD Interactive Schedule —
+ * both deduct beam footprint × min(beam depth, slab thickness) from slab volume.
+ */
+function sumBeamDeductionsM3(
+  slabVertices: readonly Point3D[],
+  slabThicknessMm: number,
+  beamFootprints: readonly BeamFootprintForDeduction[] | undefined,
+): number {
+  if (!beamFootprints || beamFootprints.length === 0) return 0;
+  let total = 0;
+  for (const beam of beamFootprints) {
+    const intersectionMm2 = polygonIntersectionAreaMm2(slabVertices, beam.outline.vertices);
+    if (intersectionMm2 <= 0) continue;
+    const effectiveDepthMm = Math.min(beam.depthMm, slabThicknessMm);
+    total += intersectionMm2 * effectiveDepthMm / 1e9;
+  }
+  return total;
 }

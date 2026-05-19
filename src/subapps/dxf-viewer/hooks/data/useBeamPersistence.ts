@@ -237,11 +237,12 @@ export function useBeamPersistence(
           isNew ? 'created' : 'updated',
         );
       }
+      if (floorplanId) EventBus.emit('bim:beam-persisted', { floorplanId });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'BEAM_SAVE_ERROR');
       setSaveState('error');
     }
-  }, [companyId, projectId, buildingId]);
+  }, [companyId, projectId, buildingId, floorplanId]);
 
   // Auto-save debounce σε selected beam params change.
   useEffect(() => {
@@ -296,6 +297,7 @@ export function useBeamPersistence(
         { id: beamId, kind: (deletedEntity as Partial<BeamEntity>)?.kind ?? 'straight' },
       );
       void bimToBoqBridge.deleteBoqItemForBim(beamId, companyId ?? '');
+      if (floorplanId) EventBus.emit('bim:beam-persisted', { floorplanId });
     } catch {
       // Non-fatal: deletion failure silent — user retries.
     }
@@ -307,7 +309,7 @@ export function useBeamPersistence(
 
     dirtyIdsRef.current.delete(beamId);
     lastSavedParamsRef.current.delete(beamId);
-  }, [levelManager, companyId]);
+  }, [levelManager, companyId, floorplanId]);
 
   // First-save listener — fires άμεσα για freshly drawn beams.
   useEffect(() => {

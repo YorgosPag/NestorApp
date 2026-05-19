@@ -27,7 +27,8 @@ import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SlabEntity } from '../../bim/types/slab-types';
-import { computeSlabGeometry } from '../../bim/geometry/slab-geometry';
+import type { BeamEntity } from '../../bim/types/beam-types';
+import { computeSlabGeometry, type BeamFootprintForDeduction } from '../../bim/geometry/slab-geometry';
 import { validateSlabParams } from '../../bim/validators/slab-validator';
 import { EventBus } from '../../systems/events/EventBus';
 import {
@@ -81,6 +82,23 @@ const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 function isSlab(entity: AnySceneEntity): entity is SlabEntity {
   return (entity as { type?: string }).type === 'slab';
+}
+
+/**
+ * Phase 5.5i+ — Collect beam footprints from scene for slab BOQ volume deduction.
+ * Reads beams already in memory (no Firestore query).
+ */
+function collectBeamFootprints(scene: SceneModel | null): BeamFootprintForDeduction[] {
+  if (!scene) return [];
+  const result: BeamFootprintForDeduction[] = [];
+  for (const e of scene.entities) {
+    if ((e as { type?: string }).type !== 'beam') continue;
+    const beam = e as BeamEntity;
+    if (beam.geometry?.outline && beam.params.depth > 0) {
+      result.push({ outline: beam.geometry.outline, depthMm: beam.params.depth });
+    }
+  }
+  return result;
 }
 
 /**
@@ -230,9 +248,15 @@ export function useSlabPersistence(
       setLastSavedAt(Date.now());
       void recordSlabChange(isNew ? 'created' : 'updated', entity);
       if (companyId && projectId && buildingId) {
+        const levelId = levelManager.currentLevelId;
+        const scene = levelId ? levelManager.getLevelScene(levelId) : null;
+        const beamFootprints = collectBeamFootprints(scene);
+        const boqGeometry = beamFootprints.length > 0
+          ? computeSlabGeometry(entity.params, undefined, beamFootprints)
+          : entity.geometry;
         void bimToBoqBridge.upsertBoqItemForBim(
           'slab',
-          { id: entity.id, kind: entity.kind, geometry: entity.geometry },
+          { id: entity.id, kind: entity.kind, geometry: boqGeometry },
           { companyId, projectId, buildingId },
           isNew ? 'created' : 'updated',
         );
@@ -241,7 +265,7 @@ export function useSlabPersistence(
       setError(err instanceof Error ? err.message : 'SLAB_SAVE_ERROR');
       setSaveState('error');
     }
-  }, [companyId, projectId, buildingId]);
+  }, [companyId, projectId, buildingId, levelManager]);
 
   // Auto-save debounce σε selected slab params change.
   useEffect(() => {
@@ -329,6 +353,33 @@ export function useSlabPersistence(
     });
     return cleanup;
   }, [deleteSlab]);
+
+  // Phase 5.5i+ — Re-BOQ all slabs when a beam changes (move/resize/delete).
+  // Reads scene beams from memory — no extra Firestore query.
+  useEffect(() => {
+    if (!companyId || !projectId || !buildingId) return;
+    const ctx = { companyId, projectId, buildingId };
+    const cleanup = EventBus.on('bim:beam-persisted', () => {
+      const levelId = levelManager.currentLevelId;
+      const scene = levelId ? levelManager.getLevelScene(levelId) : null;
+      if (!scene) return;
+      const beamFootprints = collectBeamFootprints(scene);
+      for (const entity of scene.entities) {
+        if ((entity as { type?: string }).type !== 'slab') continue;
+        const slab = entity as SlabEntity;
+        const boqGeometry = beamFootprints.length > 0
+          ? computeSlabGeometry(slab.params, undefined, beamFootprints)
+          : slab.geometry;
+        void bimToBoqBridge.upsertBoqItemForBim(
+          'slab',
+          { id: slab.id, kind: slab.kind, geometry: boqGeometry },
+          ctx,
+          'updated',
+        );
+      }
+    });
+    return cleanup;
+  }, [levelManager, companyId, projectId, buildingId]);
 
   // Unmount cleanup — flush pending timers.
   useEffect(() => {

@@ -12,7 +12,7 @@ export type GripType = 'vertex' | 'center' | 'edge' | 'corner' | 'midpoint';
  * ADR-358 Phase 5b — Stair grip kind (parametric grip type).
  * One of 5 grips exposed by `StairEntity`: base point translate, direction
  * rotate, width resize, length (stepCount) resize, split (flightSplit) for
- * L/U/gamma variants only. See `systems/stairs/stair-grips.ts`.
+ * L/U/gamma variants only. See `bim/stairs/stair-grips.ts`.
  */
 export type StairGripKind =
   | 'stair-base'

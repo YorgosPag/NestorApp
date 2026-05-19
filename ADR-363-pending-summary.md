@@ -24,10 +24,10 @@ _Ενημέρωση 2026-05-19: Phase 5.5e (snap-to-wall-axis projection) ολο
 ### Phase 0 — ✅ DONE (doc sync 2026-05-19)
 Όλα τα checkboxes ενημερώθηκαν σε [x] στο ADR-363. Κώδικας = SSoT.
 
-### Phase 0.5 — ⚠️ DEFERRED (discovered 2026-05-19)
+### Phase 0.5 — ✅ DONE (2026-05-20 — ανάλυση επαλήθευσε λάθος εκτίμηση)
 - [x] Ενημέρωση checkboxes Phase 0 → ολοκληρώθηκε
-- [x] Επαλήθευση Phase 0.5 → `systems/stairs/` παραμένει ζωντανός SSoT (20+ imports), `bim/stairs/` = stale copies
-- [ ] **Στάδιο Β: Ολοκλήρωση Phase 0.5** (import migration + rmdir) → βλ. `.claude-rules/pending-ratchet-work.md`
+- [x] Επαλήθευση Phase 0.5 → **`bim/stairs/` = ζωντανό SSoT** (12 real imports), `systems/stairs/` δεν υπάρχει. Η αρχική εκτίμηση (2026-05-19) είχε ανάποδα. Καμία migration χρειάστηκε.
+- [x] Stale comment `grip-types.ts:15` διορθώθηκε: `systems/stairs/` → `bim/stairs/`
 
 ---
 
@@ -127,17 +127,17 @@ _Ενημέρωση 2026-05-19: Phase 5.5e (snap-to-wall-axis projection) ολο
 
 | Κατηγορία | Items | Εκτίμηση |
 |-----------|-------|----------|
-| Documentation gap (Phase 0, 0.5) | 2 | ~1h |
+| ~~Phase 0, 0.5~~ | ✅ DONE | — |
 | Phase 1D-D | 1 | ~1-2h |
 | Phase 2 deferred | 4 | ~3-5h |
 | Phase 3.7b+ | 3 | ~2-4h |
 | Phase 4.5d deferred | 5 | ~3-5h |
-| Phase 5.5h+ (5.5e+5.5f+5.5g done, i18n labels + column snap pending) | 3 | ~1-2h |
+| Phase 5.5h+ (5.5e–5.5i+ done; anchor pulse + H-beam variant + i18n tooltip pending) | 3 | ~1-2h |
 | Phase 6.1 + 6.2 + 6.5 | ~8 | ~8-13h |
 | Phase 7 | 4 | ~4-6h |
 | Phase 7B+ | 2 | ~1-2h |
 | Phase 8 | 6 | ~5-8h |
-| **ΣΥΝΟΛΟ** | **~40 items** | **~31-51h** |
+| **ΣΥΝΟΛΟ** | **~36 items** | **~30-50h** |
 
 ---
 
