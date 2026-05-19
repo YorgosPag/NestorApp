@@ -1,0 +1,302 @@
+/**
+ * Unified viewport camera: PerspectiveCamera + OrthographicCamera + OrbitControls + tumble.
+ * PORT_AS_IS from GenArc viewportCamera.ts (ADR-366 §8.2 SPEC-3D-004A).
+ * Replaces plain OrbitControls placeholder from Phase 0.
+ */
+
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import type { ViewportCamera, ProjectionMode, SpeedModifier } from './viewport-types';
+import { createViewportAnimation } from './viewport-animation';
+import { computePerspectiveFraming, computeOrthoFraming } from './viewport-framing';
+import { createTumbleRotation } from './tumble-rotation';
+import {
+  DEFAULT_PERSPECTIVE_FOV, DEFAULT_CAMERA_DISTANCE, DEFAULT_ORTHO_SIZE,
+  CAMERA_NEAR, CAMERA_FAR, ZOOM_PRESETS,
+  ORTHO_CAMERA_DIRECTIONS, ORTHO_CAMERA_UP,
+  PERSP_MIN_DISTANCE, PERSP_MAX_DISTANCE, ORTHO_MIN_ZOOM, ORTHO_MAX_ZOOM,
+  PROJECTION_SWITCH_DURATION_MS, FRAME_SCENE_DURATION_MS,
+  DEFAULT_PAN_SPEED, DEFAULT_ROTATE_SPEED, DEFAULT_ZOOM_SPEED,
+  SPEED_MODIFIER_FAST, SPEED_MODIFIER_PRECISE,
+  TUMBLE_BASE_SPEED,
+} from './viewport-constants';
+
+export interface ViewportCameraOptions {
+  readonly initialPosition: THREE.Vector3;
+  readonly initialTarget?: THREE.Vector3;
+  readonly onRenderNeeded: () => void;
+  readonly onInteractionStart: () => void;
+  readonly onInteractionEnd: () => void;
+}
+
+const _snapDir = new THREE.Vector3();
+const _direction = new THREE.Vector3();
+
+export function createViewportCamera(
+  domElement: HTMLElement,
+  options: ViewportCameraOptions,
+): ViewportCamera {
+  const {
+    initialPosition,
+    initialTarget = new THREE.Vector3(3, 1.5, 2),
+    onRenderNeeded, onInteractionStart, onInteractionEnd,
+  } = options;
+  const aspect = domElement.clientWidth / Math.max(domElement.clientHeight, 1);
+
+  const perspCamera = new THREE.PerspectiveCamera(DEFAULT_PERSPECTIVE_FOV, aspect, CAMERA_NEAR, CAMERA_FAR);
+  perspCamera.position.copy(initialPosition);
+  perspCamera.lookAt(initialTarget);
+
+  const orthoHalfH = DEFAULT_ORTHO_SIZE;
+  const orthoCamera = new THREE.OrthographicCamera(
+    -orthoHalfH * aspect, orthoHalfH * aspect, orthoHalfH, -orthoHalfH, CAMERA_NEAR, CAMERA_FAR,
+  );
+  orthoCamera.position.copy(initialPosition);
+  orthoCamera.lookAt(initialTarget);
+
+  let activeCamera: THREE.PerspectiveCamera | THREE.OrthographicCamera = perspCamera;
+  let currentMode: ProjectionMode = 'perspective';
+
+  const controls = new OrbitControls(perspCamera, domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.25;
+  controls.zoomToCursor = true;
+  controls.target.copy(initialTarget);
+  controls.enableRotate = false;
+  controls.minDistance = PERSP_MIN_DISTANCE;
+  controls.maxDistance = PERSP_MAX_DISTANCE;
+  controls.minZoom = ORTHO_MIN_ZOOM;
+  controls.maxZoom = ORTHO_MAX_ZOOM;
+  controls.addEventListener('change', onRenderNeeded);
+  controls.addEventListener('start', onInteractionStart);
+  controls.addEventListener('end', onInteractionEnd);
+
+  const tumble = createTumbleRotation({
+    getCamera: () => activeCamera,
+    getTarget: () => controls.target,
+    domElement,
+    onStart: onInteractionStart,
+    onChange: onRenderNeeded,
+    onEnd: onInteractionEnd,
+  });
+
+  const animation = createViewportAnimation();
+
+  function getZoom(): number {
+    if (activeCamera instanceof THREE.OrthographicCamera) return activeCamera.zoom;
+    const dist = activeCamera.position.distanceTo(controls.target);
+    return dist > 0 ? DEFAULT_CAMERA_DISTANCE / dist : 1;
+  }
+
+  function setZoom(zoom: number): void {
+    const clamped = Math.max(zoom, 0.001);
+    if (activeCamera instanceof THREE.OrthographicCamera) {
+      activeCamera.zoom = clamped;
+      activeCamera.updateProjectionMatrix();
+    } else {
+      const newDist = DEFAULT_CAMERA_DISTANCE / clamped;
+      _direction.subVectors(activeCamera.position, controls.target).normalize();
+      activeCamera.position.copy(controls.target).addScaledVector(_direction, newDist);
+    }
+    onRenderNeeded();
+  }
+
+  function setZoomPreset(presetIndex: number): void {
+    const preset = ZOOM_PRESETS[presetIndex];
+    if (preset) setZoom(preset.value);
+  }
+
+  function frameBounds(min: THREE.Vector3, max: THREE.Vector3): void {
+    animation.cancel();
+    const viewDir = _direction.subVectors(controls.target, activeCamera.position).normalize();
+    if (activeCamera instanceof THREE.PerspectiveCamera) {
+      const result = computePerspectiveFraming(min, max, viewDir, activeCamera.aspect, DEFAULT_PERSPECTIVE_FOV);
+      animation.start(
+        { position: activeCamera.position.clone(), target: controls.target.clone(), zoom: getZoom() },
+        { position: result.position, target: result.target, zoom: getZoom() },
+        FRAME_SCENE_DURATION_MS,
+        (pos, tgt) => { activeCamera.position.copy(pos); controls.target.copy(tgt); onRenderNeeded(); },
+        () => { controls.enabled = true; },
+      );
+    } else {
+      const up = orthoCamera.up.clone();
+      const a = domElement.clientWidth / Math.max(domElement.clientHeight, 1);
+      const result = computeOrthoFraming(min, max, viewDir, up, a);
+      animation.start(
+        { position: activeCamera.position.clone(), target: controls.target.clone(), zoom: orthoCamera.zoom },
+        { position: result.position, target: result.target, zoom: result.orthoZoom },
+        FRAME_SCENE_DURATION_MS,
+        (pos, tgt, z) => {
+          activeCamera.position.copy(pos); controls.target.copy(tgt);
+          orthoCamera.zoom = z; updateOrthoFrustum(domElement.clientWidth, domElement.clientHeight);
+          onRenderNeeded();
+        },
+        () => { controls.enabled = true; },
+      );
+    }
+    controls.enabled = false;
+  }
+
+  function cancelAnimation(): void { animation.cancel(); controls.enabled = true; }
+
+  function setSpeedModifier(modifier: SpeedModifier): void {
+    const m = modifier === 'fast' ? SPEED_MODIFIER_FAST
+      : modifier === 'precise' ? SPEED_MODIFIER_PRECISE : 1.0;
+    controls.panSpeed = DEFAULT_PAN_SPEED * m;
+    controls.zoomSpeed = DEFAULT_ZOOM_SPEED * m;
+    tumble.setSpeed(TUMBLE_BASE_SPEED * DEFAULT_ROTATE_SPEED * m);
+  }
+
+  function setProjection(mode: ProjectionMode): void {
+    if (mode === currentMode) return;
+    animation.cancel();
+    const target = controls.target.clone();
+    if (mode === 'perspective') {
+      const dist = DEFAULT_CAMERA_DISTANCE / Math.max(getZoom(), 0.001);
+      _direction.subVectors(perspCamera.position, target).normalize();
+      if (_direction.lengthSq() < 0.001) _direction.set(1, 0.8, 1).normalize();
+      const finalPos = target.clone().addScaledVector(_direction, dist);
+      perspCamera.position.copy(orthoCamera.position);
+      perspCamera.lookAt(target);
+      activeCamera = perspCamera;
+      swapControlsCamera(perspCamera);
+      tumble.setEnabled(true);
+      controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+      currentMode = mode;
+      animation.start(
+        { position: perspCamera.position.clone(), target: target.clone(), zoom: getZoom() },
+        { position: finalPos, target, zoom: getZoom() },
+        PROJECTION_SWITCH_DURATION_MS,
+        (pos, tgt) => { perspCamera.position.copy(pos); controls.target.copy(tgt); perspCamera.lookAt(tgt); onRenderNeeded(); },
+        () => { controls.enabled = true; },
+      );
+      controls.enabled = false;
+    } else {
+      const dir = ORTHO_CAMERA_DIRECTIONS[mode];
+      const up = ORTHO_CAMERA_UP[mode];
+      if (!dir || !up) return;
+      const currentZoom = getZoom();
+      const dist = DEFAULT_CAMERA_DISTANCE;
+      const fromPos = activeCamera.position.clone();
+      const fromTarget = controls.target.clone();
+      const toPos = new THREE.Vector3(
+        target.x + dir[0] * dist, target.y + dir[1] * dist, target.z + dir[2] * dist,
+      );
+      animation.start(
+        { position: fromPos, target: fromTarget, zoom: currentZoom },
+        { position: toPos, target, zoom: currentZoom },
+        PROJECTION_SWITCH_DURATION_MS,
+        (pos, tgt) => { activeCamera.position.copy(pos); controls.target.copy(tgt); activeCamera.lookAt(tgt); onRenderNeeded(); },
+        () => {
+          orthoCamera.position.copy(toPos);
+          orthoCamera.up.set(up[0], up[1], up[2]);
+          orthoCamera.lookAt(target);
+          orthoCamera.zoom = currentZoom;
+          updateOrthoFrustum(domElement.clientWidth, domElement.clientHeight);
+          activeCamera = orthoCamera;
+          swapControlsCamera(orthoCamera);
+          tumble.setEnabled(false);
+          controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+          controls.enabled = true;
+          onRenderNeeded();
+        },
+      );
+      controls.enabled = false;
+      currentMode = mode;
+    }
+    onRenderNeeded();
+  }
+
+  function snapToViewDirection(dir: THREE.Vector3): void {
+    animation.cancel();
+    const target = controls.target.clone();
+    const dist = activeCamera.position.distanceTo(target);
+    _snapDir.copy(dir).normalize();
+    const toPos = target.clone().addScaledVector(_snapDir, dist > 0 ? dist : DEFAULT_CAMERA_DISTANCE);
+    if (currentMode !== 'perspective') {
+      perspCamera.position.copy(activeCamera.position);
+      perspCamera.lookAt(target);
+      activeCamera = perspCamera;
+      swapControlsCamera(perspCamera);
+      tumble.setEnabled(true);
+      controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+      currentMode = 'perspective';
+    }
+    animation.start(
+      { position: perspCamera.position.clone(), target: target.clone(), zoom: getZoom() },
+      { position: toPos, target, zoom: getZoom() },
+      PROJECTION_SWITCH_DURATION_MS,
+      (pos, tgt) => { perspCamera.position.copy(pos); controls.target.copy(tgt); perspCamera.lookAt(tgt); onRenderNeeded(); },
+      () => { controls.enabled = true; },
+    );
+    controls.enabled = false;
+    onRenderNeeded();
+  }
+
+  function goHome(): void {
+    animation.cancel();
+    const target = controls.target.clone();
+    if (currentMode !== 'perspective') {
+      perspCamera.position.copy(activeCamera.position);
+      perspCamera.lookAt(target);
+      activeCamera = perspCamera;
+      swapControlsCamera(perspCamera);
+      tumble.setEnabled(true);
+      controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+      currentMode = 'perspective';
+    }
+    animation.start(
+      { position: perspCamera.position.clone(), target: target.clone(), zoom: getZoom() },
+      { position: initialPosition.clone(), target: initialTarget.clone(), zoom: 1.0 },
+      FRAME_SCENE_DURATION_MS,
+      (pos, tgt) => { perspCamera.position.copy(pos); controls.target.copy(tgt); perspCamera.lookAt(tgt); onRenderNeeded(); },
+      () => { controls.enabled = true; },
+    );
+    controls.enabled = false;
+    onRenderNeeded();
+  }
+
+  function swapControlsCamera(cam: THREE.PerspectiveCamera | THREE.OrthographicCamera): void {
+    controls.object = cam;
+    controls.update();
+  }
+
+  function updateOrthoFrustum(width: number, height: number): void {
+    const a = width / Math.max(height, 1);
+    const halfH = DEFAULT_ORTHO_SIZE / orthoCamera.zoom;
+    orthoCamera.left = -halfH * a;
+    orthoCamera.right = halfH * a;
+    orthoCamera.top = halfH;
+    orthoCamera.bottom = -halfH;
+    orthoCamera.updateProjectionMatrix();
+  }
+
+  function updateAspect(width: number, height: number): void {
+    perspCamera.aspect = width / Math.max(height, 1);
+    perspCamera.updateProjectionMatrix();
+    updateOrthoFrustum(width, height);
+  }
+
+  function update(): void { controls.update(); tumble.update(); }
+
+  function dispose(): void {
+    controls.removeEventListener('change', onRenderNeeded);
+    controls.removeEventListener('start', onInteractionStart);
+    controls.removeEventListener('end', onInteractionEnd);
+    animation.dispose();
+    tumble.dispose();
+    controls.dispose();
+  }
+
+  return {
+    get camera() { return activeCamera; },
+    get target() { return controls.target; },
+    get projectionMode() { return currentMode; },
+    get isAnimating() { return animation.isAnimating; },
+    setProjection, getZoom, setZoom, setZoomPreset,
+    updateAspect, update, dispose,
+    frameBounds, cancelAnimation, setSpeedModifier,
+    snapToViewDirection, goHome,
+    applyTumble: (dx: number, dy: number) => tumble.applyExternalRotation(dx, dy),
+  };
+}
