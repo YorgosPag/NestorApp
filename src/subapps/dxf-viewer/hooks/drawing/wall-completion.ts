@@ -131,8 +131,9 @@ export function buildWallEntity(
   params: Readonly<WallParams>,
   layerId: string,
   kind: WallKind = 'straight',
+  sceneUnits: SceneUnits = 'mm',
 ): BuildWallEntityResult {
-  const validation = validateWallParams(params);
+  const validation = validateWallParams(params, sceneUnits);
   if (validation.hardErrors.length > 0) {
     return { ok: false, hardErrors: validation.hardErrors };
   }
