@@ -28,6 +28,7 @@ import type { ToolType } from '../../ui/toolbar/types';
 // `height: 2.5` is interpreted as 2.5 world units (= 2.5m in a meters scene =>
 // huge), instead of the intended 2.5 paper-mm. SSoT helper lives in scene-units.
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 
 interface CreatingState {
   readonly entityId: string;
@@ -80,8 +81,10 @@ interface TextCreationToolApi {
 // ADR-344 Phase 13 — the 2.5 default is paper-mm (CAD convention). Convert to
 // the active scene's world units so a meters-scale DXF renders the text at
 // 2.5 mm equivalent (0.0025 world units) instead of 2.5 m (huge).
-function makeEmptyTextNode(units: SceneUnits): DxfTextNode {
-  const height = 2.5 * mmToSceneUnits(units);
+function makeEmptyTextNode(units: SceneUnits, dimscale = 1): DxfTextNode {
+  // ADR-344 R6: multiply by dimscale (default 1) so the initial TipTap node
+  // shows at model-space size (e.g. 2.5mm × 100 = 250mm for 1:100 DXF).
+  const height = 2.5 * Math.max(1, dimscale) * mmToSceneUnits(units);
   return {
     paragraphs: [{
       runs: [{
@@ -178,10 +181,13 @@ export function useTextCreationTool(
       const isMText = activeTool === 'mtext';
       const { worldWidth, ...anchorRect } = computeAnchorRect(worldPoint, transform, container, isMText);
       const units = getSceneUnits ? getSceneUnits() : 'mm';
+      const reg = getDimStyleRegistry();
+      const activeStyle = reg.getAllStyles().find(s => s.id === reg.getActiveStyleId());
+      const dimscale = activeStyle?.dimscale ?? 1;
       setCreatingState({
         entityId: generateEntityId(),
         position: worldPoint,
-        initial: makeEmptyTextNode(units),
+        initial: makeEmptyTextNode(units, dimscale),
         anchorRect,
         worldWidth,
         forceMText: isMText,

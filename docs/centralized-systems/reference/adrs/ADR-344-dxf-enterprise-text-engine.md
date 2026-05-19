@@ -870,13 +870,15 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
-- **2026-05-20 — Round 6 — Belt-and-suspenders zero-height run patch**.
-  - **Symptom**: After Phase 13, Ribbon Text in meters DXF still filled the screen. `makeEmptyTextNode` correctly set `height = 0.0025` (2.5 mm in meters), but TipTap discarded the `fontHeight` mark for the empty initial run (`dxf-to-tiptap.runToInlines` skips zero-length text nodes, so the mark never entered the editor state). Newly typed chars inherited `height: 0` from `defaultStyle()` → `resolveTextHeight` fell back to `DEFAULT_FONT_SIZE = 12` → 12 m in a meters scene.
-  - **Root cause**: `dxf-to-tiptap.runToInlines` — `if (seg.length > 0)` skips empty segments, preventing the `fontHeight` mark from being encoded for the initial empty run. All subsequent typed characters inherit `height: 0`.
-  - **Fix — `useTextCreationTool.onCommit`**: adds `patchZeroHeightRuns(next, defaultHeight)` before `CreateTextCommand`. Walks all committed runs; any with `height === 0` receives `defaultHeight = state.initial.paragraphs[0].runs[0].style.height` (units-scaled from click time). StackedRuns skipped. Non-zero heights preserved.
-  - **Tests**: 2 new cases in `useTextCreationTool-scene-units.test.tsx` — R6 zero-height patch (mm + m) and R6 explicit non-zero height preserved.
-  - ✅ Google-level: YES — belt-and-suspenders independent of TipTap internals; defaultHeight sourced from the same units-scaled value computed at click time (no second getSceneUnits call needed); idempotent.
-  - **Files**: `hooks/canvas/useTextCreationTool.ts` (MOD — `patchZeroHeightRuns` helper + onCommit patch), `hooks/canvas/__tests__/useTextCreationTool-scene-units.test.tsx` (MOD — 2 new tests).
+- **2026-05-20 — Round 6 — Belt-and-suspenders zero-height run patch (dimscale-aware)**.
+  - **Symptom**: After Phase 13, Ribbon Text in meters DXF still filled the screen (~12m). Phase 13 correctly set `height = 0.0025m` in `makeEmptyTextNode`, but TipTap discarded the `fontHeight` mark for the empty initial run (`dxf-to-tiptap.runToInlines` `if (seg.length > 0)` check skips empty text nodes, so the mark never entered the editor state). Newly typed chars inherited `height: 0` from `defaultStyle()` → `resolveTextHeight` fell back to `DEFAULT_FONT_SIZE = 12` → 12 m in meters scene.
+  - **Secondary regression identified**: patching with raw `2.5 * mmToSceneUnits(units)` (= 0.0025m for meters) caused invisible text — 2.5 paper-mm is microscopic at building scale (0.24px when whole building is visible). Correct model-space size requires multiplying by DIMSCALE.
+  - **Fix — `makeEmptyTextNode(units, dimscale)`**: gains optional `dimscale` param (default 1). Height = `2.5 * max(1, dimscale) * mmToSceneUnits(units)`. For 1:100 DXF in meters: `2.5 × 100 × 0.001 = 0.25m = 250mm` — visible at building scale, consistent with dimension annotations.
+  - **Fix — `handleCanvasClick`**: reads active DimStyle's `dimscale` from `getDimStyleRegistry()` at click time → passes to `makeEmptyTextNode`. After DXF import, the active style is `imported:Standard` with the source file's DIMSCALE.
+  - **Fix — `onCommit`**: `patchZeroHeightRuns(next, state.initial...height)` — any committed run with `height: 0` is patched to the same dimscale-aware value computed at click time. StackedRuns skipped. Non-zero heights preserved.
+  - **Tests**: 2 new cases in `useTextCreationTool-scene-units.test.tsx` — R6 zero-height patched with dimscale-aware default (tests use ISO_129 dimscale=1, so expected = 0.0025 for 'm'); R6 non-zero height preserved.
+  - ✅ Google-level: YES — belt-and-suspenders independent of TipTap internals; dimscale-aware so text matches dimension scale; SSoT (reads registry, same source as DimensionRenderer); idempotent.
+  - **Files**: `hooks/canvas/useTextCreationTool.ts` (MOD — `getDimStyleRegistry` import, `makeEmptyTextNode` dimscale param, `handleCanvasClick` reads registry, `patchZeroHeightRuns` helper + onCommit patch), `hooks/canvas/__tests__/useTextCreationTool-scene-units.test.tsx` (MOD — 2 new tests).
 
 - **2026-05-19 — Phase 13 COMPLETE — Ribbon Text scene-units awareness**.
   - **Symptom**: After importing a non-mm DXF (typically meters) through the Wizard, the Ribbon Home → "Text" tool produced text that filled most of the canvas (~1000× too big), while native imported texts and DIMENSION text rendered correctly. Identical regression with the Ribbon dimension tool — that path tracked separately in **ADR-362 Round 5**.
