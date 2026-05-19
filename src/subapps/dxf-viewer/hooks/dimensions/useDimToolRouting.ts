@@ -30,6 +30,7 @@ import { getLayer } from '../../stores/LayerStore';
 import { dimensionCreateStore } from '../../stores/DimensionCreateStore';
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
 import { buildPreviewDimensionEntity } from './dimension-create-entity-builder';
+import { requiredClickCount } from './dimension-create-state';
 import {
   useDimensionCreate,
   type DimensionCreateAPI,
@@ -168,7 +169,21 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
 
   const handlePoint = useCallback(
     (world: Point2D, hoveredEntity?: DetectableEntity) => {
-      dimCreate.onClick(world, hoveredEntity);
+      const state = dimensionCreateStore.get();
+      const clickIndex = state.clicks.length;
+      const isDimLineRefClick =
+        (state.currentType === 'linear' || state.currentType === 'aligned') &&
+        clickIndex === requiredClickCount(state.currentType) - 1;
+
+      // ADR-362 hotfix: dimLineRef click (last click of linear/aligned) uses cursorWorld
+      // (= last hover = preview position) so commit == preview. Without this, snap at
+      // click time can disagree with snap at hover time (tolerance boundary + DIO
+      // mousemove interception) causing the dim line to jump to a wrong Y position.
+      // Enter-based commits already use cursorWorld (useDimensionCreate.ts:189-195).
+      const commitWorld =
+        isDimLineRefClick && state.cursorWorld !== null ? state.cursorWorld : world;
+
+      dimCreate.onClick(commitWorld, hoveredEntity);
       pushPreview(previewRef);
     },
     [dimCreate],

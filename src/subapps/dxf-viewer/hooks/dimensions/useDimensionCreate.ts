@@ -240,11 +240,6 @@ function runCommit(
     return;
   }
 
-  // ADR-362 position diagnostic — remove after bug confirmed
-  // eslint-disable-next-line no-console
-  console.log('[DIM-DIAG commit] defPoints:', built.entity.defPoints.map((p, i) => `[${i}](${p.x.toFixed(4)},${p.y.toFixed(4)})`).join(' '),
-    'clicks:', state.clicks.map((c, i) => `[${i}](${c.world.x.toFixed(4)},${c.world.y.toFixed(4)})`).join(' '));
-
   onDimensionCreated(built.entity);
 
   // Phase D3 — Q-B auto-progression: any chainable commit advances the head so
