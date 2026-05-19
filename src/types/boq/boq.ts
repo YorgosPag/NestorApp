@@ -191,6 +191,20 @@ export interface BOQItem {
 
   /** Αν true: ο χρήστης το αποσύνδεσε από BIM — δεν ενημερώνεται αυτόματα πλέον. */
   detached?: boolean | null;
+
+  // --- BIM Multi-Layer DNA (ADR-363 Phase 6.1+) ---
+
+  /** Parent BOQ item ID — set σε child rows (per-layer entries). null για standalone ή parent. */
+  parentBoqItemId?: string | null;
+
+  /** True όταν αυτό το item είναι summary parent για multi-layer wall (έχει N children). */
+  isGroupParent?: boolean | null;
+
+  /** Ordinal layer index στο WallDna (0-based). null σε parent/standalone. */
+  layerIndex?: number | null;
+
+  /** WallDnaLayer.materialId (πχ 'mat-plaster-ext'). null σε parent/standalone. */
+  materialId?: string | null;
 }
 
 // ============================================================================

@@ -83,23 +83,6 @@
 
 ---
 
-### 💰 ADR-363 PHASE 6.x — Multi-Layer Wall DNA BOQ (~8h)
-
-Discovered 2026-05-19 (SPEC-3D-004D §12 Q4 Full Enterprise resolution, industry 6/6 σύγκλιση Revit + ArchiCAD + Bentley + Tekla + Vectorworks + Allplan).
-
-**Πρόβλημα**: `BimToBoqBridge.buildBoqPayload` παράγει 1 BOQ entry per entity με `geometry.area`/`geometry.volume`. Για walls με DNA layers (πχ 3-layer composite σοβάς+σκυρόδεμα+γυψοσανίδα), αυτό δεν αντιπροσωπεύει το πραγματικό material breakdown — όλοι οι major BIM tools παράγουν per-layer rows.
-
-- [ ] **bim-to-atoe-mapping extension** — per-layer-category mapping (concrete/plaster/gypsum/insulation/tile/wood/glass/metal/stone → ΑΤΟΕ codes). (~1h)
-- [ ] **BimToBoqBridge multi-entry generation** — αν `entity.params.dna?.layers?.length > 1`, παράγει N entries με deterministic IDs `boq_bim_${entityId}_layer_${layerId}` + per-layer quantity (`wallNetArea × layer.thickness` volume, `wallNetArea × side-multiplier` area). (~2h)
-- [ ] **Per-layer detach guard** — user detach σε ένα layer entry δεν επηρεάζει τα υπόλοιπα. (~1h)
-- [ ] **Backward-compatible migration** — existing single-entry rows `boq_bim_${entityId}` (no layer suffix) διατηρούνται· νέα saves παράγουν multi-entry structure. (~1h)
-- [ ] **Tests** — unit (per-layer quantity correctness, multi-layer ratchet) + integration (Firestore upsert + detach guard). (~2h)
-- [ ] **ADR-363 §6 update + ADR-329 cross-link + ΑΤΟΕ catalog expansion** — documentation closure. (~1h)
-
-**Reference**: SPEC-3D-004D §12 Q4. Pattern reference (concept only): GenArc `wallLayerQuantities` σε `geometryCalculators.ts`.
-
----
-
 ### 🔧 ADR-363 PHASE 7.2 FOLLOW-UP — useBimCopyTool clipboard wiring (priorità bassa, ~1h)
 
 Phase 7.2 CORE LANDED 2026-05-19. Mirror/Rotate ribbon tools (`useMirrorTool` + `useRotationTool`) ΗΔΗ wired and now BIM-aware via extended `MirrorEntityCommand` / `RotateEntityCommand`. Copy SSoT (`bim-copy-builder.ts`) + `BimCopyCommand` έτοιμα — ο dedicated `useBimCopyTool` hook για clipboard-style copy (translate delta από user pick → BimCopyCommand) δεν υπάρχει. Ribbon "Copy" button + `CO` shortcut emit `copy-selected` action αλλά κανένα handler αυτή τη στιγμή. UX flow πρέπει να αποφασιστεί ώστε να ταιριάζει με ADR-357 grip-context-menu Copy modifier (γνωστή υπαρκτή flow για grip-based copy).
@@ -251,4 +234,5 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 | 2026-05-19 | ADR-365 Tailwind Semantic Palette Enforcement created (Proposed). Hover audit revealed 249 raw palette violations σε 86 files (από τα οποία ~21 SSoT exempt → ~65 consumer files). Plan: 9 phases (Phase 0 infrastructure + Phases 1-8 per-domain migration + Phase 8 closure). Per-session handoff απαιτείται. |
 | 2026-05-19 | ADR-365 Phase 0 DONE. Infrastructure deployed: ratchet script + SSoT registry module (Tier 2) + baseline + CHECK 3.26 in parallel orchestrator + npm scripts. Actual baseline 3,659/440 (revised from 249/65 — original audit was hover-only). Smoke 1-5 PASS. Hook latency ~0.73s staged. |
 | 2026-05-19 | Auto-Infer Alignment Guides discovered via SPEC-3D-004C (GenArc port catalog). 3-engine grep confirmed gap (GuideSnapEngine/OrthoSnapEngine/ParallelSnapEngine — κανένα δεν κάνει auto-infer από arbitrary anchors). New pending entry added (~3h ADR proposal + implementation). 4 Giorgio conditions all ✅ satisfied (independent feature, not blocking ADR-366). |
+| 2026-05-19 | **ADR-363 Phase 6 CLOSED — Multi-Layer DNA BOQ + Material→ΑΤΟΕ SSoT**. Phase 6.1 (multi-entry wall walls με `dna.layers.length > 1` → 1 parent + N children, deterministic IDs `boq_bim_${entityId}_layer_${layerId}`, per-layer detach guard ανεξάρτητο, cascade delete via `where('parentBoqItemId', '==', parentId)` query) + Phase 6.2 (material→ΑΤΟΕ catalog SSoT για 18 wall-material-catalog presets — ΟΙΚ-2/3/4/7/10/12 με quantityKind area/volume). Files: `bim/services/boq-multi-layer-builder.ts` (15 tests), `bim/config/material-to-atoe-mapping.ts` (23 tests), `bim/services/BimToBoqBridge.ts` extended (24 tests total — 12 existing single-entry preserved + 12 νέα multi-layer). BOQItem schema +4 optional fields (parentBoqItemId, isGroupParent, layerIndex, materialId) — 100% back-compat. Industry alignment 6/6 (SPEC-3D-004D §12 Q4 Revit/ArchiCAD/Bentley/Tekla/Vectorworks/Allplan Material Takeoff pattern). Ratchet entry «ADR-363 PHASE 6.x» removed από checklist. Future: user-editable bim_atoe_overrides + BOQ parent/children expandable UI (Phase 6.2+ non-blocking). |
 | 2026-05-19 | **ADR-363 Phase 7.2 CORE LANDED** (Mirror/Rotate/Copy BIM). Files: `bim/transforms/bim-mirror-geometry.ts` + `bim-rotate-geometry.ts` + `bim-copy-builder.ts` (SSoTs, pure functions, 7 BIM kinds each), `core/commands/entity-commands/BimCopyCommand.ts` (ICommand wrapper), MirrorEntityCommand + RotateEntityCommand extended with BIM dispatch (private `computeMirrorUpdates` / `computeRotateUpdates`). Kind-specific enterprise ID gen via `generateWallId/...`, opening↔wall + slab-opening↔slab host rewire on copy. 59 tests across 6 suites (21 mirror-geom + 12 rotate-geom + 10 copy-builder + 5 mirror dispatch + 5 rotate dispatch + 6 BimCopyCommand) all green. Ribbon buttons + MI/RO/CO shortcuts ήδη υπήρχαν; useMirrorTool + useRotationTool ήδη wired και τώρα δουλεύουν σε BIM. Ratchet block 7.2 αντικαθίσταται από smaller follow-up (~1h): `useBimCopyTool` clipboard flow. |
