@@ -164,8 +164,11 @@ describe('buildCommittedDimensionEntity', () => {
     });
     const result = buildCommittedDimensionEntity(s, { id: 'dim_real', layerId: 'lyr_x' });
     expect(result!.associations).toHaveLength(2);
+    // ADR-362 2026-05-19 hotfix: linear/aligned/angular3P/ordinate/baseline/continued
+    // use 'nearest' (position-preserving) until snap-aware capture lands. 'endpoint'
+    // without subIndex caused the observer to snap defPoint to `line.end`.
     expect(result!.associations[0]).toMatchObject({
-      defPointIndex: 0, geometryId: 'L1', associationType: 'endpoint',
+      defPointIndex: 0, geometryId: 'L1', associationType: 'nearest',
     });
     expect(result!.entity.associations).toEqual(result!.associations);
   });

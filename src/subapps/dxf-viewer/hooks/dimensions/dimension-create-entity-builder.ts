@@ -384,9 +384,16 @@ function pushLineAssociation(
 }
 
 function makeAssociation(defPointIndex: number, entity: DetectableEntity): DimensionAssociation {
+  // ADR-362 — 'nearest' preserves the clicked world position in
+  // `applyAssociationUpdates` (recomputeAssociatedDefPoint returns null for
+  // 'nearest'). Using 'endpoint' without a `subIndex` previously caused the
+  // observer to overwrite defPoints with `line.end`, snapping the dim to the
+  // line's far endpoint after commit. Until a snap-aware capture path
+  // resolves the exact sub-feature (endpoint subIndex 0/1, midpoint, etc.)
+  // we keep the geometry reference for orphan tracking but skip recompute.
   return {
     defPointIndex,
     geometryId: entity.id,
-    associationType: 'endpoint',
+    associationType: 'nearest',
   };
 }
