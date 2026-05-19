@@ -186,7 +186,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const handleSceneChangeRef = React.useRef(handleSceneChange);
   // 🏢 Universal selection primary ID
   const primarySelectedId = universalSelection.getPrimaryId();
-  const activeContextualTrigger = useActiveContextualTrigger({ primarySelectedId, currentScene, activeTool });
+  const activeContextualTrigger = useActiveContextualTrigger({ primarySelectedId, selectedEntityIds, currentScene, activeTool });
   // Auto fit-to-view on FileRecord transition (extracted hook, ADR-340 Phase 9).
   useAutoFitOnFileChange({
     currentScene,

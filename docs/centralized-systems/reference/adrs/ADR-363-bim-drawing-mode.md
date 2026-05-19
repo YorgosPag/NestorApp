@@ -1990,12 +1990,48 @@ bulk-edit ribbon contextual tab. Ratio of original Phase 7 ≈ 70%.
 - [x] **useSmartDelete slab→slab-opening cascade** — Boy-Scout N.0.2: previous inline
   `entities.filter(isOpeningEntity)` sweep replaced by resolver call. Adds
   slab→slab-opening orphan cascade alongside the existing wall→opening prompt.
-- [ ] **Multi-Selection Ribbon Contextual Tab** — `multi-selection` tab via ADR-345
-  registry, "Κοινές Ιδιότητες" panel + "Φίλτρο" panel (Revit/AutoCAD pattern per
-  Giorgio Q3 decision). Live commit on focus loss / Enter → `CompoundCommand(N × UpdateXxxParamsCommand)`
-  = 1 undo step (Google-Docs pattern). Common-properties registry
-  `bim/types/bim-common-properties.ts` (intersection of properties per selected kind).
-  ⏳ Pending — handoff to next session.
+- [x] **Multi-Selection Ribbon Contextual Tab** — `multi-selection` tab via ADR-345
+  registry (trigger `multi-selection-bim`), "Κοινές Ιδιότητες" panel + "Φιλτράρισμα"
+  panel (Revit/AutoCAD pattern per Giorgio Q3 decision). Live commit on focus loss /
+  Enter → `CompoundCommand(N × UpdateXxxParamsCommand)` = 1 undo step (Google-Docs
+  pattern). Implementation **2026-05-19**:
+  - SSoT registry `bim/types/bim-common-properties.ts` — 6 editable numeric props
+    (`height`, `thickness`, `width`, `depth`, `elevation`, `sillHeight`) × 7 BIM
+    kinds, intersection helper `getCommonProperties()`, `countByKind`,
+    `isHomogeneous`. 23 tests.
+  - Bulk command factory `bim/cascade/bim-bulk-update-builder.ts` — per-kind
+    dispatch (`Update{Wall,Opening,Slab,Column,Beam,Stair}ParamsCommand`),
+    `CompoundCommand` for atomic execute + single-step undo + rollback on
+    sub-command failure. Skip rules: missing entity / unsupported kind /
+    out-of-registry key filtered silently. 20 tests.
+  - Bridge hook `ui/ribbon/hooks/useMultiSelectionRibbonBridge.ts` — derives
+    `mode` (`none`/`single`/`multi`), `bimEntries` (filters scene + supported
+    kinds), `kindsCount`, `commonProperties`, `isHomogeneous`, `currentValues`
+    (mixed-detect per prop), `executeBulkPatch(patch)`, `narrowToKind(kind)`.
+    ADR-040 R1: subscribes inside ribbon leaf, never in `CanvasSection`. 19 tests.
+  - Widget components
+    `ui/ribbon/components/MultiSelectionCommonPropertiesPanel.tsx` (live-commit
+    numeric inputs, Enter/blur commits, Escape reverts, mixed-value placeholder
+    via i18n `differentValues`) +
+    `ui/ribbon/components/MultiSelectionFilterPanel.tsx` (N per-kind narrow
+    buttons με count, hidden when homogeneous). Registered στο `RibbonPanel.tsx`
+    widget dispatcher.
+  - Tab data `ui/ribbon/data/contextual-multi-selection-tab.ts` — 2 panels,
+    widget-type buttons (`multi-selection-common-properties`,
+    `multi-selection-filter`).
+  - Dispatcher wiring `app/ribbon-contextual-config.ts` —
+    `useActiveContextualTrigger` extended with `selectedEntityIds`. When 2+ BIM
+    entities selected → `MULTI_SELECTION_CONTEXTUAL_TRIGGER` overrides any
+    per-kind trigger driven by `primarySelectedId`. `DxfViewerContent` passes
+    `selectedEntityIds` through.
+  - i18n: `ribbon.tabs.multiSelection`, `ribbon.panels.multiSelection{Common,Filter}`,
+    `ribbon.contextualTabs.multiSelection.*` (properties/filterButtons/hints)
+    σε el + en. Πλήρως μεταφρασμένο στα Ελληνικά (no English words στο el).
+  - CSS tokens `ribbon-tokens.css` — `dxf-ribbon-multi-{common,filter}*`.
+  - Google-Level checklist (N.7.2): ✅ Proactive (resolved on selection change) /
+    ✅ No race (`CompoundCommand` atomic) / ✅ Idempotent / ✅ Belt-and-suspenders
+    (per-kind tabs intact after narrow) / ✅ SSoT (registry + builder + bridge) /
+    ✅ Await (`executeCommand` sync) / ✅ Lifecycle owner (bridge hook).
 
 #### Phase 7.2 — Transform BIM (deferred, separate session)
 
@@ -2304,6 +2340,7 @@ Phase 6 (BOQ Auto-Feed) θεωρείται **complete** όταν:
 | Ημ/νία | Αλλαγή | Author |
 |---|---|---|
 | 2026-05-19 | **Phase 7 SPLIT into 7.1 + 7.2** per Giorgio Q5 decision (phase-per-session, Google-level scope). **Phase 7.1 partial landing**: BIM marquee bounds via new SSoT `bim/utils/bim-bounds.ts` (fixed silent drop of 7 BIM kinds from `calculateEntityBounds` → `default:null`); BIM move geometry via new SSoT `bim/utils/bim-move-geometry.ts` (fixed `calculateMovedGeometry` no-op on BIM, recomputes geometry atomically per kind); cascade resolver SSoT `bim/cascade/bim-cascade-resolver.ts` (Boy-Scout N.0.2: extracts inline `useSmartDelete` wall→opening sweep + adds slab→slab-opening cascade); `useMoveTool` + `useSmartDelete` wired to resolver. Registry module `bim-cascade-resolver` (Tier 3) added. 37 new tests (13 + 9 + 15). **Pending in 7.1**: multi-selection ribbon contextual tab (Revit/AutoCAD common-properties + Filter panel pattern per Giorgio Q3) — handoff for next session. **Phase 7.2** (deferred): Mirror/Rotate/Copy BIM coverage. | Claude Opus 4.7 |
+| 2026-05-19 | **Phase 7.1 CLOSURE — Multi-Selection Ribbon Contextual Tab IMPLEMENTED**. Files created: (1) SSoT registry `bim/types/bim-common-properties.ts` — 6 editable numeric props × 7 BIM kinds + `getCommonProperties` (Revit common-properties intersection) + `countByKind` + `isHomogeneous`. (2) Bulk command factory `bim/cascade/bim-bulk-update-builder.ts` — per-kind dispatch builds `Update{Wall,Opening,Slab,Column,Beam,Stair}ParamsCommand`, wraps σε `CompoundCommand` (single undo step, atomic rollback). Skip rules: missing entity / kind out-of-registry / patch key not in kind's allow-list. (3) Bridge hook `ui/ribbon/hooks/useMultiSelectionRibbonBridge.ts` — `mode`/`bimEntries`/`kindsCount`/`commonProperties`/`isHomogeneous`/`currentValues` (mixed-detect)/`executeBulkPatch(patch)`/`narrowToKind(kind)`. ADR-040 R1: subscribes inside ribbon leaf, never στο `CanvasSection`. (4) Widget components `ui/ribbon/components/MultiSelectionCommonPropertiesPanel.tsx` (number inputs με Enter/blur commit, Escape revert, mixed-value placeholder) + `MultiSelectionFilterPanel.tsx` (N per-kind narrow buttons + count, hidden όταν homogeneous). Widget dispatcher registration στο `RibbonPanel.tsx`. (5) Tab data `ui/ribbon/data/contextual-multi-selection-tab.ts` — 2 panels (`multi-selection-common-properties`, `multi-selection-filter`). (6) Dispatcher wiring: `app/ribbon-contextual-config.ts.useActiveContextualTrigger` extended με `selectedEntityIds` arg + priority override (2+ BIM → `MULTI_SELECTION_CONTEXTUAL_TRIGGER` υπερτερεί του per-kind tab). `DxfViewerContent` περνάει `selectedEntityIds`. (7) CSS `ribbon-tokens.css` — `dxf-ribbon-multi-{common,filter}*` classes. (8) i18n: `ribbon.tabs.multiSelection`, `ribbon.panels.multiSelection{Common,Filter}`, `ribbon.contextualTabs.multiSelection.{title, properties.*, differentValues, emptyCommon, applyHint, filterButtons.*}` σε el + en (Greek pure — no English words). **62 new tests** (23 registry + 20 builder + 19 bridge), όλα πράσινα. Google-Level N.7.2 verdict: ✅ Proactive / ✅ No race (CompoundCommand atomic) / ✅ Idempotent / ✅ Belt-and-suspenders (per-kind tabs intact post-narrow) / ✅ SSoT (registry+builder+bridge) / ✅ Sync await / ✅ Lifecycle owner (bridge hook). **Phase 7.1 CLOSED. Phase 7.2 (Mirror/Rotate/Copy BIM) remains deferred.** | Claude Opus 4.7 |
 | 2026-05-17 | **Initial draft v1.0** — Full architecture, 8 phases, BOQ integration, port plan από genarc, §9 open questions για Γιώργο. Status: PROPOSED. | Claude Opus 4.7 |
 | 2026-05-17 | **Q1 ANSWERED** — Revit-style Type Picker dialog before drawing. Added §5.9.1 BimTypePickerDialog SSoT + `bim_presets` Firestore collection + 25 system-seeded presets. Pattern επεκτείνεται consistent σε όλα 5 BIM types. | Claude Opus 4.7 |
 | 2026-05-17 | **Q2 ANSWERED** — Absolute mm offset (primary) + % info-only display. Snap 50mm. Constraints: frameWidth min/max. Wall length change → opening stays absolute, orphan warning if out-of-bounds. | Claude Opus 4.7 |

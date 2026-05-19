@@ -21,6 +21,8 @@ import { RibbonAnnotationScaleWidget } from './RibbonAnnotationScaleWidget';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 import { RibbonStairFloorInfoWidget } from './RibbonStairFloorInfoWidget';
 import { RibbonStairDimensionsWidget } from './RibbonStairDimensionsWidget';
+import { MultiSelectionCommonPropertiesPanel } from './MultiSelectionCommonPropertiesPanel';
+import { MultiSelectionFilterPanel } from './MultiSelectionFilterPanel';
 import { CurrentLayerPicker } from '../../components/layer-picker/CurrentLayerPicker';
 
 interface RibbonPanelProps {
@@ -63,6 +65,12 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'stair-dimensions') {
       return <RibbonStairDimensionsWidget key="stair-dimensions-widget" />;
+    }
+    if (button.widgetId === 'multi-selection-common-properties') {
+      return <MultiSelectionCommonPropertiesPanel key="multi-selection-common-widget" />;
+    }
+    if (button.widgetId === 'multi-selection-filter') {
+      return <MultiSelectionFilterPanel key="multi-selection-filter-widget" />;
     }
     return null;
   }

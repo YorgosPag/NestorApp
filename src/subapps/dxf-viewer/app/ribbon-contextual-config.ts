@@ -15,6 +15,11 @@ import { CONTEXTUAL_SLAB_OPENING_TAB, SLAB_OPENING_CONTEXTUAL_TRIGGER } from '..
 import { DIMENSION_CONTEXTUAL_TAB, DIMENSION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimension-tab';
 import { CONTEXTUAL_LINE_TOOL_TAB, LINE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-line-tool-tab';
 import { CONTEXTUAL_XLINE_MODE_TAB, XLINE_MODE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-xline-mode-tab';
+import { CONTEXTUAL_MULTI_SELECTION_TAB, MULTI_SELECTION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-multi-selection-tab';
+
+const BIM_KIND_TYPES: ReadonlySet<string> = new Set([
+  'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair',
+]);
 
 export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_TEXT_EDITOR_TAB,
@@ -31,6 +36,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   DIMENSION_CONTEXTUAL_TAB,
   CONTEXTUAL_LINE_TOOL_TAB,
   CONTEXTUAL_XLINE_MODE_TAB,
+  CONTEXTUAL_MULTI_SELECTION_TAB,
 ] as const;
 
 type EntityLike = { readonly type: string; readonly params?: unknown };
@@ -44,13 +50,30 @@ function readArrayKind(params: unknown): string | undefined {
 }
 
 export function useActiveContextualTrigger({
-  primarySelectedId, currentScene, activeTool,
+  primarySelectedId, selectedEntityIds, currentScene, activeTool,
 }: {
   primarySelectedId: string | null;
+  /** ADR-363 Phase 7.1 — all currently selected ids (universal). When 2+ BIM
+   *  entities are selected, the multi-selection tab takes priority over the
+   *  per-kind tab driven by `primarySelectedId`. */
+  selectedEntityIds?: readonly string[];
   currentScene: SceneModel | null;
   activeTool: string;
 }): string | null {
   return React.useMemo<string | null>(() => {
+    // ADR-363 Phase 7.1: multi-selection of BIM entities → dedicated tab.
+    if (selectedEntityIds && selectedEntityIds.length >= 2 && currentScene) {
+      let bimCount = 0;
+      for (const id of selectedEntityIds) {
+        const e = currentScene.entities.find((x) => x.id === id);
+        if (e && BIM_KIND_TYPES.has(e.type)) {
+          bimCount++;
+          if (bimCount >= 2) break;
+        }
+      }
+      if (bimCount >= 2) return MULTI_SELECTION_CONTEXTUAL_TRIGGER;
+    }
+
     const entity = primarySelectedId && currentScene
       ? currentScene.entities.find((e) => e.id === primarySelectedId) : null;
     const fromSelection = entity ? resolveContextualTrigger(entity) : null;
@@ -82,7 +105,7 @@ export function useActiveContextualTrigger({
       activeTool === 'ellipse'
     ) return LINE_TOOL_CONTEXTUAL_TRIGGER;
     return null;
-  }, [primarySelectedId, currentScene, activeTool]);
+  }, [primarySelectedId, selectedEntityIds, currentScene, activeTool]);
 }
 
 export function resolveContextualTrigger(entity: EntityLike): string | null {
