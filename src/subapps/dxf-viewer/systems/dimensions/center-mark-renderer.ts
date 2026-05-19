@@ -34,7 +34,15 @@ export function renderCenterMark(
 ): void {
   if (geometry.crossLines.length === 0 && geometry.extLines.length === 0) return;
 
-  const viewport = { width: ctx.canvas.width, height: ctx.canvas.height };
+  // ADR-362 Round 4.1 (2026-05-19) — CSS viewport via getBoundingClientRect (not
+  // backing-store ctx.canvas.width/height). Mirror του DimensionRenderer.toScreen:
+  // με DPR ≠ 1 (browser zoom / HiDPI) τα cross+extension lines έπεφταν σε λάθος
+  // screen Y. SSoT canonical pattern: BaseEntityRenderer.getViewport.
+  const rect = ctx.canvas.getBoundingClientRect();
+  const viewport = {
+    width: rect.width || ctx.canvas.width,
+    height: rect.height || ctx.canvas.height,
+  };
   const toScreen = (p: Point2D): Point2D =>
     CoordinateTransforms.worldToScreen(p, transform, viewport);
 

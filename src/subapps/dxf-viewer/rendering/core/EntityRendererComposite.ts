@@ -227,11 +227,27 @@ export class EntityRendererComposite {
     return null;
   }
 
+  /**
+   * ADR-362 Round 4.1 (2026-05-19) — CSS-pixel viewport για το hitTestingService.
+   * `point` έρχεται από mouse events σε CSS pixels (getBoundingClientRect-based),
+   * άρα η `screenToWorld` εντός του service ΠΡΕΠΕΙ να λάβει CSS viewport. Backing
+   * store (ctx.canvas.width/height) διαφέρει με DPR ≠ 1 → silent mis-hit στα grips
+   * όταν browser zoom ≠ 100%. SSoT canonical: BaseEntityRenderer.getViewport.
+   */
+  private getCssViewport(): Viewport {
+    const rect = this.ctx.canvas.getBoundingClientRect();
+    return {
+      x: 0,
+      y: 0,
+      width: rect.width || this.ctx.canvas.width,
+      height: rect.height || this.ctx.canvas.height,
+    };
+  }
+
   // Hit test for entity - using centralized service
   hitTestEntity(entity: Entity, point: Point2D, tolerance: number): boolean {
     try {
-      // Create a mock viewport and transform for the hit testing service
-      const viewport = { x: 0, y: 0, width: this.ctx.canvas.width, height: this.ctx.canvas.height };
+      const viewport = this.getCssViewport();
 
       const result = hitTestingService.hitTest(point, this.transform, viewport, {
         tolerance,
@@ -248,8 +264,7 @@ export class EntityRendererComposite {
   // Hit test for multiple entities - using centralized service
   hitTest(entities: Entity[], point: Point2D, tolerance: number): Entity | null {
     try {
-      // Create a mock viewport and transform for the hit testing service
-      const viewport = { x: 0, y: 0, width: this.ctx.canvas.width, height: this.ctx.canvas.height };
+      const viewport = this.getCssViewport();
 
       const result = hitTestingService.hitTest(point, this.transform, viewport, {
         tolerance,

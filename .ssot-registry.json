@@ -3539,6 +3539,23 @@
       "addedDate": "2026-05-19",
       "addedByAdr": "ADR-365",
       "tier": 2
+    },
+    "entity-renderer-viewport-source": {
+      "ssotFile": "src/subapps/dxf-viewer/rendering/entities/BaseEntityRenderer.ts",
+      "description": "ADR-362 Round 4.1 (2026-05-19): All entity renderers MUST resolve viewport pixels via `BaseEntityRenderer.getViewport()` (CSS pixels via `ctx.canvas.getBoundingClientRect()`), not via the backing-store `ctx.canvas.width / height` (DPR-scaled). Mixing the two for `worldToScreen` / `screenToWorld` / hit-testing causes silent mis-placement under non-100% browser zoom or HiDPI (DPR ≠ 1) — the Round 4 DIM text/line and center-mark mis-placement incident. Canonical pattern: `const rect = ctx.canvas.getBoundingClientRect(); width: rect.width || ctx.canvas.width` (fallback only). Orchestrators (DxfRenderer/LayerCanvas) still call `ctx.setTransform(dpr, ...)` and `ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)` — positional args, not `width:` object keys, so unaffected.",
+      "forbiddenPatterns": [
+        "width:\\s*(this\\.)?ctx\\.canvas\\.width"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/rendering/entities/BaseEntityRenderer.ts",
+        "src/subapps/dxf-viewer/rendering/entities/DimensionRenderer.ts",
+        "src/subapps/dxf-viewer/rendering/core/EntityRendererComposite.ts",
+        "src/subapps/dxf-viewer/systems/dimensions/center-mark-renderer.ts",
+        "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/"
+      ],
+      "addedDate": "2026-05-19",
+      "addedByAdr": "ADR-362",
+      "tier": 4
     }
   }
 }
