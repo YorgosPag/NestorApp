@@ -86,12 +86,14 @@ describe('recomputeAssociatedDefPoint — endpoint', () => {
     ).toEqual({ x: 30, y: 40 });
   });
 
-  it('line subIndex undefined → end (non-zero condition: undefined !== 0)', () => {
-    // The implementation: `assoc.subIndex === 0 ? e.start : e.end`
-    // undefined !== 0, so non-zero branch → end is returned.
+  it('line subIndex undefined → null (preserves current defPoint, ADR-362 2026-05-19 hotfix)', () => {
+    // Pre-fix: `assoc.subIndex === 0 ? e.start : e.end` returned `e.end` when
+    // subIndex was undefined, snapping linear/aligned dims to the line's far
+    // endpoint on every command event. Now returns null → caller preserves
+    // the existing defPoint.
     expect(
       recomputeAssociatedDefPoint(assoc('endpoint', 0, undefined), makeLine({ x: 5, y: 6 }, { x: 7, y: 8 })),
-    ).toEqual({ x: 7, y: 8 });
+    ).toBeNull();
   });
 
   it('polyline → vertex at subIndex', () => {

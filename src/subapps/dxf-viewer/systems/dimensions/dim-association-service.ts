@@ -59,14 +59,18 @@ export function recomputeAssociatedDefPoint(
 
   switch (assoc.associationType) {
     case 'endpoint': {
+      // ADR-362 2026-05-19 hotfix: when `subIndex` is undefined (e.g. old
+      // dims captured before snap-aware association landed), preserve the
+      // current defPoint instead of defaulting to `e.end`. Defaulting was
+      // snapping committed linear/aligned dims onto the line's far endpoint.
+      if (assoc.subIndex === undefined) return null;
       if (isLineEntity(e)) {
         return assoc.subIndex === 0 ? e.start : e.end;
       }
       if (isPolylineEntity(e)) {
         const verts = e.vertices;
         if (!verts?.length) return null;
-        const idx = assoc.subIndex ?? 0;
-        return verts[Math.min(idx, verts.length - 1)];
+        return verts[Math.min(assoc.subIndex, verts.length - 1)];
       }
       return null;
     }
