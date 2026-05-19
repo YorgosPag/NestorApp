@@ -118,6 +118,26 @@ function makeEmptyTextNode(units: SceneUnits): DxfTextNode {
   };
 }
 
+// ADR-344 R6 — TipTap drops the fontHeight mark for empty initial runs
+// (dxf-to-tiptap skips zero-length text nodes so the mark never enters the
+// editor state). User-typed chars then inherit height:0 → resolveTextHeight
+// falls back to DEFAULT_FONT_SIZE=12 world-units (= 12m in meters scenes).
+// Patching at commit time is unit-safe: defaultHeight comes from the initial
+// node, which was already scaled via mmToSceneUnits at click time.
+function patchZeroHeightRuns(node: DxfTextNode, defaultHeight: number): DxfTextNode {
+  return {
+    ...node,
+    paragraphs: node.paragraphs.map(para => ({
+      ...para,
+      runs: para.runs.map(run => {
+        if (!('text' in run)) return run; // StackedRun — no style.height
+        if (run.style.height !== 0) return run;
+        return { ...run, style: { ...run.style, height: defaultHeight } };
+      }),
+    })),
+  };
+}
+
 const TEXT_OVERLAY_WIDTH_PX = 200;
 // MTEXT overlay: 40% of canvas width, clamped to [280, 600]px screen
 function mtextOverlayWidth(containerWidth: number): number {
@@ -195,11 +215,14 @@ export function useTextCreationTool(
         finishAndExit();
         return;
       }
+      const firstRun = state.initial.paragraphs[0]?.runs[0];
+      const defaultHeight = (firstRun && 'text' in firstRun) ? firstRun.style.height : 2.5;
+      const patchedNext = patchZeroHeightRuns(next, defaultHeight);
       const cmd = new CreateTextCommand(
         {
           position: state.position,
           layer: DXF_DEFAULT_LAYER,
-          textNode: next,
+          textNode: patchedNext,
           existingId: state.entityId,
           ...(state.forceMText ? { forceType: 'mtext' as const } : {}),
           ...(state.forceMText && state.worldWidth != null ? { width: state.worldWidth } : {}),

@@ -870,6 +870,14 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-05-20 — Round 6 — Belt-and-suspenders zero-height run patch**.
+  - **Symptom**: After Phase 13, Ribbon Text in meters DXF still filled the screen. `makeEmptyTextNode` correctly set `height = 0.0025` (2.5 mm in meters), but TipTap discarded the `fontHeight` mark for the empty initial run (`dxf-to-tiptap.runToInlines` skips zero-length text nodes, so the mark never entered the editor state). Newly typed chars inherited `height: 0` from `defaultStyle()` → `resolveTextHeight` fell back to `DEFAULT_FONT_SIZE = 12` → 12 m in a meters scene.
+  - **Root cause**: `dxf-to-tiptap.runToInlines` — `if (seg.length > 0)` skips empty segments, preventing the `fontHeight` mark from being encoded for the initial empty run. All subsequent typed characters inherit `height: 0`.
+  - **Fix — `useTextCreationTool.onCommit`**: adds `patchZeroHeightRuns(next, defaultHeight)` before `CreateTextCommand`. Walks all committed runs; any with `height === 0` receives `defaultHeight = state.initial.paragraphs[0].runs[0].style.height` (units-scaled from click time). StackedRuns skipped. Non-zero heights preserved.
+  - **Tests**: 2 new cases in `useTextCreationTool-scene-units.test.tsx` — R6 zero-height patch (mm + m) and R6 explicit non-zero height preserved.
+  - ✅ Google-level: YES — belt-and-suspenders independent of TipTap internals; defaultHeight sourced from the same units-scaled value computed at click time (no second getSceneUnits call needed); idempotent.
+  - **Files**: `hooks/canvas/useTextCreationTool.ts` (MOD — `patchZeroHeightRuns` helper + onCommit patch), `hooks/canvas/__tests__/useTextCreationTool-scene-units.test.tsx` (MOD — 2 new tests).
+
 - **2026-05-19 — Phase 13 COMPLETE — Ribbon Text scene-units awareness**.
   - **Symptom**: After importing a non-mm DXF (typically meters) through the Wizard, the Ribbon Home → "Text" tool produced text that filled most of the canvas (~1000× too big), while native imported texts and DIMENSION text rendered correctly. Identical regression with the Ribbon dimension tool — that path tracked separately in **ADR-362 Round 5**.
   - **Root cause**: `useTextCreationTool.makeEmptyTextNode()` hardcoded `height: 2.5` as a literal. This value is `paper-mm` by CAD convention, but the TEXT entity stores its height in **scene-world units**. When the active level was authored in meters, the renderer dutifully treated `2.5` as 2.5 m (= 2500 mm equivalent) → huge. Native DXF texts didn't suffer because the parser had already baked the source's world-unit height into each TEXT.

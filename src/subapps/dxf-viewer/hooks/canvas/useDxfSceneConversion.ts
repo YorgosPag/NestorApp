@@ -39,6 +39,11 @@ import { resolveEntityLayerName, setLayers as setLayerStoreLayers } from '../../
 // so Ribbon-created dimensions inherit the source DXF's text/arrow sizes
 // instead of falling back to the ISO_129 built-in defaults.
 import { registerImportedDimStyles } from '../../systems/dimensions/dim-style-importer';
+// ADR-362 R6 — always resolve units via heuristic so DXFs without $INSUNITS
+// (scene.units=undefined) get the correct 'm'/'cm' label instead of falling
+// back to DxfRenderer's `?? 'mm'` default, which makes DimensionRenderer apply
+// no mmToSceneUnits conversion and render dim text at 2.5 world-units (= 2.5m).
+import { resolveSceneUnits } from '../../utils/scene-units';
 import { UI_COLORS } from '../../config/color-config';
 import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
 import { dwarn } from '../../debug';
@@ -375,11 +380,15 @@ export function useDxfSceneConversion({
       // ADR-358 Phase 9E-5 — id-first primary; name-keyed layers as legacy fallback.
       layersById: currentScene?.layersById,
       bounds: currentScene?.bounds ?? null,
-      // ADR-362 Round 5 — forward active scene units so DimensionRenderer can
+      // ADR-362 Round 5+6 — forward active scene units so DimensionRenderer can
       // convert paper-mm DIMSTYLE values (dimtxt, dimasz, dimgap) → world units
-      // before applying view scale. Without this, meters/cm scenes render dim
-      // text + arrows at the world-unit size of the paper-mm number (huge).
-      units: currentScene?.units,
+      // before applying view scale. `?? resolveSceneUnits` (not bare .units) so
+      // DXFs without $INSUNITS (scene.units=undefined) still get the correct
+      // heuristic-derived unit ('m'/'cm') instead of DxfRenderer's `?? 'mm'`.
+      // When the parser DID set units (including 'mm'), trust it directly —
+      // running resolveSceneUnits on 'mm' re-triggers the bounds heuristic and
+      // can mis-classify small mm drawings as 'm' (regression: invisible text).
+      units: currentScene?.units ?? resolveSceneUnits(currentScene),
     };
   }), [currentScene]);
 

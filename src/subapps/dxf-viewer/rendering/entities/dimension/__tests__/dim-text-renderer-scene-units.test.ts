@@ -165,6 +165,23 @@ describe('renderDimensionText — paper-mm DIMTXT → world units (ADR-362 Round
     expect(px).toBeCloseTo(5, 4);
   });
 
+  it('R6 regression: m-scene text is 1000× smaller than mm-scene at same view scale', () => {
+    // Guards against useDxfSceneConversion forwarding raw scene.units (possibly
+    // undefined) instead of resolveSceneUnits() — which would make DxfRenderer
+    // fall back to 'mm', rendering 2.5 world-units of text in a meters scene.
+    const shared = {
+      entity: makeEntity(), geometry: makeLinearGeometry(), style: makeStyle(),
+      transform: { scale: 1, offsetX: 0, offsetY: 0 },
+      viewport: { width: 800, height: 600 }, layerColour: '#888',
+    };
+    const { ctx: ctxMm, calls: callsMm } = makeCtxSpy();
+    const { ctx: ctxM, calls: callsM } = makeCtxSpy();
+    renderDimensionText(ctxMm, { ...shared, sceneUnits: 'mm' });
+    renderDimensionText(ctxM,  { ...shared, sceneUnits: 'm' });
+    const ratio = extractFontHeight(callsMm[0].font) / extractFontHeight(callsM[0].font);
+    expect(ratio).toBeCloseTo(1000, 2); // mm/m = 1 / 0.001 = 1000
+  });
+
   it('does NOT double-apply the multiplier when transform scale is unit', () => {
     // m scene with view scale = 1 px/m means a 2.5 mm text should render at
     // 2.5 mm × 0.001 m/mm × 1 px/m = 0.0025 px (microscopic — but math correct).

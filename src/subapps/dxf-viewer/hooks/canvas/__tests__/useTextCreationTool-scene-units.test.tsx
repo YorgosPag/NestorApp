@@ -136,6 +136,79 @@ describe('useTextCreationTool — scene-units awareness (ADR-344 Phase 13)', () 
     }
   });
 
+  it('R6: patches height:0 runs (TipTap mark loss) with units-scaled default', () => {
+    // Simulates the bug: TipTap drops the fontHeight mark for empty initial
+    // runs, so newly-typed text inherits height:0 from defaultStyle().
+    // patchZeroHeightRuns must substitute the units-aware default at commit.
+    let capturedNode: DxfTextNode | null = null;
+    const { result } = renderTool('m', (cmd) => {
+      capturedNode = (cmd as CapturedCommand)._params.textNode;
+    });
+
+    act(() => { result.current.handleCanvasClick({ x: 0, y: 0 }); });
+    const state = result.current.creatingState!;
+    const initialRun = state.initial.paragraphs[0].runs[0];
+
+    act(() => {
+      result.current.onCommit({
+        ...state.initial,
+        paragraphs: [{
+          ...state.initial.paragraphs[0],
+          runs: [{
+            text: 'hello',
+            style: {
+              ...(initialRun as { style: { height: number } }).style,
+              height: 0, // simulated TipTap mark loss
+            },
+          }],
+        }],
+      } as DxfTextNode);
+    });
+
+    expect(capturedNode).not.toBeNull();
+    const run = capturedNode!.paragraphs[0].runs[0];
+    if ('text' in run) {
+      expect(run.style.height).toBeCloseTo(0.0025, 6); // 2.5 * mmToSceneUnits('m')
+    } else {
+      throw new Error('Expected TextRun');
+    }
+  });
+
+  it('R6: preserves non-zero height — patch does not overwrite explicit value', () => {
+    let capturedNode: DxfTextNode | null = null;
+    const { result } = renderTool('m', (cmd) => {
+      capturedNode = (cmd as CapturedCommand)._params.textNode;
+    });
+
+    act(() => { result.current.handleCanvasClick({ x: 0, y: 0 }); });
+    const state = result.current.creatingState!;
+    const initialRun = state.initial.paragraphs[0].runs[0];
+
+    act(() => {
+      result.current.onCommit({
+        ...state.initial,
+        paragraphs: [{
+          ...state.initial.paragraphs[0],
+          runs: [{
+            text: 'hello',
+            style: {
+              ...(initialRun as { style: { height: number } }).style,
+              height: 0.005, // explicit non-zero — must NOT be replaced
+            },
+          }],
+        }],
+      } as DxfTextNode);
+    });
+
+    expect(capturedNode).not.toBeNull();
+    const run = capturedNode!.paragraphs[0].runs[0];
+    if ('text' in run) {
+      expect(run.style.height).toBeCloseTo(0.005, 6);
+    } else {
+      throw new Error('Expected TextRun');
+    }
+  });
+
   it('falls back to mm when getSceneUnits is omitted (back-compat)', () => {
     const container = makeContainerStub();
     const { result } = renderHook(() =>
