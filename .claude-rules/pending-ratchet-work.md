@@ -1,9 +1,47 @@
 # Pending Ratchet Work — Live Checklist
 
 **STATUS: ACTIVE**
-**Last updated:** 2026-05-15 (ADR-345 Fasi 6.1 + 7 + 8-partial completate)
+**Last updated:** 2026-05-19 (ADR-365 Phase 0 deployed, baseline reality 3,659/440)
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
 **Purpose:** Agent-facing live checklist. Se STATUS = ALL_DONE → salta il resto. Se STATUS = ACTIVE → leggi e ricorda a Giorgio.
+
+---
+
+## 🚨🚨🚨 ΥΠΟΧΡΕΩΤΙΚΗ ΑΝΑΓΝΩΣΗ — ΚΑΘΕ AGENT / DEVELOPER ΣΕ ΚΑΘΕ SESSION 🚨🚨🚨
+
+### ADR-365 — Tailwind raw palette ratchet: τι ΠΡΕΠΕΙ να ξέρεις πριν αγγίξεις κώδικα
+
+**Πραγματική βάση (2026-05-19): 3.659 violations σε 440 αρχεία.**
+Αρχική εκτίμηση ADR-365 ήταν 249/65 — λάθος, γιατί μέτρησε **μόνο** `hover:bg-*`. Το CHECK 3.26 μετράει όλη την επιφάνεια (bg/text/border/ring/fill/stroke × 22 παλέτες × 11 αποχρώσεις × 6 state prefixes × `dark:`).
+
+### Τι ΑΠΑΓΟΡΕΥΕΤΑΙ πλέον (zero tolerance)
+
+Σε ΟΠΟΙΟΔΗΠΟΤΕ νέο ή αγγιγμένο αρχείο **εκτός allowlist** (`src/design-system/`, `src/styles/design-tokens/`, `tailwind.config.ts`, κλπ. — βλ. `.ssot-registry.json` → `tailwind-hardcoded-palette.allowlist`):
+
+❌ ΟΧΙ `hover:bg-amber-100`, `text-red-600`, `dark:bg-slate-800`, `border-blue-300`, `ring-emerald-500`, κλπ.
+❌ ΟΧΙ `dark:` prefix σε consumer files — semantic tokens είναι ήδη theme-aware.
+
+### Τι ΧΡΗΣΙΜΟΠΟΙΕΙΣ αντί γι' αυτά
+
+✅ **shadcn tokens** (παντού όπου ταιριάζει): `bg-background`, `bg-card`, `bg-muted`, `bg-accent`, `bg-destructive`, `bg-primary`, `text-foreground`, `text-muted-foreground`, `text-destructive`, `border-border`, `border-ring`, `ring-ring`.
+✅ **CSS vars για status states**: `bg-[hsl(var(--bg-success))]`, `bg-[hsl(var(--bg-error))]`, `bg-[hsl(var(--bg-warning))]`, `bg-[hsl(var(--bg-info))]` (και με `/40` opacity για subtle).
+✅ **COLOR_BRIDGE** (`src/design-system/color-bridge.ts`) για ώριμα mappings.
+✅ **Mapping table** πλήρης: ADR-365 §3.1.
+
+### Boy Scout Rule (ADR-365 §7.2 + N.0.2)
+
+**ΟΤΑΝ αγγίζεις αρχείο για άλλο λόγο**: αν περιέχει raw palette utilities από τη baseline, καθάρισέ τα μαζί στο ίδιο commit. **Δεν χρειάζεται να καθαρίσεις τα πάντα — όσα μπορείς εύκολα.** Το ratchet θα ξαναπροσαρμοστεί προς τα κάτω.
+
+### Πώς δουλεύει το ratchet (CHECK 3.26)
+
+- **Νέο αρχείο**: zero tolerance — οποιοδήποτε raw palette utility μπλοκάρει το commit.
+- **Υπάρχον αρχείο**: μπορεί να έχει ίδιο ή λιγότερο count από το baseline. Πάει πάνω = block.
+- **Allowlist αρχείο**: εξαιρείται (design-system, tokens, brand-map, κλπ).
+- **Εντολές**: `npm run tailwind-palette:audit` (full scan), `npm run tailwind-palette:baseline` (refresh μετά cleanup).
+
+### Πλάνο cleanup (Phases 1-8)
+
+Αρχικά εκτιμήθηκαν ~5h × 8 φάσεις. **Πραγματικά θα πάρει 30-50h** λόγω του 14.7x μεγαλύτερου baseline. Η στρατηγική παραμένει: per-domain atomic commits + Boy Scout. **Δεν είναι production bug** — είναι θέμα συντήρησης / theme-consistency / dark-mode.
 
 ---
 
@@ -65,7 +103,7 @@ Discovered 2026-05-19 (hover audit follow-up). ADR: `docs/centralized-systems/re
 
 **Status:** PROPOSED — αναμένει Phase 0 implementation. Per-phase handoff απαιτείται πριν από κάθε νέα session.
 
-- [ ] **Phase 0 — Infrastructure** (~1h) — ratchet script + `.ssot-registry.json` module + baseline file + pre-commit hook + npm scripts
+- [x] **Phase 0 — Infrastructure** ✅ 2026-05-19 — ratchet script (`scripts/check-tailwind-palette-ratchet.js`), `.ssot-registry.json` module `tailwind-hardcoded-palette` (Tier 2, 15 allowlist entries), `.tailwind-palette-baseline.json` (3,659 violations / 440 files — actual baseline revised from estimate 249/65), CHECK 3.26 wired into `scripts/run-checks-parallel.js` (worker_thread), npm scripts `tailwind-palette:{audit,report,baseline}`. Smoke 1-5 PASS. Hook latency ~0.73s staged / ~3.4s full.
 - [ ] **Phase 1 — DXF Viewer** (~1.5h, ~17 files) — grip menus, wall/stair/dimensions panels, text-toolbar/templates/dictionary, mirror/draggable overlays, statusbar, floorplan-background, prompt-dialog
 - [ ] **Phase 2 — Procurement + Vendor Portal** (~30min, ~9 files)
 - [ ] **Phase 3 — Accounting** (~20min, ~3 files)
@@ -75,7 +113,7 @@ Discovered 2026-05-19 (hover audit follow-up). ADR: `docs/centralized-systems/re
 - [ ] **Phase 7 — Design System + Showcase + Sales + Geo-canvas** (~45min, ~8 files)
 - [ ] **Phase 8 — Closure** (~20min) — baseline → 0, ADR APPROVED, changelog, pending-ratchet entry remove
 
-Initial baseline: ~249 violations / ~65 consumer files (post-exemption). Target: 0. Mapping table + exempt SSoT list στο ADR-365 §3.1 + §2.3.
+Initial baseline (actual, 2026-05-19): **3,659 violations / 440 files** (revised from initial estimate 249/65 — original audit was hover-only; CHECK 3.26 covers full §3.2 surface). Target: 0. Mapping table + exempt SSoT list στο ADR-365 §3.1 + §2.3. **Phase 1-8 estimates likely under-scoped** — re-baseline + revise hours after Phase 1 lands.
 
 ---
 
@@ -140,3 +178,4 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 | 2026-05-19 | BIM renderGrips centralization DONE (Boy Scout N.0.2). `protected finalizeRender(entity, options)` aggiunta a `BaseEntityRenderer`. 7 BIM renderers (`WallRenderer`, `ColumnRenderer`, `BeamRenderer`, `OpeningRenderer`, `SlabOpeningRenderer`, `SlabRenderer`, `StairRenderer`) ora chiamano `this.finalizeRender()`. Bug fix bonus: `finalizeRendering` ora passa `options` a `renderGrips`. ADR-363 changelog aggiornato. |
 | 2026-05-19 | ADR-183 Phase C completata. Cancellati `hooks/useDxfGripInteraction.ts` (451 righe) + `hooks/grips/useGripSystem.ts` (387 righe), entrambi `@deprecated` dal 2026-02-16 con zero function call-sites. Types migrati inline in `hooks/grips/unified-grip-types.ts` (canonical SSoT). Aggiunta nuova voce Boy Scout: `canvas-mouse-types.ts:19-89` duplicate grip types (~30min). ADR-183 changelog aggiornato. |
 | 2026-05-19 | ADR-365 Tailwind Semantic Palette Enforcement created (Proposed). Hover audit revealed 249 raw palette violations σε 86 files (από τα οποία ~21 SSoT exempt → ~65 consumer files). Plan: 9 phases (Phase 0 infrastructure + Phases 1-8 per-domain migration + Phase 8 closure). Per-session handoff απαιτείται. |
+| 2026-05-19 | ADR-365 Phase 0 DONE. Infrastructure deployed: ratchet script + SSoT registry module (Tier 2) + baseline + CHECK 3.26 in parallel orchestrator + npm scripts. Actual baseline 3,659/440 (revised from 249/65 — original audit was hover-only). Smoke 1-5 PASS. Hook latency ~0.73s staged. |

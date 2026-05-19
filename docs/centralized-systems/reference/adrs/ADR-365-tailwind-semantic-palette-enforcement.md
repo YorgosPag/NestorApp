@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟡 **PROPOSED** 2026-05-19 — Phased migration plan, awaits Phase 0 implementation |
+| **Status** | 🟢 **PHASE 0 DONE** 2026-05-19 — Ratchet infrastructure deployed (CHECK 3.26). Awaits Phase 1 (DXF Viewer subapp). Actual baseline: **3,659 violations / 440 files** (revised from initial estimate 249/65 — original audit was hover-only) |
 | **Date** | 2026-05-19 |
 | **Category** | Design System — Theming & Color Tokens |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-365-tailwind-semantic-palette-enforcement.md` |
@@ -465,3 +465,4 @@ Grep for violations in this phase's files. Confirm count matches baseline delta.
 | Date | Change |
 |------|--------|
 | 2026-05-19 | ADR created (Proposed). Hover audit revealed 249 violations / 86 files. Plan: Phase 0 infrastructure + Phases 1-8 per-domain migration. Status: awaits Phase 0 implementation. |
+| 2026-05-19 | **Phase 0 DONE.** Infrastructure deployed: (a) `scripts/check-tailwind-palette-ratchet.js` (3 modes: default ratchet, `--all`/`--report` audit, `--baseline` regen); (b) `.ssot-registry.json` module `tailwind-hardcoded-palette` (Tier 2, 15 allowlist entries from §2.3); (c) `.tailwind-palette-baseline.json` generated; (d) CHECK 3.26 wired into `scripts/run-checks-parallel.js` (worker_thread, runs when `srcTsFiles.length > 0`); (e) npm scripts `tailwind-palette:audit` / `:report` / `:baseline`. **Baseline reality check:** initial scan returned **3,659 violations / 440 files** vs ADR §1.2 estimate of 249/86. Root cause: original hover audit was hover-only and counted `hover:bg-*` patterns; this regex covers the full §3.2 surface (bg/text/border/ring/fill/stroke × 22 palettes × 11 shades × 6 state prefixes × dark:). Per-domain phase estimates (1-8) likely under-scoped — re-baseline expected after Phase 1 lands. Hook latency on staged files: ~0.73s (cold Node start; amortized in worker_thread pool). Full audit: ~3.4s. Smoke tests 1-5 PASS. |

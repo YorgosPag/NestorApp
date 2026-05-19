@@ -3460,6 +3460,34 @@
       "addedDate": "2026-05-19",
       "addedByAdr": "ADR-363",
       "tier": 3
+    },
+    "tailwind-hardcoded-palette": {
+      "ssotFile": "src/design-system/color-bridge.ts",
+      "description": "ADR-365 (2026-05-19): Tailwind raw palette utilities (bg|text|border|ring|fill|stroke)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(50..950) and their dark:/hover:/focus:/active:/group-hover:/peer-hover: variants are FORBIDDEN in consumer files. Use semantic tokens from COLOR_BRIDGE (src/design-system/color-bridge.ts), semanticColors (src/design-system/semantics/colors.ts), or shadcn tokens (muted/accent/destructive/primary/ring/background/card/foreground/muted-foreground). For status states use CSS vars: bg-[hsl(var(--bg-success|error|warning|info))]. Dark-mode prefix is unnecessary on consumer files — semantic tokens are theme-aware via CSS vars. Enforced by CHECK 3.26 (scripts/check-tailwind-palette-ratchet.js). Baseline: .tailwind-palette-baseline.json. Phase 0 ratchet only — per-domain migration (Phases 1-8) drives baseline → 0.",
+      "forbiddenPatterns": [
+        "(hover:|focus:|active:|group-hover:|peer-hover:)?(bg|text|border|ring|fill|stroke)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(50|100|200|300|400|500|600|700|800|900|950)",
+        "dark:(hover:|focus:|active:)?(bg|text|border|ring|fill|stroke)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(50|100|200|300|400|500|600|700|800|900|950)"
+      ],
+      "allowlist": [
+        "src/design-system/color-bridge.ts",
+        "src/design-system/tokens/colors.ts",
+        "src/design-system/semantics/colors.ts",
+        "src/styles/design-tokens/modules/brand-map.ts",
+        "src/styles/design-tokens/modules/borders.ts",
+        "src/styles/design-tokens/canvas/",
+        "src/subapps/procurement/config/comparison-factor-colors.ts",
+        "src/subapps/dxf-viewer/config/modal-colors.ts",
+        "src/subapps/dxf-viewer/config/panel-tokens.ts",
+        "src/components/ui/effects/hover-effects.ts",
+        "src/components/ui/effects/hover-text-effects.ts",
+        "src/components/ui/effects/form-effects.ts",
+        "src/components/ui/effects/social-effects.ts",
+        "src/subapps/dxf-viewer/ui/effects/index.ts",
+        "tailwind.config.ts"
+      ],
+      "addedDate": "2026-05-19",
+      "addedByAdr": "ADR-365",
+      "tier": 2
     }
   }
 }
