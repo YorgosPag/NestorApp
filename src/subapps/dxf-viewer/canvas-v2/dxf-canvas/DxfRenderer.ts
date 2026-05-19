@@ -16,12 +16,10 @@ import { resolveEntityLayerName, getLayer as getLayerStoreLayer } from '../../st
 // ADR-358 §5.6.bis Phase 10 — Layer Isolate runtime effects (zero-cost passthrough when inactive).
 import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsStore';
 import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver';
-// ADR-362 Phase C1 — DimensionLookup builder for baseline/continued parent resolution.
-import type { DimensionEntity } from '../../types/dimension';
-import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
-// ADR-363 Phase 3.7 — slab-opening per-frame map for SlabRenderer boolean cutouts.
-import type { DxfSlabOpening } from './dxf-types';
-import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
+// ADR-363 Phase 2 (deferred pipeline) — DxfOpening unwrap in toEntityModel().
+import type { DxfOpening } from './dxf-types';
+// Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
+import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall } from './dxf-renderer-frame-builders';
 function mapDxfLineTypeToEnterprise(dxfLineType: string | undefined): 'solid' | 'dashed' | 'dotted' | 'dashdot' {
   const mapping: Record<string, 'solid' | 'dashed' | 'dotted' | 'dashdot'> = {
     'solid': 'solid',
@@ -97,8 +95,11 @@ export class DxfRenderer {
     // ADR-362 Phase C1 — build the per-frame DimensionLookup map once and
     // forward it to the dimension leaf. Cheap O(n) scene scan; only dim
     // entities land in the map (typically <100 per scene).
-    this.entityComposite.setDimensionLookup(this.buildDimensionLookup(scene.entities));
-    this.entityComposite.setSlabOpeningsBySlab(this.buildSlabOpeningsBySlab(scene.entities));
+    this.entityComposite.setDimensionLookup(buildDimensionLookup(scene.entities));
+    this.entityComposite.setSlabOpeningsBySlab(buildSlabOpeningsBySlab(scene.entities));
+    // ADR-363 Phase 2 (deferred pipeline) — feed per-frame opening→wall index so
+    // WallRenderer can punch boolean cutouts through wall fills.
+    this.entityComposite.setOpeningsByWall(buildOpeningsByWall(scene.entities));
 
     // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): bitmap cache passes skipInteractive=true
     // to render entities in pure normal-state. Interactive overlays are drawn separately.
@@ -360,6 +361,12 @@ export class DxfRenderer {
         const so = entity.slabOpeningEntity;
         return { ...base, type: 'slab-opening', kind: so.kind, params: so.params, geometry: so.geometry, validation: so.validation } as unknown as Entity;
       }
+      case 'opening': {
+        // ADR-363 Phase 2 (deferred pipeline) — unwrap DxfOpening: OpeningRenderer reads
+        // geometry.outline + kind overlay; WallRenderer uses per-frame openingsByWall map.
+        const o = (entity as DxfOpening).openingEntity;
+        return { ...base, type: 'opening', kind: o.kind, params: o.params, geometry: o.geometry, validation: o.validation } as unknown as Entity;
+      }
       case 'xline':
         return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
       case 'ray':
@@ -370,6 +377,8 @@ export class DxfRenderer {
       }
     }
   }
+
+  // Per-frame index builders extracted to ./dxf-renderer-frame-builders.ts.
 
   /** ADR-358 §G7 Phase 6 — ByLayer/ByBlock style resolution; falls back to literal values when no layersById. */
   private resolveStyleForRender(
@@ -410,35 +419,6 @@ export class DxfRenderer {
       },
       entity,
     );
-  }
-
-  /** ADR-363 Phase 3.7 — build per-frame Map<slabId, SlabOpeningEntity[]> for SlabRenderer cutouts. */
-  private buildSlabOpeningsBySlab(entities: readonly DxfEntityUnion[]): Map<string, SlabOpeningEntity[]> {
-    const m = new Map<string, SlabOpeningEntity[]>();
-    for (const e of entities) {
-      if (e.type !== 'slab-opening') continue;
-      const so = (e as DxfSlabOpening).slabOpeningEntity;
-      const arr = m.get(so.params.slabId) ?? [];
-      arr.push(so);
-      m.set(so.params.slabId, arr);
-    }
-    return m;
-  }
-
-  /**
-   * ADR-362 Phase C1 — build the per-frame DimensionLookup map for chained
-   * dim resolution (baseline / continued). O(n) scan; only `'dimension'`
-   * entities land in the map (typically <100 per scene). Returned closure is
-   * O(1) lookup at render time.
-   */
-  private buildDimensionLookup(entities: readonly DxfEntityUnion[]): DimensionLookup {
-    const map = new Map<string, DimensionEntity>();
-    for (const e of entities) {
-      if (e.type === 'dimension') {
-        map.set(e.dimensionEntity.id, e.dimensionEntity);
-      }
-    }
-    return (id: string) => map.get(id);
   }
 
   /**

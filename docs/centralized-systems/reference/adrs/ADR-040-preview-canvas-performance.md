@@ -71,6 +71,22 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-19 — ADR-363 Phase 2 deferred pipeline interop: `DxfRenderer.render()` per-frame openings→wall map + Boy-Scout split
+
+`DxfRenderer.render()` now feeds the per-frame opening→wall index into `EntityRendererComposite` so `WallRenderer` can punch boolean cutouts through wall fills for hosted openings. Touch surface in `DxfRenderer.ts`:
+
+- New `case 'opening'` branch in `toEntityModel()` (unwrap `DxfOpening` → `OpeningEntity`).
+- New per-frame call `composite.setOpeningsByWall(buildOpeningsByWall(scene.entities))` right next to the already-existing `setDimensionLookup` / `setSlabOpeningsBySlab` calls.
+- Boy-Scout file-size split (Google-SRP, 500-line limit): the three pure per-frame index builders (`buildDimensionLookup`, `buildSlabOpeningsBySlab`, `buildOpeningsByWall`) extracted from `DxfRenderer.ts` (523 → 477 lines) into a new sibling module `canvas-v2/dxf-canvas/dxf-renderer-frame-builders.ts`. Pure functions — no `this`, no React, no store subscriptions.
+
+**Cardinal rule compliance**:
+- **Rule 1 (no orchestrator subscriptions)**: untouched — `DxfRenderer` is already a non-React orchestrator driven by the bitmap-cache / live-canvas effect; no React subscriptions added.
+- **Rule 2 (getter-based event reads)**: N/A — per-frame builders read straight from `scene.entities` passed into `render()`.
+- **Rule 3 (bitmap cache key untouched)**: respected — `dxf-bitmap-cache.ts` not modified; opening identity does not enter the cache key.
+- **Rule 4 (≤1 canvas element / ≤2 high-freq hooks per leaf)**: N/A for the orchestrator; downstream `WallRenderer` leaf already complies (single composite slot, no new hooks).
+
+Bundled atomically with the ADR-363 Phase 2 wiring (dxf-types.ts `DxfOpening` wrapper + useDxfSceneConversion.ts `case 'opening'` + DxfRenderer.ts pipeline call) so CHECK 6B passes.
+
 ### 2026-05-19 — ADR-363 Phase A interop: BIM snap description propagation through `canvas-layer-stack-leaves`
 
 `SnapIndicatorSubscriber` (one of the micro-leaves) now forwards `snapResult.snapPoint?.description` to `SnapIndicatorOverlay` so the overlay can resolve the BIM-specific i18n label (`bim-wall` → "Επί άξονα τοίχου", `bim-slab` → "Επί ακμής πλάκας", `bim-opening` → "Επί παραστάτη ανοίγματος"). The subscriber keeps its single high-frequency hook (snap-result subscription); no extra subscriptions added.

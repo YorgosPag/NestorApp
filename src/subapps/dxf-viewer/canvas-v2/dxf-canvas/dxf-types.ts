@@ -11,13 +11,15 @@ import type { DimensionEntity } from '../../types/dimension';
 // ADR-363 Phase 3.7 — BIM slab / slab-opening wrappers for DXF render pipeline.
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
+// ADR-363 Phase 2 (deferred pipeline) — opening wrapper for DXF render pipeline.
+import type { OpeningEntity } from '../../bim/types/opening-types';
 // ADR-359 Phase 11 — construction line wrappers for grip computation pipeline.
 import type { XLineEntity, RayEntity } from '../../types/entities';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'xline' | 'ray';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'xline' | 'ray';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -165,6 +167,12 @@ export interface DxfSlabOpening extends DxfEntity {
   slabOpeningEntity: SlabOpeningEntity;
 }
 
+/** ADR-363 Phase 2 (deferred pipeline) — DxfOpening wrapper. OpeningRenderer renders from `openingEntity.geometry`. WallRenderer uses per-frame `openingsByWall` map for boolean cutouts. */
+export interface DxfOpening extends DxfEntity {
+  type: 'opening';
+  openingEntity: OpeningEntity;
+}
+
 /** ADR-359 Phase 11 — XLine wrapper for grip computation pipeline. */
 export interface DxfXLine extends DxfEntity {
   type: 'xline';
@@ -177,7 +185,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfXLine | DxfRay;
 
 // === DXF SCENE ===
 export interface DxfScene {

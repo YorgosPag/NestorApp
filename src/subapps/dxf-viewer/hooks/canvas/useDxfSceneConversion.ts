@@ -21,11 +21,12 @@ import type { DxfScene, DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity, Entity } from '../../types/entities';
-import { isArrayEntity, isStairEntity, isSlabEntity, isSlabOpeningEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import { isArrayEntity, isStairEntity, isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isXLineEntity, isRayEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../types/stair';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
+import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { PathParams } from '../../systems/array/types';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
 import { extractFlatText } from '../../utils/text-node-utils';
@@ -274,6 +275,14 @@ function convertEntity(entity: SceneEntity, layers: SceneLayers, layersById?: Sc
       // dashed outline + kind annotation over the host slab cutout.
       return isSlabOpeningEntity(entity)
         ? { ...base, type: 'slab-opening' as const, slabOpeningEntity: entity as SlabOpeningEntity } as DxfEntityUnion
+        : null;
+    }
+    case 'opening': {
+      // ADR-363 Phase 2 (deferred pipeline) — wrap OpeningEntity. OpeningRenderer
+      // draws outline + kind overlay; per-frame openingsByWall map drives WallRenderer
+      // boolean cutouts so openings visually punch through wall fills.
+      return isOpeningEntity(entity)
+        ? { ...base, type: 'opening' as const, openingEntity: entity as OpeningEntity } as DxfEntityUnion
         : null;
     }
     case 'xline': {
