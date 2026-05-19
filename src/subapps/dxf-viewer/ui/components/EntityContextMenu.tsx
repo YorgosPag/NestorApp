@@ -27,7 +27,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import styles from './DrawingContextMenu.module.css';
 import { cn } from '@/lib/utils';
-import { JoinIcon, DeleteIcon, CancelIcon } from '../icons/MenuIcons';
+import { JoinIcon, DeleteIcon, CancelIcon, SplitWallIcon } from '../icons/MenuIcons';
 
 // ===== TYPES =====
 
@@ -60,6 +60,9 @@ interface EntityContextMenuProps {
   onLayerOff?: () => void;
   onLayerFreeze?: () => void;
   onLayerLock?: () => void;
+  /** ADR-363 Phase 5.6 — shown only when a single wall is selected. */
+  canSplit?: boolean;
+  onSplit?: () => void;
 }
 
 // ===== MAIN COMPONENT =====
@@ -76,6 +79,8 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
   onLayerOff,
   onLayerFreeze,
   onLayerLock,
+  canSplit,
+  onSplit,
 }, ref) => {
   const { t } = useTranslation('dxf-viewer');
   const triggerRef = useRef<HTMLSpanElement>(null);
@@ -127,6 +132,11 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
     setIsOpen(false);
   }, [onLayerLock]);
 
+  const handleSplit = useCallback(() => {
+    onSplit?.();
+    setIsOpen(false);
+  }, [onSplit]);
+
   const showLayerCommands = !!(canApplyLayerCommands && (onLayerOff || onLayerFreeze || onLayerLock));
   const layerCommandsDisabled = !!isSystemLayer;
 
@@ -160,6 +170,16 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
           </span>
           <span className={styles.menuItemShortcut}>J</span>
         </DropdownMenuItem>
+
+        {canSplit && (
+          <>
+            <DropdownMenuSeparator className={styles.menuSeparator} />
+            <DropdownMenuItem className={styles.menuItem} onClick={handleSplit}>
+              <span className={styles.menuItemIcon}><SplitWallIcon /></span>
+              <span className={styles.menuItemLabel}>{t('contextMenu.entity.splitWall')}</span>
+            </DropdownMenuItem>
+          </>
+        )}
 
         {showLayerCommands && (
           <>

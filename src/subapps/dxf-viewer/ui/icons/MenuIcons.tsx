@@ -231,6 +231,19 @@ export function DeleteIcon({ className, color }: IconProps) {
 }
 
 /**
+ * Split wall icon (wall rectangle split by a vertical dashed line)
+ * Used in: EntityContextMenu for the BIM wall-split action
+ */
+export function SplitWallIcon({ className, color }: IconProps) {
+  return (
+    <SvgWrapper className={className} color={color}>
+      <rect x="3" y="9" width="18" height="6" rx="1" />
+      <line x1="12" y1="7" x2="12" y2="17" strokeDasharray="2,2" />
+    </SvgWrapper>
+  );
+}
+
+/**
  * Flip arc direction icon (two opposing arcs with arrows)
  * Used in: DrawingContextMenu for arc tools (arc-3p, arc-cse, arc-sce)
  *

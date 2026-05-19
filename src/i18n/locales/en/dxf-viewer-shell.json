@@ -966,6 +966,7 @@
       "wallEditor": {
         "height": "Height",
         "thickness": "Thickness",
+        "split": "Split",
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete wall? This action cannot be undone.",

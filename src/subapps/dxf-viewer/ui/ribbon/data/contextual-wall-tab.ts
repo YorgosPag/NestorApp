@@ -183,6 +183,16 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
               type: 'simple',
               size: 'small',
               command: {
+                id: 'wall.split',
+                labelKey: 'ribbon.commands.wallEditor.split',
+                icon: 'bim-wall-split',
+                commandKey: 'wall-split',
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
                 id: 'wall.close',
                 labelKey: 'ribbon.commands.wallEditor.close',
                 icon: 'select',

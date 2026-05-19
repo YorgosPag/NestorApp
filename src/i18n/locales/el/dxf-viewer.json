@@ -117,6 +117,9 @@
   },
   "contextMenu": {
     "flipArc": "Αντιστροφή",
+    "entity": {
+      "splitWall": "Χωρισμός Τοίχου"
+    },
     "snapOverride": {
       "title": "Προσωρινή Εστίαση Snap",
       "from": "Από Σημείο",

@@ -205,6 +205,7 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'bim-slab-opening': return <SquareDashed width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-column': return <Columns3 width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-beam': return <RectangleHorizontal width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'bim-wall-split': return <Scissors width={sizePx[size]} height={sizePx[size]} className={className} />;
     default: return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }
 };

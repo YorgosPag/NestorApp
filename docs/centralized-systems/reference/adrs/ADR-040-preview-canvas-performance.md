@@ -71,6 +71,12 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-19 — ADR-363 Phase 5.6 Ribbon+ContextMenu: `isWallEntity` import + `canSplit`/`onSplit` passthrough in `CanvasSection`
+
+`CanvasSection` adds: (1) `import { isWallEntity }` from `types/entities` for the context-menu wall-type guard; (2) `canSplit` prop computed inline via `props.currentScene.entities.find + isWallEntity` (pure derivation, no subscription); (3) `onSplit` callback that calls `props.onToolChange('wall-split')`. Zero new `useSyncExternalStore` subscriptions in orchestrator.
+
+**Cardinal rule compliance**: Rule 1 respected — type guard is a plain function call at render time, not a store subscription.
+
 ### 2026-05-19 — ADR-363 Phase 5.6 interop: Wall Split tool plumb in `CanvasSection` (zero new subscriptions)
 
 `CanvasSection` adds `wallSplitTool` to the `useModifyTools` destructure and forwards `{wallSplitIsActive, handleWallSplitClick}` to `useCanvasClickHandler` + `{handleWallSplitEscape, wallSplitIsActive}` to `useCanvasKeyboardShortcuts`. The high-frequency mouse-move path is owned by `useWallSplitTool` via `subscribeToImmediateWorldPosition` + a new module-level `WallSplitStore` (`useSyncExternalStore`-compatible, snapshot-stable, zero React state). `CanvasSection` itself acquires **no** new `useSyncExternalStore` subscription.

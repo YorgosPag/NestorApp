@@ -58,6 +58,7 @@ import EntityContextMenu, { type EntityContextMenuHandle } from '../../ui/compon
 import GuideContextMenu, { type GuideContextMenuHandle } from '../../ui/components/GuideContextMenu';
 import GuideBatchContextMenu, { type GuideBatchContextMenuHandle } from '../../ui/components/GuideBatchContextMenu';
 import type { ToolType } from '../../ui/toolbar/types';
+import { isWallEntity } from '../../types/entities';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
@@ -424,6 +425,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       <EntityContextMenu ref={entityMenuRef} selectedCount={selectedEntityIds.length}
         canJoin={entityJoinState.canJoin} joinResultLabel={entityJoinState.joinResultLabel}
         onJoin={() => entityJoinHook.joinEntities(selectedEntityIds)} onDelete={() => handleSmartDelete()} onCancel={() => entityMenuRef.current?.close()}
+        canSplit={selectedEntityIds.length === 1 && !!props.currentScene?.entities.find((x) => x.id === selectedEntityIds[0] && isWallEntity(x))} onSplit={() => { entityMenuRef.current?.close(); props.onToolChange?.('wall-split' as ToolType); }}
         {...(() => {
           // ADR-358 §5.6.bis Phase 10 — Layer click-driven commands.
           const firstId = selectedEntityIds[0];
@@ -435,9 +437,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           const layer = props.currentScene?.layersById?.[layerId];
           const isSystem = layer?.name === '0';
           // Lazy-require to avoid circular deps in CanvasSection.
-          return {
-            canApplyLayerCommands: true,
-            isSystemLayer: isSystem,
+          return { canApplyLayerCommands: true, isSystemLayer: isSystem,
             onLayerOff: () => {
               const { LayerOffCommand } = require('../../core/commands/layer');
               executeCommand(new LayerOffCommand({ layerId }));

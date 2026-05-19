@@ -117,6 +117,9 @@
   },
   "contextMenu": {
     "flipArc": "Reverse",
+    "entity": {
+      "splitWall": "Split Wall"
+    },
     "snapOverride": {
       "title": "Snap Override",
       "from": "From",
