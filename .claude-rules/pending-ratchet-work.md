@@ -83,21 +83,9 @@
 
 ---
 
-### 🔧 ADR-363 PHASE 7.2 FOLLOW-UP — useBimCopyTool clipboard wiring (priorità bassa, ~1h)
+### 🔧 ADR-363 PHASE 7.2 FOLLOW-UP — L-shape/T-shape ARM handedness on Mirror (low priority)
 
-Phase 7.2 CORE LANDED 2026-05-19. Mirror/Rotate ribbon tools (`useMirrorTool` + `useRotationTool`) ΗΔΗ wired and now BIM-aware via extended `MirrorEntityCommand` / `RotateEntityCommand`. Copy SSoT (`bim-copy-builder.ts`) + `BimCopyCommand` έτοιμα — ο dedicated `useBimCopyTool` hook για clipboard-style copy (translate delta από user pick → BimCopyCommand) δεν υπάρχει. Ribbon "Copy" button + `CO` shortcut emit `copy-selected` action αλλά κανένα handler αυτή τη στιγμή. UX flow πρέπει να αποφασιστεί ώστε να ταιριάζει με ADR-357 grip-context-menu Copy modifier (γνωστή υπαρκτή flow για grip-based copy).
-
-- [ ] Δημιούργησε `hooks/tools/useBimCopyTool.ts` με FSM `idle → awaiting-base-point → awaiting-target-point → execute → awaiting-base-point` (AutoCAD COPY pattern, continuous mode).
-- [ ] Wire `copy-selected` action: αν selection contains BIM entities → activate tool with `BimCopyCommand`. Mixed selection (BIM + non-BIM) → split: BIM via `BimCopyCommand`, non-BIM via existing grip-flow pipeline. CompoundCommand για single undo step.
 - [ ] L-shape / T-shape column ARM handedness flip on Mirror (currently NOT flipped — uncommon variant). Defer to dedicated column-mirror iteration.
-
----
-
-### 🪜 ADR-363 STAIR DOMAIN — bridge helpers cross-domain coupling follow-up (priorità bassa, ~1h)
-
-Discovered 2026-05-19 κατά Phase 0.5 closure. Όχι blocker.
-
-- [ ] **`ui/ribbon/hooks/bridge/stair-command-keys.ts` + `stair-param-helpers.ts` extract σε `bim/hooks/bridge/`** — Stair-specific ribbon bridge helpers ζουν ακόμα στο `ui/ribbon/hooks/bridge/`. Όταν μετακινήθηκαν τα 2 ζωντανά hooks σε `bim/hooks/` (Phase 0.5), δημιουργήθηκε cross-domain coupling: `bim/hooks/use-ribbon-stair-bridge.ts` importάρει `../../ui/ribbon/hooks/bridge/stair-command-keys` + `stair-param-helpers`. Καθαρότερη αρχιτεκτονική: τα stair-specific bridge helpers ανήκουν στο BIM domain. Move + import sweep + αν εμπλέκουν πιο γενικά ribbon types να μείνουν αυτά εκεί, να μετακινηθούν μόνο τα stair-specific.
 
 ---
 
@@ -200,6 +188,7 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 ## Changelog
 
 | Date       | Change |
+| 2026-05-19 | ADR-363 R1 DONE — `useBimCopyTool` (AutoCAD COPY FSM + full canvas wiring). ADR-363 R2 DONE — stair bridge helpers moved to `bim/hooks/bridge/`, cross-domain coupling fixed. Both removed from checklist. |
 | 2026-05-15 | ADR-345 Fasi 6.1 + 7 completate. Fase 8 parziale (colors rimossa, levels rimane per ora). |
 | 2026-05-12 | ADR-345 Fase 5.5 pending items aggiunti (findReplace/spellCheck/symbol comingSoon, commit chain ADR-344 Ph6+, Fasi 6/7/8). STATUS → ACTIVE. |
 | 2026-05-04 | ADR-233 CLOSED — tutti e 3 gli item già implementati nel codice (POST 409 route.ts:220-233, PATCH 409 building-update.handler.ts:104-119, BuildingListCard formatBuildingLabel, unit tests entity-code-config.test.ts). Ratchet era stale. |

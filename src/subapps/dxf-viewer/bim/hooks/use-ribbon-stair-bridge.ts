@@ -35,7 +35,7 @@ import {
   isStairRibbonKey,
   isStairRibbonStringKey,
   isStairVisibilityKey,
-} from '../../ui/ribbon/hooks/bridge/stair-command-keys';
+} from './bridge/stair-command-keys';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -51,7 +51,7 @@ import {
   readStairNumericField,
   patchStairStringParam,
   patchStairNumericParam,
-} from '../../ui/ribbon/hooks/bridge/stair-param-helpers';
+} from './bridge/stair-param-helpers';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,

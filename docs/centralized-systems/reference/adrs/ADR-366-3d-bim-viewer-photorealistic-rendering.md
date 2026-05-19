@@ -1947,10 +1947,230 @@ ADR-366 total estimate revised: **~179-212h** Phase 0-7 (από ~144-166h post-B
 
 ---
 
+### B.5 — Performance HUD — ✅ FULLY CLOSED 2026-05-19
+
+**Σκοπός**: Καθορισμός UX για το performance overlay (HUD) που δείχνει FPS, frame time, polygon count, draw calls, GPU memory, samples/sec (path tracer), και render mode indicator. 8 sub-questions Q1-Q8 — όλες κλειστές με industry-driven decisions. **Τελευταία ενότητα του Group B — Group B 5/5 ✅.**
+
+**Cross-references**: §9 Q3 tri-mode FSM (raster/preview/final), B.3.Q7 Floating3DPanel αριστερά (νέο tab για HUD toggle), B.4 PathTracerRenderer (samples/sec source), ADR-326 tenant scope (project_assets + νέο `performance_diagnostics` collection), ADR-040 micro-leaf compliance (HUD = leaf subscriber), `feedback_completeness_over_mvp.md` memory (FULL enterprise για export/diagnostic), `feedback_industry_standard_default.md` memory (BIM SaaS convergence = hidden default), `feedback_3d_mirror_2d_ssot.md` memory (annotated: εδώ 2D δεν έχει perf HUD pattern — B.5 ορίζει pattern από μηδέν, 2D μπορεί να το mirror αργότερα αν χρειαστεί).
+
+**Pending micro-decisions** — ✅ ALL RESOLVED 2026-05-19:
+- B.5.Q1: Default state ✅ RESOLVED — **Toggle στο menu, default OFF, ON με κουμπί** (industry σύγκλιση 6/8 BIM SaaS pattern)
+- B.5.Q2: Position ✅ RESOLVED — **Bottom-right** (Twinmotion/Chaos Vantage 2/8, με κάθετο offset 50px πάνω από zoom controls για συνύπαρξη)
+- B.5.Q3: Metrics ✅ RESOLVED — **Full diagnostic 10 metrics** (FPS + Frame time + Triangles + Vertices + Draw calls + Objects visible/total + GPU memory + CPU memory + Samples/sec + Render mode) — completeness_over_mvp
+- B.5.Q4: Per-mode visibility ✅ RESOLVED — **Per-mode adaptive** (auto-promotes σημαντικά metrics ανά mode — 4/8 industry path-tracer tools)
+- B.5.Q5: Warnings UI ✅ RESOLVED — **3-tier color coding** (🟢 πράσινο / 🟡 κίτρινο / 🔴 κόκκινο) με industry-median thresholds (4/8 pro tools)
+- B.5.Q6: Mini vs Expanded ✅ RESOLVED — **Toggle button μέσα στο HUD, default Expanded**, preference σε localStorage (συνδυασμός industry full-info 5/8 + Lumion/Enscape mini-only 2/8)
+- B.5.Q7: Export ✅ RESOLVED — **Full enterprise**: Copy stats JSON + Download .json+.png + Send diagnostic σε `performance_diagnostics` Firestore + screenshot σε Storage + super-admin notification (3/8 industry pro pattern V-Ray/Chaos/D5 + cloud-native Nestor extension)
+- B.5.Q8: Mobile/tablet ✅ RESOLVED — **Responsive**: Mini-only <1024px, full Expanded ≥1024px (extension πέρα από industry 7/8 desktop-only για ADR-326 tablet site visits)
+
+**Decisions Log (Γιώργος)** — B.5 ✅ FULLY CLOSED 8/8:
+
+| # | Ερώτηση | Απόφαση | Industry alignment |
+|---|---|---|---|
+| B.5.Q1 | Default state (always-on / opt-in toggle / dev-only / context-aware) | **Toggle στο menu, default OFF**. ON via checkbox/button στο Floating3DPanel Quality tab (REUSE B.3.Q7 panel). Καθαρή UX για παρουσιάσεις πελατών (zero clutter default), αρχιτέκτονες/engineers ενεργοποιούν με 1 click όταν χρειαστούν diagnostics. | Industry σύγκλιση 6/8 BIM SaaS pattern (Lumion/Twinmotion/D5/Enscape/Blender/V-Ray hidden + toggle). Always-on (stats.js + Chaos Vantage 2/8) απορρίπτεται — σπάει Nestor SaaS clean DNA, distraction σε client demos. Dev-only ?debug=1 απορρίπτεται (αρχιτέκτονες/engineers δεν μπορούν να debugάρουν χωρίς support call). Context-aware role-based απορρίπτεται (complex 2-state UX, zero industry precedent). |
+| B.5.Q2 | Position στην οθόνη | **Bottom-right** με κάθετο offset 50px πάνω από zoom controls (συνύπαρξη). Σταθερή θέση, peripheral vision-friendly. | Industry split: top-right 4/8 (D5/Lumion/Enscape/Blender), bottom-right 2/8 (Twinmotion/Chaos Vantage), top-left 1/8 (stats.js — συγκρούεται με Nestor's left Floating3DPanel B.3.Q7), bottom status 1/8 (V-Ray VFB embedded). Bottom-right επιλέχθηκε πάνω από top-right industry plurality — Γιώργος voted Twinmotion/Chaos pattern. Collision avoidance with zoom controls: vertical stack με ~50px offset, HUD πάνω από zoom. Floating-draggable απορρίπτεται (zero industry precedent, accidental-drag risk). |
+| B.5.Q3 | Metrics shown | **Full diagnostic 10 metrics**: Mode indicator + FPS + Frame time (ms) + Triangles + Vertices + Draw calls + Objects visible/total + GPU memory + CPU memory + Samples/sec (path tracer mode). | Industry universal FPS 7/8, GPU mem 5/8, Triangles 3/8, Draw calls 2/8, Samples/sec 4/8 (path tracer tools), Frame time 2/8, Render mode indicator 0/8 (νέο για Nestor — απαραίτητο γιατί έχουμε tri-mode FSM B.4). Full diagnostic συνδυάζει ALL tools' metrics — Twinmotion-grade geometry stats + Blender-grade vertex/object counts + V-Ray-grade sample tracking + stats.js memory + Chaos Vantage GPU monitoring. Justified per `feedback_completeness_over_mvp.md` rule. Minimal 3-metric (Lumion/Enscape pattern 2/8) απορρίπτεται (δεν εξηγεί ΓΙΑΤΙ κολλάει η σκηνή). User-selectable per-metric checkbox απορρίπτεται (settings UI complexity, zero industry precedent, overkill για debug tool). |
+| B.5.Q4 | Per-mode visibility | **Per-mode adaptive auto-highlight**. Ιδια 10 metrics πάντα παρόντα, αλλά το HUD auto-promotes (bold + position priority) τα σημαντικά metrics για το current render mode. **Raster**: FPS+Frame time bold, Samples/sec greyed `—`. **Preview**: Samples cur/total + Samples/sec bold, FPS=`—`, Triangles still visible. **Final**: ⏱ Time remaining + Samples cur/total + Samples/sec bold + progress bar `▰▰▰▱▱ 14%` sticky στο top, με auto-update από `PathTracerRenderer` progress hook. | Industry σύγκλιση 4/8 (V-Ray + Chaos Vantage + D5 + Blender — όλα τα path-tracer tools auto-adapt). Static (Twinmotion/Lumion/Enscape/stats.js 4/8) απορρίπτεται — χάνεις visual hierarchy σε κρίσιμες στιγμές. Manual mode-tab switch (zero industry precedent) απορρίπτεται — confusing dual-state (viewed mode vs actual mode). Hybrid (always + extras) απορρίπτεται — layout height jumps σπάνε spatial memory. |
+| B.5.Q5 | Warnings UI | **3-tier color coding** (🟢/🟡/🔴) με industry-median thresholds: **FPS** 🟢≥45 / 🟡 25-44 / 🔴<25, **Frame time** 🟢≤22ms / 🟡 22-40ms / 🔴>40ms, **Draw calls** 🟢≤1500 / 🟡 1500-3000 / 🔴>3000, **GPU memory** 🟢<60% / 🟡 60-85% / 🔴>85% capacity, **Triangles** 🟢<1M / 🟡 1M-3M / 🔴>3M. Pulse animation στην πρώτη εμφάνιση κόκκινου state (subtle attention grab — single 800ms cubic ease pulse, όχι recurring). REUSE existing theme tokens (`STATUS_OK/WARN/ERROR` palette), zero νέο palette — mirrors Nestor 2D status colors. | 4/8 pro-grade tools (D5 bars green/yellow/red + Chaos Vantage text color shift + Twinmotion partial red-FPS + stats.js sparkline gradient). Thresholds derived from D5+Chaos+Twinmotion median values. 2-tier red-only (Twinmotion-style 1/8) απορρίπτεται — χάνεις borderline state warning. Plain text (4/8 — Blender/V-Ray/Lumion/Enscape) απορρίπτεται — user must do mental math για να καταλάβει αν είναι OK. Sparkline graph history (stats.js style) απορρίπτεται — 5× HUD height inflation καλύπτει viewport, render cost per frame, overkill για debug tool. |
+| B.5.Q6 | Mini vs Expanded | **Toggle button (chevron) στο HUD header, default Expanded**. User clicks chevron `[∨]` → collapses σε mini 1-line: `raster | 58 FPS 🟢 [∧]`. Preference persisted localStorage (`bim3d.performanceHud.expanded`). Συνδυάζει industry full-info standard + Lumion/Enscape ambient option. | Industry: Always-expanded 5/8 (Vantage/D5/Twinmotion/Blender/V-Ray), Mini-only 2/8 (Lumion/Enscape consumer minimalist), Click-cycle 1/8 (stats.js), Collapsed+expand 0/8. Default Expanded επιλέχθηκε γιατί HUD ήδη opt-in (Q1) — όταν user opens it θέλει info. Mini mode προσφέρεται ως ambient monitoring option για users που θέλουν "low-distraction permanent monitor" χωρίς το βάρος των 10 metrics. Pure collapsed-by-default απορρίπτεται (2 clicks για info, semantic duplicate του opt-in toggle). Mini-only απορρίπτεται (παραβιάζει Q3 10-metric decision). |
+| B.5.Q7 | Export / Share stats | **Full enterprise**: 3 actions σε HUD header `⋮` menu — **(1) Copy stats JSON** στο clipboard για quick paste σε chat/email, **(2) Download .json + .png snapshot** ως ZIP file, **(3) Send diagnostic to support** → δημιουργεί Firestore document σε νέα collection `performance_diagnostics/{diagnosticId}` με: screenshot (Canvas.toDataURL → Firebase Storage `companies/{companyId}/diagnostics/{ts}.png`), όλα τα 10 metrics, GPU benchmark score, scene info (entity count + layer count + active floor + active project), user/project context (userId + projectId + companyId), timestamp, optional user comment 280 chars. Super-admin (Γιώργος, ADR-145) λαμβάνει notification + το βλέπει στο admin diagnostics dashboard. | 3/8 industry pro tools έχουν export (V-Ray save-to-file + Chaos Vantage copy-clipboard + D5 stats-file). Cloud-native send-to-support extension μηδέν industry precedent — Nestor cloud-first DNA + ADR-326 tenant scope + ADR-145 super-admin pattern κάνει feasible. Justified per `feedback_completeness_over_mvp.md`. Copy-only (Chaos pattern απομόνωση) απορρίπτεται — χάνεις screenshot context. No-export (consumer tools 5/8) απορρίπτεται — user δεν μπορεί να αναφέρει issue χωρίς manual screenshot+typing. |
+| B.5.Q8 | Mobile/tablet variant | **Responsive breakpoints**. **<768px (phone)**: HUD = mini-only 1-line, toggle Mini↔Expanded disabled, font 12px, touch button ≥44px, position bottom-right με 16px safe-area inset. **768-1023px (tablet)**: ίδιο με phone αλλά font 14px + 20px inset. **≥1024px (desktop)**: full HUD per Q1-Q7 approved (mini/expanded toggle ενεργό, 10 metrics expanded default). Export menu (Q7) **always available** (όλα τα viewport sizes — quick diagnostic from tablet site visits is core use case). | Industry σύγκλιση 7/8 desktop-only (V-Ray/D5/Twinmotion/Lumion/Blender/Chaos Vantage/Enscape δεν τρέχουν σε mobile). Nestor extension πέρα από industry: tablet site visits valid use case (ADR-326 tenant collaboration). Phone secondary use case (BIM scene δύσκολα διαβάζεται <600px). Desktop-only απορρίπτεται — tablet engineer στο εργοτάξιο δεν μπορεί να δει αν κολλάει. Same-HUD-scaled απορρίπτεται — cramped, hard to read, touch buttons too small. Touch-optimized swipe (3 swipable panels) απορρίπτεται — separate mobile component overkill για sparingly-used debug tool, zero industry precedent. |
+
+**Architectural implications**:
+
+- **Νέα SSoT modules (Phase 4 — core HUD)**:
+  - `bim-3d/performance/PerformanceHUDStore.ts` — Zustand store: `{ enabled: boolean, expanded: boolean, metrics: PerformanceMetricsSnapshot, mode: '3d-raster'|'3d-preview'|'3d-final' }`. Actions: `setEnabled`, `toggleExpanded`, `updateMetrics(snapshot)`. localStorage-persisted preferences (`bim3d.performanceHud.enabled`, `bim3d.performanceHud.expanded`).
+  - `bim-3d/performance/PerformanceCollector.ts` — RAF-driven collector. Subscribes to Three.js `renderer.info` (triangles/vertices/calls/programs) + WebGL extension `WEBGL_debug_renderer_info` (GPU name) + `performance.memory` (Chrome non-standard fallback) + custom GPU mem estimator via texture/buffer accounting. Throttled to 250ms updates (not per-frame — HUD UI doesn't need 60Hz numbers). Pushes snapshot to `PerformanceHUDStore.updateMetrics`. Auto-pause when HUD disabled (zero-cost overhead when OFF).
+  - `bim-3d/performance/PerformanceHUD.tsx` — main overlay component, ADR-040 micro-leaf compliance (`useSyncExternalStore` subscriber to `PerformanceHUDStore`, mounts as sibling leaf — δεν προκαλεί re-render του canvas orchestrator). Position: `bottom: calc(50px + 16px); right: 16px; position: absolute; z-index: 50;`. Inner content διαιρείται σε `PerformanceHUDMini.tsx` (1-line) και `PerformanceHUDExpanded.tsx` (10-metric vertical list), επιλογή με `expanded` state.
+  - `bim-3d/performance/performance-thresholds.ts` — pure helper με color tier mapping. `getMetricTier(name: MetricName, value: number): 'good'|'warn'|'critical'`. Thresholds-as-constants σε νέο `PERFORMANCE_THRESHOLDS` registry. REUSE existing `STATUS_OK/WARN/ERROR` design tokens για χρώματα (zero νέο palette).
+  - `bim-3d/performance/metric-formatters.ts` — pure helpers για human-readable formatting (`formatBytes(1289000) → "1.2 GB"`, `formatCount(482310) → "482K"`, `formatMs(17.3) → "17 ms"`, `formatProgressBar(0.14, 8) → "▰▰▰▱▱▱▱▱"`).
+  - `bim-3d/performance/per-mode-promotion.ts` — pure helper επιστρέφει `MetricEmphasis = 'bold' | 'normal' | 'greyed'` per metric per mode (Q4 logic). E.g. `getEmphasis('fps', '3d-preview') → 'normal'`, `getEmphasis('samplesPerSec', '3d-preview') → 'bold'`.
+
+- **Νέα SSoT modules (Phase 4 — diagnostic export)**:
+  - `bim-3d/performance/PerformanceDiagnosticDialog.tsx` — Radix Dialog (REUSE ADR-001) που εμφανίζεται όταν user clicks "📤 Αποστολή στο support". Δείχνει: preview screenshot, όλα τα metrics, optional user comment 280-char textarea, Cancel/Submit buttons. Submit → calls `performance-snapshot-service.create`.
+  - `bim-3d/performance/performance-snapshot-service.ts` — high-level service. `createDiagnostic(input)` orchestrates: (1) capture screenshot via `renderer.domElement.toBlob('image/png', 0.92)`, (2) upload screenshot στο Firebase Storage path `companies/{companyId}/diagnostics/{diagnosticId}.png` με enterprise-id (νέος generator `perf_diag_*` σε `enterprise-id.service.ts`), (3) write Firestore document `performance_diagnostics/{diagnosticId}` με τα metrics+context+screenshot URL, (4) EntityAuditService `recordChange` (audit type `performance_diagnostic_submitted`), (5) NOTIFICATION_KEYS `bim3d.diagnostic.received` notification στον super-admin (Γιώργος, ADR-145 registry lookup), (6) toast success στο UI. Idempotent via deterministic ID.
+  - `bim-3d/performance/clipboard-stats-writer.ts` — pure helper για Q7 Copy action. Σερβίρει JSON με stable schema (version-stamped) μέσω `navigator.clipboard.writeText`.
+  - `bim-3d/performance/file-download-writer.ts` — pure helper για Q7 Download action. Δημιουργεί ZIP (JSZip MIT) με `stats.json` + `screenshot.png`, triggers `<a download>` blob link.
+
+- **ViewMode3DStore integration**:
+  - Δεν προστίθενται νέα fields στο `ViewMode3DStore`. Το `PerformanceHUDStore` είναι separate Zustand store (perf concerns ≠ view-mode concerns, ADR-294 SSoT scope separation).
+  - `PerformanceHUDStore` διαβάζει `renderMode` από `ViewMode3DStore` (cross-store subscribe via shallow selector) για Q4 per-mode logic.
+
+- **Floating3DPanel integration (extends B.3.Q7)**:
+  - Quality tab (ήδη approved B.3.Q7) **adds new row**: `[☐] Εμφάνιση Performance HUD` checkbox με aria-label `bim3d.performance.toggleAria`. State binding: `PerformanceHUDStore.enabled`. Default OFF (Q1).
+  - Quality tab δομή: top section Quality presets (B.1.Q2/Q3 modulator presets) → divider → bottom section Performance HUD toggle.
+  - Δεν προστίθεται νέο tab — αποφεύγουμε bloat (Quality tab είναι natural home για performance settings).
+
+- **Firestore schema**:
+  - **Νέα collection**: `performance_diagnostics/{diagnosticId}` (top-level — όχι nested μέσα σε project, για να μπορεί ο super-admin να βλέπει cross-project diagnostics).
+  - Document fields:
+    ```ts
+    {
+      diagnosticId: string;           // `perf_diag_${userId}_${ts}` deterministic
+      companyId: string;              // tenant scope (ADR-326)
+      userId: string;
+      projectId: string | null;       // null αν δεν είναι σε project
+      timestamp: Timestamp;
+      screenshotPath: string;         // Storage path
+      screenshotUrl: string;          // signed URL για admin preview
+      metrics: {
+        renderMode: '3d-raster' | '3d-preview' | '3d-final';
+        fps: number; frameTimeMs: number;
+        triangles: number; vertices: number;
+        drawCalls: number; objectsVisible: number; objectsTotal: number;
+        gpuMemoryMb: number; cpuMemoryMb: number | null;
+        samplesPerSec: number | null;
+      };
+      sceneInfo: {
+        entityCount: number; layerCount: number;
+        activeFloorId: string | null;
+        sceneBoundingBoxMeters: { w: number; h: number; d: number };
+      };
+      gpuInfo: { vendor: string; renderer: string; webgpu: boolean };
+      userComment: string | null;     // max 280 chars
+      status: 'open' | 'investigating' | 'resolved';   // super-admin curates
+      resolvedBy: string | null;
+      resolvedAt: Timestamp | null;
+    }
+    ```
+  - **Firestore rules**:
+    - Create: `request.auth != null && resource.data.companyId == request.auth.token.companyId && resource.data.userId == request.auth.uid` (user creates diagnostics for own user+company).
+    - Read: super-admin (per ADR-145 registry) OR owner reads own diagnostics.
+    - Update: super-admin only (status field curation).
+    - Delete: super-admin only.
+  - **RBAC permissions**: `performance_diagnostics.create` (all authenticated users, scoped to own company), `performance_diagnostics.read` (super-admin OR owner), `performance_diagnostics.update` (super-admin), `performance_diagnostics.delete` (super-admin).
+  - **Storage rules** για `companies/{companyId}/diagnostics/{file}.png`: create scoped per company tenant, read super-admin + owner, delete super-admin.
+
+- **enterprise-id integration (N.6 mandatory)**:
+  - Νέος generator `perf_diag_*` σε `enterprise-id.service.ts`. Pattern: `perf_diag_${userId}_${nanoid(10)}_${ts}` με deterministic component για idempotency.
+
+- **Notification system (NOTIFICATION_KEYS registry)**:
+  - Νέο key `bim3d.diagnostic.received` σε `NOTIFICATION_KEYS` registry. Notification message: `'Νέο performance diagnostic από {userName} ({projectName}) — FPS {fps}'`. Routed στον super-admin per ADR-145.
+
+- **EntityAuditService integration (CHECK 3.17 entity audit coverage)**:
+  - Νέος audit type `performance_diagnostic_submitted` με fields `{ diagnosticId, fps, renderMode }`. Called inside `performance-snapshot-service.createDiagnostic` after Firestore write.
+
+- **Industry-aligned thresholds (constants ready-to-implement)**:
+  ```ts
+  export const PERFORMANCE_THRESHOLDS = {
+    fps:           { good: 45,   warn: 25,    invert: true  }, // ≥45 good, 25-44 warn, <25 critical
+    frameTimeMs:   { good: 22,   warn: 40,    invert: false },
+    drawCalls:     { good: 1500, warn: 3000,  invert: false },
+    gpuMemoryPct:  { good: 60,   warn: 85,    invert: false },
+    triangles:     { good: 1_000_000, warn: 3_000_000, invert: false },
+  } as const;
+  ```
+
+- **Responsive breakpoints (Q8)**:
+  - `<768px`: force `expanded: false`, hide toggle chevron, font 12px, touch ≥44px.
+  - `768-1023px`: force `expanded: false`, font 14px.
+  - `≥1024px`: respect user `expanded` preference, font 13px.
+  - Implementation: CSS container queries (modern) με fallback Tailwind responsive classes.
+
+- **Per-mode adaptive rendering (Q4 detail)**:
+  - In `PerformanceHUDExpanded.tsx`, each metric row reads `getEmphasis(metricName, renderMode)` και applies CSS class `font-bold` (bold) / `` (normal) / `text-muted opacity-50` (greyed).
+  - Σε `'3d-final'` mode, εμφανίζεται **sticky progress bar row** στο top: `⏱ {timeRemaining} | {samplesCurrent}/{samplesTotal}` + ASCII bar 8 chars `▰▰▰▰▱▱▱▱ {pct}%`. Bar updates συγχρονισμένα με `PathTracerRenderer.onProgress` callback.
+  - Σε raster mode, samples/sec row δείχνει `Samples/s: — (raster)` greyed.
+
+- **i18n keys** (per N.11, FIRST locale JSONs `el/bim3d.json` + `en/bim3d.json`):
+  - `bim3d.performance.toggleAria` — 'Εμφάνιση/Απόκρυψη Performance HUD' / 'Show/Hide Performance HUD'
+  - `bim3d.performance.toggleLabel` — 'Performance HUD' / 'Performance HUD'
+  - `bim3d.performance.mode` — 'Κατάσταση' / 'Mode'
+  - `bim3d.performance.modeRaster` — 'γρήγορη' / 'raster'
+  - `bim3d.performance.modePreview` — 'προεπισκόπηση' / 'preview'
+  - `bim3d.performance.modeFinal` — 'τελική' / 'final'
+  - `bim3d.performance.fps` — 'FPS' / 'FPS'
+  - `bim3d.performance.frameTime` — 'Χρόνος εικόνας' / 'Frame time'
+  - `bim3d.performance.triangles` — 'Τρίγωνα' / 'Triangles'
+  - `bim3d.performance.vertices` — 'Κορυφές' / 'Vertices'
+  - `bim3d.performance.drawCalls` — 'Κλήσεις σχεδίασης' / 'Draw calls'
+  - `bim3d.performance.objects` — 'Αντικείμενα ορατά/σύνολο' / 'Objects visible/total'
+  - `bim3d.performance.gpuMemory` — 'Μνήμη GPU' / 'GPU memory'
+  - `bim3d.performance.cpuMemory` — 'Μνήμη CPU' / 'CPU memory'
+  - `bim3d.performance.samplesPerSec` — 'Δείγματα/δλ' / 'Samples/sec'
+  - `bim3d.performance.timeRemaining` — 'Χρόνος που απομένει' / 'Time remaining'
+  - `bim3d.performance.collapse` — 'Σύμπτυξη σε μικρή προβολή' / 'Collapse to mini view'
+  - `bim3d.performance.expand` — 'Επέκταση σε πλήρη προβολή' / 'Expand to full view'
+  - `bim3d.performance.menuAria` — 'Ενέργειες HUD' / 'HUD actions'
+  - `bim3d.performance.copyStats` — '📋 Αντιγραφή stats' / '📋 Copy stats'
+  - `bim3d.performance.download` — '💾 Λήψη .json + .png' / '💾 Download .json + .png'
+  - `bim3d.performance.sendToSupport` — '📤 Αποστολή στο support' / '📤 Send to support'
+  - `bim3d.performance.diagnostic.dialogTitle` — 'Αποστολή Performance Diagnostic' / 'Send Performance Diagnostic'
+  - `bim3d.performance.diagnostic.commentLabel` — 'Σχόλιο (προαιρετικό, μέχρι 280 χαρακτήρες)' / 'Comment (optional, up to 280 chars)'
+  - `bim3d.performance.diagnostic.commentPlaceholder` — 'Π.χ. Κολλάει όταν περιστρέφω την κάμερα...' / 'E.g. Stutters when I orbit the camera...'
+  - `bim3d.performance.diagnostic.submitButton` — 'Αποστολή' / 'Send'
+  - `bim3d.performance.diagnostic.cancelButton` — 'Άκυρο' / 'Cancel'
+  - `bim3d.performance.diagnostic.successToast` — 'Το diagnostic στάλθηκε. Ο διαχειριστής ειδοποιήθηκε.' / 'Diagnostic sent. Admin notified.'
+  - `bim3d.performance.diagnostic.errorToast` — 'Αποτυχία αποστολής. Δοκιμάστε ξανά.' / 'Send failed. Try again.'
+  - Total ~28 keys × 2 locales = ~56 entries.
+
+- **GOL checklist (N.7.2)**:
+  - **Proactive**: ✅ HUD opt-in (Q1), zero passive overhead — Collector pauses fully when disabled. Σκηνή performance characteristics δεν χτυπιούνται από HUD presence.
+  - **Race conditions**: ✅ RAF-throttled collector @250ms + Zustand single-mutation per snapshot + ADR-040 micro-leaf prevents orchestrator re-renders.
+  - **Idempotent**: ✅ `createDiagnostic` deterministic ID από `perf_diag_${userId}_${ts}` — duplicate clicks → same Firestore doc updated, no duplicates. Screenshot upload uses same path (overwrite).
+  - **Belt-and-suspenders**: ✅ Primary path `renderer.info` + fallback estimator για GPU memory (όχι all browsers expose). `performance.memory` Chrome-only — graceful null για Safari/Firefox με UI label `CPU mem: —`. WebGPU vs WebGL info detection με fallback.
+  - **Single Source of Truth**: ✅ `PerformanceHUDStore` SSoT για state + preferences. `PerformanceCollector` SSoT για metric gathering. `PERFORMANCE_THRESHOLDS` SSoT για color tiers. Zero parallel implementations.
+  - **Fire-and-forget vs await**: Collector update = fire-and-forget (UI display, non-critical). Diagnostic submit = await (correctness — toast/error feedback required).
+  - **Lifecycle owner**: ✅ `PerformanceHUDStore.enabled` owns HUD visibility lifecycle. `PerformanceCollector` owns metric gathering lifecycle (subscribes to store, auto-pauses when disabled). `performance-snapshot-service` owns diagnostic write lifecycle. Clean separation.
+
+  **Verdict**: ✅ **Google-level: YES** — opt-in, zero overhead when off, race-free, idempotent diagnostics, full SSoT.
+
+- **Style SSoT REUSE**:
+  - Container: ίδια CSS module structure με 2D overlay panels (border, shadow, theme tokens), `data-variant="performance-hud"` για future divergence.
+  - Color tiers: REUSE `STATUS_OK` (#22c55e green) / `STATUS_WARN` (#eab308 yellow) / `STATUS_ERROR` (#ef4444 red) από existing design tokens.
+  - Progress bar: REUSE existing `Progress` component (Radix Progress) από Phase 6 render dialog (B.4) — same component.
+  - Icons: Lucide React (`Activity`, `ChevronDown`, `ChevronUp`, `MoreVertical`, `Copy`, `Download`, `Send`) με size=14, color tokens.
+
+- **Performance budget (HUD overhead)**:
+  - Collector: 250ms throttled = 4 updates/sec, ~0.2ms per snapshot read (renderer.info is O(1)). Total <1ms/sec overhead.
+  - HUD render: Mini variant ~10 nodes, Expanded ~80 nodes. React reconciliation ~0.5ms per update.
+  - Total when HUD enabled: <2ms/sec on main thread. Negligible.
+  - When disabled: zero overhead (Collector subscribed but pauses on enabled=false).
+
+- **License check (N.5)**:
+  - JSZip: **MIT** ✅ (Phase 4 dependency για Q7 download ZIP).
+  - Three.js `renderer.info`: built-in, no new dep.
+  - All other code: in-house.
+
+- **Activation guards**:
+  - PerformanceHUD mounts μόνο αν `ViewMode3DStore.mode !== '2d'` AND `PerformanceHUDStore.enabled === true`.
+  - Diagnostic menu actions disabled αν δεν υπάρχει active project (some metrics like `projectId` δεν θα έχουν value — δεν blocks submit but warns user).
+
+- **Future Phase 5+ extensions (NOT blocking B.5)**:
+  - Sparkline graph history (60s rolling) ως optional "Show graphs" toggle στο Settings.
+  - Per-metric drill-down click → opens detail panel με historical chart + per-frame breakdown.
+  - Admin diagnostics dashboard (super-admin view για `performance_diagnostics` collection με filters + search + status curation) — ADR-145 super-admin scope expansion.
+  - Anonymized telemetry opt-in για aggregate performance analytics (% users seeing FPS<30, etc.).
+  - Auto-submit threshold (αν FPS<10 για >5s → auto-prompt "θες να στείλεις diagnostic;").
+
+**Effort impact για B.5**: **+6-8h Phase 4** breakdown:
+- Phase 4: `PerformanceHUDStore.ts` + `PerformanceCollector.ts` (Three.js renderer.info integration + RAF throttle + Chrome memory hook + GPU estimator) → **~1.5h**
+- Phase 4: `PerformanceHUD.tsx` + `PerformanceHUDMini.tsx` + `PerformanceHUDExpanded.tsx` (bottom-right positioning + responsive breakpoints + Mini/Expanded toggle + chevron + ARIA) → **~1.5h**
+- Phase 4: `performance-thresholds.ts` + `metric-formatters.ts` + `per-mode-promotion.ts` (pure helpers + tests) → **~0.5h**
+- Phase 4: Floating3DPanel Quality tab integration (Show Performance HUD checkbox) → **~0.25h**
+- Phase 4: `PerformanceDiagnosticDialog.tsx` + `performance-snapshot-service.ts` (Firestore + Storage + enterprise-id + EntityAudit + Notification + RBAC + Firestore rules) → **~2-3h**
+- Phase 4: `clipboard-stats-writer.ts` + `file-download-writer.ts` + JSZip integration → **~0.5h**
+- Phase 4: `performance_diagnostics` Firestore rules + Storage rules + test fixtures (CHECK 3.16 mandatory on touch) → **~0.5h**
+- Phase 4: i18n keys (~28 × 2 locales = ~56 entries) + ICU compliance → **~0.5h**
+- Phase 4: tests (collector snapshot fixture + thresholds boundary + per-mode promotion table + diagnostic submit idempotency + responsive breakpoint snapshots) → **~1h**
+
+ADR-366 total estimate revised: **~185-220h** Phase 0-7 (από ~179-212h post-B.4, +6-8h B.5 net).
+
+**Group B summary** (ALL 5 topics CLOSED ✅):
+- B.1 Materials & Lighting UX: 4/4 ✅ (+14h Phase 5)
+- B.2 BIM Data Overlay: 4/4 ✅ (+20.5-24.5h Phase 4-7)
+- B.3 Multi-floor visibility controls: 7/7 ✅ (+5-7h Phase 4)
+- B.4 Path tracer trigger UX: 9/9 ✅ (+35-46h Phase 5-7, includes FULL ENTERPRISE animation Phase 7)
+- B.5 Performance HUD: 8/8 ✅ (+6-8h Phase 4)
+- **Group B total**: 32/32 questions ✅ — **+80.5-99.5h** additive across phases.
+
+---
+
 ## 12. Changelog
 
 | Ημ/νία | Αλλαγή | Author |
 |---|---|---|
+| 2026-05-19 | **Appendix B — Topic B.5 ✅ FULLY CLOSED 8/8 Qs (Performance HUD) — GROUP B 5/5 COMPLETE**. **B.5.Q1** Default state = **Toggle, default OFF, ON με κουμπί** στο Floating3DPanel Quality tab (industry σύγκλιση 6/8 BIM SaaS — Lumion/Twinmotion/D5/Enscape/Blender/V-Ray hidden-by-default pattern). **B.5.Q2** Position = **Bottom-right** με 50px vertical offset πάνω από zoom controls για συνύπαρξη (Twinmotion/Chaos Vantage 2/8 industry, Γιώργος voted πάνω από top-right plurality 4/8). **B.5.Q3** Metrics = **Full diagnostic 10 metrics** (Mode + FPS + Frame time + Triangles + Vertices + Draw calls + Objects visible/total + GPU memory + CPU memory + Samples/sec) — συνδυασμός ALL industry tools (Twinmotion geometry + Blender vertex/object + V-Ray samples + stats.js memory + Chaos Vantage GPU), justified per `feedback_completeness_over_mvp.md`. Mode indicator zero industry precedent — απαραίτητο για Nestor's tri-mode FSM B.4. **B.5.Q4** Per-mode adaptive auto-highlight (4/8 path-tracer industry: V-Ray/Chaos/D5/Blender). Raster→FPS+Frame bold, Preview→Samples/sec+sample count bold, Final→Time remaining+progress bar sticky (συγχρονισμός με PathTracerRenderer.onProgress B.4). **B.5.Q5** 3-tier color coding 🟢/🟡/🔴 με industry-median thresholds (D5+Chaos+Twinmotion derived): FPS ≥45/25-44/<25, Frame time ≤22ms/22-40ms/>40ms, Draw calls ≤1500/1500-3000/>3000, GPU mem <60%/60-85%/>85%, Triangles <1M/1M-3M/>3M. REUSE existing `STATUS_OK/WARN/ERROR` design tokens, zero νέο palette — mirrors 2D status colors. **B.5.Q6** Mini↔Expanded toggle chevron, **default Expanded**, preference localStorage (`bim3d.performanceHud.expanded`). Συνδυασμός industry full-info 5/8 (Vantage/D5/Twinmotion/Blender/V-Ray) + Lumion/Enscape ambient mini-only option 2/8. **B.5.Q7** Full enterprise export 3 actions: Copy stats JSON clipboard + Download .json+.png ZIP (JSZip MIT) + Send diagnostic to support → νέα Firestore collection `performance_diagnostics/{diagnosticId}` με screenshot (Canvas.toBlob → Firebase Storage `companies/{companyId}/diagnostics/`) + 10 metrics + GPU benchmark + scene info + user/project context + 280-char user comment + status curation field, super-admin notification (ADR-145 registry). Industry 3/8 pro tools (V-Ray/Chaos/D5 export), cloud-native send-to-support extension πέρα από industry — Nestor cloud-first DNA + ADR-326 tenant scope + ADR-145 super-admin enablement. **B.5.Q8** Responsive breakpoints: <768px phone mini-only/disabled toggle/font 12px/touch ≥44px/16px safe-area inset, 768-1023px tablet mini-only/font 14px/20px inset, ≥1024px desktop full Expanded per Q1-Q7. Export menu always available all sizes (tablet site visit valid use case ADR-326). Industry 7/8 desktop-only — Nestor extension για tablet engineers στο εργοτάξιο. **Νέα modules Phase 4**: `PerformanceHUDStore.ts` (Zustand store + localStorage prefs) + `PerformanceCollector.ts` (RAF-throttled 250ms, Three.js renderer.info + WebGL_debug_renderer_info + Chrome performance.memory + GPU estimator, auto-pause when disabled) + `PerformanceHUD.tsx` (ADR-040 micro-leaf sibling, bottom-right responsive) + `PerformanceHUDMini.tsx` + `PerformanceHUDExpanded.tsx` (per-mode bold/normal/greyed emphasis via `per-mode-promotion.ts`) + `performance-thresholds.ts` + `metric-formatters.ts` + `PerformanceDiagnosticDialog.tsx` (Radix Dialog ADR-001) + `performance-snapshot-service.ts` (orchestrates screenshot upload + Firestore write + EntityAuditService `performance_diagnostic_submitted` + NOTIFICATION_KEYS `bim3d.diagnostic.received` + toast) + `clipboard-stats-writer.ts` + `file-download-writer.ts`. SSoT REUSE: STATUS_OK/WARN/ERROR design tokens, Radix Dialog/Progress, EntityAuditService (ADR-195), NOTIFICATION_KEYS registry, Firebase Storage tenant-scoped path (ADR-326), enterprise-id service (νέος generator `perf_diag_*`), ADR-040 micro-leaf compliance, RBAC pattern. Νέα Firestore collection `performance_diagnostics` με rules: create user-own-company, read super-admin+owner, update/delete super-admin only (ADR-145 super-admin registry). Storage rules για `diagnostics/*.png` company-scoped. License N.5: JSZip MIT ✅. ~28 i18n keys × 2 locales (~56 entries). GOL ✅: opt-in zero-overhead Collector pause, RAF throttle race-free, deterministic ID idempotent diagnostics, primary+fallback paths για cross-browser GPU memory, SSoT clear separation HUD store vs view-mode store vs snapshot service, μ-leaf ADR-040 compliance. Floating3DPanel Quality tab (B.3.Q7) integration: adds checkbox row "Εμφάνιση Performance HUD" — δεν προστίθεται νέο tab, αποφεύγουμε bloat. **B.5 effort: Phase 4 +6-8h** (core HUD 1.5h + Mini/Expanded variants 1.5h + helpers 0.5h + Floating3DPanel integration 0.25h + Diagnostic dialog+Firestore+Storage+rules+RBAC 2-3h + Copy/Download 0.5h + Firestore/Storage rules tests CHECK 3.16 0.5h + i18n 0.5h + tests 1h). **ADR-366 total estimate revised: ~185-220h Phase 0-7** (από ~179-212h post-B.4, +6-8h B.5 net). **GROUP B SUMMARY 5/5 ✅** (B.1 4/4 +14h, B.2 4/4 +20.5-24.5h, B.3 7/7 +5-7h, B.4 9/9 +35-46h, B.5 8/8 +6-8h) — **Group B total: 32/32 questions closed, +80.5-99.5h additive**. Memory updates: `project_adr366_group_b_partial.md` → renamed σε `project_adr366_group_b_complete.md` (Group B 5/5 ✅). Pending Phase 5+ extensions documented (NOT blocking): sparkline 60s history, admin diagnostics dashboard ADR-145 expansion, anonymized telemetry opt-in, auto-submit threshold FPS<10. Diagnostic conscious extension πέρα από industry-only-desktop pattern: tablet support per ADR-326 site-visit use case justified by Nestor BIM SaaS cloud-first DNA. | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.4 ✅ FULLY CLOSED 9/9 Qs (Path tracer trigger UX)**. **B.4.Q1** Idle threshold **800ms** (industry median Lumion/D5, 5/7 σύγκλιση 500-1000ms range) — updates §9 Q3 αρχικό spec 2000ms σε industry-aligned value. **B.4.Q2** Cancellation = **Snap cut** atomic mode swap (7/7 industry absolute σύγκλιση). **B.4.Q3** Preview progress indicator = **Τίποτα** (silent magic Lumion/Enscape ethos, 4/7 industry leaning — changed από αρχικό UI selection "Quality bar" σε followup turn, Γιώργος preferred non-jargon presentation context). **B.4.Q4** Final dialog **4 presets**: Πρόχειρη 64 / Κανονική 256 / Υψηλή 1024 / Κορυφαία 4096 SPP (Twinmotion/Enscape/Chaos Vantage 3/7 direct match). **B.4.Q5** Resolution **HD/4K/8K + Custom**, default 4K (7/7 industry). Crop region DEFERRED Phase 8+ (saves Phase 7 dialog complexity). **B.4.Q6** Format = **PNG+JPG+EXR** + destination **2 checkboxable** (disk + project_assets Firestore Storage). PNG default, EXR για post-processing. **B.4.Q7** Denoiser **ON by default + toggle σε Προχωρημένα expander** (V-Ray/Blender hybrid, 7/7 default-ON + 3/7 toggle). **B.4.Q8 FULL ENTERPRISE Phase 7** = Turntable 360° + Flyaround waypoints + Timeline editor UI + path easing curves + multi-frame MP4 export (7/7 industry parity, per memory `feedback_completeness_over_mvp.md` rule, +30-40h scope expansion ~20% του ADR-366). **B.4.Q9** Detailed time estimate (D5/V-Ray style) πάντα visible: GPU calibration (~50ms benchmark σε mount) × scene complexity × samples × resolution × frames → `~42 λεπτά ±4 min` format, live update on config change (6/7 industry). Νέα modules Phase 5: `IdleDetector.ts` (800ms tune από 2000ms, REUSED B.1.Q2/B.1.Q3/B.4), `PathTracerRenderer.ts` (three-gpu-pathtracer MIT wrapper, single instance dual-profile), `raster-to-pathtrace-swap.ts`. Phase 6: `RenderFinalDialog.tsx` (Radix Dialog ADR-001) + `render-cost-estimator.ts` + `render-output-writer.ts` (PNG/JPG Canvas.toBlob + EXR wasm + Firebase Storage upload + project_assets Firestore + enterprise-id `rnd_bim_*` generator + RBAC `bim_renders.create`) + `RenderProgressOverlay.tsx`. Phase 7: `TurntablePathBuilder.ts` + `WaypointPathBuilder.ts` + `TimelineEditor.tsx` (ribbon panel + 3D waypoint overlay drag-and-drop + scrubber) + `MP4Exporter.ts` (mp4-muxer MIT + WebCodecs + WebM fallback). ViewMode3DStore extensions: `idleThresholdMs=800`, `finalRenderConfig`, `animationConfig`. SSoT REUSE: IdleDetector multi-subscriber, Radix Dialog, enterprise-id (νέος `rnd_bim_*` generator addition), EntityAuditService (νέο audit type `bim_render_created`), NOTIFICATION_KEYS (νέο `bim3d.render.completed`), Firebase Storage tenant-scoped path pattern (ADR-326), project_assets existing collection με `type='bim-render'` discriminator. License N.5 compliant: three-gpu-pathtracer MIT, mp4-muxer MIT, WebCodecs native, EXR encoder MIT family. ~28 i18n keys × 2 locales (~56 entries). GOL: atomic FSM mode swap (race-free), idempotent re-render (deterministic seed), WebGPU→WebGL fallback (belt-and-suspenders), single PathTracerRenderer + single IdleDetector (SSoT). **B.4 effort: Phase 5 +3h + Phase 6 +9h + Phase 7 +30-40h = +42-52h** (note: το Phase 7 +30-40h είναι animation system FULL ENTERPRISE, η ίδια η path-trace trigger UX = ~12h). **ADR-366 total estimate revised: ~179-212h Phase 0-7** (από ~144-166h post-B.3, +35-46h B.4 net). Decision conscious diverge documented: animation FULL ENTERPRISE Phase 7 αντί incremental Phase 8+ (justified per completeness_over_mvp memory). Pending ratchet entries DEFERRED Phase 8+: crop region rendering (B.4.Q5), OIDN-wasm denoiser upgrade αν three-gpu-pathtracer built-in underwhelming. Memory updates: `project_adr366_group_b_partial.md` → B.4 closure (Group B now 4/5 — B.5 remaining). | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.3 ✅ FULLY CLOSED 7/7 Qs (Multi-floor Visibility Controls UI)**. **B.3.Q1** Panel αριστερά με checkbox list ανά όροφο (5/5 industry σύγκλιση — Revit/ArchiCAD/Navisworks/Vectorworks/Allplan). **B.3.Q2** Free multi-select checkboxes + 3 preset buttons στο top [All][Active][None]. **B.3.Q3** 3-state per floor: Hide / Ghost (30% opacity) / Show (Revit Underlay pattern extended, 3/5 industry transparency-as-context). Ghost via Three.js `material.transparent=true, opacity=0.3, depthWrite=false` σε cloned material (WeakMap-cached). **B.3.Q4** Top-down order (ψηλότερος πρώτος, Revit/ArchiCAD/Allplan default, sort by `floor.elevation desc`). **B.3.Q5** Μπλε τελίτσα δεξιά για active floor (Revit minimal pattern, REUSE `CAD_UI_COLORS.ACTIVE`, zero νέο token). **B.3.Q6** 4 presets total: [All][Active][None][Invert] (4/5 industry έχουν Invert command). **B.3.Q7** Νέο 3D-specific FloatingPanel αριστερά (separate component από 2D FloatingPanel), tabs Floors/Lighting/Quality — Γιώργος διαφώνησε με recommended REUSE 2D Levels tab για cleaner 3D scope separation (decision conscious diverge από `feedback_3d_mirror_2d_ssot.md` rule σε αυτό το specific UI surface, justified: 3D Floors tab = visibility multi-toggle με 3-state + 4 presets, διαφορετικό UX scope από 2D Levels read-mostly). Νέα modules Phase 4: `Floating3DPanel.tsx` (container) + `Floor3DPanelTab.tsx` (Floors tab UI) + `floor-visibility-state.ts` (pure helpers: preset/invert/sort) + `applyFloorVisibility.ts` (scene mutator με RAF coalesce + ghost material cache). ViewMode3DStore extensions: `floorVisibilityModes: Map<floorId, 'show'\|'ghost'\|'hide'>` + actions `applyFloorsPreset`/`setFloorMode`/`toggleFloorVisibility`. `visibleFloors:Set` (ήδη §9 Q2) τώρα derived view από modes. SSoT REUSE: `useFloors` (ADR-326), `CAD_UI_COLORS.ACTIVE`, ADR-040 micro-leaf compliance, ADR-031 (no command history needed — UI-only state). ~12 i18n keys ×2 locales (~24 entries). Phase 4 **+5-7h** total. **ADR-366 total estimate revised: ~144-166h Phase 0-7**. Industry decisions documented με 5+ benchmarks per question. Memory updates: `project_adr366_group_b_partial.md` → B.3 closure; `reference_dxf_viewer_floating_panel.md` annotated με 3D divergence note. | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.2 ✅ FULLY CLOSED 4/4 Qs. B.2.Q4 (Element info panel — full BIM card on click) RESOLVED**: **EntityDetailsHeader SSoT extension με 5 tabs (Geometry/Materials/BOQ/Audit/Comments) + read-only παντού εκτός Comments**. Pattern REUSE 100% του `@/core/entity-headers` (Contacts + Procurement Phase G 2026-04-28 proof) — μηδέν παράλληλη detail-header abstraction. Tabs: Geometry (length/height/thickness/area/volume read-only `<dl>`) + Materials (multi-layer DNA preview ADR-363 Phase 6) + BOQ (summary card + drawer link ADR-329) + Audit (vertical timeline + inline diff `old → new` via `useEntityAudit` ADR-195) + Comments (filtered list mirror B.2.Q3 με add/resolve actions inline). Editing παντού delegated σε dedicated tools (transform/material assigner/BOQ drawer) — SSoT discipline. Νέα modules `bim-3d/properties/BimEntityCardPanel.tsx` + 5 tab components + 8 entity-kind SVG icons + ~34 i18n keys ×2 locales (~68 entries). No new SSoT tokens. Progressive disclosure Phase 4-7 (Geometry+Audit Phase 4 instant value, Materials Phase 5, BOQ Phase 6, Comments Phase 7 depends on B.2.Q3). Backport opportunity 2D: refactor FloatingPanel Properties tab σε EntityDetailsHeader-based card (~3-4h, Boy Scout, NOT BLOCKING). Phase 4-7 **+7-9h** total. **ADR-366 total estimate revised: ~139-159h.** Industry alignment: Notion/Linear/Github single canonical detail header pattern, Revit Properties Palette multi-category grouping. Memory [[entity-details-header-ssot]] reinforced. | Claude Opus 4.7 |
