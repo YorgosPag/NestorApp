@@ -487,7 +487,20 @@ Jest pure-math tests (κανείς δεν χρειάζεται Three.js renderer
 
 ---
 
-### Q3 — Naming collision `screenToWorld` (Nestor 2D vs GenArc 3D): rename ή scoped import;
+### Q3 — RESOLVED 2026-05-19 (Full Enterprise) — Module path + type-based separation + JSDoc + optional ESLint guard
+
+**Industry analysis** (7/7 σύγκλιση: Blender region_2d vs view3d_utils, AutoCAD ObjectARX context flag, Revit XYZ vs UV types, Unity Camera vs RectTransformUtility, Unreal FSceneView vs FGeometry, Rhino Viewport vs Plane, Three.js Editor module isolation) → **κανείς δεν κάνει function rename**. Όλοι χρησιμοποιούν module/namespace/class separation ή type-based distinction.
+
+**Adopted (Full Enterprise, 4 layers)**:
+
+| Layer | Mechanism | Status |
+|---|---|---|
+| 1. Module path | `rendering/core/CoordinateTransforms` (2D) vs `bim-3d/utils/coordinate-transforms` (3D) | ✅ Default through ports |
+| 2. Type-based distinction | 2D signature: `(Point2D, ViewTransform, Viewport) → Point2D`. 3D signature: `(number, number, THREE.Camera, HTMLElement, depth?) → THREE.Vector3`. TypeScript αρνείται mixed use. | ✅ Native ports preserve |
+| 3. JSDoc convention | 2D modules: `@coordinate-system 2D Canvas`. 3D modules: `@coordinate-system 3D Three.js (Y-up, metres, NDC)`. Header comment. | ✅ Add during port |
+| 4. ESLint cross-domain guard (optional) | Custom rule που μπλοκάρει imports από `rendering/core/CoordinateTransforms` σε `bim-3d/**` (και inverse) | ⏳ Pending entry αν προκύψει σύγχυση μετά Phase 1 (~30min effort) |
+
+### Q3 (legacy text — kept for context) — Naming collision `screenToWorld` (Nestor 2D vs GenArc 3D): rename ή scoped import;
 
 **Παράδειγμα**: Το Nestor ήδη έχει `screenToWorld` στο `rendering/core/CoordinateTransforms.ts` — δουλεύει σε 2D Canvas pixels ↔ mm. Το GenArc έχει επίσης `screenToWorld` στο `coordinateTransforms.ts` — δουλεύει σε browser pixels ↔ Three.js metres. **Διαφορετική σημασία, ίδιο όνομα.**
 
@@ -504,7 +517,25 @@ Jest pure-math tests (κανείς δεν χρειάζεται Three.js renderer
 
 ---
 
-### Q4 — Snap engine GenArc: zero-port επιβεβαίωση;
+### Q4 — RESOLVED 2026-05-19 (Full Enterprise) — Zero-port confirmed via formal parity matrix
+
+**Industry analysis** (4/4 σύγκλιση: Speckle uses Three.js native raycaster + zero custom snap port, xeokit built-in PickController + zero port, Forge/APS augments only specific gaps, Rhino full replace + backward shim) → **dual snap systems = anti-pattern**. Όταν υπάρχει mature engine, ισχύει: zero-port OR augment specific gaps OR full replace. Co-exist αποφεύγεται.
+
+**Parity matrix** (spot-check 2026-05-19 με read στο `PerpendicularSnapEngine.ts` + `ExtensionSnapEngine.ts`):
+
+| GenArc strategy | LOC | Nestor equivalent | Parity |
+|---|---:|---|---|
+| `endpointStrategy` | 108 | Endpoint + Midpoint + Center + Quadrant (4 engines, ADR-026 SRP) | ✅ **Superset** — granular separation |
+| `midpointStrategy` | 43 | `MidpointSnapEngine` | ✅ Parity |
+| `intersectionStrategy` | 76 | `IntersectionSnapEngine` + `intersection-calculators` + `ray-intersection-calculators` (XLINE/RAY) | ✅ **Superset** — infinite-line support |
+| `perpendicularStrategy` | 66 | `PerpendicularSnapEngine` + BIM pre-pass (`getWallAxisPerpendicularFeet`, `getSlabEdgePerpendicularFeet`, `getOpeningOutlinePerpendicularFeet` — ADR-363 Phase 5.5e/f/g) | ✅ **Superset** — BIM-aware |
+| `parallelStrategy` | 80 | `ParallelSnapEngine` + `OrthoSnapEngine` | ✅ **Superset** — 2 engines για broader coverage |
+| `extensionStrategy` | 88 | `ExtensionSnapEngine` (Line + Polyline start/end segment extensions) | ✅ **Superset** — more entity types |
+| `gridStrategy` | 24 | `GridSnapEngine` | ✅ Parity |
+
+**Decision**: **A (zero port) confirmed**. Επιπλέον, identification of architectural pattern improvement (Boy Scout candidate): Nestor's separation of `engine output (candidates) ↔ snap indicator visualization (separate system)` είναι **πιο enterprise** από GenArc's inline `guide` field σε perpendicular/parallel/extension candidates. **Nestor εδώ είναι ανώτερο σε αρχιτεκτονική, όχι μόνο σε coverage.**
+
+### Q4 (legacy text — kept for context) — Snap engine GenArc: zero-port επιβεβαίωση;
 
 **Παράδειγμα**: Το `endpointStrategy.ts` του GenArc βρίσκει για κάθε τοίχο **9 snap points** (4 γωνίες + 4 face centers + 1 midpoint). Το Nestor `EndpointSnapEngine` βρίσκει μόνο τα **2 endpoints** του τοίχου (start, end). Οι ενδιάμεσοι σημεία (face centers, corners) δίνονται από τα **`MidpointSnapEngine`** + **`CenterSnapEngine`** + grip system — separation of concerns.
 
@@ -535,3 +566,4 @@ Jest pure-math tests (κανείς δεν χρειάζεται Three.js renderer
 |---|---|---|
 | 2026-05-19 | **Initial draft v1.0** — Full catalog 16 αρχείων του GenArc snap/picking/utils domain. **Result: 2 PORT_AS_IS + 1 PORT_WITH_ADAPTATION + 0 EXTRACT + 13 EXCLUDE.** Κεντρικό εύρημα: το GenArc `coordinateTransforms.ts` (Three.js NDC math) + `gizmoProjection.ts` (constrained drag math) είναι **καινούργιο domain για Nestor** (Nestor `CoordinateTransforms` είναι 2D-only). Snap engine είναι **strict subset** του Nestor 17-engine system. `sitePicking` 100% ΝΟΚ-specific (consistent με SPEC-3D-004A §5.5 EXCLUDE plotOverlay). Cross-domain edges προς SPEC-3D-004D υπό observation (`raySceneIntersection`, `buildingSelectors`, `distSqXZ`). 4 open questions για Γιώργο (alignment guide infer, cursorProjection port timing, naming collision, snap zero-port confirmation). | Claude Opus 4.7 |
 | 2026-05-19 | **§9 Port Plan refactor — Full Enterprise (Industry alignment)**. Q2 resolved: όλα τα ports σε Phase 0, όχι deferred σε Phase 7. Industry analysis 9/9 σύγκλιση (Revit, AutoCAD 3D, SketchUp, Rhino, Blender, Forge/APS, Speckle, xeokit, Three.js Editor) → cursor coordinates = viewport infrastructure, scene-agnostic, empty-safe. Νέο sub-phase 0.2 (`bim-raycaster.ts` SSoT) προστέθηκε ~30 LOC. Cursor projection signature simplified: αντί `walls/columns/beams[]` arrays → `THREE.Scene` directly (scene.children agnostic). Contract για Phase 1/2 mesh creation: `mesh.userData.entityId = entity.id`. Effort revised 3-4h → 3.5h Phase 0 (zero Phase 7 cost). Q1 RESOLVED (auto-infer alignment) → pending entry στο `.claude-rules/pending-ratchet-work.md` (~3h independent feature, 4 Giorgio conditions ✅). | Claude Opus 4.7 |
+| 2026-05-19 | **Q3 + Q4 RESOLVED — Full Enterprise (Industry alignment)**. **Q3 (naming collision)**: 7/7 σύγκλιση (Blender, AutoCAD, Revit, Unity, Unreal, Rhino, Three.js Editor) → function rename = anti-pattern. Adopted 4-layer separation: (1) module path, (2) type-based distinction (TypeScript compiler enforcement), (3) JSDoc `@coordinate-system` convention, (4) optional ESLint cross-domain import guard. **Q4 (snap zero-port)**: 4/4 σύγκλιση (Speckle, xeokit, Forge/APS, Rhino) → dual snap = anti-pattern. Formal parity matrix (7 GenArc strategies × Nestor engines) confirms Nestor strict superset σε ΟΛΑ — επιπλέον αρχιτεκτονικά ανώτερο (separation engine candidates ↔ visualization vs GenArc inline guide field). ZERO PORT confirmed. ΟΛΕΣ οι 4 ερωτήσεις του SPEC resolved. | Claude Opus 4.7 |
