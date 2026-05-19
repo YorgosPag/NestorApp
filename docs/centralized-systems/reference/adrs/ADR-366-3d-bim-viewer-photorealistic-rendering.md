@@ -1288,7 +1288,7 @@ GenArc **ADR-009** defines Y-up convention explicitly. This ADR **inherits** tha
 
 > Post-Group-A deep-dive research για 5 core topics. Phase 5 (Materials/Lighting) και Phase 7 (Polish) UX refinements. Group A έκλεισε interaction layer (selection/gizmos/sections/camera/viewcube/keyboard/a11y) — Group B καλύπτει visual quality + BIM data overlay + performance UX.
 
-### B.1 — Materials & Lighting UX
+### B.1 — Materials & Lighting UX — ✅ CLOSED 2026-05-19
 
 **Σκοπός**: Καθορισμός default lighting strategy, time-of-day UX, BIM solar studies integration. Phase 5 (Materials & Lighting) core decisions.
 
@@ -1296,15 +1296,18 @@ GenArc **ADR-009** defines Y-up convention explicitly. This ADR **inherits** tha
 
 **Pending micro-decisions**:
 - Q1: Φωτισμός εκκίνησης (presets / slider / combo + BIM geolocation) ✅ RESOLVED
-- Q2: Shadow quality + soft shadow tier (PCF / VSM / contact shadows)
-- Q3: Ambient occlusion (SSAO / GTAO / disabled)
-- Q4: Environment reflections (HDRI mirror / cubemap dynamic / matte-only)
+- Q2: Shadow quality + soft shadow tier ✅ RESOLVED
+- Q3: Ambient occlusion ✅ RESOLVED
+- Q4: Environment reflections ✅ RESOLVED
 
-**Decisions Log (Γιώργος)** — Topic B.1 in progress:
+**Decisions Log (Γιώργος)** — Topic B.1 COMPLETE 4/4 Qs:
 
 | # | Ερώτηση | Απόφαση | Industry alignment |
 |---|---|---|---|
 | B.1.Q1 | Φωτισμός εκκίνησης σε photorealistic mode | **Combo 3-tier + BIM geolocation sun**. **Tier 1 — Preset thumbnails**: 6 πακέτα (Πρωί / Μεσημέρι / Απόγευμα / Ηλιοβασίλεμα / Συννεφιά / Νύχτα), 3×2 grid, ένα κλικ αλλάζει όλο το περιβάλλον. **Tier 2 — Time-of-day slider**: full-width 00:00–23:59 με real-time shadow update (debounced 16ms = 60fps). **Tier 3 — Advanced Solar Panel** (collapsible): date picker + latitude/longitude (auto-populate από ADR-326 project metadata, fallback Αθήνα 37.98/23.72) + "Animate sun through day" toggle (1h advance per 2s, stops on user interaction). Default state: preset "Μεσημέρι" selected, slider 12:00, advanced panel collapsed. | 4/4 σύγκλιση industry για combo (Twinmotion thumbnails + Enscape slider + Lumion combined + D5 library). BIM geolocation extension = 2/2 BIM industry σύγκλιση (Revit "Sun Settings" location-aware + ArchiCAD "Sun Study" date+time+latlng). Best-of-both: rendering UX speed + BIM solar accuracy για πραγματικές shadow studies (π.χ. βίλα Σαντορίνη, σκιά πισίνας 16:00 Αύγουστος). |
+| B.1.Q2 | Ποιότητα σκιών σε real-time 3D mode | **Soft shadows with auto-downgrade on camera motion** (Lumion pattern). Three.js `PCFSoftShadowMap` ΠΑΝΤΑ active (zero material recompile cost). Dynamic modulation `light.shadow.radius`: κατά camera κίνηση → `radius=0.5` (sharp, snappy 60fps). Idle ≥300ms → `radius` animates σε `4.0` (soft, realistic) με 300ms cubic ease-in. Map size dynamic: moving=1024², idle=2048². Trigger via `IdleDetector` SSoT (REUSE από §9 Q3 path tracer trigger). User-invisible — μηδέν settings UI clutter. | 3/4 σύγκλιση industry για soft-by-default (Twinmotion + Enscape + Lumion + D5). Lumion exact match για auto-downgrade pattern. Revit/SketchUp παλιό hard-only pattern απορρίπτεται ως "παιχνιδιάρικο" UX. Architect βλέπει ρεαλιστικές σκιές χωρίς να μάθει ρυθμίσεις. |
+| B.1.Q3 | Ambient occlusion (σκούρες γωνίες όπου σμίγουν επιφάνειες) | **SSAO με auto-downgrade on camera motion** (consistency με B.1.Q2 pattern). Three.js `SSAOPass` postprocess με `aoIntensity` modulation: snappy mode (camera moving) → `pass.enabled=false` (zero cost). Idle ≥300ms → fade-in 300ms cubic ease σε `aoIntensity=1.0` (full effect). Single unified IdleDetector trigger (ίδιο event-source με B.1.Q2). User-invisible — zero settings UI. Phase 7 path tracer (§9 Q3) takes over με ground-truth AO βία ray tracing — overrides SSAO. | 4/5 industry σύγκλιση για SSAO-default σε arch-viz (Twinmotion+Enscape+Lumion+D5 πάντα on, Revit conditional). Lumion auto-downgrade exact match. Industry leader benchmarks: Chaos V-Ray offline = ground truth (BIM gold standard), Twinmotion + D5 = real-time inspirations για Nestor web-based Three.js. SSAO όχι GTAO/HBAO γιατί Three.js built-in `SSAOPass` battle-tested + low-LOC integration. |
+| B.1.Q4 | Environment reflections (αντανάκλαση σε γυάλινα/μεταλλικά υλικά) | **Tier escalation: HDRI envmap Phase 5 + path-traced Phase 7** (Twinmotion + V-Ray pattern). **Phase 5 (rasterized real-time)**: `scene.environment = <cubemap από Hosek-Wilkie Sky>` rendered once per lighting preset change via `PMREMGenerator` (proper roughness mipmaps). Three.js `MeshStandardMaterial.envMap` + `metalness` + `roughness` PBR built-in IBL → zero runtime cost, παράθυρα αντανακλούν ουρανό, μέταλλα γυαλίζουν, πλαστικά matte. **Phase 7 (path-traced final)**: `three-gpu-pathtracer` (MIT) takes over με ground-truth reflections — παράθυρα αντανακλούν κτίριο απέναντι, καθρέφτες δείχνουν δωμάτιο. SSR απορρίπτεται (artifacts στις άκρες, incompatible με procedural Sky). | 2/2 BIM render leaders σύγκλιση (Twinmotion HDRI-default + V-Ray path-traced final). Consistency με §9 Q3 tri-mode rendering pattern. PBR Three.js built-in IBL = zero νέος κώδικας. Path tracer Phase 7 cost ήδη υπολογισμένο σε §9 Q4. |
 
 **Architectural implications για B.1.Q1**:
 
@@ -1337,12 +1340,120 @@ GenArc **ADR-009** defines Y-up convention explicitly. This ADR **inherits** tha
 
 **Effort impact για B.1.Q1**: +4h Phase 5 (presets registry + thumbnails grid component + time-of-day slider + DirectionalLight wiring + Hosek-Wilkie Sky shader) + 3h Phase 5 (solar position algorithm + Advanced Solar Panel + animate mode + 14 i18n keys ×2 locales) = **+7h Phase 5**. ADR-366 total estimate revised: **~111.5-127.5h** (από ~104.5-120.5h post-A.7).
 
+**Architectural implications για B.1.Q2**:
+
+- **Three.js renderer config**: `renderer.shadowMap.enabled = true`, `renderer.shadowMap.type = THREE.PCFSoftShadowMap` (μόνιμα — zero swap cost). Σημαντικό: εναλλαγή `shadowMap.type` runtime απαιτεί `material.needsUpdate = true` σε ΟΛΑ τα materials → expensive recompile. Pattern απορρίπτεται.
+- **ViewMode3DStore extension**: νέο sub-state `shadowState: { mode: 'snappy' | 'soft', currentRadius: number, currentMapSize: number, transitionStartTime: number | null }`. Mutations από IdleDetector observer.
+- **Shadow modulation SSoT**: `bim-3d/lighting/shadow-modulator.ts` — pure animation utility. Inputs: `(mode, deltaT)`. Outputs: `{ radius, mapSize }` interpolated. Cubic ease-in 300ms.
+  - Snappy state: `radius=0.5`, `mapSize=1024`
+  - Soft state: `radius=4.0`, `mapSize=2048`
+  - Transition: 300ms cubic interpolation σε RAF loop
+- **IdleDetector integration**: REUSE από §9 Q3 (path tracer trigger). Subscribe με 300ms threshold. Camera controls (orbit/pan/zoom) fire `IdleDetector.notifyActivity()` → mode='snappy'. After 300ms silence → mode='soft' transition begins.
+- **Map size swap (1024² → 2048²)**: `light.shadow.mapSize.set(2048, 2048)` + `light.shadow.map.dispose()` + `light.shadow.map = null` → Three.js recreates map next frame. Cost: ~1-2ms frame stutter. Acceptable γιατί συμβαίνει μόνο on transition to idle (user already stopped).
+- **Performance budget**:
+  - Snappy mode (camera moving): shadow render budget < 2ms/frame (1024² PCF radius=0.5)
+  - Soft mode (idle): shadow render budget ~4-5ms/frame (2048² PCF radius=4.0) — μη blocking γιατί idle
+  - Transition window 300ms: budget ramps 2ms→5ms linear, smooth
+- **Mobile/low-end fallback**: detect via `navigator.hardwareConcurrency < 4 || gpu tier < 2` → force `mode='snappy'` always, disable soft transition. Settings override για explicit user request. Phase 8+ optimization tier.
+- **Three.js light shadow camera tuning**: `DirectionalLight.shadow.camera.{left,right,top,bottom}` auto-fit στο scene bounding box — REUSE GenArc `viewportFraming.ts` pattern (Topic A.4). `light.shadow.bias = -0.0005` για acne prevention, `light.shadow.normalBias = 0.02` για peter-panning prevention.
+- **i18n**: zero new keys (feature είναι invisible / settings-less per Lumion philosophy).
+- **GOL checklist**:
+  - Proactive: ✅ shadow mode initialized 'snappy' at mount, IdleDetector subscribed
+  - Race conditions: ✅ IdleDetector single source — multiple camera controls converge σε ένα activity stream
+  - Idempotent: ✅ `notifyActivity()` δύο φορές = ίδια state (resets timer)
+  - Belt-and-suspenders: ✅ low-end fallback path
+  - SSoT: ✅ shadow-modulator single utility, ViewMode3DStore single state owner
+  - Lifecycle owner: ✅ ViewMode3DStore owns shadow lifecycle, IdleDetector owns activity tracking
+- **Backport σε 2D**: ΟΧΙ — 2D δεν έχει σκιές. Pure 3D feature.
+
+**Effort impact για B.1.Q2**: +3h Phase 5 (shadow-modulator utility + ViewMode3DStore extension + IdleDetector wiring + light shadow camera auto-fit + low-end detection + RAF animation loop + tests). Phase 5 cumulative από Β.1: **+10h** (B.1.Q1=7h + B.1.Q2=3h). ADR-366 total estimate revised: **~114.5-130.5h** (από ~111.5-127.5h post B.1.Q1).
+
+**Architectural implications για B.1.Q3**:
+
+- **Rename SSoT utility**: `bim-3d/lighting/shadow-modulator.ts` → `bim-3d/lighting/quality-modulator.ts` — unified module για ΟΛΑ τα auto-downgrade visual effects (shadows + AO + future post-FX). Single RAF loop, single transition timeline.
+- **ViewMode3DStore extension**: rename `shadowState` → `qualityState: { mode: 'snappy' | 'soft', shadowRadius, shadowMapSize, aoIntensity, transitionStartTime }`. Single mutation source, multiple effect parameters.
+- **Three.js postprocess pipeline** (νέο για Phase 5):
+  - `EffectComposer` wraps renderer (αντί direct `renderer.render()`)
+  - Passes order: `RenderPass` → `SSAOPass` → `OutputPass`
+  - `SSAOPass` config: `kernelRadius=8`, `minDistance=0.005`, `maxDistance=0.1` (architectural scale, metres)
+  - `pass.enabled = false` όταν `aoIntensity === 0` (snappy mode) → zero render cost
+- **AO modulation curve**: snappy → `enabled=false`. Transition start → `enabled=true` + `aoIntensity` animates 0→1 σε 300ms cubic ease-in (same curve με B.1.Q2 shadow radius — visual coherence).
+- **Performance budget**:
+  - Snappy mode (camera moving): SSAOPass disabled, zero cost
+  - Soft mode (idle): SSAOPass ~3-5ms/frame @ 1920×1080 (acceptable, idle)
+  - Mobile/low-end: `qualityState.mode` forced 'snappy' (από B.1.Q2 detection) → AO never activates
+- **Phase 7 path tracer takeover**: όταν `mode='3d-final'` (path tracer rendering, §9 Q3), SSAOPass disabled — path tracer παράγει ground-truth AO via ray-traced GI. Quality-modulator pauses transitions ενώ Phase 7 active.
+- **i18n**: zero new keys (silent feature).
+- **GOL checklist**:
+  - Proactive: ✅ pipeline initialized at mount, pass pre-allocated (zero runtime allocation)
+  - Race conditions: ✅ same IdleDetector source — shadows + AO transition atomically
+  - Idempotent: ✅ multiple `notifyActivity()` = ίδια reset
+  - Belt-and-suspenders: ✅ low-end fallback, Phase 7 override
+  - SSoT: ✅ quality-modulator single utility, ViewMode3DStore single state
+  - Lifecycle owner: ✅ ViewMode3DStore owns quality lifecycle
+- **Backport σε 2D**: ΟΧΙ — 2D δεν έχει 3D depth για AO. Pure 3D feature.
+
+**Effort impact για B.1.Q3**: +2.5h Phase 5 (EffectComposer pipeline setup + SSAOPass integration + quality-modulator rename/extension + aoIntensity transition logic + Phase 7 takeover guard + tests). Phase 5 cumulative από B.1: **+12.5h** (Q1=7h + Q2=3h + Q3=2.5h). ADR-366 total estimate revised: **~117-133h** (από ~114.5-130.5h post B.1.Q2).
+
+**Architectural implications για B.1.Q4**:
+
+- **Phase 5 envmap pipeline** (νέο utility): `bim-3d/lighting/envmap-generator.ts` — renders Hosek-Wilkie Sky shader σε `WebGLCubeRenderTarget` (256² faces, ισορροπία cost/quality), processes via `PMREMGenerator` για roughness mipmaps. Triggered on lighting preset change OR time-of-day change ≥15min delta (debounced).
+- **Scene wiring**: `scene.environment = <generated PMREM texture>` + `scene.background = sceneNeedsSkyBackground ? cubemap : null` (background visibility per ViewMode3DStore.skyVisible flag, μελλοντικά).
+- **PBR material defaults** (νέο SSoT registry): `bim-3d/materials/material-defaults.ts` — entity-type-to-PBR-params mapping:
+  - Glass (παράθυρα/πόρτες): `metalness=0`, `roughness=0.05`, `transparent=true`, `opacity=0.3`, `envMapIntensity=1.0`
+  - Metal (πόμολα/κουπαστές/handrails): `metalness=1.0`, `roughness=0.2`, `envMapIntensity=1.0`
+  - Concrete/walls: `metalness=0`, `roughness=0.85`, `envMapIntensity=0.3`
+  - Wood floors: `metalness=0`, `roughness=0.4`, `envMapIntensity=0.5`
+  - Plaster ceiling: `metalness=0`, `roughness=0.95`, `envMapIntensity=0.1`
+- **Material registry SSoT**: read-only catalog, mirror του 2D `color-config.ts` pattern. Entity renderer (BIM → Three.js, Phase 2) consults registry on mesh creation.
+- **Phase 7 path tracer takeover**: `three-gpu-pathtracer` reads ίδια PBR materials → ground-truth BSDF reflections automatically. Zero material refactor. Quality-modulator pauses Phase 5 SSAO/shadow transitions ενώ Phase 7 active (already covered B.1.Q3).
+- **HDRI swap-in (§9 Q4 Phase 7)**: όταν Phase 7 polish προσθέσει HDRI library, envmap-generator απλά swaps source — `scene.environment` API unchanged. Pure additive.
+- **License check (per N.5)**: `three-gpu-pathtracer` **MIT verified ✅**. PMREMGenerator + WebGLCubeRenderTarget = Three.js core (MIT).
+- **Performance**: envmap regeneration ~5-10ms one-time on preset change (acceptable, non-frame-budget). Steady-state cost: zero (texture reused per frame).
+- **i18n**: zero new keys (silent feature, no UI).
+- **GOL checklist**:
+  - Proactive: ✅ envmap generated on lighting preset mount, cached
+  - Race conditions: ✅ debounced regeneration (15min threshold for time changes)
+  - Idempotent: ✅ ίδιο preset = ίδιο envmap (cache key by preset+sunPosition)
+  - Belt-and-suspenders: ✅ fallback solid color εάν envmap generation fails
+  - SSoT: ✅ envmap-generator single source + material-defaults single registry
+  - Lifecycle owner: ✅ ViewMode3DStore.lightingState triggers regeneration
+- **Backport σε 2D**: ΟΧΙ — 2D δεν έχει PBR materials. Pure 3D feature.
+
+**Effort impact για B.1.Q4**: +1.5h Phase 5 (envmap-generator utility + PMREMGenerator wiring + material-defaults registry 5 entries + entity renderer integration + cache key logic). Phase 7 path tracer cost already counted σε §9 Q4 (4-6h). Phase 5 cumulative από B.1: **+14h** (Q1=7h + Q2=3h + Q3=2.5h + Q4=1.5h). ADR-366 total estimate revised: **~118.5-134.5h** (από ~117-133h post B.1.Q3).
+
+---
+
+**Topic B.1 FINAL summary (2026-05-19)**:
+
+| Q | Status | Key outcome |
+|---|---|---|
+| Q1 — Lighting strategy | ✅ CLOSED | Combo 3-tier (presets thumbnails + time-of-day slider + Advanced Solar panel με ADR-326 geolocation) |
+| Q2 — Shadow quality | ✅ CLOSED | Soft shadows με auto-downgrade on camera motion (Lumion pattern, `light.shadow.radius` modulation) |
+| Q3 — Ambient occlusion | ✅ CLOSED | SSAO με auto-downgrade (unified με Q2 quality-modulator SSoT) |
+| Q4 — Environment reflections | ✅ CLOSED | HDRI envmap Phase 5 (PBR IBL zero cost) + path-traced Phase 7 final |
+
+**Topic B.1 total effort impact**: +14h Phase 5 (Q1=7h + Q2=3h + Q3=2.5h + Q4=1.5h). ADR-366 total estimate post-B.1: **~118.5-134.5h** (από ~104.5-120.5h post-Group-A).
+
+**Architectural commitments από B.1**:
+- Νέα SSoT modules (Phase 5): `lighting-presets.ts`, `solar-position.ts`, `quality-modulator.ts` (shadows+AO unified), `envmap-generator.ts`, `material-defaults.ts`
+- ViewMode3DStore extensions: `lightingState` + `qualityState`
+- Νέα UI (Phase 5): `LightingPresetsPanel`, `TimeOfDaySlider`, `AdvancedSolarPanel`
+- Three.js pipeline: `EffectComposer` με `RenderPass → SSAOPass → OutputPass`
+- Postprocess always-on: `PCFSoftShadowMap` + envmap PBR IBL
+- IdleDetector REUSE (από §9 Q3) → shadows + AO unified trigger
+- npm deps Phase 5: `suncalc` (MIT, ~2KB)
+- Phase 7 deps (already counted §9 Q4): `three-gpu-pathtracer` (MIT)
+
 ---
 
 ## 12. Changelog
 
 | Ημ/νία | Αλλαγή | Author |
 |---|---|---|
+| 2026-05-19 | **Appendix B — Topic B.1 (Materials & Lighting UX) ✅ FULLY CLOSED 4/4 Qs.** Q4 Environment reflections RESOLVED: **HDRI envmap Phase 5 (PBR IBL zero cost) + path-traced Phase 7 final** (Twinmotion + V-Ray pattern, 2/2 BIM render leaders σύγκλιση). Νέα SSoT: `envmap-generator.ts` (PMREMGenerator wiring) + `material-defaults.ts` (5 entity-type PBR registry: glass/metal/concrete/wood/plaster). Phase 7 path tracer (`three-gpu-pathtracer` MIT) takes over reflections automatically — zero material refactor. SSR απορρίπτεται (edge artifacts). Phase 5 +1.5h. **Topic B.1 total +14h Phase 5** (Q1=7h + Q2=3h + Q3=2.5h + Q4=1.5h). **Total estimate revised: ~118.5-134.5h.** Topic B.1 architectural commitments documented: 5 νέα SSoT modules, ViewMode3DStore extensions, EffectComposer pipeline, IdleDetector REUSE. | Claude Opus 4.7 |
+| 2026-05-19 | **Appendix B — Topic B.1.Q3 (Materials/Lighting — ambient occlusion) ✅ RESOLVED** — **SSAO με auto-downgrade on camera motion** (consistency με B.1.Q2 pattern, 4/5 industry σύγκλιση). Three.js `SSAOPass` postprocess, `pass.enabled=false` snappy mode (zero cost), idle 300ms fade-in σε `aoIntensity=1.0`. Rename utility: `shadow-modulator.ts` → `quality-modulator.ts` (unified shadows + AO + future post-FX). ViewMode3DStore.shadowState → qualityState extension. EffectComposer pipeline νέο για Phase 5 (RenderPass → SSAOPass → OutputPass). Phase 7 path tracer takeover override SSAO. Industry leader benchmarks documented: Chaos V-Ray gold offline + Twinmotion/D5 real-time inspirations. Phase 5 +2.5h. **Total estimate revised: ~117-133h.** | Claude Opus 4.7 |
+| 2026-05-19 | **Appendix B — Topic B.1.Q2 (Materials/Lighting — shadow quality) ✅ RESOLVED** — **Soft shadows with auto-downgrade on camera motion** (Lumion pattern, 3/4 industry σύγκλιση + exact Lumion match). Three.js `PCFSoftShadowMap` always-on (zero recompile cost) + dynamic `light.shadow.radius` modulation (0.5 snappy → 4.0 soft, 300ms cubic ease) + dynamic map size (1024² moving → 2048² idle). Trigger via IdleDetector SSoT REUSE από §9 Q3. Zero settings UI clutter — invisible feature, Architect-friendly. Νέο SSoT: `bim-3d/lighting/shadow-modulator.ts`. ViewMode3DStore.shadowState extension. Low-end fallback (hardwareConcurrency<4) forces snappy-always. Phase 5 +3h. **Total estimate revised: ~114.5-130.5h.** | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.1.Q1 (Materials/Lighting UX — φωτισμός εκκίνησης) ✅ RESOLVED** — **Combo 3-tier + BIM geolocation sun**. Tier 1: 6 preset thumbnails (Πρωί/Μεσημέρι/Απόγευμα/Ηλιοβασίλεμα/Συννεφιά/Νύχτα). Tier 2: time-of-day slider 00:00–23:59 με real-time shadows (debounced 16ms). Tier 3: Advanced Solar Panel (date + lat/lng από ADR-326, fallback Athens, Animate toggle). Industry σύγκλιση: 4/4 rendering tools (Twinmotion/Enscape/Lumion/D5) + 2/2 BIM (Revit Sun Settings + ArchiCAD Sun Study). Νέα SSoT: `bim-3d/lighting/lighting-presets.ts` + `bim-3d/lighting/solar-position.ts` (suncalc MIT). ViewMode3DStore extension. UI: LightingPresetsPanel + TimeOfDaySlider + AdvancedSolarPanel. Phase 5 effort +7h. **Total estimate revised: ~111.5-127.5h.** | Claude Opus 4.7 |
 | 2026-05-19 | **Initial draft v1.0** — Full architecture, 7 phases, GenArc port catalog, SPEC-3D-001/002/003/004 skeletons, §9 open questions Q1-Q4 για Γιώργο. Status: PROPOSED. | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix A — Group A 7/7 CLOSED** — A.5 ViewCube micro-interactions (5 sub-Qs), A.6 Keyboard shortcuts 3D (4 sub-Qs), A.7 Accessibility (4 sub-Qs, Q2 ARIA DEFERRED). Total effort impact: +12.5h. Updated ADR-366 estimate: ~104.5-120.5h Phase 0-7 full implementation. | Claude Opus 4.7 |
