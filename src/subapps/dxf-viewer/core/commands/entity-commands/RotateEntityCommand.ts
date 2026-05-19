@@ -19,6 +19,10 @@ import { DEFAULT_MERGE_CONFIG } from '../interfaces';
 import { deepClone } from '../../../utils/clone-utils';
 import { rotateEntity } from '../../../utils/rotation-math';
 import type { Entity } from '../../../types/entities';
+// ADR-363 Phase 7.2 — BIM-aware rotate (pivot rotation per kind + atomic
+// geometry recompute). Returns null for non-BIM, falls through to the
+// generic rotateEntity() path below.
+import { calculateBimRotatedGeometry } from '../../../bim/transforms/bim-rotate-geometry';
 
 /**
  * Command for rotating multiple entities around a pivot point.
@@ -64,22 +68,39 @@ export class RotateEntityCommand implements ICommand {
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId);
       if (!entity) continue;
-      const updates = rotateEntity(entity as unknown as Entity, this.pivot, this.angleDeg);
+      const updates = this.computeRotateUpdates(entity);
 
       if (this.copyMode) {
         const newId = generateEntityId();
-        const clone: SceneEntity = { ...entity, ...(updates as Partial<SceneEntity>), id: newId };
+        const clone: SceneEntity = { ...entity, ...updates, id: newId };
         this.sceneManager.addEntity(clone);
         this.createdEntityIds.push(newId);
       } else {
         this.entitySnapshots.set(entityId, deepClone(entity));
-        this.sceneManager.updateEntity(entityId, updates as Partial<SceneEntity>);
+        this.sceneManager.updateEntity(entityId, updates);
       }
     }
 
     this.wasExecuted = this.copyMode
       ? this.createdEntityIds.length > 0
       : this.entitySnapshots.size > 0;
+  }
+
+  /**
+   * Computes the rotation patch for a single entity. ADR-363 Phase 7.2:
+   * tries BIM-aware rotate first (returns `{params, geometry}` atomic patch
+   * for the 7 BIM kinds); falls through to the generic `rotateEntity()`
+   * path otherwise.
+   */
+  private computeRotateUpdates(entity: SceneEntity): Partial<SceneEntity> {
+    const bimPatch = calculateBimRotatedGeometry(
+      entity as unknown as Entity,
+      this.pivot,
+      this.angleDeg,
+    );
+    if (bimPatch !== null) return bimPatch;
+    const generic = rotateEntity(entity as unknown as Entity, this.pivot, this.angleDeg);
+    return generic as Partial<SceneEntity>;
   }
 
   /**
@@ -119,9 +140,9 @@ export class RotateEntityCommand implements ICommand {
         if (!this.entitySnapshots.has(entityId)) {
           this.entitySnapshots.set(entityId, deepClone(snapshot));
         }
-        const updates = rotateEntity(snapshot as unknown as Entity, this.pivot, this.angleDeg);
+        const updates = this.computeRotateUpdates(snapshot);
         const newId = generateEntityId();
-        const clone: SceneEntity = { ...snapshot, ...(updates as Partial<SceneEntity>), id: newId };
+        const clone: SceneEntity = { ...snapshot, ...updates, id: newId };
         this.sceneManager.addEntity(clone);
         this.createdEntityIds.push(newId);
       }
@@ -131,8 +152,8 @@ export class RotateEntityCommand implements ICommand {
     for (const entityId of this.entityIds) {
       const snapshot = this.entitySnapshots.get(entityId);
       if (snapshot) {
-        const updates = rotateEntity(snapshot as unknown as Entity, this.pivot, this.angleDeg);
-        this.sceneManager.updateEntity(entityId, updates as Partial<SceneEntity>);
+        const updates = this.computeRotateUpdates(snapshot);
+        this.sceneManager.updateEntity(entityId, updates);
       }
     }
   }

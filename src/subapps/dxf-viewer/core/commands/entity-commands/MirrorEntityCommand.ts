@@ -18,6 +18,10 @@ import { deepClone } from '../../../utils/clone-utils';
 import { mirrorEntity } from '../../../utils/mirror-math';
 import type { MirrorAxis } from '../../../utils/mirror-math';
 import type { Entity } from '../../../types/entities';
+// ADR-363 Phase 7.2 — BIM-aware mirror (axis-aware reflection per kind +
+// atomic geometry recompute). Returns null for non-BIM, falls through to the
+// generic mirrorEntity() path below.
+import { calculateBimMirroredGeometry } from '../../../bim/transforms/bim-mirror-geometry';
 
 export class MirrorEntityCommand implements ICommand {
   readonly id: string;
@@ -47,7 +51,7 @@ export class MirrorEntityCommand implements ICommand {
       const entity = this.sceneManager.getEntity(entityId);
       if (!entity) continue;
 
-      const updates = mirrorEntity(entity as unknown as Entity, this.mirrorAxis);
+      const updates = this.computeMirrorUpdates(entity);
 
       if (this.keepOriginals) {
         const newId = generateEntityId();
@@ -56,13 +60,29 @@ export class MirrorEntityCommand implements ICommand {
         this.createdEntityIds.push(newId);
       } else {
         this.entitySnapshots.set(entityId, deepClone(entity));
-        this.sceneManager.updateEntity(entityId, updates as Partial<SceneEntity>);
+        this.sceneManager.updateEntity(entityId, updates);
       }
     }
 
     this.wasExecuted = this.keepOriginals
       ? this.createdEntityIds.length > 0
       : this.entitySnapshots.size > 0;
+  }
+
+  /**
+   * Computes the mirror patch for a single entity. ADR-363 Phase 7.2:
+   * tries BIM-aware mirror first (returns `{params, geometry}` atomic patch
+   * for the 7 BIM kinds); falls through to the generic `mirrorEntity()`
+   * path otherwise.
+   */
+  private computeMirrorUpdates(entity: SceneEntity): Partial<SceneEntity> {
+    const bimPatch = calculateBimMirroredGeometry(
+      entity as unknown as Entity,
+      this.mirrorAxis,
+    );
+    if (bimPatch !== null) return bimPatch;
+    const generic = mirrorEntity(entity as unknown as Entity, this.mirrorAxis);
+    return generic as Partial<SceneEntity>;
   }
 
   undo(): void {
@@ -86,7 +106,7 @@ export class MirrorEntityCommand implements ICommand {
       for (const entityId of this.entityIds) {
         const entity = this.sceneManager.getEntity(entityId);
         if (!entity) continue;
-        const updates = mirrorEntity(entity as unknown as Entity, this.mirrorAxis);
+        const updates = this.computeMirrorUpdates(entity);
         const newId = generateEntityId();
         const newEntity: SceneEntity = { ...entity, ...updates, id: newId };
         this.sceneManager.addEntity(newEntity);
@@ -96,8 +116,8 @@ export class MirrorEntityCommand implements ICommand {
       for (const entityId of this.entityIds) {
         const snapshot = this.entitySnapshots.get(entityId);
         if (snapshot) {
-          const updates = mirrorEntity(snapshot as unknown as Entity, this.mirrorAxis);
-          this.sceneManager.updateEntity(entityId, updates as Partial<SceneEntity>);
+          const updates = this.computeMirrorUpdates(snapshot);
+          this.sceneManager.updateEntity(entityId, updates);
         }
       }
     }
