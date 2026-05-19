@@ -711,6 +711,13 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 
 ## 7. Changelog
 
+- **2026-05-19 (DIM-DIAG R3 round-2 — επεκτάσεις logs, 4 ακόμη σημεία)** — Τα logs round-1 (5 sites) δεν εντόπισαν layer όπου αλλάζουν defPoints. Συμπεραίνεται ότι το πρόβλημα ίσως είναι render-side (screen-space projection / textAnchor / canvas size). Νέα logs:
+  - `rendering/entities/DimensionRenderer.draw` — επέκταση: + dimLine **screen-space** projection μέσω `this.toScreen()`, textAnchor world+screen, canvas size, full transform, dimscale/dimtxt/dimtad style.
+  - `rendering/entities/dimension/dim-text-renderer.ts` — textAnchor world+screen + viewport + primaryHeight calculation.
+  - `canvas-v2/dxf-canvas/DxfRenderer.render` — frame-start dimCount + canvas/cssW/cssH + skipInteractive flag + first 10 dim IDs.
+  - `hooks/drawing/drawing-hover-handler.ts` — hover trace μόνο σε dimLineRef phase (raw + snapped). Avoid noise on other phases.
+  - **STILL TEMPORARY** — διαγραφή μόλις βρεθεί root cause.
+
 - **2026-05-19 (DIM-DIAG R3 — temporary diagnostic logs, 5 sites)** — Round-3 fix landed σε `mouse-handler-up.ts`, αλλά παραμένει συμπτωματική απόκλιση commit→render στα defPoints. Προστέθηκαν προσωρινά `console.warn('[DIM-DIAG R3] …')` σε 5 σημεία για να συγκριθεί το ίδιο σημείο πριν/μετά από κάθε layer:
   - `systems/cursor/mouse-handler-up.ts` — client/screen/world point + snap source/target + transform + dimLineRefPhase flag.
   - `stores/DimensionCreateStore.click` — world + clicksBefore + cursorWorldBefore + stack (4 frames).

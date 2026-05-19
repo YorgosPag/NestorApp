@@ -66,6 +66,16 @@ export function renderDimensionText(
     params.transform,
     params.viewport,
   );
+  // [DIM-DIAG R3] log text placement to track if text lands far from dim line.
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[DIM-DIAG R3] text entity=${params.entity.id} kind=${params.geometry.kind} ` +
+      `textAnchorWorld=(${params.geometry.textAnchor.x.toFixed(2)},${params.geometry.textAnchor.y.toFixed(2)}) ` +
+      `textAnchorScreen=(${screenAnchor.x.toFixed(1)},${screenAnchor.y.toFixed(1)}) ` +
+      `viewport=(${params.viewport.width}x${params.viewport.height}) ` +
+      `transform=(scale=${params.transform.scale.toFixed(3)},offY=${params.transform.offsetY.toFixed(2)}) ` +
+      `dimtxt=${params.style.dimtxt} primaryHeight=${(params.style.dimtxt * params.transform.scale).toFixed(2)}`,
+  );
   // DIMTXT is world-mm; screen height = DIMTXT × view scale (mirrors TextRenderer ADR-344).
   const primaryHeight = params.style.dimtxt * params.transform.scale;
   // DXF angles are CCW, canvas is CW with Y-flip → negate (matches TextRenderer note).

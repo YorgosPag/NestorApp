@@ -96,6 +96,18 @@ export class DxfRenderer {
     // forward it to the dimension leaf. Cheap O(n) scene scan; only dim
     // entities land in the map (typically <100 per scene).
     this.entityComposite.setDimensionLookup(buildDimensionLookup(scene.entities));
+    // [DIM-DIAG R3] frame-start dim entity census — count + IDs.
+    {
+      const dims = scene.entities.filter((e) => e.type === 'dimension');
+      if (dims.length > 0) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[DIM-DIAG R3] frame dimCount=${dims.length} canvas=(${this.ctx.canvas.width}x${this.ctx.canvas.height}) cssW=${cssW} cssH=${cssH} ` +
+            `skipInteractive=${options.skipInteractive ?? false} ` +
+            `ids=[${dims.slice(0, 10).map((e) => e.id).join(',')}]`,
+        );
+      }
+    }
     this.entityComposite.setSlabOpeningsBySlab(buildSlabOpeningsBySlab(scene.entities));
     // ADR-363 Phase 2 (deferred pipeline) — feed per-frame opening→wall index so
     // WallRenderer can punch boolean cutouts through wall fills.

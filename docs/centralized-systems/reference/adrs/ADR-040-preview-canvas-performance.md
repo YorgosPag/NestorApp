@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-19 — ADR-362 DIM-DIAG R3 round-2: temporary `console.warn` σε `DxfRenderer.render` (TEMPORARY)
+
+Προστέθηκε προσωρινό diagnostic log στο `DxfRenderer.render` που μετράει dim entities ανά frame + canvas size + skipInteractive flag, για να εντοπιστεί commit→render defPoints divergence (ADR-362 issue). **Δεν τροποποιεί αρχιτεκτονική** — μόνο `console.warn` πίσω από `if (dims.length > 0)` guard. Zero React state, zero subscription change, zero invalidation logic. **TEMPORARY** — διαγραφή μόλις βρεθεί root cause του ADR-362 bug. Αν διαβάζεις αυτό σε επόμενο PR και τα logs υπάρχουν ακόμα → ασφαλώς αφαίρεσέ τα (Boy Scout).
+
 ### 2026-05-19 — ADR-363 Phase 7.1 Step 6: Multi-Selection ribbon micro-leaves + `useActiveContextualTrigger` extension
 
 Added two new ribbon widget components — `MultiSelectionCommonPropertiesPanel` + `MultiSelectionFilterPanel` — registered in `RibbonPanel.tsx` widget dispatcher. Both mount **only** inside the contextual ribbon tree (DOM-only, no canvas), so they are not on the canvas render path. Each component instantiates a single bridge hook `useMultiSelectionRibbonBridge(...)`, which reads `useLevels()` + `useUniversalSelection()` via React Context (not `useSyncExternalStore`). Bridge work is derived inside the leaf, never raised into `CanvasSection`.
