@@ -27,6 +27,7 @@ import type { useLevels } from '../systems/levels';
 import type { WallEntity } from '../bim/types/wall-types';
 import { isWallEntity } from '../types/entities';
 import { useWallPersistence } from '../hooks/data/useWallPersistence';
+import { useWallSplitPersistence } from '../hooks/data/useWallSplitPersistence';
 import { WallCascadeDeleteDialog } from '../ui/dialogs/WallCascadeDeleteDialog';
 
 type LevelManagerLike = Pick<
@@ -68,6 +69,14 @@ export function WallPersistenceHost({
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedWall,
+  });
+
+  useWallSplitPersistence({
+    companyId: user?.companyId ?? null,
+    projectId,
+    floorplanId,
+    buildingId,
+    userId: user?.uid ?? null,
   });
 
   return <WallCascadeDeleteDialog />;

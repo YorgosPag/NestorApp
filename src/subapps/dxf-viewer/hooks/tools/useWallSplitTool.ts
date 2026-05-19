@@ -41,6 +41,7 @@ import {
   computeSplitIndicatorLine,
 } from '../../bim/walls/wall-split';
 import { WallSplitCommand } from '../../core/commands/entity-commands/WallSplitCommand';
+import { EventBus } from '../../systems/events/EventBus';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import type { useLevels } from '../../systems/levels';
 
@@ -205,6 +206,12 @@ export function useWallSplitTool({
     );
 
     executeCommand(cmd);
+    EventBus.emit('bim:wall-split-committed', {
+      originalWallId: targetWall.id,
+      wall1: { ...wall1, hostedOpeningIds: wall1OpeningIds },
+      wall2: { ...wall2, hostedOpeningIds: wall2OpeningIds },
+      openingUpdates,
+    });
   }, [getSceneManager, levelManager, findWallAtPoint, executeCommand]);
 
   // ── Escape: exit tool ─────────────────────────────────────────────────────
