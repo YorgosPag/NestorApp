@@ -183,7 +183,16 @@ export function useTextCreationTool(
       const units = getSceneUnits ? getSceneUnits() : 'mm';
       const reg = getDimStyleRegistry();
       const activeStyle = reg.getAllStyles().find(s => s.id === reg.getActiveStyleId());
-      const dimscale = activeStyle?.dimscale ?? 1;
+      const rawDimscale = activeStyle?.dimscale ?? 1;
+      // ADR-344 R6: when no meaningful scale is declared (dimscale ≤ 1),
+      // fall back to a unit-aware typical drawing scale so the committed text
+      // height is visible. E.g. m scene + scale 1 → 0.0025m (sub-pixel). Using
+      // 100 gives 0.25m (250mm) — legible at typical 1:100 building scale.
+      const dimscale = rawDimscale > 1 ? rawDimscale : (
+        units === 'm'  ? 100 :  // 2.5mm × 100 = 250mm — 1:100 building
+        units === 'cm' ? 10  :  // 2.5mm × 10 = 25mm  — 1:10 detail
+        1                        // mm/in/ft — paper-mm is correct
+      );
       setCreatingState({
         entityId: generateEntityId(),
         position: worldPoint,

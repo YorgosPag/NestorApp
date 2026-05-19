@@ -28,6 +28,14 @@ jest.mock('../../../ui/text-toolbar/hooks/useDxfTextServices', () => ({
   }),
 }));
 
+// Stub registry — no styles registered → rawDimscale=1 → unit-aware fallback applies.
+jest.mock('../../../systems/dimensions/dim-style-registry', () => ({
+  getDimStyleRegistry: () => ({
+    getAllStyles: () => [],
+    getActiveStyleId: () => '',
+  }),
+}));
+
 interface CapturedCommand extends ICommand {
   readonly _params: { readonly textNode: DxfTextNode };
 }
@@ -73,10 +81,18 @@ function renderTool(units: SceneUnits, executeCommand: (cmd: ICommand) => void) 
 // Cases
 // ──────────────────────────────────────────────────────────────────────────────
 
+// ADR-344 R6: unit-aware dimscale fallback (rawDimscale≤1 → cm×10, m×100).
+// Registry stub above returns no styles → rawDimscale=1 → fallback activates.
+// Formula: 2.5 * dimscaleFallback(units) * mmToSceneUnits(units)
+//   mm: 2.5 * 1   * 1     = 2.5        (paper-mm stays as-is)
+//   cm: 2.5 * 10  * 0.1   = 2.5        (25mm model space in cm-scene)
+//   m:  2.5 * 100 * 0.001 = 0.25       (250mm model space in m-scene)
+//   in: 2.5 * 1   * 1/25.4 ≈ 0.0984
+//   ft: 2.5 * 1   * 1/304.8 ≈ 0.0082
 const CASES: ReadonlyArray<{ units: SceneUnits; expected: number }> = [
   { units: 'mm', expected: 2.5 },
-  { units: 'cm', expected: 0.25 },
-  { units: 'm',  expected: 0.0025 },
+  { units: 'cm', expected: 2.5 },         // 2.5 * 10  * 0.1   = 2.5
+  { units: 'm',  expected: 0.25 },        // 2.5 * 100 * 0.001 = 0.25
   { units: 'in', expected: 2.5 / 25.4 },
   { units: 'ft', expected: 2.5 / 304.8 },
 ];
@@ -168,7 +184,9 @@ describe('useTextCreationTool — scene-units awareness (ADR-344 Phase 13)', () 
     expect(capturedNode).not.toBeNull();
     const run = capturedNode!.paragraphs[0].runs[0];
     if ('text' in run) {
-      expect(run.style.height).toBeCloseTo(0.0025, 6); // 2.5 * mmToSceneUnits('m')
+      // R6 dimscale fallback: m-scene + rawDimscale≤1 → fallback=100
+      // defaultHeight = 2.5 * 100 * 0.001 = 0.25m (250mm — visible at building scale)
+      expect(run.style.height).toBeCloseTo(0.25, 6);
     } else {
       throw new Error('Expected TextRun');
     }
