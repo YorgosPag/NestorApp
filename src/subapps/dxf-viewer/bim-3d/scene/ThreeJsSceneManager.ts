@@ -38,6 +38,7 @@ export class ThreeJsSceneManager {
   private disposed = false;
   private lastFrameTime = performance.now();
   private isInteracting = false;
+  private initialCameraFitDone = false;
 
   constructor(container: HTMLElement) {
     this.renderer = this.initRenderer(container);
@@ -138,7 +139,15 @@ export class ThreeJsSceneManager {
   }
 
   syncDxfOverlay(dxfScene: DxfScene | null): void {
-    if (!this.disposed) this.overlay.sync(dxfScene);
+    if (this.disposed) return;
+    this.overlay.sync(dxfScene);
+    if (!this.initialCameraFitDone) {
+      const box = this.overlay.getBounds();
+      if (box && !box.isEmpty()) {
+        this.viewport.frameBounds(box.min, box.max);
+        this.initialCameraFitDone = true;
+      }
+    }
   }
 
   resize(width: number, height: number): void {

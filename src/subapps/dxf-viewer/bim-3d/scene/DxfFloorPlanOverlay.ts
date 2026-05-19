@@ -22,15 +22,11 @@ const OVERLAY_MAT = new THREE.LineBasicMaterial({
   opacity: 0.5,
 });
 
-function unitScale(units: DxfScene['units']): number {
-  switch (units) {
-    case 'cm': return 0.01;
-    case 'm':  return 1;
-    case 'in': return 0.0254;
-    case 'ft': return 0.3048;
-    default:   return 0.001; // 'mm' + back-compat
-  }
-}
+// DXF viewer entities are stored in the canvas world coordinate system (meters),
+// matching BimToThreeConverter's output. No unit conversion needed — scale=1.
+// NOTE: dxfScene.units reflects the DXF INSUNITS header, but our canvas always
+// normalizes to meters internally, so unitScale() is intentionally NOT applied here.
+const DXF_WORLD_SCALE = 1;
 
 function pushSeg(
   buf: number[],
@@ -140,13 +136,21 @@ export class DxfFloorPlanOverlay {
     }
     if (!dxfScene || dxfScene.entities.length === 0) return;
 
-    const positions = buildPositions(dxfScene.entities, unitScale(dxfScene.units));
+    const positions = buildPositions(dxfScene.entities, DXF_WORLD_SCALE);
     if (positions.length === 0) return;
 
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     this.mesh = new THREE.LineSegments(geo, OVERLAY_MAT);
     this.scene.add(this.mesh);
+  }
+
+  /** Returns world-space bounding box of the overlay, or null if no mesh. */
+  getBounds(): THREE.Box3 | null {
+    if (!this.mesh) return null;
+    const box = new THREE.Box3();
+    box.setFromObject(this.mesh);
+    return box;
   }
 
   dispose(): void {

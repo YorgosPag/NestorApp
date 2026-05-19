@@ -31,9 +31,8 @@ _Ενημέρωση 2026-05-19: Phase 5.5e (snap-to-wall-axis projection) ολο
 
 ---
 
-### Phase 1D-D — BOQ Auto-Feed για Wall (~1-2h)
-> Dependency: Phase 6 (DONE) → μπορεί να γίνει τώρα.
-- [ ] `BimToBoqBridge.feedWall()` — emit ΟΙΚ-3 BOQ item per wall
+### Phase 1D-D — ✅ DONE (2026-05-19 — stale entry, κώδικας ήταν ήδη υλοποιημένος)
+`bimToBoqBridge.upsertBoqItemForBim('wall', ...)` wired σε `useWallPersistence`. 8 tests pass.
 
 ---
 
@@ -128,7 +127,7 @@ _Ενημέρωση 2026-05-19: Phase 5.5e (snap-to-wall-axis projection) ολο
 | Κατηγορία | Items | Εκτίμηση |
 |-----------|-------|----------|
 | ~~Phase 0, 0.5~~ | ✅ DONE | — |
-| Phase 1D-D | 1 | ~1-2h |
+| ~~Phase 1D-D~~ | ✅ DONE | — |
 | Phase 2 deferred | 4 | ~3-5h |
 | Phase 3.7b+ | 3 | ~2-4h |
 | Phase 4.5d deferred | 5 | ~3-5h |

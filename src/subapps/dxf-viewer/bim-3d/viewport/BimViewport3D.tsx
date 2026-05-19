@@ -98,7 +98,7 @@ export function BimViewport3D() {
   // React stopPropagation, so OrbitControls receives events normally.
   return (
     <div
-      className="absolute inset-0 z-50"
+      className="absolute inset-0 z-50 cursor-grab active:cursor-grabbing"
       onMouseMove={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
       onMouseUp={(e) => e.stopPropagation()}
