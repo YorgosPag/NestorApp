@@ -83,6 +83,23 @@
 
 ---
 
+### 💰 ADR-363 PHASE 6.x — Multi-Layer Wall DNA BOQ (~8h)
+
+Discovered 2026-05-19 (SPEC-3D-004D §12 Q4 Full Enterprise resolution, industry 6/6 σύγκλιση Revit + ArchiCAD + Bentley + Tekla + Vectorworks + Allplan).
+
+**Πρόβλημα**: `BimToBoqBridge.buildBoqPayload` παράγει 1 BOQ entry per entity με `geometry.area`/`geometry.volume`. Για walls με DNA layers (πχ 3-layer composite σοβάς+σκυρόδεμα+γυψοσανίδα), αυτό δεν αντιπροσωπεύει το πραγματικό material breakdown — όλοι οι major BIM tools παράγουν per-layer rows.
+
+- [ ] **bim-to-atoe-mapping extension** — per-layer-category mapping (concrete/plaster/gypsum/insulation/tile/wood/glass/metal/stone → ΑΤΟΕ codes). (~1h)
+- [ ] **BimToBoqBridge multi-entry generation** — αν `entity.params.dna?.layers?.length > 1`, παράγει N entries με deterministic IDs `boq_bim_${entityId}_layer_${layerId}` + per-layer quantity (`wallNetArea × layer.thickness` volume, `wallNetArea × side-multiplier` area). (~2h)
+- [ ] **Per-layer detach guard** — user detach σε ένα layer entry δεν επηρεάζει τα υπόλοιπα. (~1h)
+- [ ] **Backward-compatible migration** — existing single-entry rows `boq_bim_${entityId}` (no layer suffix) διατηρούνται· νέα saves παράγουν multi-entry structure. (~1h)
+- [ ] **Tests** — unit (per-layer quantity correctness, multi-layer ratchet) + integration (Firestore upsert + detach guard). (~2h)
+- [ ] **ADR-363 §6 update + ADR-329 cross-link + ΑΤΟΕ catalog expansion** — documentation closure. (~1h)
+
+**Reference**: SPEC-3D-004D §12 Q4. Pattern reference (concept only): GenArc `wallLayerQuantities` σε `geometryCalculators.ts`.
+
+---
+
 ### 🏗️ ADR-363 PHASE 7.2 — BIM Transforms (deferred 2026-05-19, priorità bassa, ~4-5h)
 
 Phase 7 split into 7.1 (Selection Core) + 7.2 (Transform BIM) per Giorgio Q5 decision (phase-per-session). **7.1 FULLY LANDED 2026-05-19** (marquee bounds + move geometry + cascade resolver + integrations + Multi-Selection Ribbon Contextual Tab με κοινές ιδιότητες/Φίλτρο + bulk-update-builder + bridge hook + dispatcher wiring + i18n + 99 tests). 7.2 scope below.
