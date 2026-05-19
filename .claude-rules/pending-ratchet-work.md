@@ -85,7 +85,7 @@
 
 ### 🏗️ ADR-363 PHASE 7.2 — BIM Transforms (deferred 2026-05-19, priorità bassa, ~4-5h)
 
-Phase 7 split into 7.1 (Selection Core) + 7.2 (Transform BIM) per Giorgio Q5 decision (phase-per-session). 7.1 partially landed 2026-05-19 (marquee bounds + move geometry + cascade resolver + integrations); ribbon contextual tab pending separate handoff. 7.2 scope below.
+Phase 7 split into 7.1 (Selection Core) + 7.2 (Transform BIM) per Giorgio Q5 decision (phase-per-session). **7.1 FULLY LANDED 2026-05-19** (marquee bounds + move geometry + cascade resolver + integrations + Multi-Selection Ribbon Contextual Tab με κοινές ιδιότητες/Φίλτρο + bulk-update-builder + bridge hook + dispatcher wiring + i18n + 99 tests). 7.2 scope below.
 
 - [ ] **Mirror BIM** — extend `MirrorEntityCommand` per kind: wall `start`/`end` reflection across axis; opening `handing` flip when applicable; slab/slab-opening polygon mirror; column rotation reflection; beam endpoint mirror; stair basepoint+direction mirror. Each must preserve params + recompute geometry via `compute<Kind>Geometry()`.
 - [ ] **Rotate BIM** — pivot UI (2-click: pivot point → rotation angle). Extend `RotateEntityCommand` for wall endpoints, slab polygon, column position+rotation, beam endpoints, stair basepoint+direction. Group rotation around common pivot.

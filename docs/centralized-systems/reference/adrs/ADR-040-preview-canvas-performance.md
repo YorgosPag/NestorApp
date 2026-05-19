@@ -71,6 +71,20 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-19 — ADR-363 Phase 7.1 Step 6: Multi-Selection ribbon micro-leaves + `useActiveContextualTrigger` extension
+
+Added two new ribbon widget components — `MultiSelectionCommonPropertiesPanel` + `MultiSelectionFilterPanel` — registered in `RibbonPanel.tsx` widget dispatcher. Both mount **only** inside the contextual ribbon tree (DOM-only, no canvas), so they are not on the canvas render path. Each component instantiates a single bridge hook `useMultiSelectionRibbonBridge(...)`, which reads `useLevels()` + `useUniversalSelection()` via React Context (not `useSyncExternalStore`). Bridge work is derived inside the leaf, never raised into `CanvasSection`.
+
+`app/ribbon-contextual-config.ts.useActiveContextualTrigger` gained an optional `selectedEntityIds` arg + a precedence rule: when 2+ entities from the BIM kind set (`wall`/`opening`/`slab`/`slab-opening`/`column`/`beam`/`stair`) are selected, the function returns `MULTI_SELECTION_CONTEXTUAL_TRIGGER`, overriding any per-kind trigger driven by `primarySelectedId`. The hook still runs only inside `DxfViewerContent` (top-level), inheriting the existing memoization deps. `DxfViewerContent` simply forwards `selectedEntityIds` — no new orchestrator subscriptions.
+
+`MultiSelectionCommonPropertiesPanel` commit path is event-time (Enter / blur read `draft` state at the moment of the keystroke, then build a `CompoundCommand` via `bim-bulk-update-builder.ts` and dispatch through `executeCommand`). It does not capture stale snapshots — all reads happen at submit time.
+
+**Cardinal rule compliance**:
+- **Rule 1 (no orchestrator subscriptions)**: respected — both widgets subscribe via React Context, scoped to the ribbon leaf. `CanvasSection` gains zero new subscriptions; `DxfViewerContent` only adds a pass-through arg to an existing memo.
+- **Rule 2 (getter-based event reads)**: respected — commit handlers read `draft`/`initialValue` at event time via React state, and the bulk-update factory pulls per-entity `params` from the `ISceneManager` at command-construction time (not from a captured snapshot).
+- **Rule 3 (bitmap cache key untouched)**: respected — no changes to `dxf-bitmap-cache.ts` key composition. Multi-selection mode is a DOM-only concept; the canvas continues to invalidate based on the existing selection set + transform delta only.
+- **Rule 4 (≤1 canvas element / ≤2 high-freq hooks per leaf)**: respected — each new widget is DOM-only (zero canvas elements) and uses one bridge hook that pulls from React Context (not high-frequency).
+
 ### 2026-05-19 — ADR-363 Phase 5.6 Ribbon+ContextMenu: `isWallEntity` import + `canSplit`/`onSplit` passthrough in `CanvasSection`
 
 `CanvasSection` adds: (1) `import { isWallEntity }` from `types/entities` for the context-menu wall-type guard; (2) `canSplit` prop computed inline via `props.currentScene.entities.find + isWallEntity` (pure derivation, no subscription); (3) `onSplit` callback that calls `props.onToolChange('wall-split')`. Zero new `useSyncExternalStore` subscriptions in orchestrator.
