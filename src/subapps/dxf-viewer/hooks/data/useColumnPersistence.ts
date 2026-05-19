@@ -295,7 +295,7 @@ export function useColumnPersistence(
         'deleted',
         { id: columnId, kind: (deletedEntity as Partial<ColumnEntity>)?.kind ?? 'rectangular' },
       );
-      void bimToBoqBridge.deleteBoqItemForBim(columnId);
+      void bimToBoqBridge.deleteBoqItemForBim(columnId, companyId ?? '');
     } catch {
       // Non-fatal: deletion failure silent — user retries.
     }
@@ -307,7 +307,7 @@ export function useColumnPersistence(
 
     dirtyIdsRef.current.delete(columnId);
     lastSavedParamsRef.current.delete(columnId);
-  }, [levelManager]);
+  }, [levelManager, companyId]);
 
   // First-save listener — fires άμεσα για freshly drawn columns.
   useEffect(() => {

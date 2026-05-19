@@ -324,7 +324,7 @@ export function useOpeningPersistence(
         'deleted',
         { id: openingId, kind: (deletedEntity as Partial<OpeningEntity>)?.kind ?? 'door' },
       );
-      void bimToBoqBridge.deleteBoqItemForBim(openingId);
+      void bimToBoqBridge.deleteBoqItemForBim(openingId, companyId ?? '');
     } catch {
       // Non-fatal: deletion failure silent — user can retry.
     }
@@ -336,7 +336,7 @@ export function useOpeningPersistence(
 
     dirtyIdsRef.current.delete(openingId);
     lastSavedParamsRef.current.delete(openingId);
-  }, [levelManager]);
+  }, [levelManager, companyId]);
 
   // First-save listener — fires άμεσα για freshly drawn openings.
   useEffect(() => {

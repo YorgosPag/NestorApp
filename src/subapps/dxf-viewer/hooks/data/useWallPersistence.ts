@@ -355,7 +355,7 @@ export function useWallPersistence(
         'deleted',
         { id: wallId, kind: (deletedEntity as Partial<WallEntity>)?.kind ?? 'straight' },
       );
-      void bimToBoqBridge.deleteBoqItemForBim(wallId);
+      void bimToBoqBridge.deleteBoqItemForBim(wallId, companyId ?? '');
     } catch {
       // Non-fatal: deletion failure is silent — user can retry.
     }
@@ -372,7 +372,7 @@ export function useWallPersistence(
     if (lockHeldRef.current === wallId) {
       void releaseLock();
     }
-  }, [levelManager, releaseLock]);
+  }, [levelManager, releaseLock, companyId]);
 
   // First-save listener — fires immediately for freshly drawn walls so the
   // local scene survives the next Firestore snapshot AND lands in

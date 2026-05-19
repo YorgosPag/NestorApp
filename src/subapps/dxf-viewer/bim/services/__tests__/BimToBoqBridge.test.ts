@@ -417,6 +417,81 @@ describe('bimToBoqBridge.upsertBoqItemForBim — multi-layer wall (Phase 6.1)', 
   });
 });
 
+describe('bimToBoqBridge — wall single-entry BOQ categories (Phase 1D-D)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetDoc.mockResolvedValue(makeSnap(false));
+    mockSetDoc.mockResolvedValue(undefined);
+  });
+
+  const wallCases: Array<{ category: string; expectedCode: string }> = [
+    { category: 'exterior',  expectedCode: 'OIK-3.05' },
+    { category: 'parapet',   expectedCode: 'OIK-3.05' },
+    { category: 'fence',     expectedCode: 'OIK-3.05' },
+    { category: 'interior',  expectedCode: 'OIK-3.06' },
+    { category: 'partition', expectedCode: 'OIK-3.06' },
+  ];
+
+  for (const { category, expectedCode } of wallCases) {
+    it(`category '${category}' → categoryCode ${expectedCode}, unit m2, area as quantity`, async () => {
+      await bimToBoqBridge.upsertBoqItemForBim(
+        'wall',
+        { id: `wall-cat-${category}`, kind: 'straight', params: { category }, geometry: { area: 12.5 } },
+        context,
+        'created',
+      );
+
+      expect(mockSetDoc).toHaveBeenCalledTimes(1);
+      const payload = mockSetDoc.mock.calls[0]![1] as Record<string, unknown>;
+      expect(payload.categoryCode).toBe(expectedCode);
+      expect(payload.unit).toBe('m2');
+      expect(payload.estimatedQuantity).toBe(12.5);
+      expect(payload.sourceEntityType).toBe('wall');
+    });
+  }
+
+  it('wall χωρίς category → skip (no setDoc)', async () => {
+    await bimToBoqBridge.upsertBoqItemForBim(
+      'wall',
+      { id: 'wall-nocat', kind: 'straight' },
+      context,
+      'created',
+    );
+
+    expect(mockGetDoc).not.toHaveBeenCalled();
+    expect(mockSetDoc).not.toHaveBeenCalled();
+  });
+
+  it('wall area=0 (χωρίς geometry) → estimatedQuantity=0, still writes', async () => {
+    await bimToBoqBridge.upsertBoqItemForBim(
+      'wall',
+      { id: 'wall-nogeo', kind: 'straight', params: { category: 'exterior' } },
+      context,
+      'created',
+    );
+
+    expect(mockSetDoc).toHaveBeenCalledTimes(1);
+    const payload = mockSetDoc.mock.calls[0]![1] as Record<string, unknown>;
+    expect(payload.estimatedQuantity).toBe(0);
+  });
+
+  it('cascade delete query χρησιμοποιεί companyId σωστά (regression ADR-363 Phase 1D-D)', async () => {
+    mockGetDocs.mockResolvedValue({
+      docs: [
+        { id: 'boq_bim_wall-reg_layer_L0' },
+        { id: 'boq_bim_wall-reg_layer_L1' },
+      ],
+    });
+    mockGetDoc.mockResolvedValue(makeSnap(true, { detached: false }));
+    mockDeleteDoc.mockResolvedValue(undefined);
+
+    await bimToBoqBridge.deleteBoqItemForBim('wall-reg', 'company-abc');
+
+    expect(mockWhere).toHaveBeenCalledWith('companyId', '==', 'company-abc');
+    expect(mockDeleteDoc).toHaveBeenCalledTimes(3);
+  });
+});
+
 describe('bimToBoqBridge.getBoqItemBySourceEntity', () => {
   beforeEach(() => jest.clearAllMocks());
 

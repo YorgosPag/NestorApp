@@ -295,7 +295,7 @@ export function useSlabPersistence(
         'deleted',
         { id: slabId, kind: (deletedEntity as Partial<SlabEntity>)?.kind ?? 'floor' },
       );
-      void bimToBoqBridge.deleteBoqItemForBim(slabId);
+      void bimToBoqBridge.deleteBoqItemForBim(slabId, companyId ?? '');
     } catch {
       // Non-fatal: deletion failure silent — user retries.
     }
@@ -307,7 +307,7 @@ export function useSlabPersistence(
 
     dirtyIdsRef.current.delete(slabId);
     lastSavedParamsRef.current.delete(slabId);
-  }, [levelManager]);
+  }, [levelManager, companyId]);
 
   // First-save listener — fires άμεσα για freshly drawn slabs.
   useEffect(() => {

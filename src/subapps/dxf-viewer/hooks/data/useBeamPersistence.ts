@@ -295,7 +295,7 @@ export function useBeamPersistence(
         'deleted',
         { id: beamId, kind: (deletedEntity as Partial<BeamEntity>)?.kind ?? 'straight' },
       );
-      void bimToBoqBridge.deleteBoqItemForBim(beamId);
+      void bimToBoqBridge.deleteBoqItemForBim(beamId, companyId ?? '');
     } catch {
       // Non-fatal: deletion failure silent — user retries.
     }
@@ -307,7 +307,7 @@ export function useBeamPersistence(
 
     dirtyIdsRef.current.delete(beamId);
     lastSavedParamsRef.current.delete(beamId);
-  }, [levelManager]);
+  }, [levelManager, companyId]);
 
   // First-save listener — fires άμεσα για freshly drawn beams.
   useEffect(() => {
