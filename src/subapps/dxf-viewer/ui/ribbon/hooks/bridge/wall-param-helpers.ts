@@ -44,6 +44,9 @@ export function readWallStringField(
   if (commandKey === WALL_RIBBON_KEYS.toggles.flip) {
     return params.flip ? 'true' : 'false';
   }
+  if (commandKey === WALL_RIBBON_KEYS.stringParams.material) {
+    return params.material ?? null;
+  }
   return null;
 }
 
@@ -60,6 +63,9 @@ export function patchWallStringParam(
   if (commandKey === WALL_RIBBON_KEYS.toggles.flip) {
     if (value !== 'true' && value !== 'false') return null;
     return { ...params, flip: value === 'true' };
+  }
+  if (commandKey === WALL_RIBBON_KEYS.stringParams.material) {
+    return { ...params, material: value || undefined };
   }
   return null;
 }
