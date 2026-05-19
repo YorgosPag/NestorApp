@@ -148,6 +148,10 @@
     "selectBasePoint": "Κλικ: σημείο αναφοράς",
     "selectDestination": "Κλικ: σημείο προορισμού — Esc: ακύρωση"
   },
+  "bimCopyTool": {
+    "selectBasePoint": "Κλικ: σημείο αναφοράς",
+    "selectTargetPoint": "Κλικ: σημείο προορισμού — Esc: ακύρωση"
+  },
   "mirrorTool": {
     "selectEntity": "Επιλέξτε οντότητες → Κλικ: 1ο σημείο άξονα → 2ο σημείο άξονα",
     "selectFirstPoint": "Κλικ: 1ο σημείο άξονα συμμετρίας",

@@ -81,6 +81,8 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'mstretch': { id: 'mstretch', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   // ADR-363 Phase 5.6: Wall Split (Revit Split Element — continuous pick loop, exits on ESC)
   'wall-split': { id: 'wall-split', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-363 R1: BIM Copy (AutoCAD COPY: base + continuous target picks, exits on ESC)
+  'bim-copy': { id: 'bim-copy', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-350: Trim (continuous pick loop, Quick mode default, exits on ENTER/ESC/right-click)
   'trim': { id: 'trim', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-353: Extend (continuous pick loop, Quick mode default, exits on ENTER/ESC/right-click)

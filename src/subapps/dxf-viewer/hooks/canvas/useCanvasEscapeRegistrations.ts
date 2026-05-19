@@ -63,6 +63,9 @@ export interface UseCanvasEscapeRegistrationsParams {
   /** ADR-363 Phase 5.6: Wall Split ESC handler */
   readonly handleWallSplitEscape?: () => void;
   readonly wallSplitIsActive: boolean;
+  /** ADR-363 R1: BIM Copy ESC handler */
+  readonly handleBimCopyEscape?: () => void;
+  readonly bimCopyIsActive: boolean;
   readonly handleRotationEscape?: () => void;
   readonly rotationIsActive: boolean;
 }
@@ -100,6 +103,7 @@ export function useCanvasEscapeRegistrations(p: UseCanvasEscapeRegistrationsPara
   useEscapeHandler(buildModifyHandler('array-polar', p.handleArrayPolarEscape, () => p.arrayPolarIsActive));
   useEscapeHandler(buildModifyHandler('array-path', p.handleArrayPathEscape, () => p.arrayPathIsActive));
   useEscapeHandler(buildModifyHandler('wall-split', p.handleWallSplitEscape, () => p.wallSplitIsActive));
+  useEscapeHandler(buildModifyHandler('bim-copy', p.handleBimCopyEscape, () => p.bimCopyIsActive));
   useEscapeHandler(buildModifyHandler('rotation', p.handleRotationEscape, () => p.rotationIsActive));
 
   // P450 — Grip drag (handleGripEscape returns its own consumed boolean)

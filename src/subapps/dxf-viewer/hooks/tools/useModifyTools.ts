@@ -18,6 +18,7 @@ import { useArrayTool } from './useArrayTool';
 import { useArrayPolarTool } from './useArrayPolarTool';
 import { useArrayPathTool } from './useArrayPathTool';
 import { useWallSplitTool } from './useWallSplitTool';
+import { useBimCopyTool } from './useBimCopyTool';
 import { MoveOverlayCommand, MoveMultipleOverlaysCommand } from '../../core/commands';
 import { subscribeToImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { distanceToEntity } from '../../utils/entity-distance';
@@ -83,6 +84,15 @@ export function useModifyTools({
 
   const stretchTool = useStretchTool({
     activeTool, selectedEntityIds, levelManager, executeCommand, onToolChange,
+  });
+
+  // ADR-363 R1 — BIM Copy Tool (AutoCAD COPY pattern)
+  const bimCopyTool = useBimCopyTool({
+    activeTool,
+    selectedEntityIds,
+    levelManager,
+    executeCommand,
+    onToolChange,
   });
 
   // ADR-363 Phase 5.6 — Wall Split Tool (Revit Split Element pattern)
@@ -210,6 +220,7 @@ export function useModifyTools({
     arrayPolarTool,
     arrayPathTool,
     wallSplitTool,
+    bimCopyTool,
     handleRotationAnglePrompt,
   };
 }

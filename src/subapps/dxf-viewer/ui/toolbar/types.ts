@@ -38,6 +38,7 @@ export type ToolType =
   | 'scale'             // ADR-348: Scale command (uniform + non-uniform + reference + copy)
   | 'mirror'            // ADR-2xx: Mirror command
   | 'copy'
+  | 'bim-copy'            // ADR-363 R1: BIM clipboard copy (AutoCAD COPY pattern)
   | 'delete'
   // ADR-349 Phase 1a: Stretch command (crossing-window displacement)
   | 'stretch'

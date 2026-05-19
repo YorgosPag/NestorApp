@@ -114,6 +114,10 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleWallSplitEscape?: () => void;
   /** ADR-363 Phase 5.6: Whether the wall-split tool is active */
   wallSplitIsActive?: boolean;
+  /** ADR-363 R1: BIM Copy ESC handler */
+  handleBimCopyEscape?: () => void;
+  /** ADR-363 R1: Whether the bim-copy tool is active */
+  bimCopyIsActive?: boolean;
   /** SSoT deselect-all callback — clears local entity state + UniversalSelection */
   clearEntitySelection?: () => void;
   /** True when any non-DXF entity is selected (e.g. overlays) — widens the Escape guard */
@@ -181,6 +185,8 @@ export function useCanvasKeyboardShortcuts({
   arrayPathIsActive = false,
   handleWallSplitEscape,
   wallSplitIsActive = false,
+  handleBimCopyEscape,
+  bimCopyIsActive = false,
   clearEntitySelection,
   hasAnySelection = false,
   handleReorderEntity,
@@ -432,6 +438,8 @@ export function useCanvasKeyboardShortcuts({
     arrayPathIsActive,
     handleWallSplitEscape,
     wallSplitIsActive,
+    handleBimCopyEscape,
+    bimCopyIsActive,
     handleRotationEscape,
     rotationIsActive,
   });

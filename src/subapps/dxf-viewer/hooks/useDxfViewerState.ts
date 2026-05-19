@@ -367,6 +367,10 @@ export function useDxfViewerState() {
       case 'toggle-guide-analysis-panel':
         toolbarState.toggleGuideAnalysisPanel();
         break;
+      // ADR-363 R1: BIM Copy tool activation (CO chord → AutoCAD COPY pattern)
+      case 'copy-selected':
+        handleToolChange('bim-copy');
+        break;
       default:
         console.warn('Unknown action:', action);
     }

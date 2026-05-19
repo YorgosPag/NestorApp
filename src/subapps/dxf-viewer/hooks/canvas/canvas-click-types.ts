@@ -197,6 +197,12 @@ export interface UseCanvasClickHandlerParams {
   /** Click handler for wall-split state machine. */
   handleWallSplitClick?: (worldPoint: Point2D) => void;
 
+  // ── ADR-363 R1: BIM Copy tool ──────────────────────────────────────────
+  /** Whether the bim-copy tool is active (base-point + continuous target picks). */
+  bimCopyIsActive?: boolean;
+  /** Click handler for bim-copy FSM (base point or target point). */
+  handleBimCopyClick?: (worldPoint: Point2D) => void;
+
   // ── ADR-353 Phase B: Polar Array tool ──────────────────────────────────
   /** Whether the polar Array tool is awaiting the centre-pick click */
   arrayPolarIsActive?: boolean;

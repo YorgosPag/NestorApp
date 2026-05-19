@@ -82,6 +82,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     trimIsActive = false, handleTrimClick,
     extendIsActive = false, handleExtendClick,
     wallSplitIsActive = false, handleWallSplitClick,
+    bimCopyIsActive = false, handleBimCopyClick,
     arrayPolarIsActive = false, handleArrayPolarClick,
     handleArrayPolarCenterRepick,
     arrayPathIsActive = false, handleArrayPathClick,
@@ -154,6 +155,11 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 1.61: ADR-363 Phase 5.6 — Wall Split tool click (Revit Split Element)
     if (wallSplitIsActive && handleWallSplitClick) {
       handleWallSplitClick(worldPoint);
+      return;
+    }
+    // PRIORITY 1.62: ADR-363 R1 — BIM Copy tool click (AutoCAD COPY: base + target)
+    if (bimCopyIsActive && handleBimCopyClick) {
+      handleBimCopyClick(worldPoint);
       return;
     }
     // PRIORITY 1.605: ADR-353 Phase B/C — Array interactive picks

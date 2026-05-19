@@ -148,6 +148,10 @@
     "selectBasePoint": "Click: base point",
     "selectDestination": "Click: destination point — Esc: cancel"
   },
+  "bimCopyTool": {
+    "selectBasePoint": "Click: base point",
+    "selectTargetPoint": "Click: destination point — Esc: cancel"
+  },
   "mirrorTool": {
     "selectEntity": "Select entities → Click: first axis point → second axis point",
     "selectFirstPoint": "Click: first point of mirror axis",
