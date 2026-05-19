@@ -110,48 +110,60 @@ function buildCircularLocal(diameter: number): Point3D[] {
  * L-shape CCW (anchor-frame): full width × depth bounding box, με αφαίρεση
  * upper-right rectangle ώστε να μείνει το L. armLength = κόντρα μήκος
  * (default depth/3), armWidth = πάχος βραχίονα (default width/3).
+ *
+ * flipY=true: arm base moves to top (set by mirror — ADR-363 Phase 7.2).
+ * y-flip reverses CCW winding, so vertices are reversed to restore it.
  */
 function buildLshapeLocal(width: number, depth: number, override?: ColumnLshapeParams): Point3D[] {
   const armWidth = Math.max(1, override?.armWidth ?? width / 3);
   const armLength = Math.max(1, override?.armLength ?? depth / 3);
+  const flipY = override?.flipY ?? false;
   const hw = width / 2;
   const hd = depth / 2;
+  const ys = flipY ? -1 : 1;
   // L-shape vertices CCW (anchor-frame, origin = bbox centre):
   //   sw → se → upper-right notch corner1 → notch corner2 → nw
-  return [
-    { x: -hw,            y: -hd,            z: 0 }, // sw
-    { x:  hw,            y: -hd,            z: 0 }, // se
-    { x:  hw,            y: -hd + armLength, z: 0 }, // notch bottom-right
-    { x: -hw + armWidth, y: -hd + armLength, z: 0 }, // notch inside
-    { x: -hw + armWidth, y:  hd,            z: 0 }, // notch top
-    { x: -hw,            y:  hd,            z: 0 }, // nw
+  const verts: Point3D[] = [
+    { x: -hw,            y: ys * -hd,             z: 0 },
+    { x:  hw,            y: ys * -hd,             z: 0 },
+    { x:  hw,            y: ys * (-hd + armLength), z: 0 },
+    { x: -hw + armWidth, y: ys * (-hd + armLength), z: 0 },
+    { x: -hw + armWidth, y: ys * hd,              z: 0 },
+    { x: -hw,            y: ys * hd,              z: 0 },
   ];
+  return flipY ? [...verts].reverse() : verts;
 }
 
 /**
  * T-shape CCW (anchor-frame): horizontal flange στο top + vertical web στο
  * bottom-center. flangeLength = πλάτος πέλματος (default = width),
  * webThickness = πάχος κορμού (default = depth/3).
+ *
+ * flipY=true: flange moves to bottom (set by mirror — ADR-363 Phase 7.2).
+ * y-flip reverses CCW winding, so vertices are reversed to restore it.
  */
 function buildTshapeLocal(width: number, depth: number, override?: ColumnTshapeParams): Point3D[] {
   const flangeLength = Math.max(1, override?.flangeLength ?? width);
   const webThickness = Math.max(1, override?.webThickness ?? depth / 3);
   const flangeDepth = Math.max(1, depth / 3);
+  const flipY = override?.flipY ?? false;
   const hw = width / 2;
   const hd = depth / 2;
   const halfFlange = Math.min(hw, flangeLength / 2);
   const halfWeb = Math.min(hw, webThickness / 2);
+  const ys = flipY ? -1 : 1;
   // 8 vertices CCW starting στο web bottom-left:
-  return [
-    { x: -halfWeb,    y: -hd,                z: 0 },
-    { x:  halfWeb,    y: -hd,                z: 0 },
-    { x:  halfWeb,    y:  hd - flangeDepth,  z: 0 },
-    { x:  halfFlange, y:  hd - flangeDepth,  z: 0 },
-    { x:  halfFlange, y:  hd,                z: 0 },
-    { x: -halfFlange, y:  hd,                z: 0 },
-    { x: -halfFlange, y:  hd - flangeDepth,  z: 0 },
-    { x: -halfWeb,    y:  hd - flangeDepth,  z: 0 },
+  const verts: Point3D[] = [
+    { x: -halfWeb,    y: ys * -hd,               z: 0 },
+    { x:  halfWeb,    y: ys * -hd,               z: 0 },
+    { x:  halfWeb,    y: ys * (hd - flangeDepth), z: 0 },
+    { x:  halfFlange, y: ys * (hd - flangeDepth), z: 0 },
+    { x:  halfFlange, y: ys * hd,                z: 0 },
+    { x: -halfFlange, y: ys * hd,                z: 0 },
+    { x: -halfFlange, y: ys * (hd - flangeDepth), z: 0 },
+    { x: -halfWeb,    y: ys * (hd - flangeDepth), z: 0 },
   ];
+  return flipY ? [...verts].reverse() : verts;
 }
 
 // ─── Anchor + rotation transform ────────────────────────────────────────────

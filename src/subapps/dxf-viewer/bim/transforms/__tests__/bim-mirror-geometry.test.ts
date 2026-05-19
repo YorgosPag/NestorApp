@@ -177,6 +177,68 @@ function makeColumn(anchor: 'center' | 'nw' = 'center', rotation = 0): ColumnEnt
   } as unknown as ColumnEntity;
 }
 
+function makeLshapeColumn(flipY = false): ColumnEntity {
+  return {
+    id: 'col_L',
+    type: 'column',
+    kind: 'L-shape',
+    layerId: 'L',
+    params: {
+      kind: 'L-shape',
+      position: { x: 1000, y: 500, z: 0 },
+      anchor: 'center',
+      width: 600,
+      depth: 600,
+      height: 3000,
+      rotation: 0,
+      lshape: { armWidth: 200, armLength: 200, flipY },
+    },
+    geometry: { bbox: { min: { x: 700, y: 200 }, max: { x: 1300, y: 800 } } },
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+  } as unknown as ColumnEntity;
+}
+
+function makeLshapeColumnNoOverride(): ColumnEntity {
+  return {
+    id: 'col_Lx',
+    type: 'column',
+    kind: 'L-shape',
+    layerId: 'L',
+    params: {
+      kind: 'L-shape',
+      position: { x: 1000, y: 500, z: 0 },
+      anchor: 'center',
+      width: 600,
+      depth: 600,
+      height: 3000,
+      rotation: 0,
+    },
+    geometry: { bbox: { min: { x: 700, y: 200 }, max: { x: 1300, y: 800 } } },
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+  } as unknown as ColumnEntity;
+}
+
+function makeTshapeColumn(flipY = false): ColumnEntity {
+  return {
+    id: 'col_T',
+    type: 'column',
+    kind: 'T-shape',
+    layerId: 'L',
+    params: {
+      kind: 'T-shape',
+      position: { x: 1000, y: 500, z: 0 },
+      anchor: 'center',
+      width: 600,
+      depth: 600,
+      height: 3000,
+      rotation: 0,
+      tshape: { flangeLength: 600, webThickness: 200, flipY },
+    },
+    geometry: { bbox: { min: { x: 700, y: 200 }, max: { x: 1300, y: 800 } } },
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+  } as unknown as ColumnEntity;
+}
+
 function makeBeam(): BeamEntity {
   return {
     id: 'beam_1',
@@ -367,6 +429,57 @@ describe('ADR-363 Phase 7.2 — calculateBimMirroredGeometry', () => {
       params: { rotation: number };
     };
     expect(patch.params.rotation).toBeCloseTo(135, 4);
+  });
+
+  // ── L-shape / T-shape handedness (Phase 7.2) ────────────────────────
+  it('L-shape column: mirror across Y-axis toggles flipY false→true', () => {
+    const patch = calculateBimMirroredGeometry(makeLshapeColumn(false) as unknown as Entity, Y_AXIS) as {
+      params: { lshape: { flipY: boolean } };
+    };
+    expect(patch.params.lshape.flipY).toBe(true);
+  });
+
+  it('L-shape column: double-mirror restores flipY (true→false)', () => {
+    const patch = calculateBimMirroredGeometry(makeLshapeColumn(true) as unknown as Entity, Y_AXIS) as {
+      params: { lshape: { flipY: boolean } };
+    };
+    expect(patch.params.lshape.flipY).toBe(false);
+  });
+
+  it('L-shape column: mirror across X-axis also toggles flipY (axis-independent)', () => {
+    const patch = calculateBimMirroredGeometry(makeLshapeColumn(false) as unknown as Entity, X_AXIS) as {
+      params: { lshape: { flipY: boolean } };
+    };
+    expect(patch.params.lshape.flipY).toBe(true);
+  });
+
+  it('L-shape column with no lshape override: mirror creates flipY=true', () => {
+    const patch = calculateBimMirroredGeometry(makeLshapeColumnNoOverride() as unknown as Entity, Y_AXIS) as {
+      params: { lshape: { flipY: boolean } };
+    };
+    expect(patch.params.lshape.flipY).toBe(true);
+  });
+
+  it('T-shape column: mirror across Y-axis toggles flipY false→true', () => {
+    const patch = calculateBimMirroredGeometry(makeTshapeColumn(false) as unknown as Entity, Y_AXIS) as {
+      params: { tshape: { flipY: boolean } };
+    };
+    expect(patch.params.tshape.flipY).toBe(true);
+  });
+
+  it('T-shape column: double-mirror restores flipY (true→false)', () => {
+    const patch = calculateBimMirroredGeometry(makeTshapeColumn(true) as unknown as Entity, Y_AXIS) as {
+      params: { tshape: { flipY: boolean } };
+    };
+    expect(patch.params.tshape.flipY).toBe(false);
+  });
+
+  it('rectangular column: mirror adds no lshape or tshape', () => {
+    const patch = calculateBimMirroredGeometry(makeColumn('center') as unknown as Entity, Y_AXIS) as {
+      params: { lshape?: unknown; tshape?: unknown };
+    };
+    expect(patch.params.lshape).toBeUndefined();
+    expect(patch.params.tshape).toBeUndefined();
   });
 
   // ── Beam ────────────────────────────────────────────────────────────

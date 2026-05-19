@@ -53,6 +53,11 @@ export interface ColumnLshapeParams {
   readonly armLength?: number;
   /** mm. Πάχος δευτερεύοντος βραχίονα. */
   readonly armWidth?: number;
+  /**
+   * Arm at top instead of bottom. Set by mirror operations (ADR-363 Phase 7.2).
+   * Proof: local mirror transform T[1][1] = -1 for all axisAngle+rotation.
+   */
+  readonly flipY?: boolean;
 }
 
 /**
@@ -64,6 +69,11 @@ export interface ColumnTshapeParams {
   readonly flangeLength?: number;
   /** mm. Πάχος κορμού (Y-axis web). */
   readonly webThickness?: number;
+  /**
+   * Flange at bottom instead of top. Set by mirror operations (ADR-363 Phase 7.2).
+   * Proof: local mirror transform T[1][1] = -1 for all axisAngle+rotation.
+   */
+  readonly flipY?: boolean;
 }
 
 // ─── Parameters (user-editable, SSoT for geometry derivation) ────────────────

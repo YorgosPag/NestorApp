@@ -83,10 +83,6 @@
 
 ---
 
-### 🔧 ADR-363 PHASE 7.2 FOLLOW-UP — L-shape/T-shape ARM handedness on Mirror (low priority)
-
-- [ ] L-shape / T-shape column ARM handedness flip on Mirror (currently NOT flipped — uncommon variant). Defer to dedicated column-mirror iteration.
-
 ---
 
 ### 🪜 ADR-358 STAIR DOMAIN — pre-existing TS residual (priorità bassa)

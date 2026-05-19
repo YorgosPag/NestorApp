@@ -27,10 +27,10 @@
  *
  *   - Column: `position` reflected, `rotation` reflected via
  *     `mirrorAngle(rotation, axisAngle)`, `anchor` re-snapped by reflecting
- *     its `(dx, dy)` offset across the axis. Asymmetric L-shape / T-shape
- *     arm handedness is NOT flipped — Phase 7.2 caveat (industry: Revit
- *     mirrors L-column by also flipping arm parameters; Nestor defers
- *     that to a future iteration since L/T columns are uncommon).
+ *     its `(dx, dy)` offset across the axis. L-shape / T-shape arm
+ *     handedness is flipped via `lshape.flipY` / `tshape.flipY` toggle.
+ *     Proof: local transform T = R(-θ') × M × R(θ) always has T[1][1] = -1
+ *     regardless of axisAngle or column rotation — zero runtime computation.
  *
  *   - Beam: `startPoint`, `endPoint`, and `curveControl` (if present)
  *     reflected.
@@ -198,12 +198,26 @@ function mirrorSlabOpening(entity: SlabOpeningEntity, axis: MirrorAxis): Partial
 
 function mirrorColumn(entity: ColumnEntity, axis: MirrorAxis): Partial<SceneEntity> {
   const axisAngle = getAxisAngleDeg(axis);
-  const newParams: ColumnParams = {
+  const base: ColumnParams = {
     ...entity.params,
     position: mirrorPoint3D(entity.params.position, axis),
     rotation: mirrorAngle(entity.params.rotation, axisAngle),
     anchor: mirrorColumnAnchor(entity.params.anchor, axisAngle),
   };
+
+  let newParams: ColumnParams = base;
+  if (entity.params.kind === 'L-shape') {
+    newParams = {
+      ...base,
+      lshape: { ...entity.params.lshape, flipY: !(entity.params.lshape?.flipY ?? false) },
+    };
+  } else if (entity.params.kind === 'T-shape') {
+    newParams = {
+      ...base,
+      tshape: { ...entity.params.tshape, flipY: !(entity.params.tshape?.flipY ?? false) },
+    };
+  }
+
   const geometry = computeColumnGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
