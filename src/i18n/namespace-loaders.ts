@@ -108,6 +108,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'onboarding': return () => import('./locales/el/onboarding.json');
     case 'settings': return () => import('./locales/el/settings.json');
     case 'textToolbar': return () => import('./locales/el/textToolbar.json');
+    case 'bim3d': return () => import('./locales/el/bim3d.json');
     default: return null;
   }
 }
@@ -205,6 +206,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'onboarding': return () => import('./locales/en/onboarding.json');
     case 'settings': return () => import('./locales/en/settings.json');
     case 'textToolbar': return () => import('./locales/en/textToolbar.json');
+    case 'bim3d': return () => import('./locales/en/bim3d.json');
     default: return null;
   }
 }

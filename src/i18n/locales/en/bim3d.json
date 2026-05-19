@@ -1,0 +1,13 @@
+{
+  "modeToggle": {
+    "label": "3D View",
+    "aria": "Toggle 2D/3D",
+    "tooltip2d": "Switch to 3D",
+    "tooltip3d": "Switch to 2D"
+  },
+  "viewport": {
+    "placeholder": "3D viewport (loading...)",
+    "loadingLabel": "Loading 3D scene",
+    "webglError": "WebGL is not supported on this device"
+  }
+}

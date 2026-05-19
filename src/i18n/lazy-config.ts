@@ -109,6 +109,7 @@ export const SUPPORTED_NAMESPACES = [
   'onboarding',             // 🏢 New tenant onboarding wizard (ADR-326 Phase 8)
   'settings',               // 🏢 App settings pages (shortcuts, etc.)
   'textToolbar',            // 🏢 DXF text toolbar / Properties panel (ADR-344)
+  'bim3d',                  // 🏢 BIM 3D Viewer (ADR-366)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 

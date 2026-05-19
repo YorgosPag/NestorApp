@@ -1,0 +1,13 @@
+{
+  "modeToggle": {
+    "label": "3D Προβολή",
+    "aria": "Εναλλαγή 2D/3D",
+    "tooltip2d": "Μετάβαση σε 3D",
+    "tooltip3d": "Μετάβαση σε 2D"
+  },
+  "viewport": {
+    "placeholder": "3D προβολή (φόρτωση...)",
+    "loadingLabel": "Φόρτωση 3D σκηνής",
+    "webglError": "Δεν υποστηρίζεται WebGL σε αυτή τη συσκευή"
+  }
+}
