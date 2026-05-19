@@ -41,6 +41,7 @@ import { GuideSnapEngine } from '../engines/GuideSnapEngine';
 import { ConstructionPointSnapEngine } from '../engines/ConstructionPointSnapEngine';
 import { DimDefPointSnapEngine } from '../engines/DimDefPointSnapEngine';
 import { DimLineSnapEngine } from '../engines/DimLineSnapEngine';
+import { ColumnCenterSnapEngine } from '../engines/ColumnCenterSnapEngine';
 
 interface Viewport {
   worldPerPixelAt(p: Point2D): number;
@@ -83,6 +84,8 @@ export class SnapEngineRegistry {
     // ADR-362 I1: Dimension snap — def points + dim line
     this.engines.set(ExtendedSnapType.DIM_DEF_POINT, new DimDefPointSnapEngine());
     this.engines.set(ExtendedSnapType.DIM_LINE, new DimLineSnapEngine());
+    // ADR-363 Phase 5.5i: Column center axis snap (structural precision)
+    this.engines.set(ExtendedSnapType.BIM_COLUMN_CENTER, new ColumnCenterSnapEngine());
   }
 
   initializeEnginesWithEntities(entities: Entity[], settings: ProSnapSettings): void {

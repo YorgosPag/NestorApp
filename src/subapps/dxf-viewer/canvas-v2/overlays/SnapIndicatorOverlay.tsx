@@ -25,11 +25,12 @@ import {
   getNodeDotRadius
 } from '../../rendering/ui/snap/snap-icon-config';
 
-// ADR-363 Phase A: BIM description → i18n key mapping.
+// ADR-363 Phase A + 5.5i: BIM description → i18n key mapping.
 const BIM_DESCRIPTION_KEY: Record<string, string> = {
   'bim-wall': 'snapModes.labels.bim.wallAxis',
   'bim-slab': 'snapModes.labels.bim.slabEdge',
   'bim-opening': 'snapModes.labels.bim.openingJamb',
+  'bim-column': 'snapModes.labels.bim.columnAxis',
 };
 
 interface SnapResult {
@@ -197,6 +198,24 @@ function SnapShape({ type, color }: { type: string; color: string }) {
           <circle cx={half} cy={half} r={half - strokeWidth} fill="none" stroke={color} strokeWidth={strokeWidth} />
           {/* 🏢 ADR-137: Using centralized node dot radius */}
           <circle cx={half} cy={half} r={getNodeDotRadius()} fill={color} />
+        </svg>
+      );
+
+    // ⊕ BIM_COLUMN_CENTER: Circle + crosshair — structural column axis (ADR-363 Phase 5.5i)
+    // Revit/Tekla plan-view convention: column shown as circle with center cross.
+    case 'bim_column_center':
+      return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <circle
+            cx={half}
+            cy={half}
+            r={half - strokeWidth}
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+          />
+          <line x1={half} y1={strokeWidth} x2={half} y2={size - strokeWidth} stroke={color} strokeWidth={strokeWidth} />
+          <line x1={strokeWidth} y1={half} x2={size - strokeWidth} y2={half} stroke={color} strokeWidth={strokeWidth} />
         </svg>
       );
 

@@ -535,7 +535,8 @@
       "bim": {
         "wallAxis": "On wall axis",
         "slabEdge": "On slab edge",
-        "openingJamb": "On opening jamb"
+        "openingJamb": "On opening jamb",
+        "columnAxis": "On column axis"
       }
     },
     "tooltips": {

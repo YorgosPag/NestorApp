@@ -426,6 +426,8 @@ export const SNAP_ENGINE_PRIORITIES = {
   DIM_DEF_POINT: 2,
   /** ADR-362 I1: Snap to dimension line reference/midpoint (for baseline/continued chaining) */
   DIM_LINE: 3,
+  /** ADR-363 Phase 5.5i: Structural column center-axis snap — supersedes generic ENDPOINT at center point */
+  BIM_COLUMN_CENTER: -1,
 } as const;
 
 // ===== SNAP UI OFFSETS =====

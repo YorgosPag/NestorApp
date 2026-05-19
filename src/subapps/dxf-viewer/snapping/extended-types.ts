@@ -41,6 +41,7 @@ export enum ExtendedSnapType {
   CONSTRUCTION_POINT = 'construction_point',  // ADR-189 §3.7-3.16: Construction snap points
   DIM_DEF_POINT = 'dim_def_point',  // ADR-362 I1: snap to dimension def points (AutoCAD DIMSNAP)
   DIM_LINE = 'dim_line',            // ADR-362 I1: snap to dimension line for baseline/continued chains
+  BIM_COLUMN_CENTER = 'bim_column_center',  // ADR-363 Phase 5.5i: structural column center-axis snap
   AUTO = 'auto'
 }
 
@@ -113,11 +114,13 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.GUIDE,             // ADR-189: Guide snap enabled by default
     ExtendedSnapType.CONSTRUCTION_POINT, // ADR-189: Construction point snap
     ExtendedSnapType.DIM_DEF_POINT,     // ADR-362 I1: dimension def point snap
-    ExtendedSnapType.DIM_LINE           // ADR-362 I1: dimension line snap
+    ExtendedSnapType.DIM_LINE,          // ADR-362 I1: dimension line snap
+    ExtendedSnapType.BIM_COLUMN_CENTER, // ADR-363 Phase 5.5i: column center axis snap
   ]),
   showSnapMarkers: true,
   showSnapTooltips: true,
   priority: [
+    ExtendedSnapType.BIM_COLUMN_CENTER, // ADR-363 Phase 5.5i: structural precision — before generic endpoint
     ExtendedSnapType.INTERSECTION,
     ExtendedSnapType.ENDPOINT,
     ExtendedSnapType.MIDPOINT,
@@ -157,7 +160,8 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     [ExtendedSnapType.GUIDE]: 12,               // ADR-189: intentionally wider for easy grab
     [ExtendedSnapType.CONSTRUCTION_POINT]: 10,
     [ExtendedSnapType.DIM_DEF_POINT]: 10,      // ADR-362 I1: exact definition point — AutoCAD APERTURE default
-    [ExtendedSnapType.DIM_LINE]: 10             // ADR-362 I1: dim line reference point
+    [ExtendedSnapType.DIM_LINE]: 10,            // ADR-362 I1: dim line reference point
+    [ExtendedSnapType.BIM_COLUMN_CENTER]: 10,   // ADR-363 Phase 5.5i: column center axis snap
   }
 };
 
