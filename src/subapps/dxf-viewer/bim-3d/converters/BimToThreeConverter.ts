@@ -19,38 +19,25 @@ import type { ColumnEntity } from '../../bim/types/column-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { Point3D } from '../../bim/types/bim-base';
+import { getMaterial3D, getElementMaterial3D } from '../materials/MaterialCatalog3D';
 
 // ── Shared rotation matrix: shape XY → Three.js Y-up ─────────────────────────
 const ROT_X_NEG_90 = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
 
-// ── Phase 2 flat materials (Phase 3: MaterialCatalog3D) ──────────────────────
-const WALL_MAT = new THREE.MeshStandardMaterial({
-  color: 0x9e9e9e,
-  roughness: 0.8,
-  metalness: 0.1,
-  side: THREE.DoubleSide,
-});
+// ── Wall material: DNA core layer → catalog, else category fallback ───────────
+const CATEGORY_MAT_ID: Record<WallEntity['params']['category'], string> = {
+  exterior:  'mat-concrete',
+  interior:  'mat-plaster',
+  partition: 'mat-brick',
+  parapet:   'mat-concrete',
+  fence:     'mat-stone',
+};
 
-const COLUMN_MAT = new THREE.MeshStandardMaterial({
-  color: 0x616161,
-  roughness: 0.7,
-  metalness: 0.15,
-  side: THREE.DoubleSide,
-});
-
-const BEAM_MAT = new THREE.MeshStandardMaterial({
-  color: 0x795548,
-  roughness: 0.75,
-  metalness: 0.1,
-  side: THREE.DoubleSide,
-});
-
-const SLAB_MAT = new THREE.MeshStandardMaterial({
-  color: 0xbdbdbd,
-  roughness: 0.85,
-  metalness: 0.05,
-  side: THREE.DoubleSide,
-});
+function resolveWallMaterial(wall: WallEntity): THREE.MeshStandardMaterial {
+  const coreLayer = wall.params.dna?.layers.find((l) => l.side === 'core');
+  const materialId = coreLayer?.materialId ?? CATEGORY_MAT_ID[wall.params.category] ?? 'mat-concrete';
+  return getMaterial3D(materialId);
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -101,7 +88,7 @@ export function wallToMesh(wall: WallEntity, floorElevationMm = 0): THREE.Mesh |
   if (!shape) return null;
 
   const geo = extrudeAndRotate(shape, wall.params.height / 1000);
-  const mesh = new THREE.Mesh(geo, WALL_MAT);
+  const mesh = new THREE.Mesh(geo, resolveWallMaterial(wall));
   mesh.position.y = floorElevationMm / 1000;
   return tagMesh(mesh, wall.id, 'wall');
 }
@@ -114,7 +101,7 @@ export function columnToMesh(column: ColumnEntity, floorElevationMm = 0): THREE.
   if (!shape) return null;
 
   const geo = extrudeAndRotate(shape, column.params.height / 1000);
-  const mesh = new THREE.Mesh(geo, COLUMN_MAT);
+  const mesh = new THREE.Mesh(geo, getElementMaterial3D('column'));
   mesh.position.y = floorElevationMm / 1000;
   return tagMesh(mesh, column.id, 'column');
 }
@@ -128,7 +115,7 @@ export function beamToMesh(beam: BeamEntity): THREE.Mesh | null {
 
   const depthM = beam.params.depth / 1000;
   const geo = extrudeAndRotate(shape, depthM);
-  const mesh = new THREE.Mesh(geo, BEAM_MAT);
+  const mesh = new THREE.Mesh(geo, getElementMaterial3D('beam'));
   // elevation = top of beam; extrusion goes from y=0 → y=depth, so offset down by depth
   mesh.position.y = (beam.params.elevation - beam.params.depth) / 1000;
   return tagMesh(mesh, beam.id, 'beam');
@@ -143,7 +130,7 @@ export function slabToMesh(slab: SlabEntity): THREE.Mesh | null {
 
   const thicknessM = slab.params.thickness / 1000;
   const geo = extrudeAndRotate(shape, thicknessM);
-  const mesh = new THREE.Mesh(geo, SLAB_MAT);
+  const mesh = new THREE.Mesh(geo, getElementMaterial3D('slab'));
   // elevation = top surface; position bottom at elevation - thickness
   mesh.position.y = (slab.params.elevation - slab.params.thickness) / 1000;
   return tagMesh(mesh, slab.id, 'slab');

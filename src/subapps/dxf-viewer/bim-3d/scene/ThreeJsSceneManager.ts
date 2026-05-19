@@ -57,6 +57,8 @@ export class ThreeJsSceneManager {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth || 800, container.clientHeight || 600);
     renderer.setClearColor(0x1a1a1a, 1);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
     return renderer;
   }
@@ -64,10 +66,27 @@ export class ThreeJsSceneManager {
   private initScene(): THREE.Scene {
     const scene = new THREE.Scene();
     scene.add(new THREE.AxesHelper(2));
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-    dir.position.set(5, 10, 5);
-    scene.add(dir);
+
+    // Sky ambient (ADR-366 §7.2)
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+    // Sun — Athens summer noon: azimuth ~180° (south), elevation ~65° (ADR-366 §7.2)
+    const sun = new THREE.DirectionalLight(0xfffaf0, 3);
+    sun.position.set(-5, 10, 5);
+    sun.castShadow = true;
+    sun.shadow.bias = -0.0005;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.near = 0.1;
+    sun.shadow.camera.far = 200;
+    sun.shadow.camera.left = -50;
+    sun.shadow.camera.right = 50;
+    sun.shadow.camera.top = 50;
+    sun.shadow.camera.bottom = -50;
+    scene.add(sun);
+
+    // Ground bounce (HemisphereLight — sky blue / warm ground)
+    scene.add(new THREE.HemisphereLight(0x87ceeb, 0x8b7355, 0.3));
+
     return scene;
   }
 
