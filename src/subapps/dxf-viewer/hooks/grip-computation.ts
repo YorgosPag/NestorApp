@@ -12,6 +12,8 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo, StairGripKind } from './useGripMovement';
+import type { ColumnGripKind } from './grip-types';
+import type { BeamGripKind } from './grip-types';
 import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
 import { getStairGrips } from '../bim/stairs/stair-grips';
 import { getDimensionGrips } from './dimensions/useDimensionGrips';
@@ -48,6 +50,14 @@ export interface DxfGripDragPreview {
    */
   stairGripKind?: StairGripKind;
   anchorPos?: Point2D;
+  /**
+   * ADR-363 Phase 4.5c.5 — parametric column/beam grip discriminators. Set
+   * when the active grip is a dimensional column or beam grip; consumed by
+   * `useGripDimAnnotation` to render a live "w=350mm" label on the preview
+   * canvas. Non-dimensional grips (center, rotation, start/end) are omitted.
+   */
+  columnGripKind?: ColumnGripKind;
+  beamGripKind?: BeamGripKind;
 }
 
 /** Grip interaction state for rendering pipeline */
