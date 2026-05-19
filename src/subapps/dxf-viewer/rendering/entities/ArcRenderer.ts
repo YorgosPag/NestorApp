@@ -148,7 +148,8 @@ export class ArcRenderer extends BaseEntityRenderer {
       arcData.startAngle,
       arcData.endAngle,
       tolerance,
-      this.transform
+      this.transform,
+      arcData.counterclockwise
     );
   }
 

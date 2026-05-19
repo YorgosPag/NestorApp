@@ -144,10 +144,28 @@ export class CompoundCommand implements ICompoundCommand {
   }
 
   /**
-   * Compound commands cannot be merged
+   * Two CompoundCommands can merge when they have the same child count and
+   * every child pair can merge (e.g. drag-merging wall + opening updates).
    */
-  canMergeWith(): boolean {
-    return false;
+  canMergeWith(other: ICommand): boolean {
+    if (!(other instanceof CompoundCommand)) return false;
+    const otherCmds = (other as CompoundCommand)._commands;
+    if (otherCmds.length !== this._commands.length) return false;
+    return this._commands.every(
+      (cmd, i) => cmd.canMergeWith != null && cmd.canMergeWith(otherCmds[i]),
+    );
+  }
+
+  /**
+   * Merge by forwarding to each child pair. Preserves pre-drag originalParams
+   * from `this` and post-drag params from `other`.
+   */
+  mergeWith(other: ICommand): ICommand {
+    const otherCmds = (other as CompoundCommand)._commands;
+    const merged = this._commands.map((cmd, i) =>
+      cmd.mergeWith != null ? cmd.mergeWith(otherCmds[i]) : cmd,
+    );
+    return new CompoundCommand(this.name, merged);
   }
 
   /**

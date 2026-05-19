@@ -81,7 +81,7 @@ export function arcTangentAt(center: Point2D, point: Point2D, counterclockwise?:
  */
 export function pointToArcDistance(
   point: Point2D,
-  arc: { center: Point2D; radius: number; startAngle: number; endAngle: number }
+  arc: { center: Point2D; radius: number; startAngle: number; endAngle: number; counterclockwise?: boolean }
 ): number {
   const dx = point.x - arc.center.x;
   const dy = point.y - arc.center.y;
@@ -91,8 +91,15 @@ export function pointToArcDistance(
   let pointAngleDeg = radToDeg(Math.atan2(dy, dx));
   if (pointAngleDeg < 0) pointAngleDeg += 360;
 
+  // counterclockwise=true means the arc is drawn CW in world (the renderer uses
+  // !counterclockwise for the canvas direction). The visible CW arc spans
+  // [endAngle → startAngle] CCW, i.e. we swap the range for the check.
+  const [rangeStart, rangeEnd] = arc.counterclockwise === true
+    ? [arc.endAngle, arc.startAngle]
+    : [arc.startAngle, arc.endAngle];
+
   // Check if point angle is within the arc's range
-  if (isAngleInArcRange(pointAngleDeg, arc.startAngle, arc.endAngle)) {
+  if (isAngleInArcRange(pointAngleDeg, rangeStart, rangeEnd)) {
     // Point is within arc angular range — distance = |dist_to_center - radius|
     return Math.abs(distToCenter - arc.radius);
   }

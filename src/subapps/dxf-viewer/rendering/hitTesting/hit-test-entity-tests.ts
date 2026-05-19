@@ -71,7 +71,7 @@ function hitTestArc(entity: Entity, point: Point2D, tolerance: number): Partial<
   if (!('center' in entity) || !('radius' in entity) || !('startAngle' in entity) || !('endAngle' in entity)) {
     return null;
   }
-  const arcEntity = entity as { center: Point2D; radius: number; startAngle: number; endAngle: number };
+  const arcEntity = entity as { center: Point2D; radius: number; startAngle: number; endAngle: number; counterclockwise?: boolean };
   const distance = pointToArcDistance(point, arcEntity);
   if (distance <= tolerance) {
     return { hitType: 'entity', hitPoint: point };

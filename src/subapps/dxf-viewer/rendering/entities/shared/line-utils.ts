@@ -89,21 +89,23 @@ export function hitTestArcEntity(
   startAngle: number, // σε μοίρες
   endAngle: number,   // σε μοίρες
   tolerance: number,
-  transform: { scale: number }
+  transform: { scale: number },
+  counterclockwise?: boolean
 ): boolean {
   // First check distance
   if (!hitTestCircularEntity(point, center, radius, tolerance, transform)) {
     return false;
   }
-  
+
   // 🏢 ADR-067: Use centralized angle conversion
   // 🏢 ADR-068: Use centralized angle normalization
   const angle = normalizeAngleDeg(radToDeg(Math.atan2(point.y - center.y, point.x - center.x)));
 
-  // Normalize angles
-  const start = normalizeAngleDeg(startAngle);
-  const end = normalizeAngleDeg(endAngle);
-  
+  // counterclockwise=true means the arc draws CW in world (renderer uses !counterclockwise).
+  // The visible range is [endAngle→startAngle] CCW, so swap for the check.
+  const start = normalizeAngleDeg(counterclockwise === true ? endAngle : startAngle);
+  const end = normalizeAngleDeg(counterclockwise === true ? startAngle : endAngle);
+
   // Check if angle is within arc range
   if (start <= end) {
     return angle >= start && angle <= end;

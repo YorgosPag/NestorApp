@@ -41,6 +41,7 @@ import { applyDimensionGripDrag } from '../dimensions/useDimensionGrips';
 import { EventBus } from '../../systems/events/EventBus';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { coordinateWallUpdate } from '../../bim/walls/wall-opening-coordinator';
 
 /**
  * ADR-358 Phase 5b — Parametric stair grip commit. Bypasses the standard
@@ -115,7 +116,7 @@ export function commitWallGripDrag(
     currentPos,
   });
   const kind: WallKind = wall.kind ?? 'straight';
-  const command = new UpdateWallParamsCommand(
+  const wallCmd = new UpdateWallParamsCommand(
     grip.entityId,
     newParams,
     originalParams,
@@ -123,7 +124,10 @@ export function commitWallGripDrag(
     true,
     kind,
   );
-  if (command.validate() !== null) return;
+  if (wallCmd.validate() !== null) return;
+  const command = coordinateWallUpdate(
+    wallCmd, grip.entityId, originalParams, newParams, sceneManager, true,
+  );
   deps.execute(command);
   EventBus.emit('bim:wall-params-updated', { wallId: grip.entityId });
 }
