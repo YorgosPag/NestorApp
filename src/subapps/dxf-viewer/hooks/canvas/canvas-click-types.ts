@@ -191,6 +191,12 @@ export interface UseCanvasClickHandlerParams {
   /** Click handler for extend state machine (shiftKey = inverse TRIM, Q4) */
   handleExtendClick?: (worldPoint: Point2D, shiftKey: boolean) => void;
 
+  // ── ADR-363 Phase 5.6: Wall Split tool ────────────────────────────────
+  /** Whether the wall-split tool is active (continuous pick loop, ESC to exit). */
+  wallSplitIsActive?: boolean;
+  /** Click handler for wall-split state machine. */
+  handleWallSplitClick?: (worldPoint: Point2D) => void;
+
   // ── ADR-353 Phase B: Polar Array tool ──────────────────────────────────
   /** Whether the polar Array tool is awaiting the centre-pick click */
   arrayPolarIsActive?: boolean;

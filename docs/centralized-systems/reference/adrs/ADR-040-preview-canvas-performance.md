@@ -71,6 +71,18 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-19 — ADR-363 Phase 5.6 interop: Wall Split tool plumb in `CanvasSection` (zero new subscriptions)
+
+`CanvasSection` adds `wallSplitTool` to the `useModifyTools` destructure and forwards `{wallSplitIsActive, handleWallSplitClick}` to `useCanvasClickHandler` + `{handleWallSplitEscape, wallSplitIsActive}` to `useCanvasKeyboardShortcuts`. The high-frequency mouse-move path is owned by `useWallSplitTool` via `subscribeToImmediateWorldPosition` + a new module-level `WallSplitStore` (`useSyncExternalStore`-compatible, snapshot-stable, zero React state). `CanvasSection` itself acquires **no** new `useSyncExternalStore` subscription.
+
+**Cardinal rule compliance**:
+- **Rule 1 (no orchestrator subscriptions)**: respected — `CanvasSection` adds two prop pass-throughs only.
+- **Rule 2 (getter-based event reads)**: respected — `useWallSplitTool` reads `transformScale` via ref, reads scene via `levelManager.getLevelScene(...)` at click time.
+- **Rule 3 (bitmap cache key untouched)**: respected — wall-split hover state lives in `WallSplitStore`, never feeds `dxf-bitmap-cache.ts`.
+- **Rule 4 (≤1 canvas element / ≤2 high-freq hooks per leaf)**: respected — preview renderer (when wired) is its own micro-leaf subscriber to `WallSplitStore`, mirrors `TrimToolStore`.
+
+Bundled with the ADR-363 Phase 5.6 commit (CHECK 6B compliance).
+
 ### 2026-05-19 — ADR-183 Phase C interop: deprecated grip-hook deletion (import path retargets only)
 
 `canvas-layer-stack-types.ts` and `canvas-click-types.ts` (both micro-leaf surface files) had their grip-type imports retargeted from the now-deleted `hooks/useDxfGripInteraction.ts` / `hooks/grips/useGripSystem.ts` to the canonical SSoT modules (`hooks/grips/unified-grip-types.ts` for overlay grip types; `hooks/grip-computation.ts` for DXF state-machine types + `UseDxfGripInteractionReturn`). **Type-only changes — zero runtime behavior change.**

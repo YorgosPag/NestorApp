@@ -81,6 +81,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     stretchIsActive = false, handleStretchClick,
     trimIsActive = false, handleTrimClick,
     extendIsActive = false, handleExtendClick,
+    wallSplitIsActive = false, handleWallSplitClick,
     arrayPolarIsActive = false, handleArrayPolarClick,
     handleArrayPolarCenterRepick,
     arrayPathIsActive = false, handleArrayPathClick,
@@ -148,6 +149,11 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 1.60: ADR-353 — Extend tool click (single pick / SHIFT+click = TRIM inverse)
     if (extendIsActive && handleExtendClick) {
       handleExtendClick(worldPoint, shiftKey);
+      return;
+    }
+    // PRIORITY 1.61: ADR-363 Phase 5.6 — Wall Split tool click (Revit Split Element)
+    if (wallSplitIsActive && handleWallSplitClick) {
+      handleWallSplitClick(worldPoint);
       return;
     }
     // PRIORITY 1.605: ADR-353 Phase B/C — Array interactive picks

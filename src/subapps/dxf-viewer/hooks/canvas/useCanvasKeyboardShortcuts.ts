@@ -110,6 +110,10 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleArrayPathEscape?: () => void;
   /** ADR-353 Phase C: Whether the path Array tool is awaiting path-entity pick */
   arrayPathIsActive?: boolean;
+  /** ADR-363 Phase 5.6: Wall Split ESC handler */
+  handleWallSplitEscape?: () => void;
+  /** ADR-363 Phase 5.6: Whether the wall-split tool is active */
+  wallSplitIsActive?: boolean;
   /** SSoT deselect-all callback — clears local entity state + UniversalSelection */
   clearEntitySelection?: () => void;
   /** True when any non-DXF entity is selected (e.g. overlays) — widens the Escape guard */
@@ -175,6 +179,8 @@ export function useCanvasKeyboardShortcuts({
   arrayPolarIsActive = false,
   handleArrayPathEscape,
   arrayPathIsActive = false,
+  handleWallSplitEscape,
+  wallSplitIsActive = false,
   clearEntitySelection,
   hasAnySelection = false,
   handleReorderEntity,
@@ -424,6 +430,8 @@ export function useCanvasKeyboardShortcuts({
     arrayPolarIsActive,
     handleArrayPathEscape,
     arrayPathIsActive,
+    handleWallSplitEscape,
+    wallSplitIsActive,
     handleRotationEscape,
     rotationIsActive,
   });

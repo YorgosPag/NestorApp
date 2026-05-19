@@ -1806,6 +1806,94 @@ cursor move → ProSnapEngineV2 → NearestSnapEngine / PerpendicularSnapEngine
 
 ✅ Google-level: YES — pure SSoT module (opening outline projection single-sourced + Phase 2 cached geometry leveraged, zero re-computation), reuse-first (extend existing NearestSnapEngine + PerpendicularSnapEngine, ΟΧΙ νέος engine/SnapType), modulo closing-edge mirrors Phase 5.5f invariant, idempotent pure functions, ADR-040 micro-leaf compliance (ZERO new React subscriptions), defensive null guard for missing geometry, zero ribbon/i18n/command changes.
 
+---
+
+### Phase 5.6 — Wall Split Tool *(✅ IMPLEMENTED 2026-05-19)*
+
+**Pattern**: Revit "Split Element" — dedicated tool mode (`wall-split`), continuous pick loop (multi-split, stays active until ESC), hover preview με perpendicular indicator line across wall at projected split point.
+
+**Architecture decision**: `useWallSplitTool` τοποθετείται σε `hooks/tools/` (ΟΧΙ `hooks/drawing/`) και εισάγεται μέσω `useModifyTools` — διότι είναι destructive editing operation που χρειάζεται `executeCommand` + undo/redo. Creation tools (wall, opening, slab) πηγαίνουν σε `useSpecialTools`.
+
+**Files created:**
+
+- `src/subapps/dxf-viewer/bim/walls/wall-split.ts` — Pure geometry functions, zero React/DOM/Firestore deps:
+  - `computeSplitOffset(wall, splitPoint): number | null` — projects cursor onto wall axis via `projectPointOnWallAxis()` SSoT, clamps to `[MIN_SEGMENT_MM=100, totalLen-100]`, returns `null` για curved/polyline/degenerate walls.
+  - `computeSplitWallParams(wall, splitOffset): { wall1Params, wall2Params }` — interpolates midpoint on axis, inherits bevels (wall1: `startBevel`; wall2: `endBevel`), clears `measurementLength`.
+  - `redistributeOpenings(hostedOpeningIds, openingsByIdFn, splitOffset, wall1Id, wall2Id): RedistributeResult` — center-based assignment: `center > splitOffset` → wall2 (offset -= splitOffset, clamped to 0); else → wall1. Returns `wall1OpeningIds`, `wall2OpeningIds`, `openingUpdates`.
+  - `computeSplitIndicatorLine(wall, splitPoint): [Point2D, Point2D]` — perpendicular at `1.5 × half-thickness` (REACH_FACTOR=1.5).
+  - `OpeningUpdate { openingId, previousParams, nextParams }` exported type.
+
+- `src/subapps/dxf-viewer/systems/wall-split/WallSplitStore.ts` — Module-level store (ADR-040 pattern, mirrors `TrimToolStore`/`WallPreviewStore`):
+  - State: `WallSplitHoverState { hoveredWallId: string|null, splitPoint: Point2D|null, splitLine: [Point2D,Point2D]|null }`.
+  - `WallSplitStore.set(next)` — equality guard on `hoveredWallId` + `splitPoint` coords, deep-copies on change.
+  - `WallSplitStore.reset()`, `.get()`, `.subscribe()`.
+  - `useWallSplitPreview()` hook via `useSyncExternalStore`.
+
+- `src/subapps/dxf-viewer/core/commands/entity-commands/WallSplitCommand.ts` — ICommand implementation:
+  - `execute()`: `removeEntity(original.id)` → `addEntity(wall1)` → `addEntity(wall2)` → loop `openingUpdates` → `applyOpeningPatch(nextParams)`.
+  - `undo()`: `removeEntity(wall1.id)` → `removeEntity(wall2.id)` → `addEntity(originalWall)` → loop `openingUpdates` reversed → `applyOpeningPatch(previousParams)`.
+  - `applyOpeningPatch`: resolves host wall from `sceneManager`, recomputes geometry + validation (soft-orphan: proceeds even if host missing), calls `updateEntity`.
+  - `canMergeWith()` → `false` (no drag merge).
+  - `getAffectedEntityIds()`: `originalWall.id + wall1.id + wall2.id + all opening IDs`.
+
+- `src/subapps/dxf-viewer/hooks/tools/useWallSplitTool.ts` — Editing tool hook:
+  - Props: `{ activeTool, levelManager, executeCommand, transformScale, onToolChange }`.
+  - Return: `{ isActive, handleWallSplitClick, handleWallSplitMouseMove, handleWallSplitEscape }`.
+  - `findWallAtPoint(worldPoint)`: iterates `isWallEntity` walls, calls `projectPointOnWallAxis()` + `calculateDistance()` vs `TOLERANCE_CONFIG.SNAP_DEFAULT / transformScaleRef.current`.
+  - `handleWallSplitMouseMove`: finds wall, projects cursor, calls `computeSplitIndicatorLine`, updates `WallSplitStore`.
+  - `useEffect` subscribes to `subscribeToImmediateWorldPosition` when `isActive` (resets store on deactivate).
+  - `handleWallSplitClick`: getSceneManager → `findWallAtPoint` → `computeSplitOffset` (null → return) → `computeSplitWallParams` → `generateWallId()×2` → `computeWallGeometry` for wall1+wall2 → `redistributeOpenings` → `new WallSplitCommand` → `executeCommand(cmd)`.
+  - `handleWallSplitEscape`: resets `WallSplitStore`, calls `onToolChange?.('select')`.
+
+- `src/subapps/dxf-viewer/bim/walls/__tests__/wall-split.test.ts` — 21 test cases:
+  - `computeSplitOffset`: 7 cases (midpoint, clamp-start, clamp-end, curved→null, polyline→null, degenerate→null, off-axis projection).
+  - `computeSplitWallParams`: 5 cases (endpoints, startBevel inheritance, endBevel inheritance, property preservation, measurementLength cleared).
+  - `redistributeOpenings`: 6 cases (wall1 assignment, wall2 + offset adjust, straddle→wall1, missing→skip, offset≥0, previousParams for undo).
+  - `computeSplitIndicatorLine`: 3 cases (perpendicular endpoints, length=thickness×REACH_FACTOR, degenerate→zero-length pair).
+
+**Files modified:**
+
+- `src/subapps/dxf-viewer/ui/toolbar/types.ts` — `DxfTool` union += `'wall-split'`.
+- `src/subapps/dxf-viewer/systems/tools/ToolStateManager.ts` — entry: `{ id: 'wall-split', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }`.
+- `src/subapps/dxf-viewer/core/commands/entity-commands/index.ts` — re-exports `WallSplitCommand` + `WallSplitCommandParams`.
+- `src/subapps/dxf-viewer/hooks/tools/useModifyTools.ts` — imports + instantiates `useWallSplitTool`, exposes `wallSplitTool` in return.
+- `src/subapps/dxf-viewer/hooks/canvas/canvas-click-types.ts` — `wallSplitIsActive?` + `handleWallSplitClick?` props added.
+- `src/subapps/dxf-viewer/hooks/canvas/useCanvasClickHandler.ts` — PRIORITY 1.61 branch after extend (1.60).
+- `src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx` — wires `wallSplitTool.isActive` + `handleWallSplitClick` → click handler; `handleWallSplitEscape` + `wallSplitIsActive` → keyboard shortcuts.
+- `src/subapps/dxf-viewer/hooks/canvas/useCanvasKeyboardShortcuts.ts` — `handleWallSplitEscape?` + `wallSplitIsActive?` params, passed to escape registrations.
+- `src/subapps/dxf-viewer/hooks/canvas/useCanvasEscapeRegistrations.ts` — `buildModifyHandler('wall-split', ...)` at `ESC_PRIORITY.MODIFY_TOOL` after array-path.
+- `src/i18n/locales/el/dxf-viewer-shell.json` — `"wall-split": "Χωρισμός Τοίχου"`.
+- `src/i18n/locales/en/dxf-viewer-shell.json` — `"wall-split": "Split Wall"`.
+
+**Opening redistribution algorithm:**
+
+```
+center = opening.offsetFromStart + opening.width / 2
+if center > splitOffset:
+  wall2 ← opening, newOffset = max(0, offsetFromStart − splitOffset)
+else:
+  wall1 ← opening, offset unchanged
+straddle (center === splitOffset) → wall1 (same as Revit behavior)
+```
+
+**Bevel inheritance at split point:**
+
+```
+wall1: startBevel = original.startBevel  (preserved),  endBevel = undefined (clean cut)
+wall2: startBevel = undefined (clean cut),              endBevel = original.endBevel (preserved)
+```
+
+**Deferred to Phase 5.6+:**
+- [ ] Visual renderer — something must read `WallSplitStore` and draw the perpendicular indicator line on canvas (store data ready, renderer pending).
+- [ ] Ribbon button in Modify panel (ADR-345 integration).
+- [ ] Context menu entry "Χωρισμός Τοίχου" (right-click fallback, ArchiCAD/Revit both have it).
+- [ ] Keyboard shortcut `SL` conflicts with slab chord — resolve (e.g. `WS` for Wall Split or toolbar-only).
+- [ ] Curved/polyline wall split — currently returns null; requires arc-subdivision or polyline-segment-split algorithm (separate phase).
+
+✅ Google-level: YES — Revit Split Element pattern (enterprise standard, all major CAD tools converge), dedicated tool mode (not context-menu-only), full undo/redo via `WallSplitCommand` (ICommand pattern, ADR-031), center-based opening redistribution (AutoCAD/Revit straddle behavior), pure geometry functions (zero React deps in `wall-split.ts`), ADR-040 module-level store (zero React state for high-frequency mouse-move), idempotent `execute/undo`, `projectPointOnWallAxis()` SSoT reused (zero duplication), enterprise IDs via `generateWallId()` (N.6 compliance), 21 test cases.
+
+---
+
 ### Phase 6 — BOQ Auto-Feed *(✅ CORE IMPLEMENTED 2026-05-18)*
 
 **Files created:**
@@ -2218,4 +2306,5 @@ Phase 6 (BOQ Auto-Feed) θεωρείται **complete** όταν:
 | 2026-05-19 | **Phase cascade-delete IMPLEMENTED — Wall cascade delete confirmation dialog**. When user deletes a wall that owns child openings, a confirmation dialog prompts before proceeding. Pattern: PathDeletionWarningDialog (createPortal). Files created (2): (1) `bim/walls/wall-cascade-delete-store.ts` — module-level Promise handshake store (HoverStore/ImmediatePositionStore pattern). `requestWallCascadeDelete(count)` suspends delete flow; `resolveWallCascadeDelete(action)` closes dialog + resolves promise. `useSyncExternalStore`-compatible subscribe/snapshot. (2) `ui/dialogs/WallCascadeDeleteDialog.tsx` — `createPortal(document.body)` modal, zero props (subscribes to store via `useSyncExternalStore`), two actions: 'delete-all' / 'cancel', `autoFocus` on Cancel (safe default: Figma/Linear/Notion pattern). Files modified (4): (3) `hooks/canvas/useSmartDelete.ts` — Priority 3 extended: detect walls in selection → scan scene for orphaned openings via `isOpeningEntity` type guard + `e.params.wallId ∈ deletingWallIds`. If orphans found → `await requestWallCascadeDelete(count)`. If 'delete-all' → `idsToDelete = [walls, openings]` → `DeleteMultipleEntitiesCommand` (full undo/redo support — restores both wall AND openings). (4+5) `i18n/locales/{el,en}/dxf-viewer-shell.json` — `bim.wallCascadeDelete.{title, body, confirmDelete, cancel}`. (6) `app/WallPersistenceHost.tsx` — renders `<WallCascadeDeleteDialog />` (portal → document.body, tree position irrelevant). ✅ Google-level: YES — proactive detection, no race conditions (async/await blocks delete), idempotent (one pending request at a time), belt-and-suspenders (no openings → skip dialog), SSoT (DeleteMultipleEntitiesCommand single delete path), undo/redo restores wall + openings. | Claude Sonnet 4.6 |
 | 2026-05-19 | **Arc hit-test counterclockwise fix**. `hitTestArcEntity` (`rendering/entities/shared/line-utils.ts`) και `pointToArcDistance` (`utils/angle-entity-math.ts`) δεν λάμβαναν υπόψη το `counterclockwise` flag, οπότε CW arcs (incl. BIM curved walls drawn in CW direction) failed hit-test στο visible range τους. Fix: όταν `counterclockwise === true` swap `[startAngle, endAngle]` πριν το `isAngleInArcRange` check — visible CW arc spans `[end → start]` σε CCW orientation. `ArcRenderer.hitTest` τώρα περνάει `arcData.counterclockwise` στο shared helper. `hitTestArc` (hit-test-entity-tests.ts) ενημερωμένο cast type signature με optional `counterclockwise`. **Files modified (4)**: `ArcRenderer.ts`, `line-utils.ts`, `hit-test-entity-tests.ts`, `angle-entity-math.ts`. ✅ Google-level: YES — root-cause fix (renderer uses `!counterclockwise` for canvas direction, hit-test must mirror), pure functions, zero new state, mirrors renderer geometry. | Claude Opus 4.7 |
 | 2026-05-19 | **Phase Wall-Grip-Opening-Recompute IMPLEMENTED — Revit Transaction Pattern**. Closes the deferred item "wall split mid-opening (recompute opening positions όταν αλλάζει wall axis)". When user drags a wall endpoint/midpoint grip, hosted openings now reposition proportionally and remain geometrically valid. Architecture: Revit Transaction Pattern — `WallOpeningCoordinator` wraps `UpdateWallParamsCommand` + N `UpdateOpeningParamsCommand` into a single `CompoundCommand` → one atomic undo/redo entry. Ratio-preserving: `newOffset = (oldOffset / oldLength) × newLength`. Overflow clamp: if wall shrinks and opening would overflow → clamp to `max(0, newLength − opening.width)`. Drag merge: `CompoundCommand.canMergeWith/mergeWith` added — delegates pairwise to children so consecutive drag samples collapse into a single undo entry (mirrors `UpdateWallParamsCommand` ADR-031 merge window). Short-circuit: if wall has no `hostedOpeningIds` → coordinator returns `wallCmd` unchanged (zero overhead for plain walls). **Files created (1)**: `bim/walls/wall-opening-coordinator.ts` (~80 γρ, pure SSoT — `coordinateWallUpdate(wallCmd, wallId, oldParams, newParams, sceneManager, isDragging): ICommand`). **Files modified (3)**: (1) `core/commands/CompoundCommand.ts` — `canMergeWith(other)` replaces the no-op `false`; new `mergeWith(other)` delegates pairwise. (2) `hooks/grips/grip-parametric-commits.ts` — `commitWallGripDrag` routes through `coordinateWallUpdate` before `deps.execute`. (3) `ADR-363-bim-drawing-mode.md` (this entry). **Limitation (deferred)**: curved/polyline walls use chord length as axis-length approximation — exact arc-length recompute is Phase 0.5+ work. ✅ Google-level: YES — Revit Transaction Pattern (industry standard for hosted-element cascade), single atomic undo step, ratio-preserving + overflow clamp, zero overhead for plain walls, drag merge preserved end-to-end, pure SSoT coordinator (no logic in grip handler). | Claude Sonnet 4.6 |
+| 2026-05-19 | **Phase 5.6 IMPLEMENTED — Wall Split Tool (Revit Split Element pattern)**. Νέο editing tool που σπάει straight wall σε δύο segments στο click point, redistributing hosted openings between the two new walls (atomic undo/redo). State machine: idle → picking (continuous loop) → click wall → execute → loop. ESC / right-click → `onToolChange('select')`. Mouse-move path: `subscribeToImmediateWorldPosition` → `findWallAtPoint` (via `projectPointOnWallAxis` + `TOLERANCE_CONFIG.SNAP_DEFAULT/scale`) → `WallSplitStore.set({hoveredWallId, splitPoint, splitLine})` — ZERO React state for high-freq path (mirrors `TrimToolStore`, ADR-040 compliance). Click path: `computeSplitOffset` (clamped to ≥`MIN_SEGMENT_MM=100mm` each side) → `computeSplitWallParams` (bevel inheritance: wall1 keeps `startBevel`, wall2 keeps `endBevel`; `measurementLength` cleared) → `redistributeOpenings` (straddle policy: opening center ≤ split → wall1, > split → wall2; wall2 openings get `offsetFromStart -= splitOffset`) → `WallSplitCommand` (single atomic undo/redo: remove orig + add wall1+wall2 + patch openings; soft-orphan-safe `applyOpeningPatch` mirrors `UpdateOpeningParamsCommand`). Phase 1 limitation: straight walls only — curved/polyline split deferred to Phase 0.5+. **Files created (6)**: `bim/walls/wall-split.ts` (pure geometry SSoT — 4 functions), `bim/walls/__tests__/wall-split.test.ts`, `core/commands/entity-commands/WallSplitCommand.ts` (~160 γρ), `hooks/tools/useWallSplitTool.ts` (~220 γρ — editing hook, needs `executeCommand`, mirrors `useTrimTool`), `systems/wall-split/WallSplitStore.ts` (~110 γρ, snapshot-stable module-pub/sub). **Files modified (9)**: `entity-commands/index.ts` (+2 exports), `useModifyTools.ts`, `canvas-click-types.ts`, `useCanvasClickHandler.ts` (+PRIORITY 1.61), `useCanvasEscapeRegistrations.ts` (+`buildModifyHandler('wall-split',…)`), `useCanvasKeyboardShortcuts.ts`, `ToolStateManager.ts` (+ToolInfo), `ui/toolbar/types.ts` (+ToolType `'wall-split'`), `CanvasSection.tsx` (plumb-only, ZERO new orchestrator subs — ADR-040 changelog updated this session). i18n keys (el/en `dxf-viewer-shell.json`). ✅ Google-level: YES — Revit Split Element parity, atomic command (orig wall + opening params restored on undo), pure SSoT geometry, soft-orphan-safe patch, snapshot-stable store, MIN_SEGMENT_MM guard, ADR-040 micro-leaf compliance, reuse-first (`useTrimTool` + `projectPointOnWallAxis` from Phase 5.5e). | Claude Opus 4.7 |
 | 2026-05-19 | **Phase 5.5e IMPLEMENTED — Snap-to-Wall-Axis Perpendicular Projection**. Closes το `snap-to-wall-axis projection` deferred item από Phase 5.5d. Industry parity: AutoCAD NEAREST + PERPENDICULAR osnaps και Revit "Snap to Reference Line" — beam endpoints (ή κάθε drawing tool με snap ενεργό) κουμπώνουν στην ορθή προβολή πάνω στον wall axis όταν ο cursor μπει εντός snap radius. Root cause: ούτε `NearestSnapEngine` ούτε `PerpendicularSnapEngine` αναγνώριζαν `WallEntity` — walls είχαν spatial-index entries μόνο για endpoints (Phase 1B) + midpoints (Phase 1C). Design: reuse-first — extend τους δύο engines με `isWallEntity` branch, ΟΧΙ νέος engine, ΟΧΙ νέος `ExtendedSnapType` (industry convergence — AutoCAD/Revit architectural preset ήδη έχει και τους δύο osnaps active). Pure SSoT module `bim/walls/wall-axis-projection.ts` με 2 functions: `projectPointOnWallAxis(wall, cursor): Point2D \| null` (clamped, NEAREST semantics — `getNearestPointOnLine` clamp=true ανά segment, αν cursor εκτός segment foot=endpoint) και `getWallAxisPerpendicularFeet(wall, cursor, maxDistance): Array<{point, segmentIndex}>` (unclamped, PERPENDICULAR semantics — clamp=false + radius filter, επιτρέπει foot σε προέκταση). Leverage cached `wall.geometry.axisPolyline.points` (Phase 1 invariant) → uniform code path για straight (2 verts) / curved (17 tessellated λόγω `CURVED_SUBDIVISIONS=16`) / polyline (N user verts) → ZERO Bezier math duplication, ZERO export του internal `subdivideQuadraticBezier`. Defensive null guards αν geometry missing. Zero changes σε beam side, ribbon, i18n, command surface. **Files created (2)**: `bim/walls/wall-axis-projection.ts` (pure SSoT, 90 γρ), `bim/walls/__tests__/wall-axis-projection.test.ts` (12 Jest tests — clamped × 6 + unclamped × 6, καλύπτει straight/curved/polyline + null geometry guards). **Files modified (2)**: `snapping/engines/NearestSnapEngine.ts` (νέο `isWallEntity` import + `projectPointOnWallAxis` import + branch στην αρχή του `getNearestPointOnEntity()`), `snapping/engines/PerpendicularSnapEngine.ts` (νέο `isWallEntity` import + `getWallAxisPerpendicularFeet` import + `else if (isWallEntity)` branch στο `getPerpendicularPoints()` με label `'Wall Axis Segment N'`). Phase 5.5d deferred list ticked (snap-to-wall-axis ✅). **Deferred Phase 5.5f+**: snap-to-slab-edge perpendicular, snap-to-opening-jamb perpendicular, distinct i18n label "Επί άξονα τοίχου", column-center-line 3D wireframe snap (από Phase 5.5d), beam-supports-slab analytical link (Phase 6), section-profile preview steel I/H beams. ✅ Google-level: YES — pure SSoT (axis projection single-sourced + cached geometry leveraged ZERO duplication), reuse-first architecture (extend existing engines, industry convergence AutoCAD/Revit), idempotent (pure functions), ADR-040 micro-leaf compliance (ZERO new React subscriptions), clamped vs unclamped maps clean σε NEAREST vs PERPENDICULAR osnap intents, defensive missing geometry, zero ribbon/i18n/command changes. | Claude Opus 4.7 |

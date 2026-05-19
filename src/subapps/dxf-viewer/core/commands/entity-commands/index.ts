@@ -12,4 +12,6 @@ export { DeleteEntityCommand, DeleteMultipleEntitiesCommand } from './DeleteEnti
 export { JoinEntityCommand } from './JoinEntityCommand';
 export { TrimEntityCommand } from './TrimEntityCommand';
 export type { TrimCommandParams } from './TrimEntityCommand';
+export { WallSplitCommand } from './WallSplitCommand';
+export type { WallSplitCommandParams } from './WallSplitCommand';
 export { ReorderEntityCommand } from './ReorderEntityCommand';

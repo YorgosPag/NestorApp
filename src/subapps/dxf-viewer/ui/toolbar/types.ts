@@ -105,6 +105,8 @@ export type ToolType =
   | 'stair'
   // ADR-363 Phase 1: BIM Wall drawing tool (parametric wall με WallDna composition)
   | 'wall'
+  // ADR-363 Phase 5.6: BIM Wall Split tool (Revit Split Element pattern)
+  | 'wall-split'
   // ADR-363 Phase 2: BIM Opening drawing tool (5 kinds — door/window/sliding/french/fixed)
   | 'opening'
   // ADR-363 Phase 3: BIM Slab drawing tool (polygon — floor/ceiling/roof/ground/foundation)

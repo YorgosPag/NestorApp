@@ -79,6 +79,8 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // ADR-349 Phase 1a: Stretch (crossing-window) + MStretch (multi-window union)
   'stretch': { id: 'stretch', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'mstretch': { id: 'mstretch', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-363 Phase 5.6: Wall Split (Revit Split Element — continuous pick loop, exits on ESC)
+  'wall-split': { id: 'wall-split', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-350: Trim (continuous pick loop, Quick mode default, exits on ENTER/ESC/right-click)
   'trim': { id: 'trim', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-353: Extend (continuous pick loop, Quick mode default, exits on ENTER/ESC/right-click)

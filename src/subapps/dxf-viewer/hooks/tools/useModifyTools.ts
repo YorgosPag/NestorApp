@@ -17,6 +17,7 @@ import { useExtendTool } from './useExtendTool';
 import { useArrayTool } from './useArrayTool';
 import { useArrayPolarTool } from './useArrayPolarTool';
 import { useArrayPathTool } from './useArrayPathTool';
+import { useWallSplitTool } from './useWallSplitTool';
 import { MoveOverlayCommand, MoveMultipleOverlaysCommand } from '../../core/commands';
 import { subscribeToImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { distanceToEntity } from '../../utils/entity-distance';
@@ -82,6 +83,15 @@ export function useModifyTools({
 
   const stretchTool = useStretchTool({
     activeTool, selectedEntityIds, levelManager, executeCommand, onToolChange,
+  });
+
+  // ADR-363 Phase 5.6 — Wall Split Tool (Revit Split Element pattern)
+  const wallSplitTool = useWallSplitTool({
+    activeTool,
+    levelManager,
+    executeCommand,
+    transformScale,
+    onToolChange,
   });
 
   const trimHitTest = useCallback((worldPoint: { x: number; y: number }): string | null => {
@@ -199,6 +209,7 @@ export function useModifyTools({
     arrayTool,
     arrayPolarTool,
     arrayPathTool,
+    wallSplitTool,
     handleRotationAnglePrompt,
   };
 }
