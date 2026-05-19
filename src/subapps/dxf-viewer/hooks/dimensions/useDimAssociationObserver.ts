@@ -81,6 +81,15 @@ export function useDimAssociationObserver(
     }
 
     if (updates.size > 0) {
+      // ADR-362 position diagnostic — remove after bug confirmed
+      updates.forEach((upd, id) => {
+        const orig = associatedDims.find(d => d.id === id);
+        const newPts = (upd as unknown as Partial<DimensionEntity>).defPoints;
+        // eslint-disable-next-line no-console
+        console.warn('[DIM-DIAG observer] MOVING dim', id,
+          'from', orig?.defPoints?.map((p, i) => `[${i}](${p.x.toFixed(4)},${p.y.toFixed(4)})`).join(' '),
+          'to', newPts?.map((p, i) => `[${i}](${p.x.toFixed(4)},${p.y.toFixed(4)})`).join(' '));
+      });
       const adapter = new LevelSceneManagerAdapter(getLevelScene, setLevelScene, levelId);
       adapter.updateEntities(updates as ReadonlyMap<string, Partial<SceneEntity>>);
     }

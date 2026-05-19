@@ -80,6 +80,8 @@ import { resolveTrackingSnap } from '../../systems/tracking/tracking-resolver';
 import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 // 🏢 ADR-362 Phase D1: Dim tool routing layer (Smart DIM + 4 manual overrides)
 import { useDimToolRouting } from '../dimensions/useDimToolRouting';
+// ADR-362 diagnostic (remove after bug confirmed)
+import { dimensionCreateStore } from '../../stores/DimensionCreateStore';
 // ADR-362 hotfix: DetectableEntity for smart dim type detection via snap entityId
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
 // ADR-362 Phase L2: Center mark + centerline standalone tools
@@ -216,6 +218,10 @@ export function useDrawingHandlers(
       const hoveredEntity: DetectableEntity | undefined = snapResult?.entityId
         ? (currentScene?.entities.find((e) => e.id === snapResult.entityId) as DetectableEntity | undefined)
         : undefined;
+      // ADR-362 position diagnostic — remove after bug confirmed
+      const _dst = dimensionCreateStore.get(); const _cw = _dst.cursorWorld; const _sp = snapResult?.snappedPoint;
+      // eslint-disable-next-line no-console
+      console.log(`[DIM-DIAG click#${_dst.clicks.length + 1}] raw:(${p.x.toFixed(4)},${p.y.toFixed(4)}) snapped:(${snapped.x.toFixed(4)},${snapped.y.toFixed(4)}) cursorWorld:${_cw ? `(${_cw.x.toFixed(4)},${_cw.y.toFixed(4)})` : 'null'} snapFound:${snapResult?.found} snapPt:${_sp ? `(${_sp.x.toFixed(4)},${_sp.y.toFixed(4)})` : 'none'} snapMatch:${_cw ? (snapped.x === _cw.x && snapped.y === _cw.y) : 'N/A'}`);
       dimRouting.handlePoint(snapped, hoveredEntity);
       return;
     }
