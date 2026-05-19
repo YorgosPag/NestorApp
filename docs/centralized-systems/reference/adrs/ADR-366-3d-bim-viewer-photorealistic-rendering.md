@@ -1456,13 +1456,14 @@ GenArc **ADR-009** defines Y-up convention explicitly. This ADR **inherits** tha
 **Pending micro-decisions**:
 - Q1: Hover tooltip content + pattern ✅ RESOLVED
 - Q2: Permanent dimensions σε 3D ✅ RESOLVED
-- Q3: Annotation/leader text σε 3D space (free-floating labels;)
+- Q3: Annotation/leader text σε 3D space ✅ RESOLVED (comments markers Phase 7+, free-text DEFERRED Phase 8+)
 - Q4: Element info panel (full BIM card on click — αυτόνομη ή reuse 2D properties panel;)
 
 **Decisions Log (Γιώργος)** — Topic B.2 in progress:
 
 | # | Ερώτηση | Απόφαση | Industry alignment |
 |---|---|---|---|
+| B.2.Q3 | Annotation/leader text σε 3D (free labels, comment markers, ή hybrid) | **Option 3 — Typed comment markers (BIMcollab style) Phase 7+** + **DEFERRED free-text labels σε Phase 8+**. Νέα Firestore collection `bim_comments` με marker pins σε 3D space (Three.js Sprite billboard με number + color-by-status), click → opens `BimCommentDetailsPanel` side pane με typed metadata (text, status `open/resolved/wontfix`, priority, author, createdAt, optional attachments). Optional entity anchor (`attachedEntityId`). Tenant-scoped via ADR-326 (`companyId/projectId/buildingId/floorId`). Free-text labels με leader arrows ΔΕΝ rejected — deferred Phase 8+ ως optional (αν ζητηθούν, mirror ADR-362 dim tool pattern). | Modern BIM coordination σύγκλιση: BIMcollab + Solibri lead 3D review workflows (organized typed comments αντί anarchic text labels). Revit/ArchiCAD annotations migrated σε 2D-only — review μεταφέρθηκε σε ξεχωριστά coordination platforms. SketchUp 3D-text pattern deferred — Nestor είναι BIM tool, όχι freeform sketch tool. |
 | B.2.Q2 | Permanent dimensions σε 3D (auto-display ή manual) | **Combo Option 1 + Option 4** (Revit/ArchiCAD industry consensus 4/5). **Καθόλου automatic dimensions σε 3D** (clean visualization philosophy) **PLUS manual user-placed dimensions via mirror του ADR-362 2D Dim System**. Ribbon "Dimension" button context-aware: 2D mode → plan dimension (existing ADR-362), 3D mode → 3D dimension. Ο χρήστης κλικάρει 2 σημεία σε 3D space (snap-aware REUSE ProSnapEngineV2), εμφανίζεται μόνιμη διάσταση: thin grey 3D line + tick marks + billboard Sprite label (πάντα face camera, readable από κάθε γωνία). Storage extends ADR-362 schema με `placement: '2d' \| '3d'` discriminator (zero data duplication, visibility filter per mode). Hover tooltip ήδη δείχνει dimensions (από B.2.Q1) → user βλέπει μέτρα on-demand χωρίς clutter. | 4/5 industry σύγκλιση (Revit + ArchiCAD + SketchUp + BIMcollab όλοι manual-only, Twinmotion zero dims). Option 3 (permanent always-visible) απορρίπτεται — 0/5 industry. SSoT REUSE ADR-362 (155 tests, fully implemented) + ProSnapEngineV2 + dim style tokens (`DIMENSION_LINE_COLOR`, `DIMENSION_TEXT_SIZE`). |
 | B.2.Q1 | Hover tooltip content + activation pattern | **Mirror ADR-357 QuickProperties pattern + BIM data getters extension**. Compact 3-line floating card (Revit style, 1/4 industry direct precedent: Revit "Category : Family : Type"). **Trigger**: 800ms stable hover **REUSE constant** `HOVER_DELAY_MS` από `QuickPropertiesStore.ts`. **Position**: cursor-relative offset (12px right, 4px down) via `ImmediatePositionStore` **REUSE**. **Mount**: ADR-040 sibling micro-leaf (παράλληλα με `QuickPropertiesHoverPopover`, ποτέ μέσα σε orchestrator). **Activation**: `activeTool === 'select'` AND mode `!== '2d'`. **Content lines**: (1) entity type translated (`t('bim3d.entityTypes.{wall,door,window,slab,beam,column}')`), (2) name + dimensions `Wall_A12 · 5.20m × 3.00m × 0.25m`, (3) floor + material `Όροφος 1 · Τούβλο`. **Progressive disclosure**: click → full BIM panel (right pane, Q4 pending decision). | 1/4 direct Revit precedent (compact Category/Family/Type). 100% SSoT REUSE με 2D Nestor `QuickProperties` (HOVER_DELAY_MS constant, ImmediatePositionStore, ADR-040 micro-leaf mount, `useSyncExternalStore` pattern, CSS module shared). Twinmotion/Lumion no-tooltip pattern rejected — Nestor είναι BIM (data-driven), όχι pure visualization. ArchiCAD configurable pattern deferred — default-first principle. |
 
@@ -1553,12 +1554,78 @@ GenArc **ADR-009** defines Y-up convention explicitly. This ADR **inherits** tha
 
 **Effort impact για B.2.Q2**: +5-6h Phase 7 (Dimension3DRenderer 1.5h + Dim3DToolRouting 1h + schema extension 30min + ribbon context-aware dispatcher 30min + snap context offset logic 1h + visibility filter 30min + Quick3D dim case 30min + tests 1h). ADR-362 backward compat verified (existing 2D dims continue with `placement='2d'` default). ADR-366 total estimate revised: **~126-143h** (από ~121-137h post-B.2.Q1).
 
+**Architectural implications για B.2.Q3**:
+
+- **Νέα Firestore collection**: `bim_comments` — tenant-scoped per ADR-326 (`companyId` required, query filter mandatory per N.11 CHECK 3.10).
+- **Schema**:
+  - `id: string` (deterministic via enterprise-id.service `cmt_bim_${ulid}` — νέο generator add σε `enterprise-id.service.ts`)
+  - `companyId, projectId, buildingId, floorId: string` (tenant hierarchy)
+  - `position3D: { x: number, y: number, z: number }` (mm world-space)
+  - `attachedEntityId: string | null` (optional anchor σε wall/door/etc — null = free-standing comment)
+  - `text: string` (i18n-free user content)
+  - `status: 'open' | 'resolved' | 'wontfix'`
+  - `priority: 'low' | 'med' | 'high'`
+  - `author: { userId, displayName }` (denormalized for fast display)
+  - `createdAt: Timestamp`, `resolvedAt?: Timestamp`, `resolvedBy?: userId`
+  - `attachments?: string[]` (Firebase Storage paths, tenant-scoped per `storage.rules`)
+- **Firestore rules** (extend `firestore.rules`): companyId-scoped read/write, RBAC role check, audit trail via `EntityAuditService.recordChange()` (ADR-195 ratchet compliance — module `entity-audit-trail`).
+- **Marker rendering**: `bim-3d/comments/CommentMarker3DRenderer.ts` — Three.js `Sprite` με canvas-rendered:
+  - Circle 32px diameter
+  - Color by status: open=#FF9500 (orange), resolved=#34C759 (green), wontfix=#8E8E93 (gray) — νέα tokens σε `color-config.ts` ή ADR-tokens? — **νέο SSoT entry `COMMENT_STATUS_COLORS`** justified (zero 2D equivalent)
+  - Sequence number rendered inside (auto-assigned per project, ascending)
+  - Priority indicator: thin border (low=none, med=2px yellow, high=3px red)
+  - Billboard auto-face camera (Three.js Sprite default)
+- **Side panel**: `bim-3d/comments/BimCommentDetailsPanel.tsx` — extends existing detail right-pane pattern (REUSE `EntityDetailsHeader` SSoT from `@/core/entity-headers`).
+  - Edit-in-place text, status select, priority select
+  - Attachment upload (REUSE storage upload service)
+  - Audit log section (REUSE `useEntityAudit` hook από ADR-195)
+  - Delete/resolve actions με confirmation dialog
+- **Comment CRUD service**: `bim-3d/comments/bim-comments.service.ts` — wraps firestoreQueryService.subscribe με equality guard ([[firestore-subscribe-equality-guard]] memory rule). Methods:
+  - `createComment(input)` → setDoc με enterprise-id
+  - `updateComment(id, patch)` → updateDoc + EntityAudit
+  - `resolveComment(id)` → updateDoc status + resolvedBy/resolvedAt
+  - `deleteComment(id)` → deleteDoc + audit
+  - `subscribeProjectComments(projectId, callback)` → reactive feed
+- **Comment list panel**: separate UI panel `bim-3d/comments/CommentListPanel.tsx` (collapsible left sidebar tab):
+  - Sortable by createdAt/priority/status
+  - Filter by status/author
+  - Click → zooms camera σε comment.position3D (animated 500ms cubic via GenArc viewportAnimation) + opens details panel
+- **Marker visibility**:
+  - Always visible σε 3D mode (default)
+  - Toggle button "Show Comments" στο ribbon Phase 7 — hides all markers
+  - Floor filter: markers on hidden floors auto-hidden (consistency με §9 Q2 single-floor default)
+- **Notifications**: reuse `NOTIFICATION_KEYS` SSoT (memory entry [[notification-ssot]]) για events: comment.created, comment.resolved, comment.mentioned (future @-mention). Domain hook: νέο `useCommentNotifications` mirror του `useContactNotifications`/`useProjectNotifications` pattern.
+- **i18n keys** (νέα namespace `bim3d.comments`, ΠΡΩΤΑ σε locale JSONs):
+  - `bim3d.comments.status.{open,resolved,wontfix}` × 2 locales
+  - `bim3d.comments.priority.{low,med,high}` × 2 locales
+  - `bim3d.comments.actions.{create,edit,resolve,reopen,delete,upload}` × 2 locales
+  - `bim3d.comments.fields.{text,author,createdAt,resolvedBy,attachments}` × 2 locales
+  - `bim3d.comments.empty`, `bim3d.comments.list.title`, `bim3d.comments.toolbar.toggle`
+- **Permissions** (extend `roles.ts`): νέο RBAC permission `bim_comments.{create,edit,resolve,delete}`. Default: all authenticated roles can create/edit own; only `admin`/`project_manager` resolve+delete others.
+- **GOL checklist**:
+  - Proactive: ✅ subscribe at viewer mount, RAF-coordinated marker positioning
+  - Race conditions: ✅ Firestore optimistic updates + equality guard ([[firestore-subscribe-equality-guard]])
+  - Idempotent: ✅ deterministic enterprise-id (no duplicates on retry)
+  - Belt-and-suspenders: ✅ Firestore rules + RBAC + audit trail (3 layers)
+  - SSoT: ✅ enterprise-id, EntityDetailsHeader, useEntityAudit, NOTIFICATION_KEYS, color-config (status colors)
+  - Lifecycle owner: ✅ bim-comments.service.ts owns CRUD, ViewMode3DStore tracks selected comment, Bim3DScene owns marker rendering
+  - Idempotent enterprise-id ✅ (per N.6 ADR-017/210/294)
+- **Backport σε 2D**: COULD add 2D plan-view markers (mirror του 3D pattern) σε ξεχωριστή phase αν Γιώργος ζητήσει. Default: 3D-only για Phase 7. Same Firestore collection — 2D markers θα ήταν projection του 3D position στο plan view (διαφορετικός renderer).
+- **Phase 8+ free-text labels (DEFERRED)**:
+  - Mirror του ADR-362 dim tool pattern για labels με leader
+  - Schema: `BimLabelEntity` με `position3D`, `text`, `leaderEnd3D`, `placement='3d'`
+  - Effort estimate (future): ~5-6h αν ζητηθεί
+  - Status: NOT ENTERED στο ratchet, NOT BLOCKING Phase 7 release
+
+**Effort impact για B.2.Q3**: +6-7h Phase 7 (CommentMarker3DRenderer 1.5h + Firestore collection schema + rules 1h + BimCommentDetailsPanel 2h + bim-comments.service.ts CRUD 1h + CommentListPanel sidebar tab 1h + 20+ i18n keys ×2 locales + RBAC permissions 30min + audit integration 30min + tests 1.5h). Phase 8+ free-text labels DEFERRED (~5-6h future, not counted). ADR-366 total estimate revised: **~132-150h** (από ~126-143h post-B.2.Q2).
+
 ---
 
 ## 12. Changelog
 
 | Ημ/νία | Αλλαγή | Author |
 |---|---|---|
+| 2026-05-19 | **Appendix B — Topic B.2.Q3 (BIM Data Overlay — 3D annotations/leaders) ✅ RESOLVED** — **Typed comment markers (BIMcollab style) Phase 7+** + **DEFERRED free-text labels Phase 8+**. Νέα Firestore collection `bim_comments` (tenant-scoped ADR-326) με marker pins Three.js Sprite billboard, status color (open=orange/resolved=green/wontfix=gray), priority border, auto-numbered. Click → side panel REUSE `EntityDetailsHeader` SSoT + edit-in-place + attachments + audit trail (ADR-195). Νέα modules Phase 7: `CommentMarker3DRenderer.ts` + `BimCommentDetailsPanel.tsx` + `CommentListPanel.tsx` + `bim-comments.service.ts`. SSoT REUSE: enterprise-id (νέο `cmt_bim_*` generator), EntityAuditService, NOTIFICATION_KEYS (νέο `useCommentNotifications` hook), GenArc viewportAnimation (camera zoom-to-comment). Νέο SSoT token `COMMENT_STATUS_COLORS` (zero 2D equivalent). 20+ i18n keys ×2 locales. RBAC permissions `bim_comments.*`. Modern BIM coordination industry σύγκλιση (BIMcollab + Solibri leaders). SketchUp 3D-text/Revit annotations-in-views rejected — Nestor είναι BIM coordination tool. Phase 7 +6-7h. Phase 8+ free-text labels deferred (~5-6h future, not blocking). **Total estimate revised: ~132-150h.** | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.2.Q2 (BIM Data Overlay — permanent dimensions σε 3D) ✅ RESOLVED** — **Combo no-automatic + manual user-placed via mirror ADR-362** (Revit/ArchiCAD industry consensus 4/5 σύγκλιση). Καθόλου auto-dimensions σε 3D (clean visualization philosophy). Manual dim tool mirror του 2D ADR-362 με ribbon context-aware Dim button (2D mode → plan dim, 3D mode → 3D dim). Schema extension: existing `DimensionEntity` + `placement: '2d' \| '3d'` discriminator (zero data duplication). Νέα Phase 7: `Dimension3DRenderer.ts` (Three.js Line + Sprite billboard label) + `useDim3DToolRouting.ts` (state machine mirror). SSoT REUSE 100%: ADR-362 schema/snap/style tokens + ProSnapEngineV2 + ADR-031 CommandHistory + ribbon button. Hover tooltip ήδη δείχνει dims (B.2.Q1) → user βλέπει μέτρα on-demand. Boy Scout: 2D scene converter adds visibility filter για `placement=3d` skip. Phase 7 +5-6h. **Total estimate revised: ~126-143h.** | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.2.Q1 (BIM Data Overlay — hover tooltip) ✅ RESOLVED** — **Mirror ADR-357 QuickProperties pattern + BIM data getters**. Compact 3-line Revit-style floating card (type / name+dimensions / floor+material). 100% SSoT REUSE: HOVER_DELAY_MS=800ms constant, ImmediatePositionStore, ADR-040 sibling micro-leaf mount, useSyncExternalStore, CSS module visual rules. Νέα modules Phase 4: `bim-3d/properties/QuickProperties3DStore.ts` + `QuickProperties3DHoverPopover.tsx` + `bim-entity-formatter.ts`. BIM data sources: ADR-363 cached geometry + ADR-363 Phase 6 multi-layer DNA materials + useFloors SSoT. 11 νέα i18n keys (bim3d.entityTypes.* + bim3d.quickProperties.*). Activation: `activeTool=select` AND `mode!=2d` AND 800ms stable. Effort οικονομία ~1.5h από mirror pattern. Phase 4 +2.5h. **Total estimate revised: ~121-137h.** | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.1 (Materials & Lighting UX) ✅ FULLY CLOSED 4/4 Qs.** Q4 Environment reflections RESOLVED: **HDRI envmap Phase 5 (PBR IBL zero cost) + path-traced Phase 7 final** (Twinmotion + V-Ray pattern, 2/2 BIM render leaders σύγκλιση). Νέα SSoT: `envmap-generator.ts` (PMREMGenerator wiring) + `material-defaults.ts` (5 entity-type PBR registry: glass/metal/concrete/wood/plaster). Phase 7 path tracer (`three-gpu-pathtracer` MIT) takes over reflections automatically — zero material refactor. SSR απορρίπτεται (edge artifacts). Phase 5 +1.5h. **Topic B.1 total +14h Phase 5** (Q1=7h + Q2=3h + Q3=2.5h + Q4=1.5h). **Total estimate revised: ~118.5-134.5h.** Topic B.1 architectural commitments documented: 5 νέα SSoT modules, ViewMode3DStore extensions, EffectComposer pipeline, IdleDetector REUSE. | Claude Opus 4.7 |
