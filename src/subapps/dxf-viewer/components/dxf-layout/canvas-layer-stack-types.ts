@@ -24,7 +24,7 @@ import type {
   DraggingEdgeMidpointState,
   DraggingOverlayBodyState,
 } from '../../hooks/canvas/useCanvasMouse';
-import type { UseDxfGripInteractionReturn } from '../../hooks/useDxfGripInteraction';
+import type { UseDxfGripInteractionReturn } from '../../hooks/grip-computation';
 import type { useDrawingHandlers } from '../../hooks/drawing/useDrawingHandlers';
 import type { Guide, ConstructionPoint } from '../../systems/guides/guide-types';
 import type { GuideWorkflowState } from '../../hooks/guides/guide-workflow-types';

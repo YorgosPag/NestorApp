@@ -27,7 +27,7 @@ import { CanvasNumericInputStore } from '../../systems/canvas-numeric-input/Canv
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
 import { LassoFreehandStore } from '../../systems/lasso/LassoFreehandStore';
 import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
-import type { SelectedGrip } from '../grips/useGripSystem';
+import type { SelectedGrip } from '../grips/unified-grip-types';
 
 interface DxfGripInteractionLike {
   readonly handleGripEscape: () => boolean;

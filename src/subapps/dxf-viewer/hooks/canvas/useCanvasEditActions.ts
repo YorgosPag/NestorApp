@@ -5,7 +5,7 @@ import type { ICommand } from '../../core/commands';
 import type { OverlayEditorMode } from '../../overlays/types';
 import type { ToolType } from '../../ui/toolbar/types';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
-import type { SelectedGrip } from '../grips/useGripSystem';
+import type { SelectedGrip } from '../grips/unified-grip-types';
 import type { UniversalSelectionHook } from '../../systems/selection';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { useEventBus } from '../../systems/events/EventBus';

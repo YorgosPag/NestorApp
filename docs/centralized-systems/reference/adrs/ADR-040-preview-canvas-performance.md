@@ -71,6 +71,18 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-19 — ADR-183 Phase C interop: deprecated grip-hook deletion (import path retargets only)
+
+`canvas-layer-stack-types.ts` and `canvas-click-types.ts` (both micro-leaf surface files) had their grip-type imports retargeted from the now-deleted `hooks/useDxfGripInteraction.ts` / `hooks/grips/useGripSystem.ts` to the canonical SSoT modules (`hooks/grips/unified-grip-types.ts` for overlay grip types; `hooks/grip-computation.ts` for DXF state-machine types + `UseDxfGripInteractionReturn`). **Type-only changes — zero runtime behavior change.**
+
+**Cardinal rule compliance**:
+- **Rule 1 (no orchestrator subscriptions)**: respected — only type imports moved; no `useSyncExternalStore` added anywhere.
+- **Rule 2 (getter-based event reads)**: untouched — handlers still receive the same getter shapes.
+- **Rule 3 (bitmap cache key untouched)**: respected — no identity propagated into `dxf-bitmap-cache.ts`.
+- **Rule 4 (≤1 canvas element / ≤2 high-freq hooks per leaf)**: respected — leaf hook surface unchanged.
+
+Bundled with the ADR-183 Phase C deletion commit (CHECK 6B compliance).
+
 ### 2026-05-19 — ADR-363 Phase 2 deferred pipeline interop: `DxfRenderer.render()` per-frame openings→wall map + Boy-Scout split
 
 `DxfRenderer.render()` now feeds the per-frame opening→wall index into `EntityRendererComposite` so `WallRenderer` can punch boolean cutouts through wall fills for hosted openings. Touch surface in `DxfRenderer.ts`:

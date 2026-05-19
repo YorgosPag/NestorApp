@@ -33,8 +33,8 @@
 - Baseline: `.firestore-companyid-baseline.json` (48 violations, 30 files, 2026-04-10)
 - `npm run firestore:audit` — check progress vs baseline
 
-## Language Rule (2026-04-13)
-- Giorgio writes in Greek. Claude ALWAYS responds in Italian. NEVER English, NEVER Greek. Token savings ~60% on output. See CLAUDE.md top section.
+## Language Rule (2026-05-17 — αλλαγή από Giorgio)
+- Giorgio writes in Greek. Claude ALWAYS responds in **Greek**. NEVER English, NEVER Italian. See CLAUDE.md top section.
 
 ## User Preferences
 

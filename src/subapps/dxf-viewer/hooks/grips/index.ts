@@ -41,11 +41,8 @@ export {
   commitOverlayBodyDrag,
 } from './overlay-grip-commit-adapters';
 
-// === Legacy (deprecated — ADR-183) ===
-/** @deprecated Use useUnifiedGripInteraction instead */
-export { useGripSystem } from './useGripSystem';
+// === Overlay grip types (canonical SSoT in unified-grip-types) ===
 export type {
-  UseGripSystemReturn,
   VertexHoverInfo,
   EdgeHoverInfo,
   SelectedGrip,
@@ -53,4 +50,4 @@ export type {
   DraggingEdgeMidpointState,
   DraggingOverlayBodyState,
   GripHoverThrottle,
-} from './useGripSystem';
+} from './unified-grip-types';

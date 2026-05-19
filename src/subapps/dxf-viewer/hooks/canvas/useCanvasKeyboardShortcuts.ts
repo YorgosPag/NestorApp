@@ -18,7 +18,7 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { CanvasNumericInputStore } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
-import type { SelectedGrip } from '../grips/useGripSystem';
+import type { SelectedGrip } from '../grips/unified-grip-types';
 import type { Point2D } from '../../rendering/types/Types';
 // ADR-357 Phase 3: DDE — cursor world position + unit conversion
 import { getImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';

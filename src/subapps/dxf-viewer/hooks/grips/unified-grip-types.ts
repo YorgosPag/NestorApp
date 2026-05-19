@@ -4,45 +4,94 @@
  * Single type system for BOTH DXF entity grips and overlay polygon grips.
  * Extends the existing GripInfo (useGripMovement.ts) with overlay support.
  *
- * @see useDxfGripInteraction.ts — DXF grip state machine (being unified)
- * @see useGripSystem.ts — Overlay grip state management (being unified)
+ * Canonical SSoT for all grip types. Overlay hover/drag/select types live here
+ * inline (migrated from the now-deleted useGripSystem.ts). DXF state-machine
+ * types are re-exported from grip-computation.ts (pure-function module).
  */
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, BeamGripKind, ColumnGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
 import type {
-  VertexHoverInfo,
-  EdgeHoverInfo,
-  SelectedGrip,
-  DraggingVertexState,
-  DraggingEdgeMidpointState,
-  DraggingOverlayBodyState,
-  GripHoverThrottle,
-} from './useGripSystem';
-import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
-} from '../useDxfGripInteraction';
+} from '../grip-computation';
 
 // ============================================================================
-// RE-EXPORTS from existing types (backward compatibility)
+// OVERLAY GRIP TYPES (canonical SSoT — moved from useGripSystem.ts on delete)
 // ============================================================================
 
-export type {
-  VertexHoverInfo,
-  EdgeHoverInfo,
-  SelectedGrip,
-  DraggingVertexState,
-  DraggingEdgeMidpointState,
-  DraggingOverlayBodyState,
-  GripHoverThrottle,
-} from './useGripSystem';
+/** Vertex hover information */
+export interface VertexHoverInfo {
+  overlayId: string;
+  vertexIndex: number;
+}
+
+/** Edge hover information */
+export interface EdgeHoverInfo {
+  overlayId: string;
+  edgeIndex: number;
+}
+
+/**
+ * Selected grip information (vertex or edge midpoint).
+ * ADR-031: Multi-Grip Selection System.
+ */
+export interface SelectedGrip {
+  type: 'vertex' | 'edge-midpoint';
+  overlayId: string;
+  /** vertexIndex for vertex, edgeIndex for edge-midpoint */
+  index: number;
+}
+
+/**
+ * Vertex drag state for multi-vertex movement.
+ * ADR-031: Multi-Grip Selection System — supports moving multiple grips together.
+ */
+export interface DraggingVertexState {
+  overlayId: string;
+  vertexIndex: number;
+  startPoint: Point2D;
+  /** Original vertex position for delta calculation */
+  originalPosition: Point2D;
+}
+
+/** Edge midpoint drag state (for vertex insertion) */
+export interface DraggingEdgeMidpointState {
+  overlayId: string;
+  edgeIndex: number;
+  insertIndex: number;
+  startPoint: Point2D;
+  /** True after vertex has been inserted */
+  newVertexCreated: boolean;
+}
+
+/**
+ * Overlay body drag state (move tool).
+ * ADR-032: Move entire overlay with Command Pattern for undo/redo support.
+ */
+export interface DraggingOverlayBodyState {
+  overlayId: string;
+  /** Mouse start position in world coordinates */
+  startPoint: Point2D;
+  /** Original polygon for delta calculation */
+  startPolygon: Array<[number, number]>;
+}
+
+/** Grip hover throttle ref type for performance optimization */
+export interface GripHoverThrottle {
+  lastCheckTime: number;
+  lastWorldPoint: Point2D | null;
+}
+
+// ============================================================================
+// RE-EXPORTS — DXF state machine types live in grip-computation.ts
+// ============================================================================
 
 export type {
   DxfGripDragPreview,
   DxfGripInteractionState,
   GripIdentifier,
-} from '../useDxfGripInteraction';
+} from '../grip-computation';
 
 // ============================================================================
 // UNIFIED TYPES

@@ -18,7 +18,7 @@ import type { ViewTransform } from '../../rendering/types/Types';
 import type { OverlayEditorMode, Overlay } from '../../overlays/types';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { UniversalSelectionHook } from '../../systems/selection/SelectionSystem';
-import type { SelectedGrip } from '../grips/useGripSystem';
+import type { SelectedGrip } from '../grips/unified-grip-types';
 import type { Guide, ConstructionPoint } from '../../systems/guides/guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
 import type { CreateGuideCommand, DeleteGuideCommand, CreateDiagonalGuideCommand } from '../../systems/guides/commands';

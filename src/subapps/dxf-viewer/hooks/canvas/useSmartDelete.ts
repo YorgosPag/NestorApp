@@ -28,7 +28,7 @@ import {
   type ICommand,
 } from '../../core/commands';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
-import type { SelectedGrip } from '../grips/useGripSystem';
+import type { SelectedGrip } from '../grips/unified-grip-types';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { UniversalSelectionHook } from '../../systems/selection/SelectionSystem';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
