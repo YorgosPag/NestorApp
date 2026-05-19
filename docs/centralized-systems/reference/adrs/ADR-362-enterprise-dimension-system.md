@@ -711,6 +711,20 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 
 ## 7. Changelog
 
+- **2026-05-20 (Round 9 — thread sceneUnits into PreviewRenderer; fix preview text constant 10px)**
+  - **Symptom**: During dimension creation preview (green), text was constant ~10px regardless of zoom or scene units — always much smaller than native DXF TEXT entities. After 3rd click (committed, white), dimension text jumped to a much larger size inconsistent with preview.
+  - **Root cause A**: `preview-dimension-renderer.ts` `renderPreviewDimension` calls `drawText(scaledParams, ...)` where `scaledParams.style.dimscale = autoScale = 4/scale`. In `dim-text-renderer`, formula is `dimtxt × dimscale × unitFactor × scale` → `dimtxt × (4/scale) × unitFactor × scale = dimtxt × 4 × unitFactor` — constant, zoom-independent ~10px. autoScale was designed only for arrows.
+  - **Root cause B**: `PreviewRenderer` had no `sceneUnits` field. `PreviewCanvas` had no `sceneUnits` prop. `CanvasLayerStack` never forwarded `dxfScene.units` to `<PreviewCanvas />`. So `renderPreviewDimension` received `sceneUnits=undefined` → `unitFactor=1` (mm fallback) in meters scenes.
+  - **Fix**: Thread sceneUnits from `dxfScene.units` down the preview stack:
+    - `PreviewRenderer.ts`: added `sceneUnits: SceneUnits = 'mm'` field + `setSceneUnits(units)` setter; passes `sceneUnits: this.sceneUnits` to `renderPreviewDimension`.
+    - `preview-dimension-renderer.ts`: `drawText` now receives `params` (original, real dimscale + real sceneUnits), NOT `scaledParams` (autoScale). Other calls (extension lines, dim line, arrowheads) still use `scaledParams` to keep arrows ~10px on screen.
+    - `PreviewCanvas.tsx`: added `sceneUnits?: SceneUnits` prop + `useEffect` → `rendererRef.current?.setSceneUnits(sceneUnits ?? 'mm')`.
+    - `CanvasLayerStack.tsx`: added `sceneUnits={dxfScene?.units ?? 'mm'}` to `<PreviewCanvas />`.
+  - **Result**: Preview text now uses identical formula to committed text (`dimtxt × dimscale × mmToSceneUnits(sceneUnits) × viewScale`). Preview and committed text match.
+  - **Tests**: dim-text-renderer-scene-units.test.ts (7/7 ✓), useTextCreationTool-scene-units.test.tsx (8/8 ✓), dim-style-importer.test.ts (9/9 ✓).
+  - ✅ Google-level: YES — sceneUnits threaded via prop/effect (React lifecycle correct); autoScale confined to arrows only (separation of concerns); real dimscale/sceneUnits used for text (AutoCAD-parity).
+  - **Files**: `canvas-v2/preview-canvas/PreviewRenderer.ts` (MOD), `canvas-v2/preview-canvas/preview-dimension-renderer.ts` (MOD), `canvas-v2/preview-canvas/PreviewCanvas.tsx` (MOD), `components/dxf-layout/CanvasLayerStack.tsx` (MOD).
+
 - **2026-05-20 (Round 8 — scale geometry offsets (dimexo/dimexe/dimdli/dimcen/breakGap) to world units)**
   - **Symptom**: Both dimension text AND extension lines/geometry at wrong scale. Extension line gaps (dimexo), extensions (dimexe), baseline increments (dimdli), center marks (dimcen), and break gaps (breakGap) were used directly as world-unit offsets in the geometry builder — but they are paper-mm values that must be converted.
   - **Root cause**: `linear-aligned-builder.ts` (and other geometry builders) receive `DimStyle` and use `style.dimexo`, `style.dimexe` directly as coordinate deltas in world space. For a 1:100 meters DXF: `dimexo=0.625mm` would be used as 0.625m offset (1000× too large) instead of 0.0625m. This makes extension lines start/end at completely wrong positions.
