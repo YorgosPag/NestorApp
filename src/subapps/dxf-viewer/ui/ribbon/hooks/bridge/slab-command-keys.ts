@@ -13,6 +13,8 @@ export const SLAB_RIBBON_KEYS = {
     kind: 'slab.params.kind',
     /** Reinforcement hint (one-way / two-way / waffle / flat). */
     reinforcement: 'slab.params.reinforcement',
+    /** Material key (rc / composite / wood). */
+    material: 'slab.params.material',
   },
   params: {
     /** mm — slab thickness. */
@@ -28,7 +30,8 @@ export type SlabRibbonNumberCommandKey =
 
 export type SlabRibbonStringCommandKey =
   | typeof SLAB_RIBBON_KEYS.stringParams.kind
-  | typeof SLAB_RIBBON_KEYS.stringParams.reinforcement;
+  | typeof SLAB_RIBBON_KEYS.stringParams.reinforcement
+  | typeof SLAB_RIBBON_KEYS.stringParams.material;
 
 export const SLAB_RIBBON_NUMBER_KEYS: readonly SlabRibbonNumberCommandKey[] = [
   SLAB_RIBBON_KEYS.params.thickness,
@@ -38,6 +41,7 @@ export const SLAB_RIBBON_NUMBER_KEYS: readonly SlabRibbonNumberCommandKey[] = [
 export const SLAB_RIBBON_STRING_KEYS: readonly SlabRibbonStringCommandKey[] = [
   SLAB_RIBBON_KEYS.stringParams.kind,
   SLAB_RIBBON_KEYS.stringParams.reinforcement,
+  SLAB_RIBBON_KEYS.stringParams.material,
 ];
 
 export const SLAB_RIBBON_KEYS_ACTIONS = {

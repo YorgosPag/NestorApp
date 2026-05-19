@@ -80,6 +80,7 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof SlabParams>> = {
 const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof SlabParams>> = {
   [SLAB_RIBBON_KEYS.stringParams.kind]: 'kind',
   [SLAB_RIBBON_KEYS.stringParams.reinforcement]: 'reinforcement',
+  [SLAB_RIBBON_KEYS.stringParams.material]: 'material',
 };
 
 export function useRibbonSlabBridge(
@@ -155,6 +156,12 @@ export function useRibbonSlabBridge(
         if (field === 'reinforcement') {
           const nextParams: SlabParams = { ...slab.params, reinforcement: value as SlabReinforcement };
           dispatchParams(slab, nextParams);
+          return;
+        }
+        if (field === 'material') {
+          const nextParams: SlabParams = { ...slab.params, material: value || undefined };
+          dispatchParams(slab, nextParams);
+          return;
         }
         return;
       }

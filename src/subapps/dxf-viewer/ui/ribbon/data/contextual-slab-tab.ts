@@ -53,9 +53,8 @@ const THICKNESS_MM_OPTIONS = [
   { value: '500', labelKey: '500', isLiteralLabel: true },
 ] as const;
 
-// ADR-363 Phase 4.5d — slab material picker (DISABLED, comingSoon placeholder).
-// Real activation lands with the material library Phase 6+ (multi-domain
-// hatch patterns + per-kind defaults).
+// ADR-363 Phase 4.5e-A — slab material picker (ENABLED). 3 preset options.
+// Phase 6.5 material library will expand to full catalog.
 const SLAB_MATERIAL_OPTIONS = [
   { value: 'rc',        labelKey: 'ribbon.commands.slabEditor.material.rc',        isLiteralLabel: false },
   { value: 'composite', labelKey: 'ribbon.commands.slabEditor.material.composite', isLiteralLabel: false },
@@ -148,8 +147,6 @@ export const CONTEXTUAL_SLAB_TAB: RibbonTab = {
       ],
     },
     {
-      // ADR-363 Phase 4.5d — slab material picker placeholder. Visible + disabled.
-      // Activation deferred to material library Phase 6+.
       id: 'slab-material',
       labelKey: 'ribbon.panels.slabMaterial',
       rows: [
@@ -162,11 +159,9 @@ export const CONTEXTUAL_SLAB_TAB: RibbonTab = {
               command: {
                 id: 'slab.material',
                 labelKey: 'ribbon.commands.slabEditor.material.section.title',
-                tooltipKey: 'ribbon.commands.slabEditor.material.comingSoon',
-                commandKey: 'slab.params.material',
+                commandKey: SLAB_RIBBON_KEYS.stringParams.material,
                 comboboxWidthPx: 180,
                 options: SLAB_MATERIAL_OPTIONS,
-                comingSoon: true,
               },
             },
           ],
