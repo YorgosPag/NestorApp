@@ -1447,22 +1447,23 @@ GenArc **ADR-009** defines Y-up convention explicitly. This ADR **inherits** tha
 
 ---
 
-### B.2 — BIM Data Overlay (tooltips, dimensions, annotations)
+### B.2 — BIM Data Overlay (tooltips, dimensions, annotations) — ✅ FULLY CLOSED 2026-05-19
 
-**Σκοπός**: Καθορισμός hover tooltip + permanent dimensions + annotation/leader text strategy σε 3D viewer. SSoT mirror του 2D pattern όπου applicable.
+**Σκοπός**: Καθορισμός hover tooltip + permanent dimensions + annotation/leader text + element info panel strategy σε 3D viewer. SSoT mirror του 2D pattern όπου applicable.
 
-**Cross-references**: ADR-357 §4 G9 Phase 8 (`QuickPropertiesHoverPopover` 2D), ADR-040 micro-leaf pattern, ADR-362 Enterprise Dimension System (2D), ADR-363 BIM entity geometry SSoT.
+**Cross-references**: ADR-357 §4 G9 Phase 8 (`QuickPropertiesHoverPopover` 2D), ADR-040 micro-leaf pattern, ADR-362 Enterprise Dimension System (2D), ADR-363 BIM entity geometry SSoT, ADR-195 Audit Value Catalogs (`useEntityAudit`), ADR-329 BOQ Scope, ADR-326 Tenant Org Structure, `reference_entity_details_header_ssot.md` memory (EntityDetailsHeader pattern, Contacts + Procurement Phase G 2026-04-28).
 
 **Pending micro-decisions**:
 - Q1: Hover tooltip content + pattern ✅ RESOLVED
 - Q2: Permanent dimensions σε 3D ✅ RESOLVED
 - Q3: Annotation/leader text σε 3D space ✅ RESOLVED (comments markers Phase 7+, free-text DEFERRED Phase 8+)
-- Q4: Element info panel (full BIM card on click — αυτόνομη ή reuse 2D properties panel;)
+- Q4: Element info panel (full BIM card on click) ✅ RESOLVED — **EntityDetailsHeader SSoT extension + 5 tabs (Geometry/Materials/BOQ/Audit/Comments) + read-only παντού εκτός Comments**
 
-**Decisions Log (Γιώργος)** — Topic B.2 in progress:
+**Decisions Log (Γιώργος)** — Topic B.2 ✅ FULLY CLOSED 4/4 Qs:
 
 | # | Ερώτηση | Απόφαση | Industry alignment |
 |---|---|---|---|
+| B.2.Q4 | Element info panel (full BIM card on click) — αυτόνομο 3D panel, REUSE 2D FloatingPanel, ή EntityDetailsHeader SSoT extension; | **EntityDetailsHeader SSoT extension με 5 tabs (Geometry/Materials/BOQ/Audit/Comments) + read-only παντού εκτός Comments**. Sub-decisions: (1) Panel pattern = `@/core/entity-headers` `EntityDetailsHeader` SSoT (mirror Contacts + Procurement Phase G 2026-04-28). (2) 5 tabs: **Geometry** (length/height/thickness/area/volume read-only), **Materials** (multi-layer DNA preview ADR-363 Phase 6 read-only), **BOQ** (summary card με scope link + total cost breakdown, click → opens ADR-329 BOQ drawer, read-only display), **Audit** (vertical timeline + inline diff old→new από `useEntityAudit` ADR-195), **Comments** (inline list filtered στο entity με add/resolve actions inline, mirror B.2.Q3 `CommentListPanel`). (3) Geometry/Materials editing γίνεται μόνο από dedicated tools (transform tool ribbon, material assigner) — όχι από κάρτα. (4) BOQ editing γίνεται μόνο από BOQ drawer (ADR-329). (5) Audit always read-only (ADR-195 immutable). (6) Comments inline editable (add new + resolve/reopen) μέσω `bim-comments.service.ts` (B.2.Q3). | Maximum SSoT REUSE: industry σύγκλιση Notion/Linear/Github (single canonical detail header pattern across app). EntityDetailsHeader already proven σε Contacts + Procurement. Tab structure mirror Revit Properties Palette (multi-category grouping) + Notion timeline pattern (chronological audit). Read-only-except-Comments αποτρέπει duplication BOQ drawer logic (SSoT discipline). |
 | B.2.Q3 | Annotation/leader text σε 3D (free labels, comment markers, ή hybrid) | **Option 3 — Typed comment markers (BIMcollab style) Phase 7+** + **DEFERRED free-text labels σε Phase 8+**. Νέα Firestore collection `bim_comments` με marker pins σε 3D space (Three.js Sprite billboard με number + color-by-status), click → opens `BimCommentDetailsPanel` side pane με typed metadata (text, status `open/resolved/wontfix`, priority, author, createdAt, optional attachments). Optional entity anchor (`attachedEntityId`). Tenant-scoped via ADR-326 (`companyId/projectId/buildingId/floorId`). Free-text labels με leader arrows ΔΕΝ rejected — deferred Phase 8+ ως optional (αν ζητηθούν, mirror ADR-362 dim tool pattern). | Modern BIM coordination σύγκλιση: BIMcollab + Solibri lead 3D review workflows (organized typed comments αντί anarchic text labels). Revit/ArchiCAD annotations migrated σε 2D-only — review μεταφέρθηκε σε ξεχωριστά coordination platforms. SketchUp 3D-text pattern deferred — Nestor είναι BIM tool, όχι freeform sketch tool. |
 | B.2.Q2 | Permanent dimensions σε 3D (auto-display ή manual) | **Combo Option 1 + Option 4** (Revit/ArchiCAD industry consensus 4/5). **Καθόλου automatic dimensions σε 3D** (clean visualization philosophy) **PLUS manual user-placed dimensions via mirror του ADR-362 2D Dim System**. Ribbon "Dimension" button context-aware: 2D mode → plan dimension (existing ADR-362), 3D mode → 3D dimension. Ο χρήστης κλικάρει 2 σημεία σε 3D space (snap-aware REUSE ProSnapEngineV2), εμφανίζεται μόνιμη διάσταση: thin grey 3D line + tick marks + billboard Sprite label (πάντα face camera, readable από κάθε γωνία). Storage extends ADR-362 schema με `placement: '2d' \| '3d'` discriminator (zero data duplication, visibility filter per mode). Hover tooltip ήδη δείχνει dimensions (από B.2.Q1) → user βλέπει μέτρα on-demand χωρίς clutter. | 4/5 industry σύγκλιση (Revit + ArchiCAD + SketchUp + BIMcollab όλοι manual-only, Twinmotion zero dims). Option 3 (permanent always-visible) απορρίπτεται — 0/5 industry. SSoT REUSE ADR-362 (155 tests, fully implemented) + ProSnapEngineV2 + dim style tokens (`DIMENSION_LINE_COLOR`, `DIMENSION_TEXT_SIZE`). |
 | B.2.Q1 | Hover tooltip content + activation pattern | **Mirror ADR-357 QuickProperties pattern + BIM data getters extension**. Compact 3-line floating card (Revit style, 1/4 industry direct precedent: Revit "Category : Family : Type"). **Trigger**: 800ms stable hover **REUSE constant** `HOVER_DELAY_MS` από `QuickPropertiesStore.ts`. **Position**: cursor-relative offset (12px right, 4px down) via `ImmediatePositionStore` **REUSE**. **Mount**: ADR-040 sibling micro-leaf (παράλληλα με `QuickPropertiesHoverPopover`, ποτέ μέσα σε orchestrator). **Activation**: `activeTool === 'select'` AND mode `!== '2d'`. **Content lines**: (1) entity type translated (`t('bim3d.entityTypes.{wall,door,window,slab,beam,column}')`), (2) name + dimensions `Wall_A12 · 5.20m × 3.00m × 0.25m`, (3) floor + material `Όροφος 1 · Τούβλο`. **Progressive disclosure**: click → full BIM panel (right pane, Q4 pending decision). | 1/4 direct Revit precedent (compact Category/Family/Type). 100% SSoT REUSE με 2D Nestor `QuickProperties` (HOVER_DELAY_MS constant, ImmediatePositionStore, ADR-040 micro-leaf mount, `useSyncExternalStore` pattern, CSS module shared). Twinmotion/Lumion no-tooltip pattern rejected — Nestor είναι BIM (data-driven), όχι pure visualization. ArchiCAD configurable pattern deferred — default-first principle. |
@@ -1619,12 +1620,77 @@ GenArc **ADR-009** defines Y-up convention explicitly. This ADR **inherits** tha
 
 **Effort impact για B.2.Q3**: +6-7h Phase 7 (CommentMarker3DRenderer 1.5h + Firestore collection schema + rules 1h + BimCommentDetailsPanel 2h + bim-comments.service.ts CRUD 1h + CommentListPanel sidebar tab 1h + 20+ i18n keys ×2 locales + RBAC permissions 30min + audit integration 30min + tests 1.5h). Phase 8+ free-text labels DEFERRED (~5-6h future, not counted). ADR-366 total estimate revised: **~132-150h** (από ~126-143h post-B.2.Q2).
 
+**Architectural implications για B.2.Q4**:
+
+- **SSoT REUSE 100%**: `@/core/entity-headers` `EntityDetailsHeader` component + `createEntityAction` helper (memory [[entity-details-header-ssot]] confirmed pattern σε Contacts + Procurement Phase G 2026-04-28). Καμία νέα detail-header abstraction — ίδιο visual + interaction model με rest του app.
+- **Νέα modules (Phase 4 mount + Phase 5-7 progressive content)**:
+  - `bim-3d/properties/BimEntityCardPanel.tsx` — orchestrator που wrappάρει `EntityDetailsHeader` + 5 tabs. Mount στο Bim3DScene right pane area. Subscribes σε `Selection3DStore` (single-selected entityId → resolve από `Bim3DScene.entities` map).
+  - `bim-3d/properties/tabs/BimGeometryTab.tsx` — read-only table (length/height/thickness/area/volume από ADR-363 cached geometry). Phase 4.
+  - `bim-3d/properties/tabs/BimMaterialsTab.tsx` — multi-layer DNA preview (REUSE ADR-363 Phase 6 layer composition + PBR thumbnails). Phase 5 (μετά material catalog ready).
+  - `bim-3d/properties/tabs/BimBoqTab.tsx` — Summary card (scope name + breakdown υλικά/εργατικά/όργανα/συνολικό) + "Άνοιγμα BOQ Drawer →" button που dispatches `boq:drawer:open` με `entityId` filter. Phase 6.
+  - `bim-3d/properties/tabs/BimAuditTab.tsx` — Vertical timeline component (date pill + author + inline diff `old → new`). REUSE `useEntityAudit` hook από ADR-195 (memory rule [[firestore-subscribe-equality-guard]] — `useEntityAudit` ήδη hash-guarded). Phase 4.
+  - `bim-3d/properties/tabs/BimCommentsTab.tsx` — filtered list adapter πάνω από `bim-comments.service.ts` (B.2.Q3) με `attachedEntityId === currentEntityId` filter + add comment FAB + per-comment resolve/reopen actions. Mirror του `CommentListPanel` markup (B.2.Q3) reduced to single-entity scope. Phase 7 (depends on B.2.Q3 service).
+- **EntityDetailsHeader configuration**:
+  - **Title**: `entity.name` (auto-generated `${kind}_A12` αν χρήστης δεν έχει custom name) — mirror Quick3D tooltip line 2.
+  - **Subtitle**: `${floor.name} · ${i18n entityType}` (π.χ. «Όροφος 1 · Εξωτερικός τοίχος»).
+  - **Icon**: entity-kind SVG (νέο SVG set `bim3d-icons/{wall,door,window,slab,beam,column,stair}.svg` — Phase 4 asset bundle, ~8 icons ×16x16).
+  - **Actions** (createEntityAction): no edit/delete στο header (read-only φιλοσοφία) — μόνο `⋯` overflow menu με "Zoom-to-entity" (REUSE GenArc viewportAnimation) + "Copy IfcGUID to clipboard" + "Show in 2D plan" (mode toggle + viewport pan to entity centroid).
+- **Tab structure & order** (5 tabs, left-to-right priority):
+  1. **Geometry** (default active) — most-frequent data need
+  2. **Materials** — Phase 5+ (μετά material catalog)
+  3. **BOQ** — Phase 6+ (μετά BOQ wire-up)
+  4. **Audit** — Phase 4 (instant value από day-1)
+  5. **Comments** — Phase 7+ (depends on B.2.Q3)
+- **Tab content details**:
+  - **Geometry**: read-only `<dl>` semantic markup (no `<div>` soup per CLAUDE.md N.4). Fields:
+    - `bim3d.fields.length` → entity.geometry.length (mm → m via `formatDisplayValue`)
+    - `bim3d.fields.height` → entity.geometry.height
+    - `bim3d.fields.thickness` → entity.geometry.thickness (walls only)
+    - `bim3d.fields.area` → entity.geometry.area (computed, badge "computed")
+    - `bim3d.fields.volume` → entity.geometry.volume (computed badge)
+    - `bim3d.fields.ifcGUID` → entity.ifcGUID (αν exists) με copy-to-clipboard icon
+  - **Materials**: multi-layer list με color swatch + thickness per layer (από ADR-363 Phase 6 multi-layer DNA). PBR preview thumbnail (REUSE material catalog renderer Phase 5). Read-only.
+  - **BOQ**: scope link banner + cost breakdown table + "Άνοιγμα BOQ Drawer →" CTA button. Empty state αν entity δεν έχει BOQ scope assignment ("Χωρίς αντιστοίχιση — [Άνοιγμα BOQ →]"). REUSE ADR-329 cost data formatter.
+  - **Audit**: timeline component `<ol>` semantic markup. Per-event: timestamp pill (date + time) + author display name + field changed + inline diff (`old → new` με strikethrough old + bold new). Pagination "Φόρτωσε παλαιότερα" αν >20 entries. REUSE `useEntityAudit({ collectionName, entityId })` ADR-195 hook.
+  - **Comments**: filter dropdown (Όλα / Open / Resolved / Wontfix) + "+ Νέο σχόλιο" button + scrollable list of comment cards (mirror B.2.Q3 `CommentListPanel` row markup). Per-card: status badge color (`COMMENT_STATUS_COLORS` SSoT), priority border, author + date, text, [Resolve] / [Reopen] action.
+- **Cross-tab interactions**:
+  - Tab switch persists per-session στο `ViewMode3DStore.activeEntityCardTab` (default 'geometry').
+  - Selection change: closes card αν `selectedEntityIds.size === 0`, opens at default tab αν `size === 1`, shows "N entities selected" state αν `size > 1` (no card, instructs single-select).
+  - Comment add from card → optimistic update via `bim-comments.service.ts` με equality guard.
+- **Phase progressive disclosure**: Phase 4 ships με Geometry + Audit tabs only (instant value). Phase 5 adds Materials. Phase 6 adds BOQ. Phase 7 adds Comments (depends on B.2.Q3 service ready). Empty tabs hidden αν Phase not yet shipped (αντί placeholder spinner).
+- **i18n keys** (per N.11, ΠΡΩΤΑ add σε locale JSONs, νέος namespace `bim3d.card.*`):
+  - `bim3d.card.tabs.{geometry,materials,boq,audit,comments}` — 5 keys ×2 locales
+  - `bim3d.fields.{length,height,thickness,area,volume,ifcGUID,floor,material,scope,cost,subtotalMaterials,subtotalLabor,subtotalEquipment}` — 14 keys ×2 locales
+  - `bim3d.card.actions.{zoomToEntity,copyIfcGUID,showIn2D,openBoqDrawer,addComment,loadOlder,noScope}` — 7 keys ×2 locales
+  - `bim3d.card.audit.{created,modified,fieldChanged}` — 3 keys ×2 locales
+  - `bim3d.card.empty.{noSelection,multiSelection,noComments,noAuditEvents,noBoqScope}` — 5 keys ×2 locales
+  - **Total: ~34 keys ×2 locales = ~68 new entries** (να προστεθούν ΠΡΙΝ τη χρήση per N.11)
+- **No new SSoT tokens needed**: REUSE `COMMENT_STATUS_COLORS` (B.2.Q3), `CAD_UI_COLORS` (selection consistency A.1), `DIMENSION_*` (B.2.Q2 if dim entity).
+- **GOL checklist**:
+  - Proactive: ✅ store subscribed at viewer mount, card mounts/unmounts on selection change
+  - Race conditions: ✅ Firestore equality guard για audit + comments (memory [[firestore-subscribe-equality-guard]])
+  - Idempotent: ✅ no mutations from card (read-only) εκτός comment CRUD που είναι ήδη idempotent (B.2.Q3 deterministic enterprise-id)
+  - Belt-and-suspenders: ✅ null-safe entity getters + empty states per tab + fallback "—" αν field missing
+  - SSoT: ✅ EntityDetailsHeader + useEntityAudit + bim-comments.service + ADR-329 BOQ drawer + ADR-363 cached geometry + MaterialCatalog3D ΟΛΑ REUSED
+  - Lifecycle owner: ✅ BimEntityCardPanel.tsx orchestrates lifecycle, Selection3DStore drives visibility, individual tabs own data subscriptions
+- **Backport σε 2D**: opportunity — 2D viewer entity click could open same `EntityDetailsHeader`-based card (mirror 3D pattern). Currently 2D δείχνει το FloatingPanel "Properties" tab (memory [[dxf-viewer-floating-panel]]). Boy Scout: αν Phase 4+ προχωρήσει και χρειαστεί 2D-3D consistency, refactor το FloatingPanel Properties tab σε EntityDetailsHeader-based card (~3-4h, optional, NOT BLOCKING Phase 7 release). Status: NOT ENTERED στο ratchet.
+
+**Effort impact για B.2.Q4**: **+7-9h spread Phase 4-7** breakdown:
+- Phase 4: BimEntityCardPanel orchestrator + Selection3DStore wiring + Geometry tab + Audit tab + 8 entity-kind SVG icons + 14 baseline i18n keys ×2 locales + tests → **~3-4h**
+- Phase 5: Materials tab (multi-layer DNA preview, depends on material catalog ready) → **~1.5h**
+- Phase 6: BOQ tab (cost breakdown + drawer link dispatch) → **~1.5h**
+- Phase 7: Comments tab (filtered adapter πάνω από B.2.Q3 service) → **~1h** (mostly view code, service ήδη ready)
+- Cross-phase: tab switch persistence + empty states + EntityDetailsHeader configuration + remaining i18n batches → **~1h**
+
+ADR-366 total estimate revised: **~139-159h** Phase 0-7 (από ~132-150h post-B.2.Q3).
+
 ---
 
 ## 12. Changelog
 
 | Ημ/νία | Αλλαγή | Author |
 |---|---|---|
+| 2026-05-19 | **Appendix B — Topic B.2 ✅ FULLY CLOSED 4/4 Qs. B.2.Q4 (Element info panel — full BIM card on click) RESOLVED**: **EntityDetailsHeader SSoT extension με 5 tabs (Geometry/Materials/BOQ/Audit/Comments) + read-only παντού εκτός Comments**. Pattern REUSE 100% του `@/core/entity-headers` (Contacts + Procurement Phase G 2026-04-28 proof) — μηδέν παράλληλη detail-header abstraction. Tabs: Geometry (length/height/thickness/area/volume read-only `<dl>`) + Materials (multi-layer DNA preview ADR-363 Phase 6) + BOQ (summary card + drawer link ADR-329) + Audit (vertical timeline + inline diff `old → new` via `useEntityAudit` ADR-195) + Comments (filtered list mirror B.2.Q3 με add/resolve actions inline). Editing παντού delegated σε dedicated tools (transform/material assigner/BOQ drawer) — SSoT discipline. Νέα modules `bim-3d/properties/BimEntityCardPanel.tsx` + 5 tab components + 8 entity-kind SVG icons + ~34 i18n keys ×2 locales (~68 entries). No new SSoT tokens. Progressive disclosure Phase 4-7 (Geometry+Audit Phase 4 instant value, Materials Phase 5, BOQ Phase 6, Comments Phase 7 depends on B.2.Q3). Backport opportunity 2D: refactor FloatingPanel Properties tab σε EntityDetailsHeader-based card (~3-4h, Boy Scout, NOT BLOCKING). Phase 4-7 **+7-9h** total. **ADR-366 total estimate revised: ~139-159h.** Industry alignment: Notion/Linear/Github single canonical detail header pattern, Revit Properties Palette multi-category grouping. Memory [[entity-details-header-ssot]] reinforced. | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.2.Q3 (BIM Data Overlay — 3D annotations/leaders) ✅ RESOLVED** — **Typed comment markers (BIMcollab style) Phase 7+** + **DEFERRED free-text labels Phase 8+**. Νέα Firestore collection `bim_comments` (tenant-scoped ADR-326) με marker pins Three.js Sprite billboard, status color (open=orange/resolved=green/wontfix=gray), priority border, auto-numbered. Click → side panel REUSE `EntityDetailsHeader` SSoT + edit-in-place + attachments + audit trail (ADR-195). Νέα modules Phase 7: `CommentMarker3DRenderer.ts` + `BimCommentDetailsPanel.tsx` + `CommentListPanel.tsx` + `bim-comments.service.ts`. SSoT REUSE: enterprise-id (νέο `cmt_bim_*` generator), EntityAuditService, NOTIFICATION_KEYS (νέο `useCommentNotifications` hook), GenArc viewportAnimation (camera zoom-to-comment). Νέο SSoT token `COMMENT_STATUS_COLORS` (zero 2D equivalent). 20+ i18n keys ×2 locales. RBAC permissions `bim_comments.*`. Modern BIM coordination industry σύγκλιση (BIMcollab + Solibri leaders). SketchUp 3D-text/Revit annotations-in-views rejected — Nestor είναι BIM coordination tool. Phase 7 +6-7h. Phase 8+ free-text labels deferred (~5-6h future, not blocking). **Total estimate revised: ~132-150h.** | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.2.Q2 (BIM Data Overlay — permanent dimensions σε 3D) ✅ RESOLVED** — **Combo no-automatic + manual user-placed via mirror ADR-362** (Revit/ArchiCAD industry consensus 4/5 σύγκλιση). Καθόλου auto-dimensions σε 3D (clean visualization philosophy). Manual dim tool mirror του 2D ADR-362 με ribbon context-aware Dim button (2D mode → plan dim, 3D mode → 3D dim). Schema extension: existing `DimensionEntity` + `placement: '2d' \| '3d'` discriminator (zero data duplication). Νέα Phase 7: `Dimension3DRenderer.ts` (Three.js Line + Sprite billboard label) + `useDim3DToolRouting.ts` (state machine mirror). SSoT REUSE 100%: ADR-362 schema/snap/style tokens + ProSnapEngineV2 + ADR-031 CommandHistory + ribbon button. Hover tooltip ήδη δείχνει dims (B.2.Q1) → user βλέπει μέτρα on-demand. Boy Scout: 2D scene converter adds visibility filter για `placement=3d` skip. Phase 7 +5-6h. **Total estimate revised: ~126-143h.** | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix B — Topic B.2.Q1 (BIM Data Overlay — hover tooltip) ✅ RESOLVED** — **Mirror ADR-357 QuickProperties pattern + BIM data getters**. Compact 3-line Revit-style floating card (type / name+dimensions / floor+material). 100% SSoT REUSE: HOVER_DELAY_MS=800ms constant, ImmediatePositionStore, ADR-040 sibling micro-leaf mount, useSyncExternalStore, CSS module visual rules. Νέα modules Phase 4: `bim-3d/properties/QuickProperties3DStore.ts` + `QuickProperties3DHoverPopover.tsx` + `bim-entity-formatter.ts`. BIM data sources: ADR-363 cached geometry + ADR-363 Phase 6 multi-layer DNA materials + useFloors SSoT. 11 νέα i18n keys (bim3d.entityTypes.* + bim3d.quickProperties.*). Activation: `activeTool=select` AND `mode!=2d` AND 800ms stable. Effort οικονομία ~1.5h από mirror pattern. Phase 4 +2.5h. **Total estimate revised: ~121-137h.** | Claude Opus 4.7 |
