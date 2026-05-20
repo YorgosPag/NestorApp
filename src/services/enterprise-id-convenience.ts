@@ -250,6 +250,9 @@ export const generateBimSettingsId = () => enterpriseIdService.generateBimSettin
 export const generateOptimisticId = () => enterpriseIdService.generateOptimisticId();
 export const generateTempId = () => enterpriseIdService.generateTempId();
 
+// IFC4 GlobalId (ADR-369 §9 Q8) — 22-char compressed UUID για BIM entities
+export { generateIfcGuid, encodeIfcGuidFromBytes, IFC_GUID_ALPHABET } from './ifc-guid.service';
+
 // Opaque tokens (Firebase download tokens, nonces, etc) — see CLAUDE.md N.6
 export const generateOpaqueToken = () => enterpriseIdService.generateOpaqueToken();
 

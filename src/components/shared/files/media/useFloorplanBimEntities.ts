@@ -18,6 +18,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { dequal } from 'dequal';
 import { where } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 import { firestoreQueryService } from '@/services/firestore';
 import {
@@ -95,10 +96,20 @@ function useGuardedDocs<T extends { id: string }>(
 
     let prevDocs: ReadonlyArray<T> | null = null;
 
+    // eslint-disable-next-line no-console
+    console.log('[bim-readonly][subscribe:start]', { collectionKey, floorplanId });
+
     const unsub = firestoreQueryService.subscribe<T>(
       collectionKey,
       (result) => {
         const next = result.documents;
+        // eslint-disable-next-line no-console
+        console.log('[bim-readonly][snapshot]', {
+          collectionKey,
+          floorplanId,
+          count: next.length,
+          ids: next.slice(0, 3).map((d) => d.id),
+        });
         if (prevDocs && dequal(prevDocs, next)) {
           setState((s) => (s.loaded ? s : { docs: s.docs, loaded: true }));
           return;
@@ -106,7 +117,15 @@ function useGuardedDocs<T extends { id: string }>(
         prevDocs = next;
         setState({ docs: next, loaded: true });
       },
-      () => {
+      (err) => {
+        // eslint-disable-next-line no-console
+        console.warn('[bim-readonly][error]', {
+          collectionKey,
+          floorplanId,
+          code: (err as { code?: string }).code,
+          message: err.message,
+          name: err.name,
+        });
         setState((s) => ({ docs: s.docs, loaded: true }));
       },
       {
@@ -127,6 +146,33 @@ export function useFloorplanBimEntities(
   floorplanId: string | null | undefined,
 ): FloorplanBimSnapshot {
   const activeId = isQueryable(floorplanId) ? floorplanId : null;
+
+  // eslint-disable-next-line no-console
+  console.log('[bim-readonly][hook]', {
+    floorplanIdInput: floorplanId,
+    activeId,
+    isSynthetic: floorplanId ? SYNTHETIC_FLOORPLAN_PREFIX.test(floorplanId) : false,
+  });
+
+  useEffect(() => {
+    const user = getAuth().currentUser;
+    if (!user) {
+      // eslint-disable-next-line no-console
+      console.warn('[bim-readonly][token] NO_USER');
+      return;
+    }
+    user.getIdTokenResult().then((t) => {
+      // eslint-disable-next-line no-console
+      console.log('[bim-readonly][token]', {
+        uid: user.uid,
+        email: user.email,
+        companyId: t.claims.companyId,
+        globalRole: t.claims.globalRole,
+        effectiveCompanyId: t.claims.effectiveCompanyId,
+        allClaims: t.claims,
+      });
+    });
+  }, []);
 
   const wallsRes = useGuardedDocs<WallDoc>('FLOORPLAN_WALLS', activeId);
   const slabsRes = useGuardedDocs<SlabDoc>('FLOORPLAN_SLABS', activeId);
@@ -171,6 +217,21 @@ export function useFloorplanBimEntities(
         openings.length +
         slabOpenings.length >
       0;
+
+    // eslint-disable-next-line no-console
+    console.log('[bim-readonly][snapshot:return]', {
+      activeId,
+      isLoading,
+      hasAny,
+      counts: {
+        walls: walls.length,
+        slabs: slabs.length,
+        beams: beams.length,
+        columns: columns.length,
+        openings: openings.length,
+        slabOpenings: slabOpenings.length,
+      },
+    });
 
     return { walls, slabs, beams, columns, openings, slabOpenings, isLoading, hasAny };
   }, [

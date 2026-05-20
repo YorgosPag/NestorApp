@@ -12,6 +12,18 @@ import type { BuildingType } from '@/constants/building-types';
 import type { EnergyClass } from '@/constants/energy-classes';
 import type { RenovationStatus } from '@/constants/renovation-statuses';
 
+// ADR-369 — Multi-building elevation reference (baseElevation chain)
+import type {
+  BuildingBaseElevationReference,
+  BuildingSiteOrigin,
+  BuildingPhase,
+} from '@/types/building/elevation.schemas';
+export type {
+  BuildingBaseElevationReference,
+  BuildingSiteOrigin,
+  BuildingPhase,
+} from '@/types/building/elevation.schemas';
+
 // Building hierarchy interfaces
 // NOTE: Contact → @/types/contacts, Project → @/types/project (canonical types)
 // Dead Contact/Project interfaces removed 2026-03-13 (centralization audit)
@@ -111,6 +123,18 @@ import type { RenovationStatus } from '@/constants/renovation-statuses';
     createdAt?: string | Date;
     /** Last update timestamp */
     updatedAt?: string | Date;
+
+    // ─── ADR-369: Multi-building elevation reference ───────────────────────
+    /** METRES — Base elevation relative to Project Base Point (default 0). */
+    baseElevation?: number;
+    /** Semantic interpretation του baseElevation. */
+    baseElevationReference?: BuildingBaseElevationReference;
+    /** XY offset στο site (METRES) για multi-building layouts. */
+    siteOrigin?: BuildingSiteOrigin;
+    /** Building orientation, DEGREES (default 0). */
+    rotation?: number;
+    /** Lifecycle phase: planned → permitted → under_construction → completed. */
+    phase?: BuildingPhase;
   }
   
   export interface Floor {

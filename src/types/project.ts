@@ -15,6 +15,13 @@ export type { ProjectStatus };
 // ADR-308 — Soft-delete mixin
 import type { SoftDeletableFields } from '@/types/soft-deletable';
 
+// ADR-369 — 3-tier Revit reference system (surveyPoint / basePoint / northRotation)
+import type {
+  ProjectSurveyPoint,
+  ProjectBasePoint,
+} from '@/types/project-elevation.schemas';
+export type { ProjectSurveyPoint, ProjectBasePoint } from '@/types/project-elevation.schemas';
+
 // ADR-287 — ProjectType SSoT: canonical union lives στο
 // `src/constants/project-types.ts`. Re-exported εδώ για backward-compat.
 export type { ProjectType };
@@ -117,6 +124,13 @@ export interface Project extends SoftDeletableFields {
   /** ADR-186 §8b: Phase 2 ΝΟΚ building-code form data — null = not yet defined */
   buildingCode?: ProjectBuildingCodePhase2 | null;
 
+  // ─── ADR-369: Project elevation reference (Tier 1 + Tier 2 + rotation) ──
+  /** Γεωδαιτικό σημείο αναφοράς (Tier 1 — Survey Point). METRES + reference system. */
+  surveyPoint?: ProjectSurveyPoint;
+  /** Τοπικό μηδέν έργου (Tier 2 — Project Base Point). Offset από surveyPoint. */
+  basePoint?: ProjectBasePoint;
+  /** Rotation true-north → project grid, DEGREES. Default 0. */
+  northRotation?: number;
 }
 
 /**

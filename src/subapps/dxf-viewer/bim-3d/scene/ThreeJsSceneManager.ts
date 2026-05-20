@@ -19,7 +19,11 @@ import { BimSceneLayer } from './BimSceneLayer';
 import { PerformanceCollector } from '../performance/PerformanceCollector';
 import { IdleDetector } from '../lighting/idle-detector';
 import { QualityModulator } from '../lighting/quality-modulator';
+import { SSAOModulator } from '../lighting/ssao-modulator';
+import { EnvmapGenerator } from '../lighting/envmap-generator';
+import { PathTracerRenderer } from '../render/PathTracerRenderer';
 import type { LightPreset } from '../lighting/lighting-presets';
+import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 import { raycastBimGroup, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
 import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
@@ -48,6 +52,9 @@ export class ThreeJsSceneManager {
   private readonly hemi: THREE.HemisphereLight;
   private readonly idleDetector: IdleDetector;
   private readonly qualityModulator: QualityModulator;
+  private readonly ssaoModulator: SSAOModulator;
+  private readonly envmapGenerator: EnvmapGenerator;
+  private readonly pathTracerRenderer: PathTracerRenderer;
 
   private readonly performanceCollector: PerformanceCollector;
   private rafHandle: number | null = null;
@@ -64,21 +71,52 @@ export class ThreeJsSceneManager {
     this.hemi = lights.hemi;
     this.scene = this.initScene();
     this.qualityModulator = new QualityModulator(this.sun);
-    this.idleDetector = new IdleDetector({
-      thresholdMs: 800,
-      onIdle: () => this.qualityModulator.onCameraIdle(),
-      onActive: () => this.qualityModulator.onCameraActive(),
-    });
     this.bimLayer = new BimSceneLayer(this.scene);
     this.selectionHighlighter = new BimSelectionHighlighter(this.bimLayer.group);
     this.dxfConverter = new DxfToThreeConverter(this.scene);
     this.viewport = this.initViewportCamera(container);
+    const { width, height } = this.getViewportSize();
+    this.ssaoModulator = new SSAOModulator(
+      this.renderer,
+      this.scene,
+      () => this.viewport.camera,
+      width,
+      height,
+    );
+    this.envmapGenerator = new EnvmapGenerator(this.renderer, this.scene);
+    this.pathTracerRenderer = new PathTracerRenderer(
+      this.renderer,
+      this.scene,
+      () => this.viewport.camera,
+    );
+    this.idleDetector = new IdleDetector({
+      thresholdMs: 800,
+      onIdle: () => {
+        this.qualityModulator.onCameraIdle();
+        this.ssaoModulator.onCameraIdle();
+        this.pathTracerRenderer.start();
+        useViewMode3DStore.getState().enterPreviewMode();
+      },
+      onActive: () => {
+        this.qualityModulator.onCameraActive();
+        this.ssaoModulator.onCameraActive();
+        this.pathTracerRenderer.cancel();
+        useViewMode3DStore.getState().enterRasterMode();
+      },
+    });
     this.poi = createPoi();
     this.scene.add(this.poi.root);
     this.viewCube = this.initViewCube(container);
     this.performanceCollector = new PerformanceCollector(this.renderer, this.scene);
     this.performanceCollector.start();
     this.startLoop();
+  }
+
+  private getViewportSize(): { width: number; height: number } {
+    return {
+      width: this.renderer.domElement.clientWidth || 800,
+      height: this.renderer.domElement.clientHeight || 600,
+    };
   }
 
   private initRenderer(container: HTMLElement): THREE.WebGLRenderer {
@@ -187,7 +225,11 @@ export class ThreeJsSceneManager {
         // Snap candidate available for future ribbon indicator (Phase 4)
       }
 
-      this.renderer.render(this.scene, this.viewport.camera);
+      if (this.pathTracerRenderer.isActive) {
+        this.pathTracerRenderer.renderSample();
+      } else {
+        this.ssaoModulator.render();
+      }
     };
     this.rafHandle = requestAnimationFrame(animate);
   }
@@ -198,8 +240,8 @@ export class ThreeJsSceneManager {
     const selectedId = useSelection3DStore.getState().selectedBimId;
     this.selectionHighlighter.onClear();
     this.bimLayer.sync(entities, floorElevationMm, activeLevelId);
-    // Re-apply to the fresh meshes if selection is still active.
     if (selectedId) this.selectionHighlighter.onSelect(selectedId);
+    this.pathTracerRenderer.invalidateScene();
   }
 
   applyFloorVisibility(modes: ReadonlyMap<string, FloorVisMode>): void {
@@ -209,6 +251,7 @@ export class ThreeJsSceneManager {
   syncDxfOverlay(dxfScene: DxfScene | null): void {
     if (this.disposed) return;
     this.dxfConverter.sync(dxfScene);
+    this.pathTracerRenderer.invalidateScene();
     if (!this.initialCameraFitDone) {
       const box = this.dxfConverter.getBounds();
       if (box && !box.isEmpty()) {
@@ -267,6 +310,7 @@ export class ThreeJsSceneManager {
     this.hemi.groundColor.set(preset.groundColor);
     this.hemi.intensity = preset.hemisphereIntensity;
     this.updateSunPosition(preset.azimuthDeg, preset.elevationDeg);
+    this.envmapGenerator.updateForPreset(preset);
   }
 
   getRendererCanvas(): HTMLCanvasElement {
@@ -277,6 +321,7 @@ export class ThreeJsSceneManager {
     if (this.disposed || width === 0 || height === 0) return;
     this.viewport.updateAspect(width, height);
     this.renderer.setSize(width, height);
+    this.ssaoModulator.resize(width, height);
   }
 
   dispose(): void {
@@ -288,6 +333,9 @@ export class ThreeJsSceneManager {
     }
     this.idleDetector.dispose();
     this.qualityModulator.dispose();
+    this.pathTracerRenderer.dispose();
+    this.ssaoModulator.dispose();
+    this.envmapGenerator.dispose();
     this.performanceCollector.dispose();
     this.selectionHighlighter.dispose();
     this.bimLayer.dispose();
