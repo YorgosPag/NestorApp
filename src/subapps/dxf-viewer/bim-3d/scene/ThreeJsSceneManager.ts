@@ -16,7 +16,7 @@ import { createViewCube } from '../viewport/view-cube/view-cube';
 import { createPoi } from '../viewport/viewport-poi';
 import { detectSnapCandidate } from '../viewport/view-snap-detector';
 import { BimSceneLayer } from './BimSceneLayer';
-import { DxfFloorPlanOverlay } from './DxfFloorPlanOverlay';
+import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 import { applyFloorVisibility } from '../utils/applyFloorVisibility';
 import type { FloorVisMode } from '../utils/floor-visibility-state';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
@@ -32,7 +32,7 @@ export class ThreeJsSceneManager {
   readonly scene: THREE.Scene;
   readonly viewport: ViewportCamera;
   readonly bimLayer: BimSceneLayer;
-  readonly overlay: DxfFloorPlanOverlay;
+  readonly dxfConverter: DxfToThreeConverter;
   private readonly viewCube: ViewCubeEngine;
   private readonly poi: ReturnType<typeof createPoi>;
 
@@ -46,7 +46,7 @@ export class ThreeJsSceneManager {
     this.renderer = this.initRenderer(container);
     this.scene = this.initScene();
     this.bimLayer = new BimSceneLayer(this.scene);
-    this.overlay = new DxfFloorPlanOverlay(this.scene);
+    this.dxfConverter = new DxfToThreeConverter(this.scene);
     this.viewport = this.initViewportCamera(container);
     this.poi = createPoi();
     this.scene.add(this.poi.root);
@@ -166,9 +166,9 @@ export class ThreeJsSceneManager {
 
   syncDxfOverlay(dxfScene: DxfScene | null): void {
     if (this.disposed) return;
-    this.overlay.sync(dxfScene);
+    this.dxfConverter.sync(dxfScene);
     if (!this.initialCameraFitDone) {
-      const box = this.overlay.getBounds();
+      const box = this.dxfConverter.getBounds();
       if (box && !box.isEmpty()) {
         this.viewport.frameBounds(box.min, box.max);
         this.initialCameraFitDone = true;
@@ -190,7 +190,7 @@ export class ThreeJsSceneManager {
       this.rafHandle = null;
     }
     this.bimLayer.dispose();
-    this.overlay.dispose();
+    this.dxfConverter.dispose();
     this.viewport.dispose();
     this.viewCube.dispose();
     this.poi.dispose();
