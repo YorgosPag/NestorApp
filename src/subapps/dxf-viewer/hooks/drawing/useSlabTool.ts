@@ -30,6 +30,7 @@ import {
   buildDefaultSlabParams,
   type SlabParamOverrides,
 } from './slab-completion';
+import { slabPreviewStore } from '../../bim/slabs/slab-preview-store';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -99,6 +100,19 @@ export function useSlabTool(options: UseSlabToolOptions = {}): UseSlabToolResult
   const [state, setState] = useState<SlabToolState>(INITIAL_STATE);
   const stateRef = useRef<SlabToolState>(state);
   stateRef.current = state;
+
+  // ── preview store sync (ADR-363 Phase 6.5.B) ─────────────────────────────
+  useEffect(() => {
+    if (state.phase === 'idle') {
+      slabPreviewStore.reset();
+      return;
+    }
+    slabPreviewStore.set({ vertices: state.vertices, overrides: state.overrides });
+  }, [state]);
+
+  useEffect(() => {
+    return () => slabPreviewStore.reset();
+  }, []);
 
   // ── lifecycle ────────────────────────────────────────────────────────────
   const activate = useCallback(() => {

@@ -18,14 +18,16 @@ import type {
   ExtendedArcEntity,
   PreviewPoint,
 } from './drawing-types';
-import type { XLineEntity, RayEntity } from '../../types/entities';
-import { getXLineModeState } from '../../systems/tools/xline-mode-store';
 // ADR-358 Phase 5a — stair preview via SSoT `computeStairGeometry`.
 import { buildDefaultStairParams } from './stair-completion';
 import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometryService';
 import type { SceneUnits, StairParamOverrides } from './stair-completion';
 // ADR-363 Phase 1C — wall preview extracted to wall-preview-helpers.ts.
 import { generateWallPreview } from './wall-preview-helpers';
+// ADR-363 Phase 6.5.B — slab preview.
+import { generateSlabPreview } from './slab-preview-helpers';
+// ADR-363 Phase 5.5P — beam preview.
+import { generateBeamPreview } from './beam-preview-helpers';
 import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
 import {
   arcFrom3Points,
@@ -99,6 +101,14 @@ export function generatePreviewEntity(
   // ── ADR-363 Phase 1C — Wall tool preview branch ──────────────────────────
   if (tool === 'wall') {
     return generateWallPreview(tempPoints, cursorPoint, sceneUnits);
+  }
+  // ── ADR-363 Phase 6.5.B — Slab tool preview branch ───────────────────────
+  if (tool === 'slab') {
+    return generateSlabPreview(tempPoints, cursorPoint);
+  }
+  // ── ADR-363 Phase 5.5P — Beam tool preview branch ────────────────────────
+  if (tool === 'beam') {
+    return generateBeamPreview(tempPoints, cursorPoint);
   }
   // ── ADR-359 Phase 3 — XLine preview ──────────────────────────────────────
   if (tool === 'xline') {
@@ -357,119 +367,8 @@ function makeStairGhost(id: string, vertices: readonly Point2D[]): ExtendedPolyl
   };
   return { ...base, preview: true, showEdgeDistances: true, showPreviewGrips: true } as ExtendedPolylineEntity;
 }
-// ─── ADR-359 Phase 3 — XLine / Ray preview helpers ──────────────────────────
-function normDir(dx: number, dy: number): { x: number; y: number } {
-  const len = Math.sqrt(dx * dx + dy * dy);
-  if (len < 1e-10) return { x: 1, y: 0 };
-  return { x: dx / len, y: dy / len };
-}
-function generateXLinePreview(
-  tempPoints: readonly Point2D[],
-  cursorPoint: Point2D,
-): ExtendedSceneEntity | null {
-  const xlineState = getXLineModeState();
-  const mode = xlineState.mode;
-  if (mode === 'offset') return null; // Phase 4+ — entity pick not yet implemented
-  if (mode === 'bisect') {
-    if (tempPoints.length === 0) return null;
-    if (tempPoints.length === 1) {
-      return makeRubberBandPolyline('preview_bisect_arm1', [tempPoints[0], cursorPoint]);
-    }
-    // tempPoints.length >= 2: p1=vertex, p2=angleStart, cursor=angleEnd direction
-    const p1 = tempPoints[0];
-    const p2 = tempPoints[1];
-    const d2x = p2.x - p1.x, d2y = p2.y - p1.y;
-    const dcx = cursorPoint.x - p1.x, dcy = cursorPoint.y - p1.y;
-    const len2 = Math.sqrt(d2x * d2x + d2y * d2y);
-    const lenc = Math.sqrt(dcx * dcx + dcy * dcy);
-    if (len2 < 1e-10 || lenc < 1e-10) return null;
-    return {
-      id: 'preview_xline',
-      type: 'xline',
-      basePoint: p1,
-      direction: normDir(d2x / len2 + dcx / lenc, d2y / len2 + dcy / lenc),
-      visible: true,
-      layerId: defaultLayerId(),
-      preview: true,
-    } as XLineEntity & { preview: true };
-  }
-  if (mode === 'angle') {
-    if (xlineState.angleValue === null) return null;
-    const angleRad = xlineState.angleValue * Math.PI / 180;
-    const dir = { x: Math.cos(angleRad), y: Math.sin(angleRad) };
-    const basePoint = tempPoints.length >= 1 ? tempPoints[0] : cursorPoint;
-    return {
-      id: 'preview_xline',
-      type: 'xline',
-      basePoint,
-      direction: dir,
-      visible: true,
-      layerId: defaultLayerId(),
-      preview: true,
-    } as XLineEntity & { preview: true };
-  }
-  // horizontal / vertical / through
-  if (tempPoints.length === 0) {
-    if (mode === 'horizontal') {
-      return {
-        id: 'preview_xline',
-        type: 'xline',
-        basePoint: cursorPoint,
-        direction: { x: 1, y: 0 },
-        visible: true,
-        layerId: defaultLayerId(),
-        preview: true,
-      } as XLineEntity & { preview: true };
-    }
-    if (mode === 'vertical') {
-      return {
-        id: 'preview_xline',
-        type: 'xline',
-        basePoint: cursorPoint,
-        direction: { x: 0, y: 1 },
-        visible: true,
-        layerId: defaultLayerId(),
-        preview: true,
-      } as XLineEntity & { preview: true };
-    }
-    return null; // through — no preview without 2 points
-  }
-  const firstPoint = tempPoints[0];
-  const dir = mode === 'horizontal'
-    ? { x: 1, y: 0 }
-    : mode === 'vertical'
-      ? { x: 0, y: 1 }
-      : normDir(cursorPoint.x - firstPoint.x, cursorPoint.y - firstPoint.y);
-  return {
-    id: 'preview_xline',
-    type: 'xline',
-    basePoint: firstPoint,
-    direction: dir,
-    visible: true,
-    layerId: defaultLayerId(),
-    preview: true,
-  } as XLineEntity & { preview: true };
-}
-function generateRayPreview(
-  tempPoints: readonly Point2D[],
-  cursorPoint: Point2D,
-): ExtendedSceneEntity | null {
-  if (tempPoints.length === 0) {
-    // No preview without first point
-    return null;
-  }
-  const firstPoint = tempPoints[0];
-  const dir = normDir(cursorPoint.x - firstPoint.x, cursorPoint.y - firstPoint.y);
-  return {
-    id: 'preview_ray',
-    type: 'ray',
-    basePoint: firstPoint,
-    direction: dir,
-    visible: true,
-    layerId: defaultLayerId(),
-    preview: true,
-  } as RayEntity & { preview: true };
-}
+// ADR-359 Phase 3 — XLine / Ray preview helpers extracted to xline-ray-preview-helpers.ts.
+import { generateXLinePreview, generateRayPreview } from './xline-ray-preview-helpers';
 function makeStairWalklinePreview(
   basePoint: Readonly<Point2D>,
   dirPoint: Readonly<Point2D>,

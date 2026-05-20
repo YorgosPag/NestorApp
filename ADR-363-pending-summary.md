@@ -2,6 +2,7 @@
 _Ημερομηνία ανάλυσης: 2026-05-19_
 _Ενημέρωση 2026-05-20: Μεγάλη διόρθωση — πολλά "pending" items ήταν ήδη DONE στον κώδικα. Verified από ADR-363 checklist._
 _Ενημέρωση 2026-05-20 (2η): Phase 3.7b+ multi-storey stack DONE (commit a14cef17). pending-summary stale entry διορθώθηκε._
+_Ενημέρωση 2026-05-21 (3η): Phase 6.5 (A/B/C), Phase 7 (7.1 + 7.2), Phase 8 marked DONE. Πραγματικά εκκρεμή ADR-363: **μηδέν**. Όλα verified από κώδικα + ADR-363 §6.5/§7.1/§7.2/§8 checklists._
 
 ---
 
@@ -20,10 +21,14 @@ _Ενημέρωση 2026-05-20 (2η): Phase 3.7b+ multi-storey stack DONE (commi
 | 6 | BOQ Auto-Feed core (5 entities) + multi-layer DNA walls + material→ΑΤΟΕ mapping |
 | 7A, 7B | Multi-Char BIM Hotkeys (ST/SL/OP/CL/BM) + Single-char D/Wn shortcuts |
 | 3.7b, 3.7b+, 3.7b++ | Fire-rating ribbon + multi-storey slab-opening stack + edge-midpoint ghost (commit a14cef17) |
+| 6.5.A, 6.5.B, 6.5.C | BIM Material Library — `MaterialLibraryService` (3-scope) + seed script + "Υλικά" 5η panel tab + WallDna picker integration (2026-05-20, ADR-363 §6.5 lines 2652-2659) |
+| 7.1, 7.2 | Multi-Selection Ribbon (bulk edit 6 props × 7 kinds via CompoundCommand) + Transform BIM (Mirror/Rotate/Copy SSoTs + L/T flipY handedness) (2026-05-19, ADR-363 lines 2238/2308) |
+| 8 | Schedule Export — `BimScheduleExporter` + CSV/xlsx/PDF + filterable UI + Region pick FSM + Ribbon Ανάλυση tab + 81 tests (2026-05-19, ADR-363 §Phase 8 line 2398) |
 
 ---
 
 ## Εκκρεμείς Φάσεις ❌
+_Πραγματικά εκκρεμή: μηδέν. Όλες οι παρακάτω εμφανίζονται strikethrough — διατηρούνται για audit trail._
 
 ### Phase 3.7b/3.7b+/3.7b++ — ✅ DONE (commit a14cef17, 2026-05-20)
 - [x] ~~Fire-rating ribbon~~ — fireRating combobox (60/90/120/none)
@@ -55,28 +60,31 @@ _(Deferred from Phase 4.5d — ribbon buttons exist, pickers disabled/comingSoon
 
 ---
 
-### Phase 6.5 — Custom Material Library Editor (~4-6h)
-- [ ] ~25 seeded materials (RC/Steel/Masonry/Wood variants)
-- [ ] Material library editor UI
-- [ ] Gates: wall/slab/beam material pickers + Phase 3.7b+ fire-rating
+### Phase 6.5 — Custom Material Library Editor — ✅ DONE (2026-05-20)
+_Ref: ADR-363 §6.5 (lines 2652-2659)._
+- [x] ~~25 seeded materials~~ — `bim/data/system-materials-seed.ts` + `scripts/seed-bim-materials.ts` (Phase 6.5.A)
+- [x] ~~Material library editor UI~~ — `MaterialsLibraryPanel.tsx` + `MaterialEditorDialog.tsx` + `useMaterialLibrary.ts` 5η panel tab (Phase 6.5.B)
+- [x] ~~Gates: wall/slab/beam material pickers~~ — WallDna integration via `useDnaMaterialOptions.ts` + `MaterialPicker` <optgroup> "Βιβλιοθήκη Υλικών"/"Προεπιλεγμένα" (Phase 6.5.C)
 
 ---
 
-### Phase 7 — Multi-Element Selection & Bulk Edit (~4-6h)
-- [ ] Selection rubber-band extension για BIM entities
-- [ ] Multi-select panel (common-denominator bulk edit)
-- [ ] Mirror/rotate/copy semantics για BIM entities
-- [ ] Group operations (move walls + hosted openings as unit)
+### Phase 7 — Multi-Element Selection & Bulk Edit — ✅ DONE (2026-05-19)
+_Ref: ADR-363 §Phase 7.1 (line 2238) + §Phase 7.2 (line 2308). Split into 7.1 (Selection Core) + 7.2 (Transform BIM)._
+- [x] ~~Selection rubber-band extension για BIM entities~~ — `bim/utils/bim-bounds.ts` `calculateBimEntity2DBounds()` (Phase 7.1, 13 tests)
+- [x] ~~Multi-select panel (common-denominator bulk edit)~~ — `bim-common-properties.ts` (6 props × 7 kinds) + `bim-bulk-update-builder.ts` (CompoundCommand) + `useMultiSelectionRibbonBridge.ts` + 2 panels (Common + Filter), 62 tests
+- [x] ~~Mirror/rotate/copy semantics για BIM entities~~ — `bim/transforms/bim-{mirror,rotate,copy}-{geometry,builder}.ts` SSoTs + L/T arm `flipY` handedness fix
+- [x] ~~Group operations (move walls + hosted openings as unit)~~ — `bim/cascade/bim-cascade-resolver.ts` + `useMoveTool`/`useSmartDelete` slab→slab-opening cascade
 
 ---
 
-### Phase 8 — Schedule Export (~5-8h)
-- [ ] `BimScheduleExporter` (table per entity type + combined)
-- [ ] CSV export
-- [ ] Excel (xlsx) export
-- [ ] PDF export
-- [ ] Filterable schedule UI (per floor, per category)
-- [ ] Sample "Πίνακας Κουφωμάτων" door schedule
+### Phase 8 — Schedule Export — ✅ DONE (2026-05-19)
+_Ref: ADR-363 §Phase 8 (line 2398), 81 tests passing, SSoT module `bim-schedule` (Tier 3)._
+- [x] ~~`BimScheduleExporter` (table per entity type + combined)~~ — `bim/schedule/schedule-builder.ts` + 8 presets (door/window/wall/slab/column/beam/stair/slab-opening + combined)
+- [x] ~~CSV export~~ — `bim/schedule/exporters/csv-exporter.ts` (UTF-8 BOM, RFC 4180)
+- [x] ~~Excel (xlsx) export~~ — `bim/schedule/exporters/xlsx-exporter.ts` (ExcelJS, styled headers, numFmt)
+- [x] ~~PDF export~~ — `bim/schedule/exporters/pdf-exporter.ts` (jsPDF + autotable + Greek fonts)
+- [x] ~~Filterable schedule UI (per floor, per category, region, selection)~~ — `BimScheduleDialog.tsx` + `ScheduleFilterBar.tsx` + `SchedulePreviewTable.tsx` + `ScheduleFormatPicker.tsx` + Ribbon "Ανάλυση" tab
+- [x] ~~Sample "Πίνακας Κουφωμάτων" door schedule~~ — covered by door preset + i18n namespace `dxf-schedule` (37 keys, el + en, ICU `{count}`)
 
 ---
 
@@ -94,10 +102,12 @@ _(Deferred from Phase 4.5d — ribbon buttons exist, pickers disabled/comingSoon
 |-----------|-------|----------|
 | ~~Phase 4.5e+ (Tab cycling material pickers)~~ | ~~1~~ | ~~✅ DONE~~ |
 | ~~Phase 5.5j extras (beam polish)~~ | ~~2~~ | ~~✅ DONE~~ |
-| Phase 6.5 (material library editor) | ~5 | ~4-6h |
-| Phase 7 (multi-select) | 4 | ~4-6h |
-| Phase 8 (schedule export) | 6 | ~5-8h |
-| **ΣΥΝΟΛΟ** | **~13 items** | **~13-20h** |
+| ~~Phase 6.5 (material library editor)~~ | ~~~5~~ | ~~✅ DONE~~ |
+| ~~Phase 7 (multi-select)~~ | ~~4~~ | ~~✅ DONE~~ |
+| ~~Phase 8 (schedule export)~~ | ~~6~~ | ~~✅ DONE~~ |
+| **ΣΥΝΟΛΟ ΕΚΚΡΕΜΩΝ** | **0 items** | **0h** |
+
+🎉 **Όλες οι Phases του ADR-363 (Phase 0 → Phase 8) ολοκληρώθηκαν.** Επόμενα βήματα είναι Phase 9+ (Out of Scope του παρόντος ADR — βλ. ADR-366 για 3D viewer port).
 
 ---
 

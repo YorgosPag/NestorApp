@@ -40,7 +40,7 @@ export type SlabReinforcement = 'one-way' | 'two-way' | 'waffle' | 'flat';
  * Slab parameters. All linear measurements σε mm (Nestor convention).
  *
  *   - `outline` — closed polygon (CCW), world coords mm. Min 3 vertices.
- *   - `elevation` — mm, z από project origin (floor 0, roof > storyHeight).
+  *   - `elevation` — mm, bottom surface z from project origin. 3D extrudes upward by thickness.
  *   - `thickness` — mm, default 200 (DEFAULT_SLAB_THICKNESS_MM).
  *   - `slabOpeningIds` — Phase 3.5 (lift shaft, stair well, duct, chimney).
  *   - `reinforcement` — structural hint (Phase 6 BOQ + Phase 3.5 hatch).
@@ -50,7 +50,7 @@ export interface SlabParams {
   readonly kind: SlabKind;
   /** Closed polygon (CCW). World coords σε mm. Min MIN_POLYGON_VERTICES (3). */
   readonly outline: Polygon3D;
-  /** mm. z από project origin (0 = ground floor). */
+  /** mm. Bottom surface z from project origin. floor:0, ceiling:2800, roof:3000. 3D extrudes upward. */
   readonly elevation: number;
   /** mm. Πάχος πλάκας (default DEFAULT_SLAB_THICKNESS_MM = 200). */
   readonly thickness: number;
@@ -116,7 +116,7 @@ export const MAX_FREE_SPAN_WARNING_M = 5;
 /** Ελάχιστος αριθμός κορυφών για έγκυρο πολύγωνο. */
 export const MIN_POLYGON_VERTICES = 3;
 
-/** Default elevation (mm) ανά kind. floor 0, ceiling/roof > 0 (Phase 3 hint). */
+/** Default bottom-surface elevation (mm) ανά kind. 3D extrusion goes upward by thickness. */
 export const SLAB_KIND_DEFAULT_ELEVATION_MM: Readonly<Record<SlabKind, number>> = {
   'floor':       0,
   'ground':      0,

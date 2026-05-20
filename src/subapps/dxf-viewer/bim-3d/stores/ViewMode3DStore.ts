@@ -1,11 +1,14 @@
 "use client";
 
+import { enableMapSet } from 'immer';
 import { create } from 'zustand';
 import { subscribeWithSelector, devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import type { FloorVisMode, FloorPreset } from '../utils/floor-visibility-state';
 import { applyPreset, sortLevelsTopDown } from '../utils/floor-visibility-state';
 import type { Level } from '../../systems/levels/config';
+
+enableMapSet();
 
 export type { FloorVisMode };
 
@@ -128,9 +131,7 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
 
         setFloorMode(levelId, mode) {
           set((draft) => {
-            const next = new Map(draft.floorVisibilityModes);
-            next.set(levelId, mode);
-            draft.floorVisibilityModes = next;
+            draft.floorVisibilityModes.set(levelId, mode);
           });
         },
 

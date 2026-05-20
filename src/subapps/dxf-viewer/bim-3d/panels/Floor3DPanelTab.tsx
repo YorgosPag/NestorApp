@@ -20,7 +20,7 @@ const PRESETS: FloorPreset[] = ['all', 'active', 'none', 'invert'];
 function ModeButton({
   active,
   onClick,
-  title,
+  label,
   children,
 }: {
   active: boolean;

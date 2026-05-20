@@ -208,7 +208,6 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         s.startPoint,
         endPoint,
         s.overrides,
-        sceneUnits,
       );
       const result = buildWallEntity(params, currentLevelId, 'straight', sceneUnits);
       if (!result.ok) {
@@ -239,7 +238,6 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         s.startPoint,
         s.endPoint,
         s.overrides,
-        sceneUnits,
       );
       const curveControl: Point3D = { x: controlPoint.x, y: controlPoint.y, z: 0 };
       const params = { ...base, curveControl };
@@ -272,7 +270,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       const startPt = verts[0];
       const endPt = verts[verts.length - 1];
-      const base = buildDefaultWallParams(startPt, endPt, s.overrides, sceneUnits);
+      const base = buildDefaultWallParams(startPt, endPt, s.overrides);
       const polylineVertices: Point3D[] = verts.map((v) => ({ x: v.x, y: v.y, z: 0 }));
       const params = { ...base, polylineVertices };
       const result = buildWallEntity(params, currentLevelId, 'polyline', sceneUnits);

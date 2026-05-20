@@ -20,6 +20,7 @@
 
 import type { Point3D, Polyline3D, BoundingBox3D } from '../types/bim-base';
 import type { WallParams, WallGeometry, WallKind } from '../types/wall-types';
+import { mmToSceneUnits } from '../../utils/scene-units';
 
 const MM_TO_M = 1 / 1000;
 /** Minimum axis length (mm) below which geometry degenerates. */
@@ -51,19 +52,24 @@ export function computeWallGeometry(
   params: WallParams,
   kind: WallKind = 'straight',
 ): WallGeometry {
+  // s converts mm scalar params → canvas world units (matches start/end coordinate space).
+  // height and thickness are always stored in mm (SSOT); start/end are canvas world coords.
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+
   const rawVertices = pickAxisVertices(params, kind);
   const vertices = applyAxisBevels(rawVertices, params.startBevel ?? 0, params.endBevel ?? 0);
   const axisPolyline: Polyline3D = { points: vertices, closed: false };
 
-  const halfThicknessMm = params.thickness / 2;
+  const halfThicknessCanvas = (params.thickness / 2) * s;
   const sign = params.flip ? -1 : 1;
 
-  const { outerEdge, innerEdge } = offsetAxisToEdges(vertices, halfThicknessMm, sign);
+  const { outerEdge, innerEdge } = offsetAxisToEdges(vertices, halfThicknessCanvas, sign);
 
-  const bbox = computeBbox(vertices, outerEdge.points, innerEdge.points, params.height);
+  const bbox = computeBbox(vertices, outerEdge.points, innerEdge.points, params.height * s);
 
-  const lengthMm = computePolylineLengthMm(vertices);
-  const lengthM = lengthMm * MM_TO_M;
+  // lengthCanvas is in canvas world units; convert to meters for BOQ.
+  const lengthCanvas = computePolylineLengthMm(vertices);
+  const lengthM = lengthCanvas * MM_TO_M / s;
   const heightM = params.height * MM_TO_M;
   const thicknessM = params.thickness * MM_TO_M;
 

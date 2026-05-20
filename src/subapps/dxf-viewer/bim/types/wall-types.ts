@@ -26,6 +26,7 @@ import type {
   BoundingBox3D,
 } from './bim-base';
 import type { WallDna } from './wall-dna-types';
+import type { SceneUnits } from '../../utils/scene-units';
 
 // ─── Sub-type & category enums (ADR-363 §5.3) ────────────────────────────────
 
@@ -56,13 +57,13 @@ export type WallCategory = 'exterior' | 'interior' | 'partition' | 'parapet' | '
  */
 export interface WallParams {
   readonly category: WallCategory;
-  /** mm. */
+  /** Canvas world coordinates (DXF scene units). */
   readonly start: Point3D;
-  /** mm. */
+  /** Canvas world coordinates (DXF scene units). */
   readonly end: Point3D;
-  /** mm. Default 3000 (DEFAULT_WALL_HEIGHT_MM). */
+  /** mm. Physical height — always mm regardless of sceneUnits. Default 3000. */
   readonly height: number;
-  /** mm. Equals `dna.totalThickness` when dna present; else manual. */
+  /** mm. Cross-section depth — always mm. Equals dna.totalThickness when dna present. */
   readonly thickness: number;
   /** When true, the "exterior face" is swapped (offsets the centerline-derived edges). */
   readonly flip: boolean;
@@ -81,6 +82,12 @@ export interface WallParams {
   /** Material key for wall-level hatch (rc/masonry/aerated-concrete/gypsum).
    *  Ignored when `dna` is present — DNA layers govern per-layer materials. */
   readonly material?: string;
+  /**
+   * DXF canvas coordinate unit. Always 'mm' for walls created after ADR-363 SSOT fix.
+   * Used by computeWallGeometry to convert mm scalars (height/thickness) → canvas units
+   * for 2D edge-offset geometry. Absent on legacy entities → defaults to 'mm'.
+   */
+  readonly sceneUnits?: SceneUnits;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

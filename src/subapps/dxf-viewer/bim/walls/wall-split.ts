@@ -102,6 +102,7 @@ export function computeSplitWallParams(
     thickness: wall.params.thickness,
     flip: wall.params.flip,
     dna: wall.params.dna,
+    sceneUnits: wall.params.sceneUnits,
   } as const;
 
   const wall1Params: WallParams = {

@@ -21,7 +21,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7 §6 Phase 5
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type {
   BeamEntity,
@@ -34,6 +34,7 @@ import {
 } from './beam-completion';
 import type { Point3D } from '../../bim/types/bim-base';
 import type { BeamParams } from '../../bim/types/beam-types';
+import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -97,6 +98,24 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
   const [state, setState] = useState<BeamToolState>(INITIAL_STATE);
   const stateRef = useRef<BeamToolState>(state);
   stateRef.current = state;
+
+  // ── preview store sync (ADR-363 Phase 5.5P) ───────────────────────────────
+  useEffect(() => {
+    if (state.phase === 'idle') {
+      beamPreviewStore.reset();
+      return;
+    }
+    beamPreviewStore.set({
+      startPoint: state.startPoint,
+      endPoint: state.endPoint,
+      kind: state.kind,
+      overrides: state.overrides,
+    });
+  }, [state]);
+
+  useEffect(() => {
+    return () => beamPreviewStore.reset();
+  }, []);
 
   // ── lifecycle ────────────────────────────────────────────────────────────
   const activate = useCallback(() => {

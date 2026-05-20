@@ -65,9 +65,9 @@ export function validateWallParams(
   const s = mmToSceneUnits(sceneUnits);
 
   validateGeometry(params, hardErrors, s);
-  validateThickness(params, hardErrors, codeViolations, s);
+  validateThickness(params, hardErrors, codeViolations);
   validateHeight(params, hardErrors);
-  validateDnaConsistency(params, hardErrors, s);
+  validateDnaConsistency(params, hardErrors);
 
   const violationKeys: string[] = [...codeViolations];
   const bimValidation: BimValidation = {
@@ -94,22 +94,21 @@ function validateThickness(
   params: WallParams,
   hardErrors: string[],
   codeViolations: string[],
-  s: number,
 ): void {
   if (params.thickness <= 0) {
     hardErrors.push('wall.validation.hardErrors.thicknessNonPositive');
     return;
   }
-  if (params.thickness > MAX_WALL_THICKNESS_MM * s) {
+  if (params.thickness > MAX_WALL_THICKNESS_MM) {
     hardErrors.push('wall.validation.hardErrors.thicknessExceedsMax');
     return;
   }
-  if (params.thickness < MIN_WALL_THICKNESS_MM * s) {
+  if (params.thickness < MIN_WALL_THICKNESS_MM) {
     codeViolations.push('wall.validation.codeViolations.thicknessBelowMin');
   }
   if (
     params.category === 'exterior' &&
-    params.thickness < MIN_EXTERIOR_LOAD_BEARING_THICKNESS_MM * s
+    params.thickness < MIN_EXTERIOR_LOAD_BEARING_THICKNESS_MM
   ) {
     codeViolations.push('wall.validation.codeViolations.exteriorBelowNokMin');
   }
@@ -121,10 +120,10 @@ function validateHeight(params: WallParams, hardErrors: string[]): void {
   }
 }
 
-function validateDnaConsistency(params: WallParams, hardErrors: string[], s: number): void {
+function validateDnaConsistency(params: WallParams, hardErrors: string[]): void {
   if (!params.dna) return;
   const dnaTotal = params.dna.totalThickness;
-  if (Math.abs(dnaTotal - params.thickness) > DNA_THICKNESS_TOLERANCE_MM * s) {
+  if (Math.abs(dnaTotal - params.thickness) > DNA_THICKNESS_TOLERANCE_MM) {
     hardErrors.push('wall.validation.hardErrors.dnaThicknessMismatch');
   }
 }

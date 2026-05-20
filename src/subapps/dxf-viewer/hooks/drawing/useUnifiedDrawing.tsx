@@ -56,6 +56,10 @@ import { generatePreviewEntity, applyPreviewStyling, createPartialPreview } from
 import { stairPreviewStore } from '../../bim/stairs/stair-preview-store';
 // ADR-363 Phase 1C — wall preview SSoT (same single-writer pattern as stair).
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
+// ADR-363 Phase 6.5.B — slab preview SSoT.
+import { slabPreviewStore } from '../../bim/slabs/slab-preview-store';
+// ADR-363 Phase 5.5P — beam preview SSoT.
+import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
 import { toolStateStore } from '../../stores/ToolStateStore';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { applyPreviewSettingsToEntity } from './apply-preview-settings';
@@ -255,8 +259,10 @@ export function useUnifiedDrawing() {
     // ADR-363 Phase 1C — wall tool runs its own state machine (mirror stair),
     // so `machineTool` stays at `'select'`. Resolve via toolStateStore SSoT.
     const isWall = activeTool === 'wall';
-    const currentTool: DrawingTool = isStair ? 'stair' : isWall ? 'wall' : machineTool;
-    if (!isStair && !isWall && (!machineTool || machineTool === 'select')) return;
+    const isSlab = activeTool === 'slab';
+    const isBeam = activeTool === 'beam';
+    const currentTool: DrawingTool = isStair ? 'stair' : isWall ? 'wall' : isSlab ? 'slab' : isBeam ? 'beam' : machineTool;
+    if (!isStair && !isWall && !isSlab && !isBeam && (!machineTool || machineTool === 'select')) return;
 
     // machineMoveCursor intentionally removed — it updated cursorPosition in machine context
     // (never read by any component) and notified React useSyncExternalStore subscribers on
@@ -292,6 +298,15 @@ export function useUnifiedDrawing() {
         tempPoints = [];
       }
     }
+    if (isSlab) {
+      // ADR-363 Phase 6.5.B — reconstruct slab tempPoints from `slabPreviewStore`.
+      tempPoints = slabPreviewStore.get().vertices;
+    }
+    if (isBeam) {
+      // ADR-363 Phase 5.5P — beam tempPoints from store.
+      const bp = beamPreviewStore.get();
+      tempPoints = bp.startPoint && bp.endPoint ? [bp.startPoint, bp.endPoint] : bp.startPoint ? [bp.startPoint] : [];
+    }
 
     // ADR-358 Phase 8 — scene units propagated to stair preview so the
     // ghost rubber-band + walkline match the host floorplan scale.
@@ -299,7 +314,7 @@ export function useUnifiedDrawing() {
     // `$INSUNITS` propagated by dxf-scene-builder, falls back to bounds
     // heuristic for legacy / unitless scenes.
     const sceneUnitsForPreview = (() => {
-      if (!isStair && !isWall) return 'mm' as const;
+      if (!isStair && !isWall && !isSlab && !isBeam) return 'mm' as const;
       const levelId = currentLevelId;
       if (!levelId) return 'mm' as const;
       return resolveSceneUnits(getLevelScene(levelId));

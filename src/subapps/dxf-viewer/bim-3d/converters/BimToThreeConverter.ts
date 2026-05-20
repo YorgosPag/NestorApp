@@ -24,6 +24,12 @@ import { getMaterial3D, getElementMaterial3D } from '../materials/MaterialCatalo
 // ── Shared rotation matrix: shape XY → Three.js Y-up ─────────────────────────
 const ROT_X_NEG_90 = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
 
+// BIM shape vertices (outerEdge, innerEdge, footprint, outline) are already in meters
+// (canvas world coordinates). Scalar params — slab thickness/elevation, beam depth/elevation,
+// column height, floorElevationMm — are stored in raw mm and MUST be multiplied by MM_TO_M.
+// Exception: wall.params.height is already in meters (wall-completion.ts applies mmToSceneUnits).
+const MM_TO_M = 0.001;
+
 // ── Wall material: DNA core layer → catalog, else category fallback ───────────
 const CATEGORY_MAT_ID: Record<WallEntity['params']['category'], string> = {
   exterior:  'mat-concrete',
@@ -41,8 +47,6 @@ function resolveWallMaterial(wall: WallEntity): THREE.MeshStandardMaterial {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-// All BIM params (height, depth, thickness, elevation) are in canvas world units (~meters).
-// Shape XY coords: same units. No unit conversion needed anywhere in this file.
 function toShapePoints(pts: readonly Point3D[]): { x: number; y: number }[] {
   return pts.map((p) => ({ x: p.x, y: p.y }));
 }
@@ -104,9 +108,9 @@ export function wallToMesh(wall: WallEntity, floorElevationMm = 0, levelId?: str
   );
   if (!shape) return null;
 
-  const geo = extrudeAndRotate(shape, wall.params.height);
+  const geo = extrudeAndRotate(shape, wall.params.height * MM_TO_M);
   const mesh = new THREE.Mesh(geo, resolveWallMaterial(wall));
-  mesh.position.y = floorElevationMm;
+  mesh.position.y = floorElevationMm * MM_TO_M;
   return tagMesh(mesh, wall.id, 'wall', levelId);
 }
 
@@ -117,9 +121,9 @@ export function columnToMesh(column: ColumnEntity, floorElevationMm = 0, levelId
   const shape = buildShape(verts);
   if (!shape) return null;
 
-  const geo = extrudeAndRotate(shape, column.params.height);
+  const geo = extrudeAndRotate(shape, column.params.height * MM_TO_M);
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('column'));
-  mesh.position.y = floorElevationMm;
+  mesh.position.y = floorElevationMm * MM_TO_M;
   return tagMesh(mesh, column.id, 'column', levelId);
 }
 
@@ -130,10 +134,11 @@ export function beamToMesh(beam: BeamEntity, levelId?: string): THREE.Mesh | nul
   const shape = buildShape(verts);
   if (!shape) return null;
 
-  const geo = extrudeAndRotate(shape, beam.params.depth);
+  const beamDepthM = beam.params.depth * MM_TO_M;
+  const geo = extrudeAndRotate(shape, beamDepthM);
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('beam'));
-  // elevation = top of beam; extrusion goes from y=0 → y=depth, so offset down by depth
-  mesh.position.y = beam.params.elevation - beam.params.depth;
+  // elevation = top of beam; extrusion goes from y=0 → y=depthM, so offset bottom to elevationM - depthM
+  mesh.position.y = beam.params.elevation * MM_TO_M - beamDepthM;
   return tagMesh(mesh, beam.id, 'beam', levelId);
 }
 
@@ -144,9 +149,11 @@ export function slabToMesh(slab: SlabEntity, levelId?: string): THREE.Mesh | nul
   const shape = buildShape(verts);
   if (!shape) return null;
 
-  const geo = extrudeAndRotate(shape, slab.params.thickness);
+  const thicknessM = slab.params.thickness * MM_TO_M;
+  const geo = extrudeAndRotate(shape, thicknessM);
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('slab'));
-  // elevation = top surface; position bottom at elevation - thickness
-  mesh.position.y = slab.params.elevation - slab.params.thickness;
+  // elevation = bottom surface (mm → m); extrusion goes upward by thicknessM.
+  // floor:0 → 0..+0.20m, ceiling:2800 → 2.80..3.00m, roof:3000 → 3.00..3.20m.
+  mesh.position.y = slab.params.elevation * MM_TO_M;
   return tagMesh(mesh, slab.id, 'slab', levelId);
 }

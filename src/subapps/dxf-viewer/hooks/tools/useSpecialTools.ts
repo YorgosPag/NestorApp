@@ -24,13 +24,13 @@ import { useLineParallel } from '../drawing/useLineParallel';
 import { useStairTool } from '../drawing/useStairTool';
 import { useWallTool } from '../drawing/useWallTool';
 import { useOpeningTool } from '../drawing/useOpeningTool';
-import { useSlabTool } from '../drawing/useSlabTool';
+import { useSlabTool, SLAB_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useSlabTool';
 import { useColumnTool } from '../drawing/useColumnTool';
 import { useBeamTool } from '../drawing/useBeamTool';
 import { useSlabOpeningTool } from '../drawing/useSlabOpeningTool';
 import { buildSlabOpeningResolvers } from './useSpecialTools-slab-opening';
 import { useToolLifecycle } from './useToolLifecycle';
-import { resolveSceneUnits } from '../../utils/scene-units';
+import { resolveSceneUnits, mmToSceneUnits } from '../../utils/scene-units';
 import { useFloorMetadata } from '../data/useFloorMetadata';
 import type { StairFloorLinkInput } from '../drawing/stair-completion';
 import { useAngleEntityMeasurement, type AngleEntityVariant } from './useAngleEntityMeasurement';
@@ -41,6 +41,22 @@ import type { Point2D } from '../../rendering/types/Types';
 import { computeWallTrims, applyTrimPatches } from '../../bim/walls/wall-trims';
 // 🏢 ENTERPRISE: Import actual level system types for type safety
 import type { LevelsHookReturn } from '../../systems/levels';
+
+function appendAndBroadcast<E extends { id: string }>(
+  levelManager: LevelsHookReturn,
+  entity: E,
+  tool: string,
+): void {
+  const levelId = levelManager.currentLevelId;
+  if (!levelId) return;
+  const scene = levelManager.getLevelScene(levelId);
+  if (!scene) return;
+  levelManager.setLevelScene(levelId, {
+    ...scene,
+    entities: [...(scene.entities || []), entity as unknown as Entity],
+  });
+  EventBus.emit('drawing:entity-created', { entity: entity as unknown as Entity, tool });
+}
 // TYPES & INTERFACES
 /**
  * Props for useSpecialTools hook
@@ -148,10 +164,8 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     onLineCreated: (lineEntity) => {
       const levelId = levelManager.currentLevelId;
       if (!levelId) return;
-
       const scene = levelManager.getLevelScene(levelId);
       if (!scene) return;
-
       const updatedScene = {
         ...scene,
         entities: [...(scene.entities || []), lineEntity]
@@ -181,10 +195,8 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     onLineCreated: (lineEntity) => {
       const levelId = levelManager.currentLevelId;
       if (!levelId) return;
-
       const scene = levelManager.getLevelScene(levelId);
       if (!scene) return;
-
       const updatedScene = {
         ...scene,
         entities: [...(scene.entities || []), lineEntity]
@@ -210,10 +222,8 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     onMeasurementCreated: (measurementEntity: AngleMeasurementEntity) => {
       const levelId = levelManager.currentLevelId;
       if (!levelId) return;
-
       const scene = levelManager.getLevelScene(levelId);
       if (!scene) return;
-
       const updatedScene = {
         ...scene,
         entities: [...(scene.entities || []), measurementEntity]
@@ -388,17 +398,13 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
    */
   const slabTool = useSlabTool({
     currentLevelId: levelManager.currentLevelId || '0',
-    onSlabCreated: (slabEntity) => {
+    getAutoCloseTolerance: () => {
       const levelId = levelManager.currentLevelId;
-      if (!levelId) return;
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return;
-      levelManager.setLevelScene(levelId, {
-        ...scene,
-        entities: [...(scene.entities || []), slabEntity],
-      });
-      EventBus.emit('drawing:entity-created', { entity: slabEntity, tool: 'slab' });
+      const scene = levelId ? levelManager.getLevelScene(levelId) : null;
+      const units = scene ? resolveSceneUnits(scene) : 'mm';
+      return SLAB_AUTO_CLOSE_TOLERANCE_DEFAULT * mmToSceneUnits(units);
     },
+    onSlabCreated: (slabEntity) => appendAndBroadcast(levelManager, slabEntity, 'slab'),
   });
   useToolLifecycle(activeTool === 'slab', slabTool.activate, slabTool.deactivate);
   // ADR-363 Phase 4 — COLUMN TOOL
@@ -410,17 +416,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
    */
   const columnTool = useColumnTool({
     currentLevelId: levelManager.currentLevelId || '0',
-    onColumnCreated: (columnEntity) => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return;
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return;
-      levelManager.setLevelScene(levelId, {
-        ...scene,
-        entities: [...(scene.entities || []), columnEntity],
-      });
-      EventBus.emit('drawing:entity-created', { entity: columnEntity, tool: 'column' });
-    },
+    onColumnCreated: (columnEntity) => appendAndBroadcast(levelManager, columnEntity, 'column'),
   });
   useToolLifecycle(activeTool === 'column', columnTool.activate, columnTool.deactivate);
   // ============================================================================
@@ -434,17 +430,12 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
    */
   const beamTool = useBeamTool({
     currentLevelId: levelManager.currentLevelId || '0',
-    onBeamCreated: (beamEntity) => {
+    getSceneUnits: () => {
       const levelId = levelManager.currentLevelId;
-      if (!levelId) return;
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return;
-      levelManager.setLevelScene(levelId, {
-        ...scene,
-        entities: [...(scene.entities || []), beamEntity],
-      });
-      EventBus.emit('drawing:entity-created', { entity: beamEntity, tool: 'beam' });
+      if (!levelId) return 'mm';
+      return resolveSceneUnits(levelManager.getLevelScene(levelId));
     },
+    onBeamCreated: (beamEntity) => appendAndBroadcast(levelManager, beamEntity, 'beam'),
   });
   useToolLifecycle(activeTool === 'beam', beamTool.activate, beamTool.deactivate);
   // ADR-363 Phase 3.7 — SLAB-OPENING TOOL (resolvers extracted: useSpecialTools-slab-opening.ts)

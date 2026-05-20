@@ -29,7 +29,7 @@ import { getDefaultDnaForCategory } from '../../bim/types/wall-dna-types';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
 import { validateWallParams } from '../../bim/validators/wall-validator';
 import { generateWallId } from '@/services/enterprise-id-convenience';
-import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import type { SceneUnits } from '../../utils/scene-units';
 
 export type { SceneUnits };
 
@@ -58,21 +58,16 @@ export interface WallParamOverrides {
  *   1. Resolve category (override → 'exterior' default).
  *   2. Resolve DNA from category (SSoT preset).
  *   3. Resolve thickness from DNA totalThickness (or explicit override).
- *   4. Convert mm-baked defaults to scene units (height).
- *
- * Scene-unit semantics mirror stair (`buildDefaultStairParams`): values arriving
- * through Dynamic Input/ribbon are already in user units; mm defaults convert
- * to match.
+ *   4. Scalars (height, thickness) stored in mm — always, regardless of sceneUnits.
+ *      Boundary conversion (mm → canvas units) happens in computeWallGeometry.
  */
 export function buildDefaultWallParams(
   startPoint: Readonly<Point2D>,
   endPoint: Readonly<Point2D>,
   overrides: WallParamOverrides = {},
-  sceneUnits: SceneUnits = 'mm',
 ): WallParams {
-  const s = mmToSceneUnits(sceneUnits);
   const category: WallCategory = overrides.category ?? 'exterior';
-  const height = overrides.height ?? DEFAULT_WALL_HEIGHT_MM * s;
+  const height = overrides.height ?? DEFAULT_WALL_HEIGHT_MM;
   const start: Point3D = { x: startPoint.x, y: startPoint.y, z: 0 };
   const end: Point3D = { x: endPoint.x, y: endPoint.y, z: 0 };
   // Thickness resolution (Revit "Generic Wall" pattern):
@@ -86,26 +81,19 @@ export function buildDefaultWallParams(
       height,
       thickness: overrides.thickness,
       flip: overrides.flip ?? false,
+      sceneUnits: 'mm',
     };
   }
   const dna = getDefaultDnaForCategory(category);
-  // When using scene-unit thickness, the DNA layer thicknesses ALSO need
-  // scaling so the SSoT (`thickness === dna.totalThickness`) holds.
-  const scaledDna =
-    s === 1
-      ? dna
-      : {
-          layers: dna.layers.map((l) => ({ ...l, thickness: l.thickness * s })),
-          totalThickness: dna.totalThickness * s,
-        };
   return {
     category,
     start,
     end,
     height,
-    thickness: scaledDna.totalThickness,
+    thickness: dna.totalThickness,
     flip: overrides.flip ?? false,
-    dna: scaledDna,
+    dna,
+    sceneUnits: 'mm',
   };
 }
 
@@ -165,6 +153,6 @@ export function completeWallFromTwoClicks(
   overrides: WallParamOverrides = {},
   sceneUnits: SceneUnits = 'mm',
 ): BuildWallEntityResult {
-  const params = buildDefaultWallParams(startPoint, endPoint, overrides, sceneUnits);
-  return buildWallEntity(params, layerId, 'straight');
+  const params = buildDefaultWallParams(startPoint, endPoint, overrides);
+  return buildWallEntity(params, layerId, 'straight', sceneUnits);
 }
