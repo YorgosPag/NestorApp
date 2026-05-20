@@ -296,6 +296,81 @@ Only invert slab semantic, leave wall/column hardcoded at z=0.
 
 > **Διεξήχθη 2η, βαθύτερη έρευνα 2026-05-20** σε ArchiCAD, Vectorworks, Allplan, BricsCAD BIM, IFC open standard, και Revit advanced features. Αποτέλεσμα: η αρχική απόφαση (§2) ήταν **σωστή αλλά ΑΝΕΠΑΡΚΗΣ** — χρειάζεται καθολικό **Storey/Level System** ως SSoT, όχι μόνο per-entity fields.
 
+### 9.0 🎉 KEY DISCOVERY — Floor Entity ΗΔΗ Υπάρχει στον Κώδικα
+
+**Έρευνα στον δικό μας κώδικα (2026-05-20, post Q1 user request):**
+
+Η οντότητα `Floor` (όροφος) **υπάρχει ήδη πλήρως υλοποιημένη** ως first-class entity, IFC-compliant (mirroring `IfcBuildingStorey`). Δεν χρειάζεται να την φτιάξουμε — χρειάζεται **wiring** στο BIM Drawing Mode.
+
+#### **Existing Floor Entity** (Production-live)
+
+| Aspect | File / Detail |
+|--------|---------------|
+| Firestore collection | `floors` (top-level, defined `src/config/firestore-collections.ts:26 FLOORS`) |
+| Subcollection alias | `BUILDING_FLOORS` (line 389) |
+| Route | `/buildings` → `/src/app/buildings/page.tsx` (lazy-loaded) |
+| Detail view | `BuildingDetails.tsx` με `UniversalTabsRenderer` |
+| Floors Tab UI | `src/components/building-management/tabs/FloorsTabContent.tsx` (inline CRUD) |
+| Tab config | `src/config/building-tabs-config.ts` + `buildingMappings.ts:253-278` |
+| Zod schemas | `src/app/api/floors/floors.schemas.ts` (`CreateFloorSchema`, `UpdateFloorSchema`) |
+| TypeScript types | `src/app/api/floors/floors.types.ts` (`FloorDocument`, IFC-compliant comment) |
+| Mutation gateway | `src/services/floor-mutation-gateway.ts` |
+| API handlers | `src/app/api/floors/floors.handlers.ts` (list/create/update/delete) |
+| State hook | `src/components/building-management/tabs/useFloorsTabState.ts` |
+
+#### **Existing FloorRecord Fields**
+```ts
+interface FloorRecord {
+  readonly id: string;
+  readonly number: number;          // 0=ground, 1=1st, -1=basement
+  readonly name: string;            // auto-suggested ("G", "1", "B1") + user-overridable
+  readonly elevation: number | null; // **ABSOLUTE z in METRES** (e.g., 0, 3.0, 6.0)
+  readonly height: number | null;    // **storey height in METRES** (default 3.0)
+  readonly buildingId: string;       // FK to buildings
+  readonly projectId?: string;
+  readonly companyId: string;        // tenant scope
+  readonly units: number;            // unit count (for residential)
+  readonly hasFloorplan: boolean;    // has uploaded DXF?
+}
+```
+
+#### **Existing Behaviors**
+- `DEFAULT_STOREY_HEIGHT = 3.0` meters (line 99 `useFloorsTabState.ts`)
+- Auto-elevation on floor number change: `elevation = number × 3.0`
+- Cascade shift dialog: όταν αλλάζει elevation ενός intermediate floor, ρωτάει αν να shift-αρει και τους από πάνω
+- Deletion guards για intermediate floors (warning αν θα δημιουργηθεί κενό)
+- Inline create/edit forms (`FloorInlineCreateForm.tsx`)
+
+#### **🔥 Critical: BIM Entities ΗΔΗ Έχουν `floorId` FK**
+
+Τα BIM Firestore documents ΗΔΗ δηλώνουν foreign key προς floors:
+
+| Entity | File | FK Field |
+|--------|------|----------|
+| Wall | `src/subapps/dxf-viewer/bim/walls/wall-firestore-service.ts:64-80` | `floorId?: string` |
+| Slab | `src/subapps/dxf-viewer/bim/slabs/slab-firestore-service.ts:52-68` | `floorId?: string` |
+| Opening | (similar pattern) | `floorId?: string` |
+| Beam | (similar pattern) | `floorId?: string` |
+| Column | (similar pattern) | `floorId?: string` |
+| SlabOpening | (similar pattern) | `floorId?: string` |
+
+**Συμπέρασμα**: Η Phase 0 του Migration Plan (§9.9) είναι **ΗΔΗ υλοποιημένη**. Χρειάζεται μόνο:
+
+1. **Wiring** `Floor.elevation` → BIM 3D rendering pipeline (αντί hardcoded z=0)
+2. **Semantic clarification**: τι ακριβώς σημαίνει `Floor.elevation`; (FFL ή Top of Structural Slab;) — **Q4 pending**
+3. **`offsetFromStorey` field** στις BIM entities για overrides (slabs που "πέφτουν" 50mm για bathroom drain, walls με base offset για να καθίσουν πάνω σε structural slab, etc.)
+4. **Unit harmonization**: Floor χρησιμοποιεί **METRES**, BIM entities χρησιμοποιούν **MILLIMETRES** — απαιτείται conversion layer
+5. **Multi-building**: ήδη supported (Building → Floor → BIM entities chain). Απαιτείται μόνο verification στο DXF Viewer scene loading
+
+#### **Revised Phase 0 — Wiring, Not Building**
+
+Phase 0 (NEW): Skipped — entity exists. Validation tasks only:
+- 0.1 Verify FloorRecord interface stable + complete για ADR-369 needs
+- 0.2 Document semantic decision (Q4 pending — FFL vs ToS)
+- 0.3 Add reverse-lookup hook: given BIM entity → derive absolute Z via floor lookup
+- 0.4 Add `offsetFromStorey` (mm) optional field σε όλες τις BIM entities
+- 0.5 Confirm cascade-shift logic στο `useFloorsTabState` works για connected BIM entities (not just elevation values)
+
 ### 9.1 Revit (advanced — beyond ADR-369 §1.1)
 
 #### **Project Base Point (PBP) vs Survey Point (SP)**
@@ -500,16 +575,75 @@ interface BimElevationRef {
 - I.1 Map internal model → IFC schema (`IfcProject → IfcSite → IfcBuilding → IfcBuildingStorey → elements`)
 - I.2 ObjectPlacement chains via storey references (matches IFC pattern out of the box)
 
-### 9.10 Open Questions — Pending Q&A Clarifications
+### 9.10 Open Questions — Q&A Clarifications
 
 Πριν την υλοποίηση, χρειάζονται διευκρινίσεις από Giorgio (Greek + απλά + παραδείγματα + ένα-ένα):
 
-1. **Q1 — Storey ως οντότητα ή scalar?** Θέλουμε Storey εντελώς ξεχωριστή οντότητα στο Firestore (όπως Revit Levels) ή απλά scalar values στο project?
+1. **Q1 — Storey ως οντότητα ή scalar?** ✅ **ANSWERED 2026-05-20**: Επιλογή Α (Revit-style — Floor οντότητα). **Discovery**: Floor entity υπάρχει ήδη πλήρως (§9.0). Δεν χρειάζεται νέα οντότητα — μόνο wiring στο BIM rendering layer.
 2. **Q2 — Multi-building support;** Ένα project = ένα κτίριο πάντα, ή υποστηρίζουμε multiple buildings (όπως Revit Site)?
 3. **Q3 — Project Base Point vs Survey Point;** Χρειάζεται geodetic / sea-level reference, ή αρκεί ένα local origin?
-4. **Q4 — Storey reference: FFL ή Top of Structural Slab?** Επιλογή των "εργολάβων" (top of structural) ή των αρχιτεκτόνων (FFL)?
-5. **Q5 — Parametric coupling;** Θέλουμε auto-stretch walls όταν αλλάζει storey height (ArchiCAD/Vectorworks style), ή manual update;
-6. **Q6 — Negative storeys (basements);** Υπόγεια / θεμελίωση σαν ξεχωριστή storey ή ως offset από ground storey;
+4. **Q4 — Storey reference: FFL ή Top of Structural Slab?** ✅ **ANSWERED 2026-05-20**: **Hybrid A — FFL primary + auto-derived ToS**. `Floor.elevation` = FFL (METRES). New field `Floor.finishThickness` (mm, default 80mm Greek typical). Derived: `topOfStructuralSlab = elevation - finishThickness/1000`. Construction drawings & BOQ auto-generate ToS dimensions. Change of finish (e.g. marble→wood) updates ToS without affecting walls/windows/doors. Rationale: serves full pipeline (design FFL → construction ToS → management FFL) with single user-facing number per storey.
+5. **Q5 — Parametric coupling;** ✅ **ANSWERED 2026-05-20**: **Γ — Hybrid με opt-in binding** (Revit pattern). Walls/columns έχουν `baseBinding` + `topBinding` enums. Default = bound (auto-stretch όταν αλλάζει storey height). User μπορεί να uncheck για edge cases (διαχωριστικά μπαρ, πατάρι, εξωτερικός όγκος).
+
+   **Schema additions**:
+   ```ts
+   // Wall (και Column mirror)
+   interface WallParams {
+     storeyId: string;                                          // FK to floors
+     baseBinding: 'storey-floor' | 'absolute';                  // default 'storey-floor'
+     topBinding: 'storey-ceiling' | 'absolute' | 'unconnected'; // default 'storey-ceiling'
+     baseOffset: number;        // mm — όταν binding='storey-floor' = offset από FFL· όταν 'absolute' = absolute z
+     topOffset: number;         // mm — same semantic
+     unconnectedHeight?: number; // mm — μόνο όταν topBinding='unconnected'
+   }
+   ```
+
+   **UI**:
+   - Properties panel: 2 dropdowns ("Βάση", "Κορυφή") + offset inputs
+   - Default state on creation = bound (no extra clicks for 95% case)
+   - i18n keys: `wall.binding.storeyFloor="Πάνω σε δάπεδο ορόφου"`, `wall.binding.storeyCeiling="Κάτω από επόμενο όροφο"`, `wall.binding.absolute="Συγκεκριμένο ύψος"`, `wall.binding.unconnected="Ελεύθερο ύψος"`
+
+   **Auto-stretch trigger**:
+   - `FloorService.update({ height })` → cascade subscriber: όλα τα walls/columns με `topBinding='storey-ceiling'` σε αυτόν τον όροφο → recompute `topZ = floor.elevation + floor.height`
+   - Optimistic UI update + Firestore batch write
+   - Existing `useFloorsTabState.ts:230-282` cascade logic extends to BIM entities (not just floor elevations)
+
+   **Slab handling**: Slabs έχουν δικό τους semantic (top face = FFL by Hybrid A). Δεν χρειάζονται binding — `storeyId` αρκεί. Sloped slabs (Phase H) θα έχουν sub-element overrides.
+
+   **Beam handling**: Beams `topElevation` = floor.elevation by default. `zOffset` (mm) για drop-from-ceiling cases.
+
+   **Opening (windows/doors)**: Already host-wall-relative (sillHeight από host wall base). No binding needed — implicit through host wall.
+6. **Q6 — Negative storeys (basements);** ✅ **ANSWERED 2026-05-20**: Revit + Full Enterprise — όλα είναι Floor entities με signed number (foundation -3, Υ2 -2, Υ1 -1, Ground 0, 1, 2, ...). New `kind` field για semantic categorization (foundation/basement/ground/standard/roof/mezzanine).
+
+   **Code Investigation Findings (2026-05-20)**:
+   ✅ **Already supported**:
+   - Negative `number` Zod-allowed (`floors.schemas.ts:4,17` — no min() constraint, elevation range -999 to +9999)
+   - Auto-name generation Greek+English fully working (`src/lib/intl-domain.ts:20-35`): 0→"Ισόγειο", -1→"Υπόγειο", -2→"2ο Υπόγειο", 1→"1ος Όροφος"
+   - Auto-elevation `number × 3.0` works for negatives (`useFloorsTabState.ts:99-104`): -1→-3.00m
+   - Cascade-shift logic signed-delta-correct για basements (`useFloorsTabState.ts:230-282`)
+   - i18n keys exist για "Ισόγειο", "Υπόγειο", "Υπόγειο 2" (`el/building-storage.json:99-111`)
+   - UI input accepts negatives (placeholder "π.χ. -1, 0, 1" — `FloorInlineCreateForm.tsx:268-276`)
+   - Client-side contiguity warning (`FloorInlineCreateForm.tsx:216-221`, non-blocking)
+
+   ❌ **Gaps for ADR-369 implementation**:
+   - **`kind` field missing** — cannot distinguish foundation/basement/ground/standard/roof/mezzanine
+   - i18n keys missing: "Θεμέλια" (Foundation), "Δώμα" (Roof), "Μεσοπάτωμα" (Mezzanine)
+   - Server-side contiguity enforcement missing (only client warns)
+   - No "mandatory ground floor" rule
+   - No special handling για roof (no FFL needed) ή mezzanine (partial coverage)
+
+   **ADR-369 Implementation Tasks**:
+   - Add `kind: 'foundation' | 'basement' | 'ground' | 'standard' | 'roof' | 'mezzanine'` to FloorRecord + Zod schema
+   - Auto-infer `kind` from `number` (number<-1 + lowest = foundation; number<0 = basement; number=0 = ground; standard otherwise) με user override
+   - Add i18n keys: floor.kind.foundation="Θεμέλια", floor.kind.roof="Δώμα", floor.kind.mezzanine="Μεσοπάτωμα"
+   - Per-kind defaults:
+     - `foundation`: `finishThickness = null` (raw concrete), no walls above, `height` auto from soil depth
+     - `basement`: full finishThickness, mechanical equipment flag optional
+     - `ground`: standard finishThickness, "patio access" flag optional
+     - `standard`: residential default (`finishThickness: 80mm`)
+     - `roof`: `finishThickness = null` (no FFL), drainage flags
+     - `mezzanine`: partial outline (subset of parent floor footprint)
+   - Auto-template on new Building: Foundation @ lowest + Ground @ 0 + Roof @ top (user can add intermediate)
 7. **Q7 — Sloped slabs / variable thickness;** Στην MVP φάση τα υποστηρίζουμε, ή είναι post-MVP;
 8. **Q8 — IFC export readiness;** Σχεδιάζουμε για future IFC export τώρα (επηρεάζει schema), ή το αφήνουμε για μετά;
 9. **Q9 — Naming convention storeys;** Default ονόματα ("L1", "Ισόγειο", "1ος όροφος") + user override; Auto-renumber όταν προστίθεται basement;

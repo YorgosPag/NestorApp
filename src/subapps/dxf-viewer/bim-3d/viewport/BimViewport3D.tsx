@@ -8,7 +8,9 @@ import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
+import { useSelection3DStore } from '../stores/Selection3DStore';
 import { QuickProperties3DHoverPopover } from '../properties/QuickProperties3DHoverPopover';
+import { BimEntityCardPanel } from '../properties/BimEntityCardPanel';
 import { Floating3DPanel } from '../panels/Floating3DPanel';
 
 const HOVER_DEBOUNCE_MS = 800;
@@ -73,6 +75,7 @@ export function BimViewport3D() {
         debounceTimerRef.current = null;
       }
       useQuickProperties3DStore.getState().clearHover();
+      useSelection3DStore.getState().clearSelection();
       managerRef.current?.dispose();
       managerRef.current = null;
       errorRef.current = null;
@@ -119,6 +122,12 @@ export function BimViewport3D() {
     }, HOVER_DEBOUNCE_MS);
   }, []);
 
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    const hit = managerRef.current?.raycastBimEntities(e.clientX, e.clientY);
+    managerRef.current?.selectBimEntity(hit?.bimId ?? null);
+  }, []);
+
   const handleMouseLeave = useCallback(() => {
     if (debounceTimerRef.current !== null) {
       clearTimeout(debounceTimerRef.current);
@@ -147,6 +156,7 @@ export function BimViewport3D() {
       className="absolute inset-0 z-50 cursor-grab active:cursor-grabbing"
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      onClick={handleClick}
       onMouseDown={(e) => e.stopPropagation()}
       onMouseUp={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.stopPropagation()}
@@ -180,6 +190,9 @@ export function BimViewport3D() {
 
       {/* QuickProperties tooltip (ADR-366 B.2.Q1) — micro-leaf, fixed position */}
       <QuickProperties3DHoverPopover />
+
+      {/* BIM entity card panel (ADR-366 B.2.Q4) — micro-leaf, absolute right-side panel */}
+      <BimEntityCardPanel />
     </div>
   );
 }

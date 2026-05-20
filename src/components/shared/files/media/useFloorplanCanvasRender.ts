@@ -19,6 +19,8 @@ import type { DxfDrawingMode } from '@/components/shared/files/media/floorplan-g
 import { renderDxfToCanvas } from '@/components/shared/files/media/floorplan-dxf-renderer';
 import { drawOverlayPolygons } from '@/components/shared/files/media/floorplan-overlay-system';
 import { renderPdfWithOverlays } from '@/components/shared/files/media/floorplan-pdf-overlay-renderer';
+import { renderBimEntitiesToCanvas } from '@/components/shared/files/media/bim-readonly-render';
+import type { FloorplanBimSnapshot } from '@/components/shared/files/media/useFloorplanBimEntities';
 import type { OverlayLabel } from '@/components/shared/files/media/overlay-polygon-renderer';
 
 interface SceneBounds {
@@ -47,13 +49,15 @@ export interface FloorplanCanvasRenderParams {
   getOverlayLabel?: (overlay: FloorOverlayItem) => OverlayLabel | null | undefined;
   /** ms delay only on first render after `enabled` flips true (e.g., modal layout) */
   firstRenderDelay?: number;
+  /** ADR-370 — read-only BIM entities for the current floorplan; rendered above DXF, below overlays. */
+  bimEntities?: FloorplanBimSnapshot | null;
 }
 
 export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): void {
   const {
     canvasRef, enabled, isDxf, isRaster, loadedScene, rasterImage, rasterBounds,
     currentBounds, zoom, panOffset, drawingMode, overlays, highlightedUnitId,
-    getOverlayLabel, firstRenderDelay,
+    getOverlayLabel, firstRenderDelay, bimEntities,
   } = params;
 
   const readyRef = useRef(false);
@@ -69,6 +73,9 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
       if (!canvas) return;
       if (isDxf && loadedScene) {
         renderDxfToCanvas(canvas, loadedScene, zoom, panOffset, drawingMode);
+        if (bimEntities && currentBounds && bimEntities.hasAny) {
+          renderBimEntitiesToCanvas(canvas, bimEntities, currentBounds, zoom, panOffset);
+        }
         if (overlays?.length && currentBounds) {
           drawOverlayPolygons(
             canvas, overlays, currentBounds, zoom, panOffset, highlightedUnitId, getOverlayLabel,
@@ -93,6 +100,6 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
   }, [
     canvasRef, enabled, isDxf, loadedScene, isRaster, rasterImage, rasterBounds,
     currentBounds, zoom, panOffset, drawingMode, overlays, highlightedUnitId,
-    getOverlayLabel, firstRenderDelay,
+    getOverlayLabel, firstRenderDelay, bimEntities,
   ]);
 }

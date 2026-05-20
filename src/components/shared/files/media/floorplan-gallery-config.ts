@@ -59,6 +59,14 @@ export interface FloorplanGalleryProps {
    * files skip this UI (auto-detected via `$INSUNITS`).
    */
   backgroundId?: string | null;
+  /**
+   * ADR-370 — `FileRecord.id` used as `floorplanId` foreign key for read-only
+   * BIM entity rendering. When supplied AND the current file is a DXF scene,
+   * the gallery subscribes to walls/slabs/beams/columns/openings/slab-openings
+   * for that floorplan and draws them above the DXF geometry. Synthetic
+   * fallback ids (`floor_floorplan_*`) are detected internally and skipped.
+   */
+  floorplanId?: string | null;
 }
 
 /**

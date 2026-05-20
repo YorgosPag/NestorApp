@@ -44,6 +44,24 @@
     "loadingLabel": "Φόρτωση 3D σκηνής",
     "webglError": "Δεν υποστηρίζεται WebGL σε αυτή τη συσκευή"
   },
+  "entityCard": {
+    "closeAria": "Κλείσιμο πλαισίου",
+    "tabs": {
+      "geometry": "Γεωμετρία",
+      "audit": "Ιστορικό"
+    }
+  },
+  "geometry": {
+    "thickness": "Πάχος",
+    "height": "Ύψος",
+    "width": "Πλάτος",
+    "depth": "Βάθος",
+    "length": "Μήκος",
+    "area": "Εμβαδόν",
+    "volume": "Όγκος",
+    "category": "Κατηγορία",
+    "kind": "Τύπος"
+  },
   "floatingPanel": {
     "tabs": {
       "floors": "Όροφοι",
@@ -62,6 +80,49 @@
       "hide": "Κρυφό",
       "activeLevel": "Ενεργός",
       "noLevels": "Χωρίς ορόφους"
+    }
+  },
+  "performance": {
+    "toggleLabel": "Εμφάνιση πίνακα απόδοσης",
+    "mode": {
+      "raster": "Γρήγορη",
+      "preview": "Προεπισκόπηση",
+      "final": "Τελική"
+    },
+    "metric": {
+      "fps": "Καρέ/δευτ.",
+      "frameTime": "Χρόνος καρέ",
+      "triangles": "Τρίγωνα",
+      "vertices": "Κορυφές",
+      "drawCalls": "Κλήσεις σχεδίασης",
+      "objectsVisible": "Αντικείμενα",
+      "gpuMemory": "Μνήμη γραφικών",
+      "cpuMemory": "Μνήμη επεξεργαστή",
+      "samplesPerSec": "Δείγματα/δευτ."
+    },
+    "expand": "Ανάπτυξη",
+    "collapse": "Σύμπτυξη",
+    "menu": {
+      "aria": "Ενέργειες",
+      "copyStats": "Αντιγραφή στατιστικών",
+      "download": "Λήψη αρχείων",
+      "sendToSupport": "Αναφορά σε υποστήριξη"
+    },
+    "dialog": {
+      "title": "Αναφορά διαγνωστικών",
+      "description": "Στείλε στιγμιότυπο στατιστικών στην υποστήριξη",
+      "commentLabel": "Σχόλιο (προαιρετικό)",
+      "commentPlaceholder": "Περιγραφή προβλήματος, μέγιστα 280 χαρακτήρες",
+      "submit": "Αποστολή",
+      "cancel": "Άκυρο",
+      "submitting": "Αποστολή...",
+      "successToast": "Διαγνωστικά στάλθηκαν",
+      "errorToast": "Αποτυχία αποστολής"
+    },
+    "copyStatsToast": "Στατιστικά αντιγράφηκαν",
+    "notFound": "—",
+    "notification": {
+      "diagnosticReceived": "Νέα αναφορά διαγνωστικών απόδοσης"
     }
   }
 }

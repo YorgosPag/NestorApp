@@ -18,6 +18,8 @@ import { detectSnapCandidate } from '../viewport/view-snap-detector';
 import { BimSceneLayer } from './BimSceneLayer';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 import { raycastBimGroup, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
+import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
+import { useSelection3DStore } from '../stores/Selection3DStore';
 import { applyFloorVisibility } from '../utils/applyFloorVisibility';
 import type { FloorVisMode } from '../utils/floor-visibility-state';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
@@ -34,6 +36,7 @@ export class ThreeJsSceneManager {
   readonly viewport: ViewportCamera;
   readonly bimLayer: BimSceneLayer;
   readonly dxfConverter: DxfToThreeConverter;
+  readonly selectionHighlighter: BimSelectionHighlighter;
   private readonly viewCube: ViewCubeEngine;
   private readonly poi: ReturnType<typeof createPoi>;
 
@@ -47,6 +50,7 @@ export class ThreeJsSceneManager {
     this.renderer = this.initRenderer(container);
     this.scene = this.initScene();
     this.bimLayer = new BimSceneLayer(this.scene);
+    this.selectionHighlighter = new BimSelectionHighlighter(this.bimLayer.group);
     this.dxfConverter = new DxfToThreeConverter(this.scene);
     this.viewport = this.initViewportCamera(container);
     this.poi = createPoi();
@@ -158,7 +162,13 @@ export class ThreeJsSceneManager {
   }
 
   syncBimEntities(entities: Bim3DEntities, floorElevationMm = 0, activeLevelId?: string): void {
-    if (!this.disposed) this.bimLayer.sync(entities, floorElevationMm, activeLevelId);
+    if (this.disposed) return;
+    // Clear highlight before rebuild — old mesh refs die in BimSceneLayer.clearGroup().
+    const selectedId = useSelection3DStore.getState().selectedBimId;
+    this.selectionHighlighter.onClear();
+    this.bimLayer.sync(entities, floorElevationMm, activeLevelId);
+    // Re-apply to the fresh meshes if selection is still active.
+    if (selectedId) this.selectionHighlighter.onSelect(selectedId);
   }
 
   applyFloorVisibility(modes: ReadonlyMap<string, FloorVisMode>): void {
@@ -175,6 +185,24 @@ export class ThreeJsSceneManager {
         this.initialCameraFitDone = true;
       }
     }
+  }
+
+  selectBimEntity(bimId: string | null): void {
+    if (this.disposed) return;
+    if (bimId === null) {
+      this.selectionHighlighter.onClear();
+      useSelection3DStore.getState().clearSelection();
+      return;
+    }
+    // Resolve bimType from the live group before highlighting.
+    let bimType = '';
+    this.bimLayer.group.traverse((obj) => {
+      if (bimType) return;
+      const id = obj.userData['bimId'] as string | undefined;
+      if (id === bimId) bimType = (obj.userData['bimType'] as string | undefined) ?? '';
+    });
+    this.selectionHighlighter.onSelect(bimId);
+    useSelection3DStore.getState().selectEntity(bimId, bimType);
   }
 
   raycastBimEntities(clientX: number, clientY: number): RaycastHit | null {
@@ -201,6 +229,7 @@ export class ThreeJsSceneManager {
       cancelAnimationFrame(this.rafHandle);
       this.rafHandle = null;
     }
+    this.selectionHighlighter.dispose();
     this.bimLayer.dispose();
     this.dxfConverter.dispose();
     this.viewport.dispose();
