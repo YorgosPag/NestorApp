@@ -96,7 +96,12 @@ function buildWallShape(outer: readonly Point3D[], inner: readonly Point3D[]): T
 
 // ── Public converters ─────────────────────────────────────────────────────────
 
-export function wallToMesh(wall: WallEntity, floorElevationMm = 0, levelId?: string): THREE.Mesh | null {
+export function wallToMesh(
+  wall: WallEntity,
+  floorElevationMm = 0,
+  levelId?: string,
+  buildingBaseElevationM = 0,
+): THREE.Mesh | null {
   const shape = buildWallShape(
     wall.geometry.outerEdge.points,
     wall.geometry.innerEdge.points,
@@ -107,11 +112,16 @@ export function wallToMesh(wall: WallEntity, floorElevationMm = 0, levelId?: str
   const coreLayer = wall.params.dna?.layers.find((l) => l.side === 'core');
   const matId = coreLayer?.materialId ?? CATEGORY_MAT_ID[wall.params.category] ?? 'mat-concrete';
   const mesh = new THREE.Mesh(geo, getMaterial3D(matId));
-  mesh.position.y = floorElevationMm * MM_TO_M;
+  mesh.position.y = floorElevationMm * MM_TO_M + buildingBaseElevationM;
   return tagMesh(mesh, wall.id, 'wall', matId, levelId);
 }
 
-export function columnToMesh(column: ColumnEntity, floorElevationMm = 0, levelId?: string): THREE.Mesh | null {
+export function columnToMesh(
+  column: ColumnEntity,
+  floorElevationMm = 0,
+  levelId?: string,
+  buildingBaseElevationM = 0,
+): THREE.Mesh | null {
   const verts = column.geometry.footprint.vertices;
   if (verts.length < 3) return null;
 
@@ -121,11 +131,15 @@ export function columnToMesh(column: ColumnEntity, floorElevationMm = 0, levelId
   const geo = extrudeAndRotate(shape, column.params.height * MM_TO_M);
   const matId = column.params.material ?? 'elem-column';
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('column'));
-  mesh.position.y = floorElevationMm * MM_TO_M;
+  mesh.position.y = floorElevationMm * MM_TO_M + buildingBaseElevationM;
   return tagMesh(mesh, column.id, 'column', matId, levelId);
 }
 
-export function beamToMesh(beam: BeamEntity, levelId?: string): THREE.Mesh | null {
+export function beamToMesh(
+  beam: BeamEntity,
+  levelId?: string,
+  buildingBaseElevationM = 0,
+): THREE.Mesh | null {
   const verts = beam.geometry.outline.vertices;
   if (verts.length < 3) return null;
 
@@ -139,11 +153,15 @@ export function beamToMesh(beam: BeamEntity, levelId?: string): THREE.Mesh | nul
   // ADR-369 §2.2: topElevation = top of beam; extrusion goes from y=0 → y=depthM.
   // beam hangs DOWN from (topElevation + zOffset) by depth.
   const beamTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
-  mesh.position.y = beamTopMm * MM_TO_M - beamDepthM;
+  mesh.position.y = beamTopMm * MM_TO_M - beamDepthM + buildingBaseElevationM;
   return tagMesh(mesh, beam.id, 'beam', matId, levelId);
 }
 
-export function slabToMesh(slab: SlabEntity, levelId?: string): THREE.Mesh | null {
+export function slabToMesh(
+  slab: SlabEntity,
+  levelId?: string,
+  buildingBaseElevationM = 0,
+): THREE.Mesh | null {
   const verts = slab.params.outline.vertices;
   if (verts.length < 3) return null;
 
@@ -157,6 +175,6 @@ export function slabToMesh(slab: SlabEntity, levelId?: string): THREE.Mesh | nul
   // ADR-369 §2.1: levelElevation = top face (FFL). Slab hangs DOWN by thickness.
   // floor:0 → -0.20..0m, ceiling/roof:3000 → 2.80..3.00m, foundation:0 → -0.50..0m.
   const slabTopMm = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
-  mesh.position.y = (slabTopMm - slab.params.thickness) * MM_TO_M;
+  mesh.position.y = (slabTopMm - slab.params.thickness) * MM_TO_M + buildingBaseElevationM;
   return tagMesh(mesh, slab.id, 'slab', matId, levelId);
 }

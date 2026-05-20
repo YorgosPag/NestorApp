@@ -212,6 +212,7 @@ export function createViewportCamera(
     const target = controls.target.clone();
     const dist = activeCamera.position.distanceTo(target);
     _snapDir.copy(dir).normalize();
+    if (_snapDir.lengthSq() < 0.001) return;
     const toPos = target.clone().addScaledVector(_snapDir, dist > 0 ? dist : DEFAULT_CAMERA_DISTANCE);
     if (currentMode !== 'perspective') {
       perspCamera.position.copy(activeCamera.position);
@@ -222,12 +223,13 @@ export function createViewportCamera(
       controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
       currentMode = 'perspective';
     }
+    onInteractionStart();
     animation.start(
       { position: perspCamera.position.clone(), target: target.clone(), zoom: getZoom() },
       { position: toPos, target, zoom: getZoom() },
       PROJECTION_SWITCH_DURATION_MS,
       (pos, tgt) => { perspCamera.position.copy(pos); controls.target.copy(tgt); perspCamera.lookAt(tgt); onRenderNeeded(); },
-      () => { controls.enabled = true; },
+      () => { controls.enabled = true; onInteractionEnd(); },
     );
     controls.enabled = false;
     onRenderNeeded();
@@ -245,12 +247,13 @@ export function createViewportCamera(
       controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
       currentMode = 'perspective';
     }
+    onInteractionStart();
     animation.start(
       { position: perspCamera.position.clone(), target: target.clone(), zoom: getZoom() },
       { position: initialPosition.clone(), target: initialTarget.clone(), zoom: 1.0 },
       FRAME_SCENE_DURATION_MS,
       (pos, tgt) => { perspCamera.position.copy(pos); controls.target.copy(tgt); perspCamera.lookAt(tgt); onRenderNeeded(); },
-      () => { controls.enabled = true; },
+      () => { controls.enabled = true; onInteractionEnd(); },
     );
     controls.enabled = false;
     onRenderNeeded();

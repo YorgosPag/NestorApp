@@ -104,6 +104,23 @@
       "quality": "Quality",
       "sections": "Section"
     },
+    "buildings": {
+      "label": "Building",
+      "allBuildings": "All buildings",
+      "selectAria": "Select building",
+      "visibilityLabel": "Building visibility",
+      "show": "Show",
+      "ghost": "Ghost",
+      "hide": "Hide",
+      "focus": "Focus",
+      "focusAria": "Focus on building — show selected, ghost others",
+      "presets": {
+        "all": "All",
+        "active": "Focus",
+        "none": "None",
+        "isolate": "Isolate"
+      }
+    },
     "floors": {
       "presets": {
         "all": "All",

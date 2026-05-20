@@ -30,11 +30,23 @@ export type StoreyRef = {
   readonly elevation?: number;
 };
 
-/** Minimal building shape needed for reverse-lookup. */
+/**
+ * Storey shape extended with building FK — used by the 3D viewer to resolve
+ * building.baseElevation via the floor-chain (entity → floor → building).
+ * ADR-369 §9.2 Q2.1.
+ */
+export type FloorRef = StoreyRef & {
+  /** FK → Building (ADR-369 Q2 multi-building). */
+  readonly buildingId?: string;
+};
+
+/** Minimal building shape needed for reverse-lookup and UI display. */
 export type BuildingRef = {
   readonly id: string;
   /** METRES — building base elevation above site datum (ADR-369 §9.2). */
   readonly baseElevation?: number;
+  /** Display name for building selector UI (ADR-369 Q2.2). */
+  readonly name?: string;
 };
 
 /**
@@ -79,19 +91,42 @@ export function getEntityAbsoluteElevation(
 }
 
 /**
- * Resolves the parent Building record for a BIM entity.
+ * Resolves the parent Building record for a BIM entity via direct `buildingId` FK.
  *
- * Used by the 3D viewer multi-building scene (ADR-369 §9.2 / Q2) to
- * apply `building.baseElevation` offset and per-building visibility.
- *
- * @param entity   - BIM entity with `buildingId` FK.
+ * @param entity    - BIM entity with `buildingId` FK.
  * @param buildings - Available building records to search.
  * @returns Matching BuildingRef, or `undefined` when not found / FK absent.
  */
 export function getEntityBuilding<B extends BuildingRef>(
   entity: EntityWithStoreyParams,
-  buildings: B[],
+  buildings: readonly B[],
 ): B | undefined {
   if (entity.buildingId === undefined) return undefined;
   return buildings.find(b => b.id === entity.buildingId);
+}
+
+/**
+ * Resolves the parent Building via two-step lookup (ADR-369 §9.2 Q2.1):
+ *   1. Direct: `entity.buildingId` → fast path
+ *   2. Floor-chain: `entity.floorId → floor.buildingId → building`
+ *
+ * Used by the 3D viewer to apply `building.baseElevation` Y-offset to every mesh.
+ *
+ * @param entity    - BIM entity with optional buildingId / floorId FKs.
+ * @param floors    - Available floor records carrying buildingId.
+ * @param buildings - Available building records.
+ * @returns Matching building, or `undefined` when chain cannot be resolved.
+ */
+export function resolveEntityBuilding<B extends BuildingRef>(
+  entity: EntityWithStoreyParams,
+  floors: readonly FloorRef[],
+  buildings: readonly B[],
+): B | undefined {
+  const direct = getEntityBuilding(entity, buildings);
+  if (direct !== undefined) return direct;
+  const floorId = entity.params.storeyId ?? entity.floorId;
+  if (floorId === undefined) return undefined;
+  const floor = floors.find(f => f.id === floorId);
+  if (floor?.buildingId === undefined) return undefined;
+  return buildings.find(b => b.id === floor.buildingId);
 }

@@ -32,12 +32,16 @@ import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighli
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { applyFloorVisibility } from '../utils/applyFloorVisibility';
 import type { FloorVisMode } from '../utils/floor-visibility-state';
+import { applyBuildingVisibility } from '../utils/applyBuildingVisibility';
+import type { BuildingVisMode } from '../utils/building-visibility-state';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
+import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
 import type { FinalRenderConfig } from '../stores/ViewMode3DStore';
 import { writeRenderOutput } from '../render/render-output-writer';
+import { useCameraTargetStore } from '../stores/CameraTargetStore';
 
 const INITIAL_CAMERA_POSITION = new THREE.Vector3(15, 10, 15);
 const INITIAL_CAMERA_TARGET = new THREE.Vector3(0, 0, 0);
@@ -222,6 +226,7 @@ export class ThreeJsSceneManager {
       this.lastFrameTime = now;
 
       this.viewport.update();
+      useCameraTargetStore.getState().syncFromCamera(this.viewport.camera, this.viewport.target);
 
       if (this.isInteracting) {
         this.idleDetector.notifyActive();
@@ -247,7 +252,18 @@ export class ThreeJsSceneManager {
       }
 
       if (this.pathTracerRenderer.isActive) {
-        this.pathTracerRenderer.renderSample();
+        // Cancel during camera animation — stale BVH state causes WebGL errors.
+        if (this.viewport.isAnimating) {
+          this.pathTracerRenderer.cancel();
+          useViewMode3DStore.getState().enterRasterMode();
+        } else {
+          try {
+            this.pathTracerRenderer.renderSample();
+          } catch {
+            this.pathTracerRenderer.cancel();
+            useViewMode3DStore.getState().enterRasterMode();
+          }
+        }
       } else if (this.sectionController.isStencilActive()) {
         // ADR-366 §A.3 Phase 7.0a — Direct render + stencil caps.
         // Bypass EffectComposer/SSAO (default RT lacks stencil buffer).
@@ -261,12 +277,20 @@ export class ThreeJsSceneManager {
     this.rafHandle = requestAnimationFrame(animate);
   }
 
-  syncBimEntities(entities: Bim3DEntities, floorElevationMm = 0, activeLevelId?: string): void {
+  syncBimEntities(
+    entities: Bim3DEntities,
+    floorElevationMm = 0,
+    activeLevelId?: string,
+    floors: readonly FloorRef[] = [],
+    buildings: readonly BuildingRef[] = [],
+    activeBuildingId: string | null = null,
+    buildingVisModes: ReadonlyMap<string, BuildingVisMode> = new Map(),
+  ): void {
     if (this.disposed) return;
-    // Clear highlight before rebuild — old mesh refs die in BimSceneLayer.clearGroup().
     const selectedId = useSelection3DStore.getState().selectedBimId;
     this.selectionHighlighter.onClear();
-    this.bimLayer.sync(entities, floorElevationMm, activeLevelId);
+    this.bimLayer.sync(entities, floorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes);
+    if (buildingVisModes.size > 0) applyBuildingVisibility(this.bimLayer.group, buildingVisModes);
     if (selectedId) this.selectionHighlighter.onSelect(selectedId);
     this.pathTracerRenderer.invalidateScene();
     this.sectionController.ensureInit();
@@ -275,6 +299,10 @@ export class ThreeJsSceneManager {
 
   applyFloorVisibility(modes: ReadonlyMap<string, FloorVisMode>): void {
     if (!this.disposed) applyFloorVisibility(this.bimLayer.group, modes);
+  }
+
+  applyBuildingVisibility(modes: ReadonlyMap<string, BuildingVisMode>): void {
+    if (!this.disposed) applyBuildingVisibility(this.bimLayer.group, modes);
   }
 
   syncDxfOverlay(dxfScene: DxfScene | null): void {

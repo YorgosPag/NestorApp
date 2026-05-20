@@ -231,14 +231,18 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
   function onPointerUp(e: PointerEvent): void {
     if (e.button !== 0 || !isPointerDown) return;
     isPointerDown = false;
+    e.stopPropagation();
     canvas.releasePointerCapture(e.pointerId);
     if (isDragging) { isDragging = false; canvas.style.cursor = hoveredMesh ? 'pointer' : 'grab'; return; }
     handleClick(e);
   }
 
+  function onCanvasClick(e: MouseEvent): void { e.stopPropagation(); }
+
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointerup', onPointerUp);
+  canvas.addEventListener('click', onCanvasClick);
   canvas.addEventListener('mouseenter', () => { cubeHovered = true; });
   canvas.addEventListener('mouseleave', () => { cubeHovered = false; });
 
@@ -270,6 +274,7 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
     canvas.removeEventListener('pointerdown', onPointerDown);
     canvas.removeEventListener('pointermove', onPointerMove);
     canvas.removeEventListener('pointerup', onPointerUp);
+    canvas.removeEventListener('click', onCanvasClick);
     cubeMesh.geometry.dispose();
     for (const mat of cubeMaterials) { mat.map?.dispose(); mat.dispose(); }
     for (const t of hitTargets) t.geometry.dispose();

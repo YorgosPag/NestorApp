@@ -10,6 +10,9 @@
 import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh } from '../converters/BimToThreeConverter';
+import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
+import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
+import type { BuildingVisMode } from '../utils/building-visibility-state';
 
 export class BimSceneLayer {
   readonly group: THREE.Group;
@@ -20,24 +23,57 @@ export class BimSceneLayer {
     scene.add(this.group);
   }
 
-  sync(entities: Bim3DEntities, floorElevationMm = 0, activeLevelId?: string): void {
+  sync(
+    entities: Bim3DEntities,
+    floorElevationMm = 0,
+    activeLevelId?: string,
+    floors: readonly FloorRef[] = [],
+    buildings: readonly BuildingRef[] = [],
+    activeBuildingId: string | null = null,
+    buildingVisModes: ReadonlyMap<string, BuildingVisMode> = new Map(),
+  ): void {
     this.clearGroup();
+    const useNewSystem = buildingVisModes.size > 0;
     for (const wall of entities.walls) {
-      const mesh = wallToMesh(wall, floorElevationMm, activeLevelId);
-      if (mesh) this.group.add(mesh);
+      const resolved = resolveEntityBuilding(wall, floors, buildings);
+      const buildingId = resolved?.id ?? '';
+      if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) continue;
+      const mesh = wallToMesh(wall, floorElevationMm, activeLevelId, resolved?.baseElevation ?? 0);
+      if (mesh) { mesh.userData['buildingId'] = buildingId; this.group.add(mesh); }
     }
     for (const column of entities.columns) {
-      const mesh = columnToMesh(column, floorElevationMm, activeLevelId);
-      if (mesh) this.group.add(mesh);
+      const resolved = resolveEntityBuilding(column, floors, buildings);
+      const buildingId = resolved?.id ?? '';
+      if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) continue;
+      const mesh = columnToMesh(column, floorElevationMm, activeLevelId, resolved?.baseElevation ?? 0);
+      if (mesh) { mesh.userData['buildingId'] = buildingId; this.group.add(mesh); }
     }
     for (const beam of entities.beams) {
-      const mesh = beamToMesh(beam, activeLevelId);
-      if (mesh) this.group.add(mesh);
+      const resolved = resolveEntityBuilding(beam, floors, buildings);
+      const buildingId = resolved?.id ?? '';
+      if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) continue;
+      const mesh = beamToMesh(beam, activeLevelId, resolved?.baseElevation ?? 0);
+      if (mesh) { mesh.userData['buildingId'] = buildingId; this.group.add(mesh); }
     }
     for (const slab of entities.slabs) {
-      const mesh = slabToMesh(slab, activeLevelId);
-      if (mesh) this.group.add(mesh);
+      const resolved = resolveEntityBuilding(slab, floors, buildings);
+      const buildingId = resolved?.id ?? '';
+      if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) continue;
+      const mesh = slabToMesh(slab, activeLevelId, resolved?.baseElevation ?? 0);
+      if (mesh) { mesh.userData['buildingId'] = buildingId; this.group.add(mesh); }
     }
+  }
+
+  /** Returns true if a mesh for buildingId should be added to the scene. */
+  private shouldRender(
+    buildingId: string,
+    useNewSystem: boolean,
+    modes: ReadonlyMap<string, BuildingVisMode>,
+    activeBuildingId: string | null,
+  ): boolean {
+    if (useNewSystem) return (modes.get(buildingId) ?? 'show') !== 'hide';
+    if (activeBuildingId !== null) return buildingId === activeBuildingId;
+    return true;
   }
 
   private clearGroup(): void {

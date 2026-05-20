@@ -251,20 +251,268 @@ src/subapps/dxf-viewer/bim-3d/
     └── BimToThreeConverter.test.ts   # Phase 2 BIM tests
 ```
 
-### 4.5 Phases
+### 4.5 Phases — Master Plan (status updated 2026-05-21)
 
-| Phase | Τίτλος | Εκτίμηση | Εξαρτήσεις |
-|---|---|---|---|
-| **Phase 0** | Infrastructure: Three.js setup, SceneManager, ViewMode3DStore, mode toggle UI (ribbon button), coordinate system, resize handler | ~4h | — |
-| **Phase 1** | DXF → 3D: LINE→LineSegments, ARC→EllipseCurve, LWPOLYLINE/POLYLINE→BufferGeometry, HATCH→ShapeGeometry, INSERT expansion, TEXT→sprite | ~8h | Phase 0 |
-| **Phase 2** | BIM → 3D: Wall/Column/Beam/Slab→ExtrudeGeometry, Opening as boolean cutout (CSGEvaluator or manual), multi-floor stacking via ADR-326 floor elevation | ~10h | Phase 0, ADR-363 |
-| **Phase 3** | Materials & Lighting: MeshStandardMaterial per ADR-363 material catalog, AmbientLight + DirectionalLight + optional PointLight, shadow mapping | ~6h | Phase 2 |
-| **Phase 4** | Camera & ViewCube: port από GenArc, tumble, perspective/ortho toggle, canonical view snap, frame-scene, home button | ~6h | Phase 0 |
-| **Phase 5** | WebGPU Path Tracer: three-gpu-pathtracer integration, progressive sampling, denoising, environment map (HDRI) | ~12h | Phase 3+4 |
-| **Phase 6** | Export: PNG (rasterized + path-traced), EXR (HDR), print resolution | ~4h | Phase 5 |
-| **Phase 7** | Polish: depth-of-field, bloom, multi-floor clip planes, annotation overlays in 3D, section cuts | ~8h | Phase 6 |
+| Phase | Τίτλος | Εκτίμηση | Εξαρτήσεις | Status |
+|---|---|---|---|---|
+| **Phase 0** | Infrastructure: Three.js setup, SceneManager, ViewMode3DStore, mode toggle UI (ribbon button), coordinate system, resize handler | ~4h | — | ✅ **DONE** (commit `6cd11104`, 2026-05-17) |
+| **Phase 1** | DXF → 3D: LINE→LineSegments, ARC→EllipseCurve, LWPOLYLINE/POLYLINE→BufferGeometry, HATCH→ShapeGeometry, INSERT expansion, TEXT→sprite | ~8h | Phase 0 | ✅ **DONE** (commit `80b87f2c`, 2026-05-18) |
+| **Phase 2** | BIM → 3D: Wall/Column/Beam/Slab→ExtrudeGeometry, Opening as boolean cutout, multi-floor stacking via ADR-326 floor elevation | ~10h | Phase 0, ADR-363 | ✅ **DONE** (commits `a2602f6d` + `364b0bfb`, 2026-05-18) |
+| **Phase 3** | Materials & Lighting baseline: MeshStandardMaterial per ADR-363 material catalog, AmbientLight + DirectionalLight, shadow mapping | ~6h | Phase 2 | ✅ **DONE** (commits `c6cf1798` + `4ab564b5`, 2026-05-18/19) |
+| **Phase 4** | Camera & ViewCube ENRICHMENT (tumble, 12-direction canonical snap, animated transitions, A.4/A.5/A.6/A.7 keyboard + accessibility impacts) — **see breakdown §4.5.1** | ~23-25h (από αρχικά ~6h base + ~17-19h από Appendix A impacts) | Phase 0 | 🟡 **IN PROGRESS** — 4.0 ✅ DONE (2026-05-21) · 4.1–4.6 ❌ pending |
+| **Phase 5** | WebGPU Path Tracer (5A/5B/5C): three-gpu-pathtracer integration, progressive sampling, denoising, lighting refinement | ~12h | Phase 3 (Phase 4 parallel) | ✅ **DONE** (commits `f8b353b3` + `99996690`, 2026-05-19) |
+| **Phase 6** | Path Tracer Render dialog + Export: PNG (rasterized + path-traced), EXR (HDR), print resolution | ~4h | Phase 5 | ✅ **DONE** (commit `0ad30f7d`, 2026-05-19) |
+| **Phase 7** | Section Cuts + Polish (7.0a stencil wiring, 7.0b 1-pass stencil, 7.0B 2D live section panel, 7.0C selection cap emphasis, 7.1 hatched per-material caps, 7.2 HDRI) | ~8h | Phase 6 | ✅ **DONE** (commits `8480fbf1` + `0cb26914` + `97373bf6` + `1067e433` + `2fd161ab` + `0ad30f7d`, 2026-05-19/21) |
+| **Phase 8** | ARIA Compliance (από A.7.Q2 DEFERRED → ENQUEUED post-Phase 4) — **see breakdown §4.5.2** | ~4h | Phase 4.5 | ⏸️ **PENDING** — split σε 2 υποφάσεις (8.0 + 8.1) |
 
-**Συνολική εκτίμηση: ~58h** (10-12 session phases).
+> **Σημείωση εξάρτησης**: Phase 5 + 6 + 7 ολοκληρώθηκαν παράλληλα με Phase 4 pending — το lighting/path-tracer/section-cuts pipeline δεν εξαρτάται κρίσιμα από enriched camera (basic Phase 0 ViewCube + free orbit ήταν αρκετά για Phase 5-7 development). Phase 4 enrichment παραμένει pending για production UX.
+
+**Συνολική εκτίμηση (revised 2026-05-21)**:
+- ✅ Done (Phases 0-3, 5-7): ~52h
+- ❌ Pending (Phase 4 + Phase 8): **~27-29h**
+- **Grand total: ~79-81h** (από αρχικά ~58h, revision drivers: SPEC-3D-004A ports + A.4-A.7 accessibility impacts + section cuts depth)
+
+---
+
+#### 4.5.1 Phase 4 Sub-Phase Breakdown — Camera & ViewCube ENRICHMENT (~23-25h)
+
+> **Σκοπός**: Πλήρης υλοποίηση όλων των αποφάσεων Appendix A (Topics A.4-A.7) για production-grade 3D camera/viewport UX. Σπάει σε **7 ατομικές υποφάσεις** (4.0 → 4.6) με ξεκάθαρες εξαρτήσεις, ώστε κάθε session να αντιμετωπίζει 1 υπόφαση (≤4h, ≤70% context).
+
+##### Phase 4.0 — Camera Tumble + Orbit Core (~3-4h) ✅ DONE (2026-05-21)
+
+**Scope**:
+- Port GenArc `viewport-camera.ts` enrichment: free tumble (LMB drag) με yaw/pitch quaternion math
+- Pan modifier (MMB drag ή Shift+LMB) με screen-space delta projection
+- Zoom (wheel/pinch) με anchor-point preservation (cursor-relative)
+- Camera target store (`bim-3d/stores/CameraTargetStore.ts`) Zustand SSoT για `{position, target, fov}`
+- Constraints: pitch clamp (-89°/+89°), zoom min/max bounds, target distance limits
+
+**Implementation note (N.0.1 code > ADR)**:
+`camera-controls.ts` was NOT created as a separate file — the planned scope was already fully implemented in `viewport-camera.ts` + `tumble-rotation.ts` during Phase 1 (PORT_AS_IS from GenArc, commit `2fd161ab` area). Phase 4.0 adds only what was missing: `CameraTargetStore.ts` (Zustand SSoT) + RAF wiring + unit tests.
+
+**Files (NEW)**:
+- ~~`bim-3d/viewport/camera-controls.ts`~~ — merged into `viewport-camera.ts` (Phase 1 PORT_AS_IS)
+- `bim-3d/stores/CameraTargetStore.ts` (63 LOC) — Zustand SSoT με dirty-check; `syncFromCamera` no-op when camera static
+- `bim-3d/__tests__/tumble-rotation.test.ts` — 4 unit tests (yaw, pitch, distance preservation, pole clamp)
+- `bim-3d/__tests__/CameraTargetStore.test.ts` — 3 unit tests (sync, dirty-check, ortho fov=0)
+
+**Files (MODIFY)**:
+- `bim-3d/scene/ThreeJsSceneManager.ts` — added `syncFromCamera` call in RAF loop (post `viewport.update()`)
+- ~~`bim-3d/viewport/viewport-camera.ts`~~ — constraints already integrated in Phase 1
+
+**Tests**: 7 unit (4 tumble + 3 store) — all pass ✅
+
+**Dependencies**: Phase 0 (existing ThreeJsSceneManager skeleton)
+
+**Acceptance**: AC-5 partial (camera tumble + zoom + pan functional σε real 3D scene) ✅
+
+---
+
+##### Phase 4.1 — Canonical Views + 12-Direction Snap (~3-4h)
+
+**Scope**:
+- Νέο SSoT module 12 canonical views: 6 face (Top/Bottom/Front/Back/Left/Right) + 6 isometric (NE/NW/SE/SW + UE/UW upper-edges)
+- `CanonicalViewService.snapTo(viewId, opts)` → smooth dispatch
+- Frame-scene utility (`viewport-framing.ts` enrichment): υπολογισμός camera position από scene bounding box + FOV margin
+- Home button: AutoCAD-style snap σε default isometric NE view (A.5 decision)
+- ViewCube face/edge/corner click → dispatcher στο `CanonicalViewService`
+
+**Files (NEW)**:
+- `bim-3d/viewport/canonical-views.ts` (~180 LOC, 12 entries SSoT με positions + quaternions)
+- `bim-3d/viewport/CanonicalViewService.ts` (~120 LOC)
+
+**Files (MODIFY)**:
+- `bim-3d/viewport/view-snap-detector.ts` — extend για 12-direction targets
+- `bim-3d/viewport/viewport-framing.ts` — frame-scene math
+- `bim-3d/viewport/view-cube/view-cube.ts` — click dispatch
+- i18n: bim-3d.json (12 view labels el + en)
+
+**Tests**: 8 unit (12 view positions, frame-scene bbox math, home snap, ViewCube click → view mapping)
+
+**Dependencies**: Phase 4.0
+
+**Acceptance**: AC-5 ViewCube navigation functional + frame-scene + home
+
+---
+
+##### Phase 4.2 — Animated Transitions (~2-3h)
+
+**Scope**:
+- Port GenArc `viewport-animation.ts` (~709 LOC PORT_AS_IS per SPEC-3D-004A)
+- 500ms cubic ease-in-out (A.4 decision, locked)
+- Ortho ↔ perspective smooth FOV interpolation (όχι abrupt switch)
+- Interruptible animations (νέο request cancels current με fade-blend)
+- Animation manager (`bim-3d/viewport/animation-manager.ts`) με **single RAF loop** (ADR-040 compliant)
+
+**Files (NEW)**:
+- `bim-3d/viewport/animation-manager.ts` (~200 LOC)
+- `bim-3d/viewport/easing-functions.ts` (~40 LOC, pure)
+
+**Files (MODIFY)**:
+- `bim-3d/viewport/viewport-animation.ts` — port from GenArc + Nestor adaptation
+- `bim-3d/viewport/CanonicalViewService.ts` — use animation manager
+- `bim-3d/scene/ThreeJsSceneManager.ts` — RAF integration
+
+**Tests**: 6 unit (easing curves, quaternion slerp, FOV lerp, cancel + blend, interruption)
+
+**Dependencies**: Phase 4.1
+
+**Acceptance**: smooth 500ms transitions confirmed visually + measured ≤520ms (5% tolerance)
+
+---
+
+##### Phase 4.3 — ViewCube Micro-Interactions Polish (~1.5h) [A.5.Q1+Q4]
+
+**Scope**:
+- **A.5.Q1**: Conditional compass ring (Β/Α/Ν/Δ Greek labels) toggle on/off
+- **A.5.Q4**: Right-click menu στο ViewCube → preference toggle "Εμφάνιση πυξίδας" + Firestore persistence (`bim_3d_preferences/{userId}`)
+- Polish: hover zones refinement, drag-on-cube tuning, home button visual treatment (subtle pulse on hover)
+
+**Files (NEW)**:
+- `bim-3d/viewport/view-cube/view-cube-context-menu.tsx` (~100 LOC, Radix DropdownMenu — ADR-001 compliant)
+- `bim-3d/services/Bim3DPreferencesService.ts` (~80 LOC Firestore — N.6 enterprise ID `bim3d_pref_${userId}` via generator)
+
+**Files (MODIFY)**:
+- `bim-3d/viewport/view-cube/view-cube-overlay.ts` — compass conditional render
+- `bim-3d/viewport/view-cube/view-cube.ts` — right-click handler
+- `src/services/enterprise-id.service.ts` — νέος generator (N.6)
+- i18n: bim-3d.json `viewCube.contextMenu.showCompass` (el + en)
+- Firestore rules: `bim_3d_preferences` collection (owner-only)
+
+**Tests**: 4 unit (preference load/save/toggle, generator)
+
+**Dependencies**: Phase 4.1
+
+**Firestore**: νέα collection `bim_3d_preferences` + enterprise ID + rules + index
+
+---
+
+##### Phase 4.4 — Keyboard Shortcuts SSoT (~4h) [A.6.Q1-Q4]
+
+**Scope**:
+- **A.6.Q1**: ΝΕΟ SSoT file `bim-3d/shortcuts/keyboard-shortcuts-3d.ts` (~250 LOC) με Numpad + Ctrl+Shift+Letter mappings
+- **A.6.Q2**: 12 canonical view dispatcher entries (Numpad 1/2/3/4/5/7/9 + Ctrl+Shift+T/F/B/L/R/U)
+- **A.6.Q3**: Audit ~40 existing 2D shortcuts → `mode` field migration (`'2D-only' | '3D-only' | 'mode-aware' | 'universal'`) + auto-switch toast («Αλλαγή σε 3D για συντόμευση X»)
+- **A.6.Q4**: Split action dispatchers per mode + **selection-aware F** (frame selected entity ή scene αν empty selection)
+
+**Files (NEW)**:
+- `bim-3d/shortcuts/keyboard-shortcuts-3d.ts` (~250 LOC SSoT)
+- `bim-3d/shortcuts/shortcut-dispatcher.ts` (~150 LOC mode-aware routing)
+
+**Files (MODIFY)**:
+- 2D shortcut registry (~40 entries) — add `mode` field
+- `useKeyboardShortcuts.ts` — mode-aware routing + auto-switch toast wiring
+- i18n: shortcuts.json «modeSwitch.toast» (el + en)
+
+**Tests**: 12 unit (12 canonical view dispatch + mode routing + selection-aware F + auto-switch)
+
+**Dependencies**: Phase 4.1
+
+**SSoT registry**: νέο module `keyboard-shortcuts-3d` (Tier 3) στο `.ssot-registry.json` με `forbiddenPatterns` για κατευθείαν `keydown.*Numpad` σε άλλα αρχεία
+
+---
+
+##### Phase 4.5 — Accessibility Multi-Channel Signaling (~5.5h) [A.7.Q1+Q3+Q4]
+
+**Scope**:
+- **A.7.Q1**: `KeyboardFocusManager` — Tab cycle through visible entities, focus indicator rendering (cyan outline + label) (~3h)
+- **A.7.Q3**: `SelectionCursorIcon` component + `AXIS_LABEL_GLYPHS` sprites (X/Y/Z axis indicators) + status bar text wiring («Επιλεγμένο: Wall #wall_abc123 — μήκος 5.2μ») (~2h)
+- **A.7.Q4**: **Ctrl+Arrows pan** — 8 entries dispatcher (4 directions × {fine 1px, coarse 20px}) (~30min)
+
+**Files (NEW)**:
+- `bim-3d/accessibility/KeyboardFocusManager.ts` (~180 LOC)
+- `bim-3d/accessibility/focus-indicator-renderer.ts` (~120 LOC pure render layer)
+- `bim-3d/accessibility/SelectionCursorIcon.tsx` (~80 LOC component)
+- `bim-3d/accessibility/axis-label-glyphs.ts` (~60 LOC sprite texture atlas)
+- `bim-3d/accessibility/status-bar-text-generator.ts` (~100 LOC entity → text)
+
+**Files (MODIFY)**:
+- `bim-3d/shortcuts/keyboard-shortcuts-3d.ts` — +8 Ctrl+Arrow entries
+- Statusbar component — text wiring
+- i18n: bim-3d-accessibility.json (~20 keys el + en)
+
+**Tests**: 10 unit (focus cycle order, label positioning σε edge cases, status text generation per entity type, Ctrl+Arrow fine/coarse magnitude)
+
+**Dependencies**: Phase 4.4
+
+---
+
+##### Phase 4.6 — 2D Backport + Final Integration (~2-2.5h)
+
+**Scope**:
+- **A.7.Q1 backport 2D**: `KeyboardFocusManager` cross-mode usage στο 2D viewer (~1h)
+- **A.7.Q3 backport 2D**: `SelectionCursorIcon` cross-mode usage στο 2D viewer (~30min)
+- Integration tests: cross-mode shortcut consistency (Phase 4.4 → 4.5 → 2D)
+- **ADR-040 audit**: `ThreeJsSceneManager` + 3D micro-leaves πρέπει να μην subscribe σε high-freq stores (orchestrator pattern)
+- **Boy Scout cleanup**: hardcoded strings (N.11), palette violations (N.0.2/ADR-365) σε αγγιγμένα αρχεία
+- **Final commit**: Phase 4 closure + ADR-366 §4.5.1 progress check-marks
+
+**Files (MODIFY)**:
+- 2D viewer hooks: KeyboardFocusManager integration
+- 2D viewer hooks: SelectionCursorIcon integration
+- `bim-3d/scene/*` — ADR-040 compliance audit
+- ADR-040 changelog (cross-mode backport entry)
+- ADR-366 §4.5.1 (mark sub-phase check-marks DONE)
+
+**Tests**: 8 integration (cross-mode 2D↔3D consistency, ADR-040 leaf compliance)
+
+**Dependencies**: Phase 4.5
+
+**Acceptance**: όλα τα AC-1 → AC-5 πληρούνται + ADR-040 compliance + zero new hardcoded strings/palette violations σε Boy Scout files
+
+---
+
+#### 4.5.2 Phase 8 Sub-Phase Breakdown — ARIA Compliance (~4h)
+
+> **Σκοπός**: Activation του deferred A.7.Q2 (ARIA wrappers + live regions + entity descriptions). Προετοιμασία για future EU public sector compliance (Greek municipalities / EUDP). Σπάει σε **2 ατομικές υποφάσεις** (8.0 + 8.1).
+
+##### Phase 8.0 — ARIA Wrappers + Live Regions (~2h)
+
+**Scope**:
+- Canvas accessibility wrapper element (`role="application"` + `aria-label="3D BIM Viewer"`)
+- Live regions για: selection changes (`aria-live="polite"`), mode switches, errors (`aria-live="assertive"`), tool activations
+- Role attributes + aria-label coverage σε όλα UI elements (ribbon buttons, ViewCube, section panels, drawing tools)
+- ARIA states: `aria-pressed` για toggle buttons, `aria-expanded` για collapsibles, `aria-current` για active tools
+
+**Files (NEW)**:
+- `bim-3d/accessibility/AriaLiveRegion.tsx` (~100 LOC, single SSoT live region pair pollite+assertive)
+- `bim-3d/accessibility/aria-attribute-presets.ts` (~80 LOC reusable preset objects)
+
+**Files (MODIFY)**:
+- `bim-3d/scene/ThreeJsCanvas.tsx` — wrapper element
+- Ribbon panels (3D-related tabs) — aria attributes
+- ViewCube overlay — aria-label
+- Section panels — aria attributes
+
+**Tests**: 5 unit (live region announcements per event type)
+
+**Dependencies**: Phase 4.5 (uses KeyboardFocusManager focus state)
+
+---
+
+##### Phase 8.1 — Entity Description i18n + Screen Reader (~2h)
+
+**Scope**:
+- Per-entity-type ARIA descriptions (wall, column, beam, slab, opening, stair, slab-opening)
+- i18n keys σε `bim-3d-aria.json` (el + en) — ~40 keys με ICU interpolation
+- Screen reader text generators (entity → human-readable): π.χ. «Wall, length 5.2 metres, height 2.8 metres, material concrete, level Ground Floor»
+- NVDA + VoiceOver testing checklist (manual QA doc στο `docs/accessibility/`)
+- Focus indicator hook: read description on focus via live region (integration με Phase 8.0)
+
+**Files (NEW)**:
+- `bim-3d/accessibility/aria-entity-description-generator.ts` (~150 LOC, 1 generator per entity type)
+- `src/i18n/locales/{el,en}/bim-3d-aria.json` (~40 keys each)
+- `docs/accessibility/bim-3d-screen-reader-checklist.md` (manual QA matrix)
+
+**Files (MODIFY)**:
+- `bim-3d/accessibility/focus-indicator-renderer.ts` — description read on focus
+- `bim-3d/accessibility/KeyboardFocusManager.ts` — emit description event
+
+**Tests**: 7 unit (description generation per entity type, i18n key coverage)
+
+**Dependencies**: Phase 8.0
+
+**Acceptance**: NVDA + VoiceOver κάνουν announce wall/column/beam/slab/opening/stair/slab-opening selection + dimensions + material + level
 
 ---
 
@@ -2357,7 +2605,9 @@ ADR-366 total estimate revised: **~185-220h** Phase 0-7 (από ~179-212h post-B
 
 | Ημ/νία | Αλλαγή | Author |
 |---|---|---|
+| 2026-05-21 | **ADR-366 §4.5 Phase Plan ENRICHMENT — Phase 4 + Phase 8 sub-phase breakdown.** Σπάσιμο εκκρεμών φάσεων σε ατομικές υποφάσεις βάσει εντολής Γιώργου (2026-05-21). **§4.5 Phases table**: ενημερωμένη με status column + commit refs για 0-3/5-7 (DONE) + revised estimate ~79-81h (από αρχικά 58h, drivers: SPEC-3D-004A ports + A.4-A.7 impacts + section cuts depth). **§4.5.1 Phase 4 Breakdown** (~23-25h, 7 υποφάσεις): **Phase 4.0** Camera Tumble + Orbit Core (~3-4h, camera-controls.ts + CameraTargetStore.ts), **Phase 4.1** Canonical Views + 12-Direction Snap (~3-4h, canonical-views.ts SSoT + CanonicalViewService.ts + ViewCube click dispatch), **Phase 4.2** Animated Transitions (~2-3h, port GenArc viewport-animation.ts 709 LOC + 500ms cubic ease-in-out + animation-manager.ts single RAF), **Phase 4.3** ViewCube Micro-Interactions Polish (~1.5h, A.5.Q1 conditional compass + A.5.Q4 right-click menu + Firestore `bim_3d_preferences` collection + N.6 enterprise ID generator `bim3d_pref_*`), **Phase 4.4** Keyboard Shortcuts SSoT (~4h, A.6.Q1-Q4: Numpad + Ctrl+Shift+Letter mappings + ~40 2D shortcut `mode` field migration + selection-aware F + auto-switch toast + SSoT registry module `keyboard-shortcuts-3d` Tier 3), **Phase 4.5** Accessibility Multi-Channel Signaling (~5.5h, A.7.Q1 KeyboardFocusManager + focus indicator + A.7.Q3 SelectionCursorIcon + AXIS_LABEL_GLYPHS + status bar text + A.7.Q4 Ctrl+Arrows pan 8 entries), **Phase 4.6** 2D Backport + Final Integration (~2-2.5h, A.7.Q1+Q3 cross-mode backport + ADR-040 audit + Boy Scout N.11/N.0.2 cleanup). **§4.5.2 Phase 8 Breakdown** (~4h, 2 υποφάσεις, activates A.7.Q2 deferred): **Phase 8.0** ARIA Wrappers + Live Regions (~2h, AriaLiveRegion.tsx + role/aria-label/aria-pressed/aria-expanded coverage σε canvas/ribbon/ViewCube/sections), **Phase 8.1** Entity Description i18n + Screen Reader (~2h, aria-entity-description-generator.ts per kind + bim-3d-aria.json ~40 keys × 2 locales + NVDA/VoiceOver QA checklist doc). Dependencies graph: 4.0→4.1→{4.2, 4.3, 4.4}→4.5→4.6→8.0→8.1. Acceptance: όλα τα AC-1→AC-5 + ADR-040 compliance + Boy Scout zero new violations. | Claude Opus 4.7 |
 | 2026-05-21 | **Hotfix Phase 0 — ViewCube face buttons unclickable.** `view-cube-mesh.ts::createHitTargets()` edge `BoxGeometry` size threshold `> 1.5` ποτέ δεν triggered (max sum of `|da.axis|+|db.axis|` για adjacent faces = 1, για opposite faces που δεν φτιάχνουν edge = 2). Όλες οι 3 διαστάσεις γίνονταν 0.92 → edge hit boxes ήταν 0.92³ κύβοι αντί slim bars → επικάλυπταν ~94% κάθε face hit plane area. User click στη μεγάλη κεντρική επιφάνεια face → ray hit edge box πρώτο → `onDirSnap(diagonal)` αντί `onFaceSnap(canonical view)` → "δεν λειτουργεί το πλήκτρο". **Fix**: threshold `> 0.5` → axes που μία face contributes (sum=1) γίνονται 0.24 (thin across edge), axis που καμία (sum=0) μένει 0.92 (long along edge). Edge boxes πλέον slim bars στις γωνίες (0.24×0.24×0.92), face hit plane πλήρως προσβάσιμο. **Bonus fix**: `hitMat` → `side: THREE.DoubleSide` ώστε το -Z face plane (default PlaneGeometry normal +Z χωρίς rotation, που έδειχνε ΜΕΣΑ στον κύβο) να γίνεται raycast-hittable και από -Z direction (back face click). **Files modified** (1): `bim-3d/viewport/view-cube/view-cube-mesh.ts`. GOL ✅: root-cause fix (όχι workaround), idempotent (pure geometry rebuild on init), zero race (synchronous construction), SSoT (single `createHitTargets()` ownership), zero new deps. | Claude Opus 4.7 |
+| 2026-05-21 | **Phase 4.0 COMPLETE — Camera Tumble + Orbit Core (CameraTargetStore + tests).** N.0.1 code>ADR: `camera-controls.ts` was NOT created — `viewport-camera.ts` + `tumble-rotation.ts` (Phase 1 PORT_AS_IS) already cover orbit/pan/zoom/tumble + all constraints (pitch clamp, zoom bounds). Phase 4.0 adds: **`CameraTargetStore.ts`** (63 LOC, Zustand SSoT with `subscribeWithSelector` + epsilon dirty-check → no-op when camera static; syncFromCamera called once per RAF frame by ThreeJsSceneManager after `viewport.update()`). **Tests**: 7 unit — 4 tumble (yaw quaternion math, pitch quaternion, distance preservation after compound rotation, pole clamp dotY>0.99 → camera.up flip) + 3 store (sync perspective cam, dirty-check no-op, ortho fov=0). All 7 pass ✅. **§4.5 table**: Phase 4.0 → ✅ DONE. **§4.5.1**: Phase 4.0 spec updated to reflect actual implementation (camera-controls.ts crossed out, note added). GOL ✅: idempotent (dirty-check), SSoT (single writer ThreeJsSceneManager), zero race (RAF single-threaded), belt-and-suspenders (subscribeWithSelector for field-selective consumers), no new deps beyond existing zustand. | Claude Sonnet 4.6 |
 | 2026-05-21 | **Phase 7.1 COMPLETE — Hatched per-material cut surface.** DEFERRED item (b) from Phase 7.0a closed. CanvasTexture approach (Option A, no ADR-363 ShaderType dep). **Architecture**: grey base cap (Phase 7.0b) rendered first, then per-material hatch overlays on top (one stencil pass per unique `SectionHatchKey` per plane — same Phase 7.0C visibility-mask pattern). `collectHatchGroups()` traverses scene once per `render()` call (not per plane) → Map<SectionHatchKey, meshes[]>. **Keys**: `'rc'` (dot grid, mat-concrete/plaster/tile/elem-*), `'steel'` (cross-hatch ×, mat-metal/entity steel), `'masonry'` (brick courses, mat-brick/stone/entity masonry), `'wood'` (diagonal lines, mat-wood/entity wood/glulam). Glass/unknown → null → grey fallback (no hatch overlay). **BimToThreeConverter**: `tagMesh()` +`matId: string` → `userData['matId']` (wall: DNA core layer materialId; column/beam/slab: `params.material ?? 'elem-{type}'`). `resolveWallMaterial()` removed (inlined). **Performance**: `collectHatchGroups` O(N) once/frame. Per plane: +N_keys × (1 BIM render + O(N) traverse + 1 hatch cap render). Typical 3 materials × 1 plane = +3 BIM renders. Zero cost when hatchGroups empty. **New file**: `section-hatch-cap.ts` (163 lines). Modified: `section-stencil-renderer.ts` (+3 methods: collectHatchGroups/renderHatchOverlaysForPlane/renderHatchGroupForPlane, 423 lines <500 ✅), `BimToThreeConverter.ts` (163 lines). GOL ✅: idempotent (collect+render same groups), zero race (sync render), belt-and-suspenders (grey cap always renders, hatch is additive), SSoT (resolveHatchKey single place, CanvasTexture lazy cache), file sizes all <500. | Claude Sonnet 4.6 |
 | 2026-05-20 | **Phase 7.0b COMPLETE — 1-pass Stencil Optimization via `gl.stencilOpSeparate`.** ADR-366 §A.3 Phase 7.0a "future optimization candidate" υλοποιημένο. Replaced 2-pass (BackSide+FrontSide separate overrideMaterial renders) with 1-pass (DoubleSide `singlePassStencilMat` + `gl.stencilOpSeparate` Three.js cache trick). **Mechanism**: per plane → clearStencil → render zero-area warmup mesh (PlaneGeometry `scale.set(0,0,1)`, `frustumCulled=false`) with `singlePassStencilMat` (DoubleSide, `stencilZPass=IncrementWrap`) — seeds Three.js `WebGLState` stencil cache with `currentZpass=IncrementWrap` without writing any fragments → `gl.stencilOpSeparate(gl.FRONT, gl.KEEP, gl.KEEP, gl.DECR_WRAP)` overrides FRONT face only (Three.js cache unaware) → main scene render: per-object Three.js checks `material.stencilZPass (Increment) === cached (Increment)` → CACHE HIT → skips `gl.stencilOp` → FRONT override persists for ALL BIM objects → back-facing=IncrementWrap (entering solid) + front-facing=DecrementWrap (exiting solid) → correct parity → NotEqual(0) → cap fills cut surface. **Performance**: 2N BIM scene renders → N (warmup negligible) + N BIM renders = ~50% reduction. Box mode 12 → 6 BIM renders/frame. **Files modified** (1): `~systems/section/section-stencil-renderer.ts` (removed `backStencilMat`+`frontStencilMat`, added `singlePassStencilMat`+`warmupScene`; `renderCapForPlane`: warmup→stencilOpSeparate→single render→cap). Public API `render(renderer, mainScene, camera, planes, sceneBounds)` unchanged. `section-scene-controller.ts` + `ThreeJsSceneManager.ts` untouched. **SSoT**: REUSE `SECTION_CUT_SURFACE` unchanged, zero new tokens. **Three.js compatibility**: `^0.170.0` verified. GOL ✅: idempotent, zero race (sync render), belt-and-suspenders (autoClear saved/restored), SSoT reuse, file size 230 lines < 500. | Claude Sonnet 4.6 |
 | 2026-05-20 | **Phase 7.0B COMPLETE — 2D Live Section Panel.** ADR-366 §A.3 Q3 υλοποιημένο μέσω GenArc port (SPEC-3D-004A §3.2, 4 PORT_WITH_ADAPTATION files ~680 LOC). **8 νέα αρχεία**: `bim-3d/2d-section/{section-2d-constants,section-intersect,section-geometry,section-renderer,section-scene-sync,active-plane-derivation}.ts` (port των GenArc `sectionIntersect/sectionGeometry/sectionRenderer/sectionSceneSync` με type-swap → Nestor BIM entities + unit conversion mm→m για vertical extents + axis rename `'z'`→`'y'` για Nestor 2D plan convention + active plane derivation από Three.js world ↔ Nestor 2D plan coords mapping) + `bim-3d/stores/Section2DPanelStore.ts` (Zustand SSoT: visible, activePlaneId, heightPx με clamp 180-480px) + `bim-3d/panels/Section2DPanel.tsx` (ADR-040 micro-leaf, bottom-strip panel z-30 absolute, 2 useSyncExternalStore subscriptions, standalone Three.js WebGLRenderer + OrthographicCamera mount, wheel/pan/click handlers με selection sync via `Selection3DStore.selectEntity`, ResizeObserver, dispose cleanup). **4 αρχεία τροποποιήθηκαν**: `bim-3d/panels/Section3DPanelTab.tsx` (+`Show 2D panel` toggle Switch + active plane dropdown selector με `deriveAvailablePlanes()` options + fallback message "Καμία κατακόρυφη τομή διαθέσιμη" όταν no vertical plane) + `bim-3d/viewport/BimViewport3D.tsx` (+`<Section2DPanel />` mount) + `config/color-config.ts` (+`SECTION_2D_PANEL_COLORS` token: background `#1a1a1a`, wall `#6c6c6c`, column `#5a5a5a`, beam `#7a7a7a`, slab `#9e9e9e`, selected `#FFFF00` mirror του 2D entity hover, outline `#2a2a2a`) + `i18n/locales/{el,en}/bim3d.json` (+4 keys στο `section.*` + νέο `section2d.{title,ariaLabel,closeAria,resetView,noPlane}` group). **Coordinate system mapping**: Three.js world.X → Nestor plan.x (axis='x', no sign flip), Three.js world.Z → Nestor plan.y (axis='y', sign flip because BimToThreeConverter ROT_X_NEG_90 maps Nestor.y → -world.z). World-Y (vertical) cuts UNSUPPORTED στο Phase 7.0B (architectural section = vertical only; horizontal cut deferred Phase 7.0C top-down/loupe rendering). **Scope limits**: openings array empty στο scene-sync (OpeningEntity ΔΕΝ είναι στο Bim3DEntitiesStore feed — walls render χωρίς cutouts μέχρι ADR-369 Phase A4+ προσθέσει openings στο feed). Full-floor scan (όχι spatial filter — Phase 7.0C optimization candidate). Per-material hatch ΟΧΙ supported (Phase 7.1+ ADR-363 ShaderType registry). **GOL ✅**: proactive (renderer mount on visibility change), idempotent (syncScene reads getState στο rebuild), zero race (sync render-on-call, no rAF interference), belt-and-suspenders (renderer cleanup + observer disconnect + dispose chain σε unmount + section enabled gate prevents stale renders), SSoT (REUSE Section/Bim3DEntities/Selection3D stores + REUSE 2D entity hover yellow για selection + NEW SECTION_2D_PANEL_COLORS justified ως first occurrence), Google file size (όλα <500 lines: section-renderer 211, section-geometry 199, section-intersect 273, Section2DPanel 209, active-plane-derivation 117, scene-sync 99, store 64, constants 39). Resolves ADR-366 §A.3 Q3 DEFERRED item (c). | Claude Opus 4.7 |

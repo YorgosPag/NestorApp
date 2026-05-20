@@ -16,6 +16,7 @@ import { useBim3DEntitiesStore, type Bim3DEntities } from '../stores/Bim3DEntiti
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
+import { useBuildingFloors3DSync } from '../../components/dxf-layout/useBuildingFloors3DSync';
 import { QuickProperties3DHoverPopover } from '../properties/QuickProperties3DHoverPopover';
 import { BimEntityCardPanel } from '../properties/BimEntityCardPanel';
 import { Floating3DPanel } from '../panels/Floating3DPanel';
@@ -67,6 +68,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   const projectId = projectIdProp ?? hierarchy?.selectedProject?.id ?? null;
   const externalEntitiesMode = bimEntities !== undefined;
 
+  // ADR-369 Q2.2 — feed buildings + floors to store whenever project changes.
+  useBuildingFloors3DSync(projectId);
+
   // Low-frequency store subscriptions (user-triggered entity changes — not 60fps)
   const is3DFromStore = useSyncExternalStore(
     useViewMode3DStore.subscribe,
@@ -105,8 +109,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       managerRef.current.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined);
     } else {
       const entitiesState = useBim3DEntitiesStore.getState();
-      const { walls, columns, beams, slabs, activeLevelId } = entitiesState;
-      managerRef.current.syncBimEntities({ walls, columns, beams, slabs }, 0, activeLevelId ?? undefined);
+      const { walls, columns, beams, slabs, activeLevelId, floors, buildings, activeBuildingId, buildingVisibilityModes } = entitiesState;
+      managerRef.current.syncBimEntities({ walls, columns, beams, slabs }, 0, activeLevelId ?? undefined, floors, buildings, activeBuildingId, buildingVisibilityModes);
     }
     managerRef.current.syncDxfOverlay(useDxfOverlay3DStore.getState().dxfScene);
 
@@ -151,8 +155,21 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs },
         0,
         s.activeLevelId ?? undefined,
+        s.floors,
+        s.buildings,
+        s.activeBuildingId,
+        s.buildingVisibilityModes,
       );
     });
+  }, [externalEntitiesMode]);
+
+  // Building visibility: re-apply whenever modes change (no full rebuild needed).
+  useEffect(() => {
+    if (externalEntitiesMode) return;
+    return useBim3DEntitiesStore.subscribe(
+      (s) => s.buildingVisibilityModes,
+      (modes) => { managerRef.current?.applyBuildingVisibility(modes); },
+    );
   }, [externalEntitiesMode]);
 
   // ADR-371: external entity feed — push prop changes into the scene.

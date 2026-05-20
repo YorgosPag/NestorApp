@@ -104,6 +104,23 @@
       "quality": "Ποιότητα",
       "sections": "Τομή"
     },
+    "buildings": {
+      "label": "Κτίριο",
+      "allBuildings": "Όλα τα κτίρια",
+      "selectAria": "Επιλογή κτιρίου",
+      "visibilityLabel": "Ορατότητα κτιρίων",
+      "show": "Εμφάνιση",
+      "ghost": "Αχνό",
+      "hide": "Κρυφό",
+      "focus": "Εστίαση",
+      "focusAria": "Εστίαση στο κτίριο — εμφάνιση επιλεγμένου, αχνά υπόλοιπα",
+      "presets": {
+        "all": "Όλα",
+        "active": "Εστίαση",
+        "none": "Κανένα",
+        "isolate": "Μόνο αυτό"
+      }
+    },
     "floors": {
       "presets": {
         "all": "Όλα",
