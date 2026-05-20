@@ -129,6 +129,16 @@
       "confirm": "Delete and import",
       "cancel": "Cancel"
     },
+    "drawingUnits": {
+      "title": "DXF Drawing Units",
+      "hint": "Select the coordinate units used by this DXF file. 'Auto' works for most files.",
+      "auto": "Auto",
+      "m": "Meters (m)",
+      "cm": "Centimeters (cm)",
+      "mm": "Millimeters (mm)",
+      "ft": "Feet (ft)",
+      "in": "Inches (in)"
+    },
     "noItems": "No items found",
     "autoSelected": "Auto-selected",
     "acceptedTypes": "DXF, PDF, JPG, PNG (up to 50MB)",

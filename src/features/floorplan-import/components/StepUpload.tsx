@@ -21,7 +21,9 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { CheckCircle2, AlertCircle, AlertTriangle, Loader2, Compass } from 'lucide-react';
+import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 import { Button } from '@/components/ui/button';
+import { DxfUnitsSelector } from './DxfUnitsSelector';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,8 +59,9 @@ import '@/lib/design-system';
 interface StepUploadProps {
   config: FloorplanUploadConfig;
   /** fileId is the FileRecord ID created during upload — passed so callers can link the scene to the level.
-   * `format` lets callers branch on payload type (DXF vs raster) — raster must NOT trigger DXF scene wiring. */
-  onComplete: (file: File, fileId?: string, format?: FloorplanFormat) => void;
+   * `format` lets callers branch on payload type (DXF vs raster) — raster must NOT trigger DXF scene wiring.
+   * `userDrawingUnits` is the ADR-368 unit override (absent when 'auto' or non-DXF). */
+  onComplete: (file: File, fileId?: string, format?: FloorplanFormat, userDrawingUnits?: SceneUnits) => void;
 }
 
 // =============================================================================
@@ -76,6 +79,9 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { t } = useTranslation(['files', 'files-media']);
+
+  // ADR-368: user-specified DXF coordinate units (default = auto-detect)
+  const [selectedUnits, setSelectedUnits] = useState<SceneUnits | 'auto'>('auto');
 
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const floorId = smart.resolveFloorId();
@@ -170,9 +176,11 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
       setUploadedFile(file);
       setUploadedFormat(result.format ?? null);
       setUploadSuccess(true);
-      onComplete(file, result.fileId, result.format);
+      // ADR-368: pass unit override only when user made an explicit choice
+      const unitOverride = selectedUnits !== 'auto' ? selectedUnits : undefined;
+      onComplete(file, result.fileId, result.format, unitOverride);
     }
-  }, [smart, floorId, existingFile, config.userId, onComplete]);
+  }, [smart, floorId, existingFile, config.userId, onComplete, selectedUnits]);
 
   const handleUpload = useCallback(async (files: File[]) => {
     if (files.length === 0) return;
@@ -283,6 +291,14 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
       {!floorId && !checkingExisting && existingFile && (
         <ExistingFileWarning file={existingFile} t={t} />
       )}
+
+      {/* ── ADR-368: DXF coordinate units selector ── */}
+      <DxfUnitsSelector
+        value={selectedUnits}
+        onChange={setSelectedUnits}
+        colors={colors}
+        t={t}
+      />
 
       {/* ── Upload zone ── */}
       <FileUploadZone

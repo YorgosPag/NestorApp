@@ -41,6 +41,7 @@ import { StepStoragePicker } from './components/StepStoragePicker';
 import type { FloorplanType } from './hooks/useFloorplanImportState';
 import type { FloorplanFormat } from './hooks/useFloorplanSmartUpload';
 import type { EntityType } from '@/config/domain-constants';
+import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -61,6 +62,9 @@ export interface WizardCompleteMeta {
   /** ADR-340 Phase 4 reborn FOLLOW-UP: payload format — callers must NOT trigger DXF
    * scene wiring (linkSceneToLevel / cadFiles processor) when format !== 'dxf'. */
   format?: FloorplanFormat;
+  /** ADR-368 — user-specified DXF coordinate units from the upload step unit selector.
+   * Absent when user chose 'auto' or uploaded a non-DXF file. */
+  userDrawingUnits?: SceneUnits;
 }
 
 interface FloorplanImportWizardProps {
@@ -141,7 +145,7 @@ export function FloorplanImportWizard({
     [t, isNamespaceReady, mode],
   );
 
-  const handleUploadComplete = useCallback((file: File, fileId?: string, format?: FloorplanFormat) => {
+  const handleUploadComplete = useCallback((file: File, fileId?: string, format?: FloorplanFormat, userDrawingUnits?: SceneUnits) => {
     // 🏢 ADR-240: Build WizardCompleteMeta from uploadConfig so callers can configure auto-save
     const cfg = state.uploadConfig;
     if (cfg && onComplete) {
@@ -154,6 +158,7 @@ export function FloorplanImportWizard({
         entityLabel: cfg.entityLabel,
         fileId,
         format,
+        userDrawingUnits,
       };
       onComplete(file, meta);
     } else {
@@ -163,6 +168,7 @@ export function FloorplanImportWizard({
         entityId: '',
         purpose: '',
         format,
+        userDrawingUnits,
       });
     }
   }, [onComplete, state.uploadConfig]);
@@ -276,7 +282,7 @@ export function FloorplanImportWizard({
           {mode === 'import' && state.step === 6 && state.uploadConfig && (
             <StepUpload
               config={state.uploadConfig}
-              onComplete={(file, fileId, format) => handleUploadComplete(file, fileId, format)}
+              onComplete={(file, fileId, format, userDrawingUnits) => handleUploadComplete(file, fileId, format, userDrawingUnits)}
             />
           )}
 

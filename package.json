@@ -54,7 +54,7 @@
     "nav:audit": "node scripts/check-navigation-labels.js",
     "search-config:sync": "node scripts/check-search-config-sync.js",
     "ssot:audit": "bash scripts/ssot-audit.sh",
-    "ssot:baseline": "bash scripts/generate-ssot-baseline.sh",
+    "ssot:baseline": "node scripts/ssot-baseline-engine.js --write",
     "ssot:discover": "bash scripts/ssot-discover.sh",
     "ssot:discover:baseline": "node scripts/check-ssot-discover-ratchet.js --write-baseline",
     "ssot:discover:check": "node scripts/check-ssot-discover-ratchet.js --full",

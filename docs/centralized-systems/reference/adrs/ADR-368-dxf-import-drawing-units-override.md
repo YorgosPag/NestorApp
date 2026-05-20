@@ -139,27 +139,44 @@ When `userDrawingUnits` is set → R12+R13 patches are bypassed entirely. Correc
 
 ## 7. Files Changed
 
+### 7.1 DXF Viewer internal (deprecated-wizard path — FloorplanDoc SSoT)
+
 | File | Change |
 |------|--------|
 | `systems/levels/config.ts` | `FloorplanDoc.userDrawingUnits`, `ImportWizardState.step` + `userDrawingUnits`, `ImportWizardActions.setUserDrawingUnits` |
 | `hooks/common/useImportWizard.ts` | `setUserDrawingUnits()` action + `completeImport` persists it |
 | `systems/levels/LevelsSystem.tsx` | Wires `setUserDrawingUnits` through context |
 | `systems/levels/useLevels.ts` | Exposes `setUserDrawingUnits` in `useImportWizard()` hook |
-| `ui/wizard/DrawingUnitsStep.tsx` | **NEW** — radio group UI for unit selection |
-| `ui/ImportWizard.tsx` | Adds `case 'units'` + imports DrawingUnitsStep |
-| `hooks/useWizardNavigation.ts` | Adds `'units'` step to navigation flow (4 steps total) |
+| `ui/wizard/DrawingUnitsStep.tsx` | Radio group UI (used only in deprecated wizard) |
 | `hooks/canvas/useDxfSceneConversion.ts` | Adds `userDrawingUnits?` param; uses it over resolveSceneUnits |
-| `components/dxf-layout/CanvasSection.tsx` | Resolves current floorplan, passes `userDrawingUnits` |
 | `i18n/locales/el/dxf-viewer-wizard.json` | `drawingUnits.*` keys (Greek) |
 | `i18n/locales/en/dxf-viewer-wizard.json` | `drawingUnits.*` keys (English) |
+
+### 7.2 Active wizard path — FloorplanImportWizard + DxfSaveContext SSoT
+
+| File | Change |
+|------|--------|
+| `services/dxf-firestore.types.ts` | `DxfSaveContext.userDrawingUnits?: SceneUnits` |
+| `features/floorplan-import/FloorplanImportWizard.tsx` | `WizardCompleteMeta.userDrawingUnits?`, propagates through `handleUploadComplete` |
+| `features/floorplan-import/components/StepUpload.tsx` | **Unit selector UI** (pill buttons: auto/m/cm/mm/ft/in) above upload zone |
+| `app/DxfViewerContent.tsx` | Adds `userDrawingUnits` from meta to saveContext |
+| `components/dxf-layout/CanvasSection.tsx` | Reads `userDrawingUnits` from `FloorplanDoc` (deprecated path) OR `saveContext` (active path) |
+| `i18n/locales/el/files-media.json` | `floorplanImport.drawingUnits.*` keys (Greek) |
+| `i18n/locales/en/files-media.json` | `floorplanImport.drawingUnits.*` keys (English) |
 
 ---
 
 ## 8. Changelog
 
-- **2026-05-20 (Initial implementation)**
-  - Added "Μονάδες Σχεδίου" wizard step (step 2 of 4).
+- **2026-05-20 (Initial implementation — deprecated wizard path)**
+  - Added "Μονάδες Σχεδίου" step to deprecated `ImportWizard.tsx`.
   - `FloorplanDoc.userDrawingUnits` field — per-file Firestore storage.
   - `useDxfSceneConversion` uses user override first, falls back to resolveSceneUnits.
   - R12+R13 patches retained as backward-compatible fallback.
-  - ✅ Google-level: YES — industry-standard pattern (AutoCAD/Revit parity); explicit user intent overrides heuristics; backward-compatible for legacy files.
+
+- **2026-05-20 (Fix — active wizard path, DxfSaveContext SSoT)**
+  - Root cause: active wizard (`FloorplanImportWizard` in `features/floorplan-import`) never used the DXF viewer's internal `ImportWizard` — unit selector was invisible to users.
+  - Fix: Unit selector (`DxfUnitsSelector` pill buttons) added to `StepUpload.tsx` (step 6 of active wizard).
+  - Data flow: `selectedUnits` → `onComplete(file, fileId, format, unitOverride)` → `WizardCompleteMeta.userDrawingUnits` → `DxfSaveContext.userDrawingUnits` → `levelManager.saveContext`.
+  - `CanvasSection.tsx` reads from `FloorplanDoc.userDrawingUnits` (deprecated path) OR `saveContext.userDrawingUnits` (active path), whichever is set.
+  - ✅ Google-level: YES — industry-standard pattern (AutoCAD/Revit parity); explicit user intent overrides heuristics; both wizard paths covered; backward-compatible for 'auto' default.

@@ -28,6 +28,7 @@ import { WallWarningsSection } from './sections/WallWarningsSection';
 import { WallPersistenceSection } from './sections/WallPersistenceSection';
 import { WallDnaSection } from './sections/WallDnaSection';
 import type { DispatchWallParamPatch } from './commands/dispatchWallParamPatch';
+import { useDnaMaterialOptions } from './hooks/useDnaMaterialOptions';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -42,6 +43,7 @@ export interface WallAdvancedPanelProps {
   readonly persistence?: UseWallPersistenceResult;
   readonly containerClassName?: string;
   readonly hideHeader?: boolean;
+  readonly projectId?: string;
 }
 
 export function WallAdvancedPanel({
@@ -51,8 +53,10 @@ export function WallAdvancedPanel({
   persistence,
   containerClassName,
   hideHeader,
+  projectId,
 }: WallAdvancedPanelProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
+  const { libraryMaterials, libraryLoading } = useDnaMaterialOptions({ projectId });
   const resolvedClassName =
     containerClassName
     ?? 'fixed right-4 top-20 z-40 flex w-80 max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 p-3 shadow-xl backdrop-blur';
@@ -74,7 +78,12 @@ export function WallAdvancedPanel({
           persistence={persistence}
         />
       )}
-      <WallDnaSection wall={wall} dispatchPatch={dispatchPatch} />
+      <WallDnaSection
+        wall={wall}
+        dispatchPatch={dispatchPatch}
+        libraryMaterials={libraryMaterials}
+        libraryLoading={libraryLoading}
+      />
     </aside>
   );
 }

@@ -85,6 +85,7 @@ import { useRibbonCommands } from '../ui/ribbon/hooks/useRibbonCommands';
 // ADR-344 Phase 6.E: selection→toolbar + toolbar→CommandHistory always-on bridges
 import { useTextToolbarSelectionSync } from '../ui/text-toolbar/hooks/useTextToolbarSelectionSync';
 import { useTextToolbarCommandBridge } from '../ui/text-toolbar/hooks/useTextToolbarCommandBridge';
+import { buildDxfImportSaveContext } from './dxf-import-save-context';
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-345 — mark the document root while the DXF viewer route is mounted
   // so route-scoped CSS (e.g. hiding the global header border-bottom) only
@@ -451,21 +452,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           onComplete={(file, meta) => {
             setShowImportWizard(false);
             if (meta.format && meta.format !== 'dxf') return;
-            // ADR-340 Phase 9 follow-up: propagate wizard `fileRecordId` so
-            // auto-save reuses the canonical FileRecord instead of racing on
-            // name-based lookup against the cadFiles processor.
-            const saveContext = {
-              companyId: meta.companyId || undefined,
-              projectId: meta.projectId || undefined,
-              ...(meta.entityType === 'floor' ? { floorId: meta.entityId } : {}),
-              ...(meta.entityType === 'building' ? { buildingId: meta.entityId } : {}),
-              entityType: meta.entityType as import('../services/dxf-firestore.service').DxfSaveContext['entityType'],
-              filesCategory: 'floorplans' as const,
-              purpose: meta.purpose || undefined,
-              entityLabel: meta.entityLabel,
-              ...(meta.fileId ? { fileRecordId: meta.fileId } : {}),
-            };
-            void handleFileImportWithEncoding(file, undefined, saveContext);
+            void handleFileImportWithEncoding(file, undefined, buildDxfImportSaveContext(meta));
           }}
         />
       </React.Suspense>

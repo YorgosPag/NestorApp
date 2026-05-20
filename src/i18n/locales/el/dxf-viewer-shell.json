@@ -1521,7 +1521,10 @@
           "side": "Πλευρά",
           "name": "Ονομασία",
           "thickness": "Πάχος (χιλ.)",
-          "material": "Υλικό"
+          "material": "Υλικό",
+          "libraryGroup": "Βιβλιοθήκη Υλικών",
+          "presetsGroup": "Προεπιλεγμένα",
+          "libraryLoading": "Φόρτωση βιβλιοθήκης..."
         },
         "side": {
           "exterior": "Εξωτερική",

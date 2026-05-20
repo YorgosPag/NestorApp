@@ -78,6 +78,10 @@
     "colors": {
       "loading": "Loading..."
     },
+    "materials": {
+      "title": "Materials",
+      "loading": "Loading materials..."
+    },
     "dimensions": {
       "title": "Dimensions",
       "loading": "Loading dimension styles...",

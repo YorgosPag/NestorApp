@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { BarChart, Ruler, Settings, Sliders } from 'lucide-react';
+import { BarChart, Palette, Ruler, Settings, Sliders } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Use centralized TabsOnlyTriggers (same as Contacts, ΓΕΜΗ tabs)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
@@ -63,6 +63,13 @@ export function PanelTabs({ activePanel, onTabClick, disabledPanels, isCollapsed
       icon: Ruler,
       content: null,
       disabled: disabledPanels['dimensions'],
+    },
+    {
+      id: 'materials',
+      label: isCollapsed ? '' : t('panels.materials.title'),
+      icon: Palette,
+      content: null,
+      disabled: disabledPanels['materials'],
     },
   ];
 

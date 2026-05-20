@@ -20,6 +20,7 @@
 
 import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { BimMaterial } from '../../../bim/types/bim-material-types';
 import type { WallEntity } from '../../../bim/types/wall-types';
 import type {
   WallDna,
@@ -46,11 +47,15 @@ const LAYER_SIDES: readonly WallLayerSide[] = ['exterior', 'core', 'interior'];
 export interface WallDnaSectionProps {
   readonly wall: WallEntity;
   readonly dispatchPatch: DispatchWallParamPatch;
+  readonly libraryMaterials?: readonly BimMaterial[];
+  readonly libraryLoading?: boolean;
 }
 
 export function WallDnaSection({
   wall,
   dispatchPatch,
+  libraryMaterials = [],
+  libraryLoading = false,
 }: WallDnaSectionProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
   const dna = wall.params.dna;
@@ -94,6 +99,8 @@ export function WallDnaSection({
         <DnaLayerList
           dna={dna}
           materialOptions={materialOptions}
+          libraryMaterials={libraryMaterials}
+          libraryLoading={libraryLoading}
           onChange={applyDna}
         />
       )}
@@ -189,12 +196,16 @@ function DnaEmptyState({
 interface DnaLayerListProps {
   readonly dna: WallDna;
   readonly materialOptions: readonly WallMaterialOption[];
+  readonly libraryMaterials: readonly BimMaterial[];
+  readonly libraryLoading: boolean;
   readonly onChange: (next: WallDna) => void;
 }
 
 function DnaLayerList({
   dna,
   materialOptions,
+  libraryMaterials,
+  libraryLoading,
   onChange,
 }: DnaLayerListProps): React.ReactElement {
   return (
@@ -206,6 +217,8 @@ function DnaLayerList({
             index={index}
             count={dna.layers.length}
             materialOptions={materialOptions}
+            libraryMaterials={libraryMaterials}
+            libraryLoading={libraryLoading}
             onRemove={() => onChange(removeLayer(dna, layer.id))}
             onUpdate={(patch) => onChange(updateLayer(dna, layer.id, patch))}
             onMoveUp={() => onChange(reorderLayer(dna, index, -1))}
@@ -224,6 +237,8 @@ interface DnaLayerRowProps {
   readonly index: number;
   readonly count: number;
   readonly materialOptions: readonly WallMaterialOption[];
+  readonly libraryMaterials: readonly BimMaterial[];
+  readonly libraryLoading: boolean;
   readonly onRemove: () => void;
   readonly onUpdate: (patch: Partial<Omit<WallDnaLayer, 'id'>>) => void;
   readonly onMoveUp: () => void;
@@ -232,7 +247,10 @@ interface DnaLayerRowProps {
 
 function DnaLayerRow(props: DnaLayerRowProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { layer, index, count, materialOptions, onRemove, onUpdate, onMoveUp, onMoveDown } = props;
+  const {
+    layer, index, count, materialOptions, libraryMaterials, libraryLoading,
+    onRemove, onUpdate, onMoveUp, onMoveDown,
+  } = props;
   return (
     <div className="flex flex-col gap-1 rounded border border-slate-700 bg-slate-800/40 p-2">
       <div className="flex items-center gap-2">
@@ -287,7 +305,11 @@ function DnaLayerRow(props: DnaLayerRowProps): React.ReactElement {
         <MaterialPicker
           value={layer.materialId}
           options={materialOptions}
-          onChange={(materialId) => onUpdate({ materialId })}
+          libraryMaterials={libraryMaterials}
+          libraryLoading={libraryLoading}
+          onChange={(materialId, name) =>
+            onUpdate({ materialId, ...(name !== undefined ? { name } : {}) })
+          }
         />
       </div>
     </div>
@@ -336,24 +358,34 @@ function ReorderButtons({ canUp, canDown, onUp, onDown }: ReorderButtonsProps): 
 interface MaterialPickerProps {
   readonly value: string;
   readonly options: readonly WallMaterialOption[];
-  readonly onChange: (value: string) => void;
+  readonly libraryMaterials: readonly BimMaterial[];
+  readonly libraryLoading: boolean;
+  readonly onChange: (value: string, name?: string) => void;
 }
 
-function MaterialPicker({ value, options, onChange }: MaterialPickerProps): React.ReactElement {
+function MaterialPicker({
+  value, options, libraryMaterials, libraryLoading, onChange,
+}: MaterialPickerProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
-  const kind = classifyWallMaterial(value);
+  const isBmatId = value.startsWith('bmat_');
+  const kind = isBmatId ? 'library' : classifyWallMaterial(value);
   const selectValue = kind === 'custom' ? WALL_MATERIAL_CUSTOM_ID : value;
+  const presetOptions = options.filter((opt) => opt.id !== WALL_MATERIAL_CUSTOM_ID);
+  const customOption = options.find((opt) => opt.id === WALL_MATERIAL_CUSTOM_ID);
+  const hasLibrary = libraryMaterials.length > 0;
 
   const onSelectChange = useCallback(
     (event: React.ChangeEvent<HTMLSelectElement>): void => {
       const next = event.target.value;
-      if (next === WALL_MATERIAL_CUSTOM_ID) {
-        onChange('');
+      if (next === WALL_MATERIAL_CUSTOM_ID) { onChange(''); return; }
+      if (next.startsWith('bmat_')) {
+        const mat = libraryMaterials.find((m) => m.id === next);
+        onChange(next, mat?.nameEl);
         return;
       }
       onChange(next);
     },
-    [onChange],
+    [onChange, libraryMaterials],
   );
 
   return (
@@ -364,11 +396,38 @@ function MaterialPicker({ value, options, onChange }: MaterialPickerProps): Reac
         onChange={onSelectChange}
         className="flex-1 rounded border border-slate-600 bg-slate-900 px-1 py-0.5 text-xs text-slate-100"
       >
-        {options.map((opt) => (
-          <option key={opt.id} value={opt.id}>
-            {t(`wallAdvancedPanel.materials.preset.${opt.labelKeySuffix}`)}
+        {libraryLoading && !hasLibrary && (
+          <option value="" disabled>
+            {t('wallAdvancedPanel.sections.dna.fields.libraryLoading')}
           </option>
-        ))}
+        )}
+        {hasLibrary && (
+          <optgroup label={t('wallAdvancedPanel.sections.dna.fields.libraryGroup')}>
+            {libraryMaterials.map((m) => (
+              <option key={m.id} value={m.id}>{m.nameEl}</option>
+            ))}
+          </optgroup>
+        )}
+        {hasLibrary ? (
+          <optgroup label={t('wallAdvancedPanel.sections.dna.fields.presetsGroup')}>
+            {presetOptions.map((opt) => (
+              <option key={opt.id} value={opt.id}>
+                {t(`wallAdvancedPanel.materials.preset.${opt.labelKeySuffix}`)}
+              </option>
+            ))}
+          </optgroup>
+        ) : (
+          presetOptions.map((opt) => (
+            <option key={opt.id} value={opt.id}>
+              {t(`wallAdvancedPanel.materials.preset.${opt.labelKeySuffix}`)}
+            </option>
+          ))
+        )}
+        {customOption && (
+          <option value={customOption.id}>
+            {t(`wallAdvancedPanel.materials.preset.${customOption.labelKeySuffix}`)}
+          </option>
+        )}
       </select>
       {kind === 'custom' && (
         <input

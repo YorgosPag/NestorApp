@@ -157,6 +157,10 @@ tmpclaude-*
 # npm cache (generated locally, not project code)
 .npm-cache/
 
+# SSoT baseline engine: incremental cache + dry-run artifact (regenerated locally)
+.ssot-baseline-cache.json
+.ssot-violations-baseline.dry.json
+
 # 🔒 SECURITY: Service Account Keys (NEVER commit these)
 *service-account*
 *.pem

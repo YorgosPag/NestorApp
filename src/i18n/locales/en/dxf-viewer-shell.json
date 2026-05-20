@@ -1521,7 +1521,10 @@
           "side": "Side",
           "name": "Name",
           "thickness": "Thickness (mm)",
-          "material": "Material"
+          "material": "Material",
+          "libraryGroup": "Material Library",
+          "presetsGroup": "Presets",
+          "libraryLoading": "Loading library..."
         },
         "side": {
           "exterior": "Exterior",

@@ -31,6 +31,8 @@ import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 import { BimPropertiesRouter } from '../wall-advanced-panel/BimPropertiesRouter';
 // ADR-362 Phase F1 — Dimensions style manager tab.
 import { DimensionsTab } from '../panels/dimensions/DimensionsTab';
+// ADR-363 Phase 6.5.B — BIM Material Library panel.
+import { MaterialsLibraryPanel } from '../panels/materials/MaterialsLibraryPanel';
 
 interface UsePanelContentRendererParams {
   activePanel: PanelType;
@@ -127,6 +129,9 @@ export function usePanelContentRenderer({
 
       case 'dimensions':
         return <DimensionsTab />;
+
+      case 'materials':
+        return <MaterialsLibraryPanel projectId={projectId} />;
 
       default:
         return (

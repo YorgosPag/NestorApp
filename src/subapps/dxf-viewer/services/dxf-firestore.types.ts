@@ -2,6 +2,7 @@ import type { Timestamp } from 'firebase/firestore';
 import type { SceneModel } from '../types/scene';
 import type { SecurityValidationResult } from '../security/DxfSecurityValidator';
 import type { FileRecord } from '@/types/file-record';
+import type { SceneUnits } from '../utils/scene-units';
 
 /**
  * Optional entity context for dual-write to `files` collection.
@@ -41,6 +42,13 @@ export interface DxfSaveContext {
    * linkSceneToLevel writes the correct sceneFileId to the Level document.
    */
   fileRecordId?: string;
+  /**
+   * ADR-368 — user-specified coordinate units for this DXF file.
+   * Passed from FloorplanImportWizard unit selector → saveContext →
+   * CanvasSection so that useDxfSceneConversion uses the correct unit
+   * override instead of resolveSceneUnits() heuristic.
+   */
+  userDrawingUnits?: SceneUnits;
 }
 
 export interface DxfFileMetadata {

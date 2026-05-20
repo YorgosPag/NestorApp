@@ -1,0 +1,84 @@
+{
+  "categories": {
+    "plaster": "Plaster / Render",
+    "masonry": "Masonry / Brick",
+    "concrete": "Concrete",
+    "insulation": "Insulation (Thermal / Acoustic)",
+    "flooring": "Flooring",
+    "window-frame": "Window Frames",
+    "door-frame": "Door Frames",
+    "paint": "Paints / Varnishes",
+    "roofing": "Roofing / Tiles",
+    "waterproofing": "Waterproofing",
+    "other": "Other"
+  },
+  "fireRatings": {
+    "EI30": "EI30 (30 minutes)",
+    "EI60": "EI60 (60 minutes)",
+    "EI90": "EI90 (90 minutes)",
+    "EI120": "EI120 (120 minutes)",
+    "none": "No fire rating"
+  },
+  "units": {
+    "m": "m (linear metres)",
+    "m2": "m² (square metres)",
+    "m3": "m³ (cubic metres)",
+    "kg": "kg (kilograms)",
+    "pcs": "pcs (pieces)"
+  },
+  "scopes": {
+    "company": "Company",
+    "project": "Project",
+    "system": "System",
+    "all": "All"
+  },
+  "form": {
+    "createTitle": "New Material",
+    "editTitle": "Edit Material",
+    "nameEl": "Name (Greek)",
+    "nameEn": "Name (English)",
+    "category": "Category",
+    "density": "Density (kg/m³)",
+    "defaultThickness": "Default Thickness (mm)",
+    "fireRating": "Fire Rating",
+    "atoeCategory": "ATOE Code",
+    "atoeArticle": "ATOE Article",
+    "defaultUnitCost": "Unit Cost (€)",
+    "defaultUnit": "Unit of Measurement",
+    "brand": "Manufacturer",
+    "brandModel": "Model",
+    "notes": "Notes",
+    "scope": "Material Scope",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "selectCategory": "Select category...",
+    "selectFireRating": "Select fire rating...",
+    "selectUnit": "Select unit..."
+  },
+  "validation": {
+    "nameRequired": "Both Greek and English names are required.",
+    "densityPositive": "Density must be a positive number.",
+    "atoeCategoryRequired": "ATOE code is required."
+  },
+  "list": {
+    "title": "Material Library",
+    "loading": "Loading materials...",
+    "filtersAriaLabel": "Material filters",
+    "cardAriaLabel": "Material {name}",
+    "searchPlaceholder": "Search materials...",
+    "allCategories": "All categories",
+    "emptyList": "No materials found",
+    "emptyHint": "Create your first company material.",
+    "systemBadge": "System",
+    "companyBadge": "Company",
+    "projectBadge": "Project"
+  },
+  "delete": {
+    "title": "Delete Material",
+    "description": "The material \"{name}\" will be permanently deleted. This action cannot be undone.",
+    "confirm": "Delete",
+    "cancel": "Cancel"
+  },
+  "readOnlyHint": "System material — editing and deletion are not allowed."
+}
