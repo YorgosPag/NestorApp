@@ -291,6 +291,8 @@ Only invert slab semantic, leave wall/column hardcoded at z=0.
 | 2026-05-20 | Giorgio + Claude | §9 added — Deep multi-platform research (ArchiCAD, Vectorworks, Allplan, BricsCAD, IFC standard, Revit advanced). Major scope expansion: **Storey System** + Project Base Point/Survey Point distinction + Parametric coupling. Q&A clarification phase initiated. |
 | 2026-05-20 | Giorgio + Claude | Q1/Q4/Q6/Q5 answered (Floor entity already exists, FFL Hybrid, signed-number basements with `kind` field, Hybrid binding). Discovery: `floors` + `buildings` collections fully live, gaps in 3D rendering wiring only. |
 | 2026-05-20 | Giorgio + Claude | **Q2 answered** — Full Multi-Building (Revit-style + Enterprise). Building.baseElevation + siteOrigin + rotation. Floor.elevation now relative to Building. Indirect BIM→Floor→Building FK chain. 3D viewer per-building visibility/isolation. BOQ group-by-building. |
+| 2026-05-20 | Giorgio + Claude | **Q3 answered** — Full Revit reference system (Survey Point + Project Base Point + Building base + Floor). 4-tier z-chain. UI: Floors tab toggle dropdown (Επιλογή Γ) + Building card tri-value summary. IFC4 export-ready. Greek geodetic systems (GGRS87/EGSA87) supported. |
+| 2026-05-20 | Giorgio + Claude | **Q7 answered** — Full mesh geometry (Επιλογή Γ). Slab schema: `geometryType: 'box'\|'tilted'\|'mesh'` + per-vertex z + thickness regions. Phased: Phase 1 ship box+tilted (~30h), Phase 2 deferred mesh editor (~70h). ADR-366 impact: BufferGeometry pipeline + mesh slicing for section cuts. IFC4 IfcPolygonalFaceSet ready. |
 
 ---
 
@@ -650,7 +652,105 @@ interface BimElevationRef {
    - 3D viewer: Building visibility panel + isolation mode
    - BOQ aggregator: group-by buildingId support
 
-3. **Q3 — Project Base Point vs Survey Point;** Χρειάζεται geodetic / sea-level reference, ή αρκεί ένα local origin?
+3. **Q3 — Project Base Point vs Survey Point;** ✅ **ANSWERED 2026-05-20**: **Full Revit — Project Base Point + Survey Point** (3-tier reference system) + **UI Toggle (Γ) + Building Card Summary**.
+
+   **3-Tier Reference System**:
+   ```
+   Tier 1: Survey Point (γεωδαιτικό / Mean Sea Level)
+     ├─ Project.surveyPoint = { z: +185.40, x: ..., y: ... }  // geodetic origin
+     │
+     ▼
+   Tier 2: Project Base Point (τοπικό μηδέν έργου)
+     ├─ Project.basePoint = { z: 0, x: 0, y: 0 }  // local origin (relative to survey)
+     │
+     ▼
+   Tier 3: Building Base Elevation (per building)
+     ├─ Building.baseElevation = -2.50  // relative to Project Base Point
+     │
+     ▼
+   Tier 4: Floor Elevation (per floor)
+     └─ Floor.elevation = 3.00  // relative to Building base
+
+   World coordinates (geodetic):
+   geodeticZ = survey.z + project.basePoint.z + building.baseElevation + floor.elevation
+   ```
+
+   **Schema additions (Project)**:
+   ```ts
+   interface ProjectRecord {
+     // existing fields...
+     surveyPoint?: {
+       z: number;                          // METRES geodetic (Mean Sea Level)
+       x?: number; y?: number;             // optional GIS coords (EPSG:2100 GGRS87 for Greece)
+       reference?: 'MSL' | 'GGRS87' | 'EGSA87' | 'WGS84' | 'custom';
+       sourceDocument?: string;            // τοπογραφικό filename/URL
+     };
+     basePoint?: {
+       z: number;                          // default 0 — offset from survey point
+       x?: number; y?: number;
+       description?: string;               // π.χ. "γωνία οικοπέδου ΒΔ"
+     };
+     // future: rotation between survey grid (true north) and project grid
+     northRotation?: number;               // degrees
+   }
+   ```
+
+   **UI — Floors tab (Επιλογή Γ: Toggle dropdown)**:
+   - Single elevation column με toggle dropdown above:
+     - "Σχετικό κτιρίου" (default — `floor.elevation`)
+     - "Σχετικό έργου" (`building.baseElevation + floor.elevation`)
+     - "Γεωδαιτικό" (`survey.z + basePoint.z + building.baseElevation + floor.elevation`)
+   - Persist user preference (per-user, per-project Firestore doc)
+   - Toolbar badge "📐 Γεωδαιτικό" όταν active mode ≠ default
+   - Hover tooltip σε κάθε υψόμετρο: instant 3-line peek με all 3 values
+
+   **UI — Building Card Summary (compact 3-tier display)**:
+   ```
+   🏢 Κτίριο Α
+   Βάση κτιρίου:
+     • Σχετικό έργου:   -2.50 m
+     • Γεωδαιτικό:    +180.40 m
+   Κορυφή κτιρίου:
+     • Σχετικό έργου:  +12.50 m
+     • Γεωδαιτικό:    +195.40 m
+   ```
+   - Πάντα και τα 3 ορατά (compact summary, όχι list)
+   - Πολεοδομικά PDF exports από εδώ διαβάζουν
+
+   **UI — Project settings panel** (NEW):
+   - "Σημείο Αναφοράς Έργου" section
+   - Inputs: Survey Point z (m γεωδαιτικά), Reference system dropdown (MSL/GGRS87/EGSA87/WGS84)
+   - Optional: τοπογραφικό document upload
+   - Project Base Point z (default 0, εξήγηση: "γωνία οικοπέδου")
+   - True North rotation (degrees, default 0)
+
+   **3D Viewer integration (ADR-366)**:
+   - Rulers/ruler-marks σέβονται το ίδιο toggle (consistency)
+   - Ground plane rendering στο Survey z (όταν enabled)
+   - Optional GIS overlay (Google Maps) requires survey coords
+   - Section cut annotations εμφανίζουν tri-value labels
+
+   **IFC Export readiness**:
+   - IfcSite stores survey coords + reference system → ready
+   - IfcProject stores basePoint → ready
+   - IfcBuilding stores baseElevation → ready
+   - IfcBuildingStorey stores floor.elevation → ready
+   - Full IFC4 spatial hierarchy supported out-of-the-box
+
+   **i18n keys**:
+   - `floor.elevation.mode.building="Σχετικό κτιρίου"`, `.project="Σχετικό έργου"`, `.geodetic="Γεωδαιτικό"`
+   - `project.surveyPoint="Σημείο Αναφοράς Γεωδαιτικό"`, `project.basePoint="Σημείο Αναφοράς Έργου"`
+   - `project.reference.MSL="Μέση Στάθμη Θάλασσας"`, `.GGRS87="ΕΓΣΑ '87"`, etc.
+
+   **Implementation Tasks**:
+   - Add Project.surveyPoint + basePoint + northRotation fields + Zod schema
+   - Add `useElevationDisplayMode()` hook με persistence
+   - Create `<ElevationDisplay value={z} />` SSoT component που σέβεται mode
+   - Refactor Floors tab table να χρησιμοποιεί το component + toggle
+   - Building card summary refactor με tri-value display
+   - Project settings panel — new section
+   - 3D viewer ruler integration
+   - PDF export utilities (πολεοδομικά documents tri-value tables)
 4. **Q4 — Storey reference: FFL ή Top of Structural Slab?** ✅ **ANSWERED 2026-05-20**: **Hybrid A — FFL primary + auto-derived ToS**. `Floor.elevation` = FFL (METRES). New field `Floor.finishThickness` (mm, default 80mm Greek typical). Derived: `topOfStructuralSlab = elevation - finishThickness/1000`. Construction drawings & BOQ auto-generate ToS dimensions. Change of finish (e.g. marble→wood) updates ToS without affecting walls/windows/doors. Rationale: serves full pipeline (design FFL → construction ToS → management FFL) with single user-facing number per storey.
 5. **Q5 — Parametric coupling;** ✅ **ANSWERED 2026-05-20**: **Γ — Hybrid με opt-in binding** (Revit pattern). Walls/columns έχουν `baseBinding` + `topBinding` enums. Default = bound (auto-stretch όταν αλλάζει storey height). User μπορεί να uncheck για edge cases (διαχωριστικά μπαρ, πατάρι, εξωτερικός όγκος).
 
@@ -713,7 +813,100 @@ interface BimElevationRef {
      - `roof`: `finishThickness = null` (no FFL), drainage flags
      - `mezzanine`: partial outline (subset of parent floor footprint)
    - Auto-template on new Building: Foundation @ lowest + Ground @ 0 + Roof @ top (user can add intermediate)
-7. **Q7 — Sloped slabs / variable thickness;** Στην MVP φάση τα υποστηρίζουμε, ή είναι post-MVP;
+7. **Q7 — Sloped slabs / variable thickness;** ✅ **ANSWERED 2026-05-20**: **Επιλογή Γ — Full Mesh Geometry (Revit/ArchiCAD-grade sub-elements)**. Slabs υποστηρίζουν per-vertex z + per-region thickness via BufferGeometry. Καλύπτει waffle slabs, capitals, double-slope, drainage cones, καμπύλες ράμπες, σύνθετα δώματα. Effort ~100h.
+
+   **Schema additions (Slab)**:
+   ```ts
+   interface SlabRecord {
+     // existing flat fields preserved (backward compat)
+     geometryType: 'box' | 'tilted' | 'mesh';  // default 'box'
+
+     // Επιλογή Β (tilted): single slope plane
+     slope?: {
+       direction: number;       // degrees (0 = +X, 90 = +Y)
+       angle: number;           // percentage (2% = drainage standard)
+       pivotEdge?: 'N' | 'S' | 'E' | 'W' | 'center';
+     };
+
+     // Επιλογή Γ (mesh): full sub-element overrides
+     mesh?: {
+       vertices: Array<{        // outline points με per-vertex z override
+         x: number; y: number;
+         zOverride?: number;    // METRES relative to floor.elevation (undefined = use floor.elevation)
+       }>;
+       thicknessRegions?: Array<{   // για waffle/capitals
+         polygon: Point2D[];        // sub-region in XY
+         thickness: number;          // mm
+       }>;
+       internalVertices?: Array<{   // π.χ. drainage cone center
+         x: number; y: number; z: number;
+       }>;
+       triangulation?: 'auto' | 'manual';  // Delaunay default
+     };
+   }
+   ```
+
+   **3D Viewer integration (ADR-366 impact)**:
+   - `box` path: `THREE.BoxGeometry` (existing, trivial — Phase 0-3 unchanged)
+   - `tilted` path: `THREE.BoxGeometry` + matrix transform OR custom 4-vertex extrude
+   - `mesh` path: `THREE.BufferGeometry` με indexed triangles + `computeVertexNormals()` για lighting
+   - Section cuts (τομές): mesh slicing algorithm (three-bvh-csg ή custom plane intersect) — Phase G
+   - Vertex editing UI: "Modify Sub Elements" mode (Revit-style) — click corner → drag z → live update
+   - LOD strategy: meshes >50 vertices → simplified box για zoom-out (perf)
+
+   **Firestore impact**:
+   - Box slab: ~50 bytes payload (no change)
+   - Tilted slab: ~80 bytes (+slope object)
+   - Mesh slab: 500-5000 bytes (vertices array) — well within 1MB doc limit
+   - Compression: vertex array stored as flat `Float32Array`-equivalent JSON, not nested objects
+
+   **BOQ / Quantity Takeoff**:
+   - Box: `volume = length × width × thickness` (instant)
+   - Tilted: `volume = area × avgThickness × cos(angle)` (analytical)
+   - Mesh: `volume = Σ triangleVolume(v1,v2,v3,bottomZ)` (integration επί mesh — pre-computed and cached)
+   - Cache invalidation on geometry change (debounced)
+
+   **IFC Export**:
+   - Box → `IfcSlab` με `IfcExtrudedAreaSolid`
+   - Tilted → `IfcSlab` με `IfcExtrudedAreaSolid` + axis rotation
+   - Mesh → `IfcSlab` με `IfcFacetedBrep` ή `IfcPolygonalFaceSet` (IFC4 standard)
+   - Full IFC4 spatial hierarchy ready
+
+   **Forward-compat strategy**:
+   - Phase 1 implementation: ship `box` + `tilted` (~30h subset)
+   - Phase 2 (deferred): add `mesh` UI + editing (~70h)
+   - Schema field `geometryType` present from day 1 → no migration when mesh ships
+   - Existing data: all slabs default `geometryType: 'box'` (zero-downtime)
+
+   **UI requirements**:
+   - Slab properties panel: dropdown "Γεωμετρία" → Επίπεδη / Κεκλιμένη / Σύνθετη
+   - Επίπεδη: shows thickness input only
+   - Κεκλιμένη: shows slope direction (compass) + angle (%)
+   - Σύνθετη: opens 3D sub-element editor (Phase 2 deferred)
+   - i18n keys: `slab.geometry.box="Επίπεδη"`, `.tilted="Κεκλιμένη"`, `.mesh="Σύνθετη (mesh)"`
+   - i18n: `slab.slope.direction="Κατεύθυνση κλίσης"`, `slab.slope.angle="Γωνία κλίσης (%)"`
+
+   **Validation rules**:
+   - Mesh vertex count: 3 ≤ N ≤ 500 (hard limit για perf)
+   - Thickness regions must not overlap
+   - Boundary polygon must be simple (non-self-intersecting)
+   - All zOverrides must be within ±10m of floor.elevation (sanity check)
+
+   **Implementation Tasks (Phase 1 — `box` + `tilted` only)**:
+   - Add `geometryType` + `slope` fields to Slab schema + Zod
+   - `SlabService` cascade: update geometry on type change
+   - 3D renderer: tilted extrude path
+   - Properties panel UI: geometry dropdown + slope inputs
+   - BOQ updates for tilted volume calc
+   - IFC export tilted path
+
+   **Implementation Tasks (Phase 2 — `mesh`, deferred)**:
+   - Add `mesh` field to schema
+   - `<SubElementEditor />` 3D component (click-drag vertices)
+   - Mesh BufferGeometry pipeline + LOD
+   - Mesh slicing for section cuts
+   - Mesh volume integration για BOQ
+   - IFC IfcPolygonalFaceSet export
 8. **Q8 — IFC export readiness;** Σχεδιάζουμε για future IFC export τώρα (επηρεάζει schema), ή το αφήνουμε για μετά;
 9. **Q9 — Naming convention storeys;** Default ονόματα ("L1", "Ισόγειο", "1ος όροφος") + user override; Auto-renumber όταν προστίθεται basement;
 10. **Q10 — Existing Firestore data;** Πόσα production projects έχουν ήδη BIM data; Migration script πρέπει να είναι zero-downtime;
