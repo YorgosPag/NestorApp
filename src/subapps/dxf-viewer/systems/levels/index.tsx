@@ -10,8 +10,9 @@ export * from './config';
 export * from './utils';
 
 // Hooks (can be imported safely)
-export { 
-  useLevels, 
+export {
+  useLevels,
+  useLevelsOptional,
   useLevelManager,
   useLevelSystem,
   useLevelOperations,

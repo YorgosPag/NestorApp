@@ -119,6 +119,11 @@ export function useLevels(): LevelsHookReturn {
   return context;
 }
 
+// ADR-371: safe variant for read-only consumers outside LevelsSystem provider.
+export function useLevelsOptional(): LevelsHookReturn | null {
+  return useContext(getLevelsContext());
+}
+
 // Legacy compatibility hooks
 export function useLevelManager(): LevelsHookReturn {
   return useLevels();

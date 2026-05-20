@@ -8,7 +8,7 @@
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff } from 'lucide-react';
-import { useLevels } from '../../systems/levels';
+import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { sortLevelsTopDown } from '../utils/floor-visibility-state';
@@ -76,7 +76,9 @@ function LevelRow({ level, activeLevelId }: { level: Level; activeLevelId: strin
 
 export function Floor3DPanelTab() {
   const { t } = useTranslation('bim3d');
-  const { levels } = useLevels();
+  // ADR-371: useLevelsOptional() — null outside LevelsSystem (Properties read-only context).
+  const levelsCtx = useLevelsOptional();
+  const levels = levelsCtx?.levels ?? [];
   const activeLevelId = useBim3DEntitiesStore((s) => s.activeLevelId);
   const applyFloorsPreset = useViewMode3DStore((s) => s.applyFloorsPreset);
   const floorVisibilityModes = useViewMode3DStore((s) => s.floorVisibilityModes);

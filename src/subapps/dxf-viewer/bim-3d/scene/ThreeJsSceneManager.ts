@@ -139,7 +139,9 @@ export class ThreeJsSceneManager {
   }
 
   private initRenderer(container: HTMLElement): THREE.WebGLRenderer {
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    // stencil:true required for ADR-366 §A.3 Phase 7.0a stencil cap pipeline.
+    // (Three.js default is already true, set explicit για future-proofing.)
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth || 800, container.clientHeight || 600);
     renderer.setClearColor(0x1a1a1a, 1);
@@ -246,6 +248,12 @@ export class ThreeJsSceneManager {
 
       if (this.pathTracerRenderer.isActive) {
         this.pathTracerRenderer.renderSample();
+      } else if (this.sectionController.isStencilActive()) {
+        // ADR-366 §A.3 Phase 7.0a — Direct render + stencil caps.
+        // Bypass EffectComposer/SSAO (default RT lacks stencil buffer).
+        // SSAO trade-off acceptable: section editing = active interaction,
+        // SSAO only kicks in at idle anyway.
+        this.sectionController.renderFrameWithCaps(this.viewport.camera);
       } else {
         this.ssaoModulator.render();
       }
