@@ -176,9 +176,9 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
               type: 'combobox',
               size: 'small',
               command: {
-                id: 'beam.elevation',
-                labelKey: 'ribbon.commands.beamEditor.elevation',
-                commandKey: BEAM_RIBBON_KEYS.params.elevation,
+                id: 'beam.topElevation',
+                labelKey: 'ribbon.commands.beamEditor.topElevation',
+                commandKey: BEAM_RIBBON_KEYS.params.topElevation,
                 comboboxWidthPx: 80,
                 options: ELEVATION_MM_OPTIONS,
               },

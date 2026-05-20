@@ -135,9 +135,9 @@ export const CONTEXTUAL_SLAB_TAB: RibbonTab = {
               type: 'combobox',
               size: 'small',
               command: {
-                id: 'slab.elevation',
-                labelKey: 'ribbon.commands.slabEditor.elevation',
-                commandKey: SLAB_RIBBON_KEYS.params.elevation,
+                id: 'slab.levelElevation',
+                labelKey: 'ribbon.commands.slabEditor.levelElevation',
+                commandKey: SLAB_RIBBON_KEYS.params.levelElevation,
                 comboboxWidthPx: 90,
                 options: ELEVATION_MM_OPTIONS,
               },

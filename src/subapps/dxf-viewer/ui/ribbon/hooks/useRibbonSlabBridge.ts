@@ -74,7 +74,7 @@ const NULL_TOGGLE: RibbonToggleState = false;
 
 const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof SlabParams>> = {
   [SLAB_RIBBON_KEYS.params.thickness]: 'thickness',
-  [SLAB_RIBBON_KEYS.params.elevation]: 'elevation',
+  [SLAB_RIBBON_KEYS.params.levelElevation]: 'levelElevation',
 };
 
 const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof SlabParams>> = {

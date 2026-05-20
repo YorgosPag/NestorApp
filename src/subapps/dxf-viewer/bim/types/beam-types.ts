@@ -1,23 +1,32 @@
 /**
- * BIM Beam — Type Schema (ADR-363 §5.7, Phase 5).
+ * BIM Beam — Type Schema (ADR-363 §5.7 + ADR-369 §2.2 + §9 Q5 + Q8, Phase A4).
  *
- * Concrete `BeamParams` + `BeamGeometry` + `BeamEntity` αντικαθιστούν τα Phase 0
- * stubs (`BimParamsStub`/`BimGeometryStub`) στο `types/entities.ts` για beams.
+ * Concrete `BeamParams` + `BeamGeometry` + `BeamEntity`. 3 kinds (straight /
+ * curved / cantilever). Straight + cantilever: 2-click. Curved: 3-click με
+ * quadratic Bezier control. Cross-section width × depth.
  *
- * 3 kinds (straight / curved / cantilever). Straight + cantilever: 2-click
- * placement (start → end). Curved: 3-click (start → end → curve control point).
- * Cross-section width × depth + elevation (top-of-beam από project origin).
+ * ADR-369 §2.2 canonical convention (Post-ADR-369):
+ *   - `topElevation` = **top face** (top-of-beam) σε mm από project origin.
+ *     Default = `floor.elevation` (Hybrid A FFL). Beam hangs DOWN by `depth`.
+ *   - `zOffset?` = mm (default 0) — drop-from-ceiling για ψευδοροφές, exposed
+ *     beams κάτω από slab, κλπ.
+ *   - Geometry: top = topElevation + zOffset
+ *              bottom = top - depth
+ *
+ * ADR-369 §9 Q5 §854: Beams `topElevation` = floor.elevation by default.
+ * `zOffset` (mm) για drop-from-ceiling cases. Δεν χρειάζονται baseBinding/
+ * topBinding enums όπως walls/columns (beam έχει ενιαία top reference).
+ *
+ * ADR-369 §9 Q8 IFC4 readiness:
+ *   - BeamEntity extends IfcEntityMixin. ifcType='IfcBeam' πάντα.
  *
  * SSoT:
  *   - `BeamParams.startPoint` + `endPoint` (+ optional `curveControl`) ορίζουν
  *     τον άξονα. `width` / `depth` ορίζουν τη διατομή.
- *   - `BeamGeometry` cache από `computeBeamGeometry()` — re-derivable από
- *     params σε corruption (mirrors wall/slab/column pattern).
- *
- * Plan-view rendering: dashed line (industry convention για beam hidden above
- * floor in plan view) με translucent fill στο width × length footprint.
+ *   - `BeamGeometry` cache από `computeBeamGeometry()` — re-derivable από params.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7
+ * @see docs/centralized-systems/reference/adrs/ADR-369-bim-elevation-convention-revit-alignment.md §2.2, §9 Q5, §9 Q8
  */
 
 import type {
@@ -28,6 +37,7 @@ import type {
   Polyline3D,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
+import type { IfcEntityMixin } from './ifc-entity-mixin';
 
 // ─── Sub-type discriminators (ADR-363 §5.7) ─────────────────────────────────
 
@@ -63,8 +73,9 @@ export type BeamSectionType = 'I' | 'H';
  *   - `curveControl` — quadratic Bezier control point (μόνο αν `kind === 'curved'`).
  *   - `width` — mm. Cross-section X (πλάτος διατομής).
  *   - `depth` — mm. Cross-section Y (structural depth — δομικό βάθος).
- *   - `elevation` — mm. Top-of-beam από project origin (typical 3000mm για
- *     top-of-slab-storey level).
+ *   - `topElevation` — mm. **Top face** (top-of-beam) από project origin.
+ *     ADR-369 §2.2 canonical (renamed από legacy `elevation`).
+ *   - `zOffset?` — mm (default 0). Drop-from-ceiling offset. ADR-369 §854.
  *   - `material` — material library ID (Phase 6+).
  *   - `supportType` — pin/roller / fixed / cantilever (default per kind).
  */
@@ -78,8 +89,10 @@ export interface BeamParams {
   readonly width: number;
   /** mm. Cross-section Y / structural depth. */
   readonly depth: number;
-  /** mm. Top-of-beam από project origin (typically storey height). */
-  readonly elevation: number;
+  /** mm. Top face (top-of-beam) από project origin. ADR-369 §2.2. */
+  readonly topElevation: number;
+  /** mm. Drop-from-ceiling offset (default 0). ADR-369 §854. */
+  readonly zOffset?: number;
   readonly material?: string;
   readonly supportType?: BeamSupportType;
   /** Steel section profile type ('I' or 'H'). Ignored for rc/glulam. Default: 'I'. */
@@ -106,7 +119,7 @@ export interface BeamParams {
  *   - `length` — m. Σύνολο μήκους κατά μήκος του άξονα.
  *   - `area` — m². Top surface (length × width / 1e6) — feeds BOQ formwork.
  *   - `volume` — m³. length × width × depth / 1e9.
- *   - `bbox` — folds outline + axis vertices, z extends σε elevation.
+ *   - `bbox` — folds outline + axis vertices, z extends σε topElevation.
  */
 export interface BeamGeometry {
   readonly axisPolyline: Polyline3D;
@@ -128,11 +141,14 @@ export interface BeamGeometry {
 // ─── Entity (BIM generic instantiation) ─────────────────────────────────────
 
 /**
- * Beam BIM entity. Extends `BimEntity` με `kind: BeamKind` discriminator.
+ * Beam BIM entity. Extends `BimEntity` με `kind: BeamKind` discriminator + IFC mixin.
  */
 export interface BeamEntity
-  extends BimEntity<BeamKind, BeamParams, BeamGeometry> {
+  extends BimEntity<BeamKind, BeamParams, BeamGeometry>,
+    IfcEntityMixin {
   readonly type: 'beam';
+  /** ADR-369 §9 Q8 — IFC4 class. Always 'IfcBeam'. */
+  readonly ifcType: 'IfcBeam';
 }
 
 // ─── Defaults & constants ────────────────────────────────────────────────────
@@ -168,8 +184,14 @@ export const MAX_SPAN_DEPTH_RATIO = 20;
  */
 export const MAX_CANTILEVER_SPAN_DEPTH_RATIO = 10;
 
-/** Default elevation (mm) — top-of-slab για typical Greek residential storey. */
-export const DEFAULT_BEAM_ELEVATION_MM = 3000;
+/**
+ * Default top elevation (mm) — top-of-slab για typical Greek residential
+ * storey (3m). ADR-369 §2.2 renamed από `DEFAULT_BEAM_ELEVATION_MM`.
+ */
+export const DEFAULT_BEAM_TOP_ELEVATION_MM = 3000;
+
+/** ADR-369 §854 — default drop-from-ceiling zOffset (mm). */
+export const DEFAULT_BEAM_Z_OFFSET_MM = 0;
 
 /**
  * Quadratic Bezier subdivision count για `curved` kind. 16 segments mirror

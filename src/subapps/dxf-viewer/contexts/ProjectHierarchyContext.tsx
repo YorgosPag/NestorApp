@@ -490,4 +490,10 @@ export function useProjectHierarchy() {
   return context;
 }
 
+// ADR-371: optional variant for read-only consumers (Properties pipeline) that
+// mount DXF-Viewer outside ProjectHierarchyProvider — returns null vs. throw.
+export function useProjectHierarchyOptional(): ProjectHierarchyContextType | null {
+  return useContext(ProjectHierarchyContext);
+}
+
 export default ProjectHierarchyContext;

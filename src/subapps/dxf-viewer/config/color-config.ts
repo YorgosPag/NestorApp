@@ -762,3 +762,25 @@ export const HOVER_HIGHLIGHT = {
     glowShadowBlur: 6,                         // soft halo radius (pixels)
   },
 } as const;
+
+// ============================================================================
+// 🏢 ADR-366 §A.3 — SECTION CUT SURFACE COLOR (2026-05-20)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Section Cut Cap Surface (Phase 7.0)
+ *
+ * Solid semi-transparent grey fill για το cut face του 3D section box / plane.
+ * Justified ως NEW token: το 2D DXF Viewer δεν έχει αντίστοιχη έννοια
+ * (clip-volume cap surface). Hatched variants → Phase 7.1+ (ADR-363 ShaderType).
+ *
+ * @see ADR-366 §A.3.Q4 — Cut surface visual decision
+ */
+export const SECTION_CUT_SURFACE = {
+  /** Hex color για solid cap fill — neutral grey, photoreal-friendly */
+  color: '#9e9e9e',
+  /** Opacity για cap mesh — semi-transparent ώστε εσωτερικό να φαίνεται */
+  opacity: 0.5,
+} as const;
+
+export type SectionCutSurfaceKey = keyof typeof SECTION_CUT_SURFACE;

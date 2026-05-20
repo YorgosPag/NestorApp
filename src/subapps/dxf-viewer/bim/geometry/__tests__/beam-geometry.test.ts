@@ -6,7 +6,7 @@
  *   - curved axis subdivision (17 vertices)
  *   - outline perpendicular offset (rectangle area = length × width)
  *   - length / area / volume scalars (m / m² / m³)
- *   - bbox folds outline + axis + extends to elevation
+ *   - bbox folds outline + axis + extends to topElevation
  *   - getBeamSpanDepthRatio convenience
  *   - cantilever axis identical to straight pattern
  */
@@ -18,7 +18,7 @@ import {
 import {
   CURVED_BEAM_SUBDIVISIONS,
   DEFAULT_BEAM_DEPTH_MM,
-  DEFAULT_BEAM_ELEVATION_MM,
+  DEFAULT_BEAM_TOP_ELEVATION_MM,
   DEFAULT_BEAM_WIDTH_MM,
   type BeamParams,
 } from '../../types/beam-types';
@@ -29,7 +29,7 @@ const baseStraight: BeamParams = {
   endPoint: { x: 5000, y: 0, z: 0 },
   width: DEFAULT_BEAM_WIDTH_MM,
   depth: DEFAULT_BEAM_DEPTH_MM,
-  elevation: DEFAULT_BEAM_ELEVATION_MM,
+  topElevation: DEFAULT_BEAM_TOP_ELEVATION_MM,
   supportType: 'simple',
 };
 
@@ -62,11 +62,11 @@ describe('computeBeamGeometry — straight kind', () => {
     expect(g.volume).toBeCloseTo(expected, 6);
   });
 
-  test('bbox folds outline + axis + extends to elevation', () => {
+  test('bbox folds outline + axis + extends to topElevation', () => {
     const g = computeBeamGeometry(baseStraight);
     expect(g.bbox.min.x).toBeCloseTo(0, 3);
     expect(g.bbox.max.x).toBeCloseTo(5000, 3);
-    expect(g.bbox.max.z).toBeCloseTo(DEFAULT_BEAM_ELEVATION_MM, 3);
+    expect(g.bbox.max.z).toBeCloseTo(DEFAULT_BEAM_TOP_ELEVATION_MM, 3);
   });
 });
 

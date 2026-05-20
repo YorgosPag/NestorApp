@@ -1,8 +1,9 @@
 /**
- * ADR-363 Phase 5 — Pure builders για beam entity creation.
+ * ADR-363 Phase 5 + ADR-369 Phase A4 — Pure builders για beam entity creation.
  *
  * SSoT:
- *   - IDs via `generateBeamId()` (N.6 enterprise-id).
+ *   - Entity creation via `createBeam()` factory (ADR-369 Phase A4).
+ *   - IDs auto-generated από factory (prefix 'beam').
  *   - Geometry via `computeBeamGeometry()` — pure function.
  *   - Validation via `validateBeamParams()` — hardErrors block creation.
  *   - Types via `bim/types/beam-types.ts`.
@@ -12,14 +13,16 @@
  *   - 3-click (curved): start → end → curveControl, `completeBeamFromThreeClicks`.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7
+ * @see docs/centralized-systems/reference/adrs/ADR-369-bim-elevation-convention-revit-alignment.md §2.2, §9 Q5, §9 Q8
  */
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../../bim/types/bim-base';
 import {
   DEFAULT_BEAM_DEPTH_MM,
-  DEFAULT_BEAM_ELEVATION_MM,
+  DEFAULT_BEAM_TOP_ELEVATION_MM,
   DEFAULT_BEAM_WIDTH_MM,
+  DEFAULT_BEAM_Z_OFFSET_MM,
   type BeamEntity,
   type BeamKind,
   type BeamParams,
@@ -27,7 +30,7 @@ import {
 } from '../../bim/types/beam-types';
 import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
 import { validateBeamParams } from '../../bim/validators/beam-validator';
-import { generateBeamId } from '@/services/enterprise-id-convenience';
+import { createBeam } from '@/services/factories/beam.factory';
 import type { SceneUnits } from '../../utils/scene-units';
 
 export type { SceneUnits };
@@ -36,7 +39,7 @@ export type { SceneUnits };
 
 /**
  * Field overrides για `buildDefaultBeamParams`. Ribbon (contextual beam
- * tab) supplies kind / supportType / width / depth / elevation / material.
+ * tab) supplies kind / supportType / width / depth / topElevation / zOffset / material.
  */
 export interface BeamParamOverrides {
   readonly kind?: BeamKind;
@@ -45,8 +48,10 @@ export interface BeamParamOverrides {
   readonly width?: number;
   /** mm. */
   readonly depth?: number;
-  /** mm. Top-of-beam από project origin. */
-  readonly elevation?: number;
+  /** mm. Top face (top-of-beam) από project origin. ADR-369 §2.2. */
+  readonly topElevation?: number;
+  /** mm. Drop-from-ceiling offset (default 0). ADR-369 §854. */
+  readonly zOffset?: number;
   readonly material?: string;
 }
 
@@ -65,7 +70,7 @@ function defaultSupportType(kind: BeamKind): BeamSupportType {
  *
  *   1. Resolve kind (override → 'straight' default).
  *   2. Lift 2D points σε Point3D (z=0).
- *   3. Resolve width / depth / elevation / supportType (override → defaults).
+ *   3. Resolve width / depth / topElevation / zOffset / supportType.
  */
 export function buildDefaultBeamParams(
   startPoint: Readonly<Point2D>,
@@ -79,7 +84,8 @@ export function buildDefaultBeamParams(
   const end: Point3D = { x: endPoint.x, y: endPoint.y, z: 0 };
   const width = overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
   const depth = overrides.depth ?? DEFAULT_BEAM_DEPTH_MM;
-  const elevation = overrides.elevation ?? DEFAULT_BEAM_ELEVATION_MM;
+  const topElevation = overrides.topElevation ?? DEFAULT_BEAM_TOP_ELEVATION_MM;
+  const zOffset = overrides.zOffset ?? DEFAULT_BEAM_Z_OFFSET_MM;
   const supportType = overrides.supportType ?? defaultSupportType(kind);
 
   const params: BeamParams = {
@@ -88,7 +94,8 @@ export function buildDefaultBeamParams(
     endPoint: end,
     width,
     depth,
-    elevation,
+    topElevation,
+    zOffset,
     supportType,
     sceneUnits,
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
@@ -104,7 +111,9 @@ export type BuildBeamEntityResult =
 
 /**
  * Build a `BeamEntity` από `BeamParams`. Geometry computed via SSoT
- * `computeBeamGeometry()`. Hard errors short-circuit creation.
+ * `computeBeamGeometry()`. Hard errors short-circuit creation. Final entity
+ * assembled via `createBeam()` factory (ADR-369 Phase A4) — auto-fills
+ * ifcGuid + ifcType='IfcBeam' + zOffset default 0.
  *
  * `sceneUnits` — passed to validator so length thresholds scale correctly
  * in non-mm scenes (mirrors wall/stair builder pattern).
@@ -120,16 +129,13 @@ export function buildBeamEntity(
   }
   // params.sceneUnits is already stored; computeBeamGeometry reads it directly.
   const geometry = computeBeamGeometry(params);
-  const entity: BeamEntity = {
-    id: generateBeamId(),
-    type: 'beam',
-    kind: params.kind,
-    layerId,
+  const entity = createBeam({
     params,
     geometry,
-    validation: validation.bimValidation,
+    layerId,
     visible: true,
-  };
+    validation: validation.bimValidation,
+  });
   return { ok: true, entity };
 }
 

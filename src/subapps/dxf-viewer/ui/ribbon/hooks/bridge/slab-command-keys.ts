@@ -19,14 +19,14 @@ export const SLAB_RIBBON_KEYS = {
   params: {
     /** mm — slab thickness. */
     thickness: 'slab.params.thickness',
-    /** mm — elevation από project origin. */
-    elevation: 'slab.params.elevation',
+    /** mm — top face (FFL) από project origin. ADR-369 §2.1. */
+    levelElevation: 'slab.params.levelElevation',
   },
 } as const;
 
 export type SlabRibbonNumberCommandKey =
   | typeof SLAB_RIBBON_KEYS.params.thickness
-  | typeof SLAB_RIBBON_KEYS.params.elevation;
+  | typeof SLAB_RIBBON_KEYS.params.levelElevation;
 
 export type SlabRibbonStringCommandKey =
   | typeof SLAB_RIBBON_KEYS.stringParams.kind
@@ -35,7 +35,7 @@ export type SlabRibbonStringCommandKey =
 
 export const SLAB_RIBBON_NUMBER_KEYS: readonly SlabRibbonNumberCommandKey[] = [
   SLAB_RIBBON_KEYS.params.thickness,
-  SLAB_RIBBON_KEYS.params.elevation,
+  SLAB_RIBBON_KEYS.params.levelElevation,
 ];
 
 export const SLAB_RIBBON_STRING_KEYS: readonly SlabRibbonStringCommandKey[] = [

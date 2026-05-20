@@ -14,7 +14,7 @@
  *   3. length (m)   = sum-of-edges στο axis (mm → m)
  *   4. area (m²)    = length × (width / 1000)
  *   5. volume (m³)  = length × width × depth / 1e9
- *   6. bbox folds outline + axis + extrudes σε elevation (z range [0, elevation])
+ *   6. bbox folds outline + axis + extrudes σε topElevation (z range [0, topElevation])
  *
  * Σύμβαση μονάδων: input/output γεωμετρικά σημεία σε mm.
  * Numeric scalars (length/area/volume) σε m / m² / m³ για άμεση BOQ feed.
@@ -53,7 +53,7 @@ export function computeBeamGeometry(params: BeamParams): BeamGeometry {
   const area = lengthM * widthM;
   const volume = area * depthM;
 
-  const bbox = computeBbox(axisVertices, outlineVertices, params.elevation, s);
+  const bbox = computeBbox(axisVertices, outlineVertices, params.topElevation, s);
 
   return {
     axisPolyline,
@@ -221,13 +221,13 @@ function computePolylineLengthMm(vertices: readonly Point3D[]): number {
 }
 
 /**
- * Axis-aligned 3D bounding box. z range extends σε `elevation` (beam top).
- * Phase 5 axis z stays 0 → bbox z = [0, elevation].
+ * Axis-aligned 3D bounding box. z range extends σε `topElevation` (beam top,
+ * ADR-369 §2.2). Phase 5 axis z stays 0 → bbox z = [0, topElevation].
  */
 function computeBbox(
   axis: readonly Point3D[],
   outline: readonly Point3D[],
-  elevationMm: number,
+  topElevationMm: number,
   s: number,
 ): BoundingBox3D {
   let minX = Infinity, minY = Infinity, minZ = Infinity;
@@ -244,8 +244,8 @@ function computeBbox(
   for (const p of axis) fold(p);
   for (const p of outline) fold(p);
   if (minZ === Infinity) { minZ = 0; maxZ = 0; }
-  // elevation mm → canvas units for consistent bbox coordinate space.
-  const topZ = Math.max(maxZ, elevationMm * s);
+  // topElevation mm → canvas units for consistent bbox coordinate space.
+  const topZ = Math.max(maxZ, topElevationMm * s);
   return {
     min: { x: minX, y: minY, z: minZ },
     max: { x: maxX, y: maxY, z: topZ },

@@ -48,9 +48,9 @@ export type SlabOpeningKind = 'shaft' | 'well' | 'duct' | 'chimney';
  * `outline` σε world coords mm, CCW closed. Min 3 vertices.
  *
  * Optional fields:
- *   - `elevationOverride` — mm, override του host-slab elevation (multi-storey
+ *   - `elevationOverride` — mm, override του host-slab levelElevation (multi-storey
  *     stack: shaft που τρυπάει 2 slabs μπορεί να καθίσει διαφορετικό z).
- *     Default undefined → χρησιμοποιεί `hostSlab.params.elevation`.
+ *     Default undefined → χρησιμοποιεί `hostSlab.params.levelElevation` (ADR-369 §2.1).
  *   - `multiStoreyStackGroupId` — bulk-edit στοιβαγμένα openings (Phase 3.7+
  *     "Στοίβαξη σε όλους τους ορόφους" workflow).
  *   - `fireRating` — minutes (60/90/120) για shaft / chimney (Phase 6+ BOQ).
@@ -62,7 +62,7 @@ export interface SlabOpeningParams {
   readonly slabId: string;
   /** Closed polygon (CCW). World coords σε mm. Min MIN_SLAB_OPENING_VERTICES (3). */
   readonly outline: Polygon3D;
-  /** mm. z override; default = hostSlab.params.elevation όταν undefined. */
+  /** mm. z override; default = hostSlab.params.levelElevation όταν undefined. ADR-369 §2.1. */
   readonly elevationOverride?: number;
   /** Bulk-edit group id για multi-storey stacked openings. */
   readonly multiStoreyStackGroupId?: string;

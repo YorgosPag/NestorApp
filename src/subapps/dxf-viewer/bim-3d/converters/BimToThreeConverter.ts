@@ -137,8 +137,10 @@ export function beamToMesh(beam: BeamEntity, levelId?: string): THREE.Mesh | nul
   const beamDepthM = beam.params.depth * MM_TO_M;
   const geo = extrudeAndRotate(shape, beamDepthM);
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('beam'));
-  // elevation = top of beam; extrusion goes from y=0 → y=depthM, so offset bottom to elevationM - depthM
-  mesh.position.y = beam.params.elevation * MM_TO_M - beamDepthM;
+  // ADR-369 §2.2: topElevation = top of beam; extrusion goes from y=0 → y=depthM.
+  // beam hangs DOWN from (topElevation + zOffset) by depth.
+  const beamTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
+  mesh.position.y = beamTopMm * MM_TO_M - beamDepthM;
   return tagMesh(mesh, beam.id, 'beam', levelId);
 }
 
@@ -152,8 +154,9 @@ export function slabToMesh(slab: SlabEntity, levelId?: string): THREE.Mesh | nul
   const thicknessM = slab.params.thickness * MM_TO_M;
   const geo = extrudeAndRotate(shape, thicknessM);
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('slab'));
-  // elevation = bottom surface (mm → m); extrusion goes upward by thicknessM.
-  // floor:0 → 0..+0.20m, ceiling:2800 → 2.80..3.00m, roof:3000 → 3.00..3.20m.
-  mesh.position.y = slab.params.elevation * MM_TO_M;
+  // ADR-369 §2.1: levelElevation = top face (FFL). Slab hangs DOWN by thickness.
+  // floor:0 → -0.20..0m, ceiling/roof:3000 → 2.80..3.00m, foundation:0 → -0.50..0m.
+  const slabTopMm = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
+  mesh.position.y = (slabTopMm - slab.params.thickness) * MM_TO_M;
   return tagMesh(mesh, slab.id, 'slab', levelId);
 }

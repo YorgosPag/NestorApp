@@ -77,9 +77,9 @@ const BEAM_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
 const NULL_TOGGLE: RibbonToggleState = false;
 
 const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof BeamParams>> = {
-  [BEAM_RIBBON_KEYS.params.width]:     'width',
-  [BEAM_RIBBON_KEYS.params.depth]:     'depth',
-  [BEAM_RIBBON_KEYS.params.elevation]: 'elevation',
+  [BEAM_RIBBON_KEYS.params.width]:        'width',
+  [BEAM_RIBBON_KEYS.params.depth]:        'depth',
+  [BEAM_RIBBON_KEYS.params.topElevation]: 'topElevation',
 };
 
 const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof BeamParams>> = {

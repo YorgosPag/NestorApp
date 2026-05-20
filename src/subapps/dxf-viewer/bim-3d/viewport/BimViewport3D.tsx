@@ -4,14 +4,15 @@ import { useEffect, useRef, useCallback, useSyncExternalStore, useState } from '
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/auth/hooks/useAuth';
-import { useProjectHierarchy } from '../../contexts/ProjectHierarchyContext';
+import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyContext';
 import { PerformanceHUD } from '../performance/PerformanceHUD';
 import { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
+import { useSectionStore } from '../stores/SectionStore';
 import { LIGHT_PRESETS } from '../lighting/lighting-presets';
 import { getHdriPreset } from '../lighting/hdri-environment';
-import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
+import { useBim3DEntitiesStore, type Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
@@ -27,8 +28,28 @@ const HOVER_DEBOUNCE_MS = 800;
 // ── BimViewport3D ─────────────────────────────────────────────────────────────
 // ADR-040 micro-leaf compliant: subscribes to ViewMode3DStore (not high-freq),
 // renders ≤1 canvas element. Ownership: ThreeJsSceneManager handles Three.js.
+//
+// ADR-371: optional props let Properties read-only pipeline mount the same
+// viewport without ProjectHierarchyProvider and without global entity store.
+// Default behavior (no props) = legacy /dxf/viewer path (canvas-layer-stack-3d-leaf).
 
-export function BimViewport3D() {
+const EMPTY_BIM_ENTITIES: Bim3DEntities = {
+  walls: [],
+  columns: [],
+  beams: [],
+  slabs: [],
+};
+
+export interface BimViewport3DProps {
+  /** Override hierarchy projectId — required for render uploads. Falls back to ProjectHierarchyContext. */
+  projectId?: string | null;
+  /** Read-only mode: hides render button, dialog, progress overlay. Floors/Lighting/Quality panel stays visible. */
+  readOnly?: boolean;
+  /** External BIM entity feed (Properties read-only). When provided, replaces Bim3DEntitiesStore subscription. */
+  bimEntities?: Bim3DEntities | null;
+}
+
+export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimEntities }: BimViewport3DProps = {}) {
   const { t } = useTranslation('bim3d');
   const containerRef = useRef<HTMLDivElement>(null);
   const managerRef = useRef<ThreeJsSceneManager | null>(null);
@@ -37,8 +58,9 @@ export function BimViewport3D() {
   const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
   const [renderDialogOpen, setRenderDialogOpen] = useState(false);
   const { user } = useAuth();
-  const { selectedProject } = useProjectHierarchy();
-  const projectId = selectedProject?.id ?? null;
+  const hierarchy = useProjectHierarchyOptional();
+  const projectId = projectIdProp ?? hierarchy?.selectedProject?.id ?? null;
+  const externalEntitiesMode = bimEntities !== undefined;
 
   // Low-frequency store subscriptions (user-triggered entity changes — not 60fps)
   const is3D = useSyncExternalStore(
@@ -71,10 +93,14 @@ export function BimViewport3D() {
 
     setCanvasEl(managerRef.current.getRendererCanvas());
 
-    // Sync current store state immediately — stores were populated before 3D mode opened.
-    const entitiesState = useBim3DEntitiesStore.getState();
-    const { walls, columns, beams, slabs, activeLevelId } = entitiesState;
-    managerRef.current.syncBimEntities({ walls, columns, beams, slabs }, 0, activeLevelId ?? undefined);
+    // Initial entity sync — external prop overrides global store when provided (ADR-371).
+    if (externalEntitiesMode) {
+      managerRef.current.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined);
+    } else {
+      const entitiesState = useBim3DEntitiesStore.getState();
+      const { walls, columns, beams, slabs, activeLevelId } = entitiesState;
+      managerRef.current.syncBimEntities({ walls, columns, beams, slabs }, 0, activeLevelId ?? undefined);
+    }
     managerRef.current.syncDxfOverlay(useDxfOverlay3DStore.getState().dxfScene);
 
     // Apply current floor visibility modes immediately.
@@ -110,7 +136,9 @@ export function BimViewport3D() {
   }, [is3D]);
 
   // Ongoing subscriptions: fire when store data changes AFTER 3D mode is active.
+  // ADR-371: skipped when external bimEntities prop drives the scene.
   useEffect(() => {
+    if (externalEntitiesMode) return;
     return useBim3DEntitiesStore.subscribe((s) => {
       managerRef.current?.syncBimEntities(
         { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs },
@@ -118,7 +146,13 @@ export function BimViewport3D() {
         s.activeLevelId ?? undefined,
       );
     });
-  }, []);
+  }, [externalEntitiesMode]);
+
+  // ADR-371: external entity feed — push prop changes into the scene.
+  useEffect(() => {
+    if (!externalEntitiesMode) return;
+    managerRef.current?.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined);
+  }, [externalEntitiesMode, bimEntities]);
 
   useEffect(() => {
     return useDxfOverlay3DStore.subscribe((s) => {
@@ -159,6 +193,14 @@ export function BimViewport3D() {
         const preset = getHdriPreset(id);
         if (preset) useEnvironmentStore.getState().setHdriUrl(preset.url);
       },
+    );
+  }, []);
+
+  // ADR-366 §A.3 — safety net: user enables section before geometry sync → ensure init runs.
+  useEffect(() => {
+    return useSectionStore.subscribe(
+      (s) => s.enabled,
+      (enabled) => { if (enabled) managerRef.current?.initSectionBox(); },
     );
   }, []);
 
@@ -279,8 +321,9 @@ export function BimViewport3D() {
       {/* BIM entity card panel (ADR-366 B.2.Q4) — micro-leaf, absolute right-side panel */}
       <BimEntityCardPanel />
 
-      {/* Floating Render button — bottom-right, above Performance HUD (ADR-366 §B.4 Phase 6) */}
-      {!isRendering && (
+      {/* Floating Render button — bottom-right, above Performance HUD (ADR-366 §B.4 Phase 6).
+          ADR-371: hidden in readOnly mode (Properties pipeline). */}
+      {!isRendering && !readOnly && (
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -295,19 +338,21 @@ export function BimViewport3D() {
         </Tooltip>
       )}
 
-      {/* Render progress overlay — visible only during final render */}
-      {isRendering && (
+      {/* Render progress overlay — visible only during final render. Suppressed in readOnly. */}
+      {isRendering && !readOnly && (
         <RenderProgressOverlay onCancel={handleRenderCancel} />
       )}
 
-      {/* Render dialog — Radix (ADR-001) */}
-      <RenderFinalDialog
-        open={renderDialogOpen}
-        onOpenChange={setRenderDialogOpen}
-        onConfirm={handleRenderConfirm}
-        rendererCanvas={canvasEl}
-        onCalibrateSample={handleCalibrateSample}
-      />
+      {/* Render dialog — Radix (ADR-001). Suppressed in readOnly. */}
+      {!readOnly && (
+        <RenderFinalDialog
+          open={renderDialogOpen}
+          onOpenChange={setRenderDialogOpen}
+          onConfirm={handleRenderConfirm}
+          rendererCanvas={canvasEl}
+          onCalibrateSample={handleCalibrateSample}
+        />
+      )}
 
       {/* Performance HUD (ADR-366 B.5) — micro-leaf, bottom-right */}
       <PerformanceHUD

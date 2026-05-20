@@ -1064,7 +1064,7 @@
       },
       "slabEditor": {
         "thickness": "Thickness",
-        "elevation": "Elevation",
+        "levelElevation": "Level (FFL)",
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete this slab? This action cannot be undone.",
@@ -1100,7 +1100,7 @@
       "beamEditor": {
         "width": "Width",
         "depth": "Depth",
-        "elevation": "Elevation",
+        "topElevation": "Level (Top)",
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete this beam? This action cannot be undone.",

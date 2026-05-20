@@ -1064,7 +1064,7 @@
       },
       "slabEditor": {
         "thickness": "Πάχος",
-        "elevation": "Στάθμη",
+        "levelElevation": "Στάθμη (FFL)",
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή πλάκας; Η ενέργεια δεν μπορεί να αναιρεθεί.",
@@ -1100,7 +1100,7 @@
       "beamEditor": {
         "width": "Πλάτος",
         "depth": "Βάθος",
-        "elevation": "Στάθμη",
+        "topElevation": "Στάθμη (Άνω)",
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή δοκαριού; Η ενέργεια δεν μπορεί να αναιρεθεί.",

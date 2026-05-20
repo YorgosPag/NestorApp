@@ -25,6 +25,7 @@ import { PathTracerRenderer } from '../render/PathTracerRenderer';
 import type { LightPreset } from '../lighting/lighting-presets';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
+import { SectionSceneController } from './section-scene-controller';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 import { raycastBimGroup, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
 import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
@@ -61,6 +62,7 @@ export class ThreeJsSceneManager {
 
   private readonly performanceCollector: PerformanceCollector;
   private readonly envStoreUnsub: () => void;
+  private readonly sectionController: SectionSceneController;
   private rafHandle: number | null = null;
   private disposed = false;
   private lastFrameTime = performance.now();
@@ -117,6 +119,15 @@ export class ThreeJsSceneManager {
       (s) => s.hdriUrl,
       (url) => { if (url) void this.loadHdriEnvironment(url); },
     );
+    // ADR-366 §A.3 Phase 7.0 — Section Cuts wiring (delegated to controller).
+    this.sectionController = new SectionSceneController({
+      renderer: this.renderer,
+      scene: this.scene,
+      getCamera: () => this.viewport.camera,
+      getBimGroup: () => this.bimLayer.group,
+      getDxfBounds: () => this.dxfConverter.getBounds(),
+      invalidatePathTracer: () => this.pathTracerRenderer.invalidateScene(),
+    });
     this.startLoop();
   }
 
@@ -250,6 +261,8 @@ export class ThreeJsSceneManager {
     this.bimLayer.sync(entities, floorElevationMm, activeLevelId);
     if (selectedId) this.selectionHighlighter.onSelect(selectedId);
     this.pathTracerRenderer.invalidateScene();
+    this.sectionController.ensureInit();
+    this.sectionController.applyState();
   }
 
   applyFloorVisibility(modes: ReadonlyMap<string, FloorVisMode>): void {
@@ -267,6 +280,8 @@ export class ThreeJsSceneManager {
         this.initialCameraFitDone = true;
       }
     }
+    this.sectionController.ensureInit();
+    this.sectionController.applyState();
   }
 
   selectBimEntity(bimId: string | null): void {
@@ -307,6 +322,13 @@ export class ThreeJsSceneManager {
     const z = Math.cos(elRad) * Math.cos(azRad);
     this.sun.position.set(x * 15, y * 15, z * 15);
     this.sun.visible = elevationDeg > -5;
+  }
+
+  /** Public bridge για το ADR-366 §A.3 Section controller (BimViewport3D safety effect). */
+  initSectionBox(): void {
+    if (this.disposed) return;
+    this.sectionController.ensureInit();
+    this.sectionController.applyState();
   }
 
   async loadHdriEnvironment(url: string): Promise<void> {
@@ -388,6 +410,8 @@ export class ThreeJsSceneManager {
     if (this.disposed) return;
     this.disposed = true;
     this.envStoreUnsub();
+    this.sectionController.dispose();
+    const dom = this.renderer.domElement;
     if (this.rafHandle !== null) {
       cancelAnimationFrame(this.rafHandle);
       this.rafHandle = null;
@@ -405,7 +429,6 @@ export class ThreeJsSceneManager {
     this.viewCube.dispose();
     this.poi.dispose();
     this.renderer.dispose();
-    const domElement = this.renderer.domElement;
-    if (domElement.parentNode) domElement.parentNode.removeChild(domElement);
+    if (dom.parentNode) dom.parentNode.removeChild(dom);
   }
 }

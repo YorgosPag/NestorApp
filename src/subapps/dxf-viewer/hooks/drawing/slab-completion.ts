@@ -1,8 +1,9 @@
 /**
- * ADR-363 Phase 3 — Pure builders για slab entity creation.
+ * ADR-363 Phase 3 + ADR-369 Phase A4 — Pure builders για slab entity creation.
  *
  * SSoT:
- *   - IDs via `generateSlabId()` (N.6 enterprise-id).
+ *   - Entity creation via `createSlab()` factory (ADR-369 Phase A4).
+ *   - IDs auto-generated από factory (prefix 'slab').
  *   - Geometry via `computeSlabGeometry()` — pure function.
  *   - Validation via `validateSlabParams()` — hardErrors block creation.
  *   - Types via `bim/types/slab-types.ts`.
@@ -10,25 +11,29 @@
  * Polygon-drawing flow (Phase 3):
  *   - User multi-clicks (Enter ή auto-close near first vertex) → vertex list.
  *   - `buildDefaultSlabParams()` wraps vertices + applies overrides + defaults
- *     (thickness 200mm, kind 'floor', elevation 0 — depends on kind).
- *   - `buildSlabEntity()` validates + builds entity.
+ *     (thickness 200mm, kind 'floor', levelElevation per-kind, geometryType 'box').
+ *   - `buildSlabEntity()` validates + delegates σε `createSlab()` factory.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5
+ * @see docs/centralized-systems/reference/adrs/ADR-369-bim-elevation-convention-revit-alignment.md §2.1, §9 Q7, §9 Q8
  */
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../../bim/types/bim-base';
 import {
+  DEFAULT_SLAB_GEOMETRY_TYPE,
   DEFAULT_SLAB_THICKNESS_MM,
-  SLAB_KIND_DEFAULT_ELEVATION_MM,
+  SLAB_KIND_DEFAULT_LEVEL_ELEVATION_MM,
   type SlabEntity,
+  type SlabGeometryType,
   type SlabKind,
   type SlabParams,
   type SlabReinforcement,
+  type SlabSlope,
 } from '../../bim/types/slab-types';
 import { computeSlabGeometry } from '../../bim/geometry/slab-geometry';
 import { validateSlabParams } from '../../bim/validators/slab-validator';
-import { generateSlabId } from '@/services/enterprise-id-convenience';
+import { createSlab } from '@/services/factories/slab.factory';
 import type { SceneUnits } from '../../utils/scene-units';
 
 export type { SceneUnits };
@@ -37,14 +42,20 @@ export type { SceneUnits };
 
 /**
  * Field overrides για `buildDefaultSlabParams`. Ribbon (contextual slab tab)
- * supplies kind / thickness / elevation / reinforcement.
+ * supplies kind / thickness / levelElevation / reinforcement / geometry options.
  */
 export interface SlabParamOverrides {
   readonly kind?: SlabKind;
   /** mm. Πάχος πλάκας. */
   readonly thickness?: number;
-  /** mm. z από project origin. */
-  readonly elevation?: number;
+  /** mm. Top face z από project origin (FFL). ADR-369 §2.1. */
+  readonly levelElevation?: number;
+  /** mm. Optional offset από FFL (default 0). ADR-369 §2.1. */
+  readonly heightOffsetFromLevel?: number;
+  /** ADR-369 §9 Q7. 'box' (default) | 'tilted'. */
+  readonly geometryType?: SlabGeometryType;
+  /** Required ΟΤΑΝ geometryType='tilted'. */
+  readonly slope?: SlabSlope;
   readonly reinforcement?: SlabReinforcement;
   readonly material?: string;
 }
@@ -57,8 +68,9 @@ export interface SlabParamOverrides {
  * Algorithm:
  *   1. Resolve kind (override → 'floor' default).
  *   2. Resolve thickness (override → DEFAULT_SLAB_THICKNESS_MM).
- *   3. Resolve elevation (override → SLAB_KIND_DEFAULT_ELEVATION_MM[kind]).
- *   4. Lift 2D vertices σε Point3D (z=0).
+ *   3. Resolve levelElevation (override → SLAB_KIND_DEFAULT_LEVEL_ELEVATION_MM[kind]).
+ *   4. Resolve geometryType (override → 'box').
+ *   5. Lift 2D vertices σε Point3D (z=0).
  *
  * Vertices αναμένονται σε scene units (mm convention — caller responsible
  * για conversion αν χρειάζεται). Δεν κάνει copy/normalize — caller passes
@@ -71,17 +83,26 @@ export function buildDefaultSlabParams(
 ): SlabParams {
   const kind = overrides.kind ?? 'floor';
   const thickness = overrides.thickness ?? DEFAULT_SLAB_THICKNESS_MM;
-  const elevation = overrides.elevation ?? SLAB_KIND_DEFAULT_ELEVATION_MM[kind];
+  const levelElevation =
+    overrides.levelElevation ?? SLAB_KIND_DEFAULT_LEVEL_ELEVATION_MM[kind];
+  const geometryType = overrides.geometryType ?? DEFAULT_SLAB_GEOMETRY_TYPE;
 
   const lifted: Point3D[] = vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
 
   const params: SlabParams = {
     kind,
     outline: { vertices: lifted },
-    elevation,
+    levelElevation,
     thickness,
+    geometryType,
     sceneUnits,
-    ...(overrides.reinforcement !== undefined ? { reinforcement: overrides.reinforcement } : {}),
+    ...(overrides.heightOffsetFromLevel !== undefined
+      ? { heightOffsetFromLevel: overrides.heightOffsetFromLevel }
+      : {}),
+    ...(overrides.slope !== undefined ? { slope: overrides.slope } : {}),
+    ...(overrides.reinforcement !== undefined
+      ? { reinforcement: overrides.reinforcement }
+      : {}),
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
   };
   return params;
@@ -95,7 +116,9 @@ export type BuildSlabEntityResult =
 
 /**
  * Build a `SlabEntity` από `SlabParams`. Geometry computed via SSoT
- * `computeSlabGeometry()`. Hard errors short-circuit creation.
+ * `computeSlabGeometry()`. Hard errors short-circuit creation. Final entity
+ * assembled via `createSlab()` factory (ADR-369 Phase A4) — auto-fills
+ * ifcGuid + ifcType='IfcSlab' + validation shell.
  */
 export function buildSlabEntity(
   params: Readonly<SlabParams>,
@@ -106,16 +129,13 @@ export function buildSlabEntity(
     return { ok: false, hardErrors: validation.hardErrors };
   }
   const geometry = computeSlabGeometry(params);
-  const entity: SlabEntity = {
-    id: generateSlabId(),
-    type: 'slab',
-    kind: params.kind,
-    layerId,
+  const entity = createSlab({
     params,
     geometry,
-    validation: validation.bimValidation,
+    layerId,
     visible: true,
-  };
+    validation: validation.bimValidation,
+  });
   return { ok: true, entity };
 }
 

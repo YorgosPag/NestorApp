@@ -104,7 +104,7 @@ function validateSpan(params: SlabParams, codeViolations: string[]): void {
 }
 
 function validateElevation(params: SlabParams, codeViolations: string[]): void {
-  if ((params.kind === 'ceiling' || params.kind === 'roof') && params.elevation === 0) {
+  if ((params.kind === 'ceiling' || params.kind === 'roof') && params.levelElevation === 0) {
     codeViolations.push('slab.validation.codeViolations.ceilingRoofAtZeroElevation');
   }
 }

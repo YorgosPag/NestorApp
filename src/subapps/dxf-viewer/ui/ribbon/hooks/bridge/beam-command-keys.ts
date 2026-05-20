@@ -24,15 +24,15 @@ export const BEAM_RIBBON_KEYS = {
     width: 'beam.params.width',
     /** mm — beam structural depth (cross-section Y). */
     depth: 'beam.params.depth',
-    /** mm — top-of-beam elevation από project origin. */
-    elevation: 'beam.params.elevation',
+    /** mm — top face (top-of-beam) από project origin. ADR-369 §2.2. */
+    topElevation: 'beam.params.topElevation',
   },
 } as const;
 
 export type BeamRibbonNumberCommandKey =
   | typeof BEAM_RIBBON_KEYS.params.width
   | typeof BEAM_RIBBON_KEYS.params.depth
-  | typeof BEAM_RIBBON_KEYS.params.elevation;
+  | typeof BEAM_RIBBON_KEYS.params.topElevation;
 
 export type BeamRibbonStringCommandKey =
   | typeof BEAM_RIBBON_KEYS.stringParams.kind
@@ -44,7 +44,7 @@ export type BeamRibbonStringCommandKey =
 export const BEAM_RIBBON_NUMBER_KEYS: readonly BeamRibbonNumberCommandKey[] = [
   BEAM_RIBBON_KEYS.params.width,
   BEAM_RIBBON_KEYS.params.depth,
-  BEAM_RIBBON_KEYS.params.elevation,
+  BEAM_RIBBON_KEYS.params.topElevation,
 ];
 
 export const BEAM_RIBBON_STRING_KEYS: readonly BeamRibbonStringCommandKey[] = [
