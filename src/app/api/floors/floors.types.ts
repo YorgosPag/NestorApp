@@ -66,7 +66,7 @@ export interface FloorCreateResponse {
 }
 
 export type FloorUpdateResponse =
-  | { success: true; message: string; _v?: number }
+  | { success: true; message: string; _v?: number; cascadeWarning?: string }
   | { success: false; error: string; details?: string }
   | ConflictResponseBody;
 

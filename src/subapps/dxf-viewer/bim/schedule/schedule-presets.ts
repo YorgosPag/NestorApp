@@ -205,11 +205,15 @@ function mapWall(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['c
 
 // ─── Slab preset ─────────────────────────────────────────────────────────────
 
+/** Default finishThickness (mm) when Floor.finishThickness is not set. ADR-369 §9 Q4. */
+const DEFAULT_FINISH_THICKNESS_MM = 80;
+
 const SLAB_COLUMNS: readonly ScheduleColumnDef[] = [
   { key: 'id',             i18nKey: 'col.id',             valueType: 'text',              align: 'left'  },
   { key: 'floor',          i18nKey: 'col.floor',          valueType: 'text',              align: 'left'  },
   { key: 'kind',           i18nKey: 'col.kind',           valueType: 'text',              align: 'left'  },
   { key: 'elevation',      i18nKey: 'col.elevation',      valueType: 'dimension-mm-to-m', align: 'right' },
+  { key: 'tosElevation',   i18nKey: 'col.tosElevation',   valueType: 'dimension-mm-to-m', align: 'right' },
   { key: 'thickness',      i18nKey: 'col.thickness',      valueType: 'dimension-mm-to-m', align: 'right' },
   { key: 'area',           i18nKey: 'col.area',           valueType: 'area-m2',           align: 'right' },
   { key: 'netArea',        i18nKey: 'col.netArea',        valueType: 'area-m2',           align: 'right' },
@@ -223,11 +227,16 @@ function mapSlab(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['c
   if (entity.type !== 'slab') return {};
   const p = entity.params;
   const g = entity.geometry;
+  const finishThickness = lookups.floorFinish(entity.floorId) ?? DEFAULT_FINISH_THICKNESS_MM;
+  const tosElevation = typeof p.levelElevation === 'number'
+    ? p.levelElevation - finishThickness
+    : null;
   return {
     id: entity.id,
     floor: lookups.floor(entity.floorId),
     kind: entity.kind,
     elevation: safeNumber(p.levelElevation),
+    tosElevation,
     thickness: safeNumber(p.thickness),
     area: safeNumber(g.area),
     netArea: safeNumber(g.netArea),

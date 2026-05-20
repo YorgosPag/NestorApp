@@ -102,7 +102,10 @@ export function createVisualCube(labels: FaceLabels): {
 }
 
 export function createHitTargets(): THREE.Mesh[] {
-  const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+  // DoubleSide so face hit planes work regardless of normal orientation (the
+  // -Z face plane keeps the PlaneGeometry default +Z normal — without DoubleSide
+  // it would never be raycast-hittable from -Z direction).
+  const hitMat = new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide });
   const targets: THREE.Mesh[] = [];
   const faceDirs: Array<[number, number, number, number]> = [
     [ 1,  0,  0, 0], [-1,  0,  0, 1],
@@ -128,10 +131,15 @@ export function createHitTargets(): THREE.Mesh[] {
     const da = FACE_DIRS[a]!;
     const db = FACE_DIRS[b]!;
     const pos = new THREE.Vector3().addVectors(da, db).multiplyScalar(0.5);
+    // Edge axis = the axis NEITHER face contributes to (sum of |da|+|db| = 0).
+    // Face axes (sum = 1) get the thin 0.24 extent so the box sits as a slim bar
+    // along the edge instead of a 0.92³ cube that occludes the face hit plane.
+    // Original `> 1.5` threshold never triggered (max sum for adjacent faces = 1),
+    // so every edge became a full-volume cube covering ~94% of each face area.
     const geo = new THREE.BoxGeometry(
-      Math.abs(da.x) + Math.abs(db.x) > 1.5 ? 0.24 : 0.92,
-      Math.abs(da.y) + Math.abs(db.y) > 1.5 ? 0.24 : 0.92,
-      Math.abs(da.z) + Math.abs(db.z) > 1.5 ? 0.24 : 0.92,
+      Math.abs(da.x) + Math.abs(db.x) > 0.5 ? 0.24 : 0.92,
+      Math.abs(da.y) + Math.abs(db.y) > 0.5 ? 0.24 : 0.92,
+      Math.abs(da.z) + Math.abs(db.z) > 0.5 ? 0.24 : 0.92,
     );
     const mesh = new THREE.Mesh(geo, hitMat);
     mesh.position.copy(pos);

@@ -28,6 +28,7 @@ import {
   resolveTenantCompanyId,
   sortFloors,
 } from './floors.shared';
+import { cascadeFloorHeightToEntities } from './floor-height-cascade.service';
 
 const logger = createModuleLogger('FloorsRoute');
 
@@ -266,10 +267,27 @@ export async function handleUpdateFloor(
       });
     }
 
+    // ADR-369 §9 Q5 — Auto-stretch cascade when height changes.
+    let cascadeWarning: string | undefined;
+    if (updates.height !== undefined && typeof updates.height === 'number' && ctx.companyId) {
+      try {
+        await cascadeFloorHeightToEntities(
+          db, body.floorId, ctx.companyId, updates.height, ctx.uid,
+        );
+      } catch (cascadeErr) {
+        logger.error('[Floors/Update] Cascade failed — floor updated, entities not stretched', {
+          floorId: body.floorId,
+          error: getErrorMessage(cascadeErr),
+        });
+        cascadeWarning = 'Floor height updated but entity auto-stretch failed. Retry or manually adjust wall/column heights.';
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: `Floor "${body.floorId}" updated`,
       _v: versionResult.newVersion,
+      ...(cascadeWarning ? { cascadeWarning } : {}),
     });
   } catch (error) {
     if (error instanceof ConflictError) {

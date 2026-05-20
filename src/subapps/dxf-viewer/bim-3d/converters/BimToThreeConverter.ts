@@ -39,12 +39,6 @@ const CATEGORY_MAT_ID: Record<WallEntity['params']['category'], string> = {
   fence:     'mat-stone',
 };
 
-function resolveWallMaterial(wall: WallEntity): THREE.MeshStandardMaterial {
-  const coreLayer = wall.params.dna?.layers.find((l) => l.side === 'core');
-  const materialId = coreLayer?.materialId ?? CATEGORY_MAT_ID[wall.params.category] ?? 'mat-concrete';
-  return getMaterial3D(materialId);
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function toShapePoints(pts: readonly Point3D[]): { x: number; y: number }[] {
@@ -76,9 +70,10 @@ function extrudeAndRotate(shape: THREE.Shape, depthM: number): THREE.BufferGeome
   return geo;
 }
 
-function tagMesh(mesh: THREE.Mesh, id: string, type: string, levelId?: string): THREE.Mesh {
+function tagMesh(mesh: THREE.Mesh, id: string, type: string, matId: string, levelId?: string): THREE.Mesh {
   mesh.userData['bimId'] = id;
   mesh.userData['bimType'] = type;
+  mesh.userData['matId'] = matId;
   if (levelId !== undefined) mesh.userData['levelId'] = levelId;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -109,9 +104,11 @@ export function wallToMesh(wall: WallEntity, floorElevationMm = 0, levelId?: str
   if (!shape) return null;
 
   const geo = extrudeAndRotate(shape, wall.params.height * MM_TO_M);
-  const mesh = new THREE.Mesh(geo, resolveWallMaterial(wall));
+  const coreLayer = wall.params.dna?.layers.find((l) => l.side === 'core');
+  const matId = coreLayer?.materialId ?? CATEGORY_MAT_ID[wall.params.category] ?? 'mat-concrete';
+  const mesh = new THREE.Mesh(geo, getMaterial3D(matId));
   mesh.position.y = floorElevationMm * MM_TO_M;
-  return tagMesh(mesh, wall.id, 'wall', levelId);
+  return tagMesh(mesh, wall.id, 'wall', matId, levelId);
 }
 
 export function columnToMesh(column: ColumnEntity, floorElevationMm = 0, levelId?: string): THREE.Mesh | null {
@@ -122,9 +119,10 @@ export function columnToMesh(column: ColumnEntity, floorElevationMm = 0, levelId
   if (!shape) return null;
 
   const geo = extrudeAndRotate(shape, column.params.height * MM_TO_M);
+  const matId = column.params.material ?? 'elem-column';
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('column'));
   mesh.position.y = floorElevationMm * MM_TO_M;
-  return tagMesh(mesh, column.id, 'column', levelId);
+  return tagMesh(mesh, column.id, 'column', matId, levelId);
 }
 
 export function beamToMesh(beam: BeamEntity, levelId?: string): THREE.Mesh | null {
@@ -136,12 +134,13 @@ export function beamToMesh(beam: BeamEntity, levelId?: string): THREE.Mesh | nul
 
   const beamDepthM = beam.params.depth * MM_TO_M;
   const geo = extrudeAndRotate(shape, beamDepthM);
+  const matId = beam.params.material ?? 'elem-beam';
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('beam'));
   // ADR-369 §2.2: topElevation = top of beam; extrusion goes from y=0 → y=depthM.
   // beam hangs DOWN from (topElevation + zOffset) by depth.
   const beamTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
   mesh.position.y = beamTopMm * MM_TO_M - beamDepthM;
-  return tagMesh(mesh, beam.id, 'beam', levelId);
+  return tagMesh(mesh, beam.id, 'beam', matId, levelId);
 }
 
 export function slabToMesh(slab: SlabEntity, levelId?: string): THREE.Mesh | null {
@@ -153,10 +152,11 @@ export function slabToMesh(slab: SlabEntity, levelId?: string): THREE.Mesh | nul
 
   const thicknessM = slab.params.thickness * MM_TO_M;
   const geo = extrudeAndRotate(shape, thicknessM);
+  const matId = slab.params.material ?? 'elem-slab';
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('slab'));
   // ADR-369 §2.1: levelElevation = top face (FFL). Slab hangs DOWN by thickness.
   // floor:0 → -0.20..0m, ceiling/roof:3000 → 2.80..3.00m, foundation:0 → -0.50..0m.
   const slabTopMm = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
   mesh.position.y = (slabTopMm - slab.params.thickness) * MM_TO_M;
-  return tagMesh(mesh, slab.id, 'slab', levelId);
+  return tagMesh(mesh, slab.id, 'slab', matId, levelId);
 }

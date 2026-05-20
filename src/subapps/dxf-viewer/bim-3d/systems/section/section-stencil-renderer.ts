@@ -34,6 +34,13 @@
 import * as THREE from 'three';
 import { SECTION_CUT_SURFACE } from '../../../config/color-config';
 import { useSelection3DStore } from '../../stores/Selection3DStore';
+import {
+  type SectionHatchKey,
+  resolveHatchKey,
+  getHatchCapMaterial,
+  setHatchRepeat,
+  disposeHatchCap,
+} from './section-hatch-cap';
 
 export interface StencilRendererDeps {
   /** BIM group reference για bounding sphere calc (cap quad size). */
@@ -55,6 +62,8 @@ export class SectionStencilRenderer {
   private readonly selectedCapMat: THREE.MeshBasicMaterial;
   private readonly selectedCapMesh: THREE.Mesh;
   private readonly selectedCapScene: THREE.Scene;
+  private readonly hatchCapMesh: THREE.Mesh;
+  private readonly hatchCapScene: THREE.Scene;
   private disposed = false;
 
   constructor(deps: StencilRendererDeps) {
@@ -73,6 +82,10 @@ export class SectionStencilRenderer {
     this.selectedCapMesh.frustumCulled = false;
     this.selectedCapScene = new THREE.Scene();
     this.selectedCapScene.add(this.selectedCapMesh);
+    this.hatchCapMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial());
+    this.hatchCapMesh.frustumCulled = false;
+    this.hatchCapScene = new THREE.Scene();
+    this.hatchCapScene.add(this.hatchCapMesh);
   }
 
   private createSinglePassMaterial(): THREE.MeshBasicMaterial {
@@ -163,6 +176,7 @@ export class SectionStencilRenderer {
     if (this.disposed || planes.length === 0) return;
 
     const capSize = this.computeCapSize(sceneBounds);
+    const hatchGroups = this.collectHatchGroups(mainScene);
     const savedAutoClear = renderer.autoClear;
     const savedAutoClearColor = renderer.autoClearColor;
     const savedAutoClearDepth = renderer.autoClearDepth;
@@ -173,7 +187,7 @@ export class SectionStencilRenderer {
     renderer.autoClearStencil = false;
 
     for (let i = 0; i < planes.length; i++) {
-      this.renderCapForPlane(renderer, mainScene, camera, planes, i, capSize);
+      this.renderCapForPlane(renderer, mainScene, camera, planes, i, capSize, hatchGroups);
     }
 
     mainScene.overrideMaterial = null;
@@ -190,6 +204,7 @@ export class SectionStencilRenderer {
     planes: ReadonlyArray<THREE.Plane>,
     index: number,
     capSize: number,
+    hatchGroups: Map<SectionHatchKey, THREE.Object3D[]>,
   ): void {
     const gl = renderer.getContext() as WebGL2RenderingContext;
     const currentPlane = planes[index];
@@ -218,6 +233,12 @@ export class SectionStencilRenderer {
 
     this.positionMesh(this.capMesh, currentPlane, capSize);
     renderer.render(this.capScene, camera);
+
+    if (hatchGroups.size > 0) {
+      this.renderHatchOverlaysForPlane(
+        renderer, mainScene, camera, gl, others, currentPlane, capSize, hatchGroups,
+      );
+    }
 
     const selectedBimId = useSelection3DStore.getState().selectedBimId;
     if (selectedBimId !== null) {
@@ -264,6 +285,90 @@ export class SectionStencilRenderer {
     renderer.render(this.selectedCapScene, camera);
   }
 
+  /**
+   * Traverse scene once per frame, group BIM meshes by material hatch key.
+   * Meshes with null hatch key (glass/unknown) are excluded — grey cap covers them.
+   */
+  private collectHatchGroups(mainScene: THREE.Scene): Map<SectionHatchKey, THREE.Object3D[]> {
+    const groups = new Map<SectionHatchKey, THREE.Object3D[]>();
+    mainScene.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const bimId = (obj.userData as Record<string, unknown>)['bimId'];
+      if (bimId === undefined) return;
+      const matId = (obj.userData as Record<string, unknown>)['matId'] as string | undefined;
+      const key = resolveHatchKey(matId);
+      if (key === null) return;
+      let arr = groups.get(key);
+      if (!arr) { arr = []; groups.set(key, arr); }
+      arr.push(obj);
+    });
+    return groups;
+  }
+
+  /** Render one hatch overlay pass per material key (after the grey base cap). */
+  private renderHatchOverlaysForPlane(
+    renderer: THREE.WebGLRenderer,
+    mainScene: THREE.Scene,
+    camera: THREE.Camera,
+    gl: WebGL2RenderingContext,
+    otherPlanes: THREE.Plane[],
+    currentPlane: THREE.Plane,
+    capSize: number,
+    hatchGroups: Map<SectionHatchKey, THREE.Object3D[]>,
+  ): void {
+    for (const [key, meshes] of hatchGroups) {
+      this.renderHatchGroupForPlane(
+        renderer, mainScene, camera, gl, otherPlanes, currentPlane, capSize, key, meshes,
+      );
+    }
+  }
+
+  /**
+   * Single per-material hatch stencil pass (mirrors renderEmphasisCapForPlane pattern):
+   * clearStencil → warmup → mask to this material's meshes → stencil fill → hatch cap overlay.
+   */
+  private renderHatchGroupForPlane(
+    renderer: THREE.WebGLRenderer,
+    mainScene: THREE.Scene,
+    camera: THREE.Camera,
+    gl: WebGL2RenderingContext,
+    otherPlanes: THREE.Plane[],
+    currentPlane: THREE.Plane,
+    capSize: number,
+    key: SectionHatchKey,
+    meshes: THREE.Object3D[],
+  ): void {
+    this.singlePassStencilMat.clippingPlanes = otherPlanes;
+
+    // Hide BIM meshes that are NOT this material to isolate the stencil fill.
+    const hidden: THREE.Object3D[] = [];
+    mainScene.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const bimId = (obj.userData as Record<string, unknown>)['bimId'];
+      if (bimId === undefined) return;
+      if (!meshes.includes(obj)) {
+        hidden.push(obj);
+        obj.visible = false;
+      }
+    });
+
+    renderer.clearStencil();
+    renderer.render(this.warmupScene, camera);
+    gl.stencilOpSeparate(gl.FRONT, gl.KEEP, gl.KEEP, gl.DECR_WRAP);
+    mainScene.overrideMaterial = this.singlePassStencilMat;
+    renderer.render(mainScene, camera);
+    mainScene.overrideMaterial = null;
+
+    for (const obj of hidden) obj.visible = true;
+
+    const mat = getHatchCapMaterial(key);
+    mat.clippingPlanes = otherPlanes;
+    setHatchRepeat(key, capSize);
+    this.hatchCapMesh.material = mat;
+    this.positionMesh(this.hatchCapMesh, currentPlane, capSize);
+    renderer.render(this.hatchCapScene, camera);
+  }
+
   private positionMesh(mesh: THREE.Mesh, plane: THREE.Plane, size: number): void {
     const normal = plane.normal;
     const pointOnPlane = normal.clone().multiplyScalar(-plane.constant);
@@ -297,6 +402,7 @@ export class SectionStencilRenderer {
     this.capMat.dispose();
     this.selectedCapMesh.geometry.dispose();
     this.selectedCapMat.dispose();
+    this.hatchCapMesh.geometry.dispose();
     const warmupMesh = this.warmupScene.children[0] as THREE.Mesh | undefined;
     if (warmupMesh) {
       warmupMesh.geometry.dispose();
@@ -308,5 +414,9 @@ export class SectionStencilRenderer {
     while (this.selectedCapScene.children.length > 0) {
       this.selectedCapScene.remove(this.selectedCapScene.children[0]);
     }
+    while (this.hatchCapScene.children.length > 0) {
+      this.hatchCapScene.remove(this.hatchCapScene.children[0]);
+    }
+    disposeHatchCap();
   }
 }

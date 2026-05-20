@@ -152,10 +152,19 @@ export type FloorLabelLookup = (floorId: string | undefined) => string;
  */
 export type MaterialLabelLookup = (materialId: string | undefined) => string;
 
+/**
+ * Floor finish-thickness resolver (ADR-369 §9 Q4 — ToS derivation).
+ * Returns `Floor.finishThickness` in mm, or `undefined` if floor not found.
+ * Callers should provide `undefined` when no floors are loaded yet.
+ */
+export type FloorFinishLookup = (floorId: string | undefined) => number | undefined;
+
 /** Bundle of lookups passed to builder + presets. */
 export interface ScheduleLookups {
   readonly floor: FloorLabelLookup;
   readonly material: MaterialLabelLookup;
+  /** ADR-369 §9 Q4 — resolves floor finishThickness (mm) for ToS calculation. */
+  readonly floorFinish: FloorFinishLookup;
 }
 
 // ─── Schedule config (what to build) ─────────────────────────────────────────

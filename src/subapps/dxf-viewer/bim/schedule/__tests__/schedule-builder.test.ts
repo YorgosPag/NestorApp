@@ -23,9 +23,13 @@ import type { ScheduleConfig, ScheduleLookups } from '../types';
 
 // ─── Lookups + fixtures ──────────────────────────────────────────────────────
 
+// finishThickness registry: floor-1 has 100mm finish, unknown floors → undefined (fallback 80mm)
+const FINISH_REGISTRY: Record<string, number> = { 'floor-1': 100 };
+
 const lookups: ScheduleLookups = {
   floor: (id) => (id ? `Όροφος ${id}` : ''),
   material: (id) => (id ? `Υλικό:${id}` : ''),
+  floorFinish: (id) => (id ? FINISH_REGISTRY[id] : undefined),
 };
 
 function emptyValidation() {
@@ -98,7 +102,7 @@ function makeOpening(
   } as OpeningEntity;
 }
 
-function makeSlab(id: string): SlabEntity {
+function makeSlab(id: string, levelElevation = 0): SlabEntity {
   return {
     id,
     type: 'slab',
@@ -107,7 +111,8 @@ function makeSlab(id: string): SlabEntity {
     params: {
       kind: 'floor',
       outline: { vertices: [] },
-      elevation: 0,
+      levelElevation,
+      geometryType: 'box',
       thickness: 200,
       material: 'mat-concrete-c25',
     },
@@ -375,6 +380,20 @@ describe('buildSchedule', () => {
     const row = schedule.rows[0];
     expect(row.cells.floor).toBe('Όροφος floor-1');
     expect(row.cells.material).toBe('Υλικό:mat-wood');
+  });
+
+  test('slab tosElevation = levelElevation - floorFinish (ADR-369 Q4)', () => {
+    // floor-1 has finishThickness=100mm; slab levelElevation=3000mm → ToS=2900mm
+    const entities: AnyBimEntity[] = [makeSlab('s1', 3000)];
+    const schedule = buildSchedule(entities, { entityType: 'slab', filters: {} }, lookups);
+    expect(schedule.rows[0].cells.tosElevation).toBe(2900);
+  });
+
+  test('slab tosElevation falls back to 80mm when floor not in registry', () => {
+    // unknown floor → finishThickness fallback 80mm; levelElevation=1000 → ToS=920mm
+    const slab: SlabEntity = { ...makeSlab('s2', 1000), floorId: 'unknown-floor' };
+    const schedule = buildSchedule([slab], { entityType: 'slab', filters: {} }, lookups);
+    expect(schedule.rows[0].cells.tosElevation).toBe(920);
   });
 
   test('generatedAt is fresh timestamp', () => {

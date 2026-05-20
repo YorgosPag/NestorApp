@@ -32,17 +32,9 @@ import { createSectionPanelRenderer, type SectionPanelRenderer } from '../2d-sec
 import { createSectionPanelSceneSync } from '../2d-section/section-scene-sync';
 import { deriveAvailablePlanes } from '../2d-section/active-plane-derivation';
 
-function selectPanelState(state: ReturnType<typeof useSection2DPanelStore.getState>) {
-  return {
-    visible: state.visible,
-    activePlaneId: state.activePlaneId,
-    heightPx: state.heightPx,
-  };
-}
-
-function selectSectionEnabled(state: ReturnType<typeof useSectionStore.getState>) {
-  return state.enabled;
-}
+// ADR-040 micro-leaf: subscribe to whole-state ref (stable between zustand set() calls).
+// Object-literal selectors here would return a fresh ref each call → useSyncExternalStore
+// infinite re-render loop (Maximum update depth exceeded). Primitive/whole-state snapshots only.
 
 export function Section2DPanel() {
   const { t } = useTranslation('bim3d');
@@ -50,16 +42,21 @@ export function Section2DPanel() {
   const rendererRef = useRef<SectionPanelRenderer | null>(null);
   const syncRef = useRef<ReturnType<typeof createSectionPanelSceneSync> | null>(null);
 
-  const { visible, heightPx } = useSyncExternalStore(
+  const visible = useSyncExternalStore(
     useSection2DPanelStore.subscribe,
-    () => selectPanelState(useSection2DPanelStore.getState()),
-    () => selectPanelState(useSection2DPanelStore.getState()),
+    () => useSection2DPanelStore.getState().visible,
+    () => false,
+  );
+  const heightPx = useSyncExternalStore(
+    useSection2DPanelStore.subscribe,
+    () => useSection2DPanelStore.getState().heightPx,
+    () => 0,
   );
 
   const sectionEnabled = useSyncExternalStore(
     useSectionStore.subscribe,
-    () => selectSectionEnabled(useSectionStore.getState()),
-    () => selectSectionEnabled(useSectionStore.getState()),
+    () => useSectionStore.getState().enabled,
+    () => false,
   );
 
   const refresh = useCallback(() => {
