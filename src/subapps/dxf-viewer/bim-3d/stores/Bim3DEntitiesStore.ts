@@ -23,10 +23,13 @@ export interface Bim3DEntities {
 }
 
 interface Bim3DEntitiesStoreState extends Bim3DEntities {
+  /** Level currently loaded into the 3D scene. Fed by useLevelId3DSync. */
+  activeLevelId: string | null;
   setWalls: (walls: readonly WallEntity[]) => void;
   setColumns: (columns: readonly ColumnEntity[]) => void;
   setBeams: (beams: readonly BeamEntity[]) => void;
   setSlabs: (slabs: readonly SlabEntity[]) => void;
+  setActiveLevelId: (id: string | null) => void;
 }
 
 export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
@@ -35,10 +38,12 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     columns: [],
     beams: [],
     slabs: [],
+    activeLevelId: null,
     setWalls: (walls) => set({ walls }),
     setColumns: (columns) => set({ columns }),
     setBeams: (beams) => set({ beams }),
     setSlabs: (slabs) => set({ slabs }),
+    setActiveLevelId: (activeLevelId) => set({ activeLevelId }),
   })),
 );
 

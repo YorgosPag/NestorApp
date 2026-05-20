@@ -20,22 +20,22 @@ export class BimSceneLayer {
     scene.add(this.group);
   }
 
-  sync(entities: Bim3DEntities, floorElevationMm = 0): void {
+  sync(entities: Bim3DEntities, floorElevationMm = 0, activeLevelId?: string): void {
     this.clearGroup();
     for (const wall of entities.walls) {
-      const mesh = wallToMesh(wall, floorElevationMm);
+      const mesh = wallToMesh(wall, floorElevationMm, activeLevelId);
       if (mesh) this.group.add(mesh);
     }
     for (const column of entities.columns) {
-      const mesh = columnToMesh(column, floorElevationMm);
+      const mesh = columnToMesh(column, floorElevationMm, activeLevelId);
       if (mesh) this.group.add(mesh);
     }
     for (const beam of entities.beams) {
-      const mesh = beamToMesh(beam);
+      const mesh = beamToMesh(beam, activeLevelId);
       if (mesh) this.group.add(mesh);
     }
     for (const slab of entities.slabs) {
-      const mesh = slabToMesh(slab);
+      const mesh = slabToMesh(slab, activeLevelId);
       if (mesh) this.group.add(mesh);
     }
   }

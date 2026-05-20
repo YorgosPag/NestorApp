@@ -9,5 +9,25 @@
     "placeholder": "3D viewport (loading...)",
     "loadingLabel": "Loading 3D scene",
     "webglError": "WebGL is not supported on this device"
+  },
+  "floatingPanel": {
+    "tabs": {
+      "floors": "Floors",
+      "lighting": "Lighting",
+      "quality": "Quality"
+    },
+    "floors": {
+      "presets": {
+        "all": "All",
+        "active": "Active",
+        "none": "None",
+        "invert": "Invert"
+      },
+      "show": "Show",
+      "ghost": "Ghost",
+      "hide": "Hide",
+      "activeLevel": "Active",
+      "noLevels": "No floors"
+    }
   }
 }

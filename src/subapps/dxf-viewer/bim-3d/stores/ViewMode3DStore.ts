@@ -3,6 +3,11 @@
 import { create } from 'zustand';
 import { subscribeWithSelector, devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import type { FloorVisMode, FloorPreset } from '../utils/floor-visibility-state';
+import { applyPreset, sortLevelsTopDown } from '../utils/floor-visibility-state';
+import type { Level } from '../../systems/levels/config';
+
+export type { FloorVisMode };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -27,6 +32,8 @@ interface ViewMode3DState {
   visibleFloors: ReadonlySet<string>;
   /** Whether "Show All Floors" is active */
   showAllFloors: boolean;
+  /** Per-level visibility mode (B.3): 'show' | 'ghost' | 'hide'. */
+  floorVisibilityModes: ReadonlyMap<string, FloorVisMode>;
 }
 
 interface ViewMode3DActions {
@@ -44,6 +51,10 @@ interface ViewMode3DActions {
   toggleShowAllFloors(): void;
   /** Seed initial floor when project loads */
   setActiveFloor(floorId: string | null): void;
+  /** Set show/ghost/hide for a single level (B.3). */
+  setFloorMode(levelId: string, mode: FloorVisMode): void;
+  /** Apply a preset to all levels (B.3). */
+  applyFloorsPreset(levels: Level[], preset: FloorPreset, activeLevelId: string | null): void;
 }
 
 type ViewMode3DStoreType = ViewMode3DState & ViewMode3DActions;
@@ -59,6 +70,7 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
         isTransitioning: false,
         visibleFloors: new Set<string>(),
         showAllFloors: false,
+        floorVisibilityModes: new Map<string, FloorVisMode>(),
 
         // ── Actions ───────────────────────────────────────────────────────────
 
@@ -111,6 +123,21 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
             if (!get().showAllFloors && floorId) {
               draft.visibleFloors = new Set([floorId]);
             }
+          });
+        },
+
+        setFloorMode(levelId, mode) {
+          set((draft) => {
+            const next = new Map(draft.floorVisibilityModes);
+            next.set(levelId, mode);
+            draft.floorVisibilityModes = next;
+          });
+        },
+
+        applyFloorsPreset(levels, preset, activeLevelId) {
+          set((draft) => {
+            const sorted = sortLevelsTopDown(levels);
+            draft.floorVisibilityModes = applyPreset(sorted, preset, activeLevelId, draft.floorVisibilityModes);
           });
         },
       }))

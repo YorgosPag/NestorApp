@@ -9,5 +9,25 @@
     "placeholder": "3D προβολή (φόρτωση...)",
     "loadingLabel": "Φόρτωση 3D σκηνής",
     "webglError": "Δεν υποστηρίζεται WebGL σε αυτή τη συσκευή"
+  },
+  "floatingPanel": {
+    "tabs": {
+      "floors": "Όροφοι",
+      "lighting": "Φωτισμός",
+      "quality": "Ποιότητα"
+    },
+    "floors": {
+      "presets": {
+        "all": "Όλα",
+        "active": "Ενεργό",
+        "none": "Κανένα",
+        "invert": "Αντιστρ."
+      },
+      "show": "Εμφάνιση",
+      "ghost": "Αχνό",
+      "hide": "Κρυφό",
+      "activeLevel": "Ενεργός",
+      "noLevels": "Χωρίς ορόφους"
+    }
   }
 }

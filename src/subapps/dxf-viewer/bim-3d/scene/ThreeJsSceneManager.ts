@@ -17,6 +17,8 @@ import { createPoi } from '../viewport/viewport-poi';
 import { detectSnapCandidate } from '../viewport/view-snap-detector';
 import { BimSceneLayer } from './BimSceneLayer';
 import { DxfFloorPlanOverlay } from './DxfFloorPlanOverlay';
+import { applyFloorVisibility } from '../utils/applyFloorVisibility';
+import type { FloorVisMode } from '../utils/floor-visibility-state';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewportCamera } from '../viewport/viewport-types';
@@ -154,8 +156,12 @@ export class ThreeJsSceneManager {
     this.rafHandle = requestAnimationFrame(animate);
   }
 
-  syncBimEntities(entities: Bim3DEntities, floorElevationMm = 0): void {
-    if (!this.disposed) this.bimLayer.sync(entities, floorElevationMm);
+  syncBimEntities(entities: Bim3DEntities, floorElevationMm = 0, activeLevelId?: string): void {
+    if (!this.disposed) this.bimLayer.sync(entities, floorElevationMm, activeLevelId);
+  }
+
+  applyFloorVisibility(modes: ReadonlyMap<string, FloorVisMode>): void {
+    if (!this.disposed) applyFloorVisibility(this.bimLayer.group, modes);
   }
 
   syncDxfOverlay(dxfScene: DxfScene | null): void {

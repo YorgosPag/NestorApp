@@ -72,9 +72,10 @@ function extrudeAndRotate(shape: THREE.Shape, depthM: number): THREE.BufferGeome
   return geo;
 }
 
-function tagMesh(mesh: THREE.Mesh, id: string, type: string): THREE.Mesh {
+function tagMesh(mesh: THREE.Mesh, id: string, type: string, levelId?: string): THREE.Mesh {
   mesh.userData['bimId'] = id;
   mesh.userData['bimType'] = type;
+  if (levelId !== undefined) mesh.userData['levelId'] = levelId;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   return mesh;
@@ -96,7 +97,7 @@ function buildWallShape(outer: readonly Point3D[], inner: readonly Point3D[]): T
 
 // ── Public converters ─────────────────────────────────────────────────────────
 
-export function wallToMesh(wall: WallEntity, floorElevationMm = 0): THREE.Mesh | null {
+export function wallToMesh(wall: WallEntity, floorElevationMm = 0, levelId?: string): THREE.Mesh | null {
   const shape = buildWallShape(
     wall.geometry.outerEdge.points,
     wall.geometry.innerEdge.points,
@@ -106,10 +107,10 @@ export function wallToMesh(wall: WallEntity, floorElevationMm = 0): THREE.Mesh |
   const geo = extrudeAndRotate(shape, wall.params.height);
   const mesh = new THREE.Mesh(geo, resolveWallMaterial(wall));
   mesh.position.y = floorElevationMm;
-  return tagMesh(mesh, wall.id, 'wall');
+  return tagMesh(mesh, wall.id, 'wall', levelId);
 }
 
-export function columnToMesh(column: ColumnEntity, floorElevationMm = 0): THREE.Mesh | null {
+export function columnToMesh(column: ColumnEntity, floorElevationMm = 0, levelId?: string): THREE.Mesh | null {
   const verts = column.geometry.footprint.vertices;
   if (verts.length < 3) return null;
 
@@ -119,10 +120,10 @@ export function columnToMesh(column: ColumnEntity, floorElevationMm = 0): THREE.
   const geo = extrudeAndRotate(shape, column.params.height);
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('column'));
   mesh.position.y = floorElevationMm;
-  return tagMesh(mesh, column.id, 'column');
+  return tagMesh(mesh, column.id, 'column', levelId);
 }
 
-export function beamToMesh(beam: BeamEntity): THREE.Mesh | null {
+export function beamToMesh(beam: BeamEntity, levelId?: string): THREE.Mesh | null {
   const verts = beam.geometry.outline.vertices;
   if (verts.length < 3) return null;
 
@@ -133,10 +134,10 @@ export function beamToMesh(beam: BeamEntity): THREE.Mesh | null {
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('beam'));
   // elevation = top of beam; extrusion goes from y=0 → y=depth, so offset down by depth
   mesh.position.y = beam.params.elevation - beam.params.depth;
-  return tagMesh(mesh, beam.id, 'beam');
+  return tagMesh(mesh, beam.id, 'beam', levelId);
 }
 
-export function slabToMesh(slab: SlabEntity): THREE.Mesh | null {
+export function slabToMesh(slab: SlabEntity, levelId?: string): THREE.Mesh | null {
   const verts = slab.params.outline.vertices;
   if (verts.length < 3) return null;
 
@@ -147,5 +148,5 @@ export function slabToMesh(slab: SlabEntity): THREE.Mesh | null {
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('slab'));
   // elevation = top surface; position bottom at elevation - thickness
   mesh.position.y = slab.params.elevation - slab.params.thickness;
-  return tagMesh(mesh, slab.id, 'slab');
+  return tagMesh(mesh, slab.id, 'slab', levelId);
 }

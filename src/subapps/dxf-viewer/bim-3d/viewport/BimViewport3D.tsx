@@ -7,6 +7,7 @@ import { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
+import { Floating3DPanel } from '../panels/Floating3DPanel';
 
 // ── BimViewport3D ─────────────────────────────────────────────────────────────
 // ADR-040 micro-leaf compliant: subscribes to ViewMode3DStore (not high-freq),
@@ -42,9 +43,14 @@ export function BimViewport3D() {
     }
 
     // Sync current store state immediately — stores were populated before 3D mode opened.
-    const { walls, columns, beams, slabs } = useBim3DEntitiesStore.getState();
-    managerRef.current.syncBimEntities({ walls, columns, beams, slabs });
+    const entitiesState = useBim3DEntitiesStore.getState();
+    const { walls, columns, beams, slabs, activeLevelId } = entitiesState;
+    managerRef.current.syncBimEntities({ walls, columns, beams, slabs }, 0, activeLevelId ?? undefined);
     managerRef.current.syncDxfOverlay(useDxfOverlay3DStore.getState().dxfScene);
+
+    // Apply current floor visibility modes immediately.
+    const modes = useViewMode3DStore.getState().floorVisibilityModes;
+    if (modes.size > 0) managerRef.current.applyFloorVisibility(modes);
 
     // ResizeObserver: propagate container size changes
     const observer = new ResizeObserver((entries) => {
@@ -66,12 +72,11 @@ export function BimViewport3D() {
   // Ongoing subscriptions: fire when store data changes AFTER 3D mode is active.
   useEffect(() => {
     return useBim3DEntitiesStore.subscribe((s) => {
-      managerRef.current?.syncBimEntities({
-        walls: s.walls,
-        columns: s.columns,
-        beams: s.beams,
-        slabs: s.slabs,
-      });
+      managerRef.current?.syncBimEntities(
+        { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs },
+        0,
+        s.activeLevelId ?? undefined,
+      );
     });
   }, []);
 
@@ -79,6 +84,14 @@ export function BimViewport3D() {
     return useDxfOverlay3DStore.subscribe((s) => {
       managerRef.current?.syncDxfOverlay(s.dxfScene);
     });
+  }, []);
+
+  // Floor visibility: re-apply whenever modes change.
+  useEffect(() => {
+    return useViewMode3DStore.subscribe(
+      (s) => s.floorVisibilityModes,
+      (modes) => { managerRef.current?.applyFloorVisibility(modes); },
+    );
   }, []);
 
   if (!is3D) return null;
@@ -127,6 +140,9 @@ export function BimViewport3D() {
         </TooltipTrigger>
         <TooltipContent>{t('modeToggle.tooltip3d')}</TooltipContent>
       </Tooltip>
+
+      {/* Left sidebar panel — Floors / Lighting / Quality */}
+      <Floating3DPanel />
     </div>
   );
 }
