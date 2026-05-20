@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-20 — ADR-363 Phase 5 beam type passthrough (DxfRenderer.convertToEntity)
+
+`DxfRenderer.ts` adds a new `case 'beam':` branch in `convertToEntity()` — direct passthrough (mirror του wall Phase 1B), zero architectural change. No new `useSyncExternalStore`, no new high-freq subscription, no bitmap cache key change. Cardinal rules 1–4 unaffected; CHECK 6C still green.
+
 ### 2026-05-20 — ADR-368 wire-up: CanvasSection reads `userDrawingUnits` from floorplan (one low-freq prop pass-through)
 
 `CanvasSection.tsx` resolves `userDrawingUnits` from `levelManager.floorplans[currentLevelId]?.userDrawingUnits ?? levelManager.saveContext?.userDrawingUnits` and forwards it to `useDxfSceneConversion`. Both inputs are React-state (LevelsSystem); zero new `useSyncExternalStore` calls in the shell, zero new high-frequency subscriptions. The override changes only when a new DXF is imported or the wizard picks a unit (≪ 1/min). Cardinal rules 1–4 unaffected; CHECK 6C still green.

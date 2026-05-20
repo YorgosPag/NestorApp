@@ -169,6 +169,9 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
         return false;
       }
       onBeamCreated?.(result.entity);
+      // Sync store immediately so next mousemove sees null startPoint (cursor dot),
+      // not the stale committed startPoint that would show a ghost footprint.
+      beamPreviewStore.set({ startPoint: null, endPoint: null, kind: s.kind, overrides: s.overrides });
       setState({
         ...INITIAL_STATE,
         kind: s.kind,
@@ -193,6 +196,8 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
         return false;
       }
       onBeamCreated?.(result.entity);
+      // Sync store immediately so next mousemove shows cursor dot, not stale ghost.
+      beamPreviewStore.set({ startPoint: null, endPoint: null, kind: s.kind, overrides: s.overrides });
       setState({
         ...INITIAL_STATE,
         kind: s.kind,
@@ -212,22 +217,16 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
 
       if (s.kind === 'curved') {
         if (s.phase === 'awaitingStart') {
-          setState({
-            ...s,
-            phase: 'awaitingEnd',
-            startPoint: { x: point.x, y: point.y },
-            endPoint: null,
-            error: null,
-          });
+          const startPoint = { x: point.x, y: point.y };
+          // Sync before setState: next mousemove reads correct startPoint immediately.
+          beamPreviewStore.set({ startPoint, endPoint: null, kind: s.kind, overrides: s.overrides });
+          setState({ ...s, phase: 'awaitingEnd', startPoint, endPoint: null, error: null });
           return true;
         }
         if (s.phase === 'awaitingEnd') {
-          setState({
-            ...s,
-            phase: 'awaitingCurveControl',
-            endPoint: { x: point.x, y: point.y },
-            error: null,
-          });
+          const endPoint = { x: point.x, y: point.y };
+          beamPreviewStore.set({ startPoint: s.startPoint, endPoint, kind: s.kind, overrides: s.overrides });
+          setState({ ...s, phase: 'awaitingCurveControl', endPoint, error: null });
           return true;
         }
         if (s.phase === 'awaitingCurveControl') {
@@ -238,12 +237,11 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
 
       // Straight / cantilever — 2-click chain
       if (s.phase === 'awaitingStart') {
-        setState({
-          ...s,
-          phase: 'awaitingEnd',
-          startPoint: { x: point.x, y: point.y },
-          error: null,
-        });
+        const startPoint = { x: point.x, y: point.y };
+        // Sync before setState: next mousemove reads correct startPoint immediately,
+        // no useEffect-delay window where stale null would produce a cursor-dot flash.
+        beamPreviewStore.set({ startPoint, endPoint: null, kind: s.kind, overrides: s.overrides });
+        setState({ ...s, phase: 'awaitingEnd', startPoint, error: null });
         return true;
       }
       if (s.phase === 'awaitingEnd' && s.startPoint) {

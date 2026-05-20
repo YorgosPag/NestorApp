@@ -21,7 +21,7 @@ import type { DxfScene, DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity, Entity } from '../../types/entities';
-import { isArrayEntity, isStairEntity, isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import { isArrayEntity, isStairEntity, isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isXLineEntity, isRayEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
@@ -29,6 +29,8 @@ import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 // ADR-363 Phase 1B — wall wrapper for DXF render pipeline.
 import type { WallEntity } from '../../bim/types/wall-types';
+// ADR-363 Phase 5 — beam wrapper for DXF render pipeline.
+import type { BeamEntity } from '../../bim/types/beam-types';
 import type { DimensionEntity } from '../../types/dimension';
 import type { PathParams } from '../../systems/array/types';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
@@ -315,6 +317,13 @@ function convertEntity(entity: SceneEntity, layers: SceneLayers, layersById?: Sc
       if (!isWallEntity(entity)) return null;
       const w = entity as WallEntity;
       return { ...base, type: 'wall' as const, kind: w.kind, params: w.params, geometry: w.geometry, validation: w.validation } as DxfEntityUnion;
+    }
+    case 'beam': {
+      // ADR-363 Phase 5 — direct entity (same pattern as wall). BeamRenderer
+      // reads geometry.outline/axisPolyline + params fields at top level.
+      if (!isBeamEntity(entity)) return null;
+      const b = entity as BeamEntity;
+      return { ...base, type: 'beam' as const, kind: b.kind, params: b.params, geometry: b.geometry, validation: b.validation } as DxfEntityUnion;
     }
     case 'xline': {
       // ADR-359 Phase 11 — wrap XLineEntity for grip computation pipeline.

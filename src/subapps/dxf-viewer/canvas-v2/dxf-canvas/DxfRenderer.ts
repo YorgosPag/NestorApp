@@ -376,6 +376,11 @@ export class DxfRenderer {
         // geometry.outerEdge/innerEdge/axisPolyline + params.category/thickness/flip.
         return { ...base, type: 'wall', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
       }
+      case 'beam': {
+        // ADR-363 Phase 5 — direct entity: same pattern as DxfWall. BeamRenderer
+        // reads geometry.outline/axisPolyline + params.width/depth/kind.
+        return { ...base, type: 'beam', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
+      }
       case 'xline':
         return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
       case 'ray':

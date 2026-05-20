@@ -108,7 +108,7 @@ export function generatePreviewEntity(
   }
   // ── ADR-363 Phase 5.5P — Beam tool preview branch ────────────────────────
   if (tool === 'beam') {
-    return generateBeamPreview(tempPoints, cursorPoint);
+    return generateBeamPreview(tempPoints, cursorPoint, sceneUnits);
   }
   // ── ADR-359 Phase 3 — XLine preview ──────────────────────────────────────
   if (tool === 'xline') {

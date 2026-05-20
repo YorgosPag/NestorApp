@@ -17,11 +17,13 @@ import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 // ADR-363 Phase 1B — wall wrapper for DXF render pipeline.
 import type { WallEntity } from '../../bim/types/wall-types';
+// ADR-363 Phase 5 — beam wrapper for DXF render pipeline.
+import type { BeamEntity } from '../../bim/types/beam-types';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'xline' | 'ray';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'xline' | 'ray' | 'beam';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -189,6 +191,18 @@ export interface DxfWall extends DxfEntity {
   validation?: WallEntity['validation'];
 }
 
+/**
+ * ADR-363 Phase 5 — DxfBeam direct entity (same pattern as DxfWall).
+ * BeamRenderer reads geometry.outline/axisPolyline + params directly.
+ */
+export interface DxfBeam extends DxfEntity {
+  type: 'beam';
+  kind: BeamEntity['kind'];
+  params: BeamEntity['params'];
+  geometry: BeamEntity['geometry'];
+  validation?: BeamEntity['validation'];
+}
+
 /** ADR-359 Phase 11 — XLine wrapper for grip computation pipeline. */
 export interface DxfXLine extends DxfEntity {
   type: 'xline';
@@ -201,7 +215,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfBeam | DxfXLine | DxfRay;
 
 // === DXF SCENE ===
 export interface DxfScene {
