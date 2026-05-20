@@ -96,6 +96,7 @@
       "vertices": "Vertices",
       "drawCalls": "Draw calls",
       "objectsVisible": "Objects",
+      "objectsTotal": "Total objects",
       "gpuMemory": "GPU memory",
       "cpuMemory": "CPU memory",
       "samplesPerSec": "Samples/sec"
@@ -117,9 +118,15 @@
       "cancel": "Cancel",
       "submitting": "Sending...",
       "successToast": "Diagnostic sent",
-      "errorToast": "Failed to send"
+      "errorToast": "Failed to send",
+      "screenshotAlt": "3D scene screenshot",
+      "renderMode": "Mode"
     },
     "copyStatsToast": "Stats copied",
+    "toast": {
+      "copyFailed": "Failed to copy stats",
+      "downloadFailed": "Failed to download files"
+    },
     "notFound": "—",
     "notification": {
       "diagnosticReceived": "New performance diagnostic received"

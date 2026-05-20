@@ -96,6 +96,7 @@
       "vertices": "Κορυφές",
       "drawCalls": "Κλήσεις σχεδίασης",
       "objectsVisible": "Αντικείμενα",
+      "objectsTotal": "Σύνολο αντικειμένων",
       "gpuMemory": "Μνήμη γραφικών",
       "cpuMemory": "Μνήμη επεξεργαστή",
       "samplesPerSec": "Δείγματα/δευτ."
@@ -117,9 +118,15 @@
       "cancel": "Άκυρο",
       "submitting": "Αποστολή...",
       "successToast": "Διαγνωστικά στάλθηκαν",
-      "errorToast": "Αποτυχία αποστολής"
+      "errorToast": "Αποτυχία αποστολής",
+      "screenshotAlt": "Στιγμιότυπο 3D σκηνής",
+      "renderMode": "Λειτουργία"
     },
     "copyStatsToast": "Στατιστικά αντιγράφηκαν",
+    "toast": {
+      "copyFailed": "Αποτυχία αντιγραφής",
+      "downloadFailed": "Αποτυχία λήψης"
+    },
     "notFound": "—",
     "notification": {
       "diagnosticReceived": "Νέα αναφορά διαγνωστικών απόδοσης"
