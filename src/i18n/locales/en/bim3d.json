@@ -120,6 +120,9 @@
       "errorToast": "Failed to send"
     },
     "copyStatsToast": "Stats copied",
-    "notFound": "—"
+    "notFound": "—",
+    "notification": {
+      "diagnosticReceived": "New performance diagnostic received"
+    }
   }
 }

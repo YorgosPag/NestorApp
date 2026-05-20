@@ -118,6 +118,7 @@ export function FloorFloorplanTabContent({
     >
       <FloorplanGallery
         files={files}
+        floorplanId={files[0]?.id ?? null}
         overlays={overlays}
         highlightedOverlayUnitId={highlightedOverlayUnitId}
         onHoverOverlay={onHoverOverlay}

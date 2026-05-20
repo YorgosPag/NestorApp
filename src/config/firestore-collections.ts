@@ -365,6 +365,11 @@ export const COLLECTIONS = {
   TEXT_CUSTOM_DICTIONARY: process.env.NEXT_PUBLIC_TEXT_CUSTOM_DICTIONARY_COLLECTION || 'text_custom_dictionary',
   /** Company-uploaded TTF/OTF/SHX fonts served via Firebase Storage signed URL (Q18). Schema: { id, companyId, name, fileName, format, uploadedBy, uploadedAt, size }. IDs via fnt_* prefix. */
   COMPANY_FONTS: process.env.NEXT_PUBLIC_COMPANY_FONTS_COLLECTION || 'company_fonts',
+
+  // 📊 PERFORMANCE DIAGNOSTICS — ADR-366 §B.5 (3D BIM Viewer Performance HUD)
+  /** User-submitted performance snapshots: 10 render metrics + screenshot + scene info + comment. Super-admin curation. IDs via perfdiag_* prefix. */
+  PERFORMANCE_DIAGNOSTICS:
+    process.env.NEXT_PUBLIC_PERFORMANCE_DIAGNOSTICS_COLLECTION || 'performance_diagnostics',
 } as const;
 
 // ============================================================================

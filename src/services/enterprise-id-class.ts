@@ -303,6 +303,9 @@ export class EnterpriseIdService {
   generateCenterMarkId(): string { return this.generateId(P.CENTER_MARK).id; }
   generateCenterLineId(): string { return this.generateId(P.CENTER_LINE).id; }
 
+  // DXF 3D BIM Viewer — Performance Diagnostics (ADR-366 §B.5)
+  generatePerformanceDiagnosticId(): string { return this.generateId(P.PERF_DIAG).id; }
+
   // DXF BIM Drawing Mode (ADR-363)
   generateWallId(): string { return this.generateId(P.WALL).id; }
   generateOpeningId(): string { return this.generateId(P.OPENING).id; }

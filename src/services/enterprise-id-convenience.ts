@@ -231,6 +231,9 @@ export const generateDimStyleId = () => enterpriseIdService.generateDimStyleId()
 export const generateCenterMarkId = () => enterpriseIdService.generateCenterMarkId();
 export const generateCenterLineId = () => enterpriseIdService.generateCenterLineId();
 
+// DXF 3D BIM Viewer — Performance Diagnostics (ADR-366 §B.5)
+export const generatePerformanceDiagnosticId = () => enterpriseIdService.generatePerformanceDiagnosticId();
+
 // DXF BIM Drawing Mode (ADR-363)
 export const generateWallId = () => enterpriseIdService.generateWallId();
 export const generateOpeningId = () => enterpriseIdService.generateOpeningId();

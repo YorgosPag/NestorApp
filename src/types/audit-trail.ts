@@ -35,7 +35,8 @@ export type AuditEntityType =
   | 'slab'
   | 'slab-opening'
   | 'column'
-  | 'beam';
+  | 'beam'
+  | 'performance_diagnostic';
 
 /** Actions that can be recorded in the audit trail */
 export type AuditAction =

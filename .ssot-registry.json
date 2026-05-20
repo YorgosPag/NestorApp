@@ -3567,6 +3567,20 @@
       "addedDate": "2026-05-19",
       "addedByAdr": "ADR-362",
       "tier": 4
+    },
+    "bim-readonly-render": {
+      "ssotFile": "src/components/shared/files/media/bim-readonly-render.ts",
+      "description": "ADR-370 (2026-05-20): Read-only BIM entity visualization inside the Properties floorplan tab. The façade `renderBimEntitiesToCanvas()` instantiates the existing DXF Viewer BIM renderers (Wall/Slab/Beam/Column/Opening/SlabOpening) and dispatches them onto the FloorplanGallery canvas using a synthetic ViewTransform built by `buildBimViewTransform()`. Forbidden: re-implementing BIM rendering pipelines (BaseEntityRenderer subclasses, BIM scene composition) outside the DXF Viewer subapp, or instantiating BIM renderers (`new WallRenderer(...)`, `new SlabRenderer(...)`, etc.) outside this façade or the DXF Viewer canvas pipeline. Geometry hydration (docs → entities) must reuse `computeXxxGeometry` SSoT functions via `bim-readonly-hydration.ts` — no duplicate `docToEntity` adapters.",
+      "forbiddenPatterns": [
+        "new\\s+(Wall|Slab|Beam|Column|Opening|SlabOpening)Renderer\\("
+      ],
+      "allowlist": [
+        "src/components/shared/files/media/bim-readonly-render.ts",
+        "src/subapps/dxf-viewer/"
+      ],
+      "addedDate": "2026-05-20",
+      "addedByAdr": "ADR-370",
+      "tier": 3
     }
   }
 }

@@ -210,6 +210,8 @@ export class PreviewRenderer {
 
   /** Clear preview immediately */
   clear(): void {
+    // DEBUG: trace who calls clear() — remove after diagnosis
+    if (typeof window !== 'undefined') console.trace('[PreviewRenderer.clear]');
     this.currentPreview = null;
     this.isDirty = false;
 

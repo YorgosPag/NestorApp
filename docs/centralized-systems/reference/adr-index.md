@@ -359,6 +359,7 @@
 | **ADR-367** | Firestore Internal Assertion Recovery (Single-Tab Cache + Safety Net) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-367-firestore-internal-assertion-recovery.md) |
 | **ADR-368** | DXF Import Drawing Units Override (AutoCAD/Revit Pattern) | ✅ IMPLEMENTED 2026-05-20 | 2026-05-20 | DXF Viewer — Import Wizard / Scene Units | [📄](./adrs/ADR-368-dxf-import-drawing-units-override.md) |
 | **ADR-369** | BIM Elevation Convention: Revit/Industry-Standard Alignment | 📝 PROPOSED 2026-05-20 — Aligns slab/beam/wall/column/opening elevation semantics με Revit. Breaking change σε Slab semantic (migration plan Phase A-G). | 2026-05-20 | DXF Viewer — BIM / Parametric Building Modeling | [📄](./adrs/ADR-369-bim-elevation-convention-revit-alignment.md) |
+| **ADR-370** | BIM Read-Only Visualization in Properties Floorplan Tab | ✅ IMPLEMENTED 2026-05-20 — Façade bridges DXF Viewer BIM renderers (walls/slabs/beams/columns/openings/slab-openings) into Properties read-only floorplan tab via synthetic ViewTransform. Zero duplication. | 2026-05-20 | Properties — Floorplan Tab / BIM Visualization | [📄](./adrs/ADR-370-bim-readonly-visualization.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

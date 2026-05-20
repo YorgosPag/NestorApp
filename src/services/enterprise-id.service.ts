@@ -87,6 +87,7 @@ export {
   generateLayerStateId,
   generateLayerStateTemplateId, generateDxfTemplateCategoryId,
   generateDimensionId, generateDimStyleId, generateCenterMarkId, generateCenterLineId,
+  generatePerformanceDiagnosticId,
   generateWallId, generateOpeningId, generateSlabId, generateSlabOpeningId,
   generateColumnId, generateBeamId, generateBimPresetId, generateBimMaterialId, generateBimSettingsId,
   generateOptimisticId, generateTempId, generateOpaqueToken, validateEnterpriseId, parseEnterpriseId,

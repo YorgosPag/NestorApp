@@ -29,6 +29,7 @@ import { useFloorplanSceneLoader } from '@/components/shared/files/media/useFloo
 import { useFloorplanPdfLoader } from '@/components/shared/files/media/useFloorplanPdfLoader';
 import { useFloorplanImageLoader } from '@/components/shared/files/media/useFloorplanImageLoader';
 import { useFloorplanCanvasRender } from '@/components/shared/files/media/useFloorplanCanvasRender';
+import { useFloorplanBimEntities } from '@/components/shared/files/media/useFloorplanBimEntities';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 import { FloorplanGalleryZoomControls } from '@/components/shared/files/media/FloorplanGalleryZoomControls';
 import { MeasureToolbar, type MeasureMode } from '@/components/shared/files/media/MeasureToolbar';
@@ -55,6 +56,7 @@ export function FloorplanGallery({
   propertyLabels,
   unitsPerMeter,
   backgroundId,
+  floorplanId,
 }: FloorplanGalleryProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const iconSizes = useIconSizes();
@@ -235,17 +237,21 @@ export function FloorplanGallery({
     [propertyLabels],
   );
 
+  const bimSubscriptionId = isDxf ? (floorplanId ?? currentFile?.id ?? null) : null;
+  const bimEntities = useFloorplanBimEntities(bimSubscriptionId);
+
   useFloorplanCanvasRender({
     canvasRef: inlineCanvasRef, enabled: true, isDxf, isRaster, loadedScene, rasterImage, rasterBounds,
     currentBounds, zoom: inlineZP.zoom, panOffset: inlineZP.panOffset, drawingMode,
     overlays, highlightedUnitId: effectiveHighlightId, getOverlayLabel,
+    bimEntities,
   });
 
   useFloorplanCanvasRender({
     canvasRef: modalCanvasRef, enabled: fullscreen.isFullscreen, isDxf, isRaster, loadedScene,
     rasterImage, rasterBounds, currentBounds, zoom: modalZP.zoom, panOffset: modalZP.panOffset,
     drawingMode, overlays, highlightedUnitId: effectiveHighlightId, getOverlayLabel,
-    firstRenderDelay: 280,
+    firstRenderDelay: 280, bimEntities,
   });
 
   // ACTIONS

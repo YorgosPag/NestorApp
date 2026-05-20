@@ -289,6 +289,8 @@ Only invert slab semantic, leave wall/column hardcoded at z=0.
 |------|--------|--------|
 | 2026-05-20 | Giorgio + Claude | Initial ADR — PROPOSED status. Research-backed industry alignment decision. Migration plan Phase A-G. |
 | 2026-05-20 | Giorgio + Claude | §9 added — Deep multi-platform research (ArchiCAD, Vectorworks, Allplan, BricsCAD, IFC standard, Revit advanced). Major scope expansion: **Storey System** + Project Base Point/Survey Point distinction + Parametric coupling. Q&A clarification phase initiated. |
+| 2026-05-20 | Giorgio + Claude | Q1/Q4/Q6/Q5 answered (Floor entity already exists, FFL Hybrid, signed-number basements with `kind` field, Hybrid binding). Discovery: `floors` + `buildings` collections fully live, gaps in 3D rendering wiring only. |
+| 2026-05-20 | Giorgio + Claude | **Q2 answered** — Full Multi-Building (Revit-style + Enterprise). Building.baseElevation + siteOrigin + rotation. Floor.elevation now relative to Building. Indirect BIM→Floor→Building FK chain. 3D viewer per-building visibility/isolation. BOQ group-by-building. |
 
 ---
 
@@ -580,7 +582,74 @@ interface BimElevationRef {
 Πριν την υλοποίηση, χρειάζονται διευκρινίσεις από Giorgio (Greek + απλά + παραδείγματα + ένα-ένα):
 
 1. **Q1 — Storey ως οντότητα ή scalar?** ✅ **ANSWERED 2026-05-20**: Επιλογή Α (Revit-style — Floor οντότητα). **Discovery**: Floor entity υπάρχει ήδη πλήρως (§9.0). Δεν χρειάζεται νέα οντότητα — μόνο wiring στο BIM rendering layer.
-2. **Q2 — Multi-building support;** Ένα project = ένα κτίριο πάντα, ή υποστηρίζουμε multiple buildings (όπως Revit Site)?
+2. **Q2 — Multi-building support;** ✅ **ANSWERED 2026-05-20**: **Πλήρες Multi-Building (Revit-style) + Full Enterprise**. Project = container πολλαπλών Buildings· κάθε Building έχει δικό του δέντρο ορόφων + δικό του `baseElevation` (για κτίρια σε πλαγιά / διαφορετικά επίπεδα εδάφους).
+
+   **Discovery (2026-05-20)**: ✅ Collection `buildings` ΗΔΗ υπάρχει στο Firestore. ✅ `floor.buildingId` FK ΗΔΗ υπάρχει. ✅ UI tabs `/buildings` ΗΔΗ υποστηρίζει multiple buildings per project. Major gaps λείπουν στο geometry + 3D rendering layer.
+
+   **Schema additions (Building)**:
+   ```ts
+   interface BuildingRecord {
+     id: string;
+     projectId: string;                        // FK to project
+     name: string;                              // "Κτίριο Α", "Συγκρότημα Β"
+     baseElevation: number;                     // METRES — site z offset (default 0)
+     baseElevationReference?: 'site' | 'sea-level' | 'street'; // semantic
+     siteOrigin?: Point3D;                      // XY offset within site (multi-building layout)
+     rotation?: number;                         // degrees — building orientation on site
+     phase?: 'planned' | 'permitted' | 'under_construction' | 'completed';
+     status?: 'active' | 'archived';
+     // existing fields preserved
+   }
+   ```
+
+   **Geometry semantic**:
+   - `Floor.elevation` παραμένει **METRES**, αλλά τώρα ορίζεται **σχετικά με `building.baseElevation`** (όχι absolute z).
+   - Computed absolute z: `worldZ = building.baseElevation + floor.elevation`
+   - BIM entity `worldZ` resolution chain: `building → floor → entity offset`
+   - Έτσι, αν αλλάξει `building.baseElevation` (π.χ. survey correction), ΟΛΟ το κτίριο μετακινείται μαζί
+
+   **BIM entity FK chain (CRITICAL gap to fix)**:
+   ```
+   Current: Wall.floorId → Floor (no Building link in entity)
+   New:     Wall.floorId → Floor.buildingId → Building
+            (έμμεση σύνδεση, no schema change on BIM entities)
+   ```
+   - Walls/Slabs/Beams/Columns/Openings ΔΕΝ χρειάζονται `buildingId` field
+   - Resolution function: `getEntityBuilding(entity) = floors[entity.floorId].buildingId`
+   - Building filter στο viewer = `entities.filter(e => floors[e.floorId].buildingId === activeBuildingId)`
+
+   **3D Viewer (ADR-366) requirements**:
+   - Building visibility toggle (show/hide per building)
+   - Building isolation mode (show only one + ghost others)
+   - Active building selector (UI dropdown)
+   - Per-building section cuts
+   - Per-building exploded view
+
+   **BOQ / Cost split**:
+   - Reports group by `buildingId` automatically
+   - Filter "Κτίριο = Α" → only entities under that building's floors
+   - Subcontractor packages per building (concrete crew → only Building Α)
+
+   **Numbering collision handling**:
+   - "1ος Όροφος Κτίριο Α" ≠ "1ος Όροφος Κτίριο Β" — αμφότερα valid
+   - Display path: `Project → Building → Floor → Entity`
+   - URL routing: `/buildings/[buildingId]/floors/[floorNumber]/...`
+
+   **Migration impact**:
+   - Existing floors με `elevation` = absolute z → migrate to relative (subtract building.baseElevation, default 0 — no-op)
+   - Σε projects με ένα μόνο κτίριο, default `baseElevation=0` διατηρεί existing behavior
+   - Zero-downtime: η ανάγνωση resolution chain δουλεύει με `baseElevation ?? 0`
+
+   **Implementation Tasks**:
+   - Add `baseElevation`, `baseElevationReference`, `siteOrigin`, `rotation` fields to Building schema + Zod
+   - Add `BuildingService.update({ baseElevation })` με cascade refresh στο 3D viewer
+   - Add `useEntityBuilding(entityId)` hook για indirect resolution
+   - Update DxfToThreeConverter / 3D scene composer να εφαρμόζει `building.baseElevation` offset
+   - UI: Buildings tab add "Υψόμετρο βάσης (m)" input + "Αναφορά" dropdown (Site/Sea-level/Street)
+   - i18n keys: `building.baseElevation="Υψόμετρο βάσης"`, `building.reference.site="Επίπεδο εδάφους"`, etc.
+   - 3D viewer: Building visibility panel + isolation mode
+   - BOQ aggregator: group-by buildingId support
+
 3. **Q3 — Project Base Point vs Survey Point;** Χρειάζεται geodetic / sea-level reference, ή αρκεί ένα local origin?
 4. **Q4 — Storey reference: FFL ή Top of Structural Slab?** ✅ **ANSWERED 2026-05-20**: **Hybrid A — FFL primary + auto-derived ToS**. `Floor.elevation` = FFL (METRES). New field `Floor.finishThickness` (mm, default 80mm Greek typical). Derived: `topOfStructuralSlab = elevation - finishThickness/1000`. Construction drawings & BOQ auto-generate ToS dimensions. Change of finish (e.g. marble→wood) updates ToS without affecting walls/windows/doors. Rationale: serves full pipeline (design FFL → construction ToS → management FFL) with single user-facing number per storey.
 5. **Q5 — Parametric coupling;** ✅ **ANSWERED 2026-05-20**: **Γ — Hybrid με opt-in binding** (Revit pattern). Walls/columns έχουν `baseBinding` + `topBinding` enums. Default = bound (auto-stretch όταν αλλάζει storey height). User μπορεί να uncheck για edge cases (διαχωριστικά μπαρ, πατάρι, εξωτερικός όγκος).

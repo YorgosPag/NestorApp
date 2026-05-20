@@ -131,6 +131,16 @@ export const NOTIFICATION_KEYS = {
   },
 
   // ==========================================================================
+  // BIM 3D VIEWER domain (ADR-366 §B.5 — Performance HUD diagnostics)
+  // ==========================================================================
+  bim3d: {
+    diagnostic: {
+      /** Super-admin gets notified when a user submits a performance HUD snapshot */
+      received: 'bim3d:performance.notification.diagnosticReceived',
+    },
+  },
+
+  // ==========================================================================
   // FILES domain
   // ==========================================================================
   files: {

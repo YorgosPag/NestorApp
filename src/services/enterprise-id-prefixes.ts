@@ -247,6 +247,9 @@ export const ENTERPRISE_ID_PREFIXES = {
   BIM_MATERIAL: 'bmat',        // bim_materials collection — material library (Phase 6+)
   BIM_SETTINGS: 'bset',        // bim_settings collection — per-company BIM configuration
 
+  // DXF 3D BIM Viewer — Performance Diagnostics (ADR-366 §B.5)
+  PERF_DIAG: 'perfdiag',       // performance_diagnostics collection — user-submitted HUD snapshots
+
   // Optimistic & Temporary
   OPTIMISTIC: 'opt',
   TEMP: 'tmp',
