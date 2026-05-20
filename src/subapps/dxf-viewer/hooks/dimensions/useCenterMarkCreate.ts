@@ -70,9 +70,13 @@ export function useCenterMarkCreate(params: UseCenterMarkCreateParams): CenterMa
   const firstPointRef = useRef<Point2D | null>(null);
 
   // Reset flow when tool changes.
+  // Only clear preview canvas when entering a center-mark mode — other tools
+  // own their preview lifecycle and must NOT have it cleared on tool switch.
   useEffect(() => {
     firstPointRef.current = null;
-    previewRef.current?.current?.clear();
+    if (CENTER_MARK_TOOLS.has(activeTool)) {
+      previewRef.current?.current?.clear();
+    }
   }, [activeTool]);
 
   const handlePoint = useCallback((world: Point2D) => {

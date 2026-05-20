@@ -102,58 +102,57 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
   const stateRef = useRef<BeamToolState>(state);
   stateRef.current = state;
 
-  // ── preview store sync (ADR-363 Phase 5.5P) ───────────────────────────────
-  useEffect(() => {
-    if (state.phase === 'idle') {
-      beamPreviewStore.reset();
-      return;
-    }
-    beamPreviewStore.set({
-      startPoint: state.startPoint,
-      endPoint: state.endPoint,
-      kind: state.kind,
-      overrides: state.overrides,
-    });
-  }, [state]);
-
+  // Unmount cleanup — reset store when hook teardown (tool panel unmount).
   useEffect(() => {
     return () => beamPreviewStore.reset();
   }, []);
 
   // ── lifecycle ────────────────────────────────────────────────────────────
+  // All state transitions sync beamPreviewStore immediately (before setState)
+  // so updatePreview reads the correct data on the very next mousemove, without
+  // waiting for React's passive-effect flush (which fires after paint).
+
   const activate = useCallback(() => {
-    setState((prev) => ({
-      ...INITIAL_STATE,
-      kind: prev.kind,
-      overrides: prev.overrides,
-      phase: 'awaitingStart',
-    }));
+    const prev = stateRef.current;
+    beamPreviewStore.set({ startPoint: null, endPoint: null, kind: prev.kind, overrides: prev.overrides });
+    setState({ ...INITIAL_STATE, kind: prev.kind, overrides: prev.overrides, phase: 'awaitingStart' });
   }, []);
 
   const setKind = useCallback((kind: BeamKind) => {
-    setState((prev) => ({
-      ...INITIAL_STATE,
-      kind,
-      overrides: prev.overrides,
-      phase: prev.phase === 'idle' ? 'idle' : 'awaitingStart',
-    }));
+    const prev = stateRef.current;
+    const newPhase = prev.phase === 'idle' ? 'idle' : 'awaitingStart';
+    if (newPhase === 'idle') {
+      beamPreviewStore.reset();
+    } else {
+      beamPreviewStore.set({ startPoint: null, endPoint: null, kind, overrides: prev.overrides });
+    }
+    setState({ ...INITIAL_STATE, kind, overrides: prev.overrides, phase: newPhase });
   }, []);
 
   const deactivate = useCallback(() => {
+    beamPreviewStore.reset();
     setState(INITIAL_STATE);
   }, []);
 
   const reset = useCallback(() => {
-    setState((prev) => ({
-      ...INITIAL_STATE,
-      kind: prev.kind,
-      overrides: prev.overrides,
-      phase: prev.phase === 'idle' ? 'idle' : 'awaitingStart',
-    }));
+    const prev = stateRef.current;
+    const newPhase = prev.phase === 'idle' ? 'idle' : 'awaitingStart';
+    if (newPhase === 'idle') {
+      beamPreviewStore.reset();
+    } else {
+      beamPreviewStore.set({ startPoint: null, endPoint: null, kind: prev.kind, overrides: prev.overrides });
+    }
+    setState({ ...INITIAL_STATE, kind: prev.kind, overrides: prev.overrides, phase: newPhase });
   }, []);
 
   const setParamOverrides = useCallback((overrides: BeamParamOverrides) => {
-    setState((prev) => ({ ...prev, overrides: { ...prev.overrides, ...overrides } }));
+    const prev = stateRef.current;
+    const newOverrides = { ...prev.overrides, ...overrides };
+    if (prev.phase !== 'idle') {
+      const current = beamPreviewStore.get();
+      beamPreviewStore.set({ ...current, overrides: newOverrides });
+    }
+    setState({ ...prev, overrides: newOverrides });
   }, []);
 
   // ── commit helpers (straight/cantilever 2-click, curved 3-click) ─────────
