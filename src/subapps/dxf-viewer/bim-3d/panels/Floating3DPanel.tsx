@@ -9,6 +9,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Floor3DPanelTab } from './Floor3DPanelTab';
+import { Lighting3DPanelTab } from './Lighting3DPanelTab';
+import { Quality3DPanelTab } from './Quality3DPanelTab';
 
 type Tab = 'floors' | 'lighting' | 'quality';
 
@@ -44,12 +46,8 @@ export function Floating3DPanel() {
       {/* Tab content */}
       <div className="min-h-0 overflow-y-auto">
         {activeTab === 'floors' && <Floor3DPanelTab />}
-        {activeTab === 'lighting' && (
-          <p className="p-3 text-center text-xs text-white/30">{t('floatingPanel.tabs.lighting')} — Phase 5</p>
-        )}
-        {activeTab === 'quality' && (
-          <p className="p-3 text-center text-xs text-white/30">{t('floatingPanel.tabs.quality')} — Phase 5</p>
-        )}
+        {activeTab === 'lighting' && <Lighting3DPanelTab />}
+        {activeTab === 'quality' && <Quality3DPanelTab />}
       </div>
     </aside>
   );

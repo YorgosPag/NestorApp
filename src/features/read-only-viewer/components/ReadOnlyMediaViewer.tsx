@@ -284,6 +284,7 @@ export function ReadOnlyMediaViewer({
               <TabContentWrapper loading={floorFloorplansData.loading} error={floorFloorplansData.error} onRetry={floorFloorplansData.refetch} spacing={spacing} iconSizes={iconSizes} t={t}>
                 <FloorplanGallery
                   files={floorFloorplansData.files}
+                  floorplanId={floorFloorplansData.files[0]?.id ?? null}
                   overlays={singleFloorOverlays}
                   highlightedOverlayUnitId={highlightedOverlayUnitId}
                   onHoverOverlay={onHoverOverlay} onClickOverlay={onClickOverlay}

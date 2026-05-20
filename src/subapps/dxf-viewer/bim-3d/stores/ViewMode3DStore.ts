@@ -7,6 +7,7 @@ import { immer } from 'zustand/middleware/immer';
 import type { FloorVisMode, FloorPreset } from '../utils/floor-visibility-state';
 import { applyPreset, sortLevelsTopDown } from '../utils/floor-visibility-state';
 import type { Level } from '../../systems/levels/config';
+import { LIGHT_PRESETS, DEFAULT_PRESET, type LightPresetId } from '../lighting/lighting-presets';
 
 enableMapSet();
 
@@ -37,6 +38,14 @@ interface ViewMode3DState {
   showAllFloors: boolean;
   /** Per-level visibility mode (B.3): 'show' | 'ghost' | 'hide'. */
   floorVisibilityModes: ReadonlyMap<string, FloorVisMode>;
+  /** Active lighting preset (B.1 Phase 5A) */
+  sunPreset: LightPresetId;
+  sunAzimuthDeg: number;
+  sunElevationDeg: number;
+  sunAnimating: boolean;
+  solarDate: Date;
+  solarLatDeg: number;
+  solarLngDeg: number;
 }
 
 interface ViewMode3DActions {
@@ -58,6 +67,13 @@ interface ViewMode3DActions {
   setFloorMode(levelId: string, mode: FloorVisMode): void;
   /** Apply a preset to all levels (B.3). */
   applyFloorsPreset(levels: Level[], preset: FloorPreset, activeLevelId: string | null): void;
+  /** Set lighting preset + update sun angles (B.1 Phase 5A) */
+  setLightPreset(preset: LightPresetId): void;
+  /** Set custom sun position (clears preset highlight) */
+  setSunPosition(azDeg: number, elDeg: number): void;
+  /** Update solar calculator config */
+  setSolarConfig(date: Date, latDeg: number, lngDeg: number): void;
+  toggleSunAnimating(): void;
 }
 
 type ViewMode3DStoreType = ViewMode3DState & ViewMode3DActions;
@@ -74,6 +90,13 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
         visibleFloors: new Set<string>(),
         showAllFloors: false,
         floorVisibilityModes: new Map<string, FloorVisMode>(),
+        sunPreset: DEFAULT_PRESET,
+        sunAzimuthDeg: LIGHT_PRESETS[DEFAULT_PRESET].azimuthDeg,
+        sunElevationDeg: LIGHT_PRESETS[DEFAULT_PRESET].elevationDeg,
+        sunAnimating: false,
+        solarDate: new Date(),
+        solarLatDeg: 37.97,
+        solarLngDeg: 23.73,
 
         // ── Actions ───────────────────────────────────────────────────────────
 
@@ -139,6 +162,36 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
           set((draft) => {
             const sorted = sortLevelsTopDown(levels);
             draft.floorVisibilityModes = applyPreset(sorted, preset, activeLevelId, draft.floorVisibilityModes);
+          });
+        },
+
+        setLightPreset(preset) {
+          set((draft) => {
+            draft.sunPreset = preset;
+            draft.sunAzimuthDeg = LIGHT_PRESETS[preset].azimuthDeg;
+            draft.sunElevationDeg = LIGHT_PRESETS[preset].elevationDeg;
+            draft.sunAnimating = false;
+          });
+        },
+
+        setSunPosition(azDeg, elDeg) {
+          set((draft) => {
+            draft.sunAzimuthDeg = azDeg;
+            draft.sunElevationDeg = elDeg;
+          });
+        },
+
+        setSolarConfig(date, latDeg, lngDeg) {
+          set((draft) => {
+            draft.solarDate = date;
+            draft.solarLatDeg = latDeg;
+            draft.solarLngDeg = lngDeg;
+          });
+        },
+
+        toggleSunAnimating() {
+          set((draft) => {
+            draft.sunAnimating = !draft.sunAnimating;
           });
         },
       }))

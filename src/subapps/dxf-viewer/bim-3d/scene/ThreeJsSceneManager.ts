@@ -16,6 +16,10 @@ import { createViewCube } from '../viewport/view-cube/view-cube';
 import { createPoi } from '../viewport/viewport-poi';
 import { detectSnapCandidate } from '../viewport/view-snap-detector';
 import { BimSceneLayer } from './BimSceneLayer';
+import { PerformanceCollector } from '../performance/PerformanceCollector';
+import { IdleDetector } from '../lighting/idle-detector';
+import { QualityModulator } from '../lighting/quality-modulator';
+import type { LightPreset } from '../lighting/lighting-presets';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 import { raycastBimGroup, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
 import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
@@ -39,7 +43,13 @@ export class ThreeJsSceneManager {
   readonly selectionHighlighter: BimSelectionHighlighter;
   private readonly viewCube: ViewCubeEngine;
   private readonly poi: ReturnType<typeof createPoi>;
+  private readonly sun: THREE.DirectionalLight;
+  private readonly ambient: THREE.AmbientLight;
+  private readonly hemi: THREE.HemisphereLight;
+  private readonly idleDetector: IdleDetector;
+  private readonly qualityModulator: QualityModulator;
 
+  private readonly performanceCollector: PerformanceCollector;
   private rafHandle: number | null = null;
   private disposed = false;
   private lastFrameTime = performance.now();
@@ -48,7 +58,17 @@ export class ThreeJsSceneManager {
 
   constructor(container: HTMLElement) {
     this.renderer = this.initRenderer(container);
+    const lights = this.createLights();
+    this.sun = lights.sun;
+    this.ambient = lights.ambient;
+    this.hemi = lights.hemi;
     this.scene = this.initScene();
+    this.qualityModulator = new QualityModulator(this.sun);
+    this.idleDetector = new IdleDetector({
+      thresholdMs: 800,
+      onIdle: () => this.qualityModulator.onCameraIdle(),
+      onActive: () => this.qualityModulator.onCameraActive(),
+    });
     this.bimLayer = new BimSceneLayer(this.scene);
     this.selectionHighlighter = new BimSelectionHighlighter(this.bimLayer.group);
     this.dxfConverter = new DxfToThreeConverter(this.scene);
@@ -56,6 +76,8 @@ export class ThreeJsSceneManager {
     this.poi = createPoi();
     this.scene.add(this.poi.root);
     this.viewCube = this.initViewCube(container);
+    this.performanceCollector = new PerformanceCollector(this.renderer, this.scene);
+    this.performanceCollector.start();
     this.startLoop();
   }
 
@@ -70,16 +92,10 @@ export class ThreeJsSceneManager {
     return renderer;
   }
 
-  private initScene(): THREE.Scene {
-    const scene = new THREE.Scene();
-    scene.add(new THREE.AxesHelper(2));
+  private createLights(): { sun: THREE.DirectionalLight; ambient: THREE.AmbientLight; hemi: THREE.HemisphereLight } {
+    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
 
-    // Sky ambient (ADR-366 §7.2)
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-
-    // Sun — Athens summer noon: azimuth ~180° (south), elevation ~65° (ADR-366 §7.2)
     const sun = new THREE.DirectionalLight(0xfffaf0, 3);
-    sun.position.set(-5, 10, 5);
     sun.castShadow = true;
     sun.shadow.bias = -0.002;
     sun.shadow.normalBias = 0.1;
@@ -90,11 +106,20 @@ export class ThreeJsSceneManager {
     sun.shadow.camera.right = 60;
     sun.shadow.camera.top = 60;
     sun.shadow.camera.bottom = -60;
-    scene.add(sun);
 
-    // Ground bounce (HemisphereLight — sky blue / warm ground)
-    scene.add(new THREE.HemisphereLight(0x87ceeb, 0x8b7355, 0.3));
+    const hemi = new THREE.HemisphereLight(0x87ceeb, 0x8b7355, 0.3);
 
+    return { sun, ambient, hemi };
+  }
+
+  private initScene(): THREE.Scene {
+    const scene = new THREE.Scene();
+    scene.add(new THREE.AxesHelper(2));
+    scene.add(this.ambient);
+    scene.add(this.sun);
+    scene.add(this.hemi);
+    // Apply noon default position (ADR-366 §7.2)
+    this.sun.position.set(-5, 10, 5);
     return scene;
   }
 
@@ -138,6 +163,12 @@ export class ThreeJsSceneManager {
       this.lastFrameTime = now;
 
       this.viewport.update();
+
+      if (this.isInteracting) {
+        this.idleDetector.notifyActive();
+      } else {
+        this.idleDetector.notifyIdle();
+      }
 
       // POI: update position + fade
       this.poi.updateTarget(this.viewport.target);
@@ -216,6 +247,32 @@ export class ThreeJsSceneManager {
     );
   }
 
+  updateSunPosition(azimuthDeg: number, elevationDeg: number): void {
+    if (this.disposed) return;
+    const azRad = (azimuthDeg * Math.PI) / 180;
+    const elRad = (elevationDeg * Math.PI) / 180;
+    const x = Math.cos(elRad) * Math.sin(azRad);
+    const y = Math.sin(elRad);
+    const z = Math.cos(elRad) * Math.cos(azRad);
+    this.sun.position.set(x * 15, y * 15, z * 15);
+    this.sun.visible = elevationDeg > -5;
+  }
+
+  applyLightPreset(preset: LightPreset): void {
+    if (this.disposed) return;
+    this.sun.color.set(preset.sunColor);
+    this.sun.intensity = preset.sunIntensity;
+    this.ambient.intensity = preset.ambientIntensity;
+    this.hemi.color.set(preset.skyColor);
+    this.hemi.groundColor.set(preset.groundColor);
+    this.hemi.intensity = preset.hemisphereIntensity;
+    this.updateSunPosition(preset.azimuthDeg, preset.elevationDeg);
+  }
+
+  getRendererCanvas(): HTMLCanvasElement {
+    return this.renderer.domElement;
+  }
+
   resize(width: number, height: number): void {
     if (this.disposed || width === 0 || height === 0) return;
     this.viewport.updateAspect(width, height);
@@ -229,6 +286,9 @@ export class ThreeJsSceneManager {
       cancelAnimationFrame(this.rafHandle);
       this.rafHandle = null;
     }
+    this.idleDetector.dispose();
+    this.qualityModulator.dispose();
+    this.performanceCollector.dispose();
     this.selectionHighlighter.dispose();
     this.bimLayer.dispose();
     this.dxfConverter.dispose();

@@ -1,9 +1,8 @@
 import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
-import { generatePerfdiagId } from '@/services/enterprise-id.service';
-import { EntityAuditService } from '@/services/entity-audit.service';
-import { FIRESTORE_COLLECTIONS } from '@/config/firestore-collections';
+import { generatePerformanceDiagnosticId } from '@/services/enterprise-id.service';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
 
 export interface DiagnosticInput {
@@ -18,7 +17,7 @@ export interface DiagnosticInput {
 
 export async function sendDiagnostic(input: DiagnosticInput): Promise<void> {
   const { companyId, userId, projectId, metrics, renderMode, canvas, comment } = input;
-  const docId = generatePerfdiagId();
+  const docId = generatePerformanceDiagnosticId();
 
   // Screenshot PNG → Storage
   const dataUrl = canvas.toDataURL('image/png', 0.92);
@@ -29,7 +28,7 @@ export async function sendDiagnostic(input: DiagnosticInput): Promise<void> {
   const screenshotUrl = await getDownloadURL(storageRef);
 
   // Firestore doc
-  await setDoc(doc(db, FIRESTORE_COLLECTIONS.PERFORMANCE_DIAGNOSTICS, docId), {
+  await setDoc(doc(db, COLLECTIONS.PERFORMANCE_DIAGNOSTICS, docId), {
     id: docId,
     companyId,
     userId,
@@ -41,13 +40,9 @@ export async function sendDiagnostic(input: DiagnosticInput): Promise<void> {
     createdAt: serverTimestamp(),
   });
 
-  // Audit trail — fire-and-forget
-  void EntityAuditService.recordChange({
-    companyId,
-    entityType: 'performance_diagnostic',
-    entityId: docId,
-    action: 'create',
-    userId,
-    changes: { renderMode, fps: metrics.fps },
-  });
+  // TODO(ADR-366 §B.5): audit trail must happen server-side (EntityAuditService is server-only).
+  // Move write+audit into a `/api/performance-diagnostics` route so both Firestore doc and
+  // entity_audit_trail entry are written in the same server transaction. Client cannot import
+  // entity-audit.service (Admin SDK / server-only). For now the doc is written client-side
+  // without audit.
 }

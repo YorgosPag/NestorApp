@@ -62,6 +62,22 @@
     "category": "Category",
     "kind": "Kind"
   },
+  "lighting": {
+    "preset": {
+      "morning": "Morning",
+      "noon": "Noon",
+      "afternoon": "Afternoon",
+      "sunset": "Sunset",
+      "cloudy": "Cloudy",
+      "night": "Night"
+    },
+    "timeLabel": "Time",
+    "advancedTitle": "Advanced",
+    "dateLabel": "Date",
+    "latLabel": "Latitude",
+    "lngLabel": "Longitude",
+    "animateLabel": "Animate sun"
+  },
   "floatingPanel": {
     "tabs": {
       "floors": "Floors",

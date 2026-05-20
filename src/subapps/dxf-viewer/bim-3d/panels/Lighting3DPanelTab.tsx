@@ -1,0 +1,136 @@
+'use client';
+
+import { useState, useEffect, useSyncExternalStore } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useViewMode3DStore } from '../stores/ViewMode3DStore';
+import { PRESET_ORDER } from '../lighting/lighting-presets';
+import { computeSolarPosition, timeOfDayToDate } from '../lighting/solar-position';
+
+export function Lighting3DPanelTab() {
+  const { t } = useTranslation('bim3d');
+  const { sunPreset, sunAnimating, solarDate, solarLatDeg, solarLngDeg } = useSyncExternalStore(
+    useViewMode3DStore.subscribe,
+    useViewMode3DStore.getState,
+    useViewMode3DStore.getState,
+  );
+
+  const [timeHour, setTimeHour] = useState(12);
+  const [advanced, setAdvanced] = useState(false);
+
+  const applyTime = (h: number) => {
+    setTimeHour(h);
+    const pos = computeSolarPosition(timeOfDayToDate(h), solarLatDeg, solarLngDeg);
+    useViewMode3DStore.getState().setSunPosition(pos.azimuthDeg, pos.elevationDeg);
+  };
+
+  useEffect(() => {
+    if (!sunAnimating) return;
+    const id = setInterval(() => {
+      setTimeHour((prev) => {
+        const next = (prev + 0.25) % 24;
+        const pos = computeSolarPosition(timeOfDayToDate(next), solarLatDeg, solarLngDeg);
+        useViewMode3DStore.getState().setSunPosition(pos.azimuthDeg, pos.elevationDeg);
+        return next;
+      });
+    }, 2000);
+    return () => clearInterval(id);
+  }, [sunAnimating, solarLatDeg, solarLngDeg]);
+
+  const hh = String(Math.floor(timeHour)).padStart(2, '0');
+  const mm = String(Math.floor((timeHour % 1) * 60)).padStart(2, '0');
+
+  return (
+    <div className="space-y-3 p-3 text-xs text-white/80">
+      <div className="grid grid-cols-3 gap-1">
+        {PRESET_ORDER.map((id) => (
+          <button
+            key={id}
+            onClick={() => useViewMode3DStore.getState().setLightPreset(id)}
+            className={[
+              'rounded border px-1 py-0.5 text-[10px] transition-colors',
+              sunPreset === id
+                ? 'border-primary text-white'
+                : 'border-transparent text-white/40 hover:text-white/70',
+            ].join(' ')}
+          >
+            {t(`lighting.preset.${id}`)}
+          </button>
+        ))}
+      </div>
+
+      <div>
+        <div className="mb-1 flex justify-between">
+          <span>{t('lighting.timeLabel')}</span>
+          <span className="text-white/50">{hh}:{mm}</span>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={23.75}
+          step={0.25}
+          value={timeHour}
+          onChange={(e) => applyTime(Number(e.target.value))}
+          className="w-full accent-primary"
+        />
+      </div>
+
+      <button
+        onClick={() => setAdvanced((v) => !v)}
+        className="w-full text-left text-white/40 hover:text-white/70"
+      >
+        {t('lighting.advancedTitle')} {advanced ? '▲' : '▼'}
+      </button>
+
+      {advanced && (
+        <div className="space-y-2">
+          <div>
+            <label className="block text-white/50">{t('lighting.dateLabel')}</label>
+            <input
+              type="date"
+              value={solarDate.toISOString().slice(0, 10)}
+              onChange={(e) => {
+                const d = new Date(e.target.value);
+                useViewMode3DStore.getState().setSolarConfig(d, solarLatDeg, solarLngDeg);
+              }}
+              className="w-full rounded bg-white/10 px-1 py-0.5 text-white"
+            />
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="block text-white/50">{t('lighting.latLabel')}</label>
+              <input
+                type="number"
+                step={0.01}
+                value={solarLatDeg}
+                onChange={(e) => useViewMode3DStore.getState().setSolarConfig(solarDate, Number(e.target.value), solarLngDeg)}
+                className="w-full rounded bg-white/10 px-1 py-0.5 text-white"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-white/50">{t('lighting.lngLabel')}</label>
+              <input
+                type="number"
+                step={0.01}
+                value={solarLngDeg}
+                onChange={(e) => useViewMode3DStore.getState().setSolarConfig(solarDate, solarLatDeg, Number(e.target.value))}
+                className="w-full rounded bg-white/10 px-1 py-0.5 text-white"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>{t('lighting.animateLabel')}</span>
+            <button
+              onClick={() => useViewMode3DStore.getState().toggleSunAnimating()}
+              className={[
+                'rounded border px-2 py-0.5 transition-colors',
+                sunAnimating ? 'border-primary text-white' : 'border-white/20 text-white/40',
+              ].join(' ')}
+            >
+              {sunAnimating ? '■' : '▶'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

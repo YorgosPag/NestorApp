@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useCallback, useSyncExternalStore, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { useProjectHierarchy } from '../../contexts/ProjectHierarchyContext';
+import { PerformanceHUD } from '../performance/PerformanceHUD';
 import { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
+import { LIGHT_PRESETS } from '../lighting/lighting-presets';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
@@ -25,6 +29,10 @@ export function BimViewport3D() {
   const managerRef = useRef<ThreeJsSceneManager | null>(null);
   const errorRef = useRef<string | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
+  const { user } = useAuth();
+  const { selectedProject } = useProjectHierarchy();
+  const projectId = selectedProject?.id ?? null;
 
   // Low-frequency store subscriptions (user-triggered entity changes — not 60fps)
   const is3D = useSyncExternalStore(
@@ -49,6 +57,8 @@ export function BimViewport3D() {
       return;
     }
 
+    setCanvasEl(managerRef.current.getRendererCanvas());
+
     // Sync current store state immediately — stores were populated before 3D mode opened.
     const entitiesState = useBim3DEntitiesStore.getState();
     const { walls, columns, beams, slabs, activeLevelId } = entitiesState;
@@ -58,6 +68,10 @@ export function BimViewport3D() {
     // Apply current floor visibility modes immediately.
     const modes = useViewMode3DStore.getState().floorVisibilityModes;
     if (modes.size > 0) managerRef.current.applyFloorVisibility(modes);
+
+    // Apply current lighting preset immediately.
+    const { sunPreset } = useViewMode3DStore.getState();
+    managerRef.current.applyLightPreset(LIGHT_PRESETS[sunPreset]);
 
     // ResizeObserver: propagate container size changes
     const observer = new ResizeObserver((entries) => {
@@ -74,6 +88,7 @@ export function BimViewport3D() {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
       }
+      setCanvasEl(null);
       useQuickProperties3DStore.getState().clearHover();
       useSelection3DStore.getState().clearSelection();
       managerRef.current?.dispose();
@@ -104,6 +119,23 @@ export function BimViewport3D() {
     return useViewMode3DStore.subscribe(
       (s) => s.floorVisibilityModes,
       (modes) => { managerRef.current?.applyFloorVisibility(modes); },
+    );
+  }, []);
+
+  // Sun position changes → update Three.js
+  useEffect(() => {
+    return useViewMode3DStore.subscribe(
+      (s) => ({ az: s.sunAzimuthDeg, el: s.sunElevationDeg }),
+      ({ az, el }) => { managerRef.current?.updateSunPosition(az, el); },
+      { equalityFn: (a, b) => a.az === b.az && a.el === b.el },
+    );
+  }, []);
+
+  // Preset changes → apply full preset (colors + intensity + position)
+  useEffect(() => {
+    return useViewMode3DStore.subscribe(
+      (s) => s.sunPreset,
+      (preset) => { managerRef.current?.applyLightPreset(LIGHT_PRESETS[preset]); },
     );
   }, []);
 
@@ -193,6 +225,14 @@ export function BimViewport3D() {
 
       {/* BIM entity card panel (ADR-366 B.2.Q4) — micro-leaf, absolute right-side panel */}
       <BimEntityCardPanel />
+
+      {/* Performance HUD (ADR-366 B.5) — micro-leaf, bottom-right */}
+      <PerformanceHUD
+        canvas={canvasEl}
+        projectId={projectId ?? null}
+        userId={user?.uid ?? null}
+        companyId={user?.companyId ?? null}
+      />
     </div>
   );
 }

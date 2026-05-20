@@ -62,6 +62,22 @@
     "category": "Κατηγορία",
     "kind": "Τύπος"
   },
+  "lighting": {
+    "preset": {
+      "morning": "Πρωί",
+      "noon": "Μεσημέρι",
+      "afternoon": "Απόγευμα",
+      "sunset": "Ηλιοβασίλεμα",
+      "cloudy": "Συννεφιά",
+      "night": "Νύχτα"
+    },
+    "timeLabel": "Ώρα",
+    "advancedTitle": "Σύνθετες ρυθμίσεις",
+    "dateLabel": "Ημερομηνία",
+    "latLabel": "Γεωγρ. πλάτος",
+    "lngLabel": "Γεωγρ. μήκος",
+    "animateLabel": "Κινούμενος ήλιος"
+  },
   "floatingPanel": {
     "tabs": {
       "floors": "Όροφοι",
