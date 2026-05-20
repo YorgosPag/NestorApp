@@ -781,6 +781,10 @@ export const SECTION_CUT_SURFACE = {
   color: '#9e9e9e',
   /** Opacity για cap mesh — semi-transparent ώστε εσωτερικό να φαίνεται */
   opacity: 0.5,
+  /** Emphasis color για selected entity cap — mirrors HOVER_HIGHLIGHT.ENTITY.glowColor SSoT (Phase 7.0C) */
+  selectedCapColor: HOVER_HIGHLIGHT.ENTITY.glowColor,
+  /** Opacity για selected emphasis cap — solid enough to signal selection clearly */
+  selectedCapOpacity: 0.85,
 } as const;
 
 export type SectionCutSurfaceKey = keyof typeof SECTION_CUT_SURFACE;

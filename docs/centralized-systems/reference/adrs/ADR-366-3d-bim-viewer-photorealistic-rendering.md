@@ -1124,6 +1124,7 @@ GenArc **ADR-009** defines Y-up convention explicitly. This ADR **inherits** tha
 | Hover highlight σε section box edges | `HOVER_HIGHLIGHT.ENTITY.glowColor` (REUSE 2D) |
 | Section Panel UI base | Extend `StairCutPlaneSection.tsx` pattern (REUSE Nestor) |
 | Cut surface color (solid mode) | **NEW** `SECTION_CUT_SURFACE` token (justified — no 2D equivalent) |
+| Selected entity cap emphasis color (Phase 7.0C) | `SECTION_CUT_SURFACE.selectedCapColor` = `HOVER_HIGHLIGHT.ENTITY.glowColor` (#FFFF00) (REUSE — mirrors `SECTION_2D_PANEL_COLORS.selected`) |
 | Hatch patterns per material (Phase 7.1+) | **NEW** registry συνδεδεμένο με ADR-363 Phase 6 ShaderType — material-hatch SSoT (όχι παράλληλο σε 2D — Nestor 2D δεν έχει per-material hatch) |
 | Selection sync (selected entity intersects section plane → emphasized) | `Selection3DStore` (REUSE A.1) |
 | Mutation pipeline (drag section plane) | Nestor ICommand (REUSE 2D) |
@@ -1142,7 +1143,7 @@ Topic A.3 Q4 specified "Solid cut surface as Phase 7 base, Hatched as Phase 7.1+
 - **Performance Phase 7.0a**: per frame κόστος = N×(2 BIM scene passes color/depth off + 1 cap quad) όπου N=active planes (1-6). Box mode worst case = 12 scene passes + 6 cap quads. **Phase 7.0b optimization** (2026-05-20): reduced to N×(1 warmup + 1 BIM pass + 1 cap quad) via `gl.stencilOpSeparate` cache trick — see Phase 7.0b implementation note below. Box mode: 6 BIM scene renders + 6 cap quads (~50% fewer large renders).
 - **Files**: `+systems/section/section-stencil-renderer.ts` (new), `~systems/section/SectionBox.ts` (faces→edge wireframe), `~scene/section-scene-controller.ts` (owns stencil renderer + cachedPlanes + isStencilActive + renderFrameWithCaps), `~scene/ThreeJsSceneManager.ts` (render loop branch).
 
-DEFERRED μετά Phase 7.0a: (a) ✅ **1-pass stencil optimization Phase 7.0b — DONE 2026-05-20 (see Phase 7.0b implementation note below)**, (b) hatched per-material cut Phase 7.1+ (ADR-363 ShaderType), (c) ✅ **2D Live Section Panel GenArc port Phase 7.0B — DONE 2026-05-20 (see Phase 7.0B implementation note below)**, (d) selection-aware emphasis intersect Phase 7.0+ TBD.
+DEFERRED μετά Phase 7.0a: (a) ✅ **1-pass stencil optimization Phase 7.0b — DONE 2026-05-20 (see Phase 7.0b implementation note below)**, (b) hatched per-material cut Phase 7.1+ (ADR-363 ShaderType), (c) ✅ **2D Live Section Panel GenArc port Phase 7.0B — DONE 2026-05-20 (see Phase 7.0B implementation note below)**, (d) ✅ **selection-aware cap emphasis Phase 7.0C — DONE 2026-05-20 (see Phase 7.0C implementation note below)**.
 
 **Implementation note — Phase 7.0B (2D Live Section Panel, 2026-05-20)**:
 
@@ -1214,6 +1215,32 @@ Phase 7.0a noted "future optimization Phase 7.0b candidate = custom shader γι�
 
 **Files modified** (1):
 - `~systems/section/section-stencil-renderer.ts` — `backStencilMat`+`frontStencilMat` (2 materials, 2 scene passes) replaced with `singlePassStencilMat` (DoubleSide) + `warmupScene` (zero-area cache seed). `renderCapForPlane`: warmup → `gl.stencilOpSeparate(FRONT, DECR)` → single main render → cap. Public API (`render(renderer, mainScene, camera, planes, sceneBounds)`) unchanged. `section-scene-controller.ts` and `ThreeJsSceneManager.ts` untouched.
+
+---
+
+**Implementation note — Phase 7.0C (Selection-aware Cap Emphasis, 2026-05-20)**:
+
+DEFERRED item (d) from Phase 7.0a: "selection-aware emphasis intersect Phase 7.0+ TBD". Phase 7.0C implements Revit/Navisworks-style yellow emphasis on the stencil cap of the selected entity when a section plane intersects it.
+
+**Architecture — Dual-cap render (Option A)**:
+
+After the normal grey cap render (Phase 7.0b pass), if `Selection3DStore.selectedBimId !== null`:
+1. **Visibility mask**: traverse `mainScene`, set `visible=false` for all `THREE.Mesh` objects where `userData['bimId']` is set AND `!== selectedBimId`. Non-BIM objects (DXF, lights, sectionBox handles) unaffected.
+2. **2nd stencil pass**: clearStencil → warmup seed → `gl.stencilOpSeparate(FRONT, DECR_WRAP)` → `overrideMaterial=singlePassStencilMat` render. Stencil encodes only the selected entity's solid interior.
+3. **Restore visibility**: loop over hidden array, set `visible=true`.
+4. **Emphasis cap render**: `selectedCapMat` (color=#FFFF00, opacity=0.85) fills stencil where selected entity was cut. Rendered on top of grey cap via `depthTest=false` → yellow overwrites grey for selected entity only.
+
+**SSoT compliance**:
+- `SECTION_CUT_SURFACE.selectedCapColor = HOVER_HIGHLIGHT.ENTITY.glowColor` (#FFFF00) — REUSE, no new token. Mirrors `SECTION_2D_PANEL_COLORS.selected` semantic (Phase 7.0B precedent).
+- `useSelection3DStore.getState()` — direct Zustand non-React access (plain class, outside React tree). REUSE Topic A.1 store.
+
+**Performance**: 0 cost when no entity selected (branch not taken). When selected: +1 mainScene BIM render per active plane + O(N) traverse. Box mode worst case (6 planes × 1 entity selected): +6 BIM renders. Acceptable: selection is UI-interactive state (not 60fps idle cost).
+
+**Three.js compatibility**: warmup cache trick reused verbatim from Phase 7.0b. No new GL extensions.
+
+**Files modified** (2):
+- `~systems/section/section-stencil-renderer.ts` — +`selectedCapMat`+`selectedCapMesh`+`selectedCapScene` fields, +`createSelectedCapMaterial()`, +`renderEmphasisCapForPlane()`, `positionCapMesh` → `positionMesh(mesh, plane, size)` generalized. `render()` / `StencilRendererDeps` / `section-scene-controller.ts` untouched.
+- `~config/color-config.ts` — `SECTION_CUT_SURFACE` +`selectedCapColor` (= `HOVER_HIGHLIGHT.ENTITY.glowColor`) + `selectedCapOpacity` (0.85).
 
 ---
 

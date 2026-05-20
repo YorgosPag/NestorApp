@@ -111,6 +111,11 @@ export interface ColumnParams {
    * Defaults to 'mm' when absent (legacy Firestore docs).
    */
   readonly sceneUnits?: SceneUnits;
+  // ─── ADR-369 Phase 0.4 + A.1 — Storey linkage ────────────────────────────
+  /** FK → Floor.id (storey reference). Semantic alias for entity-level floorId. */
+  readonly storeyId?: string;
+  /** mm. Base face offset από storey reference elevation. Default 0 = base at FFL. */
+  readonly offsetFromStorey?: number;
   // ─── ADR-369 §9 Q5 — Revit-style vertical extent binding ───────────────────
   /** How column base couples to storey FFL. Default 'storey-floor'. */
   readonly baseBinding: ColumnBaseBinding;

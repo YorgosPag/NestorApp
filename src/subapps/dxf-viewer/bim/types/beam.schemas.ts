@@ -55,6 +55,8 @@ export const BeamParamsSchema = z
     sectionType: BeamSectionTypeSchema.optional(),
     profileDesignation: z.string().min(1).optional(),
     sceneUnits: z.string().optional(),
+    storeyId: z.string().min(1).optional(),
+    offsetFromStorey: z.number().finite().optional(),
   })
   .strict();
 

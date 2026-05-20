@@ -109,6 +109,7 @@ function resolveColumnParams(input: ColumnParamsCallerInput): ColumnParams {
     topBinding,
     baseOffset: input.baseOffset ?? 0,
     topOffset: input.topOffset ?? 0,
+    offsetFromStorey: input.offsetFromStorey ?? 0,
   };
 }
 

@@ -74,6 +74,7 @@ function resolveBeamParams(input: BeamParamsCallerInput): BeamParams {
   return {
     ...input,
     zOffset: input.zOffset ?? DEFAULT_BEAM_Z_OFFSET_MM,
+    offsetFromStorey: input.offsetFromStorey ?? 0,
   };
 }
 

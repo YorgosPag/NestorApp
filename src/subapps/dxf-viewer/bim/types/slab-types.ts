@@ -115,6 +115,11 @@ export interface SlabParams {
    * Defaults to 'mm' when absent (legacy Firestore docs).
    */
   readonly sceneUnits?: SceneUnits;
+  // ─── ADR-369 Phase 0.4 + A.1 — Storey linkage ────────────────────────────
+  /** FK → Floor.id (storey reference). Semantic alias for entity-level floorId. */
+  readonly storeyId?: string;
+  /** mm. Top face offset από storey reference elevation. Default 0 = FFL @ storey level. */
+  readonly offsetFromStorey?: number;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

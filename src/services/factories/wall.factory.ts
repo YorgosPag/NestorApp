@@ -121,6 +121,7 @@ function resolveWallParams(input: WallParamsCallerInput): WallParams {
     topBinding,
     baseOffset: input.baseOffset ?? 0,
     topOffset: input.topOffset ?? 0,
+    offsetFromStorey: input.offsetFromStorey ?? 0,
   };
 }
 

@@ -88,6 +88,7 @@ function resolveSlabParams(input: SlabParamsCallerInput): SlabParams {
   return {
     ...rest,
     geometryType,
+    offsetFromStorey: input.offsetFromStorey ?? 0,
   };
 }
 

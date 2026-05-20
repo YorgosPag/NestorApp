@@ -10,6 +10,11 @@
  *   Box mode worst case: 6 full BIM scene renders + 6 cap quads.
  *   Reduction: ~50% fewer large scene renders.
  *
+ * Phase 7.0C (selection emphasis): after normal cap, if selectedBimId set →
+ *   2nd stencil pass με visibility mask (selected entity only) → emphasis
+ *   cap (SECTION_CUT_SURFACE.selectedCapColor) rendered on top.
+ *   Cost: +1 BIM render + traverse when entity selected (0 cost when idle).
+ *
  * 1-pass mechanism (gl.stencilOpSeparate cache trick):
  *   1. Warmup: render zero-area mesh with singlePassMat (stencilZPass=IncrementWrap).
  *      Three.js caches stencil state as IncrementWrap. Zero fragments = no stencil writes.
@@ -28,6 +33,7 @@
 
 import * as THREE from 'three';
 import { SECTION_CUT_SURFACE } from '../../../config/color-config';
+import { useSelection3DStore } from '../../stores/Selection3DStore';
 
 export interface StencilRendererDeps {
   /** BIM group reference για bounding sphere calc (cap quad size). */
@@ -46,6 +52,9 @@ export class SectionStencilRenderer {
   private readonly capMat: THREE.MeshBasicMaterial;
   private readonly capMesh: THREE.Mesh;
   private readonly capScene: THREE.Scene;
+  private readonly selectedCapMat: THREE.MeshBasicMaterial;
+  private readonly selectedCapMesh: THREE.Mesh;
+  private readonly selectedCapScene: THREE.Scene;
   private disposed = false;
 
   constructor(deps: StencilRendererDeps) {
@@ -58,6 +67,12 @@ export class SectionStencilRenderer {
     this.capMesh.frustumCulled = false;
     this.capScene = new THREE.Scene();
     this.capScene.add(this.capMesh);
+    this.selectedCapMat = this.createSelectedCapMaterial();
+    const selectedGeom = new THREE.PlaneGeometry(1, 1);
+    this.selectedCapMesh = new THREE.Mesh(selectedGeom, this.selectedCapMat);
+    this.selectedCapMesh.frustumCulled = false;
+    this.selectedCapScene = new THREE.Scene();
+    this.selectedCapScene.add(this.selectedCapMesh);
   }
 
   private createSinglePassMaterial(): THREE.MeshBasicMaterial {
@@ -96,6 +111,24 @@ export class SectionStencilRenderer {
       color: SECTION_CUT_SURFACE.color,
       opacity: SECTION_CUT_SURFACE.opacity,
       transparent: SECTION_CUT_SURFACE.opacity < 1,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      depthTest: false,
+    });
+    mat.stencilWrite = true;
+    mat.stencilRef = 0;
+    mat.stencilFunc = THREE.NotEqualStencilFunc;
+    mat.stencilFail = THREE.ReplaceStencilOp;
+    mat.stencilZFail = THREE.ReplaceStencilOp;
+    mat.stencilZPass = THREE.ReplaceStencilOp;
+    return mat;
+  }
+
+  private createSelectedCapMaterial(): THREE.MeshBasicMaterial {
+    const mat = new THREE.MeshBasicMaterial({
+      color: SECTION_CUT_SURFACE.selectedCapColor,
+      opacity: SECTION_CUT_SURFACE.selectedCapOpacity,
+      transparent: SECTION_CUT_SURFACE.selectedCapOpacity < 1,
       side: THREE.DoubleSide,
       depthWrite: false,
       depthTest: false,
@@ -183,19 +216,63 @@ export class SectionStencilRenderer {
     renderer.render(mainScene, camera);
     mainScene.overrideMaterial = null;
 
-    this.positionCapMesh(currentPlane, capSize);
+    this.positionMesh(this.capMesh, currentPlane, capSize);
     renderer.render(this.capScene, camera);
+
+    const selectedBimId = useSelection3DStore.getState().selectedBimId;
+    if (selectedBimId !== null) {
+      this.renderEmphasisCapForPlane(
+        renderer, mainScene, camera, gl, others, currentPlane, capSize, selectedBimId,
+      );
+    }
   }
 
-  private positionCapMesh(plane: THREE.Plane, capSize: number): void {
+  private renderEmphasisCapForPlane(
+    renderer: THREE.WebGLRenderer,
+    mainScene: THREE.Scene,
+    camera: THREE.Camera,
+    gl: WebGL2RenderingContext,
+    otherPlanes: THREE.Plane[],
+    currentPlane: THREE.Plane,
+    capSize: number,
+    selectedBimId: string,
+  ): void {
+    this.selectedCapMat.clippingPlanes = otherPlanes;
+
+    // Temporarily hide BIM meshes that are NOT the selected entity so that
+    // the stencil pass encodes only the selected entity's solid interior.
+    const hidden: THREE.Object3D[] = [];
+    mainScene.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const bimId = (obj.userData as Record<string, unknown>)['bimId'];
+      if (bimId !== undefined && bimId !== selectedBimId) {
+        hidden.push(obj);
+        obj.visible = false;
+      }
+    });
+
+    renderer.clearStencil();
+    renderer.render(this.warmupScene, camera);
+    gl.stencilOpSeparate(gl.FRONT, gl.KEEP, gl.KEEP, gl.DECR_WRAP);
+    mainScene.overrideMaterial = this.singlePassStencilMat;
+    renderer.render(mainScene, camera);
+    mainScene.overrideMaterial = null;
+
+    for (const obj of hidden) obj.visible = true;
+
+    this.positionMesh(this.selectedCapMesh, currentPlane, capSize);
+    renderer.render(this.selectedCapScene, camera);
+  }
+
+  private positionMesh(mesh: THREE.Mesh, plane: THREE.Plane, size: number): void {
     const normal = plane.normal;
     const pointOnPlane = normal.clone().multiplyScalar(-plane.constant);
-    this.capMesh.position.copy(pointOnPlane);
+    mesh.position.copy(pointOnPlane);
     const defaultNormal = new THREE.Vector3(0, 0, 1);
-    this.capMesh.quaternion.setFromUnitVectors(defaultNormal, normal);
-    this.capMesh.scale.set(capSize, capSize, 1);
-    this.capMesh.updateMatrix();
-    this.capMesh.updateMatrixWorld(true);
+    mesh.quaternion.setFromUnitVectors(defaultNormal, normal);
+    mesh.scale.set(size, size, 1);
+    mesh.updateMatrix();
+    mesh.updateMatrixWorld(true);
   }
 
   private computeCapSize(sceneBounds: THREE.Box3 | null): number {
@@ -218,6 +295,8 @@ export class SectionStencilRenderer {
     this.capMesh.geometry.dispose();
     this.singlePassStencilMat.dispose();
     this.capMat.dispose();
+    this.selectedCapMesh.geometry.dispose();
+    this.selectedCapMat.dispose();
     const warmupMesh = this.warmupScene.children[0] as THREE.Mesh | undefined;
     if (warmupMesh) {
       warmupMesh.geometry.dispose();
@@ -225,6 +304,9 @@ export class SectionStencilRenderer {
     }
     while (this.capScene.children.length > 0) {
       this.capScene.remove(this.capScene.children[0]);
+    }
+    while (this.selectedCapScene.children.length > 0) {
+      this.selectedCapScene.remove(this.selectedCapScene.children[0]);
     }
   }
 }

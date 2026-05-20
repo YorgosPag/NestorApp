@@ -71,6 +71,8 @@ const WallParamsBaseSchema = z
     curveControl: Point3DSchema.optional(),
     material: z.string().min(1).optional(),
     sceneUnits: z.string().optional(),
+    storeyId: z.string().min(1).optional(),
+    offsetFromStorey: z.number().finite().optional(),
     // ─── ADR-369 §9 Q5 binding ──────────────────────────────────────────────
     baseBinding: WallBaseBindingSchema,
     topBinding: WallTopBindingSchema,

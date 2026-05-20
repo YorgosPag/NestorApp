@@ -1,6 +1,6 @@
 # ADR-369 — BIM Elevation Convention: Revit/Industry-Standard Alignment
 
-- **Status**: 🚧 IN_IMPLEMENTATION — Phase A1-A5 + B + D + F + G ✅ complete 2026-05-20. Phase H (Validation Checklist) ✅ complete — 7/9 checks pass, 2 N/A (Q10 Wipe & Reseed). Phase C (Firestore migration) N/A. Q&A 10/10 complete.
+- **Status**: 🚧 IN_IMPLEMENTATION — Phase A1-A5 + B + D + F + G + H + 0.4+A.1+0.3 ✅ complete 2026-05-20. Phase C (Firestore migration) N/A. Q&A 10/10 complete.
 - **Date**: 2026-05-20
 - **Author**: Giorgio Pagonis + Claude (Opus 4.7)
 - **Supersedes**: Partial elevation semantics in ADR-363 (BIM Drawing Mode), ADR-366 (3D BIM Viewer)
@@ -485,8 +485,10 @@ Only invert slab semantic, leave wall/column hardcoded at z=0.
 - **§3 step 17** → ✅ i18n keys shipped in Phase A4.
 - **§3 steps 18–19** → ✅ Legacy `elevation` field removed from code consumers. Types already clean from Phase A4.
 - **Phase H (Validation Checklist)** → ✅ complete (see below). **Phase I (Ribbon Levels derived values)** → deferred.
+- **Phase 0.4 + A.1 + Phase 0.3** → ✅ complete (see below).
 
 | 2026-05-20 | Giorgio + Claude | **Phase H implemented (Validation Checklist)** — 2 files modified. **slab-validator.test.ts**: `makeSlab()` default `elevation:0` → `levelElevation:0` + `geometryType:'box'` (required field from Phase A4). Test description strings updated (`elevation=0` → `levelElevation=0`). All 12 slab-validator tests pass. **ADR-369 §6**: All 9 checklist items marked — 7 ✅, 2 [N/A] (Q10 Wipe & Reseed). Pre-existing failures confirmed via git stash (slab-edge-projection/DxfToThreeConverter/column-hatch/ColumnRenderer-hatch/beam-grips test 5). BimToThreeConverter extrusion direction verified by code inspection: slab hangs DOWN from top face (✅), beam hangs DOWN from topElevation (✅). |
+| 2026-05-20 | Giorgio + Claude | **Phase 0.4 + A.1 + Phase 0.3 implemented (Storey linkage fields + reverse-lookup)** — 9 files modified + 1 new. **Storey linkage (Phase 0.4 + A.1)**: added `storeyId?: string` + `offsetFromStorey?: number` to all 4 storey-linked BIM entity params (`WallParams`, `ColumnParams`, `SlabParams`, `BeamParams`). `storeyId` = semantic alias for entity-level `floorId` FK (in-params copy for form/UI use). `offsetFromStorey` = mm offset of reference face (base for wall/column, top face for slab/beam) από storey reference elevation. Default 0 = reference face at FFL. Backward-compat: optional, existing Firestore docs without these fields remain valid. **Zod schemas**: +`storeyId: z.string().min(1).optional()` + `offsetFromStorey: z.number().finite().optional()` σε `WallParamsBaseSchema`, `ColumnParamsBaseSchema`, `SlabParamsBaseSchema`, `BeamParamsSchema` (all `.strict()` — must add to schema or validation fails). **Factories**: `resolveWallParams` + `resolveColumnParams` + `resolveSlabParams` + `resolveBeamParams` inject `offsetFromStorey: input.offsetFromStorey ?? 0` — new entities always have the field explicitly set (mirrors `zOffset` pattern in beam factory). **Phase 0.3 (Reverse-lookup)**: new utility `bim-floor-utils.ts` — `getEntityAbsoluteElevation(entity, floors)` resolves absolute elevation in mm by combining `storey.elevation × 1000` + `offsetFromStorey`. Storey resolution: `entity.params.storeyId` → fallback `entity.floorId`. Types: `StoreyRef` (minimal id+elevation?) + `EntityWithStoreyParams` (structural duck-type for all 4 entity kinds). |
 
 ### Phase H — File inventory
 
@@ -494,6 +496,24 @@ Only invert slab semantic, leave wall/column hardcoded at z=0.
 |------|--------|
 | `src/subapps/dxf-viewer/bim/validators/__tests__/slab-validator.test.ts` | `makeSlab()`: `elevation:0` → `levelElevation:0` + `geometryType:'box'`. 3 test descriptions: `elevation=0` → `levelElevation=0`. |
 | `docs/centralized-systems/reference/adrs/ADR-369-bim-elevation-convention-revit-alignment.md` | §6 checklist: all 9 items marked (7 ✅, 2 [N/A]). Status line updated. |
+
+### Phase 0.4 + A.1 + Phase 0.3 — File inventory
+
+| File | Change |
+|------|--------|
+| `src/subapps/dxf-viewer/bim/types/wall-types.ts` | `WallParams` + `storeyId?: string` + `offsetFromStorey?: number` (storey linkage section) |
+| `src/subapps/dxf-viewer/bim/types/column-types.ts` | `ColumnParams` + same two fields |
+| `src/subapps/dxf-viewer/bim/types/slab-types.ts` | `SlabParams` + same (offset semantic: top face) |
+| `src/subapps/dxf-viewer/bim/types/beam-types.ts` | `BeamParams` + same (offset semantic: top face) |
+| `src/subapps/dxf-viewer/bim/types/wall.schemas.ts` | `WallParamsBaseSchema` + `storeyId` + `offsetFromStorey` optional Zod fields |
+| `src/subapps/dxf-viewer/bim/types/column.schemas.ts` | `ColumnParamsBaseSchema` + same |
+| `src/subapps/dxf-viewer/bim/types/slab.schemas.ts` | `SlabParamsBaseSchema` + same |
+| `src/subapps/dxf-viewer/bim/types/beam.schemas.ts` | `BeamParamsSchema` + same |
+| `src/services/factories/wall.factory.ts` | `resolveWallParams`: inject `offsetFromStorey: input.offsetFromStorey ?? 0` |
+| `src/services/factories/column.factory.ts` | `resolveColumnParams`: inject same |
+| `src/services/factories/slab.factory.ts` | `resolveSlabParams`: inject same |
+| `src/services/factories/beam.factory.ts` | `resolveBeamParams`: inject same |
+| `src/subapps/dxf-viewer/bim/utils/bim-floor-utils.ts` | NEW — `getEntityAbsoluteElevation()` + `StoreyRef` type + `EntityWithStoreyParams` type |
 
 ---
 
