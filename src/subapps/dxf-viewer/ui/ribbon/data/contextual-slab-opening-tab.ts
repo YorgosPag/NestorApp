@@ -111,6 +111,18 @@ export const CONTEXTUAL_SLAB_OPENING_TAB: RibbonTab = {
                 action: SLAB_OPENING_RIBBON_KEYS_ACTIONS.delete,
               },
             },
+            {
+              // ADR-363 Phase 3.7b+ — copy to all floors (multi-storey stack).
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'slab-opening.copyToFloors',
+                labelKey: 'ribbon.commands.slabOpeningEditor.copyToFloors',
+                icon: 'copy',
+                commandKey: SLAB_OPENING_RIBBON_KEYS_ACTIONS.copyToFloors,
+                action: SLAB_OPENING_RIBBON_KEYS_ACTIONS.copyToFloors,
+              },
+            },
           ],
         },
       ],

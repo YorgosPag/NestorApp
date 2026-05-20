@@ -21,7 +21,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4
  */
 
-import { Timestamp } from 'firebase/firestore';
+import { nowTimestamp } from '@/lib/firestore-now';
 import type { BimValidation } from '../types/bim-base';
 import {
   MIN_OPENING_WIDTH_MM,
@@ -64,7 +64,7 @@ export function validateOpeningParams(
   const bimValidation: BimValidation = {
     hasCodeViolations: codeViolations.length > 0,
     violationKeys: [...codeViolations],
-    lastValidatedAt: Timestamp.now(),
+    lastValidatedAt: nowTimestamp(),
   };
 
   return { hardErrors, codeViolations, bimValidation };

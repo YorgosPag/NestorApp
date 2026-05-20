@@ -19,7 +19,7 @@ import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
-import type { XLineEntity, RayEntity } from '../../types/entities';
+import type { XLineEntity, RayEntity, DimensionEntity } from '../../types/entities';
 import type { DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
 import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/UpdateWallParamsCommand';
@@ -406,9 +406,19 @@ export function commitDimensionGripDrag(
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
   if (!raw || (raw as Record<string, unknown>).type !== 'dimension') return;
-  const dxfDim = raw as unknown as DxfDimension;
-  const newDimEntity = applyDimensionGripDrag(grip.dimGripKind, dxfDim.dimensionEntity, delta, grip.position);
-  if (newDimEntity === dxfDim.dimensionEntity) return;
-  sceneManager.updateEntity(grip.entityId, { dimensionEntity: newDimEntity } as unknown as Partial<SceneEntity>);
+  // SceneModel stores DimensionEntity directly (no DxfDimension wrapper).
+  // useDxfSceneConversion wraps it in DxfDimension only for the rendering
+  // pipeline — it is NOT persisted back to the scene model.
+  const asWrapper = raw as unknown as DxfDimension;
+  const dimEntity: DimensionEntity = asWrapper.dimensionEntity ?? (raw as unknown as DimensionEntity);
+  const newDimEntity = applyDimensionGripDrag(grip.dimGripKind, dimEntity, delta, grip.position);
+  if (newDimEntity === dimEntity) return;
+  if (asWrapper.dimensionEntity) {
+    // Rare: entity was stored as a DxfDimension wrapper — update nested field.
+    sceneManager.updateEntity(grip.entityId, { dimensionEntity: newDimEntity } as unknown as Partial<SceneEntity>);
+  } else {
+    // Common: entity is a raw DimensionEntity — patch its fields directly.
+    sceneManager.updateEntity(grip.entityId, newDimEntity as unknown as Partial<SceneEntity>);
+  }
 }
 

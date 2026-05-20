@@ -195,6 +195,8 @@ export interface DrawingEventMap {
   // ADR-363 Phase 3.7 — BIM slab-opening params + delete events
   'bim:slab-opening-params-updated': { slabOpeningId: string };
   'bim:slab-opening-delete-requested': { slabOpeningId: string };
+  // ADR-363 Phase 3.7b+ — multi-storey stack dialog trigger
+  'bim:slab-opening-stack-requested': { opening: import('../../../bim/types/slab-opening-types').SlabOpeningEntity };
   // ADR-363 Phase 4 — BIM column params + delete events
   'bim:column-params-updated': { columnId: string };
   'bim:column-delete-requested': { columnId: string };

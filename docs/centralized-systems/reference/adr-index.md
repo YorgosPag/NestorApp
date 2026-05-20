@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 321 ADRs | Last Updated: 2026-05-19
+**📊 Stats**: 322 ADRs | Last Updated: 2026-05-20
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 123 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 124 | [View](#uncategorized) |
 
 ---
 
@@ -356,6 +356,7 @@
 | **ADR-364** | Escape Command Bus (Centralized ESC Dispatcher) | ✅ 🟢 **APPROVED** 2026-05-18 — Group 1+2 implemented; Group 3 (BIM tools) migrated 2026-05-19, awaiting commit | 2026-05-18 | DXF Viewer — Tools & Keyboard | [📄](./adrs/ADR-364-escape-command-bus.md) |
 | **ADR-365** | Tailwind Semantic Palette Enforcement | ✅ 🟢 **PHASE 0 DONE** 2026-05-19 — Ratchet infrastructure deployed (CHECK 3.26). Awaits Phase 1 (DXF Viewer subapp). Actual baseline: **3,659 violations / 440 files** (revised from initial estimate 249/65 — original audit was hover-only) | 2026-05-19 | Design System — Theming & Color Tokens | [📄](./adrs/ADR-365-tailwind-semantic-palette-enforcement.md) |
 | **ADR-366** | 3D BIM Viewer & Photorealistic Rendering | ✅ 🟢 **APPROVED** 2026-05-19 — All §9 open questions resolved Full Enterprise. Phase 0 implementation ready. | 2026-05-19 | DXF Viewer — 3D Rendering / Photorealistic Output | [📄](./adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md) |
+| **ADR-367** | Firestore Internal Assertion Recovery (Single-Tab Cache + Safety Net) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-367-firestore-internal-assertion-recovery.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -706,6 +707,7 @@
 | **ADR-360** | Firebase Custom Claims Auto-Refresh Listener | ✅ APPROVED | [View](./adrs/ADR-360-claims-auto-refresh-listener.md) |
 | **ADR-360** | Claims Auto-Refresh SSoT (Firestore Mirror) | ✅ APPROVED | [View](./adrs/ADR-360-claims-auto-refresh-ssot.md) |
 | **ADR-361** | Firestore Subscribe Equality Guard (SSoT) | ✅ APPROVED | [View](./adrs/ADR-361-firestore-subscribe-equality-guard.md) |
+| **ADR-367** | Firestore Internal Assertion Recovery (Single-Tab Cache + Safety Net) | ✅ APPROVED | [View](./adrs/ADR-367-firestore-internal-assertion-recovery.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

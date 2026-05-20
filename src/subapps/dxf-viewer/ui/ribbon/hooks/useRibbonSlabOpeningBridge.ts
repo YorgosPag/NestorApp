@@ -158,14 +158,20 @@ export function useRibbonSlabOpeningBridge(
 
   const onAction = useCallback(
     (action: string): void => {
-      if (action !== SLAB_OPENING_RIBBON_KEYS_ACTIONS.delete) return;
-      const opening = resolveOpening();
-      if (!opening) return;
-      const confirmed = window.confirm(
-        t('ribbon.commands.slabOpeningEditor.deleteConfirm'),
-      );
-      if (!confirmed) return;
-      EventBus.emit('bim:slab-opening-delete-requested', { slabOpeningId: opening.id });
+      if (action === SLAB_OPENING_RIBBON_KEYS_ACTIONS.delete) {
+        const opening = resolveOpening();
+        if (!opening) return;
+        const confirmed = window.confirm(
+          t('ribbon.commands.slabOpeningEditor.deleteConfirm'),
+        );
+        if (!confirmed) return;
+        EventBus.emit('bim:slab-opening-delete-requested', { slabOpeningId: opening.id });
+        return;
+      }
+      if (action === SLAB_OPENING_RIBBON_KEYS_ACTIONS.copyToFloors) {
+        const opening = resolveOpening();
+        if (opening) EventBus.emit('bim:slab-opening-stack-requested', { opening });
+      }
     },
     [resolveOpening, t],
   );

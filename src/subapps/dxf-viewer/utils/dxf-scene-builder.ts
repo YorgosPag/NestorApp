@@ -186,6 +186,7 @@ export class DxfSceneBuilder {
       bounds,
       units: resolvedUnits,
       dimStyles: Object.keys(dimStyles).length > 0 ? dimStyles : undefined,
+      headerDimscale: header.dimscale, // ADR-362 R10 — annotative-style resolution in dim-style-importer
     };
   }
 

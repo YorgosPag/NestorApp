@@ -28,7 +28,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Timestamp } from 'firebase/firestore';
+import { nowTimestamp } from '@/lib/firestore-now';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
@@ -113,7 +113,7 @@ function docToEntity(doc: StairDoc): StairEntity {
   const validation: StairValidationState = doc.validation ?? {
     hasCodeViolations: false,
     violationKeys: [],
-    lastValidatedAt: Timestamp.now(),
+    lastValidatedAt: nowTimestamp(),
   };
   const params = hydrateLegacyParams(doc.params);
   return {

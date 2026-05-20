@@ -19,7 +19,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5
  */
 
-import { Timestamp } from 'firebase/firestore';
+import { nowTimestamp } from '@/lib/firestore-now';
 import type { BimValidation } from '../types/bim-base';
 import {
   MAX_FREE_SPAN_WARNING_M,
@@ -58,7 +58,7 @@ export function validateSlabParams(params: SlabParams): SlabValidationResult {
   const bimValidation: BimValidation = {
     hasCodeViolations: codeViolations.length > 0,
     violationKeys: [...codeViolations],
-    lastValidatedAt: Timestamp.now(),
+    lastValidatedAt: nowTimestamp(),
   };
 
   return { hardErrors, codeViolations, bimValidation };

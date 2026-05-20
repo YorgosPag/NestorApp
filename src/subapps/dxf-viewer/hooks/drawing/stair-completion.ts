@@ -19,7 +19,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-358-dxf-stair-tool-google-level.md §5.1 §6.1 §3.6 §9.2 Q26
  */
 
-import { Timestamp } from 'firebase/firestore';
+import { nowTimestamp } from '@/lib/firestore-now';
 import type { Point2D, Point3D } from '../../rendering/types/Types';
 import type {
   StairCodeProfile,
@@ -229,7 +229,7 @@ export function buildStairEntity(
   const validation: StairValidationState = {
     hasCodeViolations: false,
     violationKeys: [],
-    lastValidatedAt: Timestamp.now(),
+    lastValidatedAt: nowTimestamp(),
   };
   return {
     id: generateStairId(),

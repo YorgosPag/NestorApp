@@ -39,6 +39,7 @@ import {
   subscribeLayerStore,
   upsertLayer,
 } from '../../../stores/LayerStore';
+import { compareByLocale } from '@/lib/intl-formatting';
 import { useLevels } from '../../../systems/levels/useLevels';
 import { useNotifications } from '../../../../../providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -270,7 +271,7 @@ export function useCurrentLayerPickerState(): {
     if (list.length < RECENT_DISPLAY_TARGET) {
       const alpha = [...snapshot.layers]
         .filter((l) => !seen.has(l.id ?? l.name))
-        .sort((a, b) => a.name.localeCompare(b.name));
+        .sort((a, b) => compareByLocale(a.name, b.name));
       for (const layer of alpha) {
         list.push(layer);
         seen.add(layer.id ?? layer.name);
@@ -292,7 +293,7 @@ export function useCurrentLayerPickerState(): {
     for (const category of CATEGORY_ORDER) {
       const layers = buckets.get(category);
       if (!layers || layers.length === 0) continue;
-      const sorted = [...layers].sort((a, b) => a.name.localeCompare(b.name));
+      const sorted = [...layers].sort((a, b) => compareByLocale(a.name, b.name));
       groups.push({ category, layers: sorted });
     }
     return groups;

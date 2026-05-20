@@ -240,6 +240,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   OPENING: 'opening',          // floorplan_openings collection — door/window/etc (5 kinds)
   SLAB: 'slab',                // floorplan_slabs collection — floor/ceiling/roof/ground/foundation (5 kinds)
   SLAB_OPENING: 'slbopn',      // floorplan_slab_openings collection — elevator shaft, stair well, duct, chimney
+  BIM_STACK_GROUP: 'bmstkg',   // multiStoreyStackGroupId — shared by stacked slab-opening copies (ADR-363 Phase 3.7b+)
   COLUMN: 'col',               // floorplan_columns collection — rectangular/circular/L-shape/T-shape (4 kinds)
   BEAM: 'beam',                // floorplan_beams collection — straight/curved/cantilever (3 kinds)
   BIM_PRESET: 'bpst',          // bim_presets collection — element type presets (system/company/project/user scope)

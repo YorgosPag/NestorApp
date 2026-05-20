@@ -31,6 +31,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useTranslation } from '@/i18n';
+import { compareByLocale } from '@/lib/intl-formatting';
 import { PRESET_CATEGORIES } from '../../../types/layer-state-template';
 import type {
   DxfTemplateCategory,
@@ -131,7 +132,7 @@ export function LayerStateTemplateBrowser({
   // ─── Derived: category options ────────────────────────────────────────────
   const categoryOptions = React.useMemo<readonly string[]>(() => {
     const set = new Set<string>([...PRESET_CATEGORIES, ...categories.map((c) => c.value)]);
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
+    return Array.from(set).sort(compareByLocale);
   }, [categories]);
 
   // ─── Derived: filtered list ────────────────────────────────────────────────

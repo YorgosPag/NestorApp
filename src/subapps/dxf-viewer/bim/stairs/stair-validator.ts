@@ -28,7 +28,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-358-dxf-stair-tool-google-level.md §5.9 §3.5 §3.7 §9.2 Q25 Q26 Q27 Q29
  */
 
-import { Timestamp } from 'firebase/firestore';
+import { nowTimestamp } from '@/lib/firestore-now';
 import { gateStairChecker } from '@/services/building-code/engines/gate-stair-checker';
 import type { Entity } from '../../types/entities';
 import type { SceneLayer } from '../../types/scene';
@@ -306,7 +306,7 @@ export function validateStairParams(
     // comfort threshold). Disjoint from `violationKeys`. UI routes to soft
     // yellow band instead of red.
     ...(gate.comfortViolations.length > 0 ? { comfortViolations: gate.comfortViolations } : {}),
-    lastValidatedAt: Timestamp.now(),
+    lastValidatedAt: nowTimestamp(),
   };
 }
 

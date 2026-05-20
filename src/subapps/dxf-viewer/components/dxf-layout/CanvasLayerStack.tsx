@@ -43,8 +43,7 @@ import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/Ca
 import { DynamicInputSubscriber } from './DynamicInputSubscriber';
 import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf';
 import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton';
-import { useDxfOverlay3DSync } from './useDxfOverlay3DSync';
-import { useLevelId3DSync } from './useLevelId3DSync';
+import { useDxfOverlay3DSync } from './useDxfOverlay3DSync'; import { useLevelId3DSync } from './useLevelId3DSync';
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 const EMPTY_SNAP_RESULTS: readonly never[] = Object.freeze([]);
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
@@ -61,7 +60,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   entityPickingActive,
   selectedGuideIds, constructionPoints,
   guideWorkflowState, guideStateObj, cpStateObj,
-  rotationPreview, movePreview, mirrorPreview, scalePreview, stretchPreview, columnGhostPreview, levelManager,
+  rotationPreview, movePreview, mirrorPreview, scalePreview, stretchPreview, columnGhostPreview, slabOpeningGhostPreview, levelManager,
 }: CanvasLayerStackProps) {
   // --- Destructure grouped props ---
   const {
@@ -437,6 +436,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             scale={scalePreview}
             stretch={stretchPreview}
             columnGhost={columnGhostPreview}
+            slabOpeningGhost={slabOpeningGhostPreview}
             gripDragPreview={dxfGripInteraction.dragPreview}
             selectedEntityIds={selectedEntityIds}
             levelManager={levelManager}

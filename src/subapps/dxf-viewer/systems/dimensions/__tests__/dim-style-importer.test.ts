@@ -1,7 +1,7 @@
 /**
- * ADR-362 Round 5 — `dim-style-importer` reconciliation tests.
+ * ADR-362 Round 5 — `dim-style-importer` tests.
  *
- * Covers the three contractual responsibilities of `registerImportedDimStyles`:
+ * Covers the contractual responsibilities of `registerImportedDimStyles`:
  *
  *   1. Translation — raw `DimStyleEntry` (DXF codes) → runtime `DimStyle`
  *      (string enums + Round 5 fields). DIMTXT values land verbatim so newly
@@ -12,6 +12,10 @@
  *   3. Active style selection — `Standard` (when present) becomes active so
  *      ribbon dim creation defaults to the source's primary style; otherwise
  *      the first imported entry in iteration order.
+ *   4. DIMSCALE storage — AutoCAD DIMSCALE is dimensionless and stored as-is.
+ *      The renderer formula (dimtxt × dimscale × mmToSceneUnits × viewScale)
+ *      already applies the unit factor, so no pre-normalization is needed.
+ *      Annotative sentinel (dimscale=0) resolves to headerDimscale.
  */
 
 import { registerImportedDimStyles } from '../dim-style-importer';
@@ -44,6 +48,14 @@ function makeImportedStyle(overrides: Partial<ImportedSceneDimStyle> = {}): Impo
 
 function makeScene(dimStyles: Record<string, ImportedSceneDimStyle> | undefined): Pick<SceneModel, 'dimStyles'> {
   return { dimStyles };
+}
+
+function makeSceneWithUnits(
+  dimStyles: Record<string, ImportedSceneDimStyle>,
+  units: SceneModel['units'],
+  headerDimscale?: number,
+): Pick<SceneModel, 'dimStyles' | 'units'> & { headerDimscale?: number } {
+  return { dimStyles, units, ...(headerDimscale !== undefined ? { headerDimscale } : {}) };
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -180,5 +192,46 @@ describe('registerImportedDimStyles — active style', () => {
 
     expect(result.activeChanged).toBe(true);
     expect(registry.getActiveStyle().name).toBe('imported:Alpha');
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// DIMSCALE storage — as-is (no normalization)
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('registerImportedDimStyles — dimscale storage', () => {
+  let registry: DimStyleRegistry;
+  beforeEach(() => { registry = new DimStyleRegistry(); });
+
+  it('stores dimscale as-is for mm scene (dimensionless 100 → stored 100)', () => {
+    // AutoCAD DIMSCALE is dimensionless. Renderer formula applies mmToSceneUnits
+    // itself, so no pre-normalization. mm scene: 2.5×100×1×vs = 250×vs (correct).
+    const result = registerImportedDimStyles(
+      makeSceneWithUnits({ Standard: makeImportedStyle({ dimscale: 100 }) }, 'mm'),
+      registry,
+    );
+    const style = registry.getStyle(result.created[0]);
+    expect(style?.dimscale).toBeCloseTo(100, 6);
+  });
+
+  it('stores dimscale as-is for m scene (dimensionless 100 → stored 100)', () => {
+    // m scene: renderer formula 2.5×100×0.001×vs = 0.25×vs — matches native
+    // DXF TEXT at 0.25m height. No normalization needed.
+    const result = registerImportedDimStyles(
+      makeSceneWithUnits({ Standard: makeImportedStyle({ dimscale: 100 }) }, 'm'),
+      registry,
+    );
+    const style = registry.getStyle(result.created[0]);
+    expect(style?.dimscale).toBeCloseTo(100, 6);
+  });
+
+  it('annotative sentinel dimscale=0 resolves to headerDimscale (stored as-is)', () => {
+    // dimscale=0 → annotative sentinel → use headerDimscale=100 directly.
+    const result = registerImportedDimStyles(
+      makeSceneWithUnits({ Standard: makeImportedStyle({ dimscale: 0 }) }, 'mm', 100),
+      registry,
+    );
+    const style = registry.getStyle(result.created[0]);
+    expect(style?.dimscale).toBeCloseTo(100, 6);
   });
 });

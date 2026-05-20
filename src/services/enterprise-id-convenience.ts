@@ -236,6 +236,7 @@ export const generateWallId = () => enterpriseIdService.generateWallId();
 export const generateOpeningId = () => enterpriseIdService.generateOpeningId();
 export const generateSlabId = () => enterpriseIdService.generateSlabId();
 export const generateSlabOpeningId = () => enterpriseIdService.generateSlabOpeningId();
+export const generateBimStackGroupId = () => enterpriseIdService.generateBimStackGroupId();
 export const generateColumnId = () => enterpriseIdService.generateColumnId();
 export const generateBeamId = () => enterpriseIdService.generateBeamId();
 export const generateBimPresetId = () => enterpriseIdService.generateBimPresetId();

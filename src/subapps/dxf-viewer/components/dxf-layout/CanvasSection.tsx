@@ -39,8 +39,7 @@ import { useGlobalSnapSceneSync } from '../../snapping/hooks/useGlobalSnapSceneS
 import { useSpecialTools } from '../../hooks/tools';
 import { useModifyTools } from '../../hooks/tools/useModifyTools';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
-import { useGripHoverMenuController } from '../../hooks/grips/useGripHoverMenuController';
-import { useGripContextMenuController } from '../../hooks/grips/useGripContextMenuController';
+import { useGripHoverMenuController } from '../../hooks/grips/useGripHoverMenuController'; import { useGripContextMenuController } from '../../hooks/grips/useGripContextMenuController';
 import { GripHoverMenu } from '../grip/GripHoverMenu';
 import { GripContextMenu } from '../grip/GripContextMenu';
 import { QuickPropertiesHoverPopover } from '../../systems/properties/QuickPropertiesHoverPopover';
@@ -415,6 +414,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         scalePreview={{}}
         stretchPreview={{}}
         columnGhostPreview={{ isAwaitingPosition: columnTool.isAwaitingPosition, kind: columnTool.state.kind, getGhostFootprints: columnTool.getGhostFootprints }}
+        slabOpeningGhostPreview={{ isAwaitingPosition: slabOpeningTool.isAwaitingPosition, kind: slabOpeningTool.state.kind, overrides: slabOpeningTool.state.overrides, hoveredEdgeMidpointGrip: unified.hoveredGrip?.slabOpeningGripKind?.startsWith('slab-opening-edge-midpoint-') ? unified.hoveredGrip : null }}
         levelManager={levelManager}
       />
       <DrawingContextMenu ref={drawingMenuRef} activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}

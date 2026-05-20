@@ -308,6 +308,7 @@ export class EnterpriseIdService {
   generateOpeningId(): string { return this.generateId(P.OPENING).id; }
   generateSlabId(): string { return this.generateId(P.SLAB).id; }
   generateSlabOpeningId(): string { return this.generateId(P.SLAB_OPENING).id; }
+  generateBimStackGroupId(): string { return this.generateId(P.BIM_STACK_GROUP).id; }
   generateColumnId(): string { return this.generateId(P.COLUMN).id; }
   generateBeamId(): string { return this.generateId(P.BEAM).id; }
   generateBimPresetId(): string { return this.generateId(P.BIM_PRESET).id; }

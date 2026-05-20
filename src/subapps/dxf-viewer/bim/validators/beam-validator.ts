@@ -21,7 +21,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7
  */
 
-import { Timestamp } from 'firebase/firestore';
+import { nowTimestamp } from '@/lib/firestore-now';
 import type { BimValidation } from '../types/bim-base';
 import {
   MAX_CANTILEVER_SPAN_DEPTH_RATIO,
@@ -57,7 +57,7 @@ export function validateBeamParams(params: BeamParams): BeamValidationResult {
   const bimValidation: BimValidation = {
     hasCodeViolations: codeViolations.length > 0,
     violationKeys: [...codeViolations],
-    lastValidatedAt: Timestamp.now(),
+    lastValidatedAt: nowTimestamp(),
   };
 
   return { hardErrors, codeViolations, bimValidation };

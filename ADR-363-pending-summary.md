@@ -26,7 +26,7 @@ _Ενημέρωση 2026-05-20: Μεγάλη διόρθωση — πολλά "pe
 ### Phase 3.7b+ — Slab-Opening extras (~2-3h remaining)
 - [ ] Multi-storey stack group UI ("Copy to all floors") — cross-level persistence, dedicated session
 - [x] ~~Fire-rating ribbon~~ **✅ DONE Phase 3.7b (2026-05-20)** — fireRating combobox (60/90/120/none)
-- [ ] Snap-to-edge-midpoint preview ghost — needs ADR-040 micro-leaf or grip hover in RenderOptions
+- [x] ~~Snap-to-edge-midpoint preview ghost~~ **✅ DONE (2026-05-20)** — `useSlabOpeningGhostPreview` + `SlabOpeningGhostRenderer`, RAF micro-leaf, ADR-040 compliant
 - [ ] Material ribbon field — deferred to Phase 6.5 material library
 
 ---

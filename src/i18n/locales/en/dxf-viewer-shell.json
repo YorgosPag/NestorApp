@@ -1146,6 +1146,7 @@
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete slab opening? This action cannot be undone.",
+        "copyToFloors": "Copy to Floors",
         "kind": {
           "section": { "title": "Type" },
           "shaft": "Shaft",
@@ -1558,6 +1559,16 @@
       "codeViolations": {
         "tooSmallForKind": "Opening is smaller than the minimum for this type"
       }
+    }
+  },
+  "slabOpeningStack": {
+    "dialog": {
+      "title": "Copy Opening to Floors",
+      "noOtherFloors": "No other floors available.",
+      "noSlab": "No slab",
+      "hasSlab": "Has slab",
+      "confirm": "Copy",
+      "cancel": "Cancel"
     }
   }
 }

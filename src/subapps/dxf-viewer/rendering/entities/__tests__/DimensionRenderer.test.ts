@@ -65,7 +65,7 @@ function createMockCtx(width = 800, height = 600): MockCtx {
       calls.push({ fn, args });
       return undefined;
     };
-  const canvas = { width, height };
+  const canvas = { width, height, getBoundingClientRect: () => ({ width, height, top: 0, left: 0, right: width, bottom: height }) };
   // Plain object with the surface DimensionRenderer touches — typed loosely
   // since jsdom's full Canvas2D isn't required (no pixel verification).
   const ctxStub = {
@@ -583,24 +583,28 @@ describe('DimensionRenderer — tolerance + limits rendering (Phase G2)', () => 
   });
 });
 
-describe('DimensionRenderer — stubs for Phase I', () => {
-  it('getGrips returns empty (Phase I deferred)', () => {
+describe('DimensionRenderer — grips + hitTest (Phase I)', () => {
+  it('getGrips returns defPoint grips for linear dim', () => {
     const { renderer } = makeRenderer();
     const entity = linear([
       { x: 0, y: 0 },
       { x: 100, y: 0 },
       { x: 50, y: 20 },
     ]);
-    expect(renderer.getGrips(entity)).toEqual([]);
+    const grips = renderer.getGrips(entity);
+    expect(grips.length).toBeGreaterThanOrEqual(3);
+    expect(grips[0].position).toEqual({ x: 0, y: 0 });
+    expect(grips[1].position).toEqual({ x: 100, y: 0 });
+    expect(grips[2].position).toEqual({ x: 50, y: 20 });
   });
 
-  it('hitTest returns false (Phase I deferred)', () => {
+  it('hitTest returns false for point far from dim geometry', () => {
     const { renderer } = makeRenderer();
     const entity = linear([
       { x: 0, y: 0 },
       { x: 100, y: 0 },
       { x: 50, y: 20 },
     ]);
-    expect(renderer.hitTest(entity, { x: 0, y: 0 }, 1)).toBe(false);
+    expect(renderer.hitTest(entity, { x: 999, y: 999 }, 1)).toBe(false);
   });
 });

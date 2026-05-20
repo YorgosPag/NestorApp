@@ -22,7 +22,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.3 §5.8
  */
 
-import { Timestamp } from 'firebase/firestore';
+import { nowTimestamp } from '@/lib/firestore-now';
 import type { BimValidation } from '../types/bim-base';
 import {
   MIN_WALL_LENGTH_MM,
@@ -73,7 +73,7 @@ export function validateWallParams(
   const bimValidation: BimValidation = {
     hasCodeViolations: codeViolations.length > 0,
     violationKeys,
-    lastValidatedAt: Timestamp.now(),
+    lastValidatedAt: nowTimestamp(),
   };
 
   return { hardErrors, codeViolations, bimValidation };

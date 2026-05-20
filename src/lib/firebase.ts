@@ -3,7 +3,7 @@ import {
   getFirestore,
   initializeFirestore,
   persistentLocalCache,
-  persistentMultipleTabManager,
+  persistentSingleTabManager,
   memoryLocalCache,
   connectFirestoreEmulator,
   type Firestore,
@@ -22,8 +22,13 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// ── Firestore cache strategy (ADR-328 §5.J / §5.5 offline support) ──
-// Production: persistentLocalCache + multi-tab manager → offline support, shared IndexedDB.
+// ── Firestore cache strategy (ADR-367 — single-tab + recovery listener) ──
+// Production: persistentLocalCache + single-tab manager → offline support, no multi-tab
+//   lease race. Multi-tab was swapped on 2026-05-20 after Sentry caught
+//   "FIRESTORE INTERNAL ASSERTION FAILED (ID: b815)" at /dxf/viewer — a known
+//   firebase-js-sdk bug triggered by tab-lease swap during onSnapshot delivery.
+//   DXF viewer is a single-tab workflow; multi-tab sync is not worth the SDK risk.
+//   See src/lib/firestore-recovery.ts for the safety-net error listener.
 // Development: memoryLocalCache → no IndexedDB lease, eliminates "Failed to obtain primary
 //   lease for action 'Release target'" warnings caused by Turbopack HMR reinitializing
 //   the Firestore module while the previous instance tries to release query targets.
@@ -35,7 +40,7 @@ function createDb(): Firestore {
   try {
     const localCache = isDev
       ? memoryLocalCache()
-      : persistentLocalCache({ tabManager: persistentMultipleTabManager() });
+      : persistentLocalCache({ tabManager: persistentSingleTabManager({ forceOwnership: false }) });
     return initializeFirestore(app, { localCache });
   } catch {
     // initializeFirestore already called (HMR / repeat import) — reuse existing.

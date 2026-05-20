@@ -160,6 +160,15 @@ export interface SceneModel {
    * built-in defaults active.
    */
   dimStyles?: SceneDimStyleMap;
+  /**
+   * ADR-362 R10 — global $DIMSCALE from the DXF HEADER section. Carried here
+   * so `dim-style-importer` can resolve annotative styles (DIMSCALE=0 in the
+   * DIMSTYLE table) to their effective scale without re-parsing the file.
+   * Also used to normalize per-style dimscale to mm-space so the renderer
+   * formula (dimtxt × dimscale × mmToSceneUnits × viewScale) is unit-correct
+   * for meters/cm drawings.
+   */
+  headerDimscale?: number;
   version?: string;
 }
 

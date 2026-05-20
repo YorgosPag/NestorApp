@@ -226,6 +226,13 @@ export interface CanvasLayerStackProps {
       cursorPos: Readonly<Point2D> | null,
     ) => readonly import('../../bim/columns/column-anchor-ghosts').AnchorGhost[] | null;
   };
+  // === ADR-363 Phase 3.7b+: Slab-opening ghost preview payload ===
+  slabOpeningGhostPreview: {
+    isAwaitingPosition: boolean;
+    kind: import('../../bim/types/slab-opening-types').SlabOpeningKind;
+    overrides: import('../../hooks/drawing/slab-opening-completion').SlabOpeningParamOverrides;
+    hoveredEdgeMidpointGrip?: import('../../hooks/grips/unified-grip-types').UnifiedGripInfo | null;
+  };
   /** Level manager — needed by useRotationPreview + useMovePreview for entity reads */
   levelManager: ReturnType<typeof useLevels>;
 

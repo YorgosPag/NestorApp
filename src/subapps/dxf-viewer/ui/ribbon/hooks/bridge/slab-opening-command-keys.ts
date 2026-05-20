@@ -27,6 +27,7 @@ export const SLAB_OPENING_RIBBON_STRING_KEYS: readonly SlabOpeningRibbonStringCo
 export const SLAB_OPENING_RIBBON_KEYS_ACTIONS = {
   close: 'slabOpening.actions.close',
   delete: 'slabOpening.actions.delete',
+  copyToFloors: 'slabOpening.actions.copyToFloors',
 } as const;
 
 const SLAB_OPENING_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

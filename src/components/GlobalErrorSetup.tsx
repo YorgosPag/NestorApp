@@ -24,6 +24,13 @@ export function GlobalErrorSetup() {
       window.errorTracker = errorTracker;
       // Debug disabled: ErrorTracker initialization message
     });
+
+    // ADR-367 — Firestore SDK internal-assertion recovery net.
+    // Detects "FIRESTORE INTERNAL ASSERTION FAILED (ID: …)" errors and runs
+    // terminate → clearIndexedDbPersistence → reload (1× per session).
+    import('@/lib/firestore-recovery').then(({ installFirestoreRecoveryListener }) => {
+      installFirestoreRecoveryListener();
+    });
   }, []);
 
   return null;

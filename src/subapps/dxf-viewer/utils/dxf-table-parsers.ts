@@ -129,7 +129,9 @@ export function parseDimStyles(lines: string[]): DimStyleMap {
     switch (code) {
       case '2':   currentStyle.name        = value; break;
       // Scale / geometry
-      case '40':  currentStyle.dimscale    = parseFloat(value) || DEFAULT_DIMSTYLE.dimscale; break;
+      // ADR-362 R10: preserve 0 (annotative sentinel) — `||` was converting it
+      // to the default (1), hiding the $DIMSCALE header value at import time.
+      case '40':  { const _v = parseFloat(value); currentStyle.dimscale = Number.isFinite(_v) ? _v : DEFAULT_DIMSTYLE.dimscale; break; }
       case '41':  currentStyle.dimasz      = parseFloat(value) || DEFAULT_DIMSTYLE.dimasz; break;
       case '42':  currentStyle.dimexo      = parseFloat(value) || DEFAULT_DIMSTYLE.dimexo; break;
       case '43':  currentStyle.dimdli      = parseFloat(value) || DEFAULT_DIMSTYLE.dimdli; break;

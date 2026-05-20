@@ -2,6 +2,7 @@
 // ~150 ACAD-compatible aliases. User customization via localStorage.
 // Pattern: pure module, zero React, zero state.
 
+import { compareByLocale } from '@/lib/intl-formatting';
 import type { ToolType } from '../../ui/toolbar/types';
 
 const LS_CUSTOM_KEY = 'dxf:customAliases';
@@ -265,7 +266,7 @@ export function getAllAliases(): readonly AliasEntry[] {
       result.push({ alias, toolId, isBuiltIn: false });
     }
   });
-  result.sort((a, b) => a.alias.localeCompare(b.alias));
+  result.sort((a, b) => compareByLocale(a.alias, b.alias));
   return result;
 }
 
@@ -295,7 +296,7 @@ export function getMatchingAliases(prefix: string, limit = 10): readonly AliasEn
     }
   });
 
-  results.sort((a, b) => a.alias.localeCompare(b.alias));
+  results.sort((a, b) => compareByLocale(a.alias, b.alias));
   return results.slice(0, limit);
 }
 

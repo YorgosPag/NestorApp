@@ -45,6 +45,7 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
+import { compareByLocale } from '@/lib/intl-formatting';
 import {
   createDxfTemplateCategory,
   createLayerStateTemplate,
@@ -211,7 +212,7 @@ export class DxfLayerStateTemplateService {
     // companyId — tenant isolation (firestore.rules CHECK 3.10 inline-required)
     const q = query(this.categoriesCol(), where('companyId', '==', this.config.companyId));
     const snap = await getDocs(q);
-    const categories = snap.docs.map(snapshotToCategory).sort((a, b) => a.value.localeCompare(b.value));
+    const categories = snap.docs.map(snapshotToCategory).sort((a, b) => compareByLocale(a.value, b.value));
     this.categoriesCache = { categories, ts: Date.now() };
     return categories;
   }

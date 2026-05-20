@@ -1026,6 +1026,17 @@
         "src/lib/cron-auth.ts"
       ]
     },
+    "firestore-recovery": {
+      "ssotFile": "src/lib/firestore-recovery.ts",
+      "description": "Firestore SDK INTERNAL ASSERTION FAILED (b815/ca9) recovery listener — single owner. terminate(db) + clearIndexedDbPersistence(db) + reload, idempotent via module flag + sessionStorage. Blocks re-declaration of installFirestoreRecoveryListener outside canonical file. ADR-367.",
+      "forbiddenPatterns": [
+        "(function|const)\\s+installFirestoreRecoveryListener\\b"
+      ],
+      "allowlist": [
+        "src/lib/firestore-recovery.ts"
+      ],
+      "tier": 3
+    },
     "_comment_tier8": "=== TIER 8: ADR-314 PHASE A — CORE SSoT MODULES (2026-04-18) ===",
     "enterprise-id-convenience": {
       "ssotFile": "src/services/enterprise-id-convenience.ts",

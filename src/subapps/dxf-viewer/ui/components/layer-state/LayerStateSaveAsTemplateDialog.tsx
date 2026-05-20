@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useTranslation } from '@/i18n';
+import { compareByLocale } from '@/lib/intl-formatting';
 import { PRESET_CATEGORIES } from '../../../types/layer-state-template';
 import type {
   DxfTemplateCategory,
@@ -81,7 +82,7 @@ export function LayerStateSaveAsTemplateDialog({
   const suggestions = React.useMemo<readonly string[]>(() => {
     const fromCatalog = categories.map((c) => c.value);
     const merged = new Set<string>([...PRESET_CATEGORIES, ...fromCatalog]);
-    return Array.from(merged).sort((a, b) => a.localeCompare(b));
+    return Array.from(merged).sort(compareByLocale);
   }, [categories]);
 
   const tagsLimitReached = tags.length >= MAX_TAGS;

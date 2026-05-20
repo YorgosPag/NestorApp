@@ -15,6 +15,10 @@
  *   1. **Translate** the raw `ImportedSceneDimStyle` (DimStyleEntry-shaped,
  *      AutoCAD code-driven enums) into the runtime `DimStyle` interface
  *      (string-keyed enums + Round 5 fields like `paperTextHeight`, `dimblk`).
+ *      AutoCAD DIMSCALE is dimensionless (e.g. 100 for 1:100 regardless of
+ *      model units), so it is stored verbatim. The renderer formula
+ *      `dimtxt × dimscale × mmToSceneUnits × viewScale` applies the unit
+ *      factor itself — no pre-normalization is needed or correct here.
  *   2. **Reconcile** registry state on every (re)import: previous
  *      session-imported styles are removed before the new ones are added so
  *      switching between DXFs doesn't leak stale entries. Built-in templates
@@ -108,7 +112,14 @@ const DIMTOLJ_MAP: Record<number, DimToleranceJustify> = {
 function translateToDimStyle(
   entry: ImportedSceneDimStyle,
   sourceLabel: string,
+  headerDimscale: number,
 ): CreateCustomStyleInput {
+  // AutoCAD DIMSCALE is dimensionless (e.g. 100 for 1:100 regardless of
+  // model units). The renderer formula already applies mmToSceneUnits, so
+  // storing rawDimscale directly produces unit-correct output for both mm
+  // and m scenes. DIMSCALE=0 is the AutoCAD "annotative" sentinel — fall
+  // back to the global $DIMSCALE from the file header.
+  const rawDimscale = entry.dimscale === 0 ? headerDimscale : entry.dimscale;
   const decSep = entry.dimdsep === 44 ? ',' : '.';
   const dimtad = DIMTAD_MAP[entry.dimtad] ?? 'above';
   const dimlunit = DIMLUNIT_MAP[entry.dimlunit] ?? 'decimal';
@@ -156,7 +167,7 @@ function translateToDimStyle(
     dimtofl: entry.dimtofl,
     dimatfit: entry.dimatfit,
     dimtmove: entry.dimtmove,
-    dimscale: entry.dimscale,
+    dimscale: rawDimscale,
     paperTextHeight: entry.dimtxt,
 
     // Primary units
@@ -231,7 +242,7 @@ export interface RegisterImportedDimStylesResult {
  * having to spy on the registry's subscriber list.
  */
 export function registerImportedDimStyles(
-  scene: Pick<SceneModel, 'dimStyles'> | null | undefined,
+  scene: (Pick<SceneModel, 'dimStyles'> & Partial<Pick<SceneModel, 'units' | 'headerDimscale'>>) | null | undefined,
   registry: DimStyleRegistry = getDimStyleRegistry(),
 ): RegisterImportedDimStylesResult {
   const removed = removeImportedStyles(registry);
@@ -244,12 +255,14 @@ export function registerImportedDimStyles(
     return { created: [], removed, activeChanged: false };
   }
 
+  const headerDimscale = scene.headerDimscale ?? 1;
+
   const created: string[] = [];
   let standardId: string | null = null;
   let firstId: string | null = null;
 
   for (const [name, entry] of entries) {
-    const input = translateToDimStyle(entry, name);
+    const input = translateToDimStyle(entry, name, headerDimscale);
     const style = registry.createCustomStyle(input);
     created.push(style.id);
     if (firstId === null) firstId = style.id;
