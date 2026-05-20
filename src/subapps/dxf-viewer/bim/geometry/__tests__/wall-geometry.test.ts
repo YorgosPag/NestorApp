@@ -75,10 +75,10 @@ describe('computeWallGeometry — straight kind', () => {
     expect(g.volume).toBeCloseTo(2 * 3 * 0.2, FLOAT_TOL);
   });
 
-  it('bbox extrudes z from 0 to height', () => {
+  it('bbox z in metres: baseOffset=0 → [0, height/1000] (ADR-369 Phase B)', () => {
     const g = computeWallGeometry(makeParams({ height: 3000 }));
     expect(g.bbox.min.z).toBeCloseTo(0, FLOAT_TOL);
-    expect(g.bbox.max.z).toBeCloseTo(3000, FLOAT_TOL);
+    expect(g.bbox.max.z).toBeCloseTo(3, FLOAT_TOL); // 3000mm = 3m
   });
 
   it('bbox folds outer + inner edges into xy extents', () => {

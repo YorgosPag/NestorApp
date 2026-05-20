@@ -49,7 +49,7 @@ export function computeOpeningGeometry(
   const py = ux;
 
   const outline = buildOutline(center, ux, uy, px, py, params.width, hostWall.params.thickness);
-  const bbox = computeBbox(outline.vertices);
+  const bbox = computeBbox(outline.vertices, params.sillHeight, params.height);
   const hingeArc = isHingedKind(params.kind)
     ? buildHingeArc(params.kind, center, ux, uy, px, py, params)
     : undefined;
@@ -191,7 +191,15 @@ function buildOutline(
   return { vertices: corners };
 }
 
-function computeBbox(vertices: readonly Point3D[]): BoundingBox3D {
+/**
+ * Phase B: z in metres (ADR-369 Phase B).
+ * sill = sillHeight / 1000 m, head = (sillHeight + height) / 1000 m.
+ */
+function computeBbox(
+  vertices: readonly Point3D[],
+  sillHeightMm: number,
+  heightMm: number,
+): BoundingBox3D {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const v of vertices) {
     if (v.x < minX) minX = v.x;
@@ -200,8 +208,8 @@ function computeBbox(vertices: readonly Point3D[]): BoundingBox3D {
     if (v.y > maxY) maxY = v.y;
   }
   return {
-    min: { x: minX, y: minY, z: 0 },
-    max: { x: maxX, y: maxY, z: 0 },
+    min: { x: minX, y: minY, z: sillHeightMm / 1000 },
+    max: { x: maxX, y: maxY, z: (sillHeightMm + heightMm) / 1000 },
   };
 }
 

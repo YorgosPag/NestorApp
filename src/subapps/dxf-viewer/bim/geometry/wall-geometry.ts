@@ -65,7 +65,7 @@ export function computeWallGeometry(
 
   const { outerEdge, innerEdge } = offsetAxisToEdges(vertices, halfThicknessCanvas, sign);
 
-  const bbox = computeBbox(vertices, outerEdge.points, innerEdge.points, params.height * s);
+  const bbox = computeBbox(vertices, outerEdge.points, innerEdge.points, params.height, params.baseOffset ?? 0);
 
   // lengthCanvas is in canvas world units; convert to meters for BOQ.
   const lengthCanvas = computePolylineLengthMm(vertices);
@@ -280,37 +280,31 @@ function segmentNormalY(a: Point3D, b: Point3D): number | null {
 }
 
 /**
- * Compute axis-aligned 3D bounding box. z range = [min(z over axis), height].
- * Phase 1: z always 0 → bbox z = [0, height].
+ * Axis-aligned 3D bounding box. Phase B: z in metres (ADR-369 §2 Phase B).
+ * base = baseOffset / 1000 m, top = base + height / 1000 m.
  */
 function computeBbox(
   axis: readonly Point3D[],
   outer: readonly Point3D[],
   inner: readonly Point3D[],
   heightMm: number,
+  baseOffsetMm: number = 0,
 ): BoundingBox3D {
-  let minX = Infinity, minY = Infinity, minZ = Infinity;
-  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  let minX = Infinity, minY = Infinity;
+  let maxX = -Infinity, maxY = -Infinity;
   const fold = (p: Point3D): void => {
     if (p.x < minX) minX = p.x;
     if (p.x > maxX) maxX = p.x;
     if (p.y < minY) minY = p.y;
     if (p.y > maxY) maxY = p.y;
-    const z = p.z ?? 0;
-    if (z < minZ) minZ = z;
-    if (z > maxZ) maxZ = z;
   };
   for (const p of axis) fold(p);
   for (const p of outer) fold(p);
   for (const p of inner) fold(p);
-  // Extrude bbox to wall height along z.
-  if (minZ === Infinity) {
-    minZ = 0;
-    maxZ = 0;
-  }
+  const baseM = baseOffsetMm / 1000;
   return {
-    min: { x: minX, y: minY, z: minZ },
-    max: { x: maxX, y: maxY, z: maxZ + heightMm },
+    min: { x: minX, y: minY, z: baseM },
+    max: { x: maxX, y: maxY, z: baseM + heightMm / 1000 },
   };
 }
 

@@ -784,3 +784,41 @@ export const SECTION_CUT_SURFACE = {
 } as const;
 
 export type SectionCutSurfaceKey = keyof typeof SECTION_CUT_SURFACE;
+
+// ============================================================================
+// 🏢 ADR-366 §A.3 Q3 — 2D LIVE SECTION PANEL COLORS (Phase 7.0B, 2026-05-20)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: 2D Section Panel — per-element flat colors + outline + selected
+ *
+ * Color spectrum για flat 2D architectural section view (filled rectangles +
+ * outlines, OrthographicCamera, standalone WebGLRenderer).
+ *
+ * Justified ως NEW token: Nestor 2D DXF Viewer δεν έχει αντίστοιχο 2D section
+ * panel widget — first occurrence στο codebase. Mirror γκρι spectrum από
+ * GenArc loupe palette (proven industry σύμβαση Revit/AutoCAD section views)
+ * + selected highlight reuses HOVER_HIGHLIGHT.ENTITY.glowColor SSoT για
+ * συνέπεια με 2D selection palette.
+ *
+ * @see ADR-366 §A.3.Q3 — 2D Live Section Panel decision
+ * @see SPEC-3D-004A §3.2 — GenArc loupe LOUPE_COLOR_* port reference
+ */
+export const SECTION_2D_PANEL_COLORS = {
+  /** Background του panel canvas — dark neutral, matches 3D viewport */
+  background: '#1a1a1a',
+  /** Wall fill — dark grey (structural concrete σύμβαση) */
+  wall: '#6c6c6c',
+  /** Column fill — slightly darker grey (load-bearing emphasis) */
+  column: '#5a5a5a',
+  /** Beam fill — medium grey (structural σύμβαση) */
+  beam: '#7a7a7a',
+  /** Slab fill — light grey (horizontal element σύμβαση) */
+  slab: '#9e9e9e',
+  /** Selected element highlight — reuses 2D entity hover yellow (SSoT mirror) */
+  selected: '#FFFF00',
+  /** Outline stroke — dark contrast, edge clarity */
+  outline: '#2a2a2a',
+} as const;
+
+export type Section2DPanelColorKey = keyof typeof SECTION_2D_PANEL_COLORS;

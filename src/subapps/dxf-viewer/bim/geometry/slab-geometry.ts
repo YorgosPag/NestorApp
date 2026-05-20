@@ -18,7 +18,7 @@
 
 import type { SlabGeometry, SlabParams } from '../types/slab-types';
 import type { SlabOpeningEntity } from '../types/slab-opening-types';
-import type { Point3D, Polygon3D } from '../types/bim-base';
+import type { BoundingBox3D, Point3D, Polygon3D } from '../types/bim-base';
 import {
   polygonArea,
   polygonBbox,
@@ -85,7 +85,7 @@ export function computeSlabGeometry(
   const canvasToM = (1 / s) * MM_TO_M;
 
   const vertices = params.outline.vertices;
-  const bbox = polygonBbox(vertices);
+  const xyBbox = polygonBbox(vertices);
   const areaCanvas2 = polygonArea(vertices);
   const perimeterCanvas = polygonPerimeter(vertices);
   const areaM2 = areaCanvas2 * canvasToM * canvasToM;
@@ -100,6 +100,14 @@ export function computeSlabGeometry(
 
   const supportOutlines = collectSupportOutlines(beamFootprints, wallFootprints);
   const maxFreeSpanM = computeSlabMaxFreeSpanM(vertices, supportOutlines, params.sceneUnits ?? 'mm');
+
+  // Phase B: 3D z extent in metres (ADR-369 §2.1: top face = FFL, hangs DOWN by thickness).
+  const topFaceM = (params.levelElevation + (params.heightOffsetFromLevel ?? 0)) / 1000;
+  const botFaceM = topFaceM - thicknessMm / 1000;
+  const bbox: BoundingBox3D = {
+    min: { x: xyBbox.min.x, y: xyBbox.min.y, z: botFaceM },
+    max: { x: xyBbox.max.x, y: xyBbox.max.y, z: topFaceM },
+  };
 
   return {
     polygon: params.outline,

@@ -53,7 +53,7 @@ export function computeBeamGeometry(params: BeamParams): BeamGeometry {
   const area = lengthM * widthM;
   const volume = area * depthM;
 
-  const bbox = computeBbox(axisVertices, outlineVertices, params.topElevation, s);
+  const bbox = computeBbox(axisVertices, outlineVertices, params.topElevation, params.zOffset ?? 0, params.depth);
 
   return {
     axisPolyline,
@@ -221,33 +221,30 @@ function computePolylineLengthMm(vertices: readonly Point3D[]): number {
 }
 
 /**
- * Axis-aligned 3D bounding box. z range extends σε `topElevation` (beam top,
- * ADR-369 §2.2). Phase 5 axis z stays 0 → bbox z = [0, topElevation].
+ * Axis-aligned 3D bounding box. Phase B: z in metres (ADR-369 §2.2 Phase B).
+ * top = (topElevation + zOffset) / 1000 m, bottom = top − depth / 1000 m.
  */
 function computeBbox(
   axis: readonly Point3D[],
   outline: readonly Point3D[],
   topElevationMm: number,
-  s: number,
+  zOffsetMm: number,
+  depthMm: number,
 ): BoundingBox3D {
-  let minX = Infinity, minY = Infinity, minZ = Infinity;
-  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  let minX = Infinity, minY = Infinity;
+  let maxX = -Infinity, maxY = -Infinity;
   const fold = (p: Point3D): void => {
     if (p.x < minX) minX = p.x;
     if (p.x > maxX) maxX = p.x;
     if (p.y < minY) minY = p.y;
     if (p.y > maxY) maxY = p.y;
-    const z = p.z ?? 0;
-    if (z < minZ) minZ = z;
-    if (z > maxZ) maxZ = z;
   };
   for (const p of axis) fold(p);
   for (const p of outline) fold(p);
-  if (minZ === Infinity) { minZ = 0; maxZ = 0; }
-  // topElevation mm → canvas units for consistent bbox coordinate space.
-  const topZ = Math.max(maxZ, topElevationMm * s);
+  const topFaceM = (topElevationMm + zOffsetMm) / 1000;
+  const botFaceM = topFaceM - depthMm / 1000;
   return {
-    min: { x: minX, y: minY, z: minZ },
-    max: { x: maxX, y: maxY, z: topZ },
+    min: { x: minX, y: minY, z: botFaceM },
+    max: { x: maxX, y: maxY, z: topFaceM },
   };
 }
