@@ -1,6 +1,6 @@
 # ADR-369 — BIM Elevation Convention: Revit/Industry-Standard Alignment
 
-- **Status**: 🚧 IN_IMPLEMENTATION — Phase A1 + A2 + A3 + A4 + A5 ✅ complete 2026-05-20 (All 5 BIM entity types carry IfcEntityMixin. Opening ifcType='IfcDoor'|'IfcWindow' inferred από kind). Phase B (service layer cascade + IFC writer) pending. Q&A 10/10 complete.
+- **Status**: 🚧 IN_IMPLEMENTATION — Phase A1 + A2 + A3 + A4 + A5 + B + D ✅ complete 2026-05-20. Phase B: `compute*Geometry()` bbox z extended to absolute world elevation (metres) for all 4 entity types (slab/beam/wall/opening). Phase C (Firestore data migration) pending. Q&A 10/10 complete.
 - **Date**: 2026-05-20
 - **Author**: Giorgio Pagonis + Claude (Opus 4.7)
 - **Supersedes**: Partial elevation semantics in ADR-363 (BIM Drawing Mode), ADR-366 (3D BIM Viewer)
@@ -402,7 +402,8 @@ Only invert slab semantic, leave wall/column hardcoded at z=0.
 - **§2.1 Slab top-face semantic** → ✅ fully applied in schema + factory + 3D converter + ribbon + locales.
 - **§2.2 Beam topElevation rename** → ✅ fully applied schema-to-renderer chain.
 
-| 2026-05-20 | Giorgio + Claude | **Phase A5 implemented (Opening IfcEntityMixin)** — 3 new files + 3 modified. **Opening schema** (`opening-types.ts` extended): `OpeningEntity` mixes `IfcEntityMixin` (+ explicit `ifcType: 'IfcDoor'\|'IfcWindow'` narrowed literal). Elevation fields unchanged — `sillHeight` already Revit-compatible per §2.1 (host wall Level + sillHeight). **Zod schema** (`opening.schemas.ts` NEW): `OpeningParamsSchema` (full param validation: kind/wallId/offsetFromStart/width/height/sillHeight + optional frameWidth/handing/openDirection/glazingPanes/material) + `OpeningEntitySchema` (ifcGuid + `OpeningIfcTypeSchema = z.union([z.literal('IfcDoor'), z.literal('IfcWindow')])` + passthrough). **Factory** (`opening.factory.ts` NEW): `createOpening()` auto-fills `ifcGuid` ONCE μέσω `generateIfcGuid()`, infers `ifcType` μέσω `inferOpeningIfcType(kind)` (door/sliding-door/french-door→IfcDoor, window/fixed→IfcWindow). Enterprise ID prefix `opening_` (N.6 compliant). Tenant fields pass-through. **Tests** (`opening.factory.test.ts` NEW): `inferOpeningIfcType` 5 specs (all kinds), `createOpening` 21 specs — ifcType per kind, ifcGuid uniqueness (100 calls), enterprise ID prefix, pset/visible/params pass-through, tenant fields, Zod accept/reject (invalid kind/width/glazingPanes, invalid ifcGuid, wrong type). **Cascade**: `opening-completion.ts` migrated — `buildOpeningEntity` delegates entity assembly σε `createOpening()` (replaced inline `{id, type, kind, ...}` literal + removed `generateOpeningId` direct import). **Phase A1+A2+A3+A4+A5 complete.** Phase B (service layer cascade + IFC writer) pending. |
+| 2026-05-20 | Giorgio + Claude | **Phase A5 implemented (Opening IfcEntityMixin)** — 3 new files + 3 modified. **Opening schema** (`opening-types.ts` extended): `OpeningEntity` mixes `IfcEntityMixin` (+ explicit `ifcType: 'IfcDoor'\|'IfcWindow'` narrowed literal). Elevation fields unchanged — `sillHeight` already Revit-compatible per §2.1 (host wall Level + sillHeight). **Zod schema** (`opening.schemas.ts` NEW): `OpeningParamsSchema` (full param validation: kind/wallId/offsetFromStart/width/height/sillHeight + optional frameWidth/handing/openDirection/glazingPanes/material) + `OpeningEntitySchema` (ifcGuid + `OpeningIfcTypeSchema = z.union([z.literal('IfcDoor'), z.literal('IfcWindow')])` + passthrough). **Factory** (`opening.factory.ts` NEW): `createOpening()` auto-fills `ifcGuid` ONCE μέσω `generateIfcGuid()`, infers `ifcType` μέσω `inferOpeningIfcType(kind)` (door/sliding-door/french-door→IfcDoor, window/fixed→IfcWindow). Enterprise ID prefix `opening_` (N.6 compliant). Tenant fields pass-through. **Tests** (`opening.factory.test.ts` NEW): `inferOpeningIfcType` 5 specs (all kinds), `createOpening` 21 specs — ifcType per kind, ifcGuid uniqueness (100 calls), enterprise ID prefix, pset/visible/params pass-through, tenant fields, Zod accept/reject (invalid kind/width/glazingPanes, invalid ifcGuid, wrong type). **Cascade**: `opening-completion.ts` migrated — `buildOpeningEntity` delegates entity assembly σε `createOpening()` (replaced inline `{id, type, kind, ...}` literal + removed `generateOpeningId` direct import). **Phase A1+A2+A3+A4+A5 complete.** |
+| 2026-05-20 | Giorgio + Claude | **Phase B implemented (Geometry Layer — bbox z extension)** — 4 modified geometry files + 4 modified test files. **Convention**: `BoundingBox3D.z` now carries **absolute world elevation in metres** (sceneUnits-independent), consistent with Three.js scene coordinate system. **Slab** (`slab-geometry.ts`): `computeSlabGeometry()` replaces flat `polygonBbox` (z=0) με 3D bbox — `max.z = (levelElevation + heightOffsetFromLevel) / 1000`, `min.z = max.z − thickness / 1000`. Import `BoundingBox3D` added. **Beam** (`beam-geometry.ts`): `computeBbox()` refactored — drops canvas-unit `topElevationMm * s` approach, new signature `(axis, outline, topElevationMm, zOffsetMm, depthMm)`, outputs `max.z = (topElevation + zOffset) / 1000`, `min.z = max.z − depth / 1000`. **Wall** (`wall-geometry.ts`): `computeBbox()` refactored — new param `baseOffsetMm = 0`, outputs `min.z = baseOffset / 1000`, `max.z = min.z + height / 1000`. Caller updated: passes raw `params.height` (mm, not canvas units) + `params.baseOffset ?? 0`. **Opening** (`opening-geometry.ts`): `computeBbox()` signature extended with `sillHeightMm, heightMm` — `min.z = sillHeight / 1000`, `max.z = (sillHeight + height) / 1000`. **Tests**: `beam-geometry.test.ts` bbox test updated (expects `3` not `3000` for 3000mm topElevation; added `min.z` assertion for beam bottom). `wall-geometry.test.ts` bbox z test updated (`3000mm → 3m`). `slab-geometry.test.ts` +3 new z-tests (FFL@3000mm, heightOffsetFromLevel, foundation@0). `opening-geometry.test.ts` +2 new z-tests (door sill=0, window sill=900). All 110 geometry tests pass. ColumnRenderer-hatch failure is **pre-existing** (confirmed via git stash). **Phase B complete.** |
 
 ### Phase A5 — File inventory
 
@@ -417,6 +418,37 @@ Only invert slab semantic, leave wall/column hardcoded at z=0.
 ### Phase A5 — Q&A status updates
 
 - **Q8 (IFC Export)** → Opening `IfcEntityMixin` ✅ shipped (ifcGuid required + ifcType narrowed 'IfcDoor'|'IfcWindow' inferred από kind). All 5 BIM entity types (Wall/Column/Slab/Beam/Opening) now carry IfcEntityMixin. IFC writer (web-ifc WASM) deferred Phase B+.
+
+### Phase B — File inventory
+
+| File | Change |
+|------|--------|
+| `src/subapps/dxf-viewer/bim/geometry/slab-geometry.ts` | `computeSlabGeometry()` — 3D bbox z (metres). Import `BoundingBox3D` added. |
+| `src/subapps/dxf-viewer/bim/geometry/beam-geometry.ts` | `computeBbox()` refactored — new params `zOffsetMm, depthMm`; z in metres. |
+| `src/subapps/dxf-viewer/bim/geometry/wall-geometry.ts` | `computeBbox()` refactored — new param `baseOffsetMm`; z in metres. Caller updated. |
+| `src/subapps/dxf-viewer/bim/geometry/opening-geometry.ts` | `computeBbox()` extended — `sillHeightMm, heightMm` params; z in metres. |
+| `src/subapps/dxf-viewer/bim/geometry/__tests__/beam-geometry.test.ts` | bbox z test updated: `3000mm → 3m`; added `min.z` assertion. |
+| `src/subapps/dxf-viewer/bim/geometry/__tests__/wall-geometry.test.ts` | bbox z test updated: `3000mm → 3m`. |
+| `src/subapps/dxf-viewer/bim/geometry/__tests__/slab-geometry.test.ts` | +3 new bbox z tests (FFL elevation, heightOffsetFromLevel, foundation). |
+| `src/subapps/dxf-viewer/bim/geometry/__tests__/opening-geometry.test.ts` | +2 new bbox z tests (door sill=0, window sill=900). |
+
+### Phase B — Q&A status updates
+
+- **Phase B (Geometry Layer)** → `compute*Geometry()` bbox z ✅ shipped (slab/beam/wall/opening — absolute elevation metres). Column bbox deferred (not in Phase B scope). Phase C (Firestore migration) pending.
+
+| 2026-05-20 | Giorgio + Claude | **Phase D implemented (UI Layer — BimGeometryTab elevation labels)** — 3 files modified. **BimGeometryTab** (`bim-3d/properties/tabs/BimGeometryTab.tsx`): Slab rows now include `levelElevation` ("Στάθμη (FFL)"), optional `heightOffsetFromLevel` row (shown only when non-zero), derived `bottomFace` ("Κάτω επιφάνεια" = top − thickness). Beam rows now include `topElevation` ("Στάθμη (Άνω)"), optional `zOffset` row (shown only when non-zero), derived `bottomFace` ("Κάτω πλευρά" = top + zOffset − depth). Wall rows now include `baseOffset` ("Base Offset" mm, always visible). Opening: no change — sillHeight already Revit-compatible per A5. **i18n** (`bim3d` namespace, el + en): +6 keys added — `geometry.levelElevation`, `geometry.topElevation`, `geometry.bottomFace`, `geometry.heightOffsetFromLevel`, `geometry.zOffset`, `geometry.baseOffset`. All keys in locale files FIRST (N.11 compliance). No hardcoded strings. File sizes all within N.7.1 limits. |
+
+### Phase D — File inventory
+
+| File | Change |
+|------|--------|
+| `src/subapps/dxf-viewer/bim-3d/properties/tabs/BimGeometryTab.tsx` | `buildSlabRows`: +levelElevation + optional heightOffsetFromLevel + derived bottomFace. `buildBeamRows`: +topElevation + optional zOffset + derived bottomFace. `buildWallRows`: +baseOffset. |
+| `src/i18n/locales/el/bim3d.json` | +6 keys in `geometry` block: levelElevation/topElevation/bottomFace/heightOffsetFromLevel/zOffset/baseOffset |
+| `src/i18n/locales/en/bim3d.json` | +6 keys mirror el |
+
+### Phase D — Status
+
+- **§3 Phase D steps 10–11** → ✅ Properties panel labels + offset fields shipped. Step 12 (Ribbon Levels tab derived values) deferred to Phase E/F (ADR-345 context, separate scope).
 
 ---
 

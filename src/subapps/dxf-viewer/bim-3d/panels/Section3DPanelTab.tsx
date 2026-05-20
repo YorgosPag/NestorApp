@@ -19,6 +19,8 @@ import {
   SECTION_MAX_PLANES,
   type SectionMode,
 } from '../stores/SectionStore';
+import { useSection2DPanelStore } from '../stores/Section2DPanelStore';
+import { deriveAvailablePlanes } from '../2d-section/active-plane-derivation';
 
 function ModeButton({
   label,
@@ -51,8 +53,21 @@ export function Section3DPanelTab() {
     useSectionStore.getState,
   );
 
+  const panel2dState = useSyncExternalStore(
+    useSection2DPanelStore.subscribe,
+    useSection2DPanelStore.getState,
+    useSection2DPanelStore.getState,
+  );
+
   const { enabled, mode, planes, linkPlanes, boxBounds } = state;
+  const { visible: panel2dVisible, activePlaneId } = panel2dState;
   const canAddPlane = planes.length < SECTION_MAX_PLANES;
+
+  const availablePlanes2d = deriveAvailablePlanes({ mode, boxBounds, planes });
+  const effectiveActiveId =
+    activePlaneId && availablePlanes2d.some((p) => p.id === activePlaneId)
+      ? activePlaneId
+      : availablePlanes2d[0]?.id ?? null;
 
   return (
     <div className="flex flex-col gap-3 p-3 text-xs text-white/80">
@@ -167,6 +182,41 @@ export function Section3DPanelTab() {
               )}
             </section>
           )}
+
+          <section className="flex flex-col gap-1 border-t border-white/10 pt-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px]">{t('section.show2dPanel')}</span>
+              <Switch
+                checked={panel2dVisible}
+                onCheckedChange={(v) => useSection2DPanelStore.getState().setVisible(v)}
+                aria-label={t('section.show2dPanelAria')}
+              />
+            </div>
+            {panel2dVisible && (
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-white/40">
+                  {t('section.activePlaneLabel')}
+                </span>
+                {availablePlanes2d.length === 0 ? (
+                  <p className="text-[11px] text-white/40">{t('section.noActivePlane')}</p>
+                ) : (
+                  <select
+                    className="rounded border border-white/15 bg-white/5 px-2 py-1 text-[11px] text-white/80 transition-colors hover:bg-white/10"
+                    value={effectiveActiveId ?? ''}
+                    onChange={(e) =>
+                      useSection2DPanelStore.getState().setActivePlaneId(e.target.value || null)
+                    }
+                  >
+                    {availablePlanes2d.map((opt) => (
+                      <option key={opt.id} value={opt.id} className="bg-black text-white">
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
+          </section>
         </>
       )}
     </div>

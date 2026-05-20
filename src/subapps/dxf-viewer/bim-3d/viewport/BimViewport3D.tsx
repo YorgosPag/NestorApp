@@ -19,6 +19,7 @@ import { useSelection3DStore } from '../stores/Selection3DStore';
 import { QuickProperties3DHoverPopover } from '../properties/QuickProperties3DHoverPopover';
 import { BimEntityCardPanel } from '../properties/BimEntityCardPanel';
 import { Floating3DPanel } from '../panels/Floating3DPanel';
+import { Section2DPanel } from '../panels/Section2DPanel';
 import { RenderFinalDialog } from '../render/RenderFinalDialog';
 import { RenderProgressOverlay } from '../render/RenderProgressOverlay';
 import type { FinalRenderConfig } from '../stores/ViewMode3DStore';
@@ -326,6 +327,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
 
       {/* BIM entity card panel (ADR-366 B.2.Q4) — micro-leaf, absolute right-side panel */}
       <BimEntityCardPanel />
+
+      {/* ADR-366 §A.3 Q3 Phase 7.0B — 2D Live Section Panel (bottom strip, toggle from Section tab) */}
+      <Section2DPanel />
 
       {/* Floating Render button — bottom-right, above Performance HUD (ADR-366 §B.4 Phase 6).
           ADR-371: hidden in readOnly mode (Properties pipeline). */}

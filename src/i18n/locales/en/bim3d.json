@@ -60,7 +60,13 @@
     "area": "Area",
     "volume": "Volume",
     "category": "Category",
-    "kind": "Kind"
+    "kind": "Kind",
+    "levelElevation": "Level (FFL)",
+    "topElevation": "Level (Top)",
+    "bottomFace": "Bottom face",
+    "heightOffsetFromLevel": "Height offset",
+    "zOffset": "Z Offset",
+    "baseOffset": "Base Offset"
   },
   "lighting": {
     "preset": {
@@ -188,7 +194,18 @@
     "removeAria": "Remove plane",
     "enableAria": "Toggle section",
     "linkAria": "Toggle link planes",
-    "noPlanes": "No section — pick Box or add a plane"
+    "noPlanes": "No section — pick Box or add a plane",
+    "show2dPanel": "Show 2D panel",
+    "show2dPanelAria": "Toggle 2D section panel",
+    "activePlaneLabel": "Active plane",
+    "noActivePlane": "No vertical section plane available"
+  },
+  "section2d": {
+    "title": "2D Section",
+    "ariaLabel": "2D section panel",
+    "closeAria": "Close panel",
+    "resetView": "Reset view",
+    "noPlane": "Pick an active plane in section settings"
   },
   "performance": {
     "toggleLabel": "Show Performance HUD",

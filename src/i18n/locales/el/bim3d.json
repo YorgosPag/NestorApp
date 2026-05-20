@@ -60,7 +60,13 @@
     "area": "Εμβαδόν",
     "volume": "Όγκος",
     "category": "Κατηγορία",
-    "kind": "Τύπος"
+    "kind": "Τύπος",
+    "levelElevation": "Στάθμη (FFL)",
+    "topElevation": "Στάθμη (Άνω)",
+    "bottomFace": "Κάτω επιφάνεια",
+    "heightOffsetFromLevel": "Offset από FFL",
+    "zOffset": "Z Offset",
+    "baseOffset": "Base Offset"
   },
   "lighting": {
     "preset": {
@@ -188,7 +194,18 @@
     "removeAria": "Αφαίρεση επιπέδου",
     "enableAria": "Εναλλαγή ενεργοποίησης τομής",
     "linkAria": "Εναλλαγή σύνδεσης επιπέδων",
-    "noPlanes": "Καμία τομή — επίλεξε Box ή πρόσθεσε επίπεδο"
+    "noPlanes": "Καμία τομή — επίλεξε Box ή πρόσθεσε επίπεδο",
+    "show2dPanel": "Εμφάνιση 2D προβολής",
+    "show2dPanelAria": "Εναλλαγή 2D πίνακα τομής",
+    "activePlaneLabel": "Ενεργό επίπεδο",
+    "noActivePlane": "Καμία κατακόρυφη τομή διαθέσιμη"
+  },
+  "section2d": {
+    "title": "2D Τομή",
+    "ariaLabel": "Πίνακας 2D τομής",
+    "closeAria": "Κλείσιμο πίνακα",
+    "resetView": "Επαναφορά προβολής",
+    "noPlane": "Επίλεξε ενεργό επίπεδο στις ρυθμίσεις τομής"
   },
   "performance": {
     "toggleLabel": "Εμφάνιση πίνακα απόδοσης",

@@ -37,6 +37,7 @@ function buildWallRows(e: WallEntity, t: (k: string) => string): GeometryRow[] {
     { label: t('geometry.category'), value: t(`wallCategories.${e.params.category}`) },
     { label: t('geometry.thickness'), value: `${e.params.thickness} mm` },
     { label: t('geometry.height'), value: mmToM(e.params.height) },
+    { label: t('geometry.baseOffset'), value: `${e.params.baseOffset} mm` },
     { label: t('geometry.area'), value: `${e.geometry.area.toFixed(2)} m²` },
     { label: t('geometry.volume'), value: `${e.geometry.volume.toFixed(3)} m³` },
   ];
@@ -55,21 +56,37 @@ function buildColumnRows(e: ColumnEntity, t: (k: string) => string): GeometryRow
 }
 
 function buildBeamRows(e: BeamEntity, t: (k: string) => string): GeometryRow[] {
-  return [
+  const topMm = e.params.topElevation + (e.params.zOffset ?? 0);
+  const rows: GeometryRow[] = [
     { label: t('geometry.kind'), value: t(`beamKinds.${e.params.kind}`) },
     { label: t('geometry.width'), value: `${e.params.width} mm` },
     { label: t('geometry.depth'), value: `${e.params.depth} mm` },
     { label: t('geometry.length'), value: `${e.geometry.length.toFixed(2)} m` },
+    { label: t('geometry.topElevation'), value: mmToM(e.params.topElevation) },
   ];
+  if (e.params.zOffset) {
+    rows.push({ label: t('geometry.zOffset'), value: `${e.params.zOffset} mm` });
+  }
+  rows.push({ label: t('geometry.bottomFace'), value: mmToM(topMm - e.params.depth) });
+  return rows;
 }
 
 function buildSlabRows(e: SlabEntity, t: (k: string) => string): GeometryRow[] {
-  return [
+  const topMm = e.params.levelElevation + (e.params.heightOffsetFromLevel ?? 0);
+  const rows: GeometryRow[] = [
     { label: t('geometry.kind'), value: t(`slabKinds.${e.params.kind}`) },
     { label: t('geometry.thickness'), value: `${e.params.thickness} mm` },
+    { label: t('geometry.levelElevation'), value: mmToM(e.params.levelElevation) },
+  ];
+  if (e.params.heightOffsetFromLevel) {
+    rows.push({ label: t('geometry.heightOffsetFromLevel'), value: `${e.params.heightOffsetFromLevel} mm` });
+  }
+  rows.push(
+    { label: t('geometry.bottomFace'), value: mmToM(topMm - e.params.thickness) },
     { label: t('geometry.area'), value: `${e.geometry.area.toFixed(2)} m²` },
     { label: t('geometry.volume'), value: `${e.geometry.volume.toFixed(3)} m³` },
-  ];
+  );
+  return rows;
 }
 
 function resolveRows(bimId: string, bimType: string, t: (k: string) => string): GeometryRow[] {
