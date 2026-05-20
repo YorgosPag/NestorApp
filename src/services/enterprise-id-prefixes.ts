@@ -250,6 +250,9 @@ export const ENTERPRISE_ID_PREFIXES = {
   // DXF 3D BIM Viewer — Performance Diagnostics (ADR-366 §B.5)
   PERF_DIAG: 'perfdiag',       // performance_diagnostics collection — user-submitted HUD snapshots
 
+  // DXF 3D BIM Viewer — Render Outputs (ADR-366 §B.4 / Phase 6)
+  BIM_RENDER: 'bimrnd',        // bim_renders collection — final photoreal render exports (PNG/JPG/EXR)
+
   // Optimistic & Temporary
   OPTIMISTIC: 'opt',
   TEMP: 'tmp',

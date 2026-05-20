@@ -24,6 +24,7 @@ import { EnvmapGenerator } from '../lighting/envmap-generator';
 import { PathTracerRenderer } from '../render/PathTracerRenderer';
 import type { LightPreset } from '../lighting/lighting-presets';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
+import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 import { raycastBimGroup, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
 import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
@@ -34,6 +35,8 @@ import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
+import type { FinalRenderConfig } from '../stores/ViewMode3DStore';
+import { writeRenderOutput } from '../render/render-output-writer';
 
 const INITIAL_CAMERA_POSITION = new THREE.Vector3(15, 10, 15);
 const INITIAL_CAMERA_TARGET = new THREE.Vector3(0, 0, 0);
@@ -57,6 +60,7 @@ export class ThreeJsSceneManager {
   private readonly pathTracerRenderer: PathTracerRenderer;
 
   private readonly performanceCollector: PerformanceCollector;
+  private readonly envStoreUnsub: () => void;
   private rafHandle: number | null = null;
   private disposed = false;
   private lastFrameTime = performance.now();
@@ -109,6 +113,10 @@ export class ThreeJsSceneManager {
     this.viewCube = this.initViewCube(container);
     this.performanceCollector = new PerformanceCollector(this.renderer, this.scene);
     this.performanceCollector.start();
+    this.envStoreUnsub = useEnvironmentStore.subscribe(
+      (s) => s.hdriUrl,
+      (url) => { if (url) void this.loadHdriEnvironment(url); },
+    );
     this.startLoop();
   }
 
@@ -301,6 +309,21 @@ export class ThreeJsSceneManager {
     this.sun.visible = elevationDeg > -5;
   }
 
+  async loadHdriEnvironment(url: string): Promise<void> {
+    if (this.disposed) return;
+    const store = useEnvironmentStore.getState();
+    store.setLoading(true);
+    store.setError(false);
+    try {
+      await this.envmapGenerator.loadHdri(url);
+      this.pathTracerRenderer.invalidateScene();
+    } catch {
+      store.setError(true);
+    } finally {
+      store.setLoading(false);
+    }
+  }
+
   applyLightPreset(preset: LightPreset): void {
     if (this.disposed) return;
     this.sun.color.set(preset.sunColor);
@@ -317,6 +340,43 @@ export class ThreeJsSceneManager {
     return this.renderer.domElement;
   }
 
+  startFinalRender(
+    config: FinalRenderConfig,
+    renderContext: { projectId: string; companyId: string; userId: string },
+    onProgress: (pct: number) => void,
+    onComplete: (result: { savedDisk: boolean; savedProject: boolean; uploadError: boolean }) => void,
+  ): void {
+    if (this.disposed) return;
+    // Cancel any in-progress preview path trace first
+    this.pathTracerRenderer.cancel();
+    this.pathTracerRenderer.invalidateScene();
+
+    this.pathTracerRenderer.startFinal(
+      config,
+      onProgress,
+      () => {
+        const canvas = this.renderer.domElement;
+        writeRenderOutput(canvas, {
+          format: config.format,
+          destDisk: config.destDisk,
+          destProject: config.destProject,
+          projectId: renderContext.projectId,
+          companyId: renderContext.companyId,
+          userId: renderContext.userId,
+          presetSPP: config.presetSPP,
+          resolutionW: config.resolutionW,
+          resolutionH: config.resolutionH,
+        }).then(onComplete).catch(() => {
+          onComplete({ savedDisk: false, savedProject: false, uploadError: true });
+        });
+      },
+    );
+  }
+
+  cancelFinalRender(): void {
+    if (!this.disposed) this.pathTracerRenderer.cancelFinal();
+  }
+
   resize(width: number, height: number): void {
     if (this.disposed || width === 0 || height === 0) return;
     this.viewport.updateAspect(width, height);
@@ -327,6 +387,7 @@ export class ThreeJsSceneManager {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.envStoreUnsub();
     if (this.rafHandle !== null) {
       cancelAnimationFrame(this.rafHandle);
       this.rafHandle = null;

@@ -76,13 +76,27 @@
     "dateLabel": "Ημερομηνία",
     "latLabel": "Γεωγρ. πλάτος",
     "lngLabel": "Γεωγρ. μήκος",
-    "animateLabel": "Κινούμενος ήλιος"
+    "animateLabel": "Κινούμενος ήλιος",
+    "hdri": {
+      "label": "HDRI Περιβάλλον",
+      "noonGrass": "Μεσημέρι",
+      "overcast": "Συννεφιά",
+      "goldenHour": "Χρυσή ώρα",
+      "blueHour": "Μπλε ώρα",
+      "studio": "Studio",
+      "urban": "Πόλη",
+      "coast": "Ακτή",
+      "mountain": "Βουνό",
+      "loading": "Φόρτωση...",
+      "error": "Σφάλμα φόρτωσης"
+    }
   },
   "floatingPanel": {
     "tabs": {
       "floors": "Όροφοι",
       "lighting": "Φωτισμός",
-      "quality": "Ποιότητα"
+      "quality": "Ποιότητα",
+      "sections": "Τομή"
     },
     "floors": {
       "presets": {
@@ -97,6 +111,84 @@
       "activeLevel": "Ενεργός",
       "noLevels": "Χωρίς ορόφους"
     }
+  },
+  "render": {
+    "dialogTitle": "Δημιουργία εικόνας φωτορεαλισμού",
+    "presets": {
+      "label": "Ποιότητα",
+      "draft": "Πρόχειρη (~10δλ)",
+      "standard": "Κανονική (~1 λεπτό)",
+      "high": "Υψηλή (~5 λεπτά)",
+      "production": "Κορυφαία (~15 λεπτά)"
+    },
+    "resolution": {
+      "label": "Ανάλυση",
+      "hd": "HD 1920×1080",
+      "4k": "4K 3840×2160",
+      "8k": "8K 7680×4320",
+      "custom": "Προσαρμοσμένη",
+      "widthLabel": "Πλάτος (px)",
+      "heightLabel": "Ύψος (px)"
+    },
+    "format": {
+      "label": "Μορφή αρχείου",
+      "png": "PNG (παρουσίαση)",
+      "jpg": "JPG (email)",
+      "exr": "EXR (post-processing HDR)"
+    },
+    "destination": {
+      "label": "Αποθήκευση",
+      "disk": "Στον υπολογιστή",
+      "project": "Στο project (συνεργάτες θα δουν)"
+    },
+    "advanced": {
+      "expander": "Προχωρημένα",
+      "denoiser": "Καθαρισμός θορύβου (denoiser)"
+    },
+    "estimate": {
+      "time": "Εκτιμώμενος χρόνος",
+      "size": "Εκτιμώμενο μέγεθος",
+      "calculating": "Υπολογισμός...",
+      "seconds": "~{value} δευτ.",
+      "minutes": "~{value} λεπτά",
+      "hours": "~{value} ώρες",
+      "margin": "±{pct}%"
+    },
+    "button": {
+      "render": "Δημιουργία",
+      "cancel": "Άκυρο",
+      "triggerLabel": "Render — Φωτορεαλιστική εικόνα"
+    },
+    "progress": {
+      "title": "Δημιουργία εικόνας",
+      "samples": "Δείγματα: {current}/{total}",
+      "remaining": "Απομένουν ~{minutes} λεπτά",
+      "remainingSec": "Απομένουν ~{seconds} δευτ.",
+      "cancel": "Άκυρο"
+    },
+    "completion": {
+      "savedDisk": "Αποθηκεύτηκε στον υπολογιστή",
+      "savedProject": "Αποθηκεύτηκε στο project",
+      "savedBoth": "Αποθηκεύτηκε τοπικά και στο project",
+      "uploadError": "Σφάλμα ανεβάσματος — αποθηκεύτηκε μόνο τοπικά"
+    }
+  },
+  "section": {
+    "tabLabel": "Τομή",
+    "enable": "Ενεργοποίηση τομής",
+    "modeBox": "Box τομής",
+    "modePlane": "Επίπεδο τομής",
+    "modeLabel": "Λειτουργία",
+    "planesTitle": "Επίπεδα",
+    "linkPlanes": "Συνδεδεμένα επίπεδα",
+    "addPlane": "Προσθήκη επιπέδου",
+    "resetBox": "Επαναφορά box",
+    "planeLabel": "Επίπεδο {n}",
+    "maxPlanes": "Μέγιστο 6 επίπεδα",
+    "removeAria": "Αφαίρεση επιπέδου",
+    "enableAria": "Εναλλαγή ενεργοποίησης τομής",
+    "linkAria": "Εναλλαγή σύνδεσης επιπέδων",
+    "noPlanes": "Καμία τομή — επίλεξε Box ή πρόσθεσε επίπεδο"
   },
   "performance": {
     "toggleLabel": "Εμφάνιση πίνακα απόδοσης",

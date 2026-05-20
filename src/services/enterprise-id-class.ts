@@ -306,6 +306,9 @@ export class EnterpriseIdService {
   // DXF 3D BIM Viewer — Performance Diagnostics (ADR-366 §B.5)
   generatePerformanceDiagnosticId(): string { return this.generateId(P.PERF_DIAG).id; }
 
+  // DXF 3D BIM Viewer — Render Outputs (ADR-366 §B.4 / Phase 6)
+  generateBimRenderId(): string { return this.generateId(P.BIM_RENDER).id; }
+
   // DXF BIM Drawing Mode (ADR-363)
   generateWallId(): string { return this.generateId(P.WALL).id; }
   generateOpeningId(): string { return this.generateId(P.OPENING).id; }

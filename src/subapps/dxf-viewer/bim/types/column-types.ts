@@ -24,6 +24,8 @@ import type {
   Polygon3D,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
+import type { IfcEntityMixin } from './ifc-entity-mixin';
+import type { ColumnBaseBinding, ColumnTopBinding } from './bim-binding';
 
 // ─── Sub-type discriminator (ADR-363 §5.6) ───────────────────────────────────
 
@@ -109,6 +111,26 @@ export interface ColumnParams {
    * Defaults to 'mm' when absent (legacy Firestore docs).
    */
   readonly sceneUnits?: SceneUnits;
+  // ─── ADR-369 §9 Q5 — Revit-style vertical extent binding ───────────────────
+  /** How column base couples to storey FFL. Default 'storey-floor'. */
+  readonly baseBinding: ColumnBaseBinding;
+  /** How column top couples to next storey reference. Default 'storey-ceiling'. */
+  readonly topBinding: ColumnTopBinding;
+  /**
+   * mm. Base offset semantic depends on `baseBinding`:
+   *   - 'storey-floor' → offset από FFL (positive=up)
+   *   - 'absolute'     → absolute world z
+   */
+  readonly baseOffset: number;
+  /**
+   * mm. Top offset semantic depends on `topBinding`:
+   *   - 'storey-ceiling' → offset από επόμενο storey reference
+   *   - 'absolute'       → absolute world z
+   *   - 'unconnected'    → ignored (see `unconnectedHeight`)
+   */
+  readonly topOffset: number;
+  /** mm. Required ΟΤΑΝ topBinding='unconnected'. Free-standing height. */
+  readonly unconnectedHeight?: number;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────
@@ -136,8 +158,11 @@ export interface ColumnGeometry {
  * Column BIM entity. Extends `BimEntity` με `kind: ColumnKind` discriminator.
  */
 export interface ColumnEntity
-  extends BimEntity<ColumnKind, ColumnParams, ColumnGeometry> {
+  extends BimEntity<ColumnKind, ColumnParams, ColumnGeometry>,
+    IfcEntityMixin {
   readonly type: 'column';
+  /** ADR-369 §9 Q8 — IFC4 class. Always 'IfcColumn' για κολώνες. */
+  readonly ifcType: 'IfcColumn';
 }
 
 // ─── Defaults & constants ────────────────────────────────────────────────────

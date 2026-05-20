@@ -103,6 +103,14 @@ export function computeSplitWallParams(
     flip: wall.params.flip,
     dna: wall.params.dna,
     sceneUnits: wall.params.sceneUnits,
+    // ADR-369 §9 Q5 — preserved from original wall on split.
+    baseBinding: wall.params.baseBinding,
+    topBinding: wall.params.topBinding,
+    baseOffset: wall.params.baseOffset,
+    topOffset: wall.params.topOffset,
+    ...(wall.params.unconnectedHeight !== undefined && {
+      unconnectedHeight: wall.params.unconnectedHeight,
+    }),
   } as const;
 
   const wall1Params: WallParams = {

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { WebGLPathTracer } from 'three-gpu-pathtracer';
+import type { FinalRenderConfig } from '../stores/ViewMode3DStore';
 
 const PREVIEW_MAX_SAMPLES = 256;
 
@@ -16,9 +17,14 @@ export class PathTracerRenderer {
   private readonly scene: THREE.Scene;
   private readonly getCamera: () => THREE.Camera;
   private _isActive = false;
+  private _isFinalMode = false;
+  private _finalMaxSamples = 256;
+  private _onFinalProgress: ((pct: number) => void) | null = null;
+  private _onFinalComplete: (() => void) | null = null;
   private sceneNeedsUpdate = true;
 
   get isActive(): boolean { return this._isActive; }
+  get isFinalMode(): boolean { return this._isFinalMode; }
 
   constructor(
     renderer: THREE.WebGLRenderer,
@@ -64,12 +70,53 @@ export class PathTracerRenderer {
     // Abort if user switched to ortho while path tracer was active
     if (!(this.getCamera() instanceof THREE.PerspectiveCamera)) {
       this._isActive = false;
+      this._isFinalMode = false;
       return;
     }
     this.pathTracer.renderSample();
-    if (this.pathTracer.samples >= PREVIEW_MAX_SAMPLES) {
+    const samples = this.pathTracer.samples;
+
+    if (this._isFinalMode) {
+      const pct = Math.min(100, Math.round((samples / this._finalMaxSamples) * 100));
+      this._onFinalProgress?.(pct);
+      if (samples >= this._finalMaxSamples) {
+        this._isActive = false;
+        this._isFinalMode = false;
+        const cb = this._onFinalComplete;
+        this._onFinalProgress = null;
+        this._onFinalComplete = null;
+        cb?.();
+      }
+    } else if (samples >= PREVIEW_MAX_SAMPLES) {
       this._isActive = false;
     }
+  }
+
+  startFinal(
+    config: FinalRenderConfig,
+    onProgress: (pct: number) => void,
+    onComplete: () => void,
+  ): void {
+    const camera = this.getCamera();
+    if (!(camera instanceof THREE.PerspectiveCamera)) return;
+    try {
+      this.pathTracer.setScene(this.scene, camera);
+      this.sceneNeedsUpdate = false;
+    } catch {
+      return;
+    }
+    this._finalMaxSamples = config.presetSPP;
+    this._onFinalProgress = onProgress;
+    this._onFinalComplete = onComplete;
+    this._isFinalMode = true;
+    this._isActive = true;
+  }
+
+  cancelFinal(): void {
+    this._isFinalMode = false;
+    this._isActive = false;
+    this._onFinalProgress = null;
+    this._onFinalComplete = null;
   }
 
   dispose(): void {

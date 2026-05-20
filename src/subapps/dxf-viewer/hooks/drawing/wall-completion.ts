@@ -28,7 +28,11 @@ import { DEFAULT_WALL_HEIGHT_MM } from '../../bim/types/wall-types';
 import { getDefaultDnaForCategory } from '../../bim/types/wall-dna-types';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
 import { validateWallParams } from '../../bim/validators/wall-validator';
-import { generateWallId } from '@/services/enterprise-id-convenience';
+import {
+  DEFAULT_WALL_BASE_BINDING,
+  DEFAULT_WALL_TOP_BINDING,
+} from '../../bim/types/bim-binding';
+import { createWall } from '@/services/factories/wall.factory';
 import type { SceneUnits } from '../../utils/scene-units';
 
 export type { SceneUnits };
@@ -83,6 +87,10 @@ export function buildDefaultWallParams(
       thickness: overrides.thickness,
       flip: overrides.flip ?? false,
       sceneUnits,
+      baseBinding: DEFAULT_WALL_BASE_BINDING,
+      topBinding: DEFAULT_WALL_TOP_BINDING,
+      baseOffset: 0,
+      topOffset: 0,
     };
   }
   const dna = getDefaultDnaForCategory(category);
@@ -95,6 +103,10 @@ export function buildDefaultWallParams(
     flip: overrides.flip ?? false,
     dna,
     sceneUnits,
+    baseBinding: DEFAULT_WALL_BASE_BINDING,
+    topBinding: DEFAULT_WALL_TOP_BINDING,
+    baseOffset: 0,
+    topOffset: 0,
   };
 }
 
@@ -127,16 +139,14 @@ export function buildWallEntity(
     return { ok: false, hardErrors: validation.hardErrors };
   }
   const geometry: WallGeometry = computeWallGeometry(params, kind);
-  const entity: WallEntity = {
-    id: generateWallId(),
-    type: 'wall',
+  const entity: WallEntity = createWall({
     kind,
-    layerId,
     params,
     geometry,
-    validation: validation.bimValidation,
+    layerId,
     visible: true,
-  };
+    validation: validation.bimValidation,
+  });
   return { ok: true, entity };
 }
 

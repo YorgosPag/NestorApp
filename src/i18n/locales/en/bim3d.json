@@ -76,13 +76,27 @@
     "dateLabel": "Date",
     "latLabel": "Latitude",
     "lngLabel": "Longitude",
-    "animateLabel": "Animate sun"
+    "animateLabel": "Animate sun",
+    "hdri": {
+      "label": "HDRI Environment",
+      "noonGrass": "Noon",
+      "overcast": "Overcast",
+      "goldenHour": "Golden Hour",
+      "blueHour": "Blue Hour",
+      "studio": "Studio",
+      "urban": "Urban",
+      "coast": "Coast",
+      "mountain": "Mountain",
+      "loading": "Loading...",
+      "error": "Load error"
+    }
   },
   "floatingPanel": {
     "tabs": {
       "floors": "Floors",
       "lighting": "Lighting",
-      "quality": "Quality"
+      "quality": "Quality",
+      "sections": "Section"
     },
     "floors": {
       "presets": {
@@ -97,6 +111,84 @@
       "activeLevel": "Active",
       "noLevels": "No floors"
     }
+  },
+  "render": {
+    "dialogTitle": "Photoreal Render",
+    "presets": {
+      "label": "Quality",
+      "draft": "Draft (~10s)",
+      "standard": "Standard (~1 min)",
+      "high": "High (~5 min)",
+      "production": "Production (~15 min)"
+    },
+    "resolution": {
+      "label": "Resolution",
+      "hd": "HD 1920×1080",
+      "4k": "4K 3840×2160",
+      "8k": "8K 7680×4320",
+      "custom": "Custom",
+      "widthLabel": "Width (px)",
+      "heightLabel": "Height (px)"
+    },
+    "format": {
+      "label": "File format",
+      "png": "PNG (presentation)",
+      "jpg": "JPG (email)",
+      "exr": "EXR (post-processing HDR)"
+    },
+    "destination": {
+      "label": "Save to",
+      "disk": "My computer",
+      "project": "Project assets (collaborators)"
+    },
+    "advanced": {
+      "expander": "Advanced",
+      "denoiser": "Denoiser"
+    },
+    "estimate": {
+      "time": "Estimated time",
+      "size": "Estimated size",
+      "calculating": "Calculating...",
+      "seconds": "~{value}s",
+      "minutes": "~{value} min",
+      "hours": "~{value} hr",
+      "margin": "±{pct}%"
+    },
+    "button": {
+      "render": "Render",
+      "cancel": "Cancel",
+      "triggerLabel": "Render — Photoreal image"
+    },
+    "progress": {
+      "title": "Rendering",
+      "samples": "Samples: {current}/{total}",
+      "remaining": "~{minutes} min remaining",
+      "remainingSec": "~{seconds}s remaining",
+      "cancel": "Cancel"
+    },
+    "completion": {
+      "savedDisk": "Saved to disk",
+      "savedProject": "Saved to project assets",
+      "savedBoth": "Saved locally and to project",
+      "uploadError": "Upload failed — saved locally only"
+    }
+  },
+  "section": {
+    "tabLabel": "Section",
+    "enable": "Enable section",
+    "modeBox": "Section Box",
+    "modePlane": "Section Plane",
+    "modeLabel": "Mode",
+    "planesTitle": "Planes",
+    "linkPlanes": "Link planes",
+    "addPlane": "Add plane",
+    "resetBox": "Reset box",
+    "planeLabel": "Plane {n}",
+    "maxPlanes": "Maximum 6 planes",
+    "removeAria": "Remove plane",
+    "enableAria": "Toggle section",
+    "linkAria": "Toggle link planes",
+    "noPlanes": "No section — pick Box or add a plane"
   },
   "performance": {
     "toggleLabel": "Show Performance HUD",

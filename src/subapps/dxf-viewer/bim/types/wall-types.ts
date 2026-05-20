@@ -27,6 +27,8 @@ import type {
 } from './bim-base';
 import type { WallDna } from './wall-dna-types';
 import type { SceneUnits } from '../../utils/scene-units';
+import type { IfcEntityMixin } from './ifc-entity-mixin';
+import type { WallBaseBinding, WallTopBinding } from './bim-binding';
 
 // ─── Sub-type & category enums (ADR-363 §5.3) ────────────────────────────────
 
@@ -88,6 +90,26 @@ export interface WallParams {
    * for 2D edge-offset geometry. Absent on legacy entities → defaults to 'mm'.
    */
   readonly sceneUnits?: SceneUnits;
+  // ─── ADR-369 §9 Q5 — Revit-style vertical extent binding ───────────────────
+  /** How wall base couples to storey FFL. Default 'storey-floor'. */
+  readonly baseBinding: WallBaseBinding;
+  /** How wall top couples to next storey reference. Default 'storey-ceiling'. */
+  readonly topBinding: WallTopBinding;
+  /**
+   * mm. Base offset semantic depends on `baseBinding`:
+   *   - 'storey-floor' → offset από FFL (positive=up)
+   *   - 'absolute'     → absolute world z
+   */
+  readonly baseOffset: number;
+  /**
+   * mm. Top offset semantic depends on `topBinding`:
+   *   - 'storey-ceiling' → offset από επόμενο storey reference
+   *   - 'absolute'       → absolute world z
+   *   - 'unconnected'    → ignored (see `unconnectedHeight`)
+   */
+  readonly topOffset: number;
+  /** mm. Required ΟΤΑΝ topBinding='unconnected'. Free-standing height. */
+  readonly unconnectedHeight?: number;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────
@@ -121,9 +143,13 @@ export interface WallGeometry {
  *   - `hostedOpeningIds` — back-reference για render + QTO subtraction (Phase 2).
  *     ReadOnly array για immutability — mutations through service layer.
  */
-export interface WallEntity extends BimEntity<WallKind, WallParams, WallGeometry> {
+export interface WallEntity
+  extends BimEntity<WallKind, WallParams, WallGeometry>,
+    IfcEntityMixin {
   readonly type: 'wall';
   readonly hostedOpeningIds?: readonly string[];
+  /** ADR-369 §9 Q8 — IFC4 class. 'IfcWallStandardCase' για straight, 'IfcWall' για curved/polyline. */
+  readonly ifcType: 'IfcWall' | 'IfcWallStandardCase';
 }
 
 // ─── Defaults & constants ────────────────────────────────────────────────────

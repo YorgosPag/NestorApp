@@ -8,7 +8,9 @@ import { useProjectHierarchy } from '../../contexts/ProjectHierarchyContext';
 import { PerformanceHUD } from '../performance/PerformanceHUD';
 import { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
+import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { LIGHT_PRESETS } from '../lighting/lighting-presets';
+import { getHdriPreset } from '../lighting/hdri-environment';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
@@ -16,6 +18,9 @@ import { useSelection3DStore } from '../stores/Selection3DStore';
 import { QuickProperties3DHoverPopover } from '../properties/QuickProperties3DHoverPopover';
 import { BimEntityCardPanel } from '../properties/BimEntityCardPanel';
 import { Floating3DPanel } from '../panels/Floating3DPanel';
+import { RenderFinalDialog } from '../render/RenderFinalDialog';
+import { RenderProgressOverlay } from '../render/RenderProgressOverlay';
+import type { FinalRenderConfig } from '../stores/ViewMode3DStore';
 
 const HOVER_DEBOUNCE_MS = 800;
 
@@ -30,6 +35,7 @@ export function BimViewport3D() {
   const errorRef = useRef<string | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
+  const [renderDialogOpen, setRenderDialogOpen] = useState(false);
   const { user } = useAuth();
   const { selectedProject } = useProjectHierarchy();
   const projectId = selectedProject?.id ?? null;
@@ -38,6 +44,12 @@ export function BimViewport3D() {
   const is3D = useSyncExternalStore(
     useViewMode3DStore.subscribe,
     () => selectIs3D(useViewMode3DStore.getState()),
+    () => false,
+  );
+
+  const isRendering = useSyncExternalStore(
+    useViewMode3DStore.subscribe,
+    () => useViewMode3DStore.getState().mode === '3d-final',
     () => false,
   );
 
@@ -139,6 +151,47 @@ export function BimViewport3D() {
     );
   }, []);
 
+  // HDRI preset selection → resolve URL → EnvironmentStore (ThreeJsSceneManager reacts to hdriUrl)
+  useEffect(() => {
+    return useEnvironmentStore.subscribe(
+      (s) => s.hdriPresetId,
+      (id) => {
+        const preset = getHdriPreset(id);
+        if (preset) useEnvironmentStore.getState().setHdriUrl(preset.url);
+      },
+    );
+  }, []);
+
+  const handleRenderConfirm = useCallback((config: FinalRenderConfig) => {
+    const manager = managerRef.current;
+    if (!manager || !user || !projectId) return;
+    const store = useViewMode3DStore.getState();
+    store.startFinalRender(config);
+    manager.startFinalRender(
+      config,
+      { projectId, companyId: user.companyId ?? '', userId: user.uid },
+      (pct) => store.updateFinalRenderProgress(pct),
+      (result) => {
+        store.completeFinalRender();
+        if (result.uploadError) {
+          // Toast fires from parent app notification — upload error logged silently
+          console.warn('[BimViewport3D] render upload failed — fallback disk save applied');
+        }
+      },
+    );
+  }, [user, projectId]);
+
+  const handleRenderCancel = useCallback(() => {
+    managerRef.current?.cancelFinalRender();
+    useViewMode3DStore.getState().completeFinalRender();
+  }, []);
+
+  const handleCalibrateSample = useCallback(() => {
+    // No-op: GPU calibration uses its own timed loop inside render-cost-estimator.
+    // PathTracerRenderer.renderSample() is only called from the RAF loop.
+    // We use performance.now() inside calibrateGpu with a lightweight JS loop.
+  }, []);
+
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     const { clientX, clientY } = e;
@@ -225,6 +278,36 @@ export function BimViewport3D() {
 
       {/* BIM entity card panel (ADR-366 B.2.Q4) — micro-leaf, absolute right-side panel */}
       <BimEntityCardPanel />
+
+      {/* Floating Render button — bottom-right, above Performance HUD (ADR-366 §B.4 Phase 6) */}
+      {!isRendering && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setRenderDialogOpen(true)}
+              aria-label={t('render.button.triggerLabel')}
+              className="absolute bottom-14 right-3 z-[70] flex select-none items-center gap-1.5 rounded-md border border-white/20 bg-black/60 px-3 py-1.5 text-xs font-semibold text-primary backdrop-blur-sm transition-colors hover:bg-black/80 hover:text-primary/80"
+            >
+              ✦ {t('render.button.render')}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="left">{t('render.button.triggerLabel')}</TooltipContent>
+        </Tooltip>
+      )}
+
+      {/* Render progress overlay — visible only during final render */}
+      {isRendering && (
+        <RenderProgressOverlay onCancel={handleRenderCancel} />
+      )}
+
+      {/* Render dialog — Radix (ADR-001) */}
+      <RenderFinalDialog
+        open={renderDialogOpen}
+        onOpenChange={setRenderDialogOpen}
+        onConfirm={handleRenderConfirm}
+        rendererCanvas={canvasEl}
+        onCalibrateSample={handleCalibrateSample}
+      />
 
       {/* Performance HUD (ADR-366 B.5) — micro-leaf, bottom-right */}
       <PerformanceHUD

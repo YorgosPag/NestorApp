@@ -39,6 +39,10 @@ import {
   type ColumnParams,
   type ColumnTshapeParams,
 } from '../types/column-types';
+import {
+  DEFAULT_COLUMN_BASE_BINDING,
+  DEFAULT_COLUMN_TOP_BINDING,
+} from '../types/bim-binding';
 import { computeColumnGeometry } from '../geometry/column-geometry';
 
 /**
@@ -89,6 +93,10 @@ function buildGhostParams(
     depth: overrides.depth ?? DEFAULT_COLUMN_DEPTH_MM,
     height: overrides.height ?? DEFAULT_COLUMN_HEIGHT_MM,
     rotation: overrides.rotation ?? DEFAULT_COLUMN_ROTATION_DEG,
+    baseBinding: DEFAULT_COLUMN_BASE_BINDING,
+    topBinding: DEFAULT_COLUMN_TOP_BINDING,
+    baseOffset: 0,
+    topOffset: 0,
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
     ...(overrides.lshape !== undefined ? { lshape: overrides.lshape } : {}),
     ...(overrides.tshape !== undefined ? { tshape: overrides.tshape } : {}),

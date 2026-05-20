@@ -24,11 +24,44 @@ export type { FloorVisMode };
  */
 export type ViewMode3D = '2d' | '3d-raster' | '3d-preview' | '3d-final';
 
+export type RenderPreset = 'draft' | 'standard' | 'high' | 'production';
+export type RenderFormat = 'png' | 'jpg' | 'exr';
+export type RenderResolutionPreset = 'hd' | '4k' | '8k' | 'custom';
+
+export interface FinalRenderConfig {
+  preset: RenderPreset;
+  presetSPP: 64 | 256 | 1024 | 4096;
+  resolutionPreset: RenderResolutionPreset;
+  resolutionW: number;
+  resolutionH: number;
+  format: RenderFormat;
+  destDisk: boolean;
+  destProject: boolean;
+  denoiseEnabled: boolean;
+}
+
+export const PRESET_SPP: Record<RenderPreset, 64 | 256 | 1024 | 4096> = {
+  draft: 64,
+  standard: 256,
+  high: 1024,
+  production: 4096,
+};
+
+export const RESOLUTION_PRESETS: Record<Exclude<RenderResolutionPreset, 'custom'>, { w: number; h: number }> = {
+  hd: { w: 1920, h: 1080 },
+  '4k': { w: 3840, h: 2160 },
+  '8k': { w: 7680, h: 4320 },
+};
+
 interface ViewMode3DState {
   /** Current render mode (FSM) */
   mode: ViewMode3D;
   /** True during mode transitions (for loading states) */
   isTransitioning: boolean;
+  /** Active final render config (null = no render in progress / dialog closed) */
+  finalRenderConfig: FinalRenderConfig | null;
+  /** Render progress 0-100; -1 = idle */
+  finalRenderProgress: number;
   /**
    * Floor IDs to render (ADR-366 §9 Q2):
    * Default = {activeFloorId}. "Show All" sets this to all floor IDs.
@@ -57,6 +90,12 @@ interface ViewMode3DActions {
   enterPreviewMode(): void;
   /** Transition to '3d-final' mode (explicit Render dialog — Phase 6) */
   enterFinalMode(): void;
+  /** Start a final render with the given config */
+  startFinalRender(config: FinalRenderConfig): void;
+  /** Called by PathTracerRenderer when render completes */
+  completeFinalRender(): void;
+  /** Update progress 0-100 during final render */
+  updateFinalRenderProgress(pct: number): void;
   /** Set visible floors (Q2). Replaces current set. */
   setVisibleFloors(floorIds: ReadonlySet<string>): void;
   /** Toggle "Show All Floors" (Q2) */
@@ -87,6 +126,8 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
         // ── Initial state ─────────────────────────────────────────────────────
         mode: '2d',
         isTransitioning: false,
+        finalRenderConfig: null,
+        finalRenderProgress: -1,
         visibleFloors: new Set<string>(),
         showAllFloors: false,
         floorVisibilityModes: new Map<string, FloorVisMode>(),
@@ -129,6 +170,31 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
               draft.mode = '3d-final';
               draft.isTransitioning = false;
             }
+          });
+        },
+
+        startFinalRender(config) {
+          set((draft) => {
+            if (draft.mode === '3d-final') return;
+            draft.finalRenderConfig = config;
+            draft.finalRenderProgress = 0;
+            draft.mode = '3d-final';
+            draft.isTransitioning = false;
+          });
+        },
+
+        completeFinalRender() {
+          set((draft) => {
+            draft.finalRenderConfig = null;
+            draft.finalRenderProgress = -1;
+            draft.mode = '3d-raster';
+            draft.isTransitioning = false;
+          });
+        },
+
+        updateFinalRenderProgress(pct) {
+          set((draft) => {
+            draft.finalRenderProgress = pct;
           });
         },
 

@@ -1,15 +1,18 @@
 import * as THREE from 'three';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import type { LightPreset } from './lighting-presets';
 
 const ENV_WIDTH = 512;
 const ENV_HEIGHT = 256;
-const BLEND_ZONE = 0.2; // fraction of height for horizon blend
+const BLEND_ZONE = 0.2;
 
 export class EnvmapGenerator {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene: THREE.Scene;
   private readonly pmremGenerator: THREE.PMREMGenerator;
   private currentEnvmap: THREE.Texture | null = null;
+  private currentBackground: THREE.Texture | null = null;
+  private hdriActive = false;
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene) {
     this.renderer = renderer;
@@ -19,6 +22,49 @@ export class EnvmapGenerator {
   }
 
   updateForPreset(preset: LightPreset): void {
+    this.applyGradientFallback(preset);
+  }
+
+  applyGradientFallback(preset: LightPreset): void {
+    if (this.hdriActive) return;
+    const envMap = this.buildGradientEnvmap(preset);
+    const prev = this.currentEnvmap;
+    this.currentEnvmap = envMap;
+    this.scene.environment = this.currentEnvmap;
+    this.scene.background = new THREE.Color(preset.skyColor);
+    prev?.dispose();
+  }
+
+  async loadHdri(url: string): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const loader = new RGBELoader();
+      loader.load(
+        url,
+        (hdrTexture) => {
+          hdrTexture.mapping = THREE.EquirectangularReflectionMapping;
+          const pmremResult = this.pmremGenerator.fromEquirectangular(hdrTexture);
+
+          const prevEnv = this.currentEnvmap;
+          const prevBg = this.currentBackground;
+
+          this.currentEnvmap = pmremResult.texture;
+          this.currentBackground = hdrTexture;
+          this.hdriActive = true;
+
+          this.scene.environment = this.currentEnvmap;
+          this.scene.background = this.currentBackground;
+
+          prevEnv?.dispose();
+          prevBg?.dispose();
+          resolve();
+        },
+        undefined,
+        (error) => reject(error),
+      );
+    });
+  }
+
+  private buildGradientEnvmap(preset: LightPreset): THREE.Texture {
     const skyColor = new THREE.Color(preset.skyColor);
     const groundColor = new THREE.Color(preset.groundColor);
     const data = new Uint8Array(ENV_WIDTH * ENV_HEIGHT * 4);
@@ -50,18 +96,14 @@ export class EnvmapGenerator {
 
     const pmremTexture = this.pmremGenerator.fromEquirectangular(dataTexture);
     dataTexture.dispose();
-
-    const prev = this.currentEnvmap;
-    this.currentEnvmap = pmremTexture.texture;
-    this.scene.environment = this.currentEnvmap;
-    this.scene.background = new THREE.Color(preset.skyColor);
-
-    prev?.dispose();
+    return pmremTexture.texture;
   }
 
   dispose(): void {
     this.currentEnvmap?.dispose();
     this.currentEnvmap = null;
+    this.currentBackground?.dispose();
+    this.currentBackground = null;
     this.pmremGenerator.dispose();
   }
 }

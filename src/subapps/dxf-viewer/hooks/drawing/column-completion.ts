@@ -33,7 +33,11 @@ import {
 } from '../../bim/types/column-types';
 import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
 import { validateColumnParams } from '../../bim/validators/column-validator';
-import { generateColumnId } from '@/services/enterprise-id-convenience';
+import {
+  DEFAULT_COLUMN_BASE_BINDING,
+  DEFAULT_COLUMN_TOP_BINDING,
+} from '../../bim/types/bim-binding';
+import { createColumn } from '@/services/factories/column.factory';
 import type { SceneUnits } from '../../utils/scene-units';
 
 export type { SceneUnits };
@@ -96,6 +100,10 @@ export function buildDefaultColumnParams(
     height,
     rotation,
     sceneUnits,
+    baseBinding: DEFAULT_COLUMN_BASE_BINDING,
+    topBinding: DEFAULT_COLUMN_TOP_BINDING,
+    baseOffset: 0,
+    topOffset: 0,
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
     ...(overrides.lshape !== undefined ? { lshape: overrides.lshape } : {}),
     ...(overrides.tshape !== undefined ? { tshape: overrides.tshape } : {}),
@@ -123,16 +131,13 @@ export function buildColumnEntity(
     return { ok: false, hardErrors: validation.hardErrors };
   }
   const geometry = computeColumnGeometry(params);
-  const entity: ColumnEntity = {
-    id: generateColumnId(),
-    type: 'column',
-    kind: params.kind,
-    layerId,
+  const entity: ColumnEntity = createColumn({
     params,
     geometry,
-    validation: validation.bimValidation,
+    layerId,
     visible: true,
-  };
+    validation: validation.bimValidation,
+  });
   return { ok: true, entity };
 }
 

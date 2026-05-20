@@ -370,6 +370,10 @@ export const COLLECTIONS = {
   /** User-submitted performance snapshots: 10 render metrics + screenshot + scene info + comment. Super-admin curation. IDs via perfdiag_* prefix. */
   PERFORMANCE_DIAGNOSTICS:
     process.env.NEXT_PUBLIC_PERFORMANCE_DIAGNOSTICS_COLLECTION || 'performance_diagnostics',
+
+  // 🎨 BIM RENDERS — ADR-366 §B.4 Phase 6 (Final Render Dialog)
+  /** Photoreal render exports per project: metadata + Storage path. IDs via bimrnd_* prefix. type='bim-render'. */
+  BIM_RENDERS: process.env.NEXT_PUBLIC_BIM_RENDERS_COLLECTION || 'bim_renders',
 } as const;
 
 // ============================================================================
