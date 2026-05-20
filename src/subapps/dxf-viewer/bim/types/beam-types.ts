@@ -111,6 +111,11 @@ export interface BeamGeometry {
   readonly area: number;
   /** m³ — length × width × depth / 1e9. */
   readonly volume: number;
+  /**
+   * m. Free span = geometric axis length (polyline chord start→end). For
+   * straight/cantilever beams this equals `length`. Phase 3.8.
+   */
+  readonly maxFreeSpanM: number;
 }
 
 // ─── Entity (BIM generic instantiation) ─────────────────────────────────────

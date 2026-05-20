@@ -115,3 +115,26 @@ describe('getBeamSpanDepthRatio', () => {
     expect(r).toBe(Number.POSITIVE_INFINITY);
   });
 });
+
+describe('computeBeamGeometry — maxFreeSpanM (Phase 3.8)', () => {
+  test('maxFreeSpanM equals length for straight beam', () => {
+    const g = computeBeamGeometry(baseStraight);
+    expect(g.maxFreeSpanM).toBeCloseTo(g.length, 6);
+  });
+
+  test('maxFreeSpanM equals length for curved beam', () => {
+    const curved: BeamParams = {
+      ...baseStraight,
+      kind: 'curved',
+      curveControl: { x: 2500, y: 1500, z: 0 },
+    };
+    const g = computeBeamGeometry(curved);
+    expect(g.maxFreeSpanM).toBeCloseTo(g.length, 6);
+  });
+
+  test('maxFreeSpanM equals length for cantilever', () => {
+    const canti: BeamParams = { ...baseStraight, kind: 'cantilever', supportType: 'cantilever' };
+    const g = computeBeamGeometry(canti);
+    expect(g.maxFreeSpanM).toBeCloseTo(g.length, 6);
+  });
+});

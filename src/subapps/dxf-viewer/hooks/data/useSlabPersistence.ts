@@ -28,7 +28,12 @@ import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
-import { computeSlabGeometry, type BeamFootprintForDeduction } from '../../bim/geometry/slab-geometry';
+import type { WallEntity } from '../../bim/types/wall-types';
+import {
+  computeSlabGeometry,
+  type BeamFootprintForDeduction,
+  type WallFootprintForSpan,
+} from '../../bim/geometry/slab-geometry';
 import { validateSlabParams } from '../../bim/validators/slab-validator';
 import { EventBus } from '../../systems/events/EventBus';
 import {
@@ -102,8 +107,30 @@ function collectBeamFootprints(scene: SceneModel | null): BeamFootprintForDeduct
 }
 
 /**
+ * Phase 3.8 — Collect wall footprints from scene for slab free-span computation.
+ * Constructs plan-view outline from outerEdge + innerEdge (already in memory).
+ */
+function collectWallFootprints(scene: SceneModel | null): WallFootprintForSpan[] {
+  if (!scene) return [];
+  const result: WallFootprintForSpan[] = [];
+  for (const e of scene.entities) {
+    if ((e as { type?: string }).type !== 'wall') continue;
+    const wall = e as WallEntity;
+    const outer = wall.geometry?.outerEdge?.points;
+    const inner = wall.geometry?.innerEdge?.points;
+    if (!outer || !inner || outer.length < 2 || inner.length < 2) continue;
+    // CCW outline: outer start→end, inner reversed (end→start)
+    const outlineVertices = [...outer, ...[...inner].reverse()];
+    result.push({ outline: { vertices: outlineVertices } });
+  }
+  return result;
+}
+
+/**
  * Build scene-side `SlabEntity` από persisted `SlabDoc`. Geometry +
- * validation recomputed via SSoT pure functions.
+ * validation recomputed via SSoT pure functions. Phase 3.8: always recompute
+ * geometry (ensures `maxFreeSpanM` present; wall/beam context added at
+ * persist time via `computeSlabGeometry` with full footprints).
  */
 function docToEntity(doc: SlabDoc): SlabEntity {
   const validation = doc.validation ?? validateSlabParams(doc.params).bimValidation;
@@ -113,7 +140,7 @@ function docToEntity(doc: SlabDoc): SlabEntity {
     kind: doc.kind,
     layerId: doc.layerId ?? '0',
     params: doc.params,
-    geometry: doc.geometry ?? computeSlabGeometry(doc.params),
+    geometry: computeSlabGeometry(doc.params),
     validation,
     visible: true,
   } as SlabEntity;
@@ -251,8 +278,10 @@ export function useSlabPersistence(
         const levelId = levelManager.currentLevelId;
         const scene = levelId ? levelManager.getLevelScene(levelId) : null;
         const beamFootprints = collectBeamFootprints(scene);
-        const boqGeometry = beamFootprints.length > 0
-          ? computeSlabGeometry(entity.params, undefined, beamFootprints)
+        const wallFootprints = collectWallFootprints(scene);
+        const hasSupports = beamFootprints.length > 0 || wallFootprints.length > 0;
+        const boqGeometry = hasSupports
+          ? computeSlabGeometry(entity.params, undefined, beamFootprints, wallFootprints)
           : entity.geometry;
         void bimToBoqBridge.upsertBoqItemForBim(
           'slab',
@@ -364,11 +393,13 @@ export function useSlabPersistence(
       const scene = levelId ? levelManager.getLevelScene(levelId) : null;
       if (!scene) return;
       const beamFootprints = collectBeamFootprints(scene);
+      const wallFootprints = collectWallFootprints(scene);
       for (const entity of scene.entities) {
         if ((entity as { type?: string }).type !== 'slab') continue;
         const slab = entity as SlabEntity;
-        const boqGeometry = beamFootprints.length > 0
-          ? computeSlabGeometry(slab.params, undefined, beamFootprints)
+        const hasSupports = beamFootprints.length > 0 || wallFootprints.length > 0;
+        const boqGeometry = hasSupports
+          ? computeSlabGeometry(slab.params, undefined, beamFootprints, wallFootprints)
           : slab.geometry;
         void bimToBoqBridge.upsertBoqItemForBim(
           'slab',

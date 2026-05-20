@@ -1,19 +1,26 @@
 /**
  * Phase 5.5i+ — Beam-supports-slab analytical link: BOQ volume deduction tests.
+ * Phase 3.8 — Analytical free-span computation with supporting elements.
  *
  * Verifies that `computeSlabGeometry` correctly deducts beam intersection
  * volumes from the slab BOQ volume (industry precedent: Revit Material Takeoff /
  * ArchiCAD Interactive Schedule).
  *
- * Also covers `polygonIntersectionAreaMm2` and `clipPolygonBySH` directly.
+ * Also covers `polygonIntersectionAreaMm2`, `clipPolygonBySH`, and
+ * `computeSlabMaxFreeSpanM` directly.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5i+
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5i+ §3.8
  */
 
-import { computeSlabGeometry, type BeamFootprintForDeduction } from '../slab-geometry';
+import {
+  computeSlabGeometry,
+  computeSlabMaxFreeSpanM,
+  type BeamFootprintForDeduction,
+  type WallFootprintForSpan,
+} from '../slab-geometry';
 import { polygonIntersectionAreaMm2, clipPolygonBySH } from '../shared/polygon-utils';
 import type { SlabParams } from '../../types/slab-types';
-import type { Point3D } from '../../types/bim-base';
+import type { Point3D, Polygon3D } from '../../types/bim-base';
 
 // ─── Test fixtures ────────────────────────────────────────────────────────────
 
@@ -218,5 +225,73 @@ describe('computeSlabGeometry — beam deductions (Phase 5.5i+)', () => {
     expect(geom.area).toBeCloseTo(16, 6);
     expect(geom.netArea).toBeCloseTo(16, 6);
     expect(geom.perimeter).toBeCloseTo(16, 3); // 4×4m perimeter = 16m
+  });
+
+  it('18. maxFreeSpanM present — no supports → fallback to min(bbox.w, bbox.h)', () => {
+    const geom = computeSlabGeometry(SLAB_4X4);
+    // 4m × 4m square → min = 4m
+    expect(geom.maxFreeSpanM).toBeCloseTo(4, 3);
+  });
+});
+
+// ─── computeSlabMaxFreeSpanM — Phase 3.8 analytical free span ────────────────
+
+describe('computeSlabMaxFreeSpanM — analytical free span (Phase 3.8)', () => {
+  const SLAB_VERTS = SLAB_4X4.outline.vertices;
+
+  it('19. no support outlines → fallback min(bbox.w, bbox.h)', () => {
+    const span = computeSlabMaxFreeSpanM(SLAB_VERTS, []);
+    expect(span).toBeCloseTo(4, 3); // 4×4m square → 4m
+  });
+
+  it('20. single support → fallback (need ≥2 for opposing pair detection)', () => {
+    const wall: WallFootprintForSpan = {
+      outline: { vertices: makeRectVertices(-500, -500, 4500, 0) },
+    };
+    const span = computeSlabMaxFreeSpanM(SLAB_VERTS, [wall.outline]);
+    expect(span).toBeCloseTo(4, 3); // fallback
+  });
+
+  it('21. two parallel walls on opposite sides → clear span = slab height − wall widths', () => {
+    // 4m × 4m slab. Bottom wall y:[-300, 0], top wall y:[4000, 4300].
+    // Slab spans between them: 4000 - 0 = 4000mm → 4m clear span.
+    const bottomWall: Polygon3D = { vertices: makeRectVertices(0, -300, 4000, 0) };
+    const topWall: Polygon3D = { vertices: makeRectVertices(0, 4000, 4000, 4300) };
+    const span = computeSlabMaxFreeSpanM(SLAB_VERTS, [bottomWall, topWall]);
+    expect(span).toBeCloseTo(4, 2); // clear span between inner faces (y=0 to y=4000) = 4m
+  });
+
+  it('22. walls partially inside slab — inner face at slab edge', () => {
+    // Bottom wall at y:[-200, 200] (inner face y=200), top at y:[3800, 4200] (inner face y=3800).
+    // Clear span = 3800 - 200 = 3600mm = 3.6m.
+    const bottomWall: Polygon3D = { vertices: makeRectVertices(0, -200, 4000, 200) };
+    const topWall: Polygon3D = { vertices: makeRectVertices(0, 3800, 4000, 4200) };
+    const span = computeSlabMaxFreeSpanM(SLAB_VERTS, [bottomWall, topWall]);
+    expect(span).toBeCloseTo(3.6, 2);
+  });
+
+  it('23. two parallel beams as supports → uses beam inner faces', () => {
+    // Beam A fully inside at y:200–450 (inner face 450), Beam B at y:3550–3800 (inner face 3550).
+    // Clear span = 3550 - 450 = 3100mm = 3.1m.
+    const beamA: Polygon3D = { vertices: makeRectVertices(500, 200, 3500, 450) };
+    const beamB: Polygon3D = { vertices: makeRectVertices(500, 3550, 3500, 3800) };
+    const span = computeSlabMaxFreeSpanM(SLAB_VERTS, [beamA, beamB]);
+    expect(span).toBeCloseTo(3.1, 2);
+  });
+
+  it('24. span clamped to directional slab extent (never exceeds Feret diameter)', () => {
+    // Supports far outside slab → span = full slab extent in optimum direction.
+    // For 4m×4m square: max Feret (diagonal) ≈ 5.657m.
+    const farBelow: Polygon3D = { vertices: makeRectVertices(-10000, -10000, 4000, -5000) };
+    const farAbove: Polygon3D = { vertices: makeRectVertices(-10000, 9000, 4000, 10000) };
+    const span = computeSlabMaxFreeSpanM(SLAB_VERTS, [farBelow, farAbove]);
+    const maxFeret = Math.hypot(4, 4); // 4m×4m diagonal ≈ 5.657m
+    expect(span).toBeLessThanOrEqual(maxFeret + 0.01);
+    expect(span).toBeGreaterThan(0);
+  });
+
+  it('25. degenerate slab (<3 vertices) → fallback bbox', () => {
+    const span = computeSlabMaxFreeSpanM([{ x: 0, y: 0, z: 0 }, { x: 4000, y: 0, z: 0 }], []);
+    expect(span).toBeGreaterThanOrEqual(0);
   });
 });

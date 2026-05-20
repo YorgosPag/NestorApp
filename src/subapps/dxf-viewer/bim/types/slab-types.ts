@@ -83,6 +83,12 @@ export interface SlabGeometry {
   readonly volume: number;
   /** m. Περίμετρος πολυγώνου. */
   readonly perimeter: number;
+  /**
+   * m. Estimated structural free span (analytical when supporting elements
+   * provided to `computeSlabGeometry`; fallback = min(bbox.w, bbox.h) when no
+   * supports available). Phase 3.8.
+   */
+  readonly maxFreeSpanM: number;
 }
 
 // ─── Entity (BIM generic instantiation) ─────────────────────────────────────

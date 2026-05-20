@@ -56,6 +56,7 @@ export function computeBeamGeometry(params: BeamParams): BeamGeometry {
     length: lengthM,
     area,
     volume,
+    maxFreeSpanM: lengthM,
   };
 }
 

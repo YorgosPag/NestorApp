@@ -84,8 +84,8 @@ describe('validateSlabParams — code violations', () => {
     expect(r.codeViolations).toContain('slab.validation.codeViolations.thicknessTooThin');
   });
 
-  it('flags maxFreeSpanExceeded for bbox > MAX_FREE_SPAN_WARNING_M (5m)', () => {
-    // 8m × 6m bbox → max dim 8m > 5m → violation.
+  it('flags maxFreeSpanExceeded for span > MAX_FREE_SPAN_WARNING_M (5m)', () => {
+    // 8m × 6m slab — span = min dim 6m > 5m → violation (shorter direction = structural span).
     const r = validateSlabParams(makeSlab({
       outline: {
         vertices: [

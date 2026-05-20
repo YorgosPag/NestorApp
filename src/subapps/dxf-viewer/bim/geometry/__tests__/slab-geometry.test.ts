@@ -123,11 +123,12 @@ describe('computeSlabGeometry — perimeter + bbox + volume', () => {
     expect(g.netArea).toBeCloseTo(g.area, FLOAT_TOL);
   });
 
-  it('getSlabMaxBboxDimensionM returns max(dx,dy) in meters', () => {
+  it('getSlabMaxBboxDimensionM returns min(dx,dy) in meters (structural span direction)', () => {
+    // 8m × 3m slab — spans the SHORT direction (3m), not the 8m length.
     const params = makeSlab([
       { x: 0, y: 0 }, { x: 8000, y: 0 }, { x: 8000, y: 3000 }, { x: 0, y: 3000 },
     ]);
-    expect(getSlabMaxBboxDimensionM(params)).toBeCloseTo(8, FLOAT_TOL);
+    expect(getSlabMaxBboxDimensionM(params)).toBeCloseTo(3, FLOAT_TOL);
   });
 });
 
