@@ -229,7 +229,7 @@ describe('beam-grips (Phase 5.5a)', () => {
       ...base,
       width: 333,
       depth: 555,
-      elevation: 2750,
+      topElevation: 2750,
       supportType: 'fixed',
       material: 'rc-c25',
     };
@@ -240,7 +240,7 @@ describe('beam-grips (Phase 5.5a)', () => {
     });
     expect(next.width).toBe(333);
     expect(next.depth).toBe(555);
-    expect(next.elevation).toBe(2750);
+    expect(next.topElevation).toBe(2750);
     expect(next.supportType).toBe('fixed');
     expect(next.material).toBe('rc-c25');
   });

@@ -1,34 +1,29 @@
 /**
- * SectionStencilRenderer — True stencil cap pattern για ADR-366 §A.3 Phase 7.0a.
+ * SectionStencilRenderer — True stencil cap pattern για ADR-366 §A.3.
  *
- * Λύνει το πρόβλημα του Phase 7.0 base: τα face meshes του SectionBox ήταν
- * placeholder visual indicator (Navisworks-style). Το cut face έδειχνε
- * "κούφιο" interior αντί solid filled surface.
+ * Phase 7.0a (2-pass): per active plane = clearStencil + BackSide scene pass
+ *   (IncrementWrap) + FrontSide scene pass (DecrementWrap) + cap quad.
+ *   Box mode worst case: 12 full BIM scene renders + 6 cap quads.
  *
- * Pattern: Three.js webgl_clipping_stencil example.
- *   https://threejs.org/examples/?q=clip#webgl_clipping_stencil
+ * Phase 7.0b (1-pass): per active plane = clearStencil + zero-area warmup
+ *   (cache seed) + single DoubleSide scene pass + cap quad.
+ *   Box mode worst case: 6 full BIM scene renders + 6 cap quads.
+ *   Reduction: ~50% fewer large scene renders.
  *
- * Algorithm (per enabled clip plane i):
- *   1. clearStencil()
- *   2. scene.overrideMaterial = backStencilMat
- *      (BackSide, IncrementWrap, color/depth write OFF, clipping=others)
- *      → renderer.render(scene, camera)
- *   3. scene.overrideMaterial = frontStencilMat (FrontSide, DecrementWrap)
- *      → renderer.render(scene, camera)
- *   4. scene.overrideMaterial = null
- *   5. Position cap mesh on plane i, render capScene with stencilFunc=NotEqual,0
- *      → solid SECTION_CUT_SURFACE fill where geometry was cut
- *
- * Cap material clips with `others` (όχι self) ώστε το ίδιο το cap να μην
- * αποκόπτεται από την τομή που γεμίζει. Render order: caller πρέπει να έχει
- * ήδη ζωγραφίσει την κύρια σκηνή με ΟΛΑ τα planes ενεργά. Καλείται μετά,
- * γράφει caps πάνω από το main render via stencil mask.
- *
- * Trade-off: SSAO/composer bypass όταν section enabled (default render target
- * δεν έχει stencil buffer). Αποδεκτό — section editing = active interaction,
- * SSAO ενεργοποιείται μόνο σε idle.
+ * 1-pass mechanism (gl.stencilOpSeparate cache trick):
+ *   1. Warmup: render zero-area mesh with singlePassMat (stencilZPass=IncrementWrap).
+ *      Three.js caches stencil state as IncrementWrap. Zero fragments = no stencil writes.
+ *   2. gl.stencilOpSeparate(FRONT, KEEP, KEEP, DECR_WRAP) — overrides WebGL FRONT face only.
+ *      Three.js JS cache still shows IncrementWrap (unaware of raw GL call).
+ *   3. mainScene render with overrideMaterial=singlePassMat — for every object, Three.js
+ *      compares material.stencilZPass (IncrementWrap) vs cached (IncrementWrap) → CACHE HIT
+ *      → skips gl.stencilOp → our FRONT override persists throughout.
+ *      Result: back-facing fragments → IncrementWrap (entering solid),
+ *              front-facing fragments → DecrementWrap (exiting solid). Stencil parity correct.
+ *   4. Cap quad: stencilFunc=NotEqual(0) → solid fill where geometry was cut.
  *
  * @see ADR-366 §A.3.Q4 — Cut surface visual decision
+ * @see ADR-366 Phase 7.0b implementation note
  */
 
 import * as THREE from 'three';
@@ -46,8 +41,8 @@ const FALLBACK_CAP_SIZE = 100;
 
 export class SectionStencilRenderer {
   private readonly deps: StencilRendererDeps;
-  private readonly backStencilMat: THREE.MeshBasicMaterial;
-  private readonly frontStencilMat: THREE.MeshBasicMaterial;
+  private readonly singlePassStencilMat: THREE.MeshBasicMaterial;
+  private readonly warmupScene: THREE.Scene;
   private readonly capMat: THREE.MeshBasicMaterial;
   private readonly capMesh: THREE.Mesh;
   private readonly capScene: THREE.Scene;
@@ -55,14 +50,8 @@ export class SectionStencilRenderer {
 
   constructor(deps: StencilRendererDeps) {
     this.deps = deps;
-    this.backStencilMat = this.createStencilMaterial(
-      THREE.BackSide,
-      THREE.IncrementWrapStencilOp,
-    );
-    this.frontStencilMat = this.createStencilMaterial(
-      THREE.FrontSide,
-      THREE.DecrementWrapStencilOp,
-    );
+    this.singlePassStencilMat = this.createSinglePassMaterial();
+    this.warmupScene = this.createWarmupScene();
     this.capMat = this.createCapMaterial();
     const geom = new THREE.PlaneGeometry(1, 1);
     this.capMesh = new THREE.Mesh(geom, this.capMat);
@@ -71,21 +60,35 @@ export class SectionStencilRenderer {
     this.capScene.add(this.capMesh);
   }
 
-  private createStencilMaterial(
-    side: THREE.Side,
-    op: THREE.StencilOp,
-  ): THREE.MeshBasicMaterial {
+  private createSinglePassMaterial(): THREE.MeshBasicMaterial {
     const mat = new THREE.MeshBasicMaterial();
+    mat.side = THREE.DoubleSide;
+    mat.colorWrite = false;
     mat.depthWrite = false;
     mat.depthTest = true;
-    mat.colorWrite = false;
-    mat.side = side;
     mat.stencilWrite = true;
     mat.stencilFunc = THREE.AlwaysStencilFunc;
-    mat.stencilFail = op;
-    mat.stencilZFail = op;
-    mat.stencilZPass = op;
+    mat.stencilFail = THREE.KeepStencilOp;
+    mat.stencilZFail = THREE.KeepStencilOp;
+    // BACK face (entering solid) → IncrementWrap via Three.js material property.
+    // FRONT face (exiting solid) → DecrementWrap via gl.stencilOpSeparate (per-plane override).
+    mat.stencilZPass = THREE.IncrementWrapStencilOp;
     return mat;
+  }
+
+  private createWarmupScene(): THREE.Scene {
+    // Zero-area plane (scale=0): zero fragments rendered → zero stencil writes.
+    // Sole purpose: trigger Three.js's updateCommonMaterial(singlePassMat) so the
+    // stencil state cache is seeded with IncrementWrap before the real scene pass.
+    const scene = new THREE.Scene();
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1),
+      this.singlePassStencilMat,
+    );
+    mesh.scale.set(0, 0, 1);
+    mesh.frustumCulled = false;
+    scene.add(mesh);
+    return scene;
   }
 
   private createCapMaterial(): THREE.MeshBasicMaterial {
@@ -108,8 +111,8 @@ export class SectionStencilRenderer {
 
   /**
    * Render stencil caps για κάθε enabled plane. Καλείται ΜΕΤΑ το main scene
-   * render (καλούμενος πρέπει να έχει κάνει renderer.render(scene, camera)
-   * πρώτα με ΟΛΑ τα planes clipping ενεργά).
+   * render (caller πρέπει να έχει κάνει renderer.render(scene, camera) πρώτα
+   * με ΟΛΑ τα planes clipping ενεργά).
    *
    * @param renderer    Active WebGLRenderer (στο default framebuffer με stencil)
    * @param mainScene   Η κύρια σκηνή (BIM + DXF + sectionBox + lights)
@@ -155,20 +158,29 @@ export class SectionStencilRenderer {
     index: number,
     capSize: number,
   ): void {
+    const gl = renderer.getContext() as WebGL2RenderingContext;
     const currentPlane = planes[index];
-    const others = planes.filter((_, idx) => idx !== index);
-    this.backStencilMat.clippingPlanes = others as THREE.Plane[];
-    this.frontStencilMat.clippingPlanes = others as THREE.Plane[];
-    this.capMat.clippingPlanes = others as THREE.Plane[];
+    const others = planes.filter((_, idx) => idx !== index) as THREE.Plane[];
+
+    this.singlePassStencilMat.clippingPlanes = others;
+    this.capMat.clippingPlanes = others;
 
     renderer.clearStencil();
 
-    mainScene.overrideMaterial = this.backStencilMat;
-    renderer.render(mainScene, camera);
+    // Seed Three.js stencil state cache with singlePassMat (IncrementWrap).
+    // Required because the previous cap render left the cache at ReplaceStencilOp;
+    // without seeding, the first BIM object would cause a cache-miss and Three.js
+    // would call gl.stencilOp(INCR_WRAP), overwriting our FRONT face override below.
+    renderer.render(this.warmupScene, camera);
 
-    mainScene.overrideMaterial = this.frontStencilMat;
-    renderer.render(mainScene, camera);
+    // Override FRONT face stencil op to DecrementWrap (exiting solid).
+    // Three.js cache stays IncrementWrap (it doesn't know about this raw GL call),
+    // so all BIM objects in the main pass will cache-hit and skip gl.stencilOp.
+    // Back-facing fragments keep IncrementWrap (entering solid). Parity → NotEqual(0) → cap.
+    gl.stencilOpSeparate(gl.FRONT, gl.KEEP, gl.KEEP, gl.DECR_WRAP);
 
+    mainScene.overrideMaterial = this.singlePassStencilMat;
+    renderer.render(mainScene, camera);
     mainScene.overrideMaterial = null;
 
     this.positionCapMesh(currentPlane, capSize);
@@ -176,11 +188,9 @@ export class SectionStencilRenderer {
   }
 
   private positionCapMesh(plane: THREE.Plane, capSize: number): void {
-    // Point on plane closest to origin: -normal * constant
     const normal = plane.normal;
     const pointOnPlane = normal.clone().multiplyScalar(-plane.constant);
     this.capMesh.position.copy(pointOnPlane);
-    // Align quad normal (default +Z) with plane normal
     const defaultNormal = new THREE.Vector3(0, 0, 1);
     this.capMesh.quaternion.setFromUnitVectors(defaultNormal, normal);
     this.capMesh.scale.set(capSize, capSize, 1);
@@ -206,9 +216,13 @@ export class SectionStencilRenderer {
     if (this.disposed) return;
     this.disposed = true;
     this.capMesh.geometry.dispose();
-    this.backStencilMat.dispose();
-    this.frontStencilMat.dispose();
+    this.singlePassStencilMat.dispose();
     this.capMat.dispose();
+    const warmupMesh = this.warmupScene.children[0] as THREE.Mesh | undefined;
+    if (warmupMesh) {
+      warmupMesh.geometry.dispose();
+      this.warmupScene.remove(warmupMesh);
+    }
     while (this.capScene.children.length > 0) {
       this.capScene.remove(this.capScene.children[0]);
     }

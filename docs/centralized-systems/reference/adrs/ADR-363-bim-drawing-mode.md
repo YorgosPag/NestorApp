@@ -320,31 +320,39 @@ export interface OpeningEntity extends BimEntity<OpeningKind, OpeningParams, Ope
 
 ### 5.5 Slab — Type Schema
 
+> **Elevation convention**: `levelElevation` = top face (FFL) σε mm από project origin. Slab hangs DOWN by `thickness`. Βλ. **ADR-369 §2.1** για full reference system.
+
 ```typescript
-// src/subapps/dxf-viewer/bim/types/slab-types.ts
+// src/subapps/dxf-viewer/bim/types/slab-types.ts  (Post-ADR-369 §2.1 — Phase A4)
 export type SlabKind = 'floor' | 'ceiling' | 'roof' | 'ground' | 'foundation';
+export type SlabGeometryType = 'box' | 'tilted';
 
 export interface SlabParams {
   readonly kind: SlabKind;
-  readonly outline: Polygon3D;         // closed polygon (CCW). Rectilinear OR free
-  readonly elevation: number;          // mm (z από project origin)
-  readonly thickness: number;          // mm (default 200)
-  readonly slabOpeningIds?: string[];  // διανοίξεις (lift shaft, stair well) — Phase 3.5
+  readonly outline: Polygon3D;              // closed polygon (CCW). Min 3 vertices.
+  readonly levelElevation: number;          // mm. Top face z (FFL). Renamed από elevation (ADR-369 §2.1).
+  readonly heightOffsetFromLevel?: number;  // mm (default 0) — raise/drop top-face від FFL.
+  readonly thickness: number;               // mm (default 200)
+  readonly geometryType: SlabGeometryType;  // 'box' (default) | 'tilted'. ADR-369 §9 Q7.
+  readonly slope?: SlabSlope;               // required when geometryType='tilted', forbidden otherwise.
+  readonly slabOpeningIds?: string[];       // διανοίξεις (lift shaft, stair well) — Phase 3.5
   readonly material?: string;
-  readonly reinforcement?: 'one-way' | 'two-way' | 'waffle' | 'flat'; // structural hint
+  readonly reinforcement?: 'one-way' | 'two-way' | 'waffle' | 'flat';
 }
 
 export interface SlabGeometry {
   readonly polygon: Polygon3D;
   readonly bbox: BoundingBox3D;
-  readonly area: number;               // m² (gross, minus slabOpenings = net)
+  readonly area: number;               // m² (gross)
   readonly netArea: number;            // m² (μετά τις διανοίξεις)
   readonly volume: number;             // m³ (netArea × thickness)
   readonly perimeter: number;          // m
+  readonly maxFreeSpanM: number;       // m (Phase 3.8)
 }
 
-export interface SlabEntity extends BimEntity<SlabKind, SlabParams, SlabGeometry> {
+export interface SlabEntity extends BimEntity<SlabKind, SlabParams, SlabGeometry>, IfcEntityMixin {
   type: 'slab';
+  readonly ifcType: 'IfcSlab';
 }
 ```
 
@@ -384,31 +392,39 @@ export interface ColumnEntity extends BimEntity<ColumnKind, ColumnParams, Column
 
 ### 5.7 Beam — Type Schema
 
+> **Elevation convention**: `topElevation` = top face (top-of-beam) σε mm από project origin. Beam hangs DOWN by `depth`. Βλ. **ADR-369 §2.2** για full reference system.
+
 ```typescript
-// src/subapps/dxf-viewer/bim/types/beam-types.ts
+// src/subapps/dxf-viewer/bim/types/beam-types.ts  (Post-ADR-369 §2.2 — Phase A4)
 export type BeamKind = 'straight' | 'curved' | 'cantilever';
+export type BeamSupportType = 'simple' | 'fixed' | 'cantilever';
 
 export interface BeamParams {
   readonly kind: BeamKind;
-  readonly start: Point3D;
-  readonly end: Point3D;
-  readonly width: number;              // mm (default 250)
-  readonly height: number;             // mm (default 500)
-  readonly elevation: number;          // mm (z του bottom-of-beam)
+  readonly startPoint: Point3D;             // renamed από start (ADR-369 Phase A4)
+  readonly endPoint: Point3D;               // renamed από end
+  readonly curveControl?: Point3D;          // για curved kind (Bezier control)
+  readonly width: number;                   // mm. Cross-section X (default 250)
+  readonly depth: number;                   // mm. Cross-section Y / structural depth (default 500). Renamed από height.
+  readonly topElevation: number;            // mm. Top face z. Renamed από elevation (ADR-369 §2.2).
+  readonly zOffset?: number;                // mm (default 0) — drop-from-ceiling offset. ADR-369 §854.
+  readonly supportType?: BeamSupportType;
   readonly material?: string;
-  readonly curveControl?: Point3D;     // για curved
 }
 
 export interface BeamGeometry {
   readonly axisPolyline: Polyline3D;
+  readonly outline: Polygon3D;
   readonly bbox: BoundingBox3D;
-  readonly length: number;             // m (3D length)
-  readonly crossSectionArea: number;   // m² (width × height)
+  readonly length: number;             // m (axis length)
+  readonly area: number;               // m² (top surface)
   readonly volume: number;             // m³
+  readonly maxFreeSpanM: number;       // m (Phase 3.8)
 }
 
-export interface BeamEntity extends BimEntity<BeamKind, BeamParams, BeamGeometry> {
+export interface BeamEntity extends BimEntity<BeamKind, BeamParams, BeamGeometry>, IfcEntityMixin {
   type: 'beam';
+  readonly ifcType: 'IfcBeam';
 }
 ```
 

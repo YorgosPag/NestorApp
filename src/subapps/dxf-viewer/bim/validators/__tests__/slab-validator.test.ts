@@ -26,7 +26,8 @@ function makeSlab(overrides?: Partial<SlabParams>): SlabParams {
         { x: 0, y: 4000, z: 0 },
       ],
     },
-    elevation: 0,
+    levelElevation: 0,
+    geometryType: 'box',
     thickness: 200,
     ...overrides,
   };
@@ -99,18 +100,18 @@ describe('validateSlabParams — code violations', () => {
     expect(r.codeViolations).toContain('slab.validation.codeViolations.maxFreeSpanExceeded');
   });
 
-  it('flags ceilingRoofAtZeroElevation for ceiling με elevation=0', () => {
-    const r = validateSlabParams(makeSlab({ kind: 'ceiling', elevation: 0 }));
+  it('flags ceilingRoofAtZeroElevation for ceiling με levelElevation=0', () => {
+    const r = validateSlabParams(makeSlab({ kind: 'ceiling', levelElevation: 0 }));
     expect(r.codeViolations).toContain('slab.validation.codeViolations.ceilingRoofAtZeroElevation');
   });
 
-  it('flags ceilingRoofAtZeroElevation for roof με elevation=0', () => {
-    const r = validateSlabParams(makeSlab({ kind: 'roof', elevation: 0 }));
+  it('flags ceilingRoofAtZeroElevation for roof με levelElevation=0', () => {
+    const r = validateSlabParams(makeSlab({ kind: 'roof', levelElevation: 0 }));
     expect(r.codeViolations).toContain('slab.validation.codeViolations.ceilingRoofAtZeroElevation');
   });
 
-  it('does NOT flag ceilingRoofAtZeroElevation for floor με elevation=0', () => {
-    const r = validateSlabParams(makeSlab({ kind: 'floor', elevation: 0 }));
+  it('does NOT flag ceilingRoofAtZeroElevation for floor με levelElevation=0', () => {
+    const r = validateSlabParams(makeSlab({ kind: 'floor', levelElevation: 0 }));
     expect(r.codeViolations).not.toContain('slab.validation.codeViolations.ceilingRoofAtZeroElevation');
   });
 });
