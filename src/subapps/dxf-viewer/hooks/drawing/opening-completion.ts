@@ -34,7 +34,7 @@ import {
 import type { WallEntity } from '../../bim/types/wall-types';
 import { computeOpeningGeometry, projectPointToWallOffset } from '../../bim/geometry/opening-geometry';
 import { validateOpeningParams } from '../../bim/validators/opening-validator';
-import { generateOpeningId } from '@/services/enterprise-id-convenience';
+import { createOpening } from '@/services/factories/opening.factory';
 
 // ─── Param overrides accepted by the builder ─────────────────────────────────
 
@@ -124,16 +124,7 @@ export function buildOpeningEntity(
     return { ok: false, hardErrors: validation.hardErrors };
   }
   const geometry = computeOpeningGeometry(params, hostWall);
-  const entity: OpeningEntity = {
-    id: generateOpeningId(),
-    type: 'opening',
-    kind: params.kind,
-    layerId,
-    params,
-    geometry,
-    validation: validation.bimValidation,
-    visible: true,
-  };
+  const entity = createOpening({ params, geometry, layerId, validation: validation.bimValidation, visible: true });
   return { ok: true, entity };
 }
 

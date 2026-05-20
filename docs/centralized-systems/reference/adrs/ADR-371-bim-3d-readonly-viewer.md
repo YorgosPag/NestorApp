@@ -1,11 +1,11 @@
 # ADR-371 — BIM 3D Read-Only Viewer in Properties Floorplan Tab
 
-- **Status**: 🟡 WIP — Session A skeleton (final update Session B).
+- **Status**: ✅ IMPLEMENTED — Session B complete (2026-05-20).
 - **Date**: 2026-05-20
 - **Author**: Giorgio Pagonis + Claude (Opus 4.7)
 - **Related**: ADR-040 (Preview Canvas Performance), ADR-366 (3D BIM Viewer photorealistic), ADR-369 (BIM elevation convention), ADR-370 (BIM Read-Only 2D Visualization), ADR-294 (SSoT Ratchet).
 - **Scope**: Properties subapp read-only floorplan tab — mount the same `BimViewport3D` (Three.js + ViewCube + Floors/Lighting/Quality panel) που σερβίρει το `/dxf/viewer`, αλλά χωρίς edit affordances ή render uploads.
-- **Impact**: 🟢 Additive — props-driven refactor του υπάρχοντος viewport, καμία αντιγραφή Three.js / ViewCube / scene manager. Νέος overlay + toggle button στο Properties pipeline (Session B).
+- **Impact**: 🟢 Additive — props-driven refactor του υπάρχοντος viewport, καμία αντιγραφή Three.js / ViewCube / scene manager. Νέος overlay + toggle button wired στο Properties pipeline (Session B complete).
 
 ---
 
@@ -40,6 +40,8 @@ ADR-370 παρέδωσε read-only 2D BIM render στο `/properties?view=floorp
 | `projectId` | `string \| null` | `undefined` | Αν δοθεί, υπερισχύει του hierarchy. Αν `undefined` ΚΑΙ hierarchy missing → `null` (render uploads disabled). |
 | `readOnly` | `boolean` | `false` | `true` → hide render button, render dialog, progress overlay. `Floating3DPanel`, `BimEntityCardPanel`, `QuickProperties3DHoverPopover`, `PerformanceHUD` παραμένουν ορατά (Q2 Recognition). |
 | `bimEntities` | `Bim3DEntities \| null` | `undefined` | `undefined` → subscribe στο global store (legacy). Αν object/null → external mode: το prop είναι το single source, **καμία** global store subscription. `null` = render empty scene (data not ready). |
+| `visible` | `boolean` | `undefined` | **Option C** — controlled visibility, υπερισχύει του global `useViewMode3DStore` όταν δοθεί. Χρησιμοποιείται από `Bim3DReadOnlyOverlay` για να bypassάρει το `if (!is3D) return null` check χωρίς να αγγίζει το global store (Q1 decision). Στο `/dxf/viewer` call site (no prop) → store fallback = legacy behaviour. |
+| `onClose` | `() => void` | `undefined` | Callback για το `← 2D` exit button όταν `readOnly=true`. Αποφεύγει `toggle2D3D()` που θα άλλαζε το global store αντί για το local `show3D` state. |
 
 ### 2.2 Hierarchy context fallback
 
@@ -70,14 +72,16 @@ ADR-370 παρέδωσε read-only 2D BIM render στο `/properties?view=floorp
 | `src/subapps/dxf-viewer/contexts/ProjectHierarchyContext.tsx` | + `useProjectHierarchyOptional()` export. Canonical `useProjectHierarchy()` unchanged. |
 | `docs/centralized-systems/reference/adrs/ADR-371-bim-3d-readonly-viewer.md` | Νέο — αυτό το ADR (σκελετός). |
 
-### Session B (επόμενη session — out of scope τώρα)
+### Session B (IMPLEMENTED 2026-05-20)
 
-| Path | Ρόλος |
+| Path | Αλλαγή |
 |---|---|
-| `src/components/shared/files/media/Bim3DReadOnlyOverlay.tsx` | Overlay wrapper: mountάρει `<BimViewport3D readOnly bimEntities={...} projectId={...} />` πάνω στο 2D `FloorplanGallery` canvas, με δικό του `ViewMode3DStore`-equivalent local state (3D on/off ανεξάρτητο από /dxf/viewer). |
-| `src/components/shared/files/media/Bim3DToggleButton.tsx` | Toggle button πάνω στο `FloorplanGallery` (mirror του "3D Προβολή" button του /dxf/viewer). |
-| `src/components/shared/files/media/FloorplanGallery.tsx` | Render `Bim3DToggleButton` + `Bim3DReadOnlyOverlay` (conditional στο 3D state). Περνά `bimEntities` από το ήδη υπάρχον `useFloorplanBimEntities(floorplanId)` (ADR-370). |
-| `src/i18n/locales/{el,en}/bim3d.json` | + keys για Properties-specific labels (αν χρειαστούν — π.χ. tooltip differentiation). |
+| `src/subapps/dxf-viewer/bim-3d/viewport/BimViewport3D.tsx` | + `visible?: boolean` (Option C — overrides global store), + `onClose?: () => void` (exit button in readOnly mode). `is3D` renamed `is3DFromStore`, `effectiveVisible` computed. Mount effect + early-return use `effectiveVisible`. Exit button calls `onClose` when `readOnly && onClose`. |
+| `src/components/shared/files/media/Bim3DReadOnlyOverlay.tsx` | NEW — wrapper που mountάρει `<BimViewport3D readOnly visible bimEntities={...} onClose={...} />`. Δέχεται `bimSnapshot: FloorplanBimSnapshot` (απευθείας από parent — μία subscription, SSoT). Maps `FloorplanBimSnapshot → Bim3DEntities` με `useMemo`. |
+| `src/components/shared/files/media/Bim3DToggleButton.tsx` | NEW — prop-driven toggle (no global store). Reuses `bim3d.modeToggle.*` i18n keys. Mirror του `ViewMode3DToggleButton` αλλά decoupled. |
+| `src/components/shared/files/media/FloorplanGallery.tsx` | + `projectId?: string \| null` prop. + `show3D` local state. `renderViewerContent` accepts `overlayContent?` (5th param). Toggle button in `isDxf && bimEntities.hasAny` block. Overlay injected in inline viewer call only (fullscreen out of scope). 498 lines (≤ 500 N.7.1). |
+| `src/components/shared/files/media/floorplan-gallery-config.ts` | + `projectId?: string \| null` to `FloorplanGalleryProps` interface. |
+| `src/i18n/locales/{el,en}/bim3d.json` | No new keys — existing `modeToggle.*` reused. |
 
 ---
 
@@ -91,7 +95,10 @@ ADR-370 παρέδωσε read-only 2D BIM render στο `/properties?view=floorp
 
 ### 4.2 Session B — Properties read-only 3D
 
-(Defined in Session B handoff — out of scope εδώ.)
+- **Toggle button**: εμφανίζεται στο header του `FloorplanGallery` μόνο όταν `isDxf && bimEntities.hasAny` (entity guard). Disabled όταν `bimEntities.hasAny === false` (SYNTHETIC_FLOORPLAN_PREFIX guard εφαρμόζεται ήδη από `useFloorplanBimEntities`).
+- **3D overlay**: `Bim3DReadOnlyOverlay` mountάρεται absolute `z-[100]` πάνω από τον canvas. `BimViewport3D` λαμβάνει `visible=true` (bypasses global store), `readOnly`, `bimEntities`, `onClose`. Exit `← 2D` button καλεί `onClose` → `setShow3D(false)`.
+- **SSoT data flow**: `FloorplanGallery` έχει ήδη `bimEntities` από `useFloorplanBimEntities`. Το overlay το δέχεται ως `bimSnapshot` prop → **μία** Firestore subscription, zero duplication.
+- **Browser verification**: ⚠️ Untested (dev server δεν τρέχει). Static review: backward compat kεπτά + overlay wiring correct. TS check pending (background).
 
 ---
 
@@ -115,4 +122,5 @@ ADR-370 παρέδωσε read-only 2D BIM render στο `/properties?view=floorp
 
 | Date | Change |
 |---|---|
-| 2026-05-20 | Initial skeleton (Session A). Props-driven refactor `BimViewport3D` + `useProjectHierarchyOptional()` hook. Backward-compat verified on /dxf/viewer call site (no props). Session B (overlay + toggle + FloorplanGallery wiring) WIP. |
+| 2026-05-20 | Initial skeleton (Session A). Props-driven refactor `BimViewport3D` + `useProjectHierarchyOptional()` hook. Backward-compat verified on /dxf/viewer call site (no props). |
+| 2026-05-20 | Session B complete. `visible` + `onClose` props added (Option C visibility override). `Bim3DReadOnlyOverlay` + `Bim3DToggleButton` new files. `FloorplanGallery` wired — local `show3D` state (Q1), toggle gated `isDxf && bimEntities.hasAny`, overlay in inline viewer. `FloorplanGalleryProps` + `projectId`. No new i18n keys. Status → IMPLEMENTED. |

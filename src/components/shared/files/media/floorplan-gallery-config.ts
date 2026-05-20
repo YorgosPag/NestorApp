@@ -67,6 +67,12 @@ export interface FloorplanGalleryProps {
    * fallback ids (`floor_floorplan_*`) are detected internally and skipped.
    */
   floorplanId?: string | null;
+  /**
+   * ADR-371 — Firestore project id for the 3D read-only viewer (upload origin).
+   * Falls back to ProjectHierarchyContext inside BimViewport3D; safe to omit
+   * when render uploads are not needed.
+   */
+  projectId?: string | null;
 }
 
 /**

@@ -18,6 +18,7 @@ import * as THREE from 'three';
 import { useSectionStore, type SectionBoxBounds } from '../stores/SectionStore';
 import { SectionBox } from '../systems/section/SectionBox';
 import { applyClippingPlanes, clearClippingPlanes } from '../systems/section/section-clip-applicator';
+import { SectionStencilRenderer } from '../systems/section/section-stencil-renderer';
 
 export interface SectionControllerDeps {
   readonly renderer: THREE.WebGLRenderer;
@@ -31,18 +32,24 @@ export interface SectionControllerDeps {
 export class SectionSceneController {
   private readonly deps: SectionControllerDeps;
   private readonly sectionBox: SectionBox;
+  private readonly stencilRenderer: SectionStencilRenderer;
   private readonly storeUnsub: () => void;
   private readonly pointerDown: (e: PointerEvent) => void;
   private readonly pointerMove: (e: PointerEvent) => void;
   private readonly pointerUp: (e: PointerEvent) => void;
   private initDone = false;
   private disposed = false;
+  private cachedPlanes: THREE.Plane[] = [];
 
   constructor(deps: SectionControllerDeps) {
     this.deps = deps;
     deps.renderer.localClippingEnabled = true;
     this.sectionBox = new SectionBox();
     deps.scene.add(this.sectionBox.root);
+    this.stencilRenderer = new SectionStencilRenderer({
+      getBimGroup: deps.getBimGroup,
+      getDxfBounds: deps.getDxfBounds,
+    });
     this.storeUnsub = this.subscribeStore();
     this.pointerDown = (e) => this.onPointerDown(e);
     this.pointerMove = (e) => this.onPointerMove(e);
@@ -79,16 +86,18 @@ export class SectionSceneController {
     if (!enabled) {
       clearClippingPlanes(this.deps.scene);
       this.sectionBox.setVisible(false);
+      this.cachedPlanes = [];
       this.deps.invalidatePathTracer();
       return;
     }
     if (mode === 'box') {
       if (boxBounds) this.sectionBox.setFromBounds(boxBounds);
       this.sectionBox.setVisible(true);
-      applyClippingPlanes(this.deps.scene, this.sectionBox.getPlanes());
+      this.cachedPlanes = this.sectionBox.getPlanes();
+      applyClippingPlanes(this.deps.scene, this.cachedPlanes);
     } else {
       this.sectionBox.setVisible(false);
-      const threePlanes = planes
+      this.cachedPlanes = planes
         .filter((p) => p.enabled)
         .map(
           (p) => new THREE.Plane(
@@ -96,9 +105,42 @@ export class SectionSceneController {
             p.constant,
           ),
         );
-      applyClippingPlanes(this.deps.scene, threePlanes);
+      applyClippingPlanes(this.deps.scene, this.cachedPlanes);
     }
     this.deps.invalidatePathTracer();
+  }
+
+  /**
+   * True αν το section είναι ενεργό ΚΑΙ έχει τουλάχιστον 1 active plane.
+   * Καθορίζει αν ο render loop θα κάνει direct render + stencil caps
+   * (bypass composer) αντί για την κανονική SSAO pipeline.
+   */
+  isStencilActive(): boolean {
+    if (this.disposed) return false;
+    return useSectionStore.getState().enabled && this.cachedPlanes.length > 0;
+  }
+
+  /**
+   * Render καρέ με stencil caps. Καλείται από τον ThreeJsSceneManager όταν
+   * `isStencilActive()` είναι true. Bypasses EffectComposer/SSAO (το default
+   * RT δεν έχει stencil buffer).
+   */
+  renderFrameWithCaps(camera: THREE.Camera): void {
+    if (this.disposed) return;
+    const renderer = this.deps.renderer;
+    renderer.autoClear = true;
+    renderer.render(this.deps.scene, camera);
+    const bounds = this.computeSceneBounds();
+    this.stencilRenderer.render(renderer, this.deps.scene, camera, this.cachedPlanes, bounds);
+  }
+
+  private computeSceneBounds(): THREE.Box3 | null {
+    const box = new THREE.Box3();
+    const bimBox = new THREE.Box3().setFromObject(this.deps.getBimGroup());
+    if (!bimBox.isEmpty()) box.union(bimBox);
+    const dxfBox = this.deps.getDxfBounds();
+    if (dxfBox && !dxfBox.isEmpty()) box.union(dxfBox);
+    return box.isEmpty() ? null : box;
   }
 
   private subscribeStore(): () => void {
@@ -151,5 +193,6 @@ export class SectionSceneController {
     dom.removeEventListener('pointermove', this.pointerMove, opts);
     dom.removeEventListener('pointerup', this.pointerUp, opts);
     this.sectionBox.dispose();
+    this.stencilRenderer.dispose();
   }
 }

@@ -47,9 +47,13 @@ export interface BimViewport3DProps {
   readOnly?: boolean;
   /** External BIM entity feed (Properties read-only). When provided, replaces Bim3DEntitiesStore subscription. */
   bimEntities?: Bim3DEntities | null;
+  /** Controlled visibility — overrides global ViewMode3DStore when provided (ADR-371 read-only). */
+  visible?: boolean;
+  /** Called when user clicks the ← 2D exit button in readOnly mode. */
+  onClose?: () => void;
 }
 
-export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimEntities }: BimViewport3DProps = {}) {
+export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimEntities, visible, onClose }: BimViewport3DProps = {}) {
   const { t } = useTranslation('bim3d');
   const containerRef = useRef<HTMLDivElement>(null);
   const managerRef = useRef<ThreeJsSceneManager | null>(null);
@@ -63,11 +67,13 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   const externalEntitiesMode = bimEntities !== undefined;
 
   // Low-frequency store subscriptions (user-triggered entity changes — not 60fps)
-  const is3D = useSyncExternalStore(
+  const is3DFromStore = useSyncExternalStore(
     useViewMode3DStore.subscribe,
     () => selectIs3D(useViewMode3DStore.getState()),
     () => false,
   );
+  // ADR-371: `visible` prop overrides global store (read-only Properties pipeline).
+  const effectiveVisible = visible !== undefined ? visible : is3DFromStore;
 
   const isRendering = useSyncExternalStore(
     useViewMode3DStore.subscribe,
@@ -82,7 +88,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // getState() calls would be no-ops; correct sync must live in this [is3D] effect.
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !is3D) return;
+    if (!container || !effectiveVisible) return;
 
     try {
       managerRef.current = new ThreeJsSceneManager(container);
@@ -133,7 +139,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       managerRef.current = null;
       errorRef.current = null;
     };
-  }, [is3D]);
+  }, [effectiveVisible]);
 
   // Ongoing subscriptions: fire when store data changes AFTER 3D mode is active.
   // ADR-371: skipped when external bimEntities prop drives the scene.
@@ -263,7 +269,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     useQuickProperties3DStore.getState().clearHover();
   }, []);
 
-  if (!is3D) return null;
+  if (!effectiveVisible) return null;
 
   if (errorRef.current) {
     return (
@@ -301,7 +307,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       <Tooltip>
         <TooltipTrigger asChild>
           <button
-            onClick={() => useViewMode3DStore.getState().toggle2D3D()}
+            onClick={readOnly && onClose ? onClose : () => useViewMode3DStore.getState().toggle2D3D()}
             aria-label={t('modeToggle.aria')}
             className="absolute left-3 top-3 z-30 flex select-none items-center gap-1 rounded border border-white/20 bg-black/40 px-2 py-1 text-xs font-medium text-white/80 backdrop-blur-sm transition-colors hover:bg-black/60 hover:text-white"
           >

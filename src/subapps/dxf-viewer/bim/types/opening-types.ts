@@ -25,6 +25,7 @@ import type {
   Polygon3D,
   BoundingBox3D,
 } from './bim-base';
+import type { IfcEntityMixin } from './ifc-entity-mixin';
 
 // ─── Sub-type discriminator (ADR-363 §5.4) ───────────────────────────────────
 
@@ -123,8 +124,11 @@ export interface OpeningGeometry {
  * mirror updated optimistically on opening create/delete).
  */
 export interface OpeningEntity
-  extends BimEntity<OpeningKind, OpeningParams, OpeningGeometry> {
+  extends BimEntity<OpeningKind, OpeningParams, OpeningGeometry>,
+    IfcEntityMixin {
   readonly type: 'opening';
+  /** IfcDoor: door/sliding-door/french-door. IfcWindow: window/fixed. */
+  readonly ifcType: 'IfcDoor' | 'IfcWindow';
 }
 
 // ─── Defaults & constants ────────────────────────────────────────────────────

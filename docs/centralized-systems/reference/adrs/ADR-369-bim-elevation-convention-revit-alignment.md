@@ -1,6 +1,6 @@
 # ADR-369 — BIM Elevation Convention: Revit/Industry-Standard Alignment
 
-- **Status**: 🚧 IN_IMPLEMENTATION — Phase A1 + A2 ✅ complete 2026-05-20 (primitives + top-level schemas + factories shipped, 120 tests pass). Phase A3/A4/A5 pending. Q&A 10/10 complete.
+- **Status**: 🚧 IN_IMPLEMENTATION — Phase A1 + A2 + A3 + A4 + A5 ✅ complete 2026-05-20 (All 5 BIM entity types carry IfcEntityMixin. Opening ifcType='IfcDoor'|'IfcWindow' inferred από kind). Phase B (service layer cascade + IFC writer) pending. Q&A 10/10 complete.
 - **Date**: 2026-05-20
 - **Author**: Giorgio Pagonis + Claude (Opus 4.7)
 - **Supersedes**: Partial elevation semantics in ADR-363 (BIM Drawing Mode), ADR-366 (3D BIM Viewer)
@@ -365,6 +365,58 @@ Only invert slab semantic, leave wall/column hardcoded at z=0.
 
 - **Q5 (Binding)** → Wall + Column schema integration ✅ shipped (binding fields strict required σε `WallParams`/`ColumnParams` + Zod `superRefine` validation + factory defaults). Auto-stretch cascade (`FloorService.update({ height })` → subscriber recompute) pending Phase B (service layer). Beam binding pending Phase A5.
 - **Q8 (IFC Export)** → Wall + Column `IfcEntityMixin` ✅ shipped (ifcGuid required + ifcType narrowed per entity class + optional pset). Factory auto-generates GUID ONCE per entity lifetime. Slab/Beam/Opening wiring pending Phase A4/A5. IFC writer (web-ifc WASM) deferred Phase B+.
+
+| 2026-05-20 | Giorgio + Claude | **Phase A4 implemented (Horizontal BIM — Slab + Beam)** — 6 new files + 12 modified. **Slab schema** (`slab-types.ts` extended): 🔴 BREAKING rename `elevation` → `levelElevation` (top face FFL, ADR-369 §2.1 canonical). New fields: `heightOffsetFromLevel?` (mm, default 0), `geometryType: 'box'\|'tilted'` (ADR-369 §9 Q7 Phase 1 subset — `mesh` reserved Phase 2), `slope?: SlabSlope` (direction/angle/pivotEdge, required when tilted). `SlabEntity` mixes `IfcEntityMixin` (`ifcType: 'IfcSlab'` literal). Constants renamed: `SLAB_KIND_DEFAULT_ELEVATION_MM` → `SLAB_KIND_DEFAULT_LEVEL_ELEVATION_MM` (values updated for top-face semantic — floor:0→0, ceiling:2800→3000, foundation:-500→0). New `DEFAULT_SLAB_GEOMETRY_TYPE = 'box'`. **Beam schema** (`beam-types.ts` extended): 🟢 RENAME `elevation` → `topElevation` (ADR-369 §2.2 — semantics unchanged, clarity improved). New fields: `zOffset?` (mm, default 0 — drop-from-ceiling offset, ADR-369 §854). `BeamEntity` mixes `IfcEntityMixin` (`ifcType: 'IfcBeam'` literal). Constants renamed: `DEFAULT_BEAM_ELEVATION_MM` → `DEFAULT_BEAM_TOP_ELEVATION_MM`. New `DEFAULT_BEAM_Z_OFFSET_MM = 0`. **Strict Zod** (`slab.schemas.ts` + `beam.schemas.ts`): `SlabParamsSchema` με `superRefine()` που rejects `geometryType='tilted'` χωρίς `slope` και αντιστρόφως (discriminated coupling). `SlabEntitySchema` + `BeamParamsSchema` + `BeamEntitySchema` validate factory output με `IfcGuidSchema` + literal `ifcType` discriminator + passthrough για BaseEntity tenant fields. **Factories** (`slab.factory.ts` + `beam.factory.ts`): `createSlab()` + `createBeam()` auto-fill `ifcGuid` ONCE μέσω `generateIfcGuid()`, inject `ifcType` literal ('IfcSlab'/'IfcBeam'), default `geometryType='box'` for slabs, `zOffset=0` for beams, validate Zod on output. **Tests**: 334-line slab factory suite + 252-line beam factory suite — geometryType defaults/override, slope discriminator (tilted requires slope, box forbids slope), IfcEntityMixin auto-fill (ifcGuid uniqueness, ifcType literal), enterprise ID prefix (slab\_/beam\_), Zod accept/reject, tenant pass-through. **Cascade migration**: `slab-completion.ts` + `beam-completion.ts` delegate entity assembly σε factory (replaced inline `{id, type, kind, layerId, ...}` literals). `SlabParamOverrides` + `BeamParamOverrides` extended με νέα fields. `slab-validator.ts` → `levelElevation` field reference. `beam-geometry.ts` + tests → `topElevationMm` in bbox param. **3D Converter** (`BimToThreeConverter.ts`): slab extrusion direction FIXED — `position.y = (levelElevation + heightOffsetFromLevel - thickness) * MM_TO_M` (hangs DOWN per ADR-369 §2.1). Beam: `position.y = (topElevation + zOffset) * MM_TO_M - depthM` (hangs DOWN). **Ribbon wiring**: `slab-command-keys.ts` + `beam-command-keys.ts` + `contextual-slab-tab.ts` + `contextual-beam-tab.ts` + `useRibbonSlabBridge.ts` + `useRibbonBeamBridge.ts` → `elevation` key renamed → `levelElevation`/`topElevation`. **Locales**: `el` "Στάθμη (FFL)" (slab) + "Στάθμη (Άνω)" (beam); `en` "Level (FFL)" + "Level (Top)". **Phase A5 (Opening) επόμενο.** |
+
+### Phase A4 — File inventory
+
+| File | Purpose |
+|------|---------|
+| `src/subapps/dxf-viewer/bim/types/slab-types.ts` (extended) | 🔴 BREAKING: `elevation`→`levelElevation`, +`heightOffsetFromLevel`, +`geometryType: SlabGeometryType`, +`slope?: SlabSlope`. `SlabEntity` extends `IfcEntityMixin`. Constants renamed + updated. |
+| `src/subapps/dxf-viewer/bim/types/beam-types.ts` (extended) | 🟢 RENAME: `elevation`→`topElevation`, +`zOffset?`. `BeamEntity` extends `IfcEntityMixin`. Constants renamed. |
+| `src/subapps/dxf-viewer/bim/types/slab.schemas.ts` | NEW — Strict Zod: `SlabParamsSchema` (superRefine geometryType↔slope coupling) + `SlabEntitySchema` |
+| `src/subapps/dxf-viewer/bim/types/beam.schemas.ts` | NEW — Strict Zod: `BeamParamsSchema` + `BeamEntitySchema` |
+| `src/services/factories/slab.factory.ts` | NEW — `createSlab()` + `CreateSlabInput` (auto-fills ifcGuid + ifcType='IfcSlab' + geometryType default) |
+| `src/services/factories/beam.factory.ts` | NEW — `createBeam()` + `CreateBeamInput` (auto-fills ifcGuid + ifcType='IfcBeam' + zOffset=0) |
+| `src/services/factories/__tests__/slab.factory.test.ts` | NEW — 334 lines: geometryType, slope discriminator, IfcEntityMixin, prefix, Zod |
+| `src/services/factories/__tests__/beam.factory.test.ts` | NEW — 252 lines: topElevation, zOffset default, ifcGuid uniqueness, Zod |
+| `src/subapps/dxf-viewer/bim/validators/slab-validator.ts` (patched) | `params.elevation` → `params.levelElevation` in `validateElevation()` |
+| `src/subapps/dxf-viewer/bim/geometry/beam-geometry.ts` + tests (patched) | `elevationMm` → `topElevationMm` in `computeBbox()` + test fixture + test description |
+| `src/subapps/dxf-viewer/bim-3d/converters/BimToThreeConverter.ts` (patched) | Slab hangs DOWN from top face. Beam uses `topElevation + zOffset`. |
+| `src/subapps/dxf-viewer/hooks/drawing/slab-completion.ts` (migrated) | `buildSlabEntity` delegates σε `createSlab()`. `SlabParamOverrides` + new fields. |
+| `src/subapps/dxf-viewer/hooks/drawing/beam-completion.ts` (migrated) | `buildBeamEntity` delegates σε `createBeam()`. `BeamParamOverrides` + `topElevation`/`zOffset`. |
+| `src/subapps/dxf-viewer/bim/types/slab-opening-types.ts` (doc patch) | JSDoc references `levelElevation` instead of `elevation`. |
+| `src/subapps/dxf-viewer/ui/ribbon/hooks/bridge/slab-command-keys.ts` | `elevation` key → `levelElevation` |
+| `src/subapps/dxf-viewer/ui/ribbon/hooks/bridge/beam-command-keys.ts` | `elevation` key → `topElevation` |
+| `src/subapps/dxf-viewer/ui/ribbon/data/contextual-slab-tab.ts` | Command id + labelKey → `slab.levelElevation` |
+| `src/subapps/dxf-viewer/ui/ribbon/data/contextual-beam-tab.ts` | Command id + labelKey → `beam.topElevation` |
+| `src/subapps/dxf-viewer/ui/ribbon/hooks/useRibbonSlabBridge.ts` | `NUMBER_KEY_TO_FIELD` mapping → `levelElevation` |
+| `src/subapps/dxf-viewer/ui/ribbon/hooks/useRibbonBeamBridge.ts` | `NUMBER_KEY_TO_FIELD` mapping → `topElevation` |
+| `src/i18n/locales/el/dxf-viewer-shell.json` | `slabEditor.levelElevation="Στάθμη (FFL)"`, `beamEditor.topElevation="Στάθμη (Άνω)"` |
+| `src/i18n/locales/en/dxf-viewer-shell.json` | `slabEditor.levelElevation="Level (FFL)"`, `beamEditor.topElevation="Level (Top)"` |
+
+### Phase A4 — Q&A status updates
+
+- **Q7 (Slab geometry types)** → Phase 1 subset ✅ shipped (`geometryType: 'box'|'tilted'` + `slope?: SlabSlope` in schema + factory + Zod superRefine). `mesh` field reserved in types comment, not implemented (Phase 2 deferred).
+- **Q8 (IFC Export)** → Slab + Beam + Opening `IfcEntityMixin` ✅ shipped (ifcGuid required + ifcType literals 'IfcSlab'/'IfcBeam'/'IfcDoor'/'IfcWindow'). All 5 entity types complete. IFC writer (web-ifc WASM) deferred Phase B+.
+- **§2.1 Slab top-face semantic** → ✅ fully applied in schema + factory + 3D converter + ribbon + locales.
+- **§2.2 Beam topElevation rename** → ✅ fully applied schema-to-renderer chain.
+
+| 2026-05-20 | Giorgio + Claude | **Phase A5 implemented (Opening IfcEntityMixin)** — 3 new files + 3 modified. **Opening schema** (`opening-types.ts` extended): `OpeningEntity` mixes `IfcEntityMixin` (+ explicit `ifcType: 'IfcDoor'\|'IfcWindow'` narrowed literal). Elevation fields unchanged — `sillHeight` already Revit-compatible per §2.1 (host wall Level + sillHeight). **Zod schema** (`opening.schemas.ts` NEW): `OpeningParamsSchema` (full param validation: kind/wallId/offsetFromStart/width/height/sillHeight + optional frameWidth/handing/openDirection/glazingPanes/material) + `OpeningEntitySchema` (ifcGuid + `OpeningIfcTypeSchema = z.union([z.literal('IfcDoor'), z.literal('IfcWindow')])` + passthrough). **Factory** (`opening.factory.ts` NEW): `createOpening()` auto-fills `ifcGuid` ONCE μέσω `generateIfcGuid()`, infers `ifcType` μέσω `inferOpeningIfcType(kind)` (door/sliding-door/french-door→IfcDoor, window/fixed→IfcWindow). Enterprise ID prefix `opening_` (N.6 compliant). Tenant fields pass-through. **Tests** (`opening.factory.test.ts` NEW): `inferOpeningIfcType` 5 specs (all kinds), `createOpening` 21 specs — ifcType per kind, ifcGuid uniqueness (100 calls), enterprise ID prefix, pset/visible/params pass-through, tenant fields, Zod accept/reject (invalid kind/width/glazingPanes, invalid ifcGuid, wrong type). **Cascade**: `opening-completion.ts` migrated — `buildOpeningEntity` delegates entity assembly σε `createOpening()` (replaced inline `{id, type, kind, ...}` literal + removed `generateOpeningId` direct import). **Phase A1+A2+A3+A4+A5 complete.** Phase B (service layer cascade + IFC writer) pending. |
+
+### Phase A5 — File inventory
+
+| File | Purpose |
+|------|---------|
+| `src/subapps/dxf-viewer/bim/types/opening-types.ts` (extended) | + `IfcEntityMixin` import + `OpeningEntity` extends `IfcEntityMixin` + `ifcType: 'IfcDoor'\|'IfcWindow'` narrowed literal |
+| `src/subapps/dxf-viewer/bim/types/opening.schemas.ts` | NEW — Strict Zod: `OpeningParamsSchema` + `OpeningEntitySchema` + `OpeningIfcTypeSchema` (literal union) |
+| `src/services/factories/opening.factory.ts` | NEW — `createOpening()` + `CreateOpeningInput` + `inferOpeningIfcType()` helper |
+| `src/services/factories/__tests__/opening.factory.test.ts` | NEW — 26 specs: ifcType inference (5 kinds), ifcGuid uniqueness, enterprise ID prefix (opening_), Zod accept/reject |
+| `src/subapps/dxf-viewer/hooks/drawing/opening-completion.ts` (migrated) | `buildOpeningEntity` delegates σε `createOpening()` factory |
+
+### Phase A5 — Q&A status updates
+
+- **Q8 (IFC Export)** → Opening `IfcEntityMixin` ✅ shipped (ifcGuid required + ifcType narrowed 'IfcDoor'|'IfcWindow' inferred από kind). All 5 BIM entity types (Wall/Column/Slab/Beam/Opening) now carry IfcEntityMixin. IFC writer (web-ifc WASM) deferred Phase B+.
 
 ---
 

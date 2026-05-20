@@ -1,20 +1,21 @@
 /**
- * SectionBox — Pure Three.js implementation για ADR-366 §A.3 Phase 7.0.
+ * SectionBox — Pure Three.js implementation για ADR-366 §A.3 Phase 7.0 + 7.0a.
  *
- * Διαχειρίζεται 6 face meshes (semi-transparent grey clip-volume indicator)
- * + 6 handle discs (CAD_UI_COLORS.grips) για face-axis drag. Δεν γνωρίζει
- * την εφαρμογή των clipping planes — απλώς εκθέτει `getPlanes()` και
- * το ThreeJsSceneManager περνά το αποτέλεσμα στον applicator.
+ * Phase 7.0a αλλαγή: τα 6 solid face meshes αντικαταστάθηκαν από ενιαίο
+ * wireframe edge box (12 line segments). Λόγος: τα ΠΡΑΓΜΑΤΙΚΑ solid caps
+ * έρχονται πλέον από το `SectionStencilRenderer` (true stencil cap pattern).
+ * Το SectionBox κρατά μόνο edge outline + 6 handle spheres για drag UX.
+ * Αυτό αποφεύγει z-fight μεταξύ face meshes και stencil caps.
  *
- * Face meshes + handles φέρουν `userData['sectionBoxPart']=true` ώστε ο
- * clip applicator να τα παρακάμπτει (αλλιώς θα κλιπίζονταν από τον εαυτό
- * τους).
+ * Edges + handles φέρουν `userData['sectionBoxPart']=true` ώστε ο clip
+ * applicator να τα παρακάμπτει (αλλιώς θα κλιπίζονταν από τον εαυτό τους).
  *
  * Pointer events: capture-phase listener στο renderer.domElement. Αν hit
  * handle → claim drag (stopImmediatePropagation), αλλιώς ο camera handler
  * δουλεύει κανονικά (tumble). Shift+drag = symmetric.
  *
  * @see ADR-366 §A.3.Q1, Q2, Q5
+ * @see ADR-366 §A.3 Phase 7.0a — True Stencil Cap
  */
 
 import * as THREE from 'three';
@@ -54,9 +55,9 @@ export interface SectionBoxCallbacks {
 
 export class SectionBox {
   readonly root: THREE.Group;
-  private readonly faces: THREE.Mesh[] = [];
+  private readonly edgeBox: THREE.LineSegments;
   private readonly handles: THREE.Mesh[] = [];
-  private readonly faceMaterial: THREE.MeshBasicMaterial;
+  private readonly edgeMaterial: THREE.LineBasicMaterial;
   private readonly handleMaterialIdle: THREE.MeshBasicMaterial;
   private readonly handleMaterialHover: THREE.MeshBasicMaterial;
   private readonly raycaster = new THREE.Raycaster();
@@ -70,11 +71,11 @@ export class SectionBox {
     this.root.name = 'section-box-root';
     this.root.visible = false;
 
-    this.faceMaterial = new THREE.MeshBasicMaterial({
+    this.edgeMaterial = new THREE.LineBasicMaterial({
       color: SECTION_CUT_SURFACE.color,
-      opacity: SECTION_CUT_SURFACE.opacity,
       transparent: true,
-      side: THREE.DoubleSide,
+      opacity: 0.85,
+      depthTest: true,
       depthWrite: false,
     });
 
@@ -91,21 +92,20 @@ export class SectionBox {
       opacity: 1,
     });
 
-    this.buildFaces();
+    this.edgeBox = this.buildEdgeBox();
+    this.root.add(this.edgeBox);
     this.buildHandles();
   }
 
-  private buildFaces(): void {
-    // Unit plane geometry: 1x1, axis-aligned to XY. We orient + scale per face in setFromBounds().
-    const geom = new THREE.PlaneGeometry(1, 1);
-    for (const spec of HANDLE_SPECS) {
-      const mesh = new THREE.Mesh(geom, this.faceMaterial);
-      mesh.userData[FACE_USERDATA_KEY] = true;
-      mesh.userData['sectionFaceSpec'] = spec;
-      mesh.renderOrder = 990;
-      this.root.add(mesh);
-      this.faces.push(mesh);
-    }
+  private buildEdgeBox(): THREE.LineSegments {
+    // Unit cube edges: BoxGeometry → EdgesGeometry → 12 line segments. Scale per bounds.
+    const boxGeom = new THREE.BoxGeometry(1, 1, 1);
+    const edges = new THREE.EdgesGeometry(boxGeom);
+    boxGeom.dispose();
+    const lines = new THREE.LineSegments(edges, this.edgeMaterial);
+    lines.userData[FACE_USERDATA_KEY] = true;
+    lines.renderOrder = 990;
+    return lines;
   }
 
   private buildHandles(): void {
@@ -132,37 +132,13 @@ export class SectionBox {
     const cy = (max[1] + min[1]) / 2;
     const cz = (max[2] + min[2]) / 2;
 
+    this.edgeBox.position.set(cx, cy, cz);
+    this.edgeBox.scale.set(sx, sy, sz);
+
     for (let i = 0; i < HANDLE_SPECS.length; i++) {
       const spec = HANDLE_SPECS[i];
-      const face = this.faces[i];
       const handle = this.handles[i];
-      this.positionFace(face, spec, min, max, sx, sy, sz);
       this.positionHandle(handle, spec, cx, cy, cz, min, max);
-    }
-  }
-
-  private positionFace(
-    face: THREE.Mesh,
-    spec: HandleSpec,
-    min: readonly [number, number, number],
-    max: readonly [number, number, number],
-    sx: number,
-    sy: number,
-    sz: number,
-  ): void {
-    face.position.set((max[0] + min[0]) / 2, (max[1] + min[1]) / 2, (max[2] + min[2]) / 2);
-    face.rotation.set(0, 0, 0);
-    if (spec.axis === 'x') {
-      face.position.x = spec.side === 'min' ? min[0] : max[0];
-      face.rotation.y = Math.PI / 2;
-      face.scale.set(sz, sy, 1);
-    } else if (spec.axis === 'y') {
-      face.position.y = spec.side === 'min' ? min[1] : max[1];
-      face.rotation.x = Math.PI / 2;
-      face.scale.set(sx, sz, 1);
-    } else {
-      face.position.z = spec.side === 'min' ? min[2] : max[2];
-      face.scale.set(sx, sy, 1);
     }
   }
 
@@ -320,10 +296,9 @@ export class SectionBox {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    // Geometry/material are shared across faces / handles — dispose each once.
-    if (this.faces[0]) this.faces[0].geometry.dispose();
+    this.edgeBox.geometry.dispose();
     if (this.handles[0]) this.handles[0].geometry.dispose();
-    this.faceMaterial.dispose();
+    this.edgeMaterial.dispose();
     this.handleMaterialIdle.dispose();
     this.handleMaterialHover.dispose();
     while (this.root.children.length > 0) this.root.remove(this.root.children[0]);

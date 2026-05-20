@@ -36,6 +36,8 @@ import { MeasureToolbar, type MeasureMode } from '@/components/shared/files/medi
 import { MeasureToolOverlay } from '@/components/shared/files/media/MeasureToolOverlay';
 import { CalibrateScaleDialog } from '@/components/shared/files/media/CalibrateScaleDialog';
 import { useMeasureSnapFinder } from '@/components/shared/files/media/measure-snap-bridge';
+import { Bim3DToggleButton } from '@/components/shared/files/media/Bim3DToggleButton';
+import { Bim3DReadOnlyOverlay } from '@/components/shared/files/media/Bim3DReadOnlyOverlay';
 
 // Re-exports for backward compatibility
 export type { FloorplanGalleryProps, DxfDrawingMode };
@@ -57,11 +59,11 @@ export function FloorplanGallery({
   unitsPerMeter,
   backgroundId,
   floorplanId,
+  projectId = null,
 }: FloorplanGalleryProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-
   // Canvas refs for DXF/PDF rendering (inline + fullscreen)
   const inlineCanvasRef = useRef<HTMLCanvasElement>(null);
   const modalCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -118,13 +120,13 @@ export function FloorplanGallery({
   const snapFinder = useMeasureSnapFinder(loadedScene?.entities, isDxf);
   // ADR-340 Phase 9 STEP I: calibration dialog open state (raster only)
   const [calibrateOpen, setCalibrateOpen] = useState(false);
+  // ADR-371: local 3D toggle (independent from global ViewMode3DStore — Q1 decision)
+  const [show3D, setShow3D] = useState(false);
   const calibrationImageSrc = isRaster ? (rasterImage?.src ?? currentFile?.downloadUrl ?? null) : null;
   const canCalibrate = isRaster && !!backgroundId && !!calibrationImageSrc;
   // SPEC-237C: Effective highlight = external (list hover) OR local (canvas hover)
   const effectiveHighlightId = highlightedOverlayUnitId || hoveredOverlayUnitId;
-
   // SPEC-237C: Canvas Mouse Handlers (Hit-Testing, Hover, Click)
-
   const resolveHit = useCallback((screenX: number, screenY: number, canvas: HTMLCanvasElement) => {
     if (!overlays?.length) return null;
     if (isDxf && currentBounds) {
@@ -139,7 +141,6 @@ export function FloorplanGallery({
     }
     return null;
   }, [isDxf, isRaster, currentBounds, rasterBounds, overlays, overlayAABBs, inlineZP.zoom, inlineZP.panOffset]);
-
   const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!overlays?.length || !inlineCanvasRef.current) return;
     cancelAnimationFrame(rafRef.current);
@@ -155,7 +156,6 @@ export function FloorplanGallery({
       onHoverOverlay?.(propertyId);
     });
   }, [overlays, resolveHit, onHoverOverlay]);
-
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!overlays?.length || !inlineCanvasRef.current) return;
     const canvas = inlineCanvasRef.current;
@@ -171,28 +171,22 @@ export function FloorplanGallery({
     setHoveredOverlayUnitId(null);
     onHoverOverlay?.(null);
   }, [onHoverOverlay]);
-
   // Cleanup rAF on unmount
   useEffect(() => {
     return () => cancelAnimationFrame(rafRef.current);
   }, []);
-
   // NAVIGATION
-
   const goToPrevious = useCallback(() => {
     setCurrentIndex(prev => (prev > 0 ? prev - 1 : floorplanFiles.length - 1));
   }, [floorplanFiles.length]);
-
   const goToNext = useCallback(() => {
     setCurrentIndex(prev => (prev < floorplanFiles.length - 1 ? prev + 1 : 0));
   }, [floorplanFiles.length]);
-
   // Reset zoom/pan when switching files
   useEffect(() => {
     inlineZP.resetAll();
     // intentional: only reset on index change, not on inlineZP reference changes
   }, [currentIndex]);
-
   // Keyboard navigation
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -213,20 +207,15 @@ export function FloorplanGallery({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [goToPrevious, goToNext, floorplanFiles.length, fullscreen.isFullscreen, fullscreen.exit]);
-
   // FULLSCREEN
-
   const handleOpenFullscreen = useCallback(() => {
     modalZP.resetAll();
     fullscreen.enter();
   }, [modalZP, fullscreen]);
-
   const handleCloseFullscreen = useCallback(() => {
     fullscreen.exit();
   }, [fullscreen]);
-
   // CANVAS RENDERING — inline + modal (DXF or PDF, overlays unified)
-
   // Resolver: propertyLabels Map → OverlayLabel for the highlighted polygon.
   const getOverlayLabel = useCallback(
     (overlay: { linked?: { propertyId?: string } }) => {
@@ -239,23 +228,19 @@ export function FloorplanGallery({
 
   const bimSubscriptionId = isDxf ? (floorplanId ?? currentFile?.id ?? null) : null;
   const bimEntities = useFloorplanBimEntities(bimSubscriptionId);
-
   useFloorplanCanvasRender({
     canvasRef: inlineCanvasRef, enabled: true, isDxf, isRaster, loadedScene, rasterImage, rasterBounds,
     currentBounds, zoom: inlineZP.zoom, panOffset: inlineZP.panOffset, drawingMode,
     overlays, highlightedUnitId: effectiveHighlightId, getOverlayLabel,
     bimEntities,
   });
-
   useFloorplanCanvasRender({
     canvasRef: modalCanvasRef, enabled: fullscreen.isFullscreen, isDxf, isRaster, loadedScene,
     rasterImage, rasterBounds, currentBounds, zoom: modalZP.zoom, panOffset: modalZP.panOffset,
     drawingMode, overlays, highlightedUnitId: effectiveHighlightId, getOverlayLabel,
     firstRenderDelay: 280, bimEntities,
   });
-
   // ACTIONS
-
   const { handleDownload: enterpriseDownload } = useFileDownload();
   const handleDownload = useCallback(() => {
     if (!currentFile) return;
@@ -302,6 +287,7 @@ export function FloorplanGallery({
     canvasRef: React.Ref<HTMLCanvasElement>,
     viewClassName?: string,
     enableHitTesting?: boolean,
+    overlayContent?: React.ReactNode,
   ) {
     return (
       <figure
@@ -355,6 +341,7 @@ export function FloorplanGallery({
             <span className="mt-2 text-sm">{t('floorplan.processing')}</span>
           </section>
         )}
+        {overlayContent}
       </figure>
     );
   }
@@ -396,6 +383,12 @@ export function FloorplanGallery({
           <nav className="flex items-center gap-1" aria-label={t('floorplan.actions')}>
             {isDxf && (
               <>
+                {bimEntities.hasAny && (
+                  <Bim3DToggleButton
+                    active={show3D}
+                    onToggle={() => setShow3D((v) => !v)}
+                  />
+                )}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -454,7 +447,15 @@ export function FloorplanGallery({
             )}
           </nav>
         </header>
-        {renderViewerContent(inlineZP, inlineCanvasRef, 'min-h-[500px]', true)}
+        {renderViewerContent(inlineZP, inlineCanvasRef, 'min-h-[500px]', true,
+          show3D && isDxf ? (
+            <Bim3DReadOnlyOverlay
+              bimSnapshot={bimEntities}
+              projectId={projectId}
+              onClose={() => setShow3D(false)}
+            />
+          ) : undefined,
+        )}
       </article>
 
       {/* FULLSCREEN MODAL (ADR-241 — direct Dialog composition) */}
