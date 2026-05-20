@@ -120,7 +120,8 @@ export function renderStyledTextWithOverride(
   ctx: CanvasRenderingContext2D,
   text: string,
   x: number,
-  y: number
+  y: number,
+  colorOverride?: string
 ): void {
   const style = getTextPreviewStyleWithOverride();
 
@@ -148,7 +149,7 @@ export function renderStyledTextWithOverride(
   // Apply styling με τις προσαρμογές
   const fontString = `${style.fontStyle} ${style.fontWeight} ${adjustedFontSize}px ${style.fontFamily}`;
   ctx.font = fontString;
-  ctx.fillStyle = style.color;
+  ctx.fillStyle = colorOverride ?? style.color;
   ctx.globalAlpha = style.opacity;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

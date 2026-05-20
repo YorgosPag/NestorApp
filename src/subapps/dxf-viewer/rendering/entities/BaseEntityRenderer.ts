@@ -52,6 +52,7 @@ export abstract class BaseEntityRenderer {
   protected phaseManager: PhaseManager;
   private _viewportCache: Viewport | null = null;
   private _viewportCacheTime = 0;
+  protected _currentHovered = false;
 
   constructor(ctx: CanvasRenderingContext2D) {
     this.ctx = ctx;
@@ -87,6 +88,7 @@ export abstract class BaseEntityRenderer {
       phaseManager: this.phaseManager,
       applyAngleMeasurementTextStyle: this.applyAngleMeasurementTextStyle.bind(this),
       applyDistanceTextStyle: this.applyDistanceTextStyle.bind(this),
+      textColorOverride: this._currentHovered ? HOVER_HIGHLIGHT.ENTITY.glowColor : undefined,
     };
   }
 
@@ -186,7 +188,9 @@ export abstract class BaseEntityRenderer {
   protected applyDistanceTextStyle(): void {
     // 🏢 ENTERPRISE: Χρήση κεντρικοποιημένου χρώματος, αλλά με δυναμικό font styling
     const textStyle = getTextPreviewStyleWithOverride();
-    this.ctx.fillStyle = UI_COLORS.DISTANCE_MEASUREMENT_TEXT;  // 🎯 Centralized white color
+    this.ctx.fillStyle = this._currentHovered
+      ? HOVER_HIGHLIGHT.ENTITY.glowColor
+      : UI_COLORS.DISTANCE_MEASUREMENT_TEXT;
     this.ctx.font = `${textStyle.fontStyle} ${textStyle.fontWeight} ${textStyle.fontSize} ${textStyle.fontFamily}`;
     this.ctx.globalAlpha = textStyle.opacity;
     this.ctx.textAlign = 'center';
@@ -352,6 +356,7 @@ export abstract class BaseEntityRenderer {
     renderMeasurements?: () => void,
     renderYellowDots?: () => void
   ): void {
+    this._currentHovered = options.hovered ?? false;
     // 1. Determine current phase
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
@@ -492,5 +497,4 @@ export abstract class BaseEntityRenderer {
   private drawInternalArc(vertex: Point2D, prevUnit: Point2D, nextUnit: Point2D, rPx: number): void {
     drawInternalArcOnCanvas(this.rc, vertex, prevUnit, nextUnit, rPx);
   }
-
 }

@@ -67,6 +67,7 @@ import { renderCenterMark } from '../../systems/dimensions/center-mark-renderer'
 import { computeDimHitGeometry } from '../../systems/dimensions/dim-hit-geometry';
 import { pointToLineDistance } from './shared/geometry-utils';
 import { calculateDistance } from './shared/geometry-rendering-utils';
+import { HOVER_HIGHLIGHT } from '../../config/color-config';
 
 /**
  * Paper-mm → pixel scale at the current view.
@@ -111,6 +112,8 @@ export class DimensionRenderer extends BaseEntityRenderer {
    * by `setSceneUnits()` via the composite orchestrator.
    */
   private sceneUnits: SceneUnits = 'mm';
+  private _isHovered = false;
+  private _inGlowPass = false;
 
   /**
    * Inject the per-frame parent lookup (built once by `DxfRenderer.render()`
@@ -155,12 +158,28 @@ export class DimensionRenderer extends BaseEntityRenderer {
   }
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
+    this._isHovered = options.hovered ?? false;
     const resolved = this.resolveFromEntity(entity);
     if (!resolved) return;
 
     const breaks = this.sceneEntities.length > 0
       ? computeAutoBreaks(resolved.geometry, this.sceneEntities, resolved.geoStyle)
       : undefined;
+
+    // Glow pre-pass — SSoT: same HOVER_HIGHLIGHT.ENTITY config as BaseEntityRenderer
+    if (this._isHovered) {
+      this._inGlowPass = true;
+      this.ctx.save();
+      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
+      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
+      this.ctx.shadowBlur = 0;
+      this.ctx.shadowColor = 'transparent';
+      this.drawExtensionLines(resolved, breaks);
+      this.drawDimLineOrArc(resolved, breaks);
+      this.drawArrowheads(resolved);
+      this.ctx.restore();
+      this._inGlowPass = false;
+    }
 
     this.ctx.save();
     this.drawExtensionLines(resolved, breaks);
@@ -351,14 +370,15 @@ export class DimensionRenderer extends BaseEntityRenderer {
       layerColour: this.layerColour,
       canvasBackground: this.canvasBackground,
       sceneUnits: this.sceneUnits,
+      hovered: this._isHovered,
     });
   }
 
   // ── Canvas helpers ───────────────────────────────────────────────────────
 
   private applyLineStyle(aci: number, _suppressed: boolean): void {
-    this.ctx.strokeStyle = resolveDimColor(aci, this.layerColour);
-    this.ctx.lineWidth = 1;
+    if (!this._inGlowPass) this.ctx.strokeStyle = resolveDimColor(aci, this.layerColour);
+    this.ctx.lineWidth = this._inGlowPass ? 1 + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth : 1;
     this.ctx.setLineDash([]);
     this.ctx.lineCap = 'butt';
   }

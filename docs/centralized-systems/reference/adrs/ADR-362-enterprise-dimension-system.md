@@ -711,6 +711,14 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 
 ## 7. Changelog
 
+- **2026-05-20 (Round 13 — render-time dimscale rescue for built-in styles in meters scenes)**
+  - **Symptom**: After R12, imported DXF styles (rescaled via `dim-style-importer.ts`) rendered correctly, but built-in styles (ISO_129, Standard) that bypass the importer still carried `dimscale=1` → `2.5×1×0.001×vs = 0.0025×vs` = invisible text.
+  - **Root cause**: R12 rescue lived only in `dim-style-importer.ts`, which is not called for built-in styles. Built-in styles arrive at the renderer with `dimscale=1` and no rescue applied.
+  - **Fix** (`dim-text-renderer.ts`): Added render-time rescue: if `unitFactor <= mmToSceneUnits('m')` (i.e., scene is in meters or smaller unit) AND `style.dimscale < 10` → `effectiveDimscale = 100`. Mirrors R12 logic. Result: `2.5×100×0.001×vs = 0.25×vs` — same as imported Standard after R12.
+  - **Test updates** (`dim-text-renderer-scene-units.test.ts`): 3 existing tests updated (CASES 'm' expected 2.5→250; R6 ratio 1000→10; "does NOT double-apply" 0.0025→0.25). 6 new R13 tests added (built-in rescue, boundary at dimscale=10, no-rescue for cm/mm/dimscale≥10).
+  - ✅ Google-level: YES — render-time safety net mirrors R12 importer rescue; built-in and imported styles now behave identically.
+  - **Files**: `rendering/entities/dimension/dim-text-renderer.ts` (MOD), `rendering/entities/dimension/__tests__/dim-text-renderer-scene-units.test.ts` (MOD — 3 updated + 6 new R13 tests).
+
 - **2026-05-20 (Round 12 — unit-conflict rescue for malformed DXFs + always resolveSceneUnits)**
   - **Symptom**: Ribbon dims in `_AfrPolGD.dxf` appear 21× larger than native TEXT entities. scene.json: `units='mm'`, `dimscale=1`, bounds x:−21…0 y:−15…0 (meters), native TEXT at 0.11925m. Formula: `2.5×1×1×vs = 2.5m` dim text vs `0.11925m` native text.
   - **Root cause A — wrong $INSUNITS**: DXF declares `$INSUNITS=4` (mm) but coordinates are in meters. `dxf-scene-builder` correctly stores `units='mm'`, but the scene is physically in meters. `useDxfSceneConversion` trusted the declaration → `units='mm'` → `unitFactor=1` → `2.5×1×1×vs = 2.5m` per dim text character.

@@ -30,6 +30,7 @@ export interface BaseRenderingContext {
   readonly phaseManager: PhaseManager;
   readonly applyAngleMeasurementTextStyle: () => void;
   readonly applyDistanceTextStyle: () => void;
+  readonly textColorOverride?: string;
 }
 
 // ============================================================
@@ -89,7 +90,7 @@ export function renderDistanceTextCommonImpl(
   rc.ctx.rotate(normalizeTextAngle(angle));
   // Apply distance text styling with full decoration support
   rc.applyDistanceTextStyle();
-  renderStyledTextWithOverride(rc.ctx, text, 0, 0);
+  renderStyledTextWithOverride(rc.ctx, text, 0, 0, rc.textColorOverride);
   rc.ctx.restore();
 }
 

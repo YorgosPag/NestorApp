@@ -36,7 +36,7 @@ import {
 } from '../../../systems/dimensions/dim-text-formatter';
 import { resolveDimColor } from './dim-color-resolver';
 import { buildUIFont } from '../../../config/text-rendering-config';
-import { UI_COLORS } from '../../../config/color-config';
+import { UI_COLORS, HOVER_HIGHLIGHT } from '../../../config/color-config';
 import type { ViewTransform } from '../../types/Types';
 import { CoordinateTransforms } from '../../core/CoordinateTransforms';
 // ADR-362 Round 5 — paper-mm DIMSTYLE values must be converted to scene world
@@ -66,6 +66,7 @@ interface DimTextRenderParams {
    * tests + legacy mm-baked DXFs keep their historical behaviour.
    */
   readonly sceneUnits?: SceneUnits;
+  readonly hovered?: boolean;
 }
 
 export function renderDimensionText(
@@ -84,10 +85,16 @@ export function renderDimensionText(
   // model-space mm matching the height stored in native TEXT entities.
   // Mirrors drawArrowheads which already does `dimasz * dimscale`.
   const unitFactor = mmToSceneUnits(params.sceneUnits ?? 'mm');
-  const primaryHeight = params.style.dimtxt * params.style.dimscale * unitFactor * params.transform.scale;
+  // ADR-362 R13: built-in styles carry dimscale=1 → 2.5×1×0.001×vs microscopic in meters scenes.
+  // Mirror R12 dim-style-importer rescue: dimscale<10 in a sub-mm-per-unit scene → treat as 1:100 default.
+  const effectiveDimscale =
+    unitFactor <= mmToSceneUnits('m') && params.style.dimscale < 10 ? 100 : params.style.dimscale;
+  const primaryHeight = params.style.dimtxt * effectiveDimscale * unitFactor * params.transform.scale;
   // DXF angles are CCW, canvas is CW with Y-flip → negate (matches TextRenderer note).
   const screenRotation = -params.geometry.textRotation;
-  const colour = resolveDimColor(params.style.dimclrt, params.layerColour);
+  const colour = params.hovered
+    ? HOVER_HIGHLIGHT.ENTITY.glowColor
+    : resolveDimColor(params.style.dimclrt, params.layerColour);
   const fontFamily = params.style.textFontFamily || 'arial';
 
   // Angular dims: simplified path (no tolerance/limits/inspection in G2/G3).
