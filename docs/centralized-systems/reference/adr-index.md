@@ -357,6 +357,8 @@
 | **ADR-365** | Tailwind Semantic Palette Enforcement | ✅ 🟢 **PHASE 0 DONE** 2026-05-19 — Ratchet infrastructure deployed (CHECK 3.26). Awaits Phase 1 (DXF Viewer subapp). Actual baseline: **3,659 violations / 440 files** (revised from initial estimate 249/65 — original audit was hover-only) | 2026-05-19 | Design System — Theming & Color Tokens | [📄](./adrs/ADR-365-tailwind-semantic-palette-enforcement.md) |
 | **ADR-366** | 3D BIM Viewer & Photorealistic Rendering | ✅ 🟢 **APPROVED** 2026-05-19 — All §9 open questions resolved Full Enterprise. Phase 0 implementation ready. | 2026-05-19 | DXF Viewer — 3D Rendering / Photorealistic Output | [📄](./adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md) |
 | **ADR-367** | Firestore Internal Assertion Recovery (Single-Tab Cache + Safety Net) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-367-firestore-internal-assertion-recovery.md) |
+| **ADR-368** | DXF Import Drawing Units Override (AutoCAD/Revit Pattern) | ✅ IMPLEMENTED 2026-05-20 | 2026-05-20 | DXF Viewer — Import Wizard / Scene Units | [📄](./adrs/ADR-368-dxf-import-drawing-units-override.md) |
+| **ADR-369** | BIM Elevation Convention: Revit/Industry-Standard Alignment | 📝 PROPOSED 2026-05-20 — Aligns slab/beam/wall/column/opening elevation semantics με Revit. Breaking change σε Slab semantic (migration plan Phase A-G). | 2026-05-20 | DXF Viewer — BIM / Parametric Building Modeling | [📄](./adrs/ADR-369-bim-elevation-convention-revit-alignment.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

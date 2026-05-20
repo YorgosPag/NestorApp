@@ -1,4 +1,38 @@
 {
+  "entityTypes": {
+    "wall": "Wall",
+    "column": "Column",
+    "beam": "Beam",
+    "slab": "Slab"
+  },
+  "wallCategories": {
+    "exterior": "Exterior",
+    "interior": "Interior",
+    "partition": "Partition",
+    "parapet": "Parapet",
+    "fence": "Fence"
+  },
+  "slabKinds": {
+    "floor": "Floor slab",
+    "ceiling": "Ceiling",
+    "roof": "Roof",
+    "ground": "Ground floor",
+    "foundation": "Foundation"
+  },
+  "columnKinds": {
+    "rectangular": "Rect.",
+    "circular": "Circular",
+    "L-shape": "L-shape",
+    "T-shape": "T-shape"
+  },
+  "beamKinds": {
+    "straight": "Straight",
+    "curved": "Curved",
+    "cantilever": "Cantilever"
+  },
+  "quickProperties": {
+    "noData": "—"
+  },
   "modeToggle": {
     "label": "3D View",
     "aria": "Toggle 2D/3D",

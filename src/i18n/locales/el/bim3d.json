@@ -1,4 +1,38 @@
 {
+  "entityTypes": {
+    "wall": "Τοίχος",
+    "column": "Στύλος",
+    "beam": "Δοκός",
+    "slab": "Πλάκα"
+  },
+  "wallCategories": {
+    "exterior": "Εξωτερικός",
+    "interior": "Εσωτερικός",
+    "partition": "Χωρίσματος",
+    "parapet": "Στηθαίο",
+    "fence": "Φράχτης"
+  },
+  "slabKinds": {
+    "floor": "Πλάκα ορόφου",
+    "ceiling": "Οροφή",
+    "roof": "Στέγη",
+    "ground": "Δάπεδο ισογ.",
+    "foundation": "Θεμέλιο"
+  },
+  "columnKinds": {
+    "rectangular": "Ορθογ.",
+    "circular": "Κυκλικός",
+    "L-shape": "Γ-σχήμα",
+    "T-shape": "Τ-σχήμα"
+  },
+  "beamKinds": {
+    "straight": "Ευθεία",
+    "curved": "Καμπύλη",
+    "cantilever": "Πρόβολος"
+  },
+  "quickProperties": {
+    "noData": "—"
+  },
   "modeToggle": {
     "label": "3D Προβολή",
     "aria": "Εναλλαγή 2D/3D",

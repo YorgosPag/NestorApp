@@ -17,6 +17,7 @@ import { createPoi } from '../viewport/viewport-poi';
 import { detectSnapCandidate } from '../viewport/view-snap-detector';
 import { BimSceneLayer } from './BimSceneLayer';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
+import { raycastBimGroup, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
 import { applyFloorVisibility } from '../utils/applyFloorVisibility';
 import type { FloorVisMode } from '../utils/floor-visibility-state';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
@@ -174,6 +175,17 @@ export class ThreeJsSceneManager {
         this.initialCameraFitDone = true;
       }
     }
+  }
+
+  raycastBimEntities(clientX: number, clientY: number): RaycastHit | null {
+    if (this.disposed) return null;
+    return raycastBimGroup(
+      this.bimLayer.group,
+      this.viewport.camera,
+      this.renderer.domElement,
+      clientX,
+      clientY,
+    );
   }
 
   resize(width: number, height: number): void {

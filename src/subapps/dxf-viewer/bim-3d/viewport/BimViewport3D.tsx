@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
+import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
+import { QuickProperties3DHoverPopover } from '../properties/QuickProperties3DHoverPopover';
 import { Floating3DPanel } from '../panels/Floating3DPanel';
+
+const HOVER_DEBOUNCE_MS = 800;
 
 // ── BimViewport3D ─────────────────────────────────────────────────────────────
 // ADR-040 micro-leaf compliant: subscribes to ViewMode3DStore (not high-freq),
@@ -18,6 +22,7 @@ export function BimViewport3D() {
   const containerRef = useRef<HTMLDivElement>(null);
   const managerRef = useRef<ThreeJsSceneManager | null>(null);
   const errorRef = useRef<string | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Low-frequency store subscriptions (user-triggered entity changes — not 60fps)
   const is3D = useSyncExternalStore(
@@ -63,6 +68,11 @@ export function BimViewport3D() {
 
     return () => {
       observer.disconnect();
+      if (debounceTimerRef.current !== null) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      useQuickProperties3DStore.getState().clearHover();
       managerRef.current?.dispose();
       managerRef.current = null;
       errorRef.current = null;
@@ -94,6 +104,29 @@ export function BimViewport3D() {
     );
   }, []);
 
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    const { clientX, clientY } = e;
+    if (debounceTimerRef.current !== null) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      debounceTimerRef.current = null;
+      const hit = managerRef.current?.raycastBimEntities(clientX, clientY);
+      if (hit) {
+        useQuickProperties3DStore.getState().setHovered(hit.bimId, hit.bimType, clientX, clientY);
+      } else {
+        useQuickProperties3DStore.getState().clearHover();
+      }
+    }, HOVER_DEBOUNCE_MS);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (debounceTimerRef.current !== null) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    useQuickProperties3DStore.getState().clearHover();
+  }, []);
+
   if (!is3D) return null;
 
   if (errorRef.current) {
@@ -112,7 +145,8 @@ export function BimViewport3D() {
   return (
     <div
       className="absolute inset-0 z-50 cursor-grab active:cursor-grabbing"
-      onMouseMove={(e) => e.stopPropagation()}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       onMouseDown={(e) => e.stopPropagation()}
       onMouseUp={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.stopPropagation()}
@@ -143,6 +177,9 @@ export function BimViewport3D() {
 
       {/* Left sidebar panel — Floors / Lighting / Quality */}
       <Floating3DPanel />
+
+      {/* QuickProperties tooltip (ADR-366 B.2.Q1) — micro-leaf, fixed position */}
+      <QuickProperties3DHoverPopover />
     </div>
   );
 }
