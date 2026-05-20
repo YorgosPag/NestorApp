@@ -1,6 +1,7 @@
 # ADR-363 BIM Drawing Mode — Πόρισμα Εκκρεμών Φάσεων
 _Ημερομηνία ανάλυσης: 2026-05-19_
 _Ενημέρωση 2026-05-20: Μεγάλη διόρθωση — πολλά "pending" items ήταν ήδη DONE στον κώδικα. Verified από ADR-363 checklist._
+_Ενημέρωση 2026-05-20 (2η): Phase 3.7b+ multi-storey stack DONE (commit a14cef17). pending-summary stale entry διορθώθηκε._
 
 ---
 
@@ -18,33 +19,34 @@ _Ενημέρωση 2026-05-20: Μεγάλη διόρθωση — πολλά "pe
 | 5, 5.5a–5.5i+ | Beam core + grips + width + depth + hatch + auto-snap + all projections + section-profile I/H symbol + column-center snap + beam-slab BOQ deduction |
 | 6 | BOQ Auto-Feed core (5 entities) + multi-layer DNA walls + material→ΑΤΟΕ mapping |
 | 7A, 7B | Multi-Char BIM Hotkeys (ST/SL/OP/CL/BM) + Single-char D/Wn shortcuts |
+| 3.7b, 3.7b+, 3.7b++ | Fire-rating ribbon + multi-storey slab-opening stack + edge-midpoint ghost (commit a14cef17) |
 
 ---
 
 ## Εκκρεμείς Φάσεις ❌
 
-### Phase 3.7b+ — Slab-Opening extras (~2-3h remaining)
-- [ ] Multi-storey stack group UI ("Copy to all floors") — cross-level persistence, dedicated session
-- [x] ~~Fire-rating ribbon~~ **✅ DONE Phase 3.7b (2026-05-20)** — fireRating combobox (60/90/120/none)
-- [x] ~~Snap-to-edge-midpoint preview ghost~~ **✅ DONE (2026-05-20)** — `useSlabOpeningGhostPreview` + `SlabOpeningGhostRenderer`, RAF micro-leaf, ADR-040 compliant
-- [ ] Material ribbon field — deferred to Phase 6.5 material library
+### Phase 3.7b/3.7b+/3.7b++ — ✅ DONE (commit a14cef17, 2026-05-20)
+- [x] ~~Fire-rating ribbon~~ — fireRating combobox (60/90/120/none)
+- [x] ~~Multi-storey stack group UI~~ — `SlabOpeningStackHost` + `SlabOpeningStackDialog` + `slab-opening-stack.ts` + ribbon `copyToFloors`
+- [x] ~~Snap-to-edge-midpoint preview ghost~~ — `useSlabOpeningGhostPreview` + `SlabOpeningGhostRenderer`, ADR-040 compliant
+- Material ribbon field → deferred to Phase 6.5 (not pending)
 
 ---
 
-### Phase 4.5e+ — Material Pickers activation — ✅ DONE (2026-05-20)
+### Phase 4.5e+ — Material Pickers activation — ✅ DONE (2026-05-20/21)
 _(Deferred from Phase 4.5d — ribbon buttons exist, pickers disabled/comingSoon)_
 - [x] Wall material picker — ENABLED (wall-hatch-patterns.ts SSoT + drawMaterialHatch + bridge wiring)
 - [x] Slab material picker — ENABLED (slab-command-keys + useRibbonSlabBridge + contextual-slab-tab)
 - [x] Beam material picker — WAS ALREADY ENABLED (Phase 5.5c, not comingSoon)
-- [ ] Tab/Shift+Tab cycling για material picker (lower priority — deferred)
+- [x] Tab/Shift+Tab cycling — `useBimMaterialCycler.ts` (2026-05-21): wall/slab/beam/column, toolStateStore guard, undoable UpdateXParamsCommand
 
 ---
 
-### Phase 5.5j — ✅ DONE (2026-05-20)
+### Phase 5.5j — ✅ DONE (2026-05-20/21)
 - [x] H-beam variant (`sectionType='H'`, `SECTION_H_FLANGE_T_PX=9`, `computeHProfileOutline()`)
 - [x] `profileDesignation` canvas label (screen-space, horizontal, 14 ribbon presets)
-- [ ] Scale-adaptive symbol size (low priority enhancement)
-- [ ] Anchor highlight pulse animation (decorative, lowest priority)
+- [x] Scale-adaptive symbol size — `symW = clamp(beamWidthPx * 0.35, [12,50]px)`, all sub-dims proportional (2026-05-21)
+- [x] Anchor highlight pulse animation — `drawAnchorPulse()`, sin-modulated α @ 1.2Hz, `performance.now()` (2026-05-21)
 
 ---
 
@@ -90,14 +92,12 @@ _(Deferred from Phase 4.5d — ribbon buttons exist, pickers disabled/comingSoon
 
 | Κατηγορία | Items | Εκτίμηση |
 |-----------|-------|----------|
-| Phase 3.7b+ | 3 | ~2-3h |
-| Phase 4.5e+ (material pickers) | 4 | ~2-3h |
-| Phase 5.5i+ extras (beam polish) | 4 | ~1-2h |
-| Phase 2 leftover (polyline host) | 1 | ~1-2h |
+| ~~Phase 4.5e+ (Tab cycling material pickers)~~ | ~~1~~ | ~~✅ DONE~~ |
+| ~~Phase 5.5j extras (beam polish)~~ | ~~2~~ | ~~✅ DONE~~ |
 | Phase 6.5 (material library editor) | ~5 | ~4-6h |
 | Phase 7 (multi-select) | 4 | ~4-6h |
 | Phase 8 (schedule export) | 6 | ~5-8h |
-| **ΣΥΝΟΛΟ** | **~27 items** | **~19-30h** |
+| **ΣΥΝΟΛΟ** | **~13 items** | **~13-20h** |
 
 ---
 

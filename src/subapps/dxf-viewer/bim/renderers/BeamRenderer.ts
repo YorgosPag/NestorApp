@@ -57,6 +57,9 @@ import {
   SECTION_FILL_COLOR,
   SECTION_STROKE_COLOR,
   SECTION_LINE_WIDTH_PX,
+  SECTION_SYMBOL_W_MIN_PX,
+  SECTION_SYMBOL_W_MAX_PX,
+  SECTION_SYMBOL_BEAM_W_RATIO,
 } from '../beams/beam-section-profile';
 
 /** Stroke colour per kind. */
@@ -76,6 +79,11 @@ const KIND_FILL: Readonly<Record<BeamKind, string>> = {
 
 const OUTLINE_DASH: readonly [number, number] = [8, 4];
 const AXIS_DASH: readonly [number, number] = [4, 3];
+
+// Phase 5.5j — anchor pulse visual constants.
+const ANCHOR_PULSE_HZ = 1.2;
+const ANCHOR_PULSE_RADIUS_PX = 7;
+const ANCHOR_PULSE_LINE_W_PX = 1.5;
 
 export class BeamRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -135,6 +143,7 @@ export class BeamRenderer extends BaseEntityRenderer {
     if (phaseState.phase === 'highlighted') {
       this.drawDepthIndicator(beam);
       this.drawSectionProfile(beam);
+      this.drawAnchorPulse(beam);
     }
 
     this.finalizeRender(entity, options);
@@ -263,13 +272,12 @@ export class BeamRenderer extends BaseEntityRenderer {
   }
 
   /**
-   * Phase 5.5h — steel I/H cross-section profile symbol (Revit/Tekla convention).
+   * Phase 5.5h + 5.5j — steel I/H cross-section profile symbol (Revit/Tekla).
    *
-   * Draws a fixed-size I-profile outline at the beam midpoint, offset
-   * perpendicular to the beam axis. Symbol flanges are perpendicular to the
-   * beam direction (rotated by `screenAngle + PI/2`). Shown only for
-   * `material === 'steel'` at adequate zoom (SECTION_MIN_SCALE) and beam
-   * screen length (SECTION_MIN_BEAM_LEN_PX). No new subscriptions — pure ctx.
+   * Symbol size adapts to beam screen width (Phase 5.5j): width is clamped to
+   * [SECTION_SYMBOL_W_MIN_PX, SECTION_SYMBOL_W_MAX_PX] so it remains legible
+   * across zoom levels. All proportional sub-dimensions (web, flange, offset)
+   * scale uniformly with the computed width.
    */
   private drawSectionProfile(beam: BeamEntity): void {
     if (resolveBeamMaterialKey(beam.params.material) !== 'steel') return;
@@ -285,24 +293,36 @@ export class BeamRenderer extends BaseEntityRenderer {
     const len = Math.hypot(dx, dy);
     if (len < SECTION_MIN_BEAM_LEN_PX) return;
 
+    // Phase 5.5j — scale-adaptive symbol size: proportional to beam screen
+    // width, clamped to [W_MIN, W_MAX] px.
+    const beamWidthPx = beam.params.width * this.transform.scale;
+    const symW = Math.min(
+      Math.max(beamWidthPx * SECTION_SYMBOL_BEAM_W_RATIO, SECTION_SYMBOL_W_MIN_PX),
+      SECTION_SYMBOL_W_MAX_PX,
+    );
+    const symH = symW * (SECTION_PROFILE_H_PX / SECTION_PROFILE_W_PX);
+    const symWebW = symW * (SECTION_WEB_W_PX / SECTION_PROFILE_W_PX);
+    const symFlangeT = symW * (SECTION_FLANGE_T_PX / SECTION_PROFILE_W_PX);
+    const symHFlangeT = symW * (SECTION_H_FLANGE_T_PX / SECTION_PROFILE_W_PX);
+    const symOffset = SECTION_OFFSET_PX + (symW - SECTION_PROFILE_W_PX) * 0.3;
+
     // Perpendicular unit vector (screen space).
     const perpX = -dy / len;
     const perpY = dx / len;
 
     const midS = { x: (startS.x + endS.x) / 2, y: (startS.y + endS.y) / 2 };
-    const beamHalfWidthPx = (beam.params.width / 2) * this.transform.scale;
-    const cx = midS.x + perpX * (beamHalfWidthPx + SECTION_OFFSET_PX);
-    const cy = midS.y + perpY * (beamHalfWidthPx + SECTION_OFFSET_PX);
+    const beamHalfWidthPx = beamWidthPx / 2;
+    const cx = midS.x + perpX * (beamHalfWidthPx + symOffset);
+    const cy = midS.y + perpY * (beamHalfWidthPx + symOffset);
 
     const screenAngle = Math.atan2(dy, dx);
     const isHBeam = (beam.params.sectionType ?? 'I') === 'H';
     const outline = isHBeam
-      ? computeHProfileOutline(SECTION_PROFILE_W_PX, SECTION_PROFILE_H_PX, SECTION_WEB_W_PX, SECTION_H_FLANGE_T_PX)
-      : computeIProfileOutline(SECTION_PROFILE_W_PX, SECTION_PROFILE_H_PX, SECTION_WEB_W_PX, SECTION_FLANGE_T_PX);
+      ? computeHProfileOutline(symW, symH, symWebW, symHFlangeT)
+      : computeIProfileOutline(symW, symH, symWebW, symFlangeT);
 
     this.ctx.save();
     this.ctx.translate(cx, cy);
-    // Rotate: flanges (local ±X) become perpendicular to beam on screen.
     this.ctx.rotate(screenAngle + Math.PI / 2);
     this.ctx.setLineDash([]);
     this.ctx.beginPath();
@@ -318,11 +338,8 @@ export class BeamRenderer extends BaseEntityRenderer {
     this.ctx.stroke();
     this.ctx.restore();
 
-    // Profile designation label (e.g. "IPE 300", "HEA 200") — drawn in screen
-    // space after the rotated symbol so it stays horizontal and readable.
-    // Offset further in the perpendicular direction, beyond the symbol's W/2 edge.
     if (beam.params.profileDesignation) {
-      const labelOffsetPx = SECTION_PROFILE_W_PX / 2 + 8;
+      const labelOffsetPx = symW / 2 + 8;
       const labelX = cx + perpX * labelOffsetPx;
       const labelY = cy + perpY * labelOffsetPx;
       this.ctx.save();
@@ -333,6 +350,32 @@ export class BeamRenderer extends BaseEntityRenderer {
       this.ctx.fillText(beam.params.profileDesignation, labelX, labelY);
       this.ctx.restore();
     }
+  }
+
+  /**
+   * Phase 5.5j — pulsing highlight ring at beam anchor points (start / end).
+   *
+   * Draws a sin-modulated stroke ring at each endpoint while the beam is
+   * highlighted. Uses `performance.now()` so the ring pulses when the canvas
+   * is in an active RAF loop; falls back to a static glow otherwise. Pure ctx,
+   * zero subscriptions — ADR-040 compliant.
+   */
+  private drawAnchorPulse(beam: BeamEntity): void {
+    const t = performance.now() / 1000;
+    const alpha = Math.max(0, 0.15 + 0.25 * Math.sin(t * Math.PI * 2 * ANCHOR_PULSE_HZ));
+
+    const pts = [beam.params.startPoint, beam.params.endPoint] as const;
+    this.ctx.save();
+    this.ctx.setLineDash([]);
+    this.ctx.strokeStyle = `rgba(30, 60, 160, ${alpha.toFixed(2)})`;
+    this.ctx.lineWidth = ANCHOR_PULSE_LINE_W_PX;
+    for (const wp of pts) {
+      const s = this.worldToScreen(wp);
+      this.ctx.beginPath();
+      this.ctx.arc(s.x, s.y, ANCHOR_PULSE_RADIUS_PX, 0, Math.PI * 2);
+      this.ctx.stroke();
+    }
+    this.ctx.restore();
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────

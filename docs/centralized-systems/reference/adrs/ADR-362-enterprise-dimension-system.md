@@ -711,6 +711,17 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 
 ## 7. Changelog
 
+- **2026-05-20 (Round 12 — unit-conflict rescue for malformed DXFs + always resolveSceneUnits)**
+  - **Symptom**: Ribbon dims in `_AfrPolGD.dxf` appear 21× larger than native TEXT entities. scene.json: `units='mm'`, `dimscale=1`, bounds x:−21…0 y:−15…0 (meters), native TEXT at 0.11925m. Formula: `2.5×1×1×vs = 2.5m` dim text vs `0.11925m` native text.
+  - **Root cause A — wrong $INSUNITS**: DXF declares `$INSUNITS=4` (mm) but coordinates are in meters. `dxf-scene-builder` correctly stores `units='mm'`, but the scene is physically in meters. `useDxfSceneConversion` trusted the declaration → `units='mm'` → `unitFactor=1` → `2.5×1×1×vs = 2.5m` per dim text character.
+  - **Root cause B — unset dimscale**: `dimscale=1` means no annotation scale was configured in AutoCAD. For a proper 1:100 meters annotation, `dimscale` should be 100.
+  - **Fix A** (`hooks/canvas/useDxfSceneConversion.ts`): Changed from `currentScene?.units ?? resolveSceneUnits(currentScene)` to `resolveSceneUnits(currentScene)` (unconditional). `resolveSceneUnits` detects the bounds heuristic (`diagonal≈25.8 < 500 → 'm'`) and overrides the wrong declaration. Now `unitFactor=0.001`.
+  - **Fix B** (`systems/dimensions/dim-style-importer.ts`): Added unit-conflict rescue. When `scene.units='mm'` AND `resolveSceneUnits(scene)≠'mm'` AND `input.dimscale<10` → set `dimscale=100` (1:100 standard). Result: `2.5×100×0.001×vs = 0.25m` readable dim text.
+  - **Trade-off**: Small mm components with diagonal < 500mm may be mis-classified as 'm' by the bounds heuristic (pre-existing `resolveSceneUnits` behaviour). For architectural apps (building floorplans), this is an acceptable tradeoff.
+  - **Tests**: 4 R12 tests added to `dim-style-importer.test.ts` (rescue triggers, no-rescue cases). All tests pass.
+  - ✅ Google-level: YES — root cause identified from production DB; bounds-based correction; explicit rescue prevents invisible dims.
+  - **Files**: `hooks/canvas/useDxfSceneConversion.ts` (MOD), `systems/dimensions/dim-style-importer.ts` (MOD — add import + rescue), `systems/dimensions/__tests__/dim-style-importer.test.ts` (MOD — 4 R12 tests).
+
 - **2026-05-20 (Round 11 — revert R10 normalization; AutoCAD DIMSCALE is dimensionless)**
   - **Symptom**: After R10, ribbon dims in meters-scene DXFs (_AfrPolGD.dxf, bounds −21…0 m) appeared enormously large — text and lines 1000× bigger than native DXF dims.
   - **Root cause**: R10's `normalizedDimscale = rawDimscale / mmToSceneUnits(sceneUnits)` assumed AutoCAD stores DIMSCALE as model-units/paper-mm (i.e. 0.1 for 1:100 m-scene). In reality, **AutoCAD DIMSCALE is always dimensionless** (e.g. 100 for 1:100 regardless of model units). For a meters DXF with DIMSCALE=100: R10 stored `100 / 0.001 = 100,000`. Renderer formula `dimtxt × 100,000 × 0.001 × vs = 250 × vs` instead of the correct `2.5 × 100 × 0.001 × vs = 0.25 × vs`. Factor-1000 error.

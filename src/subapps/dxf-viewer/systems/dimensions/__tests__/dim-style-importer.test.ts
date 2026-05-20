@@ -54,9 +54,12 @@ function makeSceneWithUnits(
   dimStyles: Record<string, ImportedSceneDimStyle>,
   units: SceneModel['units'],
   headerDimscale?: number,
-): Pick<SceneModel, 'dimStyles' | 'units'> & { headerDimscale?: number } {
-  return { dimStyles, units, ...(headerDimscale !== undefined ? { headerDimscale } : {}) };
+  bounds?: SceneModel['bounds'],
+): Pick<SceneModel, 'dimStyles' | 'units'> & { headerDimscale?: number; bounds?: SceneModel['bounds'] } {
+  return { dimStyles, units, ...(headerDimscale !== undefined ? { headerDimscale } : {}), ...(bounds !== undefined ? { bounds } : {}) };
 }
+
+const METERS_BOUNDS: SceneModel['bounds'] = { min: { x: -21, y: -15 }, max: { x: 0, y: 0 } };
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Translation
@@ -233,5 +236,56 @@ describe('registerImportedDimStyles — dimscale storage', () => {
     );
     const style = registry.getStyle(result.created[0]);
     expect(style?.dimscale).toBeCloseTo(100, 6);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// R12 — unit-conflict rescue (declared mm + meter-scale bounds + dimscale<10)
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('registerImportedDimStyles — R12 unit-conflict rescue', () => {
+  let registry: DimStyleRegistry;
+  beforeEach(() => { registry = new DimStyleRegistry(); });
+
+  it('rescues dimscale=1 to 100 when declared mm but bounds indicate meters', () => {
+    // Malformed DXF: $INSUNITS=4 (mm) but coords in meters (0-21).
+    // resolveSceneUnits overrides to 'm' → unit conflict → rescue.
+    // Result: 2.5×100×0.001×viewScale = 0.25m readable annotation.
+    const result = registerImportedDimStyles(
+      makeSceneWithUnits({ Standard: makeImportedStyle({ dimscale: 1 }) }, 'mm', undefined, METERS_BOUNDS),
+      registry,
+    );
+    const style = registry.getStyle(result.created[0]);
+    expect(style?.dimscale).toBe(100);
+  });
+
+  it('does NOT rescue dimscale=100 when already reasonable (≥10)', () => {
+    // DXF author set dimscale=100 → already correct for 1:100 annotation.
+    const result = registerImportedDimStyles(
+      makeSceneWithUnits({ Standard: makeImportedStyle({ dimscale: 100 }) }, 'mm', undefined, METERS_BOUNDS),
+      registry,
+    );
+    const style = registry.getStyle(result.created[0]);
+    expect(style?.dimscale).toBe(100);
+  });
+
+  it('does NOT rescue when declared m (no unit conflict)', () => {
+    // Correctly declared meters scene — no rescue even if dimscale=1.
+    const result = registerImportedDimStyles(
+      makeSceneWithUnits({ Standard: makeImportedStyle({ dimscale: 1 }) }, 'm', undefined, METERS_BOUNDS),
+      registry,
+    );
+    const style = registry.getStyle(result.created[0]);
+    expect(style?.dimscale).toBe(1);
+  });
+
+  it('does NOT rescue when no bounds supplied (cannot detect conflict)', () => {
+    // scene.units='mm', no bounds → resolveSceneUnits returns 'mm' → no conflict.
+    const result = registerImportedDimStyles(
+      makeSceneWithUnits({ Standard: makeImportedStyle({ dimscale: 1 }) }, 'mm'),
+      registry,
+    );
+    const style = registry.getStyle(result.created[0]);
+    expect(style?.dimscale).toBe(1);
   });
 });

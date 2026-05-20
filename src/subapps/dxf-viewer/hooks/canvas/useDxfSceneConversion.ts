@@ -391,15 +391,12 @@ export function useDxfSceneConversion({
       // ADR-358 Phase 9E-5 — id-first primary; name-keyed layers as legacy fallback.
       layersById: currentScene?.layersById,
       bounds: currentScene?.bounds ?? null,
-      // ADR-362 Round 5+6 — forward active scene units so DimensionRenderer can
-      // convert paper-mm DIMSTYLE values (dimtxt, dimasz, dimgap) → world units
-      // before applying view scale. `?? resolveSceneUnits` (not bare .units) so
-      // DXFs without $INSUNITS (scene.units=undefined) still get the correct
-      // heuristic-derived unit ('m'/'cm') instead of DxfRenderer's `?? 'mm'`.
-      // When the parser DID set units (including 'mm'), trust it directly —
-      // running resolveSceneUnits on 'mm' re-triggers the bounds heuristic and
-      // can mis-classify small mm drawings as 'm' (regression: invisible text).
-      units: currentScene?.units ?? resolveSceneUnits(currentScene),
+      // ADR-362 R12 — always use resolveSceneUnits so DXFs that declare 'mm'
+      // but have meter-scale coordinates (wrong $INSUNITS) are corrected via
+      // the bounds heuristic. dim-style-importer applies a rescue dimscale=100
+      // on unit-conflict scenes (declared='mm', resolved='m', dimscale<10)
+      // so ribbon dims stay readable instead of shrinking to 0.0025m.
+      units: resolveSceneUnits(currentScene),
     };
   }), [currentScene]);
 

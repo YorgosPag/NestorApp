@@ -52,6 +52,17 @@ export const SECTION_MIN_SCALE = 0.08;
 /** Minimum beam screen length below which the symbol is suppressed. */
 export const SECTION_MIN_BEAM_LEN_PX = 24;
 
+// ─── Scale-adaptive symbol sizing (Phase 5.5j) ───────────────────────────────
+
+/** Minimum symbol flange width (px) — floor at low zoom. */
+export const SECTION_SYMBOL_W_MIN_PX = 12;
+
+/** Maximum symbol flange width (px) — ceiling at high zoom. */
+export const SECTION_SYMBOL_W_MAX_PX = 50;
+
+/** Symbol flange width ≈ this fraction of beam screen width. */
+export const SECTION_SYMBOL_BEAM_W_RATIO = 0.35;
+
 // ─── Visual style constants ───────────────────────────────────────────────────
 
 /** Fill colour — semi-transparent steel blue. */
