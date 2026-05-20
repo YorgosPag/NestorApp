@@ -38,6 +38,9 @@ export function useWizardNavigation({ onComplete, onClose }: UseWizardNavigation
 
     switch (step) {
       case 'level':
+        setImportWizardStep?.('units');
+        break;
+      case 'units':
         setImportWizardStep?.('calibration');
         break;
       case 'calibration':
@@ -55,14 +58,16 @@ export function useWizardNavigation({ onComplete, onClose }: UseWizardNavigation
   const handleBack = useCallback(() => {
 
     switch (step) {
-      case 'calibration':
+      case 'units':
         setImportWizardStep?.('level');
+        break;
+      case 'calibration':
+        setImportWizardStep?.('units');
         break;
       case 'preview':
         setImportWizardStep?.('calibration');
         break;
       case 'level':
-        // Already at first step, do nothing
         break;
       default:
         console.warn('⚠️ Unknown step in handleBack:', step);
@@ -80,13 +85,13 @@ export function useWizardNavigation({ onComplete, onClose }: UseWizardNavigation
     switch (step) {
       case 'level':
         const hasSelection = !!(selectedLevelId || newLevelName?.trim());
-
         return hasSelection;
+      case 'units':
+        // Units selection always allows proceed (auto-detect is valid default)
+        return true;
       case 'calibration':
-        // Calibration is optional, always allow proceed
         return true;
       case 'preview':
-        // Preview step should always allow proceed (final step)
         return true;
       default:
         console.warn('⚠️ Unknown step in canProceed:', step);
@@ -97,6 +102,7 @@ export function useWizardNavigation({ onComplete, onClose }: UseWizardNavigation
   const getStepInfo = useCallback(() => {
     const stepTitles: Record<WizardStep, string> = {
       level: 'Επιλογή Επιπέδου',
+      units: 'Μονάδες Σχεδίου',
       calibration: 'Βαθμονόμηση (Προαιρετική)',
       preview: 'Προεπισκόπηση & Εισαγωγή',
       complete: 'Ολοκλήρωση',
@@ -104,15 +110,16 @@ export function useWizardNavigation({ onComplete, onClose }: UseWizardNavigation
 
     const stepNumbers: Record<WizardStep, number> = {
       level: 1,
-      calibration: 2,
-      preview: 3,
-      complete: 4,
+      units: 2,
+      calibration: 3,
+      preview: 4,
+      complete: 5,
     };
 
     return {
       title: stepTitles[step] || 'Εισαγωγή DXF',
       number: stepNumbers[step] || 1,
-      totalSteps: 3
+      totalSteps: 4
     };
   }, [step]);
 

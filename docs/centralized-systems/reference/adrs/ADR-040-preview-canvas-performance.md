@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-20 — ADR-368 wire-up: CanvasSection reads `userDrawingUnits` from floorplan (one low-freq prop pass-through)
+
+`CanvasSection.tsx` resolves `userDrawingUnits` from `levelManager.floorplans[currentLevelId]?.userDrawingUnits ?? levelManager.saveContext?.userDrawingUnits` and forwards it to `useDxfSceneConversion`. Both inputs are React-state (LevelsSystem); zero new `useSyncExternalStore` calls in the shell, zero new high-frequency subscriptions. The override changes only when a new DXF is imported or the wizard picks a unit (≪ 1/min). Cardinal rules 1–4 unaffected; CHECK 6C still green.
+
 ### 2026-05-20 — ADR-362 R9: PreviewCanvas `sceneUnits` prop (one new low-freq prop)
 
 CanvasLayerStack adds `sceneUnits={dxfScene?.units ?? 'mm'}` to the PreviewCanvas leaf. The value changes only when a new DXF is loaded (not at 60fps). PreviewRenderer caches it via `setSceneUnits()`; preview-dimension-renderer uses the original (unscaled) params for text so committed dim and preview match. No new useSyncExternalStore in the shell. CHECK 6C unaffected.

@@ -3,6 +3,7 @@ import React from 'react';
 import { useLevels } from '../systems/levels';
 import { WizardProgress } from './components/WizardProgress';
 import { LevelSelectionStep } from './wizard/LevelSelectionStep';
+import { DrawingUnitsStep } from './wizard/DrawingUnitsStep';
 import { CalibrationStep } from './wizard/CalibrationStep';
 import { PreviewStep } from './wizard/PreviewStep';
 import { X } from 'lucide-react';
@@ -35,6 +36,8 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
     switch (importWizard.step) {
       case 'level':
         return <LevelSelectionStep onNext={() => {}} onClose={() => {}} />;
+      case 'units':
+        return <DrawingUnitsStep />;
       case 'calibration':
         return <CalibrationStep />;
       case 'preview':

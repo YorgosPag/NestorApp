@@ -445,5 +445,38 @@
     "createNew": "Create New Level",
     "namePlaceholder": "Enter level name (e.g. Basement, 2nd Floor)",
     "cancel": "Cancel"
+  },
+  "drawingUnits": {
+    "title": "Drawing Units",
+    "description": "Select the measurement units your floor plan was drawn in. In Greece, most AutoCAD drawings use meters.",
+    "recommended": "Recommended",
+    "example": "(e.g. 5m wall → {value})",
+    "hint": "If unsure, choose Auto-detect. The system analyses the file dimensions and selects automatically.",
+    "option": {
+      "auto": {
+        "label": "Auto-detect",
+        "desc": "Analyse file dimensions — covers most Greek DXF files"
+      },
+      "m": {
+        "label": "Meters (m)",
+        "desc": "Standard for Greek architectural AutoCAD drawings"
+      },
+      "cm": {
+        "label": "Centimeters (cm)",
+        "desc": "Used in some European drawings"
+      },
+      "mm": {
+        "label": "Millimetres (mm)",
+        "desc": "Construction, mechanical, detail drawings"
+      },
+      "ft": {
+        "label": "Feet (ft)",
+        "desc": "Anglo-Saxon files (US, UK)"
+      },
+      "in": {
+        "label": "Inches (in)",
+        "desc": "Anglo-Saxon files — detail drawings"
+      }
+    }
   }
 }

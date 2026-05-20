@@ -4,6 +4,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import type { SceneUnits } from '../../utils/scene-units';
 
 /** 🏢 ADR-309 Phase 3: Context-aware floorplan type — set by wizard on import */
 export type FloorplanType = 'project' | 'building' | 'floor' | 'unit';
@@ -34,6 +35,13 @@ export interface FloorplanDoc {
   name: string;
   fileName: string;
   units: 'mm' | 'cm' | 'm' | 'in' | 'ft';
+  /**
+   * ADR-368 — user-specified drawing coordinate units. When set, overrides
+   * the DXF $INSUNITS declaration and resolveSceneUnits() heuristic so that
+   * Greek DXF files (declared mm, actual meters) render dimensions correctly
+   * without any patch-chain heuristics. Absent = auto-detect (legacy path).
+   */
+  userDrawingUnits?: SceneUnits;
   transform: {
     scaleX: number;
     scaleY: number;
@@ -63,10 +71,12 @@ export interface CalibrationData {
 }
 
 export interface ImportWizardState {
-  step: 'level' | 'calibration' | 'preview' | 'complete';
+  step: 'level' | 'units' | 'calibration' | 'preview' | 'complete';
   file?: File;
   selectedLevelId?: string;
   newLevelName?: string;
+  /** ADR-368 — 'auto' = use resolveSceneUnits() heuristic; explicit value overrides. */
+  userDrawingUnits?: SceneUnits | 'auto';
   calibration?: CalibrationData;
   floorplan?: FloorplanDoc;
 }
@@ -115,6 +125,8 @@ export interface ImportWizardActions {
   startImportWizard: (file: File) => void;
   setImportWizardStep: (step: ImportWizardState['step']) => void;
   setSelectedLevel: (levelId?: string, newLevelName?: string) => void;
+  /** ADR-368 — set drawing-coordinate unit override from the wizard units step. */
+  setUserDrawingUnits?: (units: SceneUnits | 'auto') => void;
   setCalibration: (calibration: CalibrationData) => void;
   cancelImportWizard?: () => void;
 }

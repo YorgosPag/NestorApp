@@ -176,21 +176,23 @@ export function useFloorplanOperations() {
 }
 
 export function useImportWizard() {
-  const { 
+  const {
     importWizard,
-    startImportWizard, 
-    setImportWizardStep, 
-    setSelectedLevel, 
-    setCalibration, 
-    completeImport, 
-    cancelImportWizard 
+    startImportWizard,
+    setImportWizardStep,
+    setSelectedLevel,
+    setUserDrawingUnits,
+    setCalibration,
+    completeImport,
+    cancelImportWizard
   } = useLevels();
-  
+
   return {
     importWizard,
     startImportWizard,
     setImportWizardStep,
     setSelectedLevel,
+    setUserDrawingUnits,
     setCalibration,
     completeImport,
     cancelImportWizard

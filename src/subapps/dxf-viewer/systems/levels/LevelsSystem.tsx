@@ -10,6 +10,7 @@ import {
   DEFAULT_LEVEL_SETTINGS,
   LEVELS_EXPORT_VERSION,
 } from './config';
+import type { SceneUnits } from '../../utils/scene-units';
 import { FloorplanOperations, CalibrationOperations, LevelOperations } from './utils';
 import { type LevelsHookReturn } from './useLevels';
 import { useAutoSaveSceneManager } from '../../hooks/scene/useAutoSaveSceneManager';
@@ -263,6 +264,14 @@ function useLevelsSystemState({
     [importWizardHook]
   );
 
+  const setUserDrawingUnits = useCallback(
+    (units: SceneUnits | 'auto') => {
+      setImportWizard(prev => ({ ...prev, userDrawingUnits: units }));
+      importWizardHook.setUserDrawingUnits(units);
+    },
+    [importWizardHook]
+  );
+
   const setCalibration = useCallback(
     (calibration: CalibrationData) => {
       setImportWizard(prev => ({ ...prev, calibration }));
@@ -416,6 +425,7 @@ function useLevelsSystemState({
       startImportWizard,
       setImportWizardStep,
       setSelectedLevel,
+      setUserDrawingUnits,
       setCalibration,
       completeImport,
       cancelImportWizard,
@@ -440,7 +450,7 @@ function useLevelsSystemState({
       // ADR-358 Phase 8: reactive scope inputs so `useStairPersistence` re-runs
       // when a new floorplan loads or the wizard updates the project context.
       sceneManager.fileRecordId, sceneManager.saveContext,
-      startImportWizard, setImportWizardStep, setSelectedLevel, setCalibration, completeImport,
+      startImportWizard, setImportWizardStep, setSelectedLevel, setUserDrawingUnits, setCalibration, completeImport,
       cancelImportWizard,
       updateSettings, resetSettings,
       validateLevelName, exportLevelsData, importLevelsData,

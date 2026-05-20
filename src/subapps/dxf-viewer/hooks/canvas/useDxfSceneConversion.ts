@@ -45,7 +45,7 @@ import { registerImportedDimStyles } from '../../systems/dimensions/dim-style-im
 // (scene.units=undefined) get the correct 'm'/'cm' label instead of falling
 // back to DxfRenderer's `?? 'mm'` default, which makes DimensionRenderer apply
 // no mmToSceneUnits conversion and render dim text at 2.5 world-units (= 2.5m).
-import { resolveSceneUnits } from '../../utils/scene-units';
+import { resolveSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { UI_COLORS } from '../../config/color-config';
 import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
 import { dwarn } from '../../debug';
@@ -59,6 +59,10 @@ type SceneLayers = NonNullable<SceneModel['layersById']>;
 
 export interface UseDxfSceneConversionParams {
   currentScene: SceneModel | null;
+  /** ADR-368 — per-file user override for DXF drawing units. When provided,
+   *  takes precedence over resolveSceneUnits() so Greek DXF files (declared mm,
+   *  actual meters) render correctly without heuristic patches. */
+  userDrawingUnits?: SceneUnits;
 }
 
 export interface UseDxfSceneConversionReturn {
@@ -336,6 +340,7 @@ function convertEntity(entity: SceneEntity, layers: SceneLayers, layersById?: Sc
 
 export function useDxfSceneConversion({
   currentScene,
+  userDrawingUnits,
 }: UseDxfSceneConversionParams): UseDxfSceneConversionReturn {
 
   // Per-entity conversion cache. Keyed by entity object identity — when
@@ -391,14 +396,12 @@ export function useDxfSceneConversion({
       // ADR-358 Phase 9E-5 — id-first primary; name-keyed layers as legacy fallback.
       layersById: currentScene?.layersById,
       bounds: currentScene?.bounds ?? null,
-      // ADR-362 R12 — always use resolveSceneUnits so DXFs that declare 'mm'
-      // but have meter-scale coordinates (wrong $INSUNITS) are corrected via
-      // the bounds heuristic. dim-style-importer applies a rescue dimscale=100
-      // on unit-conflict scenes (declared='mm', resolved='m', dimscale<10)
-      // so ribbon dims stay readable instead of shrinking to 0.0025m.
-      units: resolveSceneUnits(currentScene),
+      // ADR-368 — user-specified drawing units take priority (set in import wizard).
+      // Falls back to R12 resolveSceneUnits() heuristic for files imported before
+      // ADR-368 or when user left the selection on 'auto'.
+      units: userDrawingUnits ?? resolveSceneUnits(currentScene),
     };
-  }), [currentScene]);
+  }), [currentScene, userDrawingUnits]);
 
   // ADR-358 §5.6.bis Phase 10 prerequisite — hydrate LayerStore from the
   // SceneModel snapshot whenever the current scene changes. This bridges the

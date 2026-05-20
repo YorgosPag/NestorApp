@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import type { ImportWizardState, CalibrationData, FloorplanDoc, Level, ImportWizardActions as SharedImportWizardActions } from '../../systems/levels';
+import type { SceneUnits } from '../../utils/scene-units';
 import { LevelOperations, FloorplanOperations } from '../../systems/levels';
 
 const createInitialWizardState = (): ImportWizardState => ({
@@ -55,6 +56,10 @@ export function useImportWizard(): ImportWizardActions {
     }));
   };
 
+  const setUserDrawingUnits = (userDrawingUnits: SceneUnits | 'auto') => {
+    setImportWizard(prev => ({ ...prev, userDrawingUnits }));
+  };
+
   const setCalibration = (calibration: CalibrationData) => {
     setImportWizard(prev => ({ ...prev, calibration }));
   };
@@ -81,7 +86,7 @@ export function useImportWizard(): ImportWizardActions {
     levels: Level[],
     floorplans: Record<string, FloorplanDoc>
   ) => {
-    const { file, selectedLevelId, newLevelName, calibration } = importWizard;
+    const { file, selectedLevelId, newLevelName, calibration, userDrawingUnits } = importWizard;
 
     const validationError = validateImportData();
     if (validationError) {
@@ -113,6 +118,11 @@ export function useImportWizard(): ImportWizardActions {
       file.name,
       file.name.replace('.dxf', '')
     );
+
+    // ADR-368 — store user-specified drawing units (overrides resolveSceneUnits heuristic at render time).
+    if (userDrawingUnits && userDrawingUnits !== 'auto') {
+      floorplanData.userDrawingUnits = userDrawingUnits;
+    }
 
     // Apply calibration if available
     if (calibration) {
@@ -147,6 +157,7 @@ export function useImportWizard(): ImportWizardActions {
     startImportWizard,
     setImportWizardStep,
     setSelectedLevel,
+    setUserDrawingUnits,
     setCalibration,
     completeImport,
     cancelImportWizard,

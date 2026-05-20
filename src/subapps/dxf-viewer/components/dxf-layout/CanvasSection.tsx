@@ -157,7 +157,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const cpState = useConstructionPointState();
   const { prompt: showPromptDialog } = usePromptDialog();
   // === DXF scene ===
-  const { dxfScene } = useDxfSceneConversion({ currentScene: props.currentScene ?? null });
+  const { dxfScene } = useDxfSceneConversion({ currentScene: props.currentScene ?? null, userDrawingUnits: Object.values(levelManager.floorplans).find(f => f.levelId === levelManager.currentLevelId)?.userDrawingUnits ?? levelManager.saveContext?.userDrawingUnits });
   const dxfSceneRef = useRef(dxfScene);
   dxfSceneRef.current = dxfScene;
   // === Snap engine scene-sync (SSoT, sole owner — ADR-040) ===
