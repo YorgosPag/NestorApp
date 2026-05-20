@@ -32,6 +32,7 @@ import {
 } from '../types/column-types';
 import type { Point3D } from '../types/bim-base';
 import { polygonArea, polygonBbox } from './shared/polygon-utils';
+import { mmToSceneUnits } from '../../utils/scene-units';
 
 const MM_TO_M = 1 / 1000;
 const DEG_TO_RAD = Math.PI / 180;
@@ -43,7 +44,11 @@ const DEG_TO_RAD = Math.PI / 180;
  * Throws nothing — validation σε `validateColumnParams()`.
  */
 export function computeColumnGeometry(params: ColumnParams): ColumnGeometry {
-  const localVerts = buildLocalFootprint(params);
+  // s: canvas units per 1 mm. Shape builders emit local vertices in canvas
+  // units (mm × s) so anchor-offset + rotation stay in the same space as
+  // `params.position` (always canvas units from user click).
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const localVerts = buildLocalFootprint(params, s);
   const transformed = transformFootprint(
     localVerts,
     params.position,
@@ -52,11 +57,14 @@ export function computeColumnGeometry(params: ColumnParams): ColumnGeometry {
     params.depth,
     params.rotation,
     params.kind,
+    s,
   );
 
   const bbox = polygonBbox(transformed);
-  const areaMm2 = polygonArea(transformed);
-  const areaM2 = areaMm2 * (MM_TO_M * MM_TO_M);
+  // Polygon vertices are in canvas units → convert area to m².
+  const areaCanvas2 = polygonArea(transformed);
+  const canvasToM = (1 / s) * MM_TO_M;
+  const areaM2 = areaCanvas2 * canvasToM * canvasToM;
   const heightMm = Math.max(0, params.height);
   const volumeM3 = areaM2 * heightMm * MM_TO_M;
 
@@ -75,18 +83,18 @@ export function computeColumnGeometry(params: ColumnParams): ColumnGeometry {
  * Build the column footprint in LOCAL coordinates centred at origin (0,0),
  * BEFORE anchor offset + rotation. All variants emit CCW vertex order.
  */
-function buildLocalFootprint(params: ColumnParams): Point3D[] {
+function buildLocalFootprint(params: ColumnParams, s: number): Point3D[] {
   switch (params.kind) {
-    case 'rectangular': return buildRectangularLocal(params.width, params.depth);
-    case 'circular':    return buildCircularLocal(params.width);
-    case 'L-shape':     return buildLshapeLocal(params.width, params.depth, params.lshape);
-    case 'T-shape':     return buildTshapeLocal(params.width, params.depth, params.tshape);
+    case 'rectangular': return buildRectangularLocal(params.width, params.depth, s);
+    case 'circular':    return buildCircularLocal(params.width, s);
+    case 'L-shape':     return buildLshapeLocal(params.width, params.depth, s, params.lshape);
+    case 'T-shape':     return buildTshapeLocal(params.width, params.depth, s, params.tshape);
   }
 }
 
-function buildRectangularLocal(width: number, depth: number): Point3D[] {
-  const hw = width / 2;
-  const hd = depth / 2;
+function buildRectangularLocal(width: number, depth: number, s: number): Point3D[] {
+  const hw = (width * s) / 2;  // mm → canvas units
+  const hd = (depth * s) / 2;
   return [
     { x: -hw, y: -hd, z: 0 },
     { x:  hw, y: -hd, z: 0 },
@@ -95,8 +103,8 @@ function buildRectangularLocal(width: number, depth: number): Point3D[] {
   ];
 }
 
-function buildCircularLocal(diameter: number): Point3D[] {
-  const r = diameter / 2;
+function buildCircularLocal(diameter: number, s: number): Point3D[] {
+  const r = (diameter * s) / 2;  // mm → canvas units
   const verts: Point3D[] = [];
   const step = (2 * Math.PI) / CIRCULAR_COLUMN_SEGMENTS;
   for (let i = 0; i < CIRCULAR_COLUMN_SEGMENTS; i++) {
@@ -114,22 +122,21 @@ function buildCircularLocal(diameter: number): Point3D[] {
  * flipY=true: arm base moves to top (set by mirror — ADR-363 Phase 7.2).
  * y-flip reverses CCW winding, so vertices are reversed to restore it.
  */
-function buildLshapeLocal(width: number, depth: number, override?: ColumnLshapeParams): Point3D[] {
-  const armWidth = Math.max(1, override?.armWidth ?? width / 3);
-  const armLength = Math.max(1, override?.armLength ?? depth / 3);
+function buildLshapeLocal(width: number, depth: number, s: number, override?: ColumnLshapeParams): Point3D[] {
+  // All mm scalars scaled by s → canvas units for correct 2D placement.
+  const armWidth = Math.max(s, (override?.armWidth ?? width / 3) * s);
+  const armLength = Math.max(s, (override?.armLength ?? depth / 3) * s);
   const flipY = override?.flipY ?? false;
-  const hw = width / 2;
-  const hd = depth / 2;
+  const hw = (width * s) / 2;
+  const hd = (depth * s) / 2;
   const ys = flipY ? -1 : 1;
-  // L-shape vertices CCW (anchor-frame, origin = bbox centre):
-  //   sw → se → upper-right notch corner1 → notch corner2 → nw
   const verts: Point3D[] = [
-    { x: -hw,            y: ys * -hd,             z: 0 },
-    { x:  hw,            y: ys * -hd,             z: 0 },
+    { x: -hw,            y: ys * -hd,              z: 0 },
+    { x:  hw,            y: ys * -hd,              z: 0 },
     { x:  hw,            y: ys * (-hd + armLength), z: 0 },
     { x: -hw + armWidth, y: ys * (-hd + armLength), z: 0 },
-    { x: -hw + armWidth, y: ys * hd,              z: 0 },
-    { x: -hw,            y: ys * hd,              z: 0 },
+    { x: -hw + armWidth, y: ys * hd,               z: 0 },
+    { x: -hw,            y: ys * hd,               z: 0 },
   ];
   return flipY ? [...verts].reverse() : verts;
 }
@@ -142,17 +149,17 @@ function buildLshapeLocal(width: number, depth: number, override?: ColumnLshapeP
  * flipY=true: flange moves to bottom (set by mirror — ADR-363 Phase 7.2).
  * y-flip reverses CCW winding, so vertices are reversed to restore it.
  */
-function buildTshapeLocal(width: number, depth: number, override?: ColumnTshapeParams): Point3D[] {
-  const flangeLength = Math.max(1, override?.flangeLength ?? width);
-  const webThickness = Math.max(1, override?.webThickness ?? depth / 3);
-  const flangeDepth = Math.max(1, depth / 3);
+function buildTshapeLocal(width: number, depth: number, s: number, override?: ColumnTshapeParams): Point3D[] {
+  // All mm scalars scaled by s → canvas units for correct 2D placement.
+  const flangeLength = Math.max(s, (override?.flangeLength ?? width) * s);
+  const webThickness = Math.max(s, (override?.webThickness ?? depth / 3) * s);
+  const flangeDepth = Math.max(s, (depth / 3) * s);
   const flipY = override?.flipY ?? false;
-  const hw = width / 2;
-  const hd = depth / 2;
+  const hw = (width * s) / 2;
+  const hd = (depth * s) / 2;
   const halfFlange = Math.min(hw, flangeLength / 2);
   const halfWeb = Math.min(hw, webThickness / 2);
   const ys = flipY ? -1 : 1;
-  // 8 vertices CCW starting στο web bottom-left:
   const verts: Point3D[] = [
     { x: -halfWeb,    y: ys * -hd,               z: 0 },
     { x:  halfWeb,    y: ys * -hd,               z: 0 },
@@ -182,15 +189,15 @@ function transformFootprint(
   depth: number,
   rotationDeg: number,
   kind: ColumnKind,
+  s: number,
 ): Point3D[] {
   if (kind === 'circular') {
     return local.map((v) => ({ x: position.x + v.x, y: position.y + v.y, z: 0 }));
   }
   const { dx, dy } = ANCHOR_OFFSETS[anchor];
-  // Translate so anchor sits on origin BEFORE rotation, then rotate, then
-  // shift to `position`. dx/dy are unit fractions of width/depth.
-  const shiftX = -dx * width;
-  const shiftY = -dy * depth;
+  // dx/dy are unit fractions of width/depth. Convert mm → canvas units via s.
+  const shiftX = -dx * width * s;
+  const shiftY = -dy * depth * s;
   const cos = Math.cos(rotationDeg * DEG_TO_RAD);
   const sin = Math.sin(rotationDeg * DEG_TO_RAD);
   return local.map((v) => {

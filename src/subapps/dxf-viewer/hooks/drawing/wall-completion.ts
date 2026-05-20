@@ -65,6 +65,7 @@ export function buildDefaultWallParams(
   startPoint: Readonly<Point2D>,
   endPoint: Readonly<Point2D>,
   overrides: WallParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
 ): WallParams {
   const category: WallCategory = overrides.category ?? 'exterior';
   const height = overrides.height ?? DEFAULT_WALL_HEIGHT_MM;
@@ -81,7 +82,7 @@ export function buildDefaultWallParams(
       height,
       thickness: overrides.thickness,
       flip: overrides.flip ?? false,
-      sceneUnits: 'mm',
+      sceneUnits,
     };
   }
   const dna = getDefaultDnaForCategory(category);
@@ -93,7 +94,7 @@ export function buildDefaultWallParams(
     thickness: dna.totalThickness,
     flip: overrides.flip ?? false,
     dna,
-    sceneUnits: 'mm',
+    sceneUnits,
   };
 }
 
@@ -153,6 +154,6 @@ export function completeWallFromTwoClicks(
   overrides: WallParamOverrides = {},
   sceneUnits: SceneUnits = 'mm',
 ): BuildWallEntityResult {
-  const params = buildDefaultWallParams(startPoint, endPoint, overrides);
+  const params = buildDefaultWallParams(startPoint, endPoint, overrides, sceneUnits);
   return buildWallEntity(params, layerId, 'straight', sceneUnits);
 }

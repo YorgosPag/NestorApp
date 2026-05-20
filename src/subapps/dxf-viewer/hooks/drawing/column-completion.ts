@@ -34,6 +34,9 @@ import {
 import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
 import { validateColumnParams } from '../../bim/validators/column-validator';
 import { generateColumnId } from '@/services/enterprise-id-convenience';
+import type { SceneUnits } from '../../utils/scene-units';
+
+export type { SceneUnits };
 
 // ─── Param overrides accepted by the builder ─────────────────────────────────
 
@@ -73,6 +76,7 @@ export function buildDefaultColumnParams(
   clickPoint: Readonly<Point2D>,
   kindArg?: ColumnKind,
   overrides: ColumnParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
 ): ColumnParams {
   const kind = overrides.kind ?? kindArg ?? 'rectangular';
   const anchor: ColumnAnchor = overrides.anchor ?? 'center';
@@ -91,6 +95,7 @@ export function buildDefaultColumnParams(
     depth,
     height,
     rotation,
+    sceneUnits,
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
     ...(overrides.lshape !== undefined ? { lshape: overrides.lshape } : {}),
     ...(overrides.tshape !== undefined ? { tshape: overrides.tshape } : {}),
@@ -111,6 +116,7 @@ export type BuildColumnEntityResult =
 export function buildColumnEntity(
   params: Readonly<ColumnParams>,
   layerId: string,
+  sceneUnits: SceneUnits = 'mm',
 ): BuildColumnEntityResult {
   const validation = validateColumnParams(params);
   if (validation.hardErrors.length > 0) {
@@ -141,7 +147,8 @@ export function completeColumnFromClick(
   layerId: string,
   kind?: ColumnKind,
   overrides: ColumnParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
 ): BuildColumnEntityResult {
-  const params = buildDefaultColumnParams(clickPoint, kind, overrides);
-  return buildColumnEntity(params, layerId);
+  const params = buildDefaultColumnParams(clickPoint, kind, overrides, sceneUnits);
+  return buildColumnEntity(params, layerId, sceneUnits);
 }

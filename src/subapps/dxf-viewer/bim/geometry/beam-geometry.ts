@@ -25,6 +25,7 @@
 import type { Point3D, Polyline3D, Polygon3D, BoundingBox3D } from '../types/bim-base';
 import type { BeamGeometry, BeamParams } from '../types/beam-types';
 import { CURVED_BEAM_SUBDIVISIONS } from '../types/beam-types';
+import { mmToSceneUnits } from '../../utils/scene-units';
 
 const MM_TO_M = 1 / 1000;
 const DEGENERATE_LENGTH_EPS_MM = 0.001;
@@ -34,20 +35,25 @@ const DEGENERATE_LENGTH_EPS_MM = 0.001;
  * geometry. Caller MUST ensure width/depth > 0 (validator guard upstream).
  */
 export function computeBeamGeometry(params: BeamParams): BeamGeometry {
+  // s: canvas units per 1 mm. Used to convert mm scalars → canvas-unit offsets
+  // for the 2D plan-view outline. Axis vertices are always in canvas units.
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
   const axisVertices = pickAxisVertices(params);
   const axisPolyline: Polyline3D = { points: axisVertices, closed: false };
 
-  const outlineVertices = buildOutlineRect(axisVertices, params.width);
+  const outlineVertices = buildOutlineRect(axisVertices, params.width, s);
   const outline: Polygon3D = { vertices: outlineVertices };
 
-  const lengthMm = computePolylineLengthMm(axisVertices);
-  const lengthM = lengthMm * MM_TO_M;
+  // BOQ: axis length is in canvas units → convert to m via (1/s) * MM_TO_M.
+  // width/depth are always mm → convert directly with MM_TO_M.
+  const lengthCanvas = computePolylineLengthMm(axisVertices);
+  const lengthM = lengthCanvas * (1 / s) * MM_TO_M;
   const widthM = params.width * MM_TO_M;
   const depthM = params.depth * MM_TO_M;
   const area = lengthM * widthM;
   const volume = area * depthM;
 
-  const bbox = computeBbox(axisVertices, outlineVertices, params.elevation);
+  const bbox = computeBbox(axisVertices, outlineVertices, params.elevation, s);
 
   return {
     axisPolyline,
@@ -67,8 +73,9 @@ export function computeBeamGeometry(params: BeamParams): BeamGeometry {
  */
 export function getBeamSpanDepthRatio(params: BeamParams): number {
   if (params.depth <= 0) return Number.POSITIVE_INFINITY;
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
   const verts = pickAxisVertices(params);
-  const lengthM = computePolylineLengthMm(verts) * MM_TO_M;
+  const lengthM = computePolylineLengthMm(verts) * (1 / s) * MM_TO_M;
   const depthM = params.depth * MM_TO_M;
   return lengthM / depthM;
 }
@@ -132,12 +139,13 @@ function subdivideQuadraticBezier(
  * vertex-normal pattern). Degenerate segments (length < 1µm) are skipped from
  * the normal average.
  */
-function buildOutlineRect(axis: readonly Point3D[], widthMm: number): Point3D[] {
+function buildOutlineRect(axis: readonly Point3D[], widthMm: number, s: number): Point3D[] {
   const n = axis.length;
   if (n < 2 || widthMm <= 0) {
     return [...axis];
   }
-  const half = widthMm / 2;
+  // Convert mm scalar → canvas units for correct 2D offset.
+  const half = (widthMm * s) / 2;
   const plus: Point3D[] = [];
   const minus: Point3D[] = [];
   for (let i = 0; i < n; i++) {
@@ -220,6 +228,7 @@ function computeBbox(
   axis: readonly Point3D[],
   outline: readonly Point3D[],
   elevationMm: number,
+  s: number,
 ): BoundingBox3D {
   let minX = Infinity, minY = Infinity, minZ = Infinity;
   let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
@@ -235,9 +244,8 @@ function computeBbox(
   for (const p of axis) fold(p);
   for (const p of outline) fold(p);
   if (minZ === Infinity) { minZ = 0; maxZ = 0; }
-  // Beam extrudes downward by depth from elevation top; for bbox simplicity
-  // extend max z up to elevation (top) — Phase 5 plan-view sufficient.
-  const topZ = Math.max(maxZ, elevationMm);
+  // elevation mm → canvas units for consistent bbox coordinate space.
+  const topZ = Math.max(maxZ, elevationMm * s);
   return {
     min: { x: minX, y: minY, z: minZ },
     max: { x: maxX, y: maxY, z: topZ },

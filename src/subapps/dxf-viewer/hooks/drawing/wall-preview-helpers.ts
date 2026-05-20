@@ -89,7 +89,7 @@ function makeWallFootprintGhost(
   sceneUnits: SceneUnits,
   curveControl: Point2D | null,
 ): ExtendedPolylineEntity {
-  const params = buildDefaultWallParams(startPt, endPt, overrides);
+  const params = buildDefaultWallParams(startPt, endPt, overrides, sceneUnits);
   const finalParams = curveControl
     ? { ...params, curveControl: { x: curveControl.x, y: curveControl.y, z: 0 } as Point3D }
     : params;
@@ -128,7 +128,7 @@ function makeWallPolylineGhost(
 ): ExtendedPolylineEntity {
   const startPt = vertices[0];
   const endPt = vertices[vertices.length - 1];
-  const base = buildDefaultWallParams(startPt, endPt, overrides);
+  const base = buildDefaultWallParams(startPt, endPt, overrides, sceneUnits);
   const polylineVertices: Point3D[] = vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
   const params = { ...base, polylineVertices };
   const geometry = computeWallGeometry(params, kind);

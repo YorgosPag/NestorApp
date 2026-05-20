@@ -10,7 +10,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { PolylineEntity } from '../../types/scene';
 import type { ExtendedSceneEntity, ExtendedPolylineEntity, PreviewPoint } from './drawing-types';
 import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
-import { buildDefaultBeamParams, type BeamParamOverrides } from './beam-completion';
+import { buildDefaultBeamParams, type BeamParamOverrides, type SceneUnits } from './beam-completion';
 import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
 import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
 import { UI_COLORS } from '../../config/color-config';
@@ -31,6 +31,7 @@ const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 export function generateBeamPreview(
   tempPoints: readonly Point2D[],
   cursorPoint: Point2D,
+  sceneUnits: SceneUnits = 'mm',
 ): ExtendedSceneEntity | null {
   if (tempPoints.length === 0) {
     return {
@@ -49,13 +50,11 @@ export function generateBeamPreview(
   const startPt = tempPoints[0];
 
   if (tempPoints.length === 1) {
-    // awaitingEnd: show footprint ghost start→cursor
-    return makeBeamFootprintGhost('preview_beam_footprint', startPt, cursorPoint, preview.kind, preview.overrides);
+    return makeBeamFootprintGhost('preview_beam_footprint', startPt, cursorPoint, preview.kind, preview.overrides, sceneUnits);
   }
 
-  // awaitingCurveControl (2 points): footprint ghost + construction arm to cursor
   const endPt = tempPoints[1];
-  return makeBeamCurveConstructionGhost('preview_beam_curve', startPt, endPt, cursorPoint, preview.overrides);
+  return makeBeamCurveConstructionGhost('preview_beam_curve', startPt, endPt, cursorPoint, preview.overrides, sceneUnits);
 }
 
 function makeBeamFootprintGhost(
@@ -64,8 +63,9 @@ function makeBeamFootprintGhost(
   endPt: Readonly<Point2D>,
   kind: 'straight' | 'curved' | 'cantilever',
   overrides: BeamParamOverrides,
+  sceneUnits: SceneUnits,
 ): ExtendedPolylineEntity {
-  const params = buildDefaultBeamParams(startPt, endPt, kind, overrides);
+  const params = buildDefaultBeamParams(startPt, endPt, kind, overrides, sceneUnits);
   const geometry = computeBeamGeometry(params);
   const vertices: Point2D[] = geometry.outline.vertices.map((p) => ({ x: p.x, y: p.y }));
   const polyline: PolylineEntity = {
@@ -89,9 +89,9 @@ function makeBeamCurveConstructionGhost(
   endPt: Readonly<Point2D>,
   cursorPoint: Point2D,
   overrides: BeamParamOverrides,
+  sceneUnits: SceneUnits,
 ): ExtendedPolylineEntity {
-  // Show committed axis start→end as solid, then arm end→cursor as hint
-  const params = buildDefaultBeamParams(startPt, endPt, 'curved', overrides);
+  const params = buildDefaultBeamParams(startPt, endPt, 'curved', overrides, sceneUnits);
   const geometry = computeBeamGeometry(params);
   const outline: Point2D[] = geometry.outline.vertices.map((p) => ({ x: p.x, y: p.y }));
   // Append cursor as extra construction vertex — shows the control handle direction

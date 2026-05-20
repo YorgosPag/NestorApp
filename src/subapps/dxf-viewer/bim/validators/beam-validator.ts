@@ -31,6 +31,7 @@ import {
   type BeamParams,
 } from '../types/beam-types';
 import { getBeamSpanDepthRatio } from '../geometry/beam-geometry';
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 /** Result of a beam validation pass — hard errors non-empty when invalid. */
 export interface BeamValidationResult {
@@ -44,13 +45,21 @@ export interface BeamValidationResult {
 
 /**
  * Validate `BeamParams`. Operates purely σε params — geometry re-derivable.
+ *
+ * `sceneUnits` — the scene coordinate unit (default `'mm'`). Length thresholds
+ * are scaled by `mmToSceneUnits(sceneUnits)` so validation works correctly in
+ * meters/cm/inch scenes (mirrors wall-validator pattern).
  */
-export function validateBeamParams(params: BeamParams): BeamValidationResult {
+export function validateBeamParams(
+  params: BeamParams,
+  sceneUnits: SceneUnits = 'mm',
+): BeamValidationResult {
   const hardErrors: string[] = [];
   const codeViolations: string[] = [];
+  const s = mmToSceneUnits(sceneUnits);
 
   validateDimensions(params, hardErrors, codeViolations);
-  validateAxis(params, hardErrors);
+  validateAxis(params, hardErrors, s);
   validateCurveControl(params, hardErrors);
   validateSlenderness(params, codeViolations);
 
@@ -81,11 +90,11 @@ function validateDimensions(
   }
 }
 
-function validateAxis(params: BeamParams, hardErrors: string[]): void {
+function validateAxis(params: BeamParams, hardErrors: string[], s: number): void {
   const dx = params.endPoint.x - params.startPoint.x;
   const dy = params.endPoint.y - params.startPoint.y;
   const chord = Math.hypot(dx, dy);
-  if (chord < MIN_BEAM_LENGTH_MM) {
+  if (chord < MIN_BEAM_LENGTH_MM * s) {
     hardErrors.push('beam.validation.hardErrors.lengthTooShort');
   }
 }

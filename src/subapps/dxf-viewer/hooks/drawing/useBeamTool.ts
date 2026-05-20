@@ -35,6 +35,7 @@ import {
 import type { Point3D } from '../../bim/types/bim-base';
 import type { BeamParams } from '../../bim/types/beam-types';
 import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
+import type { SceneUnits } from '../../utils/scene-units';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -69,6 +70,8 @@ export interface UseBeamToolOptions {
   readonly onBeamCreated?: (entity: BeamEntity) => void;
   /** Layer ID στο οποίο γράφεται το νέο beam. */
   readonly currentLevelId?: string;
+  /** Returns the active scene's coordinate units for threshold scaling. */
+  readonly getSceneUnits?: () => SceneUnits;
 }
 
 export interface UseBeamToolResult {
@@ -93,7 +96,7 @@ export interface UseBeamToolResult {
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
 export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult {
-  const { onBeamCreated, currentLevelId = '0' } = options;
+  const { onBeamCreated, currentLevelId = '0', getSceneUnits } = options;
 
   const [state, setState] = useState<BeamToolState>(INITIAL_STATE);
   const stateRef = useRef<BeamToolState>(state);
@@ -158,8 +161,9 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
   const commitTwoClickFromState = useCallback(
     (s: BeamToolState, endPoint: Readonly<Point2D>): boolean => {
       if (s.startPoint === null) return false;
-      const params = buildDefaultBeamParams(s.startPoint, endPoint, s.kind, s.overrides);
-      const result = buildBeamEntity(params, currentLevelId);
+      const sceneUnits = getSceneUnits?.() ?? 'mm';
+      const params = buildDefaultBeamParams(s.startPoint, endPoint, s.kind, s.overrides, sceneUnits);
+      const result = buildBeamEntity(params, currentLevelId, sceneUnits);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
         return false;
@@ -173,16 +177,17 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
       });
       return true;
     },
-    [currentLevelId, onBeamCreated],
+    [currentLevelId, getSceneUnits, onBeamCreated],
   );
 
   const commitCurvedFromState = useCallback(
     (s: BeamToolState, controlPoint: Readonly<Point2D>): boolean => {
       if (s.startPoint === null || s.endPoint === null) return false;
-      const base = buildDefaultBeamParams(s.startPoint, s.endPoint, 'curved', s.overrides);
+      const sceneUnits = getSceneUnits?.() ?? 'mm';
+      const base = buildDefaultBeamParams(s.startPoint, s.endPoint, 'curved', s.overrides, sceneUnits);
       const curveControl: Point3D = { x: controlPoint.x, y: controlPoint.y, z: 0 };
       const params: BeamParams = { ...base, kind: 'curved', curveControl };
-      const result = buildBeamEntity(params, currentLevelId);
+      const result = buildBeamEntity(params, currentLevelId, sceneUnits);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
         return false;
@@ -196,7 +201,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
       });
       return true;
     },
-    [currentLevelId, onBeamCreated],
+    [currentLevelId, getSceneUnits, onBeamCreated],
   );
 
   // ── click pipeline ───────────────────────────────────────────────────────

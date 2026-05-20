@@ -27,6 +27,7 @@ import type {
   Polygon3D,
   Polyline3D,
 } from './bim-base';
+import type { SceneUnits } from '../../utils/scene-units';
 
 // ─── Sub-type discriminators (ADR-363 §5.7) ─────────────────────────────────
 
@@ -85,6 +86,12 @@ export interface BeamParams {
   readonly sectionType?: BeamSectionType;
   /** Free-text profile designation shown on canvas (e.g. "IPE 300", "HEA 200"). */
   readonly profileDesignation?: string;
+  /**
+   * DXF canvas coordinate unit. Always stored so `computeBeamGeometry` can
+   * convert mm scalars (width/depth) → canvas units for 2D outline offset.
+   * Defaults to 'mm' when absent (legacy Firestore docs).
+   */
+  readonly sceneUnits?: SceneUnits;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

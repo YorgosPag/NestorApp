@@ -32,6 +32,7 @@ import {
   buildColumnEntity,
   buildDefaultColumnParams,
   type ColumnParamOverrides,
+  type SceneUnits,
 } from './column-completion';
 import {
   computeAnchorGhostFootprints,
@@ -69,6 +70,8 @@ export interface UseColumnToolOptions {
   readonly onColumnCreated?: (entity: ColumnEntity) => void;
   /** Layer ID στο οποίο γράφεται η νέα column. */
   readonly currentLevelId?: string;
+  /** Returns the active scene's coordinate units for correct mm→canvas conversion. */
+  readonly getSceneUnits?: () => SceneUnits;
 }
 
 export interface UseColumnToolResult {
@@ -105,7 +108,7 @@ export interface UseColumnToolResult {
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
 export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnToolResult {
-  const { onColumnCreated, currentLevelId = '0' } = options;
+  const { onColumnCreated, currentLevelId = '0', getSceneUnits } = options;
 
   const [state, setState] = useState<ColumnToolState>(INITIAL_STATE);
   const stateRef = useRef<ColumnToolState>(state);
@@ -176,8 +179,9 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         kind: s.kind,
         anchor: s.anchor,
       };
-      const params = buildDefaultColumnParams(clickPoint, s.kind, overridesWithKind);
-      const result = buildColumnEntity(params, currentLevelId);
+      const sceneUnits = getSceneUnits?.() ?? 'mm';
+      const params = buildDefaultColumnParams(clickPoint, s.kind, overridesWithKind, sceneUnits);
+      const result = buildColumnEntity(params, currentLevelId, sceneUnits);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
         return false;
@@ -192,7 +196,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       });
       return true;
     },
-    [currentLevelId, onColumnCreated],
+    [currentLevelId, onColumnCreated, getSceneUnits],
   );
 
   // ── click pipeline ───────────────────────────────────────────────────────

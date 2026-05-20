@@ -28,6 +28,9 @@ import {
 import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
 import { validateBeamParams } from '../../bim/validators/beam-validator';
 import { generateBeamId } from '@/services/enterprise-id-convenience';
+import type { SceneUnits } from '../../utils/scene-units';
+
+export type { SceneUnits };
 
 // ─── Param overrides accepted by the builder ─────────────────────────────────
 
@@ -69,6 +72,7 @@ export function buildDefaultBeamParams(
   endPoint: Readonly<Point2D>,
   kindArg?: BeamKind,
   overrides: BeamParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
 ): BeamParams {
   const kind = overrides.kind ?? kindArg ?? 'straight';
   const start: Point3D = { x: startPoint.x, y: startPoint.y, z: 0 };
@@ -86,6 +90,7 @@ export function buildDefaultBeamParams(
     depth,
     elevation,
     supportType,
+    sceneUnits,
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
   };
   return params;
@@ -100,15 +105,20 @@ export type BuildBeamEntityResult =
 /**
  * Build a `BeamEntity` από `BeamParams`. Geometry computed via SSoT
  * `computeBeamGeometry()`. Hard errors short-circuit creation.
+ *
+ * `sceneUnits` — passed to validator so length thresholds scale correctly
+ * in non-mm scenes (mirrors wall/stair builder pattern).
  */
 export function buildBeamEntity(
   params: Readonly<BeamParams>,
   layerId: string,
+  sceneUnits: SceneUnits = 'mm',
 ): BuildBeamEntityResult {
-  const validation = validateBeamParams(params);
+  const validation = validateBeamParams(params, sceneUnits);
   if (validation.hardErrors.length > 0) {
     return { ok: false, hardErrors: validation.hardErrors };
   }
+  // params.sceneUnits is already stored; computeBeamGeometry reads it directly.
   const geometry = computeBeamGeometry(params);
   const entity: BeamEntity = {
     id: generateBeamId(),
@@ -135,9 +145,10 @@ export function completeBeamFromTwoClicks(
   layerId: string,
   kind: BeamKind = 'straight',
   overrides: BeamParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
 ): BuildBeamEntityResult {
-  const params = buildDefaultBeamParams(startPoint, endPoint, kind, overrides);
-  return buildBeamEntity(params, layerId);
+  const params = buildDefaultBeamParams(startPoint, endPoint, kind, overrides, sceneUnits);
+  return buildBeamEntity(params, layerId, sceneUnits);
 }
 
 /**
@@ -150,9 +161,10 @@ export function completeBeamFromThreeClicks(
   curveControlPoint: Readonly<Point2D>,
   layerId: string,
   overrides: BeamParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
 ): BuildBeamEntityResult {
-  const base = buildDefaultBeamParams(startPoint, endPoint, 'curved', overrides);
+  const base = buildDefaultBeamParams(startPoint, endPoint, 'curved', overrides, sceneUnits);
   const curveControl: Point3D = { x: curveControlPoint.x, y: curveControlPoint.y, z: 0 };
   const params: BeamParams = { ...base, kind: 'curved', curveControl };
-  return buildBeamEntity(params, layerId);
+  return buildBeamEntity(params, layerId, sceneUnits);
 }

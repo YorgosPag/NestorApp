@@ -23,6 +23,7 @@ import type {
   Point3D,
   Polygon3D,
 } from './bim-base';
+import type { SceneUnits } from '../../utils/scene-units';
 
 // ─── Sub-type discriminator (ADR-363 §5.6) ───────────────────────────────────
 
@@ -102,6 +103,12 @@ export interface ColumnParams {
   readonly material?: string;
   readonly lshape?: ColumnLshapeParams;
   readonly tshape?: ColumnTshapeParams;
+  /**
+   * DXF canvas coordinate unit. Always stored so `computeColumnGeometry` can
+   * convert mm scalars (width/depth) → canvas units for 2D footprint offsets.
+   * Defaults to 'mm' when absent (legacy Firestore docs).
+   */
+  readonly sceneUnits?: SceneUnits;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

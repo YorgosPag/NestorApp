@@ -20,6 +20,7 @@ import type {
   BoundingBox3D,
   Polygon3D,
 } from './bim-base';
+import type { SceneUnits } from '../../utils/scene-units';
 
 // ─── Sub-type discriminator (ADR-363 §5.5) ───────────────────────────────────
 
@@ -60,6 +61,12 @@ export interface SlabParams {
   readonly reinforcement?: SlabReinforcement;
   /** Material library ID (Phase 6+). */
   readonly material?: string;
+  /**
+   * DXF canvas coordinate unit. Always stored so `computeSlabGeometry` can
+   * convert canvas-unit² polygon areas → m² for BOQ.
+   * Defaults to 'mm' when absent (legacy Firestore docs).
+   */
+  readonly sceneUnits?: SceneUnits;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

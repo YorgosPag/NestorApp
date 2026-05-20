@@ -25,6 +25,7 @@ import {
   polygonPerimeter,
   polygonIntersectionAreaMm2,
 } from './shared/polygon-utils';
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 // ─── Beam deduction input (Phase 5.5i+) ──────────────────────────────────────
 
@@ -78,12 +79,17 @@ export function computeSlabGeometry(
   beamFootprints?: readonly BeamFootprintForDeduction[],
   wallFootprints?: readonly WallFootprintForSpan[],
 ): SlabGeometry {
+  // Outline vertices are in canvas units (from user clicks). Convert to m via
+  // (1/s) * MM_TO_M. thickness/elevation are always mm → convert with MM_TO_M.
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const canvasToM = (1 / s) * MM_TO_M;
+
   const vertices = params.outline.vertices;
   const bbox = polygonBbox(vertices);
-  const areaMm2 = polygonArea(vertices);
-  const perimeterMm = polygonPerimeter(vertices);
-  const areaM2 = areaMm2 * (MM_TO_M * MM_TO_M);
-  const perimeterM = perimeterMm * MM_TO_M;
+  const areaCanvas2 = polygonArea(vertices);
+  const perimeterCanvas = polygonPerimeter(vertices);
+  const areaM2 = areaCanvas2 * canvasToM * canvasToM;
+  const perimeterM = perimeterCanvas * canvasToM;
 
   const openingsAreaM2 = sumSlabOpeningAreasM2(slabOpenings);
   const netAreaM2 = Math.max(0, areaM2 - openingsAreaM2);
@@ -93,7 +99,7 @@ export function computeSlabGeometry(
   const volumeM3 = Math.max(0, grossVolumeM3 - beamDeductionM3);
 
   const supportOutlines = collectSupportOutlines(beamFootprints, wallFootprints);
-  const maxFreeSpanM = computeSlabMaxFreeSpanM(vertices, supportOutlines);
+  const maxFreeSpanM = computeSlabMaxFreeSpanM(vertices, supportOutlines, params.sceneUnits ?? 'mm');
 
   return {
     polygon: params.outline,
@@ -130,10 +136,12 @@ function sumSlabOpeningAreasM2(
  * direction, so min(w,h) is the structurally relevant dimension).
  */
 export function getSlabMaxBboxDimensionM(params: SlabParams): number {
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const canvasToM = (1 / s) * MM_TO_M;
   const bb = polygonBbox(params.outline.vertices);
   const dx = bb.max.x - bb.min.x;
   const dy = bb.max.y - bb.min.y;
-  return Math.min(dx, dy) * MM_TO_M;
+  return Math.min(dx, dy) * canvasToM;
 }
 
 // ─── Phase 3.8 — Analytical free-span computation ───────────────────────────
@@ -187,11 +195,13 @@ function computePolygonCentroid(vertices: readonly Point3D[]): { x: number; y: n
 export function computeSlabMaxFreeSpanM(
   slabVertices: readonly Point3D[],
   supportOutlines: readonly Polygon3D[],
+  sceneUnits: SceneUnits = 'mm',
 ): number {
+  const canvasToM = (1 / mmToSceneUnits(sceneUnits)) * MM_TO_M;
   const bb = polygonBbox(slabVertices);
   const dx = bb.max.x - bb.min.x;
   const dy = bb.max.y - bb.min.y;
-  const bboxFallbackM = Math.min(dx, dy) * MM_TO_M;
+  const bboxFallbackM = Math.min(dx, dy) * canvasToM;
 
   if (slabVertices.length < 3 || supportOutlines.length < 2) {
     return bboxFallbackM;
@@ -242,7 +252,7 @@ export function computeSlabMaxFreeSpanM(
     }
   }
 
-  return maxSpanMm > 0 ? maxSpanMm * MM_TO_M : bboxFallbackM;
+  return maxSpanMm > 0 ? maxSpanMm * canvasToM : bboxFallbackM;
 }
 
 /**

@@ -29,6 +29,9 @@ import {
 import { computeSlabGeometry } from '../../bim/geometry/slab-geometry';
 import { validateSlabParams } from '../../bim/validators/slab-validator';
 import { generateSlabId } from '@/services/enterprise-id-convenience';
+import type { SceneUnits } from '../../utils/scene-units';
+
+export type { SceneUnits };
 
 // ─── Param overrides accepted by the builder ─────────────────────────────────
 
@@ -64,6 +67,7 @@ export interface SlabParamOverrides {
 export function buildDefaultSlabParams(
   vertices: readonly Point2D[],
   overrides: SlabParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
 ): SlabParams {
   const kind = overrides.kind ?? 'floor';
   const thickness = overrides.thickness ?? DEFAULT_SLAB_THICKNESS_MM;
@@ -76,6 +80,7 @@ export function buildDefaultSlabParams(
     outline: { vertices: lifted },
     elevation,
     thickness,
+    sceneUnits,
     ...(overrides.reinforcement !== undefined ? { reinforcement: overrides.reinforcement } : {}),
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
   };
@@ -127,7 +132,8 @@ export function completeSlabFromPolygonClicks(
   vertices: readonly Point2D[],
   layerId: string,
   overrides: SlabParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
 ): BuildSlabEntityResult {
-  const params = buildDefaultSlabParams(vertices, overrides);
+  const params = buildDefaultSlabParams(vertices, overrides, sceneUnits);
   return buildSlabEntity(params, layerId);
 }

@@ -29,6 +29,7 @@ import {
   buildSlabEntity,
   buildDefaultSlabParams,
   type SlabParamOverrides,
+  type SceneUnits,
 } from './slab-completion';
 import { slabPreviewStore } from '../../bim/slabs/slab-preview-store';
 
@@ -71,6 +72,8 @@ export interface UseSlabToolOptions {
    * για να ανιχνεύσει click κοντά στην πρώτη κορυφή.
    */
   readonly getAutoCloseTolerance?: () => number;
+  /** Returns the active scene's coordinate units for correct BOQ calculations. */
+  readonly getSceneUnits?: () => SceneUnits;
 }
 
 export interface UseSlabToolResult {
@@ -95,7 +98,7 @@ export interface UseSlabToolResult {
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
 export function useSlabTool(options: UseSlabToolOptions = {}): UseSlabToolResult {
-  const { onSlabCreated, currentLevelId = '0', getAutoCloseTolerance } = options;
+  const { onSlabCreated, currentLevelId = '0', getAutoCloseTolerance, getSceneUnits } = options;
 
   const [state, setState] = useState<SlabToolState>(INITIAL_STATE);
   const stateRef = useRef<SlabToolState>(state);
@@ -159,7 +162,8 @@ export function useSlabTool(options: UseSlabToolOptions = {}): UseSlabToolResult
   const commitFromState = useCallback((s: SlabToolState): boolean => {
     if (s.vertices.length < 3) return false;
     const overridesWithKind: SlabParamOverrides = { ...s.overrides, kind: s.kind };
-    const params = buildDefaultSlabParams(s.vertices, overridesWithKind);
+    const sceneUnits: SceneUnits = getSceneUnits?.() ?? 'mm';
+    const params = buildDefaultSlabParams(s.vertices, overridesWithKind, sceneUnits);
     const result = buildSlabEntity(params, currentLevelId);
     if (!result.ok) {
       setState({ ...s, error: result.hardErrors[0] ?? null });
@@ -173,7 +177,7 @@ export function useSlabTool(options: UseSlabToolOptions = {}): UseSlabToolResult
       phase: 'awaitingFirstVertex',
     });
     return true;
-  }, [currentLevelId, onSlabCreated]);
+  }, [currentLevelId, onSlabCreated, getSceneUnits]);
 
   // ── click pipeline ───────────────────────────────────────────────────────
   const onCanvasClick = useCallback(
