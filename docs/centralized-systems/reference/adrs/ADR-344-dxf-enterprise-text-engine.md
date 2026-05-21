@@ -870,6 +870,8 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-05-21 — InsertTextTokenCommand: raw Unicode codepoint support (ADR-345 Fase 5.5-SYM)**. `resolveToken(token)` helper added to `InsertTextTokenCommand.ts`: TOKEN_MAP lookup first; if not found, accepts raw single Unicode codepoint (`[...token].length === 1`) directly. `execute()`, `validate()`, `getDescription()` updated to use `resolveToken`. Retro-compatible: existing `%%c/%%d/%%p/\S` tokens unchanged. Enables `SymbolPickerDialog` (ADR-345) to pass Unicode symbols (±, °, Ø, ©, ®, ™, →, ←, etc.) directly without expanding TOKEN_MAP.
+
 - **2026-05-20 — Round 6 — Belt-and-suspenders zero-height run patch (dimscale-aware, unit-fallback)**.
   - **Symptom 1**: After Phase 13, Ribbon Text in meters DXF still filled the screen (~12m). Phase 13 correctly set `height = 0.0025m` in `makeEmptyTextNode`, but TipTap discarded the `fontHeight` mark for the empty initial run (`dxf-to-tiptap.runToInlines` `if (seg.length > 0)` check skips empty text nodes, so the mark never entered the editor state). Newly typed chars inherited `height: 0` from `defaultStyle()` → `resolveTextHeight` fell back to `DEFAULT_FONT_SIZE = 12` → 12 m in meters scene.
   - **Symptom 2**: After first R6 attempt (patch to `2.5 * mmToSceneUnits(units)` = 0.0025m for meters), text became invisible — 2.5 paper-mm is microscopic at typical building viewing scale (< 1px). Correct model-space size requires DIMSCALE factor. DXFs with `DIMSCALE=1` or annotative (`DIMSCALE=0`) still produced invisible text.
@@ -1326,6 +1328,8 @@ src/subapps/dxf-viewer/
   - Q20: Missing SHX = substitution + MissingFontBanner + canvas highlight
   - Q21: Text snap = all points (insertion + 4 corners + center + edge mids)
   - Total estimate revised: **~52-62 working days** (12 phases + 15 SSoT modules)
+- **2026-05-21 — `ClipToRegionService.clipText()` textNode functional fix + test coverage**. `clipText()` now correctly handles ribbon-drawn entities that carry only `textNode` (no flat `text` field). Logic: if `entity.textNode` exists → extract `plainText` via `paragraphs.flatMap(runs).map(run → 'top' in run ? '' : run.text).join('')` (duck-typing TextRun vs TextStack). `charH` = `run0.style.height if > 0`, else `TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE` (12) — fixes invisible clip for TipTap-produced runs with `height: 0`. 1-para/1-run path: rebuilds textNode with trimmed text. Multi-run/multi-para path: conservative — moves `position` only. New test suite `services/__tests__/ClipToRegionService.test.ts` (6 tests, all ✅): fully-inside, outside, single-run trim, DEFAULT_FONT_SIZE fallback, legacy flat-text, multi-run conservative.
+
 - **2026-05-15 — SSOT Unification Phase B COMPLETE** (ADR-344 + GOL+SSOT):
   - `utils/text-node-utils.ts` (NEW): SSoT utility — `extractFlatText(textNode)` + `resolveEntityText(entity)`. Shared across the entire subapp — zero duplication.
   - `hooks/canvas/useDxfSceneConversion.ts`: Local `extractFlatText` removed → imported from SSoT. Duck-typing cast `entity as { textNode?: DxfTextNode }` replaced with type-safe `entity as TextEntity`.

@@ -402,7 +402,8 @@ import type { ArrayKind, ArrayParams } from '../systems/array/types';
 export type { ArrayKind, ArrayParams };
 
 // ADR-358: Parametric Stair Entity — discriminated union over 11 kinds.
-import type { StairEntity } from './stair';
+// ADR-363 Phase 0.5 follow-up: import from canonical bim/ path (types/stair.ts barrel deleted).
+import type { StairEntity } from '../bim/types/stair-types';
 export type {
   StairEntity,
   StairKind,
@@ -412,7 +413,7 @@ export type {
   StairDoc,
   StairPresetDoc,
   StairQTO,
-} from './stair';
+} from '../bim/types/stair-types';
 
 export interface ArrayEntity extends BaseEntity {
   readonly type: 'array';
