@@ -75,6 +75,7 @@ function buildRow(
     entityType,
     entityKind: entity.kind,
     floorId: entity.floorId,
+    buildingId: entity.buildingId,
     cells: mapFn(entity, lookups),
   };
 }
@@ -111,6 +112,10 @@ export function buildSchedule(
   const survivors = candidates.filter((e) => survivorIds.has(e.id));
 
   const rows = survivors.map((e) => buildRow(e, config.entityType, lookups, preset.map));
+
+  if (config.groupByBuilding === true) {
+    rows.sort((a, b) => (a.buildingId ?? '').localeCompare(b.buildingId ?? ''));
+  }
 
   return {
     entityType: config.entityType,

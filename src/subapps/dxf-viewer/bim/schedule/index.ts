@@ -29,6 +29,8 @@ export type {
   ScheduleRow,
   FloorLabelLookup,
   MaterialLabelLookup,
+  FloorFinishLookup,
+  BuildingLookup,
 } from './types';
 
 // ─── Filters ────────────────────────────────────────────────────────────────
@@ -36,6 +38,7 @@ export {
   applyScheduleFilters,
   passesAllFilters,
   passesFloorFilter,
+  passesBuildingFilter,
   passesCategoryFilter,
   passesRegionFilter,
   passesSelectionFilter,
@@ -49,6 +52,7 @@ export {
   openingKindToScheduleType,
   handingToGreek,
   handingToDIN,
+  MULTI_BUILDING_COLUMNS,
 } from './schedule-presets';
 export type { AnyBimEntity, SchedulePreset } from './schedule-presets';
 

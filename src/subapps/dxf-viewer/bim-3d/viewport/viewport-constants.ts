@@ -4,7 +4,7 @@
  * Adapted: removed GenArc @/ aliases, self-contained.
  */
 
-import type { ZoomPreset, CanonicalViewDef } from './viewport-types';
+import type { ZoomPreset } from './viewport-types';
 
 export const ZOOM_PRESETS: readonly ZoomPreset[] = [
   { label: '12.5%', value: 0.125 },
@@ -60,14 +60,6 @@ export const POI_FADE_DELAY_MS = 1500;
 export const POI_FADE_DURATION_MS = 300;
 
 export const SNAP_PROXIMITY_THRESHOLD = 0.92;
-
-export const CANONICAL_VIEWS: readonly CanonicalViewDef[] = [
-  { id: 'top',   lookDir: [ 0, -1,  0], projectionMode: 'top' },
-  { id: 'front', lookDir: [ 0,  0, -1], projectionMode: 'front' },
-  { id: 'back',  lookDir: [ 0,  0,  1], projectionMode: 'back' },
-  { id: 'left',  lookDir: [ 1,  0,  0], projectionMode: 'left' },
-  { id: 'right', lookDir: [-1,  0,  0], projectionMode: 'right' },
-] as const;
 
 export const DEFAULT_PAN_SPEED = 1.0;
 export const DEFAULT_ROTATE_SPEED = 1.0;

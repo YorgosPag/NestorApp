@@ -2216,6 +2216,19 @@
       ],
       "tier": 3
     },
+    "floor-naming": {
+      "ssotFile": "src/utils/floor-naming.ts",
+      "description": "Floor naming SSoT (ADR-369 §9 Q9 Phase A1) — FloorKind taxonomy + FLOOR_KIND_VALUES + isFloorKind + generateAutoShortName/generateAutoLongName + inferKindFromNumber + DEFAULT_FLOOR_HEIGHT_M/DEFAULT_FLOOR_FINISH_THICKNESS_MM. Greek canonical longName persisted in Firestore; English rendering at UI time via formatFloorLabel (intl-domain).",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(generateAutoShortName|generateAutoLongName|inferKindFromNumber|isFloorKind)\\b",
+        "export\\s+const\\s+(FLOOR_KIND_VALUES|DEFAULT_FLOOR_HEIGHT_M|DEFAULT_FLOOR_FINISH_THICKNESS_MM)\\b",
+        "export\\s+type\\s+FloorKind\\b"
+      ],
+      "allowlist": [
+        "src/utils/floor-naming.ts"
+      ],
+      "tier": 3
+    },
     "property-utils": {
       "ssotFile": "src/lib/property-utils.ts",
       "description": "Property status/type config — getPropertyStatusConfig, PROPERTY_STATUS_CONFIG, PROPERTY_TYPE_ICONS. Canonical SSoT for property status color+label config and type icon map. ADR-314 Phase D.3o.",

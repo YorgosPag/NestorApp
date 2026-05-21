@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useSyncExternalStore } from 'react';
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
@@ -24,8 +24,10 @@ export function Lighting3DPanelTab() {
 
   const [timeHour, setTimeHour] = useState(12);
   const [advanced, setAdvanced] = useState(false);
+  const timeHourRef = useRef(12);
 
   const applyTime = (h: number) => {
+    timeHourRef.current = h;
     setTimeHour(h);
     const pos = computeSolarPosition(timeOfDayToDate(h), solarLatDeg, solarLngDeg);
     useViewMode3DStore.getState().setSunPosition(pos.azimuthDeg, pos.elevationDeg);
@@ -34,12 +36,11 @@ export function Lighting3DPanelTab() {
   useEffect(() => {
     if (!sunAnimating) return;
     const id = setInterval(() => {
-      setTimeHour((prev) => {
-        const next = (prev + 0.25) % 24;
-        const pos = computeSolarPosition(timeOfDayToDate(next), solarLatDeg, solarLngDeg);
-        useViewMode3DStore.getState().setSunPosition(pos.azimuthDeg, pos.elevationDeg);
-        return next;
-      });
+      const next = (timeHourRef.current + 0.25) % 24;
+      timeHourRef.current = next;
+      setTimeHour(next);
+      const pos = computeSolarPosition(timeOfDayToDate(next), solarLatDeg, solarLngDeg);
+      useViewMode3DStore.getState().setSunPosition(pos.azimuthDeg, pos.elevationDeg);
     }, 2000);
     return () => clearInterval(id);
   }, [sunAnimating, solarLatDeg, solarLngDeg]);

@@ -54,12 +54,24 @@ export interface ViewportCamera {
   readonly applyTumble: (dxPx: number, dyPx: number) => void;
 }
 
-export type CanonicalViewId = 'top' | 'front' | 'back' | 'left' | 'right';
+/** All 12 canonical view IDs: 6 ortho face + 6 isometric. */
+export type CanonicalViewId =
+  | 'top' | 'bottom' | 'front' | 'back' | 'left' | 'right'
+  | 'iso-ne' | 'iso-nw' | 'iso-se' | 'iso-sw' | 'iso-ue' | 'iso-uw';
+
+/** Subset of CanonicalViewId that maps to an orthographic ProjectionMode. */
+export type OrthoCanonicalViewId = Extract<CanonicalViewId,
+  'top' | 'bottom' | 'front' | 'back' | 'left' | 'right'>;
 
 export interface CanonicalViewDef {
   readonly id: CanonicalViewId;
+  /** Camera-to-target direction (unit vector). Negate for camera-from-target. */
   readonly lookDir: readonly [number, number, number];
-  readonly projectionMode: Extract<ProjectionMode, 'top' | 'front' | 'back' | 'left' | 'right'>;
+  readonly type: 'ortho' | 'iso';
+  /** Present only for ortho views; undefined for iso. */
+  readonly projectionMode?: OrthoCanonicalViewId;
+  /** i18n key within the bim3d namespace. */
+  readonly labelKey: string;
 }
 
 export interface ScreenPoint {

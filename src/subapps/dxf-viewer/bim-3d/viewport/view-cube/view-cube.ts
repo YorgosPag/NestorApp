@@ -6,18 +6,24 @@
  */
 
 import * as THREE from 'three';
-import type { ProjectionMode } from '../viewport-types';
+import type { ProjectionMode, CanonicalViewId } from '../viewport-types';
 import {
   createVisualCube, createHitTargets, createCompassRing, createHomeButton,
   FACE_DIRS, type HitUserData, type FaceLabels, type CompassLabels,
 } from './view-cube-mesh';
 import { createRollArrows, createFaceNavArrows, computeCompassDirection } from './view-cube-overlay';
 import { computeHighlights } from './view-cube-highlight';
+import { matchIsoCanonicalView } from '../canonical-views';
 
 const CUBE_CANVAS_SIZE = 160;
 const MAX_PIXEL_RATIO = 1.5;
 
 const FACE_TO_PROJECTION: Record<number, ProjectionMode> = {
+  0: 'right', 1: 'left', 2: 'top', 3: 'bottom', 4: 'front', 5: 'back',
+} as const;
+
+// Same mapping as FACE_TO_PROJECTION but typed as CanonicalViewId (used by onSnapToView path).
+const FACE_INDEX_TO_VIEW_ID: Record<number, CanonicalViewId> = {
   0: 'right', 1: 'left', 2: 'top', 3: 'bottom', 4: 'front', 5: 'back',
 } as const;
 
@@ -29,6 +35,11 @@ export interface ViewCubeOptions {
   readonly onDirSnap: (dir: THREE.Vector3) => void;
   readonly onHome: () => void;
   readonly onDragRotate?: (dxPx: number, dyPx: number) => void;
+  /**
+   * Phase 4.1: canonical dispatch — face/faceNav/edge/corner clicks route here
+   * when provided. Falls back to onFaceSnap/onDirSnap when absent.
+   */
+  readonly onSnapToView?: (id: CanonicalViewId) => void;
   /** Returns true-north offset in degrees (0 = no offset). Defaults to 0. */
   readonly getNorthAngleDeg?: () => number;
   readonly labels?: {
@@ -43,7 +54,7 @@ export interface ViewCubeEngine {
 }
 
 export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
-  const { container, getCamera, getTarget, onFaceSnap, onDirSnap, onHome, onDragRotate, getNorthAngleDeg } = opts;
+  const { container, getCamera, getTarget, onFaceSnap, onDirSnap, onHome, onDragRotate, onSnapToView, getNorthAngleDeg } = opts;
 
   const canvas = document.createElement('canvas');
   const dpr = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
@@ -190,16 +201,33 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
       onDirSnap(offset.normalize());
       return;
     }
-    if (ud.type === 'faceNav' && ud.navTarget) { onFaceSnap(ud.navTarget); return; }
+    // faceNav arrows (front/back/left/right only — never top/bottom)
+    if (ud.type === 'faceNav' && ud.navTarget) {
+      if (onSnapToView) { onSnapToView(ud.navTarget as CanonicalViewId); return; }
+      onFaceSnap(ud.navTarget);
+      return;
+    }
     if (ud.type === 'compass' && ud.cardinal) {
       onDirSnap(computeCompassDirection(ud.cardinal, getNorthAngleRad(), getCamera().position, getTarget()));
       return;
     }
     if (ud.type === 'face' && ud.faces.length === 1) {
-      const mode = FACE_TO_PROJECTION[ud.faces[0]!];
+      const faceIdx = ud.faces[0]!;
+      if (onSnapToView) {
+        const viewId = FACE_INDEX_TO_VIEW_ID[faceIdx];
+        if (viewId) { onSnapToView(viewId); return; }
+      }
+      const mode = FACE_TO_PROJECTION[faceIdx];
       if (mode) { onFaceSnap(mode); return; }
     }
-    if (ud.type === 'edge' || ud.type === 'corner') { onDirSnap(computeDirection(ud.faces)); }
+    if (ud.type === 'edge' || ud.type === 'corner') {
+      const dir = computeDirection(ud.faces);
+      if (onSnapToView) {
+        const isoId = matchIsoCanonicalView(dir);
+        if (isoId) { onSnapToView(isoId); return; }
+      }
+      onDirSnap(dir);
+    }
   }
 
   function onPointerDown(e: PointerEvent): void {

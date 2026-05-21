@@ -33,6 +33,8 @@ import type { ScheduleFilterCriteria } from './types';
 export interface FilterableBimEntity {
   readonly id: string;
   readonly floorId?: string;
+  /** ADR-369 §9.2 Q2.4 — building FK for building-filter axis. */
+  readonly buildingId?: string;
   readonly kind: string;
   readonly geometry: { readonly bbox: BoundingBox3D };
   readonly params: Readonly<{
@@ -57,7 +59,22 @@ export function passesFloorFilter(
   return floorIds.includes(entity.floorId);
 }
 
-// ─── Axis 2: Category (material OR kind) ─────────────────────────────────────
+// ─── Axis 2: Building ────────────────────────────────────────────────────────
+
+/**
+ * Building filter (ADR-369 §9.2 Q2.4). Undefined criteria axis → pass-through.
+ * Empty array → match nothing. Entity without buildingId fails when filter active.
+ */
+export function passesBuildingFilter(
+  entity: FilterableBimEntity,
+  buildingIds: readonly string[] | undefined,
+): boolean {
+  if (buildingIds === undefined) return true;
+  if (entity.buildingId === undefined) return false;
+  return buildingIds.includes(entity.buildingId);
+}
+
+// ─── Axis 3: Category (material OR kind) ─────────────────────────────────────
 
 /**
  * Category filter — accepts material ID OR entity kind. Heterogeneous
@@ -117,7 +134,7 @@ export function passesSelectionFilter(
 // ─── Composed filter (all axes ∧) ────────────────────────────────────────────
 
 /**
- * Compose all 4 axes — logical AND. Entity passes ⇔ all defined axes pass.
+ * Compose all 5 axes — logical AND. Entity passes ⇔ all defined axes pass.
  * Unused axes (criteria field undefined) are no-ops.
  */
 export function passesAllFilters(
@@ -126,6 +143,7 @@ export function passesAllFilters(
 ): boolean {
   return (
     passesFloorFilter(entity, criteria.floorIds) &&
+    passesBuildingFilter(entity, criteria.buildingIds) &&
     passesCategoryFilter(entity, criteria.categories) &&
     passesRegionFilter(entity, criteria.region) &&
     passesSelectionFilter(entity, criteria.selectionIds)

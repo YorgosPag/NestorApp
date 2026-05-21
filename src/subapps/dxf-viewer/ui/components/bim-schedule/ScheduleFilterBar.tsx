@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import type { ScheduleFilterCriteria } from '@/subapps/dxf-viewer/bim/schedule';
@@ -42,6 +43,8 @@ interface ScheduleFilterBarProps {
   readonly onChange: (next: ScheduleFilterCriteria) => void;
   readonly availableFloors: readonly FilterOption[];
   readonly availableCategories: readonly FilterOption[];
+  /** ADR-369 §9.2 Q2.4 — building options. Shown only when length > 1. */
+  readonly availableBuildings?: readonly FilterOption[];
   /** True when user enabled the "selection-only" filter axis (real ids owned by orchestrator). */
   readonly selectionActive: boolean;
   readonly selectionCount: number;
@@ -115,6 +118,7 @@ export function ScheduleFilterBar({
   onChange,
   availableFloors,
   availableCategories,
+  availableBuildings,
   selectionActive,
   selectionCount,
   onSelectionToggle,
@@ -151,6 +155,33 @@ export function ScheduleFilterBar({
         onToggle={handleCategoryToggle}
         idPrefix="schedule-category"
       />
+
+      {(availableBuildings?.length ?? 0) > 1 && (
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium text-foreground">
+            {t('dxf-schedule:filters.building.label')}
+          </legend>
+          <Select
+            value={criteria.buildingIds?.[0] ?? ''}
+            onValueChange={(v) =>
+              onChange({ ...criteria, buildingIds: v === '' ? undefined : [v] })
+            }
+          >
+            <SelectTrigger
+              className="h-8 w-full"
+              aria-label={t('dxf-schedule:filters.building.filterAria')}
+            >
+              <SelectValue placeholder={t('dxf-schedule:filters.building.all')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">{t('dxf-schedule:filters.building.all')}</SelectItem>
+              {availableBuildings!.map((b) => (
+                <SelectItem key={b.id} value={b.id}>{b.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </fieldset>
+      )}
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium text-foreground">

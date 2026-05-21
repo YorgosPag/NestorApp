@@ -33,6 +33,12 @@
     "selection": {
       "label": "Επιλογή",
       "toggle": "Μόνο επιλεγμένα ({count})"
+    },
+    "building": {
+      "label": "Κτίριο",
+      "all": "Όλα τα κτίρια",
+      "empty": "Δεν υπάρχουν κτίρια",
+      "filterAria": "Φίλτρο κτιρίου"
     }
   },
   "preview": {
@@ -91,6 +97,7 @@
     "slabId": "Πλάκα",
     "primaryQuantity": "Κύρια ποσότητα",
     "primaryUnit": "Μονάδα",
-    "atoeCategory": "Κατηγορία ΑΤΟΕ"
+    "atoeCategory": "Κατηγορία ΑΤΟΕ",
+    "buildingName": "Κτίριο"
   }
 }

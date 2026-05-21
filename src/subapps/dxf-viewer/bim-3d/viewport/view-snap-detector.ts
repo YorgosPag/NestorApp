@@ -1,11 +1,13 @@
 /**
  * Pure Smart View Snap detector — no side effects, safe to call every frame.
  * PORT_AS_IS from GenArc viewSnapDetector.ts (ADR-366 §8.2 SPEC-3D-004A).
+ * Phase 4.1: extended to detect all 12 canonical views (6 face + 6 iso).
  */
 
 import * as THREE from 'three';
 import type { CanonicalViewDef } from './viewport-types';
-import { CANONICAL_VIEWS, SNAP_PROXIMITY_THRESHOLD } from './viewport-constants';
+import { CANONICAL_VIEW_ENTRIES } from './canonical-views';
+import { SNAP_PROXIMITY_THRESHOLD } from './viewport-constants';
 
 const _lookDir = new THREE.Vector3();
 
@@ -20,7 +22,7 @@ export function detectSnapCandidate(
   _lookDir.subVectors(target, cameraPos).normalize();
   let best: CanonicalViewDef | null = null;
   let bestDot = SNAP_PROXIMITY_THRESHOLD;
-  for (const view of CANONICAL_VIEWS) {
+  for (const view of CANONICAL_VIEW_ENTRIES) {
     const dot =
       _lookDir.x * view.lookDir[0] +
       _lookDir.y * view.lookDir[1] +

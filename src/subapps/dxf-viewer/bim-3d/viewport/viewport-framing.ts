@@ -1,10 +1,13 @@
 /**
  * Zoom-to-fit calculations for perspective and orthographic cameras.
  * PORT_AS_IS from GenArc viewportFraming.ts (ADR-366 §8.2 SPEC-3D-004A).
+ * Phase 4.1: computeFramingForView convenience wrapper for canonical views.
  */
 
 import * as THREE from 'three';
-import { DEFAULT_ORTHO_SIZE, FRAME_PADDING_FACTOR } from './viewport-constants';
+import { DEFAULT_ORTHO_SIZE, FRAME_PADDING_FACTOR, ORTHO_CAMERA_UP } from './viewport-constants';
+import type { CanonicalViewId } from './viewport-types';
+import { getCanonicalViewDef } from './canonical-views';
 
 export interface FramingResult {
   readonly position: THREE.Vector3;
@@ -32,6 +35,37 @@ export function computePerspectiveFraming(
   const distance = (radius / Math.tan(effectiveFov / 2)) * FRAME_PADDING_FACTOR;
   const position = new THREE.Vector3().copy(_center).addScaledVector(viewDir, -distance);
   return { position, target: _center.clone(), orthoZoom: 1 };
+}
+
+/** Scene bounding box (world space). */
+export interface SceneBounds {
+  readonly min: THREE.Vector3;
+  readonly max: THREE.Vector3;
+}
+
+/**
+ * Compute framing for a canonical view ID given scene bounds.
+ * Ortho views use computeOrthoFraming; iso/perspective use computePerspectiveFraming.
+ * Phase 4.1 — used by CanonicalViewService.snapTo with frame-to-fit (Phase 4.4+).
+ */
+export function computeFramingForView(
+  viewId: CanonicalViewId,
+  bounds: SceneBounds,
+  aspect: number,
+  fovDeg: number,
+): FramingResult {
+  const def = getCanonicalViewDef(viewId);
+  if (!def) {
+    const fallbackDir = new THREE.Vector3(1, 0, 0);
+    return computePerspectiveFraming(bounds.min, bounds.max, fallbackDir, aspect, fovDeg);
+  }
+  const viewDir = new THREE.Vector3(def.lookDir[0], def.lookDir[1], def.lookDir[2]).normalize();
+  if (def.type === 'ortho' && def.projectionMode) {
+    const upArr = ORTHO_CAMERA_UP[def.projectionMode] ?? [0, 1, 0];
+    const up = new THREE.Vector3(upArr[0], upArr[1], upArr[2]);
+    return computeOrthoFraming(bounds.min, bounds.max, viewDir, up, aspect);
+  }
+  return computePerspectiveFraming(bounds.min, bounds.max, viewDir, aspect, fovDeg);
 }
 
 export function computeOrthoFraming(

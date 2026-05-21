@@ -173,9 +173,10 @@ function mapWindow(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow[
 // ─── Wall preset ─────────────────────────────────────────────────────────────
 
 const WALL_COLUMNS: readonly ScheduleColumnDef[] = [
-  { key: 'id',         i18nKey: 'col.id',         valueType: 'text',              align: 'left'  },
-  { key: 'floor',      i18nKey: 'col.floor',      valueType: 'text',              align: 'left'  },
-  { key: 'category',   i18nKey: 'col.category',   valueType: 'text',              align: 'left'  },
+  { key: 'id',           i18nKey: 'col.id',           valueType: 'text', align: 'left' },
+  { key: 'buildingName', i18nKey: 'col.buildingName', valueType: 'text', align: 'left' },
+  { key: 'floor',        i18nKey: 'col.floor',        valueType: 'text', align: 'left' },
+  { key: 'category',     i18nKey: 'col.category',     valueType: 'text', align: 'left' },
   { key: 'kind',       i18nKey: 'col.kind',       valueType: 'text',              align: 'left'  },
   { key: 'length',     i18nKey: 'col.length',     valueType: 'number',            align: 'right' },
   { key: 'thickness',  i18nKey: 'col.thickness',  valueType: 'dimension-mm-to-m', align: 'right' },
@@ -191,6 +192,7 @@ function mapWall(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['c
   const g = entity.geometry;
   return {
     id: entity.id,
+    buildingName: lookups.building?.(entity.buildingId)?.name ?? null,
     floor: lookups.floor(entity.floorId),
     category: p.category,
     kind: entity.kind,
@@ -210,6 +212,7 @@ const DEFAULT_FINISH_THICKNESS_MM = 80;
 
 const SLAB_COLUMNS: readonly ScheduleColumnDef[] = [
   { key: 'id',             i18nKey: 'col.id',             valueType: 'text',              align: 'left'  },
+  { key: 'buildingName',   i18nKey: 'col.buildingName',   valueType: 'text',              align: 'left'  },
   { key: 'floor',          i18nKey: 'col.floor',          valueType: 'text',              align: 'left'  },
   { key: 'kind',           i18nKey: 'col.kind',           valueType: 'text',              align: 'left'  },
   { key: 'elevation',      i18nKey: 'col.elevation',      valueType: 'dimension-mm-to-m', align: 'right' },
@@ -233,6 +236,7 @@ function mapSlab(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['c
     : null;
   return {
     id: entity.id,
+    buildingName: lookups.building?.(entity.buildingId)?.name ?? null,
     floor: lookups.floor(entity.floorId),
     kind: entity.kind,
     elevation: safeNumber(p.levelElevation),
@@ -250,8 +254,9 @@ function mapSlab(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['c
 // ─── Column preset ───────────────────────────────────────────────────────────
 
 const COLUMN_COLUMNS: readonly ScheduleColumnDef[] = [
-  { key: 'id',        i18nKey: 'col.id',        valueType: 'text',              align: 'left'  },
-  { key: 'floor',     i18nKey: 'col.floor',     valueType: 'text',              align: 'left'  },
+  { key: 'id',           i18nKey: 'col.id',           valueType: 'text', align: 'left' },
+  { key: 'buildingName', i18nKey: 'col.buildingName', valueType: 'text', align: 'left' },
+  { key: 'floor',        i18nKey: 'col.floor',        valueType: 'text', align: 'left' },
   { key: 'kind',      i18nKey: 'col.kind',      valueType: 'text',              align: 'left'  },
   { key: 'width',     i18nKey: 'col.width',     valueType: 'dimension-mm-to-m', align: 'right' },
   { key: 'depth',     i18nKey: 'col.depth',     valueType: 'dimension-mm-to-m', align: 'right' },
@@ -268,6 +273,7 @@ function mapColumn(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow[
   const g = entity.geometry;
   return {
     id: entity.id,
+    buildingName: lookups.building?.(entity.buildingId)?.name ?? null,
     floor: lookups.floor(entity.floorId),
     kind: entity.kind,
     width: safeNumber(p.width),
@@ -283,8 +289,9 @@ function mapColumn(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow[
 // ─── Beam preset ─────────────────────────────────────────────────────────────
 
 const BEAM_COLUMNS: readonly ScheduleColumnDef[] = [
-  { key: 'id',           i18nKey: 'col.id',           valueType: 'text',              align: 'left'  },
-  { key: 'floor',        i18nKey: 'col.floor',        valueType: 'text',              align: 'left'  },
+  { key: 'id',           i18nKey: 'col.id',           valueType: 'text', align: 'left' },
+  { key: 'buildingName', i18nKey: 'col.buildingName', valueType: 'text', align: 'left' },
+  { key: 'floor',        i18nKey: 'col.floor',        valueType: 'text', align: 'left' },
   { key: 'kind',         i18nKey: 'col.kind',         valueType: 'text',              align: 'left'  },
   { key: 'length',       i18nKey: 'col.length',       valueType: 'number',            align: 'right' },
   { key: 'width',        i18nKey: 'col.width',        valueType: 'dimension-mm-to-m', align: 'right' },
@@ -302,6 +309,7 @@ function mapBeam(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['c
   const g = entity.geometry;
   return {
     id: entity.id,
+    buildingName: lookups.building?.(entity.buildingId)?.name ?? null,
     floor: lookups.floor(entity.floorId),
     kind: entity.kind,
     length: safeNumber(g.length),
@@ -383,10 +391,11 @@ function mapSlabOpening(entity: AnyBimEntity, lookups: ScheduleLookups): Schedul
 // ─── Combined preset (cross-type qto roll-up) ────────────────────────────────
 
 const COMBINED_COLUMNS: readonly ScheduleColumnDef[] = [
-  { key: 'id',                i18nKey: 'col.id',                valueType: 'text',   align: 'left'  },
-  { key: 'type',              i18nKey: 'col.type',              valueType: 'text',   align: 'left'  },
-  { key: 'kind',              i18nKey: 'col.kind',              valueType: 'text',   align: 'left'  },
-  { key: 'floor',             i18nKey: 'col.floor',             valueType: 'text',   align: 'left'  },
+  { key: 'id',                i18nKey: 'col.id',                valueType: 'text',   align: 'left'   },
+  { key: 'buildingName',      i18nKey: 'col.buildingName',      valueType: 'text',   align: 'left'   },
+  { key: 'type',              i18nKey: 'col.type',              valueType: 'text',   align: 'left'   },
+  { key: 'kind',              i18nKey: 'col.kind',              valueType: 'text',   align: 'left'   },
+  { key: 'floor',             i18nKey: 'col.floor',             valueType: 'text',   align: 'left'   },
   { key: 'primaryQuantity',   i18nKey: 'col.primaryQuantity',   valueType: 'number', align: 'right' },
   { key: 'primaryUnit',       i18nKey: 'col.primaryUnit',       valueType: 'text',   align: 'center'},
   { key: 'atoeCategory',      i18nKey: 'col.atoeCategory',      valueType: 'text',   align: 'left'  },
@@ -401,6 +410,7 @@ function mapCombined(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRo
       : undefined;
   return {
     id: entity.id,
+    buildingName: lookups.building?.(entity.buildingId)?.name ?? null,
     type: entity.type,
     kind: entity.kind,
     floor: lookups.floor(entity.floorId),
@@ -429,6 +439,22 @@ const PRESET_REGISTRY: Readonly<Record<ScheduleEntityType, SchedulePreset>> = {
 export function getPreset(entityType: ScheduleEntityType): SchedulePreset {
   return PRESET_REGISTRY[entityType];
 }
+
+/**
+ * Column set for per-building BOQ summary (ADR-369 §9.2 Q2.4).
+ * Use as `ScheduleConfig.columnsOverride` when `groupByBuilding = true` to
+ * promote buildingName to the leading column and drop entity-specific fields.
+ */
+export const MULTI_BUILDING_COLUMNS: readonly ScheduleColumnDef[] = [
+  { key: 'buildingName',    i18nKey: 'col.buildingName',    valueType: 'text',   align: 'left'   },
+  { key: 'type',            i18nKey: 'col.type',            valueType: 'text',   align: 'left'   },
+  { key: 'kind',            i18nKey: 'col.kind',            valueType: 'text',   align: 'left'   },
+  { key: 'floor',           i18nKey: 'col.floor',           valueType: 'text',   align: 'left'   },
+  { key: 'primaryQuantity', i18nKey: 'col.primaryQuantity', valueType: 'number', align: 'right'  },
+  { key: 'primaryUnit',     i18nKey: 'col.primaryUnit',     valueType: 'text',   align: 'center' },
+  { key: 'atoeCategory',    i18nKey: 'col.atoeCategory',    valueType: 'text',   align: 'left'   },
+  { key: 'material',        i18nKey: 'col.material',        valueType: 'text',   align: 'left'   },
+];
 
 // ─── Door / window opening-kind routing helpers ──────────────────────────────
 

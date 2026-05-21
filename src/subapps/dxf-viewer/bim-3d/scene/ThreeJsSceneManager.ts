@@ -42,6 +42,7 @@ import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
 import type { FinalRenderConfig } from '../stores/ViewMode3DStore';
 import { writeRenderOutput } from '../render/render-output-writer';
 import { useCameraTargetStore } from '../stores/CameraTargetStore';
+import { createCanonicalViewService } from '../viewport/CanonicalViewService';
 
 const INITIAL_CAMERA_POSITION = new THREE.Vector3(15, 10, 15);
 const INITIAL_CAMERA_TARGET = new THREE.Vector3(0, 0, 0);
@@ -200,19 +201,18 @@ export class ThreeJsSceneManager {
   }
 
   private initViewCube(container: HTMLElement): ViewCubeEngine {
+    const canonicalViewService = createCanonicalViewService(this.viewport);
     return createViewCube({
       container,
       getCamera: () => this.viewport.camera as THREE.PerspectiveCamera | THREE.OrthographicCamera,
       getTarget: () => this.viewport.target,
-      onFaceSnap: (mode) => {
-        if (mode === 'top') {
-          // Top-face click from 3D → handled externally via ViewMode3DStore if needed.
-          // For now: switch to ortho top view.
-        }
-        this.viewport.setProjection(mode);
-      },
+      // Fallback path (used only when onSnapToView is absent — backward compat).
+      onFaceSnap: (mode) => this.viewport.setProjection(mode),
       onDirSnap: (dir) => this.viewport.snapToViewDirection(dir),
-      onHome: () => this.viewport.goHome(),
+      // Phase 4.1: canonical dispatch — routes all face/edge/corner clicks.
+      onSnapToView: (id) => canonicalViewService.snapTo(id),
+      // Home = NE isometric (A.5 decision — industry convergence 4/4).
+      onHome: () => canonicalViewService.snapHome(),
       onDragRotate: (dx, dy) => this.viewport.applyTumble(dx, dy),
     });
   }

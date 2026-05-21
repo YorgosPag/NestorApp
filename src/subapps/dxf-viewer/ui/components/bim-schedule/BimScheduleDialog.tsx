@@ -93,6 +93,8 @@ export interface BimScheduleDialogProps {
   readonly availableFloors: readonly FilterOption[];
   /** Multi-select category options (material OR kind labels merged). */
   readonly availableCategories: readonly FilterOption[];
+  /** ADR-369 §9.2 Q2.4 — building options for filter dropdown. Omit in single-building context. */
+  readonly availableBuildings?: readonly FilterOption[];
   /** Live canvas selection ids — used by selection-only filter axis. */
   readonly selectionIds: readonly string[];
 
@@ -122,6 +124,7 @@ export function BimScheduleDialog({
   lookups,
   availableFloors,
   availableCategories,
+  availableBuildings,
   selectionIds,
   activeRegion,
   onRequestRegionPick,
@@ -214,6 +217,7 @@ export function BimScheduleDialog({
             onChange={setFilters}
             availableFloors={availableFloors}
             availableCategories={availableCategories}
+            availableBuildings={availableBuildings}
             selectionActive={selectionActive}
             selectionCount={selectionIds.length}
             onSelectionToggle={handleSelectionToggle}

@@ -224,6 +224,20 @@
     "resetView": "Reset view",
     "noPlane": "Pick an active plane in section settings"
   },
+  "canonicalView": {
+    "top": "Top",
+    "bottom": "Bottom",
+    "front": "Front",
+    "back": "Back",
+    "left": "Left",
+    "right": "Right",
+    "isoNe": "Iso NE",
+    "isoNw": "Iso NW",
+    "isoSe": "Iso SE",
+    "isoSw": "Iso SW",
+    "isoUe": "Upper Right",
+    "isoUw": "Upper Left"
+  },
   "performance": {
     "toggleLabel": "Show Performance HUD",
     "mode": {

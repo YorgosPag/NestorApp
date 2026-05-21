@@ -33,6 +33,12 @@
     "selection": {
       "label": "Selection",
       "toggle": "Selected only ({count})"
+    },
+    "building": {
+      "label": "Building",
+      "all": "All buildings",
+      "empty": "No buildings available",
+      "filterAria": "Filter by building"
     }
   },
   "preview": {
@@ -91,6 +97,7 @@
     "slabId": "Slab",
     "primaryQuantity": "Primary quantity",
     "primaryUnit": "Unit",
-    "atoeCategory": "ATOE category"
+    "atoeCategory": "ATOE category",
+    "buildingName": "Building"
   }
 }

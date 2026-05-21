@@ -17,6 +17,7 @@
  */
 
 import type { BoundingBox3D } from '../types/bim-base';
+import type { BuildingRef } from '../utils/bim-floor-utils';
 
 // ─── Cell + Column primitives ─────────────────────────────────────────────────
 
@@ -74,8 +75,8 @@ export type ScheduleEntityType =
 
 /**
  * Single schedule row — one BIM entity flattened to cells per column.
- * `entityId` keeps back-reference for navigation; `floorId` denormalised
- * for floor-filter without re-lookup.
+ * `entityId` keeps back-reference for navigation; `floorId` + `buildingId`
+ * denormalised for filter axes without re-lookup.
  */
 export interface ScheduleRow {
   readonly entityId: string;
@@ -83,6 +84,8 @@ export interface ScheduleRow {
   /** Optional sub-type discriminator (kind) — used by selection-aware UI. */
   readonly entityKind?: string;
   readonly floorId?: string;
+  /** ADR-369 §9.2 Q2.4 — denormalised for building-filter axis + group-by. */
+  readonly buildingId?: string;
   readonly cells: Readonly<Record<string, ScheduleCellValue>>;
 }
 
@@ -98,13 +101,15 @@ export interface Schedule {
 // ─── Filter criteria (4 composable axes) ─────────────────────────────────────
 
 /**
- * Filter criteria — composable 4 axes. `undefined` axis = no filter on that
+ * Filter criteria — composable 5 axes. `undefined` axis = no filter on that
  * dimension. Empty array for a defined axis = match-nothing (intentional —
  * "show no floors" excludes everything).
  */
 export interface ScheduleFilterCriteria {
   /** Allowed floorIds. Undefined = all floors. */
   readonly floorIds?: readonly string[];
+  /** ADR-369 §9.2 Q2.4 — allowed buildingIds. Undefined = all buildings. */
+  readonly buildingIds?: readonly string[];
   /**
    * Allowed material IDs OR entity kinds. Schedule-builder applies it
    * heterogeneously: matches first `params.material` then `kind` so both
@@ -159,12 +164,21 @@ export type MaterialLabelLookup = (materialId: string | undefined) => string;
  */
 export type FloorFinishLookup = (floorId: string | undefined) => number | undefined;
 
+/**
+ * Building resolver (ADR-369 §9.2 Q2.4 — BOQ group-by-building).
+ * Returns the `BuildingRef` for a given buildingId, or `undefined` when not found.
+ * Optional — omit in single-building contexts; cells will have null buildingName.
+ */
+export type BuildingLookup = (buildingId: string | undefined) => BuildingRef | undefined;
+
 /** Bundle of lookups passed to builder + presets. */
 export interface ScheduleLookups {
   readonly floor: FloorLabelLookup;
   readonly material: MaterialLabelLookup;
   /** ADR-369 §9 Q4 — resolves floor finishThickness (mm) for ToS calculation. */
   readonly floorFinish: FloorFinishLookup;
+  /** ADR-369 §9.2 Q2.4 — resolves building name for BOQ group-by-building. Optional. */
+  readonly building?: BuildingLookup;
 }
 
 // ─── Schedule config (what to build) ─────────────────────────────────────────
@@ -173,10 +187,13 @@ export interface ScheduleLookups {
  * Build configuration. `entityType` selects which preset to apply (or
  * 'combined' for a unified mini-table). `filters` are applied AFTER mapping.
  * `columnsOverride` lets the UI hide columns ή reorder (Phase 8+ — Phase 1
- * uses preset defaults).
+ * uses preset defaults). `groupByBuilding` sorts rows by buildingId for
+ * multi-building BOQ views (ADR-369 §9.2 Q2.4).
  */
 export interface ScheduleConfig {
   readonly entityType: ScheduleEntityType;
   readonly filters: ScheduleFilterCriteria;
   readonly columnsOverride?: readonly ScheduleColumnDef[];
+  /** ADR-369 §9.2 Q2.4 — when true, rows sorted by buildingId for grouped display. */
+  readonly groupByBuilding?: boolean;
 }
