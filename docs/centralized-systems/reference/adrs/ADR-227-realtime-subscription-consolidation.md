@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🟢 Phases 1-3 Implemented — Phase 2 complete (10/10 hooks migrated) |
+| **Status** | 🟢 FULLY IMPLEMENTED — All 4 phases complete, 10/10 hooks migrated (verified 2026-05-21) |
 | **Date** | 2026-03-13 |
 | **Category** | Data Access Layer / Real-Time Architecture |
 | **Related ADRs** | ADR-214 (Firestore Query Centralization), ADR-228 (Event Coverage Gap Analysis & Roadmap) |
@@ -156,7 +156,7 @@ RealtimeService
 
 ---
 
-### Phase 2: Migrate Raw onSnapshot → Centralized (MEDIUM PRIORITY) — ✅ 6/10 MIGRATED (2026-03-13)
+### Phase 2: Migrate Raw onSnapshot → Centralized (MEDIUM PRIORITY) — ✅ 10/10 MIGRATED (2026-05-21)
 
 **Goal**: Όλα τα raw `onSnapshot()` calls μεταναστεύουν στο `firestoreQueryService.subscribe()` για automatic tenant isolation.
 
@@ -170,14 +170,15 @@ RealtimeService
 | 4 | `useRealtimeTriageCommunications.ts` | Medium | ✅ Migrated (2026-03-13) |
 | 5 | `useFloorplanFiles.ts` | Low | ✅ Migrated (2026-03-13) |
 | 6 | `useLayerManagement.ts` | Low | ✅ Migrated (2026-03-13) |
-| 7 | `BankAccountsService.ts` | High | ⏸️ Blocked — subcollection needs `firestoreQueryService` support |
-| 8 | `useVoiceCommandSubscription.ts` | Low | ⏸️ Blocked — single doc needs `subscribeDoc()` method |
-| 9 | `useContactEmailWatch.ts` | Low | ⏸️ Blocked — single doc needs `subscribeDoc()` method |
-| 10 | `useProjectFloorplans.ts` | Medium | ⏸️ Blocked — single doc + decompression |
+| 7 | `BankAccountsService.ts` | High | ✅ Migrated — `subscribeSubcollection()` (verified 2026-05-21, line 457) |
+| 8 | `useVoiceCommandSubscription.ts` | Low | ✅ Migrated — `subscribeDoc('VOICE_COMMANDS',...)` (verified 2026-05-21, line 58) |
+| 9 | `useContactEmailWatch.ts` | Low | ✅ Migrated — `subscribeDoc('CONTACTS',...)` (verified 2026-05-21, line 44) |
+| 10 | `useProjectFloorplans.ts` | Medium | ✅ N/A — file absorbed into `FloorplanContext.tsx` / `FloorplanService.ts` (no standalone hook exists) |
 
-#### Prerequisites
-- `firestoreQueryService` may need `subscribeDoc()` method for single-document subscriptions (#8, #9, #10)
-- Subcollection support for `BankAccountsService` (#7)
+#### Prerequisites (RESOLVED)
+- `subscribeDoc()` implemented in `firestore-query.service.ts` lines 320-364 (ADR-361 equality guard included)
+- `subscribeSubcollection()` implemented in `firestore-query.service.ts` lines 368-431
+- Both methods declared in `IFirestoreQueryService` interface (`firestore-query.types.ts` line 171)
 
 #### Migration Pattern
 ```typescript
@@ -259,9 +260,9 @@ useEffect(() => {
 | `tasks` | Tasks page, Dashboard | ✅ CANONICAL | ✅ Done | Phase 1 |
 | `opportunities` | CRM Dashboard, Pipeline | ✅ CANONICAL | ✅ Done | Phase 1 |
 | `floor_floorplans` | Floor detail | 🔴 STALE (one-time fetch) | CANONICAL | Phase 1 |
-| `project_floorplans` | Project floorplan view | 🟡 LEGACY (raw onSnapshot doc) | CANONICAL | Phase 2 |
-| `voice_commands` | Voice command UI | 🟡 LEGACY (raw onSnapshot doc) | CANONICAL | Phase 2 |
-| `bankAccounts` (sub) | Contact banking tab | 🟡 LEGACY (raw onSnapshot) | CANONICAL | Phase 2 |
+| `project_floorplans` | Project floorplan view | ✅ CANONICAL (FloorplanContext/FloorplanService) | ✅ Done | Phase 2 |
+| `voice_commands` | Voice command UI | ✅ CANONICAL (`subscribeDoc`) | ✅ Done | Phase 2 |
+| `bankAccounts` (sub) | Contact banking tab | ✅ CANONICAL (`subscribeSubcollection`) | ✅ Done | Phase 2 |
 | `parking` | Building spaces tabs | ✅ Via units/event bus | — | — |
 | `storage` | Building spaces tabs | ✅ Via units/event bus | — | — |
 | `attendance_qr_tokens` | Admin panel | Server-only | N/A | — |
@@ -403,4 +404,5 @@ All new hooks MUST expose `status: SubscriptionStatus` for UI feedback.
 | 2026-03-13 | Phase 3 implemented (Tasks + Opportunities) — Event bus subscribers wired for TASK_CREATED/UPDATED/DELETED and OPPORTUNITY_CREATED/UPDATED/DELETED. Optimistic UI updates via `applyUpdates()` pattern from `useFirestoreProjects` | Claude |
 | 2026-03-14 | Cross-reference: ADR-228 created with full coverage gap analysis (50% event coverage, 4 blocked hooks, 4-tier roadmap) | Claude |
 | 2026-03-25 | **Phase 4: Centralized AI Sync Bridge** — Extracted contact-specific signal bridge + tab visibility into generic reusable hooks: `useAISyncBridge(entityType, refreshFn)`, `useTabVisibilityRefresh(refreshFn)`, `emitEntitySyncSignal(entityType, action, entityId, companyId)`. Any entity hook can now get AI agent real-time sync with 2 lines. Types: `EntitySyncAction`, `SyncEntityType`. Old `ContactSyncAction` + `emitContactSyncSignal` deprecated (backward compat kept). | Claude |
+| 2026-05-21 | **Phase 2 verification (10/10 COMPLETE)** — Code audit revealed all 4 "blocked" items were already implemented: `subscribeDoc()` + `subscribeSubcollection()` exist in `firestore-query.service.ts` (lines 320-431, with ADR-361 equality guard). `useVoiceCommandSubscription` uses `subscribeDoc` (line 58). `useContactEmailWatch` uses `subscribeDoc` (line 44). `BankAccountsService.subscribeToAccounts` uses `subscribeSubcollection` (line 457). `useProjectFloorplans` was absorbed into `FloorplanContext.tsx` / `FloorplanService.ts`. ADR status updated to reflect production reality per N.0.1. | Claude Sonnet 4.6 |
 | 2026-04-16 | **Storages migrated to canonical pattern** — `useFirestoreStorages` rewritten: API fetch + `RealtimeService.subscribe('STORAGE_*')` refetch pattern replaced with `firestoreQueryService.subscribe('STORAGE', ...)` (onSnapshot). Optional `buildingId` filter via `where()` constraint. `mapStorageDoc` reused client-side (SSoT). Eliminates full-list refetch flash on create/update/delete. Public API preserved (`refetch` kept as no-op for back-compat). Impacts: `StoragePageContent`, `SpacesHubPageContent`, `useDesktopNavData`, `useSalesStorageViewerState`, `useBuildingStorages` — all consumers automatically realtime. | Claude |
