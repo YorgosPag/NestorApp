@@ -700,5 +700,28 @@
       "medium": "Μέτριος",
       "high": "Υψηλός"
     }
+  },
+  "alerts": {
+    "bannerTitle": "{count, plural, one {# Ειδοποίηση} other {# Ειδοποιήσεις}}",
+    "bannerAriaLabel": "Ειδοποιήσεις προγράμματος",
+    "expand": "Ανάπτυξη ειδοποιήσεων",
+    "collapse": "Σύμπτυξη ειδοποιήσεων",
+    "refresh": "Ανανέωση ελέγχου ειδοποιήσεων",
+    "refreshing": "Ανανέωση...",
+    "dismissAlert": "Απόρριψη: {title}",
+    "severity": {
+      "low": "Χαμηλή",
+      "medium": "Μέτρια",
+      "high": "Υψηλή",
+      "critical": "Κρίσιμη"
+    },
+    "rules": {
+      "task_overdue": "Εκπρόθεσμη Εργασία",
+      "spi_drop": "Πτώση SPI",
+      "cpi_drop": "Πτώση CPI",
+      "task_blocked": "Αποκλεισμένη Εργασία",
+      "milestone_risk": "Milestone σε Κίνδυνο",
+      "no_progress": "Καμία Πρόοδος"
+    }
   }
 }

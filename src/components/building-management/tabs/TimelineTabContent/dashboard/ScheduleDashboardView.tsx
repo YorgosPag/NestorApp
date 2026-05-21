@@ -46,6 +46,8 @@ import { useResourceHistogram } from './useResourceHistogram';
 import { useResourceAssignments } from '@/hooks/useResourceAssignments';
 import { ReportEmptyState } from '@/components/reports/core/ReportEmptyState';
 import { nowISO } from '@/lib/date-local';
+import { ScheduleAlertBanner } from '../alerts/ScheduleAlertBanner';
+import { useScheduleAlerts } from '@/hooks/useScheduleAlerts';
 
 // ─── Props ───────────────────────────────────────────────────────────────
 
@@ -95,6 +97,15 @@ export function ScheduleDashboardView({
   // Resource assignments + histogram (ADR-266 C4)
   const { assignments: resourceAssignments } = useResourceAssignments({ buildingId });
   const resourceHistogram = useResourceHistogram({ assignments: resourceAssignments, tasks });
+
+  // Schedule alerts (ADR-266 D.3)
+  const {
+    alerts,
+    loading: alertsLoading,
+    refreshing: alertsRefreshing,
+    dismiss: dismissAlert,
+    refresh: refreshAlerts,
+  } = useScheduleAlerts(buildingId);
 
   // ── Refresh handler ────────────────────────────────────────────────────
   const handleRefresh = useCallback(async () => {
@@ -340,6 +351,13 @@ export function ScheduleDashboardView({
         </div>
       ) : (
         <>
+          <ScheduleAlertBanner
+            alerts={alerts}
+            loading={alertsLoading}
+            refreshing={alertsRefreshing}
+            onDismiss={dismissAlert}
+            onRefresh={() => refreshAlerts(buildingName)}
+          />
           <ScheduleOverviewKPIs kpis={kpis} loading={boqLoading} />
           <SCurveChart data={sCurveData} loading={boqLoading} enableBrush />
           <DelayBreakdownChart data={delayBreakdownData} loading={boqLoading} />

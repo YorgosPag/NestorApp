@@ -4469,5 +4469,29 @@ service cloud.firestore {
                        );
     }
 
+    // ─── CONSTRUCTION ALERTS (ADR-266 §5.8 Phase D.3) ────────────────────
+    // Read: tenant-scoped (companyId must match). Created by Admin SDK only.
+    // Update: dismiss only — status field + dismissedAt/dismissedBy.
+    match /construction_alerts/{alertId} {
+
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
+
+      allow create: if false;
+
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId))
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'dismissedAt', 'dismissedBy'])
+                    && request.resource.data.status in ['dismissed', 'resolved'];
+
+      allow delete: if false;
+    }
+
   }
 }

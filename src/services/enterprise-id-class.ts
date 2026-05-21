@@ -200,6 +200,7 @@ export class EnterpriseIdService {
   generateConstructionTaskId(): string { return this.generateId(P.CONSTRUCTION_TASK).id; }
   generateConstructionBaselineId(): string { return this.generateId(P.CONSTRUCTION_BASELINE).id; }
   generateConstructionResourceAssignmentId(): string { return this.generateId(P.CONSTRUCTION_RESOURCE_ASSIGNMENT).id; }
+  generateConstructionAlertId(): string { return this.generateId(P.CONSTRUCTION_ALERT).id; }
 
   // Attendance (ADR-170)
   generateAttendanceQrTokenId(): string { return this.generateId(P.ATTENDANCE_QR_TOKEN).id; }

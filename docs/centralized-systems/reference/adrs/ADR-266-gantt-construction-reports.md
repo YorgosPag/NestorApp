@@ -1,6 +1,6 @@
 # ADR-266: Gantt & Construction Schedule Reports
 
-**Status**: PHASE C COMPLETE (Sub-phases 1+2+3+4+5 complete)
+**Status**: PHASE D.3 IMPLEMENTED (Alert Rules Engine + Dashboard Banner)
 **Date**: 2026-03-29
 **Author**: Claude (Research Agents × 4)
 **Related ADRs**: ADR-034 (Gantt Chart), ADR-265 (Enterprise Reports System), ADR-175 (BOQ/Quantity Surveying)
@@ -17,6 +17,7 @@
 | 2026-03-29 | **Phase C Sub-phase 4 IMPLEMENTED**: Resource Allocation — Firestore `construction_resource_assignments`, `crasn_` enterprise IDs, API route (GET/POST/PATCH/DELETE), cascade delete on task/phase deletion, client service + `useResourceAssignments` hook, `ResourceAssignmentSection` in task edit dialog (workers + equipment), `ResourceHistogramChart` (stacked bar/week, 40h capacity line), `ResourceUtilizationKPIs` (3 cards), `DelayFieldsSection` extracted, i18n (en+el) |
 | 2026-03-29 | **Phase C Sub-phase 5 IMPLEMENTED**: Accessibility (WCAG AA) — Charts: `<figure role="img">` wrappers + sr-only data tables (SCurveChart, DelayBreakdownChart, ResourceHistogramChart). Tables: `<th scope="row">` on first column + `aria-expanded` on expandable phase rows (ScheduleVarianceTable, LookaheadTable, CriticalPathSection). KPI Cards: keyboard support (`role="button"`, `tabIndex`, `onKeyDown` Enter/Space, `aria-label`, focus-visible ring) in ReportKPIGrid. i18n (en+el) |
 | 2026-05-21 | **ADR-034 Phase 4.8 IMPLEMENTED**: Dependency arrows SVG overlay — `GanttDependencyArrows.tsx` + `useGanttDependencyArrows.ts`. Portal into `.rmg-timeline-container`, bezier paths, RAF-throttled. Spec documented in ADR-034 §4.8. |
+| 2026-05-21 | **Phase D.3 IMPLEMENTED**: Schedule Alerts & Notifications — Alert rules engine (6 rules: task_overdue, spi_drop, cpi_drop, task_blocked, milestone_risk, no_progress), `construction_alerts` Firestore collection, `calert_` enterprise IDs, `POST /api/alerts/schedule-check`, `POST /api/alerts/dismiss`, `useScheduleAlerts` hook, `ScheduleAlertBanner` component, Firestore rules, i18n (el+en). Integrated into `ScheduleDashboardView` above KPIs. Telegram digest on demand via `sendTelegram: true` param. Weather Risk deferred (external API). |
 
 ---
 
@@ -2845,16 +2846,34 @@ Dashboard → [Export ▼]
    - Auto-attach today's photos
    - Daily log list panel
 
-#### D.3 Schedule Alerts & Telegram Notifications
-3. **Alert rules engine** — `construction_alerts` collection (βλ. §5.8)
-   - 7 configurable alert rules (overdue, SPI/CPI drop, blocked, milestone risk, weather, no progress)
-   - Dashboard alert banner (collapsible, dismiss, navigate)
-   - Tab badge count
-4. **Telegram alert digest** — Reuse ADR-145/171 pipeline (βλ. §5.8)
-   - Daily digest 08:00 (configurable)
-   - Immediate for CRITICAL alerts
-   - Per-building mute support
-   - `sendTelegramDigest()` function
+#### D.3 Schedule Alerts & Telegram Notifications ✅ IMPLEMENTED 2026-05-21
+3. **Alert rules engine** — `construction_alerts` collection (βλ. §5.8) ✅
+   - 6 implemented rules: task_overdue, spi_drop, cpi_drop, task_blocked, milestone_risk, no_progress
+   - Weather Risk rule deferred (external API dependency)
+   - Dashboard alert banner: collapsible, per-alert dismiss, severity sort ✅
+4. **Telegram alert digest** — Reuse ADR-145/171 pipeline (βλ. §5.8) ✅
+   - On-demand via `sendTelegram: true` param in POST body
+   - Daily cron trigger: `POST /api/alerts/schedule-check` with `sendTelegram: true`
+
+**New files:**
+- `src/services/construction-alert-rules.ts` — 6 rule functions + `runAlertRules()` orchestrator
+- `src/services/construction-alert.service.ts` — Firestore CRUD (server-only)
+- `src/app/api/alerts/schedule-check/route.ts` — POST endpoint
+- `src/app/api/alerts/dismiss/route.ts` — POST dismiss endpoint
+- `src/hooks/useScheduleAlerts.ts` — Firestore subscription hook
+- `src/components/building-management/tabs/TimelineTabContent/alerts/ScheduleAlertBanner.tsx` — UI banner
+
+**Modified:**
+- `enterprise-id-prefixes.ts` — `CONSTRUCTION_ALERT: 'calert'`
+- `enterprise-id-class.ts` — `generateConstructionAlertId()`
+- `enterprise-id-convenience.ts` — exported convenience function
+- `enterprise-id.service.ts` — re-exported
+- `firestore-collections.ts` — `CONSTRUCTION_ALERTS`
+- `types/building/construction.ts` — `ConstructionAlert`, `AlertRuleType`, `AlertSeverity`, `AlertStatus`, `AlertChannel` types
+- `firestore.rules` — `match /construction_alerts/{alertId}` rule
+- `ScheduleDashboardView.tsx` — integrated `useScheduleAlerts` + `ScheduleAlertBanner`
+- `i18n/locales/el/building-timeline.json` — `alerts.*` keys
+- `i18n/locales/en/building-timeline.json` — `alerts.*` keys
 
 #### D.4 Dashboard Integration
 5. **Variance Table** — Photo count + log count inline per phase

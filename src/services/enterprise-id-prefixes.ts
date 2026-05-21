@@ -120,6 +120,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   CONSTRUCTION_TASK: 'ctask',
   CONSTRUCTION_BASELINE: 'cbase',
   CONSTRUCTION_RESOURCE_ASSIGNMENT: 'crasn',
+  CONSTRUCTION_ALERT: 'calert',
   MILESTONE: 'mile',
 
   // Attendance (ADR-170: QR + GPS Geofencing)

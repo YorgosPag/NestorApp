@@ -700,5 +700,28 @@
       "medium": "Medium",
       "high": "High"
     }
+  },
+  "alerts": {
+    "bannerTitle": "{count, plural, one {# Alert} other {# Alerts}}",
+    "bannerAriaLabel": "Schedule alerts",
+    "expand": "Expand alerts",
+    "collapse": "Collapse alerts",
+    "refresh": "Refresh alert check",
+    "refreshing": "Refreshing...",
+    "dismissAlert": "Dismiss: {title}",
+    "severity": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "rules": {
+      "task_overdue": "Task Overdue",
+      "spi_drop": "SPI Drop",
+      "cpi_drop": "CPI Drop",
+      "task_blocked": "Task Blocked",
+      "milestone_risk": "Milestone at Risk",
+      "no_progress": "No Progress"
+    }
   }
 }

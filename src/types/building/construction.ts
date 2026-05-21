@@ -224,4 +224,49 @@ export interface ResourceAssignmentUpdatePayload {
   notes?: string | null;
 }
 
+// ─── Construction Alerts (ADR-266 §5.8 / Phase D.3) ─────────────────────────
+
+export type AlertRuleType =
+  | 'task_overdue'
+  | 'spi_drop'
+  | 'cpi_drop'
+  | 'task_blocked'
+  | 'milestone_risk'
+  | 'no_progress';
+
+export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export type AlertStatus = 'active' | 'dismissed' | 'resolved';
+
+export type AlertChannel = 'dashboard' | 'telegram';
+
+export interface ConstructionAlert {
+  id: string;
+  buildingId: string;
+  companyId: string;
+  ruleType: AlertRuleType;
+  severity: AlertSeverity;
+  title: string;
+  message: string;
+  phaseId?: string | null;
+  taskId?: string | null;
+  data: Record<string, number | string>;
+  status: AlertStatus;
+  notifiedVia: AlertChannel[];
+  createdAt: string;
+  dismissedAt?: string | null;
+  dismissedBy?: string | null;
+}
+
+export interface AlertDismissPayload {
+  alertId: string;
+  dismissedBy: string;
+}
+
+export interface ScheduleCheckResult {
+  buildingId: string;
+  alertsGenerated: number;
+  alertIds: string[];
+}
+
 // ─── API Response Types ──────────────────────────────────────────────────

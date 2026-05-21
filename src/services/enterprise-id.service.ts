@@ -64,6 +64,7 @@ export {
   generateSubscriptionId, generateMilestoneId, generateWebhookId,
   generateLearnedPatternId, generateConstructionPhaseId, generateConstructionTaskId,
   generateConstructionBaselineId, generateConstructionResourceAssignmentId,
+  generateConstructionAlertId,
   generateAttendanceQrTokenId, generateAttendanceEventId,
   generateAddressCorrectionLogId,
   generateEmploymentRecordId, generateAppointmentId,
