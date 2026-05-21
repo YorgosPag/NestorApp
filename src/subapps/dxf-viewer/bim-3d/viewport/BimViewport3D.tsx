@@ -19,7 +19,6 @@ import { useSelection3DStore } from '../stores/Selection3DStore';
 import { useBuildingFloors3DSync } from '../../components/dxf-layout/useBuildingFloors3DSync';
 import { QuickProperties3DHoverPopover } from '../properties/QuickProperties3DHoverPopover';
 import { BimEntityCardPanel } from '../properties/BimEntityCardPanel';
-import { Floating3DPanel } from '../panels/Floating3DPanel';
 import { Section2DPanel } from '../panels/Section2DPanel';
 import { RenderFinalDialog } from '../render/RenderFinalDialog';
 import { RenderProgressOverlay } from '../render/RenderProgressOverlay';
@@ -379,9 +378,6 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         </TooltipTrigger>
         <TooltipContent>{t('modeToggle.tooltip3d')}</TooltipContent>
       </Tooltip>
-
-      {/* Left sidebar panel — Floors / Lighting / Quality */}
-      <Floating3DPanel />
 
       {/* QuickProperties tooltip (ADR-366 B.2.Q1) — micro-leaf, fixed position */}
       <QuickProperties3DHoverPopover />

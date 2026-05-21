@@ -33,6 +33,8 @@ import { BimPropertiesRouter } from '../wall-advanced-panel/BimPropertiesRouter'
 import { DimensionsTab } from '../panels/dimensions/DimensionsTab';
 // ADR-363 Phase 6.5.B — BIM Material Library panel.
 import { MaterialsLibraryPanel } from '../panels/materials/MaterialsLibraryPanel';
+// ADR-366 Group B — 3D scene controls mirrored in sidebar.
+import { Bim3DFloatingTab } from '../panels/bim3d/Bim3DFloatingTab';
 
 interface UsePanelContentRendererParams {
   activePanel: PanelType;
@@ -132,6 +134,9 @@ export function usePanelContentRenderer({
 
       case 'materials':
         return <MaterialsLibraryPanel projectId={projectId} />;
+
+      case 'bim3d':
+        return <Bim3DFloatingTab />;
 
       default:
         return (

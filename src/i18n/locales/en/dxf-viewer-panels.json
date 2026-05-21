@@ -82,6 +82,9 @@
       "title": "Materials",
       "loading": "Loading materials..."
     },
+    "bim3d": {
+      "title": "BIM 3D"
+    },
     "dimensions": {
       "title": "Dimensions",
       "loading": "Loading dimension styles...",
