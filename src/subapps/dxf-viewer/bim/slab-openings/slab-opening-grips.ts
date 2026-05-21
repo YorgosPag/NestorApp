@@ -33,6 +33,8 @@ import type {
   SlabOpeningEntity,
   SlabOpeningParams,
 } from '../types/slab-opening-types';
+import type { Entity } from '../../types/entities';
+import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
 
 // ─── Grip position computation (ADR-363 §6 Phase 3.7a) ───────────────────────
 
@@ -47,7 +49,7 @@ import type {
  * Returns empty array όταν polygon degenerate (<3 vertices).
  */
 export function getSlabOpeningGrips(entity: Readonly<SlabOpeningEntity>): GripInfo[] {
-  const verts = entity.params.outline.vertices;
+  const verts = getBimEntityKeyPoints2D(entity as Entity);
   if (verts.length < 3) return [];
   const grips: GripInfo[] = [];
   for (let i = 0; i < verts.length; i++) {

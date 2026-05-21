@@ -127,6 +127,9 @@ const NAVIGATION_LABELS = {
   // 🏢 ENTERPRISE: Company Settings (ADR-326)
   company_settings: 'admin.companySettings',
 
+  // Construction Portfolio (ADR-266 Phase D.5)
+  construction_portfolio: 'pages.construction_portfolio',
+
   // Badges
   badge_new: 'badges.new',
 
@@ -415,6 +418,16 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               priority: 'high',
               displayOrder: 40,  // ENTERPRISE: Third after Properties
               analyticsKey: 'nav_buildings'
+            }
+          },
+          {
+            icon: BarChart3,
+            href: "/construction/portfolio",
+            badge: null,
+            smartConfig: {
+              priority: 'medium',
+              displayOrder: 42,
+              analyticsKey: 'nav_construction_portfolio'
             }
           },
           {
@@ -746,6 +759,7 @@ function getLabelKeyForPath(path: string): string {
     'contacts': 'contacts',
     'projects': 'projects',
     'buildings': 'buildings',
+    'construction/portfolio': 'construction_portfolio',
     'spaces': 'spaces',
     'sales': 'sales',
 

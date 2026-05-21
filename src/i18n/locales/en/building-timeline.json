@@ -701,6 +701,30 @@
       "high": "High"
     }
   },
+  "portfolio": {
+    "title": "Construction Portfolio",
+    "subtitle": "Overview of all active buildings",
+    "refresh": "Refresh",
+    "empty": "No active buildings found",
+    "kpiSectionLabel": "Portfolio KPI summary",
+    "kpi": {
+      "totalBuildings": "Total Buildings",
+      "avgSpi": "Avg SPI",
+      "totalAlerts": "Active Alerts",
+      "atRisk": "Buildings at Risk"
+    },
+    "table": {
+      "building": "Building",
+      "progress": "Progress",
+      "spi": "SPI",
+      "cpi": "CPI",
+      "delayedTasks": "Delayed",
+      "alerts": "Alerts",
+      "nextMilestone": "Next Milestone",
+      "status": "Status",
+      "noMilestone": "—"
+    }
+  },
   "alerts": {
     "bannerTitle": "{count, plural, one {# Alert} other {# Alerts}}",
     "bannerAriaLabel": "Schedule alerts",
@@ -721,7 +745,8 @@
       "cpi_drop": "CPI Drop",
       "task_blocked": "Task Blocked",
       "milestone_risk": "Milestone at Risk",
-      "no_progress": "No Progress"
+      "no_progress": "No Progress",
+      "weather_risk": "Weather Risk"
     }
   }
 }

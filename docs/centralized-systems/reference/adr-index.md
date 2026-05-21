@@ -292,7 +292,7 @@
 | **ADR-263** | Telegram Bot Testing Playbook | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-263-telegram-bot-testing-playbook.md) |
 | **ADR-264** | Document Preview Mode — AI Auto-Analysis for File-Only Messages | ✅ ✅ IMPLEMENTED | 2026-03-26 | AI Architecture | [📄](./adrs/ADR-264-document-preview-mode.md) |
 | **ADR-265** | Enterprise Reports System — Research & Architecture | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-265-enterprise-reports-system.md) |
-| **ADR-266** | Gantt & Construction Schedule Reports | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-266-gantt-construction-reports.md) |
+| **ADR-266** | Gantt & Construction Schedule Reports — EVM Dashboard, Alert Rules (7 rules + Weather), Cron, Portfolio Dashboard | ✅ PHASE D.5 IMPL | 2026-05-21 | Construction | [📄](./adrs/ADR-266-gantt-construction-reports.md) |
 | **ADR-267** | Lightweight Procurement Module — Purchase Orders & Material Tracking | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-267-lightweight-procurement-module.md) |
 | **ADR-268** | Route Rename /audit to /projects | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-268-route-rename-audit-to-projects.md) |
 | **ADR-269** | Unit to Property Rename — Naming Standardization | ✅ APPROVED | 2026-03-31 | Entity Systems | [📄](./adrs/ADR-269-unit-to-property-rename.md) |
@@ -661,7 +661,7 @@
 | **ADR-262** | AI Agent Testing & Production Standards | ✅ APPROVED | [View](./adrs/ADR-262-ai-agent-testing-production-standards.md) |
 | **ADR-263** | Telegram Bot Testing Playbook | ✅ APPROVED | [View](./adrs/ADR-263-telegram-bot-testing-playbook.md) |
 | **ADR-265** | Enterprise Reports System — Research & Architecture | ✅ APPROVED | [View](./adrs/ADR-265-enterprise-reports-system.md) |
-| **ADR-266** | Gantt & Construction Schedule Reports | ✅ APPROVED | [View](./adrs/ADR-266-gantt-construction-reports.md) |
+| **ADR-266** | Gantt & Construction Schedule Reports — EVM, Alert Rules + Weather Risk, Cron, Portfolio | ✅ PHASE D.5 IMPL | [View](./adrs/ADR-266-gantt-construction-reports.md) |
 | **ADR-267** | Lightweight Procurement Module — Purchase Orders & Material Tracking | ✅ APPROVED | [View](./adrs/ADR-267-lightweight-procurement-module.md) |
 | **ADR-268** | Route Rename /audit to /projects | ✅ APPROVED | [View](./adrs/ADR-268-route-rename-audit-to-projects.md) |
 | **ADR-278** | Company Identity Field Guard | ✅ APPROVED | [View](./adrs/ADR-278-company-identity-field-guard.md) |

@@ -10,6 +10,7 @@ import type { ConstructionPhase, ConstructionTask } from '@/types/building/const
 import type { AlertRuleType, AlertSeverity } from '@/types/building/construction';
 import type { BuildingMilestone } from '@/types/building/milestone';
 import type { EVMResult } from '@/services/report-engine/evm-calculator';
+import type { WeatherForecast } from '@/services/weather/open-meteo.service';
 import { nowISO } from '@/lib/date-local';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────
@@ -191,6 +192,39 @@ export function detectNoProgress(phases: ConstructionPhase[], staleDays = 5): Al
   return results;
 }
 
+// ─── Rule 7: Weather Risk ─────────────────────────────────────────────────
+
+const RAIN_THRESHOLD_MM = 5;
+const WIND_THRESHOLD_KMH = 50;
+
+export function detectWeatherRisk(weather: WeatherForecast): AlertCandidate[] {
+  const results: AlertCandidate[] = [];
+
+  for (const day of weather.daily) {
+    if (day.precipitationMm > RAIN_THRESHOLD_MM) {
+      results.push({
+        ruleType: 'weather_risk',
+        severity: 'medium',
+        title: `Έντονη βροχόπτωση (${day.date})`,
+        message: `Αναμενόμενη βροχόπτωση ${day.precipitationMm.toFixed(1)}mm — επηρεάζει εξωτερικές εργασίες.`,
+        data: { precipitationMm: day.precipitationMm, date: day.date },
+      });
+    }
+
+    if (day.windspeedKmh > WIND_THRESHOLD_KMH) {
+      results.push({
+        ruleType: 'weather_risk',
+        severity: 'high',
+        title: `Ισχυροί άνεμοι (${day.date})`,
+        message: `Αναμενόμενοι άνεμοι ${day.windspeedKmh.toFixed(0)}km/h — σταματήστε εργασίες σε ύψος.`,
+        data: { windspeedKmh: day.windspeedKmh, date: day.date },
+      });
+    }
+  }
+
+  return results;
+}
+
 // ─── Orchestrator ─────────────────────────────────────────────────────────
 
 export function runAlertRules(
@@ -198,6 +232,7 @@ export function runAlertRules(
   tasks: ConstructionTask[],
   milestones: BuildingMilestone[],
   evm: EVMResult,
+  weather?: WeatherForecast | null,
 ): AlertCandidate[] {
   return [
     ...detectTaskOverdue(tasks),
@@ -206,5 +241,6 @@ export function runAlertRules(
     ...detectTaskBlocked(tasks),
     ...detectMilestoneAtRisk(milestones),
     ...detectNoProgress(phases),
+    ...(weather ? detectWeatherRisk(weather) : []),
   ];
 }

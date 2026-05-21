@@ -1,6 +1,6 @@
 # ADR-266: Gantt & Construction Schedule Reports
 
-**Status**: PHASE D.3 IMPLEMENTED (Alert Rules Engine + Dashboard Banner)
+**Status**: PHASE D.5 IMPLEMENTED (Alert Rules Engine + Weather Risk + Cron + Portfolio Dashboard)
 **Date**: 2026-03-29
 **Author**: Claude (Research Agents × 4)
 **Related ADRs**: ADR-034 (Gantt Chart), ADR-265 (Enterprise Reports System), ADR-175 (BOQ/Quantity Surveying)
@@ -18,6 +18,9 @@
 | 2026-03-29 | **Phase C Sub-phase 5 IMPLEMENTED**: Accessibility (WCAG AA) — Charts: `<figure role="img">` wrappers + sr-only data tables (SCurveChart, DelayBreakdownChart, ResourceHistogramChart). Tables: `<th scope="row">` on first column + `aria-expanded` on expandable phase rows (ScheduleVarianceTable, LookaheadTable, CriticalPathSection). KPI Cards: keyboard support (`role="button"`, `tabIndex`, `onKeyDown` Enter/Space, `aria-label`, focus-visible ring) in ReportKPIGrid. i18n (en+el) |
 | 2026-05-21 | **ADR-034 Phase 4.8 IMPLEMENTED**: Dependency arrows SVG overlay — `GanttDependencyArrows.tsx` + `useGanttDependencyArrows.ts`. Portal into `.rmg-timeline-container`, bezier paths, RAF-throttled. Spec documented in ADR-034 §4.8. |
 | 2026-05-21 | **Phase D.3 IMPLEMENTED**: Schedule Alerts & Notifications — Alert rules engine (6 rules: task_overdue, spi_drop, cpi_drop, task_blocked, milestone_risk, no_progress), `construction_alerts` Firestore collection, `calert_` enterprise IDs, `POST /api/alerts/schedule-check`, `POST /api/alerts/dismiss`, `useScheduleAlerts` hook, `ScheduleAlertBanner` component, Firestore rules, i18n (el+en). Integrated into `ScheduleDashboardView` above KPIs. Telegram digest on demand via `sendTelegram: true` param. Weather Risk deferred (external API). |
+| 2026-05-21 | **Phase D.3 EXTENDED — Cron bypass + all-buildings mode**: `POST /api/alerts/schedule-check` now supports `x-cron-secret` header bypass (Netcup VPS cron, no Firebase auth). When secret matches, runs across ALL active company buildings and sends combined Telegram digest. `CRON_SECRET` env var required on server. |
+| 2026-05-21 | **Phase D.3 EXTENDED — Weather Risk Rule (7th rule)**: `detectWeatherRisk()` added to alert rules engine. Source: Open-Meteo API (free, no key, EU). Building needs `latitude`/`longitude` fields. Thresholds: rain > 5mm → MEDIUM, wind > 50km/h → HIGH. `AlertRuleType` extended with `'weather_risk'`. i18n keys added (el+en). |
+| 2026-05-21 | **Phase D.5 IMPLEMENTED — Construction Portfolio Dashboard**: Cross-building portfolio view at `/construction/portfolio`. API route `GET /api/construction/portfolio` returns EVM metrics (SPI/CPI), delayed task count, active alert count, next milestone per building. `useConstructionPortfolio` hook, `PortfolioKPIs` (4 cards), `PortfolioTable` (8 columns with click-through to building timeline). Navigation entry added. i18n (el+en). |
 
 ---
 

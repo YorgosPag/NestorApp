@@ -701,6 +701,30 @@
       "high": "Υψηλός"
     }
   },
+  "portfolio": {
+    "title": "Portfolio Κατασκευής",
+    "subtitle": "Επισκόπηση όλων των κτιρίων σε εξέλιξη",
+    "refresh": "Ανανέωση",
+    "empty": "Δεν βρέθηκαν ενεργά κτίρια",
+    "kpiSectionLabel": "Συνολικοί δείκτες portfolio",
+    "kpi": {
+      "totalBuildings": "Σύνολο Κτιρίων",
+      "avgSpi": "Μέσος SPI",
+      "totalAlerts": "Ενεργά Alerts",
+      "atRisk": "Κτίρια σε Κίνδυνο"
+    },
+    "table": {
+      "building": "Κτίριο",
+      "progress": "Πρόοδος",
+      "spi": "SPI",
+      "cpi": "CPI",
+      "delayedTasks": "Καθυστ.",
+      "alerts": "Alerts",
+      "nextMilestone": "Επόμ. Milestone",
+      "status": "Κατάσταση",
+      "noMilestone": "—"
+    }
+  },
   "alerts": {
     "bannerTitle": "{count, plural, one {# Ειδοποίηση} other {# Ειδοποιήσεις}}",
     "bannerAriaLabel": "Ειδοποιήσεις προγράμματος",
@@ -721,7 +745,8 @@
       "cpi_drop": "Πτώση CPI",
       "task_blocked": "Αποκλεισμένη Εργασία",
       "milestone_risk": "Milestone σε Κίνδυνο",
-      "no_progress": "Καμία Πρόοδος"
+      "no_progress": "Καμία Πρόοδος",
+      "weather_risk": "Καιρικός Κίνδυνος"
     }
   }
 }

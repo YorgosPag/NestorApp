@@ -163,17 +163,6 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 
 ---
 
-### 🧹 ADR-363 — BIM entity points SSoT migration (priorità media, >1h, 20+ αρχεία)
-
-Discovered 2026-05-21 (ADR-363 snap SSoT centralization session). SSoT utility `src/subapps/dxf-viewer/bim/utils/bim-entity-points.ts` δημιουργήθηκε. `GeometricCalculations.ts` ήδη delegate. Εναπομένουν 20+ αρχεία που κάνουν inline `params.outline.vertices` / `params.startPoint` access αντί να χρησιμοποιούν το SSoT.
-
-- [ ] **Migrate 20+ αρχεία** → χρήση `getBimEntityKeyPoints2D` / `getBimEntityEdgeMidpoints2D` από `bim/utils/bim-entity-points`. Αρχεία: `bim-move-geometry.ts`, `apply-entity-preview.ts`, `draw-ghost-entity.ts`, `slab-grips.ts`, `slab-opening-grips.ts`, `beam-grips.ts`, `bim-mirror-geometry.ts`, `bim-rotate-geometry.ts` + ~12 ακόμα. Grep: `params\.outline\.vertices` + `params\.startPoint` + `params\.endPoint` σε `src/subapps/dxf-viewer/bim/`.
-
-**ADR:** `docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md`
-**Effort**: ~1.5-2h (Boy Scout per-touch, ή dedicated session)
-
----
-
 ### 📅 ADR-034 GANTT — Phase 4 pending items (construction tracking)
 
 **ADR:** `docs/centralized-systems/reference/adrs/ADR-034-gantt-chart-construction-tracking.md`
@@ -217,6 +206,7 @@ Discovered 2026-05-21 (ADR-363 snap SSoT centralization session). SSoT utility `
 ## Changelog
 
 | Date       | Change |
+| 2026-05-21 | ADR-363 BIM entity points SSoT migration CLOSED — `slab-grips.ts` + `slab-opening-grips.ts` + `BeamRenderer.ts` (4 methods) migrated to `getBimEntityKeyPoints2D`. Transforms/geometry/validator files intentionally skipped (need 3D `Point3D`, SSoT returns 2D only). Broken import `bim-entity-points.ts` `'../extended-types'` → `'../../types/entities'` fixed. Item removed from checklist. |
 | 2026-05-19 | ADR-363 R1 DONE — `useBimCopyTool` (AutoCAD COPY FSM + full canvas wiring). ADR-363 R2 DONE — stair bridge helpers moved to `bim/hooks/bridge/`, cross-domain coupling fixed. Both removed from checklist. |
 | 2026-05-15 | ADR-345 Fasi 6.1 + 7 completate. Fase 8 parziale (colors rimossa, levels rimane per ora). |
 | 2026-05-12 | ADR-345 Fase 5.5 pending items aggiunti (findReplace/spellCheck/symbol comingSoon, commit chain ADR-344 Ph6+, Fasi 6/7/8). STATUS → ACTIVE. |

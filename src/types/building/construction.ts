@@ -232,7 +232,8 @@ export type AlertRuleType =
   | 'cpi_drop'
   | 'task_blocked'
   | 'milestone_risk'
-  | 'no_progress';
+  | 'no_progress'
+  | 'weather_risk';
 
 export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical';
 

@@ -1479,6 +1479,42 @@
       ],
       "tier": 3
     },
+    "_comment_adr266_phaseD3_D5": "=== ADR-266 PHASE D.3/D.5 (2026-05-21): construction alerts + weather + portfolio SSoT modules ===",
+    "construction-alert-rules": {
+      "ssotFile": "src/services/construction-alert-rules.ts",
+      "description": "Construction schedule alert rules engine (ADR-266 Phase D.3). 7 rules: task_overdue, spi_drop, cpi_drop, task_blocked, milestone_risk, no_progress, weather_risk. Canonical SSoT — no inline alert rule logic outside this file.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+detect(TaskOverdue|SpiDrop|CpiDrop|TaskBlocked|MilestoneAtRisk|NoProgress|WeatherRisk)\\b",
+        "export\\s+function\\s+runAlertRules\\b"
+      ],
+      "allowlist": [
+        "src/services/construction-alert-rules.ts"
+      ],
+      "tier": 3
+    },
+    "construction-alert-service": {
+      "ssotFile": "src/services/construction-alert.service.ts",
+      "description": "Construction alert Firestore CRUD (ADR-266 Phase D.3). saveNewAlerts, getActiveAlerts, dismissAlert. Server-only (Admin SDK). No direct writes to construction_alerts outside this service.",
+      "forbiddenPatterns": [
+        "export\\s+(async\\s+)?function\\s+(saveNewAlerts|getActiveAlerts|dismissAlert)\\b"
+      ],
+      "allowlist": [
+        "src/services/construction-alert.service.ts"
+      ],
+      "tier": 3
+    },
+    "open-meteo-weather": {
+      "ssotFile": "src/services/weather/open-meteo.service.ts",
+      "description": "Open-Meteo weather forecast client (ADR-266 Phase D.3 Weather Risk). Free EU API, no key. fetchWeatherForecast(lat, lon) → WeatherForecast. No other files should call the Open-Meteo API directly.",
+      "forbiddenPatterns": [
+        "api.open-meteo.com",
+        "export\\s+(async\\s+)?function\\s+fetchWeatherForecast\\b"
+      ],
+      "allowlist": [
+        "src/services/weather/open-meteo.service.ts"
+      ],
+      "tier": 3
+    },
     "_comment_adr314_phaseD3c": "=== ADR-314 PHASE D.3c (2026-04-19): registry gap — financial/construction engine SSoT modules ===",
     "counterproposal-engine": {
       "ssotFile": "src/lib/counterproposal-engine.ts",

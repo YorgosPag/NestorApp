@@ -13,7 +13,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../extended-types';
+import type { Entity } from '../../types/entities';
 import {
   isBeamEntity,
   isSlabEntity,

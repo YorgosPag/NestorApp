@@ -34,6 +34,7 @@ import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getBeamGrips, beamDepthHandlePosition } from '../beams/beam-grips';
+import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
 import {
   computeBeamHatchPlan,
   resolveBeamMaterialKey,
@@ -159,8 +160,7 @@ export class BeamRenderer extends BaseEntityRenderer {
     if (this.transform.scale < 0.001) return;
 
     const key: BeamMaterialKey = resolveBeamMaterialKey(beam.params.material);
-    const start = beam.params.startPoint;
-    const end = beam.params.endPoint;
+    const [start, end] = getBimEntityKeyPoints2D(beam);
     const plan: BeamHatchPlan = computeBeamHatchPlan(
       beam.geometry.bbox,
       { ux: end.x - start.x, uy: end.y - start.y },
@@ -205,8 +205,7 @@ export class BeamRenderer extends BaseEntityRenderer {
     const handlePos = beamDepthHandlePosition(beam.params);
     if (!handlePos) return;
 
-    const start = beam.params.startPoint;
-    const end = beam.params.endPoint;
+    const [start, end] = getBimEntityKeyPoints2D(beam);
     const midWorld: Point2D = {
       x: (start.x + end.x) / 2,
       y: (start.y + end.y) / 2,
@@ -283,11 +282,10 @@ export class BeamRenderer extends BaseEntityRenderer {
     if (resolveBeamMaterialKey(beam.params.material) !== 'steel') return;
     if (this.transform.scale < SECTION_MIN_SCALE) return;
 
-    const sp = beam.params.startPoint;
-    const ep = beam.params.endPoint;
+    const [sp, ep] = getBimEntityKeyPoints2D(beam);
 
-    const startS = this.worldToScreen({ x: sp.x, y: sp.y });
-    const endS = this.worldToScreen({ x: ep.x, y: ep.y });
+    const startS = this.worldToScreen(sp);
+    const endS = this.worldToScreen(ep);
     const dx = endS.x - startS.x;
     const dy = endS.y - startS.y;
     const len = Math.hypot(dx, dy);
@@ -364,7 +362,7 @@ export class BeamRenderer extends BaseEntityRenderer {
     const t = performance.now() / 1000;
     const alpha = Math.max(0, 0.15 + 0.25 * Math.sin(t * Math.PI * 2 * ANCHOR_PULSE_HZ));
 
-    const pts = [beam.params.startPoint, beam.params.endPoint] as const;
+    const pts = getBimEntityKeyPoints2D(beam);
     this.ctx.save();
     this.ctx.setLineDash([]);
     this.ctx.strokeStyle = `rgba(30, 60, 160, ${alpha.toFixed(2)})`;

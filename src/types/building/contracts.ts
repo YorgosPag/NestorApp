@@ -124,6 +124,11 @@ export type {
     /** Last update timestamp */
     updatedAt?: string | Date;
 
+    // ─── GPS coordinates (ADR-266 Weather Risk Rule) ──────────────────────
+    /** WGS84 decimal degrees — used by Open-Meteo weather alert rule */
+    latitude?: number;
+    longitude?: number;
+
     // ─── ADR-369: Multi-building elevation reference ───────────────────────
     /** METRES — Base elevation relative to Project Base Point (default 0). */
     baseElevation?: number;

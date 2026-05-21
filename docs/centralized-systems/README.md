@@ -96,7 +96,7 @@
 
 ### 📊 **REPORTS & ANALYTICS**
 - **[📊 Dynamic Report Builder (ADR-268)](reference/adrs/ADR-268-dynamic-report-builder/ADR-268.md)** - Cross-entity tabular reports, 25 domains, filters, grouping, charts, PDF/Excel export
-- **[📈 Gantt & Construction Reports (ADR-266)](reference/adrs/ADR-266-gantt-construction-reports.md)** - Gantt chart, S-Curve, EVM Dashboard, Resource Histogram, Critical Path
+- **[📈 Gantt & Construction Reports (ADR-266)](reference/adrs/ADR-266-gantt-construction-reports.md)** - Gantt chart, S-Curve, EVM Dashboard, Resource Histogram, Critical Path, Schedule Alert Rules (7 rules incl. Weather Risk via Open-Meteo), Cron auto-check, Portfolio Dashboard (`/construction/portfolio`)
 
 ### 🤖 **AI ARCHITECTURE**
 - **[📋 AI Suite Overview](ai/README.md)** - Enterprise AI automation platform (ADR-169)

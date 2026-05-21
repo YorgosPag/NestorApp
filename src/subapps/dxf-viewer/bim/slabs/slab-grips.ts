@@ -30,6 +30,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, SlabGripKind } from '../../hooks/useGripMovement';
 import type { Point3D } from '../types/bim-base';
 import type { SlabEntity, SlabParams } from '../types/slab-types';
+import type { Entity } from '../../types/entities';
+import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
 
 // ─── Grip position computation (ADR-363 §6 Phase 3.5 / 3.6) ──────────────────
 
@@ -44,7 +46,7 @@ import type { SlabEntity, SlabParams } from '../types/slab-types';
  * Returns an empty array when the polygon is degenerate (<3 vertices).
  */
 export function getSlabGrips(entity: Readonly<SlabEntity>): GripInfo[] {
-  const verts = entity.params.outline.vertices;
+  const verts = getBimEntityKeyPoints2D(entity as Entity);
   if (verts.length < 3) return [];
   const grips: GripInfo[] = [];
   for (let i = 0; i < verts.length; i++) {
