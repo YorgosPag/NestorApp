@@ -31,7 +31,11 @@ import {
   isRectangleEntity,
   isWallEntity,
   isColumnEntity,
-  isRayEntity
+  isRayEntity,
+  isBeamEntity,
+  isSlabEntity,
+  isSlabOpeningEntity,
+  isOpeningEntity,
 } from '../../types/entities';
 // ADR-363 Phase 5.5d — Column anchor SSoT για beam-end auto-snap.
 import { getColumnAnchorWorldPoints } from '../../bim/columns/column-anchors';
@@ -117,6 +121,25 @@ export class GeometricCalculations {
       }
     } else if (isRayEntity(entity)) {
       endpoints.push(entity.basePoint);
+    } else if (isBeamEntity(entity)) {
+      // ADR-363 Phase 5.5 snap — beam axis endpoints (Point3D → 2D projection).
+      endpoints.push({ x: entity.params.startPoint.x, y: entity.params.startPoint.y });
+      endpoints.push({ x: entity.params.endPoint.x, y: entity.params.endPoint.y });
+    } else if (isSlabEntity(entity)) {
+      // ADR-363 Phase 3.5 snap — all slab outline vertices (closed polygon corners).
+      for (const v of entity.params.outline.vertices) {
+        endpoints.push({ x: v.x, y: v.y });
+      }
+    } else if (isSlabOpeningEntity(entity)) {
+      // ADR-363 Phase 3.7a snap — all slab-opening outline vertices.
+      for (const v of entity.params.outline.vertices) {
+        endpoints.push({ x: v.x, y: v.y });
+      }
+    } else if (isOpeningEntity(entity)) {
+      // ADR-363 Phase 2.5 snap — opening cutout corners (4-vertex rectangle outline).
+      for (const v of entity.params.outline.vertices) {
+        endpoints.push({ x: v.x, y: v.y });
+      }
     }
     // XLine: infinite in both directions → no endpoints
 
@@ -179,6 +202,34 @@ export class GeometricCalculations {
           y: (params.start.y + params.end.y) / 2,
         });
       }
+    } else if (isBeamEntity(entity)) {
+      // ADR-363 Phase 5.5 snap — beam axis midpoint.
+      const { startPoint: s, endPoint: e } = entity.params;
+      midpoints.push({ x: (s.x + e.x) / 2, y: (s.y + e.y) / 2 });
+    } else if (isSlabEntity(entity)) {
+      // ADR-363 Phase 3.5 snap — per-edge midpoints (closed polygon, mirrors closed polyline).
+      const verts = entity.params.outline.vertices;
+      for (let i = 0; i < verts.length; i++) {
+        const a = verts[i];
+        const b = verts[(i + 1) % verts.length];
+        midpoints.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+      }
+    } else if (isSlabOpeningEntity(entity)) {
+      // ADR-363 Phase 3.7a snap — per-edge midpoints.
+      const verts = entity.params.outline.vertices;
+      for (let i = 0; i < verts.length; i++) {
+        const a = verts[i];
+        const b = verts[(i + 1) % verts.length];
+        midpoints.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+      }
+    } else if (isOpeningEntity(entity)) {
+      // ADR-363 Phase 2.5 snap — 4 edge midpoints of cutout rectangle.
+      const verts = entity.params.outline.vertices;
+      for (let i = 0; i < verts.length; i++) {
+        const a = verts[i];
+        const b = verts[(i + 1) % verts.length];
+        midpoints.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+      }
     }
 
     return midpoints;
@@ -226,6 +277,10 @@ export class GeometricCalculations {
           };
         }
       }
+    } else if (isBeamEntity(entity)) {
+      // ADR-363 Phase 5.5 snap — beam axis midpoint (single-midpoint query).
+      const { startPoint: s, endPoint: e } = entity.params;
+      return { x: (s.x + e.x) / 2, y: (s.y + e.y) / 2 };
     }
 
     return null;
