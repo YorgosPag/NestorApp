@@ -35,6 +35,13 @@ const TOKEN_MAP = new Map<string, string>([
   ['\\S', '½'],
 ]);
 
+function resolveToken(token: string): string | undefined {
+  if (TOKEN_MAP.has(token)) return TOKEN_MAP.get(token);
+  // Accept raw Unicode codepoints (e.g. from SymbolPickerDialog).
+  if ([...token].length === 1) return token;
+  return undefined;
+}
+
 function isTextRun(run: TextRun | TextStack): run is TextRun {
   return 'text' in run;
 }
@@ -85,7 +92,7 @@ export class InsertTextTokenCommand implements ICommand {
     // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
     assertCanEditLayer({ layerName: resolveEntityLayerName(entity) ?? '', provider: this.layerProvider });
 
-    const char = TOKEN_MAP.get(this.input.token);
+    const char = resolveToken(this.input.token);
     if (!char) return;
 
     const safeNode = ensureTextNode(entity);
@@ -126,7 +133,7 @@ export class InsertTextTokenCommand implements ICommand {
   }
 
   getDescription(): string {
-    const char = TOKEN_MAP.get(this.input.token) ?? this.input.token;
+    const char = resolveToken(this.input.token) ?? this.input.token;
     return `Insert "${char}" into text entity`;
   }
 
@@ -143,7 +150,7 @@ export class InsertTextTokenCommand implements ICommand {
 
   validate(): string | null {
     if (!this.input.entityId) return 'entityId is required';
-    if (!TOKEN_MAP.has(this.input.token)) return `Unknown token "${this.input.token}"`;
+    if (!resolveToken(this.input.token)) return `Unknown token "${this.input.token}"`;
     return null;
   }
 

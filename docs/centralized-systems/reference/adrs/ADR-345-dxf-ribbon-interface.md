@@ -723,6 +723,48 @@ interface RibbonState {
 
 ---
 
+### Fase 5.5-SYM — Symbol Picker + ClipToRegion textNode fix ✅ COMPLETATA 2026-05-21
+
+**Obiettivo**: (A) rimuovere `comingSoon: true` dal button `symbol` nel panel `text-insert` e montare un `SymbolPickerDialog` leggero; (B) fix `clipText()` per entità ribbon (textNode invece di flat `text`); (C) test suite `ClipToRegionService`.
+
+**Architettura Symbol Picker**
+- `comingSoon: true` rimosso da `data/contextual-text-editor-tab.ts` → `action: 'text-insert-symbol'` aggiunto.
+- `useDxfViewerState.ts`: nuovo state `symbolPickerOpen / setSymbolPickerOpen (useState(false))`. Case `'text-insert-symbol'` in `handleAction` → `setSymbolPickerOpen(true)`.
+- **Nuovo file** `ui/text-toolbar/SymbolPickerDialog.tsx` — 30 Unicode symbols in 3 gruppi (math/arrows/legal). Click → `InsertTextTokenCommand` per ogni entityId in `selectedIds`. Dialog si chiude auto dopo inserimento. Usa `useTextSelectionStore` (ADR-040 micro-leaf) + `useDxfTextServices()` + `getGlobalCommandHistory()`.
+- **Nuovo file** `ui/text-toolbar/DxfSymbolPickerHost.tsx` — wrapper lazy-loadable, ritorna null se `services === null`.
+- `DxfViewerContent.tsx`: lazy import + Suspense mount identici a `DxfFindReplaceHost`.
+
+**InsertTextTokenCommand esteso**
+- Nuova helper `resolveToken(token)`: TOKEN_MAP lookup primo; se non trovato, accetta raw Unicode codepoint (`[...token].length === 1`). Retro-compatibile — tutti i token `%%c/%%d/%%p/\S` continuano a funzionare.
+- `validate()` + `getDescription()` aggiornati per usare `resolveToken`.
+
+**ClipToRegionService textNode fix** (già presente in precedente sessione, ora coperto da test)
+- `clipText()`: se `entity.textNode` esiste → estrae `plainText` dai paragraphs→runs→text (duck-typing `'top' in run`), calcola `charH` da primo run style (height > 0) o fallback `TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE` (12). Per 1-para/1-run: ricostruisce textNode con solo il testo tagliato. Per multi-run: conservativo (muove solo `position`).
+- Nuovi test: `services/__tests__/ClipToRegionService.test.ts` — 6 casi: fully-inside, outside, single-run trim, DEFAULT_FONT_SIZE fallback, legacy text field, multi-run conservative.
+
+**Files modificati/creati**
+- `ui/ribbon/data/contextual-text-editor-tab.ts` — rimozione comingSoon symbol, aggiunto action
+- `hooks/useDxfViewerState.ts` — `symbolPickerOpen` state + `text-insert-symbol` action case
+- `ui/text-toolbar/SymbolPickerDialog.tsx` (NUOVO)
+- `ui/text-toolbar/DxfSymbolPickerHost.tsx` (NUOVO)
+- `app/DxfViewerContent.tsx` — lazy import + Suspense mount
+- `core/commands/text/InsertTextTokenCommand.ts` — `resolveToken()` helper per raw Unicode
+- `services/__tests__/ClipToRegionService.test.ts` (NUOVO — 6 tests, tutti ✅)
+- `i18n/locales/en/dxf-viewer-shell.json` — `ribbon.symbolPicker.{title,hint,close}`
+- `i18n/locales/el/dxf-viewer-shell.json` — stesse keys in greco
+
+**Google-level checklist**
+- ✅ Proactive: lazy bundle, zero impact finché non richiesto
+- ✅ Race-free: Suspense + SSoT state
+- ✅ Idempotent: `setSymbolPickerOpen(true)` × 2 = stesso stato; `InsertTextTokenCommand` idempotente su sceneCopy
+- ✅ SSoT: `symbolPickerOpen` in `useDxfViewerState`; `selectedIds` da `useTextSelectionStore`
+- ✅ Belt-and-suspenders: `resolveToken` null-safe; dialog disabilitato se no services/selection
+- ✅ Lifecycle: null guard in host wrapper
+
+✅ Google-level: YES — lazy wrapper + null guard + SSoT state + undo/redo via CommandHistory.
+
+---
+
 ### Fase 6.0 — Font panel extras (migrazione controlli FloatingPanel → Ribbon) ✅ COMPLETATA 2026-05-14
 
 **Obiettivo**: migrare i controlli mancanti del panel "Font" dal FloatingPanel alla tab contestuale Text Editor.
@@ -799,6 +841,7 @@ interface RibbonState {
 
 | Data | Modifica |
 |------|----------|
+| 2026-05-21 | **Fase 5.5-SYM — Symbol Picker + ClipToRegion textNode fix**. `comingSoon: true` rimosso da symbol button (`contextual-text-editor-tab.ts`), aggiunto `action: 'text-insert-symbol'`. `useDxfViewerState`: `symbolPickerOpen/setSymbolPickerOpen` state + `case 'text-insert-symbol'` in `handleAction`. Nuovi file: `SymbolPickerDialog.tsx` (30 Unicode symbols in 3 gruppi math/arrows/legal, click→`InsertTextTokenCommand`, auto-close) + `DxfSymbolPickerHost.tsx` (null guard wrapper). `DxfViewerContent`: lazy import + Suspense mount. `InsertTextTokenCommand`: `resolveToken()` helper — TOKEN_MAP lookup + raw Unicode codepoint fallback per 1-char tokens (retro-compatibile). `ClipToRegionService.clipText()` già fixato per textNode entities: duck-typing per estrarre plainText + charH da run.style.height con fallback DEFAULT_FONT_SIZE(12). Nuova test suite `services/__tests__/ClipToRegionService.test.ts` (6 test ✅). i18n: `ribbon.symbolPicker.{title,hint,close}` in el+en. ✅ Google-level: YES. |
 | 2026-05-19 | **Fase 5.5-FR — FindReplace button wired**. `comingSoon: true` rimosso da `contextual-text-editor-tab.ts` (findReplace button: icon `text-placeholder`→`search`, aggiunto `action: 'text-find-replace'`). `useDxfViewerState`: `findReplaceOpen/setFindReplaceOpen` state + `case 'text-find-replace': setFindReplaceOpen(true)` in `handleAction`. Nuovo `DxfFindReplaceHost.tsx`: wrapper lazy-loadable che raccoglie `sceneManager`+`layerProvider` da `useDxfTextServices()` + filtra `entities` da `useCurrentSceneModel()` via type guard `e.type === 'text'|'mtext'` + `onExecuteCommand` da `getGlobalCommandHistory().execute()`. Ritorna null se no level active. `DxfViewerContent`: lazy import + Suspense mount. spellCheck e symbol rimangono `comingSoon` (engine/dialog assenti). ✅ Google-level: YES — lazy bundle, null guard, SSoT state, race-free Suspense. |
 | 2026-05-19 | **ADR-363 Phase 7.1 — Multi-Selection contextual tab registered**. Νέο tab `multi-selection` (`isContextual: true`, `contextualTrigger: 'multi-selection-bim'`) στο registry `RIBBON_CONTEXTUAL_TABS` (`app/ribbon-contextual-config.ts`). Tab data στο `ui/ribbon/data/contextual-multi-selection-tab.ts`: 2 panels (`multi-selection-common` mounts `MultiSelectionCommonPropertiesPanel` widget, `multi-selection-filter` mounts `MultiSelectionFilterPanel` widget). Widget dispatcher `RibbonPanel.tsx` updated με τα δύο νέα widgetId ('multi-selection-common-properties', 'multi-selection-filter'). Trigger resolution στο `useActiveContextualTrigger` extended με `selectedEntityIds` arg + precedence: 2+ BIM-kind selection → multi-selection tab υπερτερεί του per-kind tab από `primarySelectedId`. i18n `ribbon.tabs.multiSelection`, `ribbon.panels.multiSelection{Common,Filter}`, `ribbon.contextualTabs.multiSelection.*` σε el (Πολλαπλή Επιλογή / Κοινές Ιδιότητες / Φιλτράρισμα / κ.λπ.) + en. CSS `dxf-ribbon-multi-{common,filter}*` στο `ribbon-tokens.css`. Widgets self-gate (return null όταν mode!=='multi' ή commonProperties άδειο) — panels collapse-άρουν gracefully. |
 | 2026-05-17 | **Fase 5.6 wire** — `DxfViewerContent` passa `useDxfViewerState.activeTool` come prop a `useRibbonCommands({ activeTool, ... })`, completando il plumbing da viewer-state → ribbon-context → tool buttons. |

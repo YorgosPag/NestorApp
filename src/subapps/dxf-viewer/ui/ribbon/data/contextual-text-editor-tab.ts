@@ -338,7 +338,7 @@ export const CONTEXTUAL_TEXT_EDITOR_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.textEditor.insert.symbol',
                 icon: 'text-placeholder',
                 commandKey: 'text-insert-symbol',
-                comingSoon: true,
+                action: 'text-insert-symbol',
               },
             },
             {

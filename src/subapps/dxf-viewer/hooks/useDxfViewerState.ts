@@ -98,6 +98,7 @@ export function useDxfViewerState() {
 
   const [autoCrop, setAutoCrop] = useState(false);
   const [findReplaceOpen, setFindReplaceOpen] = useState(false);
+  const [symbolPickerOpen, setSymbolPickerOpen] = useState(false);
 
   // 🏢 FIX: Grid visibility from RulersGridContext (single source of truth)
   // Previously, toolbar used a disconnected local state (useToolbarState.showGrid)
@@ -376,6 +377,10 @@ export function useDxfViewerState() {
       case 'text-find-replace':
         setFindReplaceOpen(true);
         break;
+      // ADR-345 Fase 5.5 — Symbol Picker dialog from ribbon Insert panel
+      case 'text-insert-symbol':
+        setSymbolPickerOpen(true);
+        break;
       default:
         console.warn('Unknown action:', action);
     }
@@ -408,6 +413,8 @@ export function useDxfViewerState() {
     autoCrop,
     findReplaceOpen,
     setFindReplaceOpen,
+    symbolPickerOpen,
+    setSymbolPickerOpen,
     // ✅ CENTRALIZED: Snap system from SnapContext
     snapEnabled,
     // 🏢 ENTERPRISE (2026-01-26): Undo/Redo from Command History - ADR-032
