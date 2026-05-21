@@ -342,6 +342,7 @@ describe('ESC_PRIORITY constants', () => {
       ESC_PRIORITY.OVERLAY_DRAW_MODE,
       ESC_PRIORITY.GRIP_SELECTION,
       ESC_PRIORITY.ENTITY_SELECTION,
+      ESC_PRIORITY.FOCUS_CLEAR,
       ESC_PRIORITY.COLOR_MENU,
     ];
     for (let i = 1; i < ordered.length; i += 1) {

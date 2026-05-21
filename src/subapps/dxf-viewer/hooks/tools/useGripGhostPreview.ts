@@ -103,10 +103,14 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       movesEntity: dragPreview.movesEntity,
       edgeVertexIndices: dragPreview.edgeVertexIndices,
       // ADR-358 Phase 5d — stair parametric ghost discriminator pass-through.
-      ...(dragPreview.stairGripKind ? { stairGripKind: dragPreview.stairGripKind } : {}),
+      ...(dragPreview.stairGripKind       ? { stairGripKind:       dragPreview.stairGripKind }       : {}),
       // ADR-363 Phase 1C — wall parametric ghost discriminator pass-through.
-      ...(dragPreview.wallGripKind ? { wallGripKind: dragPreview.wallGripKind } : {}),
-      ...(dragPreview.anchorPos ? { anchorPos: dragPreview.anchorPos } : {}),
+      ...(dragPreview.wallGripKind        ? { wallGripKind:        dragPreview.wallGripKind }         : {}),
+      // ADR-363 Phase 5.5 / 3.5 / 3.7a — beam / slab / slab-opening parametric ghost.
+      ...(dragPreview.beamGripKind        ? { beamGripKind:        dragPreview.beamGripKind }         : {}),
+      ...(dragPreview.slabGripKind        ? { slabGripKind:        dragPreview.slabGripKind }         : {}),
+      ...(dragPreview.slabOpeningGripKind ? { slabOpeningGripKind: dragPreview.slabOpeningGripKind }  : {}),
+      ...(dragPreview.anchorPos           ? { anchorPos:           dragPreview.anchorPos }            : {}),
     };
 
     const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview);

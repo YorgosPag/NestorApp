@@ -213,34 +213,35 @@ export function drawGhostEntity(
       return;
     }
 
-    // ADR-363 Phase 3.5 — slab ghost: outline polygon from slabEntity.params.
+    // ADR-363 Phase 3.5 — slab ghost: outline polygon from raw SlabEntity.params.
+    // entity is a raw SlabEntity from scene.entities (not a DxfSlab wrapper).
     case 'slab': {
       const slab = entity as unknown as {
-        slabEntity?: { params?: { outline?: { vertices: ReadonlyArray<{ x: number; y: number }> } } };
+        params?: { outline?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
       };
-      const verts = slab.slabEntity?.params?.outline?.vertices ?? [];
+      const verts = slab.params?.outline?.vertices ?? [];
       if (verts.length < 2) return;
       drawPolygon(ctx, verts, toScreen);
       return;
     }
 
-    // ADR-363 Phase 3.7a — slab-opening ghost: outline polygon from slabOpeningEntity.params.
+    // ADR-363 Phase 3.7a — slab-opening ghost: outline polygon from raw SlabOpeningEntity.params.
     case 'slab-opening': {
       const so = entity as unknown as {
-        slabOpeningEntity?: { params?: { outline?: { vertices: ReadonlyArray<{ x: number; y: number }> } } };
+        params?: { outline?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
       };
-      const verts = so.slabOpeningEntity?.params?.outline?.vertices ?? [];
+      const verts = so.params?.outline?.vertices ?? [];
       if (verts.length < 2) return;
       drawPolygon(ctx, verts, toScreen);
       return;
     }
 
-    // ADR-363 Phase 2.5 — opening ghost: cutout rectangle outline from openingEntity.geometry.
+    // ADR-363 Phase 2.5 — opening ghost: cutout rectangle outline from raw OpeningEntity.geometry.
     case 'opening': {
       const opening = entity as unknown as {
-        openingEntity?: { geometry?: { outline?: { vertices: ReadonlyArray<{ x: number; y: number }> } } };
+        geometry?: { outline?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
       };
-      const verts = opening.openingEntity?.geometry?.outline?.vertices ?? [];
+      const verts = opening.geometry?.outline?.vertices ?? [];
       if (verts.length < 2) return;
       drawPolygon(ctx, verts, toScreen);
       return;

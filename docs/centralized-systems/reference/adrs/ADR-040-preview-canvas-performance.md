@@ -71,6 +71,26 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-21 — ADR-366 Phase 4.6: 2D keyboard-focus backport + cross-mode audit
+
+Two new micro-leaves land in the canvas tree:
+- `Focus2DOverlayLeaf` — single `useSyncExternalStore` to `ViewMode3DStore.mode` (low-freq, `mode === '2d'` derive). Bridges the boolean into `Focus2DOverlay.active`. The parent `CanvasLayerStack` shell gains zero new subscriptions (CHECK 6C still green).
+- `Focus2DOverlay` — single `useSyncExternalStore` to the cross-mode `KeyboardFocusManager` SSoT (low-freq — Tab keypress only). Owns one `<canvas>` element + paints via `paintFocus2DOutline` on focus/scene/transform/viewport change. Pan/zoom continuous deltas live in `ImmediatePositionStore` (not React state), so the leaf never re-renders at 60fps.
+
+`CanvasSection` adds a `use2DKeyboardFocus` invocation with three lazy getters (`getScene` / `getTransform` / `getViewport`) and one stable `toggleEntity` callback. Hook subscribes to a window keydown listener (capture phase), mode-gated to `'2d'`; never reads stale snapshots — all event-time reads route through the getters (Rule 2).
+
+A new ESC priority `FOCUS_CLEAR: 150` slots between `ENTITY_SELECTION` and `COLOR_MENU` — used cross-mode (2D + 3D each register their own handler).
+
+**Cardinal rule compliance**:
+- **Rule 1 (no orchestrator subscriptions)**: respected — `Focus2DOverlayLeaf` is the sole new `useSyncExternalStore` and it lives BELOW the shell, subscribing only to the low-freq mode store.
+- **Rule 2 (getter-based event reads)**: respected — `use2DKeyboardFocus` consumes `getScene/getTransform/getViewport` and reads them at keydown time. Selection toggle reads `universalSelectionRef.current.toggle(...)` at fire time.
+- **Rule 3 (bitmap cache key untouched)**: respected — focus state never propagates to `dxf-bitmap-cache.ts`. The dashed outline draws to a dedicated overlay canvas (z-index 18), so the cached DXF bitmap stays valid through focus changes.
+- **Rule 4 (≤1 canvas element / ≤2 high-freq hooks per leaf)**: respected — each leaf has ≤1 canvas + ≤1 low-freq subscription.
+
+3D-side audit (Phase 4.0 → 4.5 retrospective): `ThreeJsSceneManager` is pure (zero React); `BimViewport3D` subscribes only to low-freq slices (`mode`, `sunPreset`, `sunAzimuth/Elevation`, `floorVisibilityModes`, render mode toggle); `FocusIndicator3D` uses `useSyncExternalStore` for focus changes (low-freq) + a self-owned RAF that writes `style.transform` imperatively (no React re-renders per-frame). No new violations introduced.
+
+Bundled atomically with the Phase 4.6 commit (CHECK 6B compliance).
+
 ### 2026-05-20 — ADR-363 Phase 5 beam type passthrough (DxfRenderer.convertToEntity)
 
 `DxfRenderer.ts` adds a new `case 'beam':` branch in `convertToEntity()` — direct passthrough (mirror του wall Phase 1B), zero architectural change. No new `useSyncExternalStore`, no new high-freq subscription, no bitmap cache key change. Cardinal rules 1–4 unaffected; CHECK 6C still green.
@@ -1958,3 +1978,7 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-20: ADR-363 Phase 3.7b+ / 3.7b++ — Slab-Opening Ghost Preview micro-leaf + edge-midpoint hover indicator
 
 `SlabOpeningGhostPreviewMount` (new micro-leaf, `canvas-layer-stack-slab-opening-ghost.tsx`) owns the slab-opening drawing preview path. `useSlabOpeningGhostPreview` uses the RAF + `getImmediateSnap()` imperative pattern (mirror Phase 4.5c.1 `ColumnGhostPreviewMount` / Phase 5.6 `useTrimTool`), with `useCursorWorldPosition()` only as a trigger — zero React state in the preview render path. `SlabOpeningGhostRenderer` draws per-kind rectangle ghost (shaft/well/duct/chimney palette, dashed stroke, 25% fill, crosshair). Phase 3.7b++ extension: optional `hoveredEdgeMidpointGrip` prop draws a green "+vertex" affordance at the grip's screen position (Revit/AutoCAD convention) — single RAF lifecycle gated by `isActive = isAwaitingPosition || hoveredEdgeMidpointGrip != null`. `CanvasLayerStack.tsx` + `canvas-layer-stack-leaves.tsx` + `canvas-layer-stack-types.ts` extended plumb-only; `CanvasSection.tsx` (orchestrator) destructures `slabOpeningTool` from `useSpecialTools` and passes the inline-derived `hoveredGrip?.slabOpeningGripKind?.startsWith('slab-opening-edge-midpoint-')` filter. ZERO new `useSyncExternalStore` subscriptions in orchestrator/shell. Bitmap cache key untouched. `DxfRenderer.ts` adds slab-opening preview pass plumbing (render-only, no cache invalidation key change). Cardinal rules maintained.
+
+## 2026-05-21: ADR-366 Phase 4.6 — Focus2DOverlayLeaf micro-leaf + use2DKeyboardFocus getter pattern
+
+`Focus2DOverlayLeaf` (new micro-leaf, `components/dxf-layout/Focus2DOverlayLeaf.tsx`) added as plumb-only sibling inside `CanvasLayerStack.tsx`. The leaf is the sole consumer of the `KeyboardFocus2DManager` subscription — outline painting is RAF-scheduled, zero React state on the focus ring. `use2DKeyboardFocus` (new hook, `hooks/state/use2DKeyboardFocus.ts`) wires keyboard Tab/Enter/Esc handling on the canvas; it accepts `getScene` / `getTransform` / `getViewport` **getters** (ADR-040 Rule 2) rather than snapshot values, so keydown-time reads stay fresh even when the orchestrator skips re-renders. `CanvasSection.tsx` adds the hook with `dxfSceneRef.current` / `transformRef.current ?? transform` / `viewport` getter closures plus a `toggleEntity` callback that delegates to the existing `universalSelectionRef` (ADR-030 SSoT) — ZERO new `useSyncExternalStore` subscriptions in the orchestrator. ESC handled via new `ESC_PRIORITY.FOCUS_CLEAR = 150` bus slot (clears the focus ring without touching the selection set at P250). Bitmap cache key untouched. Cardinal rules maintained.

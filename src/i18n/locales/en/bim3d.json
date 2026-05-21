@@ -3,7 +3,19 @@
     "wall": "Wall",
     "column": "Column",
     "beam": "Beam",
-    "slab": "Slab"
+    "slab": "Slab",
+    "opening": "Opening",
+    "slabOpening": "Slab opening",
+    "stair": "Stair",
+    "line": "Line",
+    "circle": "Circle",
+    "arc": "Arc",
+    "polyline": "Polyline",
+    "text": "Text",
+    "dimension": "Dimension",
+    "xline": "Construction line",
+    "ray": "Ray",
+    "angleMeasurement": "Angle measurement"
   },
   "wallCategories": {
     "exterior": "Exterior",

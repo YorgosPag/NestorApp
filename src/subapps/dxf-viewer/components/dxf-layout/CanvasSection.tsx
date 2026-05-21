@@ -36,8 +36,7 @@ import { useOverlayLayers } from '../../hooks/layers';
 import { useGlobalSnapSceneSync } from '../../snapping/hooks/useGlobalSnapSceneSync';
 // useHoveredOverlay REMOVED from orchestrator — ADR-040 Phase II micro-leaf pattern.
 // Subscription lives in DraftLayerSubscriber (canvas-layer-stack-leaves.tsx).
-import { useSpecialTools } from '../../hooks/tools';
-import { useModifyTools } from '../../hooks/tools/useModifyTools';
+import { useSpecialTools } from '../../hooks/tools'; import { useModifyTools } from '../../hooks/tools/useModifyTools';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useGripHoverMenuController } from '../../hooks/grips/useGripHoverMenuController'; import { useGripContextMenuController } from '../../hooks/grips/useGripContextMenuController';
 import { GripHoverMenu } from '../grip/GripHoverMenu';
@@ -62,11 +61,10 @@ import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
 import { MirrorConfirmOverlay } from '../../ui/components/MirrorConfirmOverlay';
-import { useFloorplanAutoFit } from '../../hooks/canvas/useFloorplanAutoFit';
-import { useCanvasEditActions } from '../../hooks/canvas/useCanvasEditActions';
+import { useFloorplanAutoFit } from '../../hooks/canvas/useFloorplanAutoFit'; import { useCanvasEditActions } from '../../hooks/canvas/useCanvasEditActions';
 import { useCanvasSectionUI } from '../../hooks/canvas/useCanvasSectionUI';
 import { useSelectionCycling } from '../../systems/selection/use-selection-cycling';
-import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover';
+import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover'; import { useCanvasSection2DFocus } from '../../hooks/canvas/useCanvasSection2DFocus';
 /**
  * Canvas orchestrator — wires hooks together and delegates rendering to CanvasLayerStack.
  * No business logic beyond hook composition.
@@ -173,6 +171,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       setSelectedEntityIds(entities.map(e => e.id));
     });
   }, [eventBus, setSelectedEntityIds]);
+  // ADR-366 Phase 4.6 / A.7.Q1 — 2D keyboard focus (Tab/Enter/Esc); wiring + ADR-030 toggle SSoT extracted to keep this orchestrator <500 lines.
+  useCanvasSection2DFocus({ dxfSceneRef, transformRef, transform, viewport, universalSelectionRef });
   // === Unified Grip System ===
   const unified = useUnifiedGripInteraction({
     selectedEntityIds, dxfScene, transform, currentOverlays, universalSelection,

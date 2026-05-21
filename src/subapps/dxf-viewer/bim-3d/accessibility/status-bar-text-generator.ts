@@ -11,19 +11,36 @@
 // el ↔ en stay in sync without duplicate keys.
 // ============================================================================
 
-export type EntityTypeKey = 'wall' | 'column' | 'beam' | 'slab';
+export type EntityTypeKey =
+  | 'wall' | 'column' | 'beam' | 'slab'
+  | 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'dimension'
+  | 'opening' | 'slabOpening' | 'stair' | 'xline' | 'ray' | 'angleMeasurement';
 
 /** Minimal i18n contract — matches react-i18next's `t` (key + optional vars). */
 export type TFn = (key: string, vars?: Record<string, unknown>) => string;
 
-/** Maps raw `bimType` strings emitted by raycaster / store to canonical keys. */
+/** Maps raw `bimType` / DXF entity-type strings to canonical i18n keys. */
 export function normalizeEntityType(rawType: string | null | undefined): EntityTypeKey | null {
   if (!rawType) return null;
   const lower = rawType.toLowerCase();
+  // BIM entity types (3D + 2D wrappers).
   if (lower === 'wall' || lower === 'walls') return 'wall';
   if (lower === 'column' || lower === 'columns') return 'column';
   if (lower === 'beam' || lower === 'beams') return 'beam';
   if (lower === 'slab' || lower === 'slabs') return 'slab';
+  if (lower === 'opening') return 'opening';
+  if (lower === 'slab-opening') return 'slabOpening';
+  if (lower === 'stair') return 'stair';
+  // Pure 2D DXF primitives.
+  if (lower === 'line') return 'line';
+  if (lower === 'circle') return 'circle';
+  if (lower === 'arc') return 'arc';
+  if (lower === 'polyline') return 'polyline';
+  if (lower === 'text') return 'text';
+  if (lower === 'dimension') return 'dimension';
+  if (lower === 'xline') return 'xline';
+  if (lower === 'ray') return 'ray';
+  if (lower === 'angle-measurement') return 'angleMeasurement';
   return null;
 }
 

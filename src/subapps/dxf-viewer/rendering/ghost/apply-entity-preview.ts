@@ -45,6 +45,7 @@ import type { SlabEntity } from '../../bim/types/slab-types';
 // ADR-363 Phase 3.7a — parametric slab-opening drag preview.
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
+import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { BeamGripKind, SlabGripKind, SlabOpeningGripKind } from '../../hooks/grip-types';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -149,19 +150,21 @@ export function applyEntityPreview(
   }
 
   // ── ADR-363 Phase 3.5 — parametric slab live preview ──────────────────────
+  // entity IS the raw SlabEntity from scene.entities — access .params directly
+  // (not via a DxfSlab wrapper; mirrors beam pattern).
   if (slabGripKind && entity.type === 'slab') {
-    const slab = (entity as unknown as { slabEntity: SlabEntity }).slabEntity;
+    const slab = entity as unknown as SlabEntity;
     const newParams = applySlabGripDrag(slabGripKind, { originalParams: slab.params, delta });
     if (newParams === slab.params) return entity;
-    return { ...(entity as object), slabEntity: { ...slab, params: newParams } } as unknown as DxfEntityUnion;
+    return { ...(entity as object), params: newParams } as unknown as DxfEntityUnion;
   }
 
   // ── ADR-363 Phase 3.7a — parametric slab-opening live preview ─────────────
   if (slabOpeningGripKind && entity.type === 'slab-opening') {
-    const so = (entity as unknown as { slabOpeningEntity: SlabOpeningEntity }).slabOpeningEntity;
+    const so = entity as unknown as SlabOpeningEntity;
     const newParams = applySlabOpeningGripDrag(slabOpeningGripKind, { originalParams: so.params, delta });
     if (newParams === so.params) return entity;
-    return { ...(entity as object), slabOpeningEntity: { ...so, params: newParams } } as unknown as DxfEntityUnion;
+    return { ...(entity as object), params: newParams } as unknown as DxfEntityUnion;
   }
 
   // ── ADR-358 Phase 5d — parametric stair live preview ─────────────────────
@@ -215,6 +218,15 @@ export function applyEntityPreview(
           point1: offsetPoint(entity.point1),
           point2: offsetPoint(entity.point2),
         };
+      case 'wall': {
+        const wall = entity as unknown as WallEntity;
+        // Delegate to SSoT (mirrors beam's applyBeamGripDrag('beam-midpoint', ...) pattern).
+        // currentPos unused by moveMidpoint — pass delta as dummy to satisfy the interface.
+        const newParams = applyWallGripDrag('wall-midpoint', { originalParams: wall.params, delta, currentPos: delta });
+        if (newParams === wall.params) return entity;
+        const newGeometry = computeWallGeometry(newParams, wall.kind);
+        return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+      }
       case 'beam': {
         const beam = entity as unknown as BeamEntity;
         const newParams = applyBeamGripDrag('beam-midpoint', { originalParams: beam.params, delta });
@@ -222,32 +234,27 @@ export function applyEntityPreview(
         return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
       }
       case 'slab': {
-        const slab = (entity as unknown as { slabEntity: SlabEntity }).slabEntity;
+        const slab = entity as unknown as SlabEntity;
         const vs = slab.params.outline.vertices;
         const movedVerts = vs.map((v) => ({ ...v, x: v.x + delta.x, y: v.y + delta.y }));
         const newParams = { ...slab.params, outline: { ...slab.params.outline, vertices: movedVerts } };
-        return { ...(entity as object), slabEntity: { ...slab, params: newParams } } as unknown as DxfEntityUnion;
+        return { ...(entity as object), params: newParams } as unknown as DxfEntityUnion;
       }
       case 'slab-opening': {
-        const so = (entity as unknown as { slabOpeningEntity: SlabOpeningEntity }).slabOpeningEntity;
+        const so = entity as unknown as SlabOpeningEntity;
         const vs = so.params.outline.vertices;
         const movedVerts = vs.map((v) => ({ ...v, x: v.x + delta.x, y: v.y + delta.y }));
         const newParams = { ...so.params, outline: { ...so.params.outline, vertices: movedVerts } };
-        return { ...(entity as object), slabOpeningEntity: { ...so, params: newParams } } as unknown as DxfEntityUnion;
+        return { ...(entity as object), params: newParams } as unknown as DxfEntityUnion;
       }
       case 'opening': {
-        const dxfO = entity as unknown as {
-          openingEntity?: { geometry?: { outline?: { vertices: Array<{ x: number; y: number; z: number }> } } };
-        };
-        const outline = dxfO.openingEntity?.geometry?.outline;
+        const opening = entity as unknown as OpeningEntity;
+        const outline = opening.geometry?.outline;
         if (!outline) return entity;
         const movedVerts = outline.vertices.map((v) => ({ ...v, x: v.x + delta.x, y: v.y + delta.y }));
         return {
           ...(entity as object),
-          openingEntity: {
-            ...dxfO.openingEntity,
-            geometry: { ...dxfO.openingEntity!.geometry, outline: { ...outline, vertices: movedVerts } },
-          },
+          geometry: { ...opening.geometry, outline: { ...outline, vertices: movedVerts } },
         } as unknown as DxfEntityUnion;
       }
     }

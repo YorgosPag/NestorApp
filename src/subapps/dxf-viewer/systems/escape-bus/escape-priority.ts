@@ -124,6 +124,15 @@ export const ESC_PRIORITY = {
   ENTITY_SELECTION: 250,
 
   /**
+   * P150 — Keyboard focus ring active (ADR-366 Phase 4.6 / A.7.Q1).
+   *
+   * Cross-mode: 2D + 3D viewers each own a `KeyboardFocusManager` instance.
+   * ESC clears the focus ring without touching the selection set — runs after
+   * entity selection so selection-clear still has its own slot at P250.
+   */
+  FOCUS_CLEAR: 150,
+
+  /**
    * P100 — Fallback: close color/menu palette.
    *
    * Lowest priority — runs only when nothing else claimed the ESC.

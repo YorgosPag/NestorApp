@@ -3,7 +3,19 @@
     "wall": "Τοίχος",
     "column": "Στύλος",
     "beam": "Δοκός",
-    "slab": "Πλάκα"
+    "slab": "Πλάκα",
+    "opening": "Άνοιγμα",
+    "slabOpening": "Άνοιγμα πλάκας",
+    "stair": "Σκάλα",
+    "line": "Γραμμή",
+    "circle": "Κύκλος",
+    "arc": "Τόξο",
+    "polyline": "Πολυγραμμή",
+    "text": "Κείμενο",
+    "dimension": "Διάσταση",
+    "xline": "Άπειρη γραμμή",
+    "ray": "Ακτίνα",
+    "angleMeasurement": "Μέτρηση γωνίας"
   },
   "wallCategories": {
     "exterior": "Εξωτερικός",
