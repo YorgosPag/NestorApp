@@ -35,6 +35,7 @@ export interface TaskFormData {
   plannedStartDate: string;
   plannedEndDate: string;
   progress: number;
+  dependencies?: string[];
   description: string;
 }
 
@@ -48,6 +49,8 @@ export interface ConstructionPhaseDialogProps {
   task?: ConstructionTask;
   phaseId?: string;
   phases?: ConstructionPhase[];
+  /** All tasks in the building — populates dependency multi-select (ADR-034 §4.8) */
+  tasks?: ConstructionTask[];
   /** Building ID — needed for resource assignments (ADR-266 C4) */
   buildingId?: string;
   /** Available workers for resource assignment (ADR-266 C4) */

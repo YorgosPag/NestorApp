@@ -451,7 +451,11 @@
             "maxReached": "Maximum 20 resources per task.",
             "loading": "Loading resources...",
             "overAllocated": "Over-allocated"
-          }
+          },
+          "dependsOn": "Depends On",
+          "dependsOnPlaceholder": "Select prerequisite tasks...",
+          "dependsOnSearch": "Search tasks...",
+          "dependsOnEmpty": "No other tasks available"
         },
         "delayReasons": {
           "weather": "Weather",

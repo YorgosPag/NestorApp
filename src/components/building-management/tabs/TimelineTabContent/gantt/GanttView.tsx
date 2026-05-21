@@ -438,6 +438,7 @@ export function GanttView({ building }: GanttViewProps) {
         task={dialogState.task}
         phaseId={dialogState.phaseId}
         phases={phases}
+        tasks={tasks}
         buildingId={building.id as string}
         onSavePhase={savePhase}
         onUpdatePhase={updatePhase}

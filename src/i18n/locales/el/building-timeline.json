@@ -451,7 +451,11 @@
             "maxReached": "Μέγιστο 20 πόροι ανά εργασία.",
             "loading": "Φόρτωση πόρων...",
             "overAllocated": "Υπερ-κατανεμημένος"
-          }
+          },
+          "dependsOn": "Εξαρτάται από",
+          "dependsOnPlaceholder": "Επιλέξτε προαπαιτούμενες εργασίες...",
+          "dependsOnSearch": "Αναζήτηση εργασίας...",
+          "dependsOnEmpty": "Δεν υπάρχουν άλλες εργασίες"
         },
         "delayReasons": {
           "weather": "Καιρός",

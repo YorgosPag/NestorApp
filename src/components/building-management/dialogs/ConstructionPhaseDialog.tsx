@@ -25,6 +25,7 @@ import { SaveButton, CancelButton, DeleteButton } from '@/components/ui/form/Act
 import { FormGrid, FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { MultiCombobox } from '@/components/ui/multi-combobox';
 import { cn } from '@/lib/utils';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
@@ -47,6 +48,7 @@ export function ConstructionPhaseDialog({
   task,
   phaseId,
   phases = [],
+  tasks = [],
   onSavePhase,
   onUpdatePhase,
   onDeletePhase,
@@ -79,6 +81,7 @@ export function ConstructionPhaseDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [delayReason, setDelayReason] = useState<DelayReason | ''>('');
   const [delayNote, setDelayNote] = useState('');
+  const [dependencies, setDependencies] = useState<string[]>([]);
 
   const showDelayFields = status === 'delayed' || status === 'blocked';
 
@@ -134,6 +137,7 @@ export function ConstructionPhaseDialog({
       setSelectedPhaseId(task.phaseId);
       setDelayReason(task.delayReason ?? '');
       setDelayNote(task.delayNote ?? '');
+      setDependencies(task.dependencies ?? []);
     } else {
       // Create mode: reset form
       setName('');
@@ -145,6 +149,7 @@ export function ConstructionPhaseDialog({
       setDescription('');
       setDelayReason('');
       setDelayNote('');
+      setDependencies([]);
       // Default to passed phaseId or first available phase
       setSelectedPhaseId(phaseId ?? phases[0]?.id ?? '');
     }
@@ -209,6 +214,7 @@ export function ConstructionPhaseDialog({
           plannedStartDate,
           plannedEndDate,
           progress,
+          dependencies,
           description: description.trim(),
         });
       } else if (mode === 'editTask' && task) {
@@ -219,6 +225,7 @@ export function ConstructionPhaseDialog({
           plannedStartDate,
           plannedEndDate,
           progress,
+          dependencies,
           description: description.trim(),
           ...delayFields,
         });
@@ -232,7 +239,7 @@ export function ConstructionPhaseDialog({
     }
   }, [
     mode, name, code, status, plannedStartDate, plannedEndDate, progress, description,
-    delayReason, delayNote, showDelayFields,
+    delayReason, delayNote, showDelayFields, dependencies,
     phase, task, selectedPhaseId, validate, onSavePhase, onUpdatePhase, onSaveTask, onUpdateTask, onClose,
   ]);
 
@@ -266,6 +273,7 @@ export function ConstructionPhaseDialog({
   }, [mode, t]);
 
   const statusOptions = isPhaseMode ? PHASE_STATUSES : TASK_STATUSES;
+  const dependencyOptions = useMemo(() => tasks.filter((t) => t.id !== task?.id).map((t) => ({ value: t.id, label: `${t.code} — ${t.name}` })), [tasks, task?.id]);
 
   const handleOpenChange = useCallback((isOpen: boolean) => {
     if (!isOpen) onClose();
@@ -305,6 +313,17 @@ export function ConstructionPhaseDialog({
                 {errors.selectedPhaseId && (
                   <p className={cn(typographyTokens.body.sm, colors.text.error, spacingTokens.margin.top.xs)}>{errors.selectedPhaseId}</p>
                 )}
+              </FormInput>
+            </FormField>
+          )}
+
+          {/* Dependencies — task multi-select (ADR-034 §4.8) */}
+          {!isPhaseMode && (
+            <FormField label={t('tabs.timeline.gantt.dialog.dependsOn')} htmlFor="construction-dependencies">
+              <FormInput>
+                <MultiCombobox value={dependencies} onChange={setDependencies} options={dependencyOptions}
+                  placeholder={t('tabs.timeline.gantt.dialog.dependsOnPlaceholder')} searchPlaceholder={t('tabs.timeline.gantt.dialog.dependsOnSearch')}
+                  emptyMessage={t('tabs.timeline.gantt.dialog.dependsOnEmpty')} />
               </FormInput>
             </FormField>
           )}
