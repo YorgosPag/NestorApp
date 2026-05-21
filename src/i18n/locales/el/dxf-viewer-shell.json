@@ -1578,5 +1578,14 @@
       "confirm": "Αντιγραφή",
       "cancel": "Ακύρωση"
     }
+  },
+  "ifcExport": {
+    "success": "Η εξαγωγή IFC ολοκληρώθηκε",
+    "entityCountLabel": "Οντότητες IFC",
+    "error": {
+      "noProject": "Δεν έχει επιλεγεί έργο",
+      "noBuildings": "Δεν βρέθηκαν κτήρια για το έργο",
+      "failed": "Αποτυχία εξαγωγής IFC"
+    }
   }
 }

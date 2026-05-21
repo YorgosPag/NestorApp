@@ -1578,5 +1578,14 @@
       "confirm": "Copy",
       "cancel": "Cancel"
     }
+  },
+  "ifcExport": {
+    "success": "IFC export complete",
+    "entityCountLabel": "IFC entities",
+    "error": {
+      "noProject": "No project selected",
+      "noBuildings": "No buildings found for project",
+      "failed": "IFC export failed"
+    }
   }
 }

@@ -182,7 +182,8 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     handleAction(action, data);
   }, [handleAction, togglePerfMonitor, perfMonitorEnabled, notifications, fullscreen,
       setTestsModalOpen, setPdfPanelOpen, setAiChatOpen,
-      setShowEnhancedImport, setShowImportWizard, setShowLegacyImport]);
+      setShowEnhancedImport, setShowImportWizard, setShowLegacyImport,
+      levelManager.saveContext, params.selectedEntityIds]);
 
   // ✅ STABLE CALLBACK: handleTransformReady
   const handleTransformReady = React.useCallback((setTransform: (t: ViewTransform) => void) => {
