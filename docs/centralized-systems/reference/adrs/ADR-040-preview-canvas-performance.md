@@ -71,6 +71,18 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-21 — ADR-366 Phase 4.7: SelectionCursorIcon cross-mode badge
+
+`SelectionCursorIcon` lands as a new accessibility leaf, mounted once inside `CanvasLayerStack` after `Focus2DOverlayLeaf`. Cross-mode (2D + 3D) cursor modifier badge for selection modifier keys.
+
+**ADR-040 compliance**:
+- **Rule 1 (no orchestrator subscriptions)**: respected — `SelectionCursorIcon` uses zero `useSyncExternalStore`. CanvasLayerStack shell stays subscription-free.
+- **Rule 4 (no high-freq stores)**: cursor position is updated via imperative `style.transform` on a ref (zero React re-renders during 60fps `mousemove`). Mirrors the self-owned RAF pattern from `FocusIndicator3D` (Phase 4.5). `setState` fires only on low-freq `keydown`/`keyup` (mode transitions `add`/`remove`/`toggle`/null).
+- Window `blur` resets mode to prevent stuck icon on alt-tab.
+- Single mount point (`position: fixed`) → works cross-mode without per-leaf duplication.
+
+**Files**: `accessibility/SelectionCursorIcon.tsx` (new), `accessibility/__tests__/SelectionCursorIcon.test.tsx` (new, 8 tests), `components/dxf-layout/CanvasLayerStack.tsx` (single mount + import; import lines compressed to stay under 500-line component cap).
+
 ### 2026-05-21 — ADR-366 Phase 8.1: AriaLiveRegion entity description subscription
 
 `AriaLiveRegion` extended with optional `focusManager` + `getEntityData` props. New `useEffect` subscribes to `focusManager.subscribeDescription` (new observer channel on `KeyboardFocusManagerApi`) — on Tab focus change, resolves entity data via `getEntityDataRef` (stable ref pattern, no subscription churn), calls `generateAriaDescription(ariaData, tAria)` (pure function, `bim-3d-aria` namespace), announces via existing `ariaLiveBus`. Zero new `useSyncExternalStore`. ADR-040 micro-leaf compliance fully preserved.

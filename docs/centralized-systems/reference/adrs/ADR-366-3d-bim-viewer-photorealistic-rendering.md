@@ -259,7 +259,7 @@ src/subapps/dxf-viewer/bim-3d/
 | **Phase 1** | DXF → 3D: LINE→LineSegments, ARC→EllipseCurve, LWPOLYLINE/POLYLINE→BufferGeometry, HATCH→ShapeGeometry, INSERT expansion, TEXT→sprite | ~8h | Phase 0 | ✅ **DONE** (commit `80b87f2c`, 2026-05-18) |
 | **Phase 2** | BIM → 3D: Wall/Column/Beam/Slab→ExtrudeGeometry, Opening as boolean cutout, multi-floor stacking via ADR-326 floor elevation | ~10h | Phase 0, ADR-363 | ✅ **DONE** (commits `a2602f6d` + `364b0bfb`, 2026-05-18) |
 | **Phase 3** | Materials & Lighting baseline: MeshStandardMaterial per ADR-363 material catalog, AmbientLight + DirectionalLight, shadow mapping | ~6h | Phase 2 | ✅ **DONE** (commits `c6cf1798` + `4ab564b5`, 2026-05-18/19) |
-| **Phase 4** | Camera & ViewCube ENRICHMENT (tumble, 12-direction canonical snap, animated transitions, A.4/A.5/A.6/A.7 keyboard + accessibility impacts) — **see breakdown §4.5.1** | ~23-25h (από αρχικά ~6h base + ~17-19h από Appendix A impacts) | Phase 0 | ✅ **DONE** — 4.0 ✅ · 4.1 ✅ · 4.2 ✅ · 4.3 ✅ · 4.4 ✅ · 4.5 ✅ (A.7.Q1+Q3-partial+Q4) · 4.6 ✅ (2026-05-21, 2D backport + ADR-040 audit + cross-mode tests) |
+| **Phase 4** | Camera & ViewCube ENRICHMENT (tumble, 12-direction canonical snap, animated transitions, A.4/A.5/A.6/A.7 keyboard + accessibility impacts) — **see breakdown §4.5.1** | ~23-25h (από αρχικά ~6h base + ~17-19h από Appendix A impacts) | Phase 0 | ✅ **DONE** — 4.0 ✅ · 4.1 ✅ · 4.2 ✅ · 4.3 ✅ · 4.4 ✅ · 4.5 ✅ (A.7.Q1+Q3-partial+Q4) · 4.6 ✅ (2026-05-21, 2D backport + ADR-040 audit + cross-mode tests) · 4.7 ✅ (2026-05-21, §A.7.Q3 SelectionCursorIcon cross-mode) |
 | **Phase 5** | WebGPU Path Tracer (5A/5B/5C): three-gpu-pathtracer integration, progressive sampling, denoising, lighting refinement | ~12h | Phase 3 (Phase 4 parallel) | ✅ **DONE** (commits `f8b353b3` + `99996690`, 2026-05-19) |
 | **Phase 6** | Path Tracer Render dialog + Export: PNG (rasterized + path-traced), EXR (HDR), print resolution | ~4h | Phase 5 | ✅ **DONE** (commit `0ad30f7d`, 2026-05-19) |
 | **Phase 7** | Section Cuts + Polish (7.0a stencil wiring, 7.0b 1-pass stencil, 7.0B 2D live section panel, 7.0C selection cap emphasis, 7.1 hatched per-material caps, 7.2 HDRI) | ~8h | Phase 6 | ✅ **DONE** (commits `8480fbf1` + `0cb26914` + `97373bf6` + `1067e433` + `2fd161ab` + `0ad30f7d`, 2026-05-19/21) |
@@ -493,7 +493,7 @@ Shipped scope (A.7.Q1 2D backport + ADR-040 audit + cross-mode tests + Boy Scout
 | #4 — ≤1 canvas element + ≤2 high-freq hooks per leaf | ✅ PASS | `Focus2DOverlay` = one `<canvas>` + one low-freq focus subscription + one optional `<output>` label (zero canvases). `Focus2DOverlayLeaf` = one low-freq mode subscription. `FocusIndicator3D` (Phase 4.5) = zero canvases (Three.js owns the canvas) + one low-freq focus subscription + self-owned RAF that imperatively writes `style.transform` (no React re-renders during the per-frame label position update). |
 
 **Deferred from Phase 4.6 → Phase 7 polish OR Phase 8 backlog**:
-- A.7.Q3 `SelectionCursorIcon` cross-mode component (visual gizmo polish — already deferred from Phase 4.5 per its implementation note).
+- ~~A.7.Q3 `SelectionCursorIcon` cross-mode component~~ → **DONE in Phase 4.7** (2026-05-21).
 - A.7.Q3 `AXIS_LABEL_GLYPHS` X/Y/Z sprite labels on gizmo arrows — requires Topic A.2 gizmo refactor.
 - Pan animation (150ms cubic ease, repeat-key continuous accumulation) — instant pan stays.
 - Centralize the focus outline color token (`#00ffff` literal lives in `focus-2d-outline-painter.ts` and `FocusOutlineRenderer.ts`). Boy-Scout candidate when canvas-ui tokens grow a `feedback.focus` slot.
@@ -530,6 +530,35 @@ Shipped scope (A.7.Q1 2D backport + ADR-040 audit + cross-mode tests + Boy Scout
 **Dependencies**: Phase 4.5
 
 **Acceptance**: όλα τα AC-1 → AC-5 πληρούνται + ADR-040 compliance audit clean + zero new hardcoded strings/palette violations σε Boy Scout files ✅
+
+---
+
+##### Phase 4.7 — §A.7.Q3 SelectionCursorIcon (~1h) ✅ DONE 2026-05-21
+
+**Implementation note — Phase 4.7 (2026-05-21)**:
+
+Closure of the A.7.Q3 deferred item: visual cursor modifier badge.
+
+- **`src/subapps/dxf-viewer/accessibility/SelectionCursorIcon.tsx`** (~90 LOC): Pure component. Global `keydown`/`keyup` listeners derive mode (`add` | `remove` | `toggle` | null). Global `mousemove` listener updates `style.transform` imperatively — zero React re-renders at 60fps (mirrors FocusIndicator3D self-owned RAF pattern). Window `blur` resets mode (prevents stuck icon on alt-tab). SVG badge: `+` for add (Ctrl), `−` for remove (Shift), `±` for toggle (Ctrl+Shift). `position: fixed` — works cross-mode from single mount point.
+- **`CanvasLayerStack.tsx`** (MODIFY): Single mount after `<Focus2DOverlayLeaf>`. No leaf wrapper needed — component has no `useSyncExternalStore` dependency.
+- **`src/subapps/dxf-viewer/accessibility/__tests__/SelectionCursorIcon.test.tsx`** (~80 LOC): 8 tests — visibility (hidden/show/release), icon content per mode (+/−/±), aria-hidden on both outer div and SVG.
+
+**ADR-040 compliance**:
+- No `useSyncExternalStore` → CanvasLayerStack shell stays subscription-free ✅
+- Cursor position = imperative `style.transform` via ref (no React re-renders on mousemove) ✅
+- `setState` only on low-freq key events ✅
+
+**Files (NEW)**:
+- `src/subapps/dxf-viewer/accessibility/SelectionCursorIcon.tsx`
+- `src/subapps/dxf-viewer/accessibility/__tests__/SelectionCursorIcon.test.tsx`
+
+**Files (MODIFY)**:
+- `src/subapps/dxf-viewer/components/dxf-layout/CanvasLayerStack.tsx` — import + single mount
+- ADR-366 §4.5.1 (this section) + Phase 4 row ✅
+
+**Tests**: 8 unit tests — all pass ✅
+
+**Dependencies**: Phase 4.6
 
 ---
 
