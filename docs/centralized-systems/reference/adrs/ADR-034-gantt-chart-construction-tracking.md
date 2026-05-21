@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | IMPLEMENTED - Phase 1+2+3 Complete, Phase 4 Partial (4.1+4.2+4.3+4.4+4.7+4.9 DONE — 4.5/4.6/4.8 PLANNED) |
+| **Status** | IMPLEMENTED - Phase 1+2+3 Complete, Phase 4 Partial (4.1+4.2+4.3+4.4+4.7+4.8+4.9 DONE — 4.5/4.6 PLANNED) |
 | **Date** | 2026-02-07 |
 | **Category** | UI Components / Construction Management |
 | **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
@@ -593,7 +593,7 @@ tabs.timeline.gantt.export.error       → "Σφάλμα εξαγωγής" / "Ex
 | 4.5 | Alert Engine integration (deadline notifications) | PLANNED → ADR-266 Phase D (spec ready, no code yet) |
 | 4.6 | AI integration (UC-017: auto-suggest delays, forecasting) | PLANNED → ADR-034 §12 (no implementation) |
 | 4.7 | Baseline snapshots (save planned dates for comparison) | **DONE** (2026-03-28 — ADR-266 Phase C.3: BaselineSection + `construction_baselines`) |
-| 4.8 | Dependency arrows visualization | PLANNED → no code found, `dependencies[]` field exists |
+| 4.8 | Dependency arrows visualization | **DONE** (2026-05-21 — SVG bezier overlay via portal) |
 | 4.9 | **Context menu (right-click actions)** | **DONE** (2026-02-07) |
 
 #### ⚠️ ADR-266 Cross-Reference (2026-05-21)
@@ -658,6 +658,41 @@ GanttView (toolbar)
 3. Καταχώρηση font και ως `normal` και ως `bold` (autoTable χρησιμοποιεί bold για headers)
 4. `didParseCell` hook forces Roboto σε κάθε κελί
 
+#### 4.8 Dependency Arrows — Implementation Details (2026-05-21)
+
+SVG bezier overlay που εμφανίζει Finish-to-Start dependency arrows μεταξύ tasks.
+
+**Αρχεία:**
+
+| Αρχείο | Ρόλος |
+|--------|-------|
+| `gantt/hooks/useGanttDependencyArrows.ts` | Υπολογισμός bezier paths από DOM. RAF-throttled ResizeObserver + scroll + MutationObserver |
+| `gantt/GanttDependencyArrows.tsx` | SVG overlay component, portal into `.rmg-timeline-container` |
+| `gantt/GanttView.tsx` | Mount point — renders `<GanttDependencyArrows>` inside ganttChartRef |
+
+**Τεχνική Αρχιτεκτονική:**
+
+```
+.rmg-timeline-container (position: relative, overflow-x: auto)
+  ├── .rmg-timeline → .rmg-timeline-grid → .rmg-task-row → .rmg-task-item[data-task-id]
+  └── <svg> [portal] (position: absolute, top:0, left:0, pointer-events: none)
+        └── <path> bezier Finish-to-Start per dependency pair
+```
+
+**Position computation:**
+- x: `parseFloat(el.style.left)` + `parseFloat(el.style.width)` — βρίσκει right/left edge bar (pixels, σε content coordinate space)
+- y: `el.getBoundingClientRect().top - scrollEl.getBoundingClientRect().top + scrollEl.scrollTop + el.offsetHeight / 2` — handles overlap rows automatically
+
+**Arrow shape:** Cubic bezier `M x1 y1 C (x1+cp) y1 (x2-cp) y2 x2 y2` όπου `cp = max(40, |dx| × 0.4)`.
+
+**Re-trigger events:** ResizeObserver (container resize) + scroll event + MutationObserver on `style` attributes (drag/resize). Throttled via `requestAnimationFrame`.
+
+**Styling:** `currentColor` + `hsl(var(--muted-foreground))` — theme-aware (light/dark). `strokeDasharray="5 3"` για visual distinction από bars. `strokeOpacity=0.55`.
+
+**Fullscreen:** Arrows render in normal view. Fullscreen GanttChart (FullscreenOverlay) does not have dependency arrows in this phase — acceptable for Phase 4.8.
+
+---
+
 #### 4.9 Context Menu — Implementation Details (2026-02-07)
 
 Right-click σε task/phase bars εμφανίζει context menu με:
@@ -675,6 +710,7 @@ Custom color picker με ColorPicker component (inline, no external dependency).
 | 2026-02-07 | Initial implementation: Phase 1+2+3 + Phase 4.4 (Export) + Phase 4.9 (Context Menu) |
 | 2026-03-28 | ADR-266 Phase A+B+C.1-5 implemented: 4.1/4.2/4.3/4.7 now DONE (via ADR-266). Status updated. |
 | 2026-05-21 | ADR-034 reconciliation: synced Phase 4 table with actual code reality. Cross-ref to ADR-266 added. |
+| 2026-05-21 | Phase 4.8 DONE: dependency arrows SVG overlay. `GanttDependencyArrows.tsx` + `useGanttDependencyArrows.ts`. Portal into `.rmg-timeline-container`, RAF-throttled, theme-aware. |
 
 ---
 

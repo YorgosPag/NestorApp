@@ -74,6 +74,7 @@ import {
   GanttFullscreenLegend,
 } from './GanttPortals';
 import { GanttActionToolbar } from './GanttToolbar';
+import { GanttDependencyArrows } from './GanttDependencyArrows';
 
 // ─── Re-exports for backward compatibility ────────────────────────────────
 
@@ -358,6 +359,7 @@ export function GanttView({ building }: GanttViewProps) {
           <CardContent className={cn('flex-1 min-h-0 overflow-auto', spacingTokens.padding.none)} onMouseDownCapture={handleGanttMouseDown}>
             <div ref={ganttChartRef}>
               <GanttChart {...ganttChartProps} />
+              <GanttDependencyArrows containerRef={ganttChartRef} taskGroups={taskGroups} />
             </div>
           </CardContent>
         </Card>

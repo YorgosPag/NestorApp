@@ -174,6 +174,28 @@ Discovered 2026-05-21 (ADR-363 snap SSoT centralization session). SSoT utility `
 
 ---
 
+### 📅 ADR-034 GANTT — Phase 4 pending items (construction tracking)
+
+**ADR:** `docs/centralized-systems/reference/adrs/ADR-034-gantt-chart-construction-tracking.md`
+**ADR-266:** `docs/centralized-systems/reference/adrs/ADR-266-gantt-construction-reports.md`
+**Gantt dir:** `src/components/building-management/tabs/TimelineTabContent/gantt/`
+**Hooks dir:** `src/components/building-management/hooks/construction-gantt/`
+
+**ADR-034 αλλαγμένο (χωρίς commit) — status line + Phase 4 table + ADR-266 cross-ref + changelog.**
+
+- [x] **4.8 Dependency arrows** ✅ DONE 2026-05-21 — `GanttDependencyArrows.tsx` + `useGanttDependencyArrows.ts`, portal into `.rmg-timeline-container`, RAF-throttled bezier SVG, ADR-034 §4.8 updated
+- [ ] **4.5 Alert engine — deadline notifications** (~8-12h, 8-10 αρχεία, cross-cutting)
+  - Spec: ADR-266 §5.8 (πλήρης)
+  - Νέα collection `construction_alerts` + API route + dashboard banner + Telegram
+  - **Θέλει orchestrator approval πριν ξεκινήσει** (8+ αρχεία, 2+ domains) — ρώτα Giorgio
+- [ ] **4.6 AI integration UC-017** (~15-20h, νέο AI pipeline module)
+  - Partial spec: ADR-034 §12
+  - Τελευταίο στη σειρά — δεν μπλοκάρει 4.8/4.5
+
+**Προτεινόμενη σειρά:** 4.8 → 4.5 (με approval) → 4.6
+
+---
+
 ### 🧹 FULL ZERO BACKLOG (Scenario B extras — +~43h expected)
 
 - [x] **ADR-298 Phase C** — COMPLETATO. Phase C.7 DONE 2026-04-14. 11 collezioni → COVERAGE. FIRESTORE_RULES_PENDING ora VUOTA (zero entry). Coverage totale: 92 collezioni. 291 test verdi.
