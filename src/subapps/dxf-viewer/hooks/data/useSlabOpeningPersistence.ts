@@ -323,6 +323,19 @@ export function useSlabOpeningPersistence(
     return cleanup;
   }, [deleteSlabOpening]);
 
+  // ADR-363 fix — multi-entity move dirty-flag propagation (mirrors useWallPersistence).
+  useEffect(() => {
+    const cleanup = EventBus.on('bim:entities-moved', ({ movedEntities }) => {
+      if (!serviceRef.current) return;
+      for (const entity of movedEntities) {
+        if (!isSlabOpening(entity)) continue;
+        dirtyIdsRef.current.add(entity.id);
+        void persist(entity);
+      }
+    });
+    return cleanup;
+  }, [persist]);
+
   // Unmount cleanup — flush pending timers.
   useEffect(() => {
     return () => {

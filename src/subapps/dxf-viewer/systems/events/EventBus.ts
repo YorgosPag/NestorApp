@@ -217,6 +217,10 @@ export interface DrawingEventMap {
   'bim:set-opening-kind': { kind: OpeningKind };
   'bim:set-wall-kind': { kind: WallKind };
   'bim:set-wall-category': { category: WallCategory };
+  // ADR-363 fix — multi-entity move dirty-flag propagation.
+  // Carries the post-move entities directly so listeners never call
+  // getLevelScene() (which returns stale React state at emit time).
+  'bim:entities-moved': { movedEntities: ReadonlyArray<AnySceneEntity> };
   /** ADR-369 Q8.2 — ribbon IFC button → open PsetEditorHost dialog. */
   'bim:pset-editor-open': { entityId: string; levelId: string; entityType: string };
   /** ADR-369 Q8.3 — ribbon IFC Export button → IfcExportHost downloads .ifc file. */

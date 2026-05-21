@@ -27,6 +27,7 @@ import { DEFAULT_MERGE_CONFIG } from '../interfaces';
 import { deepClone } from '../../../utils/clone-utils';
 // 🏢 ADR-065: Extracted geometry utilities
 import { calculateMovedGeometry, reverseDelta } from './move-entity-geometry';
+import { EventBus } from '../../../systems/events/EventBus';
 
 /**
  * Command for moving a single entity by delta
@@ -236,6 +237,15 @@ export class MoveMultipleEntitiesCommand implements ICommand {
     if (updatesMap.size > 0) {
       this.sceneManager.updateEntities(updatesMap);
       this.wasExecuted = true;
+      // Build post-move entities from snapshots+updates (safe: no getLevelScene call,
+      // which would return stale React state at synchronous emit time).
+      const movedEntities: SceneEntity[] = [];
+      for (const [entityId, updates] of updatesMap) {
+        const snapshot = this.entitySnapshots.get(entityId);
+        if (snapshot) movedEntities.push({ ...snapshot, ...updates } as SceneEntity);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      EventBus.emit('bim:entities-moved', { movedEntities: movedEntities as any });
     }
   }
 
@@ -255,6 +265,14 @@ export class MoveMultipleEntitiesCommand implements ICommand {
 
     if (updatesMap.size > 0) {
       this.sceneManager.updateEntities(updatesMap);
+      // After undo, entities are at their original (snapshot) positions.
+      const revertedEntities: SceneEntity[] = [];
+      for (const entityId of this.entityIds) {
+        const snapshot = this.entitySnapshots.get(entityId);
+        if (snapshot) revertedEntities.push(snapshot);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      EventBus.emit('bim:entities-moved', { movedEntities: revertedEntities as any });
     }
   }
 
@@ -263,16 +281,21 @@ export class MoveMultipleEntitiesCommand implements ICommand {
    */
   redo(): void {
     const updatesMap = new Map<string, Partial<SceneEntity>>();
+    const movedEntities: SceneEntity[] = [];
 
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId);
       if (entity) {
-        updatesMap.set(entityId, calculateMovedGeometry(entity, this.delta));
+        const updates = calculateMovedGeometry(entity, this.delta);
+        updatesMap.set(entityId, updates);
+        movedEntities.push({ ...entity, ...updates } as SceneEntity);
       }
     }
 
     if (updatesMap.size > 0) {
       this.sceneManager.updateEntities(updatesMap);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      EventBus.emit('bim:entities-moved', { movedEntities: movedEntities as any });
     }
   }
 
