@@ -5,7 +5,7 @@
 | **ADR** | ADR-242 |
 | **Phase** | E — AI-Powered & External APIs |
 | **Priority** | ⭐⭐ LOW |
-| **Status** | 🟡 PARTIALLY IMPLEMENTED (Session 1 of 2) |
+| **Status** | ✅ COMPLETE (Sessions 1+2) |
 | **Estimated Effort** | 2-3 sessions |
 | **Prerequisite** | SPEC-242A (sensitivity engine), SPEC-242C (portfolio dashboard) |
 | **Dependencies** | SPEC-242A, SPEC-242C, ECB API (ήδη σε χρήση), OpenAI (ήδη στο stack) |
@@ -602,6 +602,7 @@ Capabilities:
 | Date | Session | What was implemented | What remains |
 |------|---------|---------------------|-------------|
 | 2026-03-18 | Session 1 | A1 Forward Curves (engine + API + UI) + A3 Hedging Simulator (engine + UI) — 5 new files, 1,281 lines | D3 NL Financial Query (chat interface, agentic tools) |
+| 2026-05-21 | Session 2 | D3 NL Financial Query: `financial-query-tools.ts` (6 data fns), `financial-query-handler.ts` (Strategy handler), 6 agentic tool defs added, `/api/financial-intelligence/query` POST endpoint (3-iter tool loop), `FinancialQueryChat.tsx` (chat UI + recharts), i18n el+en `financialQuery.*` (20 keys), tests (`financial-query-handler.test.ts`). SPEC-242E COMPLETE. | — |
 
 ### Session 1 Deliverables (2026-03-18)
 

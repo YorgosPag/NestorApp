@@ -39,6 +39,7 @@ import { KPIAlertCard } from './KPIAlertCard';
 import { DebtMaturityWall } from './DebtMaturityWall';
 import type { DebtMaturityFormData } from './DebtMaturityWall';
 import { BudgetVarianceChart } from './BudgetVarianceChart';
+import { FinancialQueryChat } from './FinancialQueryChat';
 import type {
   PortfolioSummary,
   ProjectFinancialSummary,
@@ -344,6 +345,9 @@ export function PortfolioDashboard() {
         onSave={handleSaveBudget}
         t={t}
       />
+
+      {/* Financial Assistant — SPEC-242E D3 */}
+      <FinancialQueryChat />
     </section>
   );
 }

@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | 🟡 IN PROGRESS — SPEC-242A✅ B✅ C✅ D✅ E🟡 |
+| **Status** | ✅ COMPLETE — All SPECs A–E done |
 | **Date** | 2026-03-18 |
 | **Category** | Entity Systems / Sales & Finance |
 | **Priority** | P2 — Strategic Enhancement |
@@ -486,3 +486,4 @@ SPEC-242E (Forward Curves + AI)   ← ΤΕΛΕΥΤΑΙΟ
 | 2026-03-18 | Initial research document — 12 features across 4 categories | Claude Code + Γιώργος |
 | 2026-03-18 | Created 5 SPEC files (SPEC-242A through SPEC-242E) with full implementation details | Claude Code |
 | 2026-03-18 | SPEC-242E Session 1: Forward Curves (engine+API+UI) + Hedging Simulator (engine+UI) — 5 new files, 1,281 lines. NL Query pending Session 2. | Claude Code |
+| 2026-05-21 | SPEC-242E Session 2 COMPLETE: D3 NL Financial Query — `financial-query-tools.ts`, `financial-query-handler.ts` (ADR-171 integration), 6 agentic tool definitions, `/api/financial-intelligence/query` endpoint, `FinancialQueryChat.tsx` UI with recharts, i18n el+en, tests. ADR-242 fully implemented. | Claude Code |

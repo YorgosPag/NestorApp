@@ -788,6 +788,7 @@ export const API_ROUTES = {
     PORTFOLIO: '/api/financial-intelligence/portfolio',
     DEBT_MATURITY: '/api/financial-intelligence/debt-maturity',
     BUDGET_VARIANCE: '/api/financial-intelligence/budget-variance',
+    QUERY: '/api/financial-intelligence/query',
   },
   ECB: {
     FORWARD_RATES: '/api/ecb/forward-rates',

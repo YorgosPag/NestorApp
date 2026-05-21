@@ -1286,6 +1286,122 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
     },
   },
 
+  // ── Financial Intelligence Tools (SPEC-242E D3) ──
+
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_portfolio_summary',
+      description: 'Returns aggregated financial KPIs for the entire portfolio (all active projects). Use for questions like "ποιο είναι το μέσο κόστος χρήματος", "πόσα συνολικά εκκρεμούν", "σύνοψη portfolio". Admin only.',
+      parameters: {
+        type: 'object',
+        properties: {},
+        required: [],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_project_financial_details',
+      description: 'Returns financial details for a specific project by its ID. Use after get_portfolio_summary when you need to drill into a specific project. Admin only.',
+      parameters: {
+        type: 'object',
+        properties: {
+          projectId: { type: 'string', description: 'The project document ID (from get_portfolio_summary results)' },
+        },
+        required: ['projectId'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_debt_maturity_schedule',
+      description: 'Returns all debt maturity entries (loans) for the portfolio. Use when asked about loans, refinancing risk, or debt maturity wall. Admin only.',
+      parameters: {
+        type: 'object',
+        properties: {},
+        required: [],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_budget_variance',
+      description: 'Returns budget vs actual variance analysis for a specific project. Admin only.',
+      parameters: {
+        type: 'object',
+        properties: {
+          projectId: { type: 'string', description: 'The project document ID' },
+        },
+        required: ['projectId'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  {
+    type: 'function' as const,
+    function: {
+      name: 'calculate_scenario_npv',
+      description: 'Calculate NPV (Net Present Value) for a given set of cash flows and discount rate. Pure calculation — no Firestore access.',
+      parameters: {
+        type: 'object',
+        properties: {
+          salePrice: { type: 'number', description: 'Total sale price in EUR' },
+          cashFlows: {
+            type: 'array',
+            description: 'Array of cash flow entries',
+            items: {
+              type: 'object',
+              properties: {
+                amount: { type: 'number', description: 'Cash flow amount in EUR (positive = inflow)' },
+                date: { type: 'string', description: 'ISO date string (e.g. 2026-06-01)' },
+              },
+              required: ['amount', 'date'],
+              additionalProperties: false,
+            },
+          },
+          discountRate: { type: 'number', description: 'Annual discount rate as decimal (e.g. 0.06 for 6%)' },
+        },
+        required: ['salePrice', 'cashFlows', 'discountRate'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  {
+    type: 'function' as const,
+    function: {
+      name: 'compare_hedging_strategies',
+      description: 'Compare Floating vs Swap vs Cap vs Collar hedging strategies for a loan. Returns total costs, effective rates, and recommended strategy.',
+      parameters: {
+        type: 'object',
+        properties: {
+          notional: { type: 'number', description: 'Loan notional amount in EUR (e.g. 1000000)' },
+          currentRate: { type: 'number', description: 'Current floating rate in percent (e.g. 5.4 for 5.4%)' },
+          termYears: { type: 'number', description: 'Loan term in years (e.g. 3)' },
+        },
+        required: ['notional', 'currentRate', 'termYears'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
   // ── 31. resolve_routing_email ──
   {
     type: 'function' as const,
@@ -1329,5 +1445,23 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
  */
 export function getAgenticToolDefinitions(): ReadonlyArray<AgenticToolDefinition> {
   return AGENTIC_TOOL_DEFINITIONS;
+}
+
+/** SSoT names for SPEC-242E financial query tools */
+export const FINANCIAL_QUERY_TOOL_NAMES = [
+  'get_portfolio_summary',
+  'get_project_financial_details',
+  'get_debt_maturity_schedule',
+  'get_budget_variance',
+  'calculate_scenario_npv',
+  'compare_hedging_strategies',
+] as const;
+
+/**
+ * Get only the financial query tool definitions (for web chat endpoint).
+ */
+export function getFinancialQueryToolDefinitions(): ReadonlyArray<AgenticToolDefinition> {
+  const names = new Set<string>(FINANCIAL_QUERY_TOOL_NAMES);
+  return AGENTIC_TOOL_DEFINITIONS.filter(t => names.has(t.function.name));
 }
 

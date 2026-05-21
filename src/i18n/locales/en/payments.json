@@ -217,6 +217,25 @@
     "totalActual": "Total Actual",
     "totalVariance": "Variance"
   },
+  "financialQuery": {
+    "title": "Financial Assistant",
+    "subtitle": "Ask about your portfolio",
+    "placeholder": "Ask about your financials...",
+    "thinking": "Analyzing...",
+    "error": "Analysis error. Please try again.",
+    "examplesTitle": "Example questions",
+    "examples": {
+      "q1": "Which project has the highest cost of money?",
+      "q2": "How much is outstanding in total?",
+      "q3": "Compare projects by performance",
+      "q4": "If Euribor rises 50bps, what changes?"
+    },
+    "userBubble": "You",
+    "assistantBubble": "Assistant",
+    "send": "Send",
+    "chartTitle": "Results Chart",
+    "clearHistory": "Clear"
+  },
   "errors": {
     "noBuyer": "No buyer assigned",
     "noProject": "Unit is not assigned to a project",

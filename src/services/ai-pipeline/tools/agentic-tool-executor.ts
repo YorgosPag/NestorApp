@@ -55,6 +55,7 @@ import { ActivityHandler } from './handlers/activity-handler';
 import { DocumentReaderHandler } from './handlers/document-reader-handler';
 import { ProcurementHandler } from './handlers/procurement-handler';
 import { OrgStructureHandler } from './handlers/org-structure-handler';
+import { FinancialQueryHandler } from './handlers/financial-query-handler';
 
 // ============================================================================
 // EXECUTOR CLASS — Strategy Pattern Dispatcher
@@ -80,6 +81,7 @@ export class AgenticToolExecutor {
       new DocumentReaderHandler(),
       new ProcurementHandler(),
       new OrgStructureHandler(),
+      new FinancialQueryHandler(),
     ];
 
     for (const handler of handlers) {
