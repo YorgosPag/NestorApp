@@ -1,0 +1,22 @@
+{
+  "entity": {
+    "wall": "Wall",
+    "column": "Column",
+    "beam": "Beam",
+    "slab": "Slab",
+    "opening": "Opening",
+    "slabOpening": "Slab opening",
+    "stair": "Stair",
+    "unknown": "BIM entity",
+    "noData": "—",
+    "withName": "{type} {name}",
+    "wallGeometry": ", length {length}m, height {height}m",
+    "columnGeometry": ", width {width}m, height {height}m",
+    "beamGeometry": ", length {length}m, height {height}m",
+    "slabGeometry": ", area {area}m², thickness {thickness}m",
+    "openingGeometry": ", width {width}m, height {height}m",
+    "slabOpeningGeometry": ", width {width}m, height {height}m",
+    "material": ", material {material}",
+    "level": ", level {level}"
+  }
+}

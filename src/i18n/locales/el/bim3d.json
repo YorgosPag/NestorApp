@@ -391,5 +391,20 @@
       "selectionNone": "Καμία επιλογή",
       "selectionCount": "{count} επιλεγμένα"
     }
+  },
+  "aria": {
+    "viewport": {
+      "label": "3D Viewer BIM"
+    },
+    "live": {
+      "selectionChanged": "Επιλέχθηκε: {type} {name}",
+      "selectionChangedTypeOnly": "Επιλέχθηκε: {type}",
+      "selectionCleared": "Καθαρίστηκε επιλογή",
+      "modeSwitchedTo3D": "Μεταβήκατε σε 3D",
+      "modeSwitchedTo2D": "Μεταβήκατε σε 2D",
+      "renderStarted": "Η δημιουργία ξεκίνησε",
+      "renderComplete": "Η δημιουργία ολοκληρώθηκε",
+      "errorGeneric": "Παρουσιάστηκε σφάλμα"
+    }
   }
 }

@@ -110,6 +110,7 @@ export const SUPPORTED_NAMESPACES = [
   'settings',               // 🏢 App settings pages (shortcuts, etc.)
   'textToolbar',            // 🏢 DXF text toolbar / Properties panel (ADR-344)
   'bim3d',                  // 🏢 BIM 3D Viewer (ADR-366)
+  'bim-3d-aria',            // 🏢 BIM 3D ARIA entity descriptions (ADR-366 Phase 8.1)
   'bim-materials',          // 🏢 BIM Material Library editor UI (ADR-363 Phase 6.5)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
@@ -229,6 +230,7 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'dxf-viewer-wizard',
     'dxf-viewer-guides',
     'bim3d',
+    'bim-3d-aria',
     'bim-materials',
     'textToolbar',
     'geo-canvas',

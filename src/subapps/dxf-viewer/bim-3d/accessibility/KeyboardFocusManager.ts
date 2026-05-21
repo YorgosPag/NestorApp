@@ -18,6 +18,9 @@
 
 export type FocusListener = (focusedEntityId: string | null) => void;
 
+/** Separate listener type for ARIA description consumers (semantic distinction from FocusListener). */
+export type DescriptionListener = (entityId: string | null) => void;
+
 export interface KeyboardFocusManagerApi {
   /** Currently focused entity bimId. null when no focus. */
   getFocused(): string | null;
@@ -37,6 +40,8 @@ export interface KeyboardFocusManagerApi {
   clear(): void;
   /** Subscribe to focus changes. Returns unsubscribe. */
   subscribe(listener: FocusListener): () => void;
+  /** Subscribe specifically for ARIA description announcements. Returns unsubscribe. */
+  subscribeDescription(listener: DescriptionListener): () => void;
   /** Drop all listeners + state. Use on viewport dispose. */
   dispose(): void;
 }
@@ -46,9 +51,11 @@ export function createKeyboardFocusManager(): KeyboardFocusManagerApi {
   let order: readonly string[] = [];
   let disposed = false;
   const listeners = new Set<FocusListener>();
+  const descriptionListeners = new Set<DescriptionListener>();
 
   function emit(): void {
     for (const listener of listeners) listener(focusedId);
+    for (const listener of descriptionListeners) listener(focusedId);
   }
 
   function setFocus(entityId: string | null): void {
@@ -96,9 +103,17 @@ export function createKeyboardFocusManager(): KeyboardFocusManagerApi {
         listeners.delete(listener);
       };
     },
+    subscribeDescription: (listener) => {
+      if (disposed) return () => undefined;
+      descriptionListeners.add(listener);
+      return () => {
+        descriptionListeners.delete(listener);
+      };
+    },
     dispose: () => {
       disposed = true;
       listeners.clear();
+      descriptionListeners.clear();
       focusedId = null;
       order = [];
     },

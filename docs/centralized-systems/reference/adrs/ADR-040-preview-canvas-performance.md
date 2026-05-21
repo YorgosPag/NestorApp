@@ -71,6 +71,24 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-21 — ADR-366 Phase 8.1: AriaLiveRegion entity description subscription
+
+`AriaLiveRegion` extended with optional `focusManager` + `getEntityData` props. New `useEffect` subscribes to `focusManager.subscribeDescription` (new observer channel on `KeyboardFocusManagerApi`) — on Tab focus change, resolves entity data via `getEntityDataRef` (stable ref pattern, no subscription churn), calls `generateAriaDescription(ariaData, tAria)` (pure function, `bim-3d-aria` namespace), announces via existing `ariaLiveBus`. Zero new `useSyncExternalStore`. ADR-040 micro-leaf compliance fully preserved.
+
+### 2026-05-21 — ADR-366 Phase 8.0: AriaLiveRegion micro-leaf (ARIA live regions)
+
+`AriaLiveRegion` lands as a new micro-leaf inside `BimViewport3D`:
+- Zero `useSyncExternalStore` — uses `useEffect` + raw Zustand `subscribe()` for low-freq stores (`Selection3DStore.selectedBimId`, `ViewMode3DStore.mode`). Subscriptions are cleaned up on unmount.
+- All SR announcements via `ariaLiveBus` singleton (module-level, no React): `announce(message, severity)` → direct DOM `textContent` mutation via `requestAnimationFrame`. Zero React state → zero orchestrator re-renders.
+- Renders 2 `sr-only` divs (`role="status"` polite + `role="alert"` assertive). No canvas element, no RAF subscription.
+
+`BimViewport3D` outer div gains `role="application"` + `aria-label`. Inner Three.js container changes from `role="img"` to `role="presentation"` (the application boundary covers semantics).
+
+**Cardinal rule compliance**:
+- **Rule 1 (no orchestrator subscriptions)**: respected — `BimViewport3D` itself gains no new `useSyncExternalStore`; subscriptions live inside `AriaLiveRegion` leaf only.
+- **Rule 4 (no high-freq stores in cache key)**: not applicable — AriaLiveRegion is DOM-only, no bitmap cache involvement.
+- **ADR-040 micro-leaf**: ≤0 `useSyncExternalStore` calls (uses `useEffect` subscribe pattern instead). Low-frequency only (user-triggered selection/mode changes).
+
 ### 2026-05-21 — ADR-366 Phase 4.6: 2D keyboard-focus backport + cross-mode audit
 
 Two new micro-leaves land in the canvas tree:

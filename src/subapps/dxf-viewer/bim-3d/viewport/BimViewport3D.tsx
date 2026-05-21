@@ -28,6 +28,7 @@ import { ViewCubeContextMenu } from './view-cube/view-cube-context-menu';
 import { Bim3DPreferencesService } from '../services/Bim3DPreferencesService';
 import { use3DShortcuts } from '../shortcuts/use3DShortcuts';
 import { FocusIndicator3D } from '../accessibility/FocusIndicator3D';
+import { AriaLiveRegion } from '../accessibility/AriaLiveRegion';
 
 const HOVER_DEBOUNCE_MS = 800;
 
@@ -347,6 +348,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   return (
     <div
       className="absolute inset-0 z-50 cursor-grab active:cursor-grabbing"
+      role="application"
+      aria-label={t('aria.viewport.label')}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onClick={handleClick}
@@ -360,8 +363,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       <div
         ref={containerRef}
         className="absolute inset-0"
-        aria-label={t('viewport.loadingLabel')}
-        role="img"
+        role="presentation"
       />
       {/* Exit button top-left — clear of ViewCube at top-right (ADR-366 §9 Q1). */}
       <Tooltip>
@@ -447,6 +449,12 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         projectId={projectId ?? null}
         userId={user?.uid ?? null}
         companyId={user?.companyId ?? null}
+      />
+
+      {/* Phase 8.0+8.1 / A.7.Q2 — ARIA live regions + entity descriptions on Tab focus */}
+      <AriaLiveRegion
+        focusManager={managerRef.current?.getKeyboardFocusManager() ?? null}
+        getEntityData={managerRef.current ? (id) => managerRef.current!.getFocusedEntityData(id) : null}
       />
     </div>
   );

@@ -1,0 +1,22 @@
+{
+  "entity": {
+    "wall": "Τοίχος",
+    "column": "Υποστύλωμα",
+    "beam": "Δοκός",
+    "slab": "Πλάκα",
+    "opening": "Άνοιγμα",
+    "slabOpening": "Άνοιγμα πλάκας",
+    "stair": "Σκάλα",
+    "unknown": "Στοιχείο BIM",
+    "noData": "—",
+    "withName": "{type} {name}",
+    "wallGeometry": ", μήκος {length}μ, ύψος {height}μ",
+    "columnGeometry": ", πλάτος {width}μ, ύψος {height}μ",
+    "beamGeometry": ", μήκος {length}μ, ύψος {height}μ",
+    "slabGeometry": ", εμβαδόν {area}τ.μ., πάχος {thickness}μ",
+    "openingGeometry": ", πλάτος {width}μ, ύψος {height}μ",
+    "slabOpeningGeometry": ", πλάτος {width}μ, ύψος {height}μ",
+    "material": ", υλικό {material}",
+    "level": ", επίπεδο {level}"
+  }
+}

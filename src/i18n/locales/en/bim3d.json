@@ -391,5 +391,20 @@
       "selectionNone": "No selection",
       "selectionCount": "{count} selected"
     }
+  },
+  "aria": {
+    "viewport": {
+      "label": "3D BIM Viewer"
+    },
+    "live": {
+      "selectionChanged": "Selected: {type} {name}",
+      "selectionChangedTypeOnly": "Selected: {type}",
+      "selectionCleared": "Selection cleared",
+      "modeSwitchedTo3D": "Switched to 3D view",
+      "modeSwitchedTo2D": "Switched to 2D view",
+      "renderStarted": "Render started",
+      "renderComplete": "Render complete",
+      "errorGeneric": "An error occurred"
+    }
   }
 }
