@@ -21,16 +21,22 @@ export function Floating3DPanel() {
   const { t } = useTranslation('bim3d');
   const [activeTab, setActiveTab] = useState<Tab>('floors');
 
+  const panelId = 'floating-3d-panel';
+
   return (
     <aside
       className="absolute left-3 top-12 z-20 flex w-48 flex-col overflow-hidden rounded-lg border border-white/10 bg-black/50 shadow-xl backdrop-blur-sm"
-      aria-label={t('floatingPanel.tabs.floors')}
+      aria-label={t('floatingPanel.ariaLabel')}
     >
       {/* Tab strip */}
-      <div className="flex border-b border-white/10">
+      <div role="tablist" aria-label={t('floatingPanel.ariaLabel')} className="flex border-b border-white/10">
         {TABS.map((tab) => (
           <button
             key={tab}
+            id={`${panelId}-tab-${tab}`}
+            role="tab"
+            aria-selected={activeTab === tab}
+            aria-controls={`${panelId}-panel-${tab}`}
             onClick={() => setActiveTab(tab)}
             className={[
               'flex-1 py-1 text-xs font-medium transition-colors',
@@ -45,7 +51,12 @@ export function Floating3DPanel() {
       </div>
 
       {/* Tab content */}
-      <div className="min-h-0 overflow-y-auto">
+      <div
+        id={`${panelId}-panel-${activeTab}`}
+        role="tabpanel"
+        aria-labelledby={`${panelId}-tab-${activeTab}`}
+        className="min-h-0 overflow-y-auto"
+      >
         {activeTab === 'floors' && <Floor3DPanelTab />}
         {activeTab === 'lighting' && <Lighting3DPanelTab />}
         {activeTab === 'quality' && <Quality3DPanelTab />}

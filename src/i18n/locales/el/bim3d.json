@@ -110,6 +110,7 @@
     }
   },
   "floatingPanel": {
+    "ariaLabel": "Έλεγχοι 3D",
     "tabs": {
       "floors": "Όροφοι",
       "lighting": "Φωτισμός",

@@ -38,7 +38,7 @@ function ModeButton({
       : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white',
   ].join(' ');
   return (
-    <button type="button" className={cls} onClick={onClick}>
+    <button type="button" aria-label={label} aria-pressed={active} className={cls} onClick={onClick}>
       {label}
     </button>
   );

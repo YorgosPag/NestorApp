@@ -37,8 +37,8 @@ import {
   isSlabOpeningEntity,
   isOpeningEntity,
 } from '../../types/entities';
-// ADR-363 Phase 5.5d — Column anchor SSoT για beam-end auto-snap.
-import { getColumnAnchorWorldPoints } from '../../bim/columns/column-anchors';
+// ADR-363 BIM entity key-point SSoT (delegates to bim-entity-points.ts).
+import { getBimEntityKeyPoints2D, getBimEntityEdgeMidpoints2D } from '../../bim/utils/bim-entity-points';
 
 export interface IntersectionResult {
   point: Point2D;
@@ -99,47 +99,11 @@ export class GeometricCalculations {
     } else if (isRectangleEntity(entity)) {
       const corners = GeometricCalculations.getRectangleCorners(entity);
       endpoints.push(...corners);
-    } else if (isWallEntity(entity)) {
-      // ADR-363 Phase 1C — wall endpoints = axis endpoints. For polyline kind
-      // every spine vertex is a corner endpoint (mirrors closed-polyline rule).
-      const params = entity.params;
-      if (entity.kind === 'polyline' && params.polylineVertices && params.polylineVertices.length >= 2) {
-        for (const v of params.polylineVertices) {
-          endpoints.push({ x: v.x, y: v.y });
-        }
-      } else {
-        endpoints.push({ x: params.start.x, y: params.start.y });
-        endpoints.push({ x: params.end.x, y: params.end.y });
-      }
-    } else if (isColumnEntity(entity)) {
-      // ADR-363 Phase 5.5d — Column anchor points (9-point grid: center + 8
-      // cardinals/diagonals για rect/L/T, center + 4 perimeter cardinals + 4
-      // perimeter diagonals για circular) feed στο spatial index ώστε beam
-      // endpoints να κουμπώνουν auto-magically στις κολώνες (Revit smart-connect).
-      for (const a of getColumnAnchorWorldPoints(entity)) {
-        endpoints.push(a.point);
-      }
+    } else if (isWallEntity(entity) || isColumnEntity(entity) || isBeamEntity(entity) || isSlabEntity(entity) || isSlabOpeningEntity(entity) || isOpeningEntity(entity)) {
+      // ADR-363 — BIM entity key points delegated to SSoT (bim-entity-points.ts).
+      endpoints.push(...getBimEntityKeyPoints2D(entity));
     } else if (isRayEntity(entity)) {
       endpoints.push(entity.basePoint);
-    } else if (isBeamEntity(entity)) {
-      // ADR-363 Phase 5.5 snap — beam axis endpoints (Point3D → 2D projection).
-      endpoints.push({ x: entity.params.startPoint.x, y: entity.params.startPoint.y });
-      endpoints.push({ x: entity.params.endPoint.x, y: entity.params.endPoint.y });
-    } else if (isSlabEntity(entity)) {
-      // ADR-363 Phase 3.5 snap — all slab outline vertices (closed polygon corners).
-      for (const v of entity.params.outline.vertices) {
-        endpoints.push({ x: v.x, y: v.y });
-      }
-    } else if (isSlabOpeningEntity(entity)) {
-      // ADR-363 Phase 3.7a snap — all slab-opening outline vertices.
-      for (const v of entity.params.outline.vertices) {
-        endpoints.push({ x: v.x, y: v.y });
-      }
-    } else if (isOpeningEntity(entity)) {
-      // ADR-363 Phase 2.5 snap — opening cutout corners (4-vertex rectangle outline).
-      for (const v of entity.params.outline.vertices) {
-        endpoints.push({ x: v.x, y: v.y });
-      }
     }
     // XLine: infinite in both directions → no endpoints
 
@@ -184,52 +148,9 @@ export class GeometricCalculations {
           });
         }
       }
-    } else if (isWallEntity(entity)) {
-      // ADR-363 Phase 1C — wall midpoints. Straight/curved kind exposes axis
-      // midpoint; polyline kind exposes per-segment midpoints (mirror polyline).
-      const params = entity.params;
-      if (entity.kind === 'polyline' && params.polylineVertices && params.polylineVertices.length >= 2) {
-        const verts = params.polylineVertices;
-        for (let i = 1; i < verts.length; i++) {
-          midpoints.push({
-            x: (verts[i - 1].x + verts[i].x) / 2,
-            y: (verts[i - 1].y + verts[i].y) / 2,
-          });
-        }
-      } else {
-        midpoints.push({
-          x: (params.start.x + params.end.x) / 2,
-          y: (params.start.y + params.end.y) / 2,
-        });
-      }
-    } else if (isBeamEntity(entity)) {
-      // ADR-363 Phase 5.5 snap — beam axis midpoint.
-      const { startPoint: s, endPoint: e } = entity.params;
-      midpoints.push({ x: (s.x + e.x) / 2, y: (s.y + e.y) / 2 });
-    } else if (isSlabEntity(entity)) {
-      // ADR-363 Phase 3.5 snap — per-edge midpoints (closed polygon, mirrors closed polyline).
-      const verts = entity.params.outline.vertices;
-      for (let i = 0; i < verts.length; i++) {
-        const a = verts[i];
-        const b = verts[(i + 1) % verts.length];
-        midpoints.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
-      }
-    } else if (isSlabOpeningEntity(entity)) {
-      // ADR-363 Phase 3.7a snap — per-edge midpoints.
-      const verts = entity.params.outline.vertices;
-      for (let i = 0; i < verts.length; i++) {
-        const a = verts[i];
-        const b = verts[(i + 1) % verts.length];
-        midpoints.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
-      }
-    } else if (isOpeningEntity(entity)) {
-      // ADR-363 Phase 2.5 snap — 4 edge midpoints of cutout rectangle.
-      const verts = entity.params.outline.vertices;
-      for (let i = 0; i < verts.length; i++) {
-        const a = verts[i];
-        const b = verts[(i + 1) % verts.length];
-        midpoints.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
-      }
+    } else if (isWallEntity(entity) || isBeamEntity(entity) || isSlabEntity(entity) || isSlabOpeningEntity(entity) || isOpeningEntity(entity)) {
+      // ADR-363 — BIM entity edge midpoints delegated to SSoT (bim-entity-points.ts).
+      midpoints.push(...getBimEntityEdgeMidpoints2D(entity));
     }
 
     return midpoints;
@@ -238,20 +159,9 @@ export class GeometricCalculations {
   static getEntityMidpoint(entity: Entity): Point2D | null {
     // 🏢 ENTERPRISE: Use type guards for safe property access
     if (isWallEntity(entity)) {
-      // ADR-363 Phase 1C — single midpoint = axis midpoint (straight/curved).
-      // Polyline kind picks the median segment midpoint.
-      const params = entity.params;
-      if (entity.kind === 'polyline' && params.polylineVertices && params.polylineVertices.length >= 2) {
-        const verts = params.polylineVertices;
-        const mid = Math.floor(verts.length / 2);
-        const a = verts[Math.max(0, mid - 1)];
-        const b = verts[mid];
-        return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-      }
-      return {
-        x: (params.start.x + params.end.x) / 2,
-        y: (params.start.y + params.end.y) / 2,
-      };
+      // ADR-363 — delegate to SSoT; pick median edge midpoint as representative.
+      const mids = getBimEntityEdgeMidpoints2D(entity);
+      return mids.length > 0 ? mids[Math.floor((mids.length - 1) / 2)] : null;
     }
     if (isLineEntity(entity)) {
       return {
@@ -278,9 +188,9 @@ export class GeometricCalculations {
         }
       }
     } else if (isBeamEntity(entity)) {
-      // ADR-363 Phase 5.5 snap — beam axis midpoint (single-midpoint query).
-      const { startPoint: s, endPoint: e } = entity.params;
-      return { x: (s.x + e.x) / 2, y: (s.y + e.y) / 2 };
+      // ADR-363 — delegates to SSoT (single midpoint for beam axis).
+      const pts = getBimEntityEdgeMidpoints2D(entity);
+      return pts.length > 0 ? pts[0] : null;
     }
 
     return null;

@@ -1,6 +1,6 @@
 # ADR-369 — BIM Elevation Convention: Revit/Industry-Standard Alignment
 
-- **Status**: 🚧 IN_IMPLEMENTATION — Phase A1-A5 + B + D + F + G + H + 0.4+A.1+0.3 + Q2.1 + Q2.2 + Q2.3 + Q2.4 + Q3 + **Q8.2** + **Q8.3** + **Q8.3.5** + **Q8.4** ✅ complete 2026-05-21. Phase C (Firestore migration) N/A. Q&A 10/10 complete.
+- **Status**: ✅ IMPLEMENTED — All phases (A1-A5, B, D, F, G, H, Q8.2, Q8.3, Q8.3.5, Q8.4) complete 2026-05-21. Phase C (Firestore migration) N/A — Wipe & Reseed strategy. Q&A 10/10 complete. Callsite propagation verified (SlabParams.levelElevation, BeamParams.topElevation, Wall/Column baseBinding).
 - **Date**: 2026-05-20
 - **Author**: Giorgio Pagonis + Claude (Opus 4.7)
 - **Supersedes**: Partial elevation semantics in ADR-363 (BIM Drawing Mode), ADR-366 (3D BIM Viewer)

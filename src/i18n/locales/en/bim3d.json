@@ -110,6 +110,7 @@
     }
   },
   "floatingPanel": {
+    "ariaLabel": "3D Controls",
     "tabs": {
       "floors": "Floors",
       "lighting": "Lighting",

@@ -163,6 +163,17 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 
 ---
 
+### 🧹 ADR-363 — BIM entity points SSoT migration (priorità media, >1h, 20+ αρχεία)
+
+Discovered 2026-05-21 (ADR-363 snap SSoT centralization session). SSoT utility `src/subapps/dxf-viewer/bim/utils/bim-entity-points.ts` δημιουργήθηκε. `GeometricCalculations.ts` ήδη delegate. Εναπομένουν 20+ αρχεία που κάνουν inline `params.outline.vertices` / `params.startPoint` access αντί να χρησιμοποιούν το SSoT.
+
+- [ ] **Migrate 20+ αρχεία** → χρήση `getBimEntityKeyPoints2D` / `getBimEntityEdgeMidpoints2D` από `bim/utils/bim-entity-points`. Αρχεία: `bim-move-geometry.ts`, `apply-entity-preview.ts`, `draw-ghost-entity.ts`, `slab-grips.ts`, `slab-opening-grips.ts`, `beam-grips.ts`, `bim-mirror-geometry.ts`, `bim-rotate-geometry.ts` + ~12 ακόμα. Grep: `params\.outline\.vertices` + `params\.startPoint` + `params\.endPoint` σε `src/subapps/dxf-viewer/bim/`.
+
+**ADR:** `docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md`
+**Effort**: ~1.5-2h (Boy Scout per-touch, ή dedicated session)
+
+---
+
 ### 🧹 FULL ZERO BACKLOG (Scenario B extras — +~43h expected)
 
 - [x] **ADR-298 Phase C** — COMPLETATO. Phase C.7 DONE 2026-04-14. 11 collezioni → COVERAGE. FIRESTORE_RULES_PENDING ora VUOTA (zero entry). Coverage totale: 92 collezioni. 291 test verdi.

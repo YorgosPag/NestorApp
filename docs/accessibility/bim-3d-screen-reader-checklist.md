@@ -1,6 +1,6 @@
 # BIM 3D Viewer — Screen Reader QA Checklist
 
-**ADR-366 Phase 8.1 — Manual verification guide**
+**ADR-366 Phase 8 (8.0 + 8.1) — Manual verification guide**
 
 Tested with: NVDA 2024.x (Windows/Chrome), VoiceOver (macOS/Safari + iOS/Safari)
 
@@ -51,6 +51,22 @@ Tested with: NVDA 2024.x (Windows/Chrome), VoiceOver (macOS/Safari + iOS/Safari)
 
 ---
 
+## Phase 8.0 UI Controls
+
+| # | Element / Action | Keys | Expected SR Announcement |
+|---|---|---|---|
+| 31 | 3D Controls panel (aside) | Tab into panel | "3D Controls" landmark announced |
+| 32 | Tab strip role | Focus tablist | SR announces "tablist" role |
+| 33 | Active tab (Floors) | Tab to tab | "Floors tab, selected, 1 of 4" (or locale equivalent) |
+| 34 | Inactive tab (Lighting) | Tab to tab | "Lighting tab, not selected, 2 of 4" |
+| 35 | Switch tab | Arrow keys / click | New tab "selected" state announced |
+| 36 | Tab panel content | Auto-focus after tab change | Content landmark announced |
+| 37 | Section mode Box button | Tab to button | "Box, toggle button, pressed" |
+| 38 | Section mode Plane button | Tab to button | "Plane, toggle button, not pressed" |
+| 39 | Toggle Section mode | Click / Enter | aria-pressed state flips — SR announces new state |
+
+---
+
 ## Known limitations (Phase 8.1)
 
 - Geometry data (length, height, area, etc.) is only available if the 3D mesh `userData` exposes it. Currently meshes expose `bimType` + `entityName` only → descriptions use entityName fallback.
@@ -63,7 +79,8 @@ Tested with: NVDA 2024.x (Windows/Chrome), VoiceOver (macOS/Safari + iOS/Safari)
 
 | Criterion | Target | Phase 8.1 status |
 |---|---|---|
-| 1.3.1 Info and Relationships | A | ✅ Semantic roles (application, status, alert) |
+| 1.3.1 Info and Relationships | A | ✅ Semantic roles (application, status, alert, tablist/tab/tabpanel, region) |
+| 4.1.2 Name, Role, Value | A | ✅ aria-selected on tabs, aria-pressed on mode buttons, aria-label on all interactive elements |
 | 4.1.3 Status Messages | AA | ✅ aria-live polite/assertive regions |
 | 2.1.1 Keyboard | A | ✅ Tab/Shift-Tab/Enter/Esc navigation |
 | 1.4.1 Use of Color | A | ✅ Selection also announced as text |
