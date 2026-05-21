@@ -38,6 +38,7 @@ import {
 } from '../../bim/columns/column-firestore-service';
 import { recordColumnChange } from '../../bim/columns/column-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
+import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 
 // ============================================================================
 // TYPES
@@ -330,18 +331,7 @@ export function useColumnPersistence(
     return cleanup;
   }, [deleteColumn]);
 
-  // ADR-363 fix — multi-entity move dirty-flag propagation (mirrors useWallPersistence).
-  useEffect(() => {
-    const cleanup = EventBus.on('bim:entities-moved', ({ movedEntities }) => {
-      if (!serviceRef.current) return;
-      for (const entity of movedEntities) {
-        if (!isColumn(entity)) continue;
-        dirtyIdsRef.current.add(entity.id);
-        void persist(entity);
-      }
-    });
-    return cleanup;
-  }, [persist]);
+  useBimEntityMovedPersistEffect(isColumn, serviceRef, dirtyIdsRef, persist);
 
   // Unmount cleanup — flush pending timers.
   useEffect(() => {

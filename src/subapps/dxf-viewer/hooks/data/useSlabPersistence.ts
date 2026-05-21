@@ -44,6 +44,7 @@ import {
 } from '../../bim/slabs/slab-firestore-service';
 import { recordSlabChange } from '../../bim/slabs/slab-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
+import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 
 // ============================================================================
 // TYPES
@@ -412,18 +413,7 @@ export function useSlabPersistence(
     return cleanup;
   }, [levelManager, companyId, projectId, buildingId]);
 
-  // ADR-363 fix — multi-entity move dirty-flag propagation (mirrors useWallPersistence).
-  useEffect(() => {
-    const cleanup = EventBus.on('bim:entities-moved', ({ movedEntities }) => {
-      if (!serviceRef.current) return;
-      for (const entity of movedEntities) {
-        if (!isSlab(entity)) continue;
-        dirtyIdsRef.current.add(entity.id);
-        void persist(entity);
-      }
-    });
-    return cleanup;
-  }, [persist]);
+  useBimEntityMovedPersistEffect(isSlab, serviceRef, dirtyIdsRef, persist);
 
   // Unmount cleanup — flush pending timers.
   useEffect(() => {
