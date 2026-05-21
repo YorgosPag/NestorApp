@@ -1325,6 +1325,7 @@
       "enhancedImport": "Enhanced DXF Import",
       "pdfBackground": "PDF Υπόβαθρο",
       "exportDxf": "Εξαγωγή",
+      "ifcExport": "Εξαγωγή IFC",
       "cursorSettings": "Ρυθμίσεις Δρομέα",
       "runTests": "Εκτέλεση Ελέγχων",
       "togglePerf": "Παρακολ. Απόδοσης",

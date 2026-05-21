@@ -52,6 +52,8 @@ export interface ViewportCamera {
   readonly snapToViewDirection: (dir: THREE.Vector3) => void;
   readonly goHome: () => void;
   readonly applyTumble: (dxPx: number, dyPx: number) => void;
+  /** ADR-366 Phase 4.5 / A.7.Q4 — screen-space pan (positive dx = view right, positive dy = view up). */
+  readonly pan: (dxScreenPx: number, dyScreenPx: number) => void;
 }
 
 /** All 12 canonical view IDs: 6 ortho face + 6 isometric. */

@@ -35,6 +35,17 @@ import { applyWallGripDrag } from '../../bim/walls/wall-grips';
 import type { WallGripKind } from '../../hooks/useGripMovement';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
 import type { WallEntity } from '../../bim/types/wall-types';
+// ADR-363 Phase 5.5 — parametric beam drag preview.
+import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
+import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
+import type { BeamEntity } from '../../bim/types/beam-types';
+// ADR-363 Phase 3.5 — parametric slab drag preview.
+import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
+import type { SlabEntity } from '../../bim/types/slab-types';
+// ADR-363 Phase 3.7a — parametric slab-opening drag preview.
+import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
+import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
+import type { BeamGripKind, SlabGripKind, SlabOpeningGripKind } from '../../hooks/grip-types';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -66,6 +77,9 @@ export interface EntityPreviewTransform {
    * `applyWallGripDrag` + `computeWallGeometry` (mirrors stair pattern).
    */
   readonly wallGripKind?: WallGripKind;
+  readonly beamGripKind?: BeamGripKind;
+  readonly slabGripKind?: SlabGripKind;
+  readonly slabOpeningGripKind?: SlabOpeningGripKind;
   readonly anchorPos?: Point2D;
 }
 
@@ -112,7 +126,7 @@ export function applyEntityPreview(
   preview: EntityPreviewTransform | undefined,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, anchorPos } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, slabGripKind, slabOpeningGripKind, anchorPos } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
@@ -123,6 +137,31 @@ export function applyEntityPreview(
     if (newParams === wall.params) return entity;
     const newGeometry = computeWallGeometry(newParams, wall.kind);
     return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-363 Phase 5.5 — parametric beam live preview ──────────────────────
+  if (beamGripKind && entity.type === 'beam') {
+    const beam = entity as unknown as BeamEntity;
+    const newParams = applyBeamGripDrag(beamGripKind, { originalParams: beam.params, delta });
+    if (newParams === beam.params) return entity;
+    const newGeometry = computeBeamGeometry(newParams);
+    return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-363 Phase 3.5 — parametric slab live preview ──────────────────────
+  if (slabGripKind && entity.type === 'slab') {
+    const slab = (entity as unknown as { slabEntity: SlabEntity }).slabEntity;
+    const newParams = applySlabGripDrag(slabGripKind, { originalParams: slab.params, delta });
+    if (newParams === slab.params) return entity;
+    return { ...(entity as object), slabEntity: { ...slab, params: newParams } } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-363 Phase 3.7a — parametric slab-opening live preview ─────────────
+  if (slabOpeningGripKind && entity.type === 'slab-opening') {
+    const so = (entity as unknown as { slabOpeningEntity: SlabOpeningEntity }).slabOpeningEntity;
+    const newParams = applySlabOpeningGripDrag(slabOpeningGripKind, { originalParams: so.params, delta });
+    if (newParams === so.params) return entity;
+    return { ...(entity as object), slabOpeningEntity: { ...so, params: newParams } } as unknown as DxfEntityUnion;
   }
 
   // ── ADR-358 Phase 5d — parametric stair live preview ─────────────────────
@@ -176,6 +215,41 @@ export function applyEntityPreview(
           point1: offsetPoint(entity.point1),
           point2: offsetPoint(entity.point2),
         };
+      case 'beam': {
+        const beam = entity as unknown as BeamEntity;
+        const newParams = applyBeamGripDrag('beam-midpoint', { originalParams: beam.params, delta });
+        const newGeometry = computeBeamGeometry(newParams);
+        return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+      }
+      case 'slab': {
+        const slab = (entity as unknown as { slabEntity: SlabEntity }).slabEntity;
+        const vs = slab.params.outline.vertices;
+        const movedVerts = vs.map((v) => ({ ...v, x: v.x + delta.x, y: v.y + delta.y }));
+        const newParams = { ...slab.params, outline: { ...slab.params.outline, vertices: movedVerts } };
+        return { ...(entity as object), slabEntity: { ...slab, params: newParams } } as unknown as DxfEntityUnion;
+      }
+      case 'slab-opening': {
+        const so = (entity as unknown as { slabOpeningEntity: SlabOpeningEntity }).slabOpeningEntity;
+        const vs = so.params.outline.vertices;
+        const movedVerts = vs.map((v) => ({ ...v, x: v.x + delta.x, y: v.y + delta.y }));
+        const newParams = { ...so.params, outline: { ...so.params.outline, vertices: movedVerts } };
+        return { ...(entity as object), slabOpeningEntity: { ...so, params: newParams } } as unknown as DxfEntityUnion;
+      }
+      case 'opening': {
+        const dxfO = entity as unknown as {
+          openingEntity?: { geometry?: { outline?: { vertices: Array<{ x: number; y: number; z: number }> } } };
+        };
+        const outline = dxfO.openingEntity?.geometry?.outline;
+        if (!outline) return entity;
+        const movedVerts = outline.vertices.map((v) => ({ ...v, x: v.x + delta.x, y: v.y + delta.y }));
+        return {
+          ...(entity as object),
+          openingEntity: {
+            ...dxfO.openingEntity,
+            geometry: { ...dxfO.openingEntity!.geometry, outline: { ...outline, vertices: movedVerts } },
+          },
+        } as unknown as DxfEntityUnion;
+      }
     }
   }
 

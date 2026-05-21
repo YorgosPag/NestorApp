@@ -26,6 +26,8 @@ import { RenderProgressOverlay } from '../render/RenderProgressOverlay';
 import type { FinalRenderConfig } from '../stores/ViewMode3DStore';
 import { ViewCubeContextMenu } from './view-cube/view-cube-context-menu';
 import { Bim3DPreferencesService } from '../services/Bim3DPreferencesService';
+import { use3DShortcuts } from '../shortcuts/use3DShortcuts';
+import { FocusIndicator3D } from '../accessibility/FocusIndicator3D';
 
 const HOVER_DEBOUNCE_MS = 800;
 
@@ -290,6 +292,14 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     }
   }, [compassVisible, user?.uid]);
 
+  // Phase 4.4: keyboard shortcuts (canonical views, selection-aware F, auto-switch).
+  // Hook reads `managerRef.current` lazily on each keydown so it survives remounts
+  // without re-subscribing. Active only while the 3D viewport is visible.
+  use3DShortcuts({
+    getManager: () => managerRef.current,
+    active: effectiveVisible,
+  });
+
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     const { clientX, clientY } = e;
@@ -387,6 +397,16 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         onToggleCompass={handleToggleCompass}
         onClose={() => setContextMenuPos(null)}
       />
+
+      {/* Phase 4.5 / A.7.Q1 — keyboard focus floating label (renders only when focused) */}
+      {canvasEl && managerRef.current && (
+        <FocusIndicator3D
+          focusManager={managerRef.current.getKeyboardFocusManager()}
+          getEntityData={(id) => managerRef.current?.getFocusedEntityData(id) ?? null}
+          getCamera={() => managerRef.current?.getCamera() ?? null}
+          getCanvas={() => canvasEl}
+        />
+      )}
 
       {/* Floating Render button — bottom-right, above Performance HUD (ADR-366 §B.4 Phase 6).
           ADR-371: hidden in readOnly mode (Properties pipeline). */}

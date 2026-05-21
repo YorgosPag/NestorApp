@@ -106,6 +106,19 @@ export const INSERT_TAB: RibbonTab = {
                 shortcut: 'Ctrl+E',
               },
             },
+            // ADR-369 §Q8.3 — IFC4 export trigger. Dispatched via EventBus
+            // 'bim:ifc-export-requested' → IfcExportHost performs the export.
+            {
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.export-ifc',
+                labelKey: 'ribbon.commands.ifcExport',
+                icon: 'export-ifc',
+                commandKey: 'export-ifc',
+                action: 'export-ifc',
+              },
+            },
           ],
         },
       ],

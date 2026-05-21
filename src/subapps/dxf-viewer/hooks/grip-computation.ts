@@ -12,11 +12,16 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo, StairGripKind, WallGripKind } from './useGripMovement';
-import type { ColumnGripKind, BeamGripKind } from './grip-types';
+import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, OpeningGripKind } from './grip-types';
 import type { WallEntity } from '../bim/types/wall-types';
+import type { BeamEntity } from '../bim/types/beam-types';
 import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
 import { getStairGrips } from '../bim/stairs/stair-grips';
 import { getWallGrips } from '../bim/walls/wall-grips';
+import { getBeamGrips } from '../bim/beams/beam-grips';
+import { getSlabGrips } from '../bim/slabs/slab-grips';
+import { getSlabOpeningGrips } from '../bim/slab-openings/slab-opening-grips';
+import { getOpeningGrips } from '../bim/walls/opening-grips';
 import { getDimensionGrips } from './dimensions/useDimensionGrips';
 import { getXLineGrips } from '../systems/xline/xline-grips';
 import { getRayGrips } from '../systems/ray/ray-grips';
@@ -64,6 +69,9 @@ export interface DxfGripDragPreview {
    */
   columnGripKind?: ColumnGripKind;
   beamGripKind?: BeamGripKind;
+  slabGripKind?: SlabGripKind;
+  slabOpeningGripKind?: SlabOpeningGripKind;
+  openingGripKind?: OpeningGripKind;
 }
 
 /** Grip interaction state for rendering pipeline */
@@ -240,6 +248,26 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
     case 'wall': {
       // ADR-363 Phase 1C — parametric wall grips (start/end/midpoint/thickness).
       grips.push(...getWallGrips(entity as unknown as WallEntity));
+      break;
+    }
+
+    case 'beam': {
+      grips.push(...getBeamGrips(entity as unknown as BeamEntity));
+      break;
+    }
+
+    case 'slab': {
+      grips.push(...getSlabGrips(entity.slabEntity));
+      break;
+    }
+
+    case 'slab-opening': {
+      grips.push(...getSlabOpeningGrips(entity.slabOpeningEntity));
+      break;
+    }
+
+    case 'opening': {
+      grips.push(...getOpeningGrips(entity.openingEntity));
       break;
     }
   }

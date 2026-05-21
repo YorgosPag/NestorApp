@@ -32,7 +32,20 @@ export type ShortcutCategory =
   | 'snap'        // Snap controls (F9, F10, F11...)
   | 'zoom'        // Zoom controls (+, -, Shift+1...)
   | 'navigation'  // Navigation (Arrows, Pan...)
-  | 'special';    // Special keys (Escape, Delete...)
+  | 'special'     // Special keys (Escape, Delete...)
+  | 'view3d';     // 3D canonical view jumps (ADR-366 Phase 4.4 / A.6)
+
+/**
+ * ADR-366 Phase 4.4 / A.6.Q3 — applicability per viewport mode.
+ *
+ * - `universal`   → fires unchanged in both 2D and 3D (zoom, undo/redo, ESC, Ctrl+A...)
+ * - `2D-only`     → fires in 2D; pressing in 3D auto-switches to 2D + toast (drawing tools)
+ * - `3D-only`     → fires only in 3D; ignored in 2D (canonical views, orbit)
+ * - `mode-aware`  → dispatches different behavior per mode (F = fit extents 2D vs frame selection 3D)
+ *
+ * Default when omitted: `universal` (backward-compatible for legacy entries).
+ */
+export type ShortcutMode = '2D-only' | '3D-only' | 'mode-aware' | 'universal';
 
 /**
  * Single shortcut definition
@@ -52,6 +65,8 @@ export interface ShortcutDefinition {
   toolType?: ToolType;
   /** Display label for UI (computed from key + modifier) */
   displayLabel?: string;
+  /** ADR-366 Phase 4.4: viewport applicability — defaults to 'universal' when omitted. */
+  mode?: ShortcutMode;
 }
 
 // ============================================================================
@@ -59,8 +74,17 @@ export interface ShortcutDefinition {
 // Pattern: AutoCAD - Most used tools get single letters
 // ============================================================================
 
+// ADR-366 Phase 4.4 / A.6.Q3 — `mode` field audit:
+//
+// Entries explicitly tagged below: `select`/`pan` (universal — navigation in both
+// modes), and `fit`/`zoomExtents`/`fitToView`/`fitToViewHome` (mode-aware — split
+// fit-extents 2D vs frame-selection 3D). All other DXF_TOOL_SHORTCUTS entries
+// are drawing/measurement tools — left untagged so the shortcut-dispatcher
+// auto-switches to 2D when pressed in 3D (default falls into 2D-only branch via
+// `match2DOnlyDrawingTool`). When future work classifies the remaining ~40
+// entries individually, tag them as `'2D-only'` for explicitness.
 export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
-  // Selection Tools
+  // Selection Tools — universal: navigation primitives in both 2D and 3D
   select: {
     key: 'S',
     modifier: 'none',
@@ -68,6 +92,7 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     action: 'tool:select',
     category: 'tool',
     toolType: 'select',
+    mode: 'universal',
   },
   pan: {
     key: 'P',
@@ -76,6 +101,7 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     action: 'tool:pan',
     category: 'tool',
     toolType: 'pan',
+    mode: 'universal',
   },
 
   // Drawing Tools
@@ -350,12 +376,16 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     category: 'tool',
     toolType: 'zoom-window',
   },
+  // ADR-366 Phase 4.4 / A.6.Q4 — mode-aware F:
+  //   2D → fit-extents (existing). 3D → selection-aware (frame selection if any,
+  //   else fit-extents over BIM+DXF). Resolved by `bim-3d/shortcuts/shortcut-dispatcher.ts`.
   zoomExtents: {
     key: 'F',
     modifier: 'none',
     descriptionKey: 'shortcuts.tools.zoomExtents',
     action: 'action:fit-to-view',
     category: 'tool',
+    mode: 'mode-aware',
   },
 
   // Layering Tool
@@ -390,12 +420,14 @@ export const DXF_ACTION_SHORTCUTS: Record<string, ShortcutDefinition> = {
     action: 'action:autocrop',
     category: 'action',
   },
+  // ADR-366 Phase 4.4 / A.6.Q4 — mode-aware (mirror of zoomExtents tagging).
   fit: {
     key: 'F',
     modifier: 'none',
     descriptionKey: 'shortcuts.actions.fitToView',
     action: 'action:fit-to-view',
     category: 'action',
+    mode: 'mode-aware',
   },
 } as const;
 
@@ -608,12 +640,14 @@ export const DXF_ZOOM_SHORTCUTS: Record<string, ShortcutDefinition> = {
     action: 'zoom:out',
     category: 'zoom',
   },
+  // ADR-366 Phase 4.4 / A.6.Q4 — mode-aware Shift+1 and Home.
   fitToView: {
     key: '1',
     modifier: 'shift',
     descriptionKey: 'shortcuts.zoom.fitToView',
     action: 'zoom:fit-to-view',
     category: 'zoom',
+    mode: 'mode-aware',
   },
   fitToViewHome: {
     key: 'Home',
@@ -621,6 +655,7 @@ export const DXF_ZOOM_SHORTCUTS: Record<string, ShortcutDefinition> = {
     descriptionKey: 'shortcuts.zoom.fitToView',
     action: 'zoom:fit-to-view',
     category: 'zoom',
+    mode: 'mode-aware',
   },
   zoom100: {
     key: '0',
@@ -1020,15 +1055,16 @@ export const getToolHotkey = (toolType: ToolType): string => {
 };
 
 /**
- * Check if a keyboard event matches a specific shortcut
+ * Check if a keyboard event matches a `ShortcutDefinition` object directly.
+ *
+ * Reusable core matcher — ADR-366 Phase 4.4 extracted from `matchesShortcut(event, id)`
+ * so the 3D shortcuts SSoT (`bim-3d/shortcuts/keyboard-shortcuts-3d.ts`) can reuse it
+ * without forcing every 3D entry into `ALL_DXF_SHORTCUTS`.
  */
-export const matchesShortcut = (
+export const matchesShortcutDef = (
   event: KeyboardEvent,
-  shortcutId: string
+  shortcut: ShortcutDefinition,
 ): boolean => {
-  const shortcut = ALL_DXF_SHORTCUTS[shortcutId as keyof typeof ALL_DXF_SHORTCUTS];
-  if (!shortcut) return false;
-
   // Check modifier
   const modifierMatch = (() => {
     switch (shortcut.modifier) {
@@ -1079,6 +1115,18 @@ export const matchesShortcut = (
 
   // Standard letter/number keys
   return eventKey === shortcutKey;
+};
+
+/**
+ * Check if a keyboard event matches a registered 2D shortcut by ID.
+ */
+export const matchesShortcut = (
+  event: KeyboardEvent,
+  shortcutId: string,
+): boolean => {
+  const shortcut = ALL_DXF_SHORTCUTS[shortcutId as keyof typeof ALL_DXF_SHORTCUTS];
+  if (!shortcut) return false;
+  return matchesShortcutDef(event, shortcut);
 };
 
 /**

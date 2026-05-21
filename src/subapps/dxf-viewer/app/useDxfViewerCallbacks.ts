@@ -24,6 +24,7 @@ import type { Status, OverlayKind } from '../overlays/types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { nowISO } from '@/lib/date-local';
 import { openDimTextOverride } from '../ui/panels/dimensions/DimTextOverrideStore';
+import { EventBus } from '../systems/events/EventBus';
 
 /** Structural overlay entry shape used by callbacks */
 interface OverlayEntry {
@@ -163,6 +164,18 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     if (action === 'dim.text.override') {
       const entityId = params.selectedEntityIds[0];
       if (entityId) openDimTextOverride(entityId);
+      return;
+    }
+    // ADR-369 §Q8.3 — IFC4 export trigger. IfcExportHost subscribes to the
+    // EventBus and performs the export+download lifecycle.
+    if (action === 'export-ifc') {
+      EventBus.emit('bim:ifc-export-requested', {
+        projectId: levelManager.saveContext?.projectId,
+        buildingIds: levelManager.saveContext?.buildingId
+          ? [levelManager.saveContext.buildingId]
+          : undefined,
+        includePsets: true,
+      });
       return;
     }
     // Pass all other actions to original handleAction

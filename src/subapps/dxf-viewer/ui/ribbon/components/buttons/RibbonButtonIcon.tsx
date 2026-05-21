@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties } from 'lucide-react';
+import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes } from 'lucide-react';
 import { LineIcon } from '../../../toolbar/icons/LineIcon';
 import { CircleIcon } from '../../../toolbar/icons/CircleIcon';
 import { ArcIcon } from '../../../toolbar/icons/ArcIcon';
@@ -173,6 +173,7 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'import-enhanced': return <FolderUp width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'import-wizard': return <Wand2 width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'export-dxf': return <Download width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'export-ifc': return <Boxes width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'cursor-settings': return <Crosshair width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'run-tests': return <FlaskConical width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'toggle-perf': return <Activity width={sizePx[size]} height={sizePx[size]} className={className} />;

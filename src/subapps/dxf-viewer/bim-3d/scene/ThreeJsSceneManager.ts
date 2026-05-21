@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { createViewportCamera } from '../viewport/viewport-camera';
 import { createViewCube } from '../viewport/view-cube/view-cube';
 import { createPoi } from '../viewport/viewport-poi';
-import { detectSnapCandidate } from '../viewport/view-snap-detector';
+import { renderSceneFrame, type RenderFrameContext } from './scene-render-frame';
 import { BimSceneLayer } from './BimSceneLayer';
 import { PerformanceCollector } from '../performance/PerformanceCollector';
 import { IdleDetector } from '../lighting/idle-detector';
@@ -40,11 +40,22 @@ import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
 import type { FinalRenderConfig } from '../stores/ViewMode3DStore';
-import { writeRenderOutput } from '../render/render-output-writer';
-import { useCameraTargetStore } from '../stores/CameraTargetStore';
+import { startFinalRender as runFinalRender } from './start-final-render';
 import { createCanonicalViewService } from '../viewport/CanonicalViewService';
+import type { CanonicalViewService } from '../viewport/CanonicalViewService';
+import type { CanonicalViewId } from '../viewport/viewport-types';
 import { createAnimationManager } from '../viewport/animation-manager';
 import type { AnimationManager } from '../viewport/animation-manager';
+import { computeFramingTargetBounds } from './scene-framing-bounds';
+import { createBimRenderer, createBimLights, createBimScene } from './scene-setup';
+import {
+  createKeyboardFocusManager,
+  type KeyboardFocusManagerApi,
+} from '../accessibility/KeyboardFocusManager';
+import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer';
+import type { FocusEntityLabelData } from '../accessibility/FocusIndicator3D';
+import { computeFocusOrder, findFocusedEntityData } from '../accessibility/focus-order';
+import { applyLightPresetToScene, updateSunDirection } from '../lighting/apply-light-preset';
 
 const INITIAL_CAMERA_POSITION = new THREE.Vector3(15, 10, 15);
 const INITIAL_CAMERA_TARGET = new THREE.Vector3(0, 0, 0);
@@ -72,6 +83,12 @@ export class ThreeJsSceneManager {
   private readonly sectionController: SectionSceneController;
   /** Phase 4.2: single animation manager, ticked by main RAF (ADR-040 compliant). */
   private readonly animationManager: AnimationManager;
+  /** Phase 4.4: shared canonical-view dispatcher (ViewCube + keyboard shortcuts). */
+  private readonly canonicalViewService: CanonicalViewService;
+  /** Phase 4.5 A.7.Q1: keyboard focus state machine + Three.js outline. */
+  private readonly keyboardFocusManager: KeyboardFocusManagerApi;
+  private readonly focusOutlineRenderer: FocusOutlineRenderer;
+  private readonly focusUnsub: () => void;
   private rafHandle: number | null = null;
   private disposed = false;
   private lastFrameTime = performance.now();
@@ -81,12 +98,12 @@ export class ThreeJsSceneManager {
   private viewCubeContextMenuCb: ((x: number, y: number) => void) | null = null;
 
   constructor(container: HTMLElement) {
-    this.renderer = this.initRenderer(container);
-    const lights = this.createLights();
+    this.renderer = createBimRenderer(container);
+    const lights = createBimLights();
     this.sun = lights.sun;
     this.ambient = lights.ambient;
     this.hemi = lights.hemi;
-    this.scene = this.initScene();
+    this.scene = createBimScene(lights);
     this.qualityModulator = new QualityModulator(this.sun);
     this.bimLayer = new BimSceneLayer(this.scene);
     this.selectionHighlighter = new BimSelectionHighlighter(this.bimLayer.group);
@@ -125,6 +142,14 @@ export class ThreeJsSceneManager {
     this.scene.add(this.poi.root);
     // Phase 4.2: single animation manager (ADR-040 — ticked by main RAF below).
     this.animationManager = createAnimationManager();
+    // Phase 4.4: instantiated once, shared by ViewCube and keyboard dispatcher.
+    this.canonicalViewService = createCanonicalViewService(this.viewport, this.animationManager);
+    // Phase 4.5 A.7.Q1: focus state machine + outline. Subscribe to drive the outline.
+    this.keyboardFocusManager = createKeyboardFocusManager();
+    this.focusOutlineRenderer = new FocusOutlineRenderer(this.scene);
+    this.focusUnsub = this.keyboardFocusManager.subscribe((focusedId) => {
+      this.focusOutlineRenderer.setTargetById(this.bimLayer.group, focusedId);
+    });
     this.viewCube = this.initViewCube(container);
     this.performanceCollector = new PerformanceCollector(this.renderer, this.scene);
     this.performanceCollector.start();
@@ -151,50 +176,6 @@ export class ThreeJsSceneManager {
     };
   }
 
-  private initRenderer(container: HTMLElement): THREE.WebGLRenderer {
-    // stencil:true required for ADR-366 §A.3 Phase 7.0a stencil cap pipeline.
-    // (Three.js default is already true, set explicit για future-proofing.)
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(container.clientWidth || 800, container.clientHeight || 600);
-    renderer.setClearColor(0x1a1a1a, 1);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    container.appendChild(renderer.domElement);
-    return renderer;
-  }
-
-  private createLights(): { sun: THREE.DirectionalLight; ambient: THREE.AmbientLight; hemi: THREE.HemisphereLight } {
-    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-
-    const sun = new THREE.DirectionalLight(0xfffaf0, 3);
-    sun.castShadow = true;
-    sun.shadow.bias = -0.002;
-    sun.shadow.normalBias = 0.1;
-    sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.camera.near = 0.1;
-    sun.shadow.camera.far = 200;
-    sun.shadow.camera.left = -60;
-    sun.shadow.camera.right = 60;
-    sun.shadow.camera.top = 60;
-    sun.shadow.camera.bottom = -60;
-
-    const hemi = new THREE.HemisphereLight(0x87ceeb, 0x8b7355, 0.3);
-
-    return { sun, ambient, hemi };
-  }
-
-  private initScene(): THREE.Scene {
-    const scene = new THREE.Scene();
-    scene.add(new THREE.AxesHelper(2));
-    scene.add(this.ambient);
-    scene.add(this.sun);
-    scene.add(this.hemi);
-    // Apply noon default position (ADR-366 §7.2)
-    this.sun.position.set(-5, 10, 5);
-    return scene;
-  }
-
   private initViewportCamera(container: HTMLElement): ViewportCamera {
     return createViewportCamera(this.renderer.domElement, {
       initialPosition: INITIAL_CAMERA_POSITION.clone(),
@@ -209,7 +190,6 @@ export class ThreeJsSceneManager {
   }
 
   private initViewCube(container: HTMLElement): ViewCubeEngine {
-    const canonicalViewService = createCanonicalViewService(this.viewport, this.animationManager);
     return createViewCube({
       container,
       getCamera: () => this.viewport.camera as THREE.PerspectiveCamera | THREE.OrthographicCamera,
@@ -218,13 +198,80 @@ export class ThreeJsSceneManager {
       onFaceSnap: (mode) => this.viewport.setProjection(mode),
       onDirSnap: (dir) => this.viewport.snapToViewDirection(dir),
       // Phase 4.1: canonical dispatch — routes all face/edge/corner clicks.
-      onSnapToView: (id) => canonicalViewService.snapTo(id),
+      onSnapToView: (id) => this.canonicalViewService.snapTo(id),
       // Home = NE isometric (A.5 decision — industry convergence 4/4).
-      onHome: () => canonicalViewService.snapHome(),
+      onHome: () => this.canonicalViewService.snapHome(),
       onDragRotate: (dx, dy) => this.viewport.applyTumble(dx, dy),
       // Phase 4.3: right-click context menu — delegate to mutable callback (set by BimViewport3D).
       onContextMenuRequest: (x, y) => this.viewCubeContextMenuCb?.(x, y),
     });
+  }
+
+  // Phase 4.4 keyboard-shortcut façade (use3DShortcuts → manager → viewport).
+  snapToCanonicalView(view: CanonicalViewId): void {
+    if (!this.disposed) this.canonicalViewService.snapTo(view);
+  }
+  snapToHomeView(): void {
+    if (!this.disposed) this.canonicalViewService.snapHome();
+  }
+  /** ADR-366 A.6.Q4 selection-aware F — bounds math in `scene-framing-bounds.ts`. */
+  frameSelectionOrFitExtents(): void {
+    if (this.disposed) return;
+    const bounds = computeFramingTargetBounds(
+      this.bimLayer.group,
+      this.dxfConverter.getBounds(),
+      useSelection3DStore.getState().selectedBimId,
+    );
+    if (!bounds || bounds.isEmpty()) return;
+    this.viewport.frameBounds(bounds.min, bounds.max);
+  }
+
+  // ── Phase 4.5 / A.7 — Accessibility public surface ─────────────────────────
+  /** ADR-366 Phase 4.5 / A.7.Q4 — screen-space pan (dxPx > 0 = view right, dyPx > 0 = view up). */
+  panViewportByPixels(dxPx: number, dyPx: number): void {
+    if (!this.disposed) this.viewport.pan(dxPx, dyPx);
+  }
+
+  /** ADR-366 Phase 4.5 / A.7.Q1 — Tab/Shift+Tab cycle through visible entities. */
+  cycleKeyboardFocus(direction: 'next' | 'prev'): void {
+    if (this.disposed) return;
+    this.keyboardFocusManager.setOrder(computeFocusOrder(this.bimLayer.group, this.viewport.camera));
+    if (direction === 'next') this.keyboardFocusManager.next();
+    else this.keyboardFocusManager.prev();
+  }
+
+  /** ADR-366 Phase 4.5 / A.7.Q1 — Enter on focused entity → toggle selection (ADR-030 integration). */
+  selectFocusedEntity(): void {
+    if (this.disposed) return;
+    const focusedId = this.keyboardFocusManager.getFocused();
+    if (!focusedId) return;
+    const currentSelected = useSelection3DStore.getState().selectedBimId;
+    if (currentSelected === focusedId) {
+      this.selectBimEntity(null);
+    } else {
+      this.selectBimEntity(focusedId);
+    }
+  }
+
+  /** ADR-366 Phase 4.5 / A.7.Q1 — Esc clears focus ring (selection untouched). */
+  clearKeyboardFocus(): void {
+    if (!this.disposed) this.keyboardFocusManager.clear();
+  }
+
+  /** Read-only handle for FocusIndicator3D React subscriber. */
+  getKeyboardFocusManager(): KeyboardFocusManagerApi {
+    return this.keyboardFocusManager;
+  }
+
+  /** Resolve label data for the floating focus label (entity type + name + world center). */
+  getFocusedEntityData(bimId: string): FocusEntityLabelData | null {
+    if (this.disposed) return null;
+    return findFocusedEntityData(this.bimLayer.group, bimId);
+  }
+
+  /** Expose live camera for screen-projection (FocusIndicator3D label positioning). */
+  getCamera(): THREE.Camera {
+    return this.viewport.camera;
   }
 
   /** Phase 4.3: wire BimViewport3D's React context menu callback into the ViewCube. */
@@ -238,63 +285,25 @@ export class ThreeJsSceneManager {
   }
 
   private startLoop(): void {
+    const ctx: RenderFrameContext = {
+      viewport: this.viewport,
+      viewCube: this.viewCube,
+      animationManager: this.animationManager,
+      focusOutlineRenderer: this.focusOutlineRenderer,
+      idleDetector: this.idleDetector,
+      ssaoModulator: this.ssaoModulator,
+      pathTracerRenderer: this.pathTracerRenderer,
+      sectionController: this.sectionController,
+      poi: this.poi,
+      isInteracting: () => this.isInteracting,
+    };
     const animate = () => {
       if (this.disposed) return;
       this.rafHandle = requestAnimationFrame(animate);
       const now = performance.now();
       const delta = now - this.lastFrameTime;
       this.lastFrameTime = now;
-
-      this.viewport.update();
-      // Phase 4.2: tick managed animations (ADR-040 single-RAF coordination).
-      this.animationManager.tick(now);
-      useCameraTargetStore.getState().syncFromCamera(this.viewport.camera, this.viewport.target);
-
-      if (this.isInteracting) {
-        this.idleDetector.notifyActive();
-      } else {
-        this.idleDetector.notifyIdle();
-      }
-
-      // POI: update position + fade
-      this.poi.updateTarget(this.viewport.target);
-      this.poi.updateCamera(this.viewport.camera);
-      this.poi.updateFade(delta);
-
-      // ViewCube: sync rotation from main camera every frame
-      this.viewCube.sync(
-        this.viewport.camera as THREE.PerspectiveCamera | THREE.OrthographicCamera,
-        this.viewport.target,
-      );
-
-      // Smart View Snap: suggest projection on camera stop
-      if (!this.isInteracting && !this.viewport.isAnimating) {
-        detectSnapCandidate(this.viewport.camera.position, this.viewport.target);
-        // Snap candidate available for future ribbon indicator (Phase 4)
-      }
-
-      if (this.pathTracerRenderer.isActive) {
-        // Cancel during camera animation — stale BVH state causes WebGL errors.
-        if (this.viewport.isAnimating) {
-          this.pathTracerRenderer.cancel();
-          useViewMode3DStore.getState().enterRasterMode();
-        } else {
-          try {
-            this.pathTracerRenderer.renderSample();
-          } catch {
-            this.pathTracerRenderer.cancel();
-            useViewMode3DStore.getState().enterRasterMode();
-          }
-        }
-      } else if (this.sectionController.isStencilActive()) {
-        // ADR-366 §A.3 Phase 7.0a — Direct render + stencil caps.
-        // Bypass EffectComposer/SSAO (default RT lacks stencil buffer).
-        // SSAO trade-off acceptable: section editing = active interaction,
-        // SSAO only kicks in at idle anyway.
-        this.sectionController.renderFrameWithCaps(this.viewport.camera);
-      } else {
-        this.ssaoModulator.render();
-      }
+      renderSceneFrame(ctx, now, delta);
     };
     this.rafHandle = requestAnimationFrame(animate);
   }
@@ -311,6 +320,8 @@ export class ThreeJsSceneManager {
     if (this.disposed) return;
     const selectedId = useSelection3DStore.getState().selectedBimId;
     this.selectionHighlighter.onClear();
+    // Phase 4.5: stale bimId refs die on rebuild — clear focus before new traversal.
+    this.keyboardFocusManager.clear();
     this.bimLayer.sync(entities, floorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes);
     if (buildingVisModes.size > 0) applyBuildingVisibility(this.bimLayer.group, buildingVisModes);
     if (selectedId) this.selectionHighlighter.onSelect(selectedId);
@@ -372,14 +383,7 @@ export class ThreeJsSceneManager {
   }
 
   updateSunPosition(azimuthDeg: number, elevationDeg: number): void {
-    if (this.disposed) return;
-    const azRad = (azimuthDeg * Math.PI) / 180;
-    const elRad = (elevationDeg * Math.PI) / 180;
-    const x = Math.cos(elRad) * Math.sin(azRad);
-    const y = Math.sin(elRad);
-    const z = Math.cos(elRad) * Math.cos(azRad);
-    this.sun.position.set(x * 15, y * 15, z * 15);
-    this.sun.visible = elevationDeg > -5;
+    if (!this.disposed) updateSunDirection(this.sun, azimuthDeg, elevationDeg);
   }
 
   /** Public bridge για το ADR-366 §A.3 Section controller (BimViewport3D safety effect). */
@@ -406,14 +410,11 @@ export class ThreeJsSceneManager {
 
   applyLightPreset(preset: LightPreset): void {
     if (this.disposed) return;
-    this.sun.color.set(preset.sunColor);
-    this.sun.intensity = preset.sunIntensity;
-    this.ambient.intensity = preset.ambientIntensity;
-    this.hemi.color.set(preset.skyColor);
-    this.hemi.groundColor.set(preset.groundColor);
-    this.hemi.intensity = preset.hemisphereIntensity;
-    this.updateSunPosition(preset.azimuthDeg, preset.elevationDeg);
-    this.envmapGenerator.updateForPreset(preset);
+    applyLightPresetToScene(
+      { sun: this.sun, ambient: this.ambient, hemi: this.hemi },
+      preset,
+      this.envmapGenerator,
+    );
   }
 
   getRendererCanvas(): HTMLCanvasElement {
@@ -427,30 +428,7 @@ export class ThreeJsSceneManager {
     onComplete: (result: { savedDisk: boolean; savedProject: boolean; uploadError: boolean }) => void,
   ): void {
     if (this.disposed) return;
-    // Cancel any in-progress preview path trace first
-    this.pathTracerRenderer.cancel();
-    this.pathTracerRenderer.invalidateScene();
-
-    this.pathTracerRenderer.startFinal(
-      config,
-      onProgress,
-      () => {
-        const canvas = this.renderer.domElement;
-        writeRenderOutput(canvas, {
-          format: config.format,
-          destDisk: config.destDisk,
-          destProject: config.destProject,
-          projectId: renderContext.projectId,
-          companyId: renderContext.companyId,
-          userId: renderContext.userId,
-          presetSPP: config.presetSPP,
-          resolutionW: config.resolutionW,
-          resolutionH: config.resolutionH,
-        }).then(onComplete).catch(() => {
-          onComplete({ savedDisk: false, savedProject: false, uploadError: true });
-        });
-      },
-    );
+    runFinalRender(this.pathTracerRenderer, this.renderer.domElement, config, renderContext, onProgress, onComplete);
   }
 
   cancelFinalRender(): void {
@@ -475,6 +453,9 @@ export class ThreeJsSceneManager {
       this.rafHandle = null;
     }
     this.animationManager.dispose();
+    this.focusUnsub();
+    this.focusOutlineRenderer.dispose();
+    this.keyboardFocusManager.dispose();
     this.idleDetector.dispose();
     this.qualityModulator.dispose();
     this.pathTracerRenderer.dispose();

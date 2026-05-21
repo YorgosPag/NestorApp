@@ -3594,6 +3594,21 @@
       "addedDate": "2026-05-20",
       "addedByAdr": "ADR-370",
       "tier": 3
+    },
+    "keyboard-shortcuts-3d": {
+      "ssotFile": "src/subapps/dxf-viewer/bim-3d/shortcuts/keyboard-shortcuts-3d.ts",
+      "description": "ADR-366 Phase 4.4 / A.6 (2026-05-21): All BIM 3D keyboard shortcut definitions and dispatch must live under `bim-3d/shortcuts/`. Forbidden: ad-hoc `event.code === 'Numpad...'` matching outside the canonical dispatcher (event matching MUST go through `matchView3DShortcut()` / `matchesShortcutDef()`), inline `view3d:<id>` action string literals outside the SSoT (use `view3dAction(view)` constructor), and re-implementations of the auto-switch/selection-aware-F branching outside `shortcut-dispatcher.ts`. New 3D shortcuts add entries to `ALL_VIEW_3D_SHORTCUTS`; new dispatch branches modify `dispatchShortcut()`.",
+      "forbiddenPatterns": [
+        "event\\.code\\s*===\\s*['\"]Numpad[0-9]",
+        "['\"]view3d:[a-z-]+['\"]"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim-3d/shortcuts/",
+        "src/subapps/dxf-viewer/bim-3d/__tests__/"
+      ],
+      "addedDate": "2026-05-21",
+      "addedByAdr": "ADR-366",
+      "tier": 3
     }
   }
 }

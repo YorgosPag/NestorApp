@@ -235,6 +235,39 @@ export function createViewportCamera(
     onRenderNeeded();
   }
 
+  /**
+   * ADR-366 Phase 4.5 / A.7.Q4 — Screen-space keyboard pan.
+   *
+   * `dxScreenPx` > 0 pans the view RIGHT, `dyScreenPx` > 0 pans UP (intuitive
+   * arrow-key mapping). Mode-aware: perspective uses target-distance frustum
+   * height, ortho uses zoomed visible height. Instant for now — animated 150ms
+   * ease + repeat-key continuous flow is a deferred polish item.
+   */
+  function pan(dxScreenPx: number, dyScreenPx: number): void {
+    if (animation.isAnimating) animation.cancel();
+    const right = new THREE.Vector3();
+    const up = new THREE.Vector3();
+    activeCamera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
+
+    let pxToWorld: number;
+    const canvasHeight = Math.max(domElement.clientHeight, 1);
+    if (activeCamera instanceof THREE.OrthographicCamera) {
+      const visibleHeight = (activeCamera.top - activeCamera.bottom) / activeCamera.zoom;
+      pxToWorld = visibleHeight / canvasHeight;
+    } else {
+      const dist = activeCamera.position.distanceTo(controls.target);
+      const vFovRad = (activeCamera.fov * Math.PI) / 180;
+      pxToWorld = (2 * Math.tan(vFovRad / 2) * dist) / canvasHeight;
+    }
+
+    const offset = new THREE.Vector3()
+      .addScaledVector(right, dxScreenPx * pxToWorld)
+      .addScaledVector(up, dyScreenPx * pxToWorld);
+    activeCamera.position.add(offset);
+    controls.target.add(offset);
+    onRenderNeeded();
+  }
+
   function goHome(): void {
     animation.cancel();
     const target = controls.target.clone();
@@ -306,5 +339,6 @@ export function createViewportCamera(
     frameBounds, cancelAnimation, setSpeedModifier,
     snapToViewDirection, goHome,
     applyTumble: (dx: number, dy: number) => tumble.applyExternalRotation(dx, dy),
+    pan,
   };
 }

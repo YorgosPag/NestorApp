@@ -22,6 +22,22 @@ import type { Point2D, ViewTransform, Viewport } from '../types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { CoordinateTransforms } from '../core/CoordinateTransforms';
 
+function drawPolygon(
+  ctx: CanvasRenderingContext2D,
+  verts: ReadonlyArray<{ x: number; y: number }>,
+  toScreen: (p: { x: number; y: number }) => { x: number; y: number },
+): void {
+  ctx.beginPath();
+  const first = toScreen(verts[0]);
+  ctx.moveTo(first.x, first.y);
+  for (let i = 1; i < verts.length; i++) {
+    const p = toScreen(verts[i]);
+    ctx.lineTo(p.x, p.y);
+  }
+  ctx.closePath();
+  ctx.stroke();
+}
+
 export function drawGhostEntity(
   ctx: CanvasRenderingContext2D,
   entity: DxfEntityUnion,
@@ -183,6 +199,50 @@ export function drawGhostEntity(
       }
       ctx.closePath();
       ctx.stroke();
+      return;
+    }
+
+    // ADR-363 Phase 5.5 — beam ghost: plan-view outline (closed polygon).
+    case 'beam': {
+      const beam = entity as unknown as {
+        geometry?: { outline?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+      };
+      const verts = beam.geometry?.outline?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
+    // ADR-363 Phase 3.5 — slab ghost: outline polygon from slabEntity.params.
+    case 'slab': {
+      const slab = entity as unknown as {
+        slabEntity?: { params?: { outline?: { vertices: ReadonlyArray<{ x: number; y: number }> } } };
+      };
+      const verts = slab.slabEntity?.params?.outline?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
+    // ADR-363 Phase 3.7a — slab-opening ghost: outline polygon from slabOpeningEntity.params.
+    case 'slab-opening': {
+      const so = entity as unknown as {
+        slabOpeningEntity?: { params?: { outline?: { vertices: ReadonlyArray<{ x: number; y: number }> } } };
+      };
+      const verts = so.slabOpeningEntity?.params?.outline?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
+    // ADR-363 Phase 2.5 — opening ghost: cutout rectangle outline from openingEntity.geometry.
+    case 'opening': {
+      const opening = entity as unknown as {
+        openingEntity?: { geometry?: { outline?: { vertices: ReadonlyArray<{ x: number; y: number }> } } };
+      };
+      const verts = opening.openingEntity?.geometry?.outline?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
       return;
     }
 

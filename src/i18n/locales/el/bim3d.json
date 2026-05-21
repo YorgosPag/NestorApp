@@ -333,5 +333,51 @@
       "showCompass": "Εμφάνιση πυξίδας",
       "aria": "Μενού επιλογών ViewCube"
     }
+  },
+  "shortcuts": {
+    "view3d": {
+      "top": "Επάνω",
+      "bottom": "Κάτω",
+      "front": "Μπροστά",
+      "back": "Πίσω",
+      "left": "Αριστερά",
+      "right": "Δεξιά",
+      "isoNe": "Ισομ. ΒΑ",
+      "isoNw": "Ισομ. ΒΔ",
+      "isoSe": "Ισομ. ΝΑ",
+      "isoSw": "Ισομ. ΝΔ",
+      "isoUe": "Άνω δεξιά",
+      "isoUw": "Άνω αριστερά",
+      "home": "Αρχική προβολή",
+      "fitFrame": "Προσαρμογή / Εστίαση επιλογής",
+      "panLeft": "Μετατόπιση αριστερά",
+      "panRight": "Μετατόπιση δεξιά",
+      "panUp": "Μετατόπιση πάνω",
+      "panDown": "Μετατόπιση κάτω",
+      "panLeftFine": "Λεπτή μετατόπιση αριστερά",
+      "panRightFine": "Λεπτή μετατόπιση δεξιά",
+      "panUpFine": "Λεπτή μετατόπιση πάνω",
+      "panDownFine": "Λεπτή μετατόπιση κάτω",
+      "focusNext": "Επόμενο αντικείμενο",
+      "focusPrev": "Προηγούμενο αντικείμενο",
+      "focusSelect": "Επιλογή εστιασμένου",
+      "focusClear": "Καθαρισμός εστίασης"
+    },
+    "modeSwitch": {
+      "toast": "Αλλαγή σε 2D για συντόμευση {shortcut}"
+    }
+  },
+  "accessibility": {
+    "status": {
+      "focused": "Εστιασμένο: {type} {name}",
+      "focusedTypeOnly": "Εστιασμένο: {type}",
+      "focusedNameOnly": "Εστιασμένο: {name}",
+      "focusedUnknown": "Εστιασμένο αντικείμενο",
+      "focusCleared": "Καμία εστίαση",
+      "selectionAdded": "+{count} προστέθηκε",
+      "selectionRemoved": "−{count} αφαιρέθηκε",
+      "selectionNone": "Καμία επιλογή",
+      "selectionCount": "{count} επιλεγμένα"
+    }
   }
 }

@@ -333,5 +333,51 @@
       "showCompass": "Show compass",
       "aria": "ViewCube options menu"
     }
+  },
+  "shortcuts": {
+    "view3d": {
+      "top": "Top",
+      "bottom": "Bottom",
+      "front": "Front",
+      "back": "Back",
+      "left": "Left",
+      "right": "Right",
+      "isoNe": "Iso NE",
+      "isoNw": "Iso NW",
+      "isoSe": "Iso SE",
+      "isoSw": "Iso SW",
+      "isoUe": "Upper-right edge",
+      "isoUw": "Upper-left edge",
+      "home": "Home view",
+      "fitFrame": "Frame selection / Fit",
+      "panLeft": "Pan left",
+      "panRight": "Pan right",
+      "panUp": "Pan up",
+      "panDown": "Pan down",
+      "panLeftFine": "Pan left (fine)",
+      "panRightFine": "Pan right (fine)",
+      "panUpFine": "Pan up (fine)",
+      "panDownFine": "Pan down (fine)",
+      "focusNext": "Next entity",
+      "focusPrev": "Previous entity",
+      "focusSelect": "Select focused",
+      "focusClear": "Clear focus"
+    },
+    "modeSwitch": {
+      "toast": "Switched to 2D for shortcut {shortcut}"
+    }
+  },
+  "accessibility": {
+    "status": {
+      "focused": "Focused: {type} {name}",
+      "focusedTypeOnly": "Focused: {type}",
+      "focusedNameOnly": "Focused: {name}",
+      "focusedUnknown": "Focused entity",
+      "focusCleared": "No focus",
+      "selectionAdded": "+{count} added",
+      "selectionRemoved": "−{count} removed",
+      "selectionNone": "No selection",
+      "selectionCount": "{count} selected"
+    }
   }
 }

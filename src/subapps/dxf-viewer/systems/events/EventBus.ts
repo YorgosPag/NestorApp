@@ -219,6 +219,14 @@ export interface DrawingEventMap {
   'bim:set-wall-category': { category: WallCategory };
   /** ADR-369 Q8.2 — ribbon IFC button → open PsetEditorHost dialog. */
   'bim:pset-editor-open': { entityId: string; levelId: string; entityType: string };
+  /** ADR-369 Q8.3 — ribbon IFC Export button → IfcExportHost downloads .ifc file. */
+  'bim:ifc-export-requested': {
+    /** Scope filter — if omitted, exports every building in project. */
+    projectId?: string;
+    buildingIds?: readonly string[];
+    /** When true, include per-entity Property Sets in the IFC output. */
+    includePsets?: boolean;
+  };
 
   // Crop-window: marquee drawn by user → clip scene to that world-space rectangle
   'crop:marquee-rect': { xMin: number; yMin: number; xMax: number; yMax: number };
