@@ -62,6 +62,8 @@ export interface ViewCubeEngine {
   sync(cam: THREE.PerspectiveCamera | THREE.OrthographicCamera, target: THREE.Vector3): void;
   /** Phase 4.3: programmatically toggle compass ring visibility. */
   setCompassVisible(visible: boolean): void;
+  /** ADR-366 Polish Item #6: hide/show canvas on narrow viewports (<600px). */
+  setVisible(visible: boolean): void;
   dispose(): void;
 }
 
@@ -329,6 +331,10 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
     miniRenderer.render(scene, miniCam);
   }
 
+  function setVisible(visible: boolean): void {
+    canvas.style.display = visible ? '' : 'none';
+  }
+
   function dispose(): void {
     canvas.removeEventListener('pointerdown', onPointerDown);
     canvas.removeEventListener('pointermove', onPointerMove);
@@ -349,5 +355,5 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
     if (canvas.parentElement) canvas.parentElement.removeChild(canvas);
   }
 
-  return { sync, setCompassVisible, dispose };
+  return { sync, setCompassVisible, setVisible, dispose };
 }

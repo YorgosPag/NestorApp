@@ -16,8 +16,9 @@
 // ============================================================================
 
 import * as THREE from 'three';
+import { BIM_FOCUS_OUTLINE_COLOR_THREE } from '../../accessibility/bim-a11y-color-tokens';
 
-const FOCUS_OUTLINE_COLOR = 0x00ffff;
+const FOCUS_OUTLINE_COLOR = BIM_FOCUS_OUTLINE_COLOR_THREE;
 const FOCUS_OUTLINE_DASH_SIZE = 0.08;
 const FOCUS_OUTLINE_GAP_SIZE = 0.04;
 const FOCUS_OUTLINE_RENDER_ORDER = 999;

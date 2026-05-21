@@ -13,8 +13,9 @@
 
 import type { ViewTransform, Viewport } from '../rendering/types/Types';
 import { CoordinateTransforms } from '../rendering/core/CoordinateTransforms';
+import { BIM_FOCUS_OUTLINE_COLOR_CSS } from './bim-a11y-color-tokens';
 
-const FOCUS_OUTLINE_COLOR = '#00ffff';
+const FOCUS_OUTLINE_COLOR = BIM_FOCUS_OUTLINE_COLOR_CSS;
 const FOCUS_OUTLINE_LINE_WIDTH = 1.5;
 const FOCUS_OUTLINE_DASH: readonly [number, number] = [6, 4];
 const FOCUS_OUTLINE_PADDING_PX = 4;

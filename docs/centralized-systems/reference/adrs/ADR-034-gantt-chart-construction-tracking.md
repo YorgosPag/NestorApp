@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | IMPLEMENTED - Phase 1+2+3 Complete, Phase 4 Partial (4.4 Export + 4.9 Context Menu) |
+| **Status** | IMPLEMENTED - Phase 1+2+3 Complete, Phase 4 Partial (4.1+4.2+4.3+4.4+4.7+4.9 DONE — 4.5/4.6/4.8 PLANNED) |
 | **Date** | 2026-02-07 |
 | **Category** | UI Components / Construction Management |
 | **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
@@ -586,15 +586,30 @@ tabs.timeline.gantt.export.error       → "Σφάλμα εξαγωγής" / "Ex
 
 | Βήμα | Περιγραφή | Status |
 |------|-----------|--------|
-| 4.1 | Critical path calculation & highlighting | PLANNED |
-| 4.2 | Actual vs Planned overlay (dual bars) | PLANNED |
-| 4.3 | Resource allocation (assignedTo, assignedRole) | PLANNED |
+| 4.1 | Critical path calculation & highlighting | **DONE** (2026-03-28 — ADR-266 Phase C.2) |
+| 4.2 | Actual vs Planned overlay (dual bars) | **DONE** (2026-03-28 — ADR-266 Phase A: ScheduleVarianceTable) |
+| 4.3 | Resource allocation (assignedTo, assignedRole) | **DONE** (2026-03-29 — ADR-266 Phase C.4: ResourceHistogramChart) |
 | 4.4 | **Export: PDF, PNG, SVG, Excel** | **DONE** (2026-02-07) |
-| 4.5 | Alert Engine integration (deadline notifications) | PLANNED |
-| 4.6 | AI integration (UC-017: auto-suggest delays, forecasting) | PLANNED |
-| 4.7 | Baseline snapshots (save planned dates for comparison) | PLANNED |
-| 4.8 | Dependency arrows visualization | PLANNED |
+| 4.5 | Alert Engine integration (deadline notifications) | PLANNED → ADR-266 Phase D (spec ready, no code yet) |
+| 4.6 | AI integration (UC-017: auto-suggest delays, forecasting) | PLANNED → ADR-034 §12 (no implementation) |
+| 4.7 | Baseline snapshots (save planned dates for comparison) | **DONE** (2026-03-28 — ADR-266 Phase C.3: BaselineSection + `construction_baselines`) |
+| 4.8 | Dependency arrows visualization | PLANNED → no code found, `dependencies[]` field exists |
 | 4.9 | **Context menu (right-click actions)** | **DONE** (2026-02-07) |
+
+#### ⚠️ ADR-266 Cross-Reference (2026-05-21)
+
+Phases 4.1, 4.2, 4.3, 4.7 υλοποιήθηκαν μέσω **ADR-266 (Gantt & Construction Schedule Reports)**, όχι απευθείας εδώ.
+
+| ADR-034 Phase | ADR-266 Phase | Key Files |
+|---|---|---|
+| 4.1 Critical Path | ADR-266 Phase C.2 | `src/hooks/useCriticalPath.ts`, `src/services/construction-scheduling/cpm-calculator.ts`, `src/components/.../dashboard/CriticalPathSection.tsx` |
+| 4.2 Actual vs Planned | ADR-266 Phase A | `src/components/.../dashboard/ScheduleVarianceTable.tsx`, `useBaselineComparison.ts` |
+| 4.3 Resource Allocation | ADR-266 Phase C.4 | `src/services/construction-scheduling/resource-assignment.service.ts`, `ResourceHistogramChart.tsx`, `useResourceHistogram.ts` |
+| 4.7 Baseline Snapshots | ADR-266 Phase C.3 | `src/components/.../dashboard/BaselineSection.tsx`, Firestore: `construction_baselines` |
+
+**ADR-266 επίσης προσθέτει** Dashboard view (3rd toggle button) με S-Curve, KPIs, Lookahead Table, DelayBreakdown, Resource Histogram, Owner Report PDF export.
+
+---
 
 #### 4.4 Export Feature — Implementation Details (2026-02-07)
 
@@ -652,6 +667,16 @@ Right-click σε task/phase bars εμφανίζει context menu με:
 - Διαγραφή (with confirmation)
 
 Custom color picker με ColorPicker component (inline, no external dependency).
+
+### Changelog
+
+| Ημερομηνία | Αλλαγή |
+|------------|--------|
+| 2026-02-07 | Initial implementation: Phase 1+2+3 + Phase 4.4 (Export) + Phase 4.9 (Context Menu) |
+| 2026-03-28 | ADR-266 Phase A+B+C.1-5 implemented: 4.1/4.2/4.3/4.7 now DONE (via ADR-266). Status updated. |
+| 2026-05-21 | ADR-034 reconciliation: synced Phase 4 table with actual code reality. Cross-ref to ADR-266 added. |
+
+---
 
 ### Implementation Summary
 

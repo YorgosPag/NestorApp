@@ -66,3 +66,9 @@ export const DEFAULT_ROTATE_SPEED = 1.0;
 export const DEFAULT_ZOOM_SPEED = 1.0;
 export const SPEED_MODIFIER_FAST = 2.0;
 export const SPEED_MODIFIER_PRECISE = 0.5;
+
+/** ViewCube is hidden when viewport width drops below this threshold (mobile/dense). */
+export const VIEWCUBE_HIDE_WIDTH_PX = 600;
+
+/** Duration for keyboard pan easing animation (matches --cp-duration-fast CSS token). */
+export const PAN_ANIMATION_DURATION_MS = 150;

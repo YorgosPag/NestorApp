@@ -15,7 +15,7 @@ import {
   CAMERA_NEAR, CAMERA_FAR, ZOOM_PRESETS,
   ORTHO_CAMERA_DIRECTIONS, ORTHO_CAMERA_UP,
   PERSP_MIN_DISTANCE, PERSP_MAX_DISTANCE, ORTHO_MIN_ZOOM, ORTHO_MAX_ZOOM,
-  PROJECTION_SWITCH_DURATION_MS, FRAME_SCENE_DURATION_MS,
+  PROJECTION_SWITCH_DURATION_MS, FRAME_SCENE_DURATION_MS, PAN_ANIMATION_DURATION_MS,
   DEFAULT_PAN_SPEED, DEFAULT_ROTATE_SPEED, DEFAULT_ZOOM_SPEED,
   SPEED_MODIFIER_FAST, SPEED_MODIFIER_PRECISE,
   TUMBLE_BASE_SPEED,
@@ -240,11 +240,15 @@ export function createViewportCamera(
    *
    * `dxScreenPx` > 0 pans the view RIGHT, `dyScreenPx` > 0 pans UP (intuitive
    * arrow-key mapping). Mode-aware: perspective uses target-distance frustum
-   * height, ortho uses zoomed visible height. Instant for now — animated 150ms
-   * ease + repeat-key continuous flow is a deferred polish item.
+   * height, ortho uses zoomed visible height.
+   *
+   * Animated 150ms ease-in-out + repeat-key continuous flow:
+   * Each call (including key-repeat events) reads the CURRENT camera position
+   * (which is already mid-animation when repeating), cancels the old animation,
+   * and starts a new 150ms transition to the next target. This creates smooth
+   * continuous flow while the key is held down.
    */
   function pan(dxScreenPx: number, dyScreenPx: number): void {
-    if (animation.isAnimating) animation.cancel();
     const right = new THREE.Vector3();
     const up = new THREE.Vector3();
     activeCamera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
@@ -263,9 +267,25 @@ export function createViewportCamera(
     const offset = new THREE.Vector3()
       .addScaledVector(right, dxScreenPx * pxToWorld)
       .addScaledVector(up, dyScreenPx * pxToWorld);
-    activeCamera.position.add(offset);
-    controls.target.add(offset);
-    onRenderNeeded();
+
+    const fromPos = activeCamera.position.clone();
+    const fromTgt = controls.target.clone();
+    const toPos = fromPos.clone().add(offset);
+    const toTgt = fromTgt.clone().add(offset);
+    const currentZoom = getZoom();
+
+    animation.start(
+      { position: fromPos, target: fromTgt, zoom: currentZoom },
+      { position: toPos, target: toTgt, zoom: currentZoom },
+      PAN_ANIMATION_DURATION_MS,
+      (pos, tgt) => {
+        activeCamera.position.copy(pos);
+        controls.target.copy(tgt);
+        activeCamera.lookAt(tgt);
+        onRenderNeeded();
+      },
+      () => { /* no-op: controls stay enabled during pan */ },
+    );
   }
 
   function goHome(): void {

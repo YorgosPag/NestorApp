@@ -39,6 +39,7 @@ import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
+import { VIEWCUBE_HIDE_WIDTH_PX } from '../viewport/viewport-constants';
 import type { FinalRenderConfig } from '../stores/ViewMode3DStore';
 import { startFinalRender as runFinalRender } from './start-final-render';
 import { createCanonicalViewService } from '../viewport/CanonicalViewService';
@@ -440,6 +441,7 @@ export class ThreeJsSceneManager {
     this.viewport.updateAspect(width, height);
     this.renderer.setSize(width, height);
     this.ssaoModulator.resize(width, height);
+    this.viewCube.setVisible(width >= VIEWCUBE_HIDE_WIDTH_PX);
   }
 
   dispose(): void {
