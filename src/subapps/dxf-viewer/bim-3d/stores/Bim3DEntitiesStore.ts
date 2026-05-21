@@ -20,6 +20,15 @@ import type { BuildingVisMode, BuildingPreset } from '../utils/building-visibili
 
 export type { BuildingVisMode, BuildingPreset };
 
+/**
+ * Which z-reference the Floors tab uses to display elevations (ADR-369 §9.2 Q3).
+ * 'floor'    → floor.elevation relative to building datum (default)
+ * 'building' → building.baseElevation + floor.elevation (project base)
+ * 'site'     → sum including project.basePoint (site origin)
+ * 'sea'      → geodetic / Mean Sea Level (survey point chain)
+ */
+export type ElevationReference = 'floor' | 'building' | 'site' | 'sea';
+
 export interface Bim3DEntities {
   readonly walls: readonly WallEntity[];
   readonly columns: readonly ColumnEntity[];
@@ -38,6 +47,8 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   activeBuildingId: string | null;
   /** Per-building visibility modes (ADR-369 Q2.3): empty map = all 'show' (default). */
   buildingVisibilityModes: ReadonlyMap<string, BuildingVisMode>;
+  /** Elevation reference system for Floors tab display (ADR-369 §9.2 Q3). */
+  elevationReference: ElevationReference;
   setWalls: (walls: readonly WallEntity[]) => void;
   setColumns: (columns: readonly ColumnEntity[]) => void;
   setBeams: (beams: readonly BeamEntity[]) => void;
@@ -48,6 +59,7 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   setActiveBuildingId: (id: string | null) => void;
   setBuildingMode: (buildingId: string, mode: BuildingVisMode) => void;
   applyBuildingsPreset: (preset: BuildingPreset, focusBuildingId?: string) => void;
+  setElevationReference: (ref: ElevationReference) => void;
 }
 
 export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
@@ -61,6 +73,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     floors: [],
     activeBuildingId: null,
     buildingVisibilityModes: new Map<string, BuildingVisMode>(),
+    elevationReference: 'floor',
     setWalls: (walls) => set({ walls }),
     setColumns: (columns) => set({ columns }),
     setBeams: (beams) => set({ beams }),
@@ -82,6 +95,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
           buildingVisibilityModes: applyBuildingsPreset(s.buildings, preset, effectiveActive),
         };
       }),
+    setElevationReference: (elevationReference) => set({ elevationReference }),
   })),
 );
 

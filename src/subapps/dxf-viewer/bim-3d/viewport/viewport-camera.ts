@@ -280,7 +280,12 @@ export function createViewportCamera(
     updateOrthoFrustum(width, height);
   }
 
-  function update(): void { controls.update(); tumble.update(); }
+  function update(): void {
+    controls.update();
+    tumble.update();
+    // Phase 4.2: tick animation from main RAF (no separate requestAnimationFrame).
+    animation.tick(performance.now());
+  }
 
   function dispose(): void {
     controls.removeEventListener('change', onRenderNeeded);

@@ -33,6 +33,7 @@ import {
   WALL_RIBBON_KEYS_ACTIONS,
   WALL_RIBBON_BADGE_KEYS,
 } from './bridge/wall-command-keys';
+import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
 import type {
   RibbonComboboxState,
@@ -197,6 +198,16 @@ export function useRibbonWallBridge(
 
   const onAction = useCallback(
     (action: string): void => {
+      if (action === PSET_RIBBON_ACTION) {
+        const wall = resolveWall();
+        if (!wall || !levelManager.currentLevelId) return;
+        EventBus.emit('bim:pset-editor-open', {
+          entityId: wall.id,
+          levelId: levelManager.currentLevelId,
+          entityType: 'wall',
+        });
+        return;
+      }
       if (action !== WALL_RIBBON_KEYS_ACTIONS.delete) return;
       const wall = resolveWall();
       if (!wall) return;
@@ -206,7 +217,7 @@ export function useRibbonWallBridge(
       if (!confirmed) return;
       EventBus.emit('bim:wall-delete-requested', { wallId: wall.id });
     },
-    [resolveWall, t],
+    [resolveWall, levelManager, t],
   );
 
   // Memoize return so RibbonCommandProvider deps stay stable (ADR-040 Phase XIX).

@@ -24,6 +24,7 @@ import {
   WALL_RIBBON_KEYS_ACTIONS,
   WALL_RIBBON_BADGE_KEYS,
 } from '../hooks/bridge/wall-command-keys';
+import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
 
 export const WALL_CONTEXTUAL_TRIGGER = 'wall-selected';
 
@@ -165,6 +166,28 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
                 commandKey: WALL_RIBBON_KEYS.stringParams.material,
                 comboboxWidthPx: 200,
                 options: WALL_MATERIAL_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'wall-ifc',
+      labelKey: 'ribbon.panels.ifcProperties',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'wall.pset.open',
+                labelKey: 'ribbon.commands.psetEditor.open',
+                icon: 'ifc-pset',
+                commandKey: 'wall.pset.open',
+                action: PSET_RIBBON_ACTION,
               },
             },
           ],

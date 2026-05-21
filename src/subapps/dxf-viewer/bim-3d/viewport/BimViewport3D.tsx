@@ -24,6 +24,8 @@ import { Section2DPanel } from '../panels/Section2DPanel';
 import { RenderFinalDialog } from '../render/RenderFinalDialog';
 import { RenderProgressOverlay } from '../render/RenderProgressOverlay';
 import type { FinalRenderConfig } from '../stores/ViewMode3DStore';
+import { ViewCubeContextMenu } from './view-cube/view-cube-context-menu';
+import { Bim3DPreferencesService } from '../services/Bim3DPreferencesService';
 
 const HOVER_DEBOUNCE_MS = 800;
 
@@ -63,6 +65,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
   const [renderDialogOpen, setRenderDialogOpen] = useState(false);
+  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [compassVisible, setCompassVisible] = useState(true);
   const { user } = useAuth();
   const hierarchy = useProjectHierarchyOptional();
   const projectId = projectIdProp ?? hierarchy?.selectedProject?.id ?? null;
@@ -79,6 +83,21 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   );
   // ADR-371: `visible` prop overrides global store (read-only Properties pipeline).
   const effectiveVisible = visible !== undefined ? visible : is3DFromStore;
+
+  // Phase 4.3: load persisted ViewCube preferences on user mount
+  useEffect(() => {
+    if (!user?.uid) return;
+    Bim3DPreferencesService.load(user.uid).then((prefs) => {
+      if (prefs) setCompassVisible(prefs.compassRingVisible);
+    }).catch(() => { /* silently ignore — defaults apply */ });
+  }, [user?.uid]);
+
+  // Phase 4.3: wire context menu callback + initial compass state into manager on 3D activation.
+  // Also re-applies when compassVisible changes so prefs loaded async before 3D opens take effect.
+  useEffect(() => {
+    managerRef.current?.setViewCubeContextMenuCallback((x, y) => setContextMenuPos({ x, y }));
+    managerRef.current?.setViewCubeCompassVisible(compassVisible);
+  }, [effectiveVisible, compassVisible]);
 
   const isRendering = useSyncExternalStore(
     useViewMode3DStore.subscribe,
@@ -258,6 +277,19 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     // We use performance.now() inside calibrateGpu with a lightweight JS loop.
   }, []);
 
+  // Phase 4.3: compass ring toggle — optimistic update + Firestore persistence
+  const handleToggleCompass = useCallback(() => {
+    const next = !compassVisible;
+    setCompassVisible(next);
+    setContextMenuPos(null);
+    if (user?.uid) {
+      Bim3DPreferencesService.save(user.uid, { compassRingVisible: next }).catch(() => {
+        // On save failure revert optimistic update
+        setCompassVisible(!next);
+      });
+    }
+  }, [compassVisible, user?.uid]);
+
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     const { clientX, clientY } = e;
@@ -347,6 +379,14 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
 
       {/* ADR-366 §A.3 Q3 Phase 7.0B — 2D Live Section Panel (bottom strip, toggle from Section tab) */}
       <Section2DPanel />
+
+      {/* Phase 4.3: ViewCube right-click context menu (compass toggle) */}
+      <ViewCubeContextMenu
+        anchor={contextMenuPos}
+        compassVisible={compassVisible}
+        onToggleCompass={handleToggleCompass}
+        onClose={() => setContextMenuPos(null)}
+      />
 
       {/* Floating Render button — bottom-right, above Performance HUD (ADR-366 §B.4 Phase 6).
           ADR-371: hidden in readOnly mode (Properties pipeline). */}

@@ -31,6 +31,7 @@ import {
   isOpeningRibbonKey,
   isOpeningRibbonStringKey,
 } from './bridge/opening-command-keys';
+import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
 import type {
   RibbonComboboxState,
@@ -186,6 +187,16 @@ export function useRibbonOpeningBridge(
 
   const onAction = useCallback(
     (action: string): void => {
+      if (action === PSET_RIBBON_ACTION) {
+        const opening = resolveOpening();
+        if (!opening || !levelManager.currentLevelId) return;
+        EventBus.emit('bim:pset-editor-open', {
+          entityId: opening.id,
+          levelId: levelManager.currentLevelId,
+          entityType: 'opening',
+        });
+        return;
+      }
       if (action !== OPENING_RIBBON_KEYS_ACTIONS.delete) return;
       const opening = resolveOpening();
       if (!opening) return;
@@ -195,7 +206,7 @@ export function useRibbonOpeningBridge(
       if (!confirmed) return;
       EventBus.emit('bim:opening-delete-requested', { openingId: opening.id });
     },
-    [resolveOpening, t],
+    [resolveOpening, levelManager, t],
   );
 
   return useMemo(

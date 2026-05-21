@@ -1,9 +1,15 @@
 /**
  * Cubic ease-in-out camera animation engine.
  * PORT_AS_IS from GenArc viewportAnimation.ts (ADR-366 §8.2 SPEC-3D-004A).
+ *
+ * Phase 4.2 adaptation:
+ *   - No internal requestAnimationFrame — caller drives via tick(nowMs).
+ *   - Easing extracted to easing-functions.ts (DRY).
+ *   - startTime set on first tick (not in start()).
  */
 
 import * as THREE from 'three';
+import { easeInOutCubic } from './easing-functions';
 import type { CameraKeyframe, AnimationTickCallback } from './viewport-types';
 
 export interface ViewportAnimation {
@@ -15,22 +21,17 @@ export interface ViewportAnimation {
     onComplete: () => void,
   ) => void;
   readonly cancel: () => void;
+  /** Advance animation to nowMs. Call each frame from the main RAF loop. */
+  readonly tick: (nowMs: number) => void;
   readonly isAnimating: boolean;
   readonly dispose: () => void;
-}
-
-function easeInOutCubic(t: number): number {
-  return t < 0.5
-    ? 4 * t * t * t
-    : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
 export function createViewportAnimation(): ViewportAnimation {
   const _pos = new THREE.Vector3();
   const _tgt = new THREE.Vector3();
 
-  let rafId = 0;
-  let startTime = 0;
+  let startTime = -1;
   let duration = 0;
   let fromKf: CameraKeyframe | null = null;
   let toKf: CameraKeyframe | null = null;
@@ -38,22 +39,23 @@ export function createViewportAnimation(): ViewportAnimation {
   let completeCb: (() => void) | null = null;
   let running = false;
 
-  function tick(): void {
+  function tick(nowMs: number): void {
     if (!running || !fromKf || !toKf || !tickCb) return;
-    const elapsed = performance.now() - startTime;
+    // startTime=-1 sentinel → set on first tick.
+    if (startTime < 0) startTime = nowMs;
+    const elapsed = nowMs - startTime;
     const rawProgress = Math.min(elapsed / duration, 1);
     const progress = easeInOutCubic(rawProgress);
     _pos.lerpVectors(fromKf.position, toKf.position, progress);
     _tgt.lerpVectors(fromKf.target, toKf.target, progress);
     const zoom = fromKf.zoom + (toKf.zoom - fromKf.zoom) * progress;
     tickCb(_pos, _tgt, zoom, progress);
-    if (rawProgress >= 1) { finish(); return; }
-    rafId = requestAnimationFrame(tick);
+    if (rawProgress >= 1) { finish(); }
   }
 
   function finish(): void {
     running = false;
-    rafId = 0;
+    startTime = -1;
     const cb = completeCb;
     fromKf = null; toKf = null; tickCb = null; completeCb = null;
     cb?.();
@@ -61,8 +63,8 @@ export function createViewportAnimation(): ViewportAnimation {
 
   function cancel(): void {
     if (!running) return;
-    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
     running = false;
+    startTime = -1;
     fromKf = null; toKf = null; tickCb = null; completeCb = null;
   }
 
@@ -78,12 +80,11 @@ export function createViewportAnimation(): ViewportAnimation {
     duration = Math.max(durationMs, 1);
     tickCb = onTick; completeCb = onComplete;
     running = true;
-    startTime = performance.now();
-    rafId = requestAnimationFrame(tick);
+    startTime = -1; // sentinel: set to nowMs on first tick
   }
 
   return {
-    start, cancel,
+    start, cancel, tick,
     get isAnimating() { return running; },
     dispose: cancel,
   };

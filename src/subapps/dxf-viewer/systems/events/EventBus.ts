@@ -217,6 +217,8 @@ export interface DrawingEventMap {
   'bim:set-opening-kind': { kind: OpeningKind };
   'bim:set-wall-kind': { kind: WallKind };
   'bim:set-wall-category': { category: WallCategory };
+  /** ADR-369 Q8.2 — ribbon IFC button → open PsetEditorHost dialog. */
+  'bim:pset-editor-open': { entityId: string; levelId: string; entityType: string };
 
   // Crop-window: marquee drawn by user → clip scene to that world-space rectangle
   'crop:marquee-rect': { xMin: number; yMin: number; xMax: number; yMax: number };

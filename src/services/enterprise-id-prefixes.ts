@@ -253,6 +253,9 @@ export const ENTERPRISE_ID_PREFIXES = {
   // DXF 3D BIM Viewer — Render Outputs (ADR-366 §B.4 / Phase 6)
   BIM_RENDER: 'bimrnd',        // bim_renders collection — final photoreal render exports (PNG/JPG/EXR)
 
+  // DXF 3D BIM Viewer — User Preferences (ADR-366 Phase 4.3)
+  BIM_3D_PREF: 'b3dpref',      // bim_3d_preferences collection — per-user 3D viewport UI preferences
+
   // Optimistic & Temporary
   OPTIMISTIC: 'opt',
   TEMP: 'tmp',

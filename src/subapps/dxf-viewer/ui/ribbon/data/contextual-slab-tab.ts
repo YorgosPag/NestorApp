@@ -22,6 +22,7 @@ import {
   SLAB_RIBBON_KEYS_ACTIONS,
   SLAB_RIBBON_BADGE_KEYS,
 } from '../hooks/bridge/slab-command-keys';
+import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
 
 export const SLAB_CONTEXTUAL_TRIGGER = 'slab-selected';
 
@@ -162,6 +163,28 @@ export const CONTEXTUAL_SLAB_TAB: RibbonTab = {
                 commandKey: SLAB_RIBBON_KEYS.stringParams.material,
                 comboboxWidthPx: 180,
                 options: SLAB_MATERIAL_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'slab-ifc',
+      labelKey: 'ribbon.panels.ifcProperties',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'slab.pset.open',
+                labelKey: 'ribbon.commands.psetEditor.open',
+                icon: 'ifc-pset',
+                commandKey: 'slab.pset.open',
+                action: PSET_RIBBON_ACTION,
               },
             },
           ],

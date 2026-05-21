@@ -38,6 +38,7 @@ import {
   isBeamRibbonKey,
   isBeamRibbonStringKey,
 } from './bridge/beam-command-keys';
+import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
 import type {
   RibbonComboboxState,
@@ -219,6 +220,16 @@ export function useRibbonBeamBridge(
 
   const onAction = useCallback(
     (action: string): void => {
+      if (action === PSET_RIBBON_ACTION) {
+        const beam = resolveBeam();
+        if (!beam || !levelManager.currentLevelId) return;
+        EventBus.emit('bim:pset-editor-open', {
+          entityId: beam.id,
+          levelId: levelManager.currentLevelId,
+          entityType: 'beam',
+        });
+        return;
+      }
       if (action !== BEAM_RIBBON_KEYS_ACTIONS.delete) return;
       const beam = resolveBeam();
       if (!beam) return;
@@ -228,7 +239,7 @@ export function useRibbonBeamBridge(
       if (!confirmed) return;
       EventBus.emit('bim:beam-delete-requested', { beamId: beam.id });
     },
-    [resolveBeam, t],
+    [resolveBeam, levelManager, t],
   );
 
   return useMemo(

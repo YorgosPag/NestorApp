@@ -22,6 +22,7 @@ import {
   COLUMN_RIBBON_KEYS_ACTIONS,
   COLUMN_RIBBON_BADGE_KEYS,
 } from '../hooks/bridge/column-command-keys';
+import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
 
 export const COLUMN_CONTEXTUAL_TRIGGER = 'column-selected';
 
@@ -213,6 +214,28 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.stringParams.material,
                 comboboxWidthPx: 180,
                 options: COLUMN_MATERIAL_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'column-ifc',
+      labelKey: 'ribbon.panels.ifcProperties',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'column.pset.open',
+                labelKey: 'ribbon.commands.psetEditor.open',
+                icon: 'ifc-pset',
+                commandKey: 'column.pset.open',
+                action: PSET_RIBBON_ACTION,
               },
             },
           ],

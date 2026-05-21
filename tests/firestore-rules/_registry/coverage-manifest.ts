@@ -1174,6 +1174,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'bim_presets',                // lines 3680-3702 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
   'bim_materials',              // lines 3704-3723 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
   'bim_settings',               // lines 3725-3737 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
+  // — BIM 3D Preferences (ADR-366 Phase 4.3, 2026-05-21) —
+  'bim_3d_preferences',         // lines 3744-3762 — owner-only (docId == b3dpref_${auth.uid}); full matrix later
 ] as const;
 
 // ---------------------------------------------------------------------------

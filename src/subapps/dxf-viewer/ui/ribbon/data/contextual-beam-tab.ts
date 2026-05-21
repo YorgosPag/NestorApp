@@ -22,6 +22,7 @@ import {
   BEAM_RIBBON_KEYS_ACTIONS,
   BEAM_RIBBON_BADGE_KEYS,
 } from '../hooks/bridge/beam-command-keys';
+import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
 
 export const BEAM_CONTEXTUAL_TRIGGER = 'beam-selected';
 
@@ -233,6 +234,28 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
                 commandKey: BEAM_RIBBON_KEYS.stringParams.profileDesignation,
                 comboboxWidthPx: 110,
                 options: BEAM_PROFILE_DESIGNATION_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'beam-ifc',
+      labelKey: 'ribbon.panels.ifcProperties',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'beam.pset.open',
+                labelKey: 'ribbon.commands.psetEditor.open',
+                icon: 'ifc-pset',
+                commandKey: 'beam.pset.open',
+                action: PSET_RIBBON_ACTION,
               },
             },
           ],

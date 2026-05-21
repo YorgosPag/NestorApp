@@ -653,6 +653,7 @@
       "beamGeometry": "Geometry",
       "beamMaterial": "Material",
       "beamActions": "Actions",
+      "ifcProperties": "IFC Properties",
       "slabOpeningKind": "Type",
       "slabOpeningActions": "Actions",
       "multiSelectionCommon": "Common Properties",
@@ -1202,6 +1203,9 @@
           "masonry": "Masonry",
           "wood": "Wood"
         }
+      },
+      "psetEditor": {
+        "open": "IFC Properties (Pset)"
       },
       "measureAngle": "Angle",
       "measureAngleVariants": {

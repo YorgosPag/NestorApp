@@ -133,6 +133,20 @@
       "hide": "Hide",
       "activeLevel": "Active",
       "noLevels": "No floors"
+    },
+    "reference": {
+      "label": "Elevation reference",
+      "selectAria": "Select elevation reference system",
+      "floor": "Relative to floor",
+      "building": "Relative to building",
+      "site": "Relative to site",
+      "sea": "Sea level (geodetic)"
+    },
+    "buildingCard": {
+      "sectionLabel": "Building elevations",
+      "baseElevation": "Building base",
+      "floorElevation": "Floor level",
+      "absoluteElevation": "Absolute"
     }
   },
   "render": {
@@ -238,6 +252,31 @@
     "isoUe": "Upper Right",
     "isoUw": "Upper Left"
   },
+  "pset": {
+    "sectionLabel": "IFC Property Sets (Pset)",
+    "addField": "Add field",
+    "removeField": "Remove",
+    "keyLabel": "Key",
+    "valueLabel": "Value",
+    "loadTemplate": "Load template",
+    "dialogTitle": "Edit IFC Property Set",
+    "noFields": "No fields — use \"Load template\" or \"Add field\"",
+    "saveButton": "Save",
+    "cancelButton": "Cancel",
+    "keyPlaceholder": "e.g. FireRating",
+    "emptyKeyError": "Key cannot be empty",
+    "duplicateKeyError": "Key already exists",
+    "standard": {
+      "wall": "Pset_WallCommon",
+      "slab": "Pset_SlabCommon",
+      "column": "Pset_ColumnCommon",
+      "beam": "Pset_BeamCommon",
+      "door": "Pset_DoorCommon",
+      "window": "Pset_WindowCommon",
+      "buildingStorey": "Pset_BuildingStoreyCommon",
+      "building": "Pset_BuildingCommon"
+    }
+  },
   "performance": {
     "toggleLabel": "Show Performance HUD",
     "mode": {
@@ -286,6 +325,13 @@
     "notFound": "—",
     "notification": {
       "diagnosticReceived": "New performance diagnostic received"
+    }
+  },
+  "viewCube": {
+    "contextMenu": {
+      "title": "ViewCube",
+      "showCompass": "Show compass",
+      "aria": "ViewCube options menu"
     }
   }
 }

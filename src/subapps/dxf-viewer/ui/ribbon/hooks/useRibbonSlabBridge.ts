@@ -32,6 +32,7 @@ import {
   isSlabRibbonKey,
   isSlabRibbonStringKey,
 } from './bridge/slab-command-keys';
+import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
 import type {
   RibbonComboboxState,
@@ -196,6 +197,16 @@ export function useRibbonSlabBridge(
 
   const onAction = useCallback(
     (action: string): void => {
+      if (action === PSET_RIBBON_ACTION) {
+        const slab = resolveSlab();
+        if (!slab || !levelManager.currentLevelId) return;
+        EventBus.emit('bim:pset-editor-open', {
+          entityId: slab.id,
+          levelId: levelManager.currentLevelId,
+          entityType: 'slab',
+        });
+        return;
+      }
       if (action !== SLAB_RIBBON_KEYS_ACTIONS.delete) return;
       const slab = resolveSlab();
       if (!slab) return;
@@ -205,7 +216,7 @@ export function useRibbonSlabBridge(
       if (!confirmed) return;
       EventBus.emit('bim:slab-delete-requested', { slabId: slab.id });
     },
-    [resolveSlab, t],
+    [resolveSlab, levelManager, t],
   );
 
   return useMemo(

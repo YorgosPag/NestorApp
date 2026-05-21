@@ -653,6 +653,7 @@
       "beamGeometry": "Γεωμετρία",
       "beamMaterial": "Υλικό",
       "beamActions": "Ενέργειες",
+      "ifcProperties": "IFC Ιδιότητες",
       "slabOpeningKind": "Τύπος",
       "slabOpeningActions": "Ενέργειες",
       "multiSelectionCommon": "Κοινές Ιδιότητες",
@@ -1202,6 +1203,9 @@
           "masonry": "Τοιχοποιία",
           "wood": "Ξύλο"
         }
+      },
+      "psetEditor": {
+        "open": "IFC Ιδιότητες (Pset)"
       },
       "measureAngle": "Γωνία",
       "measureAngleVariants": {

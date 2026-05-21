@@ -43,6 +43,8 @@ import type { FinalRenderConfig } from '../stores/ViewMode3DStore';
 import { writeRenderOutput } from '../render/render-output-writer';
 import { useCameraTargetStore } from '../stores/CameraTargetStore';
 import { createCanonicalViewService } from '../viewport/CanonicalViewService';
+import { createAnimationManager } from '../viewport/animation-manager';
+import type { AnimationManager } from '../viewport/animation-manager';
 
 const INITIAL_CAMERA_POSITION = new THREE.Vector3(15, 10, 15);
 const INITIAL_CAMERA_TARGET = new THREE.Vector3(0, 0, 0);
@@ -68,11 +70,15 @@ export class ThreeJsSceneManager {
   private readonly performanceCollector: PerformanceCollector;
   private readonly envStoreUnsub: () => void;
   private readonly sectionController: SectionSceneController;
+  /** Phase 4.2: single animation manager, ticked by main RAF (ADR-040 compliant). */
+  private readonly animationManager: AnimationManager;
   private rafHandle: number | null = null;
   private disposed = false;
   private lastFrameTime = performance.now();
   private isInteracting = false;
   private initialCameraFitDone = false;
+  /** Phase 4.3: mutable callback for ViewCube right-click context menu. */
+  private viewCubeContextMenuCb: ((x: number, y: number) => void) | null = null;
 
   constructor(container: HTMLElement) {
     this.renderer = this.initRenderer(container);
@@ -117,6 +123,8 @@ export class ThreeJsSceneManager {
     });
     this.poi = createPoi();
     this.scene.add(this.poi.root);
+    // Phase 4.2: single animation manager (ADR-040 — ticked by main RAF below).
+    this.animationManager = createAnimationManager();
     this.viewCube = this.initViewCube(container);
     this.performanceCollector = new PerformanceCollector(this.renderer, this.scene);
     this.performanceCollector.start();
@@ -201,7 +209,7 @@ export class ThreeJsSceneManager {
   }
 
   private initViewCube(container: HTMLElement): ViewCubeEngine {
-    const canonicalViewService = createCanonicalViewService(this.viewport);
+    const canonicalViewService = createCanonicalViewService(this.viewport, this.animationManager);
     return createViewCube({
       container,
       getCamera: () => this.viewport.camera as THREE.PerspectiveCamera | THREE.OrthographicCamera,
@@ -214,7 +222,19 @@ export class ThreeJsSceneManager {
       // Home = NE isometric (A.5 decision — industry convergence 4/4).
       onHome: () => canonicalViewService.snapHome(),
       onDragRotate: (dx, dy) => this.viewport.applyTumble(dx, dy),
+      // Phase 4.3: right-click context menu — delegate to mutable callback (set by BimViewport3D).
+      onContextMenuRequest: (x, y) => this.viewCubeContextMenuCb?.(x, y),
     });
+  }
+
+  /** Phase 4.3: wire BimViewport3D's React context menu callback into the ViewCube. */
+  setViewCubeContextMenuCallback(cb: (x: number, y: number) => void): void {
+    this.viewCubeContextMenuCb = cb;
+  }
+
+  /** Phase 4.3: propagate user compass visibility preference to the ViewCube. */
+  setViewCubeCompassVisible(visible: boolean): void {
+    this.viewCube.setCompassVisible(visible);
   }
 
   private startLoop(): void {
@@ -226,6 +246,8 @@ export class ThreeJsSceneManager {
       this.lastFrameTime = now;
 
       this.viewport.update();
+      // Phase 4.2: tick managed animations (ADR-040 single-RAF coordination).
+      this.animationManager.tick(now);
       useCameraTargetStore.getState().syncFromCamera(this.viewport.camera, this.viewport.target);
 
       if (this.isInteracting) {
@@ -452,6 +474,7 @@ export class ThreeJsSceneManager {
       cancelAnimationFrame(this.rafHandle);
       this.rafHandle = null;
     }
+    this.animationManager.dispose();
     this.idleDetector.dispose();
     this.qualityModulator.dispose();
     this.pathTracerRenderer.dispose();

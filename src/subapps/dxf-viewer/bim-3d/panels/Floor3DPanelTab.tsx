@@ -11,14 +11,30 @@ import { Eye, EyeOff, Focus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
-import type { BuildingVisMode } from '../stores/Bim3DEntitiesStore';
+import type { BuildingVisMode, ElevationReference } from '../stores/Bim3DEntitiesStore';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { sortLevelsTopDown } from '../utils/floor-visibility-state';
 import type { FloorVisMode, FloorPreset } from '../utils/floor-visibility-state';
-import type { BuildingRef } from '../../bim/utils/bim-floor-utils';
+import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import type { Level } from '../../systems/levels/config';
 
 const PRESETS: FloorPreset[] = ['all', 'active', 'none', 'invert'];
+const ELEVATION_REFS: ElevationReference[] = ['floor', 'building', 'site', 'sea'];
+
+function fmtM(metres: number | undefined): string {
+  if (metres === undefined) return '—';
+  const sign = metres >= 0 ? '+' : '';
+  return `${sign}${metres.toFixed(2)} m`;
+}
+
+function resolveActiveFloor(
+  floors: readonly FloorRef[],
+  activeLevelId: string | null,
+  buildingId: string,
+): FloorRef | undefined {
+  const active = floors.find((f) => f.id === activeLevelId && f.buildingId === buildingId);
+  return active ?? floors.find((f) => f.buildingId === buildingId);
+}
 
 function ModeButton({
   active,
@@ -172,6 +188,92 @@ function BuildingSelector() {
   );
 }
 
+function ElevationReferenceDropdown() {
+  const { t } = useTranslation('bim3d');
+  const elevationReference = useBim3DEntitiesStore((s) => s.elevationReference);
+  const setElevationReference = useBim3DEntitiesStore((s) => s.setElevationReference);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[10px] font-medium uppercase tracking-wide text-white/40">
+        {t('floatingPanel.reference.label')}
+      </span>
+      <Select
+        value={elevationReference}
+        onValueChange={(v) => setElevationReference(v as ElevationReference)}
+      >
+        <SelectTrigger
+          className="h-7 w-full border-white/15 bg-white/10 text-xs text-white/80 hover:bg-white/15"
+          aria-label={t('floatingPanel.reference.selectAria')}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {ELEVATION_REFS.map((ref) => (
+            <SelectItem key={ref} value={ref}>
+              {t(`floatingPanel.reference.${ref}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function BuildingElevationRow({ building }: { building: BuildingRef }) {
+  const { t } = useTranslation('bim3d');
+  const floors = useBim3DEntitiesStore((s) => s.floors);
+  const activeLevelId = useBim3DEntitiesStore((s) => s.activeLevelId);
+
+  const activeFloor = resolveActiveFloor(floors, activeLevelId, building.id);
+  const baseM = building.baseElevation;
+  const floorM = activeFloor?.elevation;
+  const absoluteM =
+    baseM !== undefined && floorM !== undefined ? baseM + floorM : undefined;
+
+  return (
+    <li className="flex flex-col gap-0.5 rounded px-1 py-1 hover:bg-white/5">
+      <span className="truncate text-xs font-medium text-white/80">
+        {building.name ?? building.id}
+      </span>
+      <div className="flex flex-col gap-px pl-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-white/40">{t('floatingPanel.buildingCard.baseElevation')}</span>
+          <span className="font-mono text-[10px] text-white/60">{fmtM(baseM)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-white/40">{t('floatingPanel.buildingCard.floorElevation')}</span>
+          <span className="font-mono text-[10px] text-white/60">{fmtM(floorM)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-white/40">{t('floatingPanel.buildingCard.absoluteElevation')}</span>
+          <span className="font-mono text-[10px] text-white/70">{fmtM(absoluteM)}</span>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function BuildingElevationSection() {
+  const { t } = useTranslation('bim3d');
+  const buildings = useBim3DEntitiesStore((s) => s.buildings);
+
+  if (buildings.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[10px] font-medium uppercase tracking-wide text-white/40">
+        {t('floatingPanel.buildingCard.sectionLabel')}
+      </span>
+      <ul className="flex flex-col gap-0.5">
+        {buildings.map((b) => (
+          <BuildingElevationRow key={b.id} building={b} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function Floor3DPanelTab() {
   const { t } = useTranslation('bim3d');
   // ADR-371: useLevelsOptional() — null outside LevelsSystem (Properties read-only context).
@@ -190,6 +292,12 @@ export function Floor3DPanelTab() {
 
       {/* Per-building Show/Ghost/Hide + Focus (ADR-369 Q2.3) */}
       <BuildingsVisibilitySection />
+
+      {/* Elevation reference system toggle (ADR-369 §9.2 Q3) */}
+      <ElevationReferenceDropdown />
+
+      {/* Building tri-value elevation summary (ADR-369 §9.2 Q3) */}
+      <BuildingElevationSection />
 
       {/* Preset buttons */}
       <div className="flex gap-1">

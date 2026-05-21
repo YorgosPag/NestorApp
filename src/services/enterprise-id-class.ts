@@ -309,6 +309,12 @@ export class EnterpriseIdService {
   // DXF 3D BIM Viewer — Render Outputs (ADR-366 §B.4 / Phase 6)
   generateBimRenderId(): string { return this.generateId(P.BIM_RENDER).id; }
 
+  // DXF 3D BIM Viewer — User Preferences (ADR-366 Phase 4.3)
+  generateBim3DPrefId(userId: string): string {
+    if (!userId) throw new Error('generateBim3DPrefId: userId is required');
+    return `${P.BIM_3D_PREF}_${userId}`;
+  }
+
   // DXF BIM Drawing Mode (ADR-363)
   generateWallId(): string { return this.generateId(P.WALL).id; }
   generateOpeningId(): string { return this.generateId(P.OPENING).id; }

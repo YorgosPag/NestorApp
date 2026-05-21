@@ -24,6 +24,7 @@ import { ColumnPersistenceHost } from './ColumnPersistenceHost';
 import { BeamPersistenceHost } from './BeamPersistenceHost';
 import { SlabOpeningPersistenceHost } from './SlabOpeningPersistenceHost';
 import { SlabOpeningStackHost } from './SlabOpeningStackHost';
+import { PsetEditorHost } from './PsetEditorHost';
 
 type LevelManager = ReturnType<typeof useLevels>;
 
@@ -108,6 +109,7 @@ export function DxfViewerTopBar({
         buildingId={levelManager.saveContext?.buildingId ?? undefined}
       />
       <SlabOpeningStackHost levelManager={levelManager} />
+      <PsetEditorHost levelManager={levelManager} />
       {false && (
         <StairAdvancedPanelHost
           primarySelectedId={primarySelectedId}

@@ -22,6 +22,7 @@ import {
   OPENING_RIBBON_KEYS_ACTIONS,
   OPENING_RIBBON_BADGE_KEYS,
 } from '../hooks/bridge/opening-command-keys';
+import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
 
 export const OPENING_CONTEXTUAL_TRIGGER = 'opening-selected';
 
@@ -164,6 +165,28 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: OPENING_RIBBON_KEYS.params.sillHeight,
                 comboboxWidthPx: 80,
                 options: SILL_MM_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'opening-ifc',
+      labelKey: 'ribbon.panels.ifcProperties',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'opening.pset.open',
+                labelKey: 'ribbon.commands.psetEditor.open',
+                icon: 'ifc-pset',
+                commandKey: 'opening.pset.open',
+                action: PSET_RIBBON_ACTION,
               },
             },
           ],

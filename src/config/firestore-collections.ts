@@ -374,6 +374,10 @@ export const COLLECTIONS = {
   // 🎨 BIM RENDERS — ADR-366 §B.4 Phase 6 (Final Render Dialog)
   /** Photoreal render exports per project: metadata + Storage path. IDs via bimrnd_* prefix. type='bim-render'. */
   BIM_RENDERS: process.env.NEXT_PUBLIC_BIM_RENDERS_COLLECTION || 'bim_renders',
+
+  // 🎛️ BIM 3D PREFERENCES — ADR-366 Phase 4.3 (per-user viewport UI preferences)
+  /** Per-user 3D BIM viewport preferences (compass ring, etc.). IDs via b3dpref_* prefix. Owner-only. */
+  BIM_3D_PREFERENCES: process.env.NEXT_PUBLIC_BIM_3D_PREFERENCES_COLLECTION || 'bim_3d_preferences',
 } as const;
 
 // ============================================================================

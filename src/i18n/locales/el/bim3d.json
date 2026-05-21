@@ -133,6 +133,20 @@
       "hide": "Κρυφό",
       "activeLevel": "Ενεργός",
       "noLevels": "Χωρίς ορόφους"
+    },
+    "reference": {
+      "label": "Σύστημα αναφοράς",
+      "selectAria": "Επιλογή συστήματος αναφοράς υψομέτρου",
+      "floor": "Ως προς όροφο",
+      "building": "Ως προς κτίριο",
+      "site": "Ως προς εργοτάξιο",
+      "sea": "Υψόμετρο θάλασσας"
+    },
+    "buildingCard": {
+      "sectionLabel": "Υψόμετρα κτιρίων",
+      "baseElevation": "Βάση κτιρίου",
+      "floorElevation": "Στάθμη ορόφου",
+      "absoluteElevation": "Απόλυτο"
     }
   },
   "render": {
@@ -238,6 +252,31 @@
     "isoUe": "Άνω Δεξιά",
     "isoUw": "Άνω Αριστερά"
   },
+  "pset": {
+    "sectionLabel": "Ιδιότητες IFC (Pset)",
+    "addField": "Προσθήκη πεδίου",
+    "removeField": "Αφαίρεση",
+    "keyLabel": "Κλειδί",
+    "valueLabel": "Τιμή",
+    "loadTemplate": "Φόρτωση προτύπου",
+    "dialogTitle": "Επεξεργασία IFC Property Set",
+    "noFields": "Χωρίς πεδία — χρησιμοποίησε «Φόρτωση προτύπου» ή «Προσθήκη πεδίου»",
+    "saveButton": "Αποθήκευση",
+    "cancelButton": "Άκυρο",
+    "keyPlaceholder": "π.χ. FireRating",
+    "emptyKeyError": "Το κλειδί δεν μπορεί να είναι κενό",
+    "duplicateKeyError": "Το κλειδί υπάρχει ήδη",
+    "standard": {
+      "wall": "Pset_WallCommon",
+      "slab": "Pset_SlabCommon",
+      "column": "Pset_ColumnCommon",
+      "beam": "Pset_BeamCommon",
+      "door": "Pset_DoorCommon",
+      "window": "Pset_WindowCommon",
+      "buildingStorey": "Pset_BuildingStoreyCommon",
+      "building": "Pset_BuildingCommon"
+    }
+  },
   "performance": {
     "toggleLabel": "Εμφάνιση πίνακα απόδοσης",
     "mode": {
@@ -286,6 +325,13 @@
     "notFound": "—",
     "notification": {
       "diagnosticReceived": "Νέα αναφορά διαγνωστικών απόδοσης"
+    }
+  },
+  "viewCube": {
+    "contextMenu": {
+      "title": "ViewCube",
+      "showCompass": "Εμφάνιση πυξίδας",
+      "aria": "Μενού επιλογών ViewCube"
     }
   }
 }

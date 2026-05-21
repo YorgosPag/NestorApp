@@ -3737,6 +3737,31 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🎛️ BIM_3D_PREFERENCES COLLECTION - ADR-366 Phase 4.3
+    // =========================================================================
+    // Per-user 3D viewport preferences (compass ring, etc.).
+    // Doc ID = b3dpref_{userId} — owner-only, no tenant scope.
+    match /bim_3d_preferences/{docId} {
+      // READ: docId must match b3dpref_{auth.uid}
+      allow read: if isAuthenticated()
+                  && docId == ('b3dpref_' + request.auth.uid);
+
+      // CREATE/UPDATE: owner writes their own prefs doc
+      allow create: if isAuthenticated()
+                    && docId == ('b3dpref_' + request.auth.uid)
+                    && request.resource.data.keys().hasAll(['userId', 'compassRingVisible', 'updatedAt'])
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.compassRingVisible is bool;
+
+      allow update: if isAuthenticated()
+                    && docId == ('b3dpref_' + request.auth.uid)
+                    && request.resource.data.userId == request.auth.uid;
+
+      allow delete: if isAuthenticated()
+                    && docId == ('b3dpref_' + request.auth.uid);
+    }
+
+    // =========================================================================
     // 🔒 HELPER FUNCTIONS - VALIDATION & SECURITY
     // =========================================================================
 

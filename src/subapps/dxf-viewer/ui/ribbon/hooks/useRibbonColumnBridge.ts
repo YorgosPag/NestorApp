@@ -38,6 +38,7 @@ import {
   isColumnRibbonKey,
   isColumnRibbonStringKey,
 } from './bridge/column-command-keys';
+import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
 import type {
   RibbonComboboxState,
@@ -214,6 +215,16 @@ export function useRibbonColumnBridge(
 
   const onAction = useCallback(
     (action: string): void => {
+      if (action === PSET_RIBBON_ACTION) {
+        const column = resolveColumn();
+        if (!column || !levelManager.currentLevelId) return;
+        EventBus.emit('bim:pset-editor-open', {
+          entityId: column.id,
+          levelId: levelManager.currentLevelId,
+          entityType: 'column',
+        });
+        return;
+      }
       if (action !== COLUMN_RIBBON_KEYS_ACTIONS.delete) return;
       const column = resolveColumn();
       if (!column) return;
@@ -223,7 +234,7 @@ export function useRibbonColumnBridge(
       if (!confirmed) return;
       EventBus.emit('bim:column-delete-requested', { columnId: column.id });
     },
-    [resolveColumn, t],
+    [resolveColumn, levelManager, t],
   );
 
   return useMemo(

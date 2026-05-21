@@ -40,8 +40,18 @@ export interface ViewCubeOptions {
    * when provided. Falls back to onFaceSnap/onDirSnap when absent.
    */
   readonly onSnapToView?: (id: CanonicalViewId) => void;
-  /** Returns true-north offset in degrees (0 = no offset). Defaults to 0. */
-  readonly getNorthAngleDeg?: () => number;
+  /**
+   * Returns true-north offset in degrees (0 = no offset). Defaults to 0.
+   * Return null when no topographic data is available (compass hidden by default).
+   */
+  readonly getNorthAngleDeg?: () => number | null;
+  /**
+   * Phase 4.3: right-click context menu request with screen coordinates.
+   * Consumer (BimViewport3D) renders the React context menu overlay.
+   */
+  readonly onContextMenuRequest?: (x: number, y: number) => void;
+  /** Phase 4.3: initial compass ring visibility (default true). */
+  readonly compassVisible?: boolean;
   readonly labels?: {
     readonly faces?: Partial<FaceLabels>;
     readonly compass?: Partial<CompassLabels>;
@@ -50,11 +60,13 @@ export interface ViewCubeOptions {
 
 export interface ViewCubeEngine {
   sync(cam: THREE.PerspectiveCamera | THREE.OrthographicCamera, target: THREE.Vector3): void;
+  /** Phase 4.3: programmatically toggle compass ring visibility. */
+  setCompassVisible(visible: boolean): void;
   dispose(): void;
 }
 
 export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
-  const { container, getCamera, getTarget, onFaceSnap, onDirSnap, onHome, onDragRotate, onSnapToView, getNorthAngleDeg } = opts;
+  const { container, getCamera, getTarget, onFaceSnap, onDirSnap, onHome, onDragRotate, onSnapToView, getNorthAngleDeg, onContextMenuRequest } = opts;
 
   const canvas = document.createElement('canvas');
   const dpr = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
@@ -129,6 +141,10 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
 
   for (const mat of cubeMaterials) { mat.transparent = true; mat.opacity = 0.5; }
 
+  // Phase 4.3: compass visibility state (user-controlled, persisted via Bim3DPreferencesService)
+  let compassVisibleState = opts.compassVisible ?? true;
+  compassGroup.visible = compassVisibleState;
+
   let hoveredMesh: THREE.Mesh | null = null;
   let cubeHovered = false;
   let isPointerDown = false;
@@ -143,7 +159,8 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
   const _mouse = new THREE.Vector2();
 
   function getNorthAngleRad(): number {
-    return ((getNorthAngleDeg?.() ?? 0) * Math.PI) / 180;
+    const deg = getNorthAngleDeg?.() ?? 0;
+    return ((deg ?? 0) * Math.PI) / 180;
   }
 
   function getNormalizedMouse(e: PointerEvent): THREE.Vector2 {
@@ -267,10 +284,17 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
 
   function onCanvasClick(e: MouseEvent): void { e.stopPropagation(); }
 
+  function onCanvasContextMenu(e: MouseEvent): void {
+    e.preventDefault();
+    e.stopPropagation();
+    onContextMenuRequest?.(e.clientX, e.clientY);
+  }
+
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointerup', onPointerUp);
   canvas.addEventListener('click', onCanvasClick);
+  canvas.addEventListener('contextmenu', onCanvasContextMenu);
   canvas.addEventListener('mouseenter', () => { cubeHovered = true; });
   canvas.addEventListener('mouseleave', () => { cubeHovered = false; });
 
@@ -283,6 +307,7 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
     cam.getWorldQuaternion(_q);
     cubeGroup.quaternion.copy(_q).conjugate();
     compassGroup.rotation.y = getNorthAngleRad();
+    compassGroup.visible = compassVisibleState;
     const tgtAlpha = cubeHovered ? 1.0 : 0.5;
     const lerp = 0.15;
     for (const mat of cubeMaterials) { mat.opacity += (tgtAlpha - mat.opacity) * lerp; }
@@ -298,11 +323,18 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
     miniRenderer.render(scene, miniCam);
   }
 
+  function setCompassVisible(visible: boolean): void {
+    compassVisibleState = visible;
+    compassGroup.visible = visible;
+    miniRenderer.render(scene, miniCam);
+  }
+
   function dispose(): void {
     canvas.removeEventListener('pointerdown', onPointerDown);
     canvas.removeEventListener('pointermove', onPointerMove);
     canvas.removeEventListener('pointerup', onPointerUp);
     canvas.removeEventListener('click', onCanvasClick);
+    canvas.removeEventListener('contextmenu', onCanvasContextMenu);
     cubeMesh.geometry.dispose();
     for (const mat of cubeMaterials) { mat.map?.dispose(); mat.dispose(); }
     for (const t of hitTargets) t.geometry.dispose();
@@ -317,5 +349,5 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
     if (canvas.parentElement) canvas.parentElement.removeChild(canvas);
   }
 
-  return { sync, dispose };
+  return { sync, setCompassVisible, dispose };
 }
