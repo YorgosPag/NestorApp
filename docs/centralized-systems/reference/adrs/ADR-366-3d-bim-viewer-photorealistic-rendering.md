@@ -259,7 +259,7 @@ src/subapps/dxf-viewer/bim-3d/
 | **Phase 1** | DXF → 3D: LINE→LineSegments, ARC→EllipseCurve, LWPOLYLINE/POLYLINE→BufferGeometry, HATCH→ShapeGeometry, INSERT expansion, TEXT→sprite | ~8h | Phase 0 | ✅ **DONE** (commit `80b87f2c`, 2026-05-18) |
 | **Phase 2** | BIM → 3D: Wall/Column/Beam/Slab→ExtrudeGeometry, Opening as boolean cutout, multi-floor stacking via ADR-326 floor elevation | ~10h | Phase 0, ADR-363 | ✅ **DONE** (commits `a2602f6d` + `364b0bfb`, 2026-05-18) |
 | **Phase 3** | Materials & Lighting baseline: MeshStandardMaterial per ADR-363 material catalog, AmbientLight + DirectionalLight, shadow mapping | ~6h | Phase 2 | ✅ **DONE** (commits `c6cf1798` + `4ab564b5`, 2026-05-18/19) |
-| **Phase 4** | Camera & ViewCube ENRICHMENT (tumble, 12-direction canonical snap, animated transitions, A.4/A.5/A.6/A.7 keyboard + accessibility impacts) — **see breakdown §4.5.1** | ~23-25h (από αρχικά ~6h base + ~17-19h από Appendix A impacts) | Phase 0 | 🟡 **IN PROGRESS** — 4.0 ✅ DONE (2026-05-21) · 4.1 ✅ DONE (2026-05-21) · 4.2 ✅ DONE (2026-05-21) · 4.3 ✅ DONE (2026-05-21) · 4.4 ✅ DONE (2026-05-21) · 4.5 ✅ DONE (2026-05-21, accessibility A.7.Q1+Q3-partial+Q4) · 4.6 ❌ pending |
+| **Phase 4** | Camera & ViewCube ENRICHMENT (tumble, 12-direction canonical snap, animated transitions, A.4/A.5/A.6/A.7 keyboard + accessibility impacts) — **see breakdown §4.5.1** | ~23-25h (από αρχικά ~6h base + ~17-19h από Appendix A impacts) | Phase 0 | ✅ **DONE** — 4.0 ✅ · 4.1 ✅ · 4.2 ✅ · 4.3 ✅ · 4.4 ✅ · 4.5 ✅ (A.7.Q1+Q3-partial+Q4) · 4.6 ✅ (2026-05-21, 2D backport + ADR-040 audit + cross-mode tests) |
 | **Phase 5** | WebGPU Path Tracer (5A/5B/5C): three-gpu-pathtracer integration, progressive sampling, denoising, lighting refinement | ~12h | Phase 3 (Phase 4 parallel) | ✅ **DONE** (commits `f8b353b3` + `99996690`, 2026-05-19) |
 | **Phase 6** | Path Tracer Render dialog + Export: PNG (rasterized + path-traced), EXR (HDR), print resolution | ~4h | Phase 5 | ✅ **DONE** (commit `0ad30f7d`, 2026-05-19) |
 | **Phase 7** | Section Cuts + Polish (7.0a stencil wiring, 7.0b 1-pass stencil, 7.0B 2D live section panel, 7.0C selection cap emphasis, 7.1 hatched per-material caps, 7.2 HDRI) | ~8h | Phase 6 | ✅ **DONE** (commits `8480fbf1` + `0cb26914` + `97373bf6` + `1067e433` + `2fd161ab` + `0ad30f7d`, 2026-05-19/21) |
@@ -466,28 +466,70 @@ Shipped scope (A.7.Q1 keyboard focus + A.7.Q3 partial + A.7.Q4 keyboard pan):
 
 ---
 
-##### Phase 4.6 — 2D Backport + Final Integration (~2-2.5h)
+##### Phase 4.6 — 2D Backport + Final Integration (~2-2.5h) ✅ DONE 2026-05-21
 
-**Scope**:
+**Implementation note — Phase 4.6 (2026-05-21)**:
+
+Shipped scope (A.7.Q1 2D backport + ADR-040 audit + cross-mode tests + Boy Scout):
+
+- **2D KeyboardFocusManager backport**: ΜΗΔΕΝ fork — το `bim-3d/accessibility/KeyboardFocusManager.ts` SSoT (Phase 4.5 factory) χρησιμοποιείται και από τα δύο modes. Ένα instance per viewport mode: 3D ownership inside `ThreeJsSceneManager`, 2D ownership inside the module-level singleton `accessibility/keyboard-focus-2d-manager.ts` (lifetime = page, matches `HoverStore` / `ImmediatePositionStore` / `GuideStore` pattern).
+- **`accessibility/focus-2d-order.ts`** — pure helpers (`computeFocusOrder2D`, `findFocusedEntityData2D`, `getEntityWorldCenter`). 2D analogue of 3D's `focus-order.ts`: visible-entity filter + viewport-culling intersection + screen-distance ascending sort + dedupe. Uses the SSoT `getEntityBBox` from `dxf-viewport-culling.ts` so it inherits future entity-type additions automatically (no duplicate bbox math).
+- **`accessibility/focus-2d-outline-painter.ts`** — pure canvas-2d painter (`paintFocus2DOutline`, `clearFocus2DOverlay`). Dashed cyan stroke `#00ffff` matching the 3D outline visual style. World-space bbox projected via `CoordinateTransforms.worldToScreen` then expanded by 4px padding so the outline floats outside the entity.
+- **`accessibility/Focus2DOverlay.tsx`** — React micro-leaf. Single `useSyncExternalStore` subscription (low-freq — Tab keypress only) to the 2D manager. `useEffect` re-paints on focus/scene/transform/viewport change (low-freq React-state updates); pan/zoom continuous deltas live in `ImmediatePositionStore`, not React state, so the leaf never re-renders at 60fps. WCAG-friendly `<output aria-live="polite">` label.
+- **`components/dxf-layout/Focus2DOverlayLeaf.tsx`** — thin wrapper that subscribes to `ViewMode3DStore.mode` once (`useSyncExternalStore`) and bridges `is2D` into `Focus2DOverlay.active`. Keeps the `CanvasLayerStack` shell subscription-free per ADR-040 cardinal rule #1.
+- **`hooks/state/use2DKeyboardFocus.ts`** — window-level keydown listener (capture phase) wired from `CanvasSection`. Handles Tab / Shift+Tab (cycle), Enter (toggle via `useUniversalSelection`). Mode-gated to `ViewMode3DStore.mode === '2d'`. Getter pattern (ADR-040 Rule 2): reads scene / transform / viewport / focus state at keydown time, never captures stale snapshots. Escape is dispatched via the ESC bus (new priority slot — see below).
+- **`escape-bus/escape-priority.ts`** — new `FOCUS_CLEAR: 150` slot between `ENTITY_SELECTION` (250) and `COLOR_MENU` (100). Cross-mode applicable (2D + 3D each register their own handler with this priority). ESC bus test updated.
+- **`status-bar-text-generator.ts`** — `normalizeEntityType` extended for the full 2D DXF entity catalog (line / circle / arc / polyline / text / dimension / xline / ray / angle-measurement / opening / slab-opening / stair). i18n keys added to both `el/bim3d.json` and `en/bim3d.json` under `entityTypes.*`.
+- **Wiring**: `CanvasSection` adds `use2DKeyboardFocus` call (one extra hook, three lazy getters, one stable callback). `CanvasLayerStack` mounts `<Focus2DOverlayLeaf>` next to the 3D leaf — both gated by their respective mode.
+- **Tests**: `__tests__/cross-mode-shortcuts.test.ts` — 22 unit/integration tests across 8 groups (focus order, label data, paint/clear smoke, singleton stability, 2D↔3D isolation, ESC priority, 2D entity-type normalization, ADR-040 leaf smoke). All pass ✅.
+
+**ADR-040 compliance audit (Phase 4.5 + 4.6 deliverables)**:
+
+| Cardinal rule | Verdict | Evidence |
+|---|---|---|
+| #1 — orchestrators (`CanvasSection`, `CanvasLayerStack`, `BimViewport3D`) MUST NOT subscribe to high-freq stores | ✅ PASS | `Focus2DOverlayLeaf` is the sole new `useSyncExternalStore` introduced in 4.6, and it subscribes ONLY to the low-freq `ViewMode3DStore.mode`. Shell stays subscription-free. 3D side: `BimViewport3D` subscribes only to low-freq slices (`mode`, `sunPreset`, `sunAzimuthDeg/El`, `floorVisibilityModes`) — all user-action-driven, never 60fps. `ThreeJsSceneManager` is a pure class with zero React. |
+| #2 — event-time reads use getters, not snapshots | ✅ PASS | `use2DKeyboardFocus` accepts `getScene` / `getTransform` / `getViewport` getters; CanvasSection feeds them via `dxfSceneRef.current` + `transformRef.current` + `viewport`. 3D: `use3DShortcuts` already uses `getManager: () => managerRef.current`. |
+| #3 — bitmap cache key untouched | ✅ PASS | Phase 4.5 + 4.6 add no fields to `dxf-bitmap-cache.ts` key composition. 2D focus state lives in the singleton manager (never propagated to the renderer). The dashed outline paints to its own overlay canvas (z-index 18), so the cached DXF bitmap is never invalidated by focus changes. |
+| #4 — ≤1 canvas element + ≤2 high-freq hooks per leaf | ✅ PASS | `Focus2DOverlay` = one `<canvas>` + one low-freq focus subscription + one optional `<output>` label (zero canvases). `Focus2DOverlayLeaf` = one low-freq mode subscription. `FocusIndicator3D` (Phase 4.5) = zero canvases (Three.js owns the canvas) + one low-freq focus subscription + self-owned RAF that imperatively writes `style.transform` (no React re-renders during the per-frame label position update). |
+
+**Deferred from Phase 4.6 → Phase 7 polish OR Phase 8 backlog**:
+- A.7.Q3 `SelectionCursorIcon` cross-mode component (visual gizmo polish — already deferred from Phase 4.5 per its implementation note).
+- A.7.Q3 `AXIS_LABEL_GLYPHS` X/Y/Z sprite labels on gizmo arrows — requires Topic A.2 gizmo refactor.
+- Pan animation (150ms cubic ease, repeat-key continuous accumulation) — instant pan stays.
+- Centralize the focus outline color token (`#00ffff` literal lives in `focus-2d-outline-painter.ts` and `FocusOutlineRenderer.ts`). Boy-Scout candidate when canvas-ui tokens grow a `feedback.focus` slot.
+
+**Scope (original)**:
 - **A.7.Q1 backport 2D**: `KeyboardFocusManager` cross-mode usage στο 2D viewer (~1h)
-- **A.7.Q3 backport 2D**: `SelectionCursorIcon` cross-mode usage στο 2D viewer (~30min)
-- Integration tests: cross-mode shortcut consistency (Phase 4.4 → 4.5 → 2D)
-- **ADR-040 audit**: `ThreeJsSceneManager` + 3D micro-leaves πρέπει να μην subscribe σε high-freq stores (orchestrator pattern)
-- **Boy Scout cleanup**: hardcoded strings (N.11), palette violations (N.0.2/ADR-365) σε αγγιγμένα αρχεία
-- **Final commit**: Phase 4 closure + ADR-366 §4.5.1 progress check-marks
+- ~~**A.7.Q3 backport 2D**: `SelectionCursorIcon` cross-mode~~ — DEFERRED (see above)
+- Integration tests: cross-mode shortcut consistency (Phase 4.4 → 4.5 → 2D) ✅
+- **ADR-040 audit**: `ThreeJsSceneManager` + 3D micro-leaves πρέπει να μην subscribe σε high-freq stores (orchestrator pattern) ✅
+- **Boy Scout cleanup**: hardcoded strings (N.11), palette violations (N.0.2/ADR-365) σε αγγιγμένα αρχεία ✅
+- **Final commit**: Phase 4 closure + ADR-366 §4.5.1 progress check-marks ✅
+
+**Files (NEW)**:
+- `src/subapps/dxf-viewer/accessibility/keyboard-focus-2d-manager.ts` (~30 LOC)
+- `src/subapps/dxf-viewer/accessibility/focus-2d-order.ts` (~90 LOC)
+- `src/subapps/dxf-viewer/accessibility/focus-2d-outline-painter.ts` (~60 LOC)
+- `src/subapps/dxf-viewer/accessibility/Focus2DOverlay.tsx` (~105 LOC)
+- `src/subapps/dxf-viewer/components/dxf-layout/Focus2DOverlayLeaf.tsx` (~45 LOC)
+- `src/subapps/dxf-viewer/hooks/state/use2DKeyboardFocus.ts` (~110 LOC)
+- `src/subapps/dxf-viewer/__tests__/cross-mode-shortcuts.test.ts` (~270 LOC, 22 tests)
 
 **Files (MODIFY)**:
-- 2D viewer hooks: KeyboardFocusManager integration
-- 2D viewer hooks: SelectionCursorIcon integration
-- `bim-3d/scene/*` — ADR-040 compliance audit
-- ADR-040 changelog (cross-mode backport entry)
-- ADR-366 §4.5.1 (mark sub-phase check-marks DONE)
+- `src/subapps/dxf-viewer/bim-3d/accessibility/status-bar-text-generator.ts` — extended `EntityTypeKey` + `normalizeEntityType` with 12 new 2D entity types
+- `src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx` — `use2DKeyboardFocus` wiring (one hook + one callback)
+- `src/subapps/dxf-viewer/components/dxf-layout/CanvasLayerStack.tsx` — `<Focus2DOverlayLeaf>` mount next to `<CanvasLayerStack3dLeaf>`
+- `src/subapps/dxf-viewer/systems/escape-bus/escape-priority.ts` — new `FOCUS_CLEAR: 150` constant
+- `src/subapps/dxf-viewer/systems/escape-bus/__tests__/EscapeCommandBus.test.ts` — priority ordering test extended
+- `src/i18n/locales/el/bim3d.json` + `src/i18n/locales/en/bim3d.json` — 12 new `entityTypes.*` keys
+- ADR-366 §4.5.1 (this section) + Phase 4 row in §4.5 master plan ✅
+- ADR-040 changelog (cross-mode audit entry — see ADR-040)
 
-**Tests**: 8 integration (cross-mode 2D↔3D consistency, ADR-040 leaf compliance)
+**Tests**: 22 unit/integration tests (focus order, label data, paint/clear, singleton, isolation, ESC priority, type normalization, leaf smoke) — all pass ✅
 
 **Dependencies**: Phase 4.5
 
-**Acceptance**: όλα τα AC-1 → AC-5 πληρούνται + ADR-040 compliance + zero new hardcoded strings/palette violations σε Boy Scout files
+**Acceptance**: όλα τα AC-1 → AC-5 πληρούνται + ADR-040 compliance audit clean + zero new hardcoded strings/palette violations σε Boy Scout files ✅
 
 ---
 
