@@ -6,10 +6,11 @@ import { Floor3DPanelTab } from '../../../bim-3d/panels/Floor3DPanelTab';
 import { Lighting3DPanelTab } from '../../../bim-3d/panels/Lighting3DPanelTab';
 import { Quality3DPanelTab } from '../../../bim-3d/panels/Quality3DPanelTab';
 import { Section3DPanelTab } from '../../../bim-3d/panels/Section3DPanelTab';
+import { Accessibility3DPanelTab } from '../../../bim-3d/panels/Accessibility3DPanelTab';
 
-type Bim3DSubTab = 'floors' | 'lighting' | 'quality' | 'sections';
+type Bim3DSubTab = 'floors' | 'lighting' | 'quality' | 'sections' | 'accessibility';
 
-const SUB_TABS: readonly Bim3DSubTab[] = ['floors', 'lighting', 'quality', 'sections'] as const;
+const SUB_TABS: readonly Bim3DSubTab[] = ['floors', 'lighting', 'quality', 'sections', 'accessibility'] as const;
 
 const PANEL_ID = 'bim3d-floating-tab';
 
@@ -50,6 +51,7 @@ export function Bim3DFloatingTab() {
         {activeSubTab === 'lighting' && <Lighting3DPanelTab />}
         {activeSubTab === 'quality' && <Quality3DPanelTab />}
         {activeSubTab === 'sections' && <Section3DPanelTab />}
+        {activeSubTab === 'accessibility' && <Accessibility3DPanelTab />}
       </div>
     </div>
   );

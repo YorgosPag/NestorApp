@@ -12,10 +12,11 @@ import { Floor3DPanelTab } from './Floor3DPanelTab';
 import { Lighting3DPanelTab } from './Lighting3DPanelTab';
 import { Quality3DPanelTab } from './Quality3DPanelTab';
 import { Section3DPanelTab } from './Section3DPanelTab';
+import { Accessibility3DPanelTab } from './Accessibility3DPanelTab';
 
-type Tab = 'floors' | 'lighting' | 'quality' | 'sections';
+type Tab = 'floors' | 'lighting' | 'quality' | 'sections' | 'accessibility';
 
-const TABS: Tab[] = ['floors', 'lighting', 'quality', 'sections'];
+const TABS: Tab[] = ['floors', 'lighting', 'quality', 'sections', 'accessibility'];
 
 export function Floating3DPanel() {
   const { t } = useTranslation('bim3d');
@@ -61,6 +62,7 @@ export function Floating3DPanel() {
         {activeTab === 'lighting' && <Lighting3DPanelTab />}
         {activeTab === 'quality' && <Quality3DPanelTab />}
         {activeTab === 'sections' && <Section3DPanelTab />}
+        {activeTab === 'accessibility' && <Accessibility3DPanelTab />}
       </div>
     </aside>
   );

@@ -8,6 +8,7 @@ import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyCont
 import { PerformanceHUD } from '../performance/PerformanceHUD';
 import { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
+import type { ReducedMotionOverride } from '../accessibility/use-reduced-motion';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { useSectionStore } from '../stores/SectionStore';
 import { LIGHT_PRESETS } from '../lighting/lighting-presets';
@@ -28,6 +29,7 @@ import { Bim3DPreferencesService } from '../services/Bim3DPreferencesService';
 import { use3DShortcuts } from '../shortcuts/use3DShortcuts';
 import { FocusIndicator3D } from '../accessibility/FocusIndicator3D';
 import { AriaLiveRegion } from '../accessibility/AriaLiveRegion';
+import { useBimEntityProxyAccessibility } from '../accessibility/use-bim-entity-proxy-accessibility';
 
 const HOVER_DEBOUNCE_MS = 800;
 
@@ -86,11 +88,20 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // ADR-371: `visible` prop overrides global store (read-only Properties pipeline).
   const effectiveVisible = visible !== undefined ? visible : is3DFromStore;
 
-  // Phase 4.3: load persisted ViewCube preferences on user mount
+  // Phase 4.3 + C.5: load persisted preferences (ViewCube + accessibility) on user mount.
   useEffect(() => {
     if (!user?.uid) return;
     Bim3DPreferencesService.load(user.uid).then((prefs) => {
-      if (prefs) setCompassVisible(prefs.compassRingVisible);
+      if (!prefs) return;
+      setCompassVisible(prefs.compassRingVisible);
+      if (prefs.accessibility) {
+        const a = prefs.accessibility;
+        const store = useViewMode3DStore.getState();
+        store.setAnnouncementsEnabled(a.announcementsEnabled);
+        store.setAccessibilityReducedMotion(a.reducedMotion);
+        store.setAccessibilityEntityNavOrder(a.entityNavOrder);
+        managerRef.current?.setReducedMotionOverride(a.reducedMotion);
+      }
     }).catch(() => { /* silently ignore — defaults apply */ });
   }, [user?.uid]);
 
@@ -292,6 +303,22 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     }
   }, [compassVisible, user?.uid]);
 
+  // Phase 9 / C.5: entity DOM proxy + keyboard navigator (accessibility for AT).
+  useBimEntityProxyAccessibility({
+    containerRef,
+    managerRef,
+    effectiveVisible,
+    externalEntitiesMode,
+  });
+
+  // Phase 9 / C.5.Q5: sync reduced-motion override from store → ThreeJsSceneManager.
+  useEffect(() => {
+    return useViewMode3DStore.subscribe(
+      (s) => s.accessibilityReducedMotion,
+      (override) => { managerRef.current?.setReducedMotionOverride(override as ReducedMotionOverride); },
+    );
+  }, []);
+
   // Phase 4.4: keyboard shortcuts (canonical views, selection-aware F, auto-switch).
   // Hook reads `managerRef.current` lazily on each keydown so it survives remounts
   // without re-subscribing. Active only while the 3D viewport is visible.
@@ -345,10 +372,18 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // Three.js camera DOM listeners still fire — DOM bubbling is unaffected by
   // React stopPropagation, so OrbitControls receives events normally.
   return (
+    <>
+      {/* Skip link — allows keyboard/AT users to bypass 3D content. */}
+      <a
+        href="#bim-3d-canvas-skip"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-[200] focus:rounded focus:bg-background focus:px-3 focus:py-1 focus:text-sm focus:shadow"
+      >
+        {t('aria.canvas.skipLink')}
+      </a>
     <div
       className="absolute inset-0 z-50 cursor-grab active:cursor-grabbing"
       role="application"
-      aria-label={t('aria.viewport.label')}
+      aria-label={t('aria.canvas.rootLabel')}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onClick={handleClick}
@@ -452,6 +487,11 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         focusManager={managerRef.current?.getKeyboardFocusManager() ?? null}
         getEntityData={managerRef.current ? (id) => managerRef.current!.getFocusedEntityData(id) : null}
       />
+
     </div>
+
+    {/* Skip-link target — placed after the 3D viewport div. */}
+    <span id="bim-3d-canvas-skip" tabIndex={-1} className="sr-only" aria-hidden="true" />
+    </>
   );
 }

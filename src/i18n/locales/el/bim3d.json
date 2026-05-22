@@ -154,7 +154,8 @@
       "floors": "Όροφοι",
       "lighting": "Φωτισμός",
       "quality": "Ποιότητα",
-      "sections": "Τομή"
+      "sections": "Τομή",
+      "accessibility": "Προσβασιμότητα"
     },
     "buildings": {
       "label": "Κτίριο",
@@ -473,7 +474,8 @@
       "enterHelp": "Enter: άνοιγμα ιδιοτήτων",
       "escHelp": "Esc: καθαρισμός εστίασης",
       "pageHelp": "PageDown/PageUp: επόμενος/προηγούμενος όροφος",
-      "homeEndHelp": "Home/End: πρώτη/τελευταία εντότητα"
+      "homeEndHelp": "Home/End: πρώτη/τελευταία εντότητα",
+      "proxyContainerLabel": "Οντότητες BIM — πλοήγηση πληκτρολογίου"
     },
     "announcements": {
       "entitySelected": "Επιλέχθηκε {type} {name}",

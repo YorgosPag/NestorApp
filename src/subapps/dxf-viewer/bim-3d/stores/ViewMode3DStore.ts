@@ -8,6 +8,7 @@ import type { FloorVisMode, FloorPreset } from '../utils/floor-visibility-state'
 import { applyPreset, sortLevelsTopDown } from '../utils/floor-visibility-state';
 import type { Level } from '../../systems/levels/config';
 import { LIGHT_PRESETS, DEFAULT_PRESET, type LightPresetId } from '../lighting/lighting-presets';
+import type { ReducedMotionOverride } from '../accessibility/use-reduced-motion';
 
 enableMapSet();
 
@@ -60,6 +61,10 @@ interface ViewMode3DState {
   isTransitioning: boolean;
   /** Whether ARIA live-region announcements are active (ADR-366 Phase 9 / C.5.Q1). */
   announcementsEnabled: boolean;
+  /** Reduced-motion override (ADR-366 Phase 9 / C.5.Q5). Default: 'auto' (follow OS). */
+  accessibilityReducedMotion: ReducedMotionOverride;
+  /** Entity keyboard navigation order (ADR-366 Phase 9 / C.5.Q3). */
+  accessibilityEntityNavOrder: 'spatial' | 'semantic';
   /** Active final render config (null = no render in progress / dialog closed) */
   finalRenderConfig: FinalRenderConfig | null;
   /** Render progress 0-100; -1 = idle */
@@ -116,6 +121,8 @@ interface ViewMode3DActions {
   setSolarConfig(date: Date, latDeg: number, lngDeg: number): void;
   toggleSunAnimating(): void;
   setAnnouncementsEnabled(enabled: boolean): void;
+  setAccessibilityReducedMotion(v: ReducedMotionOverride): void;
+  setAccessibilityEntityNavOrder(v: 'spatial' | 'semantic'): void;
 }
 
 type ViewMode3DStoreType = ViewMode3DState & ViewMode3DActions;
@@ -130,6 +137,8 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
         mode: '2d',
         isTransitioning: false,
         announcementsEnabled: true,
+        accessibilityReducedMotion: 'auto' as ReducedMotionOverride,
+        accessibilityEntityNavOrder: 'spatial' as const,
         finalRenderConfig: null,
         finalRenderProgress: -1,
         visibleFloors: new Set<string>(),
@@ -268,6 +277,18 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
         setAnnouncementsEnabled(enabled) {
           set((draft) => {
             draft.announcementsEnabled = enabled;
+          });
+        },
+
+        setAccessibilityReducedMotion(v) {
+          set((draft) => {
+            draft.accessibilityReducedMotion = v;
+          });
+        },
+
+        setAccessibilityEntityNavOrder(v) {
+          set((draft) => {
+            draft.accessibilityEntityNavOrder = v;
           });
         },
       }))

@@ -57,6 +57,7 @@ import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer';
 import type { FocusEntityLabelData } from '../accessibility/FocusIndicator3D';
 import { computeFocusOrder, findFocusedEntityData } from '../accessibility/focus-order';
 import { applyLightPresetToScene, updateSunDirection } from '../lighting/apply-light-preset';
+import { checkReducedMotion, type ReducedMotionOverride } from '../accessibility/use-reduced-motion';
 
 const INITIAL_CAMERA_POSITION = new THREE.Vector3(15, 10, 15);
 const INITIAL_CAMERA_TARGET = new THREE.Vector3(0, 0, 0);
@@ -92,6 +93,7 @@ export class ThreeJsSceneManager {
   private readonly focusUnsub: () => void;
   private rafHandle: number | null = null;
   private disposed = false;
+  private reducedMotionOverride: ReducedMotionOverride = 'auto';
   private lastFrameTime = performance.now();
   private isInteracting = false;
   private initialCameraFitDone = false;
@@ -187,7 +189,13 @@ export class ThreeJsSceneManager {
         this.poi.onNavigationActive();
       },
       onInteractionEnd: () => { this.isInteracting = false; },
+      getReducedMotion: () => checkReducedMotion(this.reducedMotionOverride),
     });
+  }
+
+  /** ADR-366 Phase 9 / C.5.Q5 — update override; viewport reads it at animation-call time. */
+  setReducedMotionOverride(override: ReducedMotionOverride): void {
+    this.reducedMotionOverride = override;
   }
 
   private initViewCube(container: HTMLElement): ViewCubeEngine {
@@ -231,6 +239,12 @@ export class ThreeJsSceneManager {
   /** ADR-366 Phase 4.5 / A.7.Q4 — screen-space pan (dxPx > 0 = view right, dyPx > 0 = view up). */
   panViewportByPixels(dxPx: number, dyPx: number): void {
     if (!this.disposed) this.viewport.pan(dxPx, dyPx);
+  }
+
+  /** ADR-366 Phase 9 / C.5.Q3 — current frustum-culled entity order for keyboard navigator. */
+  getEntityFocusOrder(): readonly string[] {
+    if (this.disposed) return [];
+    return computeFocusOrder(this.bimLayer.group, this.viewport.camera);
   }
 
   /** ADR-366 Phase 4.5 / A.7.Q1 — Tab/Shift+Tab cycle through visible entities. */

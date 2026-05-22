@@ -154,7 +154,8 @@
       "floors": "Floors",
       "lighting": "Lighting",
       "quality": "Quality",
-      "sections": "Section"
+      "sections": "Section",
+      "accessibility": "Accessibility"
     },
     "buildings": {
       "label": "Building",
@@ -473,7 +474,8 @@
       "enterHelp": "Enter: open properties",
       "escHelp": "Esc: clear focus",
       "pageHelp": "PageDown/PageUp: next/previous floor",
-      "homeEndHelp": "Home/End: first/last entity"
+      "homeEndHelp": "Home/End: first/last entity",
+      "proxyContainerLabel": "BIM entities — keyboard navigation"
     },
     "announcements": {
       "entitySelected": "Selected {type} {name}",

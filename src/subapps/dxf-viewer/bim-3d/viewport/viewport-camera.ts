@@ -20,6 +20,7 @@ import {
   SPEED_MODIFIER_FAST, SPEED_MODIFIER_PRECISE,
   TUMBLE_BASE_SPEED,
 } from './viewport-constants';
+import { getAnimationDuration } from '../accessibility/reduced-motion-config';
 
 export interface ViewportCameraOptions {
   readonly initialPosition: THREE.Vector3;
@@ -27,6 +28,8 @@ export interface ViewportCameraOptions {
   readonly onRenderNeeded: () => void;
   readonly onInteractionStart: () => void;
   readonly onInteractionEnd: () => void;
+  /** Returns true when reduced motion is active. Checked at animation call time. */
+  readonly getReducedMotion?: () => boolean;
 }
 
 const _snapDir = new THREE.Vector3();
@@ -81,6 +84,7 @@ export function createViewportCamera(
   });
 
   const animation = createViewportAnimation();
+  const rm = () => options.getReducedMotion?.() ?? false;
 
   function getZoom(): number {
     if (activeCamera instanceof THREE.OrthographicCamera) return activeCamera.zoom;
@@ -114,7 +118,7 @@ export function createViewportCamera(
       animation.start(
         { position: activeCamera.position.clone(), target: controls.target.clone(), zoom: getZoom() },
         { position: result.position, target: result.target, zoom: getZoom() },
-        FRAME_SCENE_DURATION_MS,
+        getAnimationDuration('camera', rm(), FRAME_SCENE_DURATION_MS),
         (pos, tgt) => { activeCamera.position.copy(pos); controls.target.copy(tgt); onRenderNeeded(); },
         () => { controls.enabled = true; },
       );
@@ -125,7 +129,7 @@ export function createViewportCamera(
       animation.start(
         { position: activeCamera.position.clone(), target: controls.target.clone(), zoom: orthoCamera.zoom },
         { position: result.position, target: result.target, zoom: result.orthoZoom },
-        FRAME_SCENE_DURATION_MS,
+        getAnimationDuration('camera', rm(), FRAME_SCENE_DURATION_MS),
         (pos, tgt, z) => {
           activeCamera.position.copy(pos); controls.target.copy(tgt);
           orthoCamera.zoom = z; updateOrthoFrustum(domElement.clientWidth, domElement.clientHeight);
@@ -166,7 +170,7 @@ export function createViewportCamera(
       animation.start(
         { position: perspCamera.position.clone(), target: target.clone(), zoom: getZoom() },
         { position: finalPos, target, zoom: getZoom() },
-        PROJECTION_SWITCH_DURATION_MS,
+        getAnimationDuration('camera', rm(), PROJECTION_SWITCH_DURATION_MS),
         (pos, tgt) => { perspCamera.position.copy(pos); controls.target.copy(tgt); perspCamera.lookAt(tgt); onRenderNeeded(); },
         () => { controls.enabled = true; },
       );
@@ -185,7 +189,7 @@ export function createViewportCamera(
       animation.start(
         { position: fromPos, target: fromTarget, zoom: currentZoom },
         { position: toPos, target, zoom: currentZoom },
-        PROJECTION_SWITCH_DURATION_MS,
+        getAnimationDuration('camera', rm(), PROJECTION_SWITCH_DURATION_MS),
         (pos, tgt) => { activeCamera.position.copy(pos); controls.target.copy(tgt); activeCamera.lookAt(tgt); onRenderNeeded(); },
         () => {
           orthoCamera.position.copy(toPos);
@@ -227,7 +231,7 @@ export function createViewportCamera(
     animation.start(
       { position: perspCamera.position.clone(), target: target.clone(), zoom: getZoom() },
       { position: toPos, target, zoom: getZoom() },
-      PROJECTION_SWITCH_DURATION_MS,
+      getAnimationDuration('camera', rm(), PROJECTION_SWITCH_DURATION_MS),
       (pos, tgt) => { perspCamera.position.copy(pos); controls.target.copy(tgt); perspCamera.lookAt(tgt); onRenderNeeded(); },
       () => { controls.enabled = true; onInteractionEnd(); },
     );
@@ -277,7 +281,7 @@ export function createViewportCamera(
     animation.start(
       { position: fromPos, target: fromTgt, zoom: currentZoom },
       { position: toPos, target: toTgt, zoom: currentZoom },
-      PAN_ANIMATION_DURATION_MS,
+      getAnimationDuration('camera', rm(), PAN_ANIMATION_DURATION_MS),
       (pos, tgt) => {
         activeCamera.position.copy(pos);
         controls.target.copy(tgt);
@@ -304,7 +308,7 @@ export function createViewportCamera(
     animation.start(
       { position: perspCamera.position.clone(), target: target.clone(), zoom: getZoom() },
       { position: initialPosition.clone(), target: initialTarget.clone(), zoom: 1.0 },
-      FRAME_SCENE_DURATION_MS,
+      getAnimationDuration('camera', rm(), FRAME_SCENE_DURATION_MS),
       (pos, tgt) => { perspCamera.position.copy(pos); controls.target.copy(tgt); perspCamera.lookAt(tgt); onRenderNeeded(); },
       () => { controls.enabled = true; onInteractionEnd(); },
     );
