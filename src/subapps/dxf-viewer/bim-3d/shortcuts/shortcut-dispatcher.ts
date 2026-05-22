@@ -27,6 +27,7 @@ import {
   ACTION_FOCUS_PREV_3D,
   ACTION_FOCUS_SELECT_3D,
   ACTION_FOCUS_CLEAR_3D,
+  ACTION_CROP_REGION_TOGGLE,
   PAN_STEP_NORMAL_PX,
   PAN_STEP_FINE_PX,
   matchView3DShortcut,
@@ -61,6 +62,8 @@ export interface ShortcutDispatchContext {
   readonly onFocusPrev3D: () => void;
   readonly onFocusSelect3D: () => void;
   readonly onFocusClear3D: () => void;
+  /** ADR-366 §C.6.Q4 — Crop region tool toggle (Ctrl+Alt+R). Optional. */
+  readonly onCropRegionToggle?: () => void;
 }
 
 export interface DispatchResult {
@@ -162,6 +165,12 @@ function dispatchMatched3D(
   const view = parseView3dAction(shortcut.action);
   if (view) {
     ctx.onSnapToView(view);
+    return HANDLED;
+  }
+
+  // ADR-366 §C.6.Q4 — crop region toggle (Ctrl+Alt+R).
+  if (shortcut.action === ACTION_CROP_REGION_TOGGLE) {
+    ctx.onCropRegionToggle?.();
     return HANDLED;
   }
 

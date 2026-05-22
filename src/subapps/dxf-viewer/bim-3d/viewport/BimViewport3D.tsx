@@ -29,6 +29,8 @@ import { Bim3DPreferencesService } from '../services/Bim3DPreferencesService';
 import { use3DShortcuts } from '../shortcuts/use3DShortcuts';
 import { FocusIndicator3D } from '../accessibility/FocusIndicator3D';
 import { AriaLiveRegion } from '../accessibility/AriaLiveRegion';
+import { CropRegionOverlay } from '../render/crop-region/CropRegionOverlay';
+import { useCropRegionTool } from '../render/crop-region/useCropRegionTool';
 import { useBimEntityProxyAccessibility } from '../accessibility/use-bim-entity-proxy-accessibility';
 
 const HOVER_DEBOUNCE_MS = 800;
@@ -319,12 +321,11 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     );
   }, []);
 
-  // Phase 4.4: keyboard shortcuts (canonical views, selection-aware F, auto-switch).
-  // Hook reads `managerRef.current` lazily on each keydown so it survives remounts
-  // without re-subscribing. Active only while the 3D viewport is visible.
+  const onCropRegionToggle = useCropRegionTool({ managerRef, active: effectiveVisible });
   use3DShortcuts({
     getManager: () => managerRef.current,
     active: effectiveVisible,
+    onCropRegionToggle,
   });
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -399,6 +400,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         className="absolute inset-0"
         role="presentation"
       />
+      <CropRegionOverlay />
       {/* Exit button top-left — clear of ViewCube at top-right (ADR-366 §9 Q1). */}
       <Tooltip>
         <TooltipTrigger asChild>

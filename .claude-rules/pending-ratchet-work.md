@@ -1,7 +1,7 @@
 # Pending Ratchet Work — Live Checklist
 
 **STATUS: ACTIVE**
-**Last updated:** 2026-05-22 (ADR-366 Phase 9 C.6 DONE — Advanced Section Cuts + Crop Region: 6 new modules + plane groups + frustum builder + ADR-326 floor.elevation presets)
+**Last updated:** 2026-05-22 (ADR-366 Phase 9 C.6 INTEGRATION — BimViewport3D wiring + ribbon button + overlay + Ctrl+Alt+R shortcut)
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
 **Purpose:** Agent-facing live checklist. Se STATUS = ALL_DONE → salta il resto. Se STATUS = ACTIVE → leggi e ricorda a Giorgio.
 

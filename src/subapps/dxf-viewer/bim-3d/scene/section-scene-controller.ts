@@ -19,6 +19,8 @@ import { useSectionStore, type SectionBoxBounds } from '../stores/SectionStore';
 import { SectionBox } from '../systems/section/SectionBox';
 import { applyClippingPlanes, clearClippingPlanes } from '../systems/section/section-clip-applicator';
 import { SectionStencilRenderer } from '../systems/section/section-stencil-renderer';
+import { useCropRegionStore } from '../render/crop-region/CropRegionStore';
+import { buildCropPlanes } from '../render/crop-region/crop-frustum-builder';
 
 export interface SectionControllerDeps {
   readonly renderer: THREE.WebGLRenderer;
@@ -34,12 +36,15 @@ export class SectionSceneController {
   private readonly sectionBox: SectionBox;
   private readonly stencilRenderer: SectionStencilRenderer;
   private readonly storeUnsub: () => void;
+  private readonly cropUnsub: () => void;
   private readonly pointerDown: (e: PointerEvent) => void;
   private readonly pointerMove: (e: PointerEvent) => void;
   private readonly pointerUp: (e: PointerEvent) => void;
   private initDone = false;
   private disposed = false;
   private cachedPlanes: THREE.Plane[] = [];
+  /** Combined section + crop planes (≤ 6 total, Three.js hard limit). */
+  private combinedPlanes: THREE.Plane[] = [];
 
   constructor(deps: SectionControllerDeps) {
     this.deps = deps;
@@ -51,6 +56,10 @@ export class SectionSceneController {
       getDxfBounds: deps.getDxfBounds,
     });
     this.storeUnsub = this.subscribeStore();
+    this.cropUnsub = useCropRegionStore.subscribe(
+      (s) => s.editState,
+      () => this.applyState(),
+    );
     this.pointerDown = (e) => this.onPointerDown(e);
     this.pointerMove = (e) => this.onPointerMove(e);
     this.pointerUp = (e) => this.onPointerUp(e);
@@ -94,7 +103,6 @@ export class SectionSceneController {
       if (boxBounds) this.sectionBox.setFromBounds(boxBounds);
       this.sectionBox.setVisible(true);
       this.cachedPlanes = this.sectionBox.getPlanes();
-      applyClippingPlanes(this.deps.scene, this.cachedPlanes);
     } else {
       this.sectionBox.setVisible(false);
       this.cachedPlanes = planes
@@ -105,8 +113,11 @@ export class SectionSceneController {
             p.constant,
           ),
         );
-      applyClippingPlanes(this.deps.scene, this.cachedPlanes);
     }
+    const cropPlanes = this.buildCropPlanes();
+    // Enforce Three.js hard limit of 6 clipping planes (section + crop combined).
+    this.combinedPlanes = [...this.cachedPlanes, ...cropPlanes].slice(0, 6);
+    applyClippingPlanes(this.deps.scene, this.combinedPlanes);
     this.deps.invalidatePathTracer();
   }
 
@@ -117,7 +128,17 @@ export class SectionSceneController {
    */
   isStencilActive(): boolean {
     if (this.disposed) return false;
-    return useSectionStore.getState().enabled && this.cachedPlanes.length > 0;
+    return useSectionStore.getState().enabled && this.combinedPlanes.length > 0;
+  }
+
+  private buildCropPlanes(): THREE.Plane[] {
+    const cropState = useCropRegionStore.getState();
+    if (cropState.editState !== 'committed' || !cropState.rectangle) return [];
+    const camera = this.deps.getCamera();
+    const depthRange = cropState.depthRangeEnabled
+      ? { near: cropState.nearNorm, far: cropState.farNorm }
+      : undefined;
+    return buildCropPlanes(cropState.rectangle, camera, depthRange);
   }
 
   /**
@@ -131,7 +152,7 @@ export class SectionSceneController {
     renderer.autoClear = true;
     renderer.render(this.deps.scene, camera);
     const bounds = this.computeSceneBounds();
-    this.stencilRenderer.render(renderer, this.deps.scene, camera, this.cachedPlanes, bounds);
+    this.stencilRenderer.render(renderer, this.deps.scene, camera, this.combinedPlanes, bounds);
   }
 
   private computeSceneBounds(): THREE.Box3 | null {
@@ -187,6 +208,7 @@ export class SectionSceneController {
     if (this.disposed) return;
     this.disposed = true;
     this.storeUnsub();
+    this.cropUnsub();
     const dom = this.deps.renderer.domElement;
     const opts = { capture: true } as EventListenerOptions;
     dom.removeEventListener('pointerdown', this.pointerDown, opts);

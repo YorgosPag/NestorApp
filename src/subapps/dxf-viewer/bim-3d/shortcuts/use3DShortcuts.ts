@@ -27,6 +27,8 @@ interface Use3DShortcutsConfig {
   readonly getManager: () => ThreeJsSceneManager | null;
   /** Gate by component mount — hook still creates listener, but no-ops when false. */
   readonly active: boolean;
+  /** ADR-366 §C.6.Q4 — crop region toggle callback. */
+  readonly onCropRegionToggle?: () => void;
 }
 
 /**
@@ -36,7 +38,7 @@ interface Use3DShortcutsConfig {
  * flag, so it does not re-subscribe on every render. The callback reads
  * `getManager()` lazily so the latest manager instance is used after remounts.
  */
-export function use3DShortcuts({ getManager, active }: Use3DShortcutsConfig): void {
+export function use3DShortcuts({ getManager, active, onCropRegionToggle }: Use3DShortcutsConfig): void {
   const { t } = useTranslation('bim3d');
 
   useEffect(() => {
@@ -73,6 +75,7 @@ export function use3DShortcuts({ getManager, active }: Use3DShortcutsConfig): vo
         onFocusPrev3D: () => manager.cycleKeyboardFocus('prev'),
         onFocusSelect3D: () => manager.selectFocusedEntity(),
         onFocusClear3D: () => manager.clearKeyboardFocus(),
+        onCropRegionToggle,
       };
 
       const result = dispatchShortcut(event, ctx);

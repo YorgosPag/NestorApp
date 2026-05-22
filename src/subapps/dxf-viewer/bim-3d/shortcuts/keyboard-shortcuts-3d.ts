@@ -64,6 +64,9 @@ export const ACTION_FOCUS_CLEAR_3D = 'view3d:focus-clear' as const;
 export const ACTION_DIM3D_TOGGLE = 'view3d:dim3d-toggle' as const;
 export const ACTION_DIM3D_CYCLE_MODE = 'view3d:dim3d-cycle-mode' as const;
 
+// ADR-366 Phase 9 / C.6.Q4 — Crop region tool (Ctrl+Alt+R).
+export const ACTION_CROP_REGION_TOGGLE = 'view3d:crop-region-toggle' as const;
+
 /** Returns the canonical action id for a given view. */
 export function view3dAction(view: CanonicalViewId): View3DAction {
   return `view3d:${view}`;
@@ -392,6 +395,23 @@ export const DIM3D_SHORTCUTS: Record<string, ShortcutDefinition> = {
 } as const;
 
 // ============================================================================
+// 🖼️ CROP REGION SHORTCUT — ADR-366 Phase 9 / C.6.Q4
+// ============================================================================
+// Ctrl+Alt+R activates/deactivates the crop region marquee tool.
+// Ctrl+Shift+R is reserved (browser); Ctrl+Alt+R is free in all major browsers.
+
+export const CROP_3D_SHORTCUTS: Record<string, ShortcutDefinition> = {
+  cropToggle: {
+    key: 'R',
+    modifier: 'ctrlAlt',
+    descriptionKey: 'shortcuts.view3d.cropToggle',
+    action: ACTION_CROP_REGION_TOGGLE,
+    category: 'view3d',
+    mode: '3D-only',
+  },
+} as const;
+
+// ============================================================================
 // 🔗 COMBINED MAP + DERIVED INDICES
 // ============================================================================
 
@@ -401,6 +421,7 @@ export const ALL_VIEW_3D_SHORTCUTS = {
   ...PAN_3D_SHORTCUTS,
   ...FOCUS_3D_SHORTCUTS,
   ...DIM3D_SHORTCUTS,
+  ...CROP_3D_SHORTCUTS,
   fitFrame: VIEW_3D_FIT_SHORTCUT,
   homeKey: VIEW_3D_HOME_SHORTCUT,
 } as const;
