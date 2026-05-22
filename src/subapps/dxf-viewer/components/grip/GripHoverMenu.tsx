@@ -6,8 +6,12 @@
  * {@link GripHoverMenuStore}. Mounted as a sibling of CanvasLayerStack so
  * orchestrators (CanvasSection, CanvasLayerStack) stay subscription-free.
  *
+ * Styling: uses DxfContextMenu shared primitives for visual consistency with
+ * DrawingContextMenu, EntityContextMenu, and GripContextMenu.
+ *
  * @see GripHoverMenuStore
  * @see ADR-040 §micro-leaf subscriber pattern
+ * @see DxfContextMenu — shared context menu SSoT
  */
 
 'use client';
@@ -15,6 +19,14 @@
 import React, { useSyncExternalStore, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { GripHoverMenuStore } from '../../systems/grip/GripHoverMenuStore';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DxfMenuContent,
+  DxfMenuItem,
+  DxfMenuHiddenTrigger,
+  DxfMenuLabel,
+} from '../../ui/components/dxf-context-menu';
 
 export const GripHoverMenu = React.memo(function GripHoverMenu() {
   const snapshot = useSyncExternalStore(
@@ -23,55 +35,45 @@ export const GripHoverMenu = React.memo(function GripHoverMenu() {
     GripHoverMenuStore.getSnapshot,
   );
   const { t } = useTranslation('tool-hints');
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLSpanElement>(null);
 
-  // ── Dismiss on outside-click / Escape ───────────────────────────────────
+  // Position the hidden trigger at the grip screen position from the store.
   useEffect(() => {
-    if (!snapshot.visible) return;
-    const onPointerDown = (e: PointerEvent) => {
-      if (containerRef.current && containerRef.current.contains(e.target as Node)) return;
-      GripHoverMenuStore.hide();
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') GripHoverMenuStore.hide();
-    };
-    window.addEventListener('pointerdown', onPointerDown, true);
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('pointerdown', onPointerDown, true);
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [snapshot.visible]);
+    if (snapshot.visible && snapshot.screenPos && triggerRef.current) {
+      triggerRef.current.style.left = `${snapshot.screenPos.x}px`;
+      triggerRef.current.style.top = `${snapshot.screenPos.y}px`;
+    }
+  }, [snapshot.visible, snapshot.screenPos]);
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open) GripHoverMenuStore.hide();
+  }, []);
 
   const handleSelect = useCallback((onSelect: () => void) => {
     onSelect();
     GripHoverMenuStore.hide();
   }, []);
 
-  if (!snapshot.visible || !snapshot.screenPos) return null;
-
   return (
-    <nav
-      ref={containerRef}
-      className="dxf-grip-menu fixed z-50 min-w-[160px] rounded-md border border-border bg-card shadow-lg"
-      style={{ left: snapshot.screenPos.x, top: snapshot.screenPos.y }}
-      aria-label={t('gripMenu.ariaLabel')}
-    >
-      <ul className="py-1 text-sm">
+    <DropdownMenu open={snapshot.visible} onOpenChange={handleOpenChange}>
+      <DropdownMenuTrigger asChild>
+        <DxfMenuHiddenTrigger ref={triggerRef} />
+      </DropdownMenuTrigger>
+      <DxfMenuContent
+        aria-label={t('gripMenu.ariaLabel')}
+        onContextMenu={(e) => e.preventDefault()}
+      >
         {snapshot.options.map((opt) => (
-          <li key={opt.id}>
-            <button
-              type="button"
-              disabled={opt.disabled}
-              onClick={() => handleSelect(opt.onSelect)}
-              className="block w-full px-3 py-1.5 text-left hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {t(opt.labelKey)}
-            </button>
-          </li>
+          <DxfMenuItem
+            key={opt.id}
+            disabled={opt.disabled}
+            onClick={() => handleSelect(opt.onSelect)}
+          >
+            <DxfMenuLabel>{t(opt.labelKey)}</DxfMenuLabel>
+          </DxfMenuItem>
         ))}
-      </ul>
-    </nav>
+      </DxfMenuContent>
+    </DropdownMenu>
   );
 });
 
