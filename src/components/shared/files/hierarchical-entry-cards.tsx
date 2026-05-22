@@ -66,7 +66,7 @@ export function EntryCard({
             isSelected
               ? 'border-primary bg-primary/10 shadow-md scale-105'
               : isCustomTitle
-                ? 'border-dashed border-amber-400 bg-amber-50 hover:border-amber-500 dark:border-amber-600 dark:bg-amber-950/30 dark:hover:border-amber-500'
+                ? 'border-dashed border-[hsl(var(--bg-warning))] bg-[hsl(var(--bg-warning))]/40 hover:border-[hsl(var(--bg-warning))]'
                 : 'border-border bg-card hover:border-primary/50'
           )}
           role="radio"
@@ -79,7 +79,7 @@ export function EntryCard({
               isSelected
                 ? 'bg-primary text-primary-foreground'
                 : isCustomTitle
-                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
+                  ? 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--bg-warning))]'
                   : `bg-muted ${colors.text.muted}`
             )}
           >
@@ -92,7 +92,7 @@ export function EntryCard({
               isSelected
                 ? 'text-primary'
                 : isCustomTitle
-                  ? 'text-amber-800 dark:text-amber-300'
+                  ? 'text-[hsl(var(--bg-warning))]'
                   : 'text-foreground'
             )}
           >
@@ -100,7 +100,7 @@ export function EntryCard({
           </span>
 
           {isCustomTitle && (
-            <span className="text-[10px] text-amber-600 dark:text-amber-400 leading-tight">
+            <span className="text-[10px] text-[hsl(var(--bg-warning))] leading-tight">
               {freeTitleLabel}
             </span>
           )}

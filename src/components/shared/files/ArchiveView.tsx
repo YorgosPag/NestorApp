@@ -206,8 +206,8 @@ export function ArchiveView({
 
   if (error) {
     return (
-      <section className={`p-2 ${colors.bg.error} ${quick.card} border border-red-200`}>
-        <div className="flex items-center gap-2 text-red-600">
+      <section className={`p-2 ${colors.bg.error} ${quick.card} border border-destructive`}>
+        <div className="flex items-center gap-2 text-destructive">
           <AlertTriangle className={iconSizes.md} />
           <p>{error.message}</p>
         </div>
@@ -294,10 +294,10 @@ export function ArchiveView({
           >
             <div className="flex items-center space-x-3 flex-1 min-w-0">
               <div
-                className={`flex-shrink-0 w-10 h-10 bg-orange-500/10 ${quick.card} flex items-center justify-center`}
+                className={`flex-shrink-0 w-10 h-10 bg-[hsl(var(--bg-warning))]/10 ${quick.card} flex items-center justify-center`}
                 aria-hidden="true"
               >
-                <Archive className={`${iconSizes.md} text-orange-500`} />
+                <Archive className={`${iconSizes.md} text-[hsl(var(--bg-warning))]`} />
               </div>
 
               <div className="flex-1 min-w-0">
@@ -326,7 +326,7 @@ export function ArchiveView({
                     variant="ghost"
                     size="sm"
                     onClick={() => handleUnarchiveClick(file.id)}
-                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                    className="text-green-707 hover:text-green-707 hover:bg-[hsl(var(--bg-success))]/10"
                     aria-label={t('archived.unarchiveFile')}
                   >
                     <RotateCcw className={`${iconSizes.sm} mr-1`} aria-hidden="true" />

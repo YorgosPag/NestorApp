@@ -1,7 +1,7 @@
 # Pending Ratchet Work — Live Checklist
 
 **STATUS: ACTIVE**
-**Last updated:** 2026-05-22 (ADR-365 Phase 3 DONE — Accounting 19 files, −143 violations, baseline 2,889/394)
+**Last updated:** 2026-05-22 (ADR-365 Phase 5 DONE — Shared Files + File Manager 9 files, −73 violations, baseline 2,667/362)
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
 **Purpose:** Agent-facing live checklist. Se STATUS = ALL_DONE → salta il resto. Se STATUS = ACTIVE → leggi e ricorda a Giorgio.
 
@@ -95,19 +95,19 @@
 
 Discovered 2026-05-19 (hover audit follow-up). ADR: `docs/centralized-systems/reference/adrs/ADR-365-tailwind-semantic-palette-enforcement.md`
 
-**Status:** PHASE 4 DONE 2026-05-22. Baseline: 2,740/371. Per-phase handoff απαιτείται πριν από κάθε νέα session.
+**Status:** PHASE 5 DONE 2026-05-22. Baseline: 2,667/362. Per-phase handoff απαιτείται πριν από κάθε νέα session.
 
 - [x] **Phase 0 — Infrastructure** ✅ 2026-05-19 — ratchet script (`scripts/check-tailwind-palette-ratchet.js`), `.ssot-registry.json` module `tailwind-hardcoded-palette` (Tier 2, 15 allowlist entries), `.tailwind-palette-baseline.json` (3,659 violations / 440 files — actual baseline revised from estimate 249/65), CHECK 3.26 wired into `scripts/run-checks-parallel.js` (worker_thread), npm scripts `tailwind-palette:{audit,report,baseline}`. Smoke 1-5 PASS. Hook latency ~0.73s staged / ~3.4s full.
 - [x] **Phase 1 — DXF Viewer** ✅ 2026-05-22 — 20 files cleaned (−254 violations). Baseline: 3,659/440 → 3,405/420.
 - [x] **Phase 2 — Procurement + Vendor Portal** ✅ 2026-05-22 — 43/44 files cleaned (−373 violations). Baseline: 3,405/420 → 3,032/399. ConflictDialog migration in working tree only, blocked by CHECK 3.22 dead-code ratchet.
 - [x] **Phase 3 — Accounting** ✅ 2026-05-22 — 19 files cleaned (−143 violations). Baseline: 3,032/399 → 2,889/394.
 - [x] **Phase 4 — Properties + Contacts + Building Dialogs** ✅ 2026-05-22 — 23 files cleaned (−149 violations). Baseline: 2,889/394 → 2,740/371.
-- [ ] **Phase 5 — Shared Files + File Manager** (~30min, ~9 files)
+- [x] **Phase 5 — Shared Files + File Manager** ✅ 2026-05-22 — 9 files cleaned (−73 violations). Baseline: 2,740/371 → 2,667/362.
 - [ ] **Phase 6 — Dashboard + Admin + CRM + Header + Notifications** (~45min, ~10 files)
 - [ ] **Phase 7 — Design System + Showcase + Sales + Geo-canvas** (~45min, ~8 files)
 - [ ] **Phase 8 — Closure** (~20min) — baseline → 0, ADR APPROVED, changelog, pending-ratchet entry remove
 
-Baseline after Phase 4 (2026-05-22): **2,740 violations / 371 files** (was 2,889/394). Target: 0. Mapping table + exempt SSoT list στο ADR-365 §3.1 + §2.3. **Phase 5-8 estimates likely under-scoped** — re-baseline after each phase. Note: `text-green-707` instances are WCAG exception canonical form (§2.1) — ratchet counts them but they're documented exceptions in COLOR_BRIDGE.
+Baseline after Phase 5 (2026-05-22): **2,667 violations / 362 files** (was 2,740/371). Target: 0. Mapping table + exempt SSoT list στο ADR-365 §3.1 + §2.3. **Phase 6-8 estimates likely under-scoped** — re-baseline after each phase. Note: `text-green-707` instances are WCAG exception canonical form (§2.1) — ratchet counts them but they're documented exceptions in COLOR_BRIDGE.
 
 ---
 
@@ -196,13 +196,14 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 
 **Copy-paste template for the agent:**
 
-> 📋 Pending ratchet tasks (ADR-299): **~21h critical path (Scenario A)** — ADR-298 Phase B.2→B.6 (16 collections), CHECK 3.17 entity audit (18 files), resolver reachability (13 files). Full zero-backlog = ~64h with Phase C+E+i18n keys (Scenario B). Details: `.claude-rules/pending-ratchet-work.md` + `adrs/ADR-299-ratchet-backlog-master-roadmap.md`.
+> 📋 Pending ratchet tasks (ADR-299): **ADR-365 Tailwind Palette Phases 6-8 ⏸️ ΕΚΚΡΕΜΟΥΝ** — 2,667 violations / 362 files, ~110min συνολικά (Phase 6 Dashboard/Admin/CRM ~10 files, Phase 7 DesignSystem/Sales ~8 files, Phase 8 closure). Giorgio παύσε 2026-05-22. Handoff per session από `.claude-rules/pending-ratchet-work.md` § ADR-365 + ADR-365 §6.
 
 ---
 
 ## Changelog
 
 | Date       | Change |
+| 2026-05-22 | **ADR-365 Phase 5 DONE — Shared Files + File Manager**. 9 files: ArchiveView, TrashView, VersionHistory, UploadEntryPointSelector, HierarchicalEntryPointSelector, hierarchical-entry-cards, CameraCaptureDialog, ApprovalPanel, BatchActionsBar. Baseline: 2,740/371 → 2,667/362 (−73 violations, −9 files). Mappings: orange/amber/yellow→warning tokens; red→destructive; green→text-green-707/bg-success; violet→primary; dark: removed; eslint-disable comments removed. |
 | 2026-05-22 | **ADR-365 Phase 2 PARTIAL — Procurement + Vendor Portal**. 43 files committed (VendorPortal × 5, ExtractedDataReviewPanel, SetupLockBanner, SignatoryProposalCard, SignatoryDisambiguationModal, SourcingEventSummaryCard, QuoteLineEditorTable, QuoteDetailsHeader, QuoteEditMode, ComparisonPanel, ComparisonWinnerBanner, RecommendationCard, OfflineBanner, QuoteRevisionDetectedDialog, extracted-data-review-helpers, ProcurementSubNav, VendorDetail, VendorCard, SupplierComparisonTable, SupplierMetricsCard, PurchaseOrderForm, PurchaseOrderKPIs, AgreementDetail, MaterialDetail, hub/cards × 6, ContactRfqInvitesSection, ProcurementContactTab, ProjectProcurementTabs, KpiPendingApprovalPos, VendorGridCard, VendorListCard, scan/page, RfqDetailClient, AnalyticsKpiTiles). Baseline: 3,405/420 → 3,034/400 (−371 violations, −20 files). ConflictDialog migration in working tree (−2 more), blocked by CHECK 3.22 dead-code ratchet — pending Giorgio decision. ADR-365 status + changelog + adr-index + MEMORY.md updated. |
 | 2026-05-22 | **ADR-365 Phase 1 DONE — DXF Viewer subapp**. 20 files cleaned: GripContextMenu, GripHoverMenu, WallDnaSection, WallPersistenceSection, StairWarningsSection, StairPersistenceSection, StairPresetsSection, StairPerTreadOverrideSection, DimensionsTab, DraftRecoveryBanner, SpellCheckContextMenu, TextTemplateList, PlaceholderPicker, CustomDictionaryEditorDialog, MirrorConfirmOverlay, DraggableOverlayToolbar, PolygonControls, IsolateStatusIndicator, FloorplanBackgroundPanel, PromptDialog. Baseline: 3,659/440 → 3,405/420 (−254 violations, −20 files). ADR-365 status + changelog updated. |
 | 2026-05-21 | ADR-363 BIM entity points SSoT migration CLOSED — `slab-grips.ts` + `slab-opening-grips.ts` + `BeamRenderer.ts` (4 methods) migrated to `getBimEntityKeyPoints2D`. Transforms/geometry/validator files intentionally skipped (need 3D `Point3D`, SSoT returns 2D only). Broken import `bim-entity-points.ts` `'../extended-types'` → `'../../types/entities'` fixed. Item removed from checklist. |

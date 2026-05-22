@@ -210,7 +210,7 @@ export function BatchActionsBar({
               size="sm"
               onClick={onAIClassify}
               disabled={aiClassifying}
-              className="h-7 px-2 text-xs text-violet-600 hover:text-violet-700"
+              className="h-7 px-2 text-xs text-primary hover:text-primary/80"
             >
               {aiClassifying ? (
                 <Spinner size="small" color="inherit" className="mr-1" />
@@ -233,7 +233,7 @@ export function BatchActionsBar({
               size="sm"
               onClick={() => setArchiveDialogOpen(true)}
               disabled={archiving}
-              className="h-7 px-2 text-xs text-orange-600 hover:text-orange-700"
+              className="h-7 px-2 text-xs text-[hsl(var(--bg-warning))] hover:text-[hsl(var(--bg-warning))]/80"
             >
               {archiving ? (
                 <Spinner size="small" color="inherit" className="mr-1" />
@@ -256,7 +256,7 @@ export function BatchActionsBar({
               size="sm"
               onClick={() => setUnarchiveDialogOpen(true)}
               disabled={unarchiving}
-              className="h-7 px-2 text-xs text-green-600 hover:text-green-700"
+              className="h-7 px-2 text-xs text-green-707 hover:text-green-707"
             >
               {unarchiving ? (
                 <Spinner size="small" color="inherit" className="mr-1" />

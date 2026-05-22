@@ -64,9 +64,9 @@ const STATUS_ICON_CONFIG: Record<
   ApprovalStatus,
   { icon: typeof CheckCircle2; colorClass: string }
 > = {
-  pending: { icon: Clock, colorClass: 'text-yellow-500' }, // eslint-disable-line design-system/enforce-semantic-colors
-  approved: { icon: CheckCircle2, colorClass: 'text-green-500' }, // eslint-disable-line design-system/enforce-semantic-colors
-  rejected: { icon: XCircle, colorClass: 'text-red-500' }, // eslint-disable-line design-system/enforce-semantic-colors
+  pending: { icon: Clock, colorClass: 'text-[hsl(var(--bg-warning))]' },
+  approved: { icon: CheckCircle2, colorClass: 'text-green-707' },
+  rejected: { icon: XCircle, colorClass: 'text-destructive' },
   cancelled: { icon: Ban, colorClass: COLOR_BRIDGE.text.muted },
 };
 
@@ -389,7 +389,7 @@ export function ApprovalPanel({
                               variant="default"
                               size="sm"
                               onClick={() => handleApprove(approval.id)}
-                              className="h-6 px-2 text-xs bg-green-600 hover:bg-green-700" // eslint-disable-line design-system/enforce-semantic-colors
+                              className="h-6 px-2 text-xs bg-[hsl(var(--bg-success))] hover:bg-[hsl(var(--bg-success))]/90"
                             >
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               {t('approvals.approve')}

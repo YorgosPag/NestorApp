@@ -1,4 +1,3 @@
-/* eslint-disable design-system/enforce-semantic-colors */
 /**
  * =============================================================================
  * 🗑️ ENTERPRISE: Trash View Component
@@ -274,8 +273,8 @@ export function TrashView({
   // Error state
   if (error) {
     return (
-      <section className={`p-2 ${colors.bg.error} ${quick.card} border border-red-200`}>
-        <div className="flex items-center gap-2 text-red-600">
+      <section className={`p-2 ${colors.bg.error} ${quick.card} border border-destructive`}>
+        <div className="flex items-center gap-2 text-destructive">
           <AlertTriangle className={iconSizes.md} />
           <p>{error.message}</p>
         </div>
@@ -379,10 +378,10 @@ export function TrashView({
               <div className="flex items-center space-x-3 flex-1 min-w-0">
                 {/* Icon */}
                 <div
-                  className={`flex-shrink-0 w-10 h-10 bg-red-500/10 ${quick.card} flex items-center justify-center`}
+                  className={`flex-shrink-0 w-10 h-10 bg-destructive/10 ${quick.card} flex items-center justify-center`}
                   aria-hidden="true"
                 >
-                  <Trash2 className={`${iconSizes.md} text-red-500`} />
+                  <Trash2 className={`${iconSizes.md} text-destructive`} />
                 </div>
 
                 {/* Details */}
@@ -411,9 +410,9 @@ export function TrashView({
                       <span
                         className={`flex items-center gap-1 ${
                           isExpired
-                            ? 'text-red-500'
+                            ? 'text-destructive'
                             : daysUntilPurge <= 7
-                            ? 'text-orange-500'
+                            ? 'text-[hsl(var(--bg-warning))]'
                             : ''
                         }`}
                       >
@@ -426,7 +425,7 @@ export function TrashView({
 
                     {/* Hold status */}
                     {holdDisplay && (
-                      <span className="flex items-center gap-1 text-amber-600">
+                      <span className="flex items-center gap-1 text-[hsl(var(--bg-warning))]">
                         <Shield className={iconSizes.xs} aria-hidden="true" />
                         {holdDisplay}
                       </span>
@@ -444,7 +443,7 @@ export function TrashView({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleRestoreClick(file.id)}
-                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                      className="text-green-707 hover:text-green-707 hover:bg-[hsl(var(--bg-success))]/10"
                       aria-label={t('trash.restoreFile')}
                     >
                       <RotateCcw className={`${iconSizes.sm} mr-1`} aria-hidden="true" />

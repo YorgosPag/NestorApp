@@ -305,9 +305,9 @@ export function HierarchicalEntryPointSelector({
           })()}
 
           {hasPerFloorTemplates && floors.length === 0 && (
-            <div className="flex items-start gap-2 p-2 rounded-lg bg-yellow-50 border border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800"> {/* eslint-disable-line design-system/enforce-semantic-colors */}
-              <LucideIcons.AlertTriangle className={cn(iconSizes.sm, 'text-yellow-600 mt-0.5 flex-shrink-0')} aria-hidden="true" /> {/* eslint-disable-line design-system/enforce-semantic-colors */}
-              <p className="text-xs text-yellow-800 dark:text-yellow-300"> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+            <div className="flex items-start gap-2 p-2 rounded-lg bg-[hsl(var(--bg-warning))]/40 border border-[hsl(var(--bg-warning))]">
+              <LucideIcons.AlertTriangle className={cn(iconSizes.sm, 'text-[hsl(var(--bg-warning))] mt-0.5 flex-shrink-0')} aria-hidden="true" />
+              <p className="text-xs text-[hsl(var(--bg-warning))]">
                 {t('studies.noFloorsWarning')}
                 {onNavigateToFloors && (
                   <>
@@ -315,7 +315,7 @@ export function HierarchicalEntryPointSelector({
                     <button
                       type="button"
                       onClick={onNavigateToFloors}
-                      className="inline-flex items-center gap-1 font-semibold text-yellow-700 underline underline-offset-2 hover:text-yellow-900 dark:text-yellow-200 dark:hover:text-yellow-100 transition-colors" // eslint-disable-line design-system/enforce-semantic-colors
+                      className="inline-flex items-center gap-1 font-semibold text-[hsl(var(--bg-warning))] underline underline-offset-2 hover:text-[hsl(var(--bg-warning))]/80 transition-colors"
                     >
                       {navigateToFloorsLabel || t('studies.goToFloors')}
                       <LucideIcons.ArrowRight className="inline h-3 w-3" aria-hidden="true" />

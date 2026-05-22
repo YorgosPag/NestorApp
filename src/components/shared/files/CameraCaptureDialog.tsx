@@ -273,7 +273,7 @@ export function CameraCaptureDialog({
               role="alert"
               className={cn('flex flex-col items-center gap-3 p-6 text-center', colors.text.primary)}
             >
-              <AlertCircle className={cn(iconSizes.lg, 'text-red-500')} aria-hidden="true" />
+              <AlertCircle className={cn(iconSizes.lg, 'text-destructive')} aria-hidden="true" />
               <p className="font-medium">{t(errorKeyFor(activeErrorCode))}</p>
 
               {activeErrorCode === 'PERMISSION_DENIED' && (
@@ -337,7 +337,7 @@ export function CameraCaptureDialog({
           {!isError && !showPreview && isRecording && (
             <span
               aria-live="polite"
-              className={cn('absolute right-3 top-3 flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold text-white', 'bg-red-600')} // eslint-disable-line design-system/enforce-semantic-colors
+              className={cn('absolute right-3 top-3 flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold text-destructive-foreground', 'bg-destructive')}
             >
               <span className="h-2 w-2 animate-pulse rounded-full bg-white" aria-hidden="true" />
               {formatDuration(video.durationMs)}
@@ -398,7 +398,7 @@ export function CameraCaptureDialog({
               {t('capture.cameraDialog.capture')}
             </Button>
           ) : isRecording ? (
-            <Button onClick={handleStopRecording} className="bg-red-600 hover:bg-red-700"> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+            <Button onClick={handleStopRecording} className="bg-destructive hover:bg-destructive/90">
               {t('capture.cameraDialog.stopRecording')}
             </Button>
           ) : (
