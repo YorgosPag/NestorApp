@@ -70,9 +70,9 @@ function getInvoiceIcon(type: string): React.ElementType {
 
 function getPaymentBadgeClass(status: string): string {
   switch (status) {
-    case 'paid': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-    case 'partial': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-    default: return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+    case 'paid': return 'bg-[hsl(var(--bg-success))]/10 text-green-707';
+    case 'partial': return 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]';
+    default: return 'bg-destructive/10 text-destructive';
   }
 }
 
@@ -122,7 +122,7 @@ export function TransactionChainCard({ propertyId }: TransactionChainCardProps) 
     <Card>
       <CardHeader className="p-3 pb-0">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <Receipt className={`${iconSizes.sm} text-indigo-600`} />
+          <Receipt className={`${iconSizes.sm} text-primary`} />
           {t('sales.saleInfo.invoices')}
         </CardTitle>
       </CardHeader>

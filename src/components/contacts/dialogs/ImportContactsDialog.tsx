@@ -153,12 +153,12 @@ export function ImportContactsDialog({
                 <li>{t('import.totalRecords', { count: result.totalRecords })}</li>
                 <li>{t('import.validRecords', { count: result.validRecords })}</li>
                 {result.invalidRecords > 0 && (
-                  <li className="text-amber-600">
+                  <li className="text-[hsl(var(--text-warning))]">
                     {t('import.invalidRecords', { count: result.invalidRecords })}
                   </li>
                 )}
                 {result.warnings.length > 0 && (
-                  <li className="text-amber-600">
+                  <li className="text-[hsl(var(--text-warning))]">
                     {t('import.warnings', { count: result.warnings.length })}
                   </li>
                 )}

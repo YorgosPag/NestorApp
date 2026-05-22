@@ -40,7 +40,7 @@ export function getCommunicationStyles(colors?: UseSemanticColorsReturn) {
       container: `${quick.card} bg-card p-2 w-full max-w-none`,
       row: `grid gap-2 p-2 ${quick.borderB} last:border-b-0 bg-card transition-colors ${HOVER_BACKGROUND_EFFECTS.ACCENT}`,
       emptyState: `text-center text-muted-foreground py-2 ${quick.card} bg-muted/30`,
-      input: `${colors?.bg.primary || 'bg-background'} ${quick.input} focus:${colors?.bg.primary || 'bg-background'} focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20`
+      input: `${colors?.bg.primary || 'bg-background'} ${quick.input} focus:${colors?.bg.primary || 'bg-background'} focus:border-ring focus:ring-1 focus:ring-ring/20`
     }
   } as const;
 }
@@ -56,7 +56,7 @@ export const COMMUNICATION_STYLES = {
     container: 'border rounded-lg bg-card p-2 w-full max-w-none',
     row: `grid gap-2 p-2 border-b last:border-b-0 bg-card transition-colors ${HOVER_BACKGROUND_EFFECTS.ACCENT}`,
     emptyState: 'text-center text-muted-foreground py-2 border rounded-lg bg-muted/30',
-    input: `${COLOR_BRIDGE.bg.primary} border-input focus:${COLOR_BRIDGE.bg.primary} focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20` // Legacy - use getCommunicationStyles() instead
+    input: `${COLOR_BRIDGE.bg.primary} border-input focus:${COLOR_BRIDGE.bg.primary} focus:border-ring focus:ring-1 focus:ring-ring/20` // Legacy - use getCommunicationStyles() instead
   }
 } as const;
 
@@ -107,7 +107,7 @@ export const RESPONSIVE_GRID_CLASSES = {
  * Consistent button styling για communication actions
  */
 export const COMMUNICATION_BUTTON_STYLES = {
-  add: `w-full ${COLOR_BRIDGE.bg.primary} border-input focus:${COLOR_BRIDGE.bg.primary} focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20`, // Legacy - use getCommunicationStyles() instead
+  add: `w-full ${COLOR_BRIDGE.bg.primary} border-input focus:${COLOR_BRIDGE.bg.primary} focus:border-ring focus:ring-1 focus:ring-ring/20`, // Legacy - use getCommunicationStyles() instead
   delete: `${HOVER_TEXT_EFFECTS.RED}`,
   primary: `cursor-pointer ${INTERACTIVE_PATTERNS.OPACITY_HOVER}`
 } as const;

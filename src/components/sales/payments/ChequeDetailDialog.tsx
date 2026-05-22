@@ -189,7 +189,7 @@ export function ChequeDetailDialog({
               {cheque.postDated && (
                 <>
                   <dt className={colors.text.muted}>{t('chequeRegistry.fields.postDated')}</dt>
-                  <dd className="text-amber-600 font-medium">
+                  <dd className="text-[hsl(var(--text-warning))] font-medium">
                     {t('chequeRegistry.fields.yes')}
                   </dd>
                 </>

@@ -172,9 +172,9 @@ export function DSCRStressTab({ salePrice, effectiveRate, t }: DSCRStressTabProp
   return (
     <article className="space-y-5">
       {/* Info banner */}
-      <section className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
-        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">
+      <section className="flex gap-2 rounded-lg border border-primary/30 bg-[hsl(var(--bg-info))]/20 p-3">
+        <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+        <p className="text-sm text-foreground leading-relaxed">
           {t('costCalculator.dscr.infoBanner')}
         </p>
       </section>
@@ -336,7 +336,7 @@ export function DSCRStressTab({ salePrice, effectiveRate, t }: DSCRStressTabProp
         </Table>
 
         {/* Max sustainable rate */}
-        <section className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3">
+        <section className="flex items-center gap-2 rounded-lg border border-border bg-[hsl(var(--bg-warning))]/40 p-3">
           <p className="text-sm">
             <span className="font-semibold">{t('costCalculator.dscr.maxRateLabel')}:</span>{' '}
             <span className="font-mono font-bold">{maxRateForDSCR1.toFixed(2)}%</span>

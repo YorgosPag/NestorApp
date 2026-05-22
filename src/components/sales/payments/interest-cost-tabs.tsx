@@ -52,9 +52,9 @@ export function CashFlowTab({ analysis, salePrice, t }: CashFlowTabProps) {
   return (
     <article className="space-y-3">
       {/* Educational info banner */}
-      <section className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
-        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">
+      <section className="flex gap-2 rounded-lg border border-primary/30 bg-[hsl(var(--bg-info))]/20 p-3">
+        <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+        <p className="text-sm text-foreground leading-relaxed">
           {t('costCalculator.cashFlow.infoBanner')}
         </p>
       </section>
@@ -111,10 +111,10 @@ export function CashFlowTab({ analysis, salePrice, t }: CashFlowTabProps) {
             const lossColor = lossRatio === 0
               ? ''
               : lossRatio < 0.01
-                ? 'bg-yellow-50/50 dark:bg-yellow-950/10'
+                ? 'bg-[hsl(var(--bg-warning))]/40'
                 : lossRatio < 0.02
-                  ? 'bg-orange-50/50 dark:bg-orange-950/10'
-                  : 'bg-red-50/50 dark:bg-red-950/10';
+                  ? 'bg-[hsl(var(--bg-warning))]/40'
+                  : 'bg-destructive/10';
 
             const rowTooltipText = cf.daysDelta === 0
               ? t('costCalculator.cashFlow.rowTooltipToday', { label: cf.label })
@@ -173,9 +173,9 @@ export function CashFlowTab({ analysis, salePrice, t }: CashFlowTabProps) {
 
         {/* Loss insight callout */}
         {totalLoss > 0 ? (
-          <section className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-sm text-amber-800 dark:text-amber-300 leading-relaxed">
+          <section className="flex gap-2 rounded-lg border border-border bg-[hsl(var(--bg-warning))]/40 p-3">
+            <AlertTriangle className="h-5 w-5 text-[hsl(var(--text-warning))] shrink-0 mt-0.5" />
+            <p className="text-sm text-foreground leading-relaxed">
               {t('costCalculator.cashFlow.summaryLoss', {
                 loss: formatCurrency(totalLoss),
                 percent: formatPercent(lossPercent),
@@ -183,9 +183,9 @@ export function CashFlowTab({ analysis, salePrice, t }: CashFlowTabProps) {
             </p>
           </section>
         ) : (
-          <section className="flex gap-2 rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/30 p-3">
-            <Info className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-            <p className="text-sm text-emerald-800 dark:text-emerald-300 leading-relaxed">
+          <section className="flex gap-2 rounded-lg border border-border bg-[hsl(var(--bg-success))]/10 p-3">
+            <Info className="h-5 w-5 text-green-707 shrink-0 mt-0.5" />
+            <p className="text-sm text-foreground leading-relaxed">
               {t('costCalculator.cashFlow.summaryNoLoss')}
             </p>
           </section>
@@ -213,9 +213,9 @@ export function ScenarioTab({ comparison, t }: ScenarioTabProps) {
 
   return (
     <article className="space-y-3">
-      <section className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
-        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">
+      <section className="flex gap-2 rounded-lg border border-primary/30 bg-[hsl(var(--bg-info))]/20 p-3">
+        <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+        <p className="text-sm text-foreground leading-relaxed">
           {t('costCalculator.scenarios.infoBanner')}
         </p>
       </section>
@@ -272,7 +272,7 @@ export function ScenarioTab({ comparison, t }: ScenarioTabProps) {
             return (
               <Tooltip key={idx}>
                 <TooltipTrigger asChild>
-                  <TableRow className={`cursor-help ${isBest ? 'bg-emerald-50 dark:bg-emerald-950/20' : ''}`}>
+                  <TableRow className={`cursor-help ${isBest ? 'bg-[hsl(var(--bg-success))]/10' : ''}`}>
                     <TableCell className="text-sm">
                       <span className="font-medium">{t(s.name)}</span>
                       <br />

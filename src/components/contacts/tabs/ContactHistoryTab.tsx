@@ -218,7 +218,7 @@ export function ContactHistoryTab({ contactId }: ContactHistoryTabProps) {
 function PhotoShareTimelineEntry({ share, t, colors }: { share: import('@/types/photo-share').PhotoShareRecord; t: (k: string, p?: Record<string, unknown>) => string; colors: { text: { muted: string } } }) {
   return (
     <li className="relative pb-5 pl-8 last:pb-0">
-      <div className="absolute -left-[9px] top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-muted bg-background text-sky-600">
+      <div className="absolute -left-[9px] top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-muted bg-background text-primary">
         <ImageIcon className="h-2.5 w-2.5" />
       </div>
       <ShareEntry share={share} t={t} />

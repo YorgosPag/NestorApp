@@ -296,7 +296,7 @@ export function DynamicHelpPanel({
           </section>
 
           <section className="space-y-1 border-t border-dashed pt-2">
-            <p className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+            <p className="text-xs font-semibold text-primary">
               {h('exampleTitle')}
             </p>
             <p className={cn("text-xs leading-relaxed", colors.text.muted)}>
@@ -305,7 +305,7 @@ export function DynamicHelpPanel({
           </section>
 
           <section className="space-y-1 border-t border-dashed pt-2">
-            <p className="text-xs font-semibold text-green-600 dark:text-green-400">
+            <p className="text-xs font-semibold text-green-707">
               {h('recommendTitle')}
             </p>
             <p className={cn("text-xs leading-relaxed", colors.text.muted)}>
@@ -334,7 +334,7 @@ export function DynamicHelpPanel({
 
         {hoveredItem.field === 'main' && (
           <section className="space-y-1 border-t border-dashed pt-2">
-            <p className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+            <p className="text-xs font-semibold text-primary">
               {h('exampleTitle')}
             </p>
             <p className={cn("text-xs leading-relaxed", colors.text.muted)}>
@@ -345,7 +345,7 @@ export function DynamicHelpPanel({
 
         {hoveredItem.field === 'main' && (
           <section className="space-y-1 border-t border-dashed pt-2">
-            <p className="text-xs font-semibold text-green-600 dark:text-green-400">
+            <p className="text-xs font-semibold text-green-707">
               {h('recommendTitle')}
             </p>
             <p className={cn("text-xs leading-relaxed", colors.text.muted)}>
@@ -365,7 +365,7 @@ export function DynamicHelpPanel({
         }`}
       >
         <header className="flex items-center gap-2">
-          <Lightbulb className="h-4 w-4 text-amber-500" />
+          <Lightbulb className="h-4 w-4 text-[hsl(var(--text-warning))]" />
           <h4 className="text-sm font-semibold">{h('dynamicTitle')}</h4>
         </header>
         {renderDynamicContent()}

@@ -156,7 +156,7 @@ export function InterestCostSection({
               <figcaption className={cn("text-[10px]", colors.text.muted)}>
                 {t('costCalculator.recommended')}
               </figcaption>
-              <p className="text-sm font-semibold text-emerald-600">
+              <p className="text-sm font-semibold text-green-707">
                 {formatCurrency(result.recommendedPrice)}
               </p>
             </figure>

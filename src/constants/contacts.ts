@@ -22,18 +22,18 @@ export const CONTACT_COLORS = {
     ring: brandClasses.primary.ring,
   },
   [CONTACT_TYPES.COMPANY]: {
-    primary: 'text-purple-500',
+    primary: 'text-foreground',
     hover: HOVER_TEXT_EFFECTS.PURPLE,
-    bg: 'bg-purple-50',
-    border: 'border-blue-300',
-    ring: 'ring-purple-100',
+    bg: 'bg-accent',
+    border: 'border-border',
+    ring: 'ring-accent',
   },
   [CONTACT_TYPES.SERVICE]: {
-    primary: 'text-green-500',
+    primary: 'text-green-707',
     hover: HOVER_TEXT_EFFECTS.GREEN,
-    bg: 'bg-green-50',
-    border: 'border-green-300',
-    ring: 'ring-green-100',
+    bg: 'bg-[hsl(var(--bg-success))]/10',
+    border: 'border-border',
+    ring: 'ring-[hsl(var(--bg-success))]/20',
   },
 } as const;
 
@@ -66,11 +66,11 @@ export const CONTACT_STYLES = {
   getBadges: (colors?: ReturnType<typeof useSemanticColors>) => {
     if (!colors) {
       return {
-        primary: 'bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full',
-        secondary: `${hardcodedColorValues.background.gray[100]} text-slate-800 text-xs px-2 py-1 rounded-full`,
-        success: 'bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full',
-        warning: 'bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full',
-        danger: 'bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full',
+        primary: 'bg-[hsl(var(--bg-info))]/20 text-primary text-xs px-2 py-1 rounded-full',
+        secondary: `${hardcodedColorValues.background.gray[100]} text-muted-foreground text-xs px-2 py-1 rounded-full`,
+        success: 'bg-[hsl(var(--bg-success))]/10 text-green-707 text-xs px-2 py-1 rounded-full',
+        warning: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))] text-xs px-2 py-1 rounded-full',
+        danger: 'bg-destructive/10 text-destructive text-xs px-2 py-1 rounded-full',
       };
     }
     return {
@@ -82,11 +82,11 @@ export const CONTACT_STYLES = {
     };
   },
   badges: {
-    primary: 'bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full',
-    secondary: 'bg-slate-100 text-slate-800 text-xs px-2 py-1 rounded-full',
-    success: 'bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full',
-    warning: 'bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full',
-    danger: 'bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full',
+    primary: 'bg-[hsl(var(--bg-info))]/20 text-primary text-xs px-2 py-1 rounded-full',
+    secondary: 'bg-muted text-muted-foreground text-xs px-2 py-1 rounded-full',
+    success: 'bg-[hsl(var(--bg-success))]/10 text-green-707 text-xs px-2 py-1 rounded-full',
+    warning: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))] text-xs px-2 py-1 rounded-full',
+    danger: 'bg-destructive/10 text-destructive text-xs px-2 py-1 rounded-full',
   },
   responsive: {
     mobile: 'block md:hidden',

@@ -70,19 +70,19 @@ export function SalesStorageCard({
     const items = [
       {
         icon: Layers,
-        iconColor: 'text-teal-600',
+        iconColor: 'text-primary',
         label: t('storage:general.fields.type'),
         value: t(`storage:types.${storage.type}`, { defaultValue: storage.type }),
       },
       {
         icon: Calculator,
-        iconColor: 'text-pink-600',
+        iconColor: 'text-primary',
         label: t('storage:general.fields.area'),
         value: `${area} m²`,
       },
       {
         icon: DollarSign,
-        iconColor: 'text-green-600',
+        iconColor: 'text-green-707',
         label: t('storage:general.fields.price'),
         value: formatCurrencyWhole(price > 0 ? price : null),
       },
@@ -91,7 +91,7 @@ export function SalesStorageCard({
     if (pricePerSqm) {
       items.push({
         icon: Calculator,
-        iconColor: 'text-blue-600',
+        iconColor: 'text-primary',
         label: t('storage:general.fields.pricePerSqm'),
         value: `${formatCurrencyWhole(pricePerSqm)}/m²`,
       });

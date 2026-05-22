@@ -170,10 +170,10 @@ export function CounterproposalTab({
   return (
     <section className="space-y-5">
       {/* 1. Info Banner */}
-      <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/30">
+      <div className="rounded-lg border border-primary/30 bg-[hsl(var(--bg-info))]/20 p-3">
         <div className="flex gap-2">
-          <Info className="h-4 w-4 mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
-          <p className="text-xs text-blue-800 dark:text-blue-300">
+          <Info className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+          <p className="text-xs text-foreground">
             {t('costCalculator.counterproposal.infoBanner')}
           </p>
         </div>
@@ -181,10 +181,10 @@ export function CounterproposalTab({
 
       {/* 2. Key Insight Card */}
       {sweetSpot && sweetSpot.builderNetGain > 0 && (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950/30">
+        <div className="rounded-lg border border-border bg-[hsl(var(--bg-success))]/10 p-3">
           <div className="flex gap-2">
-            <Lightbulb className="h-4 w-4 mt-0.5 shrink-0 text-green-600 dark:text-green-400" />
-            <p className="text-xs text-green-800 dark:text-green-300">
+            <Lightbulb className="h-4 w-4 mt-0.5 shrink-0 text-green-707" />
+            <p className="text-xs text-foreground">
               {t('costCalculator.counterproposal.insightCard', {
                 upfront: String(sweetSpot.upfrontPercent),
                 months: String(sweetSpot.remainingMonths),
@@ -346,7 +346,7 @@ export function CounterproposalTab({
               tooltip={t('costCalculator.counterproposal.slider.savingTooltip')}
               className={cn("text-xs", colors.text.muted)}
             />
-            <dd className="font-mono font-medium tabular-nums text-green-600 dark:text-green-400">
+            <dd className="font-mono font-medium tabular-nums text-green-707">
               {fmtCurrency(sliderScenario.timeCostSaved)}
             </dd>
           </div>
@@ -356,7 +356,7 @@ export function CounterproposalTab({
               tooltip={t('costCalculator.counterproposal.slider.discountTooltip')}
               className={cn("text-xs", colors.text.muted)}
             />
-            <dd className="font-mono font-medium tabular-nums text-amber-600 dark:text-amber-400">
+            <dd className="font-mono font-medium tabular-nums text-[hsl(var(--text-warning))]">
               {fmtCurrency(sliderScenario.suggestedDiscount)} ({fmtPercent(sliderScenario.suggestedDiscountPercent)})
             </dd>
           </div>
@@ -366,7 +366,7 @@ export function CounterproposalTab({
               tooltip={t('costCalculator.counterproposal.slider.netGainTooltip')}
               className={cn("text-xs", colors.text.muted)}
             />
-            <dd className="font-mono font-medium tabular-nums text-blue-600 dark:text-blue-400">
+            <dd className="font-mono font-medium tabular-nums text-primary">
               {fmtCurrency(sliderScenario.builderNetGain)}
             </dd>
           </div>

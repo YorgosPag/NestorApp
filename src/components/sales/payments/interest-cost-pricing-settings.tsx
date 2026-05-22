@@ -45,20 +45,20 @@ export function PricingTab({ result, salePrice, t }: PricingTabProps) {
   const colors = useSemanticColors();
   return (
     <article className="space-y-4">
-      <section className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
-        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">
+      <section className="flex gap-2 rounded-lg border border-primary/30 bg-[hsl(var(--bg-info))]/20 p-3">
+        <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+        <p className="text-sm text-foreground leading-relaxed">
           {t('costCalculator.pricing.infoBanner')}
         </p>
       </section>
 
       {/* Hero callout */}
-      <section className="rounded-lg border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 p-4 text-center space-y-2">
-        <TrendingUp className="h-10 w-10 mx-auto text-emerald-600" />
+      <section className="rounded-lg border-2 border-border bg-[hsl(var(--bg-success))]/10 p-4 text-center space-y-2">
+        <TrendingUp className="h-10 w-10 mx-auto text-green-707" />
         <p className={cn("text-sm", colors.text.muted)}>
           {t('costCalculator.pricing.sellAtLeast')}
         </p>
-        <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">
+        <p className="text-3xl font-bold text-green-707">
           {formatCurrency(result.recommendedPrice)}
         </p>
         <p className={cn("text-sm", colors.text.muted)}>
@@ -68,13 +68,13 @@ export function PricingTab({ result, salePrice, t }: PricingTabProps) {
       </section>
 
       {/* "What this means" explanation */}
-      <section className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3">
-        <HelpCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+      <section className="flex gap-2 rounded-lg border border-border bg-[hsl(var(--bg-warning))]/40 p-3">
+        <HelpCircle className="h-5 w-5 text-[hsl(var(--text-warning))] shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">
+          <p className="text-sm font-semibold text-foreground mb-1">
             {t('costCalculator.pricing.whatThisMeans')}
           </p>
-          <p className="text-sm text-amber-700 dark:text-amber-400 leading-relaxed">
+          <p className="text-sm text-muted-foreground leading-relaxed">
             {t('costCalculator.pricing.whatThisMeansText', {
               nominal: formatCurrency(salePrice),
               npv: formatCurrency(result.npv),

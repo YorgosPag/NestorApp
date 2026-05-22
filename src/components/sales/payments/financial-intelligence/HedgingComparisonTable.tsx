@@ -127,9 +127,9 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
   return (
     <article className="space-y-4">
       {/* Info banner */}
-      <aside className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
-        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">
+      <aside className="flex gap-2 rounded-lg border border-primary/30 bg-[hsl(var(--bg-info))]/20 p-3">
+        <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+        <p className="text-sm text-foreground leading-relaxed">
           {t('costCalculator.hedging.infoBanner')}
         </p>
       </aside>
@@ -260,7 +260,7 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
               return (
                 <TableRow
                   key={strat.strategy}
-                  className={isCheapest ? 'bg-green-50 dark:bg-green-950/20' : undefined}
+                  className={isCheapest ? 'bg-[hsl(var(--bg-success))]/10' : undefined}
                 >
                   <TableCell className="flex items-center gap-2">
                     <Badge variant={STRATEGY_BADGE_VARIANT[strat.strategy]}>
@@ -288,7 +288,7 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
         </Table>
 
         {/* Break-even callout */}
-        <aside className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3">
+        <aside className="flex items-center gap-2 rounded-lg border border-border bg-[hsl(var(--bg-warning))]/40 p-3">
           <RadixTooltip>
             <TooltipTrigger asChild>
               <span>
@@ -301,7 +301,7 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
               {t('costCalculator.hedging.breakEvenTooltip')}
             </TooltipContent>
           </RadixTooltip>
-          <p className="text-sm text-amber-800 dark:text-amber-300">
+          <p className="text-sm text-foreground">
             {t('costCalculator.hedging.breakEvenText', {
               rate: comparison.breakEvenRate.toFixed(2),
             })}

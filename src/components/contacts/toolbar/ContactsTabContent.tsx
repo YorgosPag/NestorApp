@@ -371,7 +371,7 @@ export function FiltersTabContent({
           </TooltipContent>
         </Tooltip>
 
-      <div className={`text-center text-sm ${colors.text.muted} mt-2 p-2 ${quick.card} bg-blue-50/50 w-full`}>
+      <div className={`text-center text-sm ${colors.text.muted} mt-2 p-2 ${quick.card} bg-[hsl(var(--bg-info))]/10 w-full`}>
         💡 {t('toolbar.tabs.filters.filterHint')}
       </div>
     </>

@@ -111,7 +111,7 @@ export function PaymentReportDialog({
               <SummaryCard
                 label={t('report.totalWithPlan')}
                 value={String(report.summary.totalPropertiesWithPlan)}
-                icon={<CheckCircle2 className="h-4 w-4 text-green-500" />}
+                icon={<CheckCircle2 className="h-4 w-4 text-green-707" />}
               />
               <SummaryCard
                 label={t('labels.totalAmount')}
@@ -127,9 +127,9 @@ export function PaymentReportDialog({
                 value={String(report.summary.totalOverdueCount)}
                 icon={
                   report.summary.totalOverdueCount > 0 ? (
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    <AlertTriangle className="h-4 w-4 text-[hsl(var(--text-warning))]" />
                   ) : (
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-green-707" />
                   )
                 }
                 variant={report.summary.totalOverdueCount > 0 ? 'warning' : 'default'}
@@ -170,7 +170,7 @@ export function PaymentReportDialog({
                     report.rows.map((row) => (
                       <TableRow
                         key={row.propertyId}
-                        className={row.overdueInstallments > 0 ? 'bg-red-50' : undefined}
+                        className={row.overdueInstallments > 0 ? 'bg-destructive/10' : undefined}
                       >
                         <TableCell className="font-medium">{row.propertyLabel}</TableCell>
                         <TableCell>{row.buildingName}</TableCell>
@@ -242,7 +242,7 @@ function SummaryCard({ label, value, subtitle, icon, variant = 'default' }: Summ
   return (
     <article
       className={`rounded-lg border p-3 ${
-        variant === 'warning' ? 'border-amber-200 bg-amber-50' : 'bg-card'
+        variant === 'warning' ? 'border-border bg-[hsl(var(--bg-warning))]/40' : 'bg-card'
       }`}
     >
       <header className="flex items-center justify-between">

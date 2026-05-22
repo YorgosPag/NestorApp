@@ -180,9 +180,9 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
   return (
     <article className="space-y-5">
       {/* ── Info Banner ── */}
-      <section className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
-        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">
+      <section className="flex gap-2 rounded-lg border border-primary/30 bg-[hsl(var(--bg-info))]/20 p-3">
+        <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+        <p className="text-sm text-foreground leading-relaxed">
           {t('costCalculator.drawSchedule.infoBanner')}
         </p>
       </section>

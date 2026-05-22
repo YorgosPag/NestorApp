@@ -68,13 +68,13 @@ export function SalesParkingCard({
     const items = [
       {
         icon: Car,
-        iconColor: 'text-blue-600',
+        iconColor: 'text-primary',
         label: t('parking:general.fields.type'),
         value: t(`parking:types.${spot.type ?? 'standard'}`, { defaultValue: spot.type ?? 'standard' }),
       },
       {
         icon: MapPin,
-        iconColor: 'text-orange-600',
+        iconColor: 'text-[hsl(var(--text-warning))]',
         label: t('parking:general.fields.locationZone'),
         value: spot.locationZone
           ? t(`parking:locationZone.${spot.locationZone}`, { defaultValue: spot.locationZone })
@@ -82,7 +82,7 @@ export function SalesParkingCard({
       },
       {
         icon: DollarSign,
-        iconColor: 'text-green-600',
+        iconColor: 'text-green-707',
         label: t('parking:general.fields.price'),
         value: formatCurrencyWhole(price > 0 ? price : null),
       },
@@ -91,7 +91,7 @@ export function SalesParkingCard({
     if (area > 0) {
       items.push({
         icon: Calculator,
-        iconColor: 'text-pink-600',
+        iconColor: 'text-primary',
         label: t('parking:general.fields.area'),
         value: `${area} m²`,
       });

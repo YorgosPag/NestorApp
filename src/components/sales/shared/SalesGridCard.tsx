@@ -28,13 +28,13 @@ import { formatCurrencyCompact, formatCurrencyWhole } from '@/lib/intl-utils';
  * colors (purple for reserved) where semantic tokens don't exist.
  */
 const STATUS_COLORS: Record<string, string> = {
-  'for-sale':  'bg-[hsl(var(--bg-success))]/50 text-green-700 dark:text-green-400',
-  'available': 'bg-[hsl(var(--bg-success))]/50 text-green-700 dark:text-green-400',
-  'reserved':  'bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400',
-  'sold':      'bg-[hsl(var(--bg-error))]/50 text-red-700 dark:text-red-400',
+  'for-sale':  'bg-[hsl(var(--bg-success))]/10 text-green-707',
+  'available': 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+  'reserved':  'bg-accent text-primary',
+  'sold':      'bg-destructive/10 text-destructive',
 };
 
-const DEFAULT_STATUS_COLOR = 'bg-[hsl(var(--bg-info))]/50 text-blue-700 dark:text-blue-400';
+const DEFAULT_STATUS_COLOR = 'bg-[hsl(var(--bg-info))]/20 text-primary';
 
 // ============================================================================
 // TYPES

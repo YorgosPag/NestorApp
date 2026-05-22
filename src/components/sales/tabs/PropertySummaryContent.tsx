@@ -83,7 +83,7 @@ export function PropertySummaryContent({ data: unit }: PropertySummaryContentPro
       <Card>
         <CardHeader className="p-3 pb-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Home className={`${iconSizes.sm} text-teal-600`} />
+            <Home className={`${iconSizes.sm} text-primary`} />
             {t('sales.unitSummary.physicalData')}
           </CardTitle>
         </CardHeader>
@@ -91,49 +91,49 @@ export function PropertySummaryContent({ data: unit }: PropertySummaryContentPro
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
             <SummaryField
               icon={Home}
-              iconColor="text-teal-600"
+              iconColor="text-primary"
               label={t('sales.unitSummary.type')}
               value={tProps(`types.${unit.type}`)}
             />
             <SummaryField
               icon={Maximize2}
-              iconColor="text-pink-600"
+              iconColor="text-primary"
               label={t('sales.unitSummary.area')}
               value={area ? `${area} m²` : undefined}
             />
             <SummaryField
               icon={Layers}
-              iconColor="text-orange-600"
+              iconColor="text-[hsl(var(--text-warning))]"
               label={t('sales.unitSummary.floor')}
               value={unit.floor !== undefined ? `${unit.floor}ος` : undefined}
             />
             <SummaryField
               icon={Building2}
-              iconColor="text-blue-600" // eslint-disable-line design-system/enforce-semantic-colors
+              iconColor="text-primary"
               label={t('sales.unitSummary.building')}
               value={unit.building}
             />
             <SummaryField
               icon={Bed}
-              iconColor="text-violet-600"
+              iconColor="text-primary"
               label={t('sales.unitSummary.bedrooms')}
               value={unit.layout?.bedrooms}
             />
             <SummaryField
               icon={Bath}
-              iconColor="text-cyan-600"
+              iconColor="text-primary"
               label={t('sales.unitSummary.bathrooms')}
               value={unit.layout?.bathrooms}
             />
             <SummaryField
               icon={Compass}
-              iconColor="text-amber-600"
+              iconColor="text-[hsl(var(--text-warning))]"
               label={t('sales.unitSummary.orientation')}
               value={orientation ? tProps(`orientation.short.${orientation}`, { defaultValue: orientation }) : undefined}
             />
             <SummaryField
               icon={Zap}
-              iconColor="text-yellow-600" // eslint-disable-line design-system/enforce-semantic-colors
+              iconColor="text-[hsl(var(--text-warning))]"
               label={t('sales.unitSummary.energy')}
               value={unit.energy?.class}
             />

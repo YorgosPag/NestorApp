@@ -130,7 +130,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                       {translatedTypeLabel}
                     </Badge>
                     {isRelatedInTrash && (
-                      <Badge variant="outline" className="gap-1 border-amber-500/50 text-amber-600 dark:text-amber-400">
+                      <Badge variant="outline" className="gap-1 border-border text-[hsl(var(--text-warning))]">
                         <Trash2 className="h-2.5 w-2.5" />
                         {t('relationships.card.relatedInTrash')}
                       </Badge>

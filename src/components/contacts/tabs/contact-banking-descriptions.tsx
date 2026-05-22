@@ -24,12 +24,12 @@ export function buildDeleteDescription(
       <p>{t('bankingTab.impact.futureUse')}</p>
       <p className={cn('text-sm', mutedText)}>{t('bankingTab.impact.snapshotPreserved')}</p>
       {account.isPrimary && (
-        <p className="text-sm text-amber-600 dark:text-amber-400">
+        <p className="text-sm text-[hsl(var(--text-warning))]">
           {t('bankingTab.impact.deletePrimary')}
         </p>
       )}
       {isLastActive && (
-        <p className="text-sm text-amber-600 dark:text-amber-400">
+        <p className="text-sm text-[hsl(var(--text-warning))]">
           {t('bankingTab.impact.deleteLastActive')}
         </p>
       )}

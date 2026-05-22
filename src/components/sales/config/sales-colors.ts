@@ -6,33 +6,33 @@
 
 export const SALES_ICON_COLORS = {
   // Pricing concepts
-  askingPrice: 'text-green-600',
-  finalPrice: 'text-blue-600',
-  pricePerSqm: 'text-purple-600',
-  deposit: 'text-amber-600',
+  askingPrice: 'text-green-707',
+  finalPrice: 'text-primary',
+  pricePerSqm: 'text-primary',
+  deposit: 'text-[hsl(var(--text-warning))]',
 
   // People
-  buyer: 'text-violet-600',
+  buyer: 'text-primary',
 
   // Date concepts
-  listedDate: 'text-blue-600',
-  reservationDate: 'text-violet-600',
-  saleDate: 'text-green-600',
-  cancellationDate: 'text-red-600',
-  daysOnMarket: 'text-gray-500',
+  listedDate: 'text-primary',
+  reservationDate: 'text-primary',
+  saleDate: 'text-green-707',
+  cancellationDate: 'text-destructive',
+  daysOnMarket: 'text-muted-foreground',
 
   // Basic info field icons
-  type: 'text-teal-600',
-  building: 'text-indigo-600',
-  floor: 'text-orange-600',
-  area: 'text-pink-600',
-  millesimalShares: 'text-cyan-600',
-  locationZone: 'text-orange-600',
+  type: 'text-primary',
+  building: 'text-primary',
+  floor: 'text-[hsl(var(--text-warning))]',
+  area: 'text-primary',
+  millesimalShares: 'text-primary',
+  locationZone: 'text-[hsl(var(--text-warning))]',
 
   // Section headers
-  pricingSection: 'text-green-600',
-  reservationSection: 'text-violet-600',
-  datesSection: 'text-orange-600',
-  financialSection: 'text-green-600',
-  basicInfoSection: 'text-indigo-600',
+  pricingSection: 'text-green-707',
+  reservationSection: 'text-primary',
+  datesSection: 'text-[hsl(var(--text-warning))]',
+  financialSection: 'text-green-707',
+  basicInfoSection: 'text-primary',
 } as const;

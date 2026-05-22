@@ -60,10 +60,10 @@ const STATUS_KEYS: Record<ContractStatus, string> = {
 };
 
 const STATUS_COLORS: Record<ContractStatus, string> = {
-  draft: 'bg-gray-100 text-gray-700',
-  pending_signature: 'bg-yellow-100 text-yellow-800',
-  signed: 'bg-green-100 text-green-800',
-  completed: 'bg-blue-100 text-blue-800',
+  draft: 'bg-muted text-foreground',
+  pending_signature: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
+  signed: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+  completed: 'bg-[hsl(var(--bg-info))]/20 text-primary',
 };
 
 const NEXT_STATUS_KEYS: Record<ContractStatus, string> = {
@@ -189,7 +189,7 @@ export function ContractCard({ contract, onTransition, associations = [] }: Cont
                     </span>
                     {live && (
                       <span
-                        className={cn('text-[10px] px-1 rounded bg-amber-100 text-amber-800', 'dark:bg-amber-900/40 dark:text-amber-300')}
+                        className={cn('text-[10px] px-1 rounded bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]')}
                         title={t('sales.legal.liveNotInSnapshotTooltip')}
                       >
                         {t('sales.legal.liveNotInSnapshot')}

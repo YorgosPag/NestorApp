@@ -38,18 +38,18 @@ const getRelationshipColors = (colors?: ReturnType<typeof useSemanticColors>) =>
   if (!colors) {
     // Enterprise fallback for non-React contexts
     return {
-      employee: `${getStatusColor('info', 'bg')} text-blue-800`,
-      manager: 'bg-purple-100 text-purple-800',
-      shareholder: `${getStatusColor('success', 'bg')} text-green-800`,
-      board_member: 'bg-orange-100 text-orange-800',
-      civil_servant: 'bg-indigo-100 text-indigo-800',
-      department_head: `${getStatusColor('error', 'bg')} text-red-800`,
-      consultant: 'bg-teal-100 text-teal-800',
-      colleague: `${getStatusColor('warning', 'bg')} text-yellow-800`,
-      friend: 'bg-pink-100 text-pink-800',
-      family: 'bg-violet-100 text-violet-800',
-      business_contact: `${hardcodedColorValues.background.gray[100]} text-slate-800`,
-      default: `${hardcodedColorValues.background.gray[100]} text-slate-800`
+      employee: `${getStatusColor('info', 'bg')} text-primary`,
+      manager: 'bg-accent text-foreground',
+      shareholder: `${getStatusColor('success', 'bg')} text-green-707`,
+      board_member: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
+      civil_servant: 'bg-accent text-foreground',
+      department_head: `${getStatusColor('error', 'bg')} text-destructive`,
+      consultant: 'bg-accent text-foreground',
+      colleague: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
+      friend: 'bg-accent text-foreground',
+      family: 'bg-accent text-foreground',
+      business_contact: `${hardcodedColorValues.background.gray[100]} text-muted-foreground`,
+      default: `${hardcodedColorValues.background.gray[100]} text-muted-foreground`
     };
   }
 

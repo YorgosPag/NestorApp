@@ -158,7 +158,7 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
       return (
         <>
           {ctx.isContactTrashed && (
-            <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 mb-3 flex items-center gap-2 text-sm text-amber-800">
+            <div className="rounded-md border border-border bg-[hsl(var(--bg-warning))]/40 px-4 py-3 mb-3 flex items-center gap-2 text-sm text-[hsl(var(--text-warning))]">
               <span aria-hidden="true">🗑️</span>
               <span>{ctx.t('contacts-lifecycle:trash.filesInTrashWithContact')}</span>
             </div>

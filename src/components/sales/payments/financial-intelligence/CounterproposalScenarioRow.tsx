@@ -44,7 +44,7 @@ export function ScenarioRow({ scenario, variant, t }: ScenarioRowProps) {
   const colors = useSemanticColors();
   const rowClass =
     variant === 'sweetSpot'
-      ? 'bg-green-50 dark:bg-green-950/20'
+      ? 'bg-[hsl(var(--bg-success))]/10'
       : variant === 'baseline'
         ? 'bg-muted/40'
         : '';
@@ -55,7 +55,7 @@ export function ScenarioRow({ scenario, variant, t }: ScenarioRowProps) {
         <span className="flex items-center gap-1.5">
           {t(scenario.nameKey)}
           {variant === 'sweetSpot' && (
-            <Badge variant="outline" className="text-[10px] border-green-500 text-green-700 dark:text-green-400">
+            <Badge variant="outline" className="text-[10px] border-border text-green-707">
               {t('costCalculator.counterproposal.badges.sweetSpot')}
             </Badge>
           )}
@@ -77,7 +77,7 @@ export function ScenarioRow({ scenario, variant, t }: ScenarioRowProps) {
       <TableCell className="text-right text-xs font-mono tabular-nums">
         {fmtCurrency(scenario.npv)}
       </TableCell>
-      <TableCell className="text-right text-xs font-mono tabular-nums text-green-600 dark:text-green-400">
+      <TableCell className="text-right text-xs font-mono tabular-nums text-green-707">
         {scenario.timeCostSaved > 0 ? fmtCurrency(scenario.timeCostSaved) : '—'}
       </TableCell>
       <TableCell className="text-right text-xs font-mono tabular-nums">
@@ -85,7 +85,7 @@ export function ScenarioRow({ scenario, variant, t }: ScenarioRowProps) {
           ? `${fmtCurrency(scenario.maxDiscount)} (${fmtPercent(scenario.maxDiscountPercent)})`
           : '—'}
       </TableCell>
-      <TableCell className="text-right text-xs font-mono tabular-nums text-amber-600 dark:text-amber-400">
+      <TableCell className="text-right text-xs font-mono tabular-nums text-[hsl(var(--text-warning))]">
         {scenario.suggestedDiscount > 0
           ? `${fmtCurrency(scenario.suggestedDiscount)} (${fmtPercent(scenario.suggestedDiscountPercent)})`
           : '—'}
@@ -93,7 +93,7 @@ export function ScenarioRow({ scenario, variant, t }: ScenarioRowProps) {
       <TableCell className="text-right text-xs font-mono tabular-nums font-medium">
         {fmtCurrency(scenario.finalPrice)}
       </TableCell>
-      <TableCell className="text-right text-xs font-mono tabular-nums text-blue-600 dark:text-blue-400 font-medium">
+      <TableCell className="text-right text-xs font-mono tabular-nums text-primary font-medium">
         {scenario.builderNetGain > 0
           ? `${fmtCurrency(scenario.builderNetGain)} (${fmtPercent(scenario.builderNetGainPercent)})`
           : '—'}

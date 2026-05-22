@@ -66,8 +66,8 @@ export const RelationshipList: React.FC<RelationshipListProps> = ({
   const renderNewContactState = () => (
     <Card>
       <CardContent className="pt-6">
-        <div className="text-center text-gray-500">
-          <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+        <div className="text-center text-muted-foreground">
+          <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
           <p className="font-medium">{t('relationships.list.newContact.title')}</p>
           <p className="text-sm mt-2">
             {t('relationships.list.newContact.description')}
@@ -88,7 +88,7 @@ export const RelationshipList: React.FC<RelationshipListProps> = ({
   const renderLoadingState = () => (
     <Card>
       <CardContent className="pt-6">
-        <p className="text-center text-gray-500">{t('relationships.list.loading')}</p>
+        <p className="text-center text-muted-foreground">{t('relationships.list.loading')}</p>
       </CardContent>
     </Card>
   );
@@ -99,8 +99,8 @@ export const RelationshipList: React.FC<RelationshipListProps> = ({
   const renderEmptyState = () => (
     <Card>
       <CardContent className="pt-6">
-        <div className="text-center text-gray-500">
-          <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+        <div className="text-center text-muted-foreground">
+          <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
           <p>{t('relationships.list.empty.title')}</p>
           {!readonly && (
             <p className="text-sm">

@@ -93,19 +93,19 @@ export function SalesPropertyListCard({
   const physicalStats = useMemo(() => [
     {
       icon: NAVIGATION_ENTITIES.property.icon,
-      iconColor: 'text-teal-600',
+      iconColor: 'text-primary',
       label: t('sales.fields.type'),
       value: t(`properties-enums:types.${unit.type}`, { defaultValue: unit.type }),
     },
     {
       icon: NAVIGATION_ENTITIES.area?.icon ?? Calculator,
-      iconColor: 'text-pink-600',
+      iconColor: 'text-primary',
       label: t('sales.fields.area'),
       value: `${area} m²`,
     },
     ...(unit.floor !== undefined ? [{
       icon: NAVIGATION_ENTITIES.floor?.icon ?? Calendar,
-      iconColor: 'text-orange-600',
+      iconColor: 'text-[hsl(var(--text-warning))]',
       label: t('sales.fields.floor'),
       value: `${unit.floor}ος`,
     }] : []),
@@ -120,7 +120,7 @@ export function SalesPropertyListCard({
     const stats = [
       {
         icon: DollarSign,
-        iconColor: 'text-green-600',
+        iconColor: 'text-green-707',
         label: t('sales.fields.askingPrice'),
         value: formatCurrencyWhole(askingPrice),
       },
@@ -129,7 +129,7 @@ export function SalesPropertyListCard({
     if (pricePerSqm) {
       stats.push({
         icon: Calculator,
-        iconColor: 'text-blue-600',
+        iconColor: 'text-primary',
         label: t('sales.fields.pricePerSqm'),
         value: `${formatCurrencyWhole(pricePerSqm)}/m²`,
       });
@@ -138,7 +138,7 @@ export function SalesPropertyListCard({
     if (daysOnMarket !== null) {
       stats.push({
         icon: Calendar,
-        iconColor: 'text-gray-500',
+        iconColor: 'text-muted-foreground',
         label: t('sales.fields.daysOnMarket'),
         value: `${daysOnMarket} ${t('sales.daysOnMarket')}`,
       });
@@ -165,7 +165,7 @@ export function SalesPropertyListCard({
     if (primaryBuyerContactId) {
       stats.push({
         icon: User,
-        iconColor: 'text-violet-600',
+        iconColor: 'text-primary',
         label: t('sales.fields.buyer'),
         value: resolvedBuyerName ?? t('sales.fields.unknownBuyer'),
       });
@@ -175,7 +175,7 @@ export function SalesPropertyListCard({
     if (isReserved && unit.commercial?.reservationDeposit) {
       stats.push({
         icon: CreditCard,
-        iconColor: 'text-amber-600',
+        iconColor: 'text-[hsl(var(--text-warning))]',
         label: t('sales.fields.deposit'),
         value: formatCurrencyWhole(unit.commercial.reservationDeposit),
       });
@@ -185,7 +185,7 @@ export function SalesPropertyListCard({
     if (isSold && unit.commercial?.finalPrice) {
       stats.push({
         icon: DollarSign,
-        iconColor: 'text-blue-600',
+        iconColor: 'text-primary',
         label: t('sales.fields.finalPrice'),
         value: formatCurrencyWhole(unit.commercial.finalPrice),
       });

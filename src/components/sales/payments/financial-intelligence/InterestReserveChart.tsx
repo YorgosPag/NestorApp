@@ -116,9 +116,9 @@ export function InterestReserveChart({ periods, reserveStatus, t }: InterestRese
 
       {/* Warning if reserve exhausted */}
       {!reserveStatus.sufficient && (
-        <aside className="flex gap-2 rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30 p-3">
-          <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-red-800 dark:text-red-300 leading-relaxed">
+        <aside className="flex gap-2 rounded-lg border border-destructive bg-destructive/10 p-3">
+          <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+          <p className="text-sm text-destructive leading-relaxed">
             {t('costCalculator.drawSchedule.reserveWarning', {
               month: String((reserveStatus.exhaustionMonth ?? 0) + 1),
               shortfall: formatCurrencyWhole(reserveStatus.cashShortfall),

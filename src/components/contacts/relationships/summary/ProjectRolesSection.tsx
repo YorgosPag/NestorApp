@@ -35,7 +35,7 @@ interface ProjectRolesSectionProps {
 // ============================================================================
 
 const ROLE_BADGE_STYLES: Record<string, string> = {
-  landowner: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+  landowner: 'bg-accent text-foreground',
 };
 
 /** i18n keys per role — SSoT for labels (reuses existing common:ownership keys) */

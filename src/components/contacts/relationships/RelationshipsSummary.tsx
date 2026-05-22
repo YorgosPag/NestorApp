@@ -228,7 +228,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
             <div className="mt-6 mb-6">
               <div className="flex items-center space-x-2 mb-4">
                 <NAVIGATION_ENTITIES.building.icon className={`${iconSizes.md} ${NAVIGATION_ENTITIES.building.color}`} />
-                <h4 className="text-sm font-medium text-gray-900">{t('relationships.summary.organizationChart')}</h4>
+                <h4 className="text-sm font-medium text-foreground">{t('relationships.summary.organizationChart')}</h4>
               </div>
               <div className={`${colors.bg.secondary} rounded-lg p-2 border`}>
                 <OrganizationTree

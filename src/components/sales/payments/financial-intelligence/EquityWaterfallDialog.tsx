@@ -319,11 +319,11 @@ export function EquityWaterfallDialog({
               <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <dl className="rounded-lg border p-3 space-y-1">
                   <InfoDt label={t('costCalculator.waterfall.lpTotal')} tooltip={t('costCalculator.waterfall.lpTotalTooltip')} className={cn("text-xs", colors.text.muted)} />
-                  <dd className="text-lg font-bold text-blue-600">{fmt(result.totalLP)}</dd>
+                  <dd className="text-lg font-bold text-primary">{fmt(result.totalLP)}</dd>
                 </dl>
                 <dl className="rounded-lg border p-3 space-y-1">
                   <InfoDt label={t('costCalculator.waterfall.gpTotal')} tooltip={t('costCalculator.waterfall.gpTotalTooltip')} className={cn("text-xs", colors.text.muted)} />
-                  <dd className="text-lg font-bold text-emerald-600">{fmt(result.totalGP)}</dd>
+                  <dd className="text-lg font-bold text-green-707">{fmt(result.totalGP)}</dd>
                 </dl>
                 <dl className="rounded-lg border p-3 space-y-1">
                   <InfoDt label={t('costCalculator.waterfall.lpMultiple')} tooltip={t('costCalculator.waterfall.lpMultipleTooltip')} className={cn("text-xs", colors.text.muted)} />
@@ -342,9 +342,9 @@ export function EquityWaterfallDialog({
                   <dd className="text-sm font-medium">{result.gpIRR}%</dd>
                 </dl>
                 {result.remainder > 0 && (
-                  <dl className="rounded-lg border border-amber-300 p-3 space-y-1">
+                  <dl className="rounded-lg border border-border p-3 space-y-1">
                     <InfoDt label={t('costCalculator.waterfall.remainder')} tooltip={t('costCalculator.waterfall.remainderTooltip')} className={cn("text-xs", colors.text.muted)} />
-                    <dd className="text-sm font-medium text-amber-600">{fmt(result.remainder)}</dd>
+                    <dd className="text-sm font-medium text-[hsl(var(--text-warning))]">{fmt(result.remainder)}</dd>
                   </dl>
                 )}
               </section>
@@ -379,8 +379,8 @@ export function EquityWaterfallDialog({
                   <thead>
                     <tr>
                       <th className="p-2 text-left border border-border font-medium">Tier</th>
-                      <th className="p-2 text-right border border-border font-medium text-blue-600">LP</th>
-                      <th className="p-2 text-right border border-border font-medium text-emerald-600">GP</th>
+                      <th className="p-2 text-right border border-border font-medium text-primary">LP</th>
+                      <th className="p-2 text-right border border-border font-medium text-green-707">GP</th>
                       <th className="p-2 text-right border border-border font-medium">Total</th>
                     </tr>
                   </thead>
@@ -397,8 +397,8 @@ export function EquityWaterfallDialog({
                   <tfoot>
                     <tr className="font-semibold">
                       <td className="p-2 border border-border">Total</td>
-                      <td className="p-2 text-right border border-border text-blue-600">{fmt(result.totalLP)}</td>
-                      <td className="p-2 text-right border border-border text-emerald-600">{fmt(result.totalGP)}</td>
+                      <td className="p-2 text-right border border-border text-primary">{fmt(result.totalLP)}</td>
+                      <td className="p-2 text-right border border-border text-green-707">{fmt(result.totalGP)}</td>
                       <td className="p-2 text-right border border-border">{fmt(result.totalLP + result.totalGP)}</td>
                     </tr>
                   </tfoot>

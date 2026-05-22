@@ -71,8 +71,8 @@ export function ContractTimeline({ contracts }: ContractTimelineProps) {
               <span
                 className={cn(
                   'flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors',
-                  state === 'completed' && 'border-green-600 bg-green-600 text-white',
-                  state === 'active' && 'border-blue-600 bg-blue-50 text-blue-600',
+                  state === 'completed' && 'border-green-707 bg-green-707 text-white',
+                  state === 'active' && 'border-primary bg-[hsl(var(--bg-info))]/20 text-primary',
                   state === 'pending' && cn('border-muted-foreground/30 bg-muted', colors.text.muted, 'opacity-50')
                 )}
               >
@@ -83,8 +83,8 @@ export function ContractTimeline({ contracts }: ContractTimelineProps) {
               <span
                 className={cn(
                   'text-[10px] font-medium text-center leading-tight max-w-[5rem] truncate',
-                  state === 'completed' && 'text-green-700',
-                  state === 'active' && 'text-blue-700',
+                  state === 'completed' && 'text-green-707',
+                  state === 'active' && 'text-primary',
                   state === 'pending' && colors.text.muted, 'opacity-50'
                 )}
               >
@@ -98,7 +98,7 @@ export function ContractTimeline({ contracts }: ContractTimelineProps) {
                 className={cn(
                   'flex-1 h-0.5 rounded-full',
                   getStepState(STEPS[index + 1].phase, contracts) !== 'pending'
-                    ? 'bg-green-400'
+                    ? 'bg-green-707'
                     : 'bg-muted-foreground/20'
                 )}
               />

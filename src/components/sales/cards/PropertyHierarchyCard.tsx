@@ -107,7 +107,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
     <Card>
       <CardHeader className="p-3 pb-0">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <Building2 className={`${iconSizes.sm} text-indigo-600`} />
+          <Building2 className={`${iconSizes.sm} text-primary`} />
           {t('sales.saleInfo.hierarchy')}
         </CardTitle>
       </CardHeader>
@@ -117,7 +117,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
           {hierarchy.company && (
             <HierarchyNode
               icon={Briefcase}
-              iconColor="text-slate-600"
+              iconColor="text-muted-foreground"
               label={t('sales.hierarchy.company')}
               value={hierarchy.company.name}
               iconSizeClass={iconSizes.xs}
@@ -128,7 +128,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
           {hierarchy.project && (
             <HierarchyNode
               icon={FolderKanban}
-              iconColor="text-blue-600"
+              iconColor="text-primary"
               label={t('sales.hierarchy.project')}
               value={hierarchy.project.name}
               iconSizeClass={iconSizes.xs}
@@ -139,7 +139,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
           {hierarchy.project?.permitTitle && (
             <HierarchyNode
               icon={FileText}
-              iconColor="text-amber-600"
+              iconColor="text-[hsl(var(--text-warning))]"
               label={t('sales.hierarchy.permit')}
               value={hierarchy.project.permitTitle}
               iconSizeClass={iconSizes.xs}
@@ -150,7 +150,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
           {hierarchy.building && (
             <HierarchyNode
               icon={Building2}
-              iconColor="text-teal-600"
+              iconColor="text-primary"
               label={t('sales.hierarchy.building')}
               value={hierarchy.building.name}
               iconSizeClass={iconSizes.xs}
@@ -160,7 +160,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
           {/* Μονάδα + Όροφος */}
           <HierarchyNode
             icon={Home}
-            iconColor="text-green-600"
+            iconColor="text-green-707"
             label={t('sales.hierarchy.unit')}
             value={`${hierarchy.property.name} — ${formatFloorLabel(hierarchy.property.floor)}`}
             iconSizeClass={iconSizes.xs}
@@ -172,7 +172,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
         {address && (
           <footer className={cn("mt-3 pt-2 border-t text-sm space-y-1", colors.text.muted)}>
             <p className="flex items-center gap-2">
-              <MapPin className={`${iconSizes.sm} text-red-500 flex-shrink-0`} />
+              <MapPin className={`${iconSizes.sm} text-destructive flex-shrink-0`} />
               <span>{address}</span>
             </p>
             {hasExtraAddressInfo && (

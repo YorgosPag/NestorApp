@@ -88,7 +88,7 @@ export function PaymentPlanOverview({ plan }: PaymentPlanOverviewProps) {
           <dt className={cn("text-[10px] uppercase", colors.text.muted)}>
             {t('labels.paidAmount')}
           </dt>
-          <dd className="text-sm font-semibold text-green-600">
+          <dd className="text-sm font-semibold text-green-707">
             €{plan.paidAmount.toLocaleString('el-GR')}
           </dd>
         </div>
@@ -96,7 +96,7 @@ export function PaymentPlanOverview({ plan }: PaymentPlanOverviewProps) {
           <dt className={cn("text-[10px] uppercase", colors.text.muted)}>
             {t('labels.remainingAmount')}
           </dt>
-          <dd className="text-sm font-semibold text-orange-600">
+          <dd className="text-sm font-semibold text-[hsl(var(--text-warning))]">
             €{plan.remainingAmount.toLocaleString('el-GR')}
           </dd>
         </div>

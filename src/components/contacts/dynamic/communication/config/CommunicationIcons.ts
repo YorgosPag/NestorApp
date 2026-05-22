@@ -53,11 +53,11 @@ export const COMMUNICATION_ICONS: Record<CommunicationType, LucideIcon> = {
  * have a dark-mode variant so contrast survives theme changes.
  */
 export const COMMUNICATION_ICON_COLORS: Record<CommunicationType, string> = {
-  phone: 'text-sky-600 dark:text-sky-400',
-  email: 'text-rose-600 dark:text-rose-400',
-  website: 'text-indigo-600 dark:text-indigo-400',
-  social: 'text-violet-600 dark:text-violet-400',
-  identity: 'text-amber-600 dark:text-amber-400',
-  professional: 'text-emerald-600 dark:text-emerald-400',
-  address: 'text-red-600 dark:text-red-400',
+  phone: 'text-primary',
+  email: 'text-destructive',
+  website: 'text-primary',
+  social: 'text-primary',
+  identity: 'text-[hsl(var(--text-warning))]',
+  professional: 'text-green-707',
+  address: 'text-destructive',
 } as const;

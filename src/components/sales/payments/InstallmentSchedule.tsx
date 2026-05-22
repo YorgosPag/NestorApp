@@ -35,9 +35,9 @@ const STATUS_CONFIG: Record<InstallmentStatus, {
   variant: 'default' | 'secondary' | 'destructive' | 'outline';
   className: string;
 }> = {
-  paid: { icon: CheckCircle2, variant: 'default', className: 'text-green-600' },
-  partial: { icon: CircleDashed, variant: 'secondary', className: 'text-blue-600' },
-  due: { icon: AlertTriangle, variant: 'destructive', className: 'text-red-600' },
+  paid: { icon: CheckCircle2, variant: 'default', className: 'text-green-707' },
+  partial: { icon: CircleDashed, variant: 'secondary', className: 'text-primary' },
+  due: { icon: AlertTriangle, variant: 'destructive', className: 'text-destructive' },
   pending: { icon: Clock, variant: 'outline', className: '' },
   waived: { icon: MinusCircle, variant: 'secondary', className: '' },
 };
@@ -127,7 +127,7 @@ export function InstallmentSchedule({
                 </TableCell>
                 <TableCell className="text-right text-sm">
                   {inst.paidAmount > 0 ? (
-                    <span className="text-green-600">
+                    <span className="text-green-707">
                       €{inst.paidAmount.toLocaleString('el-GR')}
                     </span>
                   ) : (

@@ -124,9 +124,9 @@ export function ForwardCurveChart({ t }: ForwardCurveChartProps) {
   // --- Error state ---
   if (error || !result) {
     return (
-      <section className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30 p-4">
-        <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
-        <p className="text-sm text-red-800 dark:text-red-300">
+      <section className="flex items-center gap-2 rounded-lg border border-destructive bg-destructive/10 p-4">
+        <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+        <p className="text-sm text-destructive">
           {error ?? t('costCalculator.forwardCurve.error')}
         </p>
       </section>
@@ -146,9 +146,9 @@ export function ForwardCurveChart({ t }: ForwardCurveChartProps) {
   return (
     <article className="space-y-4">
       {/* Info banner */}
-      <aside className="flex gap-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
-        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">
+      <aside className="flex gap-2 rounded-lg border border-primary/30 bg-[hsl(var(--bg-info))]/20 p-3">
+        <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+        <p className="text-sm text-foreground leading-relaxed">
           {t('costCalculator.forwardCurve.infoBanner')}
         </p>
       </aside>

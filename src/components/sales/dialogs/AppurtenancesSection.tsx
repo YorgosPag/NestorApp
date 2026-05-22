@@ -90,7 +90,7 @@ export function AppurtenancesSection({
                 >
                   {space.displayName}
                   {space.isRented && (
-                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700">
+                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-[hsl(var(--bg-warning))]/40 px-2 py-0.5 text-xs text-[hsl(var(--text-warning))]">
                       <AlertTriangle className={iconSizes.xs} />
                       {t('sales.appurtenances.activeRental')}
                     </span>
