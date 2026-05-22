@@ -69,7 +69,7 @@ export function AIInboxHeader({
             <Badge
               key="live-indicator"
               variant="default"
-              className="bg-green-600 hover:bg-green-600 text-white animate-pulse" // eslint-disable-line design-system/enforce-semantic-colors
+              className="bg-[hsl(var(--bg-success))] hover:bg-[hsl(var(--bg-success))] text-white animate-pulse"
             >
               <span className="mr-1">&#9679;</span>
               {'Live' /* eslint-disable-line custom/no-hardcoded-strings */}

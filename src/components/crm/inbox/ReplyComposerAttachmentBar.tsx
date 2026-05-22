@@ -61,7 +61,7 @@ export function ReplyComposerAttachmentBar({
             key={attachment.id}
             className={`
               relative flex items-center gap-2 p-2 rounded-lg border
-              ${attachment.status === 'failed' ? `${getStatusColor('error', 'border')} bg-red-50` : 'border-border bg-muted/30'}
+              ${attachment.status === 'failed' ? `${getStatusColor('error', 'border')} bg-destructive/10` : 'border-border bg-muted/30'}
               ${TRANSITION_PRESETS.STANDARD_COLORS}
             `}
           >
@@ -99,7 +99,7 @@ export function ReplyComposerAttachmentBar({
             )}
 
             {attachment.status === 'failed' && (
-              <AlertCircle className={`${iconSizes.sm} text-red-500`} />
+              <AlertCircle className={`${iconSizes.sm} text-destructive`} />
             )}
 
             {/* Remove button */}

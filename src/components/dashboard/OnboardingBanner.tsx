@@ -44,7 +44,7 @@ export function OnboardingBanner() {
   return (
     <div
       role="alert"
-      className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+      className="mb-4 flex items-start gap-3 rounded-lg border border-[hsl(var(--bg-warning))] bg-[hsl(var(--bg-warning))]/40 px-4 py-3 text-[hsl(var(--bg-warning))]"
     >
       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
       <div className="flex-1">
@@ -55,7 +55,7 @@ export function OnboardingBanner() {
         <Button
           variant="outline"
           size="sm"
-          className="h-7 border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-200"
+          className="h-7 border-[hsl(var(--bg-warning))] bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--bg-warning))] hover:bg-[hsl(var(--bg-warning))]/60"
           onClick={() => router.push('/onboarding/organization')}
         >
           {t('onboarding.banner.cta')}
@@ -64,7 +64,7 @@ export function OnboardingBanner() {
           type="button"
           aria-label={t('onboarding.banner.dismiss')}
           onClick={dismiss}
-          className="text-amber-600 hover:text-amber-900 dark:text-amber-400"
+          className="text-[hsl(var(--bg-warning))] hover:text-[hsl(var(--bg-warning))]"
         >
           <X className="h-4 w-4" />
         </button>

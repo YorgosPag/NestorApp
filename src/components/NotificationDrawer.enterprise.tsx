@@ -44,11 +44,11 @@ const iconMap: Record<Severity, React.ComponentType<{ className?: string }>> = {
 };
 
 const colorMap: Record<Severity, string> = {
-  success: 'text-green-500', // eslint-disable-line design-system/enforce-semantic-colors
-  error: 'text-red-500', // eslint-disable-line design-system/enforce-semantic-colors
-  warning: 'text-yellow-500', // eslint-disable-line design-system/enforce-semantic-colors
-  info: 'text-blue-500', // eslint-disable-line design-system/enforce-semantic-colors
-  critical: 'text-red-700' // eslint-disable-line design-system/enforce-semantic-colors
+  success: 'text-green-707',
+  error: 'text-destructive',
+  warning: 'text-[hsl(var(--bg-warning))]',
+  info: 'text-primary',
+  critical: 'text-destructive',
 };
 
 export function NotificationDrawer() {
@@ -323,7 +323,7 @@ export function NotificationDrawer() {
           {/* ✅ ENTERPRISE: Error state UI με Retry */}
           {storeError ? (
             <div className={cn("flex flex-col items-center justify-center h-full gap-3 p-4", colors.text.muted)}>
-              <AlertCircle className={`${iconSizes.xl} text-red-500`} />
+              <AlertCircle className={`${iconSizes.xl} text-destructive`} />
               <p className="text-sm text-center">{storeError}</p>
               <Button variant="default" size="sm" onClick={handleRetry}>
                 <RefreshCw className={iconSizes.sm} />
@@ -415,7 +415,7 @@ export function NotificationDrawer() {
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        className={cn("flex-shrink-0 hover:text-red-500 hover:bg-red-500/10", colors.text.muted)} // eslint-disable-line design-system/enforce-semantic-colors
+                        className={cn("flex-shrink-0 hover:text-destructive hover:bg-destructive/10", colors.text.muted)}
                         onClick={(e) => { e.stopPropagation(); void handleDismiss(n.id); }}
                         aria-label={t('notifications.dismiss')}
                         title={t('notifications.dismiss')}
@@ -443,7 +443,7 @@ export function NotificationDrawer() {
                         variant="outline"
                         size="xs"
                         disabled={!isUnread}
-                        className="border-emerald-500/50 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-400/50"
+                        className="border-[hsl(var(--bg-success))]/50 text-green-707 hover:bg-[hsl(var(--bg-success))]/10"
                         onClick={(e) => { e.stopPropagation(); void markRead([n.id]); }}
                       >
                         <CheckCheck className="h-3.5 w-3.5" />

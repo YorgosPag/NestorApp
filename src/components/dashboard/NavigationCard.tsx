@@ -29,44 +29,44 @@ interface NavigationCardProps {
 
 const COLOR_MAP: Record<ColorVariant, { iconBg: string; iconText: string; ringHover: string }> = {
   blue: {
-    iconBg: 'bg-blue-100 dark:bg-blue-950',
-    iconText: 'text-blue-600 dark:text-blue-400',
-    ringHover: 'group-hover:ring-blue-200 dark:group-hover:ring-blue-800',
+    iconBg: 'bg-[hsl(var(--bg-info))]/20',
+    iconText: 'text-primary',
+    ringHover: 'group-hover:ring-ring',
   },
   green: {
-    iconBg: 'bg-emerald-100 dark:bg-emerald-950',
-    iconText: 'text-emerald-600 dark:text-emerald-400',
-    ringHover: 'group-hover:ring-emerald-200 dark:group-hover:ring-emerald-800',
+    iconBg: 'bg-[hsl(var(--bg-success))]/10',
+    iconText: 'text-green-707',
+    ringHover: 'group-hover:ring-[hsl(var(--bg-success))]',
   },
   purple: {
-    iconBg: 'bg-purple-100 dark:bg-purple-950',
-    iconText: 'text-purple-600 dark:text-purple-400',
-    ringHover: 'group-hover:ring-purple-200 dark:group-hover:ring-purple-800',
+    iconBg: 'bg-purple-100',
+    iconText: 'text-purple-600',
+    ringHover: 'group-hover:ring-purple-200',
   },
   orange: {
-    iconBg: 'bg-orange-100 dark:bg-orange-950',
-    iconText: 'text-orange-600 dark:text-orange-400',
-    ringHover: 'group-hover:ring-orange-200 dark:group-hover:ring-orange-800',
+    iconBg: 'bg-[hsl(var(--bg-warning))]/40',
+    iconText: 'text-[hsl(var(--bg-warning))]',
+    ringHover: 'group-hover:ring-[hsl(var(--bg-warning))]',
   },
   yellow: {
-    iconBg: 'bg-amber-100 dark:bg-amber-950',
-    iconText: 'text-amber-600 dark:text-amber-400',
-    ringHover: 'group-hover:ring-amber-200 dark:group-hover:ring-amber-800',
+    iconBg: 'bg-[hsl(var(--bg-warning))]/40',
+    iconText: 'text-[hsl(var(--bg-warning))]',
+    ringHover: 'group-hover:ring-[hsl(var(--bg-warning))]',
   },
   pink: {
-    iconBg: 'bg-pink-100 dark:bg-pink-950',
-    iconText: 'text-pink-600 dark:text-pink-400',
-    ringHover: 'group-hover:ring-pink-200 dark:group-hover:ring-pink-800',
+    iconBg: 'bg-pink-100',
+    iconText: 'text-pink-600',
+    ringHover: 'group-hover:ring-pink-200',
   },
   indigo: {
-    iconBg: 'bg-indigo-100 dark:bg-indigo-950',
-    iconText: 'text-indigo-600 dark:text-indigo-400',
-    ringHover: 'group-hover:ring-indigo-200 dark:group-hover:ring-indigo-800',
+    iconBg: 'bg-indigo-100',
+    iconText: 'text-indigo-600',
+    ringHover: 'group-hover:ring-indigo-200',
   },
   teal: {
-    iconBg: 'bg-teal-100 dark:bg-teal-950',
-    iconText: 'text-teal-600 dark:text-teal-400',
-    ringHover: 'group-hover:ring-teal-200 dark:group-hover:ring-teal-800',
+    iconBg: 'bg-teal-100',
+    iconText: 'text-teal-600',
+    ringHover: 'group-hover:ring-teal-200',
   },
 };
 

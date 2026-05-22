@@ -29,9 +29,9 @@ const QUICK_ACTIONS: QuickAction[] = [
 ];
 
 const VARIANT_CLASSES: Record<QuickAction['variant'], string> = {
-  blue: 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900', // eslint-disable-line design-system/enforce-semantic-colors
-  purple: 'bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-950 dark:text-purple-300 dark:hover:bg-purple-900',
-  green: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 dark:hover:bg-emerald-900',
+  blue: 'bg-[hsl(var(--bg-info))]/20 text-primary hover:bg-[hsl(var(--bg-info))]/30',
+  purple: 'bg-purple-50 text-purple-700 hover:bg-purple-100',
+  green: 'bg-[hsl(var(--bg-success))]/10 text-green-707 hover:bg-[hsl(var(--bg-success))]/20',
   neutral: 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground',
 };
 

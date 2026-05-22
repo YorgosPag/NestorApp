@@ -108,8 +108,8 @@ export function OrgStructureTab({ orgStructure, saving, onSave }: OrgStructureTa
         ? t('orgStructure.dept.routingCustomRules', { count: customRules.length })
         : null;
     return (
-      <div className="mt-2 rounded border border-amber-500/40 bg-amber-500/10 p-2 space-y-1 text-xs">
-        <p className="font-semibold text-amber-600">{t('orgStructure.dept.routingImpactTitle')}</p>
+      <div className="mt-2 rounded border border-[hsl(var(--bg-warning))]/40 bg-[hsl(var(--bg-warning))]/10 p-2 space-y-1 text-xs">
+        <p className="font-semibold text-[hsl(var(--bg-warning))]">{t('orgStructure.dept.routingImpactTitle')}</p>
         {customLine && <p>• {customLine}</p>}
         {defaultEvents.length > 0 && (
           <>
@@ -119,7 +119,7 @@ export function OrgStructureTab({ orgStructure, saving, onSave }: OrgStructureTa
             ))}
           </>
         )}
-        <p className="text-amber-700 mt-1">{note}</p>
+        <p className="text-[hsl(var(--bg-warning))] mt-1">{note}</p>
       </div>
     );
   };
@@ -231,7 +231,7 @@ export function OrgStructureTab({ orgStructure, saving, onSave }: OrgStructureTa
                           <button
                             onClick={() => handleRestoreDept(dept.id)}
                             disabled={saving}
-                            className="h-6 w-6 flex items-center justify-center rounded text-zinc-300 hover:text-emerald-400 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="h-6 w-6 flex items-center justify-center rounded text-zinc-300 hover:text-green-707 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             <RotateCcw className="h-3 w-3" />
                           </button>
@@ -244,7 +244,7 @@ export function OrgStructureTab({ orgStructure, saving, onSave }: OrgStructureTa
                         <button
                           onClick={() => setDeletingDeptId(dept.id)}
                           disabled={saving}
-                          className="h-6 w-6 flex items-center justify-center rounded text-zinc-300 hover:text-red-400 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="h-6 w-6 flex items-center justify-center rounded text-zinc-300 hover:text-destructive hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>

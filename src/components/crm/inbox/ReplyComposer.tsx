@@ -1,5 +1,4 @@
 'use client';
-/* eslint-disable design-system/enforce-semantic-colors */
 
 /**
  * =============================================================================
@@ -218,9 +217,9 @@ export function ReplyComposer({
 
       {/* Edit mode banner */}
       {isEditMode && editingMessage && (
-        <div className="flex items-start gap-2 mb-3 p-3 rounded-lg border-l-4 border-l-amber-500 bg-amber-500/5">
+        <div className="flex items-start gap-2 mb-3 p-3 rounded-lg border-l-4 border-l-[hsl(var(--bg-warning))] bg-[hsl(var(--bg-warning))]/10">
           <div className="flex-shrink-0 mt-0.5">
-            <Pencil className={`${iconSizes.sm} text-amber-500`} />
+            <Pencil className={`${iconSizes.sm} text-[hsl(var(--bg-warning))]`} />
           </div>
           <div className="flex-1 min-w-0">
             <div className={`text-xs font-medium ${colors.text.muted} mb-1`}>
@@ -249,14 +248,14 @@ export function ReplyComposer({
           className={`flex items-start gap-2 mb-3 p-3 rounded-lg border-l-4 ${
             replyMode === 'reply'
               ? 'border-l-primary bg-primary/5'
-              : 'border-l-blue-500 bg-blue-500/5'
+              : 'border-l-ring bg-[hsl(var(--bg-info))]/10'
           }`}
         >
           <div className="flex-shrink-0 mt-0.5">
             {replyMode === 'reply' ? (
               <Reply className={`${iconSizes.sm} text-primary`} />
             ) : (
-              <Forward className={`${iconSizes.sm} text-blue-500`} />
+              <Forward className={`${iconSizes.sm} text-primary`} />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -344,7 +343,7 @@ export function ReplyComposer({
         <Button
           onClick={handleSend}
           disabled={!canSend}
-          className={`flex-shrink-0 ${isEditMode ? 'bg-amber-500 hover:bg-amber-600' : ''}`}
+          className={`flex-shrink-0 ${isEditMode ? 'bg-[hsl(var(--bg-warning))] hover:bg-[hsl(var(--bg-warning))]/80' : ''}`}
           aria-label={
             isEditMode
               ? isSavingEdit
