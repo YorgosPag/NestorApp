@@ -138,8 +138,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
             <code className="break-all">{totpSecret.secretKey}</code>
             <Button variant="ghost" size="sm" onClick={handleCopySecret} aria-label={t('copy.copyText')}>
               {copiedSecret ? (
-                // eslint-disable-next-line design-system/enforce-semantic-colors
-                <Check className={cn(iconSizes.xs, 'text-green-500')} />
+                <Check className={cn(iconSizes.xs, 'text-green-707')} />
               ) : (
                 <Copy className={iconSizes.xs} />
               )}
@@ -232,8 +231,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
       <nav className={cn(layout.flexCenterGap2)}>
         <Button variant="outline" onClick={handleCopyBackupCodes} className="flex-1">
           {copiedCodes ? (
-            // eslint-disable-next-line design-system/enforce-semantic-colors
-            <Check className={cn(iconSizes.sm, 'mr-2 text-green-500')} />
+            <Check className={cn(iconSizes.sm, 'mr-2 text-green-707')} />
           ) : (
             <Copy className={cn(iconSizes.sm, 'mr-2')} />
           )}
@@ -336,7 +334,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
           <Smartphone className={iconSizes.md} aria-hidden="true" />
           {t('account.security.twoFactorTitle')}
           {twoFactorState?.status === 'enrolled' ? (
-            <Badge variant="default" className="ml-2 bg-green-600" /* eslint-disable-line design-system/enforce-semantic-colors */>
+            <Badge variant="default" className="ml-2 bg-[hsl(var(--bg-success))]">
               {t('twoFactor.active')}
             </Badge>
           ) : (

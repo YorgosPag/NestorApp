@@ -237,9 +237,9 @@ export default function AddressesDemoPage() {
             />
 
             {validationErrors.length > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded p-3">
-                <p className="text-sm font-semibold text-red-800 mb-1">Errors:</p>
-                <ul className="text-sm text-red-700 list-disc list-inside">
+              <div className="bg-destructive/10 border border-destructive rounded p-3">
+                <p className="text-sm font-semibold text-destructive mb-1">Errors:</p>
+                <ul className="text-sm text-destructive list-disc list-inside">
                   {validationErrors.map((error, i) => (
                     <li key={i}>{error}</li>
                   ))}

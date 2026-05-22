@@ -90,15 +90,15 @@ function getDeviceIcon(deviceType: DeviceType, className: string): React.ReactNo
 function getBrowserColor(browserType: BrowserType): string {
   switch (browserType) {
     case 'Chrome':
-      return 'text-green-500'; // eslint-disable-line design-system/enforce-semantic-colors
+      return 'text-green-707';
     case 'Firefox':
-      return 'text-orange-500';
+      return 'text-[hsl(var(--text-warning))]';
     case 'Safari':
-      return 'text-blue-500'; // eslint-disable-line design-system/enforce-semantic-colors
+      return 'text-primary';
     case 'Edge':
-      return 'text-cyan-500';
+      return 'text-primary';
     default:
-      return 'text-gray-500';
+      return 'text-muted-foreground';
   }
 }
 

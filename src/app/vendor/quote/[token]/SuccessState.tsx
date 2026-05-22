@@ -24,7 +24,7 @@ export function SuccessState({ editWindowExpiresAt, locale, onEditAgain }: Props
 
   return (
     <section className="rounded-lg border border-[hsl(var(--bg-success))]/60 bg-white p-6 text-center shadow-sm">
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[hsl(var(--bg-success))]/40 text-green-700">
+      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[hsl(var(--bg-success))]/40 text-green-707">
         ✓
       </div>
       <h2 className="text-lg font-semibold text-foreground">{t('vendor-portal:success.title')}</h2>

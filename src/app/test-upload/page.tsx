@@ -156,7 +156,7 @@ export default function TestUploadPage() {
           </div>
         )}
 
-        <div className="text-sm text-gray-600 mt-6">
+        <div className="text-sm text-muted-foreground mt-6">
           <p><strong>Purpose:</strong> This page tests direct Firebase Storage upload without the complex contact form logic.</p>
           <p><strong>If this works:</strong> The issue is in our contact form upload handling.</p>
           <p><strong>If this fails:</strong> The issue is with Firebase Storage configuration/connectivity.</p>

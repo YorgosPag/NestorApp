@@ -28,7 +28,7 @@ export const STATUS_CLASSES = {
     buttonHover: `${getStatusColor('error', 'bg')}/90`,
   },
   success: {
-    containerBg: 'bg-emerald-50 dark:bg-emerald-950/30',
+    containerBg: 'bg-[hsl(var(--bg-success))]/10',
     containerBorder: `border ${getStatusColor('active', 'border')}/30`,
     icon: getStatusColor('active', 'text'),
     title: getStatusColor('active', 'text'),
@@ -37,7 +37,7 @@ export const STATUS_CLASSES = {
   info: {
     spinnerText: getStatusColor('pending', 'text'),
     link: getStatusColor('pending', 'text'),
-    containerBg: 'bg-sky-50 dark:bg-sky-950/30',
+    containerBg: 'bg-[hsl(var(--bg-info))]/20',
     containerBorder: `border ${getStatusColor('pending', 'border')}/30`,
     body: `${getStatusColor('pending', 'text')}/80`,
     buttonBg: getStatusColor('pending', 'bg'),
@@ -45,13 +45,13 @@ export const STATUS_CLASSES = {
     buttonBgActive: `${getStatusColor('pending', 'bg')}/80`,
   },
   warning: {
-    containerBg: 'bg-amber-50 dark:bg-amber-950/30',
-    containerBorder: 'border border-amber-200 dark:border-amber-800',
-    icon: 'text-amber-500 dark:text-amber-400',
-    body: 'text-amber-700 dark:text-amber-300',
+    containerBg: 'bg-[hsl(var(--bg-warning))]/40',
+    containerBorder: 'border border-border',
+    icon: 'text-[hsl(var(--text-warning))]',
+    body: 'text-[hsl(var(--text-warning))]',
   },
   gpsGranted: {
-    bg: 'bg-emerald-100 dark:bg-emerald-900/40',
+    bg: 'bg-[hsl(var(--bg-success))]/10',
     text: getStatusColor('active', 'text'),
   },
 } as const;
