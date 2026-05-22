@@ -16,28 +16,30 @@
  *
  * @see ADR-047: Drawing Tool Keyboard Shortcuts & Context Menu
  * @see ADR-053 in docs/centralized-systems/reference/adr-index.md
+ * @see DxfContextMenu — shared context menu SSoT
  *
  * @author Γιώργος Παγώνης + Claude Code (Anthropic AI)
  * @since 2026-01-30
- * @version 2.0.0
+ * @version 3.0.0
  */
 
 import React, { useCallback, useRef, useEffect, useState, useImperativeHandle, forwardRef } from 'react';
+import type { SnapOverrideMode } from '../../snapping/overrides/SnapOverrideOrchestrator';
+import type { ToolType } from '../toolbar/types';
 import {
   DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import type { SnapOverrideMode } from '../../snapping/overrides/SnapOverrideOrchestrator';
-import { cn } from '@/lib/utils';
-import styles from './DrawingContextMenu.module.css';
-import type { ToolType } from '../toolbar/types';
-// 🏢 ENTERPRISE (2026-02-01): Centralized Menu Icons - ADR-133
+  DropdownMenuSub,
+  DxfMenuContent,
+  DxfMenuSubContent,
+  DxfMenuItem,
+  DxfMenuSubTrigger,
+  DxfMenuSeparator,
+  DxfMenuHiddenTrigger,
+  DxfMenuIcon,
+  DxfMenuLabel,
+  DxfMenuShortcut,
+} from './dxf-context-menu';
 import {
   EnterIcon,
   ClosePolygonIcon,
@@ -75,7 +77,6 @@ interface DrawingContextMenuProps {
 }
 
 // ADR-357 Phase 7: Single-use engine overrides available in the Snap Override submenu.
-// Maps ExtendedSnapType string values to their i18n label keys (reuses snapModes.labels).
 const SNAP_OVERRIDE_ENGINES: ReadonlyArray<{ type: string; labelKey: string }> = [
   { type: 'endpoint',     labelKey: 'snapModes.labels.endpoint' },
   { type: 'midpoint',     labelKey: 'snapModes.labels.midpoint' },
@@ -87,46 +88,21 @@ const SNAP_OVERRIDE_ENGINES: ReadonlyArray<{ type: string; labelKey: string }> =
   { type: 'nearest',      labelKey: 'snapModes.labels.nearest' },
 ] as const;
 
-// ===== HELPER FUNCTIONS =====
+// ===== HELPERS =====
 
-/**
- * Determines if the current tool supports the Close action (polygon closure)
- */
 function supportsClose(tool: ToolType): boolean {
   return tool === 'polygon' || tool === 'measure-area';
 }
 
-/**
- * Get the minimum points required for Enter/Finish
- * 🏢 ENTERPRISE (2026-01-30): Different tools have different requirements
- */
 function getMinPointsForFinish(tool: ToolType): number {
-  // 🎯 ADR-053: measure-distance-continuous auto-creates entities every 2 points
-  // "Enter" just means "stop drawing" - no minimum required
-  if (tool === 'measure-distance-continuous') {
-    return 0; // Always allow finish (entities are auto-created)
-  }
-  if (tool === 'polygon' || tool === 'measure-area') {
-    return 3; // Polygon needs at least 3 points
-  }
-  if (tool === 'measure-angle') {
-    return 3; // Angle needs 3 points
-  }
-  // 🏢 ENTERPRISE (2026-01-31): Circle best-fit needs at least 3 points - ADR-083
-  if (tool === 'circle-best-fit') {
-    return 3; // Circle best-fit needs at least 3 points
-  }
-  // ADR-357 Phase 5: line chain mode — allow Finish with 1 seeded chain start point
-  if (tool === 'line') {
-    return 1;
-  }
-  return 2; // Polyline needs at least 2
+  if (tool === 'measure-distance-continuous') return 0;
+  if (tool === 'polygon' || tool === 'measure-area') return 3;
+  if (tool === 'measure-angle') return 3;
+  if (tool === 'circle-best-fit') return 3;
+  if (tool === 'line') return 1;
+  return 2;
 }
 
-/**
- * 🏢 ENTERPRISE (2026-01-31): Determines if the current tool is an arc tool
- * Arc tools support direction flip (counterclockwise toggle)
- */
 function isArcTool(tool: ToolType): boolean {
   return tool === 'arc-3p' || tool === 'arc-cse' || tool === 'arc-sce';
 }
@@ -147,8 +123,6 @@ const DrawingContextMenuInner = forwardRef<DrawingContextMenuHandle, DrawingCont
   const triggerRef = useRef<HTMLSpanElement>(null);
   const [isOpen, setIsOpen] = useState(false);
 
-  // 🏢 PERF: Imperative handle — parent calls open(x, y) directly
-  // Position is set via DOM manipulation (no state update for position)
   useImperativeHandle(ref, () => ({
     open: (x: number, y: number) => {
       if (triggerRef.current) {
@@ -160,211 +134,108 @@ const DrawingContextMenuInner = forwardRef<DrawingContextMenuHandle, DrawingCont
     close: () => setIsOpen(false),
   }), []);
 
-  const handleOpenChange = useCallback((open: boolean) => {
-    setIsOpen(open);
-  }, []);
+  const handleOpenChange = useCallback((open: boolean) => { setIsOpen(open); }, []);
+  const handleFinish = useCallback(() => { onFinish(); setIsOpen(false); }, [onFinish]);
+  const handleClose = useCallback(() => { (onClose ?? onFinish)(); setIsOpen(false); }, [onClose, onFinish]);
+  const handleUndo = useCallback(() => { onUndoLastPoint?.(); setIsOpen(false); }, [onUndoLastPoint]);
+  const handleCancel = useCallback(() => { onCancel(); setIsOpen(false); }, [onCancel]);
+  const handleFlipArc = useCallback(() => { onFlipArc?.(); setIsOpen(false); }, [onFlipArc]);
+  const handleSnapOverride = useCallback((mode: SnapOverrideMode) => { onSnapOverride?.(mode); setIsOpen(false); }, [onSnapOverride]);
 
-  // ===== ACTION HANDLERS =====
-
-  const handleFinish = useCallback(() => {
-    onFinish();
-    setIsOpen(false);
-  }, [onFinish]);
-
-  const handleClose = useCallback(() => {
-    if (onClose) {
-      onClose();
-    } else {
-      onFinish();
-    }
-    setIsOpen(false);
-  }, [onClose, onFinish]);
-
-  const handleUndo = useCallback(() => {
-    if (onUndoLastPoint) {
-      onUndoLastPoint();
-    }
-    setIsOpen(false);
-  }, [onUndoLastPoint]);
-
-  const handleCancel = useCallback(() => {
-    onCancel();
-    setIsOpen(false);
-  }, [onCancel]);
-
-  // 🏢 ENTERPRISE (2026-01-31): Flip arc direction handler
-  const handleFlipArc = useCallback(() => {
-    if (onFlipArc) {
-      onFlipArc();
-    }
-    setIsOpen(false);
-  }, [onFlipArc]);
-
-  // ADR-357 Phase 7: Snap Override handler
-  const handleSnapOverride = useCallback((mode: SnapOverrideMode) => {
-    if (onSnapOverride) {
-      onSnapOverride(mode);
-    }
-    setIsOpen(false);
-  }, [onSnapOverride]);
-
-  // Close menu when tool/points change (user switched context)
   const prevToolRef = useRef(activeTool);
   useEffect(() => {
-    if (prevToolRef.current !== activeTool && isOpen) {
-      setIsOpen(false);
-    }
+    if (prevToolRef.current !== activeTool && isOpen) setIsOpen(false);
     prevToolRef.current = activeTool;
   }, [activeTool, isOpen]);
-
-  // ===== COMPUTED VALUES =====
 
   const canFinish = pointCount >= getMinPointsForFinish(activeTool);
   const canClose = supportsClose(activeTool) && pointCount >= 3;
   const canUndo = pointCount > 0 && onUndoLastPoint !== undefined;
   const showCloseOption = supportsClose(activeTool);
-  // 🏢 ENTERPRISE (2026-01-31): Arc flip option visibility
   const showFlipArcOption = isArcTool(activeTool) && pointCount >= 2 && onFlipArc !== undefined;
-  // ADR-357 Phase 7: Snap Override submenu — only during line COLLECTING_POINTS
   const showSnapOverride = activeTool === 'line' && pointCount >= 1 && onSnapOverride !== undefined;
-
-  // ===== RENDER =====
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
-      {/* Hidden trigger positioned at right-click location */}
       <DropdownMenuTrigger asChild>
-        <span
-          ref={triggerRef}
-          className={styles.hiddenTrigger}
-          aria-hidden="true"
-        />
+        <DxfMenuHiddenTrigger ref={triggerRef} />
       </DropdownMenuTrigger>
+      <DxfMenuContent>
+        <DxfMenuItem onClick={handleFinish} disabled={!canFinish}>
+          <DxfMenuIcon><EnterIcon /></DxfMenuIcon>
+          <DxfMenuLabel>Enter</DxfMenuLabel>
+          <DxfMenuShortcut>Enter</DxfMenuShortcut>
+        </DxfMenuItem>
 
-      <DropdownMenuContent
-        className={styles.menuContent}
-        side="bottom"
-        align="start"
-        sideOffset={0}
-        avoidCollisions={false}
-      >
-        {/* Enter / Finish */}
-        <DropdownMenuItem
-          className={cn(styles.menuItem, !canFinish && styles.menuItemDisabled)}
-          onClick={handleFinish}
-          disabled={!canFinish}
-        >
-          <span className={styles.menuItemIcon}><EnterIcon /></span>
-          <span className={styles.menuItemLabel}>Enter</span>
-          <span className={styles.menuItemShortcut}>Enter</span>
-        </DropdownMenuItem>
-
-        {/* Close (for polygon tools only) */}
         {showCloseOption && (
-          <DropdownMenuItem
-            className={cn(styles.menuItem, !canClose && styles.menuItemDisabled)}
-            onClick={handleClose}
-            disabled={!canClose}
-          >
-            <span className={styles.menuItemIcon}><ClosePolygonIcon /></span>
-            <span className={styles.menuItemLabel}>Close</span>
-            <span className={styles.menuItemShortcut}>C</span>
-          </DropdownMenuItem>
+          <DxfMenuItem onClick={handleClose} disabled={!canClose}>
+            <DxfMenuIcon><ClosePolygonIcon /></DxfMenuIcon>
+            <DxfMenuLabel>Close</DxfMenuLabel>
+            <DxfMenuShortcut>C</DxfMenuShortcut>
+          </DxfMenuItem>
         )}
 
-        {/* 🏢 ENTERPRISE (2026-01-31): Flip Arc Direction (for arc tools only) */}
         {showFlipArcOption && (
-          <DropdownMenuItem
-            className={styles.menuItem}
-            onClick={handleFlipArc}
-          >
-            <span className={styles.menuItemIcon}><FlipArcIcon /></span>
-            <span className={styles.menuItemLabel}>{t('contextMenu.flipArc')}</span>
-            <span className={styles.menuItemShortcut}>X</span>
-          </DropdownMenuItem>
+          <DxfMenuItem onClick={handleFlipArc}>
+            <DxfMenuIcon><FlipArcIcon /></DxfMenuIcon>
+            <DxfMenuLabel>{t('contextMenu.flipArc')}</DxfMenuLabel>
+            <DxfMenuShortcut>X</DxfMenuShortcut>
+          </DxfMenuItem>
         )}
 
-        <DropdownMenuSeparator className={styles.menuSeparator} />
+        <DxfMenuSeparator />
 
-        {/* Undo Last Point */}
-        <DropdownMenuItem
-          className={cn(styles.menuItem, !canUndo && styles.menuItemDisabled)}
-          onClick={handleUndo}
-          disabled={!canUndo}
-        >
-          <span className={styles.menuItemIcon}><UndoIcon /></span>
-          <span className={styles.menuItemLabel}>Undo</span>
-          <span className={styles.menuItemShortcut}>U</span>
-        </DropdownMenuItem>
+        <DxfMenuItem onClick={handleUndo} disabled={!canUndo}>
+          <DxfMenuIcon><UndoIcon /></DxfMenuIcon>
+          <DxfMenuLabel>Undo</DxfMenuLabel>
+          <DxfMenuShortcut>U</DxfMenuShortcut>
+        </DxfMenuItem>
 
-        {/* ADR-357 Phase 7: Snap Override submenu */}
         {showSnapOverride && (
           <>
-            <DropdownMenuSeparator className={styles.menuSeparator} />
+            <DxfMenuSeparator />
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger className={styles.menuItem}>
-                <span className={styles.menuItemLabel}>{t('contextMenu.snapOverride.title')}</span>
-                <span className={styles.menuItemShortcut}>▶</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className={styles.menuContent}>
-                {/* Special overrides */}
-                <DropdownMenuItem
-                  className={styles.menuItem}
-                  onClick={() => handleSnapOverride('from')}
-                >
-                  <span className={styles.menuItemLabel}>{t('contextMenu.snapOverride.from')}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={styles.menuItem}
-                  onClick={() => handleSnapOverride('m2p')}
-                >
-                  <span className={styles.menuItemLabel}>{t('contextMenu.snapOverride.m2p')}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={styles.menuItem}
-                  onClick={() => handleSnapOverride('app')}
-                >
-                  <span className={styles.menuItemLabel}>{t('contextMenu.snapOverride.app')}</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className={styles.menuSeparator} />
-                {/* Single-use engine overrides */}
+              <DxfMenuSubTrigger>
+                <DxfMenuLabel>{t('contextMenu.snapOverride.title')}</DxfMenuLabel>
+                <DxfMenuShortcut>▶</DxfMenuShortcut>
+              </DxfMenuSubTrigger>
+              <DxfMenuSubContent>
+                <DxfMenuItem onClick={() => handleSnapOverride('from')}>
+                  <DxfMenuLabel>{t('contextMenu.snapOverride.from')}</DxfMenuLabel>
+                </DxfMenuItem>
+                <DxfMenuItem onClick={() => handleSnapOverride('m2p')}>
+                  <DxfMenuLabel>{t('contextMenu.snapOverride.m2p')}</DxfMenuLabel>
+                </DxfMenuItem>
+                <DxfMenuItem onClick={() => handleSnapOverride('app')}>
+                  <DxfMenuLabel>{t('contextMenu.snapOverride.app')}</DxfMenuLabel>
+                </DxfMenuItem>
+                <DxfMenuSeparator />
                 {SNAP_OVERRIDE_ENGINES.map(engine => (
-                  <DropdownMenuItem
-                    key={engine.type}
-                    className={styles.menuItem}
-                    onClick={() => handleSnapOverride(engine.type)}
-                  >
-                    <span className={styles.menuItemLabel}>
+                  <DxfMenuItem key={engine.type} onClick={() => handleSnapOverride(engine.type)}>
+                    <DxfMenuLabel>
                       {t(engine.labelKey)} ({t('contextMenu.snapOverride.once')})
-                    </span>
-                  </DropdownMenuItem>
+                    </DxfMenuLabel>
+                  </DxfMenuItem>
                 ))}
-              </DropdownMenuSubContent>
+              </DxfMenuSubContent>
             </DropdownMenuSub>
           </>
         )}
 
-        <DropdownMenuSeparator className={styles.menuSeparator} />
+        <DxfMenuSeparator />
 
-        {/* Cancel */}
-        <DropdownMenuItem
-          className={styles.menuItem}
-          onClick={handleCancel}
-        >
-          <span className={styles.menuItemIcon}><CancelIcon /></span>
-          <span className={styles.menuItemLabel}>Cancel</span>
-          <span className={styles.menuItemShortcut}>Esc</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
+        <DxfMenuItem onClick={handleCancel}>
+          <DxfMenuIcon><CancelIcon /></DxfMenuIcon>
+          <DxfMenuLabel>Cancel</DxfMenuLabel>
+          <DxfMenuShortcut>Esc</DxfMenuShortcut>
+        </DxfMenuItem>
+      </DxfMenuContent>
     </DropdownMenu>
   );
 });
 
 DrawingContextMenuInner.displayName = 'DrawingContextMenu';
 
-// Default export for backward compatibility
 export default DrawingContextMenuInner;
-
-// ===== NAMED EXPORTS =====
 export { DrawingContextMenuInner as DrawingContextMenu };
 export type { DrawingContextMenuProps };

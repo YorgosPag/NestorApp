@@ -14,19 +14,22 @@
  *
  * @see ADR-161: Entity Join System
  * @see ADR-047: Drawing Tool Keyboard Shortcuts & Context Menu (pattern reference)
+ * @see DxfContextMenu — shared context menu SSoT
  */
 
 import React, { useCallback, useRef, useState, useImperativeHandle, forwardRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useTranslation } from 'react-i18next';
-import styles from './DrawingContextMenu.module.css';
-import { cn } from '@/lib/utils';
+  DxfMenuContent,
+  DxfMenuItem,
+  DxfMenuSeparator,
+  DxfMenuHiddenTrigger,
+  DxfMenuIcon,
+  DxfMenuLabel,
+  DxfMenuShortcut,
+} from './dxf-context-menu';
 import { JoinIcon, DeleteIcon, CancelIcon, SplitWallIcon } from '../icons/MenuIcons';
 
 // ===== TYPES =====
@@ -86,7 +89,6 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
   const triggerRef = useRef<HTMLSpanElement>(null);
   const [isOpen, setIsOpen] = useState(false);
 
-  // 🏢 PERF: Imperative handle — parent calls open(x, y) directly
   useImperativeHandle(ref, () => ({
     open: (x: number, y: number) => {
       if (triggerRef.current) {
@@ -98,158 +100,83 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
     close: () => setIsOpen(false),
   }), []);
 
-  const handleOpenChange = useCallback((open: boolean) => {
-    setIsOpen(open);
-  }, []);
-
-  const handleJoin = useCallback(() => {
-    onJoin();
-    setIsOpen(false);
-  }, [onJoin]);
-
-  const handleDelete = useCallback(() => {
-    onDelete();
-    setIsOpen(false);
-  }, [onDelete]);
-
-  const handleCancel = useCallback(() => {
-    onCancel();
-    setIsOpen(false);
-  }, [onCancel]);
-
-  const handleLayerOff = useCallback(() => {
-    onLayerOff?.();
-    setIsOpen(false);
-  }, [onLayerOff]);
-
-  const handleLayerFreeze = useCallback(() => {
-    onLayerFreeze?.();
-    setIsOpen(false);
-  }, [onLayerFreeze]);
-
-  const handleLayerLock = useCallback(() => {
-    onLayerLock?.();
-    setIsOpen(false);
-  }, [onLayerLock]);
-
-  const handleSplit = useCallback(() => {
-    onSplit?.();
-    setIsOpen(false);
-  }, [onSplit]);
+  const handleOpenChange = useCallback((open: boolean) => { setIsOpen(open); }, []);
+  const handleJoin = useCallback(() => { onJoin(); setIsOpen(false); }, [onJoin]);
+  const handleDelete = useCallback(() => { onDelete(); setIsOpen(false); }, [onDelete]);
+  const handleCancel = useCallback(() => { onCancel(); setIsOpen(false); }, [onCancel]);
+  const handleLayerOff = useCallback(() => { onLayerOff?.(); setIsOpen(false); }, [onLayerOff]);
+  const handleLayerFreeze = useCallback(() => { onLayerFreeze?.(); setIsOpen(false); }, [onLayerFreeze]);
+  const handleLayerLock = useCallback(() => { onLayerLock?.(); setIsOpen(false); }, [onLayerLock]);
+  const handleSplit = useCallback(() => { onSplit?.(); setIsOpen(false); }, [onSplit]);
 
   const showLayerCommands = !!(canApplyLayerCommands && (onLayerOff || onLayerFreeze || onLayerLock));
   const layerCommandsDisabled = !!isSystemLayer;
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
-      {/* Hidden trigger positioned at right-click location */}
       <DropdownMenuTrigger asChild>
-        <span
-          ref={triggerRef}
-          className={styles.hiddenTrigger}
-          aria-hidden="true"
-        />
+        <DxfMenuHiddenTrigger ref={triggerRef} />
       </DropdownMenuTrigger>
-
-      <DropdownMenuContent
-        className={styles.menuContent}
-        side="bottom"
-        align="start"
-        sideOffset={0}
-        avoidCollisions={false}
-      >
-        {/* Join */}
-        <DropdownMenuItem
-          className={cn(styles.menuItem, !canJoin && styles.menuItemDisabled)}
-          onClick={handleJoin}
-          disabled={!canJoin}
-        >
-          <span className={styles.menuItemIcon}><JoinIcon /></span>
-          <span className={styles.menuItemLabel}>
-            Join{joinResultLabel ? ` → ${joinResultLabel}` : ''}
-          </span>
-          <span className={styles.menuItemShortcut}>J</span>
-        </DropdownMenuItem>
+      <DxfMenuContent>
+        <DxfMenuItem onClick={handleJoin} disabled={!canJoin}>
+          <DxfMenuIcon><JoinIcon /></DxfMenuIcon>
+          <DxfMenuLabel>Join{joinResultLabel ? ` → ${joinResultLabel}` : ''}</DxfMenuLabel>
+          <DxfMenuShortcut>J</DxfMenuShortcut>
+        </DxfMenuItem>
 
         {canSplit && (
           <>
-            <DropdownMenuSeparator className={styles.menuSeparator} />
-            <DropdownMenuItem className={styles.menuItem} onClick={handleSplit}>
-              <span className={styles.menuItemIcon}><SplitWallIcon /></span>
-              <span className={styles.menuItemLabel}>{t('contextMenu.entity.splitWall')}</span>
-            </DropdownMenuItem>
+            <DxfMenuSeparator />
+            <DxfMenuItem onClick={handleSplit}>
+              <DxfMenuIcon><SplitWallIcon /></DxfMenuIcon>
+              <DxfMenuLabel>{t('contextMenu.entity.splitWall')}</DxfMenuLabel>
+            </DxfMenuItem>
           </>
         )}
 
         {showLayerCommands && (
           <>
-            <DropdownMenuSeparator className={styles.menuSeparator} />
-            {/* ADR-358 §5.6.bis Phase 10 — Layer click-driven commands */}
+            <DxfMenuSeparator />
             {onLayerOff && (
-              <DropdownMenuItem
-                className={cn(styles.menuItem, layerCommandsDisabled && styles.menuItemDisabled)}
-                onClick={handleLayerOff}
-                disabled={layerCommandsDisabled}
-              >
-                <span className={styles.menuItemLabel}>{t('layer.isolate.contextMenu.off')}</span>
-              </DropdownMenuItem>
+              <DxfMenuItem onClick={handleLayerOff} disabled={layerCommandsDisabled}>
+                <DxfMenuLabel>{t('layer.isolate.contextMenu.off')}</DxfMenuLabel>
+              </DxfMenuItem>
             )}
             {onLayerFreeze && (
-              <DropdownMenuItem
-                className={cn(styles.menuItem, layerCommandsDisabled && styles.menuItemDisabled)}
-                onClick={handleLayerFreeze}
-                disabled={layerCommandsDisabled}
-              >
-                <span className={styles.menuItemLabel}>{t('layer.isolate.contextMenu.freeze')}</span>
-              </DropdownMenuItem>
+              <DxfMenuItem onClick={handleLayerFreeze} disabled={layerCommandsDisabled}>
+                <DxfMenuLabel>{t('layer.isolate.contextMenu.freeze')}</DxfMenuLabel>
+              </DxfMenuItem>
             )}
             {onLayerLock && (
-              <DropdownMenuItem
-                className={cn(styles.menuItem, layerCommandsDisabled && styles.menuItemDisabled)}
-                onClick={handleLayerLock}
-                disabled={layerCommandsDisabled}
-              >
-                <span className={styles.menuItemLabel}>{t('layer.isolate.contextMenu.lock')}</span>
-              </DropdownMenuItem>
+              <DxfMenuItem onClick={handleLayerLock} disabled={layerCommandsDisabled}>
+                <DxfMenuLabel>{t('layer.isolate.contextMenu.lock')}</DxfMenuLabel>
+              </DxfMenuItem>
             )}
           </>
         )}
 
-        <DropdownMenuSeparator className={styles.menuSeparator} />
+        <DxfMenuSeparator />
 
-        {/* Delete */}
-        <DropdownMenuItem
-          className={styles.menuItem}
-          onClick={handleDelete}
-        >
-          <span className={styles.menuItemIcon}><DeleteIcon /></span>
-          <span className={styles.menuItemLabel}>
-            Delete ({selectedCount})
-          </span>
-          <span className={styles.menuItemShortcut}>Del</span>
-        </DropdownMenuItem>
+        <DxfMenuItem onClick={handleDelete}>
+          <DxfMenuIcon><DeleteIcon /></DxfMenuIcon>
+          <DxfMenuLabel>Delete ({selectedCount})</DxfMenuLabel>
+          <DxfMenuShortcut>Del</DxfMenuShortcut>
+        </DxfMenuItem>
 
-        <DropdownMenuSeparator className={styles.menuSeparator} />
+        <DxfMenuSeparator />
 
-        {/* Cancel */}
-        <DropdownMenuItem
-          className={styles.menuItem}
-          onClick={handleCancel}
-        >
-          <span className={styles.menuItemIcon}><CancelIcon /></span>
-          <span className={styles.menuItemLabel}>Cancel</span>
-          <span className={styles.menuItemShortcut}>Esc</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
+        <DxfMenuItem onClick={handleCancel}>
+          <DxfMenuIcon><CancelIcon /></DxfMenuIcon>
+          <DxfMenuLabel>Cancel</DxfMenuLabel>
+          <DxfMenuShortcut>Esc</DxfMenuShortcut>
+        </DxfMenuItem>
+      </DxfMenuContent>
     </DropdownMenu>
   );
 });
 
 EntityContextMenuInner.displayName = 'EntityContextMenu';
 
-// Default export for backward compatibility
 export default EntityContextMenuInner;
-
-// ===== NAMED EXPORTS =====
 export { EntityContextMenuInner as EntityContextMenu };
 export type { EntityContextMenuProps };

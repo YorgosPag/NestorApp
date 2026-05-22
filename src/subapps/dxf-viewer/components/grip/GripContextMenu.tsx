@@ -16,16 +16,31 @@
  *   - Sections are visually separated by a thin divider.
  *   - The `Exit` row uses destructive (red) styling to match AutoCAD UX.
  *
+ * Styling: uses DxfContextMenu shared primitives for visual consistency with
+ * DrawingContextMenu and EntityContextMenu.
+ *
  * @see GripContextMenuStore
  * @see GripHoverMenu — sister leaf (hover hold-menu, entity-specific actions)
  * @see ADR-040 §micro-leaf subscriber pattern
+ * @see DxfContextMenu — shared context menu SSoT
  */
 
 'use client';
 
-import React, { useSyncExternalStore, useEffect, useRef, useCallback } from 'react';
+import React, { useSyncExternalStore, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { GripContextMenuStore } from '../../systems/grip/GripContextMenuStore';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DxfMenuContent,
+  DxfMenuItem,
+  DxfMenuSeparator,
+  DxfMenuHiddenTrigger,
+  DxfMenuSectionTitle,
+  DxfMenuLabel,
+  DxfMenuCheck,
+} from '../../ui/components/dxf-context-menu';
 
 export const GripContextMenu = React.memo(function GripContextMenu() {
   const snapshot = useSyncExternalStore(
@@ -34,83 +49,54 @@ export const GripContextMenu = React.memo(function GripContextMenu() {
     GripContextMenuStore.getSnapshot,
   );
   const { t } = useTranslation('tool-hints');
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLSpanElement>(null);
 
-  // ── Dismiss on outside-click / Escape ─────────────────────────────────────
+  // Position the hidden trigger at the grip screen position from the store.
   useEffect(() => {
-    if (!snapshot.visible) return;
-    const onPointerDown = (e: PointerEvent) => {
-      if (containerRef.current && containerRef.current.contains(e.target as Node)) return;
-      GripContextMenuStore.hide();
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') GripContextMenuStore.hide();
-    };
-    window.addEventListener('pointerdown', onPointerDown, true);
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('pointerdown', onPointerDown, true);
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [snapshot.visible]);
+    if (snapshot.visible && snapshot.screenPos && triggerRef.current) {
+      triggerRef.current.style.left = `${snapshot.screenPos.x}px`;
+      triggerRef.current.style.top = `${snapshot.screenPos.y}px`;
+    }
+  }, [snapshot.visible, snapshot.screenPos]);
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open) GripContextMenuStore.hide();
+  }, []);
 
   const handleSelect = useCallback((onSelect: () => void) => {
     onSelect();
   }, []);
 
-  if (!snapshot.visible || !snapshot.screenPos) return null;
-
   return (
-    <nav
-      ref={containerRef}
-      className="dxf-grip-context-menu fixed z-50 min-w-[180px] rounded-md border border-border bg-card shadow-lg"
-      style={{ left: snapshot.screenPos.x, top: snapshot.screenPos.y }}
-      aria-label={t('gripContextMenu.ariaLabel')}
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      {snapshot.sections.map((section, sectionIdx) => (
-        <section
-          key={section.id}
-          className={
-            sectionIdx > 0
-              ? 'border-t border-border'
-              : undefined
-          }
-        >
-          {section.titleKey && (
-            <h3 className="px-3 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {t(section.titleKey)}
-            </h3>
-          )}
-          <ul className="py-1 text-sm">
+    <DropdownMenu open={snapshot.visible} onOpenChange={handleOpenChange}>
+      <DropdownMenuTrigger asChild>
+        <DxfMenuHiddenTrigger ref={triggerRef} />
+      </DropdownMenuTrigger>
+      <DxfMenuContent
+        aria-label={t('gripContextMenu.ariaLabel')}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        {snapshot.sections.map((section, sectionIdx) => (
+          <React.Fragment key={section.id}>
+            {sectionIdx > 0 && <DxfMenuSeparator />}
+            {section.titleKey && (
+              <DxfMenuSectionTitle>{t(section.titleKey)}</DxfMenuSectionTitle>
+            )}
             {section.items.map((opt) => (
-              <li key={opt.id}>
-                <button
-                  type="button"
-                  disabled={opt.disabled}
-                  onClick={() => handleSelect(opt.onSelect)}
-                  className={[
-                    'flex w-full items-center gap-2 px-3 py-1.5 text-left',
-                    'disabled:cursor-not-allowed disabled:opacity-50',
-                    opt.destructive
-                      ? 'text-destructive hover:bg-[hsl(var(--bg-error))]/40'
-                      : 'hover:bg-accent',
-                  ].join(' ')}
-                >
-                  <span
-                    className="inline-block w-3 text-center text-muted-foreground"
-                    aria-hidden="true"
-                  >
-                    {opt.checked ? '✓' : ''}
-                  </span>
-                  <span className="flex-1">{t(opt.labelKey, opt.labelParams)}</span>
-                </button>
-              </li>
+              <DxfMenuItem
+                key={opt.id}
+                disabled={opt.disabled}
+                destructive={opt.destructive}
+                onClick={() => handleSelect(opt.onSelect)}
+              >
+                <DxfMenuCheck checked={!!opt.checked} />
+                <DxfMenuLabel>{t(opt.labelKey, opt.labelParams)}</DxfMenuLabel>
+              </DxfMenuItem>
             ))}
-          </ul>
-        </section>
-      ))}
-    </nav>
+          </React.Fragment>
+        ))}
+      </DxfMenuContent>
+    </DropdownMenu>
   );
 });
 
