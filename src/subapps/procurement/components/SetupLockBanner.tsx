@@ -31,9 +31,9 @@ export function SetupLockBanner({
   if (lockState === 'lifecycleLocked') {
     const statusKey = rfqStatus ?? 'closed';
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-950/30">
-        <Lock className="size-4 shrink-0 text-slate-700 dark:text-slate-300" />
-        <span className="text-slate-700 dark:text-slate-300">
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-muted px-4 py-3 text-sm">
+        <Lock className="size-4 shrink-0 text-foreground" />
+        <span className="text-foreground">
           {t(`rfqs.setup.banner.lifecycleLocked.${statusKey}`)}
         </span>
       </div>
@@ -42,8 +42,8 @@ export function SetupLockBanner({
 
   if (lockState === 'awardLocked') {
     return (
-      <div className="flex items-center justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm dark:border-amber-800 dark:bg-amber-950/30">
-        <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300">
+      <div className="flex items-center justify-between gap-4 rounded-lg border border-[hsl(var(--bg-warning))]/60 bg-[hsl(var(--bg-warning))]/40 px-4 py-3 text-sm">
+        <div className="flex items-center gap-2 text-foreground">
           <Lock className="size-4 shrink-0" />
           <span>{t('rfqs.setup.banner.awardLocked', { vendor: vendorName ?? '—' })}</span>
         </div>
@@ -57,8 +57,8 @@ export function SetupLockBanner({
   }
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm dark:border-red-800 dark:bg-red-950/30">
-      <div className="flex items-center gap-2 text-red-800 dark:text-red-300">
+    <div className="flex items-center justify-between gap-4 rounded-lg border border-[hsl(var(--bg-error))]/60 bg-[hsl(var(--bg-error))]/40 px-4 py-3 text-sm">
+      <div className="flex items-center gap-2 text-destructive">
         <Lock className="size-4 shrink-0" />
         <span>{t('rfqs.setup.banner.poLocked', { poNumber: poNumber ?? '—' })}</span>
       </div>

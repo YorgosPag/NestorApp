@@ -50,15 +50,15 @@ interface Props {
 export function VendorPortalErrorState({ reason }: Props) {
   const msg = MESSAGES_EL[reason] ?? MESSAGES_EL.malformed_token;
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-50 px-4 py-12">
-      <section className="w-full max-w-md rounded-lg border border-slate-200 bg-white shadow-sm">
-        <header className="border-b border-slate-200 px-6 py-4">
-          <h1 className="text-lg font-semibold text-slate-900">{msg.title}</h1>
+    <main className="min-h-screen flex items-center justify-center bg-muted px-4 py-12">
+      <section className="w-full max-w-md rounded-lg border border-border bg-white shadow-sm">
+        <header className="border-b border-border px-6 py-4">
+          <h1 className="text-lg font-semibold text-foreground">{msg.title}</h1>
         </header>
         <div className="px-6 py-6">
-          <p className="text-sm leading-6 text-slate-700">{msg.body}</p>
+          <p className="text-sm leading-6 text-foreground">{msg.body}</p>
         </div>
-        <footer className="border-t border-slate-100 px-6 py-3 text-xs text-slate-500">
+        <footer className="border-t border-border px-6 py-3 text-xs text-muted-foreground">
           Nestor Construct
         </footer>
       </section>

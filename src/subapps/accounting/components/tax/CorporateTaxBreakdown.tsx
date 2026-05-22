@@ -165,7 +165,7 @@ export function CorporateTaxBreakdown({ result, entityType }: CorporateTaxBreakd
                     </div>
                     <div>
                       <dt className={colors.text.muted}>{t('setup.corporateTax.netDividend')}</dt>
-                      <dd className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(item.netDividend)}</dd>
+                      <dd className="font-semibold text-green-700">{formatCurrency(item.netDividend)}</dd>
                     </div>
                   </dl>
                 </article>

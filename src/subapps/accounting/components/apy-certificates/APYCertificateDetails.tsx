@@ -78,8 +78,8 @@ function InfoRow({ label, value }: InfoRowProps) {
   if (!value) return null;
   return (
     <div className="flex gap-2 text-sm">
-      <span className="text-gray-500 min-w-28 shrink-0">{label}:</span>
-      <span className="text-gray-900">{value}</span>
+      <span className="text-muted-foreground min-w-28 shrink-0">{label}:</span>
+      <span className="text-foreground">{value}</span>
     </div>
   );
 }
@@ -93,18 +93,18 @@ function EmailHistoryRow({ record, index }: EmailHistoryRowProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   return (
     <TableRow>
-      <TableCell className="text-gray-600 text-sm">{index + 1}</TableCell>
+      <TableCell className="text-muted-foreground text-sm">{index + 1}</TableCell>
       <TableCell className="text-sm">{formatDateTime(record.sentAt)}</TableCell>
       <TableCell className="text-sm font-mono">{record.recipientEmail}</TableCell>
-      <TableCell className="text-sm text-gray-700">{record.subject}</TableCell>
+      <TableCell className="text-sm text-foreground">{record.subject}</TableCell>
       <TableCell className="text-center">
         {record.status === 'sent' ? (
-          <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
+          <Badge className="bg-[hsl(var(--bg-success))]/40 text-green-700 border-[hsl(var(--bg-success))] text-xs">
             <CheckCircle2 className="h-3 w-3 mr-1" />
             {t('apy.emailHistory.sent')}
           </Badge>
         ) : (
-          <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
+          <Badge className="bg-destructive/10 text-destructive border-destructive text-xs">
             <AlertCircle className="h-3 w-3 mr-1" />
             {t('apy.emailHistory.failed')}
           </Badge>
@@ -207,22 +207,22 @@ export function APYCertificateDetails({
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold text-gray-900">
+              <h1 className="text-xl font-semibold text-foreground">
                 {t('apy.certificateTitle', { year: cert.fiscalYear })}
               </h1>
               {cert.isReceived ? (
-                <Badge className="bg-green-100 text-green-800 border-green-200">
+                <Badge className="bg-[hsl(var(--bg-success))]/40 text-green-700 border-[hsl(var(--bg-success))]">
                   <CheckCircle2 className="h-3 w-3 mr-1" />
                   {t('apy.status.received')}
                 </Badge>
               ) : (
-                <Badge className="bg-orange-100 text-orange-800 border-orange-200">
+                <Badge className="bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--bg-warning))] border-[hsl(var(--bg-warning))]">
                   <Clock className="h-3 w-3 mr-1" />
                   {t('apy.status.pending')}
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-gray-500 mt-0.5 font-mono">{cert.certificateId}</p>
+            <p className="text-sm text-muted-foreground mt-0.5 font-mono">{cert.certificateId}</p>
           </div>
         </div>
 
@@ -233,7 +233,7 @@ export function APYCertificateDetails({
               variant="outline"
               onClick={handleMarkReceived}
               disabled={markingReceived}
-              className="text-green-700 border-green-300 hover:bg-green-50"
+              className="text-green-700 border-[hsl(var(--bg-success))] hover:bg-[hsl(var(--bg-success))]/10"
             >
               {markingReceived ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -263,15 +263,15 @@ export function APYCertificateDetails({
         {/* Provider */}
         <section
           aria-labelledby="provider-heading"
-          className="rounded-lg border border-gray-200 p-4 space-y-1.5"
+          className="rounded-lg border border-border p-4 space-y-1.5"
         >
           <header className="flex items-center gap-2 mb-2">
-            <Building2 className="h-4 w-4 text-gray-400" />
-            <h2 id="provider-heading" className="text-sm font-semibold text-gray-700">
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <h2 id="provider-heading" className="text-sm font-semibold text-foreground">
               {t('apy.provider.title')}
             </h2>
           </header>
-          <p className="text-base font-medium text-gray-900">{cert.provider.name}</p>
+          <p className="text-base font-medium text-foreground">{cert.provider.name}</p>
           <InfoRow label={t('apy.fields.vatNumber')} value={cert.provider.vatNumber} />
           <InfoRow label={t('apy.fields.taxOffice')} value={cert.provider.taxOffice} />
           <InfoRow
@@ -289,15 +289,15 @@ export function APYCertificateDetails({
         {/* Customer */}
         <section
           aria-labelledby="customer-heading"
-          className="rounded-lg border border-gray-200 p-4 space-y-1.5"
+          className="rounded-lg border border-border p-4 space-y-1.5"
         >
           <header className="flex items-center gap-2 mb-2">
-            <User className="h-4 w-4 text-gray-400" />
-            <h2 id="customer-heading" className="text-sm font-semibold text-gray-700">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <h2 id="customer-heading" className="text-sm font-semibold text-foreground">
               {t('apy.customerSection.title')}
             </h2>
           </header>
-          <p className="text-base font-medium text-gray-900">{cert.customer.name}</p>
+          <p className="text-base font-medium text-foreground">{cert.customer.name}</p>
           <InfoRow label={t('apy.fields.vatNumber')} value={cert.customer.vatNumber} />
           <InfoRow label={t('apy.fields.taxOffice')} value={cert.customer.taxOffice} />
           <InfoRow
@@ -309,7 +309,7 @@ export function APYCertificateDetails({
             }
           />
           {cert.isReceived && cert.receivedAt && (
-            <div className="mt-2 pt-2 border-t border-gray-100">
+            <div className="mt-2 pt-2 border-t border-border">
               <InfoRow
                 label={t('apy.fields.received')}
                 value={formatDateTime(cert.receivedAt)}
@@ -321,7 +321,7 @@ export function APYCertificateDetails({
 
       {/* ── Invoice Table ───────────────────────────────────────────────────── */}
       <section aria-labelledby="invoices-heading">
-        <h2 id="invoices-heading" className="text-sm font-semibold text-gray-700 mb-2">
+        <h2 id="invoices-heading" className="text-sm font-semibold text-foreground mb-2">
           {t('apy.invoices.heading', { count: cert.lineItems.length })}
         </h2>
         <Table>
@@ -347,13 +347,13 @@ export function APYCertificateDetails({
               </TableRow>
             ))}
             {/* Totals row */}
-            <TableRow className="bg-gray-50 font-semibold">
-              <TableCell colSpan={2} className="text-right text-gray-700">
+            <TableRow className="bg-muted/50 font-semibold">
+              <TableCell colSpan={2} className="text-right text-foreground">
                 {t('apy.invoiceTable.totals')}
               </TableCell>
               <TableCell className="text-right">{totalNetFormatted}</TableCell>
               <TableCell />
-              <TableCell className="text-right text-blue-900 text-base">
+              <TableCell className="text-right text-primary text-base">
                 {totalWithholdingFormatted}
               </TableCell>
             </TableRow>
@@ -363,18 +363,18 @@ export function APYCertificateDetails({
 
       {/* ── Notes ──────────────────────────────────────────────────────────── */}
       {cert.notes && (
-        <section aria-labelledby="notes-heading" className="rounded-lg border border-gray-200 p-4">
-          <h2 id="notes-heading" className="text-sm font-semibold text-gray-700 mb-1">
+        <section aria-labelledby="notes-heading" className="rounded-lg border border-border p-4">
+          <h2 id="notes-heading" className="text-sm font-semibold text-foreground mb-1">
             {t('apy.notesHeading')}
           </h2>
-          <p className="text-sm text-gray-700 whitespace-pre-wrap">{cert.notes}</p>
+          <p className="text-sm text-foreground whitespace-pre-wrap">{cert.notes}</p>
         </section>
       )}
 
       {/* ── Email History ───────────────────────────────────────────────────── */}
       {emailHistory.length > 0 && (
         <section aria-labelledby="email-history-heading">
-          <h2 id="email-history-heading" className="text-sm font-semibold text-gray-700 mb-2">
+          <h2 id="email-history-heading" className="text-sm font-semibold text-foreground mb-2">
             {t('apy.emailHistory.heading', { count: emailHistory.length })}
           </h2>
           <Table>
@@ -397,7 +397,7 @@ export function APYCertificateDetails({
       )}
 
       {/* ── Footer metadata ─────────────────────────────────────────────────── */}
-      <footer className="text-xs text-gray-400 pt-2 border-t border-gray-100">
+      <footer className="text-xs text-muted-foreground pt-2 border-t border-border">
         {t('apy.footer', {
           created: formatDateTime(cert.createdAt),
           updated: formatDateTime(cert.updatedAt),

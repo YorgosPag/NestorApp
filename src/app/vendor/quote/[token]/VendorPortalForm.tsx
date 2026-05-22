@@ -177,7 +177,7 @@ export function VendorPortalForm({
         <button
           type="button"
           onClick={addLine}
-          className="mt-3 rounded-md border border-dashed border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="mt-3 rounded-md border border-dashed border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
         >
           + {t('vendor-portal:form.addLine')}
         </button>
@@ -190,7 +190,7 @@ export function VendorPortalForm({
             value={paymentTerms}
             onChange={(e) => setPaymentTerms(e.target.value)}
             placeholder={t('vendor-portal:form.paymentTermsHint')}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-border px-3 py-2 text-sm"
           />
         </Field>
         <Field label={t('vendor-portal:form.deliveryTerms')}>
@@ -198,7 +198,7 @@ export function VendorPortalForm({
             value={deliveryTerms}
             onChange={(e) => setDeliveryTerms(e.target.value)}
             placeholder={t('vendor-portal:form.deliveryTermsHint')}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-border px-3 py-2 text-sm"
           />
         </Field>
         <Field label={t('vendor-portal:form.warranty')}>
@@ -206,7 +206,7 @@ export function VendorPortalForm({
             value={warranty}
             onChange={(e) => setWarranty(e.target.value)}
             placeholder={t('vendor-portal:form.warrantyHint')}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-border px-3 py-2 text-sm"
           />
         </Field>
         <Field label={t('vendor-portal:form.validUntil')}>
@@ -214,7 +214,7 @@ export function VendorPortalForm({
             type="date"
             value={validUntil}
             onChange={(e) => setValidUntil(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-border px-3 py-2 text-sm"
           />
         </Field>
         <Field label={t('vendor-portal:form.notes')}>
@@ -223,29 +223,29 @@ export function VendorPortalForm({
             onChange={(e) => setNotes(e.target.value)}
             placeholder={t('vendor-portal:form.notesHint')}
             rows={3}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-border px-3 py-2 text-sm"
           />
         </Field>
       </Section>
 
       <Section title={t('vendor-portal:attachments.title')}>
-        <p className="mb-2 text-xs text-slate-500">{t('vendor-portal:attachments.hint')}</p>
+        <p className="mb-2 text-xs text-muted-foreground">{t('vendor-portal:attachments.hint')}</p>
         <input
           type="file"
           accept={Array.from(ALLOWED_MIME).join(',')}
           onChange={onFilePick}
           multiple
-          className="block w-full text-sm text-slate-700"
+          className="block w-full text-sm text-foreground"
         />
-        {fileError && <p className="mt-2 text-sm text-red-600">{fileError}</p>}
+        {fileError && <p className="mt-2 text-sm text-destructive">{fileError}</p>}
         {files.length === 0 ? (
-          <p className="mt-3 text-xs text-slate-400">{t('vendor-portal:attachments.noFiles')}</p>
+          <p className="mt-3 text-xs text-muted-foreground">{t('vendor-portal:attachments.noFiles')}</p>
         ) : (
           <ul className="mt-3 space-y-2">
             {files.map((f, i) => (
               <li
                 key={`${f.name}_${i}`}
-                className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700"
+                className="flex items-center justify-between rounded-md border border-border bg-muted px-3 py-2 text-xs text-foreground"
               >
                 <span className="truncate">
                   <strong>{f.type === 'application/pdf' ? t('vendor-portal:attachments.pdf') : t('vendor-portal:attachments.image')}</strong>
@@ -257,7 +257,7 @@ export function VendorPortalForm({
                 <button
                   type="button"
                   onClick={() => removeFile(i)}
-                  className="text-slate-500 hover:text-red-600"
+                  className="text-muted-foreground hover:text-destructive"
                 >
                   {t('vendor-portal:attachments.remove')}
                 </button>
@@ -268,9 +268,9 @@ export function VendorPortalForm({
       </Section>
 
       {(validationError || errorKey) && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div className="rounded-md border border-[hsl(var(--bg-error))]/60 bg-[hsl(var(--bg-error))]/40 px-4 py-3 text-sm text-destructive">
           {validationError ?? t(`vendor-portal:${errorKey}`)}
-          {errorReason && <span className="ml-2 text-xs text-red-600">[{errorReason}]</span>}
+          {errorReason && <span className="ml-2 text-xs text-destructive">[{errorReason}]</span>}
         </div>
       )}
 
@@ -279,14 +279,14 @@ export function VendorPortalForm({
           type="button"
           onClick={onDeclineRequest}
           disabled={isSubmitting}
-          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          className="rounded-md border border-border bg-white px-4 py-2 text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50"
         >
           {t('vendor-portal:actions.decline')}
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary/90 disabled:opacity-50"
         >
           {isSubmitting ? t('vendor-portal:actions.submitting') : t('vendor-portal:actions.submit')}
         </button>
@@ -297,8 +297,8 @@ export function VendorPortalForm({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-semibold text-slate-900">{title}</h2>
+    <section className="rounded-lg border border-border bg-white p-4 shadow-sm">
+      <h2 className="mb-3 text-sm font-semibold text-foreground">{title}</h2>
       {children}
     </section>
   );
@@ -307,7 +307,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="mb-3 block">
-      <span className="mb-1 block text-xs font-medium text-slate-700">{label}</span>
+      <span className="mb-1 block text-xs font-medium text-foreground">{label}</span>
       {children}
     </label>
   );
@@ -322,15 +322,15 @@ function RfqSummary({
 }) {
   const { t } = useTranslation(['vendor-portal']);
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-xs uppercase tracking-wide text-slate-500">
+    <section className="rounded-lg border border-border bg-white p-4 shadow-sm">
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">
         {t('vendor-portal:intro.rfqLabel')}
       </p>
-      <h2 className="mt-1 text-base font-semibold text-slate-900">{initialData.rfq.title}</h2>
+      <h2 className="mt-1 text-base font-semibold text-foreground">{initialData.rfq.title}</h2>
       {initialData.rfq.description && (
-        <p className="mt-2 text-sm text-slate-700">{initialData.rfq.description}</p>
+        <p className="mt-2 text-sm text-foreground">{initialData.rfq.description}</p>
       )}
-      <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
+      <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
         <dt>{t('vendor-portal:intro.deadlineLabel')}</dt>
         <dd className="text-right">
           {initialData.rfq.deadlineDate
@@ -342,8 +342,8 @@ function RfqSummary({
       </dl>
       {initialData.rfq.lines.length > 0 && (
         <div className="mt-4">
-          <p className="text-xs font-medium text-slate-700">{t('vendor-portal:rfq.linesTitle')}</p>
-          <ul className="mt-2 space-y-1 text-xs text-slate-600">
+          <p className="text-xs font-medium text-foreground">{t('vendor-portal:rfq.linesTitle')}</p>
+          <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
             {initialData.rfq.lines.map((l) => (
               <li key={l.id}>
                 · {l.description}
@@ -368,19 +368,19 @@ function LineRow({
 }) {
   const { t } = useTranslation(['vendor-portal']);
   return (
-    <li className="rounded-md border border-slate-200 p-3">
+    <li className="rounded-md border border-border p-3">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-12">
         <div className="sm:col-span-12">
-          <label className="text-xs font-medium text-slate-700">{t('vendor-portal:form.description')}</label>
+          <label className="text-xs font-medium text-foreground">{t('vendor-portal:form.description')}</label>
           <input
             value={line.description}
             onChange={(e) => onChange({ description: e.target.value })}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
             required
           />
         </div>
         <div className="sm:col-span-3">
-          <label className="text-xs font-medium text-slate-700">{t('vendor-portal:form.quantity')}</label>
+          <label className="text-xs font-medium text-foreground">{t('vendor-portal:form.quantity')}</label>
           <input
             type="number"
             min="0"
@@ -388,20 +388,20 @@ function LineRow({
             inputMode="decimal"
             value={line.quantity}
             onChange={(e) => onChange({ quantity: e.target.value })}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
             required
           />
         </div>
         <div className="sm:col-span-3">
-          <label className="text-xs font-medium text-slate-700">{t('vendor-portal:form.unit')}</label>
+          <label className="text-xs font-medium text-foreground">{t('vendor-portal:form.unit')}</label>
           <input
             value={line.unit}
             onChange={(e) => onChange({ unit: e.target.value })}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
           />
         </div>
         <div className="sm:col-span-3">
-          <label className="text-xs font-medium text-slate-700">{t('vendor-portal:form.unitPrice')}</label>
+          <label className="text-xs font-medium text-foreground">{t('vendor-portal:form.unitPrice')}</label>
           <input
             type="number"
             min="0"
@@ -409,16 +409,16 @@ function LineRow({
             inputMode="decimal"
             value={line.unitPrice}
             onChange={(e) => onChange({ unitPrice: e.target.value })}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
             required
           />
         </div>
         <div className="sm:col-span-3">
-          <label className="text-xs font-medium text-slate-700">{t('vendor-portal:form.vatRate')}</label>
+          <label className="text-xs font-medium text-foreground">{t('vendor-portal:form.vatRate')}</label>
           <select
             value={line.vatRate}
             onChange={(e) => onChange({ vatRate: Number(e.target.value) as 0 | 6 | 13 | 24 })}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
           >
             <option value={24}>24%</option>
             <option value={13}>13%</option>
@@ -426,12 +426,12 @@ function LineRow({
             <option value={0}>0%</option>
           </select>
         </div>
-        <div className="sm:col-span-12 flex items-center justify-between text-xs text-slate-600">
+        <div className="sm:col-span-12 flex items-center justify-between text-xs text-muted-foreground">
           <span>
             {t('vendor-portal:form.lineTotal')}: <strong>{computeLineTotal(line).toFixed(2)} €</strong>
           </span>
           {onRemove && (
-            <button type="button" onClick={onRemove} className="text-red-600 hover:underline">
+            <button type="button" onClick={onRemove} className="text-destructive hover:underline">
               {t('vendor-portal:form.removeLine')}
             </button>
           )}
@@ -444,13 +444,13 @@ function LineRow({
 function TotalsBox({ totals }: { totals: { subtotal: number; vatAmount: number; total: number } }) {
   const { t } = useTranslation(['vendor-portal']);
   return (
-    <dl className="mt-4 grid grid-cols-2 gap-1 rounded-md bg-slate-50 px-4 py-3 text-sm">
-      <dt className="text-slate-600">{t('vendor-portal:form.subtotal')}</dt>
-      <dd className="text-right text-slate-900">{totals.subtotal.toFixed(2)} €</dd>
-      <dt className="text-slate-600">{t('vendor-portal:form.vatAmount')}</dt>
-      <dd className="text-right text-slate-900">{totals.vatAmount.toFixed(2)} €</dd>
-      <dt className="font-semibold text-slate-700">{t('vendor-portal:form.total')}</dt>
-      <dd className="text-right font-semibold text-slate-900">{totals.total.toFixed(2)} €</dd>
+    <dl className="mt-4 grid grid-cols-2 gap-1 rounded-md bg-muted px-4 py-3 text-sm">
+      <dt className="text-muted-foreground">{t('vendor-portal:form.subtotal')}</dt>
+      <dd className="text-right text-foreground">{totals.subtotal.toFixed(2)} €</dd>
+      <dt className="text-muted-foreground">{t('vendor-portal:form.vatAmount')}</dt>
+      <dd className="text-right text-foreground">{totals.vatAmount.toFixed(2)} €</dd>
+      <dt className="font-semibold text-foreground">{t('vendor-portal:form.total')}</dt>
+      <dd className="text-right font-semibold text-foreground">{totals.total.toFixed(2)} €</dd>
     </dl>
   );
 }

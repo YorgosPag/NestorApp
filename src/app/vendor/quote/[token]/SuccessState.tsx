@@ -23,18 +23,18 @@ export function SuccessState({ editWindowExpiresAt, locale, onEditAgain }: Props
     : '—';
 
   return (
-    <section className="rounded-lg border border-emerald-200 bg-white p-6 text-center shadow-sm">
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+    <section className="rounded-lg border border-[hsl(var(--bg-success))]/60 bg-white p-6 text-center shadow-sm">
+      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[hsl(var(--bg-success))]/40 text-green-700">
         ✓
       </div>
-      <h2 className="text-lg font-semibold text-slate-900">{t('vendor-portal:success.title')}</h2>
-      <p className="mt-2 text-sm text-slate-600">
+      <h2 className="text-lg font-semibold text-foreground">{t('vendor-portal:success.title')}</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
         {t('vendor-portal:success.body', { editWindowExpiresAt: formatted })}
       </p>
       <button
         type="button"
         onClick={onEditAgain}
-        className="mt-5 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        className="mt-5 rounded-md border border-border bg-white px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
       >
         {t('vendor-portal:success.viewAgain')}
       </button>

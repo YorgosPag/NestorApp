@@ -54,7 +54,7 @@ function DeltaBadge({ delta, hasHistory, tooltip }: { delta: number; hasHistory:
   const negative = hasHistory && delta < 0;
   const color = !hasHistory
     ? 'text-muted-foreground'
-    : positive ? 'text-emerald-600' : negative ? 'text-rose-600' : 'text-muted-foreground';
+    : positive ? 'text-green-700' : negative ? 'text-destructive' : 'text-muted-foreground';
   const Icon = positive ? ArrowUpRight : negative ? ArrowDownRight : Minus;
   const sign = positive ? '+' : '';
   const label = hasHistory ? `${sign}${delta.toFixed(1)}%` : '—';

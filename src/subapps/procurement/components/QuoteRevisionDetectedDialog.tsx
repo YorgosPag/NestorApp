@@ -94,7 +94,7 @@ export function QuoteRevisionDetectedDialog({
           </div>
 
           {isWinner && (
-            <p className="text-sm text-yellow-700 dark:text-yellow-400 font-medium">
+            <p className="text-sm text-[hsl(var(--bg-warning))] font-medium">
               {t('rfqs.revisionDialog.warning.isWinner')}
             </p>
           )}

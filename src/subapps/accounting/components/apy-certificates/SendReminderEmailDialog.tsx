@@ -189,7 +189,7 @@ export function SendReminderEmailDialog({
               disabled={isSending}
               aria-invalid={recipientEmail.length > 0 && !emailValid}
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               {t('apyCertificates.reminderEmail.customer', { name: cert.customer.name, vat: cert.customer.vatNumber })}
             </p>
           </div>
@@ -225,7 +225,7 @@ export function SendReminderEmailDialog({
           </div>
 
           {/* PDF note */}
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-muted-foreground">
             📎 {t('apyCertificates.reminderEmail.pdfNote')}
           </p>
 
@@ -233,7 +233,7 @@ export function SendReminderEmailDialog({
           <div className="space-y-1.5">
             <Label>{t('apyCertificates.reminderEmail.preview')}</Label>
             <div
-              className="rounded-md border border-gray-200 bg-gray-50 p-3 text-sm overflow-auto max-h-48"
+              className="rounded-md border border-border bg-muted/50 p-3 text-sm overflow-auto max-h-48"
               /* biome-ignore lint/security/noDangerouslySetInnerHtml: preview of server-generated HTML */
               dangerouslySetInnerHTML={{ __html: previewHtml }}
             />
@@ -241,13 +241,13 @@ export function SendReminderEmailDialog({
 
           {/* Status */}
           {sendStatus === 'success' && (
-            <div className="flex items-center gap-2 text-sm text-green-600">
+            <div className="flex items-center gap-2 text-sm text-green-700">
               <CheckCircle className="h-4 w-4 shrink-0" />
               <span>{t('apyCertificates.reminderEmail.sendSuccess', { email: recipientEmail.trim() })}</span>
             </div>
           )}
           {sendStatus === 'error' && errorMessage && (
-            <div className="flex items-center gap-2 text-sm text-red-600">
+            <div className="flex items-center gap-2 text-sm text-destructive">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>

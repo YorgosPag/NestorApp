@@ -180,7 +180,7 @@ function ComparisonRow({ entry, isRecommended, rfqAwarded, winnerQuoteId, onAwar
   return (
     <TableRow
       className={[
-        isWinner ? 'bg-emerald-50/60 dark:bg-emerald-950/20' : isRecommended ? 'bg-emerald-50/40 dark:bg-emerald-950/10' : '',
+        isWinner ? 'bg-[hsl(var(--bg-success))]/60' : isRecommended ? 'bg-[hsl(var(--bg-success))]/40' : '',
         clickable ? 'group cursor-pointer hover:bg-muted/50' : '',
       ].join(' ') || undefined}
       onClick={clickable ? () => onRowClick(entry.quoteId) : undefined}
@@ -198,7 +198,7 @@ function ComparisonRow({ entry, isRecommended, rfqAwarded, winnerQuoteId, onAwar
       aria-label={clickable ? t('rfqs.comparison.rowAriaLabel') : undefined}
     >
       <TableCell className="font-medium">
-        {(isWinner || entry.rank === 1) && <Trophy className="inline h-4 w-4 text-emerald-600" />}
+        {(isWinner || entry.rank === 1) && <Trophy className="inline h-4 w-4 text-green-700" />}
         {entry.rank}
       </TableCell>
       <TableCell>{entry.vendorName}</TableCell>
@@ -298,7 +298,7 @@ function TcoTotalCell({ total, tco }: { total: number; tco: TcoNormalization }) 
   return (
     <div className="flex flex-col items-end gap-0.5">
       <span>{formatCurrency(tco.normalizedTotal)}</span>
-      <span className="text-[10px] text-amber-600 tabular-nums">
+      <span className="text-[10px] text-[hsl(var(--bg-warning))] tabular-nums">
         +{formatCurrency(tco.vatDelta)} {t('comparison.tco.vatDeltaLabel')}
       </span>
     </div>
@@ -310,7 +310,7 @@ function TcoFlagsRow({ tco }: { tco: TcoNormalization }) {
   const items: React.ReactNode[] = [];
   if (tco.laborFlag) {
     items.push(
-      <span key="labor" className="flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400">
+      <span key="labor" className="flex items-center gap-1 text-[10px] text-[hsl(var(--bg-warning))]">
         <HardHat className="h-3 w-3 shrink-0" />
         {t('comparison.tco.laborWarning')}
       </span>
@@ -318,7 +318,7 @@ function TcoFlagsRow({ tco }: { tco: TcoNormalization }) {
   }
   if (tco.deliveryFlag) {
     items.push(
-      <span key="delivery" className="flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400">
+      <span key="delivery" className="flex items-center gap-1 text-[10px] text-[hsl(var(--bg-warning))]">
         <Truck className="h-3 w-3 shrink-0" />
         {t('comparison.tco.deliveryWarning')}
       </span>
@@ -339,7 +339,7 @@ function TcoFlagsRow({ tco }: { tco: TcoNormalization }) {
 function CherryPickCard({ result }: { result: CherryPickResult }) {
   const { t } = useTranslation('quotes');
   return (
-    <Card className="border-blue-500/40 bg-blue-50/40 dark:bg-blue-950/20">
+    <Card className="border-ring/40 bg-[hsl(var(--bg-info))]/40">
       <CardHeader>
         <CardTitle className="text-base">{t('comparison.cherryPick.title')}</CardTitle>
       </CardHeader>
@@ -351,7 +351,7 @@ function CherryPickCard({ result }: { result: CherryPickResult }) {
           })}
         </p>
         {result.savingsFromSplit > 0 && (
-          <p className="font-medium text-blue-700 dark:text-blue-300">
+          <p className="font-medium text-primary">
             {t('comparison.cherryPick.savings', {
               amount: formatCurrency(result.savingsFromSplit),
               percent: result.savingsPercent.toFixed(1),

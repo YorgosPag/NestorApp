@@ -277,7 +277,7 @@ export function SetupPageContent() {
             {saveSuccess && (
               <div
                 role="status"
-                className="rounded-md border border-green-500/50 bg-green-500/5 p-3 text-sm text-green-700 dark:text-green-400"
+                className="rounded-md border border-[hsl(var(--bg-success))] bg-[hsl(var(--bg-success))]/10 p-3 text-sm text-green-700"
               >
                 {t('setup.saveSuccess')}
               </div>

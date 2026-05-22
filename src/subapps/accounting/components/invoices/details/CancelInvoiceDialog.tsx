@@ -201,9 +201,9 @@ export function CancelInvoiceDialog({
 
         <div className="space-y-4 py-2">
           {/* Warning banner */}
-          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950">
-            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-sm text-amber-800 dark:text-amber-200">
+          <div className="flex items-start gap-3 rounded-lg border border-[hsl(var(--bg-warning))] bg-[hsl(var(--bg-warning))]/40 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 text-[hsl(var(--bg-warning))] shrink-0 mt-0.5" />
+            <p className="text-sm text-foreground">
               {isVoid
                 ? t('cancelDialog.warningVoid')
                 : t('cancelDialog.warningCreditNote')}
@@ -270,7 +270,7 @@ export function CancelInvoiceDialog({
 
           {/* Status messages */}
           {status === 'success' && (
-            <div className="flex items-center gap-2 text-sm text-green-600">
+            <div className="flex items-center gap-2 text-sm text-green-700">
               <CheckCircle className="h-4 w-4 shrink-0" />
               <span>
                 {isVoid

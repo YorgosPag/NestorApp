@@ -24,7 +24,7 @@ export function SourcingEventSummaryCard({
 
   if (loading) {
     return (
-      <Card className="border-purple-200/60 bg-purple-50/30 dark:border-purple-800/40 dark:bg-purple-950/10">
+      <Card className="border-border/60 bg-accent/30">
         <CardHeader className="pb-3">
           <Skeleton className="h-5 w-48" />
         </CardHeader>
@@ -39,9 +39,9 @@ export function SourcingEventSummaryCard({
   if (!aggregate) return null;
 
   return (
-    <Card className="border-purple-200/60 bg-purple-50/30 dark:border-purple-800/40 dark:bg-purple-950/10">
+    <Card className="border-border/60 bg-accent/30">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base text-purple-900 dark:text-purple-200">
+        <CardTitle className="flex items-center gap-2 text-base text-foreground">
           <Package className="h-5 w-5 shrink-0" />
           <span>{t('comparison.sourcingEvent.cardTitle')}</span>
           <span className="ml-1 font-normal text-muted-foreground">—</span>
@@ -59,13 +59,13 @@ export function SourcingEventSummaryCard({
             {t('comparison.sourcingEvent.vendorsCount', { count: aggregate.uniqueVendorCount })}
           </StatPill>
           {aggregate.bestPackageTotal !== null && (
-            <StatPill icon={<Trophy className="h-3.5 w-3.5 text-emerald-600" />}>
-              <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+            <StatPill icon={<Trophy className="h-3.5 w-3.5 text-green-700" />}>
+              <span className="font-semibold text-green-700">
                 {t('comparison.sourcingEvent.bestTotal')}:{' '}
                 {formatCurrency(aggregate.bestPackageTotal)}
               </span>
               {aggregate.isPartialTotal && (
-                <span className="ml-1 text-xs text-amber-600">
+                <span className="ml-1 text-xs text-[hsl(var(--bg-warning))]">
                   ({t('comparison.sourcingEvent.partialHint')})
                 </span>
               )}
@@ -93,7 +93,7 @@ export function SourcingEventSummaryCard({
                   key={row.rfqId}
                   className={
                     row.rfqId === currentRfqId
-                      ? 'bg-purple-100/60 dark:bg-purple-900/20 font-medium'
+                      ? 'bg-accent/60 font-medium'
                       : undefined
                   }
                 >
@@ -108,12 +108,12 @@ export function SourcingEventSummaryCard({
                   </TableCell>
                   <TableCell className="text-right">
                     {row.rfqId === currentRfqId && (
-                      <Badge variant="outline" className="text-[10px] text-purple-700 border-purple-300">
+                      <Badge variant="outline" className="text-[10px] text-foreground border-border">
                         {t('comparison.sourcingEvent.currentRfq')}
                       </Badge>
                     )}
                     {row.winnerQuoteId && (
-                      <Trophy className="inline h-3.5 w-3.5 text-emerald-600 ml-1" />
+                      <Trophy className="inline h-3.5 w-3.5 text-green-700 ml-1" />
                     )}
                   </TableCell>
                 </TableRow>

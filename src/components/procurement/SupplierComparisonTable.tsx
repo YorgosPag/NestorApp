@@ -115,7 +115,7 @@ export function SupplierComparisonTable({ suppliers, className }: SupplierCompar
                     {s.averageLeadTimeDays !== null ? `${s.averageLeadTimeDays} ${t('supplierMetrics.days')}` : '—'}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={cn(s.cancellationRate > 20 && 'text-amber-600 dark:text-amber-400')}>
+                    <span className={cn(s.cancellationRate > 20 && 'text-[hsl(var(--bg-warning))]')}>
                       {s.cancellationRate}%
                     </span>
                   </td>
@@ -167,7 +167,7 @@ function SortHeader({ label, field, current, asc, onSort }: SortHeaderProps) {
 
 function OnTimeBadge({ rate }: { rate: number }) {
   if (rate >= 80) {
-    return <Badge variant="default" className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">{rate}%</Badge>;
+    return <Badge variant="default" className="bg-[hsl(var(--bg-success))]/40 text-green-700">{rate}%</Badge>;
   }
   if (rate >= 50) {
     return <Badge variant="secondary">{rate}%</Badge>;
@@ -211,9 +211,9 @@ function MobileSupplierCard({ supplier, rank }: { supplier: SupplierMetrics; ran
 
 function getRankColor(index: number): string {
   switch (index) {
-    case 0: return 'text-amber-500';
-    case 1: return 'text-gray-400';
-    case 2: return 'text-amber-700';
+    case 0: return 'text-[hsl(var(--bg-warning))]';
+    case 1: return 'text-muted-foreground';
+    case 2: return 'text-[hsl(var(--bg-warning))]';
     default: return 'text-muted-foreground';
   }
 }

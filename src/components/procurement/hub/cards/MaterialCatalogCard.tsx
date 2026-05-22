@@ -20,7 +20,7 @@ export function MaterialCatalogCard() {
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
-          <Layers className="h-8 w-8 text-yellow-600" aria-hidden />
+          <Layers className="h-8 w-8 text-[hsl(var(--bg-warning))]" aria-hidden />
         </div>
         <CardTitle className="text-lg">{t('hub.materialCatalog.title')}</CardTitle>
         <CardDescription>{t('hub.materialCatalog.description')}</CardDescription>

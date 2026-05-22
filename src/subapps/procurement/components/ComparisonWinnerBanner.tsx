@@ -40,9 +40,9 @@ export function ComparisonWinnerBanner({
   const total = winnerQuote.totals?.total ?? 0;
 
   return (
-    <div className="flex items-center justify-between rounded-lg border border-emerald-500/40 bg-emerald-50/40 px-4 py-3 dark:bg-emerald-950/20">
+    <div className="flex items-center justify-between rounded-lg border border-[hsl(var(--bg-success))]/40 bg-[hsl(var(--bg-success))]/40 px-4 py-3">
       <div className="flex items-center gap-3">
-        <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-green-700" />
         <div>
           <p className="text-sm font-semibold">
             {t('rfqs.award.winnerBanner.title', { vendor: vendorName })}

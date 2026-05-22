@@ -37,9 +37,9 @@ interface SignatoryDisambiguationModalProps {
 }
 
 const FIELD_BADGE_VARIANT: Record<'mobile' | 'email' | 'name', string> = {
-  mobile: 'border-amber-500 text-amber-700 dark:text-amber-400',
-  email: 'border-blue-500 text-blue-700 dark:text-blue-400',
-  name: 'border-purple-500 text-purple-700 dark:text-purple-400',
+  mobile: 'border-[hsl(var(--bg-warning))] text-[hsl(var(--bg-warning))]',
+  email: 'border-ring text-primary',
+  name: 'border-border text-foreground',
 };
 
 export function SignatoryDisambiguationModal({
@@ -57,7 +57,7 @@ export function SignatoryDisambiguationModal({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <AlertTriangle className="h-4 w-4 text-[hsl(var(--bg-warning))]" />
             {t('quotes.signatory.disambiguation.title')}
           </DialogTitle>
           <DialogDescription>
@@ -74,7 +74,7 @@ export function SignatoryDisambiguationModal({
           {candidates.map((c) => (
             <div
               key={c.contactId}
-              className="rounded-md border border-amber-300 bg-amber-50/40 px-3 py-2 dark:border-amber-700 dark:bg-amber-950/20"
+              className="rounded-md border border-[hsl(var(--bg-warning))]/60 bg-[hsl(var(--bg-warning))]/40 px-3 py-2"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">

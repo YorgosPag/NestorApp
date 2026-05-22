@@ -114,14 +114,14 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
 
       {/* Cancelled banner — SAP/NetSuite enterprise pattern */}
       {invoice.mydata.status === 'cancelled' && (
-        <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 dark:border-red-800 dark:bg-red-950">
-          <Ban className="h-5 w-5 text-red-600 shrink-0" />
+        <div className="flex items-center gap-3 rounded-lg border border-destructive bg-destructive/10 px-4 py-3">
+          <Ban className="h-5 w-5 text-destructive shrink-0" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-800 dark:text-red-200">
+            <p className="text-sm font-medium text-destructive">
               {t('cancelDialog.cancelledBanner')}
             </p>
             {invoice.cancellationReason && (
-              <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+              <p className="text-xs text-destructive/80 mt-0.5">
                 {t(`cancelDialog.reasons.${invoice.cancellationReason}`)}
                 {invoice.cancellationNotes ? ` — ${invoice.cancellationNotes}` : ''}
               </p>
@@ -133,14 +133,14 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
 
       {/* Credit note link — bidirectional (ADR A-1) */}
       {invoice.creditNoteInvoiceId && (
-        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-          <FileX2 className="h-4 w-4 text-blue-600 shrink-0" />
-          <p className="text-sm text-blue-800 flex-1">
+        <div className="flex items-center gap-3 rounded-lg border border-ring bg-[hsl(var(--bg-info))]/20 px-4 py-3">
+          <FileX2 className="h-4 w-4 text-primary shrink-0" />
+          <p className="text-sm text-foreground flex-1">
             {t('cancelDialog.creditNoteLink')}
           </p>
           <Link
             href={`/accounting/invoices?view=${invoice.creditNoteInvoiceId}`}
-            className="text-sm font-medium text-blue-700 underline whitespace-nowrap hover:text-blue-900"
+            className="text-sm font-medium text-primary underline whitespace-nowrap hover:text-primary/80"
           >
             {t('cancelDialog.viewCreditNote')} →
           </Link>
@@ -149,14 +149,14 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
 
       {/* Related invoice link (for credit notes pointing back to original) */}
       {invoice.type === 'credit_invoice' && invoice.relatedInvoiceId && (
-        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-          <FileX2 className="h-4 w-4 text-blue-600 shrink-0" />
-          <p className="text-sm text-blue-800 flex-1">
+        <div className="flex items-center gap-3 rounded-lg border border-ring bg-[hsl(var(--bg-info))]/20 px-4 py-3">
+          <FileX2 className="h-4 w-4 text-primary shrink-0" />
+          <p className="text-sm text-foreground flex-1">
             {t('cancelDialog.originalInvoiceLink')}
           </p>
           <Link
             href={`/accounting/invoices?view=${invoice.relatedInvoiceId}`}
-            className="text-sm font-medium text-blue-700 underline whitespace-nowrap hover:text-blue-900"
+            className="text-sm font-medium text-primary underline whitespace-nowrap hover:text-primary/80"
           >
             {t('cancelDialog.viewOriginal')} →
           </Link>
@@ -181,9 +181,9 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
 
       {/* APY Certificate shortcut — ADR-ACC-020 */}
       {invoice.withholdingAmount != null && invoice.withholdingAmount > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-          <ClipboardCheck className="h-4 w-4 text-blue-600 shrink-0" />
-          <p className="text-sm text-blue-800 flex-1">
+        <div className="flex items-center gap-3 rounded-lg border border-ring bg-[hsl(var(--bg-info))]/20 px-4 py-3">
+          <ClipboardCheck className="h-4 w-4 text-primary shrink-0" />
+          <p className="text-sm text-foreground flex-1">
             Αυτό το τιμολόγιο έχει παρακράτηση{' '}
             <strong>
               {invoice.withholdingRate ?? ''}% (
@@ -197,7 +197,7 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
           </p>
           <Link
             href="/accounting/apy-certificates"
-            className="text-sm font-medium text-blue-700 underline whitespace-nowrap hover:text-blue-900"
+            className="text-sm font-medium text-primary underline whitespace-nowrap hover:text-primary/80"
           >
             Βεβαιώσεις Παρακράτησης →
           </Link>

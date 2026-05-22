@@ -151,23 +151,23 @@ export function VendorPortalClient({ token, initialData }: Props) {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white">
+    <main className="min-h-screen bg-muted">
+      <header className="sticky top-0 z-10 border-b border-border bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <div>
-            <p className="text-xs uppercase tracking-wide text-slate-500">{t('vendor-portal:page.subtitle')}</p>
-            <h1 className="text-base font-semibold text-slate-900">{t('vendor-portal:page.title')}</h1>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{t('vendor-portal:page.subtitle')}</p>
+            <h1 className="text-base font-semibold text-foreground">{t('vendor-portal:page.title')}</h1>
           </div>
           <button
             type="button"
             onClick={switchLanguage}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded-md border border-border bg-white px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
             aria-label="Switch language"
           >
             {t('vendor-portal:page.languageToggle')}
           </button>
         </div>
-        <div className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+        <div className="border-t border-[hsl(var(--bg-warning))]/60 bg-[hsl(var(--bg-warning))]/40 px-4 py-2 text-xs text-foreground">
           {t('vendor-portal:security.warning')}
         </div>
       </header>
@@ -210,12 +210,12 @@ function DeclinedState({ locale }: { locale: 'el' | 'en' }) {
   const { t } = useTranslation(['vendor-portal']);
   const _ = locale;
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+    <section className="rounded-lg border border-border bg-white p-8 text-center shadow-sm">
+      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-foreground">
         ✓
       </div>
-      <h2 className="text-lg font-semibold text-slate-900">{t('vendor-portal:decline.doneTitle')}</h2>
-      <p className="mt-2 text-sm text-slate-600">{t('vendor-portal:decline.doneBody')}</p>
+      <h2 className="text-lg font-semibold text-foreground">{t('vendor-portal:decline.doneTitle')}</h2>
+      <p className="mt-2 text-sm text-muted-foreground">{t('vendor-portal:decline.doneBody')}</p>
     </section>
   );
 }

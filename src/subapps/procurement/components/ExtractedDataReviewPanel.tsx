@@ -192,9 +192,9 @@ export function ExtractedDataReviewPanel({
         <CardTitle className="text-base">{t('quotes.scan.reviewTitle')}</CardTitle>
         <div className="flex items-center gap-2">
           {overall >= 80 ? (
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <CheckCircle2 className="h-4 w-4 text-green-700" />
           ) : (
-            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            <AlertTriangle className="h-4 w-4 text-[hsl(var(--bg-warning))]" />
           )}
           <span className="text-sm text-muted-foreground">{t('quotes.scan.overallConfidence')}:</span>
           <ConfidenceBadge confidence={overall} />
@@ -203,14 +203,14 @@ export function ExtractedDataReviewPanel({
 
       <CardContent className="space-y-5">
         {showMismatchBanner && mismatch && (
-          <div className="flex flex-col gap-2 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-700 dark:bg-amber-950/40">
+          <div className="flex flex-col gap-2 rounded-md border border-[hsl(var(--bg-warning))]/60 bg-[hsl(var(--bg-warning))]/40 px-4 py-3">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--bg-warning))]" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                <p className="text-sm font-semibold text-foreground">
                   {t('quotes.scan.vendorMismatch.title')}
                 </p>
-                <p className="mt-0.5 break-words text-sm text-amber-700 dark:text-amber-400">
+                <p className="mt-0.5 break-words text-sm text-[hsl(var(--bg-warning))]">
                   {mismatch.type === 'vat'
                     ? t('quotes.scan.vendorMismatch.bodyVat', {
                         extractedVat: mismatch.extractedVat ?? '—',
@@ -224,7 +224,7 @@ export function ExtractedDataReviewPanel({
               {onSwitchVendor && mismatch.extractedVendorName && (
                 <Button
                   size="sm"
-                  className="bg-amber-600 text-white hover:bg-amber-700"
+                  className="bg-[hsl(var(--bg-warning))] text-white hover:bg-[hsl(var(--bg-warning))]/90"
                   disabled={isSwitchingVendor || isSaving}
                   onClick={() =>
                     void onSwitchVendor(
@@ -253,7 +253,7 @@ export function ExtractedDataReviewPanel({
                   {t('quotes.scan.vendorMismatch.goBack')}
                 </Button>
               )}
-              <Button size="sm" variant="ghost" className="text-amber-700 hover:text-amber-900 dark:text-amber-400" disabled={isSwitchingVendor} onClick={() => setMismatchDismissed(true)}>
+              <Button size="sm" variant="ghost" className="text-[hsl(var(--bg-warning))] hover:text-[hsl(var(--bg-warning))]" disabled={isSwitchingVendor} onClick={() => setMismatchDismissed(true)}>
                 {t('quotes.scan.vendorMismatch.dismiss')}
               </Button>
             </div>
@@ -379,19 +379,19 @@ export function ExtractedDataReviewPanel({
                 <Badge variant="secondary" className="text-xs">{t('quotes.scan.pricingTypeLumpSum')}</Badge>
               )}
               {extracted.vatIncluded?.value === true && (
-                <Badge variant="outline" className="border-blue-400 text-blue-700 dark:text-blue-400 text-xs">{t('quotes.scan.vatIncludedYes')}</Badge>
+                <Badge variant="outline" className="border-ring text-primary text-xs">{t('quotes.scan.vatIncludedYes')}</Badge>
               )}
               {extracted.vatIncluded?.value === false && (
-                <Badge variant="outline" className="border-orange-400 text-orange-700 dark:text-orange-400 text-xs">{t('quotes.scan.vatIncludedNo')}</Badge>
+                <Badge variant="outline" className="border-[hsl(var(--bg-warning))] text-[hsl(var(--bg-warning))] text-xs">{t('quotes.scan.vatIncludedNo')}</Badge>
               )}
               {extracted.vatIncluded?.value === null && (
                 <Badge variant="outline" className="border-muted-foreground/40 text-muted-foreground text-xs">{t('quotes.scan.vatIncludedUnknown')}</Badge>
               )}
               {extracted.laborIncluded?.value === true && (
-                <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400 text-xs">{t('quotes.scan.laborIncludedYes')}</Badge>
+                <Badge variant="outline" className="border-[hsl(var(--bg-success))] text-green-700 text-xs">{t('quotes.scan.laborIncludedYes')}</Badge>
               )}
               {extracted.laborIncluded?.value === false && (
-                <Badge variant="outline" className="border-red-400 text-red-700 dark:text-red-400 text-xs">{t('quotes.scan.laborIncludedNo')}</Badge>
+                <Badge variant="outline" className="border-destructive text-destructive text-xs">{t('quotes.scan.laborIncludedNo')}</Badge>
               )}
               {extracted.laborIncluded?.value === null && (
                 <Badge variant="outline" className="border-muted-foreground/40 text-muted-foreground text-xs">{t('quotes.scan.laborIncludedUnknown')}</Badge>
@@ -411,10 +411,10 @@ export function ExtractedDataReviewPanel({
         </section>
 
         {showWarningBanner && quoteValidation.warnings.linesSumMismatch && (
-          <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-700 dark:bg-amber-950/40">
+          <div className="rounded-md border border-[hsl(var(--bg-warning))]/60 bg-[hsl(var(--bg-warning))]/40 px-4 py-3">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <p className="text-sm text-amber-800 dark:text-amber-300">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--bg-warning))]" />
+              <p className="text-sm text-foreground">
                 {t('rfqs.quoteEdit.warning.linesSumMismatch', {
                   sum: formatEuro(quoteValidation.warnings.linesSumMismatch.sum),
                   stated: formatEuro(quoteValidation.warnings.linesSumMismatch.stated),

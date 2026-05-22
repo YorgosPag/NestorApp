@@ -293,7 +293,7 @@ export function CreateAPYCertificateDialog({
 
           {/* Invoices Preview */}
           {invoicesError && (
-            <div className="flex items-center gap-2 text-red-600 text-sm">
+            <div className="flex items-center gap-2 text-destructive text-sm">
               <AlertCircle className="h-4 w-4" />
               {invoicesError}
             </div>
@@ -301,7 +301,7 @@ export function CreateAPYCertificateDialog({
 
           {eligibleInvoices.length > 0 && (
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">
+              <p className="text-sm font-medium text-foreground mb-2">
                 {t('apy.invoices.withholdingHeading', { count: eligibleInvoices.length })}
               </p>
               <Table>
@@ -326,11 +326,11 @@ export function CreateAPYCertificateDialog({
                       </TableCell>
                     </TableRow>
                   ))}
-                  <TableRow className="bg-gray-50 font-semibold">
+                  <TableRow className="bg-muted/50 font-semibold">
                     <TableCell colSpan={4} className="text-right">
                       {t('apy.invoiceTable.totalWithholding')}
                     </TableCell>
-                    <TableCell className="text-right text-blue-900">
+                    <TableCell className="text-right text-primary">
                       {formatAccountingCurrency(totalWithholdingAmount)}
                     </TableCell>
                   </TableRow>
@@ -340,16 +340,16 @@ export function CreateAPYCertificateDialog({
           )}
 
           {eligibleInvoices.length === 0 && !invoicesLoading && customerVatNumber.trim() && (
-            <p className="text-sm text-gray-500 text-center py-4">
+            <p className="text-sm text-muted-foreground text-center py-4">
               {t('apy.invoices.empty')}
             </p>
           )}
 
           {/* Duplicate warning */}
           {duplicateId && (
-            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
-              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-              <div className="text-sm text-amber-800">
+            <div className="flex items-start gap-2 p-3 bg-[hsl(var(--bg-warning))]/40 border border-[hsl(var(--bg-warning))] rounded-md">
+              <AlertCircle className="h-4 w-4 text-[hsl(var(--bg-warning))] mt-0.5 shrink-0" />
+              <div className="text-sm text-foreground">
                 <p className="font-medium">{t('apy.duplicate.title')}</p>
                 <p>{t('apy.duplicate.message', { year: fiscalYear })}</p>
                 <button
@@ -363,7 +363,7 @@ export function CreateAPYCertificateDialog({
           )}
 
           {submitError && (
-            <p className="text-sm text-red-600">{submitError}</p>
+            <p className="text-sm text-destructive">{submitError}</p>
           )}
         </div>
 

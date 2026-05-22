@@ -24,12 +24,12 @@ function confidenceBorderClass(confidence: number): string {
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
   if (confidence >= 85) {
-    return <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400 text-[10px]">{confidence}%</Badge>;
+    return <Badge variant="outline" className="border-[hsl(var(--bg-success))] text-green-700 text-[10px]">{confidence}%</Badge>;
   }
   if (confidence >= 60) {
-    return <Badge variant="outline" className="border-yellow-500 text-yellow-700 dark:text-yellow-400 text-[10px]">{confidence}%</Badge>;
+    return <Badge variant="outline" className="border-[hsl(var(--bg-warning))] text-[hsl(var(--bg-warning))] text-[10px]">{confidence}%</Badge>;
   }
-  return <Badge variant="outline" className="border-red-500 text-red-700 dark:text-red-400 text-[10px]">{confidence}%</Badge>;
+  return <Badge variant="outline" className="border-destructive text-destructive text-[10px]">{confidence}%</Badge>;
 }
 
 // ============================================================================

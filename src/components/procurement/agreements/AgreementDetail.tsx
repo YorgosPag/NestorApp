@@ -108,7 +108,7 @@ export function AgreementDetail({ agreement, onEdit, onDelete, onCreateNew }: Ag
           </dt>
           <dd className="text-sm">
             {formatDate(agreement.validFrom.toDate())} → {formatDate(agreement.validUntil.toDate())}
-            <span className={cn('ml-2 text-xs', isExpired ? 'text-red-600' : 'text-muted-foreground')}>
+            <span className={cn('ml-2 text-xs', isExpired ? 'text-destructive' : 'text-muted-foreground')}>
               {isExpired
                 ? t('hub.frameworkAgreements.detail.expired')
                 : t('hub.frameworkAgreements.detail.daysRemaining', { count: remaining })}

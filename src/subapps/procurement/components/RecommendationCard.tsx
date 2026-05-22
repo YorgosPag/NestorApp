@@ -27,10 +27,10 @@ export function RecommendationCard({ recommendation, winner }: RecommendationCar
   const confidencePct = Math.round(recommendation.confidence * 100);
 
   return (
-    <Card className="border-2 border-emerald-500/40 bg-emerald-50/40 dark:bg-emerald-950/20">
+    <Card className="border-2 border-[hsl(var(--bg-success))]/40 bg-[hsl(var(--bg-success))]/40">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Sparkles className="h-5 w-5 text-emerald-600" />
+          <Sparkles className="h-5 w-5 text-green-700" />
           {t('comparison.recommendation.title')}
         </CardTitle>
       </CardHeader>
@@ -66,11 +66,11 @@ export function RecommendationCard({ recommendation, winner }: RecommendationCar
             <span>{t('comparison.confidence')}</span>
             <span>{confidencePct}% (Δ {recommendation.deltaFromSecond.toFixed(1)})</span>
           </div>
-          <Progress value={confidencePct} className="h-2" indicatorClassName="bg-emerald-500" />
+          <Progress value={confidencePct} className="h-2" indicatorClassName="bg-[hsl(var(--bg-success))]/400" />
         </div>
 
         {winner.hasRiskFlags && (
-          <div className="flex items-start gap-2 rounded-md border border-amber-400/50 bg-amber-50/60 p-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          <div className="flex items-start gap-2 rounded-md border border-[hsl(var(--bg-warning))]/50 bg-[hsl(var(--bg-warning))]/60 p-2 text-xs text-foreground">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             <span>{t('comparison.riskWarning')}</span>
           </div>

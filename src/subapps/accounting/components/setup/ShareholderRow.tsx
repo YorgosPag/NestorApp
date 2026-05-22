@@ -353,7 +353,7 @@ export function ShareholderRow({ shareholder, index, totalShares, onChange, onRe
 
       {/* Employee mode info */}
       {efkaMode === 'employee' && (
-        <div className="flex items-start gap-2 rounded-md border border-blue-500/50 bg-blue-500/5 p-3 text-xs text-blue-700 dark:text-blue-400">
+        <div className="flex items-start gap-2 rounded-md border border-ring bg-[hsl(var(--bg-info))]/20 p-3 text-xs text-primary">
           {t('setup.shareholders.efkaEmployeeExplain')}
         </div>
       )}

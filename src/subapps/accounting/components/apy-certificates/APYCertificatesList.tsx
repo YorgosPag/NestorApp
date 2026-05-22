@@ -87,10 +87,10 @@ export function APYCertificatesList({ onSelectCertificate }: APYCertificatesList
         <div className="flex items-center gap-3">
           <ClipboardCheck className="h-6 w-6 text-navy-600" />
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">
+            <h1 className="text-xl font-semibold text-foreground">
               {t('apy.pageTitle')}
             </h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               {t('apy.pageDescription')}
             </p>
           </div>
@@ -104,7 +104,7 @@ export function APYCertificatesList({ onSelectCertificate }: APYCertificatesList
       {/* Filters */}
       <div className="flex items-center gap-4 mb-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">{t('apy.filters.year')}</span>
+          <span className="text-sm text-muted-foreground">{t('apy.filters.year')}</span>
           <Select
             value={String(fiscalYear)}
             onValueChange={(v) => setFiscalYear(parseInt(v, 10))}
@@ -123,7 +123,7 @@ export function APYCertificatesList({ onSelectCertificate }: APYCertificatesList
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">{t('apy.filters.status')}</span>
+          <span className="text-sm text-muted-foreground">{t('apy.filters.status')}</span>
           <Select
             value={statusFilter}
             onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}
@@ -139,15 +139,15 @@ export function APYCertificatesList({ onSelectCertificate }: APYCertificatesList
           </Select>
         </div>
 
-        <span className="text-sm text-gray-500 ml-auto">
+        <span className="text-sm text-muted-foreground ml-auto">
           {t('apy.count', { count: filteredCertificates.length })}
         </span>
       </div>
 
       {/* Table */}
       {filteredCertificates.length === 0 ? (
-        <div className="text-center py-16 text-gray-500">
-          <ClipboardCheck className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+        <div className="text-center py-16 text-muted-foreground">
+          <ClipboardCheck className="h-12 w-12 mx-auto mb-3 text-muted-foreground/40" />
           <p className="font-medium">{t('apy.empty.title')}</p>
           <p className="text-sm mt-1">{t('apy.empty.hint')}</p>
         </div>
@@ -198,24 +198,24 @@ function APYCertificateRow({ cert, onClick }: APYCertificateRowProps) {
   const { t } = useTranslation(['accounting', 'accounting-setup', 'accounting-tax-offices']);
   return (
     <TableRow
-      className="cursor-pointer hover:bg-gray-50 transition-colors"
+      className="cursor-pointer hover:bg-accent transition-colors"
       onClick={onClick}
     >
-      <TableCell className="font-medium text-gray-900">{cert.customer.name}</TableCell>
-      <TableCell className="text-gray-600 font-mono text-sm">{cert.customer.vatNumber}</TableCell>
-      <TableCell className="text-center text-gray-700">{cert.fiscalYear}</TableCell>
-      <TableCell className="text-center text-gray-600">{cert.lineItems.length}</TableCell>
-      <TableCell className="text-right font-semibold text-gray-900">
+      <TableCell className="font-medium text-foreground">{cert.customer.name}</TableCell>
+      <TableCell className="text-muted-foreground font-mono text-sm">{cert.customer.vatNumber}</TableCell>
+      <TableCell className="text-center text-foreground">{cert.fiscalYear}</TableCell>
+      <TableCell className="text-center text-muted-foreground">{cert.lineItems.length}</TableCell>
+      <TableCell className="text-right font-semibold text-foreground">
         {formatAccountingCurrency(cert.totalWithholdingAmount)}
       </TableCell>
       <TableCell className="text-center">
         {cert.isReceived ? (
-          <Badge className="bg-green-100 text-green-800 border-green-200">
+          <Badge className="bg-[hsl(var(--bg-success))]/40 text-green-700 border-[hsl(var(--bg-success))]">
             <CheckCircle2 className="h-3 w-3 mr-1" />
             {t('apy.status.received')}
           </Badge>
         ) : (
-          <Badge className="bg-orange-100 text-orange-800 border-orange-200">
+          <Badge className="bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--bg-warning))] border-[hsl(var(--bg-warning))]">
             <Clock className="h-3 w-3 mr-1" />
             {t('apy.status.pending')}
           </Badge>

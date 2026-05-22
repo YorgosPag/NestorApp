@@ -110,7 +110,7 @@ export function MemberManagementSection({
       <CardContent className="space-y-4">
         {/* Double-entry notice */}
         <div
-          className="flex items-start gap-2 rounded-md border border-blue-500/50 bg-blue-500/5 p-3 text-sm text-blue-700 dark:text-blue-400"
+          className="flex items-start gap-2 rounded-md border border-ring bg-[hsl(var(--bg-info))]/20 p-3 text-sm text-primary"
           role="status"
         >
           <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
@@ -163,7 +163,7 @@ export function MemberManagementSection({
           <div
             className={`flex items-center gap-2 rounded-md border p-3 text-sm ${
               shareValid
-                ? 'border-green-500/50 bg-green-500/5 text-green-700 dark:text-green-400'
+                ? 'border-[hsl(var(--bg-success))] bg-[hsl(var(--bg-success))]/10 text-green-700'
                 : 'border-destructive/50 bg-destructive/5 text-destructive'
             }`}
             role={shareValid ? 'status' : 'alert'}

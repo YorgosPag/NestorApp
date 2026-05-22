@@ -22,7 +22,7 @@ export function PurchaseOrdersCard() {
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
-          <Package className="h-8 w-8 text-indigo-600" aria-hidden />
+          <Package className="h-8 w-8 text-primary" aria-hidden />
         </div>
         <CardTitle className="text-lg">{t('hub.purchaseOrders.title')}</CardTitle>
         <CardDescription>{t('hub.purchaseOrders.description')}</CardDescription>

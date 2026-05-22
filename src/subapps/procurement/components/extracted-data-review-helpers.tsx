@@ -16,21 +16,21 @@ export function levelOf(value: unknown, confidence: number): ConfidenceLevel {
 
 export function levelClasses(level: ConfidenceLevel): string {
   switch (level) {
-    case 'high':   return 'border-l-4 border-l-green-500 bg-green-50/40 dark:bg-green-950/20';
-    case 'medium': return 'border-l-4 border-l-yellow-500 bg-yellow-50/40 dark:bg-yellow-950/20';
-    case 'low':    return 'border-l-4 border-l-red-500 bg-red-50/40 dark:bg-red-950/20';
+    case 'high':   return 'border-l-4 border-l-green-500 bg-[hsl(var(--bg-success))]/40';
+    case 'medium': return 'border-l-4 border-l-yellow-500 bg-[hsl(var(--bg-warning))]/40';
+    case 'low':    return 'border-l-4 border-l-red-500 bg-[hsl(var(--bg-error))]/40';
     case 'empty':  return 'border-l-4 border-l-muted bg-muted/20';
   }
 }
 
 export function ConfidenceBadge({ confidence }: { confidence: number }) {
   if (confidence >= 80) {
-    return <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400">{confidence}%</Badge>;
+    return <Badge variant="outline" className="border-[hsl(var(--bg-success))] text-green-700">{confidence}%</Badge>;
   }
   if (confidence >= 50) {
-    return <Badge variant="outline" className="border-yellow-500 text-yellow-700 dark:text-yellow-400">{confidence}%</Badge>;
+    return <Badge variant="outline" className="border-[hsl(var(--bg-warning))] text-[hsl(var(--bg-warning))]">{confidence}%</Badge>;
   }
-  return <Badge variant="outline" className="border-red-500 text-red-700 dark:text-red-400">{confidence}%</Badge>;
+  return <Badge variant="outline" className="border-destructive text-destructive">{confidence}%</Badge>;
 }
 
 interface FieldRowProps<T> {

@@ -40,14 +40,14 @@ interface CardConfig {
 }
 
 const REPORT_CARD_CONFIG: Record<ReportType, CardConfig> = {
-  profit_and_loss: { icon: TrendingUp, colorClass: 'text-green-600' },
-  trial_balance: { icon: Scale, colorClass: 'text-blue-600' },
-  ar_aging: { icon: Clock, colorClass: 'text-orange-600' },
-  tax_summary: { icon: Calculator, colorClass: 'text-purple-600' },
-  bank_reconciliation: { icon: GitCompareArrows, colorClass: 'text-indigo-600' },
-  cash_flow: { icon: Banknote, colorClass: 'text-emerald-600' },
-  income_by_customer: { icon: Users, colorClass: 'text-cyan-600' },
-  expense_by_category: { icon: PieChart, colorClass: 'text-rose-600' },
+  profit_and_loss: { icon: TrendingUp, colorClass: 'text-green-700' },
+  trial_balance: { icon: Scale, colorClass: 'text-primary' },
+  ar_aging: { icon: Clock, colorClass: 'text-[hsl(var(--bg-warning))]' },
+  tax_summary: { icon: Calculator, colorClass: 'text-primary' },
+  bank_reconciliation: { icon: GitCompareArrows, colorClass: 'text-primary' },
+  cash_flow: { icon: Banknote, colorClass: 'text-green-700' },
+  income_by_customer: { icon: Users, colorClass: 'text-primary' },
+  expense_by_category: { icon: PieChart, colorClass: 'text-destructive' },
 };
 
 // ============================================================================

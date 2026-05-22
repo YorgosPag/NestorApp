@@ -439,9 +439,9 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
               </Select>
             </div>
             {form.withholdingRate > 0 && (
-              <div className="text-sm text-gray-700 mt-5">
+              <div className="text-sm text-foreground mt-5">
                 Ποσό παρακράτησης:{' '}
-                <strong className="text-blue-900">
+                <strong className="text-primary">
                   {(
                     Math.round(totals.totalNetAmount * (form.withholdingRate / 100) * 100) / 100
                   ).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}

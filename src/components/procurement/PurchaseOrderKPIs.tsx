@@ -39,8 +39,8 @@ function KPICard({ label, value, icon, variant = 'default' }: KPICardProps) {
   return (
     <Card className={cn(
       'relative overflow-hidden',
-      variant === 'warning' && 'border-amber-300 dark:border-amber-700',
-      variant === 'success' && 'border-emerald-300 dark:border-emerald-700',
+      variant === 'warning' && 'border-[hsl(var(--bg-warning))]/60',
+      variant === 'success' && 'border-[hsl(var(--bg-success))]/60',
     )}>
       <CardContent className="flex items-center gap-3 p-4">
         <div className={cn(

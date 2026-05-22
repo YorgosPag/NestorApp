@@ -345,7 +345,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
             {t('rfqs.tabs.comparison')}
             {recommendationPending && (
               <span
-                className="ml-2 inline-block size-2 rounded-full bg-yellow-500"
+                className="ml-2 inline-block size-2 rounded-full bg-[hsl(var(--bg-warning))]/400"
                 aria-label={t('rfqs.tabs.badges.recommendation')}
               />
             )}

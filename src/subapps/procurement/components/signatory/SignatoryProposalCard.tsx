@@ -63,14 +63,14 @@ export interface SignatoryProposalCardProps {
 // ============================================================================
 
 const BAND_BORDER: Record<SignatoryConfidenceBand, string> = {
-  high: 'border-l-green-500 bg-green-50/40 dark:bg-green-950/20',
-  medium: 'border-l-yellow-500 bg-yellow-50/40 dark:bg-yellow-950/20',
-  low: 'border-l-red-500 bg-red-50/40 dark:bg-red-950/20',
+  high: 'border-l-green-500 bg-[hsl(var(--bg-success))]/40',
+  medium: 'border-l-yellow-500 bg-[hsl(var(--bg-warning))]/40',
+  low: 'border-l-red-500 bg-[hsl(var(--bg-error))]/40',
 };
 
 const BAND_BUTTON: Record<SignatoryConfidenceBand, string> = {
-  high: 'bg-green-600 hover:bg-green-700 text-white',
-  medium: 'bg-yellow-500 hover:bg-yellow-600 text-white',
+  high: 'bg-[hsl(var(--bg-success))] hover:bg-[hsl(var(--bg-success))]/90 text-white',
+  medium: 'bg-[hsl(var(--bg-warning))]/400 hover:bg-[hsl(var(--bg-warning))]/90 text-white',
   low: '',
 };
 
@@ -79,10 +79,10 @@ function ConfidencePill({ confidence }: { confidence: number }) {
   const band = getSignatoryConfidenceBand(confidence);
   const cls =
     band === 'high'
-      ? 'border-green-500 text-green-700 dark:text-green-400'
+      ? 'border-[hsl(var(--bg-success))] text-green-700'
       : band === 'medium'
-      ? 'border-yellow-500 text-yellow-700 dark:text-yellow-400'
-      : 'border-red-500 text-red-700 dark:text-red-400';
+      ? 'border-[hsl(var(--bg-warning))] text-[hsl(var(--bg-warning))]'
+      : 'border-destructive text-destructive';
   return (
     <Badge variant="outline" className={`text-xs ${cls}`}>
       {confidence}%

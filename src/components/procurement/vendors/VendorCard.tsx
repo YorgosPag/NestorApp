@@ -81,7 +81,7 @@ export function VendorCard({ data }: VendorCardProps) {
 
             <div className="col-span-2 flex items-center gap-1.5">
               <dt className="text-muted-foreground">{t('hub.vendorMaster.totalSpend')}:</dt>
-              <dd className="font-semibold text-green-700 dark:text-green-400">
+              <dd className="font-semibold text-green-700">
                 {formatCurrency(metrics!.totalSpend)}
               </dd>
             </div>

@@ -61,19 +61,19 @@ export function VendorGridCard({
     const items: StatItem[] = [
       {
         icon: PackageCheck,
-        iconColor: 'text-blue-600',
+        iconColor: 'text-primary',
         label: t('hub.vendorMaster.totalOrders'),
         value: String(metrics.totalOrders),
       },
       {
         icon: DollarSign,
-        iconColor: 'text-green-600',
+        iconColor: 'text-green-700',
         label: t('hub.vendorMaster.totalSpend'),
         value: formatCurrency(metrics.totalSpend),
       },
       {
         icon: TrendingUp,
-        iconColor: 'text-emerald-600',
+        iconColor: 'text-green-700',
         label: t('hub.vendorMaster.onTimeRate'),
         value: `${metrics.onTimeDeliveryRate}%`,
       },
@@ -81,7 +81,7 @@ export function VendorGridCard({
     if (metrics.lastOrderDate) {
       items.push({
         icon: Clock,
-        iconColor: 'text-amber-600',
+        iconColor: 'text-[hsl(var(--bg-warning))]',
         label: t('hub.vendorMaster.lastOrder'),
         value: formatDate(metrics.lastOrderDate),
       });
@@ -106,7 +106,7 @@ export function VendorGridCard({
   return (
     <GridCard
       customIcon={Building2}
-      customIconColor="text-green-600"
+      customIconColor="text-green-700"
       title={displayName}
       subtitle={subtitle}
       badges={badges}

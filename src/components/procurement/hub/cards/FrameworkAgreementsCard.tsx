@@ -24,7 +24,7 @@ export function FrameworkAgreementsCard() {
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
-          <ScrollText className="h-8 w-8 text-purple-600" aria-hidden />
+          <ScrollText className="h-8 w-8 text-foreground" aria-hidden />
         </div>
         <CardTitle className="text-lg">{t('hub.frameworkAgreements.title')}</CardTitle>
         <CardDescription>{t('hub.frameworkAgreements.description')}</CardDescription>
