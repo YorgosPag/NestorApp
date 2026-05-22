@@ -309,7 +309,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                       size="icon-sm"
                       onClick={handleSavePolygon}
                       disabled={!draftPolygonInfo.canSave}
-                      className={draftPolygonInfo.canSave ? `${OVERLAY_TOOLBAR_COLORS.save} hover:bg-green-100` : 'opacity-50'}
+                      className={draftPolygonInfo.canSave ? `${OVERLAY_TOOLBAR_COLORS.save} hover:bg-[hsl(var(--bg-success))]/20` : 'opacity-50'}
                     >
                       <Save className={iconSizes.sm} />
                     </Button>
@@ -329,7 +329,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                       variant="ghost"
                       size="icon-sm"
                       onClick={handleCancelPolygon}
-                      className={`${OVERLAY_TOOLBAR_COLORS.cancel} hover:bg-red-100`}
+                      className={`${OVERLAY_TOOLBAR_COLORS.cancel} hover:bg-[hsl(var(--bg-error))]/20`}
                     >
                       <XCircle className={iconSizes.sm} />
                     </Button>

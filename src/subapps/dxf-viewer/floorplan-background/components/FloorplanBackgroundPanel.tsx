@@ -151,7 +151,7 @@ function PanelEmptyState({ isLoading, error, onImageSelect, onPdfSelect, t, colo
         {t('panels.floorplanBackground.empty.message')}
       </p>
       {error && (
-        <output className="text-xs text-red-500 bg-red-500/10 p-2 rounded block" role="alert">
+        <output className="text-xs text-destructive bg-destructive/10 p-2 rounded block" role="alert">
           {error}
         </output>
       )}
@@ -210,7 +210,7 @@ function PanelLoadedState(props: LoadedStateProps) {
   return (
     <section className="space-y-4">
       {error && (
-        <output className="text-xs text-red-500 bg-red-500/10 p-2 rounded block" role="alert">{error}</output>
+        <output className="text-xs text-destructive bg-destructive/10 p-2 rounded block" role="alert">{error}</output>
       )}
 
       {/* Header row: provider + remove */}
@@ -221,7 +221,7 @@ function PanelLoadedState(props: LoadedStateProps) {
           <PanelToggleButton on={background.locked} onClick={props.onToggleLocked} OnIcon={Lock} OffIcon={Unlock} label={t('panels.floorplanBackground.controls.locked')} />
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-500 hover:text-red-600 hover:bg-red-500/10" onClick={props.onRemove} aria-label={t('panels.floorplanBackground.controls.remove')}>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={props.onRemove} aria-label={t('panels.floorplanBackground.controls.remove')}>
                 <Trash2 className="h-3 w-3" />
               </Button>
             </TooltipTrigger>
@@ -281,8 +281,8 @@ function CalibrationInstructions({ hasPointA, onCancel, t, colors }: Calibration
     ? 'panels.floorplanBackground.calibration.instructionB'
     : 'panels.floorplanBackground.calibration.instructionA';
   return (
-    <article className="border border-blue-400/30 rounded p-3 space-y-2 bg-blue-500/5">
-      <p className={`text-xs font-medium text-blue-400`}>
+    <article className="border border-ring/30 rounded p-3 space-y-2 bg-[hsl(var(--bg-info))]/5">
+      <p className={`text-xs font-medium text-primary`}>
         {t(key)}
       </p>
       <Button

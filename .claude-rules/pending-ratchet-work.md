@@ -1,7 +1,7 @@
 # Pending Ratchet Work — Live Checklist
 
 **STATUS: ACTIVE**
-**Last updated:** 2026-05-19 (ADR-365 Phase 0 deployed, baseline reality 3,659/440)
+**Last updated:** 2026-05-22 (ADR-365 Phase 1 DONE — DXF Viewer 20 files, baseline 3,405/420)
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
 **Purpose:** Agent-facing live checklist. Se STATUS = ALL_DONE → salta il resto. Se STATUS = ACTIVE → leggi e ricorda a Giorgio.
 
@@ -95,10 +95,10 @@
 
 Discovered 2026-05-19 (hover audit follow-up). ADR: `docs/centralized-systems/reference/adrs/ADR-365-tailwind-semantic-palette-enforcement.md`
 
-**Status:** PROPOSED — αναμένει Phase 0 implementation. Per-phase handoff απαιτείται πριν από κάθε νέα session.
+**Status:** PHASE 1 DONE 2026-05-22. Baseline: 3,405/420 (was 3,659/440). Per-phase handoff απαιτείται πριν από κάθε νέα session.
 
 - [x] **Phase 0 — Infrastructure** ✅ 2026-05-19 — ratchet script (`scripts/check-tailwind-palette-ratchet.js`), `.ssot-registry.json` module `tailwind-hardcoded-palette` (Tier 2, 15 allowlist entries), `.tailwind-palette-baseline.json` (3,659 violations / 440 files — actual baseline revised from estimate 249/65), CHECK 3.26 wired into `scripts/run-checks-parallel.js` (worker_thread), npm scripts `tailwind-palette:{audit,report,baseline}`. Smoke 1-5 PASS. Hook latency ~0.73s staged / ~3.4s full.
-- [ ] **Phase 1 — DXF Viewer** (~1.5h, ~17 files) — grip menus, wall/stair/dimensions panels, text-toolbar/templates/dictionary, mirror/draggable overlays, statusbar, floorplan-background, prompt-dialog
+- [x] **Phase 1 — DXF Viewer** ✅ 2026-05-22 — 20 files cleaned (−254 violations). Baseline: 3,659/440 → 3,405/420.
 - [ ] **Phase 2 — Procurement + Vendor Portal** (~30min, ~9 files)
 - [ ] **Phase 3 — Accounting** (~20min, ~3 files)
 - [ ] **Phase 4 — Properties + Contacts + Building Dialogs** (~40min, ~12 files)
@@ -107,7 +107,7 @@ Discovered 2026-05-19 (hover audit follow-up). ADR: `docs/centralized-systems/re
 - [ ] **Phase 7 — Design System + Showcase + Sales + Geo-canvas** (~45min, ~8 files)
 - [ ] **Phase 8 — Closure** (~20min) — baseline → 0, ADR APPROVED, changelog, pending-ratchet entry remove
 
-Initial baseline (actual, 2026-05-19): **3,659 violations / 440 files** (revised from initial estimate 249/65 — original audit was hover-only; CHECK 3.26 covers full §3.2 surface). Target: 0. Mapping table + exempt SSoT list στο ADR-365 §3.1 + §2.3. **Phase 1-8 estimates likely under-scoped** — re-baseline + revise hours after Phase 1 lands.
+Baseline after Phase 1 (2026-05-22): **3,405 violations / 420 files** (was 3,659/440). Target: 0. Mapping table + exempt SSoT list στο ADR-365 §3.1 + §2.3. **Phase 2-8 estimates likely under-scoped** — re-baseline after each phase.
 
 ---
 
@@ -173,15 +173,12 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 **ADR-034 αλλαγμένο (χωρίς commit) — status line + Phase 4 table + ADR-266 cross-ref + changelog.**
 
 - [x] **4.8 Dependency arrows** ✅ DONE 2026-05-21 — `GanttDependencyArrows.tsx` + `useGanttDependencyArrows.ts`, portal into `.rmg-timeline-container`, RAF-throttled bezier SVG, ADR-034 §4.8 updated
-- [ ] **4.5 Alert engine — deadline notifications** (~8-12h, 8-10 αρχεία, cross-cutting)
-  - Spec: ADR-266 §5.8 (πλήρης)
-  - Νέα collection `construction_alerts` + API route + dashboard banner + Telegram
-  - **Θέλει orchestrator approval πριν ξεκινήσει** (8+ αρχεία, 2+ domains) — ρώτα Giorgio
+- [x] **4.5 Alert engine — deadline notifications** ✅ DONE 2026-05-21 — ADR-266 Phase D.3 (6+1 alert rules, `construction_alerts` collection, API routes, `ScheduleAlertBanner`, Telegram digest, cron bypass) + Phase D.5 (Portfolio Dashboard). ADR-034 status line stale — needs sync.
 - [ ] **4.6 AI integration UC-017** (~15-20h, νέο AI pipeline module)
   - Partial spec: ADR-034 §12
   - Τελευταίο στη σειρά — δεν μπλοκάρει 4.8/4.5
 
-**Προτεινόμενη σειρά:** 4.8 → 4.5 (με approval) → 4.6
+**Προτεινόμενη σειρά:** 4.8 ✅ → 4.5 ✅ → 4.6
 
 ---
 
@@ -206,6 +203,7 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 ## Changelog
 
 | Date       | Change |
+| 2026-05-22 | **ADR-365 Phase 1 DONE — DXF Viewer subapp**. 20 files cleaned: GripContextMenu, GripHoverMenu, WallDnaSection, WallPersistenceSection, StairWarningsSection, StairPersistenceSection, StairPresetsSection, StairPerTreadOverrideSection, DimensionsTab, DraftRecoveryBanner, SpellCheckContextMenu, TextTemplateList, PlaceholderPicker, CustomDictionaryEditorDialog, MirrorConfirmOverlay, DraggableOverlayToolbar, PolygonControls, IsolateStatusIndicator, FloorplanBackgroundPanel, PromptDialog. Baseline: 3,659/440 → 3,405/420 (−254 violations, −20 files). ADR-365 status + changelog updated. |
 | 2026-05-21 | ADR-363 BIM entity points SSoT migration CLOSED — `slab-grips.ts` + `slab-opening-grips.ts` + `BeamRenderer.ts` (4 methods) migrated to `getBimEntityKeyPoints2D`. Transforms/geometry/validator files intentionally skipped (need 3D `Point3D`, SSoT returns 2D only). Broken import `bim-entity-points.ts` `'../extended-types'` → `'../../types/entities'` fixed. Item removed from checklist. |
 | 2026-05-19 | ADR-363 R1 DONE — `useBimCopyTool` (AutoCAD COPY FSM + full canvas wiring). ADR-363 R2 DONE — stair bridge helpers moved to `bim/hooks/bridge/`, cross-domain coupling fixed. Both removed from checklist. |
 | 2026-05-15 | ADR-345 Fasi 6.1 + 7 completate. Fase 8 parziale (colors rimossa, levels rimane per ora). |

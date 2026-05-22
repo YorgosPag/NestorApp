@@ -94,7 +94,7 @@ export const CustomDictionaryEditorDialog: React.FC<EditorDialogProps> = ({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/40 z-[60]" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[61] w-[min(440px,92vw)] bg-white dark:bg-zinc-950 rounded shadow-xl p-4 flex flex-col gap-3"
+          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[61] w-[min(440px,92vw)] bg-card rounded shadow-xl p-4 flex flex-col gap-3"
           onEscapeKeyDown={() => onOpenChange(false)}
         >
           <Dialog.Title className="text-base font-semibold">
@@ -110,29 +110,29 @@ export const CustomDictionaryEditorDialog: React.FC<EditorDialogProps> = ({
               placeholder={t('textSpell:editorDialog.termPlaceholder')}
               maxLength={CUSTOM_DICTIONARY_TERM_MAX}
               autoFocus
-              className="border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
-            <span className="text-xs text-zinc-500">{t('textSpell:editorDialog.termHint')}</span>
+            <span className="text-xs text-muted-foreground">{t('textSpell:editorDialog.termHint')}</span>
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
             <span>{t('textSpell:editorDialog.languageLabel')}</span>
             <Select.Root value={language} onValueChange={(v) => setLanguage(v as SpellLanguage)}>
-              <Select.Trigger className="inline-flex items-center justify-between border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <Select.Trigger className="inline-flex items-center justify-between border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <Select.Value />
                 <Select.Icon>▾</Select.Icon>
               </Select.Trigger>
               <Select.Portal>
                 <Select.Content
                   position="popper"
-                  className="z-[62] bg-white dark:bg-zinc-950 border rounded shadow-md"
+                  className="z-[62] bg-card border rounded shadow-md"
                 >
                   <Select.Viewport>
                     {LANGUAGES.map((lng) => (
                       <Select.Item
                         key={lng}
                         value={lng}
-                        className="text-sm px-3 py-1.5 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:outline-none"
+                        className="text-sm px-3 py-1.5 cursor-pointer hover:bg-accent focus:outline-none"
                       >
                         <Select.ItemText>{t(`textSpell:languages.${lng}`)}</Select.ItemText>
                       </Select.Item>
@@ -144,7 +144,7 @@ export const CustomDictionaryEditorDialog: React.FC<EditorDialogProps> = ({
           </label>
 
           {error ? (
-            <p className="text-xs text-red-700" role="alert">
+            <p className="text-xs text-destructive" role="alert">
               {error}
             </p>
           ) : null}
@@ -163,7 +163,7 @@ export const CustomDictionaryEditorDialog: React.FC<EditorDialogProps> = ({
               type="button"
               disabled={submitting}
               onClick={() => void handleSubmit()}
-              className="text-sm px-3 py-1.5 rounded bg-blue-600 text-white disabled:opacity-50"
+              className="text-sm px-3 py-1.5 rounded bg-primary text-primary-foreground disabled:opacity-50"
             >
               {submitting ? t('textSpell:editorDialog.saving') : t('textSpell:editorDialog.save')}
             </button>

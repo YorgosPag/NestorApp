@@ -172,7 +172,7 @@ function DeleteConfirmDialog({ target, onConfirm, onCancel }: DeleteConfirmDialo
     <AlertDialog.Root open={!!target} onOpenChange={(o) => { if (!o) onCancel(); }}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
-        <AlertDialog.Content className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-6 max-w-sm w-full flex flex-col gap-4">
+        <AlertDialog.Content className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card rounded-lg shadow-xl p-6 max-w-sm w-full flex flex-col gap-4">
           <AlertDialog.Title className="text-sm font-semibold">
             {t('panels.dimensions.deleteConfirm.title')}
           </AlertDialog.Title>
@@ -181,7 +181,7 @@ function DeleteConfirmDialog({ target, onConfirm, onCancel }: DeleteConfirmDialo
           </AlertDialog.Description>
           <footer className="flex justify-end gap-2">
             <AlertDialog.Cancel asChild>
-              <button type="button" className="px-3 py-1.5 text-sm rounded border hover:bg-gray-50 dark:hover:bg-zinc-800" onClick={onCancel}>
+              <button type="button" className="px-3 py-1.5 text-sm rounded border hover:bg-accent" onClick={onCancel}>
                 {t('panels.dimensions.deleteConfirm.cancel')}
               </button>
             </AlertDialog.Cancel>

@@ -93,7 +93,7 @@ export const TextTemplateList: React.FC<ListProps> = ({
   );
 
   return (
-    <aside aria-label={t('textTemplates:manager.listAriaLabel')} className="tt-list flex flex-col gap-3 p-3 border-r border-zinc-200 dark:border-zinc-800 w-72 shrink-0">
+    <aside aria-label={t('textTemplates:manager.listAriaLabel')} className="tt-list flex flex-col gap-3 p-3 border-r border-border w-72 shrink-0">
       <header className="flex flex-col gap-2">
         <input
           type="search"
@@ -119,11 +119,11 @@ export const TextTemplateList: React.FC<ListProps> = ({
       </header>
 
       {loading ? (
-        <p className="text-xs text-zinc-500">{t('textTemplates:manager.loading')}</p>
+        <p className="text-xs text-muted-foreground">{t('textTemplates:manager.loading')}</p>
       ) : null}
 
       <section aria-label={t('textTemplates:manager.builtInSection')} className="flex flex-col gap-1">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t('textTemplates:manager.builtInSection')}
         </h3>
         <TemplateRows
@@ -138,11 +138,11 @@ export const TextTemplateList: React.FC<ListProps> = ({
       </section>
 
       <section aria-label={t('textTemplates:manager.userSection')} className="flex flex-col gap-1">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t('textTemplates:manager.userSection')}
         </h3>
         {filteredUser.length === 0 && !loading ? (
-          <p className="text-xs text-zinc-500 italic px-2 py-3">
+          <p className="text-xs text-muted-foreground italic px-2 py-3">
             {t('textTemplates:manager.emptyState')}
           </p>
         ) : (
@@ -194,8 +194,8 @@ const TemplateRows: React.FC<RowsProps> = ({
             className={cn(
               'group rounded px-2 py-1.5 text-sm cursor-pointer flex flex-col gap-0.5 border',
               isSelected
-                ? 'bg-blue-50 border-blue-300 dark:bg-blue-950 dark:border-blue-700'
-                : 'border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-900',
+                ? 'bg-[hsl(var(--bg-info))]/10 border-ring'
+                : 'border-transparent hover:bg-accent',
             )}
             onClick={() => onSelect(tpl)}
           >
@@ -205,7 +205,7 @@ const TemplateRows: React.FC<RowsProps> = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span
-                      className="text-[10px] uppercase px-1 py-0.5 rounded bg-zinc-200 text-zinc-700"
+                      className="text-[10px] uppercase px-1 py-0.5 rounded bg-muted text-muted-foreground"
                       aria-label={t('textTemplates:manager.builtinReadOnlyTooltip')}
                     >
                       {t('textTemplates:manager.builtinBadge')}
@@ -215,7 +215,7 @@ const TemplateRows: React.FC<RowsProps> = ({
                 </Tooltip>
               ) : null}
             </div>
-            <div className="flex items-center justify-between text-[11px] text-zinc-500">
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
               <span>
                 {t(`textTemplates:manager.category.${tpl.category}`)} ·{' '}
                 {t('textTemplates:manager.placeholdersCount', { count: tpl.placeholders.length })}
@@ -275,8 +275,8 @@ const RowAction: React.FC<RowActionProps> = ({ label, enabled, onClick, variant 
         onClick={onClick}
         className={cn(
           'text-[11px] px-1.5 py-0.5 rounded',
-          variant === 'danger' ? 'text-red-700' : 'text-zinc-700',
-          enabled ? 'hover:bg-zinc-200 dark:hover:bg-zinc-800' : 'opacity-40 cursor-not-allowed',
+          variant === 'danger' ? 'text-destructive' : 'text-muted-foreground',
+          enabled ? 'hover:bg-accent' : 'opacity-40 cursor-not-allowed',
         )}
       >
         {label}

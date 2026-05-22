@@ -230,7 +230,7 @@ export const PromptDialog: React.FC = () => {
                   ${getStatusBorder(error ? 'error' : 'default')}
                   ${PANEL_LAYOUT.ROUNDED.MD}
                   text-sm outline-none
-                  focus:ring-1 focus:ring-blue-500
+                  focus:ring-1 focus:ring-ring
                 `}
               />
               {options.unit && (
@@ -268,7 +268,7 @@ export const PromptDialog: React.FC = () => {
               className={`
                 flex items-center ${PANEL_LAYOUT.GAP.XS}
                 ${PANEL_LAYOUT.SPACING.COMPACT} text-xs
-                text-white bg-blue-600 hover:bg-blue-700
+                text-primary-foreground bg-primary hover:bg-primary/90
                 ${PANEL_LAYOUT.ROUNDED.MD} ${PANEL_LAYOUT.TRANSITION.COLORS}
               `}
             >

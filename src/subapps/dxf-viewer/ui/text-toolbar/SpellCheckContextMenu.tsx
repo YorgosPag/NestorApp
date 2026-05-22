@@ -104,22 +104,22 @@ export const SpellCheckContextMenu: React.FC<ContextMenuProps> = ({
     <menu
       role="menu"
       style={{ position: 'fixed', left: anchor.x, top: anchor.y }}
-      className="z-[80] min-w-[180px] bg-white dark:bg-zinc-950 border rounded shadow-md text-sm"
+      className="z-[80] min-w-[180px] bg-card border rounded shadow-md text-sm"
     >
-      <li className="px-3 py-1.5 text-xs text-zinc-500 border-b">
+      <li className="px-3 py-1.5 text-xs text-muted-foreground border-b">
         {t('textSpell:contextMenu.suggestions')} — «{misspelling.word}»
       </li>
       {loading ? (
-        <li className="px-3 py-1.5 text-zinc-500">…</li>
+        <li className="px-3 py-1.5 text-muted-foreground">…</li>
       ) : suggestions.length === 0 ? (
-        <li className="px-3 py-1.5 text-zinc-500">{t('textSpell:contextMenu.noSuggestions')}</li>
+        <li className="px-3 py-1.5 text-muted-foreground">{t('textSpell:contextMenu.noSuggestions')}</li>
       ) : (
         suggestions.map((s) => (
           <li key={s}>
             <button
               type="button"
               onClick={() => handleReplace(s)}
-              className="w-full text-left px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              className="w-full text-left px-3 py-1.5 hover:bg-accent"
             >
               {s}
             </button>
@@ -131,7 +131,7 @@ export const SpellCheckContextMenu: React.FC<ContextMenuProps> = ({
           type="button"
           disabled={!companyId}
           onClick={() => void handleAddToDictionary()}
-          className="w-full text-left px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50"
+          className="w-full text-left px-3 py-1.5 hover:bg-accent disabled:opacity-50"
         >
           {t('textSpell:contextMenu.addToDictionary')}
         </button>

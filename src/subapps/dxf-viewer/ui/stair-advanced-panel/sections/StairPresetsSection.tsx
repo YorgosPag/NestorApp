@@ -112,14 +112,14 @@ export function StairPresetsSection({
       className="flex flex-col gap-2"
     >
       <header className="flex items-center justify-between gap-2">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-foreground">
           {t('stairAdvancedPanel.sections.presets.title')}
         </h4>
         {!saveMode && (
           <button
             type="button"
             onClick={() => setSaveMode(true)}
-            className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100 hover:bg-slate-700"
+            className="rounded border border-border bg-card px-2 py-1 text-xs text-foreground hover:bg-accent"
           >
             {t('stairAdvancedPanel.sections.presets.save')}
           </button>
@@ -127,7 +127,7 @@ export function StairPresetsSection({
       </header>
 
       {saveMode && (
-        <div className="flex flex-col gap-1 rounded border border-slate-600 bg-slate-800/60 p-2">
+        <div className="flex flex-col gap-1 rounded border border-border bg-card/60 p-2">
           <input
             autoFocus
             type="text"
@@ -135,13 +135,13 @@ export function StairPresetsSection({
             onChange={(e) => setPendingName(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder={t('stairAdvancedPanel.sections.presets.namePlaceholder')}
-            className="rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-slate-100"
+            className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
           />
           <div className="flex items-center gap-2">
             <select
               value={pendingScope}
               onChange={(e) => setPendingScope(e.target.value as StairPresetScope)}
-              className="flex-1 rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-slate-100"
+              className="flex-1 rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
             >
               <option value="user">{t(SCOPE_LABEL_KEYS.user)}</option>
               <option value="company">{t(SCOPE_LABEL_KEYS.company)}</option>
@@ -153,14 +153,14 @@ export function StairPresetsSection({
               type="button"
               onClick={() => void onSaveConfirm()}
               disabled={!pendingName.trim()}
-              className="rounded border border-slate-600 bg-emerald-700 px-2 py-1 text-xs text-slate-100 hover:bg-emerald-600 disabled:opacity-50"
+              className="rounded border border-[hsl(var(--bg-success))] bg-[hsl(var(--bg-success))] px-2 py-1 text-xs text-white hover:bg-[hsl(var(--bg-success))]/90 disabled:opacity-50"
             >
               {t('stairAdvancedPanel.sections.presets.confirmSave')}
             </button>
             <button
               type="button"
               onClick={onSaveCancel}
-              className="rounded border border-slate-600 bg-slate-700 px-2 py-1 text-xs text-slate-100 hover:bg-slate-600"
+              className="rounded border border-border bg-muted px-2 py-1 text-xs text-foreground hover:bg-accent"
             >
               {t('stairAdvancedPanel.sections.presets.cancel')}
             </button>
@@ -169,13 +169,13 @@ export function StairPresetsSection({
       )}
 
       {error && (
-        <p role="alert" className="text-xs text-rose-400">
+        <p role="alert" className="text-xs text-destructive">
           {t(`stairAdvancedPanel.sections.presets.errors.${error}`, { defaultValue: '' }) || error}
         </p>
       )}
 
       {loading && (
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-muted-foreground">
           {t('stairAdvancedPanel.sections.presets.loading')}
         </p>
       )}
@@ -185,11 +185,11 @@ export function StairPresetsSection({
         const items = grouped[scope];
         return (
           <div key={scope} className="flex flex-col gap-1">
-            <p className="text-xs font-medium text-slate-400">
+            <p className="text-xs font-medium text-muted-foreground">
               {t(SCOPE_LABEL_KEYS[scope])}
             </p>
             {items.length === 0 ? (
-              <p className="text-xs italic text-slate-500">
+              <p className="text-xs italic text-muted-foreground">
                 {t('stairAdvancedPanel.sections.presets.emptyScope')}
               </p>
             ) : (
@@ -199,16 +199,16 @@ export function StairPresetsSection({
                   return (
                     <li
                       key={preset.id}
-                      className="flex items-center justify-between gap-2 rounded border border-slate-700 bg-slate-800/40 px-2 py-1"
+                      className="flex items-center justify-between gap-2 rounded border border-border bg-card/40 px-2 py-1"
                     >
-                      <span className="truncate text-xs text-slate-100">
+                      <span className="truncate text-xs text-foreground">
                         {preset.name}
                       </span>
                       <span className="flex items-center gap-1">
                         <button
                           type="button"
                           onClick={() => loadPreset(stair, preset)}
-                          className="rounded border border-slate-600 bg-slate-700 px-2 py-0.5 text-xs text-slate-100 hover:bg-slate-600"
+                          className="rounded border border-border bg-muted px-2 py-0.5 text-xs text-foreground hover:bg-accent"
                         >
                           {t('stairAdvancedPanel.sections.presets.load')}
                         </button>
@@ -217,7 +217,7 @@ export function StairPresetsSection({
                             type="button"
                             onClick={() => void deletePreset(preset.id)}
                             aria-label={t('stairAdvancedPanel.sections.presets.delete')}
-                            className="rounded border border-slate-600 bg-slate-700 px-2 py-0.5 text-xs text-rose-300 hover:bg-rose-900"
+                            className="rounded border border-border bg-muted px-2 py-0.5 text-xs text-destructive hover:bg-destructive/20"
                           >
                             ×
                           </button>

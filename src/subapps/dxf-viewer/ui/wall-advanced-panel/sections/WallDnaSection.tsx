@@ -129,10 +129,10 @@ function DnaHeader({
   return (
     <header className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-foreground">
           {t('wallAdvancedPanel.sections.dna.title')}
         </h4>
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-muted-foreground">
           {t('wallAdvancedPanel.sections.dna.totalThickness', {
             value: Math.round(totalThickness),
           })}
@@ -142,7 +142,7 @@ function DnaHeader({
         <button
           type="button"
           onClick={onLoadPreset}
-          className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100 hover:bg-slate-700"
+          className="rounded border border-border bg-card px-2 py-1 text-xs text-foreground hover:bg-accent"
         >
           {t('wallAdvancedPanel.sections.dna.loadPreset')}
         </button>
@@ -151,14 +151,14 @@ function DnaHeader({
             <button
               type="button"
               onClick={onAdd}
-              className="rounded border border-emerald-600 bg-emerald-700 px-2 py-1 text-xs text-emerald-50 hover:bg-emerald-600"
+              className="rounded border border-[hsl(var(--bg-success))] bg-[hsl(var(--bg-success))] px-2 py-1 text-xs text-white hover:bg-[hsl(var(--bg-success))]/90"
             >
               {t('wallAdvancedPanel.sections.dna.addLayer')}
             </button>
             <button
               type="button"
               onClick={onDetach}
-              className="rounded border border-amber-600 bg-amber-700/70 px-2 py-1 text-xs text-amber-50 hover:bg-amber-600"
+              className="rounded border border-[hsl(var(--bg-warning))] bg-[hsl(var(--bg-warning))]/70 px-2 py-1 text-xs text-white hover:bg-[hsl(var(--bg-warning))]/90"
             >
               {t('wallAdvancedPanel.sections.dna.detach')}
             </button>
@@ -178,12 +178,12 @@ function DnaEmptyState({
 }): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
   return (
-    <div className="rounded border border-slate-700 bg-slate-800/50 p-2 text-xs text-slate-300">
+    <div className="rounded border border-border bg-card/50 p-2 text-xs text-foreground">
       <p className="mb-2">{t('wallAdvancedPanel.sections.dna.detachedHint')}</p>
       <button
         type="button"
         onClick={onLoadPreset}
-        className="rounded border border-slate-600 bg-slate-700 px-2 py-1 text-xs text-slate-100 hover:bg-slate-600"
+        className="rounded border border-border bg-muted px-2 py-1 text-xs text-foreground hover:bg-accent"
       >
         {t('wallAdvancedPanel.sections.dna.loadPreset')}
       </button>
@@ -252,13 +252,13 @@ function DnaLayerRow(props: DnaLayerRowProps): React.ReactElement {
     onRemove, onUpdate, onMoveUp, onMoveDown,
   } = props;
   return (
-    <div className="flex flex-col gap-1 rounded border border-slate-700 bg-slate-800/40 p-2">
+    <div className="flex flex-col gap-1 rounded border border-border bg-card/40 p-2">
       <div className="flex items-center gap-2">
         <select
           aria-label={t('wallAdvancedPanel.sections.dna.fields.side')}
           value={layer.side}
           onChange={(e) => onUpdate({ side: e.target.value as WallLayerSide })}
-          className="rounded border border-slate-600 bg-slate-900 px-1 py-0.5 text-xs text-slate-100"
+          className="rounded border border-border bg-background px-1 py-0.5 text-xs text-foreground"
         >
           {LAYER_SIDES.map((side) => (
             <option key={side} value={side}>
@@ -271,7 +271,7 @@ function DnaLayerRow(props: DnaLayerRowProps): React.ReactElement {
           aria-label={t('wallAdvancedPanel.sections.dna.fields.name')}
           value={layer.name}
           onChange={(e) => onUpdate({ name: e.target.value })}
-          className="flex-1 rounded border border-slate-600 bg-slate-900 px-2 py-0.5 text-xs text-slate-100"
+          className="flex-1 rounded border border-border bg-background px-2 py-0.5 text-xs text-foreground"
         />
         <ReorderButtons
           canUp={index > 0}
@@ -283,13 +283,13 @@ function DnaLayerRow(props: DnaLayerRowProps): React.ReactElement {
           type="button"
           onClick={onRemove}
           aria-label={t('wallAdvancedPanel.sections.dna.removeLayer')}
-          className="rounded border border-rose-600 bg-rose-700/70 px-2 py-0.5 text-xs text-rose-50 hover:bg-rose-600"
+          className="rounded border border-destructive bg-destructive/70 px-2 py-0.5 text-xs text-destructive-foreground hover:bg-destructive/90"
         >
           ×
         </button>
       </div>
       <div className="flex items-center gap-2">
-        <label className="flex items-center gap-1 text-xs text-slate-200">
+        <label className="flex items-center gap-1 text-xs text-foreground">
           <span className="w-16 shrink-0">
             {t('wallAdvancedPanel.sections.dna.fields.thickness')}
           </span>
@@ -299,7 +299,7 @@ function DnaLayerRow(props: DnaLayerRowProps): React.ReactElement {
             step={1}
             value={layer.thickness}
             onChange={(e) => onUpdate({ thickness: parseFloat(e.target.value) || 0 })}
-            className="w-20 rounded border border-slate-600 bg-slate-900 px-2 py-0.5 text-xs text-slate-100"
+            className="w-20 rounded border border-border bg-background px-2 py-0.5 text-xs text-foreground"
           />
         </label>
         <MaterialPicker
@@ -328,7 +328,7 @@ interface ReorderButtonsProps {
 function ReorderButtons({ canUp, canDown, onUp, onDown }: ReorderButtonsProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
   const base =
-    'rounded border border-slate-600 bg-slate-900 px-2 py-0.5 text-xs text-slate-100 hover:bg-slate-700 disabled:opacity-40';
+    'rounded border border-border bg-background px-2 py-0.5 text-xs text-foreground hover:bg-accent disabled:opacity-40';
   return (
     <span className="flex items-center gap-1">
       <button
@@ -394,7 +394,7 @@ function MaterialPicker({
         aria-label={t('wallAdvancedPanel.sections.dna.fields.material')}
         value={selectValue}
         onChange={onSelectChange}
-        className="flex-1 rounded border border-slate-600 bg-slate-900 px-1 py-0.5 text-xs text-slate-100"
+        className="flex-1 rounded border border-border bg-background px-1 py-0.5 text-xs text-foreground"
       >
         {libraryLoading && !hasLibrary && (
           <option value="" disabled>
@@ -435,7 +435,7 @@ function MaterialPicker({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={t('wallAdvancedPanel.sections.dna.customPlaceholder')}
-          className="w-24 rounded border border-slate-600 bg-slate-900 px-1 py-0.5 text-xs text-slate-100"
+          className="w-24 rounded border border-border bg-background px-1 py-0.5 text-xs text-foreground"
         />
       )}
     </span>

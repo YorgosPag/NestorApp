@@ -76,19 +76,19 @@ export function StairPerTreadOverrideSection({
       className="flex flex-col gap-2"
     >
       <header className="flex items-center justify-between">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-foreground">
           {t('stairAdvancedPanel.sections.perTread.title')}
         </h4>
         <button
           type="button"
           onClick={onAdd}
-          className="rounded border border-slate-600 bg-slate-800 px-2 py-0.5 text-xs text-slate-100 hover:bg-slate-700"
+          className="rounded border border-border bg-card px-2 py-0.5 text-xs text-foreground hover:bg-accent"
         >
           {t('stairAdvancedPanel.sections.perTread.addOverride')}
         </button>
       </header>
       {rows.length === 0 ? (
-        <p className="text-xs italic text-slate-500">
+        <p className="text-xs italic text-muted-foreground">
           {t('stairAdvancedPanel.sections.perTread.empty')}
         </p>
       ) : (
@@ -124,8 +124,8 @@ function OverrideTable({
 }: OverrideTableProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
   return (
-    <table className="w-full text-xs text-slate-200">
-      <thead className="text-slate-400">
+    <table className="w-full text-xs text-foreground">
+      <thead className="text-muted-foreground">
         <tr>
           <th className="w-10 text-left font-medium">
             {t('stairAdvancedPanel.sections.perTread.columns.index')}
@@ -227,7 +227,7 @@ function OverrideRow({
           <select
             value={selectValue}
             onChange={onMaterialSelect}
-            className="flex-1 rounded border border-slate-600 bg-slate-800 px-1 py-0.5 text-xs text-slate-100"
+            className="flex-1 rounded border border-border bg-card px-1 py-0.5 text-xs text-foreground"
           >
             <option value="">—</option>
             {materialOptions.map((opt) => (
@@ -241,7 +241,7 @@ function OverrideRow({
               type="text"
               value={override.material ?? ''}
               onChange={onCustomMaterial}
-              className="w-24 rounded border border-slate-600 bg-slate-800 px-1 py-0.5 text-xs text-slate-100"
+              className="w-24 rounded border border-border bg-card px-1 py-0.5 text-xs text-foreground"
             />
           ) : null}
         </div>
@@ -254,7 +254,7 @@ function OverrideRow({
           step={1}
           value={override.nosing ?? ''}
           onChange={onNosing}
-          className="w-16 rounded border border-slate-600 bg-slate-800 px-1 py-0.5 text-xs text-slate-100"
+          className="w-16 rounded border border-border bg-card px-1 py-0.5 text-xs text-foreground"
         />
       </td>
       <td className="py-1 text-right align-middle">
@@ -262,7 +262,7 @@ function OverrideRow({
           type="button"
           onClick={() => onRemove(index)}
           aria-label={t('stairAdvancedPanel.sections.perTread.removeOverride')}
-          className="rounded border border-slate-600 bg-slate-800 px-1.5 py-0.5 text-xs text-slate-100 hover:bg-slate-700"
+          className="rounded border border-border bg-card px-1.5 py-0.5 text-xs text-foreground hover:bg-accent"
         >
           −
         </button>

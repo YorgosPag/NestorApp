@@ -63,7 +63,7 @@ export const GripContextMenu = React.memo(function GripContextMenu() {
   return (
     <nav
       ref={containerRef}
-      className="dxf-grip-context-menu fixed z-50 min-w-[180px] rounded-md border border-neutral-300 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900"
+      className="dxf-grip-context-menu fixed z-50 min-w-[180px] rounded-md border border-border bg-card shadow-lg"
       style={{ left: snapshot.screenPos.x, top: snapshot.screenPos.y }}
       aria-label={t('gripContextMenu.ariaLabel')}
       onContextMenu={(e) => e.preventDefault()}
@@ -73,12 +73,12 @@ export const GripContextMenu = React.memo(function GripContextMenu() {
           key={section.id}
           className={
             sectionIdx > 0
-              ? 'border-t border-neutral-200 dark:border-neutral-800'
+              ? 'border-t border-border'
               : undefined
           }
         >
           {section.titleKey && (
-            <h3 className="px-3 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+            <h3 className="px-3 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {t(section.titleKey)}
             </h3>
           )}
@@ -93,12 +93,12 @@ export const GripContextMenu = React.memo(function GripContextMenu() {
                     'flex w-full items-center gap-2 px-3 py-1.5 text-left',
                     'disabled:cursor-not-allowed disabled:opacity-50',
                     opt.destructive
-                      ? 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950'
-                      : 'hover:bg-neutral-100 dark:hover:bg-neutral-800',
+                      ? 'text-destructive hover:bg-[hsl(var(--bg-error))]/40'
+                      : 'hover:bg-accent',
                   ].join(' ')}
                 >
                   <span
-                    className="inline-block w-3 text-center text-neutral-600 dark:text-neutral-300"
+                    className="inline-block w-3 text-center text-muted-foreground"
                     aria-hidden="true"
                   >
                     {opt.checked ? '✓' : ''}

@@ -47,13 +47,13 @@ export const PlaceholderPicker: React.FC<PlaceholderPickerProps> = ({ onInsert }
   const { t } = useTranslation(['textTemplates']);
   const groups = useMemo(() => GROUPS, []);
   return (
-    <nav aria-label={t('textTemplates:editor.placeholderPicker.title')} className="flex flex-col gap-3 w-56 shrink-0 border-l border-zinc-200 dark:border-zinc-800 pl-3 overflow-auto">
-      <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+    <nav aria-label={t('textTemplates:editor.placeholderPicker.title')} className="flex flex-col gap-3 w-56 shrink-0 border-l border-border pl-3 overflow-auto">
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {t('textTemplates:editor.placeholderPicker.title')}
       </h4>
       {groups.map((group) => (
         <section key={group.source} className="flex flex-col gap-1">
-          <h5 className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">
+          <h5 className="text-[11px] font-semibold text-muted-foreground">
             {t(`textTemplates:editor.placeholderPicker.source.${group.source}`)}
           </h5>
           <ul className="flex flex-col gap-0.5" role="list">
@@ -63,11 +63,11 @@ export const PlaceholderPicker: React.FC<PlaceholderPickerProps> = ({ onInsert }
                 <li key={path}>
                   <button
                     type="button"
-                    className="w-full text-left text-xs px-1.5 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-900 flex flex-col"
+                    className="w-full text-left text-xs px-1.5 py-1 rounded hover:bg-accent flex flex-col"
                     onClick={() => onInsert(`{{${path}}}`)}
                   >
                     <span className="font-medium">{t(meta.labelI18nKey)}</span>
-                    <code className="text-[10px] text-zinc-500">{`{{${path}}}`}</code>
+                    <code className="text-[10px] text-muted-foreground">{`{{${path}}}`}</code>
                   </button>
                 </li>
               );

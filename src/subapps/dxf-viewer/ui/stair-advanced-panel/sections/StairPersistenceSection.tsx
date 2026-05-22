@@ -80,14 +80,14 @@ export function StairPersistenceSection({
       className="flex flex-col gap-2"
     >
       <header className="flex items-center justify-between gap-2">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-foreground">
           {t('stairAdvancedPanel.sections.persistence.title')}
         </h4>
         <button
           type="button"
           onClick={() => void saveNow()}
           disabled={saveState === 'saving'}
-          className="rounded border border-slate-600 bg-emerald-700 px-2 py-1 text-xs text-slate-100 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded border border-[hsl(var(--bg-success))] bg-[hsl(var(--bg-success))] px-2 py-1 text-xs text-white hover:bg-[hsl(var(--bg-success))]/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {t('stairAdvancedPanel.sections.persistence.saveButton')}
         </button>
@@ -98,10 +98,10 @@ export function StairPersistenceSection({
         aria-live="polite"
         className={
           saveState === 'error'
-            ? 'text-xs text-rose-400'
+            ? 'text-xs text-destructive'
             : saveState === 'saving'
-              ? 'text-xs text-amber-400'
-              : 'text-xs text-slate-400'
+              ? 'text-xs text-[hsl(var(--bg-warning))]'
+              : 'text-xs text-muted-foreground'
         }
       >
         {statusText}
@@ -110,7 +110,7 @@ export function StairPersistenceSection({
       {lockedByOther && (
         <p
           role="status"
-          className="rounded border border-amber-600/40 bg-amber-900/30 px-2 py-1 text-xs text-amber-200"
+          className="rounded border border-[hsl(var(--bg-warning))]/40 bg-[hsl(var(--bg-warning))]/30 px-2 py-1 text-xs text-foreground"
         >
           {t('stairAdvancedPanel.sections.persistence.editingByOther')}
         </p>

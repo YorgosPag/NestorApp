@@ -53,7 +53,7 @@ export const GripHoverMenu = React.memo(function GripHoverMenu() {
   return (
     <nav
       ref={containerRef}
-      className="dxf-grip-menu fixed z-50 min-w-[160px] rounded-md border border-neutral-300 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900"
+      className="dxf-grip-menu fixed z-50 min-w-[160px] rounded-md border border-border bg-card shadow-lg"
       style={{ left: snapshot.screenPos.x, top: snapshot.screenPos.y }}
       aria-label={t('gripMenu.ariaLabel')}
     >
@@ -64,7 +64,7 @@ export const GripHoverMenu = React.memo(function GripHoverMenu() {
               type="button"
               disabled={opt.disabled}
               onClick={() => handleSelect(opt.onSelect)}
-              className="block w-full px-3 py-1.5 text-left hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-neutral-800"
+              className="block w-full px-3 py-1.5 text-left hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
             >
               {t(opt.labelKey)}
             </button>

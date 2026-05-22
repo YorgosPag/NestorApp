@@ -66,15 +66,15 @@ function ViolationList({
   if (keys.length === 0) return null;
   const wrap =
     variant === 'hard'
-      ? 'flex flex-col gap-1.5 rounded border border-rose-600/40 bg-rose-900/20 p-2'
-      : 'flex flex-col gap-1.5 rounded border border-amber-500/40 bg-amber-900/20 p-2';
-  const dot = variant === 'hard' ? 'text-rose-300' : 'text-amber-300';
-  const title = variant === 'hard' ? 'text-rose-200' : 'text-amber-200';
-  const item = variant === 'hard' ? 'text-rose-100' : 'text-amber-100';
+      ? 'flex flex-col gap-1.5 rounded border border-destructive/40 bg-destructive/20 p-2'
+      : 'flex flex-col gap-1.5 rounded border border-[hsl(var(--bg-warning))]/40 bg-[hsl(var(--bg-warning))]/20 p-2';
+  const dot = variant === 'hard' ? 'text-destructive' : 'text-[hsl(var(--bg-warning))]';
+  const title = variant === 'hard' ? 'text-destructive-foreground' : 'text-foreground';
+  const item = variant === 'hard' ? 'text-foreground' : 'text-foreground';
   const btn =
     variant === 'hard'
-      ? 'rounded border border-rose-500/60 bg-rose-700/50 px-2 py-1 text-xs font-medium text-rose-50 hover:bg-rose-600/70'
-      : 'rounded border border-amber-500/60 bg-amber-700/50 px-2 py-1 text-xs font-medium text-amber-50 hover:bg-amber-600/70';
+      ? 'rounded border border-destructive/60 bg-destructive/50 px-2 py-1 text-xs font-medium text-destructive-foreground hover:bg-destructive/70'
+      : 'rounded border border-[hsl(var(--bg-warning))]/60 bg-[hsl(var(--bg-warning))]/50 px-2 py-1 text-xs font-medium text-foreground hover:bg-[hsl(var(--bg-warning))]/70';
   return (
     <section role="alert" aria-label={t(titleKey)} className={wrap}>
       <header className="flex items-center justify-between gap-2">

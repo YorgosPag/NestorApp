@@ -56,7 +56,7 @@ export const PolygonControls: React.FC<PolygonControlsProps> = ({
             onClick={handleSave}
             disabled={!canSave}
             aria-label={canSave ? 'Save polygon' : 'Need at least 3 points'}
-            className={canSave ? `${OVERLAY_TOOLBAR_COLORS.save} hover:bg-green-100` : 'opacity-50'}
+            className={canSave ? `${OVERLAY_TOOLBAR_COLORS.save} hover:bg-[hsl(var(--bg-success))]/20` : 'opacity-50'}
           >
             <Save className={iconSizes.sm} />
           </Button>
@@ -74,7 +74,7 @@ export const PolygonControls: React.FC<PolygonControlsProps> = ({
             size="icon-sm"
             onClick={handleCancel}
             aria-label="Cancel drawing"
-            className={`${OVERLAY_TOOLBAR_COLORS.cancel} hover:bg-red-100`}
+            className={`${OVERLAY_TOOLBAR_COLORS.cancel} hover:bg-[hsl(var(--bg-error))]/20`}
           >
             <XCircle className={iconSizes.sm} />
           </Button>
