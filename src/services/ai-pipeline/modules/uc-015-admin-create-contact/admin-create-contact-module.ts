@@ -84,10 +84,12 @@ export class AdminCreateContactModule implements IUCModule {
 
     // Extract contact type (default: individual)
     const lowerMsg = rawMessage.toLowerCase();
-    const contactType: 'individual' | 'company' =
-      lowerMsg.includes('εταιρεία') || lowerMsg.includes('εταιρία') || lowerMsg.includes('company')
-        ? 'company'
-        : 'individual';
+    const isCompany =
+      lowerMsg.includes('εταιρεία') || lowerMsg.includes('εταιρια') ||
+      lowerMsg.includes('εταιρία') || lowerMsg.includes('company') ||
+      lowerMsg.includes('νομικού προσώπου') || lowerMsg.includes('νομικου προσωπου') ||
+      lowerMsg.includes('νομικό πρόσωπο') || lowerMsg.includes('νομικο προσωπο');
+    const contactType: 'individual' | 'company' = isCompany ? 'company' : 'individual';
 
     logger.info('UC-015 LOOKUP: Parsed contact data from raw message', {
       requestId: ctx.requestId,
@@ -341,6 +343,19 @@ const COMMAND_KEYWORDS = [
   'create contact',
   'add contact',
   'new contact',
+  // Contact type qualifiers — must be stripped BEFORE name extraction
+  'φυσικού προσώπου',
+  'φυσικου προσωπου',
+  'φυσικό πρόσωπο',
+  'φυσικο προσωπο',
+  'νομικού προσώπου',
+  'νομικου προσωπου',
+  'νομικό πρόσωπο',
+  'νομικο προσωπο',
+  'ατομική επιχείρηση',
+  'ατομικη επιχειρηση',
+  'ιδιώτης',
+  'ιδιωτης',
 ];
 
 /**

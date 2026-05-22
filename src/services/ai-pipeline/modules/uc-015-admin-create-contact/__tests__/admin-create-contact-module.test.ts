@@ -109,6 +109,46 @@ describe('AdminCreateContactModule (UC-015)', () => {
   });
 
   // ── 3. Lookup: detects company type from keywords ──
+  // \u2500\u2500 2b. Lookup: strips contact-type qualifiers from name \u2500\u2500
+  it('lookup strips "\u03c6\u03c5\u03c3\u03b9\u03ba\u03bf\u03cd \u03c0\u03c1\u03bf\u03c3\u03ce\u03c0\u03bf\u03c5" so it does not appear in firstName', async () => {
+    const ctx = createMockCtx({
+      intake: {
+        id: 'intake_001', channel: 'telegram', rawPayload: {},
+        normalized: {
+          sender: { id: 'telegram_12345', displayName: '\u0393\u03b9\u03ce\u03c1\u03b3\u03bf\u03c2' },
+          recipients: [],
+          contentText: '\u0394\u03b7\u03bc\u03b9\u03bf\u03cd\u03c1\u03b3\u03b7\u03c3\u03b5 \u03b5\u03c0\u03b1\u03c6\u03ae \u03c6\u03c5\u03c3\u03b9\u03ba\u03bf\u03cd \u03c0\u03c1\u03bf\u03c3\u03ce\u03c0\u03bf\u03c5 \u039d\u03ad\u03c3\u03c4\u03bf\u03c1\u03b1\u03c2 \u03a0\u03b1\u03b3\u03ce\u03bd\u03b7\u03c2 6912345678',
+          attachments: [], timestampIso: new Date().toISOString(),
+        },
+        metadata: { providerMessageId: 'pm_001', signatureVerified: true },
+        schemaVersion: 1,
+      },
+    });
+    const result = await mod.lookup(ctx);
+    expect(String(result.firstName)).not.toContain('\u03c6\u03c5\u03c3\u03b9\u03ba\u03bf\u03cd');
+    expect(String(result.firstName)).not.toContain('\u03c0\u03c1\u03bf\u03c3\u03ce\u03c0\u03bf\u03c5');
+    expect(result.contactType).toBe('individual');
+  });
+
+  // \u2500\u2500 2c. Lookup: "\u03bd\u03bf\u03bc\u03b9\u03ba\u03bf\u03cd \u03c0\u03c1\u03bf\u03c3\u03ce\u03c0\u03bf\u03c5" \u2192 company \u2500\u2500
+  it('lookup sets contactType=company for \u03bd\u03bf\u03bc\u03b9\u03ba\u03bf\u03cd \u03c0\u03c1\u03bf\u03c3\u03ce\u03c0\u03bf\u03c5 keyword', async () => {
+    const ctx = createMockCtx({
+      intake: {
+        id: 'intake_001', channel: 'telegram', rawPayload: {},
+        normalized: {
+          sender: { id: 'telegram_12345', displayName: '\u0393\u03b9\u03ce\u03c1\u03b3\u03bf\u03c2' },
+          recipients: [],
+          contentText: '\u0394\u03b7\u03bc\u03b9\u03bf\u03cd\u03c1\u03b3\u03b7\u03c3\u03b5 \u03b5\u03c0\u03b1\u03c6\u03ae \u03bd\u03bf\u03bc\u03b9\u03ba\u03bf\u03cd \u03c0\u03c1\u03bf\u03c3\u03ce\u03c0\u03bf\u03c5 TechCorp',
+          attachments: [], timestampIso: new Date().toISOString(),
+        },
+        metadata: { providerMessageId: 'pm_001', signatureVerified: true },
+        schemaVersion: 1,
+      },
+    });
+    const result = await mod.lookup(ctx);
+    expect(result.contactType).toBe('company');
+  });
+
   it('lookup detects company contact type from "\u03b5\u03c4\u03b1\u03b9\u03c1\u03b5\u03af\u03b1" keyword', async () => {
     const ctx = createMockCtx({
       intake: {
