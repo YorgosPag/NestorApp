@@ -7,12 +7,12 @@ export const getCommunicationTypeIcon = (type: string) => ({
 }[type] || Mail);
 
 export const getTypeColor = (type: string) => ({
-  email: 'text-blue-600 bg-blue-100',
-  sms: 'text-green-600 bg-green-100',
-  call: 'text-purple-600 bg-purple-100',
-  whatsapp: 'text-green-600 bg-green-100',
-  telegram: 'text-blue-600 bg-blue-100',
-}[type] || 'text-slate-600 bg-slate-100');
+  email: 'text-primary bg-[hsl(var(--bg-info))]/20',
+  sms: 'text-green-707 bg-[hsl(var(--bg-success))]/10',
+  call: 'text-primary bg-accent',
+  whatsapp: 'text-green-707 bg-[hsl(var(--bg-success))]/10',
+  telegram: 'text-primary bg-[hsl(var(--bg-info))]/20',
+}[type] || 'text-muted-foreground bg-muted');
 
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const getDirectionLabel = (direction: string) =>

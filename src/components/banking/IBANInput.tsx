@@ -157,7 +157,7 @@ export function IBANInput({
           placeholder={placeholder}
           className={cn(
             'pr-10 font-mono tracking-wide',
-            showSuccess && 'border-green-500 focus:ring-green-500', // eslint-disable-line design-system/enforce-semantic-colors
+            showSuccess && 'border-green-707 focus:ring-green-707',
             showError && 'border-destructive focus:ring-destructive'
           )}
           aria-invalid={showError}
@@ -169,7 +169,7 @@ export function IBANInput({
           {showSuccess && (
             <CheckCircle2
               size={iconSizes.numeric.md}
-              className="text-green-500" // eslint-disable-line design-system/enforce-semantic-colors
+              className="text-green-707"
               aria-label={t('iban.valid')}
             />
           )}
