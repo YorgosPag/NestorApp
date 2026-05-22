@@ -49,17 +49,17 @@ function CPMRow({ task, t }: CPMRowProps) {
     <tr
       className={cn(
         "border-b border-border/50 transition-colors",
-        isCritical && "bg-orange-50/50 dark:bg-orange-950/20",
-        task.hasCyclicDependency && "bg-amber-50/50 dark:bg-amber-950/20",
+        isCritical && "bg-[hsl(var(--bg-warning))]/40",
+        task.hasCyclicDependency && "bg-[hsl(var(--bg-warning))]/40",
       )}
     >
       <th scope="row" className="py-2 px-2 font-medium">
         <div className="flex items-center gap-1.5">
           {isCritical && (
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-orange-500 flex-shrink-0" />
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[hsl(var(--text-warning))] flex-shrink-0" />
           )}
           {task.hasCyclicDependency && (
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+            <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--text-warning))] flex-shrink-0" />
           )}
           <span className="truncate">{task.taskCode}</span>
         </div>
@@ -107,14 +107,14 @@ interface FloatBadgeProps {
 function FloatBadge({ float, isCyclic, t }: FloatBadgeProps) {
   if (isCyclic) {
     return (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]">
         {t("tabs.timeline.dashboard.criticalPath.cyclicDep")}
       </span>
     );
   }
   if (float === 0) {
     return (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300">
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]">
         {t("tabs.timeline.dashboard.criticalPath.critical")}
       </span>
     );
@@ -283,7 +283,7 @@ export function CriticalPathSection({
           )}
         >
           <div className="flex items-center gap-2">
-            <Route className={cn(iconSizes.sm, "text-orange-500")} />
+            <Route className={cn(iconSizes.sm, "text-[hsl(var(--text-warning))]")} />
             <span className="text-sm font-medium">
               {t("tabs.timeline.dashboard.criticalPath.pathLength")}
             </span>

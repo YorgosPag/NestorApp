@@ -49,12 +49,12 @@ export default function AnalyticsOverview() {
                         ))}
                     </ul>
 
-                    <aside className={`mt-2 p-2 bg-blue-50 dark:bg-blue-950/30 ${quick.card}`}>
-                        <div className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2 flex items-center gap-2" /* eslint-disable-line design-system/enforce-semantic-colors */>
+                    <aside className={`mt-2 p-2 bg-[hsl(var(--bg-info))]/20 ${quick.card}`}>
+                        <div className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
                             <Lightbulb className={iconSizes.sm} />
                             {t('tabs.analytics.overview.analysis')}
                         </div>
-                        <p className="text-sm text-blue-700 dark:text-blue-300" /* eslint-disable-line design-system/enforce-semantic-colors */>
+                        <p className="text-sm text-muted-foreground">
                             {t('tabs.analytics.overview.analysisText')}
                         </p>
                     </aside>
@@ -79,7 +79,7 @@ export default function AnalyticsOverview() {
                                 <div className="relative">
                                     <div className="w-full bg-muted rounded-full h-4">
                                         <div
-                                            className="h-4 bg-blue-200 dark:bg-blue-800 rounded-full" // eslint-disable-line design-system/enforce-semantic-colors
+                                            className="h-4 bg-[hsl(var(--bg-info))]/20 rounded-full"
                                             style={analyticsOverviewStyles.progressBars.planned(month.planned)}
                                          />
                                         <div

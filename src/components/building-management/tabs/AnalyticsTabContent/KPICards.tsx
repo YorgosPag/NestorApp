@@ -27,7 +27,7 @@ export default function KPICards() {
             <Card>
                 <CardContent className="p-2">
                     <figure className="text-center">
-                        <p className="text-2xl font-bold text-blue-600">{kpis.costEfficiency}%</p>
+                        <p className="text-2xl font-bold text-primary">{kpis.costEfficiency}%</p>
                         <figcaption className={cn("text-xs", colors.text.muted)}>{t('tabs.analytics.kpi.costEfficiency')}</figcaption>
                         <span className={cn("text-xs px-2 py-1 rounded mt-1 inline-block", getEfficiencyColor(kpis.costEfficiency))}>
                             {getEfficiencyLabel(kpis.costEfficiency)}
@@ -39,7 +39,7 @@ export default function KPICards() {
             <Card>
                 <CardContent className="p-2">
                     <figure className="text-center">
-                        <p className="text-2xl font-bold text-green-600">{kpis.timeEfficiency}%</p>
+                        <p className="text-2xl font-bold text-green-707">{kpis.timeEfficiency}%</p>
                         <figcaption className={cn("text-xs", colors.text.muted)}>{t('tabs.analytics.kpi.timeEfficiency')}</figcaption>
                         <span className={cn("text-xs px-2 py-1 rounded mt-1 inline-block", getEfficiencyColor(kpis.timeEfficiency))}>
                             {getEfficiencyLabel(kpis.timeEfficiency)}
@@ -51,7 +51,7 @@ export default function KPICards() {
             <Card>
                 <CardContent className="p-2">
                     <figure className="text-center">
-                        <p className="text-2xl font-bold text-purple-600">{kpis.qualityScore}%</p>
+                        <p className="text-2xl font-bold text-primary">{kpis.qualityScore}%</p>
                         <figcaption className={cn("text-xs", colors.text.muted)}>{t('tabs.analytics.kpi.qualityScore')}</figcaption>
                         <span className={cn("text-xs px-2 py-1 rounded mt-1 inline-block", getEfficiencyColor(kpis.qualityScore))}>
                             {t('tabs.analytics.kpi.exceptional')}
@@ -63,9 +63,9 @@ export default function KPICards() {
             <Card>
                 <CardContent className="p-2">
                     <figure className="text-center">
-                        <p className="text-2xl font-bold text-orange-600">{kpis.roi}%</p>
+                        <p className="text-2xl font-bold text-[hsl(var(--text-warning))]">{kpis.roi}%</p>
                         <figcaption className={cn("text-xs", colors.text.muted)}>{t('tabs.analytics.kpi.roi')}</figcaption>
-                        <span className="text-xs px-2 py-1 rounded mt-1 inline-block text-green-800 dark:text-green-300">
+                        <span className="text-xs px-2 py-1 rounded mt-1 inline-block text-green-707">
                             {t('tabs.analytics.kpi.aboveTarget')}
                         </span>
                     </figure>
@@ -75,9 +75,9 @@ export default function KPICards() {
             <Card>
                 <CardContent className="p-2">
                     <figure className="text-center">
-                        <p className="text-2xl font-bold text-red-600">{kpis.profitMargin}%</p>
+                        <p className="text-2xl font-bold text-destructive">{kpis.profitMargin}%</p>
                         <figcaption className={cn("text-xs", colors.text.muted)}>{t('tabs.analytics.kpi.profitMargin')}</figcaption>
-                        <span className="text-xs px-2 py-1 rounded mt-1 inline-block text-green-800 dark:text-green-300">
+                        <span className="text-xs px-2 py-1 rounded mt-1 inline-block text-green-707">
                             {t('tabs.analytics.kpi.withinTarget')}
                         </span>
                     </figure>
@@ -87,9 +87,9 @@ export default function KPICards() {
             <Card>
                 <CardContent className="p-2">
                     <figure className="text-center">
-                        <p className="text-2xl font-bold text-gray-600">{kpis.riskLevel}</p>
+                        <p className="text-2xl font-bold text-muted-foreground">{kpis.riskLevel}</p>
                         <figcaption className={cn("text-xs", colors.text.muted)}>{t('tabs.analytics.kpi.riskLevel')}</figcaption>
-                        <span className="text-xs px-2 py-1 rounded mt-1 inline-block text-green-800 dark:text-green-300">
+                        <span className="text-xs px-2 py-1 rounded mt-1 inline-block text-green-707">
                             {t('tabs.analytics.kpi.underControl')}
                         </span>
                     </figure>

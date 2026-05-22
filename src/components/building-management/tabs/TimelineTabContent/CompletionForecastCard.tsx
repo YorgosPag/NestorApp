@@ -30,7 +30,7 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <TrendingUp className={`${iconSizes.md} text-green-500`} />
+                        <TrendingUp className={`${iconSizes.md} text-green-707`} />
                         {t('tabs.timeline.forecast.title')}
                     </CardTitle>
                 </CardHeader>
@@ -47,7 +47,7 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className={`${iconSizes.md} text-green-500`} />
+                    <TrendingUp className={`${iconSizes.md} text-green-707`} />
                     {t('tabs.timeline.forecast.title')}
                 </CardTitle>
             </CardHeader>
@@ -60,7 +60,7 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
                         </div>
                         <div className="flex items-center justify-between mb-2">
                             <span className={cn("text-sm", colors.text.muted)}>{t('tabs.timeline.forecast.currentForecast')}</span>
-                            <span className="font-medium text-orange-600">
+                            <span className="font-medium text-[hsl(var(--text-warning))]">
                                 {(() => {
                                     const d = new Date(lastMilestone.date);
                                     d.setDate(d.getDate() + delayDays);
@@ -74,7 +74,7 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
                                 status="building"
                                 customLabel={t('tabs.timeline.forecast.days', { days: delayDays })}
                                 variant="outline"
-                                className="bg-orange-100 text-orange-700"
+                                className="bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]"
                             />
                         </div>
                     </div>
@@ -83,7 +83,7 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
 
                     <div className={cn("text-sm", colors.text.muted)}>
                         <p className="mb-2 flex items-center gap-2">
-                            <Lightbulb className={`${iconSizes.sm} text-yellow-500`} />
+                            <Lightbulb className={`${iconSizes.sm} text-[hsl(var(--text-warning))]`} />
                             <strong>{t('tabs.timeline.forecast.tip')}</strong>
                         </p>
                         <p>{t('tabs.timeline.forecast.tipContent')}</p>

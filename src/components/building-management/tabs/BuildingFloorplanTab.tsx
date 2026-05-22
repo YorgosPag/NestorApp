@@ -120,8 +120,7 @@ export function BuildingFloorplanTab({
   return (
     <section className="flex flex-col gap-2">
       {/* IFC-compliant info banner: per-floor plans live in the Floors tab */}
-      {/* eslint-disable-next-line design-system/enforce-semantic-colors */}
-      <aside className="mx-2 mt-2 flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-2 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300">
+      <aside className="mx-2 mt-2 flex items-center gap-2 rounded-md border border-primary/30 bg-[hsl(var(--bg-info))]/20 px-2 py-2 text-sm text-primary">
         <Info className="h-4 w-4 shrink-0" />
         <p>{t('tabs.floorplan.floorLevelBanner')}</p>
       </aside>

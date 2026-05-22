@@ -94,7 +94,7 @@ export function BuildingSpaceActions({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-amber-600 hover:text-amber-700"
+                className="h-7 w-7 text-[hsl(var(--text-warning))] hover:text-[hsl(var(--text-warning))]"
                 onClick={onUnlink}
                 disabled={isUnlinking}
               >

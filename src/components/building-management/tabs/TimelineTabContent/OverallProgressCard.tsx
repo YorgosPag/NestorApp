@@ -30,7 +30,7 @@ export function OverallProgressCard({ building, milestones }: OverallProgressCar
             <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                     <span>{t('tabs.timeline.overallProgress.title')}</span>
-                    <span className="text-2xl font-bold text-blue-600">{building.progress}%</span>
+                    <span className="text-2xl font-bold text-primary">{building.progress}%</span>
                 </CardTitle>
             </CardHeader>
             <CardContent>
@@ -42,19 +42,19 @@ export function OverallProgressCard({ building, milestones }: OverallProgressCar
                 />
                 <dl className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                     <div className="text-center">
-                        <dd className="text-2xl font-bold text-green-600">{milestones.filter(m => m.status === 'completed').length}</dd>
+                        <dd className="text-2xl font-bold text-green-707">{milestones.filter(m => m.status === 'completed').length}</dd>
                         <dt className={colors.text.muted}>{t('tabs.timeline.overallProgress.completed')}</dt>
                     </div>
                     <div className="text-center">
-                        <dd className="text-2xl font-bold text-blue-600">{milestones.filter(m => m.status === 'in-progress').length}</dd>
+                        <dd className="text-2xl font-bold text-primary">{milestones.filter(m => m.status === 'in-progress').length}</dd>
                         <dt className={colors.text.muted}>{t('tabs.timeline.overallProgress.inProgress')}</dt>
                     </div>
                     <div className="text-center">
-                        <dd className="text-2xl font-bold text-gray-600">{milestones.filter(m => m.status === 'pending').length}</dd>
+                        <dd className="text-2xl font-bold text-muted-foreground">{milestones.filter(m => m.status === 'pending').length}</dd>
                         <dt className={colors.text.muted}>{t('tabs.timeline.overallProgress.pending')}</dt>
                     </div>
                     <div className="text-center">
-                        <dd className="text-2xl font-bold text-purple-600">
+                        <dd className="text-2xl font-bold text-primary">
                             {(() => {
                                 const inProgressMilestone = milestones.find(m => m.status === 'in-progress');
                                 if (inProgressMilestone?.date) {

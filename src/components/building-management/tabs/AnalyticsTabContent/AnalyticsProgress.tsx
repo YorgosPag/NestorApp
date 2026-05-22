@@ -29,7 +29,7 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
                 <article className="space-y-2">
                     <section className="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <figure className={`text-center p-2 ${quick.card}`}>
-                            <div className="text-3xl font-bold text-blue-600 mb-2">{building.progress}%</div> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+                            <div className="text-3xl font-bold text-primary mb-2">{building.progress}%</div>
                             <div className={cn("text-sm", colors.text.muted)}>{t('tabs.analytics.progress.totalProgress')}</div>
                             <ThemeProgressBar
                               progress={building.progress}
@@ -40,7 +40,7 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
                         </figure>
 
                         <figure className={`text-center p-2 ${quick.card}`}>
-                            <p className="text-3xl font-bold text-green-600 mb-2">88%</p> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+                            <p className="text-3xl font-bold text-green-707 mb-2">88%</p>
                             <figcaption className={cn("text-sm", colors.text.muted)}>{t('tabs.analytics.progress.efficiency')}</figcaption>
                             <ThemeProgressBar
                               progress={88}
@@ -51,37 +51,37 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
                         </figure>
 
                         <figure className={`text-center p-2 ${quick.card}`}>
-                            <p className="text-3xl font-bold text-orange-600 mb-2">12</p>
+                            <p className="text-3xl font-bold text-[hsl(var(--text-warning))] mb-2">12</p>
                             <figcaption className={cn("text-sm", colors.text.muted)}>{t('tabs.analytics.progress.daysDelay')}</figcaption>
-                            <span className="mt-2 text-xs text-orange-600">
+                            <span className="mt-2 text-xs text-[hsl(var(--text-warning))]">
                                 {t('tabs.analytics.progress.withinAcceptableLimits')}
                             </span>
                         </figure>
                     </section>
 
-                    <section className={`mt-2 p-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 ${quick.card}`}>
+                    <section className={`mt-2 p-2 bg-gradient-to-r from-[hsl(var(--bg-info))]/20 to-accent ${quick.card}`}>
                         <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
-                            <Target className={`${iconSizes.md} text-blue-600`} />
+                            <Target className={`${iconSizes.md} text-primary`} />
                             {t('tabs.analytics.progress.forecastsAndRecommendations')}
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                             <div>
-                                <div className="font-medium text-green-700 dark:text-green-400 mb-2 flex items-center gap-2" /* eslint-disable-line design-system/enforce-semantic-colors */>
+                                <div className="font-medium text-green-707 mb-2 flex items-center gap-2">
                                     <CheckCircle className={iconSizes.sm} />
                                     {t('tabs.analytics.progress.positivePoints')}
                                 </div>
-                                <ul className="space-y-1 text-green-600 dark:text-green-500" /* eslint-disable-line design-system/enforce-semantic-colors */>
+                                <ul className="space-y-1 text-green-707">
                                     <li>• {t('tabs.analytics.progress.positive1')}</li>
                                     <li>• {t('tabs.analytics.progress.positive2')}</li>
                                     <li>• {t('tabs.analytics.progress.positive3')}</li>
                                 </ul>
                             </div>
                             <div>
-                                <div className="font-medium text-orange-700 dark:text-orange-400 mb-2 flex items-center gap-2">
+                                <div className="font-medium text-[hsl(var(--text-warning))] mb-2 flex items-center gap-2">
                                     <AlertTriangle className={iconSizes.sm} />
                                     {t('tabs.analytics.progress.suggestedImprovements')}
                                 </div>
-                                <ul className="space-y-1 text-orange-600 dark:text-orange-500">
+                                <ul className="space-y-1 text-[hsl(var(--text-warning))]">
                                     <li>• {t('tabs.analytics.progress.improvement1')}</li>
                                     <li>• {t('tabs.analytics.progress.improvement2')}</li>
                                     <li>• {t('tabs.analytics.progress.improvement3')}</li>

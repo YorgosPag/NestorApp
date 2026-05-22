@@ -174,25 +174,25 @@ export function TotalsFieldset({ grossQuantity, materialCost, laborCost, equipme
       {/* accent colors match BOQSummaryCards SSOT — design-system/enforce-semantic-colors intentional */}
       <ul className="space-y-1.5">
         <li className="flex items-center gap-2">
-          <Package className="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
+          <Package className="h-3.5 w-3.5 shrink-0 text-primary" />
           <span className={cn('text-sm flex-1', colors.text.muted)}>{t('tabs.measurements.editor.fields.materialUnitCost')}</span>
-          <span className="text-sm font-semibold tabular-nums text-blue-600 dark:text-blue-400">{formatCurrency(materialCost * grossQuantity)}</span>
+          <span className="text-sm font-semibold tabular-nums text-primary">{formatCurrency(materialCost * grossQuantity)}</span>
         </li>
         <li className="flex items-center gap-2">
-          <Wrench className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <Wrench className="h-3.5 w-3.5 shrink-0 text-[hsl(var(--text-warning))]" />
           <span className={cn('text-sm flex-1', colors.text.muted)}>{t('tabs.measurements.editor.fields.laborUnitCost')}</span>
-          <span className="text-sm font-semibold tabular-nums text-amber-600 dark:text-amber-400">{formatCurrency(laborCost * grossQuantity)}</span>
+          <span className="text-sm font-semibold tabular-nums text-[hsl(var(--text-warning))]">{formatCurrency(laborCost * grossQuantity)}</span>
         </li>
         <li className="flex items-center gap-2">
-          <Truck className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <Truck className="h-3.5 w-3.5 shrink-0 text-green-707" />
           <span className={cn('text-sm flex-1', colors.text.muted)}>{t('tabs.measurements.editor.fields.equipmentUnitCost')}</span>
-          <span className="text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{formatCurrency(equipmentCost * grossQuantity)}</span>
+          <span className="text-sm font-semibold tabular-nums text-green-707">{formatCurrency(equipmentCost * grossQuantity)}</span>
         </li>
       </ul>
       <div className="flex items-center gap-2 border-t border-border/50 pt-2">
-        <Calculator className="h-4 w-4 shrink-0 text-purple-600 dark:text-purple-400" />
+        <Calculator className="h-4 w-4 shrink-0 text-primary" />
         <span className="text-sm font-semibold flex-1">{t('tabs.measurements.summary.total')}</span>
-        <span className="text-base font-bold tabular-nums text-purple-600 dark:text-purple-400">{formatCurrency(totalCost)}</span>
+        <span className="text-base font-bold tabular-nums text-primary">{formatCurrency(totalCost)}</span>
       </div>
     </section>
   );

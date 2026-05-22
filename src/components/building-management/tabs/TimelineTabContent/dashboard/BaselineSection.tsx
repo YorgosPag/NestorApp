@@ -139,7 +139,7 @@ export function BaselineSection({ baseline, loading }: BaselineSectionProps) {
       </div>
 
       {isMaxReached && (
-        <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+        <p className="text-xs text-[hsl(var(--text-warning))] mb-3">
           {t(`${tBase}.saveDialog.maxReached`)}
         </p>
       )}

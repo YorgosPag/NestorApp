@@ -119,7 +119,7 @@ export function BOQEditorCostAllocationSection({
               </li>
             ))}
           </ul>
-          <p className={cn('mt-2 text-xs', sumValid ? 'text-green-600' : 'text-destructive')}>
+          <p className={cn('mt-2 text-xs', sumValid ? 'text-green-707' : 'text-destructive')}>
             {sumValid
               ? t('tabs.measurements.scope.costAllocation.customTotalValid')
               : t('tabs.measurements.scope.costAllocation.customTotalInvalid', { percent: sum.toFixed(2) })}

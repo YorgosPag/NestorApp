@@ -75,10 +75,10 @@ const STATUS_VARIANT: Record<BOQItemStatus, 'secondary' | 'default' | 'outline' 
 
 const STATUS_CLASS: Record<BOQItemStatus, string> = {
   draft: 'bg-muted text-muted-foreground',
-  submitted: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  certified: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-  locked: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  submitted: 'bg-[hsl(var(--bg-info))]/20 text-primary',
+  approved: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+  certified: 'bg-accent text-primary',
+  locked: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
 };
 
 // ============================================================================
@@ -87,9 +87,9 @@ const STATUS_CLASS: Record<BOQItemStatus, string> = {
 
 function getVarianceClass(percent: number): string {
   const abs = Math.abs(percent);
-  if (abs <= 5) return 'text-green-600 dark:text-green-400';
-  if (abs <= 15) return 'text-amber-600 dark:text-amber-400';
-  return 'text-red-600 dark:text-red-400';
+  if (abs <= 5) return 'text-green-707';
+  if (abs <= 15) return 'text-[hsl(var(--text-warning))]';
+  return 'text-destructive';
 }
 
 // ============================================================================
@@ -246,7 +246,7 @@ function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, 
                     variant="secondary"
                     className={cn('text-xs mt-1', item.detached
                       ? 'bg-muted text-muted-foreground'
-                      : 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300'
+                      : 'bg-accent text-primary'
                     )}
                   >
                     {item.detached
@@ -297,7 +297,7 @@ function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, 
                       size="icon"
                       onClick={() => onDetach(item)}
                       aria-label={t('tabs.measurements.actions.detachFromBim')}
-                      className="h-7 w-7 text-cyan-600 hover:text-cyan-700"
+                      className="h-7 w-7 text-primary hover:text-primary"
                     >
                       <Unlink className="h-3.5 w-3.5" />
                     </Button>

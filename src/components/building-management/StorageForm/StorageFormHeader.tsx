@@ -27,8 +27,8 @@ export function StorageFormHeader({
       className={cn(
         "p-2 border-b flex-shrink-0",
         formType === 'storage'
-          ? "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20"
-          : "bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20"
+          ? "bg-gradient-to-r from-[hsl(var(--bg-info))]/20 to-accent"
+          : "bg-gradient-to-r from-[hsl(var(--bg-warning))]/40 to-[hsl(var(--bg-warning))]/20"
       )}
     >
       <div className="flex items-center justify-between">
@@ -37,17 +37,17 @@ export function StorageFormHeader({
             className={cn(
               `flex ${iconSizes.xl2} items-center justify-center rounded-lg shadow-sm`,
               formType === 'storage'
-                ? "bg-purple-100 text-purple-700"
-                : "bg-orange-100 text-orange-700"
+                ? "bg-accent text-primary"
+                : "bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]"
             )}
           >
             {formType === 'storage' ? <Package className={iconSizes.md} /> : <Car className={iconSizes.md} />}
           </div>
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            <h2 className="text-xl font-semibold text-foreground">
               {formTitle}
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               {building.name} - {building.project}
             </p>
           </div>

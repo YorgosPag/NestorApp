@@ -32,7 +32,7 @@ export function TimelineHeader({ milestones }: TimelineHeaderProps) {
                   customLabel={t('tabs.timeline.header.completedCount', { completed: completedCount, total: milestones.length })}
                   variant="outline"
                   size="sm"
-                  className="bg-green-50 text-green-700" // eslint-disable-line design-system/enforce-semantic-colors
+                  className="bg-[hsl(var(--bg-success))]/10 text-green-707"
                 />
             </div>
         </div>

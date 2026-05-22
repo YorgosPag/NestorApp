@@ -6,10 +6,10 @@ type TranslateFunction = (key: string) => string;
 
 // 🏢 ENTERPRISE: Raw cost breakdown data with translation keys
 const costBreakdownData = [
-    { categoryKey: 'materials', amount: 450000, percentage: 45, color: 'bg-blue-500' },
-    { categoryKey: 'labor', amount: 300000, percentage: 30, color: 'bg-green-500' },
-    { categoryKey: 'equipment', amount: 150000, percentage: 15, color: 'bg-yellow-500' },
-    { categoryKey: 'other', amount: 100000, percentage: 10, color: 'bg-purple-500' }
+    { categoryKey: 'materials', amount: 450000, percentage: 45, color: 'bg-primary' },
+    { categoryKey: 'labor', amount: 300000, percentage: 30, color: 'bg-[hsl(var(--bg-success))]' },
+    { categoryKey: 'equipment', amount: 150000, percentage: 15, color: 'bg-[hsl(var(--text-warning))]' },
+    { categoryKey: 'other', amount: 100000, percentage: 10, color: 'bg-accent' }
 ];
 
 
@@ -59,7 +59,7 @@ export const kpis = {
 };
 
 export const getEfficiencyColor = (value: number) => {
-    if (value >= 90) return 'text-green-600 dark:text-green-400';
-    if (value >= 75) return 'text-yellow-600 dark:text-yellow-400';
-    return 'text-red-600 dark:text-red-400';
+    if (value >= 90) return 'text-green-707';
+    if (value >= 75) return 'text-[hsl(var(--text-warning))]';
+    return 'text-destructive';
 };

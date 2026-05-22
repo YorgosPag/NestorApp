@@ -39,8 +39,8 @@ export function BuildingCardTimeline({ building }: BuildingCardTimelineProps) {
           {daysUntilCompletion !== null && (
             <p className={cn(
               "text-xs",
-              daysUntilCompletion < 0 ? "text-red-500" : // eslint-disable-line design-system/enforce-semantic-colors
-              daysUntilCompletion < 30 ? "text-yellow-600" : "text-green-600" // eslint-disable-line design-system/enforce-semantic-colors
+              daysUntilCompletion < 0 ? "text-destructive" :
+              daysUntilCompletion < 30 ? "text-[hsl(var(--text-warning))]" : "text-green-707"
             )}>
               {/* 🏢 ENTERPRISE: Fallback to raw values when namespace not ready */}
               {daysUntilCompletion < 0

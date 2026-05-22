@@ -58,7 +58,7 @@ export function StorageFormBasicInfo({
             className={cn(errors.name && getStatusBorder('error'))}
             placeholder={formType === 'storage' ? t('storage.form.placeholders.nameStorage') : t('storage.form.placeholders.nameParking')}
           />
-          {errors.name && <p className="text-sm text-red-500">{errors.name}</p>} {/* eslint-disable-line design-system/enforce-semantic-colors */}
+          {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -80,7 +80,7 @@ export function StorageFormBasicInfo({
                 {t('storage.form.auto')}
               </Button>
             </div>
-            {errors.code && <p className="text-sm text-red-500">{errors.code}</p>} {/* eslint-disable-line design-system/enforce-semantic-colors */}
+            {errors.code && <p className="text-sm text-destructive">{errors.code}</p>}
           </div>
 
           <div className="space-y-2">
@@ -108,7 +108,7 @@ export function StorageFormBasicInfo({
             placeholder={formType === 'storage' ? t('storage.form.placeholders.descriptionStorage') : t('storage.form.placeholders.descriptionParking')}
             rows={2}
           />
-          {errors.description && <p className="text-sm text-red-500">{errors.description}</p>} {/* eslint-disable-line design-system/enforce-semantic-colors */}
+          {errors.description && <p className="text-sm text-destructive">{errors.description}</p>}
         </div>
       </CardContent>
     </Card>

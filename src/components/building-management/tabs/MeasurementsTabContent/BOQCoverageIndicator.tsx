@@ -67,11 +67,10 @@ export function BOQCoverageIndicator({ items, buildingId }: BOQCoverageIndicator
       aria-label={t('tabs.measurements.coverage.floorGapTitle')}
       className={cn(
         'flex items-start gap-2 rounded-md border px-3 py-2 text-sm',
-        'border-amber-300 bg-amber-50 text-amber-900',
-        'dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200',
+        'border-border bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
       )}
     >
-      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500 dark:text-amber-400" aria-hidden />
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--text-warning))]" aria-hidden />
       <div className="flex-1 min-w-0">
         <p className="font-medium">{t('tabs.measurements.coverage.floorGapTitle')}</p>
         <p className="mt-0.5 text-xs opacity-80">
@@ -86,7 +85,7 @@ export function BOQCoverageIndicator({ items, buildingId }: BOQCoverageIndicator
         type="button"
         onClick={() => setDismissed(true)}
         aria-label={t('tabs.measurements.coverage.dismiss')}
-        className="shrink-0 rounded p-0.5 opacity-60 hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500"
+        className="shrink-0 rounded p-0.5 opacity-60 hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <X className="h-3.5 w-3.5" aria-hidden />
       </button>

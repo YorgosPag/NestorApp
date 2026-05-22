@@ -41,20 +41,20 @@ function CriticalTaskRow({ task, t }: CriticalTaskRowProps) {
       className={cn(
         'flex items-center justify-between p-2 rounded-lg',
         hasDelay
-          ? 'bg-red-50 dark:bg-red-950/30'
-          : 'bg-orange-50 dark:bg-orange-950/30',
+          ? 'bg-destructive/10'
+          : 'bg-[hsl(var(--bg-warning))]/40',
       )}
     >
       <div className="min-w-0 flex-1">
         <p className={cn(
           'font-medium truncate',
-          hasDelay ? 'text-red-900 dark:text-red-300' : 'text-orange-900 dark:text-orange-300',
+          hasDelay ? 'text-destructive' : 'text-[hsl(var(--text-warning))]',
         )}>
           {task.taskCode} — {task.taskName}
         </p>
         <p className={cn(
           'text-sm truncate',
-          hasDelay ? 'text-red-700 dark:text-red-400' : 'text-orange-700 dark:text-orange-400',
+          hasDelay ? 'text-destructive' : 'text-[hsl(var(--text-warning))]',
         )}>
           {task.phaseName}
         </p>
@@ -65,21 +65,21 @@ function CriticalTaskRow({ task, t }: CriticalTaskRowProps) {
             status="company"
             customLabel={t('tabs.timeline.criticalPath.cyclicWarning')}
             variant="outline"
-            className="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+            className="bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]"
           />
         ) : hasDelay ? (
           <CommonBadge
             status="company"
             customLabel={t('tabs.timeline.criticalPath.delayImpact', { days: task.delayImpactDays })}
             variant="outline"
-            className="bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+            className="bg-destructive/10 text-destructive"
           />
         ) : (
           <CommonBadge
             status="company"
             customLabel={t('tabs.timeline.criticalPath.critical')}
             variant="outline"
-            className="bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300"
+            className="bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]"
           />
         )}
       </div>
@@ -104,7 +104,7 @@ export function CriticalPathCard({ buildingId }: CriticalPathCardProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Route className={cn(iconSizes.md, 'text-orange-500')} />
+            <Route className={cn(iconSizes.md, 'text-[hsl(var(--text-warning))]')} />
             {t('tabs.timeline.criticalPath.title')}
           </CardTitle>
         </CardHeader>
@@ -124,7 +124,7 @@ export function CriticalPathCard({ buildingId }: CriticalPathCardProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Route className={cn(iconSizes.md, 'text-orange-500')} />
+            <Route className={cn(iconSizes.md, 'text-[hsl(var(--text-warning))]')} />
             {t('tabs.timeline.criticalPath.title')}
           </CardTitle>
         </CardHeader>
@@ -148,7 +148,7 @@ export function CriticalPathCard({ buildingId }: CriticalPathCardProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Route className={cn(iconSizes.md, 'text-green-500')} />
+            <Route className={cn(iconSizes.md, 'text-green-707')} />
             {t('tabs.timeline.criticalPath.title')}
           </CardTitle>
         </CardHeader>
@@ -171,7 +171,7 @@ export function CriticalPathCard({ buildingId }: CriticalPathCardProps) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Route className={cn(iconSizes.md, 'text-orange-500')} />
+          <Route className={cn(iconSizes.md, 'text-[hsl(var(--text-warning))]')} />
           {t('tabs.timeline.criticalPath.title')}
           <span className="text-xs font-normal text-muted-foreground ml-auto">
             {criticalPath.length} {criticalPath.length === 1 ? 'task' : 'tasks'}
@@ -181,9 +181,9 @@ export function CriticalPathCard({ buildingId }: CriticalPathCardProps) {
       <CardContent>
         <div className="space-y-2">
           {cyclicTaskIds.length > 0 && (
-            <div className="flex items-center gap-2 p-2 bg-amber-50 rounded-lg dark:bg-amber-950/30">
-              <AlertTriangle className={cn(iconSizes.sm, 'text-amber-500 flex-shrink-0')} />
-              <p className="text-sm text-amber-800 dark:text-amber-300">
+            <div className="flex items-center gap-2 p-2 bg-[hsl(var(--bg-warning))]/40 rounded-lg">
+              <AlertTriangle className={cn(iconSizes.sm, 'text-[hsl(var(--text-warning))] flex-shrink-0')} />
+              <p className="text-sm text-[hsl(var(--text-warning))]">
                 {t('tabs.timeline.criticalPath.cyclicWarning')} ({cyclicTaskIds.length})
               </p>
             </div>

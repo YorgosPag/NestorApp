@@ -94,8 +94,7 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {/* eslint-disable-next-line design-system/enforce-semantic-colors */}
-          <p className="text-center py-2 text-red-600">
+          <p className="text-center py-2 text-destructive">
             {t('customers.error.loadingPrefix')} {error}
           </p>
         </CardContent>

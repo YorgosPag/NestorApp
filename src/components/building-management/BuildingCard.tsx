@@ -49,7 +49,7 @@ export function BuildingCard({
         "",
         COMPLEX_HOVER_EFFECTS.FEATURE_CARD,
         isSelected
-          ? `${getStatusBorder('info')} shadow-lg ring-2 ring-blue-200 dark:ring-blue-800`
+          ? `${getStatusBorder('info')} shadow-lg ring-2 ring-ring`
           : "border-border"
       )}
       onClick={onClick}
@@ -89,7 +89,7 @@ export function BuildingCard({
             variant: 'ghost',
             className: cn(
               `${iconSizes.lg} p-0`,
-              isFavorite ? 'text-yellow-500 fill-current' : colors.text.muted
+              isFavorite ? 'text-[hsl(var(--text-warning))] fill-current' : colors.text.muted
             )
           }
         ]}

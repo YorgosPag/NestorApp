@@ -39,15 +39,13 @@ export interface ParkingTabContentProps {
 // STATUS BADGE COLOR MAP
 // ============================================================================
 
-/* eslint-disable design-system/enforce-semantic-colors */
 export const PARKING_STATUS_COLORS: Record<string, string> = {
-  available: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  occupied: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  reserved: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-  sold: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-  maintenance: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  available: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+  occupied: 'bg-[hsl(var(--bg-info))]/20 text-primary',
+  reserved: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
+  sold: 'bg-accent text-primary',
+  maintenance: 'bg-destructive/10 text-destructive',
 };
-/* eslint-enable design-system/enforce-semantic-colors */
 
 /**
  * Returns the Tailwind classes for a parking spot status badge.

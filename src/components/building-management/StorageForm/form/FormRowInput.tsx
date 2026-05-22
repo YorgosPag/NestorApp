@@ -50,7 +50,7 @@ export function FormRowInput({
           </div>
         )}
       </div>
-      {error && <p className="text-sm text-red-500">{error}</p>} {/* eslint-disable-line design-system/enforce-semantic-colors */}
+      {error && <p className="text-sm text-destructive">{error}</p>}
       {helper && <p className={cn("text-xs", colors.text.muted)}>{helper}</p>}
     </div>
   );

@@ -35,12 +35,12 @@ export function Header({ isEditing, autoSaving, lastSaved, setIsEditing, handleS
             {autoSaving ? (
               <>
                 <AnimatedSpinner size="small" />
-                <span className="text-blue-600">{t('tabs.general.header.saving')}</span>
+                <span className="text-primary">{t('tabs.general.header.saving')}</span>
               </>
             ) : lastSaved ? (
               <>
-                <CheckCircle className={`${iconSizes.xs} text-green-600`} />
-                <span className="text-green-600">
+                <CheckCircle className={`${iconSizes.xs} text-green-707`} />
+                <span className="text-green-707">
                   {t('tabs.general.header.saved')} {lastSaved ? formatDateTime(lastSaved, { timeStyle: 'medium' }).split(' ')[1] : '--'}
                 </span>
               </>

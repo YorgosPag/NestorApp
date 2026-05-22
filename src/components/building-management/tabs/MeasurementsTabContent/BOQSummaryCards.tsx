@@ -66,25 +66,25 @@ export function BOQSummaryCards({ items }: BOQSummaryCardsProps) {
       labelKey: 'tabs.measurements.summary.materials',
       amount: totals.materialCost,
       icon: Package,
-      accentClass: 'text-blue-600 dark:text-blue-400', // eslint-disable-line design-system/enforce-semantic-colors
+      accentClass: 'text-primary',
     },
     {
       labelKey: 'tabs.measurements.summary.labor',
       amount: totals.laborCost,
       icon: Wrench,
-      accentClass: 'text-amber-600 dark:text-amber-400',
+      accentClass: 'text-[hsl(var(--text-warning))]',
     },
     {
       labelKey: 'tabs.measurements.summary.equipment',
       amount: totals.equipmentCost,
       icon: Truck,
-      accentClass: 'text-emerald-600 dark:text-emerald-400',
+      accentClass: 'text-green-707',
     },
     {
       labelKey: 'tabs.measurements.summary.total',
       amount: totals.totalCost,
       icon: Calculator,
-      accentClass: 'text-purple-600 dark:text-purple-400',
+      accentClass: 'text-primary',
     },
   ];
 

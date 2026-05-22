@@ -108,7 +108,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
 
       {floors.length === 0 && !showCreateForm ? (
         <section className="text-center py-2 border-2 border-dashed rounded-lg">
-          <AlertTriangle className={`${iconSizes.xl} mx-auto mb-2 text-amber-500`} /> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+          <AlertTriangle className={`${iconSizes.xl} mx-auto mb-2 text-[hsl(var(--text-warning))]`} />
           <h3 className="text-lg font-semibold mb-2">{t('tabs.floors.empty')}</h3>
           <p className={cn('text-sm mb-3', colors.text.muted)}>{t('tabs.floors.emptyHint')}</p>
           <Button variant="default" size="sm" onClick={() => setShowCreateForm(true)}>
@@ -173,7 +173,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                           <td className="px-2 py-2">
                             <nav className="flex justify-end gap-1">
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSaveEdit} disabled={saving || !editName.trim()}>
-                                {saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-green-500" />} {/* eslint-disable-line design-system/enforce-semantic-colors */}
+                                {saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-green-707" />}
                               </Button>
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEdit} disabled={saving}><X className="h-3.5 w-3.5" /></Button>
                             </nav>
@@ -196,7 +196,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <span className="inline-flex cursor-help" aria-label={t('tabs.floors.noFloorplan')}>
-                                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" aria-hidden="true" /> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+                                        <AlertTriangle className="h-3.5 w-3.5 text-[hsl(var(--text-warning))] shrink-0" aria-hidden="true" />
                                       </span>
                                     </TooltipTrigger>
                                     <TooltipContent>{t('tabs.floors.noFloorplan')}</TooltipContent>

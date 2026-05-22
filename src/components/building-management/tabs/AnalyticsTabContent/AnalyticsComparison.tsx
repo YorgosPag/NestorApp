@@ -41,8 +41,8 @@ export default function AnalyticsComparison() {
                                 </div>
                                 <div className={cn(`px-2 py-1 ${quick.input} text-sm`,
                                     item.status === 'better'
-                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' // eslint-disable-line design-system/enforce-semantic-colors
-                                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' // eslint-disable-line design-system/enforce-semantic-colors
+                                        ? 'bg-[hsl(var(--bg-success))]/10 text-green-707'
+                                        : 'bg-destructive/10 text-destructive'
                                 )}>
                                     {item.status === 'better'
                                         ? `↗️ ${t('tabs.analytics.comparison.better')}`

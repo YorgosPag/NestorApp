@@ -68,7 +68,7 @@ export function BasicInfoCard({ formData, updateField, isEditing, errors }: Basi
             disabled={!isEditing}
             className={cn(!isEditing && "bg-muted", errors.name && getStatusBorder('error'))}
           />
-          {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+          {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
         </div>
 
         <div className="space-y-2">

@@ -218,13 +218,13 @@ export function StorageTab({ building }: StorageTabProps) {
 
   const getStatusBadge = (status: StorageStatus) => {
     const colorMap: Record<StorageStatus, string> = {
-      available: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-      occupied: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-      reserved: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-      maintenance: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-      sold: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-      unavailable: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-      deleted: 'bg-gray-100 text-gray-500 dark:bg-gray-900/30 dark:text-gray-500',
+      available: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+      occupied: 'bg-[hsl(var(--bg-info))]/20 text-primary',
+      reserved: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
+      maintenance: 'bg-destructive/10 text-destructive',
+      sold: 'bg-accent text-primary',
+      unavailable: 'bg-muted text-muted-foreground',
+      deleted: 'bg-muted text-muted-foreground',
     };
     return (
       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colorMap[status] || colorMap.unavailable}`}>
@@ -431,7 +431,7 @@ export function StorageTab({ building }: StorageTabProps) {
                             onClick={handleSaveEdit}
                             disabled={saving || !editName.trim()}
                           >
-                            {saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
+                            {saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-green-707" />}
                           </Button>
                           <Button
                             variant="ghost"

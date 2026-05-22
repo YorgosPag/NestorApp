@@ -37,7 +37,7 @@ export function BuildingAddressesProjectSelection({
   if (projectAddresses.length === 0) {
     return (
       <section className="text-center py-2 border-2 border-dashed rounded-lg">
-        <AlertTriangle className={`${iconSizes.xl} mx-auto mb-2 text-amber-500`} />
+        <AlertTriangle className={`${iconSizes.xl} mx-auto mb-2 text-[hsl(var(--text-warning))]`} />
         <h3 className="text-lg font-semibold mb-2">
           {t('address.labels.projectNoAddresses')}
         </h3>
@@ -142,9 +142,9 @@ export function BuildingAddressesProjectSelection({
       })}
 
       {selectedCount === 0 && (
-        <section className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
-          <AlertTriangle className={cn(iconSizes.sm, 'text-amber-600 dark:text-amber-400 shrink-0')} />
-          <p className="text-sm text-amber-700 dark:text-amber-300">
+        <section className="flex items-center gap-2 p-2 rounded-lg bg-[hsl(var(--bg-warning))]/40 border border-border">
+          <AlertTriangle className={cn(iconSizes.sm, 'text-[hsl(var(--text-warning))] shrink-0')} />
+          <p className="text-sm text-[hsl(var(--text-warning))]">
             {t('address.labels.noAddressSelected')}
           </p>
         </section>
