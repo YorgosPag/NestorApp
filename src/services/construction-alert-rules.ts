@@ -15,10 +15,34 @@ import { nowISO } from '@/lib/date-local';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────
 
+function formatDateEU(isoDate: string): string {
+  const [y, m, d] = isoDate.split('-');
+  return `${d}/${m}/${y}`;
+}
+
 const MS_PER_DAY = 86_400_000;
 
-function daysSince(isoDate: string): number {
-  return Math.floor((Date.now() - new Date(isoDate).getTime()) / MS_PER_DAY);
+/**
+ * Converts ISO string OR Admin SDK Firestore Timestamp object to ms-since-epoch.
+ * Admin SDK returns Timestamps as { _seconds, _nanoseconds } or { toDate() }.
+ */
+function toMs(value: unknown): number {
+  if (!value) return NaN;
+  if (typeof value === 'string') return new Date(value).getTime();
+  if (typeof value === 'number') return value;
+  if (typeof value === 'object' && value !== null) {
+    const ts = value as Record<string, unknown>;
+    if (typeof ts['toDate'] === 'function') return (ts['toDate'] as () => Date)().getTime();
+    if (typeof ts['_seconds'] === 'number') return (ts['_seconds'] as number) * 1000;
+    if (typeof ts['seconds'] === 'number') return (ts['seconds'] as number) * 1000;
+  }
+  return NaN;
+}
+
+function daysSince(value: unknown): number {
+  const ms = toMs(value);
+  if (isNaN(ms)) return NaN;
+  return Math.floor((Date.now() - ms) / MS_PER_DAY);
 }
 
 function daysUntil(isoDate: string): number {
@@ -58,7 +82,7 @@ export function detectTaskOverdue(tasks: ConstructionTask[]): AlertCandidate[] {
       ruleType: 'task_overdue',
       severity: 'high',
       title: task.name,
-      message: `Εργασία καθυστερεί ${days} ημέρ${days === 1 ? 'α' : 'ες'} (προγρ. λήξη: ${task.plannedEndDate})`,
+      message: `Εργασία καθυστερεί ${days} ημέρ${days === 1 ? 'α' : 'ες'} (προγρ. λήξη: ${formatDateEU(task.plannedEndDate)})`,
       phaseId: task.phaseId,
       taskId: task.id,
       data: { overdueDays: days, plannedEndDate: task.plannedEndDate },
@@ -75,6 +99,7 @@ export function detectSpiDrop(
   evm: EVMResult,
   threshold = 0.85,
 ): AlertCandidate[] {
+  if (evm.plannedValue <= 0) return []; // no BOQ data — can't compute meaningful SPI
   if (evm.spi >= threshold) return [];
 
   const worstPhase = phases
@@ -96,6 +121,7 @@ export function detectSpiDrop(
 // ─── Rule 3: CPI Drop ─────────────────────────────────────────────────────
 
 export function detectCpiDrop(evm: EVMResult, threshold = 0.85): AlertCandidate[] {
+  if (evm.budgetAtCompletion <= 0) return []; // no BOQ data — can't compute meaningful CPI
   if (evm.cpi >= threshold) return [];
 
   return [
@@ -205,7 +231,7 @@ export function detectWeatherRisk(weather: WeatherForecast): AlertCandidate[] {
       results.push({
         ruleType: 'weather_risk',
         severity: 'medium',
-        title: `Έντονη βροχόπτωση (${day.date})`,
+        title: `Έντονη βροχόπτωση (${formatDateEU(day.date)})`,
         message: `Αναμενόμενη βροχόπτωση ${day.precipitationMm.toFixed(1)}mm — επηρεάζει εξωτερικές εργασίες.`,
         data: { precipitationMm: day.precipitationMm, date: day.date },
       });
@@ -215,7 +241,7 @@ export function detectWeatherRisk(weather: WeatherForecast): AlertCandidate[] {
       results.push({
         ruleType: 'weather_risk',
         severity: 'high',
-        title: `Ισχυροί άνεμοι (${day.date})`,
+        title: `Ισχυροί άνεμοι (${formatDateEU(day.date)})`,
         message: `Αναμενόμενοι άνεμοι ${day.windspeedKmh.toFixed(0)}km/h — σταματήστε εργασίες σε ύψος.`,
         data: { windspeedKmh: day.windspeedKmh, date: day.date },
       });

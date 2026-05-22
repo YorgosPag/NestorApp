@@ -55,6 +55,7 @@ const WRITE_ALLOWED_COLLECTIONS = new Set([
   'file_links',
   'construction_phases',
   'construction_tasks',
+  'construction_alerts',
   'building_milestones',
   'invoices',
   'payments',

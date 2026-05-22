@@ -72,6 +72,7 @@ export function useScheduleAlerts(buildingId: string): UseScheduleAlertsReturn {
       },
       {
         constraints: [
+          where('companyId', '==', companyId),
           where('buildingId', '==', buildingId),
           where('status', '==', 'active'),
           orderBy('createdAt', 'desc'),
