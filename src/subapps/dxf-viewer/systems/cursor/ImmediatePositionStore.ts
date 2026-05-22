@@ -62,6 +62,20 @@ class ImmediatePositionStoreClass {
   // 🔍 DEBUG: Track call count
   private debugCallCount = 0;
 
+  // Viewport-level cursor position (clientX/clientY) — correct for position:fixed overlays.
+  // Single window listener feeds all consumers; avoids N scattered inline listeners.
+  private clientPos: { x: number; y: number } = { x: 0, y: 0 };
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener(
+        'mousemove',
+        (e: MouseEvent) => { this.clientPos = { x: e.clientX, y: e.clientY }; },
+        { passive: true },
+      );
+    }
+  }
+
   /**
    * 🚀 IMMEDIATE UPDATE: Sets position without React re-render
    * Called from mouse move handlers for zero-latency updates
@@ -228,6 +242,11 @@ class ImmediatePositionStoreClass {
   clear(): void {
     this.setPosition(null);
   }
+
+  /** Returns last known viewport cursor position (clientX/clientY). Safe to call at event-time. */
+  getClientPosition(): { x: number; y: number } {
+    return this.clientPos;
+  }
 }
 
 // ✅ SINGLETON EXPORT
@@ -273,6 +292,11 @@ export function registerDirectRender(callback: (position: Point2D | null) => voi
 // ============================================================================
 // 🏢 PAN LOCK EXPORTS (2026-01-25)
 // ============================================================================
+
+/** Last viewport cursor position (clientX/clientY). Correct for position:fixed overlays. */
+export function getClientPosition(): { x: number; y: number } {
+  return ImmediatePositionStore.getClientPosition();
+}
 
 /**
  * 🏢 START PAN: Lock crosshair to WORLD position

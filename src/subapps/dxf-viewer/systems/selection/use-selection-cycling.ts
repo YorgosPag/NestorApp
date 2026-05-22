@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { SelectionCyclingStore, type CyclingCandidate } from './SelectionCyclingStore';
 import { hitTestingService } from '../../services/HitTestingService';
-import { getImmediatePosition } from '../cursor/ImmediatePositionStore';
+import { getImmediatePosition, getClientPosition } from '../cursor/ImmediatePositionStore';
 import { getImmediateTransform } from '../cursor/ImmediateTransformStore';
 // ADR-364 — Escape Command Bus SSoT
 import { useEscapeHandler, ESC_PRIORITY } from '../escape-bus';
@@ -32,17 +32,6 @@ export interface UseSelectionCyclingParams {
  * due to cycling state changes (ADR-040). State is consumed by SelectionCyclingPopover.
  */
 export function useSelectionCycling({ activeTool, onSelectEntity }: UseSelectionCyclingParams): void {
-  // Track last mouse client position for popover anchor (page coordinates).
-  const mouseClientRef = useRef({ x: 0, y: 0 });
-
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      mouseClientRef.current = { x: e.clientX, y: e.clientY };
-    };
-    window.addEventListener('mousemove', onMove, { passive: true });
-    return () => window.removeEventListener('mousemove', onMove);
-  }, []);
-
   // Stable callback — reads onSelectEntity via ref to avoid effect re-runs.
   const onSelectRef = useRef(onSelectEntity);
   onSelectRef.current = onSelectEntity;
@@ -74,7 +63,7 @@ export function useSelectionCycling({ activeTool, onSelectEntity }: UseSelection
     }
 
     if (candidates.length >= 2) {
-      const { x, y } = mouseClientRef.current;
+      const { x, y } = getClientPosition();
       SelectionCyclingStore.startCycling(candidates, x, y);
     }
   }, []);

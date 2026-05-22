@@ -33,6 +33,7 @@ import type { PromptDialogOptions } from '../../systems/prompt-dialog';
 import type { useLevels } from '../../systems/levels';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { GripHoverMenuStore, type GripMenuOption } from '../../systems/grip/GripHoverMenuStore';
+import { getClientPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { resolveMenuActions } from '../../systems/grip/grip-menu-resolver';
 import { bindMenuAction, type GripMenuActionContext } from '../../systems/grip/grip-menu-actions';
 
@@ -65,18 +66,6 @@ export function useGripHoverMenuController(params: UseGripHoverMenuControllerPar
 
   const ctrlDownRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Viewport cursor position (clientX/clientY) — correct for position:fixed menus.
-  const lastClientPosRef = useRef<{ x: number; y: number } | null>(null);
-
-  // ── Track viewport cursor position (clientX/clientY) ────────────────────
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
-      lastClientPosRef.current = { x: e.clientX, y: e.clientY };
-    };
-    window.addEventListener('mousemove', onMouseMove);
-    return () => window.removeEventListener('mousemove', onMouseMove);
-  }, []);
 
   // ── Ctrl bypass: track modifier state at the window level ───────────────
   useEffect(() => {
@@ -129,7 +118,7 @@ export function useGripHoverMenuController(params: UseGripHoverMenuControllerPar
     if (!entity) return;
 
     // Capture viewport position NOW (at hover start) — used for menu placement.
-    const startClientPos = lastClientPosRef.current;
+    const startClientPos = getClientPosition();
 
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
@@ -152,13 +141,9 @@ export function useGripHoverMenuController(params: UseGripHoverMenuControllerPar
       }
       if (options.length === 0) return;
 
-      // Use clientX/clientY from hover start — correct for position:fixed menus.
-      const pos = startClientPos ?? lastClientPosRef.current;
-      if (!pos) return;
-
       GripHoverMenuStore.show({
         grip: hoveredGrip,
-        screenPos: { x: pos.x + MENU_OFFSET_PX.x, y: pos.y + MENU_OFFSET_PX.y },
+        screenPos: { x: startClientPos.x + MENU_OFFSET_PX.x, y: startClientPos.y + MENU_OFFSET_PX.y },
         options,
       });
     }, MENU_HOLD_MS);
