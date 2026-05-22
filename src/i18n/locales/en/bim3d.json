@@ -283,7 +283,45 @@
     "show2dPanel": "Show 2D panel",
     "show2dPanelAria": "Toggle 2D section panel",
     "activePlaneLabel": "Active plane",
-    "noActivePlane": "No vertical section plane available"
+    "noActivePlane": "No vertical section plane available",
+    "axisLabel": "Axis",
+    "distanceLabel": "Distance (m)",
+    "toggleEnabled": "Enable plane {label}",
+    "labelPlaceholder": "Plane label",
+    "addFirst": "Add your first section plane",
+    "deletePlane": "Delete plane",
+    "unlinkPlanes": "Unlink planes",
+    "linkedBadge": "Linked",
+    "groupDeltaLabel": "Group offset (m)",
+    "metersAbbrev": "m",
+    "axis": {
+      "X": "X",
+      "Y": "Y (Horizontal)",
+      "Z": "Z"
+    },
+    "presets": {
+      "title": "Floor elevation",
+      "groundFloor": "0.0 m (Ground floor)",
+      "floorN": "Floor {n}",
+      "custom": "Custom"
+    },
+    "groups": {
+      "chain": "Link selected",
+      "ungroup": "Ungroup"
+    }
+  },
+  "crop": {
+    "toolName": "Crop Region",
+    "activate": "Activate crop",
+    "cancel": "Cancel",
+    "commit": "Apply crop",
+    "showPreviewToggle": "Show preview overlay",
+    "reset": "Reset crop",
+    "depthRange": "Depth range",
+    "errors": {
+      "budgetExceeded": "Max 6 planes — reduce section planes to enable crop",
+      "tooFewPlanes": "No planes available for crop"
+    }
   },
   "section2d": {
     "title": "2D Section",
@@ -416,7 +454,8 @@
       "focusPrev": "Previous entity",
       "focusSelect": "Select focused",
       "focusClear": "Clear focus",
-      "dim3dToggle": "3D Dimensions"
+      "dim3dToggle": "3D Dimensions",
+      "cropToggle": "Crop Region"
     },
     "modeSwitch": {
       "toast": "Switched to 2D for shortcut {shortcut}"

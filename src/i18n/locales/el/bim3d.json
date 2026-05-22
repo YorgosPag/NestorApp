@@ -283,7 +283,45 @@
     "show2dPanel": "Εμφάνιση 2D προβολής",
     "show2dPanelAria": "Εναλλαγή 2D πίνακα τομής",
     "activePlaneLabel": "Ενεργό επίπεδο",
-    "noActivePlane": "Καμία κατακόρυφη τομή διαθέσιμη"
+    "noActivePlane": "Καμία κατακόρυφη τομή διαθέσιμη",
+    "axisLabel": "Άξονας",
+    "distanceLabel": "Απόσταση (μ.)",
+    "toggleEnabled": "Ενεργοποίηση επιπέδου {label}",
+    "labelPlaceholder": "Ετικέτα επιπέδου",
+    "addFirst": "Πρόσθεσε την πρώτη τομή",
+    "deletePlane": "Διαγραφή επιπέδου",
+    "unlinkPlanes": "Αποσύνδεση επιπέδων",
+    "linkedBadge": "Συνδεδεμένο",
+    "groupDeltaLabel": "Μετατόπιση ομάδας (μ.)",
+    "metersAbbrev": "μ.",
+    "axis": {
+      "X": "X",
+      "Y": "Y (Οριζόντια)",
+      "Z": "Z"
+    },
+    "presets": {
+      "title": "Στάθμη ορόφου",
+      "groundFloor": "0,0 μ. (Ισόγειο)",
+      "floorN": "{n}ος Όροφος",
+      "custom": "Προσαρμοσμένο"
+    },
+    "groups": {
+      "chain": "Σύνδεση επιλεγμένων",
+      "ungroup": "Αποσύνδεση"
+    }
+  },
+  "crop": {
+    "toolName": "Περιοχή Αποκοπής",
+    "activate": "Ενεργοποίηση crop",
+    "cancel": "Άκυρο",
+    "commit": "Εφαρμογή crop",
+    "showPreviewToggle": "Εμφάνιση προεπισκόπησης",
+    "reset": "Επαναφορά crop",
+    "depthRange": "Εύρος βάθους",
+    "errors": {
+      "budgetExceeded": "Μέγιστο 6 επίπεδα — μείωσε τις τομές για να ενεργοποιήσεις crop",
+      "tooFewPlanes": "Δεν υπάρχουν διαθέσιμα επίπεδα για crop"
+    }
   },
   "section2d": {
     "title": "2D Τομή",
@@ -416,7 +454,8 @@
       "focusPrev": "Προηγούμενο αντικείμενο",
       "focusSelect": "Επιλογή εστιασμένου",
       "focusClear": "Καθαρισμός εστίασης",
-      "dim3dToggle": "Διαστάσεις 3D"
+      "dim3dToggle": "Διαστάσεις 3D",
+      "cropToggle": "Περιοχή Αποκοπής"
     },
     "modeSwitch": {
       "toast": "Αλλαγή σε 2D για συντόμευση {shortcut}"

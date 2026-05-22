@@ -18,6 +18,7 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { generateSectionId } from '@/services/enterprise-id.service';
 
 export type SectionMode = 'box' | 'plane';
 export type Vec3Tuple = readonly [number, number, number];
@@ -39,10 +40,19 @@ export interface SectionBoxBounds {
   readonly max: Vec3Tuple;
 }
 
+/** Linked plane group — ephemeral session-only (ADR-366 §C.6.Q3 Navisworks pattern). */
+export interface PlaneGroup {
+  readonly id: string;
+  readonly planeIds: ReadonlyArray<string>;
+  /** Cumulative translation delta applied to all member planes (meters). */
+  readonly transformDeltaM: number;
+}
+
 interface SectionState {
   enabled: boolean;
   mode: SectionMode;
   planes: ReadonlyArray<SectionPlaneState>;
+  linkedGroups: ReadonlyArray<PlaneGroup>;
   linkPlanes: boolean;
   boxBounds: SectionBoxBounds | null;
 }
@@ -58,6 +68,12 @@ interface SectionActions {
   updatePlane(id: string, patch: Partial<Omit<SectionPlaneState, 'id'>>): void;
   setPlaneEnabled(id: string, enabled: boolean): void;
   setLinkPlanes(v: boolean): void;
+  /** Create a linked group from given plane IDs (ADR-366 §C.6.Q3). */
+  addGroup(planeIds: readonly string[]): void;
+  /** Remove a linked group (planes remain, just ungrouped). */
+  removeGroup(groupId: string): void;
+  /** Apply a translation delta (meters) to all planes in the group. */
+  applyGroupDelta(groupId: string, deltaM: number): void;
   resetToDefault(): void;
 }
 
@@ -69,18 +85,10 @@ const INITIAL_STATE: SectionState = {
   enabled: false,
   mode: 'box',
   planes: [],
+  linkedGroups: [],
   linkPlanes: false,
   boxBounds: null,
 };
-
-function nextPlaneId(existing: ReadonlyArray<SectionPlaneState>): string {
-  const ids = new Set(existing.map((p) => p.id));
-  for (let i = 1; i <= MAX_PLANES; i++) {
-    const candidate = `section-plane-${i}`;
-    if (!ids.has(candidate)) return candidate;
-  }
-  return `section-plane-${Date.now()}`;
-}
 
 export const useSectionStore = create<SectionStore>()(
   subscribeWithSelector((set, get) => ({
@@ -112,7 +120,7 @@ export const useSectionStore = create<SectionStore>()(
     addPlane(plane) {
       const current = get().planes;
       if (current.length >= MAX_PLANES) return;
-      const id = nextPlaneId(current);
+      const id = generateSectionId();
       const label = plane.label || `plane-${current.length + 1}`;
       set({ planes: [...current, { ...plane, id, label }] });
     },
@@ -137,6 +145,36 @@ export const useSectionStore = create<SectionStore>()(
       set({ linkPlanes: v });
     },
 
+    addGroup(planeIds) {
+      if (planeIds.length < 2) return;
+      const group: PlaneGroup = {
+        id: generateSectionId(),
+        planeIds: [...planeIds],
+        transformDeltaM: 0,
+      };
+      set({ linkedGroups: [...get().linkedGroups, group] });
+    },
+
+    removeGroup(groupId) {
+      set({ linkedGroups: get().linkedGroups.filter((g) => g.id !== groupId) });
+    },
+
+    applyGroupDelta(groupId, deltaM) {
+      const group = get().linkedGroups.find((g) => g.id === groupId);
+      if (!group) return;
+      const planeSet = new Set(group.planeIds);
+      set({
+        planes: get().planes.map((p) =>
+          planeSet.has(p.id) ? { ...p, constant: p.constant + deltaM } : p,
+        ),
+        linkedGroups: get().linkedGroups.map((g) =>
+          g.id === groupId
+            ? { ...g, transformDeltaM: g.transformDeltaM + deltaM }
+            : g,
+        ),
+      });
+    },
+
     resetToDefault() {
       set({ ...INITIAL_STATE, boxBounds: get().boxBounds });
     },
@@ -144,3 +182,10 @@ export const useSectionStore = create<SectionStore>()(
 );
 
 export const SECTION_MAX_PLANES = MAX_PLANES;
+
+/** Backward-compat helper: first enabled plane or null. */
+export function getActivePlane(
+  state: Pick<SectionState, 'planes'>,
+): SectionPlaneState | null {
+  return state.planes.find((p) => p.enabled) ?? null;
+}

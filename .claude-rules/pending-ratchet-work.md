@@ -1,7 +1,7 @@
 # Pending Ratchet Work — Live Checklist
 
 **STATUS: ACTIVE**
-**Last updated:** 2026-05-22 (ADR-366 Phase 9 C.3 INFRA CLOSURE — Firestore rules/indexes + permissions + audit types staged. 13 dim3d modules + 3 tests committed)
+**Last updated:** 2026-05-22 (ADR-366 Phase 9 C.6 DONE — Advanced Section Cuts + Crop Region: 6 new modules + plane groups + frustum builder + ADR-326 floor.elevation presets)
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
 **Purpose:** Agent-facing live checklist. Se STATUS = ALL_DONE → salta il resto. Se STATUS = ACTIVE → leggi e ricorda a Giorgio.
 
@@ -72,9 +72,6 @@
 - [x] **findReplace button** → ✅ WIRED 2026-05-19. `DxfFindReplaceHost.tsx` lazy wrapper + `findReplaceOpen` state in `useDxfViewerState` + action `text-find-replace`.
 - [ ] **spellCheck toggle** → engine assente. Rimane `comingSoon: true` fino a engine disponibile.
 - [x] **insert.symbol button** → ✅ WIRED 2026-05-21. `SymbolPickerDialog.tsx` (30 symbols, 3 gruppi) + `DxfSymbolPickerHost.tsx` + `symbolPickerOpen` state + action `text-insert-symbol`. `InsertTextTokenCommand` extended per raw Unicode.
-
-#### ADR-344 / Commit chain (priorità alta, Phase 6+)
-- [ ] **Commit chain store → UpdateTextStyleCommand → CommandHistory** — il bridge Fase 5.5 scrive solo lo store. Il chain verso CommandHistory appartiene ad ADR-344 Phase 6+ (TipTap session close). Quando ADR-344 Phase 6 atterrerà, il bridge ribbon ne beneficia automaticamente.
 
 #### Fasi future ADR-345 (in ordine)
 - [x] **Fase 6.1: Tab SETTINGS** — DxfSettingsPanel nel ribbon, floating colors tab disabilitata ✅ 2026-05-15
@@ -246,4 +243,5 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 | 2026-05-19 | **ADR-345 Fase 5.5-FR DONE** — findReplace button wired: `DxfFindReplaceHost.tsx` (NUOVO) + `findReplaceOpen` state in `useDxfViewerState` + `contextual-text-editor-tab.ts` comingSoon rimosso + `DxfViewerContent` lazy mount. spellCheck + insert.symbol rimangono comingSoon. ADR-345 changelog + Fase 5.5-FR subsection aggiunti. |
 | 2026-05-19 | **ADR-363 Phase 7.2 CORE LANDED** (Mirror/Rotate/Copy BIM). Files: `bim/transforms/bim-mirror-geometry.ts` + `bim-rotate-geometry.ts` + `bim-copy-builder.ts` (SSoTs, pure functions, 7 BIM kinds each), `core/commands/entity-commands/BimCopyCommand.ts` (ICommand wrapper), MirrorEntityCommand + RotateEntityCommand extended with BIM dispatch (private `computeMirrorUpdates` / `computeRotateUpdates`). Kind-specific enterprise ID gen via `generateWallId/...`, opening↔wall + slab-opening↔slab host rewire on copy. 59 tests across 6 suites (21 mirror-geom + 12 rotate-geom + 10 copy-builder + 5 mirror dispatch + 5 rotate dispatch + 6 BimCopyCommand) all green. Ribbon buttons + MI/RO/CO shortcuts ήδη υπήρχαν; useMirrorTool + useRotationTool ήδη wired και τώρα δουλεύουν σε BIM. Ratchet block 7.2 αντικαθίσταται από smaller follow-up (~1h): `useBimCopyTool` clipboard flow. |
 | 2026-05-21 | **ADR-358 stair TS gap CLOSED** — `entities.ts` consumer sweep fix: imports από `'./stair'` → `'../bim/types/stair-types'`. Root cause ήταν χαμένο αρχείο από ADR-363 Phase 0.5 sweep, όχι missing `case 'stair'` στο HitTestingService. Ratchet entry αφαιρέθηκε. |
+| 2026-05-22 | **ADR-345 commit chain CLOSED (was outdated)** — Confirmed 2026-05-22 via code audit: `useTextToolbarCommandBridge` (ADR-344 Phase 6.E, 2026-05-12) is mounted in `DxfViewerContent.tsx:124` (always active). Chain ribbon→store→CommandHistory ήδη λειτουργεί: `useRibbonTextEditorBridge.setValue` → store change (isPopulating=false) → subscribe callback → `UpdateTextStyleCommand/UpdateTextGeometryCommand/UpdateTextCurrentScaleCommand/UpdateMTextParagraphCommand` → `CommandHistory`. Known gap (existing, same as floating panel): `lineSpacingFactor` + `layerId` deferred, no commands yet. Ratchet entry αφαιρέθηκε. ADR-345 §Fase-5.5 ενημερώθηκε. |
 | 2026-05-19 | **ADR-363 Phase 0.5 CLOSED — Stair Migration to `bim/` ολοκληρώθηκε**. Reality-vs-ADR drift διορθώθηκε: 45 barrel stubs `systems/stairs/` αφαιρέθηκαν, 2 barrels `types/stair.ts` + `rendering/entities/StairRenderer.ts` διαγράφηκαν, 2 hooks (`useStairPersistence`, `useRibbonStairBridge`) μετακινήθηκαν σε `bim/hooks/use-stair-persistence.ts` + `use-ribbon-stair-bridge.ts` με fixed imports. `bim/renderers/StairRenderer.ts` legacy imports διορθώθηκαν. Consumer sweep: 17 × systems/stairs + 4 × useStairPersistence + 1 × useRibbonStairBridge + 65 × types/stair. SSoT registry module `bim-folder-residency` (Tier 3, baseline 0) με 5 forbidden patterns. `stair-presets-service` + `stair-firestore-service` paths ενημερώθηκαν σε bim/. Stair tests: 21 suites / 322 tests / green. Ratchet entry «ADR-363 STAIR MIGRATION — Phase 0.5 incomplete» αφαιρέθηκε. Νέα boy-scout entry προστέθηκε για bridge/* helpers (cross-domain coupling BIM→UI follow-up, ~1h). |

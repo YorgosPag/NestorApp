@@ -29,6 +29,13 @@ export type RenderPreset = 'draft' | 'standard' | 'high' | 'production';
 export type RenderFormat = 'png' | 'jpg' | 'exr';
 export type RenderResolutionPreset = 'hd' | '4k' | '8k' | 'custom';
 
+export interface CropRegionRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface FinalRenderConfig {
   preset: RenderPreset;
   presetSPP: 64 | 256 | 1024 | 4096;
@@ -39,6 +46,12 @@ export interface FinalRenderConfig {
   destDisk: boolean;
   destProject: boolean;
   denoiseEnabled: boolean;
+  /** Optional crop region (ADR-366 §C.6.Q5). Coordinates normalized 0-1. */
+  cropRegion?: {
+    enabled: boolean;
+    rectangle: CropRegionRect;
+    depthRange?: { near: number; far: number };
+  };
 }
 
 export const PRESET_SPP: Record<RenderPreset, 64 | 256 | 1024 | 4096> = {
