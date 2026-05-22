@@ -35,6 +35,7 @@ import {
   makeTranslationPreview,
   GHOST_DEFAULTS,
 } from '../../rendering/ghost';
+import { getLayer } from '../../stores/LayerStore';
 
 // ============================================================================
 // TYPES
@@ -166,12 +167,11 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     ctx.restore();
 
     // Solid preview entities at destination — AutoCAD parity: originals ghost on main
-    // canvas (handled by dxf-canvas-renderer movePreviewActive), preview shows solid.
+    // canvas (handled by dxf-canvas-renderer movePreviewActive), preview shows solid
+    // in the entity's ACTUAL COLOR (not ghost cyan) so it looks like the real entity.
     if (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001) {
       ctx.save();
       ctx.globalAlpha = 1.0;
-      ctx.strokeStyle = GHOST_DEFAULTS.color;
-      ctx.fillStyle = GHOST_DEFAULTS.color;
       ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
 
       for (const entityId of selectedEntityIds) {
@@ -179,6 +179,14 @@ export function useMovePreview(props: UseMovePreviewProps): void {
         if (!entity) continue;
         const preview = makeTranslationPreview(entityId, delta);
         const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview);
+        // Resolve entity color for solid-looking preview (AutoCAD parity).
+        // ByLayer/ByBlock: cascade to LayerStore for the actual displayed color.
+        const useLayerColor = !entity.color || entity.colorMode === 'ByLayer' || entity.colorMode === 'ByBlock';
+        const color = useLayerColor
+          ? (getLayer(entity.layerId)?.color ?? '#FFFFFF')
+          : entity.color;
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
         drawGhostEntity(ctx, transformed, transform, vp);
       }
 
