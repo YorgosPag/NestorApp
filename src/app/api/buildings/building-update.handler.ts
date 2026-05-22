@@ -23,8 +23,56 @@ import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { POLICY_ERROR_CODES } from '@/lib/policy';
+import { geocode } from '@/app/api/geocoding/geocoding-engine';
 
 const logger = createModuleLogger('BuildingUpdate');
+
+// ============================================================================
+// GEOCODING HELPER
+// ============================================================================
+
+/**
+ * Extracts lat/lng from the primary address in the addresses array.
+ * If the address already has coordinates (from the map picker), returns them directly.
+ * Otherwise calls Nominatim forward geocoding (only for manually typed addresses).
+ * Returns null if geocoding fails or no meaningful address fields are present.
+ */
+async function geocodePrimaryAddress(
+  addresses: Record<string, unknown>[],
+): Promise<{ lat: number; lng: number } | null> {
+  const primary = addresses.find(a => a['isPrimary'] === true) ?? addresses[0];
+  if (!primary) return null;
+
+  const existing = primary['coordinates'] as { lat?: number; lng?: number } | undefined;
+  if (existing?.lat && existing?.lng) {
+    return { lat: existing.lat, lng: existing.lng };
+  }
+
+  const street = typeof primary['street'] === 'string' ? primary['street'] : undefined;
+  const number = typeof primary['number'] === 'string' ? primary['number'] : undefined;
+  const city = typeof primary['city'] === 'string' ? primary['city'] : undefined;
+  const postalCode = typeof primary['postalCode'] === 'string' ? primary['postalCode'] : undefined;
+  const region = typeof primary['region'] === 'string' ? primary['region'] : undefined;
+  const municipality = typeof primary['municipality'] === 'string' ? primary['municipality'] : undefined;
+
+  if (!street && !city) return null;
+
+  try {
+    const result = await geocode({
+      street: street && number ? `${street} ${number}` : street,
+      city,
+      postalCode,
+      region,
+      municipality,
+      country: 'Greece',
+    });
+    if (!result) return null;
+    return { lat: result.lat, lng: result.lng };
+  } catch (err) {
+    logger.warn('[Buildings] Geocoding failed — lat/lon not updated', { error: getErrorMessage(err) });
+    return null;
+  }
+}
 
 // ============================================================================
 // TYPES
@@ -114,6 +162,21 @@ export const PATCH = withStandardRateLimit(
           if (conflict) {
             logger.warn('[Buildings] Duplicate code on update', { code: cleanUpdates.code, projectId: effectiveProjectId, conflictId: conflict.id });
             throw new ApiError(409, `Building code "${cleanUpdates.code}" already exists in this project`, POLICY_ERROR_CODES.DUPLICATE_CODE);
+          }
+        }
+      }
+
+      // Auto-geocode lat/lon when addresses are saved (for weather alerts)
+      if (Array.isArray(cleanUpdates.addresses)) {
+        if ((cleanUpdates.addresses as unknown[]).length === 0) {
+          cleanUpdates.latitude = null;
+          cleanUpdates.longitude = null;
+        } else {
+          const coords = await geocodePrimaryAddress(cleanUpdates.addresses as Record<string, unknown>[]);
+          if (coords) {
+            cleanUpdates.latitude = coords.lat;
+            cleanUpdates.longitude = coords.lng;
+            logger.info('[Buildings] Auto-geocoded lat/lon from primary address', { buildingId, lat: coords.lat, lng: coords.lng });
           }
         }
       }
