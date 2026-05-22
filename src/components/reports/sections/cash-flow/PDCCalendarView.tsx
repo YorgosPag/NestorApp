@@ -95,7 +95,7 @@ export function PDCCalendarView({ days }: PDCCalendarViewProps) {
           onSelect={handleDayClick}
           modifiers={{ hasCheques: chequeDates }}
           modifiersClassNames={{
-            hasCheques: 'bg-amber-100 dark:bg-amber-900/30 font-bold text-amber-900 dark:text-amber-200',
+            hasCheques: 'bg-[hsl(var(--bg-warning))]/40 font-bold text-[hsl(var(--text-warning))]',
           }}
           className="rounded-md border"
         />

@@ -19,14 +19,12 @@ export const getParkingStatusColors = (
 ): Record<ParkingSpotStatus, string> => {
   if (!colors) {
     return {
-      available: `${hardcodedColorValues.background.gray[100]} text-slate-800 dark:bg-slate-900 dark:text-slate-300`,
-      occupied: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-      reserved:
-        "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
-      sold: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-      maintenance: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
-      deleted:
-        "bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-500",
+      available: 'bg-muted text-muted-foreground',
+      occupied: 'bg-[hsl(var(--bg-info))]/20 text-primary',
+      reserved: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
+      sold: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+      maintenance: 'bg-destructive/10 text-destructive',
+      deleted: 'bg-muted text-muted-foreground',
     };
   }
 
@@ -41,14 +39,12 @@ export const getParkingStatusColors = (
 };
 
 export const PARKING_STATUS_COLORS: Record<ParkingSpotStatus, string> = {
-  available:
-    "bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-300",
-  occupied: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-  reserved:
-    "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
-  sold: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-  maintenance: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
-  deleted: "bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-500",
+  available: 'bg-muted text-muted-foreground',
+  occupied: 'bg-[hsl(var(--bg-info))]/20 text-primary',
+  reserved: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
+  sold: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+  maintenance: 'bg-destructive/10 text-destructive',
+  deleted: 'bg-muted text-muted-foreground',
 };
 
 export const getParkingStatusLabel = (status: ParkingSpotStatus | undefined) =>
@@ -63,7 +59,7 @@ export const getParkingStatusColor = (
     colorMap[status] ||
     (colors
       ? `${colors.bg.muted} ${colors.text.muted}`
-      : `${hardcodedColorValues.background.gray[100]} text-slate-800`)
+      : 'bg-muted text-muted-foreground')
   );
 };
 

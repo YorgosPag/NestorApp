@@ -39,9 +39,9 @@ const COLOR_MAP: Record<ColorVariant, { iconBg: string; iconText: string; ringHo
     ringHover: 'group-hover:ring-[hsl(var(--bg-success))]',
   },
   purple: {
-    iconBg: 'bg-purple-100',
-    iconText: 'text-purple-600',
-    ringHover: 'group-hover:ring-purple-200',
+    iconBg: 'bg-accent',
+    iconText: 'text-primary',
+    ringHover: 'group-hover:ring-ring',
   },
   orange: {
     iconBg: 'bg-[hsl(var(--bg-warning))]/40',
@@ -54,19 +54,19 @@ const COLOR_MAP: Record<ColorVariant, { iconBg: string; iconText: string; ringHo
     ringHover: 'group-hover:ring-[hsl(var(--bg-warning))]',
   },
   pink: {
-    iconBg: 'bg-pink-100',
-    iconText: 'text-pink-600',
-    ringHover: 'group-hover:ring-pink-200',
+    iconBg: 'bg-accent',
+    iconText: 'text-primary',
+    ringHover: 'group-hover:ring-ring',
   },
   indigo: {
-    iconBg: 'bg-indigo-100',
-    iconText: 'text-indigo-600',
-    ringHover: 'group-hover:ring-indigo-200',
+    iconBg: 'bg-accent',
+    iconText: 'text-primary',
+    ringHover: 'group-hover:ring-ring',
   },
   teal: {
-    iconBg: 'bg-teal-100',
-    iconText: 'text-teal-600',
-    ringHover: 'group-hover:ring-teal-200',
+    iconBg: 'bg-accent',
+    iconText: 'text-primary',
+    ringHover: 'group-hover:ring-ring',
   },
 };
 

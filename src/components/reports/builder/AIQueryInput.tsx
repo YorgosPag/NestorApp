@@ -62,7 +62,7 @@ export function AIQueryInput({ onSubmit, loading, result }: AIQueryInputProps) {
       {/* AI Result Banner */}
       {result && (
         <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
-          <Sparkles className="h-4 w-4 shrink-0 text-purple-500" />
+          <Sparkles className="h-4 w-4 shrink-0 text-primary" />
           <span className="flex-1">{result.explanation}</span>
           <ConfidenceBadge value={result.confidence} />
         </div>

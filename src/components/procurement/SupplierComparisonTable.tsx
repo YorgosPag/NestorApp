@@ -167,7 +167,7 @@ function SortHeader({ label, field, current, asc, onSort }: SortHeaderProps) {
 
 function OnTimeBadge({ rate }: { rate: number }) {
   if (rate >= 80) {
-    return <Badge variant="default" className="bg-[hsl(var(--bg-success))]/40 text-green-700">{rate}%</Badge>;
+    return <Badge variant="default" className="bg-[hsl(var(--bg-success))]/40 text-green-707">{rate}%</Badge>;
   }
   if (rate >= 50) {
     return <Badge variant="secondary">{rate}%</Badge>;

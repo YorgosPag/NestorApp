@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useMemo, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
@@ -23,8 +23,8 @@ const COLOR_MAP: Record<string, string> = {
   blue:    'bg-[hsl(var(--bg-info))]/40 text-primary',
   yellow:  'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--bg-warning))]',
   orange:  'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--bg-warning))]',
-  green:   'bg-[hsl(var(--bg-success))]/40 text-green-700',
-  emerald: 'bg-[hsl(var(--bg-success))]/40 text-green-700',
+  green:   'bg-[hsl(var(--bg-success))]/40 text-green-707',
+  emerald: 'bg-[hsl(var(--bg-success))]/40 text-green-707',
   red:     'bg-[hsl(var(--bg-error))]/40 text-destructive',
 };
 

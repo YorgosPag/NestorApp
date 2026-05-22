@@ -42,7 +42,7 @@ export function FieldIssues({ field, validation }: FieldIssuesProps) {
         </p>
       )}
       {warning && (
-        <p className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1">
+        <p className="text-xs text-[hsl(var(--text-warning))] flex items-start gap-1">
           <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden />
           <span>{t(warning.i18nKey)}</span>
         </p>

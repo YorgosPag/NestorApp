@@ -24,7 +24,7 @@ function confidenceBorderClass(confidence: number): string {
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
   if (confidence >= 85) {
-    return <Badge variant="outline" className="border-[hsl(var(--bg-success))] text-green-700 text-[10px]">{confidence}%</Badge>;
+    return <Badge variant="outline" className="border-[hsl(var(--bg-success))] text-green-707 text-[10px]">{confidence}%</Badge>;
   }
   if (confidence >= 60) {
     return <Badge variant="outline" className="border-[hsl(var(--bg-warning))] text-[hsl(var(--bg-warning))] text-[10px]">{confidence}%</Badge>;

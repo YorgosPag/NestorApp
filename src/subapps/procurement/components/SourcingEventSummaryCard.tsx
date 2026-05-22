@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Package, Users, Briefcase, Trophy } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,8 +59,8 @@ export function SourcingEventSummaryCard({
             {t('comparison.sourcingEvent.vendorsCount', { count: aggregate.uniqueVendorCount })}
           </StatPill>
           {aggregate.bestPackageTotal !== null && (
-            <StatPill icon={<Trophy className="h-3.5 w-3.5 text-green-700" />}>
-              <span className="font-semibold text-green-700">
+            <StatPill icon={<Trophy className="h-3.5 w-3.5 text-green-707" />}>
+              <span className="font-semibold text-green-707">
                 {t('comparison.sourcingEvent.bestTotal')}:{' '}
                 {formatCurrency(aggregate.bestPackageTotal)}
               </span>
@@ -113,7 +113,7 @@ export function SourcingEventSummaryCard({
                       </Badge>
                     )}
                     {row.winnerQuoteId && (
-                      <Trophy className="inline h-3.5 w-3.5 text-green-700 ml-1" />
+                      <Trophy className="inline h-3.5 w-3.5 text-green-707 ml-1" />
                     )}
                   </TableCell>
                 </TableRow>

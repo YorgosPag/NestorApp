@@ -144,7 +144,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
         )}
 
         {/* Interactive Map */}
-        <div className="relative overflow-hidden rounded-lg border border-slate-200">
+        <div className="relative overflow-hidden rounded-lg border border-border">
           <Map
             initialViewState={{
               latitude,
@@ -173,7 +173,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
             </Marker>
           </Map>
 
-          <div className={cn("absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded pointer-events-none", typography.body.xs, 'text-slate-600')}>
+          <div className={cn("absolute bottom-2 left-2 bg-background/90 backdrop-blur-sm px-2 py-1 rounded pointer-events-none", typography.body.xs, 'text-muted-foreground')}>
             <MapPin className="h-3 w-3 inline mr-1" />
             {latitude.toFixed(6)}, {longitude.toFixed(6)}
           </div>
@@ -182,7 +182,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
         {/* Coordinate Inputs */}
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label htmlFor="geofence-lat" className={cn('block mb-1', typography.label.xs, 'text-slate-600')}>
+            <label htmlFor="geofence-lat" className={cn('block mb-1', typography.label.xs, 'text-muted-foreground')}>
               {t('ika.attendance.geofence.latitude')}
             </label>
             <input
@@ -193,11 +193,11 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
               max="90"
               value={latitude}
               onChange={(e) => handleLatChange(e.target.value)}
-              className={cn('w-full px-2 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500', typography.body.sm)}
+              className={cn('w-full px-2 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring', typography.body.sm)}
             />
           </div>
           <div>
-            <label htmlFor="geofence-lng" className={cn('block mb-1', typography.label.xs, 'text-slate-600')}>
+            <label htmlFor="geofence-lng" className={cn('block mb-1', typography.label.xs, 'text-muted-foreground')}>
               {t('ika.attendance.geofence.longitude')}
             </label>
             <input
@@ -208,7 +208,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
               max="180"
               value={longitude}
               onChange={(e) => handleLngChange(e.target.value)}
-              className={cn('w-full px-2 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500', typography.body.sm)}
+              className={cn('w-full px-2 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring', typography.body.sm)}
             />
           </div>
         </div>
@@ -216,10 +216,10 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
         {/* Radius Slider */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className={cn(typography.label.xs, 'text-slate-600')}>
+            <label className={cn(typography.label.xs, 'text-muted-foreground')}>
               {t('ika.attendance.geofence.radius')}
             </label>
-            <span className={cn(typography.heading.sm, 'text-slate-700')}>
+            <span className={cn(typography.heading.sm, 'text-foreground')}>
               {radiusMeters}m
             </span>
           </div>
@@ -230,7 +230,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
             value={[radiusMeters]}
             onValueChange={handleRadiusSliderChange}
           />
-          <div className={cn("flex justify-between mt-1", typography.body.xs, 'text-slate-400')}>
+          <div className={cn("flex justify-between mt-1", typography.body.xs, 'text-muted-foreground')}>
             <span>{MIN_RADIUS}m</span>
             <span>{MAX_RADIUS}m</span>
           </div>

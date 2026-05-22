@@ -34,16 +34,16 @@ export function ProvenanceBadge({ provenance, zoneId }: ProvenanceBadgeProps) {
 
   if (provenance === 'zone') {
     return (
-      <span className="text-xs text-emerald-700 dark:text-emerald-400 inline-flex items-center">
-        <span className={`${DOT_BASE} bg-emerald-500`} aria-hidden />
+      <span className="text-xs text-green-707 inline-flex items-center">
+        <span className={`${DOT_BASE} bg-green-707`} aria-hidden />
         {t('provenance.fromZone', { zoneId })}
       </span>
     );
   }
 
   return (
-    <span className="text-xs text-amber-700 dark:text-amber-400 inline-flex items-center">
-      <span className={`${DOT_BASE} bg-amber-500`} aria-hidden />
+    <span className="text-xs text-[hsl(var(--text-warning))] inline-flex items-center">
+      <span className={`${DOT_BASE} bg-[hsl(var(--bg-warning))]`} aria-hidden />
       {t('provenance.userOverride')}
     </span>
   );

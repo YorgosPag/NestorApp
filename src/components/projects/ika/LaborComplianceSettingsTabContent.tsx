@@ -263,8 +263,7 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
       {!isFromFirestore && (
         <aside className={cn(
           'flex items-center gap-2 rounded-md border px-2 py-2',
-          'bg-amber-50 border-amber-200 text-amber-800',
-          'dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-200'
+          'bg-[hsl(var(--bg-warning))]/40 border-border text-[hsl(var(--text-warning))]'
         )}>
           <Info className={iconSizes.sm} />
           <p className={typography.body.sm}>{t('ika.efkaSettingsTab.usingDefaults')}</p>

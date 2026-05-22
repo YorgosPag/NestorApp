@@ -152,7 +152,7 @@ export function LiveWorkerMap({
         )}
 
         {/* Map */}
-        <div className="relative overflow-hidden rounded-lg border border-slate-200">
+        <div className="relative overflow-hidden rounded-lg border border-border">
           <MapGL
             initialViewState={{
               latitude: mapCenter.latitude,
@@ -202,10 +202,10 @@ export function LiveWorkerMap({
                 closeOnClick={false}
               >
                 <article className="min-w-[180px]">
-                  <h4 className={cn(typography.heading.sm, 'text-slate-800')}>
+                  <h4 className={cn(typography.heading.sm, 'text-foreground')}>
                     {selectedMarkerData.name}
                   </h4>
-                  <dl className={cn('mt-1 space-y-0.5', typography.body.xs, 'text-slate-600')}>
+                  <dl className={cn('mt-1 space-y-0.5', typography.body.xs, 'text-muted-foreground')}>
                     <div className="flex justify-between">
                       <dt>{t('ika.attendance.liveMap.popupEvent')}:</dt>
                       <dd className={typography.label.xs}>
@@ -230,7 +230,7 @@ export function LiveWorkerMap({
                       </div>
                     )}
                   </dl>
-                  <div className="mt-1.5 pt-1.5 border-t border-slate-100">
+                  <div className="mt-1.5 pt-1.5 border-t border-border">
                     <Badge
                       variant="secondary"
                       className={cn(

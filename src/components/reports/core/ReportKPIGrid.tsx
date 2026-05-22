@@ -87,29 +87,29 @@ export interface ReportKPIGridProps {
 // ---------------------------------------------------------------------------
 
 const COLOR_MAP: Record<string, string> = {
-  blue: "text-blue-600 dark:text-blue-400",
-  green: "text-emerald-600 dark:text-emerald-400",
-  purple: "text-purple-600 dark:text-purple-400",
-  orange: "text-orange-600 dark:text-orange-400",
-  cyan: "text-cyan-600 dark:text-cyan-400",
-  pink: "text-pink-600 dark:text-pink-400",
-  gray: "text-gray-600 dark:text-gray-400",
-  red: "text-red-600 dark:text-red-400",
-  yellow: "text-yellow-600 dark:text-yellow-400",
-  indigo: "text-indigo-600 dark:text-indigo-400",
+  blue: "text-primary",
+  green: "text-green-707",
+  purple: "text-primary",
+  orange: "text-[hsl(var(--text-warning))]",
+  cyan: "text-primary",
+  pink: "text-primary",
+  gray: "text-muted-foreground",
+  red: "text-destructive",
+  yellow: "text-[hsl(var(--text-warning))]",
+  indigo: "text-primary",
 };
 
 const ICON_BG_MAP: Record<string, string> = {
-  blue: "bg-blue-100 dark:bg-blue-900/30",
-  green: "bg-emerald-100 dark:bg-emerald-900/30",
-  purple: "bg-purple-100 dark:bg-purple-900/30",
-  orange: "bg-orange-100 dark:bg-orange-900/30",
-  cyan: "bg-cyan-100 dark:bg-cyan-900/30",
-  pink: "bg-pink-100 dark:bg-pink-900/30",
-  gray: "bg-gray-100 dark:bg-gray-800/30",
-  red: "bg-red-100 dark:bg-red-900/30",
-  yellow: "bg-yellow-100 dark:bg-yellow-900/30",
-  indigo: "bg-indigo-100 dark:bg-indigo-900/30",
+  blue: "bg-[hsl(var(--bg-info))]/20",
+  green: "bg-[hsl(var(--bg-success))]/10",
+  purple: "bg-accent",
+  orange: "bg-[hsl(var(--bg-warning))]/40",
+  cyan: "bg-accent",
+  pink: "bg-accent",
+  gray: "bg-muted",
+  red: "bg-destructive/10",
+  yellow: "bg-[hsl(var(--bg-warning))]/40",
+  indigo: "bg-accent",
 };
 
 // ---------------------------------------------------------------------------
@@ -156,20 +156,20 @@ function KPICard({
 
   const trendIcon = kpi.trend ? (
     kpi.trend.value > 0 ? (
-      <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+      <TrendingUp className="h-3.5 w-3.5 text-green-707" />
     ) : kpi.trend.value < 0 ? (
-      <TrendingDown className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+      <TrendingDown className="h-3.5 w-3.5 text-destructive" />
     ) : (
-      <Minus className="h-3.5 w-3.5 text-gray-400" />
+      <Minus className="h-3.5 w-3.5 text-muted-foreground" />
     )
   ) : null;
 
   const trendColor = kpi.trend
     ? kpi.trend.value > 0
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "text-green-707"
       : kpi.trend.value < 0
-        ? "text-red-600 dark:text-red-400"
-        : "text-gray-500"
+        ? "text-destructive"
+        : "text-muted-foreground"
     : "";
 
   return (

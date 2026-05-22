@@ -226,7 +226,7 @@ export function ThreadView({
                         <time dateTime={message.createdAt} className="text-xs">{relativeTime}</time>
                         {isOutbound && getMessageStatusIcon(message.deliveryStatus, iconSizes, colors)}
                         {isPinnedFn && isPinnedFn(message.id) && (
-                          <Tooltip><TooltipTrigger asChild><span><Pin className={`${iconSizes.xs} text-amber-500`} /></span></TooltipTrigger><TooltipContent>{t('inbox.message.pinned')}</TooltipContent></Tooltip>
+                          <Tooltip><TooltipTrigger asChild><span><Pin className={`${iconSizes.xs} text-[hsl(var(--text-warning))]`} /></span></TooltipTrigger><TooltipContent>{t('inbox.message.pinned')}</TooltipContent></Tooltip>
                         )}
                       </header>
 

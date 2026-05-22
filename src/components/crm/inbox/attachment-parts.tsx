@@ -216,7 +216,7 @@ export function LocationAttachment({ attachment, isOutbound }: SingleAttachmentP
       className={`flex items-center gap-3 p-3 rounded-lg ${isOutbound ? 'bg-primary/10' : 'bg-muted'} ${TRANSITION_PRESETS.STANDARD_COLORS} hover:opacity-90`}
     >
       <div className={`w-10 h-10 flex items-center justify-center rounded-lg ${isOutbound ? 'bg-primary/20' : 'bg-background'}`}>
-        <MapPin className={`${iconSizes.md} text-red-500`} />
+        <MapPin className={`${iconSizes.md} text-destructive`} />
       </div>
       <div className="flex-1 min-w-0">
         <p className={`text-sm font-medium ${colors.text.primary}`}>📍 Location</p>

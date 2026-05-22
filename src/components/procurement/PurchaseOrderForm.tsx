@@ -263,17 +263,17 @@ export function PurchaseOrderForm({
 
               {faInfo.activeFa && (
                 <>
-                  <div className="rounded-md border border-[hsl(var(--bg-success))]/60 bg-[hsl(var(--bg-success))]/40 px-2 py-1 text-xs text-green-700 text-left">
+                  <div className="rounded-md border border-[hsl(var(--bg-success))]/60 bg-[hsl(var(--bg-success))]/40 px-2 py-1 text-xs text-green-707 text-left">
                     {t('form.faBannerApplied', {
                       title: faInfo.activeFa.title,
                       percent: faInfo.discountPercent,
                     })}
                   </div>
-                  <div className="flex justify-between text-sm text-green-700">
+                  <div className="flex justify-between text-sm text-green-707">
                     <span>{t('form.faDiscount')}</span>
                     <span className="tabular-nums">−{formatPOCurrency(faInfo.discountAmount)}</span>
                   </div>
-                  <div className="flex justify-between border-t pt-1 font-semibold text-green-700">
+                  <div className="flex justify-between border-t pt-1 font-semibold text-green-707">
                     <span>{t('form.netTotal')}</span>
                     <span className="tabular-nums">{formatPOCurrency(faInfo.netTotal)}</span>
                   </div>

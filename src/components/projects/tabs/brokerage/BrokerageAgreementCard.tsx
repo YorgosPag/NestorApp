@@ -86,7 +86,7 @@ export function BrokerageAgreementCard({
           <span className={typography.label.sm}>{agreement.agentName}</span>
           <Badge variant={status.variant}>{status.label}</Badge>
           {agreement.exclusivity === 'exclusive' && (
-            <Badge variant="outline" className="text-orange-600 border-orange-300">
+            <Badge variant="outline" className="text-[hsl(var(--text-warning))] border-border">
               {t('sales.legal.exclusive')}
             </Badge>
           )}
@@ -148,7 +148,7 @@ export function BrokerageAgreementCard({
 
       {/* Inline renew */}
       {isRenewing && (
-        <footer className="flex items-center gap-2 rounded bg-blue-50 p-2 dark:bg-blue-950/20">
+        <footer className="flex items-center gap-2 rounded bg-[hsl(var(--bg-info))]/20 p-2">
           <label className={typography.body.sm}>{t('sales.legal.renewEndDate')}:</label>
           <input
             type="date"

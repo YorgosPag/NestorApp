@@ -227,7 +227,7 @@ export function SearchFiltersTabContent({
             <DropdownMenuItem
               key={value}
               onClick={() => handleStatusChange?.(value)}
-              className={getCurrentStatusFilter?.() === value ? "bg-orange-100 text-orange-700" : ""}
+              className={getCurrentStatusFilter?.() === value ? "bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]" : ""}
             >
               {label}
             </DropdownMenuItem>
@@ -249,7 +249,7 @@ export function SearchFiltersTabContent({
             <DropdownMenuItem
               key={value}
               onClick={() => handleTypeChange?.(value)}
-              className={getCurrentTypeFilter?.() === value ? "bg-orange-100 text-orange-700" : ""}
+              className={getCurrentTypeFilter?.() === value ? "bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]" : ""}
             >
               {label}
             </DropdownMenuItem>

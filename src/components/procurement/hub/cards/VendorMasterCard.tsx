@@ -22,7 +22,7 @@ export function VendorMasterCard() {
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
-          <Users2 className="h-8 w-8 text-green-700" aria-hidden />
+          <Users2 className="h-8 w-8 text-green-707" aria-hidden />
         </div>
         <CardTitle className="text-lg">{t('hub.vendorMaster.title')}</CardTitle>
         <CardDescription>{t('hub.vendorMaster.description')}</CardDescription>

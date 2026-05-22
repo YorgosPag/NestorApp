@@ -90,7 +90,7 @@ export function EmailAnalyticsDashboard() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Construction className={`${iconSizes.md} text-orange-500`} />
+            <Construction className={`${iconSizes.md} text-[hsl(var(--text-warning))]`} />
             {t('emailAnalytics.comingSoonTitle')}
           </CardTitle>
         </CardHeader>

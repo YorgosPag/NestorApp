@@ -243,10 +243,10 @@ function TruncationBanner({
 
   return (
     <div
-      className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm dark:border-amber-800 dark:bg-amber-950"
+      className="flex items-center gap-2 rounded-md border border-border bg-[hsl(var(--bg-warning))]/40 px-4 py-2 text-sm"
       role="alert"
     >
-      <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+      <AlertTriangle className="h-4 w-4 shrink-0 text-[hsl(var(--text-warning))]" />
       <span>
         {t('results.truncated', { shown, total })}
       </span>

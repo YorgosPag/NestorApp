@@ -30,7 +30,7 @@ const QUICK_ACTIONS: QuickAction[] = [
 
 const VARIANT_CLASSES: Record<QuickAction['variant'], string> = {
   blue: 'bg-[hsl(var(--bg-info))]/20 text-primary hover:bg-[hsl(var(--bg-info))]/30',
-  purple: 'bg-purple-50 text-purple-700 hover:bg-purple-100',
+  purple: 'bg-accent text-primary hover:bg-accent/80',
   green: 'bg-[hsl(var(--bg-success))]/10 text-green-707 hover:bg-[hsl(var(--bg-success))]/20',
   neutral: 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground',
 };

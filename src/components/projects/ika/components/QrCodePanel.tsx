@@ -188,7 +188,7 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
         {qrData?.qrDataUrl && (
           <div className="flex flex-col items-center gap-2">
             {/* QR Image */}
-            <div className="bg-white border border-slate-200 rounded-lg p-2">
+            <div className="bg-background border border-border rounded-lg p-2">
               <img
                 src={qrData.qrDataUrl}
                 alt="QR Code for attendance check-in"
@@ -201,7 +201,7 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
               <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full", typography.label.xs, getStatusColor('active', 'bg'), 'bg-opacity-10', getStatusColor('active', 'text'))}>
                 {t('ika.attendance.qr.active')}
               </span>
-              <span className={cn(typography.body.sm, 'text-slate-500')}>
+              <span className={cn(typography.body.sm, 'text-muted-foreground')}>
                 {qrData.validDate}
               </span>
             </div>
@@ -238,8 +238,8 @@ export function QrCodePanel({ projectId }: QrCodePanelProps) {
         {/* Empty state */}
         {!qrData && !isGenerating && !error && (
           <div className="flex flex-col items-center py-2 text-center">
-            <QrCode className="h-12 w-12 text-slate-300 mb-2" />
-            <p className={cn(typography.body.sm, 'text-slate-500')}>
+            <QrCode className="h-12 w-12 text-muted-foreground/30 mb-2" />
+            <p className={cn(typography.body.sm, 'text-muted-foreground')}>
               {t('ika.attendance.qr.emptyState')}
             </p>
           </div>
