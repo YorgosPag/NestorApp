@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟢 **FULLY IMPLEMENTED** 2026-05-21 — Phases 0-8.1 complete. 3D BIM viewer (Three.js), ARIA/screen reader (Phase 8.0-8.1), IFC export (Phase 8.0 Q8.3+Q8.4), section cuts (Phase 7.0). Deferred items: optional polish only. |
+| **Status** | 🟢 **PHASES 0-8.1 FULLY IMPLEMENTED** 2026-05-21 + 🔵 **GROUP C RESEARCH CLOSED 7/7** 2026-05-22 — Phases 0-8.1 implementation complete (3D BIM viewer Three.js, ARIA/screen reader Phase 8.0-8.1, IFC export Phase 8.0 Q8.3+Q8.4, section cuts Phase 7.0). **Appendix C** (Group C 46 sub-Qs) κλείνει implementation-level decisions για **Phase 9 deferred features**: Animation System (C.1), BIM Comments (C.2), 3D Dimensions (C.3), Card Tabs (C.4), ARIA polish (C.5), Section+Crop (C.6), Performance HUD ext (C.7). Phase 9 effort: +69-83h. ADR-366 total estimate: ~254-303h Phases 0-9. |
 | **Date** | 2026-05-19 |
 | **Category** | DXF Viewer — 3D Rendering / Photorealistic Output |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md` |
@@ -2713,6 +2713,7 @@ ADR-366 total estimate revised: **~185-220h** Phase 0-7 (από ~179-212h post-B
 
 | Ημ/νία | Αλλαγή | Author |
 |---|---|---|
+| 2026-05-22 | **Appendix C — GROUP C 7/7 COMPLETE (Implementation-Level Decisions για Deferred Features)**. 46 sub-Qs cumulative κλειστά. **C.1 Animation System UX** 9/9: 8s@30fps turntable defaults, 3D drag handles waypoint UX, single-track timeline strip με waypoint diamonds, 8-preset easing library + bezier advanced, linked-by-default interpolation + advanced split-tracks, H.264 Main MP4+AAC codec (N.5 MIT royalty-free streaming) + WebM/VP9 fallback, no audio v1 (mp4-muxer ready), νέα Firestore `bim_animations` + subcoll `render_jobs`, multi-job FIFO queue panel, enterprise-id `anm_bim_*`. **+18-22h Phase 9**. **C.2 BIM Comments / Markup System** 8/8: 5 typed comments (Issue/Question/Suggestion/Approval/Info) με REUSE design tokens, billboard pin marker με type badge, flat thread + 1-level replies, @-mentions με first-@ auto-assignee (BIMcollab pattern), 4-state FSM (Open→InReview→Resolved→Archived) με ADR-195 audit + NOTIFICATION_KEYS dispatch, image-only attachments (PNG/JPG max 5MB×5) Firebase Storage company-scoped, entity OR world space anchor με auto-orphan-convert on entity delete, νέα Firestore `bim_comments` + subcoll `replies`, enterprise-id `cmt_bim_*` + `cmtr_bim_*`. **+12-14h Phase 9**. **C.3 3D Manual Dimensions Tool** 7/7: ribbon "Διαστάσεις 3D" + hotkey D3D (mirror ADR-362), ALL snap modes ON default (REUSE 2D snap engines via raycaster adapter), 4-mode placement discriminator (Aligned/Linear/Radial/Angular mirror ADR-362), L-shape leader 8px arrow + REUSE `DIMENSION_LINE_COLOR` tokens, camera-billboard default + per-dim lock-to-plane, 3-grip pattern (endpointA/B + text) mirror 2D με entity-follow, νέα Firestore `bim_dimensions_3d` (separate από 2D — Vector3 + host binding diverge justified), enterprise-id `dim3d_*`, `useDim3DToolRouting` cross-mode hook (2D/3D shared tool routing). **+10-12h Phase 9**. **C.4 BimEntityCard Remaining Tabs** 6/6: BimMaterialsTab 4-section (current+alternatives+multi-layer+cost rollup) με ADR-363 Phase 6, read-only material change με drawer link, BimBoqTab 3-section parent/children/quantity με ADR-363 Phase 6.1, BoQ subapp navigation pattern (NO inline override SSoT), BimCommentsTab inline preview top-3 + unread badge REUSE BimCommentsStore, tab order Geometry→Materials→BoQ→Comments→Audit με per-user persistence via Bim3DPreferencesService. **+5-6h Phase 9**. **C.5 ARIA + Screen Reader Compliance** 5/5 (A.7.Q2 deferred activated): polite default + 250ms debounce announcement protocol, offscreen DOM proxy `<button>` per entity + roving tabindex, spatial default + semantic toggle keyboard nav με Arrow/Home/End/PageUp/PageDown, locale-aware ARIA labels `<type> <code> — <dimensions> — <material>` Greek primary + EN fallback, `prefers-reduced-motion` με reduced-motion-config registry + Bim3DPreferencesService override, WCAG 2.2 AA + EN 301 549 EU compliance scope. **+6-7h Phase 9** (+4-6h post-impl NVDA+JAWS+VoiceOver QA matrix DEFERRED). **C.6 Advanced Section Cuts + Crop Region** 6/6: Y-axis horizontal cuts με ADR-326 floor.elevation presets, up to 6 independent planes (Three.js hard limit) με per-plane UI list, Navisworks-pattern linked planes group με transform handle (GenArc Gizmo PORT fallback), B.4.Q5 crop region rectangle marquee (frustum 4-6 clipping planes) με finalRenderConfig persistence + Photoshop-pattern live overlay (50% dim + dashed border + 8 resize handles) — RAF-throttled UI-only preview (no clipping during edit). **+8-10h Phase 9**. **C.7 Performance HUD Extensions** 5/5: per-metric 60s sparkline (240 samples @ 4Hz, hand-rolled SVG 40-LOC zero dep), super-admin `/admin/bim-diagnostics` dashboard (ADR-145 expansion) με filters/list/detail/triage FSM/charts/CSV export, GDPR opt-in anonymized telemetry (SHA-256 daily-salt session_id, 30-day TTL, νέα Firestore `bim_performance_telemetry` NO companyId super-admin-only + erase endpoint Article 17), FPS<10 for >5s auto-submit consent dialog (NOT silent — GDPR + UX trust), per-user MAD-based regression detection (LocalStorage baseline, Tukey outlier stat) client-side v1. **+10-12h Phase 9**. **Group C totals**: 7 topics + 46 sub-Qs ✅ + **+69-83h Phase 9** (+4-6h QA). **ADR-366 total revised**: ~185-220h post-Group-B → **~254-303h post-Group-C** (Phases 0-9). **Νέες Phase 9 SSoT**: ~64 modules + 4 νέα Firestore collections (`bim_animations`+`render_jobs` subcoll, `bim_comments`+`replies` subcoll, `bim_dimensions_3d`, `bim_performance_telemetry`) + 5 νέα enterprise-id generators (`anm_bim_*`, `cmt_bim_*`, `cmtr_bim_*`, `dim3d_*`, `telm_bim_*`) + ~14 νέες RBAC permissions + ~20 νέοι audit types + 7 νέα notification keys + ~250 i18n keys × 2 locales = ~500 entries. **License N.5 ✅**: όλες οι νέες deps MIT (mp4-muxer + Recharts ήδη installed). **SSoT REUSE 90%+**: design tokens REUSE από 2D, snap engines REUSE via adapter, EntityDetailsHeader SSoT, NOTIFICATION_KEYS registry, user picker SSoT, easing functions, ribbon contextual tab pattern, focus-order, aria-live-bus, performance-snapshot-service. **Conscious diverge documented**: H.264 vs AV1 risk-averse (Q1.6), no audio v1 MVP discipline (Q1.7), 1-level replies max anti-Slack (Q2.3), separate `bim_dimensions_3d` (Q3.7 schema diverge), client-side baseline only (Q7.5 server ML deferred). **Pending DEFERRED Group D / Phase 10+**: animation audio import, animation crop keyframing, polygon crop region, PDF/video attachments, 2D plan-view marker backport, server-side ML regression, mobile/AR/XR re-scoping, dimension chains/parametric formulas. **Implementation ordering recommendation**: C.4→C.3→C.5→C.6→C.2→C.7→C.1 (smallest UX gaps first, animation last largest scope). | Claude Opus 4.7 |
 | 2026-05-21 | **Remove Floating3DPanel from 3D canvas.** `Floating3DPanel` unmounted από `BimViewport3D.tsx` (import αφαιρέθηκε + JSX αφαιρέθηκε). Controls πλέον ΜΟΝΟ στο left sidebar `FloatingPanelContainer` (bim3d tab). `Floating3DPanel.tsx` + τα tab components παραμένουν ως αρχεία (δεν διαγράφονται). |
 | 2026-05-21 | **Floating Panel Mirror — 3D controls mirrored in left sidebar (bim3d tab).** Νέος tab `'bim3d'` στο `FloatingPanelContainer` που επαναχρησιμοποιεί ΑΥΤΟΥΣΛΟΥΣ τους υπάρχοντες tab components (`Floor3DPanelTab`, `Lighting3DPanelTab`, `Quality3DPanelTab`, `Section3DPanelTab`) — zero code duplication. **Νέα αρχεία (1)**: `ui/panels/bim3d/Bim3DFloatingTab.tsx` (wrapper με sub-tabs floors/lighting/quality/sections, dark bg-zinc-900 container ώστε τα dark-styled components να εμφανίζονται σωστά, max-h-[32rem] scrollable). **Τροποποιημένα αρχεία (5)**: `types/panel-types.ts` (+'bim3d' στο FloatingPanelType union + isFloatingPanelType guard + FLOATING_PANEL_TYPES array + PANEL_METADATA record + 'Box' στο iconName union + PANEL_LAYOUT.topRow). `ui/components/PanelTabs.tsx` (+Box icon από lucide-react + bim3d tab entry). `ui/hooks/usePanelContentRenderer.tsx` (+case 'bim3d': `<Bim3DFloatingTab />`). `src/i18n/locales/el/dxf-viewer-panels.json` (+panels.bim3d.title: "BIM 3D"). `src/i18n/locales/en/dxf-viewer-panels.json` (+panels.bim3d.title: "BIM 3D"). **Canvas overlay παραμένει**: Το `Floating3DPanel.tsx` ΔΕΝ αλλάζει — και τα δύο σημεία λειτουργούν παράλληλα μέχρι νέα εντολή. GOL ✅: SSoT (zero duplication, ίδια components), idempotent, zero race, lifecycle ownership clear (FloatingPanelContainer owns tab state), i18n complete. | Claude Sonnet 4.6 |
 | 2026-05-21 | **Phase 8.0 UI ARIA CLOSURE — Floating3DPanel tab ARIA + Section3DPanelTab ModeButton.** Completes Phase 8.0 "Files (MODIFY)" scope. **Modified files (4)**: `Floating3DPanel.tsx` — tab strip div `role="tablist"` + each button `role="tab"` + `aria-selected={activeTab===tab}` + `id="floating-3d-panel-tab-{tab}"` + `aria-controls="floating-3d-panel-panel-{tab}"`; tab content div `role="tabpanel"` + `id="floating-3d-panel-panel-{activeTab}"` + `aria-labelledby="floating-3d-panel-tab-{activeTab}"`; `aside` aria-label changed from hardcoded "Floors" tab text → `t('floatingPanel.ariaLabel')`. `Section3DPanelTab.tsx` — `ModeButton` component + `aria-pressed={active}` + `aria-label={label}` (button-type toggle pattern for Box / Plane mode). `locales/el/bim3d.json` — `floatingPanel.ariaLabel: "Έλεγχοι 3D"`. `locales/en/bim3d.json` — `floatingPanel.ariaLabel: "3D Controls"`. **Phase 8.0 status**: ✅ FULLY DONE. **Phase 8 table row** → ✅ DONE. **ADR-366 FULLY CLOSED (all phases 0–8.1 + 8.0 closure)**. GOL ✅: tab ARIA follows WAI-ARIA tablist pattern (role=tablist+tab+tabpanel, aria-selected, id+aria-controls+aria-labelledby), ModeButton uses aria-pressed (toggle button semantics per WCAG 4.1.2), i18n SSoT (no hardcoded strings, N.11 compliant). | Claude Sonnet 4.6 |
@@ -2773,3 +2774,851 @@ ADR-366 total estimate revised: **~185-220h** Phase 0-7 (από ~179-212h post-B
 | 2026-05-19 | **Appendix A — Topic A.1 (3D Selection UX) ✅ CLOSED** — 5 decisions registered: (Q1) Modifier για multi-select = Revit pattern Ctrl+κλικ προσθέτει / Shift+κλικ αφαιρεί. (Q2) Color palette = SSoT REUSE από `color-config.ts` (όχι παράλληλη 3D palette). (Q3) Visual style διαλεγμένου = AutoCAD grips mirror του Nestor 2D (όχι outline για selected — outline ΜΟΝΟ για hover με κίτρινο `HOVER_HIGHLIGHT.ENTITY.glowColor`). (Q4 implicit) Marquee = mirror Nestor 2D `SelectionSettings.tsx` window/crossing tabs. (Q5 implicit) Grip 3D shape = billboard square fixed pixel size (AutoCAD 3D standard). **Cardinal principle**: 3D BIM Viewer καταναλώνει SSoT tokens του 2D DXF Viewer (`HOVER_HIGHLIGHT`, `CAD_UI_COLORS`, `UI_COLORS.SELECTION_*`, `settings.selection.*`) — μηδέν παράλληλη 3D palette. Memory saved: `feedback_3d_mirror_2d_ssot.md`. Phase 4 effort 8-10h → **12-14h** (+selection layer 4h με grips). Total estimate **72-82h**. | Claude Opus 4.7 |
 | 2026-05-19 | **Appendix A — Topic A.1 (3D Selection UX) RESEARCH** — Industry analysis 6/6 σύγκλιση (Revit + ArchiCAD + AutoCAD + Blender + Three.js OutlinePass + Twinmotion/Lumion/Enscape): hover blue outline universal, single-click replace universal, Shift+click toggle (5/6 — Nestor convention), drag marquee AutoCAD L→R blue Window / R→L green Crossing (GenArc `windowSelectionOverlay.ts` ήδη PORT_AS_IS), Escape deselect-all universal, Tab cycle overlaps Phase 4.x optional. Three.js tech: `OutlinePass` με edgeStrength=3.0/edgeThickness=2.0/edgeGlow=0.5 + FXAA + visible/hidden edge colors (sky-300 hover / sky-500 selected / sky-600 X-ray). New `Selection3DStore` Zustand SSoT separate από Nestor 2D HoverStore (different coord systems). Phase 4 effort 8-10h → **10-13h** (+3h selection layer). Total estimate **72-81h**. Sub-question pending στον Γιώργο για modifier convention (Shift+click toggle vs Revit Ctrl+click). | Claude Opus 4.7 |
 | 2026-05-19 | **SPEC-3D-004E (Materials & Shaders) COMPLETED** — 19 files catalogued (12 `engines/sdf/*` + 4 `shaders/*` + `types/material.types.ts` + `types/wallDna.types.ts` + `constants/materialRegistry.constants.ts`, total ~2.500 LOC). **Result: 0 PORT_AS_IS / 1 PORT_WITH_ADAPTATION (`material.types.ts`) / 4 EXTRACT_CONCEPT (`materialUniforms.ts` + `materialRegistry.constants.ts` + `materials.glsl.ts` Phase 5+ optional + `gridPlane.glsl.ts` Phase 7 optional) / 12 EXCLUDE (ολόκληρο SDF pipeline — §3.2.2 rejected — + `noise.glsl.ts` + `wallDna.types.ts` Nestor superset) / 2 OUT_OF_SCOPE (test files).** Κεντρικό εύρημα: `material.types.ts` schema είναι strong superset (ShaderType 8→12 με insulation/composite/membrane/terrazzo, MaterialCategory 10→11 με cladding, optional cost/density, mm units, drop GpuMaterialId) — direct enabler για **ADR-363 Phase 6.x Multi-Layer DNA BOQ (~8h pending)** που χρειάζεται density (kg/m³) + cost (€/unit) + ΑΤΟΕ-aware unit (m²/m³/kg) per material. `materialUniforms.ts` Wall DNA → 3-face dispatch algorithm (exterior/interior/core, flip-aware swap, lines 44-78) re-implemented Three.js context σε `MaterialCatalog3D.resolveWallFaceMaterials(wall)` ~1.5h Phase 3.3. Nestor material surface gap analysis (§8): 9 gaps identified, **all covered by Phase 3 (~6h unchanged) + ADR-363 Phase 6.x (~8h reused)**, zero new pending work. Q1/Q2/Q3/Q4 ΟΛΑ RESOLVED Full Enterprise (5/5 ΑΤΟΕ+ASTM data, 4/4 ShaderType extension, 5/5 optional cost, 4/4 two-tier preset+registry). **GenArc A→E suite CLOSED** (97 files catalogued / ~484 GenArc src/, ~20% relevant για ADR-366). **Total implementation estimate revised 58h → 64-70h** (Phase 4 viewport +2-4h SPEC-3D-004A, Phase 7 optional adaptive grid +3-4h SPEC-3D-004E §3.4). **Phase 0 implementation start: ✅ READY** — zero blocking questions remain. | Claude Opus 4.7 |
+
+---
+
+## Appendix C — Group C Deep Research (Implementation-Level Decisions για Deferred Features)
+
+> Post-Group-B deep research για implementation-level decisions των **12 missing modules** (Animation 4 + Comments 4 + Dimensions 2 + Card Tabs 3) και **4 deferred Phase 8+ categories** (ARIA, Section Cuts polish, Crop region, Performance HUD extensions). Groups A+B έκλεισαν architecture/UX patterns· Group C κλείνει implementation detail (preset values, codecs, threading models, snap behavior, leader styling, persistence schemas, RBAC scopes, exact i18n keys) ώστε Phase 9+ implementation να ξεκινήσει χωρίς νέα έρευνα interruption. **7 topics — C.1 έως C.7 — με ~46 sub-questions cumulative.**
+
+### C.1 — Animation System Implementation UX — ✅ CLOSED 2026-05-22
+
+**Σκοπός**: Κλείνει B.4.Q8 FULL ENTERPRISE animation από high-level «Turntable+Flyaround+Timeline+MP4» σε implementation-level decisions: turntable defaults, waypoint editing UX, timeline layout, easing library, per-keyframe interp, codec, audio, persistence, render queue.
+
+**Cross-references**:
+- B.4.Q8 (line ~2700) — FULL ENTERPRISE Phase 7 animation scope decision (+30-40h)
+- `viewport/animation-manager.ts` + `viewport/easing-functions.ts` (υπάρχοντα SSoT, Phase 4 camera transitions) → REUSE base
+- `viewport/canonical-views.ts` + `CanonicalViewService.ts` → reference για view interpolation patterns
+- ADR-345 (DXF Ribbon Interface) — pattern για ribbon contextual "Animation" tab
+- ADR-326 (Tenant Org Structure) — companyId scoping για `bim_animations` collection
+- ADR-195 (EntityAuditService) — `bim_animation_created` νέος audit type
+- ADR-017/210/294 (enterprise-id) — `anm_bim_*` νέος generator
+- `project_assets` collection — existing για final-render output linking
+
+**Pending micro-decisions**:
+- Q1: Turntable defaults (axis, duration, frames, easing, direction) ✅ RESOLVED
+- Q2: Waypoint editing UX (3D handles vs gizmo vs panel-only) ✅ RESOLVED
+- Q3: Timeline editor layout (single track vs multi-track) ✅ RESOLVED
+- Q4: Easing curve library (presets + bezier editor) ✅ RESOLVED
+- Q5: Per-keyframe interpolation modes (linked vs independent tracks) ✅ RESOLVED
+- Q6: MP4 codec (H.264 / H.265 / VP9 / AV1) ✅ RESOLVED
+- Q7: Audio track (voiceover/music v1 vs v2) ✅ RESOLVED
+- Q8: Animation persistence (Firestore schema, sharing) ✅ RESOLVED
+- Q9: Render queue UX (multi-job, cancel, resume) ✅ RESOLVED
+
+**Decisions Log** — Topic C.1 COMPLETE 9/9 Qs:
+
+| # | Ερώτηση | Απόφαση | Industry alignment |
+|---|---|---|---|
+| C.1.Q1 | Turntable defaults | **8s @ 30fps = 240 frames, axis=Y-up world, target=scene-bbox-center, easing=linear, direction=CCW viewed from above**. Custom override panel: duration slider 2-60s, fps slider 24/30/60, axis chooser (Y default + X/Z option), direction toggle. | 4/7 σύγκλιση industry (Twinmotion 8s/30fps linear, Lumion 6s/30fps, D5 8-12s, Enscape 10s). Median 8s + 30fps + linear = architectural convention. CCW from above = standard architectural drawing rotation. |
+| C.1.Q2 | Waypoint editing UX | **3D drag handles in viewport (Twinmotion/Blender hybrid) + side panel για fine-tune coords + "Add at current camera" button**. Selected waypoint: TransformGizmo (GenArc port deferred Group D — fallback: 3D arrow handles drawn με `Three.js Line2`). Ribbon contextual "Animation" tab active όταν tool activated (mirror ADR-345 pattern). | 3/7 industry (Twinmotion + Blender drag handles, V-Ray camera path). Lumion panel-only απορρίπτεται (poor 3D spatial UX). Hybrid approach covers visual + precise both. |
+| C.1.Q3 | Timeline editor layout | **Single-track strip με waypoint diamonds**. Top: scrubber playhead + time indicator `mm:ss.fff`. Middle: clickable diamonds με drag-to-reorder (snap to nearest 0.1s). Bottom: per-selected-waypoint properties panel (position xyz, target xyz, fov, easing-to-next). Pinch-to-zoom timeline (mouse wheel) 0.5s-10s ruler ticks. NOT dope sheet (over-engineered για 1 track). | 4/6 σύγκλιση single-track (Twinmotion + Lumion + D5 + Enscape). Blender dope sheet απορρίπτεται (professional tool, overkill arch viz). Pinch-to-zoom = After Effects / FCP convention. |
+| C.1.Q4 | Easing curve library | **8 presets + bezier editor advanced**. Presets: linear, ease-in (cubic), ease-out (cubic), ease-in-out (cubic), ease-in-quart, ease-out-quart, smooth-step, elastic. REUSE `viewport/easing-functions.ts` ήδη υπάρχει — extend με νέα presets. «Προχωρημένα» expander → 4-point bezier handle drag editor (mirror της ίδιας expander pattern με B.4.Q7 denoiser toggle). Per-waypoint-pair easing (FROM i TO i+1, ΟΧΙ global). | 5/7 industry presets-only (Twinmotion 4, Lumion 6, D5 8, Enscape 6, Chaos Vantage 8). Bezier editor από Blender + AE = 2/7 advanced tools. Hybrid covers both audiences. |
+| C.1.Q5 | Per-keyframe interpolation modes | **Linked-by-default (position+target+fov as single transform) + advanced toggle for independent tracks**. Default linked = 95% architectural walkthrough use case. Toggle σε «Προχωρημένα»: 3 separate F-curves (Blender-style) για cinematic pros. REUSE `viewport/animation-manager.ts` — extend με `splitTracks: boolean` flag στο animationConfig. | 6/7 industry default linked (Twinmotion/Lumion/D5/Enscape/Chaos/V-Ray). Blender independent default απορρίπτεται για arch viz. |
+| C.1.Q6 | MP4 codec | **H.264 Main profile L3.1 + AAC audio σε MP4 container**. WebCodecs `VideoEncoder` με codec string `avc1.4D401F` (Main L3.1, broad compat). `mp4-muxer` (MIT, ήδη Group B.4.Q8). Fallback: WebM/VP9 αν browser lacks H.264 (rare, Firefox<137). NEVER H.265 (HEVC patent pool — N.5 license violation candidate). AV1 DEFERRED (browser support 2027+). | 7/7 industry H.264 MP4 default (universal). License N.5 ✅ MIT, H.264 royalty-free for web playback (MPEG-LA license-free streaming). H.265 ❌ N.5. AV1 ⏸ 2027+. |
+| C.1.Q7 | Audio track | **Pure video v1 — NO audio import**. Voiceover/μουσική DEFERRED Group D candidate. `mp4-muxer` API supports audio track addition — architecture door open. Industry split: Twinmotion/Lumion έχουν audio (post-pro focus), D5/Enscape ΟΧΙ (arch focus). Nestor MVP arch focus → no audio. | 3/7 audio (post-pro tools) vs 4/7 no-audio (arch tools). Nestor aligns με arch tools. |
+| C.1.Q8 | Animation persistence | **Νέα Firestore collection `bim_animations/{animationId}`**. Schema: `{id, projectId, companyId, name, durationSec, fps, axis, direction, waypoints: Array<{position:V3, target:V3, fov, easingToNext}>, codec, renderConfig, splitTracks, createdBy, createdAt, updatedAt}`. ID prefix `anm_bim_*` νέος enterprise-id generator (ADR-017/210/294). RBAC permissions: `bim_animations.{create,read,update,delete}` company-scoped (ADR-326). Final-render output (.mp4) → `project_assets` collection με `type='bim-animation-render'` discriminator (parallels Group B `type='bim-render'`). ADR-195 audit type `bim_animation_created` + `bim_animation_rendered`. ADR-145 super-admin read-all. Sharing via project_assets URL link, ΟΧΙ direct animation share (avoids leaking config). | 4/7 industry persistence (Twinmotion + D5 + Enscape + Lumion). 3/7 file-based local-only (Blender/V-Ray/Chaos). Nestor cloud-first DNA → Firestore aligns. |
+| C.1.Q9 | Render queue UX | **Background queue panel σε νέα Floating3DPanel tab «Renders»**. FIFO multi-job. Per-job row: thumbnail + name + status (queued/rendering X%/done/failed/cancelled) + ETA + actions (cancel/retry/download). Cancel mid-render: store `lastSampleCount + lastWaypointIndex` σε job doc, mark `status='cancelled-resumable'`. Resume: re-spawn από checkpoint (Phase 6 PathTracerRenderer already supports `samplesContinueFrom` param). Concurrent: 1 active + N queued (GPU resource bound — `navigator.gpu.requestAdapter()` single context). Job docs: subcollection `bim_animations/{animationId}/render_jobs/{jobId}` με 30-day TTL post-completion. | 2/7 industry queue (Chaos Vantage + V-Ray full enterprise). 5/7 single-job (Twinmotion/Lumion/D5/Enscape/Blender). Nestor multi-job aligns με enterprise tier per completeness rule. |
+
+**Architectural implications (consolidated για C.1)**:
+
+- **Νέα Phase 9 modules** (animation system):
+  - `bim-3d/animation/TurntablePathBuilder.ts` — pure function `buildTurntable(scene, opts)` → `Waypoint[]` (8s @ 30fps default, CCW Y-axis, scene-bbox-center target)
+  - `bim-3d/animation/WaypointPathBuilder.ts` — pure function `buildWaypointPath(waypoints, easings)` → interpolated camera samples per frame
+  - `bim-3d/animation/AnimationStore.ts` — Zustand SSoT: `{waypoints, durationSec, fps, axis, direction, easingPresetIdsByPair, splitTracks, activeWaypointIndex}` + actions
+  - `bim-3d/animation/animation-presets.ts` — read-only registry για turntable + easing 8 presets (REUSE `viewport/easing-functions.ts`)
+  - `bim-3d/animation/keyframe-interpolator.ts` — pure interpolation: linked mode + split-tracks F-curve mode (3 independent position/target/fov tracks)
+  - `bim-3d/animation/TimelineEditor.tsx` — single-track strip + scrubber + diamonds + properties panel (REUSE existing UI primitives, semantic `<details>` for «Προχωρημένα»)
+  - `bim-3d/animation/WaypointDragHandle.tsx` — 3D viewport drag handles (Three.js Sprite billboard squares + raycaster hit-test, mirror grip pattern A.1.Q5)
+  - `bim-3d/animation/RibbonAnimationContextualTab.tsx` — ADR-345 ribbon tab activation
+  - `bim-3d/render/MP4Exporter.ts` — `mp4-muxer` (MIT) + WebCodecs `VideoEncoder` H.264 Main L3.1 → Blob → upload to Firebase Storage tenant-scoped path
+  - `bim-3d/render/RenderQueueStore.ts` — Zustand SSoT for jobs FIFO + concurrent limit (1 active + N queued)
+  - `bim-3d/render/RenderQueuePanel.tsx` — Floating3DPanel "Renders" tab UI
+  - `bim-3d/animation/bim-animations.service.ts` — CRUD wrapper over Firestore + audit hook + RBAC check
+
+- **Stores extensions**:
+  - `ViewMode3DStore`: +`animationToolActive: boolean` (gates ribbon tab activation)
+  - `Floating3DPanel`: add "Renders" tab dynamic (visible όταν `renderQueueStore.jobs.length > 0`)
+
+- **Firestore collections**:
+  - `bim_animations/{animationId}` — top-level, companyId scoped
+  - `bim_animations/{animationId}/render_jobs/{jobId}` — subcollection, 30-day TTL
+
+- **Firestore rules** (νέο block στο `firestore.rules`):
+  ```
+  match /bim_animations/{animationId} {
+    allow read: if isSignedIn() && resource.data.companyId == request.auth.token.companyId;
+    allow create: if hasPermission('bim_animations.create') && request.resource.data.companyId == request.auth.token.companyId;
+    allow update: if hasPermission('bim_animations.update') && resource.data.companyId == request.auth.token.companyId;
+    allow delete: if hasPermission('bim_animations.delete') && resource.data.companyId == request.auth.token.companyId;
+    match /render_jobs/{jobId} {
+      allow read, write: if isSignedIn() && get(/databases/$(database)/documents/bim_animations/$(animationId)).data.companyId == request.auth.token.companyId;
+    }
+  }
+  ```
+  ADR-298 Phase B requires coverage test suite — added στο CHECK 3.15/3.16 ratchet.
+
+- **RBAC** (νέες permissions σε `roles.ts`):
+  - `bim_animations.create` — designer/architect/owner
+  - `bim_animations.read` — all company members
+  - `bim_animations.update` — creator + owner
+  - `bim_animations.delete` — creator + owner
+
+- **enterprise-id generator** (`enterprise-id.service.ts`): `generateBimAnimationId()` → `anm_bim_<random10>` (mirror existing patterns)
+
+- **EntityAuditService** (`audit-types.ts`): νέα audit types `bim_animation_created`, `bim_animation_rendered`, `bim_animation_deleted`
+
+- **Notification keys** (`notification-keys.ts`): `bim3d.animation.render.completed` + `bim3d.animation.render.failed` (toast + Floating3DPanel badge)
+
+- **npm deps Phase 9** (N.5 compliance):
+  - `mp4-muxer` (MIT) ✅ already cataloged B.4.Q8
+  - WebCodecs API (browser native, no license concern)
+
+- **i18n keys** (Phase 9, per N.11 ΠΡΩΤΑ σε locale JSONs):
+  - `bim3d.animation.title`, `.toolbar.{turntable,addWaypoint,deleteWaypoint,reverseTrack,preview,export}`
+  - `bim3d.animation.timeline.{play,pause,seek,zoom,fps}`
+  - `bim3d.animation.waypoint.{position,target,fov,easingToNext}`
+  - `bim3d.animation.easing.{linear,easeIn,easeOut,easeInOut,easeInQuart,easeOutQuart,smoothStep,elastic,bezierAdvanced}`
+  - `bim3d.animation.advanced.{splitTracks,bezierEditor}`
+  - `bim3d.animation.export.{codec,resolution,quality,destination,start,cancel}`
+  - `bim3d.animation.queue.{title,status.queued,status.rendering,status.done,status.failed,status.cancelled,retry,downloadMp4}`
+  - `bim3d.animation.persistence.{name,description,save,load,delete,share}`
+  - **Total: ~42 keys × 2 locales = ~84 entries**
+
+- **GOL checklist 7/7**:
+  - Proactive ✅: animation tool initialized on ribbon button mount; queue rehydrates από Firestore on app start
+  - Race-free ✅: render jobs sequential (FIFO single active), waypoint mutations debounced 50ms σε store
+  - Idempotent ✅: turntable rebuild deterministic (seed από scene bbox), MP4 export resumable με saved checkpoint
+  - Belt-and-suspenders ✅: H.264 primary + WebM/VP9 fallback, GPU encode primary + CPU fallback
+  - SSoT ✅: AnimationStore single source for config, RenderQueueStore single source for jobs, animation-presets single registry for easings
+  - Await/sync ✅: MP4 export `await videoEncoder.flush()` before Blob assembly, persistence writes awaited
+  - Lifecycle owner ✅: AnimationStore owns config lifecycle, bim-animations.service owns Firestore CRUD, RenderQueueStore owns job lifecycle
+
+- **Mirror του 2D pattern** [[feedback-3d-mirror-2d-ssot]]:
+  - Ribbon contextual tab pattern = ADR-345 2D pattern (consistent)
+  - Easing functions REUSE από `viewport/easing-functions.ts` (already 3D, no duplication)
+  - SSoT για waypoints, ribbons, panels = same Zustand pattern με 2D
+
+**Effort impact για C.1**: **Phase 9 (new) +18-22h** = 4h turntable+waypoint builders + 5h timeline editor UI + 3h 3D drag handles + 3h MP4 exporter + 3h render queue panel + 2h Firestore service + RBAC + audit + 1-3h tests + i18n. ADR-366 total estimate revised: **~203-242h Phase 0-9** (από ~185-220h post-Group-B, +18-22h C.1).
+
+---
+
+### C.2 — BIM Comments / Markup System — ✅ CLOSED 2026-05-22
+
+**Σκοπός**: Κλείνει B.2.Q3 (typed comment markers BIMcollab style) από high-level pattern σε implementation-level: comment types catalog, marker visual, threading model, mentions/assignment, resolution FSM, attachments, position binding, Firestore schema + real-time sync.
+
+**Cross-references**:
+- B.2.Q3 (line ~2120) — typed markers BIMcollab style scope decision (Phase 7, free-text labels DEFERRED Phase 8+)
+- ADR-326 (Tenant Org Structure) — companyId scoping για `bim_comments`
+- ADR-195 (EntityAuditService) — `bim_comment_*` audit types
+- ADR-145 (Super Admin) — read-all για admin diagnostics
+- ADR-017/210/294 (enterprise-id) — `cmt_bim_*` νέος generator
+- Notification SSoT (`NOTIFICATION_KEYS`) — `bim3d.comment.{mentioned,assigned,resolved,reopened}` νέα keys
+- `firestoreQueryService.subscribe` (ADR-355 + ADR-361 hash-compare guard) — real-time pattern
+
+**Pending micro-decisions**:
+- Q1: Comment types ταξινόμηση ✅ RESOLVED
+- Q2: Marker visual design ✅ RESOLVED
+- Q3: Threading model ✅ RESOLVED
+- Q4: @-mentions + assignment ✅ RESOLVED
+- Q5: Resolution workflow FSM ✅ RESOLVED
+- Q6: Attachments ✅ RESOLVED
+- Q7: Position binding ✅ RESOLVED
+- Q8: Firestore schema + real-time sync ✅ RESOLVED
+
+**Decisions Log** — Topic C.2 COMPLETE 8/8 Qs:
+
+| # | Ερώτηση | Απόφαση | Industry alignment |
+|---|---|---|---|
+| C.2.Q1 | Comment types | **5 types**: Issue (πρόβλημα — red 🔴), Question (ερώτηση — blue 🔵), Suggestion (πρόταση — yellow 🟡), Approval (έγκριση — green 🟢), Info (πληροφορία — grey ⚫). Type icon εμφανίζεται μέσα στο marker badge + σε comment list rows. Subset BIMcollab BCF (drop Warning — overlap με Issue, drop Solution — implicit στο C.2.Q5 FSM). Type είναι required, ορίζεται στη δημιουργία (dropdown). | 3/5 industry σύγκλιση typed comments (BIMcollab BCF 6 types, Trimble Connect 3 types, Navisworks free-text + flag). Revit single-type απορρίπτεται (low signal). 5-type subset = sweet spot (BIMcollab inspiration, simpler). REUSE existing 2D status colors `bg-success/warning/error/info` (SSoT design tokens, no new palette). |
+| C.2.Q2 | Marker visual design | **Billboard pin icon με type-colored badge** (Sprite τεχνικά). Fixed pixel size (32px @ 1x DPR, 64px @ retina). Type icon (🔴/🔵/🟡/🟢/⚫ ή SVG) μέσα στο badge. Hover → tooltip με comment preview (first 80 chars + author + timestamp + status badge). Click → opens BimCommentDetailsPanel side-drawer. Marker κρύβεται όταν: floor visibility hide, status === 'archived', user lacks `bim_comments.read`. Resolved status → badge faded 50% opacity + checkmark overlay. | 4/5 industry pin pattern (BIMcollab + Revit cloud markup + Navisworks bubble + Trimble Connect pin). Speckle commentless thread απορρίπτεται (no spatial anchor). Mirror του 2D selection-icon pattern A.7.Q3 (SelectionCursorIcon SSoT). |
+| C.2.Q3 | Threading model | **Flat thread με max 1-level replies**. Root comment + N replies sorted chronologically. NO nested replies (avoids Slack-style depth complexity). Reply input σε bottom του details panel. Replies subcollection `bim_comments/{commentId}/replies/{replyId}`. Reply δείχνει author + timestamp + content, NO type/anchor/status (inherits parent). Root comment status changes broadcast σε όλους τους replied authors via notification. | 2/4 industry flat (BIMcollab + Trimble Connect). Revit threaded απορρίπτεται (overcomplicated UI). Speckle thread απορρίπτεται (no parent). 1-level replies covers 90% architectural discussion use case. |
+| C.2.Q4 | @-mentions + assignment | **@-mentions via user picker, first @ auto-assignee BIMcollab pattern**. Type "@" → dropdown με matching company users + roles (tenant-scoped ADR-326). Tagged users receive `bim3d.comment.mentioned` notification (toast + Notification SSoT badge). Assignment: first @ auto-becomes `assigneeId`, explicit "Assign to:" dropdown σε details panel για override. Assignee gets `bim3d.comment.assigned` notification. Unassign: dropdown "—" επιλογή. Assignee badge στο comment list row + marker tooltip. | 3/4 industry @-mentions (BIMcollab + Trimble Connect + Revit Cloud). First-@-auto-assignee BIMcollab pattern (1/4) chosen ως best UX (zero-extra-click). REUSE existing user picker UI primitive από contacts/projects (SSoT). |
+| C.2.Q5 | Resolution workflow FSM | **4-state FSM**: Open → InReview → Resolved → Archived. Transitions: Open→InReview (anyone με `bim_comments.update`), InReview→Resolved (assignee OR creator OR owner role), Resolved→Open (anyone, "Re-open" button), Resolved→Archived (auto after 30d Resolved + manual by owner/admin). Each transition: ADR-195 audit entry + creator + assignee + replies-authors notification (NOTIFICATION_KEYS). Archived = hidden από default views (filter toggle "Δείξε αρχειοθετημένα"). | 2/5 industry 4-state (BIMcollab + Navisworks). 3/5 simpler open/closed (Trimble Connect / Revit Cloud / Speckle). Nestor 4-state aligned με enterprise BIM tools per [[feedback-industry-standard-default]]. InReview state καλύπτει "assignee acknowledged" milestone (transparency για multi-stakeholder reviews). |
+| C.2.Q6 | Attachments | **Image only (PNG/JPG), max 5MB per file, max 5 files per comment**. Upload via Firebase Storage company-scoped path `companies/{companyId}/bim_comments/{commentId}/{fileId}_{filename}`. Client-side thumbnail generation (Canvas.toBlob 200×200 cover-fit) stored side-by-side. Comment list shows first thumbnail + count badge "+N". Details panel shows lightbox grid. NO PDF/video/audio v1 (DEFERRED Group D — multi-format would require ClamAV / image processing pipeline). Validation client + server (Storage rules `request.resource.size < 5*1024*1024 && request.resource.contentType.matches('image/(png|jpe?g)')`). | 4/5 industry image attachments (BIMcollab + Revit Cloud + Trimble Connect + Navisworks support images). Speckle no attachments απορρίπτεται. PDF/video DEFERRED matches Trimble Connect's incremental rollout pattern. |
+| C.2.Q7 | Position binding | **Entity OR world space (user choice on creation)**. Entity-anchored: `{kind:'entity', entityId, entityType, relativeOffset:Vector3}` — marker follows entity transform via `subscribeToEntityTransform` hook. World-anchored: `{kind:'world', worldPosition:Vector3}` — fixed absolute. **On entity delete**: entity-anchored marker auto-converts to world-anchored με last-known position + annotation field `orphanedFromEntityId:string` + status remains unchanged. Marker badge visual cue: entity-anchored = type color filled, world-anchored = type color outlined (50% fill). User-visible mode toggle στο BimCommentDetailsPanel: "Συνδεδεμένο με entity" toggle (creates/breaks binding). | 3/5 industry entity-anchored (BIMcollab + Revit + Navisworks). 2/5 world-only (Trimble Connect + Speckle). Nestor dual-mode = best-of-both ([[feedback-completeness-over-mvp]]). Auto-convert on entity delete = Revit pattern (graceful degradation, no orphans). |
+| C.2.Q8 | Firestore schema + real-time sync | **Νέα top-level collection `bim_comments/{commentId}`** με companyId+projectId compound scoping. Schema: `{id, projectId, companyId, type:enum, content:string<=2000, authorId, authorName, anchor:{kind,entityId?,entityType?,relativeOffset?,worldPosition?,orphanedFromEntityId?}, mentions:string[], assigneeId?:string, status:enum, attachments:Array<{fileId,filename,storageUrl,thumbnailUrl,sizeBytes,mimeType}>, repliesCount:int, lastReplyAt?:Timestamp, createdAt:Timestamp, updatedAt:Timestamp, archivedAt?:Timestamp}`. Subcollection `replies/{replyId}` με `{id,parentCommentId,authorId,authorName,content<=2000,mentions[],createdAt}`. enterprise-id: `cmt_bim_<random10>` νέος generator + `cmtr_bim_<random10>` για replies. Real-time sync: `firestoreQueryService.subscribe(query)` με hash-compare guard ([[feedback-firestore-subscribe-equality-guard]]). Composite indexes: `(companyId, projectId, status, createdAt)` + `(companyId, projectId, assigneeId, status)`. RBAC: `bim_comments.{create,read,update,delete,assign,archive}` company-scoped (`roles.ts`). ADR-195 audit: `bim_comment_created`, `bim_comment_status_changed`, `bim_comment_assigned`, `bim_comment_archived`, `bim_comment_deleted`. ADR-145 super-admin read-all. Firestore rules block στο `firestore.rules` (~50 lines) + ADR-298 Phase B coverage test suite (CHECK 3.15/3.16 ratchet). | 4/5 industry cloud-Firestore-like (Trimble Connect + BIMcollab cloud + Speckle stream). Schema design ευρισκόμενο best-practice BIMcollab BCF JSON schema + Firestore optimizations (subcollection για replies avoids 1MB doc limit on hot threads). REUSE firestoreQueryService SSoT (ADR-355). |
+
+**Architectural implications (consolidated για C.2)**:
+
+- **Νέα Phase 9 modules** (comments system):
+  - `bim-3d/comments/CommentMarker3DRenderer.ts` — Three.js Sprite-based pin markers με type-colored badge texture (canvas-rendered per type, cached). Subscribes σε `bim-comments.service.subscribeForProject(projectId)` + floor visibility store + entity transform stores.
+  - `bim-3d/comments/comment-marker-textures.ts` — pre-rendered Canvas badge textures per type+status (5 types × 4 statuses = 20 textures cached)
+  - `bim-3d/comments/BimCommentDetailsPanel.tsx` — side-drawer panel (Radix Dialog or sheet). Sections: header (type badge + status FSM + assignee dropdown), content + edit, attachments grid + lightbox, replies thread + reply input, history (audit log via ADR-195).
+  - `bim-3d/comments/CommentListPanel.tsx` — Floating3DPanel "Σχόλια" tab (mirror Floor3DPanelTab pattern). Filter chips: status (Open/InReview/Resolved/Archived), type, assignee, mine. Search input. Virtual list για large counts.
+  - `bim-3d/comments/CommentReplyInput.tsx` — textarea + @-mention dropdown (user picker SSoT REUSE) + image attach button + submit
+  - `bim-3d/comments/CommentAttachmentUploader.tsx` — file picker + drag-drop + thumbnail generator (Canvas.toBlob)
+  - `bim-3d/comments/CommentAttachmentLightbox.tsx` — full-screen image viewer με keyboard nav (ARIA Group C.5 compatible)
+  - `bim-3d/comments/comment-status-fsm.ts` — pure FSM transition validator + permission gate
+  - `bim-3d/comments/comment-anchor-resolver.ts` — entity-anchored → world position runtime resolver + orphan detection on entity delete
+  - `bim-3d/comments/bim-comments.service.ts` — CRUD wrapper (create/update/reply/changeStatus/assign/archive/delete) + ADR-195 audit hook + RBAC check + NOTIFICATION_KEYS dispatch
+  - `bim-3d/comments/CommentMentionsPicker.tsx` — @-mention dropdown (REUSE user picker SSoT από contacts subapp)
+  - `bim-3d/comments/CommentBadgeIcon.tsx` — single SVG icon component (5 types) — REUSE σε marker textures + list rows + details header
+
+- **Stores**:
+  - `bim-3d/stores/BimCommentsStore.ts` — Zustand SSoT: `{commentsByProjectId: Map<projectId, Comment[]>, repliesByCommentId, filters, selectedCommentId, panelOpen}` + actions (subscribe/unsubscribe per project, optimistic mutations με rollback)
+  - Subscribes via `firestoreQueryService.subscribe` με hash-compare equality guard ([[feedback-firestore-subscribe-equality-guard]])
+
+- **Firestore collections**: `bim_comments/{commentId}` + subcollection `replies/{replyId}` (30-day TTL post-archive)
+
+- **Firestore composite indexes** (firestore.indexes.json additions):
+  - `bim_comments` (companyId ASC, projectId ASC, status ASC, createdAt DESC)
+  - `bim_comments` (companyId ASC, projectId ASC, assigneeId ASC, status ASC)
+  - `bim_comments` (companyId ASC, projectId ASC, anchor.entityId ASC)
+
+- **Firestore rules** (block στο firestore.rules ~50 lines): company-scoped read/write, FSM-enforced status transitions, attachment size/mime validation, ADR-298 Phase B coverage test suite mandatory (CHECK 3.15/3.16 ratchet).
+
+- **Storage rules** (storage.rules): company-scoped `bim_comments/{commentId}/{file}` path, max 5MB, image MIME only. ADR-301 Storage Rules Coverage test (CHECK 3.19 ratchet).
+
+- **RBAC** (`roles.ts` permissions): `bim_comments.{create,read,update,delete,assign,archive}` — designer/architect/owner full, viewer read-only.
+
+- **enterprise-id generators**: `generateBimCommentId()` → `cmt_bim_<random10>`, `generateBimCommentReplyId()` → `cmtr_bim_<random10>`.
+
+- **EntityAuditService audit types**: `bim_comment_created`, `bim_comment_updated`, `bim_comment_replied`, `bim_comment_status_changed`, `bim_comment_assigned`, `bim_comment_archived`, `bim_comment_deleted`, `bim_comment_attachment_added`.
+
+- **NOTIFICATION_KEYS** (νέα keys σε `notification-keys.ts`):
+  - `bim3d.comment.mentioned` (toast + badge για mentioned user)
+  - `bim3d.comment.assigned` (toast + badge για assignee)
+  - `bim3d.comment.replied` (toast για creator + previous repliers)
+  - `bim3d.comment.status_changed` (toast για creator + assignee)
+  - `bim3d.comment.archived` (badge update only, no toast)
+
+- **i18n keys** (Phase 9):
+  - `bim3d.comments.title`, `.empty.{title,subtitle,createButton}`
+  - `bim3d.comments.types.{issue,question,suggestion,approval,info}`
+  - `bim3d.comments.status.{open,inReview,resolved,archived}`
+  - `bim3d.comments.actions.{create,edit,delete,reply,assign,resolve,reopen,archive,attachImage}`
+  - `bim3d.comments.fields.{content,assignee,attachments,createdBy,createdAt,updatedAt}`
+  - `bim3d.comments.filters.{all,mine,assignedToMe,byStatus,byType,searchPlaceholder}`
+  - `bim3d.comments.anchor.{entityLinked,worldFixed,entityOrphaned,toggleLink}`
+  - `bim3d.comments.replies.{count,placeholder,submit}`
+  - `bim3d.comments.errors.{contentTooLong,fileSizeTooLarge,fileTypeNotSupported,fileCountExceeded,permissionDenied}`
+  - **Total: ~38 keys × 2 locales = ~76 entries**
+
+- **GOL checklist 7/7**:
+  - Proactive ✅: Comments preloaded on project mount, subscriptions per active project
+  - Race-free ✅: Optimistic mutations με rollback, FSM transitions atomic στο service, hash-compare snapshot guard
+  - Idempotent ✅: Create deterministic ID, status change idempotent (re-sending same state = no-op), attachment upload chunked-resumable
+  - Belt-and-suspenders ✅: Client-side validation + server-side Firestore rules + Storage rules, orphan auto-conversion on entity delete
+  - SSoT ✅: BimCommentsStore single source, bim-comments.service single mutator, NOTIFICATION_KEYS registry single dispatcher
+  - Await/sync ✅: All Firestore writes awaited, audit hook awaited before resolve, notifications fire-and-forget post-write
+  - Lifecycle owner ✅: BimCommentsStore owns subscription lifecycle, bim-comments.service owns Firestore CRUD, ADR-195 owns audit lifecycle
+
+- **Mirror του 2D pattern** [[feedback-3d-mirror-2d-ssot]]:
+  - Status badge colors REUSE `bg-success/warning/error/info` design tokens (zero new palette)
+  - User picker SSoT REUSE από contacts subapp (no duplicate user search logic)
+  - Notification toast/badge SSoT REUSE NOTIFICATION_KEYS registry
+  - FSM permission gate pattern mirrors ADR-330 BOQ status FSM
+
+**Effort impact για C.2**: **Phase 9 (new) +12-14h** = 3h CommentMarker3DRenderer + texture cache + 3h BimCommentDetailsPanel + 2h CommentListPanel + Floating3DPanel tab + 2h bim-comments.service + RBAC + audit + 1.5h FSM + anchor-resolver + 1h Firestore rules + indexes + ADR-298 coverage tests + 0.5h Storage rules + 0.5-1h i18n + tests. ADR-366 total estimate revised: **~215-256h Phase 0-9** (από ~203-242h post-C.1, +12-14h C.2).
+
+---
+
+### C.3 — 3D Manual Dimensions Tool — ✅ CLOSED 2026-05-22
+
+**Σκοπός**: Κλείνει B.2.Q2 (manual 3D dimensions mirror ADR-362 placement discriminator) από high-level σε implementation-level: activation, snap behavior, placement modes, leader styling, text plane orientation, edit handles, persistence schema.
+
+**Cross-references**:
+- B.2.Q2 (line ~2060) — manual 3D dims mirror ADR-362 discriminator
+- ADR-362 (Enterprise Dimension System) — 2D dim tool SSoT, placement discriminator, grip pattern, leader styling tokens (`DIMENSION_LINE_COLOR`, `DIMENSION_TEXT_COLOR`)
+- ADR-262 (Inferred Alignment Guides — pending implementation) + existing explicit guide system → snap source for dim tool
+- ADR-345 (DXF Ribbon) — pattern για ribbon contextual "3D Viewer" tab activation
+- ADR-326 / ADR-195 / ADR-017/210/294 — tenant scoping, audit, enterprise-id (standard cross-references)
+- `bim/snap-engines/` (existing 2D) → port pattern για 3D snap engines
+
+**Pending micro-decisions**:
+- Q1: Tool activation (ribbon vs hotkey vs both) ✅ RESOLVED
+- Q2: Snap behavior (modes, tolerance, hover preview) ✅ RESOLVED
+- Q3: Placement modes (aligned/linear/radial/angular) ✅ RESOLVED
+- Q4: Leader line styling (shape, arrows, offset) ✅ RESOLVED
+- Q5: Text plane orientation (billboard vs world-plane) ✅ RESOLVED
+- Q6: Edit handles (grips, drag, entity-follow) ✅ RESOLVED
+- Q7: Persistence schema (separate collection vs ADR-362 extension) ✅ RESOLVED
+
+**Decisions Log** — Topic C.3 COMPLETE 7/7 Qs:
+
+| # | Ερώτηση | Απόφαση | Industry alignment |
+|---|---|---|---|
+| C.3.Q1 | Tool activation | **Ribbon button "Διαστάσεις 3D" σε contextual tab "3D Viewer" + hotkey D3D (Ctrl+Shift+D)**. Mirror ADR-362 2D activation. Spring-loaded modal: click button → cursor crosshair, click 1st point → snap preview + anchor, click 2nd point → place dim text. ESC cancels, ENTER commits, continuous mode (next click starts new dim). Tab cycles placement modes (Q3) during active placement. | 4/4 industry σύγκλιση hybrid (ribbon + hotkey, Revit/ArchiCAD/SketchUp/Blender). Mirror του 2D ADR-362 pattern (consistency). |
+| C.3.Q2 | Snap behavior | **All snap modes ON by default**: vertex/endpoint, edge midpoint, face center, edge midpoint-segment, explicit guides (ADR-262 pending), inferred alignment guides (ADR-262 pending). Tolerance: 12px screen-space (mirror 2D). Visual hover preview: snap glyph (square=endpoint, triangle=midpoint, circle=face-center, X=guide) drawn σε cursor 3D world position (Sprite, fixed pixel size). Snap glyph colors REUSE `SNAP_COLORS` tokens (existing 2D SSoT). Per-mode toggle στα settings (mirror 2D). | REUSE existing 2D snap engines pattern (`bim/snap-engines/`), port σε 3D με Three.js raycaster για face/edge hit-test. Mirror του 2D SSoT 100% [[feedback-3d-mirror-2d-ssot]]. |
+| C.3.Q3 | Placement modes | **4 modes**: **Aligned** (default — parallel to measured 3D vector, βλέπει την πραγματική απόσταση σε 3D), **Linear** (axis-locked to X/Y/Z world OR local entity axis — εκλέγει nearest), **Radial** (για round entities like columns/pipes — diameter/radius), **Angular** (3D angle between 2 edges or 3 points). Mode chooser σε ribbon contextual sub-buttons + Tab cycle during placement. Mode persisted per-dim via `mode:'aligned'\|'linear'\|'radial'\|'angular'` discriminator (mirror ADR-362 §Group A placement discriminator pattern). | Mirror του 2D ADR-362 4-mode pattern. Industry: Revit (4 modes Aligned/Linear/Radial/Angular), ArchiCAD (5 modes — extra Coordinate, dropped here), SketchUp (3 modes), Blender measure (2 modes). 4-mode = sweet spot. |
+| C.3.Q4 | Leader line styling | **L-shape leader (single dogleg) default**, straight option toggle. Arrow heads: filled triangle 8px screen-space (architectural standard, ADR-362 SSoT). Text offset from dim line: 12px screen-space default, draggable via text grip (Q6). Leader line color/text color REUSE ADR-362 `DIMENSION_LINE_COLOR` + `DIMENSION_TEXT_COLOR` tokens (zero new palette). Stroke width 1.5px screen-space (mirror 2D). | 4/4 industry L-shape default (Revit/ArchiCAD/AutoCAD/Blender). Filled triangle arrows = architectural standard ISO 128. REUSE 2D tokens [[feedback-3d-mirror-2d-ssot]]. |
+| C.3.Q5 | Text plane orientation | **Camera-billboard default** (always faces user, never upside-down/unreadable). Per-dim toggle στο edit panel "Κλείδωμα σε επίπεδο μέτρησης" → world-plane (parallel to dim's measured plane, useful για top-view docs export). Auto-best NOT offered (unpredictable behavior). Three.js: billboard via `Sprite` OR custom `Mesh.onBeforeRender = lookAt(camera.position)`. World-plane: quaternion from measured normal vector. | 4/4 σύγκλιση billboard default (Revit/ArchiCAD/SketchUp/Blender). Lock-to-plane option = Revit pattern. Auto-best dropped (no industry precedent, confusing). |
+| C.3.Q6 | Edit handles | **3-grip pattern mirror 2D ADR-362**: endpoint A, endpoint B, text-position. Endpoint grips: drag re-snaps to new position. Text grip: drags text plane offset (within billboard plane). Grip visual: billboard square με `CAD_UI_COLORS.grips` (mirror Sectoin A.1.Q3 3D grips pattern). On host entity transform: dim follows automatically via `subscribeToEntityTransform` pattern (mirror C.2.Q7 comment anchor). On host entity delete: user setting `bim3d.dimensions.onEntityDelete` = `'orphan'` (default — convert to world-anchored με orphan flag) OR `'delete'`. ESC during grip drag = cancel mutation. | Mirror του 2D ADR-362 3-grip pattern (consistency). Entity-follow = Revit/ArchiCAD pattern (4/4 industry). Orphan auto-convert = parallel to C.2.Q7 comment anchor behavior (cross-domain consistency). |
+| C.3.Q7 | Persistence schema | **Νέα top-level collection `bim_dimensions_3d/{dimensionId}`** (separate από ADR-362 2D `bim_dimensions`). Reason: schema diverges σημαντικά (Vector3 anchors vs Vector2, 4-mode discriminator superset, host entity binding 3D-specific, text plane). Schema: `{id, projectId, companyId, mode, placement:{aligned?:..., linear?:{axis:'X'\|'Y'\|'Z'\|'entityLocal', entityRefId?}, radial?:{center,radius}, angular?:{vertex,rayA,rayB}}, anchor:{endpointA:Vector3, endpointB:Vector3, additionalPoints?:Vector3[], hostEntityIds?:string[]}, textOffset:Vector2, textPlane:'billboard'\|'world', value:number (computed), unit:'mm'\|'m', precision:int, leaderStyle:{shape:'L'\|'straight', arrowSize:int}, createdBy, createdAt, updatedAt, orphanedFromEntityIds?:string[]}`. enterprise-id `dim3d_<random10>` νέος generator. RBAC: `bim_dimensions_3d.{create,read,update,delete}` company-scoped. ADR-195 audit types `bim_dim3d_{created,updated,deleted}`. Composite index: `(companyId, projectId, mode, createdAt)`. **`useDim3DToolRouting.ts` hook**: dispatches dim creation/edit σε 2D dim service αν `viewMode.mode === '2d'`, σε 3D service αν `'3d'\|'3d-path-trace'` — cross-mode tool reuse via routing layer (no duplicate UI). | Schema separation aligned με Revit (`Element.LocationCurve` distinct για 2D vs 3D). 2D backport via routing hook = mirror του ADR-345 ribbon shared-tool pattern (2D dim tool + 3D dim tool same ribbon button, mode-aware). REUSE ADR-362 schema fields where 1:1 applicable. |
+
+**Architectural implications (consolidated για C.3)**:
+
+- **Νέα Phase 9 modules** (3D dimensions):
+  - `bim-3d/dimensions/Dimension3DRenderer.ts` — Three.js renderer για 3D dims (Line2 segments + Sprite text + Sprite arrows + Sprite grips). Subscribes σε `BimDimensions3DStore` + entity transform stores.
+  - `bim-3d/dimensions/dim3d-line-geometry.ts` — pure: anchor pair + placement mode → `{dimLine:Vector3[], leaderLines:Vector3[], textAnchor:Vector3, arrowTransforms}`
+  - `bim-3d/dimensions/dim3d-value-computer.ts` — pure: anchors + mode → numeric value (aligned distance / linear axis-projected / radial radius/diameter / angular degrees) + unit formatting
+  - `bim-3d/dimensions/dim3d-text-plane-orienter.ts` — pure: billboard vs world-plane quaternion compute
+  - `bim-3d/dimensions/Dim3DToolStateMachine.ts` — FSM (idle → placing1 → placing2 → placingText → committed), TAB cycles mode mid-placement
+  - `bim-3d/dimensions/useDim3DToolRouting.ts` — cross-mode hook (2D/3D dispatcher)
+  - `bim-3d/dimensions/Dim3DGripsRenderer.ts` — 3-grip pattern mirror 2D ADR-362 grip pattern, REUSE billboard square Sprite (Section A.1.Q5)
+  - `bim-3d/dimensions/bim-dimensions-3d.service.ts` — CRUD wrapper + audit + RBAC + entity-follow subscription
+  - `bim-3d/dimensions/dim3d-snap-engine-adapter.ts` — wraps existing 2D snap engines (vertex/midpoint/face-center) με Three.js raycaster για 3D hit-test
+  - `bim-3d/dimensions/RibbonDim3DContextualTab.tsx` — ADR-345 ribbon tab με mode sub-buttons (Aligned/Linear/Radial/Angular)
+  - `bim-3d/dimensions/Dim3DPropertiesPanel.tsx` — selected-dim properties editor (text offset, plane lock, precision, unit, mode)
+
+- **Stores**:
+  - `bim-3d/stores/BimDimensions3DStore.ts` — Zustand SSoT: `{dimensionsByProjectId, selectedDimId, toolActive, toolMode, fsmState, snapPreview}` + actions
+
+- **Firestore collection**: `bim_dimensions_3d/{dimensionId}` (separate από `bim_dimensions` 2D) — companyId+projectId scoped
+
+- **Firestore composite indexes**:
+  - `bim_dimensions_3d` (companyId ASC, projectId ASC, createdAt DESC)
+  - `bim_dimensions_3d` (companyId ASC, projectId ASC, mode ASC)
+  - `bim_dimensions_3d` (companyId ASC, projectId ASC, anchor.hostEntityIds ARRAY_CONTAINS) — για entity-follow queries
+
+- **Firestore rules**: company-scoped block (~25 lines mirror ADR-362 2D block), ADR-298 Phase B coverage test suite (CHECK 3.15/3.16 ratchet, mandatory on touch).
+
+- **RBAC**: `bim_dimensions_3d.{create,read,update,delete}` — designer/architect/owner.
+
+- **enterprise-id**: `generateBim3DDimensionId()` → `dim3d_<random10>` νέος generator.
+
+- **EntityAuditService audit types**: `bim_dim3d_created`, `bim_dim3d_updated`, `bim_dim3d_deleted`, `bim_dim3d_orphaned`.
+
+- **User settings**:
+  - `bim3d.dimensions.onEntityDelete` = `'orphan'` (default) | `'delete'`
+  - `bim3d.dimensions.defaultUnit` = `'m'` (default) | `'mm'`
+  - `bim3d.dimensions.defaultPrecision` = `2` (decimal places)
+  - Persisted via Bim3DPreferencesService (existing)
+
+- **i18n keys** (Phase 9):
+  - `bim3d.dimensions.title`, `.toolbar.{aligned,linear,radial,angular,cancel,commit}`
+  - `bim3d.dimensions.mode.{aligned,linear,radial,angular}.{label,tooltip}`
+  - `bim3d.dimensions.placement.{linearAxis.{X,Y,Z,entityLocal}}`
+  - `bim3d.dimensions.textPlane.{billboard,worldLocked,toggleLabel}`
+  - `bim3d.dimensions.units.{mm,m}`
+  - `bim3d.dimensions.fields.{value,offset,precision,unit,createdAt,createdBy}`
+  - `bim3d.dimensions.actions.{edit,delete,duplicate,convertTo2D}`
+  - `bim3d.dimensions.settings.{onEntityDelete.orphan,onEntityDelete.delete,defaultUnit,defaultPrecision}`
+  - `bim3d.dimensions.snap.{endpoint,midpoint,faceCenter,guide,inferred}`
+  - `bim3d.dimensions.errors.{cannotMeasureSamePoint,invalidAngularPoints,permissionDenied}`
+  - **Total: ~36 keys × 2 locales = ~72 entries**
+
+- **GOL checklist 7/7**:
+  - Proactive ✅: Dim tool initialized on ribbon mount, subscriptions per project
+  - Race-free ✅: FSM state transitions atomic, snap engine debounced 16ms (60fps), entity-follow via subscribeToEntityTransform single source
+  - Idempotent ✅: Value computation deterministic from anchors, mode change idempotent (re-applying same mode = no-op), grip drag transactional (rollback on ESC)
+  - Belt-and-suspenders ✅: Client validation + Firestore rules + Storage (N/A here), orphan auto-convert on entity delete
+  - SSoT ✅: BimDimensions3DStore single source, bim-dimensions-3d.service single mutator, snap engines REUSE 2D SSoT, leader tokens REUSE ADR-362
+  - Await/sync ✅: All writes awaited, audit hook awaited
+  - Lifecycle owner ✅: BimDimensions3DStore owns subscription lifecycle, service owns CRUD, FSM owns tool state
+
+- **Mirror του 2D pattern** [[feedback-3d-mirror-2d-ssot]] — 95% mirror:
+  - 4-mode placement discriminator: 100% ADR-362
+  - 3-grip pattern: 100% ADR-362
+  - Snap engines: 100% REUSE με Three.js raycaster adapter
+  - Leader styling tokens: 100% REUSE
+  - Ribbon tab pattern: 100% ADR-345
+  - **Conscious diverge**: separate Firestore collection (schema requires Vector3 + host binding 3D-specific) — justified per data model differences, not UX divergence
+
+**Effort impact για C.3**: **Phase 9 (new) +10-12h** = 3h Dimension3DRenderer + line geometry + value computer + text orienter + 2h Dim3DToolStateMachine + ribbon contextual tab + 2h grips renderer + properties panel + 1.5h service + RBAC + audit + 1h Firestore rules + indexes + ADR-298 coverage tests + 1h useDim3DToolRouting cross-mode hook + 0.5-1h i18n + tests. ADR-366 total estimate revised: **~225-268h Phase 0-9** (από ~215-256h post-C.2, +10-12h C.3).
+
+---
+
+### C.4 — BimEntityCard Remaining Tabs (Materials/BOQ/Comments) — ✅ CLOSED 2026-05-22
+
+**Σκοπός**: Κλείνει B.2.Q4 (5-tab EntityDetailsHeader card) — implementation των 3 remaining tabs (`BimMaterialsTab`, `BimBoqTab`, `BimCommentsTab`). Geometry + Audit ήδη υπάρχουν. Καθορίζει per-tab layout + edit affordances + tab order + default active.
+
+**Cross-references**:
+- B.2.Q4 (line ~2170) — 5-tab Card scope (Geometry/Materials/BOQ/Audit/Comments) με read-only παντού εκτός Comments
+- ADR-363 Phase 6 (Multi-Layer DNA BOQ + Material→ΑΤΟΕ SSoT) — material catalog + multi-layer parent/children
+- EntityDetailsHeader SSoT pattern [[reference-entity-details-header-ssot]] — `@/core/entity-headers` reuse
+- C.2 — BimCommentsTab reuses BimCommentsStore + CommentDetailsPanel
+- ADR-195 audit για material/BOQ updates
+- ADR-326 tenant scoping
+
+**Pending micro-decisions**:
+- Q1: BimMaterialsTab layout ✅ RESOLVED
+- Q2: Material edit affordance (read-only link vs inline) ✅ RESOLVED
+- Q3: BimBoqTab layout (multi-layer parent/children) ✅ RESOLVED
+- Q4: BOQ edit affordance ✅ RESOLVED
+- Q5: BimCommentsTab layout ✅ RESOLVED
+- Q6: Tab order + default active ✅ RESOLVED
+
+**Decisions Log** — Topic C.4 COMPLETE 6/6 Qs:
+
+| # | Ερώτηση | Απόφαση | Industry alignment |
+|---|---|---|---|
+| C.4.Q1 | BimMaterialsTab layout | **4 sections**: (1) Current material badge (name + thumbnail από wall-material-catalog + cost €/unit preview), (2) Alternatives top-5 (filtered από catalog by `quantityKind` compatibility), (3) ADR-363 multi-layer context (αν `dna.layers.length > 1`, list each layer με per-layer material), (4) Cost rollup (per-entity total = material cost × quantity from Phase 6). Read-only display. Empty state: αν entity δεν έχει material assigned → "Δεν έχει οριστεί υλικό" + "Όρισε υλικό" CTA. | Mirror του ADR-363 Phase 6 material→ΑΤΟΕ mapping pattern. EntityDetailsHeader SSoT layout (Contacts + Procurement) tabs use ίδιες section primitives. |
+| C.4.Q2 | Material edit affordance | **Read-only με "Άλλαξε υλικό" link** → opens ADR-363 material catalog drawer με filter pre-applied (compatible `quantityKind`). User selects → triggers `bim-entity-update.service.changeMaterial(entityId, newMaterialId)` (server-side) → Firestore mutation + ADR-195 audit `bim_entity_material_changed`. RBAC: `bim_entities.update_material` permission (designer/architect/owner). Inline edit απορρίπτεται (material picker is complex UI — duplicating inline = SSoT violation). Single material UI surface = SSoT principle. | SSoT principle [[feedback-centralize-on-the-spot]]: one place owns material catalog UI. Drawer pattern aligns με ADR-345 ribbon drawer UX. |
+| C.4.Q3 | BimBoqTab layout | **3 sections**: (1) BoQ parent row (single-entry wall = self single row, multi-entry wall = `isGroupParent=true` row με total cost rollup ADR-363 Phase 6.1), (2) Children rows expandable tree (multi-layer walls only — N rows με per-layer cost + per-layer ΑΤΟΕ + per-layer quantity), (3) Quantity context (area/volume from entity geometry, ADR-363 Phase 6.2 quantityKind ΑΤΟΕ mapping). Read-only display. Empty state (no BoQ item): "Δεν έχει συσχετιστεί BoQ" + "Δες ADR-363 Phase 6.1 logic" diagnostic link (super-admin only). | Mirror του ADR-363 Phase 6 parent/children expandable tree — pending UI ήδη planned σε ADR-363 Phase 6.2+, εδώ απλώς consumed. SSoT REUSE. |
+| C.4.Q4 | BOQ edit affordance | **Read-only display + "Άνοιξε στη BoQ" link** → navigate to BOQ subapp `/boq?focusEntityId=<entityId>` drawer. NO inline ΑΤΟΕ override (centralized σε BOQ subapp, inline duplication = SSoT violation). Per-entity ΑΤΟΕ override (rare advanced use case): explicit toggle "Custom ΑΤΟΕ" σε entity properties dialog (ADR-363 Phase 6.2.1 feature, separately scoped). Audit via ADR-195 `bim_entity_boq_override_set`. | SSoT principle — BOQ edit logic σε BOQ subapp [[feedback-centralize-on-the-spot]]. Cross-subapp navigation pattern via URL state (mirror των /properties+/contacts cross-links). |
+| C.4.Q5 | BimCommentsTab layout | **Inline preview top-3 comments** (sorted by `updatedAt DESC`) με: type badge (C.2.Q1 5-type icons) + author avatar + content preview (first 100 chars + ellipsis) + relative timestamp ("πριν 2 ώρες"). Unread badge στο tab header: count of comments updated post user's last view (LocalStorage tracked). "Δες όλα" button → opens BimCommentDetailsPanel side-drawer (C.2) με filter `anchor.entityId === currentEntityId`. "Νέο σχόλιο" button → opens BimCommentCreateForm pre-filled με `anchor: {kind:'entity', entityId, entityType}`. Real-time sync via BimCommentsStore filter (subscribe scoped to projectId, filter by entityId client-side). Empty state: "Δεν υπάρχουν σχόλια" + "Δημιούργησε πρώτο σχόλιο" CTA. | Inline preview + "see all" pattern = Slack/Linear/Notion thread preview convention. Tab unread badge = ubiquitous notification pattern. REUSE BimCommentsStore (C.2 SSoT) — zero duplicate state. |
+| C.4.Q6 | Tab order + default active | **Order**: Geometry → Materials → BOQ → Comments → Audit (general → specific → cross-cutting → audit). Default active = **Geometry** (most-used tab για architects, baseline view). Per-user persistence: last active tab per entity type stored σε `userPreferences.bim3d.entityCardTabs.{entityType}.lastActive` via Bim3DPreferencesService (existing) → LocalStorage primary + Firestore sync on settings save. Tab visibility flags: Comments tab badge visible μόνο αν `bim_comments.read` permission, Audit tab visible αν `bim_audit.read` permission (RBAC gate). | Tab order mirrors ADR-345 ribbon section ordering convention (general → specialized). Default Geometry = matches Revit Element Properties default tab. Per-user persistence = standard UX pattern (Linear/Notion/Slack). |
+
+**Architectural implications (consolidated για C.4)**:
+
+- **Νέα Phase 9 modules**:
+  - `bim-3d/properties/tabs/BimMaterialsTab.tsx` — 4-section layout, reads από `bim-entity-store` + `wall-material-catalog` (existing SSoT)
+  - `bim-3d/properties/tabs/BimBoqTab.tsx` — 3-section layout, reads από ADR-363 Phase 6 BoQ data (`boq-multi-layer-builder` output + Firestore `boq_items` collection)
+  - `bim-3d/properties/tabs/BimCommentsTab.tsx` — inline preview + unread badge + actions, reads από BimCommentsStore (C.2)
+  - `bim-3d/properties/tabs/material-alternatives-resolver.ts` — pure: entity material id → top-5 alternatives από catalog filtered by `quantityKind`
+  - `bim-3d/properties/tabs/boq-tree-builder.ts` — pure: entity id → parent + children rows (consumes ADR-363 Phase 6 data structure)
+  - `bim-3d/properties/tabs/last-active-tab-tracker.ts` — pure: read/write tab state σε Bim3DPreferencesService
+
+- **Stores extensions**:
+  - `BimEntityCardPanel`: tab visibility based on RBAC permission checks
+  - `Bim3DPreferencesService`: extension με `entityCardTabs.{entityType}.lastActive` field
+  - No new top-level stores (tabs are pure views over existing SSoT)
+
+- **Services**:
+  - `bim-entity-update.service.ts` (νέο OR extension existing): `changeMaterial(entityId, newMaterialId)` server-side action + audit
+  - REUSE existing `bim-comments.service.ts` (C.2) for create from tab
+
+- **RBAC** (`roles.ts`):
+  - `bim_entities.update_material` (designer/architect/owner)
+  - `bim_entities.boq_override_set` (architect/owner only, advanced)
+  - `bim_comments.read` (all members) — gates Comments tab visibility
+  - `bim_audit.read` (architect/owner) — gates Audit tab visibility
+  - existing material catalog read permissions = unchanged
+
+- **EntityAuditService audit types**:
+  - `bim_entity_material_changed` (Q2)
+  - `bim_entity_boq_override_set` (Q4 advanced) — already planned ADR-363 Phase 6.2.1
+
+- **Firestore**: no new collections (reuses entities, materials, boq_items, bim_comments). Possible composite index addition αν χρειαστεί: `bim_comments` (companyId, projectId, anchor.entityId, updatedAt DESC) για efficient BimCommentsTab inline preview query.
+
+- **i18n keys** (Phase 9):
+  - `bim3d.entityCard.tabs.{geometry,materials,boq,comments,audit}`
+  - `bim3d.entityCard.materials.{currentSection,alternativesSection,multiLayerSection,costRollupSection,empty,changeButton,costPerUnit,totalCost}`
+  - `bim3d.entityCard.boq.{parentSection,childrenSection,quantitySection,empty,openInBoq,diagnostics}`
+  - `bim3d.entityCard.boq.layerRow.{material,quantity,unitCost,totalCost}`
+  - `bim3d.entityCard.comments.{empty,seeAll,createNew,unreadBadge,previewMore}`
+  - `bim3d.entityCard.errors.{materialChangeForbidden,boqOverrideForbidden}`
+  - **Total: ~30 keys × 2 locales = ~60 entries**
+
+- **GOL checklist 7/7**:
+  - Proactive ✅: Tabs pre-rendered, data subscriptions lazy (only when tab active)
+  - Race-free ✅: Material change atomic Firestore transaction, BOQ data read-only (no race), comments via BimCommentsStore (already hash-compare guarded C.2)
+  - Idempotent ✅: Material change same material = no-op, tab activation idempotent
+  - Belt-and-suspenders ✅: Permission check client + server, empty states gracefully handled
+  - SSoT ✅: Tabs are pure views over existing SSoT (wall-material-catalog, boq-multi-layer-builder, BimCommentsStore, ADR-195 audit) — zero duplicate state
+  - Await/sync ✅: Material mutation awaited before tab refresh, BOQ data subscribed (auto-refresh)
+  - Lifecycle owner ✅: BimEntityCardPanel owns tab activation, individual tabs own their lazy subscription lifecycles
+
+- **Mirror του 2D pattern** [[feedback-3d-mirror-2d-ssot]]:
+  - Tab layout primitives = EntityDetailsHeader SSoT (Contacts + Procurement) ✅
+  - Material catalog UI = ADR-363 (2D originated) ✅
+  - BOQ subapp = shared 2D/3D ✅
+  - Comments inline preview pattern can backport to 2D entity panels (optional follow-up Group D)
+
+**Effort impact για C.4**: **Phase 9 (new) +5-6h** = 1.5h BimMaterialsTab + alternatives resolver + 1.5h BimBoqTab + tree builder + 1h BimCommentsTab + 0.5h bim-entity-update.service material change + 0.5h Bim3DPreferencesService extension + 0.5-1h tests + i18n + Firestore index. ADR-366 total estimate revised: **~230-274h Phase 0-9** (από ~225-268h post-C.3, +5-6h C.4).
+
+---
+
+### C.5 — ARIA + Screen Reader Compliance — ✅ CLOSED 2026-05-22
+
+**Σκοπός**: Κλείνει A.7.Q2 deferred (ARIA + screen reader compliance) — EU Public Sector Bodies Directive (Greek municipalities), WCAG 2.2 AA, EN 301 549. Phase 8.0-8.1 ήδη wired infrastructure (KeyboardFocusManager, AriaLiveRegion, aria-live-bus, aria-attribute-presets, aria-entity-description-generator, FocusIndicator3D, focus-order). C.5 κλείνει: live region announcement protocol, focus management strategy, keyboard nav order, ARIA label content patterns, reduced-motion mode.
+
+**Cross-references**:
+- A.7.Q2 (line ~1100) — ARIA deferred research
+- Phase 8.0-8.1 — implemented foundation (`bim-3d/accessibility/`)
+- WCAG 2.2 AA, EN 301 549 (EU 2025), EAA (European Accessibility Act 2025), ATAG 2.0
+- NVDA / JAWS / VoiceOver — screen reader testing matrix
+- Three.js a11y patterns (offscreen DOM proxy elements convention)
+- `useReducedMotion` hook (React community SSoT pattern)
+
+**Pending micro-decisions**:
+- Q1: Live region announcement protocol ✅ RESOLVED
+- Q2: Focus management σε 3D canvas ✅ RESOLVED
+- Q3: Keyboard-only entity navigation order ✅ RESOLVED
+- Q4: ARIA labels content format ✅ RESOLVED
+- Q5: Reduced-motion mode ✅ RESOLVED
+
+**Decisions Log** — Topic C.5 COMPLETE 5/5 Qs:
+
+| # | Ερώτηση | Απόφαση | Industry alignment |
+|---|---|---|---|
+| C.5.Q1 | Live region announcements | **Politeness=polite default** (non-interrupting), assertive μόνο για errors/blockers. Events: selection (`Επιλέχθηκε τοίχος W001 — μήκος 4,5 μέτρα, ύψος 2,8 μέτρα, υλικό μπετόν`), mode change (`Ενεργοποιήθηκε φωτορεαλιστικό mode, υπολογισμός...`), camera snap (`Όψη πρόσοψης ενεργοποιήθηκε`), section cut toggle (`Τομή Z=2.0 μέτρα ενεργή`), tool activation (`Εργαλείο διαστάσεων ενεργό, κάντε κλικ για 1η ακμή`), render queue updates (`Render 1 από 3 ολοκληρώθηκε`), path tracer progress (assertive μόνο on final 100%). Debounce 250ms (avoid flooding on rapid selection). i18n via aria-entity-description-generator (Greek primary, EN fallback). REUSE existing `AriaLiveRegion` + `aria-live-bus`. | WCAG 2.2 AA SC 4.1.3 "Status Messages" compliance. NVDA/JAWS/VoiceOver politeness conventions. Industry: Adobe XD/Figma similar polite default. |
+| C.5.Q2 | Focus management σε 3D canvas | **Offscreen DOM proxy elements pattern** (Three.js a11y best practice). Per visible entity: hidden `<button>` σε offscreen `<div role="application" aria-label="Εντότητες 3D">` με ARIA label από aria-entity-description-generator (Q4 format). Tab-cycleable. Focus event → triggers 3D selection + visual `FocusOutlineRenderer` (existing). Canvas root `role="img" aria-label="Τρισδιάστατο παράρτημα BIM. Πατήστε Tab για πλοήγηση εντοτήτων, Enter για άνοιγμα ιδιοτήτων."`. Skip-link "Παράλειψη 3D viewer" pre-canvas. Tab order = focus-order.ts SSoT (existing) — spatial top-down-left-right per floor, floor-grouped. ROVING tabindex pattern (only one button has `tabindex=0` at a time, rest are `-1`). | WCAG 2.4.3 "Focus Order" + 2.4.7 "Focus Visible". Offscreen DOM proxy = Three.js docs recommended pattern + WebGL accessibility best practice (Khronos guidelines). Roving tabindex = WAI-ARIA Authoring Practices Guide composite widget pattern. |
+| C.5.Q3 | Keyboard-only entity navigation | **Spatial default** (top-down-left-right per floor, repeated per floor) — intuitive για architects. Semantic toggle (group by entity type: walls → columns → beams → slabs → openings) σε settings `bim3d.accessibility.entityNavOrder`. Arrow keys: ArrowRight/Left = next/prev sibling, ArrowUp/Down = parent/child group (floor ↔ entity). Enter = open BimEntityCardPanel. ESC = clear focus, return to canvas root. Shift+Tab reverses. Home/End = first/last entity. PageDown/PageUp = next/prev floor (groups). Focus indicator persists during nav (FocusIndicator3D existing) + sticky AriaLive announcement on each focus change. | WAI-ARIA Tree/Grid composite widget pattern. Arrow keys = WAI-ARIA Authoring Practices Guide. Industry: Revit "Tab through visible elements" (similar pattern), AutoCAD "Cycle through overlapping objects" (Tab convention). |
+| C.5.Q4 | ARIA labels content | **Format**: `<entityType> <entityCode> — <key dimensions> — <material>`. Per type: Wall=`Τοίχος W001 — μήκος 4,5 μέτρα, ύψος 2,8 μέτρα — μπετόν 20 εκατοστά`. Column=`Κολώνα C001 — 40×40 εκατοστά, ύψος 3 μέτρα — οπλισμένο σκυρόδεμα`. Beam=`Δοκός B001 — μήκος 5 μέτρα, διατομή 30×50 εκατοστά — οπλισμένο σκυρόδεμα`. Slab=`Πλάκα S001 — εμβαδόν 25 τ.μ., πάχος 15 εκατοστά`. Opening=`Άνοιγμα O001 σε τοίχο W001 — 1×2,1 μέτρα`. Stair=`Σκάλα ST001 — 12 βαθμίδες, ύψος 3 μέτρα`. Locale-aware: Greek primary, English fallback via i18n keys (existing aria-entity-description-generator extension). Numbers locale-formatted (Greek comma decimal `4,5`). | EN 301 549 §11.5.2 (info conveyed to AT in plain text). WCAG 2.2 AA SC 1.1.1 "Non-text Content". Industry: Revit screen-reader output includes type + ID + key params (similar pattern). |
+| C.5.Q5 | Reduced-motion mode | **Respect `prefers-reduced-motion: reduce` media query**. When active: camera transitions snap (zero duration vs 300ms), section cut animations instant, path tracer transitions instant raster↔pt (no fade), shadow quality snap to soft (skip 300ms), spinners static, marker hover bobs disabled, ViewCube hover hop disabled, ribbon panel collapse instant. React via existing `useReducedMotion` hook OR new `bim-3d/accessibility/use-reduced-motion.ts` (light wrapper over `window.matchMedia`). Settings override toggle `bim3d.accessibility.reducedMotion` = `'auto'` (follow OS, default) | `'force-on'` | `'force-off'`. Override stored σε Bim3DPreferencesService. Live-update listener (matchMedia change event). | WCAG 2.2 AA SC 2.3.3 "Animation from Interactions" (require user-mechanism to disable). EAA 2025 (EU mandatory). Industry: Apple Safari/iOS default-respect, Chrome respects, Figma/Linear implement (3/3 industry σύγκλιση web apps). |
+
+**Architectural implications (consolidated για C.5)**:
+
+- **Νέα Phase 9 modules** (accessibility polish):
+  - `bim-3d/accessibility/announcement-protocol.ts` — pure: event type → politeness + i18n message template. Wraps existing `aria-live-bus.ts`. Debounce 250ms.
+  - `bim-3d/accessibility/entity-dom-proxy-renderer.ts` — generates/destroys hidden `<button>` elements per visible entity. Subscribes σε `BimEntitiesStore.visibleEntities` + floor visibility store. Roving tabindex management.
+  - `bim-3d/accessibility/entity-keyboard-navigator.ts` — Arrow/Home/End/PageUp/PageDown handlers. Reads focus-order.ts SSoT (existing).
+  - `bim-3d/accessibility/use-reduced-motion.ts` — light wrapper hook over `window.matchMedia('(prefers-reduced-motion: reduce)')` + settings override.
+  - `bim-3d/accessibility/reduced-motion-config.ts` — central registry: which animations respect reduced-motion (camera, section, pt-transition, shadow-fade, hover-bob, viewcube-hop, panel-collapse) — single source for runtime checks
+  - Extend existing `aria-entity-description-generator.ts` — add missing entity types (Stair, AreaPlan, dimensions, comments markers) + verify EN locale completeness
+  - Extend existing `focus-order.ts` — spatial vs semantic toggle support
+
+- **Stores extensions**:
+  - `Bim3DPreferencesService`: +`accessibility.{entityNavOrder, reducedMotion}` fields
+  - `ViewMode3DStore`: +`announcementsEnabled: boolean` (toggle σε settings, default ON)
+
+- **Components touched (animation guards για Reduced Motion)**:
+  - `viewport/animation-manager.ts` — guard durations: 0ms αν reduced-motion active
+  - `systems/section/section-clip-applicator.ts` — guard fade animations
+  - `lighting/quality-modulator.ts` — guard 300ms shadow/SSAO fade (snap to soft directly)
+  - `render/raster-to-pathtrace-swap.ts` — guard fade
+  - All hover-bob/viewcube-hop renderers — guard transforms
+
+- **i18n keys** (Phase 9):
+  - `bim3d.aria.canvas.{rootLabel,skipLink,emptyState}`
+  - `bim3d.aria.entityNav.{spatialOrderLabel,semanticOrderLabel,arrowHelp,enterHelp,escHelp}`
+  - `bim3d.aria.entityDescription.{wall,column,beam,slab,opening,stair,dimension,comment}` templates (ICU placeholders για numbers/dimensions)
+  - `bim3d.aria.announcements.{entitySelected,modeChanged,cameraSnapped,sectionToggled,toolActivated,renderProgress,renderDone}` templates
+  - `bim3d.accessibility.settings.{title,entityNavOrder.spatial,entityNavOrder.semantic,reducedMotion.auto,reducedMotion.forceOn,reducedMotion.forceOff,announcementsEnabled}`
+  - **Total: ~32 keys × 2 locales = ~64 entries**
+
+- **Settings UI** (`Floating3DPanel` νέα tab "Προσβασιμότητα" OR section σε Settings tab — TBD per UX A/B testing, default = section σε existing Settings):
+  - Toggle: entity navigation order (Spatial / Semantic)
+  - Radio: Reduced motion (Auto / Force-on / Force-off)
+  - Toggle: ARIA announcements (On / Off)
+  - Live region politeness slider (Polite / Assertive / Off) — advanced
+
+- **Testing matrix** (manual testing required pre-release):
+  - NVDA 2026 + Firefox + Chrome
+  - JAWS 2026 + Edge + Chrome
+  - VoiceOver macOS Sonoma + Safari + Chrome
+  - VoiceOver iOS — DEFERRED (mobile non-goal G11)
+  - TalkBack Android — DEFERRED (mobile non-goal G11)
+  - Lighthouse Accessibility score ≥95
+  - axe DevTools full scan zero violations
+  - WAVE no errors
+  - Manual keyboard-only traversal (no mouse) — all features reachable
+
+- **GOL checklist 7/7**:
+  - Proactive ✅: Offscreen proxies generated on entity mount, reduced-motion checked at app init + media-change listener
+  - Race-free ✅: Roving tabindex single source (only one `=0` at a time), announcement debounced 250ms (avoid flooding)
+  - Idempotent ✅: ARIA label regen deterministic from entity data, focus event handlers idempotent
+  - Belt-and-suspenders ✅: OS preference + manual settings override, fallback EN locale αν Greek key missing
+  - SSoT ✅: aria-live-bus single dispatcher, aria-entity-description-generator single label source, reduced-motion-config single animation registry, focus-order.ts single nav order
+  - Await/sync ✅: Settings changes awaited (Firestore sync), DOM proxy updates synchronous with entity store
+  - Lifecycle owner ✅: entity-dom-proxy-renderer owns proxy lifecycle, Bim3DPreferencesService owns settings lifecycle
+
+- **Mirror του 2D pattern** [[feedback-3d-mirror-2d-ssot]]:
+  - i18n via existing locale system (zero new mechanism)
+  - Reduced motion logic same hook across 2D + 3D (when 2D adopts it — optional Group D backport)
+  - Settings persistence pattern = Bim3DPreferencesService
+
+**Effort impact για C.5**: **Phase 9 (new) +6-7h** = 2h announcement-protocol + debounce + i18n + 2h entity-dom-proxy-renderer + entity-keyboard-navigator + 1h use-reduced-motion hook + reduced-motion-config + 1h Bim3DPreferencesService extension + settings UI + 0.5h aria-entity-description-generator extension + EN locale verify + 0.5-1h tests + i18n keys. **Testing budget** (post-implementation, manual screen reader testing): +4-6h NVDA+JAWS+VoiceOver matrix — DEFERRED post-Phase 9 ως separate QA pass. ADR-366 total estimate revised: **~236-281h Phase 0-9** (από ~230-274h post-C.4, +6-7h C.5).
+
+---
+
+### C.6 — Advanced Section Cuts + Crop Region Rendering — ✅ CLOSED 2026-05-22
+
+**Σκοπός**: Κλείνει deferred section cuts polish (horizontal cuts axis=Y, multiple independent planes, linked planes group) + B.4.Q5 (crop region rendering) από high-level σε implementation-level. Phase 7.0 implemented basic single-plane vertical section cuts — C.6 extends σε max 6 planes + horizontal + linked groups + crop region tool.
+
+**Cross-references**:
+- B.4.Q5 (line ~2400) — crop region DEFERRED Phase 8+
+- Phase 7.0 (existing implementation): SectionStore, SectionBox, section-clip-applicator, section-scene-controller, Section3DPanelTab
+- A.3 (Section Cuts research, line ~1395) — base research closed για single plane vertical
+- Navisworks ClippingGroup (linked planes pattern), Revit Section Box rotation, V-Ray Region Render, Lumion crop tool
+- Three.js `Material.clippingPlanes` hard limit 6 planes
+- ADR-326 building floor.elevation — preset elevation source για horizontal cuts
+- `path-tracer/PathTracerRenderer.ts` (Phase 6) — crop region applied to PT scene
+
+**Pending micro-decisions**:
+- Q1: Horizontal cuts (axis=Y) ✅ RESOLVED
+- Q2: Multiple independent planes ✅ RESOLVED
+- Q3: Linked planes group ✅ RESOLVED
+- Q4: Crop region tool ✅ RESOLVED
+- Q5: Crop region persistence ✅ RESOLVED
+- Q6: Crop region preview ✅ RESOLVED
+
+**Decisions Log** — Topic C.6 COMPLETE 6/6 Qs:
+
+| # | Ερώτηση | Απόφαση | Industry alignment |
+|---|---|---|---|
+| C.6.Q1 | Horizontal cuts axis=Y | **Add Y-axis support to SectionStore + SectionBox + section-clip-applicator**. UI: Section3DPanelTab axis selector becomes 3-button toggle "X | Y | Z" (currently X|Z). Preset elevations dropdown για Y axis: populated από ADR-326 building floors (`floor.elevation` field). Display format: "0,0 μ. (Ισόγειο)", "3,0 μ. (1ος όροφος)", "6,0 μ. (2ος όροφος)", "Custom" entry για manual slider. Y plane normal = (0,1,0) world up. Section hatch cap pattern (Phase 7.1) auto-applies. | Revit Section Box rotation enables horizontal cuts (similar Y-axis pattern). ArchiCAD Top-Down section. Industry standard για architectural docs. |
+| C.6.Q2 | Multiple independent planes | **Up to 6 active clipping planes (Three.js hard limit `Material.clippingPlanes.length <= 6`)**. SectionStore extends to `planes: Array<{id, axis, distance, enabled, label?, linkedGroupId?}>` (currently single plane). UI: Section3DPanelTab shows list με per-plane on/off toggle + axis label + distance slider + label edit + delete button. "Νέα τομή" button → adds new plane (disabled στις 6). Empty state: "Δεν υπάρχουν τομές" + "Προσθήκη πρώτης" CTA. Each plane independently configured. enterprise-id `sec_<random10>` per plane (in-memory only, NOT persisted — section state ephemeral session-only). | Performance budget: 6 planes ~10-15% GPU cost increase (~2-3ms/frame @ 1080p) — acceptable. Three.js hard limit respected. Industry: Navisworks unlimited (but visually unmanageable >6), Revit max 6, Sketchup unlimited (with perf warning). 6 = pragmatic UX cap. |
+| C.6.Q3 | Linked planes group | **Navisworks ClippingGroup pattern**. Group definition: `groupId + planeIds[] + groupTransform: {translation:Vector3, rotation:Quaternion}`. UI: section list shows linked planes με chain icon (📎). "Σύνδεση τομών" button: user selects 2+ planes (multi-select via Ctrl+click in list) → group created, all selected planes get `linkedGroupId`. "Αποσύνδεση" button: ungroups. Group gizmo (single transform handle): drag → applies same translation delta to all linked planes' `distance` values (per-plane axis-projected). REUSE GenArc Gizmo widget PORT (existing pending Group D — fallback to simple plus/minus buttons until Gizmo ports). Group state ephemeral session-only. | 1/4 industry strict pattern (Navisworks ClippingGroup), 2/4 partial (Sketchup parallel cuts, Three.js ClippingGroup WebGPU). Pragmatic match for architectural section sweeps (e.g. detail house section animation). |
+| C.6.Q4 | Crop region tool | **Region marquee 3D — rectangle marquee in screen-space, projected to world-space frustum**. Activation: ribbon button "Crop Region" σε Render contextual tab + hotkey `CR3D` (Ctrl+Shift+R reserved για other use → use `CR3D` 3-key chord OR `Ctrl+Alt+R`). Tool: cursor crosshair + drag rectangle σε viewport. Result: 4 clipping planes (left/right/top/bottom frustum walls perpendicular to camera plane) + optional 2 planes (near/far depth) = 6 planes total. NO polygon crop v1 (rectangle only — 95% use case, V-Ray/Lumion pattern). After crop set: planes auto-applied to PathTracerRenderer scene + UI shows crop overlay (Q6). Stored σε `finalRenderConfig.cropRegion`. | V-Ray Region Render rectangle-only (1/2 industry tools), Lumion crop tool rectangle-only (2/2). Polygon crop DEFERRED Group D (rare use case, Photoshop-style complexity). Frustum-walls = camera-relative crop, industry standard. |
+| C.6.Q5 | Crop region persistence | **Stored σε `finalRenderConfig.cropRegion: {enabled:boolean, rectangle:{x:number, y:number, w:number, h:number}, depthRange?:{near:number, far:number}}`** σε ViewMode3DStore. Coordinates: normalized 0-1 viewport space (resolution-independent). Persisted αν user saves render preset σε Firestore `bim_render_presets` collection (existing OR νέα — TBD per Phase 9 implementation). Per-animation crop keyframing DEFERRED Group D (v1 = static crop applied to all frames of animation). | Static crop covers 95% use case (final-shot framing). Animation crop = niche, deferred per [[feedback-completeness-over-mvp]] interpretation "completeness within MVP scope". |
+| C.6.Q6 | Crop region preview | **Live UI overlay** (Photoshop crop tool pattern): darken outside-crop area με 50% black opacity overlay + 1px dashed border on crop edges (white με 1px black outline for contrast). RAF-throttled redraw (60fps). 8 resize handles (4 corners + 4 edge midpoints) για drag-to-resize. Center drag = move whole crop. NO heavy 3D rendering with clipping during preview (would slow editing → wasted FPS). Only-on-render applies actual clipping to PathTracerRenderer scene. Toggle "Δες προεπισκόπηση crop" σε settings (default ON when crop defined). Esc cancels active crop editing, Enter commits. | Photoshop crop tool exact UI pattern (industry universal). 4/4 image editing tools (Photoshop/Affinity/GIMP/Krita). Live-overlay-only (no real clipping) = perf-conscious pragmatic choice. |
+
+**Architectural implications (consolidated για C.6)**:
+
+- **Νέα Phase 9 modules** (section cuts polish):
+  - Extend `bim-3d/stores/SectionStore.ts` — schema migration: `currentPlane?: Plane` → `planes: Plane[]` (array, max 6). Linked groups: `groups: Group[]` (id + planeIds + transform). Backward-compat: existing single-plane consumers wrapper helper `getActivePlane()`.
+  - Extend `bim-3d/systems/section/SectionBox.ts` — accept multiple planes, render all enabled.
+  - Extend `bim-3d/systems/section/section-clip-applicator.ts` — apply N planes to all materials in scene (Three.js `Material.clippingPlanes = planes`).
+  - Extend `bim-3d/scene/section-scene-controller.ts` — manage multi-plane lifecycle, linked group transforms.
+  - Extend `bim-3d/panels/Section3DPanelTab.tsx` — per-plane list UI με toggle/slider/label/link.
+  - `bim-3d/systems/section/section-group-transformer.ts` — pure: linked group transform delta → per-plane distance updates.
+  - Extend `Section2DPanel.tsx` — multi-plane support (each plane gets own 2D live section view OR multi-cut composite — UX TBD Phase 9, default = active-plane-only).
+  - `bim-3d/section/horizontal-cut-preset-resolver.ts` — pure: building floors (ADR-326) → preset elevation list
+
+- **Νέα Phase 9 modules** (crop region):
+  - `bim-3d/render/crop-region/CropRegionStore.ts` — Zustand SSoT: `{enabled, rectangle:{x,y,w,h}, depthRange?, editing:boolean, selectedHandle?}` (sub-store of ViewMode3DStore.finalRenderConfig)
+  - `bim-3d/render/crop-region/CropRegionTool.ts` — FSM (idle → dragging → editing → committed), screen-to-world frustum projection
+  - `bim-3d/render/crop-region/CropRegionOverlay.tsx` — Photoshop-style dim+border+handles UI overlay (Canvas2D layer over viewport)
+  - `bim-3d/render/crop-region/crop-frustum-builder.ts` — pure: rectangle + camera → 4-6 clipping planes
+  - `bim-3d/render/crop-region/RibbonCropRegionButton.tsx` — Render contextual tab button
+  - Extend `PathTracerRenderer.ts` — accept crop planes via `renderConfig.cropRegion` → set scene clipping planes (combined με Section planes, total ≤6 budget enforcement)
+
+- **Stores extensions**:
+  - `SectionStore`: multi-plane array (breaking change — backward-compat wrapper required)
+  - `ViewMode3DStore.finalRenderConfig`: +`cropRegion: CropRegionState`
+  - `CropRegionStore` sub-store
+
+- **Performance budget**:
+  - 6 planes raster cost: ~10-15% GPU increase, ~2-3ms/frame @ 1080p — measured target
+  - Section + Crop combined: enforce ≤6 total (Three.js hard limit). UI guard: αν section uses N planes, crop can use ≤(6-N). Error toast "Μέγιστο 6 ταυτόχρονες τομές".
+  - Crop overlay RAF-throttled 60fps, zero GPU cost (Canvas2D)
+
+- **i18n keys** (Phase 9):
+  - `bim3d.section.axis.{X,Y,Z}`, `bim3d.section.axis.Y.{groundFloor,floorNumber,custom}`
+  - `bim3d.section.planes.{listTitle,addNew,empty,addFirst,toggleEnabled,deletePlane,labelPlaceholder,linkPlanes,unlinkPlanes,linkedBadge,maxPlanesReached}`
+  - `bim3d.section.presetElevations.{title,floorLabel,customLabel}`
+  - `bim3d.crop.{toolName,activate,cancel,commit,enabledLabel,resetButton,showPreviewToggle}`
+  - `bim3d.crop.errors.{tooFewPlanesAvailable,maxPlanesBudget}`
+  - **Total: ~28 keys × 2 locales = ~56 entries**
+
+- **GOL checklist 7/7**:
+  - Proactive ✅: Section planes initialized empty array (zero overhead when not used), crop region opt-in
+  - Race-free ✅: Plane mutations atomic (immutable array spread σε store), linked group transform single-source (group state ή plane state, not both)
+  - Idempotent ✅: Plane add/remove deterministic IDs, crop region commit idempotent
+  - Belt-and-suspenders ✅: 6-plane budget enforcement client + Three.js hardware limit, crop+section combined check, Esc cancels gracefully
+  - SSoT ✅: SectionStore single source for planes, CropRegionStore single source for crop, crop-frustum-builder pure utility
+  - Await/sync ✅: Plane updates synchronous, crop preview RAF synchronous
+  - Lifecycle owner ✅: section-scene-controller owns plane→material wiring, CropRegionTool FSM owns crop edit state
+
+- **Mirror του 2D pattern** [[feedback-3d-mirror-2d-ssot]]:
+  - Crop UI overlay pattern can backport to 2D viewport crop (optional Group D — DXF export region selection)
+  - Section panel UX = mirrors 2D section panel pattern (ADR-040 micro-leaf)
+  - Multi-plane SSoT pattern = candidate για 2D multi-cut composite (future)
+
+**Effort impact για C.6**: **Phase 9 (new) +8-10h** = 2h SectionStore migration + multi-plane wiring + Section3DPanelTab UI + 1.5h horizontal axis support + preset elevation resolver + 2h linked planes group + section-group-transformer + 2h CropRegionTool FSM + crop-frustum-builder + CropRegionOverlay + 0.5h PathTracerRenderer crop plane wiring + 0.5h budget guard + 0.5-1h i18n + tests. ADR-366 total estimate revised: **~244-291h Phase 0-9** (από ~236-281h post-C.5, +8-10h C.6).
+
+---
+
+### C.7 — Performance HUD Extensions — ✅ CLOSED 2026-05-22
+
+**Σκοπός**: Κλείνει B.5 deferred extensions (sparkline 60s history, admin diagnostics dashboard, anonymized telemetry opt-in, auto-submit threshold FPS<10, performance regression detection). Phase 4 implementing base HUD (Group B.5) — C.7 extends με production observability + admin tooling.
+
+**Cross-references**:
+- B.5 (line ~2493) — base Performance HUD scope (8/8 Qs closed Group B)
+- Phase 4 implementation: `bim-3d/performance/` (12 files existing — PerformanceHUDStore, Collector, Mini, Expanded, DiagnosticDialog, snapshot-service, etc.)
+- ADR-145 Super Admin AI Assistant — super-admin registry + admin route patterns + read-all permissions
+- ADR-195 EntityAuditService — triage audit trail
+- ADR-326 tenancy — telemetry σκόπιμα out-of-tenant (anonymized)
+- GDPR Article 6(1)(a) consent — opt-in required για telemetry
+- `performance_diagnostics` Firestore collection (B.5.Q7 — existing scope)
+
+**Pending micro-decisions**:
+- Q1: Sparkline 60s history ✅ RESOLVED
+- Q2: Admin diagnostics dashboard ✅ RESOLVED
+- Q3: Anonymized telemetry opt-in ✅ RESOLVED
+- Q4: Auto-submit threshold FPS<10 ✅ RESOLVED
+- Q5: Performance regression detection ✅ RESOLVED
+
+**Decisions Log** — Topic C.7 COMPLETE 5/5 Qs:
+
+| # | Ερώτηση | Απόφαση | Industry alignment |
+|---|---|---|---|
+| C.7.Q1 | Sparkline 60s history | **Per-metric 60s rolling buffer @ 4Hz = 240 samples/metric**. Visualization: tiny inline SVG sparkline ~40×16px next to current value σε `PerformanceHUDExpanded`. Color = current threshold tier (🟢/🟡/🔴 mirror Q5 thresholds). Unified buffer service: νέο `bim-3d/performance/PerformanceHistoryStore.ts` (Zustand circular buffer per metric). Toggle "Δείξε ιστορικό" σε HUD settings (default ON, opt-out για low-end via `hardwareConcurrency<4`). NO charting library (zero deps cost — hand-rolled 40-LOC SVG component `Sparkline.tsx`). Sample subsampling: 240 raw → 40 display samples (every 6th) for SVG. | Chrome DevTools Performance panel sparkline pattern. Sentry Performance per-metric history. Industry σύγκλιση 3/3 dev tools. SVG hand-rolled = N.5 license-free + zero bundle bloat. |
+| C.7.Q2 | Admin diagnostics dashboard | **Νέα super-admin route `/admin/bim-diagnostics`** (RBAC + ADR-145 super-admin registry gate). Page sections: (1) filters bar (status enum, date range, projectId search, GPU tier dropdown, FPS range slider, browser dropdown), (2) virtualized list of `performance_diagnostics` rows (timestamp + user + project + status badge + FPS + click-to-detail), (3) BimDiagnosticDetailPanel (full 10 metrics + screenshot lightbox + user comment + scene info + audit history via ADR-195), (4) triage actions (status FSM: `new`→`triaged`→`investigating`→`resolved`/`wontfix`; super-admin assignee dropdown; internal notes editor — separate `internal_notes:string` field, NOT visible σε user), (5) aggregated charts (FPS distribution histogram 30-day rolling, GPU tier pie, mode usage bar — Recharts MIT). Export CSV button (filtered current view). Live refresh via `firestoreQueryService.subscribe`. | Mirror ADR-145 super-admin route pattern (existing super-admin tooling). Industry: Sentry Issues dashboard pattern (status FSM + triage + filtering). 4/4 SaaS observability tools σύγκλιση. |
+| C.7.Q3 | Anonymized telemetry opt-in | **Opt-in toggle σε `Floating3DPanel` Quality tab → Performance settings: "Συμμετοχή σε ανώνυμη βελτίωση απόδοσης" (default OFF, GDPR Article 6(1)(a) consent)**. When ON: every 60s `PerformanceCollector` emits sample, anonymized via `bim-3d/telemetry/anonymizer.ts`: strip projectId/userId/companyId/sceneInfo/email/IP. Keep: anonymous_session_id (SHA-256 hash of `daily_salt + userId`, salt rotates daily — re-identification-resistant), browser + version, OS, GPU tier (0-3), mode, 10 metrics snapshot, timestamp. Batch 5-sample buffer flushed every 5min OR on session-end → POST `/api/telemetry/bim-performance` (Next.js route με rate-limit 1 req/min per session). Server writes σε νέα Firestore collection `bim_performance_telemetry` (top-level, NO companyId field, super-admin read-only). 30-day TTL (auto-delete cron). Toggle ON dialog: confirm GDPR consent + privacy policy link. Withdrawal: toggle OFF + "Διαγραφή ιστορικού" button → POST `/api/telemetry/bim-performance/erase?sessionId=X` (right to be forgotten Article 17). | GDPR Article 6(1)(a) explicit consent + Article 17 right to erasure. Industry: Sentry beacon opt-in pattern, Google Chrome usage stats opt-in. SHA-256 + daily salt = privacy-preserving telemetry pattern (Apple Differential Privacy lite). |
+| C.7.Q4 | Auto-submit threshold FPS<10 | **Threshold detector σε PerformanceCollector**: αν `fps < 10` continuous for `>5s` → trigger consent dialog (NOT silent — GDPR + UX trust). Dialog: title "Χαμηλή απόδοση εντοπίστηκε", body "Παρατηρούμε FPS κάτω από 10 για 5+ δευτερόλεπτα. Θες να στείλεις αυτόματα διαγνωστικά για να βελτιώσουμε την εμπειρία?" + 3 buttons: "Ναι, στείλε" (submits via existing performance-snapshot-service B.5.Q7) / "Όχι ευχαριστώ" (dismiss, 30min cooldown) / "Όχι και μην ξαναρωτήσεις" (persistent opt-out σε `userPreferences.bim3d.autoSubmitFps.optOut: true`). Cooldown 30min between prompts. Auto-skip αν user has telemetry opt-in ON (Q3 covers via continuous low-FPS sample). Audit log: ADR-195 `performance_auto_submit_prompted` + `performance_auto_submit_accepted`/`declined`. | Industry: Crashlytics/Sentry auto-submit consent dialog (4/4 σύγκλιση mobile crash tools). 5s sustained threshold = avoids transient FPS dips (camera fast pan transient drops shouldn't trigger). |
+| C.7.Q5 | Performance regression detection | **Per-user baseline client-side (LocalStorage)**. `bim3d.performanceBaseline.{mode}` = `{median, mad, sampleCount, lastUpdated}` from rolling 7-day samples per render mode (raster/preview/final). MAD (median absolute deviation, robust outlier-resistant). Comparison: αν current sample's FPS < `median - 2*MAD` for >30s continuous → silent warn toast "Η απόδοση είναι χαμηλότερη από το συνηθισμένο σε αυτή τη συσκευή. [Δες HUD]" + auto-open PerformanceHUD αν toggle currently OFF (helpful, non-intrusive). Toggle "Ειδοποίηση παλινδρομήσεων" σε settings (default ON). 24h cooldown between alerts per mode. NO server-side regression detection v1 (DEFERRED Group D — would require ML baseline server). | Per-device baseline = device-aware (avoids false positives across user's multiple devices). MAD robust statistic = Tukey 1977 outlier detection (industry stat best practice). Client-side = zero-server-cost + GDPR-friendly (no PII leaves device). |
+
+**Architectural implications (consolidated για C.7)**:
+
+- **Νέα Phase 9 modules** (performance extensions):
+  - `bim-3d/performance/PerformanceHistoryStore.ts` — Zustand circular buffer per metric (240 samples × 10 metrics = 2400 numbers ≈ 19KB RAM, negligible)
+  - `bim-3d/performance/Sparkline.tsx` — hand-rolled 40-LOC SVG component (path generation από samples, color από threshold tier)
+  - `bim-3d/performance/PerformanceHUDSparklines.tsx` — wraps Sparkline σε PerformanceHUDExpanded
+  - `bim-3d/performance/regression-detector.ts` — pure: current sample + baseline → boolean + magnitude
+  - `bim-3d/performance/baseline-tracker.ts` — pure + LocalStorage I/O: rolling 7-day baseline maintenance (median + MAD)
+  - `bim-3d/performance/auto-submit-fps-threshold.ts` — pure FSM: idle → low_observed → low_sustained (5s) → prompt-triggered
+
+- **Νέα Phase 9 modules** (telemetry):
+  - `bim-3d/telemetry/anonymizer.ts` — pure: PerformanceSnapshot + userId/projectId/companyId → anonymized payload (PII stripped, session_id hashed)
+  - `bim-3d/telemetry/session-id-generator.ts` — pure: `SHA-256(daily_salt + userId)` με daily salt rotation
+  - `bim-3d/telemetry/telemetry-batcher.ts` — 5-sample buffer + flush trigger (5min OR session-end)
+  - `bim-3d/telemetry/telemetry-uploader.ts` — POST wrapper με rate-limit + retry exponential backoff
+  - Server: `src/app/api/telemetry/bim-performance/route.ts` — Next.js route handler με `withStandardRateLimit` (1 req/min per session via IP+session) + Firestore write
+  - Server: `src/app/api/telemetry/bim-performance/erase/route.ts` — right-to-erasure handler (verify session_id ownership via cookie OR token, delete matching docs)
+
+- **Νέα Phase 9 modules** (admin diagnostics dashboard):
+  - `src/app/admin/bim-diagnostics/page.tsx` — super-admin route (ADR-145 RBAC gate via middleware)
+  - `src/app/admin/bim-diagnostics/_components/DiagnosticsListPage.tsx` — virtualized list + filters bar
+  - `src/app/admin/bim-diagnostics/_components/BimDiagnosticDetailPanel.tsx` — full metrics + screenshot lightbox + triage actions
+  - `src/app/admin/bim-diagnostics/_components/DiagnosticsCharts.tsx` — Recharts (MIT) histograms/pie/bar
+  - `src/app/admin/bim-diagnostics/_components/DiagnosticTriagePanel.tsx` — status FSM + assignee dropdown + internal notes editor
+  - `src/services/admin/bim-diagnostics-service.ts` — CRUD wrapper (super-admin scope)
+  - `src/services/admin/bim-diagnostics-export.ts` — CSV export helper
+
+- **Firestore collections**:
+  - `bim_performance_telemetry/{telemetryId}` — top-level, NO companyId, super-admin read-only, 30-day TTL
+  - `performance_diagnostics/{diagnosticId}` — extend schema: `status:'new'\|'triaged'\|'investigating'\|'resolved'\|'wontfix'`, `assignedSuperAdminId?:string`, `internalNotes?:string`, `triageHistory:Array<{from,to,by,at,note?}>` (existing collection from B.5.Q7)
+
+- **Firestore rules** (firestore.rules additions):
+  - `bim_performance_telemetry`: deny create from clients (server-only writes), super-admin read-only
+  - `performance_diagnostics`: extend update rule to allow super-admin status/assignee/notes updates
+
+- **RBAC** (`roles.ts` permissions):
+  - `bim_performance_telemetry.read` — super-admin only (ADR-145 registry)
+  - `performance_diagnostics.triage` — super-admin only
+  - `performance_diagnostics.update_status` — super-admin only
+  - `performance_diagnostics.assign` — super-admin only
+
+- **enterprise-id**: `generateBimTelemetryId()` → `telm_bim_<random10>` νέος generator
+
+- **EntityAuditService audit types**: `performance_auto_submit_prompted`, `performance_auto_submit_accepted`, `performance_auto_submit_declined`, `performance_diagnostic_triaged`, `performance_diagnostic_status_changed`, `performance_telemetry_erased`
+
+- **GDPR compliance** (Article 6/13/17/30):
+  - Consent: explicit opt-in (Q3 default OFF) ✅
+  - Privacy policy update: link in opt-in dialog ✅
+  - Right to erasure: erase endpoint (Q3) ✅
+  - Data minimization: anonymizer strips PII ✅
+  - Data retention: 30-day TTL ✅
+  - Data Processing Records (DPR): documented σε ADR-366 + privacy policy
+
+- **Cron TTL**:
+  - `bim_performance_telemetry` 30-day TTL: Firestore TTL policy (native feature) OR Cloud Function nightly purge
+  - `performance_diagnostics` archive: 1-year retention για resolved/wontfix, indefinite για open
+
+- **i18n keys** (Phase 9):
+  - `bim3d.performance.history.{title,toggle,sampleRateLabel,clearHistory}`
+  - `bim3d.performance.telemetry.{title,description,consentLabel,privacyPolicyLink,erase,eraseConfirm,withdraw,confirmEnable}`
+  - `bim3d.performance.autoSubmit.{title,body,acceptButton,declineButton,permanentOptOutButton,cooldownNotice}`
+  - `bim3d.performance.regression.{toggle,toastTitle,toastBody,openHud}`
+  - `admin.bimDiagnostics.{title,filters.status,filters.dateRange,filters.gpuTier,filters.fpsRange,filters.browser,filters.project,empty,listColumns.timestamp,listColumns.user,listColumns.project,listColumns.status,listColumns.fps,detailPanel.title,triage.assign,triage.status.{new,triaged,investigating,resolved,wontfix},triage.internalNotes,triage.history,charts.fpsHistogram,charts.gpuTierPie,charts.modeUsage,export.csv}`
+  - **Total: ~44 keys × 2 locales = ~88 entries** (split between bim3d + admin namespaces)
+
+- **GOL checklist 7/7**:
+  - Proactive ✅: History buffer starts on HUD mount, baseline tracker on app start, telemetry batcher only when opt-in
+  - Race-free ✅: Circular buffer atomic writes (single producer Collector), telemetry batch flush single source, regression detection debounced 30s window
+  - Idempotent ✅: Sample insertion deterministic timestamp, telemetry uploader retry idempotent (server dedup by hash), auto-submit FSM transitions atomic
+  - Belt-and-suspenders ✅: GDPR consent + privacy policy + erase endpoint, telemetry rate-limit server-side, cooldown prompts client-side
+  - SSoT ✅: PerformanceHistoryStore single buffer source, baseline-tracker single LocalStorage owner, telemetry-batcher single uploader, anonymizer single PII strip
+  - Await/sync ✅: Telemetry POST awaited (retry on fail), triage updates awaited, all audit hooks awaited
+  - Lifecycle owner ✅: PerformanceCollector owns history sample emission, PerformanceHistoryStore owns buffer lifecycle, telemetry-batcher owns batch lifecycle, baseline-tracker owns LocalStorage lifecycle
+
+- **Mirror του 2D pattern** [[feedback-3d-mirror-2d-ssot]]:
+  - Toast pattern REUSE existing toast SSoT (zero new mechanism)
+  - Settings persistence REUSE Bim3DPreferencesService + Firestore user_preferences (existing)
+  - Admin route pattern = ADR-145 super-admin (existing convention)
+  - Recharts library already used elsewhere (no new dep)
+
+**Effort impact για C.7**: **Phase 9 (new) +10-12h** = 1.5h PerformanceHistoryStore + Sparkline + integration σε Expanded + 2h regression-detector + baseline-tracker + toast + 1.5h auto-submit FPS threshold FSM + consent dialog + 2h telemetry anonymizer + batcher + uploader + server route + rate-limit + erase endpoint + 2h admin diagnostics dashboard route + list + detail + triage + charts + CSV export + 0.5h Firestore rules + RBAC + audit + 0.5-1h i18n + tests. ADR-366 total estimate revised: **~254-303h Phase 0-9** (από ~244-291h post-C.6, +10-12h C.7).
+
+---
+
+**Group C summary** (ALL 7 topics CLOSED ✅):
+
+| Topic | Status | Sub-Qs | Effort impact |
+|---|---|---|---|
+| C.1 — Animation System Implementation UX | ✅ 9/9 CLOSED | 9 | +18-22h Phase 9 |
+| C.2 — BIM Comments / Markup System | ✅ 8/8 CLOSED | 8 | +12-14h Phase 9 |
+| C.3 — 3D Manual Dimensions Tool | ✅ 7/7 CLOSED | 7 | +10-12h Phase 9 |
+| C.4 — BimEntityCard Remaining Tabs | ✅ 6/6 CLOSED | 6 | +5-6h Phase 9 |
+| C.5 — ARIA + Screen Reader Compliance | ✅ 5/5 CLOSED | 5 | +6-7h Phase 9 (+4-6h QA matrix) |
+| C.6 — Advanced Section Cuts + Crop Region | ✅ 6/6 CLOSED | 6 | +8-10h Phase 9 |
+| C.7 — Performance HUD Extensions | ✅ 5/5 CLOSED | 5 | +10-12h Phase 9 |
+| **Group C total** | **✅ 7/7** | **46 sub-Qs** | **+69-83h Phase 9** (+4-6h QA) |
+
+**ADR-366 total estimate revised post-Group-C**: **~254-303h Phase 0-9** (από ~185-220h post-Group-B baseline, +69-83h Group C net).
+
+**Νέες Phase 9 SSoT modules** (Group C cumulative):
+- Animation (~12 modules): TurntablePathBuilder, WaypointPathBuilder, AnimationStore, animation-presets, keyframe-interpolator, TimelineEditor, WaypointDragHandle, RibbonAnimationContextualTab, MP4Exporter, RenderQueueStore, RenderQueuePanel, bim-animations.service
+- Comments (~11 modules): CommentMarker3DRenderer, comment-marker-textures, BimCommentDetailsPanel, CommentListPanel, CommentReplyInput, CommentAttachmentUploader, CommentAttachmentLightbox, comment-status-fsm, comment-anchor-resolver, bim-comments.service, CommentMentionsPicker, CommentBadgeIcon, BimCommentsStore
+- Dimensions (~10 modules): Dimension3DRenderer, dim3d-line-geometry, dim3d-value-computer, dim3d-text-plane-orienter, Dim3DToolStateMachine, useDim3DToolRouting, Dim3DGripsRenderer, bim-dimensions-3d.service, dim3d-snap-engine-adapter, RibbonDim3DContextualTab, Dim3DPropertiesPanel, BimDimensions3DStore
+- Card Tabs (~6 modules): BimMaterialsTab, BimBoqTab, BimCommentsTab, material-alternatives-resolver, boq-tree-builder, last-active-tab-tracker (+ bim-entity-update.service material change)
+- ARIA polish (~5 modules + extensions): announcement-protocol, entity-dom-proxy-renderer, entity-keyboard-navigator, use-reduced-motion, reduced-motion-config (+ extends aria-entity-description-generator + focus-order)
+- Section+Crop (~7 modules + extensions): extend SectionStore/SectionBox/section-clip-applicator/section-scene-controller/Section3DPanelTab/Section2DPanel, section-group-transformer, horizontal-cut-preset-resolver, CropRegionStore, CropRegionTool, CropRegionOverlay, crop-frustum-builder, RibbonCropRegionButton
+- Performance ext (~13 modules): PerformanceHistoryStore, Sparkline, PerformanceHUDSparklines, regression-detector, baseline-tracker, auto-submit-fps-threshold, anonymizer, session-id-generator, telemetry-batcher, telemetry-uploader, admin/bim-diagnostics/page + 5 components + bim-diagnostics-service + bim-diagnostics-export + 2 server routes
+
+**Νέες Firestore collections**:
+- `bim_animations/{animationId}` + subcoll `render_jobs/{jobId}` (C.1)
+- `bim_comments/{commentId}` + subcoll `replies/{replyId}` (C.2)
+- `bim_dimensions_3d/{dimensionId}` (C.3)
+- `bim_performance_telemetry/{telemetryId}` (C.7, anonymized, no companyId)
+- `performance_diagnostics` schema extension (C.7, triage fields)
+
+**Νέοι enterprise-id generators**:
+- `anm_bim_*` (animations C.1)
+- `cmt_bim_*` + `cmtr_bim_*` (comments + replies C.2)
+- `dim3d_*` (3D dimensions C.3)
+- `telm_bim_*` (telemetry C.7)
+- `sec_*` (sections — ephemeral session-only, in-memory, NOT persisted C.6)
+
+**Νέες RBAC permissions** (`roles.ts`):
+- `bim_animations.{create,read,update,delete}` (C.1)
+- `bim_comments.{create,read,update,delete,assign,archive}` (C.2)
+- `bim_dimensions_3d.{create,read,update,delete}` (C.3)
+- `bim_entities.update_material` + `bim_entities.boq_override_set` (C.4)
+- `bim_audit.read` (C.4 tab gate)
+- `bim_performance_telemetry.read` (C.7 super-admin)
+- `performance_diagnostics.{triage,update_status,assign}` (C.7 super-admin)
+
+**Νέοι audit types** (`audit-types.ts`):
+- `bim_animation_{created,rendered,deleted}` (C.1)
+- `bim_comment_{created,updated,replied,status_changed,assigned,archived,deleted,attachment_added}` (C.2)
+- `bim_dim3d_{created,updated,deleted,orphaned}` (C.3)
+- `bim_entity_material_changed` + `bim_entity_boq_override_set` (C.4)
+- `performance_auto_submit_{prompted,accepted,declined}` (C.7)
+- `performance_diagnostic_{triaged,status_changed}` + `performance_telemetry_erased` (C.7)
+
+**Νέα notification keys** (`notification-keys.ts`):
+- `bim3d.animation.render.{completed,failed}` (C.1)
+- `bim3d.comment.{mentioned,assigned,replied,status_changed,archived}` (C.2)
+
+**Νέες npm deps** (Phase 9, ΟΛΕΣ N.5 MIT compliant):
+- `mp4-muxer` (C.1, already cataloged B.4.Q8) — MIT ✅
+- Recharts (C.7 admin dashboard) — ήδη installed για άλλα dashboards, MIT ✅
+- WebCodecs API (C.1) — browser native, no license
+
+**i18n footprint** (Group C cumulative, all `bim3d.*` + `admin.bimDiagnostics.*`):
+- C.1: ~42 keys × 2 locales = ~84 entries
+- C.2: ~38 keys × 2 = ~76 entries
+- C.3: ~36 keys × 2 = ~72 entries
+- C.4: ~30 keys × 2 = ~60 entries
+- C.5: ~32 keys × 2 = ~64 entries
+- C.6: ~28 keys × 2 = ~56 entries
+- C.7: ~44 keys × 2 = ~88 entries
+- **Total Group C: ~250 keys × 2 locales ≈ ~500 entries**
+
+**Decisions conscious diverge** (memory rules applied):
+- C.1.Q6 (H.264 over AV1): conscious risk-averse choice — AV1 browser support 2027+, H.264 MPEG-LA royalty-free streaming, license N.5 protected
+- C.1.Q7 (no audio v1): MVP scope discipline — audio track architecturally enabled (mp4-muxer supports) but no UI v1
+- C.2.Q3 (1-level replies max): conscious anti-Slack diverge — flat-with-1-reply covers 90% architectural discussion + UI simplicity vs depth complexity
+- C.3.Q7 (separate `bim_dimensions_3d` collection vs ADR-362 extension): justified per data model difference (Vector3 vs Vector2, host entity binding) — NOT UX divergence (ribbon UI + tool routing shared via useDim3DToolRouting)
+- C.4.Q4 (no inline BOQ override): SSoT principle — single BOQ edit UI σε BOQ subapp [[feedback-centralize-on-the-spot]]
+- C.7.Q4 (FPS<10 prompt, not silent): GDPR + trust — silent auto-submit would violate consent UX even though Q3 telemetry covers similar data
+- C.7.Q5 (client-side baseline, no server ML v1): conscious complexity reduction — server-side ML regression detection deferred Group D
+
+**Pending DEFERRED Group D / Phase 10+** (NOT blocking Phase 9 implementation):
+- Animation: audio track (voiceover/music import — mp4-muxer API ready), animation crop region keyframing (C.6.Q5 v1=static), animation share via URL link (Group D)
+- Comments: PDF/video attachments (C.2.Q6 v1=image only), 2D plan-view comment markers backport (C.2 cross-mode), free-text labels with leader lines (B.2.Q3 ext — mirror ADR-362 pattern)
+- Section cuts: polygon crop region (C.6.Q4 v1=rectangle), animation crop keyframing
+- Performance: server-side ML regression detection (C.7.Q5 v1=client-side baseline), per-feature performance budgets enforcement
+- ARIA: VoiceOver iOS / TalkBack Android (mobile non-goal G11 — re-evaluate when mobile re-scoped)
+- 3D Dimensions: dimension chain auto-link (Revit-style dimension chains), dimension formula references (Revit parametric)
+- Admin dashboard: real-time alert webhooks (Slack/email on critical FPS<5 events), aggregated org-wide trends across companies (super-admin global view)
+- Auto-Infer Alignment Guides (pending ratchet ADR-3XX TBD, ~3h) — referenced C.3.Q2 snap behavior but not blocking
+- IFC export Phase 2 (deeper IFC schema coverage post-Phase 8.0)
+- AR/XR mode (WebXR — entirely new feature, Group E candidate)
+
+**Group C readiness gate**:
+- ✅ Όλα 7 topics 46 sub-Qs answered με industry alignment + decisions + architectural implications + effort impact
+- ✅ License N.5 verified (MIT-only deps)
+- ✅ SSoT REUSE explicit όπου εφαρμόζεται (90%+ patterns mirror 2D)
+- ✅ GOL checklist 7/7 ανά topic
+- ✅ Mirror 2D pattern explicit [[feedback-3d-mirror-2d-ssot]]
+- ✅ Cross-domain consistency (entity-anchor orphan auto-convert pattern C.2.Q7 + C.3.Q6 + future)
+- ✅ Conscious diverge documented με justification
+- ✅ Pending DEFERRED Group D / Phase 10+ catalogued
+
+**Post-Group-C readiness**: Phase 9 implementation start (12 missing modules + 4 deferred categories) μπορεί να ξεκινήσει σε όποια σειρά αποφασίσει ο Γιώργος. Προτεινόμενη σειρά Phase 9: C.4 (smallest, completes UX gaps για existing entities) → C.3 (dimensions tool, mirror 2D) → C.5 (ARIA polish, builds on Phase 8.0 foundation) → C.6 (section + crop, builds on Phase 7.0) → C.2 (comments, new vertical slice) → C.7 (performance ext, builds on Phase 4 base) → C.1 (animation, largest scope, builds on all camera+render foundations).
+
+---
+
+
+
+
+
+
+
