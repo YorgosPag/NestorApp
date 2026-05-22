@@ -60,7 +60,46 @@
     "closeAria": "Κλείσιμο πλαισίου",
     "tabs": {
       "geometry": "Γεωμετρία",
+      "materials": "Υλικά",
+      "boq": "ΒΚΕ",
+      "comments": "Σχόλια",
       "audit": "Ιστορικό"
+    },
+    "materials": {
+      "currentSection": "Τρέχον Υλικό",
+      "alternativesSection": "Εναλλακτικά",
+      "multiLayerSection": "Σύνθεση DNA",
+      "costRollupSection": "Κόστος Υλικού",
+      "empty": "Δεν έχει οριστεί υλικό",
+      "changeButton": "Άλλαξε υλικό",
+      "costPerUnit": "Τιμή/μονάδα",
+      "totalCost": "Σύνολο",
+      "layerLabel": "Στρώμα {index}",
+      "customLabel": "Προσαρμοσμένο"
+    },
+    "boq": {
+      "parentSection": "Συνολικό ΒΚΕ",
+      "childrenSection": "Αναλυτικά Στρώματα",
+      "quantitySection": "Ποσότητες",
+      "empty": "Δεν έχει συσχετιστεί ΒΚΕ",
+      "openInBoq": "Άνοιξε στη ΒΚΕ",
+      "layerRow": {
+        "material": "Υλικό",
+        "quantity": "Ποσότητα",
+        "unitCost": "Τιμή/μον.",
+        "totalCost": "Σύνολο"
+      }
+    },
+    "comments": {
+      "empty": "Δεν υπάρχουν σχόλια",
+      "seeAll": "Δες όλα",
+      "createNew": "Νέο σχόλιο",
+      "unreadBadge": "{count} αναγνωσμένα",
+      "previewMore": "+{count} ακόμα"
+    },
+    "errors": {
+      "materialChangeForbidden": "Δεν επιτρέπεται αλλαγή υλικού",
+      "boqOverrideForbidden": "Δεν επιτρέπεται παράκαμψη ΒΚΕ"
     }
   },
   "geometry": {

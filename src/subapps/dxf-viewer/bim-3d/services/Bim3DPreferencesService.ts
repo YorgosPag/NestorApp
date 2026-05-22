@@ -8,9 +8,14 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateBim3DPrefId } from '@/services/enterprise-id.service';
 
+export interface EntityCardTabPrefs {
+  readonly lastActive: string;
+}
+
 export interface Bim3DPrefs {
   readonly userId: string;
   readonly compassRingVisible: boolean;
+  readonly entityCardTabs?: Readonly<Record<string, EntityCardTabPrefs>>;
   readonly updatedAt: unknown;
 }
 

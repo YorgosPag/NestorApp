@@ -60,7 +60,46 @@
     "closeAria": "Close panel",
     "tabs": {
       "geometry": "Geometry",
+      "materials": "Materials",
+      "boq": "BOQ",
+      "comments": "Comments",
       "audit": "History"
+    },
+    "materials": {
+      "currentSection": "Current Material",
+      "alternativesSection": "Alternatives",
+      "multiLayerSection": "DNA Composition",
+      "costRollupSection": "Material Cost",
+      "empty": "No material assigned",
+      "changeButton": "Change material",
+      "costPerUnit": "Cost/unit",
+      "totalCost": "Total",
+      "layerLabel": "Layer {index}",
+      "customLabel": "Custom"
+    },
+    "boq": {
+      "parentSection": "BOQ Summary",
+      "childrenSection": "Layer Breakdown",
+      "quantitySection": "Quantities",
+      "empty": "No BOQ item linked",
+      "openInBoq": "Open in BOQ",
+      "layerRow": {
+        "material": "Material",
+        "quantity": "Quantity",
+        "unitCost": "Unit cost",
+        "totalCost": "Total"
+      }
+    },
+    "comments": {
+      "empty": "No comments yet",
+      "seeAll": "See all",
+      "createNew": "New comment",
+      "unreadBadge": "{count} unread",
+      "previewMore": "+{count} more"
+    },
+    "errors": {
+      "materialChangeForbidden": "Not allowed to change material",
+      "boqOverrideForbidden": "Not allowed to override BOQ"
     }
   },
   "geometry": {
