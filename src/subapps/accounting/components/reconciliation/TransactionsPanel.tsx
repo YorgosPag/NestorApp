@@ -185,7 +185,7 @@ function TransactionRow({ txn, selected, checked, onSelect, onCheck }: Transacti
       <TableCell className="text-xs max-w-[200px] truncate">
         {txn.bankDescription}
       </TableCell>
-      <TableCell className={`text-xs text-right font-mono ${txn.direction === 'credit' ? 'text-green-700' : 'text-destructive'}`}>
+      <TableCell className={`text-xs text-right font-mono ${txn.direction === 'credit' ? 'text-green-707' : 'text-destructive'}`}>
         {txn.direction === 'credit' ? '+' : '-'}{formatAccountingCurrency(txn.amount)}
       </TableCell>
       <TableCell>

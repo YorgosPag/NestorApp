@@ -53,14 +53,14 @@ interface UserTableProps {
 // =============================================================================
 
 const AVATAR_COLORS = [
-  'bg-blue-500',
-  'bg-emerald-500',
-  'bg-amber-500',
-  'bg-rose-500',
-  'bg-violet-500',
-  'bg-cyan-500',
-  'bg-orange-500',
-  'bg-teal-500',
+  'bg-primary',
+  'bg-green-707',
+  'bg-[hsl(var(--bg-warning))]',
+  'bg-destructive',
+  'bg-accent-foreground',
+  'bg-primary',
+  'bg-[hsl(var(--bg-warning))]',
+  'bg-primary',
 ] as const;
 
 function getAvatarColor(uid: string): string {
@@ -237,7 +237,7 @@ export function UserTable({
                         <span
                           className={cn(
                             'text-sm',
-                            companyUser.mfaEnrolled ? 'text-green-600' : colors.text.muted
+                            companyUser.mfaEnrolled ? 'text-green-707' : colors.text.muted
                           )}
                           aria-label={companyUser.mfaEnrolled ? t('roleManagement.mfa.enabled') : t('roleManagement.mfa.notEnabled')}
                         >

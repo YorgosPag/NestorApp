@@ -158,7 +158,7 @@ export function DatabaseUpdatePageContent() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
-          <Database className={`${iconSizes.xl} text-blue-600`} />{t('databaseUpdate.title')}
+          <Database className={`${iconSizes.xl} text-primary`} />{t('databaseUpdate.title')}
         </h1>
         <p className={colors.text.muted}>{t('databaseUpdate.subtitle')}</p>
       </div>
@@ -166,7 +166,7 @@ export function DatabaseUpdatePageContent() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="text-center">
-            <Plus className={`${iconSizes.xl} mx-auto ${completed.contacts ? 'text-green-500' : 'text-blue-500'}`} />
+            <Plus className={`${iconSizes.xl} mx-auto ${completed.contacts ? 'text-green-707' : 'text-primary'}`} />
             <CardTitle className="text-sm">{t('databaseUpdate.cards.newContacts')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -176,7 +176,7 @@ export function DatabaseUpdatePageContent() {
         </Card>
         <Card>
           <CardHeader className="text-center">
-            <Edit className={`${iconSizes.xl} mx-auto ${completed.updates ? 'text-green-500' : 'text-orange-500'}`} />
+            <Edit className={`${iconSizes.xl} mx-auto ${completed.updates ? 'text-green-707' : 'text-[hsl(var(--text-warning))]'}`} />
             <CardTitle className="text-sm">{t('databaseUpdate.cards.updates')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -186,7 +186,7 @@ export function DatabaseUpdatePageContent() {
         </Card>
         <Card>
           <CardHeader className="text-center">
-            <Building className={`${iconSizes.xl} mx-auto ${completed.units ? 'text-green-500' : 'text-purple-500'}`} />
+            <Building className={`${iconSizes.xl} mx-auto ${completed.units ? 'text-green-707' : 'text-primary'}`} />
             <CardTitle className="text-sm">{t('databaseUpdate.cards.units')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -196,7 +196,7 @@ export function DatabaseUpdatePageContent() {
         </Card>
         <Card>
           <CardHeader className="text-center">
-            <Users className={`${iconSizes.xl} mx-auto ${completed.relationships ? 'text-green-500' : 'text-red-500'}`} />
+            <Users className={`${iconSizes.xl} mx-auto ${completed.relationships ? 'text-green-707' : 'text-destructive'}`} />
             <CardTitle className="text-sm">{t('databaseUpdate.cards.relationships')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -224,7 +224,7 @@ export function DatabaseUpdatePageContent() {
         </CardContent>
       </Card>
       <div className="text-center space-y-4">
-        <Button onClick={executeUpdate} disabled={isLoading} size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+        <Button onClick={executeUpdate} disabled={isLoading} size="lg">
           {isLoading
             ? <><Spinner size="small" color="inherit" className="mr-2" />{t('databaseUpdate.button.executing')}</>
             : <><Database className={`mr-2 ${iconSizes.sm}`} />{t('databaseUpdate.button.execute')}</>}

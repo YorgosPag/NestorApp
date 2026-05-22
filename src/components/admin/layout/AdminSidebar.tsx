@@ -167,7 +167,7 @@ function SidebarContent({ isSuperAdmin, pathname, t }: SidebarContentProps) {
                         />
                         <span>{t(`sidebar.nav.${item.labelKey}`)}</span>
                         {item.superAdminOnly && (
-                          <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 rounded">
+                          <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))] rounded">
                             SA
                           </span>
                         )}
@@ -200,7 +200,7 @@ export function AdminSidebar({ isSuperAdmin }: AdminSidebarProps) {
       {/* Desktop: permanent sidebar */}
       <aside
         aria-label={t('sidebar.title')}
-        className="hidden lg:flex flex-col w-64 border-r border-gray-200 flex-shrink-0 h-full"
+        className="hidden lg:flex flex-col w-64 border-r border-border flex-shrink-0 h-full"
       >
         <SidebarContent {...contentProps} />
       </aside>
@@ -213,7 +213,7 @@ export function AdminSidebar({ isSuperAdmin }: AdminSidebarProps) {
               variant="ghost"
               size="icon"
               aria-label={t('sidebar.openMenu')}
-              className="fixed top-3 left-3 z-40 h-9 w-9 bg-white shadow-md border border-gray-200 rounded-lg"
+              className="fixed top-3 left-3 z-40 h-9 w-9 bg-background shadow-md border border-border rounded-lg"
             >
               <Menu aria-hidden="true" className="w-5 h-5" />
             </Button>

@@ -131,7 +131,7 @@ export function PartnerManagementSection({
           <div
             className={`flex items-center gap-2 rounded-md border p-3 text-sm ${
               shareValid
-                ? 'border-[hsl(var(--bg-success))] bg-[hsl(var(--bg-success))]/10 text-green-700'
+                ? 'border-[hsl(var(--bg-success))] bg-[hsl(var(--bg-success))]/10 text-green-707'
                 : 'border-destructive/50 bg-destructive/5 text-destructive'
             }`}
             role={shareValid ? 'status' : 'alert'}

@@ -338,7 +338,7 @@ export function EnterpriseMigrationPageContent() {
                 <span>{Math.round(migrationState.progress)}%</span>
               </div>
               <Progress value={migrationState.progress} />
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 {t('enterpriseMigration.controls.phaseLabel', {
                   phase: migrationState.phase,
                   item: migrationState.currentItem
@@ -405,10 +405,10 @@ export function EnterpriseMigrationPageContent() {
     <div className="container mx-auto p-6 max-w-6xl">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
-          <Shield className={`${iconSizes.xl2} text-blue-600`} />
+          <Shield className={`${iconSizes.xl2} text-primary`} />
           {t('enterpriseMigration.title')}
         </h1>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           {t('enterpriseMigration.subtitle')}
         </p>
       </div>
@@ -422,12 +422,12 @@ export function EnterpriseMigrationPageContent() {
         {renderLogs()}
       </div>
 
-      <div className={`mt-6 p-4 bg-blue-50 rounded-lg ${getStatusBorder('info')}`}>
+      <div className={`mt-6 p-4 bg-[hsl(var(--bg-info))]/20 rounded-lg ${getStatusBorder('info')}`}>
         <h3 className="font-semibold mb-2 flex items-center gap-2">
-          <CheckCircle className={`${iconSizes.md} text-blue-600`} />
+          <CheckCircle className={`${iconSizes.md} text-primary`} />
           {t('enterpriseMigration.benefits.title')}
         </h3>
-        <ul className="text-sm space-y-1 text-blue-800">
+        <ul className="text-sm space-y-1 text-foreground">
           <li>✅ {t('enterpriseMigration.benefits.item1')}</li>
           <li>✅ {t('enterpriseMigration.benefits.item2')}</li>
           <li>✅ {t('enterpriseMigration.benefits.item3')}</li>

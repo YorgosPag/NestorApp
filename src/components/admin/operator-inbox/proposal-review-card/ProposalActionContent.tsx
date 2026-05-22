@@ -106,9 +106,9 @@ export function ProposalActionContent({
         </dl>
 
         {actionView.operatorBriefing ? (
-          <Card className={`${spacing.margin.top.sm} ${actionView.hasTimeConflict ? 'border-destructive/50' : 'border-blue-500/50'}`}>
+          <Card className={`${spacing.margin.top.sm} ${actionView.hasTimeConflict ? 'border-destructive/50' : 'border-primary/50'}`}>
             <CardContent className={spacing.padding.md}>
-              <h5 className={`${typography.label.sm} ${spacing.margin.bottom.xs} ${actionView.hasTimeConflict ? 'text-destructive' : 'text-blue-600 dark:text-blue-400'}`}>
+              <h5 className={`${typography.label.sm} ${spacing.margin.bottom.xs} ${actionView.hasTimeConflict ? 'text-destructive' : 'text-primary'}`}>
                 {t('operatorInbox.sections.aiBriefing')}
               </h5>
               <div className={`${typography.body.sm} whitespace-pre-line ${colors.text.muted}`}>

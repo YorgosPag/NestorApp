@@ -233,7 +233,7 @@ export function CustomCategoriesSection() {
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       {cat.type === 'income' ? (
-                        <TrendingUp className="size-4 text-green-700 shrink-0" aria-hidden />
+                        <TrendingUp className="size-4 text-green-707 shrink-0" aria-hidden />
                       ) : (
                         <TrendingDown className="size-4 text-destructive shrink-0" aria-hidden />
                       )}

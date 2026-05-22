@@ -104,8 +104,8 @@ export const getFileTypeInfo = (url: string): FileTypeInfo => {
     return {
       icon: FileImage,
       type: 'image',
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-50 dark:bg-blue-950',
+      color: 'text-primary',
+      bgColor: 'bg-[hsl(var(--bg-info))]/20',
     };
   }
 
@@ -113,8 +113,8 @@ export const getFileTypeInfo = (url: string): FileTypeInfo => {
     return {
       icon: FileText,
       type: 'pdf',
-      color: 'text-red-600 dark:text-red-400',
-      bgColor: 'bg-red-50 dark:bg-red-950',
+      color: 'text-destructive',
+      bgColor: 'bg-destructive/10',
     };
   }
 
@@ -122,8 +122,8 @@ export const getFileTypeInfo = (url: string): FileTypeInfo => {
     return {
       icon: FileText,
       type: 'document',
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-50 dark:bg-blue-950',
+      color: 'text-primary',
+      bgColor: 'bg-[hsl(var(--bg-info))]/20',
     };
   }
 
@@ -131,16 +131,16 @@ export const getFileTypeInfo = (url: string): FileTypeInfo => {
     return {
       icon: FileText,
       type: 'spreadsheet',
-      color: 'text-green-600 dark:text-green-400',
-      bgColor: 'bg-green-50 dark:bg-green-950',
+      color: 'text-green-707',
+      bgColor: 'bg-[hsl(var(--bg-success))]/10',
     };
   }
 
   return {
     icon: File,
     type: 'file',
-    color: 'text-gray-600 dark:text-gray-400',
-    bgColor: 'bg-gray-50 dark:bg-gray-950',
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted/50',
   };
 };
 

@@ -138,7 +138,7 @@ export function BackupListSection({
                 {/* Warnings */}
                 {backup.warnings.length > 0 && (
                   <details className="text-sm">
-                    <summary className="cursor-pointer text-amber-600">
+                    <summary className="cursor-pointer text-[hsl(var(--text-warning))]">
                       {t('backup.list.warnings')} ({backup.warnings.length})
                     </summary>
                     <ul className="mt-1 list-disc pl-5 text-xs">

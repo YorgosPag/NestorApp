@@ -83,9 +83,9 @@ export function RestorePreviewTable({ preview }: RestorePreviewTableProps) {
                   </td>
                   <td className="py-2 pr-4 text-right">{col.documentCount.toLocaleString()}</td>
                   <td className="py-2 pr-4 text-right">{col.existingCount.toLocaleString()}</td>
-                  <td className="py-2 pr-4 text-right text-green-600">{col.newCount.toLocaleString()}</td>
-                  <td className="py-2 pr-4 text-right text-blue-600">{col.updateCount.toLocaleString()}</td>
-                  <td className="py-2 text-right text-amber-600">{col.skipCount.toLocaleString()}</td>
+                  <td className="py-2 pr-4 text-right text-green-707">{col.newCount.toLocaleString()}</td>
+                  <td className="py-2 pr-4 text-right text-primary">{col.updateCount.toLocaleString()}</td>
+                  <td className="py-2 text-right text-[hsl(var(--text-warning))]">{col.skipCount.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -102,13 +102,13 @@ export function RestorePreviewTable({ preview }: RestorePreviewTableProps) {
             <dd>{preview.totalDocuments.toLocaleString()}</dd>
 
             <dt className={cn(colors.text.muted)}>{t('backup.restore.preview.totalNew')}</dt>
-            <dd className="text-green-600">{preview.totalNew.toLocaleString()}</dd>
+            <dd className="text-green-707">{preview.totalNew.toLocaleString()}</dd>
 
             <dt className={cn(colors.text.muted)}>{t('backup.restore.preview.totalUpdate')}</dt>
-            <dd className="text-blue-600">{preview.totalUpdate.toLocaleString()}</dd>
+            <dd className="text-primary">{preview.totalUpdate.toLocaleString()}</dd>
 
             <dt className={cn(colors.text.muted)}>{t('backup.restore.preview.totalSkip')}</dt>
-            <dd className="text-amber-600">{preview.totalSkip.toLocaleString()}</dd>
+            <dd className="text-[hsl(var(--text-warning))]">{preview.totalSkip.toLocaleString()}</dd>
           </dl>
         </section>
       </CardContent>

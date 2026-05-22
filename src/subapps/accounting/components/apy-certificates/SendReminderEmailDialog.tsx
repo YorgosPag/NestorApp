@@ -241,7 +241,7 @@ export function SendReminderEmailDialog({
 
           {/* Status */}
           {sendStatus === 'success' && (
-            <div className="flex items-center gap-2 text-sm text-green-700">
+            <div className="flex items-center gap-2 text-sm text-green-707">
               <CheckCircle className="h-4 w-4 shrink-0" />
               <span>{t('apyCertificates.reminderEmail.sendSuccess', { email: recipientEmail.trim() })}</span>
             </div>

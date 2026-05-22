@@ -255,8 +255,8 @@ export function AdminSetupPageContent() {
             ) : currentConfig ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  <span className="font-medium text-green-700">{t('setup.configActive')}</span>
+                  <CheckCircle2 className="h-5 w-5 text-green-707" />
+                  <span className="font-medium text-green-707">{t('setup.configActive')}</span>
                 </div>
                 <div className="grid gap-2 text-sm">
                   <div className="flex justify-between">
@@ -283,8 +283,8 @@ export function AdminSetupPageContent() {
 
                 {currentConfig.primaryAdminUid === user.uid ? (
                   <div className="mt-4 space-y-3">
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-                      <p className="text-sm text-green-800">
+                    <div className="p-3 bg-[hsl(var(--bg-success))]/10 border border-border rounded-md">
+                      <p className="text-sm text-green-707">
                         <CheckCircle2 className="h-4 w-4 inline mr-1" />
                         {t('setup.youArePrimaryAdmin')}
                       </p>
@@ -306,8 +306,8 @@ export function AdminSetupPageContent() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                    <p className="text-sm text-yellow-800">
+                  <div className="mt-4 p-3 bg-[hsl(var(--bg-warning))]/40 border border-border rounded-md">
+                    <p className="text-sm text-[hsl(var(--text-warning))]">
                       {t('setup.differentAdmin')}
                     </p>
                     <Button
@@ -332,8 +332,8 @@ export function AdminSetupPageContent() {
             ) : (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <XCircle className="h-5 w-5 text-yellow-500" />
-                  <span className="font-medium text-yellow-700">{t('setup.notConfigured')}</span>
+                  <XCircle className="h-5 w-5 text-[hsl(var(--text-warning))]" />
+                  <span className="font-medium text-[hsl(var(--text-warning))]">{t('setup.notConfigured')}</span>
                 </div>
                 <p className={cn("text-sm", colors.text.muted)}>
                   {t('setup.notConfiguredDescription')}
@@ -381,8 +381,8 @@ export function AdminSetupPageContent() {
 
         {/* Error Message */}
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-800 flex items-center gap-2">
+          <div className="p-4 bg-destructive/10 border border-destructive rounded-md">
+            <p className="text-sm text-destructive flex items-center gap-2">
               <XCircle className="h-4 w-4" />
               {error}
             </p>
@@ -391,8 +391,8 @@ export function AdminSetupPageContent() {
 
         {/* Success Message */}
         {success && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-md">
-            <p className="text-sm text-green-800 flex items-center gap-2">
+          <div className="p-4 bg-[hsl(var(--bg-success))]/10 border border-border rounded-md">
+            <p className="text-sm text-green-707 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4" />
               {t('setup.successMessage')}
             </p>

@@ -144,11 +144,11 @@ export function PropertyStatusDemoPageContent() {
     <div className="container mx-auto p-6 space-y-8">
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
-          <Building className={`${iconSizes.xl} text-blue-600`} />
+          <Building className={`${iconSizes.xl} text-primary`} />
           {t('propertyStatusDemo.title')}
         </h1>
         <p className={colors.text.muted}>{t('propertyStatusDemo.subtitle')}</p>
-        <div className="flex items-center justify-center gap-2 text-sm text-green-600">
+        <div className="flex items-center justify-center gap-2 text-sm text-green-707">
           <CheckCircle className={iconSizes.sm} />
           <span>{t('propertyStatusDemo.productionReady')}</span>
         </div>
@@ -159,7 +159,7 @@ export function PropertyStatusDemoPageContent() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="text-center">
-            <Zap className={`${iconSizes.xl} mx-auto text-green-500`} />
+            <Zap className={`${iconSizes.xl} mx-auto text-green-707`} />
             <CardTitle className="text-sm">{t('propertyStatusDemo.cards.available')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -179,7 +179,7 @@ export function PropertyStatusDemoPageContent() {
         </Card>
         <Card>
           <CardHeader className="text-center">
-            <Home className={`${iconSizes.xl} mx-auto text-gray-500`} />
+            <Home className={`${iconSizes.xl} mx-auto text-muted-foreground`} />
             <CardTitle className="text-sm">{t('propertyStatusDemo.cards.offMarket')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -189,7 +189,7 @@ export function PropertyStatusDemoPageContent() {
         </Card>
         <Card>
           <CardHeader className="text-center">
-            <BarChart3 className={`${iconSizes.xl} mx-auto text-blue-500`} />
+            <BarChart3 className={`${iconSizes.xl} mx-auto text-primary`} />
             <CardTitle className="text-sm">{t('propertyStatusDemo.cards.totalStatuses')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -248,7 +248,7 @@ export function PropertyStatusDemoPageContent() {
       {selectedStatus && (
         <Card className={getStatusBorder('info')}>
           <CardHeader>
-            <CardTitle className="text-blue-800">
+            <CardTitle className="text-foreground">
               {t('propertyStatusDemo.statusDetails')}: {getEnhancedStatusLabel(selectedStatus)}
             </CardTitle>
           </CardHeader>
@@ -286,7 +286,7 @@ export function PropertyStatusDemoPageContent() {
       {selectedProperty && (
         <Card className={getStatusBorder('success')}>
           <CardHeader>
-            <CardTitle className="text-green-800">
+            <CardTitle className="text-green-707">
               {t('propertyStatusDemo.propertyDetails')}: {selectedProperty.name}
             </CardTitle>
           </CardHeader>

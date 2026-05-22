@@ -205,7 +205,7 @@ export function ServicePresetsSection() {
         {saveSuccess && (
           <div
             role="status"
-            className="rounded-md border border-[hsl(var(--bg-success))] bg-[hsl(var(--bg-success))]/10 p-3 text-sm text-green-700"
+            className="rounded-md border border-[hsl(var(--bg-success))] bg-[hsl(var(--bg-success))]/10 p-3 text-sm text-green-707"
           >
             {t('servicePresets.saveSuccess')}
           </div>
@@ -313,7 +313,7 @@ export function ServicePresetsSection() {
                     </fieldset>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={confirmEdit}>
-                        <Check className="h-4 w-4 text-green-600" />
+                        <Check className="h-4 w-4 text-green-707" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cancelEdit}>
                         <X className={cn("h-4 w-4", colors.text.muted)} />
