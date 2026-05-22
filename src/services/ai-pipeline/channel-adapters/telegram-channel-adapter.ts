@@ -23,7 +23,7 @@ import type { MessageAttachment } from '@/types/conversations';
 import { PipelineChannel } from '@/types/ai-pipeline';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { enqueuePipelineItem } from '../pipeline-queue-service';
-import { isSuperAdminTelegram } from '../shared/super-admin-resolver';
+import { isSuperAdminTelegram, getSuperAdminActiveCompanyId } from '../shared/super-admin-resolver';
 import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
@@ -87,8 +87,9 @@ export class TelegramChannelAdapter {
     try {
       const intakeMessage = TelegramChannelAdapter.toIntakeMessage(params);
 
-      // ── ADR-145: Super Admin Detection ──
+      // ── ADR-145: Super Admin Detection + Option B (active company routing) ──
       let adminCommandMeta: AdminCommandMeta | null = null;
+      let effectiveCompanyId = params.companyId;
       try {
         const adminResolution = await isSuperAdminTelegram(params.userId);
         if (adminResolution) {
@@ -100,13 +101,19 @@ export class TelegramChannelAdapter {
             isAdminCommand: true,
             resolvedVia: adminResolution.resolvedVia,
           };
+          // Route bot commands to whichever company is active in the UI switcher.
+          // SuperAdminCompanyContext persists the selection to users/{uid}.activeCompanyId.
+          const adminActiveCompany = await getSuperAdminActiveCompanyId(
+            adminResolution.identity.firebaseUid
+          );
+          if (adminActiveCompany) effectiveCompanyId = adminActiveCompany;
         }
       } catch {
         // Non-fatal: if admin check fails, treat as normal customer message
       }
 
       const { queueId, requestId } = await enqueuePipelineItem({
-        companyId: params.companyId,
+        companyId: effectiveCompanyId,
         channel: PipelineChannel.TELEGRAM,
         intakeMessage,
         ...(adminCommandMeta ? { adminCommandMeta } : {}),

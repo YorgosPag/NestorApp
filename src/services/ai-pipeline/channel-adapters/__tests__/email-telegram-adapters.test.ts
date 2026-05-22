@@ -35,15 +35,16 @@ const mockIsSuperAdminEmail = jest.fn<
   Promise<{ identity: { displayName: string; firebaseUid: string }; resolvedVia: string } | null>,
   [string]
 >();
-jest.mock('../../shared/super-admin-resolver', () => ({
-  isSuperAdminEmail: (...args: [string]) => mockIsSuperAdminEmail(...args),
-  isSuperAdminTelegram: (...args: [string]) => mockIsSuperAdminTelegram(...args),
-}));
-
 const mockIsSuperAdminTelegram = jest.fn<
   Promise<{ identity: { displayName: string; firebaseUid: string }; resolvedVia: string } | null>,
   [string]
 >();
+const mockGetSuperAdminActiveCompanyId = jest.fn<Promise<string | null>, [string | null]>();
+jest.mock('../../shared/super-admin-resolver', () => ({
+  isSuperAdminEmail: (...args: [string]) => mockIsSuperAdminEmail(...args),
+  isSuperAdminTelegram: (...args: [string]) => mockIsSuperAdminTelegram(...args),
+  getSuperAdminActiveCompanyId: (...args: [string | null]) => mockGetSuperAdminActiveCompanyId(...args),
+}));
 
 // ── Imports ──
 import { EmailChannelAdapter } from '../email-channel-adapter';
@@ -300,6 +301,7 @@ describe('TelegramChannelAdapter', () => {
     jest.clearAllMocks();
     mockEnqueue.mockResolvedValue({ queueId: 'pq_002', requestId: 'req_002' });
     mockIsSuperAdminTelegram.mockResolvedValue(null);
+    mockGetSuperAdminActiveCompanyId.mockResolvedValue(null);
   });
 
   // ── feedToPipeline ──
@@ -364,6 +366,39 @@ describe('TelegramChannelAdapter', () => {
 
       const enqueueArg = mockEnqueue.mock.calls[0][0] as Record<string, unknown>;
       expect(enqueueArg).not.toHaveProperty('contactMeta');
+    });
+
+    it('uses activeCompanyId from switcher when admin has one set (Option B)', async () => {
+      mockIsSuperAdminTelegram.mockResolvedValue({
+        ...ADMIN_RESOLUTION,
+        resolvedVia: 'telegram',
+      });
+      mockGetSuperAdminActiveCompanyId.mockResolvedValue('comp_active_switcher');
+
+      await TelegramChannelAdapter.feedToPipeline(
+        createTelegramParams({ userId: '5618410820', companyId: 'comp_pagonis' })
+      );
+
+      expect(mockGetSuperAdminActiveCompanyId).toHaveBeenCalledWith('uid_admin_001');
+      expect(mockEnqueue).toHaveBeenCalledWith(
+        expect.objectContaining({ companyId: 'comp_active_switcher' })
+      );
+    });
+
+    it('falls back to params.companyId when admin has no activeCompanyId', async () => {
+      mockIsSuperAdminTelegram.mockResolvedValue({
+        ...ADMIN_RESOLUTION,
+        resolvedVia: 'telegram',
+      });
+      mockGetSuperAdminActiveCompanyId.mockResolvedValue(null);
+
+      await TelegramChannelAdapter.feedToPipeline(
+        createTelegramParams({ companyId: 'comp_pagonis' })
+      );
+
+      expect(mockEnqueue).toHaveBeenCalledWith(
+        expect.objectContaining({ companyId: 'comp_pagonis' })
+      );
     });
 
     it('treats admin check failure as non-fatal', async () => {

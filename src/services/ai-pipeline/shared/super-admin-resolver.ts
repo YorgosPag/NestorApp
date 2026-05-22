@@ -281,6 +281,35 @@ export async function getAdminTelegramChatId(): Promise<string | null> {
 }
 
 /**
+ * Read the active company selected in the super admin UI switcher.
+ * Written to Firestore by SuperAdminCompanyContext on every switcher change.
+ *
+ * Used by Telegram channel adapter (Option B — ADR-145) to route bot commands
+ * to whichever company the admin has active in the dashboard.
+ *
+ * @param firebaseUid - Firebase Auth UID of the super admin
+ * @returns Active company ID, or null if not set / read fails
+ */
+export async function getSuperAdminActiveCompanyId(
+  firebaseUid: string | null
+): Promise<string | null> {
+  if (!firebaseUid) return null;
+  try {
+    const adminDb = getAdminFirestore();
+    const snap = await adminDb.collection(COLLECTIONS.USERS).doc(firebaseUid).get();
+    if (!snap.exists) return null;
+    const data = snap.data() as { activeCompanyId?: string };
+    return data.activeCompanyId ?? null;
+  } catch (error) {
+    logger.warn('Failed to read activeCompanyId for super admin', {
+      firebaseUid,
+      error: getErrorMessage(error),
+    });
+    return null;
+  }
+}
+
+/**
  * Force-refresh the registry cache.
  * Useful after updating the registry document.
  */

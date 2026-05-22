@@ -11,7 +11,7 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, doc, getDocs, orderBy, query, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { isRoleBypass } from '@/lib/auth/roles';
@@ -90,16 +90,22 @@ export function SuperAdminCompanyProvider({ children }: { children: React.ReactN
     localStorage.setItem(STORAGE_KEY, id);
   }, []);
 
-  // Propagate selection to both transports (ADR-354):
+  // Propagate selection to all transports (ADR-354 + Option B):
   //  - apiClient → adds X-Super-Admin-Company-Id header to every API call;
   //    server's buildRequestContext overrides ctx.companyId for bypass roles.
   //  - firestore registry → requireAuthContext picks it up so client-side
   //    Firestore SDK queries (real-time listeners, getAll) scope to it.
+  //  - Firestore users/{uid}.activeCompanyId → persists for server-side
+  //    pipeline reads (Telegram bot reads this to route to the active company).
   useEffect(() => {
     const id = isSuperAdmin ? activeCompanyId : null;
     apiClient.setSuperAdminCompanyId(id);
     setSuperAdminActiveCompanyId(id);
-  }, [isSuperAdmin, activeCompanyId]);
+    if (isSuperAdmin && id && user?.uid && db) {
+      setDoc(doc(db, 'users', user.uid), { activeCompanyId: id }, { merge: true })
+        .catch(err => logger.warn('Failed to persist activeCompanyId to Firestore', { error: err }));
+    }
+  }, [isSuperAdmin, activeCompanyId, user]);
 
   return (
     <SuperAdminCompanyContext.Provider value={{ isSuperAdmin, activeCompanyId, companies, loading, setActiveCompanyId }}>
