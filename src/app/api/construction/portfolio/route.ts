@@ -17,6 +17,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { computeEVM } from '@/services/report-engine/evm-calculator';
+import { compareByLocale } from '@/lib/intl-formatting';
 import type { ConstructionPhase, ConstructionTask } from '@/types/building/construction';
 import type { BuildingMilestone } from '@/types/building/milestone';
 import type { BOQItem } from '@/types/boq';
@@ -107,7 +108,7 @@ async function aggregateBuilding(
 
   const upcomingMilestones = milestones
     .filter(m => m.status !== 'completed' && m.date >= today)
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a, b) => compareByLocale(a.date, b.date));
 
   const nextMilestone = upcomingMilestones[0]
     ? { title: upcomingMilestones[0].title, date: upcomingMilestones[0].date }

@@ -23,6 +23,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §6 Phase 8
  */
 
+import { compareByLocale } from '@/lib/intl-formatting';
 import { applyScheduleFilters, asFilterable, type FilterableBimEntity } from './filters';
 import {
   type AnyBimEntity,
@@ -114,7 +115,7 @@ export function buildSchedule(
   const rows = survivors.map((e) => buildRow(e, config.entityType, lookups, preset.map));
 
   if (config.groupByBuilding === true) {
-    rows.sort((a, b) => (a.buildingId ?? '').localeCompare(b.buildingId ?? ''));
+    rows.sort((a, b) => compareByLocale(a.buildingId ?? '', b.buildingId ?? ''));
   }
 
   return {

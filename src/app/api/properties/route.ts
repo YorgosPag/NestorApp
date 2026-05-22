@@ -18,6 +18,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { isRoleBypass } from '@/lib/auth/roles';
+import { compareByLocale } from '@/lib/intl-formatting';
 import { requireBuildingInTenant, TenantIsolationError } from '@/lib/auth/tenant-isolation';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -122,7 +123,7 @@ export const GET = withStandardRateLimit(
           ? mappedDocs.filter(p => p.status !== 'deleted')
           : mappedDocs;
 
-        filteredDocs.sort((a, b) => a.name.localeCompare(b.name));
+        filteredDocs.sort((a, b) => compareByLocale(a.name, b.name));
 
         logger.info('[Properties/List] Found properties', { count: filteredDocs.length, companyId: tenantCompanyId, buildingId: buildingId || 'all' });
 
