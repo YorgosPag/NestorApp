@@ -202,6 +202,9 @@ export class DxfRenderer {
       gripInteractionState?: DxfRenderOptions['gripInteractionState'];
       // ADR-358 §G7 Phase 4 — pass-through for ByLayer/ByBlock resolver
       layersById?: Record<string, SceneLayer>;
+      // When true, selected entities keep selection highlight but grips are hidden
+      // (AutoCAD parity: grips disappear when a command such as Move is active).
+      suppressGrips?: boolean;
     } = {},
   ): void {
     if (!entity.visible) return;
@@ -219,6 +222,7 @@ export class DxfRenderer {
       hoveredEntityId: mode === 'hovered' ? entity.id : null,
       gripInteractionState: gripOpts,
       layersById: interaction.layersById,
+      suppressGrips: interaction.suppressGrips,
     };
     this._selectionSet = new Set(syntheticOptions.selectedEntityIds);
     this.renderEntityUnified(entity, transform, actualViewport, syntheticOptions);
@@ -246,12 +250,13 @@ export class DxfRenderer {
     const resolved = this.resolveStyleForRender(entity, options.layersById);
     const entityModel: EntityModel = this.toEntityModel(entity, isSelected, resolved);
 
+    const gripsVisible = isSelected && !options.suppressGrips;
     const renderOptions: RenderOptions = {
       phase: isSelected ? 'selected' : isHovered ? 'highlighted' : 'normal',
       transform,
       viewport,
-      showGrips: isSelected,
-      grips: isSelected,
+      showGrips: gripsVisible,
+      grips: gripsVisible,
       hovered: isHovered,
       selected: isSelected,
       alpha: (entity.visible ? 1.0 : 0.3) * resolved.alpha

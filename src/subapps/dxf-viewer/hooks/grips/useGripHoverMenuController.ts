@@ -96,6 +96,13 @@ export function useGripHoverMenuController(params: UseGripHoverMenuControllerPar
       return;
     }
 
+    // Non-grip tool active (e.g. Move) — grips are suppressed, close menu unconditionally.
+    const isGripMode = activeTool === 'select' || activeTool === 'layering';
+    if (!isGripMode) {
+      GripHoverMenuStore.hide();
+      return;
+    }
+
     // If the menu is already visible and the cursor just moved off the grip
     // (hoveredGrip became null), the user is likely moving toward the menu to
     // click an item — do NOT close it. The outside-click handler in the
@@ -106,8 +113,7 @@ export function useGripHoverMenuController(params: UseGripHoverMenuControllerPar
       GripHoverMenuStore.hide();
     }
 
-    const isGripMode = activeTool === 'select' || activeTool === 'layering';
-    if (!isGripMode || ctrlDownRef.current || !hoveredGrip) return;
+    if (ctrlDownRef.current || !hoveredGrip) return;
     if (hoveredGrip.source !== 'dxf' || !hoveredGrip.entityId) return;
 
     const entityId = hoveredGrip.entityId;

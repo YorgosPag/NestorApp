@@ -273,6 +273,12 @@ export interface DxfRenderOptions {
    * missing layer → renderer falls back to per-entity literal values (legacy).
    */
   layersById?: Record<string, SceneLayer>;
+  /**
+   * When true, selected entities are rendered without grip handles (selection highlight
+   * is preserved). Used when activeTool is not 'select' / 'layering' — e.g. Move tool,
+   * matching AutoCAD behaviour where grips disappear once a command is active.
+   */
+  suppressGrips?: boolean;
 }
 
 // === DXF SELECTION ===

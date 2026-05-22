@@ -281,6 +281,11 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     isDirtyRef.current = true;
   }, [setupCanvas, isDirtyRef]);
 
+  // Force re-render when activeTool changes (grips show/hide — AutoCAD parity).
+  useEffect(() => {
+    isDirtyRef.current = true;
+  }, [activeTool, isDirtyRef]);
+
   // 🚀 PERF (2026-05-10): imperative SelectionStore subscription.
   // Updates selectionStateRef + marks canvas dirty — zero React re-renders.
   useEffect(() => {

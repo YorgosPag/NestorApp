@@ -171,12 +171,18 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
         // delta is drawn on the dedicated PreviewCanvas overlay by
         // GripDragPreviewMount → useGripGhostPreview, identical to the Move
         // tool path. No drag-preview branch lives in this renderer anymore.
+        //
+        // AutoCAD parity: grips are only visible in selection mode (no active command).
+        // When a tool like Move is active, grips disappear — the tool has its own UX.
+        const activeTool = refs.activeToolRef.current;
+        const gripsAllowed = !activeTool || activeTool === 'select' || activeTool === 'layering';
         for (const selId of curRenderOptions.selectedEntityIds) {
           const ent = curEntityMap.get(selId);
           if (ent) {
             renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'selected', {
               gripInteractionState: curRenderOptions.gripInteractionState,
               layersById: curLayersById,
+              suppressGrips: !gripsAllowed,
             });
           }
         }
