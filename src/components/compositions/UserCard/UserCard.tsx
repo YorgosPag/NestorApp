@@ -118,22 +118,22 @@ export function UserCard({
       
       // Header configuration με avatar
       headerConfig={{
-        backgroundGradient: user.status === 'active' 
-          ? "from-blue-100 via-indigo-50 to-purple-100 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-900"
+        backgroundGradient: user.status === 'active'
+          ? "from-[hsl(var(--bg-info))]/20 via-accent to-accent"
           : user.status === 'suspended'
-          ? "from-red-100 via-pink-50 to-red-100 dark:from-red-950 dark:via-pink-950 dark:to-red-900"
-          : "from-gray-100 via-gray-50 to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900",
+          ? "from-destructive/10 via-destructive/5 to-destructive/10"
+          : "from-muted via-muted/50 to-muted",
         logo: user.avatar ? (
-          <img 
-            src={user.avatar} 
+          <img
+            src={user.avatar}
             alt={user.name}
             className={`${iconSizes.xl3} rounded-full object-cover border ${quick.avatar}`}
           />
         ) : (
           <RoleIcon className={`${iconSizes.xl2} ${
-            user.status === 'active' ? 'text-blue-600 dark:text-blue-400' :
-            user.status === 'suspended' ? 'text-red-600 dark:text-red-400' :
-            'text-gray-600 dark:text-gray-400'
+            user.status === 'active' ? 'text-primary' :
+            user.status === 'suspended' ? 'text-destructive' :
+            'text-muted-foreground'
           }`} />
         ),
         compact
@@ -249,7 +249,7 @@ export function UserCard({
             <div className="grid grid-cols-3 gap-4 text-center">
               {user.tasksCompleted !== undefined && (
                 <div>
-                  <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                  <div className="text-lg font-semibold text-primary">
                     {user.tasksCompleted}
                   </div>
                   <div className={cn("text-xs", colors.text.muted)}>{t('card.stats.tasks')}</div>
@@ -257,7 +257,7 @@ export function UserCard({
               )}
               {user.projectsAssigned !== undefined && (
                 <div>
-                  <div className="text-lg font-semibold text-green-600 dark:text-green-400">
+                  <div className="text-lg font-semibold text-green-707">
                     {user.projectsAssigned}
                   </div>
                   <div className={cn("text-xs", colors.text.muted)}>{t('card.stats.projects')}</div>
@@ -265,7 +265,7 @@ export function UserCard({
               )}
               {user.achievements !== undefined && (
                 <div>
-                  <div className="text-lg font-semibold text-purple-600 dark:text-purple-400">
+                  <div className="text-lg font-semibold text-foreground">
                     {user.achievements}
                   </div>
                   <div className={cn("text-xs", colors.text.muted)}>{t('card.stats.achievements')}</div>

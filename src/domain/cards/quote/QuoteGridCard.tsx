@@ -85,19 +85,19 @@ export function QuoteGridCard({
     const items: StatItem[] = [
       {
         icon: Building2,
-        iconColor: 'text-green-600',
+        iconColor: 'text-green-707',
         label: t('list.vendorLabel'),
         value: vendorName,
       },
       {
         icon: DollarSign,
-        iconColor: 'text-emerald-600',
+        iconColor: 'text-green-707',
         label: t('list.totalLabel'),
         value: formatCurrency(quote.totals.total),
       },
       {
         icon: Calendar,
-        iconColor: 'text-blue-600',
+        iconColor: 'text-primary',
         label: quote.validUntil ? t('list.validUntilLabel') : t('list.dateLabel'),
         value: quote.validUntil
           ? formatQuoteDate(quote.validUntil as { seconds: number })
@@ -133,7 +133,7 @@ export function QuoteGridCard({
   return (
     <GridCard
       customIcon={FileText}
-      customIconColor="text-amber-600"
+      customIconColor="text-[hsl(var(--text-warning))]"
       title={quote.displayNumber}
       subtitle={vendorName}
       badges={badges}

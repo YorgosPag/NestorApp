@@ -248,7 +248,7 @@ export const OverlayListCard = forwardRef<HTMLElement, OverlayListCardProps>(
       if (hasLink) {
         items.push({
           icon: Link2,
-          iconColor: "text-blue-600",
+          iconColor: "text-primary",
           label: t("overlayCard.stats.linked"),
           value: t("overlayCard.stats.linkedYes"),
         });
@@ -258,7 +258,7 @@ export const OverlayListCard = forwardRef<HTMLElement, OverlayListCardProps>(
       if (overlay.polygon && overlay.polygon.length > 4) {
         items.push({
           icon: Footprints,
-          iconColor: "text-slate-500",
+          iconColor: "text-muted-foreground",
           label: t("overlayCard.stats.vertices"),
           value: String(overlay.polygon.length),
         });

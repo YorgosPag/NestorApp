@@ -31,7 +31,7 @@ import '@/lib/design-system';
  * <CardStats
  *   stats={[
  *     { icon: Ruler, label: 'Εμβαδόν', value: '85 m²' },
- *     { icon: Euro, label: 'Τιμή', value: '150,000€', valueColor: 'text-green-600' },
+ *     { icon: Euro, label: 'Τιμή', value: '150,000€', valueColor: 'text-green-707' },
  *     { icon: Layers, label: 'Όροφος', value: '3ος' },
  *   ]}
  *   layout="horizontal"

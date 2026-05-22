@@ -386,10 +386,10 @@ export function UserAuthPermissionPanel({
       {dirtyPolicy && (
         <aside
           role="alert"
-          className="flex items-start gap-2 p-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700"
+          className="flex items-start gap-2 p-3 rounded-lg border border-border bg-[hsl(var(--bg-warning))]/40"
         >
-          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-800 dark:text-amber-200">
+          <AlertTriangle className="h-4 w-4 text-[hsl(var(--text-warning))] shrink-0 mt-0.5" />
+          <p className="text-xs text-[hsl(var(--text-warning))]">
             {t('common-shared:share.dirtyPolicyWarning')}
           </p>
         </aside>

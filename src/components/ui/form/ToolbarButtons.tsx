@@ -137,7 +137,7 @@ export function ToolbarArchiveButton({
       size={size}
       onClick={onClick}
       disabled={disabled}
-      className={cn(BUTTON_CATEGORIES.utility, "text-orange-400 flex items-center gap-2 min-w-[100px] justify-start", className)}
+      className={cn(BUTTON_CATEGORIES.utility, "text-[hsl(var(--text-warning))]flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
       <Archive className={iconSizes.sm} />
       <span className="hidden md:inline">{defaultChildren}</span>
@@ -370,7 +370,7 @@ export function ToolbarArchivedFilterButton({
   const defaultChildren = children ?? actions.archived;
   const buttonClassName = active
     ? cn(BUTTON_CATEGORIES.primary, "flex items-center gap-2 min-w-[100px] justify-start", className)
-    : cn(BUTTON_CATEGORIES.utility, "text-orange-400 flex items-center gap-2 min-w-[100px] justify-start", className);
+    : cn(BUTTON_CATEGORIES.utility, "text-[hsl(var(--text-warning))]flex items-center gap-2 min-w-[100px] justify-start", className);
 
   return (
     <Button
@@ -431,7 +431,7 @@ export function ToolbarRefreshButton({
       size={size}
       onClick={onClick}
       disabled={disabled}
-      className={cn(BUTTON_CATEGORIES.utility, "text-cyan-400 flex items-center gap-2 min-w-[100px] justify-start", className)}
+      className={cn(BUTTON_CATEGORIES.utility, "text-primaryflex items-center gap-2 min-w-[100px] justify-start", className)}
     >
       <RefreshCw className={iconSizes.sm} />
       <span className="hidden md:inline">{defaultChildren}</span>

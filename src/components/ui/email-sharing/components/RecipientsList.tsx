@@ -146,8 +146,8 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
     }
 
     return validation.isValid
-      ? `${getStatusBorder('success')} focus:ring-green-500`
-      : `${getStatusBorder('error')} focus:ring-red-500`;
+      ? `${getStatusBorder('success')} focus:ring-ring`
+      : `${getStatusBorder('error')} focus:ring-destructive`;
   };
 
   // ============================================================================
@@ -185,9 +185,9 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
             {showValidation && email.trim() && (
               <aside className="absolute right-2 top-1/2 transform -translate-y-1/2" role="status" aria-label={t('recipients.validationStatus')}>
                 {validation.isValid ? (
-                  <CheckCircle className={`${iconSizes.sm} text-green-500`} />
+                  <CheckCircle className={`${iconSizes.sm} text-green-707`} />
                 ) : (
-                  <AlertCircle className={`${iconSizes.sm} text-red-500`} />
+                  <AlertCircle className={`${iconSizes.sm} text-destructive`} />
                 )}
               </aside>
             )}
@@ -199,7 +199,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
               id={`email-error-${index}`}
               className={designSystem.cn(
                 designSystem.getTypographyClass('xs'),
-                'text-red-600 dark:text-red-400 mt-1'
+                'text-destructive mt-1'
               )}
               role="alert"
             >
@@ -217,7 +217,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
             onClick={() => handleRemoveRecipient(index)}
             disabled={disabled}
             className={designSystem.cn(
-              'text-red-500',
+              'text-destructive',
               INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST,
               'mt-0.5' // Align with input
             )}
@@ -248,7 +248,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
         )}>
           {t('recipients.validFromTotal', { valid: validCount, total: totalRecipients })}
           {invalidCount > 0 && (
-            <span className="text-red-500 ml-2">
+            <span className="text-destructive ml-2">
               {t('recipients.invalidCount', { count: invalidCount })}
             </span>
           )}
@@ -275,11 +275,11 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
         <Label className={designSystem.cn(
           "flex items-center gap-2",
           designSystem.getTypographyClass('sm', 'medium'),
-          disabled && 'text-gray-400 dark:text-gray-500'
+          disabled && 'text-muted-foreground'
         )}>
           <Users className={designSystem.cn(
             iconSizes.sm,
-            disabled ? 'text-gray-400' : 'text-blue-600'
+            disabled ? 'text-muted-foreground' : 'text-primary'
           )} />
           {t('recipients.emailRecipients')}
         </Label>
@@ -293,7 +293,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
             onClick={handleAddRecipient}
             disabled={disabled}
             className={designSystem.cn(
-              'text-blue-600',
+              'text-primary',
               INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST,
               disabled && 'opacity-50 cursor-not-allowed'
             )}
@@ -317,7 +317,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
         <aside className={`p-3 ${colors.bg.error} rounded-lg ${getStatusBorder('error')}`} role="alert">
           <p className={designSystem.cn(
             designSystem.getTypographyClass('sm', 'medium'),
-            'text-red-800 dark:text-red-300 flex items-center gap-2'
+            'text-destructive flex items-center gap-2'
           )}>
             <AlertCircle className={iconSizes.sm} />
             {customValidationError}
@@ -329,7 +329,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
       <aside className={designSystem.cn(
         designSystem.getTypographyClass('xs'),
         'text-muted-foreground',
-        disabled && 'text-gray-400'
+        disabled && 'text-muted-foreground'
       )} role="note">
         {t('recipients.helperText')}
       </aside>
@@ -393,7 +393,7 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
                 onClick={() => onRecipientsChange(recipients.filter((_, i) => i !== index))}
                 disabled={disabled}
                 className={designSystem.cn(
-                  `${iconSizes.xl} p-0 text-red-500`,
+                  `${iconSizes.xl} p-0 text-destructive`,
                   INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST
                 )}
               >
@@ -411,7 +411,7 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
             onClick={() => onRecipientsChange([...recipients, ''])}
             disabled={disabled}
             className={designSystem.cn(
-              "h-8 w-full text-xs text-blue-600",
+              "h-8 w-full text-xs text-primary",
               INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST
             )}
           >

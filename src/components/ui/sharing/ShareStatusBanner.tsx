@@ -36,10 +36,7 @@ export function ShareStatusBanner({
       <output
         aria-live="polite"
         aria-label={t('shareSurface.a11y.statusRegion')}
-        className={cn(
-          'flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800',
-          'dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200',
-        )}
+        className="flex items-center gap-2 rounded-md border border-border bg-[hsl(var(--bg-info))]/20 px-3 py-2 text-sm text-primary"
       >
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
         <span>{t('shareSurface.submitting')}</span>
@@ -53,10 +50,7 @@ export function ShareStatusBanner({
         aria-live="assertive"
         aria-label={t('shareSurface.a11y.statusRegion')}
         role="alert"
-        className={cn(
-          'flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800',
-          'dark:border-red-800 dark:bg-red-950 dark:text-red-200',
-        )}
+        className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
       >
         <AlertCircle
           className="mt-0.5 h-4 w-4 flex-shrink-0"

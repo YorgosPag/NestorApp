@@ -115,7 +115,7 @@ export function NotificationCard({
       `}>
         <div className={`
           ${iconSizes.xxs} rounded-full mt-2 shrink-0
-          ${isRead ? 'bg-muted-foreground' : 'bg-blue-500 animate-pulse'}
+          ${isRead ? 'bg-muted-foreground' : 'bg-primary animate-pulse'}
         `} />
         
         <div className="flex-1 min-w-0">
@@ -156,9 +156,9 @@ export function NotificationCard({
       // Header configuration
       headerConfig={{
         backgroundGradient: isRead 
-          ? "from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800"
-          : "from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-900",
-        logo: <TypeIcon className={`${iconSizes.lg} ${isRead ? colors.text.muted : 'text-blue-600 dark:text-blue-400'}`} />,
+          ? "from-muted/50 to-muted"
+          : "from-[hsl(var(--bg-info))]/20 via-accent to-accent",
+        logo: <TypeIcon className={`${iconSizes.lg} ${isRead ? colors.text.muted : 'text-primary'}`} />,
         showImageOverlay: false,
         compact: true
       }}

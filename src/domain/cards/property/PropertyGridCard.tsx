@@ -185,7 +185,7 @@ export function PropertyGridCard({
     if (property.layout?.bedrooms !== undefined && property.layout.bedrooms > 0) {
       items.push({
         icon: Bed,
-        iconColor: 'text-violet-600',
+        iconColor: 'text-primary',
         label: t('card.stats.bedrooms'),
         value: String(property.layout.bedrooms),
       });
@@ -195,7 +195,7 @@ export function PropertyGridCard({
     if (property.layout?.bathrooms !== undefined && property.layout.bathrooms > 0) {
       items.push({
         icon: Bath,
-        iconColor: 'text-cyan-600',
+        iconColor: 'text-primary',
         label: t('card.stats.bathrooms'),
         value: String(property.layout.bathrooms),
       });
@@ -205,14 +205,14 @@ export function PropertyGridCard({
     if (property.condition) {
       // Color coding based on condition
       const conditionColors: Record<string, string> = {
-        'new': 'text-green-600',
-        'excellent': 'text-emerald-600',
-        'good': 'text-blue-600',
-        'needs-renovation': 'text-orange-600'
+        'new': 'text-green-707',
+        'excellent': 'text-green-707',
+        'good': 'text-primary',
+        'needs-renovation': 'text-[hsl(var(--text-warning))]'
       };
       items.push({
         icon: Wrench,
-        iconColor: conditionColors[property.condition] || 'text-gray-600',
+        iconColor: conditionColors[property.condition] || 'text-muted-foreground',
         label: t('card.stats.condition'),
         value: t(`condition.${property.condition}`, { defaultValue: property.condition }),
       });
@@ -282,7 +282,7 @@ export function PropertyGridCard({
       if (rentPrice && rentPrice > 0) {
         items.push({
           icon: NAVIGATION_ENTITIES.price.icon,
-          iconColor: 'text-amber-600',
+          iconColor: 'text-[hsl(var(--text-warning))]',
           label: t('card.stats.rentPricePerSqm'),
           value: `${formatCurrencyWhole(Math.round(rentPrice / displayArea))}/m²`,
         });

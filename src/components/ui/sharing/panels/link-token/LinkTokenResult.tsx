@@ -41,7 +41,7 @@ export function LinkTokenResult({
   return (
     <section className="flex flex-col gap-4">
       {/* eslint-disable-next-line design-system/enforce-semantic-colors */}
-      <p className="text-sm text-green-600 font-medium text-center">
+      <p className="text-sm text-green-707 font-medium text-center">
         {t('share.created')}
       </p>
 
@@ -58,7 +58,7 @@ export function LinkTokenResult({
           size="sm"
           onClick={handleCopy}
           /* eslint-disable-next-line design-system/enforce-semantic-colors */
-          className={cn('flex-shrink-0', copied && 'text-green-600')}
+          className={cn('flex-shrink-0', copied && 'text-green-707')}
         >
           {copied ? (
             <Check className="h-4 w-4" />

@@ -77,13 +77,13 @@ export const BUTTON_STYLES = {
     restore: BUTTON_CATEGORIES.secondary,
 
     // Utility Actions (Dark with colored text for differentiation)
-    call: `${BUTTON_CATEGORIES.utility} text-green-400`,
-    email: `${BUTTON_CATEGORIES.utility} text-blue-400`,
-    sms: `${BUTTON_CATEGORIES.utility} text-purple-400`,
-    export: `${BUTTON_CATEGORIES.utility} text-emerald-400`,
-    import: `${BUTTON_CATEGORIES.utility} text-orange-400`,
-    help: `${BUTTON_CATEGORIES.utility} text-cyan-400`,
-    sort: `${BUTTON_CATEGORIES.utility} text-indigo-400`,
+    call: `${BUTTON_CATEGORIES.utility} text-green-707`,
+    email: `${BUTTON_CATEGORIES.utility} text-primary`,
+    sms: `${BUTTON_CATEGORIES.utility} text-primary`,
+    export: `${BUTTON_CATEGORIES.utility} text-green-707`,
+    import: `${BUTTON_CATEGORIES.utility} text-[hsl(var(--text-warning))]`,
+    help: `${BUTTON_CATEGORIES.utility} text-primary`,
+    sort: `${BUTTON_CATEGORIES.utility} text-primary`,
   }
 } as const;
 

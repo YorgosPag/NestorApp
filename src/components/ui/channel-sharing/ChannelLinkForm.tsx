@@ -42,11 +42,11 @@ const CHANNEL_ICONS: Record<ChannelProvider, React.FC<{ className?: string }>> =
 };
 
 const CHANNEL_COLORS: Record<ChannelProvider, string> = {
-  email: 'text-gray-600 dark:text-gray-400',
-  telegram: 'text-sky-500',
-  whatsapp: 'text-green-500',
-  messenger: 'text-blue-500',
-  instagram: 'text-pink-500',
+  email: 'text-muted-foreground',
+  telegram: 'text-primary',
+  whatsapp: 'text-green-707',
+  messenger: 'text-primary',
+  instagram: 'text-primary',
 };
 
 export interface ChannelLinkFormProps {
@@ -154,7 +154,7 @@ export function ChannelLinkForm({
             aria-invalid={isTelegramInvalid}
           />
           {isTelegramInvalid && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">
+            <p className="text-xs text-[hsl(var(--text-warning))]">
               {t('channelShare.errors.telegramChatIdNonNumeric')}
             </p>
           )}

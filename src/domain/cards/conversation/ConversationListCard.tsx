@@ -70,11 +70,11 @@ const CHANNEL_ICONS: Record<string, typeof MessageSquare> = {
 // =============================================================================
 
 const CHANNEL_COLORS: Record<string, string> = {
-  [COMMUNICATION_CHANNELS.EMAIL]: 'text-blue-600',
-  [COMMUNICATION_CHANNELS.TELEGRAM]: 'text-sky-500',
-  [COMMUNICATION_CHANNELS.WHATSAPP]: 'text-green-500',
-  [COMMUNICATION_CHANNELS.MESSENGER]: 'text-violet-500',
-  [COMMUNICATION_CHANNELS.SMS]: 'text-orange-500',
+  [COMMUNICATION_CHANNELS.EMAIL]: 'text-primary',
+  [COMMUNICATION_CHANNELS.TELEGRAM]: 'text-primary',
+  [COMMUNICATION_CHANNELS.WHATSAPP]: 'text-green-707',
+  [COMMUNICATION_CHANNELS.MESSENGER]: 'text-primary',
+  [COMMUNICATION_CHANNELS.SMS]: 'text-[hsl(var(--text-warning))]',
 };
 
 // =============================================================================
@@ -163,7 +163,7 @@ export function ConversationListCard({
     const items: StatItem[] = [];
 
     const ChannelIcon = CHANNEL_ICONS[conversation.channel] || MessageSquare;
-    const channelColor = CHANNEL_COLORS[conversation.channel] || 'text-gray-500';
+    const channelColor = CHANNEL_COLORS[conversation.channel] || 'text-muted-foreground';
 
     items.push({
       icon: ChannelIcon,
@@ -176,7 +176,7 @@ export function ConversationListCard({
     if (relativeTime) {
       items.push({
         icon: Clock,
-        iconColor: 'text-gray-400',
+        iconColor: 'text-muted-foreground',
         label: t('inbox.time.label'),
         value: relativeTime,
       });
@@ -231,7 +231,7 @@ export function ConversationListCard({
     <ListCard
       entityType={undefined}
       customIcon={ChannelIcon}
-      customIconColor={CHANNEL_COLORS[conversation.channel] || 'text-gray-500'}
+      customIconColor={CHANNEL_COLORS[conversation.channel] || 'text-muted-foreground'}
       title={displayName}
       subtitle={subtitle}
       badges={badges}

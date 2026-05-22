@@ -196,28 +196,28 @@ export function ToolbarShowcase() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 border rounded-lg">
-            <h3 className="font-medium text-green-600 mb-2">✅ Unified Interface</h3>
+            <h3 className="font-medium text-green-707 mb-2">✅ Unified Interface</h3>
             <p className={cn("text-sm", colors.text.muted)}>
               Όλα τα toolbars χρησιμοποιούν το ίδιο BaseToolbar system για consistent behavior και styling
             </p>
           </div>
           
           <div className="p-4 border rounded-lg">
-            <h3 className="font-medium text-blue-600 mb-2">🔧 Configurable</h3>
+            <h3 className="font-medium text-primary mb-2">🔧 Configurable</h3>
             <p className={cn("text-sm", colors.text.muted)}>
               Flexible configuration με actions, filters, search και custom content sections
             </p>
           </div>
           
           <div className="p-4 border rounded-lg">
-            <h3 className="font-medium text-purple-600 mb-2">🎯 Type Safe</h3>
+            <h3 className="font-medium text-foreground mb-2">🎯 Type Safe</h3>
             <p className={cn("text-sm", colors.text.muted)}>
               Full TypeScript support με strongly typed props και callback functions
             </p>
           </div>
           
           <div className="p-4 border rounded-lg">
-            <h3 className="font-medium text-orange-600 mb-2">🚀 Accessible</h3>
+            <h3 className="font-medium text-[hsl(var(--text-warning))] mb-2">🚀 Accessible</h3>
             <p className={cn("text-sm", colors.text.muted)}>
               Built-in accessibility με keyboard shortcuts, tooltips και ARIA support
             </p>

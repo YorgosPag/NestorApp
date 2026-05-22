@@ -73,19 +73,19 @@ export function PurchaseOrderGridCard({
     () => [
       {
         icon: Building2,
-        iconColor: 'text-green-600',
+        iconColor: 'text-green-707',
         label: t('detail.supplier'),
         value: supplierName,
       },
       {
         icon: DollarSign,
-        iconColor: 'text-emerald-600',
+        iconColor: 'text-green-707',
         label: t('detail.total'),
         value: formatPOCurrency(po.total),
       },
       {
         icon: Calendar,
-        iconColor: 'text-blue-600',
+        iconColor: 'text-primary',
         label: t('detail.dateCreated'),
         value: formatPODate(po.dateCreated),
       },
@@ -106,7 +106,7 @@ export function PurchaseOrderGridCard({
   return (
     <GridCard
       customIcon={Package}
-      customIconColor="text-blue-600"
+      customIconColor="text-primary"
       title={po.poNumber}
       subtitle={supplierName}
       badges={badges}

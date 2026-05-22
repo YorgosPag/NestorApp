@@ -79,11 +79,11 @@ const CHANNEL_ICONS: Record<ChannelProvider, React.FC<{ className?: string }>> =
 };
 
 const CHANNEL_COLORS: Record<ChannelProvider, string> = {
-  email: 'text-gray-600 dark:text-gray-400',
-  telegram: 'text-sky-500',
-  whatsapp: 'text-green-500',
-  messenger: 'text-blue-500',
-  instagram: 'text-pink-500',
+  email: 'text-muted-foreground',
+  telegram: 'text-primary',
+  whatsapp: 'text-green-707',
+  messenger: 'text-primary',
+  instagram: 'text-primary',
 };
 
 // ============================================================================
@@ -273,7 +273,7 @@ export function ContactChannelPicker({ onChannelSelect, onBack }: ContactChannel
       {/* Selected contact badge */}
       <header className={cn(
         'flex items-center gap-2 px-3 py-2 rounded-lg',
-        'bg-primary/10 dark:bg-primary/20'
+        'bg-primary/10'
       )}>
         <User className="w-4 h-4 text-primary shrink-0" />
         <span className="text-sm font-medium truncate">
@@ -350,15 +350,15 @@ export function ContactChannelPicker({ onChannelSelect, onBack }: ContactChannel
                   <span className={cn(
                     'text-xs px-2 py-0.5 rounded-full shrink-0',
                     channel.capabilities.supportsNativePhoto
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                      ? 'bg-[hsl(var(--bg-success))]/10 text-green-707'
+                      : 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]'
                   )}>
                     {t(`channelShare.capability.${capabilityKey}`)}
                   </span>
 
                   {/* Verified badge */}
                   {channel.verified && (
-                    <CheckCircle className="w-4 h-4 text-green-500 shrink-0" aria-label={t('channelShare.verified')} />
+                    <CheckCircle className="w-4 h-4 text-green-707 shrink-0" aria-label={t('channelShare.verified')} />
                   )}
                 </button>
               </li>

@@ -119,7 +119,7 @@ export function ProjectGridCard({
         icon: TrendingUp,
         label: t('listCard.progress'),
         value: `${project.progress}%`,
-        valueColor: project.progress >= 80 ? 'text-green-600 dark:text-green-400' : undefined,
+        valueColor: project.progress >= 80 ? 'text-green-707' : undefined,
       });
     }
 

@@ -86,7 +86,7 @@ export function ShareButton({
         size={size}
         className={cn(
           'transition-all duration-200',
-          justCopied && `${colors.text.success} ${quick.success}`,  // ✅ SEMANTIC: text-green-600 -> success
+          justCopied && `${colors.text.success} ${quick.success}`,  // ✅ SEMANTIC: text-green-707 -> success
           className
         )}
         onClick={handleButtonClick}

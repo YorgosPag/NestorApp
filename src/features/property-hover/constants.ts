@@ -12,35 +12,35 @@ import { PROPERTY_STATUS_LABELS } from '@/constants/property-statuses-enterprise
  */
 const STATUS_COLORS = {
   active: {
-    bg: 'bg-emerald-500/10',
-    text: 'text-emerald-700 dark:text-emerald-400',
-    border: 'border-emerald-500/30',
+    bg: 'bg-[hsl(var(--bg-success))]/10',
+    text: 'text-green-707',
+    border: 'border-border',
   },
   pending: {
-    bg: 'bg-amber-500/10',
-    text: 'text-amber-700 dark:text-amber-400',
-    border: 'border-amber-500/30',
+    bg: 'bg-[hsl(var(--bg-warning))]/40',
+    text: 'text-[hsl(var(--text-warning))]',
+    border: 'border-border',
   },
   cancelled: {
-    bg: 'bg-red-500/10',
-    text: 'text-red-700 dark:text-red-400',
-    border: 'border-red-500/30',
+    bg: 'bg-destructive/10',
+    text: 'text-destructive',
+    border: 'border-destructive/30',
   },
   completed: {
-    bg: 'bg-blue-500/10',
-    text: 'text-blue-700 dark:text-blue-400',
-    border: 'border-blue-500/30',
+    bg: 'bg-[hsl(var(--bg-info))]/20',
+    text: 'text-primary',
+    border: 'border-border',
   },
   inactive: {
     bg: 'bg-muted/50',
     text: 'text-muted-foreground',
     border: 'border-border',
   },
-  // 🏢 ADR-258: Teal for dual listing (for-sale-and-rent)
+  // 🏢 ADR-258: Teal for dual listing (for-sale-and-rent) → bg-accent (visual differentiation)
   teal: {
-    bg: 'bg-teal-500/10',
-    text: 'text-teal-700 dark:text-teal-400',
-    border: 'border-teal-500/30',
+    bg: 'bg-accent',
+    text: 'text-primary',
+    border: 'border-border',
   },
 } as const;
 

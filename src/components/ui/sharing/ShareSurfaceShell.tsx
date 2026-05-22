@@ -41,7 +41,7 @@ export function ShareSurfaceShell({
   footer,
 }: ShareSurfaceShellProps): React.ReactElement {
   const icon = headerIcon ?? (
-    <Share2 className="h-5 w-5 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+    <Share2 className="h-5 w-5 text-primary" aria-hidden="true" />
   );
 
   const subtitle = labels.subtitle ?? entity.subtitle;
@@ -56,28 +56,22 @@ export function ShareSurfaceShell({
         aria-describedby={subtitle ? 'share-surface-subtitle' : undefined}
       >
         <DialogHeader
-          className={cn(
-            'border-b border-gray-200 bg-gray-50 px-6 py-4',
-            'dark:border-gray-800 dark:bg-gray-900',
-          )}
+          className="border-b border-border bg-muted/50 px-6 py-4"
         >
           <div className="flex items-start gap-3">
             <span
-              className={cn(
-                'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-blue-100',
-                'dark:bg-blue-950',
-              )}
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[hsl(var(--bg-info))]/20"
             >
               {icon}
             </span>
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              <DialogTitle className="text-base font-semibold text-foreground">
                 {labels.title}
               </DialogTitle>
               {subtitle && (
                 <DialogDescription
                   id="share-surface-subtitle"
-                  className="mt-0.5 truncate text-sm text-gray-600 dark:text-gray-400"
+                  className="mt-0.5 truncate text-sm text-muted-foreground"
                 >
                   {subtitle}
                 </DialogDescription>
@@ -100,10 +94,7 @@ export function ShareSurfaceShell({
 
         {footer && (
           <footer
-            className={cn(
-              'border-t border-gray-200 bg-gray-50 px-6 py-3',
-              'dark:border-gray-800 dark:bg-gray-900',
-            )}
+            className="border-t border-border bg-muted/50 px-6 py-3"
           >
             {footer}
           </footer>

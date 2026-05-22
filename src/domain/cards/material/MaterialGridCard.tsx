@@ -57,7 +57,7 @@ export function MaterialGridCard({
     if (material.lastPrice !== null) {
       items.push({
         icon: DollarSign,
-        iconColor: 'text-green-600',
+        iconColor: 'text-green-707',
         label: t('hub.materialCatalog.lastPrice'),
         value: formatCurrency(material.lastPrice),
       });
@@ -65,7 +65,7 @@ export function MaterialGridCard({
     if (material.avgPrice !== null) {
       items.push({
         icon: TrendingUp,
-        iconColor: 'text-blue-600',
+        iconColor: 'text-primary',
         label: t('hub.materialCatalog.avgPrice'),
         value: formatCurrency(material.avgPrice),
       });
@@ -73,7 +73,7 @@ export function MaterialGridCard({
     if (material.lastPurchaseDate) {
       items.push({
         icon: Calendar,
-        iconColor: 'text-amber-600',
+        iconColor: 'text-[hsl(var(--text-warning))]',
         label: t('hub.materialCatalog.detail.lastPurchase'),
         value: formatDate(material.lastPurchaseDate.toDate()),
       });
@@ -89,7 +89,7 @@ export function MaterialGridCard({
   return (
     <GridCard
       customIcon={Layers}
-      customIconColor="text-yellow-600"
+      customIconColor="text-[hsl(var(--text-warning))]"
       title={material.name}
       subtitle={subtitle}
       badges={badges}

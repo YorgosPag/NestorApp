@@ -267,7 +267,7 @@ export function EnterprisePhotoUpload({
   if (compact) {
     // Enterprise compact upload area styling - centralized pattern
     const compactUploadClasses = currentPreview
-      ? `border border-dashed ${quick.success} bg-green-50`
+      ? `border border-dashed ${quick.success} bg-[hsl(var(--bg-success))]/10`
       : `${PHOTO_COLORS.PHOTO_BACKGROUND} ${quick.card} flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER} p-6 flex-col`;
 
     return (
@@ -277,7 +277,7 @@ export function EnterprisePhotoUpload({
             relative h-full w-full text-center cursor-pointer ${PHOTO_TRANSITIONS.COLORS} overflow-hidden
             ${compactUploadClasses}
             ${disabled && !currentPreview ? 'opacity-50 cursor-not-allowed' : disabled ? 'cursor-default' : ''}
-            ${hasError ? `${quick.error} bg-red-50` : ''}
+            ${hasError ? `${quick.error} bg-destructive/10` : ''}
             ${!currentPreview ? getDynamicBackgroundClass(PHOTO_COLORS.EMPTY_STATE_BACKGROUND) : ''}
           `}
           onDrop={disabled ? undefined : handleDropWithValidation}
@@ -322,7 +322,7 @@ export function EnterprisePhotoUpload({
   // Full mode
   // Enterprise full upload area styling - centralized pattern
   const fullUploadClasses = currentPreview
-    ? `border border-dashed ${quick.success} bg-green-50`
+    ? `border border-dashed ${quick.success} bg-[hsl(var(--bg-success))]/10`
     : `${PHOTO_COLORS.PHOTO_BACKGROUND} ${quick.card} flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER}`;
 
   return (
@@ -335,7 +335,7 @@ export function EnterprisePhotoUpload({
           relative p-6 text-center cursor-pointer ${PHOTO_TRANSITIONS.COLORS} ${PHOTO_HEIGHTS.STANDARD} flex flex-col items-center justify-center
           ${fullUploadClasses}
           ${disabled && !currentPreview ? 'opacity-50 cursor-not-allowed' : disabled ? 'cursor-default' : ''}
-          ${hasError ? `${quick.error} bg-red-50` : ''}
+          ${hasError ? `${quick.error} bg-destructive/10` : ''}
           ${isLoading ? 'pointer-events-none' : ''}
           ${!currentPreview ? getDynamicBackgroundClass(PHOTO_COLORS.EMPTY_STATE_BACKGROUND) : ''}
         `}
@@ -356,7 +356,7 @@ export function EnterprisePhotoUpload({
               {showProgress && (
                 <div className={`${iconSizes.xl8} ${PHOTO_COLORS.PROGRESS_BACKGROUND} rounded-full h-2 mt-2 mx-auto`}>
                   <div
-                    className={`bg-blue-600 h-2 rounded-full ${PHOTO_TRANSITIONS.STANDARD}`}
+                    className={`bg-primary h-2 rounded-full ${PHOTO_TRANSITIONS.STANDARD}`}
                     style={getProgressBarWidthStyles(upload.progress)}
                   />
                 </div>

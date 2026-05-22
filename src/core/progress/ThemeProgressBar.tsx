@@ -36,9 +36,9 @@ export function ThemeProgressBar({
 
   // ✅ ENTERPRISE: Theme-aware progress bar colors using semantic system
   const getProgressColorClass = (value: number) => {
-    if (value >= 80) return colors.text.success;      // ✅ SEMANTIC: text-green-500 -> success text
+    if (value >= 80) return colors.text.success;      // ✅ SEMANTIC: success text
     if (value >= 60) return 'text-primary';           // Keep primary (framework)
-    if (value >= 40) return colors.text.warning;      // ✅ SEMANTIC: text-orange-500 -> warning text
+    if (value >= 40) return colors.text.warning;      // ✅ SEMANTIC: warning text
     return colors.text.error;                         // ✅ SEMANTIC: error text
   };
 

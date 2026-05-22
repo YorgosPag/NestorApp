@@ -103,7 +103,7 @@ export function StorageCard({
       
       // Header configuration
       headerConfig={{
-        backgroundGradient: `from-amber-100 via-orange-50 to-yellow-100 dark:from-amber-950 dark:via-orange-950 dark:to-yellow-900`,
+        backgroundGradient: `from-[hsl(var(--bg-warning))]/30 via-[hsl(var(--bg-warning))]/10 to-accent`,
         logo: <TypeIcon className={`${iconSizes.xl} ${colors.text.accent}`} />,
         showImageOverlay: false
       }}
@@ -193,23 +193,23 @@ export function StorageCard({
           content: (
             <div className="flex flex-wrap gap-1">
               {unit.hasElectricity && (
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-900">
+                <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-foreground">
                   {t('card.amenities.electricity')}
                 </span>
               )}
               {unit.hasWater && (
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-900">
+                <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-foreground">
                   {t('card.amenities.water')}
                 </span>
               )}
               {unit.hasSecurity && (
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-900">
+                <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-foreground">
                   <Shield className={`${iconSizes.xs} mr-1`} />
                   {t('card.amenities.security')}
                 </span>
               )}
               {unit.hasClimateControl && (
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-900">
+                <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-foreground">
                   <Thermometer className={`${iconSizes.xs} mr-1`} />
                   {t('card.amenities.climate')}
                 </span>

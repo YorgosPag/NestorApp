@@ -57,11 +57,11 @@ const CHANNEL_ICONS: Record<ChannelProvider, React.FC<{ className?: string }>> =
 };
 
 const CHANNEL_COLORS: Record<ChannelProvider, string> = {
-  email: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  telegram: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
-  whatsapp: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-  messenger: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  instagram: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
+  email: 'bg-muted text-foreground',
+  telegram: 'bg-[hsl(var(--bg-info))]/20 text-primary',
+  whatsapp: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+  messenger: 'bg-[hsl(var(--bg-info))]/20 text-primary',
+  instagram: 'bg-accent text-primary',
 };
 
 // ============================================================================
@@ -175,7 +175,7 @@ export function ChannelShareForm({
         <aside
           className={cn(
             'flex items-start gap-2 p-3 rounded-lg text-xs',
-            'bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300',
+            'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
           )}
           role="note"
         >
@@ -191,7 +191,7 @@ export function ChannelShareForm({
         <aside
           className={cn(
             'flex items-start gap-2 p-3 rounded-lg text-xs',
-            'bg-sky-50 text-sky-800 dark:bg-sky-900/20 dark:text-sky-300',
+            'bg-[hsl(var(--bg-info))]/20 text-primary',
           )}
           role="note"
         >
@@ -204,7 +204,7 @@ export function ChannelShareForm({
       {isLinkFallback && (
         <aside className={cn(
           'flex items-start gap-2 p-3 rounded-lg text-xs',
-          'bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300'
+          'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]'
         )} role="note">
           <Info className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{t('channelShare.linkFallbackNotice')}</span>

@@ -239,9 +239,9 @@ const EntityBadge: React.FC<EntityHeaderBadge> = ({
   };
 
   const typeClasses = {
-    status: `${colors.bg.info} text-blue-700 dark:text-blue-300`,
-    progress: `${colors.bg.success} text-green-700 dark:text-green-300`,
-    category: `${colors.bg.accent} text-purple-700 dark:text-purple-300`,
+    status: `${colors.bg.info} text-primary`,
+    progress: `${colors.bg.success} text-green-707`,
+    category: `${colors.bg.accent} text-primary`,
     custom: variantClasses[variant]
   };
 

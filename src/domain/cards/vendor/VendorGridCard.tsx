@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 /**
  * 🏢 ENTERPRISE VENDOR GRID CARD - Domain Component
@@ -67,13 +67,13 @@ export function VendorGridCard({
       },
       {
         icon: DollarSign,
-        iconColor: 'text-green-700',
+        iconColor: 'text-green-707',
         label: t('hub.vendorMaster.totalSpend'),
         value: formatCurrency(metrics.totalSpend),
       },
       {
         icon: TrendingUp,
-        iconColor: 'text-green-700',
+        iconColor: 'text-green-707',
         label: t('hub.vendorMaster.onTimeRate'),
         value: `${metrics.onTimeDeliveryRate}%`,
       },
@@ -106,7 +106,7 @@ export function VendorGridCard({
   return (
     <GridCard
       customIcon={Building2}
-      customIconColor="text-green-700"
+      customIconColor="text-green-707"
       title={displayName}
       subtitle={subtitle}
       badges={badges}

@@ -104,7 +104,7 @@ export function PropertyFieldsEditForm({
           variant={isSoldOrRented ? 'destructive' : 'default'}
           className={cn(
             'py-2 px-3',
-            !isSoldOrRented && 'border-amber-500 bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-700'
+            !isSoldOrRented && 'border-border bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]'
           )}
         >
           <Lock className={iconSizes.sm} />
@@ -119,7 +119,7 @@ export function PropertyFieldsEditForm({
 
       {/* ─── Hierarchy Lock Banner (creation mode) ─── */}
       {isHierarchyLocked && (
-        <Alert className="py-2 px-3 border-blue-500 bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-200 dark:border-blue-700">
+        <Alert className="py-2 px-3 border-border bg-[hsl(var(--bg-info))]/20 text-primary">
           <Lock className={iconSizes.sm} />
           <AlertDescription className="text-xs">
             {t('multiLevel.selectHierarchyFirst', { ns: 'properties-detail' })}
@@ -404,11 +404,11 @@ export function PropertyFieldsEditForm({
                           }
                           if (areaKey === 'net' || areaKey === 'gross') onAreaChange(areaKey, num);
                         }}
-                        size="sm" className={cn("text-xs", netExceedsGross && "border-amber-500")}
+                        size="sm" className={cn("text-xs", netExceedsGross && "border-border")}
                         disabled={!isEditing || isSoldOrRented || isHierarchyLocked}
                       />
                       {netExceedsGross && (
-                        <p className="text-xs text-amber-600 mt-0.5">{t('fields.areas.netExceedsGross')}</p>
+                        <p className="text-xs text-[hsl(var(--text-warning))] mt-0.5">{t('fields.areas.netExceedsGross')}</p>
                       )}
                     </fieldset>
                   );

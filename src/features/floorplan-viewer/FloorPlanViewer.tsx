@@ -19,8 +19,8 @@ interface MockContainerProps extends React.HTMLAttributes<HTMLDivElement> {
 const cn = (...args: ClassValue[]) => args.filter(Boolean).join(' ');
 const useBorderTokens = () => ({ quick: 'border-2' });
 const useSemanticColors = () => ({
-  bg: { primary: 'bg-white', secondary: 'bg-gray-100' },
-  text: { primary: 'text-black', secondary: 'text-gray-600' }
+  bg: { primary: 'bg-background', secondary: 'bg-muted' },
+  text: { primary: 'text-foreground', secondary: 'text-muted-foreground' }
 });
 
 // Mock components for missing dependencies

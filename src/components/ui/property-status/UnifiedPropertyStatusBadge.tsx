@@ -116,10 +116,10 @@ export function UnifiedPropertyStatusBadge({
       interactive && 'focus:outline-none focus:ring-2 focus:ring-offset-2',
 
       // Category-specific styling hints
-      isPropertyAvailable(status) && 'ring-green-200/50',
-      isPropertyCommitted(status) && 'ring-orange-200/50',
-      isPropertyOffMarket(status) && 'ring-gray-200/50',
-      hasPropertyIssues(status) && 'ring-red-200/50',
+      isPropertyAvailable(status) && 'ring-ring/30',
+      isPropertyCommitted(status) && 'ring-ring/30',
+      isPropertyOffMarket(status) && 'ring-ring/20',
+      hasPropertyIssues(status) && 'ring-destructive/30',
 
       className
     ),

@@ -81,9 +81,9 @@ const staticBadgeVariants = cva(
         info: "border-transparent bg-[hsl(var(--bg-info))] text-[hsl(var(--text-info))] hover:opacity-90",
         error: "border-transparent bg-[hsl(var(--bg-error))] text-[hsl(var(--text-error))] hover:opacity-90",
         purple: "border-transparent bg-muted text-foreground hover:opacity-90",
-        light: "border-transparent bg-muted text-slate-600 hover:opacity-90",
-        muted: "border-transparent bg-muted text-slate-600 hover:opacity-90",
-        subtle: "border-transparent bg-muted text-slate-600 hover:opacity-90",
+        light: "border-transparent bg-muted text-muted-foreground hover:opacity-90",
+        muted: "border-transparent bg-muted text-muted-foreground hover:opacity-90",
+        subtle: "border-transparent bg-muted text-muted-foreground hover:opacity-90",
       },
       size: {
         default: "px-2.5 py-0.5",

@@ -62,21 +62,21 @@ export function AgreementGridCard({
     if (vendorName) {
       items.push({
         icon: Building2,
-        iconColor: 'text-green-600',
+        iconColor: 'text-green-707',
         label: t('hub.frameworkAgreements.detail.vendor'),
         value: vendorName,
       });
     }
     items.push({
       icon: Calendar,
-      iconColor: 'text-blue-600',
+      iconColor: 'text-primary',
       label: t('hub.frameworkAgreements.validUntil'),
       value: formatDate(agreement.validUntil.toDate()),
     });
     if (agreement.totalCommitment !== null) {
       items.push({
         icon: DollarSign,
-        iconColor: 'text-emerald-600',
+        iconColor: 'text-green-707',
         label: t('hub.frameworkAgreements.totalCommitment'),
         value: formatCurrency(agreement.totalCommitment),
       });
@@ -84,7 +84,7 @@ export function AgreementGridCard({
     if (agreement.discountType === 'flat' && agreement.flatDiscountPercent !== null) {
       items.push({
         icon: Percent,
-        iconColor: 'text-amber-600',
+        iconColor: 'text-[hsl(var(--text-warning))]',
         label: t('hub.frameworkAgreements.discount.label'),
         value: `${agreement.flatDiscountPercent}%`,
       });
@@ -94,7 +94,7 @@ export function AgreementGridCard({
     ) {
       items.push({
         icon: Percent,
-        iconColor: 'text-amber-600',
+        iconColor: 'text-[hsl(var(--text-warning))]',
         label: t('hub.frameworkAgreements.discount.label'),
         value: t('hub.frameworkAgreements.discount.tiers', {
           count: agreement.volumeBreakpoints.length,
@@ -114,7 +114,7 @@ export function AgreementGridCard({
   return (
     <GridCard
       customIcon={ScrollText}
-      customIconColor="text-purple-600"
+      customIconColor="text-primary"
       title={agreement.title}
       subtitle={subtitle}
       badges={badges}

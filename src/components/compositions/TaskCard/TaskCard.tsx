@@ -121,15 +121,15 @@ export function TaskCard({
       
       // Header configuration
       headerConfig={{
-        backgroundGradient: task.status === 'completed' 
-          ? "from-green-100 via-emerald-50 to-teal-100 dark:from-green-950 dark:via-emerald-950 dark:to-teal-900"
+        backgroundGradient: task.status === 'completed'
+          ? "from-[hsl(var(--bg-success))]/20 via-[hsl(var(--bg-success))]/10 to-accent"
           : overdue
-          ? "from-red-100 via-pink-50 to-red-100 dark:from-red-950 dark:via-pink-950 dark:to-red-900"  
-          : "from-blue-100 via-indigo-50 to-purple-100 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-900",
+          ? "from-destructive/10 via-destructive/5 to-destructive/10"
+          : "from-[hsl(var(--bg-info))]/20 via-accent to-accent",
         logo: <TaskTypeIcon className={`${iconSizes.xl} ${
-          task.status === 'completed' ? 'text-green-600 dark:text-green-400' :
-          overdue ? 'text-red-600 dark:text-red-400' :
-          'text-blue-600 dark:text-blue-400'
+          task.status === 'completed' ? 'text-green-707' :
+          overdue ? 'text-destructive' :
+          'text-primary'
         }`} />,
         compact
       }}
@@ -170,7 +170,7 @@ export function TaskCard({
           title: t('card.sections.dueDate'),
           content: (
             <div className={`flex items-center gap-2 text-sm ${
-              overdue ? 'text-red-600 dark:text-red-400' : colors.text.muted
+              overdue ? 'text-destructive' : colors.text.muted
             }`}>
               <Calendar className={iconSizes.sm} />
               <span>{formatLocalizedTaskDate(task.dueDate)}</span>
@@ -246,7 +246,7 @@ export function TaskCard({
         task.status === 'completed' && task.completedAt && {
           title: t('card.sections.completed'),
           content: (
-            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+            <div className="flex items-center gap-2 text-sm text-green-707">
               <CheckCircle className={iconSizes.sm} />
               <span>{formatLocalizedTaskDate(task.completedAt)}</span>
             </div>
@@ -284,7 +284,7 @@ export function TaskCard({
       
       // Style overrides
       className={`${TRANSITION_PRESETS.SMOOTH_ALL} ${HOVER_SHADOWS.ENHANCED} ${
-        overdue && task.status !== 'completed' ? 'ring-1 ring-red-200 dark:ring-red-800' : ''
+        overdue && task.status !== 'completed' ? 'ring-1 ring-destructive/30' : ''
       } ${compact ? 'p-4' : ''}`}
     />
   );
