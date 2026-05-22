@@ -116,17 +116,47 @@ export function ReportSection({
     );
   }
 
+  // Collapsible path — InfoTooltip rendered outside CollapsibleTrigger
+  // (button-in-button is invalid HTML per spec)
+  const triggerHeader = (
+    <header className="flex items-center justify-between">
+      <div>
+        <h3
+          id={sectionId}
+          className={cn(typography.heading.h4, colors.text.primary)}
+        >
+          {title}
+        </h3>
+        {description && (
+          <p className={cn("mt-0.5", typography.body.sm, colors.text.muted)}>
+            {description}
+          </p>
+        )}
+      </div>
+      <ChevronDown
+        className={cn(
+          "h-5 w-5 shrink-0 transition-transform duration-200",
+          colors.text.muted,
+          isOpen && "rotate-180",
+        )}
+      />
+    </header>
+  );
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} asChild>
       <Card className={cn("overflow-visible", className)}>
         <section aria-labelledby={sectionId}>
           <CardContent className="p-2">
-            <CollapsibleTrigger
-              className="w-full cursor-pointer"
-              aria-label={isOpen ? t("section.collapse") : t("section.expand")}
-            >
-              {headerContent}
-            </CollapsibleTrigger>
+            <div className="flex items-center gap-1">
+              <CollapsibleTrigger
+                className="flex-1 cursor-pointer"
+                aria-label={isOpen ? t("section.collapse") : t("section.expand")}
+              >
+                {triggerHeader}
+              </CollapsibleTrigger>
+              {tooltip && <InfoTooltip content={tooltip} side="bottom" />}
+            </div>
             <CollapsibleContent>{content}</CollapsibleContent>
           </CardContent>
         </section>
