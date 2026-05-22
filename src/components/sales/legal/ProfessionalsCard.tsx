@@ -13,21 +13,10 @@
 
 import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
-import { User, Scale, Briefcase, Pencil, X, Loader2, AlertTriangle, ShieldAlert, UserPlus, Mail } from 'lucide-react';
+import { User, Scale, Briefcase, Pencil, X, Loader2, UserPlus } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { ENTITY_ROUTES } from '@/lib/routes';
-import { API_ROUTES } from '@/config/domain-constants';
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from '@/components/ui/alert-dialog';
 import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
 import { useNotifications } from '@/providers/NotificationProvider';
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
@@ -41,6 +30,13 @@ import {
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import {
+  ConflictBlockDialog,
+  ConflictWarningDialog,
+  EmailNotifyDialog,
+  type PendingAssignment,
+  type PendingEmailNotification,
+} from './professionals-card-dialogs';
 
 // ============================================================================
 // TYPES
@@ -72,25 +68,6 @@ interface ProfessionalSlot {
   icon: React.ElementType;
 }
 
-/** Pending assignment waiting for user confirmation */
-interface PendingAssignment {
-  contact: ContactSummary;
-  targetRole: LegalProfessionalRole;
-  existingRole: LegalProfessionalRole;
-  existingRoleLabel: string;
-  targetRoleLabel: string;
-  conflictType: 'hard_block' | 'warning';
-}
-
-/** Pending email notification — shown after successful assignment or removal */
-interface PendingEmailNotification {
-  contactId: string;
-  contactName: string;
-  role: string;
-  roleLabel: string;
-  type: 'assignment' | 'removal';
-}
-
 const SLOTS: ProfessionalSlot[] = [
   { role: 'seller_lawyer', labelKey: 'sales.legal.sellerLawyer', defaultLabel: 'Δικηγόρος Πωλητή', icon: Briefcase },
   { role: 'buyer_lawyer', labelKey: 'sales.legal.buyerLawyer', defaultLabel: 'Δικηγόρος Αγοραστή', icon: Briefcase },
@@ -109,17 +86,11 @@ function getDraftContracts(contracts: LegalContract[]): LegalContract[] {
 // ============================================================================
 
 /**
- * Check if assigning a contact to a role conflicts with their existing role.
- *
  * Rules (Greek Law):
  * 1. Notary + Lawyer (either) = HARD BLOCK
- *    Ν.2830/2000 Άρ.22§2: Ο διορισμός ως συμβολαιογράφος συνεπάγεται
- *    αυτοδίκαια αποβολή ιδιότητας δικηγόρου.
- *    Άρ.37§1: Ασυμβίβαστο με κάθε άλλη επαγγελματική δραστηριότητα.
- *
- * 2. Seller Lawyer + Buyer Lawyer = WARNING (σύγκρουση συμφερόντων)
- *    Κώδικας Δεοντολογίας Δικηγόρων Άρ.37: Απαγορεύεται παροχή βοήθειας
- *    σε αμφότερα τα μέρη. Conflict of interest.
+ *    Ν.2830/2000 Άρ.22§2 + Άρ.37§1.
+ * 2. Seller Lawyer + Buyer Lawyer = WARNING
+ *    Κώδικας Δεοντολογίας Δικηγόρων Άρ.37.
  */
 function detectConflict(
   contactId: string,
@@ -131,7 +102,6 @@ function detectConflict(
 
   const existingRole = existingLink.role as LegalProfessionalRole;
 
-  // Rule 1: Notary ↔ Lawyer = HARD BLOCK
   const isNotaryVsLawyer =
     (targetRole === 'notary' && LAWYER_ROLES.includes(existingRole)) ||
     (LAWYER_ROLES.includes(targetRole) && existingRole === 'notary');
@@ -140,7 +110,6 @@ function detectConflict(
     return { existingRole, conflictType: 'hard_block' };
   }
 
-  // Rule 2: Seller Lawyer ↔ Buyer Lawyer = WARNING
   const isLawyerVsLawyer =
     LAWYER_ROLES.includes(targetRole) && LAWYER_ROLES.includes(existingRole);
 
@@ -151,7 +120,6 @@ function detectConflict(
   return null;
 }
 
-/** Get human-readable label for a role */
 function getRoleLabel(role: LegalProfessionalRole): string {
   const slot = SLOTS.find((s) => s.role === role);
   return slot?.defaultLabel ?? role;
@@ -179,7 +147,6 @@ export function ProfessionalsCard({
 
   const drafts = getDraftContracts(contracts);
 
-  // Send the email notification (assignment or removal)
   const sendEmailNotification = useCallback(
     (notification: PendingEmailNotification) => {
       notifyProfessionalAssignmentWithPolicy({
@@ -194,7 +161,6 @@ export function ProfessionalsCard({
     [propertyId, t, success, notifyError]
   );
 
-  // Execute the actual assignment (after validation/confirmation)
   const executeAssign = useCallback(
     async (contact: ContactSummary, role: LegalProfessionalRole) => {
       setSaving(true);
@@ -206,7 +172,6 @@ export function ProfessionalsCard({
           return;
         }
 
-        // Sync draft contracts
         for (const draft of drafts) {
           await onOverrideProfessional(draft.id, role, contact.id);
         }
@@ -214,14 +179,12 @@ export function ProfessionalsCard({
         setEditingRole(null);
         success(t('sales.legal.professionalAssigned'));
 
-        // Audit trail: professional assigned
         const roleLabel = getRoleLabel(role);
         clientSafeFireAndForget(recordPropertyActivityWithPolicy(propertyId, {
           action: 'professional_assigned',
           changes: [{ field: 'professional', oldValue: null, newValue: contact.name, label: roleLabel }],
         }), 'ProfessionalsCard.auditAssign');
 
-        // Ask user whether to send email notification
         setPendingEmail({
           contactId: contact.id,
           contactName: contact.name,
@@ -235,10 +198,9 @@ export function ProfessionalsCard({
         setSaving(false);
       }
     },
-    [onAssign, onOverrideProfessional, drafts, t, success, notifyError]
+    [onAssign, onOverrideProfessional, drafts, propertyId, t, success, notifyError]
   );
 
-  // Validate before assigning — check for conflicts
   const handleAssign = useCallback(
     (contact: ContactSummary | null, role: LegalProfessionalRole) => {
       if (!contact) return;
@@ -246,7 +208,6 @@ export function ProfessionalsCard({
       const conflict = detectConflict(contact.id, role, associations);
 
       if (!conflict) {
-        // No conflict — assign directly
         executeAssign(contact, role);
         return;
       }
@@ -254,33 +215,18 @@ export function ProfessionalsCard({
       const existingRoleLabel = getRoleLabel(conflict.existingRole);
       const targetRoleLabel = getRoleLabel(role);
 
-      if (conflict.conflictType === 'hard_block') {
-        // HARD BLOCK — show error dialog, cannot proceed
-        setPendingAssignment({
-          contact,
-          targetRole: role,
-          existingRole: conflict.existingRole,
-          existingRoleLabel,
-          targetRoleLabel,
-          conflictType: 'hard_block',
-        });
-        return;
-      }
-
-      // WARNING — show confirmation dialog
       setPendingAssignment({
         contact,
         targetRole: role,
         existingRole: conflict.existingRole,
         existingRoleLabel,
         targetRoleLabel,
-        conflictType: 'warning',
+        conflictType: conflict.conflictType,
       });
     },
     [associations, executeAssign]
   );
 
-  // Handle confirmation dialog response
   const handleConfirmAssignment = useCallback(() => {
     if (!pendingAssignment || pendingAssignment.conflictType === 'hard_block') return;
     executeAssign(pendingAssignment.contact, pendingAssignment.targetRole);
@@ -291,7 +237,6 @@ export function ProfessionalsCard({
     setPendingAssignment(null);
   }, []);
 
-  // Remove a contact from a role
   const handleRemove = useCallback(
     async (linkId: string, role: LegalProfessionalRole, contactId: string, contactName: string) => {
       setSaving(true);
@@ -303,21 +248,18 @@ export function ProfessionalsCard({
           return;
         }
 
-        // Nullify in draft contracts
         for (const draft of drafts) {
           await onOverrideProfessional(draft.id, role, null);
         }
 
         success(t('sales.legal.professionalRemoved'));
 
-        // Audit trail: professional removed
         const roleLabel = getRoleLabel(role);
         clientSafeFireAndForget(recordPropertyActivityWithPolicy(propertyId, {
           action: 'professional_removed',
           changes: [{ field: 'professional', oldValue: contactName, newValue: null, label: roleLabel }],
         }), 'ProfessionalsCard.auditRemove');
 
-        // Ask user whether to send removal email
         setPendingEmail({
           contactId,
           contactName,
@@ -331,7 +273,7 @@ export function ProfessionalsCard({
         setSaving(false);
       }
     },
-    [onRemove, onOverrideProfessional, drafts, t, success, notifyError]
+    [onRemove, onOverrideProfessional, drafts, propertyId, t, success, notifyError]
   );
 
   return (
@@ -359,7 +301,7 @@ export function ProfessionalsCard({
                     <>
                       <Link
                         href={ENTITY_ROUTES.contacts.withId(linked.contactId)}
-                        className="font-medium truncate text-foreground hover:text-blue-700 hover:underline dark:hover:text-blue-400"
+                        className="font-medium truncate text-foreground hover:text-primary hover:underline"
                         title={t('sales.legal.viewContact')}
                       >
                         {linked.contactName}
@@ -401,7 +343,6 @@ export function ProfessionalsCard({
                   )}
                 </article>
 
-                {/* Inline contact search */}
                 {isEditing && (
                   <aside className="pl-5">
                     <ContactSearchManager
@@ -426,127 +367,21 @@ export function ProfessionalsCard({
         )}
       </section>
 
-      {/* ================================================================== */}
-      {/* Conflict Dialog — Hard Block (Notary ↔ Lawyer)                     */}
-      {/* ================================================================== */}
-      <AlertDialog
-        open={pendingAssignment?.conflictType === 'hard_block'}
-        onOpenChange={(open) => { if (!open) handleDismissDialog(); }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-              <ShieldAlert className="h-5 w-5" />
-              {t('sales.legal.conflictBlockTitle')}
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <section className="space-y-2 text-sm">
-                <p>
-                  {t('sales.legal.conflictBlockPre')}{' '}
-                  <strong>«{pendingAssignment?.contact.name}»</strong>{' '}
-                  {t('sales.legal.conflictBlockAlready')}{' '}
-                  <strong>{pendingAssignment?.existingRoleLabel}</strong>.{' '}
-                  {t('sales.legal.conflictBlockCannot')}{' '}
-                  <strong>{pendingAssignment?.targetRoleLabel}</strong>.
-                </p>
-                <p className={cn("italic", colors.text.muted)}>
-                  {t('sales.legal.conflictBlockLaw')}
-                </p>
-              </section>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
-              {t('sales.legal.understood')}
-            </AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* ================================================================== */}
-      {/* Conflict Dialog — Warning (Seller ↔ Buyer Lawyer)                  */}
-      {/* ================================================================== */}
-      <AlertDialog
-        open={pendingAssignment?.conflictType === 'warning'}
-        onOpenChange={(open) => { if (!open) handleDismissDialog(); }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
-              <AlertTriangle className="h-5 w-5" />
-              {t('sales.legal.conflictWarningTitle')}
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <section className="space-y-2 text-sm">
-                <p>
-                  {t('sales.legal.conflictBlockPre')}{' '}
-                  <strong>«{pendingAssignment?.contact.name}»</strong>{' '}
-                  {t('sales.legal.conflictBlockAlready')}{' '}
-                  <strong>{pendingAssignment?.existingRoleLabel}</strong>.{' '}
-                  {t('sales.legal.conflictWarningSure')}{' '}
-                  <strong>{pendingAssignment?.targetRoleLabel}</strong>;
-                </p>
-                <p className={cn("italic", colors.text.muted)}>
-                  {t('sales.legal.conflictWarningLaw')}
-                </p>
-              </section>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
-              {t('actions.cancel')}
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmAssignment} className="bg-amber-600 hover:bg-amber-700">
-              {t('sales.legal.assignAnyway')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* ================================================================== */}
-      {/* Email Notification Dialog — after successful assignment             */}
-      {/* ================================================================== */}
-      <AlertDialog
-        open={pendingEmail !== null}
-        onOpenChange={(open) => { if (!open) setPendingEmail(null); }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Mail className={`h-5 w-5 ${pendingEmail?.type === 'removal' ? 'text-destructive' : 'text-blue-600'}`} />
-              {pendingEmail?.type === 'removal'
-                ? t('sales.legal.emailNotifyRemoveTitle')
-                : t('sales.legal.emailNotifyAssignTitle')}
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <p className="text-sm">
-                {pendingEmail?.type === 'removal'
-                  ? t('sales.legal.emailNotifyRemoveBody', {
-                      contactName: pendingEmail?.contactName ?? '',
-                      roleLabel: pendingEmail?.roleLabel ?? '',
-                    })
-                  : t('sales.legal.emailNotifyAssignBody', {
-                      contactName: pendingEmail?.contactName ?? '',
-                      roleLabel: pendingEmail?.roleLabel ?? '',
-                    })}
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
-              {t('sales.legal.emailNotifyNo')}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (pendingEmail) sendEmailNotification(pendingEmail);
-                setPendingEmail(null);
-              }}
-            >
-              {t('sales.legal.emailNotifyYes')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConflictBlockDialog
+        pendingAssignment={pendingAssignment}
+        onDismiss={handleDismissDialog}
+        onConfirm={handleConfirmAssignment}
+      />
+      <ConflictWarningDialog
+        pendingAssignment={pendingAssignment}
+        onDismiss={handleDismissDialog}
+        onConfirm={handleConfirmAssignment}
+      />
+      <EmailNotifyDialog
+        pendingEmail={pendingEmail}
+        onClose={() => setPendingEmail(null)}
+        onSend={sendEmailNotification}
+      />
     </>
   );
 }

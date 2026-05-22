@@ -92,7 +92,7 @@
 
 Discovered 2026-05-19 (hover audit follow-up). ADR: `docs/centralized-systems/reference/adrs/ADR-365-tailwind-semantic-palette-enforcement.md`
 
-**Status:** PHASE 6 DONE 2026-05-22. Baseline: 2,530/354. Per-phase handoff απαιτείται πριν από κάθε νέα session.
+**Status:** PHASE 7 DONE 2026-05-22. Baseline: 2,479/346. Per-phase handoff απαιτείται πριν από κάθε νέα session.
 
 - [x] **Phase 0 — Infrastructure** ✅ 2026-05-19 — ratchet script (`scripts/check-tailwind-palette-ratchet.js`), `.ssot-registry.json` module `tailwind-hardcoded-palette` (Tier 2, 15 allowlist entries), `.tailwind-palette-baseline.json` (3,659 violations / 440 files — actual baseline revised from estimate 249/65), CHECK 3.26 wired into `scripts/run-checks-parallel.js` (worker_thread), npm scripts `tailwind-palette:{audit,report,baseline}`. Smoke 1-5 PASS. Hook latency ~0.73s staged / ~3.4s full.
 - [x] **Phase 1 — DXF Viewer** ✅ 2026-05-22 — 20 files cleaned (−254 violations). Baseline: 3,659/440 → 3,405/420.
@@ -101,10 +101,10 @@ Discovered 2026-05-19 (hover audit follow-up). ADR: `docs/centralized-systems/re
 - [x] **Phase 4 — Properties + Contacts + Building Dialogs** ✅ 2026-05-22 — 23 files cleaned (−149 violations). Baseline: 2,889/394 → 2,740/371.
 - [x] **Phase 5 — Shared Files + File Manager** ✅ 2026-05-22 — 9 files cleaned (−73 violations). Baseline: 2,740/371 → 2,667/362.
 - [x] **Phase 6 — Dashboard + Admin + CRM + Header + Notifications** ✅ 2026-05-22 — 11 files cleaned (−137 violations). Baseline: 2,667/362 → 2,530/354.
-- [ ] **Phase 7 — Design System + Showcase + Sales + Geo-canvas** (~45min, ~8 files)
+- [x] **Phase 7 — Design System + Showcase + Sales + Geo-canvas** ✅ 2026-05-22 — 8 files cleaned (−51 violations). Added `--showcase-link` CSS var. Baseline: 2,530/354 → 2,479/346.
 - [ ] **Phase 8 — Closure** (~20min) — baseline → 0, ADR APPROVED, changelog, pending-ratchet entry remove
 
-Baseline after Phase 6 (2026-05-22): **2,530 violations / 354 files** (was 2,667/362). Target: 0. Mapping table + exempt SSoT list στο ADR-365 §3.1 + §2.3. **Phase 6-8 estimates likely under-scoped** — re-baseline after each phase. Note: `text-green-707` instances are WCAG exception canonical form (§2.1) — ratchet counts them but they're documented exceptions in COLOR_BRIDGE.
+Baseline after Phase 7 (2026-05-22): **2,479 violations / 346 files** (was 2,530/354). Target: 0. Mapping table + exempt SSoT list στο ADR-365 §3.1 + §2.3. **Phase 6-8 estimates likely under-scoped** — re-baseline after each phase. Note: `text-green-707` instances are WCAG exception canonical form (§2.1) — ratchet counts them but they're documented exceptions in COLOR_BRIDGE.
 
 ---
 

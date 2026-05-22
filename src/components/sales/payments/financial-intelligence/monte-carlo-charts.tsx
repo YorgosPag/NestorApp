@@ -54,7 +54,7 @@ export function StatisticsCard({
   const fmt = (v: number) => formatCurrencyWhole(v) ?? '';
 
   const cardClass =
-    'rounded-lg border p-3 space-y-1 transition-colors hover:border-blue-400 hover:bg-blue-50/50 dark:hover:border-blue-600 dark:hover:bg-blue-950/30 cursor-help';
+    'rounded-lg border p-3 space-y-1 transition-colors hover:border-primary/40 hover:bg-[hsl(var(--bg-info))]/20 cursor-help';
 
   const enter = (key: HelpMetricKey) => () => onHover({ source: 'metric', key });
   const leave = () => onHover(null);

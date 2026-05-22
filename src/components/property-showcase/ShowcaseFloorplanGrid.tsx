@@ -62,7 +62,7 @@ export function ShowcaseFloorplanGrid({ floorplans, density = 'default' }: Showc
                 href={plan.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-violet-300 hover:text-violet-200 hover:underline whitespace-nowrap"
+                className="text-sm text-[hsl(var(--showcase-link))] hover:text-[hsl(var(--showcase-link))]/80 hover:underline whitespace-nowrap"
               >
                 {isDxf ? downloadDxf : label}
               </a>

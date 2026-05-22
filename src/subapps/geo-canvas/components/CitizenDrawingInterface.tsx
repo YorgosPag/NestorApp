@@ -198,30 +198,30 @@ export function CitizenDrawingInterface({
     <button
       onClick={() => handleToolSelect(tool)}
       disabled={isDrawing && selectedTool !== tool}
-      className={`flex flex-col items-center justify-center p-4 border border-slate-700/50 rounded-lg transition-all duration-200 min-h-[100px]
+      className={`flex flex-col items-center justify-center p-4 border border-border rounded-lg transition-all duration-200 min-h-[100px]
         ${selectedTool === tool
           ? `${getStatusBorder(isWarning ? 'warning' : 'info')} ${isWarning ? colors.bg.warning : colors.bg.info}`
-          : 'bg-slate-800/60 hover:bg-slate-700/60'}
+          : 'bg-muted/60 hover:bg-muted'}
         ${isDrawing && selectedTool !== tool ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.ENHANCED}`}`}
     >
       {icon}
-      <span className="text-sm font-medium text-slate-200">{label}</span>
-      <span className="text-xs text-slate-400">{desc}</span>
+      <span className="text-sm font-medium text-foreground">{label}</span>
+      <span className="text-xs text-muted-foreground">{desc}</span>
     </button>
   );
 
   return (
-    <div className="bg-slate-900/95 text-slate-100 border border-slate-700/50 rounded-lg shadow-lg p-4">
+    <div className="bg-background/95 text-foreground border border-border rounded-lg shadow-lg p-4">
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-slate-100">{t('drawingInterfaces.citizen.title')}</h3>
-            <p className="text-sm text-slate-400">{t('drawingInterfaces.citizen.subtitle')}</p>
+            <h3 className="text-lg font-semibold text-foreground">{t('drawingInterfaces.citizen.title')}</h3>
+            <p className="text-sm text-muted-foreground">{t('drawingInterfaces.citizen.subtitle')}</p>
           </div>
           <button
             onClick={() => setShowAddressSearch(!showAddressSearch)}
-            className={`flex items-center gap-2 px-3 py-2 border border-slate-700/50 rounded-lg transition-all ${showAddressSearch ? `${getStatusBorder('info')} ${colors.bg.info} ${colors.text.info}` : 'bg-slate-800/60 text-slate-400 hover:bg-slate-700/60'}`}
+            className={`flex items-center gap-2 px-3 py-2 border border-border rounded-lg transition-all ${showAddressSearch ? `${getStatusBorder('info')} ${colors.bg.info} ${colors.text.info}` : 'bg-muted/60 text-muted-foreground hover:bg-muted'}`}
           >
             <Search className={iconSizes.sm} />
           </button>
@@ -252,10 +252,10 @@ export function CitizenDrawingInterface({
           { onClick: () => setShowAdminDemo(!showAdminDemo), active: showAdminDemo, icon: <Building2 className={`${iconSizes.xl} mb-2 ${colors.text.muted}`} />, label: t('drawingInterfaces.citizen.tools.boundariesDemo'), isLayerControl: false, status: 'info' as const },
           { onClick: () => setShowBoundaryControl(!showBoundaryControl), active: showBoundaryControl, icon: <Settings className={`${iconSizes.xl} mb-2 ${colors.text.success}`} />, label: t('drawingInterfaces.citizen.tools.layerControl'), isLayerControl: true, status: 'success' as const },
         ].map((btn, i) => (
-          <button key={i} onClick={btn.onClick} className={`flex flex-col items-center justify-center p-4 border border-slate-700/50 rounded-lg transition-all duration-200 min-h-[100px] ${btn.active ? `${getStatusBorder(btn.status)} ${btn.status === 'success' ? colors.bg.successSubtle : colors.bg.infoSubtle}` : 'bg-slate-800/60 hover:bg-slate-700/60'} cursor-pointer ${HOVER_SHADOWS.ENHANCED}`}>
+          <button key={i} onClick={btn.onClick} className={`flex flex-col items-center justify-center p-4 border border-border rounded-lg transition-all duration-200 min-h-[100px] ${btn.active ? `${getStatusBorder(btn.status)} ${btn.status === 'success' ? colors.bg.successSubtle : colors.bg.infoSubtle}` : 'bg-muted/60 hover:bg-muted'} cursor-pointer ${HOVER_SHADOWS.ENHANCED}`}>
             {btn.icon}
-            <span className="text-sm font-medium text-slate-200">{btn.label}</span>
-            {btn.isLayerControl && <span className="text-xs text-slate-400">{t('drawingInterfaces.citizen.tools.layersCount', { count: boundaryLayers.length })}</span>}
+            <span className="text-sm font-medium text-foreground">{btn.label}</span>
+            {btn.isLayerControl && <span className="text-xs text-muted-foreground">{t('drawingInterfaces.citizen.tools.layersCount', { count: boundaryLayers.length })}</span>}
           </button>
         ))}
       </div>
@@ -266,7 +266,7 @@ export function CitizenDrawingInterface({
           <h4 className={`text-sm font-medium ${colors.text.info} mb-3`}>{t('drawingInterfaces.citizen.tools.pointDescription')}</h4>
           {[50, 100, 250, 500, 1000, 2000].map((radius) => (
             <button key={radius} onClick={() => setPointRadius(radius)}
-              className={`inline-block m-1 py-2 px-3 text-sm font-medium rounded-md transition-all ${pointRadius === radius ? `${colors.bg.info} text-white shadow-md` : 'bg-slate-800/60 text-blue-400 hover:bg-slate-700/60'}`}>
+              className={`inline-block m-1 py-2 px-3 text-sm font-medium rounded-md transition-all ${pointRadius === radius ? `${colors.bg.info} text-white shadow-md` : 'bg-muted/60 text-primary hover:bg-muted'}`}>
               {radius >= 1000 ? `${radius / 1000}km` : `${radius}m`}
             </button>
           ))}
@@ -299,13 +299,13 @@ export function CitizenDrawingInterface({
             return (
               <div
                 key={polygon.id}
-                className="flex items-center justify-between px-3 py-2 border border-slate-700/50 rounded-lg bg-slate-800/40"
+                className="flex items-center justify-between px-3 py-2 border border-border rounded-lg bg-muted/40"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   {isPoint
                     ? <MapPin className={`${iconSizes.sm} shrink-0 ${colors.text.info}`} />
                     : <Hexagon className={`${iconSizes.sm} shrink-0 ${colors.text.success}`} />}
-                  <span className="text-sm truncate text-slate-200">{label}</span>
+                  <span className="text-sm truncate text-foreground">{label}</span>
                   {isPoint && (
                     <span className={`text-xs ${colors.text.muted}`}>
                       {polygon.config?.radius as number ?? 100}m
@@ -324,7 +324,7 @@ export function CitizenDrawingInterface({
           })}
           <button
             onClick={handleClearAll}
-            className={`w-full flex items-center justify-center gap-2 bg-slate-700/40 text-slate-400 hover:bg-slate-600/40 py-2 px-4 rounded-lg ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+            className={`w-full flex items-center justify-center gap-2 bg-muted/40 text-muted-foreground hover:bg-muted/60 py-2 px-4 rounded-lg ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           >
             <Trash2 className={iconSizes.sm} />
             <span className="text-sm">{t('drawingInterfaces.citizen.actions.clearAll')} ({polygons.length})</span>
@@ -343,7 +343,7 @@ export function CitizenDrawingInterface({
       )}
 
       {(stats.totalPolygons > 0 || realEstateStats.totalAlerts > 0) && (
-        <div className="mt-4 p-3 bg-slate-800/40 rounded-md space-y-1">
+        <div className="mt-4 p-3 bg-muted/40 rounded-md space-y-1">
           {stats.totalPolygons > 0 && <p className={`text-xs ${colors.text.muted}`}>{stats.totalPolygons}</p>}
           {realEstateStats.totalAlerts > 0 && <p className={`text-xs ${colors.text.warning}`}>{realEstateStats.totalAlerts}</p>}
         </div>

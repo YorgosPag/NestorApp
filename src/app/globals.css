@@ -128,6 +128,7 @@
     --showcase-border: 217 20% 30%;   /* subtle navy border */
     --showcase-muted-fg: 215 20% 75%; /* muted foreground on navy */
     --showcase-input-bg: 220 20% 11%; /* rgb(22,26,34) — deep navy for inputs/selects inside showcase drawers */
+    --showcase-link: 263 70% 74%;     /* violet-300 — link color on showcase dark surface */
 
     /* ── Calendar SSoT colors ── */
     --cal-today: #3b82f6;          /* today indicator — big + mini calendar */
@@ -230,6 +231,7 @@
     --showcase-border: 217 20% 30%;
     --showcase-muted-fg: 215 20% 75%;
     --showcase-input-bg: 220 20% 11%;
+    --showcase-link: 263 70% 74%;     /* violet-300 — link color on showcase dark surface */
 
     /* ✅ ENTERPRISE: Dropdown positioning variables - Dark Mode (same values) */
     /* 🏢 NOTE: z-index comes from design-tokens.json via var(--z-index-dropdown) */

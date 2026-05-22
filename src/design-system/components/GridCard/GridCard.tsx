@@ -194,8 +194,8 @@ export function GridCard({
                 `${spacing.padding.xs} rounded-md transition-colors`,
                 colors.bg.card,
                 isFavorite
-                  ? 'text-yellow-500'
-                  : cn(colors.text.muted, 'hover:text-yellow-500')
+                  ? colors.text.warning
+                  : cn(colors.text.muted, 'hover:text-[hsl(var(--text-warning))]')
               )}
               aria-label={isFavorite ? t('a11y.removeFavorite') : t('a11y.addFavorite')}
               aria-pressed={isFavorite}

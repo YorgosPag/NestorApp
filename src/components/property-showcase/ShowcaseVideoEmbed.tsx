@@ -18,7 +18,7 @@ export function ShowcaseVideoEmbed({ videoUrl }: ShowcaseVideoEmbedProps) {
         href={videoUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 text-violet-300 hover:text-violet-200 hover:underline font-medium"
+        className="inline-flex items-center gap-2 text-[hsl(var(--showcase-link))] hover:text-[hsl(var(--showcase-link))]/80 hover:underline font-medium"
       >
         <ExternalLink className="h-4 w-4" />
         {t('video.openLink')}
