@@ -71,7 +71,7 @@ export function AddressImpactDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+          <AlertDialogTitle className="flex items-center gap-2 text-[hsl(var(--bg-warning))]">
             <MapPin className={iconSizes.md} />
             {ai('title')}
           </AlertDialogTitle>
@@ -125,7 +125,7 @@ export function AddressImpactDialog({
                 </article>
               )}
 
-              <p className="text-sm text-amber-600 dark:text-amber-400">
+              <p className="text-sm text-[hsl(var(--bg-warning))]">
                 {ai('warningLive', { count: totalLive })}
               </p>
             </section>
@@ -136,7 +136,7 @@ export function AddressImpactDialog({
           <AlertDialogCancel>{ai('cancel')}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
+            className="bg-[hsl(var(--bg-warning))] hover:bg-[hsl(var(--bg-warning))]/90 text-white"
           >
             {ai('confirm')}
           </AlertDialogAction>

@@ -92,7 +92,7 @@ export function CompanyIdentityImpactDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-lg">
         <AlertDialogHeader>
-          <AlertDialogTitle className={cn('flex items-center gap-2', isBlocked ? 'text-destructive' : 'text-amber-600 dark:text-amber-400')}>
+          <AlertDialogTitle className={cn('flex items-center gap-2', isBlocked ? 'text-destructive' : 'text-[hsl(var(--bg-warning))]')}>
             <Icon className={iconSizes.md} />
             {title}
           </AlertDialogTitle>
@@ -190,7 +190,7 @@ export function CompanyIdentityImpactDialog({
               )}
 
               {!isBlocked && (
-                <p className="text-sm text-amber-600 dark:text-amber-400">
+                <p className="text-sm text-[hsl(var(--bg-warning))]">
                   {ci('warningLive', { count: totalLive })}
                 </p>
               )}
@@ -207,7 +207,7 @@ export function CompanyIdentityImpactDialog({
           ) : (
             <AlertDialogAction
               onClick={onConfirm}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              className="bg-[hsl(var(--bg-warning))] hover:bg-[hsl(var(--bg-warning))]/90 text-white"
             >
               {ci('confirm')}
             </AlertDialogAction>

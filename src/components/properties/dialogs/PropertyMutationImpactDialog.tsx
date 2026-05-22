@@ -55,7 +55,7 @@ export function PropertyMutationImpactDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-2xl">
         <AlertDialogHeader>
-          <AlertDialogTitle className={cn('flex items-center gap-2', isBlocked ? 'text-destructive' : 'text-amber-600 dark:text-amber-400')}>
+          <AlertDialogTitle className={cn('flex items-center gap-2', isBlocked ? 'text-destructive' : 'text-[hsl(var(--bg-warning))]')}>
             <Icon className={iconSizes.md} />
             {mode === 'block'
               ? t('impactGuard.titles.block')
@@ -96,7 +96,7 @@ export function PropertyMutationImpactDialog({
                       <li key={dependency.id} className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
                         <div className="flex items-center justify-between gap-3">
                           <span className="font-medium text-foreground">{getDependencyLabel(dependency.id)}</span>
-                          <span className={dependency.mode === 'block' ? 'text-destructive' : 'text-amber-600 dark:text-amber-400'}>
+                          <span className={dependency.mode === 'block' ? 'text-destructive' : 'text-[hsl(var(--bg-warning))]'}>
                             {getDependencySeverity(dependency.mode, dependency.count)}
                           </span>
                         </div>
@@ -111,7 +111,7 @@ export function PropertyMutationImpactDialog({
         <AlertDialogFooter>
           <AlertDialogCancel>{t('impactGuard.actions.cancel')}</AlertDialogCancel>
           {preview?.mode === 'warn' ? (
-            <AlertDialogAction onClick={onConfirm} className="bg-amber-600 text-white hover:bg-amber-700">
+            <AlertDialogAction onClick={onConfirm} className="bg-[hsl(var(--bg-warning))] text-white hover:bg-[hsl(var(--bg-warning))]/90">
               {t('impactGuard.actions.confirm')}
             </AlertDialogAction>
           ) : (

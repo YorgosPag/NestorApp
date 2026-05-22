@@ -79,22 +79,22 @@ export function ImportFromRelationshipsBanner({
   if (loading || dismissed || importable.length === 0) return null;
 
   return (
-    <section className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3">
+    <section className="rounded-md border border-ring bg-[hsl(var(--bg-info))]/20 px-4 py-3">
       <header className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm font-medium text-blue-900">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <Users className="h-4 w-4" aria-hidden="true" />
           <span>{t('importBanner.title')}</span>
         </div>
         <button
           type="button"
           onClick={() => setDismissed(true)}
-          className="text-blue-700 hover:text-blue-900"
+          className="text-primary hover:text-foreground"
           aria-label={t('importBanner.dismissAria')}
         >
           <X className="h-4 w-4" />
         </button>
       </header>
-      <p className="mt-1 text-xs text-blue-800">
+      <p className="mt-1 text-xs text-foreground">
         {t('importBanner.message', { count: importable.length })}
       </p>
       <div className="mt-2">

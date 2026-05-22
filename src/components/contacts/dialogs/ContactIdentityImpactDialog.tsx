@@ -68,11 +68,11 @@ function getCategoryClassName(category: IndividualIdentityFieldCategory | Servic
     case 'display':
       return 'bg-muted text-muted-foreground';
     case 'identity':
-      return 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300';
+      return 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--bg-warning))]';
     case 'regulated':
       return 'bg-destructive/10 text-destructive';
     case 'administrative':
-      return 'bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300';
+      return 'bg-[hsl(var(--bg-info))]/20 text-primary';
   }
 }
 
@@ -94,7 +94,7 @@ export function ContactIdentityImpactDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-2xl">
         <AlertDialogHeader>
-          <AlertDialogTitle className={cn('flex items-center gap-2', isBlocked ? 'text-destructive' : 'text-amber-600 dark:text-amber-400')}>
+          <AlertDialogTitle className={cn('flex items-center gap-2', isBlocked ? 'text-destructive' : 'text-[hsl(var(--bg-warning))]')}>
             <Icon className={iconSizes.md} />
             {t(`identityImpact.titles.${mode}`)}
           </AlertDialogTitle>
@@ -148,7 +148,7 @@ export function ContactIdentityImpactDialog({
                           <span className="font-medium text-foreground">
                             {t(`identityImpact.dependencies.${dependency.id}.label`)}
                           </span>
-                          <span className={dependency.mode === 'block' ? 'text-destructive' : 'text-amber-600 dark:text-amber-400'}>
+                          <span className={dependency.mode === 'block' ? 'text-destructive' : 'text-[hsl(var(--bg-warning))]'}>
                             {t(`identityImpact.dependencySeverity.${dependency.mode}`, { count: dependency.count })}
                           </span>
                         </div>
@@ -186,7 +186,7 @@ export function ContactIdentityImpactDialog({
         <AlertDialogFooter>
           <AlertDialogCancel>{t('identityImpact.actions.cancel')}</AlertDialogCancel>
           {preview?.mode === 'warn' ? (
-            <AlertDialogAction onClick={onConfirm} className="bg-amber-600 text-white hover:bg-amber-700">
+            <AlertDialogAction onClick={onConfirm} className="bg-[hsl(var(--bg-warning))] text-white hover:bg-[hsl(var(--bg-warning))]/90">
               {t('identityImpact.actions.confirm')}
             </AlertDialogAction>
           ) : (

@@ -60,9 +60,9 @@ function getChangeTypeVisuals(changeType: CommunicationChangeType) {
     case 'primaryPhoneChanged':
       return { Icon: Phone, className: getStatusColor('active', 'text') };
     case 'corporateWebsiteChanged':
-      return { Icon: Globe, className: 'text-purple-600 dark:text-purple-400' };
+      return { Icon: Globe, className: 'text-primary' };
     default:
-      return { Icon: Mail, className: 'text-amber-600 dark:text-amber-400' };
+      return { Icon: Mail, className: 'text-[hsl(var(--bg-warning))]' };
   }
 }
 
@@ -99,7 +99,7 @@ export function CommunicationImpactDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-lg">
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+          <AlertDialogTitle className="flex items-center gap-2 text-[hsl(var(--bg-warning))]">
             <Mail className={iconSizes.md} />
             {ci('title')}
           </AlertDialogTitle>
@@ -188,7 +188,7 @@ export function CommunicationImpactDialog({
                 </article>
               )}
 
-              <p className="text-sm text-amber-600 dark:text-amber-400">
+              <p className="text-sm text-[hsl(var(--bg-warning))]">
                 {ci('warningLive', { count: totalLive })}
               </p>
             </section>
@@ -199,7 +199,7 @@ export function CommunicationImpactDialog({
           <AlertDialogCancel>{ci('cancel')}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
+            className="bg-[hsl(var(--bg-warning))] hover:bg-[hsl(var(--bg-warning))]/90 text-white"
           >
             {ci('confirm')}
           </AlertDialogAction>

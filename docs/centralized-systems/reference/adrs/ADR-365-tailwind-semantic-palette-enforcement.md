@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟢 **PHASE 3 DONE** 2026-05-22 — Accounting subapp migrated (19 files, −143 violations). Baseline: **2,889 violations / 394 files** (was 3,032/399). Awaits Phase 4 (Properties + Contacts + Building Dialogs). |
+| **Status** | 🟢 **PHASE 4 DONE** 2026-05-22 — Properties + Contacts + Building Dialogs migrated (24 files, −149 violations). Baseline: **2,740 violations / 371 files** (was 2,889/394). Awaits Phase 5 (Shared Files + File Manager). |
 | **Date** | 2026-05-19 |
 | **Category** | Design System — Theming & Color Tokens |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-365-tailwind-semantic-palette-enforcement.md` |
@@ -296,21 +296,32 @@ CHECK 3.x (number assigned Phase 0):
 - `src/subapps/accounting/components/setup/CustomCategoriesSection.tsx`
 - `src/subapps/accounting/components/tax/CorporateTaxBreakdown.tsx`
 
-### Phase 4 — Properties & Contacts Dialogs (~40min, 1 session)
+### Phase 4 — Properties & Contacts Dialogs ✅ DONE 2026-05-22
 
-**Files (~10):**
-- `src/components/properties/dialogs/PropertyMutationImpactDialog.tsx`
-- `src/components/projects/dialogs/ProjectMutationImpactDialog.tsx`
-- `src/components/contacts/dialogs/CompanyIdentityImpactDialog.tsx`
-- `src/components/contacts/dialogs/ContactIdentityImpactDialog.tsx`
-- `src/components/contacts/dialogs/NameChangeCascadeDialog.tsx`
-- `src/components/contacts/dialogs/CommunicationImpactDialog.tsx`
-- `src/components/contacts/dialogs/AddressImpactDialog.tsx`
-- `src/components/contacts/tabs/ImportFromRelationshipsBanner.tsx`
-- `src/components/shared/owners/LandownerRemovalDialog.tsx`
-- `src/components/building-management/shared/BuildingSpaceConfirmDialog.tsx`
-- `src/components/building-management/shared/BuildingSpaceActions.tsx`
-- `src/components/building-management/tabs/MeasurementsTabContent/BOQCategoryAccordion.tsx`
+**Files (24, −149 violations). Baseline: 2,889/394 → 2,740/371:**
+- `src/components/contacts/dialogs/ContactIdentityImpactDialog.tsx` (14 violations)
+- `src/components/contacts/dialogs/CommunicationImpactDialog.tsx` (10)
+- `src/components/contacts/dialogs/AddressImpactDialog.tsx` (6)
+- `src/components/contacts/dialogs/CompanyIdentityImpactDialog.tsx` (6)
+- `src/components/contacts/dialogs/NameChangeCascadeDialog.tsx` (6)
+- `src/components/contacts/tabs/ShareEntryRenderer.tsx` (12)
+- `src/components/contacts/tabs/ImportFromRelationshipsBanner.tsx` (6)
+- `src/components/contacts/trash/TrashActionsBar.tsx` (5)
+- `src/components/contacts/relationships/RelationshipForm.tsx` (8)
+- `src/components/properties/dialogs/PropertyMutationImpactDialog.tsx` (6)
+- `src/components/properties/shared/AreaPlausibilityWarning.tsx` (6)
+- `src/components/properties/shared/ConditionPlausibilityWarning.tsx` (6)
+- `src/components/properties/shared/FinishesPlausibilityWarning.tsx` (6)
+- `src/components/properties/shared/FloorTypePlausibilityWarning.tsx` (6)
+- `src/components/properties/shared/InteriorFeaturesPlausibilityWarning.tsx` (6)
+- `src/components/properties/shared/LayoutPlausibilityWarning.tsx` (6)
+- `src/components/properties/shared/OrientationPlausibilityWarning.tsx` (6)
+- `src/components/properties/shared/PricePlausibilityWarning.tsx` (6)
+- `src/components/properties/shared/SalesDashboardRequirementsAlert.tsx` (6)
+- `src/components/properties/shared/SystemsPlausibilityWarning.tsx` (6)
+- `src/components/properties/trash/PropertyTrashActionsBar.tsx` (5)
+- `src/components/building-management/shared/BuildingSpaceWarningBanner.tsx` (3)
+- `src/components/building-management/dialogs/ResourceAssignmentSection.tsx` (2)
 
 ### Phase 5 — Shared Files & File Manager (~30min, 1 session)
 
@@ -482,6 +493,7 @@ Grep for violations in this phase's files. Confirm count matches baseline delta.
 |------|--------|
 | 2026-05-19 | ADR created (Proposed). Hover audit revealed 249 violations / 86 files. Plan: Phase 0 infrastructure + Phases 1-8 per-domain migration. Status: awaits Phase 0 implementation. |
 | 2026-05-19 | **Phase 0 DONE.** Infrastructure deployed: (a) `scripts/check-tailwind-palette-ratchet.js` (3 modes: default ratchet, `--all`/`--report` audit, `--baseline` regen); (b) `.ssot-registry.json` module `tailwind-hardcoded-palette` (Tier 2, 15 allowlist entries from §2.3); (c) `.tailwind-palette-baseline.json` generated; (d) CHECK 3.26 wired into `scripts/run-checks-parallel.js` (worker_thread, runs when `srcTsFiles.length > 0`); (e) npm scripts `tailwind-palette:audit` / `:report` / `:baseline`. **Baseline reality check:** initial scan returned **3,659 violations / 440 files** vs ADR §1.2 estimate of 249/86. Root cause: original hover audit was hover-only and counted `hover:bg-*` patterns; this regex covers the full §3.2 surface (bg/text/border/ring/fill/stroke × 22 palettes × 11 shades × 6 state prefixes × dark:). Per-domain phase estimates (1-8) likely under-scoped — re-baseline expected after Phase 1 lands. Hook latency on staged files: ~0.73s (cold Node start; amortized in worker_thread pool). Full audit: ~3.4s. Smoke tests 1-5 PASS. |
+| 2026-05-22 | **Phase 4 DONE.** Properties + Contacts + Building Dialogs — 23 files cleaned (ContactIdentityImpactDialog, CommunicationImpactDialog, AddressImpactDialog, CompanyIdentityImpactDialog, NameChangeCascadeDialog, ShareEntryRenderer, ImportFromRelationshipsBanner, TrashActionsBar, RelationshipForm, PropertyMutationImpactDialog, AreaPlausibilityWarning, ConditionPlausibilityWarning, FinishesPlausibilityWarning, FloorTypePlausibilityWarning, InteriorFeaturesPlausibilityWarning, LayoutPlausibilityWarning, OrientationPlausibilityWarning, PricePlausibilityWarning, SalesDashboardRequirementsAlert, SystemsPlausibilityWarning, PropertyTrashActionsBar, BuildingSpaceWarningBanner, ResourceAssignmentSection). **Baseline: 2,889/394 → 2,740/371 (−149 violations, −23 files).** Mappings: `amber-*`→`bg-[hsl(var(--bg-warning))]/40`/`text-[hsl(var(--bg-warning))]`/`border-[hsl(var(--bg-warning))]`; buttons `bg-amber-600 hover:bg-amber-700`→`bg-[hsl(var(--bg-warning))] hover:bg-[hsl(var(--bg-warning))]/90`; `sky-*`→`bg-[hsl(var(--bg-info))]/20`/`text-primary`; `blue-*`→`border-ring`/`bg-[hsl(var(--bg-info))]/20`/`text-primary`/`text-foreground`; `green-*`→`text-green-707`/`bg-[hsl(var(--bg-success))]/10`; `red-*`→`text-destructive`/`bg-destructive/10`; `purple-*`→`text-primary`; all `dark:*` removed. |
 | 2026-05-22 | **Phase 3 DONE.** Accounting subapp — 19 files cleaned (APYCertificateDetails, APYCertificatesList, CreateAPYCertificateDialog, SendReminderEmailDialog, InvoiceDetails, CancelInvoiceDialog, SendInvoiceEmailDialog, EditInvoicePageContent, InvoiceForm, FinancialReportCard, TransactionsPanel, MemberManagementSection, ShareholderManagementSection, PartnerManagementSection, ServicePresetsSection, SetupPageContent, ShareholderRow, CustomCategoriesSection, CorporateTaxBreakdown). **Baseline: 3,032/399 → 2,889/394 (−143 violations, −5 files).** Mappings: `gray-*`→`text-foreground`/`text-muted-foreground`/`border-border`/`bg-muted`; `green-*/emerald-*`→`bg-[hsl(var(--bg-success))]/40`/`text-green-707` (WCAG exception); `red-*`→`text-destructive`/`bg-destructive/10`/`border-destructive`; `orange-*/amber-*`→`bg-[hsl(var(--bg-warning))]/40`/`text-[hsl(var(--bg-warning))]`; `blue-*`→`text-primary`/`border-ring`/`bg-[hsl(var(--bg-info))]/20`; `dark:*`→removed. |
 | 2026-05-22 | **Phase 2 DONE (43/44 committed).** Procurement + Vendor Portal — 43 files cleaned & committed (VendorPortalForm, VendorPortalClient, DeclineDialog, SuccessState, VendorPortalErrorState, ExtractedDataReviewPanel, SetupLockBanner, SignatoryProposalCard, SignatoryDisambiguationModal, SourcingEventSummaryCard, QuoteLineEditorTable, QuoteDetailsHeader, QuoteEditMode, ComparisonPanel, ComparisonWinnerBanner, RecommendationCard, OfflineBanner, QuoteRevisionDetectedDialog, extracted-data-review-helpers, ProcurementSubNav, VendorDetail, VendorCard, SupplierComparisonTable, SupplierMetricsCard, PurchaseOrderForm, PurchaseOrderKPIs, AgreementDetail, MaterialDetail, hub/cards × 6, ContactRfqInvitesSection, ProcurementContactTab, ProjectProcurementTabs, KpiPendingApprovalPos, VendorGridCard, VendorListCard, quotes/scan/page, RfqDetailClient, AnalyticsKpiTiles). **Baseline: 3,405/420 → 3,032/399 (−373 violations, −21 files).** ConflictDialog migration in working tree only — commit blocked by CHECK 3.22 dead-code ratchet, awaiting Giorgio decision (import / delete / SKIP). Note: `text-green-707` retained as WCAG documented exception per §2.1 (canonical via COLOR_BRIDGE.text.*). |
 | 2026-05-22 | **Phase 1 DONE.** DXF Viewer subapp — 20 files cleaned (GripContextMenu, GripHoverMenu, WallDnaSection, WallPersistenceSection, StairWarningsSection, StairPersistenceSection, StairPresetsSection, StairPerTreadOverrideSection, DimensionsTab, DraftRecoveryBanner, SpellCheckContextMenu, TextTemplateList, PlaceholderPicker, CustomDictionaryEditorDialog, MirrorConfirmOverlay, DraggableOverlayToolbar, PolygonControls, IsolateStatusIndicator, FloorplanBackgroundPanel, PromptDialog). **Baseline: 3,659/440 → 3,405/420 (−254 violations, −20 files).** Mapping applied: `neutral-*`→`border`/`card`/`muted-foreground`/`accent`; `slate-*`→`border`/`card`/`background`/`foreground`/`muted-foreground`/`accent`; `zinc-*`→`card`/`border`/`muted-foreground`/`accent`; `rose-*`→`destructive`; `emerald-*`→`bg-[hsl(var(--bg-success))]`; `amber-*`→`bg-[hsl(var(--bg-warning))]`; `blue-*`→`primary`/`ring`/`bg-[hsl(var(--bg-info))]`; `red-*`→`destructive`. All `dark:*` prefixes removed from consumer files (semantic tokens are theme-aware). |

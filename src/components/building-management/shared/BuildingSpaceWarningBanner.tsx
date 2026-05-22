@@ -16,10 +16,10 @@ export function BuildingSpaceWarningBanner({ title, hint, addLabel, onAdd }: Bui
   const iconSizes = useIconSizes();
 
   return (
-    <section className="text-center py-8 border-2 border-dashed rounded-lg border-amber-500">
-      <AlertTriangle className={`${iconSizes.xl} mx-auto mb-2 text-amber-500`} />
+    <section className="text-center py-8 border-2 border-dashed rounded-lg border-[hsl(var(--bg-warning))]">
+      <AlertTriangle className={`${iconSizes.xl} mx-auto mb-2 text-[hsl(var(--bg-warning))]`} />
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
-      <p className="text-sm mb-3 text-amber-500">{hint}</p>
+      <p className="text-sm mb-3 text-[hsl(var(--bg-warning))]">{hint}</p>
       <Button variant="default" size="sm" onClick={onAdd}>
         <Plus className={`${iconSizes.sm} mr-2`} />
         {addLabel}

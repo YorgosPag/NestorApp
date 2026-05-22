@@ -22,11 +22,11 @@ import type { PhotoShareRecord, PhotoShareStatus } from '@/types/photo-share';
 export function getStatusConfig(status: PhotoShareStatus) {
   switch (status) {
     case 'sent':
-      return { color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/30' };
+      return { color: 'text-green-707', bg: 'bg-[hsl(var(--bg-success))]/10' };
     case 'partial':
-      return { color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950/30' };
+      return { color: 'text-[hsl(var(--bg-warning))]', bg: 'bg-[hsl(var(--bg-warning))]/40' };
     case 'failed':
-      return { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-950/30' };
+      return { color: 'text-destructive', bg: 'bg-destructive/10' };
   }
 }
 

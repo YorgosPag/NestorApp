@@ -112,7 +112,7 @@ export function FinishesPlausibilityWarning({
   return (
     <Alert
       className={cn(
-        'border-amber-500 bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-700',
+        'border-[hsl(var(--bg-warning))] bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--bg-warning))]',
         className,
       )}
     >
