@@ -386,6 +386,32 @@ Quando lancio `Agent` tool, **DEVO** passare `model` param scegliendo il **minim
 
 ---
 
+## 🚨🚨🚨 SOS. SOS. N.15 — ΑΝΑΦΟΡΑ_2 MANDATORY UPDATE RULE
+
+**ΑΠΑΡΑΒΑΤΟΣ ΚΑΝΟΝΑΣ — ΙΣΟΔΥΝΑΜΟΣ ΜΕ N.(-1) ΓΙΑ COMMIT/PUSH**
+
+Το αρχείο `C:\Nestor_Pagonis\local_ΑΝΑΦΟΡΑ_2.txt` είναι ο **master status tracker** για όλα τα εκκρεμή ADR items.
+
+### Υποχρέωση μετά από ΚΑΘΕ υλοποίηση:
+
+Μόλις ολοκληρωθεί κώδικας που σχετίζεται με item στο local_ΑΝΑΦΟΡΑ_2.txt:
+
+1. **ΕΝΗΜΕΡΩΣΕ** το `local_ΑΝΑΦΟΡΑ_2.txt` — άλλαξε το `❌ ΕΚΚΡΕΜΕΙ` σε `✅ ΥΛΟΠΟΙΗΜΕΝΟ` + ημερομηνία
+2. **ΕΝΗΜΕΡΩΣΕ** το αντίστοιχο ADR (changelog + status header)
+3. **ΕΝΗΜΕΡΩΣΕ** το `docs/centralized-systems/reference/adr-index.md`
+4. **ΕΝΗΜΕΡΩΣΕ** το `.claude-rules/pending-ratchet-work.md` αν σχετίζεται με ratchet
+5. **ΕΝΗΜΕΡΩΣΕ** το `~/.claude/projects/C--Nestor-Pagonis/memory/MEMORY.md` αν σχετίζεται με pending work
+
+### ΠΟΤΕ:
+- ΟΧΙ μόνο το ADR χωρίς το ΑΝΑΦΟΡΑ_2
+- ΟΧΙ μόνο το ΑΝΑΦΟΡΑ_2 χωρίς το ADR
+- Όλα μαζί, στο ίδιο commit με τον κώδικα (ίδιος κανόνας με ADR-driven workflow N.0.1)
+
+### WHY:
+Giorgio χρησιμοποιεί το `local_ΑΝΑΦΟΡΑ_2.txt` ως το κεντρικό dashboard εκκρεμών εργασιών. Αν δεν ενημερώνεται, χάνεται track της προόδου και κάθε νέος πράκτορας ξεκινά με λανθασμένη εικόνα.
+
+---
+
 # HONESTY & TRANSPARENCY
 
 **100% honesty.** If you don't know, say "I don't know". Never mislead Giorgio.

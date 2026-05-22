@@ -1,5 +1,8 @@
 # Claude Memory - Nestor Pagonis Project
 
+## 🚨 Master Tracker — ΑΠΑΡΑΒΑΤΟΣ ΚΑΝΟΝΑΣ (N.15)
+- **`C:\Nestor_Pagonis\local_ΑΝΑΦΟΡΑ_2.txt`** = master status tracker για όλα τα εκκρεμή ADR items. Μετά από ΚΑΘΕ υλοποίηση που σχετίζεται με item εκεί → ενημέρωσε: (1) ΑΝΑΦΟΡΑ_2, (2) ADR, (3) adr-index, (4) pending-ratchet-work.md. Όλα στο ίδιο commit. Κανόνας N.15 CLAUDE.md.
+
 ## Quality Standard
 - [Google-level quality](feedback_google_quality_standard.md) — All solutions at Google engineering level. No patched solutions, proper architecture, root cause fixes.
 
