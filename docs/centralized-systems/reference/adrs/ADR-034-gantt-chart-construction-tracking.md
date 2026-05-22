@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | IMPLEMENTED - Phase 1+2+3 Complete, Phase 4 Partial (4.1+4.2+4.3+4.4+4.7+4.8+4.9 DONE — 4.5/4.6 PLANNED) |
+| **Status** | IMPLEMENTED - Phase 1+2+3 Complete, Phase 4 Partial (4.1+4.2+4.3+4.4+4.5+4.7+4.8+4.9 DONE — 4.6 PLANNED) |
 | **Date** | 2026-02-07 |
 | **Category** | UI Components / Construction Management |
 | **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
@@ -590,7 +590,7 @@ tabs.timeline.gantt.export.error       → "Σφάλμα εξαγωγής" / "Ex
 | 4.2 | Actual vs Planned overlay (dual bars) | **DONE** (2026-03-28 — ADR-266 Phase A: ScheduleVarianceTable) |
 | 4.3 | Resource allocation (assignedTo, assignedRole) | **DONE** (2026-03-29 — ADR-266 Phase C.4: ResourceHistogramChart) |
 | 4.4 | **Export: PDF, PNG, SVG, Excel** | **DONE** (2026-02-07) |
-| 4.5 | Alert Engine integration (deadline notifications) | PLANNED → ADR-266 Phase D (spec ready, no code yet) |
+| 4.5 | Alert Engine integration (deadline notifications) | ✅ DONE 2026-05-21 → ADR-266 Phase D.3+D.5 (7 alert rules, `construction_alerts`, API, dashboard banner, Telegram, Portfolio) |
 | 4.6 | AI integration (UC-017: auto-suggest delays, forecasting) | PLANNED → ADR-034 §12 (no implementation) |
 | 4.7 | Baseline snapshots (save planned dates for comparison) | **DONE** (2026-03-28 — ADR-266 Phase C.3: BaselineSection + `construction_baselines`) |
 | 4.8 | Dependency arrows visualization | **DONE** (2026-05-21 — SVG bezier overlay via portal) |
@@ -728,6 +728,7 @@ Custom color picker με ColorPicker component (inline, no external dependency).
 | 2026-05-21 | ADR-034 reconciliation: synced Phase 4 table with actual code reality. Cross-ref to ADR-266 added. |
 | 2026-05-21 | Phase 4.8 DONE: dependency arrows SVG overlay. `GanttDependencyArrows.tsx` + `useGanttDependencyArrows.ts`. Portal into `.rmg-timeline-container`, RAF-throttled, theme-aware. |
 | 2026-05-21 | Phase 4.8 UI: dependency multi-select στο `ConstructionPhaseDialog` task tab. `MultiCombobox`, `tasks` prop, i18n keys. |
+| 2026-05-22 | Phase 4.5 status sync: ADR-266 Phase D.3+D.5 είχε ολοκληρωθεί 2026-05-21 (alert rules engine + Portfolio Dashboard) αλλά ADR-034 παρέμεινε stale. Status line + Phase 4 table ενημερώθηκαν. |
 
 ---
 
