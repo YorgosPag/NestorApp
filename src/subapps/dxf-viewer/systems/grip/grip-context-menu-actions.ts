@@ -28,6 +28,7 @@ import { toolHintOverrideStore } from '../../hooks/toolHintOverrideStore';
 import { GripBasePointStore } from './GripBasePointStore';
 import { GripCopyModeStore } from './GripCopyModeStore';
 import { GripReferenceStore } from './GripReferenceStore';
+import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
 import type {
   GripContextActionId,
   GripContextActionMeta,
@@ -40,6 +41,12 @@ export interface GripContextActionBindContext {
   readonly onAfterDispatch: () => void;
   /** ADR-357 Phase 12 — run a session-scoped undo (delegates to `CommandHistory.undo`). */
   readonly sessionUndo: () => void;
+  /**
+   * ADR-363 Phase 3.8 — callback for slab vertex operations triggered from the
+   * context menu. `'delete-corner'` removes the vertex; `'add-corner'` inserts at
+   * edge midpoint (delta = 0). Provided by `useGripContextMenuController`.
+   */
+  readonly onSlabVertexOp?: (grip: UnifiedGripInfo, op: 'delete-corner' | 'add-corner') => void;
 }
 
 function updateModeHint(): void {
@@ -113,6 +120,7 @@ function actionSessionUndo(ctx: GripContextActionBindContext): void {
 export function bindContextMenuAction(
   meta: GripContextActionMeta,
   ctx: GripContextActionBindContext,
+  grip?: UnifiedGripInfo,
 ): (() => void) | null {
   if (meta.mode) {
     const mode = meta.mode;
@@ -129,6 +137,12 @@ export function bindContextMenuAction(
       return () => { actionReference(ctx); };
     case 'extras:sessionUndo':
       return () => { actionSessionUndo(ctx); };
+    case 'vertex-ops:deleteCorner':
+      if (!grip || !ctx.onSlabVertexOp) return null;
+      return () => { ctx.onSlabVertexOp!(grip, 'delete-corner'); ctx.onAfterDispatch(); };
+    case 'vertex-ops:addCorner':
+      if (!grip || !ctx.onSlabVertexOp) return null;
+      return () => { ctx.onSlabVertexOp!(grip, 'add-corner'); ctx.onAfterDispatch(); };
     default:
       return null;
   }

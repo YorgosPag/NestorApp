@@ -5,7 +5,7 @@ import type { ICommand } from '../../core/commands';
 import type { OverlayEditorMode } from '../../overlays/types';
 import type { ToolType } from '../../ui/toolbar/types';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
-import type { SelectedGrip } from '../grips/unified-grip-types';
+import type { SelectedGrip, UnifiedGripInfo } from '../grips/unified-grip-types';
 import type { UniversalSelectionHook } from '../../systems/selection';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { useEventBus } from '../../systems/events/EventBus';
@@ -37,6 +37,8 @@ interface Params {
   eventBus: ReturnType<typeof useEventBus>;
   notifyWarning: (msg: string) => void;
   notifySuccess: (msg: string) => void;
+  /** ADR-363 Phase 3.8 — hovered DXF grip for context-aware vertex delete */
+  hoveredDxfGrip?: UnifiedGripInfo | null;
 }
 
 export function useCanvasEditActions({
@@ -46,6 +48,7 @@ export function useCanvasEditActions({
   overlayStoreRef, universalSelectionRef,
   levelManager, setSelectedEntityIds, eventBus,
   notifyWarning, notifySuccess,
+  hoveredDxfGrip,
 }: Params) {
   const textCreation = useTextCreationTool({
     transformRef, containerRef, activeTool,
@@ -59,6 +62,7 @@ export function useCanvasEditActions({
   const { handleSmartDelete } = useSmartDelete({
     selectedGrips, setSelectedGrips, executeCommand,
     overlayStoreRef, universalSelectionRef, levelManager, setSelectedEntityIds, eventBus,
+    hoveredDxfGrip,
   });
   const entityJoinHook = useEntityJoin({ levelManager, executeCommand, setSelectedEntityIds, onWarning: notifyWarning, onSuccess: notifySuccess });
   const entityJoinState = useMemo(() => {

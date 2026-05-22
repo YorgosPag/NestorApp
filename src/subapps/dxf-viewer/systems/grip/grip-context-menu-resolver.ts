@@ -49,6 +49,8 @@ export type GripContextActionId =
   | 'extras:copyToggle'
   | 'extras:reference'
   | 'extras:sessionUndo'
+  | 'vertex-ops:deleteCorner'
+  | 'vertex-ops:addCorner'
   | 'exit';
 
 export interface GripContextActionMeta {
@@ -64,7 +66,7 @@ export interface GripContextActionMeta {
 }
 
 export interface GripContextSectionMeta {
-  readonly id: 'modes' | 'extras' | 'terminal';
+  readonly id: 'modes' | 'extras' | 'vertex-ops' | 'terminal';
   readonly titleKey?: string;
   readonly items: ReadonlyArray<GripContextActionMeta>;
 }
@@ -108,11 +110,35 @@ const TERMINAL_ITEMS: ReadonlyArray<GripContextActionMeta> = [
   },
 ];
 
-const SECTIONS: ReadonlyArray<GripContextSectionMeta> = [
+const BASE_SECTIONS: ReadonlyArray<GripContextSectionMeta> = [
   { id: 'modes',    titleKey: 'gripContextMenu.section.modes',    items: MODE_ITEMS },
   { id: 'extras',   titleKey: 'gripContextMenu.section.extras',   items: EXTRA_ITEMS },
   { id: 'terminal', titleKey: 'gripContextMenu.section.terminal', items: TERMINAL_ITEMS },
 ];
+
+/**
+ * ADR-363 Phase 3.8 — vertex-ops section items for slab grips.
+ * `deleteCorner` shown on vertex grips, `addCorner` on edge-midpoint grips.
+ */
+function buildVertexOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta | null {
+  const kind = grip.slabGripKind ?? (grip as { slabOpeningGripKind?: string }).slabOpeningGripKind;
+  if (!kind) return null;
+  if (kind.startsWith('slab-vertex-') || kind.startsWith('slab-opening-vertex-')) {
+    return {
+      id: 'vertex-ops',
+      titleKey: 'gripContextMenu.section.vertexOps',
+      items: [{ id: 'vertex-ops:deleteCorner', labelKey: 'gripContextMenu.deleteCorner' }],
+    };
+  }
+  if (kind.startsWith('slab-edge-midpoint-') || kind.startsWith('slab-opening-edge-midpoint-')) {
+    return {
+      id: 'vertex-ops',
+      titleKey: 'gripContextMenu.section.vertexOps',
+      items: [{ id: 'vertex-ops:addCorner', labelKey: 'gripContextMenu.addCorner' }],
+    };
+  }
+  return null;
+}
 
 /**
  * Resolve the section + action list for a right-click context menu on a hot
@@ -122,13 +148,19 @@ const SECTIONS: ReadonlyArray<GripContextSectionMeta> = [
  * (`stairGripKind`, `dimGripKind`, `wallGripKind`) are honored at the commit
  * layer (`commitDxfGripDragModeAware`), so no per-entity gating is needed here.
  *
- * @param _entity reserved — accepted for future per-entity gating (e.g. hide
- *                Rotate on POINT entities); currently returns the full menu.
- * @param _grip   reserved — accepted for future grip-type gating; same.
+ * ADR-363 Phase 3.8 — injects a `vertex-ops` section before terminal for slab
+ * corner grips ("Delete corner") and slab edge-midpoint grips ("Add corner here").
  */
 export function resolveContextMenuSections(
   _entity: Entity,
-  _grip: UnifiedGripInfo,
+  grip: UnifiedGripInfo,
 ): ReadonlyArray<GripContextSectionMeta> {
-  return SECTIONS;
+  const vertexOps = buildVertexOpsSection(grip);
+  if (!vertexOps) return BASE_SECTIONS;
+  return [
+    BASE_SECTIONS[0],
+    BASE_SECTIONS[1],
+    vertexOps,
+    BASE_SECTIONS[2],
+  ];
 }

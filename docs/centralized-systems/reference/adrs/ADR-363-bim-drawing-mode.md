@@ -1315,6 +1315,27 @@ vertex insertion + Shift-rectilinear quantization).
 - [x] ~~Fire-rating in ribbon~~ **✅ Phase 3.7b (2026-05-20)**: fireRating combobox (60/90/120/none) + i18n el+en. Material deferred to Phase 6.5.
 - [x] ~~Snap-to-edge-midpoint preview ghost~~ **✅ Phase 3.7b+ (2026-05-20)**: `useSlabOpeningGhostPreview` + `SlabOpeningGhostRenderer` — rectangle ghost (dashed stroke + 25% fill + crosshair marker) at snapped cursor position. RAF pattern, micro-leaf ADR-040 compliant. `getImmediateSnap()` imperative read mirrors Phase 4.5c.4.
 
+### Phase 3.8 — Slab Vertex Editing (Add / Remove Corner) *(✅ IMPLEMENTED 2026-05-22)*
+
+Revit-style **Edit Boundary** vertex editing για existing slabs: hover corner grip → Delete key αφαιρεί γωνία, right-click → context menu "Delete corner" / "Add corner here", min-3-vertex guard, undo/redo μέσω `UpdateSlabParamsCommand`.
+
+**Design choices:**
+- **`hoveredDxfGrip` ως Delete trigger** — εντοπίζει vertex grip κάτω από cursor αντί να επεκτείνει το `SelectedGrip` overlay-only state. Zero state duplication, ακριβώς το UX που αναμένει ο χρήστης (hover + Delete).
+- **Pure `removeVertexFromSlab()`** — mirror του `applySlabGripDrag` pattern: δέχεται `SlabParams + vertexIndex`, επιστρέφει νέο `SlabParams` ή referentially ίδιο αν out-of-range / min-3 guard. Zero side effects.
+- **Context menu dispatch μέσω `getGlobalCommandHistory().execute()`** — ίδιο pattern με session undo, αποφεύγει νέο prop threading από `CanvasSection`.
+- **"Add corner here" από context menu** — καλεί `applySlabGripDrag(kind, {delta:{x:0,y:0}})` που εισάγει vertex στο ακριβές edge midpoint (zero delta = καμία μετατόπιση).
+
+**Files created (0) / modified (8):**
+- `bim/slabs/slab-grips.ts` — νέα exported `removeVertexFromSlab(originalParams, vertexIndex)`: min-3 guard + out-of-range guard → referential short-circuit, αλλιώς `filter` αφαιρεί τον indexed vertex, spread preserves all other params.
+- `bim/slabs/__tests__/slab-grips.test.ts` — 5 νέα tests (20-24): remove indexed vertex (length 4→3), min-3 guard (triangle → identity), out-of-range ±index → identity, removing vertex-0 shifts remaining correctly, preserves kind/thickness/levelElevation. (Old test 20 → 25.)
+- `hooks/canvas/useSmartDelete.ts` — νέο `hoveredDxfGrip?: UnifiedGripInfo | null` στο Params interface. PRIORITY 0.5 block (εκτελείται πριν το PRIORITY 1 overlay vertex): ανιχνεύει `slab-vertex-*` grip kind, resolve entity via `LevelSceneManagerAdapter.getEntity`, `removeVertexFromSlab` + `UpdateSlabParamsCommand` + `executeCommand`.
+- `hooks/canvas/useCanvasEditActions.ts` — forward `hoveredDxfGrip` από params σε `useSmartDelete`.
+- `components/dxf-layout/CanvasSection.tsx` — πέρναγε `hoveredDxfGrip: unified.hoveredGrip` στο `useCanvasEditActions`.
+- `systems/grip/grip-context-menu-resolver.ts` — νέα `GripContextActionId` literals `'vertex-ops:deleteCorner' | 'vertex-ops:addCorner'`, νέο section id `'vertex-ops'`, `buildVertexOpsSection(grip)` pure builder που ανιχνεύει `slab-vertex-*` / `slab-edge-midpoint-*` / `slab-opening-*` kinds, `resolveContextMenuSections` δέχεται `grip` arg και ενίσχει τις sections.
+- `systems/grip/grip-context-menu-actions.ts` — νέα `onSlabVertexOp?` callback στο `GripContextActionBindContext`, `grip?: UnifiedGripInfo` 3ο arg στο `bindContextMenuAction`, 2 νέα cases `'vertex-ops:deleteCorner'` + `'vertex-ops:addCorner'` στο dispatch switch.
+- `hooks/grips/useGripContextMenuController.ts` — `LevelManagerLike` extended με `setLevelScene`, `onSlabVertexOp` callback (resolve entity → `removeVertexFromSlab` / `applySlabGripDrag` → `UpdateSlabParamsCommand` → `getGlobalCommandHistory().execute()`), pass `onSlabVertexOp` + `grip` στο `bindContextMenuAction`.
+- `i18n/locales/en/tool-hints.json` + `i18n/locales/el/tool-hints.json` — νέα keys `gripContextMenu.deleteCorner`, `gripContextMenu.addCorner`, `gripContextMenu.section.vertexOps`.
+
 ### Phase 4 — Column *(✅ CORE IMPLEMENTED 2026-05-18)*
 
 - [x] Port `column-types.ts` (4 kinds: rectangular / circular / L-shape / T-shape, 9-position anchor system, ANCHOR_OFFSETS + ANCHOR_CYCLE_ORDER).

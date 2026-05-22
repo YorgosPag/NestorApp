@@ -33,7 +33,11 @@ import { requestWallCascadeDelete } from '../../bim/walls/wall-cascade-delete-st
 // replaces the inline wall→opening sweep that previously lived here; adds
 // slab→slab-opening cascade alongside).
 import { findHostedOpenings, findHostedSlabOpenings } from '../../bim/cascade/bim-cascade-resolver';
-import type { SelectedGrip } from '../grips/unified-grip-types';
+// ADR-363 Phase 3.8 — slab vertex removal
+import { removeVertexFromSlab } from '../../bim/slabs/slab-grips';
+import { UpdateSlabParamsCommand } from '../../core/commands/entity-commands/UpdateSlabParamsCommand';
+import type { SlabEntity } from '../../bim/types/slab-types';
+import type { SelectedGrip, UnifiedGripInfo } from '../grips/unified-grip-types';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { UniversalSelectionHook } from '../../systems/selection/SelectionSystem';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
@@ -60,6 +64,11 @@ export interface UseSmartDeleteParams {
   setSelectedEntityIds: (ids: string[]) => void;
   /** Event bus for toolbar:delete event */
   eventBus: ReturnType<typeof useEventBus>;
+  /**
+   * ADR-363 Phase 3.8 — currently hovered DXF grip. When set and it resolves
+   * to a slab vertex, Delete removes that vertex (PRIORITY 0.5).
+   */
+  hoveredDxfGrip?: UnifiedGripInfo | null;
 }
 
 export interface UseSmartDeleteReturn {
@@ -80,10 +89,42 @@ export function useSmartDelete({
   levelManager,
   setSelectedEntityIds,
   eventBus,
+  hoveredDxfGrip,
 }: UseSmartDeleteParams): UseSmartDeleteReturn {
 
   const handleSmartDelete = useCallback(async () => {
     const overlayStoreInstance = overlayStoreRef.current;
+
+    // PRIORITY 0.5: ADR-363 Phase 3.8 — Delete hovered slab vertex
+    if (hoveredDxfGrip?.slabGripKind?.startsWith('slab-vertex-') && hoveredDxfGrip.entityId && levelManager.currentLevelId) {
+      const idx = parseInt(hoveredDxfGrip.slabGripKind.slice('slab-vertex-'.length), 10);
+      if (Number.isFinite(idx)) {
+        const adapter = new LevelSceneManagerAdapter(
+          levelManager.getLevelScene,
+          levelManager.setLevelScene,
+          levelManager.currentLevelId,
+        );
+        const raw = adapter.getEntity(hoveredDxfGrip.entityId);
+        const candidate = raw as unknown as Partial<SlabEntity>;
+        if (candidate?.type === 'slab' && candidate.params) {
+          const slab = candidate as SlabEntity;
+          const newParams = removeVertexFromSlab(slab.params, idx);
+          if (newParams !== slab.params) {
+            const command = new UpdateSlabParamsCommand(
+              hoveredDxfGrip.entityId,
+              newParams,
+              slab.params,
+              adapter,
+              false,
+            );
+            if (command.validate() === null) {
+              executeCommand(command);
+              return true;
+            }
+          }
+        }
+      }
+    }
 
     // PRIORITY 1: Delete selected grips (vertices) with UNDO SUPPORT
     if (selectedGrips.length > 0) {
@@ -178,7 +219,7 @@ export function useSmartDelete({
     }
 
     return false;
-  }, [selectedGrips, executeCommand, levelManager, overlayStoreRef, universalSelectionRef, setSelectedGrips, setSelectedEntityIds]);
+  }, [selectedGrips, executeCommand, levelManager, overlayStoreRef, universalSelectionRef, setSelectedGrips, setSelectedEntityIds, hoveredDxfGrip]);
 
   // Listen for delete command from floating toolbar
   useEffect(() => {

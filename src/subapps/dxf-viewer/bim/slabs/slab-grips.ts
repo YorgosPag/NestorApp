@@ -171,6 +171,25 @@ function insertVertexOnEdge(
   };
 }
 
+/**
+ * ADR-363 Phase 3.8 — Remove a vertex from the slab outline by index.
+ * Guard: returns `originalParams` unchanged when `vertices.length <= 3`
+ * (minimum triangle) or when `index` is out of range. Callers MUST check
+ * the return value identity to detect no-ops.
+ */
+export function removeVertexFromSlab(
+  originalParams: SlabParams,
+  vertexIndex: number,
+): SlabParams {
+  const verts = originalParams.outline.vertices;
+  if (verts.length <= 3) return originalParams;
+  if (vertexIndex < 0 || vertexIndex >= verts.length) return originalParams;
+  return {
+    ...originalParams,
+    outline: { vertices: verts.filter((_, i) => i !== vertexIndex) },
+  };
+}
+
 function translateVertex(v: Point3D, delta: Point2D): Point3D {
   return v.z !== undefined
     ? { x: v.x + delta.x, y: v.y + delta.y, z: v.z }

@@ -835,9 +835,12 @@
     "copy": "Copy",
     "reference": "Reference",
     "undo": "Undo",
+    "deleteCorner": "Delete corner",
+    "addCorner": "Add corner here",
     "section": {
       "modes": "Mode",
       "extras": "Extras",
+      "vertexOps": "Corner",
       "terminal": "Actions"
     },
     "prompts": {

@@ -291,7 +291,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
     executeCommand, selectedEntityIds, selectedGrips: unified.selectedGrips,
     setSelectedGrips: unified.setSelectedGrips, overlayStoreRef, universalSelectionRef,
-    levelManager, setSelectedEntityIds, eventBus, notifyWarning, notifySuccess,
+    levelManager, setSelectedEntityIds, eventBus, notifyWarning, notifySuccess, hoveredDxfGrip: unified.hoveredGrip,
   });
   const { handleCanvasClick } = useCanvasClickHandler({
     viewportReady, viewport, transform, activeTool, overlayMode,

@@ -37,10 +37,15 @@ import { bindContextMenuAction } from '../../systems/grip/grip-context-menu-acti
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
 import { GripSessionUndoStore } from '../../systems/grip/GripSessionUndoStore';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
+// ADR-363 Phase 3.8 — slab vertex ops from context menu
+import { removeVertexFromSlab, applySlabGripDrag } from '../../bim/slabs/slab-grips';
+import { UpdateSlabParamsCommand } from '../../core/commands/entity-commands/UpdateSlabParamsCommand';
+import type { SlabEntity } from '../../bim/types/slab-types';
+import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
-  'getLevelScene' | 'currentLevelId'
+  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
 >;
 
 export interface UseGripContextMenuControllerParams {
@@ -135,11 +140,31 @@ export function useGripContextMenuController(
       const sectionsMeta = resolveContextMenuSections(entity, grip);
       const sections: GripContextMenuSection[] = [];
       // ADR-357 Phase 12 — session undo delegates to the global CommandHistory.
-      // Closed over here so the bound `bindContextMenuAction` ctx stays stable.
       const sessionUndo = () => {
         if (GripSessionUndoStore.canSessionUndo()) {
           getGlobalCommandHistory().undo();
         }
+      };
+
+      // ADR-363 Phase 3.8 — slab vertex operations dispatched through global history.
+      const onSlabVertexOp = (targetGrip: UnifiedGripInfo, op: 'delete-corner' | 'add-corner') => {
+        const lm = depsRef.current.levelManager;
+        if (!targetGrip.entityId || !lm.currentLevelId) return;
+        const adapter = new LevelSceneManagerAdapter(lm.getLevelScene, lm.setLevelScene, lm.currentLevelId);
+        const raw = adapter.getEntity(targetGrip.entityId);
+        const candidate = raw as unknown as Partial<SlabEntity>;
+        if (candidate?.type !== 'slab' || !candidate.params) return;
+        const slab = candidate as SlabEntity;
+        let newParams = slab.params;
+        if (op === 'delete-corner' && targetGrip.slabGripKind?.startsWith('slab-vertex-')) {
+          const idx = parseInt(targetGrip.slabGripKind.slice('slab-vertex-'.length), 10);
+          if (Number.isFinite(idx)) newParams = removeVertexFromSlab(slab.params, idx);
+        } else if (op === 'add-corner' && targetGrip.slabGripKind?.startsWith('slab-edge-midpoint-')) {
+          newParams = applySlabGripDrag(targetGrip.slabGripKind, { originalParams: slab.params, delta: { x: 0, y: 0 } });
+        }
+        if (newParams === slab.params) return;
+        const cmd = new UpdateSlabParamsCommand(targetGrip.entityId, newParams, slab.params, adapter, false);
+        if (cmd.validate() === null) getGlobalCommandHistory().execute(cmd);
       };
 
       for (const sectionMeta of sectionsMeta) {
@@ -149,7 +174,8 @@ export function useGripContextMenuController(
             handleEscape: () => depsRef.current.handleEscape(),
             onAfterDispatch: () => GripContextMenuStore.hide(),
             sessionUndo,
-          });
+            onSlabVertexOp,
+          }, grip);
           if (!onSelect) continue;
           const { checked, disabled } = applyDynamicFlags(actionMeta);
           items.push({

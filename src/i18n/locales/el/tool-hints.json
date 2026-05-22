@@ -807,9 +807,12 @@
     "copy": "Αντιγραφή",
     "reference": "Αναφορά",
     "undo": "Αναίρεση",
+    "deleteCorner": "Διαγραφή γωνίας",
+    "addCorner": "Προσθήκη γωνίας εδώ",
     "section": {
       "modes": "Λειτουργία",
       "extras": "Επιπλέον",
+      "vertexOps": "Γωνία",
       "terminal": "Ενέργειες"
     },
     "prompts": {

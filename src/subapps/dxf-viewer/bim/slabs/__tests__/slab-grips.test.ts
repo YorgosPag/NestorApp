@@ -16,7 +16,7 @@
  *       · short-circuits on zero delta + out-of-range index
  */
 
-import { applySlabGripDrag, getSlabGrips } from '../slab-grips';
+import { applySlabGripDrag, getSlabGrips, removeVertexFromSlab } from '../slab-grips';
 import {
   buildDefaultSlabParams,
   buildSlabEntity,
@@ -266,7 +266,48 @@ describe('slab-grips (Phase 3.5 + 3.6)', () => {
     expect(next.outline.vertices[1].y).toBeCloseTo(-350, 3);
   });
 
-  it('20. rectilinear=false (default) keeps full delta vector', () => {
+  // ─── removeVertexFromSlab (Phase 3.8) ──────────────────────────────────────
+
+  it('20. removeVertexFromSlab: removes indexed vertex from 4-vertex slab', () => {
+    const slab = makeRectSlab();
+    const next = removeVertexFromSlab(slab.params, 1);
+    expect(next).not.toBe(slab.params);
+    expect(next.outline.vertices).toHaveLength(3);
+    expect(next.outline.vertices[0]).toEqual(slab.params.outline.vertices[0]);
+    expect(next.outline.vertices[1]).toEqual(slab.params.outline.vertices[2]);
+    expect(next.outline.vertices[2]).toEqual(slab.params.outline.vertices[3]);
+  });
+
+  it('21. removeVertexFromSlab: guards min-3 — 3-vertex slab returns original params identity', () => {
+    const verts = [{ x: 0, y: 0 }, { x: 2000, y: 0 }, { x: 1000, y: 1500 }];
+    const tri = unwrapSlab(buildSlabEntity(buildDefaultSlabParams(verts), '0'));
+    const next = removeVertexFromSlab(tri.params, 0);
+    expect(next).toBe(tri.params);
+  });
+
+  it('22. removeVertexFromSlab: out-of-range index returns original params identity', () => {
+    const slab = makeRectSlab();
+    expect(removeVertexFromSlab(slab.params, 99)).toBe(slab.params);
+    expect(removeVertexFromSlab(slab.params, -1)).toBe(slab.params);
+  });
+
+  it('23. removeVertexFromSlab: removing vertex-0 shifts remaining indices correctly', () => {
+    const slab = makeRectSlab();
+    const v1 = slab.params.outline.vertices[1];
+    const next = removeVertexFromSlab(slab.params, 0);
+    expect(next.outline.vertices).toHaveLength(3);
+    expect(next.outline.vertices[0]).toEqual(v1);
+  });
+
+  it('24. removeVertexFromSlab: preserves all other params (kind, thickness, etc.)', () => {
+    const slab = makeRectSlab();
+    const next = removeVertexFromSlab(slab.params, 0);
+    expect(next.kind).toBe(slab.params.kind);
+    expect(next.thickness).toBe(slab.params.thickness);
+    expect(next.levelElevation).toBe(slab.params.levelElevation);
+  });
+
+  it('25. rectilinear=false (default): full delta vector preserved', () => {
     const slab = makeRectSlab();
     const next = applySlabGripDrag('slab-vertex-0', {
       originalParams: slab.params,

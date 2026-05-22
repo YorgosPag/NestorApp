@@ -83,6 +83,33 @@
   visibility: hidden;
 }
 
+/* ===== GRIP CONTEXT MENU EXTRAS (GripContextMenu shares this module) ===== */
+.menuSectionTitle {
+  padding: 4px 12px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.menuItemCheck {
+  width: 14px;
+  flex-shrink: 0;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.menuItemDestructive {
+  color: var(--color-destructive, hsl(0 84% 60%));
+}
+
+.menuItemDestructive:hover {
+  background-color: var(--bg-error, hsl(0 84% 60% / 0.15));
+  color: var(--color-destructive, hsl(0 84% 60%));
+}
+
 /* ===== SCREEN READER ONLY ===== */
 .srOnly {
   position: absolute;
