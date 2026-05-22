@@ -73,7 +73,7 @@ export function FloorPlanControls({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-lg">🗺️</span>
-          <h3 className="font-semibold text-gray-900 text-sm">
+          <h3 className="font-semibold text-foreground text-sm">
             Floor Plan Layer
           </h3>
         </div>
@@ -85,8 +85,8 @@ export function FloorPlanControls({
               onClick={() => onVisibilityChange(!visible)}
               className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
                 visible
-                  ? `${colors.bg.success} text-green-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
-                  : `${colors.bg.muted} text-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                  ? `${colors.bg.success} text-green-707 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                  : `${colors.bg.muted} text-muted-foreground ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
               }`}
             >
               {visible ? '👁️ Visible' : '🚫 Hidden'}
@@ -100,7 +100,7 @@ export function FloorPlanControls({
       {fileName && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="mb-3 text-xs text-gray-600 truncate">
+            <div className="mb-3 text-xs text-muted-foreground truncate">
               📁 {fileName}
             </div>
           </TooltipTrigger>
@@ -111,10 +111,10 @@ export function FloorPlanControls({
       {/* Opacity Slider */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">
-          <label htmlFor="floor-plan-opacity" className="text-gray-700 font-medium">
+          <label htmlFor="floor-plan-opacity" className="text-foreground font-medium">
             Opacity
           </label>
-          <span className="text-gray-900 font-semibold">
+          <span className="text-foreground font-semibold">
             {Math.round(opacity * 100)}%
           </span>
         </div>
@@ -133,7 +133,7 @@ export function FloorPlanControls({
           }}
         />
 
-        <div className="flex justify-between text-xs text-gray-500">
+        <div className="flex justify-between text-xs text-muted-foreground">
           <span>0%</span>
           <span>Transparent</span>
           <span>Opaque</span>

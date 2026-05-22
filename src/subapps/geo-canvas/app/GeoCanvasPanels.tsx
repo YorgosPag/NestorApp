@@ -42,35 +42,35 @@ export function SystemStatusPanel({ t, colors, borders, iconSizes }: SystemStatu
   return (
     <div className="space-y-6">
       <section>
-        <h3 className="text-lg font-semibold mb-4 text-blue-400">
+        <h3 className="text-lg font-semibold mb-4 text-primary">
           {t('sidebar.phaseProgress.title')}
         </h3>
         <div className="space-y-3">
           <div className={`p-3 ${colors.bg.success}/20 ${borders.quick.card} ${borders.getStatusBorder('success')}`}>
-            <div className="text-sm font-medium text-green-300">{t('sidebar.phaseProgress.phase1Title')}</div>
-            <div className="text-xs text-green-400">{t('sidebar.phaseProgress.phase1Description')}</div>
+            <div className="text-sm font-medium text-green-707">{t('sidebar.phaseProgress.phase1Title')}</div>
+            <div className="text-xs text-green-707">{t('sidebar.phaseProgress.phase1Description')}</div>
           </div>
           <div className={`p-3 ${colors.bg.success}/20 ${borders.quick.card} ${borders.getStatusBorder('success')}`}>
-            <div className="text-sm font-medium text-green-300">{t('sidebar.phaseProgress.phase2Title')}</div>
-            <div className="text-xs text-green-400">{t('sidebar.phaseProgress.phase2Description')}</div>
+            <div className="text-sm font-medium text-green-707">{t('sidebar.phaseProgress.phase2Title')}</div>
+            <div className="text-xs text-green-707">{t('sidebar.phaseProgress.phase2Description')}</div>
           </div>
           <div className={`p-3 ${colors.bg.hover} rounded`}>
-            <div className="text-sm font-medium text-yellow-400">{t('sidebar.phaseProgress.phase3Title')}</div>
-            <div className="text-xs text-gray-400">{t('sidebar.phaseProgress.phase3Description')}</div>
+            <div className="text-sm font-medium text-[hsl(var(--text-warning))]">{t('sidebar.phaseProgress.phase3Title')}</div>
+            <div className="text-xs text-muted-foreground">{t('sidebar.phaseProgress.phase3Description')}</div>
           </div>
           <div className={`p-3 ${colors.bg.hover} rounded`}>
-            <div className="text-sm font-medium text-gray-400">{t('sidebar.phaseProgress.phase4Title')}</div>
-            <div className="text-xs text-gray-400">{t('sidebar.phaseProgress.phase4Description')}</div>
+            <div className="text-sm font-medium text-muted-foreground">{t('sidebar.phaseProgress.phase4Title')}</div>
+            <div className="text-xs text-muted-foreground">{t('sidebar.phaseProgress.phase4Description')}</div>
           </div>
           <div className={`p-3 ${colors.bg.hover} rounded`}>
-            <div className="text-sm font-medium text-gray-400">{t('sidebar.phaseProgress.phase5Title')}</div>
-            <div className="text-xs text-gray-400">{t('sidebar.phaseProgress.phase5Description')}</div>
+            <div className="text-sm font-medium text-muted-foreground">{t('sidebar.phaseProgress.phase5Title')}</div>
+            <div className="text-xs text-muted-foreground">{t('sidebar.phaseProgress.phase5Description')}</div>
           </div>
         </div>
       </section>
 
       <section>
-        <h3 className="text-lg font-semibold mb-4 text-green-400">
+        <h3 className="text-lg font-semibold mb-4 text-green-707">
           {t('sidebar.availableFeatures.title')}
         </h3>
         <ul className="space-y-2 text-sm list-none">
@@ -84,16 +84,16 @@ export function SystemStatusPanel({ t, colors, borders, iconSizes }: SystemStatu
       </section>
 
       <section>
-        <h3 className="text-lg font-semibold mb-4 text-blue-400">
+        <h3 className="text-lg font-semibold mb-4 text-primary">
           {t('sidebar.technicalSpecs.title')}
         </h3>
-        <dl className="space-y-2 text-sm text-gray-300">
+        <dl className="space-y-2 text-sm text-muted-foreground">
           {[
-            { key: 'transformation', color: 'text-blue-300' },
-            { key: 'accuracy', color: 'text-green-300' },
-            { key: 'crsSupport', color: 'text-purple-300' },
-            { key: 'mathEngine', color: 'text-yellow-300' },
-            { key: 'standards', color: 'text-blue-300' },
+            { key: 'transformation', color: 'text-primary' },
+            { key: 'accuracy', color: 'text-green-707' },
+            { key: 'crsSupport', color: 'text-primary' },
+            { key: 'mathEngine', color: 'text-[hsl(var(--text-warning))]' },
+            { key: 'standards', color: 'text-primary' },
           ].map(({ key, color }) => (
             <div key={key} className="flex justify-between">
               <dt>{t(`sidebar.technicalSpecs.${key}`)}</dt>
@@ -104,10 +104,10 @@ export function SystemStatusPanel({ t, colors, borders, iconSizes }: SystemStatu
       </section>
 
       <section>
-        <h3 className="text-lg font-semibold mb-4 text-yellow-400">
+        <h3 className="text-lg font-semibold mb-4 text-[hsl(var(--text-warning))]">
           {t('sidebar.comingNext.title')}
         </h3>
-        <div className="space-y-2 text-sm text-gray-300">
+        <div className="space-y-2 text-sm text-muted-foreground">
           {['maplibreIntegration', 'interactiveCoordinatePicking', 'realtimeTransformationPreview', 'multipleBasemapLayers', 'visualAccuracyIndicators'].map(key => (
             <div key={key}>{t(`sidebar.comingNext.${key}`)}</div>
           ))}
@@ -135,10 +135,10 @@ export function FoundationView({ t, isLoading, colors, iconSizes, userType, onUs
     <div className="absolute inset-0 flex items-center justify-center">
       <div className="text-center max-w-4xl p-4 sm:p-8 w-full">
         <div className="flex justify-center mb-6">
-          <Globe className="w-32 h-32 text-blue-400" />
+          <Globe className="w-32 h-32 text-primary" />
         </div>
-        <h2 className="text-3xl font-bold mb-4 text-blue-400">{t('title')}</h2>
-        <p className="text-xl text-gray-400 mb-8">{t('subtitle')}</p>
+        <h2 className="text-3xl font-bold mb-4 text-primary">{t('title')}</h2>
+        <p className="text-xl text-muted-foreground mb-8">{t('subtitle')}</p>
 
         <div className="mb-8">
           <ComponentErrorBoundary componentName="UserTypeSelector">

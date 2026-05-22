@@ -353,8 +353,8 @@ export const DEFAULT_NOTIFICATION_CONFIG: NotificationConfig = {
   position: 'fixed top-4 right-4',
   autoRemoveDelay: 3000,
   styles: {
-    success: 'bg-green-500 text-white p-4 rounded-lg shadow-lg animate-pulse', // Keep green-500 for visibility
-    warning: 'bg-yellow-500 text-white p-4 rounded-lg shadow-lg animate-pulse', // Keep yellow-500 for visibility
-    error: 'bg-red-500 text-white p-4 rounded-lg shadow-lg animate-pulse'       // Keep red-500 for visibility
+    success: 'bg-green-707 text-primary-foreground p-4 rounded-lg shadow-lg animate-pulse',
+    warning: 'bg-[hsl(var(--bg-warning))] text-foreground p-4 rounded-lg shadow-lg animate-pulse',
+    error: 'bg-destructive text-destructive-foreground p-4 rounded-lg shadow-lg animate-pulse'
   }
 };

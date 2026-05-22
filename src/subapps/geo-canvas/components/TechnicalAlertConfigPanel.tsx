@@ -147,7 +147,7 @@ export function TechnicalAlertConfigPanel({
                         : alertConfiguration.enabledPlatforms.filter(p => p !== platform.id)
                     });
                   }}
-                  className="rounded border-border text-red-600 focus:ring-red-500"
+                  className="rounded border-border text-destructive focus:ring-destructive"
                 />
                 <span className={`text-sm ${colors.text.secondary} flex items-center gap-1`}>
                   <platform.icon className={iconSizes.sm} />

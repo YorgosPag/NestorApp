@@ -98,7 +98,7 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
               relative p-4 rounded-lg transition-all duration-200
               ${isSelected
                 ? `${styleConfig.selectedBorder} ${styleConfig.selectedBackground} border-2`
-                : `border-gray-200 border-2 ${HOVER_BORDER_EFFECTS.PURPLE}`
+                : `border-border border-2 ${HOVER_BORDER_EFFECTS.PURPLE}`
               }
               ${disabled ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.SUBTLE}`}
             `}

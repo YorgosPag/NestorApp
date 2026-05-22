@@ -43,7 +43,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
       {/* Thumbnail Preview */}
       {result.thumbnail && (
         <section className={`${colors.bg.hover} ${quick.card} p-4`} aria-labelledby="thumbnail-title">
-          <h3 id="thumbnail-title" className="text-sm font-semibold text-gray-700 mb-3">
+          <h3 id="thumbnail-title" className="text-sm font-semibold text-foreground mb-3">
             {t('floorPlan.preview.thumbnailTitle')}
           </h3>
           <figure className={`flex justify-center items-center ${colors.bg.primary} ${quick.input}`}>
@@ -59,46 +59,46 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
 
       {/* File Information */}
       <section className={`${colors.bg.info} ${quick.card} p-4 ${getStatusBorder('info')}`} aria-labelledby="file-info-title">
-        <h3 id="file-info-title" className="text-sm font-semibold text-blue-700 mb-3">
+        <h3 id="file-info-title" className="text-sm font-semibold text-primary mb-3">
           {t('floorPlan.preview.fileInfoTitle')}
         </h3>
         <div className="grid grid-cols-2 gap-2 text-sm">
-          <div className="text-gray-600">{t('floorPlan.preview.fileName')}:</div>
+          <div className="text-muted-foreground">{t('floorPlan.preview.fileName')}:</div>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="font-medium text-gray-900 truncate">
+              <div className="font-medium text-foreground truncate">
                 {file.name}
               </div>
             </TooltipTrigger>
             <TooltipContent>{file.name}</TooltipContent>
           </Tooltip>
 
-          <div className="text-gray-600">{t('floorPlan.preview.format')}:</div>
-          <div className="font-medium text-gray-900">{result.format}</div>
+          <div className="text-muted-foreground">{t('floorPlan.preview.format')}:</div>
+          <div className="font-medium text-foreground">{result.format}</div>
 
-          <div className="text-gray-600">{t('floorPlan.preview.fileSize')}:</div>
-          <div className="font-medium text-gray-900">{formatFileSize(file.size)}</div>
+          <div className="text-muted-foreground">{t('floorPlan.preview.fileSize')}:</div>
+          <div className="font-medium text-foreground">{formatFileSize(file.size)}</div>
         </div>
       </section>
 
       {/* DXF-specific metadata */}
       {result.format === 'DXF' && result.geoJSON && result.bounds && (
         <section className={`${colors.bg.success} ${quick.card} p-4 ${getStatusBorder('success')}`}>
-          <h3 className="text-sm font-semibold text-green-700 mb-3">
+          <h3 className="text-sm font-semibold text-green-707 mb-3">
             {t('floorPlan.preview.dxfDataTitle')}
           </h3>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="text-gray-600">{t('floorPlan.preview.entities')}:</div>
-            <div className="font-medium text-gray-900">{result.entities || 0}</div>
+            <div className="text-muted-foreground">{t('floorPlan.preview.entities')}:</div>
+            <div className="font-medium text-foreground">{result.entities || 0}</div>
 
-            <div className="text-gray-600">{t('floorPlan.preview.layers')}:</div>
-            <div className="font-medium text-gray-900">{result.layers?.length || 0}</div>
+            <div className="text-muted-foreground">{t('floorPlan.preview.layers')}:</div>
+            <div className="font-medium text-foreground">{result.layers?.length || 0}</div>
 
-            <div className="text-gray-600">{t('floorPlan.preview.features')}:</div>
-            <div className="font-medium text-gray-900">{result.geoJSON.features.length}</div>
+            <div className="text-muted-foreground">{t('floorPlan.preview.features')}:</div>
+            <div className="font-medium text-foreground">{result.geoJSON.features.length}</div>
 
-            <div className="text-gray-600">{t('floorPlan.preview.dimensions')}:</div>
-            <div className="font-medium text-gray-900">
+            <div className="text-muted-foreground">{t('floorPlan.preview.dimensions')}:</div>
+            <div className="font-medium text-foreground">
               {(result.bounds.maxX - result.bounds.minX).toFixed(2)} × {(result.bounds.maxY - result.bounds.minY).toFixed(2)}
             </div>
           </div>
@@ -106,20 +106,20 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
           {/* Layer list */}
           {result.layers && result.layers.length > 0 && (
             <div className={`mt-3 pt-3 ${getDirectionalBorder('muted', 'top')}`}>
-              <div className="text-xs font-semibold text-green-700 mb-2">
+              <div className="text-xs font-semibold text-green-707 mb-2">
                 {t('floorPlan.preview.layerList')}:
               </div>
               <div className="flex flex-wrap gap-1">
                 {result.layers.slice(0, 10).map((layer, index) => (
                   <span
                     key={index}
-                    className={`px-2 py-1 ${colors.bg.success} text-green-800 text-xs ${quick.input}`}
+                    className={`px-2 py-1 ${colors.bg.success} text-green-707 text-xs ${quick.input}`}
                   >
                     {layer}
                   </span>
                 ))}
                 {result.layers.length > 10 && (
-                  <span className="px-2 py-1 text-green-600 text-xs">
+                  <span className="px-2 py-1 text-green-707 text-xs">
                     +{result.layers.length - 10} {t('floorPlan.preview.moreLayers')}
                   </span>
                 )}
@@ -133,22 +133,22 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
       {(result.format === 'PNG' || result.format === 'JPG' || result.format === 'TIFF') &&
        'metadata' in result && result.metadata && (
         <section className={`${colors.bg.accent} ${quick.card} p-4 ${getStatusBorder('info')}`}>
-          <h3 className="text-sm font-semibold text-purple-700 mb-3">
+          <h3 className="text-sm font-semibold text-primary mb-3">
             {t('floorPlan.preview.imageDataTitle')}
           </h3>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="text-gray-600">{t('floorPlan.preview.dimensions')}:</div>
-            <div className="font-medium text-gray-900">
+            <div className="text-muted-foreground">{t('floorPlan.preview.dimensions')}:</div>
+            <div className="font-medium text-foreground">
               {result.metadata.width} × {result.metadata.height} px
             </div>
 
-            <div className="text-gray-600">{t('floorPlan.preview.aspectRatio')}:</div>
-            <div className="font-medium text-gray-900">
+            <div className="text-muted-foreground">{t('floorPlan.preview.aspectRatio')}:</div>
+            <div className="font-medium text-foreground">
               {result.metadata.aspectRatio.toFixed(2)}
             </div>
 
-            <div className="text-gray-600">{t('floorPlan.preview.transparency')}:</div>
-            <div className="font-medium text-gray-900">
+            <div className="text-muted-foreground">{t('floorPlan.preview.transparency')}:</div>
+            <div className="font-medium text-foreground">
               {result.metadata.hasAlpha
                 ? t('floorPlan.preview.supported')
                 : t('floorPlan.preview.notSupported')}
@@ -162,10 +162,10 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
         <div className="flex items-start gap-2">
           <span className="text-xl">💡</span>
           <div className="flex-1">
-            <h3 className="text-sm font-semibold text-yellow-700 mb-1">
+            <h3 className="text-sm font-semibold text-[hsl(var(--text-warning))] mb-1">
               {t('floorPlan.preview.nextStepsTitle')}
             </h3>
-            <p className="text-xs text-yellow-800">
+            <p className="text-xs text-[hsl(var(--text-warning))]">
               {t('floorPlan.preview.nextStepsDescription')}
             </p>
           </div>

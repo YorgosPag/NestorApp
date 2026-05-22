@@ -60,14 +60,14 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
     return (
       <div className={`w-full h-full flex items-center justify-center ${colors.bg.primary}`}>
         <div className="text-center max-w-md p-6">
-          <div className="text-red-500 text-6xl mb-4">🔒</div> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+          <div className="text-destructive text-6xl mb-4">🔒</div>
           <h1 className={`text-2xl font-bold ${colors.text.primary} mb-2`}>
             {t('page.adminOnly')}
           </h1>
           <p className={`${colors.text.secondary} mb-4`}>
             {t('page.noPermission')}
           </p>
-          <p className="text-sm text-slate-400 dark:text-slate-500">
+          <p className="text-sm text-muted-foreground">
             {t('page.loginAsAdmin')}
           </p>
         </div>

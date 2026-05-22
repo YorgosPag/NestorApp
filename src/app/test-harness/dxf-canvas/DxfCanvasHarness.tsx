@@ -198,14 +198,14 @@ export default function DxfCanvasHarness() {
 
   if (error) {
     return (
-      <main className="fixed inset-0 flex items-center justify-center bg-gray-900">
-        <p data-testid="error" className="text-red-400 font-mono text-sm">{error}</p>
+      <main className="fixed inset-0 flex items-center justify-center bg-background">
+        <p data-testid="error" className="text-destructive font-mono text-sm">{error}</p>
       </main>
     );
   }
 
   return (
-    <main className="fixed inset-0 overflow-hidden bg-gray-900">
+    <main className="fixed inset-0 overflow-hidden bg-background">
       {scene ? (
         <section data-testid="dxf-canvas-ready" className="relative w-full h-full">
           <DxfCanvas

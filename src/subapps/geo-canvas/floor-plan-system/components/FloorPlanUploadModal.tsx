@@ -119,7 +119,7 @@ export function FloorPlanUploadModal({
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className={`sm:max-w-[600px] ${colors.bg.secondary} text-white ${quick.card}`}>
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-blue-400 flex items-center gap-2">
+          <DialogTitle className="text-2xl font-bold text-primary flex items-center gap-2">
             <CraneIcon className={iconSizes.lg} />
             {t('floorPlan.uploadModal.title')}
           </DialogTitle>

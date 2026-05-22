@@ -158,11 +158,11 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       <header className={`${colors.bg.primary} ${borders.quick.separatorH} p-3 sm:p-4`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
               <Globe className={iconSizes.lg} />
               {t('title')}
             </h1>
-            <p className="text-gray-400 text-sm">{t('subtitle')}</p>
+            <p className="text-muted-foreground text-sm">{t('subtitle')}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             <button
@@ -190,7 +190,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 </>
               )}
               <li className="flex items-center space-x-2">
-                <span className="text-gray-400">{t('toolbar.view')}</span>
+                <span className="text-muted-foreground">{t('toolbar.view')}</span>
                 <Select value={activeView} onValueChange={(v) => { if (v === 'foundation' || v === 'georeferencing' || v === 'map') setActiveView(v); }}>
                   <SelectTrigger className="w-[150px] sm:w-[180px]"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -201,7 +201,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 </Select>
               </li>
               <li className="flex items-center space-x-2">
-                <span className="text-gray-400">{t('toolbar.crs')}</span>
+                <span className="text-muted-foreground">{t('toolbar.crs')}</span>
                 <Select defaultValue="epsg4326">
                   <SelectTrigger className="w-[150px] sm:w-[180px]"><SelectValue /></SelectTrigger>
                   <SelectContent>

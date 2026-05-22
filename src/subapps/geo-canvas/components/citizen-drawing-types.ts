@@ -119,24 +119,24 @@ interface AddressSearchPanelProps {
 
 export const AddressSearchPanel = ({ onClose }: AddressSearchPanelProps) => {
   const { t } = useTranslation('geo-canvas');
-  return React.createElement('div', { className: 'p-4 bg-slate-800 border border-slate-700/50 rounded-lg' },
-    React.createElement('p', { className: 'text-slate-200 text-sm' }, t('addressSearch.title')),
-    React.createElement('button', { onClick: onClose, className: 'mt-2 px-3 py-1 bg-blue-600 text-white rounded text-sm' }, t('alertManagement.close'))
+  return React.createElement('div', { className: 'p-4 bg-card border border-border rounded-lg' },
+    React.createElement('p', { className: 'text-foreground text-sm' }, t('addressSearch.title')),
+    React.createElement('button', { onClick: onClose, className: 'mt-2 px-3 py-1 bg-primary text-primary-foreground rounded text-sm' }, t('alertManagement.close'))
   );
 };
 
 export const AdminBoundaryDemo = () => {
   const { t } = useTranslation('geo-canvas');
-  return React.createElement('div', { className: 'p-4 bg-slate-800 border border-slate-700/50 rounded-lg' },
-    React.createElement('p', { className: 'text-slate-200 text-sm' }, t('adminBoundary.demoTitle'))
+  return React.createElement('div', { className: 'p-4 bg-card border border-border rounded-lg' },
+    React.createElement('p', { className: 'text-foreground text-sm' }, t('adminBoundary.demoTitle'))
   );
 };
 
 export const BoundaryLayerControlPanel = ({ layers }: BoundaryLayerControlPanelProps) => {
   const { t } = useTranslation('geo-canvas');
-  return React.createElement('div', { className: 'p-4 bg-slate-800 border border-slate-700/50 rounded-lg' },
-    React.createElement('p', { className: 'text-slate-200 text-sm' }, t('boundaryLayer.title')),
-    React.createElement('p', { className: 'text-sm text-slate-400' }, t('boundaryLayer.layersAvailableCount', { count: layers?.length || 0 }))
+  return React.createElement('div', { className: 'p-4 bg-card border border-border rounded-lg' },
+    React.createElement('p', { className: 'text-foreground text-sm' }, t('boundaryLayer.title')),
+    React.createElement('p', { className: 'text-sm text-muted-foreground' }, t('boundaryLayer.layersAvailableCount', { count: layers?.length || 0 }))
   );
 };
 
