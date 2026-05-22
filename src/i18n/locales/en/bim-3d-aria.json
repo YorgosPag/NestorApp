@@ -17,6 +17,12 @@
     "openingGeometry": ", width {width}m, height {height}m",
     "slabOpeningGeometry": ", width {width}m, height {height}m",
     "material": ", material {material}",
-    "level": ", level {level}"
+    "level": ", level {level}",
+    "stairGeometry": ", {steps} steps, height {height}m",
+    "dimension": "Dimension",
+    "dimensionGeometry": ", value {value}{unit}",
+    "commentMarker": "BIM comment",
+    "commentMarkerWithText": "Comment: {text}",
+    "areaPlan": "Space"
   }
 }

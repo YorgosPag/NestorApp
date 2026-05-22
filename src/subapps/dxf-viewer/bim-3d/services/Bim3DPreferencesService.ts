@@ -12,15 +12,32 @@ export interface EntityCardTabPrefs {
   readonly lastActive: string;
 }
 
+export interface AccessibilityPrefs {
+  /** Keyboard navigation order for entity proxy buttons. Default: 'spatial'. */
+  readonly entityNavOrder: 'spatial' | 'semantic';
+  /** Reduced-motion override. Default: 'auto' (follow OS). */
+  readonly reducedMotion: 'auto' | 'force-on' | 'force-off';
+  /** Whether ARIA live-region announcements are enabled. Default: true. */
+  readonly announcementsEnabled: boolean;
+}
+
+const ACCESSIBILITY_DEFAULTS: AccessibilityPrefs = {
+  entityNavOrder: 'spatial',
+  reducedMotion: 'auto',
+  announcementsEnabled: true,
+};
+
 export interface Bim3DPrefs {
   readonly userId: string;
   readonly compassRingVisible: boolean;
   readonly entityCardTabs?: Readonly<Record<string, EntityCardTabPrefs>>;
+  readonly accessibility?: AccessibilityPrefs;
   readonly updatedAt: unknown;
 }
 
 const DEFAULTS: Omit<Bim3DPrefs, 'userId' | 'updatedAt'> = {
   compassRingVisible: true,
+  accessibility: ACCESSIBILITY_DEFAULTS,
 };
 
 export const Bim3DPreferencesService = {

@@ -17,6 +17,12 @@
     "openingGeometry": ", πλάτος {width}μ, ύψος {height}μ",
     "slabOpeningGeometry": ", πλάτος {width}μ, ύψος {height}μ",
     "material": ", υλικό {material}",
-    "level": ", επίπεδο {level}"
+    "level": ", επίπεδο {level}",
+    "stairGeometry": ", {steps} βαθμίδες, ύψος {height}μ",
+    "dimension": "Διάσταση",
+    "dimensionGeometry": ", τιμή {value}{unit}",
+    "commentMarker": "Σχόλιο BIM",
+    "commentMarkerWithText": "Σχόλιο: {text}",
+    "areaPlan": "Χώρος"
   }
 }

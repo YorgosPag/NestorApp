@@ -430,6 +430,21 @@
       "selectionRemoved": "−{count} αφαιρέθηκε",
       "selectionNone": "Καμία επιλογή",
       "selectionCount": "{count} επιλεγμένα"
+    },
+    "settings": {
+      "title": "Προσβασιμότητα",
+      "entityNavOrderLabel": "Σειρά πλοήγησης",
+      "entityNavOrder": {
+        "spatial": "Χωρική (προεπιλογή)",
+        "semantic": "Σημασιολογική"
+      },
+      "reducedMotionLabel": "Μειωμένη κίνηση",
+      "reducedMotion": {
+        "auto": "Αυτόματο (ρύθμιση OS)",
+        "forceOn": "Πάντα ενεργό",
+        "forceOff": "Πάντα ανενεργό"
+      },
+      "announcementsEnabled": "Ανακοινώσεις screen reader"
     }
   },
   "aria": {
@@ -445,6 +460,30 @@
       "renderStarted": "Η δημιουργία ξεκίνησε",
       "renderComplete": "Η δημιουργία ολοκληρώθηκε",
       "errorGeneric": "Παρουσιάστηκε σφάλμα"
+    },
+    "canvas": {
+      "rootLabel": "Τρισδιάστατο μοντέλο BIM. Πατήστε Tab για πλοήγηση εντοτήτων, Enter για άνοιγμα ιδιοτήτων.",
+      "skipLink": "Παράλειψη 3D viewer",
+      "emptyState": "Δεν υπάρχουν ορατές εντότητες"
+    },
+    "entityNav": {
+      "spatialOrderLabel": "Χωρική διάταξη",
+      "semanticOrderLabel": "Σημασιολογική διάταξη",
+      "arrowHelp": "Βέλη: επόμενη/προηγούμενη εντότητα",
+      "enterHelp": "Enter: άνοιγμα ιδιοτήτων",
+      "escHelp": "Esc: καθαρισμός εστίασης",
+      "pageHelp": "PageDown/PageUp: επόμενος/προηγούμενος όροφος",
+      "homeEndHelp": "Home/End: πρώτη/τελευταία εντότητα"
+    },
+    "announcements": {
+      "entitySelected": "Επιλέχθηκε {type} {name}",
+      "modeChanged": "Λειτουργία: {mode}",
+      "cameraSnapped": "Κάμερα: {view}",
+      "sectionToggled": "Τομή {state}",
+      "toolActivated": "Εργαλείο {tool} ενεργό",
+      "renderProgress": "Render {current} από {total} ολοκληρώθηκε",
+      "renderDone": "Render ολοκληρώθηκε",
+      "floorChanged": "Όροφος {floor}"
     }
   }
 }

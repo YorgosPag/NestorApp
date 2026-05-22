@@ -58,6 +58,8 @@ interface ViewMode3DState {
   mode: ViewMode3D;
   /** True during mode transitions (for loading states) */
   isTransitioning: boolean;
+  /** Whether ARIA live-region announcements are active (ADR-366 Phase 9 / C.5.Q1). */
+  announcementsEnabled: boolean;
   /** Active final render config (null = no render in progress / dialog closed) */
   finalRenderConfig: FinalRenderConfig | null;
   /** Render progress 0-100; -1 = idle */
@@ -113,6 +115,7 @@ interface ViewMode3DActions {
   /** Update solar calculator config */
   setSolarConfig(date: Date, latDeg: number, lngDeg: number): void;
   toggleSunAnimating(): void;
+  setAnnouncementsEnabled(enabled: boolean): void;
 }
 
 type ViewMode3DStoreType = ViewMode3DState & ViewMode3DActions;
@@ -126,6 +129,7 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
         // ── Initial state ─────────────────────────────────────────────────────
         mode: '2d',
         isTransitioning: false,
+        announcementsEnabled: true,
         finalRenderConfig: null,
         finalRenderProgress: -1,
         visibleFloors: new Set<string>(),
@@ -258,6 +262,12 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
         toggleSunAnimating() {
           set((draft) => {
             draft.sunAnimating = !draft.sunAnimating;
+          });
+        },
+
+        setAnnouncementsEnabled(enabled) {
+          set((draft) => {
+            draft.announcementsEnabled = enabled;
           });
         },
       }))

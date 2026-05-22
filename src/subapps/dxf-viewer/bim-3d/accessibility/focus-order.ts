@@ -1,36 +1,82 @@
 // ============================================================================
-// FOCUS ORDER — pure helpers for keyboard-focus traversal (ADR-366 Phase 4.5).
+// FOCUS ORDER — pure helpers for keyboard-focus traversal (ADR-366 Phase 4.5 + 9).
 // Extracted from ThreeJsSceneManager to keep that class under the 500-line cap.
 //
 // ADR-366 Polish Item #7: dense-scene overlap prevention.
 // Sort by screen-space distance to viewport center (NDC origin) so the most
 // prominent entity is always first. Entities whose NDC centers are closer than
-// FOCUS_OVERLAP_NDC_THRESHOLD to an already-accepted entity are skipped — this
-// prevents Tab from cycling through visually co-located entities in dense floors.
+// FOCUS_OVERLAP_NDC_THRESHOLD to an already-accepted entity are skipped.
+//
+// Phase 9 / C.5.Q3: semantic toggle — groups by entity type (wall → column →
+// beam → slab → opening → …) instead of spatial proximity order.
 // ============================================================================
 
 import * as THREE from 'three';
 import type { FocusEntityLabelData } from './FocusIndicator3D';
 
+/** Navigation order for keyboard traversal. */
+export type NavOrder = 'spatial' | 'semantic';
+
+const SEMANTIC_TYPE_ORDER: readonly string[] = [
+  'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening', 'stair',
+  'dimension', 'comment-marker', 'area-plan',
+];
+
 /** NDC half-distance (range -1..1) below which two entities are considered overlapping. */
 const FOCUS_OVERLAP_NDC_THRESHOLD = 0.12;
 
 /**
+ * Semantic focus order: group by entity type in BIM logical sequence.
+ * Order: wall → column → beam → slab → opening → slab-opening → stair → rest (alphabetical).
+ * Hidden ancestors skipped. No frustum culling (semantic nav ignores camera).
+ */
+export function computeSemanticFocusOrder(bimGroup: THREE.Object3D): string[] {
+  const byType = new Map<string, string[]>();
+  const seen = new Set<string>();
+
+  bimGroup.traverse((obj) => {
+    if (!(obj instanceof THREE.Mesh)) return;
+    const bimId = obj.userData['bimId'] as string | undefined;
+    if (!bimId || seen.has(bimId)) return;
+    let parent: THREE.Object3D | null = obj;
+    while (parent) {
+      if (!parent.visible) return;
+      parent = parent.parent;
+    }
+    seen.add(bimId);
+    const bimType = ((obj.userData['bimType'] as string | undefined) ?? 'unknown').toLowerCase();
+    if (!byType.has(bimType)) byType.set(bimType, []);
+    byType.get(bimType)!.push(bimId);
+  });
+
+  const result: string[] = [];
+  for (const type of SEMANTIC_TYPE_ORDER) {
+    const ids = byType.get(type);
+    if (ids) result.push(...ids);
+    byType.delete(type);
+  }
+  for (const type of [...byType.keys()].sort()) {
+    result.push(...(byType.get(type) ?? []));
+  }
+  return result;
+}
+
+/**
  * Frustum-culled, screen-center-sorted, overlap-deduped focus order over a BIM group.
  *
- * Sort key: NDC distance from viewport center (0, 0).
+ * navOrder='spatial' (default): Sort by NDC distance from viewport center.
  *   - Entities nearest to where the user is looking come first.
- *   - World-space camera distance is used as tiebreaker.
- * Overlap guard: if two entities project within FOCUS_OVERLAP_NDC_THRESHOLD of each
- *   other in screen space, only the closer one is included. Prevents Tab from
- *   bouncing between visually stacked entities in dense BIM scenes.
+ *   - Overlap guard: skip entities within FOCUS_OVERLAP_NDC_THRESHOLD in screen space.
+ * navOrder='semantic': delegates to computeSemanticFocusOrder() (camera unused).
  *
  * Hidden floors/buildings are skipped — `obj.visible=false` on any ancestor.
  */
 export function computeFocusOrder(
   bimGroup: THREE.Object3D,
   camera: THREE.Camera,
+  navOrder: NavOrder = 'spatial',
 ): string[] {
+  if (navOrder === 'semantic') return computeSemanticFocusOrder(bimGroup);
   const projMatrix = new THREE.Matrix4().multiplyMatrices(
     camera.projectionMatrix,
     camera.matrixWorldInverse,

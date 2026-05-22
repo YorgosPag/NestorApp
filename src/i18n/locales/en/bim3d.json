@@ -430,6 +430,21 @@
       "selectionRemoved": "−{count} removed",
       "selectionNone": "No selection",
       "selectionCount": "{count} selected"
+    },
+    "settings": {
+      "title": "Accessibility",
+      "entityNavOrderLabel": "Navigation order",
+      "entityNavOrder": {
+        "spatial": "Spatial (default)",
+        "semantic": "Semantic"
+      },
+      "reducedMotionLabel": "Reduced motion",
+      "reducedMotion": {
+        "auto": "Auto (OS setting)",
+        "forceOn": "Always on",
+        "forceOff": "Always off"
+      },
+      "announcementsEnabled": "Screen reader announcements"
     }
   },
   "aria": {
@@ -445,6 +460,30 @@
       "renderStarted": "Render started",
       "renderComplete": "Render complete",
       "errorGeneric": "An error occurred"
+    },
+    "canvas": {
+      "rootLabel": "3D BIM model. Press Tab to navigate entities, Enter to open properties.",
+      "skipLink": "Skip 3D viewer",
+      "emptyState": "No visible entities"
+    },
+    "entityNav": {
+      "spatialOrderLabel": "Spatial layout",
+      "semanticOrderLabel": "Semantic layout",
+      "arrowHelp": "Arrows: next/previous entity",
+      "enterHelp": "Enter: open properties",
+      "escHelp": "Esc: clear focus",
+      "pageHelp": "PageDown/PageUp: next/previous floor",
+      "homeEndHelp": "Home/End: first/last entity"
+    },
+    "announcements": {
+      "entitySelected": "Selected {type} {name}",
+      "modeChanged": "Mode: {mode}",
+      "cameraSnapped": "Camera: {view}",
+      "sectionToggled": "Section {state}",
+      "toolActivated": "Tool {tool} active",
+      "renderProgress": "Render {current} of {total} complete",
+      "renderDone": "Render complete",
+      "floorChanged": "Floor {floor}"
     }
   }
 }

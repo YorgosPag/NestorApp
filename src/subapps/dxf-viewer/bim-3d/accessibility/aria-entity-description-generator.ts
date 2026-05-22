@@ -23,6 +23,14 @@ export interface AriaEntityData {
   readonly area?: number | null;
   readonly material?: string | null;
   readonly levelName?: string | null;
+  /** Stair: number of steps. */
+  readonly stepsCount?: number | null;
+  /** Dimension annotation: numeric value. */
+  readonly dimensionValue?: number | null;
+  /** Dimension annotation: unit string (e.g. 'm', 'mm'). */
+  readonly dimensionUnit?: string | null;
+  /** Comment marker: first N chars of comment text. */
+  readonly commentText?: string | null;
 }
 
 function fmt(n: number): string {
@@ -98,10 +106,31 @@ export function generateSlabOpeningDescription(data: AriaEntityData, t: TFn): st
 }
 
 export function generateStairDescription(data: AriaEntityData, t: TFn): string {
-  const lvl = levelFrag(data, t);
-  if (lvl) return `${t('entity.stair')}${lvl}`;
-  if (data.entityName) return t('entity.withName', { type: t('entity.stair'), name: data.entityName });
-  return t('entity.stair');
+  const geom = (data.stepsCount != null && data.height != null)
+    ? t('entity.stairGeometry', { steps: data.stepsCount, height: fmt(data.height) })
+    : '';
+  return assembleDescription(t('entity.stair'), geom, '', levelFrag(data, t), data.entityName, t);
+}
+
+export function generateDimensionDescription(data: AriaEntityData, t: TFn): string {
+  const geom = (data.dimensionValue != null)
+    ? t('entity.dimensionGeometry', {
+        value: fmt(data.dimensionValue),
+        unit: data.dimensionUnit ?? 'm',
+      })
+    : '';
+  return assembleDescription(t('entity.dimension'), geom, '', levelFrag(data, t), data.entityName, t);
+}
+
+export function generateCommentMarkerDescription(data: AriaEntityData, t: TFn): string {
+  if (data.commentText) {
+    return t('entity.commentMarkerWithText', { text: data.commentText });
+  }
+  return t('entity.commentMarker');
+}
+
+export function generateAreaPlanDescription(data: AriaEntityData, t: TFn): string {
+  return assembleDescription(t('entity.areaPlan'), '', '', levelFrag(data, t), data.entityName, t);
 }
 
 // ---------------------------------------------------------------------------
@@ -128,6 +157,12 @@ export function generateAriaDescription(data: AriaEntityData, t: TFn): string {
       return generateSlabOpeningDescription(data, t);
     case 'stair':
       return generateStairDescription(data, t);
+    case 'dimension':
+      return generateDimensionDescription(data, t);
+    case 'comment-marker':
+      return generateCommentMarkerDescription(data, t);
+    case 'area-plan':
+      return generateAreaPlanDescription(data, t);
     default: {
       if (data.entityName) return t('entity.withName', { type: t('entity.unknown'), name: data.entityName });
       return t('entity.unknown');
