@@ -37,8 +37,7 @@ import {
 } from './canvas-layer-stack-leaves';
 import { PolygonCropPreviewSubscriber } from './LassoCropPreviewSubscriber'; import { LassoFreehandPreviewSubscriber } from './LassoFreehandPreviewSubscriber';
 import { AutoAreaResultPanel } from './AutoAreaResultPanel'; import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
-import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay';
-import { DynamicInputSubscriber } from './DynamicInputSubscriber'; import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf';
+import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay'; import { DynamicInputSubscriber } from './DynamicInputSubscriber'; import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf';
 import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton'; import { Focus2DOverlayLeaf } from './Focus2DOverlayLeaf'; import { SelectionCursorIcon } from '../../accessibility/SelectionCursorIcon';
 import { useDxfOverlay3DSync } from './useDxfOverlay3DSync'; import { useLevelId3DSync } from './useLevelId3DSync';
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
@@ -335,8 +334,9 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       wireframeMode: false,
       selectedEntityIds,
       gripInteractionState: dxfGripInteraction.gripInteractionState,
+      movePreviewActive: movePreview.phase === 'awaiting-destination',
     }),
-    [selectedEntityIds, dxfGripInteraction.gripInteractionState],
+    [selectedEntityIds, dxfGripInteraction.gripInteractionState, movePreview.phase],
   );
   // Guide workflow computed params (passed to DxfCanvasSubscriber)
   const guideComputedParams = useMemo(() => ({

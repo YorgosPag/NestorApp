@@ -183,6 +183,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
               gripInteractionState: curRenderOptions.gripInteractionState,
               layersById: curLayersById,
               suppressGrips: !gripsAllowed,
+              movePreviewActive: curRenderOptions.movePreviewActive,
             });
           }
         }

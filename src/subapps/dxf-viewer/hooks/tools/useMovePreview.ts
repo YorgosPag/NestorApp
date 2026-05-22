@@ -165,10 +165,11 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     ctx.fillText(tooltipText, cursorScreen.x + 15, cursorScreen.y - 10);
     ctx.restore();
 
-    // Ghost entities — SSOT via rendering/ghost
+    // Solid preview entities at destination — AutoCAD parity: originals ghost on main
+    // canvas (handled by dxf-canvas-renderer movePreviewActive), preview shows solid.
     if (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001) {
       ctx.save();
-      ctx.globalAlpha = GHOST_DEFAULTS.alpha;
+      ctx.globalAlpha = 1.0;
       ctx.strokeStyle = GHOST_DEFAULTS.color;
       ctx.fillStyle = GHOST_DEFAULTS.color;
       ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
@@ -183,10 +184,10 @@ export function useMovePreview(props: UseMovePreviewProps): void {
 
       ctx.restore();
 
-      // Ghost overlays (stroke-only outline)
+      // Solid overlay preview at destination (AutoCAD parity — matches entity ghost reversal).
       if (selectedOverlayIds && selectedOverlayIds.length > 0 && getOverlay) {
         ctx.save();
-        ctx.globalAlpha = GHOST_DEFAULTS.alpha;
+        ctx.globalAlpha = 1.0;
         ctx.strokeStyle = GHOST_DEFAULTS.color;
         ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
         for (const ovId of selectedOverlayIds) {

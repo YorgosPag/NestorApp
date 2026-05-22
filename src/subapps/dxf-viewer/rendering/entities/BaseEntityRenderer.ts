@@ -137,8 +137,6 @@ export abstract class BaseEntityRenderer {
     this.phaseManager.renderPhaseGrips(entity as Entity, grips, phaseState);
   }
 
-
-
   /**
    * 🎨 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΟ TEXT STYLING SYSTEM
    * Όλα τα κείμενα χρησιμοποιούν αυτές τις μεθόδους
@@ -221,7 +219,6 @@ export abstract class BaseEntityRenderer {
     this.applyDimensionTextStyle(); // Use centralized fuchsia color and styling
   }
 
-
   /**
    * Γενική μέθοδος - όλα τα κείμενα
    */
@@ -247,7 +244,6 @@ export abstract class BaseEntityRenderer {
     const vp = this.getViewport();
     return p.x >= 0 && p.y >= 0 && p.x <= vp.width && p.y <= vp.height;
   };
-
 
   // 🏢 ADR-075: Use centralized grip size multipliers
   // 🏢 FIX (2026-02-15): Unified grip color/size policy — SSoT across DXF entities & colored layers
@@ -324,6 +320,11 @@ export abstract class BaseEntityRenderer {
     // Determine current phase and apply appropriate styling
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
+    // Ghost alpha override (Move-tool AutoCAD parity): apply AFTER phase style so
+    // applyNormalStyle's globalAlpha=1 reset cannot win. Only when explicitly < 1.
+    if (options.alpha !== undefined && options.alpha < OPACITY.OPAQUE) {
+      this.ctx.globalAlpha = options.alpha;
+    }
   }
 
   protected applyEntityStyle(entity: EntityModel): void {
@@ -482,7 +483,6 @@ export abstract class BaseEntityRenderer {
   protected finalizeRender(entity: EntityModel, options: RenderOptions): void {
     if (options.grips) this.renderGrips(entity, options);
   }
-
 
   /** 🏢 ADR-065: Delegated to base-entity-rendering-helpers.ts */
   protected renderAngleAtVertex(

@@ -279,6 +279,12 @@ export interface DxfRenderOptions {
    * matching AutoCAD behaviour where grips disappear once a command is active.
    */
   suppressGrips?: boolean;
+  /**
+   * When true (move tool awaiting-destination phase), selected entities render as ghost
+   * at their original position — AutoCAD parity: originals fade out during preview move.
+   * The solid preview at the cursor is drawn on PreviewCanvas by useMovePreview.
+   */
+  movePreviewActive?: boolean;
 }
 
 // === DXF SELECTION ===

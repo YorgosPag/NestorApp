@@ -1,4 +1,5 @@
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
+import { GHOST_DEFAULTS } from '../../rendering/ghost';
 import type { DxfScene, DxfEntityUnion, DxfRenderOptions, DxfText } from './dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
@@ -205,6 +206,8 @@ export class DxfRenderer {
       // When true, selected entities keep selection highlight but grips are hidden
       // (AutoCAD parity: grips disappear when a command such as Move is active).
       suppressGrips?: boolean;
+      // When true, selected entity renders as ghost (alpha × GHOST_DEFAULTS.alpha).
+      movePreviewActive?: boolean;
     } = {},
   ): void {
     if (!entity.visible) return;
@@ -223,6 +226,7 @@ export class DxfRenderer {
       gripInteractionState: gripOpts,
       layersById: interaction.layersById,
       suppressGrips: interaction.suppressGrips,
+      movePreviewActive: interaction.movePreviewActive,
     };
     this._selectionSet = new Set(syntheticOptions.selectedEntityIds);
     this.renderEntityUnified(entity, transform, actualViewport, syntheticOptions);
@@ -251,6 +255,7 @@ export class DxfRenderer {
     const entityModel: EntityModel = this.toEntityModel(entity, isSelected, resolved);
 
     const gripsVisible = isSelected && !options.suppressGrips;
+    const ghostMult = options.movePreviewActive && isSelected ? GHOST_DEFAULTS.alpha : 1.0;
     const renderOptions: RenderOptions = {
       phase: isSelected ? 'selected' : isHovered ? 'highlighted' : 'normal',
       transform,
@@ -259,7 +264,7 @@ export class DxfRenderer {
       grips: gripsVisible,
       hovered: isHovered,
       selected: isSelected,
-      alpha: (entity.visible ? 1.0 : 0.3) * resolved.alpha
+      alpha: (entity.visible ? 1.0 : 0.3) * resolved.alpha * ghostMult,
     };
 
     this.entityComposite.render(entityModel, renderOptions);
@@ -396,9 +401,7 @@ export class DxfRenderer {
       }
     }
   }
-
   // Per-frame index builders extracted to ./dxf-renderer-frame-builders.ts.
-
   /** ADR-358 §G7 Phase 6 — ByLayer/ByBlock style resolution; falls back to literal values when no layersById. */
   private resolveStyleForRender(
     entity: DxfEntityUnion,
