@@ -1,6 +1,6 @@
 # ADR-266: Gantt & Construction Schedule Reports
 
-**Status**: PHASE D.5 IMPLEMENTED (Alert Rules Engine + Weather Risk + Cron + Portfolio Dashboard)
+**Status**: PHASE D.5 IMPLEMENTED (Alert Rules Engine + Weather Risk + Cron + Portfolio Dashboard + Auto-geocoding)
 **Date**: 2026-03-29
 **Author**: Claude (Research Agents × 4)
 **Related ADRs**: ADR-034 (Gantt Chart), ADR-265 (Enterprise Reports System), ADR-175 (BOQ/Quantity Surveying)
@@ -21,6 +21,8 @@
 | 2026-05-21 | **Phase D.3 EXTENDED — Cron bypass + all-buildings mode**: `POST /api/alerts/schedule-check` now supports `x-cron-secret` header bypass (Netcup VPS cron, no Firebase auth). When secret matches, runs across ALL active company buildings and sends combined Telegram digest. `CRON_SECRET` env var required on server. |
 | 2026-05-21 | **Phase D.3 EXTENDED — Weather Risk Rule (7th rule)**: `detectWeatherRisk()` added to alert rules engine. Source: Open-Meteo API (free, no key, EU). Building needs `latitude`/`longitude` fields. Thresholds: rain > 5mm → MEDIUM, wind > 50km/h → HIGH. `AlertRuleType` extended with `'weather_risk'`. i18n keys added (el+en). |
 | 2026-05-21 | **Phase D.5 IMPLEMENTED — Construction Portfolio Dashboard**: Cross-building portfolio view at `/construction/portfolio`. API route `GET /api/construction/portfolio` returns EVM metrics (SPI/CPI), delayed task count, active alert count, next milestone per building. `useConstructionPortfolio` hook, `PortfolioKPIs` (4 cards), `PortfolioTable` (8 columns with click-through to building timeline). Navigation entry added. i18n (el+en). |
+| 2026-05-22 | **Auto-geocoding lat/lon from building address**: `building-update.handler.ts` PATCH now auto-computes `latitude`/`longitude` whenever `addresses` is saved. If primary address has map-picker `coordinates` → used directly (no network). Else → Nominatim forward geocode via existing `geocoding-engine.ts`. Stored on main `buildings` document for Open-Meteo weather alerts. `maxDuration = 30` added to `buildings/route.ts`. Fallback: geocoding failure does not block the save. |
+| 2026-05-22 | **Weather alert dedup fix — date-based keys**: `AlertCandidate` extended with optional `dedupId` field. `detectWeatherRisk()` sets `dedupId: 'rain:YYYY-MM-DD'` / `dedupId: 'wind:YYYY-MM-DD'` so each day+type is a distinct alert. `saveNewAlerts()` uses `candidate.dedupId ?? taskId ?? phaseId` for dedup key, and stores `dedupId` in Firestore `data` field for future-run consistency. Before fix: only one weather alert per building (all subsequent runs blocked). |
 
 ---
 

@@ -1,3 +1,5 @@
+export const maxDuration = 30;
+
 import { z } from 'zod';
 import { NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';

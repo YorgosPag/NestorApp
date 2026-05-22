@@ -62,6 +62,8 @@ export interface AlertCandidate {
   message: string;
   phaseId?: string;
   taskId?: string;
+  /** Overrides taskId/phaseId for deduplication (e.g. weather_risk uses date) */
+  dedupId?: string;
   data: Record<string, number | string>;
 }
 
@@ -233,6 +235,7 @@ export function detectWeatherRisk(weather: WeatherForecast): AlertCandidate[] {
         severity: 'medium',
         title: `Έντονη βροχόπτωση (${formatDateEU(day.date)})`,
         message: `Αναμενόμενη βροχόπτωση ${day.precipitationMm.toFixed(1)}mm — επηρεάζει εξωτερικές εργασίες.`,
+        dedupId: `rain:${day.date}`,
         data: { precipitationMm: day.precipitationMm, date: day.date },
       });
     }
@@ -243,6 +246,7 @@ export function detectWeatherRisk(weather: WeatherForecast): AlertCandidate[] {
         severity: 'high',
         title: `Ισχυροί άνεμοι (${formatDateEU(day.date)})`,
         message: `Αναμενόμενοι άνεμοι ${day.windspeedKmh.toFixed(0)}km/h — σταματήστε εργασίες σε ύψος.`,
+        dedupId: `wind:${day.date}`,
         data: { windspeedKmh: day.windspeedKmh, date: day.date },
       });
     }

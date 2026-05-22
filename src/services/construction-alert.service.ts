@@ -96,7 +96,12 @@ export async function saveNewAlerts(
 
   const existing = await getActiveAlerts(buildingId, companyId);
   const existingKeys = new Set(
-    existing.map(a => dedupKey(buildingId, a.ruleType, a.taskId ?? a.phaseId)),
+    existing.map(a => {
+      const savedDedupId = typeof (a.data as Record<string, unknown>)?.dedupId === 'string'
+        ? (a.data as Record<string, string>).dedupId
+        : undefined;
+      return dedupKey(buildingId, a.ruleType, savedDedupId ?? a.taskId ?? a.phaseId);
+    }),
   );
 
   const alertIds: string[] = [];
@@ -105,7 +110,7 @@ export async function saveNewAlerts(
     const key = dedupKey(
       buildingId,
       candidate.ruleType,
-      candidate.taskId ?? candidate.phaseId,
+      candidate.dedupId ?? candidate.taskId ?? candidate.phaseId,
     );
 
     if (existingKeys.has(key)) continue;
@@ -121,7 +126,9 @@ export async function saveNewAlerts(
       message: candidate.message,
       phaseId: candidate.phaseId ?? null,
       taskId: candidate.taskId ?? null,
-      data: candidate.data,
+      data: candidate.dedupId
+        ? { ...candidate.data, dedupId: candidate.dedupId }
+        : candidate.data,
       status: 'active',
       notifiedVia: ['dashboard'],
       createdAt: nowISO(),
@@ -132,7 +139,7 @@ export async function saveNewAlerts(
     try {
       await db.collection(COLLECTIONS.CONSTRUCTION_ALERTS).doc(id).set(alert);
       alertIds.push(id);
-      existingKeys.add(key);
+      existingKeys.add(key); // prevent duplicate save within same batch
     } catch (err) {
       logger.error(`Failed to save alert ${id}: ${err instanceof Error ? err.message : String(err)}`);
     }
