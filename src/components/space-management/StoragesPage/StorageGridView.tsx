@@ -66,7 +66,7 @@ export function StorageGridView({
   if (storages.length === 0) {
     return (
       <div className={`flex flex-col items-center justify-center h-full ${colors.text.muted} p-8`}>
-        <Warehouse className={`${iconSizes.xl} mb-4 text-amber-500`} />
+        <Warehouse className={`${iconSizes.xl} mb-4 text-[hsl(var(--text-warning))]`} />
         <h2 className="text-xl font-semibold">{t('storages.list.noResults')}</h2>
         <p className="text-sm">{t('storages.list.noResultsHint')}</p>
       </div>

@@ -30,7 +30,7 @@ export function NotificationBell() {
     >
       <Bell className={iconSizes.sm} aria-hidden="true" />
       {unread > 0 && (
-        <span className="absolute top-0 -right-0.5 bg-red-600 text-white text-xs px-1.5 rounded-full min-w-[20px] h-5 flex items-center justify-center font-medium" aria-hidden="true" /* eslint-disable-line design-system/enforce-semantic-colors */>
+        <span className="absolute top-0 -right-0.5 bg-destructive text-destructive-foreground text-xs px-1.5 rounded-full min-w-[20px] h-5 flex items-center justify-center font-medium" aria-hidden="true">
           {unread > 99 ? '99+' : unread}
         </span>
       )}

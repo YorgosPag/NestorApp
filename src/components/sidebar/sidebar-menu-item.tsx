@@ -96,12 +96,12 @@ export function SidebarMenuItem({
               <item.icon
                 className={cn(
                   TRANSITION_PRESETS.STANDARD_ALL,
-                  isActive && "text-blue-600 dark:text-blue-400" // eslint-disable-line design-system/enforce-semantic-colors
+                  isActive && "text-primary"
                 )}
               />
               {hasChildWarning && (
                 <span
-                  className="absolute right-1 top-1 h-2 w-2 rounded-full bg-amber-500" // eslint-disable-line design-system/enforce-semantic-colors
+                  className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[hsl(var(--text-warning))]"
                   aria-hidden
                 />
               )}
@@ -135,7 +135,7 @@ export function SidebarMenuItem({
                   <span>{translateTitle(subItem.title)}</span>
                   {subItem.warningDot && (
                     <span
-                      className="ml-auto h-2 w-2 shrink-0 rounded-full bg-amber-500" // eslint-disable-line design-system/enforce-semantic-colors
+                      className="ml-auto h-2 w-2 shrink-0 rounded-full bg-[hsl(var(--text-warning))]"
                       aria-hidden
                     />
                   )}
@@ -171,7 +171,7 @@ export function SidebarMenuItem({
                   <item.icon
                     className={cn(
                       TRANSITION_PRESETS.STANDARD_ALL,
-                      isActive && "text-blue-600 dark:text-blue-400" // eslint-disable-line design-system/enforce-semantic-colors
+                      isActive && "text-primary"
                     )}
                   />
                 </Link>
@@ -203,14 +203,14 @@ export function SidebarMenuItem({
             <item.icon
               className={cn(
                 TRANSITION_PRESETS.STANDARD_ALL,
-                isActive && "text-blue-600 dark:text-blue-400" // eslint-disable-line design-system/enforce-semantic-colors
+                isActive && "text-primary"
               )}
             />
             <span className="font-medium">{translateTitle(item.title)}</span>
             {item.badge && <SidebarBadge badge={item.badge} />}
             {hasChildWarning && (
               <span
-                className="h-2 w-2 shrink-0 rounded-full bg-amber-500" // eslint-disable-line design-system/enforce-semantic-colors
+                className="h-2 w-2 shrink-0 rounded-full bg-[hsl(var(--text-warning))]"
                 aria-hidden
               />
             )}
@@ -243,7 +243,7 @@ export function SidebarMenuItem({
                       <span>{translateTitle(subItem.title)}</span>
                       {subItem.warningDot && (
                         <span
-                          className="ml-auto h-2 w-2 shrink-0 rounded-full bg-amber-500" // eslint-disable-line design-system/enforce-semantic-colors
+                          className="ml-auto h-2 w-2 shrink-0 rounded-full bg-[hsl(var(--text-warning))]"
                           aria-hidden
                         />
                       )}
@@ -271,7 +271,7 @@ export function SidebarMenuItem({
             <item.icon
               className={cn(
                 TRANSITION_PRESETS.STANDARD_ALL,
-                isActive && "text-blue-600 dark:text-blue-400" // eslint-disable-line design-system/enforce-semantic-colors
+                isActive && "text-primary"
               )}
             />
             <span className="font-medium">{translateTitle(item.title)}</span>

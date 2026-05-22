@@ -14,12 +14,12 @@ import { cn } from '@/lib/design-system';
 
 /** Predefined document text colors using CSS classes from globals.css */
 const DOCUMENT_COLORS = [
-  { className: 'doc-text-red', swatch: 'bg-red-800 dark:bg-red-400', labelKey: 'toolbar.colors.red' },
-  { className: 'doc-text-blue', swatch: 'bg-blue-800 dark:bg-blue-400', labelKey: 'toolbar.colors.blue' },
-  { className: 'doc-text-green', swatch: 'bg-green-800 dark:bg-green-400', labelKey: 'toolbar.colors.green' },
-  { className: 'doc-text-purple', swatch: 'bg-purple-800 dark:bg-purple-400', labelKey: 'toolbar.colors.purple' },
-  { className: 'doc-text-orange', swatch: 'bg-orange-700 dark:bg-orange-400', labelKey: 'toolbar.colors.orange' },
-  { className: 'doc-text-gray', swatch: 'bg-gray-600 dark:bg-gray-400', labelKey: 'toolbar.colors.gray' },
+  { className: 'doc-text-red', swatch: 'bg-destructive', labelKey: 'toolbar.colors.red' },
+  { className: 'doc-text-blue', swatch: 'bg-primary', labelKey: 'toolbar.colors.blue' },
+  { className: 'doc-text-green', swatch: 'bg-green-707', labelKey: 'toolbar.colors.green' },
+  { className: 'doc-text-purple', swatch: 'bg-accent-foreground', labelKey: 'toolbar.colors.purple' },
+  { className: 'doc-text-orange', swatch: 'bg-[hsl(var(--text-warning))]', labelKey: 'toolbar.colors.orange' },
+  { className: 'doc-text-gray', swatch: 'bg-muted-foreground', labelKey: 'toolbar.colors.gray' },
   { className: 'doc-text-reset', swatch: 'bg-foreground', labelKey: 'toolbar.colors.removeColor' },
 ] as const;
 

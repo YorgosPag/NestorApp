@@ -25,7 +25,7 @@ export function Preview({ html, placeholder, minHeight, maxHeight }: PreviewProp
         style={{ minHeight: `${minHeight}px`, maxHeight: `${maxHeight}px` }}
         className={cn("prose prose-sm max-w-none p-4 border rounded-md overflow-y-auto", colors.bg.secondary)}
       >
-        <p className="text-gray-400 italic">{t('richText.previewBrowserOnly')}</p>
+        <p className="text-muted-foreground italic">{t('richText.previewBrowserOnly')}</p>
       </div>
     );
   }
@@ -35,15 +35,15 @@ export function Preview({ html, placeholder, minHeight, maxHeight }: PreviewProp
       className={cn(
         "prose prose-sm max-w-none p-4 border rounded-md overflow-y-auto",
         colors.bg.secondary,
-        "prose-headings:text-gray-900 prose-p:text-gray-700 prose-li:text-gray-700",
-        "prose-strong:text-gray-900 prose-em:text-gray-600"
+        "prose-headings:text-foreground prose-p:text-foreground prose-li:text-foreground",
+        "prose-strong:text-foreground prose-em:text-muted-foreground"
       )}
       style={{ minHeight: `${minHeight}px`, maxHeight: `${maxHeight}px` }}
     >
       {html ? (
         <div dangerouslySetInnerHTML={{ __html: html }} />
       ) : (
-        <p className="text-gray-400 italic">{placeholder}</p>
+        <p className="text-muted-foreground italic">{placeholder}</p>
       )}
     </div>
   );

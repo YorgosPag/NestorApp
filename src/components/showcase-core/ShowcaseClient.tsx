@@ -162,7 +162,7 @@ export function ShowcaseClient<TPayload>({
   if (state.kind === 'expired') {
     return (
       <MessageScreen
-        icon={<Clock className="h-10 w-10 text-amber-500" aria-hidden="true" />}
+        icon={<Clock className="h-10 w-10 text-[hsl(var(--text-warning))]" aria-hidden="true" />}
         title={t(config.stateKeys.expiredTitle)}
         description={t(config.stateKeys.expiredDescription)}
       />
@@ -171,7 +171,7 @@ export function ShowcaseClient<TPayload>({
   if (state.kind === 'notfound') {
     return (
       <MessageScreen
-        icon={<AlertTriangle className="h-10 w-10 text-red-500" aria-hidden="true" />}
+        icon={<AlertTriangle className="h-10 w-10 text-destructive" aria-hidden="true" />}
         title={t(config.stateKeys.notFoundTitle)}
         description={t(config.stateKeys.notFoundDescription)}
       />
@@ -180,7 +180,7 @@ export function ShowcaseClient<TPayload>({
   if (state.kind === 'error') {
     return (
       <MessageScreen
-        icon={<AlertTriangle className="h-10 w-10 text-red-500" aria-hidden="true" />}
+        icon={<AlertTriangle className="h-10 w-10 text-destructive" aria-hidden="true" />}
         title={t(config.stateKeys.errorTitle)}
         description={t(config.stateKeys.errorDescription)}
       />

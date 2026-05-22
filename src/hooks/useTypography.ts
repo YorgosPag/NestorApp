@@ -179,7 +179,7 @@ export interface UseTypographyReturn {
     readonly mobileTitle: string;
     /** "font-mono text-xs" - Code/ID display */
     readonly codeId: string;
-    /** "font-medium text-green-600" - Price display */
+    /** "font-medium text-green-707" - Price display */
     readonly price: string;
     /** "text-sm text-muted-foreground" - Secondary info */
     readonly secondary: string;
@@ -269,7 +269,7 @@ export function useTypography(): UseTypographyReturn {
       containerTitle: h4Token.tailwind + " text-foreground", // "text-xl font-semibold text-foreground" (semantic token + semantic color)
       mobileTitle: "text-sm font-medium truncate flex-1",     // "text-sm font-medium truncate flex-1" (caption + custom)
       codeId: "font-mono text-xs",                           // Version IDs, codes (mono font not in tokens)
-      price: "font-medium text-green-600",                   // Price displays (color will be handled by color tokens)
+      price: "font-medium text-green-707",                   // Price displays (color will be handled by color tokens)
       secondary: "text-sm text-muted-foreground",            // "text-sm text-muted-foreground" (caption + semantic color)
       tertiary: "text-xs text-muted-foreground",             // Tertiary information (xs not in tokens yet)
     },

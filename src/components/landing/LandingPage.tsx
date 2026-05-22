@@ -68,7 +68,7 @@ export function LandingPage() {
                     {t('search.propertyType')}
                   </label>
                   <Select value={searchType} onValueChange={setSearchType}>
-                    <SelectTrigger id="search-type" className={`w-full px-4 py-3 ${colors.bg.secondary} ${colors.text.foreground} ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
+                    <SelectTrigger id="search-type" className={`w-full px-4 py-3 ${colors.bg.secondary} ${colors.text.foreground} ${quick.input} focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer`}>
                       <SelectValue placeholder={t('search.allTypes')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -97,7 +97,7 @@ export function LandingPage() {
                       placeholder={t('search.locationPlaceholder')}
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 ${colors.bg.secondary} ${colors.text.foreground} ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                      className={`w-full pl-10 pr-4 py-3 ${colors.bg.secondary} ${colors.text.foreground} ${quick.input} focus:outline-none focus:ring-2 focus:ring-ring`}
                     />
                   </div>
                 </fieldset>
@@ -108,7 +108,7 @@ export function LandingPage() {
                     {t('search.priceRange')}
                   </label>
                   <Select value={priceRange} onValueChange={setPriceRange}>
-                    <SelectTrigger id="search-price" className={`w-full px-4 py-3 ${colors.bg.secondary} ${colors.text.foreground} ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
+                    <SelectTrigger id="search-price" className={`w-full px-4 py-3 ${colors.bg.secondary} ${colors.text.foreground} ${quick.input} focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer`}>
                       <SelectValue placeholder={t('search.allPrices')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -127,7 +127,7 @@ export function LandingPage() {
                     {t('search.areaRange')}
                   </label>
                   <Select value={areaRange} onValueChange={setAreaRange}>
-                    <SelectTrigger id="search-area" className={`w-full px-4 py-3 ${colors.bg.secondary} ${colors.text.foreground} ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
+                    <SelectTrigger id="search-area" className={`w-full px-4 py-3 ${colors.bg.secondary} ${colors.text.foreground} ${quick.input} focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer`}>
                       <SelectValue placeholder={t('search.allSizes')} />
                     </SelectTrigger>
                     <SelectContent>

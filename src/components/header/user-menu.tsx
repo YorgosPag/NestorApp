@@ -165,7 +165,7 @@ export function UserMenu() {
         <DropdownMenuItem
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className={`text-red-600 dark:text-red-400 ${layout.cursorPointer} focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/50`}
+          className={`text-destructive ${layout.cursorPointer} focus:text-destructive focus:bg-destructive/10`}
         >
           {isLoggingOut ? (
             <Spinner size="small" className={layout.buttonIconSpacing} />

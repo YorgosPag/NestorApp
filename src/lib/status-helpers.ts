@@ -79,11 +79,11 @@ export interface StatusOptions {
 function colorStorage(status: string, colors?: SemanticColors): string {
   if (!colors) {
     switch (status) {
-      case 'available': return 'bg-green-500';
-      case 'sold': return 'bg-blue-500';
-      case 'reserved': return 'bg-yellow-500';
-      case 'maintenance': return 'bg-red-500';
-      default: return 'bg-slate-500';
+      case 'available': return 'bg-[hsl(var(--bg-success))]';
+      case 'sold': return 'bg-[hsl(var(--bg-info))]';
+      case 'reserved': return 'bg-[hsl(var(--bg-warning))]';
+      case 'maintenance': return 'bg-[hsl(var(--bg-error))]';
+      default: return 'bg-muted';
     }
   }
   switch (status) {
@@ -98,12 +98,12 @@ function colorStorage(status: string, colors?: SemanticColors): string {
 function colorObligation(status: string, colors?: SemanticColors): string {
   if (!colors) {
     switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'approved': return 'bg-blue-100 text-blue-800';
-      case 'in_progress': return 'bg-yellow-100 text-yellow-800';
-      case 'pending': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'draft': return 'bg-muted text-foreground';
+      case 'completed': return 'bg-[hsl(var(--bg-success))]/20 text-[hsl(var(--text-success))]';
+      case 'approved': return 'bg-[hsl(var(--bg-info))]/20 text-[hsl(var(--text-info))]';
+      case 'in_progress': return 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]';
+      case 'pending': return 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]';
+      default: return 'bg-muted text-foreground';
     }
   }
   switch (status) {
@@ -119,15 +119,15 @@ function colorObligation(status: string, colors?: SemanticColors): string {
 function colorLead(stage: string, colors?: SemanticColors): string {
   if (!colors) {
     switch (stage) {
-      case 'initial_contact': return 'bg-blue-100 text-blue-800';
-      case 'qualification': return 'bg-yellow-100 text-yellow-800';
-      case 'viewing': return 'bg-purple-100 text-purple-800';
-      case 'proposal': return 'bg-orange-100 text-orange-800';
-      case 'negotiation': return 'bg-teal-100 text-teal-800';
-      case 'contract': return 'bg-indigo-100 text-indigo-800';
-      case 'closed_won': return 'bg-green-100 text-green-800';
-      case 'closed_lost': return 'bg-red-100 text-red-800';
-      default: return 'bg-slate-100 text-slate-800';
+      case 'initial_contact': return 'bg-[hsl(var(--bg-info))]/20 text-[hsl(var(--text-info))]';
+      case 'qualification': return 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]';
+      case 'viewing': return 'bg-accent text-accent-foreground';
+      case 'proposal': return 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]';
+      case 'negotiation': return 'bg-accent text-accent-foreground';
+      case 'contract': return 'bg-accent text-accent-foreground';
+      case 'closed_won': return 'bg-[hsl(var(--bg-success))]/20 text-[hsl(var(--text-success))]';
+      case 'closed_lost': return 'bg-[hsl(var(--bg-error))]/20 text-[hsl(var(--text-error))]';
+      default: return 'bg-muted text-foreground';
     }
   }
   switch (stage) {
@@ -147,21 +147,21 @@ function colorCommunication(status: string): string {
   switch (status) {
     case 'sent':
     case 'delivered':
-    case 'completed': return 'text-green-600';
-    case 'failed': return 'text-red-600';
-    case 'pending': return 'text-yellow-600';
-    default: return 'text-gray-600';
+    case 'completed': return 'text-[hsl(var(--text-success))]';
+    case 'failed': return 'text-destructive';
+    case 'pending': return 'text-[hsl(var(--text-warning))]';
+    default: return 'text-muted-foreground';
   }
 }
 
 function colorBuildingTimeline(status: string, colors?: SemanticColors): string {
   if (!colors) {
     switch (status) {
-      case 'completed': return 'bg-green-500';
-      case 'in-progress': return 'bg-blue-500';
-      case 'delayed': return 'bg-red-500';
+      case 'completed': return 'bg-[hsl(var(--bg-success))]';
+      case 'in-progress': return 'bg-[hsl(var(--bg-info))]';
+      case 'delayed': return 'bg-[hsl(var(--bg-error))]';
       case 'pending':
-      default: return 'bg-slate-300';
+      default: return 'bg-muted';
     }
   }
   switch (status) {
@@ -176,11 +176,11 @@ function colorBuildingTimeline(status: string, colors?: SemanticColors): string 
 function colorBuildingProject(status: string, colors?: SemanticColors): string {
   if (!colors) {
     switch (status) {
-      case 'active': return 'bg-green-500';
+      case 'active': return 'bg-[hsl(var(--bg-success))]';
       case 'construction': return brandClasses.primary.bgDark;
-      case 'planned': return 'bg-yellow-500';
-      case 'completed': return 'bg-slate-600';
-      default: return 'bg-slate-500';
+      case 'planned': return 'bg-[hsl(var(--bg-warning))]';
+      case 'completed': return 'bg-muted';
+      default: return 'bg-muted';
     }
   }
   switch (status) {
@@ -195,12 +195,12 @@ function colorBuildingProject(status: string, colors?: SemanticColors): string {
 function colorProject(status: string, colors?: SemanticColors): string {
   if (!colors) {
     switch (status) {
-      case 'planning': return 'bg-yellow-100 text-yellow-800';
+      case 'planning': return 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]';
       case 'in_progress': return brandClasses.primary.badge;
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'on_hold': return 'bg-slate-100 text-slate-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-slate-100 text-slate-800';
+      case 'completed': return 'bg-[hsl(var(--bg-success))]/20 text-[hsl(var(--text-success))]';
+      case 'on_hold': return 'bg-muted text-foreground';
+      case 'cancelled': return 'bg-[hsl(var(--bg-error))]/20 text-[hsl(var(--text-error))]';
+      default: return 'bg-muted text-foreground';
     }
   }
   switch (status) {

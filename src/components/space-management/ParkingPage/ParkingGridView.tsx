@@ -66,7 +66,7 @@ export function ParkingGridView({
   if (parkingSpots.length === 0) {
     return (
       <div className={`flex flex-col items-center justify-center h-full ${colors.text.muted} p-8`}>
-        <Car className={`${iconSizes.xl} mb-4 text-blue-500`} />
+        <Car className={`${iconSizes.xl} mb-4 text-primary`} />
         <h2 className="text-xl font-semibold">{t('parkings.list.noResults')}</h2>
         <p className="text-sm">{t('parkings.list.noResultsHint')}</p>
       </div>
