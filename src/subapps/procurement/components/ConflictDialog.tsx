@@ -111,14 +111,14 @@ export function ConflictDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="size-5 text-amber-500" aria-hidden="true" />
+            <AlertTriangle className="size-5 text-[hsl(var(--bg-warning))]" aria-hidden="true" />
             {t(titleKey, { defaultValue: '' })}
           </DialogTitle>
           <DialogDescription className="whitespace-pre-line">{body}</DialogDescription>
         </DialogHeader>
 
         {retryError ? (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-destructive">
             {retryError}
           </p>
         ) : null}
