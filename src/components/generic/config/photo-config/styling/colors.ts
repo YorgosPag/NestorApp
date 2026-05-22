@@ -53,7 +53,7 @@ export const usePhotoColors = () => {
  */
 export const PHOTO_BORDERS = {
   /** Dashed borders για empty states */
-  EMPTY_STATE: `border-2 border-dashed border-gray-300`,
+  EMPTY_STATE: `border-2 border-dashed border-border`,
 
   /** Hover border για empty states - Safe fallback */
   EMPTY_HOVER: `hover:border-2 hover:border-primary hover:rounded-md`,
@@ -62,7 +62,7 @@ export const PHOTO_BORDERS = {
   PRIMARY: 'border-primary',
 
   /** Standard border */
-  STANDARD: 'border-gray-200'
+  STANDARD: 'border-border'
 } as const;
 
 /**
@@ -143,17 +143,17 @@ export const PHOTO_COLORS = {
  */
 export const PHOTO_SEMANTIC_COLORS = {
   /** Error states */
-  ERROR: 'text-red-600',
+  ERROR: 'text-destructive',
 
   /** Success states */
-  SUCCESS: 'text-green-600',
+  SUCCESS: 'text-green-707',
 
   /** Loading states */
-  LOADING: 'text-blue-600',
+  LOADING: 'text-primary',
 
   /** Warning states */
-  WARNING: 'text-yellow-600',
+  WARNING: 'text-[hsl(var(--text-warning))]',
 
   /** Info states */
-  INFO: 'text-blue-700'
+  INFO: 'text-primary'
 } as const;

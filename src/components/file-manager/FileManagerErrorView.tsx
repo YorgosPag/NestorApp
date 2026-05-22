@@ -117,7 +117,7 @@ ${error.stack || 'Not available'}
               >
                 {emailSent ? (
                   <>
-                    <Mail className="h-4 w-4 mr-2 text-emerald-600" />
+                    <Mail className="h-4 w-4 mr-2 text-green-707" />
                     {t('errorReporting.sent')}
                   </>
                 ) : (

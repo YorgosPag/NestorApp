@@ -104,7 +104,7 @@ export const STORAGE_PHOTO_CATEGORIES: PhotoCategory[] = [
     id: 'interior',
     label: 'photos.categories.interior',
     icon: 'LayoutDashboard',
-    colorClass: 'text-purple-600',
+    colorClass: 'text-primary',
     filter: (photo) =>
       photo.name.includes('Εσωτερικός') ||
       photo.name.includes('Χρήση') ||
@@ -114,7 +114,7 @@ export const STORAGE_PHOTO_CATEGORIES: PhotoCategory[] = [
     id: 'maintenance',
     label: 'photos.categories.maintenance',
     icon: 'Wrench',
-    colorClass: 'text-orange-600',
+    colorClass: 'text-[hsl(var(--text-warning))]',
     filter: (photo) =>
       photo.name.includes('Συντήρηση') ||
       photo.name.includes('Φόρτωσης') ||
@@ -138,7 +138,7 @@ export const BUILDING_PHOTO_CATEGORIES: PhotoCategory[] = [
     id: 'facade',
     label: 'photos.categories.facade',
     icon: 'Building2',
-    colorClass: 'text-indigo-600',
+    colorClass: 'text-primary',
     filter: (photo) =>
       photo.name.includes('Πρόσοψη') ||
       photo.name.includes('Facade') ||
@@ -148,7 +148,7 @@ export const BUILDING_PHOTO_CATEGORIES: PhotoCategory[] = [
     id: 'common',
     label: 'photos.categories.common',
     icon: 'Users',
-    colorClass: 'text-teal-600',
+    colorClass: 'text-primary',
     filter: (photo) =>
       photo.name.includes('Κοινόχρηστ') ||
       photo.name.includes('Είσοδος') ||
@@ -158,7 +158,7 @@ export const BUILDING_PHOTO_CATEGORIES: PhotoCategory[] = [
     id: 'amenities',
     label: 'photos.categories.amenities',
     icon: 'Sparkles',
-    colorClass: 'text-amber-600',
+    colorClass: 'text-[hsl(var(--text-warning))]',
     filter: (photo) =>
       photo.name.includes('Παροχ') ||
       photo.name.includes('Ανέσ') ||

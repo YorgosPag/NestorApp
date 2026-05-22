@@ -82,16 +82,16 @@ export const PHOTO_LOADING_EFFECTS = {
  */
 export const PHOTO_FOCUS_EFFECTS = {
   /** Standard focus ring */
-  RING: 'focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
+  RING: 'focus:ring-2 focus:ring-primary focus:ring-opacity-50',
 
   /** Outline focus για buttons */
-  OUTLINE: 'focus:outline-none focus:ring-2 focus:ring-blue-500',
+  OUTLINE: 'focus:outline-none focus:ring-2 focus:ring-primary',
 
   /** Subtle focus για form elements */
-  SUBTLE: 'focus:ring-1 focus:ring-blue-300',
+  SUBTLE: 'focus:ring-1 focus:ring-primary/30',
 
   /** High contrast focus για accessibility */
-  HIGH_CONTRAST: 'focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-75'
+  HIGH_CONTRAST: 'focus:ring-2 focus:ring-[hsl(var(--text-warning))] focus:ring-opacity-75'
 } as const;
 
 /**
@@ -105,13 +105,13 @@ export const PHOTO_STATE_EFFECTS = {
   LOADING: 'opacity-75 cursor-wait',
 
   /** Error state styling */
-  ERROR: 'border-red-300 bg-red-50',
+  ERROR: 'border-destructive bg-destructive/10',
 
   /** Success state styling */
-  SUCCESS: 'border-green-300 bg-green-50',
+  SUCCESS: 'border-green-707 bg-[hsl(var(--bg-success))]/10',
 
   /** Selected state styling */
-  SELECTED: 'border-blue-500 bg-blue-50',
+  SELECTED: 'border-primary bg-[hsl(var(--bg-info))]/20',
 
   /** Active state styling */
   ACTIVE: 'shadow-md transform scale-105'

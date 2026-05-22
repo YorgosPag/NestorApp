@@ -77,16 +77,16 @@ export const ENTITY_ICONS: Record<FileEntityType, React.ReactNode> = {
 };
 
 const CATEGORY_ICONS: Partial<Record<FileCategory | 'other', React.ReactNode>> = {
-  photos: <Camera className="h-4 w-4 text-pink-500" />,
-  videos: <Film className="h-4 w-4 text-red-500" />,
-  documents: <FileText className="h-4 w-4 text-blue-500" />,
-  contracts: <FileSignature className="h-4 w-4 text-amber-500" />,
-  floorplans: <MapIcon className="h-4 w-4 text-teal-500" />,
-  other: <File className="h-4 w-4 text-gray-500" />,
+  photos: <Camera className="h-4 w-4 text-primary" />,
+  videos: <Film className="h-4 w-4 text-destructive" />,
+  documents: <FileText className="h-4 w-4 text-primary" />,
+  contracts: <FileSignature className="h-4 w-4 text-[hsl(var(--text-warning))]" />,
+  floorplans: <MapIcon className="h-4 w-4 text-primary" />,
+  other: <File className="h-4 w-4 text-muted-foreground" />,
 };
 
 export function getCategoryIcon(category: string): React.ReactNode {
-  return CATEGORY_ICONS[category as FileCategory] || CATEGORY_ICONS.other || <File className="h-4 w-4 text-gray-500" />;
+  return CATEGORY_ICONS[category as FileCategory] || CATEGORY_ICONS.other || <File className="h-4 w-4 text-muted-foreground" />;
 }
 
 export function getFileIcon(file: FileRecord): React.ReactNode {
@@ -171,7 +171,7 @@ function buildFloorHierarchyNodes(
         id: `fp-floor-${floorId}`,
         label: floorLabel,
         type: 'folder' as const,
-        icon: <MapIcon className="h-4 w-4 text-teal-500" />,
+        icon: <MapIcon className="h-4 w-4 text-primary" />,
         path: [companyName, projLabel, bldLabel, floorLabel],
         children: fFiles.map(file => ({
           id: file.id,
@@ -267,7 +267,7 @@ export function buildTreeByEntity(
           id: `${entityType}-${entityId}-${key}`,
           label: folderLabel,
           type: 'folder' as const,
-          icon: bucket.meta ? getCategoryIcon(bucket.meta.group) : (CATEGORY_ICONS.other || <File className="h-4 w-4 text-gray-500" />),
+          icon: bucket.meta ? getCategoryIcon(bucket.meta.group) : (CATEGORY_ICONS.other || <File className="h-4 w-4 text-muted-foreground" />),
           path: [companyName, entityType, entityId, key],
           children: bucket.files.map(file => ({
             id: file.id,
@@ -381,7 +381,7 @@ export function buildTreeByCategory(
         id: `category-${key}`,
         label: folderLabel,
         type: 'folder' as const,
-        icon: meta ? getCategoryIcon(meta.group) : (CATEGORY_ICONS.other || <File className="h-4 w-4 text-gray-500" />),
+        icon: meta ? getCategoryIcon(meta.group) : (CATEGORY_ICONS.other || <File className="h-4 w-4 text-muted-foreground" />),
         path: [companyName, key],
         children: entityFolders,
       });
