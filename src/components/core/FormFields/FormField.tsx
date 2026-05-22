@@ -28,115 +28,18 @@ import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { formatCurrency, formatNumber, formatPercentage } from '@/lib/intl-utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
+import type {
+  FormFieldValue,
+  UnifiedFormFieldProps,
+} from './FormField.types';
 
-// ============================================================================
-// 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
-// ============================================================================
-
-/** Form field value type */
-export type FormFieldValue = string | number | boolean | null | undefined;
-
-/** Form field validation custom function type */
-export type ValidationFunction = (value: FormFieldValue) => string | undefined;
-
-// Types για το unified form field system
-export interface SelectOption {
-  value: string;
-  label: string;
-  disabled?: boolean;
-  description?: string;
-}
-
-export interface FormFieldValidation {
-  required?: boolean;
-  pattern?: RegExp;
-  minLength?: number;
-  maxLength?: number;
-  min?: number;
-  max?: number;
-  custom?: ValidationFunction;
-}
-
-export interface UnifiedFormFieldProps {
-  // Basic props
-  id: string;
-  name?: string;
-  type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'search' | 
-         'textarea' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'file';
-  
-  // Value and change handling
-  value?: FormFieldValue;
-  onChange?: (value: FormFieldValue) => void;
-  onBlur?: () => void;
-  onFocus?: () => void;
-  
-  // Label and description
-  label?: string;
-  description?: string;
-  placeholder?: string;
-  helpText?: string;
-  tooltip?: string;
-  
-  // Validation and errors
-  error?: string;
-  validation?: FormFieldValidation;
-  showValidationIcon?: boolean;
-  
-  // Layout options
-  labelPosition?: 'top' | 'left' | 'right' | 'floating';
-  size?: 'sm' | 'md' | 'lg';
-  variant?: 'default' | 'minimal' | 'bordered';
-  
-  // State
-  disabled?: boolean;
-  readOnly?: boolean;
-  loading?: boolean;
-  required?: boolean;
-  
-  // Select/Multi-select specific
-  options?: SelectOption[];
-  multiple?: boolean;
-  searchable?: boolean;
-  
-  // Textarea specific
-  rows?: number;
-  resize?: boolean;
-  
-  // Number specific
-  min?: number;
-  max?: number;
-  step?: number;
-  
-  // Formatting options
-  currency?: boolean;
-  percentage?: boolean;
-  thousandsSeparator?: boolean;
-  
-  // Unit display
-  unit?: string;
-  unitPosition?: 'left' | 'right';
-  
-  // Actions
-  actions?: Array<{
-    icon: React.ComponentType<{ className?: string }>;
-    label: string;
-    onClick: () => void;
-  }>;
-  
-  // Style overrides
-  className?: string;
-  inputClassName?: string;
-  labelClassName?: string;
-
-  // 🏢 ENTERPRISE: Additional props for HTML input compatibility
-  // Note: Removed index signature to avoid TypeScript unknown inference issues
-  autoComplete?: string;
-  autoFocus?: boolean;
-  tabIndex?: number;
-  'aria-label'?: string;
-  'aria-describedby'?: string;
-  'data-testid'?: string;
-}
+export type {
+  FormFieldValue,
+  ValidationFunction,
+  SelectOption,
+  FormFieldValidation,
+  UnifiedFormFieldProps,
+} from './FormField.types';
 
 export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>(({
   id,
@@ -243,8 +146,8 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
     const baseClassName = cn(
       sizeVariants[size],
       {
-        [`${getStatusBorder('error')} focus:${getStatusBorder('error').replace('border-', 'border-')} focus:ring-red-500`]: hasError,
-        [`${getStatusBorder('success')} focus:${getStatusBorder('success').replace('border-', 'border-')} focus:ring-green-500`]: isValid,
+        [`${getStatusBorder('error')} focus:${getStatusBorder('error').replace('border-', 'border-')} focus:ring-destructive`]: hasError,
+        [`${getStatusBorder('success')} focus:${getStatusBorder('success').replace('border-', 'border-')} focus:ring-ring`]: isValid,
         'cursor-not-allowed opacity-50': disabled,
         'bg-muted': readOnly,
       },
@@ -406,14 +309,14 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
           className={cn(
             'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
             {
-              'text-red-600': hasError,
-              'text-green-600': isValid,
+              'text-destructive': hasError,
+              'text-green-707': isValid,
             },
             labelClassName
           )}
         >
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className="text-destructive ml-1">*</span>}
         </Label>
         
         {tooltip && (
@@ -488,7 +391,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
           
           {/* Error message */}
           {error && (
-            <p className="text-sm text-red-600 flex items-center gap-1">
+            <p className="text-sm text-destructive flex items-center gap-1">
               {showValidationIcon && <span>⚠️</span>}
               {error}
             </p>
