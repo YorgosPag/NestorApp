@@ -155,7 +155,8 @@
       "lighting": "Φωτισμός",
       "quality": "Ποιότητα",
       "sections": "Τομή",
-      "accessibility": "Προσβασιμότητα"
+      "accessibility": "Προσβασιμότητα",
+      "dimensions3d": "Διαστάσεις"
     },
     "buildings": {
       "label": "Κτίριο",
@@ -414,10 +415,91 @@
       "focusNext": "Επόμενο αντικείμενο",
       "focusPrev": "Προηγούμενο αντικείμενο",
       "focusSelect": "Επιλογή εστιασμένου",
-      "focusClear": "Καθαρισμός εστίασης"
+      "focusClear": "Καθαρισμός εστίασης",
+      "dim3dToggle": "Διαστάσεις 3D"
     },
     "modeSwitch": {
       "toast": "Αλλαγή σε 2D για συντόμευση {shortcut}"
+    }
+  },
+  "dimensions": {
+    "title": "Διαστάσεις 3D",
+    "toolbar": {
+      "aligned": "Ευθυγραμμισμένη",
+      "linear": "Κατά άξονα",
+      "radial": "Ακτινική",
+      "angular": "Γωνιακή",
+      "cancel": "Άκυρο",
+      "commit": "Ενεργοποίηση"
+    },
+    "mode": {
+      "aligned": {
+        "label": "Ευθυγραμμισμένη",
+        "tooltip": "Πραγματική απόσταση παράλληλη στο τμήμα"
+      },
+      "linear": {
+        "label": "Κατά άξονα",
+        "tooltip": "Απόσταση πάνω σε άξονα Χ/Υ/Ζ ή τοπικό"
+      },
+      "radial": {
+        "label": "Ακτινική",
+        "tooltip": "Ακτίνα ή διάμετρος καμπύλου στοιχείου"
+      },
+      "angular": {
+        "label": "Γωνιακή",
+        "tooltip": "Γωνία μεταξύ δύο ακμών ή τριών σημείων"
+      }
+    },
+    "placement": {
+      "linearAxis": {
+        "X": "Άξονας Χ",
+        "Y": "Άξονας Υ",
+        "Z": "Άξονας Ζ",
+        "entityLocal": "Τοπικός άξονας στοιχείου"
+      }
+    },
+    "textPlane": {
+      "billboard": "Πάντα προς τον χρήστη",
+      "worldLocked": "Κλείδωμα σε επίπεδο μέτρησης",
+      "toggleLabel": "Επίπεδο κειμένου"
+    },
+    "units": {
+      "mm": "χιλιοστά",
+      "m": "μέτρα"
+    },
+    "fields": {
+      "value": "Τιμή",
+      "offset": "Μετατόπιση κειμένου",
+      "precision": "Δεκαδικά",
+      "unit": "Μονάδα",
+      "createdAt": "Δημιουργήθηκε",
+      "createdBy": "Από"
+    },
+    "actions": {
+      "edit": "Επεξεργασία",
+      "delete": "Διαγραφή",
+      "duplicate": "Διπλασιασμός",
+      "convertTo2D": "Μετατροπή σε 2D"
+    },
+    "settings": {
+      "onEntityDelete": {
+        "orphan": "Διατήρηση ως ορφανή",
+        "delete": "Διαγραφή"
+      },
+      "defaultUnit": "Προεπιλεγμένη μονάδα",
+      "defaultPrecision": "Προεπιλεγμένα δεκαδικά"
+    },
+    "snap": {
+      "endpoint": "Κορυφή",
+      "midpoint": "Μέσο",
+      "faceCenter": "Κέντρο επιφάνειας",
+      "guide": "Οδηγός",
+      "inferred": "Αυτόματος οδηγός"
+    },
+    "errors": {
+      "cannotMeasureSamePoint": "Δεν επιτρέπεται μέτρηση ίδιου σημείου",
+      "invalidAngularPoints": "Μη έγκυρα σημεία γωνίας",
+      "permissionDenied": "Δεν επιτρέπεται η ενέργεια"
     }
   },
   "accessibility": {

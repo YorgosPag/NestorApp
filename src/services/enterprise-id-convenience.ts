@@ -241,6 +241,9 @@ export const generateBimRenderId = () => enterpriseIdService.generateBimRenderId
 // DXF 3D BIM Viewer — User Preferences (ADR-366 Phase 4.3)
 export const generateBim3DPrefId = (userId: string) => enterpriseIdService.generateBim3DPrefId(userId);
 
+// DXF 3D BIM Viewer — Manual 3D Dimensions (ADR-366 Phase 9 / C.3)
+export const generateBim3DDimensionId = () => enterpriseIdService.generateBim3DDimensionId();
+
 // DXF BIM Drawing Mode (ADR-363)
 export const generateWallId = () => enterpriseIdService.generateWallId();
 export const generateOpeningId = () => enterpriseIdService.generateOpeningId();

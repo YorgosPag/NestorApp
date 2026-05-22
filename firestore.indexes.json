@@ -4307,6 +4307,36 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "position", "order": "ASCENDING" }
       ]
+    },
+
+    {
+      "collectionGroup": "bim_dimensions_3d",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "projectId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+
+    {
+      "collectionGroup": "bim_dimensions_3d",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "projectId", "order": "ASCENDING" },
+        { "fieldPath": "mode", "order": "ASCENDING" }
+      ]
+    },
+
+    {
+      "collectionGroup": "bim_dimensions_3d",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "projectId", "order": "ASCENDING" },
+        { "fieldPath": "anchor.hostEntityIds", "arrayConfig": "CONTAINS" }
+      ]
     }
   ],
   "fieldOverrides": []

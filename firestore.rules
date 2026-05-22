@@ -3762,6 +3762,65 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📏 BIM_DIMENSIONS_3D COLLECTION - ADR-366 Phase 9 / C.3
+    // =========================================================================
+    // Manual 3D dimensions per project. Company-scoped via companyId.
+    // 4 placement modes (aligned/linear/radial/angular). Anchored to BIM
+    // entities with auto-orphan-convert on entity delete.
+    match /bim_dimensions_3d/{dimensionId} {
+
+      // 📖 READ: Tenant-scoped — only users from the dimension's company
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
+
+      // ✍️ CREATE: companyId must match user's claim, required fields present
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.keys().hasAll(
+                         ['id', 'projectId', 'companyId', 'mode',
+                          'anchor', 'textOffset', 'textPlane',
+                          'value', 'unit', 'precision',
+                          'createdBy', 'createdAt', 'updatedAt']
+                       )
+                    && request.resource.data.id is string
+                    && request.resource.data.projectId is string
+                    && request.resource.data.companyId is string
+                    && request.resource.data.mode in ['aligned', 'linear', 'radial', 'angular']
+                    && request.resource.data.textPlane in ['billboard', 'world']
+                    && request.resource.data.unit in ['mm', 'm']
+                    && request.resource.data.precision is int
+                    && request.resource.data.precision >= 0
+                    && request.resource.data.precision <= 6
+                    && (
+                         isSuperAdminOnly()
+                         || request.resource.data.companyId == getUserCompanyId()
+                       );
+
+      // 📝 UPDATE: companyId immutable, tenant-locked
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         isSuperAdminOnly()
+                         || belongsToCompany(resource.data.companyId)
+                       )
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.projectId == resource.data.projectId
+                    && request.resource.data.id == resource.data.id;
+
+      // 🗑️ DELETE: tenant-locked
+      allow delete: if isAuthenticated()
+                    && resource != null
+                    && (
+                         isSuperAdminOnly()
+                         || belongsToCompany(resource.data.companyId)
+                       );
+    }
+
+    // =========================================================================
     // 🔒 HELPER FUNCTIONS - VALIDATION & SECURITY
     // =========================================================================
 

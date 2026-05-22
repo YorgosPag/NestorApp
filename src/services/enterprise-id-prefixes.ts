@@ -257,6 +257,9 @@ export const ENTERPRISE_ID_PREFIXES = {
   // DXF 3D BIM Viewer — User Preferences (ADR-366 Phase 4.3)
   BIM_3D_PREF: 'b3dpref',      // bim_3d_preferences collection — per-user 3D viewport UI preferences
 
+  // DXF 3D BIM Viewer — Manual 3D Dimensions (ADR-366 Phase 9 / C.3)
+  BIM_DIMENSION_3D: 'dim3d',   // bim_dimensions_3d collection — manual 3D dimensions (4 modes: aligned/linear/radial/angular)
+
   // Optimistic & Temporary
   OPTIMISTIC: 'opt',
   TEMP: 'tmp',

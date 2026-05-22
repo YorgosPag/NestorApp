@@ -36,7 +36,8 @@ export type AuditEntityType =
   | 'slab-opening'
   | 'column'
   | 'beam'
-  | 'performance_diagnostic';
+  | 'performance_diagnostic'
+  | 'bim_dimension_3d';
 
 /** Actions that can be recorded in the audit trail */
 export type AuditAction =
@@ -54,7 +55,8 @@ export type AuditAction =
   | 'vendor_notified'
   | 'invoice_created'
   | 'document_added'
-  | 'document_removed';
+  | 'document_removed'
+  | 'orphaned';
 
 // ============================================================================
 // FIELD-LEVEL DIFF

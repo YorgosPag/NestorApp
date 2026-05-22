@@ -316,6 +316,9 @@ export class EnterpriseIdService {
     return `${P.BIM_3D_PREF}_${userId}`;
   }
 
+  // DXF 3D BIM Viewer — Manual 3D Dimensions (ADR-366 Phase 9 / C.3)
+  generateBim3DDimensionId(): string { return this.generateId(P.BIM_DIMENSION_3D).id; }
+
   // DXF BIM Drawing Mode (ADR-363)
   generateWallId(): string { return this.generateId(P.WALL).id; }
   generateOpeningId(): string { return this.generateId(P.OPENING).id; }

@@ -60,6 +60,10 @@ export const ACTION_FOCUS_PREV_3D = 'view3d:focus-prev' as const;
 export const ACTION_FOCUS_SELECT_3D = 'view3d:focus-select' as const;
 export const ACTION_FOCUS_CLEAR_3D = 'view3d:focus-clear' as const;
 
+// ADR-366 Phase 9 / C.3.Q1 — Manual 3D dimensions tool activation (D3D = Ctrl+Shift+D).
+export const ACTION_DIM3D_TOGGLE = 'view3d:dim3d-toggle' as const;
+export const ACTION_DIM3D_CYCLE_MODE = 'view3d:dim3d-cycle-mode' as const;
+
 /** Returns the canonical action id for a given view. */
 export function view3dAction(view: CanonicalViewId): View3DAction {
   return `view3d:${view}`;
@@ -371,6 +375,23 @@ export const FOCUS_3D_SHORTCUTS: Record<string, ShortcutDefinition> = {
 } as const;
 
 // ============================================================================
+// 📏 DIMENSION TOOL SHORTCUTS — ADR-366 Phase 9 / C.3.Q1
+// ============================================================================
+// Mirror ADR-362 2D dim activation. D3D = Ctrl+Shift+D (does not conflict with
+// browser Ctrl+D bookmark when combined with Shift). Tab cycles mode mid-tool.
+
+export const DIM3D_SHORTCUTS: Record<string, ShortcutDefinition> = {
+  toggleTool: {
+    key: 'D',
+    modifier: 'ctrlShift',
+    descriptionKey: 'shortcuts.view3d.dim3dToggle',
+    action: ACTION_DIM3D_TOGGLE,
+    category: 'view3d',
+    mode: '3D-only',
+  },
+} as const;
+
+// ============================================================================
 // 🔗 COMBINED MAP + DERIVED INDICES
 // ============================================================================
 
@@ -379,6 +400,7 @@ export const ALL_VIEW_3D_SHORTCUTS = {
   ...VIEW_3D_LETTER_SHORTCUTS,
   ...PAN_3D_SHORTCUTS,
   ...FOCUS_3D_SHORTCUTS,
+  ...DIM3D_SHORTCUTS,
   fitFrame: VIEW_3D_FIT_SHORTCUT,
   homeKey: VIEW_3D_HOME_SHORTCUT,
 } as const;

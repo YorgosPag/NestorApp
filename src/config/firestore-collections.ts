@@ -379,6 +379,11 @@ export const COLLECTIONS = {
   // 🎛️ BIM 3D PREFERENCES — ADR-366 Phase 4.3 (per-user viewport UI preferences)
   /** Per-user 3D BIM viewport preferences (compass ring, etc.). IDs via b3dpref_* prefix. Owner-only. */
   BIM_3D_PREFERENCES: process.env.NEXT_PUBLIC_BIM_3D_PREFERENCES_COLLECTION || 'bim_3d_preferences',
+
+  // 📏 BIM DIMENSIONS 3D — ADR-366 Phase 9 / C.3 (manual 3D dimensions)
+  /** Manual 3D dimensions per project (aligned/linear/radial/angular). Company-scoped via companyId. IDs via dim3d_* prefix. */
+  BIM_DIMENSIONS_3D:
+    process.env.NEXT_PUBLIC_BIM_DIMENSIONS_3D_COLLECTION || 'bim_dimensions_3d',
 } as const;
 
 // ============================================================================

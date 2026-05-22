@@ -155,7 +155,8 @@
       "lighting": "Lighting",
       "quality": "Quality",
       "sections": "Section",
-      "accessibility": "Accessibility"
+      "accessibility": "Accessibility",
+      "dimensions3d": "Dimensions"
     },
     "buildings": {
       "label": "Building",
@@ -414,10 +415,91 @@
       "focusNext": "Next entity",
       "focusPrev": "Previous entity",
       "focusSelect": "Select focused",
-      "focusClear": "Clear focus"
+      "focusClear": "Clear focus",
+      "dim3dToggle": "3D Dimensions"
     },
     "modeSwitch": {
       "toast": "Switched to 2D for shortcut {shortcut}"
+    }
+  },
+  "dimensions": {
+    "title": "3D Dimensions",
+    "toolbar": {
+      "aligned": "Aligned",
+      "linear": "Linear",
+      "radial": "Radial",
+      "angular": "Angular",
+      "cancel": "Cancel",
+      "commit": "Activate"
+    },
+    "mode": {
+      "aligned": {
+        "label": "Aligned",
+        "tooltip": "True distance parallel to the measured segment"
+      },
+      "linear": {
+        "label": "Linear",
+        "tooltip": "Distance along X/Y/Z world or entity-local axis"
+      },
+      "radial": {
+        "label": "Radial",
+        "tooltip": "Radius / diameter of a round element"
+      },
+      "angular": {
+        "label": "Angular",
+        "tooltip": "Angle between two edges or three points"
+      }
+    },
+    "placement": {
+      "linearAxis": {
+        "X": "X axis",
+        "Y": "Y axis",
+        "Z": "Z axis",
+        "entityLocal": "Entity local axis"
+      }
+    },
+    "textPlane": {
+      "billboard": "Always face camera",
+      "worldLocked": "Lock to measurement plane",
+      "toggleLabel": "Text plane"
+    },
+    "units": {
+      "mm": "millimeters",
+      "m": "meters"
+    },
+    "fields": {
+      "value": "Value",
+      "offset": "Text offset",
+      "precision": "Decimals",
+      "unit": "Unit",
+      "createdAt": "Created",
+      "createdBy": "By"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "duplicate": "Duplicate",
+      "convertTo2D": "Convert to 2D"
+    },
+    "settings": {
+      "onEntityDelete": {
+        "orphan": "Keep as orphan",
+        "delete": "Delete"
+      },
+      "defaultUnit": "Default unit",
+      "defaultPrecision": "Default decimals"
+    },
+    "snap": {
+      "endpoint": "Endpoint",
+      "midpoint": "Midpoint",
+      "faceCenter": "Face center",
+      "guide": "Guide",
+      "inferred": "Inferred guide"
+    },
+    "errors": {
+      "cannotMeasureSamePoint": "Cannot measure the same point",
+      "invalidAngularPoints": "Invalid angular points",
+      "permissionDenied": "Action not permitted"
     }
   },
   "accessibility": {

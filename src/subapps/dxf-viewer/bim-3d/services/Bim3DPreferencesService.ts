@@ -27,17 +27,35 @@ const ACCESSIBILITY_DEFAULTS: AccessibilityPrefs = {
   announcementsEnabled: true,
 };
 
+/** ADR-366 Phase 9 / C.3 — Manual 3D dimensions preferences. */
+export interface Dimensions3DPrefs {
+  /** Behavior when a host entity is deleted (C.3.Q6). */
+  readonly onEntityDelete: 'orphan' | 'delete';
+  /** Default unit for new dimensions. */
+  readonly defaultUnit: 'mm' | 'm';
+  /** Default decimal precision for new dimensions. */
+  readonly defaultPrecision: number;
+}
+
+const DIMENSIONS_3D_DEFAULTS: Dimensions3DPrefs = {
+  onEntityDelete: 'orphan',
+  defaultUnit: 'm',
+  defaultPrecision: 2,
+};
+
 export interface Bim3DPrefs {
   readonly userId: string;
   readonly compassRingVisible: boolean;
   readonly entityCardTabs?: Readonly<Record<string, EntityCardTabPrefs>>;
   readonly accessibility?: AccessibilityPrefs;
+  readonly dimensions?: Dimensions3DPrefs;
   readonly updatedAt: unknown;
 }
 
 const DEFAULTS: Omit<Bim3DPrefs, 'userId' | 'updatedAt'> = {
   compassRingVisible: true,
   accessibility: ACCESSIBILITY_DEFAULTS,
+  dimensions: DIMENSIONS_3D_DEFAULTS,
 };
 
 export const Bim3DPreferencesService = {

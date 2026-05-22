@@ -1,7 +1,7 @@
 # Pending Ratchet Work — Live Checklist
 
 **STATUS: ACTIVE**
-**Last updated:** 2026-05-22 (ADR-365 Phase 6 DONE — Dashboard + Admin + CRM + Header + Notifications 11 files, −137 violations, baseline 2,530/354)
+**Last updated:** 2026-05-22 (ADR-366 Phase 9 C.3 INFRA CLOSURE — Firestore rules/indexes + permissions + audit types staged. 13 dim3d modules + 3 tests committed)
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
 **Purpose:** Agent-facing live checklist. Se STATUS = ALL_DONE → salta il resto. Se STATUS = ACTIVE → leggi e ricorda a Giorgio.
 

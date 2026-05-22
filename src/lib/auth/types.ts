@@ -161,6 +161,12 @@ export const PERMISSIONS = {
   "orders:orders:view": true,
   "deliveries:deliveries:view": true,
   "specs:specs:view": true,
+
+  // BIM 3D Dimensions (ADR-366 Phase 9 / C.3) — manual 3D dimensions tool
+  "bim_dimensions_3d:dimensions:create": true,
+  "bim_dimensions_3d:dimensions:read": true,
+  "bim_dimensions_3d:dimensions:update": true,
+  "bim_dimensions_3d:dimensions:delete": true,
 } as const;
 
 /** Permission ID derived from registry. */

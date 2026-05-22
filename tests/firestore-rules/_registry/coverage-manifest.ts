@@ -1176,6 +1176,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'bim_settings',               // lines 3725-3737 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
   // — BIM 3D Preferences (ADR-366 Phase 4.3, 2026-05-21) —
   'bim_3d_preferences',         // lines 3744-3762 — owner-only (docId == b3dpref_${auth.uid}); full matrix later
+  // — BIM 3D Dimensions (ADR-366 Phase 9 C.3, 2026-05-22) —
+  'bim_dimensions_3d',          // lines 3770-3821 — tenant-scoped CRUD (companyId+projectId immutable, mode/unit/precision validation); full matrix later
   // — Construction Alerts (ADR-266 §5.8 Phase D.3, 2026-05-21) —
   'construction_alerts',        // tenant-scoped read + server-only create + dismiss-only update; full matrix later
 ] as const;
