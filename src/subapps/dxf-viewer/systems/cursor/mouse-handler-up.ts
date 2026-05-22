@@ -24,6 +24,9 @@ import type { Entity } from '../../types/entities';
 // Round 1+2 gated snap only in the downstream `useDrawingHandlers.onDrawingPoint`,
 // but the click world point was already snapped here BEFORE reaching that gate.
 import { isDimLineRefPhase } from '../../hooks/dimensions/dim-skip-snap';
+import { getActiveDragGrip } from './GripDragStore';
+import { findWallFaceCornerSnap } from './wall-face-corner-snap';
+import { isWallEntity } from '../../types/entities';
 
 interface MouseUpHandlerDeps {
   props: CentralizedMouseHandlersProps;
@@ -75,6 +78,29 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
           const snapResult = findSnapPoint(upWorldPos.x, upWorldPos.y);
           if (snapResult && snapResult.found && snapResult.snappedPoint) {
             upWorldPos = snapResult.snappedPoint;
+          }
+
+          // ADR-371 extension — Wall Face Corner Projection Snap commit
+          // Apply the same face corner projection on mouseup so the committed
+          // entity position matches what was shown during drag preview.
+          const activeDragGrip = getActiveDragGrip();
+          if (
+            activeDragGrip &&
+            scene &&
+            (activeDragGrip.gripKind === 'wall-start' || activeDragGrip.gripKind === 'wall-end')
+          ) {
+            const draggedEntity = scene.entities?.find(en => en.id === activeDragGrip.entityId);
+            if (draggedEntity && isWallEntity(draggedEntity)) {
+              const faceSnap = findWallFaceCornerSnap(
+                draggedEntity,
+                activeDragGrip.gripKind as 'wall-start' | 'wall-end',
+                upWorldPos,
+                findSnapPoint,
+              );
+              if (faceSnap) {
+                upWorldPos = faceSnap.adjustedAxisPos;
+              }
+            }
           }
         }
 

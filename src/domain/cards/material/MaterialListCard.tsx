@@ -60,7 +60,7 @@ export function MaterialListCard({
   return (
     <ListCard
       customIcon={Layers}
-      customIconColor="text-yellow-600"
+      customIconColor="text-[hsl(var(--text-warning))]"
       title={material.name}
       subtitle={subtitle}
       badges={badges}

@@ -122,8 +122,8 @@ export const TextTemplateManager: React.FC<ManagerProps> = ({ previewLocale = 'e
 
   return (
     <TooltipProvider delayDuration={300}>
-    <article aria-label={t('textTemplates:manager.ariaLabel')} className="tt-manager flex flex-col h-full bg-white dark:bg-zinc-950">
-      <header className="flex items-center justify-between px-3 py-2 border-b border-zinc-200 dark:border-zinc-800">
+    <article aria-label={t('textTemplates:manager.ariaLabel')} className="tt-manager flex flex-col h-full bg-background">
+      <header className="flex items-center justify-between px-3 py-2 border-b border-border">
         <h2 className="text-sm font-semibold">{t('textTemplates:manager.title')}</h2>
         <span className="flex items-center gap-2">
           <Tooltip>
@@ -144,7 +144,7 @@ export const TextTemplateManager: React.FC<ManagerProps> = ({ previewLocale = 'e
                 type="button"
                 disabled={!capabilities.canCreate}
                 onClick={openCreate}
-                className="text-xs px-2 py-1 rounded bg-blue-600 text-white disabled:opacity-50"
+                className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground disabled:opacity-50"
               >
                 {t('textTemplates:manager.newButton')}
               </button>
@@ -159,7 +159,7 @@ export const TextTemplateManager: React.FC<ManagerProps> = ({ previewLocale = 'e
       </header>
 
       {error ? (
-        <p role="alert" className="text-xs text-red-700 px-3 py-1">
+        <p role="alert" className="text-xs text-destructive px-3 py-1">
           {error}
         </p>
       ) : null}
@@ -185,13 +185,13 @@ export const TextTemplateManager: React.FC<ManagerProps> = ({ previewLocale = 'e
           className="flex-1 min-w-0 p-3 flex flex-col gap-2"
         >
           <header className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {selected
                 ? selected.name
                 : t('textTemplates:manager.previewEmptyTitle')}
             </h3>
             {selected ? (
-              <span className="text-[11px] text-zinc-500">
+              <span className="text-[11px] text-muted-foreground">
                 {t(`textTemplates:manager.category.${selected.category}`)} ·{' '}
                 {t('textTemplates:manager.placeholdersCount', {
                   count: selected.placeholders.length,
@@ -199,7 +199,7 @@ export const TextTemplateManager: React.FC<ManagerProps> = ({ previewLocale = 'e
               </span>
             ) : null}
           </header>
-          <div className="flex-1 min-h-0 border border-zinc-200 dark:border-zinc-800 rounded">
+          <div className="flex-1 min-h-0 border border-border rounded">
             <TextTemplatePreview
               template={selected}
               scope={scope}

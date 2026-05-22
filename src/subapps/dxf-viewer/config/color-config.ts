@@ -4,6 +4,42 @@
  * Eliminates hardcoded color values and ensures consistency
  */
 
+// ============================================================================
+// GRIP COLOR SSOT — single source for all 6 consumers
+// Change here → changes everywhere (constants.ts, panel-tokens.ts,
+// FACTORY_DEFAULTS.ts, types/gripSettings.ts, stores/GripStyleStore.ts, CAD_UI_COLORS)
+// ============================================================================
+export const GRIP_COLD_COLOR = '#FF6600' as const;  // TEST orange — will become #007FFF
+export const GRIP_WARM_COLOR = '#FF7F00' as const;  // Orange — hover
+export const GRIP_HOT_COLOR  = '#FF0000' as const;  // Red    — selected/active
+export const GRIP_CONTOUR_COLOR = '#000000' as const; // Black — outline
+
+/**
+ * Resolved grip colors — all fields are non-null strings, ready for rendering.
+ * Consumers that received GripColors (with nullable cold) should call
+ * resolveGripColors() ONCE and then use this type exclusively.
+ */
+export interface ResolvedGripColors {
+  cold: string;
+  warm: string;
+  hot: string;
+  contour: string;
+}
+
+/**
+ * Single resolution point for the grip cold null sentinel.
+ * null cold means "use GRIP_COLD_COLOR SSoT" (Revit-style pattern).
+ * Call this ONCE at the boundary between stored settings and runtime use.
+ */
+export function resolveGripColors(colors: {
+  cold: string | null;
+  warm: string;
+  hot: string;
+  contour: string;
+}): ResolvedGripColors {
+  return { ...colors, cold: colors.cold ?? GRIP_COLD_COLOR };
+}
+
 // Core UI Colors (Base)
 const UI_COLORS_BASE = {
   // Basic colors
@@ -227,7 +263,7 @@ const UI_COLORS_BASE = {
   OVERLAY_HOVER: '#ffff00',     // Yellow for hover
   OVERLAY_SNAP_POINT: '#ff00ff', // Magenta for snap points
   OVERLAY_GRIP_HOT: '#ff0000',  // Red for hot grips
-  OVERLAY_GRIP_COLD: '#0000ff', // Blue for cold grips
+  OVERLAY_GRIP_COLD: GRIP_COLD_COLOR, // SSOT → GRIP_COLD_COLOR
   OVERLAY_AXIS_X: '#ff0000',    // Red for X axis
   OVERLAY_AXIS_Y: '#00ff00',    // Green for Y axis
   OVERLAY_ORIGIN: '#0000ff',    // Blue for origin
@@ -360,15 +396,14 @@ export const CAD_UI_COLORS = {
   // Grips configuration (for vertices, midpoints, etc.)
   grips: {
     size_px: 6,
-    color_unselected: '#0080ff', // Blue for unselected grips
-    color_selected: '#ff0000',   // Red for selected grips
-    color_hot: '#ff8000',        // Orange for hovered grips (hot)
+    color_unselected: GRIP_COLD_COLOR,  // SSOT → GRIP_COLD_COLOR
+    color_selected: GRIP_HOT_COLOR,    // SSOT → GRIP_HOT_COLOR
+    color_hot: GRIP_WARM_COLOR,        // SSOT → GRIP_WARM_COLOR (hover)
     outline_color: '#ffffff',
     outline_width: 1,
-    // ✅ AutoCAD standard grip colors for consistency with international standards
-    cold: '#FF0000',     // 🧪 TEST: red (was '#0000FF' AutoCAD blue)
-    warm: '#FF69B4',     // ✅ AutoCAD standard: Hot Pink - hover grips
-    hot: '#FF0000',      // ✅ AutoCAD standard: Red (ACI 1) - selected grips
+    cold: GRIP_COLD_COLOR,     // SSOT → GRIP_COLD_COLOR
+    warm: GRIP_WARM_COLOR,     // SSOT → GRIP_WARM_COLOR
+    hot: GRIP_HOT_COLOR,       // SSOT → GRIP_HOT_COLOR
   },
   
   // Entity configuration (for lines, circles, etc.)

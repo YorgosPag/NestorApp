@@ -167,7 +167,7 @@ export function QuoteListCard({
     <div className="relative">
       <ListCard
         customIcon={FileText}
-        customIconColor="text-amber-600"
+        customIconColor="text-[hsl(var(--text-warning))]"
         title={quote.displayNumber}
         subtitle={subtitle}
         badges={badges}

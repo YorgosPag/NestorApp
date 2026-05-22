@@ -71,7 +71,7 @@ export const DiagnosticsTab: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-blue-500 transition-all"
+                  className="h-full rounded-full bg-primary transition-all"
                   style={{ width: `${Math.round(analytics.densityScore * 100)}%` }}
                 />
               </div>
@@ -84,7 +84,7 @@ export const DiagnosticsTab: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-violet-500 transition-all"
+                  className="h-full rounded-full bg-accent transition-all"
                   style={{ width: `${Math.round(analytics.complexityScore * 100)}%` }}
                 />
               </div>
@@ -100,14 +100,14 @@ export const DiagnosticsTab: React.FC = () => {
             {t('guideAnalysis.diagnostics.anomalies')}
           </h4>
           {anomalies.length === 0 ? (
-            <p className="text-sm text-green-500">{t('guideAnalysis.diagnostics.noAnomalies')}</p>
+            <p className="text-sm text-green-707">{t('guideAnalysis.diagnostics.noAnomalies')}</p>
           ) : (
             <ul className="space-y-1">
               {anomalies.map((a, i) => (
                 <li key={i} className="flex items-start gap-1.5 text-sm">
                   {a.severity === 'error'
-                    ? <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
-                    : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />}
+                    ? <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                    : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--text-warning))]" />}
                   <span>{a.message}</span>
                 </li>
               ))}
@@ -124,7 +124,7 @@ export const DiagnosticsTab: React.FC = () => {
           <ul className="space-y-1">
             {fixes.map((f, i) => (
               <li key={i} className="flex items-start gap-1.5 text-sm">
-                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
+                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--text-warning))]" />
                 <span>{f}</span>
               </li>
             ))}

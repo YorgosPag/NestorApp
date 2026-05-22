@@ -59,7 +59,7 @@ export function StairMaterialsSection({
       className="flex flex-col gap-2"
     >
       <header>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t('stairAdvancedPanel.sections.materials.title')}
         </h4>
       </header>
@@ -120,14 +120,14 @@ function MaterialSlotRow({
   );
 
   return (
-    <label className="flex items-center gap-2 text-xs text-slate-200">
+    <label className="flex items-center gap-2 text-xs text-foreground">
       <span className="w-20 shrink-0">
         {t(`stairAdvancedPanel.sections.materials.${slot}`)}
       </span>
       <select
         value={selectValue}
         onChange={onSelectChange}
-        className="flex-1 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+        className="flex-1 rounded border border-border bg-muted px-2 py-1 text-xs text-foreground"
       >
         <option value="">—</option>
         {options.map((opt) => (
@@ -142,7 +142,7 @@ function MaterialSlotRow({
           value={value ?? ''}
           onChange={onCustomInput}
           placeholder={t('stairAdvancedPanel.sections.materials.customPlaceholder')}
-          className="w-32 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+          className="w-32 rounded border border-border bg-muted px-2 py-1 text-xs text-foreground"
         />
       ) : null}
     </label>

@@ -333,8 +333,8 @@ function ContrastRow({ label, ratio, passAA, passAAA, textColor, bgColor }: Cont
       </div>
       <span className={`flex-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.secondary}`}>{label}</span>
       <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_FAMILY.CODE} ${colors.text.primary}`}>{ratio}</span>
-      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${passAA ? 'text-green-500' : 'text-red-500'}`}>AA</span>
-      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${passAAA ? 'text-green-500' : 'text-red-500'}`}>AAA</span>
+      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${passAA ? 'text-green-707' : 'text-destructive'}`}>AA</span>
+      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${passAAA ? 'text-green-707' : 'text-destructive'}`}>AAA</span>
     </div>
   );
 }

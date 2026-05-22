@@ -101,7 +101,7 @@ export function PurchaseOrderListCard({
   return (
     <ListCard
       customIcon={Package}
-      customIconColor="text-blue-600"
+      customIconColor="text-primary"
       title={po.poNumber}
       subtitle={subtitle}
       badges={badges}

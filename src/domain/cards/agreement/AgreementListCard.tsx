@@ -67,7 +67,7 @@ export function AgreementListCard({
   return (
     <ListCard
       customIcon={ScrollText}
-      customIconColor="text-purple-600"
+      customIconColor="text-primary"
       title={agreement.title}
       subtitle={subtitle}
       badges={badges}

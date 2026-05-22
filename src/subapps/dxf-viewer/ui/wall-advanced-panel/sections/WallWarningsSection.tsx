@@ -30,17 +30,17 @@ export function WallWarningsSection({
     <section
       role="alert"
       aria-label={t('wallAdvancedPanel.sections.warnings.title')}
-      className="flex flex-col gap-1.5 rounded border border-amber-500/40 bg-amber-900/20 p-2"
+      className="flex flex-col gap-1.5 rounded border border-[hsl(var(--bg-warning))]/40 bg-[hsl(var(--bg-warning))]/20 p-2"
     >
       <header className="flex items-center gap-2">
-        <span aria-hidden="true" className="text-amber-300">
+        <span aria-hidden="true" className="text-[hsl(var(--text-warning))]">
           !
         </span>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-amber-200">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--text-warning))]">
           {t('wallAdvancedPanel.sections.warnings.title')}
         </h4>
       </header>
-      <ul className="flex flex-col gap-1 text-xs text-amber-100">
+      <ul className="flex flex-col gap-1 text-xs text-[hsl(var(--text-warning))]">
         {keys.map((key) => {
           const ns = key.startsWith('tools.') ? 'tool-hints' : 'dxf-viewer-shell';
           return (

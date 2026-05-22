@@ -27,7 +27,7 @@ import type { SyncDependencies, ToolStylePort, TextStylePort, GripStylePort, Uns
 import type { LineSettings, TextSettings } from '../core/types';
 import type { GripSettings } from '../../types/gripSettings';
 import type { ViewerMode } from '../core/types';
-import { UI_COLORS } from '../../config/color-config';
+import { UI_COLORS, resolveGripColors } from '../../config/color-config';
 
 // ============================================================================
 // EFFECTIVE SETTINGS GETTER TYPE
@@ -98,7 +98,7 @@ function mapTextToTextStyle(text: TextSettings): Parameters<TextStylePort['apply
 function mapGripToGripStyle(grip: GripSettings): Parameters<GripStylePort['apply']>[0] {
   return {
     size: grip.gripSize,
-    color: grip.colors?.cold ?? UI_COLORS.SNAP_CENTER,
+    color: resolveGripColors(grip.colors).cold,
     hoverColor: grip.colors?.warm ?? UI_COLORS.SNAP_INTERSECTION,
     selectedColor: grip.colors?.hot ?? UI_COLORS.SNAP_ENDPOINT
   };

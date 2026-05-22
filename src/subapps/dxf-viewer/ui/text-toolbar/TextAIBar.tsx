@@ -264,7 +264,7 @@ export function TextAIBar({ aiContext, onExecuteCommand, disabled = false }: Tex
         </div>
 
         {isSuccess && (
-          <p className="text-xs text-green-600 dark:text-green-400">
+          <p className="text-xs text-green-707">
             {t('textAi:success')}
           </p>
         )}

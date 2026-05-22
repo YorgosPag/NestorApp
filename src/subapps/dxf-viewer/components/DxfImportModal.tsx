@@ -146,7 +146,7 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
     // 🏢 ENTERPRISE: Get icon based on file type
     const getFileIcon = () => {
         if (fileType === 'pdf') {
-            return <FileText className={`${getIconSize('field')} ${PANEL_LAYOUT.MARGIN.RIGHT_SM} text-red-500`} />;
+            return <FileText className={`${getIconSize('field')} ${PANEL_LAYOUT.MARGIN.RIGHT_SM} text-destructive`} />;
         }
         return <Upload className={`${getIconSize('field')} ${PANEL_LAYOUT.MARGIN.RIGHT_SM} ${getModalIconColor('upload')}`} />;
     };
@@ -199,7 +199,7 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
 
                             {/* 🏢 ENTERPRISE: Show file type indicator */}
                             {selectedFile && fileType && (
-                                <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_SM} ${fileType === 'pdf' ? 'text-red-400' : 'text-blue-400'}`}>
+                                <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_SM} ${fileType === 'pdf' ? 'text-destructive' : 'text-primary'}`}>
                                     {fileType === 'pdf'
                                         ? t('importModal.fileTypePdf')
                                         : t('importModal.fileTypeDxf')}

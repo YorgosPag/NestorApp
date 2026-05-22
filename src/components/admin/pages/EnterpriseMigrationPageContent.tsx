@@ -384,7 +384,7 @@ export function EnterpriseMigrationPageContent() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="bg-black text-green-400 p-4 rounded-md font-mono text-sm h-64 overflow-y-auto">
+        <div className="bg-black text-green-707 p-4 rounded-md font-mono text-sm h-64 overflow-y-auto">
           {logs.length === 0 ? (
             <p>{t('enterpriseMigration.logs.empty')}</p>
           ) : (

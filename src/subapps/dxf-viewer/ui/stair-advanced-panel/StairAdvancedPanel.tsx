@@ -73,7 +73,7 @@ export function StairAdvancedPanel({
   const { t } = useTranslation('dxf-viewer-shell');
   const resolvedClassName =
     containerClassName
-    ?? 'fixed right-4 top-20 z-40 flex w-80 max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 p-3 shadow-xl backdrop-blur';
+    ?? 'fixed right-4 top-20 z-40 flex w-80 max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto rounded-lg border border-border bg-background/95 p-3 shadow-xl backdrop-blur';
 
   return (
     <aside
@@ -82,7 +82,7 @@ export function StairAdvancedPanel({
     >
       {!hideHeader && (
         <header>
-          <h3 className="text-sm font-medium text-slate-100">
+          <h3 className="text-sm font-medium text-foreground">
             {t('stairAdvancedPanel.title')}
           </h3>
         </header>

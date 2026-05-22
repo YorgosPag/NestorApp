@@ -33,7 +33,17 @@ const ALL_MODES: ExtendedSnapType[] = [
   ExtendedSnapType.GRID,
   ExtendedSnapType.GUIDE,               // ADR-189: Construction guide snap
   ExtendedSnapType.CONSTRUCTION_POINT,   // ADR-189: Construction snap points
-  ExtendedSnapType.AUTO
+  ExtendedSnapType.AUTO,
+  // ADR-362: Dimension snap types
+  ExtendedSnapType.DIM_DEF_POINT,
+  ExtendedSnapType.DIM_LINE,
+  // ADR-371: BIM corner snap types
+  ExtendedSnapType.BIM_COLUMN_CENTER,
+  ExtendedSnapType.BIM_WALL_CORNER,
+  ExtendedSnapType.BIM_BEAM_CORNER,
+  ExtendedSnapType.BIM_SLAB_CORNER,
+  ExtendedSnapType.BIM_COLUMN_CORNER,
+  ExtendedSnapType.BIM_OPENING_CORNER,
 ];
 
 interface SnapContextType {
@@ -60,13 +70,21 @@ interface SnapProviderProps {
 export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
   const [snapState, setSnapState] = useState<SnapState>(() => {
     const initialState = {} as SnapState;
-    // Set default enabled snaps - ENDPOINT + infrastructure types (guide, grid, construction point)
+    // Set default enabled snaps — matches DEFAULT_PRO_SNAP_SETTINGS.enabledTypes
     ALL_MODES.forEach(type => {
       initialState[type] = (
         type === ExtendedSnapType.ENDPOINT ||
         type === ExtendedSnapType.GUIDE ||
         type === ExtendedSnapType.CONSTRUCTION_POINT ||
-        type === ExtendedSnapType.GRID
+        type === ExtendedSnapType.GRID ||
+        type === ExtendedSnapType.DIM_DEF_POINT ||
+        type === ExtendedSnapType.DIM_LINE ||
+        type === ExtendedSnapType.BIM_COLUMN_CENTER ||
+        type === ExtendedSnapType.BIM_WALL_CORNER ||
+        type === ExtendedSnapType.BIM_BEAM_CORNER ||
+        type === ExtendedSnapType.BIM_SLAB_CORNER ||
+        type === ExtendedSnapType.BIM_COLUMN_CORNER ||
+        type === ExtendedSnapType.BIM_OPENING_CORNER
       );
     });
     return initialState;

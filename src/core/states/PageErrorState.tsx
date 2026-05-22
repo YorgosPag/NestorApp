@@ -6,7 +6,7 @@
  * =============================================================================
  *
  * Single source of truth για page-level error displays.
- * Αντικαθιστά hardcoded text-red-500 με semantic text-destructive.
+ * Αντικαθιστά hardcoded raw colors με semantic text-destructive.
  * Χρησιμοποιεί τον canonical Button component αντί inline <button>.
  *
  * @module core/states/PageErrorState

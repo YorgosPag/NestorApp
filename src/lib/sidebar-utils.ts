@@ -6,7 +6,7 @@ export function getBadgeVariant(badge: string) {
     return "bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0"
   }
   if (!isNaN(Number(badge))) {
-    return "bg-red-600 text-white border-0"
+    return "bg-destructive text-destructive-foreground border-0"
   }
   return ""
 }

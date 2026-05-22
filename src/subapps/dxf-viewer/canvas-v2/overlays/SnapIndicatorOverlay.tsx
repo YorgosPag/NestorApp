@@ -25,12 +25,18 @@ import {
   getNodeDotRadius
 } from '../../rendering/ui/snap/snap-icon-config';
 
-// ADR-363 Phase A + 5.5i: BIM description → i18n key mapping.
+// ADR-363 Phase A + 5.5i + ADR-370: BIM description → i18n key mapping.
 const BIM_DESCRIPTION_KEY: Record<string, string> = {
-  'bim-wall': 'snapModes.labels.bim.wallAxis',
-  'bim-slab': 'snapModes.labels.bim.slabEdge',
-  'bim-opening': 'snapModes.labels.bim.openingJamb',
-  'bim-column': 'snapModes.labels.bim.columnAxis',
+  'bim-wall':           'snapModes.labels.bim.wallAxis',
+  'bim-slab':           'snapModes.labels.bim.slabEdge',
+  'bim-opening':        'snapModes.labels.bim.openingJamb',
+  'bim-column':         'snapModes.labels.bim.columnAxis',
+  // ADR-370: BIM face-corner snap labels
+  'bim-wall-corner':    'snapModes.labels.bim.wallCorner',
+  'bim-beam-corner':    'snapModes.labels.bim.beamCorner',
+  'bim-slab-corner':    'snapModes.labels.bim.slabCorner',
+  'bim-column-corner':  'snapModes.labels.bim.columnCorner',
+  'bim-opening-corner': 'snapModes.labels.bim.openingCorner',
 };
 
 interface SnapResult {
@@ -216,6 +222,26 @@ function SnapShape({ type, color }: { type: string; color: string }) {
           />
           <line x1={half} y1={strokeWidth} x2={half} y2={size - strokeWidth} stroke={color} strokeWidth={strokeWidth} />
           <line x1={strokeWidth} y1={half} x2={size - strokeWidth} y2={half} stroke={color} strokeWidth={strokeWidth} />
+        </svg>
+      );
+
+    // ┘ BIM_CORNER: L-bracket — ADR-370 BIM face-corner snap (wall/beam/slab/column/opening)
+    // Industry convention: right-angle bracket at corner indicates structural face corner.
+    case 'bim_wall_corner':
+    case 'bim_beam_corner':
+    case 'bim_slab_corner':
+    case 'bim_column_corner':
+    case 'bim_opening_corner':
+      return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <polyline
+            points={`${strokeWidth},${strokeWidth} ${strokeWidth},${size - strokeWidth} ${size - strokeWidth},${size - strokeWidth}`}
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="square"
+            strokeLinejoin="miter"
+          />
         </svg>
       );
 

@@ -18,6 +18,7 @@ import { useTranslation } from '@/i18n';
 import type { TFunction } from 'i18next';
 
 // 🏢 ENTERPRISE: Snap mode key mapping for i18n
+// Key format for nested BIM labels: value "bim.foo" resolves to snapModes.labels.bim.foo
 const SNAP_MODE_KEYS: Record<ExtendedSnapType, string> = {
   [ExtendedSnapType.AUTO]: 'auto',
   [ExtendedSnapType.ENDPOINT]: 'endpoint',
@@ -35,10 +36,17 @@ const SNAP_MODE_KEYS: Record<ExtendedSnapType, string> = {
   [ExtendedSnapType.INSERTION]: 'insertion',
   [ExtendedSnapType.NEAR]: 'near',
   [ExtendedSnapType.ORTHO]: 'ortho',
-  [ExtendedSnapType.GUIDE]: 'guide',  // ADR-189: Construction guide snap
-  [ExtendedSnapType.CONSTRUCTION_POINT]: 'constructionPoint',  // ADR-189 §3.7-3.16: Construction snap points
-  [ExtendedSnapType.DIM_DEF_POINT]: 'dimDefPoint',             // ADR-362 I1
-  [ExtendedSnapType.DIM_LINE]: 'dimLine',                      // ADR-362 I1
+  [ExtendedSnapType.GUIDE]: 'guide',              // ADR-189: Construction guide snap
+  [ExtendedSnapType.CONSTRUCTION_POINT]: 'constructionPoint', // ADR-189 §3.7-3.16
+  [ExtendedSnapType.DIM_DEF_POINT]: 'dimDefPoint', // ADR-362 I1
+  [ExtendedSnapType.DIM_LINE]: 'dimLine',           // ADR-362 I1
+  // ADR-363 Phase 5.5i + ADR-370: BIM structural snaps — nested i18n path
+  [ExtendedSnapType.BIM_COLUMN_CENTER]:  'bim.columnAxis',
+  [ExtendedSnapType.BIM_WALL_CORNER]:    'bim.wallCorner',
+  [ExtendedSnapType.BIM_BEAM_CORNER]:    'bim.beamCorner',
+  [ExtendedSnapType.BIM_SLAB_CORNER]:    'bim.slabCorner',
+  [ExtendedSnapType.BIM_COLUMN_CORNER]:  'bim.columnCorner',
+  [ExtendedSnapType.BIM_OPENING_CORNER]: 'bim.openingCorner',
 };
 
 // 🏢 ENTERPRISE: Get translated snap label
@@ -113,6 +121,17 @@ const ADVANCED_MODES = [
   ExtendedSnapType.ORTHO
 ];
 
+// ADR-363 Phase 5.5i + ADR-370: BIM structural snap modes (column/wall/beam/slab/opening corners).
+// Shown in the advanced panel when at least one BIM entity exists on the canvas.
+const BIM_MODES = [
+  ExtendedSnapType.BIM_COLUMN_CENTER,
+  ExtendedSnapType.BIM_WALL_CORNER,
+  ExtendedSnapType.BIM_BEAM_CORNER,
+  ExtendedSnapType.BIM_SLAB_CORNER,
+  ExtendedSnapType.BIM_COLUMN_CORNER,
+  ExtendedSnapType.BIM_OPENING_CORNER,
+];
+
 interface ProSnapToolbarProps {
   enabledModes: Set<ExtendedSnapType>;
   onToggleMode: (mode: ExtendedSnapType, enabled: boolean) => void;
@@ -160,7 +179,10 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
   }, [enabledModes, onToggleMode]);
 
   const enabledCount = useMemo(() => enabledModes?.size || 0, [enabledModes]);
-  const advancedEnabledCount = useMemo(() => ADVANCED_MODES.filter(mode => enabledModes?.has(mode)).length, [enabledModes]);
+  const advancedEnabledCount = useMemo(
+    () => [...ADVANCED_MODES, ...BIM_MODES].filter(mode => enabledModes?.has(mode)).length,
+    [enabledModes],
+  );
 
   return (
     <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.primary} ${quick.card} ${className}`}>
@@ -247,6 +269,18 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
       {showAdvanced && (
         <div className={`flex ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.MARGIN.LEFT_XS} ${PANEL_LAYOUT.INPUT.PADDING_X} ${quick.separatorV}`}>
           {ADVANCED_MODES.map(mode => (
+            <SnapButton
+              key={mode}
+              mode={mode}
+              enabled={enabledModes?.has(mode) || false}
+              onClick={() => handleModeToggle(mode)}
+              compact
+              t={t}
+            />
+          ))}
+          {/* ADR-363 + ADR-370: BIM structural corner snaps — separator + BIM group */}
+          <div className={`w-px ${PANEL_LAYOUT.HEIGHT.LG} ${colors.bg.muted}`} />
+          {BIM_MODES.map(mode => (
             <SnapButton
               key={mode}
               mode={mode}

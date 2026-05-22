@@ -428,6 +428,12 @@ export const SNAP_ENGINE_PRIORITIES = {
   DIM_LINE: 3,
   /** ADR-363 Phase 5.5i: Structural column center-axis snap — supersedes generic ENDPOINT at center point */
   BIM_COLUMN_CENTER: -1,
+  /** ADR-370: BIM face corner snaps — highest structural precision, supersedes BIM_COLUMN_CENTER */
+  BIM_WALL_CORNER:    -2,
+  BIM_BEAM_CORNER:    -2,
+  BIM_SLAB_CORNER:    -2,
+  BIM_COLUMN_CORNER:  -2,
+  BIM_OPENING_CORNER: -2,
 } as const;
 
 // ===== SNAP UI OFFSETS =====

@@ -33,7 +33,7 @@ export function HeaderBar({
             <Badge variant="destructive">{t('section.required')}</Badge>
           )}
           {hasUnsavedChanges && (
-            <Badge variant="outline" className="text-orange-600">
+            <Badge variant="outline" className="text-[hsl(var(--text-warning))]">
               {t('sectionEditor.header.unsavedChanges')}
             </Badge>
           )}

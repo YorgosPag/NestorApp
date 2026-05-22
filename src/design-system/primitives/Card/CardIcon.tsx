@@ -36,7 +36,7 @@ import { getStatusColor } from '@/lib/design-system';
  * <CardIcon entityType="building" size="md" />
  *
  * // Using custom icon
- * <CardIcon icon={CustomIcon} color="text-blue-600" size="lg" />
+ * <CardIcon icon={CustomIcon} color="text-primary" size="lg" />
  *
  * // Filled variant with background
  * <CardIcon entityType="parking" variant="filled" size="md" />

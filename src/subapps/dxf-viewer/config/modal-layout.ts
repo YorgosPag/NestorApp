@@ -188,7 +188,7 @@ export const MODAL_LOADING_PATTERNS = {
   // Spinner base classes - 🏢 ENTERPRISE CENTRALIZED
   SPINNER: {
     base: 'animate-spin rounded-full border',
-    border: 'border-blue-600 border-t-transparent', // ⚠️ SPECIAL CASE: Spinner animation border (keeping as-is)
+    border: 'border-primary border-t-transparent', // ✅ SEMANTIC: spinner animation border
     small: componentSizes.icon.sm,         // h-4 w-4 - Centralized
     medium: componentSizes.icon.md,        // h-5 w-5 - Centralized
     large: componentSizes.icon.lg,         // h-6 w-6 - Centralized

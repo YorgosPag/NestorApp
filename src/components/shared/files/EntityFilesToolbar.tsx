@@ -125,7 +125,7 @@ export function EntityFilesToolbar({
               role="tab"
               aria-selected={activeTab === 'archived'}
               aria-controls="archived-panel"
-              className={cn('px-2', activeTab === 'archived' && 'bg-orange-500 text-white hover:opacity-90')}
+              className={cn('px-2', activeTab === 'archived' && 'bg-[hsl(var(--bg-warning))] text-foreground hover:opacity-90')}
             >
               <Archive className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
               {t('archived.title')}

@@ -48,15 +48,15 @@ export const TextTemplateDeleteDialog: React.FC<DeleteDialogProps> = ({
     <AlertDialog.Root open={open && target !== null} onOpenChange={onOpenChange}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="fixed inset-0 bg-black/40 z-[60]" />
-        <AlertDialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[61] w-[min(420px,92vw)] bg-white dark:bg-zinc-950 rounded shadow-xl p-4 flex flex-col gap-3">
+        <AlertDialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[61] w-[min(420px,92vw)] bg-background rounded shadow-xl p-4 flex flex-col gap-3">
           <AlertDialog.Title className="text-base font-semibold">
             {t('textTemplates:manager.deletePrompt.title', { name: target?.name ?? '' })}
           </AlertDialog.Title>
-          <AlertDialog.Description className="text-sm text-zinc-600 dark:text-zinc-400">
+          <AlertDialog.Description className="text-sm text-muted-foreground">
             {t('textTemplates:manager.deletePrompt.body')}
           </AlertDialog.Description>
           {error ? (
-            <p className="text-xs text-red-700" role="alert">
+            <p className="text-xs text-destructive" role="alert">
               {error}
             </p>
           ) : null}
@@ -75,7 +75,7 @@ export const TextTemplateDeleteDialog: React.FC<DeleteDialogProps> = ({
               type="button"
               disabled={submitting}
               onClick={() => void handleConfirm()}
-              className="text-sm px-3 py-1.5 rounded bg-red-600 text-white disabled:opacity-50"
+              className="text-sm px-3 py-1.5 rounded bg-destructive text-white disabled:opacity-50"
             >
               {submitting
                 ? t('textTemplates:manager.deletePrompt.deleting')

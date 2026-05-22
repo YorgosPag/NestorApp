@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useCallback, useMemo, useRe
 import type { GripSettings } from '../types/gripSettings';
 import { validateGripSettings, DEFAULT_GRIP_SETTINGS } from '../types/gripSettings';
 import { gripStyleStore } from '../stores/GripStyleStore';
+import { resolveGripColors } from '../config/color-config';
 // 🏢 ADR-075: Centralized Grip Size Multipliers
 import { GRIP_SIZE_MULTIPLIERS } from '../rendering/grips/constants';
 // ===== ΝΕΑ UNIFIED PROVIDERS (για internal use) =====
@@ -200,9 +201,15 @@ export function GripProvider({ children }: GripProviderProps) {
     return Math.round(baseSize * multiplier);
   }, [gripSettings.gripSize, gripSettings.dpiScale]);
 
-  const getGripColor = useCallback((state: 'cold' | 'warm' | 'hot') => {
-    return gripSettings.colors[state];
-  }, [gripSettings.colors]);
+  const resolvedColors = useMemo(
+    () => resolveGripColors(gripSettings.colors),
+    [gripSettings.colors]
+  );
+
+  const getGripColor = useCallback(
+    (state: 'cold' | 'warm' | 'hot'): string => resolvedColors[state],
+    [resolvedColors]
+  );
 
   // === STABLE CONTEXT VALUE με useMemo ===
   const contextValue = useMemo<GripContextType>(() => ({

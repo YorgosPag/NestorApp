@@ -536,7 +536,12 @@
         "wallAxis": "On wall axis",
         "slabEdge": "On slab edge",
         "openingJamb": "On opening jamb",
-        "columnAxis": "On column axis"
+        "columnAxis": "On column axis",
+        "wallCorner": "Wall corner",
+        "beamCorner": "Beam corner",
+        "slabCorner": "Slab corner",
+        "columnCorner": "Column corner",
+        "openingCorner": "Opening corner"
       }
     },
     "tooltips": {
@@ -557,7 +562,15 @@
       "near": "Near - Snap near objects (R)",
       "ortho": "Ortho - Constrain to horizontal/vertical lines (F8)",
       "guide": "Guide - Snap to construction guide lines (G)",
-      "constructionPoint": "Point - Snap to construction snap points"
+      "constructionPoint": "Point - Snap to construction snap points",
+      "bim": {
+        "columnAxis":    "Column Axis - Snap to structural column center axis",
+        "wallCorner":    "Wall Corner - Snap to wall face corner (outer/inner edge)",
+        "beamCorner":    "Beam Corner - Snap to beam end face corner",
+        "slabCorner":    "Slab Corner - Snap to slab outline vertex",
+        "columnCorner":  "Column Corner - Snap to column perimeter corner",
+        "openingCorner": "Opening Corner - Snap to door/window face corner"
+      }
     },
     "ui": {
       "showAdvanced": "Show advanced features",

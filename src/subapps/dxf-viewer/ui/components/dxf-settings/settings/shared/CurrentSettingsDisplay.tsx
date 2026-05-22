@@ -6,6 +6,7 @@ import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles'
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { resolveGripColors } from '../../../../../config/color-config';
 // 🏢 ENTERPRISE: Lucide icons replacing emojis
 import { ClipboardList, Minus, Type, Grid } from 'lucide-react';
 // 🏢 ENTERPRISE: Centralized Checkbox component (Radix)
@@ -69,6 +70,7 @@ export function CurrentSettingsDisplay({
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const { getStatusBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added radius
   const colors = useSemanticColors();
+  const resolvedGripColors = resolveGripColors(gripSettings.colors);
   const iconSizes = useIconSizes();  // ✅ ENTERPRISE: Centralized icon sizes
   const [showSettingsDetails, setShowSettingsDetails] = useState(false);
 
@@ -81,7 +83,7 @@ export function CurrentSettingsDisplay({
   // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
   const lineColorBgClass = useDynamicBackgroundClass(lineSettings.color);
   const textColorBgClass = useDynamicBackgroundClass(effectiveTextSettings.color);
-  const gripColdColorBgClass = useDynamicBackgroundClass(gripSettings.colors.cold);
+  const gripColdColorBgClass = useDynamicBackgroundClass(resolvedGripColors.cold);
   const gripWarmColorBgClass = useDynamicBackgroundClass(gripSettings.colors.warm);
   const gripHotColorBgClass = useDynamicBackgroundClass(gripSettings.colors.hot);
 
@@ -221,7 +223,7 @@ export function CurrentSettingsDisplay({
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.coldColor')}</span>
                   <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-                    {gripSettings.colors.cold}
+                    {resolvedGripColors.cold}
                     <div
                       className={`${PANEL_LAYOUT.ICON.SMALL} rounded ${getStatusBorder('muted')} ${gripColdColorBgClass}`}
                      />

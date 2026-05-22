@@ -53,7 +53,7 @@ export function DescriptionNotesCard({
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-          <StickyNote className={cn(iconSizes.md, 'text-violet-500')} />
+          <StickyNote className={cn(iconSizes.md, 'text-primary')} />
           {labels.title}
         </CardTitle>
       </CardHeader>

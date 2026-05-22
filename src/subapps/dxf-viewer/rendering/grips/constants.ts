@@ -7,7 +7,7 @@
  * @compliance CLAUDE.md Enterprise Standards - NO magic numbers
  */
 
-import { UI_COLORS } from '../../config/color-config';
+import { UI_COLORS, GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR, GRIP_CONTOUR_COLOR } from '../../config/color-config';
 
 // ============================================================================
 // GRIP SIZE MULTIPLIERS (AutoCAD/BricsCAD Standards)
@@ -58,7 +58,7 @@ export const EDGE_GRIP_SIZE_MULTIPLIERS = {
  * - CONTOUR: Black - Grip outline
  */
 export const DEFAULT_GRIP_COLORS = {
-  COLD: '#5F9ED1',   // AutoCAD blue (ACI 5)
+  COLD: GRIP_COLD_COLOR,  // SSOT → color-config.ts
   WARM: '#FF7F00',   // Orange (hover feedback)
   HOT: '#FF0000',    // Red (AutoCAD ACI 1)
   CONTOUR: '#000000', // Black outline

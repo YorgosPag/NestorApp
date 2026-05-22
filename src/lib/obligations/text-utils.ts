@@ -8,7 +8,7 @@ export { truncateText } from '@/lib/text-utils';
 export function highlightSearchTerm(
   text: string,
   searchTerm: string,
-  className: string = 'bg-yellow-200'
+  className: string = 'bg-[hsl(var(--bg-warning))]/40'
 ): string {
   if (!text || !searchTerm?.trim()) return text;
 

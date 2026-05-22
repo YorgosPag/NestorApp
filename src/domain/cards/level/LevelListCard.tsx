@@ -128,7 +128,7 @@ export function LevelListCard({
     // Entity count with layer icon
     items.push({
       icon: Layers,
-      iconColor: entityCount > 0 ? NAVIGATION_ENTITIES.building.color : 'text-slate-400',
+      iconColor: entityCount > 0 ? NAVIGATION_ENTITIES.building.color : 'text-muted-foreground',
       label: t('levelCard.stats.elements'),
       value: entityCount > 0
         ? t('panels.levels.elementsCount', { count: entityCount })

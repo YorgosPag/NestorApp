@@ -3,7 +3,7 @@ import type { LineType } from '../../../../../settings-core/types';
 import { getDashArray } from '../../../../../settings-core/defaults';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { UI_COLORS } from '../../../../../config/color-config';
+import { UI_COLORS, resolveGripColors } from '../../../../../config/color-config';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ADR-107: Centralized Text Metrics Ratios
@@ -47,7 +47,7 @@ interface GripSettings {
   apertureSize: number;
   opacity: number;
   colors: {
-    cold: string;
+    cold: string | null;
     warm: string;
     hot: string;
     contour: string;
@@ -71,6 +71,7 @@ interface LinePreviewProps {
 
 export function LinePreview({ lineSettings, textSettings, gripSettings, activeTab, className = '' }: LinePreviewProps) {
   const colors = useSemanticColors();
+  const resolvedGripColors = resolveGripColors(gripSettings.colors);
   // Μετατροπή των ρυθμίσεων για το SVG
   // ΔΙΟΡΘΩΣΗ: Η προεπισκόπηση πρέπει να δείχνει πάντα τις ρυθμίσεις γραμμής, ανεξάρτητα από την καρτέλα
   const effectiveColor = lineSettings.color;
@@ -201,7 +202,7 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
                 cx="0"
                 cy="50%"
                 r={gripSettings.gripSize / 2}
-                fill={gripSettings.colors.cold}
+                fill={resolvedGripColors.cold}
                 stroke={gripSettings.colors.contour}
                 strokeWidth="1"
                 opacity={gripSettings.opacity}
@@ -212,7 +213,7 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
                 cx="100%"
                 cy="50%"
                 r={gripSettings.gripSize / 2}
-                fill={gripSettings.colors.cold}
+                fill={resolvedGripColors.cold}
                 stroke={gripSettings.colors.contour}
                 strokeWidth="1"
                 opacity={gripSettings.opacity}
@@ -224,7 +225,7 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
                   cx="50%"
                   cy="50%"
                   r={gripSettings.gripSize / 2}
-                  fill={gripSettings.colors.cold}
+                  fill={resolvedGripColors.cold}
                   stroke={gripSettings.colors.contour}
                   strokeWidth="1"
                   opacity={gripSettings.opacity}
@@ -252,7 +253,7 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
                     cx="75%"
                     cy="calc(50% - 15px)"
                     r={gripSettings.gripSize / 2}
-                    fill={gripSettings.colors.cold}
+                    fill={resolvedGripColors.cold}
                     stroke={gripSettings.colors.contour}
                     strokeWidth="1"
                     opacity={gripSettings.opacity}
@@ -262,7 +263,7 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
                     cx="calc(75% + 15px)"
                     cy="50%"
                     r={gripSettings.gripSize / 2}
-                    fill={gripSettings.colors.cold}
+                    fill={resolvedGripColors.cold}
                     stroke={gripSettings.colors.contour}
                     strokeWidth="1"
                     opacity={gripSettings.opacity}
@@ -272,7 +273,7 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
                     cx="75%"
                     cy="calc(50% + 15px)"
                     r={gripSettings.gripSize / 2}
-                    fill={gripSettings.colors.cold}
+                    fill={resolvedGripColors.cold}
                     stroke={gripSettings.colors.contour}
                     strokeWidth="1"
                     opacity={gripSettings.opacity}
@@ -282,7 +283,7 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
                     cx="calc(75% - 15px)"
                     cy="50%"
                     r={gripSettings.gripSize / 2}
-                    fill={gripSettings.colors.cold}
+                    fill={resolvedGripColors.cold}
                     stroke={gripSettings.colors.contour}
                     strokeWidth="1"
                     opacity={gripSettings.opacity}

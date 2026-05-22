@@ -122,7 +122,7 @@ export const TextTemplateEditorDialog: React.FC<EditorDialogProps> = ({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/40 z-[60]" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[61] w-[min(1100px,95vw)] max-h-[90vh] overflow-hidden bg-white dark:bg-zinc-950 rounded shadow-xl flex flex-col"
+          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[61] w-[min(1100px,95vw)] max-h-[90vh] overflow-hidden bg-background rounded shadow-xl flex flex-col"
           onEscapeKeyDown={(e) => {
             e.preventDefault();
             handleClose();
@@ -132,7 +132,7 @@ export const TextTemplateEditorDialog: React.FC<EditorDialogProps> = ({
             handleClose();
           }}
         >
-          <Dialog.Title className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 text-base font-semibold">
+          <Dialog.Title className="px-4 py-3 border-b border-border text-base font-semibold">
             {seed ? t('textTemplates:editor.title.edit') : t('textTemplates:editor.title.create')}
           </Dialog.Title>
           <Dialog.Description className="sr-only">
@@ -158,7 +158,7 @@ export const TextTemplateEditorDialog: React.FC<EditorDialogProps> = ({
                   className="rounded border px-2 py-1"
                 />
                 {state.nameError ? (
-                  <span className="text-xs text-red-600">
+                  <span className="text-xs text-destructive">
                     {t(`textTemplates:editor.name.error.${state.nameError}`, {
                       max: TEXT_TEMPLATE_NAME_MAX,
                     })}
@@ -194,12 +194,12 @@ export const TextTemplateEditorDialog: React.FC<EditorDialogProps> = ({
                   className="rounded border px-2 py-1 font-mono text-xs min-h-[160px] flex-1"
                 />
                 {state.contentError ? (
-                  <span className="text-xs text-red-600">
+                  <span className="text-xs text-destructive">
                     {t(`textTemplates:editor.content.error.${state.contentError}`)}
                   </span>
                 ) : null}
                 {state.unknownPlaceholders.length > 0 ? (
-                  <span className="text-xs text-amber-700">
+                  <span className="text-xs text-[hsl(var(--text-warning))]">
                     {t('textTemplates:editor.content.helpUnknown', {
                       tokens: state.unknownPlaceholders.join(', '),
                     })}
@@ -208,14 +208,14 @@ export const TextTemplateEditorDialog: React.FC<EditorDialogProps> = ({
               </label>
 
               {serverError ? (
-                <p className="text-xs text-red-700" role="alert">
+                <p className="text-xs text-destructive" role="alert">
                   {serverError}
                 </p>
               ) : null}
             </form>
 
-            <aside aria-label={t('textTemplates:editor.previewAriaLabel')} className="w-[360px] shrink-0 border-l border-zinc-200 dark:border-zinc-800 flex flex-col">
-              <h4 className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 border-b border-zinc-200 dark:border-zinc-800">
+            <aside aria-label={t('textTemplates:editor.previewAriaLabel')} className="w-[360px] shrink-0 border-l border-border flex flex-col">
+              <h4 className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border">
                 {t('textTemplates:editor.previewAriaLabel')}
               </h4>
               <div className="flex-1 min-h-0">
@@ -226,7 +226,7 @@ export const TextTemplateEditorDialog: React.FC<EditorDialogProps> = ({
             <PlaceholderPicker onInsert={state.insertAtCaret} />
           </section>
 
-          <footer className="border-t border-zinc-200 dark:border-zinc-800 px-4 py-3 flex items-center justify-end gap-2">
+          <footer className="border-t border-border px-4 py-3 flex items-center justify-end gap-2">
             <button
               type="button"
               className="text-sm px-3 py-1.5 rounded border"
@@ -237,7 +237,7 @@ export const TextTemplateEditorDialog: React.FC<EditorDialogProps> = ({
             </button>
             <button
               type="button"
-              className="text-sm px-3 py-1.5 rounded bg-blue-600 text-white disabled:opacity-50"
+              className="text-sm px-3 py-1.5 rounded bg-primary text-primary-foreground disabled:opacity-50"
               onClick={() => void handleSubmit()}
               disabled={submitting || state.nameError !== null || state.contentError !== null}
             >

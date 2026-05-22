@@ -418,7 +418,7 @@ export function PropertyStatusSelector({
       {showReasonField && selectedStatus && (
         <div className={`space-y-3 p-4 bg-muted/50 ${quick.card}`}>
           <div className="flex items-center gap-2">
-            <Info className={`${iconSizes.sm} text-blue-500`} />
+            <Info className={`${iconSizes.sm} text-primary`} />
             <Label className="text-sm font-medium">
               {t('statusSelector.reasonLabel')} {requireReason && '*'}
             </Label>

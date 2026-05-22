@@ -40,13 +40,13 @@ export function MissingFontBanner({
     <aside
       role="status"
       aria-live="polite"
-      className="flex items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm dark:border-amber-800 dark:bg-amber-950"
+      className="flex items-center justify-between gap-3 border-b border-[hsl(var(--bg-warning))] bg-[hsl(var(--bg-warning))]/40 px-4 py-2 text-sm"
     >
       <div className="flex min-w-0 flex-col">
-        <span className="font-medium text-amber-900 dark:text-amber-200">
+        <span className="font-medium text-foreground">
           {t('textFonts:missingBanner.title', { count })}
         </span>
-        <span className="text-xs text-amber-700 dark:text-amber-400">
+        <span className="text-xs text-[hsl(var(--text-warning))]">
           {t('textFonts:missingBanner.subtitle')}
         </span>
       </div>

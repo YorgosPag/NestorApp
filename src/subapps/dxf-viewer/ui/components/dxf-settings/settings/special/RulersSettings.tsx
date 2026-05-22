@@ -192,7 +192,7 @@ export default RulersSettings;
  * // Rulers Settings Tab
  * <div className="space-y-4">
  *   {/* Ruler Sub-tabs *\/}
- *   <div className="flex gap-1 mb-4 border-b border-gray-600 pb-2">
+ *   <div className="flex gap-1 mb-4 border-b border-border pb-2">
  *     <button onClick={() => setActiveRulerTab('background')}>📦 Φόντο</button>
  *     <button onClick={() => setActiveRulerTab('lines')}>📏 Γραμμές</button>
  *     <button onClick={() => setActiveRulerTab('text')}>📝 Κείμενα</button>

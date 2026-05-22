@@ -110,7 +110,7 @@ export function BaseTabs({
               {tab.label}
             </span>
             {tab.warningDot ? (
-              <span className="ml-1 h-2 w-2 rounded-full bg-amber-500 shrink-0" />
+              <span className="ml-1 h-2 w-2 rounded-full bg-[hsl(var(--bg-warning))] shrink-0" />
             ) : null}
           </TabsTrigger>
         ))}

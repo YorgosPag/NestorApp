@@ -42,6 +42,12 @@ import { ConstructionPointSnapEngine } from '../engines/ConstructionPointSnapEng
 import { DimDefPointSnapEngine } from '../engines/DimDefPointSnapEngine';
 import { DimLineSnapEngine } from '../engines/DimLineSnapEngine';
 import { ColumnCenterSnapEngine } from '../engines/ColumnCenterSnapEngine';
+// ADR-370: BIM face-corner snap engines
+import { WallCornerSnapEngine } from '../engines/WallCornerSnapEngine';
+import { BeamCornerSnapEngine } from '../engines/BeamCornerSnapEngine';
+import { SlabCornerSnapEngine } from '../engines/SlabCornerSnapEngine';
+import { ColumnCornerSnapEngine } from '../engines/ColumnCornerSnapEngine';
+import { OpeningCornerSnapEngine } from '../engines/OpeningCornerSnapEngine';
 
 interface Viewport {
   worldPerPixelAt(p: Point2D): number;
@@ -86,6 +92,12 @@ export class SnapEngineRegistry {
     this.engines.set(ExtendedSnapType.DIM_LINE, new DimLineSnapEngine());
     // ADR-363 Phase 5.5i: Column center axis snap (structural precision)
     this.engines.set(ExtendedSnapType.BIM_COLUMN_CENTER, new ColumnCenterSnapEngine());
+    // ADR-370: BIM face-corner snaps (priority -2 — highest structural precision)
+    this.engines.set(ExtendedSnapType.BIM_WALL_CORNER,    new WallCornerSnapEngine());
+    this.engines.set(ExtendedSnapType.BIM_BEAM_CORNER,    new BeamCornerSnapEngine());
+    this.engines.set(ExtendedSnapType.BIM_SLAB_CORNER,    new SlabCornerSnapEngine());
+    this.engines.set(ExtendedSnapType.BIM_COLUMN_CORNER,  new ColumnCornerSnapEngine());
+    this.engines.set(ExtendedSnapType.BIM_OPENING_CORNER, new OpeningCornerSnapEngine());
   }
 
   initializeEnginesWithEntities(entities: Entity[], settings: ProSnapSettings): void {

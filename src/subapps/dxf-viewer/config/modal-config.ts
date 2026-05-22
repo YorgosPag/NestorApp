@@ -79,7 +79,7 @@ export const MODAL_THEMES = {
 
   // Dark theme for DXF viewer and technical interfaces
   DARK_TECHNICAL: {
-    content: `bg-background-secondary text-foreground border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: bg-gray-800 → semantic background // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    content: `bg-background-secondary text-foreground border ${PANEL_COLORS.BORDER_PRIMARY}`,
     overlay: 'bg-black/75 backdrop-blur-sm',
     header: `border-b ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
     footer: `border-t ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
@@ -95,7 +95,7 @@ export const MODAL_THEMES = {
 
   // Success theme for confirmations
   SUCCESS: {
-    content: `bg-success/10 text-success-foreground border ${PANEL_COLORS.BORDER_SUCCESS_SECONDARY}`, // ✅ ENTERPRISE: bg-green-50/text-green-900 → semantic success // ✅ ENTERPRISE: Centralized success border
+    content: `bg-success/10 text-success-foreground border ${PANEL_COLORS.BORDER_SUCCESS_SECONDARY}`,
     overlay: 'bg-black/60',
     header: `border-b ${PANEL_COLORS.BORDER_SUCCESS_SECONDARY}`, // ✅ ENTERPRISE: Centralized success border
     footer: `border-t ${PANEL_COLORS.BORDER_SUCCESS_SECONDARY}`, // ✅ ENTERPRISE: Centralized success border
@@ -103,7 +103,7 @@ export const MODAL_THEMES = {
 
   // Warning theme for destructive actions
   WARNING: {
-    content: `bg-destructive/10 text-destructive-foreground border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: bg-red-50/text-red-900 → semantic destructive // ✅ ENTERPRISE: Centralized error border
+    content: `bg-destructive/10 text-destructive-foreground border ${PANEL_COLORS.BORDER_PRIMARY}`,
     overlay: 'bg-black/70',
     header: `border-b ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Centralized error border
     footer: `border-t ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Centralized error border

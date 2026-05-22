@@ -48,7 +48,7 @@ function Calendar({
           "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
         ),
         range_end: "day-range-end",
-        selected: "!bg-blue-600 !text-white rounded-md",
+        selected: "!bg-primary !text-primary-foreground rounded-md",
         today: "bg-accent text-accent-foreground",
         outside: "day-outside text-muted-foreground aria-selected:bg-accent/50 aria-selected:text-muted-foreground",
         disabled: "text-muted-foreground opacity-50",

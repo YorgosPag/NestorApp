@@ -96,7 +96,7 @@ const PointItem = React.memo<{
           <TooltipTrigger asChild>
             <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => onToggleLock(point.id, !point.locked)}>
               {point.locked
-                ? <Lock className={`${iconSizes.xs} text-amber-500`} />
+                ? <Lock className={`${iconSizes.xs} text-[hsl(var(--text-warning))]`} />
                 : <Unlock className={iconSizes.xs} />
               }
             </Button>
@@ -160,7 +160,7 @@ export const ConstructionPointSection: React.FC<ConstructionPointSectionProps> =
       {groups.map((group) => (
         <Collapsible key={group.groupId ?? '__individual'} defaultOpen>
           <CollapsibleTrigger className={`flex items-center ${PANEL_LAYOUT.GAP.XS} w-full ${PANEL_LAYOUT.SPACING.XS} hover:bg-accent/30 rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.secondary}`}>
-            <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-amber-400" />
+            <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-[hsl(var(--bg-warning))]" />
             <span className="flex-1 text-left truncate">{group.label}</span>
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>({group.points.length})</span>
           </CollapsibleTrigger>

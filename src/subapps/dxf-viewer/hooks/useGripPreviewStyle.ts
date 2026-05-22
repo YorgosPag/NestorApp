@@ -7,7 +7,7 @@ import { useGripContext } from '../providers/GripProvider';
 import { gripStyleStore } from '../stores/GripStyleStore';
 // ===== OVERRIDE GUARD SYSTEM =====
 import { guardGlobalAccess } from '../../../utils/overrideGuard';
-import { UI_COLORS } from '../config/color-config';
+import { UI_COLORS, resolveGripColors } from '../config/color-config';
 // 🏢 ADR-107: Centralized UI Size Defaults
 import { UI_SIZE_DEFAULTS } from '../config/text-rendering-config';
 
@@ -86,19 +86,21 @@ export function getGripPreviewStyleWithOverride(): GripPreviewStyle {
   if (draftGripSettingsStore?.overrideGlobalSettings && draftGripSettingsStore.settings) {
     const specificSettings = draftGripSettingsStore.settings;
 
+    const resolvedColors = resolveGripColors({
+      cold: specificSettings.colors?.cold ?? null, // null → GRIP_COLD_COLOR SSoT via resolveGripColors
+      warm: specificSettings.colors?.warm ?? UI_COLORS.BRIGHT_YELLOW,
+      hot: specificSettings.colors?.hot ?? UI_COLORS.SELECTED_RED,
+      contour: specificSettings.colors?.contour ?? UI_COLORS.BLACK
+    });
+
     return {
       enabled: specificSettings.enabled !== undefined ? specificSettings.enabled : true,
-      colors: {
-        cold: specificSettings.colors?.cold || UI_COLORS.DEBUG_CURSOR,  // ✅ AutoCAD standard: Blue for cold grips
-        warm: specificSettings.colors?.warm || UI_COLORS.BRIGHT_YELLOW,  // ✅ AutoCAD standard: Yellow for warm grips
-        hot: specificSettings.colors?.hot || UI_COLORS.SELECTED_RED,    // ✅ AutoCAD standard: Red for hot grips
-        contour: specificSettings.colors?.contour || UI_COLORS.BLACK // ✅ AutoCAD standard: Black contour
-      },
-      gripSize: specificSettings.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE,
-      pickBoxSize: specificSettings.pickBoxSize || UI_SIZE_DEFAULTS.PICK_BOX_SIZE,
-      apertureSize: specificSettings.apertureSize || UI_SIZE_DEFAULTS.APERTURE_SIZE,
-      showGrips: specificSettings.showGrips !== undefined ? specificSettings.showGrips : true,
-      opacity: specificSettings.opacity || 1
+      colors: resolvedColors,
+      gripSize: specificSettings.gripSize ?? UI_SIZE_DEFAULTS.GRIP_SIZE,
+      pickBoxSize: specificSettings.pickBoxSize ?? UI_SIZE_DEFAULTS.PICK_BOX_SIZE,
+      apertureSize: specificSettings.apertureSize ?? UI_SIZE_DEFAULTS.APERTURE_SIZE,
+      showGrips: specificSettings.showGrips ?? true,
+      opacity: specificSettings.opacity ?? 1
     };
   }
 

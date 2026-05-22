@@ -132,7 +132,7 @@ export function DynamicInputFields(props: DynamicInputFieldsProps): React.ReactE
       )}
 
       {fieldsToShow.includes('angle') && (
-        <div className={`relative${lockedField === 'angle' ? ' ring-2 ring-orange-500 rounded' : ''}`}>
+        <div className={`relative${lockedField === 'angle' ? ' ring-2 ring-ring rounded' : ''}`}>
           <DynamicInputField
             label="°"
             value={angleValue}
@@ -165,14 +165,14 @@ export function DynamicInputFields(props: DynamicInputFieldsProps): React.ReactE
               type="button"
               onClick={onUnlock}
               aria-label={t('dynamicInput.lock.unlock')}
-              className="absolute right-1 top-1/2 -translate-y-1/2 text-orange-500 text-xs leading-none cursor-pointer bg-transparent border-0 p-0"
+              className="absolute right-1 top-1/2 -translate-y-1/2 text-[hsl(var(--text-warning))] text-xs leading-none cursor-pointer bg-transparent border-0 p-0"
             >🔒</button>
           )}
         </div>
       )}
 
       {fieldsToShow.includes('length') && (
-        <div className={`relative${lockedField === 'length' ? ' ring-2 ring-orange-500 rounded' : ''}`}>
+        <div className={`relative${lockedField === 'length' ? ' ring-2 ring-ring rounded' : ''}`}>
           <DynamicInputField
             label="L"
             value={lengthValue}
@@ -209,7 +209,7 @@ export function DynamicInputFields(props: DynamicInputFieldsProps): React.ReactE
               type="button"
               onClick={onUnlock}
               aria-label={t('dynamicInput.lock.unlock')}
-              className="absolute right-1 top-1/2 -translate-y-1/2 text-orange-500 text-xs leading-none cursor-pointer bg-transparent border-0 p-0"
+              className="absolute right-1 top-1/2 -translate-y-1/2 text-[hsl(var(--text-warning))] text-xs leading-none cursor-pointer bg-transparent border-0 p-0"
             >🔒</button>
           )}
         </div>

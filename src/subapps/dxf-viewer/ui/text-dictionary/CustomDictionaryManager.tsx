@@ -99,7 +99,7 @@ export const CustomDictionaryManager: React.FC = () => {
         type="button"
         disabled={disabled}
         onClick={openCreate}
-        className="text-sm px-3 py-1.5 rounded bg-blue-600 text-white disabled:opacity-50"
+        className="text-sm px-3 py-1.5 rounded bg-primary text-primary-foreground disabled:opacity-50"
       >
         {t('textSpell:manager.addButton')}
       </button>
@@ -124,7 +124,7 @@ export const CustomDictionaryManager: React.FC = () => {
       <header className="flex items-end justify-between gap-2">
         <hgroup className="flex flex-col">
           <h1 className="text-lg font-semibold">{t('textSpell:manager.title')}</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-sm text-muted-foreground">
             {t('textSpell:manager.subtitle')}
           </p>
         </hgroup>
@@ -132,13 +132,13 @@ export const CustomDictionaryManager: React.FC = () => {
       </header>
 
       {error ? (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {error.message}
         </p>
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-zinc-500">…</p>
+        <p className="text-sm text-muted-foreground">…</p>
       ) : (
         <CustomDictionaryList
           entries={entries}

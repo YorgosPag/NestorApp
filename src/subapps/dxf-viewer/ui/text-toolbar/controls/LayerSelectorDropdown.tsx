@@ -71,10 +71,10 @@ export function LayerSelectorDropdown({
             >
               <span className="inline-flex items-center gap-2">
                 {layer.locked ? <Lock className="h-3 w-3" aria-hidden="true" /> : null}
-                {isLayerZero ? <AlertTriangle className="h-3 w-3 text-amber-500" aria-hidden="true" /> : null}
+                {isLayerZero ? <AlertTriangle className="h-3 w-3 text-[hsl(var(--text-warning))]" aria-hidden="true" /> : null}
                 <span>{layer.name}</span>
                 {isLayerZero ? (
-                  <span className="text-xs text-amber-600">
+                  <span className="text-xs text-[hsl(var(--text-warning))]">
                     {t('textToolbar:layer.zeroFallback')}
                   </span>
                 ) : null}

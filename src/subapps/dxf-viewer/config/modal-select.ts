@@ -501,7 +501,7 @@ export function buildSelectTriggerClass(config: {
   }
 
   if (error) {
-    baseClass += ' border-red-500 focus:border-red-500 focus:ring-red-500';
+    baseClass += ' border-destructive focus:border-destructive focus:ring-destructive';
   }
 
   if (additional) {

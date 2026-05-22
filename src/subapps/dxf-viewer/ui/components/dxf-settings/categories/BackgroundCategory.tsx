@@ -20,11 +20,11 @@ interface ThemeConfig {
 }
 
 const PRESET_THEMES: ThemeConfig[] = [
-  { key: 'autocadClassic', cssValue: 'var(--canvas-themes-autocad-classic)', swatchClass: 'bg-black border-zinc-700',          textClass: 'text-zinc-300' },
-  { key: 'autocadDark',    cssValue: 'var(--canvas-themes-autocad-dark)',    swatchClass: 'bg-[#1a1a1a] border-zinc-600',       textClass: 'text-zinc-300' },
-  { key: 'solidworks',     cssValue: 'var(--canvas-themes-solidworks)',      swatchClass: 'bg-[#2d3748] border-slate-500',       textClass: 'text-zinc-300' },
-  { key: 'blender',        cssValue: 'var(--canvas-themes-blender)',         swatchClass: 'bg-[#232323] border-zinc-600',        textClass: 'text-zinc-300' },
-  { key: 'light',          cssValue: 'var(--canvas-themes-light)',           swatchClass: 'bg-white border-zinc-300',            textClass: 'text-zinc-800' },
+  { key: 'autocadClassic', cssValue: 'var(--canvas-themes-autocad-classic)', swatchClass: 'bg-black border-border',             textClass: 'text-muted-foreground' },
+  { key: 'autocadDark',    cssValue: 'var(--canvas-themes-autocad-dark)',    swatchClass: 'bg-[#1a1a1a] border-border',          textClass: 'text-muted-foreground' },
+  { key: 'solidworks',     cssValue: 'var(--canvas-themes-solidworks)',      swatchClass: 'bg-[#2d3748] border-border',          textClass: 'text-muted-foreground' },
+  { key: 'blender',        cssValue: 'var(--canvas-themes-blender)',         swatchClass: 'bg-[#232323] border-border',          textClass: 'text-muted-foreground' },
+  { key: 'light',          cssValue: 'var(--canvas-themes-light)',           swatchClass: 'bg-white border-border',              textClass: 'text-foreground' },
 ];
 
 const DEFAULT_THEME: ThemeKey = 'autocadClassic';
@@ -103,7 +103,7 @@ export const BackgroundCategory: React.FC<BackgroundCategoryProps> = ({ classNam
                 className={[
                   'w-full flex items-center gap-3 rounded-md px-3 py-2 text-left transition-colors',
                   isActive
-                    ? 'ring-2 ring-blue-500 bg-blue-500/10'
+                    ? 'ring-2 ring-ring bg-primary/10'
                     : `${colors.bg.secondary} hover:${colors.bg.tertiary}`,
                 ].join(' ')}
               >
@@ -112,7 +112,7 @@ export const BackgroundCategory: React.FC<BackgroundCategoryProps> = ({ classNam
                   {t(`backgroundCategory.themes.${theme.key}`)}
                 </span>
                 {isActive && (
-                  <svg className="ml-auto w-4 h-4 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 16 16">
+                  <svg className="ml-auto w-4 h-4 text-primary flex-shrink-0" fill="none" viewBox="0 0 16 16">
                     <path d="M3 8l3.5 3.5L13 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 )}
@@ -129,19 +129,19 @@ export const BackgroundCategory: React.FC<BackgroundCategoryProps> = ({ classNam
             className={[
               'w-full flex items-center gap-3 rounded-md px-3 py-2 text-left transition-colors',
               activeTheme === 'custom'
-                ? 'ring-2 ring-blue-500 bg-blue-500/10'
+                ? 'ring-2 ring-ring bg-primary/10'
                 : `${colors.bg.secondary} hover:${colors.bg.tertiary}`,
             ].join(' ')}
           >
             <span
-              className="w-8 h-8 rounded border-2 border-zinc-600 flex-shrink-0"
+              className="w-8 h-8 rounded border-2 border-border flex-shrink-0"
               style={{ backgroundColor: customColor }}
             />
             <span className={`text-sm font-medium ${colors.text.primary}`}>
               {t('backgroundCategory.themes.custom')}
             </span>
             {activeTheme === 'custom' && (
-              <svg className="ml-auto w-4 h-4 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 16 16">
+              <svg className="ml-auto w-4 h-4 text-primary flex-shrink-0" fill="none" viewBox="0 0 16 16">
                 <path d="M3 8l3.5 3.5L13 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             )}

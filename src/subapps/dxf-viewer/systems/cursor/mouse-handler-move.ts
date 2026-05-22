@@ -21,6 +21,9 @@ import { withPerf, perfTick } from './mouse-handler-perf';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { dperf } from '../../debug';
 import type { CentralizedMouseHandlersProps, MouseHandlerRefs, SnapManagerAPI, SnapResultItem, DEBUG_MOUSE_HANDLERS } from './mouse-handler-types';
+import { getActiveDragGrip } from './GripDragStore';
+import { findWallFaceCornerSnap } from './wall-face-corner-snap';
+import { isWallEntity } from '../../types/entities';
 
 interface MouseMoveHandlerDeps {
   props: CentralizedMouseHandlersProps;
@@ -108,6 +111,64 @@ export function useMouseMoveHandler({
       const gripSnapResult = findSnapPoint(worldPos.x, worldPos.y);
       if (gripSnapResult && gripSnapResult.found && gripSnapResult.snappedPoint) {
         moveWorldPos = gripSnapResult.snappedPoint;
+        // Propagate to SnapIndicatorOverlay — grip drag bypasses the throttled block below
+        setSnapResults([{
+          point: gripSnapResult.snappedPoint,
+          type: gripSnapResult.activeMode || 'default',
+          entityId: gripSnapResult.snapPoint?.entityId || null,
+          distance: gripSnapResult.snapPoint?.distance || 0,
+          priority: 0,
+        }]);
+        setFullSnapResult(gripSnapResult);
+        setImmediateSnap({
+          found: true,
+          point: gripSnapResult.snappedPoint,
+          mode: gripSnapResult.activeMode || 'endpoint',
+          entityId: gripSnapResult.snapPoint?.entityId,
+        });
+      } else {
+        // No snap near cursor during grip drag — clear indicator
+        setSnapResults([]);
+        setFullSnapResult(null);
+        clearImmediateSnap();
+      }
+
+      // ADR-371 extension — Wall Face Corner Projection Snap (Revit-style)
+      // If dragging a wall endpoint grip, check whether a face corner (axis ± halfThickness)
+      // snaps to a nearby BIM corner. If so, override moveWorldPos to the adjusted axis pos
+      // so the face corner aligns exactly with the target corner.
+      const activeDragGrip = getActiveDragGrip();
+      if (
+        activeDragGrip &&
+        scene &&
+        (activeDragGrip.gripKind === 'wall-start' || activeDragGrip.gripKind === 'wall-end')
+      ) {
+        const draggedEntity = scene.entities?.find(e => e.id === activeDragGrip.entityId);
+        if (draggedEntity && isWallEntity(draggedEntity)) {
+          const faceSnap = findWallFaceCornerSnap(
+            draggedEntity,
+            activeDragGrip.gripKind as 'wall-start' | 'wall-end',
+            worldPos,
+            findSnapPoint!,
+          );
+          if (faceSnap) {
+            moveWorldPos = faceSnap.adjustedAxisPos;
+            setSnapResults([{
+              point: faceSnap.snapResult.snappedPoint!,
+              type: faceSnap.snapResult.activeMode || 'default',
+              entityId: faceSnap.snapResult.snapPoint?.entityId || null,
+              distance: faceSnap.snapResult.snapPoint?.distance || 0,
+              priority: 0,
+            }]);
+            setFullSnapResult(faceSnap.snapResult);
+            setImmediateSnap({
+              found: true,
+              point: faceSnap.snapResult.snappedPoint!,
+              mode: faceSnap.snapResult.activeMode || 'endpoint',
+              entityId: faceSnap.snapResult.snapPoint?.entityId,
+            });
+          }
+        }
       }
     }
 
@@ -127,7 +188,7 @@ export function useMouseMoveHandler({
     const snapThrottle = refs.snapThrottleRef.current;
     const snapNow = performance.now();
 
-    if (snapEnabled && findSnapPoint) {
+    if (snapEnabled && findSnapPoint && !isGripDragging) {
       snapThrottle.pendingWorldPos = worldPos;
 
       if (snapNow - snapThrottle.lastSnapTime >= SNAP_THROTTLE_MS) {
@@ -184,7 +245,7 @@ export function useMouseMoveHandler({
           }
         }
       }
-    } else {
+    } else if (!isGripDragging) {
       if (snapThrottle.lastSnapFound) {
         setSnapResults([]);
         setFullSnapResult(null);
@@ -196,7 +257,11 @@ export function useMouseMoveHandler({
     }
 
     // Unified hover highlighting — DXF entities > overlay priority
-    if ((activeTool === 'select' || entityPickingActive) && !refs.panStateRef.current.isPanning && !cursor.isSelecting) {
+    // Suppress hover entirely while grip is hovered/dragged — only snap indicators show
+    if (isGripDragging) {
+      setHoveredEntity(null);
+      setHoveredOverlay(null);
+    } else if ((activeTool === 'select' || entityPickingActive) && !refs.panStateRef.current.isPanning && !cursor.isSelecting) {
       const HOVER_THROTTLE_MS = 50;
       const hoverNow = performance.now();
       if (hoverNow - refs.hoverThrottleRef.current >= HOVER_THROTTLE_MS) {

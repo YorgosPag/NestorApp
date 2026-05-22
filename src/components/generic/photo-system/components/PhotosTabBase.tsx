@@ -126,7 +126,7 @@ function PhotosTabStats({ totalCount: _totalCount, categoryStats, categories }: 
               key={category.id}
               className="bg-card border rounded-lg p-4 text-center"
             >
-              <div className={`text-2xl font-bold ${category.colorClass || 'text-blue-600'}`}> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+              <div className={`text-2xl font-bold ${category.colorClass || 'text-primary'}`}> {/* eslint-disable-line design-system/enforce-semantic-colors */}
                 {stat?.count || 0}
               </div>
               <div className={cn("text-sm", colors.text.muted)}>{translateLabel(category.label)}</div>

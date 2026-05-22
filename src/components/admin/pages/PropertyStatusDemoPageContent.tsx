@@ -169,7 +169,7 @@ export function PropertyStatusDemoPageContent() {
         </Card>
         <Card>
           <CardHeader className="text-center">
-            <Settings className={`${iconSizes.xl} mx-auto text-orange-500`} />
+            <Settings className={`${iconSizes.xl} mx-auto text-[hsl(var(--text-warning))]`} />
             <CardTitle className="text-sm">{t('propertyStatusDemo.cards.committed')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">

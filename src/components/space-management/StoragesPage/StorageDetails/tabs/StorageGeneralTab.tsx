@@ -308,7 +308,7 @@ export function StorageGeneralTab({
         <Card>
           <CardHeader className="p-2">
             <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-              <MapPin className={cn(iconSizes.md, 'text-emerald-500')} />
+              <MapPin className={cn(iconSizes.md, 'text-green-707')} />
               {t('general.fields.floor')}
             </CardTitle>
           </CardHeader>

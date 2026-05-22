@@ -11,7 +11,7 @@ import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '../../../../../.
 import { useIconSizes } from '../../../../../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../../../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { CAD_UI_COLORS, UI_COLORS } from '../../../../../config/color-config';
+import { CAD_UI_COLORS, UI_COLORS, resolveGripColors } from '../../../../../config/color-config';
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,8 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
   if (!gripSettings || typeof gripSettings.gripSize === 'undefined') {
     return <div>Loading grip settings...</div>;
   }
+
+  const resolvedGripColors = resolveGripColors(gripSettings.colors);
 
   const updateSettings = (updates: Partial<GripSettingsType>) => {
     updateGripSettings(updates);
@@ -154,7 +156,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.LG}`}>
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('settings.grip.labels.coldColor')}</label>
-              <ColorDialogTrigger value={gripSettings.colors.cold || CAD_UI_COLORS.grips.cold} onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, cold: color } })} label={gripSettings.colors.cold || CAD_UI_COLORS.grips.cold} title={t('settings.grip.colorPicker.cold')} alpha={false} modes={['hex', 'rgb', 'hsl']} palettes={['dxf', 'semantic', 'material']} recent eyedropper />
+              <ColorDialogTrigger value={resolvedGripColors.cold} onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, cold: color } })} label={resolvedGripColors.cold} title={t('settings.grip.colorPicker.cold')} alpha={false} modes={['hex', 'rgb', 'hsl']} palettes={['dxf', 'semantic', 'material']} recent eyedropper />
             </div>
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('settings.grip.labels.warmColor')}</label>

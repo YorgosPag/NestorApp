@@ -50,7 +50,7 @@ export function WallPropertiesTab({
 
   if (!wall) {
     return (
-      <p className="px-3 py-6 text-center text-xs text-slate-400">
+      <p className="px-3 py-6 text-center text-xs text-muted-foreground">
         {t('wallAdvancedPanel.emptyState')}
       </p>
     );

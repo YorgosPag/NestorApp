@@ -4,7 +4,7 @@
  */
 
 import type { Point2D } from '../rendering/types/Types';
-import { UI_COLORS } from '../config/color-config';
+import { UI_COLORS, GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR, GRIP_CONTOUR_COLOR } from '../config/color-config';
 // 🏢 ADR-071: Centralized clamp function
 import { clamp } from '../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-034: Centralized Validation Bounds
@@ -19,7 +19,7 @@ export interface GripSettings {
   
   // === Grip Colors (AutoCAD style) ===
   colors: {
-    cold: string;           // GRIPCOLOR: unselected (default blue)
+    cold: string | null;    // GRIPCOLOR: null = use GRIP_COLD_COLOR SSoT (Revit-style sentinel)
     warm: string;           // GRIPHOVER: hover (default orange)
     hot: string;            // GRIPHOT: selected (default red)
     contour: string;        // GRIPCONTOUR: border (default black)
@@ -62,7 +62,7 @@ const defaultGripSettings = {
   showAperture: true, // ✅ AutoCAD APBOX default: enabled
 
   colors: {
-    cold: UI_COLORS.SNAP_CENTER,     // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
+    cold: null,                      // Sentinel: null → GRIP_COLD_COLOR at render time
     warm: UI_COLORS.SNAP_INTERSECTION,     // ✅ AutoCAD standard: Hot Pink - hover grips
     hot: UI_COLORS.SNAP_ENDPOINT,      // ✅ AutoCAD standard: Red (ACI 1) - selected grips
     contour: UI_COLORS.BLACK   // ✅ AutoCAD standard: Black contour

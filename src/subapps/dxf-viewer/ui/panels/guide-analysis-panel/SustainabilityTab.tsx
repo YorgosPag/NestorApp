@@ -28,11 +28,11 @@ import type {
 } from '../../../systems/guides';
 
 const RATING_COLORS: Record<string, string> = {
-  A: 'bg-green-500',
-  B: 'bg-lime-500',
-  C: 'bg-yellow-500',
-  D: 'bg-orange-500',
-  E: 'bg-red-500',
+  A: 'bg-[hsl(var(--bg-success))]',
+  B: 'bg-accent',
+  C: 'bg-[hsl(var(--bg-warning))]',
+  D: 'bg-[hsl(var(--bg-warning))]',
+  E: 'bg-destructive',
 };
 
 export const SustainabilityTab: React.FC = () => {
@@ -132,7 +132,7 @@ export const SustainabilityTab: React.FC = () => {
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className={colors.text.muted}>{t('guideAnalysis.sustainability.rating')}</span>
-            <span className={`inline-flex h-6 w-6 items-center justify-center rounded text-xs font-bold text-white ${RATING_COLORS[carbon.rating] ?? 'bg-gray-500'}`}>
+            <span className={`inline-flex h-6 w-6 items-center justify-center rounded text-xs font-bold text-white ${RATING_COLORS[carbon.rating] ?? 'bg-muted'}`}>
               {carbon.rating}
             </span>
           </div>
@@ -148,9 +148,9 @@ export const SustainabilityTab: React.FC = () => {
           <ul className="space-y-0.5">
             {greenDeal.findings.map((f, i) => (
               <li key={i} className="flex items-start gap-1.5 text-sm">
-                {f.status === 'pass' && <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-500" />}
-                {f.status === 'warning' && <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />}
-                {f.status === 'fail' && <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" />}
+                {f.status === 'pass' && <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-707" />}
+                {f.status === 'warning' && <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[hsl(var(--text-warning))]" />}
+                {f.status === 'fail' && <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />}
                 <span>{f.detail}</span>
               </li>
             ))}

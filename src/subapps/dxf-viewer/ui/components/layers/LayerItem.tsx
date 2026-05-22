@@ -288,11 +288,11 @@ export function LayerItem({
                 }}
                 onKeyDown={handleNameKeyDown}
                 onBlur={handleNameBlur}
-                className={`${colors.bg.secondary} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.INPUT.PADDING_X} rounded border ${renameValidation && !renameValidation.valid ? 'border-red-500' : getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring}`}
+                className={`${colors.bg.secondary} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.INPUT.PADDING_X} rounded border ${renameValidation && !renameValidation.valid ? 'border-destructive' : getStatusBorder('info')} focus:outline-none ${colors.interactive.focus.ring}`}
                 autoFocus
               />
               {renameValidation && !renameValidation.valid && (
-                <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} text-red-500`}>
+                <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} text-destructive`}>
                   {t(`layerValidation.${renameValidation.error}`, { ns: 'dxf-viewer-panels' })}
                   {renameValidation.suggestion &&
                     ` ${t(`layerValidation.${renameValidation.error}_suggestion`, {

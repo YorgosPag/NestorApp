@@ -6,7 +6,7 @@
 // ✅ ΦΑΣΗ 7: Use unified coordinate transforms
 import { CoordinateTransforms } from '../core/CoordinateTransforms';
 import type { ViewTransform, Point2D, Viewport } from '../types/Types';
-import { CAD_UI_COLORS } from '../../config/color-config';
+import { CAD_UI_COLORS, resolveGripColors } from '../../config/color-config';
 import type { GripSettings } from '../../types/gripSettings';
 import { PhaseManager } from '../../systems/phase-manager/PhaseManager';
 import type { EntityModel, RenderOptions, GripInfo } from '../types/Types';
@@ -260,12 +260,12 @@ export abstract class BaseEntityRenderer {
     const multiplier = GRIP_SIZE_MULTIPLIERS[state.toUpperCase() as keyof typeof GRIP_SIZE_MULTIPLIERS];
     const size = Math.round(base * multiplier);
 
-    const colors = this.gripSettings?.colors ?? {
-      cold: CAD_UI_COLORS.grips.cold,  // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
-      warm: CAD_UI_COLORS.grips.warm,  // ✅ AutoCAD standard: Hot Pink - hover grips
-      hot: CAD_UI_COLORS.grips.hot,   // ✅ AutoCAD standard: Red (ACI 1) - selected grips
-      contour: CAD_UI_COLORS.grips.outline_color // ✅ AutoCAD standard: Black contour
-    };
+    const colors = resolveGripColors(this.gripSettings?.colors ?? {
+      cold: null,
+      warm: CAD_UI_COLORS.grips.warm,
+      hot: CAD_UI_COLORS.grips.hot,
+      contour: CAD_UI_COLORS.grips.outline_color,
+    });
 
     // 🏢 SSoT: Unified color policy — same temperature colors for ALL grip types
     // Visual distinction comes from SIZE (60% for edges), not color

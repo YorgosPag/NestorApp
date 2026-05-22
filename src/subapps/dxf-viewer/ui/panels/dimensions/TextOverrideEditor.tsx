@@ -329,7 +329,7 @@ export function TextOverrideEditor({
         ) : mode === 'prefixSuffix' ? (
           <span className="font-mono">
             <ColoredPreview text={prefix} />
-            <span className="text-blue-400 font-semibold">&lt;&gt;</span>
+            <span className="text-primary font-semibold">&lt;&gt;</span>
             <ColoredPreview text={suffix} />
           </span>
         ) : (

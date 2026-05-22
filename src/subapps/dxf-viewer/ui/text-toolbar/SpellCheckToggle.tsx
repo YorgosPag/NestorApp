@@ -58,8 +58,8 @@ export const SpellCheckToggle: React.FC<ToggleProps> = ({ editor, defaultEnabled
           aria-pressed={enabled}
           className={`text-xs px-2 py-1 rounded border ${
             enabled
-              ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-400'
-              : 'bg-transparent border-zinc-300 dark:border-zinc-700'
+              ? 'bg-[hsl(var(--bg-info))]/20 border-primary'
+              : 'bg-transparent border-border'
           }`}
         >
           <span aria-hidden="true">{enabled ? '✓ ' : ''}</span>

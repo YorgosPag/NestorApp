@@ -61,11 +61,11 @@ export function StairCutPlaneSection({
       className="flex flex-col gap-2"
     >
       <header>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t('stairAdvancedPanel.sections.cutPlane.title')}
         </h4>
       </header>
-      <label className="flex items-center gap-2 text-xs text-slate-200">
+      <label className="flex items-center gap-2 text-xs text-foreground">
         <input
           type="checkbox"
           checked={inherits}
@@ -74,12 +74,12 @@ export function StairCutPlaneSection({
         />
         <span>{t('stairAdvancedPanel.sections.cutPlane.inheritProject')}</span>
       </label>
-      <p className="text-[11px] italic text-slate-500">
+      <p className="text-[11px] italic text-muted-foreground">
         {t('stairAdvancedPanel.sections.cutPlane.projectDefaultHint', {
           valueMm: PROJECT_DEFAULT_CUT_PLANE_MM,
         })}
       </p>
-      <label className="flex items-center gap-2 text-xs text-slate-200">
+      <label className="flex items-center gap-2 text-xs text-foreground">
         <span className="w-32 shrink-0">
           {t('stairAdvancedPanel.sections.cutPlane.overrideMm')}
         </span>
@@ -90,7 +90,7 @@ export function StairCutPlaneSection({
           value={inherits ? '' : value}
           disabled={inherits}
           onChange={onOverrideChange}
-          className="w-24 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100 disabled:opacity-40"
+          className="w-24 rounded border border-border bg-muted px-2 py-1 text-xs text-foreground disabled:opacity-40"
         />
       </label>
     </section>

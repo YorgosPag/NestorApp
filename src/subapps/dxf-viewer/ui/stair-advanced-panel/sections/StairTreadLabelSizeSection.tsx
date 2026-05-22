@@ -71,11 +71,11 @@ export function StairTreadLabelSizeSection({
       className="flex flex-col gap-2"
     >
       <header>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t('stairAdvancedPanel.sections.treadLabelSize.title')}
         </h4>
       </header>
-      <label className="flex items-center gap-2 text-xs text-slate-200">
+      <label className="flex items-center gap-2 text-xs text-foreground">
         <span className="w-32 shrink-0">
           {t('stairAdvancedPanel.sections.treadLabelSize.height')}
         </span>
@@ -86,9 +86,9 @@ export function StairTreadLabelSizeSection({
           step={HEIGHT_STEP_MM}
           value={valueMm}
           onChange={onChange}
-          className="w-20 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+          className="w-20 rounded border border-border bg-muted px-2 py-1 text-xs text-foreground"
         />
-        <span className="text-slate-400">mm</span>
+        <span className="text-muted-foreground">mm</span>
       </label>
     </section>
   );

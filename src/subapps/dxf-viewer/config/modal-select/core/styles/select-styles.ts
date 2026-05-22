@@ -27,7 +27,7 @@ import { PANEL_COLORS } from '../../../panel-tokens';
 export const MODAL_SELECT_STYLES = {
   // DXF Technical Interface Select (Dark Theme)
   DXF_TECHNICAL: {
-    trigger: `w-full ${PANEL_COLORS.BG_SECONDARY} border ${PANEL_COLORS.BORDER_PRIMARY} text-white focus:border-orange-500 focus:ring-orange-500/20`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    trigger: `w-full ${PANEL_COLORS.BG_SECONDARY} border ${PANEL_COLORS.BORDER_PRIMARY} text-white focus:border-ring focus:ring-ring/20`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
     content: `${PANEL_COLORS.BG_SECONDARY} border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
     item: `text-white hover:${PANEL_COLORS.BG_TERTIARY} focus:${PANEL_COLORS.BG_TERTIARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
     placeholder: '${semanticColors.text.tertiary}',

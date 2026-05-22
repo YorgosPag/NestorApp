@@ -24,13 +24,13 @@ export const CanvasNumericInputOverlay = React.memo(function CanvasNumericInputO
   if (!isActive) return null;
 
   return (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-md bg-gray-900/90 px-4 py-2 text-sm font-mono text-white shadow-lg border border-white/10 pointer-events-none select-none">
-      <span className="text-gray-400">{t('canvasNumericInput.label')}</span>
+    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-md bg-popover/95 px-4 py-2 text-sm font-mono text-foreground shadow-lg border border-border pointer-events-none select-none">
+      <span className="text-muted-foreground">{t('canvasNumericInput.label')}</span>
       <span className="min-w-[5ch]">
         {buffer || '0'}
         <span className="animate-pulse">█</span>
       </span>
-      <span className="text-gray-500 text-xs">mm</span>
+      <span className="text-muted-foreground text-xs">mm</span>
     </div>
   );
 });

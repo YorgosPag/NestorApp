@@ -64,6 +64,7 @@ import {
 import { useMoveEntities } from '../useMoveEntities';
 import { useCommandHistory } from '../../core/commands';
 import { useLevels } from '../../systems/levels';
+import { setActiveDragGrip, clearActiveDragGrip } from '../../systems/cursor/GripDragStore';
 // Re-export types for consumers
 export type { UseUnifiedGripInteractionParams, UseUnifiedGripInteractionReturn, DxfProjection };
 export type { OverlayProjection } from './unified-grip-types';
@@ -180,6 +181,7 @@ export function useUnifiedGripInteraction(
     setHoveredGrip(null);
     setCurrentWorldPos(null);
     anchorRef.current = null;
+    clearActiveDragGrip();
   }, []);
   // ── MOUSE MOVE ──
   const handleMouseMove = useCallback(
@@ -281,6 +283,8 @@ export function useUnifiedGripInteraction(
         anchorRef.current = nearGrip.position;
         setCurrentWorldPos(nearGrip.position);
         if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
+        // ADR-371 extension — expose active grip to mouse handlers for face corner projection snap
+        setActiveDragGrip({ entityId: nearGrip.entityId!, gripKind: nearGrip.wallGripKind ?? null });
         // ADR-357 Phase 12 — mark the start of the grip-hot session so the
         // right-click `Undo` extra can bound the global CommandHistory to
         // commands produced during this session. Idempotent (no-op if already armed).

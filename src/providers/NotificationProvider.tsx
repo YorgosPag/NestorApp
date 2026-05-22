@@ -114,7 +114,7 @@ export function NotificationProvider({
       case 'info':
         return <Info className={`${iconSizes.sm} ${COLOR_BRIDGE.text.info}`} />;         // ✅ SEMANTIC: blue -> info
       case 'loading':
-        return <Spinner size="small" className="text-gray-500" />;
+        return <Spinner size="small" className="text-muted-foreground" />;
       default:
         return <Info className={iconSizes.sm} />;
     }

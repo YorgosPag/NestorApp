@@ -105,7 +105,7 @@ export const DEFAULT_GRIP_SETTINGS: GripSettings = {
   apertureSize: 10,            // AutoCAD APERTURE default: 10 pixels
   opacity: 1.0,                // Full opacity
   colors: {
-    cold: UI_COLORS.SNAP_CENTER,           // AutoCAD: Blue (ACI 5) - unselected grips
+    cold: null,                            // Sentinel: null → GRIP_COLD_COLOR at render time
     warm: UI_COLORS.SNAP_INTERSECTION,     // AutoCAD: Hot Pink - hover grips
     hot: UI_COLORS.SNAP_ENDPOINT,          // AutoCAD: Red (ACI 1) - selected grips
     contour: UI_COLORS.BLACK               // AutoCAD: Black contour

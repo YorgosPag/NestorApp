@@ -280,7 +280,7 @@ export default GeneralSettingsPanel;
  *     </div>
  *
  *     // General Settings Sub-tabs Navigation
- *     <div className="border-b border-gray-600 mb-4">
+ *     <div className="border-b border-border mb-4">
  *       <nav className="flex gap-1 px-2 pb-2">
  *         <button onClick={() => setActiveGeneralTab('lines')} ...>Γραμμές</button>
  *         <button onClick={() => setActiveGeneralTab('text')} ...>Κείμενο</button>

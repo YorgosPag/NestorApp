@@ -197,7 +197,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       <aside className={designSystem.cn(
         designSystem.getTypographyClass('xs'),
         'text-muted-foreground text-center',
-        disabled && 'text-gray-400'
+        disabled && 'text-muted-foreground/50'
       )} role="note">
         {t('email.selectAppropriate')}
       </aside>

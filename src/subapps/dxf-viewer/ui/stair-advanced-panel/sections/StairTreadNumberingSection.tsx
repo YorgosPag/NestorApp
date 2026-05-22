@@ -77,7 +77,7 @@ export function StairTreadNumberingSection({
       className="flex flex-col gap-2"
     >
       <header>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t('stairAdvancedPanel.sections.treadNumbering.title')}
         </h4>
       </header>
@@ -86,7 +86,7 @@ export function StairTreadNumberingSection({
           {t('stairAdvancedPanel.sections.treadNumbering.title')}
         </legend>
         {DISPLAY_MODES.map((mode) => (
-          <label key={mode} className="flex items-center gap-2 text-xs text-slate-200">
+          <label key={mode} className="flex items-center gap-2 text-xs text-foreground">
             <input
               type="radio"
               name="stair-tread-label-display"
@@ -100,7 +100,7 @@ export function StairTreadNumberingSection({
         ))}
       </fieldset>
       {showEveryN && (
-        <label className="flex items-center gap-2 text-xs text-slate-200">
+        <label className="flex items-center gap-2 text-xs text-foreground">
           <span className="w-32 shrink-0">
             {t('stairAdvancedPanel.sections.treadNumbering.everyN')}
           </span>
@@ -110,11 +110,11 @@ export function StairTreadNumberingSection({
             step={1}
             value={treadLabelEveryN ?? EVERY_N_DEFAULT}
             onChange={onEveryNChange}
-            className="w-20 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+            className="w-20 rounded border border-border bg-muted px-2 py-1 text-xs text-foreground"
           />
         </label>
       )}
-      <label className="flex items-center gap-2 text-xs text-slate-200">
+      <label className="flex items-center gap-2 text-xs text-foreground">
         <input
           type="checkbox"
           checked={treadLabelRestartPerFlight}

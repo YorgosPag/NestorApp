@@ -80,7 +80,7 @@ export type TextSettingsType = z.infer<typeof TextSettingsSchema>;
 
 // ✅ FIX: Updated to match settings-core/types.ts (GripSettings interface)
 export const GripColorsSchema = z.object({
-  cold: z.string().regex(/^#[0-9A-Fa-f]{6}$/),     // Unselected (Blue)
+  cold: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable(), // null = use GRIP_COLD_COLOR SSoT
   warm: z.string().regex(/^#[0-9A-Fa-f]{6}$/),     // Hover (Cyan)
   hot: z.string().regex(/^#[0-9A-Fa-f]{6}$/),      // Selected (Red)
   contour: z.string().regex(/^#[0-9A-Fa-f]{6}$/)   // Contour (Black)

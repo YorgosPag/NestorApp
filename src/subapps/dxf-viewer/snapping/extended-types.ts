@@ -41,7 +41,12 @@ export enum ExtendedSnapType {
   CONSTRUCTION_POINT = 'construction_point',  // ADR-189 §3.7-3.16: Construction snap points
   DIM_DEF_POINT = 'dim_def_point',  // ADR-362 I1: snap to dimension def points (AutoCAD DIMSNAP)
   DIM_LINE = 'dim_line',            // ADR-362 I1: snap to dimension line for baseline/continued chains
-  BIM_COLUMN_CENTER = 'bim_column_center',  // ADR-363 Phase 5.5i: structural column center-axis snap
+  BIM_COLUMN_CENTER  = 'bim_column_center',   // ADR-363 Phase 5.5i: structural column center-axis snap
+  BIM_WALL_CORNER    = 'bim_wall_corner',    // ADR-370: wall face corner (outer/inner edge)
+  BIM_BEAM_CORNER    = 'bim_beam_corner',    // ADR-370: beam outline corner
+  BIM_SLAB_CORNER    = 'bim_slab_corner',    // ADR-370: slab polygon vertex
+  BIM_COLUMN_CORNER  = 'bim_column_corner',  // ADR-370: column perimeter corner
+  BIM_OPENING_CORNER = 'bim_opening_corner', // ADR-370: opening (door/window) face corner
   AUTO = 'auto'
 }
 
@@ -115,12 +120,22 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.CONSTRUCTION_POINT, // ADR-189: Construction point snap
     ExtendedSnapType.DIM_DEF_POINT,     // ADR-362 I1: dimension def point snap
     ExtendedSnapType.DIM_LINE,          // ADR-362 I1: dimension line snap
-    ExtendedSnapType.BIM_COLUMN_CENTER, // ADR-363 Phase 5.5i: column center axis snap
+    ExtendedSnapType.BIM_COLUMN_CENTER,   // ADR-363 Phase 5.5i: column center axis snap
+    ExtendedSnapType.BIM_WALL_CORNER,     // ADR-370: wall face corner
+    ExtendedSnapType.BIM_BEAM_CORNER,     // ADR-370: beam outline corner
+    ExtendedSnapType.BIM_SLAB_CORNER,     // ADR-370: slab polygon vertex
+    ExtendedSnapType.BIM_COLUMN_CORNER,   // ADR-370: column perimeter corner
+    ExtendedSnapType.BIM_OPENING_CORNER,  // ADR-370: opening face corner
   ]),
   showSnapMarkers: true,
   showSnapTooltips: true,
   priority: [
-    ExtendedSnapType.BIM_COLUMN_CENTER, // ADR-363 Phase 5.5i: structural precision — before generic endpoint
+    ExtendedSnapType.BIM_WALL_CORNER,     // ADR-370: face corners — highest structural precision
+    ExtendedSnapType.BIM_BEAM_CORNER,     // ADR-370
+    ExtendedSnapType.BIM_SLAB_CORNER,     // ADR-370
+    ExtendedSnapType.BIM_COLUMN_CORNER,   // ADR-370
+    ExtendedSnapType.BIM_OPENING_CORNER,  // ADR-370
+    ExtendedSnapType.BIM_COLUMN_CENTER,   // ADR-363 Phase 5.5i: structural precision — before generic endpoint
     ExtendedSnapType.INTERSECTION,
     ExtendedSnapType.ENDPOINT,
     ExtendedSnapType.MIDPOINT,
@@ -161,7 +176,12 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     [ExtendedSnapType.CONSTRUCTION_POINT]: 10,
     [ExtendedSnapType.DIM_DEF_POINT]: 10,      // ADR-362 I1: exact definition point — AutoCAD APERTURE default
     [ExtendedSnapType.DIM_LINE]: 10,            // ADR-362 I1: dim line reference point
-    [ExtendedSnapType.BIM_COLUMN_CENTER]: 10,   // ADR-363 Phase 5.5i: column center axis snap
+    [ExtendedSnapType.BIM_COLUMN_CENTER]:   10, // ADR-363 Phase 5.5i: column center axis snap
+    [ExtendedSnapType.BIM_WALL_CORNER]:     10, // ADR-370
+    [ExtendedSnapType.BIM_BEAM_CORNER]:     10, // ADR-370
+    [ExtendedSnapType.BIM_SLAB_CORNER]:     10, // ADR-370
+    [ExtendedSnapType.BIM_COLUMN_CORNER]:   10, // ADR-370
+    [ExtendedSnapType.BIM_OPENING_CORNER]:  10, // ADR-370
   }
 };
 

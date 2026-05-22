@@ -129,10 +129,10 @@ export interface TextSettings {
 // ============================================================================
 
 export interface GripColors {
-  cold: string;     // Unselected (Blue - ACI 5)
-  warm: string;     // Hover (Hot Pink)
-  hot: string;      // Selected (Red - ACI 1)
-  contour: string;  // Contour (Black)
+  cold: string | null; // Unselected — null = use GRIP_COLD_COLOR SSoT (Revit-style sentinel)
+  warm: string;        // Hover (Hot Pink)
+  hot: string;         // Selected (Red - ACI 1)
+  contour: string;     // Contour (Black)
 }
 
 export interface GripSettings {
@@ -412,7 +412,7 @@ export const validateGripSettings = (settings: Partial<GripSettings>): GripSetti
     apertureSize: 10,
     opacity: 1.0,
     colors: {
-      cold: UI_COLORS.SNAP_CENTER,
+      cold: null,
       warm: UI_COLORS.SNAP_INTERSECTION,
       hot: UI_COLORS.SNAP_ENDPOINT,
       contour: UI_COLORS.BLACK

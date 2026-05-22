@@ -309,7 +309,7 @@ export const getFormFieldClass = (hasError: boolean = false, disabled: boolean =
     'disabled:cursor-not-allowed disabled:opacity-50',
     {
       [borders.variants.status.error.className]: hasError,
-      'focus-visible:ring-red-500': hasError,
+      'focus-visible:ring-destructive': hasError,
       'cursor-not-allowed opacity-50': disabled,
     }
   );

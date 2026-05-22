@@ -110,7 +110,7 @@ export function AnnotationScaleManager({
       />
 
       {entityOverridesViewport && (
-        <p className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+        <p className="flex items-center gap-1 text-xs text-[hsl(var(--text-warning))]">
           <AlertTriangle className="h-3 w-3" aria-hidden />
           {t('textToolbar:annotationScale.entityOverride')}
         </p>

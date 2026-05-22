@@ -48,7 +48,7 @@ export interface EmptyStateAction {
 export interface EmptyStateProps {
   /** Icon component (LucideIcon or custom React component) */
   icon?: LucideIcon | React.ComponentType<{ className?: string }>;
-  /** Icon color class (e.g., 'text-blue-500') — defaults to COLOR_BRIDGE.text.muted */
+  /** Icon color class — defaults to COLOR_BRIDGE.text.muted */
   iconColor?: string;
   /** Primary message */
   title: string;

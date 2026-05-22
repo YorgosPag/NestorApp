@@ -114,7 +114,7 @@ export interface CompactToolbarProps {
   headerTitle?: string; // e.g., "Εταιρείες"
   headerCount?: number; // e.g., 5
   headerIcon?: React.ComponentType<{ className?: string }>; // Icon component
-  headerIconColor?: string; // e.g., "text-blue-600" for entity-specific color
+  headerIconColor?: string; // entity-specific color class
 
   // 🏢 ENTERPRISE Custom Icons - For semantic correctness
   newItemIcon?: React.ComponentType<{ className?: string }>; // Custom new item icon (default: Plus, can be Link2 for "connect")

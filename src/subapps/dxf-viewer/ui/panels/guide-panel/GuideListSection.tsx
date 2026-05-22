@@ -132,7 +132,7 @@ const GuideItem = React.memo<GuideItemProps>(({
           <TooltipTrigger asChild>
             <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => onToggleLock(guide.id, !guide.locked)}>
               {guide.locked
-                ? <Lock className={`${iconSizes.xs} text-amber-500`} />
+                ? <Lock className={`${iconSizes.xs} text-[hsl(var(--text-warning))]`} />
                 : <Unlock className={iconSizes.xs} />
               }
             </Button>
@@ -213,7 +213,7 @@ const GroupHeader = React.memo<GroupHeaderProps>(({
           <TooltipTrigger asChild>
             <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => onToggleLock(group.id, !group.locked)}>
               {group.locked
-                ? <Lock className={`${iconSizes.xs} text-amber-500`} />
+                ? <Lock className={`${iconSizes.xs} text-[hsl(var(--text-warning))]`} />
                 : <Unlock className={iconSizes.xs} />
               }
             </Button>

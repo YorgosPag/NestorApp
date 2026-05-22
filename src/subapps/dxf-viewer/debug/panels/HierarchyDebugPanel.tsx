@@ -44,7 +44,7 @@ export function HierarchyDebugPanel() {
       <section className={`${colors.bg.card} ${PANEL_LAYOUT.SPACING.MS} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')}`}>
         <h3 className={`${colors.text.inverse} ${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           {/* 🏢 ENTERPRISE: Factory icon (blue) - same as company cards */}
-          <Factory className={`${iconSizes.md} text-blue-600`} />
+          <Factory className={`${iconSizes.md} text-primary`} />
           <span>{t('panels.hierarchy.projectHierarchy')}</span>
         </h3>
         <p className={`${colors.text.muted}`}>{t('panels.hierarchy.loading')}</p>
@@ -76,7 +76,7 @@ export function HierarchyDebugPanel() {
     <article className={`${colors.bg.card} ${PANEL_LAYOUT.SPACING.MS} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')}`}>
       <h3 className={`${colors.text.inverse} ${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
         {/* 🏢 ENTERPRISE: Factory icon (blue) - same as company cards */}
-        <Factory className={`${iconSizes.md} text-blue-600`} />
+        <Factory className={`${iconSizes.md} text-primary`} />
         <span>{t('panels.hierarchy.projectHierarchy')}</span>
       </h3>
 
@@ -150,7 +150,7 @@ export function HierarchyDebugPanel() {
       {selectedProject && (
         <section className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.MARGIN.LEFT_LG} ${getDirectionalBorder('success', 'left')}`}>
           {/* 🏢 ENTERPRISE: Construction icon (green) - same as project cards in NAVIGATION_ENTITIES */}
-          <h4 className={`text-green-600 ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+          <h4 className={`text-green-707 ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <Construction className={iconSizes.sm} />
             <span>{selectedProject.name}</span>
           </h4>
@@ -193,7 +193,7 @@ export function HierarchyDebugPanel() {
       {selectedBuilding && (
         <section className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.MARGIN.LEFT_XL} ${getDirectionalBorder('info', 'left')}`}>
           {/* 🏢 ENTERPRISE: Building icon (purple) - same as building cards in NAVIGATION_ENTITIES */}
-          <h4 className={`text-purple-600 ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+          <h4 className={`text-primary ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <Building className={iconSizes.sm} />
             <span>{selectedBuilding.name}</span>
           </h4>
