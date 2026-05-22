@@ -180,21 +180,21 @@ export function BuildingSpacesTabs({
       id: 'properties',
       label: t('buildingSpaces.units.title'),
       icon: NAVIGATION_ENTITIES.property.icon,
-      iconColor: NAVIGATION_ENTITIES.property.color, // 🟠 text-orange-600
+      iconColor: NAVIGATION_ENTITIES.property.color,
       content: null // Content rendered separately via TabsContent
     },
     {
       id: 'storage',
       label: t('buildingSpaces.storage.title'),
       icon: NAVIGATION_ENTITIES.storage.icon,
-      iconColor: NAVIGATION_ENTITIES.storage.color, // 🟡 text-amber-600
+      iconColor: NAVIGATION_ENTITIES.storage.color,
       content: null
     },
     {
       id: 'parking',
       label: t('buildingSpaces.parking.title'),
       icon: NAVIGATION_ENTITIES.parking.icon,
-      iconColor: NAVIGATION_ENTITIES.parking.color, // 🔵 text-indigo-600
+      iconColor: NAVIGATION_ENTITIES.parking.color,
       content: null
     }
   ];

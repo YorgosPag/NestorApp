@@ -285,12 +285,12 @@ export function EscoSkillPicker({
               className={cn(
                 'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium',
                 skill.uri
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                  : 'bg-gray-100 text-gray-700 border border-gray-200'
+                  ? 'bg-[hsl(var(--bg-info))]/20 text-primary border border-border'
+                  : 'bg-muted text-foreground border border-border'
               )}
             >
               {skill.uri && (
-                <span className="text-[10px] font-semibold text-blue-500">
+                <span className="text-[10px] font-semibold text-primary">
                   {t('esco.skills.badge')}
                 </span>
               )}

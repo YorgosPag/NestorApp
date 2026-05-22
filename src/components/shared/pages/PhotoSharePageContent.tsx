@@ -103,10 +103,10 @@ export function PhotoSharePageContent() {
           priority
         />
       </div>
-      <p className="mt-6 text-center text-gray-600 max-w-md">
+      <p className="mt-6 text-center text-muted-foreground max-w-md">
         {description}
       </p>
-      <p className="mt-2 text-center text-sm text-gray-500">
+      <p className="mt-2 text-center text-sm text-muted-foreground">
         Κοινοποιήθηκε από το <strong>Nestor Construct</strong>
       </p>
     </div>

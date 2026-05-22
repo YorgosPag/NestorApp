@@ -128,7 +128,7 @@ export function SelectItemModal({
         <div className="space-y-4">
           {/* Search Input */}
           <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder}
               value={searchTerm}
@@ -141,7 +141,7 @@ export function SelectItemModal({
           {isLoading && (
             <div className="flex items-center justify-center py-8">
               <Spinner size="large" />
-              <span className="ml-2 text-sm text-gray-600">{t('status.loading')}</span>
+              <span className="ml-2 text-sm text-muted-foreground">{t('status.loading')}</span>
             </div>
           )}
 
@@ -149,15 +149,15 @@ export function SelectItemModal({
           {!isLoading && (
             <ScrollArea className="h-[400px] w-full">
               {filteredItems.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   {items.length === 0 ? (
                     <div>
-                      <Icon className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                      <Icon className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
                       <p>{t('modal.noItemsFound')}</p>
                     </div>
                   ) : (
                     <div>
-                      <Search className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                      <Search className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
                       <p>{t('modal.noResultsFor', { searchTerm })}</p>
                     </div>
                   )}
@@ -172,7 +172,7 @@ export function SelectItemModal({
                     >
                       <Icon className={`h-5 w-5 ${iconColor} flex-shrink-0`} />
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-900 dark:text-foreground truncate">
+                        <div className="font-medium text-foreground truncate">
                           {item.name}
                         </div>
                         {item.subtitle && (
@@ -181,7 +181,7 @@ export function SelectItemModal({
                           </div>
                         )}
                       </div>
-                      <div className="text-xs text-gray-400 flex-shrink-0">
+                      <div className="text-xs text-muted-foreground flex-shrink-0">
                         {t('modal.selectAction')}
                       </div>
                     </div>

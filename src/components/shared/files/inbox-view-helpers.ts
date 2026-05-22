@@ -47,18 +47,18 @@ export interface ChatGroup {
 export function getCategoryIcon(category: string | undefined, iconSizes: ReturnType<typeof useIconSizes>) {
   switch (category) {
     case 'photos':
-      return React.createElement(FileImage, { className: `${iconSizes.md} text-blue-500` });
+      return React.createElement(FileImage, { className: `${iconSizes.md} text-primary` });
     case 'videos':
-      return React.createElement(FileVideo, { className: `${iconSizes.md} text-purple-500` });
+      return React.createElement(FileVideo, { className: `${iconSizes.md} text-primary` });
     case 'documents':
     case 'contracts':
     case 'reports':
-      return React.createElement(FileText, { className: `${iconSizes.md} text-orange-500` });
+      return React.createElement(FileText, { className: `${iconSizes.md} text-[hsl(var(--text-warning))]` });
     case 'floorplans':
     case 'drawings':
-      return React.createElement(FileText, { className: `${iconSizes.md} text-green-500` });
+      return React.createElement(FileText, { className: `${iconSizes.md} text-green-707` });
     default:
-      return React.createElement(File, { className: `${iconSizes.md} text-gray-500` });
+      return React.createElement(File, { className: `${iconSizes.md} text-muted-foreground` });
   }
 }
 

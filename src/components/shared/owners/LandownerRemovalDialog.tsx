@@ -87,7 +87,7 @@ export function LandownerRemovalDialog({
 
               {/* Warning note about ownership table */}
               {variant === 'warning' && (
-                <p className="text-sm text-amber-600 dark:text-amber-400">
+                <p className="text-sm text-[hsl(var(--text-warning))]">
                   {rg('warningNote')}
                 </p>
               )}
@@ -104,7 +104,7 @@ export function LandownerRemovalDialog({
               <AlertDialogAction
                 onClick={onConfirm}
                 className={variant === 'warning'
-                  ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                  ? 'bg-[hsl(var(--bg-warning))] hover:bg-[hsl(var(--bg-warning))]/80 text-foreground'
                   : 'bg-destructive hover:bg-destructive/90 text-destructive-foreground'
                 }
               >
@@ -125,7 +125,7 @@ export function LandownerRemovalDialog({
 function getTitleClasses(variant: string): string {
   switch (variant) {
     case 'blocked': return 'flex items-center gap-2 text-destructive';
-    case 'warning': return 'flex items-center gap-2 text-amber-600 dark:text-amber-400';
+    case 'warning': return 'flex items-center gap-2 text-[hsl(var(--text-warning))]';
     default: return 'flex items-center gap-2';
   }
 }

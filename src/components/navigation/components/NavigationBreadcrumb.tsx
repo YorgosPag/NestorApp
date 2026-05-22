@@ -190,7 +190,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
                 <TooltipTrigger asChild>
                   <Link
                     href={item.href}
-                    className="flex items-center gap-1 text-gray-300 hover:text-white transition-colors"
+                    className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {renderItemContent(item)}
                   </Link>
@@ -199,7 +199,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
               </Tooltip>
             )}
             {!isLastItem && (
-              <span className="text-gray-500" aria-hidden="true">→</span>
+              <span className="text-muted-foreground" aria-hidden="true">→</span>
             )}
           </React.Fragment>
         );

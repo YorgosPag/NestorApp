@@ -61,28 +61,28 @@ interface StatusConfig {
 const STATUS_CONFIG: Record<SaveStatus, StatusConfig> = {
   idle: {
     icon: CheckCircle2,
-    dotColor: 'bg-gray-400 dark:bg-gray-500',
-    textColor: 'text-gray-500 dark:text-gray-400',
-    badgeBg: 'bg-gray-100 dark:bg-gray-800',
+    dotColor: 'bg-muted-foreground',
+    textColor: 'text-muted-foreground',
+    badgeBg: 'bg-muted',
   },
   saving: {
     icon: Loader2,
-    dotColor: 'bg-blue-500 dark:bg-blue-400',
-    textColor: 'text-blue-600 dark:text-blue-400',
-    badgeBg: 'bg-blue-50 dark:bg-blue-900/30',
+    dotColor: 'bg-primary',
+    textColor: 'text-primary',
+    badgeBg: 'bg-[hsl(var(--bg-info))]/20',
     animate: true,
   },
   success: {
     icon: CheckCircle2,
-    dotColor: 'bg-green-500 dark:bg-green-400',
-    textColor: 'text-green-600 dark:text-green-400',
-    badgeBg: 'bg-green-50 dark:bg-green-900/30',
+    dotColor: 'bg-green-707',
+    textColor: 'text-green-707',
+    badgeBg: 'bg-[hsl(var(--bg-success))]/10',
   },
   error: {
     icon: AlertCircle,
-    dotColor: 'bg-red-500 dark:bg-red-400',
-    textColor: 'text-red-600 dark:text-red-400',
-    badgeBg: 'bg-red-50 dark:bg-red-900/30',
+    dotColor: 'bg-destructive',
+    textColor: 'text-destructive',
+    badgeBg: 'bg-destructive/10',
   },
 };
 

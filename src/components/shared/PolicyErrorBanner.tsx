@@ -70,8 +70,7 @@ export function PolicyErrorBanner({
 
   return (
     <>
-      {/* eslint-disable-next-line design-system/enforce-semantic-colors */}
-      <aside className="bg-red-100 border border-red-400 text-red-700 px-2 py-2 rounded relative dark:bg-red-900 dark:border-red-700 dark:text-red-300">
+      <aside className="bg-destructive/10 border border-destructive text-destructive px-2 py-2 rounded relative">
         <strong className="font-bold">{t('tabs.general.errorLabel')}</strong>
         <span>{message}</span>
       </aside>

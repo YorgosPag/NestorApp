@@ -10,16 +10,16 @@ import type { ActivityLevel, ActivityVerbosity, GeocodingActivityEvent } from '.
 
 const LEVEL_TEXT_CLASS: Record<ActivityLevel, string> = {
   info: 'text-muted-foreground',
-  success: 'text-green-600 dark:text-green-400',
-  warn: 'text-amber-600 dark:text-amber-400',
-  error: 'text-red-600 dark:text-red-400',
+  success: 'text-green-707',
+  warn: 'text-[hsl(var(--text-warning))]',
+  error: 'text-destructive',
 };
 
 const LEVEL_DOT_CLASS: Record<ActivityLevel, string> = {
   info: 'bg-muted-foreground/40',
-  success: 'bg-green-500',
-  warn: 'bg-amber-500',
-  error: 'bg-red-500',
+  success: 'bg-green-707',
+  warn: 'bg-[hsl(var(--text-warning))]',
+  error: 'bg-destructive',
 };
 
 const VERBOSITY_OPTIONS: ActivityVerbosity[] = ['basic', 'detailed', 'debug'];

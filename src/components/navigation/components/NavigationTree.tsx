@@ -104,7 +104,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
   if (loading) {
     return (
       <div className={`text-center py-8 ${className || ''}`}>
-        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" /> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
         <p className={colors.text.muted}>{t('tree.loading')}</p>
       </div>
     );
@@ -113,11 +113,11 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
   if (error) {
     return (
       <div className={`text-center py-8 ${className || ''}`}>
-        <p className="text-red-500 dark:text-red-400 mb-4">{t('tree.errorMessage', { error })}</p> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+        <p className="text-destructive mb-4">{t('tree.errorMessage', { error })}</p>
         <button
           onClick={loadCompanies}
           className={cn(
-            "px-4 py-2 bg-blue-600 text-white rounded-lg", // eslint-disable-line design-system/enforce-semantic-colors
+            "px-4 py-2 bg-primary text-primary-foreground rounded-lg",
             HOVER_BACKGROUND_EFFECTS.BLUE
           )}
         >
@@ -130,7 +130,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
   return (
     <div className={className || ''}>
       {/* Title */}
-      <h3 className="text-lg font-medium text-gray-900 dark:text-foreground mb-2">
+      <h3 className="text-lg font-medium text-foreground mb-2">
         {getStepTitle()}
       </h3>
       <p className={cn(colors.text.muted, "mb-4 text-sm")}>
@@ -223,7 +223,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
         {/* Final Destinations - 🏢 ENTERPRISE: Εξαρτάται από Building (skip Floors) */}
         {currentLevel === 'properties' && selectedBuilding && (
           <nav className="space-y-3" aria-label={t('tree.steps.units')}>
-            <p className="text-sm font-medium text-gray-900 dark:text-foreground mb-3">
+            <p className="text-sm font-medium text-foreground mb-3">
               {t('tree.destinations.navigateTo')}
             </p>
 

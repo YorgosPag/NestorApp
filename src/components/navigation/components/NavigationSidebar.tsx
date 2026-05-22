@@ -34,7 +34,7 @@ export function NavigationSidebar({
         <button
           onClick={onToggleExpanded}
           className={cn(
-            "flex items-center gap-2 text-gray-700 dark:text-gray-300 py-2 px-1 w-full text-left",
+            "flex items-center gap-2 text-foreground py-2 px-1 w-full text-left",
             HOVER_TEXT_EFFECTS.GRAY_TO_BLACK,
             TRANSITION_PRESETS.STANDARD_COLORS
           )}
@@ -51,7 +51,7 @@ export function NavigationSidebar({
 
       {/* Navigation Tree (Collapsible) */}
       {isExpanded && (
-        <div className="pl-4 border-l border-gray-200 dark:border-gray-700">
+        <div className="pl-4 border-l border-border">
           <NavigationTree />
         </div>
       )}

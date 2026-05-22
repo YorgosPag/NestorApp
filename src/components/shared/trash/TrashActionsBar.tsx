@@ -50,9 +50,9 @@ export function TrashActionsBar({
     >
       {/* Warning banner */}
       <div
-        className={`flex items-center gap-2 px-3 py-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm ${colors.text.muted}`}
+        className={`flex items-center gap-2 px-3 py-2 rounded-md bg-[hsl(var(--bg-warning))]/40 border border-border text-sm ${colors.text.muted}`}
       >
-        <AlertTriangle className={`${iconSizes.sm} text-amber-500 shrink-0`} />
+        <AlertTriangle className={`${iconSizes.sm} text-[hsl(var(--text-warning))] shrink-0`} />
         <p>{t("autoDeleteWarning")}</p>
       </div>
 

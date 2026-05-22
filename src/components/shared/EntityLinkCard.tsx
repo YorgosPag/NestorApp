@@ -462,13 +462,13 @@ export function EntityLinkCard({
           </p>
         )}
         {saveStatus === 'success' && (
-          <p className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400 pt-1">
+          <p className="flex items-center gap-1 text-sm text-green-707 pt-1">
             <CheckCircle className={iconSizes.sm} />
             {labels.success}
           </p>
         )}
         {saveStatus === 'error' && (
-          <p className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400 pt-1">
+          <p className="flex items-center gap-1 text-sm text-destructive pt-1">
             <AlertCircle className={iconSizes.sm} />
             {labels.error}
           </p>

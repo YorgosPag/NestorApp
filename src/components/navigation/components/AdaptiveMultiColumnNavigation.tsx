@@ -47,7 +47,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -55,7 +55,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
   if (error) {
     return (
       <div className="text-center py-8">
-        <p className="text-red-500 dark:text-red-400 mb-4">{t('page.error')}: {error}</p>
+        <p className="text-destructive mb-4">{t('page.error')}: {error}</p>
         <button
           onClick={() => window.location.reload()}
           className={`px-4 py-2 text-white rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}

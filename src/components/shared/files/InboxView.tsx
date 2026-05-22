@@ -136,7 +136,7 @@ export function InboxView({
     <section className="space-y-4 p-4">
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Inbox className={`${iconSizes.md} text-blue-500`} />
+          <Inbox className={`${iconSizes.md} text-primary`} />
           <div>
             <h2 className="text-lg font-semibold">{t('domains.ingestion')}</h2>
             <p className={cn("text-xs", colors.text.muted)}>{t('inbox.description')}</p>
@@ -174,7 +174,7 @@ export function InboxView({
               >
                 <div className="flex items-center gap-3">
                   {isExpanded ? <ChevronDown className={iconSizes.sm} /> : <ChevronRight className={iconSizes.sm} />}
-                  <MessageSquare className={`${iconSizes.md} text-blue-500`} />
+                  <MessageSquare className={`${iconSizes.md} text-primary`} />
                   <div className="text-left">
                     <p className="text-sm font-medium flex items-center gap-2"><User className={iconSizes.xs} />{senderName}</p>
                     <p className={cn("text-xs", colors.text.muted)}>Chat ID: {group.chatId}</p>

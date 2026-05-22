@@ -10,10 +10,10 @@ interface AddressConfidenceMeterProps {
 }
 
 function getMeterColorClass(confidence: number): string {
-  if (confidence >= 0.85) return 'bg-green-500';
-  if (confidence >= 0.70) return 'bg-yellow-400';
-  if (confidence >= 0.50) return 'bg-orange-400';
-  return 'bg-red-500';
+  if (confidence >= 0.85) return 'bg-green-707';
+  if (confidence >= 0.70) return 'bg-[hsl(var(--bg-warning))]';
+  if (confidence >= 0.50) return 'bg-[hsl(var(--bg-warning))]/60';
+  return 'bg-destructive';
 }
 
 export function AddressConfidenceMeter({ confidence, className }: AddressConfidenceMeterProps) {

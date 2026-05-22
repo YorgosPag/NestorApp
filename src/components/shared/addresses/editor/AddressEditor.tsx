@@ -52,13 +52,13 @@ const PHASE_STATUS_CLASS: Record<AddressEditorState['phase'], string> = {
   idle: 'text-muted-foreground',
   typing: 'text-muted-foreground',
   debouncing: 'text-muted-foreground',
-  loading: 'text-blue-600 dark:text-blue-400',
-  success: 'text-green-600 dark:text-green-400',
-  partial: 'text-amber-600 dark:text-amber-400',
-  conflict: 'text-orange-600 dark:text-orange-400',
-  suggestions: 'text-purple-600 dark:text-purple-400',
+  loading: 'text-primary',
+  success: 'text-green-707',
+  partial: 'text-[hsl(var(--text-warning))]',
+  conflict: 'text-[hsl(var(--text-warning))]',
+  suggestions: 'text-primary',
   stale: 'text-muted-foreground',
-  error: 'text-red-600 dark:text-red-400',
+  error: 'text-destructive',
 };
 
 interface FormFieldRowProps {

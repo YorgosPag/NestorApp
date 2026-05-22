@@ -20,7 +20,7 @@ function OrgNodeRow({ node }: { node: OrgNode }) {
         style={{ paddingLeft: `${8 + node.depth * 16}px` }}
       >
         {node.member.isDepartmentHead && (
-          <Crown className="h-3.5 w-3.5 text-yellow-500 shrink-0" />
+          <Crown className="h-3.5 w-3.5 text-[hsl(var(--text-warning))] shrink-0" />
         )}
         {!node.member.isDepartmentHead && (
           <span className="h-3.5 w-3.5 shrink-0" />
@@ -35,7 +35,7 @@ function OrgNodeRow({ node }: { node: OrgNode }) {
         </Badge>
 
         {node.member.receivesNotifications && (
-          <Bell className="h-3 w-3 text-blue-500 shrink-0" aria-label={t('orgStructure.member.receivesNotifications')} />
+          <Bell className="h-3 w-3 text-primary shrink-0" aria-label={t('orgStructure.member.receivesNotifications')} />
         )}
       </div>
 

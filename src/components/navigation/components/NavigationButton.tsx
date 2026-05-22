@@ -28,7 +28,7 @@ interface NavigationButtonProps {
   isSelected?: boolean;
   variant?: 'default' | 'compact';
   // 🏢 ENTERPRISE: Custom icon color for entity type consistency
-  iconColor?: string; // e.g., 'text-blue-600', 'text-green-600', etc.
+  iconColor?: string; // e.g., 'text-primary', 'text-green-707', etc.
   // Νέο κεντρικοποιημένο badge system
   badgeStatus?: NavigationStatus;
   badgeText?: string; // Override default badge text
@@ -114,8 +114,8 @@ export function NavigationButton({
 
   // Enterprise state-based styling
   const stateClasses = cn(
-    isSelected && 'border-blue-500 bg-blue-50 dark:bg-blue-900/30',
-    !isSelected && effectiveBadgeStatus && `border-orange-300 bg-orange-50 dark:bg-orange-900/20 ${HOVER_BORDER_EFFECTS.ORANGE}`,
+    isSelected && 'border-primary bg-[hsl(var(--bg-info))]/20',
+    !isSelected && effectiveBadgeStatus && `border-border bg-[hsl(var(--bg-warning))]/40 ${HOVER_BORDER_EFFECTS.ORANGE}`,
     !isSelected && !effectiveBadgeStatus && `border-border ${HOVER_BORDER_EFFECTS.GRAY}`
   );
 
@@ -126,7 +126,7 @@ export function NavigationButton({
     } else {
       // Enterprise icon rendering with design tokens
       const IconComponent = icon;
-      const colorClass = iconColor || 'text-gray-600 dark:text-gray-400';
+      const colorClass = iconColor || 'text-muted-foreground';
       return <IconComponent size={currentVariant.iconSize} className={colorClass} />;
     }
   };
@@ -154,11 +154,11 @@ export function NavigationButton({
       <div className={cn('flex items-center', variant === 'compact' ? 'gap-2' : 'gap-3')}>
         {renderIcon()}
         <div className="flex-1 min-w-0">
-          <div className="text-gray-900 dark:text-foreground font-medium truncate">
+          <div className="text-foreground font-medium truncate">
             {title}
           </div>
           {subtitle && (
-            <div className={cn("text-sm truncate", effectiveBadgeStatus ? 'text-orange-600 dark:text-orange-400' : colors.text.muted)}>
+            <div className={cn("text-sm truncate", effectiveBadgeStatus ? 'text-[hsl(var(--text-warning))]' : colors.text.muted)}>
               {subtitle}
             </div>
           )}
@@ -168,7 +168,7 @@ export function NavigationButton({
                 <div className={cn(
                   'text-sm truncate min-w-0',
                   effectiveBadgeStatus
-                    ? 'text-orange-500 dark:text-orange-400'
+                    ? 'text-[hsl(var(--text-warning))]'
                     : colors.text.muted
                 )}>
                   {extraInfo}

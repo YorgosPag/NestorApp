@@ -291,7 +291,7 @@ export function FilesList({
                           aria-label={t('list.retryClassification')}
                           className={cn(
                             'inline-flex items-center justify-center rounded p-0.5',
-                            'text-blue-600 dark:text-blue-400',
+                            'text-primary',
                             'hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity',
                           )}
                         >
@@ -306,7 +306,7 @@ export function FilesList({
                   </span>
                 )}
                 {file.ingestion?.analysis?.documentType && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium leading-none bg-violet-500/15 text-violet-700 dark:text-violet-400">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium leading-none bg-accent text-primary">
                     {t(`documentType.${file.ingestion.analysis.documentType}`, file.ingestion.analysis.documentType)}
                   </span>
                 )}
@@ -390,7 +390,7 @@ export function FilesList({
             {file.isLinkedFile && onUnlink && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={(e) => actions.handleUnlinkClick(file.id, e)} className="text-orange-500" aria-label={unlinkFileLabel}>
+                  <Button variant="ghost" size="icon" onClick={(e) => actions.handleUnlinkClick(file.id, e)} className="text-[hsl(var(--text-warning))]" aria-label={unlinkFileLabel}>
                     <Unlink className={iconSizes.sm} aria-hidden="true" />
                   </Button>
                 </TooltipTrigger>
@@ -401,7 +401,7 @@ export function FilesList({
             {onDelete && currentUserId && !file.isLinkedFile && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={(e) => actions.handleDeleteClick(file.id, e)} className={`text-red-500 ${FORM_BUTTON_EFFECTS.DESTRUCTIVE}`} aria-label={t('list.deleteFile')}>
+                  <Button variant="ghost" size="icon" onClick={(e) => actions.handleDeleteClick(file.id, e)} className={`text-destructive ${FORM_BUTTON_EFFECTS.DESTRUCTIVE}`} aria-label={t('list.deleteFile')}>
                     <Trash2 className={iconSizes.sm} aria-hidden="true" />
                   </Button>
                 </TooltipTrigger>

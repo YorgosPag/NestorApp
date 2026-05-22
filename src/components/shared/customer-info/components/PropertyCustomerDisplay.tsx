@@ -183,7 +183,7 @@ export function PropertyCustomerDisplay({
   if (variant === 'compact') {
     return (
       <div className={`flex items-center ${styles.gap} ${className}`}>
-        <User className={`${styles.iconSize} text-green-600`} />
+        <User className={`${styles.iconSize} text-green-707`} />
         <span className={`${styles.text} font-medium text-foreground truncate`}>
           {customerName}
         </span>
@@ -199,7 +199,7 @@ export function PropertyCustomerDisplay({
     return (
       <div className={`flex items-center justify-between ${styles.gap} ${className}`}>
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <User className={`${styles.iconSize} text-green-600 shrink-0`} />
+          <User className={`${styles.iconSize} text-green-707 shrink-0`} />
           <div className="min-w-0 flex-1">
             <div className={`${styles.text} font-medium text-foreground truncate`}>
               {customerName}
@@ -276,7 +276,7 @@ export function PropertyCustomerDisplay({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <User className={`${styles.iconSize} text-green-600`} />
+              <User className={`${styles.iconSize} text-green-707`} />
               <span className={`${styles.text} font-semibold`}>{t('customerActions.labels.customer')}</span>
               <Badge variant="outline">{statusText}</Badge>
             </div>

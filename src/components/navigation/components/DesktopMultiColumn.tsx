@@ -241,7 +241,7 @@ export function DesktopMultiColumn({
                  role="region" aria-label={t('columns.companies.sectionLabel')}>
           <header className="flex items-center gap-2 mb-2">
             <NAVIGATION_ENTITIES.company.icon className={`h-5 w-5 ${NAVIGATION_ENTITIES.company.color}`} />
-            <h3 className="font-semibold text-gray-900 dark:text-foreground">{t('columns.companies.title')}</h3>
+            <h3 className="font-semibold text-foreground">{t('columns.companies.title')}</h3>
           </header>
           <NavigationCardToolbar
             level="companies"
@@ -298,7 +298,7 @@ export function DesktopMultiColumn({
                    role="region" aria-label={t('columns.projects.sectionLabel')}>
             <header className="flex items-center gap-2 mb-2">
               <NAVIGATION_ENTITIES.project.icon className={`h-5 w-5 ${NAVIGATION_ENTITIES.project.color}`} />
-              <h3 className="font-semibold text-gray-900 dark:text-foreground">{t('columns.projects.title')}</h3>
+              <h3 className="font-semibold text-foreground">{t('columns.projects.title')}</h3>
             </header>
             <NavigationCardToolbar
               level="projects"
@@ -344,7 +344,7 @@ export function DesktopMultiColumn({
                    role="region" aria-label={t('columns.buildings.sectionLabel')}>
             <header className="flex items-center gap-2 mb-2">
               <NAVIGATION_ENTITIES.building.icon className={`h-5 w-5 ${NAVIGATION_ENTITIES.building.color}`} />
-              <h3 className="font-semibold text-gray-900 dark:text-foreground">{t('columns.buildings.title')}</h3>
+              <h3 className="font-semibold text-foreground">{t('columns.buildings.title')}</h3>
             </header>
             <NavigationCardToolbar
               level="buildings"
@@ -410,7 +410,7 @@ export function DesktopMultiColumn({
                    role="region" aria-label={t('columns.actions.sectionLabel')}>
             <header className="flex items-center gap-2 mb-4">
               <ActionsIcon className={`h-5 w-5 ${NAVIGATION_ACTIONS.actions.color}`} />
-              <h3 className="font-semibold text-gray-900 dark:text-foreground">{t('columns.actions.title')}</h3>
+              <h3 className="font-semibold text-foreground">{t('columns.actions.title')}</h3>
             </header>
             <ul className="space-y-2 list-none" role="list" aria-label={t('columns.actions.listLabel')}>
               <li>

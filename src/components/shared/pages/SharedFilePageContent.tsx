@@ -143,7 +143,7 @@ export function SharedFilePageContent() {
           {/* Expired */}
           {state === 'expired' && (
             <section className="text-center py-8">
-              <Clock className="h-12 w-12 mx-auto mb-4 text-amber-500" />
+              <Clock className="h-12 w-12 mx-auto mb-4 text-[hsl(var(--text-warning))]" />
               <h2 className="text-lg font-semibold mb-2">{t('share.expired')}</h2>
               <p className={cn('text-sm', colors.text.muted)}>{t('share.requestNew')}</p>
             </section>
@@ -167,7 +167,7 @@ export function SharedFilePageContent() {
             return (
               <section className="py-4">
                 <figure className="flex items-center justify-center mb-6">
-                  <Lock className="h-12 w-12 text-amber-500" />
+                  <Lock className="h-12 w-12 text-[hsl(var(--text-warning))]" />
                 </figure>
                 <h2 className="text-lg font-semibold text-center mb-2">
                   {t('share.protected')}

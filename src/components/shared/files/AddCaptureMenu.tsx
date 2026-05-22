@@ -231,7 +231,7 @@ export function AddCaptureMenu({
         {allowedSources.includes('microphone') && (
           <DropdownMenuItem
             onClick={handleAudioCapture}
-            className={cn('gap-2 py-2', isRecording && 'bg-red-50 text-red-600')} // eslint-disable-line design-system/enforce-semantic-colors
+            className={cn('gap-2 py-2', isRecording && 'bg-destructive/10 text-destructive')}
           >
             <Mic className={cn(iconSizes.md, isRecording && 'animate-pulse')} />
             <div className="flex flex-col">

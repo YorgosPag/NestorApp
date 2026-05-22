@@ -288,9 +288,9 @@ export function FileInspector({
                     <span
                       className={cn(
                         'inline-flex items-center px-2 py-1 rounded text-xs font-medium',
-                        file.status === 'ready' && 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200', // eslint-disable-line design-system/enforce-semantic-colors
-                        file.status === 'pending' && 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200', // eslint-disable-line design-system/enforce-semantic-colors
-                        file.status === 'failed' && 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' // eslint-disable-line design-system/enforce-semantic-colors
+                        file.status === 'ready' && 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+                        file.status === 'pending' && 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
+                        file.status === 'failed' && 'bg-destructive/10 text-destructive'
                       )}
                     >
                       {file.status}

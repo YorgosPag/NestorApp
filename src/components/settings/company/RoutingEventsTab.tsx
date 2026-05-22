@@ -145,7 +145,7 @@ export function RoutingEventsTab({ orgStructure, saving, onSave }: RoutingEvents
 
       <div className="flex items-center justify-end gap-3">
         {savedOk && (
-          <span className="text-sm text-green-600">{t('routing.savedOk')}</span>
+          <span className="text-sm text-green-707">{t('routing.savedOk')}</span>
         )}
         <Button onClick={handleSave} disabled={saving} size="sm">
           {t('routing.saveChanges')}

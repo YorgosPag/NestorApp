@@ -106,13 +106,13 @@ export function MobileNavigation({
         {mobileLevel !== 'companies' && (
           <button
             onClick={onBack}
-            className={`flex items-center gap-2 px-3 py-2 text-blue-600 ${HOVER_TEXT_EFFECTS.BLUE}`}
+            className={`flex items-center gap-2 px-3 py-2 text-primary ${HOVER_TEXT_EFFECTS.BLUE}`}
           >
             <ChevronLeft className="h-4 w-4" />
             {t('mobile.back')}
           </button>
         )}
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-foreground">
+        <h3 className="text-lg font-semibold text-foreground">
           {getTitle()}
         </h3>
         <div className="w-16" /> {/* Spacer */}

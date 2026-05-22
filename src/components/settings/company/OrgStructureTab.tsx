@@ -199,13 +199,13 @@ export function OrgStructureTab({ orgStructure, saving, onSave }: OrgStructureTa
                 </div>
 
                 <TooltipProvider>
-                  <div className="flex items-center gap-0.5 bg-zinc-900 rounded-md px-1 py-0.5">
+                  <div className="flex items-center gap-0.5 bg-card rounded-md px-1 py-0.5">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => setEditingDept(dept)}
                           disabled={saving}
-                          className="h-6 w-6 flex items-center justify-center rounded text-zinc-300 hover:text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="h-6 w-6 flex items-center justify-center rounded text-muted-foregroundhover:text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           <Pencil className="h-3 w-3" />
                         </button>
@@ -218,7 +218,7 @@ export function OrgStructureTab({ orgStructure, saving, onSave }: OrgStructureTa
                           <button
                             onClick={() => setArchivingDeptId(dept.id)}
                             disabled={saving}
-                            className="h-6 w-6 flex items-center justify-center rounded text-zinc-300 hover:text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="h-6 w-6 flex items-center justify-center rounded text-muted-foregroundhover:text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             <Archive className="h-3 w-3" />
                           </button>
@@ -231,7 +231,7 @@ export function OrgStructureTab({ orgStructure, saving, onSave }: OrgStructureTa
                           <button
                             onClick={() => handleRestoreDept(dept.id)}
                             disabled={saving}
-                            className="h-6 w-6 flex items-center justify-center rounded text-zinc-300 hover:text-green-707 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="h-6 w-6 flex items-center justify-center rounded text-muted-foregroundhover:text-green-707 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             <RotateCcw className="h-3 w-3" />
                           </button>
@@ -244,7 +244,7 @@ export function OrgStructureTab({ orgStructure, saving, onSave }: OrgStructureTa
                         <button
                           onClick={() => setDeletingDeptId(dept.id)}
                           disabled={saving}
-                          className="h-6 w-6 flex items-center justify-center rounded text-zinc-300 hover:text-destructive hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="h-6 w-6 flex items-center justify-center rounded text-muted-foregroundhover:text-destructive hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>

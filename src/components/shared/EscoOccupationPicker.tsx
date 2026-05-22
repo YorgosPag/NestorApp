@@ -317,7 +317,7 @@ export function EscoOccupationPicker({
         role="combobox"
       />
       {hasEscoSelection && !disabled && (
-        <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
+        <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs font-medium px-1.5 py-0.5 rounded bg-[hsl(var(--bg-info))]/20 text-primary">
           {t('esco.badge', 'ESCO')}
         </span>
       )}

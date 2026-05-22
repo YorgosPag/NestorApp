@@ -171,14 +171,14 @@ export function SelectCompanyContactModal({
           {isLoading && (
             <div className="flex items-center justify-center py-8">
               <Spinner size="large" />
-              <span className="ml-2 text-sm text-gray-600">{t('company.nav.loading')}</span>
+              <span className="ml-2 text-sm text-muted-foreground">{t('company.nav.loading')}</span>
             </div>
           )}
 
           {/* Error State */}
           {error && (
             <div className="text-center py-8">
-              <p className="text-red-500 mb-4">{error}</p> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+              <p className="text-destructive mb-4">{error}</p>
               <Button onClick={loadCompanyContacts} variant="outline" size="sm">
                 {t('company.nav.retry')}
               </Button>
@@ -189,14 +189,14 @@ export function SelectCompanyContactModal({
           {!isLoading && !error && (
             <ScrollArea className="h-[400px] w-full">
               {filteredContacts.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   {contacts.length === 0 ? (
                     <div>
-                      <CompanyIcon className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                      <CompanyIcon className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
                       {existingCompanyIds.length > 0 ? (
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <CheckCircle2 className="h-6 w-6 text-green-500" /> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+                            <CheckCircle2 className="h-6 w-6 text-green-707" />
                             <p className="font-medium">{t('company.nav.allAdded')}</p>
                           </div>
                           <p className={cn("text-sm", colors.text.muted)}>
@@ -209,7 +209,7 @@ export function SelectCompanyContactModal({
                     </div>
                   ) : (
                     <div>
-                      <Search className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                      <Search className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
                       <p>{t('company.nav.searchNotFound', { term: searchTerm })}</p>
                     </div>
                   )}
@@ -224,7 +224,7 @@ export function SelectCompanyContactModal({
                     >
                       <CompanyIcon className={`h-5 w-5 ${NAVIGATION_ENTITIES.company.color} flex-shrink-0`} />
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-900 dark:text-foreground truncate">
+                        <div className="font-medium text-foreground truncate">
                           {getContactDisplayName(contact)}
                         </div>
                         {contact.type === 'company' && contact.vatNumber && (
@@ -238,7 +238,7 @@ export function SelectCompanyContactModal({
                           </div>
                         )}
                       </div>
-                      <div className="text-xs text-gray-400 flex-shrink-0">
+                      <div className="text-xs text-muted-foreground flex-shrink-0">
                         {t('company.nav.select')} →
                       </div>
                     </div>

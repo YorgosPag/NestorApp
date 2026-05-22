@@ -62,8 +62,8 @@ export function AddressMapStatusChip({
   if (status === 'stale') {
     return (
       <div className="flex items-center gap-2">
-        <Badge variant="secondary" className="shadow-md flex items-center gap-1.5 border-yellow-500/40">
-          <AlertTriangle className="w-3 h-3 text-yellow-600" />
+        <Badge variant="secondary" className="shadow-md flex items-center gap-1.5 border-border">
+          <AlertTriangle className="w-3 h-3 text-[hsl(var(--text-warning))]" />
           {t('mapStatus.stale', { count: staleCount })}
         </Badge>
         <Button
