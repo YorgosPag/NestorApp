@@ -85,28 +85,23 @@ export class BimSceneLayer {
       stairsRendered++;
     }
     if (entities.stairs.length > 0) {
+      const first = entities.stairs[0];
+      const widthVal = first?.params?.width ?? -1;
+      const sceneToM = widthVal > 0 && widthVal < 10 ? 1.0 : widthVal < 100 ? 0.01 : 0.001;
       // eslint-disable-next-line no-console
-      console.warn('[BIM-3D-STAIR-DEBUG]', {
+      console.warn('[BIM-3D-STAIR-DEBUG-v2]', {
         stairsInput: entities.stairs.length,
         stairsRendered,
-        stairsSkippedFilter,
         totalMeshes,
-        activeBuildingId,
-        useNewSystem,
-        buildingVisModesSize: buildingVisModes.size,
-        floorsCount: floors.length,
-        buildingsCount: buildings.length,
-        firstStair: entities.stairs[0] ? {
-          id: entities.stairs[0].id,
-          kind: entities.stairs[0].kind,
-          buildingId: entities.stairs[0].buildingId,
-          floorId: entities.stairs[0].floorId,
-          treadsBelowCount: entities.stairs[0].geometry?.treadsBelowCut?.length ?? 0,
-          treadsAboveCount: entities.stairs[0].geometry?.treadsAboveCut?.length ?? 0,
-          landingsCount: entities.stairs[0].geometry?.landings?.length ?? 0,
-          firstTreadZmm: entities.stairs[0].geometry?.treadsBelowCut?.[0]?.[0]?.z ?? null,
-          firstTreadXmm: entities.stairs[0].geometry?.treadsBelowCut?.[0]?.[0]?.x ?? null,
-        } : null,
+        widthRaw: widthVal,
+        sceneToM,
+        firstTreadXraw: first?.geometry?.treadsBelowCut?.[0]?.[0]?.x ?? null,
+        firstTreadYraw: first?.geometry?.treadsBelowCut?.[0]?.[0]?.y ?? null,
+        firstTreadZraw: first?.geometry?.treadsBelowCut?.[0]?.[0]?.z ?? null,
+        riseRaw: first?.params?.rise ?? null,
+        treadRaw: first?.params?.tread ?? null,
+        riserType: first?.params?.riserType ?? null,
+        structureType: first?.params?.structureType ?? null,
       });
     }
   }

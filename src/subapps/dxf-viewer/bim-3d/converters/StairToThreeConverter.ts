@@ -23,10 +23,10 @@ import * as THREE from 'three';
 import type { StairEntity, Polygon3D, Polyline3D, Segment3D } from '../../bim/types/stair-types';
 import { resolveStairMaterial } from '../materials/stair-material-resolver';
 
-const MM_TO_M = 0.001;
 const ROT_X_NEG_90 = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
 
-// Industry defaults (mm) — Revit/ArchiCAD aligned, applied when stair lacks explicit values.
+// Industry defaults (mm absolute) — Revit/ArchiCAD aligned, applied when stair
+// lacks explicit values. Converted to meters at use site.
 const DEFAULT_TREAD_THICKNESS_MM = 40;
 const DEFAULT_RISER_THICKNESS_MM = 20;
 const DEFAULT_LANDING_THICKNESS_MM = 200;
@@ -34,12 +34,25 @@ const DEFAULT_HANDRAIL_RADIUS_MM = 25;
 const DEFAULT_HANDRAIL_HEIGHT_MM = 900;
 const HANDRAIL_TUBE_SEGMENTS = 8;
 
-function shapeFromPolygon(poly: Polygon3D): THREE.Shape | null {
+/**
+ * Detect mm-per-scene-unit from the stair's width magnitude. Mirror of
+ * `mmFactorFromWidth` in stair-auto-fix.ts. Stair params + geometry can be
+ * stored in meters (width<10), cm (10..99) or mm (>=100) scene units.
+ * Three.js world is meters → multiply scene values by `sceneToM` to convert.
+ */
+function sceneToMetersFactor(width: number): number {
+  if (!Number.isFinite(width) || width <= 0) return 0.001;
+  if (width < 10) return 1.0;       // meters scene units
+  if (width < 100) return 0.01;     // centimeters scene units
+  return 0.001;                      // millimeters scene units
+}
+
+function shapeFromPolygon(poly: Polygon3D, sceneToM: number): THREE.Shape | null {
   if (poly.length < 3) return null;
   const shape = new THREE.Shape();
   const [first, ...rest] = poly;
-  shape.moveTo(first.x * MM_TO_M, first.y * MM_TO_M);
-  for (const p of rest) shape.lineTo(p.x * MM_TO_M, p.y * MM_TO_M);
+  shape.moveTo(first.x * sceneToM, first.y * sceneToM);
+  for (const p of rest) shape.lineTo(p.x * sceneToM, p.y * sceneToM);
   shape.closePath();
   return shape;
 }
@@ -64,10 +77,11 @@ function tagMesh(
 function buildTreadMeshes(
   stair: StairEntity,
   baseY: number,
+  sceneToM: number,
   levelId?: string,
 ): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
-  const thicknessM = DEFAULT_TREAD_THICKNESS_MM * MM_TO_M;
+  const thicknessM = DEFAULT_TREAD_THICKNESS_MM * 0.001;
   // geometry.treads is 2D-cut: only treads below cutPlaneHeight (default 1200mm).
   // For 3D we want all treads regardless of section plane.
   const allTreads = [
@@ -76,7 +90,7 @@ function buildTreadMeshes(
   ];
   for (let i = 0; i < allTreads.length; i++) {
     const poly = allTreads[i]!;
-    const shape = shapeFromPolygon(poly);
+    const shape = shapeFromPolygon(poly, sceneToM);
     if (!shape) continue;
     const geo = new THREE.ExtrudeGeometry(shape, { depth: thicknessM, bevelEnabled: false });
     geo.applyMatrix4(ROT_X_NEG_90);
@@ -84,10 +98,10 @@ function buildTreadMeshes(
     const mesh = new THREE.Mesh(geo, mat);
     // Polygon z = top-face elevation (walkable surface). ExtrudeGeometry extrudes
     // in local +Z; after -90° X rotation this becomes world +Y. So mesh occupies
-    // [position.y, position.y + thicknessM]. To put the top face at topZmm we
+    // [position.y, position.y + thicknessM]. To put the top face at topZ we
     // translate the mesh DOWN by thicknessM.
-    const topZmm = poly[0]!.z;
-    mesh.position.y = baseY + topZmm * MM_TO_M - thicknessM;
+    const topZ = poly[0]!.z * sceneToM;
+    mesh.position.y = baseY + topZ - thicknessM;
     out.push(tagMesh(mesh, stair, 'tread', levelId));
   }
   return out;
@@ -98,16 +112,17 @@ function buildTreadMeshes(
 function buildRiserMeshes(
   stair: StairEntity,
   baseY: number,
+  sceneToM: number,
   levelId?: string,
 ): THREE.Mesh[] {
   if (stair.params.riserType !== 'closed') return [];
   const out: THREE.Mesh[] = [];
-  const widthM = stair.params.width * MM_TO_M;
-  const riseM = stair.params.rise * MM_TO_M;
-  const thicknessM = DEFAULT_RISER_THICKNESS_MM * MM_TO_M;
+  const widthM = stair.params.width * sceneToM;
+  const riseM = stair.params.rise * sceneToM;
+  const thicknessM = DEFAULT_RISER_THICKNESS_MM * 0.001;
   const mat = resolveStairMaterial(stair, 'stair-riser');
   for (const seg of stair.geometry.risers) {
-    const mesh = buildRiserBox(seg, widthM, riseM, thicknessM, mat, baseY);
+    const mesh = buildRiserBox(seg, sceneToM, widthM, riseM, thicknessM, mat, baseY);
     if (mesh) out.push(tagMesh(mesh, stair, 'riser', levelId));
   }
   return out;
@@ -115,24 +130,21 @@ function buildRiserMeshes(
 
 function buildRiserBox(
   seg: Segment3D,
+  sceneToM: number,
   widthM: number,
   riseM: number,
   thicknessM: number,
   mat: THREE.MeshStandardMaterial,
   baseY: number,
 ): THREE.Mesh | null {
-  const startM = { x: seg.start.x * MM_TO_M, y: seg.start.y * MM_TO_M };
-  const endM = { x: seg.end.x * MM_TO_M, y: seg.end.y * MM_TO_M };
-  // Riser segment is vertical (start.xy === end.xy). Build a thin box at this xy,
-  // oriented perpendicular to the stair walk direction. Inferred from segment xy
-  // position relative to centerline is non-trivial here; fall back to width along
-  // local X axis (stair direction is param-level — kept simple in V1: world-axis box).
+  // Riser segment is vertical (start.xy === end.xy). Build a thin box at this xy.
+  // V1: axis-aligned box (orientation per stair direction = Phase 5.1 enhancement).
   const geo = new THREE.BoxGeometry(thicknessM, riseM, widthM);
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(
-    startM.x,
-    baseY + (seg.start.z + seg.end.z) * 0.5 * MM_TO_M,
-    -startM.y, // DXF Y → world -Z
+    seg.start.x * sceneToM,
+    baseY + (seg.start.z + seg.end.z) * 0.5 * sceneToM,
+    -seg.start.y * sceneToM, // DXF Y → world -Z
   );
   return mesh;
 }
@@ -142,25 +154,27 @@ function buildRiserBox(
 function buildStringerMeshes(
   stair: StairEntity,
   baseY: number,
+  sceneToM: number,
   levelId?: string,
 ): THREE.Mesh[] {
   const allowed = new Set(['stringer-1side', 'stringer-2side', 'central-stringer']);
   if (!allowed.has(stair.params.structureType)) return [];
   const sp = stair.params.stringerParams;
   if (!sp) return [];
-  const widthM = sp.width * MM_TO_M;
-  const heightM = sp.height * MM_TO_M;
+  const widthM = sp.width * sceneToM;
+  const heightM = sp.height * sceneToM;
   const mat = resolveStairMaterial(stair, 'stair-stringer');
   const meshes: THREE.Mesh[] = [];
   const inner = stair.geometry.stringers.inner;
   const outer = stair.geometry.stringers.outer;
-  if (inner.length >= 2) meshes.push(...stringerSegmentsAlong(inner, widthM, heightM, mat, baseY, stair, levelId));
-  if (outer.length >= 2) meshes.push(...stringerSegmentsAlong(outer, widthM, heightM, mat, baseY, stair, levelId));
+  if (inner.length >= 2) meshes.push(...stringerSegmentsAlong(inner, sceneToM, widthM, heightM, mat, baseY, stair, levelId));
+  if (outer.length >= 2) meshes.push(...stringerSegmentsAlong(outer, sceneToM, widthM, heightM, mat, baseY, stair, levelId));
   return meshes;
 }
 
 function stringerSegmentsAlong(
   poly: Polyline3D,
+  sceneToM: number,
   widthM: number,
   heightM: number,
   mat: THREE.MeshStandardMaterial,
@@ -172,16 +186,16 @@ function stringerSegmentsAlong(
   for (let i = 0; i < poly.length - 1; i++) {
     const a = poly[i]!;
     const b = poly[i + 1]!;
-    const dxM = (b.x - a.x) * MM_TO_M;
-    const dyM = (b.y - a.y) * MM_TO_M;
-    const dzM = (b.z - a.z) * MM_TO_M;
+    const dxM = (b.x - a.x) * sceneToM;
+    const dyM = (b.y - a.y) * sceneToM;
+    const dzM = (b.z - a.z) * sceneToM;
     const lengthM = Math.hypot(dxM, dyM, dzM);
     if (lengthM < 1e-6) continue;
     const geo = new THREE.BoxGeometry(lengthM, heightM, widthM);
     const mesh = new THREE.Mesh(geo, mat);
-    const midX = (a.x + b.x) * 0.5 * MM_TO_M;
-    const midY = (a.y + b.y) * 0.5 * MM_TO_M;
-    const midZ = (a.z + b.z) * 0.5 * MM_TO_M;
+    const midX = (a.x + b.x) * 0.5 * sceneToM;
+    const midY = (a.y + b.y) * 0.5 * sceneToM;
+    const midZ = (a.z + b.z) * 0.5 * sceneToM;
     mesh.position.set(midX, baseY + midZ - heightM * 0.5, -midY);
     // Orient box length along (a→b) in plan, allowing vertical tilt.
     const dirPlan = Math.atan2(-dyM, dxM); // world rotation around Y
@@ -196,20 +210,22 @@ function stringerSegmentsAlong(
 function buildHandrailMeshes(
   stair: StairEntity,
   baseY: number,
+  sceneToM: number,
   levelId?: string,
 ): THREE.Mesh[] {
   const hr = stair.params.handrails;
   if (!hr.inner && !hr.outer) return [];
   const out: THREE.Mesh[] = [];
-  const radiusM = DEFAULT_HANDRAIL_RADIUS_MM * MM_TO_M;
-  const heightOffsetM = (hr.height ?? DEFAULT_HANDRAIL_HEIGHT_MM) * MM_TO_M;
+  const radiusM = DEFAULT_HANDRAIL_RADIUS_MM * 0.001;
+  // handrails.height is stored in stair scene units (same convention as width).
+  const heightOffsetM = (hr.height ?? DEFAULT_HANDRAIL_HEIGHT_MM) * sceneToM;
   const mat = resolveStairMaterial(stair, 'stair-handrail');
   if (hr.inner && stair.geometry.handrails.inner) {
-    const mesh = handrailTube(stair.geometry.handrails.inner, radiusM, heightOffsetM, mat, baseY);
+    const mesh = handrailTube(stair.geometry.handrails.inner, sceneToM, radiusM, heightOffsetM, mat, baseY);
     if (mesh) out.push(tagMesh(mesh, stair, 'handrail-inner', levelId));
   }
   if (hr.outer && stair.geometry.handrails.outer) {
-    const mesh = handrailTube(stair.geometry.handrails.outer, radiusM, heightOffsetM, mat, baseY);
+    const mesh = handrailTube(stair.geometry.handrails.outer, sceneToM, radiusM, heightOffsetM, mat, baseY);
     if (mesh) out.push(tagMesh(mesh, stair, 'handrail-outer', levelId));
   }
   return out;
@@ -217,6 +233,7 @@ function buildHandrailMeshes(
 
 function handrailTube(
   polyline: Polyline3D,
+  sceneToM: number,
   radiusM: number,
   heightOffsetM: number,
   mat: THREE.MeshStandardMaterial,
@@ -225,9 +242,9 @@ function handrailTube(
   if (polyline.length < 2) return null;
   const points: THREE.Vector3[] = polyline.map(
     (p) => new THREE.Vector3(
-      p.x * MM_TO_M,
-      baseY + p.z * MM_TO_M + heightOffsetM,
-      -p.y * MM_TO_M,
+      p.x * sceneToM,
+      baseY + p.z * sceneToM + heightOffsetM,
+      -p.y * sceneToM,
     ),
   );
   const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.0);
@@ -241,20 +258,21 @@ function handrailTube(
 function buildLandingMeshes(
   stair: StairEntity,
   baseY: number,
+  sceneToM: number,
   levelId?: string,
 ): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
-  const thicknessM = DEFAULT_LANDING_THICKNESS_MM * MM_TO_M;
+  const thicknessM = DEFAULT_LANDING_THICKNESS_MM * 0.001;
   const mat = resolveStairMaterial(stair, 'stair-landing');
   for (const poly of stair.geometry.landings) {
-    const shape = shapeFromPolygon(poly);
+    const shape = shapeFromPolygon(poly, sceneToM);
     if (!shape) continue;
     const geo = new THREE.ExtrudeGeometry(shape, { depth: thicknessM, bevelEnabled: false });
     geo.applyMatrix4(ROT_X_NEG_90);
     const mesh = new THREE.Mesh(geo, mat);
     // Same convention as treads: poly.z = walkable top face. Translate DOWN.
-    const topZmm = poly[0]!.z;
-    mesh.position.y = baseY + topZmm * MM_TO_M - thicknessM;
+    const topZ = poly[0]!.z * sceneToM;
+    mesh.position.y = baseY + topZ - thicknessM;
     out.push(tagMesh(mesh, stair, 'landing', levelId));
   }
   return out;
@@ -268,12 +286,13 @@ export function stairToMeshes(
   levelId?: string,
   buildingBaseElevationM = 0,
 ): readonly THREE.Mesh[] {
-  const baseY = floorElevationMm * MM_TO_M + buildingBaseElevationM;
+  const sceneToM = sceneToMetersFactor(stair.params.width);
+  const baseY = floorElevationMm * 0.001 + buildingBaseElevationM;
   return [
-    ...buildLandingMeshes(stair, baseY, levelId),
-    ...buildTreadMeshes(stair, baseY, levelId),
-    ...buildRiserMeshes(stair, baseY, levelId),
-    ...buildStringerMeshes(stair, baseY, levelId),
-    ...buildHandrailMeshes(stair, baseY, levelId),
+    ...buildLandingMeshes(stair, baseY, sceneToM, levelId),
+    ...buildTreadMeshes(stair, baseY, sceneToM, levelId),
+    ...buildRiserMeshes(stair, baseY, sceneToM, levelId),
+    ...buildStringerMeshes(stair, baseY, sceneToM, levelId),
+    ...buildHandrailMeshes(stair, baseY, sceneToM, levelId),
   ];
 }
