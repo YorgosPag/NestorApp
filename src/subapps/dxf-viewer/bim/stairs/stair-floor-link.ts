@@ -22,20 +22,24 @@
  */
 
 import type { StairCodeProfile, StairParams } from '../../bim/types/stair-types';
+import { inferSceneUnitsFromWidth, mmToSceneUnits } from '../../utils/scene-units';
 
-// ─── Scene units heuristic (mirror of stair-validator / stair-auto-fix) ──────
+// ─── Scene units heuristic — delegated to utils/scene-units SSoT ─────────────
 //
-// Same width-magnitude heuristic used across the stair codebase. Documented in
-// ADR-358 §7.2 phase 9B-2 as a TODO follow-up: replace with `resolveSceneUnits`
-// SSoT (utils/scene-units.ts) once the floor-link bridge graduates to the
-// unified unit pipeline. Until then we keep behaviour-parity with the existing
-// validator / auto-fix / grips heuristic.
+// ADR-370 Phase 5 SSoT closure (2026-05-25): the width-magnitude heuristic
+// previously lived here as a private copy + was duplicated in stair-auto-fix
+// + StairToThreeConverter. All three call sites now route through the
+// canonical `inferSceneUnitsFromWidth` + `mmToSceneUnits` pair in
+// `utils/scene-units.ts`. The legacy `mmFactorFromWidth` export below stays
+// as a thin SSoT-backed delegate so external imports keep working without a
+// breaking-API ripple; new code should consume the typed helpers directly.
 
+/**
+ * @deprecated Use `inferSceneUnitsFromWidth(width)` + `mmToSceneUnits(units)`
+ * from `utils/scene-units` directly. Kept as a back-compat wrapper.
+ */
 export function mmFactorFromWidth(width: number): number {
-  if (!Number.isFinite(width) || width <= 0) return 1;
-  if (width < 10) return 1000;   // metres
-  if (width < 100) return 10;    // centimetres
-  return 1;                       // millimetres
+  return 1 / mmToSceneUnits(inferSceneUnitsFromWidth(width));
 }
 
 // ─── Code-profile rise bounds (mirror of stair-auto-fix PROFILE_RANGES_MM) ───

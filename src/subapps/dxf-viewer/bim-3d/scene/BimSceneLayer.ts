@@ -66,43 +66,15 @@ export class BimSceneLayer {
     // ADR-370 Phase 5 — stairs render as multi-mesh components (treads/risers/
     // stringers/handrails/landings). stairToMeshes returns a flat array; each
     // mesh carries its own userData.stairComponent for raycast resolution.
-    let stairsRendered = 0;
-    let stairsSkippedFilter = 0;
-    let totalMeshes = 0;
     for (const stair of entities.stairs) {
       const resolved = resolveEntityBuilding(stair, floors, buildings);
       const buildingId = resolved?.id ?? '';
-      if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) {
-        stairsSkippedFilter++;
-        continue;
-      }
+      if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) continue;
       const meshes = stairToMeshes(stair, floorElevationMm, activeLevelId, resolved?.baseElevation ?? 0);
-      totalMeshes += meshes.length;
       for (const mesh of meshes) {
         mesh.userData['buildingId'] = buildingId;
         this.group.add(mesh);
       }
-      stairsRendered++;
-    }
-    if (entities.stairs.length > 0) {
-      const first = entities.stairs[0];
-      const widthVal = first?.params?.width ?? -1;
-      const sceneToM = widthVal > 0 && widthVal < 10 ? 1.0 : widthVal < 100 ? 0.01 : 0.001;
-      // eslint-disable-next-line no-console
-      console.warn('[BIM-3D-STAIR-DEBUG-v2]', {
-        stairsInput: entities.stairs.length,
-        stairsRendered,
-        totalMeshes,
-        widthRaw: widthVal,
-        sceneToM,
-        firstTreadXraw: first?.geometry?.treadsBelowCut?.[0]?.[0]?.x ?? null,
-        firstTreadYraw: first?.geometry?.treadsBelowCut?.[0]?.[0]?.y ?? null,
-        firstTreadZraw: first?.geometry?.treadsBelowCut?.[0]?.[0]?.z ?? null,
-        riseRaw: first?.params?.rise ?? null,
-        treadRaw: first?.params?.tread ?? null,
-        riserType: first?.params?.riserType ?? null,
-        structureType: first?.params?.structureType ?? null,
-      });
     }
   }
 

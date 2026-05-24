@@ -135,6 +135,47 @@ function normalizeDeclaredUnits(raw: string | null | undefined): SceneUnits | nu
 }
 
 /**
+ * Width-magnitude heuristic — infer the scene units when no `SceneModel`
+ * is available (e.g. read-only Firestore feeds in `bim-3d/`, validators
+ * that only receive `StairParams`). Mirrors the legacy `mmFactorFromWidth`
+ * heuristic from `bim/stairs/stair-floor-link.ts` (which now delegates here).
+ *
+ * Thresholds match industry conventions: a residential stair width is
+ *   meters:      0.6 – 1.5
+ *   centimeters: 60  – 150
+ *   millimeters: 600 – 1500
+ *
+ * Returns `'mm'` as a defensive default when the value is non-finite or
+ * non-positive (matches the legacy 1×-factor fallback).
+ */
+export function inferSceneUnitsFromWidth(width: number): SceneUnits {
+  if (!Number.isFinite(width) || width <= 0) return 'mm';
+  if (width < 10) return 'm';
+  if (width < 100) return 'cm';
+  return 'mm';
+}
+
+/**
+ * Scene-units → Three.js world (meters) multiplier. Inverse perspective of
+ * `mmToSceneUnits`: instead of going mm → scene, this maps the scene value
+ * directly to meters which is the Three.js world convention.
+ *
+ *   `valueInScene * sceneUnitsToMeters(units) = valueInMeters`
+ *
+ * Used by `bim-3d/converters/*` to translate BIM entity vertex/scalar values
+ * into the Three.js scene without each converter re-deriving the conversion.
+ */
+export function sceneUnitsToMeters(units: SceneUnits): number {
+  switch (units) {
+    case 'mm': return 0.001;
+    case 'cm': return 0.01;
+    case 'm':  return 1;
+    case 'in': return 0.0254;
+    case 'ft': return 0.3048;
+  }
+}
+
+/**
  * AutoCAD `$INSUNITS` code → SceneUnits. Used by `dxf-scene-builder` to
  * propagate the real drawing units into `SceneModel.units` (ADR-358 Phase 8
  * SSoT fix; previously the builder hardcoded `'mm'`).

@@ -27,6 +27,7 @@ import type {
   StairParams,
 } from '../../bim/types/stair-types';
 import { reconcileLinkedStair } from './stair-floor-link';
+import { inferSceneUnitsFromWidth, mmToSceneUnits } from '../../utils/scene-units';
 
 // ============================================================================
 // PER-PROFILE CODE RANGES (mirror of gate-stair-checker, mm-scale)
@@ -117,19 +118,17 @@ function resolveRanges(
 }
 
 // ============================================================================
-// SCENE-UNITS HEURISTIC (mirror of stair-completion.ts + stair-grips.ts)
+// SCENE-UNITS HELPERS — delegated to utils/scene-units SSoT
 // ============================================================================
+//
+// ADR-370 Phase 5 SSoT closure (2026-05-25): scene-units inference is now
+// owned by `utils/scene-units` (`inferSceneUnitsFromWidth` + `mmToSceneUnits`).
+// The three helpers below are thin wrappers that preserve the local call-site
+// ergonomics ("mm-per-scene-unit" factor flavour expected by the validator
+// math) while routing through the canonical heuristic. No behavioural change.
 
-/**
- * Detect the mm-per-scene-unit factor from the current width magnitude.
- * Same heuristic used by `minWidthFloorFor` (stair-grips) and
- * `detectSceneUnits` (utils/scene-units).
- */
 function mmFactorFromWidth(width: number): number {
-  if (!Number.isFinite(width) || width <= 0) return 1;
-  if (width < 10) return 1000;   // metres   — 1 scene-unit = 1000 mm
-  if (width < 100) return 10;    // centimetres — 1 scene-unit = 10 mm
-  return 1;                       // millimetres
+  return 1 / mmToSceneUnits(inferSceneUnitsFromWidth(width));
 }
 
 function mmToScene(valueMm: number, mmPerSceneUnit: number): number {

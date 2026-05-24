@@ -22,30 +22,19 @@
 import * as THREE from 'three';
 import type { StairEntity, Polygon3D, Polyline3D, Segment3D } from '../../bim/types/stair-types';
 import { resolveStairMaterial } from '../materials/stair-material-resolver';
+import { inferSceneUnitsFromWidth, sceneUnitsToMeters } from '../../utils/scene-units';
 
 const ROT_X_NEG_90 = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
 
 // Industry defaults (mm absolute) — Revit/ArchiCAD aligned, applied when stair
-// lacks explicit values. Converted to meters at use site.
+// lacks explicit values. Converted to meters at use site (× 0.001).
 const DEFAULT_TREAD_THICKNESS_MM = 40;
 const DEFAULT_RISER_THICKNESS_MM = 20;
 const DEFAULT_LANDING_THICKNESS_MM = 200;
 const DEFAULT_HANDRAIL_RADIUS_MM = 25;
 const DEFAULT_HANDRAIL_HEIGHT_MM = 900;
 const HANDRAIL_TUBE_SEGMENTS = 8;
-
-/**
- * Detect mm-per-scene-unit from the stair's width magnitude. Mirror of
- * `mmFactorFromWidth` in stair-auto-fix.ts. Stair params + geometry can be
- * stored in meters (width<10), cm (10..99) or mm (>=100) scene units.
- * Three.js world is meters → multiply scene values by `sceneToM` to convert.
- */
-function sceneToMetersFactor(width: number): number {
-  if (!Number.isFinite(width) || width <= 0) return 0.001;
-  if (width < 10) return 1.0;       // meters scene units
-  if (width < 100) return 0.01;     // centimeters scene units
-  return 0.001;                      // millimeters scene units
-}
+const MM_TO_M = 0.001;
 
 function shapeFromPolygon(poly: Polygon3D, sceneToM: number): THREE.Shape | null {
   if (poly.length < 3) return null;
@@ -81,7 +70,7 @@ function buildTreadMeshes(
   levelId?: string,
 ): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
-  const thicknessM = DEFAULT_TREAD_THICKNESS_MM * 0.001;
+  const thicknessM = DEFAULT_TREAD_THICKNESS_MM * MM_TO_M;
   // geometry.treads is 2D-cut: only treads below cutPlaneHeight (default 1200mm).
   // For 3D we want all treads regardless of section plane.
   const allTreads = [
@@ -119,7 +108,7 @@ function buildRiserMeshes(
   const out: THREE.Mesh[] = [];
   const widthM = stair.params.width * sceneToM;
   const riseM = stair.params.rise * sceneToM;
-  const thicknessM = DEFAULT_RISER_THICKNESS_MM * 0.001;
+  const thicknessM = DEFAULT_RISER_THICKNESS_MM * MM_TO_M;
   const mat = resolveStairMaterial(stair, 'stair-riser');
   for (const seg of stair.geometry.risers) {
     const mesh = buildRiserBox(seg, sceneToM, widthM, riseM, thicknessM, mat, baseY);
@@ -216,7 +205,7 @@ function buildHandrailMeshes(
   const hr = stair.params.handrails;
   if (!hr.inner && !hr.outer) return [];
   const out: THREE.Mesh[] = [];
-  const radiusM = DEFAULT_HANDRAIL_RADIUS_MM * 0.001;
+  const radiusM = DEFAULT_HANDRAIL_RADIUS_MM * MM_TO_M;
   // handrails.height is stored in stair scene units (same convention as width).
   const heightOffsetM = (hr.height ?? DEFAULT_HANDRAIL_HEIGHT_MM) * sceneToM;
   const mat = resolveStairMaterial(stair, 'stair-handrail');
@@ -262,7 +251,7 @@ function buildLandingMeshes(
   levelId?: string,
 ): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
-  const thicknessM = DEFAULT_LANDING_THICKNESS_MM * 0.001;
+  const thicknessM = DEFAULT_LANDING_THICKNESS_MM * MM_TO_M;
   const mat = resolveStairMaterial(stair, 'stair-landing');
   for (const poly of stair.geometry.landings) {
     const shape = shapeFromPolygon(poly, sceneToM);
@@ -286,8 +275,12 @@ export function stairToMeshes(
   levelId?: string,
   buildingBaseElevationM = 0,
 ): readonly THREE.Mesh[] {
-  const sceneToM = sceneToMetersFactor(stair.params.width);
-  const baseY = floorElevationMm * 0.001 + buildingBaseElevationM;
+  // SSoT: scene-units inference + Three.js meters conversion live in
+  // utils/scene-units.ts. Stair params/geometry are in scene units (m/cm/mm
+  // inferred from width magnitude per ADR-358 §9.2 Q22 heuristic).
+  const sceneUnits = inferSceneUnitsFromWidth(stair.params.width);
+  const sceneToM = sceneUnitsToMeters(sceneUnits);
+  const baseY = floorElevationMm * MM_TO_M + buildingBaseElevationM;
   return [
     ...buildLandingMeshes(stair, baseY, sceneToM, levelId),
     ...buildTreadMeshes(stair, baseY, sceneToM, levelId),
