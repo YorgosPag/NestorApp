@@ -25,6 +25,7 @@ import { getActiveDragGrip } from './GripDragStore';
 import { findWallFaceCornerSnap } from './wall-face-corner-snap';
 import { isWallEntity } from '../../types/entities';
 import { LassoStore } from './LassoStore';
+import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
 
 interface MouseMoveHandlerDeps {
   props: CentralizedMouseHandlersProps;
@@ -56,6 +57,13 @@ export function useMouseMoveHandler({
 
     const screenPos = withPerf('coord-calc-screen', () => getScreenPosFromEvent(e, pointerSnap));
     const freshViewport = pointerSnap.viewport;
+
+    // ADR-374 — ZOOM Window: update rubber-band rect, keep crosshair live, skip snap/hover/pan/lasso.
+    if (activeTool === 'zoom-window' && ZoomWindowStore.isActive()) {
+      ZoomWindowStore.update(screenPos);
+      setImmediatePosition(screenPos);
+      return;
+    }
 
     // Zero-latency crosshair (bypasses React)
     // If hovering over a grip, lock crosshair to grip center (world→screen)

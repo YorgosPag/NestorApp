@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-24 — BIM 3D cursor integration (ADR-366 Group B Phase 9)
+
+Cursor event handlers (`mouse-handler-move.ts`, `mouse-handler-up.ts`, `useCentralizedMouseHandlers.ts`) updated to support 3D viewport coordinate transforms in BIM 3D viewer integration. Centralized mouse handler routing extended with BimViewport3D state propagation to 3D scene (world → screen → 3D camera). No changes to canvas rendering architecture or frame scheduler integration; cursor system remains neutral to 2D vs 3D viewport context.
+
 ### 2026-05-24 — ADR-374 ZOOM Window tool wiring (singleton store + micro-leaf)
 
 `ZoomWindowStore` (new module-level singleton in `systems/zoom-window/`) replaces the dead `useZoomWindow` React hook. The drag rectangle is updated imperatively from `mouse-handler-move.ts` (zero React state during 60fps mousemove). `ZoomWindowSubscriber` (new micro-leaf at `components/dxf-layout/leaves/ZoomWindowSubscriber.tsx`) is the SOLE `useSyncExternalStore` consumer. Mounted in `CanvasLayerStack.tsx` at z-index 20 (after `LassoFreehandPreviewSubscriber`, before `CanvasNumericInputOverlay`).

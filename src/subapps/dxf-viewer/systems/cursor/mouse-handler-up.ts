@@ -28,6 +28,7 @@ import { getActiveDragGrip } from './GripDragStore';
 import { findWallFaceCornerSnap } from './wall-face-corner-snap';
 import { isWallEntity } from '../../types/entities';
 import { LassoStore, computeLassoMode } from './LassoStore';
+import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
 
 interface MouseUpHandlerDeps {
   props: CentralizedMouseHandlersProps;
@@ -47,6 +48,34 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
 
   return useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     cursor.setMouseDown(false);
+
+    // ADR-374 — ZOOM Window finish: screen rect → world bounds → fit-to-view via EventBus.
+    if (activeTool === 'zoom-window' && e.button === 0 && ZoomWindowStore.isActive()) {
+      const screenRect = ZoomWindowStore.finish();
+      if (screenRect) {
+        const upSnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
+        if (upSnap) {
+          const w1 = screenToWorldWithSnapshot(
+            { x: screenRect.x, y: screenRect.y },
+            transform,
+            upSnap,
+          );
+          const w2 = screenToWorldWithSnapshot(
+            { x: screenRect.x + screenRect.width, y: screenRect.y + screenRect.height },
+            transform,
+            upSnap,
+          );
+          EventBus.emit('zoom-window:apply', {
+            worldBounds: {
+              min: { x: Math.min(w1.x, w2.x), y: Math.min(w1.y, w2.y) },
+              max: { x: Math.max(w1.x, w2.x), y: Math.max(w1.y, w2.y) },
+            },
+            viewport: upSnap.viewport,
+          });
+        }
+      }
+      return;
+    }
 
     // Pan cleanup
     const panState = refs.panStateRef.current;

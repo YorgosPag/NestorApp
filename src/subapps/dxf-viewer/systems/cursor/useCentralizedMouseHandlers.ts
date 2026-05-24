@@ -6,6 +6,7 @@
 
 import { useCallback, useRef, useState, useMemo } from 'react';
 import { LassoStore } from './LassoStore';
+import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
 import { useCursor } from './CursorSystem';
 import { isPointInRulerArea } from './utils';
 import {
@@ -148,6 +149,14 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
       }
     }
 
+    // ADR-374 — ZOOM Window tool: arm drag rect, skip pan/lasso/grip entirely.
+    if (activeTool === 'zoom-window' && e.button === 0) {
+      ZoomWindowStore.start(screenPos);
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
     // Pan initialization
     const isToolInteractive = isInDrawingMode(activeTool, overlayMode);
     // button 1 = middle drag (AutoCAD standard), button 2 = right drag (BricsCAD style)
@@ -202,6 +211,9 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
     // Cancel any in-progress lasso when pointer leaves canvas.
     lassoDownRef.current = { pos: null, buttonHeld: false };
     LassoStore.cancelLasso();
+
+    // ADR-374 — cancel zoom-window drag if pointer leaves canvas mid-drag.
+    ZoomWindowStore.cancel();
 
     const panState = panStateRef.current;
     if (panState.isPanning) {
