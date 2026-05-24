@@ -43,6 +43,10 @@ interface FloorStairsListProps {
 
 function FloorStairsList({ stairs, loading }: FloorStairsListProps) {
   const { t } = useTranslation(['building-tabs']);
+
+  // Hide entirely when no data to show
+  if (!loading && stairs.length === 0) return null;
+
   if (loading) {
     return (
       <section className="mt-2 pt-2 border-t border-border/30 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -313,12 +317,10 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                       <tr className="bg-muted/5">
                         <td colSpan={COLUMN_COUNT} className="px-2 py-2">
                           <FloorFloorplanInline floorId={floor.id} floorName={floor.name} projectId={building.projectId} buildingCompanyId={building.companyId} />
-                          {floor.hasFloorplan && (
-                            <FloorStairsList
-                              stairs={expandedFloorStairs}
-                              loading={loadingStairs}
-                            />
-                          )}
+                          <FloorStairsList
+                            stairs={expandedFloorStairs}
+                            loading={loadingStairs}
+                          />
                         </td>
                       </tr>
                     )}

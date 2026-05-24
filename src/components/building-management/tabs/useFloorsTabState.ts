@@ -108,19 +108,20 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
       setExpandedFloorStairs([]);
       return;
     }
-    const floor = floors.find((f) => f.id === expandedFloorId);
-    if (!floor?.hasFloorplan) {
-      setExpandedFloorStairs([]);
-      return;
-    }
     const cid = user?.companyId;
     if (!cid) return;
     setLoadingStairs(true);
     queryStairsByFloorId(expandedFloorId, cid)
-      .then((info) => setExpandedFloorStairs([...info.all]))
-      .catch(() => setExpandedFloorStairs([]))
+      .then((info) => {
+        console.debug('[FloorsTab] stair query floorId=%s → %d stairs', expandedFloorId, info.all.length);
+        setExpandedFloorStairs([...info.all]);
+      })
+      .catch((err) => {
+        console.error('[FloorsTab] stair query failed floorId=%s:', expandedFloorId, err);
+        setExpandedFloorStairs([]);
+      })
       .finally(() => setLoadingStairs(false));
-  }, [expandedFloorId, floors, user?.companyId]);
+  }, [expandedFloorId, user?.companyId]);
 
   // ADR-358 Plan B — one-time stair query scoped to a floor
   const checkLinkedStairs = useCallback(
