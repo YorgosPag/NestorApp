@@ -52,7 +52,6 @@ export interface DxfViewerEffectsParams {
   primarySelectedId: string | null;
 
   setOverlayMode: (mode: OverlayEditorMode) => void;
-  setSelectedEntityIds: React.Dispatch<React.SetStateAction<string[]>>;
   handleToolChange: (tool: ToolType) => void;
   handleAction: (action: string, data?: string | number | Record<string, unknown>) => void;
   handleSceneChange: (scene: SceneModel) => void;
@@ -86,7 +85,7 @@ export function useDxfViewerEffects(params: DxfViewerEffectsParams): void {
   const {
     activeTool, overlayMode, currentScene,
     showLayers, selectedEntityIds, primarySelectedId,
-    setOverlayMode, setSelectedEntityIds,
+    setOverlayMode,
     handleToolChange, handleAction, handleSceneChange,
     updateGripSettings, showCopyableNotification,
     eventBus, notifications,
@@ -345,18 +344,18 @@ Check console for detailed metrics`;
     return cleanup;
   }, [eventBus, overlayStore]);
 
-  // Sync selection from bus (mode: 'select' only)
+  // Sync selection from bus (mode: 'select' only) — writes to universalSelection (SSoT)
   React.useEffect(() => {
     const cleanup = eventBus.on('dxf.highlightByIds', ({ mode, ids }) => {
       if (mode !== 'select') return;
       const validIds: string[] = Array.isArray(ids) ? ids : [];
-      setSelectedEntityIds(prev => {
-        if (prev.length === validIds.length && prev.every((v, i) => v === validIds[i])) return prev;
-        return validIds;
-      });
+      const currentIds = universalSelection.getIdsByType('dxf-entity');
+      if (currentIds.length !== validIds.length || !currentIds.every((v, i) => v === validIds[i])) {
+        universalSelection.replaceEntitySelection(validIds);
+      }
     });
     return cleanup;
-  }, [eventBus, setSelectedEntityIds]);
+  }, [eventBus, universalSelection]);
 
   // 🏢 ENTERPRISE: Centralized notification for polygon save errors
   React.useEffect(() => {

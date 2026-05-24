@@ -190,11 +190,40 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 
 ---
 
+### 🧹 ADR-370/371 DUPLICATE NUMBERING — housekeeping (priorità bassa, ~15min, discovered 2026-05-24 via ADR-373 OQ8)
+
+**Discovered**: 2026-05-24 durante ADR-373 Phase 1 Recognition (Glob verification del prossimo ADR libero).
+
+**Πρόβλημα**: 4 αρχεία ADR με 2 collisione numerazione:
+- `docs/centralized-systems/reference/adrs/ADR-370-bim-readonly-visualization.md`
+- `docs/centralized-systems/reference/adrs/ADR-370-bim-corner-snap-system.md` ← duplicate
+- `docs/centralized-systems/reference/adrs/ADR-371-bim-3d-readonly-viewer.md`
+- `docs/centralized-systems/reference/adrs/ADR-371-bim-corner-snap-system.md` ← duplicate
+
+**Effetto**: confusione nello index, ambiguità riferimenti incrociati, blocca uso di `adr-index.md` come SSoT.
+
+**Fix proposto** (Γιώργος approval pending):
+1. I due `corner-snap-system` ADRs sembrano duplicati l'uno dell'altro (stesso suffix). Verifica se sono lo stesso contenuto o due fasi diverse.
+2. Se duplicati: cancella uno, l'altro rinomina come ADR-374 (next free dopo ADR-373).
+3. Se distinti: rinomina ADR-370-bim-corner-snap-system.md → ADR-374, ADR-371-bim-corner-snap-system.md → ADR-375.
+4. Grep tutti i riferimenti (`grep -rn "ADR-370\|ADR-371"` in docs/ + src/) e aggiorna.
+5. Re-run auto-script per `adr-index.md`.
+
+**Effort**: ~15min lookup + rename + reference update.
+
+**Σχέση με ADR-373**: nessuna — domain diverso (BIM viewer vs file metadata). Non blocks ADR-373 implementation.
+
+- [ ] Verifica se i 2 `corner-snap-system` ADRs sono content-equal o distinti
+- [ ] Rinomina + ricerca + sostituzione tutti i riferimenti
+- [ ] Re-run `adr-index.md` auto-script
+
+---
+
 ## Short sentence for session-start reminder
 
 **Copy-paste template for the agent:**
 
-> 📋 Pending ratchet tasks (ADR-299): **ADR-365 Tailwind Palette ✅ COMPLETE** — 0 violations / 0 files (2026-05-22). Zero-tolerance via CHECK 3.26 active. Remaining pending: Grip Types SSoT, ADR-3XX Auto-Infer Alignment. (ADR-345 spellCheck ✅ DONE 2026-05-23, ADR-034 UC-017 ✅ DONE 2026-05-23)
+> 📋 Pending ratchet tasks (ADR-299): **ADR-365 Tailwind Palette ✅ COMPLETE** — 0 violations / 0 files (2026-05-22). Zero-tolerance via CHECK 3.26 active. Remaining pending: Grip Types SSoT, ADR-3XX Auto-Infer Alignment, **ADR-370/371 duplicate numbering cleanup** (15min housekeeping, discovered via ADR-373 OQ8). (ADR-345 spellCheck ✅ DONE 2026-05-23, ADR-034 UC-017 ✅ DONE 2026-05-23)
 
 ---
 

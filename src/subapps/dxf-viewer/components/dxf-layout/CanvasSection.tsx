@@ -125,11 +125,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const currentOverlays = useLiveOverlaysForLevel(levelManager.currentLevelId);
   // === Selection (SSoT: UniversalSelection — selectedEntityIds derived, no local state) ===
   const selectedEntityIds = useMemo(() => universalSelection.getIdsByType('dxf-entity'), [universalSelection]);
-  const setSelectedEntityIds = useCallback((value: string[] | ((prev: string[]) => string[])) => {
-    const us = universalSelectionRef.current;
-    const next = typeof value === 'function' ? value(us.getIdsByType('dxf-entity')) : value;
-    us.clearByType('dxf-entity');
-    if (next.length > 0) us.addMultiple(next.map(id => ({ id, type: 'dxf-entity' as const })));
+  // SSoT: thin alias — delegates to replaceEntitySelection (SelectionSystem is the sole owner).
+  // No functional-updater form: all consumers pass string[] directly.
+  const setSelectedEntityIds = useCallback((ids: string[]) => {
+    universalSelectionRef.current.replaceEntitySelection(ids);
   }, []);
   // ADR-357 Phase 15 (G13): Selection Cycling — Shift+Space to cycle overlapping entities.
   const handleCycleEntitySelect = useCallback((id: string) => { setSelectedEntityIds([id]); }, [setSelectedEntityIds]);
@@ -319,7 +318,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     universalSelection, hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
     selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
     justFinishedDragRef: unified.justFinishedDragRef, draggingOverlayBody: unified.draggingOverlayBody,
-    setSelectedEntityIds, currentOverlays, handleOverlayClick,
+    currentOverlays, handleOverlayClick,
     guideAddGuide: guideState.addGuide, guideRemoveGuide: guideState.removeGuide, getGuides,
     parallelRefGuideId: guideWorkflows.parallelRefGuideId, onParallelRefSelected: guideWorkflows.handleParallelRefSelected, onParallelSideChosen: guideWorkflows.handleParallelSideChosen,
     guideAddDiagonalGuide: guideState.addDiagonalGuide, diagonalStep: guideWorkflows.diagonalStep, diagonalStartPoint: guideWorkflows.diagonalStartPoint, diagonalDirectionPoint: guideWorkflows.diagonalDirectionPoint,

@@ -159,8 +159,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     activeTool, handleToolChange, handleAction, showGrid, toggleGrid,
     canUndo, canRedo, snapEnabled, showLayers, showCalibration,
     showCursorSettings, showGuidePanel, showGuideAnalysisPanel,
-    handleFileImport, currentScene, selectedEntityIds,
-    setSelectedEntityIds, handleSceneChange, handleCalibrationToggle,
+    handleFileImport, currentScene,
+    handleSceneChange, handleCalibrationToggle,
     drawingState, onMeasurementPoint, onMeasurementHover, onMeasurementCancel,
     onDrawingPoint, onDrawingHover, onDrawingCancel, onDrawingDoubleClick,
     onEntityCreated, gripSettings
@@ -185,6 +185,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const prevPrimarySelectedIdRef = React.useRef<string | null>(null);
   const levelManagerRef = React.useRef(levelManager);
   const handleSceneChangeRef = React.useRef(handleSceneChange);
+  // SSoT: selectedEntityIds derived from universalSelection — single write path
+  const selectedEntityIds = React.useMemo(
+    () => universalSelection.getIdsByType('dxf-entity'),
+    [universalSelection]
+  );
   // 🏢 Universal selection primary ID
   const primarySelectedId = universalSelection.getPrimaryId();
   const activeContextualTrigger = useActiveContextualTrigger({ primarySelectedId, selectedEntityIds, currentScene, activeTool });
@@ -214,7 +219,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useDxfViewerEffects({
     activeTool, overlayMode, currentScene,
     showLayers, selectedEntityIds, primarySelectedId,
-    setOverlayMode, setSelectedEntityIds,
+    setOverlayMode,
     handleToolChange, handleAction, handleSceneChange,
     updateGripSettings, showCopyableNotification,
     eventBus, notifications,
@@ -226,9 +231,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ✅ PERFORMANCE: Memoize wrappedState
   const wrappedState = React.useMemo(() => ({
     ...state,
+    selectedEntityIds,  // SSoT: override stale raw useState with live universalSelection value
     handleAction: wrappedHandleAction,
     onAction: wrappedHandleAction
-  }), [state, wrappedHandleAction]);
+  }), [state, selectedEntityIds, wrappedHandleAction]);
   // Overlay drawing hook
   const {
     overlayCanvasRef, draftPolygon, snapPoint,
@@ -244,6 +250,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     },
     onOverlaySelect: (id: string | null) => universalSelection.handleOverlaySelect(id)
   });
+  // SSoT: stable entity select callback for sidebar consumers
+  const handleEntitySelect = React.useCallback(
+    (ids: string[]) => universalSelection.replaceEntitySelection(ids),
+    [universalSelection]
+  );
   // Ctrl+A → select all entities via EventBus so CanvasSection updates its own state
   const handleSelectAll = React.useCallback(() => {
     EventBus.emit('canvas:select-all', undefined as unknown as void);
@@ -272,7 +283,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-353 Phase A — Array contextual bridge + action interception.
   const arrayBridge = useRibbonArrayBridge({ levelManager, universalSelection });
   const arrayActionInterceptor = useArrayRibbonActions({
-    levelManager, universalSelection, setSelectedEntityIds,
+    levelManager, universalSelection,
     handleToolChange, fallback: wrappedHandleAction,
   });
   // ADR-362 Phase J2 — Dimension associativity observer (auto-follow geometry).
@@ -312,7 +323,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           floatingRef={floatingRef}
           currentScene={currentScene}
           selectedEntityIds={selectedEntityIds}
-          setSelectedEntityIds={setSelectedEntityIds}
+          onEntitySelect={handleEntitySelect}
           activeTool={activeTool}
           onSceneImported={handleFileImportWithEncoding}
           projectId={levelManager.saveContext?.projectId ?? undefined}
@@ -326,7 +337,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           floatingRef={floatingRef}
           currentScene={currentScene}
           selectedEntityIds={selectedEntityIds}
-          setSelectedEntityIds={setSelectedEntityIds}
+          onEntitySelect={handleEntitySelect}
           activeTool={activeTool}
           onSceneImported={handleFileImportWithEncoding}
         />

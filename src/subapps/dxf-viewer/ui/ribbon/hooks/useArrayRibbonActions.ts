@@ -48,13 +48,12 @@ type LevelManagerLike = Pick<
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId' | 'clearByType'
+  'getPrimaryId' | 'clearByType' | 'replaceEntitySelection'
 >;
 
 export interface UseArrayRibbonActionsProps {
   readonly levelManager: LevelManagerLike;
   readonly universalSelection: UniversalSelectionLike;
-  readonly setSelectedEntityIds: (ids: string[]) => void;
   readonly handleToolChange: (tool: ToolType) => void;
   /** Fall-through for non-array actions. */
   readonly fallback: (action: string, data?: RibbonActionPayload) => void;
@@ -66,7 +65,6 @@ export function useArrayRibbonActions(
   const {
     levelManager,
     universalSelection,
-    setSelectedEntityIds,
     handleToolChange,
     fallback,
   } = props;
@@ -93,8 +91,7 @@ export function useArrayRibbonActions(
       }
 
       if (action === 'array-close-tab') {
-        universalSelection.clearByType('dxf-entity');
-        setSelectedEntityIds([]);
+        universalSelection.replaceEntitySelection([]);
         handleToolChange('select' as ToolType);
         return;
       }
@@ -114,8 +111,7 @@ export function useArrayRibbonActions(
         const cmd = new ExplodeArrayCommand(entity.id, sm);
         executeCommand(cmd);
         const created = cmd.getAffectedEntityIds().slice(1);
-        universalSelection.clearByType('dxf-entity');
-        setSelectedEntityIds(created);
+        universalSelection.replaceEntitySelection(created);
         handleToolChange('select' as ToolType);
         return;
       }
@@ -160,7 +156,6 @@ export function useArrayRibbonActions(
       levelManager,
       universalSelection,
       executeCommand,
-      setSelectedEntityIds,
       handleToolChange,
     ],
   );

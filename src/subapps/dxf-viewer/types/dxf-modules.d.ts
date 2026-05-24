@@ -164,7 +164,6 @@ declare module './hooks/useDxfViewerState' {
     handleFileImport: (file: File) => void;
     currentScene: SceneModel | null;
     selectedEntityIds: string[];
-    setSelectedEntityIds: (ids: string[]) => void;
     handleTransformChange: (transform: ViewTransform) => void;
     handleSceneChange: (scene: SceneModel) => void;
     handleCalibrationToggle: () => void;

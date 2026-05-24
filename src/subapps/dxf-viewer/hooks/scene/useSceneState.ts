@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import type { SceneModel, AnySceneEntity } from '../../types/scene';
 import { EventBus } from '../../systems/events';
 import { useLevels } from '../../systems/levels';
@@ -32,8 +32,6 @@ export function useSceneState() {
   // ✅ ENTERPRISE: 2 separate copy instances for error notification actions
   const { copy: copyErrorMessage } = useCopyToClipboard();
   const { copy: copyImportError } = useCopyToClipboard();
-  const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
-
   // Levels and scene management
   const levelsSystem = useLevels();
   const { currentLevelId, getLevelScene, setLevelScene, addLevel, levels, setCurrentLevel } = levelsSystem;
@@ -183,13 +181,8 @@ export function useSceneState() {
   }, [currentLevelId, importDxfFile, setLevelScene, addLevel, levels, setCurrentLevel, levelsSystem, copyErrorMessage, copyImportError, notifications, importError, t]);
 
   return {
-    // State
     currentScene,
-    selectedEntityIds,
     currentLevelId,
-    
-    // Actions
-    setSelectedEntityIds,
     onEntityCreated,
     handleSceneChange,
     handleFileImport

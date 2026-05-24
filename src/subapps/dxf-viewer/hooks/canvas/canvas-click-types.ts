@@ -252,7 +252,7 @@ export interface UseCanvasClickHandlerParams {
   setSelectedGrips: (grips: SelectedGrip[]) => void;
   justFinishedDragRef: MutableRefObject<boolean>;
   draggingOverlayBody: unknown;
-  setSelectedEntityIds: (ids: string[]) => void;
+  // 🔴 SSoT (2026-05-24): setSelectedEntityIds REMOVED — use universalSelection.replaceEntitySelection directly
 
   // ── Overlay handlers ──────────────────────────────────────────────────
   currentOverlays: Overlay[];

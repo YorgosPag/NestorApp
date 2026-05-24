@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { Dispatch, SetStateAction } from 'react';
+import React from 'react';
 import type { DXFEntity, Layer, ViewMode, Status, Point } from '../types';
 import type { useDxfViewerState } from '../hooks/useDxfViewerState';
 import type { SceneModel } from '../types/scene';
@@ -10,12 +10,9 @@ import type { OverlayEditorMode, OverlayKind, Status as PropertyStatus } from '.
 
 export type DxfViewerState = ReturnType<typeof useDxfViewerState>;
 
-export interface DXFViewerLayoutProps extends Omit<DxfViewerState, 'snapEnabled' | 'handleCalibrationToggle' | 'setSelectedEntityIds'> {
+export interface DXFViewerLayoutProps extends Omit<DxfViewerState, 'snapEnabled' | 'handleCalibrationToggle'> {
   // ✅ ENTERPRISE FIX: Override snapEnabled to ensure boolean type
   snapEnabled: boolean;
-
-  // ✅ FIX: Override setSelectedEntityIds with proper React Dispatch type (matches useState return)
-  setSelectedEntityIds: Dispatch<SetStateAction<string[]>>;
 
   // ✅ FIX: Add missing setOverlayKind property
   setOverlayKind: (kind: OverlayKind) => void;

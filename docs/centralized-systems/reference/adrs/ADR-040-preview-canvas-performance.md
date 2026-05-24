@@ -71,6 +71,69 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-24 — DxfViewerContent SSoT: eliminate raw useState write paths for entity selection
+
+`selectedEntityIds` in `DxfViewerContent` was derived from a raw `useState<string[]>([])` in `useSceneState`.
+Multiple callers wrote to this raw setter while `CanvasSection` read from `universalSelection` — causing divergence:
+external events and sidebar clicks updated the ribbon/trigger state but NOT the canvas.
+
+**Write-path bugs fixed:**
+- `useDxfViewerEffects` — `dxf.highlightByIds` event wrote to raw useState (canvas ignored it)
+- `useArrayRibbonActions` — double-write: `clearByType()` + `setSelectedEntityIds([])` both fired on close/explode
+- `SidebarSection` / `MobileSidebarDrawer` — entity click updated ribbon but not canvas
+
+**Changes:**
+- `app/DxfViewerContent.tsx` — `selectedEntityIds` now computed via `useMemo(universalSelection.getIdsByType('dxf-entity'))`;
+  overridden in `wrappedState` to propagate live value to NormalView/FullscreenView consumers;
+  `setSelectedEntityIds` prop removed from `useDxfViewerEffects`, `useArrayRibbonActions` calls;
+  SidebarSection/MobileSidebarDrawer receive `(ids) => universalSelection.replaceEntitySelection(ids)`
+- `app/useDxfViewerEffects.ts` — `dxf.highlightByIds` handler: raw setter → `universalSelection.replaceEntitySelection` (with equality guard); removed from `DxfViewerEffectsParams`
+- `ui/ribbon/hooks/useArrayRibbonActions.ts` — double-write eliminated; `UniversalSelectionLike` extended with `replaceEntitySelection`; `setSelectedEntityIds` removed from props
+- `integration/types.ts` — removed `setSelectedEntityIds: Dispatch<SetStateAction<string[]>>` override (no longer in DxfViewerState)
+
+**SSoT invariant**: `universalSelection` (SelectionSystem) is the **sole write path** for `dxf-entity` selection across ALL callers — canvas, sidebar, ribbon, event bus.
+
+---
+
+### 2026-05-24 — CanvasSection bridge: eliminate duplicate replaceEntitySelection logic
+
+`setSelectedEntityIds` bridge in `CanvasSection.tsx` was reimplementing `replaceEntitySelection` inline
+(`clearByType('dxf-entity')` + `addMultiple(...)`), including a dead functional-updater overload
+(`string[] | ((prev) => string[])`) that no consumer called.
+
+**Change** (`CanvasSection.tsx:128`):
+```typescript
+// BEFORE — duplicate logic + dead overload:
+const setSelectedEntityIds = useCallback((value: string[] | ((prev: string[]) => string[])) => {
+  const us = universalSelectionRef.current;
+  const next = typeof value === 'function' ? value(us.getIdsByType('dxf-entity')) : value;
+  us.clearByType('dxf-entity');
+  if (next.length > 0) us.addMultiple(next.map(id => ({ id, type: 'dxf-entity' as const })));
+}, []);
+
+// AFTER — thin alias, SSoT delegation:
+const setSelectedEntityIds = useCallback((ids: string[]) => {
+  universalSelectionRef.current.replaceEntitySelection(ids);
+}, []);
+```
+
+**Result**: Zero duplicate `clearByType`/`addMultiple` inline — `SelectionSystem.replaceEntitySelection` is the sole owner of that logic.
+
+---
+
+### 2026-05-24 — UseCanvasClickHandlerParams SSoT: setSelectedEntityIds removed
+
+`setSelectedEntityIds` was redundant in `UseCanvasClickHandlerParams` — `universalSelection` (with `.replaceEntitySelection`) was already present in the same interface.
+
+**Changes:**
+- `hooks/canvas/canvas-click-types.ts` — removed `setSelectedEntityIds` from `UseCanvasClickHandlerParams`
+- `hooks/canvas/useCanvasClickHandler.ts` — destructuring + deps removed; `handleAngleEntityPick` call site now passes `universalSelection.replaceEntitySelection` directly
+- `components/dxf-layout/CanvasSection.tsx` — removed `setSelectedEntityIds` from `useCanvasClickHandler` params object
+
+**Result:** `UseCanvasClickHandlerParams` has a single write path to entity selection — `universalSelection.replaceEntitySelection`. No bridge wrapper needed.
+
+---
+
 ### 2026-05-24 — Boy Scout: full primitive → semantic API migration (entity + overlay)
 
 Migrated ALL remaining primitive `universalSelection.select/clearByType` + `setSelectedEntityIds`
@@ -177,6 +240,22 @@ Selection interaction changed from click-hold-drag to click→move→click (Auto
 - `SelectionStore` and `SelectionRenderer` unchanged — `isSelecting = true` still gates the rect rendering in both `DxfCanvas` and `LayerCanvas` subscribers.
 - `mouse-handler-move.ts` unchanged — `cursor.updateSelection(screenPos)` runs whenever `cursor.isSelecting`, which now covers mouse-free movement in two-click mode.
 - **Files**: `systems/cursor/useCentralizedMouseHandlers.ts` (removed `startSelection` from mousedown), `systems/cursor/mouse-handler-up.ts` (added two-click start in `else if` branch).
+
+### 2026-05-24 — Selection SSoT: rename setSelectedEntityIds → onEntitySelect + remove dead useState
+
+**Rename** (`SidebarSection`, `MobileSidebarDrawer`, `DxfViewerContent`):
+- `SidebarSection` interface + destructure: `setSelectedEntityIds` → `onEntitySelect`; internal JSX: `onEntitySelect={onEntitySelect}`
+- `MobileSidebarDrawer` interface + destructure: `setSelectedEntityIds` → `onEntitySelect`; `SidebarSection` usage: `onEntitySelect={onEntitySelect}`
+- `DxfViewerContent.tsx`: both call sites `setSelectedEntityIds={handleEntitySelect}` → `onEntitySelect={handleEntitySelect}`
+
+**Dead state removal** (`useSceneState`):
+- Removed `const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([])` — no writer existed after previous session's SSoT cleanup; `useState` removed from React import
+- Removed `selectedEntityIds` + `setSelectedEntityIds` from `useSceneState` return object
+- `dxf-modules.d.ts` — removed `setSelectedEntityIds: (ids: string[]) => void` from `useDxfViewerState` ambient declaration
+
+**SSoT invariant preserved**: `universalSelection.replaceEntitySelection` remains the sole write path. `selectedEntityIds` in consumers is derived read-only via `useMemo(universalSelection.getIdsByType('dxf-entity'))`.
+
+---
 
 ### 2026-05-21 — ADR-366 Phase 4.7: SelectionCursorIcon cross-mode badge
 

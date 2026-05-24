@@ -94,7 +94,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     universalSelection,
     hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
     setSelectedGrips, justFinishedDragRef,
-    draggingOverlayBody, setSelectedEntityIds,
+    draggingOverlayBody,
     currentOverlays, handleOverlayClick,
   } = params;
   const handleCanvasClick = useCallback((worldPoint: Point2D, shiftKey: boolean = false) => {
@@ -191,7 +191,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     }
     // PRIORITY 1.9-4: Entity picking tools (angle, circle-ttt, perpendicular, parallel)
     const entityCtx: EntityPickContext = { worldPoint, transform, levelManager };
-    if (handleAngleEntityPick(entityCtx, angleEntityMeasurement, setSelectedEntityIds)) return;
+    if (handleAngleEntityPick(entityCtx, angleEntityMeasurement, universalSelection.replaceEntitySelection)) return;
     if (handleCircleTTTPick(entityCtx, circleTTT, activeTool)) return;
     if (handleLinePerpendicularPick(entityCtx, linePerpendicular, activeTool)) return;
     if (handleLineParallelPick(entityCtx, lineParallel, activeTool)) return;
@@ -316,7 +316,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     universalSelection,
     hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
     setSelectedGrips, justFinishedDragRef,
-    draggingOverlayBody, setSelectedEntityIds,
+    draggingOverlayBody,
     currentOverlays, handleOverlayClick,
     setDraftPolygon, setIsSavingPolygon,
     params,

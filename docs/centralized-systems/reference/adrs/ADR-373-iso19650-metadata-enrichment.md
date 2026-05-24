@@ -2,8 +2,8 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | 🟡 DRAFT — Phase 1 Recognition complete, awaiting final clarifications before implementation |
-| **Date** | 2026-05-24 |
+| **Status** | 🟢 CLARIFIED — All 8 Open Questions resolved 2026-05-24. Ready for Plan Mode → Orchestrator implementation. |
+| **Date** | 2026-05-24 (clarifications session 2026-05-24) |
 | **Category** | File Management / Document Governance / AI Pipeline |
 | **Author** | Γιώργος Παγώνης + Claude (Opus 4.7) |
 | **Phase** | 1 of 3 (Schema + AI auto-fill — no UI yet) |
@@ -17,7 +17,9 @@ fields, **χωρίς αλλαγή του storage path layer** (ADR-018, ADR-054,
 
 **Αρχιτεκτονική απόφαση**: **υβριδικό σύστημα δύο επιπέδων** —
 - **Επίπεδο 1 (user-facing)**: οι υπάρχουσες **7 ομάδες μελετών** (study groups) και τα **211 upload entry points** παραμένουν αμετάβλητα.
-- **Επίπεδο 2 (AI-driven, hidden)**: τα 5 νέα ISO πεδία γεμίζουν **αυτόματα από τον AI classifier** (gpt-4o-mini σήμερα, model-agnostic για το αύριο). Ο χρήστης μπορεί να τα διορθώσει χειροκίνητα.
+- **Επίπεδο 2 (AI-driven, hidden)**: τα 5 νέα ISO πεδία γεμίζουν **πάντα από τον AI classifier** (gpt-4o-mini σήμερα, model-agnostic για το αύριο). Always-AI policy (OQ7) — max consistency. Ο χρήστης μπορεί να τα διορθώσει χειροκίνητα (Phase 2).
+
+**Clarifications session 2026-05-24**: 13 disciplines (A/S/M/E/K/H/N/X/T/L/P/F/D), 9 document series (100-900), CDE state `SUPERSEDED`, composite buildingCode, always-AI με $0.01/file cap. Βλ. §"Resolved Decisions".
 
 Backward-compatible: όλα τα νέα fields optional, υπάρχοντα αρχεία = `undefined`/`null` (Firestore rule `?? null`).
 
@@ -101,8 +103,9 @@ export interface FileRecord {
   documentSeries?: DocumentSeries;
 
   /**
-   * 🌐 ISO 19650-2 — Revision tag (P01/R01/IFA/IFR/IFC/ASB)
+   * 🌐 ISO 19650-2 — Revision tag (P01/T01/C01/R01/AB01)
    * AI parses title block ή filename pattern.
+   * Suitability codes (IFA/IFR/IFC/ASB) live in separate `suitabilityCode` field (Phase 2).
    */
   revisionCode?: string; // validated by REVISION_CODE_REGEX
 
@@ -110,7 +113,8 @@ export interface FileRecord {
    * 🌐 ISO 19650-1 §10.2 — Common Data Environment workflow state.
    * ΟΡΘΟΓΩΝΙΟ προς `lifecycleState` (που είναι retention state).
    * WIP = work-in-progress, SHARED = under review, PUBLISHED = authorized,
-   * ARCHIVED = superseded.
+   * SUPERSEDED = replaced by newer revision (renamed από ARCHIVED στο OQ4
+   * για disambiguation με `lifecycleState.archived`).
    */
   cdeState?: CdeState;
 
@@ -151,16 +155,21 @@ import type { StudyGroup } from './study-groups-config';
 // ─── Discipline Codes ───────────────────────────────────────────────────────
 
 export const DISCIPLINE_CODES = {
+  // ─── Core 8 (always available) ───────────────────────────────────────────
   A: { studyGroup: 'architectural' as StudyGroup, label: 'Architectural', labelEl: 'Αρχιτεκτονικά' },
   S: { studyGroup: 'structural' as StudyGroup, label: 'Structural', labelEl: 'Στατικά' },
   M: { studyGroup: 'mechanical' as StudyGroup, label: 'Mechanical (HVAC/Plumbing)', labelEl: 'Μηχανολογικά' },
-  E: { studyGroup: 'mechanical' as StudyGroup, label: 'Electrical', labelEl: 'Ηλεκτρολογικά' }, // split from mechanical via AI
+  E: { studyGroup: 'mechanical' as StudyGroup, label: 'Electrical', labelEl: 'Ηλεκτρολογικά' }, // split from M via AI
   K: { studyGroup: 'energy' as StudyGroup, label: 'KENAK (Energy)', labelEl: 'Ενεργειακά (ΚΕΝΑΚ)' },
   H: { studyGroup: 'site' as StudyGroup, label: 'HSE (Health/Safety/Environment)', labelEl: 'ΣΑΥ-ΦΑΥ / Εργοταξιακά' },
   N: { studyGroup: 'administrative' as StudyGroup, label: 'Notarial/Legal', labelEl: 'Διοικητικά/Νομικά' },
   X: { studyGroup: 'fiscal' as StudyGroup, label: 'Fiscal', labelEl: 'Φορολογικά/Ασφαλιστικά' },
-  // Optional letters TBD in next session (see Open Questions)
-  // T: Topographic, L: Lift, P: Permits, F: Fire safety, D: ΑΕΚΚ demolition waste
+  // ─── Extended 5 (OQ1 — approved 2026-05-24) ──────────────────────────────
+  T: { studyGroup: 'site' as StudyGroup, label: 'Topographic', labelEl: 'Τοπογραφικά' },
+  L: { studyGroup: 'mechanical' as StudyGroup, label: 'Lift / Elevator', labelEl: 'Ανελκυστήρες' },
+  P: { studyGroup: 'administrative' as StudyGroup, label: 'Permits', labelEl: 'Άδειες (οικοδομική, ΤΑΥΤ, ΗΛΠΑΠ)' },
+  F: { studyGroup: 'mechanical' as StudyGroup, label: 'Fire Safety', labelEl: 'Πυρασφάλεια' },
+  D: { studyGroup: 'site' as StudyGroup, label: 'Demolition / AEKK', labelEl: 'Κατεδαφίσεις / ΑΕΚΚ' },
 } as const;
 
 export type DisciplineCode = keyof typeof DISCIPLINE_CODES;
@@ -168,12 +177,16 @@ export type DisciplineCode = keyof typeof DISCIPLINE_CODES;
 // ─── Document Series ────────────────────────────────────────────────────────
 
 export const DOCUMENT_SERIES = {
+  // OQ3 — strict enum, 9 series (approved 2026-05-24)
   100: { label: 'Κατόψεις', en: 'Plans' },
   200: { label: 'Όψεις', en: 'Elevations' },
   300: { label: 'Τομές', en: 'Sections' },
   400: { label: 'Λεπτομέρειες', en: 'Details' },
   500: { label: 'Κουφώματα / Πίνακες', en: 'Schedules' },
   600: { label: 'Διαμορφώσεις', en: 'Landscape' },
+  700: { label: 'Στατικά σχέδια', en: 'Structural Drawings' },
+  800: { label: 'Η/Μ Schematics', en: 'MEP Schematics' },
+  900: { label: 'As-Built / AIM', en: 'As-Built / AIM' },
 } as const;
 
 export type DocumentSeries = keyof typeof DOCUMENT_SERIES;
@@ -181,21 +194,30 @@ export type DocumentSeries = keyof typeof DOCUMENT_SERIES;
 // ─── CDE States (ISO 19650-1 §10.2) ─────────────────────────────────────────
 
 export const CDE_STATES = {
-  WIP:       { labelEl: 'Σε εξέλιξη', labelEn: 'Work in Progress' },
-  SHARED:    { labelEl: 'Σε διαβούλευση', labelEn: 'Shared for Review' },
-  PUBLISHED: { labelEl: 'Εγκεκριμένο', labelEn: 'Authorized for Use' },
-  ARCHIVED:  { labelEl: 'Αρχειοθετημένο (ISO)', labelEn: 'Superseded (ISO archive)' },
+  // OQ4 — SUPERSEDED instead of ARCHIVED to disambiguate from lifecycleState.archived (approved 2026-05-24)
+  WIP:        { labelEl: 'Σε εξέλιξη', labelEn: 'Work in Progress' },
+  SHARED:     { labelEl: 'Σε διαβούλευση', labelEn: 'Shared for Review' },
+  PUBLISHED:  { labelEl: 'Εγκεκριμένο', labelEn: 'Authorized for Use' },
+  SUPERSEDED: { labelEl: 'Αντικαταστάθηκε', labelEn: 'Superseded by Newer Revision' },
 } as const;
 
 export type CdeState = keyof typeof CDE_STATES;
 
 // ─── Validators (regex SSoT) ────────────────────────────────────────────────
 
-/** P01-P99 (preliminary), R01-R99 (revision), IFA/IFR/IFC/ASB (ISO stage tags) */
-export const REVISION_CODE_REGEX = /^(?:[PR]\d{2}|IFA|IFR|IFC|ASB)$/;
+/**
+ * OQ2 — Revision codes (approved 2026-05-24)
+ * P = Preliminary, T = Tender, C = Construction, R = Revision, AB = As-Built variant
+ * Suitability tags (IFA/IFR/IFC/ASB) live separately in `suitabilityCode` field (Phase 2).
+ */
+export const REVISION_CODE_REGEX = /^(P|T|C|R|AB)\d{2}$/;
 
-/** Κ1, K12, Β3, B12 — Greek/Latin uppercase letter + 1-2 digits */
-export const BUILDING_CODE_REGEX = /^[Α-ΩA-Z]\d{1,2}$/;
+/**
+ * OQ5 — Composite building code (approved 2026-05-24)
+ * Main building (Κ1, K12, Β3) + optional suffix for wing/unit (-Α, -Β1, -A3).
+ * Examples: Κ1, Κ12, Κ1-Α, Κ1-Β1, A-1
+ */
+export const BUILDING_CODE_REGEX = /^[Α-ΩA-Z]\d{1,2}(-[Α-ΩA-Z\d]{1,3})?$/;
 
 // ─── Reverse Mapping ────────────────────────────────────────────────────────
 
@@ -246,14 +268,38 @@ Upload από user
 [Existing pipeline] FileRecord created με purpose από entry point
    │
    ▼
-[NEW] Fire-and-forget call to enriched classifier:
+[NEW] Fire-and-forget call to enriched classifier (ALWAYS — OQ7):
    ├─ Step 1: Derive defaults από purpose → study group → DisciplineCode
-   │           (zero-cost, καμία AI κλήση)
-   ├─ Step 2: AI vision call (gpt-4o-mini) διαβάζει το αρχείο
+   │           (zero-cost, καμία AI κλήση, σαν fallback αν AI fails)
+   ├─ Step 2: AI vision call (gpt-4o-mini) ΠΑΝΤΑ διαβάζει το αρχείο
    │           Extract: disciplineCode (override default αν χρειάζεται),
    │                    documentSeries, revisionCode, buildingCode, cdeState
+   │           OQ7 decision: ΟΧΙ skip ακόμα και σε unambiguous derivation —
+   │           ο Γιώργος προτιμά 100% AI verification για consistency.
    └─ Step 3: Update FileRecord με τα 5 πεδία + iso19650Source audit
 ```
+
+#### D5.1.1 Trigger semantics (OQ6 — approved 2026-05-24)
+
+| Σενάριο | Συμπεριφορά |
+|---------|-------------|
+| Πρώτο upload | ✅ Trigger AI enricher |
+| Binary replace (νέα έκδοση πάνω από παλιά) | ✅ Re-trigger AI (νέο content = νέο classification) |
+| Metadata-only change (rename, purpose update) | ❌ ΟΧΙ trigger (content unchanged) |
+| Manual "Re-classify" button (Phase 2) | ✅ Trigger AI |
+
+#### D5.1.2 Concurrency control (OQ6)
+
+- **Max 5 concurrent AI vision calls per company** (επαναχρησιμοποιεί υπάρχον `withStandardRateLimit` infrastructure)
+- Bulk upload 50 αρχείων → batches των 5 → ~2-3 λεπτά συνολικά, **fire-and-forget** (upload completes instantly, classification updates async)
+- Αν OpenAI rate limit hit → exponential backoff (max 3 retries)
+
+#### D5.1.3 Cost control (OQ6)
+
+- **Hard budget cap: $0.01/file** (10× το standard gpt-4o-mini vision cost ~$0.001)
+- Αν εκτιμώμενο cost > $0.01 (π.χ. πολυσέλιδο PDF > 50 σελίδες) → skip + log
+- Log entry: `iso19650Source.aiReasoning = "Skipped: estimated cost ${X}¢ exceeds $0.01/file cap"`
+- Monthly aggregate cost tracking per company → admin dashboard (Phase 2)
 
 #### D5.2 Model-agnostic design
 
@@ -361,54 +407,44 @@ Phase 3 (μελλοντικό ADR): ZIP EXPORT + ISO COMPLIANCE
 
 ---
 
-## Open Questions για επόμενη session (καθαρό context)
+## Resolved Decisions (clarifications session 2026-05-24)
 
-⚠️ **ΠΡΟΣΟΧΗ**: αυτές δεν έχουν απαντηθεί ακόμα. Πριν προχωρήσει η υλοποίηση,
-ο Γιώργος θα δώσει διευκρινίσεις σε νέα session.
+✅ Όλες οι 8 αρχικές Open Questions απαντημένες από τον Γιώργο. Industry-default
+recommendations έγιναν δεκτές με τη βασική απόκλιση στο OQ7 (always-AI αντί skip-on-certainty).
 
-### OQ1 — Optional discipline letters
-Πέρα από τα 8 βασικά (A/S/M/E/K/H/N/X), προτάθηκαν αρχικά: **T** (Topographic),
-**L** (Lift), **P** (Permits), **F** (Fire safety), **D** (ΑΕΚΚ demolition).
-- Αυτά τα 5 είναι κατά τη συζήτηση **υπό απόφαση**.
-- Παρατήρηση: T/P/F/D ίσως καλύπτονται από την ομάδα `administrative` ή `site`. Μήπως αρκούν τα 8;
-- L (ανελκυστήρες) ξεχωριστή ειδικότητα → ίσως αξίζει separate letter.
+### ✅ OQ1 — Discipline letters: **13 γράμματα συνολικά**
+Core 8 (A/S/M/E/K/H/N/X) + Extended 5 (T/L/P/F/D). Όλα implemented στο `DISCIPLINE_CODES`.
+- T (Topographic) → study group `site`
+- L (Lift) → study group `mechanical`
+- P (Permits) → study group `administrative`
+- F (Fire safety) → study group `mechanical`
+- D (Demolition/ΑΕΚΚ) → study group `site`
 
-### OQ2 — Revision code regex
-Σήμερα: `^(P[0-9]{2}|R[0-9]{2}|IFA|IFR|IFC|ASB)$`.
-- Να επεκταθεί σε `T01` (tender), `C01` (construction), `AB01` (as-built variant);
-- Να επιτραπεί 3 ψηφία (R001-R999) για πολύ μεγάλα έργα;
+### ✅ OQ2 — Revision regex: `^(P|T|C|R|AB)\d{2}$`
+- P = Preliminary, T = Tender, C = Construction, R = Revision, AB = As-Built variant
+- 2 ψηφία (industry standard, ISO 19650-2 §5.1.7)
+- Suitability tags (IFA/IFR/IFC/ASB) → **Phase 2** ως ξεχωριστό πεδίο `suitabilityCode` (BS 1192 separation pattern, Aconex/Bentley convention)
 
-### OQ3 — Document series strictness
-Σήμερα: literal union `100|200|300|400|500|600`.
-- Strict (type safety) ή ευέλικτο (`number` με runtime check) για επεκτασιμότητα;
-- Να προστεθούν: 700 (στατικά plans), 800 (Η/Μ schematics), 900 (as-built);
+### ✅ OQ3 — Document series: **strict enum, 9 σειρές**
+100 (Plans) / 200 (Elevations) / 300 (Sections) / 400 (Details) / 500 (Schedules) / 600 (Landscape) / 700 (Structural) / 800 (MEP) / 900 (As-Built). TypeScript literal union → IDE auto-complete + compile-time typo detection.
 
-### OQ4 — CDE state naming
-Σήμερα: `WIP / SHARED / PUBLISHED / ARCHIVED`.
-- Το `ARCHIVED` συγκρούεται **σε string τιμή** με το `lifecycleState: 'archived'`
-  (lowercase). Πρόταση: keep uppercase distinction.
-- Εναλλακτικά: rename σε `SUPERSEDED` (πιο σαφές ISO).
+### ✅ OQ4 — CDE 4th state: **`SUPERSEDED`** (όχι `ARCHIVED`)
+Disambiguation από `lifecycleState.archived`. Industry pattern (Aconex/Bentley/Bimplus). Greek label: "Αντικαταστάθηκε".
 
-### OQ5 — Building code regex
-Σήμερα: `^[Α-ΩA-Z][0-9]{1,2}$` (π.χ. Κ1, B12).
-- Να επιτραπεί composite codes τύπου `Κ1-Α` (κτίριο + πτέρυγα);
-- Να αλλάξει σε `^[Α-ΩA-Z]+[0-9]{1,3}$` (πιο ελαστικό);
+### ✅ OQ5 — Building code: **composite regex** `^[Α-ΩA-Z]\d{1,2}(-[Α-ΩA-Z\d]{1,3})?$`
+Καλύπτει: `Κ1`, `Κ12`, `Κ1-Α`, `Κ1-Β1`, `A-1`. Δεν επιτρέπει multi-dash anarchy (max 1 παύλα, max 3 χαρακτήρες suffix).
 
-### OQ6 — AI enricher trigger
-Σήμερα: fire-and-forget μετά το upload finalize.
-- Πότε ξανατρέχει αν το αρχείο τροποποιηθεί (replaced binary);
-- Throttling — αν 100 αρχεία ανέβουν μαζί, όλα asynchronously;
-- Budget limit — μέγιστο cost ανά αρχείο (gpt-4o-mini = ~$0.001/file vision call);
+### ✅ OQ6 — AI trigger semantics: **Industry Default package**
+- **Re-trigger** στο binary replace (όχι σε metadata-only changes)
+- **Concurrency** max 5 parallel AI calls per company (reuse `withStandardRateLimit`)
+- **Budget cap** hard $0.01/file (10× standard cost — safety net για edge cases)
+- **Monthly aggregate** cost tracking per company → Phase 2 admin dashboard
 
-### OQ7 — Auto-derivation από purpose
-Πριν τρέξει AI, θα γίνει "cheap" derivation από `purpose → study group → DisciplineCode`.
-- Αν `confidence === 1.0` (unambiguous mapping), να SKIP-άρουμε το AI call για cost?
-- Π.χ. το purpose `'study-floorplan'` → `architectural` → `'A'` — δεν χρειάζεται AI.
+### ✅ OQ7 — Skip on high-confidence derivation: **ΟΧΙ skip — ΠΑΝΤΑ AI**
+Ο Γιώργος προτίμησε max accuracy έναντι cost optimization. AI vision call γίνεται **πάντα** ακόμα και όταν derivation από purpose είναι unambiguous (π.χ. study-floorplan → A100). Trade-off: ~30% extra cost, **100% verification consistency**. Cheap derivation κρατείται μόνο ως fallback αν AI fails (timeout/quota).
 
-### OQ8 — ADR-370/371 duplicates cleanup
-Filesystem έχει `ADR-370-bim-readonly-visualization.md` ΚΑΙ `ADR-370-bim-corner-snap-system.md`
-+ `ADR-371-bim-3d-readonly-viewer.md` ΚΑΙ `ADR-371-bim-corner-snap-system.md`.
-- Ξεχωριστή εργασία — όχι μέρος του ADR-373, αλλά να καταγραφεί στο `pending-ratchet-work.md`.
+### ✅ OQ8 — ADR-370/371 duplicates: **Pending list**
+Confirmed via `Glob`: 4 αρχεία με 2 νούμερα. Καταγράφηκε στο `.claude-rules/pending-ratchet-work.md` ως ξεχωριστή housekeeping εργασία. **Δεν blocks** την υλοποίηση του ADR-373.
 
 ---
 
@@ -429,3 +465,4 @@ Filesystem έχει `ADR-370-bim-readonly-visualization.md` ΚΑΙ `ADR-370-bim-
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-05-24 | Initial DRAFT — Phase 1 Recognition complete. Hybrid 2-layer architecture decided (7 user-facing groups + 5 AI-driven ISO 19650 fields). Implementation pending Giorgio's final clarifications (8 open questions). | Claude (Opus 4.7) + Γιώργος Παγώνης |
+| 2026-05-24 | **CLARIFIED** — All 8 Open Questions resolved via interactive Q&A. Key updates: (1) **13 disciplines** (added T/L/P/F/D), (2) revisionCode regex tightened to `^(P\|T\|C\|R\|AB)\d{2}$` with suitability codes moved to Phase 2, (3) **9 document series** strict enum (added 700/800/900), (4) CDE state `ARCHIVED` → **`SUPERSEDED`** (lifecycle disambiguation), (5) composite buildingCode regex for wing/unit support, (6) industry-default AI trigger semantics (re-trigger on replace + max 5 concurrent + $0.01/file cap), (7) **always-AI** policy (no skip on certainty — max consistency), (8) ADR-370/371 duplicates → pending list. ADR ready for Plan Mode → Orchestrator implementation. | Claude (Opus 4.7) + Γιώργος Παγώνης |
