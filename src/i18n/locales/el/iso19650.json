@@ -46,6 +46,23 @@
     "buildingCode": "Κωδικός Κτιρίου",
     "aiClassified": "Ταξινομήθηκε από AI",
     "manualOverride": "Χειροκίνητη Διόρθωση",
-    "noClassification": "Χωρίς ταξινόμηση"
+    "noClassification": "Χωρίς ταξινόμηση",
+    "sectionTitle": "ISO 19650 Ταξινόμηση",
+    "saveChanges": "Αποθήκευση Αλλαγών",
+    "saving": "Αποθήκευση...",
+    "saved": "Αποθηκεύτηκε",
+    "select": "Επιλέξτε...",
+    "confidence": "Αξιοπιστία",
+    "aiReasoning": "Αιτιολόγηση AI",
+    "derivedLabel": "↗ Παράγεται",
+    "noChanges": "Καμία αλλαγή"
+  },
+  "placeholder": {
+    "revisionCode": "π.χ. P01",
+    "buildingCode": "π.χ. Κ1"
+  },
+  "errors": {
+    "invalidRevisionCode": "Μη έγκυρο (π.χ. P01, T02, AB99)",
+    "invalidBuildingCode": "Μη έγκυρο (π.χ. Κ1, Κ12, Κ1-Α)"
   }
 }

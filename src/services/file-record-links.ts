@@ -31,6 +31,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
 import { FileAuditService } from '@/services/file-audit.service';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+import type { DisciplineCode, DocumentSeries, CdeState, SuitabilityCode } from '@/config/iso19650-constants';
 
 const logger = createModuleLogger('FILE_RECORD_LINKS');
 
@@ -211,6 +212,64 @@ export async function updateDescription(fileId: string, description: string): Pr
   RealtimeService.dispatch('FILE_UPDATED', {
     fileId,
     updates: { description: description.trim() || undefined },
+    timestamp: Date.now(),
+  });
+}
+
+// ============================================================================
+// ISO 19650 METADATA UPDATE — ADR-373 Phase 2
+// ============================================================================
+
+export interface Iso19650MetadataUpdate {
+  disciplineCode?: DisciplineCode | null;
+  documentSeries?: DocumentSeries | null;
+  revisionCode?: string | null;
+  suitabilityCode?: SuitabilityCode | null;
+  cdeState?: CdeState | null;
+  buildingCode?: string | null;
+}
+
+/**
+ * Partial update of ISO 19650 metadata fields on a FileRecord.
+ * Records iso19650Source.overriddenBy + overriddenAt + filledBy='user'.
+ * Does NOT re-trigger AI enricher (Phase 2 manual override only).
+ * @see ADR-373 §P2.1
+ */
+export async function updateIso19650Metadata(
+  fileId: string,
+  metadata: Iso19650MetadataUpdate,
+  userId: string,
+): Promise<void> {
+  logger.info('Updating ISO 19650 metadata', { fileId, userId });
+
+  const docRef = doc(db, COLLECTIONS.FILES, fileId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) {
+    throw new Error(`FileRecord not found: ${fileId}`);
+  }
+
+  const updateData: Record<string, unknown> = {
+    updatedAt: serverTimestamp(),
+    'iso19650Source.filledBy': 'user',
+    'iso19650Source.overriddenBy': userId,
+    'iso19650Source.overriddenAt': serverTimestamp(),
+    'iso19650Source.filledAt': serverTimestamp(),
+  };
+
+  if ('disciplineCode' in metadata) updateData['disciplineCode'] = metadata.disciplineCode ?? null;
+  if ('documentSeries' in metadata) updateData['documentSeries'] = metadata.documentSeries ?? null;
+  if ('revisionCode' in metadata) updateData['revisionCode'] = metadata.revisionCode ?? null;
+  if ('suitabilityCode' in metadata) updateData['suitabilityCode'] = metadata.suitabilityCode ?? null;
+  if ('cdeState' in metadata) updateData['cdeState'] = metadata.cdeState ?? null;
+  if ('buildingCode' in metadata) updateData['buildingCode'] = metadata.buildingCode ?? null;
+
+  await updateDoc(docRef, updateData);
+
+  logger.info('ISO 19650 metadata updated', { fileId });
+
+  RealtimeService.dispatch('FILE_UPDATED', {
+    fileId,
+    updates: { iso19650MetadataUpdated: true },
     timestamp: Date.now(),
   });
 }

@@ -46,6 +46,23 @@
     "buildingCode": "Building Code",
     "aiClassified": "AI Classified",
     "manualOverride": "Manual Override",
-    "noClassification": "No classification"
+    "noClassification": "No classification",
+    "sectionTitle": "ISO 19650 Classification",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "select": "Select...",
+    "confidence": "Confidence",
+    "aiReasoning": "AI Reasoning",
+    "derivedLabel": "↗ Derived",
+    "noChanges": "No changes"
+  },
+  "placeholder": {
+    "revisionCode": "e.g. P01",
+    "buildingCode": "e.g. K1"
+  },
+  "errors": {
+    "invalidRevisionCode": "Invalid (e.g. P01, T02, AB99)",
+    "invalidBuildingCode": "Invalid (e.g. K1, K12, K1-A)"
   }
 }

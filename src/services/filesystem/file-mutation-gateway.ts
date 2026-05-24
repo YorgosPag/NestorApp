@@ -5,6 +5,7 @@ import { DocumentTemplateService, type CreateTemplateInput } from '@/services/do
 import { FileCommentService, type CreateCommentInput } from '@/services/file-comment.service';
 import { FileApprovalService, type CreateApprovalInput } from '@/services/file-approval.service';
 import { FileRecordService } from '@/services/file-record.service';
+import type { Iso19650MetadataUpdate } from '@/services/file-record.service';
 import { FileShareService, type CreateShareInput } from '@/services/file-share.service';
 import { API_ROUTES, type EntityType } from '@/config/domain-constants';
 import type { FileClassification } from '@/config/domain-constants';
@@ -199,6 +200,16 @@ export async function updateFileDescriptionWithPolicy(
 ): Promise<void> {
   return FileRecordService.updateDescription(fileId, description);
 }
+
+export async function updateIso19650MetadataWithPolicy(
+  fileId: string,
+  metadata: Iso19650MetadataUpdate,
+  userId: string,
+): Promise<void> {
+  return FileRecordService.updateIso19650Metadata(fileId, metadata, userId);
+}
+
+export type { Iso19650MetadataUpdate };
 
 export async function createFileShareWithPolicy(input: CreateShareInput): Promise<string> {
   return FileShareService.createShare(input);

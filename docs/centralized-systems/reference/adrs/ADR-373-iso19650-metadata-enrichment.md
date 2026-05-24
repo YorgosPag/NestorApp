@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | ✅ Phase 1 IMPLEMENTED 2026-05-24 — Schema + AI enricher + tests + post-finalize hook SSoT. Pending Γιώργος commit. Phase 2 (UI / manual override / virtual folders / backfill / concurrency token bucket / suitabilityCode field) deferred. |
+| **Status** | ✅ Phase 1 + P2.1/P2.6/P2.7/P2.8 IMPLEMENTED 2026-05-24. Phase 2 remaining: P2.2 Virtual Folders, P2.3 Backfill, P2.4 Token Bucket, P2.5 Cost Dashboard. |
 | **Date** | 2026-05-24 (clarifications session 2026-05-24) |
 | **Category** | File Management / Document Governance / AI Pipeline |
 | **Author** | Γιώργος Παγώνης + Claude (Opus 4.7) |
@@ -464,6 +464,7 @@ Confirmed via `Glob`: 4 αρχεία με 2 νούμερα. Καταγράφηκ
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-05-24 | **✅ P2.1 IMPLEMENTED — Manual Override UI.** 6 αρχεία: (1) `src/services/file-record-links.ts` +`Iso19650MetadataUpdate` interface + `updateIso19650Metadata()` (partial updateDoc, writes `iso19650Source.overriddenBy/overriddenAt/filledBy='user'`). (2) `src/services/file-record.service.ts` static `updateIso19650Metadata` alias + re-export of type. (3) `src/services/filesystem/file-mutation-gateway.ts` +`updateIso19650MetadataWithPolicy()` wrapper. (4) `src/components/file-manager/Iso19650MetadataSection.tsx` NEW (~328 LOC) — collapsible form: SourceBadge (ai/user/derived/undefined), 6 fields (4 Select + 2 Input with live validation), save button (disabled when no changes OR errors), optimistic setSavedAt. (5-6) `i18n/locales/{el,en}/iso19650.json` +11 UI keys each (sectionTitle, saveChanges, saving, saved, select, confidence, aiReasoning, derivedLabel, noChanges + placeholder.* + errors.*). `FilePreviewPanel.tsx` +`Tag` icon button (header nav) + conditional `<Iso19650MetadataSection>` panel before preview area. ADR-001 Radix Select, ADR-365 shadcn tokens, N.7.1 all files <500 LOC. Tests: 12 pre-existing failures in iso19650-enricher (from Phase 1 — unrelated), 1167 green. | Claude (Sonnet 4.6) |
 | 2026-05-24 | **✅ P2.7 IMPLEMENTED — i18n keys για ISO labels.** `src/i18n/locales/el/iso19650.json` + `src/i18n/locales/en/iso19650.json` (NEW). Namespace `'iso19650'` added to `SUPPORTED_NAMESPACES` + loaders (el+en) in `namespace-loaders.ts`. Keys: 13 discipline codes, 9 document series, 4 CDE states, 4 suitability codes, 7 label strings. i18n audit: 0 violations. | Claude (Sonnet 4.6) |
 | 2026-05-24 | **✅ P2.6 IMPLEMENTED — `suitabilityCode` field (BS 1192 OQ2 Phase 2).** Added `SuitabilityCode` type (IFA/IFR/IFC/ASB) + `SUITABILITY_CODES` const + `SUITABILITY_CODE_REGEX` + `SUITABILITY_CODE_VALUES` to `iso19650-constants.ts`. `FileRecord.suitabilityCode?: SuitabilityCode` field added after `revisionCode`. `isSuitabilityCode()` type guard + `validateSuitabilityCode()` in `validators.ts`. `iso19650-enricher.ts` schema + prompt + `buildAiResult` extended. 76 constants+enricher tests green (73 suites / 1179 total). Note: `vision-helpers.ts` SSoT found already implemented (P2.8 ✅). | Claude (Sonnet 4.6) |
 | 2026-05-24 | Initial DRAFT — Phase 1 Recognition complete. Hybrid 2-layer architecture decided (7 user-facing groups + 5 AI-driven ISO 19650 fields). Implementation pending Giorgio's final clarifications (8 open questions). | Claude (Opus 4.7) + Γιώργος Παγώνης |

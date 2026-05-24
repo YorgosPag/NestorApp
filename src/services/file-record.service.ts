@@ -74,8 +74,10 @@ import {
   getLinkedFiles,
   renameFile,
   updateDescription,
+  updateIso19650Metadata,
   findByHash,
 } from '@/services/file-record-links';
+export type { Iso19650MetadataUpdate } from '@/services/file-record-links';
 const logger = createModuleLogger('FILE_RECORD');
 // ============================================================================
 // POST-QUERY NORMALIZATION HELPER (ADR-214 Phase 3)
@@ -472,6 +474,9 @@ export class FileRecordService {
 
   /** Update file description — @see file-record-links.ts */
   static updateDescription = updateDescription;
+
+  /** Update ISO 19650 metadata (manual override) — @see file-record-links.ts + ADR-373 §P2.1 */
+  static updateIso19650Metadata = updateIso19650Metadata;
 
   /** Find file by hash — @see file-record-links.ts */
   static findByHash = findByHash;

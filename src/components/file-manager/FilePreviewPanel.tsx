@@ -32,6 +32,7 @@ import {
   Share2,
   MessageSquare,
   UserCheck,
+  Tag,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,7 @@ import { AuditLogPanel } from '@/components/shared/files/AuditLogPanel';
 import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
 import { CommentsPanel } from '@/components/shared/files/CommentsPanel';
 import { ApprovalPanel } from '@/components/shared/files/ApprovalPanel';
+import { Iso19650MetadataSection } from './Iso19650MetadataSection';
 import { FilePreviewRenderer } from '@/components/shared/files/preview/FilePreviewRenderer';
 import { getPreviewType, type PreviewType } from '@/lib/file-types/preview-registry';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
@@ -90,12 +92,13 @@ function getPreviewIcon(previewType: PreviewType) {
 
 export function FilePreviewPanel({ file, onClose, companyId, currentUserId, currentUserName, onRefresh, className }: FilePreviewPanelProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation(['files', 'files-media', 'iso19650']);
   const [showVersions, setShowVersions] = useState(false);
   const [showAudit, setShowAudit] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showApprovals, setShowApprovals] = useState(false);
+  const [showIso19650, setShowIso19650] = useState(false);
   const translateDisplayName = useFileDisplayName();
 
   const previewType = useMemo(
@@ -254,6 +257,22 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
               {t('audit.title')}
             </TooltipContent>
           </Tooltip>
+          {/* ISO 19650 metadata toggle (ADR-373 §P2.1) */}
+          {currentUserId && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={showIso19650 ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setShowIso19650(!showIso19650)}
+                  className="h-7 w-7 p-0"
+                >
+                  <Tag className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('iso19650:labels.sectionTitle')}</TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0">
@@ -324,6 +343,17 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
             companyId={companyId}
             currentUserId={currentUserId}
             currentUserName={currentUserName || 'User'}
+          />
+        </div>
+      )}
+
+      {/* ISO 19650 metadata panel (collapsible — ADR-373 §P2.1) */}
+      {showIso19650 && currentUserId && (
+        <div className="border-b">
+          <Iso19650MetadataSection
+            file={file}
+            currentUserId={currentUserId}
+            onFileUpdated={onRefresh}
           />
         </div>
       )}
