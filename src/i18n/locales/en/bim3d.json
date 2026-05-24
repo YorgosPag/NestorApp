@@ -442,6 +442,24 @@
       "toggle": "Auto-report low performance",
       "toggleDescription": "When FPS drops below 10 for 5+ seconds, we will ask permission to send diagnostics.",
       "autoComment": "[Auto-submission — FPS < 10 for 5+ seconds]"
+    },
+    "telemetry": {
+      "title": "Anonymous performance improvement participation",
+      "toggle": "Share anonymous performance data",
+      "description": "Sends anonymous performance statistics (no personal data, no project identifiers) to help us improve the 3D viewer. You can disable this at any time.",
+      "eraseButton": "Erase telemetry history",
+      "erasing": "Erasing...",
+      "eraseSuccess": "Telemetry history erased.",
+      "eraseError": "Erase failed. Try again.",
+      "lastErasedAt": "Last erased: {date}",
+      "consentDialog": {
+        "title": "Consent to send anonymous performance data",
+        "body": "With your consent we send anonymous metrics (FPS, frame time, GPU memory, browser family, OS) to improve the 3D viewer. No personal data, no project identifiers, no screenshots are sent. Retention 30 days.",
+        "privacyLink": "Read the privacy policy",
+        "privacyPolicyHref": "/privacy-policy",
+        "accept": "I agree",
+        "decline": "No thanks"
+      }
     }
   },
   "viewCube": {

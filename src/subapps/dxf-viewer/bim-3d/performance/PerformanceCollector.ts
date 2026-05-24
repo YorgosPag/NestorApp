@@ -20,6 +20,7 @@ import { baselineTracker } from './baseline-tracker';
 import { createRegressionDetector } from './regression-detector';
 import { regressionAlertBus } from './regression-alert-bus';
 import { autoSubmitFpsThreshold } from './auto-submit-fps-threshold';
+import { telemetryBatcher } from '../telemetry/telemetry-batcher';
 import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
 
 // Chrome-only Performance API extension
@@ -125,5 +126,10 @@ export class PerformanceCollector {
     // C.7.Q4 — sustained FPS<10 auto-submit consent FSM. Store-gated:
     // permanent opt-out and Q3 telemetry opt-in both short-circuit inside.
     autoSubmitFpsThreshold.observe(snapshot.fps, now);
+
+    // C.7.Q3 — anonymous telemetry batcher. Short-circuits when opt-in is OFF
+    // (default), so zero overhead for users who never enabled it. Uses
+    // Date.now() (not performance.now() — needs wall-clock for daily salt).
+    telemetryBatcher.observe(snapshot, hudState.renderMode, Date.now());
   };
 }
