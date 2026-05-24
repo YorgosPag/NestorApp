@@ -24,6 +24,7 @@ import { BeamRenderer } from '@/subapps/dxf-viewer/bim/renderers/BeamRenderer';
 import { ColumnRenderer } from '@/subapps/dxf-viewer/bim/renderers/ColumnRenderer';
 import { OpeningRenderer } from '@/subapps/dxf-viewer/bim/renderers/OpeningRenderer';
 import { SlabOpeningRenderer } from '@/subapps/dxf-viewer/bim/renderers/SlabOpeningRenderer';
+import { StairRenderer } from '@/subapps/dxf-viewer/bim/renderers/StairRenderer';
 
 import type { OpeningEntity } from '@/subapps/dxf-viewer/bim/types/opening-types';
 import type { SlabOpeningEntity } from '@/subapps/dxf-viewer/bim/types/slab-opening-types';
@@ -88,6 +89,7 @@ export function renderBimEntitiesToCanvas(
   const columnRenderer = new ColumnRenderer(ctx);
   const openingRenderer = new OpeningRenderer(ctx);
   const slabOpeningRenderer = new SlabOpeningRenderer(ctx);
+  const stairRenderer = new StairRenderer(ctx);
 
   wallRenderer.setTransform(transform);
   slabRenderer.setTransform(transform);
@@ -95,6 +97,7 @@ export function renderBimEntitiesToCanvas(
   columnRenderer.setTransform(transform);
   openingRenderer.setTransform(transform);
   slabOpeningRenderer.setTransform(transform);
+  stairRenderer.setTransform(transform);
 
   wallRenderer.setOpeningsByWall(buildOpeningsByWall(snapshot.openings));
   slabRenderer.setSlabOpeningsBySlab(buildSlabOpeningsBySlab(snapshot.slabOpenings));
@@ -106,5 +109,6 @@ export function renderBimEntitiesToCanvas(
   for (const column of snapshot.columns) columnRenderer.render(column, READONLY_OPTIONS);
   for (const opening of snapshot.openings) openingRenderer.render(opening, READONLY_OPTIONS);
   for (const so of snapshot.slabOpenings) slabOpeningRenderer.render(so, READONLY_OPTIONS);
+  for (const stair of snapshot.stairs) stairRenderer.render(stair, READONLY_OPTIONS);
   ctx.restore();
 }

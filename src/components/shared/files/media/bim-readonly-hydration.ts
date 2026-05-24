@@ -8,12 +8,14 @@
  * @see docs/centralized-systems/reference/adrs/ADR-370-bim-readonly-visualization.md
  */
 
+import { nowTimestamp } from '@/lib/firestore-now';
 import { computeWallGeometry } from '@/subapps/dxf-viewer/bim/geometry/wall-geometry';
 import { computeSlabGeometry } from '@/subapps/dxf-viewer/bim/geometry/slab-geometry';
 import { computeBeamGeometry } from '@/subapps/dxf-viewer/bim/geometry/beam-geometry';
 import { computeColumnGeometry } from '@/subapps/dxf-viewer/bim/geometry/column-geometry';
 import { computeOpeningGeometry } from '@/subapps/dxf-viewer/bim/geometry/opening-geometry';
 import { computeSlabOpeningGeometry } from '@/subapps/dxf-viewer/bim/geometry/slab-opening-geometry';
+import { computeStairGeometry } from '@/subapps/dxf-viewer/bim/geometry/stairs/StairGeometryService';
 import { validateWallParams } from '@/subapps/dxf-viewer/bim/validators/wall-validator';
 import { validateSlabParams } from '@/subapps/dxf-viewer/bim/validators/slab-validator';
 import { validateBeamParams } from '@/subapps/dxf-viewer/bim/validators/beam-validator';
@@ -34,6 +36,12 @@ import type { BeamEntity } from '@/subapps/dxf-viewer/bim/types/beam-types';
 import type { ColumnEntity } from '@/subapps/dxf-viewer/bim/types/column-types';
 import type { OpeningEntity } from '@/subapps/dxf-viewer/bim/types/opening-types';
 import type { SlabOpeningEntity } from '@/subapps/dxf-viewer/bim/types/slab-opening-types';
+import type {
+  StairDoc,
+  StairEntity,
+  StairParams,
+  StairValidationState,
+} from '@/subapps/dxf-viewer/bim/types/stair-types';
 
 function migrateWallParamsToMm(params: WallParams): WallParams {
   if (params.sceneUnits) return params;
@@ -139,4 +147,42 @@ export function hydrateSlabOpening(doc: SlabOpeningDoc): SlabOpeningEntity {
     validation,
     visible: true,
   } as SlabOpeningEntity;
+}
+
+// Mirrors `use-stair-persistence.hydrateLegacyParams` (private). ADR-358 Phase 3f/3g
+// back-compat: legacy l-shape without cornerStyle → 'landing'; nokSubType 'secondary' → 'low-rise'.
+function hydrateLegacyStairParams(params: StairParams): StairParams {
+  let out: StairParams = params;
+  const v = out.variant;
+  if (v.kind === 'l-shape' && (v as { cornerStyle?: string }).cornerStyle === undefined) {
+    out = { ...out, variant: { ...v, cornerStyle: 'landing' } as typeof v };
+  }
+  if (out.nokSubType === 'secondary') {
+    out = { ...out, nokSubType: 'low-rise' };
+  }
+  return out;
+}
+
+export function hydrateStair(doc: StairDoc): StairEntity {
+  const params = hydrateLegacyStairParams(doc.params);
+  const validation: StairValidationState = doc.validation ?? {
+    hasCodeViolations: false,
+    violationKeys: [],
+    lastValidatedAt: nowTimestamp(),
+  };
+  return {
+    id: doc.id,
+    type: 'stair',
+    kind: doc.kind,
+    params,
+    geometry: doc.geometry ?? computeStairGeometry(params),
+    validation,
+    layerId: doc.layer ?? 'STAIRS',
+    levelId: doc.levelId,
+    floorId: doc.floorId,
+    buildingId: doc.buildingId,
+    visible: true,
+    editingBy: doc.editingBy,
+    qto: doc.qto,
+  } as StairEntity;
 }

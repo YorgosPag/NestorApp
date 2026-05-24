@@ -27,6 +27,7 @@ import {
   hydrateColumn,
   hydrateOpening,
   hydrateSlabOpening,
+  hydrateStair,
 } from '@/components/shared/files/media/bim-readonly-hydration';
 
 import type { WallDoc } from '@/subapps/dxf-viewer/bim/walls/wall-firestore-service';
@@ -42,6 +43,7 @@ import type { BeamEntity } from '@/subapps/dxf-viewer/bim/types/beam-types';
 import type { ColumnEntity } from '@/subapps/dxf-viewer/bim/types/column-types';
 import type { OpeningEntity } from '@/subapps/dxf-viewer/bim/types/opening-types';
 import type { SlabOpeningEntity } from '@/subapps/dxf-viewer/bim/types/slab-opening-types';
+import type { StairDoc, StairEntity } from '@/subapps/dxf-viewer/bim/types/stair-types';
 
 export interface FloorplanBimSnapshot {
   readonly walls: ReadonlyArray<WallEntity>;
@@ -50,6 +52,7 @@ export interface FloorplanBimSnapshot {
   readonly columns: ReadonlyArray<ColumnEntity>;
   readonly openings: ReadonlyArray<OpeningEntity>;
   readonly slabOpenings: ReadonlyArray<SlabOpeningEntity>;
+  readonly stairs: ReadonlyArray<StairEntity>;
   readonly isLoading: boolean;
   readonly hasAny: boolean;
 }
@@ -61,6 +64,7 @@ const EMPTY_SNAPSHOT: FloorplanBimSnapshot = {
   columns: [],
   openings: [],
   slabOpenings: [],
+  stairs: [],
   isLoading: false,
   hasAny: false,
 };
@@ -79,7 +83,8 @@ function useGuardedDocs<T extends { id: string }>(
     | 'FLOORPLAN_BEAMS'
     | 'FLOORPLAN_COLUMNS'
     | 'FLOORPLAN_OPENINGS'
-    | 'FLOORPLAN_SLAB_OPENINGS',
+    | 'FLOORPLAN_SLAB_OPENINGS'
+    | 'FLOORPLAN_STAIRS',
   floorplanId: string | null,
 ): { docs: ReadonlyArray<T>; loaded: boolean } {
   const [state, setState] = useState<{ docs: ReadonlyArray<T>; loaded: boolean }>({
@@ -134,6 +139,7 @@ export function useFloorplanBimEntities(
   const columnsRes = useGuardedDocs<ColumnDoc>('FLOORPLAN_COLUMNS', activeId);
   const openingsRes = useGuardedDocs<OpeningDoc>('FLOORPLAN_OPENINGS', activeId);
   const slabOpeningsRes = useGuardedDocs<SlabOpeningDoc>('FLOORPLAN_SLAB_OPENINGS', activeId);
+  const stairsRes = useGuardedDocs<StairDoc>('FLOORPLAN_STAIRS', activeId);
 
   return useMemo<FloorplanBimSnapshot>(() => {
     if (!activeId) return EMPTY_SNAPSHOT;
@@ -146,6 +152,7 @@ export function useFloorplanBimEntities(
     const beams = beamsRes.docs.map(hydrateBeam);
     const columns = columnsRes.docs.map(hydrateColumn);
     const slabOpenings = slabOpeningsRes.docs.map(hydrateSlabOpening);
+    const stairs = stairsRes.docs.map(hydrateStair);
 
     const openings: OpeningEntity[] = [];
     for (const od of openingsRes.docs) {
@@ -160,7 +167,8 @@ export function useFloorplanBimEntities(
       beamsRes.loaded &&
       columnsRes.loaded &&
       openingsRes.loaded &&
-      slabOpeningsRes.loaded
+      slabOpeningsRes.loaded &&
+      stairsRes.loaded
     );
 
     const hasAny =
@@ -169,10 +177,11 @@ export function useFloorplanBimEntities(
         beams.length +
         columns.length +
         openings.length +
-        slabOpenings.length >
+        slabOpenings.length +
+        stairs.length >
       0;
 
-    return { walls, slabs, beams, columns, openings, slabOpenings, isLoading, hasAny };
+    return { walls, slabs, beams, columns, openings, slabOpenings, stairs, isLoading, hasAny };
   }, [
     activeId,
     wallsRes.docs,
@@ -187,5 +196,7 @@ export function useFloorplanBimEntities(
     openingsRes.loaded,
     slabOpeningsRes.docs,
     slabOpeningsRes.loaded,
+    stairsRes.docs,
+    stairsRes.loaded,
   ]);
 }
