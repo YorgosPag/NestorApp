@@ -20,6 +20,7 @@ import { useTranslation } from '@/i18n';
 // ADR-358 Phase 9E-4: compat bridge for name-keyed layer lookup.
 import { getSceneLayerByName } from '../../../utils/scene-layer-utils';
 import { validateLayerName, type LayerNameValidationResult } from '../../../services/layer-name-validator';
+import { useUniversalSelection } from '../../../systems/selection';
 
 export interface LayerItemProps {
   layerName: string;
@@ -43,7 +44,6 @@ export interface LayerItemProps {
   getFilteredEntities: (layerName: string) => AnySceneEntity[];
   
   // Event handlers
-  onEntitySelectionChange?: (entityIds: string[]) => void;
   onLayerToggle?: (layerName: string, visible: boolean) => void;
   onLayerDelete?: (layerName: string) => void;
   onLayerRename?: (oldName: string, newName: string) => void;
@@ -90,7 +90,6 @@ export function LayerItem({
   handleLayerMultiSelectForMerge,
   getFilteredEntities,
   
-  onEntitySelectionChange,
   onLayerToggle,
   onLayerDelete,
   onLayerRename,
@@ -116,6 +115,7 @@ export function LayerItem({
   onEntityColorChange,
   onEntityRename
 }: LayerItemProps) {
+  const universalSelection = useUniversalSelection();
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
@@ -151,7 +151,7 @@ export function LayerItem({
         handleLayerMultiSelectForMerge(layerName, true);
       } else {
         const entityIds = layerEntities.map(entity => entity.id);
-        onEntitySelectionChange?.(entityIds);
+        universalSelection.replaceEntitySelection(entityIds);
       }
     }
   };

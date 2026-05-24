@@ -28,7 +28,6 @@ interface MobileSidebarDrawerProps {
   floatingRef: React.RefObject<FloatingPanelHandle>;
   currentScene: SceneModel | null;
   selectedEntityIds: string[];
-  onEntitySelect: (ids: string[]) => void;
   activeTool: string;
   // ADR-309 Phase 2: Wizard button in LevelPanel
   onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
@@ -40,7 +39,6 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
   floatingRef,
   currentScene,
   selectedEntityIds,
-  onEntitySelect,
   activeTool,
   onSceneImported,
 }) => {
@@ -61,7 +59,6 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
             floatingRef={floatingRef}
             currentScene={currentScene}
             selectedEntityIds={selectedEntityIds}
-            onEntitySelect={onEntitySelect}
             activeTool={activeTool}
             onSceneImported={onSceneImported}
           />

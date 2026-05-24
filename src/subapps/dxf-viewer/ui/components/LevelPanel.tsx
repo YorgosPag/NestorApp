@@ -38,7 +38,6 @@ interface LevelPanelProps {
   scene?: SceneModel | null;
   selectedEntityIds?: string[];
   onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
-  onEntitySelect?: (ids: string[]) => void;
   expandedKeys?: Set<string>;
   onExpandChange?: React.Dispatch<React.SetStateAction<Set<string>>>;
   onLayerToggle?: (layerName: string, visible: boolean) => void;
@@ -66,7 +65,6 @@ export function LevelPanel({
   scene,
   selectedEntityIds = [],
   onSceneImported,
-  onEntitySelect,
   expandedKeys = new Set(),
   onExpandChange,
   onLayerToggle,
@@ -355,7 +353,6 @@ export function LevelPanel({
           <LayersSection
             scene={scene}
             selectedEntityIds={selectedEntityIds}
-            onEntitySelectionChange={onEntitySelect}
             onLayerToggle={onLayerToggle}
             onLayerDelete={onLayerDelete}
             onLayerColorChange={onLayerColorChange}

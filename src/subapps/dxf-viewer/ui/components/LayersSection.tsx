@@ -28,7 +28,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 interface LayersSectionProps {
   scene: SceneModel | null;
   selectedEntityIds: string[];
-  onEntitySelectionChange?: (entityIds: string[]) => void;
   // Layer operations
   onLayerToggle?: (layerName: string, visible: boolean) => void;
   onLayerDelete?: (layerName: string) => void;
@@ -55,7 +54,6 @@ interface LayersSectionProps {
 export function LayersSection({
   scene,
   selectedEntityIds,
-  onEntitySelectionChange,
   onLayerToggle,
   onLayerDelete,
   onLayerColorChange,
@@ -89,7 +87,6 @@ export function LayersSection({
   const callbacks = useLayersCallbacks({
     scene,
     selectedEntityIds,
-    onEntitySelectionChange,
     selectedEntitiesForMerge: state.selectedEntitiesForMerge,
     setSelectedEntitiesForMerge: state.setSelectedEntitiesForMerge,
     selectedLayersForMerge: state.selectedLayersForMerge,
@@ -106,7 +103,6 @@ export function LayersSection({
   const { handleEntityKeyDown } = useKeyboardNavigation({
     selectedEntityIds,
     focusedEntityId: state.focusedEntityId,
-    onEntitySelectionChange,
     setFocusedEntityId: state.setFocusedEntityId,
     setSelectedEntitiesForMerge: state.setSelectedEntitiesForMerge
   });
@@ -146,7 +142,6 @@ export function LayersSection({
     getFilteredEntities,
     
     // Event handlers
-    onEntitySelectionChange,
     onLayerToggle,
     onLayerDelete,
     onLayerRename,

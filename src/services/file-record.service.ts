@@ -34,10 +34,10 @@ import {
   type EntityType,
   type FileDomain,
   type FileCategory,
-  FILE_CATEGORIES,
   FILE_LIFECYCLE_STATES,
   FILE_STATUS,
 } from '@/config/domain-constants';
+import { triggerPostFinalizeHooks } from '@/services/file-record-post-finalize-hooks';
 import type {
   FileRecord,
   CreateFileRecordInput,
@@ -235,35 +235,31 @@ export class FileRecordService {
     // ADR-029: Index for global search after file is ready (fire-and-forget)
     apiClient.post(API_ROUTES.SEARCH_REINDEX, { entityType: 'file', entityId: input.fileId }).catch(() => {});
 
-    // ADR-312 Phase 7.1: Auto-process DXF floorplans → writes `.dxf.processed.json`
-    // → `onDxfProcessedFinalize` Cloud Function rasterizes PNG thumbnail.
-    // Entity-type agnostic: covers property, floor, building, parking, storage DXFs
-    // through the single SSoT finalize choke-point.
-    const finalizedData = docSnap.data() as { ext?: string; category?: string } | undefined;
-    if (
-      finalizedData?.ext?.toLowerCase() === 'dxf' &&
-      finalizedData?.category === FILE_CATEGORIES.FLOORPLANS
-    ) {
-      import('@/services/floorplans/floorplan-processing-mutation-gateway')
-        .then(({ processFloorplanWithPolicy }) =>
-          processFloorplanWithPolicy({ fileId: input.fileId, forceReprocess: false }),
-        )
-        .catch((err) =>
-          logger.warn('DXF auto-process skipped', {
-            fileId: input.fileId,
-            error: getErrorMessage(err),
-          }),
-        );
+    // ADR-312 + ADR-373: Post-finalize side effects (DXF + ISO19650 enrichment) — fire-and-forget.
+    // Hooks SSoT: file-record-post-finalize-hooks.ts. Never blocks finalize.
+    type FinalizedSnapshot = { ext?: string; category?: string; originalFilename?: string; contentType?: string; purpose?: string; displayName?: string };
+    const finalizedRecord = docSnap.data() as FinalizedSnapshot | undefined;
+    try {
+      triggerPostFinalizeHooks(input.fileId, {
+        ext: finalizedRecord?.ext,
+        category: finalizedRecord?.category,
+        sizeBytes: input.sizeBytes,
+        downloadUrl: input.downloadUrl,
+        originalFilename: finalizedRecord?.originalFilename,
+        contentType: finalizedRecord?.contentType,
+        purpose: finalizedRecord?.purpose,
+      });
+    } catch (err) {
+      logger.warn('Post-finalize hooks dispatch failed', { fileId: input.fileId, error: getErrorMessage(err) });
     }
 
-    const finalizedDoc = docSnap.data() as { displayName?: string } | undefined;
     RealtimeService.dispatch('FILE_UPDATED', {
       fileId: input.fileId,
       updates: {
         status: coreUpdate.status,
         sizeBytes: input.sizeBytes,
         hasDownloadUrl: !!input.downloadUrl,
-        displayName: finalizedDoc?.displayName,
+        displayName: finalizedRecord?.displayName,
       },
       timestamp: Date.now(),
     });

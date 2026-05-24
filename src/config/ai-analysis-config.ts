@@ -55,6 +55,13 @@ export const AI_COST_CONFIG = {
     PROPERTY_DESCRIPTION_MAX_TOKENS: 300,
     /** Temperature for creative property description generation (0 = deterministic, 1 = creative) */
     PROPERTY_DESCRIPTION_TEMPERATURE: 0.7,
+    /**
+     * ADR-373: Hard per-file budget cap (USD) for ISO 19650 metadata enrichment
+     * vision calls. ~10× standard gpt-4o-mini vision cost. Files exceeding the
+     * estimated cap skip AI + fall back to purpose-derived disciplineCode.
+     * Canonical SSoT mirrored at `@/config/iso19650-constants.ISO19650_BUDGET_CAP_USD`.
+     */
+    ISO19650_BUDGET_CAP_USD: 0.01,
   },
 } as const;
 export const AI_ANALYSIS_PROMPTS = {

@@ -241,6 +241,23 @@ Selection interaction changed from click-hold-drag to click→move→click (Auto
 - `mouse-handler-move.ts` unchanged — `cursor.updateSelection(screenPos)` runs whenever `cursor.isSelecting`, which now covers mouse-free movement in two-click mode.
 - **Files**: `systems/cursor/useCentralizedMouseHandlers.ts` (removed `startSelection` from mousedown), `systems/cursor/mouse-handler-up.ts` (added two-click start in `else if` branch).
 
+### 2026-05-24 — Remove onEntitySelect prop-drilling (6-level chain eliminated)
+
+`onEntitySelect` / `onEntitySelectionChange` was prop-drilled 6 levels deep through entirely DXF-specific components, passing a wrapper that just called `universalSelection.replaceEntitySelection`.
+
+**Root fix (Phase A — deep hooks):**
+- `selection.ts` — removed `onEntitySelectionChange` from `Deps` type; callers now own the SSoT call
+- `useLayersCallbacks.ts` — added `useUniversalSelection()`; every `setSelection(ids, { onEntitySelectionChange }, …)` → `setSelection(ids, {}, …)` + `universalSelection.replaceEntitySelection(ids)`; guards `!onEntitySelectionChange` removed
+- `useKeyboardNavigation.ts` — same pattern; `onEntitySelectionChange` param removed
+- `useLayerOperations.ts` — added `useUniversalSelection()`; all 5 `onEntitySelect(…)` call sites → `universalSelection.replaceEntitySelection(…)`; `selection-update-utils` receives bound `universalSelection.replaceEntitySelection` (pure utility unchanged)
+
+**Cascade prop removal (Phases B–D — 8 files):**
+`LayerItem` (added `useUniversalSelection()` for direct handleLayerClick call) → `LayersSection` → `LevelPanel` (already had hook) → `usePanelContentRenderer` → `FloatingPanelContainer` (React.memo comparison updated) → `SidebarSection` → `MobileSidebarDrawer` → `DxfViewerContent` (`handleEntitySelect` callback removed + 2 JSX sites)
+
+**Result:** `onEntitySelect`/`onEntitySelectionChange` = 0 occurrences in `/layout/`, `/ui/components/`, `/app/DxfViewerContent.tsx`. Every selection write goes through `universalSelection.replaceEntitySelection` at the point of user interaction.
+
+---
+
 ### 2026-05-24 — Selection SSoT: rename setSelectedEntityIds → onEntitySelect + remove dead useState
 
 **Rename** (`SidebarSection`, `MobileSidebarDrawer`, `DxfViewerContent`):

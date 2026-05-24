@@ -2,25 +2,25 @@ import { useCallback, useRef } from 'react';
 import { setSelection, selectSingle } from './selection';
 // 🏢 ADR: Centralized Clamp Function
 import { clamp } from '../../../../rendering/entities/shared/geometry-utils';
+import { useUniversalSelection } from '../../../../systems/selection';
 
 interface KeyboardNavigationProps {
   selectedEntityIds: string[];
-  focusedEntityId: string | null;                 // χρειαζόμαστε και την τιμή
-  onEntitySelectionChange?: (entityIds: string[]) => void;
+  focusedEntityId: string | null;
   setFocusedEntityId: (id: string | null) => void;
-  focusEntityDom?: (id: string) => void;          // προαιρετικά για πραγματικό DOM focus
-  // Merge state για να ενημερώνεται το merge panel
+  focusEntityDom?: (id: string) => void;
   setSelectedEntitiesForMerge?: (set: Set<string>) => void;
 }
 
 export function useKeyboardNavigation({
   selectedEntityIds,
   focusedEntityId,
-  onEntitySelectionChange,
   setFocusedEntityId,
   focusEntityDom,
   setSelectedEntitiesForMerge
 }: KeyboardNavigationProps) {
+
+  const universalSelection = useUniversalSelection();
 
   const anchorRef = useRef<string | null>(null);
   
@@ -59,15 +59,15 @@ export function useKeyboardNavigation({
       const rangeIds = list.slice(start, end + 1).map(x => x.id);
       
       // 🔊 Χρησιμοποιούμε το helper για ενιαία διαχείριση selection + grips + merge
-      setSelection(rangeIds, { onEntitySelectionChange, setSelectedEntitiesForMerge }, { forMerge: true });
+      setSelection(rangeIds, { setSelectedEntitiesForMerge }, { forMerge: true });
+      universalSelection.replaceEntitySelection(rangeIds);
     } else {
       // Χωρίς Shift: single select και reset anchor
       anchorRef.current = nextId;
-      
-      // 🔊 Χρησιμοποιούμε το helper για ενιαία διαχείριση selection + grips + merge
-      selectSingle(nextId, { onEntitySelectionChange, setSelectedEntitiesForMerge });
+      selectSingle(nextId, { setSelectedEntitiesForMerge });
+      universalSelection.replaceEntitySelection(nextId ? [nextId] : []);
     }
-  }, [focusedEntityId, onEntitySelectionChange, setFocusedEntityId, focusEntityDom, setSelectedEntitiesForMerge]);
+  }, [focusedEntityId, universalSelection, setFocusedEntityId, focusEntityDom, setSelectedEntitiesForMerge]);
 
   // Optionally αν θες reset όταν αφήνεις το Shift/χάνεις focus
   const resetSelectionAnchor = useCallback(() => {

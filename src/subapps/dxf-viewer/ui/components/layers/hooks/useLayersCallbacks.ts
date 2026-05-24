@@ -13,11 +13,10 @@ import {
 } from '../../../../services/shared/layer-operation-utils';
 // ADR-358 Phase 9D-5a: id-first reader SSoT (LayerStore lookup + legacy name fallback).
 import { resolveEntityLayerName } from '../../../../stores/LayerStore';
+import { useUniversalSelection } from '../../../../systems/selection';
 
 interface LayersCallbacksProps {
   scene: SceneModel | null;
-  selectedEntityIds: string[];
-  onEntitySelectionChange?: (entityIds: string[]) => void;
   selectedEntitiesForMerge: Set<string>;
   setSelectedEntitiesForMerge: (set: Set<string>) => void;
   selectedLayersForMerge: Set<string>;
@@ -54,8 +53,6 @@ function collectEntityIdsOfColorGroups(scene: SceneModel | null, groups: string[
 
 export function useLayersCallbacks({
   scene,
-  selectedEntityIds,
-  onEntitySelectionChange,
   selectedEntitiesForMerge,
   setSelectedEntitiesForMerge,
   selectedLayersForMerge,
@@ -68,6 +65,8 @@ export function useLayersCallbacks({
   customColorGroupNames
 }: LayersCallbacksProps) {
 
+  const universalSelection = useUniversalSelection();
+
   // Anchor ref for Color Group merge - κρατάει το πρώτο επιλεγμένο group ως target
   const colorGroupAnchorRef = useRef<string | null>(null);
 
@@ -78,37 +77,32 @@ export function useLayersCallbacks({
 
   // Simple layer click - ADR-129: Using centralized layer filtering
   const handleLayerClick = useCallback((layerName: string) => {
-    if (!scene?.entities || !onEntitySelectionChange) return;
+    if (!scene?.entities) return;
 
     // Use centralized visible entity filtering
     const entityIds = getVisibleEntityIdsByLayer(scene.entities, layerName);
 
-    // Use setSelection helper to ensure both highlight and selection state are updated
-    setSelection(entityIds, { onEntitySelectionChange }, { layerName });
-  }, [scene, onEntitySelectionChange]);
+    // publishHighlight + merge-state via setSelection; selection SSoT via universalSelection
+    setSelection(entityIds, {}, { layerName });
+    universalSelection.replaceEntitySelection(entityIds);
+  }, [scene, universalSelection]);
 
   // Handle individual entity click
   const handleEntityClick = useCallback((entityId: string, addToSelection: boolean = false) => {
-
-    if (!onEntitySelectionChange) {
-
-      return;
-    }
-    
     let newSelection: string[];
     if (addToSelection) {
-      // Add to existing selection
-      newSelection = selectedEntityIds.includes(entityId)
-        ? selectedEntityIds.filter(id => id !== entityId)
-        : [...selectedEntityIds, entityId];
+      const currentIds = universalSelection.getIdsByType('dxf-entity');
+      newSelection = currentIds.includes(entityId)
+        ? currentIds.filter(id => id !== entityId)
+        : [...currentIds, entityId];
     } else {
-      // Replace selection
       newSelection = [entityId];
     }
 
-    // Use setSelection helper to ensure both highlight and selection state are updated
-    setSelection(newSelection, { onEntitySelectionChange });
-  }, [selectedEntityIds, onEntitySelectionChange]);
+    // publishHighlight + merge-state via setSelection; selection SSoT via universalSelection
+    setSelection(newSelection, {});
+    universalSelection.replaceEntitySelection(newSelection);
+  }, [universalSelection]);
 
   // Handle entity multi-selection for merge (with Ctrl+Click)
   const handleEntityMultiSelectForMerge = useCallback((entityId: string, ctrlKey: boolean) => {
@@ -120,20 +114,20 @@ export function useLayersCallbacks({
         newSelected.add(entityId);
       }
       setSelectedEntitiesForMerge(newSelected);
-      
+
       // Also clear other selections when selecting entities
       setSelectedLayersForMerge(new Set());
       setSelectedColorGroupsForMerge(new Set());
-      
-      // Use setSelection helper to ensure both highlight and selection state are updated
+
       const entityIdsArray = Array.from(newSelected);
-      setSelection(entityIdsArray, { onEntitySelectionChange, setSelectedEntitiesForMerge }, { forMerge: true });
+      setSelection(entityIdsArray, { setSelectedEntitiesForMerge }, { forMerge: true });
+      universalSelection.replaceEntitySelection(entityIdsArray);
 
     } else {
       // Regular single click - use existing handler
       handleEntityClick(entityId, false);
     }
-  }, [selectedEntitiesForMerge, handleEntityClick, setSelectedEntitiesForMerge, setSelectedLayersForMerge, setSelectedColorGroupsForMerge, onEntitySelectionChange]);
+  }, [selectedEntitiesForMerge, handleEntityClick, setSelectedEntitiesForMerge, setSelectedLayersForMerge, setSelectedColorGroupsForMerge, universalSelection]);
 
   // Handle layer multi-selection for merge (with Ctrl+Click)
   const handleLayerMultiSelectForMerge = useCallback((layerName: string, ctrlKey: boolean) => {
@@ -146,7 +140,7 @@ export function useLayersCallbacks({
         newSelected.add(layerName);
       }
       setSelectedLayersForMerge(newSelected);
-      
+
       // Καθαρίζουμε τα άλλα merge selections για συνέπεια
       setSelectedEntitiesForMerge(new Set());
       setSelectedColorGroupsForMerge(new Set());
@@ -154,12 +148,10 @@ export function useLayersCallbacks({
       // ✅ UNION όλων των entity ids από τα επιλεγμένα layers - ADR-129
       if (scene?.entities) {
         const selectedLayerNames = Array.from(newSelected);
-        // Use centralized visible entity filtering
         const unionIds = getVisibleEntityIdsByLayers(scene.entities, selectedLayerNames);
 
-        // ✅ Ενημέρωσε selection + ΠΕΣ ΤΟ στον καμβά (grips για ΟΛΑ)
-        // Δεν θέλουμε merge-entities mode εδώ, άρα forMerge:false
-        setSelection(unionIds, { onEntitySelectionChange }, { forMerge: false });
+        setSelection(unionIds, {}, { forMerge: false });
+        universalSelection.replaceEntitySelection(unionIds);
       }
     } else {
       // Regular single click - use existing handler
@@ -172,7 +164,7 @@ export function useLayersCallbacks({
     setSelectedEntitiesForMerge,
     setSelectedColorGroupsForMerge,
     handleLayerClick,
-    onEntitySelectionChange
+    universalSelection
   ]);
 
   // Handle color group multi-selection for merge (with Ctrl+Click)
@@ -199,16 +191,11 @@ export function useLayersCallbacks({
       setSelectedEntitiesForMerge(new Set());
       setSelectedLayersForMerge(new Set());
 
-      // ✅ UNION όλων των entity ids από τα επιλεγμένα color groups
       const unionIds = collectEntityIdsOfColorGroups(scene, Array.from(newSelected));
-      setSelection(unionIds, { onEntitySelectionChange }, { forMerge: false });
-
-      if (colorGroupAnchorRef.current) {
-
-      }
+      setSelection(unionIds, {}, { forMerge: false });
+      universalSelection.replaceEntitySelection(unionIds);
     } else {
-      // existing single-click code (ήδη κάνει publish + selection)
-      if (!scene || !onEntitySelectionChange) return;
+      if (!scene) return;
       const ids: string[] = [];
       // ADR-358 Phase 9D-5a: id-first resolution via LayerStore (post-rename stale-name guard).
       layerNames.forEach(L =>
@@ -218,7 +205,8 @@ export function useLayersCallbacks({
           }
         })
       );
-      setSelection(ids, { onEntitySelectionChange });
+      setSelection(ids, {});
+      universalSelection.replaceEntitySelection(ids);
     }
   }, [
     scene,
@@ -226,23 +214,19 @@ export function useLayersCallbacks({
     setSelectedColorGroupsForMerge,
     setSelectedEntitiesForMerge,
     setSelectedLayersForMerge,
-    onEntitySelectionChange
+    universalSelection
   ]);
 
   // Color Group click handler (for grips) - ✅ ένα event – όχι χιλιάδες
   // ADR-129: Using centralized layer filtering with layer visibility check
   const handleColorGroupClick = useCallback((colorName: string, layerNames: string[]) => {
-    if (!scene?.entities || !onEntitySelectionChange) return;
+    if (!scene?.entities) return;
 
-    // ✅ Use centralized filtering with both entity and layer visibility
     const ids = getVisibleEntityIdsInLayers(scene.entities, scene.layersById, layerNames);
 
-    // ✅ ένα event – όχι καταιγισμό
     publishHighlight({ ids, mode: 'select' });
-
-    // Update local selection state
-    onEntitySelectionChange(ids);
-  }, [scene, onEntitySelectionChange]);
+    universalSelection.replaceEntitySelection(ids);
+  }, [scene, universalSelection]);
 
   // Merge functions
   const mergeSelectedEntities = useCallback(() => {
@@ -259,29 +243,30 @@ export function useLayersCallbacks({
 
     if (!onEntitiesMerge) {
       logger.warn('Δεν υπάρχει callback onEntitiesMerge! Το parent component πρέπει να το παράσχει.');
-      // Προσωρινά θα κάνουμε sample merge
       const entitiesArray = Array.from(selectedEntitiesForMerge);
       const firstEntityId = entitiesArray[0];
       const firstEntity = scene.entities?.find(e => e.id === firstEntityId);
       const mergedEntityName = firstEntity?.name || `${firstEntity?.type} #${firstEntityId.substring(0, 8)}...`;
+      void mergedEntityName;
 
       setSelectedEntitiesForMerge(new Set());
       return;
     }
-    
+
     const entitiesArray = Array.from(selectedEntitiesForMerge);
     const firstEntityId = entitiesArray[0]; // Target entity (κρατάμε αυτήν)
     const sourceEntityIds = entitiesArray.slice(1); // Source entities (διαγράφονται)
-    
+
     const firstEntity = scene.entities?.find(e => e.id === firstEntityId);
-    
+
     if (!firstEntity) return;
-    
+
     const mergedEntityName = firstEntity.name || `${firstEntity.type} #${firstEntity.id.substring(0, 8)}...`;
+    void mergedEntityName;
 
     // Καλούμε το callback για την πραγματική συγχώνευση
     onEntitiesMerge(firstEntityId, sourceEntityIds);
-    
+
     // Καθαρίζουμε την επιλογή
     setSelectedEntitiesForMerge(new Set());
   }, [selectedEntitiesForMerge, scene, onEntitiesMerge, setSelectedEntitiesForMerge]);
@@ -291,16 +276,16 @@ export function useLayersCallbacks({
       logger.warn('Χρειάζονται τουλάχιστον 2 layers για merge');
       return;
     }
-    
+
     if (!onLayersMerge) return;
-    
+
     const layersArray = Array.from(selectedLayersForMerge);
     const firstLayerName = layersArray[0]; // Target layer (κρατάμε αυτό)
     const sourceLayerNames = layersArray.slice(1); // Source layers (διαγράφονται)
 
     // Καλούμε το callback για την πραγματική συγχώνευση
     onLayersMerge(firstLayerName, sourceLayerNames);
-    
+
     // Καθαρίζουμε την επιλογή
     setSelectedLayersForMerge(new Set());
   }, [selectedLayersForMerge, onLayersMerge, setSelectedLayersForMerge]);
@@ -311,19 +296,19 @@ export function useLayersCallbacks({
       logger.warn('Χρειάζονται τουλάχιστον 2 color groups για merge');
       return;
     }
-    
+
     if (!onColorGroupsMerge) return;
-    
+
     // Χρησιμοποιούμε την άγκυρα ως target, αλλιώς το πρώτο
     const targetCG = colorGroupAnchorRef.current && groups.includes(colorGroupAnchorRef.current)
       ? colorGroupAnchorRef.current
       : groups[0]; // fallback
-    
+
     const sourcesCG = groups.filter(g => g !== targetCG);
 
     // Καλούμε το callback για την πραγματική συγχώνευση
     onColorGroupsMerge(targetCG, sourcesCG);
-    
+
     // Καθαρίζουμε την επιλογή και την άγκυρα
     setSelectedColorGroupsForMerge(new Set());
     colorGroupAnchorRef.current = null;

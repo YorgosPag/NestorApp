@@ -41,7 +41,6 @@ interface UsePanelContentRendererParams {
   scene: SceneModel | null;
   currentTool: ToolType;
   selectedEntityIds: string[];
-  onEntitySelect: (ids: string[]) => void;
   expandedKeys: Set<string>;
   setExpandedKeys: React.Dispatch<React.SetStateAction<Set<string>>>;
   layerOperations: LayerOperationsCallbacks;
@@ -62,7 +61,6 @@ export function usePanelContentRenderer({
   scene,
   currentTool,
   selectedEntityIds,
-  onEntitySelect,
   expandedKeys,
   setExpandedKeys,
   layerOperations,
@@ -84,7 +82,6 @@ export function usePanelContentRenderer({
               currentTool={currentTool}
               scene={scene}
               selectedEntityIds={selectedEntityIds}
-              onEntitySelect={onEntitySelect}
               onSceneImported={onSceneImported}
               expandedKeys={expandedKeys}
               onExpandChange={setExpandedKeys}

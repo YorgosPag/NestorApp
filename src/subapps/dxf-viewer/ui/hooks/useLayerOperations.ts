@@ -14,6 +14,7 @@ import { publishHighlight } from '../../events/selection-bus';
 import { handleLayerServiceResult } from '../utils/selection-update-utils';
 // ADR-129: Centralized entity layer filtering
 import { countEntitiesInLayer } from '../../services/shared/layer-operation-utils';
+import { useUniversalSelection } from '../../systems/selection';
 
 export interface LayerOperationsCallbacks {
   // Layer operations
@@ -42,7 +43,6 @@ interface UseLayerOperationsParams {
   scene: SceneModel | null;
   currentLevelId: string | null;
   selectedEntityIds: string[];
-  onEntitySelect: (ids: string[]) => void;
   setLevelScene: (levelId: string, scene: SceneModel) => void;
 }
 
@@ -54,9 +54,10 @@ export function useLayerOperations({
   scene,
   currentLevelId,
   selectedEntityIds,
-  onEntitySelect,
   setLevelScene
 }: UseLayerOperationsParams): LayerOperationsCallbacks {
+
+  const universalSelection = useUniversalSelection();
 
   // ✅ ENTERPRISE MIGRATION: Services από ServiceRegistry (lazy initialization + caching)
   const layerService = useMemo(() => serviceRegistry.get('layer-operations'), []);
@@ -92,7 +93,7 @@ export function useLayerOperations({
     if (!confirmed) return;
 
     const result = layerService.deleteLayer(layerName, scene);
-    handleLayerServiceResult(result, selectedEntityIds, onEntitySelect, setLevelScene, currentLevelId);
+    handleLayerServiceResult(result, selectedEntityIds, universalSelection.replaceEntitySelection, setLevelScene, currentLevelId);
   };
 
   const handleLayerColorChange = (layerName: string, color: string) => {
@@ -185,7 +186,7 @@ export function useLayerOperations({
 
     const newSelection = selectedEntityIds.filter(id => id !== entityId);
     if (newSelection.length !== selectedEntityIds.length) {
-      onEntitySelect(newSelection);
+      universalSelection.replaceEntitySelection(newSelection);
     }
     setLevelScene(currentLevelId, updatedScene);
   };
@@ -272,10 +273,10 @@ export function useLayerOperations({
 
     if (result.success) {
       if (result.newEntityId) {
-        onEntitySelect([result.newEntityId]);
+        universalSelection.replaceEntitySelection([result.newEntityId]);
         publishHighlight({ ids: [result.newEntityId] });
       } else {
-        onEntitySelect([targetEntityId]);
+        universalSelection.replaceEntitySelection([targetEntityId]);
         publishHighlight({ ids: [targetEntityId] });
       }
       setLevelScene(currentLevelId, result.updatedScene);
@@ -297,7 +298,7 @@ export function useLayerOperations({
   const handleColorGroupDelete = (colorGroupName: string, layersInGroup: string[]) => {
     if (!scene || !currentLevelId) return;
     const result = layerService.deleteColorGroup(colorGroupName, layersInGroup, scene);
-    handleLayerServiceResult(result, selectedEntityIds, onEntitySelect, setLevelScene, currentLevelId);
+    handleLayerServiceResult(result, selectedEntityIds, universalSelection.replaceEntitySelection, setLevelScene, currentLevelId);
   };
 
   const handleColorGroupColorChange = (colorGroupName: string, layersInGroup: string[], color: string) => {

@@ -2,7 +2,6 @@
 import { publishHighlight } from '../../../../events/selection-bus';
 
 type Deps = {
-  onEntitySelectionChange?: (ids: string[]) => void;
   setSelectedEntitiesForMerge?: (s: Set<string>) => void;
 };
 
@@ -20,7 +19,6 @@ type Opts = {
  * - (προαιρετικά) ενημερώνει το merge state
  */
 export function setSelection(ids: string[], deps: Deps, opts: Opts = {}) {
-  deps.onEntitySelectionChange?.(ids);
   publishHighlight({ ids, layerName: opts.layerName });
 
   if (opts.forMerge) {

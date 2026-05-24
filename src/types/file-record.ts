@@ -25,6 +25,11 @@ import type {
   HoldType,
 } from '@/config/domain-constants';
 import type { DocumentClassifyAnalysis } from '@/schemas/ai-analysis';
+import type {
+  DisciplineCode,
+  DocumentSeries,
+  CdeState,
+} from '@/config/iso19650-constants';
 
 // ============================================================================
 // 🏢 ENTERPRISE: FLOORPLAN PROCESSED DATA TYPES (ADR-033)
@@ -624,6 +629,85 @@ export interface FileRecord {
    * Kept for backward compatibility with existing queries
    */
   deletedBy?: string;
+
+  // =========================================================================
+  // 🌐 ISO 19650 METADATA — ADR-373 (Phase 1: Schema + AI auto-fill)
+  // =========================================================================
+  // 5 optional fields populated automatically by AI vision enricher.
+  // Storage path UNCHANGED (ADR-293 preserved 100%).
+  // Backward-compatible: existing FileRecords have all 5 = undefined/null.
+  // Phase 2 will add UI for manual override + virtual folder view.
+  // =========================================================================
+
+  /**
+   * 🌐 ISO 19650-2 §5.1.7 — Discipline code (single letter)
+   * 13 codes: core 8 (A/S/M/E/K/H/N/X) + extended 5 (T/L/P/F/D).
+   * Auto-filled by AI classifier; fallback derived από `purpose` → study group.
+   * Manual override via file detail dialog (Phase 2).
+   * @see ADR-373 §D1 + §"Resolved Decisions" OQ1
+   */
+  disciplineCode?: DisciplineCode;
+
+  /**
+   * 🌐 ISO 19650 — Document series (100..900).
+   * 9 series: 100=Plans, 200=Elevations, 300=Sections, 400=Details,
+   * 500=Schedules, 600=Landscape, 700=Structural, 800=MEP, 900=As-Built.
+   * Auto-detected by AI from drawing content.
+   * @see ADR-373 §"Resolved Decisions" OQ3
+   */
+  documentSeries?: DocumentSeries;
+
+  /**
+   * 🌐 ISO 19650-2 — Revision tag matching REVISION_CODE_REGEX.
+   * Pattern: (P|T|C|R|AB) + 2 digits. Examples: P01, T02, C03, R10, AB99.
+   * Suitability codes (IFA/IFR/IFC/ASB) live in separate `suitabilityCode`
+   * field (Phase 2).
+   * @see ADR-373 §"Resolved Decisions" OQ2
+   */
+  revisionCode?: string;
+
+  /**
+   * 🌐 ISO 19650-1 §10.2 — Common Data Environment workflow state.
+   * ORTHOGONAL to `lifecycleState` (which is data-retention state).
+   * WIP / SHARED / PUBLISHED / SUPERSEDED.
+   * `SUPERSEDED` chosen over `ARCHIVED` for disambiguation with
+   * `lifecycleState.archived`.
+   * @see ADR-373 §"Resolved Decisions" OQ4
+   */
+  cdeState?: CdeState;
+
+  /**
+   * 🌐 ISO 19650 — Building short code matching BUILDING_CODE_REGEX.
+   * Different from `buildingLabel` (UI display): code = sortable/exportable.
+   * Composite pattern: main + optional suffix (Κ1, Κ12, Κ1-Α, Κ1-Β1, A-1).
+   * @see ADR-373 §"Resolved Decisions" OQ5
+   */
+  buildingCode?: string;
+
+  /**
+   * 🤖 ISO 19650 metadata source audit.
+   * Tracks whether the 5 fields above were filled by AI / derivation / user.
+   * Populated by `iso19650-enricher` post-finalize hook.
+   * @see ADR-373 §D1 + §D5
+   */
+  iso19650Source?: {
+    /** How the metadata was populated */
+    filledBy: 'ai' | 'derived' | 'user' | 'skipped';
+    /** AI provider identifier (e.g. 'openai-gpt-4o-mini') */
+    aiProvider?: string;
+    /** AI confidence score 0..1 */
+    aiConfidence?: number;
+    /** 1-sentence Greek reasoning (or skip rationale) */
+    aiReasoning?: string;
+    /** Estimated AI call cost in USD (gpt-4o-mini vision proxy) */
+    aiCostUsd?: number;
+    /** When this audit record was written */
+    filledAt: Date | string;
+    /** User ID who manually overrode AI suggestion (Phase 2) */
+    overriddenBy?: string;
+    /** When the override happened */
+    overriddenAt?: Date | string;
+  };
 }
 
 // ============================================================================

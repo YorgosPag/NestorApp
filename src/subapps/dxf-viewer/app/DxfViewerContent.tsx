@@ -250,11 +250,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     },
     onOverlaySelect: (id: string | null) => universalSelection.handleOverlaySelect(id)
   });
-  // SSoT: stable entity select callback for sidebar consumers
-  const handleEntitySelect = React.useCallback(
-    (ids: string[]) => universalSelection.replaceEntitySelection(ids),
-    [universalSelection]
-  );
   // Ctrl+A → select all entities via EventBus so CanvasSection updates its own state
   const handleSelectAll = React.useCallback(() => {
     EventBus.emit('canvas:select-all', undefined as unknown as void);
@@ -323,7 +318,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           floatingRef={floatingRef}
           currentScene={currentScene}
           selectedEntityIds={selectedEntityIds}
-          onEntitySelect={handleEntitySelect}
           activeTool={activeTool}
           onSceneImported={handleFileImportWithEncoding}
           projectId={levelManager.saveContext?.projectId ?? undefined}
@@ -337,7 +331,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           floatingRef={floatingRef}
           currentScene={currentScene}
           selectedEntityIds={selectedEntityIds}
-          onEntitySelect={handleEntitySelect}
           activeTool={activeTool}
           onSceneImported={handleFileImportWithEncoding}
         />
