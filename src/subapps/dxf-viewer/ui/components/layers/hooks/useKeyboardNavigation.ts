@@ -5,7 +5,6 @@ import { clamp } from '../../../../rendering/entities/shared/geometry-utils';
 import { useUniversalSelection } from '../../../../systems/selection';
 
 interface KeyboardNavigationProps {
-  selectedEntityIds: string[];
   focusedEntityId: string | null;
   setFocusedEntityId: (id: string | null) => void;
   focusEntityDom?: (id: string) => void;
@@ -13,7 +12,6 @@ interface KeyboardNavigationProps {
 }
 
 export function useKeyboardNavigation({
-  selectedEntityIds,
   focusedEntityId,
   setFocusedEntityId,
   focusEntityDom,

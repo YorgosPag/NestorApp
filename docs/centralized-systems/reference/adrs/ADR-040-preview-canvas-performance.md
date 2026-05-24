@@ -71,6 +71,27 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-24 — selectedEntityIds prop chain eliminated (sidebar → deep hooks)
+
+`selectedEntityIds` was prop-drilled 6 levels deep through `DxfViewerContent → SidebarSection → FloatingPanelContainer → usePanelContentRenderer → LevelPanel → LayersSection → LayerItem + useLayersCallbacks + useKeyboardNavigation + useLayerOperations`. Each consumer now reads directly from `universalSelection.getIdsByType('dxf-entity')`.
+
+**Changes (11 files):**
+- `ui/components/layers/hooks/useLayersCallbacks.ts` — removed `selectedEntityIds` from `LayersCallbacksProps`; `handleEntityClick` reads `universalSelection.getIdsByType('dxf-entity')` at call time
+- `ui/components/layers/hooks/useKeyboardNavigation.ts` — removed from `KeyboardNavigationProps` (was unused in logic)
+- `ui/hooks/useLayerOperations.ts` — removed from `UseLayerOperationsParams`; 3 inline usages replaced with `universalSelection.getIdsByType('dxf-entity')`
+- `ui/components/layers/LayerItem.tsx` — removed from `LayerItemProps`; derived locally via `universalSelection.getIdsByType('dxf-entity')`
+- `ui/components/LayersSection.tsx` — removed from `LayersSectionProps` + all call sites (`useLayersCallbacks`, `useKeyboardNavigation`, `layerItemProps`)
+- `ui/components/LevelPanel.tsx` — removed from `LevelPanelProps`; derived locally; `LayersSection` call site cleaned
+- `ui/hooks/usePanelContentRenderer.tsx` — removed from params; `selectedEntityIds[0]` fallback → `primarySelectedId ?? null`
+- `ui/FloatingPanelContainer.tsx` — removed from props + `useLayerOperations` + `usePanelContentRenderer` calls; `React.memo` comparison simplified
+- `layout/SidebarSection.tsx` — removed from `SidebarSectionProps` + `FloatingPanelContainer` JSX
+- `layout/MobileSidebarDrawer.tsx` — removed from `MobileSidebarDrawerProps` + `SidebarSection` JSX
+- `app/DxfViewerContent.tsx` — removed from `SidebarSection` + `MobileSidebarDrawer` JSX call sites
+
+**SSoT invariant**: `universalSelection.getIdsByType('dxf-entity')` is the sole read path for entity selection IDs in sidebar, layers panel, and all deep hooks. Zero prop drilling for this value.
+
+---
+
 ### 2026-05-24 — DxfViewerContent SSoT: eliminate raw useState write paths for entity selection
 
 `selectedEntityIds` in `DxfViewerContent` was derived from a raw `useState<string[]>([])` in `useSceneState`.

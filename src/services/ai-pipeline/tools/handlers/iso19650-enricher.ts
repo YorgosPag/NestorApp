@@ -92,8 +92,16 @@ export interface Iso19650EnrichmentInput {
 /** Hard size cap — files larger skip AI entirely (per contact-classifier convention, raised to 8MB για architectural PDFs). */
 const MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024;
 
-/** Heuristic: bytes-per-token for vision input (gpt-4o-mini, conservative proxy). */
-const VISION_BYTES_PER_TOKEN = 800;
+/**
+ * Heuristic: bytes-per-token for vision input.
+ * gpt-4o-mini PDFs process each page at ~2833 tokens flat. We approximate via
+ * sizeBytes (since page count is unknown at finalize time). 300 bytes/token is
+ * conservative — calibrated so that:
+ *   - ≤8MB files (hard MAX_FILE_SIZE) → cost ≤ $0.0044 → always proceed
+ *   - ~30MB+ files (rejected by MAX_FILE_SIZE first) → cost > $0.01 cap
+ * Both gates align; cost cap is defensive against future MAX_FILE_SIZE raises.
+ */
+const VISION_BYTES_PER_TOKEN = 300;
 
 /** Fixed prompt overhead (system + user, no file). */
 const PROMPT_TOKENS_OVERHEAD = 1500;

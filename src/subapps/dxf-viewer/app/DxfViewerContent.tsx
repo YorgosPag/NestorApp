@@ -317,7 +317,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         <SidebarSection
           floatingRef={floatingRef}
           currentScene={currentScene}
-          selectedEntityIds={selectedEntityIds}
           activeTool={activeTool}
           onSceneImported={handleFileImportWithEncoding}
           projectId={levelManager.saveContext?.projectId ?? undefined}
@@ -330,7 +329,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           onOpenChange={setSidebarOpen}
           floatingRef={floatingRef}
           currentScene={currentScene}
-          selectedEntityIds={selectedEntityIds}
           activeTool={activeTool}
           onSceneImported={handleFileImportWithEncoding}
         />

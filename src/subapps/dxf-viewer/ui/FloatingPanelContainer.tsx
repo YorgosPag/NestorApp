@@ -30,7 +30,6 @@ import { DxfBreadcrumb } from './components/DxfBreadcrumb';
 
 interface FloatingPanelContainerProps {
   sceneModel: SceneModel | null;
-  selectedEntityIds: string[];
   zoomLevel: number;
   currentTool: ToolType;
   // ADR-309 Phase 2: Wizard button in LevelPanel
@@ -44,7 +43,6 @@ interface FloatingPanelContainerProps {
 
 const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, FloatingPanelContainerProps>(function FloatingPanelContainer({
   sceneModel: scene,
-  selectedEntityIds,
   zoomLevel,
   currentTool,
   onSceneImported,
@@ -71,7 +69,6 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   const layerOperations = useLayerOperations({
     scene,
     currentLevelId,
-    selectedEntityIds,
     setLevelScene
   });
 
@@ -92,7 +89,6 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
     activePanel,
     scene,
     currentTool,
-    selectedEntityIds,
     expandedKeys,
     setExpandedKeys,
     layerOperations,
@@ -181,8 +177,6 @@ export const FloatingPanelContainer = React.memo(FloatingPanelContainerInner, (p
   // Custom comparison for performance optimization
   return (
     prevProps.sceneModel === nextProps.sceneModel &&
-    prevProps.selectedEntityIds.length === nextProps.selectedEntityIds.length &&
-    prevProps.selectedEntityIds.every((id, index) => id === nextProps.selectedEntityIds[index]) &&
     prevProps.zoomLevel === nextProps.zoomLevel &&
     prevProps.currentTool === nextProps.currentTool &&
     prevProps.onSceneImported === nextProps.onSceneImported &&

@@ -333,6 +333,7 @@ Phase 5: ████████░░░░░░░░░░░ PARTIAL  — 
 
 | Date | Change |
 |------|--------|
+| 2026-05-24 | **ADR-373 — FileRecord ISO 19650 metadata enrichment (Phase 1)** — Schema extended with 5 optional fields (`disciplineCode`, `documentSeries`, `revisionCode`, `cdeState`, `buildingCode`) + `iso19650Source` AI audit subobject. Storage path layer UNCHANGED (ADR-293 100% preserved). Auto-fill via OpenAI vision in `iso19650-enricher.ts` (always-AI policy per OQ7, $0.01/file budget cap per OQ6). DXF auto-process hook extracted from `file-record.service.ts` → new `file-record-post-finalize-hooks.ts` SSoT (Boy Scout SRP). All new fields optional + backward-compatible (existing FileRecords = `undefined`). UI / manual override / virtual folders / backfill deferred to Phase 2. See [ADR-373](./ADR-373-iso19650-metadata-enrichment.md). |
 | 2026-03-09 | Initial ADR — Phase 1 documented, Phases 2-5 roadmap defined |
 | 2026-03-09 | Phase 3 COMPLETE — Audit trail, retention, approvals, watermarking, GDPR (12 commits) |
 | 2026-03-09 | Phase 4 COMPLETE — Templates, sharing, comments, folders, advanced filters |

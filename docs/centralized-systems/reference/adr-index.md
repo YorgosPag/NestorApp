@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 322 ADRs | Last Updated: 2026-05-20
+**📊 Stats**: 330 ADRs | Last Updated: 2026-05-24
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 124 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 130 | [View](#uncategorized) |
 
 ---
 
@@ -68,7 +68,7 @@
 | **ADR-031** | Enterprise Command Pattern (Undo/Redo) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-031-enterprise-command-pattern-undo-redo.md) |
 | **ADR-032** | Drawing State Machine | ✅ COMPLETED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-032-drawing-state-machine.md) |
 | **ADR-034** | EMPTY_SPATIAL_BOUNDS Consolidation | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-034-empty-spatial-bounds-centralization.md) |
-| **ADR-034** | Gantt Chart - Construction Phase Tracking | ✅ IMPLEMENTED - Phase 1+2+3+4 Complete (4.1–4.9 ALL DONE, UC-017 AI 2026-05-23) | 2026-02-07 | UI Components / Construction Management | [📄](./adrs/ADR-034-gantt-chart-construction-tracking.md) |
+| **ADR-034** | Gantt Chart - Construction Phase Tracking | ✅ IMPLEMENTED - Phase 1+2+3+4 Complete (4.1+4.2+4.3+4.4+4.5+4.6+4.7+4.8+4.9 ALL DONE) | 2026-02-07 | UI Components / Construction Management | [📄](./adrs/ADR-034-gantt-chart-construction-tracking.md) |
 | **ADR-034** | Validation Bounds Centralization | ✅ IMPLEMENTED | 2026-02-01 | Data & State | [📄](./adrs/ADR-034-validation-bounds-centralization.md) |
 | **ADR-035** | Tool Overlay Mode Metadata | ✅ APPROVED | 2026-01-01 | Tools & Keyboard | [📄](./adrs/ADR-035-tool-overlay-mode-metadata.md) |
 | **ADR-036** | Enterprise Structured Logging | ✅ APPROVED | 2026-01-01 | Performance | [📄](./adrs/ADR-036-enterprise-structured-logging.md) |
@@ -252,7 +252,7 @@
 | **ADR-224** | Safe JSON Parse Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-224-safe-json-parse-centralization.md) |
 | **ADR-225** | Type Guards Centralization — `isNonEmptyString`, `isNonEmptyArray` | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-225-type-guards-centralization.md) |
 | **ADR-226** | Centralized Deletion Guard — Referential Integrity Protection | ✅ IN PROGRESS (Phase 0-7 ✅, Phase 8 ✅ Company Identity Guard) | 2026-03-13 | Backend Systems / Data & State | [📄](./adrs/ADR-226-deletion-guard.md) |
-| **ADR-227** | Real-Time Subscription Consolidation & Coverage Expansion | ✅ 🟢 Phases 1-3 Implemented — Phase 2 complete (10/10 hooks migrated) | 2026-03-13 | Data Access Layer / Real-Time Architecture | [📄](./adrs/ADR-227-realtime-subscription-consolidation.md) |
+| **ADR-227** | Real-Time Subscription Consolidation & Coverage Expansion | ✅ 🟢 FULLY IMPLEMENTED — All 4 phases complete, 10/10 hooks migrated (verified 2026-05-21) | 2026-03-13 | Data Access Layer / Real-Time Architecture | [📄](./adrs/ADR-227-realtime-subscription-consolidation.md) |
 | **ADR-228** | Real-Time Event Bus Coverage Gap Analysis & Implementation Roadmap | ✅ ✅ All Tiers Implemented (100% Coverage) | 2026-03-14 | Data Access Layer / Real-Time Architecture | [📄](./adrs/ADR-228-realtime-event-coverage-gap-analysis.md) |
 | **ADR-229** | Centralized Page Loading & Error States | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-229-centralized-page-loading-states.md) |
 | **ADR-230** | Contract Workflow — Legal Process (Σύστημα Συμβολαίων / Νομική Διαδικασία Πώλησης) | ✅ IMPLEMENTED — All 5 phases completed (2026-03-14) | 2026-03-14 | Entity Systems | [📄](./adrs/ADR-230-contract-workflow-legal-process.md) |
@@ -267,7 +267,7 @@
 | **ADR-239** | Entity Linking Centralization | ✅ ✅ IMPLEMENTED | 2026-03-17 | Entity Systems | [📄](./adrs/ADR-239-entity-linking-centralization.md) |
 | **ADR-240** | Floorplan Pipeline Unification — Wizard → ΚΑΤΟΨΗ ΟΡΟΦΟΥ | ✅ ✅ IMPLEMENTED | 2026-03-17 | Entity Systems / File Storage | [📄](./adrs/ADR-240-floorplan-pipeline-unification.md) |
 | **ADR-241** | Fullscreen — Composition Architecture | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-241-fullscreen-container-centralization.md) |
-| **ADR-242** | Smart Financial Intelligence Suite — Enterprise Features for InterestCostDialog | ✅ 🟡 IN PROGRESS — SPEC-242A✅ B✅ C✅ D✅ E🟡 | 2026-03-18 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-242-smart-financial-intelligence-suite.md) |
+| **ADR-242** | Smart Financial Intelligence Suite — Enterprise Features for InterestCostDialog | ✅ ✅ COMPLETE — All SPECs A–E done | 2026-03-18 | Entity Systems / Sales & Finance | [📄](./adrs/ADR-242-smart-financial-intelligence-suite.md) |
 | **ADR-243** | Custom Firestore MCP Server — Secure Database Access for Claude Code | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-243-firestore-mcp-server.md) |
 | **ADR-244** | Πολλαπλοί Αγοραστές & Συνιδιοκτησία Ακινήτων | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-244-multi-buyer-co-ownership.md) |
 | **ADR-244** | Role Management Admin Console | ✅ IMPLEMENTED (Phase A + Phase B) | 2026-03-19 | Security & Auth | [📄](./adrs/ADR-244-role-management-admin-console.md) |
@@ -292,7 +292,7 @@
 | **ADR-263** | Telegram Bot Testing Playbook | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-263-telegram-bot-testing-playbook.md) |
 | **ADR-264** | Document Preview Mode — AI Auto-Analysis for File-Only Messages | ✅ ✅ IMPLEMENTED | 2026-03-26 | AI Architecture | [📄](./adrs/ADR-264-document-preview-mode.md) |
 | **ADR-265** | Enterprise Reports System — Research & Architecture | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-265-enterprise-reports-system.md) |
-| **ADR-266** | Gantt & Construction Schedule Reports — EVM Dashboard, Alert Rules (7 rules + Weather), Cron, Portfolio Dashboard | ✅ PHASE D.5 IMPL | 2026-05-21 | Construction | [📄](./adrs/ADR-266-gantt-construction-reports.md) |
+| **ADR-266** | Gantt & Construction Schedule Reports | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-266-gantt-construction-reports.md) |
 | **ADR-267** | Lightweight Procurement Module — Purchase Orders & Material Tracking | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-267-lightweight-procurement-module.md) |
 | **ADR-268** | Route Rename /audit to /projects | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-268-route-rename-audit-to-projects.md) |
 | **ADR-269** | Unit to Property Rename — Naming Standardization | ✅ APPROVED | 2026-03-31 | Entity Systems | [📄](./adrs/ADR-269-unit-to-property-rename.md) |
@@ -352,16 +352,19 @@
 | **ADR-360** | Claims Auto-Refresh SSoT (Firestore Mirror) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-360-claims-auto-refresh-ssot.md) |
 | **ADR-361** | Firestore Subscribe Equality Guard (SSoT) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-361-firestore-subscribe-equality-guard.md) |
 | **ADR-362** | Enterprise Dimension System | ✅ ✅ IMPLEMENTED — ADR-362 FULLY IMPLEMENTED 2026-05-18. Groups A→O3 complete (all pending commit). | 2026-05-17 | DXF Viewer — Annotation / Dimensions | [📄](./adrs/ADR-362-enterprise-dimension-system.md) |
-| **ADR-363** | BIM Drawing Mode (Parametric Building Elements) | ✅ 🟢 **APPROVED + ACTIVE** — Phase 3.8 (Slab Vertex Editing) implemented 2026-05-22. Phases 0-8 + 3.8 complete. | 2026-05-17 | DXF Viewer — BIM / Parametric Building Modeling | [📄](./adrs/ADR-363-bim-drawing-mode.md) |
+| **ADR-363** | BIM Drawing Mode (Parametric Building Elements) | ✅ 🟢 **FULLY IMPLEMENTED** 2026-05-21 — Phases 0-8 complete. Wall/Opening/Slab/Column/Beam tools, Phase 5.6 Wall Split, Phase 6 BOQ auto-feed, Phase 7.1-7.2 multi-select + bulk edit, Phase 8 schedule export. | 2026-05-17 | DXF Viewer — BIM / Parametric Building Modeling | [📄](./adrs/ADR-363-bim-drawing-mode.md) |
 | **ADR-364** | Escape Command Bus (Centralized ESC Dispatcher) | ✅ 🟢 **APPROVED** 2026-05-18 — Group 1+2 implemented; Group 3 (BIM tools) migrated 2026-05-19, awaiting commit | 2026-05-18 | DXF Viewer — Tools & Keyboard | [📄](./adrs/ADR-364-escape-command-bus.md) |
-| **ADR-365** | Tailwind Semantic Palette Enforcement | ⚠️ **APPROVED WITH KNOWN BUG** 2026-05-22 — All 9 phases formally complete; baseline 0/0 (was 3,659/440); CHECK 3.26 active. **BUT**: 304 occurrences / 183 files use invalid `green-707` (typo for `green-700`) → silent no-CSS render in success states. Ratchet 0/0 passes only because regex SHADES whitelist skips 707. Pending fix: rename + invalid-shade detection in ratchet. See ADR §10 Changelog 2026-05-22. | 2026-05-19 | Design System — Theming & Color Tokens | [📄](./adrs/ADR-365-tailwind-semantic-palette-enforcement.md) |
-| **ADR-366** | 3D BIM Viewer & Photorealistic Rendering | 🔵 **PHASE 9 IN PROGRESS** 2026-05-22 — C.3 ✅ (3D Manual Dimensions Tool) + C.4 ✅ (Materials/BOQ/Comments tabs) + C.5 ✅ (ARIA integration) + C.6 ✅ (Advanced Section Cuts + Crop Region: 6 modules + plane groups + frustum builder + presets). Remaining: C.2→C.7→C.1 (~37-46h). | 2026-05-19 | DXF Viewer — 3D Rendering / Photorealistic Output | [📄](./adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md) |
+| **ADR-365** | Tailwind Semantic Palette Enforcement | ✅ ⚠️ **APPROVED WITH KNOWN BUG** 2026-05-22 — All 8 phases formally complete. Baseline 0/0 (was 3,659/440), zero-tolerance CHECK 3.26 active. **BUT**: 304 occurrences / 183 files use invalid Tailwind class `green-707` (typo for `green-700`) introduced in Phases 3-8. Ratchet baseline passes only because the regex `SHADES` whitelist excludes `707`; CSS never emits → silent visual regression in success states. **Pending fix**: rename to semantic token + ratchet enhancement to catch invalid shades. See Changelog 2026-05-22 entry. | 2026-05-19 | Design System — Theming & Color Tokens | [📄](./adrs/ADR-365-tailwind-semantic-palette-enforcement.md) |
+| **ADR-366** | 3D BIM Viewer & Photorealistic Rendering | ✅ 🟢 **PHASES 0-8.1 FULLY IMPLEMENTED** 2026-05-21 + 🔵 **GROUP C RESEARCH CLOSED 7/7** 2026-05-22 + 🟡 **PHASE 9 IN PROGRESS** (C.4 ✅ 2026-05-22, C.5 ✅ 2026-05-22, C.3 ✅ 2026-05-22, C.6 ✅ 2026-05-22) — Phases 0-8.1 implementation complete (3D BIM viewer Three.js, ARIA/screen reader Phase 8.0-8.1, IFC export Phase 8.0 Q8.3+Q8.4, section cuts Phase 7.0). **Phase 9 deferred features** (Group C decisions → implementation): **C.4 ✅ DONE** (BimMaterialsTab/BimBoqTab/BimCommentsTab + last-active-tab-tracker + material-alternatives-resolver + boq-tree-builder). **C.5 ✅ DONE** (announcement-protocol + entity-dom-proxy-renderer + entity-keyboard-navigator + use-reduced-motion + reduced-motion-config + aria-entity-description-generator extensions + focus-order semantic toggle + Bim3DPreferencesService accessibility fields + ViewMode3DStore announcementsEnabled + i18n 44 keys). **C.3 ✅ DONE 2026-05-22** (dim3d-types + value-computer + line-geometry + text-plane-orienter + Dim3DToolStateMachine + dim3d-snap-engine-adapter + bim-dimensions-3d.service + Dimension3DRenderer + Dim3DGripsRenderer + useDim3DToolRouting + RibbonDim3DContextualTab + Dim3DPropertiesPanel + BimDimensions3DStore + Firestore collection+rules+3 indexes + 4 RBAC perms + audit type+action + Bim3DPreferencesService dimensions field + Ctrl+Shift+D hotkey + i18n 36 keys × 2 + 35 tests). **C.6 ✅ DONE 2026-05-22** (SectionStore PlaneGroup/linkedGroups + CropRegionStore FSM + CropRegionTool + CropRegionOverlay + crop-frustum-builder + HorizontalPresetPicker + PlaneListItem + section-group-transformer + horizontal-cut-preset-resolver + useCropRegionTool + keyboard shortcut Ctrl+Alt+R + BimViewport3D wiring + SectionSceneController budget guard + i18n ~41 keys × 2). Pending: C.2 (Comments), C.7 (Perf HUD ext), C.1 (Animation). Phase 9 remaining effort: ~37-46h. ADR-366 total estimate: ~254-303h Phases 0-9. | 2026-05-19 | DXF Viewer — 3D Rendering / Photorealistic Output | [📄](./adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md) |
 | **ADR-367** | Firestore Internal Assertion Recovery (Single-Tab Cache + Safety Net) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-367-firestore-internal-assertion-recovery.md) |
-| **ADR-368** | DXF Import Drawing Units Override (AutoCAD/Revit Pattern) | ✅ IMPLEMENTED 2026-05-20 | 2026-05-20 | DXF Viewer — Import Wizard / Scene Units | [📄](./adrs/ADR-368-dxf-import-drawing-units-override.md) |
-| **ADR-369** | BIM Elevation Convention: Revit/Industry-Standard Alignment | 📝 PROPOSED 2026-05-20 — Aligns slab/beam/wall/column/opening elevation semantics με Revit. Breaking change σε Slab semantic (migration plan Phase A-G). | 2026-05-20 | DXF Viewer — BIM / Parametric Building Modeling | [📄](./adrs/ADR-369-bim-elevation-convention-revit-alignment.md) |
-| **ADR-370** | BIM Read-Only Visualization in Properties Floorplan Tab | ✅ IMPLEMENTED 2026-05-20 — Façade bridges DXF Viewer BIM renderers (walls/slabs/beams/columns/openings/slab-openings) into Properties read-only floorplan tab via synthetic ViewTransform. Zero duplication. | 2026-05-20 | Properties — Floorplan Tab / BIM Visualization | [📄](./adrs/ADR-370-bim-readonly-visualization.md) |
-| **ADR-371** | BIM Corner Snap System (Revit/ArchiCAD-grade Face-Corner Snapping) | ✅ IMPLEMENTED 2026-05-22 — 5 anchor SSoT modules + 5 snap engines + registry + L-bracket indicator + i18n el+en + ProSnapToolbar BIM section. Priority -2. 12 test files (incl. S1-S5 integration). | 2026-05-22 | DXF Viewer — Snapping / BIM Precision | [📄](./adrs/ADR-370-bim-corner-snap-system.md) |
-| **ADR-372** | Contact Relationship Bidirectional Crossing Matrix | ✅ IMPLEMENTED 2026-05-23 — `allowedCrossings: CrossingPair[]` SSoT, `allowedFor` derived, 31-type UI registry, `targetContactType` wired through form. Extends ADR-318. | 2026-05-23 | Contacts — Relationships | [📄](./adrs/ADR-372-relationship-crossings-matrix.md) |
+| **ADR-368** | DXF Import Drawing Units Override (AutoCAD/Revit Pattern) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-368-dxf-import-drawing-units-override.md) |
+| **ADR-369** | BIM Elevation Convention: Revit/Industry-Standard Alignment | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-369-bim-elevation-convention-revit-alignment.md) |
+| **ADR-370** | BIM Read-Only Visualization in Properties Floorplan Tab | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-370-bim-readonly-visualization.md) |
+| **ADR-371** | BIM Corner Snap System (Revit/ArchiCAD-grade Face-Corner Snapping) | ✅ ✅ **IMPLEMENTED** 2026-05-22 — Phases 2A-2F complete. 27 files created/edited. Integration test (S1-S5) added 2026-05-22. Bugfix: SnapContext.ALL_MODES missing BIM types fixed 2026-05-22. Extension: Wall Face Corner Projection Snap (Revit-style) added 2026-05-22. | 2026-05-22 | DXF Viewer — Snapping / BIM Precision | [📄](./adrs/ADR-370-bim-corner-snap-system.md) |
+| **ADR-371** | BIM 3D Read-Only Viewer in Properties Floorplan Tab | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-371-bim-3d-readonly-viewer.md) |
+| **ADR-371** | BIM Corner Snap System (Redirect) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-371-bim-corner-snap-system.md) |
+| **ADR-372** | Contact Relationship Bidirectional Crossing Matrix | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-372-relationship-crossings-matrix.md) |
+| **ADR-373** | FileRecord ISO 19650 Metadata Enrichment (Phase 1 — Schema + AI Auto-Fill) | ✅ ✅ Phase 1 IMPLEMENTED 2026-05-24 — Schema + AI enricher + tests + post-finalize hook SSoT. Pending Γιώργος commit. Phase 2 (UI / manual override / virtual folders / backfill / concurrency token bucket / suitabilityCode field) deferred. | 2026-05-24 (clarifications session 2026-05-24) | File Management / Document Governance / AI Pipeline | [📄](./adrs/ADR-373-iso19650-metadata-enrichment.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -663,7 +666,7 @@
 | **ADR-262** | AI Agent Testing & Production Standards | ✅ APPROVED | [View](./adrs/ADR-262-ai-agent-testing-production-standards.md) |
 | **ADR-263** | Telegram Bot Testing Playbook | ✅ APPROVED | [View](./adrs/ADR-263-telegram-bot-testing-playbook.md) |
 | **ADR-265** | Enterprise Reports System — Research & Architecture | ✅ APPROVED | [View](./adrs/ADR-265-enterprise-reports-system.md) |
-| **ADR-266** | Gantt & Construction Schedule Reports — EVM, Alert Rules + Weather Risk, Cron, Portfolio | ✅ PHASE D.5 IMPL | [View](./adrs/ADR-266-gantt-construction-reports.md) |
+| **ADR-266** | Gantt & Construction Schedule Reports | ✅ APPROVED | [View](./adrs/ADR-266-gantt-construction-reports.md) |
 | **ADR-267** | Lightweight Procurement Module — Purchase Orders & Material Tracking | ✅ APPROVED | [View](./adrs/ADR-267-lightweight-procurement-module.md) |
 | **ADR-268** | Route Rename /audit to /projects | ✅ APPROVED | [View](./adrs/ADR-268-route-rename-audit-to-projects.md) |
 | **ADR-278** | Company Identity Field Guard | ✅ APPROVED | [View](./adrs/ADR-278-company-identity-field-guard.md) |
@@ -713,6 +716,12 @@
 | **ADR-360** | Claims Auto-Refresh SSoT (Firestore Mirror) | ✅ APPROVED | [View](./adrs/ADR-360-claims-auto-refresh-ssot.md) |
 | **ADR-361** | Firestore Subscribe Equality Guard (SSoT) | ✅ APPROVED | [View](./adrs/ADR-361-firestore-subscribe-equality-guard.md) |
 | **ADR-367** | Firestore Internal Assertion Recovery (Single-Tab Cache + Safety Net) | ✅ APPROVED | [View](./adrs/ADR-367-firestore-internal-assertion-recovery.md) |
+| **ADR-368** | DXF Import Drawing Units Override (AutoCAD/Revit Pattern) | ✅ APPROVED | [View](./adrs/ADR-368-dxf-import-drawing-units-override.md) |
+| **ADR-369** | BIM Elevation Convention: Revit/Industry-Standard Alignment | ✅ APPROVED | [View](./adrs/ADR-369-bim-elevation-convention-revit-alignment.md) |
+| **ADR-370** | BIM Read-Only Visualization in Properties Floorplan Tab | ✅ APPROVED | [View](./adrs/ADR-370-bim-readonly-visualization.md) |
+| **ADR-371** | BIM 3D Read-Only Viewer in Properties Floorplan Tab | ✅ APPROVED | [View](./adrs/ADR-371-bim-3d-readonly-viewer.md) |
+| **ADR-371** | BIM Corner Snap System (Redirect) | ✅ APPROVED | [View](./adrs/ADR-371-bim-corner-snap-system.md) |
+| **ADR-372** | Contact Relationship Bidirectional Crossing Matrix | ✅ APPROVED | [View](./adrs/ADR-372-relationship-crossings-matrix.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

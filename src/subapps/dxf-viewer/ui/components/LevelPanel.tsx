@@ -36,7 +36,6 @@ interface LevelPanelProps {
   currentTool?: ToolType;
   onToolChange?: (tool: ToolType) => void;
   scene?: SceneModel | null;
-  selectedEntityIds?: string[];
   onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
   expandedKeys?: Set<string>;
   onExpandChange?: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -63,7 +62,6 @@ export function LevelPanel({
   currentTool,
   onToolChange,
   scene,
-  selectedEntityIds = [],
   onSceneImported,
   expandedKeys = new Set(),
   onExpandChange,
@@ -104,6 +102,7 @@ export function LevelPanel({
   const { user } = useAuth();
   const overlayStore = useOverlayStore();
   const universalSelection = useUniversalSelection();
+  const selectedEntityIds = universalSelection.getIdsByType('dxf-entity');
   const { handleOverlaySelect, handleOverlayEdit, handleOverlayDelete } =
     createOverlayHandlers({
       setSelectedOverlay: (id: string | null) => universalSelection.handleOverlaySelect(id),
@@ -352,7 +351,6 @@ export function LevelPanel({
         <div className={PANEL_TOKENS.LEVEL_PANEL.SECTIONS_BORDER}>
           <LayersSection
             scene={scene}
-            selectedEntityIds={selectedEntityIds}
             onLayerToggle={onLayerToggle}
             onLayerDelete={onLayerDelete}
             onLayerColorChange={onLayerColorChange}

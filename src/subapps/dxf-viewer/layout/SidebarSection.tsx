@@ -69,7 +69,6 @@ interface SidebarSectionProps {
   variant?: SidebarVariant;
   floatingRef: React.RefObject<FloatingPanelHandle>;
   currentScene: SceneModel | null;
-  selectedEntityIds: string[];
   activeTool: string;
   // ADR-309 Phase 2: Wizard button in LevelPanel
   onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
@@ -94,7 +93,6 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
   variant = 'inline',
   floatingRef,
   currentScene,
-  selectedEntityIds,
   activeTool,
   onSceneImported,
   projectId,
@@ -147,7 +145,6 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
           <FloatingPanelContainer
             ref={floatingRef}
             sceneModel={currentScene}
-            selectedEntityIds={selectedEntityIds}
             zoomLevel={currentZoom}
             currentTool={activeTool as ToolType}
             onSceneImported={onSceneImported}

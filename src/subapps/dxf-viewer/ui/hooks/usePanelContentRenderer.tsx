@@ -40,7 +40,6 @@ interface UsePanelContentRendererParams {
   activePanel: PanelType;
   scene: SceneModel | null;
   currentTool: ToolType;
-  selectedEntityIds: string[];
   expandedKeys: Set<string>;
   setExpandedKeys: React.Dispatch<React.SetStateAction<Set<string>>>;
   layerOperations: LayerOperationsCallbacks;
@@ -60,7 +59,6 @@ export function usePanelContentRenderer({
   activePanel,
   scene,
   currentTool,
-  selectedEntityIds,
   expandedKeys,
   setExpandedKeys,
   layerOperations,
@@ -81,7 +79,6 @@ export function usePanelContentRenderer({
             <LevelPanel
               currentTool={currentTool}
               scene={scene}
-              selectedEntityIds={selectedEntityIds}
               onSceneImported={onSceneImported}
               expandedKeys={expandedKeys}
               onExpandChange={setExpandedKeys}
@@ -119,7 +116,7 @@ export function usePanelContentRenderer({
       case 'properties':
         return (
           <BimPropertiesRouter
-            primarySelectedId={primarySelectedId ?? selectedEntityIds[0] ?? null}
+            primarySelectedId={primarySelectedId ?? null}
             currentScene={scene}
             projectId={projectId}
             floorplanId={floorplanId}

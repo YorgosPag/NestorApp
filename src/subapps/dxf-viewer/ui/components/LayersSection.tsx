@@ -27,7 +27,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // ✅ ENTERPRISE: Inline type definitions (matching LevelPanel.tsx)
 interface LayersSectionProps {
   scene: SceneModel | null;
-  selectedEntityIds: string[];
   // Layer operations
   onLayerToggle?: (layerName: string, visible: boolean) => void;
   onLayerDelete?: (layerName: string) => void;
@@ -53,7 +52,6 @@ interface LayersSectionProps {
 
 export function LayersSection({
   scene,
-  selectedEntityIds,
   onLayerToggle,
   onLayerDelete,
   onLayerColorChange,
@@ -86,7 +84,6 @@ export function LayersSection({
   // Use callbacks hook
   const callbacks = useLayersCallbacks({
     scene,
-    selectedEntityIds,
     selectedEntitiesForMerge: state.selectedEntitiesForMerge,
     setSelectedEntitiesForMerge: state.setSelectedEntitiesForMerge,
     selectedLayersForMerge: state.selectedLayersForMerge,
@@ -101,7 +98,6 @@ export function LayersSection({
   
   // Use keyboard navigation hook
   const { handleEntityKeyDown } = useKeyboardNavigation({
-    selectedEntityIds,
     focusedEntityId: state.focusedEntityId,
     setFocusedEntityId: state.setFocusedEntityId,
     setSelectedEntitiesForMerge: state.setSelectedEntitiesForMerge
@@ -147,7 +143,6 @@ export function LayersSection({
     onLayerRename,
     
     // Entity-related props
-    selectedEntityIds,
     editingEntity: state.editingEntity,
     colorPickerEntity: state.colorPickerEntity,
     focusedEntityId: state.focusedEntityId,

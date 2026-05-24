@@ -49,7 +49,6 @@ export interface LayerItemProps {
   onLayerRename?: (oldName: string, newName: string) => void;
   
   // Entity-related props
-  selectedEntityIds: string[];
   editingEntity: string | null;
   colorPickerEntity: string | null;
   focusedEntityId: string | null;
@@ -95,7 +94,6 @@ export function LayerItem({
   onLayerRename,
   
   // Entity props
-  selectedEntityIds,
   editingEntity,
   colorPickerEntity,
   focusedEntityId,
@@ -116,6 +114,7 @@ export function LayerItem({
   onEntityRename
 }: LayerItemProps) {
   const universalSelection = useUniversalSelection();
+  const selectedEntityIds = universalSelection.getIdsByType('dxf-entity');
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();

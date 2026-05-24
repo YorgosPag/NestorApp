@@ -42,7 +42,6 @@ export interface LayerOperationsCallbacks {
 interface UseLayerOperationsParams {
   scene: SceneModel | null;
   currentLevelId: string | null;
-  selectedEntityIds: string[];
   setLevelScene: (levelId: string, scene: SceneModel) => void;
 }
 
@@ -53,7 +52,6 @@ interface UseLayerOperationsParams {
 export function useLayerOperations({
   scene,
   currentLevelId,
-  selectedEntityIds,
   setLevelScene
 }: UseLayerOperationsParams): LayerOperationsCallbacks {
 
@@ -93,7 +91,7 @@ export function useLayerOperations({
     if (!confirmed) return;
 
     const result = layerService.deleteLayer(layerName, scene);
-    handleLayerServiceResult(result, selectedEntityIds, universalSelection.replaceEntitySelection, setLevelScene, currentLevelId);
+    handleLayerServiceResult(result, universalSelection.getIdsByType('dxf-entity'), universalSelection.replaceEntitySelection, setLevelScene, currentLevelId);
   };
 
   const handleLayerColorChange = (layerName: string, color: string) => {
@@ -184,8 +182,9 @@ export function useLayerOperations({
       entities: scene.entities.filter(entity => entity.id !== entityId)
     };
 
-    const newSelection = selectedEntityIds.filter(id => id !== entityId);
-    if (newSelection.length !== selectedEntityIds.length) {
+    const currentIds = universalSelection.getIdsByType('dxf-entity');
+    const newSelection = currentIds.filter(id => id !== entityId);
+    if (newSelection.length !== currentIds.length) {
       universalSelection.replaceEntitySelection(newSelection);
     }
     setLevelScene(currentLevelId, updatedScene);
@@ -298,7 +297,7 @@ export function useLayerOperations({
   const handleColorGroupDelete = (colorGroupName: string, layersInGroup: string[]) => {
     if (!scene || !currentLevelId) return;
     const result = layerService.deleteColorGroup(colorGroupName, layersInGroup, scene);
-    handleLayerServiceResult(result, selectedEntityIds, universalSelection.replaceEntitySelection, setLevelScene, currentLevelId);
+    handleLayerServiceResult(result, universalSelection.getIdsByType('dxf-entity'), universalSelection.replaceEntitySelection, setLevelScene, currentLevelId);
   };
 
   const handleColorGroupColorChange = (colorGroupName: string, layersInGroup: string[], color: string) => {
