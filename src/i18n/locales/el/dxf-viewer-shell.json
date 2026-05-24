@@ -510,7 +510,40 @@
     "guidePresetGrid": "Δομικός Κάνναβος",
     "guideFromSelection": "Οδηγοί από Επιλογή",
     "temporaryMode": "Προσωρινή Λειτουργία",
-    "temporaryModeActive": "Ενεργή λειτουργία — οι οδηγοί αφαιρούνται αυτόματα μετά τη σχεδίαση"
+    "temporaryModeActive": "Ενεργή λειτουργία — οι οδηγοί αφαιρούνται αυτόματα μετά τη σχεδίαση",
+    "xline": {
+      "name": "Γραμμή Κατασκευής",
+      "tooltip": "Άπειρη γραμμή αναφοράς και για τις δύο κατευθύνσεις",
+      "statusBarPrefix": "Γραμμή κατασκευής:",
+      "modes": {
+        "through": "Μέσω σημείου",
+        "horizontal": "Οριζόντια",
+        "vertical": "Κάθετη",
+        "angle": "Γωνία",
+        "bisect": "Διχοτόμος",
+        "offset": "Παράλληλη"
+      },
+      "contextMenu": {
+        "cancelCurrent": "Ακύρωση τρέχοντος",
+        "finishChain": "Τέλος αλυσίδας"
+      }
+    },
+    "ray": {
+      "name": "Ακτίνα",
+      "tooltip": "Ημι-άπειρη γραμμή από αρχή προς κατεύθυνση",
+      "statusBarPrefix": "Ακτίνα:",
+      "contextMenu": {
+        "cancelCurrent": "Ακύρωση τρέχοντος",
+        "finishChain": "Τέλος αλυσίδας"
+      }
+    },
+    "constructionLayerScaffold": {
+      "title": "Δημιουργία layer Κατασκευής;",
+      "body": "Συνιστούμε ξεχωριστό layer για XLINE/RAY:\n• Όνομα: Construction\n• Linetype: Dashed\n• Χρώμα: Cyan (ACI 4)\n• Plottable: Όχι",
+      "create": "Δημιουργία και χρήση",
+      "skip": "Όχι ευχαριστώ",
+      "neverAsk": "Μην ξαναρωτήσεις"
+    }
   },
   "snapModes": {
     "labels": {

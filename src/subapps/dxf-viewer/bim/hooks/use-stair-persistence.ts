@@ -125,6 +125,8 @@ function docToEntity(doc: StairDoc): StairEntity {
     validation,
     layerId: doc.layer ?? 'STAIRS',
     levelId: doc.levelId,
+    floorId: doc.floorId,
+    buildingId: doc.buildingId,
     visible: true,
     editingBy: doc.editingBy,
     qto: doc.qto,

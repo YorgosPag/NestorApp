@@ -1198,7 +1198,111 @@
       "searchBackfill": "Ανανέωση Αναζήτησης",
       "communications": "Επικοινωνία",
       "aiInbox": "Εισερχόμενα AI",
-      "operatorInbox": "Εισερχόμενα Χειριστή"
+      "operatorInbox": "Εισερχόμενα Χειριστή",
+      "bimDiagnostics": "Διαγνωστικά BIM"
+    }
+  },
+  "bimDiagnostics": {
+    "title": "Διαγνωστικά Απόδοσης BIM",
+    "description": "Διαχείριση και διαλογή των αναφορών απόδοσης από το 3D Viewer",
+    "loading": "Φόρτωση αναφορών...",
+    "empty": "Δεν υπάρχουν αναφορές για τα επιλεγμένα φίλτρα",
+    "selectRowHint": "Επιλέξτε γραμμή για λεπτομέρειες",
+    "filters": {
+      "title": "Φίλτρα",
+      "status": "Κατάσταση",
+      "statusAll": "Όλες",
+      "dateRange": "Χρονικό διάστημα",
+      "dateFrom": "Από",
+      "dateTo": "Έως",
+      "projectId": "Κωδικός έργου",
+      "projectIdPlaceholder": "Αναζήτηση κωδικού έργου...",
+      "gpuTier": "Κατηγορία GPU",
+      "gpuTierAll": "Όλες",
+      "fpsRange": "Εύρος FPS",
+      "browser": "Φυλλομετρητής",
+      "browserAll": "Όλοι",
+      "reset": "Καθαρισμός φίλτρων"
+    },
+    "list": {
+      "timestamp": "Ημερομηνία",
+      "user": "Χρήστης",
+      "project": "Έργο",
+      "status": "Κατάσταση",
+      "fps": "FPS",
+      "mode": "Λειτουργία",
+      "assignee": "Ανάθεση",
+      "rowCount": "{count} αναφορές"
+    },
+    "status": {
+      "new": "Νέα",
+      "triaged": "Σε διαλογή",
+      "investigating": "Υπό έρευνα",
+      "resolved": "Επιλύθηκε",
+      "wontfix": "Δεν θα διορθωθεί"
+    },
+    "detail": {
+      "title": "Λεπτομέρειες αναφοράς",
+      "metricsHeader": "Μετρήσεις απόδοσης",
+      "metricFps": "FPS",
+      "metricFrameTime": "Χρόνος καρέ (ms)",
+      "metricTriangles": "Τρίγωνα",
+      "metricVertices": "Κορυφές",
+      "metricDrawCalls": "Κλήσεις σχεδίασης",
+      "metricObjectsVisible": "Ορατά αντικείμενα",
+      "metricObjectsTotal": "Σύνολο αντικειμένων",
+      "metricGpuMemory": "Μνήμη GPU (MB)",
+      "metricCpuMemory": "Μνήμη CPU (MB)",
+      "metricSamplesPerSec": "Δείγματα/sec",
+      "screenshot": "Στιγμιότυπο οθόνης",
+      "screenshotOpen": "Άνοιγμα σε μεγέθυνση",
+      "userComment": "Σχόλιο χρήστη",
+      "userCommentEmpty": "Δεν υπάρχει σχόλιο",
+      "sceneInfo": "Πληροφορίες σκηνής",
+      "auditHistory": "Ιστορικό ενεργειών",
+      "renderMode": "Λειτουργία απόδοσης",
+      "source": "Πηγή",
+      "sourceManual": "Χειροκίνητη υποβολή",
+      "sourceAutoSubmit": "Αυτόματη υποβολή"
+    },
+    "triage": {
+      "title": "Ενέργειες διαλογής",
+      "currentStatus": "Τρέχουσα κατάσταση",
+      "changeStatus": "Αλλαγή κατάστασης",
+      "changeStatusNote": "Σημείωση μετάβασης (προαιρετική)",
+      "changeStatusSubmit": "Καταχώρηση",
+      "transitionInvalid": "Μη επιτρεπτή μετάβαση",
+      "assignee": "Υπεύθυνος",
+      "assigneeUnassigned": "Χωρίς ανάθεση",
+      "assigneeChange": "Αλλαγή υπεύθυνου",
+      "assigneeSubmit": "Ανάθεση",
+      "internalNotes": "Ιδιωτικές σημειώσεις (μόνο super-admin)",
+      "internalNotesPlaceholder": "Γράψτε σημείωση...",
+      "internalNotesSubmit": "Αποθήκευση σημείωσης",
+      "historyTitle": "Ιστορικό διαλογής",
+      "historyEmpty": "Δεν υπάρχει ιστορικό ακόμα",
+      "historyEntry": "{from} → {to} από {by} στις {at}"
+    },
+    "charts": {
+      "title": "Συγκεντρωτικά γραφήματα",
+      "fpsHistogram": "Κατανομή FPS",
+      "fpsHistogramAxis": "FPS",
+      "fpsHistogramCount": "Αναφορές",
+      "gpuTierPie": "Κατηγορίες GPU",
+      "modeUsageBar": "Χρήση λειτουργιών",
+      "noData": "Δεν υπάρχουν δεδομένα"
+    },
+    "actions": {
+      "exportCsv": "Εξαγωγή CSV",
+      "exporting": "Εξαγωγή...",
+      "refresh": "Ανανέωση"
+    },
+    "errors": {
+      "loadFailed": "Αποτυχία φόρτωσης αναφορών",
+      "transitionFailed": "Αποτυχία αλλαγής κατάστασης",
+      "assignFailed": "Αποτυχία ανάθεσης",
+      "noteFailed": "Αποτυχία αποθήκευσης σημείωσης",
+      "exportFailed": "Αποτυχία εξαγωγής CSV"
     }
   }
 }

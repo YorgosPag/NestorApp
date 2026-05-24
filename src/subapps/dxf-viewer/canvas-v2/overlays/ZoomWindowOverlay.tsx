@@ -43,7 +43,7 @@ export default function ZoomWindowOverlay({
   return (
     <div className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${className}`}>
       <div
-        className="absolute border-2 border-solid ${PANEL_LAYOUT.POINTER_EVENTS.NONE}"
+        className={`absolute border-2 border-solid ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
         style={{
           left,
           top,

@@ -1198,7 +1198,111 @@
       "searchBackfill": "Search Backfill",
       "communications": "Communications",
       "aiInbox": "AI Inbox",
-      "operatorInbox": "Operator Inbox"
+      "operatorInbox": "Operator Inbox",
+      "bimDiagnostics": "BIM Diagnostics"
+    }
+  },
+  "bimDiagnostics": {
+    "title": "BIM Performance Diagnostics",
+    "description": "Triage and review performance reports from the 3D Viewer",
+    "loading": "Loading reports...",
+    "empty": "No reports match the selected filters",
+    "selectRowHint": "Select a row to view details",
+    "filters": {
+      "title": "Filters",
+      "status": "Status",
+      "statusAll": "All",
+      "dateRange": "Date range",
+      "dateFrom": "From",
+      "dateTo": "To",
+      "projectId": "Project ID",
+      "projectIdPlaceholder": "Search project ID...",
+      "gpuTier": "GPU tier",
+      "gpuTierAll": "All",
+      "fpsRange": "FPS range",
+      "browser": "Browser",
+      "browserAll": "All",
+      "reset": "Reset filters"
+    },
+    "list": {
+      "timestamp": "Timestamp",
+      "user": "User",
+      "project": "Project",
+      "status": "Status",
+      "fps": "FPS",
+      "mode": "Mode",
+      "assignee": "Assignee",
+      "rowCount": "{count} reports"
+    },
+    "status": {
+      "new": "New",
+      "triaged": "Triaged",
+      "investigating": "Investigating",
+      "resolved": "Resolved",
+      "wontfix": "Won't fix"
+    },
+    "detail": {
+      "title": "Report details",
+      "metricsHeader": "Performance metrics",
+      "metricFps": "FPS",
+      "metricFrameTime": "Frame time (ms)",
+      "metricTriangles": "Triangles",
+      "metricVertices": "Vertices",
+      "metricDrawCalls": "Draw calls",
+      "metricObjectsVisible": "Visible objects",
+      "metricObjectsTotal": "Total objects",
+      "metricGpuMemory": "GPU memory (MB)",
+      "metricCpuMemory": "CPU memory (MB)",
+      "metricSamplesPerSec": "Samples/sec",
+      "screenshot": "Screenshot",
+      "screenshotOpen": "Open enlarged",
+      "userComment": "User comment",
+      "userCommentEmpty": "No comment",
+      "sceneInfo": "Scene info",
+      "auditHistory": "Action history",
+      "renderMode": "Render mode",
+      "source": "Source",
+      "sourceManual": "Manual submission",
+      "sourceAutoSubmit": "Auto-submitted"
+    },
+    "triage": {
+      "title": "Triage actions",
+      "currentStatus": "Current status",
+      "changeStatus": "Change status",
+      "changeStatusNote": "Transition note (optional)",
+      "changeStatusSubmit": "Apply",
+      "transitionInvalid": "Transition not allowed",
+      "assignee": "Assignee",
+      "assigneeUnassigned": "Unassigned",
+      "assigneeChange": "Change assignee",
+      "assigneeSubmit": "Assign",
+      "internalNotes": "Internal notes (super-admin only)",
+      "internalNotesPlaceholder": "Write a note...",
+      "internalNotesSubmit": "Save note",
+      "historyTitle": "Triage history",
+      "historyEmpty": "No history yet",
+      "historyEntry": "{from} → {to} by {by} at {at}"
+    },
+    "charts": {
+      "title": "Aggregated charts",
+      "fpsHistogram": "FPS distribution",
+      "fpsHistogramAxis": "FPS",
+      "fpsHistogramCount": "Reports",
+      "gpuTierPie": "GPU tiers",
+      "modeUsageBar": "Mode usage",
+      "noData": "No data"
+    },
+    "actions": {
+      "exportCsv": "Export CSV",
+      "exporting": "Exporting...",
+      "refresh": "Refresh"
+    },
+    "errors": {
+      "loadFailed": "Failed to load reports",
+      "transitionFailed": "Failed to change status",
+      "assignFailed": "Failed to assign",
+      "noteFailed": "Failed to save note",
+      "exportFailed": "Failed to export CSV"
     }
   }
 }

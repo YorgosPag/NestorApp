@@ -37,6 +37,7 @@ import { useGlobalSnapSceneSync } from '../../snapping/hooks/useGlobalSnapSceneS
 // useHoveredOverlay REMOVED from orchestrator — ADR-040 Phase II micro-leaf pattern.
 // Subscription lives in DraftLayerSubscriber (canvas-layer-stack-leaves.tsx).
 import { useSpecialTools } from '../../hooks/tools'; import { useModifyTools } from '../../hooks/tools/useModifyTools';
+import { useZoomWindowTool } from '../../hooks/tools/useZoomWindowTool';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useGripHoverMenuController } from '../../hooks/grips/useGripHoverMenuController'; import { useGripContextMenuController } from '../../hooks/grips/useGripContextMenuController';
 import { GripHoverMenu } from '../grip/GripHoverMenu';
@@ -378,6 +379,19 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     transformRef, containerRef, activeTool, executeCommand,
     getSelectedEntityIds, dxfScene, handleMouseMove: unified.handleMouseMove,
     levelManager, currentOverlays, transformScale: transform.scale,
+  });
+  // ADR-374 — ZOOM Window tool lifecycle (EventBus listener + Escape + return-to-select).
+  // Combined transform handler: must mirror CanvasLayerStack.handleTransformChange — bare
+  // setTransform leaves zoomSystem with stale internal transform, so the next wheel zoom
+  // computes from the pre-zoom-window state and snaps the drawing far away.
+  const handleZoomWindowTransform = useCallback((newTransform: import('../../rendering/types/Types').ViewTransform) => {
+    setTransform(newTransform);
+    zoomSystem.setTransform(newTransform);
+  }, [setTransform, zoomSystem]);
+  useZoomWindowTool({
+    activeTool,
+    onTransformChange: handleZoomWindowTransform,
+    onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
   });
   // === Render ===
   return (

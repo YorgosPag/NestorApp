@@ -78,16 +78,6 @@ export function RibbonStairFloorInfoWidget(): React.JSX.Element | null {
   // used by BuildingTabs (no duplicate cost).
   const { floorsCount: totalFloors } = useBuildingTotalFloors(floor?.buildingId);
 
-  if (typeof window !== 'undefined') {
-    // Diagnostic — remove once Phase 9 UX is validated end-to-end.
-    (window as unknown as Record<string, unknown>).__stairFloorInfoDebug = {
-      saveContext: levelManager.saveContext,
-      floorId,
-      floor,
-      stairId: universalSelection.getPrimaryId(),
-    };
-  }
-
   const stair = useMemo<StairEntity | null>(() => {
     const id = universalSelection.getPrimaryId();
     if (!id || !levelManager.currentLevelId) return null;
@@ -118,37 +108,9 @@ export function RibbonStairFloorInfoWidget(): React.JSX.Element | null {
     execute(new UpdateStairParamsCommand(stair.id, params, prev, sm, false));
   }, [execute, floor, levelManager, stair]);
 
-  // ADR-358 Phase 9 debug — surface gating state inline so the user can see
-  // why the panel is empty without opening DevTools. Remove once the wiring
-  // is validated end-to-end.
-  if (!stair) {
-    return (
-      <span className="dxf-ribbon-stair-floor-info">
-        <span className="dxf-ribbon-stair-floor-value">
-          [debug] no stair selected
-        </span>
-      </span>
-    );
-  }
-  if (!floorId) {
-    return (
-      <span className="dxf-ribbon-stair-floor-info">
-        <span className="dxf-ribbon-stair-floor-value">
-          [debug] saveContext.floorId missing — entityType=
-          {String(levelManager.saveContext?.entityType ?? 'undefined')}
-        </span>
-      </span>
-    );
-  }
-  if (!floor) {
-    return (
-      <span className="dxf-ribbon-stair-floor-info">
-        <span className="dxf-ribbon-stair-floor-value">
-          [debug] FLOORS/{floorId} not found or still loading
-        </span>
-      </span>
-    );
-  }
+  if (!stair) return null;
+  if (!floorId) return null;
+  if (!floor) return null;
 
   const linked = isLinkedToFloor(stair.params.multiStoryConfig, floor);
   const endElevation =

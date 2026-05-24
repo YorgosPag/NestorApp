@@ -510,7 +510,40 @@
     "guidePresetGrid": "Structural Preset Grid",
     "guideFromSelection": "Guide from Selection",
     "temporaryMode": "Temporary Mode",
-    "temporaryModeActive": "Temporary mode active — guides auto-removed on drawing completion"
+    "temporaryModeActive": "Temporary mode active — guides auto-removed on drawing completion",
+    "xline": {
+      "name": "Construction Line",
+      "tooltip": "Infinite reference line in both directions",
+      "statusBarPrefix": "Construction Line:",
+      "modes": {
+        "through": "Through Point",
+        "horizontal": "Horizontal",
+        "vertical": "Vertical",
+        "angle": "Angle",
+        "bisect": "Bisect",
+        "offset": "Offset"
+      },
+      "contextMenu": {
+        "cancelCurrent": "Cancel Current",
+        "finishChain": "Finish Chain"
+      }
+    },
+    "ray": {
+      "name": "Ray",
+      "tooltip": "Semi-infinite line from origin in a direction",
+      "statusBarPrefix": "Ray:",
+      "contextMenu": {
+        "cancelCurrent": "Cancel Current",
+        "finishChain": "Finish Chain"
+      }
+    },
+    "constructionLayerScaffold": {
+      "title": "Create Construction Layer?",
+      "body": "We recommend a separate layer for XLINE/RAY:\n• Name: Construction\n• Linetype: Dashed\n• Color: Cyan (ACI 4)\n• Plottable: No",
+      "create": "Create and use",
+      "skip": "No thanks",
+      "neverAsk": "Don't ask again"
+    }
   },
   "snapModes": {
     "labels": {

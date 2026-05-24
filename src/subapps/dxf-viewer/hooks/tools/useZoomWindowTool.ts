@@ -22,6 +22,7 @@ import { useEffect, useRef } from 'react';
 import { EventBus } from '../../systems/events/EventBus';
 import { FitToViewService } from '../../services/FitToViewService';
 import { ZoomWindowStore } from '../../systems/zoom-window/ZoomWindowStore';
+import { UI_ZOOM_LIMITS } from '../../config/transform-config';
 import type { ViewTransform } from '../../rendering/types/Types';
 
 export interface UseZoomWindowToolProps {
@@ -43,10 +44,13 @@ export function useZoomWindowTool({
   // ── Apply zoom on mouse-up dispatched rect ─────────────────────────────
   useEffect(() => {
     const cleanup = EventBus.on('zoom-window:apply', (payload) => {
+      // AutoCAD ZOOM W: το rect γεμίζει την οθόνη ανεξάρτητα από scale.
+      // maxScale must match wheel-zoom upper bound (UI_ZOOM_LIMITS.MAX_SCALE = 10000),
+      // otherwise small rects clamp at 20× and the user "loses" zoom mid-way.
       const result = FitToViewService.calculateFitToViewFromBounds(
         payload.worldBounds,
         payload.viewport,
-        { padding: 0.1, maxScale: 20 },
+        { padding: 0.1, maxScale: UI_ZOOM_LIMITS.MAX_SCALE, minScale: UI_ZOOM_LIMITS.MIN_SCALE },
       );
       if (result.success && result.transform) {
         onTransformChangeRef.current(result.transform);

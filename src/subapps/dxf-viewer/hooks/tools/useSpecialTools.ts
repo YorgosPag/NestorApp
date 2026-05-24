@@ -276,23 +276,28 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       };
     },
     onStairCreated: (stairEntity) => {
+      // ADR-358 Phase 9C — stamp floorId + buildingId so Firestore persistence
+      // can link the stair to its floor (required for Plan B batch update).
+      const enriched = floorIdForStair
+        ? { ...stairEntity, floorId: floorIdForStair, buildingId: floorForStair?.buildingId }
+        : stairEntity;
       const levelId = levelManager.currentLevelId;
       if (!levelId) return;
       const scene = levelManager.getLevelScene(levelId);
       if (!scene) return;
       const updatedScene = {
         ...scene,
-        entities: [...(scene.entities || []), stairEntity],
+        entities: [...(scene.entities || []), enriched],
       };
       levelManager.setLevelScene(levelId, updatedScene);
-      console.debug('[StairTool] Stair added to scene:', stairEntity.id);
+      console.debug('[StairTool] Stair added to scene:', enriched.id);
       // ADR-358 Phase Q17 9B-6 — broadcast creation so persistence layer
       // can immediately schedule the Firestore save. Without this, a freshly
       // drawn stair is local-only until the user explicitly selects + edits
       // it, and a Firestore snapshot in between drops it from the scene
       // (see useStairPersistence diff-merge guard).
       EventBus.emit('drawing:entity-created', {
-        entity: stairEntity,
+        entity: enriched,
         tool: 'stair',
       });
     },

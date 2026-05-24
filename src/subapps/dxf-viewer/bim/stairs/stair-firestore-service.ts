@@ -247,5 +247,7 @@ export function entityToSaveInput(entity: StairEntity): StairSaveInput {
     validation: entity.validation,
     qto: entity.qto,
     levelId: entity.levelId,
+    floorId: entity.floorId,
+    buildingId: entity.buildingId,
   };
 }

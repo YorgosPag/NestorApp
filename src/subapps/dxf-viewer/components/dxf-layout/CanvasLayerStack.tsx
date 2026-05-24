@@ -36,6 +36,7 @@ import {
   type LayerCanvasPassthroughProps,
 } from './canvas-layer-stack-leaves';
 import { PolygonCropPreviewSubscriber } from './LassoCropPreviewSubscriber'; import { LassoFreehandPreviewSubscriber } from './LassoFreehandPreviewSubscriber';
+import { ZoomWindowSubscriber } from './leaves/ZoomWindowSubscriber';
 import { AutoAreaResultPanel } from './AutoAreaResultPanel'; import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
 import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay'; import { DynamicInputSubscriber } from './DynamicInputSubscriber'; import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf';
 import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton'; import { Focus2DOverlayLeaf } from './Focus2DOverlayLeaf'; import { SelectionCursorIcon } from '../../accessibility/SelectionCursorIcon';
@@ -438,6 +439,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           <AutoAreaPreviewOverlay transform={transform} viewport={viewport} />
           <PolygonCropPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <LassoFreehandPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
+          {/* ADR-374 — ZOOM Window rubber-band rect overlay (mount per ADR §"File Structure") */}
+          <ZoomWindowSubscriber className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <CanvasNumericInputOverlay />
           {/* ADR-357 Phase 2a — Dynamic Input overlay (length/angle live readout). */}
           <DynamicInputSubscriber
