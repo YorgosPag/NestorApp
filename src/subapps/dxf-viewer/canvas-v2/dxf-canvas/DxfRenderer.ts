@@ -20,7 +20,7 @@ import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver'
 // ADR-363 Phase 2 (deferred pipeline) — DxfOpening unwrap in toEntityModel().
 import type { DxfOpening } from './dxf-types';
 // Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
-import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall } from './dxf-renderer-frame-builders';
+import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, transparencyToAlpha } from './dxf-renderer-frame-builders';
 function mapDxfLineTypeToEnterprise(dxfLineType: string | undefined): 'solid' | 'dashed' | 'dotted' | 'dashdot' {
   const mapping: Record<string, 'solid' | 'dashed' | 'dotted' | 'dashdot'> = {
     'solid': 'solid',
@@ -391,6 +391,11 @@ export class DxfRenderer {
         // reads geometry.outline/axisPolyline + params.width/depth/kind.
         return { ...base, type: 'beam', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
       }
+      case 'column': {
+        // ADR-363 Phase 4 — direct entity: same pattern as DxfWall/DxfBeam.
+        // ColumnRenderer reads geometry.footprint + kind + params at top level.
+        return { ...base, type: 'column', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
+      }
       case 'xline':
         return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
       case 'ray':
@@ -489,11 +494,4 @@ export class DxfRenderer {
     if (!layer) return false;
     return layer.frozen === true || layer.visible === false;
   }
-}
-
-/** DXF transparency (0..90) → canvas alpha (0..1). 0 transparency = fully opaque. */
-function transparencyToAlpha(transparency: number | undefined): number {
-  if (typeof transparency !== 'number' || !Number.isFinite(transparency)) return 1;
-  const clamped = Math.max(0, Math.min(90, transparency));
-  return 1 - clamped / 100;
 }

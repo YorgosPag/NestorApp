@@ -66,15 +66,48 @@ export class BimSceneLayer {
     // ADR-370 Phase 5 — stairs render as multi-mesh components (treads/risers/
     // stringers/handrails/landings). stairToMeshes returns a flat array; each
     // mesh carries its own userData.stairComponent for raycast resolution.
+    let stairsRendered = 0;
+    let stairsSkippedFilter = 0;
+    let totalMeshes = 0;
     for (const stair of entities.stairs) {
       const resolved = resolveEntityBuilding(stair, floors, buildings);
       const buildingId = resolved?.id ?? '';
-      if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) continue;
+      if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) {
+        stairsSkippedFilter++;
+        continue;
+      }
       const meshes = stairToMeshes(stair, floorElevationMm, activeLevelId, resolved?.baseElevation ?? 0);
+      totalMeshes += meshes.length;
       for (const mesh of meshes) {
         mesh.userData['buildingId'] = buildingId;
         this.group.add(mesh);
       }
+      stairsRendered++;
+    }
+    if (entities.stairs.length > 0) {
+      // eslint-disable-next-line no-console
+      console.warn('[BIM-3D-STAIR-DEBUG]', {
+        stairsInput: entities.stairs.length,
+        stairsRendered,
+        stairsSkippedFilter,
+        totalMeshes,
+        activeBuildingId,
+        useNewSystem,
+        buildingVisModesSize: buildingVisModes.size,
+        floorsCount: floors.length,
+        buildingsCount: buildings.length,
+        firstStair: entities.stairs[0] ? {
+          id: entities.stairs[0].id,
+          kind: entities.stairs[0].kind,
+          buildingId: entities.stairs[0].buildingId,
+          floorId: entities.stairs[0].floorId,
+          treadsBelowCount: entities.stairs[0].geometry?.treadsBelowCut?.length ?? 0,
+          treadsAboveCount: entities.stairs[0].geometry?.treadsAboveCut?.length ?? 0,
+          landingsCount: entities.stairs[0].geometry?.landings?.length ?? 0,
+          firstTreadZmm: entities.stairs[0].geometry?.treadsBelowCut?.[0]?.[0]?.z ?? null,
+          firstTreadXmm: entities.stairs[0].geometry?.treadsBelowCut?.[0]?.[0]?.x ?? null,
+        } : null,
+      });
     }
   }
 

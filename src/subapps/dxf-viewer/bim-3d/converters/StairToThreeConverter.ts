@@ -68,21 +68,26 @@ function buildTreadMeshes(
 ): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
   const thicknessM = DEFAULT_TREAD_THICKNESS_MM * MM_TO_M;
-  // Tread polygons co-planar at z = i·rise. We extrude DOWN by tread thickness so
-  // the polygon's z plane becomes the WALKABLE top face of the step.
-  const treads = stair.geometry.treads;
-  for (let i = 0; i < treads.length; i++) {
-    const poly = treads[i]!;
+  // geometry.treads is 2D-cut: only treads below cutPlaneHeight (default 1200mm).
+  // For 3D we want all treads regardless of section plane.
+  const allTreads = [
+    ...stair.geometry.treadsBelowCut,
+    ...stair.geometry.treadsAboveCut,
+  ];
+  for (let i = 0; i < allTreads.length; i++) {
+    const poly = allTreads[i]!;
     const shape = shapeFromPolygon(poly);
     if (!shape) continue;
     const geo = new THREE.ExtrudeGeometry(shape, { depth: thicknessM, bevelEnabled: false });
     geo.applyMatrix4(ROT_X_NEG_90);
     const mat = resolveStairMaterial(stair, 'stair-tread', i);
     const mesh = new THREE.Mesh(geo, mat);
-    // Polygon z is top-face elevation; extrude went into local +Z (= world -Y after rotation),
-    // so geometry sits between [topZ - thicknessM, topZ]. Translate so top face stays at topZ.
+    // Polygon z = top-face elevation (walkable surface). ExtrudeGeometry extrudes
+    // in local +Z; after -90° X rotation this becomes world +Y. So mesh occupies
+    // [position.y, position.y + thicknessM]. To put the top face at topZmm we
+    // translate the mesh DOWN by thicknessM.
     const topZmm = poly[0]!.z;
-    mesh.position.y = baseY + topZmm * MM_TO_M;
+    mesh.position.y = baseY + topZmm * MM_TO_M - thicknessM;
     out.push(tagMesh(mesh, stair, 'tread', levelId));
   }
   return out;
@@ -247,8 +252,9 @@ function buildLandingMeshes(
     const geo = new THREE.ExtrudeGeometry(shape, { depth: thicknessM, bevelEnabled: false });
     geo.applyMatrix4(ROT_X_NEG_90);
     const mesh = new THREE.Mesh(geo, mat);
+    // Same convention as treads: poly.z = walkable top face. Translate DOWN.
     const topZmm = poly[0]!.z;
-    mesh.position.y = baseY + topZmm * MM_TO_M;
+    mesh.position.y = baseY + topZmm * MM_TO_M - thicknessM;
     out.push(tagMesh(mesh, stair, 'landing', levelId));
   }
   return out;

@@ -21,7 +21,7 @@ import type { DxfScene, DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity, Entity } from '../../types/entities';
-import { isArrayEntity, isStairEntity, isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import { isArrayEntity, isStairEntity, isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isXLineEntity, isRayEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
@@ -31,6 +31,8 @@ import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { WallEntity } from '../../bim/types/wall-types';
 // ADR-363 Phase 5 — beam wrapper for DXF render pipeline.
 import type { BeamEntity } from '../../bim/types/beam-types';
+// ADR-363 Phase 4 — column direct entity for DXF render pipeline.
+import type { ColumnEntity } from '../../bim/types/column-types';
 import type { DimensionEntity } from '../../types/dimension';
 import type { PathParams } from '../../systems/array/types';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
@@ -324,6 +326,15 @@ function convertEntity(entity: SceneEntity, layers: SceneLayers, layersById?: Sc
       if (!isBeamEntity(entity)) return null;
       const b = entity as BeamEntity;
       return { ...base, type: 'beam' as const, kind: b.kind, params: b.params, geometry: b.geometry, validation: b.validation } as DxfEntityUnion;
+    }
+    case 'column': {
+      // ADR-363 Phase 4 — direct entity (same pattern as wall/beam). ColumnRenderer
+      // reads geometry.footprint + kind + params fields at top level.
+      // Without this case, freshly-committed columns were silently dropped here →
+      // invisible on 2D canvas (visible only in 3D which reads params directly).
+      if (!isColumnEntity(entity)) return null;
+      const col = entity as ColumnEntity;
+      return { ...base, type: 'column' as const, kind: col.kind, params: col.params, geometry: col.geometry, validation: col.validation } as DxfEntityUnion;
     }
     case 'xline': {
       // ADR-359 Phase 11 — wrap XLineEntity for grip computation pipeline.

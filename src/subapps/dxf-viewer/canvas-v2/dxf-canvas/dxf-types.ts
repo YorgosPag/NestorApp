@@ -19,11 +19,13 @@ import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 // ADR-363 Phase 5 — beam wrapper for DXF render pipeline.
 import type { BeamEntity } from '../../bim/types/beam-types';
+// ADR-363 Phase 4 — column direct entity for DXF render pipeline.
+import type { ColumnEntity } from '../../bim/types/column-types';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'xline' | 'ray' | 'beam';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'xline' | 'ray' | 'beam';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -203,6 +205,18 @@ export interface DxfBeam extends DxfEntity {
   validation?: BeamEntity['validation'];
 }
 
+/**
+ * ADR-363 Phase 4 — DxfColumn direct entity (same pattern as DxfWall/DxfBeam).
+ * ColumnRenderer reads geometry.footprint + kind + params fields at top level.
+ */
+export interface DxfColumn extends DxfEntity {
+  type: 'column';
+  kind: ColumnEntity['kind'];
+  params: ColumnEntity['params'];
+  geometry: ColumnEntity['geometry'];
+  validation?: ColumnEntity['validation'];
+}
+
 /** ADR-359 Phase 11 — XLine wrapper for grip computation pipeline. */
 export interface DxfXLine extends DxfEntity {
   type: 'xline';
@@ -215,7 +229,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfBeam | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfBeam | DxfXLine | DxfRay;
 
 // === DXF SCENE ===
 export interface DxfScene {

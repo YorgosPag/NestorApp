@@ -59,3 +59,10 @@ export function buildOpeningsByWall(entities: readonly DxfEntityUnion[]): Openin
   }
   return m;
 }
+
+/** DXF transparency (0..90) → canvas alpha (0..1). 0 transparency = fully opaque. */
+export function transparencyToAlpha(transparency: number | undefined): number {
+  if (typeof transparency !== 'number' || !Number.isFinite(transparency)) return 1;
+  const clamped = Math.max(0, Math.min(90, transparency));
+  return 1 - clamped / 100;
+}

@@ -40,6 +40,36 @@ These abbreviations can appear anywhere in a prompt (standalone, inline, in task
 - **ZERO EXCEPTIONS.** This rule overrides ALL other rules.
 - 📘 Full git/push/backup protocol: `docs/deployment/git-workflow.md`
 
+## 🚨🚨🚨 SOS. SOS. N.(-1.1) — TERMINAL PROHIBITION: NEVER `--no-verify`
+
+**ABSOLUTELY FORBIDDEN** to use `git commit --no-verify` or `git push --no-verify`.
+- ❌ NEVER `git commit --no-verify` (bypasses pre-commit hook safety checks)
+- ❌ NEVER `git push --no-verify` (bypasses pre-push hook safety checks)
+- ❌ NEVER `--no-gpg-sign` or `-c commit.gpgsign=false` (disables signing)
+- ❌ NEVER any other git bypass flags
+
+**If pre-commit hook FAILS:**
+1. **READ** the error message completely
+2. **DEBUG** the failing check (run individual checks, check Node.js scripts)
+3. **REPORT** the exact error to Giorgio with:
+   - What check failed (CHECK number + name)
+   - Exact error message
+   - Which files trigger it
+   - Estimated fix complexity
+4. **WAIT** for Giorgio's decision: fix the hook, or skip the specific check with env var
+
+**WHY:** Pre-commit hooks are safety nets. They catch:
+- Hardcoded strings, missing i18n keys
+- Security violations, GPL dependencies
+- Dead code, file size violations
+- Architecture regressions (ADR-040 orchestrator subscriptions)
+
+Bypassing them = accepting untested, potentially broken code into the repo.
+
+**INCIDENT:** 2026-05-25 — Agent bypassed hook with `--no-verify` because CHECK 3.17 (entity-audit) was failing. This masked a real bug in the Node.js worker script and let code through without proper validation.
+
+**ZERO EXCEPTIONS.** If hook blocks, something is wrong — either the code or the hook itself. Find out which, then fix it. Never bypass.
+
 ## SOS. SOS. N.0 — CENTRALIZED SYSTEMS
 YOU READ:
 - **MASTER HUB**: `docs/centralized-systems/README.md`
