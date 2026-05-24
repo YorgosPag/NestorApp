@@ -418,6 +418,12 @@
     "notFound": "—",
     "notification": {
       "diagnosticReceived": "New performance diagnostic received"
+    },
+    "history": {
+      "toggleLabel": "Show 60s history",
+      "clearButton": "Clear history",
+      "sparklineAria": "60-second history for {metric}, current value {value}",
+      "tooltipTitle": "Last 60s"
     }
   },
   "viewCube": {

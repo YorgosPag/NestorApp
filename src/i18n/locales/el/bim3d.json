@@ -418,6 +418,12 @@
     "notFound": "—",
     "notification": {
       "diagnosticReceived": "Νέα αναφορά διαγνωστικών απόδοσης"
+    },
+    "history": {
+      "toggleLabel": "Εμφάνιση ιστορικού 60 δευτ.",
+      "clearButton": "Καθαρισμός ιστορικού",
+      "sparklineAria": "Ιστορικό 60 δευτερολέπτων για {metric}, τρέχουσα τιμή {value}",
+      "tooltipTitle": "Τελευταία 60 δευτ."
     }
   },
   "viewCube": {

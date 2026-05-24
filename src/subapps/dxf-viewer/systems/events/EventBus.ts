@@ -238,6 +238,12 @@ export interface DrawingEventMap {
   'crop:polygon': { polygon: Array<[number, number]> };
   // Lasso-crop: freehand polygon drawn by user → clip scene
   'crop:lasso-polygon': { polygon: Array<[number, number]> };
+
+  // ADR-374 — ZOOM Window tool: final world rect to fit-to-view, viewport for scale calc.
+  'zoom-window:apply': {
+    worldBounds: { min: { x: number; y: number }; max: { x: number; y: number } };
+    viewport: { width: number; height: number };
+  };
 }
 
 export type DrawingEventType = keyof DrawingEventMap;

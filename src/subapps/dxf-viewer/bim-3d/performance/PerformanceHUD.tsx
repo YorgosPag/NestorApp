@@ -12,6 +12,7 @@ import { useSyncExternalStore, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePerformanceHUDStore } from './PerformanceHUDStore';
+import { usePerformanceHistoryStore } from './PerformanceHistoryStore';
 import { PerformanceHUDMini } from './PerformanceHUDMini';
 import { PerformanceHUDExpanded } from './PerformanceHUDExpanded';
 import { PerformanceDiagnosticDialog } from './PerformanceDiagnosticDialog';
@@ -33,6 +34,12 @@ export function PerformanceHUD({ canvas, projectId, userId, companyId }: Perform
     usePerformanceHUDStore.subscribe,
     usePerformanceHUDStore.getState,
     usePerformanceHUDStore.getState,
+  );
+
+  const historyEnabled = useSyncExternalStore(
+    usePerformanceHistoryStore.subscribe,
+    () => usePerformanceHistoryStore.getState().enabled,
+    () => false,
   );
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -78,6 +85,7 @@ export function PerformanceHUD({ canvas, projectId, userId, companyId }: Perform
           <PerformanceHUDExpanded
             metrics={metrics}
             renderMode={renderMode}
+            historyEnabled={historyEnabled}
             onCollapse={onCollapse}
             onCopyStats={onCopyStats}
             onDownload={onDownload}

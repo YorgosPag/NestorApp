@@ -15,6 +15,7 @@
 
 import * as THREE from 'three';
 import { usePerformanceHUDStore } from './PerformanceHUDStore';
+import { usePerformanceHistoryStore } from './PerformanceHistoryStore';
 import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
 
 // Chrome-only Performance API extension
@@ -102,5 +103,6 @@ export class PerformanceCollector {
     };
 
     usePerformanceHUDStore.getState().updateMetrics(snapshot);
+    usePerformanceHistoryStore.getState().pushSample(snapshot);
   };
 }

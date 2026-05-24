@@ -18,6 +18,10 @@ import type { Bim3dRenderMode } from './per-mode-promotion';
 import { getEmphasis, EMPHASIS_CLASS } from './per-mode-promotion';
 import { getMetricTier, TIER_TEXT_CLASS } from './performance-thresholds';
 import { formatBytes, formatCount, formatMs } from './metric-formatters';
+import { PerformanceHUDSparklines } from './PerformanceHUDSparklines';
+import { SPARKLINE_METRICS, type SparklineMetric } from './PerformanceHistoryStore';
+
+const SPARKLINE_METRIC_SET: ReadonlySet<string> = new Set(SPARKLINE_METRICS);
 
 const RENDER_MODE_KEY: Record<Bim3dRenderMode, string> = {
   '3d-raster':  'raster',
@@ -28,6 +32,7 @@ const RENDER_MODE_KEY: Record<Bim3dRenderMode, string> = {
 interface PerformanceHUDExpandedProps {
   metrics: PerformanceMetricsSnapshot | null;
   renderMode: Bim3dRenderMode;
+  historyEnabled: boolean;
   onCollapse: () => void;
   onCopyStats: () => void;
   onDownload: () => void;
@@ -109,6 +114,7 @@ function buildRows(t: (k: string) => string): MetricRow[] {
 export function PerformanceHUDExpanded({
   metrics,
   renderMode,
+  historyEnabled,
   onCollapse,
   onCopyStats,
   onDownload,
@@ -118,8 +124,13 @@ export function PerformanceHUDExpanded({
   const rows = buildRows(t);
   const modeLabel = t(`performance.mode.${RENDER_MODE_KEY[renderMode]}`);
 
+  const minWidthClass = historyEnabled ? 'min-w-[230px]' : 'min-w-[180px]';
+
   return (
-    <div className="flex flex-col gap-0.5 p-2 rounded bg-background/90 backdrop-blur border border-border text-xs font-mono min-w-[180px]">
+    <div className={cn(
+      'flex flex-col gap-0.5 p-2 rounded bg-background/90 backdrop-blur border border-border text-xs font-mono',
+      minWidthClass,
+    )}>
       <div className="flex items-center justify-between mb-1">
         <span className="text-muted-foreground font-medium">{modeLabel}</span>
         <div className="flex items-center gap-1">
@@ -157,15 +168,26 @@ export function PerformanceHUDExpanded({
       {rows.map((row) => {
         const emphasisClass = EMPHASIS_CLASS[getEmphasis(row.key, renderMode)];
         const value         = metrics ? row.format(metrics) : '—';
-        const tierClass     = metrics ? TIER_TEXT_CLASS[row.tier(metrics)] : '';
+        const tier          = metrics ? row.tier(metrics) : 'good';
+        const tierClass     = metrics ? TIER_TEXT_CLASS[tier] : '';
+        const showSparkline = historyEnabled && SPARKLINE_METRIC_SET.has(row.key);
 
         return (
           <div
             key={row.key}
-            className={cn('flex justify-between gap-3', emphasisClass)}
+            className={cn('flex items-center justify-between gap-3', emphasisClass)}
           >
             <span className="text-muted-foreground">{row.label}</span>
-            <span className={tierClass}>{value}</span>
+            <span className="flex items-center gap-2">
+              {showSparkline && (
+                <PerformanceHUDSparklines
+                  metricKey={row.key as SparklineMetric}
+                  tier={tier}
+                  ariaLabel={t('performance.history.sparklineAria', { metric: row.label, value })}
+                />
+              )}
+              <span className={tierClass}>{value}</span>
+            </span>
           </div>
         );
       })}
