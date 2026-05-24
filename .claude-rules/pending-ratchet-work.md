@@ -196,11 +196,11 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 
 Phase 1 ✅ IMPLEMENTED 2026-05-24 (schema + AI enricher + tests + post-finalize hook). Φύλαξη για Phase 2 — επόμενες υλοποιήσεις:
 
-- [ ] **Manual override UI** (~3h) — file detail dialog + Phase 2 spec, `iso19650Source.overriddenBy` / `overriddenAt` audit trail.
-- [ ] **Virtual ISO 19650 folder view** (~3h) — file manager filter by `disciplineCode` / `documentSeries` / `cdeState`. Firestore composite indexes required (per filter combo).
-- [ ] **Backfill script** (~2h) — `npm run iso19650:backfill` που τρέχει `enrichFileWithIso19650Metadata` ασύγχρονα για existing FileRecords. Concurrency cap, dry-run mode.
-- [ ] **Distributed concurrency token bucket** (~2h) — Firestore-backed semaphore (per-company max 5 concurrent AI calls, OQ6 industry-default). Replaces Phase 1 reliance on OpenAI built-in rate limits. Pattern: `companies/{cid}/ai_token_buckets/iso19650` document with `tokens` + `lastRefillAt`.
-- [ ] **Monthly aggregate cost dashboard** (~2h) — admin view: per-company breakdown of `iso19650Source.aiCostUsd` summed by month. New collection `ai_cost_aggregates` ή query existing `files` collection.
+- [x] **Manual override UI** ✅ DONE 2026-05-24 — Iso19650MetadataSection.tsx + updateIso19650Metadata() + file-mutation-gateway + i18n (P2.1).
+- [x] **Virtual ISO 19650 folder view** ✅ DONE 2026-05-24 — buildTreeByISO19650 + FileManagerToolbar 4th view mode + iso19650-tree ViewMode (P2.2).
+- [x] **Backfill script** ✅ DONE 2026-05-24 — GET/POST /api/admin/iso19650/backfill, super_admin only, dry-run + execute, max 20/call, idempotent (P2.3).
+- [x] **Distributed concurrency token bucket** ✅ DONE 2026-05-24 — enrichment-slot-service.ts Admin SDK, max 5 slots/company, TTL 5min self-heal, fail-open (P2.4).
+- [x] **Monthly aggregate cost dashboard** ✅ DONE 2026-05-24 — iso19650-cost-log-service.ts + GET /api/admin/iso19650/costs, byDiscipline/byMonth aggregates, max 500 records, rules deployed (P2.5).
 - [x] **`suitabilityCode` field** ✅ DONE 2026-05-24 — SUITABILITY_CODES + SUITABILITY_CODE_REGEX + SuitabilityCode type in iso19650-constants.ts. FileRecord field. isSuitabilityCode() + validateSuitabilityCode() in validators.ts. Enricher schema+prompt+buildAiResult extended. 76 tests green (73 suites / 1179 total).
 - [x] **i18n keys για ISO labels** ✅ DONE 2026-05-24 — `el/iso19650.json` + `en/iso19650.json` NEW. Namespace 'iso19650' registered in SUPPORTED_NAMESPACES + namespace-loaders. 13 disciplines + 9 series + 4 CDE states + 4 suitability codes + 7 labels. i18n audit clean.
 - [x] **`vision-helpers.ts` SSoT extraction** ✅ DONE (prior session) — `downloadFile` / `extractOutputText` / `isImageMime` / `VisionContent` εξαχθηκαν σε shared module. iso19650-enricher.ts + contact-document-classifier.ts imports updated.

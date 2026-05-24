@@ -424,6 +424,24 @@
       "clearButton": "Clear history",
       "sparklineAria": "60-second history for {metric}, current value {value}",
       "tooltipTitle": "Last 60s"
+    },
+    "regression": {
+      "toggle": "Regression alerts",
+      "toastTitle": "Performance dropped below typical",
+      "toastBody": "Mode {mode}: {fps} FPS (typical ~{median}). Open HUD for details.",
+      "openHud": "Open HUD"
+    },
+    "autoSubmit": {
+      "title": "Low performance detected",
+      "body": "We are seeing {fps} FPS for 5+ seconds. Send diagnostics automatically to help us improve?",
+      "bodyGeneric": "We are seeing low performance for 5+ seconds. Send diagnostics automatically to help us improve?",
+      "acceptButton": "Yes, send",
+      "declineButton": "No thanks",
+      "permanentOptOutButton": "No and do not ask again",
+      "cooldownNotice": "We will not ask again for 30 minutes.",
+      "toggle": "Auto-report low performance",
+      "toggleDescription": "When FPS drops below 10 for 5+ seconds, we will ask permission to send diagnostics.",
+      "autoComment": "[Auto-submission — FPS < 10 for 5+ seconds]"
     }
   },
   "viewCube": {

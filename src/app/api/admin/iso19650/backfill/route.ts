@@ -160,9 +160,20 @@ async function handleBackfill(
     const { enrichFileWithIso19650Metadata } = await import(
       '@/services/ai-pipeline/tools/handlers/iso19650-enricher'
     );
+    const { acquireSlot, releaseSlot } = await import(
+      '@/services/iso19650/enrichment-slot-service'
+    );
 
     for (const file of batch) {
       result.processed++;
+
+      const acquired = await acquireSlot(companyId).catch(() => true);
+      if (!acquired) {
+        result.skipped++;
+        logger.info('ISO19650 backfill: slot full, skipping file', { fileId: file.id, companyId });
+        continue;
+      }
+
       try {
         const enrichment = await enrichFileWithIso19650Metadata({
           downloadUrl: file.downloadUrl,
@@ -180,11 +191,27 @@ async function handleBackfill(
         await applyEnrichment(file.id, enrichment);
         result.succeeded++;
         result.totalCostUsd += enrichment.source.aiCostUsd ?? 0;
+
+        // P2.5 — log cost for real AI calls
+        if (enrichment.source.filledBy === 'ai' && (enrichment.source.aiCostUsd ?? 0) > 0) {
+          const { logIso19650EnrichmentCost } = await import(
+            '@/services/iso19650/iso19650-cost-log-service'
+          );
+          await logIso19650EnrichmentCost({
+            companyId,
+            fileId: file.id,
+            costUsd: enrichment.source.aiCostUsd!,
+            model: enrichment.source.aiProvider ?? 'unknown',
+            disciplineCode: enrichment.disciplineCode,
+          }).catch(() => {});
+        }
       } catch (err) {
         result.failed++;
         const msg = `${file.id}: ${getErrorMessage(err)}`;
         result.errors.push(msg);
         logger.warn('ISO19650 backfill file failed', { fileId: file.id, error: getErrorMessage(err) });
+      } finally {
+        await releaseSlot(companyId).catch(() => {});
       }
     }
 

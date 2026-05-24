@@ -389,6 +389,14 @@ export const COLLECTIONS = {
   /** Typed comment markers per project (Issue/Question/Suggestion/Approval/Info). Company-scoped via companyId. IDs via cmt_bim_* prefix. Replies live in subcollection SUBCOLLECTIONS.BIM_COMMENT_REPLIES. */
   BIM_COMMENTS:
     process.env.NEXT_PUBLIC_BIM_COMMENTS_COLLECTION || 'bim_comments',
+
+  // 🪣 ISO 19650 ENRICHMENT SLOTS — ADR-373 P2.4 (distributed token bucket, server-only)
+  /** Per-company distributed token bucket for AI enrichment concurrency control. Doc ID = companyId. Admin SDK only — client access forbidden. */
+  ISO19650_ENRICHMENT_SLOTS: 'iso19650_enrichment_slots',
+
+  // 💰 ISO 19650 COST LOGS — ADR-373 P2.5 (per-file AI enrichment cost tracking, server-only)
+  /** Per-file AI enrichment cost records. Queried by super_admin cost dashboard. Admin SDK only — client access forbidden. */
+  ISO19650_COST_LOG: 'iso19650_cost_log',
 } as const;
 
 // ============================================================================

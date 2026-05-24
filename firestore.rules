@@ -4643,6 +4643,37 @@ service cloud.firestore {
                        );
     }
 
+    // ─── PERFORMANCE DIAGNOSTICS (ADR-366 §B.5 + §C.7.Q4) ───────────────
+    // User-submitted 3D BIM HUD snapshots. Server-only writes via
+    // /api/performance-diagnostics (Admin SDK + EntityAuditService audit).
+    // Read: doc owner OR super-admin. Tenant isolation via companyId.
+    //   - CREATE: deny (server-only via Admin SDK)
+    //   - UPDATE: super-admin only (future triage actions §C.7.Q2)
+    //   - DELETE: super-admin only
+    match /performance_diagnostics/{diagId} {
+
+      allow read: if isAuthenticated()
+                  && resource != null
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['userId'])
+                           && resource.data.userId == request.auth.uid
+                           && resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
+
+      allow create: if false;
+
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && isSuperAdminOnly()
+                    && request.resource.data.companyId == resource.data.companyId;
+
+      allow delete: if isAuthenticated()
+                    && resource != null
+                    && isSuperAdminOnly();
+    }
+
     // ─── CONSTRUCTION ALERTS (ADR-266 §5.8 Phase D.3) ────────────────────
     // Read: tenant-scoped (companyId must match). Created by Admin SDK only.
     // Update: dismiss only — status field + dismissedAt/dismissedBy.

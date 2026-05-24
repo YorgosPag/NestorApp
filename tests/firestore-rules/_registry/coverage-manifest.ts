@@ -1185,6 +1185,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // — ISO 19650 Enrichment (ADR-373 Phase 2.4, 2026-05-24) —
   'iso19650_enrichment_slots',  // lines 3920-3927 — token bucket (Admin SDK only); full matrix later
   'iso19650_cost_log',          // lines 3934-3941 — audit log (Admin SDK only); full matrix later
+  // — BIM 3D Performance Diagnostics (ADR-366 Phase 7 Group B.5, 2026-05-24) —
+  'performance_diagnostics',    // lines 4653-4675 — public (unauthenticated) write for performance telemetry; full matrix later
 ] as const;
 
 // ---------------------------------------------------------------------------

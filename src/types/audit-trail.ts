@@ -56,7 +56,10 @@ export type AuditAction =
   | 'invoice_created'
   | 'document_added'
   | 'document_removed'
-  | 'orphaned';
+  | 'orphaned'
+  | 'auto_submit_prompted'
+  | 'auto_submit_accepted'
+  | 'auto_submit_declined';
 
 // ============================================================================
 // FIELD-LEVEL DIFF
