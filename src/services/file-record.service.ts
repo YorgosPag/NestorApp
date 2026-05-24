@@ -37,7 +37,6 @@ import {
   FILE_LIFECYCLE_STATES,
   FILE_STATUS,
 } from '@/config/domain-constants';
-import { triggerPostFinalizeHooks } from '@/services/file-record-post-finalize-hooks';
 import type {
   FileRecord,
   CreateFileRecordInput,
@@ -236,22 +235,23 @@ export class FileRecordService {
     apiClient.post(API_ROUTES.SEARCH_REINDEX, { entityType: 'file', entityId: input.fileId }).catch(() => {});
 
     // ADR-312 + ADR-373: Post-finalize side effects (DXF + ISO19650 enrichment) — fire-and-forget.
-    // Hooks SSoT: file-record-post-finalize-hooks.ts. Never blocks finalize.
+    // Hooks SSoT: file-record-post-finalize-hooks.ts. Dynamic import keeps server-only chain
+    // out of client bundles (this service is callable from client code paths like useFileDownload).
     type FinalizedSnapshot = { ext?: string; category?: string; originalFilename?: string; contentType?: string; purpose?: string; displayName?: string };
     const finalizedRecord = docSnap.data() as FinalizedSnapshot | undefined;
-    try {
-      triggerPostFinalizeHooks(input.fileId, {
-        ext: finalizedRecord?.ext,
-        category: finalizedRecord?.category,
-        sizeBytes: input.sizeBytes,
-        downloadUrl: input.downloadUrl,
-        originalFilename: finalizedRecord?.originalFilename,
-        contentType: finalizedRecord?.contentType,
-        purpose: finalizedRecord?.purpose,
-      });
-    } catch (err) {
-      logger.warn('Post-finalize hooks dispatch failed', { fileId: input.fileId, error: getErrorMessage(err) });
-    }
+    import('@/services/file-record-post-finalize-hooks')
+      .then(({ triggerPostFinalizeHooks }) =>
+        triggerPostFinalizeHooks(input.fileId, {
+          ext: finalizedRecord?.ext,
+          category: finalizedRecord?.category,
+          sizeBytes: input.sizeBytes,
+          downloadUrl: input.downloadUrl,
+          originalFilename: finalizedRecord?.originalFilename,
+          contentType: finalizedRecord?.contentType,
+          purpose: finalizedRecord?.purpose,
+        }),
+      )
+      .catch((err) => logger.warn('Post-finalize hooks dispatch failed', { fileId: input.fileId, error: getErrorMessage(err) }));
 
     RealtimeService.dispatch('FILE_UPDATED', {
       fileId: input.fileId,

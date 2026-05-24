@@ -135,6 +135,9 @@ export interface UniversalSelectionHook {
   /** Get selected IDs of a specific type */
   getIdsByType: (type: SelectableEntityType) => string[];
 
+  /** Convenience: get selected dxf-entity IDs */
+  getSelectedEntityIds: () => string[];
+
   /** Get total selection count */
   count: () => number;
 
@@ -243,6 +246,9 @@ export function useUniversalSelection(): UniversalSelectionHook {
 
     getIdsByType: (type: SelectableEntityType) =>
       context.getSelectedIdsByType(type),
+
+    getSelectedEntityIds: () =>
+      context.getSelectedIdsByType('dxf-entity'),
 
     count: () =>
       context.getUniversalSelectionCount(),

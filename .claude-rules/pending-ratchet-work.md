@@ -190,6 +190,25 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 
 ---
 
+### 🧱 ADR-373 ISO 19650 — Phase 2 deferred items (priorità media, ~10-15h totali, discovered 2026-05-24 via Phase 1 implementation)
+
+**ADR**: `docs/centralized-systems/reference/adrs/ADR-373-iso19650-metadata-enrichment.md`
+
+Phase 1 ✅ IMPLEMENTED 2026-05-24 (schema + AI enricher + tests + post-finalize hook). Φύλαξη για Phase 2 — επόμενες υλοποιήσεις:
+
+- [ ] **Manual override UI** (~3h) — file detail dialog + Phase 2 spec, `iso19650Source.overriddenBy` / `overriddenAt` audit trail.
+- [ ] **Virtual ISO 19650 folder view** (~3h) — file manager filter by `disciplineCode` / `documentSeries` / `cdeState`. Firestore composite indexes required (per filter combo).
+- [ ] **Backfill script** (~2h) — `npm run iso19650:backfill` που τρέχει `enrichFileWithIso19650Metadata` ασύγχρονα για existing FileRecords. Concurrency cap, dry-run mode.
+- [ ] **Distributed concurrency token bucket** (~2h) — Firestore-backed semaphore (per-company max 5 concurrent AI calls, OQ6 industry-default). Replaces Phase 1 reliance on OpenAI built-in rate limits. Pattern: `companies/{cid}/ai_token_buckets/iso19650` document with `tokens` + `lastRefillAt`.
+- [ ] **Monthly aggregate cost dashboard** (~2h) — admin view: per-company breakdown of `iso19650Source.aiCostUsd` summed by month. New collection `ai_cost_aggregates` ή query existing `files` collection.
+- [x] **`suitabilityCode` field** ✅ DONE 2026-05-24 — SUITABILITY_CODES + SUITABILITY_CODE_REGEX + SuitabilityCode type in iso19650-constants.ts. FileRecord field. isSuitabilityCode() + validateSuitabilityCode() in validators.ts. Enricher schema+prompt+buildAiResult extended. 76 tests green (73 suites / 1179 total).
+- [x] **i18n keys για ISO labels** ✅ DONE 2026-05-24 — `el/iso19650.json` + `en/iso19650.json` NEW. Namespace 'iso19650' registered in SUPPORTED_NAMESPACES + namespace-loaders. 13 disciplines + 9 series + 4 CDE states + 4 suitability codes + 7 labels. i18n audit clean.
+- [x] **`vision-helpers.ts` SSoT extraction** ✅ DONE (prior session) — `downloadFile` / `extractOutputText` / `isImageMime` / `VisionContent` εξαχθηκαν σε shared module. iso19650-enricher.ts + contact-document-classifier.ts imports updated.
+
+**Effort**: ~13.5h totale per Phase 2 (additional al Phase 3 ZIP export).
+
+---
+
 ### 🧹 ADR-370/371 DUPLICATE NUMBERING — housekeeping (priorità bassa, ~15min, discovered 2026-05-24 via ADR-373 OQ8)
 
 **Discovered**: 2026-05-24 durante ADR-373 Phase 1 Recognition (Glob verification del prossimo ADR libero).

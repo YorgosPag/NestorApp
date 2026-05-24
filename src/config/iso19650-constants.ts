@@ -102,8 +102,35 @@ export type CdeState = keyof typeof CDE_STATES;
 export const CDE_STATE_VALUES = Object.keys(CDE_STATES) as CdeState[];
 
 // ============================================================================
+// SUITABILITY CODES (BS 1192:2007+A2 — Phase 2, approved 2026-05-24 OQ2)
+// ============================================================================
+// Separate from revisionCode per BS 1192 separation pattern (Aconex/Bentley).
+// Documents carry a suitability code describing their authorization status
+// as an annotation on top of the revision stage.
+// ============================================================================
+
+export const SUITABILITY_CODES = {
+  IFA: { labelEl: 'Για Έγκριση',           labelEn: 'Issued for Approval' },
+  IFR: { labelEl: 'Για Σχολιασμό',         labelEn: 'Issued for Review' },
+  IFC: { labelEl: 'Για Κατασκευή',         labelEn: 'Issued for Construction' },
+  ASB: { labelEl: 'Τελικό Κατασκευής',     labelEn: 'As-Built' },
+} as const;
+
+export type SuitabilityCode = keyof typeof SUITABILITY_CODES;
+
+/** All suitability codes as an array. */
+export const SUITABILITY_CODE_VALUES = Object.keys(SUITABILITY_CODES) as SuitabilityCode[];
+
+// ============================================================================
 // REGEX VALIDATORS (OQ2 + OQ5 — approved 2026-05-24)
 // ============================================================================
+
+/**
+ * Suitability code regex (BS 1192:2007+A2 §8).
+ * Values: IFA / IFR / IFC / ASB.
+ * Lives in separate `suitabilityCode` field from revisionCode.
+ */
+export const SUITABILITY_CODE_REGEX = /^(IFA|IFR|IFC|ASB)$/;
 
 /**
  * Revision code regex (ISO 19650-2 §5.1.7).
@@ -115,7 +142,7 @@ export const CDE_STATE_VALUES = Object.keys(CDE_STATES) as CdeState[];
  * Followed by exactly 2 digits.
  *
  * Suitability codes (IFA/IFR/IFC/ASB) live in separate `suitabilityCode` field
- * (Phase 2 scope — BS 1192 separation pattern, Aconex/Bentley convention).
+ * (BS 1192 separation pattern, Aconex/Bentley convention).
  *
  * Examples: P01, T02, C03, R10, AB99
  */

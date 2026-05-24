@@ -167,6 +167,14 @@ export const PERMISSIONS = {
   "bim_dimensions_3d:dimensions:read": true,
   "bim_dimensions_3d:dimensions:update": true,
   "bim_dimensions_3d:dimensions:delete": true,
+
+  // BIM Comments / Markup (ADR-366 Phase 9 / C.2) — typed comment markers
+  "bim_comments:comments:create": true,
+  "bim_comments:comments:read": true,
+  "bim_comments:comments:update": true,
+  "bim_comments:comments:delete": true,
+  "bim_comments:comments:assign": true,
+  "bim_comments:comments:archive": true,
 } as const;
 
 /** Permission ID derived from registry. */

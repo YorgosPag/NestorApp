@@ -111,6 +111,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'bim3d': return () => import('./locales/el/bim3d.json');
     case 'bim-3d-aria': return () => import('./locales/el/bim-3d-aria.json');
     case 'bim-materials': return () => import('./locales/el/bim-materials.json');
+    case 'iso19650': return () => import('./locales/el/iso19650.json');
     default: return null;
   }
 }
@@ -211,6 +212,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'bim3d': return () => import('./locales/en/bim3d.json');
     case 'bim-3d-aria': return () => import('./locales/en/bim-3d-aria.json');
     case 'bim-materials': return () => import('./locales/en/bim-materials.json');
+    case 'iso19650': return () => import('./locales/en/iso19650.json');
     default: return null;
   }
 }

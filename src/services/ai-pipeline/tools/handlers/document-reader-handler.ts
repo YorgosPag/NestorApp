@@ -29,8 +29,8 @@ import {
 import {
   isImageMime,
   extractOutputText,
-} from './contact-document-classifier';
-import type { VisionContent } from './contact-document-classifier';
+  type VisionContent,
+} from './vision-helpers';
 
 const logger = createModuleLogger('DOC_READER');
 

@@ -91,7 +91,7 @@ export function useLayersCallbacks({
   const handleEntityClick = useCallback((entityId: string, addToSelection: boolean = false) => {
     let newSelection: string[];
     if (addToSelection) {
-      const currentIds = universalSelection.getIdsByType('dxf-entity');
+      const currentIds = universalSelection.getSelectedEntityIds();
       newSelection = currentIds.includes(entityId)
         ? currentIds.filter(id => id !== entityId)
         : [...currentIds, entityId];

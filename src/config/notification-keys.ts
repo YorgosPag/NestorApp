@@ -131,12 +131,24 @@ export const NOTIFICATION_KEYS = {
   },
 
   // ==========================================================================
-  // BIM 3D VIEWER domain (ADR-366 §B.5 — Performance HUD diagnostics)
+  // BIM 3D VIEWER domain (ADR-366 §B.5 + C.2)
   // ==========================================================================
   bim3d: {
     diagnostic: {
       /** Super-admin gets notified when a user submits a performance HUD snapshot */
       received: 'bim3d:performance.notification.diagnosticReceived',
+    },
+    comment: {
+      /** User is @-mentioned in a BIM comment */
+      mentioned: 'bim3d:comments.notification.mentioned',
+      /** Comment is assigned to user */
+      assigned: 'bim3d:comments.notification.assigned',
+      /** New reply on a comment the user authored or is assigned to */
+      replied: 'bim3d:comments.notification.replied',
+      /** Comment status changed (e.g. Open → Resolved) */
+      statusChanged: 'bim3d:comments.notification.statusChanged',
+      /** Comment archived (30-day auto or admin manual) */
+      archived: 'bim3d:comments.notification.archived',
     },
   },
 

@@ -19,12 +19,15 @@ import {
   DISCIPLINE_CODES,
   DOCUMENT_SERIES,
   CDE_STATES,
+  SUITABILITY_CODES,
+  SUITABILITY_CODE_REGEX,
   REVISION_CODE_REGEX,
   BUILDING_CODE_REGEX,
   STUDY_GROUP_TO_DEFAULT_DISCIPLINE,
   type DisciplineCode,
   type DocumentSeries,
   type CdeState,
+  type SuitabilityCode,
 } from '@/config/iso19650-constants';
 import { getGroupForPurpose } from '@/config/study-groups-config';
 
@@ -45,6 +48,10 @@ export function isCdeState(value: unknown): value is CdeState {
   return typeof value === 'string' && value in CDE_STATES;
 }
 
+export function isSuitabilityCode(value: unknown): value is SuitabilityCode {
+  return typeof value === 'string' && value in SUITABILITY_CODES;
+}
+
 // ============================================================================
 // REGEX VALIDATORS — return boolean (true = valid)
 // ============================================================================
@@ -56,6 +63,14 @@ export function isCdeState(value: unknown): value is CdeState {
  */
 export function validateRevisionCode(value: unknown): value is string {
   return typeof value === 'string' && REVISION_CODE_REGEX.test(value);
+}
+
+/**
+ * Validates suitability code against BS 1192:2007+A2 §8.
+ * Valid: 'IFA', 'IFR', 'IFC', 'ASB'. Invalid: 'IFT', 'ifc', etc.
+ */
+export function validateSuitabilityCode(value: unknown): value is string {
+  return typeof value === 'string' && SUITABILITY_CODE_REGEX.test(value);
 }
 
 /**

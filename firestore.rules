@@ -3821,6 +3821,103 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 💬 BIM_COMMENTS COLLECTION - ADR-366 Phase 9 / C.2
+    // =========================================================================
+    // Typed comment markers per project (Issue/Question/Suggestion/Approval/Info).
+    // Company-scoped via companyId + projectId. Soft-delete via archivedAt.
+    // Replies live in subcollection: bim_comments/{id}/replies/{cmtr_bim_*}.
+    match /bim_comments/{commentId} {
+
+      // 📖 READ: Tenant-scoped — only users from comment's company
+      // Super-admin can read all (ADR-145 diagnostics)
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
+
+      // ✍️ CREATE: authenticated + tenant-bound + required fields
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.keys().hasAll([
+                         'id', 'companyId', 'projectId', 'type', 'status',
+                         'content', 'authorId', 'authorName',
+                         'anchor', 'mentionedUserIds', 'attachments',
+                         'createdAt', 'updatedAt'
+                       ])
+                    && request.resource.data.id is string
+                    && request.resource.data.companyId is string
+                    && request.resource.data.projectId is string
+                    && request.resource.data.type in ['issue', 'question', 'suggestion', 'approval', 'info']
+                    && request.resource.data.status == 'open'
+                    && request.resource.data.content is string
+                    && request.resource.data.content.size() > 0
+                    && request.resource.data.authorId == request.auth.uid
+                    && (
+                         isSuperAdminOnly()
+                         || request.resource.data.companyId == getUserCompanyId()
+                       );
+
+      // 📝 UPDATE: companyId + projectId immutable, tenant-locked
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         isSuperAdminOnly()
+                         || belongsToCompany(resource.data.companyId)
+                       )
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.projectId == resource.data.projectId
+                    && request.resource.data.id == resource.data.id
+                    && request.resource.data.authorId == resource.data.authorId;
+
+      // 🗑️ DELETE: forbidden — use archivedAt soft-delete instead
+      allow delete: if isSuperAdminOnly();
+
+      // 💬 REPLIES subcollection — flat 1-level thread (cmtr_bim_* IDs)
+      match /replies/{replyId} {
+
+        // 📖 READ: same tenant as parent comment
+        allow read: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (get(/databases/$(database)/documents/bim_comments/$(commentId)).data.companyId
+                             == getUserCompanyId())
+                       );
+
+        // ✍️ CREATE: authenticated + required fields + matches parent company
+        allow create: if isAuthenticated()
+                      && resource == null
+                      && request.resource.data.keys().hasAll([
+                           'id', 'companyId', 'commentId', 'content',
+                           'authorId', 'authorName', 'mentionedUserIds',
+                           'createdAt', 'updatedAt'
+                         ])
+                      && request.resource.data.authorId == request.auth.uid
+                      && request.resource.data.commentId == commentId
+                      && (
+                           isSuperAdminOnly()
+                           || request.resource.data.companyId == getUserCompanyId()
+                         );
+
+        // 📝 UPDATE: author can edit own reply
+        allow update: if isAuthenticated()
+                      && resource != null
+                      && resource.data.authorId == request.auth.uid
+                      && request.resource.data.companyId == resource.data.companyId
+                      && request.resource.data.commentId == resource.data.commentId;
+
+        // 🗑️ DELETE: author or super-admin
+        allow delete: if isAuthenticated()
+                      && resource != null
+                      && (
+                           isSuperAdminOnly()
+                           || resource.data.authorId == request.auth.uid
+                         );
+      }
+    }
+
+    // =========================================================================
     // 🔒 HELPER FUNCTIONS - VALIDATION & SECURITY
     // =========================================================================
 

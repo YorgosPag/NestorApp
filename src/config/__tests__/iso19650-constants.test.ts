@@ -14,6 +14,9 @@ import {
   DOCUMENT_SERIES_VALUES,
   ISO19650_BUDGET_CAP_USD,
   REVISION_CODE_REGEX,
+  SUITABILITY_CODES,
+  SUITABILITY_CODE_REGEX,
+  SUITABILITY_CODE_VALUES,
   STUDY_GROUP_TO_DEFAULT_DISCIPLINE,
   type DisciplineCode,
 } from '@/config/iso19650-constants';
@@ -149,5 +152,48 @@ describe('iso19650-constants — STUDY_GROUP_TO_DEFAULT_DISCIPLINE', () => {
 describe('iso19650-constants — ISO19650_BUDGET_CAP_USD (OQ6)', () => {
   it('is set to $0.01 per file', () => {
     expect(ISO19650_BUDGET_CAP_USD).toBe(0.01);
+  });
+});
+
+describe('iso19650-constants — suitability codes (BS 1192 OQ2 Phase 2)', () => {
+  it('exposes exactly 4 suitability codes', () => {
+    expect(SUITABILITY_CODE_VALUES).toHaveLength(4);
+  });
+
+  it('contains IFA/IFR/IFC/ASB', () => {
+    expect(SUITABILITY_CODE_VALUES.sort()).toEqual(['ASB', 'IFA', 'IFC', 'IFR']);
+  });
+
+  it('every suitability code has Greek + English labels', () => {
+    SUITABILITY_CODE_VALUES.forEach((code) => {
+      expect(SUITABILITY_CODES[code].labelEl).toBeTruthy();
+      expect(SUITABILITY_CODES[code].labelEn).toBeTruthy();
+    });
+  });
+
+  it.each(['IFA', 'IFR', 'IFC', 'ASB'])(
+    'SUITABILITY_CODE_REGEX accepts %s',
+    (code) => {
+      expect(SUITABILITY_CODE_REGEX.test(code)).toBe(true);
+    },
+  );
+
+  it.each([
+    ['ifa', 'lowercase'],
+    ['IFXX', 'unknown code'],
+    ['IFC ', 'trailing space'],
+    ['', 'empty'],
+    ['P01', 'revision code — different field'],
+    ['R02', 'revision code — different field'],
+  ])('SUITABILITY_CODE_REGEX rejects %s (%s)', (code) => {
+    expect(SUITABILITY_CODE_REGEX.test(code)).toBe(false);
+  });
+
+  it('suitability codes are distinct from revision codes (orthogonality)', () => {
+    const suitabilityCodes = new Set(SUITABILITY_CODE_VALUES);
+    const revisionPrefixes = ['P', 'T', 'C', 'R', 'AB'];
+    revisionPrefixes.forEach((prefix) => {
+      expect(suitabilityCodes.has(prefix as never)).toBe(false);
+    });
   });
 });

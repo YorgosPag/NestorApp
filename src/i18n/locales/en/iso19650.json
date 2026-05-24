@@ -1,0 +1,51 @@
+{
+  "discipline": {
+    "A": "Architectural",
+    "S": "Structural",
+    "M": "Mechanical (HVAC / Plumbing)",
+    "E": "Electrical",
+    "K": "KENAK (Energy)",
+    "H": "HSE (Health / Safety / Environment)",
+    "N": "Notarial / Legal",
+    "X": "Fiscal",
+    "T": "Topographic",
+    "L": "Lift / Elevator",
+    "P": "Permits",
+    "F": "Fire Safety",
+    "D": "Demolition / AEKK"
+  },
+  "documentSeries": {
+    "100": "Plans",
+    "200": "Elevations",
+    "300": "Sections",
+    "400": "Details",
+    "500": "Schedules",
+    "600": "Landscape",
+    "700": "Structural Drawings",
+    "800": "MEP Schematics",
+    "900": "As-Built / AIM"
+  },
+  "cdeState": {
+    "WIP": "Work in Progress",
+    "SHARED": "Shared for Review",
+    "PUBLISHED": "Authorized for Use",
+    "SUPERSEDED": "Superseded by Newer Revision"
+  },
+  "suitabilityCode": {
+    "IFA": "Issued for Approval",
+    "IFR": "Issued for Review",
+    "IFC": "Issued for Construction",
+    "ASB": "As-Built"
+  },
+  "labels": {
+    "disciplineCode": "Discipline Code",
+    "documentSeries": "Document Series",
+    "revisionCode": "Revision",
+    "suitabilityCode": "Suitability Code",
+    "cdeState": "CDE State",
+    "buildingCode": "Building Code",
+    "aiClassified": "AI Classified",
+    "manualOverride": "Manual Override",
+    "noClassification": "No classification"
+  }
+}

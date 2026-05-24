@@ -29,6 +29,7 @@ import type {
   DisciplineCode,
   DocumentSeries,
   CdeState,
+  SuitabilityCode,
 } from '@/config/iso19650-constants';
 
 // ============================================================================
@@ -660,11 +661,19 @@ export interface FileRecord {
   /**
    * 🌐 ISO 19650-2 — Revision tag matching REVISION_CODE_REGEX.
    * Pattern: (P|T|C|R|AB) + 2 digits. Examples: P01, T02, C03, R10, AB99.
-   * Suitability codes (IFA/IFR/IFC/ASB) live in separate `suitabilityCode`
-   * field (Phase 2).
    * @see ADR-373 §"Resolved Decisions" OQ2
    */
   revisionCode?: string;
+
+  /**
+   * 🌐 BS 1192:2007+A2 §8 — Suitability code (authorization status).
+   * IFA = Issued for Approval, IFR = Issued for Review,
+   * IFC = Issued for Construction, ASB = As-Built.
+   * Orthogonal to `revisionCode` (separate BS 1192 field, per OQ2 decision).
+   * Auto-filled by AI classifier; manual override via file detail dialog (Phase 2).
+   * @see ADR-373 §"Resolved Decisions" OQ2
+   */
+  suitabilityCode?: SuitabilityCode;
 
   /**
    * 🌐 ISO 19650-1 §10.2 — Common Data Environment workflow state.

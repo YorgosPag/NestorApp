@@ -187,7 +187,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const handleSceneChangeRef = React.useRef(handleSceneChange);
   // SSoT: selectedEntityIds derived from universalSelection — single write path
   const selectedEntityIds = React.useMemo(
-    () => universalSelection.getIdsByType('dxf-entity'),
+    () => universalSelection.getSelectedEntityIds(),
     [universalSelection]
   );
   // 🏢 Universal selection primary ID

@@ -167,7 +167,7 @@ export function useSmartDelete({
     }
 
     // PRIORITY 3: Delete selected DXF entities with UNDO SUPPORT
-    const selectedDxfEntityIds = universalSelectionRef.current.getIdsByType('dxf-entity');
+    const selectedDxfEntityIds = universalSelectionRef.current.getSelectedEntityIds();
     if (selectedDxfEntityIds.length > 0 && levelManager.currentLevelId) {
       const adapter = new LevelSceneManagerAdapter(
         levelManager.getLevelScene,

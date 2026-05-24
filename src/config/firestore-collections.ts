@@ -384,6 +384,11 @@ export const COLLECTIONS = {
   /** Manual 3D dimensions per project (aligned/linear/radial/angular). Company-scoped via companyId. IDs via dim3d_* prefix. */
   BIM_DIMENSIONS_3D:
     process.env.NEXT_PUBLIC_BIM_DIMENSIONS_3D_COLLECTION || 'bim_dimensions_3d',
+
+  // 💬 BIM COMMENTS — ADR-366 Phase 9 / C.2 (typed BIM comment markers)
+  /** Typed comment markers per project (Issue/Question/Suggestion/Approval/Info). Company-scoped via companyId. IDs via cmt_bim_* prefix. Replies live in subcollection SUBCOLLECTIONS.BIM_COMMENT_REPLIES. */
+  BIM_COMMENTS:
+    process.env.NEXT_PUBLIC_BIM_COMMENTS_COLLECTION || 'bim_comments',
 } as const;
 
 // ============================================================================
@@ -453,6 +458,9 @@ export const SUBCOLLECTIONS = {
 
   // DXF overlay level items (subcollection under dxf_overlay_levels/{id})
   DXF_OVERLAY_LEVEL_ITEMS: process.env.NEXT_PUBLIC_DXF_OVERLAY_LEVEL_ITEMS_SUBCOL || 'items',
+
+  // BIM Comment replies (ADR-366 Phase 9 / C.2 — subcollection under bim_comments/{id})
+  BIM_COMMENT_REPLIES: process.env.NEXT_PUBLIC_BIM_COMMENT_REPLIES_SUBCOL || 'replies',
 } as const;
 
 // ============================================================================

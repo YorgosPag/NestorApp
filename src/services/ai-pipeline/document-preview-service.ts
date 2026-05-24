@@ -23,8 +23,8 @@ import {
   downloadFile,
   isImageMime,
   extractOutputText,
-} from './tools/handlers/contact-document-classifier';
-import type { VisionContent } from './tools/handlers/contact-document-classifier';
+  type VisionContent,
+} from './tools/handlers/vision-helpers';
 
 const logger = createModuleLogger('DOC_PREVIEW');
 

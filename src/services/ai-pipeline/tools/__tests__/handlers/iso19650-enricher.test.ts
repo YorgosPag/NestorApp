@@ -11,7 +11,7 @@
  */
 
 jest.mock(
-  '@/services/ai-pipeline/tools/handlers/contact-document-classifier',
+  '@/services/ai-pipeline/tools/handlers/vision-helpers',
   () => ({
     downloadFile: jest.fn(),
     isImageMime: (ct: string) => ct.startsWith('image/'),
@@ -27,7 +27,7 @@ import {
 import {
   downloadFile,
   extractOutputText,
-} from '@/services/ai-pipeline/tools/handlers/contact-document-classifier';
+} from '@/services/ai-pipeline/tools/handlers/vision-helpers';
 import { ISO19650_BUDGET_CAP_USD } from '@/config/iso19650-constants';
 
 const mockedDownload = downloadFile as jest.MockedFunction<typeof downloadFile>;
@@ -127,6 +127,7 @@ describe('enrichFileWithIso19650Metadata — AI success', () => {
         disciplineCode: 'A',
         documentSeries: 100,
         revisionCode: 'P01',
+        suitabilityCode: 'IFC',
         cdeState: 'WIP',
         buildingCode: 'Κ1',
         confidence: 0.92,
@@ -140,9 +141,33 @@ describe('enrichFileWithIso19650Metadata — AI success', () => {
     expect(result.disciplineCode).toBe('A');
     expect(result.documentSeries).toBe(100);
     expect(result.revisionCode).toBe('P01');
+    expect(result.suitabilityCode).toBe('IFC');
     expect(result.cdeState).toBe('WIP');
     expect(result.buildingCode).toBe('Κ1');
     expect(result.source.aiCostUsd).toBeGreaterThan(0);
+  });
+
+  it('returns suitabilityCode null when AI returns null (document lacks title block annotation)', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    });
+    mockedExtract.mockReturnValue(
+      JSON.stringify({
+        disciplineCode: 'S',
+        documentSeries: 700,
+        revisionCode: 'R02',
+        suitabilityCode: null,
+        cdeState: 'PUBLISHED',
+        buildingCode: null,
+        confidence: 0.88,
+        reasoning: 'Στατικό σχέδιο χωρίς suitability annotation.',
+      }),
+    );
+    const result = await enrichFileWithIso19650Metadata(SMALL_PDF_INPUT);
+    expect(result.source.filledBy).toBe('ai');
+    expect(result.suitabilityCode).toBeUndefined();
+    expect(result.revisionCode).toBe('R02');
   });
 
   it('skips invalid AI values silently (does not break the rest)', async () => {
@@ -155,6 +180,7 @@ describe('enrichFileWithIso19650Metadata — AI success', () => {
         disciplineCode: 'A',
         documentSeries: 100,
         revisionCode: 'INVALID-format',   // fails REVISION_CODE_REGEX → dropped
+        suitabilityCode: 'IFT',           // unknown code → dropped
         cdeState: 'BOGUS',                // fails type guard → dropped
         buildingCode: 'κ1',               // lowercase → fails regex → dropped
         confidence: 0.85,
@@ -166,6 +192,7 @@ describe('enrichFileWithIso19650Metadata — AI success', () => {
     expect(result.disciplineCode).toBe('A');
     expect(result.documentSeries).toBe(100);
     expect(result.revisionCode).toBeUndefined();
+    expect(result.suitabilityCode).toBeUndefined();
     expect(result.cdeState).toBeUndefined();
     expect(result.buildingCode).toBeUndefined();
   });

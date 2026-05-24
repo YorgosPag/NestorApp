@@ -349,7 +349,7 @@ Check console for detailed metrics`;
     const cleanup = eventBus.on('dxf.highlightByIds', ({ mode, ids }) => {
       if (mode !== 'select') return;
       const validIds: string[] = Array.isArray(ids) ? ids : [];
-      const currentIds = universalSelection.getIdsByType('dxf-entity');
+      const currentIds = universalSelection.getSelectedEntityIds();
       if (currentIds.length !== validIds.length || !currentIds.every((v, i) => v === validIds[i])) {
         universalSelection.replaceEntitySelection(validIds);
       }

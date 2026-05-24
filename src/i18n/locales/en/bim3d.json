@@ -156,7 +156,8 @@
       "quality": "Quality",
       "sections": "Section",
       "accessibility": "Accessibility",
-      "dimensions3d": "Dimensions"
+      "dimensions3d": "Dimensions",
+      "comments": "Comments"
     },
     "buildings": {
       "label": "Building",
@@ -459,6 +460,77 @@
     },
     "modeSwitch": {
       "toast": "Switched to 2D for shortcut {shortcut}"
+    }
+  },
+  "comments": {
+    "panelTitle": "BIM Comments",
+    "noComments": "No comments yet",
+    "newComment": "New Comment",
+    "placeholder": "Describe the comment...",
+    "searchPlaceholder": "Search comments...",
+    "filter": {
+      "all": "All",
+      "open": "Open",
+      "inReview": "In Review",
+      "resolved": "Resolved",
+      "archived": "Archived"
+    },
+    "type": {
+      "issue": "Issue",
+      "question": "Question",
+      "suggestion": "Suggestion",
+      "approval": "Approval",
+      "info": "Info"
+    },
+    "status": {
+      "open": "Open",
+      "inReview": "In Review",
+      "resolved": "Resolved",
+      "archived": "Archived"
+    },
+    "details": {
+      "replies": "Replies",
+      "addReply": "Add a reply...",
+      "attachments": "Attachments",
+      "history": "History",
+      "assignee": "Assigned to",
+      "noAssignee": "Unassigned",
+      "author": "Author",
+      "submit": "Submit",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this comment?",
+      "close": "Close"
+    },
+    "actions": {
+      "markInReview": "Send for Review",
+      "resolve": "Resolve",
+      "reopen": "Reopen",
+      "archive": "Archive"
+    },
+    "attachment": {
+      "upload": "Upload image",
+      "maxFiles": "Up to 5 images per comment",
+      "maxSize": "Max 5MB per image",
+      "invalidType": "Only PNG/JPG allowed",
+      "tooLarge": "File exceeds 5MB",
+      "tooMany": "Maximum 5 images allowed"
+    },
+    "mention": {
+      "placeholder": "Search users...",
+      "noUsers": "No users found"
+    },
+    "anchor": {
+      "entity": "Entity",
+      "world": "Point",
+      "orphaned": "Orphaned (entity deleted)"
+    },
+    "notification": {
+      "mentioned": "Mentioned in BIM comment",
+      "assigned": "BIM comment assigned to you",
+      "replied": "New reply on comment",
+      "statusChanged": "Comment status changed",
+      "archived": "Comment archived"
     }
   },
   "dimensions": {

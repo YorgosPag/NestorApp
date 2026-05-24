@@ -17,6 +17,12 @@ import 'server-only';
 import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { CONTACT_ENTRY_POINTS } from '@/config/upload-entry-points/entries-contact';
 import { isRecord } from '@/lib/type-guards';
+import {
+  downloadFile,
+  extractOutputText,
+  isImageMime,
+  type VisionContent,
+} from './vision-helpers';
 
 // ============================================================================
 // TYPES
@@ -129,7 +135,6 @@ function buildClassificationSchema(): Record<string, unknown> {
 // OPENAI VISION CALL
 // ============================================================================
 
-const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
 const CONFIDENCE_THRESHOLD = 0.5;
 
 const FALLBACK_RESULT: ContactClassifyResult = {
@@ -138,32 +143,6 @@ const FALLBACK_RESULT: ContactClassifyResult = {
   reasoning: 'Αυτόματη ταξινόμηση δεν ήταν δυνατή.',
   suggestedLabel: 'Άλλο Έγγραφο',
 };
-
-export async function downloadFile(url: string): Promise<Buffer | null> {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
-
-    const contentLength = response.headers.get('content-length');
-    if (contentLength && parseInt(contentLength, 10) > MAX_FILE_SIZE) return null;
-
-    const arrayBuffer = await response.arrayBuffer();
-    if (arrayBuffer.byteLength > MAX_FILE_SIZE) return null;
-
-    return Buffer.from(arrayBuffer);
-  } catch {
-    return null;
-  }
-}
-
-export function isImageMime(contentType: string): boolean {
-  return contentType.startsWith('image/');
-}
-
-export type VisionContent =
-  | { type: 'input_text'; text: string }
-  | { type: 'input_image'; image_url: string }
-  | { type: 'input_file'; filename: string; file_data: string };
 
 /**
  * Classify a contact document using OpenAI vision.
@@ -287,36 +266,3 @@ export async function classifyContactDocument(params: {
   }
 }
 
-// ============================================================================
-// RESPONSE PARSING (mirrors OpenAIAnalysisProvider pattern)
-// ============================================================================
-
-export function extractOutputText(payload: unknown): string | null {
-  if (!isRecord(payload)) return null;
-
-  const outputText = (payload as Record<string, unknown>).output_text;
-  if (typeof outputText === 'string' && outputText.trim()) {
-    return outputText.trim();
-  }
-
-  const output = (payload as Record<string, unknown>).output;
-  if (!Array.isArray(output)) return null;
-
-  for (const item of output) {
-    if (!isRecord(item)) continue;
-    if ((item as Record<string, unknown>).type !== 'message') continue;
-    const itemContent = (item as Record<string, unknown>).content;
-    if (!Array.isArray(itemContent)) continue;
-
-    for (const entry of itemContent) {
-      if (!isRecord(entry)) continue;
-      if ((entry as Record<string, unknown>).type !== 'output_text') continue;
-      const text = (entry as Record<string, unknown>).text;
-      if (typeof text === 'string' && text.trim()) {
-        return text.trim();
-      }
-    }
-  }
-
-  return null;
-}

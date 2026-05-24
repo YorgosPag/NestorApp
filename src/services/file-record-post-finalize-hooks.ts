@@ -22,7 +22,14 @@
  * @see ADR-312 — DXF Floorplan Processing (Phase 7.1)
  */
 
-import 'server-only';
+// NOTE: NO `import 'server-only'` — Turbopack follows static AND dynamic
+// imports for server-only detection. Even though `file-record.service.ts`
+// uses `import('./file-record-post-finalize-hooks')` (dynamic), the chain
+// useFileDownload(client) → … → post-finalize-hooks still trips the
+// server-only build check in Next.js 15 Turbopack. We rely on the runtime
+// guard `if (typeof window !== 'undefined') return;` in
+// `triggerPostFinalizeHooks` to keep hooks server-side at runtime.
+// See ADR-373 §D9 build-error postmortem.
 
 import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 
@@ -146,6 +153,10 @@ async function applyIso19650Enrichment(
  * Caller wraps with .catch() as triple-safety belt-and-suspenders.
  */
 export function triggerPostFinalizeHooks(fileId: string, ctx: PostFinalizeContext): void {
+  // Runtime server-only guard (ADR-373 §D9) — replaces `import 'server-only'`
+  // which Turbopack rejects across `file-record.service` dynamic-import chain.
+  // Hooks must NEVER run client-side (would spam Firestore + leak OpenAI tokens).
+  if (typeof window !== 'undefined') return;
   triggerDxfAutoProcess(fileId, ctx);
   triggerIso19650Enrichment(fileId, ctx);
 }

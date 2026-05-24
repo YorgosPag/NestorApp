@@ -124,7 +124,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // ADR-281: filter out overlays linked to soft-deleted properties
   const currentOverlays = useLiveOverlaysForLevel(levelManager.currentLevelId);
   // === Selection (SSoT: UniversalSelection — selectedEntityIds derived, no local state) ===
-  const selectedEntityIds = useMemo(() => universalSelection.getIdsByType('dxf-entity'), [universalSelection]);
+  const selectedEntityIds = useMemo(() => universalSelection.getSelectedEntityIds(), [universalSelection]);
   // SSoT: thin alias — delegates to replaceEntitySelection (SelectionSystem is the sole owner).
   // No functional-updater form: all consumers pass string[] directly.
   const setSelectedEntityIds = useCallback((ids: string[]) => {
@@ -134,7 +134,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const handleCycleEntitySelect = useCallback((id: string) => { setSelectedEntityIds([id]); }, [setSelectedEntityIds]);
   useSelectionCycling({ activeTool, onSelectEntity: handleCycleEntitySelect });
   // ADR-040 rule 2 — getter for event-time reads (useTextDoubleClickEditor).
-  const getSelectedEntityIds = useCallback(() => universalSelectionRef.current.getIdsByType('dxf-entity'), []);
+  const getSelectedEntityIds = useCallback(() => universalSelectionRef.current.getSelectedEntityIds(), []);
   const entitySelectedOnMouseDownRef = useRef(false);
   // 🚀 PERF (2026-05-09 Phase E → 2026-05-10 Phase II): hoveredEntityId +
   // hoveredOverlayId both removed from CanvasSection. HoverStore subscriptions

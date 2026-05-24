@@ -156,7 +156,8 @@
       "quality": "Ποιότητα",
       "sections": "Τομή",
       "accessibility": "Προσβασιμότητα",
-      "dimensions3d": "Διαστάσεις"
+      "dimensions3d": "Διαστάσεις",
+      "comments": "Σχόλια"
     },
     "buildings": {
       "label": "Κτίριο",
@@ -459,6 +460,77 @@
     },
     "modeSwitch": {
       "toast": "Αλλαγή σε 2D για συντόμευση {shortcut}"
+    }
+  },
+  "comments": {
+    "panelTitle": "Σχόλια BIM",
+    "noComments": "Δεν υπάρχουν σχόλια",
+    "newComment": "Νέο Σχόλιο",
+    "placeholder": "Περιγράψτε το σχόλιο...",
+    "searchPlaceholder": "Αναζήτηση σχολίων...",
+    "filter": {
+      "all": "Όλα",
+      "open": "Ανοιχτά",
+      "inReview": "Σε Ανασκόπηση",
+      "resolved": "Επιλυμένα",
+      "archived": "Αρχειοθετημένα"
+    },
+    "type": {
+      "issue": "Πρόβλημα",
+      "question": "Ερώτηση",
+      "suggestion": "Πρόταση",
+      "approval": "Έγκριση",
+      "info": "Πληροφορία"
+    },
+    "status": {
+      "open": "Ανοιχτό",
+      "inReview": "Σε Ανασκόπηση",
+      "resolved": "Επιλυμένο",
+      "archived": "Αρχειοθετημένο"
+    },
+    "details": {
+      "replies": "Απαντήσεις",
+      "addReply": "Προσθήκη απάντησης...",
+      "attachments": "Συνημμένα",
+      "history": "Ιστορικό",
+      "assignee": "Ανατεθειμένο σε",
+      "noAssignee": "Χωρίς ανάθεση",
+      "author": "Δημιουργός",
+      "submit": "Υποβολή",
+      "cancel": "Ακύρωση",
+      "delete": "Διαγραφή",
+      "deleteConfirm": "Διαγραφή σχολίου;",
+      "close": "Κλείσιμο"
+    },
+    "actions": {
+      "markInReview": "Αποστολή για Ανασκόπηση",
+      "resolve": "Επίλυση",
+      "reopen": "Επαναφορά",
+      "archive": "Αρχειοθέτηση"
+    },
+    "attachment": {
+      "upload": "Μεταφόρτωση εικόνας",
+      "maxFiles": "Έως 5 εικόνες ανά σχόλιο",
+      "maxSize": "Μέγ. 5MB ανά εικόνα",
+      "invalidType": "Επιτρέπονται μόνο PNG/JPG",
+      "tooLarge": "Το αρχείο υπερβαίνει τα 5MB",
+      "tooMany": "Επιτρέπονται έως 5 εικόνες"
+    },
+    "mention": {
+      "placeholder": "Αναζήτηση χρήστη...",
+      "noUsers": "Δεν βρέθηκαν χρήστες"
+    },
+    "anchor": {
+      "entity": "Στοιχείο",
+      "world": "Σημείο",
+      "orphaned": "Ορφανό (στοιχείο διαγράφηκε)"
+    },
+    "notification": {
+      "mentioned": "Αναφορά σε σχόλιο BIM",
+      "assigned": "Ανατέθηκε σχόλιο BIM",
+      "replied": "Νέα απάντηση σε σχόλιο",
+      "statusChanged": "Αλλαγή κατάστασης σχολίου",
+      "archived": "Αρχειοθέτηση σχολίου"
     }
   },
   "dimensions": {

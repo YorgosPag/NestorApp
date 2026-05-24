@@ -91,7 +91,7 @@ export function useLayerOperations({
     if (!confirmed) return;
 
     const result = layerService.deleteLayer(layerName, scene);
-    handleLayerServiceResult(result, universalSelection.getIdsByType('dxf-entity'), universalSelection.replaceEntitySelection, setLevelScene, currentLevelId);
+    handleLayerServiceResult(result, universalSelection.getSelectedEntityIds(), universalSelection.replaceEntitySelection, setLevelScene, currentLevelId);
   };
 
   const handleLayerColorChange = (layerName: string, color: string) => {
@@ -182,7 +182,7 @@ export function useLayerOperations({
       entities: scene.entities.filter(entity => entity.id !== entityId)
     };
 
-    const currentIds = universalSelection.getIdsByType('dxf-entity');
+    const currentIds = universalSelection.getSelectedEntityIds();
     const newSelection = currentIds.filter(id => id !== entityId);
     if (newSelection.length !== currentIds.length) {
       universalSelection.replaceEntitySelection(newSelection);
@@ -297,7 +297,7 @@ export function useLayerOperations({
   const handleColorGroupDelete = (colorGroupName: string, layersInGroup: string[]) => {
     if (!scene || !currentLevelId) return;
     const result = layerService.deleteColorGroup(colorGroupName, layersInGroup, scene);
-    handleLayerServiceResult(result, universalSelection.getIdsByType('dxf-entity'), universalSelection.replaceEntitySelection, setLevelScene, currentLevelId);
+    handleLayerServiceResult(result, universalSelection.getSelectedEntityIds(), universalSelection.replaceEntitySelection, setLevelScene, currentLevelId);
   };
 
   const handleColorGroupColorChange = (colorGroupName: string, layersInGroup: string[], color: string) => {

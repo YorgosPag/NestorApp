@@ -102,7 +102,7 @@ export function LevelPanel({
   const { user } = useAuth();
   const overlayStore = useOverlayStore();
   const universalSelection = useUniversalSelection();
-  const selectedEntityIds = universalSelection.getIdsByType('dxf-entity');
+  const selectedEntityIds = universalSelection.getSelectedEntityIds();
   const { handleOverlaySelect, handleOverlayEdit, handleOverlayDelete } =
     createOverlayHandlers({
       setSelectedOverlay: (id: string | null) => universalSelection.handleOverlaySelect(id),

@@ -16,16 +16,25 @@
  *
  * Pattern mirrors `contact-document-classifier.ts` (same Responses API +
  * vision pipeline). Vision helpers (`downloadFile`, `extractOutputText`,
- * `isImageMime`, `VisionContent`) imported directly from the contact
- * classifier — extraction to a `vision-helpers.ts` SSoT is queued as a
- * Phase 2 small task (Boy Scout, N.0.2).
+ * `isImageMime`, `VisionContent`) are imported from the shared
+ * `vision-helpers.ts` SSoT (ADR-373 §D9 Boy Scout, N.0.2). This keeps the
+ * `server-only` AI chain off the static import graph reaching client
+ * bundles (Turbopack follows static chains even past dynamic-import
+ * boundaries — see ADR-373 §D9 build-error postmortem).
  *
  * @module services/ai-pipeline/tools/handlers/iso19650-enricher
  * @see ADR-373 §D5 — AI Auto-Fill Architecture
  * @see ADR-191 — Enterprise Document Management (parent)
  */
 
-import 'server-only';
+// NOTE: NO `import 'server-only'` here — Turbopack follows static + dynamic
+// imports for server-only detection (see ADR-373 §D9). The chain
+// useFileDownload(client) → file-mutation-gateway → file-record.service →
+// [dynamic] post-finalize-hooks → [dynamic] iso19650-enricher still triggers
+// a build error if any link declares `'server-only'`. We rely on runtime
+// guards instead (`typeof window !== 'undefined'`) — defense-in-depth at
+// every public entry. The OpenAI key check provides additional protection:
+// `process.env.OPENAI_API_KEY` is undefined client-side → AI call short-circuits.
 
 import { AI_ANALYSIS_DEFAULTS, AI_COST_CONFIG } from '@/config/ai-analysis-config';
 import {
@@ -33,15 +42,18 @@ import {
   DISCIPLINE_CODE_VALUES,
   DOCUMENT_SERIES_VALUES,
   ISO19650_BUDGET_CAP_USD,
+  SUITABILITY_CODE_VALUES,
   type CdeState,
   type DisciplineCode,
   type DocumentSeries,
+  type SuitabilityCode,
 } from '@/config/iso19650-constants';
 import {
   deriveFromPurpose,
   isCdeState,
   isDisciplineCode,
   isDocumentSeries,
+  isSuitabilityCode,
   validateBuildingCode,
   validateRevisionCode,
 } from '@/services/iso19650/validators';
@@ -51,7 +63,7 @@ import {
   extractOutputText,
   isImageMime,
   type VisionContent,
-} from '@/services/ai-pipeline/tools/handlers/contact-document-classifier';
+} from '@/services/ai-pipeline/tools/handlers/vision-helpers';
 
 // ============================================================================
 // PUBLIC TYPES
@@ -72,6 +84,7 @@ export interface Iso19650EnrichmentResult {
   disciplineCode?: DisciplineCode;
   documentSeries?: DocumentSeries;
   revisionCode?: string;
+  suitabilityCode?: SuitabilityCode;
   cdeState?: CdeState;
   buildingCode?: string;
   source: Iso19650SourceAudit;
@@ -144,6 +157,7 @@ const SYSTEM_PROMPT =
   'documentSeries: αριθμός σειράς (100=Κατόψεις, 200=Όψεις, 300=Τομές, 400=Λεπτομέρειες, ' +
   '500=Πίνακες κουφωμάτων, 600=Διαμορφώσεις, 700=Στατικά σχέδια, 800=Η/Μ schematics, 900=As-Built). ' +
   'revisionCode: τύπος (P|T|C|R|AB) + 2 ψηφία π.χ. P01, R02, C03. ' +
+  'suitabilityCode: κωδικός καταλληλότητας BS 1192 — IFA (Για Έγκριση), IFR (Για Σχολιασμό), IFC (Για Κατασκευή), ASB (Τελικό Κατασκευής). ' +
   'cdeState: WIP (σε εξέλιξη), SHARED (διαβούλευση), PUBLISHED (εγκεκριμένο), SUPERSEDED (αντικατασταθηκε). ' +
   'buildingCode: κωδικός κτιρίου π.χ. Κ1, Κ1-Α, A-1. ' +
   'Απάντησε ΜΟΝΟ με JSON σύμφωνα με το schema.';
@@ -175,6 +189,7 @@ const ENRICHMENT_SCHEMA: Record<string, unknown> = {
       'disciplineCode',
       'documentSeries',
       'revisionCode',
+      'suitabilityCode',
       'cdeState',
       'buildingCode',
       'confidence',
@@ -195,6 +210,11 @@ const ENRICHMENT_SCHEMA: Record<string, unknown> = {
       revisionCode: {
         type: ['string', 'null'],
         description: 'Revision tag (P|T|C|R|AB + 2 digits) or null if not present.',
+      },
+      suitabilityCode: {
+        type: ['string', 'null'],
+        enum: [...SUITABILITY_CODE_VALUES, null],
+        description: 'BS 1192 suitability code (IFA/IFR/IFC/ASB) or null if not found on document.',
       },
       cdeState: {
         type: ['string', 'null'],
@@ -356,6 +376,7 @@ function buildAiResult(
   if (isDisciplineCode(parsed.disciplineCode)) result.disciplineCode = parsed.disciplineCode;
   if (isDocumentSeries(parsed.documentSeries)) result.documentSeries = parsed.documentSeries;
   if (validateRevisionCode(parsed.revisionCode)) result.revisionCode = parsed.revisionCode;
+  if (isSuitabilityCode(parsed.suitabilityCode)) result.suitabilityCode = parsed.suitabilityCode;
   if (isCdeState(parsed.cdeState)) result.cdeState = parsed.cdeState;
   if (validateBuildingCode(parsed.buildingCode)) result.buildingCode = parsed.buildingCode;
   return result;
@@ -436,6 +457,11 @@ function checkPreflightGate(
 export async function enrichFileWithIso19650Metadata(
   params: Iso19650EnrichmentInput,
 ): Promise<Iso19650EnrichmentResult> {
+  // Runtime server-only guard (ADR-373 §D9) — replaces `import 'server-only'`
+  // which Turbopack rejects across the file-record dynamic-import chain.
+  if (typeof window !== 'undefined') {
+    return buildFallbackFromPurpose(params.purpose, 'skipped', 'Client-side enrichment blocked.');
+  }
   const apiKey = process.env.OPENAI_API_KEY;
   const estimatedCostUsd = estimateEnrichmentCostUsd(params.sizeBytes);
 

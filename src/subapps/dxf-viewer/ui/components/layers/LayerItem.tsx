@@ -114,7 +114,7 @@ export function LayerItem({
   onEntityRename
 }: LayerItemProps) {
   const universalSelection = useUniversalSelection();
-  const selectedEntityIds = universalSelection.getIdsByType('dxf-entity');
+  const selectedEntityIds = universalSelection.getSelectedEntityIds();
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
