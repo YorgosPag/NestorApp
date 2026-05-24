@@ -14,6 +14,7 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
+import type { StairEntity } from '../../bim/types/stair-types';
 import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import { applyBuildingsPreset } from '../utils/building-visibility-state';
 import type { BuildingVisMode, BuildingPreset } from '../utils/building-visibility-state';
@@ -34,6 +35,7 @@ export interface Bim3DEntities {
   readonly columns: readonly ColumnEntity[];
   readonly beams: readonly BeamEntity[];
   readonly slabs: readonly SlabEntity[];
+  readonly stairs: readonly StairEntity[];
 }
 
 interface Bim3DEntitiesStoreState extends Bim3DEntities {
@@ -53,6 +55,7 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   setColumns: (columns: readonly ColumnEntity[]) => void;
   setBeams: (beams: readonly BeamEntity[]) => void;
   setSlabs: (slabs: readonly SlabEntity[]) => void;
+  setStairs: (stairs: readonly StairEntity[]) => void;
   setActiveLevelId: (id: string | null) => void;
   setBuildings: (buildings: readonly BuildingRef[]) => void;
   setFloors: (floors: readonly FloorRef[]) => void;
@@ -68,6 +71,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     columns: [],
     beams: [],
     slabs: [],
+    stairs: [],
     activeLevelId: null,
     buildings: [],
     floors: [],
@@ -78,6 +82,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     setColumns: (columns) => set({ columns }),
     setBeams: (beams) => set({ beams }),
     setSlabs: (slabs) => set({ slabs }),
+    setStairs: (stairs) => set({ stairs }),
     setActiveLevelId: (activeLevelId) => set({ activeLevelId }),
     setBuildings: (buildings) => set({ buildings }),
     setFloors: (floors) => set({ floors }),
@@ -105,5 +110,6 @@ export function selectBim3DEntities(state: Bim3DEntitiesStoreState): Bim3DEntiti
     columns: state.columns,
     beams: state.beams,
     slabs: state.slabs,
+    stairs: state.stairs,
   };
 }

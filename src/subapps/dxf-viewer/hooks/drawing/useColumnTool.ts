@@ -113,6 +113,8 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   const [state, setState] = useState<ColumnToolState>(INITIAL_STATE);
   const stateRef = useRef<ColumnToolState>(state);
   stateRef.current = state;
+  const getSceneUnitsRef = useRef(getSceneUnits);
+  getSceneUnitsRef.current = getSceneUnits;
 
   // ── lifecycle ────────────────────────────────────────────────────────────
   const activate = useCallback(() => {
@@ -231,6 +233,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         ...(s.overrides.material !== undefined ? { material: s.overrides.material } : {}),
         ...(s.overrides.lshape !== undefined ? { lshape: s.overrides.lshape } : {}),
         ...(s.overrides.tshape !== undefined ? { tshape: s.overrides.tshape } : {}),
+        sceneUnits: getSceneUnitsRef.current?.() ?? 'mm',
       };
       return computeAnchorGhostFootprints(cursorPos, s.kind, s.anchor, ghostOverrides);
     },

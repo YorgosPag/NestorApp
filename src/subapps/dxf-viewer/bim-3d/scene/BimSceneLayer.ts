@@ -10,6 +10,7 @@
 import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh } from '../converters/BimToThreeConverter';
+import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import type { BuildingVisMode } from '../utils/building-visibility-state';
@@ -61,6 +62,19 @@ export class BimSceneLayer {
       if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) continue;
       const mesh = slabToMesh(slab, activeLevelId, resolved?.baseElevation ?? 0);
       if (mesh) { mesh.userData['buildingId'] = buildingId; this.group.add(mesh); }
+    }
+    // ADR-370 Phase 5 — stairs render as multi-mesh components (treads/risers/
+    // stringers/handrails/landings). stairToMeshes returns a flat array; each
+    // mesh carries its own userData.stairComponent for raycast resolution.
+    for (const stair of entities.stairs) {
+      const resolved = resolveEntityBuilding(stair, floors, buildings);
+      const buildingId = resolved?.id ?? '';
+      if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) continue;
+      const meshes = stairToMeshes(stair, floorElevationMm, activeLevelId, resolved?.baseElevation ?? 0);
+      for (const mesh of meshes) {
+        mesh.userData['buildingId'] = buildingId;
+        this.group.add(mesh);
+      }
     }
   }
 

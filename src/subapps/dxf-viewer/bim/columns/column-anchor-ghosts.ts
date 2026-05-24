@@ -27,6 +27,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D, Polygon3D } from '../types/bim-base';
+import type { SceneUnits } from '../../utils/scene-units';
 import {
   ANCHOR_CYCLE_ORDER,
   DEFAULT_COLUMN_DEPTH_MM,
@@ -58,6 +59,7 @@ export interface ColumnGhostOverrides {
   readonly material?: string;
   readonly lshape?: ColumnLshapeParams;
   readonly tshape?: ColumnTshapeParams;
+  readonly sceneUnits?: SceneUnits;
 }
 
 /**
@@ -93,6 +95,7 @@ function buildGhostParams(
     depth: overrides.depth ?? DEFAULT_COLUMN_DEPTH_MM,
     height: overrides.height ?? DEFAULT_COLUMN_HEIGHT_MM,
     rotation: overrides.rotation ?? DEFAULT_COLUMN_ROTATION_DEG,
+    sceneUnits: overrides.sceneUnits ?? 'mm',
     baseBinding: DEFAULT_COLUMN_BASE_BINDING,
     topBinding: DEFAULT_COLUMN_TOP_BINDING,
     baseOffset: 0,

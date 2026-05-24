@@ -23,6 +23,7 @@ import { SlabPersistenceHost } from './SlabPersistenceHost';
 import { ColumnPersistenceHost } from './ColumnPersistenceHost';
 import { BeamPersistenceHost } from './BeamPersistenceHost';
 import { SlabOpeningPersistenceHost } from './SlabOpeningPersistenceHost';
+import { StairPersistenceHost } from './StairPersistenceHost';
 import { SlabOpeningStackHost } from './SlabOpeningStackHost';
 import { PsetEditorHost } from './PsetEditorHost';
 import { IfcExportHost } from './IfcExportHost';
@@ -110,6 +111,7 @@ export function DxfViewerTopBar({
         buildingId={levelManager.saveContext?.buildingId ?? undefined}
       />
       <SlabOpeningStackHost levelManager={levelManager} />
+      <StairPersistenceHost currentScene={currentScene} />
       <PsetEditorHost levelManager={levelManager} />
       <IfcExportHost />
       {false && (

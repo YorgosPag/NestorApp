@@ -48,6 +48,7 @@ const EMPTY_BIM_ENTITIES: Bim3DEntities = {
   columns: [],
   beams: [],
   slabs: [],
+  stairs: [],
 };
 
 export interface BimViewport3DProps {
@@ -143,8 +144,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       managerRef.current.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined);
     } else {
       const entitiesState = useBim3DEntitiesStore.getState();
-      const { walls, columns, beams, slabs, activeLevelId, floors, buildings, activeBuildingId, buildingVisibilityModes } = entitiesState;
-      managerRef.current.syncBimEntities({ walls, columns, beams, slabs }, 0, activeLevelId ?? undefined, floors, buildings, activeBuildingId, buildingVisibilityModes);
+      const { walls, columns, beams, slabs, stairs, activeLevelId, floors, buildings, activeBuildingId, buildingVisibilityModes } = entitiesState;
+      managerRef.current.syncBimEntities({ walls, columns, beams, slabs, stairs }, 0, activeLevelId ?? undefined, floors, buildings, activeBuildingId, buildingVisibilityModes);
     }
     managerRef.current.syncDxfOverlay(useDxfOverlay3DStore.getState().dxfScene);
 
@@ -186,7 +187,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     if (externalEntitiesMode) return;
     return useBim3DEntitiesStore.subscribe((s) => {
       managerRef.current?.syncBimEntities(
-        { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs },
+        { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs, stairs: s.stairs },
         0,
         s.activeLevelId ?? undefined,
         s.floors,

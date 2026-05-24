@@ -409,6 +409,11 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       const units = scene ? resolveSceneUnits(scene) : 'mm';
       return SLAB_AUTO_CLOSE_TOLERANCE_DEFAULT * mmToSceneUnits(units);
     },
+    getSceneUnits: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return 'mm';
+      return resolveSceneUnits(levelManager.getLevelScene(levelId));
+    },
     onSlabCreated: (slabEntity) => appendAndBroadcast(levelManager, slabEntity, 'slab'),
   });
   useToolLifecycle(activeTool === 'slab', slabTool.activate, slabTool.deactivate);
@@ -422,6 +427,11 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   const columnTool = useColumnTool({
     currentLevelId: levelManager.currentLevelId || '0',
     onColumnCreated: (columnEntity) => appendAndBroadcast(levelManager, columnEntity, 'column'),
+    getSceneUnits: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return 'mm';
+      return resolveSceneUnits(levelManager.getLevelScene(levelId));
+    },
   });
   useToolLifecycle(activeTool === 'column', columnTool.activate, columnTool.deactivate);
   // ============================================================================

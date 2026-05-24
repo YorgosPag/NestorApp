@@ -32,7 +32,21 @@ const MAT_DEFS: Record<string, PbrDef> = {
   'elem-column':  { color: 0x8a8a8a, roughness: 0.75, metalness: 0.05 },
   'elem-beam':    { color: 0x6d4c3d, roughness: 0.75, metalness: 0.05 },
   'elem-slab':    { color: 0xbdbdbd, roughness: 0.80, metalness: 0.00 },
+  // ADR-370 Phase 5 — stair element-type defaults (Revit-aligned: wood treads,
+  // concrete risers/landings, metal stringers/handrails).
+  'elem-stair-tread':    { color: 0x8b5e3c, roughness: 0.70, metalness: 0.00 },
+  'elem-stair-riser':    { color: 0xbdbdbd, roughness: 0.85, metalness: 0.00 },
+  'elem-stair-stringer': { color: 0x6b6b6b, roughness: 0.40, metalness: 0.80 },
+  'elem-stair-landing':  { color: 0xbdbdbd, roughness: 0.80, metalness: 0.00 },
+  'elem-stair-handrail': { color: 0x999999, roughness: 0.25, metalness: 0.90 },
 };
+
+export type Stair3DComponent =
+  | 'stair-tread'
+  | 'stair-riser'
+  | 'stair-stringer'
+  | 'stair-landing'
+  | 'stair-handrail';
 
 const CACHE = new Map<string, THREE.MeshStandardMaterial>();
 
@@ -66,7 +80,9 @@ export function getMaterial3D(materialId: string): THREE.MeshStandardMaterial {
 }
 
 /** Resolve MeshStandardMaterial for element types without DNA. */
-export function getElementMaterial3D(type: 'column' | 'beam' | 'slab'): THREE.MeshStandardMaterial {
+export function getElementMaterial3D(
+  type: 'column' | 'beam' | 'slab' | Stair3DComponent,
+): THREE.MeshStandardMaterial {
   const key = `elem-${type}`;
   let mat = CACHE.get(key);
   if (!mat) {
