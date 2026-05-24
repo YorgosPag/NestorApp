@@ -71,6 +71,48 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-24 — Lasso Selection (AutoCAD 3rd selection mode)
+
+Free-form polygon selection (`mousedown + drag > 5px` while button held).
+
+**Behavior**:
+- CW lasso → window mode (solid blue fill, entities fully inside)
+- CCW lasso → crossing mode (dashed green fill, entities intersecting or inside)
+- Disambiguation: lasso (button held + drag) vs two-click marquee (click→release→move→click) are mutually exclusive
+
+**New files**:
+- `systems/cursor/LassoStore.ts` — zero-React-dispatch singleton store (mirrors `SelectionStore` pattern, ADR-040 Phase III compliant). Exports `computeLassoMode()` (shoelace formula for CW/CCW detection).
+
+**Modified files** (ADR-040 compliance):
+- `systems/cursor/mouse-handler-types.ts` — `lassoDownRef` added to `MouseHandlerRefs`
+- `systems/cursor/useCentralizedMouseHandlers.ts` — arms `lassoDownRef` on left-button mousedown (select tool only); cancels lasso on leave
+- `systems/cursor/mouse-handler-move.ts` — activates `LassoStore.startLasso()` at 5px drag threshold; `LassoStore.appendPoint()` each move frame
+- `systems/cursor/mouse-handler-up.ts` — `LassoStore.endLasso()` on mouseup; routes result through `UniversalMarqueeSelector.performLassoSelection()`
+- `systems/selection/utils.ts` — `findEntitiesInLasso()` upgraded: proper window (all key points inside) / crossing (any key point or segment intersects) logic + `segmentsIntersect()` helper
+- `systems/selection/UniversalMarqueeSelection.ts` — `performLassoSelection()` static method (mirrors `performSelection`, supports entities + color layers)
+- `canvas-v2/layer-canvas/selection/SelectionRenderer.ts` — `renderLasso(path, mode, settings)` using canvas free-form path
+- `canvas-v2/layer-canvas/layer-types.ts` — `showLasso`, `lassoPath`, `lassoMode` added to `LayerRenderOptions`
+- `canvas-v2/layer-canvas/layer-canvas-hooks.ts` — `LassoStore.getSnapshot()` in `renderLayers` callback (same pattern as `gripStyleStore.get()`)
+- `canvas-v2/layer-canvas/LayerRenderer.ts` — `renderLasso()` call in both `renderLegacy` and `renderUnified` paths
+- `canvas-v2/layer-canvas/LayerCanvas.tsx` — `LassoStore.subscribe()` marks `isDirtyRef`
+- `canvas-v2/dxf-canvas/dxf-canvas-renderer.ts` — lasso render in scene render loop
+- `canvas-v2/dxf-canvas/DxfCanvas.tsx` — `LassoStore.subscribe()` marks `isDirtyRef`
+
+**ADR-040 compliance**:
+- Rule 1 (orchestrators): `LassoStore.subscribe()` marks `isDirtyRef` only — zero React re-renders on append
+- Rule 4 (high-freq): `appendPoint()` is O(n array copy) with 1px dedup guard; bounded in practice by mousemove ~60fps
+- No `useSyncExternalStore` in orchestrators; store read at RAF render time via direct `getSnapshot()`
+
+### 2026-05-24 — Two-click selection pattern (AutoCAD standard)
+
+Selection interaction changed from click-hold-drag to click→move→click (AutoCAD standard).
+
+- **Before**: `mousedown` called `SelectionStore.startSelection()` → drag with mouse held → `mouseup` confirmed.
+- **After**: First `mouseup` on empty space (no entity hit, select tool, no modifier keys) calls `SelectionStore.startSelection()` → mouse moves freely → second `mouseup` processes `processMarqueeSelection()`.
+- `SelectionStore` and `SelectionRenderer` unchanged — `isSelecting = true` still gates the rect rendering in both `DxfCanvas` and `LayerCanvas` subscribers.
+- `mouse-handler-move.ts` unchanged — `cursor.updateSelection(screenPos)` runs whenever `cursor.isSelecting`, which now covers mouse-free movement in two-click mode.
+- **Files**: `systems/cursor/useCentralizedMouseHandlers.ts` (removed `startSelection` from mousedown), `systems/cursor/mouse-handler-up.ts` (added two-click start in `else if` branch).
+
 ### 2026-05-21 — ADR-366 Phase 4.7: SelectionCursorIcon cross-mode badge
 
 `SelectionCursorIcon` lands as a new accessibility leaf, mounted once inside `CanvasLayerStack` after `Focus2DOverlayLeaf`. Cross-mode (2D + 3D) cursor modifier badge for selection modifier keys.

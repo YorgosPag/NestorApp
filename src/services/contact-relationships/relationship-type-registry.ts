@@ -30,6 +30,7 @@ import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   RELATIONSHIP_METADATA,
+  buildCrossingsForSources,
   type RelationshipCategory,
   type RelationshipTypeMetadata,
   type WorkAddressDerivation,
@@ -212,6 +213,9 @@ const ALLOWED_FOR_BY_CATEGORY: Record<RelationshipCategory, ContactType[]> = {
 };
 
 export function buildDefaultMetadata(category: RelationshipCategory): RelationshipTypeMetadata {
+  const allowedFor = ALLOWED_FOR_BY_CATEGORY[category];
+  // ADR-372: derive allowedCrossings from source set; all targets permitted for custom types.
+  const allowedCrossings = buildCrossingsForSources(allowedFor);
   return {
     category,
     derivesWorkAddress: DEFAULT_DERIVES_WORK_ADDRESS,
@@ -219,7 +223,8 @@ export function buildDefaultMetadata(category: RelationshipCategory): Relationsh
     isOwnership:  category === 'ownership',
     isGovernment: category === 'government',
     isProperty:   category === 'property',
-    allowedFor: ALLOWED_FOR_BY_CATEGORY[category],
+    allowedFor,
+    allowedCrossings,
   };
 }
 

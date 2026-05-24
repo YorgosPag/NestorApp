@@ -16,6 +16,7 @@ import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { useCentralizedMouseHandlers } from '../../systems/cursor/useCentralizedMouseHandlers';
 import { useCursor } from '../../systems/cursor/CursorSystem';
 import { SelectionStore } from '../../systems/cursor/SelectionStore';
+import { LassoStore } from '../../systems/cursor/LassoStore';
 import { SelectionRenderer } from '../layer-canvas/selection/SelectionRenderer';
 import type { ViewTransform, Viewport, Point2D, CanvasConfig } from '../../rendering/types/Types';
 import type { DxfScene, DxfRenderOptions } from './dxf-types';
@@ -294,6 +295,14 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     return SelectionStore.subscribe(() => {
       const s = SelectionStore.getSnapshot();
       selectionStateRef.current = { isSelecting: s.isSelecting, selectionStart: s.selectionStart, selectionCurrent: s.selectionCurrent };
+      isDirtyRef.current = true;
+    });
+  }, [isDirtyRef]);
+
+  // Lasso subscription — mark DXF canvas dirty on every path append.
+  // dxf-canvas-renderer reads LassoStore.getSnapshot() directly at render time.
+  useEffect(() => {
+    return LassoStore.subscribe(() => {
       isDirtyRef.current = true;
     });
   }, [isDirtyRef]);

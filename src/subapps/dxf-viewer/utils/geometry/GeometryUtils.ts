@@ -209,6 +209,33 @@ export function isPointInPolygon(point: Point2D, polygon: Point2D[]): boolean {
 }
 
 /**
+ * 🎯 CENTRALIZED SEGMENT-SEGMENT INTERSECTION TEST
+ * Cross-product method. Handles collinear endpoint overlap.
+ * SSoT for all selection systems (lasso, marquee, crossing).
+ */
+export function segmentsIntersect(
+  a1: Point2D, a2: Point2D,
+  b1: Point2D, b2: Point2D,
+): boolean {
+  const cross = (o: Point2D, a: Point2D, b: Point2D) =>
+    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const d1 = cross(b1, b2, a1);
+  const d2 = cross(b1, b2, a2);
+  const d3 = cross(a1, a2, b1);
+  const d4 = cross(a1, a2, b2);
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+      ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return true;
+  const onSeg = (p: Point2D, s: Point2D, e: Point2D) =>
+    Math.min(s.x, e.x) <= p.x && p.x <= Math.max(s.x, e.x) &&
+    Math.min(s.y, e.y) <= p.y && p.y <= Math.max(s.y, e.y);
+  if (d1 === 0 && onSeg(a1, b1, b2)) return true;
+  if (d2 === 0 && onSeg(a2, b1, b2)) return true;
+  if (d3 === 0 && onSeg(b1, a1, a2)) return true;
+  if (d4 === 0 && onSeg(b2, a1, a2)) return true;
+  return false;
+}
+
+/**
  * 🏢 ADR-114: CENTRALIZED BOUNDS CALCULATION
  * Re-export από geometry-utils.ts (Single Source of Truth)
  *

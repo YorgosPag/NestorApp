@@ -13,6 +13,7 @@
  */
 
 import type { BoundingBox3D, Point3D, Polygon3D } from '../../types/bim-base';
+import { segmentsIntersect } from '../../../utils/geometry/GeometryUtils';
 
 /**
  * Compute signed polygon area via the shoelace (Gauss) formula.
@@ -116,26 +117,6 @@ export function isPolygonSelfIntersecting(vertices: readonly Point3D[]): boolean
     }
   }
   return false;
-}
-
-// ─── Internal helpers ────────────────────────────────────────────────────────
-
-function segmentsIntersect(p1: Point3D, p2: Point3D, p3: Point3D, p4: Point3D): boolean {
-  const d1 = direction(p3, p4, p1);
-  const d2 = direction(p3, p4, p2);
-  const d3 = direction(p1, p2, p3);
-  const d4 = direction(p1, p2, p4);
-  if (
-    ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
-    ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))
-  ) {
-    return true;
-  }
-  return false;
-}
-
-function direction(a: Point3D, b: Point3D, c: Point3D): number {
-  return (c.x - a.x) * (b.y - a.y) - (b.x - a.x) * (c.y - a.y);
 }
 
 /** Convenience: re-export polygon vertices as a closed Polygon3D. */

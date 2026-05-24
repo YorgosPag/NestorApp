@@ -29,6 +29,7 @@ import { perfStart, perfEnd } from '../../debug/perf-line-profile';
 import { subscribeIsolateEffects } from '../../systems/isolate/IsolateEffectsStore';
 // ADR-358 §5.6.bis Phase 10 — re-render on LayerStore mutations (visible/frozen toggles).
 import { subscribeLayerStore } from '../../stores/LayerStore';
+import { LassoStore, computeLassoMode } from '../../systems/cursor/LassoStore';
 
 const logger = createModuleLogger('DxfCanvasRenderer');
 
@@ -245,18 +246,29 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
         }
       }
 
-      // 4: Selection box
+      // 4: Selection box + lasso polygon
       const selState = refs.selectionStateRef.current;
       const currentActiveTool = refs.activeToolRef.current;
-      if (refs.selectionRendererRef.current && currentActiveTool !== 'pan' &&
-          selState.isSelecting && selState.selectionStart && selState.selectionCurrent) {
-        const curSettings = getCursorSettings();
-        const selectionBox = {
-          startPoint: selState.selectionStart,
-          endPoint: selState.selectionCurrent,
-          type: (selState.selectionCurrent.x > selState.selectionStart.x) ? 'window' : 'crossing'
-        } as const;
-        refs.selectionRendererRef.current.renderSelection(selectionBox, currentViewport, curSettings.selection);
+      const curSettings = getCursorSettings();
+
+      if (refs.selectionRendererRef.current && currentActiveTool !== 'pan') {
+        if (selState.isSelecting && selState.selectionStart && selState.selectionCurrent) {
+          const selectionBox = {
+            startPoint: selState.selectionStart,
+            endPoint: selState.selectionCurrent,
+            type: (selState.selectionCurrent.x > selState.selectionStart.x) ? 'window' : 'crossing',
+          } as const;
+          refs.selectionRendererRef.current.renderSelection(selectionBox, currentViewport, curSettings.selection);
+        }
+
+        const lassoSnap = LassoStore.getSnapshot();
+        if (lassoSnap.isLasso && lassoSnap.lassoPath.length >= 2) {
+          refs.selectionRendererRef.current.renderLasso(
+            lassoSnap.lassoPath,
+            computeLassoMode(lassoSnap.lassoPath),
+            curSettings.selection,
+          );
+        }
       }
     } catch (error) {
       logger.error('Failed to render DXF scene', { error });

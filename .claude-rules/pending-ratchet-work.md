@@ -70,7 +70,7 @@
 
 #### Fase 5.5 — comingSoon stubs (priorità media)
 - [x] **findReplace button** → ✅ WIRED 2026-05-19. `DxfFindReplaceHost.tsx` lazy wrapper + `findReplaceOpen` state in `useDxfViewerState` + action `text-find-replace`.
-- [ ] **spellCheck toggle** → engine assente. Rimane `comingSoon: true` fino a engine disponibile.
+- [x] **spellCheck toggle** ✅ DONE 2026-05-23 — Stub `comingSoon: true` già presente in `contextual-text-editor-tab.ts:385`. Engine assente by design — nessun ulteriore lavoro necessario finché non esiste un engine.
 - [x] **insert.symbol button** → ✅ WIRED 2026-05-21. `SymbolPickerDialog.tsx` (30 symbols, 3 gruppi) + `DxfSymbolPickerHost.tsx` + `symbolPickerOpen` state + action `text-insert-symbol`. `InsertTextTokenCommand` extended per raw Unicode.
 
 #### Fasi future ADR-345 (in ordine)
@@ -194,7 +194,7 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 
 **Copy-paste template for the agent:**
 
-> 📋 Pending ratchet tasks (ADR-299): **ADR-365 Tailwind Palette ✅ COMPLETE** — 0 violations / 0 files (2026-05-22). Zero-tolerance via CHECK 3.26 active. Remaining pending: ADR-345 spellCheck stub, Grip Types SSoT, ADR-3XX Auto-Infer Alignment, ADR-034 UC-017 AI integration ✅ DONE 2026-05-23.
+> 📋 Pending ratchet tasks (ADR-299): **ADR-365 Tailwind Palette ✅ COMPLETE** — 0 violations / 0 files (2026-05-22). Zero-tolerance via CHECK 3.26 active. Remaining pending: Grip Types SSoT, ADR-3XX Auto-Infer Alignment. (ADR-345 spellCheck ✅ DONE 2026-05-23, ADR-034 UC-017 ✅ DONE 2026-05-23)
 
 ---
 

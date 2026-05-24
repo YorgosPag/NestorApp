@@ -27,6 +27,7 @@ import { isDimLineRefPhase } from '../../hooks/dimensions/dim-skip-snap';
 import { getActiveDragGrip } from './GripDragStore';
 import { findWallFaceCornerSnap } from './wall-face-corner-snap';
 import { isWallEntity } from '../../types/entities';
+import { LassoStore, computeLassoMode } from './LassoStore';
 
 interface MouseUpHandlerDeps {
   props: CentralizedMouseHandlersProps;
@@ -111,10 +112,13 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
       }
     }
 
+    // Clear lasso button-held state on every mouseup.
+    refs.lassoDownRef.current.buttonHeld = false;
+
     // Drawing tools click (left button only, not after pan)
     const isLeftClick = e.button === 0;
 
-    if (onCanvasClick && isLeftClick && !cursor.isSelecting && !wasPanning) {
+    if (onCanvasClick && isLeftClick && !cursor.isSelecting && !wasPanning && !LassoStore.getIsLasso()) {
       const clickSnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
       if (!clickSnap) return;
 
@@ -137,6 +141,52 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
       onCanvasClick(worldPoint, e.shiftKey);
     }
 
+    // Lasso selection (button-held drag → free-form polygon).
+    // MUST run before the two-click marquee block — mutually exclusive.
+    if (LassoStore.getIsLasso()) {
+      const finalLasso = LassoStore.endLasso();
+      const lassoPath = finalLasso.lassoPath as import('../../rendering/types/Types').Point2D[];
+
+      if (lassoPath.length >= 3) {
+        const canvas = canvasRef?.current ?? null;
+        const lassoSnap = getPointerSnapshotFromElement(canvas);
+        if (lassoSnap) {
+          const lassoMode = computeLassoMode(lassoPath);
+          const result = UniversalMarqueeSelector.performLassoSelection(
+            lassoPath,
+            lassoMode,
+            transform,
+            lassoSnap.rect,
+            {
+              colorLayers: colorLayers ?? [],
+              entities: (scene?.entities ?? []) as unknown as Entity[],
+              enableDebugLogs: false,
+            },
+          );
+
+          if (result.selectedIds.length > 0) {
+            const { layerIds, overlayIds, entityIds } = result.breakdown ?? {};
+            const allLayerIds = [...(layerIds ?? []), ...(overlayIds ?? [])];
+
+            if (onUnifiedMarqueeResult) {
+              onUnifiedMarqueeResult({ layerIds: allLayerIds, entityIds: entityIds ?? [] });
+            } else {
+              if (allLayerIds.length > 0 && onMultiLayerSelected) onMultiLayerSelected(allLayerIds);
+              if ((entityIds ?? []).length > 0 && onEntitiesSelected) onEntitiesSelected(entityIds!);
+            }
+          } else if (onCanvasClick) {
+            // Empty lasso on empty space → deselect (same as empty marquee).
+            const emptySnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
+            if (emptySnap) {
+              const emptyScreenPos = getScreenPosFromEvent(e, emptySnap);
+              onCanvasClick(screenToWorldWithSnapshot(emptyScreenPos, transform, emptySnap), e.shiftKey);
+            }
+          }
+        }
+      }
+      return;
+    }
+
     // Marquee selection processing
     if (cursor.isSelecting && cursor.selectionStart && cursor.position) {
       processMarqueeSelection(e, {
@@ -155,6 +205,11 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
         if (!hitSnap) return;
         const hitResult = hitTestCallback(scene, cursor.position, transform, hitSnap.viewport);
         if (onEntitySelect) onEntitySelect(hitResult, e.shiftKey || e.ctrlKey || e.metaKey);
+        // No entity + select tool + clean left-click → start two-click selection (AutoCAD: click→move→click)
+        if (!hitResult && activeTool === 'select' && e.button === 0 && !wasPanning &&
+            !(e.shiftKey || e.ctrlKey || e.metaKey)) {
+          cursor.startSelection(getScreenPosFromEvent(e, hitSnap));
+        }
       }
     }
   }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, onMultiLayerSelected, canvasRef, onCanvasClick, activeTool, overlayMode, snapEnabled, findSnapPoint, onGripMouseUp, onEntitiesSelected, onUnifiedMarqueeResult, refs]);

@@ -5,6 +5,7 @@
  */
 
 import { useCallback, useRef, useState, useMemo } from 'react';
+import { LassoStore } from './LassoStore';
 import { useCursor } from './CursorSystem';
 import { isPointInRulerArea } from './utils';
 import {
@@ -28,6 +29,7 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 export type { SnapResultItem, ZoomConstraints, CentralizedMouseHandlersProps } from './mouse-handler-types';
 import { DEBUG_MOUSE_HANDLERS } from './mouse-handler-types';
 import type { CentralizedMouseHandlersProps, MouseHandlerRefs, SnapResultItem } from './mouse-handler-types';
+import type { Point2D } from '../../rendering/types/Types';
 import { useMouseMoveHandler } from './mouse-handler-move';
 import { useMouseUpHandler } from './mouse-handler-up';
 
@@ -102,8 +104,9 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
 
   const cursorThrottleRef = useRef<{ lastUpdateTime: number }>({ lastUpdateTime: 0 });
   const hoverThrottleRef = useRef<number>(0);
+  const lassoDownRef = useRef<{ pos: Point2D | null; buttonHeld: boolean }>({ pos: null, buttonHeld: false });
 
-  const refs: MouseHandlerRefs = { panStateRef, snapThrottleRef, cursorThrottleRef, hoverThrottleRef };
+  const refs: MouseHandlerRefs = { panStateRef, snapThrottleRef, cursorThrottleRef, hoverThrottleRef, lassoDownRef };
   const snap = { snapEnabled, findSnapPoint };
 
   // Apply pending transform (rAF callback)
@@ -170,17 +173,13 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
       return;
     }
 
-    // Marquee selection start (left button, not pan, not drawing, not grip, not additive-click)
-    // NOTE: entity hit-test intentionally moved to mouseup — AutoCAD selects on click (press+release),
-    // not press alone. Calling onEntitySelect on both mousedown AND mouseup caused a double-toggle
-    // bug with additive (Ctrl/Shift) clicks: entity was added then immediately removed on mouseup.
-    const isRotationActive = activeTool === 'rotate';
-    const isGuideToolActive = activeTool?.startsWith('guide-') ?? false;
-    const isAdditiveClick = e.shiftKey || e.ctrlKey || e.metaKey;
-    if (e.button === 0 && !isAdditiveClick && activeTool !== 'pan' && activeTool !== 'lasso-crop' && activeTool !== 'polygon-crop' && !isToolInteractive && !shouldStartPan && !isGripDragging && !isRotationActive && !isGuideToolActive) {
-      cursor.startSelection(screenPos);
+    // Lasso drag detection: record button-down position for move handler.
+    // Only arm on left button + select tool (not pan, not drawing, not grip drag).
+    if (e.button === 0 && activeTool === 'select' && !isToolInteractive && !isGripDragging) {
+      lassoDownRef.current = { pos: screenPos, buttonHeld: true };
     }
-  }, [transform, cursor, activeTool, overlayMode, isGripDragging, onGripMouseDown]);
+
+  }, [transform, cursor, activeTool, overlayMode, isGripDragging, onGripMouseDown, lassoDownRef]);
 
   // ===== MOUSE MOVE (delegated) =====
   const handleMouseMove = useMouseMoveHandler({
@@ -200,6 +199,10 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
     cursor.setMouseDown(false);
     onHoverEntity?.(null);
 
+    // Cancel any in-progress lasso when pointer leaves canvas.
+    lassoDownRef.current = { pos: null, buttonHeld: false };
+    LassoStore.cancelLasso();
+
     const panState = panStateRef.current;
     if (panState.isPanning) {
       panState.isPanning = false;
@@ -209,7 +212,7 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
         panState.animationId = null;
       }
     }
-  }, [cursor, onHoverEntity]);
+  }, [cursor, onHoverEntity, lassoDownRef]);
 
   // ===== WHEEL (zoom / horizontal pan) =====
   const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {

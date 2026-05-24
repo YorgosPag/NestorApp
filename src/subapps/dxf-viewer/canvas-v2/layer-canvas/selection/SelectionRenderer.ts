@@ -145,6 +145,58 @@ export class SelectionRenderer implements UIRenderer {
   }
 
   /**
+   * Render a free-form lasso polygon (AutoCAD 3rd selection mode).
+   *
+   * mode='window'   → solid blue fill + solid border (entity fully inside)
+   * mode='crossing' → dashed green fill + dashed border (entity intersects)
+   */
+  renderLasso(
+    lassoPath: readonly Point2D[],
+    mode: 'window' | 'crossing',
+    settings: SelectionSettings,
+  ): void {
+    if (lassoPath.length < 2) return;
+
+    const config = settings[mode];
+
+    this.ctx.save();
+
+    // Build free-form path.
+    this.ctx.beginPath();
+    this.ctx.moveTo(lassoPath[0].x, lassoPath[0].y);
+    for (let i = 1; i < lassoPath.length; i++) {
+      this.ctx.lineTo(lassoPath[i].x, lassoPath[i].y);
+    }
+    this.ctx.closePath();
+
+    // Fill.
+    if (config.fillOpacity > 0) {
+      this.ctx.fillStyle = config.fillColor;
+      this.ctx.globalAlpha = config.fillOpacity;
+      this.ctx.fill();
+    }
+
+    // Stroke.
+    if (config.borderOpacity > 0 && config.borderWidth > 0) {
+      this.ctx.strokeStyle = config.borderColor;
+      this.ctx.lineWidth = config.borderWidth;
+      this.ctx.globalAlpha = config.borderOpacity;
+      this.setLineStyle(config.borderStyle);
+
+      // Re-draw path for stroke (fill consumed globalAlpha reset).
+      this.ctx.beginPath();
+      this.ctx.moveTo(lassoPath[0].x, lassoPath[0].y);
+      for (let i = 1; i < lassoPath.length; i++) {
+        this.ctx.lineTo(lassoPath[i].x, lassoPath[i].y);
+      }
+      this.ctx.closePath();
+      this.ctx.stroke();
+    }
+
+    this.ctx.restore();
+  }
+
+  /**
    * ✅ UIRenderer interface: Get performance metrics
    */
   getMetrics(): UIRenderMetrics {

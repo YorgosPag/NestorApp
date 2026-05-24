@@ -9,6 +9,7 @@
 
 import { useRef, useCallback, useEffect } from 'react';
 import type { SelectionState } from '../../systems/cursor/SelectionStore';
+import { LassoStore, computeLassoMode } from '../../systems/cursor/LassoStore';
 import type { LayerRenderer } from './LayerRenderer';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
@@ -205,6 +206,9 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
         entityId: snap.entityId ?? undefined,
       }));
 
+      const lasso = LassoStore.getSnapshot();
+      const showLasso = !isPanToolActive && lasso.isLasso && lasso.lassoPath.length >= 2;
+
       const finalRenderOptions = {
         ...current.renderOptions,
         showCrosshair: current.renderOptions.showCrosshair && !isPanToolActive,
@@ -215,6 +219,9 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
         selectionBox: isPanToolActive ? null : currentSelectionBox,
         snapResults: layerSnapResults,
         gripSettings: gripStyleStore.get(),
+        showLasso,
+        lassoPath: showLasso ? lasso.lassoPath : null,
+        lassoMode: showLasso ? computeLassoMode(lasso.lassoPath) : undefined,
       };
 
       renderer.render(

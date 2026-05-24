@@ -71,6 +71,8 @@ export interface MouseHandlerRefs {
   }>;
   cursorThrottleRef: React.MutableRefObject<{ lastUpdateTime: number }>;
   hoverThrottleRef: React.MutableRefObject<number>;
+  /** Tracks mouse button held state for lasso drag detection. */
+  lassoDownRef: React.MutableRefObject<{ pos: Point2D | null; buttonHeld: boolean }>;
 }
 
 /** Snap manager API subset needed by handlers (SSoT: ProSnapResult) */

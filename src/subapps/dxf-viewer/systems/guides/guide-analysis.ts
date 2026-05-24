@@ -13,6 +13,7 @@
 
 import type { Guide, GridAxis } from './guide-types';
 import { GUIDE_LIMITS } from './guide-types';
+import { segmentsIntersect } from '../../utils/geometry/GeometryUtils';
 
 // ============================================================================
 // TYPES
@@ -199,36 +200,6 @@ function detectDiagonalClashes(
       }
     }
   }
-}
-
-/**
- * Check if two line segments intersect (2D cross-product method).
- */
-function segmentsIntersect(
-  p1: { readonly x: number; readonly y: number },
-  p2: { readonly x: number; readonly y: number },
-  p3: { readonly x: number; readonly y: number },
-  p4: { readonly x: number; readonly y: number },
-): boolean {
-  const d1 = direction(p3, p4, p1);
-  const d2 = direction(p3, p4, p2);
-  const d3 = direction(p1, p2, p3);
-  const d4 = direction(p1, p2, p4);
-
-  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
-      ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
-    return true;
-  }
-
-  return false;
-}
-
-function direction(
-  pi: { readonly x: number; readonly y: number },
-  pj: { readonly x: number; readonly y: number },
-  pk: { readonly x: number; readonly y: number },
-): number {
-  return (pk.x - pi.x) * (pj.y - pi.y) - (pj.x - pi.x) * (pk.y - pi.y);
 }
 
 // ============================================================================

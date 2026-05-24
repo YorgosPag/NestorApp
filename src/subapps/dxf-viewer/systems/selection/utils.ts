@@ -24,7 +24,7 @@ import { getLayerNameOrDefault } from '../../config/layer-config';
 import { resolveEntityLayerName } from '../../stores/LayerStore';
 import { createRectangleVertices, calculateEntityBounds } from './shared/selection-duplicate-utils';
 import { extractAngleMeasurementPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
-import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
+import { isPointInPolygon, segmentsIntersect } from '../../utils/geometry/GeometryUtils';
 
 // Helper function to get rectangle vertices (eliminates code duplication)
 export function getRectangleVertices(entity: Entity): Point2D[] | null {
@@ -141,29 +141,135 @@ export class UnifiedEntitySelection {
   }
   
   /**
-   * Finds entities inside a lasso (polygon) selection.
+   * Finds entities inside a lasso (free-form polygon) selection.
+   *
+   * mode='window':   entity FULLY inside lasso polygon (all key points inside)
+   * mode='crossing': entity INTERSECTS OR is inside (any key point inside OR
+   *                  any entity segment crosses lasso boundary)
    */
   static findEntitiesInLasso(
     lassoPoints: Point2D[],
     entities: Entity[],
     transform: ViewTransform,
-    canvasRect: DOMRect
+    canvasRect: DOMRect,
+    mode: 'window' | 'crossing' = 'window'
   ): string[] {
     if (lassoPoints.length < 3) return [];
-    
+
     const viewport: Viewport = { width: canvasRect.width, height: canvasRect.height };
-    const worldLassoPoints = lassoPoints.map(p => CoordinateTransforms.screenToWorld(p, transform, viewport));
+    const worldLasso = lassoPoints.map(p => CoordinateTransforms.screenToWorld(p, transform, viewport));
 
     const selectedIds: string[] = [];
-    
+
     for (const entity of entities) {
-      const entityCenter = this.getEntityCenter(entity);
-      if (entityCenter && isPointInPolygon(entityCenter, worldLassoPoints)) {
-        selectedIds.push(entity.id);
+      const keyPts = this.getEntityKeyPoints(entity);
+      if (keyPts.length === 0) continue;
+
+      if (mode === 'window') {
+        if (keyPts.every(p => isPointInPolygon(p, worldLasso))) {
+          selectedIds.push(entity.id);
+        }
+      } else {
+        const anyInside = keyPts.some(p => isPointInPolygon(p, worldLasso));
+        if (anyInside) {
+          selectedIds.push(entity.id);
+          continue;
+        }
+        const segs = this.getEntitySegments(entity);
+        if (this.lassoIntersectsSegments(worldLasso, segs)) {
+          selectedIds.push(entity.id);
+        }
       }
     }
-    
+
     return selectedIds;
+  }
+
+  private static lassoIntersectsSegments(
+    lasso: Point2D[], segs: Array<[Point2D, Point2D]>,
+  ): boolean {
+    for (let i = 0; i < lasso.length; i++) {
+      const la = lasso[i];
+      const lb = lasso[(i + 1) % lasso.length];
+      for (const [sa, sb] of segs) {
+        if (segmentsIntersect(la, lb, sa, sb)) return true;
+      }
+    }
+    return false;
+  }
+
+  /** Representative key points for window-mode testing. */
+  private static getEntityKeyPoints(entity: Entity): Point2D[] {
+    if (isLineEntity(entity)) {
+      return [entity.start, entity.end];
+    }
+    if (isCircleEntity(entity)) {
+      const { center, radius } = entity;
+      const pts: Point2D[] = [center];
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        pts.push({ x: center.x + radius * Math.cos(a), y: center.y + radius * Math.sin(a) });
+      }
+      return pts;
+    }
+    if (isPolylineEntity(entity)) return entity.vertices;
+    if (isRectangleEntity(entity)) {
+      const verts = getRectangleVertices(entity);
+      return verts ?? [];
+    }
+    if (isAngleMeasurementEntity(entity)) {
+      const pts = extractAngleMeasurementPoints(entity);
+      if (!pts) return [];
+      return [pts.vertex, pts.point1, pts.point2];
+    }
+    const center = this.getEntityCenter(entity);
+    return center ? [center] : [];
+  }
+
+  /** Entity boundary segments for crossing-mode intersection test. */
+  private static getEntitySegments(entity: Entity): Array<[Point2D, Point2D]> {
+    if (isLineEntity(entity)) {
+      return [[entity.start, entity.end]];
+    }
+    if (isCircleEntity(entity)) {
+      const { center, radius } = entity;
+      const N = 12;
+      const segs: Array<[Point2D, Point2D]> = [];
+      for (let i = 0; i < N; i++) {
+        const a1 = (i / N) * Math.PI * 2;
+        const a2 = ((i + 1) / N) * Math.PI * 2;
+        segs.push([
+          { x: center.x + radius * Math.cos(a1), y: center.y + radius * Math.sin(a1) },
+          { x: center.x + radius * Math.cos(a2), y: center.y + radius * Math.sin(a2) },
+        ]);
+      }
+      return segs;
+    }
+    if (isPolylineEntity(entity)) {
+      const { vertices, closed } = entity;
+      const segs: Array<[Point2D, Point2D]> = [];
+      for (let i = 0; i < vertices.length - 1; i++) {
+        segs.push([vertices[i], vertices[i + 1]]);
+      }
+      if (closed && vertices.length > 1) {
+        segs.push([vertices[vertices.length - 1], vertices[0]]);
+      }
+      return segs;
+    }
+    if (isRectangleEntity(entity)) {
+      const verts = getRectangleVertices(entity);
+      if (!verts || verts.length < 4) return [];
+      return [
+        [verts[0], verts[1]], [verts[1], verts[2]],
+        [verts[2], verts[3]], [verts[3], verts[0]],
+      ];
+    }
+    if (isAngleMeasurementEntity(entity)) {
+      const pts = extractAngleMeasurementPoints(entity);
+      if (!pts) return [];
+      return [[pts.vertex, pts.point1], [pts.vertex, pts.point2]];
+    }
+    return [];
   }
   
   // --- PRIVATE HELPER METHODS ---

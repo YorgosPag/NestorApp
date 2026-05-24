@@ -178,4 +178,8 @@ export interface LayerRenderOptions {
   selectionBox: SelectionBox | null;
   // 🏢 ENTERPRISE (2026-01-25): Centralized grip settings for vertex/edge grips
   gripSettings?: GripSettings;
+  // Lasso selection (AutoCAD 3rd selection mode — free-form polygon)
+  showLasso?: boolean;
+  lassoPath?: readonly Point2D[] | null;
+  lassoMode?: 'window' | 'crossing';
 }

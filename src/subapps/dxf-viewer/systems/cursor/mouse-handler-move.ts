@@ -24,6 +24,7 @@ import type { CentralizedMouseHandlersProps, MouseHandlerRefs, SnapManagerAPI, S
 import { getActiveDragGrip } from './GripDragStore';
 import { findWallFaceCornerSnap } from './wall-face-corner-snap';
 import { isWallEntity } from '../../types/entities';
+import { LassoStore } from './LassoStore';
 
 interface MouseMoveHandlerDeps {
   props: CentralizedMouseHandlersProps;
@@ -309,7 +310,24 @@ export function useMouseMoveHandler({
       }
     }
 
-    // Selection update
+    // Lasso detection: if button held + dragged > threshold → activate / extend lasso.
+    // Mutually exclusive with two-click marquee (cursor.isSelecting guard).
+    const LASSO_ACTIVATE_PX = 5;
+    const lassoDown = refs.lassoDownRef.current;
+    if (lassoDown.buttonHeld && lassoDown.pos && activeTool === 'select' && !cursor.isSelecting) {
+      if (!LassoStore.getIsLasso()) {
+        const dx = screenPos.x - lassoDown.pos.x;
+        const dy = screenPos.y - lassoDown.pos.y;
+        if (Math.sqrt(dx * dx + dy * dy) >= LASSO_ACTIVATE_PX) {
+          LassoStore.startLasso(lassoDown.pos);
+          LassoStore.appendPoint(screenPos);
+        }
+      } else {
+        withPerf('lasso-append', () => LassoStore.appendPoint(screenPos));
+      }
+    }
+
+    // Selection update (two-click marquee mode)
     if (cursor.isSelecting && activeTool !== 'pan') {
       withPerf('selection-update', () => cursor.updateSelection(screenPos));
     }
