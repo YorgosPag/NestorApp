@@ -178,6 +178,12 @@ export const PERMISSIONS = {
 
   // BIM Performance Telemetry (ADR-366 §C.7.Q3) — super-admin read-only
   "bim_performance_telemetry:telemetry:read": true,
+
+  // BIM Performance Diagnostics Triage (ADR-366 §C.7.Q2) — super-admin only
+  // (granted via isBypass; explicit entries kept for audit transparency)
+  "performance_diagnostics:diagnostics:triage": true,
+  "performance_diagnostics:diagnostics:update_status": true,
+  "performance_diagnostics:diagnostics:assign": true,
 } as const;
 
 /** Permission ID derived from registry. */

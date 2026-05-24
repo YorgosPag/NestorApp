@@ -61,7 +61,10 @@ export type AuditAction =
   | 'auto_submit_prompted'
   | 'auto_submit_accepted'
   | 'auto_submit_declined'
-  | 'erased';
+  | 'erased'
+  | 'triage_status_changed'
+  | 'triage_assigned'
+  | 'internal_note_added';
 
 // ============================================================================
 // FIELD-LEVEL DIFF
