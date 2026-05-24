@@ -25,7 +25,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createStaleCache } from '@/lib/stale-cache';
 import { RealtimeService } from '@/services/realtime';
-import type { FloorplanCreatedPayload, FloorplanDeletedPayload } from '@/services/realtime';
+import type { FloorplanCreatedPayload, FloorplanDeletedPayload, FloorplanUpdatedPayload } from '@/services/realtime';
 
 const logger = createModuleLogger('useFloorFloorplans');
 
@@ -240,14 +240,19 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
       }
     };
 
+    const handleUpdated = (_payload: FloorplanUpdatedPayload) => {
+      fetchFloorplans();
+    };
+
     const handleDeleted = (_payload: FloorplanDeletedPayload) => {
       fetchFloorplans();
     };
 
     const unsub1 = RealtimeService.subscribe('FLOORPLAN_CREATED', handleCreated);
-    const unsub2 = RealtimeService.subscribe('FLOORPLAN_DELETED', handleDeleted);
+    const unsub2 = RealtimeService.subscribe('FLOORPLAN_UPDATED', handleUpdated);
+    const unsub3 = RealtimeService.subscribe('FLOORPLAN_DELETED', handleDeleted);
 
-    return () => { unsub1(); unsub2(); };
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, [floorId, buildingId, floorNumber, fetchFloorplans]);
 
   return {

@@ -24,6 +24,7 @@ import {
   MessageSquare,
   Menu,
   Shield,
+  Activity,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -84,6 +85,12 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/admin/audit-log', labelKey: 'auditLog', icon: FileText },
       { href: '/admin/backup', labelKey: 'backup', icon: Archive },
+      {
+        href: '/admin/bim-diagnostics',
+        labelKey: 'bimDiagnostics',
+        icon: Activity,
+        superAdminOnly: true,
+      },
     ],
   },
   {

@@ -17,6 +17,12 @@ import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { formatFloorLabel } from '@/lib/intl-domain';
 import { RealtimeService } from '@/services/realtime';
+import { useAuth } from '@/auth/contexts/AuthContext';
+import {
+  batchUpdateLinkedStairsHeight,
+  queryStairsByFloorId,
+  type LinkedStairsInfo,
+} from '@/subapps/dxf-viewer/bim/stairs/stair-floor-sync';
 
 // ============================================================================
 // TYPES
@@ -60,6 +66,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   const { success, error: notifyError } = useNotifications();
   const { confirm, dialogProps } = useConfirmDialog();
   const { checkBeforeDelete, BlockedDialog } = useDeletionGuard('floor');
+  const { user } = useAuth();
 
   // Data state — ADR-300: Seed from module-level cache → zero flash on re-navigation
   const [floors, setFloors] = useState<FloorRecord[]>(floorsCache.get(buildingId) ?? []);
@@ -90,6 +97,21 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   const toggleFloorExpand = (floorId: string) => {
     setExpandedFloorId((prev) => (prev === floorId ? null : floorId));
   };
+
+  // ADR-358 Plan B — one-time stair query scoped to a floor
+  const checkLinkedStairs = useCallback(
+    async (floorId: string): Promise<LinkedStairsInfo | null> => {
+      const cid = user?.companyId;
+      if (!cid) return null;
+      try {
+        return await queryStairsByFloorId(floorId, cid);
+      } catch (e) {
+        console.error('[FloorsTab] stair query error:', e);
+        return null;
+      }
+    },
+    [user?.companyId],
+  );
 
   // =========================================================================
   // AUTO-SUGGEST: Number → Name + Elevation (Revit/ArchiCAD Pattern)
@@ -251,6 +273,28 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
       if (!confirmed) return;
     }
 
+    // ADR-358 Plan B — warn if floor height changes with linked stairs
+    const oldHeight = editedFloor?.height ?? null;
+    const newHeight = editHeight ? parseFloat(editHeight) : null;
+    const heightChanged =
+      oldHeight !== null && newHeight !== null && Math.abs(newHeight - oldHeight) > 0.001;
+    let linkedStairs: LinkedStairsInfo | null = null;
+    if (editedFloor?.hasFloorplan && heightChanged) {
+      linkedStairs = await checkLinkedStairs(editingId);
+      if (linkedStairs && (linkedStairs.linked.length > 0 || linkedStairs.custom.length > 0)) {
+        const stairConfirmed = await confirm({
+          title: t('tabs.floors.linkedStairsWarningTitle'),
+          description: t('tabs.floors.linkedStairsWarningDescription', {
+            linked: linkedStairs.linked.length,
+            custom: linkedStairs.custom.length,
+          }),
+          confirmText: t('tabs.floors.linkedStairsWarningConfirm'),
+          variant: 'warning',
+        });
+        if (!stairConfirmed) return;
+      }
+    }
+
     setSaving(true);
     try {
       const payload: Record<string, unknown> = {
@@ -279,6 +323,15 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
             })
           )
         );
+      }
+
+      // ADR-358 Plan B — propagate new height to linked stairs
+      if (linkedStairs && linkedStairs.linked.length > 0 && newHeight !== null && user?.uid) {
+        try {
+          await batchUpdateLinkedStairsHeight(linkedStairs.linked, newHeight * 1000, user.uid);
+        } catch (e) {
+          console.error('[FloorsTab] stair batch update error:', e);
+        }
       }
 
       setEditingId(null);
