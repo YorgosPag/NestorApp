@@ -4643,12 +4643,17 @@ service cloud.firestore {
                        );
     }
 
-    // ─── PERFORMANCE DIAGNOSTICS (ADR-366 §B.5 + §C.7.Q4) ───────────────
+    // ─── PERFORMANCE DIAGNOSTICS (ADR-366 §B.5 + §C.7.Q2 + §C.7.Q4) ─────
     // User-submitted 3D BIM HUD snapshots. Server-only writes via
     // /api/performance-diagnostics (Admin SDK + EntityAuditService audit).
     // Read: doc owner OR super-admin. Tenant isolation via companyId.
     //   - CREATE: deny (server-only via Admin SDK)
-    //   - UPDATE: super-admin only (future triage actions §C.7.Q2)
+    //   - UPDATE: super-admin only — restricted to triage fields
+    //             {status, assignedSuperAdminId, internalNotes, triageHistory}.
+    //             Base fields (id, companyId, userId, projectId, renderMode,
+    //             metrics, screenshotUrl, comment, source, createdAt) are
+    //             immutable. Server routes use Admin SDK and bypass these
+    //             rules, so backfill / lazy migration is unaffected.
     //   - DELETE: super-admin only
     match /performance_diagnostics/{diagId} {
 
@@ -4667,7 +4672,9 @@ service cloud.firestore {
       allow update: if isAuthenticated()
                     && resource != null
                     && isSuperAdminOnly()
-                    && request.resource.data.companyId == resource.data.companyId;
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'assignedSuperAdminId', 'internalNotes', 'triageHistory']);
 
       allow delete: if isAuthenticated()
                     && resource != null

@@ -144,6 +144,9 @@ const handlePost: AuthenticatedHandler<DiagnosticResponse | ErrorBody> = async (
     });
 
     // 2. Firestore doc via Admin SDK (server-only writes — see firestore.rules).
+    //    Triage defaults (§C.7.Q2): every fresh submission starts at 'new'
+    //    with empty history and no assignment, so super-admin dashboard sees
+    //    a uniform starting state with no lazy backfill on read.
     const db = getAdminFirestore();
     await db.collection(COLLECTIONS.PERFORMANCE_DIAGNOSTICS).doc(docId).set({
       id: docId,
@@ -156,6 +159,10 @@ const handlePost: AuthenticatedHandler<DiagnosticResponse | ErrorBody> = async (
       comment: comment || null,
       source,
       createdAt: FieldValue.serverTimestamp(),
+      status: 'new',
+      assignedSuperAdminId: null,
+      internalNotes: null,
+      triageHistory: [],
     });
 
     // 3. Audit trail — manual submissions count as 'created'; auto-submit
