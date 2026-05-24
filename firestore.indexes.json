@@ -3667,6 +3667,14 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_stairs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "floorId", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "dxf_layer_state_templates",
       "queryScope": "COLLECTION",
       "fields": [

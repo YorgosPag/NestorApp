@@ -126,7 +126,9 @@ export function mapFileRecordToDxfMetadata(
     id: record.id,
     fileName: record.originalFilename || record.displayName || record.id,
     storageUrl: record.downloadUrl || '',
-    storagePath: record.storagePath,
+    // Fall back to processedDataPath when storagePath is missing — legacy records
+    // created before ADR-293 enforcement may omit the top-level field.
+    storagePath: record.storagePath || record.processedData?.processedDataPath,
     // FileRecord.updatedAt can be Date, string, or Firestore Timestamp
     lastModified: toFirestoreTimestamp(record.updatedAt),
     version: record.revision ?? 1,
