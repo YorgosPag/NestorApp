@@ -14,11 +14,12 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Layers, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronRight, Map, AlertTriangle } from 'lucide-react';
+import { Layers, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronRight, Map, AlertTriangle, Footprints } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FloorFloorplanInline } from './FloorFloorplanInline';
 import type { Building } from '@/types/building/contracts';
+import type { StairDoc } from '@/subapps/dxf-viewer/bim/types/stair-types';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -30,6 +31,62 @@ import { FloorInlineCreateForm } from './FloorInlineCreateForm';
 
 // Re-export for backward compatibility
 export type { FloorRecord } from './useFloorsTabState';
+
+// ============================================================================
+// FLOOR STAIRS LIST (ADR-358 Phase 9C-3)
+// ============================================================================
+
+interface FloorStairsListProps {
+  stairs: StairDoc[];
+  loading: boolean;
+}
+
+function FloorStairsList({ stairs, loading }: FloorStairsListProps) {
+  const { t } = useTranslation(['building-tabs']);
+  if (loading) {
+    return (
+      <section className="mt-2 pt-2 border-t border-border/30 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Spinner size="small" />
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-2 pt-2 border-t border-border/30">
+      <header className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1.5">
+        <Footprints className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        {t('tabs.floors.stairs')}
+      </header>
+      {stairs.length === 0 ? (
+        <p className="text-xs text-muted-foreground pl-5">{t('tabs.floors.stairsEmpty')}</p>
+      ) : (
+        <ul className="flex flex-col gap-0.5 pl-1">
+          {stairs.map((stair) => {
+            const isLinked = stair.params.multiStoryConfig?.linkedToFloor === true;
+            const isCustom =
+              stair.params.multiStoryConfig !== undefined && !isLinked;
+            return (
+              <li key={stair.id} className="flex items-center gap-2 text-xs py-0.5 px-1 rounded hover:bg-muted/20">
+                <Footprints className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span>{t(`tabs.floors.stairKind.${stair.kind}`)}</span>
+                {isLinked && (
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-[hsl(var(--bg-info)/0.15)] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--text-info))]">
+                    🔗 {t('tabs.floors.stairLinked')}
+                  </span>
+                )}
+                {isCustom && (
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-[hsl(var(--bg-warning)/0.15)] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--text-warning))]">
+                    ⚠️ {t('tabs.floors.stairCustom')}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 interface FloorsTabContentProps {
   building: Building;
@@ -51,6 +108,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,
     floorGaps,
+    expandedFloorStairs, loadingStairs,
     dialogProps, BlockedDialog,
   } = useFloorsTabState(building.id, building.projectId);
 
@@ -255,6 +313,12 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                       <tr className="bg-muted/5">
                         <td colSpan={COLUMN_COUNT} className="px-2 py-2">
                           <FloorFloorplanInline floorId={floor.id} floorName={floor.name} projectId={building.projectId} buildingCompanyId={building.companyId} />
+                          {floor.hasFloorplan && (
+                            <FloorStairsList
+                              stairs={expandedFloorStairs}
+                              loading={loadingStairs}
+                            />
+                          )}
                         </td>
                       </tr>
                     )}

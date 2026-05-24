@@ -23,6 +23,7 @@ import {
   queryStairsByFloorId,
   type LinkedStairsInfo,
 } from '@/subapps/dxf-viewer/bim/stairs/stair-floor-sync';
+import type { StairDoc } from '@/subapps/dxf-viewer/bim/types/stair-types';
 
 // ============================================================================
 // TYPES
@@ -97,6 +98,29 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   const toggleFloorExpand = (floorId: string) => {
     setExpandedFloorId((prev) => (prev === floorId ? null : floorId));
   };
+
+  // ADR-358 Phase 9C-3 — stair list for the currently expanded floor.
+  const [expandedFloorStairs, setExpandedFloorStairs] = useState<StairDoc[]>([]);
+  const [loadingStairs, setLoadingStairs] = useState(false);
+
+  useEffect(() => {
+    if (!expandedFloorId) {
+      setExpandedFloorStairs([]);
+      return;
+    }
+    const floor = floors.find((f) => f.id === expandedFloorId);
+    if (!floor?.hasFloorplan) {
+      setExpandedFloorStairs([]);
+      return;
+    }
+    const cid = user?.companyId;
+    if (!cid) return;
+    setLoadingStairs(true);
+    queryStairsByFloorId(expandedFloorId, cid)
+      .then((info) => setExpandedFloorStairs([...info.all]))
+      .catch(() => setExpandedFloorStairs([]))
+      .finally(() => setLoadingStairs(false));
+  }, [expandedFloorId, floors, user?.companyId]);
 
   // ADR-358 Plan B — one-time stair query scoped to a floor
   const checkLinkedStairs = useCallback(
@@ -419,6 +443,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,
     floorGaps,
+    expandedFloorStairs, loadingStairs,
     dialogProps, BlockedDialog, confirm,
   };
 }

@@ -203,6 +203,8 @@ export interface DrawingEventMap {
   // ADR-363 Phase 5 — BIM beam params + delete events
   'bim:beam-params-updated': { beamId: string };
   'bim:beam-delete-requested': { beamId: string };
+  // ADR-358 Phase 9C-3 — stair delete (Firestore cleanup on canvas Delete key)
+  'bim:stair-delete-requested': { stairId: string };
   // ADR-363 Phase 5.5i+ — beam persisted → slabs re-compute BOQ deductions
   'bim:beam-persisted': { floorplanId: string };
   // ADR-363 Phase X — Wall split committed: persist delete+create+opening patch

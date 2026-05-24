@@ -72,6 +72,7 @@ export interface UseStairPersistenceResult {
   readonly lastSavedAt: number | null;
   readonly error: string | null;
   readonly saveNow: () => Promise<void>;
+  readonly deleteStair: (stairId: string) => Promise<void>;
 }
 
 // ============================================================================
@@ -355,6 +356,42 @@ export function useStairPersistence(
     };
   }, [primarySelectedStair, persist]);
 
+  // ADR-358 Phase 9C-3 — delete stair from Firestore + scene cleanup.
+  // Mirrors useWallPersistence.deleteWall. Called via bim:stair-delete-requested
+  // event emitted by useSmartDelete after DeleteEntityCommand removes from scene.
+  const deleteStair = useCallback(async (stairId: string) => {
+    const svc = serviceRef.current;
+    if (!svc) return;
+    const levelId = levelManager.currentLevelId;
+    if (!levelId) return;
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+
+    try {
+      await svc.deleteStair(stairId);
+    } catch {
+      // Non-fatal — scene already updated by DeleteEntityCommand.
+    }
+
+    const scene = levelManager.getLevelScene(levelId);
+    if (scene) {
+      const nextEntities = scene.entities.filter((e) => e.id !== stairId);
+      if (nextEntities.length !== scene.entities.length) {
+        levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
+      }
+    }
+
+    dirtyIdsRef.current.delete(stairId);
+    lastSavedParamsRef.current.delete(stairId);
+
+    if (lockHeldRef.current === stairId) {
+      void releaseLock();
+    }
+  }, [levelManager, releaseLock]);
+
   // Imperative save trigger (explicit "Αποθήκευση" button).
   const saveNow = useCallback(async () => {
     const stair = selectedStairRef.current;
@@ -365,6 +402,14 @@ export function useStairPersistence(
     }
     await persist(stair);
   }, [persist]);
+
+  // ADR-358 Phase 9C-3 — delete-requested listener (useSmartDelete emits after confirm).
+  useEffect(() => {
+    const cleanup = EventBus.on('bim:stair-delete-requested', ({ stairId }) => {
+      void deleteStair(stairId);
+    });
+    return cleanup;
+  }, [deleteStair]);
 
   // ADR-358 Phase Q17 9B-6 — listen for `drawing:entity-created` so the
   // first persistence of a freshly drawn stair fires immediately, without
@@ -393,7 +438,7 @@ export function useStairPersistence(
   }, [releaseLock]);
 
   return useMemo(
-    () => ({ saveState, lastSavedAt, error, saveNow }),
-    [saveState, lastSavedAt, error, saveNow],
+    () => ({ saveState, lastSavedAt, error, saveNow, deleteStair }),
+    [saveState, lastSavedAt, error, saveNow, deleteStair],
   );
 }

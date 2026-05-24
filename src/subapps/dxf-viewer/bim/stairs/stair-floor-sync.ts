@@ -26,6 +26,7 @@ import type { UpdateData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { StairDoc } from '../../bim/types/stair-types';
+import { reconcileLinkedStair } from './stair-floor-link';
 
 // ============================================================================
 // TYPES
@@ -36,6 +37,8 @@ export interface LinkedStairsInfo {
   readonly linked: readonly StairDoc[];
   /** Stairs that have multiStoryConfig but are NOT linked (manual override). */
   readonly custom: readonly StairDoc[];
+  /** All stairs assigned to this floor (for display in Buildings floors tab). */
+  readonly all: readonly StairDoc[];
 }
 
 // ============================================================================
@@ -66,6 +69,7 @@ export async function queryStairsByFloorId(
         s.params.multiStoryConfig !== undefined &&
         s.params.multiStoryConfig.linkedToFloor !== true,
     ),
+    all: docs,
   };
 }
 
@@ -89,15 +93,17 @@ export async function batchUpdateLinkedStairsHeight(
   const batch = writeBatch(db);
   for (const stair of stairs) {
     const ref = doc(db, COLLECTIONS.FLOORPLAN_STAIRS, stair.id);
-    const updatedParams = {
+    const withNewHeight = {
       ...stair.params,
       multiStoryConfig: {
         ...stair.params.multiStoryConfig!,
         storyHeight: newHeightMm,
       },
     };
+    // Recompute stepCount/totalRise/totalRun/pitch from the new storyHeight.
+    const reconciledParams = reconcileLinkedStair(withNewHeight);
     batch.update(ref, {
-      params: updatedParams,
+      params: reconciledParams,
       updatedBy,
       updatedAt: serverTimestamp(),
     } as UpdateData<StairDoc>);
