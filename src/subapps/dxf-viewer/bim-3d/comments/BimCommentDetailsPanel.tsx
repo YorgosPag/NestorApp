@@ -19,7 +19,7 @@ import { CommentBadgeIcon } from './CommentBadgeIcon';
 import { CommentReplyInput } from './CommentReplyInput';
 import { CommentAttachmentLightbox } from './CommentAttachmentLightbox';
 import { getAvailableTransitions } from './comment-status-fsm';
-import type { CommentStatus } from './bim-comment-types';
+import type { BimComment, CommentStatus } from './bim-comment-types';
 
 const ADMIN_ROLES = new Set(['company_admin', 'project_manager']);
 
@@ -148,7 +148,7 @@ export function BimCommentDetailsPanel({ commentId, companyId }: BimCommentDetai
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 interface CommentDetailsPanelHeaderProps {
-  readonly comment: ReturnType<typeof useBimCommentsStore.getState>['comments'][string];
+  readonly comment: BimComment;
   readonly availableTransitions: readonly CommentStatus[];
   readonly onTransition: (to: CommentStatus) => Promise<void>;
   readonly onClose: () => void;

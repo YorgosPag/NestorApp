@@ -1,7 +1,7 @@
 # Pending Ratchet Work — Live Checklist
 
 **STATUS: ACTIVE**
-**Last updated:** 2026-05-22 (ADR-366 Phase 9 C.6 INTEGRATION — BimViewport3D wiring + ribbon button + overlay + Ctrl+Alt+R shortcut)
+**Last updated:** 2026-05-24 (ADR-366 Phase 9 C.2 IMPLEMENTED — BIM Comments / Markup System, 25 files)
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
 **Purpose:** Agent-facing live checklist. Se STATUS = ALL_DONE → salta il resto. Se STATUS = ACTIVE → leggi e ricorda a Giorgio.
 

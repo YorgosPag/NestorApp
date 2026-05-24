@@ -30,7 +30,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { getStatusColor } from '@/lib/design-system';
 
 import type { TreeNodeData, CompanyFileTreeProps, ViewMode } from './company-file-tree-builders';
-import { buildTreeByEntity, buildTreeByCategory } from './company-file-tree-builders';
+import { buildTreeByEntity, buildTreeByCategory, buildTreeByISO19650 } from './company-file-tree-builders';
 
 // Re-export types for consumers
 export type { GroupingMode, ViewMode } from './company-file-tree-builders';
@@ -195,13 +195,16 @@ export function CompanyFileTree({
   onRename,
   className,
 }: CompanyFileTreeProps) {
-  const { t, i18n } = useTranslation(['files', 'files-media']);
+  const { t, i18n } = useTranslation(['files', 'files-media', 'iso19650']);
   const colors = useSemanticColors();
   const translateDisplayName = useFileDisplayName();
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['root']));
   const lang = i18n.language;
 
   const treeData = useMemo(() => {
+    if (groupingMode === 'iso19650') {
+      return buildTreeByISO19650(files, t, companyName, translateDisplayName);
+    }
     if (groupingMode === 'entity') {
       return buildTreeByEntity(files, companyName, translateDisplayName, lang, t);
     }

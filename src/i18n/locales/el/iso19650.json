@@ -64,5 +64,12 @@
   "errors": {
     "invalidRevisionCode": "Μη έγκυρο (π.χ. P01, T02, AB99)",
     "invalidBuildingCode": "Μη έγκυρο (π.χ. Κ1, Κ12, Κ1-Α)"
+  },
+  "virtualFolders": {
+    "viewLabel": "ISO 19650",
+    "viewTooltip": "Ιεραρχία ISO 19650 (Κλάδος → Σειρά → Κατάσταση CDE)",
+    "unclassified": "Αταξινόμητα",
+    "noSeries": "Χωρίς Σειρά",
+    "noCdeState": "Χωρίς Κατάσταση CDE"
   }
 }

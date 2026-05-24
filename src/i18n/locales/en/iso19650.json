@@ -64,5 +64,12 @@
   "errors": {
     "invalidRevisionCode": "Invalid (e.g. P01, T02, AB99)",
     "invalidBuildingCode": "Invalid (e.g. K1, K12, K1-A)"
+  },
+  "virtualFolders": {
+    "viewLabel": "ISO 19650",
+    "viewTooltip": "ISO 19650 Hierarchy (Discipline → Series → CDE State)",
+    "unclassified": "Unclassified",
+    "noSeries": "No Series",
+    "noCdeState": "No CDE State"
   }
 }

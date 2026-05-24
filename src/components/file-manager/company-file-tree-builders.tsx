@@ -36,7 +36,7 @@ import {
 // ============================================================================
 
 export type FileEntityType = 'project' | 'building' | 'property' | 'contact' | 'company';
-export type GroupingMode = 'entity' | 'category';
+export type GroupingMode = 'entity' | 'category' | 'iso19650';
 export type ViewMode = 'business' | 'technical';
 
 export interface CompanyFileTreeProps {
@@ -397,3 +397,6 @@ export function buildTreeByCategory(
     children: categoryChildren,
   };
 }
+
+// ISO 19650 builder lives in a separate SRP module (ADR-373 + N.7.1)
+export { buildTreeByISO19650 } from './company-file-tree-iso19650-builder';

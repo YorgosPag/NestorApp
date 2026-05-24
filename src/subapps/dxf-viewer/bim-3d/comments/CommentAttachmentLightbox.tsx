@@ -81,7 +81,7 @@ export function CommentAttachmentLightbox({
             variant="secondary"
             className="absolute -left-12 top-1/2 -translate-y-1/2"
             onClick={() => onIndexChange(currentIndex - 1)}
-            aria-label="Previous"
+            aria-label={t('comments.details.previousAttachment')}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -94,7 +94,7 @@ export function CommentAttachmentLightbox({
             variant="secondary"
             className="absolute -right-12 top-1/2 -translate-y-1/2"
             onClick={() => onIndexChange(currentIndex + 1)}
-            aria-label="Next"
+            aria-label={t('comments.details.nextAttachment')}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>

@@ -30,7 +30,7 @@ import type { ViewMode as TreeViewMode } from './CompanyFileTree';
 // TYPES
 // ============================================================================
 
-export type ViewMode = 'list' | 'tree' | 'gallery';
+export type ViewMode = 'list' | 'tree' | 'gallery' | 'iso19650-tree';
 export type ActiveTab = 'files' | 'trash' | 'inbox';
 
 // ============================================================================
@@ -142,7 +142,7 @@ function applyFilters(files: FileRecord[], searchTerm: string, filters: FileFilt
 // ============================================================================
 
 export function useFileManagerState() {
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation(['files', 'files-media', 'iso19650']);
   const { user } = useAuth();
   const { activeWorkspace } = useWorkspace();
   const { success: showSuccess, error: showError, warning: showWarning } = useNotifications();

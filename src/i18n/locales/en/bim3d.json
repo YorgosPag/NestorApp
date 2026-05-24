@@ -500,7 +500,9 @@
       "cancel": "Cancel",
       "delete": "Delete",
       "deleteConfirm": "Delete this comment?",
-      "close": "Close"
+      "close": "Close",
+      "previousAttachment": "Previous image",
+      "nextAttachment": "Next image"
     },
     "actions": {
       "markInReview": "Send for Review",

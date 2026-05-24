@@ -303,6 +303,16 @@ export function FileManagerPageContent() {
                           />
                         ))}
                       </div>
+                    ) : viewMode === 'iso19650-tree' ? (
+                      <CompanyFileTree
+                        files={filteredFiles}
+                        companyName={activeWorkspace?.displayName || 'Company'}
+                        groupingMode="iso19650"
+                        onFileClick={handleFileClick}
+                        onFileDoubleClick={handleFileDoubleClick}
+                        onRename={handleRename}
+                        className="h-full"
+                      />
                     ) : viewMode === 'tree' ? (
                       <CompanyFileTree
                         files={filteredFiles}

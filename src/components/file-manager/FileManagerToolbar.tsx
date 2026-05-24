@@ -29,6 +29,7 @@ import {
   Upload,
   Inbox,
   AlertTriangle,
+  Layers,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
@@ -188,6 +189,21 @@ export function FileManagerToolbar({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>{t('manager.treeView')}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={viewMode === 'iso19650-tree' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => onViewModeChange('iso19650-tree')}
+                      aria-label={t('iso19650:virtualFolders.viewLabel')}
+                      aria-pressed={viewMode === 'iso19650-tree'}
+                      className={cn('px-2', viewMode === 'iso19650-tree' && 'bg-primary text-primary-foreground')}
+                    >
+                      <Layers className={iconSizes.sm} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('iso19650:virtualFolders.viewTooltip')}</TooltipContent>
                 </Tooltip>
               </li>
 

@@ -500,7 +500,9 @@
       "cancel": "Ακύρωση",
       "delete": "Διαγραφή",
       "deleteConfirm": "Διαγραφή σχολίου;",
-      "close": "Κλείσιμο"
+      "close": "Κλείσιμο",
+      "previousAttachment": "Προηγούμενη εικόνα",
+      "nextAttachment": "Επόμενη εικόνα"
     },
     "actions": {
       "markInReview": "Αποστολή για Ανασκόπηση",
