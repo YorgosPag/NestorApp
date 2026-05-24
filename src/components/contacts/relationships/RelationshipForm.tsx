@@ -76,6 +76,10 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
       return {
         ...prev,
         targetContactId: contact?.id || '',
+        // ADR-372: capture target type to enable 2D crossing filter in form fields
+        targetContactType: contact?.type ?? undefined,
+        // Reset type when target changes — old selection may be invalid for new crossing
+        relationshipType: contact?.type === prev.targetContactType ? prev.relationshipType : '',
         phones: autoPhones,
         emails: autoEmails,
         contactInfo: {

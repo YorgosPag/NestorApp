@@ -66,6 +66,8 @@ export function mapLegacyIntentToPipeline(legacyIntent: string): PipelineIntentT
     'admin_create_contact': PipelineIntentType.ADMIN_CREATE_CONTACT,
     'admin_update_contact': PipelineIntentType.ADMIN_UPDATE_CONTACT,
     'admin_general_question': PipelineIntentType.ADMIN_GENERAL_QUESTION,
+    // ── ADR-034 §12: Gantt AI (UC-017) ──
+    'admin_gantt_ai': PipelineIntentType.ADMIN_GANTT_AI,
   };
 
   return mapping[legacyIntent] ?? PipelineIntentType.UNKNOWN;

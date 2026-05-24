@@ -28,6 +28,7 @@ import { AdminSendEmailModule } from './uc-012-admin-send-email';
 import { AdminPropertyStatsModule } from './uc-013-admin-property-stats';
 import { AdminCreateContactModule } from './uc-015-admin-create-contact';
 import { AdminUpdateContactModule } from './uc-016-admin-update-contact';
+import { GanttAIModule } from './uc-017-gantt-ai';
 
 const logger = createModuleLogger('PIPELINE_MODULE_REGISTRATION');
 
@@ -78,6 +79,9 @@ export function registerAllPipelineModules(): void {
 
   // UC-016: Admin Update Contact (Secretary Mode)
   registry.register(new AdminUpdateContactModule());
+
+  // UC-017: Gantt AI — ADR-034 §12
+  registry.register(new GanttAIModule());
 
   // UC-014: Admin Fallback — NOT registered here (no global intent mapping)
   // It is invoked explicitly by the pipeline worker for admin messages

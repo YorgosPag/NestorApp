@@ -138,6 +138,7 @@ interface AdminCommandMeta {
 | `admin_property_stats` | UC-013 | Στατιστικά ακινήτων (πωλημένα/διαθέσιμα/δεσμευμένα) |
 | `admin_create_contact` | UC-015 | Δημιουργία νέας επαφής (+ smart confirmation) |
 | `admin_update_contact` | UC-016 | Ενημέρωση στοιχείων επαφής (Secretary Mode) |
+| `admin_gantt_ai` | UC-017 | AI ανάλυση Gantt: πρόβλεψη καθυστερήσεων, κίνδυνοι, βέλτιστο scheduling, πόροι, φωτογραφία (ADR-034 §12) |
 | _(no intent match)_ | UC-014 | Fallback — help text με διαθέσιμες εντολές |
 
 ### 3.5 Auto-Approve Logic
@@ -356,9 +357,10 @@ interface AdminSession {
 | `admin_property_stats` | UC-013 | ✅ **NEW** (ADR-145) |
 | `admin_create_contact` | UC-015 | ✅ **NEW** (ADR-145) |
 | `admin_update_contact` | UC-016 | ✅ **NEW** (ADR-145 — Secretary Mode) |
+| `admin_gantt_ai` | UC-017 | ✅ **NEW** (ADR-034 §12 — Gantt AI, 2026-05-23) |
 | _(admin fallback)_ | UC-014 | ✅ **NEW** (ADR-145) |
 
-**14 intents με module** + 1 admin fallback.
+**15 intents με module** + 1 admin fallback.
 
 ---
 
@@ -533,6 +535,7 @@ interface AdminSession {
 | 2026-02-10 | **ARCH: OpenAI Function Calling (Tool Use)** — Αντικατάσταση structured output (JSON schema) με tool calling για admin commands. 7 tool definitions (`search_contacts`, `get_project_status`, `send_email`, `get_business_stats`, `create_contact`, `update_contact_field`, `remove_contact_field`) αντικαθιστούν `AI_ADMIN_COMMAND_SCHEMA`. Η AI εξάγει ΟΛΑ τα params σημασιολογικά — μηδέν regex parsing. Conversational replies μέσω text fallback (0 extra API calls). UC modules λαμβάνουν pre-parsed entities. Νέο αρχείο: `src/config/admin-tool-definitions.ts`. Customer pipeline δεν αλλάζει. | Claude Code |
 | 2026-02-10 | **UC-011 Expansion: Multi-Project Search + Gantt Detection** — `get_project_status` tool: `projectName` γίνεται nullable + νέο `searchCriteria` param. UC-011 τρία modes: single (ένα έργο), list (όλα), search (με κριτήρια). Batch enrichment: units + buildings + construction_phases → unit stats + building count + `hasGantt`. Κριτήρια: gantt/χρονοδιάγραμμα, status (σε εξέλιξη/ολοκληρωμένο), κτήρια, units. Fixes: "Ποια έργα έχουν gantt;" τώρα δουλεύει. | Claude Code |
 | 2026-02-10 | **UC-011 Bottom-Up Discovery (Google approach)** — Πλήρης αναδόμηση `enrichProjectDetails()`. Πρόβλημα: buildings.companyId + units.companyId είναι OPTIONAL → queries by companyId επέστρεφαν κενά. Λύση: Bottom-up discovery χρησιμοποιώντας ΜΟΝΟ required fields: Buildings by `projectId` (required), Units by `buildingId` (required), Phases by `buildingId` (required). Νέο: `GanttBuildingDetail` type — η απάντηση δείχνει Gantt ανά κτίριο μέσα σε κάθε έργο (ιεραρχική εμφάνιση). Diagnostic logging σε κάθε step. | Claude Code |
+| 2026-05-23 | **UC-017: Gantt AI integration (ADR-034 §12)** — Νέο intent `admin_gantt_ai` + `GanttAIModule`. 6 AI features: delay_prediction (FAST/heuristic), natural_language (FAST/pattern), risk_assessment (QUALITY/OpenAI), auto_scheduling (QUALITY/OpenAI), resource_optimization (QUALITY/OpenAI), photo_progress (VISION/OpenAI). `IntentType` enum + `mapLegacyIntentToPipeline` + `ADMIN_COMMAND_SYSTEM` prompt ενημερώθηκαν. 41 tests. | Claude Code |
 | 2026-02-10 | **ADR-171: Autonomous AI Agent** — Αντικατάσταση hardcoded UC module routing με agentic tool calling. Ο admin path πλέον χρησιμοποιεί `executeAgenticPath()` αντί individual UC modules. 8 generic tools (firestore_query, get_document, count, write, send_email, send_telegram, get_schema, search_text), agentic loop (max 5 iterations), chat history (24h TTL). UC-010~016 παραμένουν ως legacy για customer path. Βλ. ADR-171 για πλήρη τεκμηρίωση. | Claude Code |
 | 2026-02-11 | **Multi-Channel Super Admin Detection** — Επέκταση admin αναγνώρισης σε WhatsApp, Messenger, Instagram. Νέες συναρτήσεις: `isSuperAdminWhatsApp()`, `isSuperAdminMessenger()`, `isSuperAdminInstagram()` στο `super-admin-resolver.ts`. Όλα τα Meta channel adapters (WhatsApp, Messenger, Instagram) ενσωματώνουν admin detection block (ίδιο pattern με Telegram). Types: `SuperAdminMessengerIdentity`, `SuperAdminInstagramIdentity`, `AdminResolvedVia` +messenger_psid +instagram_igsid. Firestore registry ενημερώθηκε: Γιώργος PSID=25577455211956767. | Claude Code |
 | 2026-02-11 | **Instagram dedicated app account (nestor_app)**: Δημιουργία ξεχωριστού Instagram Business account (nestor_app) ως webhook receiver. Ο Γιώργος στέλνει DMs από giorgio_pagoni → nestor_app. INSTAGRAM_ACCESS_TOKEN ενημερώθηκε για nestor_app. End-to-end test passed: ack + AI agentic reply received. | Claude Code |

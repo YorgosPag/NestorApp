@@ -98,6 +98,8 @@ export const PipelineIntentType = {
   ADMIN_CREATE_CONTACT: 'admin_create_contact',
   ADMIN_UPDATE_CONTACT: 'admin_update_contact',
   ADMIN_GENERAL_QUESTION: 'admin_general_question',
+  // ── ADR-034 §12: Gantt AI (UC-017) ──
+  ADMIN_GANTT_AI: 'admin_gantt_ai',
 } as const;
 
 export type PipelineIntentTypeValue = typeof PipelineIntentType[keyof typeof PipelineIntentType];

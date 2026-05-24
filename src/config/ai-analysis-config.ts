@@ -128,7 +128,9 @@ ADMIN INTENT TYPES (choose the most specific match — PREFER specific intents o
 
 - admin_contact_search: Any request to FIND, VIEW, LIST, or CHECK contacts/people/companies in the system. Includes: searching by name, listing contacts by type, checking a contact's data completeness or missing fields. Also covers questions like "ποιοι είναι οι πελάτες μας", "δείξε επαφές", "τι στοιχεία έχουμε για τον X". If a specific name is given, extract it in contactName. If listing all, set contactName to empty string. IMPORTANT: Questions about a SPECIFIC contact's data/fields → this intent, NOT admin_property_stats.
 
-- admin_project_status: Any question about CONSTRUCTION PROJECTS — single project status, listing all projects, or searching by criteria. Covers BOTH: single-project queries ("τι γίνεται με το έργο Πανόραμα") AND multi-project queries ("ποια έργα έχουν gantt", "πόσα έργα σε εξέλιξη", "δείξε μου τα ολοκληρωμένα", "σε ποια έργα υπάρχει gantt/χρονοδιάγραμμα"). Use this for ANY question about projects, progress, timelines, Gantt charts, or construction status.
+- admin_project_status: Any question about CONSTRUCTION PROJECTS — single project status, listing all projects, or searching by criteria. Covers BOTH: single-project queries ("τι γίνεται με το έργο Πανόραμα") AND multi-project queries ("ποια έργα έχουν gantt", "πόσα έργα σε εξέλιξη", "δείξε μου τα ολοκληρωμένα"). Use this for STATUS OVERVIEW — NOT for AI analysis (see admin_gantt_ai below).
+
+- admin_gantt_ai: AI-powered ANALYSIS of a construction schedule (Gantt). Use when the admin wants PREDICTIONS, RISKS, OPTIMIZATION, or AI insights — NOT just status. Covers: "πρόβλεψη καθυστέρησης", "ποιοι κίνδυνοι υπάρχουν", "βέλτιστη σειρά εργασιών", "βελτιστοποίηση πόρων", "δείξε καθυστερημένες εργασίες", "ανάλυσε το χρονοδιάγραμμα", "τι ρίσκα βλέπεις", photo analysis for progress estimation. KEY DISTINCTION: admin_project_status = "what is the status?", admin_gantt_ai = "analyze / predict / optimize / assess risks".
 
 - admin_send_email: Any request to SEND a message/email to someone. Covers: "στείλε email", "στείλε μήνυμα", "γράψε στον X ότι...".
 
@@ -155,6 +157,7 @@ ADMIN INTENT TYPES (choose the most specific match — PREFER specific intents o
 ENTITY EXTRACTION RULES:
 - For admin_contact_search: Extract person name in "contactName" (empty string if listing all). Extract "contactType" as "individual" or "company" if specified.
 - For admin_project_status: Extract "projectName" if asking about ONE specific project (null if asking about many/all). Extract "searchCriteria" if filtering by feature/status (e.g., "gantt", "completed", "σε εξέλιξη").
+- For admin_gantt_ai: Extract "ganttFeature" as one of: "delay_prediction" | "risk_assessment" | "auto_scheduling" | "resource_optimization" | "natural_language" | "photo_progress". Extract "buildingId" if a specific building ID is mentioned. Default ganttFeature to "natural_language" if unclear.
 - For admin_send_email: Extract "recipientName" and "emailContent"
 - For admin_create_contact: Extract "contactName", "email", "phone", "contactType" (default: "individual")
 - For admin_update_contact: Extract "contactName", "fieldName" (e.g., "phone", "email", "vatNumber", "idNumber", "profession"), "fieldValue" (empty if removing)

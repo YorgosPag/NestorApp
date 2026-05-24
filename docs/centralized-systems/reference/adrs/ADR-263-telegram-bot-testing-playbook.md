@@ -61,7 +61,7 @@ cd C:/Nestor_Pagonis && npx jest --testPathPatterns="ai-pipeline/tools/__tests__
 1. Διόρθωσε τον κώδικα
 2. Re-run automated tests μέχρι 63/63 PASS
 3. Commit τη διόρθωση
-4. Push (αν ζητηθεί) ώστε να χτιστεί στο Vercel
+4. Push (αν ζητηθεί) ώστε να ανεβεί στο Netcup (nestorconstruct.gr)
 
 ### ΦΑΣΗ 3: Telegram Bot E2E Tests (~2-5 λεπτά ανά test)
 
@@ -74,7 +74,11 @@ Production bot **μόνο για τελική επιβεβαίωση** μετά 
 1. Ξεκίνα localhost: `cd C:/Nestor_Pagonis && npm run dev`
 2. Ξεκίνα ngrok: `C:/Nestor_Pagonis/ngrok-bin/ngrok.exe http 3000`
 3. Πάρε το ngrok URL (π.χ. `https://xxxx.ngrok-free.app`)
-4. Set webhook: `curl "https://api.telegram.org/bot8291786276:AAEkduYv24BzyW-6oBnL_LOG97s0e5Rwz8U/setWebhook?url=https://xxxx.ngrok-free.app/api/communications/webhooks/telegram&secret_token=nestor_webhook_secret_2025_secure_key"`
+4. Set webhook (χρησιμοποίησε tokens από `.env.local`):
+   ```
+   scripts/start-telegram-dev.ps1
+   ```
+   (κάνει αυτόματα ngrok + webhook register — δεν χρειάζεται manual curl)
 5. Στέλνε messages με dev bot token + dev secret στο Node.js script
 
 Αυτά τα tests ελέγχουν:
@@ -109,18 +113,19 @@ Automated Tests → Fix Code → Re-test → Telegram E2E → Findings →
 |-------|-------|
 | **Bot Name** | Nestor_P_Bot |
 | **Bot ID** | 8097088681 |
-| **Token** | `8097088681:AAHasjfQQh6K3zUpxvcz7nolgwM72ODaFwE` |
-| **Webhook URL** | `https://nestor-app.vercel.app/api/communications/webhooks/telegram` |
-| **Webhook Secret** | `5BD3E52317ECFEAD9628A44C29D979A261309228D6558C1D0CECD25F16108428` |
-| **Env Source** | Vercel env vars (pulled via `vercel env pull`) |
+| **Token** | Δες `TELEGRAM_BOT_TOKEN` στα Netcup env vars |
+| **Webhook URL** | `https://nestorconstruct.gr/api/communications/webhooks/telegram` |
+| **Webhook Secret** | Δες `TELEGRAM_WEBHOOK_SECRET` στα Netcup env vars |
+| **Env Source** | Netcup server environment variables |
 
 ### Development Bot (localhost)
 | Field | Value |
 |-------|-------|
-| **Token** | `8291786276:AAEkduYv24BzyW-6oBnL_LOG97s0e5Rwz8U` |
-| **Webhook URL** | Needs ngrok or Vercel preview deploy |
-| **Webhook Secret** | `nestor_webhook_secret_2025_secure_key` |
-| **Env Source** | `.env` file |
+| **Bot ID** | 8291786276 |
+| **Token** | Δες `TELEGRAM_BOT_TOKEN` στο `.env.local` |
+| **Webhook URL** | ngrok tunnel → `localhost:3000` (auto-register με `scripts/start-telegram-dev.ps1`) |
+| **Webhook Secret** | Δες `TELEGRAM_WEBHOOK_SECRET` στο `.env.local` |
+| **Env Source** | `.env.local` |
 
 ### Super Admin (Γιώργος)
 | Field | Value |
@@ -143,8 +148,15 @@ Windows curl κάνει garble τα ελληνικά. Πάντα Node.js:
 
 ```javascript
 // === COPY-PASTE READY: Send message to production webhook ===
+// Πριν τρέξεις: φόρτωσε TELEGRAM_WEBHOOK_SECRET από .env.local ή Netcup env vars
 cd C:/Nestor_Pagonis && node -e "
 const https = require('https');
+const fs = require('fs');
+// Διάβασε το secret από .env.local (για dev) ή βάλε το production secret χειροκίνητα
+const envContent = fs.readFileSync('.env.local', 'utf8');
+const secretMatch = envContent.match(/TELEGRAM_WEBHOOK_SECRET=\"?([^\"\\n]+)\"?/);
+const WEBHOOK_SECRET = secretMatch ? secretMatch[1] : '<ΒΑΛΕ_ΕΔΩ_ΤΟ_PRODUCTION_SECRET>';
+
 function send(text, uid, mid) {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify({
@@ -156,12 +168,12 @@ function send(text, uid, mid) {
       }
     });
     const req = https.request({
-      hostname:'nestor-app.vercel.app',
+      hostname:'nestorconstruct.gr',
       path:'/api/communications/webhooks/telegram',
       method:'POST',
       headers:{
         'Content-Type':'application/json',
-        'X-Telegram-Bot-Api-Secret-Token':'5BD3E52317ECFEAD9628A44C29D979A261309228D6558C1D0CECD25F16108428',
+        'X-Telegram-Bot-Api-Secret-Token': WEBHOOK_SECRET,
         'Content-Length':Buffer.byteLength(payload)
       }
     }, res => { let d=''; res.on('data',c=>d+=c); res.on('end',()=>resolve(d)); });

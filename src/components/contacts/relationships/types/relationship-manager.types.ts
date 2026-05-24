@@ -40,6 +40,8 @@ export interface ContactRelationshipManagerProps {
  */
 export interface RelationshipFormData {
   targetContactId: string;
+  /** ADR-372: type of the selected target contact. Drives 2D crossing filter when set. */
+  targetContactType?: ContactType;
   relationshipType: string;
   /** Custom label when user adds a new relationship type not in predefined list */
   customRelationshipLabel?: string;

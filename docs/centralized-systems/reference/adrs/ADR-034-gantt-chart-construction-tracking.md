@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | IMPLEMENTED - Phase 1+2+3 Complete, Phase 4 Partial (4.1+4.2+4.3+4.4+4.5+4.7+4.8+4.9 DONE — 4.6 PLANNED) |
+| **Status** | IMPLEMENTED - Phase 1+2+3+4 Complete (4.1+4.2+4.3+4.4+4.5+4.6+4.7+4.8+4.9 ALL DONE) |
 | **Date** | 2026-02-07 |
 | **Category** | UI Components / Construction Management |
 | **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
@@ -729,6 +729,7 @@ Custom color picker με ColorPicker component (inline, no external dependency).
 | 2026-05-21 | Phase 4.8 DONE: dependency arrows SVG overlay. `GanttDependencyArrows.tsx` + `useGanttDependencyArrows.ts`. Portal into `.rmg-timeline-container`, RAF-throttled, theme-aware. |
 | 2026-05-21 | Phase 4.8 UI: dependency multi-select στο `ConstructionPhaseDialog` task tab. `MultiCombobox`, `tasks` prop, i18n keys. |
 | 2026-05-22 | Phase 4.5 status sync: ADR-266 Phase D.3+D.5 είχε ολοκληρωθεί 2026-05-21 (alert rules engine + Portfolio Dashboard) αλλά ADR-034 παρέμεινε stale. Status line + Phase 4 table ενημερώθηκαν. |
+| 2026-05-23 | Phase 4.6 DONE: UC-017 Gantt AI module. 6 features (FAST: delay_prediction + natural_language, QUALITY: risk_assessment + auto_scheduling + resource_optimization, VISION: photo_progress). Files: `src/services/ai-pipeline/modules/uc-017-gantt-ai/` (11 source files + 4 test files, 41 tests). New intent `ADMIN_GANTT_AI` added to `PipelineIntentType`. Module registered in `register-modules.ts`. |
 
 ---
 

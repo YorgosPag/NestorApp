@@ -7,39 +7,27 @@
 // 🏢 STANDARDS: Enterprise form patterns, centralized design system
 //
 // ============================================================================
-
 'use client';
-
 import React, { useCallback, useMemo, useState } from 'react';
 import { isValidEmail } from '@/lib/validation/email-validation';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { designSystem } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-
-// 🏢 ENTERPRISE: Centralized SearchableCombobox — single source of truth
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
-
-// 🏢 ENTERPRISE: Centralized presets — positions, departments, types
 import {
   getRelationshipTypeOptions,
   getPositionOptions,
   getDepartmentOptions
 } from './config/relationship-form-presets';
-
-// 🏢 ENTERPRISE: Centralized communication system
 import { UniversalCommunicationManager } from '@/components/contacts/dynamic/UniversalCommunicationManager';
 import { getEntityAwareCommunicationConfig } from '@/components/contacts/dynamic/communication';
 import type { CommunicationItem } from '@/components/contacts/dynamic/communication';
 import type { PhoneInfo, EmailInfo } from '@/types/contacts';
 import { formatPhoneDisplay } from '@/utils/contacts/formatPhoneDisplay';
-
-// 🏢 ENTERPRISE: Import centralized types
 import type { ContactType } from '@/types/contacts/contracts';
 import type { RelationshipFormData } from './types/relationship-manager.types';
-
-// 🏢 ADR-318: Registry-driven work-address derivation
 import { getRelationshipMetadata } from '@/types/contacts/relationships/core/relationship-metadata';
 import { Switch } from '@/components/ui/switch';
 
@@ -50,7 +38,10 @@ import { Switch } from '@/components/ui/switch';
 export interface RelationshipFormFieldsProps {
   formData: RelationshipFormData;
   setFormData: React.Dispatch<React.SetStateAction<RelationshipFormData>>;
+  /** Source contact type (page owner). */
   contactType: ContactType;
+  /** ADR-372: target contact type. Enables 2D crossing filter when provided. */
+  targetContactType?: ContactType;
   loading?: boolean;
   errors?: Partial<Record<keyof RelationshipFormData, string>>;
   /** Relationship types already used for the selected target contact — excluded from dropdown */
@@ -120,6 +111,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   formData,
   setFormData,
   contactType,
+  targetContactType,
   loading = false,
   errors = {},
   usedRelationshipTypes = [],
@@ -155,7 +147,13 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   // ============================================================================
 
   const relationshipTypeOptions = useMemo(() => {
-    const presets = getRelationshipTypeOptions(contactType, t);
+    // Pass currentValue + targetContactType for ADR-372 crossing filter.
+    const presets = getRelationshipTypeOptions(
+      contactType,
+      t,
+      formData.relationshipType,
+      targetContactType ?? formData.targetContactType
+    );
     const allOptions = [...presets, ...customRelTypes];
     // 🏢 ENTERPRISE: Mark already-used types as disabled (not removed)
     // Shows all options but prevents re-selection — Google-level UX
@@ -164,7 +162,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
       ? { ...option, disabled: true, disabledHint: t('relationships.form.alreadyRegistered') }
       : option
     );
-  }, [contactType, t, customRelTypes, usedRelationshipTypes]);
+  }, [contactType, targetContactType, t, customRelTypes, usedRelationshipTypes, formData.relationshipType, formData.targetContactType]);
 
   const positionOptions = useMemo(() => {
     const presets = getPositionOptions(t);

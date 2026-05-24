@@ -56,6 +56,8 @@ export const IntentType = z.enum([
   'admin_create_contact',  // Admin: Δημιουργία νέας επαφής (UC-015)
   'admin_update_contact',  // Admin: Ενημέρωση στοιχείων επαφής (UC-016)
   'admin_general_question', // Admin: Γενική ερώτηση/συζήτηση (UC-014 conversational)
+  // ── ADR-034 §12: Gantt AI (UC-017) ──
+  'admin_gantt_ai',         // Admin: AI ανάλυση Gantt (UC-017) — delay prediction, risk, scheduling, resources, photo
 ]);
 
 export type IntentTypeValue = z.infer<typeof IntentType>;

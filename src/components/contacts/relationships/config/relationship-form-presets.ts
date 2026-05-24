@@ -20,27 +20,43 @@ import {
 } from '../utils/relationship-types';
 
 // ============================================================================
-// RELATIONSHIP TYPE OPTIONS — Built from existing centralized config
+// RELATIONSHIP TYPE OPTIONS — Built from centralized config + ADR-372 matrix
 // ============================================================================
 
 /**
- * Builds ComboboxOption[] for relationship types based on contact type.
- * Wraps existing `getAvailableRelationshipTypes` + `getRelationshipTypeConfig`.
+ * Builds ComboboxOption[] for relationship types filtered by crossing.
  *
- * @param contactType - individual | company | service
- * @param t - i18n translation function
+ * @param sourceType   - contact type of the page owner (source side)
+ * @param t            - i18n translation function
+ * @param currentValue - already-saved type; prepended if absent from filtered list
+ * @param targetType   - contact type of the selected target (ADR-372: enables 2D matrix filter)
+ *                       When provided, only types valid for the (source→target) crossing are shown.
+ *                       When absent, falls back to source-only filter (backward compat).
  */
 export function getRelationshipTypeOptions(
-  contactType: ContactType,
-  t: (key: string) => string
+  sourceType: ContactType,
+  t: (key: string) => string,
+  currentValue?: string,
+  targetType?: ContactType
 ): ComboboxOption[] {
-  const types = getAvailableRelationshipTypes(contactType);
+  const types = getAvailableRelationshipTypes(sourceType, targetType);
 
-  return types.map(typeKey => {
+  const options: ComboboxOption[] = types.map(typeKey => {
     const config = getRelationshipTypeConfig(typeKey);
     const label = config?.label ? t(config.label) : typeKey;
     return { value: typeKey, label };
   });
+
+  // When editing a relationship from the opposite contact's side, the saved type may not be
+  // in the filtered list (e.g. 'business_contact' was set from person's side, but a company
+  // is opening the form). Prepend it with its proper label so the UI never shows raw keys.
+  if (currentValue && !options.some(o => o.value === currentValue)) {
+    const fallbackConfig = getRelationshipTypeConfig(currentValue);
+    const fallbackLabel = fallbackConfig?.label ? t(fallbackConfig.label) : currentValue;
+    options.unshift({ value: currentValue, label: fallbackLabel });
+  }
+
+  return options;
 }
 
 // ============================================================================

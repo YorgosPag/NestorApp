@@ -173,8 +173,7 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 
 - [x] **4.8 Dependency arrows** ✅ DONE 2026-05-21 — `GanttDependencyArrows.tsx` + `useGanttDependencyArrows.ts`, portal into `.rmg-timeline-container`, RAF-throttled bezier SVG, ADR-034 §4.8 updated
 - [x] **4.5 Alert engine — deadline notifications** ✅ DONE 2026-05-21 — ADR-266 Phase D.3 (6+1 alert rules, `construction_alerts` collection, API routes, `ScheduleAlertBanner`, Telegram digest, cron bypass) + Phase D.5 (Portfolio Dashboard). ADR-034 status line stale — needs sync.
-- [ ] **4.6 AI integration UC-017** (~15-20h, νέο AI pipeline module)
-  - Partial spec: ADR-034 §12
+- [x] **4.6 AI integration UC-017** ✅ DONE 2026-05-23 — UC-017 module 11 source files + 4 tests (41 pass). 6 features FAST/QUALITY/VISION. `src/services/ai-pipeline/modules/uc-017-gantt-ai/`. Intent `ADMIN_GANTT_AI` + registered.
   - Τελευταίο στη σειρά — δεν μπλοκάρει 4.8/4.5
 
 **Προτεινόμενη σειρά:** 4.8 ✅ → 4.5 ✅ → 4.6
@@ -195,7 +194,7 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 
 **Copy-paste template for the agent:**
 
-> 📋 Pending ratchet tasks (ADR-299): **ADR-365 Tailwind Palette ✅ COMPLETE** — 0 violations / 0 files (2026-05-22). Zero-tolerance via CHECK 3.26 active. Remaining pending: ADR-345 spellCheck stub, Grip Types SSoT, ADR-3XX Auto-Infer Alignment, ADR-034 UC-017 AI integration.
+> 📋 Pending ratchet tasks (ADR-299): **ADR-365 Tailwind Palette ✅ COMPLETE** — 0 violations / 0 files (2026-05-22). Zero-tolerance via CHECK 3.26 active. Remaining pending: ADR-345 spellCheck stub, Grip Types SSoT, ADR-3XX Auto-Infer Alignment, ADR-034 UC-017 AI integration ✅ DONE 2026-05-23.
 
 ---
 
