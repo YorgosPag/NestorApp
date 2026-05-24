@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟢 **PHASES 0-8.1 FULLY IMPLEMENTED** 2026-05-21 + 🔵 **GROUP C RESEARCH CLOSED 7/7** 2026-05-22 + 🟡 **PHASE 9 IN PROGRESS** (C.4 ✅ 2026-05-22, C.5 ✅ 2026-05-22, C.3 ✅ 2026-05-22, C.6 ✅ 2026-05-22) — Phases 0-8.1 implementation complete (3D BIM viewer Three.js, ARIA/screen reader Phase 8.0-8.1, IFC export Phase 8.0 Q8.3+Q8.4, section cuts Phase 7.0). **Phase 9 deferred features** (Group C decisions → implementation): **C.4 ✅ DONE** (BimMaterialsTab/BimBoqTab/BimCommentsTab + last-active-tab-tracker + material-alternatives-resolver + boq-tree-builder). **C.5 ✅ DONE** (announcement-protocol + entity-dom-proxy-renderer + entity-keyboard-navigator + use-reduced-motion + reduced-motion-config + aria-entity-description-generator extensions + focus-order semantic toggle + Bim3DPreferencesService accessibility fields + ViewMode3DStore announcementsEnabled + i18n 44 keys). **C.3 ✅ DONE 2026-05-22** (dim3d-types + value-computer + line-geometry + text-plane-orienter + Dim3DToolStateMachine + dim3d-snap-engine-adapter + bim-dimensions-3d.service + Dimension3DRenderer + Dim3DGripsRenderer + useDim3DToolRouting + RibbonDim3DContextualTab + Dim3DPropertiesPanel + BimDimensions3DStore + Firestore collection+rules+3 indexes + 4 RBAC perms + audit type+action + Bim3DPreferencesService dimensions field + Ctrl+Shift+D hotkey + i18n 36 keys × 2 + 35 tests). **C.6 ✅ DONE 2026-05-22** (SectionStore PlaneGroup/linkedGroups + CropRegionStore FSM + CropRegionTool + CropRegionOverlay + crop-frustum-builder + HorizontalPresetPicker + PlaneListItem + section-group-transformer + horizontal-cut-preset-resolver + useCropRegionTool + keyboard shortcut Ctrl+Alt+R + BimViewport3D wiring + SectionSceneController budget guard + i18n ~41 keys × 2). **C.2 ✅ DONE 2026-05-24**, **C.7 Q1+Q3+Q4+Q5 ✅ DONE 2026-05-24** (Q1 Sparkline 60s, Q3 GDPR anonymous telemetry pipeline, Q4 auto-submit FSM, Q5 Regression detection — PerformanceHistoryStore + Sparkline + baseline-tracker MAD + regression-detector + regression-alert-bus + PerformanceRegressionNotifier toast + auto-submit-fps-threshold FSM + AutoSubmitConsentDialog + telemetry/{anonymizer,session-id-generator,batcher,uploader,store,ConsentDialog} + /api/telemetry/bim-performance + .../erase + bim_performance_telemetry Firestore collection). Pending: C.7 Q2 (admin dashboard), C.1 (Animation). Phase 9 remaining effort: ~14-19h. ADR-366 total estimate: ~254-303h Phases 0-9. |
+| **Status** | 🟢 **PHASES 0-8.1 FULLY IMPLEMENTED** 2026-05-21 + 🔵 **GROUP C RESEARCH CLOSED 7/7** 2026-05-22 + 🟡 **PHASE 9 IN PROGRESS** (C.4 ✅ 2026-05-22, C.5 ✅ 2026-05-22, C.3 ✅ 2026-05-22, C.6 ✅ 2026-05-22) — Phases 0-8.1 implementation complete (3D BIM viewer Three.js, ARIA/screen reader Phase 8.0-8.1, IFC export Phase 8.0 Q8.3+Q8.4, section cuts Phase 7.0). **Phase 9 deferred features** (Group C decisions → implementation): **C.4 ✅ DONE** (BimMaterialsTab/BimBoqTab/BimCommentsTab + last-active-tab-tracker + material-alternatives-resolver + boq-tree-builder). **C.5 ✅ DONE** (announcement-protocol + entity-dom-proxy-renderer + entity-keyboard-navigator + use-reduced-motion + reduced-motion-config + aria-entity-description-generator extensions + focus-order semantic toggle + Bim3DPreferencesService accessibility fields + ViewMode3DStore announcementsEnabled + i18n 44 keys). **C.3 ✅ DONE 2026-05-22** (dim3d-types + value-computer + line-geometry + text-plane-orienter + Dim3DToolStateMachine + dim3d-snap-engine-adapter + bim-dimensions-3d.service + Dimension3DRenderer + Dim3DGripsRenderer + useDim3DToolRouting + RibbonDim3DContextualTab + Dim3DPropertiesPanel + BimDimensions3DStore + Firestore collection+rules+3 indexes + 4 RBAC perms + audit type+action + Bim3DPreferencesService dimensions field + Ctrl+Shift+D hotkey + i18n 36 keys × 2 + 35 tests). **C.6 ✅ DONE 2026-05-22** (SectionStore PlaneGroup/linkedGroups + CropRegionStore FSM + CropRegionTool + CropRegionOverlay + crop-frustum-builder + HorizontalPresetPicker + PlaneListItem + section-group-transformer + horizontal-cut-preset-resolver + useCropRegionTool + keyboard shortcut Ctrl+Alt+R + BimViewport3D wiring + SectionSceneController budget guard + i18n ~41 keys × 2). **C.2 ✅ DONE 2026-05-24**, **C.7 Q1+Q2+Q3+Q4+Q5 ✅ DONE 2026-05-24** (Q1 Sparkline 60s, Q2 Admin BIM Diagnostics Dashboard — super-admin /admin/bim-diagnostics route + FSM triage + Recharts aggregates + CSV export + audit, Q3 GDPR anonymous telemetry pipeline, Q4 auto-submit FSM, Q5 Regression detection). Pending: C.1 (Animation). Phase 9 remaining effort: ~14-19h. ADR-366 total estimate: ~254-303h Phases 0-9. |
 | **Date** | 2026-05-19 |
 | **Category** | DXF Viewer — 3D Rendering / Photorealistic Output |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md` |
@@ -3406,7 +3406,7 @@ ADR-366 total estimate revised: **~185-220h** Phase 0-7 (από ~179-212h post-B
 
 ---
 
-### C.7 — Performance HUD Extensions — ✅ RESEARCH CLOSED 2026-05-22 · 🟡 Q1+Q3+Q4+Q5 IMPLEMENTED 2026-05-24 (Sessions 3a+3b)
+### C.7 — Performance HUD Extensions — ✅ RESEARCH CLOSED 2026-05-22 · 🟢 Q1+Q2+Q3+Q4+Q5 IMPLEMENTED 2026-05-24 (Sessions 3a+3b+4)
 
 **Σκοπός**: Κλείνει B.5 deferred extensions (sparkline 60s history, admin diagnostics dashboard, anonymized telemetry opt-in, auto-submit threshold FPS<10, performance regression detection). Phase 4 implementing base HUD (Group B.5) — C.7 extends με production observability + admin tooling.
 
@@ -3517,6 +3517,47 @@ ADR-366 total estimate revised: **~185-220h** Phase 0-7 (από ~179-212h post-B
   - Recharts library already used elsewhere (no new dep)
 
 **Effort impact για C.7**: **Phase 9 (new) +10-12h** = 1.5h PerformanceHistoryStore + Sparkline + integration σε Expanded + 2h regression-detector + baseline-tracker + toast + 1.5h auto-submit FPS threshold FSM + consent dialog + 2h telemetry anonymizer + batcher + uploader + server route + rate-limit + erase endpoint + 2h admin diagnostics dashboard route + list + detail + triage + charts + CSV export + 0.5h Firestore rules + RBAC + audit + 0.5-1h i18n + tests. ADR-366 total estimate revised: **~254-303h Phase 0-9** (από ~244-291h post-C.6, +10-12h C.7).
+
+---
+
+#### Q2 Implementation log — Session 4 (2026-05-24)
+
+**Status**: ✅ DONE 2026-05-24. Super-admin dashboard live at `/admin/bim-diagnostics`.
+
+**Files created** (12):
+- `src/types/performance-diagnostic.ts` — `PerformanceDiagnostic` + `TriageStatus` + `TriageHistoryEntry` types (SSoT for collection schema)
+- `src/app/admin/bim-diagnostics/lib/triage-fsm.ts` — pure FSM (`canTransition`, `nextStates`, `isTerminal`, `TRIAGE_STATUSES`)
+- `src/app/admin/bim-diagnostics/lib/admin-api.ts` — client wrappers `patchTriage()` + `putInternalNote()` με Firebase ID-token auth
+- `src/app/admin/bim-diagnostics/hooks/useDiagnosticsQuery.ts` — `firestoreQueryService.subscribe` με 30-day window + `tenantOverride:'skip'` για super-admin global view
+- `src/app/admin/bim-diagnostics/components/DiagnosticsFiltersBar.tsx` — status/date/project/GPU/FPS/browser filters
+- `src/app/admin/bim-diagnostics/components/DiagnosticsList.tsx` — plain scrolling table (virtualization deferred until >1k rows)
+- `src/app/admin/bim-diagnostics/components/DiagnosticsDetailPanel.tsx` — 10-metric grid + Radix Dialog lightbox + `useEntityAudit` history + TriageActions
+- `src/app/admin/bim-diagnostics/components/TriageActions.tsx` — FSM status select + assignee input + internal notes editor + triage history
+- `src/app/admin/bim-diagnostics/components/DiagnosticsCharts.tsx` — Recharts FPS histogram (10-bin) + GPU pie + render-mode bar (CSS-var colors per ADR-365)
+- `src/app/admin/bim-diagnostics/BimDiagnosticsView.tsx` — client root: filter state + selection + CSV export trigger + 3-pane shell
+- `src/app/admin/bim-diagnostics/page.tsx` — server wrapper (auth via layout `requireAdminForPage`)
+- `src/lib/exports/diagnostics-csv.ts` — `diagnosticsToCsv()` + `downloadDiagnosticsCsv()` (mirror `scheduleToCsv` SSoT)
+
+**API routes created** (2):
+- `src/app/api/admin/bim-diagnostics/[id]/route.ts` — `PATCH` for status + assignee (atomic Firestore transaction + per-field audit)
+- `src/app/api/admin/bim-diagnostics/[id]/notes/route.ts` — `PUT` for internalNotes (single-field replace, idempotent skip when unchanged)
+
+**Files modified** (7):
+- `src/types/audit-trail.ts` — added `triage_status_changed`, `triage_assigned`, `internal_note_added` to `AuditAction` union
+- `firestore.rules` — updated `performance_diagnostics` block to restrict super-admin update to `{status, assignedSuperAdminId, internalNotes, triageHistory}` only (immutable base fields enforced via `diff().affectedKeys().hasOnly(...)`)
+- `src/app/api/performance-diagnostics/route.ts` — first-write sets defaults `status:'new'`, `assignedSuperAdminId:null`, `internalNotes:null`, `triageHistory:[]`
+- `src/lib/auth/types.ts` — added 3 explicit PERMISSIONS entries (super-admin granted via `isBypass`, explicit for audit transparency)
+- `src/components/admin/layout/AdminSidebar.tsx` — added nav entry «Διαγνωστικά BIM» under `dataAudit` group, gated by `superAdminOnly:true`
+- `src/i18n/locales/el/admin.json` — added `bimDiagnostics.*` namespace (~44 keys, pure Greek) + sidebar.nav entry
+- `src/i18n/locales/en/admin.json` — added parallel `bimDiagnostics.*` namespace
+
+**REST design**: GitHub Issues convention — `PATCH /[id]` for status+assignee (atomic, single resource), `PUT /[id]/notes` for internalNotes replace. Industry-standard split for triage workflows (Jira/Linear/Sentry convergence).
+
+**Deviations from research-time spec**:
+- Virtualization (`@tanstack/react-virtual`) deferred: plain scrolling table chosen for first iteration since 30-day window keeps row count bounded. Promote when records >1k.
+- New permissions kept explicit in `PERMISSIONS` registry even though super-admin role uses `isBypass:true`; provides audit-grade traceability for future role granularization.
+
+**Industry alignment**: Resource-oriented REST (GitHub Issues PATCH + comments POST), CSS-var palette tokens (ADR-365), Recharts MIT (N.5 license-compliant, already used in 25 files).
 
 ---
 
