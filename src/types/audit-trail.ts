@@ -37,6 +37,7 @@ export type AuditEntityType =
   | 'column'
   | 'beam'
   | 'performance_diagnostic'
+  | 'performance_telemetry'
   | 'bim_dimension_3d';
 
 /** Actions that can be recorded in the audit trail */
@@ -59,7 +60,8 @@ export type AuditAction =
   | 'orphaned'
   | 'auto_submit_prompted'
   | 'auto_submit_accepted'
-  | 'auto_submit_declined';
+  | 'auto_submit_declined'
+  | 'erased';
 
 // ============================================================================
 // FIELD-LEVEL DIFF

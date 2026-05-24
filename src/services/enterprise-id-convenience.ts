@@ -248,6 +248,9 @@ export const generateBim3DDimensionId = () => enterpriseIdService.generateBim3DD
 export const generateBimCommentId = () => enterpriseIdService.generateBimCommentId();
 export const generateBimCommentReplyId = () => enterpriseIdService.generateBimCommentReplyId();
 
+// DXF 3D BIM Viewer — Anonymous Telemetry (ADR-366 §C.7.Q3)
+export const generateBimTelemetryId = () => enterpriseIdService.generateBimTelemetryId();
+
 // ISO 19650 Cost Log (ADR-373 P2.5)
 export const generateIso19650CostLogId = () => enterpriseIdService.generateIso19650CostLogId();
 

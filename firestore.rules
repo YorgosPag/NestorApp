@@ -4674,6 +4674,22 @@ service cloud.firestore {
                     && isSuperAdminOnly();
     }
 
+    // ─── BIM PERFORMANCE TELEMETRY (ADR-366 §C.7.Q3) ─────────────────────
+    // GDPR-anonymized performance samples. TOP-LEVEL, no companyId (anonymity
+    // preserved). All client traffic flows through the Admin-SDK ingest route
+    // at /api/telemetry/bim-performance; ERASE flows through .../erase. Client
+    // writes/reads are denied at the rules layer.
+    //   - READ:   super-admin only (no per-tenant exposure — anonymous data)
+    //   - CREATE: deny (server-only via Admin SDK)
+    //   - UPDATE: deny (samples are immutable)
+    //   - DELETE: deny (server-only via Admin SDK erase route)
+    match /bim_performance_telemetry/{telemetryId} {
+
+      allow read: if isAuthenticated() && isSuperAdminOnly();
+
+      allow create, update, delete: if false;
+    }
+
     // ─── CONSTRUCTION ALERTS (ADR-266 §5.8 Phase D.3) ────────────────────
     // Read: tenant-scoped (companyId must match). Created by Admin SDK only.
     // Update: dismiss only — status field + dismissedAt/dismissedBy.

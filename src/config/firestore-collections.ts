@@ -390,6 +390,11 @@ export const COLLECTIONS = {
   BIM_COMMENTS:
     process.env.NEXT_PUBLIC_BIM_COMMENTS_COLLECTION || 'bim_comments',
 
+  // 📡 BIM PERFORMANCE TELEMETRY — ADR-366 §C.7.Q3 (GDPR anonymous samples)
+  /** Anonymous performance samples. TOP-LEVEL (no companyId field — anonymity preserved). Super-admin read-only, server-only writes via Admin SDK, 30-day TTL on createdAt. IDs via telm_bim_* prefix. */
+  BIM_PERFORMANCE_TELEMETRY:
+    process.env.NEXT_PUBLIC_BIM_PERFORMANCE_TELEMETRY_COLLECTION || 'bim_performance_telemetry',
+
   // 🪣 ISO 19650 ENRICHMENT SLOTS — ADR-373 P2.4 (distributed token bucket, server-only)
   /** Per-company distributed token bucket for AI enrichment concurrency control. Doc ID = companyId. Admin SDK only — client access forbidden. */
   ISO19650_ENRICHMENT_SLOTS: 'iso19650_enrichment_slots',

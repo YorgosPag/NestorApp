@@ -1187,6 +1187,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'iso19650_cost_log',          // lines 3934-3941 — audit log (Admin SDK only); full matrix later
   // — BIM 3D Performance Diagnostics (ADR-366 Phase 7 Group B.5, 2026-05-24) —
   'performance_diagnostics',    // lines 4653-4675 — public (unauthenticated) write for performance telemetry; full matrix later
+  // — BIM 3D Anonymous Telemetry (ADR-366 §C.7.Q3, 2026-05-24) —
+  'bim_performance_telemetry',  // super-admin-only read + deny-all-client writes (server-only Admin SDK via /api/telemetry/bim-performance); full matrix later
 ] as const;
 
 // ---------------------------------------------------------------------------

@@ -323,6 +323,9 @@ export class EnterpriseIdService {
   generateBimCommentId(): string { return this.generateId(P.BIM_COMMENT).id; }
   generateBimCommentReplyId(): string { return this.generateId(P.BIM_COMMENT_REPLY).id; }
 
+  // DXF 3D BIM Viewer — Anonymous Telemetry (ADR-366 §C.7.Q3)
+  generateBimTelemetryId(): string { return this.generateId(P.PERFORMANCE_TELEMETRY).id; }
+
   // ISO 19650 Cost Log (ADR-373 P2.5)
   generateIso19650CostLogId(): string { return this.generateId(P.ISO19650_COST_LOG).id; }
 

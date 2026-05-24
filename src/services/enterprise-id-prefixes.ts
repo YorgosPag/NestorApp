@@ -267,6 +267,9 @@ export const ENTERPRISE_ID_PREFIXES = {
   BIM_COMMENT: 'cmt_bim',      // bim_comments collection — typed comment markers (Issue/Question/Suggestion/Approval/Info)
   BIM_COMMENT_REPLY: 'cmtr_bim', // bim_comments/{id}/replies — flat 1-level reply thread
 
+  // DXF 3D BIM Viewer — Anonymous Telemetry (ADR-366 §C.7.Q3)
+  PERFORMANCE_TELEMETRY: 'telm_bim', // bim_performance_telemetry — GDPR-anonymized samples (top-level, no companyId, 30-day TTL)
+
   // Optimistic & Temporary
   OPTIMISTIC: 'opt',
   TEMP: 'tmp',

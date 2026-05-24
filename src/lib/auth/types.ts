@@ -175,6 +175,9 @@ export const PERMISSIONS = {
   "bim_comments:comments:delete": true,
   "bim_comments:comments:assign": true,
   "bim_comments:comments:archive": true,
+
+  // BIM Performance Telemetry (ADR-366 §C.7.Q3) — super-admin read-only
+  "bim_performance_telemetry:telemetry:read": true,
 } as const;
 
 /** Permission ID derived from registry. */
