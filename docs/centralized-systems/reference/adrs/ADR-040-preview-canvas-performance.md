@@ -71,6 +71,61 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-24 — Boy Scout: migrate primitive entity selection to semantic API
+
+Migrated remaining primitive `universalSelection.select/clearByType` + `setSelectedEntityIds`
+dual-write patterns (outside `CanvasLayerStack`) to the semantic API introduced in Phase 2.
+
+**Changed files:**
+- `hooks/canvas/useCanvasClickHandler.ts` — `handleRotationEntitySelection`: 3 primitive calls
+  (`setSelectedEntityIds + clearByType + select`) → `replaceEntitySelection([entity.id])`
+- `hooks/tools/useModifyTools.ts` — `replaceWithArrayId`: 3 primitive calls
+  (`setSelectedEntityIds + clearByType + if...select`) → `replaceEntitySelection(ids)`
+  (also fixes bug: previously only `ids[0]` was registered in universalSelection; now all ids)
+
+**Overlay-specific calls** (4 files: DxfViewerContent, useDxfViewerCallbacks, LevelPanel,
+FloatingPanelsSection) — **left as-is**: `select(id, 'overlay')` is correct overlay-type
+usage with no semantic equivalent in the dxf-entity API.
+
+---
+
+### 2026-05-24 — Selection SSoT Cleanup (universalSelection single write path)
+
+Removed dual-write pattern in `CanvasLayerStack.tsx`: handlers were calling both
+`setSelectedEntityIds` and `universalSelection.*` for dxf-entity operations, creating
+redundant double dispatches to the same reducer.
+
+**Changes:**
+- `CanvasLayerStack.tsx` — all 5 selection handlers now call ONLY `universalSelection.*`;
+  `setSelectedEntityIds` removed from all handlers
+- `canvas-layer-stack-types.ts` — `setSelectedEntityIds` removed from `entityState` type;
+  `selectedEntityIds` is now explicitly read-only snapshot for rendering
+- `CanvasSection.tsx` — `entityState` prop no longer passes `setSelectedEntityIds`
+
+**SSoT invariant**: `universalSelection` (React reducer context) is the **only write path**
+for entity/overlay selection. `selectedEntityIds` is derived via `useMemo` in CanvasSection
+and passed as a read-only snapshot for canvas rendering only.
+
+**Phase 2 — Semantic API (enterprise centralization):**
+AutoCAD behavior rules moved from `CanvasLayerStack` UI component into `SelectionSystem.tsx`:
+- `handleEntityClick(entityId, { shiftKey })` — PICKADD=1 + toggle logic
+- `handleMarqueeResult(layerIds, entityIds, { subtract })` — additive/subtract marquee
+- `replaceEntitySelection(entityIds)` — replace dxf-entity set, preserve overlays
+
+Added to: `UniversalSelectionHook` interface + `useUniversalSelection()` + `UniversalSelectionForStack`.
+
+`CanvasLayerStack` handlers reduced to 1-line semantic calls — zero PICKADD/toggle business logic in UI.
+
+**Behavior preserved**:
+- Shift+click → toggle entity in/out of selection
+- Click with existing selection → ADD (AutoCAD PICKADD=1)
+- Click with no existing selection → single select (clears overlays)
+- Marquee/lasso standard → additive to existing selection
+- Marquee/lasso with Shift → subtract from selection
+- Overlay click → clears dxf-entity selection
+
+---
+
 ### 2026-05-24 — Lasso Selection (AutoCAD 3rd selection mode)
 
 Free-form polygon selection (`mousedown + drag > 5px` while button held).

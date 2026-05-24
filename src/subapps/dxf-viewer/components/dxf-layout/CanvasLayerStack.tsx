@@ -68,7 +68,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     draggingVertex, draggingEdgeMidpoint, hoveredVertexInfo, hoveredEdgeInfo,
     draggingOverlayBody, dragPreviewPosition,
   } = gripState;
-  const { selectedEntityIds, setSelectedEntityIds } = entityState;
+  const { selectedEntityIds } = entityState;
   const {
     drawingHandlers, handleDrawingFinish, handleDrawingClose,
     handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc,
@@ -85,69 +85,30 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     zoomSystem.setTransform(newTransform);
   };
   const handleDxfEntitiesSelected = (entityIds: string[]) => {
-    setSelectedEntityIds(entityIds);
-    universalSelection.clearByType('dxf-entity');
-    if (entityIds.length > 0) {
-      universalSelection.selectMultiple(
-        entityIds.map((id) => ({ id, type: 'dxf-entity' as const })),
-      );
-    }
+    universalSelection.replaceEntitySelection(entityIds);
   };
   const handleUnifiedMarqueeResult = ({
     layerIds,
     entityIds,
+    subtract,
   }: {
     layerIds: string[];
     entityIds: string[];
+    subtract?: boolean;
   }) => {
-    universalSelection.clearAll();
-    if (layerIds.length > 0) {
-      universalSelection.addMultiple(
-        layerIds.map((id) => ({ id, type: 'overlay' as const })),
-      );
-    }
-    setSelectedEntityIds(entityIds);
-    if (entityIds.length > 0) {
-      universalSelection.addMultiple(
-        entityIds.map((id) => ({ id, type: 'dxf-entity' as const })),
-      );
-    }
+    universalSelection.handleMarqueeResult(layerIds, entityIds, { subtract: !!subtract });
   };
   const handleOverlayClickWithEntityClear = (overlayId: string, point: Point2D) => {
-    setSelectedEntityIds([]);
+    universalSelection.clearByType('dxf-entity');
     handleOverlayClick(overlayId, point);
   };
   const handleMultiOverlayClickWithEntityClear = (layerIds: string[]) => {
-    setSelectedEntityIds([]);
+    universalSelection.clearByType('dxf-entity');
     handleMultiOverlayClick(layerIds);
   };
   const handleDxfEntitySelect = (entityId: string | null, additive?: boolean) => {
     if (entityId) {
-      if (additive) {
-        // Shift held: toggle entity in/out of selection
-        // Read current state directly — universalSelection calls must NOT go inside
-        // a setState updater (that runs during render → "update while rendering" error).
-        if (selectedEntityIds.includes(entityId)) {
-          setSelectedEntityIds(prev => prev.filter(id => id !== entityId));
-          universalSelection.deselect(entityId);
-        } else {
-          setSelectedEntityIds(prev => [...prev, entityId]);
-          universalSelection.add(entityId, 'dxf-entity');
-        }
-      } else if (selectedEntityIds.length > 0) {
-        // Existing selection, no Shift: ADD to selection (AutoCAD PICKADD=1 behavior)
-        if (!selectedEntityIds.includes(entityId)) {
-          setSelectedEntityIds(prev => [...prev, entityId]);
-          universalSelection.add(entityId, 'dxf-entity');
-        }
-      } else {
-        // No existing selection, no Shift: single select
-        if (!(selectedEntityIds.length === 1 && selectedEntityIds[0] === entityId)) {
-          setSelectedEntityIds([entityId]);
-        }
-        universalSelection.clearByType('dxf-entity');
-        universalSelection.select(entityId, 'dxf-entity');
-      }
+      universalSelection.handleEntityClick(entityId, { shiftKey: !!additive });
       entitySelectedOnMouseDownRef.current = true;
     } else if (!additive) {
       entitySelectedOnMouseDownRef.current = false;

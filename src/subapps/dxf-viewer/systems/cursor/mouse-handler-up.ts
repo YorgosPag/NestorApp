@@ -169,7 +169,7 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
             const allLayerIds = [...(layerIds ?? []), ...(overlayIds ?? [])];
 
             if (onUnifiedMarqueeResult) {
-              onUnifiedMarqueeResult({ layerIds: allLayerIds, entityIds: entityIds ?? [] });
+              onUnifiedMarqueeResult({ layerIds: allLayerIds, entityIds: entityIds ?? [], subtract: e.shiftKey });
             } else {
               if (allLayerIds.length > 0 && onMultiLayerSelected) onMultiLayerSelected(allLayerIds);
               if ((entityIds ?? []).length > 0 && onEntitiesSelected) onEntitiesSelected(entityIds!);
@@ -289,7 +289,7 @@ function processMarqueeSelection(
     const entityIds = breakdown?.entityIds ?? [];
 
     if (hasUnifiedCallback) {
-      onUnifiedMarqueeResult!({ layerIds: layerAndOverlayIds, entityIds });
+      onUnifiedMarqueeResult!({ layerIds: layerAndOverlayIds, entityIds, subtract: e.shiftKey });
     } else {
       if (layerAndOverlayIds.length > 0) {
         if (hasMultiCallback) onMultiLayerSelected!(layerAndOverlayIds);

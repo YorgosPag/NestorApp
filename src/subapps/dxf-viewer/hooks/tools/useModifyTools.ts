@@ -129,11 +129,9 @@ export function useModifyTools({
   // ADR-353 Phase A — Rectangular Array (single-shot from pre-selection).
   const replaceWithArrayId = useCallback(
     (ids: string[]) => {
-      setSelectedEntityIds(ids);
-      universalSelection.clearByType('dxf-entity');
-      if (ids.length > 0) universalSelection.select(ids[0], 'dxf-entity');
+      universalSelection.replaceEntitySelection(ids);
     },
-    [setSelectedEntityIds, universalSelection],
+    [universalSelection],
   );
 
   const arrayTool = useArrayTool({

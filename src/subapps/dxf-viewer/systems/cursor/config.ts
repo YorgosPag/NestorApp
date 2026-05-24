@@ -137,7 +137,7 @@ export const DEFAULT_CURSOR_SETTINGS: CursorSettings = {
       borderColor: UI_COLORS.BLUE_DEFAULT,
       borderOpacity: 1.0,      // συμπαγές περίγραμμα
       borderStyle: 'solid',
-      borderWidth: 10          // πάχος γραμμής 10px (δοκιμή)
+      borderWidth: 1           // πάχος γραμμής 1px
     },
     crossing: {
       fillColor: UI_COLORS.SUCCESS_BRIGHT,    // AutoCAD πράσινο
@@ -145,7 +145,7 @@ export const DEFAULT_CURSOR_SETTINGS: CursorSettings = {
       borderColor: UI_COLORS.SUCCESS_BRIGHT,
       borderOpacity: 1.0,      // συμπαγές περίγραμμα
       borderStyle: 'dashed',
-      borderWidth: 10          // πάχος γραμμής 10px (δοκιμή)
+      borderWidth: 1           // πάχος γραμμής 1px
     }
   },
   

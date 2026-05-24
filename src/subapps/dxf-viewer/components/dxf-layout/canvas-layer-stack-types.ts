@@ -5,7 +5,7 @@
  * Extracted per ADR-065 (file size compliance).
  */
 
-import type { RefObject, MutableRefObject, Dispatch, SetStateAction } from 'react';
+import type { RefObject, MutableRefObject } from 'react';
 import type { DxfCanvasRef } from '../../canvas-v2';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -50,6 +50,11 @@ interface UniversalSelectionForStack {
   add: (id: string, type: 'overlay' | 'dxf-entity') => void;
   addMultiple: (items: Array<{ id: string; type: 'overlay' | 'dxf-entity' }>) => void;
   deselect: (id: string) => void;
+  // Semantic actions — AutoCAD behavior rules live in SelectionSystem, not in CanvasLayerStack
+  handleEntityClick: (entityId: string, opts: { shiftKey: boolean }) => void;
+  handleMarqueeResult: (layerIds: string[], entityIds: string[], opts: { subtract: boolean }) => void;
+  replaceEntitySelection: (entityIds: string[]) => void;
+  handleOverlaySelect: (overlayId: string | null) => void;
 }
 
 /** Zoom system methods used by CanvasLayerStack */
@@ -121,9 +126,10 @@ export interface CanvasLayerStackProps {
   // They now live in HoverStore (systems/hover/HoverStore.ts) and are read
   // via useHoveredEntity() / useHoveredOverlay() inside nano-leaf subscribers,
   // so CanvasSection and CanvasLayerStack do NOT re-render on hover changes.
+  // 🔴 SSoT (2026-05-24): setSelectedEntityIds REMOVED — universalSelection is the
+  // single write path. selectedEntityIds is read-only snapshot for rendering.
   entityState: {
     selectedEntityIds: string[];
-    setSelectedEntityIds: Dispatch<SetStateAction<string[]>>;
   };
 
   // === System objects ===

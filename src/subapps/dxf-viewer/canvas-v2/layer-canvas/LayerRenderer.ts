@@ -252,10 +252,6 @@ export class LayerRenderer {
       enableMetrics: this.canvasSettings?.getSetting('enableMetrics') ?? true
     }, transform);
 
-    // Lasso polygon rendered after UIComposite (not part of unified settings schema yet).
-    if (options.showLasso && options.lassoPath && options.lassoPath.length >= 2) {
-      this.selectionRenderer.renderLasso(options.lassoPath, options.lassoMode ?? 'window', selectionSettings);
-    }
   }
 
   /**
@@ -298,11 +294,6 @@ export class LayerRenderer {
     // 4. Render selection box
     if (options.showSelectionBox && options.selectionBox) {
       this.selectionRenderer.renderSelection(options.selectionBox, viewport, selectionSettings);
-    }
-
-    // 5. Render lasso polygon (AutoCAD free-form selection)
-    if (options.showLasso && options.lassoPath && options.lassoPath.length >= 2) {
-      this.selectionRenderer.renderLasso(options.lassoPath, options.lassoMode ?? 'window', selectionSettings);
     }
 
     // 5. Debug: Ruler calibration grid (enterprise calibration & verification)

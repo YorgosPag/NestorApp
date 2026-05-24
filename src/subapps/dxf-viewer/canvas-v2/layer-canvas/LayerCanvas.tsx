@@ -27,7 +27,6 @@ import { useCentralizedMouseHandlers } from '../../systems/cursor/useCentralized
 import { useCursor } from '../../systems/cursor/CursorSystem';
 import { SelectionStore } from '../../systems/cursor/SelectionStore';
 import type { SelectionState } from '../../systems/cursor/SelectionStore';
-import { LassoStore } from '../../systems/cursor/LassoStore';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { createUnifiedCanvasSystem } from '../../rendering/canvas';
 import type { CanvasManager, CanvasInstance } from '../../rendering/canvas/core/CanvasManager';
@@ -304,14 +303,6 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
       isDirtyRef.current = true;
     });
   }, [isDirtyRef, selectionRef]);
-
-  // Lasso subscription — mark dirty on every path append (60fps during drag).
-  // renderLayers reads LassoStore.getSnapshot() directly (no state threading).
-  useEffect(() => {
-    return LassoStore.subscribe(() => {
-      isDirtyRef.current = true;
-    });
-  }, [isDirtyRef]);
 
   // Viewport resize → re-setup canvas backing store
   useEffect(() => {

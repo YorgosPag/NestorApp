@@ -88,6 +88,35 @@ export interface UniversalSelectionHook {
   clearByType: (type: SelectableEntityType) => void;
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // DXF CANVAS SEMANTIC ACTIONS (AutoCAD-behavior rules live here, not in UI)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * AutoCAD PICKADD=1 entity click handler.
+   * shiftKey=false + existing selection → ADD; empty → single select (clears overlays).
+   * shiftKey=true → toggle entity in/out of selection.
+   */
+  handleEntityClick: (entityId: string, opts: { shiftKey: boolean }) => void;
+
+  /**
+   * Apply marquee/lasso result to selection.
+   * subtract=false → additive (PICKADD=1); subtract=true → remove matched ids.
+   */
+  handleMarqueeResult: (layerIds: string[], entityIds: string[], opts: { subtract: boolean }) => void;
+
+  /**
+   * Replace the entire dxf-entity selection (e.g. Ctrl+A, select-by-layer).
+   * Preserves overlay selections.
+   */
+  replaceEntitySelection: (entityIds: string[]) => void;
+
+  /**
+   * Select a single overlay, replacing any existing overlay selection.
+   * Pass null to clear overlay selection only (e.g. deselect on backdrop click).
+   */
+  handleOverlaySelect: (overlayId: string | null) => void;
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // QUERY METHODS
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -154,6 +183,50 @@ export function useUniversalSelection(): UniversalSelectionHook {
 
     clearByType: (type: SelectableEntityType) =>
       context.clearByType(type),
+
+    // DXF canvas semantic actions — AutoCAD behavior rules live here
+    handleEntityClick: (entityId: string, opts: { shiftKey: boolean }) => {
+      if (opts.shiftKey) {
+        context.toggleEntity({ id: entityId, type: 'dxf-entity' });
+      } else if (context.getSelectionCountByType('dxf-entity') > 0) {
+        // PICKADD=1: existing selection → add without clearing
+        if (!context.isEntitySelected(entityId)) {
+          context.addEntity({ id: entityId, type: 'dxf-entity' });
+        }
+      } else {
+        // No prior selection → single select (clears all including overlays)
+        context.selectEntity({ id: entityId, type: 'dxf-entity' });
+      }
+    },
+
+    handleMarqueeResult: (layerIds: string[], entityIds: string[], opts: { subtract: boolean }) => {
+      if (opts.subtract) {
+        entityIds.forEach(id => context.deselectEntity(id));
+        layerIds.forEach(id => context.deselectEntity(id));
+      } else {
+        if (layerIds.length > 0) {
+          context.addEntities(layerIds.map(id => ({ id, type: 'overlay' as const })));
+        }
+        if (entityIds.length > 0) {
+          context.addEntities(entityIds.map(id => ({ id, type: 'dxf-entity' as const })));
+        }
+      }
+    },
+
+    replaceEntitySelection: (entityIds: string[]) => {
+      context.clearByType('dxf-entity');
+      if (entityIds.length > 0) {
+        context.addEntities(entityIds.map(id => ({ id, type: 'dxf-entity' as const })));
+      }
+    },
+
+    handleOverlaySelect: (overlayId: string | null) => {
+      if (overlayId) {
+        context.selectEntity({ id: overlayId, type: 'overlay' });
+      } else {
+        context.clearByType('overlay');
+      }
+    },
 
     // Query Methods
     isSelected: (id: string) =>

@@ -341,9 +341,7 @@ function handleRotationEntitySelection(
     const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / p.transform.scale;
     for (const entity of scene.entities) {
       if (testEntityHit(worldPoint, entity, hitTolerance)) {
-        p.setSelectedEntityIds([entity.id]);
-        p.universalSelection.clearByType('dxf-entity');
-        p.universalSelection.select(entity.id, 'dxf-entity');
+        p.universalSelection.replaceEntitySelection([entity.id]);
         dlog('useCanvasClickHandler', 'Rotation entity selected:', entity.id);
         return true;
       }

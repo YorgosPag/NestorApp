@@ -170,9 +170,9 @@ export function SelectionSettings() {
             </div>
             <SliderInput
               value={settings.selection.window.borderWidth}
-              min={1}
+              min={0.25}
               max={5}
-              step={1}
+              step={0.25}
               onChange={(v) => handleWindowSelectionChange('borderWidth', v)}
               showValue
               formatValue={(v) => `${v}px`}
@@ -315,9 +315,9 @@ export function SelectionSettings() {
             </div>
             <SliderInput
               value={settings.selection.crossing.borderWidth}
-              min={1}
+              min={0.25}
               max={5}
-              step={1}
+              step={0.25}
               onChange={(v) => handleCrossingSelectionChange('borderWidth', v)}
               showValue
               formatValue={(v) => `${v}px`}

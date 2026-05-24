@@ -45,7 +45,7 @@ export interface CentralizedMouseHandlersProps {
   isGripDragging?: boolean;
   onDrawingHover?: (worldPos: Point2D) => void;
   onEntitiesSelected?: (entityIds: string[]) => void;
-  onUnifiedMarqueeResult?: (result: { layerIds: string[]; entityIds: string[] }) => void;
+  onUnifiedMarqueeResult?: (result: { layerIds: string[]; entityIds: string[]; subtract?: boolean }) => void;
   onHoverEntity?: (entityId: string | null) => void;
   onHoverOverlay?: (overlayId: string | null) => void;
   onGripMouseDown?: (worldPos: Point2D) => boolean;

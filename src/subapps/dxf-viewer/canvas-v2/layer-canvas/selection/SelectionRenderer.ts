@@ -155,9 +155,8 @@ export class SelectionRenderer implements UIRenderer {
     mode: 'window' | 'crossing',
     settings: SelectionSettings,
   ): void {
-    if (lassoPath.length < 2) return;
-
     const config = settings[mode];
+    if (lassoPath.length < 2) return;
 
     this.ctx.save();
 
