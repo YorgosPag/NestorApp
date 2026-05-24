@@ -242,13 +242,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       setLevelScene: levelManager.setLevelScene,
       getLevelScene: levelManager.getLevelScene
     },
-    onOverlaySelect: (id: string | null) => {
-      if (id) {
-        universalSelection.select(id, 'overlay');
-      } else {
-        universalSelection.clearByType('overlay');
-      }
-    }
+    onOverlaySelect: (id: string | null) => universalSelection.handleOverlaySelect(id)
   });
   // Ctrl+A → select all entities via EventBus so CanvasSection updates its own state
   const handleSelectAll = React.useCallback(() => {

@@ -71,21 +71,31 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
-### 2026-05-24 — Boy Scout: migrate primitive entity selection to semantic API
+### 2026-05-24 — Boy Scout: full primitive → semantic API migration (entity + overlay)
 
-Migrated remaining primitive `universalSelection.select/clearByType` + `setSelectedEntityIds`
-dual-write patterns (outside `CanvasLayerStack`) to the semantic API introduced in Phase 2.
+Migrated ALL remaining primitive `universalSelection.select/clearByType` + `setSelectedEntityIds`
+calls to the semantic API. Added `handleOverlaySelect` as the overlay counterpart to `handleEntityClick`.
 
-**Changed files:**
-- `hooks/canvas/useCanvasClickHandler.ts` — `handleRotationEntitySelection`: 3 primitive calls
-  (`setSelectedEntityIds + clearByType + select`) → `replaceEntitySelection([entity.id])`
-- `hooks/tools/useModifyTools.ts` — `replaceWithArrayId`: 3 primitive calls
-  (`setSelectedEntityIds + clearByType + if...select`) → `replaceEntitySelection(ids)`
-  (also fixes bug: previously only `ids[0]` was registered in universalSelection; now all ids)
+**New semantic method** (SelectionSystem.tsx → UniversalSelectionHook + UniversalSelectionForStack):
+- `handleOverlaySelect(overlayId: string | null)` — single-select overlay or clear overlay type.
+  Encapsulates the `if (id) select(id, 'overlay') else clearByType('overlay')` pattern
+  that was copy-pasted across 4 files.
 
-**Overlay-specific calls** (4 files: DxfViewerContent, useDxfViewerCallbacks, LevelPanel,
-FloatingPanelsSection) — **left as-is**: `select(id, 'overlay')` is correct overlay-type
-usage with no semantic equivalent in the dxf-entity API.
+**Entity migration** (2 files):
+- `hooks/canvas/useCanvasClickHandler.ts` — rotation entity selection: 3 primitive calls → `replaceEntitySelection([entity.id])`
+- `hooks/tools/useModifyTools.ts` — `replaceWithArrayId`: 3 primitive calls → `replaceEntitySelection(ids)`
+  (bug fix: previously only `ids[0]` was registered; now all ids)
+
+**Overlay migration** (6 files):
+- `app/DxfViewerContent.tsx` — `onOverlaySelect` 5-line if/else → 1-line `handleOverlaySelect`
+- `app/useDxfViewerCallbacks.ts` — `handleRegionClick` primitive → `handleOverlaySelect`
+- `ui/components/LevelPanel.tsx` — `setSelectedOverlay` 5-line if/else → 1-line `handleOverlaySelect`
+- `layout/FloatingPanelsSection.tsx` — polygon-saved event → `handleOverlaySelect`
+- `hooks/canvas/useOverlayInteraction.ts` — `setSelectedOverlay` bridge → `handleOverlaySelect`
+- `hooks/canvas/useCanvasClickHandler.ts` — rotation overlay hit: 4 primitive lines → `handleOverlaySelect`
+  (also removes stale `setSelectedEntityIds([overlay.id])` — overlay ID was incorrectly passed as entity ID)
+
+**Result**: Zero primitive `select(id, 'overlay')` calls outside SelectionSystem. Full semantic API coverage.
 
 ---
 

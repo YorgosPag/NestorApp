@@ -140,7 +140,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   // 🏢 ADR-258B: Auto-select new overlay after polygon save → opens Properties Panel
   useEffect(() => {
     const cleanup = eventBus.on('overlay:polygon-saved', ({ overlayId }) => {
-      universalSelection.select(overlayId, 'overlay');
+      universalSelection.handleOverlaySelect(overlayId);
     });
     return cleanup;
   }, [eventBus, universalSelection]);

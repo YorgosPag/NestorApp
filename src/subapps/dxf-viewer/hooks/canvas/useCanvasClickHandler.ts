@@ -352,10 +352,7 @@ function handleRotationEntitySelection(
     if (!overlay.polygon || overlay.polygon.length < 3) continue;
     const vertices = overlay.polygon.map(([x, y]) => ({ x, y }));
     if (isPointInPolygon(worldPoint, vertices)) {
-      p.setSelectedEntityIds([overlay.id]);
-      p.universalSelection.clearByType('dxf-entity');
-      p.universalSelection.clearByType('overlay');
-      p.universalSelection.select(overlay.id, 'overlay');
+      p.universalSelection.handleOverlaySelect(overlay.id);
       dlog('useCanvasClickHandler', 'Rotation overlay selected:', overlay.id);
       return true;
     }

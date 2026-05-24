@@ -92,13 +92,7 @@ export function useOverlayInteraction({
   // Bridge to universal selection system — ADR-030
   const { handleOverlaySelect } =
     createOverlayHandlers({
-      setSelectedOverlay: (id: string | null) => {
-        if (id) {
-          universalSelection.select(id, 'overlay');
-        } else {
-          universalSelection.clearByType('overlay');
-        }
-      },
+      setSelectedOverlay: (id: string | null) => universalSelection.handleOverlaySelect(id),
       remove: overlayStore.remove,
       update: overlayStore.update,
       getSelectedOverlay: overlayStore.getSelectedOverlay,

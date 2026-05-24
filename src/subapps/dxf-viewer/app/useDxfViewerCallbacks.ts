@@ -277,8 +277,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
 
   // Handle overlay region click
   const handleRegionClick = React.useCallback((regionId: string) => {
-    // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
-    universalSelection.select(regionId, 'overlay');
+    universalSelection.handleOverlaySelect(regionId);
 
     // Auto-open levels tab when clicking on overlay in canvas
     floatingRef.current?.showTab('levels');

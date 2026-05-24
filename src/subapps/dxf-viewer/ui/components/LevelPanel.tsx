@@ -108,13 +108,7 @@ export function LevelPanel({
   const universalSelection = useUniversalSelection();
   const { handleOverlaySelect, handleOverlayEdit, handleOverlayDelete } =
     createOverlayHandlers({
-      setSelectedOverlay: (id: string | null) => {
-        if (id) {
-          universalSelection.select(id, 'overlay');
-        } else {
-          universalSelection.clearByType('overlay');
-        }
-      },
+      setSelectedOverlay: (id: string | null) => universalSelection.handleOverlaySelect(id),
       remove: overlayStore.remove,
       update: overlayStore.update,
       getSelectedOverlay: overlayStore.getSelectedOverlay,
