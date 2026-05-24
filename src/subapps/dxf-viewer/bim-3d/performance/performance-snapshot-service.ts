@@ -1,8 +1,17 @@
-import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@/lib/firebase';
-import { generatePerformanceDiagnosticId } from '@/services/enterprise-id.service';
-import { COLLECTIONS } from '@/config/firestore-collections';
+/**
+ * performance-snapshot-service — ADR-366 §B.5 + §C.7.Q4
+ *
+ * Client-side facade that posts a performance diagnostic snapshot to the
+ * server-side route `/api/performance-diagnostics`. The server handles
+ * Storage upload (Admin SDK), Firestore write, and EntityAuditService audit
+ * — clients never write directly to `performance_diagnostics` (see
+ * firestore.rules and the related Boy Scout that hardened the rule block).
+ *
+ * Sources accepted by the route:
+ *   - 'manual'      → user clicked "Send to support" in the HUD dialog (B.5)
+ *   - 'auto_submit' → §C.7.Q4 FSM accepted prompt (sustained FPS<10)
+ */
+
 import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
 
 export interface DiagnosticInput {
@@ -13,36 +22,31 @@ export interface DiagnosticInput {
   renderMode: string;
   canvas: HTMLCanvasElement;
   comment: string;
+  /** Defaults to 'manual' for backward compatibility with existing call sites. */
+  source?: 'manual' | 'auto_submit';
 }
 
 export async function sendDiagnostic(input: DiagnosticInput): Promise<void> {
-  const { companyId, userId, projectId, metrics, renderMode, canvas, comment } = input;
-  const docId = generatePerformanceDiagnosticId();
+  const { metrics, renderMode, canvas, comment, projectId, source = 'manual' } = input;
 
-  // Screenshot PNG → Storage
   const dataUrl = canvas.toDataURL('image/png', 0.92);
-  const base64Data = dataUrl.split(',')[1] ?? dataUrl;
-  const storagePath = `performance_diagnostics/${companyId}/${docId}/screenshot.png`;
-  const storageRef = ref(storage, storagePath);
-  await uploadString(storageRef, base64Data, 'base64', { contentType: 'image/png' });
-  const screenshotUrl = await getDownloadURL(storageRef);
+  const screenshotBase64 = dataUrl.split(',')[1] ?? dataUrl;
 
-  // Firestore doc
-  await setDoc(doc(db, COLLECTIONS.PERFORMANCE_DIAGNOSTICS, docId), {
-    id: docId,
-    companyId,
-    userId,
-    projectId,
-    renderMode,
-    metrics,
-    screenshotUrl,
-    comment: comment || null,
-    createdAt: serverTimestamp(),
+  const response = await fetch('/api/performance-diagnostics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      projectId,
+      metrics,
+      renderMode,
+      comment: comment || null,
+      source,
+      screenshotBase64,
+    }),
   });
 
-  // TODO(ADR-366 §B.5): audit trail must happen server-side (EntityAuditService is server-only).
-  // Move write+audit into a `/api/performance-diagnostics` route so both Firestore doc and
-  // entity_audit_trail entry are written in the same server transaction. Client cannot import
-  // entity-audit.service (Admin SDK / server-only). For now the doc is written client-side
-  // without audit.
+  if (!response.ok) {
+    const text = await response.text().catch(() => response.statusText);
+    throw new Error(`performance-diagnostics POST failed: ${response.status} ${text}`);
+  }
 }

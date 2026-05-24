@@ -16,6 +16,10 @@
 import * as THREE from 'three';
 import { usePerformanceHUDStore } from './PerformanceHUDStore';
 import { usePerformanceHistoryStore } from './PerformanceHistoryStore';
+import { baselineTracker } from './baseline-tracker';
+import { createRegressionDetector } from './regression-detector';
+import { regressionAlertBus } from './regression-alert-bus';
+import { autoSubmitFpsThreshold } from './auto-submit-fps-threshold';
 import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
 
 // Chrome-only Performance API extension
@@ -35,6 +39,9 @@ export class PerformanceCollector {
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private lastTickTime: number = performance.now();
   private smoothFps: number = 60;
+  private readonly regressionDetector = createRegressionDetector((payload) =>
+    regressionAlertBus.emit(payload),
+  );
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene) {
     this.renderer = renderer;
@@ -102,7 +109,21 @@ export class PerformanceCollector {
       samplesPerSec: null, // Path-tracer Phase 4 — not yet implemented
     };
 
-    usePerformanceHUDStore.getState().updateMetrics(snapshot);
+    const hudState = usePerformanceHUDStore.getState();
+    hudState.updateMetrics(snapshot);
     usePerformanceHistoryStore.getState().pushSample(snapshot);
+
+    // Baseline + regression detection feed the same sample stream. Baseline
+    // records always when HUD is on; alerts are gated by the user toggle.
+    baselineTracker.recordSample(hudState.renderMode, snapshot.fps, now);
+    if (hudState.regressionAlertsEnabled) {
+      this.regressionDetector.evaluate(hudState.renderMode, snapshot.fps, now);
+    } else {
+      this.regressionDetector.reset();
+    }
+
+    // C.7.Q4 — sustained FPS<10 auto-submit consent FSM. Store-gated:
+    // permanent opt-out and Q3 telemetry opt-in both short-circuit inside.
+    autoSubmitFpsThreshold.observe(snapshot.fps, now);
   };
 }
