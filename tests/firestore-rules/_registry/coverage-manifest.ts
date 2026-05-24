@@ -1180,6 +1180,11 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'bim_dimensions_3d',          // lines 3770-3821 — tenant-scoped CRUD (companyId+projectId immutable, mode/unit/precision validation); full matrix later
   // — Construction Alerts (ADR-266 §5.8 Phase D.3, 2026-05-21) —
   'construction_alerts',        // tenant-scoped read + server-only create + dismiss-only update; full matrix later
+  // — BIM 3D Comments (ADR-373 Phase 2.3, 2026-05-24) —
+  'bim_comments',               // lines 3829-3918 — tenant-scoped CRUD; full matrix later
+  // — ISO 19650 Enrichment (ADR-373 Phase 2.4, 2026-05-24) —
+  'iso19650_enrichment_slots',  // lines 3920-3927 — token bucket (Admin SDK only); full matrix later
+  'iso19650_cost_log',          // lines 3934-3941 — audit log (Admin SDK only); full matrix later
 ] as const;
 
 // ---------------------------------------------------------------------------

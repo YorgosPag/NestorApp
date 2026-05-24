@@ -71,6 +71,24 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-24 — ADR-374 ZOOM Window tool wiring (singleton store + micro-leaf)
+
+`ZoomWindowStore` (new module-level singleton in `systems/zoom-window/`) replaces the dead `useZoomWindow` React hook. The drag rectangle is updated imperatively from `mouse-handler-move.ts` (zero React state during 60fps mousemove). `ZoomWindowSubscriber` (new micro-leaf at `components/dxf-layout/leaves/ZoomWindowSubscriber.tsx`) is the SOLE `useSyncExternalStore` consumer. Mounted in `CanvasLayerStack.tsx` at z-index 20 (after `LassoFreehandPreviewSubscriber`, before `CanvasNumericInputOverlay`).
+
+`useCentralizedMouseHandlers.handleMouseDown` gains a `zoom-window` branch (left button → `ZoomWindowStore.start(screenPos)`, early return — skips pan/lasso/grip). `mouse-handler-move.ts` gets an early branch that calls `ZoomWindowStore.update(screenPos)` and returns (skips snap/hover/pan/lasso for the duration of the drag). `mouse-handler-up.ts` finalises the rect: `ZoomWindowStore.finish()` → `screenToWorldWithSnapshot` (×2 corners) → `EventBus.emit('zoom-window:apply', { worldBounds, viewport })`. `useCentralizedMouseHandlers.handleMouseLeave` calls `ZoomWindowStore.cancel()` to drop a half-finished drag.
+
+`useZoomWindowTool` (new `hooks/tools/useZoomWindowTool.ts`) listens for the EventBus event inside `CanvasSection`, applies `FitToViewService.calculateFitToViewFromBounds(...)` → `setTransform(...)`, then `onToolChange('select')` (one-shot AutoCAD ZOOM W behavior). Same hook owns the `Escape` keyboard listener (cancels drag + exits tool). `CanvasSection.tsx` adds exactly one new hook call; zero new `useSyncExternalStore` subscriptions.
+
+SSoT cleanup (Boy Scout): `hooks/useZoomWindow.ts` deleted (0 callers), `useViewState.zoomWindow` slot removed (dead state never read), EventBus typed with `'zoom-window:apply'` payload (mirrors `'crop:marquee-rect'` pattern).
+
+**Cardinal rule compliance**:
+- **Rule 1 (no orchestrator subscriptions)**: respected — `useSyncExternalStore` lives ONLY in `ZoomWindowSubscriber` (leaf). `CanvasSection` + `CanvasLayerStack` stay subscription-free for this feature. CHECK 6C green.
+- **Rule 2 (getter-based event reads)**: respected — `useZoomWindowTool` stores callbacks in refs and reads them at event time. Mouse-up handler reads `transform` from the existing prop closure at fire time, never a stale snapshot.
+- **Rule 3 (bitmap cache key untouched)**: respected — `ZoomWindowStore` state never propagates to `dxf-bitmap-cache.ts`. The rubber-band rect paints to its own DOM div overlay (z-index 20), so the cached DXF bitmap stays valid throughout the drag.
+- **Rule 4 (≤1 canvas element / ≤2 high-freq hooks per leaf)**: respected — `ZoomWindowSubscriber` is DOM-only (zero canvas elements), consumes one store via `useSyncExternalStore`.
+
+**Files touched (atomic batch)**: `ZoomWindowStore.ts` (new), `ZoomWindowSubscriber.tsx` (new), `useZoomWindowTool.ts` (new), `useCentralizedMouseHandlers.ts`, `mouse-handler-move.ts`, `mouse-handler-up.ts`, `EventBus.ts`, `CanvasLayerStack.tsx`, `CanvasSection.tsx`, `useViewState.ts` (slot removal), `useZoomWindow.ts` (deleted). New ADR `ADR-374-zoom-window-tool.md` documents the pattern in full.
+
 ### 2026-05-24 — selectedEntityIds prop chain eliminated (sidebar → deep hooks)
 
 `selectedEntityIds` was prop-drilled 6 levels deep through `DxfViewerContent → SidebarSection → FloatingPanelContainer → usePanelContentRenderer → LevelPanel → LayersSection → LayerItem + useLayersCallbacks + useKeyboardNavigation + useLayerOperations`. Each consumer now reads directly from `universalSelection.getIdsByType('dxf-entity')`.

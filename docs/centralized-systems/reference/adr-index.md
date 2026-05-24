@@ -364,7 +364,8 @@
 | **ADR-371** | BIM 3D Read-Only Viewer in Properties Floorplan Tab | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-371-bim-3d-readonly-viewer.md) |
 | **ADR-371** | BIM Corner Snap System (Redirect) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-371-bim-corner-snap-system.md) |
 | **ADR-372** | Contact Relationship Bidirectional Crossing Matrix | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-372-relationship-crossings-matrix.md) |
-| **ADR-373** | FileRecord ISO 19650 Metadata Enrichment (Phase 1 — Schema + AI Auto-Fill) | ✅ ✅ Phase 1 IMPLEMENTED 2026-05-24 — Schema + AI enricher + tests + post-finalize hook SSoT. Pending Γιώργος commit. Phase 2 (UI / manual override / virtual folders / backfill / concurrency token bucket / suitabilityCode field) deferred. | 2026-05-24 (clarifications session 2026-05-24) | File Management / Document Governance / AI Pipeline | [📄](./adrs/ADR-373-iso19650-metadata-enrichment.md) |
+| **ADR-373** | FileRecord ISO 19650 Metadata Enrichment (Phase 1 + Phase 2 Complete) | ✅ Phase 1 + Phase 2 COMPLETE 2026-05-24 — Schema + AI enricher + manual override UI + virtual folders + backfill admin route + distributed token bucket + suitabilityCode + i18n + cost dashboard (P2.5). Phase 3 (ZIP export, controlled filename, compliance report) deferred. | 2026-05-24 | File Management / Document Governance / AI Pipeline | [📄](./adrs/ADR-373-iso19650-metadata-enrichment.md) |
+| **ADR-374** | ZOOM Window Tool (AutoCAD ZOOM W — singleton store + micro-leaf) | ✅ IMPLEMENTED 2026-05-24 — ZoomWindowStore + ZoomWindowSubscriber + useZoomWindowTool. SSoT cleanup: useZoomWindow hook deleted, ViewState.zoomWindow slot removed. ADR-040 compliant. | 2026-05-24 | Canvas & Rendering | [📄](./adrs/ADR-374-zoom-window-tool.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -722,6 +723,7 @@
 | **ADR-371** | BIM 3D Read-Only Viewer in Properties Floorplan Tab | ✅ APPROVED | [View](./adrs/ADR-371-bim-3d-readonly-viewer.md) |
 | **ADR-371** | BIM Corner Snap System (Redirect) | ✅ APPROVED | [View](./adrs/ADR-371-bim-corner-snap-system.md) |
 | **ADR-372** | Contact Relationship Bidirectional Crossing Matrix | ✅ APPROVED | [View](./adrs/ADR-372-relationship-crossings-matrix.md) |
+| **ADR-374** | ZOOM Window Tool (AutoCAD ZOOM W) | ✅ IMPLEMENTED | [View](./adrs/ADR-374-zoom-window-tool.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

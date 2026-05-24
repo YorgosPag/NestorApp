@@ -3918,6 +3918,24 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🪣 ISO 19650 ENRICHMENT SLOTS — ADR-373 P2.4
+    // Distributed token bucket (activeSlots, updatedAt). Doc ID = companyId.
+    // Managed exclusively via Admin SDK — no client reads or writes permitted.
+    // =========================================================================
+    match /iso19650_enrichment_slots/{companyId} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // 💰 ISO 19650 COST LOGS — ADR-373 P2.5
+    // Per-file AI enrichment cost records for super_admin cost dashboard.
+    // Written by Admin SDK only — no client reads or writes permitted.
+    // =========================================================================
+    match /iso19650_cost_log/{docId} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
     // 🔒 HELPER FUNCTIONS - VALIDATION & SECURITY
     // =========================================================================
 
