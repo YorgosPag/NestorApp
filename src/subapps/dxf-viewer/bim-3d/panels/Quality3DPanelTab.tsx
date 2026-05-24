@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Switch } from '@/components/ui/switch';
 import { usePerformanceHUDStore } from '../performance/PerformanceHUDStore';
 import { usePerformanceHistoryStore } from '../performance/PerformanceHistoryStore';
+import { autoSubmitStore } from '../performance/auto-submit-store';
 
 const RENDER_MODE_KEY: Record<string, string> = {
   '3d-raster': 'raster',
@@ -15,7 +16,7 @@ const RENDER_MODE_KEY: Record<string, string> = {
 export function Quality3DPanelTab() {
   const { t } = useTranslation('bim3d');
 
-  const { enabled, renderMode } = useSyncExternalStore(
+  const { enabled, renderMode, regressionAlertsEnabled } = useSyncExternalStore(
     usePerformanceHUDStore.subscribe,
     usePerformanceHUDStore.getState,
     usePerformanceHUDStore.getState,
@@ -24,6 +25,12 @@ export function Quality3DPanelTab() {
   const historyEnabled = useSyncExternalStore(
     usePerformanceHistoryStore.subscribe,
     () => usePerformanceHistoryStore.getState().enabled,
+    () => false,
+  );
+
+  const autoSubmitOptOut = useSyncExternalStore(
+    autoSubmitStore.subscribe,
+    () => autoSubmitStore.getState().permanentOptOut,
     () => false,
   );
 
@@ -59,6 +66,25 @@ export function Quality3DPanelTab() {
           {t('performance.history.clearButton')}
         </button>
       )}
+
+      <div className="flex items-center justify-between gap-2 border-t border-white/10 pt-3">
+        <span>{t('performance.regression.toggle')}</span>
+        <Switch
+          checked={regressionAlertsEnabled}
+          onCheckedChange={(v) => usePerformanceHUDStore.getState().setRegressionAlertsEnabled(v)}
+        />
+      </div>
+
+      <div className="space-y-2 border-t border-white/10 pt-3">
+        <div className="flex items-center justify-between gap-2">
+          <span>{t('performance.autoSubmit.toggle')}</span>
+          <Switch
+            checked={!autoSubmitOptOut}
+            onCheckedChange={(v) => autoSubmitStore.getState().setPermanentOptOut(!v)}
+          />
+        </div>
+        <p className="text-white/40">{t('performance.autoSubmit.toggleDescription')}</p>
+      </div>
     </div>
   );
 }
