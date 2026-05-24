@@ -323,6 +323,9 @@ export class EnterpriseIdService {
   generateBimCommentId(): string { return this.generateId(P.BIM_COMMENT).id; }
   generateBimCommentReplyId(): string { return this.generateId(P.BIM_COMMENT_REPLY).id; }
 
+  // ISO 19650 Cost Log (ADR-373 P2.5)
+  generateIso19650CostLogId(): string { return this.generateId(P.ISO19650_COST_LOG).id; }
+
   // DXF BIM Drawing Mode (ADR-363)
   generateWallId(): string { return this.generateId(P.WALL).id; }
   generateOpeningId(): string { return this.generateId(P.OPENING).id; }

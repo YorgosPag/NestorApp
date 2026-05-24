@@ -93,6 +93,7 @@ export {
   generateColumnId, generateBeamId, generateBimPresetId, generateBimMaterialId, generateBimSettingsId,
   generateBim3DPrefId, generateBim3DDimensionId,
   generateBimCommentId, generateBimCommentReplyId,
+  generateIso19650CostLogId,
   generateOptimisticId, generateTempId, generateOpaqueToken, validateEnterpriseId, parseEnterpriseId,
   getIdType, isLegacyId, generateNotificationDedupeId,
 } from './enterprise-id-convenience';

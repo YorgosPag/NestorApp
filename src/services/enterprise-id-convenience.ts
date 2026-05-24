@@ -248,6 +248,9 @@ export const generateBim3DDimensionId = () => enterpriseIdService.generateBim3DD
 export const generateBimCommentId = () => enterpriseIdService.generateBimCommentId();
 export const generateBimCommentReplyId = () => enterpriseIdService.generateBimCommentReplyId();
 
+// ISO 19650 Cost Log (ADR-373 P2.5)
+export const generateIso19650CostLogId = () => enterpriseIdService.generateIso19650CostLogId();
+
 // DXF BIM Drawing Mode (ADR-363)
 export const generateWallId = () => enterpriseIdService.generateWallId();
 export const generateOpeningId = () => enterpriseIdService.generateOpeningId();
