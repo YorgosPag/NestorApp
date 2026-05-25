@@ -336,6 +336,10 @@ dxf-adapter εξάγει → source = 'dxf_auto' (draft)
 Audit trail: ποιος επιβεβαίωσε, πότε, τι άλλαξε
 ```
 
+**BIM auto-feed patterns** (ADR-363 Phase 6 / Phase 6.1 + ADR-376 Phase B.2):
+- **Wall multi-layer** (ADR-363 Phase 6.1): 1 parent summary row + N child rows per wall entity (each `WallDna.layer` = own BOQ row με `parentBoqItemId` pointer). Atomic per-entity model — κάθε wall έχει unique geometry/area, κάθε layer έχει unique material.
+- **Opening signature aggregation** (ADR-376 Phase B.2): **single aggregated row per signature group** — 50 ίδια παράθυρα = 1 BOQ row με `quantity=50` + marks compacted στο `description` (`Marks: Π.101..Π.150`). Revit Schedule pattern, 6/6 industry convergence (Revit / ArchiCAD / Tekla / Allplan / Bentley / Vectorworks). Diverges from wall pattern because openings are atomic (no multi-component layers). Scope = per-floorplan. Deterministic ID: `boq_bim_opening_sig_<floorplanId>_<kind>_<w>_<h>_<sill>_<dir>`. SSoT module: `bim/services/opening-boq-grouper.ts`.
+
 ### 4.3.1 Risks & Controls
 
 | # | Κίνδυνος | Πιθανότητα | Αντίμετρο |

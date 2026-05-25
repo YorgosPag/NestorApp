@@ -44,7 +44,10 @@ import {
   type OpeningDoc,
 } from '../../bim/walls/opening-firestore-service';
 import { recordOpeningChange } from '../../bim/walls/opening-audit-client';
-import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
+import {
+  deleteOpeningFromGroup,
+  upsertOpeningGroupForOpening,
+} from '../../bim/services/opening-boq-sync';
 import { getOpeningMarkService } from '../../bim/services/opening-mark-service';
 
 // ============================================================================
@@ -256,7 +259,8 @@ export function useOpeningPersistence(
   const persist = useCallback(async (entity: OpeningEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;
-    const isNew = !lastSavedParamsRef.current.has(entity.id);
+    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
+    const isNew = prevParams === null;
     setSaveState('saving');
     setError(null);
     try {
@@ -266,19 +270,20 @@ export function useOpeningPersistence(
       setSaveState('saved');
       setLastSavedAt(Date.now());
       void recordOpeningChange(isNew ? 'created' : 'updated', entity);
-      if (companyId && projectId && buildingId) {
-        void bimToBoqBridge.upsertBoqItemForBim(
-          'opening',
-          { id: entity.id, kind: entity.kind },
-          { companyId, projectId, buildingId },
-          isNew ? 'created' : 'updated',
+      // ADR-376 Phase B.2 — signature-group aggregation (όχι per-opening row).
+      // opening-boq-sync recomputes the new signature group (+ old αν άλλαξε).
+      if (companyId && projectId && buildingId && floorplanId) {
+        void upsertOpeningGroupForOpening(
+          { id: entity.id, kind: entity.kind, params: entity.params },
+          prevParams,
+          { companyId, projectId, buildingId, floorplanId },
         );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'OPENING_SAVE_ERROR');
       setSaveState('error');
     }
-  }, [companyId, projectId, buildingId]);
+  }, [companyId, projectId, buildingId, floorplanId]);
 
   /**
    * ADR-376 Phase A — Resolve `params.mark` πριν την πρώτη persist.
@@ -394,6 +399,9 @@ export function useOpeningPersistence(
 
     const scene = levelManager.getLevelScene(levelId);
     const deletedEntity = scene?.entities.find((e) => e.id === openingId);
+    const lastKnownParams =
+      lastSavedParamsRef.current.get(openingId) ??
+      ((deletedEntity as Partial<OpeningEntity> | undefined)?.params ?? null);
 
     try {
       await svc.deleteOpening(openingId);
@@ -401,7 +409,14 @@ export function useOpeningPersistence(
         'deleted',
         { id: openingId, kind: (deletedEntity as Partial<OpeningEntity>)?.kind ?? 'door' },
       );
-      void bimToBoqBridge.deleteBoqItemForBim(openingId, companyId ?? '');
+      // ADR-376 Phase B.2 — recompute signature group post-delete (count
+      // decrements; row deleted if last opening of signature gone).
+      if (companyId && projectId && buildingId && floorplanId) {
+        void deleteOpeningFromGroup(
+          lastKnownParams,
+          { companyId, projectId, buildingId, floorplanId },
+        );
+      }
     } catch {
       // Non-fatal: deletion failure silent — user can retry.
     }
@@ -413,7 +428,7 @@ export function useOpeningPersistence(
 
     dirtyIdsRef.current.delete(openingId);
     lastSavedParamsRef.current.delete(openingId);
-  }, [levelManager, companyId]);
+  }, [levelManager, companyId, projectId, buildingId, floorplanId]);
 
   // First-save listener — fires άμεσα για freshly drawn openings.
   // ADR-376 Phase A: lazy-allocate `params.mark` here (single SSoT lifecycle

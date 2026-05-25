@@ -75,6 +75,12 @@ export interface BimBoqContext {
   readonly companyId: string;
   readonly projectId: string;
   readonly buildingId: string;
+  /**
+   * ADR-376 Phase B.2 — opening signature group scope. Required όταν το
+   * entityType είναι `'opening'` (per-floorplan aggregation). Ignored από
+   * το wall/slab/column/beam single-entry + multi-layer path.
+   */
+  readonly floorplanId?: string;
 }
 
 // ============================================================================
@@ -225,6 +231,13 @@ class BimToBoqBridgeImpl {
    * 1 parent + N children· τα υπόλοιπα entities (ή walls χωρίς DNA) πάνε
    * single-entry path.
    *
+   * **Openings ΔΕΝ περνούν από εδώ μετά το ADR-376 Phase B.2.** Καλέστε
+   * `upsertOpeningGroupForOpening()` από `opening-boq-sync.ts` direct —
+   * single-entry per-opening rows αντικαταστάθηκαν από signature-group
+   * aggregation (Revit Schedule pattern, 6/6 industry). Αν entityType ===
+   * 'opening' εδώ → warn + skip για να μην δημιουργούνται ξανά legacy
+   * `boq_bim_<openingId>` rows.
+   *
    * Detach guard ανά row (parent + κάθε child ξεχωριστά).
    */
   async upsertBoqItemForBim(
@@ -234,6 +247,14 @@ class BimToBoqBridgeImpl {
     action: 'created' | 'updated',
   ): Promise<void> {
     if (!context.companyId || !context.projectId || !context.buildingId) return;
+
+    if (entityType === 'opening') {
+      logger.warn(
+        'BimToBoqBridge.upsertBoqItemForBim called with opening — use upsertOpeningGroupForOpening από opening-boq-sync.ts instead (ADR-376 Phase B.2)',
+        { entityId: entity.id },
+      );
+      return;
+    }
 
     if (isMultiLayerWall(entityType, entity)) {
       await this.upsertMultiLayerWall(entity, context, action);
