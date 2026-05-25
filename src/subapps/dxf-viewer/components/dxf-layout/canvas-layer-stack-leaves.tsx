@@ -24,6 +24,7 @@ import { useDraftPolygonLayer } from '../../hooks/layers/useDraftPolygonLayer';
 import { ColumnGhostPreviewMount, type ColumnGhostPreviewMountProps } from './canvas-layer-stack-column-ghost';
 import { SlabOpeningGhostPreviewMount, type SlabOpeningGhostPreviewMountProps } from './canvas-layer-stack-slab-opening-ghost';
 import { OpeningGhostPreviewMount, type OpeningGhostPreviewMountProps } from './canvas-layer-stack-opening-ghost';
+import { OpeningTagDragMount } from './canvas-layer-stack-opening-tag-drag';
 import { GripDimAnnotationMount } from './canvas-layer-stack-grip-dim-annotation';
 import { TrimPreviewMount } from './TrimPreviewMount';
 import { ExtendPreviewOverlay } from './ExtendPreviewOverlay';
@@ -375,6 +376,13 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       <SlabOpeningGhostPreviewMount {...slabOpeningGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <OpeningGhostPreviewMount {...openingGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <GripDimAnnotationMount dragPreview={gripDragPreview} levelManager={levelManager} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <OpeningTagDragMount
+        transform={transform}
+        getViewportElement={getViewportElement}
+        currentLevelId={levelManager.currentLevelId}
+        getLevelScene={levelManager.getLevelScene}
+        setLevelScene={levelManager.setLevelScene}
+      />
     </>
   );
 });

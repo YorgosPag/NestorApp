@@ -24,6 +24,9 @@ import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils';
 // 🏢 ADR-344 Phase 11: bitmap cache must invalidate on viewport annotation scale change
 import { getActiveScaleName } from '../../systems/viewport/ViewportStore';
+// 🏢 ADR-375 Phase B: BIM render settings (drawingScale + viewRange + objectStyles)
+//    affect per-entity line weight and cut-state — invalidate when they change.
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('DxfBitmapCache');
@@ -38,6 +41,18 @@ interface CacheKey {
   dpr: number;
   /** ADR-344 Phase 11: invalidate cache when viewport annotation scale changes. */
   activeAnnotationScale: string;
+  /** ADR-375 Phase B.1: invalidate cache when annotation scale denominator changes. */
+  drawingScale: number;
+  /** ADR-375 Phase B.2: viewRange/objectStyles hash — JSON snapshot of small structs. */
+  bimSettingsHash: string;
+}
+
+function readBimCacheInputs(): { drawingScale: number; bimSettingsHash: string } {
+  const s = useBimRenderSettingsStore.getState();
+  return {
+    drawingScale: s.drawingScale,
+    bimSettingsHash: JSON.stringify({ vr: s.viewRange, os: s.objectStyles }),
+  };
 }
 
 export class DxfBitmapCache {
@@ -51,6 +66,7 @@ export class DxfBitmapCache {
 
     const dpr = getDevicePixelRatio();
     const activeAnnotationScale = getActiveScaleName();
+    const { drawingScale, bimSettingsHash } = readBimCacheInputs();
     return (
       this.cacheKey.sceneRef !== scene ||
       this.cacheKey.scale !== transform.scale ||
@@ -59,7 +75,9 @@ export class DxfBitmapCache {
       this.cacheKey.width !== viewport.width ||
       this.cacheKey.height !== viewport.height ||
       this.cacheKey.dpr !== dpr ||
-      this.cacheKey.activeAnnotationScale !== activeAnnotationScale
+      this.cacheKey.activeAnnotationScale !== activeAnnotationScale ||
+      this.cacheKey.drawingScale !== drawingScale ||
+      this.cacheKey.bimSettingsHash !== bimSettingsHash
     );
   }
 
@@ -90,6 +108,7 @@ export class DxfBitmapCache {
         skipInteractive: true,
       });
 
+      const { drawingScale, bimSettingsHash } = readBimCacheInputs();
       this.cacheKey = {
         sceneRef: scene,
         scale: transform.scale,
@@ -99,6 +118,8 @@ export class DxfBitmapCache {
         height: viewport.height,
         dpr,
         activeAnnotationScale: getActiveScaleName(),
+        drawingScale,
+        bimSettingsHash,
       };
     } catch (error) {
       logger.error('Bitmap cache rebuild failed', { error });

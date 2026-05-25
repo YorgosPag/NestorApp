@@ -29,6 +29,8 @@ import { perfStart, perfEnd } from '../../debug/perf-line-profile';
 import { subscribeIsolateEffects } from '../../systems/isolate/IsolateEffectsStore';
 // ADR-358 §5.6.bis Phase 10 — re-render on LayerStore mutations (visible/frozen toggles).
 import { subscribeLayerStore } from '../../stores/LayerStore';
+// ADR-375 Phase B — re-render on BIM render-settings changes (drawingScale / viewRange / objectStyles).
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { LassoStore, computeLassoMode } from '../../systems/cursor/LassoStore';
 
 const logger = createModuleLogger('DxfCanvasRenderer');
@@ -325,6 +327,15 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
   // reads layer flags from LayerStore as the runtime SSoT.
   useEffect(() => {
     return subscribeLayerStore(() => {
+      isDirtyRef.current = true;
+    });
+  }, []);
+
+  // ADR-375 Phase B — mark dirty on BIM render-settings changes (DrawingScale,
+  // ViewRange, ObjectStyles). Bitmap cache key already includes these fields,
+  // so a dirty mark forces re-evaluation and rebuild on the next frame.
+  useEffect(() => {
+    return useBimRenderSettingsStore.subscribe(() => {
       isDirtyRef.current = true;
     });
   }, []);

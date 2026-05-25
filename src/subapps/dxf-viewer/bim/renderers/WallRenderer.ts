@@ -29,7 +29,7 @@ import type { OpeningEntity } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
-import { resolveCutState, DEFAULT_VIEW_RANGE } from '../../config/bim-view-range';
+import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -165,7 +165,7 @@ export class WallRenderer extends BaseEntityRenderer {
     this.ctx.fillStyle = CATEGORY_FILL[cat];
     const _cutState = resolveCutState(
       { zBottomMm: wall.params.baseOffset ?? 0, zTopMm: (wall.params.baseOffset ?? 0) + wall.params.height, category: 'wall' },
-      DEFAULT_VIEW_RANGE,
+      useDrawingScaleStore.getState().viewRange,
     );
     this.ctx.lineWidth = resolveLineWeightPx({ category: 'wall', cutState: _cutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
 

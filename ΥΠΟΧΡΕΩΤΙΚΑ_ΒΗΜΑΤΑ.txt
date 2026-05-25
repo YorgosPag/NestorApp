@@ -1,198 +1,147 @@
-  Object { camPos: "29.97,12.98,11.97", dist: 30.44, sceneChildren: 10, dxfGroup: "✓" }                                                                                   
-  src_subapps_dxf-viewer_bim-3d_7dc32a53._.js:2492:29                                                                                                                     
-  [3D-DEBUG][frameBounds] animation DONE +100ms                                                                                                                           
-  Object { camPos: "29.97,12.98,11.97", tgt: "10.5,0,-7.5", dist: 30.44, controlsEnabled: true }                                                                          
-  src_subapps_dxf-viewer_bim-3d_viewport_4289c220._.js:1174:29                                                                                                            
-  [3D-DEBUG][2s after frameBounds]                                                                                                                                        
-  Object { camPos: "29.97,12.98,11.97", dist: 30.44 }                                                                                                                     
-  src_subapps_dxf-viewer_bim-3d_7dc32a53._.js:2500:29                                                                                                                     
-  [3D-DEBUG][onIdle] hasBimMesh: true bimChildren: 18 12 src_subapps_dxf-viewer_bim-3d_7dc32a53._.js:2685:25                                                              
-  [3D-DEBUG][onIdle] hasBimMesh: true bimChildren: 18 4 src_subapps_dxf-viewer_bim-3d_7dc32a53._.js:2685:25                                                               
+375 ΠΑΧΟΣ ΠΕΡΙΓΡΑΜΜΑΤΑC:\Nestor_Pagonis\local_ΑΝΑΦΟΡΑ_2.txt
+
+
+❯  📋 HANDOFF — ADR-375 Phase B Runtime Verification                                                                                                                      
+                                                                                                                                                                              Είμαι Claude Code σε νέα session. Στόχος: **manual runtime verification** όλου του Phase B (B.1 + B.2 + B.3) του ADR-375 στο browser. 92 unit tests PASS, αλλά μηδέν  
+   runtime confirmation ακόμη.                                                                                                                                            
                                                                                                                                                                           
-
-● hasBimMesh: true bimChildren: 18 — υπάρχουν BIM entities στη scene! Άρα το path tracer ενεργοποιείται. Το πρόβλημα είναι ότι renders black ακόμα και με BIM meshes.
-  Ελέγχω το EnvironmentStore — path tracer χρειάζεται HDRI:
-
-  Searched for 1 pattern, read 1 file (ctrl+o to expand)
-
-● hdriUrl: null — HDRI δεν έχει φορτωθεί by default. Το path tracer ενεργοποιείται με BIM meshes αλλά χωρίς environment map → black screen (all rays miss → no lighting).
-
-  Σωστή guard: path tracer ONLY με hasBimMesh AND hdriUrl loaded:
-
-● Update(src\subapps\dxf-viewer\bim-3d\scene\ThreeJsSceneManager.ts)
-  ⎿  Error editing file
-
-  Searched for 1 pattern, read 1 file (ctrl+o to expand)
-
-● Κάποιος άλλαξε το αρχείο — τώρα χρησιμοποιεί this.bimLayer.hasAnyMesh(). Διαβάζω BimSceneLayer να δω αν υπάρχει αυτή η μέθοδος:
-
-  Searched for 1 pattern, read 1 file (ctrl+o to expand)
-
-● hasAnyMesh() υπάρχει. Τώρα πρέπει να προσθέσω το HDRI guard — path tracer χωρίς HDRI εμφανίζει μαύρη εικόνα (direct lighting only = πολύ dark για 1 sample):
-
-● Update(src\subapps\dxf-viewer\bim-3d\scene\ThreeJsSceneManager.ts)
-  ⎿  Added 3 lines, removed 2 lines
-      139          this.qualityModulator.onCameraIdle();
-      140          this.ssaoModulator.onCameraIdle();
-      141          const hasBimMesh = this.bimLayer.hasAnyMesh();
-      142 -        console.log('[3D-DEBUG][onIdle] hasBimMesh:', hasBimMesh, 'bimChildren:', this.bimLayer.group.children.length);                                       143 -        if (hasBimMesh) this.pathTracerRenderer.start();                                                                                                
-      142 +        const hdriLoaded = useEnvironmentStore.getState().hdriUrl !== null;                                                                                   143 +        console.log('[3D-DEBUG][onIdle] hasBimMesh:', hasBimMesh, 'hdriLoaded:', hdriLoaded, 'bimChildren:', this.bimLayer.group.children.length);      
-      144 +        if (hasBimMesh && hdriLoaded) this.pathTracerRenderer.start();                                                                                  
-      145          useViewMode3DStore.getState().enterPreviewMode();
-      146        },
-      147        onActive: () => {
-
-● Επαληθεύω το αποτέλεσμα:
-
-  Read 1 file (ctrl+o to expand)
-
-● Η fix τώρα:
-  - hasBimMesh: true ✓ (18 BIM children υπάρχουν)
-  - hdriLoaded: false ✗ (χωρίς HDRI → path tracer ΔΕΝ ξεκινά)
-  - Αποτέλεσμα: ssaoModulator.render() τρέχει κανονικά → scene ορατό
-
-  Δοκίμασε τώρα — στη κονσόλα θα δεις hdriLoaded: false και η scene δεν θα εξαφανίζεται.
-
-  Γιατί γίνεται αυτό: Path tracer χωρίς HDRI environment → κάθε ray που "miss" επιστρέφει μαύρο pixel. 1 sample per frame × χωρίς ambient IBL = τελείως σκοτεινή εικόνα  από το πρώτο frame που ενεργοποιείται. Λύση: path tracer preview activates μόνο όταν user φόρτωσε HDRI (σωστό behavior για Phase 5C anyway).
-  📊 Context: ~70% | Commands: 10 | ⚠️  Σκέψου /clear αν αλλάξεις θέμα
-
-✻ Sautéed for 3m 17s · 2 shells still running
-
-※ recap: Fixing two 3D viewer bugs where the scene goes black after 800ms. Added a guard so the path tracer only activates when both BIM meshes and HDRI are loaded. Next:
-   Giorgio tests and confirms the scene stays visible.
-
-❯ [3D-DEBUG][DxfConverter.sync]                                                                                                                                             Object { units: "m", unitScale: 1, entities: 3283, colorBuckets: 20, worldMin: "0,0,-15", worldMax: "21,0,0", worldIsEmpty: false }                                     
-  src_subapps_dxf-viewer_bim-3d_54c4d414._.js:3773:17                                                                                                                       [3D-DEBUG][syncDxfOverlay]                                                                                                                                              
-  Object { sceneNull: false, fitDone: false, boxNull: false, boxEmpty: false, boxMin: "0,0,-15", boxMax: "21,0,0", camPos: "15,10,15" }                                   
-  src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2245:13                                                                                                                     
-  [3D-DEBUG][computePerspectiveFraming]                                                                                                                                   
-  Object { min: "0,0,-15", max: "21,0,0", radius: 12.9, distance: 30.44, camPos: "29.97,12.98,11.97", withinFar: true }                                                   
-  src_subapps_dxf-viewer_bim-3d_viewport_4289c220._.js:876:13                                                                                                             
-  [3D-DEBUG][frameBounds] animation START                                                                                                                                 
-  Object { fromCam: "15,10,15", fromTgt: "0,0,0", toCam: "29.97,12.98,11.97", toTgt: "10.5,0,-7.5", maxDist: 500 }                                                        
-  src_subapps_dxf-viewer_bim-3d_viewport_4289c220._.js:1151:21                                                                                                            
-  [3D-DEBUG][syncDxfOverlay] frameBounds CALLED ✓ src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2264:13                                                                     
-  [3D-DEBUG][frameBounds] animation DONE +100ms                                                                                                                           
-  Object { camPos: "29.97,12.98,11.97", tgt: "10.5,0,-7.5", dist: 30.44, controlsEnabled: true }                                                                          
-  src_subapps_dxf-viewer_bim-3d_viewport_4289c220._.js:1174:29                                                                                                            
-  [3D-DEBUG][onIdle] hasBimMesh: true hdriLoaded: false bimChildren: 18 src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2721:25                                               
-  [3D-DEBUG][1s after frameBounds]                                                                                                                                        
-  Object { camPos: "29.97,12.98,11.97", dist: 30.44, sceneChildren: 10, dxfGroup: "✓" }                                                                                   
-  src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2266:17                                                                                                                     
-  [3D-DEBUG][onIdle] hasBimMesh: true hdriLoaded: false bimChildren: 18 src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2721:25                                               
-  [3D-DEBUG][2s after frameBounds]                                                                                                                                        
-  Object { camPos: "29.97,12.98,11.97", dist: 30.44 }                                                                                                                     
-  src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2274:17                                                                                                                     
-  [3D-DEBUG][onIdle] hasBimMesh: true hdriLoaded: false bimChildren: 18 13 src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2721:25                                            
-  [3D-DEBUG][onIdle] hasBimMesh: true hdriLoaded: false bimChildren: 18 4 src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2721:25                                             
-  [3D-DEBUG][onIdle] hasBimMesh: true hdriLoaded: false bimChildren: 18 3 src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2721:25                                             
-  [3D-DEBUG][onIdle] hasBimMesh: true hdriLoaded: false bimChildren: 18 3 src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2721:25                                             
-   ΠΑΛΙ ΤΑ ΙΔΙΑ                                                                                                                                                           
-
-● hdriLoaded: false και path tracer δεν ξεκινά — αλλά η scene εξακολουθεί να εξαφανίζεται. Το πρόβλημα είναι αλλού. Διαβάζω ViewMode3DStore — το enterPreviewMode()
-  καλείται σε κάθε onIdle:
-
-  Searched for 2 patterns, read 1 file (ctrl+o to expand)
-
-● Ελέγχω αν κάποιο component κρύβει το 3D canvas όταν mode = '3d-preview':
-
-  Searched for 1 pattern, read 1 file (ctrl+o to expand)
-
-● Διαβάζω BimViewport3D.tsx — πού χρησιμοποιεί το mode state:
-
-  Read 1 file (ctrl+o to expand)
-
-● Συνεχίζω ανάγνωση BimViewport3D.tsx — ψάχνω αν mode = '3d-preview' αλλάζει CSS visibility:
-
-  Read 1 file (ctrl+o to expand)
-
-● Ελέγχω τι κάνει qualityModulator.onCameraIdle():
-
-  Read 1 file (ctrl+o to expand)
-
-● Η υπόνοια: ssaoModulator.onCameraIdle() ενεργοποιεί SSAO στα 800ms — αυτό ταιριάζει με το timing του disappearing. Χρειάζεται try-catch στο scene-render-frame.ts για να
-   δούμε αν SSAO πετάει error. Επίσης guard στο onIdle:
-
-  Read 1 file (ctrl+o to expand)
-
-● Update(src\subapps\dxf-viewer\bim-3d\scene\scene-render-frame.ts)
-  ⎿  Added 6 lines, removed 1 line
-      70    } else if (sectionController.isStencilActive()) {
-      71      sectionController.renderFrameWithCaps(viewport.camera);
-      72    } else {
-      73 -    ssaoModulator.render();                                                                                                                              
-      73 +    try {                                                                                                                                                
-      74 +      ssaoModulator.render();                                                                                                                            
-      75 +    } catch (err) {                                                                                                                                            76 +      console.error('[3D-DEBUG][renderSceneFrame] ssaoModulator.render() threw:', err);                                                                  
-      77 +      ssaoModulator.disableSSAO();                                                                                                                             78 +    }                                                                                                                                                    
-      79    }
-      80  }
-
-● Τώρα προσθέτω disableSSAO() στο SSAOModulator και log για να δούμε αν το SSAO throws:
-
-  Read 1 file (ctrl+o to expand)
-
-● Update(src\subapps\dxf-viewer\bim-3d\lighting\ssao-modulator.ts)
-  ⎿  Added 12 lines
-      69      this.ssaoPass.setSize(width, height);
-      70    }
-      71  
-      72 +  /** Emergency SSAO disable — called from scene-render-frame when composer throws. */                                                                   
-      73 +  disableSSAO(): void {                                                                                                                                  
-      74 +    this.cancelAnim();                                                                                                                                         75 +    this.ssaoPass.enabled = false;                                                                                                                       
-      76 +    // Fallback: direct render without post-processing.                                                                                                        77 +    const camera = this.getCamera();                                                                                                                     
-      78 +    try {                                                                                                                                                
-      79 +      this.composer.renderer.setRenderTarget(null);                                                                                                      
-      80 +      this.composer.renderer.render(this.renderPass.scene, camera);                                                                                      
-      81 +    } catch { /* ignore fallback failures */ }                                                                                                           
-      82 +  }                                                                                                                                                      
-      83 +                                                                                                                                                         
-      84    render(): void {
-      85      const camera = this.getCamera();
-      86      const isPerspective = camera instanceof THREE.PerspectiveCamera;
-
-● Βλέπω το πρόβλημα τώρα. SSAOPass κάνει scene.overrideMaterial = MeshNormalMaterial για τη normal render pass και αν αποτύχει (LineSegments + BIM combo), δεν το
-  επαναφέρει. Αποτέλεσμα: κάθε επόμενο frame renders με normal material (grey output = scene "εξαφανίζεται").
-
-  Fix: reset overrideMaterial = null μετά από κάθε composer.render():
-
-● Update(src\subapps\dxf-viewer\bim-3d\lighting\ssao-modulator.ts)
-  ⎿  Added 5 lines
-      88      this.ssaoPass.camera = camera as THREE.PerspectiveCamera;
-      89      if (!isPerspective) this.ssaoPass.enabled = false;
-      90      this.composer.render();
-      91 +    // Safety: SSAOPass sets scene.overrideMaterial = MeshNormalMaterial during                                                                          
-      92 +    // its normal-buffer pass. If it fails to restore the override (exception or                                                                         
-      93 +    // early return), every subsequent frame renders grey normals instead of                                                                             
-      94 +    // actual materials. Force-reset after every frame to prevent corruption.                                                                                  95 +    this.renderPass.scene.overrideMaterial = null;                                                                                                       
-      96    }      97  
-      98    dispose(): void {
-
-● Έχω νέα θεωρία: με ssaoPass.enabled = false, το EffectComposer μπορεί να γράφει κανονικά στην οθόνη. Αλλά ΜΟΛΙΣ ssaoPass.enabled = true (800ms), το SSAOPass τρέχει και
-  παράγει μαύρη εικόνα — είτε λόγω garbage normals από LineSegments, είτε λόγω overrideMaterial corruption.
-
-  Αποδεικτικό test: Αφαιρώ τη ssaoModulator.onCameraIdle() από το onIdle — αν η scene μένει ορατή, SSAO είναι ο ένοχος:
-
-  Read 1 file (ctrl+o to expand)
-
-● Update(src\subapps\dxf-viewer\bim-3d\scene\ThreeJsSceneManager.ts)
-  ⎿  Added 6 lines, removed 2 lines
-      137        thresholdMs: 800,
-      138        onIdle: () => {
-      139          this.qualityModulator.onCameraIdle();
-      140 -        this.ssaoModulator.onCameraIdle();                                                                                                                    140 +        // NOTE: ssaoModulator.onCameraIdle() disabled — SSAO corrupts scene when                                                                       
-      141 +        // LineSegments (DXF wireframe) mix with BIM meshes (garbage normal buffer                                                                            142 +        // for line geometry → SSAOPass output goes black). Re-enable only after                                                                        
-      143 +        // a lines-exclusion fix or pure-BIM detection is in place.                                                                                     
-      144 +        // this.ssaoModulator.onCameraIdle();                                                                                                           
-      145          const hasBimMesh = this.bimLayer.hasAnyMesh();
-      146          const hdriLoaded = useEnvironmentStore.getState().hdriUrl !== null;
-      143 -        console.log('[3D-DEBUG][onIdle] hasBimMesh:', hasBimMesh, 'hdriLoaded:', hdriLoaded, 'bimChildren:', this.bimLayer.group.children.length);      
-      147 +        console.log('[3D-DEBUG][onIdle] hasBimMesh:', hasBimMesh, 'hdriLoaded:', hdriLoaded, 'ssao:DISABLED');                                          
-      148          if (hasBimMesh && hdriLoaded) this.pathTracerRenderer.start();
-      149          useViewMode3DStore.getState().enterPreviewMode();
-      150        },
-
-● Δοκίμασε τώρα — στη κονσόλα θα δεις ssao:DISABLED. Αν η scene μένει ορατή μόνιμα, επιβεβαιώνεται ότι το SSAOPass ήταν ο ένοχος.
-
-  Γιατί SSAO είναι ο ένοχος (θεωρία): SSAOPass κάνει scene.overrideMaterial = MeshNormalMaterial για να render τα normals. Το LineSegments (DXF wireframe) δεν έχει normal
-   attribute — ο shader διαβάζει garbage normals. Αποτέλεσμα: AO factor = 1.0 σε αυτά τα pixels → scene_color × 0 = black. Αφού το DXF wireframe καλύπτει μεγάλο μέρος της   οθόνης, ολόκληρη η εικόνα γίνεται μαύρη.
+    ## 🎯 Μοντέλο: Sonnet 4.6 (Recommended)                                                                                                                               
+    Λόγος: runtime debugging + small targeted fixes (αν προκύψουν). Όχι cross-cutting refactor.                                                                           
+    ⏸️   Περίμενε "ok" πριν ξεκινήσεις (κανόνας N.14).                                                                                                                     
+                                                                                                                                                                          
+    ---                                                                                                                                                                   
+                                                                                                                                                                          
+    ## 📦 Τι ΕΧΕΙ ΗΔΗ COMMITTED (μην ξαναγράψεις, μόνο verify)                                                                                                            
+                                                                                                                                                                          
+    - **Phase A** (commits 8c3bbbd7 και πριν): 4 SSoT files (bim-pen-table, bim-object-styles, bim-view-range, bim-line-weight-resolver) + 7 BIM renderers + 35 tests     
+    - **Phase B.1**: DrawingScale selector ribbon widget + drawing-scale-store (thin re-export shim)                                                                      
+    - **Phase B.2**: bim-render-settings-store SSoT + ViewRangePanel + ObjectStylesPanel + useBimRenderSettingsSync + Level.bimRenderSettings persistence                 
+    (`dxf_viewer_levels/{id}.bimRenderSettings`)                                                                                                                          
+    - **Phase B.3** (commit `36d6fb3f`): View Templates library                                                                                                           
+      - `dxf_viewer_view_templates` collection (companyId-scoped, vtmpl_ prefix)                                                                                          
+      - Snapshot-copy model: Apply copies settings + sets FK, Detach nulls FK, Edit fans out via `propagateToLinkedLevels`                                                
+      - ViewTemplatesPanel ribbon widget (Apply / Update / Delete + Save As footer + Detach)                                                                              
+    - **Firestore deploy DONE**: rules + indexes pushed στο `pagonis-87766` cloud (composite index `companyId+createdAt DESC` ίσως ακόμα building — δες console)          
+                                                                                                                                                                          
+    ## ⚠️   ΠΡΟΣΟΧΗ — Multi-agent state                                                                                                                                    
+    Άλλος agent έχει **uncommitted ADR-376 Phase B work** (Opening Renumber + ANNOTATE_OPENINGS_PANEL). Σε `git status` θα δεις ~16 modified + 5 untracked files **που    
+  ΔΕΝ                                                                                                                                                                     
+    είναι δικά σου**:                                                                                                                                                     
+    - `.claude-rules/pending-ratchet-work.md`, `.ssot-registry.json`                                                                                                      
+    - `ADR-366` + `ADR-376` docs                                                                                                                                          
+    - `DxfViewerContent.tsx`, `EventBus.ts`, `RibbonButtonIcon.tsx`, `contextual-opening-tab.ts`, `opening-command-keys.ts`, `useRibbonOpeningBridge.ts`,                 
+    `opening-types.ts`, `ssao-modulator.ts`                                                                                                                               
+    - Modified locales (el+en) — έχουν KAI ADR-376 keys (`openingRenumber`, `annotateOpenings`, `renumber.*`)                                                             
+    - Modified `ribbon-default-tabs.ts` — έχει KAI `ANNOTATE_OPENINGS_PANEL` του άλλου                                                                                    
+    - Untracked: `bim/services/opening-renumber-service.{ts,test}`, `RenumberOpeningsCommand.ts`, `ui/components/bim-openings/`, `annotate-tab-openings.ts`,              
+    `ΥΠΟΧΡΕΩΤΙΚΑ_ΒΗΜΑΤΑ.txt`                                                                                                                                              
+                                                                                                                                                                          
+    **ΑΠΑΓΟΡΕΥΕΤΑΙ**: `git add -A`, `git restore`, `git reset --hard`, οποιαδήποτε mass-sweep. Αν χρειαστεί commit, stage μόνο specific paths.                            
+                                                                                                                                                                          
+    ---                                                                                                                                                                   
+                                                                                                                                                                          
+    ## 🎯 Verification Checklist                                                                                                                                          
+                                                                                                                                                                          
+    ### Step 1 — Boot dev server                                                                                                                                          
+    npm run dev                                                                                                                                                           
+    Open http://localhost:3000 → login → navigate σε `/dxf/viewer` (project που έχει ≥2 levels με imported DXF scene).                                                    
+                                                                                                                                                                          
+    ### Step 2 — Phase B.1: Drawing Scale                                                                                                                                 
+    1. Στο **View tab** του ribbon δες widget `1:{scale}` (DrawingScaleWidget).                                                                                           
+    2. Άλλαξε σε preset 1:50 → επιβεβαίωσε ότι **πάχη γραμμών** στο canvas αλλάζουν αμέσως (BIM renderers).                                                               
+    3. Άλλαξε σε custom 1:75 (free input) → ίδιο.                                                                                                                         
+    4. F5 → πρέπει να επανέλθει στην τιμή σου (Firestore persistence).                                                                                                    
+                                                                                                                                                                          
+    ### Step 3 — Phase B.2: View Range                                                                                                                                    
+    1. Δες widget **"Εύρος Προβολής"** δίπλα στο DrawingScale.                                                                                                            
+    2. Άνοιξε dropdown → 4 mm inputs (Top / Cut Plane / Bottom / View Depth).                                                                                             
+    3. Αλλαγή cut plane (π.χ. 1200) → 500ms debounce → Firestore save (δες Network tab για `PATCH /api/dxf-levels`).                                                      
+    4. F5 → τιμές persistent.                                                                                                                                             
+    5. Reset button → DEFAULT_VIEW_RANGE.                                                                                                                                 
+                                                                                                                                                                          
+    ### Step 4 — Phase B.2: Object Styles                                                                                                                                 
+    1. Δες widget **"Στυλ Αντικειμένων"** (12 με 2 pen selectors).                                                                                                        
+    2. Άλλαξε `wall.cutPen` από default σε 9 → debounce → save.                                                                                                           
+    3. Επιβεβαίωσε πάχος γραμμής στο canvas (walls cut state).                                                                                                            
+    4. Reset.                                                                                                                                                             
+                                                                                                                                                                          
+    ### Step 5 — Phase B.3: View Templates                                                                                                                                
+    1. Δες widget **"Πρότυπο"** (τελευταίο στο View tab).                                                                                                                 
+    2. **Save As**: γράψε όνομα "Standard 1:100" → click "Αποθήκευση ως" → νέο template εμφανίζεται στο dropdown list.                                                    
+    3. Άλλαξε σε άλλο level (Level 2). Άνοιξε ViewTemplates → click Apply (✓ icon) στο "Standard 1:100" → settings copy στο Level.bimRenderSettings + trigger label       
+  δείχνει                                                                                                                                                                 
+    "Standard 1:100".                                                                                                                                                     
+    4. Linked count badge: επιστροφή σε Level 1 → ίδιο template applied → badge `×2` δίπλα στο όνομα.                                                                     
+    5. **Update propagation**: άλλαξε drawingScale ή cutPlane. Click "Update" (refresh icon) → όλα τα linked levels (2) αυτόματα ενημερώνονται. Σύγκρινε Level 2.         
+    6. **Detach**: click "Αποσύνδεση από πρότυπο" → FK nullifies, settings παραμένουν (snapshot). Badge → `×1`.                                                           
+    7. **Delete**: trash icon → template εξαφανίζεται από dropdown. Orphan FK σε Level 1 παραμένει αλλά harmless (renderers διαβάζουν bimRenderSettings).                 
+                                                                                                                                                                          
+    ### Step 6 — Multi-tab Firestore sync                                                                                                                                 
+    1. Άνοιξε δεύτερο tab ίδιου project.                                                                                                                                  
+    2. Tab A: άλλαξε drawingScale.                                                                                                                                        
+    3. Tab B: πρέπει να επανέλθει αυτόματα (firestoreQueryService.subscribe).                                                                                             
+                                                                                                                                                                          
+    ### Step 7 — Console / Network                                                                                                                                        
+    - Καθαρή κονσόλα (όχι PERMISSION_DENIED, FAILED_PRECONDITION, render loops)                                                                                           
+    - Network: μόνο `PATCH /api/dxf-levels` (debounced) + Firestore websocket                                                                                             
+    - Performance: όχι >60fps churn / idle re-renders                                                                                                                     
+                                                                                                                                                                          
+    ---                                                                                                                                                                   
+                                                                                                                                                                          
+    ## 🐛 Known pitfalls                                                                                                                                                  
+                                                                                                                                                                          
+    - **Composite index ακόμα building** (deployed 2026-05-25 evening) → πρώτο template list ίσως πετάξει `FAILED_PRECONDITION`. Δες                                      
+    https://console.firebase.google.com/project/pagonis-87766/firestore/databases/-default-/indexes                                                                       
+    - **PERMISSION_DENIED στο write template**: companyId/createdBy mismatch — δες firestore.rules:3454-3510 για τις απαιτήσεις                                           
+    - **3D camera fit regression** (memory `feedback_camera_fit_3d_regression`) — Property 3D bug ακόμα open, αν φανεί παράμερα.                                          
+    - **Empty templates στο dropdown** όταν `companyId` λείπει από auth — useViewTemplateStore περιμένει companyId πριν subscribe.                                        
+                                                                                                                                                                          
+    ---                                                                                                                                                                   
+                                                                                                                                                                          
+    ## 📚 Critical files (read-only references)                                                                                                                           
+                                                                                                                                                                          
+    | Layer | Path |                                                                                                                                                      
+    |---|---|                                                                                                                                                             
+    | Types | `src/subapps/dxf-viewer/config/view-template-types.ts` |                                                                                                    
+    | Service | `src/subapps/dxf-viewer/services/view-template.service.ts` |                                                                                              
+    | Store | `src/subapps/dxf-viewer/state/view-template-store.ts` |                                                                                                     
+    | Panel | `src/subapps/dxf-viewer/ui/ribbon/panels/ViewTemplatesPanel.tsx` |                                                                                          
+    | B.2 Store | `src/subapps/dxf-viewer/state/bim-render-settings-store.ts` |                                                                                           
+    | Level config | `src/subapps/dxf-viewer/systems/levels/config.ts` (`appliedViewTemplateId` field) |                                                                  
+    | Rules | `firestore.rules:3454-3510` (`dxf_viewer_view_templates` block) |                                                                                           
+    | Index | `firestore.indexes.json` (`dxf_viewer_view_templates: companyId+createdAt DESC`) |                                                                          
+    | ADR | `docs/centralized-systems/reference/adrs/ADR-375-bim-entity-line-weight-semantic-system.md` v1.5 |                                                            
+                                                                                                                                                                          
+    ## 🔧 Diagnostic commands (αν προκύψουν bugs)                                                                                                                         
+                                                                                                                                                                          
+    ```bash                                                                                                                                                               
+    # Firestore template list (one-shot από κονσόλα browser)                                                                                                              
+    import { listViewTemplatesOnce } from '@/subapps/dxf-viewer/services/view-template.service';                                                                          
+    await listViewTemplatesOnce('<your-companyId>');                                                                                                                      
+                                                                                                                                                                          
+    # Re-run unit tests                                                                                                                                                   
+    npx jest src/subapps/dxf-viewer/services/__tests__/view-template.service.test.ts src/subapps/dxf-viewer/state/__tests__/view-template-store.test.ts --no-coverage     
+                                                                                                                                                                          
+    # Type check                                                                                                                                                          
+    npx tsc --noEmit                                                                                                                                                      
+                                                                                                                                                                          
+    ---                                                                                                                                                                   
+    ✅ Acceptance — όταν τελειώσουμε                                                                                                                                      
+                                                                                                                                                                          
+    - [ ] Όλα τα 7 steps πέρασαν χωρίς manual workaround                                                                                                                  
+    - [ ] Καθαρή console, κανένα render loop, κανένα PERMISSION_DENIED                                                                                                    
+    - [ ] Multi-tab Firestore real-time sync λειτουργεί                                                                                                                   
+    - [ ] Update template propagation σε ≥2 linked levels δουλεύει                                                                                                        
+    - [ ] Detach behavior σωστή (snapshot stays)                                                                                                                          
+    - [ ] Καμία regression στο 2D canvas drawing (walls/columns/etc πάχη γραμμών)                                                                                         
+                                                                                                                                                                          
+    Όταν δω ✅ σε όλα: Update memory project_adr375_bim_line_weights_phase_a.md με "Runtime verified 2026-XX-XX". Update ADR-375 v1.6 με verification note. ΟΧΙ commit    
+  χωρίς   ρητή εντολή (N.(-1)).                                                                                                                                           
+                                                                                                                                                                          
+    Όταν δω bug: report immediately με βήματα reproduction + Greek explanation. ΟΧΙ silent fix.                                                                           
+                                                                                                                                                                          
+    ---                                                                                                                                                                   
+    🌐 Language: ελληνικά responses πάντα (N.0).                                                                                                                          
+    🚨 N.(-1): ΠΟΤΕ commit/push/deploy χωρίς εντολή Giorgio.                                                                                                              
+                                                                                                                                                                          
+    ok? περιμένω confirmation πριν ξεκινήσω.                                              

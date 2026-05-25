@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | ✅ **PHASE_B2_DONE** 2026-05-26 — Phase A core + Phase B.1 Renumber Openings + Phase B.2 BOQ signature-group aggregation shipped. Phase C (draggable tag + leader line) pending. |
+| **Status** | ✅ **PHASE_C1_DONE** 2026-05-26 — Phase A core + Phase B.1 Renumber Openings + Phase B.2 BOQ signature-group aggregation + Phase C.1 draggable tag + γωνιακή leader + Reset Position UX shipped. Phase C.2 (per-project styling) + Phase C.3 (PDF schedule export) still ⏸️ PENDING. |
 | **Date** | 2026-05-25 |
 | **Category** | DXF Viewer — BIM / Annotation |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-376-opening-tags.md` |
@@ -328,9 +328,65 @@ Zoom threshold: tag visible μόνο σε zoom ≥ `OPENING_TAG_MIN_ZOOM` (e.g. 
 | **A** (core) | `mark` field, `OpeningMarkService` (per floor+kind allocator), `OpeningTagRenderer`, auto-numbering on placement, ribbon inputs, layer toggle, validator, i18n keys (5 prefixes el+en), 2D-only enforcement | All Q1-Q10 resolved | **~6-10h** | ✅ DONE 2026-05-25 |
 | **B.1** (renumber) | Manual "Renumber Openings" command + ICommand undo + Dialog modal (scope + kind filter + manual-include toggle) + `markIsManual` tracking on ribbon Mark edits + Annotate ribbon tab global button + contextual quick-action | Phase A | **~3-4h** | ✅ DONE 2026-05-25 |
 | **B.2** (BOQ schedule) | BOQ integration (ADR-175): **single aggregated row per signature group** (Mode C — `kind + width + height + sillHeight + openDirection`). Revit Schedule pattern, 6/6 industry convergence (Revit / ArchiCAD / Tekla / Allplan / Bentley / Vectorworks). Scope = **per-floorplan** (matches `OpeningFirestoreService` subscribe scope). 50 ίδια παράθυρα = 1 row με `quantity=50`, marks compacted στο `description` (`Marks: Π.101..Π.150`). **Diverges from multi-layer wall pattern** (Phase 6.1) — openings are atomic, no multi-component layers. | Phase A | **~3-4h** | ✅ DONE 2026-05-26 |
-| **C** (polish) | Draggable tag + leader line, custom styling per project, export to PDF schedule | Phase B | **~8-10h** | ⏸️ PENDING |
+| **C.1** (draggable tag + leader) | Draggable tag position via pointer drag (FSM controller + React hook) με leader line από opening centroid → tag (Revit 2027 + ArchiCAD γωνιακή/elbow pattern). `tagOffset` field (already reserved σε `OpeningParams`) ενεργοποιείται. "Reset Tag Position" command (ribbon contextual + right-click on tag). Auto-leader visibility (hide όταν tag close to anchor). Tag rotation = always horizontal (Q2 industry default 3/3). ADR-040 compliant — pure FSM + leaf-only DOM listeners + RAF-throttled scene patches. | Phase B | **~3-5h** | ✅ DONE 2026-05-26 |
+| **C.2** (per-project styling) | Custom tag styling override per scope (font size, pill color override, border thickness, leader style dashed/solid). Persistence layer TBD (per-building vs per-project vs per-view-template — ADR-375 Phase B.3 pattern reuse). Settings panel UI (Floating3DPanel ή ribbon). Live-preview στο canvas. | Phase C.1 | **~2-3h** | ⏸️ PENDING |
+| **C.3** (PDF schedule export) | Standalone PDF export του opening schedule (αξιοποιεί Phase B.2 signature-group BOQ rows). Πιθανή ενσωμάτωση σε ADR-175 BOQ export feature αντί ξεχωριστού path. | Phase B.2 | **~2-3h** | ⏸️ PENDING |
 
 **Total Phase A+B.1+B.2 = ~12-18h** — all shipped.
+**Total Phase C (split σε 3 sub-phases) = ~7-11h** — ξεχωριστή session ανά sub-phase (Giorgio 2026-05-26 scope decision: split — manageable 2h-window sessions, χαμηλότερο risk per commit, ADR docs καθαρά μεταξύ subphases).
+
+### 4.10 Draggable tag + γωνιακή leader (Phase C.1)
+
+**Industry convergence (web research 2026-05-26)**:
+- **Leader geometry (Q1)** → **γωνιακή / elbow**. Revit 2027 + ArchiCAD plan default. Revit 2026 = straight; we adopt the 2027 pattern as forward-looking. Single 90° break point — split-horizontal-first for `|Δx| ≥ |Δy|`, split-vertical-first otherwise.
+- **Tag rotation (Q2)** → **πάντα horizontal**. 3/3 convergence (Revit horizontal default + ArchiCAD + AutoCAD). "Rotate with Component" Revit option remains *out of scope* — adds UX complexity without measurable benefit για architectural plan annotation.
+- **Reset position (Q4)** → **και τα δύο** UX paths (ribbon button **και** right-click). Vectorworks-style power-user redundancy.
+
+**Three-layer architecture** (ADR-040 compliant — pure FSM + leaf hook + leaf renderer):
+
+```
+                              ┌─────────────────────────────────────┐
+                              │ OpeningTagDragController (pure FSM) │
+                              │ idle ↔ dragging                      │
+                              │ - hitTestTag(openings, transform)   │
+                              │ - screenDeltaToWorldDelta(...)      │
+                              │ - tagWorldCenter(opening)           │
+                              └─────────────┬───────────────────────┘
+                                            │
+                ┌───────────────────────────┴──────────────────────────┐
+                │                                                       │
+   ┌────────────▼──────────────┐                       ┌────────────────▼──────────┐
+   │ use-opening-tag-drag-     │                       │ OpeningTagRenderer.render │
+   │ interaction (React hook)  │                       │ - computeTagCenter        │
+   │ - pointerdown/move/up     │                       │ - +tagOffset                │
+   │ - setPointerCapture       │                       │ - drawLeaderLine (elbow)    │
+   │ - RAF coalescing          │                       │ - drawPillTag (horizontal) │
+   │ - right-click → reset     │                       └───────────────────────────┘
+   │ - UpdateOpeningParamsCmd  │
+   └───────────────────────────┘
+```
+
+**`tagOffset` semantics** (already reserved σε `OpeningParams.tagOffset`):
+- World-mm delta από το auto-centroid (Phase A normal-to-wall outward).
+- `undefined` → tag at auto-centroid (no leader drawn).
+- `{dx, dy}` → tag at `auto-centroid + (dx, dy)`; leader drawn όταν screen-distance ≥ `LEADER_MIN_DISTANCE_PX` (18 px).
+- Pan/zoom invariant — world coordinates, not screen pixels.
+
+**Persistence**:
+- Drag-end → `UpdateOpeningParamsCommand` (existing entity command, undoable, auto-save δευτερόλεπτο 500 ms via `useOpeningPersistence` dirty-set).
+- Reset (ribbon + right-click) → `UpdateOpeningParamsCommand` με `tagOffset` field stripped (Firestore-friendly — `undefined` field omitted from payload).
+
+**ADR-040 compliance**:
+- `OpeningTagDragController` pure module — ZERO React, ZERO Zustand subscriptions.
+- React hook mounted only inside `canvas-layer-stack-leaves.tsx` `PreviewCanvasMounts` leaf (μη orchestrator).
+- DOM listeners with `setPointerCapture` so the gesture survives cursor leaving the canvas.
+- Scene patches during drag throttled via `requestAnimationFrame` — at most one `setLevelScene` call per frame.
+- `pointerdown` με `capture: true` ώστε ο tag drag να προπολλαπλασιάζεται έναντι του canvas selection click handler.
+
+**Right-click semantics**:
+- Right-click στο tag pill → immediate Reset Position (no menu). Power-user shortcut, redundant with ribbon for discoverability.
+- `contextmenu` event suppressed when cursor over a tag pill (καμία browser menu για να μην μπλοκάρει το reset workflow).
+- Right-click εκτός tag → propagates κανονικά στο standard canvas context-menu path.
 
 ### 4.9 Manual mark override tracking (Phase B.1)
 
@@ -414,6 +470,17 @@ readonly markIsManual?: boolean;
   - Tests: 12/12 PASS (current-floor 10 + all-floors 2). Covers: empty rows, single-floor no-gaps, gap filling (1,2,4,7 → 1,2,3,4), per-kind isolation, basement floor, manual preserve, manual wipe, idempotency, out-of-scope skip, kindFilter skip, multi-floor + multi-kind ordering, missing-floorId skip.
   - Industry pattern: 5/5 convergence (IMAGINiT / ArchiCAD / Tekla / Bentley / Vectorworks) — preserve manual overrides by default, opt-in to wipe.
   - Pending: Phase B.2 (BOQ Schedule group-by Mode C signature) + Phase C (draggable tag + leader line).
+- **2026-05-26** (v8 — Phase C SPLIT) — Giorgio scope decision: Phase C χωρίστηκε σε **C.1 (draggable tag + leader line, ~3-5h)**, **C.2 (per-project styling, ~2-3h)**, **C.3 (PDF schedule export, ~2-3h)**. Κάθε sub-phase = ξεχωριστή ~2h session με δικό του commit + ADR update — manageable session windows, χαμηλότερο per-commit risk, καθαρά docs μεταξύ subphases. §7 phases table updated με 3 ξεχωριστά rows + dependencies + status. Total Phase C scope unchanged (~7-11h). Zero κώδικας ακόμη — C.1 ξεκινά αμέσως μετά OQ resolution (leader geometry + tag rotation + reset UX).
+- **2026-05-26** (v9 — PHASE_C1_DONE) — **Phase C.1 implementation complete** (draggable tag + γωνιακή leader + Reset Position UX). 3 OQs resolved με industry research:
+  - Q1 leader = **γωνιακή/elbow** (Revit 2027 + ArchiCAD forward-looking pattern, single 90° break point με split-axis selection — horizontal-first when `|Δx| ≥ |Δy|`, vertical-first otherwise).
+  - Q2 rotation = **πάντα horizontal** (3/3 industry convergence — Revit + ArchiCAD + AutoCAD).
+  - Q4 reset UX = **both** ribbon button (contextual `opening-mark` panel) + right-click on tag (immediate, no menu — Vectorworks power-user shortcut).
+  - **NEW files (3)**: `bim/services/opening-tag-drag-controller.ts` (pure FSM — idle/dragging states, `hitTestTag` + `tagWorldCenter` + `screenDeltaToWorldDelta` + `getOffsetOrZero` + `isOffsetSignificant` pure helpers + controller class με `startDrag`/`updateDrag`/`endDrag`/`cancelDrag`). `hooks/canvas/use-opening-tag-drag-interaction.ts` (React DOM glue — pointerdown/move/up + setPointerCapture + RAF-coalesced scene patches + `UpdateOpeningParamsCommand` commit + right-click reset). `components/dxf-layout/canvas-layer-stack-opening-tag-drag.tsx` (`OpeningTagDragMount` leaf — wires hook στο `PreviewCanvasMounts` composition).
+  - **NEW tests (1)**: `bim/services/__tests__/opening-tag-drag-controller.test.ts` — **28 assertions** (10 pure helpers + 8 hit-test + 10 FSM transitions). PASS 28/28.
+  - **MODIFIED files (8)**: `bim/renderers/OpeningTagRenderer.ts` (+`drawLeaderLine` γωνιακή leader, anchor=auto-centroid / pill=anchor+tagOffset, skip leader when distance < 18 px). `ui/ribbon/data/contextual-opening-tab.ts` (+Reset Position simple button στο `opening-mark` panel row). `ui/ribbon/hooks/bridge/opening-command-keys.ts` (+`resetTagPosition` action key). `ui/ribbon/hooks/useRibbonOpeningBridge.ts` (+action handler — strips `tagOffset` field via spread+delete + dispatches `UpdateOpeningParamsCommand`). `ui/ribbon/components/buttons/RibbonButtonIcon.tsx` (+`bim-opening-reset-tag` case → `RotateCcw` lucide icon). `i18n/locales/{el,en}/dxf-viewer-shell.json` (+`ribbon.commands.openingEditor.resetTagPosition.{label,tooltip,contextMenu}`). `components/dxf-layout/canvas-layer-stack-leaves.tsx` (+`OpeningTagDragMount` wired into `PreviewCanvasMounts`).
+  - **N.7.2 Google-level**: Proactive (hook mounts only inside leaf, RAF-coalesced scene patches), Idempotent (setting same tagOffset = no-op via dequal), Belt-and-suspenders (FSM + hook + persistence — 3 independent guards), SSoT (`opening-tag-drag-controller.ts` owns FSM, `OpeningParams.tagOffset` owns persisted state, `UpdateOpeningParamsCommand` owns undoable mutation), Await (commit awaited via existing command path), Lifecycle owner (React hook, mount/unmount with leaf).
+  - **ADR-040 compliance**: pure FSM zero subscriptions, hook only in leaf, RAF-throttled patches, `pointerdown` με `capture: true` ώστε να μην race με canvas selection click, no useSyncExternalStore in orchestrators, bitmap cache key unchanged (tag drag is rare event, full re-render acceptable).
+  - Pending: Phase C.2 (per-project styling override) + Phase C.3 (PDF schedule export, possibly merged με ADR-175 BOQ export).
 
 ---
 
@@ -444,3 +511,19 @@ readonly markIsManual?: boolean;
 - [Door/Window Markers — Graphisoft (ArchiCAD)](https://community.graphisoft.com/t5/Documentation/Door-and-window-markers/td-p/211786)
 - [How to tag doors/windows in AutoCAD — ARKANCE](https://ukcommunity.arkance.world/hc/en-us/articles/21549368974354-How-do-you-tag-doors-and-windows-in-AutoCAD)
 - [ISO 19650 Drawing Numbering — Bimlead](https://www.bimlead.co.uk/iso-19650-drawing-naming-templates-for-revit-archicad)
+
+## Sources (web research 2026-05-26 — Phase C.1)
+
+**Tag leader geometry (Q1)**:
+- [Top 15 Best New Features in Revit 2027 — BIM Pure](https://www.bimpure.com/blog/revit-2027) — elbow leader + clip-icon endpoints + snap to elements.
+- [Tag Leader Settings — BIMLOGIQ](https://bimlogiq.com/docs/smart-annotation/docs/tag-leader-settings)
+- [Adding Door Tags in Revit — VDCI](https://vdci.edu/learn/revit/adding-door-tags-in-revit-for-room-numbering-and-adjustment)
+
+**Tag rotation (Q2)**:
+- [Change the Orientation of a Tag — Autodesk help](https://help.autodesk.com/view/RVT/2024/ENU/?guid=GUID-54136AF5-E395-4FD4-973D-E2A47EF7B284)
+- [Revit Tags Rotate with Component — revitIQ](https://revitiq.com/revit-tags-rotate-with-component/)
+- [Label or Tag Always Horizontal — Revit Forum](https://www.revitforum.org/forum/revit-architecture-forum-rac/architecture-and-general-revit-questions/448495-label-or-tag-always-horizontal)
+
+**Reset position (Q4)**:
+- [Context Menus — Revit API](https://help.autodesk.com/view/RVT/2025/ENU/?guid=Revit_API_Revit_API_Developers_Guide_Advanced_Topics_Context_Menus_html)
+- [Manage Revit Projects with Right Click Menu — Ideate](https://support.ideatesoftware.com/support/help/ideate-explorer/ideate-explorer-basics/tools/right-click-menu)

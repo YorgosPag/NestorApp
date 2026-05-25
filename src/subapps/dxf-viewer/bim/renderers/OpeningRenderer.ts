@@ -31,7 +31,7 @@ import { isHingedKind, isGlazedKind } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
-import { resolveCutState, DEFAULT_VIEW_RANGE } from '../../config/bim-view-range';
+import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getOpeningGrips } from '../walls/opening-grips';
@@ -68,7 +68,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
     this.ctx.strokeStyle = OPENING_KIND_STROKE[opening.kind];
     const _opCutState = resolveCutState(
       { zBottomMm: opening.params.sillHeight, zTopMm: opening.params.sillHeight + opening.params.height, category: 'opening' },
-      DEFAULT_VIEW_RANGE,
+      useDrawingScaleStore.getState().viewRange,
     );
     this.ctx.lineWidth = resolveLineWeightPx({ category: 'opening', cutState: _opCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
 

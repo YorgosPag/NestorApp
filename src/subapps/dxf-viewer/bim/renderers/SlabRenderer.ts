@@ -39,7 +39,7 @@ import type { SlabOpeningEntity } from '../types/slab-opening-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
-import { resolveCutState, DEFAULT_VIEW_RANGE } from '../../config/bim-view-range';
+import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getSlabGrips } from '../slabs/slab-grips';
@@ -138,7 +138,7 @@ export class SlabRenderer extends BaseEntityRenderer {
     const _slabZTop = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
     const _slabCutState = resolveCutState(
       { zBottomMm: _slabZTop - slab.params.thickness, zTopMm: _slabZTop, category: 'slab' },
-      DEFAULT_VIEW_RANGE,
+      useDrawingScaleStore.getState().viewRange,
     );
     this.ctx.lineWidth = resolveLineWeightPx({ category: 'slab', cutState: _slabCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
     this.drawPolygonPath(verts);

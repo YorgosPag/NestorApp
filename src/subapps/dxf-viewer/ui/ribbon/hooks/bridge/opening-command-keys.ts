@@ -56,6 +56,8 @@ export const OPENING_RIBBON_KEYS_ACTIONS = {
   delete: 'opening.actions.delete',
   /** ADR-376 Phase B.1 — Open the Renumber Openings dialog. */
   renumber: 'opening.actions.renumber',
+  /** ADR-376 Phase C.1 — Reset draggable tag offset back to auto-centroid. */
+  resetTagPosition: 'opening.actions.resetTagPosition',
 } as const;
 
 const OPENING_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

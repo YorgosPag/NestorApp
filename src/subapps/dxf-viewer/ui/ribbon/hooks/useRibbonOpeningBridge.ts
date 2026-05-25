@@ -209,6 +209,18 @@ export function useRibbonOpeningBridge(
         EventBus.emit('bim:opening-renumber-requested', {});
         return;
       }
+      if (action === OPENING_RIBBON_KEYS_ACTIONS.resetTagPosition) {
+        // ADR-376 Phase C.1 — clear tagOffset so the pill snaps back to the
+        // auto-centroid + offset normal-to-wall outward. Field removed so the
+        // Firestore document does not carry a stale {dx:0, dy:0} payload.
+        const opening = resolveOpening();
+        if (!opening) return;
+        if (opening.params.tagOffset === undefined) return;
+        const { tagOffset: _omit, ...rest } = opening.params;
+        void _omit;
+        dispatchParams(opening, rest as OpeningParams);
+        return;
+      }
       if (action !== OPENING_RIBBON_KEYS_ACTIONS.delete) return;
       const opening = resolveOpening();
       if (!opening) return;

@@ -71,6 +71,20 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-26 — ADR-376 Phase C.1 opening tag drag (new micro-leaf)
+
+ADR-376 Phase C.1 (draggable opening tag + γωνιακή leader + Reset Position UX) adds a new micro-leaf `OpeningTagDragMount` to `PreviewCanvasMounts` in `canvas-layer-stack-leaves.tsx`. The mount wires `useOpeningTagDragInteraction` hook (`hooks/canvas/use-opening-tag-drag-interaction.ts`) which owns pointer event listeners on the viewport element + drives the pure FSM `OpeningTagDragController` (`bim/services/opening-tag-drag-controller.ts`).
+
+**Cardinal rule compliance**:
+- ZERO `useSyncExternalStore` in shell/orchestrator. The hook reads scene via `getLevelScene(currentLevelId)` getter pattern (no subscription).
+- DOM listeners scoped to viewport element + cleaned up on unmount.
+- `pointerdown` registered with `capture: true` so the tag drag wins the gesture race against the canvas selection click handler (without capture, the canvas-level pick path would consume the click before the tag hit-test ran).
+- Scene patches during drag throttled via `requestAnimationFrame` — at most one `setLevelScene` call per frame (60 fps cap on optimistic updates).
+- Bitmap cache key unchanged — `OpeningParams.tagOffset` mutations trigger normal entity re-render path (rare event, acceptable cost; no per-frame cache invalidation).
+- `OpeningTagDragController` is a pure module — zero React, zero Zustand, fully unit-testable (28/28 PASS).
+
+**Files touched (atomic batch)**: `canvas-layer-stack-leaves.tsx` (+OpeningTagDragMount wiring), `canvas-layer-stack-opening-tag-drag.tsx` (new), `use-opening-tag-drag-interaction.ts` (new), `opening-tag-drag-controller.ts` (new), `OpeningTagRenderer.ts` (+drawLeaderLine helper + offset application in render()).
+
 ### 2026-05-25 — canvas-layer-stack-leaves 500-line ratchet split (tool preview mounts)
 
 `canvas-layer-stack-leaves.tsx` reached 503 lines after the slab-opening + opening ghost preview mounts were added (ADR-363 §11.Q3). The 6 trivial tool preview mounts — `RotationPreviewMount`, `MovePreviewMount`, `MirrorPreviewMount`, `ScalePreviewMount`, `StretchPreviewMount`, `GripDragPreviewMount` — and their props interfaces were extracted into `canvas-layer-stack-tool-preview-mounts.tsx`. Each mount keeps its `React.memo(() => { useXxxPreview(props); return null; })` shape; their internal subscriptions to cursor world position / tool stores are unchanged.

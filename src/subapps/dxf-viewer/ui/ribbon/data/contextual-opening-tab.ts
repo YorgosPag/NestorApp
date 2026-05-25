@@ -101,6 +101,17 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 options: [],
               },
             },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'opening.resetTagPosition',
+                labelKey: 'ribbon.commands.openingEditor.resetTagPosition.label',
+                icon: 'bim-opening-reset-tag',
+                commandKey: OPENING_RIBBON_KEYS_ACTIONS.resetTagPosition,
+                action: OPENING_RIBBON_KEYS_ACTIONS.resetTagPosition,
+              },
+            },
           ],
         },
       ],

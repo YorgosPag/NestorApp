@@ -33,7 +33,7 @@ import type { BeamEntity, BeamKind } from '../types/beam-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
-import { resolveCutState, DEFAULT_VIEW_RANGE } from '../../config/bim-view-range';
+import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getBeamGrips, beamDepthHandlePosition } from '../beams/beam-grips';
@@ -127,7 +127,7 @@ export class BeamRenderer extends BaseEntityRenderer {
     const _beamZTop = beam.params.topElevation + (beam.params.zOffset ?? 0);
     const _beamCutState = resolveCutState(
       { zBottomMm: _beamZTop - beam.params.depth, zTopMm: _beamZTop, category: 'beam' },
-      DEFAULT_VIEW_RANGE,
+      useDrawingScaleStore.getState().viewRange,
     );
     this.ctx.lineWidth = resolveLineWeightPx({ category: 'beam', cutState: _beamCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
     this.ctx.setLineDash(OUTLINE_DASH as unknown as number[]);

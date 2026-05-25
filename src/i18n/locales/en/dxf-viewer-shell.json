@@ -1159,6 +1159,11 @@
             "confirm": "Run",
             "cancel": "Cancel"
           }
+        },
+        "resetTagPosition": {
+          "label": "Reset Position",
+          "tooltip": "Reset tag to default position (opening centre)",
+          "contextMenu": "Reset Tag Position"
         }
       },
       "slabEditor": {

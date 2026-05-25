@@ -25,6 +25,8 @@ import { useColorMenuState } from '../hooks/state/useColorMenuState';
 import { useOverlayStore } from '../overlays/overlay-store';
 import { useUniversalSelection } from '../systems/selection';
 import { useLevelManager } from '../systems/levels/useLevels';
+// ADR-375 Phase B.2 — sync per-level BIM render settings into the store
+import { useBimRenderSettingsSync } from '../state/hooks/useBimRenderSettingsSync';
 import { useDimAssociationObserver } from '../hooks/dimensions/useDimAssociationObserver';
 import { useGripContext } from '../providers/GripProvider';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -170,6 +172,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const overlayStore = useOverlayStore();
   const universalSelection = useUniversalSelection();
   const levelManager = useLevelManager();
+  // ADR-375 Phase B.2 — load BimRenderSettings for active level on every switch / Firestore push
+  useBimRenderSettingsSync({
+    currentLevelId: levelManager.currentLevelId,
+    levels: levelManager.levels,
+  });
   const { updateGripSettings } = useGripContext();
   const { enabledModes, toggleMode } = useSnapContext();
   const canvasOps = useCanvasOperations();

@@ -45,6 +45,13 @@ const TAG_OFFSET_MM = 500;
 
 const LINE_HEIGHT = 11;
 
+/** Screen-px below which the leader line is skipped (tag sits on the anchor). */
+const LEADER_MIN_DISTANCE_PX = 18;
+/** Leader line colour — neutral grey ώστε να μην ανταγωνίζεται το pill border. */
+const LEADER_COLOR = '#7a8696';
+/** Leader line width in screen pixels. */
+const LEADER_WIDTH_PX = 1;
+
 /**
  * Public arguments contract για a single tag render call. The caller resolves
  * layer state και supplies the canvas context + transform.
@@ -68,14 +75,27 @@ export class OpeningTagRenderer {
     const mark = args.opening.params.mark;
     if (!mark) return;
 
-    const worldCenter = computeTagCenter(args.opening);
-    const screen = CoordinateTransforms.worldToScreen(
-      { x: worldCenter.x, y: worldCenter.y },
+    // ADR-376 Phase C.1 — anchor = auto-centroid (without offset); pill = anchor
+    // + user `tagOffset` delta. Leader drawn between the two when distance is
+    // significant. Always rendered "tag horizontal" (Q2 industry default 3/3).
+    const anchorWorld = computeTagCenter(args.opening);
+    const offset = args.opening.params.tagOffset ?? { dx: 0, dy: 0 };
+    const tagWorld = { x: anchorWorld.x + offset.dx, y: anchorWorld.y + offset.dy };
+
+    const anchorScreen = CoordinateTransforms.worldToScreen(
+      { x: anchorWorld.x, y: anchorWorld.y },
       args.transform,
       args.viewport,
     );
+    const tagScreen = CoordinateTransforms.worldToScreen(
+      { x: tagWorld.x, y: tagWorld.y },
+      args.transform,
+      args.viewport,
+    );
+
     const color = OPENING_KIND_STROKE[args.opening.kind];
-    drawPillTag(args.ctx, screen, mark, color);
+    drawLeaderLine(args.ctx, anchorScreen, tagScreen);
+    drawPillTag(args.ctx, tagScreen, mark, color);
   }
 }
 
@@ -126,6 +146,52 @@ export function computeTagCenter(opening: OpeningEntity): Point3D {
     y: cy + uy * TAG_OFFSET_MM,
     z: 0,
   };
+}
+
+/**
+ * ADR-376 Phase C.1 — γωνιακή (elbow) leader line from the opening centroid
+ * (`anchor`) to the tag pill centre (`tag`). Single 90° break point: half the
+ * horizontal run, then the vertical run, then the remaining horizontal run.
+ * This is the Revit 2027 / ArchiCAD plan-annotation default — keeps the
+ * leader visually parallel-to-axis even when the user drags diagonally.
+ *
+ * Pattern (anchor → break1 → break2 → tag) when |Δx| > |Δy|:
+ *   anchor ───── break1
+ *                  │
+ *                break2 ───── tag
+ *
+ * Skipped when the tag sits within `LEADER_MIN_DISTANCE_PX` of the anchor —
+ * avoids a degenerate "stub" leader inside the pill border.
+ */
+export function drawLeaderLine(
+  ctx: CanvasRenderingContext2D,
+  anchor: Point2D,
+  tag: Point2D,
+): void {
+  const dx = tag.x - anchor.x;
+  const dy = tag.y - anchor.y;
+  if (Math.hypot(dx, dy) < LEADER_MIN_DISTANCE_PX) return;
+
+  ctx.save();
+  ctx.strokeStyle = LEADER_COLOR;
+  ctx.lineWidth = LEADER_WIDTH_PX;
+  ctx.beginPath();
+  ctx.moveTo(anchor.x, anchor.y);
+  // Elbow break: split half-horizontal, then full vertical, then half-horizontal.
+  // For mostly-vertical drags (|dy| > |dx|) swap to split-vertical for cleaner shape.
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    const midX = anchor.x + dx / 2;
+    ctx.lineTo(midX, anchor.y);
+    ctx.lineTo(midX, tag.y);
+    ctx.lineTo(tag.x, tag.y);
+  } else {
+    const midY = anchor.y + dy / 2;
+    ctx.lineTo(anchor.x, midY);
+    ctx.lineTo(tag.x, midY);
+    ctx.lineTo(tag.x, tag.y);
+  }
+  ctx.stroke();
+  ctx.restore();
 }
 
 /**

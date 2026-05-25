@@ -211,6 +211,8 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'bim-schedule': return <TableProperties width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-376 Phase B.1 — Renumber Openings command
     case 'bim-opening-renumber': return <RefreshCw width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // ADR-376 Phase C.1 — Reset tag position (drag offset → 0)
+    case 'bim-opening-reset-tag': return <RotateCcw width={sizePx[size]} height={sizePx[size]} className={className} />;
     default: return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }
 };
