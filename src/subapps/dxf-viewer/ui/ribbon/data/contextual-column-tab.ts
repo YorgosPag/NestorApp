@@ -74,6 +74,31 @@ const I_WEB_THICKNESS_OPTIONS = [
   { value: '20', labelKey: '20', isLiteralLabel: true },
 ] as const;
 
+// ADR-363 Phase 8E — shear-wall RC concrete catalog (Eurocode 2 / EN 1992-1-1).
+const SHEAR_WALL_CATALOG_OPTIONS = [
+  { value: 'custom',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.custom',              isLiteralLabel: false },
+  { value: 'C20/25',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.shearWall.c2025',     isLiteralLabel: false },
+  { value: 'C25/30',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.shearWall.c2530',     isLiteralLabel: false },
+  { value: 'C30/37',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.shearWall.c3037',     isLiteralLabel: false },
+  { value: 'C35/45',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.shearWall.c3545',     isLiteralLabel: false },
+  { value: 'C40/50',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.shearWall.c4050',     isLiteralLabel: false },
+] as const;
+
+// ADR-363 Phase 8E — I-shape steel section catalog (EN 10025-2 IPE + HEA families).
+const ISHAPE_CATALOG_OPTIONS = [
+  { value: 'custom',   labelKey: 'ribbon.commands.columnEditor.catalogProfile.custom',            isLiteralLabel: false },
+  { value: 'IPE-200',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.ipe200',     isLiteralLabel: false },
+  { value: 'IPE-240',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.ipe240',     isLiteralLabel: false },
+  { value: 'IPE-300',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.ipe300',     isLiteralLabel: false },
+  { value: 'IPE-360',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.ipe360',     isLiteralLabel: false },
+  { value: 'IPE-400',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.ipe400',     isLiteralLabel: false },
+  { value: 'IPE-500',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.ipe500',     isLiteralLabel: false },
+  { value: 'HEA-200',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.hea200',     isLiteralLabel: false },
+  { value: 'HEA-240',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.hea240',     isLiteralLabel: false },
+  { value: 'HEA-300',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.hea300',     isLiteralLabel: false },
+  { value: 'HEA-400',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.hea400',     isLiteralLabel: false },
+] as const;
+
 const COLUMN_ANCHOR_OPTIONS = [
   { value: 'center', labelKey: 'ribbon.commands.columnEditor.anchor.center', isLiteralLabel: false },
   { value: 'nw',     labelKey: 'ribbon.commands.columnEditor.anchor.nw',     isLiteralLabel: false },
@@ -288,6 +313,56 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.webThickness,
                 comboboxWidthPx: 80,
                 options: I_WEB_THICKNESS_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-363 Phase 8E — shear-wall RC concrete catalog. Visible iff
+      // `params.kind === 'shear-wall'` via bridge.getPanelVisibility.
+      id: 'column-shear-wall-catalog',
+      labelKey: 'ribbon.panels.columnShearWallCatalog',
+      visibilityKey: COLUMN_RIBBON_VISIBILITY_KEYS.shearWallCatalog,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.shearWallCatalog',
+                labelKey: 'ribbon.commands.columnEditor.catalogProfile.section.title',
+                commandKey: COLUMN_RIBBON_KEYS.stringParams.catalogProfile,
+                comboboxWidthPx: 190,
+                options: SHEAR_WALL_CATALOG_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-363 Phase 8E — I-shape IPE/HEA profile catalog. Visible iff
+      // `params.kind === 'I-shape'` via bridge.getPanelVisibility.
+      id: 'column-ishape-catalog',
+      labelKey: 'ribbon.panels.columnIshapeCatalog',
+      visibilityKey: COLUMN_RIBBON_VISIBILITY_KEYS.ishapeCatalog,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.ishapeCatalog',
+                labelKey: 'ribbon.commands.columnEditor.catalogProfile.section.title',
+                commandKey: COLUMN_RIBBON_KEYS.stringParams.catalogProfile,
+                comboboxWidthPx: 190,
+                options: ISHAPE_CATALOG_OPTIONS,
               },
             },
           ],
