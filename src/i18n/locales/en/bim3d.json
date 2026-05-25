@@ -849,6 +849,15 @@
         "cancelled": "Cancelled",
         "cancelledResumable": "Cancelled — resumable"
       }
+    },
+    "axisLock": {
+      "label": "Axis Lock",
+      "hint": "X / Y / Z during drag",
+      "axis": {
+        "X": "X Axis",
+        "Y": "Y Axis",
+        "Z": "Z Axis"
+      }
     }
   }
 }
