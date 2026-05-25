@@ -28,7 +28,12 @@ import { getWallAxisVertices } from './wall-geometry';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 const MM_TO_M = 1 / 1000;
-const HINGE_ARC_SUBDIVISIONS = 12;
+/**
+ * Number of subdivisions per quarter-arc. Exported so consumers (e.g.
+ * OpeningRenderer leaf-line drawing) can index into `hingeArc.points`
+ * without re-deriving the array layout.
+ */
+export const HINGE_ARC_SUBDIVISIONS = 12;
 const HALF_PI = Math.PI / 2;
 
 /**
@@ -60,7 +65,7 @@ export function computeOpeningGeometry(
 
   const outline = buildOutline(center, ux, uy, px, py, widthScene, thicknessScene);
   const bbox = computeBbox(outline.vertices, params.sillHeight, params.height);
-  const hingeArc = isHingedKind(params.kind)
+  const hingeResult = isHingedKind(params.kind)
     ? buildHingeArc(params.kind, center, ux, uy, px, py, params, widthScene)
     : undefined;
 
@@ -68,7 +73,9 @@ export function computeOpeningGeometry(
     position: center,
     rotation,
     outline,
-    hingeArc,
+    hingeArc: hingeResult?.arc,
+    hingeAnchor: hingeResult?.hingeAnchor,
+    hingeAnchor2: hingeResult?.hingeAnchor2,
     bbox,
     area: (params.width * params.height) * (MM_TO_M * MM_TO_M),
     perimeter: 2 * (params.width + params.height) * MM_TO_M,
@@ -232,6 +239,12 @@ function computeBbox(
  * `openDirection` ('inward' / 'outward') flips the perpendicular sign so
  * the arc rotates toward the correct face.
  */
+interface HingeArcResult {
+  readonly arc: Polyline3D;
+  readonly hingeAnchor: Point3D;
+  readonly hingeAnchor2?: Point3D;
+}
+
 function buildHingeArc(
   kind: OpeningKind,
   center: Point3D,
@@ -241,7 +254,7 @@ function buildHingeArc(
   py: number,
   params: OpeningParams,
   widthScene: number,
-): Polyline3D {
+): HingeArcResult {
   const halfW = widthScene / 2;
   const handingSign = params.handing === 'right' ? 1 : -1;
   const swingSign = params.openDirection === 'outward' ? -1 : 1;
@@ -273,8 +286,9 @@ function buildHingeArc(
   }
 
   // french-door = mirror arc on the opposite jamb (two leaves).
+  let hinge2: Point3D | undefined;
   if (kind === 'french-door') {
-    const hinge2: Point3D = {
+    hinge2 = {
       x: center.x + ux * (-handingSign * halfW),
       y: center.y + uy * (-handingSign * halfW),
       z: 0,
@@ -293,7 +307,7 @@ function buildHingeArc(
     }
   }
 
-  return { points, closed: false };
+  return { arc: { points, closed: false }, hingeAnchor: hinge, hingeAnchor2: hinge2 };
 }
 
 /**
