@@ -21,6 +21,7 @@ import {
   COLUMN_RIBBON_KEYS,
   COLUMN_RIBBON_KEYS_ACTIONS,
   COLUMN_RIBBON_BADGE_KEYS,
+  COLUMN_RIBBON_VISIBILITY_KEYS,
 } from '../hooks/bridge/column-command-keys';
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
 
@@ -33,6 +34,44 @@ const COLUMN_KIND_OPTIONS = [
   { value: 'circular',    labelKey: 'ribbon.commands.columnEditor.kind.circular',    isLiteralLabel: false },
   { value: 'L-shape',     labelKey: 'ribbon.commands.columnEditor.kind.lShape',      isLiteralLabel: false },
   { value: 'T-shape',     labelKey: 'ribbon.commands.columnEditor.kind.tShape',      isLiteralLabel: false },
+  // ADR-363 Phase 8D — 3 new column kinds (industry-standard variants).
+  { value: 'polygon',     labelKey: 'ribbon.commands.columnEditor.kind.polygon',     isLiteralLabel: false },
+  { value: 'shear-wall',  labelKey: 'ribbon.commands.columnEditor.kind.shearWall',   isLiteralLabel: false },
+  { value: 'I-shape',     labelKey: 'ribbon.commands.columnEditor.kind.iShape',      isLiteralLabel: false },
+] as const;
+
+// ADR-363 Phase 8D — polygon sides numeric input options (3-12 per MIN/MAX_POLYGON_SIDES).
+const POLYGON_SIDES_OPTIONS = [
+  { value: '3',  labelKey: '3',  isLiteralLabel: true },
+  { value: '4',  labelKey: '4',  isLiteralLabel: true },
+  { value: '5',  labelKey: '5',  isLiteralLabel: true },
+  { value: '6',  labelKey: '6',  isLiteralLabel: true },
+  { value: '7',  labelKey: '7',  isLiteralLabel: true },
+  { value: '8',  labelKey: '8',  isLiteralLabel: true },
+  { value: '10', labelKey: '10', isLiteralLabel: true },
+  { value: '12', labelKey: '12', isLiteralLabel: true },
+] as const;
+
+// ADR-363 Phase 8D — I-shape flange thickness presets (IPE/HEA typical range).
+const I_FLANGE_THICKNESS_OPTIONS = [
+  { value: '8',  labelKey: '8',  isLiteralLabel: true },
+  { value: '10', labelKey: '10', isLiteralLabel: true },
+  { value: '12', labelKey: '12', isLiteralLabel: true },
+  { value: '15', labelKey: '15', isLiteralLabel: true },
+  { value: '20', labelKey: '20', isLiteralLabel: true },
+  { value: '25', labelKey: '25', isLiteralLabel: true },
+  { value: '30', labelKey: '30', isLiteralLabel: true },
+] as const;
+
+// ADR-363 Phase 8D — I-shape web thickness presets (IPE/HEA typical range).
+const I_WEB_THICKNESS_OPTIONS = [
+  { value: '6',  labelKey: '6',  isLiteralLabel: true },
+  { value: '8',  labelKey: '8',  isLiteralLabel: true },
+  { value: '10', labelKey: '10', isLiteralLabel: true },
+  { value: '12', labelKey: '12', isLiteralLabel: true },
+  { value: '15', labelKey: '15', isLiteralLabel: true },
+  { value: '18', labelKey: '18', isLiteralLabel: true },
+  { value: '20', labelKey: '20', isLiteralLabel: true },
 ] as const;
 
 const COLUMN_ANCHOR_OPTIONS = [
@@ -188,6 +227,67 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.rotation,
                 comboboxWidthPx: 80,
                 options: ROTATION_DEG_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-363 Phase 8D — polygon-specific input (sides count). Visible iff
+      // `params.kind === 'polygon'` via bridge.getPanelVisibility.
+      id: 'column-polygon-params',
+      labelKey: 'ribbon.panels.columnPolygon',
+      visibilityKey: COLUMN_RIBBON_VISIBILITY_KEYS.polygonParams,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.sides',
+                labelKey: 'ribbon.commands.columnEditor.sides',
+                commandKey: COLUMN_RIBBON_KEYS.params.sides,
+                comboboxWidthPx: 80,
+                options: POLYGON_SIDES_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-363 Phase 8D — I-shape variant inputs (flange tf + web tw). Visible
+      // iff `params.kind === 'I-shape'` via bridge.getPanelVisibility.
+      id: 'column-ishape-params',
+      labelKey: 'ribbon.panels.columnIshape',
+      visibilityKey: COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.flangeThickness',
+                labelKey: 'ribbon.commands.columnEditor.flangeThickness',
+                commandKey: COLUMN_RIBBON_KEYS.params.flangeThickness,
+                comboboxWidthPx: 80,
+                options: I_FLANGE_THICKNESS_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.webThickness',
+                labelKey: 'ribbon.commands.columnEditor.webThickness',
+                commandKey: COLUMN_RIBBON_KEYS.params.webThickness,
+                comboboxWidthPx: 80,
+                options: I_WEB_THICKNESS_OPTIONS,
               },
             },
           ],

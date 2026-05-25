@@ -144,6 +144,53 @@ describe('computeAnchorGhostFootprints — overrides propagate', () => {
       expect(g.footprint.vertices).toHaveLength(8);
     }
   });
+
+  // ── ADR-363 Phase 8D — polygon / shear-wall / I-shape kinds ───────────────
+  it('polygon → 9 ghosts in ANCHOR_CYCLE_ORDER (mirrors rectangular)', () => {
+    const ghosts = computeAnchorGhostFootprints(CURSOR, 'polygon', 'center');
+    expect(ghosts).toHaveLength(9);
+    expect(ghosts.map((g) => g.anchor)).toEqual([...ANCHOR_CYCLE_ORDER]);
+  });
+
+  it('polygon sides override propagates to all 9 ghosts (default 6 → vertex count 6)', () => {
+    const ghosts = computeAnchorGhostFootprints(CURSOR, 'polygon', 'center');
+    for (const g of ghosts) {
+      expect(g.footprint.vertices.length).toBe(6);
+    }
+  });
+
+  it('polygon sides=8 override propagates to all 9 ghosts (vertex count 8)', () => {
+    const ghosts = computeAnchorGhostFootprints(CURSOR, 'polygon', 'center', {
+      polygon: { sides: 8 },
+    });
+    for (const g of ghosts) {
+      expect(g.footprint.vertices.length).toBe(8);
+    }
+  });
+
+  it('shear-wall → 9 ghosts (rectangular footprint, 4 vertices)', () => {
+    const ghosts = computeAnchorGhostFootprints(CURSOR, 'shear-wall', 'center');
+    expect(ghosts).toHaveLength(9);
+    for (const g of ghosts) {
+      expect(g.footprint.vertices).toHaveLength(4);
+    }
+  });
+
+  it('I-shape → 9 ghosts in ANCHOR_CYCLE_ORDER', () => {
+    const ghosts = computeAnchorGhostFootprints(CURSOR, 'I-shape', 'center');
+    expect(ghosts).toHaveLength(9);
+    expect(ghosts.map((g) => g.anchor)).toEqual([...ANCHOR_CYCLE_ORDER]);
+  });
+
+  it('ishape override propagates to all 9 I-shape ghosts (12 vertices double-T)', () => {
+    const ghosts = computeAnchorGhostFootprints(CURSOR, 'I-shape', 'center', {
+      ishape: { flangeThickness: 25, webThickness: 18 },
+    });
+    for (const g of ghosts) {
+      // I-shape footprint = 12 vertices (top flange 4 + web 4 + bottom flange 4).
+      expect(g.footprint.vertices.length).toBeGreaterThanOrEqual(8);
+    }
+  });
 });
 
 describe('computeAnchorGhostFootprints — cursorPos surface', () => {

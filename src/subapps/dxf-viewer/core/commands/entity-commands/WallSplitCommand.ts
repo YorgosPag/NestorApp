@@ -146,7 +146,7 @@ export class WallSplitCommand implements ICommand {
 
     if (hostCandidate?.type === 'wall' && hostCandidate.params && hostCandidate.geometry) {
       const host = hostCandidate as WallEntity;
-      const geometry: OpeningGeometry = computeOpeningGeometry(params, host);
+      const geometry: OpeningGeometry = computeOpeningGeometry(params, host, host.params.sceneUnits ?? 'mm');
       const validation = validateOpeningParams(params, host).bimValidation;
       patch.geometry = geometry;
       patch.validation = validation;

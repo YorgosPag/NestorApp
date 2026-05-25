@@ -9,7 +9,7 @@
 
 export const COLUMN_RIBBON_KEYS = {
   stringParams: {
-    /** Column kind selector (4 options: rectangular/circular/L-shape/T-shape). */
+    /** Column kind selector (7 options: rectangular/circular/L-shape/T-shape/polygon/shear-wall/I-shape). */
     kind: 'column.params.kind',
     /** 9-position anchor selector. */
     anchor: 'column.params.anchor',
@@ -25,6 +25,12 @@ export const COLUMN_RIBBON_KEYS = {
     height: 'column.params.height',
     /** deg — rotation around anchor (αγνοείται αν circular). */
     rotation: 'column.params.rotation',
+    /** ADR-363 Phase 8D — polygon sides (3-12, only meaningful αν kind='polygon'). */
+    sides: 'column.params.sides',
+    /** ADR-363 Phase 8D — I-shape flange thickness (mm, only meaningful αν kind='I-shape'). */
+    flangeThickness: 'column.params.flangeThickness',
+    /** ADR-363 Phase 8D — I-shape web thickness (mm, only meaningful αν kind='I-shape'). */
+    webThickness: 'column.params.webThickness',
   },
 } as const;
 
@@ -32,7 +38,10 @@ export type ColumnRibbonNumberCommandKey =
   | typeof COLUMN_RIBBON_KEYS.params.width
   | typeof COLUMN_RIBBON_KEYS.params.depth
   | typeof COLUMN_RIBBON_KEYS.params.height
-  | typeof COLUMN_RIBBON_KEYS.params.rotation;
+  | typeof COLUMN_RIBBON_KEYS.params.rotation
+  | typeof COLUMN_RIBBON_KEYS.params.sides
+  | typeof COLUMN_RIBBON_KEYS.params.flangeThickness
+  | typeof COLUMN_RIBBON_KEYS.params.webThickness;
 
 export type ColumnRibbonStringCommandKey =
   | typeof COLUMN_RIBBON_KEYS.stringParams.kind
@@ -44,6 +53,9 @@ export const COLUMN_RIBBON_NUMBER_KEYS: readonly ColumnRibbonNumberCommandKey[] 
   COLUMN_RIBBON_KEYS.params.depth,
   COLUMN_RIBBON_KEYS.params.height,
   COLUMN_RIBBON_KEYS.params.rotation,
+  COLUMN_RIBBON_KEYS.params.sides,
+  COLUMN_RIBBON_KEYS.params.flangeThickness,
+  COLUMN_RIBBON_KEYS.params.webThickness,
 ];
 
 export const COLUMN_RIBBON_STRING_KEYS: readonly ColumnRibbonStringCommandKey[] = [
@@ -69,6 +81,29 @@ export function isColumnActionKey(action: string): boolean {
 export const COLUMN_RIBBON_BADGE_KEYS = {
   violations: 'column.badge.violations',
 } as const;
+
+/**
+ * ADR-363 Phase 8D — panel visibility keys (ADR-358 Phase 7b2b-β pattern).
+ *   - `polygonParams`: visible iff `params.kind === 'polygon'` — surfaces sides input.
+ *   - `ishapeParams`:  visible iff `params.kind === 'I-shape'` — surfaces flange + web thickness inputs.
+ */
+export const COLUMN_RIBBON_VISIBILITY_KEYS = {
+  polygonParams: 'column.visibility.polygonParams',
+  ishapeParams: 'column.visibility.ishapeParams',
+} as const;
+
+export type ColumnRibbonVisibilityKey =
+  | typeof COLUMN_RIBBON_VISIBILITY_KEYS.polygonParams
+  | typeof COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams;
+
+const COLUMN_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
+  COLUMN_RIBBON_VISIBILITY_KEYS.polygonParams,
+  COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams,
+]);
+
+export function isColumnVisibilityKey(key: string): key is ColumnRibbonVisibilityKey {
+  return COLUMN_VISIBILITY_KEY_SET.has(key);
+}
 
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 

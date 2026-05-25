@@ -12,6 +12,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnParams } from '../types/column-types';
 import { ANCHOR_OFFSETS } from '../types/column-types';
+import { polygonBboxMm } from './column-anchors';
 
 export const DEG_TO_RAD = Math.PI / 180;
 export const RAD_TO_DEG = 180 / Math.PI;
@@ -46,15 +47,26 @@ export function projectDeltaToLocal(
 
 /**
  * Compute the centroid (bbox centre) of the column footprint σε world coords.
- * For non-circular: `centroid = position + rotatedR(-dx*width, -dy*depth)`.
+ * For non-circular / non-polygon: `centroid = position + rotatedR(-dx*width, -dy*depth)`.
  * For circular: anchor effectively 'center', `centroid = position`.
+ * For polygon (Phase 8C): uses actual N-gon bbox `dimX, dimY` (mirror του
+ * `transformFootprint` geometry pipeline), since polygon `depth` is meaningless
+ * και bbox depends on sides count.
  */
 export function computeCentroidWorld(params: ColumnParams): Point2D {
   if (params.kind === 'circular') {
     return { x: params.position.x, y: params.position.y };
   }
   const { dx, dy } = ANCHOR_OFFSETS[params.anchor];
-  const shift = rotate({ x: -dx * params.width, y: -dy * params.depth }, params.rotation);
+  let dimX: number;
+  let dimY: number;
+  if (params.kind === 'polygon') {
+    ({ dimX, dimY } = polygonBboxMm(params.width, params.polygon?.sides));
+  } else {
+    dimX = params.width;
+    dimY = params.depth;
+  }
+  const shift = rotate({ x: -dx * dimX, y: -dy * dimY }, params.rotation);
   return { x: params.position.x + shift.x, y: params.position.y + shift.y };
 }
 

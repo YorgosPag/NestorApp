@@ -25,6 +25,7 @@ import type { OpeningParams, OpeningGeometry, OpeningKind } from '../types/openi
 import { isHingedKind } from '../types/opening-types';
 import type { WallEntity } from '../types/wall-types';
 import { getWallAxisVertices } from './wall-geometry';
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 const MM_TO_M = 1 / 1000;
 const HINGE_ARC_SUBDIVISIONS = 12;
@@ -40,18 +41,27 @@ const HALF_PI = Math.PI / 2;
 export function computeOpeningGeometry(
   params: OpeningParams,
   hostWall: WallEntity,
+  sceneUnits: SceneUnits = 'mm',
 ): OpeningGeometry {
+  // ADR-370 — axisVertices ζουν σε scene-units. `params.offsetFromStart` και
+  // `params.width` είναι σε mm (Nestor convention). Με `mmToSceneUnits()`
+  // ευθυγραμμίζουμε mm→scene ώστε το walk να διασχίζει τη σωστή απόσταση και
+  // το outline να συμπίπτει με το ghost preview στο canvas.
+  const mmFactor = mmToSceneUnits(sceneUnits);
   const axisVertices = getWallAxisVertices(hostWall.params, hostWall.kind);
-  const centerOffset = Math.max(0, params.offsetFromStart + params.width / 2);
-  const { point: center, ux, uy, rotation } = walkPolylineToDistance(axisVertices, centerOffset);
+  const centerOffsetMm = Math.max(0, params.offsetFromStart + params.width / 2);
+  const centerOffsetScene = centerOffsetMm * mmFactor;
+  const widthScene = params.width * mmFactor;
+  const thicknessScene = hostWall.params.thickness * mmFactor;
+  const { point: center, ux, uy, rotation } = walkPolylineToDistance(axisVertices, centerOffsetScene);
   // Perpendicular (CCW 90°): (-uy, ux).
   const px = -uy;
   const py = ux;
 
-  const outline = buildOutline(center, ux, uy, px, py, params.width, hostWall.params.thickness);
+  const outline = buildOutline(center, ux, uy, px, py, widthScene, thicknessScene);
   const bbox = computeBbox(outline.vertices, params.sillHeight, params.height);
   const hingeArc = isHingedKind(params.kind)
-    ? buildHingeArc(params.kind, center, ux, uy, px, py, params)
+    ? buildHingeArc(params.kind, center, ux, uy, px, py, params, widthScene)
     : undefined;
 
   return {
@@ -230,8 +240,9 @@ function buildHingeArc(
   px: number,
   py: number,
   params: OpeningParams,
+  widthScene: number,
 ): Polyline3D {
-  const halfW = params.width / 2;
+  const halfW = widthScene / 2;
   const handingSign = params.handing === 'right' ? 1 : -1;
   const swingSign = params.openDirection === 'outward' ? -1 : 1;
 
@@ -255,8 +266,8 @@ function buildHingeArc(
     const cos = Math.cos(t);
     const sin = Math.sin(t);
     points.push({
-      x: hinge.x + params.width * (cos * startVecX + sin * perpX),
-      y: hinge.y + params.width * (cos * startVecY + sin * perpY),
+      x: hinge.x + widthScene * (cos * startVecX + sin * perpX),
+      y: hinge.y + widthScene * (cos * startVecY + sin * perpY),
       z: 0,
     });
   }
@@ -275,8 +286,8 @@ function buildHingeArc(
       const cos = Math.cos(t);
       const sin = Math.sin(t);
       points.push({
-        x: hinge2.x + params.width * (cos * startVec2X + sin * perpX),
-        y: hinge2.y + params.width * (cos * startVec2Y + sin * perpY),
+        x: hinge2.x + widthScene * (cos * startVec2X + sin * perpX),
+        y: hinge2.y + widthScene * (cos * startVec2Y + sin * perpY),
         z: 0,
       });
     }

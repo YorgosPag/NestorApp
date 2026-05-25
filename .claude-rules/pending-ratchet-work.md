@@ -1,7 +1,7 @@
 # Pending Ratchet Work — Live Checklist
 
 **STATUS: ACTIVE**
-**Last updated:** 2026-05-25 (ADR-366 Phase 9 C.1.a IMPLEMENTED — Animation Logic Foundation, 12 files + SSoT extensions)
+**Last updated:** 2026-05-25 (later) — ADR-363 Phase 2 **carry-over CLOSED**: scene-units thread στα 4 πραγματικά opening edit-path callers (`bim-readonly-hydration`, `useOpeningPersistence`, `UpdateOpeningParamsCommand`, `WallSplitCommand`) via `hostWall.params.sceneUnits ?? 'mm'` frozen-context. Pending list είχε 7 false positives + 1 missing caller — διορθώθηκε. 3 new tests, 27/27 PASS. ADR-363 §12 + ΑΝΑΦΟΡΑ_2 + memory updated.
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
 **Purpose:** Agent-facing live checklist. Se STATUS = ALL_DONE → salta il resto. Se STATUS = ACTIVE → leggi e ricorda a Giorgio.
 
@@ -167,7 +167,7 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 **Status (2026-05-25)**: All 3 sub-phases DONE. Animation Phase 9 ολόκληρη closed.
 
 - ✅ **C.1.a Logic Foundation** — DONE 2026-05-25 (commit `1e393c1d`).
-- ✅ **C.1.b UX / Timeline** — DONE 2026-05-25 (commit `68c473a5`). Deferred (NOT blocker): drag interaction, bezier 4-point editor, real scene-bbox, TimelineEditor unit tests.
+- ✅ **C.1.b UX / Timeline** — DONE 2026-05-25 (commit `68c473a5`). **+drag interaction DONE 2026-05-25** (uncommitted). **+§C.1.Q4 bezier 4-point editor DONE 2026-05-25** (uncommitted, FULL ENTERPRISE: 5 new + 4 modified + 23 tests). **+real scene-bbox turntable DONE 2026-05-25** (uncommitted, 2 new + 3 modified + 7 tests, SSoT REUSE computeSceneFramingBounds). Deferred (NOT blocker): TimelineEditor unit tests, axis-constrained gizmo, snap-to-grid.
 - ✅ **C.1.c Rendering / Queue** — DONE 2026-05-25 (8 new + 6 modified + storage rules + 3 test suites). MP4Exporter (WebCodecs H.264 + VP9 fallback inside MP4 via mp4-muxer@5.2.2 MIT) + RenderQueueStore (Zustand FIFO + AbortController Map) + RenderQueuePanel (Floating3DPanel 8th tab) + animation-queue-processor + render-checkpoint + animation-action-handlers (auto-save flow) + origin-indicator-overlay extraction (SRP cap) + Save+Export ribbon comingSoon REMOVED + Storage rules block (500MB, mp4/webm) + notification keys + i18n ~15×2. ADR drift resolved: rasterizer-not-pathtracer + project_assets DROPPED + VP9-in-MP4 + checkpoint field reuse. Cross-session subscribe DEFERRED Phase 10.
 
 ---
@@ -248,11 +248,17 @@ Phase 1 ✅ IMPLEMENTED 2026-05-24 (schema + AI enricher + tests + post-finalize
 
 ---
 
+### 🪟 ~~ADR-363 Opening — scene-units thread στα edit paths~~ ✅ CLOSED 2026-05-25 (later)
+
+Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 πραγματικούς callers** (όχι 11 — pending list είχε 7 false positives + 1 missing caller). Files: `bim-readonly-hydration.ts:132`, `useOpeningPersistence.ts:109`, `UpdateOpeningParamsCommand.ts:71`, `WallSplitCommand.ts:149`. 3 νέα tests στο `opening-geometry.test.ts` (scene-units 'm' describe block). 27/27 PASS. Καμία API change σε commands/`OpeningParams`. Out of scope: pre-existing `wall.geometry.length * 1000` σε `applyOpeningGripDrag` — separate ratchet candidate. Βλ. ADR-363 §12 changelog 2026-05-25 (later).
+
+---
+
 ## Short sentence for session-start reminder
 
 **Copy-paste template for the agent:**
 
-> 📋 Pending ratchet tasks (ADR-299): **ADR-365 Tailwind Palette ✅ COMPLETE** — 0 violations / 0 files (2026-05-22). Zero-tolerance via CHECK 3.26 active. Remaining pending: Grip Types SSoT, ADR-3XX Auto-Infer Alignment, ADR-370/371 duplicate numbering cleanup. (ADR-366 §C.1 Animation Phase 9 ✅ FULLY CLOSED 2026-05-25 — all 3 sub-phases done; ADR-345 spellCheck ✅ DONE 2026-05-23, ADR-034 UC-017 ✅ DONE 2026-05-23.)
+> 📋 Pending ratchet tasks (ADR-299): **ADR-365 Tailwind Palette ✅ COMPLETE** — 0 violations / 0 files (2026-05-22). Zero-tolerance via CHECK 3.26 active. Remaining pending: Grip Types SSoT, ADR-3XX Auto-Infer Alignment, ADR-370/371 duplicate numbering cleanup. (ADR-363 Opening scene-units thread ✅ CLOSED 2026-05-25 later — 4 callers, 27/27 tests PASS. ADR-366 §C.1 Animation Phase 9 ✅ FULLY CLOSED 2026-05-25 — all 3 sub-phases done; ADR-345 spellCheck ✅ DONE 2026-05-23, ADR-034 UC-017 ✅ DONE 2026-05-23; **ADR-363 Phase 2 canvas-wiring follow-up ✅ 2026-05-25** — opening tool silent-failure fix.)
 
 ---
 

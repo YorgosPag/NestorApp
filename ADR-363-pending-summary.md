@@ -4,6 +4,8 @@ _Ενημέρωση 2026-05-20: Μεγάλη διόρθωση — πολλά "pe
 _Ενημέρωση 2026-05-20 (2η): Phase 3.7b+ multi-storey stack DONE (commit a14cef17). pending-summary stale entry διορθώθηκε._
 _Ενημέρωση 2026-05-21 (3η): Phase 6.5 (A/B/C), Phase 7 (7.1 + 7.2), Phase 8 marked DONE. Πραγματικά εκκρεμή ADR-363: **μηδέν**. Όλα verified από κώδικα + ADR-363 §6.5/§7.1/§7.2/§8 checklists._
 
+_Ενημέρωση 2026-05-25 (4η): Νέα sub-track **Phase 8 Column Shapes** (επέκταση `ColumnKind` 4→7 με polygon/shear-wall/I-shape). Phases A+B+C+D ✅ ΥΛΟΠΟΙΗΜΕΝΑ 2026-05-25 (pending commit chain). Phase E = closure verification (manual E2E σε /dxf/viewer + commit chain)._
+
 ---
 
 ## Ολοκληρωμένες Φάσεις ✅
@@ -24,6 +26,10 @@ _Ενημέρωση 2026-05-21 (3η): Phase 6.5 (A/B/C), Phase 7 (7.1 + 7.2), Ph
 | 6.5.A, 6.5.B, 6.5.C | BIM Material Library — `MaterialLibraryService` (3-scope) + seed script + "Υλικά" 5η panel tab + WallDna picker integration (2026-05-20, ADR-363 §6.5 lines 2652-2659) |
 | 7.1, 7.2 | Multi-Selection Ribbon (bulk edit 6 props × 7 kinds via CompoundCommand) + Transform BIM (Mirror/Rotate/Copy SSoTs + L/T flipY handedness) (2026-05-19, ADR-363 lines 2238/2308) |
 | 8 | Schedule Export — `BimScheduleExporter` + CSV/xlsx/PDF + filterable UI + Region pick FSM + Ribbon Ανάλυση tab + 81 tests (2026-05-19, ADR-363 §Phase 8 line 2398) |
+| 8 Column Shapes A | Phase 8 sub-track — types + geometry + section profile + completion για polygon/shear-wall/I-shape (2026-05-25, ADR-363 §12 changelog) |
+| 8 Column Shapes B | Validator + ColumnRenderer +3 kind colors + drawPolygonSideLabel + drawIShapeLabels + column-hatch-patterns diagonal-line zero-line bugfix (2026-05-25) |
+| 8 Column Shapes C | column-anchors polygon branch + polygonBboxMm SSoT + column-grips dispatcher (polygon 3 / I-shape 6 / shear-wall 4 grips) + column-variant-grips materializeIshape + useGripDimAnnotation +2 cases. 635/635 column subtree PASS (2026-05-25) |
+| 8 Column Shapes D | Ribbon kind selector 4→7 + conditional polygon/I-shape numeric input panels (visibilityKey pattern) + columnToolBridgeStore single-writer + drawing-mode synthetic resolver + useRibbonColumnBridge NESTED_NUMBER_KEY_TO_PATH + getPanelVisibility. 18 bridge + 6 ghost tests added (2026-05-25) |
 
 ---
 

@@ -286,3 +286,49 @@ describe('computeOpeningGeometry — curved wall', () => {
     expect(g.position.y).toBeGreaterThan(0);
   });
 });
+
+// ─── ADR-363 Phase 2 carry-over — scene-units thread (edit-path callers) ─────
+
+describe("computeOpeningGeometry — scene units 'm'", () => {
+  function makeMetersWall(): WallEntity {
+    return makeWall({
+      sceneUnits: 'm',
+      start: { x: 0, y: 0, z: 0 },
+      end: { x: 5, y: 0, z: 0 },
+    });
+  }
+
+  it("scales outline to scene units when host wall is in 'm'", () => {
+    const wall = makeMetersWall();
+    const g = computeOpeningGeometry(makeOpening(), wall, 'm');
+    // offsetFromStart=1000mm + width/2=450mm = 1450mm = 1.45m
+    expect(g.position.x).toBeCloseTo(1.45, 5);
+    expect(g.position.y).toBeCloseTo(0, 5);
+    // Outline span = width=900mm → 0.9m along the wall axis.
+    const xs = g.outline.vertices.map((v) => v.x);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(0.9, 5);
+    // Outline span perpendicular = thickness=250mm → 0.25m.
+    const ys = g.outline.vertices.map((v) => v.y);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(0.25, 5);
+  });
+
+  it("scales hingeArc to scene units when host wall is in 'm'", () => {
+    const wall = makeMetersWall();
+    const g = computeOpeningGeometry(makeOpening({ kind: 'door' }), wall, 'm');
+    expect(g.hingeArc).toBeDefined();
+    // handing='left' → hinge anchor at center.x - widthScene/2 = 1.45 - 0.45 = 1.0m.
+    // points[0] (t=0): hinge.x + widthScene * (1 * startVecX) = 1.0 + 0.9 * 1 = 1.9m.
+    expect(g.hingeArc!.points[0].x).toBeCloseTo(1.9, 5);
+  });
+
+  it("default sceneUnits='mm' regression — outline unchanged when omitted", () => {
+    const wall = makeWall();
+    const gDefault = computeOpeningGeometry(makeOpening(), wall);
+    const gExplicit = computeOpeningGeometry(makeOpening(), wall, 'mm');
+    expect(gDefault.position.x).toBeCloseTo(gExplicit.position.x, FLOAT_TOL);
+    expect(gDefault.outline.vertices[0].x).toBeCloseTo(
+      gExplicit.outline.vertices[0].x,
+      FLOAT_TOL,
+    );
+  });
+});

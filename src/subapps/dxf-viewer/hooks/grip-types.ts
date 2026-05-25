@@ -131,7 +131,7 @@ export type BeamGripKind =
   | 'beam-depth';
 
 /**
- * ADR-363 Phase 4.5 + 4.5b — Column grip kind (parametric grip type).
+ * ADR-363 Phase 4.5 + 4.5b + Phase 8C — Column grip kind (parametric grip type).
  * Routes commit through `applyColumnGripDrag()` + `UpdateColumnParamsCommand`
  * instead of the standard `StretchEntityCommand` vertex path.
  *
@@ -139,11 +139,11 @@ export type BeamGripKind =
  *   - `column-center`   → translate `position` (anchor stays)
  *   - `column-rotation` → rotate γύρω από `position` (non-circular only)
  *   - `column-width`    → resize width on the far edge from anchor (= diameter
- *                          για `circular` kind)
+ *                          για `circular` + `polygon` kinds)
  *   - `column-depth`    → resize depth on the far edge from anchor (skipped
- *                          για `circular` kind)
+ *                          για `circular` + `polygon` kinds — depth meaningless)
  *
- * Variant-specific grips (Phase 4.5b):
+ * Variant-specific grips (Phase 4.5b — L-shape / T-shape):
  *   - `column-arm-length`    → L-shape only (`params.lshape.armLength`,
  *                               Y-axis δευτερεύοντος βραχίονα). Asymmetric
  *                               edge handle στο inner-corner edge κατά τοπικό
@@ -160,12 +160,25 @@ export type BeamGripKind =
  *                               πάχος κορμού κατά X). Symmetric — handle
  *                               στη δεξιά πλευρά κορμού. Drag projection × 2.
  *
- * Όλες οι νέες διαστάσεις clamp στο `MIN_COLUMN_DIMENSION_MM` (250 mm). Όταν
- * `params.lshape` / `params.tshape` undefined, ο handler materializes defaults
- * από `width/3 + depth/3` (L) ή `width + depth/3` (T) — mirror των
- * `computeColumnGeometry` defaults — ώστε το επόμενο drag να ξεκινά από τα
- * ήδη υπολογισμένα values. Circular και rectangular kinds δεν εκπέμπουν
- * variant-specific grips.
+ * Variant-specific grips (Phase 8C — I-shape):
+ *   - `column-i-flange-thickness` → I-shape only (`params.ishape.flangeThickness`,
+ *                                    πάχος πέλματος tf). Asymmetric edge handle
+ *                                    στο top-flange bottom-edge midpoint κατά
+ *                                    τοπικό +Y. Drag projection × 1 (bottom
+ *                                    flange mirrors automatically μέσω geometry).
+ *   - `column-i-web-thickness`    → I-shape only (`params.ishape.webThickness`,
+ *                                    πάχος κορμού tw). Symmetric — handle στη
+ *                                    αριστερή πλευρά κορμού. Drag projection
+ *                                    × 2 (web centered around vertical axis).
+ *
+ * Όλες οι νέες διαστάσεις clamp στο `MIN_COLUMN_DIMENSION_MM` (250 mm) — εκτός
+ * των I-shape plate thicknesses που clamp στο `MIN_I_PLATE_THICKNESS_MM` (5 mm).
+ * Όταν `params.lshape` / `params.tshape` / `params.ishape` undefined, ο handler
+ * materializes defaults από `width/3 + depth/3` (L) ή `width + depth/3` (T) ή
+ * `DEFAULT_I_FLANGE_THICKNESS_MM` / `DEFAULT_I_WEB_THICKNESS_MM` (I) — mirror
+ * των `computeColumnGeometry` defaults — ώστε το επόμενο drag να ξεκινά από τα
+ * ήδη υπολογισμένα values. Circular + shear-wall kinds δεν εκπέμπουν
+ * variant-specific grips (shear-wall = rect parity).
  */
 export type ColumnGripKind =
   | 'column-center'
@@ -175,7 +188,9 @@ export type ColumnGripKind =
   | 'column-arm-length'
   | 'column-arm-width'
   | 'column-flange-length'
-  | 'column-web-thickness';
+  | 'column-web-thickness'
+  | 'column-i-flange-thickness'
+  | 'column-i-web-thickness';
 
 /**
  * ADR-359 Phase 11 — XLine grip kind.

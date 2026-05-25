@@ -1,25 +1,45 @@
 /**
- * ADR-363 Phase 4.5 + 4.5b — Column parametric grip handlers (base + variants).
+ * ADR-363 Phase 4.5 + 4.5b + Phase 8C — Column parametric grip handlers
+ * (base + variants).
  *
  * Pure functions: zero React / DOM / Firestore / canvas deps. Mirrors το
  * `bim/beams/beam-grips.ts` (Phase 5.5a/5.5b) pattern και exposes τα grips που
- * περιγράφει το ADR-363 §6 Phase 4.5 + 4.5b:
+ * περιγράφει το ADR-363 §6 Phase 4.5 + 4.5b + Phase 8C:
  *
  *   Base (Phase 4.5):
  *   - `column-center`   → translate `position` (movesEntity=true)
  *   - `column-rotation` → rotate γύρω από `position` (anchor invariant). Skip
  *                          για `circular` kind.
  *   - `column-width`    → resize width on the far edge from anchor (local X
- *                          axis). For circular kind: resize diameter (handle
- *                          στο +X world).
+ *                          axis). For circular + polygon kinds: resize
+ *                          (circumscribed) diameter symmetric 2× factor.
  *   - `column-depth`    → resize depth on the far edge from anchor (local Y
- *                          axis). Skip για `circular` kind.
+ *                          axis). Skip για `circular` + `polygon` kinds.
  *
- *   Variant-specific (Phase 4.5b — see `column-variant-grips.ts`):
+ *   Variant-specific Phase 4.5b (`column-variant-grips.ts`):
  *   - `column-arm-length`    → L-shape only (asymmetric, 1× factor)
  *   - `column-arm-width`     → L-shape only (asymmetric, 1× factor)
  *   - `column-flange-length` → T-shape only (symmetric, 2× factor)
  *   - `column-web-thickness` → T-shape only (symmetric, 2× factor)
+ *
+ *   Variant-specific Phase 8C (`column-variant-grips.ts`):
+ *   - `column-i-flange-thickness` → I-shape only (asymmetric, 1× factor)
+ *   - `column-i-web-thickness`    → I-shape only (symmetric, 2× factor)
+ *
+ *   Polygon kind (Phase 8C):
+ *   - 3 grips total = center + rotation + width (circumscribed Ø).
+ *     ΟΧΙ depth grip (polygon ignores depth). Rotation handle position uses
+ *     actual N-gon bbox dimY (`polygonBboxMm`) ώστε το offset να ταιριάζει με
+ *     τη γεωμετρία.
+ *
+ *   Shear-wall kind (Phase 8C):
+ *   - 4 grips identical με rectangular (center + rotation + width + depth).
+ *     Falls through default branch — shear-wall = rect parity.
+ *
+ *   I-shape kind (Phase 8C):
+ *   - 6 grips = base 4 + 2 variant (flange-thickness + web-thickness).
+ *
+ *   Circular (unchanged): 2 grips = center + width.
  *
  * SSoT:
  *   - Geometry math via `computeColumnGeometry()` (called by
@@ -29,14 +49,16 @@
  *     module). Anchor invariant during drag — `position` stays fixed για
  *     width/depth/rotation/variant grips· centroid shifts automatically μέσω
  *     της geometry pipeline.
+ *   - Polygon bbox math centralized στο `column-anchors.ts` (`polygonBboxMm`).
  *
- * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6 §6 Phase 4.5/4.5b
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6 §6 Phase 4.5/4.5b/8C
  */
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnGripKind, GripInfo } from '../../hooks/useGripMovement';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import { ANCHOR_OFFSETS, MIN_COLUMN_DIMENSION_MM } from '../types/column-types';
+import { polygonBboxMm } from './column-anchors';
 import {
   RAD_TO_DEG,
   ROTATION_HANDLE_OFFSET_MM,
@@ -50,22 +72,35 @@ import {
   armLengthHandlePosition,
   armWidthHandlePosition,
   flangeLengthHandlePosition,
+  iFlangeThicknessHandlePosition,
+  iWebThicknessHandlePosition,
   resizeArmLength,
   resizeArmWidth,
   resizeFlangeLength,
+  resizeIFlangeThickness,
+  resizeIWebThickness,
   resizeWebThickness,
   webThicknessHandlePosition,
 } from './column-variant-grips';
 
-// ─── Base grip handle positions (Phase 4.5) ──────────────────────────────────
+// ─── Base grip handle positions (Phase 4.5 + 8C) ─────────────────────────────
 
 /**
  * World position of the width grip handle (far edge midpoint along local X).
- * Local coords (centered on centroid): `(signX*width/2, 0)`.
+ * Local coords (centered on centroid): `(signX*width/2, 0)`. Polygon uses
+ * symmetric +X point at (width/2, 0) τοπικού πλαισίου centroid (circumscribed
+ * radius representation — visually πέφτει στην περίμετρο του circumscribed
+ * circle, ελαφρώς εκτός polygon για N≠4).
  */
 function widthHandleWorld(params: ColumnParams): Point2D {
   if (params.kind === 'circular') {
     return { x: params.position.x + params.width / 2, y: params.position.y };
+  }
+  if (params.kind === 'polygon') {
+    const centroid = computeCentroidWorld(params);
+    const local = { x: params.width / 2, y: 0 };
+    const rotated = rotate(local, params.rotation);
+    return { x: centroid.x + rotated.x, y: centroid.y + rotated.y };
   }
   const centroid = computeCentroidWorld(params);
   const { dx } = ANCHOR_OFFSETS[params.anchor];
@@ -89,11 +124,15 @@ function depthHandleWorld(params: ColumnParams): Point2D {
 
 /**
  * World position of the rotation grip handle. Sits centroid + rotated(0,
- * depth/2 + offset) — visually πάνω από το north edge.
+ * dimY/2 + offset) — visually πάνω από το north edge. Polygon uses actual
+ * N-gon bbox dimY (από `polygonBboxMm`) αντί για το meaningless `params.depth`.
  */
 function rotationHandleWorld(params: ColumnParams): Point2D {
   const centroid = computeCentroidWorld(params);
-  const local = { x: 0, y: params.depth / 2 + ROTATION_HANDLE_OFFSET_MM };
+  const dimY = params.kind === 'polygon'
+    ? polygonBboxMm(params.width, params.polygon?.sides).dimY
+    : params.depth;
+  const local = { x: 0, y: dimY / 2 + ROTATION_HANDLE_OFFSET_MM };
   const rotated = rotate(local, params.rotation);
   return { x: centroid.x + rotated.x, y: centroid.y + rotated.y };
 }
@@ -103,20 +142,28 @@ function rotationHandleWorld(params: ColumnParams): Point2D {
 /**
  * Compute parametric grip positions για ένα `ColumnEntity`. Stable order:
  *
- *   rectangular:
+ *   rectangular / shear-wall (4 grips):
  *     0 → center, 1 → rotation, 2 → width, 3 → depth
  *
- *   L-shape (Phase 4.5b adds 2 variant grips):
+ *   L-shape (6 grips — Phase 4.5b adds 2 variant grips):
  *     0 → center, 1 → rotation, 2 → width, 3 → depth,
  *     4 → arm-length (inner-corner horizontal edge, asymmetric),
  *     5 → arm-width  (inner-corner vertical edge, asymmetric)
  *
- *   T-shape (Phase 4.5b adds 2 variant grips):
+ *   T-shape (6 grips — Phase 4.5b adds 2 variant grips):
  *     0 → center, 1 → rotation, 2 → width, 3 → depth,
  *     4 → flange-length (right side edge of πέλμα, symmetric),
  *     5 → web-thickness (right side edge of κορμός, symmetric)
  *
- *   circular:
+ *   I-shape (6 grips — Phase 8C adds 2 variant grips):
+ *     0 → center, 1 → rotation, 2 → width (b), 3 → depth (h),
+ *     4 → i-flange-thickness (top-flange bottom-edge, 1× factor),
+ *     5 → i-web-thickness (web left-edge, 2× symmetric factor)
+ *
+ *   polygon (3 grips — Phase 8C):
+ *     0 → center, 1 → rotation, 2 → width (= circumscribed Ø)
+ *
+ *   circular (2 grips):
  *     0 → center, 1 → width (= diameter, handle στο world +X)
  */
 export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
@@ -137,6 +184,26 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
     grips.push({
       entityId: entity.id,
       gripIndex: 1,
+      type: 'vertex',
+      position: widthHandleWorld(params),
+      movesEntity: false,
+      columnGripKind: 'column-width',
+    });
+    return grips;
+  }
+
+  if (params.kind === 'polygon') {
+    grips.push({
+      entityId: entity.id,
+      gripIndex: 1,
+      type: 'vertex',
+      position: rotationHandleWorld(params),
+      movesEntity: false,
+      columnGripKind: 'column-rotation',
+    });
+    grips.push({
+      entityId: entity.id,
+      gripIndex: 2,
       type: 'vertex',
       position: widthHandleWorld(params),
       movesEntity: false,
@@ -204,7 +271,25 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
       movesEntity: false,
       columnGripKind: 'column-web-thickness',
     });
+  } else if (params.kind === 'I-shape') {
+    grips.push({
+      entityId: entity.id,
+      gripIndex: 4,
+      type: 'edge',
+      position: iFlangeThicknessHandlePosition(params),
+      movesEntity: false,
+      columnGripKind: 'column-i-flange-thickness',
+    });
+    grips.push({
+      entityId: entity.id,
+      gripIndex: 5,
+      type: 'edge',
+      position: iWebThicknessHandlePosition(params),
+      movesEntity: false,
+      columnGripKind: 'column-i-web-thickness',
+    });
   }
+  // shear-wall: falls through με 4 grips (rect parity — bbox = width × depth)
 
   return grips;
 }
@@ -240,6 +325,8 @@ export function applyColumnGripDrag(
   if (gripKind === 'column-arm-width') return resizeArmWidth(input);
   if (gripKind === 'column-flange-length') return resizeFlangeLength(input);
   if (gripKind === 'column-web-thickness') return resizeWebThickness(input);
+  if (gripKind === 'column-i-flange-thickness') return resizeIFlangeThickness(input);
+  if (gripKind === 'column-i-web-thickness') return resizeIWebThickness(input);
   return input.originalParams;
 }
 
@@ -282,6 +369,14 @@ function resizeWidth(input: Readonly<ColumnGripDragInput>): ColumnParams {
     const newWidth = Math.max(MIN_COLUMN_DIMENSION_MM, originalParams.width + 2 * delta.x);
     return { ...originalParams, width: newWidth };
   }
+  if (originalParams.kind === 'polygon') {
+    // Phase 8C — polygon scales symmetrically about centroid. Handle at local
+    // (width/2, 0) → drag dxLocal → newWidth = width + 2·dxLocal (mirror των
+    // T-shape flange-length / column-web-thickness symmetric 2× pattern).
+    const { dxLocal } = projectDeltaToLocal(delta, originalParams.rotation);
+    const newWidth = Math.max(MIN_COLUMN_DIMENSION_MM, originalParams.width + 2 * dxLocal);
+    return { ...originalParams, width: newWidth };
+  }
   const { dx } = ANCHOR_OFFSETS[originalParams.anchor];
   const signX = farEdgeSignX(dx);
   const coefX = signX * 0.5 - dx;
@@ -292,7 +387,9 @@ function resizeWidth(input: Readonly<ColumnGripDragInput>): ColumnParams {
 
 function resizeDepth(input: Readonly<ColumnGripDragInput>): ColumnParams {
   const { originalParams, delta } = input;
-  if (originalParams.kind === 'circular') return originalParams;
+  if (originalParams.kind === 'circular' || originalParams.kind === 'polygon') {
+    return originalParams;
+  }
   const { dy } = ANCHOR_OFFSETS[originalParams.anchor];
   const signY = farEdgeSignY(dy);
   const coefY = signY * 0.5 - dy;

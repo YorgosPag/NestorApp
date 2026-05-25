@@ -693,6 +693,8 @@
       "slabActions": "Actions",
       "columnKind": "Type",
       "columnGeometry": "Geometry",
+      "columnPolygon": "Polygon",
+      "columnIshape": "I-shape",
       "columnMaterial": "Material",
       "columnActions": "Actions",
       "beamKind": "Type",
@@ -1232,6 +1234,9 @@
         "depth": "Depth",
         "height": "Height",
         "rotation": "Rotation",
+        "sides": "Sides",
+        "flangeThickness": "Flange thickness",
+        "webThickness": "Web thickness",
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete this column? This action cannot be undone.",
@@ -1242,7 +1247,10 @@
           "rectangular": "Rectangular",
           "circular": "Circular",
           "lShape": "L-shape",
-          "tShape": "T-shape"
+          "tShape": "T-shape",
+          "polygon": "Polygon",
+          "shearWall": "Shear wall",
+          "iShape": "I-shape"
         },
         "anchor": {
           "section": {

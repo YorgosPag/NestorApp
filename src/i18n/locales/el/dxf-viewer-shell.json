@@ -693,6 +693,8 @@
       "slabActions": "Ενέργειες",
       "columnKind": "Τύπος",
       "columnGeometry": "Γεωμετρία",
+      "columnPolygon": "Πολύγωνο",
+      "columnIshape": "Διατομή Ι",
       "columnMaterial": "Υλικό",
       "columnActions": "Ενέργειες",
       "beamKind": "Τύπος",
@@ -1232,6 +1234,9 @@
         "depth": "Βάθος",
         "height": "Ύψος",
         "rotation": "Στροφή",
+        "sides": "Πλευρές",
+        "flangeThickness": "Πάχος πέλματος",
+        "webThickness": "Πάχος κορμού",
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή κολώνας; Η ενέργεια δεν μπορεί να αναιρεθεί.",
@@ -1242,7 +1247,10 @@
           "rectangular": "Ορθογώνια",
           "circular": "Κυκλική",
           "lShape": "Σχήμα Γ",
-          "tShape": "Σχήμα Τ"
+          "tShape": "Σχήμα Τ",
+          "polygon": "Πολύγωνο",
+          "shearWall": "Τοιχείο διάτμησης",
+          "iShape": "Σχήμα Ι"
         },
         "anchor": {
           "section": {

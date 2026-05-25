@@ -39,6 +39,7 @@ import {
   type AnchorGhost,
   type ColumnGhostOverrides,
 } from '../../bim/columns/column-anchor-ghosts';
+import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -233,12 +234,42 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         ...(s.overrides.material !== undefined ? { material: s.overrides.material } : {}),
         ...(s.overrides.lshape !== undefined ? { lshape: s.overrides.lshape } : {}),
         ...(s.overrides.tshape !== undefined ? { tshape: s.overrides.tshape } : {}),
+        // ADR-363 Phase 8D — polygon/ishape variant overrides drive ghost
+        // preview geometry for the 3 new kinds (polygon sides, I-shape flange/
+        // web thickness).
+        ...(s.overrides.polygon !== undefined ? { polygon: s.overrides.polygon } : {}),
+        ...(s.overrides.ishape !== undefined ? { ishape: s.overrides.ishape } : {}),
         sceneUnits: getSceneUnitsRef.current?.() ?? 'mm',
       };
       return computeAnchorGhostFootprints(cursorPos, s.kind, s.anchor, ghostOverrides);
     },
     [],
   );
+
+  // ── ADR-363 Phase 8D — publish handle to ribbon bridge store ────────────
+  // Single writer pattern (mirror stair-status-store). Bridge reads via
+  // `columnToolBridgeStore.get()` when no entity selected, so the contextual
+  // column ribbon drives the FSM in drawing mode (kind dropdown + variant
+  // numeric inputs).
+  useEffect(() => {
+    const isActive = state.phase !== 'idle';
+    columnToolBridgeStore.set({
+      isActive,
+      kind: state.kind,
+      anchor: state.anchor,
+      overrides: state.overrides,
+      setKind,
+      setAnchor,
+      setParamOverrides,
+    });
+    return () => {
+      // Only clear if we're the current publisher (prevents wiping a newer
+      // mount that took over).
+      if (columnToolBridgeStore.get()?.setKind === setKind) {
+        columnToolBridgeStore.set(null);
+      }
+    };
+  }, [state, setKind, setAnchor, setParamOverrides]);
 
   // ── Tab cycles anchor (ADR-363 Phase 4.5c) ───────────────────────────────
   // ESC handled centrally by EscapeCommandBus (ADR-364 §4.1 BIM migration

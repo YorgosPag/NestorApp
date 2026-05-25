@@ -129,7 +129,7 @@ export function hydrateOpening(doc: OpeningDoc, hostWall: WallEntity | null): Op
     kind: doc.kind,
     layerId: doc.layerId ?? '0',
     params: doc.params,
-    geometry: doc.geometry ?? computeOpeningGeometry(doc.params, hostWall),
+    geometry: doc.geometry ?? computeOpeningGeometry(doc.params, hostWall, hostWall.params.sceneUnits ?? 'mm'),
     validation,
     visible: true,
   } as OpeningEntity;

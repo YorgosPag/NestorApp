@@ -30,6 +30,7 @@ import {
   buildOpeningEntity,
   buildDefaultOpeningParams,
   type OpeningParamOverrides,
+  type SceneUnits,
 } from './opening-completion';
 import { EventBus } from '../../systems/events/EventBus';
 
@@ -75,6 +76,12 @@ export interface UseOpeningToolOptions {
    * when no wall sits below). Caller wires this from the hit-test service.
    */
   readonly getWallAtPoint: (point: Readonly<Point2D>) => WallEntity | null;
+  /**
+   * ADR-370 — active scene units. Wires `buildDefaultOpeningParams` +
+   * `computeOpeningGeometry` ώστε ο projection και το outline να συμπίπτουν
+   * όταν το scene είναι σε 'm'/'cm'/'in'/'ft'. Όταν undefined → 'mm' fallback.
+   */
+  readonly getSceneUnits?: () => SceneUnits;
 }
 
 export interface UseOpeningToolResult {
@@ -98,7 +105,7 @@ export interface UseOpeningToolResult {
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
 export function useOpeningTool(options: UseOpeningToolOptions): UseOpeningToolResult {
-  const { onOpeningCreated, currentLevelId = '0', getWallById, getWallAtPoint } = options;
+  const { onOpeningCreated, currentLevelId = '0', getWallById, getWallAtPoint, getSceneUnits } = options;
 
   const [state, setState] = useState<OpeningToolState>(INITIAL_STATE);
   const stateRef = useRef<OpeningToolState>(state);
@@ -148,8 +155,9 @@ export function useOpeningTool(options: UseOpeningToolOptions): UseOpeningToolRe
   const commitOpeningFromState = useCallback(
     (s: OpeningToolState, hostWall: WallEntity, clickPoint: Readonly<Point2D>): boolean => {
       const overridesWithKind: OpeningParamOverrides = { ...s.overrides, kind: s.kind };
-      const params = buildDefaultOpeningParams(hostWall, clickPoint, overridesWithKind);
-      const result = buildOpeningEntity(params, hostWall, currentLevelId);
+      const sceneUnits: SceneUnits = getSceneUnits?.() ?? 'mm';
+      const params = buildDefaultOpeningParams(hostWall, clickPoint, overridesWithKind, sceneUnits);
+      const result = buildOpeningEntity(params, hostWall, currentLevelId, sceneUnits);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
         return false;
@@ -163,7 +171,7 @@ export function useOpeningTool(options: UseOpeningToolOptions): UseOpeningToolRe
       });
       return true;
     },
-    [currentLevelId, onOpeningCreated],
+    [currentLevelId, onOpeningCreated, getSceneUnits],
   );
 
   // ── click pipeline ───────────────────────────────────────────────────────

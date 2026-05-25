@@ -241,6 +241,16 @@ export interface CanvasLayerStackProps {
     /** ADR-370 — active scene units για mm→scene conversion στο ghost. */
     getSceneUnits?: () => import('../../utils/scene-units').SceneUnits;
   };
+  // === ADR-363 Phase 2 canvas-wiring follow-up (2026-05-25): Opening ghost preview payload ===
+  openingGhostPreview: {
+    isAwaitingPosition: boolean;
+    kind: import('../../bim/types/opening-types').OpeningKind;
+    overrides: import('../../hooks/drawing/opening-completion').OpeningParamOverrides;
+    /** Resolver for the locked host wall (null while not awaiting position). */
+    getHostWall: () => import('../../bim/types/wall-types').WallEntity | null;
+    /** ADR-370 — active scene units για mm→scene conversion στο ghost. */
+    getSceneUnits?: () => import('../../utils/scene-units').SceneUnits;
+  };
   /** Level manager — needed by useRotationPreview + useMovePreview for entity reads */
   levelManager: ReturnType<typeof useLevels>;
 

@@ -17,7 +17,7 @@ import { isOpeningBadgeKey } from './useRibbonOpeningBridge';
 import type { RibbonSlabBridge } from './useRibbonSlabBridge';
 import { isSlabBadgeKey } from './useRibbonSlabBridge';
 import type { RibbonColumnBridge } from './useRibbonColumnBridge';
-import { isColumnBadgeKey } from './useRibbonColumnBridge';
+import { isColumnBadgeKey, isColumnPanelVisibilityKey } from './useRibbonColumnBridge';
 import type { RibbonBeamBridge } from './useRibbonBeamBridge';
 import { isBeamBadgeKey } from './useRibbonBeamBridge';
 import type { RibbonSlabOpeningBridge } from './useRibbonSlabOpeningBridge';
@@ -190,14 +190,16 @@ export function useRibbonCommands({
   );
 
   // ADR-358 Phase 7b2b-β Stream F — Only the stair bridge owns visibility
-  // keys today. Future bridges add their own owned set + branch here.
-  // Default `true` for unowned keys = panel visible (no breaking change).
+  // keys today. ADR-363 Phase 8D — column bridge added (polygon/ishape panels).
+  // Future bridges add their own owned set + branch here. Default `true` for
+  // unowned keys = panel visible (no breaking change).
   const getPanelVisibility = React.useCallback(
     (visibilityKey: string): boolean => {
       if (isStairPanelVisibilityKey(visibilityKey)) return stairBridge.getPanelVisibility(visibilityKey);
+      if (isColumnPanelVisibilityKey(visibilityKey)) return columnBridge.getPanelVisibility(visibilityKey);
       return true;
     },
-    [stairBridge],
+    [stairBridge, columnBridge],
   );
 
   // ADR-363 Phase 1E — Wall action keys (delete) handled by bridge before

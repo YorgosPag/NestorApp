@@ -68,7 +68,7 @@ export class UpdateOpeningParamsCommand implements ICommand {
     const host = this.resolveHostWall(params.wallId);
     const patch: Record<string, unknown> = { params };
     if (host) {
-      const geometry: OpeningGeometry = computeOpeningGeometry(params, host);
+      const geometry: OpeningGeometry = computeOpeningGeometry(params, host, host.params.sceneUnits ?? 'mm');
       const validation = validateOpeningParams(params, host).bimValidation;
       patch.geometry = geometry;
       patch.validation = validation;

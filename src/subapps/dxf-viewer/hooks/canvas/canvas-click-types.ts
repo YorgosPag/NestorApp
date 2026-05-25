@@ -112,6 +112,12 @@ export interface SlabOpeningToolLike {
   onCanvasClick: (point: Point2D) => boolean;
 }
 
+/** ADR-363 Phase 2 — Minimal opening tool interface for click routing. */
+export interface OpeningToolLike {
+  readonly isActive: boolean;
+  onCanvasClick: (point: Point2D) => boolean;
+}
+
 /** Minimal interface for level manager (read-only for click handling) */
 export interface LevelManagerLike {
   currentLevelId: string | null;
@@ -148,6 +154,8 @@ export interface UseCanvasClickHandlerParams {
   beamTool?: BeamToolLike;
   /** ADR-363 Phase 3.7 — Slab-opening tool click pipeline. */
   slabOpeningTool?: SlabOpeningToolLike;
+  /** ADR-363 Phase 2 — Opening tool click pipeline. */
+  openingTool?: OpeningToolLike;
 
   // ── ADR-188: Rotation tool ────────────────────────────────────────────
   /** Whether the rotation tool is active and collecting input */

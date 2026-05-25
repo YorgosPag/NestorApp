@@ -21,13 +21,21 @@ import {
   armLengthHandlePosition,
   armWidthHandlePosition,
   flangeLengthHandlePosition,
+  iFlangeThicknessHandlePosition,
+  iWebThicknessHandlePosition,
+  materializeIshape,
   materializeLshape,
   materializeTshape,
   webThicknessHandlePosition,
 } from '../column-variant-grips';
 import { buildDefaultColumnParams } from '../../../hooks/drawing/column-completion';
-import type { ColumnEntity, ColumnParams } from '../../types/column-types';
-import { MIN_COLUMN_DIMENSION_MM } from '../../types/column-types';
+import type { ColumnEntity, ColumnKind, ColumnParams } from '../../types/column-types';
+import {
+  DEFAULT_I_FLANGE_THICKNESS_MM,
+  DEFAULT_I_WEB_THICKNESS_MM,
+  MIN_COLUMN_DIMENSION_MM,
+  MIN_I_PLATE_THICKNESS_MM,
+} from '../../types/column-types';
 
 function makeColumnEntity(params: ColumnParams): ColumnEntity {
   return {
@@ -56,6 +64,13 @@ function makeLshape(): ColumnEntity {
 
 function makeTshape(): ColumnEntity {
   return makeColumnEntity(buildDefaultColumnParams({ x: 0, y: 0 }, 'T-shape'));
+}
+
+function makeOfKind(kind: ColumnKind, overrides: Partial<ColumnParams> = {}): ColumnEntity {
+  return makeColumnEntity({
+    ...buildDefaultColumnParams({ x: 0, y: 0 }, kind),
+    ...overrides,
+  });
 }
 
 describe('column-grips — getColumnGrips (Phase 4.5)', () => {
@@ -547,5 +562,197 @@ describe('column-grips — materialize helpers (Phase 4.5b)', () => {
       depth: 900,
     });
     expect(materializeTshape(params)).toEqual({ flangeLength: 500, webThickness: 300 });
+  });
+});
+
+// ─── ADR-363 Phase 8C — polygon / shear-wall / I-shape grips ────────────────
+
+describe('column-grips — Phase 8C: polygon kind', () => {
+  it('46. polygon → 3 grips (center + rotation + width). NO depth grip', () => {
+    const grips = getColumnGrips(makeOfKind('polygon'));
+    expect(grips).toHaveLength(3);
+    expect(grips.map((g) => g.columnGripKind)).toEqual([
+      'column-center',
+      'column-rotation',
+      'column-width',
+    ]);
+  });
+
+  it('47. polygon width handle at perimeter +X = (width/2, 0) world (anchor=center, rotation=0)', () => {
+    const col = makeOfKind('polygon', { width: 400, anchor: 'center', rotation: 0 });
+    const grips = getColumnGrips(col);
+    const widthGrip = grips.find((g) => g.columnGripKind === 'column-width')!;
+    expect(widthGrip.position.x).toBeCloseTo(col.params.width / 2, 4);
+    expect(widthGrip.position.y).toBeCloseTo(0, 4);
+  });
+
+  it('48. polygon depth grip drag → no-op (referential identity)', () => {
+    const params = makeOfKind('polygon').params;
+    const next = applyColumnGripDrag('column-depth', {
+      originalParams: params,
+      delta: { x: 0, y: 100 },
+    });
+    expect(next).toBe(params);
+  });
+
+  it('49. polygon width drag → 2× factor (symmetric)', () => {
+    const params = makeOfKind('polygon', { width: 400 }).params;
+    const next = applyColumnGripDrag('column-width', {
+      originalParams: params,
+      delta: { x: 50, y: 0 },
+    });
+    // 2× factor → newWidth = 400 + 2·50 = 500
+    expect(next.width).toBeCloseTo(500, 4);
+  });
+});
+
+describe('column-grips — Phase 8C: shear-wall kind', () => {
+  it('50. shear-wall → 4 grips (rect parity: center, rotation, width, depth)', () => {
+    const grips = getColumnGrips(makeOfKind('shear-wall', { width: 2000, depth: 200 }));
+    expect(grips).toHaveLength(4);
+    expect(grips.map((g) => g.columnGripKind)).toEqual([
+      'column-center',
+      'column-rotation',
+      'column-width',
+      'column-depth',
+    ]);
+  });
+
+  it('51. shear-wall depth drag (thickness) preserves width (length)', () => {
+    const params = makeOfKind('shear-wall', { width: 2000, depth: 200 }).params;
+    const next = applyColumnGripDrag('column-depth', {
+      originalParams: params,
+      delta: { x: 0, y: 50 },
+    });
+    expect(next.width).toBe(2000);
+    // anchor=center → coefY=0.5 → newDepth = 200 + 100
+    expect(next.depth).toBeCloseTo(300, 4);
+  });
+});
+
+describe('column-grips — Phase 8C: I-shape kind', () => {
+  function makeIshape(overrides: Partial<ColumnParams> = {}): ColumnEntity {
+    return makeOfKind('I-shape', { width: 200, depth: 300, ...overrides });
+  }
+
+  it('52. I-shape → 6 grips (base 4 + i-flange-thickness + i-web-thickness)', () => {
+    const grips = getColumnGrips(makeIshape());
+    expect(grips).toHaveLength(6);
+    expect(grips.map((g) => g.columnGripKind)).toEqual([
+      'column-center',
+      'column-rotation',
+      'column-width',
+      'column-depth',
+      'column-i-flange-thickness',
+      'column-i-web-thickness',
+    ]);
+  });
+
+  it('53. I-shape i-flange-thickness handle at (0, depth/2 - tf) world (anchor=center, rotation=0)', () => {
+    const params = makeIshape().params;
+    const expectedY = params.depth / 2 - DEFAULT_I_FLANGE_THICKNESS_MM; // 150 - 20 = 130
+    const pos = iFlangeThicknessHandlePosition(params);
+    expect(pos.x).toBeCloseTo(0, 4);
+    expect(pos.y).toBeCloseTo(expectedY, 4);
+  });
+
+  it('54. I-shape i-web-thickness handle at (-tw/2, 0) world (anchor=center, rotation=0)', () => {
+    const params = makeIshape().params;
+    const expectedX = -DEFAULT_I_WEB_THICKNESS_MM / 2; // -7.5
+    const pos = iWebThicknessHandlePosition(params);
+    expect(pos.x).toBeCloseTo(expectedX, 4);
+    expect(pos.y).toBeCloseTo(0, 4);
+  });
+
+  it('55. resizeIFlangeThickness drag +Y → 1× factor (tf decreases by dy)', () => {
+    const params = makeIshape({ ishape: { flangeThickness: 30, webThickness: 20 } }).params;
+    const next = applyColumnGripDrag('column-i-flange-thickness', {
+      originalParams: params,
+      delta: { x: 0, y: 5 },
+    });
+    // 1× factor: drag +Y by 5 → tf = 30 - 5 = 25
+    expect(next.ishape?.flangeThickness).toBeCloseTo(25, 4);
+    expect(next.ishape?.webThickness).toBe(20); // preserved
+  });
+
+  it('56. resizeIWebThickness drag +X → 2× factor (tw decreases by 2·dx)', () => {
+    const params = makeIshape({ ishape: { flangeThickness: 30, webThickness: 20 } }).params;
+    const next = applyColumnGripDrag('column-i-web-thickness', {
+      originalParams: params,
+      delta: { x: 5, y: 0 },
+    });
+    // 2× factor: drag +X by 5 → tw = 20 - 10 = 10
+    expect(next.ishape?.webThickness).toBeCloseTo(10, 4);
+    expect(next.ishape?.flangeThickness).toBe(30); // preserved
+  });
+
+  it('57. I-shape flange-thickness clamps στο MIN_I_PLATE_THICKNESS_MM (huge +Y delta)', () => {
+    const params = makeIshape().params;
+    const next = applyColumnGripDrag('column-i-flange-thickness', {
+      originalParams: params,
+      delta: { x: 0, y: 10000 },
+    });
+    expect(next.ishape?.flangeThickness).toBe(MIN_I_PLATE_THICKNESS_MM);
+  });
+
+  it('58. I-shape web-thickness clamps στο MIN_I_PLATE_THICKNESS_MM (huge +X delta)', () => {
+    const params = makeIshape().params;
+    const next = applyColumnGripDrag('column-i-web-thickness', {
+      originalParams: params,
+      delta: { x: 10000, y: 0 },
+    });
+    expect(next.ishape?.webThickness).toBe(MIN_I_PLATE_THICKNESS_MM);
+  });
+
+  it('59. resizeIFlangeThickness on rectangular → no-op (referential identity)', () => {
+    const params = makeRect().params;
+    const next = applyColumnGripDrag('column-i-flange-thickness', {
+      originalParams: params,
+      delta: { x: 0, y: 5 },
+    });
+    expect(next).toBe(params);
+  });
+
+  it('60. resizeIWebThickness on T-shape → no-op (referential identity)', () => {
+    const params = makeTshape().params;
+    const next = applyColumnGripDrag('column-i-web-thickness', {
+      originalParams: params,
+      delta: { x: 5, y: 0 },
+    });
+    expect(next).toBe(params);
+  });
+
+  it('61. materializeIshape defaults from DEFAULT_I_*_THICKNESS_MM', () => {
+    const params = buildDefaultColumnParams({ x: 0, y: 0 }, 'I-shape', { width: 200, depth: 300 });
+    expect(params.ishape).toBeUndefined();
+    expect(materializeIshape(params)).toEqual({
+      flangeThickness: DEFAULT_I_FLANGE_THICKNESS_MM,
+      webThickness: DEFAULT_I_WEB_THICKNESS_MM,
+    });
+  });
+
+  it('62. materializeIshape respects partial override', () => {
+    const params = buildDefaultColumnParams({ x: 0, y: 0 }, 'I-shape', {
+      width: 200, depth: 300,
+      ishape: { flangeThickness: 25 },
+    });
+    expect(materializeIshape(params)).toEqual({
+      flangeThickness: 25,
+      webThickness: DEFAULT_I_WEB_THICKNESS_MM,
+    });
+  });
+
+  it('63. I-shape i-flange-thickness drag χωρίς params.ishape materializes defaults', () => {
+    const params = buildDefaultColumnParams({ x: 0, y: 0 }, 'I-shape', { width: 200, depth: 300 });
+    expect(params.ishape).toBeUndefined();
+    const next = applyColumnGripDrag('column-i-flange-thickness', {
+      originalParams: params,
+      delta: { x: 0, y: 5 },
+    });
+    // base tf = 20 (default), drag +Y 5 → tf = 15. webThickness preserved at default 15.
+    expect(next.ishape).toEqual({
+      flangeThickness: DEFAULT_I_FLANGE_THICKNESS_MM - 5,
+      webThickness: DEFAULT_I_WEB_THICKNESS_MM,
+    });
   });
 });

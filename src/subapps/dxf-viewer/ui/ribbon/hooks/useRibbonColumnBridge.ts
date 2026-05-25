@@ -25,8 +25,15 @@ import { isColumnEntity } from '../../../types/entities';
 import type {
   ColumnAnchor,
   ColumnEntity,
+  ColumnIShapeParams,
   ColumnKind,
   ColumnParams,
+  ColumnPolygonParams,
+} from '../../../bim/types/column-types';
+import {
+  DEFAULT_I_FLANGE_THICKNESS_MM,
+  DEFAULT_I_WEB_THICKNESS_MM,
+  DEFAULT_POLYGON_SIDES,
 } from '../../../bim/types/column-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateColumnParamsCommand } from '../../../core/commands/entity-commands/UpdateColumnParamsCommand';
@@ -35,9 +42,12 @@ import {
   COLUMN_RIBBON_KEYS,
   COLUMN_RIBBON_KEYS_ACTIONS,
   COLUMN_RIBBON_BADGE_KEYS,
+  COLUMN_RIBBON_VISIBILITY_KEYS,
   isColumnRibbonKey,
   isColumnRibbonStringKey,
+  isColumnVisibilityKey,
 } from './bridge/column-command-keys';
+import { columnToolBridgeStore } from './bridge/column-tool-bridge-store';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
 import type {
@@ -71,6 +81,14 @@ export interface RibbonColumnBridge {
   readonly getBadgeState: (badgeKey: string) => boolean;
   /** Handles ribbon simple-button actions (close / delete). */
   readonly onAction: (action: string) => void;
+  /**
+   * ADR-363 Phase 8D — panel visibility resolver. Returns `true` όταν το panel
+   * πρέπει να εμφανίζεται.
+   *   - polygonParams → kind === 'polygon'
+   *   - ishapeParams  → kind === 'I-shape'
+   * Keys εκτός `COLUMN_RIBBON_VISIBILITY_KEYS` επιστρέφουν `true` (no-op).
+   */
+  readonly getPanelVisibility: (visibilityKey: string) => boolean;
 }
 
 const COLUMN_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
@@ -92,12 +110,71 @@ const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof ColumnParams>> = {
   [COLUMN_RIBBON_KEYS.stringParams.material]: 'material',
 };
 
+/**
+ * ADR-363 Phase 8D — Nested-param routing. Sides → polygon.sides;
+ * flangeThickness/webThickness → ishape.{flange|web}Thickness.
+ */
+type NestedGroup = 'polygon' | 'ishape';
+type NestedField = keyof ColumnPolygonParams | keyof ColumnIShapeParams;
+
+interface NestedPath {
+  readonly group: NestedGroup;
+  readonly field: NestedField;
+  readonly defaultValue: number;
+}
+
+const NESTED_NUMBER_KEY_TO_PATH: Readonly<Record<string, NestedPath>> = {
+  [COLUMN_RIBBON_KEYS.params.sides]: {
+    group: 'polygon',
+    field: 'sides',
+    defaultValue: DEFAULT_POLYGON_SIDES,
+  },
+  [COLUMN_RIBBON_KEYS.params.flangeThickness]: {
+    group: 'ishape',
+    field: 'flangeThickness',
+    defaultValue: DEFAULT_I_FLANGE_THICKNESS_MM,
+  },
+  [COLUMN_RIBBON_KEYS.params.webThickness]: {
+    group: 'ishape',
+    field: 'webThickness',
+    defaultValue: DEFAULT_I_WEB_THICKNESS_MM,
+  },
+};
+
+function isNestedNumberKey(commandKey: string): boolean {
+  return Object.prototype.hasOwnProperty.call(NESTED_NUMBER_KEY_TO_PATH, commandKey);
+}
+
+function readNestedValue(params: Readonly<ColumnParams>, path: NestedPath): number {
+  const group = path.group === 'polygon' ? params.polygon : params.ishape;
+  const raw = group ? (group as Record<string, unknown>)[path.field] : undefined;
+  return typeof raw === 'number' ? raw : path.defaultValue;
+}
+
+function patchNestedParams(
+  params: Readonly<ColumnParams>,
+  path: NestedPath,
+  nextValue: number,
+): ColumnParams {
+  if (path.group === 'polygon') {
+    const nextPolygon: ColumnPolygonParams = { ...(params.polygon ?? {}), [path.field]: nextValue };
+    return { ...params, polygon: nextPolygon };
+  }
+  const nextIshape: ColumnIShapeParams = { ...(params.ishape ?? {}), [path.field]: nextValue };
+  return { ...params, ishape: nextIshape };
+}
+
 export function useRibbonColumnBridge(
   props: UseRibbonColumnBridgeProps,
 ): RibbonColumnBridge {
   const { levelManager, universalSelection } = props;
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
+
+  // ADR-363 Phase 8D — Reactive subscription to the drawing-tool handle so the
+  // ribbon re-renders when the user switches kind in drawing mode (no selected
+  // entity). Selected-entity reads are driven by `useUniversalSelection`.
+  const toolHandle = columnToolBridgeStore.use();
 
   const resolveColumn = useCallback((): ColumnEntity | null => {
     const id = universalSelection.getPrimaryId();
@@ -134,63 +211,141 @@ export function useRibbonColumnBridge(
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
       const column = resolveColumn();
-      if (!column) return null;
-      if (isColumnRibbonStringKey(commandKey)) {
-        const field = STRING_KEY_TO_FIELD[commandKey];
-        const raw = column.params[field];
-        // ADR-363 Phase 4.5d — surface 'rc' as the active selection when
-        // `params.material` is undefined; mirrors the `resolveMaterialKey`
-        // fallback used by `ColumnRenderer.drawMaterialHatch`.
-        if (raw == null) {
-          if (field === 'material') return { value: 'rc', options: [] };
-          return null;
+      // ── SELECTED ENTITY BRANCH ────────────────────────────────────────────
+      if (column) {
+        if (isColumnRibbonStringKey(commandKey)) {
+          const field = STRING_KEY_TO_FIELD[commandKey];
+          const raw = column.params[field];
+          // ADR-363 Phase 4.5d — surface 'rc' as the active selection when
+          // `params.material` is undefined; mirrors the `resolveMaterialKey`
+          // fallback used by `ColumnRenderer.drawMaterialHatch`.
+          if (raw == null) {
+            if (field === 'material') return { value: 'rc', options: [] };
+            return null;
+          }
+          return { value: String(raw), options: [] };
         }
-        return { value: String(raw), options: [] };
+        if (isNestedNumberKey(commandKey)) {
+          const path = NESTED_NUMBER_KEY_TO_PATH[commandKey];
+          return { value: String(Math.round(readNestedValue(column.params, path))), options: [] };
+        }
+        if (isColumnRibbonKey(commandKey)) {
+          const field = NUMBER_KEY_TO_FIELD[commandKey];
+          const raw = column.params[field];
+          if (typeof raw !== 'number') return null;
+          return { value: String(Math.round(raw)), options: [] };
+        }
+        return null;
+      }
+      // ── DRAWING-MODE BRANCH (no selection, tool active) ──────────────────
+      // ADR-363 Phase 8D — Read from `columnToolBridgeStore` so the kind
+      // dropdown + variant numeric inputs drive `useColumnTool` directly when
+      // creating a new column. Mirrors Revit/ArchiCAD "Properties" panel UX.
+      if (!toolHandle || !toolHandle.isActive) return null;
+      if (commandKey === COLUMN_RIBBON_KEYS.stringParams.kind) {
+        return { value: toolHandle.kind, options: [] };
+      }
+      if (commandKey === COLUMN_RIBBON_KEYS.stringParams.anchor) {
+        return { value: toolHandle.anchor, options: [] };
+      }
+      if (isNestedNumberKey(commandKey)) {
+        const path = NESTED_NUMBER_KEY_TO_PATH[commandKey];
+        const group = path.group === 'polygon' ? toolHandle.overrides.polygon : toolHandle.overrides.ishape;
+        const raw = group ? (group as Record<string, unknown>)[path.field] : undefined;
+        const value = typeof raw === 'number' ? raw : path.defaultValue;
+        return { value: String(Math.round(value)), options: [] };
       }
       if (isColumnRibbonKey(commandKey)) {
         const field = NUMBER_KEY_TO_FIELD[commandKey];
-        const raw = column.params[field];
+        const raw = (toolHandle.overrides as Record<string, unknown>)[field];
         if (typeof raw !== 'number') return null;
         return { value: String(Math.round(raw)), options: [] };
       }
       return null;
     },
-    [resolveColumn],
+    [resolveColumn, toolHandle],
   );
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
       const column = resolveColumn();
-      if (!column) return;
 
-      if (isColumnRibbonStringKey(commandKey)) {
-        const field = STRING_KEY_TO_FIELD[commandKey];
-        if (field === 'kind') {
-          const nextParams: ColumnParams = { ...column.params, kind: value as ColumnKind };
+      // ── SELECTED ENTITY BRANCH ────────────────────────────────────────────
+      if (column) {
+        if (isColumnRibbonStringKey(commandKey)) {
+          const field = STRING_KEY_TO_FIELD[commandKey];
+          if (field === 'kind') {
+            const nextParams: ColumnParams = { ...column.params, kind: value as ColumnKind };
+            dispatchParams(column, nextParams);
+            return;
+          }
+          if (field === 'anchor') {
+            const nextParams: ColumnParams = { ...column.params, anchor: value as ColumnAnchor };
+            dispatchParams(column, nextParams);
+            return;
+          }
+          if (field === 'material') {
+            const nextParams: ColumnParams = { ...column.params, material: value };
+            dispatchParams(column, nextParams);
+          }
+          return;
+        }
+        if (isNestedNumberKey(commandKey)) {
+          const numeric = Number.parseFloat(value);
+          if (Number.isNaN(numeric)) return;
+          const path = NESTED_NUMBER_KEY_TO_PATH[commandKey];
+          const nextParams = patchNestedParams(column.params, path, numeric);
           dispatchParams(column, nextParams);
           return;
         }
-        if (field === 'anchor') {
-          const nextParams: ColumnParams = { ...column.params, anchor: value as ColumnAnchor };
-          dispatchParams(column, nextParams);
-          return;
-        }
-        if (field === 'material') {
-          // ADR-363 Phase 4.5d — material patch. `isDragging=false` so every
-          // pick is its own undo entry. Renderer hatch updates on the next
-          // frame via the existing column-bbox bitmap-cache invalidation path.
-          const nextParams: ColumnParams = { ...column.params, material: value };
+        if (isColumnRibbonKey(commandKey)) {
+          const numeric = Number.parseFloat(value);
+          if (Number.isNaN(numeric)) return;
+          const field = NUMBER_KEY_TO_FIELD[commandKey];
+          const nextParams: ColumnParams = { ...column.params, [field]: numeric } as ColumnParams;
           dispatchParams(column, nextParams);
         }
         return;
       }
 
+      // ── DRAWING-MODE BRANCH ───────────────────────────────────────────────
+      // ADR-363 Phase 8D — Forward writes to `useColumnTool` via the store
+      // handle so subsequent canvas clicks create columns with the chosen kind
+      // + variant params + anchor.
+      const handle = columnToolBridgeStore.get();
+      if (!handle || !handle.isActive) return;
+      if (commandKey === COLUMN_RIBBON_KEYS.stringParams.kind) {
+        handle.setKind(value as ColumnKind);
+        return;
+      }
+      if (commandKey === COLUMN_RIBBON_KEYS.stringParams.anchor) {
+        handle.setAnchor(value as ColumnAnchor);
+        return;
+      }
+      if (isNestedNumberKey(commandKey)) {
+        const numeric = Number.parseFloat(value);
+        if (Number.isNaN(numeric)) return;
+        const path = NESTED_NUMBER_KEY_TO_PATH[commandKey];
+        if (path.group === 'polygon') {
+          const nextPolygon: ColumnPolygonParams = {
+            ...(handle.overrides.polygon ?? {}),
+            [path.field]: numeric,
+          };
+          handle.setParamOverrides({ polygon: nextPolygon });
+        } else {
+          const nextIshape: ColumnIShapeParams = {
+            ...(handle.overrides.ishape ?? {}),
+            [path.field]: numeric,
+          };
+          handle.setParamOverrides({ ishape: nextIshape });
+        }
+        return;
+      }
       if (isColumnRibbonKey(commandKey)) {
         const numeric = Number.parseFloat(value);
         if (Number.isNaN(numeric)) return;
         const field = NUMBER_KEY_TO_FIELD[commandKey];
-        const nextParams: ColumnParams = { ...column.params, [field]: numeric } as ColumnParams;
-        dispatchParams(column, nextParams);
+        handle.setParamOverrides({ [field]: numeric });
       }
     },
     [resolveColumn, dispatchParams],
@@ -237,15 +392,48 @@ export function useRibbonColumnBridge(
     [resolveColumn, levelManager, t],
   );
 
+  /**
+   * ADR-363 Phase 8D — Panel visibility resolver. Returns `true` when the
+   * panel should render. Resolves `kind` from the selected entity first;
+   * falls back to the drawing-tool handle when no entity is selected (so the
+   * polygon/I-shape input panels appear/hide as the user switches kind during
+   * column creation).
+   */
+  const getPanelVisibility = useCallback(
+    (visibilityKey: string): boolean => {
+      if (!isColumnVisibilityKey(visibilityKey)) return true;
+      const column = resolveColumn();
+      const kind: ColumnKind | null = column
+        ? column.params.kind
+        : toolHandle?.isActive
+          ? toolHandle.kind
+          : null;
+      if (!kind) return false;
+      if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.polygonParams) {
+        return kind === 'polygon';
+      }
+      if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams) {
+        return kind === 'I-shape';
+      }
+      return false;
+    },
+    [resolveColumn, toolHandle],
+  );
+
   return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction],
+    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility }),
+    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility],
   );
 }
 
 /** Type guard used by `useRibbonCommands` composer. */
 export function isColumnBadgeKey(badgeKey: string): boolean {
   return COLUMN_OWNED_BADGE_KEYS.has(badgeKey);
+}
+
+/** ADR-363 Phase 8D — type guard used by `useRibbonCommands` composer. */
+export function isColumnPanelVisibilityKey(visibilityKey: string): boolean {
+  return isColumnVisibilityKey(visibilityKey);
 }
 
 /** Exposed so action interceptor μπορεί να αναγνωρίσει `column.actions.close`. */

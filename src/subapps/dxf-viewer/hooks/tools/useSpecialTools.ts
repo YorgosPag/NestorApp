@@ -29,6 +29,7 @@ import { useColumnTool } from '../drawing/useColumnTool';
 import { useBeamTool } from '../drawing/useBeamTool';
 import { useSlabOpeningTool } from '../drawing/useSlabOpeningTool';
 import { buildSlabOpeningResolvers } from './useSpecialTools-slab-opening';
+import { buildOpeningResolvers } from './useSpecialTools-opening';
 import { useToolLifecycle } from './useToolLifecycle';
 import { resolveSceneUnits, mmToSceneUnits } from '../../utils/scene-units';
 import { useFloorMetadata } from '../data/useFloorMetadata';
@@ -36,8 +37,6 @@ import type { StairFloorLinkInput } from '../drawing/stair-completion';
 import { useAngleEntityMeasurement, type AngleEntityVariant } from './useAngleEntityMeasurement';
 import type { AngleMeasurementEntity, Entity } from '../../types/entities';
 import { isWallEntity } from '../../types/entities';
-import type { WallEntity } from '../../bim/types/wall-types';
-import type { Point2D } from '../../rendering/types/Types';
 import { computeWallTrims, applyTrimPatches } from '../../bim/walls/wall-trims';
 // 🏢 ENTERPRISE: Import actual level system types for type safety
 import type { LevelsHookReturn } from '../../systems/levels';
@@ -338,61 +337,8 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     },
   });
   useToolLifecycle(activeTool === 'wall', wallTool.activate, wallTool.deactivate);
-  // ADR-363 Phase 2 — OPENING TOOL
-  /**
-   * Opening drawing tool — 2-state FSM (await host wall → await position). The
-   * created `OpeningEntity` is appended to the scene AND broadcast via
-   * `EventBus` so `useOpeningPersistence` can schedule the first Firestore save.
-   *
-   * Host resolution: `getWallAtPoint` reads the current scene and returns the
-   * first wall whose `geometry.bbox` contains the click — sufficient για Phase 2
-   * placement (full hit-test integration lands Phase 2.5).
-   */
-  const openingTool = useOpeningTool({
-    currentLevelId: levelManager.currentLevelId || '0',
-    getWallById: (wallId: string): WallEntity | null => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return null;
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return null;
-      const e = scene.entities.find((x) => x.id === wallId);
-      return e && isWallEntity(e) ? (e as WallEntity) : null;
-    },
-    getWallAtPoint: (point: Readonly<Point2D>): WallEntity | null => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return null;
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return null;
-      const walls = scene.entities.filter(isWallEntity) as WallEntity[];
-      // Bbox containment — adequate for Phase 2 click placement.
-      return walls.find((w: WallEntity) => {
-        const bb = w.geometry?.bbox;
-        if (!bb) return false;
-        return point.x >= bb.min.x && point.x <= bb.max.x
-            && point.y >= bb.min.y && point.y <= bb.max.y;
-      }) ?? null;
-    },
-    onOpeningCreated: (openingEntity) => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return;
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return;
-      // Update host wall's `hostedOpeningIds` mirror so the wall renderer
-      // and BOQ pipeline can find the opening from the host side.
-      const nextEntities: Entity[] = scene.entities.map((e) => {
-        if (!isWallEntity(e)) return e as Entity;
-        if (e.id !== openingEntity.params.wallId) return e as Entity;
-        const existing = (e as WallEntity).hostedOpeningIds ?? [];
-        if (existing.includes(openingEntity.id)) return e as Entity;
-        return { ...(e as WallEntity), hostedOpeningIds: [...existing, openingEntity.id] } as Entity;
-      });
-      levelManager.setLevelScene(levelId, {
-        ...scene,
-        entities: [...nextEntities, openingEntity],
-      });
-      EventBus.emit('drawing:entity-created', { entity: openingEntity, tool: 'opening' });
-    },
-  });
+  // ADR-363 Phase 2 — OPENING TOOL (resolvers extracted: useSpecialTools-opening.ts)
+  const openingTool = useOpeningTool(buildOpeningResolvers(levelManager));
   useToolLifecycle(activeTool === 'opening', openingTool.activate, openingTool.deactivate);
   // ADR-363 Phase 3 — SLAB TOOL
   /**

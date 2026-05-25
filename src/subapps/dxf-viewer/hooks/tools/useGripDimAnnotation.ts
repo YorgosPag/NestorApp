@@ -129,6 +129,10 @@ function buildColumnLabel(
       return `fl=${Math.round(p.tshape?.flangeLength ?? p.width)}`;
     case 'column-web-thickness':
       return `wt=${Math.round(p.tshape?.webThickness ?? p.depth / 3)}`;
+    case 'column-i-flange-thickness':
+      return `tf=${Math.round(p.ishape?.flangeThickness ?? 20)}`;
+    case 'column-i-web-thickness':
+      return `tw=${Math.round(p.ishape?.webThickness ?? 15)}`;
     default:
       return null;
   }

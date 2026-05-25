@@ -35,6 +35,9 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import { computeOpeningGeometry, projectPointToWallOffset } from '../../bim/geometry/opening-geometry';
 import { validateOpeningParams } from '../../bim/validators/opening-validator';
 import { createOpening } from '@/services/factories/opening.factory';
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+
+export type { SceneUnits };
 
 // ─── Param overrides accepted by the builder ─────────────────────────────────
 
@@ -72,6 +75,7 @@ export function buildDefaultOpeningParams(
   hostWall: WallEntity,
   clickPoint: Readonly<Point2D>,
   overrides: OpeningParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
 ): OpeningParams {
   const kind = overrides.kind ?? 'door';
   const defaults = OPENING_KIND_DEFAULTS[kind];
@@ -79,8 +83,13 @@ export function buildDefaultOpeningParams(
   const height = overrides.height ?? defaults.height;
   const sillHeight = overrides.sillHeight ?? defaults.sillHeight;
 
-  const projectedOffset = projectPointToWallOffset(clickPoint, hostWall);
-  const centeredOffset = projectedOffset - width / 2;
+  // ADR-370 — projectPointToWallOffset walks scene-unit axisVertices, so the
+  // returned offset shares the scene's unit (m / mm / cm). Normalise to mm so
+  // `offsetFromStart` matches the OpeningParams documented contract (always mm).
+  const mmFactor = mmToSceneUnits(sceneUnits);
+  const projectedOffsetScene = projectPointToWallOffset(clickPoint, hostWall);
+  const projectedOffsetMm = projectedOffsetScene / (mmFactor || 1);
+  const centeredOffset = projectedOffsetMm - width / 2;
   const snappedOffset = snapToIncrement(centeredOffset, OPENING_SNAP_INCREMENT_MM);
   const wallLengthMm = hostWall.geometry.length * 1000;
   const clampedOffset = clampOffset(snappedOffset, width, wallLengthMm);
@@ -118,12 +127,13 @@ export function buildOpeningEntity(
   params: Readonly<OpeningParams>,
   hostWall: WallEntity,
   layerId: string,
+  sceneUnits: SceneUnits = 'mm',
 ): BuildOpeningEntityResult {
   const validation = validateOpeningParams(params, hostWall);
   if (validation.hardErrors.length > 0) {
     return { ok: false, hardErrors: validation.hardErrors };
   }
-  const geometry = computeOpeningGeometry(params, hostWall);
+  const geometry = computeOpeningGeometry(params, hostWall, sceneUnits);
   const entity = createOpening({ params, geometry, layerId, validation: validation.bimValidation, visible: true });
   return { ok: true, entity };
 }
@@ -140,9 +150,10 @@ export function completeOpeningFromHostClick(
   clickPoint: Readonly<Point2D>,
   layerId: string,
   overrides: OpeningParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
 ): BuildOpeningEntityResult {
-  const params = buildDefaultOpeningParams(hostWall, clickPoint, overrides);
-  return buildOpeningEntity(params, hostWall, layerId);
+  const params = buildDefaultOpeningParams(hostWall, clickPoint, overrides, sceneUnits);
+  return buildOpeningEntity(params, hostWall, layerId, sceneUnits);
 }
 
 // ─── Internal helpers ────────────────────────────────────────────────────────

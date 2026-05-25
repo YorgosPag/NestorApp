@@ -1,22 +1,32 @@
 /**
- * ADR-363 Phase 4.5b — Variant-specific column grip handlers (L-shape, T-shape).
+ * ADR-363 Phase 4.5b + Phase 8C — Variant-specific column grip handlers
+ * (L-shape, T-shape, I-shape).
  *
  * Pure functions: zero React / DOM / Firestore / canvas deps. Extends τα base
- * grips του `column-grips.ts` με 4 ακόμη grips για τις ασύμμετρες διατομές:
+ * grips του `column-grips.ts` με 6 ακόμη grips για τις ασύμμετρες/πολύπλοκες
+ * διατομές:
  *
- *   - `column-arm-length`    → L-shape only. Inner-corner horizontal edge
- *                              midpoint κατά τοπικό +Y. 1× factor (asymmetric).
- *   - `column-arm-width`     → L-shape only. Inner-corner vertical edge
- *                              midpoint κατά τοπικό +X. 1× factor (asymmetric).
- *   - `column-flange-length` → T-shape only. Δεξιά side edge του πέλματος.
- *                              2× factor (symmetric γύρω από τον κάθετο άξονα).
- *   - `column-web-thickness` → T-shape only. Δεξιά side edge του κορμού.
- *                              2× factor (symmetric).
+ *   - `column-arm-length`         → L-shape. Inner-corner horizontal edge
+ *                                    midpoint κατά τοπικό +Y. 1× factor (asymmetric).
+ *   - `column-arm-width`          → L-shape. Inner-corner vertical edge
+ *                                    midpoint κατά τοπικό +X. 1× factor (asymmetric).
+ *   - `column-flange-length`      → T-shape. Δεξιά side edge του πέλματος.
+ *                                    2× factor (symmetric γύρω από τον κάθετο άξονα).
+ *   - `column-web-thickness`      → T-shape. Δεξιά side edge του κορμού.
+ *                                    2× factor (symmetric).
+ *   - `column-i-flange-thickness` → I-shape (Phase 8C). Top-flange bottom-edge
+ *                                    midpoint κατά τοπικό +Y. 1× factor
+ *                                    (bottom flange mirrors automatically μέσω
+ *                                    geometry).
+ *   - `column-i-web-thickness`    → I-shape (Phase 8C). Αριστερή side edge του
+ *                                    κορμού. 2× factor (web centered around y-axis).
  *
- * Όλα clamp στο `MIN_COLUMN_DIMENSION_MM` (250 mm Eurocode). Όταν
- * `params.lshape` / `params.tshape` undefined, οι handlers materialize
- * defaults από `width/3 + depth/3` (L) ή `width + depth/3` (T) — mirror των
- * `computeColumnGeometry` defaults — ώστε το επόμενο drag να μην ξαναξεκινά
+ * Όλα clamp στο `MIN_COLUMN_DIMENSION_MM` (250 mm Eurocode) — εκτός I-shape
+ * plate thicknesses που clamp στο `MIN_I_PLATE_THICKNESS_MM` (5 mm steel). Όταν
+ * `params.lshape` / `params.tshape` / `params.ishape` undefined, οι handlers
+ * materialize defaults από `width/3 + depth/3` (L) ή `width + depth/3` (T) ή
+ * `DEFAULT_I_FLANGE_THICKNESS_MM` / `DEFAULT_I_WEB_THICKNESS_MM` (I) — mirror
+ * των `computeColumnGeometry` defaults — ώστε το επόμενο drag να μην ξαναξεκινά
  * από τα defaults. Non-matching kinds → no-op (`originalParams` referentially).
  *
  * SSoT:
@@ -24,16 +34,22 @@
  *     `UpdateColumnParamsCommand` at commit time — this module returns ONLY
  *     new `ColumnParams`).
  *
- * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6 §6 Phase 4.5b
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6 §6 Phase 4.5b + Phase 8C
  */
 
 import type { Point2D } from '../../rendering/types/Types';
 import type {
+  ColumnIShapeParams,
   ColumnLshapeParams,
   ColumnParams,
   ColumnTshapeParams,
 } from '../types/column-types';
-import { MIN_COLUMN_DIMENSION_MM } from '../types/column-types';
+import {
+  DEFAULT_I_FLANGE_THICKNESS_MM,
+  DEFAULT_I_WEB_THICKNESS_MM,
+  MIN_COLUMN_DIMENSION_MM,
+  MIN_I_PLATE_THICKNESS_MM,
+} from '../types/column-types';
 import { localToWorld, projectDeltaToLocal } from './column-grip-utils';
 import type { ColumnGripDragInput } from './column-grips';
 
@@ -217,5 +233,101 @@ export function resizeWebThickness(input: Readonly<ColumnGripDragInput>): Column
   return {
     ...originalParams,
     tshape: mergeTshape(originalParams, { webThickness: newWebThickness }),
+  };
+}
+
+// ─── Phase 8C — I-shape (double-T) variant grips ────────────────────────────
+
+/**
+ * Materialize I-shape variant params με defaults mirror των
+ * `computeColumnGeometry`: `flangeThickness = DEFAULT_I_FLANGE_THICKNESS_MM`
+ * (20 mm), `webThickness = DEFAULT_I_WEB_THICKNESS_MM` (15 mm). Exported για
+ * unit-test reuse.
+ */
+export function materializeIshape(
+  params: ColumnParams,
+): { flangeThickness: number; webThickness: number } {
+  return {
+    flangeThickness: params.ishape?.flangeThickness ?? DEFAULT_I_FLANGE_THICKNESS_MM,
+    webThickness: params.ishape?.webThickness ?? DEFAULT_I_WEB_THICKNESS_MM,
+  };
+}
+
+/**
+ * World position του I-shape flangeThickness grip. Top-flange bottom-edge
+ * midpoint (στο `y = depth/2 - tf`, x = 0). Drag κατά +Y μειώνει `flangeThickness`
+ * (1× factor, asymmetric edge — bottom flange mirrors automatically μέσω της
+ * geometry pipeline ώστε η διατομή να μένει symmetric).
+ */
+export function iFlangeThicknessHandlePosition(params: ColumnParams): Point2D {
+  const { flangeThickness } = materializeIshape(params);
+  const local: Point2D = { x: 0, y: params.depth / 2 - flangeThickness };
+  return localToWorld(local, params);
+}
+
+/**
+ * World position του I-shape webThickness grip. Web αριστερή side edge midpoint
+ * (στο `x = -tw/2`, y = 0). Drag κατά +X μειώνει `webThickness` με 2× factor
+ * (symmetric γύρω από τον κάθετο άξονα — mirror του T-shape web-thickness
+ * pattern).
+ */
+export function iWebThicknessHandlePosition(params: ColumnParams): Point2D {
+  const { webThickness } = materializeIshape(params);
+  const local: Point2D = { x: -webThickness / 2, y: 0 };
+  return localToWorld(local, params);
+}
+
+/**
+ * Merge a partial I-shape patch με τα materialized defaults ώστε το επόμενο
+ * drag να μην ξαναξεκινά από τα `DEFAULT_I_*_THICKNESS_MM`. Preserves
+ * `flipY` από το original `ishape` (set από mirror operations, ADR-363 Phase 7.2).
+ */
+function mergeIshape(
+  original: ColumnParams,
+  patch: Partial<{ flangeThickness: number; webThickness: number }>,
+): ColumnIShapeParams {
+  const base = materializeIshape(original);
+  const flipY = original.ishape?.flipY;
+  return {
+    flangeThickness: patch.flangeThickness ?? base.flangeThickness,
+    webThickness: patch.webThickness ?? base.webThickness,
+    ...(flipY !== undefined ? { flipY } : {}),
+  };
+}
+
+/**
+ * I-shape flangeThickness resize. Top-flange bottom-edge handle κατά τοπικό +Y
+ * → 1× factor (asymmetric edge handle — bottom flange mirrors automatically
+ * μέσω geometry ώστε η διατομή να μένει symmetric). Drag +Y μειώνει tf· drag
+ * -Y αυξάνει tf. Clamps στο `MIN_I_PLATE_THICKNESS_MM` (5 mm). Non-I-shape
+ * kinds: no-op.
+ */
+export function resizeIFlangeThickness(input: Readonly<ColumnGripDragInput>): ColumnParams {
+  const { originalParams, delta } = input;
+  if (originalParams.kind !== 'I-shape') return originalParams;
+  const base = materializeIshape(originalParams);
+  const { dyLocal } = projectDeltaToLocal(delta, originalParams.rotation);
+  const newFlangeThickness = Math.max(MIN_I_PLATE_THICKNESS_MM, base.flangeThickness - dyLocal);
+  return {
+    ...originalParams,
+    ishape: mergeIshape(originalParams, { flangeThickness: newFlangeThickness }),
+  };
+}
+
+/**
+ * I-shape webThickness resize. Web αριστερή side edge handle κατά τοπικό +X
+ * → 2× factor (symmetric γύρω από κάθετο άξονα — mirror του T-shape pattern).
+ * Drag +X μειώνει tw· drag -X αυξάνει tw. Clamps στο `MIN_I_PLATE_THICKNESS_MM`
+ * (5 mm). Non-I-shape kinds: no-op.
+ */
+export function resizeIWebThickness(input: Readonly<ColumnGripDragInput>): ColumnParams {
+  const { originalParams, delta } = input;
+  if (originalParams.kind !== 'I-shape') return originalParams;
+  const base = materializeIshape(originalParams);
+  const { dxLocal } = projectDeltaToLocal(delta, originalParams.rotation);
+  const newWebThickness = Math.max(MIN_I_PLATE_THICKNESS_MM, base.webThickness - 2 * dxLocal);
+  return {
+    ...originalParams,
+    ishape: mergeIshape(originalParams, { webThickness: newWebThickness }),
   };
 }

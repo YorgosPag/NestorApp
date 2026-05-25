@@ -35,9 +35,11 @@ import {
   DEFAULT_COLUMN_ROTATION_DEG,
   DEFAULT_COLUMN_WIDTH_MM,
   type ColumnAnchor,
+  type ColumnIShapeParams,
   type ColumnKind,
   type ColumnLshapeParams,
   type ColumnParams,
+  type ColumnPolygonParams,
   type ColumnTshapeParams,
 } from '../types/column-types';
 import {
@@ -59,6 +61,10 @@ export interface ColumnGhostOverrides {
   readonly material?: string;
   readonly lshape?: ColumnLshapeParams;
   readonly tshape?: ColumnTshapeParams;
+  /** ADR-363 Phase 8D — polygon-specific override (sides). */
+  readonly polygon?: ColumnPolygonParams;
+  /** ADR-363 Phase 8D — I-shape-specific override (flange/web thickness). */
+  readonly ishape?: ColumnIShapeParams;
   readonly sceneUnits?: SceneUnits;
 }
 
@@ -103,6 +109,8 @@ function buildGhostParams(
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
     ...(overrides.lshape !== undefined ? { lshape: overrides.lshape } : {}),
     ...(overrides.tshape !== undefined ? { tshape: overrides.tshape } : {}),
+    ...(overrides.polygon !== undefined ? { polygon: overrides.polygon } : {}),
+    ...(overrides.ishape !== undefined ? { ishape: overrides.ishape } : {}),
   };
   return params;
 }
