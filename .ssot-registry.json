@@ -3236,6 +3236,31 @@
       "addedByAdr": "ADR-358",
       "tier": 3
     },
+    "bim-line-weight-resolver": {
+      "ssotFile": "src/subapps/dxf-viewer/config/bim-line-weight-resolver.ts",
+      "description": "ADR-375 Phase A: BIM entity line weight resolution (Revit-equivalent). resolveLineWeightPx(ctx) is the SOLE entry point for BIM entity ctx.lineWidth. BIM renderers (wall/column/slab/beam/opening/slab-opening/stair) MUST call this; FORBIDDEN to use RENDER_LINE_WIDTHS or hardcoded px for main entity stroke. Depends on bim-pen-table (Tier 1) + bim-object-styles (Tier 2) + bim-view-range (Tier 0) + lineweight-iso-catalog (ADR-358 SSoT).",
+      "forbiddenPatterns": [],
+      "allowlist": [
+        "src/subapps/dxf-viewer/config/bim-line-weight-resolver.ts",
+        "src/subapps/dxf-viewer/config/bim-pen-table.ts",
+        "src/subapps/dxf-viewer/config/bim-object-styles.ts",
+        "src/subapps/dxf-viewer/config/bim-view-range.ts",
+        "src/subapps/dxf-viewer/config/__tests__/bim-line-weight-resolver.test.ts",
+        "src/subapps/dxf-viewer/config/__tests__/bim-pen-table.test.ts",
+        "src/subapps/dxf-viewer/config/__tests__/bim-object-styles.test.ts",
+        "src/subapps/dxf-viewer/config/__tests__/bim-view-range.test.ts",
+        "src/subapps/dxf-viewer/bim/renderers/WallRenderer.ts",
+        "src/subapps/dxf-viewer/bim/renderers/SlabRenderer.ts",
+        "src/subapps/dxf-viewer/bim/renderers/ColumnRenderer.ts",
+        "src/subapps/dxf-viewer/bim/renderers/BeamRenderer.ts",
+        "src/subapps/dxf-viewer/bim/renderers/OpeningRenderer.ts",
+        "src/subapps/dxf-viewer/bim/renderers/SlabOpeningRenderer.ts",
+        "src/subapps/dxf-viewer/bim/renderers/StairRenderer.ts"
+      ],
+      "addedDate": "2026-05-25",
+      "addedByAdr": "ADR-375",
+      "tier": 3
+    },
     "resolve-entity-style": {
       "ssotFile": "src/subapps/dxf-viewer/systems/properties/resolve-entity-style.ts",
       "description": "ADR-358 §G7 Phase 6: the ByLayer/ByBlock/Concrete cascade — entity → block → layer → system default for color + linetype + lineweight + transparency — is owned by `resolve-entity-style.ts`. Calls to `resolveEntityStyle()` must live in the centralised renderer path (`DxfRenderer.resolveStyleForRender`) so that `AdminLayerManager` edits propagate live to canvas and snapshot/print/export paths share the same resolution semantics. Bypass call sites flatten styles ad-hoc and break the §G7 LIVE pipeline. Property panels reading provenance for inspection are allowlisted.",

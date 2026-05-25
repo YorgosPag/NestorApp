@@ -366,6 +366,8 @@
 | **ADR-372** | Contact Relationship Bidirectional Crossing Matrix | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-372-relationship-crossings-matrix.md) |
 | **ADR-373** | FileRecord ISO 19650 Metadata Enrichment (Phase 1 + Phase 2 Complete) | ✅ Phase 1 + Phase 2 COMPLETE 2026-05-24 — Schema + AI enricher + manual override UI + virtual folders + backfill admin route + distributed token bucket + suitabilityCode + i18n + cost dashboard (P2.5). Phase 3 (ZIP export, controlled filename, compliance report) deferred. | 2026-05-24 | File Management / Document Governance / AI Pipeline | [📄](./adrs/ADR-373-iso19650-metadata-enrichment.md) |
 | **ADR-374** | ZOOM Window Tool (AutoCAD ZOOM W — singleton store + micro-leaf) | ✅ IMPLEMENTED 2026-05-24 — ZoomWindowStore + ZoomWindowSubscriber + useZoomWindowTool. SSoT cleanup: useZoomWindow hook deleted, ViewState.zoomWindow slot removed. ADR-040 compliant. | 2026-05-24 | Canvas & Rendering | [📄](./adrs/ADR-374-zoom-window-tool.md) |
+| **ADR-375** | BIM Entity Line Weight Semantic System (Revit-Equivalent) | ✅ Phase A IMPLEMENTED 2026-05-25 — 4 SSoT files (bim-pen-table/bim-object-styles/bim-view-range/bim-line-weight-resolver) + 7 BIM renderers migrated + 35 tests PASS. Phase B (Ribbon UI) + Phase C (3D parity) deferred. | 2026-05-25 | Canvas & Rendering / BIM Drawing | [📄](./adrs/ADR-375-bim-entity-line-weight-semantic-system.md) |
+| **ADR-376** | Opening Tags (Revit-Faithful Pattern) — instance Mark + per-kind prefix + floor-prefix hundreds | ✅ Phase A IMPLEMENTED 2026-05-25 — OpeningMarkService + OpeningTagRenderer (canvas-pill SSoT) + Layer SSoT (`__system_opening_tags__`) + i18n (el/en) + ribbon Mark field + migration script. 24 tests. Phase B (BOQ + Renumber) + Phase C (draggable tag) deferred. | 2026-05-25 | DXF Viewer — BIM / Annotation | [📄](./adrs/ADR-376-opening-tags.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -724,6 +726,7 @@
 | **ADR-371** | BIM Corner Snap System (Redirect) | ✅ APPROVED | [View](./adrs/ADR-371-bim-corner-snap-system.md) |
 | **ADR-372** | Contact Relationship Bidirectional Crossing Matrix | ✅ APPROVED | [View](./adrs/ADR-372-relationship-crossings-matrix.md) |
 | **ADR-374** | ZOOM Window Tool (AutoCAD ZOOM W) | ✅ IMPLEMENTED | [View](./adrs/ADR-374-zoom-window-tool.md) |
+| **ADR-375** | BIM Entity Line Weight Semantic System | ✅ Phase A IMPLEMENTED | [View](./adrs/ADR-375-bim-entity-line-weight-semantic-system.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

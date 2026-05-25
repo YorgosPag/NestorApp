@@ -2,7 +2,7 @@
 
 | Status | Date | Author | Strategy |
 |--------|------|--------|----------|
-| ✅ **IMPLEMENTED — Phase A Done** | 2026-05-25 | Giorgio Pagonis + Claude (Sonnet 4.6) | **Full Revit Clone — Enterprise — Unified SSoT with ADR-358** |
+| ✅ **Phase A DONE** · ⏸️ **Phase B Planned (B.1 / B.2 / B.3)** | 2026-05-25 | Giorgio Pagonis + Claude (Sonnet 4.6 / Opus 4.7) | **Full Revit Clone — Enterprise — Unified SSoT with ADR-358** |
 
 **Related ADRs**:
 - ADR-044 — Centralized Canvas Line Widths (current generic SSoT, will coexist)
@@ -642,15 +642,209 @@ Renderer mapping:
 
 > Phase A: όλα τα BIM entities καλούν `resolveLineWeightPx({ category, cutState, scale, dpi })`. Το `cutState` παράγεται αυτόματα από `resolveCutState(entity.zExtents, viewRange)`.
 
-### Phase B — User Customization (future)
+### Phase B — User Customization (Sub-phases B.1 / B.2 / B.3) ⏸️ PENDING
 
-- Ribbon panel "Line Weights" (Revit Manage tab clone):
-  - Tab 1: Pen Table editor (16 × 6 grid)
-  - Tab 2: Object Styles editor (category × pen assignment)
-  - Tab 3: View Range editor (top/cut/bottom/viewDepth per view)
-- `<Beyond>` line style customization (dash pattern + color)
-- Persistence: per-project, firestore `bim_line_weight_settings`
-- Pen Sets (presets): Design / Construction / Presentation (ArchiCAD pattern)
+> **Scope decision (Giorgio, 2026-05-25)**: Σπάσιμο σε 3 υπο-φάσεις, μία ανά session (≤70% context per `feedback_phase_per_session`). Κάθε υπο-φάση = αυτόνομο commit chain + ADR update + ΑΝΑΦΟΡΑ_2 update.
+>
+> **Σύνολο scope**: ~22-30 αρχεία, 5 domains (BIM resolver / Ribbon UI / Firestore / state / i18n).
+> **Execution mode** (αν συνεχιστεί ως ενιαίο): Orchestrator. Με σπάσιμο: Plan Mode + Sonnet σειριακά ανά υπο-φάση.
+
+#### Locked decisions (Giorgio, 2026-05-25)
+
+| # | Decision | Choice |
+|---|----------|--------|
+| 1 | Drawing Scale source | **Β** — Νέος ξεχωριστός selector "Κλίμακα Σχεδίου", **decoupled from zoom** (Revit annotation scale pattern). Δεν αλλάζει με zoom in/out. |
+| 2 | View Range storage | **Α + Β** — Inline στο floorplan document (Level 1, Revit basic) **+** ξεχωριστή `view_templates` library (Level 2, reusable templates) |
+| 3 | Object Styles overrides | **ΝΑΙ** — Πλήρης πίνακας 8 categories × 2 dropdowns (projectionPen / cutPen) per floorplan |
+
+---
+
+#### Phase B.1 — Drawing Scale Selector ⏸️ NEXT
+
+**Goal**: Νέο ribbon input "Κλίμακα Σχεδίου" που ορίζει `scaleDenominator` για τον BIM resolver, **ανεξάρτητο από το viewport zoom**.
+
+**Scope**: ~6 αρχεία (4 new + 2 modified)
+
+##### Files
+
+| # | File | Type | Purpose |
+|---|------|------|---------|
+| 1 | `src/subapps/dxf-viewer/state/drawing-scale-store.ts` | NEW | Zustand store: `drawingScale: number` (default 100) + setter |
+| 2 | `src/subapps/dxf-viewer/ui/ribbon/panels/DrawingScalePanel.tsx` | NEW | Ribbon panel: input "1: ___" + presets (1:10, 1:20, 1:50, 1:100, 1:200, 1:500) |
+| 3 | `src/subapps/dxf-viewer/state/__tests__/drawing-scale-store.test.ts` | NEW | Store tests |
+| 4 | `src/i18n/locales/{el,en}/dxf-viewer-ribbon.json` | MODIFIED | Keys: `drawingScale.label`, `drawingScale.presets.*` |
+| 5 | `src/subapps/dxf-viewer/bim/renderers/*Renderer.ts` (×7) | MODIFIED | Replace `scaleDenominator: 100` (hardcoded) → `useDrawingScale()` getter |
+| 6 | `src/subapps/dxf-viewer/ui/ribbon/RibbonViewTab.tsx` (or similar) | MODIFIED | Mount `<DrawingScalePanel />` |
+
+##### Persistence (B.1)
+
+- **Phase B.1 first cut**: in-memory store only (no Firestore yet)
+- **Phase B.2**: επεκτείνεται με persistence στο floorplan document (`floorplan.drawingScale`)
+
+##### Acceptance
+
+- Drawing Scale input στο ribbon — αλλαγή τιμής triggers redraw όλων των BIM entities με νέα line weights
+- Zoom in/out — η κλίμακα **ΔΕΝ** αλλάζει, οι γραμμές μένουν σταθερές σε mm
+- Defaults: 1:100 αν δεν έχει οριστεί
+- Validation: 1-10000 range (όπως υπάρχον `ScaleControls`)
+- TSC clean + 35 (Phase A) tests still PASS + new B.1 store tests
+
+##### Risk
+
+| Risk | Mitigation |
+|------|-----------|
+| 7 renderers χρειάζονται store getter | Pattern ήδη υπάρχει — Zustand `useStore.getState()` ή dedicated hook |
+| Σύγχυση με υπάρχον `ScaleControls` (1/zoom) | Document explicitly: ScaleControls = display zoom only, DrawingScalePanel = annotation scale (semantic) |
+
+---
+
+#### Phase B.2 — View Range + Object Styles (per floorplan, inline) ⏸️ AFTER B.1
+
+**Goal**: Editable per-floorplan ρυθμίσεις:
+1. View Range (4 numeric inputs: top/cut/bottom/viewDepth mm)
+2. Object Styles overrides (8 categories × 2 pen dropdowns)
+
+Persistence inline στο floorplan document (`floorplan.bimRenderSettings`).
+
+**Scope**: ~10-12 αρχεία (6 new + 4-6 modified)
+
+##### Files
+
+| # | File | Type | Purpose |
+|---|------|------|---------|
+| 1 | `src/subapps/dxf-viewer/services/bim-render-settings.service.ts` | NEW | Firestore CRUD για `floorplan.bimRenderSettings` field |
+| 2 | `src/subapps/dxf-viewer/state/bim-render-settings-store.ts` | NEW | Zustand: current floorplan's settings + setters + Firestore sync |
+| 3 | `src/subapps/dxf-viewer/ui/ribbon/panels/ViewRangePanel.tsx` | NEW | 4 numeric inputs (top, cut, bottom, viewDepth) σε mm |
+| 4 | `src/subapps/dxf-viewer/ui/ribbon/panels/ObjectStylesPanel.tsx` | NEW | Πίνακας 8 categories × 2 dropdowns (1-16 pen indices) |
+| 5 | `src/subapps/dxf-viewer/services/__tests__/bim-render-settings.service.test.ts` | NEW | Service tests |
+| 6 | `src/subapps/dxf-viewer/state/__tests__/bim-render-settings-store.test.ts` | NEW | Store tests |
+| 7 | `src/subapps/dxf-viewer/types/floorplan-types.ts` | MODIFIED | Extend `Floorplan` interface με `bimRenderSettings?: { viewRange, objectStyles, drawingScale }` |
+| 8 | `firestore.rules` | MODIFIED | Validation rule για `bimRenderSettings` subfield (immutable companyId, owner write) |
+| 9 | `src/subapps/dxf-viewer/config/bim-line-weight-resolver.ts` | MODIFIED | Accept override Object Styles map (fallback to `DEFAULT_OBJECT_STYLES`) |
+| 10 | `src/subapps/dxf-viewer/config/bim-view-range.ts` | MODIFIED | Add `resolveViewRange(floorplan): ViewRange` helper (override or default) |
+| 11 | `src/i18n/locales/{el,en}/dxf-viewer-ribbon.json` | MODIFIED | Keys: `viewRange.*`, `objectStyles.*`, category labels |
+| 12 | `src/subapps/dxf-viewer/ui/ribbon/RibbonViewTab.tsx` | MODIFIED | Mount 2 νέα panels |
+
+##### Persistence model (B.2)
+
+```typescript
+// firestore: floorplans/{id}
+{
+  // ... existing fields
+  bimRenderSettings?: {
+    drawingScale: number;              // moved from B.1 in-memory → Firestore
+    viewRange?: Partial<ViewRange>;    // omit → use DEFAULT_VIEW_RANGE
+    objectStyles?: Partial<Record<BimCategory, ObjectStyle>>;  // partial override
+  };
+}
+```
+
+##### Acceptance
+
+- ViewRangePanel: αλλαγή cut plane από 1200 → 800 → οι τοίχοι/κολώνες ξαναυπολογίζουν cutState
+- ObjectStylesPanel: αλλαγή wall.cutPen από 7 → 9 → τοίχοι γίνονται παχύτεροι
+- Firestore persistence: refresh σελίδας → οι ρυθμίσεις παραμένουν
+- Defaults restore button → reset to `DEFAULT_VIEW_RANGE` + `DEFAULT_OBJECT_STYLES`
+- TSC clean + όλα τα Phase A + B.1 tests PASS + νέα B.2 tests
+
+##### Risk
+
+| Risk | Mitigation |
+|------|-----------|
+| Firestore schema migration για legacy floorplans | Optional field, fallback chain `?.bimRenderSettings ?? DEFAULT_*` |
+| Render loop αν store updates trigger Firestore writes | Debounce 500ms, write only on commit (blur/Apply button) |
+| Mass override του ObjectStylesPanel μπερδεύει user | Highlight changed cells, "Reset category" + "Reset all" buttons |
+
+---
+
+#### Phase B.3 — View Templates Library (reusable, Revit Level 2) ⏸️ AFTER B.2
+
+**Goal**: Ξεχωριστή `view_templates` collection — reusable presets που εφαρμόζονται σε πολλά floorplans με ένα κλικ.
+
+**Scope**: ~8-10 αρχεία (5 new + 3-5 modified)
+
+##### Files
+
+| # | File | Type | Purpose |
+|---|------|------|---------|
+| 1 | `src/subapps/dxf-viewer/services/view-template.service.ts` | NEW | Firestore CRUD: list / create / update / delete / apply template |
+| 2 | `src/subapps/dxf-viewer/state/view-template-store.ts` | NEW | Zustand: cached templates list + currently-applied template per floorplan |
+| 3 | `src/subapps/dxf-viewer/ui/ribbon/panels/ViewTemplatesPanel.tsx` | NEW | List τα templates + "Apply to current" + "Save current as template" + "Edit" + "Delete" |
+| 4 | `src/subapps/dxf-viewer/ui/dialogs/ViewTemplateEditorDialog.tsx` | NEW | Modal: edit template name + viewRange + objectStyles + drawingScale |
+| 5 | `src/subapps/dxf-viewer/services/__tests__/view-template.service.test.ts` | NEW | Service tests |
+| 6 | `src/subapps/dxf-viewer/types/floorplan-types.ts` | MODIFIED | Add `appliedViewTemplateId?: string` στο `Floorplan` (cross-link to template) |
+| 7 | `firestore.rules` | MODIFIED | Rules για `view_templates` collection (companyId scoped, role-based write) |
+| 8 | `firestore.indexes.json` | MODIFIED | Composite index `companyId` + `createdAt` για list query |
+| 9 | `src/config/firestore-collections.ts` | MODIFIED | Add `VIEW_TEMPLATES = 'view_templates'` |
+| 10 | `src/subapps/dxf-viewer/ui/ribbon/RibbonViewTab.tsx` | MODIFIED | Mount `<ViewTemplatesPanel />` |
+
+##### Persistence model (B.3)
+
+```typescript
+// firestore: view_templates/{id} — enterprise ID prefix: 'vtmpl_'
+interface ViewTemplate {
+  id: string;
+  companyId: string;
+  name: string;                              // "Standard Plan", "Section Cut Low"
+  description?: string;
+  drawingScale: number;
+  viewRange: ViewRange;
+  objectStyles: Record<BimCategory, ObjectStyle>;
+  createdAt: Timestamp;
+  createdBy: string;
+  updatedAt: Timestamp;
+}
+
+// floorplan reference (optional)
+interface Floorplan {
+  // ...
+  appliedViewTemplateId?: string;   // if set, bimRenderSettings ignored
+}
+```
+
+##### Apply semantics
+
+- Όταν `appliedViewTemplateId` οριστεί → resolver χρησιμοποιεί τις τιμές του template
+- Αλλάζεις το template → όλα τα floorplans που το χρησιμοποιούν ενημερώνονται **αυτόματα** (Revit behavior)
+- "Detach from template" → copies template values στο `floorplan.bimRenderSettings` και αδειάζει `appliedViewTemplateId`
+
+##### Acceptance
+
+- Create template "Στάνταρ Κάτοψη" → εμφανίζεται στο dropdown
+- Apply σε 3 floorplans → όλα κρατούν τις ίδιες ρυθμίσεις
+- Edit template → 3 floorplans αυτόματα ενημερώνονται
+- Delete template ενώ είναι in use → confirmation: "Detach από X floorplans;"
+- Enterprise ID prefix: `vtmpl_` (add to `enterprise-id.service.ts` generators)
+- TSC clean + όλα τα προηγούμενα tests PASS + νέα B.3 tests
+
+##### Risk
+
+| Risk | Mitigation |
+|------|-----------|
+| Stale template reference (template deleted) | Resolver falls back to `DEFAULT_*` αν `appliedViewTemplateId` δεν βρίσκεται |
+| Mass update lag (1 template → 50 floorplans re-render) | Templates loaded once στο store, floorplans listen via store selector (no per-doc Firestore round-trip) |
+| Concurrent edit conflict | Last-write-wins με `updatedAt` ως optimistic version (standard Firestore pattern) |
+
+---
+
+#### Cross-cutting items (όλα τα B sub-phases)
+
+- **<Beyond> line style visual treatment** (dashed pattern + halftone) → Phase B.2 (μέρος του Object Styles)
+- **Pen Table editor** (16 × 6 grid) → **DEFERRED to Phase C** (όχι μέρος B.1/B.2/B.3 per Giorgio's scope)
+- **Pen Sets presets** (Design / Construction / Presentation) → **DEFERRED to Phase C**
+- **i18n keys**: όλα τα νέα UI strings σε el + en locales (Giorgio rule N.11)
+- **Enterprise IDs**: `vtmpl_` prefix στο `enterprise-id.service.ts` (rule N.6)
+- **Pre-commit hooks**: όλα τα PRs περνούν CHECK 3.7 (SSoT ratchet), 3.13 (i18n resolver reachability), 6D (architecture protection)
+
+#### Session boundaries
+
+| Sub-phase | Estimated time | Context budget | Commit chain |
+|-----------|---------------|----------------|--------------|
+| B.1 | ~1.5-2h | ≤50% | 1 commit: "feat(bim/ribbon): drawing scale selector (Phase B.1)" |
+| B.2 | ~3-4h | ≤70% | 2-3 commits (service / panels / wiring) |
+| B.3 | ~3-4h | ≤70% | 2-3 commits (service / panels / wiring) |
+
+> **Rule**: Each sub-phase ends with explicit ADR-375 changelog entry + ΑΝΑΦΟΡΑ_2 update (per CLAUDE.md N.15) + `pending-ratchet-work.md` update if applicable.
 
 ### Phase C — Advanced (future)
 
@@ -770,6 +964,7 @@ Per ISO 128-20 + Revit Architectural Template. Διαφορετικό πάχος
 | 2026-05-25 | 0.4 — Draft (Unified SSoT with ADR-358) | Q4/Q5/Q6/Q8 locked. Shared catalog: Pen Table references `LINEWEIGHT_ISO_VALUES` (ADR-358). Architectural diagram §1.4. Pre-commit ratchet compliance. | Claude (Opus 4.7) |
 | 2026-05-25 | **1.0 — APPROVED (Phase A Ready)** | **Phase A scope locked: 11 files (4 new + 7 modified). Sonnet 4.6 model. Full implementation sequence + pre/post checks + risk register documented §5. Clarification phase complete — Q7/Q9/Q10 deferred to Phase B/C/D.** | Claude (Opus 4.7) |
 | 2026-05-25 | **1.1 — Phase A IMPLEMENTED** | **4 new SSoT files (bim-pen-table, bim-object-styles, bim-view-range, bim-line-weight-resolver) + 4 test files (35 tests PASS) + 7 BIM renderers migrated (Wall/Slab/Column/Beam/Opening/SlabOpening/Stair). TSC clean. All hardcoded RENDER_LINE_WIDTHS.NORMAL replaced with resolveLineWeightPx(). lineweightToPx from ADR-358 SSoT (no mm→px duplication). Phase A: defaults scaleDenominator=100, dpi=96.** | Claude (Sonnet 4.6) |
+| 2026-05-25 | **1.2 — Phase B Sub-phases Planned** | **Phase B split into B.1 / B.2 / B.3 (per Giorgio session-per-phase rule). Locked decisions: (1) Drawing Scale = new selector decoupled from zoom (Revit annotation scale), (2) View Range = Α+Β inline floorplan + separate `view_templates` library, (3) Object Styles overrides = full 8-category × 2-pen table per floorplan. B.1 ~6 files (Drawing Scale store + ribbon panel + 7 renderer wirings). B.2 ~10-12 files (View Range + Object Styles panels + Firestore inline persistence). B.3 ~8-10 files (View Templates library + apply/edit/delete + Firestore collection). Pen Table editor + Pen Sets presets DEFERRED to Phase C.** | Claude (Opus 4.7) |
 
 ---
 
