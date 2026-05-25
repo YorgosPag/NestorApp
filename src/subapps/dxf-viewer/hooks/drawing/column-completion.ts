@@ -74,6 +74,8 @@ export interface ColumnParamOverrides {
   readonly polygon?: ColumnPolygonParams;
   /** ADR-363 Phase 8 — I-shape flange/web thickness override. */
   readonly ishape?: ColumnIShapeParams;
+  /** ADR-363 Phase 8E — catalog profile ID persisted with the column. */
+  readonly catalogProfile?: string;
 }
 
 /**
@@ -137,6 +139,7 @@ export function buildDefaultColumnParams(
     ...(overrides.tshape !== undefined ? { tshape: overrides.tshape } : {}),
     ...(overrides.polygon !== undefined ? { polygon: overrides.polygon } : {}),
     ...(overrides.ishape !== undefined ? { ishape: overrides.ishape } : {}),
+    ...(overrides.catalogProfile !== undefined ? { catalogProfile: overrides.catalogProfile } : {}),
   };
   return params;
 }
