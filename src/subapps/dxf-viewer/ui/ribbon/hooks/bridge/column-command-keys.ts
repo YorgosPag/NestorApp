@@ -15,6 +15,8 @@ export const COLUMN_RIBBON_KEYS = {
     anchor: 'column.params.anchor',
     /** ADR-363 Phase 4.5d — material library ID (4 options: rc/steel/masonry/wood). */
     material: 'column.params.material',
+    /** ADR-363 Phase 8E — catalog profile ID (e.g. 'IPE-300', 'C25/30', or 'custom' sentinel). */
+    catalogProfile: 'column.params.catalogProfile',
   },
   params: {
     /** mm — column width (διάμετρος αν circular). */
@@ -46,7 +48,8 @@ export type ColumnRibbonNumberCommandKey =
 export type ColumnRibbonStringCommandKey =
   | typeof COLUMN_RIBBON_KEYS.stringParams.kind
   | typeof COLUMN_RIBBON_KEYS.stringParams.anchor
-  | typeof COLUMN_RIBBON_KEYS.stringParams.material;
+  | typeof COLUMN_RIBBON_KEYS.stringParams.material
+  | typeof COLUMN_RIBBON_KEYS.stringParams.catalogProfile;
 
 export const COLUMN_RIBBON_NUMBER_KEYS: readonly ColumnRibbonNumberCommandKey[] = [
   COLUMN_RIBBON_KEYS.params.width,
@@ -62,6 +65,7 @@ export const COLUMN_RIBBON_STRING_KEYS: readonly ColumnRibbonStringCommandKey[] 
   COLUMN_RIBBON_KEYS.stringParams.kind,
   COLUMN_RIBBON_KEYS.stringParams.anchor,
   COLUMN_RIBBON_KEYS.stringParams.material,
+  COLUMN_RIBBON_KEYS.stringParams.catalogProfile,
 ];
 
 export const COLUMN_RIBBON_KEYS_ACTIONS = {
@@ -83,22 +87,30 @@ export const COLUMN_RIBBON_BADGE_KEYS = {
 } as const;
 
 /**
- * ADR-363 Phase 8D — panel visibility keys (ADR-358 Phase 7b2b-β pattern).
- *   - `polygonParams`: visible iff `params.kind === 'polygon'` — surfaces sides input.
- *   - `ishapeParams`:  visible iff `params.kind === 'I-shape'` — surfaces flange + web thickness inputs.
+ * ADR-363 Phase 8D/8E — panel visibility keys (ADR-358 Phase 7b2b-β pattern).
+ *   - `polygonParams`:      visible iff `params.kind === 'polygon'` — surfaces sides input.
+ *   - `ishapeParams`:       visible iff `params.kind === 'I-shape'` — surfaces flange + web thickness inputs.
+ *   - `shearWallCatalog`:   visible iff `params.kind === 'shear-wall'` — RC concrete catalog dropdown.
+ *   - `ishapeCatalog`:      visible iff `params.kind === 'I-shape'` — IPE/HEA catalog dropdown.
  */
 export const COLUMN_RIBBON_VISIBILITY_KEYS = {
-  polygonParams: 'column.visibility.polygonParams',
-  ishapeParams: 'column.visibility.ishapeParams',
+  polygonParams:    'column.visibility.polygonParams',
+  ishapeParams:     'column.visibility.ishapeParams',
+  shearWallCatalog: 'column.visibility.shearWallCatalog',
+  ishapeCatalog:    'column.visibility.ishapeCatalog',
 } as const;
 
 export type ColumnRibbonVisibilityKey =
   | typeof COLUMN_RIBBON_VISIBILITY_KEYS.polygonParams
-  | typeof COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams;
+  | typeof COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams
+  | typeof COLUMN_RIBBON_VISIBILITY_KEYS.shearWallCatalog
+  | typeof COLUMN_RIBBON_VISIBILITY_KEYS.ishapeCatalog;
 
 const COLUMN_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
   COLUMN_RIBBON_VISIBILITY_KEYS.polygonParams,
   COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams,
+  COLUMN_RIBBON_VISIBILITY_KEYS.shearWallCatalog,
+  COLUMN_RIBBON_VISIBILITY_KEYS.ishapeCatalog,
 ]);
 
 export function isColumnVisibilityKey(key: string): key is ColumnRibbonVisibilityKey {
