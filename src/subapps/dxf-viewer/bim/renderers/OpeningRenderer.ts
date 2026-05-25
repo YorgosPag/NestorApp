@@ -32,6 +32,8 @@ import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getOpeningGrips } from '../walls/opening-grips';
+import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
+import { HINGE_ARC_SUBDIVISIONS } from '../geometry/opening-geometry';
 
 /** Stroke colour per kind (industry convention — door warm, window cool). */
 const KIND_STROKE: Readonly<Record<OpeningKind, string>> = {
@@ -90,17 +92,16 @@ export class OpeningRenderer extends BaseEntityRenderer {
     }));
   }
 
-  hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
+  hitTest(entity: EntityModel, point: Point2D, _tolerance: number): boolean {
     if (!isOpeningEntity(entity)) return false;
     const opening = entity as OpeningEntity;
-    const bb = opening.geometry?.bbox;
-    if (!bb) return false;
-    return (
-      point.x >= bb.min.x - tolerance &&
-      point.x <= bb.max.x + tolerance &&
-      point.y >= bb.min.y - tolerance &&
-      point.y <= bb.max.y + tolerance
-    );
+    // ADR-363 Bug 1 fix — polygon containment against the 4-vertex outline
+    // (cached στο `geometry.outline.vertices`), όχι το bbox. Opening πρέπει
+    // να κερδίζει hit-test τιe-break έναντι του host wall όταν ο cursor είναι
+    // εντός του cutout rectangle.
+    const verts = opening.geometry?.outline?.vertices;
+    if (!verts || verts.length < 3) return false;
+    return isPointInPolygon(point, verts.map((v) => ({ x: v.x, y: v.y })));
   }
 
   // ─── Internal drawing helpers ──────────────────────────────────────────────
@@ -133,15 +134,49 @@ export class OpeningRenderer extends BaseEntityRenderer {
     }
   }
 
-  /** Dashed quarter-arc swing indicator for door / french-door. */
+  /**
+   * Dashed quarter-arc swing indicator + solid leaf line(s) for door / french-door.
+   *
+   * Industry-standard plan convention (AutoCAD/Revit): door = swing arc (dashed)
+   * + leaf line (solid). The leaf line represents the door panel σε 90°-open
+   * position — connects the hinge anchor (pivot) με την άκρη του arc.
+   *
+   * Geometry contract:
+   *   - `arc.points[0..HINGE_ARC_SUBDIVISIONS]`: first arc (closed → 90°-open)
+   *   - `arc.points[HINGE_ARC_SUBDIVISIONS]`: 90°-open tip του first leaf
+   *   - french-door only: `arc.points[HINGE_ARC_SUBDIVISIONS+1]`: 90°-open tip
+   *     του second leaf (first point of the reversed second-arc loop, sin=1).
+   */
   private drawHingeArc(opening: OpeningEntity): void {
     const arc = opening.geometry.hingeArc;
-    if (!arc || arc.points.length < 2) return;
+    const hinge = opening.geometry.hingeAnchor;
+    if (!arc || arc.points.length < 2 || !hinge) return;
+
     this.ctx.save();
+    // Dashed swing arc.
     this.ctx.setLineDash(HINGE_DASH as unknown as number[]);
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
     this.drawPolyline(arc.points);
+
+    // Solid leaf line(s) — door panel at 90°-open position.
+    this.ctx.setLineDash([]);
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+    this.drawLeafLine(hinge, arc.points[HINGE_ARC_SUBDIVISIONS]);
+
+    const hinge2 = opening.geometry.hingeAnchor2;
+    if (hinge2 && arc.points.length > HINGE_ARC_SUBDIVISIONS + 1) {
+      this.drawLeafLine(hinge2, arc.points[HINGE_ARC_SUBDIVISIONS + 1]);
+    }
     this.ctx.restore();
+  }
+
+  private drawLeafLine(from: { x: number; y: number }, to: { x: number; y: number }): void {
+    const a = this.worldToScreen({ x: from.x, y: from.y });
+    const b = this.worldToScreen({ x: to.x, y: to.y });
+    this.ctx.beginPath();
+    this.ctx.moveTo(a.x, a.y);
+    this.ctx.lineTo(b.x, b.y);
+    this.ctx.stroke();
   }
 
   /** Sliding-door visual cue: long-dashed line down the middle. */
