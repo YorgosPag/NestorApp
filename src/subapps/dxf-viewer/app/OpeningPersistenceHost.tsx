@@ -22,6 +22,7 @@ import type { useLevels } from '../systems/levels';
 import type { OpeningEntity } from '../bim/types/opening-types';
 import { isOpeningEntity } from '../types/entities';
 import { useOpeningPersistence } from '../hooks/data/useOpeningPersistence';
+import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -53,6 +54,15 @@ export function OpeningPersistenceHost({
     if (!e || !isOpeningEntity(e)) return null;
     return e;
   }, [primarySelectedId, currentScene]);
+
+  // ADR-363 Bug 2 — push opening entities στο Bim3DEntitiesStore ώστε ο 3D
+  // viewer να ενσωματώσει wall cutouts (THREE.Shape.holes per-segment).
+  // Mirror του SlabOpeningPersistenceHost pattern. CHECK 6B/6C compliant —
+  // low-freq (user-triggered scene changes).
+  React.useEffect(() => {
+    const openings = (currentScene?.entities.filter(isOpeningEntity) ?? []) as readonly OpeningEntity[];
+    useBim3DEntitiesStore.getState().setOpenings(openings);
+  }, [currentScene]);
 
   useOpeningPersistence({
     companyId: user?.companyId ?? null,
