@@ -14,6 +14,8 @@ export const OPENING_RIBBON_KEYS = {
     handing: 'opening.params.handing',
     /** Door open direction (inward / outward). */
     openDirection: 'opening.params.openDirection',
+    /** ADR-376 Phase A — Instance Mark (free-text, auto-allocated on placement). */
+    mark: 'opening.params.mark',
   },
   params: {
     /** mm — opening width along host wall axis. */
@@ -33,7 +35,8 @@ export type OpeningRibbonNumberCommandKey =
 export type OpeningRibbonStringCommandKey =
   | typeof OPENING_RIBBON_KEYS.stringParams.kind
   | typeof OPENING_RIBBON_KEYS.stringParams.handing
-  | typeof OPENING_RIBBON_KEYS.stringParams.openDirection;
+  | typeof OPENING_RIBBON_KEYS.stringParams.openDirection
+  | typeof OPENING_RIBBON_KEYS.stringParams.mark;
 
 export const OPENING_RIBBON_NUMBER_KEYS: readonly OpeningRibbonNumberCommandKey[] = [
   OPENING_RIBBON_KEYS.params.width,
@@ -45,6 +48,7 @@ export const OPENING_RIBBON_STRING_KEYS: readonly OpeningRibbonStringCommandKey[
   OPENING_RIBBON_KEYS.stringParams.kind,
   OPENING_RIBBON_KEYS.stringParams.handing,
   OPENING_RIBBON_KEYS.stringParams.openDirection,
+  OPENING_RIBBON_KEYS.stringParams.mark,
 ];
 
 export const OPENING_RIBBON_KEYS_ACTIONS = {

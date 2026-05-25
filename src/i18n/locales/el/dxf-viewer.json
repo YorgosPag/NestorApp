@@ -424,5 +424,21 @@
       "skip": "Όχι ευχαριστώ",
       "neverAsk": "Μην ξαναρωτήσεις"
     }
+  },
+  "opening": {
+    "tag": {
+      "prefix": {
+        "door": "Θ",
+        "sliding-door": "Σ",
+        "french-door": "ΔΘ",
+        "window": "Π",
+        "fixed": "ΣΥ"
+      },
+      "basementPrefix": "Υ",
+      "tagVisible": "Εμφάνιση Ταμπελάκι",
+      "duplicateWarning": "Το Mark υπάρχει ήδη σε άλλο άνοιγμα του ορόφου.",
+      "markLabel": "Mark",
+      "layerName": "Ταμπελάκια Ανοιγμάτων"
+    }
   }
 }

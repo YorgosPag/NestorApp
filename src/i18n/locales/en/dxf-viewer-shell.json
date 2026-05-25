@@ -684,6 +684,7 @@
       "wallGeometry": "Geometry",
       "wallMaterial": "Material",
       "wallActions": "Actions",
+      "openingMark": "Mark",
       "openingKind": "Type",
       "openingSize": "Size",
       "openingActions": "Actions",
@@ -1100,6 +1101,7 @@
         }
       },
       "openingEditor": {
+        "mark": "Mark",
         "width": "Width",
         "height": "Height",
         "sillHeight": "Sill Height",

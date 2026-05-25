@@ -82,6 +82,7 @@ const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof OpeningParams>> = {
   [OPENING_RIBBON_KEYS.stringParams.kind]: 'kind',
   [OPENING_RIBBON_KEYS.stringParams.handing]: 'handing',
   [OPENING_RIBBON_KEYS.stringParams.openDirection]: 'openDirection',
+  [OPENING_RIBBON_KEYS.stringParams.mark]: 'mark',
 };
 
 export function useRibbonOpeningBridge(

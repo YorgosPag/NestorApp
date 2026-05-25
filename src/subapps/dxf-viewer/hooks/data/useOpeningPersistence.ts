@@ -24,11 +24,16 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { dequal } from 'dequal';
+import { doc, getDoc } from 'firebase/firestore';
 
+import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { WallEntity } from '../../bim/types/wall-types';
+import type { Level } from '../../systems/levels/config';
 import { computeOpeningGeometry } from '../../bim/geometry/opening-geometry';
 import { validateOpeningParams } from '../../bim/validators/opening-validator';
 import { EventBus } from '../../systems/events/EventBus';
@@ -40,6 +45,7 @@ import {
 } from '../../bim/walls/opening-firestore-service';
 import { recordOpeningChange } from '../../bim/walls/opening-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
+import { getOpeningMarkService } from '../../bim/services/opening-mark-service';
 
 // ============================================================================
 // TYPES
@@ -49,6 +55,7 @@ export type OpeningSaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
+  readonly levels: readonly Level[];
   getLevelScene(levelId: string): SceneModel | null;
   setLevelScene(levelId: string, scene: SceneModel): void;
 }
@@ -128,6 +135,8 @@ export function useOpeningPersistence(
     levelManager,
     primarySelectedOpening,
   } = params;
+
+  const { t } = useTranslation('dxf-viewer');
 
   const [saveState, setSaveState] = useState<OpeningSaveState>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -271,6 +280,74 @@ export function useOpeningPersistence(
     }
   }, [companyId, projectId, buildingId]);
 
+  /**
+   * ADR-376 Phase A — Resolve `params.mark` πριν την πρώτη persist.
+   *
+   * Φάσεις:
+   *   1. Αν entity ήδη έχει mark → skip allocation (idempotent — N.7.2 Q3)
+   *   2. Resolve current `Level.floorId` από `levelManager`. Αν λείπει
+   *      → console.warn + persist χωρίς mark (blank-canvas case, Phase B)
+   *   3. Fetch `FloorDocument.number` από Firestore floors/{floorId}
+   *   4. i18n-resolve kindPrefix + basementPrefix
+   *   5. `OpeningMarkService.allocateMark()` → patched entity
+   *   6. Optimistic scene patch ώστε ο tag να φαίνεται immediately
+   *   7. Persist patched entity
+   */
+  const allocateAndPersistOpening = useCallback(async (entity: OpeningEntity) => {
+    let finalEntity: OpeningEntity = entity;
+    if (
+      entity.params.mark === undefined &&
+      companyId &&
+      projectId &&
+      floorplanId &&
+      levelManager.currentLevelId
+    ) {
+      const level = levelManager.levels.find((l) => l.id === levelManager.currentLevelId);
+      if (!level?.floorId) {
+        // Blank-canvas / non-wizard placement — pending Phase B per handoff Α.
+        // eslint-disable-next-line no-console
+        console.warn('[opening-mark] skipped allocation: level.floorId missing');
+      } else {
+        try {
+          const floorSnap = await getDoc(doc(db, COLLECTIONS.FLOORS, level.floorId));
+          const floorNumber = (floorSnap.data() as { number?: number } | undefined)?.number;
+          if (typeof floorNumber === 'number') {
+            const kindPrefix = t(`opening.tag.prefix.${entity.kind}`);
+            const basementPrefix = t('opening.tag.basementPrefix');
+            const mark = await getOpeningMarkService().allocateMark({
+              companyId,
+              projectId,
+              floorplanId,
+              floorNumber,
+              kind: entity.kind,
+              kindPrefix,
+              basementPrefix,
+            });
+            finalEntity = {
+              ...entity,
+              params: { ...entity.params, mark },
+            } as OpeningEntity;
+
+            // Optimistic scene patch — ο tag εμφανίζεται immediately χωρίς να
+            // περιμένουμε round-trip από Firestore snapshot.
+            const levelId = levelManager.currentLevelId;
+            const scene = levelManager.getLevelScene(levelId);
+            if (scene) {
+              const nextEntities = scene.entities.map((e) =>
+                e.id === finalEntity.id ? finalEntity : e,
+              );
+              levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
+            }
+          }
+        } catch {
+          // Non-fatal — persist χωρίς mark, lazy-allocate σε επόμενο placement
+          // ή μέσω migration script (`npm run bim:migrate:opening-tags`).
+        }
+      }
+    }
+    await persist(finalEntity);
+  }, [persist, companyId, projectId, floorplanId, levelManager, t]);
+
   // Auto-save debounce on selected opening params change.
   useEffect(() => {
     const opening = primarySelectedOpening;
@@ -339,6 +416,9 @@ export function useOpeningPersistence(
   }, [levelManager, companyId]);
 
   // First-save listener — fires άμεσα για freshly drawn openings.
+  // ADR-376 Phase A: lazy-allocate `params.mark` here (single SSoT lifecycle
+  // owner για mark assignment — N.7.2 Q7) πριν το persist + scene optimistic
+  // patch ώστε ο tag να εμφανίζεται immediately χωρίς να περιμένει round-trip.
   useEffect(() => {
     const cleanup = EventBus.on('drawing:entity-created', (payload) => {
       if (payload.tool !== 'opening') return;
@@ -346,10 +426,10 @@ export function useOpeningPersistence(
       if (!entity || (entity as { type?: string }).type !== 'opening') return;
       if (!serviceRef.current) return;
       dirtyIdsRef.current.add(entity.id);
-      void persist(entity);
+      void allocateAndPersistOpening(entity);
     });
     return cleanup;
-  }, [persist]);
+  }, [allocateAndPersistOpening]);
 
   // Phase 2 — Delete-requested listener (bridge emits μετά από confirm).
   useEffect(() => {

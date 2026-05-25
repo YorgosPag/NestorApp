@@ -84,6 +84,28 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
   badgeKey: OPENING_RIBBON_BADGE_KEYS.violations,
   panels: [
     {
+      id: 'opening-mark',
+      labelKey: 'ribbon.panels.openingMark',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'opening.mark',
+                labelKey: 'ribbon.commands.openingEditor.mark',
+                commandKey: OPENING_RIBBON_KEYS.stringParams.mark,
+                comboboxWidthPx: 110,
+                options: [],
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'opening-kind',
       labelKey: 'ribbon.panels.openingKind',
       rows: [

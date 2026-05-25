@@ -684,6 +684,7 @@
       "wallGeometry": "Γεωμετρία",
       "wallMaterial": "Υλικό",
       "wallActions": "Ενέργειες",
+      "openingMark": "Mark",
       "openingKind": "Τύπος",
       "openingSize": "Διαστάσεις",
       "openingActions": "Ενέργειες",
@@ -1100,6 +1101,7 @@
         }
       },
       "openingEditor": {
+        "mark": "Mark",
         "width": "Πλάτος",
         "height": "Ύψος",
         "sillHeight": "Ύψος Ποδιάς",

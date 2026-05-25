@@ -32,6 +32,7 @@
     "typecheck:strict": "tsc --noEmit --strict",
     "validate:project": "bash scripts/validate-project-rules.sh",
     "i18n:audit": "bash scripts/i18n-audit.sh",
+    "bim:migrate:opening-tags": "npx ts-node scripts/bim/migrate-opening-tags.ts",
     "i18n:baseline": "bash scripts/generate-i18n-baseline.sh",
     "ui-strings:audit": "bash scripts/ui-strings-audit.sh",
     "ui-strings:baseline": "bash scripts/generate-ui-strings-baseline.sh",

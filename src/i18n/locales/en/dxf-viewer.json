@@ -424,5 +424,21 @@
       "skip": "No thanks",
       "neverAsk": "Don't ask again"
     }
+  },
+  "opening": {
+    "tag": {
+      "prefix": {
+        "door": "D",
+        "sliding-door": "SD",
+        "french-door": "FD",
+        "window": "W",
+        "fixed": "FX"
+      },
+      "basementPrefix": "B",
+      "tagVisible": "Show Tag",
+      "duplicateWarning": "Mark already exists on another opening of this floor.",
+      "markLabel": "Mark",
+      "layerName": "Opening Tags"
+    }
   }
 }

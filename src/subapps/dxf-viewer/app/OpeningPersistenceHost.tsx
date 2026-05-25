@@ -26,7 +26,7 @@ import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
+  'getLevelScene' | 'setLevelScene' | 'currentLevelId' | 'levels'
 >;
 
 export interface OpeningPersistenceHostProps {
