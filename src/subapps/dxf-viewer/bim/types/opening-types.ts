@@ -85,6 +85,24 @@ export interface OpeningParams {
   readonly material?: string;
   /** Glazing panes — 1 single / 2 double / 3 triple. Window / french-door / fixed. */
   readonly glazingPanes?: 1 | 2 | 3;
+  /**
+   * ADR-376 Phase A — Instance Mark (ταμπελάκι). Auto-allocated on placement
+   * via `OpeningMarkService` with per-kind prefix + floor-prefix hundreds
+   * (e.g. `Θ.101`, `Π.001`, `ΣΥ.205`). User override-able. Undefined for
+   * legacy openings; lazy-allocated on first render (migration script).
+   */
+  readonly mark?: string;
+  /**
+   * ADR-376 Phase A — Per-opening tag visibility override.
+   * `undefined` → defaults to layer `__system_opening_tags__` visibility.
+   * `false` → tag hidden even when the layer is ON.
+   */
+  readonly tagVisible?: boolean;
+  /**
+   * ADR-376 Phase C — Custom tag position offset (mm) from the auto-centroid.
+   * Phase A leaves this `undefined`; reserved για draggable tag implementation.
+   */
+  readonly tagOffset?: { readonly dx: number; readonly dy: number };
 }
 
 // ─── Geometry cache (derivable from params + host wall; SSoT = params) ──────
