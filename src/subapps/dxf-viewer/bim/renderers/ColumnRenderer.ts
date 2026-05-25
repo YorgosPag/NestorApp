@@ -38,6 +38,8 @@ import { isColumnEntity } from '../../types/entities';
 import type { ColumnEntity, ColumnKind } from '../types/column-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
+import { resolveCutState, DEFAULT_VIEW_RANGE } from '../../config/bim-view-range';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getColumnGrips } from '../columns/column-grips';
 import {
@@ -121,7 +123,11 @@ export class ColumnRenderer extends BaseEntityRenderer {
     this.drawMaterialHatch(column);
 
     this.ctx.strokeStyle = KIND_STROKE[column.kind];
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+    const _colCutState = resolveCutState(
+      { zBottomMm: column.params.baseOffset ?? 0, zTopMm: (column.params.baseOffset ?? 0) + column.params.height, category: 'column' },
+      DEFAULT_VIEW_RANGE,
+    );
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'column', cutState: _colCutState, scaleDenominator: 100, dpi: 96 });
     this.drawPolygonPath(verts);
     this.ctx.stroke();
     this.ctx.restore();
