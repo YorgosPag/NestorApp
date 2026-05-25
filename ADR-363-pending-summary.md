@@ -30,6 +30,8 @@ _Ενημέρωση 2026-05-25 (4η): Νέα sub-track **Phase 8 Column Shapes**
 | 8 Column Shapes B | Validator + ColumnRenderer +3 kind colors + drawPolygonSideLabel + drawIShapeLabels + column-hatch-patterns diagonal-line zero-line bugfix (2026-05-25) |
 | 8 Column Shapes C | column-anchors polygon branch + polygonBboxMm SSoT + column-grips dispatcher (polygon 3 / I-shape 6 / shear-wall 4 grips) + column-variant-grips materializeIshape + useGripDimAnnotation +2 cases. 635/635 column subtree PASS (2026-05-25) |
 | 8 Column Shapes D | Ribbon kind selector 4→7 + conditional polygon/I-shape numeric input panels (visibilityKey pattern) + columnToolBridgeStore single-writer + drawing-mode synthetic resolver + useRibbonColumnBridge NESTED_NUMBER_KEY_TO_PATH + getPanelVisibility. 18 bridge + 6 ghost tests added (2026-05-25) |
+| 8 Column Shapes E | Section Catalog Presets (Revit-style): section-catalog.ts SSoT (5 Eurocode 2 RC + 10 EN 10025-2 IPE/HEA) + column-bridge-catalog-helpers.ts + ColumnParams.catalogProfile persist + 2 visibility-gated catalog ribbon panels + useRibbonColumnBridge catalog batch-write + Custom sentinel on manual edit. TSC PASS. 23/23 tests (2026-05-25) |
+| 8 Column Shapes F | Permanent dimension pill labels (Revit-style): canvas-pill.ts SSOT (pillPath + 5 constants, N.0.2 fix) + column-dim-labels.ts (formatColumnDimLabels 7 kinds + catalogProfile prefix + drawColumnDimPill centred multi-line) + ColumnRenderer.drawCenterDimLabel() (highlighted\|\|selected) + useGripDimAnnotation imports canvas-pill SSOT. 18/18 tests (2026-05-25) |
 
 ---
 
