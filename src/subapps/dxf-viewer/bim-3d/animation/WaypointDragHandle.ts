@@ -14,17 +14,25 @@
 
 import {
   BufferGeometry,
+  Camera,
   CanvasTexture,
+  ConeGeometry,
   Color,
+  CylinderGeometry,
   Float32BufferAttribute,
   Group,
   Line,
   LineBasicMaterial,
+  Mesh,
+  MeshBasicMaterial,
+  Raycaster,
   Sprite,
   SpriteMaterial,
+  Vector2,
   type Scene,
 } from 'three';
 import { CAD_UI_COLORS } from '../../config/color-config';
+import { AXIS_COLORS, AXIS_COLORS_DIM, type AxisLock } from './axis-constraint-projector';
 import {
   selectActiveWaypoint,
   selectAnimationToolActive,
@@ -37,6 +45,14 @@ export type WaypointHandleRole = 'position' | 'target';
 const HANDLE_SIZE_WORLD = 0.08;
 const TEXTURE_PX = 32;
 
+const GIZMO_SHAFT_RADIUS = 0.004;
+const GIZMO_SHAFT_LENGTH = 0.05;
+const GIZMO_CONE_RADIUS = 0.012;
+const GIZMO_CONE_HEIGHT = 0.02;
+const GIZMO_OPACITY_ACTIVE = 1.0;
+const GIZMO_OPACITY_INACTIVE = 0.35;
+const GIZMO_OPACITY_DEFAULT = 0.6;
+
 interface WaypointHandleHandles {
   readonly root: Group;
   readonly positionSprite: Sprite;
@@ -47,8 +63,12 @@ interface WaypointHandleHandles {
 export class WaypointDragHandleRenderer {
   private readonly scene: Scene;
   private readonly handles: WaypointHandleHandles;
+  private readonly gizmoGroup: Group;
+  private readonly gizmoRaycaster = new Raycaster();
+  private readonly gizmoNdc = new Vector2();
   private readonly unsubWaypoint: () => void;
   private readonly unsubToolActive: () => void;
+  private readonly unsubAxisLock: () => void;
   private hoverRole: WaypointHandleRole | null = null;
   private disposed = false;
 
@@ -57,6 +77,10 @@ export class WaypointDragHandleRenderer {
     this.handles = createHandlesGroup();
     this.handles.root.visible = false;
     this.scene.add(this.handles.root);
+
+    this.gizmoGroup = createGizmoGroup();
+    this.gizmoGroup.visible = false;
+    this.scene.add(this.gizmoGroup);
 
     this.applyState(
       useAnimationStore.getState().toolActive
@@ -79,6 +103,14 @@ export class WaypointDragHandleRenderer {
         if (this.disposed) return;
         const waypoint = active ? selectActiveWaypoint(useAnimationStore.getState()) : null;
         this.applyState(waypoint);
+      },
+    );
+
+    this.unsubAxisLock = useAnimationStore.subscribe(
+      (s) => s.dragAxisLock,
+      (axis) => {
+        if (this.disposed) return;
+        this.setAxisLockVisual(axis);
       },
     );
   }
@@ -105,11 +137,53 @@ export class WaypointDragHandleRenderer {
     this.hoverRole = role;
     paintSprite(this.handles.positionSprite, 'position', role);
     paintSprite(this.handles.targetSprite, 'target', role);
+    const waypoint = selectActiveWaypoint(useAnimationStore.getState());
+    if (waypoint) positionGizmo(this.gizmoGroup, waypoint, role);
+  }
+
+  /** ADR-366 §C.1.b — update gizmo arrow opacity to reflect active axis lock. */
+  setAxisLockVisual(axis: AxisLock | null): void {
+    if (this.disposed) return;
+    for (const child of this.gizmoGroup.children) {
+      const childAxis = child.userData['axis'] as AxisLock | undefined;
+      if (!childAxis) continue;
+      const opacity = axis === null
+        ? GIZMO_OPACITY_DEFAULT
+        : childAxis === axis ? GIZMO_OPACITY_ACTIVE : GIZMO_OPACITY_INACTIVE;
+      setGizmoArrowOpacity(child as Group, opacity);
+    }
+  }
+
+  /**
+   * ADR-366 §C.1.b — raycast gizmo arrows to detect axis clicks.
+   * Returns the clicked axis or null. Must be called BEFORE handle pick.
+   */
+  pickAxisArrow(
+    domElement: HTMLElement,
+    camera: Camera,
+    clientX: number,
+    clientY: number,
+  ): AxisLock | null {
+    if (this.disposed || !this.gizmoGroup.visible) return null;
+    const rect = domElement.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return null;
+    this.gizmoNdc.set(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1,
+    );
+    this.gizmoRaycaster.setFromCamera(this.gizmoNdc, camera);
+    const hits = this.gizmoRaycaster.intersectObjects(this.gizmoGroup.children, true);
+    for (const hit of hits) {
+      const axis = readGizmoAxis(hit.object);
+      if (axis !== null) return axis;
+    }
+    return null;
   }
 
   private applyState(waypoint: Waypoint | null): void {
     if (waypoint === null) {
       this.handles.root.visible = false;
+      this.gizmoGroup.visible = false;
       return;
     }
     this.handles.positionSprite.position.set(
@@ -124,6 +198,9 @@ export class WaypointDragHandleRenderer {
     );
     updateLineGeometry(this.handles.line, waypoint);
     this.handles.root.visible = true;
+    positionGizmo(this.gizmoGroup, waypoint, this.hoverRole);
+    this.gizmoGroup.visible = true;
+    this.setAxisLockVisual(useAnimationStore.getState().dragAxisLock);
   }
 
   dispose(): void {
@@ -131,11 +208,14 @@ export class WaypointDragHandleRenderer {
     this.disposed = true;
     this.unsubWaypoint();
     this.unsubToolActive();
+    this.unsubAxisLock();
     this.scene.remove(this.handles.root);
+    this.scene.remove(this.gizmoGroup);
     disposeHandle(this.handles.positionSprite);
     disposeHandle(this.handles.targetSprite);
     this.handles.line.geometry.dispose();
     (this.handles.line.material as LineBasicMaterial).dispose();
+    disposeGizmoGroup(this.gizmoGroup);
   }
 }
 
@@ -228,4 +308,73 @@ function disposeHandle(sprite: Sprite): void {
   const mat = sprite.material as SpriteMaterial;
   mat.map?.dispose();
   mat.dispose();
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Axis gizmo helpers (ADR-366 §C.1.b)
+// ──────────────────────────────────────────────────────────────────────────────
+
+function createGizmoGroup(): Group {
+  const group = new Group();
+  group.name = 'waypoint_axis_gizmo';
+  group.renderOrder = 997;
+  const axes: AxisLock[] = ['X', 'Y', 'Z'];
+  for (const axis of axes) {
+    group.add(createAxisArrow(axis));
+  }
+  return group;
+}
+
+function createAxisArrow(axis: AxisLock): Group {
+  const color = AXIS_COLORS[axis];
+  const mat = new MeshBasicMaterial({ color, transparent: true, opacity: GIZMO_OPACITY_DEFAULT, depthTest: false });
+  const shaftGeo = new CylinderGeometry(GIZMO_SHAFT_RADIUS, GIZMO_SHAFT_RADIUS, GIZMO_SHAFT_LENGTH, 6);
+  const shaft = new Mesh(shaftGeo, mat);
+  shaft.position.y = GIZMO_SHAFT_LENGTH / 2;
+  const tipGeo = new ConeGeometry(GIZMO_CONE_RADIUS, GIZMO_CONE_HEIGHT, 6);
+  const tip = new Mesh(tipGeo, mat.clone());
+  tip.position.y = GIZMO_SHAFT_LENGTH + GIZMO_CONE_HEIGHT / 2;
+  const arrow = new Group();
+  arrow.add(shaft, tip);
+  arrow.userData['axis'] = axis;
+  arrow.userData['kind'] = 'axis-gizmo';
+  if (axis === 'X') arrow.rotation.z = -Math.PI / 2;
+  else if (axis === 'Z') arrow.rotation.x = Math.PI / 2;
+  return arrow;
+}
+
+function positionGizmo(gizmoGroup: Group, waypoint: Waypoint, hoverRole: WaypointHandleRole | null): void {
+  const ref = hoverRole === 'target' ? waypoint.target : waypoint.position;
+  gizmoGroup.position.set(ref.x, ref.y, ref.z);
+}
+
+function setGizmoArrowOpacity(arrow: Group, opacity: number): void {
+  for (const child of arrow.children) {
+    const mesh = child as Mesh;
+    if (mesh.material) {
+      (mesh.material as MeshBasicMaterial).opacity = opacity;
+    }
+  }
+}
+
+function readGizmoAxis(object: import('three').Object3D | null): AxisLock | null {
+  let obj = object;
+  while (obj) {
+    if (obj.userData['kind'] === 'axis-gizmo') {
+      const axis = obj.userData['axis'] as AxisLock | undefined;
+      if (axis === 'X' || axis === 'Y' || axis === 'Z') return axis;
+    }
+    obj = obj.parent;
+  }
+  return null;
+}
+
+function disposeGizmoGroup(group: Group): void {
+  for (const child of group.children) {
+    const arrow = child as Group;
+    for (const mesh of arrow.children) {
+      (mesh as Mesh).geometry.dispose();
+      ((mesh as Mesh).material as MeshBasicMaterial).dispose();
+    }
+  }
 }
