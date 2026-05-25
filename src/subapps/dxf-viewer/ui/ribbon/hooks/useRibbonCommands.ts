@@ -1,4 +1,6 @@
 import React from 'react';
+import { useAnimationStore } from '../../../bim-3d/animation/AnimationStore';
+import { SNAP_STEP_PRESETS } from '../../../bim-3d/animation/snap-quantizer';
 import type { ToolType } from '../../toolbar/types';
 import type {
   RibbonCommandsApi,
@@ -65,6 +67,12 @@ interface UseRibbonCommandsProps {
   xlineModeBridge: RibbonXlineModeBridge;
 }
 
+/** Combobox options for the animation snap step (mirrors SNAP_STEP_PRESETS). */
+const SNAP_STEP_COMBOBOX_OPTIONS = SNAP_STEP_PRESETS.map((v) => ({
+  value: String(v),
+  labelKey: `animation.snapStepOptions.${v % 1 === 0 ? String(Math.round(v)) : String(v)}`,
+}));
+
 export function useRibbonCommands({
   activeTool,
   handleToolChange,
@@ -82,11 +90,22 @@ export function useRibbonCommands({
   lineToolBridge,
   xlineModeBridge,
 }: UseRibbonCommandsProps): RibbonCommandsApi {
+  // ADR-366 §C.1.b snap-to-grid — subscribe so ribbon re-renders on snap change.
+  const snapEnabled = useAnimationStore((s) => s.snapEnabled);
+  const snapStepUnits = useAnimationStore((s) => s.snapStepUnits);
+
   // Compose: stair-prefixed keys → stairBridge; array-prefixed → arrayBridge;
   // everything else falls through to the text-editor bridge. All bridges
   // no-op on keys they don't own, but the prefix checks short-circuit.
   const onComboboxChange = React.useCallback(
     (key: string, value: string) => {
+      if (key === 'animation.snap-step') {
+        const step = parseFloat(value);
+        if (!Number.isNaN(step) && step > 0) {
+          useAnimationStore.getState().setSnapStepUnits(step);
+        }
+        return;
+      }
       if (isStairRibbonKey(key) || isStairRibbonStringKey(key)) {
         stairBridge.onComboboxChange(key, value);
         return;
@@ -134,6 +153,9 @@ export function useRibbonCommands({
 
   const getComboboxState = React.useCallback(
     (key: string): RibbonComboboxState | null => {
+      if (key === 'animation.snap-step') {
+        return { value: String(snapStepUnits), options: SNAP_STEP_COMBOBOX_OPTIONS };
+      }
       if (isStairRibbonKey(key) || isStairRibbonStringKey(key)) return stairBridge.getComboboxState(key);
       if (isWallRibbonKey(key) || isWallRibbonStringKey(key) || isWallRibbonToggleKey(key)) return wallBridge.getComboboxState(key);
       if (isOpeningRibbonKey(key) || isOpeningRibbonStringKey(key)) return openingBridge.getComboboxState(key);
@@ -146,7 +168,7 @@ export function useRibbonCommands({
       if (isXlineRibbonKey(key)) return xlineModeBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const onToggle = React.useCallback(
@@ -166,11 +188,12 @@ export function useRibbonCommands({
 
   const getToggleState = React.useCallback(
     (key: string): RibbonToggleState => {
+      if (key === 'animation.snap-toggle') return snapEnabled;
       if (isWallRibbonToggleKey(key)) return wallBridge.getToggleState(key);
       if (isArrayRibbonToggleKey(key)) return arrayBridge.getToggleState(key);
       return textEditorBridge.getToggleState(key);
     },
-    [wallBridge, arrayBridge, textEditorBridge],
+    [snapEnabled, wallBridge, arrayBridge, textEditorBridge],
   );
 
   // ADR-358 Phase 7b1 — Stair bridge owns badge keys; ADR-363 Phase 1B adds
