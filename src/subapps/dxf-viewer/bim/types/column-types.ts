@@ -197,6 +197,12 @@ export interface ColumnParams {
   readonly topOffset: number;
   /** mm. Required ΟΤΑΝ topBinding='unconnected'. Free-standing height. */
   readonly unconnectedHeight?: number;
+  /**
+   * ADR-363 Phase 8E — Catalog profile ID (e.g. 'IPE-300', 'C25/30').
+   * Persisted so BOQ and re-opened drawings show the standard section name.
+   * Undefined / absent = user-defined ("Custom"). Revit-style pattern.
+   */
+  readonly catalogProfile?: string;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────
