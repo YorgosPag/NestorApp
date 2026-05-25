@@ -152,6 +152,11 @@ export function useRibbonOpeningBridge(
       if (isOpeningRibbonStringKey(commandKey)) {
         const field = STRING_KEY_TO_FIELD[commandKey];
         const nextParams: OpeningParams = { ...opening.params, [field]: value as OpeningKind } as OpeningParams;
+        // ADR-376 Phase B.1 — Mark edits flip markIsManual to true so
+        // future Renumber operations preserve the user's choice by default.
+        if (field === 'mark') {
+          (nextParams as { -readonly [K in keyof OpeningParams]: OpeningParams[K] }).markIsManual = true;
+        }
         // Switching kind also retargets defaults: if user picks a kind that has
         // no handing/openDirection (window/fixed), leave those undefined.
         dispatchParams(opening, nextParams);
@@ -196,6 +201,12 @@ export function useRibbonOpeningBridge(
           levelId: levelManager.currentLevelId,
           entityType: 'opening',
         });
+        return;
+      }
+      if (action === OPENING_RIBBON_KEYS_ACTIONS.renumber) {
+        // ADR-376 Phase B.1 — Open Renumber dialog. No selection prereq —
+        // the modal owns scope/kind controls and falls back to current floor.
+        EventBus.emit('bim:opening-renumber-requested', {});
         return;
       }
       if (action !== OPENING_RIBBON_KEYS_ACTIONS.delete) return;

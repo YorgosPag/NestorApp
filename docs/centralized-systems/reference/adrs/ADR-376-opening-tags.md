@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | ✅ **PHASE_A_DONE** 2026-05-25 — Core implementation complete. Tags rendered on placement με auto-allocated instance Mark. Phase B (BOQ Schedule + Renumber command) + Phase C (draggable tag) pending. |
+| **Status** | ✅ **PHASE_B1_DONE** 2026-05-25 — Phase A core complete + Phase B.1 Renumber Openings command shipped. Phase B.2 (BOQ Schedule signature group-by) + Phase C (draggable tag) pending. |
 | **Date** | 2026-05-25 |
 | **Category** | DXF Viewer — BIM / Annotation |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-376-opening-tags.md` |
@@ -323,13 +323,33 @@ Zoom threshold: tag visible μόνο σε zoom ≥ `OPENING_TAG_MIN_ZOOM` (e.g. 
 
 ## 7. Phases
 
-| Φάση | Περιεχόμενο | Εξάρτηση | Εκτίμηση |
-|---|---|---|---|
-| **A** (core) | `mark` field, `OpeningMarkService` (per floor+kind allocator), `OpeningTagRenderer`, auto-numbering on placement, ribbon inputs, layer toggle, validator, i18n keys (5 prefixes el+en), 2D-only enforcement | All Q1-Q10 resolved | **~6-10h** (μειωμένο από v2 λόγω Q3) |
-| **B** (schedule) | BOQ integration (ADR-175 group-by signature για visual aggregation), "Renumber Openings" command | Phase A | **~4-6h** |
-| **C** (polish) | Draggable tag + leader line, custom styling per project, export to PDF schedule | Phase B | **~8-10h** |
+| Φάση | Περιεχόμενο | Εξάρτηση | Εκτίμηση | Status |
+|---|---|---|---|---|
+| **A** (core) | `mark` field, `OpeningMarkService` (per floor+kind allocator), `OpeningTagRenderer`, auto-numbering on placement, ribbon inputs, layer toggle, validator, i18n keys (5 prefixes el+en), 2D-only enforcement | All Q1-Q10 resolved | **~6-10h** | ✅ DONE 2026-05-25 |
+| **B.1** (renumber) | Manual "Renumber Openings" command + ICommand undo + Dialog modal (scope + kind filter + manual-include toggle) + `markIsManual` tracking on ribbon Mark edits + Annotate ribbon tab global button + contextual quick-action | Phase A | **~3-4h** | ✅ DONE 2026-05-25 |
+| **B.2** (BOQ schedule) | BOQ integration (ADR-175 group-by Mode C signature — `kind + width + height + sillHeight + openingDirection`), parent/children rows mirroring multi-layer wall pattern (Phase 6.1) | Phase A | **~3-4h** | ⏸️ PENDING |
+| **C** (polish) | Draggable tag + leader line, custom styling per project, export to PDF schedule | Phase B | **~8-10h** | ⏸️ PENDING |
 
-**Total Phase A+B = ~10-16h** (ready-to-implement, μειωμένο ~30% λόγω εξάλειψης OpeningTypeCatalog).
+**Total Phase A+B.1+B.2 = ~12-18h** (Phase A+B.1 already shipped ~10-14h, Phase B.2 remaining ~3-4h).
+
+### 4.9 Manual mark override tracking (Phase B.1)
+
+To honor industry-standard "preserve manual edits" semantics during a renumber pass (5/5 convergence — IMAGINiT Door Mark Update, ArchiCAD Element ID Manager, Tekla locked marks, Bentley AECOsim, Vectorworks), the `OpeningParams` schema gains:
+
+```typescript
+readonly markIsManual?: boolean;
+```
+
+**Semantics**:
+- Undefined / false → mark is auto-allocated. Eligible for renumber.
+- true → user typed the Mark via the ribbon. Skipped by default in renumber.
+
+**Set points**:
+- `useRibbonOpeningBridge.onComboboxChange` for `commandKey === 'opening.params.mark'` upgrades the next params patch με `markIsManual: true`.
+- Auto-allocator (`useOpeningPersistence.allocateAndPersistOpening`) never sets it true.
+- `RenumberOpeningsCommand.execute()` resets it to `false` on its in-scope rows so subsequent renumbers stay automatic.
+
+**Modal opt-out**: The "Επανεκκίνηση και των χειροκίνητων αλλαγών" checkbox (default unchecked) flips the renumber filter to `includeManual=true` — wipes manual overrides for the active scope.
 
 ---
 
@@ -380,6 +400,12 @@ Zoom threshold: tag visible μόνο σε zoom ≥ `OPENING_TAG_MIN_ZOOM` (e.g. 
 - **2026-05-25** (v5.1 — Phase A polish) — Layers panel UI toggle: new `AnnotationsSection.tsx` component wired στο `LevelPanel` ως ξεχωριστή section κάτω από το `LayersSection`. `Switch` (variant=`status`) εναλλάσσει global εμφάνιση opening tags μέσω SSoT setters. i18n keys προστέθηκαν σε `dxf-viewer-panels.{el,en}.json`. +9 SSoT unit tests (`__tests__/opening-tag-layer.test.ts`). `.ssot-registry.json` νέο entry `opening-tag-layer` (Tier 3, forbids inline `__system_opening_tags__` literal εκτός SSoT). Πλέον ο user μπορεί να ενεργοποιεί/απενεργοποιεί τα tags χωρίς console. Pending Phase A items closed: 1 (Layers panel UI button DONE), 1 left (manual smoke test με αληθινό DXF — requires browser session).
 - **2026-05-25** (v5.2 — Phase A bug fix) — Cross-floor allocator filter fix στο `opening-mark-service.ts:parseMarkSeq`. Pre-existing bug από original Phase A commit `8ecc7b1a`: standard-floor branch δεχόταν seq ∈ [1, 9999] χωρίς per-floor band check → allocator τραβούσε cross-floor max+1 (π.χ. floor=0 με existing `Θ.205` έδινε `Θ.206` αντί `Θ.002`). Fix: seq cap reduced σε [1, 99] per ADR-376 §4.1 floor-prefix hundreds convention (`Θ.001..Θ.099` ground, `Θ.101..Θ.199` first floor κλπ). Test suite green: 20/20 PASS (previously 19/20).
 - **2026-05-25** (v5.3 — Blank-canvas decision) — Giorgio resolved pending open question (Option D — defer): silent skip στο blank-canvas / non-wizard placement παραμένει final design. §8 Out-of-scope τεκμηρίωσε την απόφαση + rationale. Pending-ratchet entry «blank-canvas non-wizard placement» CLOSED. Zero code change required.
+- **2026-05-25** (v6 — PHASE_B1_DONE) — **Phase B.1 implementation complete** (Renumber Openings command, IMAGINiT-style). 3 OQs resolved (BOQ grouping Mode C — Phase B.2 scope, ribbon placement = contextual + Annotate tab, override policy = preserve manual via 5/5 industry convergence). Phase 7 expanded with status column + B.1/B.2 split + §4.9 new section "Manual mark override tracking" documenting `markIsManual` flag semantics + renumber reset behavior.
+  - NEW files (5): `bim/services/opening-renumber-service.ts` (pure `computeRenumberUpdates()` + Firestore fetch wrapper), `bim/services/__tests__/opening-renumber-service.test.ts` (12 unit assertions), `core/commands/entity-commands/RenumberOpeningsCommand.ts` (ICommand + writeBatch + scene optimistic update + undo), `ui/components/bim-openings/RenumberOpeningsDialog.tsx` (Radix Dialog + scope radio + kind checkbox grid + manual-include toggle + live preview count), `ui/components/bim-openings/RenumberOpeningsHost.tsx` (EventBus listener + companyId/projectId/floorplanId wiring + sceneManager adapter), `ui/ribbon/data/annotate-tab-openings.ts` (new ribbon panel).
+  - MODIFIED files (9): `bim/types/opening-types.ts` (+`markIsManual` optional flag), `ui/ribbon/hooks/bridge/opening-command-keys.ts` (+`renumber` action key), `ui/ribbon/data/contextual-opening-tab.ts` (+`opening-renumber` panel button), `ui/ribbon/data/ribbon-default-tabs.ts` (annotate tab uses `ANNOTATE_OPENINGS_PANEL`), `ui/ribbon/hooks/useRibbonOpeningBridge.ts` (+`onAction` renumber emits EventBus event + Mark edits set `markIsManual: true`), `ui/ribbon/components/buttons/RibbonButtonIcon.tsx` (+`bim-opening-renumber` icon case using `RefreshCw`), `systems/events/EventBus.ts` (+`bim:opening-renumber-requested` event), `app/DxfViewerContent.tsx` (lazy mount `RenumberOpeningsHost`), `i18n/locales/{el,en}/dxf-viewer-shell.json` (+`ribbon.commands.openingEditor.renumber.*` + panel labels `openingRenumber`/`annotateOpenings`).
+  - Tests: 12/12 PASS (current-floor 10 + all-floors 2). Covers: empty rows, single-floor no-gaps, gap filling (1,2,4,7 → 1,2,3,4), per-kind isolation, basement floor, manual preserve, manual wipe, idempotency, out-of-scope skip, kindFilter skip, multi-floor + multi-kind ordering, missing-floorId skip.
+  - Industry pattern: 5/5 convergence (IMAGINiT / ArchiCAD / Tekla / Bentley / Vectorworks) — preserve manual overrides by default, opt-in to wipe.
+  - Pending: Phase B.2 (BOQ Schedule group-by Mode C signature) + Phase C (draggable tag + leader line).
 
 ---
 

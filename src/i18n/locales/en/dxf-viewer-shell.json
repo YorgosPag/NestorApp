@@ -688,6 +688,8 @@
       "openingKind": "Type",
       "openingSize": "Size",
       "openingActions": "Actions",
+      "openingRenumber": "Renumber",
+      "annotateOpenings": "Openings",
       "slabKind": "Type",
       "slabGeometry": "Geometry",
       "slabMaterial": "Material",
@@ -1135,6 +1137,28 @@
           },
           "inward": "Inward",
           "outward": "Outward"
+        },
+        "renumber": {
+          "label": "Renumber",
+          "tooltip": "Renumber opening tags (fills gaps from deletions)",
+          "dialog": {
+            "title": "Renumber Openings",
+            "description": "Fills gaps in mark numbering after deletions. Preserves manual edits by default — opt in below to wipe them too.",
+            "scope": {
+              "label": "Scope",
+              "currentFloor": "Current floor",
+              "allFloors": "All floors"
+            },
+            "kindFilter": {
+              "label": "Opening kinds"
+            },
+            "includeManual": {
+              "label": "Also renumber manually-edited marks"
+            },
+            "preview": "{count} openings will be updated",
+            "confirm": "Run",
+            "cancel": "Cancel"
+          }
         }
       },
       "slabEditor": {

@@ -209,6 +209,8 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'bim-wall-split': return <Scissors width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-363 Phase 8 — BIM Schedule export
     case 'bim-schedule': return <TableProperties width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // ADR-376 Phase B.1 — Renumber Openings command
+    case 'bim-opening-renumber': return <RefreshCw width={sizePx[size]} height={sizePx[size]} className={className} />;
     default: return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }
 };

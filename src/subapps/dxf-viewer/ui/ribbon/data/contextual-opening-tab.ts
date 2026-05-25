@@ -216,6 +216,28 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
       ],
     },
     {
+      id: 'opening-renumber',
+      labelKey: 'ribbon.panels.openingRenumber',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'opening.renumber',
+                labelKey: 'ribbon.commands.openingEditor.renumber.label',
+                icon: 'bim-opening-renumber',
+                commandKey: OPENING_RIBBON_KEYS_ACTIONS.renumber,
+                action: OPENING_RIBBON_KEYS_ACTIONS.renumber,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'opening-actions',
       labelKey: 'ribbon.panels.openingActions',
       rows: [

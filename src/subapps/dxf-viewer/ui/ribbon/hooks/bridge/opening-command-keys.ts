@@ -54,6 +54,8 @@ export const OPENING_RIBBON_STRING_KEYS: readonly OpeningRibbonStringCommandKey[
 export const OPENING_RIBBON_KEYS_ACTIONS = {
   close: 'opening.actions.close',
   delete: 'opening.actions.delete',
+  /** ADR-376 Phase B.1 — Open the Renumber Openings dialog. */
+  renumber: 'opening.actions.renumber',
 } as const;
 
 const OPENING_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

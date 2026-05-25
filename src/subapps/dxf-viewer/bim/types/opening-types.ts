@@ -93,6 +93,14 @@ export interface OpeningParams {
    */
   readonly mark?: string;
   /**
+   * ADR-376 Phase B.1 — Manual mark override tracking. Set `true` when the
+   * user edits the Mark via the ribbon Mark field; renumber operations
+   * (`opening-renumber-service`) skip these instances by default (industry
+   * pattern — IMAGINiT / ArchiCAD / Tekla / Bentley / Vectorworks 5/5).
+   * Modal opt-in toggle allows wiping manual overrides on demand.
+   */
+  readonly markIsManual?: boolean;
+  /**
    * ADR-376 Phase A — Per-opening tag visibility override.
    * `undefined` → defaults to layer `__system_opening_tags__` visibility.
    * `false` → tag hidden even when the layer is ON.
