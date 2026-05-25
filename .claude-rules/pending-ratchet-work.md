@@ -1,7 +1,7 @@
 # Pending Ratchet Work — Live Checklist
 
 **STATUS: ACTIVE**
-**Last updated:** 2026-05-26 — **ADR-376 Phase C.1 DONE** (later in day): draggable tag + γωνιακή/elbow leader (Revit 2027 + ArchiCAD) + Reset Position UX (ribbon + right-click, Vectorworks 2/2 modern convergence). Q1+Q2+Q4 resolved με web research. 3 new files (opening-tag-drag-controller pure FSM + use-opening-tag-drag-interaction hook + canvas-layer-stack-opening-tag-drag mount) + 8 modified (renderer leader, ribbon button, command-keys action, bridge handler, icon, i18n el+en, leaves wiring). 28/28 tests PASS. ADR-040 compliant — pure FSM zero subscriptions + RAF-coalesced scene patches + pointerdown capture-phase. ADR-376 §4.10 + §7 C.1 row DONE + §11 v9 changelog updated. Pending: Phase C.2 (per-project styling) + Phase C.3 (PDF schedule export). Earlier in day: Phase B.2 BOQ signature-group aggregation DONE. Pending ratchet: legacy `boq_bim_<openingId>` rows από Phase A single-entry path (αν υπάρχουν production data) — cleanup TODO παρακάτω. .ssot-registry.json `opening-boq-grouper` + νέο `opening-tag-drag-controller` entry pending μέχρι να καθαρίσει working tree.
+**Last updated:** 2026-05-26 — **ADR-375 Phase A+B runtime verified** + 5 hotfixes (v1.6 cache invalidation, v1.7 ViewRange renderer wiring, v1.8 Firestore undefined). Phase C ⏸️ deferred, scope locked, ~25-40h estimate. Earlier in day — **ADR-376 Phase C.1 DONE**: draggable tag + γωνιακή/elbow leader (Revit 2027 + ArchiCAD) + Reset Position UX (ribbon + right-click, Vectorworks 2/2 modern convergence). Q1+Q2+Q4 resolved με web research. 3 new files (opening-tag-drag-controller pure FSM + use-opening-tag-drag-interaction hook + canvas-layer-stack-opening-tag-drag mount) + 8 modified (renderer leader, ribbon button, command-keys action, bridge handler, icon, i18n el+en, leaves wiring). 28/28 tests PASS. ADR-040 compliant — pure FSM zero subscriptions + RAF-coalesced scene patches + pointerdown capture-phase. ADR-376 §4.10 + §7 C.1 row DONE + §11 v9 changelog updated. Pending: Phase C.2 (per-project styling) + Phase C.3 (PDF schedule export). Earlier in day: Phase B.2 BOQ signature-group aggregation DONE. Pending ratchet: legacy `boq_bim_<openingId>` rows από Phase A single-entry path (αν υπάρχουν production data) — cleanup TODO παρακάτω. .ssot-registry.json `opening-boq-grouper` + νέο `opening-tag-drag-controller` entry pending μέχρι να καθαρίσει working tree.
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
 **Purpose:** Agent-facing live checklist. Se STATUS = ALL_DONE → salta il resto. Se STATUS = ACTIVE → leggi e ricorda a Giorgio.
 
@@ -254,11 +254,50 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 
 ---
 
+### 🎨 ADR-375 Phase C — BIM Line Weight Advanced (DEFERRED, ~25-40h estimated, planned 2026-05-25)
+
+**ADR**: `docs/centralized-systems/reference/adrs/ADR-375-bim-entity-line-weight-semantic-system.md`
+**Status**: ⏸️ DEFERRED — Phase A + B (B.1/B.2/B.3) ολοκληρώθηκαν 2026-05-25 + runtime verified 2026-05-26 (5 hotfixes v1.6-v1.8). Phase C ρητά αναβλήθηκε στο ADR §5 «Phase C — Advanced (future)» και στο v1.2 changelog «Pen Table editor + Pen Sets presets DEFERRED to Phase C».
+
+**Phase C scope** (ADR-375 §5.Phase-C):
+
+1. **Pen Table editor** — UI grid 16 pens × 6 scales να ορίζει mm τιμές αντί για hardcoded `bim-pen-table.ts` constants. Persistence: νέο collection ή στο `companies/{id}.bimPenTable`. Decision pending.
+2. **Pen Sets presets** — Bundles Design / Construction / Presentation. Ένα click αλλάζει ολόκληρη pen table. Reference: ArchiCAD Pen Sets pattern.
+3. **Subcategories** — Door panel vs Door swing, Wall layers cut vs skin. Διαφορετικό pen ανά μέρος του ίδιου entity.
+4. **Per-view overrides (Visibility/Graphics)** — Override styles ανά view χωρίς να αλλάζουν defaults. Επεκτείνει το ViewTemplate.
+5. **Per-element overrides** — Πάχος γραμμής για ΕΝΑΝ συγκεκριμένο τοίχο. Νέο field `entity.params.lineWeightOverride?`.
+6. **Layer-driven overrides** — Integration με ADR-358. Layer controls override BIM defaults (όπως Revit Layer Lineweight αν existed).
+7. **3D parity (ADR-370)** — Τα ίδια SSoT tokens (PenTable + ObjectStyles + ViewRange) να εφαρμόζονται σε THREE.js line widths. Mirror του 2D Phase A pattern σε 3D viewer.
+
+**Phase D scope** (ξεχωριστό ADR στο μέλλον — όχι μέρος C):
+- Underlay rendering (όροφος από πάνω/κάτω σαν halftone reference)
+
+**Δομικός περιορισμός εντοπίστηκε 2026-05-26 runtime verification**:
+- Το σύστημα έχει **1 `dxf_viewer_levels` doc που reuses floorId** όταν αλλάζεις όροφο. Δεν υπάρχουν παράλληλα 2+ BIM Level entities με ίδιο `appliedViewTemplateId`.
+- Συνέπεια: το Update propagation (`propagateToLinkedLevels`) στο `view-template.service.ts` είναι **unit-tested (28 tests PASS) αλλά runtime-unobservable**.
+- Δεν είναι B.3 bug — είναι ίσως candidate για Phase D / νέο ADR (multi-level architecture extension).
+
+**Pre-requisites για Phase C**:
+- Καμία. Phase A + B είναι solid baseline.
+- ⚠️ Πριν Phase C.7 (3D parity), επιβεβαίωσε ADR-370 status (3D viewer Group A/B/C state).
+
+**Effort estimate (ψιλικά)**: C.1 ~3-5h · C.2 ~2-3h · C.3 ~5-8h · C.4 ~5-8h · C.5 ~3-5h · C.6 ~3-5h · C.7 ~5-10h. Total ~25-40h.
+
+- [ ] **C.1** Pen Table editor (UI grid + persistence)
+- [ ] **C.2** Pen Sets presets (Design / Construction / Presentation)
+- [ ] **C.3** Subcategories (Door panel/swing, Wall layers)
+- [ ] **C.4** Per-view overrides (extends ViewTemplate)
+- [ ] **C.5** Per-element overrides (`entity.params.lineWeightOverride?`)
+- [ ] **C.6** Layer-driven overrides (ADR-358 integration)
+- [ ] **C.7** 3D parity (ADR-370 THREE.js line widths)
+
+---
+
 ## Short sentence for session-start reminder
 
 **Copy-paste template for the agent:**
 
-> 📋 Pending ratchet tasks (ADR-299): **ADR-365 Tailwind Palette ✅ COMPLETE** — 0 violations / 0 files (2026-05-22). Zero-tolerance via CHECK 3.26 active. Remaining pending: Grip Types SSoT, ADR-3XX Auto-Infer Alignment, ADR-370/371 duplicate numbering cleanup. (ADR-363 Opening scene-units thread ✅ CLOSED 2026-05-25 later — 4 callers, 27/27 tests PASS. ADR-366 §C.1 Animation Phase 9 ✅ FULLY CLOSED 2026-05-25 (axis-constrained gizmo ✅ DONE 2026-05-25 — closes last deferred C.1.b item, Phase 9 zero deferred); ADR-345 spellCheck ✅ DONE 2026-05-23, ADR-034 UC-017 ✅ DONE 2026-05-23; **ADR-363 Phase 2 canvas-wiring follow-up ✅ 2026-05-25** — opening tool silent-failure fix.)
+> 📋 Pending ratchet tasks (ADR-299): **ADR-365 Tailwind Palette ✅ COMPLETE** — 0 violations / 0 files (2026-05-22). Zero-tolerance via CHECK 3.26 active. Remaining pending: Grip Types SSoT, ADR-3XX Auto-Infer Alignment, ADR-370/371 duplicate numbering cleanup, **ADR-375 Phase C BIM Line Weight Advanced (~25-40h, deferred 2026-05-25, runtime-verified Phase A+B 2026-05-26 with 5 hotfixes v1.6-v1.8)**. (ADR-363 Opening scene-units thread ✅ CLOSED 2026-05-25 later — 4 callers, 27/27 tests PASS. ADR-366 §C.1 Animation Phase 9 ✅ FULLY CLOSED 2026-05-25 (axis-constrained gizmo ✅ DONE 2026-05-25 — closes last deferred C.1.b item, Phase 9 zero deferred); ADR-345 spellCheck ✅ DONE 2026-05-23, ADR-034 UC-017 ✅ DONE 2026-05-23; **ADR-363 Phase 2 canvas-wiring follow-up ✅ 2026-05-25** — opening tool silent-failure fix.)
 
 ---
 

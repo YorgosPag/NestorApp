@@ -25,8 +25,8 @@ export interface ViewTemplate {
   companyId: string;
   /** Human-readable name (e.g. "Standard 1:100", "Site Plan 1:500"). */
   name: string;
-  /** Optional description / usage note. */
-  description?: string;
+  /** Optional description / usage note. Stored as `null` when absent (Firestore rejects undefined). */
+  description?: string | null;
   /** Snapshot of the render settings that this template applies. */
   settings: BimRenderSettings;
   /** UID of the user who created the template. */

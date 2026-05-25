@@ -97,7 +97,8 @@ export async function createViewTemplate(
     id,
     companyId: ctx.companyId,
     name: input.name,
-    description: input.description,
+    // Firestore rejects `undefined`. Optional fields → null. (CLAUDE.md "Firestore: NEVER write undefined values")
+    description: input.description ?? null,
     settings: input.settings,
     createdBy: ctx.userId,
     createdAt: now,
