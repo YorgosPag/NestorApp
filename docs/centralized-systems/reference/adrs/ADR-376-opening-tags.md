@@ -240,6 +240,8 @@ Implementation: query existing openings στο (project, floor, kind), find max 
 - Toggle hides ALL opening tags globally.
 - Per-opening `tagVisible: false` overrides.
 
+**UI surface (Phase A polish, 2026-05-25)**: `AnnotationsSection` component (`src/subapps/dxf-viewer/ui/components/AnnotationsSection.tsx`) rendered ως ξεχωριστή section μέσα στο `LevelPanel` κάτω από το `LayersSection`. Περιέχει `Switch` (variant=`status`) που καλεί `setOpeningTagLayerVisible()` και διαβάζει state μέσω `useOpeningTagLayerVisible()` (`useSyncExternalStore` SSoT binding). i18n keys: `dxf-viewer-panels.panels.annotations.{title,openingTags.{label,description,toggleAria}}` (el+en).
+
 ### 4.8 Validation rules
 
 1. **Duplicate Mark intra-(floor, kind)**: warning, not blocked.
@@ -374,6 +376,7 @@ Zoom threshold: tag visible μόνο σε zoom ≥ `OPENING_TAG_MIN_ZOOM` (e.g. 
   - Modified: `opening-types.ts` (+mark/tagVisible/tagOffset optional fields), `OpeningRenderer.ts` (KIND_STROKE import + tag render call), `useOpeningPersistence.ts` (allocateAndPersistOpening — proactive mark assignment on `drawing:entity-created` με optimistic scene patch), `opening-command-keys.ts` + `contextual-opening-tab.ts` + `useRibbonOpeningBridge.ts` (Mark ribbon field), `dxf-viewer{,-shell}.json` el+en (i18n keys), `package.json` (npm script).
   - Tests: 24 unit assertions (15 για `opening-mark-service.ts`, 9 για `OpeningTagRenderer.ts`).
   - Pending Phase B: blank-canvas non-wizard placement mark allocation (added στο `.claude-rules/pending-ratchet-work.md`).
+- **2026-05-25** (v5.1 — Phase A polish) — Layers panel UI toggle: new `AnnotationsSection.tsx` component wired στο `LevelPanel` ως ξεχωριστή section κάτω από το `LayersSection`. `Switch` (variant=`status`) εναλλάσσει global εμφάνιση opening tags μέσω SSoT setters. i18n keys προστέθηκαν σε `dxf-viewer-panels.{el,en}.json`. +9 SSoT unit tests (`__tests__/opening-tag-layer.test.ts`). Πλέον ο user μπορεί να ενεργοποιεί/απενεργοποιεί τα tags χωρίς console. Pending Phase A items closed: 1 (Layers panel UI button DONE), 1 left (manual smoke test με αληθινό DXF — requires browser session).
 
 ---
 
