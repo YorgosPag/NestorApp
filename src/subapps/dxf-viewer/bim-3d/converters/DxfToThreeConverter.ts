@@ -223,25 +223,6 @@ export class DxfToThreeConverter {
 
     this.group = group;
     this.scene.add(group);
-
-    // DEBUG — remove after fix confirmed
-    const rawBox = new THREE.Box3();
-    for (const child of group.children) {
-      if (child instanceof THREE.LineSegments) (child.geometry as THREE.BufferGeometry).computeBoundingBox();
-    }
-    // force matrixWorld update before bounds check
-    group.updateMatrixWorld(true);
-    const worldBox = new THREE.Box3().setFromObject(group);
-    console.log('[3D-DEBUG][DxfConverter.sync]', {
-      units: dxfScene.units ?? '(undefined→mm)',
-      unitScale,
-      entities: dxfScene.entities.length,
-      colorBuckets: colorBuckets.size,
-      worldMin: worldBox.min.toArray().map(v => +v.toFixed(2)).join(','),
-      worldMax: worldBox.max.toArray().map(v => +v.toFixed(2)).join(','),
-      worldIsEmpty: worldBox.isEmpty(),
-    });
-    void rawBox;
   }
 
   getBounds(): THREE.Box3 | null {
