@@ -106,6 +106,19 @@ export interface OpeningGeometry {
   readonly outline: Polygon3D;
   /** mm. Door swing arc — present only για door / french-door. */
   readonly hingeArc?: Polyline3D;
+  /**
+   * mm. Door hinge anchor (pivot point) — present only για door / french-door.
+   * Used by OpeningRenderer to draw the **leaf line** (door panel σε 90°-open)
+   * from `hingeAnchor` → `hingeArc.points[HINGE_ARC_SUBDIVISIONS]`. Industry
+   * convention (AutoCAD / Revit): door plan = swing arc (dashed) + leaf line (solid).
+   */
+  readonly hingeAnchor?: Point3D;
+  /**
+   * mm. Second hinge anchor — present only για french-door (dual-leaf).
+   * Pairs με the second arc segment (points[HINGE_ARC_SUBDIVISIONS+1]) για
+   * the second leaf line.
+   */
+  readonly hingeAnchor2?: Point3D;
   readonly bbox: BoundingBox3D;
   /** m². Opening face area (width × height in mm → m²). */
   readonly area: number;
