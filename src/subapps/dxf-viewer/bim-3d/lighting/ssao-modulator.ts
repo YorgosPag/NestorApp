@@ -69,6 +69,18 @@ export class SSAOModulator {
     this.ssaoPass.setSize(width, height);
   }
 
+  /** Emergency SSAO disable — called from scene-render-frame when composer throws. */
+  disableSSAO(): void {
+    this.cancelAnim();
+    this.ssaoPass.enabled = false;
+    // Fallback: direct render without post-processing.
+    const camera = this.getCamera();
+    try {
+      this.composer.renderer.setRenderTarget(null);
+      this.composer.renderer.render(this.renderPass.scene, camera);
+    } catch { /* ignore fallback failures */ }
+  }
+
   render(): void {
     const camera = this.getCamera();
     const isPerspective = camera instanceof THREE.PerspectiveCamera;
@@ -76,6 +88,11 @@ export class SSAOModulator {
     this.ssaoPass.camera = camera as THREE.PerspectiveCamera;
     if (!isPerspective) this.ssaoPass.enabled = false;
     this.composer.render();
+    // Safety: SSAOPass sets scene.overrideMaterial = MeshNormalMaterial during
+    // its normal-buffer pass. If it fails to restore the override (exception or
+    // early return), every subsequent frame renders grey normals instead of
+    // actual materials. Force-reset after every frame to prevent corruption.
+    this.renderPass.scene.overrideMaterial = null;
   }
 
   dispose(): void {

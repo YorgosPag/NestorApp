@@ -15,9 +15,10 @@ import { createPoi } from '../viewport/viewport-poi';
 import { renderSceneFrame, type RenderFrameContext } from './scene-render-frame';
 import { BimSceneLayer } from './BimSceneLayer';
 import { PerformanceCollector } from '../performance/PerformanceCollector';
-import { IdleDetector } from '../lighting/idle-detector';
+import type { IdleDetector } from '../lighting/idle-detector';
 import { QualityModulator } from '../lighting/quality-modulator';
 import { SSAOModulator } from '../lighting/ssao-modulator';
+import { createSceneIdleDetector } from './scene-idle-handlers';
 import { EnvmapGenerator } from '../lighting/envmap-generator';
 import { PathTracerRenderer } from '../render/PathTracerRenderer';
 import type { LightPreset } from '../lighting/lighting-presets';
@@ -133,22 +134,11 @@ export class ThreeJsSceneManager {
       this.scene,
       () => this.viewport.camera,
     );
-    this.idleDetector = new IdleDetector({
-      thresholdMs: 800,
-      onIdle: () => {
-        this.qualityModulator.onCameraIdle();
-        this.ssaoModulator.onCameraIdle();
-        const hasBimMesh = this.bimLayer.hasAnyMesh();
-        console.log('[3D-DEBUG][onIdle] hasBimMesh:', hasBimMesh, 'bimChildren:', this.bimLayer.group.children.length);
-        if (hasBimMesh) this.pathTracerRenderer.start();
-        useViewMode3DStore.getState().enterPreviewMode();
-      },
-      onActive: () => {
-        this.qualityModulator.onCameraActive();
-        this.ssaoModulator.onCameraActive();
-        this.pathTracerRenderer.cancel();
-        useViewMode3DStore.getState().enterRasterMode();
-      },
+    this.idleDetector = createSceneIdleDetector({
+      qualityModulator: this.qualityModulator,
+      ssaoModulator: this.ssaoModulator,
+      bimLayer: this.bimLayer,
+      pathTracerRenderer: this.pathTracerRenderer,
     });
     this.poi = createPoi();
     this.scene.add(this.poi.root);

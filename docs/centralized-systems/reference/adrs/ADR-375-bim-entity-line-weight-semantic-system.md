@@ -2,7 +2,7 @@
 
 | Status | Date | Author | Strategy |
 |--------|------|--------|----------|
-| ✅ **Phase A DONE** · ⏸️ **Phase B Planned (B.1 / B.2 / B.3)** | 2026-05-25 | Giorgio Pagonis + Claude (Sonnet 4.6 / Opus 4.7) | **Full Revit Clone — Enterprise — Unified SSoT with ADR-358** |
+| ✅ **Phase A DONE** · ✅ **Phase B.1 DONE** · ⏸️ **Phase B.2 / B.3 Pending** | 2026-05-25 | Giorgio Pagonis + Claude (Sonnet 4.6 / Opus 4.7) | **Full Revit Clone — Enterprise — Unified SSoT with ADR-358** |
 
 **Related ADRs**:
 - ADR-044 — Centralized Canvas Line Widths (current generic SSoT, will coexist)
@@ -965,6 +965,7 @@ Per ISO 128-20 + Revit Architectural Template. Διαφορετικό πάχος
 | 2026-05-25 | **1.0 — APPROVED (Phase A Ready)** | **Phase A scope locked: 11 files (4 new + 7 modified). Sonnet 4.6 model. Full implementation sequence + pre/post checks + risk register documented §5. Clarification phase complete — Q7/Q9/Q10 deferred to Phase B/C/D.** | Claude (Opus 4.7) |
 | 2026-05-25 | **1.1 — Phase A IMPLEMENTED** | **4 new SSoT files (bim-pen-table, bim-object-styles, bim-view-range, bim-line-weight-resolver) + 4 test files (35 tests PASS) + 7 BIM renderers migrated (Wall/Slab/Column/Beam/Opening/SlabOpening/Stair). TSC clean. All hardcoded RENDER_LINE_WIDTHS.NORMAL replaced with resolveLineWeightPx(). lineweightToPx from ADR-358 SSoT (no mm→px duplication). Phase A: defaults scaleDenominator=100, dpi=96.** | Claude (Sonnet 4.6) |
 | 2026-05-25 | **1.2 — Phase B Sub-phases Planned** | **Phase B split into B.1 / B.2 / B.3 (per Giorgio session-per-phase rule). Locked decisions: (1) Drawing Scale = new selector decoupled from zoom (Revit annotation scale), (2) View Range = Α+Β inline floorplan + separate `view_templates` library, (3) Object Styles overrides = full 8-category × 2-pen table per floorplan. B.1 ~6 files (Drawing Scale store + ribbon panel + 7 renderer wirings). B.2 ~10-12 files (View Range + Object Styles panels + Firestore inline persistence). B.3 ~8-10 files (View Templates library + apply/edit/delete + Firestore collection). Pen Table editor + Pen Sets presets DEFERRED to Phase C.** | Claude (Opus 4.7) |
+| 2026-05-25 | **1.3 — Phase B.1 IMPLEMENTED** | **Drawing Scale Selector (in-memory Zustand store). 4 new files: `drawing-scale-store.ts` (store + PRESETS + clamp), `drawing-scale-store.test.ts` (9 tests PASS), `DrawingScaleWidget.tsx` (ribbon dropdown "1:100" + 6 presets, ZoomControls-pattern), `view-tab-drawing-scale.ts` (VIEW_DRAWING_SCALE_PANEL data). 5 modified: `ribbon-default-tabs.ts` (add panel to view tab), `RibbonPanel.tsx` (widgetId handler), `el/dxf-viewer-shell.json` + `en/dxf-viewer-shell.json` (i18n keys), + all 7 BIM renderers updated: `scaleDenominator: 100` → `useDrawingScaleStore.getState().drawingScale`. Phase A 35 tests PASS + B.1 9 tests PASS = 44 total. TSC pending.** | Claude (Sonnet 4.6) |
 
 ---
 

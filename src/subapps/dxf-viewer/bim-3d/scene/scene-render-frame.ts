@@ -70,6 +70,11 @@ export function renderSceneFrame(ctx: RenderFrameContext, now: number, delta: nu
   } else if (sectionController.isStencilActive()) {
     sectionController.renderFrameWithCaps(viewport.camera);
   } else {
-    ssaoModulator.render();
+    try {
+      ssaoModulator.render();
+    } catch (err) {
+      console.error('[3D-DEBUG][renderSceneFrame] ssaoModulator.render() threw:', err);
+      ssaoModulator.disableSSAO();
+    }
   }
 }

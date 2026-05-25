@@ -105,12 +105,16 @@ export function parseMarkSeq(
   }
 
   // Standard floor — tail is the raw number `floorNumber*100 + seq` zero-padded.
+  // Per ADR-376 §4.1 the floor-prefix hundreds convention caps seq at 99 per
+  // (floor, kind) — `Θ.001..Θ.099` ground, `Θ.101..Θ.199` first, etc. A mark
+  // whose decoded seq falls outside [1, 99] belongs to a different floor and
+  // MUST be ignored, otherwise the allocator pulls cross-floor max+1.
   if (tail.includes('.')) return null; // exclude basement-style tails
   const n = Number.parseInt(tail, 10);
   if (!Number.isFinite(n)) return null;
   const base = args.floorNumber * 100;
   const seq = n - base;
-  return seq >= 1 && seq <= 9999 ? seq : null;
+  return seq >= 1 && seq <= 99 ? seq : null;
 }
 
 // ────────────────────────────────────────────────────────────────────────────

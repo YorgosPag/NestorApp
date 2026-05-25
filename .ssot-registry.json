@@ -3261,6 +3261,20 @@
       "addedByAdr": "ADR-375",
       "tier": 3
     },
+    "opening-tag-layer": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/layers/opening-tag-layer.ts",
+      "description": "ADR-376 Phase A §4.7: reserved annotation layer `__system_opening_tags__` controlling global visibility of all opening tags. The layer ID literal MUST live only in the SSoT module + tests; consumers (OpeningRenderer, AnnotationsSection) interact through `isOpeningTagLayerVisible()` / `setOpeningTagLayerVisible()` / `useOpeningTagLayerVisible()`. Inline visibility state or re-declaration of the literal in another file fragments the SSoT and breaks the React useSyncExternalStore binding.",
+      "forbiddenPatterns": [
+        "['\"]__system_opening_tags__['\"]"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/layers/opening-tag-layer.ts",
+        "src/subapps/dxf-viewer/systems/layers/__tests__/opening-tag-layer.test.ts"
+      ],
+      "addedDate": "2026-05-25",
+      "addedByAdr": "ADR-376",
+      "tier": 3
+    },
     "resolve-entity-style": {
       "ssotFile": "src/subapps/dxf-viewer/systems/properties/resolve-entity-style.ts",
       "description": "ADR-358 §G7 Phase 6: the ByLayer/ByBlock/Concrete cascade — entity → block → layer → system default for color + linetype + lineweight + transparency — is owned by `resolve-entity-style.ts`. Calls to `resolveEntityStyle()` must live in the centralised renderer path (`DxfRenderer.resolveStyleForRender`) so that `AdminLayerManager` edits propagate live to canvas and snapshot/print/export paths share the same resolution semantics. Bypass call sites flatten styles ad-hoc and break the §G7 LIVE pipeline. Property panels reading provenance for inspection are allowlisted.",
