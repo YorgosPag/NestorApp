@@ -128,6 +128,8 @@ export interface ProjectUpdatePayload {
   landownerContactIds?: string[] | null;
   /** ADR-186 §8b: Phase 2 ΝΟΚ building-code form data */
   buildingCode?: ProjectBuildingCodePhase2 | null;
+  /** ADR-376 Phase C.2 — Per-project Opening Tag Style override (DXF Viewer BIM). */
+  openingTagStyle?: import('@/subapps/dxf-viewer/bim/services/opening-tag-style-service').OpeningTagStyle | null;
 }
 
 /**
