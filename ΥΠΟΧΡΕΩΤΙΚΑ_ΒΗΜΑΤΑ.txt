@@ -1,896 +1,198 @@
+  Object { camPos: "29.97,12.98,11.97", dist: 30.44, sceneChildren: 10, dxfGroup: "✓" }                                                                                   
+  src_subapps_dxf-viewer_bim-3d_7dc32a53._.js:2492:29                                                                                                                     
+  [3D-DEBUG][frameBounds] animation DONE +100ms                                                                                                                           
+  Object { camPos: "29.97,12.98,11.97", tgt: "10.5,0,-7.5", dist: 30.44, controlsEnabled: true }                                                                          
+  src_subapps_dxf-viewer_bim-3d_viewport_4289c220._.js:1174:29                                                                                                            
+  [3D-DEBUG][2s after frameBounds]                                                                                                                                        
+  Object { camPos: "29.97,12.98,11.97", dist: 30.44 }                                                                                                                     
+  src_subapps_dxf-viewer_bim-3d_7dc32a53._.js:2500:29                                                                                                                     
+  [3D-DEBUG][onIdle] hasBimMesh: true bimChildren: 18 12 src_subapps_dxf-viewer_bim-3d_7dc32a53._.js:2685:25                                                              
+  [3D-DEBUG][onIdle] hasBimMesh: true bimChildren: 18 4 src_subapps_dxf-viewer_bim-3d_7dc32a53._.js:2685:25                                                               
+                                                                                                                                                                          
 
-  Δοκίμασε ξανά τώρα — το DXF του floor flr_8a64251e-... πρέπει να φορτώνει.
-
-  📊 Context: ~70% | ⚠️  Αν αλλάξεις θέμα, εξέτασε /clear
-
-✻ Worked for 2m 55s
-
-❯ Η ΣΚΑΛΑ ΠΑΛΙ ΔΕΝ ΕΜΦΑΝΙΖΕΤΑΙ ΣΤΟΝ ΟΡΟΦΟ, http://localhost:3000/buildings  ΟΤΑΝ ΤΗΝ ΠΡΟΣΘΕΤΩ ΣΤΗΝ ΚΑΤΟΨΗ ΟΡΟΦΟΥ ΣΤΟΝ ΚΑΜΒΑ                                               
-
-● Ελέγχω αν το loadFromStorageImpl επιστρέφει entityType/entityId στο DxfFileRecord:
+● hasBimMesh: true bimChildren: 18 — υπάρχουν BIM entities στη scene! Άρα το path tracer ενεργοποιείται. Το πρόβλημα είναι ότι renders black ακόμα και με BIM meshes.
+  Ελέγχω το EnvironmentStore — path tracer χρειάζεται HDRI:
 
   Searched for 1 pattern, read 1 file (ctrl+o to expand)
 
-● Il meccanismo sembra corretto. Cerco come useStairPersistence gestisce drawing:entity-created:
+● hdriUrl: null — HDRI δεν έχει φορτωθεί by default. Το path tracer ενεργοποιείται με BIM meshes αλλά χωρίς environment map → black screen (all rays miss → no lighting).
 
-  Searched for 2 patterns (ctrl+o to expand)
+  Σωστή guard: path tracer ONLY με hasBimMesh AND hdriUrl loaded:
 
-● Vediamo se FloorplanGallery apre il viewer completo o è solo preview:
+● Update(src\subapps\dxf-viewer\bim-3d\scene\ThreeJsSceneManager.ts)
+  ⎿  Error editing file
 
-  Searched for 2 patterns, read 1 file (ctrl+o to expand)
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
 
-● Ελέγχω απευθείας στη Firestore αν υπάρχουν σκάλες για αυτόν τον όροφο:
+● Κάποιος άλλαξε το αρχείο — τώρα χρησιμοποιεί this.bimLayer.hasAnyMesh(). Διαβάζω BimSceneLayer να δω αν υπάρχει αυτή η μέθοδος:
 
-  Called firestore 3 times (ctrl+o to expand)
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
 
-● Σκάλα βρέθηκε! floorId: "flr_f64e9699-..." — αλλά ο Giorgio expand κάποιον άλλο όροφο. Ελέγχω ποιος όροφος:
+● hasAnyMesh() υπάρχει. Τώρα πρέπει να προσθέσω το HDRI guard — path tracer χωρίς HDRI εμφανίζει μαύρη εικόνα (direct lighting only = πολύ dark για 1 sample):
 
-  Called firestore 2 times (ctrl+o to expand)
+● Update(src\subapps\dxf-viewer\bim-3d\scene\ThreeJsSceneManager.ts)
+  ⎿  Added 3 lines, removed 2 lines
+      139          this.qualityModulator.onCameraIdle();
+      140          this.ssaoModulator.onCameraIdle();
+      141          const hasBimMesh = this.bimLayer.hasAnyMesh();
+      142 -        console.log('[3D-DEBUG][onIdle] hasBimMesh:', hasBimMesh, 'bimChildren:', this.bimLayer.group.children.length);                                       143 -        if (hasBimMesh) this.pathTracerRenderer.start();                                                                                                
+      142 +        const hdriLoaded = useEnvironmentStore.getState().hdriUrl !== null;                                                                                   143 +        console.log('[3D-DEBUG][onIdle] hasBimMesh:', hasBimMesh, 'hdriLoaded:', hdriLoaded, 'bimChildren:', this.bimLayer.group.children.length);      
+      144 +        if (hasBimMesh && hdriLoaded) this.pathTracerRenderer.start();                                                                                  
+      145          useViewMode3DStore.getState().enterPreviewMode();
+      146        },
+      147        onActive: () => {
 
-● Η σκάλα ΥΠΑΡΧΕΙ στο Firestore με floorId: "flr_f64e9699-..." (Ισόγειο, Κτήριο Α1). Ελέγχω αν το Buildings API επιστρέφει τα σωστά id για αυτό το κτήριο:
-
-  Searched for 1 pattern, called firestore (ctrl+o to expand)
-
-● Δεδομένα σωστά. Ελέγχω αν το API επιστρέφει id σωστά:
-
-  Searching for 11 patterns, reading 2 files… (ctrl+o to expand)
-  ⎿  "handleListFloors|id|floor\b"
-
-✻ Processing… (4m 47s · ↓ 13.4k tokens · almost done thinking with high effort)
-  ⎿  Tip: Use /btw to ask a quick side question without interrupting Claude's current work
-
-  ❯ ● Βρέθηκε missing index. Θα προσθέσω το index στο firestore.indexes.json και μετά deploy.                                                                           
-                                                                                                                                                                              Διαβάζω τη σχετική περιοχή του αρχείου.                                                                                                                           
-                                                                                                                                                                        
-    ● Explore(Find exact floorplan_stairs index location) Haiku 4.5                                                                                                     
-      ⎿  Done (1 tool use · 28.0k tokens · 5s)                                                                                                                          
-      Διαβάζω τη σχετική περιοχή του αρχείου.                                                                                                                           
-                                                                                                                                                                        
-    ● Explore(Find exact floorplan_stairs index location) Haiku 4.5                                                                                                     
-      ⎿  Done (1 tool use · 28.0k tokens · 5s)                                                                                                                          
-      ⎿  Done (1 tool use · 28.0k tokens · 5s)                                                                                                                          
-
-  Called firestore 3 times (ctrl+o to expand)
-
-● Σκάλα βρέθηκε! floorId: "flr_f64e9699-..." — αλλά ο Giorgio expand κάποιον άλλο όροφο. Ελέγχω ποιος όροφος:
-
-  Called firestore 2 times (ctrl+o to expand)
-
-● Η σκάλα ΥΠΑΡΧΕΙ στο Firestore με floorId: "flr_f64e9699-..." (Ισόγειο, Κτήριο Α1). Ελέγχω αν το Buildings API επιστρέφει τα σωστά id για αυτό το κτήριο:
-
-  Searched for 1 pattern, called firestore (ctrl+o to expand)
-
-● Δεδομένα σωστά. Ελέγχω αν το API επιστρέφει id σωστά:
-
-● Searching for 11 patterns, reading 2 files… (ctrl+o to expand)
-  ⎿  "handleListFloors|id|floor\b"
-
-● Δεδομένα σωστά στη βάση. Ελέγχω Firestore rules για floorplan_stairs:
-
-● Searching for 1 pattern… (ctrl+o to expand)
-  ⎿  "floorplan_stairs"
-
-❯ ● Βρέθηκε missing index. Θα προσθέσω το index στο firestore.indexes.json και μετά deploy.                                                                               
-                                                                                                                                                                          
-    Διαβάζω τη σχετική περιοχή του αρχείου.                                                                                                                               
-                                                                                                                                                                            ● Explore(Find exact floorplan_stairs index location) Haiku 4.5                                                                                                         
-    ⎿  Done (1 tool use · 28.0k tokens · 5s)                                                                                                                                  (ctrl+o to expand)                                                                                                                                                    
-                                                                                                                                                                          
-    Searched for 1 pattern, read 1 file (ctrl+o to expand)                                                                                                                
-                                                                                                                                                                          
-  ● Προσθέτω το missing index αμέσως μετά από τα υπάρχοντα floorplan_stairs entries.                                                                                      
-                                                                                                                                                                          
-  ● Update(firestore.indexes.json)                                                                                                                                        
-    ⎿  Added 8 lines                                                                                                                                                      
-        3667        ]                                                                                                                                                     
-        3668      },                                                                                                                                                      
-        3669      {                                                                                                                                                       
-        3670 +      "collectionGroup": "floorplan_stairs",                                                                                                                
-        3671 +      "queryScope": "COLLECTION",                                                                                                                           
-        3672 +      "fields": [                                                                                                                                           
-        3673 +        { "fieldPath": "companyId", "order": "ASCENDING" },                                                                                                 
-    3674 +        { "fieldPath": "floorId", "order": "ASCENDING" }                                                                                                        
-        3675 +      ]                                                                                                                                                     
-    3676 +    },                                                                                                                                                          
-        3677 +    {                                                                                                                                                       
-        3678        "collectionGroup": "dxf_layer_state_templates",                                                                                                       
-        3679        "queryScope": "COLLECTION",                                                                                                                           
-        3680        "fields": [                                                                                                                                           
-                                                                                                                                                                          
-  ● Index προστέθηκε. Τώρα deploy.                                                                                                                                        
-
-● Giorgio βρήκε την αιτία και την έφτιαξε σωστά! Το query where('companyId', '==') + where('floorId', '==') απαιτεί composite index που δεν υπήρχε — Firestore έπεφτε σε
-  FAILED_PRECONDITION και η σιωπηλή .catch() έκρυβε το error.
-
-  Η σειρά που έλυσε το πρόβλημα:  1. Πρόσθεσα console.error στο .catch() → έδειξε το Firestore index error
-  2. Giorgio αναγνώρισε το missing index  3. Πρόσθεσε (companyId ASC, floorId ASC) index στο firestore.indexes.json ✅
-
-  Μόλις deploy και build (2-5 λεπτά), οι σκάλες θα εμφανίζονται.
-
-  Επίσης πρέπει να προσθέσουμε αυτό το index στο ADR-358 ως requirement. Μπορώ να ενημερώσω το ADR αμέσως μόλις επιβεβαιωθεί ότι δουλεύει;
-
-  📊 Context: ~75% | ⚠️  Μετά τη επιβεβαίωση, εξέτασε /clear για νέο θέμα
-
-✻ Churned for 5m 40s
-
-※ recap: Υλοποίηση ADR-358 Phase 9C-3: εμφάνιση σκαλών στους ορόφους στο /buildings. Ο Giorgio deploy-αρε το missing Firestore index (companyId+floorId). Επόμενο:   επιβεβαίωση ότι οι σκάλες εμφανίζονται, μετά update ADR-358 και local_ΑΝΑΦΟΡΑ_2.txt.
-❯ ΠΑΛΙ ΔΕΝ ΦΑΙΝΕΤΑΙ Η ΣΚΑΛΑ ΣΤΟΥΣ ΟΡΟΦΟΥΣ ΤΩΝ ΚΤΙΤΙΩΝ. ΓΙΑΤΙ?                                                                                                             
-
-● Ελέγχω live τη Firestore — υπάρχει ακόμα η σκάλα και τι index status έχουμε:
-
-  Searched for 1 pattern, called firestore (ctrl+o to expand)
-
-● Ελέγχω αν ο index deployed και αν το JSON έχει το entry:
-
-  Searched for 2 patterns, read 1 file (ctrl+o to expand)
-
-● Ελέγχω τo entry για floorplan_stairs στο indexes JSON:
+● Επαληθεύω το αποτέλεσμα:
 
   Read 1 file (ctrl+o to expand)
 
-● Bash("C:\Program Files\Git\cmd\git.exe" diff HEAD -- firestore.indexes.json | head -20)
-  ⎿  (No output)
-  ⎿  Allowed by auto mode classifier
+● Η fix τώρα:
+  - hasBimMesh: true ✓ (18 BIM children υπάρχουν)
+  - hdriLoaded: false ✗ (χωρίς HDRI → path tracer ΔΕΝ ξεκινά)
+  - Αποτέλεσμα: ssaoModulator.render() τρέχει κανονικά → scene ορατό
 
-● Bash("C:\Program Files\Git\cmd\git.exe" status -- firestore.indexes.json)
-  ⎿  On branch main
-     Your branch is ahead of 'origin/main' by 40 commits.
-       (use "git push" to publish your local commits)
-     … +2 lines (ctrl+o to expand)
-  ⎿  Allowed by auto mode classifier
-● Bash("C:\Program Files\Git\cmd\git.exe" log --oneline -5 -- firestore.indexes.json)
-  ⎿  ab6f599a chore: update Firestore indexes and DXF types
-     ca78b2df feat(bim3d): ADR-366 Phase 9 C.3 — 3D Manual Dimensions Tool (modules + infra closure)
-     d71c2a3c feat(construction): ADR-266 Phase D.3 — Schedule Alerts & Notifications
-     … +2 lines (ctrl+o to expand)
-  ⎿  Allowed by auto mode classifier
-● Bash("C:\Program Files\Git\cmd\git.exe" show ab6f599a --stat)
-  ⎿  commit ab6f599a3cef3b346a4569a5e2f3195ab4d54bef
-     Author: YorgosPag <georgios.pagonis@gmail.com>
-     Date:   Mon May 25 00:59:00 2026 +0300
-     … +8 lines (ctrl+o to expand)
-  ⎿  Allowed by auto mode classifier
-● Bash("C:\Program Files\Git\cmd\git.exe" status)
-  ⎿  On branch main
-     Your branch is ahead of 'origin/main' by 40 commits.
-       (use "git push" to publish your local commits)
-     … +2 lines (ctrl+o to expand)
-  ⎿  Allowed by auto mode classifier
-● Bash("C:\Program Files\Git\cmd\git.exe" show ab6f599a --name-only)
-  ⎿  commit ab6f599a3cef3b346a4569a5e2f3195ab4d54bef
-     Author: YorgosPag <georgios.pagonis@gmail.com>
-     Date:   Mon May 25 00:59:00 2026 +0300
-     … +7 lines (ctrl+o to expand)
-  ⎿  Allowed by auto mode classifier
-  Read 1 file (ctrl+o to expand)
+  Δοκίμασε τώρα — στη κονσόλα θα δεις hdriLoaded: false και η scene δεν θα εξαφανίζεται.
 
-● Bash("C:\Program Files\Git\cmd\git.exe" diff HEAD -- "src/components/building-management/tabs/useFloorsTabState.ts" | head -30)
-  ⎿  (No output)
-  ⎿  Allowed by auto mode classifier
+  Γιατί γίνεται αυτό: Path tracer χωρίς HDRI environment → κάθε ray που "miss" επιστρέφει μαύρο pixel. 1 sample per frame × χωρίς ambient IBL = τελείως σκοτεινή εικόνα  από το πρώτο frame που ενεργοποιείται. Λύση: path tracer preview activates μόνο όταν user φόρτωσε HDRI (σωστό behavior για Phase 5C anyway).
+  📊 Context: ~70% | Commands: 10 | ⚠️  Σκέψου /clear αν αλλάξεις θέμα
 
-● Bash("C:\Program Files\Git\cmd\git.exe" log --oneline -5 -- "src/components/building-management/tabs/useFloorsTabState.ts")
-  ⎿  81f459ad fix(floors): refinements to stair-floor sync
-     ba802ed1 feat(dxf): ADR-358 stair-floor bidirectional linking
-     07aca4fc refactor: AdminSidebar + floor hooks
-     … +2 lines (ctrl+o to expand)
-  ⎿  Allowed by auto mode classifier
-● Bash("C:\Program Files\Git\cmd\git.exe" show 81f459ad --name-only && echo "---" && "C:\Program Files\Git\cmd\git.exe" show 81f459ad -- "src/components/building-manag…)
-  ⎿  commit 81f459ad7bf4644cc4eac44ceea0ef9258789637
-     Author: YorgosPag <georgios.pagonis@gmail.com>
-     Date:   Mon May 25 00:47:25 2026 +0300
-     … +38 lines (ctrl+o to expand)
-  ⎿  Allowed by auto mode classifier
-● Το index είναι στο JSON αλλά δεν έχει γίνει deploy στο Firestore production. Τρέξε αυτό:
+✻ Sautéed for 3m 17s · 2 shells still running
 
-  ! firebase deploy --only firestore:indexes --project pagonis-87766
+※ recap: Fixing two 3D viewer bugs where the scene goes black after 800ms. Added a guard so the path tracer only activates when both BIM meshes and HDRI are loaded. Next:
+   Giorgio tests and confirms the scene stays visible.
 
-  Μετά περίμενε 2-5 λεπτά για το build του index, και μετά κάνε reload τη σελίδα και expand τον όροφο.
-  Εν τω μεταξύ, φτιάχνω και έναν fallback στον κώδικα που δεν χρειάζεται composite index — έτσι δουλεύει ΑΜΕΣΑ χωρίς να περιμένεις το index build:
+❯ [3D-DEBUG][DxfConverter.sync]                                                                                                                                             Object { units: "m", unitScale: 1, entities: 3283, colorBuckets: 20, worldMin: "0,0,-15", worldMax: "21,0,0", worldIsEmpty: false }                                     
+  src_subapps_dxf-viewer_bim-3d_54c4d414._.js:3773:17                                                                                                                       [3D-DEBUG][syncDxfOverlay]                                                                                                                                              
+  Object { sceneNull: false, fitDone: false, boxNull: false, boxEmpty: false, boxMin: "0,0,-15", boxMax: "21,0,0", camPos: "15,10,15" }                                   
+  src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2245:13                                                                                                                     
+  [3D-DEBUG][computePerspectiveFraming]                                                                                                                                   
+  Object { min: "0,0,-15", max: "21,0,0", radius: 12.9, distance: 30.44, camPos: "29.97,12.98,11.97", withinFar: true }                                                   
+  src_subapps_dxf-viewer_bim-3d_viewport_4289c220._.js:876:13                                                                                                             
+  [3D-DEBUG][frameBounds] animation START                                                                                                                                 
+  Object { fromCam: "15,10,15", fromTgt: "0,0,0", toCam: "29.97,12.98,11.97", toTgt: "10.5,0,-7.5", maxDist: 500 }                                                        
+  src_subapps_dxf-viewer_bim-3d_viewport_4289c220._.js:1151:21                                                                                                            
+  [3D-DEBUG][syncDxfOverlay] frameBounds CALLED ✓ src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2264:13                                                                     
+  [3D-DEBUG][frameBounds] animation DONE +100ms                                                                                                                           
+  Object { camPos: "29.97,12.98,11.97", tgt: "10.5,0,-7.5", dist: 30.44, controlsEnabled: true }                                                                          
+  src_subapps_dxf-viewer_bim-3d_viewport_4289c220._.js:1174:29                                                                                                            
+  [3D-DEBUG][onIdle] hasBimMesh: true hdriLoaded: false bimChildren: 18 src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2721:25                                               
+  [3D-DEBUG][1s after frameBounds]                                                                                                                                        
+  Object { camPos: "29.97,12.98,11.97", dist: 30.44, sceneChildren: 10, dxfGroup: "✓" }                                                                                   
+  src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2266:17                                                                                                                     
+  [3D-DEBUG][onIdle] hasBimMesh: true hdriLoaded: false bimChildren: 18 src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2721:25                                               
+  [3D-DEBUG][2s after frameBounds]                                                                                                                                        
+  Object { camPos: "29.97,12.98,11.97", dist: 30.44 }                                                                                                                     
+  src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2274:17                                                                                                                     
+  [3D-DEBUG][onIdle] hasBimMesh: true hdriLoaded: false bimChildren: 18 13 src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2721:25                                            
+  [3D-DEBUG][onIdle] hasBimMesh: true hdriLoaded: false bimChildren: 18 4 src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2721:25                                             
+  [3D-DEBUG][onIdle] hasBimMesh: true hdriLoaded: false bimChildren: 18 3 src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2721:25                                             
+  [3D-DEBUG][onIdle] hasBimMesh: true hdriLoaded: false bimChildren: 18 3 src_subapps_dxf-viewer_bim-3d_54c4d414._.js:2721:25                                             
+   ΠΑΛΙ ΤΑ ΙΔΙΑ                                                                                                                                                           
 
-  Searched for 5 patterns (ctrl+o to expand)
-
-● Bash(cat "C:\Nestor_Pagonis\.firestore-companyid-baseline.json" | python3 -c "import json,sys; d=json.load(sys.stdin); print('baseline violations:', len(d))" 2>/dev/…)
-  ⎿  can't parse
-  ⎿  Allowed by auto mode classifier
-
-  Read 1 file, listed 1 directory (ctrl+o to expand)
-
-● Αιτία: Ο composite index (companyId + floorId) για floorplan_stairs είναι στο firestore.indexes.json αλλά ΔΕΝ έχει γίνει deploy στο Firestore production. Χωρίς αυτό, το
-   query αποτυγχάνει αθόρυβα.
-
-  Τρέξε τώρα στο terminal:
-
-  ! firebase deploy --only firestore:indexes --project pagonis-87766
-  Μετά το deploy, ο index χτίζεται σε 2-5 λεπτά. Κατά τη διάρκεια αυτή το query επιστρέφει error (ή κενό). Μόλις ολοκληρωθεί:
-  1. Κάνε F5 reload στη σελίδα  2. Expand τον όροφο "Ισόγειο" στο Κτήριο Α1
-
-  Αν θέλεις να βεβαιωθείς ότι το error υπάρχει, άνοιξε το browser console (F12) και κάνε expand τον όροφο — πρέπει να δεις:
-  [FloorsTab] stair query failed floorId=flr_f64e9699-...: FirebaseError: The query requires an index
-
-  📊 Context: ~75% | ⚠️  Αν θέλεις να αλλάξεις θέμα μετά, κάνε /clear
-
-✻ Crunched for 5m 8s
-
-❯ ! firebase deploy --only firestore:indexes --project pagonis-87766                                                                                                      
-
-● Τρέχει... περίμενε 1-2 λεπτά για το deploy, και μετά άλλα 2-5 λεπτά για να χτιστεί ο index στο Firestore cloud.
-
-  Μόλις τελειώσει θα δεις κάτι σαν:  ✔  firestore: released rules firestore.rules to cloud.firestore
-  ✔  firestore: deployed indexes in firestore.indexes.json
-  Μετά: F5 reload → expand "Ισόγειο" → η σκάλα πρέπει να εμφανιστεί.
-
-✻ Baked for 10s
-
-❯ ΕΓΙΝΑΝ DEPLOY ΟΙ ΔΕΙΚΤΕΣ?                                                                                                                                               
-
-● Bash(firebase indexes:list --project pagonis-87766 2>/dev/null | grep -A5 "floorplan_stairs" | head -30)
-  ⎿  (No output)
-  ⎿  Allowed by auto mode classifier
-
-● Bash(firebase firestore:indexes --project pagonis-87766 2>&1 | head -50)
-  ⎿  {
-       "indexes": [
-         {
-     … +47 lines (ctrl+o to expand)
-● Bash(firebase firestore:indexes --project pagonis-87766 2>&1 | python3 -c "
-      import json, sys…)
-  ⎿  Error: Exit code 127
-     /usr/bin/bash: line 9: python3: command not found
-
-● Bash(firebase firestore:indexes --project pagonis-87766 2>&1 | node -e "
-      const chunks=[];process.stdin.on('data',c=>chunks.push(c));process.stdin.on('end',()=>{…)
-  ⎿  floorplan_stairs indexes deployed: 5
-       companyId+floorId+__name__ (no state)
-       companyId+projectId+floorplanId+__name__ (no state)
-     … +3 lines (ctrl+o to expand)
-  ⎿  Allowed by auto mode classifier
-● ΝΑΙ, ο index companyId + floorId για floorplan_stairs είναι deployed:
-
-  companyId+floorId+__name__  ✅ (deployed)
-  Όμως δεν μπορώ να δω αν είναι CREATING ή READY από αυτό το format. Αν μόλις έτρεξε το deploy, χρειάζεται 2-5 λεπτά για να γίνει READY.
-  Τώρα δοκίμασε:
-  1. F5 reload στο /buildings
-  2. Expand τον όροφο "Ισόγειο" στο Κτήριο Α1
-  3. Αν δεν εμφανίζεται ακόμα → περίμενε 2-3 λεπτά και ξαναδοκίμασε
-
-  Αν θέλεις να δεις αν είναι READY, άνοιξε το Firebase Console → Firestore → Indexes (https://console.firebase.google.com/project/pagonis-87766/firestore/indexes) και
-  ψάξε για floorplan_stairs.
-
-✻ Cogitated for 1m 11s
-
-❯   Αν θέλεις να δεις αν είναι READY, άνοιξε το Firebase Console → Firestore → Indexes (https://console.firebase.google.com/project/pagonis-87766/firestore/indexes) και  
-    ψάξε για floorplan_stairs. = ΚΑΝΤΟ ΕΣΥ ΑΥΤΟ                                                                                                                           
-    
-● Bash(firebase firestore:indexes --project pagonis-87766 --json 2>&1 | node -e "
-      const chunks=[];process.stdin.on('data',c=>chunks.push(c));process.stdin.on('end',()=…)
-  ⎿  parse error Cannot read properties of undefined (reading 'filter')
-  ⎿  Allowed by auto mode classifier
-
-● Bash(firebase firestore:indexes --project pagonis-87766 --json 2>&1 | node -e "
-      const chunks=[];process.stdin.on('data',c=>chunks.push(c));process.stdin.on('end',()=…)
-  ⎿  {
-       "status": "success",
-       "result": {
-     … +81 lines (ctrl+o to expand)
-  ⎿  Allowed by auto mode classifier
-● Bash(firebase firestore:indexes --project pagonis-87766 --json 2>&1 | node -e "
-      const chunks=[];process.stdin.on('data',c=>chunks.push(c));process.stdin.on('end',()=…)
-  ⎿  floorplan_stairs indexes: 5
-       companyId+floorId+__name__ → state: (no state field)
-       companyId+projectId+floorplanId+__name__ → state: (no state field)
-     … +3 lines (ctrl+o to expand)
-  ⎿  Allowed by auto mode classifier
-● Bash(firebase login:ci --no-localhost 2>&1 | head -5; firebase use pagonis-87766 2>&1; firebase auth:export /dev/null 2>&1 | head -3)
-  ⎿  Error: Cannot run login:ci in non-interactive mode.
-     Now using project pagonis-87766
-
-     Error: Please specify data file format in file name, or use `format` parameter
-  ⎿  Allowed by auto mode classifier
-● Bash(node -e "
-      const {execSync}=require('child_process');…)
-  ⎿  Error: Exit code 1
-     node:child_process:966
-         throw err;
-         ^
-
-     Error: Command failed: firebase auth:print-access-token --project pagonis-87766 2>&1         at genericNodeError (node:internal/errors:984:15)
-         at wrappedFn (node:internal/errors:538:14)         at checkExecSyncError (node:child_process:891:11)
-         at execSync (node:child_process:963:15)
-     … +37 lines (ctrl+o to expand)
-
-● Bash(gcloud auth print-access-token 2>&1 | head -3)
- ▐▛███▜▌   Claude Code v2.1.150
-▝▜█████▛▘  Opus 4.7 (1M context) with xhigh effort · Claude Max
-  ▘▘ ▝▝    C:\Nestor_Pagonis
-
-✻ Conversation compacted (ctrl+o for history)
-
-  ⎿  Referenced file firestore.indexes.json
-  ⎿  Read src\subapps\dxf-viewer\services\dxf-firestore.types.ts (168 lines)
-  ⎿  Referenced file src\components\building-management\tabs\useFloorsTabState.ts
-  ⎿  Read src\components\building-management\tabs\FloorsTabContent.tsx (344 lines)
-  ⎿  Referenced file local_ΑΝΑΦΟΡΑ_2.txt
-
-  Read 1 file (ctrl+o to expand)
-
-● Index READY ✅ — δείκτης companyId+floorId στο floorplan_stairs είναι deployed.
-
-  Τώρα δοκίμασε:
-  1. Πήγαινε /buildings
-  2. Expand "Ισόγειο" στο Κτήριο Α1  3. Η σκάλα πρέπει να φαίνεται
-  Αν δεν φαίνεται, άνοιξε browser console και βρες: [FloorsTab] stair query floorId=... — πόσες σκάλες επέστρεψε;
-
-  📊 Συνεχής — ο κύριος bug διορθώθηκε. Αναμένω επιβεβαίωσή σου πριν κλείσω ADR-358 + N.15 updates.
-
-✻ Worked for 4m 12s
-
-❯ 2026-05-24T22:12:02.770Z [INFO] [RealtimeService] Initialized <empty string> src_lib_8fde7691._.js:576:25                                                               
-  2026-05-24T22:12:02.790Z [INFO] [EnterpriseTwoFactorService] 🔐 EnterpriseTwoFactorService created <empty string> src_lib_8fde7691._.js:576:25                          
-  2026-05-24T22:12:03.110Z [INFO] [NavigationContext] Waiting for auth state... <empty string> src_lib_8fde7691._.js:576:25                                                 2026-05-24T22:12:03.111Z [INFO] [NotificationDrawer] Waiting for auth state <empty string> src_lib_8fde7691._.js:576:25                                                 
-  2026-05-24T22:12:03.120Z [INFO] [WebSocketContext] [WebSocket] Transport disabled: No WebSocket configuration in development — using Firestore real-time listeners      
-  <empty string> src_lib_8fde7691._.js:576:25                                                                                                                             
-  2026-05-24T22:12:03.244Z [INFO] [NavigationContext] Waiting for auth state... <empty string> src_lib_8fde7691._.js:576:25                                               
-  2026-05-24T22:12:03.245Z [INFO] [NotificationDrawer] Waiting for auth state <empty string> src_lib_8fde7691._.js:576:25                                                 
-  2026-05-24T22:12:03.246Z [INFO] [WebSocketContext] [WebSocket] Transport disabled: No WebSocket configuration in development — using Firestore real-time listeners      
-  <empty string> src_lib_8fde7691._.js:576:25                                                                                                                             
-  2026-05-24T22:12:03.481Z [DEBUG] [AuthContext] [AuthContext] Auth state changed: {"uid":"WKBWEg3DSfcdSbLNJfzGEW3vkct1"} src_lib_8fde7691._.js:579:25                    
-  2026-05-24T22:12:03.481Z [DEBUG] [AuthContext] [AuthContext] Session validation: {"status":"VALID"} src_lib_8fde7691._.js:579:25                                        
-  [Fast Refresh] rebuilding 0b405_next_dist_client_0688ce58._.js:5950:17                                                                                                  
-  2026-05-24T22:12:04.078Z [DEBUG] [AuthContext] [AuthContext] Custom claims loaded:                                                                                      
-  {"globalRole":"super_admin","companyId":"comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757","permissions":1} src_lib_8fde7691._.js:579:25                                       
-  2026-05-24T22:12:05.549Z [INFO] [AuthContextProfile] [AuthContext] User profile updated successfully <empty string> src_lib_8fde7691._.js:576:25                        
-  2026-05-24T22:12:05.549Z [INFO] [AuthContext] [AuthContext] Valid session established: {"email":"georgios.pagonis@gmail.com"} src_lib_8fde7691._.js:576:25              
-  2026-05-24T22:12:05.549Z [INFO] [EnterpriseSessionService] 🔐 EnterpriseSessionService initialized <empty string> src_lib_8fde7691._.js:576:25                          
-  2026-05-24T22:12:05.640Z [INFO] [NavigationContext] Waiting for auth state... <empty string> src_lib_8fde7691._.js:576:25                                               
-  2026-05-24T22:12:05.641Z [INFO] [NotificationDrawer] Waiting for auth state <empty string> src_lib_8fde7691._.js:576:25                                                 
-  2026-05-24T22:12:05.641Z [INFO] [WebSocketContext] [WebSocket] Transport disabled: No WebSocket configurat                                                              
-  ──── (139 lines hidden) ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── 
-  de7691._.js:576:25                                                                                                                                                      
-  2026-05-24T22:12:44.108Z [WARN] [IconMapping] Unknown icon, using Info fallback {"iconName":"layers"} <anonymous code>:1:147461                                         
-  2026-05-24T22:12:44.109Z [WARN] [IconMapping] Unknown icon, using Info fallback {"iconName":"layers"} <anonymous code>:1:147461                                         
-  [BaseTabs] `children` and `tab.content` both provided. `children` wins; tab.content is ignored. <anonymous code>:1:147461                                               
-  Generated enterprise ID: req_3d30873c-96dc-4c60-8ac7-dc6ba1a0bbe2 (attempts: 1) src_services_28934410._.js:317:48                                                       
-  2026-05-24T22:12:44.254Z [DEBUG] [enterprise-api-client] [API] GET /api/floors?buildingId=bldg_04808c02-37b7-4afc-bccc-8b2971918f19 (attempt 1/3) <empty string>        
-  src_lib_8fde7691._.js:579:25                                                                                                                                            
-  [Fast Refresh] rebuilding 0b405_next_dist_client_0688ce58._.js:5950:17                                                                                                  
-  [Fast Refresh] done in 131ms 0b405_next_dist_client_0688ce58._.js:5810:13                                                                                               
-  [Fast Refresh] rebuilding 0b405_next_dist_client_0688ce58._.js:5950:17                                                                                                  
-  [Fast Refresh] done in 312ms 0b405_next_dist_client_0688ce58._.js:5810:13                                                                                               
-  2026-05-24T22:12:45.969Z [WARN] [enterprise-api-client] [API Contract] /api/floors?buildingId=bldg_04808c02-37b7-4afc-bccc-8b2971918f19 returned 200 but not canonical  
-  format. Keys: [success, floors, stats, message] <empty string> <anonymous code>:1:147461                                                                                
-  2026-05-24T22:12:45.969Z [DEBUG] [enterprise-api-client] [API] GET /api/floors?buildingId=bldg_04808c02-37b7-4afc-bccc-8b2971918f19 - 200 (1717ms) <empty string>       
-  src_lib_8fde7691._.js:579:25                                                                                                                                            
-  2026-05-24T22:12:49.213Z [INFO] [WorkspaceContext] [WorkspaceContext] Lazy activation triggered <empty string> src_lib_8fde7691._.js:576:25                             
-  2026-05-24T22:12:49.554Z [INFO] [USE_ENTITY_FILES] [realtime] Files updated {"count":1,"entityType":"floor","entityId":"flr_f64e9699-2cd4-4140-8534-2903bc04fb91"}      
-  src_lib_8fde7691._.js:576:25                                                                                                                                            
-  [FloorsTab] stair query floorId=flr_f64e9699-2cd4-4140-8534-2903bc04fb91 → 1 stairs src_components_building-management_tabs_33fd0c4a._.js:3685:29                       
-  2026-05-24T22:12:50.255Z [DEBUG] [WorkspaceContext] [WorkspaceContext] No workspaces available for user <empty string> src_lib_8fde7691._.js:579:25                     
-  [Fast Refresh] rebuilding 0b405_next_dist_client_0688ce58._.js:5950:17                                                                                                  
-  [Fast Refresh] done in 1283ms 0b405_next_dist_client_0688ce58._.js:5810:13                                                                                              
-  [Fast Refresh] rebuilding 0b405_next_dist_client_0688ce58._.js:5950:17                                                                                                  
-  [Fast Refresh] done in 277ms 0b405_next_dist_client_0688ce58._.js:5810:13                                                                                               
-  [Fast Refresh] rebuilding 0b405_next_dist_client_0688ce58._.js:5950:17                                                                                                  
-  [Fast Refresh] done in 259ms 0b405_next_dist_client_0688ce58._.js:5810:13                                                                                               
-                                                                                                                                                                          
-
-● [FloorsTab] stair query floorId=flr_f64e9699-2cd4-4140-8534-2903bc04fb91 → 1 stairs
-
-  Query δουλεύει — 1 σκάλα επιστράφηκε. Φαίνεται στο UI;
-
-✻ Cogitated for 6s
-❯ ΕΓΩ ΔΕΝ ΤΗΝ ΒΛΕΠΩ. ΒΛΕΠΩ ΜΟΝΟΝ ΕΝΑΝ ΤΟΙΧΟ BIM ΠΟΥ ΠΡΟΣΘΕΣΑ, ΑΛΛΑ ΣΚΑΛΑ BIM ΔΕΝ ΒΛΕΠΩ. ΔΕΝ ΘΑ ΕΠΡΕΠΕ ΤΟΙΧΟΣ ΚΑΙ ΣΚΑΛΑ ΝΑ ΧΡΗΣΙΜΟΠΟΙΟΥΝ ΤΟΝ ΙΔΙΟ ΚΩΔΙΚΑ ΓΙΑ ΝΑ ΦΑΙΝΟΝΤΑΙ  
-  ΚΑΙ ΤΑ ΔΥΟ?                                                                                                                                                             
-  
-● Query βγάζει 1 σκάλα αλλά δεν φαίνεται. Πρώτα διαβάζω FloorFloorplanInline για να δω πώς φαίνεται ο τοίχος εκεί.
-
-  Searched for 2 patterns, read 2 files (ctrl+o to expand)
-
-● Χρειάζομαι πληροφορίες. Ρωτάω: Στα κτίρια expanded floor, βλέπεις τον τοίχο ΣΤΟ DXF preview (canvas) ή σε κάποια λίστα κειμένου;
-
-  Searched for 4 patterns, read 1 file (ctrl+o to expand)
-
-● Πρέπει να δω τον stair tool για να καταλάβω αν η σκάλα αποθηκεύεται στο scene JSON (για canvas rendering) ή μόνο στο Firestore.
+● hdriLoaded: false και path tracer δεν ξεκινά — αλλά η scene εξακολουθεί να εξαφανίζεται. Το πρόβλημα είναι αλλού. Διαβάζω ViewMode3DStore — το enterPreviewMode()
+  καλείται σε κάθε onIdle:
 
   Searched for 2 patterns, read 1 file (ctrl+o to expand)
 
-● Σκάλα μπαίνει στο scene entities ✓. Τώρα ελέγχω αν υπάρχει renderer για σκάλα.
-
-  Searched for 3 patterns (ctrl+o to expand)
-
-● Δύο StairRenderer.ts! SSoT violation. Ελέγχω ποιο χρησιμοποιείται.
-
-  Searched for 2 patterns, read 2 files (ctrl+o to expand)
-
-● Κρίσιμο: renderer έχει guard if (!stair.geometry || !stair.params) return. Αν η geometry δεν αποθηκεύεται στο scene JSON → δεν renders.
-
-  Searched for 4 patterns, read 1 file (ctrl+o to expand)
-
-❯ ΤΟΝ ΤΟΙΧΟ ΤΟΝ ΒΛΕΠΩ ΚΑΙ ΣΤΟΝ ΚΑΜΒΑ ΣΤΟ DXF VIEWER ΚΑΙ ΣΤΗΝ ΣΕΛΙΔΑ                                                                                                      
-  http://localhost:3000/properties?view=floorplan&selected=prop_5410e574-c550-4713-a8f8-7abdcd3ce540&mediaTab=floorplan-floor ΣΤΗΝ ΚΑΡΤΕΛΑ ΚΑΤΟΨΗ ΟΡΟΦΟΥ ΚΑΙ ΣΤΗ ΣΕΛΙΔΑ  
-  http://localhost:3000/buildings ΣΤΗΝ ΚΑΡΤΕΛΑ ΟΡΟΦΟΙ                                                                                                                    
-
-● Giorgio: τοίχος φαίνεται παντού (DXF viewer + properties floor plan + buildings), σκάλα πουθενά. Αυτό σημαίνει ότι η σκάλα είτε δεν μπαίνει στο scene JSON είτε fail στο
-   conversion.
-
-  Searched for 3 patterns, read 1 file (ctrl+o to expand)
-
-● Ελέγχω isStairEntity — το converted entity έχει stairEntity: e αλλά όχι τα fields απευθείας.
-
-  Searched for 4 patterns (ctrl+o to expand)
-
-● Βρήκα την αιτία. StairRenderer κάνει stair.geometry αλλά το converted entity έχει stairEntity.geometry. Ελέγχω WallRenderer για σύγκριση.
-
-  Searched for 3 patterns (ctrl+o to expand)
-
-● Βρήκα τη διαφορά:
-  - Wall: case 'wall' → direct entity spread (fields at top level, geometry accessible)
-  - Stair: case 'stair' → wrapped { stairEntity: e } (geometry πρέπει να διαβαστεί ως entity.stairEntity.geometry)
-
-  Comment λέει: "StairRenderer renders directly from stairEntity.geometry" — αλλά ο renderer κάνει stair.geometry (λάθος!). Αυτή είναι η αιτία.
+● Ελέγχω αν κάποιο component κρύβει το 3D canvas όταν mode = '3d-preview':
 
   Searched for 1 pattern, read 1 file (ctrl+o to expand)
 
-● DxfRenderer.ts κάνει unwrap — ελέγχω τι ακριβώς κάνει και γιατί StairRenderer δεν το λαμβάνει σωστά.
-
-  Searched for 1 pattern, read 1 file (ctrl+o to expand)
-
-● DxfRenderer.ts κάνει σωστό unwrap. Άρα το πρόβλημα είναι ότι η σκάλα δεν υπάρχει στο scene JSON. Ελέγχω useStairPersistence — υπάρχει diff-merge guard που μπορεί να την
-   αφαιρεί.
-
-  Searched for 2 patterns, read 1 file (ctrl+o to expand)
-
-● Ελέγχω αν το auto-save αφαιρεί τη σκάλα από το JSON (comment λέει "geometry NOT persisted").
-
-  Searched for 3 patterns, read 2 files (ctrl+o to expand)
-
-● Ελέγχω το Firestore document της σκάλας για να δω αν έχει floorplanId.
-
-  Called firestore (ctrl+o to expand)
-
-  Searched for 1 pattern, called firestore (ctrl+o to expand)
-
-● Σκάλα έχει floorplanId: "file_214e2453-..." — ΟΚ. Τώρα ελέγχω αν το FloorplanGallery χρησιμοποιεί τον ίδιο canvas renderer με τον main DXF viewer.
-
-  Searched for 6 patterns (ctrl+o to expand)
-
-● floorplan-dxf-renderer.ts δεν έχει καθόλου stair code — αυτός είναι ο renderer του FloorplanGallery. Ελέγχω τι entities υποστηρίζει.
-
-  Searched for 2 patterns, read 1 file (ctrl+o to expand)
-
-● Ο floorplan-dxf-renderer.ts δεν έχει wall/stair/slab. Τότε ο τοίχος πρέπει να φαίνεται μέσω useFloorplanBimEntities. Ελέγχω αν αυτό έχει stairs.
+● Διαβάζω BimViewport3D.tsx — πού χρησιμοποιεί το mode state:
 
   Read 1 file (ctrl+o to expand)
 
-● ΒΡΗΚΑ ΤΗΝ ΑΙΤΙΑ!
-
-  useFloorplanBimEntities subscribes σε 6 collections (walls, slabs, beams, columns, openings, slab-openings) — αλλά ΟΧΙ FLOORPLAN_STAIRS!
-
-  Γι' αυτό τοίχος φαίνεται (via Firestore subscription) και σκάλα ΔΕΝ φαίνεται.
-
-  Searched for 4 patterns, read 3 files (ctrl+o to expand)
-
-● Root cause 100% confirmed:
-  - renderBimEntitiesToCanvas renders walls/slabs/beams/columns — but NO stair
-  - useFloorplanBimEntities subscribes to 6 collections — FLOORPLAN_STAIRS λείπει
-
-  Fix: 3 αρχεία + 1 Firestore index.
-
-  🎯 Modello consigliato: Sonnet 4.6  Motivo: 3-4 αρχεία, 1 domain (BIM readonly), straightforward additive change                                                                     
-  ⏸️  Αναμένω "ok"
-
-✻ Brewed for 14m 7s
-
-❯ ΕΔΩ Ή ΣΕ ΝΕΑ ΣΥΝΕΔΡΙΑ?                                                                                                                                                  
-
-● 📊 Συνεχής session μετά από summary — context ~70% ⚠️ 
-
-  Η fix είναι additive + καθαρή (3 αρχεία, 1 domain). Μπορώ να το κάνω εδώ άνετα.
-
-  Αν θες /clear πρώτα, δώσε μου αυτό το summary για τη νέα session:
-  ▎ Fix: Σκάλα δεν φαίνεται στο Properties/Buildings floorplan gallery. Root cause: useFloorplanBimEntities δεν subscribe στο FLOORPLAN_STAIRS. Fix: προσθήκη stairs στο 
-  ▎ bim-readonly-hydration.ts (hydrateStair) + useFloorplanBimEntities.ts + bim-readonly-render.ts (StairRenderer) + Firestore index (companyId, floorplanId) για 
-  ▎ floorplan_stairs. Stair doc: floorplanId: "file_214e2453-...", floorId: "flr_f64e9699-...". Model: Sonnet.
-
-  Προτείνω να συνεχίσουμε εδώ — η fix είναι 30 λεπτά δουλειά και context αντέχει.
-
-✻ Cooked for 18s
-
-❯ /model                                                                                                                                                                  
-  ⎿  Set model to Opus 4.7 (1M context) (default) for this session
-❯ VAI                                                                                                                                                                     
-
-  Searched for 15 patterns, read 4 files (ctrl+o to expand)
-
-● Έχω όλα τα info. Ξεκινώ την υλοποίηση.
-
-  Step 1: Add hydrateStair στο bim-readonly-hydration.ts
-
-● Update(src\components\shared\files\media\bim-readonly-hydration.ts)
-  ⎿  Added 8 lines
-       8   * @see docs/centralized-systems/reference/adrs/ADR-370-bim-readonly-visualization.md
-       9   */      10  
-      11 +import { nowTimestamp } from '@/lib/firestore-now';                                                                                                            12  import { computeWallGeometry } from '@/subapps/dxf-viewer/bim/geometry/wall-geometry';
-      13  import { computeSlabGeometry } from '@/subapps/dxf-viewer/bim/geometry/slab-geometry';
-      14  import { computeBeamGeometry } from '@/subapps/dxf-viewer/bim/geometry/beam-geometry';
-      15  import { computeColumnGeometry } from '@/subapps/dxf-viewer/bim/geometry/column-geometry';
-      16  import { computeOpeningGeometry } from '@/subapps/dxf-viewer/bim/geometry/opening-geometry';
-      17  import { computeSlabOpeningGeometry } from '@/subapps/dxf-viewer/bim/geometry/slab-opening-geometry';
-      18 +import { computeStairGeometry } from '@/subapps/dxf-viewer/bim/geometry/stairs/StairGeometryService';                                                    
-      19  import { validateWallParams } from '@/subapps/dxf-viewer/bim/validators/wall-validator';
-      20  import { validateSlabParams } from '@/subapps/dxf-viewer/bim/validators/slab-validator';
-      21  import { validateBeamParams } from '@/subapps/dxf-viewer/bim/validators/beam-validator';
-     ...
-      36  import type { ColumnEntity } from '@/subapps/dxf-viewer/bim/types/column-types';
-      37  import type { OpeningEntity } from '@/subapps/dxf-viewer/bim/types/opening-types';
-      38  import type { SlabOpeningEntity } from '@/subapps/dxf-viewer/bim/types/slab-opening-types';
-      39 +import type {                                                                                                                                            
-      40 +  StairDoc,                                                                                                                                              
-      41 +  StairEntity,                                                                                                                                           
-      42 +  StairParams,                                                                                                                                           
-      43 +  StairValidationState,                                                                                                                                  
-      44 +} from '@/subapps/dxf-viewer/bim/types/stair-types';                                                                                                     
-      45  
-      46  function migrateWallParamsToMm(params: WallParams): WallParams {
-      47    if (params.sceneUnits) return params;
-
-● Update(src\components\shared\files\media\bim-readonly-hydration.ts)
-  ⎿  Added 38 lines
-      148      visible: true,
-      149    } as SlabOpeningEntity;
-      150  }
-      151 +                                                                                                                                                              152 +// Mirrors `use-stair-persistence.hydrateLegacyParams` (private). ADR-358 Phase 3f/3g                                                                   
-      153 +// back-compat: legacy l-shape without cornerStyle → 'landing'; nokSubType 'secondary' → 'low-rise'.                                                          154 +function hydrateLegacyStairParams(params: StairParams): StairParams {                                                                                   
-      155 +  let out: StairParams = params;                                                                                                                        
-      156 +  const v = out.variant;                                                                                                                                
-      157 +  if (v.kind === 'l-shape' && (v as { cornerStyle?: string }).cornerStyle === undefined) {                                                              
-      158 +    out = { ...out, variant: { ...v, cornerStyle: 'landing' } as typeof v };                                                                            
-      159 +  }                                                                                                                                                     
-      160 +  if (out.nokSubType === 'secondary') {                                                                                                                 
-      161 +    out = { ...out, nokSubType: 'low-rise' };                                                                                                           
-      162 +  }                                                                                                                                                     
-      163 +  return out;                                                                                                                                           
-      164 +}                                                                                                                                                       
-      165 +                                                                                                                                                        
-      166 +export function hydrateStair(doc: StairDoc): StairEntity {                                                                                              
-      167 +  const params = hydrateLegacyStairParams(doc.params);                                                                                                  
-      168 +  const validation: StairValidationState = doc.validation ?? {                                                                                          
-      169 +    hasCodeViolations: false,                                                                                                                           
-      170 +    violationKeys: [],                                                                                                                                  
-      171 +    lastValidatedAt: nowTimestamp(),                                                                                                                    
-      172 +  };                                                                                                                                                    
-      173 +  return {                                                                                                                                              
-      174 +    id: doc.id,                                                                                                                                         
-      175 +    type: 'stair',                                                                                                                                      
-      176 +    kind: doc.kind,                                                                                                                                     
-      177 +    params,                                                                                                                                             
-      178 +    geometry: doc.geometry ?? computeStairGeometry(params),                                                                                             
-      179 +    validation,                                                                                                                                         
-      180 +    layerId: doc.layer ?? 'STAIRS',                                                                                                                     
-      181 +    levelId: doc.levelId,                                                                                                                               
-      182 +    floorId: doc.floorId,                                                                                                                               
-      183 +    buildingId: doc.buildingId,                                                                                                                         
-      184 +    visible: true,                                                                                                                                      
-      185 +    editingBy: doc.editingBy,                                                                                                                           
-      186 +    qto: doc.qto,                                                                                                                                       
-      187 +  } as StairEntity;                                                                                                                                     
-      188 +}                                                                                                                                                       
-
-● Step 2: Add FLOORPLAN_STAIRS subscription στο useFloorplanBimEntities.ts
-
-● Update(src\components\shared\files\media\useFloorplanBimEntities.ts)
-  ⎿  Added 4 lines
-      27    hydrateColumn,
-      28    hydrateOpening,
-      29    hydrateSlabOpening,
-      30 +  hydrateStair,                                                                                                                                                31  } from '@/components/shared/files/media/bim-readonly-hydration';
-      32        33  import type { WallDoc } from '@/subapps/dxf-viewer/bim/walls/wall-firestore-service';
-     ...
-      43  import type { ColumnEntity } from '@/subapps/dxf-viewer/bim/types/column-types';
-      44  import type { OpeningEntity } from '@/subapps/dxf-viewer/bim/types/opening-types';
-      45  import type { SlabOpeningEntity } from '@/subapps/dxf-viewer/bim/types/slab-opening-types';
-      46 +import type { StairDoc, StairEntity } from '@/subapps/dxf-viewer/bim/types/stair-types';                                                                 
-      47  
-      48  export interface FloorplanBimSnapshot {
-      49    readonly walls: ReadonlyArray<WallEntity>;
-     ...
-      52    readonly columns: ReadonlyArray<ColumnEntity>;
-      53    readonly openings: ReadonlyArray<OpeningEntity>;
-      54    readonly slabOpenings: ReadonlyArray<SlabOpeningEntity>;
-      55 +  readonly stairs: ReadonlyArray<StairEntity>;                                                                                                           
-      56    readonly isLoading: boolean;
-      57    readonly hasAny: boolean;
-      58  }
-     ...
-      64    columns: [],
-      65    openings: [],
-      66    slabOpenings: [],
-      67 +  stairs: [],                                                                                                                                            
-      68    isLoading: false,
-      69    hasAny: false,
-      70  };
-
-● Update(src\components\shared\files\media\useFloorplanBimEntities.ts)
-  ⎿  Added 2 lines, removed 1 line
-      83      | 'FLOORPLAN_BEAMS'
-      84      | 'FLOORPLAN_COLUMNS'
-      85      | 'FLOORPLAN_OPENINGS'
-      86 -    | 'FLOORPLAN_SLAB_OPENINGS',                                                                                                                               86 +    | 'FLOORPLAN_SLAB_OPENINGS'                                                                                                                          
-      87 +    | 'FLOORPLAN_STAIRS',                                                                                                                                      88    floorplanId: string | null,
-      89  ): { docs: ReadonlyArray<T>; loaded: boolean } {
-      90    const [state, setState] = useState<{ docs: ReadonlyArray<T>; loaded: boolean }>({
-
-● Update(src\components\shared\files\media\useFloorplanBimEntities.ts)
-  ⎿  Added 9 lines, removed 3 lines
-      139    const columnsRes = useGuardedDocs<ColumnDoc>('FLOORPLAN_COLUMNS', activeId);
-      140    const openingsRes = useGuardedDocs<OpeningDoc>('FLOORPLAN_OPENINGS', activeId);      141    const slabOpeningsRes = useGuardedDocs<SlabOpeningDoc>('FLOORPLAN_SLAB_OPENINGS', activeId);
-      142 +  const stairsRes = useGuardedDocs<StairDoc>('FLOORPLAN_STAIRS', activeId);                                                                                   143  
-      144    return useMemo<FloorplanBimSnapshot>(() => {
-      145      if (!activeId) return EMPTY_SNAPSHOT;
-     ...
-      152      const beams = beamsRes.docs.map(hydrateBeam);
-      153      const columns = columnsRes.docs.map(hydrateColumn);
-      154      const slabOpenings = slabOpeningsRes.docs.map(hydrateSlabOpening);
-      155 +    const stairs = stairsRes.docs.map(hydrateStair);                                                                                                    
-      156  
-      157      const openings: OpeningEntity[] = [];
-      158      for (const od of openingsRes.docs) {
-     ...
-      167        beamsRes.loaded &&
-      168        columnsRes.loaded &&
-      169        openingsRes.loaded &&
-      168 -      slabOpeningsRes.loaded                                                                                                                            
-      170 +      slabOpeningsRes.loaded &&                                                                                                                         
-      171 +      stairsRes.loaded                                                                                                                                  
-      172      );
-      173  
-      174      const hasAny =
-     ...
-      177          beams.length +
-      178          columns.length +
-      179          openings.length +
-      177 -        slabOpenings.length >                                                                                                                           
-      180 +        slabOpenings.length +                                                                                                                           
-      181 +        stairs.length >                                                                                                                                 
-      182        0;
-      183  
-      180 -    return { walls, slabs, beams, columns, openings, slabOpenings, isLoading, hasAny };                                                                 
-      184 +    return { walls, slabs, beams, columns, openings, slabOpenings, stairs, isLoading, hasAny };                                                         
-      185    }, [
-      186      activeId,
-      187      wallsRes.docs,
-     ...
-      196      openingsRes.loaded,
-      197      slabOpeningsRes.docs,
-      198      slabOpeningsRes.loaded,
-      199 +    stairsRes.docs,                                                                                                                                     
-      200 +    stairsRes.loaded,                                                                                                                                   
-      201    ]);
-      202  }
-
-● Step 3: Add StairRenderer στο bim-readonly-render.ts
-
-● Update(src\components\shared\files\media\bim-readonly-render.ts)
-  ⎿  Added 1 line
-      24  import { ColumnRenderer } from '@/subapps/dxf-viewer/bim/renderers/ColumnRenderer';
-      25  import { OpeningRenderer } from '@/subapps/dxf-viewer/bim/renderers/OpeningRenderer';      26  import { SlabOpeningRenderer } from '@/subapps/dxf-viewer/bim/renderers/SlabOpeningRenderer';
-      27 +import { StairRenderer } from '@/subapps/dxf-viewer/bim/renderers/StairRenderer';                                                                              28  
-      29  import type { OpeningEntity } from '@/subapps/dxf-viewer/bim/types/opening-types';
-      30  import type { SlabOpeningEntity } from '@/subapps/dxf-viewer/bim/types/slab-opening-types';
-
-● Update(src\components\shared\files\media\bim-readonly-render.ts)
-  ⎿  Added 3 lines
-      89    const columnRenderer = new ColumnRenderer(ctx);
-      90    const openingRenderer = new OpeningRenderer(ctx);
-      91    const slabOpeningRenderer = new SlabOpeningRenderer(ctx);
-      92 +  const stairRenderer = new StairRenderer(ctx);                                                                                                                93  
-      94    wallRenderer.setTransform(transform);      95    slabRenderer.setTransform(transform);
-     ...
-       97    columnRenderer.setTransform(transform);
-       98    openingRenderer.setTransform(transform);
-       99    slabOpeningRenderer.setTransform(transform);
-      100 +  stairRenderer.setTransform(transform);                                                                                                                
-      101  
-      102    wallRenderer.setOpeningsByWall(buildOpeningsByWall(snapshot.openings));
-      103    slabRenderer.setSlabOpeningsBySlab(buildSlabOpeningsBySlab(snapshot.slabOpenings));
-     ...
-      109    for (const column of snapshot.columns) columnRenderer.render(column, READONLY_OPTIONS);
-      110    for (const opening of snapshot.openings) openingRenderer.render(opening, READONLY_OPTIONS);
-      111    for (const so of snapshot.slabOpenings) slabOpeningRenderer.render(so, READONLY_OPTIONS);
-      112 +  for (const stair of snapshot.stairs) stairRenderer.render(stair, READONLY_OPTIONS);                                                                   
-      113    ctx.restore();
-      114  }
-
-● Ελέγχω αν άλλα αρχεία καταναλώνουν FloorplanBimSnapshot και χρειάζονται update.
-
-  Searched for 4 patterns (ctrl+o to expand)
-
-● Bash("C:\Program Files\Git\cmd\git.exe" diff --stat src/components/shared/files/media/)
-  ⎿  warning: in the working copy of 'src/components/shared/files/media/bim-readonly-hydration.ts', LF will be replaced by CRLF the next time Git touches it
-     warning: in the working copy of 'src/components/shared/files/media/bim-readonly-render.ts', LF will be replaced by CRLF the next time Git touches it
-      .../shared/files/media/bim-readonly-hydration.ts   | 46 ++++++++++++++++++++++
-     … +3 lines (ctrl+o to expand)
-  ⎿  Allowed by auto mode classifier
-● Τρέχω tsc check στο background και διαβάζω ADR-370 για update.
-
-● Bash(npx tsc --noEmit 2>&1 | grep -E "(bim-readonly|useFloorplanBim|StairEntity|StairDoc|StairValidation)" | head -30)
-  ⎿  Running in the background (↓ to manage)
-
-  Searched for 1 pattern, read 1 file (ctrl+o to expand)
-
-● Bash("C:\Program Files\Git\cmd\git.exe" log --oneline -1 -- docs/centralized-systems/reference/adrs/ADR-370-bim-readonly-visualization.md)
-  ⎿  0ad30f7d feat(bim): ADR-366 §B.4 Phase 6 render dialog + Phase 7.2 HDRI + ADR-369 Phase A3 wall+column + ADR-370 Phase 3 rules deploy
-  ⎿  Allowed by auto mode classifier
-
-  Searched for 1 pattern, read 1 file (ctrl+o to expand)
-
-● Update(docs\centralized-systems\reference\adrs\ADR-370-bim-readonly-visualization.md)
-  ⎿  Added 1 line, removed 1 line
-       4  - **Date**: 2026-05-20
-       5  - **Author**: Giorgio Pagonis + Claude (Opus 4.7)
-       6  - **Related**: ADR-040 (Preview Canvas Performance), ADR-294 (SSoT Ratchet), ADR-356 (Tenant SSoT), ADR-361 (Firestore Subscribe Equality Guard), ADR-363           (BIM Drawing Mode), ADR-366 (3D BIM Viewer)
-       7 -- **Scope**: Properties subapp read-only floorplan tab — show BIM entities (`walls`, `slabs`, `beams`, `columns`, `openings`, `slab-openings`) drawn in t         -he DXF Viewer subapp.                                                                                                                                    
-       7 +- **Scope**: Properties subapp read-only floorplan tab — show BIM entities (`walls`, `slabs`, `beams`, `columns`, `openings`, `slab-openings`, `stairs`) 
-         +drawn in the DXF Viewer subapp.                                                                                                                          
-       8  - **Impact**: 🟢 Additive — new render layer, no schema/persistence changes.
-       9  
-      10  ---
-
-● Update(docs\centralized-systems\reference\adrs\ADR-370-bim-readonly-visualization.md)
-  ⎿  Added 1 line, removed 1 line
-      11  
-      12  ## 1. Context
-      13  
-      14 -Ο χρήστης σχεδιάζει BIM entities (τοίχοι, πλάκες, δοκάρια, κολόνες, κουφώματα, διανοίξεις πλάκας) στον `/dxf/viewer` (DXF Viewer subapp). Αυτά persistάρο         -υν σωστά σε Firestore (`floorplan_walls`, `floorplan_slabs`, `floorplan_beams`, `floorplan_columns`, `floorplan_openings`, `floorplan_slab_openings`), sc
-         -oped by `(companyId, projectId, floorplanId)` per ADR-363 §5.10.                                                                                               14 +Ο χρήστης σχεδιάζει BIM entities (τοίχοι, πλάκες, δοκάρια, κολόνες, κουφώματα, διανοίξεις πλάκας, σκάλες) στον `/dxf/viewer` (DXF Viewer subapp). Αυτά pe
-         +rsistάρουν σωστά σε Firestore (`floorplan_walls`, `floorplan_slabs`, `floorplan_beams`, `floorplan_columns`, `floorplan_openings`, `floorplan_slab_openin
-         +gs`, `floorplan_stairs`), scoped by `(companyId, projectId, floorplanId)` per ADR-363 §5.10 / ADR-358 §6.1.                                              
-      15  
-      16  Όμως στο read-only floorplan tab του Properties subapp στο URL pattern `/properties?view=floorplan&selected=<propertyId>&mediaTab=floorplan-floor` **δεν
-          εμφανίζονται**. Ο χρήστης εύλογα περιμένει να βλέπει τα BIM στοιχεία που σχεδίασε.
-      17  
-
-● Update(docs\centralized-systems\reference\adrs\ADR-370-bim-readonly-visualization.md)
-  ⎿  Added 1 line
-      157  | 2026-05-20 | Initial implementation. Façade + transform bridge + hook + 4 modified files + SSoT registry entry. |
-      158  | 2026-05-20 | **Phase 2 wiring** — single-level `floorplan-floor` branch in `ReadOnlyMediaViewer.tsx` (γρ. 283-297) δεν περνούσε `floorplanId` prop στο
-            `FloorplanGallery`. Στο URL `?view=floorplan&selected=<propertyId>&mediaTab=floorplan-floor` (single-level property) ο `FloorplanGallery` έπεφτε στο fa
-           llback `currentFile?.id` που, σε περιπτώσεις legacy floorplan χωρίς `fileRecordId` (π.χ. αμετάβατο entry στο `files` collection), παρήγαγε synthetic id            `floor_floorplan_*` → `SYNTHETIC_FLOORPLAN_PREFIX` guard στο `useFloorplanBimEntities.isQueryable()` → `EMPTY_SNAPSHOT` → καμία BIM render. Fix: explici
-           t `floorplanId={floorFloorplansData.files[0]?.id ?? null}` (mirror του `FloorFloorplanTabContent` pattern). Multi-file branches (`floorplans` unit singl           e-level, `UnitFloorplanTabContent`) παραμένουν στο `currentFile?.id` fallback γιατί ο index αλλάζει per navigation — εκεί το fallback είναι το σωστό δυν
-           αμικό SSoT. |
-      159  | 2026-05-20 | **Phase 3 diagnosis + fix** — μετά τα Phase 1+2, οι BIM entities παρέμεναν αόρατες στο Properties tab παρά τα σωστά subscriptions. Διάγνω
-           ση: temporary diagnostic logs στο `useFloorplanBimEntities` εκτύπωσαν `[bim-readonly][error] code: "permission-denied"` σε όλα 6 collections. Cause: τα
-           Firestore rules για τα 6 `floorplan_*` collections (που είχαν προστεθεί στον commit `05275d03` ADR-363 Phase 0) **ΔΕΝ είχαν deployed** στο production Fi
-           restore — μόνο το local `firestore.rules` αρχείο τα είχε. Auth token claims verified σωστά (`globalRole: super_admin`, `companyId: pzNUy8ksddGCtcQMqumR`
-           ). Fix: `firebase deploy --only firestore:rules --project pagonis-87766`. Μετά το deploy, τα 5/6 subscriptions επέστρεψαν `count: 0` (κανονικά — προηγου
-           μένως δεν υπήρχαν persisted docs), και μετά από σχεδίαση walls στο `/dxf/viewer` οι τοίχοι εμφανίστηκαν σωστά στο read-only Properties canvas. Diagnosti
-           c logs αφαιρέθηκαν (production noise). **Verification finding**: τα `floorplan_*` collections αρχικά δεν υπήρχαν στο Firestore Console γιατί το test DB
-           ήταν wiped — οι BIM persistence hosts (`WallPersistenceHost` κ.λπ.) στο `DxfViewerTopBar` λειτουργούν σωστά εφόσον `companyId && projectId && floorplanI
-           d && userId` είναι όλα present (guard στο `useWallPersistence.ts:165`). |
-      160 +| 2026-05-25 | **Phase 4 — stair coverage extension**. Bug report: Giorgio σχεδίασε BIM σκάλα στο `/dxf/viewer` σε floor-plan, εμφανιζόταν εκεί κανονικά
-          + αλλά **όχι** στο Properties read-only canvas (`?view=floorplan&mediaTab=floorplan-floor`) ούτε στο Buildings → tab Όροφοι → expanded floor DXF preview 
-          +(που μοιράζονται το ίδιο `FloorplanGallery` pipeline). Root cause: ο façade hook `useFloorplanBimEntities` κάλυπτε μόνο 6 collections — `FLOORPLAN_STAIR
-          +S` δεν υπήρχε καθόλου, και ο `bim-readonly-render` δεν είχε `StairRenderer`. Walls/slabs/beams/columns δούλευαν επειδή ήταν στα 6 από Phase 1. **Σκάλες 
-          +ήταν totally invisible** σε όλα τα read-only canvases. Fix (3 αρχεία, additive): (1) `bim-readonly-hydration.ts` — `hydrateStair(doc)` που inlineάρει το
-          + legacy params hydration από `use-stair-persistence` (l-shape `cornerStyle` default `'landing'`, `nokSubType: 'secondary'` → `'low-rise'`), re-deriveάρε
-          +ι geometry μέσω SSoT `computeStairGeometry(params)` (ADR-358 §G6: geometry NOT persisted). (2) `useFloorplanBimEntities.ts` — προστέθηκε `FLOORPLAN_STAI
-          +RS` στο union του `useGuardedDocs<T>`, νέο `stairsRes` subscription, `stairs` field στο `FloorplanBimSnapshot`, μετράται στο `isLoading`/`hasAny`/`useMe
-          +mo` deps. (3) `bim-readonly-render.ts` — instantiate `StairRenderer`, `setTransform(transform)`, render loop `for (const stair of snapshot.stairs) stair
-          +Renderer.render(stair, READONLY_OPTIONS)`. Δεν χρειάστηκε Firestore composite index — η ίδια query shape `where('companyId') + where('floorplanId')` δου
-          +λεύει για walls/slabs/beams/columns χωρίς explicit index (Firestore index-merging για multi-equality). Verified με Firestore MCP: η σκάλα `stair_a630d20
-          +e-f024-...` έχει `floorplanId: file_214e2453-...`, `floorId: flr_f64e9699-...`, `companyId: comp_9c7c1a50-...`, `kind: 'straight'`, full `params + valid
-          +ation`. Δεν αλλάζει το `Bim3DReadOnlyOverlay` — 3D coverage για σκάλες είναι ξεχωριστή scope (ADR-371). |                                               
-
-● Bash(if [ -f "C:\Users\user\AppData\Local\Temp\claude\C--Nestor-Pagonis\f9f6d6c7-d806-4d5b-a27f-35dae11cc580\tasks\b6pvtmr68.output" ]; then cat "C:\Users\user\AppDa…)
-  ⎿  (No output)
-  ⎿  Allowed by auto mode classifier
-
-  Searched for 3 patterns, read 1 file, listed 2 directories (ctrl+o to expand)
-
-● Update(docs\centralized-systems\reference\adrs\ADR-358-dxf-stair-tool-google-level.md)
-  ⎿  Added 1 line
-      937  
-      938  | Date | Change |
-      939  |---|---|      940 +| 2026-05-25 | **Phase 9D IMPLEMENTED — stairs visible in read-only floorplan canvases (Properties + Buildings)**. Bug report: Giorgio σχεδίασε BIM σκάλ
-          +α στο `/dxf/viewer` (correctly persisted σε `floorplan_stairs/{id}` με `floorplanId/floorId/companyId/projectId` όλα set), αλλά **δεν εμφανιζόταν** στο           +read-only DXF preview του Properties tab (`/properties?view=floorplan&mediaTab=floorplan-floor`) ούτε στο Buildings → Όροφοι → expanded row (που μοιράζο
-          +νται το ίδιο `FloorplanGallery` pipeline). Walls του ίδιου χρήστη εμφανίζονταν κανονικά — άρα η ερώτηση Giorgio: "γιατί ο τοίχος και η σκάλα δεν χρησιμο
-          +ποιούν τον ίδιο κώδικα για να φαίνονται;". Root cause (ADR-370): ο façade hook `useFloorplanBimEntities` κάλυπτε μόνο 6 collections (walls/slabs/beams/c
-          +olumns/openings/slab-openings) — **`FLOORPLAN_STAIRS` δεν υπήρχε καθόλου στο read-only pipeline**, και ο `bim-readonly-render` δεν είχε `StairRenderer`.
-          + Σκάλες ήταν totally invisible σε όλα τα read-only canvases. Fix (3 αρχεία, additive — ADR-370 §6 Phase 4): (1) `bim-readonly-hydration.ts` — `hydrateSt
-          +air(doc)` με inlined legacy params hydration mirror του `use-stair-persistence.hydrateLegacyParams` (l-shape χωρίς `cornerStyle` → `'landing'`, `nokSubT
-          +ype: 'secondary'` → `'low-rise'`), geometry re-derived μέσω SSoT `computeStairGeometry(params)` (§G6: geometry NOT persisted). (2) `useFloorplanBimEntit
-          +ies.ts` — `FLOORPLAN_STAIRS` στο `useGuardedDocs` union, νέο `stairsRes` subscription, `stairs: ReadonlyArray<StairEntity>` field στο `FloorplanBimSnaps
-          +hot`, counted στο `isLoading/hasAny/useMemo` deps. (3) `bim-readonly-render.ts` — `StairRenderer` instance + `setTransform(transform)` + render loop. Κα
-          +νένα νέο Firestore index — η ίδια query shape `where('companyId') + where('floorplanId')` δουλεύει για όλα τα BIM collections χωρίς explicit composite i
-          +ndex (Firestore equality-merge). Verified με Firestore MCP query: σκάλα `stair_a630d20e-f024-...` έχει `floorplanId: file_214e2453-...`, `floorId: flr_f
-          +64e9699-...` (Ισόγειο Κτηρίου Α1), `kind: 'straight'`, full `params + validation + multiStoryConfig {linkedToFloor: true}`. 3D coverage σκάλας στο `Bim3
-          +DReadOnlyOverlay` παραμένει separate scope (ADR-371). |                                                                                                 
-      941  | 2026-05-25 | **Phase 9C-3 IMPLEMENTED — 3 bugfixes: delete reappears + stepCount stale + stairs visible in Floors tab**. (1) **Delete reappears fix**:
-            `DeleteEntityCommand` removed stair from scene but not from Firestore → subscription re-added it. Fix: new EventBus event `bim:stair-delete-requested`
-           + `useSmartDelete` collects stair IDs before execute and emits the event post-execute + `useStairPersistence` adds `deleteStair(stairId)` callback (mirr
-           ors `useWallPersistence.deleteWall`) + listener for the event → calls `svc.deleteStair()` + removes from scene + clears dirty/saved refs. `UseStairPersi
-           stenceResult` now exposes `deleteStair`. (2) **stepCount stale fix**: `batchUpdateLinkedStairsHeight` in `stair-floor-sync.ts` was writing only `{ story
-           Height: X }` without recomputing `stepCount/totalRise/totalRun/pitch`. Fix: import `reconcileLinkedStair` from `stair-floor-link.ts` and apply it after
-           spreading the new `storyHeight` — now the batch write contains the fully reconciled params (Revit "Desired Riser Height" pattern maintained). (3) **Floo
-           rs tab stairs list**: new `FloorStairsList` component in `FloorsTabContent.tsx` (shown in expanded floor row when `hasFloorplan=true`) queries `querySta
-           irsByFloorId` (companyId-scoped) via `useFloorsTabState` new `expandedFloorStairs/loadingStairs` state — lazy load on expand. `LinkedStairsInfo.all` fie
-           ld added to expose all stairs (not just multiStoryConfig-bearing ones). Each stair: kind label (i18n 12 kinds) + 🔗 Linked badge / ⚠️  Independent badge.
-           New i18n keys `tabs.floors.{stairs,stairsEmpty,stairLinked,stairCustom,stairKind.*}` el+en. Files: `EventBus.ts`, `useSmartDelete.ts`, `use-stair-persis
-           tence.ts`, `stair-floor-sync.ts`, `useFloorsTabState.ts`, `FloorsTabContent.tsx`, `building-tabs.json` (el+en). ✅ Google-level: YES — event-driven Fire
-           store cleanup (mirrors wall pattern), idempotent scene cleanup, batch reconcile via pure SSoT helper. |
-      942  | 2026-05-21 | **ADR-363 Phase 0.5 follow-up — `types/entities.ts` consumer sweep fix**. `entities.ts` είχε παραλειφθεί από τη consumer sweep της Phase
-           0.5: εξακολουθούσε να importάρει `StairEntity` κ.ά. από `'./stair'` (barrel που είχε διαγραφεί). Fix: imports ενημερώθηκαν σε `'../bim/types/stair-types
-           '` (1 αρχείο, 2 import statements). Το `types/stair.ts` ΔΕΝ επανδημιουργήθηκε — σωστά σύμφωνα με ADR-363 §Phase 0.5 intent. TypeScript gap που άφηνε `En
-           tityModel` / `Entity` union χωρίς resolved stair types κλείστηκε. |
-      943  | 2026-05-19 | **ADR-363 Phase 0.5 ολοκληρώθηκε — stair migrated to bim/ SSoT**. Νέα canonical paths για ολόκληρο το stair domain: `bim/stairs/` (lifecy
-           cle code), `bim/geometry/stairs/` (geometry SSoT), `bim/types/stair-types.ts` (types — extends BimEntity<>), `bim/renderers/StairRenderer.ts`, `bim/hook
-           s/use-stair-persistence.ts`, `bim/hooks/use-ribbon-stair-bridge.ts`. Legacy paths αφαιρέθηκαν: `systems/stairs/` folder + `types/stair.ts` barrel + `ren
-           dering/entities/StairRenderer.ts` barrel. Pre-commit CHECK 6B/6C/6D compliance preserved (zero canvas-architecture changes — pure import refactor). SSoT
-            registry module `bim-folder-residency` (Tier 3, baseline 0) ratchet blocks regressions· `stair-presets-service` + `stair-firestore-service` registry pa
-           ths ενημερώθηκαν προς bim/. Stair test suites: **21 suites / 322 tests / green**. Reconciliation note: reality drift από αρχικό ADR-363 §Phase 0.5 — τα
-           bim/stairs/ + bim/geometry/stairs/ + bim/types/stair-types.ts + bim/renderers/StairRenderer.ts ήταν ΗΔΗ τα ζωντανά αρχεία, ενώ systems/stairs/ ήταν 45 b
-           arrel re-export stubs. 2 hooks (useStairPersistence, useRibbonStairBridge) ήταν τα μόνα πραγματικά εκτός bim/ ζωντανά αρχεία που χρειάστηκαν μετακίνηση.
-            Known follow-up (low priority): bridge/* stair helpers στο ui/ribbon/hooks/bridge/ εξακολουθούν εκεί — cross-domain coupling BIM→UI για 2 imports· extr
-           action σε bim/hooks/bridge/ σε ratchet follow-up. |
-
-  Searched for 1 pattern, read 1 file (ctrl+o to expand)
-
-● Update(local_ΑΝΑΦΟΡΑ_2.txt)
-  ⎿  Added 8 lines
-      414    - Delete reappears: EventBus bim:stair-delete-requested + useSmartDelete emit + useStairPersistence.deleteStair()
-      415    - stepCount stale: batchUpdateLinkedStairsHeight εφαρμόζει reconcileLinkedStair() πριν το batch.update
-      416    - Floors tab: FloorStairsList component + queryStairsByFloorId lazy load + LinkedStairsInfo.all + i18n keys
-      417 +  - Firestore index: (companyId, floorId) για floorplan_stairs deployed + READY                                                                               418 +✅ BUG FIX 2026-05-25 — Phase 9D (ADR-370 Phase 4): σκάλες ορατές στα Properties + Buildings floorplan canvases                                         
-      419 +  - Root cause: useFloorplanBimEntities subscribed σε 6 collections (walls/slabs/beams/columns/openings/slab-openings) ΧΩΡΙΣ FLOORPLAN_STAIRS — σκάλες i          +nvisible παντού εκτός /dxf/viewer                                                                                                                       
-      420 +  - bim-readonly-hydration.ts: + hydrateStair(doc) με legacy params hydration + computeStairGeometry SSoT                                               
-      421 +  - useFloorplanBimEntities.ts: + FLOORPLAN_STAIRS subscription + stairs field στο FloorplanBimSnapshot                                                 
-      422 +  - bim-readonly-render.ts: + StairRenderer instance + render loop με READONLY_OPTIONS                                                                  
-      423 +  - ADR-370 §6 changelog + scope updated, ADR-358 §10 changelog Phase 9D added                                                                          
-      424 +  - Zero new Firestore index (equality-merge κάλυψη)                                                                                                    
-      425  
-      426  ─────────────────────────────────────────────────────────
-      427  ADR-362 — Enterprise Dimension System (ΝΕΟ, δεν υπήρχε 2026-05-21)
-
-  Recalled 1 memory, wrote 1 memory (ctrl+o to expand)
-
-● Bash(npx tsc --noEmit --pretty false 2>&1 | grep -E "bim-readonly-hydration|bim-readonly-render|useFloorplanBimEntities" | head -20)
-  ⎿  Running in the background (↓ to manage)
-  ⎿  (timeout 3m)
-
-● Background command "TypeScript check filtered for our changes" completed (exit code 0)
-
-● ✅ Υλοποίηση ΟΛΟΚΛΗΡΩΘΗΚΕ.
-
-  Code (3 αρχεία, additive):
-  - bim-readonly-hydration.ts:144 — hydrateStair(doc) + inlined legacy params hydration  - useFloorplanBimEntities.ts — FLOORPLAN_STAIRS subscription + stairs field στο snapshot
-  - bim-readonly-render.ts — StairRenderer instance + render loop
-  Docs (4 αρχεία):
-  - ADR-370 §1 + §6 changelog — Phase 4 stair extension
-  - ADR-358 §10 changelog — Phase 9D entry
-  - local_ΑΝΑΦΟΡΑ_2.txt — N.15 compliant
-  - Memory project_adr358_floor_link_pattern.md — Phase 9D status
-
-  Τι να δοκιμάσεις τώρα:
-  1. Hard refresh (Ctrl+Shift+R) στο /buildings ή /properties?view=floorplan&mediaTab=floorplan-floor
-  2. Expand τον όροφο "Ισόγειο" στο Κτήριο Α1
-  3. Η σκάλα ευθεία πρέπει να εμφανιστεί στο DXF preview, ζωγραφισμένη όπως ο τοίχος
-
-  ✅ Google-level: YES — SSoT reuse (StairRenderer + computeStairGeometry), zero geometry duplication, mirror wall/slab/beam pattern, additive.
-
-  📊 Context: ~80% | Commands: 12+ | ⚠️  /clear μετά το testing
-
-  ⏸️  Αναμένω επιβεβαίωση πριν /project:commit (N.(-1)).
-
-✻ Brewed for 13m 6s · 1 shell still running
-
-❯ ΤΡΕΧΕΙ ΣΤΟ ΠΑΡΑΣΚΗΝΙΟ ΚΑΠΟΙΟΣ ΕΛΕΓΧΟΣ?                                                                                                                                    ΕΠΙΣΗΣ ΕΙΠΕΣ ΠΩΣ ΘΑ ΧΡΕΙΑΖΟΤΑΝ ΝΑ ΔΗΜΙΟΥΡΓΗΣΕΙΣ ΚΑΙ ΝΕΟΥΣ ΔΕΙΚΤΕΣ. ΔΗΜΙΟΥΡΓΗΣΕΣ? ΧΡΕΙΑΣΤΗΚΕ ΝΑ ΔΗΜΙΟΥΡΓΗΣΕΙΣ?                                                           
-  ΟΙ ΣΚΑΛΕΣ ΤΩΡΑ ΦΑΙΝΟΝΤΑΙ                                                                                                                                                
-  
-● 1) Background tsc:
+● Συνεχίζω ανάγνωση BimViewport3D.tsx — ψάχνω αν mode = '3d-preview' αλλάζει CSS visibility:
 
   Read 1 file (ctrl+o to expand)
 
-● Bash(ls -la "C:\Users\user\AppData\Local\Temp\claude\C--Nestor-Pagonis\f9f6d6c7-d806-4d5b-a27f-35dae11cc580\tasks\b0fq4vdy3.output" 2>&1; echo ""; tasklist | grep -i…)  ⎿  -rw-r--r-- 1 giorgio-pc 197121 0 May 25 01:43 C:\Users\user\AppData\Local\Temp\claude\C--Nestor-Pagonis\f9f6d6c7-d806-4d5b-a27f-35dae11cc580\tasks\b0fq4vdy3.out
-     put
-     … +5 lines (ctrl+o to expand)
+● Ελέγχω τι κάνει qualityModulator.onCameraIdle():
 
-● 🎉 Σκάλες φαίνονται!
+  Read 1 file (ctrl+o to expand)
+
+● Η υπόνοια: ssaoModulator.onCameraIdle() ενεργοποιεί SSAO στα 800ms — αυτό ταιριάζει με το timing του disappearing. Χρειάζεται try-catch στο scene-render-frame.ts για να
+   δούμε αν SSAO πετάει error. Επίσης guard στο onIdle:
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(src\subapps\dxf-viewer\bim-3d\scene\scene-render-frame.ts)
+  ⎿  Added 6 lines, removed 1 line
+      70    } else if (sectionController.isStencilActive()) {
+      71      sectionController.renderFrameWithCaps(viewport.camera);
+      72    } else {
+      73 -    ssaoModulator.render();                                                                                                                              
+      73 +    try {                                                                                                                                                
+      74 +      ssaoModulator.render();                                                                                                                            
+      75 +    } catch (err) {                                                                                                                                            76 +      console.error('[3D-DEBUG][renderSceneFrame] ssaoModulator.render() threw:', err);                                                                  
+      77 +      ssaoModulator.disableSSAO();                                                                                                                             78 +    }                                                                                                                                                    
+      79    }
+      80  }
+
+● Τώρα προσθέτω disableSSAO() στο SSAOModulator και log για να δούμε αν το SSAO throws:
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(src\subapps\dxf-viewer\bim-3d\lighting\ssao-modulator.ts)
+  ⎿  Added 12 lines
+      69      this.ssaoPass.setSize(width, height);
+      70    }
+      71  
+      72 +  /** Emergency SSAO disable — called from scene-render-frame when composer throws. */                                                                   
+      73 +  disableSSAO(): void {                                                                                                                                  
+      74 +    this.cancelAnim();                                                                                                                                         75 +    this.ssaoPass.enabled = false;                                                                                                                       
+      76 +    // Fallback: direct render without post-processing.                                                                                                        77 +    const camera = this.getCamera();                                                                                                                     
+      78 +    try {                                                                                                                                                
+      79 +      this.composer.renderer.setRenderTarget(null);                                                                                                      
+      80 +      this.composer.renderer.render(this.renderPass.scene, camera);                                                                                      
+      81 +    } catch { /* ignore fallback failures */ }                                                                                                           
+      82 +  }                                                                                                                                                      
+      83 +                                                                                                                                                         
+      84    render(): void {
+      85      const camera = this.getCamera();
+      86      const isPerspective = camera instanceof THREE.PerspectiveCamera;
+
+● Βλέπω το πρόβλημα τώρα. SSAOPass κάνει scene.overrideMaterial = MeshNormalMaterial για τη normal render pass και αν αποτύχει (LineSegments + BIM combo), δεν το
+  επαναφέρει. Αποτέλεσμα: κάθε επόμενο frame renders με normal material (grey output = scene "εξαφανίζεται").
+
+  Fix: reset overrideMaterial = null μετά από κάθε composer.render():
+
+● Update(src\subapps\dxf-viewer\bim-3d\lighting\ssao-modulator.ts)
+  ⎿  Added 5 lines
+      88      this.ssaoPass.camera = camera as THREE.PerspectiveCamera;
+      89      if (!isPerspective) this.ssaoPass.enabled = false;
+      90      this.composer.render();
+      91 +    // Safety: SSAOPass sets scene.overrideMaterial = MeshNormalMaterial during                                                                          
+      92 +    // its normal-buffer pass. If it fails to restore the override (exception or                                                                         
+      93 +    // early return), every subsequent frame renders grey normals instead of                                                                             
+      94 +    // actual materials. Force-reset after every frame to prevent corruption.                                                                                  95 +    this.renderPass.scene.overrideMaterial = null;                                                                                                       
+      96    }      97  
+      98    dispose(): void {
+
+● Έχω νέα θεωρία: με ssaoPass.enabled = false, το EffectComposer μπορεί να γράφει κανονικά στην οθόνη. Αλλά ΜΟΛΙΣ ssaoPass.enabled = true (800ms), το SSAOPass τρέχει και
+  παράγει μαύρη εικόνα — είτε λόγω garbage normals από LineSegments, είτε λόγω overrideMaterial corruption.
+
+  Αποδεικτικό test: Αφαιρώ τη ssaoModulator.onCameraIdle() από το onIdle — αν η scene μένει ορατή, SSAO είναι ο ένοχος:
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(src\subapps\dxf-viewer\bim-3d\scene\ThreeJsSceneManager.ts)
+  ⎿  Added 6 lines, removed 2 lines
+      137        thresholdMs: 800,
+      138        onIdle: () => {
+      139          this.qualityModulator.onCameraIdle();
+      140 -        this.ssaoModulator.onCameraIdle();                                                                                                                    140 +        // NOTE: ssaoModulator.onCameraIdle() disabled — SSAO corrupts scene when                                                                       
+      141 +        // LineSegments (DXF wireframe) mix with BIM meshes (garbage normal buffer                                                                            142 +        // for line geometry → SSAOPass output goes black). Re-enable only after                                                                        
+      143 +        // a lines-exclusion fix or pure-BIM detection is in place.                                                                                     
+      144 +        // this.ssaoModulator.onCameraIdle();                                                                                                           
+      145          const hasBimMesh = this.bimLayer.hasAnyMesh();
+      146          const hdriLoaded = useEnvironmentStore.getState().hdriUrl !== null;
+      143 -        console.log('[3D-DEBUG][onIdle] hasBimMesh:', hasBimMesh, 'hdriLoaded:', hdriLoaded, 'bimChildren:', this.bimLayer.group.children.length);      
+      147 +        console.log('[3D-DEBUG][onIdle] hasBimMesh:', hasBimMesh, 'hdriLoaded:', hdriLoaded, 'ssao:DISABLED');                                          
+      148          if (hasBimMesh && hdriLoaded) this.pathTracerRenderer.start();
+      149          useViewMode3DStore.getState().enterPreviewMode();
+      150        },
+
+● Δοκίμασε τώρα — στη κονσόλα θα δεις ssao:DISABLED. Αν η scene μένει ορατή μόνιμα, επιβεβαιώνεται ότι το SSAOPass ήταν ο ένοχος.
+
+  Γιατί SSAO είναι ο ένοχος (θεωρία): SSAOPass κάνει scene.overrideMaterial = MeshNormalMaterial για να render τα normals. Το LineSegments (DXF wireframe) δεν έχει normal
+   attribute — ο shader διαβάζει garbage normals. Αποτέλεσμα: AO factor = 1.0 σε αυτά τα pixels → scene_color × 0 = black. Αφού το DXF wireframe καλύπτει μεγάλο μέρος της   οθόνης, ολόκληρη η εικόνα γίνεται μαύρη.

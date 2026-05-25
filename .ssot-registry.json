@@ -3238,24 +3238,40 @@
     },
     "bim-line-weight-resolver": {
       "ssotFile": "src/subapps/dxf-viewer/config/bim-line-weight-resolver.ts",
-      "description": "ADR-375 Phase A: BIM entity line weight resolution (Revit-equivalent). resolveLineWeightPx(ctx) is the SOLE entry point for BIM entity ctx.lineWidth. BIM renderers (wall/column/slab/beam/opening/slab-opening/stair) MUST call this; FORBIDDEN to use RENDER_LINE_WIDTHS or hardcoded px for main entity stroke. Depends on bim-pen-table (Tier 1) + bim-object-styles (Tier 2) + bim-view-range (Tier 0) + lineweight-iso-catalog (ADR-358 SSoT).",
+      "description": "ADR-375 Phase A+B.1+B.2: BIM entity line weight + view settings SSoT (Revit-equivalent). resolveLineWeightPx(ctx) is the SOLE entry point for BIM entity ctx.lineWidth. useBimRenderSettingsStore is the SOLE SSoT for per-view BIM settings (drawingScale + viewRange + objectStyles). drawing-scale-store is a re-export shim — do NOT use it for new code. BIM renderers MUST call resolveLineWeightPx(); FORBIDDEN to use RENDER_LINE_WIDTHS or hardcoded px for main entity stroke.",
       "forbiddenPatterns": [],
       "allowlist": [
         "src/subapps/dxf-viewer/config/bim-line-weight-resolver.ts",
         "src/subapps/dxf-viewer/config/bim-pen-table.ts",
         "src/subapps/dxf-viewer/config/bim-object-styles.ts",
         "src/subapps/dxf-viewer/config/bim-view-range.ts",
+        "src/subapps/dxf-viewer/config/bim-render-settings-types.ts",
         "src/subapps/dxf-viewer/config/__tests__/bim-line-weight-resolver.test.ts",
         "src/subapps/dxf-viewer/config/__tests__/bim-pen-table.test.ts",
         "src/subapps/dxf-viewer/config/__tests__/bim-object-styles.test.ts",
         "src/subapps/dxf-viewer/config/__tests__/bim-view-range.test.ts",
+        "src/subapps/dxf-viewer/state/drawing-scale-store.ts",
+        "src/subapps/dxf-viewer/state/bim-render-settings-store.ts",
+        "src/subapps/dxf-viewer/state/__tests__/drawing-scale-store.test.ts",
+        "src/subapps/dxf-viewer/state/__tests__/bim-render-settings-store.test.ts",
+        "src/subapps/dxf-viewer/state/hooks/useBimRenderSettingsSync.ts",
+        "src/subapps/dxf-viewer/services/bim-render-settings.service.ts",
+        "src/subapps/dxf-viewer/services/__tests__/bim-render-settings.service.test.ts",
+        "src/subapps/dxf-viewer/ui/ribbon/panels/ViewRangePanel.tsx",
+        "src/subapps/dxf-viewer/ui/ribbon/panels/ObjectStylesPanel.tsx",
+        "src/subapps/dxf-viewer/ui/ribbon/data/view-tab-bim-settings.ts",
+        "src/subapps/dxf-viewer/ui/ribbon/components/DrawingScaleWidget.tsx",
+        "src/subapps/dxf-viewer/ui/ribbon/data/view-tab-drawing-scale.ts",
         "src/subapps/dxf-viewer/bim/renderers/WallRenderer.ts",
         "src/subapps/dxf-viewer/bim/renderers/SlabRenderer.ts",
         "src/subapps/dxf-viewer/bim/renderers/ColumnRenderer.ts",
         "src/subapps/dxf-viewer/bim/renderers/BeamRenderer.ts",
         "src/subapps/dxf-viewer/bim/renderers/OpeningRenderer.ts",
         "src/subapps/dxf-viewer/bim/renderers/SlabOpeningRenderer.ts",
-        "src/subapps/dxf-viewer/bim/renderers/StairRenderer.ts"
+        "src/subapps/dxf-viewer/bim/renderers/StairRenderer.ts",
+        "src/subapps/dxf-viewer/systems/levels/config.ts",
+        "src/app/api/dxf-levels/dxf-levels.schemas.ts",
+        "src/app/api/dxf-levels/dxf-levels.handlers.ts"
       ],
       "addedDate": "2026-05-25",
       "addedByAdr": "ADR-375",
@@ -3270,6 +3286,21 @@
       "allowlist": [
         "src/subapps/dxf-viewer/systems/layers/opening-tag-layer.ts",
         "src/subapps/dxf-viewer/systems/layers/__tests__/opening-tag-layer.test.ts"
+      ],
+      "addedDate": "2026-05-25",
+      "addedByAdr": "ADR-376",
+      "tier": 3
+    },
+    "opening-renumber-service": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/services/opening-renumber-service.ts",
+      "description": "ADR-376 Phase B.1 §7: pure renumber compute + Firestore fetch wrapper. `computeRenumberUpdates()` is the single source for renumber semantics — scope (current-floor / all-floors), per-kind isolation, chronological ordering by createdAt, `markIsManual` preservation. Consumers (RenumberOpeningsDialog, RenumberOpeningsHost, RenumberOpeningsCommand) MUST go through this module; inline reallocation, ad-hoc seq computation, or duplicate format SSoT (parseMarkSeq / formatMark) outside `opening-mark-service.ts` fragments the contract.",
+      "forbiddenPatterns": [
+        "\\bcomputeRenumberUpdates\\b\\s*=\\s*function",
+        "function\\s+computeRenumberUpdates\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/services/opening-renumber-service.ts",
+        "src/subapps/dxf-viewer/bim/services/__tests__/opening-renumber-service.test.ts"
       ],
       "addedDate": "2026-05-25",
       "addedByAdr": "ADR-376",
