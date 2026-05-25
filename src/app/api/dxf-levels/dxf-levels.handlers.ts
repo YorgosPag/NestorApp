@@ -180,6 +180,8 @@ export async function handleUpdateDxfLevel(
     if (body.floorplanType !== undefined) updates.floorplanType = body.floorplanType ?? null;
     if (body.entityLabel !== undefined) updates.entityLabel = body.entityLabel ?? null;
     if (body.projectId !== undefined) updates.projectId = body.projectId ?? null;
+    // ADR-375 Phase B.2: per-view BIM render settings
+    if (body.bimRenderSettings !== undefined) updates.bimRenderSettings = body.bimRenderSettings ?? null;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });
