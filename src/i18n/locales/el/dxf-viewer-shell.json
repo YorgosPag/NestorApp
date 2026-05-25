@@ -721,6 +721,8 @@
       "ai": "AI",
       "window": "Παράθυρο",
       "drawingScale": "Κλίμακα Σχεδίου",
+      "viewRange": "Εύρος Προβολής",
+      "objectStyles": "Στυλ Αντικειμένων",
       "dimensions": "Διαστάσεις",
       "dimStyle": "Στυλ",
       "dimOverride": "Παράκαμψη",
@@ -1414,6 +1416,36 @@
         "ariaLabel": "Κλίμακα σχεδίου 1:{scale}",
         "placeholder": "πχ. 100",
         "inputAriaLabel": "Εισαγωγή κλίμακας σχεδίου"
+      },
+      "viewRange": {
+        "label": "Εύρος Προβολής",
+        "topMm": "Ανώτατο (mm)",
+        "cutPlaneMm": "Επίπεδο Τομής (mm)",
+        "bottomMm": "Κατώτατο (mm)",
+        "viewDepthMm": "Βάθος Προβολής (mm)",
+        "reset": "Επαναφορά Προεπιλογών",
+        "resetAriaLabel": "Επαναφορά εύρους προβολής στις προεπιλογές"
+      },
+      "objectStyles": {
+        "label": "Στυλ Αντικειμένων",
+        "projectionPen": "Προβολή",
+        "cutPen": "Τομή",
+        "reset": "Επαναφορά Προεπιλογών",
+        "resetAriaLabel": "Επαναφορά στυλ αντικειμένων στις προεπιλογές",
+        "categories": {
+          "wall": "Τοίχωμα",
+          "column": "Υποστύλωμα",
+          "beam": "Δοκός",
+          "slab": "Πλάκα",
+          "opening": "Κούφωμα",
+          "slab-opening": "Άνοιγμα Πλάκας",
+          "stair": "Κλίμακα",
+          "roof": "Στέγη",
+          "ceiling": "Ταβάνι",
+          "dimension": "Διάσταση",
+          "hatch": "Διαγράμμιση",
+          "grip": "Λαβή"
+        }
       },
       "openGuidePanel": "Πίνακας Οδηγών",
       "toggleGuides": "Εμφάνιση/Απόκρυψη Οδηγών",
