@@ -45,12 +45,9 @@ import type { CanonicalViewService } from '../viewport/CanonicalViewService';
 import type { CanonicalViewId } from '../viewport/viewport-types';
 import { createAnimationManager } from '../viewport/animation-manager';
 import type { AnimationManager } from '../viewport/animation-manager';
-import { computeFramingTargetBounds } from './scene-framing-bounds';
+import { computeFramingTargetBounds, computeSceneFramingBounds } from './scene-framing-bounds';
 import { createBimRenderer, createBimLights, createBimScene, initViewportCamera, initViewCube } from './scene-setup';
-import {
-  createKeyboardFocusManager,
-  type KeyboardFocusManagerApi,
-} from '../accessibility/KeyboardFocusManager';
+import { createKeyboardFocusManager, type KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
 import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer';
 import type { FocusEntityLabelData } from '../accessibility/FocusIndicator3D';
 import { computeFocusOrder, findFocusedEntityData } from '../accessibility/focus-order';
@@ -219,6 +216,12 @@ export class ThreeJsSceneManager {
     this.viewport.frameBounds(bounds.min, bounds.max);
   }
 
+  /** ADR-366 §C.1.b — combined BIM + DXF bounds για animation actions (turntable). */
+  getSceneFramingBounds(): THREE.Box3 | null {
+    if (this.disposed) return null;
+    return computeSceneFramingBounds(this.bimLayer.group, this.dxfConverter.getBounds());
+  }
+
   // ── Phase 4.5 / A.7 — Accessibility public surface ─────────────────────────
   /** ADR-366 Phase 4.5 / A.7.Q4 — screen-space pan (dxPx > 0 = view right, dyPx > 0 = view up). */
   panViewportByPixels(dxPx: number, dyPx: number): void {
@@ -273,23 +276,33 @@ export class ThreeJsSceneManager {
     return this.viewport.camera;
   }
 
-  /**
-   * ADR-366 §C.1.b — Expose the waypoint handles Group for raycast picking
-   * by `useWaypointDragInteraction`. Returns null when handles are hidden
-   * (tool inactive OR no active waypoint).
-   */
+  /** ADR-366 §C.1.b — Waypoint handles Group για raycast picking (null when hidden). */
   getWaypointHandlesRoot(): THREE.Group | null {
     if (this.disposed) return null;
     return this.waypointDragHandleRenderer.getHandlesGroup();
   }
 
-  /**
-   * ADR-366 §C.1.b — Apply hover/drag highlight to the waypoint handles.
-   * Pass null to clear. Delegates to WaypointDragHandleRenderer.
-   */
+  /** ADR-366 §C.1.b — Hover/drag highlight για waypoint handles (null = clear). */
   setWaypointHoverState(role: 'position' | 'target' | null): void {
     if (this.disposed) return;
     this.waypointDragHandleRenderer.setHoverState(role);
+  }
+
+  /** ADR-366 §C.1.b — Sync axis lock visual with gizmo arrows. */
+  setDragAxisLock(axis: 'X' | 'Y' | 'Z' | null): void {
+    if (this.disposed) return;
+    this.waypointDragHandleRenderer.setAxisLockVisual(axis);
+  }
+
+  /** ADR-366 §C.1.b — Raycast gizmo arrows for axis-click detection. */
+  pickWaypointAxisArrow(
+    domElement: HTMLElement,
+    camera: import('three').Camera,
+    clientX: number,
+    clientY: number,
+  ): 'X' | 'Y' | 'Z' | null {
+    if (this.disposed) return null;
+    return this.waypointDragHandleRenderer.pickAxisArrow(domElement, camera, clientX, clientY);
   }
 
   /** Phase 4.3: wire BimViewport3D's React context menu callback into the ViewCube. */

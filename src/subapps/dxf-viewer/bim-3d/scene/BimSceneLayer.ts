@@ -35,11 +35,15 @@ export class BimSceneLayer {
   ): void {
     this.clearGroup();
     const useNewSystem = buildingVisModes.size > 0;
+    // ADR-363 Bug 2 — wall openings render ως THREE.Shape.holes cutouts στους
+    // τοίχους. Mirror του slab→slab-opening pattern: openings filtered per
+    // wall με `wallId` FK, passed inline στο wallToMesh.
     for (const wall of entities.walls) {
       const resolved = resolveEntityBuilding(wall, floors, buildings);
       const buildingId = resolved?.id ?? '';
       if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) continue;
-      const mesh = wallToMesh(wall, floorElevationMm, activeLevelId, resolved?.baseElevation ?? 0);
+      const openingsForWall = entities.openings.filter((o) => o.params.wallId === wall.id);
+      const mesh = wallToMesh(wall, openingsForWall, floorElevationMm, activeLevelId, resolved?.baseElevation ?? 0);
       if (mesh) { mesh.userData['buildingId'] = buildingId; this.group.add(mesh); }
     }
     for (const column of entities.columns) {
@@ -56,11 +60,16 @@ export class BimSceneLayer {
       const mesh = beamToMesh(beam, activeLevelId, resolved?.baseElevation ?? 0);
       if (mesh) { mesh.userData['buildingId'] = buildingId; this.group.add(mesh); }
     }
+    // ADR-363 §11.Q3 Phase 3.7d + ADR-370 §6 Phase 7 — slab cutouts.
+    // Openings live as first-class entities (own Firestore collection) but are
+    // rendered as holes in their host slab's extrude (THREE.Shape.holes). No
+    // separate loop — passed inline so triangulation cuts the slab geometry.
     for (const slab of entities.slabs) {
       const resolved = resolveEntityBuilding(slab, floors, buildings);
       const buildingId = resolved?.id ?? '';
       if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) continue;
-      const mesh = slabToMesh(slab, activeLevelId, resolved?.baseElevation ?? 0);
+      const openingsForSlab = entities.slabOpenings.filter((o) => o.params.slabId === slab.id);
+      const mesh = slabToMesh(slab, openingsForSlab, activeLevelId, resolved?.baseElevation ?? 0);
       if (mesh) { mesh.userData['buildingId'] = buildingId; this.group.add(mesh); }
     }
     // ADR-370 Phase 5 — stairs render as multi-mesh components (treads/risers/
@@ -91,10 +100,14 @@ export class BimSceneLayer {
   }
 
   private clearGroup(): void {
+    // ADR-363 Bug 2 — wallToMesh now returns Group για openings (per-segment
+    // meshes). Recursive traverse disposes nested geometries.
     for (const child of [...this.group.children]) {
-      if (child instanceof THREE.Mesh) {
-        child.geometry.dispose();
-      }
+      child.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) {
+          obj.geometry.dispose();
+        }
+      });
     }
     this.group.clear();
   }

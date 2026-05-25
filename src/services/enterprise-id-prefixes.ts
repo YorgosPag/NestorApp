@@ -274,6 +274,9 @@ export const ENTERPRISE_ID_PREFIXES = {
   BIM_ANIMATION: 'anm_bim',       // bim_animations collection — turntable + waypoint camera animations
   BIM_RENDER_JOB: 'rnj_bim',      // bim_animations/{id}/render_jobs — render job FIFO queue (resumable, 30-day TTL post-complete)
 
+  // DXF 3D BIM Viewer — Custom HDRI Environments (ADR-366 Group B)
+  BIM_ENVIRONMENT: 'env_bim',     // bim_environments storage path — user-uploaded HDRI environment maps
+
   // Optimistic & Temporary
   OPTIMISTIC: 'opt',
   TEMP: 'tmp',

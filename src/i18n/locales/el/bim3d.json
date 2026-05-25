@@ -140,12 +140,21 @@
       "overcast": "Συννεφιά",
       "goldenHour": "Χρυσή ώρα",
       "blueHour": "Μπλε ώρα",
-      "studio": "Studio",
+      "studio": "Στούντιο",
       "urban": "Πόλη",
       "coast": "Ακτή",
       "mountain": "Βουνό",
       "loading": "Φόρτωση...",
-      "error": "Σφάλμα φόρτωσης"
+      "error": "Σφάλμα φόρτωσης",
+      "custom": {
+        "label": "Δικό μου περιβάλλον",
+        "dropHint": "Σύρε αρχείο .hdr ή .exr εδώ ή πάτα για επιλογή",
+        "uploading": "Ανέβασμα...",
+        "remove": "Αφαίρεση",
+        "formatError": "Δεκτά μόνο αρχεία .hdr ή .exr",
+        "sizeError": "Το αρχείο ξεπερνά τα 50 MB",
+        "errorGeneric": "Αποτυχία ανεβάσματος"
+      }
     }
   },
   "floatingPanel": {
@@ -733,7 +742,8 @@
       "tool": "Εργαλείο",
       "waypoints": "Σημεία πορείας",
       "persistence": "Αποθήκευση",
-      "export": "Εξαγωγή"
+      "export": "Εξαγωγή",
+      "snap": "Πλέγμα"
     },
     "toolbar": {
       "turntable": "Περιστροφή",
@@ -743,7 +753,16 @@
       "reverseTrack": "Αντιστροφή πορείας",
       "preview": "Προεπισκόπηση",
       "export": "Εξαγωγή",
-      "addAtCurrentCamera": "Προσθήκη στην τρέχουσα κάμερα"
+      "addAtCurrentCamera": "Προσθήκη στην τρέχουσα κάμερα",
+      "snapToggle": "Μαγνήτης πλέγματος",
+      "snapStep": "Βήμα πλέγματος"
+    },
+    "snapStepOptions": {
+      "0.1": "0,1 μον.",
+      "0.25": "0,25 μον.",
+      "0.5": "0,5 μον.",
+      "1": "1 μον.",
+      "2": "2 μον."
     },
     "timeline": {
       "scrubberLabel": "Χρονοδιακόπτης",
@@ -779,7 +798,21 @@
       "easeInQuart": "Έντονη επιτάχυνση εισόδου",
       "easeOutQuart": "Έντονη επιβράδυνση εξόδου",
       "smoothStep": "Ομαλό βήμα",
-      "elastic": "Ελαστική"
+      "elastic": "Ελαστική",
+      "bezier": {
+        "expander": "Προχωρημένα",
+        "title": "Επεξεργαστής καμπύλης",
+        "p1x": "P1 X",
+        "p1y": "P1 Y",
+        "p2x": "P2 X",
+        "p2y": "P2 Y",
+        "reset": "Επαναφορά",
+        "presets": "Προεπιλογές",
+        "preview": "Προεπισκόπηση",
+        "advanced": "Σύνθετα",
+        "handleP1": "Λαβή ελέγχου 1",
+        "handleP2": "Λαβή ελέγχου 2"
+      }
     },
     "persistence": {
       "save": "Αποθήκευση",

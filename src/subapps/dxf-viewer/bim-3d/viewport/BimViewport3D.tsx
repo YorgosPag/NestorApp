@@ -14,6 +14,7 @@ import { useBim3DEntitiesStore, type Bim3DEntities } from '../stores/Bim3DEntiti
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
+import { clearSceneBboxGetter, setSceneBboxGetter } from '../stores/SceneBboxProvider';
 import { useBuildingFloors3DSync } from '../../components/dxf-layout/useBuildingFloors3DSync';
 import { QuickProperties3DHoverPopover } from '../properties/QuickProperties3DHoverPopover';
 import { BimEntityCardPanel } from '../properties/BimEntityCardPanel';
@@ -49,6 +50,8 @@ const EMPTY_BIM_ENTITIES: Bim3DEntities = {
   columns: [],
   beams: [],
   slabs: [],
+  slabOpenings: [],
+  openings: [],
   stairs: [],
 };
 
@@ -140,13 +143,16 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
 
     setCanvasEl(managerRef.current.getRendererCanvas());
 
+    // ADR-366 §C.1.b — bridge real scene bbox σε `useDxfViewerCallbacks` animation actions.
+    setSceneBboxGetter(() => managerRef.current?.getSceneFramingBounds() ?? null);
+
     // Initial entity sync — external prop overrides global store when provided (ADR-371).
     if (externalEntitiesMode) {
       managerRef.current.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined);
     } else {
       const entitiesState = useBim3DEntitiesStore.getState();
-      const { walls, columns, beams, slabs, stairs, activeLevelId, floors, buildings, activeBuildingId, buildingVisibilityModes } = entitiesState;
-      managerRef.current.syncBimEntities({ walls, columns, beams, slabs, stairs }, 0, activeLevelId ?? undefined, floors, buildings, activeBuildingId, buildingVisibilityModes);
+      const { walls, columns, beams, slabs, slabOpenings, openings, stairs, activeLevelId, floors, buildings, activeBuildingId, buildingVisibilityModes } = entitiesState;
+      managerRef.current.syncBimEntities({ walls, columns, beams, slabs, slabOpenings, openings, stairs }, 0, activeLevelId ?? undefined, floors, buildings, activeBuildingId, buildingVisibilityModes);
     }
     managerRef.current.syncDxfOverlay(useDxfOverlay3DStore.getState().dxfScene);
 
@@ -176,6 +182,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       setCanvasEl(null);
       useQuickProperties3DStore.getState().clearHover();
       useSelection3DStore.getState().clearSelection();
+      clearSceneBboxGetter();
       managerRef.current?.dispose();
       managerRef.current = null;
       errorRef.current = null;
@@ -188,7 +195,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     if (externalEntitiesMode) return;
     return useBim3DEntitiesStore.subscribe((s) => {
       managerRef.current?.syncBimEntities(
-        { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs, stairs: s.stairs },
+        { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs, slabOpenings: s.slabOpenings, openings: s.openings, stairs: s.stairs },
         0,
         s.activeLevelId ?? undefined,
         s.floors,

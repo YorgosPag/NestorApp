@@ -50,6 +50,20 @@ export function useBim3DStoreSync(managerRef: RefObject<ThreeJsSceneManager | nu
     );
   }, [managerRef]);
 
+  // ADR-366 Group B — when the user removes a custom HDRI, restore the
+  // currently-selected preset URL so the scene environment reverts cleanly
+  // (otherwise hdriUrl would still point at the cleared custom upload).
+  useEffect(() => {
+    return useEnvironmentStore.subscribe(
+      (s) => s.customHdriUrl,
+      (customUrl) => {
+        if (customUrl) return;
+        const preset = getHdriPreset(useEnvironmentStore.getState().hdriPresetId);
+        if (preset) useEnvironmentStore.getState().setHdriUrl(preset.url);
+      },
+    );
+  }, [managerRef]);
+
   // ADR-366 §A.3 — safety net: user enables section before geometry sync → ensure init runs.
   useEffect(() => {
     return useSectionStore.subscribe(

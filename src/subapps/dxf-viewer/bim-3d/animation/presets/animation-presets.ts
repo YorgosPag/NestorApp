@@ -9,6 +9,7 @@
  * Reuses `viewport/easing-functions.ts` SSoT — no duplication.
  */
 
+import { cubicBezier } from '../../viewport/bezier-easing';
 import {
   easeLinear,
   easeInCubic,
@@ -24,6 +25,7 @@ import type {
   AnimationConfig,
   AnimationDirection,
   AnimationFps,
+  BezierControlPoints,
   EasingPresetId,
 } from '../animation-types';
 
@@ -71,7 +73,23 @@ export function createDefaultAnimationConfig(): AnimationConfig {
   };
 }
 
-/** Resolve a curve by preset id. Returns linear for unknown ids (defensive). */
-export function getEasingFunction(id: EasingPresetId): EasingFunction {
+/**
+ * Resolve a curve from preset id ή per-waypoint bezier override.
+ *
+ * Bezier wins αν παρέχεται (ADR-366 §C.1.Q4 «Προχωρημένα» editor). Διαφορετικά
+ * επιστρέφεται το preset curve. Unknown id → linear (defensive).
+ */
+export function getEasingFunction(
+  id: EasingPresetId,
+  customBezier?: BezierControlPoints,
+): EasingFunction {
+  if (customBezier) {
+    return cubicBezier(
+      customBezier.p1[0],
+      customBezier.p1[1],
+      customBezier.p2[0],
+      customBezier.p2[1],
+    );
+  }
   return EASING_PRESETS[id] ?? easeLinear;
 }

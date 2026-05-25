@@ -22,6 +22,7 @@ import type { useLevels } from '../systems/levels';
 import type { SlabOpeningEntity } from '../bim/types/slab-opening-types';
 import { isSlabOpeningEntity } from '../types/entities';
 import { useSlabOpeningPersistence } from '../hooks/data/useSlabOpeningPersistence';
+import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -53,6 +54,14 @@ export function SlabOpeningPersistenceHost({
     if (!e || !isSlabOpeningEntity(e)) return null;
     return e as unknown as SlabOpeningEntity;
   }, [primarySelectedId, currentScene]);
+
+  // ADR-363 §11.Q3 Phase 3.7d + ADR-370 §6 Phase 7 — push slab-openings to
+  // Bim3DEntitiesStore so 3D viewer triangulates slab cutouts (THREE.Shape.holes).
+  // Mirror του SlabPersistenceHost pattern. CHECK 6B/6C compliant — low-freq.
+  React.useEffect(() => {
+    const slabOpenings = (currentScene?.entities.filter(isSlabOpeningEntity) ?? []) as readonly SlabOpeningEntity[];
+    useBim3DEntitiesStore.getState().setSlabOpenings(slabOpenings);
+  }, [currentScene]);
 
   useSlabOpeningPersistence({
     companyId: user?.companyId ?? null,

@@ -106,18 +106,10 @@ export function useSlabOpeningTool(
 
   const [state, setState] = useState<SlabOpeningToolState>(INITIAL_STATE);
   const stateRef = useRef<SlabOpeningToolState>(state);
-  // TEMP DIAGNOSTIC — log φάση transition (slab-opening hole-size bug)
-  if (stateRef.current.phase !== state.phase || stateRef.current.hostSlabId !== state.hostSlabId) {
-    // eslint-disable-next-line no-console
-    console.warn('[slab-opening:STATE]', { prev: stateRef.current.phase, next: state.phase, hostSlabId: state.hostSlabId });
-  }
   stateRef.current = state;
 
   // ── lifecycle ────────────────────────────────────────────────────────────
   const activate = useCallback(() => {
-    // TEMP DIAGNOSTIC — log activate() calls (slab-opening hole-size bug)
-    // eslint-disable-next-line no-console
-    console.warn('[slab-opening:ACTIVATE] called');
     setState((prev) => ({
       ...INITIAL_STATE,
       kind: prev.kind,
@@ -194,15 +186,10 @@ export function useSlabOpeningTool(
   const onCanvasClick = useCallback(
     (point: Readonly<Point2D>): boolean => {
       const s = stateRef.current;
-      // TEMP DIAGNOSTIC — slab-opening hole-size bug
-      // eslint-disable-next-line no-console
-      console.warn('[slab-opening:CLICK]', { phase: s.phase, point, hostSlabId: s.hostSlabId });
       if (s.phase === 'idle') return false;
 
       if (s.phase === 'awaitingHostSlab') {
         const slab = getSlabAtPoint(point);
-        // eslint-disable-next-line no-console
-        console.warn('[slab-opening:HOST-PICK]', { found: !!slab, slabId: slab?.id, bbox: slab?.geometry?.bbox });
         if (!slab) {
           setState({ ...s, error: 'slabOpening.tool.errors.missingHostSlab' });
           return false;
@@ -218,8 +205,6 @@ export function useSlabOpeningTool(
 
       if (s.phase === 'awaitingPosition' && s.hostSlabId) {
         const slab = getSlabById(s.hostSlabId);
-        // eslint-disable-next-line no-console
-        console.warn('[slab-opening:COMMIT-PICK]', { hostSlabId: s.hostSlabId, slabResolved: !!slab });
         if (!slab) {
           setState({
             ...s,

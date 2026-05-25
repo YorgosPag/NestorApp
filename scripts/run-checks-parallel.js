@@ -227,7 +227,10 @@ async function main() {
     if (out && out.trim()) {
       process.stdout.write(out.endsWith('\n') ? out : out + '\n');
     }
-    if (r.exitCode !== 0) failed = true;
+    if (r.exitCode !== 0) {
+      failed = true;
+      process.stdout.write(`${RED}  ⛔ CHECK ${r.id} (${r.name}) exited ${r.exitCode}${NC}\n`);
+    }
   }
 
   if (failed) {

@@ -44,7 +44,7 @@ export interface InterpolateFrameInput {
 
 export function interpolateFrame(input: InterpolateFrameInput): InterpolatedFrame {
   const clampedT = Math.max(0, Math.min(1, input.t));
-  const easing = getEasingFunction(input.from.easingToNext);
+  const easing = getEasingFunction(input.from.easingToNext, input.from.customBezier);
 
   if (!input.splitTracks) {
     const eased = easing(clampedT);

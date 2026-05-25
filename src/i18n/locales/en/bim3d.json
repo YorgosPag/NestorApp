@@ -145,7 +145,16 @@
       "coast": "Coast",
       "mountain": "Mountain",
       "loading": "Loading...",
-      "error": "Load error"
+      "error": "Load error",
+      "custom": {
+        "label": "Custom environment",
+        "dropHint": "Drop a .hdr or .exr file here or click to choose",
+        "uploading": "Uploading...",
+        "remove": "Remove",
+        "formatError": "Only .hdr or .exr files are accepted",
+        "sizeError": "File exceeds 50 MB",
+        "errorGeneric": "Upload failed"
+      }
     }
   },
   "floatingPanel": {
@@ -733,7 +742,8 @@
       "tool": "Tool",
       "waypoints": "Waypoints",
       "persistence": "Save",
-      "export": "Export"
+      "export": "Export",
+      "snap": "Grid snap"
     },
     "toolbar": {
       "turntable": "Turntable",
@@ -743,7 +753,16 @@
       "reverseTrack": "Reverse track",
       "preview": "Preview",
       "export": "Export",
-      "addAtCurrentCamera": "Add at current camera"
+      "addAtCurrentCamera": "Add at current camera",
+      "snapToggle": "Snap to grid",
+      "snapStep": "Grid step"
+    },
+    "snapStepOptions": {
+      "0.1": "0.1 u",
+      "0.25": "0.25 u",
+      "0.5": "0.5 u",
+      "1": "1 u",
+      "2": "2 u"
     },
     "timeline": {
       "scrubberLabel": "Scrubber",
@@ -779,7 +798,21 @@
       "easeInQuart": "Ease in (quart)",
       "easeOutQuart": "Ease out (quart)",
       "smoothStep": "Smooth step",
-      "elastic": "Elastic"
+      "elastic": "Elastic",
+      "bezier": {
+        "expander": "Advanced",
+        "title": "Curve editor",
+        "p1x": "P1 X",
+        "p1y": "P1 Y",
+        "p2x": "P2 X",
+        "p2y": "P2 Y",
+        "reset": "Reset",
+        "presets": "Presets",
+        "preview": "Preview",
+        "advanced": "Advanced",
+        "handleP1": "Control handle 1",
+        "handleP2": "Control handle 2"
+      }
     },
     "persistence": {
       "save": "Save",

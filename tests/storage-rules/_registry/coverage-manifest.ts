@@ -158,12 +158,12 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
 
   // -------------------------------------------------------------------------
   // Path 3: CAD files (ownership-based, super_admin can read/delete but not write)
-  // storage.rules lines 275-286
+  // storage.rules lines 294-305
   // -------------------------------------------------------------------------
   {
     pathId: 'cad',
     pattern: 'owner_based',
-    rulesRange: [275, 286],
+    rulesRange: [294, 305],
     testFile: 'tests/storage-rules/suites/cad-files.storage.test.ts',
     matrix: [
       // owner (same_tenant_user uid == path userId)
@@ -187,7 +187,7 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
 
   // -------------------------------------------------------------------------
   // Path 4: Temp uploads (owner-only, NO super_admin bypass on any operation)
-  // storage.rules lines 295-302
+  // storage.rules lines 314-321
   //
   // NOTE: The `allow read, write` rule uses `isValidFileSize()` which checks
   // `request.resource.size`. For read operations, `request.resource` is null
@@ -198,7 +198,7 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'temp',
     pattern: 'owner_based_no_superadmin',
-    rulesRange: [295, 302],
+    rulesRange: [314, 321],
     testFile: 'tests/storage-rules/suites/temp-uploads.storage.test.ts',
     matrix: [
       // owner (same_tenant_user uid == path userId)
@@ -234,4 +234,7 @@ export const STORAGE_RULES_PENDING: readonly string[] = [
   // ADR-366 §C.1.c BIM animation MP4 renders (company-scoped, client-side writes capped at 500 MB).
   // Test suite to be added in follow-up: tests/storage-rules/suites/bim-animation-renders.storage.test.ts
   '/companies/{companyId}/bim_animations/{animationId}/renders/{fileName}',
+  // ADR-366 Group B custom HDRI environments (company-scoped, .hdr/.exr ≤ 50 MB).
+  // Test suite to be added in follow-up: tests/storage-rules/suites/bim-environments.storage.test.ts
+  '/companies/{companyId}/bim_environments/{fileName}',
 ] as const;

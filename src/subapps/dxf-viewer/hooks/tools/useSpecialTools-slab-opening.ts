@@ -59,10 +59,8 @@ export function buildSlabOpeningResolvers(levelManager: LevelManagerLike): SlabO
           params: { ...(e as SlabEntity).params, slabOpeningIds: [...existing, openingEntity.id] },
         };
       });
-      levelManager.setLevelScene(levelId, {
-        ...scene,
-        entities: [...nextEntities, openingEntity],
-      });
+      const nextScene = { ...scene, entities: [...nextEntities, openingEntity] };
+      levelManager.setLevelScene(levelId, nextScene);
       EventBus.emit('drawing:entity-created', { entity: openingEntity, tool: 'slab-opening' });
     },
     // ADR-370 — propagate active scene units so the slab-opening rectangle

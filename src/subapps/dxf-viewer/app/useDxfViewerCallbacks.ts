@@ -28,6 +28,7 @@ import { useAnimationStore } from '../bim-3d/animation/AnimationStore';
 import { useCameraTargetStore } from '../bim-3d/stores/CameraTargetStore';
 import { buildTurntablePath, type SceneBbox } from '../bim-3d/animation/core/TurntablePathBuilder';
 import { TURNTABLE_DEFAULTS } from '../bim-3d/animation/presets/animation-presets';
+import { getSceneBbox } from '../bim-3d/stores/SceneBboxProvider';
 import {
   handleAnimationExport,
   handleAnimationSave,
@@ -43,9 +44,10 @@ interface OverlayEntry {
 }
 
 /**
- * ADR-366 §C.1.b — synthesize a SceneBbox from the current camera state for
- * the turntable preset. Until ThreeJsSceneManager exposes the real BIM bbox,
- * we use a radius derived from camera→target distance (covers the framed area).
+ * ADR-366 §C.1.b — camera-derived fallback bbox για turntable όταν δεν υπάρχει
+ * mounted BIM scene (e.g. 2D-only viewer, ή empty 3D scene). Real bbox έρχεται
+ * πρώτα από `getSceneBbox()` (SceneBboxProvider registered by BimViewport3D).
+ * Fallback radius = camera→target distance / 2.
  */
 function syntheticBboxFromCamera(): SceneBbox {
   const cam = useCameraTargetStore.getState();
@@ -57,6 +59,11 @@ function syntheticBboxFromCamera(): SceneBbox {
     min: { x: cam.target.x - radius, y: cam.target.y - radius, z: cam.target.z - radius },
     max: { x: cam.target.x + radius, y: cam.target.y + radius, z: cam.target.z + radius },
   };
+}
+
+/** Real BIM scene bbox first, camera fallback when 3D unmounted ή empty. */
+function resolveTurntableBbox(): SceneBbox {
+  return getSceneBbox() ?? syntheticBboxFromCamera();
 }
 
 /** Params for useDxfViewerCallbacks */
@@ -200,7 +207,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       return;
     }
     if (action === 'animation.turntable') {
-      const waypoints = buildTurntablePath(syntheticBboxFromCamera(), TURNTABLE_DEFAULTS);
+      const waypoints = buildTurntablePath(resolveTurntableBbox(), TURNTABLE_DEFAULTS);
       useAnimationStore.getState().setWaypoints(waypoints);
       return;
     }
@@ -222,6 +229,11 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     if (action === 'animation.reverse') {
       const state = useAnimationStore.getState();
       state.setWaypoints([...state.waypoints].reverse());
+      return;
+    }
+    if (action === 'animation.snap-toggle') {
+      const state = useAnimationStore.getState();
+      state.setSnapEnabled(!state.snapEnabled);
       return;
     }
     // ADR-366 §C.1.c — Animation save + export to MP4 via render queue.

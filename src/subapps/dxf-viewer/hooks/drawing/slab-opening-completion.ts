@@ -104,31 +104,6 @@ export function buildDefaultSlabOpeningParams(
 
   const outline = buildRectangleCcw(anchorPoint, widthScene, depthScene);
 
-  // TEMP DIAGNOSTIC — ADR-370 slab-opening hole-size bug (2026-05-25)
-  // JSON.stringify για να μην collapse-άρουν τα objects στο console.
-  // eslint-disable-next-line no-console
-  console.warn('[slab-opening:DIAG] ' + JSON.stringify({
-    sceneUnitsParam: sceneUnits,
-    hostSlabSceneUnits: hostSlab.params.sceneUnits,
-    inferredFromBbox: inferUnitsFromBbox(hostSlab),
-    effectiveUnits,
-    mmFactor,
-    widthMm,
-    depthMm,
-    widthScene,
-    depthScene,
-    anchor: { x: anchorPoint.x, y: anchorPoint.y },
-    hostBbox: hostSlab.geometry?.bbox,
-    hostOutlineLen: hostSlab.params.outline?.vertices?.length,
-    hostOutlineV0: hostSlab.params.outline?.vertices?.[0],
-    hostOutlineV1: hostSlab.params.outline?.vertices?.[1],
-    hostOutlineV2: hostSlab.params.outline?.vertices?.[2],
-    outlineV0: outline.vertices[0],
-    outlineV1: outline.vertices[1],
-    outlineV2: outline.vertices[2],
-    outlineV3: outline.vertices[3],
-  }));
-
   const params: SlabOpeningParams = {
     kind,
     slabId: hostSlab.id,

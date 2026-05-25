@@ -25,9 +25,11 @@ export function Bim3DReadOnlyOverlay({ bimSnapshot, projectId, onClose }: Bim3DR
       columns: bimSnapshot.columns,
       beams: bimSnapshot.beams,
       slabs: bimSnapshot.slabs,
+      slabOpenings: bimSnapshot.slabOpenings,
+      openings: bimSnapshot.openings,
       stairs: bimSnapshot.stairs,
     }),
-    [bimSnapshot.walls, bimSnapshot.columns, bimSnapshot.beams, bimSnapshot.slabs, bimSnapshot.stairs],
+    [bimSnapshot.walls, bimSnapshot.columns, bimSnapshot.beams, bimSnapshot.slabs, bimSnapshot.slabOpenings, bimSnapshot.openings, bimSnapshot.stairs],
   );
 
   return (

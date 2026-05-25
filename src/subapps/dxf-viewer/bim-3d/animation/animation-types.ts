@@ -36,6 +36,26 @@ export const EASING_PRESET_IDS: readonly EasingPresetId[] = [
 ] as const;
 
 // ---------------------------------------------------------------------------
+// Bezier control points — advanced easing override (ADR-366 §C.1.Q4)
+// P0 = (0,0) και P3 = (1,1) implied σταθερά. P1, P2 editable.
+// ---------------------------------------------------------------------------
+
+export interface BezierControlPoints {
+  readonly p1: readonly [number, number];
+  readonly p2: readonly [number, number];
+}
+
+/** UI clamp/range guidance για bezier editor. X clamped, Y allows overshoot. */
+export const BEZIER_RANGES = Object.freeze({
+  xMin: 0,
+  xMax: 1,
+  yMin: -1,
+  yMax: 2,
+  step: 0.01,
+  stepCoarse: 0.1,
+});
+
+// ---------------------------------------------------------------------------
 // Geometry primitives (mirror Three.js Vector3 shape, no instance dependency)
 // ---------------------------------------------------------------------------
 
@@ -66,6 +86,8 @@ export interface Waypoint {
   readonly target: Vec3;
   readonly fov: number;
   readonly easingToNext: EasingPresetId;
+  /** ADR-366 §C.1.Q4 — optional advanced override. Αν undefined, easingToNext wins. */
+  readonly customBezier?: BezierControlPoints;
 }
 
 // ---------------------------------------------------------------------------

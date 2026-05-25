@@ -18,8 +18,11 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
+import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
+import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { getMaterial3D, getElementMaterial3D } from '../materials/MaterialCatalog3D';
+import { buildWallMeshWithOpenings } from './wall-opening-extrude';
 
 // ── Shared rotation matrix: shape XY → Three.js Y-up ─────────────────────────
 const ROT_X_NEG_90 = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
@@ -98,10 +101,34 @@ function buildWallShape(outer: readonly Point3D[], inner: readonly Point3D[]): T
 
 export function wallToMesh(
   wall: WallEntity,
+  openings: readonly OpeningEntity[] = [],
   floorElevationMm = 0,
   levelId?: string,
   buildingBaseElevationM = 0,
-): THREE.Mesh | null {
+): THREE.Object3D | null {
+  const coreLayer = wall.params.dna?.layers.find((l) => l.side === 'core');
+  const matId = coreLayer?.materialId ?? CATEGORY_MAT_ID[wall.params.category] ?? 'mat-concrete';
+  const material = getMaterial3D(matId);
+
+  // ADR-363 Bug 2 — opening cutouts via per-segment front-face re-extrude.
+  // Mirror του ADR-370 Phase 7 slab-opening pattern, εξαπλωμένο σε όλα τα
+  // wall kinds (straight / curved / polyline) μέσω axis vertex iteration.
+  if (openings.length > 0) {
+    const group = buildWallMeshWithOpenings(
+      wall,
+      openings,
+      material,
+      floorElevationMm,
+      buildingBaseElevationM,
+    );
+    if (group) {
+      group.userData['matId'] = matId;
+      if (levelId !== undefined) group.userData['levelId'] = levelId;
+      return group;
+    }
+    // Fall through to solid path if segmenting failed (defensive).
+  }
+
   const shape = buildWallShape(
     wall.geometry.outerEdge.points,
     wall.geometry.innerEdge.points,
@@ -109,9 +136,7 @@ export function wallToMesh(
   if (!shape) return null;
 
   const geo = extrudeAndRotate(shape, wall.params.height * MM_TO_M);
-  const coreLayer = wall.params.dna?.layers.find((l) => l.side === 'core');
-  const matId = coreLayer?.materialId ?? CATEGORY_MAT_ID[wall.params.category] ?? 'mat-concrete';
-  const mesh = new THREE.Mesh(geo, getMaterial3D(matId));
+  const mesh = new THREE.Mesh(geo, material);
   mesh.position.y = floorElevationMm * MM_TO_M + buildingBaseElevationM;
   return tagMesh(mesh, wall.id, 'wall', matId, levelId);
 }
@@ -157,8 +182,29 @@ export function beamToMesh(
   return tagMesh(mesh, beam.id, 'beam', matId, levelId);
 }
 
+// ADR-363 §11.Q3 Phase 3.7d + ADR-370 §6 Phase 7 — slab-opening cutouts.
+// THREE.Shape.holes requires opposite winding from the outer ring (CCW outer +
+// CW holes — clipper-style). BIM polygons are CCW by convention, so we reverse
+// each opening's outline before pushing as a THREE.Path. ExtrudeGeometry runs
+// native ear-clipping triangulation with holes, mirroring IFC IfcOpeningElement
+// voiding IfcSlab (Revit Floor + Opening family pattern).
+function pushHoles(shape: THREE.Shape, openings: readonly SlabOpeningEntity[]): void {
+  for (const op of openings) {
+    const verts = op.params.outline.vertices;
+    if (verts.length < 3) continue;
+    const path = new THREE.Path();
+    // CCW → CW: traverse vertices in reverse.
+    const last = verts[verts.length - 1];
+    path.moveTo(last.x, last.y);
+    for (let i = verts.length - 2; i >= 0; i--) path.lineTo(verts[i].x, verts[i].y);
+    path.closePath();
+    shape.holes.push(path);
+  }
+}
+
 export function slabToMesh(
   slab: SlabEntity,
+  openings: readonly SlabOpeningEntity[] = [],
   levelId?: string,
   buildingBaseElevationM = 0,
 ): THREE.Mesh | null {
@@ -167,6 +213,7 @@ export function slabToMesh(
 
   const shape = buildShape(verts);
   if (!shape) return null;
+  pushHoles(shape, openings);
 
   const thicknessM = slab.params.thickness * MM_TO_M;
   const geo = extrudeAndRotate(shape, thicknessM);

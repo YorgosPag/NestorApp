@@ -255,6 +255,9 @@ export const generateBimTelemetryId = () => enterpriseIdService.generateBimTelem
 export const generateBimAnimationId = () => enterpriseIdService.generateBimAnimationId();
 export const generateBimRenderJobId = () => enterpriseIdService.generateBimRenderJobId();
 
+// DXF 3D BIM Viewer — Custom HDRI Environments (ADR-366 Group B)
+export const generateBimEnvironmentId = () => enterpriseIdService.generateBimEnvironmentId();
+
 // ISO 19650 Cost Log (ADR-373 P2.5)
 export const generateIso19650CostLogId = () => enterpriseIdService.generateIso19650CostLogId();
 

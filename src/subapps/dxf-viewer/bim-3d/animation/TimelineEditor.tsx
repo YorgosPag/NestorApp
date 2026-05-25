@@ -20,7 +20,6 @@ import { useTranslation } from 'react-i18next';
 import { useCameraTargetStore } from '../stores/CameraTargetStore';
 import {
   selectActiveWaypoint,
-  selectAnimationConfig,
   useAnimationStore,
 } from './AnimationStore';
 import {
@@ -39,7 +38,13 @@ const DIRECTION_OPTIONS: readonly AnimationDirection[] = ['cw', 'ccw'];
 
 export function TimelineEditor() {
   const { t } = useTranslation('bim3d');
-  const config = useAnimationStore(selectAnimationConfig);
+  // ADR-040 micro-leaf pattern — individual selectors avoid the new-object
+  // identity that an aggregate selector would emit on every render.
+  const waypoints = useAnimationStore((s) => s.waypoints);
+  const durationSec = useAnimationStore((s) => s.durationSec);
+  const fps = useAnimationStore((s) => s.fps);
+  const axis = useAnimationStore((s) => s.axis);
+  const direction = useAnimationStore((s) => s.direction);
   const activeIndex = useAnimationStore((s) => s.activeWaypointIndex);
   const activeWaypoint = useAnimationStore(selectActiveWaypoint);
   const setActive = useAnimationStore((s) => s.setActiveWaypointIndex);
@@ -81,10 +86,10 @@ export function TimelineEditor() {
       </header>
 
       <ConfigRow
-        durationSec={config.durationSec}
-        fps={config.fps}
-        axis={config.axis}
-        direction={config.direction}
+        durationSec={durationSec}
+        fps={fps}
+        axis={axis}
+        direction={direction}
         onDurationChange={setDurationSec}
         onFpsChange={setFps}
         onAxisChange={setAxis}
@@ -102,15 +107,15 @@ export function TimelineEditor() {
 
       <ScrubberRow
         valueSec={scrubberSec}
-        durationSec={config.durationSec}
+        durationSec={durationSec}
         onChange={handleScrubberInput}
         ariaLabel={t('animation.timeline.scrubberLabel')}
       />
 
       <WaypointList
-        waypoints={config.waypoints}
+        waypoints={waypoints}
         activeIndex={activeIndex}
-        durationSec={config.durationSec}
+        durationSec={durationSec}
         onSelect={setActive}
         onRemove={removeWaypoint}
         onReorder={reorderWaypoints}

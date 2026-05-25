@@ -266,6 +266,25 @@ service firebase.storage {
     }
 
     // =========================================================================
+    // 🌅 BIM CUSTOM HDRI ENVIRONMENTS — ADR-366 Group B
+    // =========================================================================
+    // Path: /companies/{companyId}/bim_environments/{fileName}
+    //
+    // User-uploaded .hdr (image/vnd.radiance) or .exr (application/octet-stream)
+    // environment maps used by the 3D BIM viewer for image-based lighting.
+    // Storage-only (no Firestore metadata) — single file per environment.
+    // 50 MB cap covers 8K resolution HDRIs.
+    // =========================================================================
+
+    match /companies/{companyId}/bim_environments/{fileName} {
+      allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
+      allow write: if (belongsToCompany(companyId) || isSuperAdmin())
+                   && request.resource.size < 50 * 1024 * 1024
+                   && request.resource.contentType in ['image/vnd.radiance', 'application/octet-stream'];
+      allow delete: if (belongsToCompany(companyId) || isSuperAdmin());
+    }
+
+    // =========================================================================
     // 🎨 CAD FILES (DXF/Technical Drawings)
     // =========================================================================
     // Path: /cad/{userId}/{fileId}/{filename}

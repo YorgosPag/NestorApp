@@ -375,6 +375,23 @@ export function buildBimAnimationRenderPath(params: {
 }
 
 /**
+ * Builds the storage path for a custom BIM HDRI environment asset.
+ *
+ * Path scheme: `companies/{companyId}/bim_environments/{envId}.{ext}`
+ *
+ * Used by ADR-366 Group B custom HDRI upload. Single-purpose path
+ * (Storage-only, no Firestore metadata) — lives here alongside the
+ * animation render path SSoT.
+ */
+export function buildBimEnvironmentHdriPath(params: {
+  companyId: string;
+  envId: string;
+  ext: 'hdr' | 'exr';
+}): string {
+  return `companies/${params.companyId}/bim_environments/${params.envId}.${params.ext}`;
+}
+
+/**
  * Parses a storage path back to its components
  * Useful for debugging and migration tools
  *

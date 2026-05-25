@@ -11,10 +11,13 @@
 import { useTranslation } from 'react-i18next';
 import {
   EASING_PRESET_IDS,
+  type BezierControlPoints,
   type EasingPresetId,
   type Vec3,
   type Waypoint,
 } from './animation-types';
+import { BezierCurveEditor } from './BezierCurveEditor';
+import { getPresetBezier } from './presets/preset-bezier-defaults';
 
 interface Props {
   readonly waypoint: Waypoint;
@@ -83,6 +86,21 @@ export function TimelineWaypointForm({ waypoint, onPatch }: Props) {
           ))}
         </select>
       </label>
+
+      <details className="rounded border border-white/10 bg-black/20">
+        <summary className="cursor-pointer px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/60 hover:text-white">
+          {t('animation.easing.bezier.expander')}
+        </summary>
+        <div className="border-t border-white/10 p-2">
+          <BezierCurveEditor
+            value={waypoint.customBezier ?? getPresetBezier(waypoint.easingToNext)}
+            presetId={waypoint.easingToNext}
+            isCustomActive={waypoint.customBezier !== undefined}
+            onChange={(bezier: BezierControlPoints) => onPatch({ customBezier: bezier })}
+            onReset={() => onPatch({ customBezier: undefined })}
+          />
+        </div>
+      </details>
     </section>
   );
 }

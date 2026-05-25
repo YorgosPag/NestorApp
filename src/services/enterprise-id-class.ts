@@ -330,6 +330,9 @@ export class EnterpriseIdService {
   generateBimAnimationId(): string { return this.generateId(P.BIM_ANIMATION).id; }
   generateBimRenderJobId(): string { return this.generateId(P.BIM_RENDER_JOB).id; }
 
+  // DXF 3D BIM Viewer — Custom HDRI Environments (ADR-366 Group B)
+  generateBimEnvironmentId(): string { return this.generateId(P.BIM_ENVIRONMENT).id; }
+
   // ISO 19650 Cost Log (ADR-373 P2.5)
   generateIso19650CostLogId(): string { return this.generateId(P.ISO19650_COST_LOG).id; }
 

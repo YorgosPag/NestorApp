@@ -38,20 +38,28 @@ import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getSlabOpeningGrips } from '../slab-openings/slab-opening-grips';
 
-/** Stroke colour per kind. */
+/**
+ * Stroke colour per kind — saturated, high-contrast over typical slab fills
+ * (warm-grey floor / cool-grey ceiling / red-brown roof / dark-grey foundation).
+ * Industry convention: cutouts use darker, more saturated outlines vs slab body
+ * so the hole reads as "structural void" at a glance in plan view.
+ */
 const KIND_STROKE: Readonly<Record<SlabOpeningKind, string>> = {
-  'shaft':   '#3a5f86',
-  'well':    '#7d6a55',
-  'duct':    '#5a5a5a',
-  'chimney': '#a04a2b',
+  'shaft':   '#1f3a5f',
+  'well':    '#5a4a2e',
+  'duct':    '#2a2a2a',
+  'chimney': '#7a2810',
 };
 
-/** Translucent fill (rgba) per kind. ~18% opacity. */
+/**
+ * Translucent fill (rgba) per kind. ~35% opacity — enough για visible kind hint
+ * over slab fill, low enough για cross-hatch / sub-entities να φαίνονται.
+ */
 const KIND_FILL: Readonly<Record<SlabOpeningKind, string>> = {
-  'shaft':   'rgba(108, 152, 198, 0.18)',
-  'well':    'rgba(170, 150, 120, 0.18)',
-  'duct':    'rgba(140, 140, 140, 0.16)',
-  'chimney': 'rgba(192, 92, 56, 0.22)',
+  'shaft':   'rgba(108, 152, 198, 0.35)',
+  'well':    'rgba(170, 150, 120, 0.35)',
+  'duct':    'rgba(140, 140, 140, 0.32)',
+  'chimney': 'rgba(192, 92, 56, 0.40)',
 };
 
 /** Dash pattern για κάθε kind (mm-agnostic — screen px). */
@@ -92,7 +100,7 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
     this.ctx.fill();
 
     this.ctx.strokeStyle = KIND_STROKE[opening.kind];
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THICK;
     this.ctx.setLineDash(KIND_DASH[opening.kind] as unknown as number[]);
     this.drawPolygonPath(verts);
     this.ctx.stroke();
