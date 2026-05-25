@@ -3728,6 +3728,44 @@ where `unitScale = DXF_UNIT_TO_METRES[dxfScene.units ?? 'mm']` (0.001 for defaul
 correctly (~20–60 m for typical floor plans) → BIM entities visible within `CAMERA_FAR`.
 3 new unit tests added to `DxfToThreeConverter.test.ts` (mm/m/cm scale assertions).
 
+---
 
+## Bugfix — SSAO black-screen + debug-log cleanup (2026-05-25)
 
+### Root cause
+`SSAOPass` sets `scene.overrideMaterial = MeshNormalMaterial` during its internal
+normal-buffer render. `LineSegments` (DXF wireframe) lack a `normals` attribute →
+GPU emits garbage values → AO factor saturates to 1.0 → final composite `scene_color × 0 = black`.
+This caused the scene to go black on every 800 ms idle event
+(`IdleDetector.onCameraIdle → ssaoModulator.onCameraIdle → ssaoPass.enabled = true`).
+
+### Fix — `BimSSAOPass` subclass (`ssao-modulator.ts`)
+```typescript
+class BimSSAOPass extends SSAOPass {
+  override render(renderer, writeBuffer, readBuffer, deltaTime, maskActive): void {
+    const hidden: THREE.LineSegments[] = [];
+    this.scene.traverse((obj) => {
+      if (obj instanceof THREE.LineSegments && obj.visible) {
+        obj.visible = false; hidden.push(obj);
+      }
+    });
+    super.render(renderer, writeBuffer, readBuffer, deltaTime, maskActive);
+    for (const obj of hidden) obj.visible = true;
+  }
+}
+```
+LineSegments are hidden before the normal-buffer pass and restored immediately after.
+`RenderPass` (executed before `BimSSAOPass` in the composer chain) already wrote line
+color into `readBuffer`, so lines remain visible in the final output with AO factor 0
+(correct — lines should not occlude geometry).
+
+### Additional cleanup
+- `ssaoModulator.onCameraIdle()` re-enabled (was commented out as workaround).
+- `BimSceneLayer.hasMesh` getter backed by `_hasMesh` cache (set once in `sync()`),
+  replacing `hasAnyMesh()` traverse-per-idle-call.
+- `applyDxfOverlayFraming` (`scene-sync-dxf-overlay.ts`) simplified — removed
+  `dxfScene` and `scene` parameters that were only used by debug logs.
+- All `[3D-DEBUG]` `console.log` calls removed from:
+  `scene-idle-handlers.ts`, `scene-sync-dxf-overlay.ts`, `DxfToThreeConverter.ts`,
+  `viewport-framing.ts`, `viewport-camera.ts`, `scene-render-frame.ts`.
 
