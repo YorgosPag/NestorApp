@@ -6,6 +6,14 @@
 
 import type { Point2D } from '../types/Types';
 import type { Entity, DimensionEntity } from '../../types/entities';
+import {
+  isOpeningEntity,
+  isSlabOpeningEntity,
+  isWallEntity,
+  isSlabEntity,
+  isColumnEntity,
+  isBeamEntity,
+} from '../../types/entities';
 import type { HitTestResult, SnapResult } from './hit-tester-types';
 import { pointToLineDistance, clamp, degToRad } from '../entities/shared/geometry-utils';
 import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
@@ -16,6 +24,15 @@ import { pointToInfiniteLineDistance } from '../utils/point-to-line-distance';
 import { pointToRayDistance } from '../utils/point-to-line-distance';
 // ADR-362 Phase I3 hotfix (2026-05-19) — SSoT for dim foot points / text anchor.
 import { computeDimHitGeometry } from '../../systems/dimensions/dim-hit-geometry';
+import { HINGE_ARC_SUBDIVISIONS } from '../../bim/geometry/opening-geometry';
+
+/** Project a 3D point (or array) to 2D, dropping z. */
+function to2D(p: { readonly x: number; readonly y: number }): Point2D {
+  return { x: p.x, y: p.y };
+}
+function poly3to2(pts: readonly { readonly x: number; readonly y: number }[]): Point2D[] {
+  return pts.map(to2D);
+}
 
 /** Dispatch hit test to the correct entity-type handler */
 export function performDetailedHitTest(
@@ -36,8 +53,99 @@ export function performDetailedHitTest(
     // ADR-359 Phase 11 — precise hit-test for construction lines.
     case 'xline': return hitTestXLine(entity, point, tolerance);
     case 'ray': return hitTestRay(entity, point, tolerance);
+    // ADR-363 Bug 1 fix — polygon containment για BIM entities. Cached outline
+    // vertices στο `geometry`/`params` δίνουν τα 4-vertex (opening/slab-opening)
+    // ή N-vertex (slab/column/beam) world-coord polygons. Wall uses outerEdge +
+    // innerEdge reversed ένωση για το cross-section footprint. Stair πέφτει στο
+    // default bbox-only — detailed treads/stringers hit-test = separate ratchet.
+    case 'opening': return hitTestOpening(entity, point, tolerance);
+    case 'slab-opening': return hitTestSlabOpening(entity, point);
+    case 'slab': return hitTestSlab(entity, point);
+    case 'wall': return hitTestWall(entity, point);
+    case 'column': return hitTestColumn(entity, point);
+    case 'beam': return hitTestBeam(entity, point);
     default: return { hitType: 'entity', hitPoint: point };
   }
+}
+
+// ===== BIM ENTITIES (ADR-363 Bug 1 — polygon containment) =====
+
+function hitTestOpening(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+  if (!isOpeningEntity(entity)) return null;
+  const geom = entity.geometry;
+  if (!geom) return null;
+
+  // 1. Outline rectangle (cutout inside wall thickness).
+  const verts = geom.outline?.vertices;
+  if (verts && verts.length >= 3 && isPointInPolygon(point, poly3to2(verts))) {
+    return { hitType: 'entity', hitPoint: point };
+  }
+
+  const arc = geom.hingeArc;
+  const hinge = geom.hingeAnchor;
+
+  // 2. Leaf line(s) — solid door panel at 90°-open position.
+  if (hinge && arc && arc.points.length > HINGE_ARC_SUBDIVISIONS) {
+    if (pointToLineDistance(point, to2D(hinge), to2D(arc.points[HINGE_ARC_SUBDIVISIONS])) <= tolerance) {
+      return { hitType: 'entity', hitPoint: point };
+    }
+    const hinge2 = geom.hingeAnchor2;
+    if (hinge2 && arc.points.length > HINGE_ARC_SUBDIVISIONS + 1) {
+      if (pointToLineDistance(point, to2D(hinge2), to2D(arc.points[HINGE_ARC_SUBDIVISIONS + 1])) <= tolerance) {
+        return { hitType: 'entity', hitPoint: point };
+      }
+    }
+  }
+
+  // 3. Swing arc — test each chord segment.
+  if (arc && arc.points.length >= 2) {
+    for (let i = 0; i < arc.points.length - 1; i++) {
+      if (pointToLineDistance(point, to2D(arc.points[i]), to2D(arc.points[i + 1])) <= tolerance) {
+        return { hitType: 'entity', hitPoint: point };
+      }
+    }
+  }
+
+  return null;
+}
+
+function hitTestSlabOpening(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
+  if (!isSlabOpeningEntity(entity)) return null;
+  const verts = entity.params?.outline?.vertices;
+  if (!verts || verts.length < 3) return null;
+  return isPointInPolygon(point, poly3to2(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+}
+
+function hitTestSlab(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
+  if (!isSlabEntity(entity)) return null;
+  const verts = entity.params?.outline?.vertices;
+  if (!verts || verts.length < 3) return null;
+  return isPointInPolygon(point, poly3to2(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+}
+
+function hitTestWall(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
+  if (!isWallEntity(entity)) return null;
+  const outer = entity.geometry?.outerEdge?.points;
+  const inner = entity.geometry?.innerEdge?.points;
+  if (!outer || !inner || outer.length < 2 || inner.length < 2) return null;
+  // Build closed footprint: outer forward + inner reversed (matches buildWallShape).
+  const ring: Point2D[] = [...outer.map(to2D), ...[...inner].reverse().map(to2D)];
+  if (ring.length < 3) return null;
+  return isPointInPolygon(point, ring) ? { hitType: 'entity', hitPoint: point } : null;
+}
+
+function hitTestColumn(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
+  if (!isColumnEntity(entity)) return null;
+  const verts = entity.geometry?.footprint?.vertices;
+  if (!verts || verts.length < 3) return null;
+  return isPointInPolygon(point, poly3to2(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+}
+
+function hitTestBeam(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
+  if (!isBeamEntity(entity)) return null;
+  const verts = entity.geometry?.outline?.vertices;
+  if (!verts || verts.length < 3) return null;
+  return isPointInPolygon(point, poly3to2(verts)) ? { hitType: 'entity', hitPoint: point } : null;
 }
 
 // ===== LINE =====
