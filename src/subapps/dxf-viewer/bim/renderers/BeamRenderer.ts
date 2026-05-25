@@ -129,7 +129,7 @@ export class BeamRenderer extends BaseEntityRenderer {
       { zBottomMm: _beamZTop - beam.params.depth, zTopMm: _beamZTop, category: 'beam' },
       DEFAULT_VIEW_RANGE,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'beam', cutState: _beamCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96 });
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'beam', cutState: _beamCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
     this.ctx.setLineDash(OUTLINE_DASH as unknown as number[]);
     this.drawPolygonPath(verts);
     this.ctx.stroke();
