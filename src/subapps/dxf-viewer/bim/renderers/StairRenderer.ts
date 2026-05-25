@@ -31,6 +31,7 @@ import { isStairEntity } from '../../types/entities';
 import { getStairGrips } from '../stairs/stair-grips';
 import { DEFAULT_CUT_PLANE_HEIGHT } from '../geometry/stairs/stair-geometry-shared';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 // ADR-358 Phase 7c — per-structureType plan symbology lives in a dedicated
 // module so the per-style branches (monolithic / stringer-1side / central /
@@ -304,7 +305,7 @@ export class StairRenderer extends BaseEntityRenderer {
   private drawArrow(startW: Point3D, endW: Point3D, label: 'UP' | 'DOWN'): void {
     const start = this.worldToScreen({ x: startW.x, y: startW.y });
     const end = this.worldToScreen({ x: endW.x, y: endW.y });
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'stair', cutState: 'cut', scaleDenominator: 100, dpi: 96 });
     // strokeStyle inherited from `renderWithPhases` (hover/selected SSoT).
     // fillStyle aligned with stroke so the arrow head + UP/DOWN label pick up
     // the same hover/selection colour as the rest of the stair.
