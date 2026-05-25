@@ -9,10 +9,7 @@ import { PerformanceHUD } from '../performance/PerformanceHUD';
 import { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
 import type { ReducedMotionOverride } from '../accessibility/use-reduced-motion';
-import { useEnvironmentStore } from '../stores/EnvironmentStore';
-import { useSectionStore } from '../stores/SectionStore';
 import { LIGHT_PRESETS } from '../lighting/lighting-presets';
-import { getHdriPreset } from '../lighting/hdri-environment';
 import { useBim3DEntitiesStore, type Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
@@ -32,6 +29,9 @@ import { AriaLiveRegion } from '../accessibility/AriaLiveRegion';
 import { CropRegionOverlay } from '../render/crop-region/CropRegionOverlay';
 import { useCropRegionTool } from '../render/crop-region/useCropRegionTool';
 import { useBimEntityProxyAccessibility } from '../accessibility/use-bim-entity-proxy-accessibility';
+import { useAnimationQueueProcessor } from '../animation/animation-queue-processor';
+import { useNotifications } from '@/providers/NotificationProvider';
+import { useBim3DStoreSync } from './use-bim3d-store-sync';
 
 const HOVER_DEBOUNCE_MS = 800;
 
@@ -213,55 +213,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     managerRef.current?.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined);
   }, [externalEntitiesMode, bimEntities]);
 
-  useEffect(() => {
-    return useDxfOverlay3DStore.subscribe((s) => {
-      managerRef.current?.syncDxfOverlay(s.dxfScene);
-    });
-  }, []);
-
-  // Floor visibility: re-apply whenever modes change.
-  useEffect(() => {
-    return useViewMode3DStore.subscribe(
-      (s) => s.floorVisibilityModes,
-      (modes) => { managerRef.current?.applyFloorVisibility(modes); },
-    );
-  }, []);
-
-  // Sun position changes → update Three.js
-  useEffect(() => {
-    return useViewMode3DStore.subscribe(
-      (s) => ({ az: s.sunAzimuthDeg, el: s.sunElevationDeg }),
-      ({ az, el }) => { managerRef.current?.updateSunPosition(az, el); },
-      { equalityFn: (a, b) => a.az === b.az && a.el === b.el },
-    );
-  }, []);
-
-  // Preset changes → apply full preset (colors + intensity + position)
-  useEffect(() => {
-    return useViewMode3DStore.subscribe(
-      (s) => s.sunPreset,
-      (preset) => { managerRef.current?.applyLightPreset(LIGHT_PRESETS[preset]); },
-    );
-  }, []);
-
-  // HDRI preset selection → resolve URL → EnvironmentStore (ThreeJsSceneManager reacts to hdriUrl)
-  useEffect(() => {
-    return useEnvironmentStore.subscribe(
-      (s) => s.hdriPresetId,
-      (id) => {
-        const preset = getHdriPreset(id);
-        if (preset) useEnvironmentStore.getState().setHdriUrl(preset.url);
-      },
-    );
-  }, []);
-
-  // ADR-366 §A.3 — safety net: user enables section before geometry sync → ensure init runs.
-  useEffect(() => {
-    return useSectionStore.subscribe(
-      (s) => s.enabled,
-      (enabled) => { if (enabled) managerRef.current?.initSectionBox(); },
-    );
-  }, []);
+  useBim3DStoreSync(managerRef);
 
   const handleRenderConfirm = useCallback((config: FinalRenderConfig) => {
     const manager = managerRef.current;
@@ -312,6 +264,25 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     managerRef,
     effectiveVisible,
     externalEntitiesMode,
+  });
+
+  // Phase 9 / C.1.c — Animation render queue driver. Mounted once; subscribes
+  // to RenderQueueStore and drives the MP4 encode pipeline when a job is queued.
+  const notifications = useNotifications();
+  useAnimationQueueProcessor({
+    managerRef,
+    companyId: user?.companyId ?? null,
+    projectId: projectId ?? null,
+    callbacks: {
+      onRenderStarted: (name) =>
+        notifications.info(t('animation.notification.renderStarted', { name })),
+      onRenderCompleted: (name) =>
+        notifications.success(t('animation.notification.renderCompleted', { name })),
+      onRenderFailed: (name, reason) =>
+        notifications.error(t('animation.notification.renderFailed', { name, reason })),
+      onRenderCancelled: (name) =>
+        notifications.info(t('animation.notification.renderCancelled', { name })),
+    },
   });
 
   // Phase 9 / C.5.Q5: sync reduced-motion override from store → ThreeJsSceneManager.

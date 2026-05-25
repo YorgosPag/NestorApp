@@ -158,7 +158,8 @@
       "accessibility": "Accessibility",
       "dimensions3d": "Dimensions",
       "comments": "Comments",
-      "animation": "Animation"
+      "animation": "Animation",
+      "renders": "Renders"
     },
     "buildings": {
       "label": "Building",
@@ -785,6 +786,36 @@
       "load": "Load",
       "share": "Share"
     },
-    "exportDisabledTooltip": "Available in next phase (C.1.c)"
+    "defaultName": "Untitled {time}",
+    "exportTooltip": "Export to MP4",
+    "notification": {
+      "renderStarted": "Render started: \"{name}\"",
+      "renderCompleted": "Render \"{name}\" completed",
+      "renderFailed": "Render \"{name}\" failed: {reason}",
+      "renderCancelled": "Render \"{name}\" cancelled",
+      "saveSuccess": "Animation \"{name}\" saved",
+      "saveError": "Failed to save animation: {reason}",
+      "exportNeedsTwoWaypoints": "Export requires at least 2 waypoints",
+      "exportContextMissing": "No active project or company for export"
+    },
+    "queue": {
+      "title": "Renders ({count})",
+      "empty": "No renders in progress",
+      "frame": "Frame {current}/{total}",
+      "eta": "ETA: {seconds}s",
+      "cancel": "Cancel",
+      "retry": "Retry",
+      "download": "Download MP4",
+      "remove": "Remove",
+      "clearCompleted": "Clear completed",
+      "status": {
+        "queued": "Queued",
+        "rendering": "Rendering",
+        "done": "Done",
+        "failed": "Failed",
+        "cancelled": "Cancelled",
+        "cancelledResumable": "Cancelled — resumable"
+      }
+    }
   }
 }

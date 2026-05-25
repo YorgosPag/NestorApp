@@ -158,7 +158,8 @@
       "accessibility": "Προσβασιμότητα",
       "dimensions3d": "Διαστάσεις",
       "comments": "Σχόλια",
-      "animation": "Κίνηση"
+      "animation": "Κίνηση",
+      "renders": "Αποδόσεις"
     },
     "buildings": {
       "label": "Κτίριο",
@@ -785,6 +786,36 @@
       "load": "Φόρτωση",
       "share": "Διαμοιρασμός"
     },
-    "exportDisabledTooltip": "Διαθέσιμη στην επόμενη φάση (C.1.c)"
+    "defaultName": "Χωρίς όνομα {time}",
+    "exportTooltip": "Εξαγωγή σε MP4",
+    "notification": {
+      "renderStarted": "Ξεκίνησε η απόδοση «{name}»",
+      "renderCompleted": "Η απόδοση «{name}» ολοκληρώθηκε",
+      "renderFailed": "Η απόδοση «{name}» απέτυχε: {reason}",
+      "renderCancelled": "Η απόδοση «{name}» ακυρώθηκε",
+      "saveSuccess": "Αποθηκεύτηκε η κίνηση «{name}»",
+      "saveError": "Αποτυχία αποθήκευσης κίνησης: {reason}",
+      "exportNeedsTwoWaypoints": "Χρειάζονται τουλάχιστον 2 σημεία πορείας για εξαγωγή",
+      "exportContextMissing": "Δεν βρέθηκε ενεργό έργο ή εταιρεία για την εξαγωγή"
+    },
+    "queue": {
+      "title": "Αποδόσεις ({count})",
+      "empty": "Καμία απόδοση σε εξέλιξη",
+      "frame": "Καρέ {current}/{total}",
+      "eta": "Εκτίμηση: {seconds}δ",
+      "cancel": "Ακύρωση",
+      "retry": "Επανάληψη",
+      "download": "Λήψη MP4",
+      "remove": "Αφαίρεση",
+      "clearCompleted": "Καθαρισμός ολοκληρωμένων",
+      "status": {
+        "queued": "Σε αναμονή",
+        "rendering": "Σε εξέλιξη",
+        "done": "Ολοκληρώθηκε",
+        "failed": "Απέτυχε",
+        "cancelled": "Ακυρώθηκε",
+        "cancelledResumable": "Ακυρώθηκε — συνεχίσιμη"
+      }
+    }
   }
 }

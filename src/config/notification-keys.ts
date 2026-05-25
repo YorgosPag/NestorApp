@@ -150,6 +150,24 @@ export const NOTIFICATION_KEYS = {
       /** Comment archived (30-day auto or admin manual) */
       archived: 'bim3d:comments.notification.archived',
     },
+    animation: {
+      /** Render job started (queued → rendering) */
+      renderStarted: 'bim3d:animation.notification.renderStarted',
+      /** Render finished successfully — MP4 ready for download */
+      renderCompleted: 'bim3d:animation.notification.renderCompleted',
+      /** Render failed mid-way (encoder error, GPU crash, etc.) */
+      renderFailed: 'bim3d:animation.notification.renderFailed',
+      /** User cancelled render — checkpoint persisted, can retry */
+      renderCancelled: 'bim3d:animation.notification.renderCancelled',
+      /** Animation document saved to Firestore */
+      saveSuccess: 'bim3d:animation.notification.saveSuccess',
+      /** Animation save failed */
+      saveError: 'bim3d:animation.notification.saveError',
+      /** Export blocked — need ≥2 waypoints */
+      exportNeedsTwoWaypoints: 'bim3d:animation.notification.exportNeedsTwoWaypoints',
+      /** Export blocked — companyId/projectId unavailable */
+      exportContextMissing: 'bim3d:animation.notification.exportContextMissing',
+    },
   },
 
   // ==========================================================================

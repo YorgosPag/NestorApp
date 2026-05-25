@@ -3,14 +3,15 @@
 /**
  * Floating3DPanel — left sidebar panel for 3D BIM viewport.
  * Tabs: Floors (B.3) | Lighting (Phase 5 stub) | Quality (Phase 5 stub) |
- *       Sections | Accessibility | Comments | Animation (ADR-366 §C.1.b).
- * ADR-366 Phase 4 Group B + Phase 9 §C.1.b. Rendered inside BimViewport3D.
+ *       Sections | Accessibility | Comments | Animation (ADR-366 §C.1.b) |
+ *       Renders (ADR-366 §C.1.c — conditional, only when jobs > 0).
+ * ADR-366 Phase 4 Group B + Phase 9 §C.1.b/C.1.c. Rendered inside BimViewport3D.
  *
- * Width: w-48 default; widens to w-72 when animation tab active (timeline
- * fields need extra room — ADR-366 §C.1.b design risk resolution).
+ * Width: w-48 default; widens to w-72 when animation or renders tab active
+ * (timeline fields + queue rows need extra room — ADR-366 §C.1.b/c design risk).
  */
 
-import { useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Floor3DPanelTab } from './Floor3DPanelTab';
 import { Lighting3DPanelTab } from './Lighting3DPanelTab';
@@ -19,18 +20,32 @@ import { Section3DPanelTab } from './Section3DPanelTab';
 import { Accessibility3DPanelTab } from './Accessibility3DPanelTab';
 import { CommentListPanel } from '../comments/CommentListPanel';
 import { TimelineEditor } from '../animation/TimelineEditor';
+import { RenderQueuePanel } from '../animation/RenderQueuePanel';
+import { selectAnyJobs, useRenderQueueStore } from '../animation/RenderQueueStore';
 
-type Tab = 'floors' | 'lighting' | 'quality' | 'sections' | 'accessibility' | 'comments' | 'animation';
+type Tab = 'floors' | 'lighting' | 'quality' | 'sections' | 'accessibility' | 'comments' | 'animation' | 'renders';
 
-const TABS: Tab[] = ['floors', 'lighting', 'quality', 'sections', 'accessibility', 'comments', 'animation'];
+const BASE_TABS: Tab[] = ['floors', 'lighting', 'quality', 'sections', 'accessibility', 'comments', 'animation'];
 
 export function Floating3DPanel() {
   const { t } = useTranslation('bim3d');
   const [activeTab, setActiveTab] = useState<Tab>('floors');
 
+  const showRenders = useSyncExternalStore(
+    useRenderQueueStore.subscribe,
+    () => selectAnyJobs(useRenderQueueStore.getState()),
+    () => false,
+  );
+
+  const tabs: Tab[] = showRenders ? [...BASE_TABS, 'renders'] : BASE_TABS;
+
+  useEffect(() => {
+    if (!showRenders && activeTab === 'renders') setActiveTab('animation');
+  }, [showRenders, activeTab]);
+
   const panelId = 'floating-3d-panel';
 
-  const widthClass = activeTab === 'animation' ? 'w-72' : 'w-48';
+  const widthClass = activeTab === 'animation' || activeTab === 'renders' ? 'w-72' : 'w-48';
 
   return (
     <aside
@@ -39,7 +54,7 @@ export function Floating3DPanel() {
     >
       {/* Tab strip */}
       <div role="tablist" aria-label={t('floatingPanel.ariaLabel')} className="flex border-b border-white/10">
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab}
             id={`${panelId}-tab-${tab}`}
@@ -73,6 +88,7 @@ export function Floating3DPanel() {
         {activeTab === 'accessibility' && <Accessibility3DPanelTab />}
         {activeTab === 'comments' && <CommentListPanel />}
         {activeTab === 'animation' && <TimelineEditor />}
+        {activeTab === 'renders' && <RenderQueuePanel />}
       </div>
     </aside>
   );

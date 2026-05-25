@@ -246,6 +246,26 @@ service firebase.storage {
     }
 
     // =========================================================================
+    // 🎬 BIM ANIMATION RENDERS — ADR-366 §C.1.c
+    // =========================================================================
+    // Path: /companies/{companyId}/bim_animations/{animationId}/renders/{fileName}
+    //
+    // Final MP4 outputs from the in-browser animation renderer. Written from
+    // the client (no server route) so authenticated company members can upload
+    // their own renders directly. Size capped at 500 MB to accommodate
+    // 1080p H.264 animations up to ~10 minutes; tighter caps can land later
+    // if storage growth becomes a concern.
+    // =========================================================================
+
+    match /companies/{companyId}/bim_animations/{animationId}/renders/{fileName} {
+      allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
+      allow write: if (belongsToCompany(companyId) || isSuperAdmin())
+                   && request.resource.size < 500 * 1024 * 1024
+                   && request.resource.contentType in ['video/mp4', 'video/webm'];
+      allow delete: if (belongsToCompany(companyId) || isSuperAdmin());
+    }
+
+    // =========================================================================
     // 🎨 CAD FILES (DXF/Technical Drawings)
     // =========================================================================
     // Path: /cad/{userId}/{fileId}/{filename}

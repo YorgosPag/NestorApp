@@ -349,6 +349,31 @@ export function getFileExtension(filename: string): string {
   return parts[parts.length - 1].toLowerCase();
 }
 
+// ============================================================================
+// SPECIAL-PURPOSE PATHS (non-canonical, single-use)
+// ============================================================================
+
+/**
+ * Builds the storage path for a BIM animation MP4/WebM render output.
+ *
+ * Path scheme: `companies/{companyId}/bim_animations/{animationId}/renders/{jobId}.{ext}`
+ *
+ * Used by ADR-366 §C.1.c render queue processor. This is a single-purpose path
+ * (not part of the canonical entity/domain/category hierarchy) so it lives here
+ * as the centralized SSoT instead of in `buildStoragePath()`.
+ *
+ * @param params Render path components
+ * @returns Storage path string ready for `makeStorageRef()`
+ */
+export function buildBimAnimationRenderPath(params: {
+  companyId: string;
+  animationId: string;
+  jobId: string;
+  ext: 'mp4' | 'webm';
+}): string {
+  return `companies/${params.companyId}/bim_animations/${params.animationId}/renders/${params.jobId}.${params.ext}`;
+}
+
 /**
  * Parses a storage path back to its components
  * Useful for debugging and migration tools
