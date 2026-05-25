@@ -44,6 +44,7 @@ import {
   bboxOfPolygons,
   splitTreadsByCutPlane,
   buildCutLine,
+  buildHandrailsFromParams,
 } from './stair-geometry-shared';
 import { buildTreadLabels } from './stair-geometry-labels';
 
@@ -108,7 +109,7 @@ export function computeTriangularFan(
     risers,
     stringers,
     walkline,
-    handrails: {},
+    handrails: buildHandrailsFromParams(walkline, params.width, params.handrails),
     landings: [],
     arrowSymbol: arrow,
     cutLine,

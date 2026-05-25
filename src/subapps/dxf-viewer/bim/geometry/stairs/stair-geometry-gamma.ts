@@ -43,6 +43,7 @@ import {
   bboxOfPolygons,
   buildCutLineForFlights,
   buildStringersFromWalkline,
+  buildHandrailsFromParams,
 } from './stair-geometry-shared';
 import { buildTreadLabelsWithLandings } from './stair-geometry-labels';
 
@@ -126,7 +127,7 @@ export function computeGamma(
     risers,
     stringers,
     walkline,
-    handrails: {},
+    handrails: buildHandrailsFromParams(walkline, params.width, params.handrails),
     landings: [landing1, landing2],
     arrowSymbol: arrow,
     cutLine,

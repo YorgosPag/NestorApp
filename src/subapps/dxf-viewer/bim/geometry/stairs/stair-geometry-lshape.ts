@@ -28,6 +28,7 @@ import {
   splitTreadsByCutPlane,
   buildCutLineForFlights,
   buildStringersFromWalkline,
+  buildHandrailsFromParams,
 } from './stair-geometry-shared';
 import { buildTreadLabels, buildTreadLabelsWithLandings } from './stair-geometry-labels';
 import {
@@ -105,7 +106,7 @@ function computeLShapeWithLanding(
     risers,
     stringers,
     walkline,
-    handrails: {},
+    handrails: buildHandrailsFromParams(walkline, params.width, params.handrails),
     landings: [landing],
     arrowSymbol: arrow,
     cutLine,
@@ -171,7 +172,7 @@ function computeLShapeWithWinders(
     risers,
     stringers,
     walkline,
-    handrails: {},
+    handrails: buildHandrailsFromParams(walkline, params.width, params.handrails),
     landings: [],
     arrowSymbol: arrow,
     cutLine,

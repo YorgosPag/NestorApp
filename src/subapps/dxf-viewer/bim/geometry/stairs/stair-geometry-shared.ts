@@ -13,6 +13,8 @@ import type {
   Polyline3D,
   Segment3D,
   StairArrowSymbol,
+  StairHandrailGeometry,
+  StairHandrails,
   StairUpDirection,
 } from '../../../bim/types/stair-types';
 
@@ -170,4 +172,29 @@ export function buildStringersFromWalkline(
     outer: offsetPolyline(walkline, halfW),
     inner: offsetPolyline(walkline, -halfW),
   };
+}
+
+/**
+ * Handrails follow the inner and outer flight edges — same xy path as the
+ * stringers, distinguished only by elevation (`handrails.height`, applied
+ * downstream by renderers). Only the sides toggled on in `params.handrails`
+ * are populated; the returned object stays empty when both `inner` and
+ * `outer` are disabled (matches the legacy `handrails: {}` empty default).
+ *
+ * ADR-370 Phase 5.2 (2026-05-25) — closes the 2D-engine gap that left
+ * `StairGeometry.handrails` empty for every kind, preventing the 3D viewer
+ * (StairToThreeConverter) from rendering the handrail tubes even when the
+ * user had enabled them via the Stair Properties panel.
+ */
+export function buildHandrailsFromParams(
+  walkline: Polyline3D,
+  width: number,
+  handrails: StairHandrails,
+): StairHandrailGeometry {
+  if (!handrails.inner && !handrails.outer) return {};
+  const halfW = width * 0.5;
+  const result: { -readonly [K in keyof StairHandrailGeometry]: StairHandrailGeometry[K] } = {};
+  if (handrails.inner) result.inner = offsetPolyline(walkline, -halfW);
+  if (handrails.outer) result.outer = offsetPolyline(walkline, halfW);
+  return result;
 }

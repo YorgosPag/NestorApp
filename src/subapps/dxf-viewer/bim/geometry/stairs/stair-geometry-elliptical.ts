@@ -43,6 +43,7 @@ import {
   splitTreadsByCutPlane,
   buildCutLine,
   buildStringersFromWalkline,
+  buildHandrailsFromParams,
 } from './stair-geometry-shared';
 import { buildTreadLabels } from './stair-geometry-labels';
 
@@ -85,7 +86,7 @@ export function computeElliptical(
     risers,
     stringers,
     walkline,
-    handrails: {},
+    handrails: buildHandrailsFromParams(walkline, params.width, params.handrails),
     landings: [],
     arrowSymbol: arrow,
     cutLine,
