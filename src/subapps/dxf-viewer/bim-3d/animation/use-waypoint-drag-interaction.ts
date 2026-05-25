@@ -20,6 +20,7 @@
 
 import { useEffect, type MutableRefObject } from 'react';
 import { useAnimationStore } from './AnimationStore';
+import { quantizeVec3 } from './snap-quantizer';
 import {
   WaypointDragController,
   type DragControllerEvents,
@@ -60,6 +61,8 @@ export function useWaypointDragInteraction(params: UseWaypointDragInteractionPar
       canvasEl.addEventListener('pointerup', (e) => onPointerUp(e, controller, events, canvasEl), { signal });
       canvasEl.addEventListener('pointercancel', () => onPointerCancel(controller, events, canvasEl), { signal });
       canvasEl.addEventListener('pointerleave', () => onPointerLeave(controller, events), { signal });
+
+      window.addEventListener('keydown', (e) => onAxisLockKey(e, controller, events), { signal, capture: true });
     };
 
     const syncFromStore = (): void => {
@@ -95,7 +98,8 @@ function onPointerMove(
   if (!manager) return;
 
   if (controller.getState() === 'dragging') {
-    controller.updateDrag(manager.getCamera(), manager.getRendererCanvas(), event.clientX, event.clientY, events);
+    const axisLock = useAnimationStore.getState().dragAxisLock;
+    controller.updateDrag(manager.getCamera(), manager.getRendererCanvas(), event.clientX, event.clientY, events, axisLock);
     return;
   }
 
@@ -117,6 +121,22 @@ function onPointerDown(
   if (event.button !== 0) return; // primary button only
   const manager = managerRef.current;
   if (!manager) return;
+
+  // Gizmo arrow pick takes priority — must test before handle pick.
+  const axisHit = manager.pickWaypointAxisArrow(
+    manager.getRendererCanvas(),
+    manager.getCamera(),
+    event.clientX,
+    event.clientY,
+  );
+  if (axisHit !== null) {
+    const store = useAnimationStore.getState();
+    store.setDragAxisLock(store.dragAxisLock === axisHit ? null : axisHit);
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+
   const handlesGroup = manager.getWaypointHandlesRoot();
   if (!handlesGroup) return;
 
@@ -171,9 +191,39 @@ function makeEvents(
     onHoverChange: (role) => managerRef.current?.setWaypointHoverState(role),
     onDragStart: (role) => managerRef.current?.setWaypointHoverState(role),
     onDragMove: (role, worldPos) => writeWaypointPosition(role, worldPos),
-    onDragEnd: () => managerRef.current?.setWaypointHoverState(null),
-    onDragCancel: () => managerRef.current?.setWaypointHoverState(null),
+    onDragEnd: () => {
+      managerRef.current?.setWaypointHoverState(null);
+      useAnimationStore.getState().setDragAxisLock(null);
+    },
+    onDragCancel: () => {
+      managerRef.current?.setWaypointHoverState(null);
+      useAnimationStore.getState().setDragAxisLock(null);
+    },
   };
+}
+
+function onAxisLockKey(
+  e: KeyboardEvent,
+  controller: WaypointDragController,
+  events: DragControllerEvents,
+): void {
+  const isAxisKey = e.code === 'KeyX' || e.code === 'KeyY' || e.code === 'KeyZ';
+  const isEscape = e.code === 'Escape';
+  if (!isAxisKey && !isEscape) return;
+  const store = useAnimationStore.getState();
+  if (!store.toolActive) return;
+  if (isEscape) {
+    if (store.dragAxisLock !== null && controller.getState() !== 'dragging') {
+      store.setDragAxisLock(null);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    return;
+  }
+  const axis = e.code.slice(-1) as 'X' | 'Y' | 'Z';
+  store.setDragAxisLock(store.dragAxisLock === axis ? null : axis);
+  e.preventDefault();
+  e.stopPropagation();
 }
 
 function writeWaypointPosition(
@@ -183,13 +233,16 @@ function writeWaypointPosition(
   const store = useAnimationStore.getState();
   const index = store.activeWaypointIndex;
   if (index === null) return;
+  const snapped = store.snapEnabled
+    ? quantizeVec3(worldPos, store.snapStepUnits)
+    : worldPos;
   if (role === 'position') {
     store.updateWaypoint(index, {
-      position: { x: worldPos.x, y: worldPos.y, z: worldPos.z },
+      position: { x: snapped.x, y: snapped.y, z: snapped.z },
     });
   } else {
     store.updateWaypoint(index, {
-      target: { x: worldPos.x, y: worldPos.y, z: worldPos.z },
+      target: { x: snapped.x, y: snapped.y, z: snapped.z },
     });
   }
 }
