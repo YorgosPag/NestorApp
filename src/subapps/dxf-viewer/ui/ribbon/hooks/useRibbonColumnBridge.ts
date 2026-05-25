@@ -49,6 +49,13 @@ import {
 } from './bridge/column-command-keys';
 import { columnToolBridgeStore } from './bridge/column-tool-bridge-store';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
+import {
+  applyEntityCatalogPreset,
+  applyToolCatalogPreset,
+  catalogOwnsDimension,
+  catalogOwnsNestedParam,
+} from './bridge/column-bridge-catalog-helpers';
+import { CATALOG_CUSTOM_SENTINEL } from '../../../bim/columns/section-catalog';
 import { EventBus } from '../../../systems/events/EventBus';
 import type {
   RibbonComboboxState,
@@ -105,9 +112,10 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof ColumnParams>> = {
 };
 
 const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof ColumnParams>> = {
-  [COLUMN_RIBBON_KEYS.stringParams.kind]:     'kind',
-  [COLUMN_RIBBON_KEYS.stringParams.anchor]:   'anchor',
-  [COLUMN_RIBBON_KEYS.stringParams.material]: 'material',
+  [COLUMN_RIBBON_KEYS.stringParams.kind]:           'kind',
+  [COLUMN_RIBBON_KEYS.stringParams.anchor]:         'anchor',
+  [COLUMN_RIBBON_KEYS.stringParams.material]:       'material',
+  [COLUMN_RIBBON_KEYS.stringParams.catalogProfile]: 'catalogProfile',
 };
 
 /**
@@ -216,6 +224,8 @@ export function useRibbonColumnBridge(
         if (isColumnRibbonStringKey(commandKey)) {
           const field = STRING_KEY_TO_FIELD[commandKey];
           const raw = column.params[field];
+          // ADR-363 Phase 8E — catalogProfile absent = 'custom' sentinel.
+          if (field === 'catalogProfile') return { value: raw != null ? String(raw) : CATALOG_CUSTOM_SENTINEL, options: [] };
           // ADR-363 Phase 4.5d — surface 'rc' as the active selection when
           // `params.material` is undefined; mirrors the `resolveMaterialKey`
           // fallback used by `ColumnRenderer.drawMaterialHatch`.
@@ -248,6 +258,9 @@ export function useRibbonColumnBridge(
       if (commandKey === COLUMN_RIBBON_KEYS.stringParams.anchor) {
         return { value: toolHandle.anchor, options: [] };
       }
+      if (commandKey === COLUMN_RIBBON_KEYS.stringParams.catalogProfile) {
+        return { value: toolHandle.overrides.catalogProfile ?? CATALOG_CUSTOM_SENTINEL, options: [] };
+      }
       if (isNestedNumberKey(commandKey)) {
         const path = NESTED_NUMBER_KEY_TO_PATH[commandKey];
         const group = path.group === 'polygon' ? toolHandle.overrides.polygon : toolHandle.overrides.ishape;
@@ -272,6 +285,11 @@ export function useRibbonColumnBridge(
 
       // ── SELECTED ENTITY BRANCH ────────────────────────────────────────────
       if (column) {
+        // ADR-363 Phase 8E — catalog preset: batch-write all preset dims + catalogProfile.
+        if (commandKey === COLUMN_RIBBON_KEYS.stringParams.catalogProfile) {
+          applyEntityCatalogPreset(column, value, dispatchParams);
+          return;
+        }
         if (isColumnRibbonStringKey(commandKey)) {
           const field = STRING_KEY_TO_FIELD[commandKey];
           if (field === 'kind') {
@@ -294,24 +312,30 @@ export function useRibbonColumnBridge(
           const numeric = Number.parseFloat(value);
           if (Number.isNaN(numeric)) return;
           const path = NESTED_NUMBER_KEY_TO_PATH[commandKey];
-          const nextParams = patchNestedParams(column.params, path, numeric);
-          dispatchParams(column, nextParams);
+          const patched = patchNestedParams(column.params, path, numeric);
+          const clearCatalog = catalogOwnsNestedParam(commandKey, column.params.kind);
+          dispatchParams(column, clearCatalog ? { ...patched, catalogProfile: undefined } : patched);
           return;
         }
         if (isColumnRibbonKey(commandKey)) {
           const numeric = Number.parseFloat(value);
           if (Number.isNaN(numeric)) return;
           const field = NUMBER_KEY_TO_FIELD[commandKey];
-          const nextParams: ColumnParams = { ...column.params, [field]: numeric } as ColumnParams;
+          const clearCatalog = catalogOwnsDimension(commandKey, column.params.kind);
+          const nextParams = {
+            ...column.params,
+            [field]: numeric,
+            ...(clearCatalog ? { catalogProfile: undefined } : {}),
+          } as ColumnParams;
           dispatchParams(column, nextParams);
         }
         return;
       }
 
       // ── DRAWING-MODE BRANCH ───────────────────────────────────────────────
-      // ADR-363 Phase 8D — Forward writes to `useColumnTool` via the store
+      // ADR-363 Phase 8D/8E — Forward writes to `useColumnTool` via the store
       // handle so subsequent canvas clicks create columns with the chosen kind
-      // + variant params + anchor.
+      // + variant params + anchor + catalog profile.
       const handle = columnToolBridgeStore.get();
       if (!handle || !handle.isActive) return;
       if (commandKey === COLUMN_RIBBON_KEYS.stringParams.kind) {
@@ -322,22 +346,21 @@ export function useRibbonColumnBridge(
         handle.setAnchor(value as ColumnAnchor);
         return;
       }
+      // ADR-363 Phase 8E — catalog preset in drawing mode.
+      if (commandKey === COLUMN_RIBBON_KEYS.stringParams.catalogProfile) {
+        applyToolCatalogPreset(handle, value);
+        return;
+      }
       if (isNestedNumberKey(commandKey)) {
         const numeric = Number.parseFloat(value);
         if (Number.isNaN(numeric)) return;
         const path = NESTED_NUMBER_KEY_TO_PATH[commandKey];
         if (path.group === 'polygon') {
-          const nextPolygon: ColumnPolygonParams = {
-            ...(handle.overrides.polygon ?? {}),
-            [path.field]: numeric,
-          };
-          handle.setParamOverrides({ polygon: nextPolygon });
+          handle.setParamOverrides({ polygon: { ...(handle.overrides.polygon ?? {}), [path.field]: numeric } });
         } else {
-          const nextIshape: ColumnIShapeParams = {
-            ...(handle.overrides.ishape ?? {}),
-            [path.field]: numeric,
-          };
-          handle.setParamOverrides({ ishape: nextIshape });
+          const clearCatalog = catalogOwnsNestedParam(commandKey, handle.kind);
+          const nextIshape: ColumnIShapeParams = { ...(handle.overrides.ishape ?? {}), [path.field]: numeric };
+          handle.setParamOverrides({ ishape: nextIshape, ...(clearCatalog ? { catalogProfile: undefined } : {}) });
         }
         return;
       }
@@ -345,7 +368,8 @@ export function useRibbonColumnBridge(
         const numeric = Number.parseFloat(value);
         if (Number.isNaN(numeric)) return;
         const field = NUMBER_KEY_TO_FIELD[commandKey];
-        handle.setParamOverrides({ [field]: numeric });
+        const clearCatalog = catalogOwnsDimension(commandKey, handle.kind);
+        handle.setParamOverrides({ [field]: numeric, ...(clearCatalog ? { catalogProfile: undefined } : {}) });
       }
     },
     [resolveColumn, dispatchParams],
@@ -409,12 +433,10 @@ export function useRibbonColumnBridge(
           ? toolHandle.kind
           : null;
       if (!kind) return false;
-      if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.polygonParams) {
-        return kind === 'polygon';
-      }
-      if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams) {
-        return kind === 'I-shape';
-      }
+      if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.polygonParams) return kind === 'polygon';
+      if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams) return kind === 'I-shape';
+      if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.shearWallCatalog) return kind === 'shear-wall';
+      if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.ishapeCatalog) return kind === 'I-shape';
       return false;
     },
     [resolveColumn, toolHandle],
