@@ -64,6 +64,12 @@ export function calculatePriority(entity: Entity): number {
     case 'line': priority += 80; break;
     case 'circle': priority += 70; break;
     case 'text': priority += 60; break;
+    // ADR-363 Bug 1 fix — BIM hosted-children win the hit-test tie-break over
+    // their parent. Opening sits inside wall, slab-opening inside slab — when
+    // both polygons contain the click, child wins. Priority delta = 25 keeps
+    // headroom below DXF-native points (100) / lines (80) / circles (70).
+    case 'opening': priority += 75; break;
+    case 'slab-opening': priority += 75; break;
     default: priority += 50; break;
   }
 
