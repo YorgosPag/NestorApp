@@ -126,6 +126,137 @@ describe('performDetailedHitTest — BIM entities (ADR-363 Bug 1)', () => {
   });
 });
 
+// ─── Bug 4 — leaf line + swing arc hit test ───────────────────────────────────
+
+/**
+ * Door on horizontal wall (x: 1000-1900, thickness 250mm, axis at y=0).
+ * Handing left, inward swing. Arc points computed from buildHingeArc geometry:
+ *   hinge = (1000, 0), startVec = (1, 0), perp = (0, 1) → arc sweeps rightward/upward.
+ *   arc.points[0]  = (1900,    0)   ← right jamb (closed position)
+ *   arc.points[12] = (1000,  900)   ← 90°-open tip
+ *   Leaf line: hinge (1000,0) → arc.points[12] (1000, 900).
+ */
+function makeOpeningWithArc(): Entity {
+  const SUBDIVISIONS = 12;
+  const HALF_PI = Math.PI / 2;
+  const arcPoints: Array<{ x: number; y: number; z: number }> = [];
+  for (let i = 0; i <= SUBDIVISIONS; i++) {
+    const t = (i / SUBDIVISIONS) * HALF_PI;
+    arcPoints.push({ x: 1000 + 900 * Math.cos(t), y: 900 * Math.sin(t), z: 0 });
+  }
+  return {
+    id: 'op_arc',
+    type: 'opening',
+    kind: 'door',
+    layerId: '0',
+    visible: true,
+    params: { kind: 'door', wallId: 'w_1', offsetFromStart: 1000, width: 900, height: 2100, sillHeight: 0 },
+    geometry: {
+      position: { x: 1450, y: 0, z: 0 },
+      rotation: 0,
+      outline: {
+        vertices: [
+          { x: 1000, y: -125, z: 0 },
+          { x: 1900, y: -125, z: 0 },
+          { x: 1900, y: 125, z: 0 },
+          { x: 1000, y: 125, z: 0 },
+        ],
+      },
+      hingeArc: { points: arcPoints, closed: false },
+      hingeAnchor: { x: 1000, y: 0, z: 0 },
+      bbox: { min: { x: 1000, y: -125, z: 0 }, max: { x: 1900, y: 125, z: 2.1 } },
+      area: 1.89,
+      perimeter: 6.0,
+    },
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+  } as unknown as Entity;
+}
+
+/** French-door: two leaves. Second hinge at (1900,0), second leaf → (1900,900). */
+function makeFrenchDoorOpening(): Entity {
+  const SUBDIVISIONS = 12;
+  const HALF_PI = Math.PI / 2;
+  const arcPoints: Array<{ x: number; y: number; z: number }> = [];
+  // First leaf arc: hinge1=(1000,0), startVec=(1,0), sweeps upward.
+  for (let i = 0; i <= SUBDIVISIONS; i++) {
+    const t = (i / SUBDIVISIONS) * HALF_PI;
+    arcPoints.push({ x: 1000 + 900 * Math.cos(t), y: 900 * Math.sin(t), z: 0 });
+  }
+  // Second leaf arc: hinge2=(1900,0), startVec=(-1,0), sweeps upward (reversed order).
+  for (let i = SUBDIVISIONS; i >= 0; i--) {
+    const t = (i / SUBDIVISIONS) * HALF_PI;
+    arcPoints.push({ x: 1900 - 900 * Math.cos(t), y: 900 * Math.sin(t), z: 0 });
+  }
+  return {
+    id: 'op_french',
+    type: 'opening',
+    kind: 'french-door',
+    layerId: '0',
+    visible: true,
+    params: { kind: 'french-door', wallId: 'w_1', offsetFromStart: 1000, width: 900, height: 2100, sillHeight: 0 },
+    geometry: {
+      position: { x: 1450, y: 0, z: 0 },
+      rotation: 0,
+      outline: {
+        vertices: [
+          { x: 1000, y: -125, z: 0 },
+          { x: 1900, y: -125, z: 0 },
+          { x: 1900, y: 125, z: 0 },
+          { x: 1000, y: 125, z: 0 },
+        ],
+      },
+      hingeArc: { points: arcPoints, closed: false },
+      hingeAnchor: { x: 1000, y: 0, z: 0 },
+      hingeAnchor2: { x: 1900, y: 0, z: 0 },
+      bbox: { min: { x: 1000, y: -125, z: 0 }, max: { x: 1900, y: 125, z: 2.1 } },
+      area: 1.89,
+      perimeter: 6.0,
+    },
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+  } as unknown as Entity;
+}
+
+describe('hitTestOpening — Bug 4: leaf line + swing arc (ADR-363)', () => {
+  it('hits leaf line midpoint (outside outline rectangle)', () => {
+    const op = makeOpeningWithArc();
+    // Leaf line: (1000,0)→(1000,900). Midpoint (1000,450) is well outside the
+    // outline rectangle (y: -125..125), so only leaf-line branch can match.
+    const result = performDetailedHitTest(op, { x: 1000, y: 450 }, 5);
+    expect(result).not.toBeNull();
+    expect(result?.hitType).toBe('entity');
+  });
+
+  it('hits swing arc midpoint (outside outline + leaf)', () => {
+    const op = makeOpeningWithArc();
+    // Arc at t=π/4 ≈ (1637, 636) — outside outline and not on leaf line x=1000.
+    // Point (1638, 636) with tolerance 5 lands within a chord segment of the arc.
+    const result = performDetailedHitTest(op, { x: 1638, y: 636 }, 5);
+    expect(result).not.toBeNull();
+    expect(result?.hitType).toBe('entity');
+  });
+
+  it('returns null when point is far from outline, leaf line, and arc', () => {
+    const op = makeOpeningWithArc();
+    const result = performDetailedHitTest(op, { x: 500, y: 500 }, 5);
+    expect(result).toBeNull();
+  });
+
+  it('hits french-door second leaf midpoint', () => {
+    const op = makeFrenchDoorOpening();
+    // Second leaf: hinge2 (1900,0) → arc.points[13] = (1900,900). Midpoint (1900,450).
+    const result = performDetailedHitTest(op, { x: 1900, y: 450 }, 5);
+    expect(result).not.toBeNull();
+    expect(result?.hitType).toBe('entity');
+  });
+
+  it('opening without hingeArc still hits via outline polygon', () => {
+    // Window — no arc, no leaf. Only outline containment.
+    const op = makeOpeningEntity(); // existing factory, no hingeArc
+    const result = performDetailedHitTest(op, { x: 1450, y: 0 }, 5);
+    expect(result).not.toBeNull();
+  });
+});
+
 describe('calculatePriority — child-over-parent (ADR-363 Bug 1)', () => {
   it('opening priority > wall priority', () => {
     const op = makeOpeningEntity();
