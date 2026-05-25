@@ -16,13 +16,9 @@ export function createSceneIdleDetector(deps: {
     thresholdMs: 800,
     onIdle: () => {
       deps.qualityModulator.onCameraIdle();
-      // NOTE: ssaoModulator.onCameraIdle() disabled — SSAO corrupts scene when
-      // LineSegments (DXF wireframe) mix with BIM meshes (garbage normal buffer
-      // for line geometry → SSAOPass output goes black). Re-enable only after
-      // a lines-exclusion fix or pure-BIM detection is in place.
-      const hasBimMesh = deps.bimLayer.hasAnyMesh();
+      deps.ssaoModulator.onCameraIdle();
+      const hasBimMesh = deps.bimLayer.hasMesh;
       const hdriLoaded = useEnvironmentStore.getState().hdriUrl !== null;
-      console.log('[3D-DEBUG][onIdle] hasBimMesh:', hasBimMesh, 'hdriLoaded:', hdriLoaded, 'ssao:DISABLED');
       if (hasBimMesh && hdriLoaded) deps.pathTracerRenderer.start();
       useViewMode3DStore.getState().enterPreviewMode();
     },

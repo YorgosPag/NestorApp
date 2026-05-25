@@ -17,6 +17,7 @@ import type { BuildingVisMode } from '../utils/building-visibility-state';
 
 export class BimSceneLayer {
   readonly group: THREE.Group;
+  private _hasMesh = false;
 
   constructor(scene: THREE.Scene) {
     this.group = new THREE.Group();
@@ -85,6 +86,9 @@ export class BimSceneLayer {
         this.group.add(mesh);
       }
     }
+    let found = false;
+    this.group.traverse((obj) => { if (!found && obj instanceof THREE.Mesh) found = true; });
+    this._hasMesh = found;
   }
 
   /** Returns true if a mesh for buildingId should be added to the scene. */
@@ -112,18 +116,8 @@ export class BimSceneLayer {
     this.group.clear();
   }
 
-  /**
-   * ADR-366 §3D path-tracer guard — true iff the BIM group contains at least
-   * one triangle Mesh. Used by ThreeJsSceneManager.onIdle to skip path tracer
-   * startup on DXF-only scenes (LineSegments only → empty BVH → black frame).
-   * Scoped to `this.group` (not `scene.traverse`) so SectionBox handles do
-   * not produce a false-positive.
-   */
-  hasAnyMesh(): boolean {
-    let has = false;
-    this.group.traverse((obj) => { if (obj instanceof THREE.Mesh) has = true; });
-    return has;
-  }
+  /** True iff BIM group contains ≥1 triangle Mesh (cached from last sync). */
+  get hasMesh(): boolean { return this._hasMesh; }
 
   dispose(): void {
     this.clearGroup();
