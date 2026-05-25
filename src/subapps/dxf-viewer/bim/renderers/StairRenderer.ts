@@ -306,7 +306,7 @@ export class StairRenderer extends BaseEntityRenderer {
   private drawArrow(startW: Point3D, endW: Point3D, label: 'UP' | 'DOWN'): void {
     const start = this.worldToScreen({ x: startW.x, y: startW.y });
     const end = this.worldToScreen({ x: endW.x, y: endW.y });
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'stair', cutState: 'cut', scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96 });
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'stair', cutState: 'cut', scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
     // strokeStyle inherited from `renderWithPhases` (hover/selected SSoT).
     // fillStyle aligned with stroke so the arrow head + UP/DOWN label pick up
     // the same hover/selection colour as the rest of the stair.
