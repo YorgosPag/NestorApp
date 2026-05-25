@@ -128,7 +128,7 @@ export class ColumnRenderer extends BaseEntityRenderer {
       { zBottomMm: column.params.baseOffset ?? 0, zTopMm: (column.params.baseOffset ?? 0) + column.params.height, category: 'column' },
       DEFAULT_VIEW_RANGE,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'column', cutState: _colCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96 });
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'column', cutState: _colCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
     this.drawPolygonPath(verts);
     this.ctx.stroke();
     this.ctx.restore();
