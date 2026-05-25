@@ -28,6 +28,8 @@ import type { WallCategory, WallEntity } from '../types/wall-types';
 import type { OpeningEntity } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
+import { resolveCutState, DEFAULT_VIEW_RANGE } from '../../config/bim-view-range';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getWallGrips } from '../walls/wall-grips';
@@ -48,14 +50,6 @@ const CATEGORY_FILL: Readonly<Record<WallCategory, string>> = {
   fence:     'rgba(141, 110, 99, 0.18)',  // stone brown
 };
 
-/** Line weight per category (thicker for structural walls). */
-const CATEGORY_LINE_WIDTH: Readonly<Record<WallCategory, number>> = {
-  exterior:  RENDER_LINE_WIDTHS.THICK,
-  interior:  RENDER_LINE_WIDTHS.NORMAL,
-  partition: RENDER_LINE_WIDTHS.NORMAL,
-  parapet:   RENDER_LINE_WIDTHS.THICK,
-  fence:     RENDER_LINE_WIDTHS.THICK,
-};
 
 const AXIS_DASH: readonly [number, number] = [6, 4];
 
@@ -168,7 +162,11 @@ export class WallRenderer extends BaseEntityRenderer {
 
     const cat = wall.params.category;
     this.ctx.fillStyle = CATEGORY_FILL[cat];
-    this.ctx.lineWidth = CATEGORY_LINE_WIDTH[cat];
+    const _cutState = resolveCutState(
+      { zBottomMm: wall.params.baseOffset ?? 0, zTopMm: (wall.params.baseOffset ?? 0) + wall.params.height, category: 'wall' },
+      DEFAULT_VIEW_RANGE,
+    );
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'wall', cutState: _cutState, scaleDenominator: 100, dpi: 96 });
 
     // Build closed polygon: outer (start→end) + inner (end→start) reverses
     // so the perimeter is well-oriented for fill.
