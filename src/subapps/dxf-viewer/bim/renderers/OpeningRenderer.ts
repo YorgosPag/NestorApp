@@ -70,7 +70,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
       { zBottomMm: opening.params.sillHeight, zTopMm: opening.params.sillHeight + opening.params.height, category: 'opening' },
       DEFAULT_VIEW_RANGE,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'opening', cutState: _opCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96 });
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'opening', cutState: _opCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
 
     this.drawOutline(opening);
     this.drawKindOverlay(opening);
