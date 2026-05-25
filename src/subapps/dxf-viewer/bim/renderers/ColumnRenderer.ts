@@ -60,6 +60,11 @@ import {
   COL_SECTION_STROKE_COLOR,
   COL_SECTION_LINE_WIDTH_PX,
 } from '../columns/column-section-profile';
+import {
+  formatColumnDimLabels,
+  drawColumnDimPill,
+  COLUMN_LABEL_MIN_FOOTPRINT_PX,
+} from '../columns/column-dim-labels';
 
 /** Stroke colour per kind. */
 const KIND_STROKE: Readonly<Record<ColumnKind, string>> = {
@@ -125,6 +130,11 @@ export class ColumnRenderer extends BaseEntityRenderer {
     if (phaseState.phase === 'highlighted') {
       this.drawVariantDimensionLabels(column);
       this.drawSectionProfile(column);
+    }
+
+    // Phase 8F — centred dimension pill (Revit-style): visible when hovered OR selected.
+    if (phaseState.phase === 'highlighted' || options.selected) {
+      this.drawCenterDimLabel(column);
     }
 
     this.finalizeRender(entity, options);
@@ -335,6 +345,21 @@ export class ColumnRenderer extends BaseEntityRenderer {
     this.ctx.lineWidth = COL_SECTION_LINE_WIDTH_PX;
     this.ctx.stroke();
     this.ctx.restore();
+  }
+
+  /**
+   * Phase 8F — Revit-style centred dimension pill.
+   * Drawn at bbox centre in screen space; hidden when footprint is < threshold.
+   */
+  private drawCenterDimLabel(column: ColumnEntity): void {
+    const bb = column.geometry.bbox;
+    const minS = this.worldToScreen({ x: bb.min.x, y: bb.min.y });
+    const maxS = this.worldToScreen({ x: bb.max.x, y: bb.max.y });
+    const span = Math.max(Math.abs(maxS.x - minS.x), Math.abs(maxS.y - minS.y));
+    if (span < COLUMN_LABEL_MIN_FOOTPRINT_PX) return;
+    const lines = formatColumnDimLabels(column.params);
+    if (lines.length === 0) return;
+    drawColumnDimPill(this.ctx, lines, (minS.x + maxS.x) / 2, (minS.y + maxS.y) / 2);
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
