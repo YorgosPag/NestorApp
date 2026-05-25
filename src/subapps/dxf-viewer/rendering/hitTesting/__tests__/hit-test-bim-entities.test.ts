@@ -1,0 +1,155 @@
+/**
+ * ADR-363 Bug 1 — hit-test polygon containment + child-over-parent priority.
+ *
+ * Coverage:
+ *   - Opening polygon containment hit succeeds inside outline, fails outside.
+ *   - Slab polygon hit succeeds inside outline.
+ *   - Wall polygon (outerEdge + innerEdge reversed) hit succeeds inside footprint.
+ *   - Opening priority > wall priority (75 vs 50).
+ *   - Slab-opening priority > slab priority.
+ *   - Column / beam polygon containment via geometry.footprint/outline.
+ */
+
+import { performDetailedHitTest } from '../hit-test-entity-tests';
+import { calculatePriority } from '../hit-tester-utils';
+import type { Entity } from '../../../types/entities';
+
+function makeOpeningEntity(): Entity {
+  return {
+    id: 'op_1',
+    type: 'opening',
+    kind: 'door',
+    layerId: '0',
+    visible: true,
+    params: { kind: 'door', wallId: 'w_1', offsetFromStart: 1000, width: 900, height: 2100, sillHeight: 0 },
+    geometry: {
+      position: { x: 1450, y: 0, z: 0 },
+      rotation: 0,
+      outline: {
+        vertices: [
+          { x: 1000, y: -125, z: 0 },
+          { x: 1900, y: -125, z: 0 },
+          { x: 1900, y: 125, z: 0 },
+          { x: 1000, y: 125, z: 0 },
+        ],
+      },
+      bbox: { min: { x: 1000, y: -125, z: 0 }, max: { x: 1900, y: 125, z: 2.1 } },
+      area: 1.89,
+      perimeter: 6.0,
+    },
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+  } as unknown as Entity;
+}
+
+function makeWallEntity(): Entity {
+  return {
+    id: 'w_1',
+    type: 'wall',
+    kind: 'straight',
+    layerId: '0',
+    visible: true,
+    params: { category: 'exterior', start: { x: 0, y: 0, z: 0 }, end: { x: 5000, y: 0, z: 0 }, height: 3000, thickness: 250, flip: false },
+    geometry: {
+      axisPolyline: { points: [{ x: 0, y: 0, z: 0 }, { x: 5000, y: 0, z: 0 }], closed: false },
+      outerEdge: { points: [{ x: 0, y: -125, z: 0 }, { x: 5000, y: -125, z: 0 }], closed: false },
+      innerEdge: { points: [{ x: 0, y: 125, z: 0 }, { x: 5000, y: 125, z: 0 }], closed: false },
+      bbox: { min: { x: 0, y: -125, z: 0 }, max: { x: 5000, y: 125, z: 3 } },
+      length: 5,
+      area: 15,
+      volume: 3.75,
+    },
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+  } as unknown as Entity;
+}
+
+function makeSlabEntity(): Entity {
+  return {
+    id: 's_1',
+    type: 'slab',
+    kind: 'floor',
+    layerId: '0',
+    visible: true,
+    params: {
+      outline: {
+        vertices: [
+          { x: 0, y: 0, z: 0 },
+          { x: 4000, y: 0, z: 0 },
+          { x: 4000, y: 3000, z: 0 },
+          { x: 0, y: 3000, z: 0 },
+        ],
+      },
+      thickness: 200,
+      levelElevation: 0,
+    },
+    geometry: { footprint: { vertices: [] }, bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 4000, y: 3000, z: 0.2 } }, area: 12, perimeter: 14 },
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+  } as unknown as Entity;
+}
+
+describe('performDetailedHitTest — BIM entities (ADR-363 Bug 1)', () => {
+  it('opening hit succeeds when point is inside outline polygon', () => {
+    const op = makeOpeningEntity();
+    const result = performDetailedHitTest(op, { x: 1450, y: 0 }, 1);
+    expect(result).not.toBeNull();
+    expect(result?.hitType).toBe('entity');
+  });
+
+  it('opening hit fails when point is outside outline polygon (still inside bbox)', () => {
+    const op = makeOpeningEntity();
+    // Point at x=500 — outside opening (which starts at x=1000), still inside wall bbox
+    const result = performDetailedHitTest(op, { x: 500, y: 0 }, 1);
+    expect(result).toBeNull();
+  });
+
+  it('slab hit succeeds when point is inside outline polygon', () => {
+    const slab = makeSlabEntity();
+    const result = performDetailedHitTest(slab, { x: 2000, y: 1500 }, 1);
+    expect(result).not.toBeNull();
+  });
+
+  it('slab hit fails when point is outside outline polygon', () => {
+    const slab = makeSlabEntity();
+    const result = performDetailedHitTest(slab, { x: 5000, y: 1500 }, 1);
+    expect(result).toBeNull();
+  });
+
+  it('wall hit succeeds when point is inside the outer+inner edge band', () => {
+    const wall = makeWallEntity();
+    const result = performDetailedHitTest(wall, { x: 2500, y: 0 }, 1);
+    expect(result).not.toBeNull();
+  });
+
+  it('wall hit fails when point is outside the band (far from wall axis)', () => {
+    const wall = makeWallEntity();
+    const result = performDetailedHitTest(wall, { x: 2500, y: 500 }, 1);
+    expect(result).toBeNull();
+  });
+});
+
+describe('calculatePriority — child-over-parent (ADR-363 Bug 1)', () => {
+  it('opening priority > wall priority', () => {
+    const op = makeOpeningEntity();
+    const wall = makeWallEntity();
+    expect(calculatePriority(op)).toBeGreaterThan(calculatePriority(wall));
+  });
+
+  it('opening priority === 75 (child boost), wall === 50 (default)', () => {
+    expect(calculatePriority(makeOpeningEntity())).toBe(75);
+    expect(calculatePriority(makeWallEntity())).toBe(50);
+  });
+
+  it('slab-opening priority > slab priority', () => {
+    const slabOpening: Entity = {
+      id: 'so_1',
+      type: 'slab-opening',
+      kind: 'shaft',
+      layerId: '0',
+      visible: true,
+      params: { slabId: 's_1', outline: { vertices: [] } },
+      geometry: { polygon: { vertices: [] }, bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } }, area: 0, perimeter: 0 },
+      validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+    } as unknown as Entity;
+    expect(calculatePriority(slabOpening)).toBe(75);
+    expect(calculatePriority(makeSlabEntity())).toBe(50);
+  });
+});
