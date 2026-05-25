@@ -24,6 +24,14 @@ import type { BeamParams } from '../../bim/types/beam-types';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { isColumnEntity, isBeamEntity } from '../../types/entities';
+import {
+  PILL_FONT,
+  PILL_TEXT_COLOR,
+  PILL_BG_COLOR,
+  PILL_PADDING,
+  PILL_RADIUS,
+  pillPath,
+} from '../../rendering/utils/canvas-pill';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,13 +50,8 @@ export interface UseGripDimAnnotationProps {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const LABEL_FONT = '9px sans-serif';
-const LABEL_TEXT_COLOR = 'rgba(0,0,0,0.75)';
-const LABEL_BG_COLOR = 'rgba(255,255,255,0.88)';
 const LABEL_OFFSET_X = 12;
 const LABEL_OFFSET_Y = -4;
-const LABEL_PADDING = 3;
-const LABEL_RADIUS = 3;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -65,23 +68,6 @@ function worldToScreen(p: Point2D, t: ViewTransform): Point2D {
   return { x: p.x * t.scale + t.offsetX, y: p.y * t.scale + t.offsetY };
 }
 
-function pillPath(
-  ctx: CanvasRenderingContext2D,
-  x: number, y: number, w: number, h: number, r: number,
-): void {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
 function drawLabelPill(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -89,20 +75,18 @@ function drawLabelPill(
   sy: number,
 ): void {
   ctx.save();
-  ctx.font = LABEL_FONT;
+  ctx.font = PILL_FONT;
   const metrics = ctx.measureText(text);
-  const w = metrics.width + LABEL_PADDING * 2;
+  const w = metrics.width + PILL_PADDING * 2;
   const h = 13;
   const x = sx + LABEL_OFFSET_X;
-  const y = sy + LABEL_OFFSET_Y - h + LABEL_PADDING;
-
-  pillPath(ctx, x, y, w, h, LABEL_RADIUS);
-  ctx.fillStyle = LABEL_BG_COLOR;
+  const y = sy + LABEL_OFFSET_Y - h + PILL_PADDING;
+  pillPath(ctx, x, y, w, h, PILL_RADIUS);
+  ctx.fillStyle = PILL_BG_COLOR;
   ctx.fill();
-
-  ctx.fillStyle = LABEL_TEXT_COLOR;
+  ctx.fillStyle = PILL_TEXT_COLOR;
   ctx.textBaseline = 'top';
-  ctx.fillText(text, x + LABEL_PADDING, y + LABEL_PADDING);
+  ctx.fillText(text, x + PILL_PADDING, y + PILL_PADDING);
   ctx.restore();
 }
 
