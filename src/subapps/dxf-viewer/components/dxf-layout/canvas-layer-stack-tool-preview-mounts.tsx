@@ -1,0 +1,121 @@
+/**
+ * Tool preview mounts (Rotation / Move / Mirror / Scale / Stretch / GripDrag).
+ *
+ * Each mount: `React.memo(() => { useXxxPreview(props); return null; })`.
+ * No JSX — draws to PreviewCanvas via imperative API. Internal subscriptions
+ * (cursor world position, tool store) keep parent CanvasLayerStack inert.
+ *
+ * Architectural rule: see ADR-040 micro-leaf pattern. Extracted from
+ * canvas-layer-stack-leaves.tsx for 500-line ratchet compliance.
+ */
+'use client';
+import React from 'react';
+import { useRotationPreview } from '../../hooks/tools/useRotationPreview';
+import { useMovePreview } from '../../hooks/tools/useMovePreview';
+import { useGripGhostPreview } from '../../hooks/tools/useGripGhostPreview';
+import { useMirrorPreview } from '../../hooks/tools/useMirrorPreview';
+import { useScalePreview } from '../../hooks/tools/useScalePreview';
+import { useStretchPreview } from '../../hooks/tools/useStretchPreview';
+import type { MovePhase } from '../../hooks/tools/useMoveTool';
+import type { MirrorPhase } from '../../hooks/tools/useMirrorTool';
+import type { DxfGripDragPreview } from '../../hooks/grip-computation';
+import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+
+export interface RotationPreviewMountProps {
+  phase: import('../../hooks/tools/useRotationTool').RotationPhase;
+  basePoint: Point2D | null;
+  referencePoint: Point2D | null;
+  currentAngle: number;
+  selectedEntityIds: string[];
+  levelManager: Parameters<typeof useRotationPreview>[0]['levelManager'];
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+export const RotationPreviewMount = React.memo(function RotationPreviewMount(
+  props: RotationPreviewMountProps,
+) {
+  useRotationPreview(props);
+  return null;
+});
+
+export interface MovePreviewMountProps {
+  phase: MovePhase;
+  basePoint: Point2D | null;
+  selectedEntityIds: string[];
+  selectedOverlayIds?: string[];
+  getOverlay?: Parameters<typeof useMovePreview>[0]['getOverlay'];
+  levelManager: Parameters<typeof useMovePreview>[0]['levelManager'];
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+export const MovePreviewMount = React.memo(function MovePreviewMount(
+  props: MovePreviewMountProps,
+) {
+  useMovePreview(props);
+  return null;
+});
+
+export interface MirrorPreviewMountProps {
+  phase: MirrorPhase;
+  firstPoint: Point2D | null;
+  secondPoint: Point2D | null;
+  selectedEntityIds: string[];
+  levelManager: Parameters<typeof useMirrorPreview>[0]['levelManager'];
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+export const MirrorPreviewMount = React.memo(function MirrorPreviewMount(
+  props: MirrorPreviewMountProps,
+) {
+  useMirrorPreview(props);
+  return null;
+});
+
+export interface ScalePreviewMountProps {
+  levelManager: Parameters<typeof useScalePreview>[0]['levelManager'];
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+export const ScalePreviewMount = React.memo(function ScalePreviewMount(
+  props: ScalePreviewMountProps,
+) {
+  useScalePreview(props);
+  return null;
+});
+
+export interface StretchPreviewMountProps {
+  levelManager: Parameters<typeof useStretchPreview>[0]['levelManager'];
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+export const StretchPreviewMount = React.memo(function StretchPreviewMount(
+  props: StretchPreviewMountProps,
+) {
+  useStretchPreview(props);
+  return null;
+});
+
+export interface GripDragPreviewMountProps {
+  dragPreview: DxfGripDragPreview | null;
+  levelManager: Parameters<typeof useGripGhostPreview>[0]['levelManager'];
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+export const GripDragPreviewMount = React.memo(function GripDragPreviewMount(
+  props: GripDragPreviewMountProps,
+) {
+  useGripGhostPreview(props);
+  return null;
+});

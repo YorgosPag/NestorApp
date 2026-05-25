@@ -71,6 +71,14 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-25 — canvas-layer-stack-leaves 500-line ratchet split (tool preview mounts)
+
+`canvas-layer-stack-leaves.tsx` reached 503 lines after the slab-opening + opening ghost preview mounts were added (ADR-363 §11.Q3). The 6 trivial tool preview mounts — `RotationPreviewMount`, `MovePreviewMount`, `MirrorPreviewMount`, `ScalePreviewMount`, `StretchPreviewMount`, `GripDragPreviewMount` — and their props interfaces were extracted into `canvas-layer-stack-tool-preview-mounts.tsx`. Each mount keeps its `React.memo(() => { useXxxPreview(props); return null; })` shape; their internal subscriptions to cursor world position / tool stores are unchanged.
+
+**Cardinal rule compliance**: no shell/orchestrator subscriptions added, no new `useSyncExternalStore` in `CanvasLayerStack` or `CanvasSection`, no bitmap-cache key impact. The mounts remain the sole subscribers for their respective tool previews. `canvas-layer-stack-leaves.tsx` 503 → 381 lines.
+
+**Files touched (atomic batch)**: `canvas-layer-stack-leaves.tsx`, `canvas-layer-stack-tool-preview-mounts.tsx` (new).
+
 ### 2026-05-25 — DxfRenderer 500-line ratchet split (entity-model builder)
 
 `DxfRenderer.ts` hit 514 lines after the ADR-363 Phase 3.7 two-pass slab-opening render (incident 2026-05-25 §11.Q3). The 135-line `toEntityModel` switch (DxfEntityUnion → Entity unwrap for every entity kind) plus `mapDxfLineTypeToEnterprise` helper were extracted into the pure module `canvas-v2/dxf-canvas/dxf-renderer-entity-model.ts`, exporting `buildEntityModelFromDxf(entity, isSelected, resolved)`. `DxfRenderer.toEntityModel()` becomes a 16-line wrapper that resolves the style (pre-resolved fast-path used by `renderEntityUnified`; `layersById` legacy path delegates to `resolveStyleForRender`) then calls the pure builder.
