@@ -44,6 +44,12 @@ export interface ObjectStyle {
  *
  * Per ADR-375 §3.3 + Q0 locked hierarchy.
  */
+/** All BIM categories in display order (matches DEFAULT_OBJECT_STYLES keys). */
+export const BIM_CATEGORIES: readonly BimCategory[] = [
+  'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening',
+  'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip',
+] as const;
+
 export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> = {
   wall:           { projectionPen: 5,  cutPen: 7  },
   column:         { projectionPen: 5,  cutPen: 9  },
