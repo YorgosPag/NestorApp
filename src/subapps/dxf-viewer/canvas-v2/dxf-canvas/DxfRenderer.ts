@@ -1,6 +1,6 @@
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import { GHOST_DEFAULTS } from '../../rendering/ghost';
-import type { DxfScene, DxfEntityUnion, DxfRenderOptions, DxfText } from './dxf-types';
+import type { DxfScene, DxfEntityUnion, DxfRenderOptions } from './dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
 import { EntityRendererComposite } from '../../rendering/core/EntityRendererComposite';
@@ -17,23 +17,10 @@ import { resolveEntityLayerName, getLayer as getLayerStoreLayer } from '../../st
 // ADR-358 §5.6.bis Phase 10 — Layer Isolate runtime effects (zero-cost passthrough when inactive).
 import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsStore';
 import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver';
-// ADR-363 Phase 2 (deferred pipeline) — DxfOpening unwrap in toEntityModel().
-import type { DxfOpening } from './dxf-types';
 // Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
 import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, transparencyToAlpha } from './dxf-renderer-frame-builders';
-function mapDxfLineTypeToEnterprise(dxfLineType: string | undefined): 'solid' | 'dashed' | 'dotted' | 'dashdot' {
-  const mapping: Record<string, 'solid' | 'dashed' | 'dotted' | 'dashdot'> = {
-    'solid': 'solid',
-    'dashed': 'dashed',
-    'dotted': 'dotted',
-    'dashdot': 'dashdot', // ✅ ENTERPRISE FIX: Keep 'dashdot' for BaseEntity compatibility
-    'dash-dot': 'dashdot', // ✅ Map 'dash-dot' to 'dashdot' for BaseEntity compatibility
-    'dash-dot-dot': 'dashdot' // ✅ Fallback to 'dashdot' for complex patterns
-  };
-
-  const key = dxfLineType || 'solid';
-  return mapping[key] || 'solid';
-}
+// DxfEntityUnion → Entity mapper (extracted file-size split, 2026-05-25).
+import { buildEntityModelFromDxf } from './dxf-renderer-entity-model';
 export class DxfRenderer {
   private ctx: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
@@ -174,11 +161,27 @@ export class DxfRenderer {
       this.ctx.stroke();
       this.ctx.restore();
     }
-    // Per-entity rendering — non-line entities + interactive lines (selected/hovered/measurement)
+    // ADR-363 Phase 3.7 / ADR-040 — two-pass rendering για cutout entities.
+    // Pass A: όλα τα entities ΕΚΤΟΣ slab-opening. Slab fills +
+    //         `punchHostedSlabOpenings` (destination-out) clear το cutout area
+    //         στο slab fill.
+    // Pass B: slab-openings ζωγραφίζονται ΠΑΝΩ από τα slabs ώστε το dashed
+    //         outline + kind-fill να φαίνεται. Χωρίς αυτό, persisted slabs που
+    //         έρχονται από Firestore snapshot ΜΕΤΑ τα persisted openings στο
+    //         `scene.entities` array, σκεπάζουν τα openings (alpha-blend) και
+    //         η οπή γίνεται αόρατη (incident 2026-05-25, ADR-363 §11.Q3).
     for (const entity of scene.entities) {
+      if (entity.type === 'slab-opening') continue;
       if (!entity.visible) continue;
       if (!isEntityInViewport(entity, worldViewport)) continue;
-      // ADR-358 §5.6.bis Phase 10 — skip frozen/invisible layers.
+      if (this.isEntityLayerSkipped(entity, effectiveOptions.layersById)) continue;
+      if (batchedIds.has(entity.id)) continue;
+      this.renderEntityUnified(entity, transform, actualViewport, effectiveOptions);
+    }
+    for (const entity of scene.entities) {
+      if (entity.type !== 'slab-opening') continue;
+      if (!entity.visible) continue;
+      if (!isEntityInViewport(entity, worldViewport)) continue;
       if (this.isEntityLayerSkipped(entity, effectiveOptions.layersById)) continue;
       if (batchedIds.has(entity.id)) continue;
       this.renderEntityUnified(entity, transform, actualViewport, effectiveOptions);
@@ -270,19 +273,14 @@ export class DxfRenderer {
     this.entityComposite.render(entityModel, renderOptions);
   }
 
+  // ADR-358 §G7 Phase 4 — accepts either a pre-resolved style (perf path used
+  // by renderEntityUnified) or a layersById map (legacy / renderSingleEntity).
+  // The entity-type → Entity switch lives in dxf-renderer-entity-model.ts.
   private toEntityModel(
     entity: DxfEntityUnion,
     isSelected: boolean,
     resolvedOrLayersById: { colorHex: string; lineWidthPx: number; alpha: number } | Record<string, SceneLayer> | undefined,
   ): Entity {
-    const entityWithLineType = entity as typeof entity & { lineType?: string };
-    const entityWithMeasurement = entity as typeof entity & {
-      measurement?: boolean;
-      showEdgeDistances?: boolean;
-    };
-    // ADR-358 §G7 Phase 4 — ByLayer/ByBlock resolution.
-    // Accepts either a pre-resolved style (perf: avoid double-resolve in renderEntityUnified)
-    // OR a layersById map (legacy / renderSingleEntity call sites).
     const isPreResolved =
       typeof resolvedOrLayersById === 'object' &&
       resolvedOrLayersById !== null &&
@@ -290,121 +288,7 @@ export class DxfRenderer {
     const resolved = isPreResolved
       ? (resolvedOrLayersById as { colorHex: string; lineWidthPx: number; alpha: number })
       : this.resolveStyleForRender(entity, resolvedOrLayersById as Record<string, SceneLayer> | undefined);
-    // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
-    const base = {
-      id: entity.id,
-      visible: entity.visible,
-      selected: isSelected,
-      layerId: entity.layerId ?? '',
-      color: resolved.colorHex,
-      lineType: mapDxfLineTypeToEnterprise(entityWithLineType.lineType),
-      lineweight: resolved.lineWidthPx,
-      ...(entityWithMeasurement.measurement !== undefined && { measurement: entityWithMeasurement.measurement }),
-      ...(entityWithMeasurement.showEdgeDistances !== undefined && { showEdgeDistances: entityWithMeasurement.showEdgeDistances })
-    };
-
-    switch (entity.type) {
-      case 'line':
-        return { ...base, type: 'line', start: entity.start, end: entity.end };
-      case 'circle':
-        return { ...base, type: 'circle', center: entity.center, radius: entity.radius };
-      case 'polyline':
-        return { ...base, type: 'polyline', vertices: entity.vertices, closed: entity.closed };
-      case 'arc':
-        return {
-          ...base,
-          type: 'arc',
-          center: entity.center,
-          radius: entity.radius,
-          startAngle: entity.startAngle,
-          endAngle: entity.endAngle,
-          counterclockwise: entity.counterclockwise
-        };
-      case 'text': {
-        const te = entity as DxfText;
-        // ADR-344 Phase 6.E: spread textStyle so TextRenderer can apply rich styling.
-        // Cast required — Entity/TextEntity predates textStyle (rendering hint, not domain).
-        return {
-          ...base,
-          type: 'text',
-          position: te.position,
-          text: te.text,
-          height: te.height,
-          rotation: te.rotation,
-          ...(te.textStyle && { textStyle: te.textStyle }),
-        } as unknown as Entity;
-      }
-      case 'angle-measurement':
-        return {
-          ...base,
-          type: 'angle-measurement',
-          vertex: entity.vertex,
-          point1: entity.point1,
-          point2: entity.point2,
-          angle: entity.angle
-        };
-      case 'stair': {
-        // ADR-358 Phase 5b — unwrap the DxfStair wrapper back into a
-        // first-class StairEntity for the renderer pipeline. The parametric
-        // geometry comes from the SSoT (`stairEntity.geometry` — populated by
-        // `computeStairGeometry()` at create/update time).
-        const s = entity.stairEntity;
-        return {
-          ...base,
-          type: 'stair',
-          kind: s.kind,
-          params: s.params,
-          geometry: s.geometry,
-          validation: s.validation,
-        } as unknown as Entity;
-      }
-      case 'dimension': {
-        // ADR-362 Phase C1 — unwrap the DxfDimension wrapper back into the
-        // DimensionEntity SSoT. The renderer resolves DimStyle + DimGeometry
-        // internally (via registry singleton + per-frame DimensionLookup).
-        return { ...base, ...entity.dimensionEntity } as unknown as Entity;
-      }
-      case 'slab': {
-        // ADR-363 Phase 3.7 — unwrap DxfSlab: SlabRenderer reads geometry.polygon + params.
-        const s = entity.slabEntity;
-        return { ...base, type: 'slab', kind: s.kind, params: s.params, geometry: s.geometry, validation: s.validation } as unknown as Entity;
-      }
-      case 'slab-opening': {
-        // ADR-363 Phase 3.7 — unwrap DxfSlabOpening: SlabOpeningRenderer reads geometry + kind.
-        const so = entity.slabOpeningEntity;
-        return { ...base, type: 'slab-opening', kind: so.kind, params: so.params, geometry: so.geometry, validation: so.validation } as unknown as Entity;
-      }
-      case 'opening': {
-        // ADR-363 Phase 2 (deferred pipeline) — unwrap DxfOpening: OpeningRenderer reads
-        // geometry.outline + kind overlay; WallRenderer uses per-frame openingsByWall map.
-        const o = (entity as DxfOpening).openingEntity;
-        return { ...base, type: 'opening', kind: o.kind, params: o.params, geometry: o.geometry, validation: o.validation } as unknown as Entity;
-      }
-      case 'wall': {
-        // ADR-363 Phase 1B — direct entity: geometry/params/kind already at top level
-        // (DxfWall uses direct spread, no wallEntity wrapper). WallRenderer reads
-        // geometry.outerEdge/innerEdge/axisPolyline + params.category/thickness/flip.
-        return { ...base, type: 'wall', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
-      }
-      case 'beam': {
-        // ADR-363 Phase 5 — direct entity: same pattern as DxfWall. BeamRenderer
-        // reads geometry.outline/axisPolyline + params.width/depth/kind.
-        return { ...base, type: 'beam', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
-      }
-      case 'column': {
-        // ADR-363 Phase 4 — direct entity: same pattern as DxfWall/DxfBeam.
-        // ColumnRenderer reads geometry.footprint + kind + params at top level.
-        return { ...base, type: 'column', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
-      }
-      case 'xline':
-        return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
-      case 'ray':
-        return { ...base, type: 'ray', basePoint: entity.rayEntity.basePoint, direction: entity.rayEntity.direction } as unknown as Entity;
-      default: {
-        const exhaustiveCheck: never = entity;
-        return exhaustiveCheck;
-      }
-    }
+    return buildEntityModelFromDxf(entity, isSelected, resolved);
   }
   // Per-frame index builders extracted to ./dxf-renderer-frame-builders.ts.
   /** ADR-358 §G7 Phase 6 — ByLayer/ByBlock style resolution; falls back to literal values when no layersById. */

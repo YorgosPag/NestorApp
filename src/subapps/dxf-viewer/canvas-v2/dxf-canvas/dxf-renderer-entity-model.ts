@@ -1,0 +1,119 @@
+import type { DxfEntityUnion, DxfText, DxfOpening } from './dxf-types';
+import type { Entity } from '../../types/entities';
+
+function mapDxfLineTypeToEnterprise(
+  dxfLineType: string | undefined,
+): 'solid' | 'dashed' | 'dotted' | 'dashdot' {
+  const mapping: Record<string, 'solid' | 'dashed' | 'dotted' | 'dashdot'> = {
+    'solid': 'solid',
+    'dashed': 'dashed',
+    'dotted': 'dotted',
+    'dashdot': 'dashdot',
+    'dash-dot': 'dashdot',
+    'dash-dot-dot': 'dashdot',
+  };
+  const key = dxfLineType || 'solid';
+  return mapping[key] || 'solid';
+}
+
+export function buildEntityModelFromDxf(
+  entity: DxfEntityUnion,
+  isSelected: boolean,
+  resolved: { colorHex: string; lineWidthPx: number; alpha: number },
+): Entity {
+  const entityWithLineType = entity as typeof entity & { lineType?: string };
+  const entityWithMeasurement = entity as typeof entity & {
+    measurement?: boolean;
+    showEdgeDistances?: boolean;
+  };
+  const base = {
+    id: entity.id,
+    visible: entity.visible,
+    selected: isSelected,
+    layerId: entity.layerId ?? '',
+    color: resolved.colorHex,
+    lineType: mapDxfLineTypeToEnterprise(entityWithLineType.lineType),
+    lineweight: resolved.lineWidthPx,
+    ...(entityWithMeasurement.measurement !== undefined && { measurement: entityWithMeasurement.measurement }),
+    ...(entityWithMeasurement.showEdgeDistances !== undefined && { showEdgeDistances: entityWithMeasurement.showEdgeDistances }),
+  };
+
+  switch (entity.type) {
+    case 'line':
+      return { ...base, type: 'line', start: entity.start, end: entity.end };
+    case 'circle':
+      return { ...base, type: 'circle', center: entity.center, radius: entity.radius };
+    case 'polyline':
+      return { ...base, type: 'polyline', vertices: entity.vertices, closed: entity.closed };
+    case 'arc':
+      return {
+        ...base,
+        type: 'arc',
+        center: entity.center,
+        radius: entity.radius,
+        startAngle: entity.startAngle,
+        endAngle: entity.endAngle,
+        counterclockwise: entity.counterclockwise,
+      };
+    case 'text': {
+      const te = entity as DxfText;
+      return {
+        ...base,
+        type: 'text',
+        position: te.position,
+        text: te.text,
+        height: te.height,
+        rotation: te.rotation,
+        ...(te.textStyle && { textStyle: te.textStyle }),
+      } as unknown as Entity;
+    }
+    case 'angle-measurement':
+      return {
+        ...base,
+        type: 'angle-measurement',
+        vertex: entity.vertex,
+        point1: entity.point1,
+        point2: entity.point2,
+        angle: entity.angle,
+      };
+    case 'stair': {
+      const s = entity.stairEntity;
+      return {
+        ...base,
+        type: 'stair',
+        kind: s.kind,
+        params: s.params,
+        geometry: s.geometry,
+        validation: s.validation,
+      } as unknown as Entity;
+    }
+    case 'dimension':
+      return { ...base, ...entity.dimensionEntity } as unknown as Entity;
+    case 'slab': {
+      const s = entity.slabEntity;
+      return { ...base, type: 'slab', kind: s.kind, params: s.params, geometry: s.geometry, validation: s.validation } as unknown as Entity;
+    }
+    case 'slab-opening': {
+      const so = entity.slabOpeningEntity;
+      return { ...base, type: 'slab-opening', kind: so.kind, params: so.params, geometry: so.geometry, validation: so.validation } as unknown as Entity;
+    }
+    case 'opening': {
+      const o = (entity as DxfOpening).openingEntity;
+      return { ...base, type: 'opening', kind: o.kind, params: o.params, geometry: o.geometry, validation: o.validation } as unknown as Entity;
+    }
+    case 'wall':
+      return { ...base, type: 'wall', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
+    case 'beam':
+      return { ...base, type: 'beam', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
+    case 'column':
+      return { ...base, type: 'column', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
+    case 'xline':
+      return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
+    case 'ray':
+      return { ...base, type: 'ray', basePoint: entity.rayEntity.basePoint, direction: entity.rayEntity.direction } as unknown as Entity;
+    default: {
+      const exhaustiveCheck: never = entity;
+      return exhaustiveCheck;
+    }
+  }
+}

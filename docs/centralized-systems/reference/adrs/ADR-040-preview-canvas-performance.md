@@ -71,6 +71,14 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-25 — DxfRenderer 500-line ratchet split (entity-model builder)
+
+`DxfRenderer.ts` hit 514 lines after the ADR-363 Phase 3.7 two-pass slab-opening render (incident 2026-05-25 §11.Q3). The 135-line `toEntityModel` switch (DxfEntityUnion → Entity unwrap for every entity kind) plus `mapDxfLineTypeToEnterprise` helper were extracted into the pure module `canvas-v2/dxf-canvas/dxf-renderer-entity-model.ts`, exporting `buildEntityModelFromDxf(entity, isSelected, resolved)`. `DxfRenderer.toEntityModel()` becomes a 16-line wrapper that resolves the style (pre-resolved fast-path used by `renderEntityUnified`; `layersById` legacy path delegates to `resolveStyleForRender`) then calls the pure builder.
+
+**Cardinal rule compliance**: no rendering pipeline change, no new store subscriptions, no bitmap-cache key impact. Pure mechanical extraction. `renderEntityUnified` still passes the pre-resolved style (avoiding double-resolve). `DxfRenderer.ts` 514 → 382 lines.
+
+**Files touched (atomic batch)**: `DxfRenderer.ts`, `dxf-renderer-entity-model.ts` (new).
+
 ### 2026-05-25 — CanvasSection 500-line ratchet split + slabOpeningGhostPreview wiring
 
 `CanvasSection.tsx` was approaching the 500-line cap (514 lines pre-split). Two non-architectural edits brought it under:
