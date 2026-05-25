@@ -115,30 +115,12 @@ export function createViewportCamera(
     const viewDir = _direction.subVectors(controls.target, activeCamera.position).normalize();
     if (activeCamera instanceof THREE.PerspectiveCamera) {
       const result = computePerspectiveFraming(min, max, viewDir, activeCamera.aspect, DEFAULT_PERSPECTIVE_FOV);
-      console.log('[3D-DEBUG][frameBounds] animation START', {
-        fromCam: activeCamera.position.toArray().map(v => +v.toFixed(2)).join(','),
-        fromTgt: controls.target.toArray().map(v => +v.toFixed(2)).join(','),
-        toCam: result.position.toArray().map(v => +v.toFixed(2)).join(','),
-        toTgt: result.target.toArray().map(v => +v.toFixed(2)).join(','),
-        maxDist: PERSP_MAX_DISTANCE,
-      });
       animation.start(
         { position: activeCamera.position.clone(), target: controls.target.clone(), zoom: getZoom() },
         { position: result.position, target: result.target, zoom: getZoom() },
         getAnimationDuration('camera', rm(), FRAME_SCENE_DURATION_MS),
         (pos, tgt) => { activeCamera.position.copy(pos); controls.target.copy(tgt); onRenderNeeded(); },
-        () => {
-          controls.enabled = true;
-          // DEBUG: log camera state immediately after animation completes
-          setTimeout(() => {
-            console.log('[3D-DEBUG][frameBounds] animation DONE +100ms', {
-              camPos: activeCamera.position.toArray().map(v => +v.toFixed(2)).join(','),
-              tgt: controls.target.toArray().map(v => +v.toFixed(2)).join(','),
-              dist: +activeCamera.position.distanceTo(controls.target).toFixed(2),
-              controlsEnabled: controls.enabled,
-            });
-          }, 100);
-        },
+        () => { controls.enabled = true; },
       );
     } else {
       const up = orthoCamera.up.clone();
