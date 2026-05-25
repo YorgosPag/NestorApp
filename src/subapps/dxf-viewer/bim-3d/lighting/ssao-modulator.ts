@@ -6,9 +6,41 @@ import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
 const SSAO_TRANSITION_MS = 300;
 const IS_LOW_PERF = typeof navigator !== 'undefined' && navigator.hardwareConcurrency < 4;
 
+/**
+ * SSAOPass subclass that excludes LineSegments from the normal-buffer pass.
+ *
+ * Root cause: SSAOPass sets scene.overrideMaterial = MeshNormalMaterial during
+ * its internal normal render. LineSegments lack a normals attribute, so the GPU
+ * emits garbage values → AO factor saturates to 1.0 → final composite = black.
+ *
+ * Fix: hide all LineSegments before super.render() (normal pass + AO compute),
+ * restore immediately after. The RenderPass (executed before this pass in the
+ * composer chain) already captured line color into the readBuffer, so lines
+ * remain visible in the final output — they just receive AO factor 0 (correct).
+ */
+class BimSSAOPass extends SSAOPass {
+  override render(
+    renderer: THREE.WebGLRenderer,
+    writeBuffer: THREE.WebGLRenderTarget,
+    readBuffer: THREE.WebGLRenderTarget,
+    deltaTime: number,
+    maskActive: boolean,
+  ): void {
+    const hidden: THREE.LineSegments[] = [];
+    this.scene.traverse((obj) => {
+      if (obj instanceof THREE.LineSegments && obj.visible) {
+        obj.visible = false;
+        hidden.push(obj);
+      }
+    });
+    super.render(renderer, writeBuffer, readBuffer, deltaTime, maskActive);
+    for (const obj of hidden) obj.visible = true;
+  }
+}
+
 export class SSAOModulator {
   readonly composer: EffectComposer;
-  private readonly ssaoPass: SSAOPass;
+  private readonly ssaoPass: BimSSAOPass;
   private readonly renderPass: RenderPass;
   private readonly getCamera: () => THREE.Camera;
   private animFrame: number | null = null;
@@ -24,7 +56,7 @@ export class SSAOModulator {
     const camera = getCamera();
 
     this.renderPass = new RenderPass(scene, camera);
-    this.ssaoPass = new SSAOPass(scene, camera as THREE.PerspectiveCamera, width, height);
+    this.ssaoPass = new BimSSAOPass(scene, camera as THREE.PerspectiveCamera, width, height);
     this.ssaoPass.kernelRadius = 8;
     this.ssaoPass.minDistance = 0.001;
     this.ssaoPass.maxDistance = 0.1;
