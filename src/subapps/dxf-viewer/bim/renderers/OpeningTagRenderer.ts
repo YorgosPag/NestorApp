@@ -29,13 +29,16 @@ import type { OpeningEntity } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { OPENING_KIND_STROKE } from './opening-kind-style';
 import {
-  PILL_FONT,
   PILL_TEXT_COLOR,
-  PILL_BG_COLOR,
   PILL_PADDING,
   PILL_RADIUS,
   pillPath,
 } from '../../rendering/utils/canvas-pill';
+import {
+  getCurrentOpeningTagStyle,
+  OPENING_TAG_STYLE_DEFAULTS,
+  type ResolvedOpeningTagStyle,
+} from '../services/opening-tag-style-service';
 
 /** Below this zoom scale, tags are hidden to reduce clutter. */
 export const OPENING_TAG_MIN_ZOOM = 0.5;
@@ -43,14 +46,19 @@ export const OPENING_TAG_MIN_ZOOM = 0.5;
 /** mm — distance the tag centre is pushed normal-to-wall outward από το centroid. */
 const TAG_OFFSET_MM = 500;
 
-const LINE_HEIGHT = 11;
+const LINE_HEIGHT_MULTIPLIER = 11 / 9; // legacy 11 px line-height at the 9 px default.
 
 /** Screen-px below which the leader line is skipped (tag sits on the anchor). */
 const LEADER_MIN_DISTANCE_PX = 18;
-/** Leader line colour — neutral grey ώστε να μην ανταγωνίζεται το pill border. */
-const LEADER_COLOR = '#7a8696';
 /** Leader line width in screen pixels. */
 const LEADER_WIDTH_PX = 1;
+
+/** Phase C.2 — leader dash pattern per `leaderStyle`. */
+const LEADER_DASH_PATTERN: Readonly<Record<ResolvedOpeningTagStyle['leaderStyle'], readonly number[]>> = {
+  solid: [],
+  dashed: [6, 4],
+  dotted: [2, 3],
+};
 
 /**
  * Public arguments contract για a single tag render call. The caller resolves
@@ -94,8 +102,11 @@ export class OpeningTagRenderer {
     );
 
     const color = OPENING_KIND_STROKE[args.opening.kind];
-    drawLeaderLine(args.ctx, anchorScreen, tagScreen);
-    drawPillTag(args.ctx, tagScreen, mark, color);
+    // Phase C.2 — per-project style overrides resolved via sync getter (no
+    // subscription — mirrors `useDrawingScaleStore.getState()`).
+    const style = getCurrentOpeningTagStyle();
+    drawLeaderLine(args.ctx, anchorScreen, tagScreen, style);
+    drawPillTag(args.ctx, tagScreen, mark, color, style);
   }
 }
 
@@ -167,14 +178,18 @@ export function drawLeaderLine(
   ctx: CanvasRenderingContext2D,
   anchor: Point2D,
   tag: Point2D,
+  style: ResolvedOpeningTagStyle = OPENING_TAG_STYLE_DEFAULTS,
 ): void {
+  if (!style.leaderVisible) return;
   const dx = tag.x - anchor.x;
   const dy = tag.y - anchor.y;
   if (Math.hypot(dx, dy) < LEADER_MIN_DISTANCE_PX) return;
 
   ctx.save();
-  ctx.strokeStyle = LEADER_COLOR;
+  ctx.strokeStyle = style.leaderColor;
   ctx.lineWidth = LEADER_WIDTH_PX;
+  const dash = LEADER_DASH_PATTERN[style.leaderStyle];
+  ctx.setLineDash(dash as unknown as number[]);
   ctx.beginPath();
   ctx.moveTo(anchor.x, anchor.y);
   // Elbow break: split half-horizontal, then full vertical, then half-horizontal.
@@ -208,21 +223,29 @@ export function drawPillTag(
   screenCenter: Point2D,
   mark: string,
   kindColor: string,
+  style: ResolvedOpeningTagStyle = OPENING_TAG_STYLE_DEFAULTS,
 ): void {
   ctx.save();
-  ctx.font = PILL_FONT;
+  // Phase C.2 — font size & background from per-project style; border width
+  // controls visibility of the kind-coloured outline (0 → skip stroke).
+  ctx.font = `${style.fontSizePx}px sans-serif`;
   const textWidth = ctx.measureText(mark).width;
+  const lineHeight = Math.ceil(style.fontSizePx * LINE_HEIGHT_MULTIPLIER);
   const pillW = textWidth + PILL_PADDING * 2;
-  const pillH = LINE_HEIGHT + PILL_PADDING * 2;
+  const pillH = lineHeight + PILL_PADDING * 2;
   const x = screenCenter.x - pillW / 2;
   const y = screenCenter.y - pillH / 2;
 
   pillPath(ctx, x, y, pillW, pillH, PILL_RADIUS);
-  ctx.fillStyle = PILL_BG_COLOR;
+  ctx.fillStyle = style.pillBgColor;
   ctx.fill();
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = kindColor;
-  ctx.stroke();
+  if (style.borderWidthPx > 0) {
+    ctx.lineWidth = style.borderWidthPx;
+    ctx.strokeStyle = kindColor;
+    // Solid border irrespective of leader style.
+    ctx.setLineDash([]);
+    ctx.stroke();
+  }
 
   ctx.fillStyle = PILL_TEXT_COLOR;
   ctx.textBaseline = 'middle';

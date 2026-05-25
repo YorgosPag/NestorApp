@@ -22,6 +22,10 @@ import type {
 } from '@/types/project-elevation.schemas';
 export type { ProjectSurveyPoint, ProjectBasePoint } from '@/types/project-elevation.schemas';
 
+// ADR-376 Phase C.2 — Per-project Opening Tag Style override (DXF Viewer BIM)
+import type { OpeningTagStyle } from '@/subapps/dxf-viewer/bim/services/opening-tag-style-service';
+export type { OpeningTagStyle } from '@/subapps/dxf-viewer/bim/services/opening-tag-style-service';
+
 // ADR-287 — ProjectType SSoT: canonical union lives στο
 // `src/constants/project-types.ts`. Re-exported εδώ για backward-compat.
 export type { ProjectType };
@@ -131,6 +135,14 @@ export interface Project extends SoftDeletableFields {
   basePoint?: ProjectBasePoint;
   /** Rotation true-north → project grid, DEGREES. Default 0. */
   northRotation?: number;
+
+  // ─── ADR-376 Phase C.2 — Per-project Opening Tag Style override ──────────
+  /**
+   * Custom styling override για opening-tag pills (font size, border width,
+   * leader style/color/visibility, pill background colour). Undefined fields
+   * fall back to canvas-pill SSoT defaults. `null` = reset (no overrides).
+   */
+  openingTagStyle?: OpeningTagStyle | null;
 }
 
 /**

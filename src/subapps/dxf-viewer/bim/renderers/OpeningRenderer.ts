@@ -70,10 +70,11 @@ export class OpeningRenderer extends BaseEntityRenderer {
       { zBottomMm: opening.params.sillHeight, zTopMm: opening.params.sillHeight + opening.params.height, category: 'opening' },
       useDrawingScaleStore.getState().viewRange,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'opening', cutState: _opCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
+    const _opBaseLineWidth = resolveLineWeightPx({ category: 'opening', cutState: _opCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
+    this.ctx.lineWidth = _opBaseLineWidth;
 
     this.drawOutline(opening);
-    this.drawKindOverlay(opening);
+    this.drawKindOverlay(opening, _opBaseLineWidth);
 
     // ADR-376 Phase A — paint instance Mark tag overlay (canvas-pill SSoT).
     // Layer toggle gating is read μέσω the dedicated module; tag renderer
@@ -139,17 +140,17 @@ export class OpeningRenderer extends BaseEntityRenderer {
     this.ctx.stroke();
   }
 
-  private drawKindOverlay(opening: OpeningEntity): void {
+  private drawKindOverlay(opening: OpeningEntity, baseLineWidth: number): void {
     if (isHingedKind(opening.kind)) {
-      this.drawHingeArc(opening);
+      this.drawHingeArc(opening, baseLineWidth);
       return;
     }
     if (opening.kind === 'sliding-door') {
-      this.drawSlidingIndicator(opening);
+      this.drawSlidingIndicator(opening, baseLineWidth);
       return;
     }
     if (isGlazedKind(opening.kind)) {
-      this.drawGlazing(opening);
+      this.drawGlazing(opening, baseLineWidth);
     }
   }
 
@@ -166,7 +167,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
    *   - french-door only: `arc.points[HINGE_ARC_SUBDIVISIONS+1]`: 90°-open tip
    *     του second leaf (first point of the reversed second-arc loop, sin=1).
    */
-  private drawHingeArc(opening: OpeningEntity): void {
+  private drawHingeArc(opening: OpeningEntity, baseLineWidth: number): void {
     const arc = opening.geometry.hingeArc;
     const hinge = opening.geometry.hingeAnchor;
     if (!arc || arc.points.length < 2 || !hinge) return;
@@ -174,12 +175,12 @@ export class OpeningRenderer extends BaseEntityRenderer {
     this.ctx.save();
     // Dashed swing arc.
     this.ctx.setLineDash(HINGE_DASH as unknown as number[]);
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    this.ctx.lineWidth = baseLineWidth;
     this.drawPolyline(arc.points);
 
     // Solid leaf line(s) — door panel at 90°-open position.
     this.ctx.setLineDash([]);
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+    this.ctx.lineWidth = baseLineWidth;
     this.drawLeafLine(hinge, arc.points[HINGE_ARC_SUBDIVISIONS]);
 
     const hinge2 = opening.geometry.hingeAnchor2;
@@ -199,7 +200,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
   }
 
   /** Sliding-door visual cue: long-dashed line down the middle. */
-  private drawSlidingIndicator(opening: OpeningEntity): void {
+  private drawSlidingIndicator(opening: OpeningEntity, baseLineWidth: number): void {
     const verts = opening.geometry.outline.vertices;
     if (verts.length < 4) return;
     // Outline order is start-outer, end-outer, end-inner, start-inner.
@@ -211,13 +212,13 @@ export class OpeningRenderer extends BaseEntityRenderer {
     const trackEnd = mid(verts[1], verts[2]);
     this.ctx.save();
     this.ctx.setLineDash(SLIDING_DASH as unknown as number[]);
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    this.ctx.lineWidth = baseLineWidth;
     this.drawPolyline([trackStart, trackEnd]);
     this.ctx.restore();
   }
 
   /** Glazed visual: inset double-line inside the outline. */
-  private drawGlazing(opening: OpeningEntity): void {
+  private drawGlazing(opening: OpeningEntity, baseLineWidth: number): void {
     const verts = opening.geometry.outline.vertices;
     if (verts.length < 4) return;
     // Inset the outline by GLAZING_INSET_RATIO toward the centroid.
@@ -229,7 +230,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
       z: 0,
     }));
     this.ctx.save();
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    this.ctx.lineWidth = baseLineWidth;
     this.ctx.beginPath();
     const first = this.worldToScreen({ x: inset[0].x, y: inset[0].y });
     this.ctx.moveTo(first.x, first.y);

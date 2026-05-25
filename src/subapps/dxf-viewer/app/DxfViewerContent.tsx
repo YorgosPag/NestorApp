@@ -49,6 +49,7 @@ const DxfAiChatPanel = React.lazy(() => import('../ai-assistant/components/DxfAi
 const DxfFindReplaceHost = React.lazy(() => import('../ui/text-toolbar/DxfFindReplaceHost').then(mod => ({ default: mod.DxfFindReplaceHost })));
 const DxfSymbolPickerHost = React.lazy(() => import('../ui/text-toolbar/DxfSymbolPickerHost').then(mod => ({ default: mod.DxfSymbolPickerHost })));
 const RenumberOpeningsHost = React.lazy(() => import('../ui/components/bim-openings/RenumberOpeningsHost').then(mod => ({ default: mod.RenumberOpeningsHost })));
+const OpeningTagStyleHost = React.lazy(() => import('../ui/components/bim-openings/OpeningTagStyleHost').then(mod => ({ default: mod.OpeningTagStyleHost })));
 const DxfImportModal = React.lazy(() => import('../components/DxfImportModal'));
 const SimpleProjectDialog = React.lazy(() => import('../components/SimpleProjectDialog').then(mod => ({ default: mod.SimpleProjectDialog })));
 const ConstructionLayerScaffoldDialog = React.lazy(() => import('../hooks/useConstructionLayerScaffold').then(mod => ({ default: mod.ConstructionLayerScaffoldDialog })));
@@ -465,6 +466,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       <React.Suspense fallback={<div className="hidden" />}><DxfFindReplaceHost open={state.findReplaceOpen} onOpenChange={state.setFindReplaceOpen} /></React.Suspense>
       <React.Suspense fallback={<div className="hidden" />}><DxfSymbolPickerHost open={state.symbolPickerOpen} onOpenChange={state.setSymbolPickerOpen} /></React.Suspense>
       <React.Suspense fallback={<div className="hidden" />}><RenumberOpeningsHost projectId={levelManager.saveContext?.projectId ?? undefined} floorplanId={levelManager.fileRecordId ?? undefined} /></React.Suspense>
+      <React.Suspense fallback={<div className="hidden" />}><OpeningTagStyleHost projectId={levelManager.saveContext?.projectId ?? undefined} /></React.Suspense>
       {USE_AI_DRAWING_ASSISTANT && (
         <React.Suspense fallback={<div className="hidden" />}>
           <DxfAiChatPanel

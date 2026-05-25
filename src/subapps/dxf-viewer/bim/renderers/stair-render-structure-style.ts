@@ -27,17 +27,23 @@
  * `setLineDash`, and `fillStyle` (which is local to the tread fill).
  */
 
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import type { Point2D, Point3D } from '../../rendering/types/Types';
 import type { StairGeometry, StairStructureType } from '../types/stair-types';
 
 /**
  * Render-helper deps. `worldToScreen` is `BaseEntityRenderer.worldToScreen`
  * bound to the same `transform` the parent renderer is using.
+ *
+ * ADR-375 Phase B (2026-05-26): `baseLineWidth` is the resolver-computed
+ * width (category 'stair' + cutState + scale + objectStyles) that ALL stair
+ * plan lines share, mirroring the WallRenderer single-lineWidth pattern.
+ * Visual hierarchy (stringer / tread / walkline) is delegated to
+ * Object Subcategories (Phase C.3, pending).
  */
 export interface StairStyleContext {
   readonly ctx: CanvasRenderingContext2D;
   readonly worldToScreen: (point: { x: number; y: number }) => Point2D;
+  readonly baseLineWidth: number;
 }
 
 const TREAD_FILL_ALPHA = 0.12;
@@ -80,7 +86,7 @@ export function renderTreadsForStructure(
   const fillStyle = isGlass ? TREAD_FILL_GLASS : TREAD_FILL_DEFAULT;
 
   ctx.save();
-  ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+  ctx.lineWidth = scx.baseLineWidth;
   if (!options.skipFill) ctx.fillStyle = fillStyle;
   if (isGlass) ctx.setLineDash(GLASS_TREAD_OUTLINE_DASH as unknown as number[]);
 
@@ -128,28 +134,28 @@ export function renderStringersForStructure(
       return;
 
     case 'stringer-1side':
-      drawSolidPolyline(scx, stringers.outer, RENDER_LINE_WIDTHS.THICK);
+      drawSolidPolyline(scx, stringers.outer, scx.baseLineWidth);
       return;
 
     case 'central-stringer':
-      drawSolidPolyline(scx, walkline, RENDER_LINE_WIDTHS.THICK);
+      drawSolidPolyline(scx, walkline, scx.baseLineWidth);
       return;
 
     case 'cantilever':
-      drawSolidPolyline(scx, stringers.inner, RENDER_LINE_WIDTHS.THICK);
+      drawSolidPolyline(scx, stringers.inner, scx.baseLineWidth);
       return;
 
     case 'suspended':
       drawDashedPolyline(
         scx,
         stringers.inner,
-        RENDER_LINE_WIDTHS.THIN,
+        scx.baseLineWidth,
         SUSPENDED_STRINGER_DASH,
       );
       drawDashedPolyline(
         scx,
         stringers.outer,
-        RENDER_LINE_WIDTHS.THIN,
+        scx.baseLineWidth,
         SUSPENDED_STRINGER_DASH,
       );
       return;
@@ -158,8 +164,8 @@ export function renderStringersForStructure(
     case 'glass-tread':
     case 'steel-grating':
     default:
-      drawSolidPolyline(scx, stringers.inner, RENDER_LINE_WIDTHS.THICK);
-      drawSolidPolyline(scx, stringers.outer, RENDER_LINE_WIDTHS.THICK);
+      drawSolidPolyline(scx, stringers.inner, scx.baseLineWidth);
+      drawSolidPolyline(scx, stringers.outer, scx.baseLineWidth);
       return;
   }
 }

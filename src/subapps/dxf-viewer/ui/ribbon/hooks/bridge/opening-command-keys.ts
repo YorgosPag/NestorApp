@@ -58,6 +58,8 @@ export const OPENING_RIBBON_KEYS_ACTIONS = {
   renumber: 'opening.actions.renumber',
   /** ADR-376 Phase C.1 — Reset draggable tag offset back to auto-centroid. */
   resetTagPosition: 'opening.actions.resetTagPosition',
+  /** ADR-376 Phase C.2 — Open the per-project Tag Style dialog. */
+  openTagStyle: 'opening.actions.openTagStyle',
 } as const;
 
 const OPENING_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

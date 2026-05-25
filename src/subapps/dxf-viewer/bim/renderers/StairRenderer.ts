@@ -30,8 +30,8 @@ import type { Entity } from '../../types/entities';
 import { isStairEntity } from '../../types/entities';
 import { getStairGrips } from '../stairs/stair-grips';
 import { DEFAULT_CUT_PLANE_HEIGHT } from '../geometry/stairs/stair-geometry-shared';
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
+import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 // ADR-358 Phase 7c — per-structureType plan symbology lives in a dedicated
@@ -103,18 +103,43 @@ export class StairRenderer extends BaseEntityRenderer {
 
     // Main pass — phase-appropriate style + full fill+stroke render.
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
+
+    // ADR-375 Phase B (2026-05-26) — resolve line weight ONCE per render.
+    // All stair plan lines (treads, stringers, walkline, handrails, arrow)
+    // share the same resolver-computed width. Visual differentiation stays
+    // via dash patterns (walkline / handrails / suspended stringers); pixel
+    // width itself is scale + viewRange + objectStyles reactive.
+    const ds = useDrawingScaleStore.getState();
+    const cutState = resolveCutState(
+      {
+        zBottomMm: stair.params.basePoint.z,
+        zTopMm: stair.params.basePoint.z + stair.params.totalRise,
+        category: 'stair',
+      },
+      ds.viewRange,
+    );
+    const baseLineWidth = resolveLineWeightPx({
+      category: 'stair',
+      cutState,
+      scaleDenominator: ds.drawingScale,
+      dpi: 96,
+      objectStyles: ds.objectStyles,
+    });
+
     const scx: StairStyleContext = {
       ctx: this.ctx,
       worldToScreen: (p) => this.worldToScreen(p),
+      baseLineWidth,
     };
     renderTreadsForStructure(scx, stair.params.structureType, geometry.treadsBelowCut);
     renderStringersForStructure(scx, stair.params.structureType, geometry);
-    this.drawHandrails(stair);
-    this.drawWalkline(geometry.walkline);
+    this.drawHandrails(stair, baseLineWidth);
+    this.drawWalkline(geometry.walkline, baseLineWidth);
     this.drawArrow(
       geometry.arrowSymbol.start,
       geometry.arrowSymbol.end,
       geometry.arrowSymbol.label,
+      baseLineWidth,
     );
     this.drawTreadLabels(stair);
 
@@ -219,11 +244,11 @@ export class StairRenderer extends BaseEntityRenderer {
     this.ctx.stroke();
   }
 
-  private drawWalkline(walkline: ReadonlyArray<Point3D>): void {
+  private drawWalkline(walkline: ReadonlyArray<Point3D>, baseLineWidth: number): void {
     if (walkline.length < 2) return;
     this.ctx.save();
     this.ctx.setLineDash(WALKLINE_DASH as unknown as number[]);
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    this.ctx.lineWidth = baseLineWidth;
     // strokeStyle inherited from `renderWithPhases` (hover/selected SSoT).
     this.drawPolyline3D(walkline);
     this.ctx.restore();
@@ -240,7 +265,7 @@ export class StairRenderer extends BaseEntityRenderer {
    * Geometry SSoT promotion (compute handrail polylines inside
    * StairGeometryService per kind) deferred to Phase 7b2/9.
    */
-  private drawHandrails(stair: StairEntity): void {
+  private drawHandrails(stair: StairEntity, baseLineWidth: number): void {
     const { handrails } = stair.params;
     if (!handrails.inner && !handrails.outer) return;
     const { stringers } = stair.geometry;
@@ -255,7 +280,7 @@ export class StairRenderer extends BaseEntityRenderer {
 
     this.ctx.save();
     this.ctx.setLineDash(HANDRAIL_DASH as unknown as number[]);
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    this.ctx.lineWidth = baseLineWidth;
     // strokeStyle inherited from `renderWithPhases` (hover/selected SSoT).
 
     if (handrails.inner) {
@@ -303,10 +328,15 @@ export class StairRenderer extends BaseEntityRenderer {
     this.ctx.restore();
   }
 
-  private drawArrow(startW: Point3D, endW: Point3D, label: 'UP' | 'DOWN'): void {
+  private drawArrow(
+    startW: Point3D,
+    endW: Point3D,
+    label: 'UP' | 'DOWN',
+    baseLineWidth: number,
+  ): void {
     const start = this.worldToScreen({ x: startW.x, y: startW.y });
     const end = this.worldToScreen({ x: endW.x, y: endW.y });
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'stair', cutState: 'cut', scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
+    this.ctx.lineWidth = baseLineWidth;
     // strokeStyle inherited from `renderWithPhases` (hover/selected SSoT).
     // fillStyle aligned with stroke so the arrow head + UP/DOWN label pick up
     // the same hover/selection colour as the rest of the stair.

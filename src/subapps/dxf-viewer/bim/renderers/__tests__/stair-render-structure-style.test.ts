@@ -45,13 +45,13 @@ function createMockCtx() {
   return { calls, ctx: ctxStub as unknown as CanvasRenderingContext2D };
 }
 
-function makeScx(): { scx: StairStyleContext; calls: MockCtxCall[] } {
+function makeScx(baseLineWidth = 1.5): { scx: StairStyleContext; calls: MockCtxCall[] } {
   const { ctx, calls } = createMockCtx();
   const worldToScreen = (p: { x: number; y: number }): Point2D => ({
     x: p.x * 10,
     y: p.y * 10,
   });
-  return { scx: { ctx, worldToScreen }, calls };
+  return { scx: { ctx, worldToScreen, baseLineWidth }, calls };
 }
 
 function countCalls(calls: readonly MockCtxCall[], fn: string): number {

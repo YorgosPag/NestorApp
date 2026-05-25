@@ -132,6 +132,7 @@ describe('drawPillTag', () => {
       closePath: () => calls.push('closePath'),
       fill: () => calls.push('fill'),
       stroke: () => calls.push('stroke'),
+      setLineDash: () => calls.push('setLineDash'),
       fillText: () => calls.push('fillText'),
       measureText: () => ({ width: 30 }),
       font: '',

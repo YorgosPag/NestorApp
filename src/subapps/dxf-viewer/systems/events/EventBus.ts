@@ -191,6 +191,8 @@ export interface DrawingEventMap {
   'bim:opening-delete-requested': { openingId: string };
   // ADR-376 Phase B.1 — Renumber Openings dialog trigger
   'bim:opening-renumber-requested': Record<string, never>;
+  // ADR-376 Phase C.2 — Opening Tag Style dialog trigger
+  'bim:opening-tag-style-requested': Record<string, never>;
   // ADR-363 Phase 3 — BIM slab params + delete events
   'bim:slab-params-updated': { slabId: string };
   'bim:slab-delete-requested': { slabId: string };

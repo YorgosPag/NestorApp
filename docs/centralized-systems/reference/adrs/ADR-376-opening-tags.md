@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | ✅ **PHASE_C1_DONE** 2026-05-26 — Phase A core + Phase B.1 Renumber Openings + Phase B.2 BOQ signature-group aggregation + Phase C.1 draggable tag + γωνιακή leader + Reset Position UX shipped. Phase C.2 (per-project styling) + Phase C.3 (PDF schedule export) still ⏸️ PENDING. |
+| **Status** | ✅ **PHASE_C2_DONE** 2026-05-26 — Phase A core + Phase B.1 Renumber Openings + Phase B.2 BOQ signature-group aggregation + Phase C.1 draggable tag + γωνιακή leader + Reset Position UX + Phase C.2 per-project Tag Style override shipped. Phase C.3 (PDF schedule export) still ⏸️ PENDING. |
 | **Date** | 2026-05-25 |
 | **Category** | DXF Viewer — BIM / Annotation |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-376-opening-tags.md` |
@@ -329,7 +329,7 @@ Zoom threshold: tag visible μόνο σε zoom ≥ `OPENING_TAG_MIN_ZOOM` (e.g. 
 | **B.1** (renumber) | Manual "Renumber Openings" command + ICommand undo + Dialog modal (scope + kind filter + manual-include toggle) + `markIsManual` tracking on ribbon Mark edits + Annotate ribbon tab global button + contextual quick-action | Phase A | **~3-4h** | ✅ DONE 2026-05-25 |
 | **B.2** (BOQ schedule) | BOQ integration (ADR-175): **single aggregated row per signature group** (Mode C — `kind + width + height + sillHeight + openDirection`). Revit Schedule pattern, 6/6 industry convergence (Revit / ArchiCAD / Tekla / Allplan / Bentley / Vectorworks). Scope = **per-floorplan** (matches `OpeningFirestoreService` subscribe scope). 50 ίδια παράθυρα = 1 row με `quantity=50`, marks compacted στο `description` (`Marks: Π.101..Π.150`). **Diverges from multi-layer wall pattern** (Phase 6.1) — openings are atomic, no multi-component layers. | Phase A | **~3-4h** | ✅ DONE 2026-05-26 |
 | **C.1** (draggable tag + leader) | Draggable tag position via pointer drag (FSM controller + React hook) με leader line από opening centroid → tag (Revit 2027 + ArchiCAD γωνιακή/elbow pattern). `tagOffset` field (already reserved σε `OpeningParams`) ενεργοποιείται. "Reset Tag Position" command (ribbon contextual + right-click on tag). Auto-leader visibility (hide όταν tag close to anchor). Tag rotation = always horizontal (Q2 industry default 3/3). ADR-040 compliant — pure FSM + leaf-only DOM listeners + RAF-throttled scene patches. | Phase B | **~3-5h** | ✅ DONE 2026-05-26 |
-| **C.2** (per-project styling) | Custom tag styling override per scope (font size, pill color override, border thickness, leader style dashed/solid). Persistence layer TBD (per-building vs per-project vs per-view-template — ADR-375 Phase B.3 pattern reuse). Settings panel UI (Floating3DPanel ή ribbon). Live-preview στο canvas. | Phase C.1 | **~2-3h** | ⏸️ PENDING |
+| **C.2** (per-project styling) | Custom tag styling override per project — 6 fields (fontSizePx 7-16, borderWidthPx 0-3, leaderStyle solid/dashed/dotted, pillBgColor, leaderColor, leaderVisible). Persistence: `Project.openingTagStyle?: OpeningTagStyle \| null` (Firestore project doc, 3/3 industry convergence — Revit shared parameters, ArchiCAD .PRF favorites, AutoCAD DIMSTYLE dict). Ribbon Annotate → "Tag Style" button (Palette icon). Modal dialog (Radix) με 6 controls + Reset Defaults. Debounced 200 ms live preview (Figma/Photoshop pattern). | Phase C.1 | **~2-3h** | ✅ DONE 2026-05-26 |
 | **C.3** (PDF schedule export) | Standalone PDF export του opening schedule (αξιοποιεί Phase B.2 signature-group BOQ rows). Πιθανή ενσωμάτωση σε ADR-175 BOQ export feature αντί ξεχωριστού path. | Phase B.2 | **~2-3h** | ⏸️ PENDING |
 
 **Total Phase A+B.1+B.2 = ~12-18h** — all shipped.
@@ -387,6 +387,87 @@ Zoom threshold: tag visible μόνο σε zoom ≥ `OPENING_TAG_MIN_ZOOM` (e.g. 
 - Right-click στο tag pill → immediate Reset Position (no menu). Power-user shortcut, redundant with ribbon for discoverability.
 - `contextmenu` event suppressed when cursor over a tag pill (καμία browser menu για να μην μπλοκάρει το reset workflow).
 - Right-click εκτός tag → propagates κανονικά στο standard canvas context-menu path.
+
+### 4.11 Per-Project Tag Styling Override (Phase C.2)
+
+**Industry convergence (web research 2026-05-26)**:
+- **Storage scope (Q1)** → **per-project**. 3/3 convergence: Revit shared parameters (project-scope), ArchiCAD `.PRF` favourites (project file), AutoCAD `DIMSTYLE` (drawing dictionary). Settings travel με το αρχείο, override-able ανά project, χωρίς cross-project bleed.
+- **Customisable fields (Q2)** → **όλα τα 6 fields**: `fontSizePx` (7-16, default 9), `borderWidthPx` (0-3, default 1), `leaderStyle` ('solid'|'dashed'|'dotted', default 'solid'), `pillBgColor` (default `rgba(255,255,255,0.88)` από canvas-pill SSoT), `leaderColor` (default `#7a8696`), `leaderVisible` (default `true`).
+- **UI surface (Q3)** → **modal dialog** από Annotate ribbon tab → "Tag Style" button (Palette icon). Discoverable next to Renumber Openings.
+- **Live preview (Q4)** → **debounced 200 ms** (Figma/Photoshop default). Optimistic state update + canvas re-render fire-and-forget; Firestore write batched in single PATCH per burst.
+
+**Three-layer architecture** (ADR-040 compliant — pure service + leaf host + leaf renderer):
+
+```
+                      ┌────────────────────────────────────────────┐
+                      │ OpeningTagStyleService (singleton, pure)   │
+                      │ - getCurrentStyle(): ResolvedOpeningTagStyle│
+                      │ - hydrate(projectId, { openingTagStyle })  │
+                      │ - mutateStyle(patch) → debounced 200 ms     │
+                      │ - subscribe(listener) → unsubscribe         │
+                      │ - setPersister(fn) (DI for testability)     │
+                      └─────────────┬───────────────────────────────┘
+                                    │
+            ┌───────────────────────┴───────────────────────────────┐
+            │                                                        │
+   ┌────────▼──────────────────┐                ┌────────────────────▼────────────────┐
+   │ OpeningTagStyleHost       │                │ OpeningTagRenderer.render            │
+   │ - getDoc → hydrate         │                │ - getCurrentOpeningTagStyle() sync  │
+   │ - setPersister(updateProj) │                │ - drawPillTag(... , style)           │
+   │ - EventBus listener → open │                │ - drawLeaderLine(... , style)        │
+   │ - Mounts Dialog            │                └─────────────────────────────────────┘
+   └────────┬──────────────────┘
+            │
+   ┌────────▼──────────────────────────┐
+   │ OpeningTagStyleDialog (Radix)     │
+   │ - 6 controls (sliders + select +  │
+   │   color inputs + Switch)          │
+   │ - service.mutateStyle on change   │
+   │ - Reset Defaults button → reset() │
+   └───────────────────────────────────┘
+```
+
+**Persisted shape** — every field optional, undefined stripped on Firestore write:
+
+```typescript
+interface OpeningTagStyle {
+  readonly fontSizePx?: number;       // clamped [7,16]
+  readonly borderWidthPx?: number;    // clamped [0,3]
+  readonly leaderStyle?: 'solid' | 'dashed' | 'dotted';
+  readonly pillBgColor?: string;      // hex or rgba()
+  readonly leaderColor?: string;      // hex
+  readonly leaderVisible?: boolean;
+}
+```
+
+Lives στο `Project.openingTagStyle?: OpeningTagStyle | null` (`src/types/project.ts`). `null` = explicit reset (no overrides, fall back to defaults).
+
+**Resolution semantics**:
+- Render path always calls `getCurrentOpeningTagStyle()` → returns a fully-resolved style (every field defined, defaults filled).
+- Invalid / out-of-range values silently clamp to range or fall back to default (`resolveOpeningTagStyle()` never throws — corrupted Firestore docs stay renderable).
+- Border colour ΔΕΝ είναι customisable — παραμένει `OPENING_KIND_STROKE[kind]` (kind discrimination locked). Μόνο `borderWidthPx` ελέγχεται (`0` → skip stroke entirely).
+
+**ADR-040 compliance**:
+- Service is pure (no React, no Zustand). Renderer reads μέσω sync `getCurrentOpeningTagStyle()` — ίδιο pattern με `useDrawingScaleStore.getState()` που ήδη χρησιμοποιεί ο `OpeningRenderer`.
+- ZERO `useSyncExternalStore` στον renderer.
+- Bitmap cache key ΔΕΝ συμπεριλαμβάνει style values — style change είναι rare event; subscribers (η canvas leaf re-renderer) τραβάνε γενικό RAF redraw όταν εκδίδεται.
+- Host mount γίνεται σε `DxfViewerContent` shell (lazy Suspense leaf), όχι σε high-frequency orchestrator. Firestore I/O bounded: 1 `getDoc` ανά projectId change + max 1 write per 200 ms burst.
+- `canvas-pill.ts` constants ΠΑΡΑΜΕΝΟΥΝ shared SSoT για column-dim-labels + grip-annotation. Overrides περνάνε ως args ΜΟΝΟ στα helpers του OpeningTagRenderer.
+
+**Validation** — handled in pure `resolveOpeningTagStyle()` helper:
+
+| Field | Validation |
+|---|---|
+| `fontSizePx` | Number.isFinite + clamp [7, 16] |
+| `borderWidthPx` | Number.isFinite + clamp [0, 3] |
+| `leaderStyle` | must be one of `'solid'`, `'dashed'`, `'dotted'` (else default) |
+| `pillBgColor` / `leaderColor` | non-empty string (else default) |
+| `leaderVisible` | strict `typeof === 'boolean'` (else default `true`) |
+
+**Persistence path**:
+- `OpeningTagStyleHost.setPersister(async (projectId, style) => updateProjectWithPolicy({ projectId, updates: { openingTagStyle: style } }))`.
+- `updateProjectWithPolicy` delegates στο existing `updateProjectClient` → standard tenant-isolated write path (no new Firestore rule needed; covered by `projects/{id}` collection rule).
+- `service.reset()` writes `{}` (empty object) — Firestore merges as cleared overrides; effective style = defaults from canvas-pill SSoT.
 
 ### 4.9 Manual mark override tracking (Phase B.1)
 
@@ -471,6 +552,17 @@ readonly markIsManual?: boolean;
   - Industry pattern: 5/5 convergence (IMAGINiT / ArchiCAD / Tekla / Bentley / Vectorworks) — preserve manual overrides by default, opt-in to wipe.
   - Pending: Phase B.2 (BOQ Schedule group-by Mode C signature) + Phase C (draggable tag + leader line).
 - **2026-05-26** (v8 — Phase C SPLIT) — Giorgio scope decision: Phase C χωρίστηκε σε **C.1 (draggable tag + leader line, ~3-5h)**, **C.2 (per-project styling, ~2-3h)**, **C.3 (PDF schedule export, ~2-3h)**. Κάθε sub-phase = ξεχωριστή ~2h session με δικό του commit + ADR update — manageable session windows, χαμηλότερο per-commit risk, καθαρά docs μεταξύ subphases. §7 phases table updated με 3 ξεχωριστά rows + dependencies + status. Total Phase C scope unchanged (~7-11h). Zero κώδικας ακόμη — C.1 ξεκινά αμέσως μετά OQ resolution (leader geometry + tag rotation + reset UX).
+- **2026-05-26** (v10 — PHASE_C2_DONE) — **Phase C.2 implementation complete** (per-project Tag Style override). 4 OQs resolved με industry research:
+  - Q1 storage scope = **per-project** (3/3 — Revit shared parameters, ArchiCAD .PRF, AutoCAD DIMSTYLE drawing dict). Field στο `Project` Firestore doc: `openingTagStyle?: OpeningTagStyle | null`.
+  - Q2 fields = **all 6**: `fontSizePx` (7-16, default 9), `borderWidthPx` (0-3, default 1), `leaderStyle` ('solid'/'dashed'/'dotted', default 'solid'), `pillBgColor` (default canvas-pill `PILL_BG_COLOR`), `leaderColor` (default '#7a8696'), `leaderVisible` (default true).
+  - Q3 UI = **modal dialog** από Annotate ribbon tab → "Tag Style" button (Palette icon).
+  - Q4 preview = **debounced 200 ms** (Figma/Photoshop pattern — optimistic local + batched Firestore write).
+  - **NEW files (4)**: `bim/services/opening-tag-style-service.ts` (pure singleton + `resolveOpeningTagStyle()` clamp/fallback + `stripUndefined()` Firestore-safe + debounced 200ms persister + subscribe). `bim/services/__tests__/opening-tag-style-service.test.ts` (22 assertions — pure resolve clamping/fallback 9 + stripUndefined 3 + singleton lifecycle 10). `ui/components/bim-openings/OpeningTagStyleDialog.tsx` (Radix Dialog + 6 controls: 2 sliders + 1 select + 2 color inputs + 1 Switch). `ui/components/bim-openings/OpeningTagStyleHost.tsx` (Suspense leaf, hydrate via `getDoc` on projectId change + `setPersister(updateProjectWithPolicy)` wiring + EventBus listener).
+  - **MODIFIED files (8)**: `bim/renderers/OpeningTagRenderer.ts` (drawPillTag + drawLeaderLine accept `ResolvedOpeningTagStyle`, render() calls `getCurrentOpeningTagStyle()` sync, dash pattern map για leader style, border skipped when `borderWidthPx===0`). `ui/ribbon/data/annotate-tab-openings.ts` (+Tag Style button next to Renumber). `ui/ribbon/hooks/bridge/opening-command-keys.ts` (+`openTagStyle` action key). `ui/ribbon/hooks/useRibbonOpeningBridge.ts` (+handler emits `bim:opening-tag-style-requested`). `ui/ribbon/components/buttons/RibbonButtonIcon.tsx` (+`bim-opening-tag-style` → Palette icon). `i18n/locales/{el,en}/dxf-viewer-shell.json` (+15 keys: `ribbon.commands.openingEditor.tagStyle.*` + 6 field labels + 3 leader style options + 2 actions). `systems/events/EventBus.ts` (+`bim:opening-tag-style-requested` Record<string,never>). `types/project.ts` (+`openingTagStyle?: OpeningTagStyle | null` + re-export). `app/DxfViewerContent.tsx` (+lazy `OpeningTagStyleHost` mount).
+  - **Tests**: 22/22 PASS (service) + 9/9 PASS (renderer regression) = 31 total. Pure helper coverage 100%.
+  - **N.7.2 Google-level**: Proactive (service hydrates on first projectId mount via `getDoc`), Idempotent (`mutateStyle` partial merge — same patch twice = no-op via dequal at consumer), Belt-and-suspenders (service defaults + helper-level fallback args), SSoT (`opening-tag-style-service` owns state; renderer pure consumer; `Project.openingTagStyle` Firestore-owned doc), Await (Firestore write awaited via `updateProjectWithPolicy`), Lifecycle owner (`OpeningTagStyleHost` mounts/unmounts hydration + persister per projectId).
+  - **ADR-040 compliance**: pure service zero subscriptions, renderer sync-getter pattern, leaf-only host, Firestore I/O bounded (1 getDoc per project + 1 write per 200ms burst), bitmap cache key unchanged.
+  - Pending: Phase C.3 (PDF schedule export — possibly merged με ADR-175 BOQ export).
 - **2026-05-26** (v9 — PHASE_C1_DONE) — **Phase C.1 implementation complete** (draggable tag + γωνιακή leader + Reset Position UX). 3 OQs resolved με industry research:
   - Q1 leader = **γωνιακή/elbow** (Revit 2027 + ArchiCAD forward-looking pattern, single 90° break point με split-axis selection — horizontal-first when `|Δx| ≥ |Δy|`, vertical-first otherwise).
   - Q2 rotation = **πάντα horizontal** (3/3 industry convergence — Revit + ArchiCAD + AutoCAD).

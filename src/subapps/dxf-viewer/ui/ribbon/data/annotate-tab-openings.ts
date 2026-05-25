@@ -30,6 +30,18 @@ export const ANNOTATE_OPENINGS_PANEL: RibbonPanelDef = {
             action: OPENING_RIBBON_KEYS_ACTIONS.renumber,
           },
         },
+        {
+          // ADR-376 Phase C.2 — Per-project Tag Style dialog launcher.
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'annotate.openings.tagStyle',
+            labelKey: 'ribbon.commands.openingEditor.tagStyle.label',
+            icon: 'bim-opening-tag-style',
+            commandKey: OPENING_RIBBON_KEYS_ACTIONS.openTagStyle,
+            action: OPENING_RIBBON_KEYS_ACTIONS.openTagStyle,
+          },
+        },
       ],
     },
   ],

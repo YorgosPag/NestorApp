@@ -1164,6 +1164,31 @@
           "label": "Reset Position",
           "tooltip": "Reset tag to default position (opening centre)",
           "contextMenu": "Reset Tag Position"
+        },
+        "tagStyle": {
+          "label": "Tag Style",
+          "tooltip": "Tag appearance settings (font size, colours, leader line)",
+          "dialog": {
+            "title": "Opening Tag Style",
+            "description": "Customise tag appearance for the current project. Changes apply live to the drawing."
+          },
+          "fields": {
+            "fontSize": "Font Size",
+            "borderWidth": "Border Width",
+            "leaderStyle": "Leader Line Style",
+            "pillBgColor": "Pill Background Colour",
+            "leaderColor": "Leader Line Colour",
+            "leaderVisible": "Show Leader Line"
+          },
+          "leaderStyleOptions": {
+            "solid": "Solid",
+            "dashed": "Dashed",
+            "dotted": "Dotted"
+          },
+          "actions": {
+            "reset": "Reset Defaults",
+            "close": "Close"
+          }
         }
       },
       "slabEditor": {
