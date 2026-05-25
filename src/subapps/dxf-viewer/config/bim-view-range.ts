@@ -42,6 +42,17 @@ export interface EntityZExtents {
 }
 
 /**
+ * Return the effective ViewRange for a level, merging stored overrides with defaults.
+ * Accepts the raw optional subfield from Level.bimRenderSettings.
+ */
+export function resolveViewRange(
+  overrides?: Partial<ViewRange> | null,
+): ViewRange {
+  if (!overrides) return DEFAULT_VIEW_RANGE;
+  return { ...DEFAULT_VIEW_RANGE, ...overrides };
+}
+
+/**
  * Derive display state from Revit view-range rules.
  *
  * Per verified Revit display rules (2026-05-25):
