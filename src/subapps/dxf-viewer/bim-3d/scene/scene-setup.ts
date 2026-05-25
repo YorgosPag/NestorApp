@@ -5,11 +5,59 @@
  */
 
 import * as THREE from 'three';
+import { createViewportCamera } from '../viewport/viewport-camera';
+import { createViewCube } from '../viewport/view-cube/view-cube';
+import type { ViewportCamera, CanonicalViewId } from '../viewport/viewport-types';
+import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
+import type { CanonicalViewService } from '../viewport/CanonicalViewService';
+import { checkReducedMotion, type ReducedMotionOverride } from '../accessibility/use-reduced-motion';
 
 export interface SceneLights {
   readonly sun: THREE.DirectionalLight;
   readonly ambient: THREE.AmbientLight;
   readonly hemi: THREE.HemisphereLight;
+}
+
+export interface InitViewportCameraDeps {
+  readonly rendererDomElement: HTMLCanvasElement;
+  readonly initialPosition: THREE.Vector3;
+  readonly initialTarget: THREE.Vector3;
+  readonly onInteractionStart: () => void;
+  readonly onInteractionEnd: () => void;
+  readonly getReducedMotionOverride: () => ReducedMotionOverride;
+}
+
+export function initViewportCamera(deps: InitViewportCameraDeps): ViewportCamera {
+  return createViewportCamera(deps.rendererDomElement, {
+    initialPosition: deps.initialPosition.clone(),
+    initialTarget: deps.initialTarget.clone(),
+    onRenderNeeded: () => { /* RAF drives rendering — no-op */ },
+    onInteractionStart: deps.onInteractionStart,
+    onInteractionEnd: deps.onInteractionEnd,
+    getReducedMotion: () => checkReducedMotion(deps.getReducedMotionOverride()),
+  });
+}
+
+export interface InitViewCubeDeps {
+  readonly container: HTMLElement;
+  readonly viewport: ViewportCamera;
+  readonly canonicalViewService: CanonicalViewService;
+  readonly onContextMenuRequest: (x: number, y: number) => void;
+}
+
+export function initViewCube(deps: InitViewCubeDeps): ViewCubeEngine {
+  const { viewport, canonicalViewService } = deps;
+  return createViewCube({
+    container: deps.container,
+    getCamera: () => viewport.camera as THREE.PerspectiveCamera | THREE.OrthographicCamera,
+    getTarget: () => viewport.target,
+    onFaceSnap: (mode) => viewport.setProjection(mode),
+    onDirSnap: (dir) => viewport.snapToViewDirection(dir),
+    onSnapToView: (id: CanonicalViewId) => canonicalViewService.snapTo(id),
+    onHome: () => canonicalViewService.snapHome(),
+    onDragRotate: (dx, dy) => viewport.applyTumble(dx, dy),
+    onContextMenuRequest: deps.onContextMenuRequest,
+  });
 }
 
 /**

@@ -11,8 +11,6 @@
  */
 
 import * as THREE from 'three';
-import { createViewportCamera } from '../viewport/viewport-camera';
-import { createViewCube } from '../viewport/view-cube/view-cube';
 import { createPoi } from '../viewport/viewport-poi';
 import { renderSceneFrame, type RenderFrameContext } from './scene-render-frame';
 import { BimSceneLayer } from './BimSceneLayer';
@@ -48,7 +46,7 @@ import type { CanonicalViewId } from '../viewport/viewport-types';
 import { createAnimationManager } from '../viewport/animation-manager';
 import type { AnimationManager } from '../viewport/animation-manager';
 import { computeFramingTargetBounds } from './scene-framing-bounds';
-import { createBimRenderer, createBimLights, createBimScene } from './scene-setup';
+import { createBimRenderer, createBimLights, createBimScene, initViewportCamera, initViewCube } from './scene-setup';
 import {
   createKeyboardFocusManager,
   type KeyboardFocusManagerApi,
@@ -57,8 +55,9 @@ import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer';
 import type { FocusEntityLabelData } from '../accessibility/FocusIndicator3D';
 import { computeFocusOrder, findFocusedEntityData } from '../accessibility/focus-order';
 import { applyLightPresetToScene, updateSunDirection } from '../lighting/apply-light-preset';
-import { checkReducedMotion, type ReducedMotionOverride } from '../accessibility/use-reduced-motion';
+import { type ReducedMotionOverride } from '../accessibility/use-reduced-motion';
 import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
+import { disposeSceneManagerResources } from './scene-dispose';
 
 const INITIAL_CAMERA_POSITION = new THREE.Vector3(15, 10, 15);
 const INITIAL_CAMERA_TARGET = new THREE.Vector3(0, 0, 0);
@@ -114,7 +113,14 @@ export class ThreeJsSceneManager {
     this.bimLayer = new BimSceneLayer(this.scene);
     this.selectionHighlighter = new BimSelectionHighlighter(this.bimLayer.group);
     this.dxfConverter = new DxfToThreeConverter(this.scene);
-    this.viewport = this.initViewportCamera(container);
+    this.viewport = initViewportCamera({
+      rendererDomElement: this.renderer.domElement,
+      initialPosition: INITIAL_CAMERA_POSITION,
+      initialTarget: INITIAL_CAMERA_TARGET,
+      onInteractionStart: () => { this.isInteracting = true; this.poi.onNavigationActive(); },
+      onInteractionEnd: () => { this.isInteracting = false; },
+      getReducedMotionOverride: () => this.reducedMotionOverride,
+    });
     const { width, height } = this.getViewportSize();
     this.ssaoModulator = new SSAOModulator(
       this.renderer,
@@ -156,7 +162,12 @@ export class ThreeJsSceneManager {
     this.focusUnsub = this.keyboardFocusManager.subscribe((focusedId) => {
       this.focusOutlineRenderer.setTargetById(this.bimLayer.group, focusedId);
     });
-    this.viewCube = this.initViewCube(container);
+    this.viewCube = initViewCube({
+      container,
+      viewport: this.viewport,
+      canonicalViewService: this.canonicalViewService,
+      onContextMenuRequest: (x, y) => this.viewCubeContextMenuCb?.(x, y),
+    });
     this.performanceCollector = new PerformanceCollector(this.renderer, this.scene);
     this.performanceCollector.start();
     this.envStoreUnsub = useEnvironmentStore.subscribe(
@@ -184,41 +195,9 @@ export class ThreeJsSceneManager {
     };
   }
 
-  private initViewportCamera(container: HTMLElement): ViewportCamera {
-    return createViewportCamera(this.renderer.domElement, {
-      initialPosition: INITIAL_CAMERA_POSITION.clone(),
-      initialTarget: INITIAL_CAMERA_TARGET.clone(),
-      onRenderNeeded: () => { /* RAF drives rendering — no-op */ },
-      onInteractionStart: () => {
-        this.isInteracting = true;
-        this.poi.onNavigationActive();
-      },
-      onInteractionEnd: () => { this.isInteracting = false; },
-      getReducedMotion: () => checkReducedMotion(this.reducedMotionOverride),
-    });
-  }
-
   /** ADR-366 Phase 9 / C.5.Q5 — update override; viewport reads it at animation-call time. */
   setReducedMotionOverride(override: ReducedMotionOverride): void {
     this.reducedMotionOverride = override;
-  }
-
-  private initViewCube(container: HTMLElement): ViewCubeEngine {
-    return createViewCube({
-      container,
-      getCamera: () => this.viewport.camera as THREE.PerspectiveCamera | THREE.OrthographicCamera,
-      getTarget: () => this.viewport.target,
-      // Fallback path (used only when onSnapToView is absent — backward compat).
-      onFaceSnap: (mode) => this.viewport.setProjection(mode),
-      onDirSnap: (dir) => this.viewport.snapToViewDirection(dir),
-      // Phase 4.1: canonical dispatch — routes all face/edge/corner clicks.
-      onSnapToView: (id) => this.canonicalViewService.snapTo(id),
-      // Home = NE isometric (A.5 decision — industry convergence 4/4).
-      onHome: () => this.canonicalViewService.snapHome(),
-      onDragRotate: (dx, dy) => this.viewport.applyTumble(dx, dy),
-      // Phase 4.3: right-click context menu — delegate to mutable callback (set by BimViewport3D).
-      onContextMenuRequest: (x, y) => this.viewCubeContextMenuCb?.(x, y),
-    });
   }
 
   // Phase 4.4 keyboard-shortcut façade (use3DShortcuts → manager → viewport).
@@ -292,6 +271,25 @@ export class ThreeJsSceneManager {
   /** Expose live camera for screen-projection (FocusIndicator3D label positioning). */
   getCamera(): THREE.Camera {
     return this.viewport.camera;
+  }
+
+  /**
+   * ADR-366 §C.1.b — Expose the waypoint handles Group for raycast picking
+   * by `useWaypointDragInteraction`. Returns null when handles are hidden
+   * (tool inactive OR no active waypoint).
+   */
+  getWaypointHandlesRoot(): THREE.Group | null {
+    if (this.disposed) return null;
+    return this.waypointDragHandleRenderer.getHandlesGroup();
+  }
+
+  /**
+   * ADR-366 §C.1.b — Apply hover/drag highlight to the waypoint handles.
+   * Pass null to clear. Delegates to WaypointDragHandleRenderer.
+   */
+  setWaypointHoverState(role: 'position' | 'target' | null): void {
+    if (this.disposed) return;
+    this.waypointDragHandleRenderer.setHoverState(role);
   }
 
   /** Phase 4.3: wire BimViewport3D's React context menu callback into the ViewCube. */
@@ -466,31 +464,22 @@ export class ThreeJsSceneManager {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    this.envStoreUnsub();
-    this.sectionController.dispose();
-    this.waypointDragHandleRenderer.dispose();
-    const dom = this.renderer.domElement;
-    if (this.rafHandle !== null) {
-      cancelAnimationFrame(this.rafHandle);
-      this.rafHandle = null;
-    }
-    this.animationManager.dispose();
-    this.focusUnsub();
-    this.focusOutlineRenderer.dispose();
-    this.keyboardFocusManager.dispose();
-    this.idleDetector.dispose();
-    this.qualityModulator.dispose();
-    this.pathTracerRenderer.dispose();
-    this.ssaoModulator.dispose();
-    this.envmapGenerator.dispose();
-    this.performanceCollector.dispose();
-    this.selectionHighlighter.dispose();
-    this.bimLayer.dispose();
-    this.dxfConverter.dispose();
-    this.viewport.dispose();
-    this.viewCube.dispose();
-    this.poi.dispose();
-    this.renderer.dispose();
-    if (dom.parentNode) dom.parentNode.removeChild(dom);
+    disposeSceneManagerResources({
+      renderer: this.renderer, rafHandle: this.rafHandle,
+      envStoreUnsub: this.envStoreUnsub, focusUnsub: this.focusUnsub,
+      sectionController: this.sectionController,
+      waypointDragHandleRenderer: this.waypointDragHandleRenderer,
+      animationManager: this.animationManager,
+      focusOutlineRenderer: this.focusOutlineRenderer,
+      keyboardFocusManager: this.keyboardFocusManager,
+      idleDetector: this.idleDetector, qualityModulator: this.qualityModulator,
+      pathTracerRenderer: this.pathTracerRenderer, ssaoModulator: this.ssaoModulator,
+      envmapGenerator: this.envmapGenerator,
+      performanceCollector: this.performanceCollector,
+      selectionHighlighter: this.selectionHighlighter,
+      bimLayer: this.bimLayer, dxfConverter: this.dxfConverter,
+      viewport: this.viewport, viewCube: this.viewCube, poi: this.poi,
+    });
+    this.rafHandle = null;
   }
 }

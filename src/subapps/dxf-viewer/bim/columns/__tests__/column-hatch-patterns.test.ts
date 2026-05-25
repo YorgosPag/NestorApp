@@ -149,6 +149,26 @@ describe('Exported constants', () => {
   });
 });
 
+describe('buildDiagonalHatch — slope sign parity (ADR-363 Phase 8 bugfix)', () => {
+  it('steel cross-hatch produces same line count for slope=+1 and slope=-1 σε square bbox', () => {
+    // Bug pre-Phase 8: slope=-1 με kMin=kMax=400 → ZERO negative-slope lines.
+    // Fix: 4-corner sweep για kMin/kMax.
+    const plan = computeHatchPlan(bbox(0, 0, 400, 400), 'steel');
+    const pos = plan.lines.filter((l) => (l.end.x - l.start.x) * (l.end.y - l.start.y) > 0);
+    const neg = plan.lines.filter((l) => (l.end.x - l.start.x) * (l.end.y - l.start.y) < 0);
+    expect(pos.length).toBeGreaterThan(0);
+    expect(neg.length).toBeGreaterThan(0);
+    expect(neg.length).toBe(pos.length);
+  });
+
+  it('asymmetric bbox: slope=-1 produces non-zero lines', () => {
+    // 200×800 vertical rectangle (shear-wall-like) — earlier formula degenerated εδώ.
+    const plan = computeHatchPlan(bbox(0, 0, 200, 800), 'steel');
+    const neg = plan.lines.filter((l) => (l.end.x - l.start.x) * (l.end.y - l.start.y) < 0);
+    expect(neg.length).toBeGreaterThan(0);
+  });
+});
+
 describe('computeHatchPlan — backward-compat: arcs field is always present', () => {
   const B = bbox(0, 0, 400, 400);
 

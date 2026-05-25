@@ -1,5 +1,5 @@
 /**
- * Column validator (ADR-363 Phase 4).
+ * Column validator (ADR-363 Phase 4 + Phase 8 extension).
  *
  * Pure function — zero React / DOM / Firestore deps. Mirrors slab/opening
  * validator SSoT pattern: hard errors block creation, code violations are
@@ -8,14 +8,25 @@
  * Phase 4 scope:
  *   - **Hard errors** (block creation):
  *       · width ≤ 0
- *       · depth ≤ 0 (μη circular)
+ *       · depth ≤ 0 (μη circular/polygon)
  *       · height ≤ 0
  *       · L-shape: armLength/armWidth ≤ 0 ή > αντίστοιχη bbox διάσταση
  *       · T-shape: webThickness/flangeLength ≤ 0 ή > αντίστοιχη bbox διάσταση
  *   - **Code violations** (non-blocking):
- *       · width < MIN_COLUMN_DIMENSION_MM (250mm Eurocode)
- *       · depth < MIN_COLUMN_DIMENSION_MM (250mm Eurocode, μη circular)
+ *       · width < MIN_COLUMN_DIMENSION_MM (250mm Eurocode, εκτός shear-wall)
+ *       · depth < MIN_COLUMN_DIMENSION_MM (250mm Eurocode, εκτός shear-wall/circular/polygon)
  *       · slenderness > MAX_SLENDERNESS_RATIO (30 Eurocode crude check)
+ *
+ * Phase 8 extension (polygon / shear-wall / I-shape):
+ *   - **Hard errors**:
+ *       · polygon: sides ∉ [3,12] ή μη ακέραιος
+ *       · I-shape: flangeThickness/webThickness < MIN_I_PLATE_THICKNESS_MM (5mm)
+ *       · I-shape: 2·tf ≥ depth (flanges overlap) ή web ≥ flange (degenerate)
+ *   - **Code violations**:
+ *       · shear-wall: thickness (=depth) < MIN_SHEAR_WALL_THICKNESS_MM (150mm
+ *         Eurocode 8 §5.4.2.4) — relaxed από το 250mm column minimum.
+ *       · shear-wall: length/thickness < SHEAR_WALL_MIN_ASPECT_RATIO (4) —
+ *         κάτω από αυτό = κανονική κολώνα, ο user πρέπει να αλλάξει kind.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6
  */
@@ -25,6 +36,11 @@ import type { BimValidation } from '../types/bim-base';
 import {
   MAX_SLENDERNESS_RATIO,
   MIN_COLUMN_DIMENSION_MM,
+  MIN_POLYGON_SIDES,
+  MAX_POLYGON_SIDES,
+  MIN_SHEAR_WALL_THICKNESS_MM,
+  SHEAR_WALL_MIN_ASPECT_RATIO,
+  MIN_I_PLATE_THICKNESS_MM,
   type ColumnParams,
 } from '../types/column-types';
 import { getColumnSlenderness } from '../geometry/column-geometry';
@@ -48,7 +64,7 @@ export function validateColumnParams(params: ColumnParams): ColumnValidationResu
 
   validateDimensions(params, hardErrors, codeViolations);
   validateHeight(params, hardErrors);
-  validateVariantParams(params, hardErrors);
+  validateVariantParams(params, hardErrors, codeViolations);
   validateSlenderness(params, codeViolations);
 
   const bimValidation: BimValidation = {
@@ -69,17 +85,35 @@ function validateDimensions(
 ): void {
   if (params.width <= 0) {
     hardErrors.push('column.validation.hardErrors.nonPositiveWidth');
-  } else if (params.width < MIN_COLUMN_DIMENSION_MM) {
+  } else if (params.width < MIN_COLUMN_DIMENSION_MM && !isRelaxedWidth(params)) {
     codeViolations.push('column.validation.codeViolations.widthTooSmall');
   }
 
-  if (params.kind === 'circular') return;
+  // Circular + polygon have a single planar dimension (diameter / circumscribed Ø);
+  // depth is ignored in geometry and must not trigger a code violation.
+  if (params.kind === 'circular' || params.kind === 'polygon') return;
 
   if (params.depth <= 0) {
     hardErrors.push('column.validation.hardErrors.nonPositiveDepth');
-  } else if (params.depth < MIN_COLUMN_DIMENSION_MM) {
+  } else if (params.depth < MIN_COLUMN_DIMENSION_MM && !isRelaxedDepth(params)) {
     codeViolations.push('column.validation.codeViolations.depthTooSmall');
   }
+}
+
+/**
+ * shear-wall reuses ColumnParams.width (= wall length); standard 250mm minimum
+ * is irrelevant — code-grade walls can be as wide as the user wants.
+ */
+function isRelaxedWidth(params: ColumnParams): boolean {
+  return params.kind === 'shear-wall';
+}
+
+/**
+ * shear-wall depth = thickness; Eurocode 8 §5.4.2.4 minimum is 150mm, enforced
+ * separately in `validateVariantParams`.
+ */
+function isRelaxedDepth(params: ColumnParams): boolean {
+  return params.kind === 'shear-wall';
 }
 
 function validateHeight(params: ColumnParams, hardErrors: string[]): void {
@@ -88,7 +122,11 @@ function validateHeight(params: ColumnParams, hardErrors: string[]): void {
   }
 }
 
-function validateVariantParams(params: ColumnParams, hardErrors: string[]): void {
+function validateVariantParams(
+  params: ColumnParams,
+  hardErrors: string[],
+  codeViolations: string[],
+): void {
   if (params.kind === 'L-shape' && params.lshape) {
     const { armLength, armWidth } = params.lshape;
     if (armLength !== undefined && (armLength <= 0 || armLength > params.depth)) {
@@ -106,6 +144,64 @@ function validateVariantParams(params: ColumnParams, hardErrors: string[]): void
     if (flangeLength !== undefined && (flangeLength <= 0 || flangeLength > params.width)) {
       hardErrors.push('column.validation.hardErrors.invalidTshapeFlange');
     }
+  }
+  if (params.kind === 'polygon') {
+    validatePolygonParams(params, hardErrors);
+  }
+  if (params.kind === 'shear-wall') {
+    validateShearWallParams(params, codeViolations);
+  }
+  if (params.kind === 'I-shape') {
+    validateIShapeParams(params, hardErrors);
+  }
+}
+
+function validatePolygonParams(params: ColumnParams, hardErrors: string[]): void {
+  const sides = params.polygon?.sides;
+  if (sides === undefined) return;
+  if (!Number.isInteger(sides) || sides < MIN_POLYGON_SIDES || sides > MAX_POLYGON_SIDES) {
+    hardErrors.push('column.validation.hardErrors.invalidPolygonSides');
+  }
+}
+
+/**
+ * Eurocode 8 §5.4.2.4 thresholds for ductile RC shear walls.
+ *   - thickness (= depth) ≥ 150mm.
+ *   - aspect ratio (length / thickness) ≥ 4 to qualify as a wall (below this
+ *     it behaves as a regular column and the user should switch kind).
+ */
+function validateShearWallParams(params: ColumnParams, codeViolations: string[]): void {
+  if (params.depth > 0 && params.depth < MIN_SHEAR_WALL_THICKNESS_MM) {
+    codeViolations.push('column.validation.codeViolations.shearWallThicknessTooSmall');
+  }
+  if (params.width > 0 && params.depth > 0) {
+    const aspect = params.width / params.depth;
+    if (aspect < SHEAR_WALL_MIN_ASPECT_RATIO) {
+      codeViolations.push('column.validation.codeViolations.shearWallAspectRatioBelow');
+    }
+  }
+}
+
+/**
+ * I-shape (steel double-T) sanity rules. Steel sections degenerate if plates
+ * are too thin, if flanges overlap (2·tf ≥ h), or if the web is wider than the
+ * flange it joins. These are geometry-validity checks, not Eurocode limits —
+ * material design checks live downstream in section-design libraries.
+ */
+function validateIShapeParams(params: ColumnParams, hardErrors: string[]): void {
+  const tf = params.ishape?.flangeThickness;
+  const tw = params.ishape?.webThickness;
+  if (tf !== undefined && tf < MIN_I_PLATE_THICKNESS_MM) {
+    hardErrors.push('column.validation.hardErrors.invalidIShapePlateThickness');
+  }
+  if (tw !== undefined && tw < MIN_I_PLATE_THICKNESS_MM) {
+    hardErrors.push('column.validation.hardErrors.invalidIShapePlateThickness');
+  }
+  if (tf !== undefined && params.depth > 0 && 2 * tf >= params.depth) {
+    hardErrors.push('column.validation.hardErrors.invalidIShapeFlangeOverlap');
+  }
+  if (tw !== undefined && params.width > 0 && tw >= params.width) {
+    hardErrors.push('column.validation.hardErrors.invalidIShapeWebOverflow');
   }
 }
 

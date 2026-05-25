@@ -28,6 +28,7 @@ import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { SlabOpeningGhostRenderer } from '../../bim/slab-openings/slab-opening-ghost-renderer';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 export interface UseSlabOpeningGhostPreviewProps {
   readonly isAwaitingPosition: boolean;
@@ -39,10 +40,17 @@ export interface UseSlabOpeningGhostPreviewProps {
   readonly transform: ViewTransform;
   getCanvas(): HTMLCanvasElement | null;
   getViewportElement?(): HTMLElement | null;
+  /**
+   * ADR-370 — active scene units. Defaults (mm-baked) are converted into
+   * scene coords via `mmToSceneUnits(units)` ώστε το ghost να συμπίπτει με
+   * το committed entity rectangle (mirror του builder σε
+   * `buildDefaultSlabOpeningParams`). Όταν undefined → 'mm' fallback.
+   */
+  getSceneUnits?(): SceneUnits;
 }
 
 export function useSlabOpeningGhostPreview(props: Readonly<UseSlabOpeningGhostPreviewProps>): void {
-  const { isAwaitingPosition, kind, overrides, hoveredEdgeMidpointGrip, transform, getCanvas, getViewportElement } = props;
+  const { isAwaitingPosition, kind, overrides, hoveredEdgeMidpointGrip, transform, getCanvas, getViewportElement, getSceneUnits } = props;
   const cursorWorld = useCursorWorldPosition();
   const rafRef = useRef<number>(0);
   const prevActiveRef = useRef<boolean>(false);
@@ -68,8 +76,13 @@ export function useSlabOpeningGhostPreview(props: Readonly<UseSlabOpeningGhostPr
       const effectiveCursor: Point2D =
         snapState?.found === true && snapState.point != null ? snapState.point : cursorWorld;
       const defaults = SLAB_OPENING_DEFAULT_SIZES[kind];
-      const halfW = (overrides.width ?? defaults.width) / 2;
-      const halfD = (overrides.depth ?? defaults.depth) / 2;
+      // ADR-370 — defaults σε mm. Convert σε scene-units ώστε το ghost
+      // rectangle να συμπίπτει με το rectangle που θα φτιάξει ο builder στο
+      // commit (1.5 m σε scene 'm', 1500 mm σε scene 'mm', κτλ.). Χωρίς αυτό
+      // το conversion το ghost εμφανίζεται ~1000× μεγαλύτερο σε scene 'm'.
+      const mmFactor = mmToSceneUnits(getSceneUnits?.() ?? 'mm');
+      const halfW = ((overrides.width ?? defaults.width) / 2) * mmFactor;
+      const halfD = ((overrides.depth ?? defaults.depth) / 2) * mmFactor;
       const cx = effectiveCursor.x;
       const cy = effectiveCursor.y;
       const vertices = [
@@ -97,7 +110,7 @@ export function useSlabOpeningGhostPreview(props: Readonly<UseSlabOpeningGhostPr
       ctx.textBaseline = 'middle';
       ctx.fillText('+', sp.x, sp.y);
     }
-  }, [isAwaitingPosition, kind, overrides, hoveredEdgeMidpointGrip, transform, getCanvas, getViewportElement, cursorWorld]);
+  }, [isAwaitingPosition, kind, overrides, hoveredEdgeMidpointGrip, transform, getCanvas, getViewportElement, cursorWorld, getSceneUnits]);
 
   // Clear stale ghost on transition to fully inactive state.
   useEffect(() => {

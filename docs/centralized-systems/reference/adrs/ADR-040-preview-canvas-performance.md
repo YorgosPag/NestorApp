@@ -71,6 +71,18 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-25 — CanvasSection 500-line ratchet split + slabOpeningGhostPreview wiring
+
+`CanvasSection.tsx` was approaching the 500-line cap (514 lines pre-split). Two non-architectural edits brought it under:
+
+1. **`useEntityLayerCommands` hook (new)** — extracted the inline IIFE that computed `{ canApplyLayerCommands, isSystemLayer, onLayerOff, onLayerFreeze, onLayerLock }` for `EntityContextMenu` (ADR-358 §5.6.bis Phase 10 — Layer click-driven commands). Lazy `require()` of `LayerOffCommand` / `LayerFreezeCommand` / `LayerLockCommand` preserved to avoid the same circular-dep that motivated the IIFE originally. Located at `hooks/canvas/useEntityLayerCommands.ts`; consumes `selectedEntityIds`, `props.currentScene`, `executeCommand` — no new store subscriptions.
+
+2. **`slabOpeningGhostPreview` prop** — new `CanvasLayerStack` prop wiring the column-tool-style ghost for the slab-opening tool (typed in `canvas-layer-stack-types.ts`, leaf added in `canvas-layer-stack-slab-opening-ghost.tsx`). Ghost preview is a micro-leaf subscriber that resolves scene units lazily via the supplied `getSceneUnits()` closure; CanvasSection never touches `useSyncExternalStore` for this feature.
+
+**Cardinal rule compliance**: no new `useSyncExternalStore` calls in `CanvasSection` or `CanvasLayerStack`; the hook returns memoized data only; the new leaf is the SOLE subscriber for slab-opening ghost state. CHECK 6B/6C green.
+
+**Files touched (atomic batch)**: `CanvasSection.tsx`, `canvas-layer-stack-types.ts`, `canvas-layer-stack-slab-opening-ghost.tsx`, `useEntityLayerCommands.ts` (new), `useSlabOpeningGhostPreview.ts`.
+
 ### 2026-05-24 — BIM 3D cursor integration (ADR-366 Group B Phase 9)
 
 Cursor event handlers (`mouse-handler-move.ts`, `mouse-handler-up.ts`, `useCentralizedMouseHandlers.ts`) updated to support 3D viewport coordinate transforms in BIM 3D viewer integration. Centralized mouse handler routing extended with BimViewport3D state propagation to 3D scene (world → screen → 3D camera). No changes to canvas rendering architecture or frame scheduler integration; cursor system remains neutral to 2D vs 3D viewport context.

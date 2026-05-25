@@ -18,6 +18,7 @@ import type { SlabOpeningKind } from '../../bim/types/slab-opening-types';
 import type { SlabOpeningParamOverrides } from '../../hooks/drawing/slab-opening-completion';
 import type { ViewTransform } from '../../rendering/types/Types';
 import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
+import type { SceneUnits } from '../../utils/scene-units';
 
 export interface SlabOpeningGhostPreviewMountProps {
   isAwaitingPosition: boolean;
@@ -27,6 +28,8 @@ export interface SlabOpeningGhostPreviewMountProps {
   transform: ViewTransform;
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
+  /** ADR-370 — active scene units για mm→scene conversion στο ghost rectangle. */
+  getSceneUnits?: () => SceneUnits;
 }
 
 export const SlabOpeningGhostPreviewMount = React.memo(function SlabOpeningGhostPreviewMount(

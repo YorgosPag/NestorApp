@@ -34,6 +34,7 @@ import {
 import { useGuideToolWorkflows, useEntityCompleteGuideListener } from '../../hooks/guides';
 import { useOverlayLayers } from '../../hooks/layers';
 import { useGlobalSnapSceneSync } from '../../snapping/hooks/useGlobalSnapSceneSync';
+import { resolveSceneUnits } from '../../utils/scene-units';
 // useHoveredOverlay REMOVED from orchestrator — ADR-040 Phase II micro-leaf pattern.
 // Subscription lives in DraftLayerSubscriber (canvas-layer-stack-leaves.tsx).
 import { useSpecialTools } from '../../hooks/tools'; import { useModifyTools } from '../../hooks/tools/useModifyTools';
@@ -64,6 +65,7 @@ import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
 import { MirrorConfirmOverlay } from '../../ui/components/MirrorConfirmOverlay';
 import { useFloorplanAutoFit } from '../../hooks/canvas/useFloorplanAutoFit'; import { useCanvasEditActions } from '../../hooks/canvas/useCanvasEditActions';
 import { useCanvasSectionUI } from '../../hooks/canvas/useCanvasSectionUI';
+import { useEntityLayerCommands } from '../../hooks/canvas/useEntityLayerCommands';
 import { useSelectionCycling } from '../../systems/selection/use-selection-cycling';
 import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover'; import { useCanvasSection2DFocus } from '../../hooks/canvas/useCanvasSection2DFocus';
 /**
@@ -380,6 +382,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     getSelectedEntityIds, dxfScene, handleMouseMove: unified.handleMouseMove,
     levelManager, currentOverlays, transformScale: transform.scale,
   });
+  const entityLayerCommands = useEntityLayerCommands(selectedEntityIds, props.currentScene, executeCommand);
   // ADR-374 — ZOOM Window tool lifecycle (EventBus listener + Escape + return-to-select).
   // Combined transform handler: must mirror CanvasLayerStack.handleTransformChange — bare
   // setTransform leaves zoomSystem with stale internal transform, so the next wheel zoom
@@ -427,7 +430,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         scalePreview={{}}
         stretchPreview={{}}
         columnGhostPreview={{ isAwaitingPosition: columnTool.isAwaitingPosition, kind: columnTool.state.kind, getGhostFootprints: columnTool.getGhostFootprints }}
-        slabOpeningGhostPreview={{ isAwaitingPosition: slabOpeningTool.isAwaitingPosition, kind: slabOpeningTool.state.kind, overrides: slabOpeningTool.state.overrides, hoveredEdgeMidpointGrip: unified.hoveredGrip?.slabOpeningGripKind?.startsWith('slab-opening-edge-midpoint-') ? unified.hoveredGrip : null }}
+        slabOpeningGhostPreview={{ isAwaitingPosition: slabOpeningTool.isAwaitingPosition, kind: slabOpeningTool.state.kind, overrides: slabOpeningTool.state.overrides, hoveredEdgeMidpointGrip: unified.hoveredGrip?.slabOpeningGripKind?.startsWith('slab-opening-edge-midpoint-') ? unified.hoveredGrip : null, getSceneUnits: () => resolveSceneUnits(levelManager.getLevelScene(levelManager.currentLevelId)) }}
         levelManager={levelManager}
       />
       <DrawingContextMenu ref={drawingMenuRef} activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}
@@ -439,32 +442,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         canJoin={entityJoinState.canJoin} joinResultLabel={entityJoinState.joinResultLabel}
         onJoin={() => entityJoinHook.joinEntities(selectedEntityIds)} onDelete={() => handleSmartDelete()} onCancel={() => entityMenuRef.current?.close()}
         canSplit={selectedEntityIds.length === 1 && !!props.currentScene?.entities.find((x) => x.id === selectedEntityIds[0] && isWallEntity(x))} onSplit={() => { entityMenuRef.current?.close(); props.onToolChange?.('wall-split' as ToolType); }}
-        {...(() => {
-          // ADR-358 §5.6.bis Phase 10 — Layer click-driven commands.
-          const firstId = selectedEntityIds[0];
-          const firstEntity = firstId && props.currentScene
-            ? props.currentScene.entities.find((e) => e.id === firstId)
-            : null;
-          const layerId = (firstEntity as { layerId?: string } | null)?.layerId ?? null;
-          if (!layerId) return { canApplyLayerCommands: false } as const;
-          const layer = props.currentScene?.layersById?.[layerId];
-          const isSystem = layer?.name === '0';
-          // Lazy-require to avoid circular deps in CanvasSection.
-          return { canApplyLayerCommands: true, isSystemLayer: isSystem,
-            onLayerOff: () => {
-              const { LayerOffCommand } = require('../../core/commands/layer');
-              executeCommand(new LayerOffCommand({ layerId }));
-            },
-            onLayerFreeze: () => {
-              const { LayerFreezeCommand } = require('../../core/commands/layer');
-              executeCommand(new LayerFreezeCommand({ layerId }));
-            },
-            onLayerLock: () => {
-              const { LayerLockCommand } = require('../../core/commands/layer');
-              executeCommand(new LayerLockCommand({ layerId }));
-            },
-          } as const;
-        })()} />
+        {...entityLayerCommands} />
       <GuideContextMenu ref={guideMenuRef}
         onDelete={guideWorkflows.handleGuideContextDelete} onToggleLock={guideWorkflows.handleGuideContextToggleLock}
         onEditLabel={guideWorkflows.handleGuideContextEditLabel} onChangeColor={guideWorkflows.handleGuideContextChangeColor}

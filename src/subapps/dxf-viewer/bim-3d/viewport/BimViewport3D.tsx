@@ -30,6 +30,7 @@ import { CropRegionOverlay } from '../render/crop-region/CropRegionOverlay';
 import { useCropRegionTool } from '../render/crop-region/useCropRegionTool';
 import { useBimEntityProxyAccessibility } from '../accessibility/use-bim-entity-proxy-accessibility';
 import { useAnimationQueueProcessor } from '../animation/animation-queue-processor';
+import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-interaction';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useBim3DStoreSync } from './use-bim3d-store-sync';
 
@@ -265,6 +266,11 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     effectiveVisible,
     externalEntitiesMode,
   });
+
+  // Phase 9 / C.1.b — Waypoint 3D drag interaction. Wires pointer events on
+  // the renderer canvas to the WaypointDragController; only active when
+  // AnimationStore.toolActive === true (controller listeners attach/detach).
+  useWaypointDragInteraction({ managerRef, canvasEl });
 
   // Phase 9 / C.1.c — Animation render queue driver. Mounted once; subscribes
   // to RenderQueueStore and drives the MP4 encode pipeline when a job is queued.

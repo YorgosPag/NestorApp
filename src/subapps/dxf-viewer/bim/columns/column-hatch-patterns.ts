@@ -235,8 +235,16 @@ function buildDiagonalHatch(
   slope: 1 | -1,
 ): readonly HatchLineSegment[] {
   const axial = spacingMm * Math.SQRT2;
-  const kMin = bbox.min.x - slope * bbox.max.y;
-  const kMax = bbox.max.x - slope * bbox.min.y;
+  // kMin/kMax across all 4 bbox corners — covers both slope signs.
+  // For `x = slope·y + k`, the line touching corner (cx, cy) has k = cx − slope·cy.
+  // Earlier formula assumed slope=+1 directionality and collapsed to kMin=kMax for slope=-1
+  // on square bboxes; full 4-corner sweep is robust to any slope/aspect.
+  const k1 = bbox.min.x - slope * bbox.min.y;
+  const k2 = bbox.min.x - slope * bbox.max.y;
+  const k3 = bbox.max.x - slope * bbox.min.y;
+  const k4 = bbox.max.x - slope * bbox.max.y;
+  const kMin = Math.min(k1, k2, k3, k4);
+  const kMax = Math.max(k1, k2, k3, k4);
   const startK = Math.ceil(kMin / axial) * axial;
   const out: HatchLineSegment[] = [];
   let steps = 0;

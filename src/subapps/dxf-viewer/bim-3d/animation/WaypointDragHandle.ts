@@ -6,9 +6,10 @@
  * (position + target) plus a connecting line for the currently selected
  * waypoint. Visibility gated by AnimationStore.toolActive + activeWaypoint.
  *
- * Drag interaction (raycaster + mouse handler) deferred to follow-up — this
- * file ships static visualization only. Edits route through TimelineEditor
- * form fields for C.1.b.
+ * Drag interaction (raycaster + mouse handler) lives in
+ * `use-waypoint-drag-interaction.ts` + `waypoint-drag-controller.ts`.
+ * This renderer exposes `getHandlesGroup()` for raycast access and
+ * `setHoverState(role)` for hover-color feedback (cold/hot textures).
  */
 
 import {
@@ -48,6 +49,7 @@ export class WaypointDragHandleRenderer {
   private readonly handles: WaypointHandleHandles;
   private readonly unsubWaypoint: () => void;
   private readonly unsubToolActive: () => void;
+  private hoverRole: WaypointHandleRole | null = null;
   private disposed = false;
 
   constructor(scene: Scene) {
@@ -79,6 +81,30 @@ export class WaypointDragHandleRenderer {
         this.applyState(waypoint);
       },
     );
+  }
+
+  /**
+   * Exposed for raycast pickup by `waypoint-drag-controller`. Returns null
+   * when handles are hidden (no active waypoint or tool inactive) so the
+   * controller can short-circuit before allocating a Raycaster.
+   */
+  getHandlesGroup(): Group | null {
+    if (this.disposed) return null;
+    if (!this.handles.root.visible) return null;
+    return this.handles.root;
+  }
+
+  /**
+   * Highlight the handle currently under the pointer (or being dragged).
+   * `null` clears the hover state. Idempotent — only rebuilds the sprite
+   * texture when the role transitions.
+   */
+  setHoverState(role: WaypointHandleRole | null): void {
+    if (this.disposed) return;
+    if (this.hoverRole === role) return;
+    this.hoverRole = role;
+    paintSprite(this.handles.positionSprite, 'position', role);
+    paintSprite(this.handles.targetSprite, 'target', role);
   }
 
   private applyState(waypoint: Waypoint | null): void {
@@ -131,9 +157,8 @@ function createHandlesGroup(): WaypointHandleHandles {
 }
 
 function createHandleSprite(role: WaypointHandleRole): Sprite {
-  const color = role === 'position' ? CAD_UI_COLORS.grips.warm : CAD_UI_COLORS.grips.hot;
   const material = new SpriteMaterial({
-    map: buildHandleTexture(color),
+    map: buildHandleTexture(resolveHandleColor(role, null)),
     transparent: true,
     depthTest: false,
   });
@@ -142,6 +167,22 @@ function createHandleSprite(role: WaypointHandleRole): Sprite {
   sprite.userData['kind'] = 'waypoint-handle';
   sprite.userData['role'] = role;
   return sprite;
+}
+
+function resolveHandleColor(role: WaypointHandleRole, hoverRole: WaypointHandleRole | null): string {
+  if (hoverRole === role) return CAD_UI_COLORS.grips.hot;
+  return role === 'position' ? CAD_UI_COLORS.grips.warm : CAD_UI_COLORS.grips.cold;
+}
+
+function paintSprite(
+  sprite: Sprite,
+  role: WaypointHandleRole,
+  hoverRole: WaypointHandleRole | null,
+): void {
+  const mat = sprite.material as SpriteMaterial;
+  mat.map?.dispose();
+  mat.map = buildHandleTexture(resolveHandleColor(role, hoverRole));
+  mat.needsUpdate = true;
 }
 
 function createConnectingLine(): Line {

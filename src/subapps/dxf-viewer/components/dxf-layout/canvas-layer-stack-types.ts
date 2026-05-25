@@ -238,6 +238,8 @@ export interface CanvasLayerStackProps {
     kind: import('../../bim/types/slab-opening-types').SlabOpeningKind;
     overrides: import('../../hooks/drawing/slab-opening-completion').SlabOpeningParamOverrides;
     hoveredEdgeMidpointGrip?: import('../../hooks/grips/unified-grip-types').UnifiedGripInfo | null;
+    /** ADR-370 — active scene units για mm→scene conversion στο ghost. */
+    getSceneUnits?: () => import('../../utils/scene-units').SceneUnits;
   };
   /** Level manager — needed by useRotationPreview + useMovePreview for entity reads */
   levelManager: ReturnType<typeof useLevels>;

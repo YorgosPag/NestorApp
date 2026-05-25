@@ -102,3 +102,138 @@ describe('validateColumnParams — happy path', () => {
     expect(r.bimValidation.violationKeys.length).toBeGreaterThan(0);
   });
 });
+
+// ─── ADR-363 Phase 8 — polygon / shear-wall / I-shape ───────────────────────
+
+describe('validateColumnParams — polygon kind (Phase 8)', () => {
+  it('flags invalidPolygonSides για sides < MIN_POLYGON_SIDES (3)', () => {
+    const r = validateColumnParams(makeColumn({
+      kind: 'polygon', width: 400, polygon: { sides: 2 },
+    }));
+    expect(r.hardErrors).toContain('column.validation.hardErrors.invalidPolygonSides');
+  });
+
+  it('flags invalidPolygonSides για sides > MAX_POLYGON_SIDES (12)', () => {
+    const r = validateColumnParams(makeColumn({
+      kind: 'polygon', width: 400, polygon: { sides: 13 },
+    }));
+    expect(r.hardErrors).toContain('column.validation.hardErrors.invalidPolygonSides');
+  });
+
+  it('flags invalidPolygonSides για μη ακέραιο αριθμό πλευρών', () => {
+    const r = validateColumnParams(makeColumn({
+      kind: 'polygon', width: 400, polygon: { sides: 3.5 },
+    }));
+    expect(r.hardErrors).toContain('column.validation.hardErrors.invalidPolygonSides');
+  });
+
+  it('valid hexagon (sides=6) → no hard errors', () => {
+    const r = validateColumnParams(makeColumn({
+      kind: 'polygon', width: 400, polygon: { sides: 6 },
+    }));
+    expect(r.hardErrors).toHaveLength(0);
+  });
+
+  it('polygon skips depthTooSmall (depth ignored)', () => {
+    const r = validateColumnParams(makeColumn({
+      kind: 'polygon', width: 400, depth: 0, polygon: { sides: 6 },
+    }));
+    expect(r.hardErrors).not.toContain('column.validation.hardErrors.nonPositiveDepth');
+    expect(r.codeViolations).not.toContain('column.validation.codeViolations.depthTooSmall');
+  });
+});
+
+describe('validateColumnParams — shear-wall kind (Phase 8)', () => {
+  it('flags shearWallThicknessTooSmall για thickness < 150mm', () => {
+    const r = validateColumnParams(makeColumn({
+      kind: 'shear-wall', width: 2000, depth: 140,
+    }));
+    expect(r.codeViolations).toContain(
+      'column.validation.codeViolations.shearWallThicknessTooSmall',
+    );
+  });
+
+  it('thickness = 150mm → no thickness violation', () => {
+    const r = validateColumnParams(makeColumn({
+      kind: 'shear-wall', width: 2000, depth: 150,
+    }));
+    expect(r.codeViolations).not.toContain(
+      'column.validation.codeViolations.shearWallThicknessTooSmall',
+    );
+  });
+
+  it('flags shearWallAspectRatioBelow για aspect < 4', () => {
+    const r = validateColumnParams(makeColumn({
+      kind: 'shear-wall', width: 500, depth: 200, // aspect 2.5
+    }));
+    expect(r.codeViolations).toContain(
+      'column.validation.codeViolations.shearWallAspectRatioBelow',
+    );
+  });
+
+  it('aspect = 4 → no aspect violation', () => {
+    const r = validateColumnParams(makeColumn({
+      kind: 'shear-wall', width: 800, depth: 200,
+    }));
+    expect(r.codeViolations).not.toContain(
+      'column.validation.codeViolations.shearWallAspectRatioBelow',
+    );
+  });
+
+  it('relaxes widthTooSmall + depthTooSmall (Eurocode 250mm) για shear-wall', () => {
+    const r = validateColumnParams(makeColumn({
+      kind: 'shear-wall', width: 2000, depth: 200,
+    }));
+    expect(r.codeViolations).not.toContain('column.validation.codeViolations.widthTooSmall');
+    expect(r.codeViolations).not.toContain('column.validation.codeViolations.depthTooSmall');
+  });
+});
+
+describe('validateColumnParams — I-shape kind (Phase 8)', () => {
+  const validIShape = (extra?: Partial<ColumnParams>): ColumnParams => makeColumn({
+    kind: 'I-shape', width: 200, depth: 300,
+    ishape: { flangeThickness: 20, webThickness: 15 },
+    ...extra,
+  });
+
+  it('flags invalidIShapePlateThickness για flangeThickness < 5mm', () => {
+    const r = validateColumnParams(validIShape({
+      ishape: { flangeThickness: 3, webThickness: 15 },
+    }));
+    expect(r.hardErrors).toContain(
+      'column.validation.hardErrors.invalidIShapePlateThickness',
+    );
+  });
+
+  it('flags invalidIShapePlateThickness για webThickness < 5mm', () => {
+    const r = validateColumnParams(validIShape({
+      ishape: { flangeThickness: 20, webThickness: 4 },
+    }));
+    expect(r.hardErrors).toContain(
+      'column.validation.hardErrors.invalidIShapePlateThickness',
+    );
+  });
+
+  it('flags invalidIShapeFlangeOverlap όταν 2*tf >= depth', () => {
+    const r = validateColumnParams(validIShape({
+      depth: 180, ishape: { flangeThickness: 100, webThickness: 15 },
+    }));
+    expect(r.hardErrors).toContain(
+      'column.validation.hardErrors.invalidIShapeFlangeOverlap',
+    );
+  });
+
+  it('flags invalidIShapeWebOverflow όταν tw >= width', () => {
+    const r = validateColumnParams(validIShape({
+      width: 200, ishape: { flangeThickness: 20, webThickness: 250 },
+    }));
+    expect(r.hardErrors).toContain(
+      'column.validation.hardErrors.invalidIShapeWebOverflow',
+    );
+  });
+
+  it('valid IPE-300 defaults → no hard errors', () => {
+    const r = validateColumnParams(validIShape());
+    expect(r.hardErrors).toHaveLength(0);
+  });
+});

@@ -151,11 +151,15 @@ describe('ColumnRenderer + material hatch (Phase 4.5c.2)', () => {
     expect(hatch.some((c) => c.fn === 'arc')).toBe(false);
   });
 
-  it('6. circular kind → hatch SKIPPED (no clip call regardless of material)', () => {
+  it('6. circular RC → concentric arcs drawn inside single clip pass (Phase 4.5c.3)', () => {
+    // Phase 4.5c.3 superseded the original "circular → SKIP" assumption:
+    // `computeCircularHatchPlan('rc')` returns 3 concentric rings; renderer
+    // clips to the 32-vertex footprint and draws arcs. Outline stroke still
+    // runs after the hatch pass restore.
     const { renderer, mock } = makeRenderer();
     renderer.render(makeColumn('circular', 'rc') as unknown as EntityModel, {});
-    expect(countCalls(mock.calls, 'clip')).toBe(0);
-    expect(countCalls(mock.calls, 'arc')).toBe(0);
+    expect(countCalls(mock.calls, 'clip')).toBe(1);
+    expect(countCalls(mock.calls, 'arc')).toBeGreaterThanOrEqual(3);
   });
 
   it('7. extreme zoom-out (scale < 0.001) → hatch SKIPPED', () => {
@@ -224,5 +228,55 @@ describe('ColumnRenderer + material hatch (Phase 4.5c.2)', () => {
       expect(hatch.filter((c) => c.fn === 'lineTo').length).toBeGreaterThan(0);
       expect(hatch.some((c) => c.fn === 'arc')).toBe(false);
     }
+  });
+});
+
+// ─── ADR-363 Phase 8 — polygon / shear-wall / I-shape ───────────────────────
+
+describe('ColumnRenderer + Phase 8 kinds (polygon / shear-wall / I-shape)', () => {
+  it.each(['polygon', 'shear-wall', 'I-shape'] as const)(
+    '%s kind RC → single clip pass + dot grid (arc calls)',
+    (kind) => {
+      const { renderer, mock } = makeRenderer();
+      renderer.render(makeColumn(kind, 'rc') as unknown as EntityModel, {});
+      expect(countCalls(mock.calls, 'clip')).toBe(1);
+      expect(countCalls(mock.calls, 'arc')).toBeGreaterThan(0);
+    },
+  );
+
+  it.each(['polygon', 'shear-wall', 'I-shape'] as const)(
+    '%s kind steel → cross-hatch strokes inside clip, no arc',
+    (kind) => {
+      const { renderer, mock } = makeRenderer();
+      renderer.render(makeColumn(kind, 'steel') as unknown as EntityModel, {});
+      const clipIdx = mock.calls.findIndex((c) => c.fn === 'clip');
+      expect(clipIdx).toBeGreaterThan(-1);
+      const tail = mock.calls.slice(clipIdx);
+      const restoreIdx = tail.findIndex((c) => c.fn === 'restore');
+      const hatch = tail.slice(0, restoreIdx);
+      expect(hatch.filter((c) => c.fn === 'lineTo').length).toBeGreaterThan(0);
+      expect(hatch.some((c) => c.fn === 'arc')).toBe(false);
+    },
+  );
+
+  it('polygon kind uses per-kind stroke colour (warm green)', () => {
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeColumn('polygon', 'rc') as unknown as EntityModel, {});
+    const strokeStyles = mock.calls.filter((c) => c.fn === 'set:strokeStyle').map((c) => c.args[0]);
+    expect(strokeStyles).toContain('#5c8a3a');
+  });
+
+  it('shear-wall kind uses per-kind stroke colour (deep RC grey)', () => {
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeColumn('shear-wall', 'rc') as unknown as EntityModel, {});
+    const strokeStyles = mock.calls.filter((c) => c.fn === 'set:strokeStyle').map((c) => c.args[0]);
+    expect(strokeStyles).toContain('#3a4048');
+  });
+
+  it('I-shape kind uses per-kind stroke colour (cool steel)', () => {
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeColumn('I-shape', 'rc') as unknown as EntityModel, {});
+    const strokeStyles = mock.calls.filter((c) => c.fn === 'set:strokeStyle').map((c) => c.args[0]);
+    expect(strokeStyles).toContain('#4a4a52');
   });
 });

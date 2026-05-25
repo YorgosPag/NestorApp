@@ -1638,6 +1638,29 @@
       }
     }
   },
+  "column": {
+    "validation": {
+      "hardErrors": {
+        "nonPositiveWidth": "Width must be greater than 0",
+        "nonPositiveDepth": "Depth must be greater than 0",
+        "nonPositiveHeight": "Height must be greater than 0",
+        "invalidLshapeArm": "Invalid L-shape arm dimensions",
+        "invalidTshapeWeb": "Invalid T-shape web thickness",
+        "invalidTshapeFlange": "Invalid T-shape flange length",
+        "invalidPolygonSides": "Sides must be an integer between 3 and 12",
+        "invalidIShapePlateThickness": "Flange or web thickness below minimum (5mm)",
+        "invalidIShapeFlangeOverlap": "Flanges overlap — section depth is too small",
+        "invalidIShapeWebOverflow": "Web exceeds flange width"
+      },
+      "codeViolations": {
+        "widthTooSmall": "Width below Eurocode minimum (250mm)",
+        "depthTooSmall": "Depth below Eurocode minimum (250mm)",
+        "maxSlendernessExceeded": "Slenderness ratio above 30 — Eurocode check",
+        "shearWallThicknessTooSmall": "Wall thickness below Eurocode 8 minimum (150mm)",
+        "shearWallAspectRatioBelow": "Length-to-thickness ratio below 4 — not a shear wall"
+      }
+    }
+  },
   "slabOpeningStack": {
     "dialog": {
       "title": "Copy Opening to Floors",

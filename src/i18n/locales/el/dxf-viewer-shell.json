@@ -1638,6 +1638,29 @@
       }
     }
   },
+  "column": {
+    "validation": {
+      "hardErrors": {
+        "nonPositiveWidth": "Το πλάτος πρέπει να είναι μεγαλύτερο από 0",
+        "nonPositiveDepth": "Το βάθος πρέπει να είναι μεγαλύτερο από 0",
+        "nonPositiveHeight": "Το ύψος πρέπει να είναι μεγαλύτερο από 0",
+        "invalidLshapeArm": "Άκυρες διαστάσεις βραχίονα Γ",
+        "invalidTshapeWeb": "Άκυρο πάχος κορμού Τ",
+        "invalidTshapeFlange": "Άκυρο μήκος πέλματος Τ",
+        "invalidPolygonSides": "Οι πλευρές πρέπει να είναι ακέραιες, από 3 έως 12",
+        "invalidIShapePlateThickness": "Το πάχος πέλματος ή κορμού είναι κάτω από το ελάχιστο (5mm)",
+        "invalidIShapeFlangeOverlap": "Τα πέλματα επικαλύπτονται — το ύψος διατομής είναι πολύ μικρό",
+        "invalidIShapeWebOverflow": "Ο κορμός υπερβαίνει το πλάτος πέλματος"
+      },
+      "codeViolations": {
+        "widthTooSmall": "Πλάτος κάτω από το ελάχιστο Eurocode (250mm)",
+        "depthTooSmall": "Βάθος κάτω από το ελάχιστο Eurocode (250mm)",
+        "maxSlendernessExceeded": "Λόγος λυγηρότητας πάνω από 30 — έλεγχος Eurocode",
+        "shearWallThicknessTooSmall": "Πάχος τοιχείου κάτω από το ελάχιστο Eurocode 8 (150mm)",
+        "shearWallAspectRatioBelow": "Λόγος μήκους προς πάχος κάτω από 4 — δεν είναι τοιχείο διάτμησης"
+      }
+    }
+  },
   "slabOpeningStack": {
     "dialog": {
       "title": "Αντιγραφή ανοίγματος σε ορόφους",

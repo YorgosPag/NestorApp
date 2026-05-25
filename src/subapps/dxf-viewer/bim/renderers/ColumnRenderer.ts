@@ -13,6 +13,9 @@
  *   - circular    → RC grey (φέροντα κολώνα)
  *   - L-shape     → ochre (γωνία)
  *   - T-shape     → steel-blue
+ *   - polygon     → warm green (decorative, ADR-363 Phase 8)
+ *   - shear-wall  → deep RC grey (structural emphasis, ADR-363 Phase 8)
+ *   - I-shape     → cool steel (industrial, ADR-363 Phase 8)
  *
  * Phase 4.5 (DONE): center / rotation / width / depth grips.
  * Phase 4.5b (DONE): variant-specific grips (L-shape arm / T-shape flange).
@@ -64,6 +67,9 @@ const KIND_STROKE: Readonly<Record<ColumnKind, string>> = {
   'circular':    '#3a3a40',
   'L-shape':     '#a07a2b',
   'T-shape':     '#3a5a78',
+  'polygon':     '#5c8a3a',
+  'shear-wall':  '#3a4048',
+  'I-shape':     '#4a4a52',
 };
 
 /** Translucent fill (rgba) per kind. ~22% opacity. */
@@ -72,6 +78,9 @@ const KIND_FILL: Readonly<Record<ColumnKind, string>> = {
   'circular':    'rgba(96, 96, 102, 0.22)',
   'L-shape':     'rgba(192, 148, 56, 0.22)',
   'T-shape':     'rgba(110, 140, 178, 0.22)',
+  'polygon':     'rgba(120, 170, 90, 0.22)',
+  'shear-wall':  'rgba(70, 80, 90, 0.25)',
+  'I-shape':     'rgba(95, 95, 110, 0.20)',
 };
 
 export class ColumnRenderer extends BaseEntityRenderer {
@@ -186,7 +195,7 @@ export class ColumnRenderer extends BaseEntityRenderer {
    * Pure canvas draw — ZERO store subscriptions (ADR-040 compliant).
    */
   private drawVariantDimensionLabels(column: ColumnEntity): void {
-    if (column.kind !== 'L-shape' && column.kind !== 'T-shape') return;
+    if (!hasVariantLabels(column.kind)) return;
     const verts = column.geometry.footprint.vertices;
 
     this.ctx.save();
@@ -203,9 +212,43 @@ export class ColumnRenderer extends BaseEntityRenderer {
       const wt = column.params.tshape?.webThickness ?? Math.round(column.params.depth / 3);
       this.drawDimLabel(verts[4], verts[5], `${Math.round(fl)} `);
       this.drawDimLabel(verts[1], verts[2], `${Math.round(wt)} `);
+    } else if (column.kind === 'polygon' && verts.length >= 3) {
+      this.drawPolygonSideLabel(column, verts);
+    } else if (column.kind === 'I-shape' && verts.length === 12) {
+      this.drawIShapeLabels(column, verts);
     }
 
     this.ctx.restore();
+  }
+
+  /**
+   * ADR-363 Phase 8 — polygon `N=k` annotation centred above the top vertex.
+   * `params.polygon.sides` falls back to the rendered vertex count when the
+   * override is absent (clamped already by `column-geometry`).
+   */
+  private drawPolygonSideLabel(
+    column: ColumnEntity,
+    verts: ReadonlyArray<{ x: number; y: number }>,
+  ): void {
+    const sides = column.params.polygon?.sides ?? verts.length;
+    const topIdx = pickTopVertexIndex(verts);
+    const top = verts[topIdx];
+    const s = this.worldToScreen({ x: top.x, y: top.y });
+    this.ctx.fillText(`N=${sides}`, s.x, s.y - 10);
+  }
+
+  /**
+   * ADR-363 Phase 8 — I-shape dimensions. Vertex 0 lives at (-b/2, -h/2) and
+   * vertex 6 at (+b/2, +h/2) for the canonical 12-vertex CCW outline emitted
+   * by `buildIShapeLocal()`. Flange width spans verts[0]↔verts[1]; section
+   * depth spans verts[1]↔verts[6] across the right flange-edge.
+   */
+  private drawIShapeLabels(
+    column: ColumnEntity,
+    verts: ReadonlyArray<{ x: number; y: number }>,
+  ): void {
+    this.drawDimLabel(verts[0], verts[1], `b=${Math.round(column.params.width)} `);
+    this.drawDimLabel(verts[1], verts[6], `h=${Math.round(column.params.depth)} `);
   }
 
   /**
@@ -346,4 +389,25 @@ export class ColumnRenderer extends BaseEntityRenderer {
     }
     this.ctx.closePath();
   }
+}
+
+/** Kinds whose highlighted state shows dimension annotations. shear-wall stays
+ *  unannotated — its rectangular outline is self-explanatory. */
+function hasVariantLabels(kind: ColumnKind): boolean {
+  return kind === 'L-shape' || kind === 'T-shape' || kind === 'polygon' || kind === 'I-shape';
+}
+
+/** Index of the vertex with the maximum world Y (top of polygon). */
+function pickTopVertexIndex(
+  verts: ReadonlyArray<{ x: number; y: number }>,
+): number {
+  let idx = 0;
+  let topY = verts[0].y;
+  for (let i = 1; i < verts.length; i++) {
+    if (verts[i].y > topY) {
+      topY = verts[i].y;
+      idx = i;
+    }
+  }
+  return idx;
 }
