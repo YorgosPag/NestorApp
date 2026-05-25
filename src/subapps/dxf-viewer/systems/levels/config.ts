@@ -5,6 +5,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
+import type { BimRenderSettings } from '../../config/bim-render-settings-types';
 
 /** 🏢 ADR-309 Phase 3: Context-aware floorplan type — set by wizard on import */
 export type FloorplanType = 'project' | 'building' | 'floor' | 'unit';
@@ -27,6 +28,12 @@ export interface Level {
   entityLabel?: string;
   /** 🏢 ADR-309 Phase 3: Project ID — set by wizard on import */
   projectId?: string;
+  /** ADR-375 Phase B.2: per-view BIM render settings (Revit ViewPlan equivalent). */
+  bimRenderSettings?: BimRenderSettings;
+  /** ADR-375 Phase B.3: FK → dxf_viewer_view_templates. When set, signals that
+   *  bimRenderSettings is a snapshot of the linked template; edits to the
+   *  template are fanned out to all levels with the same FK. */
+  appliedViewTemplateId?: string | null;
 }
 
 export interface FloorplanDoc {
