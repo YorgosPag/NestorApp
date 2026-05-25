@@ -16,6 +16,8 @@ import { DIMENSION_CONTEXTUAL_TAB, DIMENSION_CONTEXTUAL_TRIGGER } from '../ui/ri
 import { CONTEXTUAL_LINE_TOOL_TAB, LINE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-line-tool-tab';
 import { CONTEXTUAL_XLINE_MODE_TAB, XLINE_MODE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-xline-mode-tab';
 import { CONTEXTUAL_MULTI_SELECTION_TAB, MULTI_SELECTION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-multi-selection-tab';
+import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
+import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
 
 const BIM_KIND_TYPES: ReadonlySet<string> = new Set([
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair',
@@ -37,6 +39,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_LINE_TOOL_TAB,
   CONTEXTUAL_XLINE_MODE_TAB,
   CONTEXTUAL_MULTI_SELECTION_TAB,
+  ANIMATION_CONTEXTUAL_TAB,
 ] as const;
 
 type EntityLike = { readonly type: string; readonly params?: unknown };
@@ -60,7 +63,10 @@ export function useActiveContextualTrigger({
   currentScene: SceneModel | null;
   activeTool: string;
 }): string | null {
+  // ADR-366 §C.1.b — surface animation contextual tab when AnimationStore.toolActive flips.
+  const animationToolActive = useAnimationStore(selectAnimationToolActive);
   return React.useMemo<string | null>(() => {
+    if (animationToolActive) return ANIMATION_CONTEXTUAL_TRIGGER;
     // ADR-363 Phase 7.1: multi-selection of BIM entities → dedicated tab.
     if (selectedEntityIds && selectedEntityIds.length >= 2 && currentScene) {
       let bimCount = 0;
@@ -105,7 +111,7 @@ export function useActiveContextualTrigger({
       activeTool === 'ellipse'
     ) return LINE_TOOL_CONTEXTUAL_TRIGGER;
     return null;
-  }, [primarySelectedId, selectedEntityIds, currentScene, activeTool]);
+  }, [primarySelectedId, selectedEntityIds, currentScene, activeTool, animationToolActive]);
 }
 
 export function resolveContextualTrigger(entity: EntityLike): string | null {

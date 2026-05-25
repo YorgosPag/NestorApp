@@ -32,8 +32,16 @@ import { getStairGrips } from '../stairs/stair-grips';
 import { DEFAULT_CUT_PLANE_HEIGHT } from '../geometry/stairs/stair-geometry-shared';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
+// ADR-358 Phase 7c — per-structureType plan symbology lives in a dedicated
+// module so the per-style branches (monolithic / stringer-1side / central /
+// cantilever / suspended / glass / grating) stay testable in isolation and
+// this file stays under the 500-line SRP limit.
+import {
+  renderStringersForStructure,
+  renderTreadsForStructure,
+  type StairStyleContext,
+} from './stair-render-structure-style';
 
-const TREAD_FILL_ALPHA = 0.12;
 const WALKLINE_DASH: readonly [number, number] = [6, 4];
 const HANDRAIL_DASH: readonly [number, number] = [3, 3];
 const ARROW_HEAD_PX = 10;
@@ -93,8 +101,12 @@ export class StairRenderer extends BaseEntityRenderer {
 
     // Main pass — phase-appropriate style + full fill+stroke render.
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.drawTreads(geometry.treadsBelowCut);
-    this.drawStringers(geometry.stringers.inner, geometry.stringers.outer);
+    const scx: StairStyleContext = {
+      ctx: this.ctx,
+      worldToScreen: (p) => this.worldToScreen(p),
+    };
+    renderTreadsForStructure(scx, stair.params.structureType, geometry.treadsBelowCut);
+    renderStringersForStructure(scx, stair.params.structureType, geometry);
     this.drawHandrails(stair);
     this.drawWalkline(geometry.walkline);
     this.drawArrow(
@@ -203,42 +215,6 @@ export class StairRenderer extends BaseEntityRenderer {
     }
     this.ctx.closePath();
     this.ctx.stroke();
-  }
-
-  private drawTreads(
-    treads: ReadonlyArray<ReadonlyArray<Point3D>>,
-    options: { skipFill?: boolean } = {},
-  ): void {
-    if (treads.length === 0) return;
-    // strokeStyle is set upstream by `renderWithPhases` (hover glow / phase
-    // setupStyle SSoT) — DO NOT overwrite here, otherwise the yellow hover
-    // pass is lost. Only the stair-specific fill (translucent slate) stays
-    // locally because it is not part of the entity style pipeline.
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    if (!options.skipFill) {
-      this.ctx.fillStyle = `rgba(120, 144, 156, ${TREAD_FILL_ALPHA})`;
-    }
-
-    for (const tread of treads) {
-      if (tread.length < 3) continue;
-      this.ctx.beginPath();
-      const first = this.worldToScreen({ x: tread[0].x, y: tread[0].y });
-      this.ctx.moveTo(first.x, first.y);
-      for (let i = 1; i < tread.length; i++) {
-        const s = this.worldToScreen({ x: tread[i].x, y: tread[i].y });
-        this.ctx.lineTo(s.x, s.y);
-      }
-      this.ctx.closePath();
-      if (!options.skipFill) this.ctx.fill();
-      this.ctx.stroke();
-    }
-  }
-
-  private drawStringers(inner: ReadonlyArray<Point3D>, outer: ReadonlyArray<Point3D>): void {
-    // strokeStyle inherited from `renderWithPhases` (hover/selected SSoT).
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THICK;
-    this.drawPolyline3D(inner);
-    this.drawPolyline3D(outer);
   }
 
   private drawWalkline(walkline: ReadonlyArray<Point3D>): void {

@@ -62,20 +62,25 @@ const WINDER_COUNT_OPTIONS = [
   { value: '5', labelKey: '5', isLiteralLabel: true },
 ] as const;
 
+// ADR-358 Phase 7c — structureType + riserType options route through i18n.
+// Keys live under `ribbon.commands.stairEditor.structureType.*` /
+// `ribbon.commands.stairEditor.riserType.*` in `dxf-viewer-shell.json`
+// (el+en). Param `value` literals stay hyphenated (StairStructureType
+// union); i18n key suffixes are camelCase for JSON-friendliness.
 const STRUCTURE_TYPE_OPTIONS = [
-  { value: 'monolithic', labelKey: 'Monolithic', isLiteralLabel: true },
-  { value: 'stringer-1side', labelKey: 'Stringer 1-Side', isLiteralLabel: true },
-  { value: 'stringer-2side', labelKey: 'Stringer 2-Side', isLiteralLabel: true },
-  { value: 'central-stringer', labelKey: 'Central Stringer', isLiteralLabel: true },
-  { value: 'cantilever', labelKey: 'Cantilever', isLiteralLabel: true },
-  { value: 'suspended', labelKey: 'Suspended', isLiteralLabel: true },
-  { value: 'glass-tread', labelKey: 'Glass Tread', isLiteralLabel: true },
-  { value: 'steel-grating', labelKey: 'Steel Grating', isLiteralLabel: true },
+  { value: 'monolithic', labelKey: 'ribbon.commands.stairEditor.structureType.monolithic', isLiteralLabel: false },
+  { value: 'stringer-1side', labelKey: 'ribbon.commands.stairEditor.structureType.stringer1side', isLiteralLabel: false },
+  { value: 'stringer-2side', labelKey: 'ribbon.commands.stairEditor.structureType.stringer2side', isLiteralLabel: false },
+  { value: 'central-stringer', labelKey: 'ribbon.commands.stairEditor.structureType.centralStringer', isLiteralLabel: false },
+  { value: 'cantilever', labelKey: 'ribbon.commands.stairEditor.structureType.cantilever', isLiteralLabel: false },
+  { value: 'suspended', labelKey: 'ribbon.commands.stairEditor.structureType.suspended', isLiteralLabel: false },
+  { value: 'glass-tread', labelKey: 'ribbon.commands.stairEditor.structureType.glassTread', isLiteralLabel: false },
+  { value: 'steel-grating', labelKey: 'ribbon.commands.stairEditor.structureType.steelGrating', isLiteralLabel: false },
 ] as const;
 
 const RISER_TYPE_OPTIONS = [
-  { value: 'closed', labelKey: 'Closed', isLiteralLabel: true },
-  { value: 'open', labelKey: 'Open', isLiteralLabel: true },
+  { value: 'closed', labelKey: 'ribbon.commands.stairEditor.riserType.closed', isLiteralLabel: false },
+  { value: 'open', labelKey: 'ribbon.commands.stairEditor.riserType.open', isLiteralLabel: false },
 ] as const;
 
 // ADR-358 Phase 3g — NOK stair scope selector (Άρθρο 13 Κτιριοδομικού).
@@ -242,7 +247,7 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
               size: 'small',
               command: {
                 id: 'stair.structureType',
-                labelKey: 'ribbon.commands.stairEditor.structureType',
+                labelKey: 'ribbon.commands.stairEditor.structureType.section.title',
                 commandKey: STAIR_RIBBON_KEYS.stringParams.structureType,
                 comboboxWidthPx: 150,
                 options: STRUCTURE_TYPE_OPTIONS,
@@ -253,7 +258,7 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
               size: 'small',
               command: {
                 id: 'stair.riserType',
-                labelKey: 'ribbon.commands.stairEditor.riserType',
+                labelKey: 'ribbon.commands.stairEditor.riserType.section.title',
                 commandKey: STAIR_RIBBON_KEYS.stringParams.riserType,
                 comboboxWidthPx: 90,
                 options: RISER_TYPE_OPTIONS,

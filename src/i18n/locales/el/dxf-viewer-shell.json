@@ -961,8 +961,26 @@
         "pathPickPath": "Επιλογή Διαδρομής"
       },
       "stairEditor": {
-        "structureType": "Τύπος Δομής",
-        "riserType": "Ριχτή",
+        "structureType": {
+          "section": {
+            "title": "Τύπος Δομής"
+          },
+          "monolithic": "Συμπαγής",
+          "stringer1side": "Με μία Νευρώση",
+          "stringer2side": "Με δύο Νευρώσεις",
+          "centralStringer": "Με Κεντρική Νευρώση",
+          "cantilever": "Πρόβολος",
+          "suspended": "Κρεμαστή",
+          "glassTread": "Γυάλινα Πατήματα",
+          "steelGrating": "Μεταλλικό Πλέγμα"
+        },
+        "riserType": {
+          "section": {
+            "title": "Ριχτή"
+          },
+          "closed": "Κλειστή",
+          "open": "Ανοιχτή"
+        },
         "rise": "Ύψος Σκαλιού",
         "tread": "Πάτημα",
         "width": "Πλάτος",

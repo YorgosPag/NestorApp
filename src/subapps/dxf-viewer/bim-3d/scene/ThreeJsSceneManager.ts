@@ -58,6 +58,7 @@ import type { FocusEntityLabelData } from '../accessibility/FocusIndicator3D';
 import { computeFocusOrder, findFocusedEntityData } from '../accessibility/focus-order';
 import { applyLightPresetToScene, updateSunDirection } from '../lighting/apply-light-preset';
 import { checkReducedMotion, type ReducedMotionOverride } from '../accessibility/use-reduced-motion';
+import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
 
 const INITIAL_CAMERA_POSITION = new THREE.Vector3(15, 10, 15);
 const INITIAL_CAMERA_TARGET = new THREE.Vector3(0, 0, 0);
@@ -91,6 +92,8 @@ export class ThreeJsSceneManager {
   private readonly keyboardFocusManager: KeyboardFocusManagerApi;
   private readonly focusOutlineRenderer: FocusOutlineRenderer;
   private readonly focusUnsub: () => void;
+  /** ADR-366 §C.1.b — waypoint drag-handle sprites (visualization only για C.1.b). */
+  private readonly waypointDragHandleRenderer: WaypointDragHandleRenderer;
   private rafHandle: number | null = null;
   private disposed = false;
   private reducedMotionOverride: ReducedMotionOverride = 'auto';
@@ -169,6 +172,8 @@ export class ThreeJsSceneManager {
       getDxfBounds: () => this.dxfConverter.getBounds(),
       invalidatePathTracer: () => this.pathTracerRenderer.invalidateScene(),
     });
+    // ADR-366 §C.1.b — waypoint drag-handle sprites. Auto-subscribes σε AnimationStore.
+    this.waypointDragHandleRenderer = new WaypointDragHandleRenderer(this.scene);
     this.startLoop();
   }
 
@@ -463,6 +468,7 @@ export class ThreeJsSceneManager {
     this.disposed = true;
     this.envStoreUnsub();
     this.sectionController.dispose();
+    this.waypointDragHandleRenderer.dispose();
     const dom = this.renderer.domElement;
     if (this.rafHandle !== null) {
       cancelAnimationFrame(this.rafHandle);

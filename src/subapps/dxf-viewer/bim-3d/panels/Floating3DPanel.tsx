@@ -2,8 +2,12 @@
 
 /**
  * Floating3DPanel — left sidebar panel for 3D BIM viewport.
- * Tabs: Floors (B.3) | Lighting (Phase 5 stub) | Quality (Phase 5 stub).
- * ADR-366 Phase 4 Group B. Rendered inside BimViewport3D.
+ * Tabs: Floors (B.3) | Lighting (Phase 5 stub) | Quality (Phase 5 stub) |
+ *       Sections | Accessibility | Comments | Animation (ADR-366 §C.1.b).
+ * ADR-366 Phase 4 Group B + Phase 9 §C.1.b. Rendered inside BimViewport3D.
+ *
+ * Width: w-48 default; widens to w-72 when animation tab active (timeline
+ * fields need extra room — ADR-366 §C.1.b design risk resolution).
  */
 
 import { useState } from 'react';
@@ -14,10 +18,11 @@ import { Quality3DPanelTab } from './Quality3DPanelTab';
 import { Section3DPanelTab } from './Section3DPanelTab';
 import { Accessibility3DPanelTab } from './Accessibility3DPanelTab';
 import { CommentListPanel } from '../comments/CommentListPanel';
+import { TimelineEditor } from '../animation/TimelineEditor';
 
-type Tab = 'floors' | 'lighting' | 'quality' | 'sections' | 'accessibility' | 'comments';
+type Tab = 'floors' | 'lighting' | 'quality' | 'sections' | 'accessibility' | 'comments' | 'animation';
 
-const TABS: Tab[] = ['floors', 'lighting', 'quality', 'sections', 'accessibility', 'comments'];
+const TABS: Tab[] = ['floors', 'lighting', 'quality', 'sections', 'accessibility', 'comments', 'animation'];
 
 export function Floating3DPanel() {
   const { t } = useTranslation('bim3d');
@@ -25,9 +30,11 @@ export function Floating3DPanel() {
 
   const panelId = 'floating-3d-panel';
 
+  const widthClass = activeTab === 'animation' ? 'w-72' : 'w-48';
+
   return (
     <aside
-      className="absolute left-3 top-12 z-20 flex w-48 flex-col overflow-hidden rounded-lg border border-white/10 bg-black/50 shadow-xl backdrop-blur-sm"
+      className={`absolute left-3 top-12 z-20 flex ${widthClass} flex-col overflow-hidden rounded-lg border border-white/10 bg-black/50 shadow-xl backdrop-blur-sm`}
       aria-label={t('floatingPanel.ariaLabel')}
     >
       {/* Tab strip */}
@@ -65,6 +72,7 @@ export function Floating3DPanel() {
         {activeTab === 'sections' && <Section3DPanelTab />}
         {activeTab === 'accessibility' && <Accessibility3DPanelTab />}
         {activeTab === 'comments' && <CommentListPanel />}
+        {activeTab === 'animation' && <TimelineEditor />}
       </div>
     </aside>
   );

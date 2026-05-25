@@ -157,7 +157,8 @@
       "sections": "Section",
       "accessibility": "Accessibility",
       "dimensions3d": "Dimensions",
-      "comments": "Comments"
+      "comments": "Comments",
+      "animation": "Animation"
     },
     "buildings": {
       "label": "Building",
@@ -724,5 +725,66 @@
       "renderDone": "Render complete",
       "floorChanged": "Floor {floor}"
     }
+  },
+  "animation": {
+    "title": "Animation",
+    "panels": {
+      "tool": "Tool",
+      "waypoints": "Waypoints",
+      "persistence": "Save",
+      "export": "Export"
+    },
+    "toolbar": {
+      "turntable": "Turntable",
+      "deactivate": "Deactivate",
+      "addWaypoint": "Add waypoint",
+      "deleteWaypoint": "Delete",
+      "reverseTrack": "Reverse track",
+      "preview": "Preview",
+      "export": "Export",
+      "addAtCurrentCamera": "Add at current camera"
+    },
+    "timeline": {
+      "scrubberLabel": "Scrubber",
+      "emptyHint": "No track yet. Click \"Turntable\" or add waypoints."
+    },
+    "config": {
+      "durationSec": "Duration (sec)",
+      "fps": "FPS",
+      "axis": "Axis",
+      "direction": "Direction"
+    },
+    "axisOptions": {
+      "x": "X axis",
+      "y": "Y axis",
+      "z": "Z axis"
+    },
+    "directionOptions": {
+      "cw": "Clockwise",
+      "ccw": "Counter-clockwise"
+    },
+    "waypoint": {
+      "title": "Selected waypoint",
+      "position": "Position",
+      "target": "Target",
+      "fov": "FOV",
+      "easingToNext": "Easing to next"
+    },
+    "easing": {
+      "linear": "Linear",
+      "easeIn": "Ease in",
+      "easeOut": "Ease out",
+      "easeInOut": "Ease in/out",
+      "easeInQuart": "Ease in (quart)",
+      "easeOutQuart": "Ease out (quart)",
+      "smoothStep": "Smooth step",
+      "elastic": "Elastic"
+    },
+    "persistence": {
+      "save": "Save",
+      "load": "Load",
+      "share": "Share"
+    },
+    "exportDisabledTooltip": "Available in next phase (C.1.c)"
   }
 }

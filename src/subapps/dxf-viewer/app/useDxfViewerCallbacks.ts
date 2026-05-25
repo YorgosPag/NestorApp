@@ -25,12 +25,33 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { nowISO } from '@/lib/date-local';
 import { openDimTextOverride } from '../ui/panels/dimensions/DimTextOverrideStore';
 import { EventBus } from '../systems/events/EventBus';
+import { useAnimationStore } from '../bim-3d/animation/AnimationStore';
+import { useCameraTargetStore } from '../bim-3d/stores/CameraTargetStore';
+import { buildTurntablePath, type SceneBbox } from '../bim-3d/animation/core/TurntablePathBuilder';
+import { TURNTABLE_DEFAULTS } from '../bim-3d/animation/presets/animation-presets';
 
 /** Structural overlay entry shape used by callbacks */
 interface OverlayEntry {
   status?: Status;
   kind: OverlayKind;
   levelId?: string;
+}
+
+/**
+ * ADR-366 §C.1.b — synthesize a SceneBbox from the current camera state for
+ * the turntable preset. Until ThreeJsSceneManager exposes the real BIM bbox,
+ * we use a radius derived from camera→target distance (covers the framed area).
+ */
+function syntheticBboxFromCamera(): SceneBbox {
+  const cam = useCameraTargetStore.getState();
+  const dx = cam.position.x - cam.target.x;
+  const dy = cam.position.y - cam.target.y;
+  const dz = cam.position.z - cam.target.z;
+  const radius = Math.max(2, Math.sqrt(dx * dx + dy * dy + dz * dz) * 0.5);
+  return {
+    min: { x: cam.target.x - radius, y: cam.target.y - radius, z: cam.target.z - radius },
+    max: { x: cam.target.x + radius, y: cam.target.y + radius, z: cam.target.z + radius },
+  };
 }
 
 /** Params for useDxfViewerCallbacks */
@@ -164,6 +185,37 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     if (action === 'dim.text.override') {
       const entityId = params.selectedEntityIds[0];
       if (entityId) openDimTextOverride(entityId);
+      return;
+    }
+    // ADR-366 §C.1.b — Animation actions. Read/write AnimationStore + CameraTargetStore via getState().
+    if (action === 'animation.tool-toggle') {
+      const state = useAnimationStore.getState();
+      state.setToolActive(!state.toolActive);
+      return;
+    }
+    if (action === 'animation.turntable') {
+      const waypoints = buildTurntablePath(syntheticBboxFromCamera(), TURNTABLE_DEFAULTS);
+      useAnimationStore.getState().setWaypoints(waypoints);
+      return;
+    }
+    if (action === 'animation.add-waypoint') {
+      const cam = useCameraTargetStore.getState();
+      useAnimationStore.getState().addWaypoint({
+        position: { x: cam.position.x, y: cam.position.y, z: cam.position.z },
+        target: { x: cam.target.x, y: cam.target.y, z: cam.target.z },
+        fov: cam.fov > 0 ? cam.fov : 50,
+        easingToNext: 'linear',
+      });
+      return;
+    }
+    if (action === 'animation.delete-waypoint') {
+      const state = useAnimationStore.getState();
+      if (state.activeWaypointIndex !== null) state.removeWaypoint(state.activeWaypointIndex);
+      return;
+    }
+    if (action === 'animation.reverse') {
+      const state = useAnimationStore.getState();
+      state.setWaypoints([...state.waypoints].reverse());
       return;
     }
     // ADR-369 §Q8.3 — IFC4 export trigger. IfcExportHost subscribes to the

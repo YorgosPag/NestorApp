@@ -1,7 +1,7 @@
 # Pending Ratchet Work — Live Checklist
 
 **STATUS: ACTIVE**
-**Last updated:** 2026-05-24 (ADR-366 Phase 9 C.2 IMPLEMENTED — BIM Comments / Markup System, 25 files)
+**Last updated:** 2026-05-25 (ADR-366 Phase 9 C.1.a IMPLEMENTED — Animation Logic Foundation, 12 files + SSoT extensions)
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
 **Purpose:** Agent-facing live checklist. Se STATUS = ALL_DONE → salta il resto. Se STATUS = ACTIVE → leggi e ricorda a Giorgio.
 
@@ -162,6 +162,27 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 
 ---
 
+### 🎬 ADR-366 §C.1 ANIMATION SYSTEM — Sub-phases pending (~6-8h remaining — only C.1.c)
+
+**Status (2026-05-25)**: C.1 split σε 3 sub-phases. C.1.a Logic Foundation ✅ DONE. C.1.b UX/Timeline ✅ DONE. C.1.c Rendering/Queue pending.
+
+- ✅ **C.1.a Logic Foundation** — DONE 2026-05-25 (12 αρχεία: animation-types + AnimationStore Zustand SSoT + TurntablePathBuilder + WaypointPathBuilder + keyframe-interpolator + 8 easing presets registry + bim-animations.service Firestore CRUD + SSoT extensions: enterprise-id `anm_bim_`/`rnj_bim_`, COLLECTIONS.BIM_ANIMATIONS + SUBCOLLECTIONS.BIM_RENDER_JOBS, RBAC `bim_animations:animations:{C,R,U,D}` σε 4 roles + read σε viewer, AuditEntityType `'bim_animation'`, Firestore rules `/bim_animations/{id}` + subcoll `/render_jobs/{id}` + 5 test suites)
+
+- ✅ **C.1.b UX / Timeline** — DONE 2026-05-25 (10 αρχεία: TimelineEditor.tsx + TimelineWaypointForm.tsx + WaypointDragHandle.ts + contextual-animation-tab.ts + AnimationStore (+toolActive) + Floating3DPanel (+animation tab, w-48→w-72 conditional) + ribbon-contextual-config (+trigger) + ThreeJsSceneManager (+renderer lifecycle) + useDxfViewerCallbacks (+5 animation actions) + i18n el/en bim3d.animation.* ~50 keys × 2 locales). **Deviation**: toolActive lives σε AnimationStore (mirror BimDimensions3DStore SSoT), ΟΧΙ ViewMode3DStore όπως αρχικό brief. **Deferred (NOT blocker)**: drag interaction (raycaster + mouse handler), bezier 4-point editor (ADR-366 §C.1.Q4 «Προχωρημένα»), real scene-bbox για turntable (current synthetic από camera distance), unit tests TimelineEditor + WaypointDragHandle + ribbon trigger.
+
+- [ ] **C.1.c Rendering / Queue** (~6-8h)
+  - [ ] `MP4Exporter.ts` — WebCodecs `VideoEncoder` codec `avc1.4D401F` H.264 Main L3.1 + `mp4-muxer` (MIT) → Blob → Firebase Storage tenant-scoped path
+  - [ ] WebM/VP9 fallback για browsers without H.264 (Firefox<137)
+  - [ ] `RenderQueueStore.ts` — Zustand FIFO + concurrent limit 1 active + N queued
+  - [ ] `RenderQueuePanel.tsx` — Floating3DPanel "Renders" tab (visible όταν `jobs.length > 0`)
+  - [ ] Cancel mid-render με `lastSampleCount + lastWaypointIndex` checkpoint persistence
+  - [ ] Resume από checkpoint via `samplesContinueFrom` (Phase 6 PathTracerRenderer hook)
+  - [ ] `project_assets` integration με `type='bim-animation-render'` discriminator
+  - [ ] Notification keys `bim3d.animation.render.completed/failed` + i18n
+  - [ ] EntityAuditService inline calls για `bim_animation_rendered` action (αν δεν γίνει CDC trigger)
+
+---
+
 ### 📅 ADR-034 GANTT — Phase 4 pending items (construction tracking)
 
 **ADR:** `docs/centralized-systems/reference/adrs/ADR-034-gantt-chart-construction-tracking.md`
@@ -242,13 +263,15 @@ Phase 1 ✅ IMPLEMENTED 2026-05-24 (schema + AI enricher + tests + post-finalize
 
 **Copy-paste template for the agent:**
 
-> 📋 Pending ratchet tasks (ADR-299): **ADR-365 Tailwind Palette ✅ COMPLETE** — 0 violations / 0 files (2026-05-22). Zero-tolerance via CHECK 3.26 active. Remaining pending: Grip Types SSoT, ADR-3XX Auto-Infer Alignment, **ADR-370/371 duplicate numbering cleanup** (15min housekeeping, discovered via ADR-373 OQ8). (ADR-345 spellCheck ✅ DONE 2026-05-23, ADR-034 UC-017 ✅ DONE 2026-05-23)
+> 📋 Pending ratchet tasks (ADR-299): **ADR-365 Tailwind Palette ✅ COMPLETE** — 0 violations / 0 files (2026-05-22). Zero-tolerance via CHECK 3.26 active. Remaining pending: Grip Types SSoT, ADR-3XX Auto-Infer Alignment, ADR-370/371 duplicate numbering cleanup, **ADR-366 §C.1.c Rendering/Queue** (~6-8h) — C.1.a Logic Foundation ✅ DONE 2026-05-25, C.1.b UX/Timeline ✅ DONE 2026-05-25. (ADR-345 spellCheck ✅ DONE 2026-05-23, ADR-034 UC-017 ✅ DONE 2026-05-23)
 
 ---
 
 ## Changelog
 
 | Date       | Change |
+| 2026-05-25 | **ADR-366 §C.1.b Animation UX/Timeline DONE** — 10 αρχεία (4 new + 6 modified) + 100 i18n entries. New: TimelineEditor.tsx (~280 LOC vertical waypoint editor) + TimelineWaypointForm.tsx (~115 LOC properties form split για N.7.1) + WaypointDragHandle.ts (~165 LOC Three.js Sprite renderer mirror Dim3DGripsRenderer) + contextual-animation-tab.ts (~165 LOC declarative RibbonTab). Modified: AnimationStore (+toolActive + selectAnimationToolActive — SSoT deviation από brief: domain store ΟΧΙ ViewMode3DStore, mirror BimDimensions3DStore pattern), Floating3DPanel (+7th tab 'animation', conditional w-48→w-72 widen design risk resolution), ribbon-contextual-config (+ANIMATION trigger early-return), ThreeJsSceneManager (+WaypointDragHandleRenderer lifecycle), useDxfViewerCallbacks (+5 animation actions: tool-toggle/turntable/add-waypoint/delete-waypoint/reverse + syntheticBboxFromCamera helper), bim3d.json el/en (+50 keys × 2 locales pure Greek). Deferred (NOT blocker): drag interaction (raycaster + mouse handler), bezier 4-point editor, real scene-bbox, unit tests. C.1.b checklist removed. Pending: only C.1.c. |
+| 2026-05-25 | **ADR-366 §C.1.a Animation Logic Foundation DONE** — 12 αρχεία (7 new + 5 SSoT extensions) + 5 test suites. C.1 split σε 3 sub-phases (C.1.a / C.1.b / C.1.c) στο ADR §C.1 Implementation Phases. Pending entry για C.1.b (UX/Timeline ~7-9h) + C.1.c (Rendering/Queue ~6-8h) added. SSoT extensions: enterprise-id `anm_bim_`/`rnj_bim_`, COLLECTIONS.BIM_ANIMATIONS + SUBCOLLECTIONS.BIM_RENDER_JOBS, RBAC `bim_animations:animations:{C,R,U,D}` × 4 roles + read viewer, AuditEntityType `'bim_animation'`, Firestore rules block. |
 | 2026-05-24 | **Selection SSoT Cleanup DONE** — Removed dual-write pattern from `CanvasLayerStack.tsx`. `universalSelection` is now the ONLY write path for entity/overlay selection. `setSelectedEntityIds` removed from `entityState` type + CanvasSection prop. ADR-040 changelog updated. 3 files changed (CanvasLayerStack.tsx, canvas-layer-stack-types.ts, CanvasSection.tsx). |
 | 2026-05-22 | **🚨 ADR-365 green-707 TYPO INCIDENT — DOCUMENTATION INCONSISTENCY DISCOVERED.** Phases 3-8 migration mapping `green-*` → `text-green-707` / `bg-green-707` is a TYPO (intended `green-700`, the COLOR_BRIDGE canonical at `src/design-system/color-bridge.ts:142`). `green-707` is **not** a valid Tailwind shade (`SHADES = ['50','100',…,'700',…,'950']` in `scripts/check-tailwind-palette-ratchet.js:80`) and is **not** defined anywhere in `tailwind.config.ts`, `src/styles/`, or `globals.css`. Impact: **304 occurrences across 183 files** silently emit no CSS — Tailwind JIT scans source, finds no class definition, drops the utility. Visual result: success badges / form-validation labels / terminal logs / toggles render as default text color in those files. **Why baseline reads 0/0**: the ratchet regex looks for valid shades only; `green-707` bypasses it entirely. The "complete" status of ADR-365 is **only formally complete** — semantic intent is correct but emitted CSS is broken for green success states. **Pending fix** (next phase): global rename `green-707` → semantic token (`text-[hsl(var(--text-success))]` or equivalent) + remove "WCAG exception" entry from ADR-365 §2.1 + add invalid-shade detection to ratchet script (catch `green-\d+` not in `SHADES` list). Origin commit `1788cad9` (Phase 5). |
 | 2026-05-22 | **ADR-365 Phase 8 Final Closure — APPROVED.** 36 files fixed (ThemeProgressBar, ParkingGeneralTab, StorageGeneralTab, RecipientsList, OverlayListCard, PropertyGridCard, FloorPlanViewer, select-styles, TechnicalAlertConfigPanel, ProposalActionContent, EnterpriseMigrationPageContent, PropertyStatusDemoPageContent, ContactsTabContent, CompactToolbar/types, ThreadView, GenericPeriodSelector, PhotosTabBase, HeaderBar, AIQueryInput, ChequeDetailDialog, EmptyState, EntityFilesToolbar, DescriptionNotesCard, calendar, TemplateSelector, EnterprisePhotoUpload, base-tabs, PropertyStatusSelector, PageErrorState, CardIcon, AgreementListCard, LevelListCard, MaterialListCard, PurchaseOrderListCard, QuoteListCard, design-system.ts, text-utils.ts, sidebar-utils.ts, NotificationProvider, modal-layout.ts, UserTypeSelector, FloorPlanPreview, FloorPlanUploadModal, PolygonControls). Baseline: 36/36 → **0/0**. npm run tailwind-palette:baseline run. ADR-365 status: APPROVED. |

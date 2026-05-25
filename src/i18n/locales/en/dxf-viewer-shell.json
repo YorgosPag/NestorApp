@@ -961,8 +961,26 @@
         "pathPickPath": "Pick Path"
       },
       "stairEditor": {
-        "structureType": "Structure Type",
-        "riserType": "Riser",
+        "structureType": {
+          "section": {
+            "title": "Structure Type"
+          },
+          "monolithic": "Monolithic",
+          "stringer1side": "Single Stringer",
+          "stringer2side": "Double Stringer",
+          "centralStringer": "Central Stringer",
+          "cantilever": "Cantilever",
+          "suspended": "Suspended",
+          "glassTread": "Glass Tread",
+          "steelGrating": "Steel Grating"
+        },
+        "riserType": {
+          "section": {
+            "title": "Riser"
+          },
+          "closed": "Closed",
+          "open": "Open"
+        },
         "rise": "Rise",
         "tread": "Tread",
         "width": "Width",

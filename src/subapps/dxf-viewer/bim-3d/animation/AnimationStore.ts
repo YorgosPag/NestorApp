@@ -32,6 +32,8 @@ interface AnimationState extends AnimationConfig {
   readonly activeWaypointIndex: number | null;
   /** Last-loaded doc id (null = unsaved / fresh). */
   readonly loadedDocId: string | null;
+  /** ADR-366 §C.1.b — ribbon/panel/handles gate. Mirror BimDimensions3DStore.toolActive SSoT pattern. */
+  readonly toolActive: boolean;
 }
 
 interface AnimationActions {
@@ -50,6 +52,9 @@ interface AnimationActions {
 
   setActiveWaypointIndex(index: number | null): void;
 
+  /** ADR-366 §C.1.b — flip ribbon-contextual-tab + Floating3DPanel + 3D handles. */
+  setToolActive(active: boolean): void;
+
   loadFromDoc(doc: BimAnimationDoc): void;
   reset(): void;
 }
@@ -60,6 +65,7 @@ const initialState: AnimationState = {
   ...createDefaultAnimationConfig(),
   activeWaypointIndex: null,
   loadedDocId: null,
+  toolActive: false,
 };
 
 function clampIndex(idx: number, length: number): number {
@@ -165,6 +171,12 @@ export const useAnimationStore = create<AnimationStore>()(
               index === null ? null : clampIndex(index, s.waypoints.length);
           }),
 
+        setToolActive: (active) =>
+          set((s) => {
+            s.toolActive = active;
+            if (!active) s.activeWaypointIndex = null;
+          }),
+
         loadFromDoc: (doc) =>
           set((s) => {
             s.waypoints = doc.waypoints;
@@ -201,5 +213,7 @@ export const selectActiveWaypoint = (s: AnimationStore): Waypoint | null => {
   if (s.activeWaypointIndex === null) return null;
   return s.waypoints[s.activeWaypointIndex] ?? null;
 };
+
+export const selectAnimationToolActive = (s: AnimationStore): boolean => s.toolActive;
 
 export const TURNTABLE_PRESET_DEFAULTS = TURNTABLE_DEFAULTS;

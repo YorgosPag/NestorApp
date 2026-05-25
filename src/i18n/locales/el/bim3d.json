@@ -157,7 +157,8 @@
       "sections": "Τομή",
       "accessibility": "Προσβασιμότητα",
       "dimensions3d": "Διαστάσεις",
-      "comments": "Σχόλια"
+      "comments": "Σχόλια",
+      "animation": "Κίνηση"
     },
     "buildings": {
       "label": "Κτίριο",
@@ -724,5 +725,66 @@
       "renderDone": "Render ολοκληρώθηκε",
       "floorChanged": "Όροφος {floor}"
     }
+  },
+  "animation": {
+    "title": "Κινούμενη Εικόνα",
+    "panels": {
+      "tool": "Εργαλείο",
+      "waypoints": "Σημεία πορείας",
+      "persistence": "Αποθήκευση",
+      "export": "Εξαγωγή"
+    },
+    "toolbar": {
+      "turntable": "Περιστροφή",
+      "deactivate": "Απενεργοποίηση",
+      "addWaypoint": "Προσθήκη σημείου",
+      "deleteWaypoint": "Διαγραφή",
+      "reverseTrack": "Αντιστροφή πορείας",
+      "preview": "Προεπισκόπηση",
+      "export": "Εξαγωγή",
+      "addAtCurrentCamera": "Προσθήκη στην τρέχουσα κάμερα"
+    },
+    "timeline": {
+      "scrubberLabel": "Χρονοδιακόπτης",
+      "emptyHint": "Καμία πορεία ακόμη. Πάτα «Περιστροφή» ή πρόσθεσε σημεία."
+    },
+    "config": {
+      "durationSec": "Διάρκεια (δευτ)",
+      "fps": "Καρέ/δευτ",
+      "axis": "Άξονας",
+      "direction": "Φορά"
+    },
+    "axisOptions": {
+      "x": "Άξονας Χ",
+      "y": "Άξονας Ψ",
+      "z": "Άξονας Ζ"
+    },
+    "directionOptions": {
+      "cw": "Δεξιόστροφα",
+      "ccw": "Αριστερόστροφα"
+    },
+    "waypoint": {
+      "title": "Επιλεγμένο σημείο",
+      "position": "Θέση",
+      "target": "Στόχος",
+      "fov": "Γωνία θέασης",
+      "easingToNext": "Καμπύλη προς επόμενο"
+    },
+    "easing": {
+      "linear": "Γραμμική",
+      "easeIn": "Επιτάχυνση εισόδου",
+      "easeOut": "Επιβράδυνση εξόδου",
+      "easeInOut": "Επιτάχυνση και επιβράδυνση",
+      "easeInQuart": "Έντονη επιτάχυνση εισόδου",
+      "easeOutQuart": "Έντονη επιβράδυνση εξόδου",
+      "smoothStep": "Ομαλό βήμα",
+      "elastic": "Ελαστική"
+    },
+    "persistence": {
+      "save": "Αποθήκευση",
+      "load": "Φόρτωση",
+      "share": "Διαμοιρασμός"
+    },
+    "exportDisabledTooltip": "Διαθέσιμη στην επόμενη φάση (C.1.c)"
   }
 }
