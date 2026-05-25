@@ -198,9 +198,10 @@ function buildGammaFlight1(
     const along = tread * (i + 1);
     const cx = basePoint.x + u.x * along - v.x * halfW;
     const cy = basePoint.y + u.y * along - v.y * halfW;
+    // ADR-370 Phase 5.3 — diagonal Segment3D (see StairGeometryService.buildStraightRisers).
     risers.push({
       start: point(cx, cy, basePoint.z + rise * i),
-      end: point(cx, cy, basePoint.z + rise * (i + 1)),
+      end: point(cx + v.x * width, cy + v.y * width, basePoint.z + rise * (i + 1)),
     });
   }
   return { treads, risers };
@@ -270,9 +271,11 @@ function buildGammaIntermediateFlight(
     const along = (i + 1) * tread;
     const cx = originXY.x + uAlong.x * along;
     const cy = originXY.y + uAlong.y * along;
+    // ADR-370 Phase 5.3 — diagonal Segment3D. Width axis = vWidth, origin on
+    // one width edge, opposite edge at +vWidth·width.
     risers.push({
       start: point(cx, cy, zFirstTread + rise * i),
-      end: point(cx, cy, zFirstTread + rise * (i + 1)),
+      end: point(cx + vWidth.x * width, cy + vWidth.y * width, zFirstTread + rise * (i + 1)),
     });
   }
   return { treads, risers };

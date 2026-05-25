@@ -123,6 +123,11 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "bim_comments:comments:delete",
       "bim_comments:comments:assign",
       "bim_comments:comments:archive",
+      // BIM Animations (ADR-366 Phase 9 / C.1.a)
+      "bim_animations:animations:create",
+      "bim_animations:animations:read",
+      "bim_animations:animations:update",
+      "bim_animations:animations:delete",
     ],
     level: 1,
     isProjectRole: false,
@@ -201,6 +206,11 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "bim_comments:comments:delete",
       "bim_comments:comments:assign",
       "bim_comments:comments:archive",
+      // BIM Animations (ADR-366 Phase 9 / C.1.a)
+      "bim_animations:animations:create",
+      "bim_animations:animations:read",
+      "bim_animations:animations:update",
+      "bim_animations:animations:delete",
     ],
     level: 2,
     isProjectRole: true,
@@ -232,6 +242,11 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "bim_comments:comments:delete",
       "bim_comments:comments:assign",
       "bim_comments:comments:archive",
+      // BIM Animations (ADR-366 Phase 9 / C.1.a)
+      "bim_animations:animations:create",
+      "bim_animations:animations:read",
+      "bim_animations:animations:update",
+      "bim_animations:animations:delete",
     ],
     level: 3,
     isProjectRole: true,
@@ -264,6 +279,11 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "bim_comments:comments:delete",
       "bim_comments:comments:assign",
       "bim_comments:comments:archive",
+      // BIM Animations (ADR-366 Phase 9 / C.1.a)
+      "bim_animations:animations:create",
+      "bim_animations:animations:read",
+      "bim_animations:animations:update",
+      "bim_animations:animations:delete",
     ],
     level: 3,
     isProjectRole: true,
@@ -363,6 +383,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "reports:reports:view",
       // BIM Comments (ADR-366 Phase 9 / C.2) — read only
       "bim_comments:comments:read",
+      // BIM Animations (ADR-366 Phase 9 / C.1.a) — read only
+      "bim_animations:animations:read",
     ],
     level: 6,
     isProjectRole: true,

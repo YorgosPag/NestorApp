@@ -205,9 +205,10 @@ export function buildWinderFlight1(
     const along = tread * (i + 1);
     const cx = basePoint.x + u1.x * along - v1.x * halfW;
     const cy = basePoint.y + u1.y * along - v1.y * halfW;
+    // ADR-370 Phase 5.3 — diagonal Segment3D (see StairGeometryService.buildStraightRisers).
     risers.push({
       start: point(cx, cy, basePoint.z + rise * i),
-      end: point(cx, cy, basePoint.z + rise * (i + 1)),
+      end: point(cx + v1.x * width, cy + v1.y * width, basePoint.z + rise * (i + 1)),
     });
   }
   return { treads, risers };
@@ -266,9 +267,11 @@ export function buildWinderFlight2(
     const along = (i + 1) * tread;
     const cx = pivotXY.x + u2.x * along;
     const cy = pivotXY.y + u2.y * along;
+    // ADR-370 Phase 5.3 — diagonal Segment3D. Flight 2 width axis = widthAxis
+    // (trailing winder boundary), pivotXY is the near edge, far edge at +widthAxis·width.
     risers.push({
       start: point(cx, cy, basePoint.z + rise * (n1 + winderCount + i)),
-      end: point(cx, cy, basePoint.z + rise * (n1 + winderCount + i + 1)),
+      end: point(cx + widthAxis.x * width, cy + widthAxis.y * width, basePoint.z + rise * (n1 + winderCount + i + 1)),
     });
   }
   return { treads, risers };

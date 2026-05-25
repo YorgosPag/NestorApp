@@ -176,6 +176,12 @@ export const PERMISSIONS = {
   "bim_comments:comments:assign": true,
   "bim_comments:comments:archive": true,
 
+  // BIM Animations (ADR-366 Phase 9 / C.1.a) — camera animation configs + render jobs
+  "bim_animations:animations:create": true,
+  "bim_animations:animations:read": true,
+  "bim_animations:animations:update": true,
+  "bim_animations:animations:delete": true,
+
   // BIM Performance Telemetry (ADR-366 §C.7.Q3) — super-admin read-only
   "bim_performance_telemetry:telemetry:read": true,
 

@@ -24,6 +24,22 @@ import type { BimEntity, BimLock } from './bim-base';
 export type Polygon3D = readonly Point3D[];
 export type Polyline3D = readonly Point3D[];
 
+/**
+ * Generic 3D segment (start → end).
+ *
+ * For `StairGeometry.risers` specifically, the convention is DIAGONAL
+ * (ADR-370 Phase 5.3, 2026-05-25):
+ *   - `start` = corner A on one width edge @ z = zLow (bottom of riser)
+ *   - `end`   = OPPOSITE corner B on the other width edge @ z = zHigh (top)
+ *
+ * Diagonal encoding lets one segment carry midpoint, width axis, AND width
+ * magnitude — no extra params context needed downstream. Replaces the legacy
+ * "vertical line at one edge" convention (start.xy === end.xy) which silently
+ * broke 3D rendering: BoxGeometry rotation was unknown and the mesh was
+ * positioned at a corner instead of the midpoint.
+ *
+ * `Segment3D` for the `cutLine` field remains a plain 3D segment.
+ */
 export interface Segment3D {
   readonly start: Point3D;
   readonly end: Point3D;

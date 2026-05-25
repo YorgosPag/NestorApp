@@ -137,13 +137,16 @@ function buildSpiralRisers(
   grid: AngularGrid,
   outerRadius: number,
 ): readonly Segment3D[] {
+  // ADR-370 Phase 5.3 — diagonal Segment3D (see StairGeometryService.buildStraightRisers).
+  // Spiral width axis is RADIAL: start at apex (innerRadius = 0), end at outer
+  // edge of the angular boundary θ_{i+1}.
   const risers: Segment3D[] = [];
   for (let i = 0; i < params.stepCount - 1; i++) {
     const theta = (i + 1) * grid.angleStep;
     const zLow = variant.centerPoint.z + grid.riseStep * i;
     const zHigh = variant.centerPoint.z + grid.riseStep * (i + 1);
     risers.push({
-      start: radialPoint(variant.centerPoint, outerRadius, theta, zLow),
+      start: point(variant.centerPoint.x, variant.centerPoint.y, zLow),
       end: radialPoint(variant.centerPoint, outerRadius, theta, zHigh),
     });
   }

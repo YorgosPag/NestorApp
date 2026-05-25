@@ -141,6 +141,8 @@ function buildSketchRisers(
   walkline: readonly Point3D[],
   width: number,
 ): readonly Segment3D[] {
+  // ADR-370 Phase 5.3 — diagonal Segment3D (see StairGeometryService.buildStraightRisers).
+  // Width axis = n (chord-perpendicular): start at −halfW edge, end at +halfW edge.
   const halfW = width * 0.5;
   const stepCount = walkline.length - 1;
   const risers: Segment3D[] = [];
@@ -148,9 +150,11 @@ function buildSketchRisers(
     const n = perp(chordTangent(walkline[i + 1], walkline[i + 2]));
     const ix = walkline[i + 1].x - halfW * n.x;
     const iy = walkline[i + 1].y - halfW * n.y;
+    const ox = walkline[i + 1].x + halfW * n.x;
+    const oy = walkline[i + 1].y + halfW * n.y;
     risers.push({
       start: point(ix, iy, walkline[i].z),
-      end: point(ix, iy, walkline[i + 1].z),
+      end: point(ox, oy, walkline[i + 1].z),
     });
   }
   return risers;

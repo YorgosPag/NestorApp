@@ -3979,6 +3979,22 @@
       ]
     },
     {
+      "collectionGroup": "bim_animations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "projectId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bim_animations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "tasks",
       "queryScope": "COLLECTION",
       "fields": [

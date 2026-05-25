@@ -109,14 +109,21 @@ describe('StairGeometryService — straight flight', () => {
     }
   });
 
-  it('Test 3: emits stepCount-1 vertical risers of length rise', () => {
+  it('Test 3: emits stepCount-1 diagonal risers (xy = width, Δz = rise)', () => {
+    // ADR-370 Phase 5.3 — Segment3D for risers uses diagonal encoding:
+    // start = corner A on one width edge @zLow, end = OPPOSITE corner B @zHigh.
+    // For direction=0 stair: v=(0,1), so start.y = -halfW, end.y = +halfW.
     const params = makeStraightParams();
     const g = computeStairGeometry(params);
     expect(g.risers).toHaveLength(9);
     for (const r of g.risers) {
-      expect(Math.abs(r.start.x - r.end.x)).toBeLessThan(COORD_TOL);
-      expect(Math.abs(r.start.y - r.end.y)).toBeLessThan(COORD_TOL);
+      // xy diagonal spans full width (start and end on opposite width edges).
+      expect(xyDistance(r.start, r.end)).toBeCloseTo(1000, 6);
+      // Vertical span matches rise.
       expect(Math.abs(Math.abs(r.end.z - r.start.z) - 175)).toBeLessThan(Z_TOL);
+      // Midpoint stays on the flight centerline (y = 0 for direction=0 basePoint=0).
+      expect(Math.abs((r.start.x + r.end.x) * 0.5 - r.start.x)).toBeLessThan(COORD_TOL);
+      expect(Math.abs((r.start.y + r.end.y) * 0.5)).toBeLessThan(COORD_TOL);
     }
   });
 

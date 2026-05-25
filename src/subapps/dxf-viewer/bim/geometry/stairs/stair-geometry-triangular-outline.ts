@@ -171,6 +171,8 @@ function buildOutlineRisers(
   params: Readonly<StairParams>,
   layout: OutlineLayout,
 ): readonly Segment3D[] {
+  // ADR-370 Phase 5.3 — diagonal Segment3D (see StairGeometryService.buildStraightRisers).
+  // Width axis = slice direction (from corner a on Va→Vc edge to corner b on Vb→Vc edge).
   const { stepCount, rise, basePoint } = params;
   const risers: Segment3D[] = [];
   for (let i = 0; i < stepCount - 1; i++) {
@@ -180,7 +182,7 @@ function buildOutlineRisers(
     const zHigh = basePoint.z + rise * (i + 1);
     risers.push({
       start: point(slice.a.x, slice.a.y, zLow),
-      end: point(slice.a.x, slice.a.y, zHigh),
+      end: point(slice.b.x, slice.b.y, zHigh),
     });
   }
   return risers;

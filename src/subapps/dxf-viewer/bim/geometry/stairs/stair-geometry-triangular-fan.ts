@@ -155,13 +155,16 @@ function buildFanRisers(
   grid: FanGrid,
   outerRadius: number,
 ): readonly Segment3D[] {
+  // ADR-370 Phase 5.3 — diagonal Segment3D (see StairGeometryService.buildStraightRisers).
+  // Fan width axis is RADIAL: start at apex (innerRadius = 0), end at outer
+  // edge of the angular boundary θ_{i+1}.
   const risers: Segment3D[] = [];
   for (let i = 0; i < params.stepCount - 1; i++) {
     const theta = (i + 1) * grid.angleStep;
     const zLow = variant.apexPoint.z + grid.riseStep * i;
     const zHigh = variant.apexPoint.z + grid.riseStep * (i + 1);
     risers.push({
-      start: radialPoint(variant.apexPoint, outerRadius, theta, zLow),
+      start: point(variant.apexPoint.x, variant.apexPoint.y, zLow),
       end: radialPoint(variant.apexPoint, outerRadius, theta, zHigh),
     });
   }

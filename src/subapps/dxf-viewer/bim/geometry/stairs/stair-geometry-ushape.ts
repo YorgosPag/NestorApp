@@ -153,9 +153,11 @@ function buildUShapeFlight1(
     const along = tread * (i + 1);
     const cx = basePoint.x + u.x * along - v.x * halfW;
     const cy = basePoint.y + u.y * along - v.y * halfW;
+    // ADR-370 Phase 5.3 — diagonal Segment3D (see StairGeometryService.buildStraightRisers).
+    // Flight 1 width axis = v, near edge at cx,cy (cy already − v·halfW), far edge at +v·width.
     risers.push({
       start: point(cx, cy, basePoint.z + rise * i),
-      end: point(cx, cy, basePoint.z + rise * (i + 1)),
+      end: point(cx + v.x * width, cy + v.y * width, basePoint.z + rise * (i + 1)),
     });
   }
   return { treads, risers };
@@ -233,9 +235,11 @@ function buildUShapeFlight2(
     const along = (i + 1) * tread;
     const cx = innerEdge.x + u2.x * along;
     const cy = innerEdge.y + u2.y * along;
+    // ADR-370 Phase 5.3 — diagonal Segment3D. Flight 2 width axis = vOut,
+    // innerEdge is the near width edge, far edge at +vOut·width.
     risers.push({
       start: point(cx, cy, basePoint.z + rise * (n1 + 1 + i)),
-      end: point(cx, cy, basePoint.z + rise * (n1 + 2 + i)),
+      end: point(cx + vOut.x * width, cy + vOut.y * width, basePoint.z + rise * (n1 + 2 + i)),
     });
   }
   return { treads, risers };

@@ -38,7 +38,8 @@ export type AuditEntityType =
   | 'beam'
   | 'performance_diagnostic'
   | 'performance_telemetry'
-  | 'bim_dimension_3d';
+  | 'bim_dimension_3d'
+  | 'bim_animation';
 
 /** Actions that can be recorded in the audit trail */
 export type AuditAction =

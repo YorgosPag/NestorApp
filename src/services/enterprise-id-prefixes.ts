@@ -270,6 +270,10 @@ export const ENTERPRISE_ID_PREFIXES = {
   // DXF 3D BIM Viewer — Anonymous Telemetry (ADR-366 §C.7.Q3)
   PERFORMANCE_TELEMETRY: 'telm_bim', // bim_performance_telemetry — GDPR-anonymized samples (top-level, no companyId, 30-day TTL)
 
+  // DXF 3D BIM Viewer — Animations (ADR-366 Phase 9 / C.1.a)
+  BIM_ANIMATION: 'anm_bim',       // bim_animations collection — turntable + waypoint camera animations
+  BIM_RENDER_JOB: 'rnj_bim',      // bim_animations/{id}/render_jobs — render job FIFO queue (resumable, 30-day TTL post-complete)
+
   // Optimistic & Temporary
   OPTIMISTIC: 'opt',
   TEMP: 'tmp',

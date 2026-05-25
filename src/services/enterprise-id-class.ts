@@ -326,6 +326,10 @@ export class EnterpriseIdService {
   // DXF 3D BIM Viewer — Anonymous Telemetry (ADR-366 §C.7.Q3)
   generateBimTelemetryId(): string { return this.generateId(P.PERFORMANCE_TELEMETRY).id; }
 
+  // DXF 3D BIM Viewer — Animations (ADR-366 Phase 9 / C.1.a)
+  generateBimAnimationId(): string { return this.generateId(P.BIM_ANIMATION).id; }
+  generateBimRenderJobId(): string { return this.generateId(P.BIM_RENDER_JOB).id; }
+
   // ISO 19650 Cost Log (ADR-373 P2.5)
   generateIso19650CostLogId(): string { return this.generateId(P.ISO19650_COST_LOG).id; }
 

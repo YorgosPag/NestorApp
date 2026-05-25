@@ -133,9 +133,10 @@ function buildVShapeArm(
     const along = tread * (i + 1);
     const cx = basePoint.x + u.x * along;
     const cy = basePoint.y + u.y * along;
+    // ADR-370 Phase 5.3 — diagonal Segment3D (see StairGeometryService.buildStraightRisers).
     risers.push({
       start: point(cx - v.x * halfW, cy - v.y * halfW, basePoint.z + rise * i),
-      end: point(cx - v.x * halfW, cy - v.y * halfW, basePoint.z + rise * (i + 1)),
+      end: point(cx + v.x * halfW, cy + v.y * halfW, basePoint.z + rise * (i + 1)),
     });
   }
   return { treads, risers };

@@ -1189,6 +1189,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'performance_diagnostics',    // lines 4653-4675 — public (unauthenticated) write for performance telemetry; full matrix later
   // — BIM 3D Anonymous Telemetry (ADR-366 §C.7.Q3, 2026-05-24) —
   'bim_performance_telemetry',  // super-admin-only read + deny-all-client writes (server-only Admin SDK via /api/telemetry/bim-performance); full matrix later
+  // — BIM 3D Animations (ADR-366 C.1, 2026-05-25) —
+  'bim_animations',             // lines 3926-4034 — tenant-scoped CRUD; full matrix later
 ] as const;
 
 // ---------------------------------------------------------------------------

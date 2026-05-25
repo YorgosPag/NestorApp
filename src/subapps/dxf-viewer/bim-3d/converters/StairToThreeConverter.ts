@@ -106,12 +106,11 @@ function buildRiserMeshes(
 ): THREE.Mesh[] {
   if (stair.params.riserType !== 'closed') return [];
   const out: THREE.Mesh[] = [];
-  const widthM = stair.params.width * sceneToM;
   const riseM = stair.params.rise * sceneToM;
   const thicknessM = DEFAULT_RISER_THICKNESS_MM * MM_TO_M;
   const mat = resolveStairMaterial(stair, 'stair-riser');
   for (const seg of stair.geometry.risers) {
-    const mesh = buildRiserBox(seg, sceneToM, widthM, riseM, thicknessM, mat, baseY);
+    const mesh = buildRiserBox(seg, sceneToM, riseM, thicknessM, mat, baseY);
     if (mesh) out.push(tagMesh(mesh, stair, 'riser', levelId));
   }
   return out;
@@ -120,21 +119,34 @@ function buildRiserMeshes(
 function buildRiserBox(
   seg: Segment3D,
   sceneToM: number,
-  widthM: number,
   riseM: number,
   thicknessM: number,
   mat: THREE.MeshStandardMaterial,
   baseY: number,
 ): THREE.Mesh | null {
-  // Riser segment is vertical (start.xy === end.xy). Build a thin box at this xy.
-  // V1: axis-aligned box (orientation per stair direction = Phase 5.1 enhancement).
+  // ADR-370 Phase 5.3 (2026-05-25) — riser Segment3D uses DIAGONAL encoding:
+  // start = corner A @zLow on one width edge, end = OPPOSITE corner B @zHigh
+  // on the other width edge. The xy diagonal yields midpoint, width axis, and
+  // width magnitude — no need to consult `stair.params.direction/width`.
+  const dxScene = seg.end.x - seg.start.x;
+  const dyScene = seg.end.y - seg.start.y;
+  const widthScene = Math.hypot(dxScene, dyScene);
+  if (widthScene < 1e-9) return null; // degenerate (zero-width riser)
+  const widthM = widthScene * sceneToM;
+  const midXScene = (seg.start.x + seg.end.x) * 0.5;
+  const midYScene = (seg.start.y + seg.end.y) * 0.5;
   const geo = new THREE.BoxGeometry(thicknessM, riseM, widthM);
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(
-    seg.start.x * sceneToM,
+    midXScene * sceneToM,
     baseY + (seg.start.z + seg.end.z) * 0.5 * sceneToM,
-    -seg.start.y * sceneToM, // DXF Y → world -Z
+    -midYScene * sceneToM, // DXF Y → world -Z
   );
+  // BoxGeometry width axis = local +Z. Three.js Y-rotation by θ maps (0,0,1) →
+  // (sin θ, 0, cos θ). Target world XZ direction = (dxScene, -dyScene)/widthScene
+  // (DXF Y → world -Z). Solve: sin θ = dxScene/W, cos θ = -dyScene/W
+  // ⇒ θ = atan2(dxScene, -dyScene).
+  mesh.rotation.y = Math.atan2(dxScene, -dyScene);
   return mesh;
 }
 

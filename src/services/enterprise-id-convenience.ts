@@ -251,6 +251,10 @@ export const generateBimCommentReplyId = () => enterpriseIdService.generateBimCo
 // DXF 3D BIM Viewer — Anonymous Telemetry (ADR-366 §C.7.Q3)
 export const generateBimTelemetryId = () => enterpriseIdService.generateBimTelemetryId();
 
+// DXF 3D BIM Viewer — Animations (ADR-366 Phase 9 / C.1.a)
+export const generateBimAnimationId = () => enterpriseIdService.generateBimAnimationId();
+export const generateBimRenderJobId = () => enterpriseIdService.generateBimRenderJobId();
+
 // ISO 19650 Cost Log (ADR-373 P2.5)
 export const generateIso19650CostLogId = () => enterpriseIdService.generateIso19650CostLogId();
 

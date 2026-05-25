@@ -135,6 +135,8 @@ function buildEllipticalRisers(
   width: number,
   sign: 1 | -1,
 ): readonly Segment3D[] {
+  // ADR-370 Phase 5.3 — diagonal Segment3D (see StairGeometryService.buildStraightRisers).
+  // Width axis = nNext (chord-perpendicular): start at inner edge, end at outer edge.
   const halfW = width * 0.5;
   const stepCount = walkline.length - 1;
   const risers: Segment3D[] = [];
@@ -144,9 +146,11 @@ function buildEllipticalRisers(
     const innerSign = sign === 1 ? -1 : 1;
     const ix = walkline[i + 1].x + innerSign * halfW * nNext.x;
     const iy = walkline[i + 1].y + innerSign * halfW * nNext.y;
+    const ox = walkline[i + 1].x - innerSign * halfW * nNext.x;
+    const oy = walkline[i + 1].y - innerSign * halfW * nNext.y;
     risers.push({
       start: point(ix, iy, walkline[i].z),
-      end: point(ix, iy, walkline[i + 1].z),
+      end: point(ox, oy, walkline[i + 1].z),
     });
   }
   return risers;

@@ -178,6 +178,13 @@ function buildStraightRisers(
   width: number,
   stepCount: number,
 ): readonly Segment3D[] {
+  // ADR-370 Phase 5.3 (2026-05-25) — diagonal Segment3D encoding for risers:
+  // start = corner A @zLow on one width edge, end = OPPOSITE corner B @zHigh on
+  // the other width edge. The xy diagonal carries midpoint, width axis, and
+  // width magnitude in one segment — letting the 3D converter orient + size
+  // the riser box without consulting `params.direction` or `params.width`.
+  // Replaces the legacy "vertical line at one edge" convention that broke 3D
+  // rendering for direction ≠ 0 and offset the riser by halfW even at 0°.
   const v = perp(u);
   const halfW = width * 0.5;
   const out: Segment3D[] = [];
@@ -189,7 +196,7 @@ function buildStraightRisers(
     const zHigh = basePoint.z + rise * (i + 1);
     out.push({
       start: point(cx - v.x * halfW, cy - v.y * halfW, zLow),
-      end: point(cx - v.x * halfW, cy - v.y * halfW, zHigh),
+      end: point(cx + v.x * halfW, cy + v.y * halfW, zHigh),
     });
   }
   return out;

@@ -3918,6 +3918,122 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🎬 BIM_ANIMATIONS COLLECTION - ADR-366 Phase 9 / C.1.a
+    // =========================================================================
+    // Camera animation configs per project (turntable + waypoint flythrough).
+    // Company-scoped via companyId. Render jobs live in subcollection:
+    // bim_animations/{id}/render_jobs/{rnj_bim_*} με 30-day TTL post-completion.
+    match /bim_animations/{animationId} {
+
+      // 📖 READ: Tenant-scoped — only users from animation's company
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
+
+      // ✍️ CREATE: companyId must match user's claim, required fields present
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.keys().hasAll([
+                         'id', 'projectId', 'companyId', 'name',
+                         'durationSec', 'fps', 'axis', 'direction',
+                         'waypoints', 'codec', 'splitTracks',
+                         'createdBy', 'createdAt', 'updatedAt'
+                       ])
+                    && request.resource.data.id is string
+                    && request.resource.data.projectId is string
+                    && request.resource.data.companyId is string
+                    && request.resource.data.name is string
+                    && request.resource.data.durationSec is number
+                    && request.resource.data.durationSec >= 2
+                    && request.resource.data.durationSec <= 60
+                    && request.resource.data.fps in [24, 30, 60]
+                    && request.resource.data.axis in ['x', 'y', 'z']
+                    && request.resource.data.direction in ['cw', 'ccw']
+                    && request.resource.data.codec in ['h264', 'vp9']
+                    && request.resource.data.splitTracks is bool
+                    && request.resource.data.waypoints is list
+                    && request.resource.data.createdBy == request.auth.uid
+                    && (
+                         isSuperAdminOnly()
+                         || request.resource.data.companyId == getUserCompanyId()
+                       );
+
+      // 📝 UPDATE: companyId + projectId + id + createdBy immutable, tenant-locked
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         isSuperAdminOnly()
+                         || belongsToCompany(resource.data.companyId)
+                       )
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.projectId == resource.data.projectId
+                    && request.resource.data.id == resource.data.id
+                    && request.resource.data.createdBy == resource.data.createdBy;
+
+      // 🗑️ DELETE: tenant-locked (creator or company admin)
+      allow delete: if isAuthenticated()
+                    && resource != null
+                    && (
+                         isSuperAdminOnly()
+                         || belongsToCompany(resource.data.companyId)
+                       );
+
+      // 🎞️ RENDER JOBS subcollection — FIFO queue with checkpoint/resume (rnj_bim_* IDs)
+      // 30-day TTL post-completion via Cloud Function (deferred C.1.c implementation)
+      match /render_jobs/{jobId} {
+
+        // 📖 READ: same tenant as parent animation
+        allow read: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (get(/databases/$(database)/documents/bim_animations/$(animationId)).data.companyId
+                             == getUserCompanyId())
+                       );
+
+        // ✍️ CREATE: authenticated + matches parent company + required fields
+        allow create: if isAuthenticated()
+                      && resource == null
+                      && request.resource.data.keys().hasAll([
+                           'id', 'animationId', 'companyId', 'status',
+                           'progress', 'createdAt', 'updatedAt'
+                         ])
+                      && request.resource.data.animationId == animationId
+                      && request.resource.data.status in ['queued', 'rendering', 'done', 'failed', 'cancelled', 'cancelled-resumable']
+                      && request.resource.data.progress is number
+                      && request.resource.data.progress >= 0
+                      && request.resource.data.progress <= 100
+                      && (
+                           isSuperAdminOnly()
+                           || request.resource.data.companyId == getUserCompanyId()
+                         );
+
+        // 📝 UPDATE: status/progress/checkpoint mutable, ownership immutable
+        allow update: if isAuthenticated()
+                      && resource != null
+                      && (
+                           isSuperAdminOnly()
+                           || (get(/databases/$(database)/documents/bim_animations/$(animationId)).data.companyId
+                               == getUserCompanyId())
+                         )
+                      && request.resource.data.id == resource.data.id
+                      && request.resource.data.animationId == resource.data.animationId
+                      && request.resource.data.companyId == resource.data.companyId;
+
+        // 🗑️ DELETE: tenant-scoped
+        allow delete: if isAuthenticated()
+                      && resource != null
+                      && (
+                           isSuperAdminOnly()
+                           || (get(/databases/$(database)/documents/bim_animations/$(animationId)).data.companyId
+                               == getUserCompanyId())
+                         );
+      }
+    }
+
+    // =========================================================================
     // 🪣 ISO 19650 ENRICHMENT SLOTS — ADR-373 P2.4
     // Distributed token bucket (activeSlots, updatedAt). Doc ID = companyId.
     // Managed exclusively via Admin SDK — no client reads or writes permitted.

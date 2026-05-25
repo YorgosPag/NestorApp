@@ -94,6 +94,7 @@ export {
   generateBim3DPrefId, generateBim3DDimensionId,
   generateBimCommentId, generateBimCommentReplyId,
   generateBimTelemetryId,
+  generateBimAnimationId, generateBimRenderJobId,
   generateIso19650CostLogId,
   generateOptimisticId, generateTempId, generateOpaqueToken, validateEnterpriseId, parseEnterpriseId,
   getIdType, isLegacyId, generateNotificationDedupeId,

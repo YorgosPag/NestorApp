@@ -395,6 +395,11 @@ export const COLLECTIONS = {
   BIM_PERFORMANCE_TELEMETRY:
     process.env.NEXT_PUBLIC_BIM_PERFORMANCE_TELEMETRY_COLLECTION || 'bim_performance_telemetry',
 
+  // 🎬 BIM ANIMATIONS — ADR-366 Phase 9 / C.1.a (camera turntable + waypoint animations)
+  /** Camera animation configs per project (turntable / waypoint flythrough). Company-scoped via companyId. IDs via anm_bim_* prefix. Render jobs live in subcollection SUBCOLLECTIONS.BIM_RENDER_JOBS. */
+  BIM_ANIMATIONS:
+    process.env.NEXT_PUBLIC_BIM_ANIMATIONS_COLLECTION || 'bim_animations',
+
   // 🪣 ISO 19650 ENRICHMENT SLOTS — ADR-373 P2.4 (distributed token bucket, server-only)
   /** Per-company distributed token bucket for AI enrichment concurrency control. Doc ID = companyId. Admin SDK only — client access forbidden. */
   ISO19650_ENRICHMENT_SLOTS: 'iso19650_enrichment_slots',
@@ -474,6 +479,9 @@ export const SUBCOLLECTIONS = {
 
   // BIM Comment replies (ADR-366 Phase 9 / C.2 — subcollection under bim_comments/{id})
   BIM_COMMENT_REPLIES: process.env.NEXT_PUBLIC_BIM_COMMENT_REPLIES_SUBCOL || 'replies',
+
+  // BIM Animation render jobs (ADR-366 Phase 9 / C.1.a — subcollection under bim_animations/{id}, 30-day TTL post-completion)
+  BIM_RENDER_JOBS: process.env.NEXT_PUBLIC_BIM_RENDER_JOBS_SUBCOL || 'render_jobs',
 } as const;
 
 // ============================================================================

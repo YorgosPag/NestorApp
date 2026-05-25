@@ -647,7 +647,7 @@ Implementati come overlay layer riusando architettura grip esistente del line to
 Decomposizione `StairEntity` per render:
 1. Per ogni tread in `geometry.treadsBelowCut` (sotto cut plane 1.2m): drawPolygon SOLID (fill = layer color, stroke continuous).
 2. Per ogni tread in `geometry.treadsAboveCut`: drawPolygon DASHED (stroke tratteggiato, hidden).
-3. Per ogni `riser` in `geometry.risers`: drawLine; if `params.riserType='open'` → DASHED, else SOLID.
+3. Per ogni `riser` in `geometry.risers`: drawLine; if `params.riserType='open'` → DASHED, else SOLID. **Convention (ADR-370 Phase 5.3, 2026-05-25)**: `Segment3D` per riser è encoded DIAGONALMENTE — `start` = corner A @zLow su un width edge, `end` = corner B OPPOSTO @zHigh sull'altro edge. Il 2D `drawLine(start.xy, end.xy)` produce direttamente la linea di footprint del riser nel plan view; il 3D `StairToThreeConverter.buildRiserBox` deriva midpoint + width axis + width magnitude dal diagonale (no extra context). Convention sostituisce il legacy "vertical line at one edge" (start.xy === end.xy) che era unimplemented in 2D e silently broken in 3D.
 4. `walkline`: drawPolyline dashed (visibile solo se editing OR toggle ON, ADR §5.7).
 5. `arrowSymbol`: drawArrow + drawText (i18n locale-driven).
 6. Stringers: drawPolyline bold (skip se `structureType='cantilever'|'suspended'|'glass-tread'`).
@@ -659,7 +659,7 @@ Decomposizione `StairEntity` per render:
 ### 6.3 3D-readiness (Phase 9+)
 
 - `Polygon3D` → extrude tread thickness.
-- `Riser` → quad verticale altezza `rise`.
+- `Riser` → quad verticale altezza `rise`. **Phase 5.3 (2026-05-25)**: `StairToThreeConverter.buildRiserBox` consuma `Segment3D` diagonal encoding (start/end su corner opposti) — `BoxGeometry(thicknessM, riseM, widthM)` con `widthM = |end.xy − start.xy|`, posizione = midpoint, `mesh.rotation.y = atan2(dxScene, -dyScene)`. Indipendente da `params.direction` (funziona uniformemente per straight/curved/winder kinds).
 - Stringer → extruded beam.
 - Handrail → swept profile lungo walkline traslata di `handrailHeight` in z.
 - Spiral/Helical: `helixSample` ritorna già `Point3D` con z calcolato.

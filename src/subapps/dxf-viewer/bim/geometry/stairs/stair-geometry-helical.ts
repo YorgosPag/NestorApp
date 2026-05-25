@@ -141,6 +141,9 @@ function buildHelicalRisers(
   variant: StairVariantHelical,
   grid: AngularGrid,
 ): readonly Segment3D[] {
+  // ADR-370 Phase 5.3 — diagonal Segment3D (see StairGeometryService.buildStraightRisers).
+  // Helical width axis is RADIAL: start at inner edge, end at outer edge of
+  // the angular boundary θ_{i+1}. Width = outerRadius − innerRadius = params.width.
   const risers: Segment3D[] = [];
   for (let i = 0; i < params.stepCount - 1; i++) {
     const theta = (i + 1) * grid.angleStep;
@@ -148,7 +151,7 @@ function buildHelicalRisers(
     const zHigh = variant.centerPoint.z + grid.riseStep * (i + 1);
     risers.push({
       start: radialPoint(variant.centerPoint, variant.innerRadius, theta, zLow),
-      end: radialPoint(variant.centerPoint, variant.innerRadius, theta, zHigh),
+      end: radialPoint(variant.centerPoint, variant.outerRadius, theta, zHigh),
     });
   }
   return risers;
