@@ -19,6 +19,8 @@ import {
   createDefaultAnimationConfig,
   TURNTABLE_DEFAULTS,
 } from './presets/animation-presets';
+import { DEFAULT_SNAP_STEP } from './snap-quantizer';
+import type { AxisLock } from './axis-constraint-projector';
 import type {
   AnimationAxis,
   AnimationConfig,
@@ -34,6 +36,12 @@ interface AnimationState extends AnimationConfig {
   readonly loadedDocId: string | null;
   /** ADR-366 §C.1.b — ribbon/panel/handles gate. Mirror BimDimensions3DStore.toolActive SSoT pattern. */
   readonly toolActive: boolean;
+  /** ADR-366 §C.1.b snap-to-grid — enabled flag. */
+  readonly snapEnabled: boolean;
+  /** ADR-366 §C.1.b snap-to-grid — grid step in scene units. */
+  readonly snapStepUnits: number;
+  /** ADR-366 §C.1.b axis-constrained drag — active axis lock (null = free drag). */
+  readonly dragAxisLock: AxisLock | null;
 }
 
 interface AnimationActions {
@@ -54,6 +62,12 @@ interface AnimationActions {
 
   /** ADR-366 §C.1.b — flip ribbon-contextual-tab + Floating3DPanel + 3D handles. */
   setToolActive(active: boolean): void;
+  /** ADR-366 §C.1.b snap-to-grid — toggle snap on/off. */
+  setSnapEnabled(enabled: boolean): void;
+  /** ADR-366 §C.1.b snap-to-grid — update grid step (scene units). */
+  setSnapStepUnits(step: number): void;
+  /** ADR-366 §C.1.b axis-constrained drag — set/clear axis lock. */
+  setDragAxisLock(axis: AxisLock | null): void;
 
   loadFromDoc(doc: BimAnimationDoc): void;
   reset(): void;
@@ -66,6 +80,9 @@ const initialState: AnimationState = {
   activeWaypointIndex: null,
   loadedDocId: null,
   toolActive: false,
+  snapEnabled: false,
+  snapStepUnits: DEFAULT_SNAP_STEP,
+  dragAxisLock: null,
 };
 
 function clampIndex(idx: number, length: number): number {
@@ -174,7 +191,25 @@ export const useAnimationStore = create<AnimationStore>()(
         setToolActive: (active) =>
           set((s) => {
             s.toolActive = active;
-            if (!active) s.activeWaypointIndex = null;
+            if (!active) {
+              s.activeWaypointIndex = null;
+              s.dragAxisLock = null;
+            }
+          }),
+
+        setSnapEnabled: (enabled) =>
+          set((s) => {
+            s.snapEnabled = enabled;
+          }),
+
+        setSnapStepUnits: (step) =>
+          set((s) => {
+            if (step > 0) s.snapStepUnits = step;
+          }),
+
+        setDragAxisLock: (axis) =>
+          set((s) => {
+            s.dragAxisLock = axis;
           }),
 
         loadFromDoc: (doc) =>
