@@ -1,4 +1,12 @@
 import { act } from '@testing-library/react';
+
+// B.2: drawing-scale-store re-exports bim-render-settings-store which
+// transitively imports the Firestore service. Mock it to keep this
+// unit test focused on drawing-scale behavior only.
+jest.mock('../../services/bim-render-settings.service', () => ({
+  saveBimRenderSettings: jest.fn().mockResolvedValue(undefined),
+}));
+
 import {
   useDrawingScaleStore,
   DEFAULT_DRAWING_SCALE,
