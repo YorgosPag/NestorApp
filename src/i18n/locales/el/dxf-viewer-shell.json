@@ -723,6 +723,7 @@
       "drawingScale": "Κλίμακα Σχεδίου",
       "viewRange": "Εύρος Προβολής",
       "objectStyles": "Στυλ Αντικειμένων",
+      "viewTemplates": "Πρότυπα Προβολής",
       "dimensions": "Διαστάσεις",
       "dimStyle": "Στυλ",
       "dimOverride": "Παράκαμψη",
@@ -1446,6 +1447,18 @@
           "hatch": "Διαγράμμιση",
           "grip": "Λαβή"
         }
+      },
+      "viewTemplates": {
+        "label": "Πρότυπο",
+        "none": "—",
+        "empty": "Δεν υπάρχουν πρότυπα",
+        "namePlaceholder": "Όνομα προτύπου…",
+        "saveAs": "Αποθήκευση ως",
+        "detach": "Αποσύνδεση από πρότυπο",
+        "linkedCount": "Συνδεδεμένα επίπεδα: {count}",
+        "applyAriaLabel": "Εφαρμογή προτύπου {name}",
+        "updateAriaLabel": "Ενημέρωση προτύπου {name} με τις τρέχουσες ρυθμίσεις",
+        "deleteAriaLabel": "Διαγραφή προτύπου {name}"
       },
       "openGuidePanel": "Πίνακας Οδηγών",
       "toggleGuides": "Εμφάνιση/Απόκρυψη Οδηγών",

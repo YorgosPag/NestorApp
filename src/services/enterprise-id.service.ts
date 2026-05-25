@@ -43,7 +43,7 @@ export {
   generateSectionId, generateArticleId, generateParagraphId, generateObligationId,
   generateTransmittalId, generateSessionId, generateTransactionId,
   generateNotificationId, generateTaskId, generateEventId, generateRequestId,
-  generateMessageId, generateJobId, generateOverlayId, generateLevelId,
+  generateMessageId, generateJobId, generateOverlayId, generateLevelId, generateViewTemplateId,
   generateLayerId, generateElementId, generateHistoryId, generateAnnotationId,
   generateControlPointId, generateEntityId, generateCustomizationId,
   generateErrorId, generateMetricId, generateAlertId, generateTraceId,

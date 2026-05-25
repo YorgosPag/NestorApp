@@ -41,5 +41,7 @@ export const UpdateDxfLevelSchema = z.object({
       cutPen: z.number().int().min(1).max(16),
     })).optional(),
   }).nullable().optional(),
+  /** ADR-375 Phase B.3: FK → dxf_viewer_view_templates. Null = detached. */
+  appliedViewTemplateId: z.string().min(1).max(128).nullable().optional(),
   _v: z.number().int().optional(),
 }).passthrough();

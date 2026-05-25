@@ -47,6 +47,8 @@ export const ENTERPRISE_ID_PREFIXES = {
   // DXF / CAD Viewer
   OVERLAY: 'ovrl',
   LEVEL: 'lvl',
+  /** ADR-375 Phase B.3 — BIM View Template (reusable preset of drawingScale + viewRange + objectStyles). */
+  VIEW_TEMPLATE: 'vtmpl',
 
   // Floorplan Background System (ADR-340)
   RASTER_BACKGROUND: 'rbg',

@@ -721,6 +721,9 @@
       "ai": "AI",
       "window": "Window",
       "drawingScale": "Drawing Scale",
+      "viewRange": "View Range",
+      "objectStyles": "Object Styles",
+      "viewTemplates": "View Templates",
       "dimensions": "Dimensions",
       "dimStyle": "Style",
       "dimOverride": "Override",
@@ -1414,6 +1417,48 @@
         "ariaLabel": "Drawing scale 1:{scale}",
         "placeholder": "e.g. 100",
         "inputAriaLabel": "Enter drawing scale denominator"
+      },
+      "viewRange": {
+        "label": "View Range",
+        "topMm": "Top (mm)",
+        "cutPlaneMm": "Cut Plane (mm)",
+        "bottomMm": "Bottom (mm)",
+        "viewDepthMm": "View Depth (mm)",
+        "reset": "Reset to Defaults",
+        "resetAriaLabel": "Reset view range to defaults"
+      },
+      "objectStyles": {
+        "label": "Object Styles",
+        "projectionPen": "Projection",
+        "cutPen": "Cut",
+        "reset": "Reset to Defaults",
+        "resetAriaLabel": "Reset object styles to defaults",
+        "categories": {
+          "wall": "Wall",
+          "column": "Column",
+          "beam": "Beam",
+          "slab": "Slab",
+          "opening": "Opening",
+          "slab-opening": "Slab Opening",
+          "stair": "Stair",
+          "roof": "Roof",
+          "ceiling": "Ceiling",
+          "dimension": "Dimension",
+          "hatch": "Hatch",
+          "grip": "Grip"
+        }
+      },
+      "viewTemplates": {
+        "label": "Template",
+        "none": "—",
+        "empty": "No templates yet",
+        "namePlaceholder": "Template name…",
+        "saveAs": "Save As",
+        "detach": "Detach from template",
+        "linkedCount": "Linked levels: {count}",
+        "applyAriaLabel": "Apply template {name}",
+        "updateAriaLabel": "Update template {name} with current settings",
+        "deleteAriaLabel": "Delete template {name}"
       },
       "openGuidePanel": "Guide Panel",
       "toggleGuides": "Show/Hide Guides",

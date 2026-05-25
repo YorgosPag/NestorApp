@@ -53,6 +53,8 @@ export const generateJobId = () => enterpriseIdService.generateJobId();
 // DXF / CAD Viewer
 export const generateOverlayId = () => enterpriseIdService.generateOverlayId();
 export const generateLevelId = () => enterpriseIdService.generateLevelId();
+/** ADR-375 Phase B.3 — BIM View Template (drawingScale + viewRange + objectStyles preset). */
+export const generateViewTemplateId = () => enterpriseIdService.generateViewTemplateId();
 
 // Floorplan Background System (ADR-340)
 export const generateFloorplanBackgroundId = () => enterpriseIdService.generateFloorplanBackgroundId();

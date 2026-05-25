@@ -19,6 +19,9 @@ import { RibbonFontFamilyWidget } from './RibbonFontFamilyWidget';
 import { RibbonLineSpacingWidget } from './RibbonLineSpacingWidget';
 import { RibbonAnnotationScaleWidget } from './RibbonAnnotationScaleWidget';
 import { DrawingScaleWidget } from './DrawingScaleWidget';
+import { ViewRangePanel } from '../panels/ViewRangePanel';
+import { ObjectStylesPanel } from '../panels/ObjectStylesPanel';
+import { ViewTemplatesPanel } from '../panels/ViewTemplatesPanel';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 import { RibbonStairFloorInfoWidget } from './RibbonStairFloorInfoWidget';
 import { RibbonStairDimensionsWidget } from './RibbonStairDimensionsWidget';
@@ -57,6 +60,15 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'drawing-scale') {
       return <DrawingScaleWidget key="drawing-scale-widget" />;
+    }
+    if (button.widgetId === 'view-range') {
+      return <ViewRangePanel key="view-range-widget" />;
+    }
+    if (button.widgetId === 'object-styles') {
+      return <ObjectStylesPanel key="object-styles-widget" />;
+    }
+    if (button.widgetId === 'view-templates') {
+      return <ViewTemplatesPanel key="view-templates-widget" />;
     }
     if (button.widgetId === 'insert-tokens') {
       return <RibbonInsertTokenWidget key="insert-tokens-widget" />;

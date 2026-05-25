@@ -3632,6 +3632,14 @@
       ]
     },
     {
+      "collectionGroup": "dxf_viewer_view_templates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "floorplan_stairs",
       "queryScope": "COLLECTION",
       "fields": [

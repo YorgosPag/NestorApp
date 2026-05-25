@@ -137,6 +137,8 @@ export class EnterpriseIdService {
   // DXF / CAD Viewer
   generateOverlayId(): string { return this.generateId(P.OVERLAY).id; }
   generateLevelId(): string { return this.generateId(P.LEVEL).id; }
+  /** ADR-375 Phase B.3 — BIM View Template ID (prefix: vtmpl). */
+  generateViewTemplateId(): string { return this.generateId(P.VIEW_TEMPLATE).id; }
 
   // Floorplan Background System (ADR-340)
   generateFloorplanBackgroundId(): string { return this.generateId(P.RASTER_BACKGROUND).id; }
