@@ -28,6 +28,7 @@ import type { WallCategory, WallEntity } from '../types/wall-types';
 import type { OpeningEntity } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getWallGrips } from '../walls/wall-grips';
 import {
@@ -128,17 +129,23 @@ export class WallRenderer extends BaseEntityRenderer {
     }));
   }
 
-  hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
+  hitTest(entity: EntityModel, point: Point2D, _tolerance: number): boolean {
     if (!isWallEntity(entity)) return false;
     const wall = entity as WallEntity;
-    const bb = wall.geometry?.bbox;
-    if (!bb) return false;
-    return (
-      point.x >= bb.min.x - tolerance &&
-      point.x <= bb.max.x + tolerance &&
-      point.y >= bb.min.y - tolerance &&
-      point.y <= bb.max.y + tolerance
-    );
+    // ADR-363 Bug 1 fix — polygon containment της outer+inner edge ένωσης
+    // (mirror του buildWallShape pattern σε BimToThreeConverter), όχι bbox.
+    // Επιτρέπει στο opening (priority=75) να κερδίζει tie-break όταν ο cursor
+    // είναι εντός του opening outline, καθώς το wall hit-test πλέον δεν
+    // overshoots πέρα από τις outer/inner edges.
+    const outer = wall.geometry?.outerEdge?.points;
+    const inner = wall.geometry?.innerEdge?.points;
+    if (!outer || !inner || outer.length < 2 || inner.length < 2) return false;
+    const ring: Point2D[] = [
+      ...outer.map((p) => ({ x: p.x, y: p.y })),
+      ...[...inner].reverse().map((p) => ({ x: p.x, y: p.y })),
+    ];
+    if (ring.length < 3) return false;
+    return isPointInPolygon(point, ring);
   }
 
   // ─── Internal drawing helpers ──────────────────────────────────────────────
