@@ -4,7 +4,7 @@
 - **Date**: 2026-05-20
 - **Author**: Giorgio Pagonis + Claude (Opus 4.7)
 - **Related**: ADR-040 (Preview Canvas Performance), ADR-294 (SSoT Ratchet), ADR-356 (Tenant SSoT), ADR-361 (Firestore Subscribe Equality Guard), ADR-363 (BIM Drawing Mode), ADR-366 (3D BIM Viewer)
-- **Scope**: Properties subapp read-only floorplan tab — show BIM entities (`walls`, `slabs`, `beams`, `columns`, `openings`, `slab-openings`, `stairs`) drawn in the DXF Viewer subapp. **Phase 5 (2026-05-25)**: 3D stair coverage parity (read-only + `/dxf/viewer` 3D toggle). **Phase 7 (2026-05-25)**: 3D slab-opening coverage parity — `THREE.Shape.holes` cutouts στις πλάκες (IFC IfcOpeningElement pattern).
+- **Scope**: Properties subapp read-only floorplan tab — show BIM entities (`walls`, `slabs`, `beams`, `columns`, `openings`, `slab-openings`, `stairs`) drawn in the DXF Viewer subapp. **Phase 5 (2026-05-25)**: 3D stair coverage parity (read-only + `/dxf/viewer` 3D toggle). **Phase 7 (2026-05-25)**: 3D slab-opening coverage parity — `THREE.Shape.holes` cutouts στις πλάκες (IFC IfcOpeningElement pattern). **Phase 8 (2026-05-25)**: 3D wall opening coverage parity — per-segment front-face re-extrude με `THREE.Shape.holes` cutouts στους τοίχους (IFC IfcRelVoidsElement(IfcWall, IfcOpeningElement) pattern). Handles straight / curved / polyline walls uniformly via axis vertex iteration. Zero new deps, zero `three` upgrade.
 - **Impact**: 🟢 Additive — new render layer, no schema/persistence changes.
 
 ---
