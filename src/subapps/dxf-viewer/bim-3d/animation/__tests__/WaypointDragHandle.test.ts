@@ -113,12 +113,13 @@ describe('WaypointDragHandleRenderer — hover state', () => {
 });
 
 describe('WaypointDragHandleRenderer — dispose', () => {
-  it('removes the group from the scene', () => {
+  it('removes all groups from the scene', () => {
     const scene = new THREE.Scene();
     const r = new WaypointDragHandleRenderer(scene);
     const before = scene.children.length;
     r.dispose();
-    expect(scene.children.length).toBe(before - 1);
+    // Renderer adds handles group + gizmo group; both removed on dispose.
+    expect(scene.children.length).toBe(before - 2);
   });
 
   it('returns null from getHandlesGroup after dispose', () => {
