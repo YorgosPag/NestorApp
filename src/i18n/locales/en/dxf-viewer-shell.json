@@ -697,6 +697,8 @@
       "columnIshape": "I-shape",
       "columnMaterial": "Material",
       "columnActions": "Actions",
+      "columnShearWallCatalog": "Concrete Catalog",
+      "columnIshapeCatalog": "Profile Catalog",
       "beamKind": "Type",
       "beamGeometry": "Geometry",
       "beamMaterial": "Material",
@@ -1274,6 +1276,31 @@
           "steel": "Steel",
           "masonry": "Masonry",
           "wood": "Wood"
+        },
+        "catalogProfile": {
+          "section": {
+            "title": "Profile catalog"
+          },
+          "custom": "Custom",
+          "shearWall": {
+            "c2025": "C20/25 — 200mm thick",
+            "c2530": "C25/30 — 200mm thick",
+            "c3037": "C30/37 — 250mm thick",
+            "c3545": "C35/45 — 250mm thick",
+            "c4050": "C40/50 — 300mm thick"
+          },
+          "iShape": {
+            "ipe200": "IPE 200 (b=100, h=200mm)",
+            "ipe240": "IPE 240 (b=120, h=240mm)",
+            "ipe300": "IPE 300 (b=150, h=300mm)",
+            "ipe360": "IPE 360 (b=170, h=360mm)",
+            "ipe400": "IPE 400 (b=180, h=400mm)",
+            "ipe500": "IPE 500 (b=200, h=500mm)",
+            "hea200": "HEA 200 (b=200, h=190mm)",
+            "hea240": "HEA 240 (b=240, h=230mm)",
+            "hea300": "HEA 300 (b=300, h=290mm)",
+            "hea400": "HEA 400 (b=300, h=390mm)"
+          }
         }
       },
       "psetEditor": {
