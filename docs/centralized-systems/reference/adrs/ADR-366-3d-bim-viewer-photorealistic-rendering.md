@@ -3730,36 +3730,61 @@ correctly (~20–60 m for typical floor plans) → BIM entities visible within `
 
 ---
 
-## Bugfix — SSAO black-screen + debug-log cleanup (2026-05-25)
+## Bugfix — SSAO black-screen + debug-log cleanup (2026-05-25 → 2026-05-26)
 
-### Root cause
-`SSAOPass` sets `scene.overrideMaterial = MeshNormalMaterial` during its internal
-normal-buffer render. `LineSegments` (DXF wireframe) lack a `normals` attribute →
-GPU emits garbage values → AO factor saturates to 1.0 → final composite `scene_color × 0 = black`.
-This caused the scene to go black on every 800 ms idle event
-(`IdleDetector.onCameraIdle → ssaoModulator.onCameraIdle → ssaoPass.enabled = true`).
+### Root cause (corrected 2026-05-26)
 
-### Fix — `BimSSAOPass` subclass (`ssao-modulator.ts`)
-```typescript
-class BimSSAOPass extends SSAOPass {
-  override render(renderer, writeBuffer, readBuffer, deltaTime, maskActive): void {
-    const hidden: THREE.LineSegments[] = [];
-    this.scene.traverse((obj) => {
-      if (obj instanceof THREE.LineSegments && obj.visible) {
-        obj.visible = false; hidden.push(obj);
-      }
-    });
-    super.render(renderer, writeBuffer, readBuffer, deltaTime, maskActive);
-    for (const obj of hidden) obj.visible = true;
-  }
-}
+**Original (wrong) diagnosis**: `SSAOPass` sets `scene.overrideMaterial = MeshNormalMaterial` →
+`LineSegments` lack normals → garbage AO values → black.
+This was incorrect: `SSAOPass.overrideVisibility()` (Three.js source line 378-384) already
+hides all `isLine` objects before the normal-buffer pass. `BimSSAOPass` is therefore
+a redundant (but harmless) defensive guard.
+
+**Actual root cause — EffectComposer compositing accumulation**:
+
+`SSAOPass.Output.Default` uses **multiply blending** (`blendSrc: DstColorFactor, blendDst: ZeroFactor`).
+When the pass is the **last pass** in the composer (`renderToScreen = true`), it writes to
+`null` (the screen framebuffer), multiplying SSAO onto whatever is currently on the screen:
+
 ```
-LineSegments are hidden before the normal-buffer pass and restored immediately after.
-`RenderPass` (executed before `BimSSAOPass` in the composer chain) already wrote line
-color into `readBuffer`, so lines remain visible in the final output with AO factor 0
-(correct — lines should not occlude geometry).
+frame_1: screen ← SSAO × frame_0_scene         ✓  (frame 0 had correct scene)
+frame_2: screen ← SSAO × (SSAO × scene)        ← darker
+frame_N: screen ← SSAO^N × scene               → BLACK after ~60 frames
+```
 
-### Additional cleanup
+At 60fps and a typical SSAO factor of 0.9, after 60 frames: `0.9^60 ≈ 0.002` → effectively black.
+This explains the reproducible "scene disappears 800ms after camera idle" — 800ms is the
+`IdleDetector` threshold, and the 300ms kernelRadius transition animation spans ~18 frames
+that all compound the multiplication.
+
+### Fix — `CopyPass` as terminal pass (`ssao-modulator.ts`, 2026-05-26)
+
+`SSAOPass.Output.Default` is designed to run as a **middle pass** (not last): when
+`renderToScreen = false`, it renders to `readBuffer` (which holds the current frame's scene
+colors from `RenderPass`), and the multiply blend gives: `SSAO × scene_colors` — correct
+for exactly one frame.
+
+Fix: add `ShaderPass(CopyShader)` as the final pass in the composer chain so
+`SSAOPass.renderToScreen` is always `false`:
+
+```
+[RenderPass] → writeBuffer → swap → readBuffer = scene_colors
+[BimSSAOPass, renderToScreen=false] → readBuffer ← SSAO × scene_colors  (one-time, correct)
+[CopyPass, renderToScreen=true] → screen ← readBuffer                   (clean copy, NoBlending)
+```
+
+```typescript
+const copyPass = new ShaderPass(CopyShader);
+copyPass.material.blending = THREE.NoBlending;
+this.composer.addPass(this.renderPass);
+this.composer.addPass(this.ssaoPass);
+this.composer.addPass(copyPass);   // ← ensures SSAOPass is never last
+```
+
+`BimSSAOPass` (hide/restore `LineSegments`) is kept as a belt-and-suspenders guard
+against upstream Three.js changes to `overrideVisibility()`.
+
+### Additional cleanup (2026-05-25)
 - `ssaoModulator.onCameraIdle()` re-enabled (was commented out as workaround).
 - `BimSceneLayer.hasMesh` getter backed by `_hasMesh` cache (set once in `sync()`),
   replacing `hasAnyMesh()` traverse-per-idle-call.

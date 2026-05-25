@@ -2,21 +2,18 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { CopyShader } from 'three/addons/shaders/CopyShader.js';
 
 const SSAO_TRANSITION_MS = 300;
 const IS_LOW_PERF = typeof navigator !== 'undefined' && navigator.hardwareConcurrency < 4;
 
 /**
- * SSAOPass subclass that excludes LineSegments from the normal-buffer pass.
+ * SSAOPass subclass that hides LineSegments before the normal-buffer render.
  *
- * Root cause: SSAOPass sets scene.overrideMaterial = MeshNormalMaterial during
- * its internal normal render. LineSegments lack a normals attribute, so the GPU
- * emits garbage values → AO factor saturates to 1.0 → final composite = black.
- *
- * Fix: hide all LineSegments before super.render() (normal pass + AO compute),
- * restore immediately after. The RenderPass (executed before this pass in the
- * composer chain) already captured line color into the readBuffer, so lines
- * remain visible in the final output — they just receive AO factor 0 (correct).
+ * SSAOPass.overrideVisibility() already handles isLine objects, so this is a
+ * defensive belt-and-suspenders guard. Kept because BimSSAOPass is the right
+ * place to enforce this invariant regardless of upstream Three.js changes.
  */
 class BimSSAOPass extends SSAOPass {
   override render(
@@ -63,9 +60,19 @@ export class SSAOModulator {
     this.ssaoPass.output = SSAOPass.OUTPUT.Default;
     this.ssaoPass.enabled = false;
 
+    // CopyPass must be the last pass so SSAOPass is never renderToScreen=true.
+    // SSAOPass.Output.Default uses multiply blending (DstColorFactor) onto its
+    // render target. When renderToScreen=true it targets the screen (null),
+    // and each frame compounds: SSAO × (SSAO × scene) → SSAO^N → black.
+    // As a middle pass (renderToScreen=false) it correctly does SSAO × readBuffer
+    // (= current frame's scene colors) once per frame.
+    const copyPass = new ShaderPass(CopyShader);
+    copyPass.material.blending = THREE.NoBlending;
+
     this.composer = new EffectComposer(renderer);
     this.composer.addPass(this.renderPass);
     this.composer.addPass(this.ssaoPass);
+    this.composer.addPass(copyPass);
   }
 
   onCameraActive(): void {
