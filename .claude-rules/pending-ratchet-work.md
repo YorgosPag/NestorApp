@@ -167,7 +167,7 @@ Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecat
 **Status (2026-05-25)**: All 3 sub-phases DONE. Animation Phase 9 ολόκληρη closed.
 
 - ✅ **C.1.a Logic Foundation** — DONE 2026-05-25 (commit `1e393c1d`).
-- ✅ **C.1.b UX / Timeline** — DONE 2026-05-25 (commit `68c473a5`). **+drag interaction DONE 2026-05-25** (uncommitted). **+§C.1.Q4 bezier 4-point editor DONE 2026-05-25** (uncommitted, FULL ENTERPRISE: 5 new + 4 modified + 23 tests). **+real scene-bbox turntable DONE 2026-05-25** (uncommitted, 2 new + 3 modified + 7 tests, SSoT REUSE computeSceneFramingBounds). Deferred (NOT blocker): TimelineEditor unit tests, axis-constrained gizmo, snap-to-grid.
+- ✅ **C.1.b UX / Timeline** — DONE 2026-05-25 (commit `68c473a5`). **+drag interaction DONE 2026-05-25** (uncommitted). **+§C.1.Q4 bezier 4-point editor DONE 2026-05-25** (uncommitted, FULL ENTERPRISE: 5 new + 4 modified + 23 tests). **+real scene-bbox turntable DONE 2026-05-25** (uncommitted, 2 new + 3 modified + 7 tests, SSoT REUSE computeSceneFramingBounds). Deferred resolved: ~~TimelineEditor unit tests~~ ✅ 2026-05-25, ~~snap-to-grid~~ ✅ 2026-05-25, ~~axis-constrained gizmo~~ ✅ 2026-05-25.
 - ✅ **C.1.c Rendering / Queue** — DONE 2026-05-25 (8 new + 6 modified + storage rules + 3 test suites). MP4Exporter (WebCodecs H.264 + VP9 fallback inside MP4 via mp4-muxer@5.2.2 MIT) + RenderQueueStore (Zustand FIFO + AbortController Map) + RenderQueuePanel (Floating3DPanel 8th tab) + animation-queue-processor + render-checkpoint + animation-action-handlers (auto-save flow) + origin-indicator-overlay extraction (SRP cap) + Save+Export ribbon comingSoon REMOVED + Storage rules block (500MB, mp4/webm) + notification keys + i18n ~15×2. ADR drift resolved: rasterizer-not-pathtracer + project_assets DROPPED + VP9-in-MP4 + checkpoint field reuse. Cross-session subscribe DEFERRED Phase 10.
 
 ---
@@ -258,7 +258,7 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 
 **Copy-paste template for the agent:**
 
-> 📋 Pending ratchet tasks (ADR-299): **ADR-365 Tailwind Palette ✅ COMPLETE** — 0 violations / 0 files (2026-05-22). Zero-tolerance via CHECK 3.26 active. Remaining pending: Grip Types SSoT, ADR-3XX Auto-Infer Alignment, ADR-370/371 duplicate numbering cleanup. (ADR-363 Opening scene-units thread ✅ CLOSED 2026-05-25 later — 4 callers, 27/27 tests PASS. ADR-366 §C.1 Animation Phase 9 ✅ FULLY CLOSED 2026-05-25 — all 3 sub-phases done; ADR-345 spellCheck ✅ DONE 2026-05-23, ADR-034 UC-017 ✅ DONE 2026-05-23; **ADR-363 Phase 2 canvas-wiring follow-up ✅ 2026-05-25** — opening tool silent-failure fix.)
+> 📋 Pending ratchet tasks (ADR-299): **ADR-365 Tailwind Palette ✅ COMPLETE** — 0 violations / 0 files (2026-05-22). Zero-tolerance via CHECK 3.26 active. Remaining pending: Grip Types SSoT, ADR-3XX Auto-Infer Alignment, ADR-370/371 duplicate numbering cleanup. (ADR-363 Opening scene-units thread ✅ CLOSED 2026-05-25 later — 4 callers, 27/27 tests PASS. ADR-366 §C.1 Animation Phase 9 ✅ FULLY CLOSED 2026-05-25 (axis-constrained gizmo ✅ DONE 2026-05-25 — closes last deferred C.1.b item, Phase 9 zero deferred); ADR-345 spellCheck ✅ DONE 2026-05-23, ADR-034 UC-017 ✅ DONE 2026-05-23; **ADR-363 Phase 2 canvas-wiring follow-up ✅ 2026-05-25** — opening tool silent-failure fix.)
 
 ---
 
