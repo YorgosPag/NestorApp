@@ -367,9 +367,8 @@ export class ThreeJsSceneManager {
     this.dxfConverter.sync(dxfScene);
     this.pathTracerRenderer.invalidateScene();
     applyDxfOverlayFraming(
-      { viewport: this.viewport, scene: this.scene, bounds: this.dxfConverter.getBounds(),
+      { viewport: this.viewport, bounds: this.dxfConverter.getBounds(),
         fitDone: this.initialCameraFitDone, onFitApplied: () => { this.initialCameraFitDone = true; } },
-      dxfScene,
     );
     this.sectionController.ensureInit();
     this.sectionController.applyState();
