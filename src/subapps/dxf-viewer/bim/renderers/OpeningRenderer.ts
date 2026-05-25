@@ -26,23 +26,19 @@ import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer'
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isOpeningEntity } from '../../types/entities';
-import type { OpeningEntity, OpeningKind } from '../types/opening-types';
+import type { OpeningEntity } from '../types/opening-types';
 import { isHingedKind, isGlazedKind } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
+import { resolveCutState, DEFAULT_VIEW_RANGE } from '../../config/bim-view-range';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getOpeningGrips } from '../walls/opening-grips';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HINGE_ARC_SUBDIVISIONS } from '../geometry/opening-geometry';
-
-/** Stroke colour per kind (industry convention — door warm, window cool). */
-const KIND_STROKE: Readonly<Record<OpeningKind, string>> = {
-  'door':         '#c97c2f', // burnt orange (timber door)
-  'window':       '#2d72b8', // cool blue (glazed)
-  'sliding-door': '#7c5fa1', // muted purple (sliding rail)
-  'french-door':  '#b96b2c', // amber (double-leaf timber)
-  'fixed':        '#3d7a6f', // teal (fixed glazing)
-};
+import { OPENING_KIND_STROKE } from './opening-kind-style';
+import { OpeningTagRenderer } from './OpeningTagRenderer';
+import { isOpeningTagLayerVisible } from '../../systems/layers/opening-tag-layer';
 
 const HINGE_DASH: readonly [number, number] = [4, 3];
 const SLIDING_DASH: readonly [number, number] = [10, 4];
@@ -68,13 +64,35 @@ export class OpeningRenderer extends BaseEntityRenderer {
     }
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.ctx.strokeStyle = KIND_STROKE[opening.kind];
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+    this.ctx.strokeStyle = OPENING_KIND_STROKE[opening.kind];
+    const _opCutState = resolveCutState(
+      { zBottomMm: opening.params.sillHeight, zTopMm: opening.params.sillHeight + opening.params.height, category: 'opening' },
+      DEFAULT_VIEW_RANGE,
+    );
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'opening', cutState: _opCutState, scaleDenominator: 100, dpi: 96 });
 
     this.drawOutline(opening);
     this.drawKindOverlay(opening);
 
+    // ADR-376 Phase A — paint instance Mark tag overlay (canvas-pill SSoT).
+    // Layer toggle gating is read μέσω the dedicated module; tag renderer
+    // itself enforces per-opening + zoom + mark-present checks.
+    OpeningRenderer.tagRenderer.render({
+      ctx: this.ctx,
+      transform: this.transform,
+      viewport: this.tagViewport(),
+      opening,
+      layerVisible: isOpeningTagLayerVisible(),
+    });
+
     this.finalizeRender(entity, options);
+  }
+
+  private static readonly tagRenderer = new OpeningTagRenderer();
+
+  private tagViewport(): { width: number; height: number } {
+    const rect = this.ctx.canvas.getBoundingClientRect();
+    return { width: rect.width, height: rect.height };
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
