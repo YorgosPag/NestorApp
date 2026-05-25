@@ -149,6 +149,45 @@ export const ANIMATION_CONTEXTUAL_TAB: RibbonTab = {
       ],
     },
     {
+      id: 'animation-snap',
+      labelKey: 'animation.panels.snap',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'animation.snap-toggle',
+                labelKey: 'animation.toolbar.snapToggle',
+                icon: 'snap-grid',
+                commandKey: 'animation.snap-toggle',
+                action: 'animation.snap-toggle',
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'animation.snap-step',
+                labelKey: 'animation.toolbar.snapStep',
+                commandKey: 'animation.snap-step',
+                comboboxWidthPx: 90,
+                options: [
+                  { value: '0.1', labelKey: 'animation.snapStepOptions.0.1' },
+                  { value: '0.25', labelKey: 'animation.snapStepOptions.0.25' },
+                  { value: '0.5', labelKey: 'animation.snapStepOptions.0.5' },
+                  { value: '1', labelKey: 'animation.snapStepOptions.1' },
+                  { value: '2', labelKey: 'animation.snapStepOptions.2' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'animation-export',
       labelKey: 'animation.panels.export',
       rows: [
