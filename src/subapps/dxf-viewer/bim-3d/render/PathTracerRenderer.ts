@@ -46,6 +46,9 @@ export class PathTracerRenderer {
   start(): void {
     const camera = this.getCamera();
     if (!(camera instanceof THREE.PerspectiveCamera)) return;
+    // Note: callers (ThreeJsSceneManager.onIdle) guard for BIM mesh existence before
+    // calling start(). scene.traverse() here would give false-positives from SectionBox
+    // sphere handles (always in scene, visible=false). Guard is in the caller.
     try {
       if (this.sceneNeedsUpdate) {
         this.pathTracer.setScene(this.scene, camera);

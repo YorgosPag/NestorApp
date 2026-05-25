@@ -345,4 +345,41 @@ describe('getBounds', () => {
     converter.dispose();
     expect(converter.getBounds()).toBeNull();
   });
+
+  it('default (mm) units: getBounds returns metre-scale world coords', () => {
+    // 1000 mm line → 1 m in Three.js world space
+    const scene1000mm: DxfScene = {
+      entities: [makeLine({ start: { x: 0, y: 0 }, end: { x: 1000, y: 0 }, color: '#ffffff' })],
+      layers: [], bounds: null,
+    };
+    converter.sync(scene1000mm);
+    const box = converter.getBounds();
+    expect(box).not.toBeNull();
+    expect(box!.max.x).toBeCloseTo(1.0, 5);
+  });
+
+  it('explicit m units: getBounds returns unchanged metre coords', () => {
+    const sceneMetres: DxfScene = {
+      entities: [makeLine({ start: { x: 0, y: 0 }, end: { x: 5, y: 0 }, color: '#ffffff' })],
+      layers: [], bounds: null,
+      units: 'm',
+    };
+    converter.sync(sceneMetres);
+    const box = converter.getBounds();
+    expect(box).not.toBeNull();
+    expect(box!.max.x).toBeCloseTo(5.0, 5);
+  });
+
+  it('cm units: getBounds returns metre-scale world coords', () => {
+    // 100 cm → 1 m
+    const sceneCm: DxfScene = {
+      entities: [makeLine({ start: { x: 0, y: 0 }, end: { x: 100, y: 0 }, color: '#ffffff' })],
+      layers: [], bounds: null,
+      units: 'cm',
+    };
+    converter.sync(sceneCm);
+    const box = converter.getBounds();
+    expect(box).not.toBeNull();
+    expect(box!.max.x).toBeCloseTo(1.0, 5);
+  });
 });

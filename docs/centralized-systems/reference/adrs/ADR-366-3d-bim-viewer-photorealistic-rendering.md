@@ -3705,8 +3705,28 @@ ADR-366 total estimate revised: **~185-220h** Phase 0-7 (από ~179-212h post-B
 
 ---
 
+## Bugfix — DxfToThreeConverter unit-scale alignment (2026-05-25)
 
+**Bug A — 3D toggle flash / scene disappears:**
+`syncDxfOverlay` called `frameBounds` with DXF mm-scale bounding box. DXF coordinates
+were pushed raw (mm) into Three.js while BIM geometry uses metres → 1000× scale mismatch.
+`frameBounds` computed a camera distance of ~20 000+ units; `CAMERA_FAR = 1000` clipped
+the entire scene. The camera moved (500ms animation), the scene briefly appeared at the
+default position (15, 10, 15), then vanished as the camera reached the far-clipped position.
 
+**Bug B — ViewCube corner/edge click → scene disappears:**
+`snapToViewDirection` uses `dist = camera.distanceTo(target)`. After Bug A moved the
+camera ~20 000 units from the DXF-mm target, corner/edge snaps preserved that huge
+distance → scene remained beyond `CAMERA_FAR`.
+
+**Fix — `DxfToThreeConverter.sync()` applies group-level unit scale:**
+```
+group.scale.set(unitScale, 1, unitScale)
+```
+where `unitScale = DXF_UNIT_TO_METRES[dxfScene.units ?? 'mm']` (0.001 for default mm).
+`getBounds()` now returns metre-scale world coords → `frameBounds` positions camera
+correctly (~20–60 m for typical floor plans) → BIM entities visible within `CAMERA_FAR`.
+3 new unit tests added to `DxfToThreeConverter.test.ts` (mm/m/cm scale assertions).
 
 
 

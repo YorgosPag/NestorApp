@@ -47,6 +47,7 @@ import { createAnimationManager } from '../viewport/animation-manager';
 import type { AnimationManager } from '../viewport/animation-manager';
 import { computeFramingTargetBounds, computeSceneFramingBounds } from './scene-framing-bounds';
 import { createBimRenderer, createBimLights, createBimScene, initViewportCamera, initViewCube } from './scene-setup';
+import { applyDxfOverlayFraming } from './scene-sync-dxf-overlay';
 import { createKeyboardFocusManager, type KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
 import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer';
 import type { FocusEntityLabelData } from '../accessibility/FocusIndicator3D';
@@ -137,7 +138,9 @@ export class ThreeJsSceneManager {
       onIdle: () => {
         this.qualityModulator.onCameraIdle();
         this.ssaoModulator.onCameraIdle();
-        this.pathTracerRenderer.start();
+        const hasBimMesh = this.bimLayer.hasAnyMesh();
+        console.log('[3D-DEBUG][onIdle] hasBimMesh:', hasBimMesh, 'bimChildren:', this.bimLayer.group.children.length);
+        if (hasBimMesh) this.pathTracerRenderer.start();
         useViewMode3DStore.getState().enterPreviewMode();
       },
       onActive: () => {
@@ -373,13 +376,11 @@ export class ThreeJsSceneManager {
     if (this.disposed) return;
     this.dxfConverter.sync(dxfScene);
     this.pathTracerRenderer.invalidateScene();
-    if (!this.initialCameraFitDone) {
-      const box = this.dxfConverter.getBounds();
-      if (box && !box.isEmpty()) {
-        this.viewport.frameBounds(box.min, box.max);
-        this.initialCameraFitDone = true;
-      }
-    }
+    applyDxfOverlayFraming(
+      { viewport: this.viewport, scene: this.scene, bounds: this.dxfConverter.getBounds(),
+        fitDone: this.initialCameraFitDone, onFitApplied: () => { this.initialCameraFitDone = true; } },
+      dxfScene,
+    );
     this.sectionController.ensureInit();
     this.sectionController.applyState();
   }

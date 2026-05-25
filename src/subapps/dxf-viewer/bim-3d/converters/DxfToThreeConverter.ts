@@ -30,6 +30,18 @@ const ARC_SEGMENTS_FULL = 48;
 const DEG2RAD = Math.PI / 180;
 const WIREFRAME_OPACITY = 0.65;
 
+// DXF files use various world units; the Three.js BIM world uses metres.
+// This map converts each DXF unit to metres so the DXF wireframe overlay
+// is spatially aligned with BIM geometry (walls, slabs, etc.).
+// Default 'mm' matches the back-compat assumption in DxfScene.units.
+const DXF_UNIT_TO_METRES: Readonly<Record<string, number>> = {
+  mm: 0.001,
+  cm: 0.01,
+  m:  1,
+  in: 0.0254,
+  ft: 0.3048,
+};
+
 // ACI_PALETTE values are CSS hex strings '#RRGGBB'. Cast for numeric index access.
 const ACI_MAP = ACI_PALETTE as unknown as Record<number, string | undefined>;
 
@@ -202,8 +214,34 @@ export class DxfToThreeConverter {
     }
 
     if (group.children.length === 0) return;
+
+    // Scale the wireframe overlay from DXF world units → metres so it aligns
+    // with BIM geometry. appendEntitySegments stores raw DXF coordinates;
+    // the group-level transform converts them to the Three.js metre world.
+    const unitScale = DXF_UNIT_TO_METRES[dxfScene.units ?? 'mm'] ?? 0.001;
+    group.scale.set(unitScale, 1, unitScale);
+
     this.group = group;
     this.scene.add(group);
+
+    // DEBUG — remove after fix confirmed
+    const rawBox = new THREE.Box3();
+    for (const child of group.children) {
+      if (child instanceof THREE.LineSegments) (child.geometry as THREE.BufferGeometry).computeBoundingBox();
+    }
+    // force matrixWorld update before bounds check
+    group.updateMatrixWorld(true);
+    const worldBox = new THREE.Box3().setFromObject(group);
+    console.log('[3D-DEBUG][DxfConverter.sync]', {
+      units: dxfScene.units ?? '(undefined→mm)',
+      unitScale,
+      entities: dxfScene.entities.length,
+      colorBuckets: colorBuckets.size,
+      worldMin: worldBox.min.toArray().map(v => +v.toFixed(2)).join(','),
+      worldMax: worldBox.max.toArray().map(v => +v.toFixed(2)).join(','),
+      worldIsEmpty: worldBox.isEmpty(),
+    });
+    void rawBox;
   }
 
   getBounds(): THREE.Box3 | null {

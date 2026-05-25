@@ -34,6 +34,15 @@ export function computePerspectiveFraming(
     : 2 * Math.atan(Math.tan(fovRad / 2) * aspect);
   const distance = (radius / Math.tan(effectiveFov / 2)) * FRAME_PADDING_FACTOR;
   const position = new THREE.Vector3().copy(_center).addScaledVector(viewDir, -distance);
+  // DEBUG — remove after fix confirmed
+  console.log('[3D-DEBUG][computePerspectiveFraming]', {
+    min: min.toArray().map(v => +v.toFixed(2)).join(','),
+    max: max.toArray().map(v => +v.toFixed(2)).join(','),
+    radius: +radius.toFixed(2),
+    distance: +distance.toFixed(2),
+    camPos: position.toArray().map(v => +v.toFixed(2)).join(','),
+    withinFar: distance < 1000,
+  });
   return { position, target: _center.clone(), orthoZoom: 1 };
 }
 

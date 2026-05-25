@@ -112,6 +112,19 @@ export class BimSceneLayer {
     this.group.clear();
   }
 
+  /**
+   * ADR-366 §3D path-tracer guard — true iff the BIM group contains at least
+   * one triangle Mesh. Used by ThreeJsSceneManager.onIdle to skip path tracer
+   * startup on DXF-only scenes (LineSegments only → empty BVH → black frame).
+   * Scoped to `this.group` (not `scene.traverse`) so SectionBox handles do
+   * not produce a false-positive.
+   */
+  hasAnyMesh(): boolean {
+    let has = false;
+    this.group.traverse((obj) => { if (obj instanceof THREE.Mesh) has = true; });
+    return has;
+  }
+
   dispose(): void {
     this.clearGroup();
     this.group.parent?.remove(this.group);
