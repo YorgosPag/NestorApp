@@ -6,7 +6,7 @@
  * Uses lineweightToPx from ADR-358 SSoT (no mm→px duplication).
  */
 import { PEN_TABLE_MM, SCALE_COLUMNS, type PenIndex } from './bim-pen-table';
-import { DEFAULT_OBJECT_STYLES, type BimCategory } from './bim-object-styles';
+import { DEFAULT_OBJECT_STYLES, type BimCategory, type ObjectStyle } from './bim-object-styles';
 import { type CutState } from './bim-view-range';
 import { lineweightToPx } from './lineweight-iso-catalog';
 
@@ -29,6 +29,12 @@ export interface LineWeightContext {
   scaleDenominator: number;
   /** Screen DPI (default 96). */
   dpi?: number;
+  /**
+   * ADR-375 Phase B.2: per-view ObjectStyles overrides.
+   * When present, merged with DEFAULT_OBJECT_STYLES (override wins).
+   * Renderers pass `useBimRenderSettingsStore.getState().objectStyles`.
+   */
+  objectStyles?: Partial<Record<BimCategory, ObjectStyle>>;
 }
 
 /** <Beyond> uses the finest pen (Pen #3) per Revit Line Styles default. */
@@ -45,7 +51,10 @@ const BEYOND_PEN: PenIndex = 3;
 export function resolveLineWeightPx(ctx: LineWeightContext): number {
   if (ctx.cutState === 'hidden') return 0;
 
-  const style = DEFAULT_OBJECT_STYLES[ctx.category];
+  const styles = ctx.objectStyles
+    ? { ...DEFAULT_OBJECT_STYLES, ...ctx.objectStyles }
+    : DEFAULT_OBJECT_STYLES;
+  const style = styles[ctx.category];
   let penIdx: PenIndex;
   if (ctx.cutState === 'cut') {
     penIdx = style.cutPen;
