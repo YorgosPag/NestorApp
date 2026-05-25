@@ -108,7 +108,7 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
       { zBottomMm: _soZTop - 200, zTopMm: _soZTop, category: 'slab-opening' },
       DEFAULT_VIEW_RANGE,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'slab-opening', cutState: _soCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96 });
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'slab-opening', cutState: _soCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
     this.ctx.setLineDash(KIND_DASH[opening.kind] as unknown as number[]);
     this.drawPolygonPath(verts);
     this.ctx.stroke();
