@@ -310,14 +310,25 @@ export class HitTestingService {
           validation: stairData.validation,
         } as unknown as EntityModel;
       }
-      // ADR-363 Phases 1B/4/5 — wall/opening/column/beam are direct entities (no DXF wrapper).
+      // ADR-363 Phases 1B/4/5 — wall/column/beam are direct entities (no DXF wrapper).
       // `geometry.bbox` powers spatial broad-phase via BoundsCalculator.calculateBimEntityBounds.
       // SSoT: buildBimEntityModel in bim/utils/bim-entity-passthrough.ts.
       case 'wall':
-      case 'opening':
       case 'column':
       case 'beam':
         return buildBimEntityModel(entity.type as BimElementType, entity, baseModel);
+      // ADR-363 Bug 1 v2 fix (2026-05-25) — `opening` IS wrapped στο
+      // useDxfSceneConversion.ts:306-312 ως `{ ...base, type: 'opening',
+      // openingEntity: <OpeningEntity> }`. Πρέπει να unwrap-ed mirror των slab/
+      // slab-opening branches παρακάτω. Χωρίς αυτό, ο wrapper δεν είχε
+      // `geometry`/`params` στο top level → `BoundsCalculator.calculateBimEntityBounds`
+      // επέστρεφε null → opening εξαφανιζόταν από spatial index → πάντα κέρδιζε
+      // το wall στο hit-test.
+      case 'opening': {
+        type DxfOpeningLike = { openingEntity: unknown };
+        const inner = (entity as unknown as DxfOpeningLike).openingEntity;
+        return buildBimEntityModel('opening', inner, baseModel);
+      }
       // ADR-363 Phase 3.7 — slab/slab-opening ARE wrapped (DxfSlab.slabEntity / DxfSlabOpening.slabOpeningEntity).
       // Must unwrap to inner entity so geometry/kind/params reach BoundsCalculator and hit-tests.
       case 'slab': {
