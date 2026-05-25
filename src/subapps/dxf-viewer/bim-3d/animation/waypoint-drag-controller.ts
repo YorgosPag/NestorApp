@@ -22,6 +22,7 @@
  */
 
 import * as THREE from 'three';
+import { applyAxisConstraint, type AxisLock } from './axis-constraint-projector';
 import type { WaypointHandleRole } from './WaypointDragHandle';
 
 export type DragFsmState = 'idle' | 'hovering' | 'dragging';
@@ -52,6 +53,7 @@ export class WaypointDragController {
   private readonly raycaster = new THREE.Raycaster();
   private readonly ndc = new THREE.Vector2();
   private readonly tmpVec3 = new THREE.Vector3();
+  private readonly startWorldPos = new THREE.Vector3();
 
   getState(): DragFsmState {
     return this.state;
@@ -114,6 +116,7 @@ export class WaypointDragController {
   ): void {
     this.state = 'dragging';
     this.dragRole = role;
+    this.startWorldPos.copy(handleWorldPos);
     computeCameraAlignedPlane(this.dragPlane, camera, handleWorldPos);
     events?.onDragStart?.(role, handleWorldPos.clone());
   }
@@ -129,15 +132,22 @@ export class WaypointDragController {
     clientX: number,
     clientY: number,
     events?: DragControllerEvents,
+    axisLock?: AxisLock | null,
   ): THREE.Vector3 | null {
     if (this.state !== 'dragging' || this.dragRole === null) return null;
     if (!setNdcFromClient(this.ndc, domElement, clientX, clientY)) return null;
     this.raycaster.setFromCamera(this.ndc, camera);
     const hit = this.raycaster.ray.intersectPlane(this.dragPlane, this.tmpVec3);
     if (!hit) return null;
-    const next = hit.clone();
-    events?.onDragMove?.(this.dragRole, next);
-    return next;
+    let constrained: THREE.Vector3;
+    if (axisLock) {
+      const c = applyAxisConstraint(hit, this.startWorldPos, axisLock);
+      constrained = new THREE.Vector3(c.x, c.y, c.z);
+    } else {
+      constrained = hit.clone();
+    }
+    events?.onDragMove?.(this.dragRole, constrained);
+    return constrained;
   }
 
   /**
