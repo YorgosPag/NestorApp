@@ -167,7 +167,7 @@ export class WallRenderer extends BaseEntityRenderer {
       { zBottomMm: wall.params.baseOffset ?? 0, zTopMm: (wall.params.baseOffset ?? 0) + wall.params.height, category: 'wall' },
       DEFAULT_VIEW_RANGE,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'wall', cutState: _cutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96 });
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'wall', cutState: _cutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
 
     // Build closed polygon: outer (start→end) + inner (end→start) reverses
     // so the perimeter is well-oriented for fill.
