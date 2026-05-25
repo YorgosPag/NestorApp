@@ -1,18 +1,30 @@
 /**
- * BIM Column — Type Schema (ADR-363 §5.6, Phase 4).
+ * BIM Column — Type Schema (ADR-363 §5.6, Phase 4 / Phase 8 extension).
  *
  * Concrete `ColumnParams` + `ColumnGeometry` + `ColumnEntity` αντικαθιστούν το
  * Phase 0 stub στο `types/entities.ts`.
  *
- * 4 kinds (rectangular / circular / L-shape / T-shape), single-click placement
- * με 9-position anchor + free rotation. Footprint cached στο `geometry` (SSoT
- * = params), area σε m², volume σε m³.
+ * 7 kinds — single-click placement με 9-position anchor + free rotation:
+ *   - rectangular / circular / L-shape / T-shape  (Phase 4)
+ *   - polygon / shear-wall / I-shape              (Phase 8 extension)
+ *
+ * Footprint cached στο `geometry` (SSoT = params), area σε m², volume σε m³.
  *
  * SSoT:
  *   - `ColumnParams.position` + `anchor` (+ rotation/kind/width/depth) ορίζουν
  *     το footprint του πολυγώνου.
  *   - `ColumnGeometry` cache από `computeColumnGeometry()` — re-derivable από
  *     params.
+ *
+ * Phase 8 design notes:
+ *   - shear-wall reuses `width` (length) + `depth` (thickness) — απλό
+ *     rectangle με διαφορετικά defaults + relaxed min dimension. Code rules
+ *     ζουν στον validator (Eurocode 8 §5.4.2.4 — thickness ≥ 150mm).
+ *   - polygon = regular N-gon (3–12 sides). `width` = circumscribed Ø. Sides
+ *     από `ColumnPolygonParams.sides`. `depth` ignored.
+ *   - I-shape = steel double-T (IPE/HEA family). `width` = flange width (b),
+ *     `depth` = section depth (h). Flange + web thickness από
+ *     `ColumnIShapeParams`. Defaults match IPE-300 (b=200, h=300).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6
  */
@@ -29,12 +41,15 @@ import type { ColumnBaseBinding, ColumnTopBinding } from './bim-binding';
 
 // ─── Sub-type discriminator (ADR-363 §5.6) ───────────────────────────────────
 
-/** Column kind discriminator. 4 industry-standard τύποι κολώνας. */
+/** Column kind discriminator. 7 industry-standard τύποι κολώνας. */
 export type ColumnKind =
   | 'rectangular'
   | 'circular'
   | 'L-shape'
-  | 'T-shape';
+  | 'T-shape'
+  | 'polygon'      // ADR-363 Phase 8 — regular N-gon (3–12 sides)
+  | 'shear-wall'   // ADR-363 Phase 8 — μακρόστενη ορθογωνία (τοιχείο ΟΣ, Eurocode 8 §5.4.2.4)
+  | 'I-shape';     // ADR-363 Phase 8 — steel double-T (IPE/HEA family)
 
 /**
  * 9-position anchor — ποιο σημείο της διατομής εδράζεται στο `position`.
@@ -79,6 +94,34 @@ export interface ColumnTshapeParams {
   readonly flipY?: boolean;
 }
 
+/**
+ * Polygon (regular N-gon) geometry override. ADR-363 Phase 8.
+ * `width` σε `ColumnParams` παίζει role circumscribed-circle diameter (Ø_circ).
+ * `depth` αγνοείται (mirrors circular).
+ */
+export interface ColumnPolygonParams {
+  /** Number of sides. Clamped to [MIN_POLYGON_SIDES, MAX_POLYGON_SIDES]. Default DEFAULT_POLYGON_SIDES (6 = hexagon). */
+  readonly sides?: number;
+}
+
+/**
+ * I-shape (steel double-T) geometry override. ADR-363 Phase 8.
+ * `width` σε `ColumnParams` = flange width (b). `depth` = section depth (h).
+ * Defaults track IPE-300 typical proportions. Mirror via `flipY` reverses
+ * vertex winding (same convention as L/T).
+ */
+export interface ColumnIShapeParams {
+  /** mm. Πάχος πέλματος (tf). Default DEFAULT_I_FLANGE_THICKNESS_MM. */
+  readonly flangeThickness?: number;
+  /** mm. Πάχος κορμού (tw). Default DEFAULT_I_WEB_THICKNESS_MM. */
+  readonly webThickness?: number;
+  /**
+   * Mirror Y handedness. Set by mirror operations (ADR-363 Phase 7.2).
+   * No-op visually για symmetric I (provided for transform-pipeline parity).
+   */
+  readonly flipY?: boolean;
+}
+
 // ─── Parameters (user-editable, SSoT for geometry derivation) ────────────────
 
 /**
@@ -87,12 +130,26 @@ export interface ColumnTshapeParams {
  *   - `position` — clicked point σε world coords (mm). Anchor offset
  *     εφαρμόζεται στο geometry pipeline.
  *   - `anchor` — 9-position selector (default 'center').
- *   - `width` — mm. Διάμετρος αν `kind === 'circular'`. Αλλιώς πλάτος X-axis.
- *   - `depth` — mm. Αγνοείται αν `kind === 'circular'`. Αλλιώς ύψος Y-axis.
+ *   - `width` — mm. Semantic per kind:
+ *       rectangular  → πλάτος X-axis
+ *       circular     → διάμετρος
+ *       L-shape      → bbox width
+ *       T-shape      → bbox width
+ *       polygon      → circumscribed-circle diameter
+ *       shear-wall   → μήκος τοιχείου (length)
+ *       I-shape      → flange width (b)
+ *   - `depth` — mm. Semantic per kind:
+ *       rectangular  → ύψος Y-axis
+ *       circular     → αγνοείται
+ *       L-shape      → bbox depth
+ *       T-shape      → bbox depth
+ *       polygon      → αγνοείται
+ *       shear-wall   → πάχος τοιχείου (thickness)
+ *       I-shape      → section depth (h)
  *   - `height` — mm. Storey height (default 3000).
  *   - `rotation` — μοίρες CCW γύρω από το anchor. Αγνοείται αν circular.
  *   - `material` — material library ID (Phase 6+).
- *   - `lshape` / `tshape` — variant-specific dimensions.
+ *   - `lshape` / `tshape` / `polygon` / `ishape` — variant-specific dims.
  */
 export interface ColumnParams {
   readonly kind: ColumnKind;
@@ -105,6 +162,10 @@ export interface ColumnParams {
   readonly material?: string;
   readonly lshape?: ColumnLshapeParams;
   readonly tshape?: ColumnTshapeParams;
+  /** ADR-363 Phase 8 — regular N-gon override (only meaningful αν kind='polygon'). */
+  readonly polygon?: ColumnPolygonParams;
+  /** ADR-363 Phase 8 — I-shape override (only meaningful αν kind='I-shape'). */
+  readonly ishape?: ColumnIShapeParams;
   /**
    * DXF canvas coordinate unit. Always stored so `computeColumnGeometry` can
    * convert mm scalars (width/depth) → canvas units for 2D footprint offsets.
@@ -195,6 +256,52 @@ export const DEFAULT_COLUMN_ROTATION_DEG = 0;
 
 /** Number of segments για circular footprint approximation. */
 export const CIRCULAR_COLUMN_SEGMENTS = 32;
+
+// ─── ADR-363 Phase 8 — polygon / shear-wall / I-shape defaults ─────────────
+
+/** Default αριθμός πλευρών για polygon kind. 6 = hexagon (most common decorative). */
+export const DEFAULT_POLYGON_SIDES = 6;
+
+/** Min/max sides για regular N-gon. < 3 degenerate, > 12 visually indistinguishable από circular. */
+export const MIN_POLYGON_SIDES = 3;
+export const MAX_POLYGON_SIDES = 12;
+
+/** Default μήκος τοιχείου διάτμησης (mm). 2m typical wall length. */
+export const DEFAULT_SHEAR_WALL_LENGTH_MM = 2000;
+
+/** Default πάχος τοιχείου διάτμησης (mm). 20cm typical RC shear wall. */
+export const DEFAULT_SHEAR_WALL_THICKNESS_MM = 200;
+
+/**
+ * Min thickness τοιχείου διάτμησης (mm). Eurocode 8 §5.4.2.4 — 15cm για
+ * RC shear walls (versus 25cm για κανονικές κολώνες, MIN_COLUMN_DIMENSION_MM).
+ */
+export const MIN_SHEAR_WALL_THICKNESS_MM = 150;
+
+/**
+ * Min aspect ratio (length / thickness) ώστε ένα rectangular kind να
+ * χαρακτηριστεί shear wall. < 4 = standard column. ≥ 4 = wall behaviour
+ * (Eurocode 8 §5.4.2.4 wall classification).
+ */
+export const SHEAR_WALL_MIN_ASPECT_RATIO = 4;
+
+/** Default flange width (b) για I-shape (mm). IPE-300 = 150, HEA-300 = 300. Median = 200. */
+export const DEFAULT_I_FLANGE_WIDTH_MM = 200;
+
+/** Default section depth (h) για I-shape (mm). IPE-300 = 300. */
+export const DEFAULT_I_SECTION_DEPTH_MM = 300;
+
+/** Default flange thickness (tf) για I-shape (mm). IPE-300 ≈ 10.7, HEA-300 = 14. Generic = 20. */
+export const DEFAULT_I_FLANGE_THICKNESS_MM = 20;
+
+/** Default web thickness (tw) για I-shape (mm). IPE-300 ≈ 7.1, HEA-300 = 8.5. Generic = 15. */
+export const DEFAULT_I_WEB_THICKNESS_MM = 15;
+
+/**
+ * Min flange/web thickness για I-shape (mm). Below this = degenerate (would
+ * collapse to line). Validator hard-error.
+ */
+export const MIN_I_PLATE_THICKNESS_MM = 5;
 
 /**
  * Anchor → unit-fraction offset within the (width × depth) bounding box,

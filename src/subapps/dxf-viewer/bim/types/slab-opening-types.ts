@@ -24,6 +24,7 @@ import type {
   BoundingBox3D,
   Polygon3D,
 } from './bim-base';
+import type { SceneUnits } from '../../utils/scene-units';
 
 // ─── Sub-type discriminator (ADR-363 §11.Q3) ────────────────────────────────
 
@@ -70,6 +71,14 @@ export interface SlabOpeningParams {
   readonly fireRating?: 60 | 90 | 120;
   /** Material library ID (Phase 6+). */
   readonly material?: string;
+  /**
+   * Coordinate units του `outline.vertices` (mirror του `SlabParams.sceneUnits`).
+   * Default `'mm'` για back-compat. Όταν host scene δηλώνει m/cm/in/ft, ο
+   * builder converts τα mm-baked defaults (width/depth) στις scene units και
+   * propagates το πεδίο εδώ ώστε geometry/validator να επιστρέψουν σωστά
+   * area/perimeter/min-dim σε mm. Mirror του slab-types §sceneUnits.
+   */
+  readonly sceneUnits?: SceneUnits;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ─────────────────

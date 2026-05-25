@@ -26,6 +26,7 @@ import {
   SLAB_OPENING_RIBBON_BADGE_KEYS,
   isSlabOpeningRibbonStringKey,
 } from './bridge/slab-opening-command-keys';
+import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 import { EventBus } from '../../../systems/events/EventBus';
 import type {
   RibbonComboboxState,
@@ -109,8 +110,10 @@ export function useRibbonSlabOpeningBridge(
       if (isSlabOpeningRibbonStringKey(commandKey)) {
         const field = STRING_KEY_TO_FIELD[commandKey];
         const raw = opening.params[field];
-        // fireRating: undefined → '' (no rating) for combobox display.
-        if (field === 'fireRating') return { value: raw == null ? '' : String(raw), options: [] };
+        // fireRating: undefined → SELECT_CLEAR_VALUE (Radix Select forbids '').
+        if (field === 'fireRating') {
+          return { value: raw == null ? SELECT_CLEAR_VALUE : String(raw), options: [] };
+        }
         return raw == null ? null : { value: String(raw), options: [] };
       }
       return null;
@@ -130,7 +133,10 @@ export function useRibbonSlabOpeningBridge(
           return;
         }
         if (field === 'fireRating') {
-          const parsed = value === '' ? undefined : (Number(value) as 60 | 90 | 120);
+          const parsed =
+            value === SELECT_CLEAR_VALUE || value === ''
+              ? undefined
+              : (Number(value) as 60 | 90 | 120);
           const nextParams: SlabOpeningParams = { ...opening.params, fireRating: parsed };
           dispatchParams(opening, nextParams);
           return;

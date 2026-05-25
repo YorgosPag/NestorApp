@@ -24,11 +24,17 @@ import {
   DEFAULT_COLUMN_HEIGHT_MM,
   DEFAULT_COLUMN_ROTATION_DEG,
   DEFAULT_COLUMN_WIDTH_MM,
+  DEFAULT_I_FLANGE_WIDTH_MM,
+  DEFAULT_I_SECTION_DEPTH_MM,
+  DEFAULT_SHEAR_WALL_LENGTH_MM,
+  DEFAULT_SHEAR_WALL_THICKNESS_MM,
   type ColumnAnchor,
   type ColumnEntity,
+  type ColumnIShapeParams,
   type ColumnKind,
   type ColumnLshapeParams,
   type ColumnParams,
+  type ColumnPolygonParams,
   type ColumnTshapeParams,
 } from '../../bim/types/column-types';
 import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
@@ -47,14 +53,15 @@ export type { SceneUnits };
 /**
  * Field overrides για `buildDefaultColumnParams`. Ribbon (contextual column
  * tab) supplies kind / anchor / width / depth / height / rotation /
- * material. Variant geometry overrides (`lshape`, `tshape`) propagated.
+ * material. Variant geometry overrides (`lshape`, `tshape`, `polygon`,
+ * `ishape`) propagated.
  */
 export interface ColumnParamOverrides {
   readonly kind?: ColumnKind;
   readonly anchor?: ColumnAnchor;
-  /** mm. Width / διάμετρος αν circular. */
+  /** mm. Width / διάμετρος αν circular / circumscribed Ø αν polygon. */
   readonly width?: number;
-  /** mm. Αγνοείται αν circular. */
+  /** mm. Αγνοείται αν circular ή polygon. */
   readonly depth?: number;
   /** mm. */
   readonly height?: number;
@@ -63,6 +70,26 @@ export interface ColumnParamOverrides {
   readonly material?: string;
   readonly lshape?: ColumnLshapeParams;
   readonly tshape?: ColumnTshapeParams;
+  /** ADR-363 Phase 8 — regular N-gon sides override. */
+  readonly polygon?: ColumnPolygonParams;
+  /** ADR-363 Phase 8 — I-shape flange/web thickness override. */
+  readonly ishape?: ColumnIShapeParams;
+}
+
+/**
+ * Kind-specific defaults για width/depth. Shear walls + I-shapes start με
+ * realistic structural defaults (2m×20cm wall / IPE-300 b×h) αντί για
+ * τα generic 400×400 RC column defaults.
+ */
+function getKindDimensionDefaults(kind: ColumnKind): { width: number; depth: number } {
+  switch (kind) {
+    case 'shear-wall':
+      return { width: DEFAULT_SHEAR_WALL_LENGTH_MM, depth: DEFAULT_SHEAR_WALL_THICKNESS_MM };
+    case 'I-shape':
+      return { width: DEFAULT_I_FLANGE_WIDTH_MM, depth: DEFAULT_I_SECTION_DEPTH_MM };
+    default:
+      return { width: DEFAULT_COLUMN_WIDTH_MM, depth: DEFAULT_COLUMN_DEPTH_MM };
+  }
 }
 
 // ─── Defaults factory ────────────────────────────────────────────────────────
@@ -83,9 +110,10 @@ export function buildDefaultColumnParams(
   sceneUnits: SceneUnits = 'mm',
 ): ColumnParams {
   const kind = overrides.kind ?? kindArg ?? 'rectangular';
+  const dims = getKindDimensionDefaults(kind);
   const anchor: ColumnAnchor = overrides.anchor ?? 'center';
-  const width = overrides.width ?? DEFAULT_COLUMN_WIDTH_MM;
-  const depth = overrides.depth ?? DEFAULT_COLUMN_DEPTH_MM;
+  const width = overrides.width ?? dims.width;
+  const depth = overrides.depth ?? dims.depth;
   const height = overrides.height ?? DEFAULT_COLUMN_HEIGHT_MM;
   const rotation = overrides.rotation ?? DEFAULT_COLUMN_ROTATION_DEG;
 
@@ -107,6 +135,8 @@ export function buildDefaultColumnParams(
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
     ...(overrides.lshape !== undefined ? { lshape: overrides.lshape } : {}),
     ...(overrides.tshape !== undefined ? { tshape: overrides.tshape } : {}),
+    ...(overrides.polygon !== undefined ? { polygon: overrides.polygon } : {}),
+    ...(overrides.ishape !== undefined ? { ishape: overrides.ishape } : {}),
   };
   return params;
 }

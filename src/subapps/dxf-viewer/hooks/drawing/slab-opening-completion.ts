@@ -15,7 +15,14 @@
  *   - Outline auto-clamped εντός slab footprint όταν το rectangle "βγαίνει
  *     παραέξω" (simple bbox shift, validator πιάνει τα υπόλοιπα).
  *
+ * Scene-units (ADR-370): default rectangle size είναι mm-baked
+ * (`SLAB_OPENING_DEFAULT_SIZES`). Όταν το active scene δηλώνει m/cm/in/ft, ο
+ * builder converts width/depth στις scene units πριν φτιάξει το polygon, ώστε
+ * η οπή να μην βγει σε άλλη κλίμακα από το host slab (mirror του
+ * `slab-completion` Phase 8 fix).
+ *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5 §11.Q3
+ * @see docs/centralized-systems/reference/adrs/ADR-370-bim-readonly-visualization.md
  */
 
 import type { Point2D } from '../../rendering/types/Types';
@@ -30,6 +37,9 @@ import type { SlabEntity } from '../../bim/types/slab-types';
 import { computeSlabOpeningGeometry } from '../../bim/geometry/slab-opening-geometry';
 import { validateSlabOpeningParams } from '../../bim/validators/slab-opening-validator';
 import { generateSlabOpeningId } from '@/services/enterprise-id-convenience';
+import { detectSceneUnits, mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+
+export type { SceneUnits };
 
 // ─── Param overrides accepted by the builder ────────────────────────────────
 
@@ -57,25 +67,73 @@ export interface SlabOpeningParamOverrides {
  * Algorithm:
  *   1. Resolve kind (override → 'shaft' default).
  *   2. Resolve rect size από `SLAB_OPENING_DEFAULT_SIZES[kind]` (overrides win).
- *   3. Build rectangular outline centered στο `anchorPoint` (CCW).
- *   4. Πρόσθεση optional overrides (fireRating, elevationOverride, ...).
+ *   3. Convert width/depth (mm) → scene-units πολλαπλασιάζοντας με
+ *      `mmToSceneUnits(sceneUnits)` — anchorPoint είναι ήδη σε scene-units.
+ *   4. Build rectangular outline centered στο `anchorPoint` (CCW).
+ *   5. Πρόσθεση optional overrides (fireRating, elevationOverride, ...) +
+ *      propagation του `sceneUnits` ώστε geometry/validator να ξέρουν την
+ *      κλίμακα των vertices.
  */
 export function buildDefaultSlabOpeningParams(
   hostSlab: SlabEntity,
   anchorPoint: Readonly<Point2D>,
   overrides: SlabOpeningParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
 ): SlabOpeningParams {
   const kind = overrides.kind ?? 'shaft';
   const defaults = SLAB_OPENING_DEFAULT_SIZES[kind];
-  const width = overrides.width ?? defaults.width;
-  const depth = overrides.depth ?? defaults.depth;
+  const widthMm = overrides.width ?? defaults.width;
+  const depthMm = overrides.depth ?? defaults.depth;
 
-  const outline = buildRectangleCcw(anchorPoint, width, depth);
+  // Priority για το coordinate system του cutout (most → least reliable):
+  //   1. host slab's frozen `sceneUnits` — εγγυάται ίδιο coordinate space με
+  //      το slab outline που τρυπάμε.
+  //   2. caller-provided `sceneUnits` από resolveSceneUnits(scene).
+  //   3. bounds heuristic πάνω στο host slab bbox — σώζει legacy docs που
+  //      δεν έχουν sceneUnits αλλά έχουν αξιόπιστα coords.
+  //   4. 'mm' default.
+  const effectiveUnits: SceneUnits =
+    hostSlab.params.sceneUnits
+    ?? sceneUnits
+    ?? inferUnitsFromBbox(hostSlab)
+    ?? 'mm';
+
+  const mmFactor = mmToSceneUnits(effectiveUnits);
+  const widthScene = widthMm * mmFactor;
+  const depthScene = depthMm * mmFactor;
+
+  const outline = buildRectangleCcw(anchorPoint, widthScene, depthScene);
+
+  // TEMP DIAGNOSTIC — ADR-370 slab-opening hole-size bug (2026-05-25)
+  // JSON.stringify για να μην collapse-άρουν τα objects στο console.
+  // eslint-disable-next-line no-console
+  console.warn('[slab-opening:DIAG] ' + JSON.stringify({
+    sceneUnitsParam: sceneUnits,
+    hostSlabSceneUnits: hostSlab.params.sceneUnits,
+    inferredFromBbox: inferUnitsFromBbox(hostSlab),
+    effectiveUnits,
+    mmFactor,
+    widthMm,
+    depthMm,
+    widthScene,
+    depthScene,
+    anchor: { x: anchorPoint.x, y: anchorPoint.y },
+    hostBbox: hostSlab.geometry?.bbox,
+    hostOutlineLen: hostSlab.params.outline?.vertices?.length,
+    hostOutlineV0: hostSlab.params.outline?.vertices?.[0],
+    hostOutlineV1: hostSlab.params.outline?.vertices?.[1],
+    hostOutlineV2: hostSlab.params.outline?.vertices?.[2],
+    outlineV0: outline.vertices[0],
+    outlineV1: outline.vertices[1],
+    outlineV2: outline.vertices[2],
+    outlineV3: outline.vertices[3],
+  }));
 
   const params: SlabOpeningParams = {
     kind,
     slabId: hostSlab.id,
     outline,
+    sceneUnits: effectiveUnits,
     ...(overrides.elevationOverride !== undefined
       ? { elevationOverride: overrides.elevationOverride }
       : {}),
@@ -132,24 +190,42 @@ export function completeSlabOpeningFromClick(
   anchorPoint: Readonly<Point2D>,
   layerId: string,
   overrides: SlabOpeningParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
 ): BuildSlabOpeningEntityResult {
-  const params = buildDefaultSlabOpeningParams(hostSlab, anchorPoint, overrides);
+  const params = buildDefaultSlabOpeningParams(hostSlab, anchorPoint, overrides, sceneUnits);
   return buildSlabOpeningEntity(params, hostSlab, layerId);
 }
 
 // ─── Internal helpers ───────────────────────────────────────────────────────
 
 /**
- * Build axis-aligned rectangle (CCW) centered στο anchor. Vertices in mm
- * world coords, z=0. Order: bottom-left → bottom-right → top-right → top-left.
+ * Bounds-diagonal heuristic — όταν το host slab δεν φέρει `sceneUnits` (legacy
+ * Firestore doc), η μαγνητούδα του bbox δίνει αξιόπιστη ένδειξη της κλίμακας:
+ * ένα slab 5×5m έχει diagonal ≈ 7 σε `'m'`, ≈ 707 σε `'cm'`, ≈ 7070 σε `'mm'`.
+ * Επιστρέφει `null` όταν bbox άκυρο — caller πέφτει στο `'mm'` default.
+ */
+function inferUnitsFromBbox(hostSlab: SlabEntity): SceneUnits | null {
+  const bb = hostSlab.geometry?.bbox;
+  if (!bb) return null;
+  const dx = bb.max.x - bb.min.x;
+  const dy = bb.max.y - bb.min.y;
+  if (!Number.isFinite(dx) || !Number.isFinite(dy) || dx <= 0 || dy <= 0) return null;
+  return detectSceneUnits({ min: { x: bb.min.x, y: bb.min.y }, max: { x: bb.max.x, y: bb.max.y } });
+}
+
+/**
+ * Build axis-aligned rectangle (CCW) centered στο anchor. Vertices στις
+ * ίδιες units με το `anchor` + `width`/`depth` (caller responsible για
+ * conversion από mm-baked defaults). Order: bottom-left → bottom-right →
+ * top-right → top-left.
  */
 function buildRectangleCcw(
   center: Readonly<Point2D>,
-  widthMm: number,
-  depthMm: number,
+  width: number,
+  depth: number,
 ): Polygon3D {
-  const halfW = widthMm / 2;
-  const halfD = depthMm / 2;
+  const halfW = width / 2;
+  const halfD = depth / 2;
   const vertices: Point3D[] = [
     { x: center.x - halfW, y: center.y - halfD, z: 0 },
     { x: center.x + halfW, y: center.y - halfD, z: 0 },

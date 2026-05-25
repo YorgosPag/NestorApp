@@ -1,5 +1,5 @@
 /**
- * Column geometry computation (ADR-363 Phase 4).
+ * Column geometry computation (ADR-363 Phase 4 / Phase 8 extension).
  *
  * Pure SSoT function — derives `ColumnGeometry` cache από `ColumnParams`.
  * Idempotent + side-effect free. Footprint builder dispatches per kind:
@@ -8,6 +8,9 @@
  *   - circular    → CIRCULAR_COLUMN_SEGMENTS-vertex polygon (Ø = width)
  *   - L-shape     → 6-vertex CCW L (default arm = width/3, depth/3)
  *   - T-shape     → 8-vertex CCW T (default flange = width, web = depth/3)
+ *   - polygon     → N-vertex regular N-gon (Ø_circ = width, sides = 3..12)  [Phase 8]
+ *   - shear-wall  → 4-vertex rect (length=width, thickness=depth)           [Phase 8]
+ *   - I-shape     → 12-vertex CCW double-T (b=width, h=depth, tf/tw flanges)[Phase 8]
  *
  * Pipeline για non-circular: build local-axis vertices (origin = centroid
  * BEFORE anchor shift) → applyAnchorTransform (offsets so anchor sits on
@@ -21,14 +24,22 @@
 import type {
   ColumnAnchor,
   ColumnGeometry,
+  ColumnIShapeParams,
   ColumnKind,
   ColumnLshapeParams,
   ColumnParams,
+  ColumnPolygonParams,
   ColumnTshapeParams,
 } from '../types/column-types';
 import {
   ANCHOR_OFFSETS,
   CIRCULAR_COLUMN_SEGMENTS,
+  DEFAULT_I_FLANGE_THICKNESS_MM,
+  DEFAULT_I_WEB_THICKNESS_MM,
+  DEFAULT_POLYGON_SIDES,
+  MAX_POLYGON_SIDES,
+  MIN_I_PLATE_THICKNESS_MM,
+  MIN_POLYGON_SIDES,
 } from '../types/column-types';
 import type { Point3D } from '../types/bim-base';
 import { polygonArea, polygonBbox } from './shared/polygon-utils';
@@ -89,6 +100,11 @@ function buildLocalFootprint(params: ColumnParams, s: number): Point3D[] {
     case 'circular':    return buildCircularLocal(params.width, s);
     case 'L-shape':     return buildLshapeLocal(params.width, params.depth, s, params.lshape);
     case 'T-shape':     return buildTshapeLocal(params.width, params.depth, s, params.tshape);
+    // ADR-363 Phase 8 — shear-wall reuses rectangular footprint (width=length, depth=thickness).
+    // Validator + ribbon defaults differentiate τη συμπεριφορά.
+    case 'shear-wall':  return buildRectangularLocal(params.width, params.depth, s);
+    case 'polygon':     return buildPolygonLocal(params.width, s, params.polygon);
+    case 'I-shape':     return buildIShapeLocal(params.width, params.depth, s, params.ishape);
   }
 }
 
@@ -173,13 +189,92 @@ function buildTshapeLocal(width: number, depth: number, s: number, override?: Co
   return flipY ? [...verts].reverse() : verts;
 }
 
+/**
+ * Regular N-gon (polygon kind, ADR-363 Phase 8). `diameter` = circumscribed
+ * circle diameter (matches `params.width`). Sides clamped to [MIN, MAX].
+ * Vertex 0 points up (math +Y) per AutoCAD/Revit convention so even-sided
+ * polygons render flat-bottom and odd-sided ones point-up out of the box.
+ */
+function buildPolygonLocal(diameter: number, s: number, override?: ColumnPolygonParams): Point3D[] {
+  const r = (diameter * s) / 2;
+  const raw = override?.sides ?? DEFAULT_POLYGON_SIDES;
+  const n = Math.max(MIN_POLYGON_SIDES, Math.min(MAX_POLYGON_SIDES, Math.round(raw)));
+  const verts: Point3D[] = [];
+  const step = (2 * Math.PI) / n;
+  const startAngle = Math.PI / 2;
+  for (let i = 0; i < n; i++) {
+    const a = startAngle + i * step;
+    verts.push({ x: r * Math.cos(a), y: r * Math.sin(a), z: 0 });
+  }
+  return verts;
+}
+
+/**
+ * I-shape (double-T, steel IPE/HEA family) — 12-vertex CCW (math Y-up).
+ *
+ *   - `width` (b)  = flange total width  (X-axis)
+ *   - `depth` (h)  = section depth       (Y-axis)
+ *   - `flangeThickness` (tf) = vertical thickness of top/bottom flanges
+ *   - `webThickness`    (tw) = horizontal thickness of central web
+ *
+ * Vertices traverse outer outline starting bottom-left of bottom flange,
+ * going right along bottom, up the web, left along top, and back down.
+ *
+ * flipY=true reverses winding (parity with L/T mirror transform). Visually
+ * symmetric for I, but kept for transform-pipeline consistency.
+ */
+function buildIShapeLocal(width: number, depth: number, s: number, override?: ColumnIShapeParams): Point3D[] {
+  const tfMm = override?.flangeThickness ?? DEFAULT_I_FLANGE_THICKNESS_MM;
+  const twMm = override?.webThickness ?? DEFAULT_I_WEB_THICKNESS_MM;
+  const tfRaw = Math.max(MIN_I_PLATE_THICKNESS_MM, tfMm) * s;
+  const twRaw = Math.max(MIN_I_PLATE_THICKNESS_MM, twMm) * s;
+  const hb = (width * s) / 2;
+  const hh = (depth * s) / 2;
+  // Clamp tf ≤ h/2 (else flanges overlap) and tw ≤ b (else web exits flange).
+  const tf = Math.min(tfRaw, hh);
+  const halfWeb = Math.min(twRaw / 2, hb);
+  const flipY = override?.flipY ?? false;
+  const ys = flipY ? -1 : 1;
+  const verts: Point3D[] = [
+    { x: -hb,      y: ys * -hh,        z: 0 },  // v0  bottom flange BL
+    { x:  hb,      y: ys * -hh,        z: 0 },  // v1  bottom flange BR
+    { x:  hb,      y: ys * (-hh + tf), z: 0 },  // v2  top of BR corner
+    { x:  halfWeb, y: ys * (-hh + tf), z: 0 },  // v3  web BR
+    { x:  halfWeb, y: ys * ( hh - tf), z: 0 },  // v4  web TR
+    { x:  hb,      y: ys * ( hh - tf), z: 0 },  // v5  bottom of TR corner
+    { x:  hb,      y: ys *  hh,        z: 0 },  // v6  top flange TR
+    { x: -hb,      y: ys *  hh,        z: 0 },  // v7  top flange TL
+    { x: -hb,      y: ys * ( hh - tf), z: 0 },  // v8  bottom of TL corner
+    { x: -halfWeb, y: ys * ( hh - tf), z: 0 },  // v9  web TL
+    { x: -halfWeb, y: ys * (-hh + tf), z: 0 },  // v10 web BL
+    { x: -hb,      y: ys * (-hh + tf), z: 0 },  // v11 top of BL corner
+  ];
+  return flipY ? [...verts].reverse() : verts;
+}
+
 // ─── Anchor + rotation transform ────────────────────────────────────────────
+
+/**
+ * Compute canvas-space bbox dimensions από local vertices. Used by polygon
+ * (no `depth` param) ώστε anchor offsets να βασίζονται σε actual bbox.
+ */
+function computeLocalBboxCanvas(local: readonly Point3D[]): { dimX: number; dimY: number } {
+  let minX = Number.POSITIVE_INFINITY, maxX = Number.NEGATIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY, maxY = Number.NEGATIVE_INFINITY;
+  for (const v of local) {
+    if (v.x < minX) minX = v.x;
+    if (v.x > maxX) maxX = v.x;
+    if (v.y < minY) minY = v.y;
+    if (v.y > maxY) maxY = v.y;
+  }
+  return { dimX: maxX - minX, dimY: maxY - minY };
+}
 
 /**
  * Move local-frame vertices to world coords: translate by anchor offset so
  * the chosen anchor point sits on `position`, then rotate around `position`
  * για visual coherence με Tab cycling. Circular bypasses both (anchor fixed
- * 'center', rotation N/A).
+ * 'center', rotation N/A). Polygon derives anchor dims from actual bbox.
  */
 function transformFootprint(
   local: readonly Point3D[],
@@ -196,8 +291,11 @@ function transformFootprint(
   }
   const { dx, dy } = ANCHOR_OFFSETS[anchor];
   // dx/dy are unit fractions of width/depth. Convert mm → canvas units via s.
-  const shiftX = -dx * width * s;
-  const shiftY = -dy * depth * s;
+  const { dimX, dimY } = kind === 'polygon'
+    ? computeLocalBboxCanvas(local)
+    : { dimX: width * s, dimY: depth * s };
+  const shiftX = -dx * dimX;
+  const shiftY = -dy * dimY;
   const cos = Math.cos(rotationDeg * DEG_TO_RAD);
   const sin = Math.sin(rotationDeg * DEG_TO_RAD);
   return local.map((v) => {
@@ -213,9 +311,12 @@ function transformFootprint(
  * Convenience: returns slenderness ratio = height / min(width, depth). Used
  * από validator για MAX_SLENDERNESS_RATIO check. Returns Infinity για
  * degenerate width or depth.
+ *
+ * `circular` + `polygon` use `width` (circumscribed Ø) since `depth` is
+ * undefined for those kinds. All other kinds use min(width, depth).
  */
 export function getColumnSlenderness(params: ColumnParams): number {
-  const minDim = params.kind === 'circular'
+  const minDim = params.kind === 'circular' || params.kind === 'polygon'
     ? params.width
     : Math.min(params.width, params.depth);
   if (minDim <= 0) return Number.POSITIVE_INFINITY;

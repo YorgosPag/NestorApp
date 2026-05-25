@@ -1,14 +1,21 @@
 /**
- * ADR-363 Phase 4.5c.6 — Column L/T Section-Profile Symbols (pure SSoT).
+ * ADR-363 Phase 4.5c.6 / Phase 8 — Column Section-Profile Symbols (pure SSoT).
  *
- * Computes outline polygons for L-shape and T-shape cross-section profile
- * symbols drawn near a column entity in plan view (hover/selection only).
- * Mirrors the ADR-363 Phase 5.5h pattern (`bim/beams/beam-section-profile.ts`)
- * applied to column variants.
+ * Computes outline polygons for cross-section profile symbols drawn near a
+ * column entity in plan view (hover/selection only). Mirrors the ADR-363
+ * Phase 5.5h pattern (`bim/beams/beam-section-profile.ts`) applied to column
+ * variants.
  *
- * Symbols communicate actual section shape (∟ for L-shape, ⊤ for T-shape)
- * per Revit/Tekla structural plan conventions. flipY reflects the mirror
- * handedness set by ADR-363 Phase 7.2 bim-mirror-geometry.
+ * Symbols communicate actual section shape per Revit/Tekla structural plan
+ * conventions:
+ *   - ∟ (L-shape)         — Phase 4.5c.6
+ *   - ⊤ (T-shape)         — Phase 4.5c.6
+ *   - ⬡ (polygon, N=3..12) — Phase 8
+ *   - ▬ (shear-wall)      — Phase 8 (μακρόστενη)
+ *   - Ι (I-shape, double-T) — Phase 8
+ *
+ * flipY reflects the mirror handedness set by ADR-363 Phase 7.2
+ * bim-mirror-geometry.
  *
  * Coordinate convention (LOCAL symbol space, centre = origin):
  *   ±X = horizontal, ±Y = vertical.
@@ -50,6 +57,29 @@ export const COL_T_FLANGE_T_PX = 5;
 
 /** T-shape web width (X-axis). */
 export const COL_T_WEB_W_PX = 5;
+
+// ─── ADR-363 Phase 8 — polygon / shear-wall / I-shape symbol sizes ─────────
+
+/** Polygon symbol circumscribed Ø (px). Matches L/T extent. */
+export const COL_POLYGON_D_PX = 18;
+
+/** Shear-wall symbol total length (X-axis, μακρόστενο). */
+export const COL_SHEAR_WALL_LEN_PX = 24;
+
+/** Shear-wall symbol thickness (Y-axis). 4:1 aspect για visual wall hint. */
+export const COL_SHEAR_WALL_THK_PX = 6;
+
+/** I-shape symbol flange total width (X-axis). */
+export const COL_I_FLANGE_W_PX = 18;
+
+/** I-shape symbol total section depth (Y-axis). */
+export const COL_I_TOTAL_H_PX = 20;
+
+/** I-shape flange thickness (Y-axis portion of each flange). */
+export const COL_I_FLANGE_T_PX = 4;
+
+/** I-shape web width (X-axis). */
+export const COL_I_WEB_W_PX = 4;
 
 /** Offset from column bbox right-edge to symbol centre (px). */
 export const COL_SECTION_OFFSET_PX = 12;
@@ -163,5 +193,105 @@ export function computeTProfileOutline(
     { x: -hfl,  y: ys * -hh },              // v5 flange top-left
     { x: -hfl,  y: ys * (-hh + flangeT) },  // v6 flange inner-left
     { x: -hwb,  y: ys * (-hh + flangeT) },  // v7 web-flange junction left
+  ];
+}
+
+// ─── ADR-363 Phase 8 — polygon / shear-wall / I-shape outlines ─────────────
+
+/**
+ * Compute the outline polygon of a regular N-gon section symbol (⬡).
+ *
+ * Returns N points in LOCAL symbol coords (centre = origin), CCW math-frame.
+ * Vertex 0 points up (math +Y, screen −Y due to Y-down) per AutoCAD/Revit
+ * polygon default (vertex-up for odd, flat-bottom emergent for even due to
+ * symmetry).
+ *
+ * @param d      Circumscribed diameter (default COL_POLYGON_D_PX)
+ * @param sides  Number of sides (clamped to [3, 12])
+ * @param flipY  Mirror vertically (parity-only, polygon is point-symmetric)
+ */
+export function computePolygonOutline(
+  d: number = COL_POLYGON_D_PX,
+  sides = 6,
+  flipY = false,
+): ReadonlyArray<SectionPoint> {
+  const r = d / 2;
+  const n = Math.max(3, Math.min(12, Math.round(sides)));
+  const ys = flipY ? -1 : 1;
+  const verts: SectionPoint[] = [];
+  const step = (2 * Math.PI) / n;
+  const startAngle = Math.PI / 2;
+  for (let i = 0; i < n; i++) {
+    const a = startAngle + i * step;
+    // Screen-space: math +Y → screen −Y, so negate sin output before ys.
+    verts.push({ x: r * Math.cos(a), y: ys * -r * Math.sin(a) });
+  }
+  return verts;
+}
+
+/**
+ * Compute the outline polygon of a shear-wall section symbol (▬).
+ *
+ * Returns 4 CCW vertices in LOCAL symbol coords (centre = origin). Plain
+ * rectangle with 4:1 aspect for visual "wall" hint.
+ *
+ * @param length     Symbol total length  (X-axis, default COL_SHEAR_WALL_LEN_PX)
+ * @param thickness  Symbol total thickness (Y-axis, default COL_SHEAR_WALL_THK_PX)
+ * @param flipY      Mirror vertically (parity-only)
+ */
+export function computeShearWallOutline(
+  length: number = COL_SHEAR_WALL_LEN_PX,
+  thickness: number = COL_SHEAR_WALL_THK_PX,
+  flipY = false,
+): ReadonlyArray<SectionPoint> {
+  const hl = length / 2;
+  const ht = thickness / 2;
+  const ys = flipY ? -1 : 1;
+  return [
+    { x: -hl, y: ys *  ht },  // v0 bottom-left
+    { x:  hl, y: ys *  ht },  // v1 bottom-right
+    { x:  hl, y: ys * -ht },  // v2 top-right
+    { x: -hl, y: ys * -ht },  // v3 top-left
+  ];
+}
+
+/**
+ * Compute the outline polygon of an I-shape (double-T) section symbol (Ι).
+ *
+ * Returns 12 points in LOCAL symbol coords (centre = origin) tracing the
+ * outer outline of a steel IPE/HEA profile. Both flanges visible (top + bottom).
+ *
+ * @param b       Flange total width (X-axis, default COL_I_FLANGE_W_PX)
+ * @param h       Total section depth (Y-axis, default COL_I_TOTAL_H_PX)
+ * @param tf      Flange thickness (default COL_I_FLANGE_T_PX)
+ * @param tw      Web width (default COL_I_WEB_W_PX)
+ * @param flipY   Mirror vertically (parity-only, I is symmetric)
+ */
+export function computeIProfileOutline(
+  b: number = COL_I_FLANGE_W_PX,
+  h: number = COL_I_TOTAL_H_PX,
+  tf: number = COL_I_FLANGE_T_PX,
+  tw: number = COL_I_WEB_W_PX,
+  flipY = false,
+): ReadonlyArray<SectionPoint> {
+  const hb = b / 2;
+  const hh = h / 2;
+  const hw = Math.min(tw / 2, hb);
+  const tfc = Math.min(tf, hh);
+  const ys = flipY ? -1 : 1;
+  // 12 vertices CCW outer trace (screen Y-down → ys handles flip):
+  return [
+    { x: -hb, y: ys *  hh },             // v0  bottom flange BL
+    { x:  hb, y: ys *  hh },             // v1  bottom flange BR
+    { x:  hb, y: ys * ( hh - tfc) },     // v2  top of BR corner
+    { x:  hw, y: ys * ( hh - tfc) },     // v3  web BR
+    { x:  hw, y: ys * (-hh + tfc) },     // v4  web TR
+    { x:  hb, y: ys * (-hh + tfc) },     // v5  bottom of TR corner
+    { x:  hb, y: ys * -hh },             // v6  top flange TR
+    { x: -hb, y: ys * -hh },             // v7  top flange TL
+    { x: -hb, y: ys * (-hh + tfc) },     // v8  bottom of TL corner
+    { x: -hw, y: ys * (-hh + tfc) },     // v9  web TL
+    { x: -hw, y: ys * ( hh - tfc) },     // v10 web BL
+    { x: -hb, y: ys * ( hh - tfc) },     // v11 top of BL corner
   ];
 }

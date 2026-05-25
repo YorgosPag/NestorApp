@@ -18,6 +18,7 @@ import {
   SLAB_OPENING_RIBBON_KEYS_ACTIONS,
   SLAB_OPENING_RIBBON_BADGE_KEYS,
 } from '../hooks/bridge/slab-opening-command-keys';
+import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 
 export const SLAB_OPENING_CONTEXTUAL_TRIGGER = 'slab-opening-selected';
 
@@ -33,7 +34,7 @@ const SLAB_OPENING_KIND_OPTIONS = [
 // ADR-363 Phase 3.7b — fire rating options (minutes). Applicable to shaft/chimney.
 // Stored as number in SlabOpeningParams.fireRating (60 | 90 | 120 | undefined).
 const SLAB_OPENING_FIRE_RATING_OPTIONS = [
-  { value: '',    labelKey: 'ribbon.commands.slabOpeningEditor.fireRating.none', isLiteralLabel: false },
+  { value: SELECT_CLEAR_VALUE, labelKey: 'ribbon.commands.slabOpeningEditor.fireRating.none', isLiteralLabel: false },
   { value: '60',  labelKey: 'ribbon.commands.slabOpeningEditor.fireRating.60',  isLiteralLabel: false },
   { value: '90',  labelKey: 'ribbon.commands.slabOpeningEditor.fireRating.90',  isLiteralLabel: false },
   { value: '120', labelKey: 'ribbon.commands.slabOpeningEditor.fireRating.120', isLiteralLabel: false },

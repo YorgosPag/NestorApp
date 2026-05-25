@@ -1,19 +1,22 @@
 /**
- * Slab-opening geometry computation (ADR-363 Phase 3.7).
+ * Slab-opening geometry computation (ADR-363 Phase 3.7, ADR-370 scene-units SSoT).
  *
  * Pure SSoT function — derives `SlabOpeningGeometry` cache από
- * `SlabOpeningParams`. Idempotent + side-effect free. Re-uses shared
- * polygon-utils (mirrors `slab-geometry.ts`):
+ * `SlabOpeningParams`. Idempotent + side-effect free. Mirrors `slab-geometry`:
  *
- *   1. polygon = params.outline (closed CCW, mm world coords)
- *   2. area (m²) = |shoelaceArea| / 1e6
- *   3. perimeter (m) = sum-of-edges / 1000
- *   4. bbox (mm) = AABB folds vertices σε z=0 plane
+ *   1. polygon = params.outline (closed CCW, σε scene-units world coords)
+ *   2. area (m²)        = shoelace * canvasToM²
+ *   3. perimeter (m)    = sum-of-edges * canvasToM
+ *   4. bbox             = AABB folds vertices σε z=0 plane (scene-units)
+ *
+ * Όπου `canvasToM = (1 / mmToSceneUnits(sceneUnits)) * 1e-3`, ώστε vertices σε
+ * `m` / `cm` / `mm` / `in` / `ft` να μετατρέπονται σωστά σε metres.
  *
  * Caller MUST ensure `outline.vertices.length >= 3` (validator guard).
  * Όταν λιγότερες κορυφές → area/perimeter = 0.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5 §11.Q3
+ * @see docs/centralized-systems/reference/adrs/ADR-370-bim-readonly-visualization.md
  */
 
 import type {
@@ -25,6 +28,7 @@ import {
   polygonBbox,
   polygonPerimeter,
 } from './shared/polygon-utils';
+import { mmToSceneUnits } from '../../utils/scene-units';
 
 const MM_TO_M = 1 / 1000;
 
@@ -35,36 +39,42 @@ const MM_TO_M = 1 / 1000;
 export function computeSlabOpeningGeometry(
   params: SlabOpeningParams,
 ): SlabOpeningGeometry {
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const canvasToM = (1 / s) * MM_TO_M;
+
   const vertices = params.outline.vertices;
   const bbox = polygonBbox(vertices);
-  const areaMm2 = polygonArea(vertices);
-  const perimeterMm = polygonPerimeter(vertices);
+  const areaCanvas2 = polygonArea(vertices);
+  const perimeterCanvas = polygonPerimeter(vertices);
   return {
     polygon: params.outline,
     bbox,
-    area: areaMm2 * (MM_TO_M * MM_TO_M),
-    perimeter: perimeterMm * MM_TO_M,
+    area: areaCanvas2 * canvasToM * canvasToM,
+    perimeter: perimeterCanvas * canvasToM,
   };
 }
 
 /**
  * Convenience: largest dimension (X ή Y) σε mm από bbox. Χρησιμοποιείται
- * από validator + ribbon dimensions readout.
+ * από validator + ribbon dimensions readout. Always returns mm regardless
+ * of `params.sceneUnits`.
  */
 export function getSlabOpeningMaxDimensionMm(
   params: SlabOpeningParams,
 ): number {
+  const canvasToMm = 1 / mmToSceneUnits(params.sceneUnits ?? 'mm');
   const bb = polygonBbox(params.outline.vertices);
-  return Math.max(bb.max.x - bb.min.x, bb.max.y - bb.min.y);
+  return Math.max(bb.max.x - bb.min.x, bb.max.y - bb.min.y) * canvasToMm;
 }
 
 /**
  * Convenience: smallest dimension (X ή Y) σε mm από bbox.
- * Used by code-violation min-dimension check.
+ * Used by code-violation min-dimension check. Always returns mm.
  */
 export function getSlabOpeningMinDimensionMm(
   params: SlabOpeningParams,
 ): number {
+  const canvasToMm = 1 / mmToSceneUnits(params.sceneUnits ?? 'mm');
   const bb = polygonBbox(params.outline.vertices);
-  return Math.min(bb.max.x - bb.min.x, bb.max.y - bb.min.y);
+  return Math.min(bb.max.x - bb.min.x, bb.max.y - bb.min.y) * canvasToMm;
 }

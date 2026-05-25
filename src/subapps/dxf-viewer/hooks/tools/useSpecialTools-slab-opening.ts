@@ -7,6 +7,7 @@ import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { Point2D } from '../../rendering/types/Types';
 import { EventBus } from '../../systems/events/EventBus';
 import type { LevelsHookReturn } from '../../systems/levels';
+import { resolveSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 type LevelManagerLike = LevelsHookReturn;
 
@@ -15,6 +16,8 @@ export interface SlabOpeningToolResolvers {
   getSlabById: (slabId: string) => SlabEntity | null;
   getSlabAtPoint: (point: Readonly<Point2D>) => SlabEntity | null;
   onSlabOpeningCreated: (openingEntity: SlabOpeningEntity) => void;
+  /** ADR-370 — units του active scene για mm→scene-units conversion στο builder. */
+  getSceneUnits: () => SceneUnits;
 }
 
 export function buildSlabOpeningResolvers(levelManager: LevelManagerLike): SlabOpeningToolResolvers {
@@ -61,6 +64,14 @@ export function buildSlabOpeningResolvers(levelManager: LevelManagerLike): SlabO
         entities: [...nextEntities, openingEntity],
       });
       EventBus.emit('drawing:entity-created', { entity: openingEntity, tool: 'slab-opening' });
+    },
+    // ADR-370 — propagate active scene units so the slab-opening rectangle
+    // builder scales the mm-baked defaults into the host scene's coordinate
+    // space (otherwise a 1.5 m shaft in a meter-units scene became 1500 m).
+    getSceneUnits: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return 'mm';
+      return resolveSceneUnits(levelManager.getLevelScene(levelId));
     },
   };
 }
