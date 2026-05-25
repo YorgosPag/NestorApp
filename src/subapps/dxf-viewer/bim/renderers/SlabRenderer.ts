@@ -140,7 +140,7 @@ export class SlabRenderer extends BaseEntityRenderer {
       { zBottomMm: _slabZTop - slab.params.thickness, zTopMm: _slabZTop, category: 'slab' },
       DEFAULT_VIEW_RANGE,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'slab', cutState: _slabCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96 });
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'slab', cutState: _slabCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
     this.drawPolygonPath(verts);
     this.ctx.stroke();
     this.ctx.restore();
