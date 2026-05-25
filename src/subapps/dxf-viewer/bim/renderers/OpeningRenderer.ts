@@ -32,6 +32,7 @@ import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
 import { resolveCutState, DEFAULT_VIEW_RANGE } from '../../config/bim-view-range';
+import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getOpeningGrips } from '../walls/opening-grips';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
@@ -69,7 +70,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
       { zBottomMm: opening.params.sillHeight, zTopMm: opening.params.sillHeight + opening.params.height, category: 'opening' },
       DEFAULT_VIEW_RANGE,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'opening', cutState: _opCutState, scaleDenominator: 100, dpi: 96 });
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'opening', cutState: _opCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96 });
 
     this.drawOutline(opening);
     this.drawKindOverlay(opening);

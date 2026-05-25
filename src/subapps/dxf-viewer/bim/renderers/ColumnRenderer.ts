@@ -40,6 +40,7 @@ import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
 import { resolveCutState, DEFAULT_VIEW_RANGE } from '../../config/bim-view-range';
+import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getColumnGrips } from '../columns/column-grips';
 import {
@@ -127,7 +128,7 @@ export class ColumnRenderer extends BaseEntityRenderer {
       { zBottomMm: column.params.baseOffset ?? 0, zTopMm: (column.params.baseOffset ?? 0) + column.params.height, category: 'column' },
       DEFAULT_VIEW_RANGE,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'column', cutState: _colCutState, scaleDenominator: 100, dpi: 96 });
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'column', cutState: _colCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96 });
     this.drawPolygonPath(verts);
     this.ctx.stroke();
     this.ctx.restore();

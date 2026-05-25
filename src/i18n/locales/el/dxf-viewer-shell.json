@@ -720,6 +720,7 @@
       "developer": "Εργαλεία Ανάπτυξης",
       "ai": "AI",
       "window": "Παράθυρο",
+      "drawingScale": "Κλίμακα Σχεδίου",
       "dimensions": "Διαστάσεις",
       "dimStyle": "Στυλ",
       "dimOverride": "Παράκαμψη",
@@ -1408,6 +1409,12 @@
       "undo": "Αναίρεση (Ctrl+Z)",
       "redo": "Επαναφορά (Ctrl+Y)",
       "zoomLevel": "Επίπεδο Μεγέθυνσης",
+      "drawingScale": {
+        "label": "Κλίμακα",
+        "ariaLabel": "Κλίμακα σχεδίου 1:{scale}",
+        "placeholder": "πχ. 100",
+        "inputAriaLabel": "Εισαγωγή κλίμακας σχεδίου"
+      },
       "openGuidePanel": "Πίνακας Οδηγών",
       "toggleGuides": "Εμφάνιση/Απόκρυψη Οδηγών",
       "guideAnalysis": "Ανάλυση Οδηγών",

@@ -37,6 +37,7 @@ import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
 import { resolveCutState, DEFAULT_VIEW_RANGE } from '../../config/bim-view-range';
+import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getSlabOpeningGrips } from '../slab-openings/slab-opening-grips';
 
@@ -107,7 +108,7 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
       { zBottomMm: _soZTop - 200, zTopMm: _soZTop, category: 'slab-opening' },
       DEFAULT_VIEW_RANGE,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'slab-opening', cutState: _soCutState, scaleDenominator: 100, dpi: 96 });
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'slab-opening', cutState: _soCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96 });
     this.ctx.setLineDash(KIND_DASH[opening.kind] as unknown as number[]);
     this.drawPolygonPath(verts);
     this.ctx.stroke();

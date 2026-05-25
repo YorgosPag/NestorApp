@@ -720,6 +720,7 @@
       "developer": "Developer",
       "ai": "AI",
       "window": "Window",
+      "drawingScale": "Drawing Scale",
       "dimensions": "Dimensions",
       "dimStyle": "Style",
       "dimOverride": "Override",
@@ -1408,6 +1409,12 @@
       "undo": "Undo (Ctrl+Z)",
       "redo": "Redo (Ctrl+Y)",
       "zoomLevel": "Zoom Level",
+      "drawingScale": {
+        "label": "Scale",
+        "ariaLabel": "Drawing scale 1:{scale}",
+        "placeholder": "e.g. 100",
+        "inputAriaLabel": "Enter drawing scale denominator"
+      },
       "openGuidePanel": "Guide Panel",
       "toggleGuides": "Show/Hide Guides",
       "guideAnalysis": "Guide Analysis",

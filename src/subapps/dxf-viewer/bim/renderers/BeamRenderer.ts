@@ -34,6 +34,7 @@ import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
 import { resolveCutState, DEFAULT_VIEW_RANGE } from '../../config/bim-view-range';
+import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getBeamGrips, beamDepthHandlePosition } from '../beams/beam-grips';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
@@ -128,7 +129,7 @@ export class BeamRenderer extends BaseEntityRenderer {
       { zBottomMm: _beamZTop - beam.params.depth, zTopMm: _beamZTop, category: 'beam' },
       DEFAULT_VIEW_RANGE,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'beam', cutState: _beamCutState, scaleDenominator: 100, dpi: 96 });
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'beam', cutState: _beamCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96 });
     this.ctx.setLineDash(OUTLINE_DASH as unknown as number[]);
     this.drawPolygonPath(verts);
     this.ctx.stroke();

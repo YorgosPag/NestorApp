@@ -30,6 +30,7 @@ import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
 import { resolveCutState, DEFAULT_VIEW_RANGE } from '../../config/bim-view-range';
+import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getWallGrips } from '../walls/wall-grips';
@@ -166,7 +167,7 @@ export class WallRenderer extends BaseEntityRenderer {
       { zBottomMm: wall.params.baseOffset ?? 0, zTopMm: (wall.params.baseOffset ?? 0) + wall.params.height, category: 'wall' },
       DEFAULT_VIEW_RANGE,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'wall', cutState: _cutState, scaleDenominator: 100, dpi: 96 });
+    this.ctx.lineWidth = resolveLineWeightPx({ category: 'wall', cutState: _cutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96 });
 
     // Build closed polygon: outer (start→end) + inner (end→start) reverses
     // so the perimeter is well-oriented for fill.
