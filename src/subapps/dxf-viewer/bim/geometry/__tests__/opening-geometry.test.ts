@@ -94,14 +94,25 @@ describe('computeOpeningGeometry — scalars', () => {
     expect(g.perimeter).toBeCloseTo((2 * (900 + 2100)) / 1000, FLOAT_TOL); // 6.0 m
   });
 
-  it('bbox folds all outline vertices', () => {
-    const g = computeOpeningGeometry(makeOpening(), makeWall());
+  it('bbox folds all outline vertices (window — no arc)', () => {
+    // Use window kind (no hingeArc) so bbox covers exactly the outline rectangle.
+    const g = computeOpeningGeometry(makeOpening({ kind: 'window' }), makeWall());
     const xs = g.outline.vertices.map((v) => v.x);
     const ys = g.outline.vertices.map((v) => v.y);
     expect(g.bbox.min.x).toBeCloseTo(Math.min(...xs), EDGE_TOL);
     expect(g.bbox.max.x).toBeCloseTo(Math.max(...xs), EDGE_TOL);
     expect(g.bbox.min.y).toBeCloseTo(Math.min(...ys), EDGE_TOL);
     expect(g.bbox.max.y).toBeCloseTo(Math.max(...ys), EDGE_TOL);
+  });
+
+  it('bbox for door expands beyond outline to include hingeArc tip (Bug 4 spatial pre-filter)', () => {
+    // Horizontal wall, door handing=left inward: arc swings upward (+Y).
+    // arc.points[12] = (1000, 900) — well outside outline y: -125..125.
+    // bbox.max.y must cover the arc tip so spatial pre-filter includes the entity
+    // when cursor is over leaf line / swing arc (not just the outline rectangle).
+    const g = computeOpeningGeometry(makeOpening({ kind: 'door', handing: 'left', openDirection: 'inward' }), makeWall());
+    const outlineMaxY = Math.max(...g.outline.vertices.map((v) => v.y));
+    expect(g.bbox.max.y).toBeGreaterThan(outlineMaxY + 100);
   });
 
   it('bbox z in metres: door sillHeight=0, height=2100mm → [0, 2.1] (ADR-369 Phase B)', () => {

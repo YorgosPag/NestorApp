@@ -64,10 +64,16 @@ export function computeOpeningGeometry(
   const py = ux;
 
   const outline = buildOutline(center, ux, uy, px, py, widthScene, thicknessScene);
-  const bbox = computeBbox(outline.vertices, params.sillHeight, params.height);
   const hingeResult = isHingedKind(params.kind)
     ? buildHingeArc(params.kind, center, ux, uy, px, py, params, widthScene)
     : undefined;
+  // Expand bbox to encompass full visible geometry (outline + arc + leaf line) so
+  // the spatial pre-filter (BoundsCalculator.calculateBimEntityBounds) includes the
+  // entity when the cursor is over the swing arc or leaf line, not just the cutout.
+  const bboxPoints: readonly Point3D[] = hingeResult
+    ? ([...outline.vertices, ...hingeResult.arc.points] as Point3D[])
+    : outline.vertices;
+  const bbox = computeBbox(bboxPoints, params.sillHeight, params.height);
 
   return {
     position: center,
