@@ -24,7 +24,6 @@ import { SETTINGS_CURSOR_PANEL } from './settings-tab-cursor';
 import { SETTINGS_DEVELOPER_PANEL } from './settings-tab-developer';
 import { INSERT_TAB } from './insert-tab';
 import { ANALYZE_TAB } from './analyze-tab';
-import { ANNOTATE_OPENINGS_PANEL } from './annotate-tab-openings';
 
 export const DEFAULT_RIBBON_TAB_ORDER: readonly string[] = [
   'home',
@@ -74,7 +73,6 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
     id: 'annotate',
     labelKey: 'ribbon.tabs.annotate',
     panels: [
-      ANNOTATE_OPENINGS_PANEL,
       { id: 'text', labelKey: 'ribbon.panels.text', rows: [] },
     ],
   },

@@ -43,12 +43,16 @@ export interface OpeningSchedulePdfHostProps {
   readonly projectName?: string;
 }
 
-function buildLookupsFromLevels(levels: readonly Level[]): ScheduleLookups {
+function buildLookupsFromLevels(
+  levels: readonly Level[],
+  translateKind: (kind: string) => string,
+): ScheduleLookups {
   const map = new Map(levels.map((l) => [l.id, l.name]));
   return {
     floor: (floorId) => (floorId ? (map.get(floorId) ?? floorId) : ''),
     material: (matId) => matId ?? '',
     floorFinish: () => undefined,
+    translateKind,
   };
 }
 
@@ -59,8 +63,8 @@ export function OpeningSchedulePdfHost(props: OpeningSchedulePdfHostProps): null
 
   const handleExport = React.useCallback(async (): Promise<void> => {
     const entities = getEntities() as AnyBimEntity[];
-    const lookups = buildLookupsFromLevels(levels);
-
+    const kindResolver = (kind: string) => tSchedule(`openingKind.${kind}`, { defaultValue: kind });
+    const lookups = buildLookupsFromLevels(levels, kindResolver);
     const doorSchedule = buildSchedule(entities, { entityType: 'door', filters: {} }, lookups);
     const windowSchedule = buildSchedule(entities, { entityType: 'window', filters: {} }, lookups);
 

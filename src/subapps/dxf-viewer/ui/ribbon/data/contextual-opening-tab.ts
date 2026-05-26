@@ -342,14 +342,35 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
               widgetId: 'opening-tag-leader-color',
             },
             {
-              type: 'simple',
+              type: 'toggle',
               size: 'small',
               command: {
                 id: 'opening.tagStyle.leaderVisible',
                 labelKey: 'ribbon.commands.openingEditor.tagStyle.ribbon.leaderVisibleLabel',
                 icon: 'bim-opening-leader-visible',
                 commandKey: OPENING_TAG_STYLE_KEYS.leaderVisible,
-                action: OPENING_TAG_STYLE_KEYS.leaderVisible,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'opening-schedule',
+      labelKey: 'ribbon.panels.openingSchedule',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'opening.scheduleExport',
+                labelKey: 'ribbon.commands.openingEditor.scheduleExport.label',
+                icon: 'bim-opening-schedule-pdf',
+                commandKey: OPENING_RIBBON_KEYS_ACTIONS.exportSchedulePdf,
+                action: OPENING_RIBBON_KEYS_ACTIONS.exportSchedulePdf,
               },
             },
           ],

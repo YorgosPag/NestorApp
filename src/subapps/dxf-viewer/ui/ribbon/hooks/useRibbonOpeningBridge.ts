@@ -17,7 +17,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4 §6
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isOpeningEntity } from '../../../types/entities';
 import type { OpeningEntity, OpeningKind, OpeningParams } from '../../../bim/types/opening-types';
@@ -98,6 +98,18 @@ export function useRibbonOpeningBridge(
   const { levelManager, universalSelection } = props;
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
+
+  // React state mirror of leaderVisible — causes ribbon toggle button to
+  // re-render when the service changes (sidebar dialog / ribbon both write).
+  const [leaderVisible, setLeaderVisible] = useState(
+    () => getOpeningTagStyleService().getCurrentStyle().leaderVisible,
+  );
+  useEffect(
+    () => getOpeningTagStyleService().subscribe(() => {
+      setLeaderVisible(getOpeningTagStyleService().getCurrentStyle().leaderVisible);
+    }),
+    [],
+  );
 
   const resolveOpening = useCallback((): OpeningEntity | null => {
     const id = universalSelection.getPrimaryId();
@@ -215,11 +227,9 @@ export function useRibbonOpeningBridge(
   }, []);
 
   const getToggleState = useCallback((key: string): RibbonToggleState => {
-    if (key === OPENING_TAG_STYLE_KEYS.leaderVisible) {
-      return getOpeningTagStyleService().getCurrentStyle().leaderVisible;
-    }
+    if (key === OPENING_TAG_STYLE_KEYS.leaderVisible) return leaderVisible;
     return NULL_TOGGLE;
-  }, []);
+  }, [leaderVisible]);
 
   const getBadgeState = useCallback((badgeKey: string): boolean => {
     if (!OPENING_OWNED_BADGE_KEYS.has(badgeKey)) return false;

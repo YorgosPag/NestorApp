@@ -36,6 +36,8 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import { getWallAxisVertices } from '../../bim/geometry/wall-geometry';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
+import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
 
 const MM_TO_M = 0.001;
 
@@ -136,6 +138,14 @@ export function buildWallMeshWithOpenings(
     segMesh.userData['segmentIndex'] = i;
     segMesh.castShadow = true;
     segMesh.receiveShadow = true;
+    // ADR-375 Phase C.7 — per-segment edge overlay (mirror του 2D wall projection style).
+    const edgeStyle = resolve3DEdgeStyle({
+      category: 'wall',
+      cutState: 'projection',
+      scaleDenominator: 100,
+      dpi: 96,
+    });
+    attachEdgeOverlay(segMesh, buildEdgeOverlay(segMesh, edgeStyle));
     group.add(segMesh);
 
     arcStartScene = arcEndScene;

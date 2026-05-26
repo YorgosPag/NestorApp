@@ -48,6 +48,7 @@ import { createAnimationManager } from '../viewport/animation-manager';
 import type { AnimationManager } from '../viewport/animation-manager';
 import { computeFramingTargetBounds, computeSceneFramingBounds } from './scene-framing-bounds';
 import { createBimRenderer, createBimLights, createBimScene, initViewportCamera, initViewCube } from './scene-setup';
+import { bimEdgeResolutionStore } from '../edges/bim-edge-resolution-store';
 import { applyDxfOverlayFraming } from './scene-sync-dxf-overlay';
 import { createKeyboardFocusManager, type KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
 import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer';
@@ -462,6 +463,8 @@ export class ThreeJsSceneManager {
     this.renderer.setSize(width, height);
     this.ssaoModulator.resize(width, height);
     this.viewCube.setVisible(width >= VIEWCUBE_HIDE_WIDTH_PX);
+    // ADR-375 Phase C.7 — feed renderer size into BIM edge LineMaterial resolution.
+    bimEdgeResolutionStore.setSize(width, height);
   }
 
   dispose(): void {

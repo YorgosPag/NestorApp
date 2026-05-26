@@ -59,6 +59,13 @@
     "awaitingFirst": "Click first corner of region on canvas",
     "awaitingSecond": "Click opposite corner"
   },
+  "openingKind": {
+    "door": "Door",
+    "window": "Window",
+    "sliding-door": "Sliding door",
+    "french-door": "French door",
+    "fixed": "Fixed opening"
+  },
   "col": {
     "mark": "Mark",
     "id": "ID",

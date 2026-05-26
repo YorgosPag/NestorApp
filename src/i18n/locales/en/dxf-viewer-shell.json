@@ -690,6 +690,7 @@
       "openingActions": "Actions",
       "openingRenumber": "Renumber",
       "openingTagStyle": "Tag Style",
+      "openingSchedule": "Schedule",
       "annotateOpenings": "Openings",
       "slabKind": "Type",
       "slabGeometry": "Geometry",

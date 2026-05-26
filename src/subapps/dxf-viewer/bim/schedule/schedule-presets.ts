@@ -108,6 +108,11 @@ function safeText(value: unknown): ScheduleCellValue {
   return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
+function shortId(rawId: string | null | undefined): string {
+  if (!rawId) return '';
+  return rawId.replace(/^[a-z]+-?[a-z]*_/, '').slice(0, 12);
+}
+
 // ─── Door preset (ADR-363 §6 Phase 8 Q3 + Q4) ────────────────────────────────
 
 const DOOR_COLUMNS: readonly ScheduleColumnDef[] = [
@@ -129,16 +134,16 @@ function mapDoor(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['c
   const p = entity.params;
   return {
     mark: safeText(p.mark),
-    id: entity.id,
+    id: shortId(entity.id),
     floor: lookups.floor(entity.floorId),
-    kind: p.kind,
+    kind: lookups.translateKind ? lookups.translateKind(p.kind) : p.kind,
     width: safeNumber(p.width),
     height: safeNumber(p.height),
     sill: safeNumber(p.sillHeight),
     handingText: handingToGreek(p.handing, p.openDirection),
     handingCode: handingToDIN(p.handing, p.openDirection),
     material: lookups.material(p.material),
-    wall: safeText(p.wallId),
+    wall: shortId(p.wallId),
   };
 }
 
@@ -162,15 +167,15 @@ function mapWindow(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow[
   const p = entity.params;
   return {
     mark: safeText(p.mark),
-    id: entity.id,
+    id: shortId(entity.id),
     floor: lookups.floor(entity.floorId),
-    kind: p.kind,
+    kind: lookups.translateKind ? lookups.translateKind(p.kind) : p.kind,
     width: safeNumber(p.width),
     height: safeNumber(p.height),
     sill: safeNumber(p.sillHeight),
     glazing: safeNumber(p.glazingPanes),
     material: lookups.material(p.material),
-    wall: safeText(p.wallId),
+    wall: shortId(p.wallId),
   };
 }
 

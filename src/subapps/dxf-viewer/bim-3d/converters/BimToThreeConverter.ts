@@ -23,6 +23,25 @@ import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { getMaterial3D, getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildWallMeshWithOpenings } from './wall-opening-extrude';
+import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
+import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
+import type { BimCategory } from '../../config/bim-object-styles';
+
+// ADR-375 Phase C.7 — default 3D edge resolution context.
+// scaleDenominator 100 = 1:100 architectural plan, the most common BIM scale.
+// dpi 96 = standard CSS pixel density.
+const EDGE_DEFAULT_SCALE = 100;
+const EDGE_DEFAULT_DPI = 96;
+
+function attachEdgesProjection(mesh: THREE.Mesh, category: BimCategory): void {
+  const style = resolve3DEdgeStyle({
+    category,
+    cutState: 'projection',
+    scaleDenominator: EDGE_DEFAULT_SCALE,
+    dpi: EDGE_DEFAULT_DPI,
+  });
+  attachEdgeOverlay(mesh, buildEdgeOverlay(mesh, style));
+}
 
 // ── Shared rotation matrix: shape XY → Three.js Y-up ─────────────────────────
 const ROT_X_NEG_90 = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
@@ -138,7 +157,9 @@ export function wallToMesh(
   const geo = extrudeAndRotate(shape, wall.params.height * MM_TO_M);
   const mesh = new THREE.Mesh(geo, material);
   mesh.position.y = floorElevationMm * MM_TO_M + buildingBaseElevationM;
-  return tagMesh(mesh, wall.id, 'wall', matId, levelId);
+  const tagged = tagMesh(mesh, wall.id, 'wall', matId, levelId);
+  attachEdgesProjection(tagged, 'wall');
+  return tagged;
 }
 
 export function columnToMesh(
@@ -157,7 +178,9 @@ export function columnToMesh(
   const matId = column.params.material ?? 'elem-column';
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('column'));
   mesh.position.y = floorElevationMm * MM_TO_M + buildingBaseElevationM;
-  return tagMesh(mesh, column.id, 'column', matId, levelId);
+  const tagged = tagMesh(mesh, column.id, 'column', matId, levelId);
+  attachEdgesProjection(tagged, 'column');
+  return tagged;
 }
 
 export function beamToMesh(
@@ -179,7 +202,9 @@ export function beamToMesh(
   // beam hangs DOWN from (topElevation + zOffset) by depth.
   const beamTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
   mesh.position.y = beamTopMm * MM_TO_M - beamDepthM + buildingBaseElevationM;
-  return tagMesh(mesh, beam.id, 'beam', matId, levelId);
+  const tagged = tagMesh(mesh, beam.id, 'beam', matId, levelId);
+  attachEdgesProjection(tagged, 'beam');
+  return tagged;
 }
 
 // ADR-363 §11.Q3 Phase 3.7d + ADR-370 §6 Phase 7 — slab-opening cutouts.
@@ -223,5 +248,7 @@ export function slabToMesh(
   // floor:0 → -0.20..0m, ceiling/roof:3000 → 2.80..3.00m, foundation:0 → -0.50..0m.
   const slabTopMm = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
   mesh.position.y = (slabTopMm - slab.params.thickness) * MM_TO_M + buildingBaseElevationM;
-  return tagMesh(mesh, slab.id, 'slab', matId, levelId);
+  const tagged = tagMesh(mesh, slab.id, 'slab', matId, levelId);
+  attachEdgesProjection(tagged, 'slab');
+  return tagged;
 }

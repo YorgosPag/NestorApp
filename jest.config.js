@@ -94,6 +94,13 @@ const config = {
       }
     }]
   },
+  // ADR-375 Phase C.7: allow Jest to transform Three.js ESM examples
+  // (three/examples/jsm/lines/*). pnpm structure nests at
+  // node_modules/.pnpm/three@VER/node_modules/three/... so the negative
+  // lookahead must allow both shallow and pnpm-nested paths.
+  transformIgnorePatterns: [
+    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?three/)'
+  ],
   moduleDirectories: ['node_modules', '<rootDir>'],
   testTimeout: 10000,
   extensionsToTreatAsEsm: ['.ts', '.tsx'],

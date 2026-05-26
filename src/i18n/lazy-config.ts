@@ -81,6 +81,7 @@ export const SUPPORTED_NAMESPACES = [
   'common-photos',          // 🏢 Photo management (split from common — ADR-280)
   'common-shared',          // 🏢 Shared UI: toolbar, filters, contacts, sharing (split from common — ADR-280)
   'dxf-viewer-shell',       // 🏢 DXF viewer chrome/toolbar (split from dxf-viewer — ADR-280)
+  'dxf-schedule',           // 🏢 BIM schedule column headers + entity type labels (ADR-363 §6)
   'dxf-viewer-panels',      // 🏢 DXF viewer panels/layers (split from dxf-viewer — ADR-280)
   'dxf-viewer-settings',    // 🏢 DXF viewer settings (split from dxf-viewer — ADR-280)
   'dxf-viewer-wizard',      // 🏢 DXF viewer wizard/import (split from dxf-viewer — ADR-280)

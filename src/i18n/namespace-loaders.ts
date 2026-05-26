@@ -33,6 +33,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'filters': return () => import('./locales/el/filters.json');
     case 'dxf-viewer': return () => import('./locales/el/dxf-viewer.json');
     case 'dxf-viewer-shell': return () => import('./locales/el/dxf-viewer-shell.json');
+    case 'dxf-schedule': return () => import('./locales/el/dxf-schedule.json');
     case 'dxf-viewer-panels': return () => import('./locales/el/dxf-viewer-panels.json');
     case 'dxf-viewer-settings': return () => import('./locales/el/dxf-viewer-settings.json');
     case 'dxf-viewer-wizard': return () => import('./locales/el/dxf-viewer-wizard.json');
@@ -134,6 +135,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'filters': return () => import('./locales/en/filters.json');
     case 'dxf-viewer': return () => import('./locales/en/dxf-viewer.json');
     case 'dxf-viewer-shell': return () => import('./locales/en/dxf-viewer-shell.json');
+    case 'dxf-schedule': return () => import('./locales/en/dxf-schedule.json');
     case 'dxf-viewer-panels': return () => import('./locales/en/dxf-viewer-panels.json');
     case 'dxf-viewer-settings': return () => import('./locales/en/dxf-viewer-settings.json');
     case 'dxf-viewer-wizard': return () => import('./locales/en/dxf-viewer-wizard.json');

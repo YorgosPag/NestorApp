@@ -3271,7 +3271,16 @@
         "src/subapps/dxf-viewer/bim/renderers/StairRenderer.ts",
         "src/subapps/dxf-viewer/systems/levels/config.ts",
         "src/app/api/dxf-levels/dxf-levels.schemas.ts",
-        "src/app/api/dxf-levels/dxf-levels.handlers.ts"
+        "src/app/api/dxf-levels/dxf-levels.handlers.ts",
+        "src/subapps/dxf-viewer/bim-3d/edges/bim-3d-edge-resolver.ts",
+        "src/subapps/dxf-viewer/bim-3d/edges/bim-3d-edge-overlay-builder.ts",
+        "src/subapps/dxf-viewer/bim-3d/edges/bim-edge-resolution-store.ts",
+        "src/subapps/dxf-viewer/bim-3d/edges/__tests__/bim-3d-edge-resolver.test.ts",
+        "src/subapps/dxf-viewer/bim-3d/edges/__tests__/bim-3d-edge-overlay-builder.test.ts",
+        "src/subapps/dxf-viewer/bim-3d/converters/BimToThreeConverter.ts",
+        "src/subapps/dxf-viewer/bim-3d/converters/StairToThreeConverter.ts",
+        "src/subapps/dxf-viewer/bim-3d/converters/wall-opening-extrude.ts",
+        "src/subapps/dxf-viewer/bim-3d/scene/ThreeJsSceneManager.ts"
       ],
       "addedDate": "2026-05-25",
       "addedByAdr": "ADR-375",

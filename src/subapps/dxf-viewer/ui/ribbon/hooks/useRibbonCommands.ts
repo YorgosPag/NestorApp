@@ -28,7 +28,7 @@ import type { RibbonLineToolBridge } from './useRibbonLineToolBridge';
 import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
 import { isStairRibbonKey, isStairRibbonStringKey } from './bridge/stair-command-keys';
 import { isWallRibbonKey, isWallRibbonStringKey, isWallRibbonToggleKey, isWallActionKey } from './bridge/wall-command-keys';
-import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningActionKey, isOpeningTagStyleComboboxKey } from './bridge/opening-command-keys';
+import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningActionKey, isOpeningTagStyleComboboxKey, isOpeningTagStyleToggleKey } from './bridge/opening-command-keys';
 import { isSlabRibbonKey, isSlabRibbonStringKey, isSlabActionKey } from './bridge/slab-command-keys';
 import { isColumnRibbonKey, isColumnRibbonStringKey, isColumnActionKey } from './bridge/column-command-keys';
 import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamActionKey } from './bridge/beam-command-keys';
@@ -181,9 +181,13 @@ export function useRibbonCommands({
         arrayBridge.onToggle(key, next);
         return;
       }
+      if (isOpeningTagStyleToggleKey(key)) {
+        openingBridge.onToggle(key, next);
+        return;
+      }
       textEditorBridge.onToggle(key, next);
     },
-    [wallBridge, arrayBridge, textEditorBridge],
+    [wallBridge, arrayBridge, openingBridge, textEditorBridge],
   );
 
   const getToggleState = React.useCallback(
@@ -191,9 +195,10 @@ export function useRibbonCommands({
       if (key === 'animation.snap-toggle') return snapEnabled;
       if (isWallRibbonToggleKey(key)) return wallBridge.getToggleState(key);
       if (isArrayRibbonToggleKey(key)) return arrayBridge.getToggleState(key);
+      if (isOpeningTagStyleToggleKey(key)) return openingBridge.getToggleState(key);
       return textEditorBridge.getToggleState(key);
     },
-    [snapEnabled, wallBridge, arrayBridge, textEditorBridge],
+    [snapEnabled, wallBridge, arrayBridge, openingBridge, textEditorBridge],
   );
 
   // ADR-358 Phase 7b1 — Stair bridge owns badge keys; ADR-363 Phase 1B adds

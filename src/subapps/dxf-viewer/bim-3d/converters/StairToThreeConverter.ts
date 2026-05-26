@@ -23,6 +23,21 @@ import * as THREE from 'three';
 import type { StairEntity, Polygon3D, Polyline3D, Segment3D } from '../../bim/types/stair-types';
 import { resolveStairMaterial } from '../materials/stair-material-resolver';
 import { inferSceneUnitsFromWidth, sceneUnitsToMeters } from '../../utils/scene-units';
+import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
+import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
+
+// ADR-375 Phase C.7 — stair subcategory wiring (ADR-377 SUBCATEGORY_TAXONOMY).
+// landing has no canonical subcategory key → falls back to parent stair style.
+function attachStairEdges(mesh: THREE.Mesh, subcategoryKey?: string): void {
+  const style = resolve3DEdgeStyle({
+    category: 'stair',
+    cutState: 'projection',
+    scaleDenominator: 100,
+    dpi: 96,
+    subcategoryKey,
+  });
+  attachEdgeOverlay(mesh, buildEdgeOverlay(mesh, style));
+}
 
 const ROT_X_NEG_90 = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
 
@@ -91,7 +106,9 @@ function buildTreadMeshes(
     // translate the mesh DOWN by thicknessM.
     const topZ = poly[0]!.z * sceneToM;
     mesh.position.y = baseY + topZ - thicknessM;
-    out.push(tagMesh(mesh, stair, 'tread', levelId));
+    const tagged = tagMesh(mesh, stair, 'tread', levelId);
+    attachStairEdges(tagged, 'treads');
+    out.push(tagged);
   }
   return out;
 }
@@ -111,7 +128,11 @@ function buildRiserMeshes(
   const mat = resolveStairMaterial(stair, 'stair-riser');
   for (const seg of stair.geometry.risers) {
     const mesh = buildRiserBox(seg, sceneToM, riseM, thicknessM, mat, baseY);
-    if (mesh) out.push(tagMesh(mesh, stair, 'riser', levelId));
+    if (mesh) {
+      const tagged = tagMesh(mesh, stair, 'riser', levelId);
+      attachStairEdges(tagged, 'risers');
+      out.push(tagged);
+    }
   }
   return out;
 }
@@ -201,7 +222,9 @@ function stringerSegmentsAlong(
     // Orient box length along (a→b) in plan, allowing vertical tilt.
     const dirPlan = Math.atan2(-dyM, dxM); // world rotation around Y
     mesh.rotation.y = dirPlan;
-    out.push(tagMesh(mesh, stair, 'stringer', levelId));
+    const tagged = tagMesh(mesh, stair, 'stringer', levelId);
+    attachStairEdges(tagged, 'outlines');
+    out.push(tagged);
   }
   return out;
 }
@@ -274,7 +297,10 @@ function buildLandingMeshes(
     // Same convention as treads: poly.z = walkable top face. Translate DOWN.
     const topZ = poly[0]!.z * sceneToM;
     mesh.position.y = baseY + topZ - thicknessM;
-    out.push(tagMesh(mesh, stair, 'landing', levelId));
+    const tagged = tagMesh(mesh, stair, 'landing', levelId);
+    // landing has no canonical subcategory in ADR-377 taxonomy → parent stair style.
+    attachStairEdges(tagged);
+    out.push(tagged);
   }
   return out;
 }

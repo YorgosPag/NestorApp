@@ -93,9 +93,16 @@ export const OPENING_RIBBON_KEYS_ACTIONS = {
   exportSchedulePdf: 'opening.actions.exportSchedulePdf',
 } as const;
 
+const OPENING_TAG_STYLE_TOGGLE_SET: ReadonlySet<string> = new Set<string>([
+  OPENING_TAG_STYLE_KEYS.leaderVisible,
+]);
+
+export function isOpeningTagStyleToggleKey(key: string): boolean {
+  return OPENING_TAG_STYLE_TOGGLE_SET.has(key);
+}
+
 const OPENING_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>([
   ...Object.values(OPENING_RIBBON_KEYS_ACTIONS),
-  OPENING_TAG_STYLE_KEYS.leaderVisible,
 ]);
 
 export function isOpeningActionKey(action: string): boolean {
