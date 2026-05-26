@@ -189,6 +189,8 @@ export function useOpeningPersistence(
 
     const unsubscribe = svc.subscribeOpenings(
       (docs) => {
+        // eslint-disable-next-line no-console
+        console.log('[DBG-TAG] subscribeOpenings fired', docs.map(d => ({ id: d.id, mark: d.params.mark, kind: d.kind })));
         const scene = levelManager.getLevelScene(levelId);
         if (!scene) return;
 
@@ -313,6 +315,8 @@ export function useOpeningPersistence(
       levelManager.currentLevelId
     ) {
       const level = levelManager.levels.find((l) => l.id === levelManager.currentLevelId);
+      // eslint-disable-next-line no-console
+      console.log('[DBG-TAG] allocateAndPersist entry', { id: entity.id, kind: entity.kind, floorId: level?.floorId, existingMark: entity.params.mark });
       if (!level?.floorId) {
         // Blank-canvas / non-wizard placement — pending Phase B per handoff Α.
         // eslint-disable-next-line no-console
@@ -321,6 +325,8 @@ export function useOpeningPersistence(
         try {
           const floorSnap = await getDoc(doc(db, COLLECTIONS.FLOORS, level.floorId));
           const floorNumber = (floorSnap.data() as { number?: number } | undefined)?.number;
+          // eslint-disable-next-line no-console
+          console.log('[DBG-TAG] floorNumber resolved', { floorId: level.floorId, floorNumber });
           if (typeof floorNumber === 'number') {
             const kindPrefix = t(`opening.tag.prefix.${entity.kind}`);
             const basementPrefix = t('opening.tag.basementPrefix');
@@ -333,6 +339,8 @@ export function useOpeningPersistence(
               kindPrefix,
               basementPrefix,
             });
+            // eslint-disable-next-line no-console
+            console.log('[DBG-TAG] mark allocated', { id: entity.id, mark });
             finalEntity = {
               ...entity,
               params: { ...entity.params, mark },

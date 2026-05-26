@@ -104,6 +104,8 @@ export class RenumberOpeningsCommand implements ICommand {
     for (const snap of this.snapshots) {
       const target = resolve(snap);
       const entity = this.sceneManager.getEntity(snap.openingId) as OpeningEntity | undefined;
+      // eslint-disable-next-line no-console
+      console.log('[DBG-TAG] RenumberCommand snap', { openingId: snap.openingId, newMark: target.mark, entityFound: !!entity, entityMark: entity?.params.mark });
       if (!entity) continue;
 
       const nextParams: OpeningParams = {
@@ -114,6 +116,8 @@ export class RenumberOpeningsCommand implements ICommand {
           : { markIsManual: target.markIsManual }),
       } as OpeningParams;
 
+      // eslint-disable-next-line no-console
+      console.log('[DBG-TAG] RenumberCommand nextParams.mark', { id: snap.openingId, nextMark: nextParams.mark });
       sceneUpdates.set(snap.openingId, { params: nextParams } as Partial<SceneEntity>);
 
       batch.update(doc(db, COLLECTIONS.FLOORPLAN_OPENINGS, snap.openingId), {
@@ -123,6 +127,8 @@ export class RenumberOpeningsCommand implements ICommand {
       });
     }
 
+    // eslint-disable-next-line no-console
+    console.log('[DBG-TAG] RenumberCommand updateEntities', { count: sceneUpdates.size, ids: [...sceneUpdates.keys()] });
     if (sceneUpdates.size > 0) this.sceneManager.updateEntities(sceneUpdates);
 
     try {

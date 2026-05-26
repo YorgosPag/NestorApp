@@ -40,8 +40,9 @@ import {
   type ResolvedOpeningTagStyle,
 } from '../services/opening-tag-style-service';
 
-/** Below this zoom scale, tags are hidden to reduce clutter. */
-export const OPENING_TAG_MIN_ZOOM = 0.5;
+/** Below this zoom scale, tags are hidden to reduce clutter. Matches minScale (0.1) from
+ * transform-config so tags appear at every usable zoom level. */
+export const OPENING_TAG_MIN_ZOOM = 0.1;
 
 /** mm — distance the tag centre is pushed normal-to-wall outward από το centroid. */
 const TAG_OFFSET_MM = 500;
@@ -100,6 +101,8 @@ export class OpeningTagRenderer {
       args.transform,
       args.viewport,
     );
+    // eslint-disable-next-line no-console
+    console.log(`[DBG-TAG] coords id=${args.opening.id.slice(-8)} anchor=(${anchorWorld.x.toFixed(1)},${anchorWorld.y.toFixed(1)}) anchorScr=(${anchorScreen.x.toFixed(1)},${anchorScreen.y.toFixed(1)}) tagScr=(${tagScreen.x.toFixed(1)},${tagScreen.y.toFixed(1)}) vp=${args.viewport.width.toFixed(0)}x${args.viewport.height.toFixed(0)}`);
 
     const color = OPENING_KIND_STROKE[args.opening.kind];
     // Phase C.2 — per-project style overrides resolved via sync getter (no
@@ -119,10 +122,12 @@ export function shouldRenderTag(
   layerVisible: boolean,
   zoomScale: number,
 ): boolean {
-  if (!layerVisible) return false;
-  if (opening.params.tagVisible === false) return false;
-  if (!opening.params.mark) return false;
-  if (zoomScale < OPENING_TAG_MIN_ZOOM) return false;
+  if (!layerVisible) { /* eslint-disable-next-line no-console */ console.log('[DBG-TAG] shouldRenderTag=false: layerVisible=false', { id: opening.id }); return false; }
+  if (opening.params.tagVisible === false) { /* eslint-disable-next-line no-console */ console.log('[DBG-TAG] shouldRenderTag=false: tagVisible=false', { id: opening.id }); return false; }
+  if (!opening.params.mark) { /* eslint-disable-next-line no-console */ console.log('[DBG-TAG] shouldRenderTag=false: mark missing', { id: opening.id, mark: opening.params.mark }); return false; }
+  if (zoomScale < OPENING_TAG_MIN_ZOOM) { /* eslint-disable-next-line no-console */ console.log('[DBG-TAG] shouldRenderTag=false: zoom too low', { id: opening.id, zoomScale, min: OPENING_TAG_MIN_ZOOM }); return false; }
+  // eslint-disable-next-line no-console
+  console.log('[DBG-TAG] shouldRenderTag=TRUE ✅', { id: opening.id, mark: opening.params.mark, zoomScale });
   return true;
 }
 
@@ -225,6 +230,8 @@ export function drawPillTag(
   kindColor: string,
   style: ResolvedOpeningTagStyle = OPENING_TAG_STYLE_DEFAULTS,
 ): void {
+  // eslint-disable-next-line no-console
+  console.log(`[DBG-TAG] drawPillTag mark=${mark} center=(${screenCenter.x.toFixed(1)},${screenCenter.y.toFixed(1)}) font=${style.fontSizePx}px bg=${style.pillBgColor} border=${style.borderWidthPx}`);
   ctx.save();
   // Phase C.2 — font size & background from per-project style; border width
   // controls visibility of the kind-coloured outline (0 → skip stroke).

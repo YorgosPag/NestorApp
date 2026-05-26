@@ -38,7 +38,8 @@ import type { SlabEntity, SlabKind, SlabReinforcement } from '../types/slab-type
 import type { SlabOpeningEntity } from '../types/slab-opening-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -134,13 +135,19 @@ export class SlabRenderer extends BaseEntityRenderer {
     // ADR-363 Phase 3.7 — subtract hosted slab-opening outlines από το fill.
     this.punchHostedSlabOpenings(slab);
 
-    this.ctx.strokeStyle = KIND_STROKE[slab.kind];
     const _slabZTop = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
     const _slabCutState = resolveCutState(
       { zBottomMm: _slabZTop - slab.params.thickness, zTopMm: _slabZTop, category: 'slab' },
       useDrawingScaleStore.getState().viewRange,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'slab', cutState: _slabCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
+    const { lineWidthPx: _slabLwPx, linePattern: _slabPattern, color: _slabColor } = resolveSubcategoryStyle({
+      category: 'slab', subcategoryKey: 'common-edges',
+      cutState: _slabCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
+      dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
+    });
+    this.ctx.lineWidth = _slabLwPx;
+    this.ctx.setLineDash(linePatternToDashArray(_slabPattern) as number[]);
+    this.ctx.strokeStyle = _slabColor ?? KIND_STROKE[slab.kind];
     this.drawPolygonPath(verts);
     this.ctx.stroke();
     this.ctx.restore();

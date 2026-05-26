@@ -35,7 +35,8 @@ import type {
 } from '../types/slab-opening-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -102,14 +103,22 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
     this.drawPolygonPath(verts);
     this.ctx.fill();
 
-    this.ctx.strokeStyle = KIND_STROKE[opening.kind];
     const _soZTop = opening.params.elevationOverride ?? 0;
     const _soCutState = resolveCutState(
       { zBottomMm: _soZTop - 200, zTopMm: _soZTop, category: 'slab-opening' },
       useDrawingScaleStore.getState().viewRange,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'slab-opening', cutState: _soCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
-    this.ctx.setLineDash(KIND_DASH[opening.kind] as unknown as number[]);
+    const { lineWidthPx: _soLwPx, linePattern: _soPattern, color: _soColor } = resolveSubcategoryStyle({
+      category: 'slab-opening', subcategoryKey: 'edges',
+      cutState: _soCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
+      dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
+    });
+    this.ctx.lineWidth = _soLwPx;
+    const _soDash = _soPattern !== 'solid'
+      ? linePatternToDashArray(_soPattern)
+      : KIND_DASH[opening.kind];
+    this.ctx.setLineDash(_soDash as number[]);
+    this.ctx.strokeStyle = _soColor ?? KIND_STROKE[opening.kind];
     this.drawPolygonPath(verts);
     this.ctx.stroke();
     this.ctx.restore();

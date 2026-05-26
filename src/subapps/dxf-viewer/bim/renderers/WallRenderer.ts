@@ -28,7 +28,8 @@ import type { WallCategory, WallEntity } from '../types/wall-types';
 import type { OpeningEntity } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
@@ -167,7 +168,13 @@ export class WallRenderer extends BaseEntityRenderer {
       { zBottomMm: wall.params.baseOffset ?? 0, zTopMm: (wall.params.baseOffset ?? 0) + wall.params.height, category: 'wall' },
       useDrawingScaleStore.getState().viewRange,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'wall', cutState: _cutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
+    const { lineWidthPx: _edgePx, linePattern: _edgePattern, color: _edgeColor } = resolveSubcategoryStyle({
+      category: 'wall', subcategoryKey: 'common-edges',
+      cutState: _cutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
+      dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
+    });
+    this.ctx.lineWidth = _edgePx;
+    this.ctx.setLineDash(linePatternToDashArray(_edgePattern) as number[]);
 
     // Build closed polygon: outer (start→end) + inner (end→start) reverses
     // so the perimeter is well-oriented for fill.
@@ -188,6 +195,7 @@ export class WallRenderer extends BaseEntityRenderer {
     // ADR-363 Phase 2.5 — subtract hosted opening outlines from the fill.
     this.punchHostedOpenings(wall);
 
+    if (_edgeColor !== null) this.ctx.strokeStyle = _edgeColor;
     this.ctx.stroke();
   }
 
@@ -271,6 +279,17 @@ export class WallRenderer extends BaseEntityRenderer {
     const inner = wall.geometry.innerEdge.points;
     if (outer.length < 2 || inner.length < 2) return;
 
+    const _hatchCutState = resolveCutState(
+      { zBottomMm: wall.params.baseOffset ?? 0, zTopMm: (wall.params.baseOffset ?? 0) + wall.params.height, category: 'wall' },
+      useDrawingScaleStore.getState().viewRange,
+    );
+    const { linePattern: _hatchPattern, color: _hatchColor } = resolveSubcategoryStyle({
+      category: 'wall', subcategoryKey: 'cut-pattern',
+      cutState: _hatchCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
+      objectStyles: useDrawingScaleStore.getState().objectStyles,
+    });
+    const _hatchStroke = _hatchColor ?? HATCH_STROKE_RGBA;
+
     this.ctx.save();
     // Clip to wall body polygon (same path as drawFootprint).
     this.ctx.beginPath();
@@ -287,10 +306,10 @@ export class WallRenderer extends BaseEntityRenderer {
     this.ctx.closePath();
     this.ctx.clip();
 
-    this.ctx.strokeStyle = HATCH_STROKE_RGBA;
-    this.ctx.fillStyle = HATCH_STROKE_RGBA;
+    this.ctx.strokeStyle = _hatchStroke;
+    this.ctx.fillStyle = _hatchStroke;
     this.ctx.lineWidth = WALL_HATCH_LINE_WIDTH_PX[key];
-    this.ctx.setLineDash([]);
+    this.ctx.setLineDash(linePatternToDashArray(_hatchPattern) as number[]);
 
     for (const seg of plan.lines) {
       const a = this.worldToScreen(seg.start);

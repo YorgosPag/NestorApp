@@ -50,6 +50,8 @@ export class OpeningRenderer extends BaseEntityRenderer {
     if (!isOpeningEntity(entity)) return;
     const opening = entity as OpeningEntity;
     if (!opening.geometry || !opening.params) return;
+    // eslint-disable-next-line no-console
+    console.log('[DBG-TAG] OpeningRenderer.render', { id: opening.id, mark: opening.params.mark, kind: opening.kind, scale: this.transform.scale });
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 

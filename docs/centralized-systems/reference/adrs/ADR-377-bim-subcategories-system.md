@@ -1,6 +1,6 @@
 # ADR-377: BIM Subcategories System
 
-**Status**: 🟡 ACTIVE v0.3 — Phase A + B implemented, Phase C pending
+**Status**: 🟡 ACTIVE v0.4 — Phase A + B + C.1 implemented, C.2 + C.3 pending
 **Date**: 2026-05-26
 **Author**: Giorgio Pagonis (orchestrated via Claude)
 **Related**:
@@ -690,6 +690,7 @@ Deferred to draft review (best-guess in this doc):
 
 ## 11. Changelog
 
+- **v0.4 (2026-05-26)** — Phase C.1 IMPLEMENTED. Wall/Slab/SlabOpening 2D renderers wired. `WallRenderer.drawFootprint()` → `common-edges`, `WallRenderer.drawMaterialHatch()` → `cut-pattern`, `SlabRenderer.render()` → `common-edges`, `SlabOpeningRenderer.render()` → `edges`. `linePatternToDashArray()` applied per draw call. Color overrides via `ctx.strokeStyle` when non-null. SlabOpening preserves per-kind KIND_DASH fallback when linePattern='solid' (additive, zero regression). 19 new tests (3 files × 6-7 tests: WallRenderer-subcategory-wiring, SlabRenderer-subcategory-wiring, SlabOpeningRenderer-subcategory-wiring). 19/19 PASS. TSC pending.
 - **v0.3 (2026-05-26)** — Phase B IMPLEMENTED. `resolveSubcategoryStyle()` + `ResolvedSubcategoryStyle` + `SubcategoryResolutionContext` added to `bim-line-weight-resolver.ts`. `resolveLineWeightPx()` re-implemented as thin wrapper (zero behavior change). 30 new tests (7 groups: parent fallback, cutPen/projectionPen overrides, linePattern override, color overrides, beyond state, unknown keys, wrapper regression). 43/43 PASS. TSC clean.
 - **v0.2 (2026-05-26)** — Phase A IMPLEMENTED. 2 NEW SSoT files (`bim-line-patterns.ts`: 28 patterns + `linePatternToDashArray()`, `bim-subcategories.ts`: 47 keys + 23-entry WIRED_SUBCATEGORIES + 2 helpers). 1 MODIFIED (`bim-object-styles.ts`: `SubcategoryStyle` interface + `ObjectStyle.subcategories?` extension). Cache invalidation verified automatic via existing `JSON.stringify` in `dxf-bitmap-cache.ts:54`. 47 new tests + 35 regression = 82 tests PASS. TSC clean. Pending commit.
 - **v0.1 (2026-05-26)** — DRAFT created. Clarification phase με Giorgio (Q1-Q11 locked). Industry research confirms 47 subcategories taxonomy. Architecture decided: extend ADR-375 Tier 2 with optional `subcategories` map. 6-phase plan ~29-46h total. Custom Wall Types / Door Types etc deferred to ADR-378 BIM Family Types.
