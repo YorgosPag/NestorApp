@@ -53,6 +53,8 @@ export function RenumberOpeningsHost(props: RenumberOpeningsHostProps): React.Re
   const { user } = useAuth();
   const companyId = user?.companyId ?? null;
   const levels = useLevels();
+  const levelsRef = React.useRef(levels);
+  levelsRef.current = levels;
   const [open, setOpen] = React.useState(false);
   const [rows, setRows] = React.useState<ReadonlyArray<RenumberOpeningRow>>([]);
   const [floorMap, setFloorMap] = React.useState<ReadonlyMap<string, number>>(new Map());
@@ -63,7 +65,13 @@ export function RenumberOpeningsHost(props: RenumberOpeningsHostProps): React.Re
       if (!companyId || !projectId || !floorplanId) return;
       void loadRows(companyId, projectId, floorplanId).then(({ rows: loaded, floorIds }) => {
         setRows(loaded);
-        void loadFloorMap(floorIds).then(setFloorMap);
+        // Belt-and-suspenders: also include floor IDs from the level list so
+        // currentFloor resolves even when no openings exist yet on that floor.
+        const allFloorIds = new Set(floorIds);
+        for (const lvl of levelsRef.current.levels) {
+          if (lvl.floorId) allFloorIds.add(lvl.floorId);
+        }
+        void loadFloorMap(Array.from(allFloorIds)).then(setFloorMap);
         setOpen(true);
       });
     });

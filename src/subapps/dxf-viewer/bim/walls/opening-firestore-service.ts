@@ -203,12 +203,13 @@ export function createOpeningFirestoreService(
  * fields (`geometry`) intentionally omitted — geometry recomputed client-side
  * από params + host wall on hydrate.
  */
-export function entityToSaveInput(entity: OpeningEntity): OpeningSaveInput {
+export function entityToSaveInput(entity: OpeningEntity, floorId?: string): OpeningSaveInput {
   return {
     id: entity.id,
     kind: entity.kind,
     params: entity.params,
     validation: entity.validation,
     layerId: entity.layerId,
+    ...(floorId !== undefined ? { floorId } : {}),
   };
 }

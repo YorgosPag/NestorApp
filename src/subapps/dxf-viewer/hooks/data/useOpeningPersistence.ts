@@ -155,6 +155,9 @@ export function useOpeningPersistence(
   // Ref-based access to avoid stale closures without adding to effect dep arrays.
   const levelManagerRef = useRef(levelManager);
   levelManagerRef.current = levelManager;
+  const currentFloorIdRef = useRef<string | null>(null);
+  currentFloorIdRef.current =
+    levelManager.levels.find((l) => l.id === levelManager.currentLevelId)?.floorId ?? null;
 
   // Listen for explicit deletion — marks ID so subscription never re-adds it.
   useEffect(() => {
@@ -278,7 +281,7 @@ export function useOpeningPersistence(
     setSaveState('saving');
     setError(null);
     try {
-      await svc.saveOpening(entityToSaveInput(entity));
+      await svc.saveOpening(entityToSaveInput(entity, currentFloorIdRef.current ?? undefined));
       lastSavedParamsRef.current.set(entity.id, entity.params);
       dirtyIdsRef.current.delete(entity.id);
       setSaveState('saved');
