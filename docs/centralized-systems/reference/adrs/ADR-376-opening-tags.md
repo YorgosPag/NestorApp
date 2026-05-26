@@ -570,6 +570,10 @@ readonly markIsManual?: boolean;
   - **Auto-contrast text**: `contrastTextColor(bgColor)` WCAG 1.4.3 in `canvas-pill.ts` SSoT — black/white text auto per background luminance. 14 tests.
   - **Tag clickability**: `OpeningRenderer.hitTestTagPill()` — click on pill selects opening, contextual ribbon tab activates.
   - **Modified files**: `OpeningTagRenderer.ts` + `OpeningRenderer.ts` + `canvas-pill.ts` + `opening-command-keys.ts` + `contextual-opening-tab.ts` + `useRibbonOpeningBridge.ts` + `dxf-viewer-shell.json el+en`.
+- **2026-05-26** (v12.1 — RIBBON_BUG_FIXES) — **Ribbon tag style controls bug fixes**.
+  - **Bug 1 — canvas not re-rendering**: `mutateStyle()` only notified dialog subscribers; canvas reads style via sync getter but needs a dirty frame. Fix: `markAllCanvasDirty()` (from `UnifiedFrameScheduler`) called after every `mutateStyle()` in `onComboboxChange` and `onToggle` in `useRibbonOpeningBridge.ts`. Tags now update immediately on ribbon change.
+  - **Bug 2 — leaderVisible silent no-op**: Button is `type:'simple'` with `action` → ribbon calls `onAction()`, not `onToggle()`. `onAction` had no handler for `OPENING_TAG_STYLE_KEYS.leaderVisible`. Fix: added toggle handler in `onAction`: reads `getCurrentStyle().leaderVisible`, inverts, calls `mutateStyle()` + `markAllCanvasDirty()`.
+  - **Modified**: `useRibbonOpeningBridge.ts` only (+1 import + 3 call sites).
 - **2026-05-26** (v11 — PHASE_C3_DONE) — **Phase C.3 implementation complete** (PDF opening schedule export). ADR-376 now COMPLETE.
   - **Architecture**: client-side PDF (no API route). `downloadOpeningScheduleAsPdf()` pure module — 1 PDF, 2 sections (Πίνακας Θυρών + Πίνακας Παραθύρων). jsPDF + jspdf-autotable A4 landscape, mirrors ADR-363 Phase 8 `pdf-exporter.ts` SSoT pattern. `triggerExportDownload` SSoT for browser download.
   - **Mark column**: Added `mark` to `DOOR_COLUMNS` + `WINDOW_COLUMNS` presets (as first column, before `id`). Industry standard — Revit/ArchiCAD both include Mark/ID as primary identifier in door/window schedules. Affects all exports (CSV + xlsx + PDF).
