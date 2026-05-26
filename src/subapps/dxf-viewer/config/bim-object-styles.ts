@@ -1,13 +1,15 @@
 /**
  * ADR-375 — BIM Object Styles (Revit-equivalent, Tier 2)
+ * ADR-377 — SubcategoryStyle extension
  *
- * Per category: { projectionPen, cutPen } pen assignments.
+ * Per category: { projectionPen, cutPen } pen assignments + optional subcategory overrides.
  * Defaults match Revit Architectural Template (verified 2026-05-25).
  *
- * Phase A: hard-coded defaults.
+ * Phase A: hard-coded defaults, SubcategoryStyle extension (ADR-377).
  * Phase B: user customization via ribbon + Firestore persistence.
  */
 import type { PenIndex } from './bim-pen-table';
+import type { LinePatternKey } from './bim-line-patterns';
 
 /**
  * Discriminated entity categories matching our BIM renderers.
@@ -27,11 +29,29 @@ export type BimCategory =
   | 'hatch'
   | 'grip';
 
+/**
+ * Per-subcategory style overrides (ADR-377).
+ * All fields optional — absent field falls back to parent ObjectStyle value.
+ * Color null → use canvas token (light/dark adaptive).
+ */
+export interface SubcategoryStyle {
+  cutPen?: PenIndex;
+  projectionPen?: PenIndex;
+  /** Line pattern override (absent → 'solid'). */
+  linePattern?: LinePatternKey;
+  /** Cut color hex or null (null → canvas token). */
+  cutColor?: string | null;
+  /** Projection color hex or null (null → canvas token). */
+  projectionColor?: string | null;
+}
+
 export interface ObjectStyle {
   /** Pen used when element is in projection (not cut by plane). */
   projectionPen: PenIndex;
   /** Pen used when element is cut by view plane. */
   cutPen: PenIndex;
+  /** Per-subcategory style overrides (ADR-377). Keys validated by SUBCATEGORY_TAXONOMY. */
+  subcategories?: Partial<Record<string, SubcategoryStyle>>;
 }
 
 /**
