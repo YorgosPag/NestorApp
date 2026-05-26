@@ -147,10 +147,22 @@ export function useOpeningPersistence(
 
   const serviceRef = useRef<OpeningFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
+  const deletedIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, OpeningEntity['params']>>(new Map());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedOpeningRef = useRef<OpeningEntity | null>(null);
   selectedOpeningRef.current = primarySelectedOpening;
+  // Ref-based access to avoid stale closures without adding to effect dep arrays.
+  const levelManagerRef = useRef(levelManager);
+  levelManagerRef.current = levelManager;
+
+  // Listen for explicit deletion — marks ID so subscription never re-adds it.
+  useEffect(() => {
+    return EventBus.on('bim:opening-delete-requested', ({ openingId }) => {
+      deletedIdsRef.current.add(openingId);
+      void serviceRef.current?.deleteOpening(openingId).catch(() => undefined);
+    });
+  }, []);
 
   // Instantiate service όταν auth + scope ready.
   useEffect(() => {
@@ -231,6 +243,8 @@ export function useOpeningPersistence(
 
         for (const [id, entity] of sceneOpenings) {
           if (docsById.has(id)) continue;
+          // Explicitly deleted — never re-add regardless of save state.
+          if (deletedIdsRef.current.has(id)) { mutated = true; continue; }
           const neverSaved = !lastSavedParamsRef.current.has(id);
           if (dirty.has(id) || neverSaved) {
             nextOpenings.push(entity);
@@ -285,19 +299,7 @@ export function useOpeningPersistence(
     }
   }, [companyId, projectId, buildingId, floorplanId]);
 
-  /**
-   * ADR-376 Phase A — Resolve `params.mark` πριν την πρώτη persist.
-   *
-   * Φάσεις:
-   *   1. Αν entity ήδη έχει mark → skip allocation (idempotent — N.7.2 Q3)
-   *   2. Resolve current `Level.floorId` από `levelManager`. Αν λείπει
-   *      → console.warn + persist χωρίς mark (blank-canvas case, Phase B)
-   *   3. Fetch `FloorDocument.number` από Firestore floors/{floorId}
-   *   4. i18n-resolve kindPrefix + basementPrefix
-   *   5. `OpeningMarkService.allocateMark()` → patched entity
-   *   6. Optimistic scene patch ώστε ο tag να φαίνεται immediately
-   *   7. Persist patched entity
-   */
+  // ADR-376 Phase A — allocate mark before first persist (idempotent if already set).
   const allocateAndPersistOpening = useCallback(async (entity: OpeningEntity) => {
     let finalEntity: OpeningEntity = entity;
     if (
@@ -352,6 +354,9 @@ export function useOpeningPersistence(
     }
     await persist(finalEntity);
   }, [persist, companyId, projectId, floorplanId, levelManager, t]);
+
+  const allocateAndPersistRef = useRef(allocateAndPersistOpening);
+  allocateAndPersistRef.current = allocateAndPersistOpening;
 
   // Auto-save debounce on selected opening params change.
   useEffect(() => {
@@ -445,6 +450,28 @@ export function useOpeningPersistence(
     });
     return cleanup;
   }, [allocateAndPersistOpening]);
+
+  // Retry-save for openings drawn before floorplanId was available (neverSaved in Firestore).
+  useEffect(() => {
+    if (!floorplanId || !companyId || !projectId || !userId) return;
+    const lm = levelManagerRef.current;
+    const levelId = lm.currentLevelId;
+    if (!levelId) return;
+    const scene = lm.getLevelScene(levelId);
+    if (!scene) return;
+    const unsaved = scene.entities.filter(
+      (e): e is OpeningEntity =>
+        isOpening(e) &&
+        !lastSavedParamsRef.current.has(e.id) &&
+        !deletedIdsRef.current.has(e.id),
+    );
+    if (unsaved.length === 0) return;
+    for (const opening of unsaved) {
+      dirtyIdsRef.current.add(opening.id);
+      void allocateAndPersistRef.current(opening);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [floorplanId, companyId, projectId, userId]);
 
   // Phase 2 — Delete-requested listener (bridge emits μετά από confirm).
   useEffect(() => {

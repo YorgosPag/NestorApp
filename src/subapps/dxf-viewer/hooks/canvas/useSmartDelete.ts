@@ -208,9 +208,12 @@ export function useSmartDelete({
         idsToDelete = [...idsToDelete, ...orphanedSlabOpeningIds];
       }
 
-      // Collect stair IDs BEFORE executeCommand removes them from scene.
+      // Collect BIM IDs BEFORE executeCommand removes them from scene.
       const stairIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'stair',
+      );
+      const openingIdsInBatch = idsToDelete.filter(
+        (id) => adapter.getEntity(id)?.type === 'opening',
       );
 
       if (idsToDelete.length === 1) {
@@ -224,6 +227,10 @@ export function useSmartDelete({
       // ADR-358 Phase 9C-3 — trigger Firestore deleteDoc for each deleted stair.
       for (const stairId of stairIdsInBatch) {
         eventBus.emit('bim:stair-delete-requested', { stairId });
+      }
+      // Trigger Firestore deleteDoc + prevent subscription re-add for each deleted opening.
+      for (const openingId of openingIdsInBatch) {
+        eventBus.emit('bim:opening-delete-requested', { openingId });
       }
 
       return true;
