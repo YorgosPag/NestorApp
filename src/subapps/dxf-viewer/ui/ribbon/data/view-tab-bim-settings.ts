@@ -53,6 +53,30 @@ export const OBJECT_STYLES_PANEL: RibbonPanelDef = {
   ],
 };
 
+/** ADR-375 Phase C.1 — per-company editable 16×6 pen table. */
+export const PEN_TABLE_PANEL: RibbonPanelDef = {
+  id: 'penTable',
+  labelKey: 'ribbon.panels.penTable',
+  rows: [
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'widget',
+          size: 'small',
+          widgetId: 'pen-table',
+          command: {
+            id: 'view.penTable',
+            labelKey: 'ribbon.commands.penTable.label',
+            icon: '',
+            commandKey: 'pen-table',
+          },
+        },
+      ],
+    },
+  ],
+};
+
 /** ADR-375 Phase B.3 — reusable BIM render-settings presets (Revit Level 2). */
 export const VIEW_TEMPLATES_PANEL: RibbonPanelDef = {
   id: 'viewTemplates',

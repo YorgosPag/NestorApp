@@ -29,7 +29,7 @@ import type { OpeningEntity } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { OPENING_KIND_STROKE } from './opening-kind-style';
 import {
-  PILL_TEXT_COLOR,
+  contrastTextColor,
   PILL_PADDING,
   PILL_RADIUS,
   pillPath,
@@ -44,8 +44,9 @@ import {
  * transform-config so tags appear at every usable zoom level. */
 export const OPENING_TAG_MIN_ZOOM = 0.1;
 
-/** mm — distance the tag centre is pushed normal-to-wall outward από το centroid. */
-const TAG_OFFSET_MM = 500;
+/** Screen-px initial separation between opening centroid and tag pill. Scale-independent so
+ * the tag is always visible at every zoom level (world-space offset is zoom-dependent). */
+const TAG_INITIAL_SCREEN_PX = 40;
 
 const LINE_HEIGHT_MULTIPLIER = 11 / 9; // legacy 11 px line-height at the 9 px default.
 
@@ -84,25 +85,31 @@ export class OpeningTagRenderer {
     const mark = args.opening.params.mark;
     if (!mark) return;
 
-    // ADR-376 Phase C.1 — anchor = auto-centroid (without offset); pill = anchor
-    // + user `tagOffset` delta. Leader drawn between the two when distance is
-    // significant. Always rendered "tag horizontal" (Q2 industry default 3/3).
+    // ADR-376 Phase C.1 — anchor = opening centroid; tag pill = anchor +
+    // screen-space initial push (TAG_INITIAL_SCREEN_PX along wall normal) +
+    // accumulated world-space user drag (tagOffset). Screen-space initial push
+    // keeps the tag visible at every zoom level regardless of scene unit scale.
     const anchorWorld = computeTagCenter(args.opening);
-    const offset = args.opening.params.tagOffset ?? { dx: 0, dy: 0 };
-    const tagWorld = { x: anchorWorld.x + offset.dx, y: anchorWorld.y + offset.dy };
-
     const anchorScreen = CoordinateTransforms.worldToScreen(
       { x: anchorWorld.x, y: anchorWorld.y },
       args.transform,
       args.viewport,
     );
-    const tagScreen = CoordinateTransforms.worldToScreen(
-      { x: tagWorld.x, y: tagWorld.y },
-      args.transform,
-      args.viewport,
-    );
-    // eslint-disable-next-line no-console
-    console.log(`[DBG-TAG] coords id=${args.opening.id.slice(-8)} anchor=(${anchorWorld.x.toFixed(1)},${anchorWorld.y.toFixed(1)}) anchorScr=(${anchorScreen.x.toFixed(1)},${anchorScreen.y.toFixed(1)}) tagScr=(${tagScreen.x.toFixed(1)},${tagScreen.y.toFixed(1)}) vp=${args.viewport.width.toFixed(0)}x${args.viewport.height.toFixed(0)}`);
+
+    // Wall normal in screen space — world Y is flipped on canvas (down = positive).
+    const { ux, uy } = computeWallNormal(args.opening);
+    const normSnx = ux;   // canvas X: same direction as world X
+    const normSny = -uy;  // canvas Y: inverted relative to world Y
+
+    // User drag delta in world coords → screen delta from centroid.
+    const offset = args.opening.params.tagOffset ?? { dx: 0, dy: 0 };
+    const draggedWorld = { x: anchorWorld.x + offset.dx, y: anchorWorld.y + offset.dy };
+    const draggedScreen = CoordinateTransforms.worldToScreen(draggedWorld, args.transform, args.viewport);
+
+    const tagScreen: Point2D = {
+      x: anchorScreen.x + normSnx * TAG_INITIAL_SCREEN_PX + (draggedScreen.x - anchorScreen.x),
+      y: anchorScreen.y + normSny * TAG_INITIAL_SCREEN_PX + (draggedScreen.y - anchorScreen.y),
+    };
 
     const color = OPENING_KIND_STROKE[args.opening.kind];
     // Phase C.2 — per-project style overrides resolved via sync getter (no
@@ -122,46 +129,45 @@ export function shouldRenderTag(
   layerVisible: boolean,
   zoomScale: number,
 ): boolean {
-  if (!layerVisible) { /* eslint-disable-next-line no-console */ console.log('[DBG-TAG] shouldRenderTag=false: layerVisible=false', { id: opening.id }); return false; }
-  if (opening.params.tagVisible === false) { /* eslint-disable-next-line no-console */ console.log('[DBG-TAG] shouldRenderTag=false: tagVisible=false', { id: opening.id }); return false; }
-  if (!opening.params.mark) { /* eslint-disable-next-line no-console */ console.log('[DBG-TAG] shouldRenderTag=false: mark missing', { id: opening.id, mark: opening.params.mark }); return false; }
-  if (zoomScale < OPENING_TAG_MIN_ZOOM) { /* eslint-disable-next-line no-console */ console.log('[DBG-TAG] shouldRenderTag=false: zoom too low', { id: opening.id, zoomScale, min: OPENING_TAG_MIN_ZOOM }); return false; }
-  // eslint-disable-next-line no-console
-  console.log('[DBG-TAG] shouldRenderTag=TRUE ✅', { id: opening.id, mark: opening.params.mark, zoomScale });
+  if (!layerVisible) return false;
+  if (opening.params.tagVisible === false) return false;
+  if (!opening.params.mark) return false;
+  if (zoomScale < OPENING_TAG_MIN_ZOOM) return false;
   return true;
 }
 
 /**
- * Auto-centroid + offset normal-to-wall outward. The outline rectangle vertex
- * order is `[start-outer, end-outer, end-inner, start-inner]` (see
- * `computeOpeningGeometry`). The outward normal is the unit vector from
- * `inner-mid` toward `outer-mid`.
+ * Auto-centroid of the opening outline rectangle.
+ * The outline vertex order is `[start-outer, end-outer, end-inner, start-inner]`
+ * (see `computeOpeningGeometry`).
  */
 export function computeTagCenter(opening: OpeningEntity): Point3D {
   const verts = opening.geometry.outline.vertices;
   if (verts.length < 4) return opening.geometry.position;
+  return {
+    x: (verts[0].x + verts[1].x + verts[2].x + verts[3].x) / 4,
+    y: (verts[0].y + verts[1].y + verts[2].y + verts[3].y) / 4,
+    z: 0,
+  };
+}
 
-  const cx = (verts[0].x + verts[1].x + verts[2].x + verts[3].x) / 4;
-  const cy = (verts[0].y + verts[1].y + verts[2].y + verts[3].y) / 4;
-
+/**
+ * Wall outward unit normal in world space.
+ * Outline order: `[start-outer, end-outer, end-inner, start-inner]`.
+ * Outward = direction from inner-mid toward outer-mid.
+ */
+export function computeWallNormal(opening: OpeningEntity): { ux: number; uy: number } {
+  const verts = opening.geometry.outline.vertices;
+  if (verts.length < 4) return { ux: 0, uy: 1 };
   const outerMidX = (verts[0].x + verts[1].x) / 2;
   const outerMidY = (verts[0].y + verts[1].y) / 2;
   const innerMidX = (verts[2].x + verts[3].x) / 2;
   const innerMidY = (verts[2].y + verts[3].y) / 2;
-
   const nx = outerMidX - innerMidX;
   const ny = outerMidY - innerMidY;
   const len = Math.hypot(nx, ny);
-  if (len === 0) return { x: cx, y: cy, z: 0 };
-
-  const ux = nx / len;
-  const uy = ny / len;
-
-  return {
-    x: cx + ux * TAG_OFFSET_MM,
-    y: cy + uy * TAG_OFFSET_MM,
-    z: 0,
-  };
+  if (len === 0) return { ux: 0, uy: 1 };
+  return { ux: nx / len, uy: ny / len };
 }
 
 /**
@@ -230,8 +236,6 @@ export function drawPillTag(
   kindColor: string,
   style: ResolvedOpeningTagStyle = OPENING_TAG_STYLE_DEFAULTS,
 ): void {
-  // eslint-disable-next-line no-console
-  console.log(`[DBG-TAG] drawPillTag mark=${mark} center=(${screenCenter.x.toFixed(1)},${screenCenter.y.toFixed(1)}) font=${style.fontSizePx}px bg=${style.pillBgColor} border=${style.borderWidthPx}`);
   ctx.save();
   // Phase C.2 — font size & background from per-project style; border width
   // controls visibility of the kind-coloured outline (0 → skip stroke).
@@ -254,7 +258,7 @@ export function drawPillTag(
     ctx.stroke();
   }
 
-  ctx.fillStyle = PILL_TEXT_COLOR;
+  ctx.fillStyle = contrastTextColor(style.pillBgColor);
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'center';
   ctx.fillText(mark, screenCenter.x, screenCenter.y);

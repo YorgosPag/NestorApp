@@ -7,6 +7,7 @@
  * Uses lineweightToPx from ADR-358 SSoT (no mm→px duplication).
  */
 import { PEN_TABLE_MM, SCALE_COLUMNS, type PenIndex } from './bim-pen-table';
+import type { EffectivePenTable } from './bim-pen-table-types';
 import { DEFAULT_OBJECT_STYLES, type BimCategory, type ObjectStyle } from './bim-object-styles';
 import { type CutState } from './bim-view-range';
 import { lineweightToPx } from './lineweight-iso-catalog';
@@ -53,6 +54,18 @@ export interface ResolvedSubcategoryStyle {
   color: string | null;
 }
 
+/**
+ * Active pen table — defaults to PEN_TABLE_MM.
+ * Replaced at runtime by `setPenTableSource` when the pen table store loads
+ * per-company overrides (ADR-375 Phase C.1). No renderer changes needed.
+ */
+let _activePenTable: EffectivePenTable = PEN_TABLE_MM;
+
+/** Called by bim-pen-table-store whenever overrides are loaded or updated. */
+export function setPenTableSource(table: EffectivePenTable): void {
+  _activePenTable = table;
+}
+
 /** <Beyond> uses the finest pen (Pen #3) per Revit Line Styles default. */
 const BEYOND_PEN: PenIndex = 3;
 
@@ -88,7 +101,7 @@ export function resolveSubcategoryStyle(
   }
 
   const scaleCol = closestScaleColumn(ctx.scaleDenominator);
-  const mm = PEN_TABLE_MM[penIdx - 1][scaleCol];
+  const mm = _activePenTable[penIdx - 1][scaleCol];
   const lineWidthPx = lineweightToPx(mm, ctx.dpi ?? 96);
 
   const linePattern = sub?.linePattern ?? 'solid';

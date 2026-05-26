@@ -725,6 +725,7 @@
       "drawingScale": "Κλίμακα Σχεδίου",
       "viewRange": "Εύρος Προβολής",
       "objectStyles": "Στυλ Αντικειμένων",
+      "penTable": "Πίνακας Πενών",
       "viewTemplates": "Πρότυπα Προβολής",
       "dimensions": "Διαστάσεις",
       "dimStyle": "Στυλ",
@@ -1517,6 +1518,14 @@
         "applyAriaLabel": "Εφαρμογή προτύπου {name}",
         "updateAriaLabel": "Ενημέρωση προτύπου {name} με τις τρέχουσες ρυθμίσεις",
         "deleteAriaLabel": "Διαγραφή προτύπου {name}"
+      },
+      "penTable": {
+        "label": "Πίνακας Πενών",
+        "openAriaLabel": "Άνοιγμα πίνακα πενών 16×6",
+        "cellAriaLabel": "Πένα {pen} κλίμακα {scale}",
+        "rightClickHint": "Δεξί κλικ σε κελί → επαναφορά σε προεπιλογή",
+        "reset": "Επαναφορά όλων",
+        "resetAriaLabel": "Επαναφορά πίνακα πενών στις προεπιλογές ISO"
       },
       "openGuidePanel": "Πίνακας Οδηγών",
       "toggleGuides": "Εμφάνιση/Απόκρυψη Οδηγών",

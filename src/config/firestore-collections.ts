@@ -96,6 +96,8 @@ export const COLLECTIONS = {
   DXF_VIEWER_LEVELS: process.env.NEXT_PUBLIC_DXF_VIEWER_LEVELS_COLLECTION || 'dxf_viewer_levels',
   /** ADR-375 Phase B.3 — BIM View Templates (reusable presets: drawingScale + viewRange + objectStyles). */
   DXF_VIEWER_VIEW_TEMPLATES: process.env.NEXT_PUBLIC_DXF_VIEWER_VIEW_TEMPLATES_COLLECTION || 'dxf_viewer_view_templates',
+  /** ADR-375 Phase C.1 — BIM Pen Table overrides (per-company, docId = companyId). */
+  DXF_VIEWER_PEN_TABLES: process.env.NEXT_PUBLIC_DXF_VIEWER_PEN_TABLES_COLLECTION || 'dxf_viewer_pen_tables',
 
   // 📐 FLOORPLANS (Enterprise Unified)
   FLOORPLANS: process.env.NEXT_PUBLIC_FLOORPLANS_COLLECTION || 'floorplans',

@@ -21,6 +21,7 @@ import { RibbonAnnotationScaleWidget } from './RibbonAnnotationScaleWidget';
 import { DrawingScaleWidget } from './DrawingScaleWidget';
 import { ViewRangePanel } from '../panels/ViewRangePanel';
 import { ObjectStylesPanel } from '../panels/ObjectStylesPanel';
+import { PenTablePanel } from '../panels/PenTablePanel';
 import { ViewTemplatesPanel } from '../panels/ViewTemplatesPanel';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 import { RibbonStairFloorInfoWidget } from './RibbonStairFloorInfoWidget';
@@ -66,6 +67,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'object-styles') {
       return <ObjectStylesPanel key="object-styles-widget" />;
+    }
+    if (button.widgetId === 'pen-table') {
+      return <PenTablePanel key="pen-table-widget" />;
     }
     if (button.widgetId === 'view-templates') {
       return <ViewTemplatesPanel key="view-templates-widget" />;

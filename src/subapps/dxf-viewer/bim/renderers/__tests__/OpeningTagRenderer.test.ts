@@ -11,6 +11,7 @@
 import {
   shouldRenderTag,
   computeTagCenter,
+  computeWallNormal,
   drawPillTag,
   OPENING_TAG_MIN_ZOOM,
 } from '../OpeningTagRenderer';
@@ -93,25 +94,62 @@ describe('shouldRenderTag', () => {
 // ---------------------------------------------------------------------------
 
 describe('computeTagCenter', () => {
-  it('returns centroid + outward-normal offset', () => {
+  it('returns pure centroid (no world-space offset)', () => {
     // Outline: outer top edge (y=100), inner bottom edge (y=0).
-    // Normal points from inner → outer = (0, +1).
-    // Centroid: (50, 50). Offset 500mm outward → (50, 550).
+    // Centroid: (50, 50). No offset applied — screen-space push done in render().
     const o = makeOpening({});
     const c = computeTagCenter(o);
     expect(c.x).toBe(50);
-    expect(c.y).toBe(550);
+    expect(c.y).toBe(50);
   });
-  it('handles degenerate (zero-length normal) → returns centroid', () => {
-    // All 4 verts the same point — normal = 0.
+  it('handles degenerate (< 4 verts) → returns geometry.position', () => {
+    const o = makeOpening({ outline: [{ x: 10, y: 10 }, { x: 20, y: 20 }] });
+    const c = computeTagCenter(o);
+    expect(c.x).toBe(50); // geometry.position fallback from makeOpening
+    expect(c.y).toBe(50);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeWallNormal
+// ---------------------------------------------------------------------------
+
+describe('computeWallNormal', () => {
+  it('returns upward normal for horizontal wall (outer=top, inner=bottom)', () => {
+    // outer-mid = (50,100), inner-mid = (50,0) → normal = (0,+1)
+    const o = makeOpening({});
+    const { ux, uy } = computeWallNormal(o);
+    expect(ux).toBeCloseTo(0);
+    expect(uy).toBeCloseTo(1);
+  });
+  it('returns rightward normal for vertical wall', () => {
+    // outer-mid = (100,50), inner-mid = (0,50) → normal = (+1,0)
+    const o = makeOpening({
+      outline: [
+        { x: 100, y: 100 }, // start-outer
+        { x: 100, y: 0 },   // end-outer
+        { x: 0, y: 0 },     // end-inner
+        { x: 0, y: 100 },   // start-inner
+      ],
+    });
+    const { ux, uy } = computeWallNormal(o);
+    expect(ux).toBeCloseTo(1);
+    expect(uy).toBeCloseTo(0);
+  });
+  it('returns unit vector (length = 1)', () => {
+    const o = makeOpening({});
+    const { ux, uy } = computeWallNormal(o);
+    expect(Math.hypot(ux, uy)).toBeCloseTo(1);
+  });
+  it('handles degenerate (zero-length normal) → returns fallback (0, 1)', () => {
     const o = makeOpening({
       outline: [
         { x: 10, y: 10 }, { x: 10, y: 10 }, { x: 10, y: 10 }, { x: 10, y: 10 },
       ],
     });
-    const c = computeTagCenter(o);
-    expect(c.x).toBe(10);
-    expect(c.y).toBe(10);
+    const { ux, uy } = computeWallNormal(o);
+    expect(ux).toBe(0);
+    expect(uy).toBe(1);
   });
 });
 

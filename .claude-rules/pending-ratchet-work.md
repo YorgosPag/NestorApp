@@ -254,14 +254,14 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 
 ---
 
-### 🎨 ADR-375 Phase C — BIM Line Weight Advanced (DEFERRED, ~25-40h estimated, planned 2026-05-25)
+### 🎨 ADR-375 Phase C — BIM Line Weight Advanced (C.1 ✅ DONE, C.2-C.7 pending, ~20-35h remaining)
 
 **ADR**: `docs/centralized-systems/reference/adrs/ADR-375-bim-entity-line-weight-semantic-system.md`
-**Status**: ⏸️ DEFERRED — Phase A + B (B.1/B.2/B.3) ολοκληρώθηκαν 2026-05-25 + runtime verified 2026-05-26 (5 hotfixes v1.6-v1.8). Phase C ρητά αναβλήθηκε στο ADR §5 «Phase C — Advanced (future)» και στο v1.2 changelog «Pen Table editor + Pen Sets presets DEFERRED to Phase C».
+**Status**: C.1 ✅ DONE 2026-05-26 (Pen Table editor). C.2-C.7 ⏸️ DEFERRED.
 
 **Phase C scope** (ADR-375 §5.Phase-C):
 
-1. **Pen Table editor** — UI grid 16 pens × 6 scales να ορίζει mm τιμές αντί για hardcoded `bim-pen-table.ts` constants. Persistence: νέο collection ή στο `companies/{id}.bimPenTable`. Decision pending.
+1. **Pen Table editor** ✅ DONE 2026-05-26 — `dxf_viewer_pen_tables/{companyId}`, Zustand store, `setPenTableSource()` resolver injection, `PenTablePanel.tsx` 16×6 grid. 10 tests.
 2. **Pen Sets presets** — Bundles Design / Construction / Presentation. Ένα click αλλάζει ολόκληρη pen table. Reference: ArchiCAD Pen Sets pattern.
 3. **Subcategories** — Door panel vs Door swing, Wall layers cut vs skin. Διαφορετικό pen ανά μέρος του ίδιου entity.
 4. **Per-view overrides (Visibility/Graphics)** — Override styles ανά view χωρίς να αλλάζουν defaults. Επεκτείνει το ViewTemplate.

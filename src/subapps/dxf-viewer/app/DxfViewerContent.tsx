@@ -27,40 +27,25 @@ import { useUniversalSelection } from '../systems/selection';
 import { useLevelManager } from '../systems/levels/useLevels';
 // ADR-375 Phase B.2 — sync per-level BIM render settings into the store
 import { useBimRenderSettingsSync } from '../state/hooks/useBimRenderSettingsSync';
+// ADR-375 Phase C.1 — sync per-company pen table overrides into the resolver
+import { useBimPenTableSync } from '../state/hooks/useBimPenTableSync';
 import { useDimAssociationObserver } from '../hooks/dimensions/useDimAssociationObserver';
 import { useGripContext } from '../providers/GripProvider';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
-const OverlayToolbar = React.lazy(() => import('../ui/OverlayToolbar').then(mod => ({ default: mod.OverlayToolbar })));
-const ColorManager = React.lazy(() => import('../ui/components/ColorManager').then(mod => ({ default: mod.ColorManager })));
-const ProSnapToolbar = React.lazy(() => import('../ui/components/ProSnapToolbar').then(mod => ({ default: mod.ProSnapToolbar })));
-const TestsModal = React.lazy(() => import('../ui/components/TestsModal').then(mod => ({ default: mod.TestsModal })));
-const CursorSettingsPanel = React.lazy(() => import('../ui/CursorSettingsPanel'));
-const CoordinateCalibrationOverlay = React.lazy(() => import('../ui/CoordinateCalibrationOverlay'));
-const AutoSaveStatus = React.lazy(() => import('../ui/components/AutoSaveStatus').then(mod => ({ default: mod.AutoSaveStatus })));
-const CentralizedAutoSaveStatus = React.lazy(() => import('../ui/components/CentralizedAutoSaveStatus').then(mod => ({ default: mod.CentralizedAutoSaveStatus })));
-const OverlayProperties = React.lazy(() => import('../ui/OverlayProperties').then(mod => ({ default: mod.OverlayProperties })));
-const DraggableOverlayToolbar = React.lazy(() => import('../ui/components/DraggableOverlayToolbar').then(mod => ({ default: mod.DraggableOverlayToolbar })));
-const DraggableOverlayProperties = React.lazy(() => import('../ui/components/DraggableOverlayProperties').then(mod => ({ default: mod.DraggableOverlayProperties })));
-const FloorplanBackgroundPanel = React.lazy(() => import('../floorplan-background').then(mod => ({ default: mod.FloorplanBackgroundPanel })));
-const ReplaceConfirmDialog = React.lazy(() => import('../floorplan-background').then(mod => ({ default: mod.ReplaceConfirmDialog })));
-const CalibrationDialog = React.lazy(() => import('../floorplan-background').then(mod => ({ default: mod.CalibrationDialog })));
-const DxfAiChatPanel = React.lazy(() => import('../ai-assistant/components/DxfAiChatPanel'));
-const DxfFindReplaceHost = React.lazy(() => import('../ui/text-toolbar/DxfFindReplaceHost').then(mod => ({ default: mod.DxfFindReplaceHost })));
-const DxfSymbolPickerHost = React.lazy(() => import('../ui/text-toolbar/DxfSymbolPickerHost').then(mod => ({ default: mod.DxfSymbolPickerHost })));
-const RenumberOpeningsHost = React.lazy(() => import('../ui/components/bim-openings/RenumberOpeningsHost').then(mod => ({ default: mod.RenumberOpeningsHost })));
-const OpeningTagStyleHost = React.lazy(() => import('../ui/components/bim-openings/OpeningTagStyleHost').then(mod => ({ default: mod.OpeningTagStyleHost })));
-const OpeningSchedulePdfHost = React.lazy(() => import('../ui/components/bim-openings/OpeningSchedulePdfHost').then(mod => ({ default: mod.OpeningSchedulePdfHost })));
-const DxfImportModal = React.lazy(() => import('../components/DxfImportModal'));
-const SimpleProjectDialog = React.lazy(() => import('../components/SimpleProjectDialog').then(mod => ({ default: mod.SimpleProjectDialog })));
-const ConstructionLayerScaffoldDialog = React.lazy(() => import('../hooks/useConstructionLayerScaffold').then(mod => ({ default: mod.ConstructionLayerScaffoldDialog })));
-const FloorplanImportWizard = React.lazy(() => import('@/features/floorplan-import').then(mod => ({ default: mod.FloorplanImportWizard })));
+import {
+  OverlayToolbar, ColorManager, ProSnapToolbar, TestsModal, CursorSettingsPanel,
+  CoordinateCalibrationOverlay, AutoSaveStatus, CentralizedAutoSaveStatus, OverlayProperties,
+  DraggableOverlayToolbar, DraggableOverlayProperties, FloorplanBackgroundPanel,
+  ReplaceConfirmDialog, CalibrationDialog, DxfAiChatPanel, DxfFindReplaceHost,
+  DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost, OpeningSchedulePdfHost,
+  DxfImportModal, SimpleProjectDialog, ConstructionLayerScaffoldDialog,
+  FloorplanImportWizard, MainContentSection, FloatingPanelsSection,
+} from './dxf-viewer-lazy-components';
 // Layout Components - Canvas V2
 import { SidebarSection } from '../layout/SidebarSection';
 import { MobileSidebarDrawer } from '../layout/MobileSidebarDrawer';
 import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
-const MainContentSection = React.lazy(() => import('../layout/MainContentSection').then(mod => ({ default: mod.MainContentSection })));
-const FloatingPanelsSection = React.lazy(() => import('../layout/FloatingPanelsSection').then(mod => ({ default: mod.FloatingPanelsSection })));
 // ✅ ENTERPRISE ARCHITECTURE: Transform Context (Single Source of Truth)
 import { TransformProvider } from '../contexts/TransformContext';
 // ADR-040 Phase XIII: TransformStore SSoT — used for initialTransform read
@@ -179,6 +164,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     currentLevelId: levelManager.currentLevelId,
     levels: levelManager.levels,
   });
+  // ADR-375 Phase C.1 — subscribe to per-company pen table overrides
+  useBimPenTableSync();
   const { updateGripSettings } = useGripContext();
   const { enabledModes, toggleMode } = useSnapContext();
   const canvasOps = useCanvasOperations();

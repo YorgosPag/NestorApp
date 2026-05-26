@@ -725,6 +725,7 @@
       "drawingScale": "Drawing Scale",
       "viewRange": "View Range",
       "objectStyles": "Object Styles",
+      "penTable": "Pen Table",
       "viewTemplates": "View Templates",
       "dimensions": "Dimensions",
       "dimStyle": "Style",
@@ -1517,6 +1518,14 @@
         "applyAriaLabel": "Apply template {name}",
         "updateAriaLabel": "Update template {name} with current settings",
         "deleteAriaLabel": "Delete template {name}"
+      },
+      "penTable": {
+        "label": "Pen Table",
+        "openAriaLabel": "Open 16×6 pen table editor",
+        "cellAriaLabel": "Pen {pen} scale {scale}",
+        "rightClickHint": "Right-click a cell to reset it to default",
+        "reset": "Reset all",
+        "resetAriaLabel": "Reset pen table to ISO defaults"
       },
       "openGuidePanel": "Guide Panel",
       "toggleGuides": "Show/Hide Guides",
