@@ -30,7 +30,8 @@ import type { Entity } from '../../types/entities';
 import { isStairEntity } from '../../types/entities';
 import { getStairGrips } from '../stairs/stair-grips';
 import { DEFAULT_CUT_PLANE_HEIGHT } from '../geometry/stairs/stair-geometry-shared';
-import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { linePatternToDashArray, type LinePatternKey } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -44,8 +45,6 @@ import {
   type StairStyleContext,
 } from './stair-render-structure-style';
 
-const WALKLINE_DASH: readonly [number, number] = [6, 4];
-const HANDRAIL_DASH: readonly [number, number] = [3, 3];
 const ARROW_HEAD_PX = 10;
 const ARROW_HEAD_HALF_WIDTH_PX = 5;
 const LABEL_OFFSET_PX = 8;
@@ -118,28 +117,34 @@ export class StairRenderer extends BaseEntityRenderer {
       },
       ds.viewRange,
     );
-    const baseLineWidth = resolveLineWeightPx({
-      category: 'stair',
-      cutState,
-      scaleDenominator: ds.drawingScale,
-      dpi: 96,
-      objectStyles: ds.objectStyles,
+    // ADR-377 C.3 — per-subcategory style resolution.
+    const _rss = (subcat: string) => resolveSubcategoryStyle({
+      category: 'stair', subcategoryKey: subcat,
+      cutState, scaleDenominator: ds.drawingScale, dpi: 96, objectStyles: ds.objectStyles,
     });
+    const _treadsS    = _rss('treads');
+    const _stringersS = _rss('outlines');
+    const _walklineS  = _rss('walkline');
+    const _handrailsS = _rss('handrails');
+    const _arrowLabel = geometry.arrowSymbol.label;
+    const _arrowS     = _rss(_arrowLabel === 'UP' ? 'up-arrows' : 'down-arrows');
 
     const scx: StairStyleContext = {
       ctx: this.ctx,
       worldToScreen: (p) => this.worldToScreen(p),
-      baseLineWidth,
+      baseLineWidth: _treadsS.lineWidthPx,
+      treadsLineWidth: _treadsS.lineWidthPx,
+      stringersLineWidth: _stringersS.lineWidthPx,
     };
     renderTreadsForStructure(scx, stair.params.structureType, geometry.treadsBelowCut);
     renderStringersForStructure(scx, stair.params.structureType, geometry);
-    this.drawHandrails(stair, baseLineWidth);
-    this.drawWalkline(geometry.walkline, baseLineWidth);
+    this.drawHandrails(stair, _handrailsS.lineWidthPx, _handrailsS.linePattern);
+    this.drawWalkline(geometry.walkline, _walklineS.lineWidthPx, _walklineS.linePattern);
     this.drawArrow(
       geometry.arrowSymbol.start,
       geometry.arrowSymbol.end,
-      geometry.arrowSymbol.label,
-      baseLineWidth,
+      _arrowLabel,
+      _arrowS.lineWidthPx,
     );
     this.drawTreadLabels(stair);
 
@@ -244,12 +249,11 @@ export class StairRenderer extends BaseEntityRenderer {
     this.ctx.stroke();
   }
 
-  private drawWalkline(walkline: ReadonlyArray<Point3D>, baseLineWidth: number): void {
+  private drawWalkline(walkline: ReadonlyArray<Point3D>, lineWidthPx: number, linePattern: LinePatternKey): void {
     if (walkline.length < 2) return;
     this.ctx.save();
-    this.ctx.setLineDash(WALKLINE_DASH as unknown as number[]);
-    this.ctx.lineWidth = baseLineWidth;
-    // strokeStyle inherited from `renderWithPhases` (hover/selected SSoT).
+    this.ctx.setLineDash(linePatternToDashArray(linePattern) as number[]);
+    this.ctx.lineWidth = lineWidthPx;
     this.drawPolyline3D(walkline);
     this.ctx.restore();
   }
@@ -265,7 +269,7 @@ export class StairRenderer extends BaseEntityRenderer {
    * Geometry SSoT promotion (compute handrail polylines inside
    * StairGeometryService per kind) deferred to Phase 7b2/9.
    */
-  private drawHandrails(stair: StairEntity, baseLineWidth: number): void {
+  private drawHandrails(stair: StairEntity, lineWidthPx: number, linePattern: LinePatternKey): void {
     const { handrails } = stair.params;
     if (!handrails.inner && !handrails.outer) return;
     const { stringers } = stair.geometry;
@@ -279,9 +283,8 @@ export class StairRenderer extends BaseEntityRenderer {
     );
 
     this.ctx.save();
-    this.ctx.setLineDash(HANDRAIL_DASH as unknown as number[]);
-    this.ctx.lineWidth = baseLineWidth;
-    // strokeStyle inherited from `renderWithPhases` (hover/selected SSoT).
+    this.ctx.setLineDash(linePatternToDashArray(linePattern) as number[]);
+    this.ctx.lineWidth = lineWidthPx;
 
     if (handrails.inner) {
       const extended = extendPolylineEnds(stringers.inner, topExtMm, bottomExtMm);
@@ -332,11 +335,11 @@ export class StairRenderer extends BaseEntityRenderer {
     startW: Point3D,
     endW: Point3D,
     label: 'UP' | 'DOWN',
-    baseLineWidth: number,
+    lineWidthPx: number,
   ): void {
     const start = this.worldToScreen({ x: startW.x, y: startW.y });
     const end = this.worldToScreen({ x: endW.x, y: endW.y });
-    this.ctx.lineWidth = baseLineWidth;
+    this.ctx.lineWidth = lineWidthPx;
     // strokeStyle inherited from `renderWithPhases` (hover/selected SSoT).
     // fillStyle aligned with stroke so the arrow head + UP/DOWN label pick up
     // the same hover/selection colour as the rest of the stair.

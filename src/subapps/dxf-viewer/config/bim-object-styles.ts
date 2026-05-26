@@ -73,11 +73,20 @@ export const BIM_CATEGORIES: readonly BimCategory[] = [
 export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> = {
   wall:           { projectionPen: 5,  cutPen: 7  },
   column:         { projectionPen: 5,  cutPen: 9  },
-  beam:           { projectionPen: 4,  cutPen: 6  },
+  beam: {
+    projectionPen: 4, cutPen: 6,
+    subcategories: { 'hidden-lines': { linePattern: 'dashed' } },
+  },
   slab:           { projectionPen: 5,  cutPen: 7  },
   opening:        { projectionPen: 3,  cutPen: 4  },
   'slab-opening': { projectionPen: 3,  cutPen: 4  },
-  stair:          { projectionPen: 3,  cutPen: 5  },
+  stair: {
+    projectionPen: 3, cutPen: 5,
+    subcategories: {
+      'walkline':  { linePattern: 'dashed'  },
+      'handrails': { linePattern: 'dashed2' },
+    },
+  },
   roof:           { projectionPen: 5,  cutPen: 6  },
   ceiling:        { projectionPen: 3,  cutPen: 4  },
   dimension:      { projectionPen: 3,  cutPen: 3  },

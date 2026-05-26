@@ -44,6 +44,9 @@ export interface StairStyleContext {
   readonly ctx: CanvasRenderingContext2D;
   readonly worldToScreen: (point: { x: number; y: number }) => Point2D;
   readonly baseLineWidth: number;
+  /** ADR-377 C.3 — subcategory-resolved widths (fall back to baseLineWidth when absent). */
+  readonly treadsLineWidth?: number;
+  readonly stringersLineWidth?: number;
 }
 
 const TREAD_FILL_ALPHA = 0.12;
@@ -86,7 +89,7 @@ export function renderTreadsForStructure(
   const fillStyle = isGlass ? TREAD_FILL_GLASS : TREAD_FILL_DEFAULT;
 
   ctx.save();
-  ctx.lineWidth = scx.baseLineWidth;
+  ctx.lineWidth = scx.treadsLineWidth ?? scx.baseLineWidth;
   if (!options.skipFill) ctx.fillStyle = fillStyle;
   if (isGlass) ctx.setLineDash(GLASS_TREAD_OUTLINE_DASH as unknown as number[]);
 
@@ -133,40 +136,40 @@ export function renderStringersForStructure(
     case 'monolithic':
       return;
 
-    case 'stringer-1side':
-      drawSolidPolyline(scx, stringers.outer, scx.baseLineWidth);
+    case 'stringer-1side': {
+      const _sw = scx.stringersLineWidth ?? scx.baseLineWidth;
+      drawSolidPolyline(scx, stringers.outer, _sw);
       return;
+    }
 
-    case 'central-stringer':
-      drawSolidPolyline(scx, walkline, scx.baseLineWidth);
+    case 'central-stringer': {
+      const _sw = scx.stringersLineWidth ?? scx.baseLineWidth;
+      drawSolidPolyline(scx, walkline, _sw);
       return;
+    }
 
-    case 'cantilever':
-      drawSolidPolyline(scx, stringers.inner, scx.baseLineWidth);
+    case 'cantilever': {
+      const _sw = scx.stringersLineWidth ?? scx.baseLineWidth;
+      drawSolidPolyline(scx, stringers.inner, _sw);
       return;
+    }
 
-    case 'suspended':
-      drawDashedPolyline(
-        scx,
-        stringers.inner,
-        scx.baseLineWidth,
-        SUSPENDED_STRINGER_DASH,
-      );
-      drawDashedPolyline(
-        scx,
-        stringers.outer,
-        scx.baseLineWidth,
-        SUSPENDED_STRINGER_DASH,
-      );
+    case 'suspended': {
+      const _sw = scx.stringersLineWidth ?? scx.baseLineWidth;
+      drawDashedPolyline(scx, stringers.inner, _sw, SUSPENDED_STRINGER_DASH);
+      drawDashedPolyline(scx, stringers.outer, _sw, SUSPENDED_STRINGER_DASH);
       return;
+    }
 
     case 'stringer-2side':
     case 'glass-tread':
     case 'steel-grating':
-    default:
-      drawSolidPolyline(scx, stringers.inner, scx.baseLineWidth);
-      drawSolidPolyline(scx, stringers.outer, scx.baseLineWidth);
+    default: {
+      const _sw = scx.stringersLineWidth ?? scx.baseLineWidth;
+      drawSolidPolyline(scx, stringers.inner, _sw);
+      drawSolidPolyline(scx, stringers.outer, _sw);
       return;
+    }
   }
 }
 

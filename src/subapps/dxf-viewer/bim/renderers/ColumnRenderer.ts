@@ -38,7 +38,7 @@ import { isColumnEntity } from '../../types/entities';
 import type { ColumnEntity, ColumnKind } from '../types/column-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
+import { resolveLineWeightPx, resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -317,6 +317,17 @@ export class ColumnRenderer extends BaseEntityRenderer {
     if (resolveMaterialKey(column.params.material) !== 'steel') return;
     if (this.transform.scale < COL_SECTION_MIN_SCALE) return;
 
+    const _spDs = useDrawingScaleStore.getState();
+    const _spCutState = resolveCutState(
+      { zBottomMm: column.params.baseOffset ?? 0, zTopMm: (column.params.baseOffset ?? 0) + column.params.height, category: 'column' },
+      _spDs.viewRange,
+    );
+    const { lineWidthPx: _spPx, color: _spCol } = resolveSubcategoryStyle({
+      category: 'column', subcategoryKey: 'section-profile',
+      cutState: _spCutState, scaleDenominator: _spDs.drawingScale,
+      dpi: 96, objectStyles: _spDs.objectStyles,
+    });
+
     const bb = column.geometry.bbox;
     const minS = this.worldToScreen({ x: bb.min.x, y: bb.min.y });
     const maxS = this.worldToScreen({ x: bb.max.x, y: bb.max.y });
@@ -348,8 +359,8 @@ export class ColumnRenderer extends BaseEntityRenderer {
     this.ctx.closePath();
     this.ctx.fillStyle = COL_SECTION_FILL_COLOR;
     this.ctx.fill();
-    this.ctx.strokeStyle = COL_SECTION_STROKE_COLOR;
-    this.ctx.lineWidth = COL_SECTION_LINE_WIDTH_PX;
+    this.ctx.strokeStyle = _spCol ?? COL_SECTION_STROKE_COLOR;
+    this.ctx.lineWidth = _spPx;
     this.ctx.stroke();
     this.ctx.restore();
   }

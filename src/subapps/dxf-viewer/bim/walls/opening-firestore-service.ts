@@ -91,6 +91,7 @@ export interface OpeningSaveInput {
 }
 
 export interface OpeningUpdateInput {
+  readonly kind?: OpeningKind;
   readonly params?: OpeningParams;
   readonly validation?: BimValidation;
   readonly geometry?: OpeningGeometry;
@@ -171,6 +172,7 @@ export class OpeningFirestoreService {
       updatedBy: this.config.userId,
       updatedAt: serverTimestamp(),
     };
+    if (patch.kind !== undefined) payload.kind = patch.kind;
     if (patch.params !== undefined) payload.params = patch.params;
     if (patch.validation !== undefined) payload.validation = patch.validation;
     if (patch.geometry !== undefined) payload.geometry = patch.geometry;

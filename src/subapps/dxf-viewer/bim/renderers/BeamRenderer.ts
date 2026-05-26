@@ -32,7 +32,8 @@ import { isBeamEntity } from '../../types/entities';
 import type { BeamEntity, BeamKind } from '../types/beam-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -122,15 +123,22 @@ export class BeamRenderer extends BaseEntityRenderer {
     // Phase 5.5c — per-material hatch clipped inside footprint.
     this.drawMaterialHatch(beam);
 
-    // Dashed outline (industry convention για hidden beam in plan view).
-    this.ctx.strokeStyle = KIND_STROKE[beam.kind];
+    // ADR-377 C.2 — hidden-lines subcategory (dashed outline convention).
     const _beamZTop = beam.params.topElevation + (beam.params.zOffset ?? 0);
+    const _beamDs = useDrawingScaleStore.getState();
     const _beamCutState = resolveCutState(
       { zBottomMm: _beamZTop - beam.params.depth, zTopMm: _beamZTop, category: 'beam' },
-      useDrawingScaleStore.getState().viewRange,
+      _beamDs.viewRange,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'beam', cutState: _beamCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
-    this.ctx.setLineDash(OUTLINE_DASH as unknown as number[]);
+    const { lineWidthPx: _beamPx, linePattern: _beamPat, color: _beamCol } = resolveSubcategoryStyle({
+      category: 'beam', subcategoryKey: 'hidden-lines',
+      cutState: _beamCutState, scaleDenominator: _beamDs.drawingScale,
+      dpi: 96, objectStyles: _beamDs.objectStyles,
+    });
+    this.ctx.strokeStyle = KIND_STROKE[beam.kind];
+    this.ctx.lineWidth = _beamPx;
+    this.ctx.setLineDash(linePatternToDashArray(_beamPat) as number[]);
+    if (_beamCol !== null) this.ctx.strokeStyle = _beamCol;
     this.drawPolygonPath(verts);
     this.ctx.stroke();
 
@@ -290,6 +298,18 @@ export class BeamRenderer extends BaseEntityRenderer {
     if (resolveBeamMaterialKey(beam.params.material) !== 'steel') return;
     if (this.transform.scale < SECTION_MIN_SCALE) return;
 
+    const _spDs = useDrawingScaleStore.getState();
+    const _spZTop = beam.params.topElevation + (beam.params.zOffset ?? 0);
+    const _spCutState = resolveCutState(
+      { zBottomMm: _spZTop - beam.params.depth, zTopMm: _spZTop, category: 'beam' },
+      _spDs.viewRange,
+    );
+    const { lineWidthPx: _spPx, color: _spCol } = resolveSubcategoryStyle({
+      category: 'beam', subcategoryKey: 'section-profile',
+      cutState: _spCutState, scaleDenominator: _spDs.drawingScale,
+      dpi: 96, objectStyles: _spDs.objectStyles,
+    });
+
     const [sp, ep] = getBimEntityKeyPoints2D(beam);
 
     const startS = this.worldToScreen(sp);
@@ -339,8 +359,8 @@ export class BeamRenderer extends BaseEntityRenderer {
     this.ctx.closePath();
     this.ctx.fillStyle = SECTION_FILL_COLOR;
     this.ctx.fill();
-    this.ctx.strokeStyle = SECTION_STROKE_COLOR;
-    this.ctx.lineWidth = SECTION_LINE_WIDTH_PX;
+    this.ctx.strokeStyle = _spCol ?? SECTION_STROKE_COLOR;
+    this.ctx.lineWidth = _spPx;
     this.ctx.stroke();
     this.ctx.restore();
 

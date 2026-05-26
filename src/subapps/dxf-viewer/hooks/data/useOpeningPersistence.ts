@@ -272,7 +272,6 @@ export function useOpeningPersistence(
     return () => unsubscribe();
   }, [levelManager, companyId, projectId, floorplanId, userId]);
 
-  // Immediate persist (used by both auto-save flush and explicit button).
   const persist = useCallback(async (entity: OpeningEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;
@@ -281,7 +280,9 @@ export function useOpeningPersistence(
     setSaveState('saving');
     setError(null);
     try {
-      await svc.saveOpening(entityToSaveInput(entity, currentFloorIdRef.current ?? undefined));
+      await (isNew
+        ? svc.saveOpening(entityToSaveInput(entity, currentFloorIdRef.current ?? undefined))
+        : svc.updateOpening(entity.id, { kind: entity.kind, params: entity.params, validation: entity.validation, layerId: entity.layerId }));
       lastSavedParamsRef.current.set(entity.id, entity.params);
       dirtyIdsRef.current.delete(entity.id);
       setSaveState('saved');

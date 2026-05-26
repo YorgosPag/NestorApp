@@ -30,7 +30,8 @@ import type { OpeningEntity } from '../types/opening-types';
 import { isHingedKind, isGlazedKind } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveLineWeightPx } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -71,15 +72,25 @@ export class OpeningRenderer extends BaseEntityRenderer {
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.strokeStyle = OPENING_KIND_STROKE[opening.kind];
+    const _opDs = useDrawingScaleStore.getState();
     const _opCutState = resolveCutState(
       { zBottomMm: opening.params.sillHeight, zTopMm: opening.params.sillHeight + opening.params.height, category: 'opening' },
-      useDrawingScaleStore.getState().viewRange,
+      _opDs.viewRange,
     );
-    const _opBaseLineWidth = resolveLineWeightPx({ category: 'opening', cutState: _opCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
-    this.ctx.lineWidth = _opBaseLineWidth;
+    // ADR-377 C.3 — per-kind subcategory style resolution.
+    const _rso = (subcat: string) => resolveSubcategoryStyle({
+      category: 'opening', subcategoryKey: subcat,
+      cutState: _opCutState, scaleDenominator: _opDs.drawingScale,
+      dpi: 96, objectStyles: _opDs.objectStyles,
+    });
+    const _outlineS = _rso(openingOutlineSubcat(opening.kind));
+    const _overlayS = _rso(openingOverlaySubcat(opening.kind));
 
+    this.ctx.lineWidth = _outlineS.lineWidthPx;
+    this.ctx.setLineDash(linePatternToDashArray(_outlineS.linePattern) as number[]);
+    if (_outlineS.color !== null) this.ctx.strokeStyle = _outlineS.color;
     this.drawOutline(opening);
-    this.drawKindOverlay(opening, _opBaseLineWidth);
+    this.drawKindOverlay(opening, _overlayS.lineWidthPx);
 
     // ADR-376 Phase A — paint instance Mark tag overlay (canvas-pill SSoT).
     // Layer toggle gating is read μέσω the dedicated module; tag renderer
@@ -289,4 +300,18 @@ export class OpeningRenderer extends BaseEntityRenderer {
     }
     this.ctx.stroke();
   }
+}
+
+// ─── ADR-377 C.3 — subcategory key helpers ──────────────────────────────────
+
+function openingOutlineSubcat(kind: string): string {
+  if (kind === 'window' || kind === 'fixed') return 'window-opening';
+  if (kind === 'wall-cutout') return 'wall-cutout-jambs';
+  return 'door-opening'; // door, french-door, sliding-door
+}
+
+function openingOverlaySubcat(kind: string): string {
+  if (kind === 'window' || kind === 'fixed') return 'window-glass';
+  if (kind === 'sliding-door') return 'sliding-track';
+  return 'door-plan-swing'; // door, french-door
 }
