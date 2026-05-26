@@ -46,7 +46,7 @@ export const OPENING_TAG_MIN_ZOOM = 0.1;
 
 /** Screen-px initial separation between opening centroid and tag pill. Scale-independent so
  * the tag is always visible at every zoom level (world-space offset is zoom-dependent). */
-const TAG_INITIAL_SCREEN_PX = 40;
+export const TAG_INITIAL_SCREEN_PX = 40;
 
 const LINE_HEIGHT_MULTIPLIER = 11 / 9; // legacy 11 px line-height at the 9 px default.
 

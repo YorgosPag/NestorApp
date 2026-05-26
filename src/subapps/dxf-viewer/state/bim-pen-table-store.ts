@@ -1,10 +1,15 @@
 'use client';
 
 /**
- * ADR-375 Phase C.1 — BIM Pen Table Store (Zustand, Firestore-persisted).
+ * ADR-375 Phase C.1+C.2 — BIM Pen Table Store (Zustand, Firestore-persisted).
  *
  * SSoT for per-company pen table overrides (16 pens × 6 scale columns).
  * Singleton doc: `dxf_viewer_pen_tables/{companyId}`.
+ *
+ * Phase C.2 adds pen sets (Design / Construction / Presentation):
+ * - `activePresetName` tracks which preset is active ('custom' after manual edits).
+ * - `applyPreset(name)` replaces the full table in one shot + persists.
+ * - `resetAll` restores defaults and sets preset → 'construction'.
  *
  * On load/update: calls `setPenTableSource()` to inject the effective table
  * into the resolver — no renderer changes needed.
@@ -25,6 +30,10 @@ import {
 } from '../config/bim-pen-table-types';
 import { PEN_TABLE_MM, type PenIndex } from '../config/bim-pen-table';
 import {
+  penSetToOverrides,
+  type PenSetName,
+} from '../config/bim-pen-sets';
+import {
   savePenTableOverrides,
   subscribePenTableOverrides,
 } from '../services/bim-pen-table.service';
@@ -35,11 +44,16 @@ import type { ConcreteLineweightMm } from '../config/lineweight-iso-catalog';
 type Timer = ReturnType<typeof setTimeout>;
 let _pendingSave: Timer | null = null;
 
-function debounceSave(companyId: string, overrides: PenTableOverrides, delayMs = 500): void {
+function debounceSave(
+  companyId: string,
+  overrides: PenTableOverrides,
+  activePresetName: string,
+  delayMs = 500,
+): void {
   if (_pendingSave) clearTimeout(_pendingSave);
   _pendingSave = setTimeout(() => {
     _pendingSave = null;
-    savePenTableOverrides(companyId, overrides).catch(() => {});
+    savePenTableOverrides(companyId, overrides, activePresetName).catch(() => {});
   }, delayMs);
 }
 
@@ -52,6 +66,8 @@ interface BimPenTableState {
   effectivePenTable: EffectivePenTable;
   /** Company this table belongs to. null = not loaded. */
   currentCompanyId: string | null;
+  /** Active pen set preset, or 'custom' after manual cell edits. */
+  activePresetName: PenSetName | 'custom';
 
   /** Subscribe to Firestore and hydrate the store. Returns unsubscribe fn. */
   loadForCompany: (companyId: string) => () => void;
@@ -59,34 +75,43 @@ interface BimPenTableState {
   /**
    * Override a single cell.
    * Validates that mm is in the ISO catalog — silently ignores invalid values.
+   * Marks preset as 'custom'.
    */
   setCell: (penIdx: PenIndex, scaleColIdx: number, mm: number) => void;
 
-  /** Remove override for a single cell (reverts to PEN_TABLE_MM default). */
+  /** Remove override for a single cell (reverts to PEN_TABLE_MM default). Marks 'custom'. */
   resetCell: (penIdx: PenIndex, scaleColIdx: number) => void;
 
-  /** Clear all overrides for the current company. */
+  /** Clear all overrides and revert preset to 'construction' (ISO defaults). */
   resetAll: () => void;
+
+  /** Apply a built-in pen set preset — overwrites all cells, then persists. */
+  applyPreset: (name: PenSetName) => void;
 }
 
 // ── Store ──────────────────────────────────────────────────────────────────
 
 export const useBimPenTableStore = create<BimPenTableState>((set, get) => {
-  function applyOverrides(overrides: PenTableOverrides | null): void {
+  function applyOverrides(
+    overrides: PenTableOverrides | null,
+    presetName: PenSetName | 'custom' = 'custom',
+  ): void {
     const effective = buildEffectivePenTable(overrides ?? undefined);
     setPenTableSource(effective);
-    set({ overrides: overrides ?? {}, effectivePenTable: effective });
+    set({ overrides: overrides ?? {}, effectivePenTable: effective, activePresetName: presetName });
   }
 
   return {
     overrides: null,
     effectivePenTable: PEN_TABLE_MM,
     currentCompanyId: null,
+    activePresetName: 'construction',
 
     loadForCompany(companyId) {
       set({ currentCompanyId: companyId });
-      const unsubscribe = subscribePenTableOverrides(companyId, (overrides) => {
-        applyOverrides(overrides);
+      const unsubscribe = subscribePenTableOverrides(companyId, ({ overrides, activePresetName }) => {
+        const preset = (activePresetName as PenSetName | 'custom') ?? 'construction';
+        applyOverrides(overrides, preset);
       });
       return unsubscribe;
     },
@@ -98,8 +123,8 @@ export const useBimPenTableStore = create<BimPenTableState>((set, get) => {
       const penRow = existing[penIdx] ?? {};
       const nextRow = { ...penRow, [scaleColIdx]: mm as ConcreteLineweightMm };
       const nextOverrides: PenTableOverrides = { ...existing, [penIdx]: nextRow };
-      applyOverrides(nextOverrides);
-      if (state.currentCompanyId) debounceSave(state.currentCompanyId, nextOverrides);
+      applyOverrides(nextOverrides, 'custom');
+      if (state.currentCompanyId) debounceSave(state.currentCompanyId, nextOverrides, 'custom');
     },
 
     resetCell(penIdx, scaleColIdx) {
@@ -113,15 +138,24 @@ export const useBimPenTableStore = create<BimPenTableState>((set, get) => {
       } else {
         delete nextOverrides[penIdx];
       }
-      applyOverrides(nextOverrides);
-      if (state.currentCompanyId) debounceSave(state.currentCompanyId, nextOverrides);
+      applyOverrides(nextOverrides, 'custom');
+      if (state.currentCompanyId) debounceSave(state.currentCompanyId, nextOverrides, 'custom');
     },
 
     resetAll() {
       const { currentCompanyId } = get();
-      applyOverrides({});
+      applyOverrides({}, 'construction');
       if (currentCompanyId) {
-        savePenTableOverrides(currentCompanyId, {}).catch(() => {});
+        savePenTableOverrides(currentCompanyId, {}, 'construction').catch(() => {});
+      }
+    },
+
+    applyPreset(name) {
+      const overrides = penSetToOverrides(name);
+      applyOverrides(overrides, name);
+      const { currentCompanyId } = get();
+      if (currentCompanyId) {
+        savePenTableOverrides(currentCompanyId, overrides, name).catch(() => {});
       }
     },
   };

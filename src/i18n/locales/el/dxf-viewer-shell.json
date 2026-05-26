@@ -689,6 +689,7 @@
       "openingSize": "Διαστάσεις",
       "openingActions": "Ενέργειες",
       "openingRenumber": "Επαναρίθμηση",
+      "openingTagStyle": "Στυλ Ταμπελακίου",
       "annotateOpenings": "Ανοίγματα",
       "slabKind": "Τύπος",
       "slabGeometry": "Γεωμετρία",
@@ -1189,6 +1190,27 @@
           "actions": {
             "reset": "Επαναφορά Προεπιλογών",
             "close": "Κλείσιμο"
+          },
+          "ribbon": {
+            "fontSize": "Μέγεθος",
+            "borderWidth": "Περίγραμμα",
+            "leaderStyleLabel": "Οδηγός",
+            "bgColorLabel": "Φόντο",
+            "leaderColorLabel": "Χρ. Οδηγού",
+            "leaderVisibleLabel": "Ορατότητα"
+          },
+          "bgColorOptions": {
+            "white": "Λευκό",
+            "yellow": "Κίτρινο",
+            "blue": "Μπλε",
+            "green": "Πράσινο",
+            "dark": "Σκούρο"
+          },
+          "leaderColorOptions": {
+            "gray": "Γκρι",
+            "black": "Μαύρο",
+            "blue": "Μπλε",
+            "red": "Κόκκινο"
           }
         },
         "scheduleExport": {
@@ -1525,7 +1547,14 @@
         "cellAriaLabel": "Πένα {pen} κλίμακα {scale}",
         "rightClickHint": "Δεξί κλικ σε κελί → επαναφορά σε προεπιλογή",
         "reset": "Επαναφορά όλων",
-        "resetAriaLabel": "Επαναφορά πίνακα πενών στις προεπιλογές ISO"
+        "resetAriaLabel": "Επαναφορά πίνακα πενών στις προεπιλογές ISO",
+        "penSets": {
+          "tabsAriaLabel": "Σετ Πενών",
+          "design": "Σχεδίαση",
+          "construction": "Κατασκευή",
+          "presentation": "Παρουσίαση",
+          "custom": "Προσαρμοσμένο"
+        }
       },
       "openGuidePanel": "Πίνακας Οδηγών",
       "toggleGuides": "Εμφάνιση/Απόκρυψη Οδηγών",

@@ -28,10 +28,16 @@ import {
   OPENING_RIBBON_KEYS,
   OPENING_RIBBON_KEYS_ACTIONS,
   OPENING_RIBBON_BADGE_KEYS,
+  OPENING_TAG_STYLE_KEYS,
   isOpeningRibbonKey,
   isOpeningRibbonStringKey,
+  isOpeningTagStyleComboboxKey,
 } from './bridge/opening-command-keys';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
+import {
+  getOpeningTagStyleService,
+  type OpeningTagStyle,
+} from '../../../bim/services/opening-tag-style-service';
 import { EventBus } from '../../../systems/events/EventBus';
 import type {
   RibbonComboboxState,
@@ -139,6 +145,17 @@ export function useRibbonOpeningBridge(
         if (typeof raw !== 'number') return null;
         return { value: String(Math.round(raw)), options: [] };
       }
+      // Tag style — per-project, read from service (sync getter).
+      if (isOpeningTagStyleComboboxKey(commandKey)) {
+        const style = getOpeningTagStyleService().getCurrentStyle();
+        switch (commandKey) {
+          case OPENING_TAG_STYLE_KEYS.fontSizePx:    return { value: String(style.fontSizePx), options: [] };
+          case OPENING_TAG_STYLE_KEYS.borderWidthPx: return { value: String(style.borderWidthPx), options: [] };
+          case OPENING_TAG_STYLE_KEYS.leaderStyle:   return { value: style.leaderStyle, options: [] };
+          case OPENING_TAG_STYLE_KEYS.pillBgColor:   return { value: style.pillBgColor, options: [] };
+          case OPENING_TAG_STYLE_KEYS.leaderColor:   return { value: style.leaderColor, options: [] };
+        }
+      }
       return null;
     },
     [resolveOpening],
@@ -146,6 +163,20 @@ export function useRibbonOpeningBridge(
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
+      // Tag style — per-project, routed directly to service (no undo entry needed).
+      if (isOpeningTagStyleComboboxKey(commandKey)) {
+        const patch: OpeningTagStyle = {};
+        switch (commandKey) {
+          case OPENING_TAG_STYLE_KEYS.fontSizePx:    patch.fontSizePx    = Number(value); break;
+          case OPENING_TAG_STYLE_KEYS.borderWidthPx: patch.borderWidthPx = Number(value); break;
+          case OPENING_TAG_STYLE_KEYS.leaderStyle:   patch.leaderStyle   = value as OpeningTagStyle['leaderStyle']; break;
+          case OPENING_TAG_STYLE_KEYS.pillBgColor:   patch.pillBgColor   = value; break;
+          case OPENING_TAG_STYLE_KEYS.leaderColor:   patch.leaderColor   = value; break;
+        }
+        getOpeningTagStyleService().mutateStyle(patch);
+        return;
+      }
+
       const opening = resolveOpening();
       if (!opening) return;
 
@@ -174,12 +205,18 @@ export function useRibbonOpeningBridge(
     [resolveOpening, dispatchParams],
   );
 
-  // Toggles unused Phase 2 — included for interface parity with wall bridge.
-  const onToggle = useCallback((_key: string, _next: boolean): void => {
-    /* no-op Phase 2 */
+  const onToggle = useCallback((key: string, next: boolean): void => {
+    if (key === OPENING_TAG_STYLE_KEYS.leaderVisible) {
+      getOpeningTagStyleService().mutateStyle({ leaderVisible: next });
+    }
   }, []);
 
-  const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
+  const getToggleState = useCallback((key: string): RibbonToggleState => {
+    if (key === OPENING_TAG_STYLE_KEYS.leaderVisible) {
+      return getOpeningTagStyleService().getCurrentStyle().leaderVisible;
+    }
+    return NULL_TOGGLE;
+  }, []);
 
   const getBadgeState = useCallback((badgeKey: string): boolean => {
     if (!OPENING_OWNED_BADGE_KEYS.has(badgeKey)) return false;

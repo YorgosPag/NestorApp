@@ -1084,6 +1084,7 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // — DXF Viewer levels (post-rename underscore collections, 2026-04-16) —
   'dxf_viewer_levels',    // lines 3097-3117 — tenant read + bootstrap create
   'dxf_viewer_view_templates',   // lines 3474-3511 — ADR-375 Phase B.3 BIM render-settings presets
+  'dxf_viewer_pen_tables',       // lines 3519-3534 — ADR-375 Phase C.1 per-company pen table singleton
   // — Sharing (ADR-312 Phase 2 Property Showcase + ADR-315 Unified Sharing) —
   // TODO(ADR-298 Phase D): write full matrix for shares + share_dispatches
   'shares',               // lines 2428-2447 — ADR-312/315 unified sharing link tokens

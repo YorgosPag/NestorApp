@@ -689,6 +689,7 @@
       "openingSize": "Size",
       "openingActions": "Actions",
       "openingRenumber": "Renumber",
+      "openingTagStyle": "Tag Style",
       "annotateOpenings": "Openings",
       "slabKind": "Type",
       "slabGeometry": "Geometry",
@@ -1189,6 +1190,27 @@
           "actions": {
             "reset": "Reset Defaults",
             "close": "Close"
+          },
+          "ribbon": {
+            "fontSize": "Size",
+            "borderWidth": "Border",
+            "leaderStyleLabel": "Leader",
+            "bgColorLabel": "Background",
+            "leaderColorLabel": "Leader Color",
+            "leaderVisibleLabel": "Visible"
+          },
+          "bgColorOptions": {
+            "white": "White",
+            "yellow": "Yellow",
+            "blue": "Blue",
+            "green": "Green",
+            "dark": "Dark"
+          },
+          "leaderColorOptions": {
+            "gray": "Gray",
+            "black": "Black",
+            "blue": "Blue",
+            "red": "Red"
           }
         },
         "scheduleExport": {
@@ -1525,7 +1547,14 @@
         "cellAriaLabel": "Pen {pen} scale {scale}",
         "rightClickHint": "Right-click a cell to reset it to default",
         "reset": "Reset all",
-        "resetAriaLabel": "Reset pen table to ISO defaults"
+        "resetAriaLabel": "Reset pen table to ISO defaults",
+        "penSets": {
+          "tabsAriaLabel": "Pen Sets",
+          "design": "Design",
+          "construction": "Construction",
+          "presentation": "Presentation",
+          "custom": "Custom"
+        }
       },
       "openGuidePanel": "Guide Panel",
       "toggleGuides": "Show/Hide Guides",

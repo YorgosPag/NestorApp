@@ -3511,6 +3511,29 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🖊️ DXF_VIEWER_PEN_TABLES COLLECTION — ADR-375 Phase C.1
+    // =========================================================================
+    // 📅 Added: 2026-05-26
+    // Singleton per company: docId == companyId.
+    // Stores sparse pen table overrides (16 pens × 6 scales).
+    match /dxf_viewer_pen_tables/{companyId} {
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || companyId == getUserCompanyId()
+                     );
+
+      allow write: if isAuthenticated()
+                   && (
+                        isSuperAdminOnly()
+                        || (
+                             companyId == getUserCompanyId()
+                             && request.resource.data.companyId == companyId
+                           )
+                      );
+    }
+
+    // =========================================================================
     // 🪜 FLOORPLAN_STAIRS COLLECTION — ADR-358 Phase 8 (G6 schema, G24 soft-lock)
     // =========================================================================
     // 📅 Added: 2026-05-17

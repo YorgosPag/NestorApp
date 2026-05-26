@@ -254,15 +254,15 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 
 ---
 
-### 🎨 ADR-375 Phase C — BIM Line Weight Advanced (C.1 ✅ DONE, C.2-C.7 pending, ~20-35h remaining)
+### 🎨 ADR-375 Phase C — BIM Line Weight Advanced (C.1 ✅ DONE, C.2 ✅ DONE, C.3-C.7 pending, ~18-32h remaining)
 
 **ADR**: `docs/centralized-systems/reference/adrs/ADR-375-bim-entity-line-weight-semantic-system.md`
-**Status**: C.1 ✅ DONE 2026-05-26 (Pen Table editor). C.2-C.7 ⏸️ DEFERRED.
+**Status**: C.1 ✅ DONE 2026-05-26 (Pen Table editor). C.2 ✅ DONE 2026-05-26 (Pen Sets presets). C.3-C.7 ⏸️ DEFERRED.
 
 **Phase C scope** (ADR-375 §5.Phase-C):
 
 1. **Pen Table editor** ✅ DONE 2026-05-26 — `dxf_viewer_pen_tables/{companyId}`, Zustand store, `setPenTableSource()` resolver injection, `PenTablePanel.tsx` 16×6 grid. 10 tests.
-2. **Pen Sets presets** — Bundles Design / Construction / Presentation. Ένα click αλλάζει ολόκληρη pen table. Reference: ArchiCAD Pen Sets pattern.
+2. **Pen Sets presets** ✅ DONE 2026-05-26 — `bim-pen-sets.ts` Design/Construction/Presentation ISO tables + `penSetToOverrides()`, store `applyPreset/activePresetName`, PenTablePanel preset tabs (aria-pressed), i18n el+en. 25 tests PASS.
 3. **Subcategories** — Door panel vs Door swing, Wall layers cut vs skin. Διαφορετικό pen ανά μέρος του ίδιου entity.
 4. **Per-view overrides (Visibility/Graphics)** — Override styles ανά view χωρίς να αλλάζουν defaults. Επεκτείνει το ViewTemplate.
 5. **Per-element overrides** — Πάχος γραμμής για ΕΝΑΝ συγκεκριμένο τοίχο. Νέο field `entity.params.lineWeightOverride?`.
@@ -283,8 +283,8 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 
 **Effort estimate (ψιλικά)**: C.1 ~3-5h · C.2 ~2-3h · C.3 ~5-8h · C.4 ~5-8h · C.5 ~3-5h · C.6 ~3-5h · C.7 ~5-10h. Total ~25-40h.
 
-- [ ] **C.1** Pen Table editor (UI grid + persistence)
-- [ ] **C.2** Pen Sets presets (Design / Construction / Presentation)
+- [x] **C.1** Pen Table editor (UI grid + persistence) ✅ 2026-05-26
+- [x] **C.2** Pen Sets presets (Design / Construction / Presentation) ✅ 2026-05-26
 - [ ] **C.3** Subcategories (Door panel/swing, Wall layers)
 - [ ] **C.4** Per-view overrides (extends ViewTemplate)
 - [ ] **C.5** Per-element overrides (`entity.params.lineWeightOverride?`)

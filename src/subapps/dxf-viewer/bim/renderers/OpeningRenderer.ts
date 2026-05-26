@@ -38,7 +38,12 @@ import { getOpeningGrips } from '../walls/opening-grips';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HINGE_ARC_SUBDIVISIONS } from '../geometry/opening-geometry';
 import { OPENING_KIND_STROKE } from './opening-kind-style';
-import { OpeningTagRenderer } from './OpeningTagRenderer';
+import {
+  OpeningTagRenderer,
+  computeTagCenter,
+  computeWallNormal,
+  TAG_INITIAL_SCREEN_PX,
+} from './OpeningTagRenderer';
 import { isOpeningTagLayerVisible } from '../../systems/layers/opening-tag-layer';
 
 const HINGE_DASH: readonly [number, number] = [4, 3];
@@ -115,6 +120,12 @@ export class OpeningRenderer extends BaseEntityRenderer {
   hitTest(entity: EntityModel, point: Point2D, _tolerance: number): boolean {
     if (!isOpeningEntity(entity)) return false;
     const opening = entity as OpeningEntity;
+
+    // Tag pill hit — check first so the larger pill area extends selectability.
+    if (opening.params.mark && isOpeningTagLayerVisible()) {
+      if (this.hitTestTagPill(opening, point)) return true;
+    }
+
     // ADR-363 Bug 1 fix — polygon containment against the 4-vertex outline
     // (cached στο `geometry.outline.vertices`), όχι το bbox. Opening πρέπει
     // να κερδίζει hit-test τιe-break έναντι του host wall όταν ο cursor είναι
@@ -122,6 +133,30 @@ export class OpeningRenderer extends BaseEntityRenderer {
     const verts = opening.geometry?.outline?.vertices;
     if (!verts || verts.length < 3) return false;
     return isPointInPolygon(point, verts.map((v) => ({ x: v.x, y: v.y })));
+  }
+
+  private hitTestTagPill(opening: OpeningEntity, worldPoint: Point2D): boolean {
+    const clickScreen = this.worldToScreen(worldPoint);
+    const anchorWorld = computeTagCenter(opening);
+    const anchorScreen = this.worldToScreen({ x: anchorWorld.x, y: anchorWorld.y });
+    const { ux, uy } = computeWallNormal(opening);
+    const offset = opening.params.tagOffset ?? { dx: 0, dy: 0 };
+    const draggedWorld = { x: anchorWorld.x + offset.dx, y: anchorWorld.y + offset.dy };
+    const draggedScreen = this.worldToScreen(draggedWorld);
+    const tagScreen = {
+      x: anchorScreen.x + ux * TAG_INITIAL_SCREEN_PX + (draggedScreen.x - anchorScreen.x),
+      y: anchorScreen.y + (-uy) * TAG_INITIAL_SCREEN_PX + (draggedScreen.y - anchorScreen.y),
+    };
+    // Approximate pill half-size: mark length × ~6px per char at 9px font + padding + tolerance.
+    const mark = opening.params.mark ?? '';
+    const halfW = mark.length * 5 + 10;
+    const halfH = 12;
+    return (
+      clickScreen.x >= tagScreen.x - halfW &&
+      clickScreen.x <= tagScreen.x + halfW &&
+      clickScreen.y >= tagScreen.y - halfH &&
+      clickScreen.y <= tagScreen.y + halfH
+    );
   }
 
   // ─── Internal drawing helpers ──────────────────────────────────────────────

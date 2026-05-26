@@ -21,6 +21,7 @@ import {
   OPENING_RIBBON_KEYS,
   OPENING_RIBBON_KEYS_ACTIONS,
   OPENING_RIBBON_BADGE_KEYS,
+  OPENING_TAG_STYLE_KEYS,
 } from '../hooks/bridge/opening-command-keys';
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
 
@@ -64,6 +65,47 @@ const HEIGHT_MM_OPTIONS = [
   { value: '2100', labelKey: '2100', isLiteralLabel: true },
   { value: '2200', labelKey: '2200', isLiteralLabel: true },
   { value: '2400', labelKey: '2400', isLiteralLabel: true },
+] as const;
+
+// ─── Tag style options ───────────────────────────────────────────────────────
+
+const FONT_SIZE_OPTIONS = [
+  { value: '7',  labelKey: '7px',  isLiteralLabel: true },
+  { value: '8',  labelKey: '8px',  isLiteralLabel: true },
+  { value: '9',  labelKey: '9px',  isLiteralLabel: true },
+  { value: '10', labelKey: '10px', isLiteralLabel: true },
+  { value: '11', labelKey: '11px', isLiteralLabel: true },
+  { value: '12', labelKey: '12px', isLiteralLabel: true },
+  { value: '14', labelKey: '14px', isLiteralLabel: true },
+  { value: '16', labelKey: '16px', isLiteralLabel: true },
+] as const;
+
+const BORDER_WIDTH_OPTIONS = [
+  { value: '0', labelKey: '0px', isLiteralLabel: true },
+  { value: '1', labelKey: '1px', isLiteralLabel: true },
+  { value: '2', labelKey: '2px', isLiteralLabel: true },
+  { value: '3', labelKey: '3px', isLiteralLabel: true },
+] as const;
+
+const LEADER_STYLE_OPTIONS = [
+  { value: 'solid',  labelKey: 'ribbon.commands.openingEditor.tagStyle.leaderStyleOptions.solid',  isLiteralLabel: false },
+  { value: 'dashed', labelKey: 'ribbon.commands.openingEditor.tagStyle.leaderStyleOptions.dashed', isLiteralLabel: false },
+  { value: 'dotted', labelKey: 'ribbon.commands.openingEditor.tagStyle.leaderStyleOptions.dotted', isLiteralLabel: false },
+] as const;
+
+const PILL_BG_COLOR_OPTIONS = [
+  { value: 'rgba(255,255,255,0.88)', labelKey: 'ribbon.commands.openingEditor.tagStyle.bgColorOptions.white',  isLiteralLabel: false },
+  { value: 'rgba(255,253,200,0.88)', labelKey: 'ribbon.commands.openingEditor.tagStyle.bgColorOptions.yellow', isLiteralLabel: false },
+  { value: 'rgba(200,220,255,0.88)', labelKey: 'ribbon.commands.openingEditor.tagStyle.bgColorOptions.blue',   isLiteralLabel: false },
+  { value: 'rgba(200,240,210,0.88)', labelKey: 'ribbon.commands.openingEditor.tagStyle.bgColorOptions.green',  isLiteralLabel: false },
+  { value: 'rgba(40,40,40,0.90)',    labelKey: 'ribbon.commands.openingEditor.tagStyle.bgColorOptions.dark',   isLiteralLabel: false },
+] as const;
+
+const LEADER_COLOR_OPTIONS = [
+  { value: '#7a8696', labelKey: 'ribbon.commands.openingEditor.tagStyle.leaderColorOptions.gray',  isLiteralLabel: false },
+  { value: '#000000', labelKey: 'ribbon.commands.openingEditor.tagStyle.leaderColorOptions.black', isLiteralLabel: false },
+  { value: '#2266cc', labelKey: 'ribbon.commands.openingEditor.tagStyle.leaderColorOptions.blue',  isLiteralLabel: false },
+  { value: '#cc3333', labelKey: 'ribbon.commands.openingEditor.tagStyle.leaderColorOptions.red',   isLiteralLabel: false },
 ] as const;
 
 const SILL_MM_OPTIONS = [
@@ -242,6 +284,88 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 icon: 'bim-opening-renumber',
                 commandKey: OPENING_RIBBON_KEYS_ACTIONS.renumber,
                 action: OPENING_RIBBON_KEYS_ACTIONS.renumber,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'opening-tag-style',
+      labelKey: 'ribbon.panels.openingTagStyle',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'opening.tagStyle.fontSizePx',
+                labelKey: 'ribbon.commands.openingEditor.tagStyle.ribbon.fontSize',
+                commandKey: OPENING_TAG_STYLE_KEYS.fontSizePx,
+                comboboxWidthPx: 72,
+                options: FONT_SIZE_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'opening.tagStyle.borderWidthPx',
+                labelKey: 'ribbon.commands.openingEditor.tagStyle.ribbon.borderWidth',
+                commandKey: OPENING_TAG_STYLE_KEYS.borderWidthPx,
+                comboboxWidthPx: 64,
+                options: BORDER_WIDTH_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'opening.tagStyle.leaderStyle',
+                labelKey: 'ribbon.commands.openingEditor.tagStyle.ribbon.leaderStyleLabel',
+                commandKey: OPENING_TAG_STYLE_KEYS.leaderStyle,
+                comboboxWidthPx: 120,
+                options: LEADER_STYLE_OPTIONS,
+              },
+            },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'opening.tagStyle.pillBgColor',
+                labelKey: 'ribbon.commands.openingEditor.tagStyle.ribbon.bgColorLabel',
+                commandKey: OPENING_TAG_STYLE_KEYS.pillBgColor,
+                comboboxWidthPx: 130,
+                options: PILL_BG_COLOR_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'opening.tagStyle.leaderColor',
+                labelKey: 'ribbon.commands.openingEditor.tagStyle.ribbon.leaderColorLabel',
+                commandKey: OPENING_TAG_STYLE_KEYS.leaderColor,
+                comboboxWidthPx: 110,
+                options: LEADER_COLOR_OPTIONS,
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'opening.tagStyle.leaderVisible',
+                labelKey: 'ribbon.commands.openingEditor.tagStyle.ribbon.leaderVisibleLabel',
+                icon: 'bim-opening-leader-visible',
+                commandKey: OPENING_TAG_STYLE_KEYS.leaderVisible,
+                action: OPENING_TAG_STYLE_KEYS.leaderVisible,
               },
             },
           ],

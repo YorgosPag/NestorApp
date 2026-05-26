@@ -51,6 +51,35 @@ export const OPENING_RIBBON_STRING_KEYS: readonly OpeningRibbonStringCommandKey[
   OPENING_RIBBON_KEYS.stringParams.mark,
 ];
 
+/** ADR-376 Phase C.2+ — Per-project tag style keys (combobox + toggle). */
+export const OPENING_TAG_STYLE_KEYS = {
+  fontSizePx:    'opening.tagStyle.fontSizePx',
+  borderWidthPx: 'opening.tagStyle.borderWidthPx',
+  leaderStyle:   'opening.tagStyle.leaderStyle',
+  pillBgColor:   'opening.tagStyle.pillBgColor',
+  leaderColor:   'opening.tagStyle.leaderColor',
+  leaderVisible: 'opening.tagStyle.leaderVisible',
+} as const;
+
+export type OpeningTagStyleComboboxKey =
+  | typeof OPENING_TAG_STYLE_KEYS.fontSizePx
+  | typeof OPENING_TAG_STYLE_KEYS.borderWidthPx
+  | typeof OPENING_TAG_STYLE_KEYS.leaderStyle
+  | typeof OPENING_TAG_STYLE_KEYS.pillBgColor
+  | typeof OPENING_TAG_STYLE_KEYS.leaderColor;
+
+const TAG_STYLE_COMBOBOX_SET: ReadonlySet<string> = new Set<string>([
+  OPENING_TAG_STYLE_KEYS.fontSizePx,
+  OPENING_TAG_STYLE_KEYS.borderWidthPx,
+  OPENING_TAG_STYLE_KEYS.leaderStyle,
+  OPENING_TAG_STYLE_KEYS.pillBgColor,
+  OPENING_TAG_STYLE_KEYS.leaderColor,
+]);
+
+export function isOpeningTagStyleComboboxKey(key: string): boolean {
+  return TAG_STYLE_COMBOBOX_SET.has(key);
+}
+
 export const OPENING_RIBBON_KEYS_ACTIONS = {
   close: 'opening.actions.close',
   delete: 'opening.actions.delete',
