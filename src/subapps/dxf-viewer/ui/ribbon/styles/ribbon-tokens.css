@@ -884,3 +884,103 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
   font-variant-numeric: tabular-nums;
   color: var(--ribbon-text-muted);
 }
+
+/* ── DXF Modal dialogs (WallCascadeDeleteDialog, PathDeletionWarningDialog) ── */
+
+.dxf-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+}
+
+.dxf-modal-card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+  padding: 24px;
+  width: 360px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dxf-modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.dxf-modal-body {
+  font-size: 14px;
+  color: #444444;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.dxf-modal-actions {
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.dxf-modal-button {
+  padding: 7px 16px;
+  border-radius: 5px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dxf-modal-button:hover {
+  background: #f3f4f6;
+}
+
+.dxf-modal-button-danger {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+.dxf-modal-button-danger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.dark .dxf-modal-card,
+[data-theme="dark"] .dxf-modal-card {
+  background: #1e293b;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.60);
+}
+
+.dark .dxf-modal-title,
+[data-theme="dark"] .dxf-modal-title {
+  color: #f1f5f9;
+}
+
+.dark .dxf-modal-body,
+[data-theme="dark"] .dxf-modal-body {
+  color: #94a3b8;
+}
+
+.dark .dxf-modal-button,
+[data-theme="dark"] .dxf-modal-button {
+  background: #334155;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark .dxf-modal-button:hover,
+[data-theme="dark"] .dxf-modal-button:hover {
+  background: #3f5068;
+}

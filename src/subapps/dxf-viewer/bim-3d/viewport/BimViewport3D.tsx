@@ -34,6 +34,7 @@ import { useAnimationQueueProcessor } from '../animation/animation-queue-process
 import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-interaction';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useBim3DStoreSync } from './use-bim3d-store-sync';
+import { useBim3DVgResync, EMPTY_BIM_ENTITIES } from './use-bim3d-vg-resync';
 
 const HOVER_DEBOUNCE_MS = 800;
 
@@ -44,16 +45,6 @@ const HOVER_DEBOUNCE_MS = 800;
 // ADR-371: optional props let Properties read-only pipeline mount the same
 // viewport without ProjectHierarchyProvider and without global entity store.
 // Default behavior (no props) = legacy /dxf/viewer path (canvas-layer-stack-3d-leaf).
-
-const EMPTY_BIM_ENTITIES: Bim3DEntities = {
-  walls: [],
-  columns: [],
-  beams: [],
-  slabs: [],
-  slabOpenings: [],
-  openings: [],
-  stairs: [],
-};
 
 export interface BimViewport3DProps {
   /** Override hierarchy projectId — required for render uploads. Falls back to ProjectHierarchyContext. */
@@ -214,6 +205,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       (modes) => { managerRef.current?.applyBuildingVisibility(modes); },
     );
   }, [externalEntitiesMode]);
+
+  useBim3DVgResync(managerRef, externalEntitiesMode, bimEntities);
 
   // ADR-371: external entity feed — push prop changes into the scene.
   useEffect(() => {

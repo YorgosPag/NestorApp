@@ -727,7 +727,7 @@
 | **ADR-371** | BIM 3D Read-Only Viewer in Properties Floorplan Tab | ✅ APPROVED | [View](./adrs/ADR-371-bim-3d-readonly-viewer.md) |
 | **ADR-371** | BIM Corner Snap System (Redirect) | ✅ APPROVED | [View](./adrs/ADR-371-bim-corner-snap-system.md) |
 | **ADR-372** | Contact Relationship Bidirectional Crossing Matrix | ✅ APPROVED | [View](./adrs/ADR-372-relationship-crossings-matrix.md) |
-| **ADR-375** | BIM Entity Line Weight Semantic System (Revit-Equivalent) | ✅ COMPLETE v2.5 — C.1+C.2+C.4+C.5+C.6+C.7 DONE. C.7 (2026-05-26): 3D BIM edge overlay (Line2/LineMaterial), 4 NEW edge module files, 5 MODIFIED converters/scene-manager, 38/38 edge tests + 76/76 2D regression PASS. | [View](./adrs/ADR-375-bim-entity-line-weight-semantic-system.md) |
+| **ADR-375** | BIM Entity Line Weight Semantic System (Revit-Equivalent) | ✅ COMPLETE v2.6 — C.1+C.2+C.4+C.5+C.6+C.7 DONE. C.7 (2026-05-26): 3D BIM edge overlay (Line2/LineMaterial), 4 NEW edge module files, 5 MODIFIED converters/scene-manager, 38/38 edge tests + 76/76 2D regression PASS. v2.6 hotfix (2026-05-26): C.4 V/G visibility runtime wiring — 7 2D renderers early-return + BimSceneLayer 3D filter + BimViewport3D objectStyles subscription. 2 new tests (renderer skip + 3D layer). | [View](./adrs/ADR-375-bim-entity-line-weight-semantic-system.md) |
 | **ADR-377** | BIM Subcategories System | 🟡 ACTIVE v0.6 — C.1+C.2+C.3 DONE (45 tests). D+E+F pending | [View](./adrs/ADR-377-bim-subcategories-system.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 

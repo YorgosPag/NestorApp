@@ -35,7 +35,7 @@ import type {
 } from '../types/slab-opening-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -79,6 +79,8 @@ const KIND_DASH: Readonly<Record<SlabOpeningKind, readonly [number, number]>> = 
 export class SlabOpeningRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isSlabOpeningEntity(entity)) return;
+    // ADR-375 Phase C.4 v2.6 — V/G visibility hotfix (see WallRenderer for rationale).
+    if (!resolveIsCategoryVisible('slab-opening', useDrawingScaleStore.getState().objectStyles)) return;
     const opening = entity as SlabOpeningEntity;
     if (!opening.geometry || !opening.params) return;
     const verts = opening.geometry.polygon.vertices;

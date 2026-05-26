@@ -154,6 +154,7 @@ export function useWallPersistence(
 
   const serviceRef = useRef<WallFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
+  const deletedIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, WallEntity['params']>>(new Map());
   const lockHeldRef = useRef<string | null>(null);
   const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -200,10 +201,11 @@ export function useWallPersistence(
         const nextWalls: WallEntity[] = [];
         let mutated = false;
 
+        const deleted = deletedIdsRef.current;
         for (const doc of docs) {
           const existing = sceneWalls.get(doc.id);
           if (!existing) {
-            if (!dirty.has(doc.id)) {
+            if (!dirty.has(doc.id) && !deleted.has(doc.id)) {
               nextWalls.push(docToEntity(doc));
               mutated = true;
             }
@@ -223,6 +225,8 @@ export function useWallPersistence(
 
         for (const [id, entity] of sceneWalls) {
           if (docsById.has(id)) continue;
+          // Explicitly deleted — never re-add regardless of save state.
+          if (deleted.has(id)) { mutated = true; continue; }
           // Preserve local-never-saved walls (optimistic insert, stair parallel).
           const neverSaved = !lastSavedParamsRef.current.has(id);
           if (dirty.has(id) || neverSaved) {
@@ -415,9 +419,11 @@ export function useWallPersistence(
     return cleanup;
   }, [persist]);
 
-  // ADR-363 Phase 1E — Delete-requested listener (bridge emits after confirm).
+  // ADR-363 Phase 1E — Delete-requested listener. Mark ID before async delete
+  // so subscription never re-adds a wall that is pending Firestore removal.
   useEffect(() => {
     const cleanup = EventBus.on('bim:wall-delete-requested', ({ wallId }) => {
+      deletedIdsRef.current.add(wallId);
       void deleteWall(wallId);
     });
     return cleanup;

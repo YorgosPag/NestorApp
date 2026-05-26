@@ -20,7 +20,6 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateWallParamsCommand } from '../../../core/commands/entity-commands/UpdateWallParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -87,8 +86,6 @@ export function useRibbonWallBridge(
 ): RibbonWallBridge {
   const { levelManager, universalSelection } = props;
   const { execute: executeCommand } = useCommandHistory();
-  const { t } = useTranslation('dxf-viewer-shell');
-
   const resolveWall = useCallback((): WallEntity | null => {
     const id = universalSelection.getPrimaryId();
     if (!id || !levelManager.currentLevelId) return null;
@@ -211,13 +208,9 @@ export function useRibbonWallBridge(
       if (action !== WALL_RIBBON_KEYS_ACTIONS.delete) return;
       const wall = resolveWall();
       if (!wall) return;
-      const confirmed = window.confirm(
-        t('ribbon.commands.wallEditor.deleteConfirm'),
-      );
-      if (!confirmed) return;
       EventBus.emit('bim:wall-delete-requested', { wallId: wall.id });
     },
-    [resolveWall, levelManager, t],
+    [resolveWall, levelManager],
   );
 
   // Memoize return so RibbonCommandProvider deps stay stable (ADR-040 Phase XIX).

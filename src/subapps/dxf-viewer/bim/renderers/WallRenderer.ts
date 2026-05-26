@@ -28,7 +28,7 @@ import type { WallCategory, WallEntity } from '../types/wall-types';
 import type { OpeningEntity } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveSubcategoryStyle, type BimLayerOverride } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle, resolveIsCategoryVisible, type BimLayerOverride } from '../../config/bim-line-weight-resolver';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -80,6 +80,11 @@ export class WallRenderer extends BaseEntityRenderer {
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isWallEntity(entity)) return;
+    // ADR-375 Phase C.4 v2.6 — V/G visibility hotfix: hide entire entity
+    // when the per-view override marks the category invisible. Resolver
+    // already returns lineWidthPx=0 for strokes but fill/hatch/grips run
+    // outside that path, so an early-return at render entry is required.
+    if (!resolveIsCategoryVisible('wall', useDrawingScaleStore.getState().objectStyles)) return;
     const wall = entity as WallEntity;
     if (!wall.geometry || !wall.params) return;
 

@@ -38,7 +38,7 @@ import { isColumnEntity } from '../../types/entities';
 import type { ColumnEntity, ColumnKind } from '../types/column-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
@@ -96,6 +96,8 @@ const KIND_FILL: Readonly<Record<ColumnKind, string>> = {
 export class ColumnRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isColumnEntity(entity)) return;
+    // ADR-375 Phase C.4 v2.6 — V/G visibility hotfix (see WallRenderer for rationale).
+    if (!resolveIsCategoryVisible('column', useDrawingScaleStore.getState().objectStyles)) return;
     const column = entity as ColumnEntity;
     if (!column.geometry || !column.params) return;
     const verts = column.geometry.footprint.vertices;

@@ -32,7 +32,7 @@ import { isBeamEntity } from '../../types/entities';
 import type { BeamEntity, BeamKind } from '../types/beam-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -95,6 +95,8 @@ const ANCHOR_PULSE_LINE_W_PX = 1.5;
 export class BeamRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isBeamEntity(entity)) return;
+    // ADR-375 Phase C.4 v2.6 — V/G visibility hotfix (see WallRenderer for rationale).
+    if (!resolveIsCategoryVisible('beam', useDrawingScaleStore.getState().objectStyles)) return;
     const beam = entity as BeamEntity;
     if (!beam.geometry || !beam.params) return;
     const verts = beam.geometry.outline.vertices;

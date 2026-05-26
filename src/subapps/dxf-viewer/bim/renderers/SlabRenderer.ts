@@ -38,7 +38,7 @@ import type { SlabEntity, SlabKind, SlabReinforcement } from '../types/slab-type
 import type { SlabOpeningEntity } from '../types/slab-opening-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -104,6 +104,8 @@ export class SlabRenderer extends BaseEntityRenderer {
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isSlabEntity(entity)) return;
+    // ADR-375 Phase C.4 v2.6 — V/G visibility hotfix (see WallRenderer for rationale).
+    if (!resolveIsCategoryVisible('slab', useDrawingScaleStore.getState().objectStyles)) return;
     const slab = entity as SlabEntity;
     if (!slab.geometry || !slab.params) return;
     const verts = slab.geometry.polygon.vertices;

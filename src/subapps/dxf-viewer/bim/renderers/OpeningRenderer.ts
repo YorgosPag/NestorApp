@@ -30,7 +30,7 @@ import type { OpeningEntity } from '../types/opening-types';
 import { isHingedKind, isGlazedKind } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -56,6 +56,8 @@ const GLAZING_INSET_RATIO = 0.25; // 25% of thickness inset for double-line glas
 export class OpeningRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isOpeningEntity(entity)) return;
+    // ADR-375 Phase C.4 v2.6 — V/G visibility hotfix (see WallRenderer for rationale).
+    if (!resolveIsCategoryVisible('opening', useDrawingScaleStore.getState().objectStyles)) return;
     const opening = entity as OpeningEntity;
     if (!opening.geometry || !opening.params) return;
 

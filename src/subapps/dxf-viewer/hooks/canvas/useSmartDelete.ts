@@ -209,11 +209,16 @@ export function useSmartDelete({
       }
 
       // Collect BIM IDs BEFORE executeCommand removes them from scene.
+      const wallIdsInBatch = [...deletingWallIds];
+      const slabIdsInBatch = [...deletingSlabIds];
       const stairIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'stair',
       );
       const openingIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'opening',
+      );
+      const slabOpeningIdsInBatch = idsToDelete.filter(
+        (id) => adapter.getEntity(id)?.type === 'slab-opening',
       );
 
       if (idsToDelete.length === 1) {
@@ -224,6 +229,13 @@ export function useSmartDelete({
       universalSelectionRef.current.clearByType('dxf-entity');
       setSelectedEntityIds([]);
 
+      // Trigger Firestore deleteDoc for each deleted BIM entity type.
+      for (const wallId of wallIdsInBatch) {
+        eventBus.emit('bim:wall-delete-requested', { wallId });
+      }
+      for (const slabId of slabIdsInBatch) {
+        eventBus.emit('bim:slab-delete-requested', { slabId });
+      }
       // ADR-358 Phase 9C-3 — trigger Firestore deleteDoc for each deleted stair.
       for (const stairId of stairIdsInBatch) {
         eventBus.emit('bim:stair-delete-requested', { stairId });
@@ -231,6 +243,9 @@ export function useSmartDelete({
       // Trigger Firestore deleteDoc + prevent subscription re-add for each deleted opening.
       for (const openingId of openingIdsInBatch) {
         eventBus.emit('bim:opening-delete-requested', { openingId });
+      }
+      for (const slabOpeningId of slabOpeningIdsInBatch) {
+        eventBus.emit('bim:slab-opening-delete-requested', { slabOpeningId });
       }
 
       return true;
