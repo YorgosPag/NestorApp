@@ -29,6 +29,7 @@ import {
 } from '../config/bim-render-settings-types';
 import { type ViewRange } from '../config/bim-view-range';
 import { type BimCategory, type ObjectStyle } from '../config/bim-object-styles';
+import { type LinePatternKey } from '../config/bim-line-patterns';
 import { saveBimRenderSettings } from '../services/bim-render-settings.service';
 
 // ── Debounce helper ────────────────────────────────────────────────────────
@@ -66,12 +67,29 @@ interface BimRenderSettingsState extends ResolvedBimSettings {
   /** Patch individual ViewRange plane values (mm) — persisted after 500 ms idle. */
   setViewRangeField: (field: keyof ViewRange, valueMm: number) => void;
 
-  /** Patch one category's ObjectStyle — persisted after 500 ms idle. */
+  /** Patch one category's pen (projectionPen or cutPen) — persisted after 500 ms idle. */
   setObjectStyleField: (
     category: BimCategory,
-    key: keyof ObjectStyle,
+    key: 'projectionPen' | 'cutPen',
     pen: number,
   ) => void;
+
+  // ── ADR-375 Phase C.4 — Visibility/Graphics per-view setters ────────────
+  /** Toggle category visibility for the current view. */
+  setObjectStyleVisibility: (category: BimCategory, visible: boolean) => void;
+  /** Override projection or cut color for a category (null = canvas token). */
+  setObjectStyleVgColor: (
+    category: BimCategory,
+    key: 'projectionColor' | 'cutColor',
+    color: string | null,
+  ) => void;
+  /** Override projection or cut line pattern for a category. */
+  setObjectStyleVgPattern: (
+    category: BimCategory,
+    key: 'projectionPattern' | 'cutPattern',
+    pattern: LinePatternKey,
+  ) => void;
+  // ────────────────────────────────────────────────────────────────────────
 
   /** Reset all settings to defaults for the current level — persisted immediately. */
   resetToDefaults: () => void;
@@ -137,6 +155,36 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       const state = get();
       const prev = state.objectStyles[category];
       const nextCat: ObjectStyle = { ...prev, [key]: pen };
+      const nextStyles = { ...state.objectStyles, [category]: nextCat };
+      set({ objectStyles: nextStyles });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
+    },
+
+    setObjectStyleVisibility(category, visible) {
+      const state = get();
+      const prev = state.objectStyles[category];
+      const nextCat: ObjectStyle = { ...prev, visible };
+      const nextStyles = { ...state.objectStyles, [category]: nextCat };
+      set({ objectStyles: nextStyles });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
+    },
+
+    setObjectStyleVgColor(category, key, color) {
+      const state = get();
+      const prev = state.objectStyles[category];
+      const nextCat: ObjectStyle = { ...prev, [key]: color };
+      const nextStyles = { ...state.objectStyles, [category]: nextCat };
+      set({ objectStyles: nextStyles });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
+    },
+
+    setObjectStyleVgPattern(category, key, pattern) {
+      const state = get();
+      const prev = state.objectStyles[category];
+      const nextCat: ObjectStyle = { ...prev, [key]: pattern };
       const nextStyles = { ...state.objectStyles, [category]: nextCat };
       set({ objectStyles: nextStyles });
       if (state.currentLevelId)

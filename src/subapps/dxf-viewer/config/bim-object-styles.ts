@@ -50,6 +50,18 @@ export interface ObjectStyle {
   projectionPen: PenIndex;
   /** Pen used when element is cut by view plane. */
   cutPen: PenIndex;
+  // ── ADR-375 Phase C.4 — Visibility/Graphics per-view overrides ────────────
+  /** false = hide this category entirely for the current view. Default: true. */
+  visible?: boolean;
+  /** Hex color for projection lines (null = use canvas token). */
+  projectionColor?: string | null;
+  /** Hex color for cut lines (null = use canvas token). */
+  cutColor?: string | null;
+  /** Line pattern override for projection lines. */
+  projectionPattern?: LinePatternKey;
+  /** Line pattern override for cut lines. */
+  cutPattern?: LinePatternKey;
+  // ─────────────────────────────────────────────────────────────────────────
   /** Per-subcategory style overrides (ADR-377). Keys validated by SUBCATEGORY_TAXONOMY. */
   subcategories?: Partial<Record<string, SubcategoryStyle>>;
 }

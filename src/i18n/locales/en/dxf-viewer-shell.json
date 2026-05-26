@@ -726,6 +726,7 @@
       "drawingScale": "Drawing Scale",
       "viewRange": "View Range",
       "objectStyles": "Object Styles",
+      "visibilityGraphics": "Visibility/Graphics",
       "penTable": "Pen Table",
       "viewTemplates": "View Templates",
       "dimensions": "Dimensions",
@@ -1527,6 +1528,35 @@
           "dimension": "Dimension",
           "hatch": "Hatch",
           "grip": "Grip"
+        }
+      },
+      "visibilityGraphics": {
+        "label": "Visibility",
+        "openAriaLabel": "Open Visibility/Graphics panel",
+        "allVisible": "All visible",
+        "hiddenCount": "{count} hidden",
+        "visibleHeader": "Visibility",
+        "visibleHeaderShort": "Vis.",
+        "projPen": "Proj. Pen",
+        "projColor": "Proj. Color",
+        "projPattern": "Proj. Pattern",
+        "cutPen": "Cut Pen",
+        "cutColor": "Cut Color",
+        "cutPattern": "Cut Pattern",
+        "projColorTitle": "Projection line color",
+        "cutColorTitle": "Cut line color",
+        "toggleVisibility": "Toggle visibility for category {cat}",
+        "reset": "Reset to Defaults",
+        "resetAriaLabel": "Reset visibility/graphics to defaults",
+        "patterns": {
+          "solid": "Solid",
+          "dashed": "Dashed",
+          "dashed2": "Dashed ×0.5",
+          "dotted": "Dotted",
+          "center": "Center",
+          "hidden": "Hidden",
+          "dashdot": "Dash Dot",
+          "phantom": "Phantom"
         }
       },
       "viewTemplates": {

@@ -726,6 +726,7 @@
       "drawingScale": "Κλίμακα Σχεδίου",
       "viewRange": "Εύρος Προβολής",
       "objectStyles": "Στυλ Αντικειμένων",
+      "visibilityGraphics": "Ορατότητα/Γραφικά",
       "penTable": "Πίνακας Πενών",
       "viewTemplates": "Πρότυπα Προβολής",
       "dimensions": "Διαστάσεις",
@@ -1527,6 +1528,35 @@
           "dimension": "Διάσταση",
           "hatch": "Διαγράμμιση",
           "grip": "Λαβή"
+        }
+      },
+      "visibilityGraphics": {
+        "label": "Ορατότητα",
+        "openAriaLabel": "Άνοιγμα πίνακα Ορατότητας/Γραφικών",
+        "allVisible": "Όλα ορατά",
+        "hiddenCount": "{count} κρυφά",
+        "visibleHeader": "Ορατότητα",
+        "visibleHeaderShort": "Ορ.",
+        "projPen": "Προβ. Πένα",
+        "projColor": "Προβ. Χρώμα",
+        "projPattern": "Προβ. Γραμμή",
+        "cutPen": "Τομή Πένα",
+        "cutColor": "Τομή Χρώμα",
+        "cutPattern": "Τομή Γραμμή",
+        "projColorTitle": "Χρώμα γραμμών προβολής",
+        "cutColorTitle": "Χρώμα γραμμών τομής",
+        "toggleVisibility": "Εναλλαγή ορατότητας κατηγορίας {cat}",
+        "reset": "Επαναφορά Προεπιλογών",
+        "resetAriaLabel": "Επαναφορά ορατότητας/γραφικών στις προεπιλογές",
+        "patterns": {
+          "solid": "Συνεχής",
+          "dashed": "Διακεκομμένη",
+          "dashed2": "Διακεκομμένη ×0.5",
+          "dotted": "Κουκκίδες",
+          "center": "Κεντρική",
+          "hidden": "Κρυφή",
+          "dashdot": "Γραμμή-Τελεία",
+          "phantom": "Φάντασμα"
         }
       },
       "viewTemplates": {

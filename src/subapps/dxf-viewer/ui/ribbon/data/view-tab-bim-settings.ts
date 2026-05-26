@@ -77,6 +77,30 @@ export const PEN_TABLE_PANEL: RibbonPanelDef = {
   ],
 };
 
+/** ADR-375 Phase C.4 — Visibility/Graphics per-view override dialog (Revit V/G equivalent). */
+export const VISIBILITY_GRAPHICS_PANEL: RibbonPanelDef = {
+  id: 'visibilityGraphics',
+  labelKey: 'ribbon.panels.visibilityGraphics',
+  rows: [
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'widget',
+          size: 'small',
+          widgetId: 'visibility-graphics',
+          command: {
+            id: 'view.visibilityGraphics',
+            labelKey: 'ribbon.commands.visibilityGraphics.label',
+            icon: '',
+            commandKey: 'visibility-graphics',
+          },
+        },
+      ],
+    },
+  ],
+};
+
 /** ADR-375 Phase B.3 — reusable BIM render-settings presets (Revit Level 2). */
 export const VIEW_TEMPLATES_PANEL: RibbonPanelDef = {
   id: 'viewTemplates',

@@ -285,8 +285,8 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 
 - [x] **C.1** Pen Table editor (UI grid + persistence) ✅ 2026-05-26
 - [x] **C.2** Pen Sets presets (Design / Construction / Presentation) ✅ 2026-05-26
-- [ ] **C.3** Subcategories (Door panel/swing, Wall layers)
-- [ ] **C.4** Per-view overrides (extends ViewTemplate)
+- [x] **C.3** Subcategories (Door panel/swing, Wall layers) ✅ 2026-05-26 (via ADR-377)
+- [x] **C.4** Per-view overrides (Visibility/Graphics) ✅ 2026-05-26 — ObjectStyle +5 V/G fields, resolveIsCategoryVisible helper, full priority stack, 3 store setters, VisibilityGraphicsPanel.tsx, 24/24 tests
 - [ ] **C.5** Per-element overrides (`entity.params.lineWeightOverride?`)
 - [ ] **C.6** Layer-driven overrides (ADR-358 integration)
 - [ ] **C.7** 3D parity (ADR-370 THREE.js line widths)

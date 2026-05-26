@@ -71,6 +71,14 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-26 — Bitmap cache key extended for opening tag style (ADR-376 Phase C.2)
+
+`dxf-bitmap-cache.ts` `bimSettingsHash` now also folds `getCurrentOpeningTagStyle()` into its key. Per-project tag style mutations (showSize/showHeight/labelFormat/leaderVisible/leaderColor/textColor) must bust the cache so the next render reflects the updated label content/visibility. Mutations happen via ribbon dropdown — rare events, no per-frame cost.
+
+**Cardinal rule compliance**: cache key remains bounded (single JSON hash, no entity-level state); no new orchestrator subscriptions; no high-frequency invalidation source. Style reads happen in the cache-input function (already invoked per render pass), not in the renderer hot path.
+
+**Files touched**: `dxf-bitmap-cache.ts` (+import + hash field).
+
 ### 2026-05-26 — ADR-376 Phase C.1 opening tag drag (new micro-leaf)
 
 ADR-376 Phase C.1 (draggable opening tag + γωνιακή leader + Reset Position UX) adds a new micro-leaf `OpeningTagDragMount` to `PreviewCanvasMounts` in `canvas-layer-stack-leaves.tsx`. The mount wires `useOpeningTagDragInteraction` hook (`hooks/canvas/use-opening-tag-drag-interaction.ts`) which owns pointer event listeners on the viewport element + drives the pure FSM `OpeningTagDragController` (`bim/services/opening-tag-drag-controller.ts`).

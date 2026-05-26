@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-store';
-import { BIM_CATEGORIES, type BimCategory, type ObjectStyle } from '../../../config/bim-object-styles';
+import { BIM_CATEGORIES, type BimCategory } from '../../../config/bim-object-styles';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
@@ -38,7 +38,7 @@ export const ObjectStylesPanel: React.FC = () => {
   const resetToDefaults = useBimRenderSettingsStore((s) => s.resetToDefaults);
 
   const handlePenChange = useCallback(
-    (category: BimCategory, key: keyof ObjectStyle, value: string) => {
+    (category: BimCategory, key: 'projectionPen' | 'cutPen', value: string) => {
       const pen = parseInt(value, 10);
       if (pen >= 1 && pen <= 16) setObjectStyleField(category, key, pen);
     },

@@ -23,6 +23,7 @@ import { ViewRangePanel } from '../panels/ViewRangePanel';
 import { ObjectStylesPanel } from '../panels/ObjectStylesPanel';
 import { PenTablePanel } from '../panels/PenTablePanel';
 import { ViewTemplatesPanel } from '../panels/ViewTemplatesPanel';
+import { VisibilityGraphicsPanel } from '../panels/VisibilityGraphicsPanel';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 import { RibbonStairFloorInfoWidget } from './RibbonStairFloorInfoWidget';
 import { RibbonStairDimensionsWidget } from './RibbonStairDimensionsWidget';
@@ -73,6 +74,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'view-templates') {
       return <ViewTemplatesPanel key="view-templates-widget" />;
+    }
+    if (button.widgetId === 'visibility-graphics') {
+      return <VisibilityGraphicsPanel key="visibility-graphics-widget" />;
     }
     if (button.widgetId === 'insert-tokens') {
       return <RibbonInsertTokenWidget key="insert-tokens-widget" />;

@@ -55,6 +55,20 @@ export interface ResolvedSubcategoryStyle {
 }
 
 /**
+ * Resolve whether a BIM category is visible in the current per-view override.
+ *
+ * ADR-375 Phase C.4: per-view visibility toggle.
+ * Returns false only when the override explicitly sets `visible: false`.
+ */
+export function resolveIsCategoryVisible(
+  category: BimCategory,
+  objectStyles?: Partial<Record<BimCategory, ObjectStyle>>,
+): boolean {
+  if (!objectStyles) return true;
+  return objectStyles[category]?.visible !== false;
+}
+
+/**
  * Active pen table — defaults to PEN_TABLE_MM.
  * Replaced at runtime by `setPenTableSource` when the pen table store loads
  * per-company overrides (ADR-375 Phase C.1). No renderer changes needed.
@@ -70,10 +84,13 @@ export function setPenTableSource(table: EffectivePenTable): void {
 const BEYOND_PEN: PenIndex = 3;
 
 /**
- * Resolve full subcategory style for a BIM render pass (ADR-377 Phase B).
+ * Resolve full subcategory style for a BIM render pass (ADR-377 Phase B, ADR-375 Phase C.4).
  *
- * Resolution order: subcategory override → parent ObjectStyle → BEYOND_PEN for beyond.
- * Hidden cutState short-circuits to zero width, solid pattern, null color.
+ * Resolution order (highest priority first):
+ *   1. hidden cutState or visible=false → zero/solid/null
+ *   2. subcategory override (per-subcategory key)
+ *   3. per-view category V/G override (ADR-375 C.4: color + pattern)
+ *   4. DEFAULT_OBJECT_STYLES global defaults
  */
 export function resolveSubcategoryStyle(
   ctx: SubcategoryResolutionContext,
@@ -86,6 +103,11 @@ export function resolveSubcategoryStyle(
     ? { ...DEFAULT_OBJECT_STYLES, ...ctx.objectStyles }
     : DEFAULT_OBJECT_STYLES;
   const parent = styles[ctx.category];
+
+  // ADR-375 C.4 — visibility toggle: hidden = zero width, no stroke
+  if (parent.visible === false) {
+    return { lineWidthPx: 0, linePattern: 'solid', color: null };
+  }
 
   const sub = ctx.subcategoryKey
     ? parent.subcategories?.[ctx.subcategoryKey]
@@ -104,10 +126,14 @@ export function resolveSubcategoryStyle(
   const mm = _activePenTable[penIdx - 1][scaleCol];
   const lineWidthPx = lineweightToPx(mm, ctx.dpi ?? 96);
 
-  const linePattern = sub?.linePattern ?? 'solid';
+  // ADR-375 C.4 — color: subcategory > parent V/G override > null (canvas token)
   const color = ctx.cutState === 'cut'
-    ? (sub?.cutColor ?? null)
-    : (sub?.projectionColor ?? null);
+    ? (sub?.cutColor ?? parent.cutColor ?? null)
+    : (sub?.projectionColor ?? parent.projectionColor ?? null);
+
+  // ADR-375 C.4 — pattern: subcategory > parent V/G override > 'solid'
+  const linePattern = sub?.linePattern
+    ?? (ctx.cutState === 'cut' ? (parent.cutPattern ?? 'solid') : (parent.projectionPattern ?? 'solid'));
 
   return { lineWidthPx, linePattern, color };
 }

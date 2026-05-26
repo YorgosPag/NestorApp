@@ -27,6 +27,8 @@ import { getActiveScaleName } from '../../systems/viewport/ViewportStore';
 // 🏢 ADR-375 Phase B: BIM render settings (drawingScale + viewRange + objectStyles)
 //    affect per-entity line weight and cut-state — invalidate when they change.
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
+// 🏢 ADR-376 Phase C.2: opening tag style mutations must bust the bitmap cache.
+import { getCurrentOpeningTagStyle } from '../../bim/services/opening-tag-style-service';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('DxfBitmapCache');
@@ -51,7 +53,7 @@ function readBimCacheInputs(): { drawingScale: number; bimSettingsHash: string }
   const s = useBimRenderSettingsStore.getState();
   return {
     drawingScale: s.drawingScale,
-    bimSettingsHash: JSON.stringify({ vr: s.viewRange, os: s.objectStyles }),
+    bimSettingsHash: JSON.stringify({ vr: s.viewRange, os: s.objectStyles, ts: getCurrentOpeningTagStyle() }),
   };
 }
 
