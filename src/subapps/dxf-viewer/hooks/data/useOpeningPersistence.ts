@@ -244,6 +244,15 @@ export function useOpeningPersistence(
           }
         }
 
+        // Mark all Firestore docs as "exists in DB" so the retry-save path
+        // never calls saveOpening() (setDoc) on already-persisted openings,
+        // which would violate the UPDATE rule (createdAt immutability check).
+        for (const doc of docs) {
+          if (!lastSavedParamsRef.current.has(doc.id)) {
+            lastSavedParamsRef.current.set(doc.id, doc.params);
+          }
+        }
+
         for (const [id, entity] of sceneOpenings) {
           if (docsById.has(id)) continue;
           // Explicitly deleted — never re-add regardless of save state.

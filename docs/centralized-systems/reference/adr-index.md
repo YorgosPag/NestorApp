@@ -366,7 +366,7 @@
 | **ADR-372** | Contact Relationship Bidirectional Crossing Matrix | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-372-relationship-crossings-matrix.md) |
 | **ADR-373** | FileRecord ISO 19650 Metadata Enrichment (Phase 1 — Schema + AI Auto-Fill) | ✅ ✅ Phase 1 + P2.1/P2.2/P2.3/P2.4/P2.5/P2.6/P2.7/P2.8 IMPLEMENTED 2026-05-24. Phase 2 COMPLETE. | 2026-05-24 (clarifications session 2026-05-24) | File Management / Document Governance / AI Pipeline | [📄](./adrs/ADR-373-iso19650-metadata-enrichment.md) |
 | **ADR-374** | ZOOM Window Tool (AutoCAD ZOOM W) | ✅ ✅ APPROVED | 2026-05-24 | Canvas & Rendering | [📄](./adrs/ADR-374-zoom-window-tool.md) |
-| **ADR-375** | BIM Entity Line Weight Semantic System (Revit-Equivalent) | 🟡 ACTIVE v2.1 — Phase A+B.1+B.2+B.3+C.1+C.2 DONE. C.2: pen set presets Design/Construction/Presentation, applyPreset(), activePresetName. C.3-C.7 pending. | 2026-05-25 | DXF Viewer — BIM / Rendering | [📄](./adrs/ADR-375-bim-entity-line-weight-semantic-system.md) |
+| **ADR-375** | BIM Entity Line Weight Semantic System (Revit-Equivalent) | 🟡 ACTIVE v2.2 — Phase A+B.1+B.2+B.3+C.1+C.2+C.3+C.4 DONE. C.4: V/G per-view overrides (visibility/color/pattern per category), resolveIsCategoryVisible(), 3 store setters, VisibilityGraphicsPanel, 24 tests. C.5-C.7 pending. | 2026-05-26 | DXF Viewer — BIM / Rendering | [📄](./adrs/ADR-375-bim-entity-line-weight-semantic-system.md) |
 | **ADR-376** | Opening Tags (Ταμπελάκια Ανοιγμάτων) — Revit-Faithful Pattern | ✅ **COMPLETE v12.1** 2026-05-26 — All phases SHIPPED. v12: inline ribbon panel + i18n fix + screen-space offset + WCAG contrast + tag clickability. v12.1: canvas dirty-flag fix (markAllCanvasDirty after mutateStyle) + leaderVisible onAction handler. | 2026-05-25 | DXF Viewer — BIM / Annotation | [📄](./adrs/ADR-376-opening-tags.md) |
 | **ADR-377** | BIM Subcategories System | 🟡 ACTIVE v0.6 — Phase A+B+C.1+C.2+C.3 DONE (Wall/Slab/SlabOpening+Beam/Column+Opening/Stair wired, 45 tests). D+E+F pending. | 2026-05-26 | DXF Viewer — BIM / Rendering | [📄](./adrs/ADR-377-bim-subcategories-system.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
@@ -727,7 +727,7 @@
 | **ADR-371** | BIM 3D Read-Only Viewer in Properties Floorplan Tab | ✅ APPROVED | [View](./adrs/ADR-371-bim-3d-readonly-viewer.md) |
 | **ADR-371** | BIM Corner Snap System (Redirect) | ✅ APPROVED | [View](./adrs/ADR-371-bim-corner-snap-system.md) |
 | **ADR-372** | Contact Relationship Bidirectional Crossing Matrix | ✅ APPROVED | [View](./adrs/ADR-372-relationship-crossings-matrix.md) |
-| **ADR-375** | BIM Entity Line Weight Semantic System (Revit-Equivalent) | 🟡 ACTIVE v2.1 — C.1+C.2 DONE (pen table editor + pen set presets) | [View](./adrs/ADR-375-bim-entity-line-weight-semantic-system.md) |
+| **ADR-375** | BIM Entity Line Weight Semantic System (Revit-Equivalent) | 🟡 ACTIVE v2.2 — C.1+C.2+C.3+C.4 DONE (V/G per-view overrides, 24 tests). C.5-C.7 pending. | [View](./adrs/ADR-375-bim-entity-line-weight-semantic-system.md) |
 | **ADR-377** | BIM Subcategories System | 🟡 ACTIVE v0.6 — C.1+C.2+C.3 DONE (45 tests). D+E+F pending | [View](./adrs/ADR-377-bim-subcategories-system.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
