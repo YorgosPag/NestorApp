@@ -134,6 +134,7 @@ export class BeamRenderer extends BaseEntityRenderer {
       category: 'beam', subcategoryKey: 'hidden-lines',
       cutState: _beamCutState, scaleDenominator: _beamDs.drawingScale,
       dpi: 96, objectStyles: _beamDs.objectStyles,
+      elementOverride: beam.styleOverride,
     });
     this.ctx.strokeStyle = KIND_STROKE[beam.kind];
     this.ctx.lineWidth = _beamPx;
@@ -308,6 +309,7 @@ export class BeamRenderer extends BaseEntityRenderer {
       category: 'beam', subcategoryKey: 'section-profile',
       cutState: _spCutState, scaleDenominator: _spDs.drawingScale,
       dpi: 96, objectStyles: _spDs.objectStyles,
+      elementOverride: beam.styleOverride,
     });
 
     const [sp, ep] = getBimEntityKeyPoints2D(beam);

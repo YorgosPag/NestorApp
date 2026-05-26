@@ -82,6 +82,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
       category: 'opening', subcategoryKey: subcat,
       cutState: _opCutState, scaleDenominator: _opDs.drawingScale,
       dpi: 96, objectStyles: _opDs.objectStyles,
+      elementOverride: opening.styleOverride,
     });
     const _outlineS = _rso(openingOutlineSubcat(opening.kind));
     const _overlayS = _rso(openingOverlaySubcat(opening.kind));

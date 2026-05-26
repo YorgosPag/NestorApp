@@ -121,6 +121,7 @@ export class StairRenderer extends BaseEntityRenderer {
     const _rss = (subcat: string) => resolveSubcategoryStyle({
       category: 'stair', subcategoryKey: subcat,
       cutState, scaleDenominator: ds.drawingScale, dpi: 96, objectStyles: ds.objectStyles,
+      elementOverride: stair.styleOverride,
     });
     const _treadsS    = _rss('treads');
     const _stringersS = _rss('outlines');

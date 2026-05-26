@@ -144,6 +144,7 @@ export class SlabRenderer extends BaseEntityRenderer {
       category: 'slab', subcategoryKey: 'common-edges',
       cutState: _slabCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
       dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
+      elementOverride: slab.styleOverride,
     });
     this.ctx.lineWidth = _slabLwPx;
     this.ctx.setLineDash(linePatternToDashArray(_slabPattern) as number[]);

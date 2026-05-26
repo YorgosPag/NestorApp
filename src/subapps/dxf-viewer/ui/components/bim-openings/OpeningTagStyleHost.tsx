@@ -24,6 +24,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
+import { markAllCanvasDirty } from '../../../rendering/core/frame-scheduler-api';
 import { EventBus } from '../../../systems/events/EventBus';
 import {
   getOpeningTagStyleService,
@@ -73,6 +74,9 @@ export function OpeningTagStyleHost(
       service.setPersister(null);
     };
   }, [projectId]);
+
+  // Ensure any style mutation (ribbon or dialog) immediately repaints the canvas.
+  React.useEffect(() => getOpeningTagStyleService().subscribe(markAllCanvasDirty), []);
 
   // EventBus listener — ribbon button → open dialog.
   React.useEffect(() => {

@@ -8,7 +8,7 @@
  */
 import { PEN_TABLE_MM, SCALE_COLUMNS, type PenIndex } from './bim-pen-table';
 import type { EffectivePenTable } from './bim-pen-table-types';
-import { DEFAULT_OBJECT_STYLES, type BimCategory, type ObjectStyle } from './bim-object-styles';
+import { DEFAULT_OBJECT_STYLES, type BimCategory, type ObjectStyle, type BimElementStyleOverride } from './bim-object-styles';
 import { type CutState } from './bim-view-range';
 import { lineweightToPx } from './lineweight-iso-catalog';
 import { type LinePatternKey } from './bim-line-patterns';
@@ -43,6 +43,8 @@ export interface LineWeightContext {
 export interface SubcategoryResolutionContext extends LineWeightContext {
   /** Subcategory key for this render pass (e.g., 'treads', 'common-edges'). */
   subcategoryKey?: string;
+  /** Per-element style override (ADR-375 C.5). Highest priority after hidden/category-visible. */
+  elementOverride?: BimElementStyleOverride;
 }
 
 export interface ResolvedSubcategoryStyle {
@@ -84,13 +86,19 @@ export function setPenTableSource(table: EffectivePenTable): void {
 const BEYOND_PEN: PenIndex = 3;
 
 /**
- * Resolve full subcategory style for a BIM render pass (ADR-377 Phase B, ADR-375 Phase C.4).
+ * Resolve full subcategory style for a BIM render pass (ADR-377 Phase B, ADR-375 Phase C.4+C.5).
  *
  * Resolution order (highest priority first):
- *   1. hidden cutState or visible=false → zero/solid/null
- *   2. subcategory override (per-subcategory key)
- *   3. per-view category V/G override (ADR-375 C.4: color + pattern)
- *   4. DEFAULT_OBJECT_STYLES global defaults
+ *   1. hidden cutState → zero/solid/null
+ *   2. category visible=false (C.4 per-view) → zero/solid/null
+ *   3. elementOverride.visible === false (C.5 per-element) → zero/solid/null
+ *   4. elementOverride.cutPen / projectionPen (C.5) → override pen + optional color/pattern
+ *   5. subcategory override (per-subcategory key)
+ *   6. per-view category V/G override (C.4: color + pattern)
+ *   7. DEFAULT_OBJECT_STYLES global defaults
+ *
+ * Partial elementOverride (color/pattern only, no pen) falls through to step 5-7 for pen,
+ * but the override color/pattern takes priority at final assembly.
  */
 export function resolveSubcategoryStyle(
   ctx: SubcategoryResolutionContext,
@@ -104,7 +112,7 @@ export function resolveSubcategoryStyle(
     : DEFAULT_OBJECT_STYLES;
   const parent = styles[ctx.category];
 
-  // ADR-375 C.4 — visibility toggle: hidden = zero width, no stroke
+  // ADR-375 C.4 — category visibility toggle
   if (parent.visible === false) {
     return { lineWidthPx: 0, linePattern: 'solid', color: null };
   }
@@ -112,6 +120,33 @@ export function resolveSubcategoryStyle(
   const sub = ctx.subcategoryKey
     ? parent.subcategories?.[ctx.subcategoryKey]
     : undefined;
+
+  // ADR-375 C.5 — per-element visibility (beats subcategory and V/G)
+  if (ctx.elementOverride?.visible === false) {
+    return { lineWidthPx: 0, linePattern: 'solid', color: null };
+  }
+
+  // ADR-375 C.5 — per-element pen override (wins over subcategory + objectStyles)
+  if (ctx.elementOverride) {
+    const overridePen = ctx.cutState === 'cut'
+      ? (ctx.elementOverride.cutPen ?? null)
+      : (ctx.elementOverride.projectionPen ?? null);
+    if (overridePen !== null) {
+      const scaleCol = closestScaleColumn(ctx.scaleDenominator);
+      const mm = _activePenTable[overridePen - 1][scaleCol];
+      const lineWidthPx = lineweightToPx(mm, ctx.dpi ?? 96);
+      const color = ctx.elementOverride.color !== undefined
+        ? ctx.elementOverride.color
+        : (ctx.cutState === 'cut'
+            ? (sub?.cutColor ?? parent.cutColor ?? null)
+            : (sub?.projectionColor ?? parent.projectionColor ?? null));
+      const linePattern = ctx.elementOverride.linePattern
+        ?? (sub?.linePattern ?? (ctx.cutState === 'cut'
+            ? (parent.cutPattern ?? 'solid')
+            : (parent.projectionPattern ?? 'solid')));
+      return { lineWidthPx, linePattern, color };
+    }
+  }
 
   let penIdx: PenIndex;
   if (ctx.cutState === 'cut') {
@@ -126,14 +161,18 @@ export function resolveSubcategoryStyle(
   const mm = _activePenTable[penIdx - 1][scaleCol];
   const lineWidthPx = lineweightToPx(mm, ctx.dpi ?? 96);
 
-  // ADR-375 C.4 — color: subcategory > parent V/G override > null (canvas token)
-  const color = ctx.cutState === 'cut'
-    ? (sub?.cutColor ?? parent.cutColor ?? null)
-    : (sub?.projectionColor ?? parent.projectionColor ?? null);
+  // ADR-375 C.4+C.5 — color: elementOverride > subcategory > parent V/G > null (canvas token)
+  const color = ctx.elementOverride?.color !== undefined
+    ? ctx.elementOverride.color
+    : (ctx.cutState === 'cut'
+        ? (sub?.cutColor ?? parent.cutColor ?? null)
+        : (sub?.projectionColor ?? parent.projectionColor ?? null));
 
-  // ADR-375 C.4 — pattern: subcategory > parent V/G override > 'solid'
-  const linePattern = sub?.linePattern
-    ?? (ctx.cutState === 'cut' ? (parent.cutPattern ?? 'solid') : (parent.projectionPattern ?? 'solid'));
+  // ADR-375 C.4+C.5 — pattern: elementOverride > subcategory > parent V/G > 'solid'
+  const linePattern = ctx.elementOverride?.linePattern
+    ?? (sub?.linePattern ?? (ctx.cutState === 'cut'
+        ? (parent.cutPattern ?? 'solid')
+        : (parent.projectionPattern ?? 'solid')));
 
   return { lineWidthPx, linePattern, color };
 }

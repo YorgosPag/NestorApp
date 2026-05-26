@@ -45,6 +45,20 @@ export interface SubcategoryStyle {
   projectionColor?: string | null;
 }
 
+/** ADR-375 Phase C.5 — Per-element style override (Revit "Override Graphics in View by Element"). */
+export interface BimElementStyleOverride {
+  /** false = hide this element entirely, regardless of category/subcategory visibility. */
+  visible?: boolean;
+  /** Pen for projection pass. Wins over subcategory + objectStyles. */
+  projectionPen?: PenIndex;
+  /** Pen for cut pass. Wins over subcategory + objectStyles. */
+  cutPen?: PenIndex;
+  /** Color hex or null (null = canvas token). undefined = no override. */
+  color?: string | null;
+  /** Line pattern override. */
+  linePattern?: LinePatternKey;
+}
+
 export interface ObjectStyle {
   /** Pen used when element is in projection (not cut by plane). */
   projectionPen: PenIndex;

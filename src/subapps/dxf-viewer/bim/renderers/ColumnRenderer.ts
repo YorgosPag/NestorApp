@@ -326,6 +326,7 @@ export class ColumnRenderer extends BaseEntityRenderer {
       category: 'column', subcategoryKey: 'section-profile',
       cutState: _spCutState, scaleDenominator: _spDs.drawingScale,
       dpi: 96, objectStyles: _spDs.objectStyles,
+      elementOverride: column.styleOverride,
     });
 
     const bb = column.geometry.bbox;

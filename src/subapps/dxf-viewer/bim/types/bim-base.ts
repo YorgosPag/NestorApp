@@ -9,6 +9,7 @@
 
 import type { Timestamp } from 'firebase/firestore';
 import type { BaseEntity } from '../../types/base-entity';
+import type { BimElementStyleOverride } from '../../config/bim-object-styles';
 
 // ─── 3D Geometry primitives ───────────────────────────────────────────────────
 
@@ -114,6 +115,8 @@ export interface BimEntity<TKind extends string, TParams, TGeometry, TQto = BimQ
   readonly qto?: TQto;
   /** Display-only multi-user lock (never blocks writes) */
   readonly editingBy?: BimLock;
+  /** Per-element style override (ADR-375 Phase C.5). Persisted in Firestore entity doc. */
+  readonly styleOverride?: BimElementStyleOverride;
   // Firestore tenant fields (present on persisted entities)
   readonly companyId?: string;
   readonly projectId?: string;

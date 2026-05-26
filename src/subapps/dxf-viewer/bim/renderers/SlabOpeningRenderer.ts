@@ -112,6 +112,7 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
       category: 'slab-opening', subcategoryKey: 'edges',
       cutState: _soCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
       dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
+      elementOverride: opening.styleOverride,
     });
     this.ctx.lineWidth = _soLwPx;
     const _soDash = _soPattern !== 'solid'

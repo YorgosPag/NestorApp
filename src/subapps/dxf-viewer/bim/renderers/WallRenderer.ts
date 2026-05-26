@@ -172,6 +172,7 @@ export class WallRenderer extends BaseEntityRenderer {
       category: 'wall', subcategoryKey: 'common-edges',
       cutState: _cutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
       dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
+      elementOverride: wall.styleOverride,
     });
     this.ctx.lineWidth = _edgePx;
     this.ctx.setLineDash(linePatternToDashArray(_edgePattern) as number[]);
@@ -287,6 +288,7 @@ export class WallRenderer extends BaseEntityRenderer {
       category: 'wall', subcategoryKey: 'cut-pattern',
       cutState: _hatchCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
       objectStyles: useDrawingScaleStore.getState().objectStyles,
+      elementOverride: wall.styleOverride,
     });
     const _hatchStroke = _hatchColor ?? HATCH_STROKE_RGBA;
 
