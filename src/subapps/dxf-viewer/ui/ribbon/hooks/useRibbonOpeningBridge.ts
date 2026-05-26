@@ -24,6 +24,7 @@ import type { OpeningEntity, OpeningKind, OpeningParams } from '../../../bim/typ
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateOpeningParamsCommand } from '../../../core/commands/entity-commands/UpdateOpeningParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { markAllCanvasDirty } from '../../../rendering/core/UnifiedFrameScheduler';
 import {
   OPENING_RIBBON_KEYS,
   OPENING_RIBBON_KEYS_ACTIONS,
@@ -174,6 +175,7 @@ export function useRibbonOpeningBridge(
           case OPENING_TAG_STYLE_KEYS.leaderColor:   patch.leaderColor   = value; break;
         }
         getOpeningTagStyleService().mutateStyle(patch);
+        markAllCanvasDirty();
         return;
       }
 
@@ -208,6 +210,7 @@ export function useRibbonOpeningBridge(
   const onToggle = useCallback((key: string, next: boolean): void => {
     if (key === OPENING_TAG_STYLE_KEYS.leaderVisible) {
       getOpeningTagStyleService().mutateStyle({ leaderVisible: next });
+      markAllCanvasDirty();
     }
   }, []);
 
@@ -254,6 +257,12 @@ export function useRibbonOpeningBridge(
       if (action === OPENING_RIBBON_KEYS_ACTIONS.exportSchedulePdf) {
         // ADR-376 Phase C.3 — Export opening schedule PDF (doors + windows).
         EventBus.emit('bim:opening-schedule-pdf-requested', {});
+        return;
+      }
+      if (action === OPENING_TAG_STYLE_KEYS.leaderVisible) {
+        const svc = getOpeningTagStyleService();
+        svc.mutateStyle({ leaderVisible: !svc.getCurrentStyle().leaderVisible });
+        markAllCanvasDirty();
         return;
       }
       if (action === OPENING_RIBBON_KEYS_ACTIONS.resetTagPosition) {
