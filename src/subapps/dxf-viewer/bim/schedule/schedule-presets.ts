@@ -111,6 +111,7 @@ function safeText(value: unknown): ScheduleCellValue {
 // ─── Door preset (ADR-363 §6 Phase 8 Q3 + Q4) ────────────────────────────────
 
 const DOOR_COLUMNS: readonly ScheduleColumnDef[] = [
+  { key: 'mark',         i18nKey: 'col.mark',         valueType: 'text',              align: 'left'   },
   { key: 'id',           i18nKey: 'col.id',           valueType: 'text',              align: 'left'   },
   { key: 'floor',        i18nKey: 'col.floor',        valueType: 'text',              align: 'left'   },
   { key: 'kind',         i18nKey: 'col.kind',         valueType: 'text',              align: 'left'   },
@@ -127,6 +128,7 @@ function mapDoor(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['c
   if (entity.type !== 'opening') return {};
   const p = entity.params;
   return {
+    mark: safeText(p.mark),
     id: entity.id,
     floor: lookups.floor(entity.floorId),
     kind: p.kind,
@@ -143,6 +145,7 @@ function mapDoor(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['c
 // ─── Window preset ───────────────────────────────────────────────────────────
 
 const WINDOW_COLUMNS: readonly ScheduleColumnDef[] = [
+  { key: 'mark',      i18nKey: 'col.mark',      valueType: 'text',              align: 'left'  },
   { key: 'id',        i18nKey: 'col.id',        valueType: 'text',              align: 'left'  },
   { key: 'floor',     i18nKey: 'col.floor',     valueType: 'text',              align: 'left'  },
   { key: 'kind',      i18nKey: 'col.kind',      valueType: 'text',              align: 'left'  },
@@ -158,6 +161,7 @@ function mapWindow(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow[
   if (entity.type !== 'opening') return {};
   const p = entity.params;
   return {
+    mark: safeText(p.mark),
     id: entity.id,
     floor: lookups.floor(entity.floorId),
     kind: p.kind,

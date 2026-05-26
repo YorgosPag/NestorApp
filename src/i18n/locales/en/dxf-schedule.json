@@ -60,6 +60,7 @@
     "awaitingSecond": "Click opposite corner"
   },
   "col": {
+    "mark": "Mark",
     "id": "ID",
     "floor": "Floor",
     "kind": "Type",

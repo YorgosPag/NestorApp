@@ -1189,6 +1189,10 @@
             "reset": "Reset Defaults",
             "close": "Close"
           }
+        },
+        "scheduleExport": {
+          "label": "Schedule PDF",
+          "tooltip": "Export opening schedule (doors + windows) as PDF"
         }
       },
       "slabEditor": {

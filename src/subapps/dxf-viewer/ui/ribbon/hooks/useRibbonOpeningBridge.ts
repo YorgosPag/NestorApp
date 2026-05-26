@@ -214,6 +214,11 @@ export function useRibbonOpeningBridge(
         EventBus.emit('bim:opening-tag-style-requested', {});
         return;
       }
+      if (action === OPENING_RIBBON_KEYS_ACTIONS.exportSchedulePdf) {
+        // ADR-376 Phase C.3 — Export opening schedule PDF (doors + windows).
+        EventBus.emit('bim:opening-schedule-pdf-requested', {});
+        return;
+      }
       if (action === OPENING_RIBBON_KEYS_ACTIONS.resetTagPosition) {
         // ADR-376 Phase C.1 — clear tagOffset so the pill snaps back to the
         // auto-centroid + offset normal-to-wall outward. Field removed so the

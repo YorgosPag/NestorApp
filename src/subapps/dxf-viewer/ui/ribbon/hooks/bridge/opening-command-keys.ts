@@ -60,6 +60,8 @@ export const OPENING_RIBBON_KEYS_ACTIONS = {
   resetTagPosition: 'opening.actions.resetTagPosition',
   /** ADR-376 Phase C.2 — Open the per-project Tag Style dialog. */
   openTagStyle: 'opening.actions.openTagStyle',
+  /** ADR-376 Phase C.3 — Export opening schedule as PDF (doors + windows). */
+  exportSchedulePdf: 'opening.actions.exportSchedulePdf',
 } as const;
 
 const OPENING_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

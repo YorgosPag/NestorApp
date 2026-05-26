@@ -42,6 +42,18 @@ export const ANNOTATE_OPENINGS_PANEL: RibbonPanelDef = {
             action: OPENING_RIBBON_KEYS_ACTIONS.openTagStyle,
           },
         },
+        {
+          // ADR-376 Phase C.3 — Export opening schedule (doors + windows) as PDF.
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'annotate.openings.scheduleExport',
+            labelKey: 'ribbon.commands.openingEditor.scheduleExport.label',
+            icon: 'bim-opening-schedule-pdf',
+            commandKey: OPENING_RIBBON_KEYS_ACTIONS.exportSchedulePdf,
+            action: OPENING_RIBBON_KEYS_ACTIONS.exportSchedulePdf,
+          },
+        },
       ],
     },
   ],
