@@ -287,7 +287,7 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
 - [x] **C.2** Pen Sets presets (Design / Construction / Presentation) ✅ 2026-05-26
 - [x] **C.3** Subcategories (Door panel/swing, Wall layers) ✅ 2026-05-26 (via ADR-377)
 - [x] **C.4** Per-view overrides (Visibility/Graphics) ✅ 2026-05-26 — ObjectStyle +5 V/G fields, resolveIsCategoryVisible helper, full priority stack, 3 store setters, VisibilityGraphicsPanel.tsx, 24/24 tests
-- [ ] **C.5** Per-element overrides (`entity.params.lineWeightOverride?`)
+- [x] **C.5** Per-element overrides (`BimElementStyleOverride` + `BimEntity.styleOverride`) ✅ 2026-05-26 — resolver C.5 priority stack, 7 renderers wired, 17/17 tests
 - [ ] **C.6** Layer-driven overrides (ADR-358 integration)
 - [ ] **C.7** 3D parity (ADR-370 THREE.js line widths)
 
