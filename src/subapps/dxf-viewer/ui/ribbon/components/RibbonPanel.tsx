@@ -14,6 +14,7 @@ import { RibbonToggleButton } from './buttons/RibbonToggleButton';
 import { RibbonCombobox } from './buttons/RibbonCombobox';
 import { ZoomControlsWidget } from './ZoomControlsWidget';
 import { RibbonColorSwatchWidget } from './RibbonColorSwatchWidget';
+import { OpeningTagPillColorWidget, OpeningTagLeaderColorWidget } from './OpeningTagStyleColorWidget';
 import { RibbonJustificationGridWidget } from './RibbonJustificationGridWidget';
 import { RibbonFontFamilyWidget } from './RibbonFontFamilyWidget';
 import { RibbonLineSpacingWidget } from './RibbonLineSpacingWidget';
@@ -95,6 +96,12 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'multi-selection-filter') {
       return <MultiSelectionFilterPanel key="multi-selection-filter-widget" />;
+    }
+    if (button.widgetId === 'opening-tag-pill-color') {
+      return <OpeningTagPillColorWidget key="opening-tag-pill-color-widget" />;
+    }
+    if (button.widgetId === 'opening-tag-leader-color') {
+      return <OpeningTagLeaderColorWidget key="opening-tag-leader-color-widget" />;
     }
     return null;
   }

@@ -35,6 +35,8 @@ import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { getLayer } from '../../stores/LayerStore';
+import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getOpeningGrips } from '../walls/opening-grips';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HINGE_ARC_SUBDIVISIONS } from '../geometry/opening-geometry';
@@ -77,12 +79,17 @@ export class OpeningRenderer extends BaseEntityRenderer {
       { zBottomMm: opening.params.sillHeight, zTopMm: opening.params.sillHeight + opening.params.height, category: 'opening' },
       _opDs.viewRange,
     );
+    const _opLayer = opening.layerId ? getLayer(opening.layerId) : null;
+    const _opLayerOverride = _opLayer ? {
+      lineweightMm: isConcreteLineweight(_opLayer.lineweight) ? _opLayer.lineweight : undefined,
+      color: _opLayer.color ?? undefined,
+    } : undefined;
     // ADR-377 C.3 — per-kind subcategory style resolution.
     const _rso = (subcat: string) => resolveSubcategoryStyle({
       category: 'opening', subcategoryKey: subcat,
       cutState: _opCutState, scaleDenominator: _opDs.drawingScale,
       dpi: 96, objectStyles: _opDs.objectStyles,
-      elementOverride: opening.styleOverride,
+      elementOverride: opening.styleOverride, layerOverride: _opLayerOverride,
     });
     const _outlineS = _rso(openingOutlineSubcat(opening.kind));
     const _overlayS = _rso(openingOverlaySubcat(opening.kind));

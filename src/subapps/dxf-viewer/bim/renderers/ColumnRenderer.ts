@@ -38,10 +38,12 @@ import { isColumnEntity } from '../../types/entities';
 import type { ColumnEntity, ColumnKind } from '../types/column-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveLineWeightPx, resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { getLayer } from '../../stores/LayerStore';
+import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getColumnGrips } from '../columns/column-grips';
 import {
   computeHatchPlan,
@@ -124,11 +126,23 @@ export class ColumnRenderer extends BaseEntityRenderer {
     this.drawMaterialHatch(column);
 
     this.ctx.strokeStyle = KIND_STROKE[column.kind];
+    const _colLayer = column.layerId ? getLayer(column.layerId) : null;
+    const _colLayerOverride = _colLayer ? {
+      lineweightMm: isConcreteLineweight(_colLayer.lineweight) ? _colLayer.lineweight : undefined,
+      color: _colLayer.color ?? undefined,
+    } : undefined;
     const _colCutState = resolveCutState(
       { zBottomMm: column.params.baseOffset ?? 0, zTopMm: (column.params.baseOffset ?? 0) + column.params.height, category: 'column' },
       useDrawingScaleStore.getState().viewRange,
     );
-    this.ctx.lineWidth = resolveLineWeightPx({ category: 'column', cutState: _colCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale, dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles });
+    const { lineWidthPx: _colLwPx, color: _colColor } = resolveSubcategoryStyle({
+      category: 'column', subcategoryKey: 'common-edges',
+      cutState: _colCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
+      dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
+      elementOverride: column.styleOverride, layerOverride: _colLayerOverride,
+    });
+    this.ctx.lineWidth = _colLwPx;
+    if (_colColor !== null) this.ctx.strokeStyle = _colColor;
     this.drawPolygonPath(verts);
     this.ctx.stroke();
     this.ctx.restore();
@@ -318,6 +332,11 @@ export class ColumnRenderer extends BaseEntityRenderer {
     if (this.transform.scale < COL_SECTION_MIN_SCALE) return;
 
     const _spDs = useDrawingScaleStore.getState();
+    const _spLayer = column.layerId ? getLayer(column.layerId) : null;
+    const _spLayerOverride = _spLayer ? {
+      lineweightMm: isConcreteLineweight(_spLayer.lineweight) ? _spLayer.lineweight : undefined,
+      color: _spLayer.color ?? undefined,
+    } : undefined;
     const _spCutState = resolveCutState(
       { zBottomMm: column.params.baseOffset ?? 0, zTopMm: (column.params.baseOffset ?? 0) + column.params.height, category: 'column' },
       _spDs.viewRange,
@@ -326,7 +345,7 @@ export class ColumnRenderer extends BaseEntityRenderer {
       category: 'column', subcategoryKey: 'section-profile',
       cutState: _spCutState, scaleDenominator: _spDs.drawingScale,
       dpi: 96, objectStyles: _spDs.objectStyles,
-      elementOverride: column.styleOverride,
+      elementOverride: column.styleOverride, layerOverride: _spLayerOverride,
     });
 
     const bb = column.geometry.bbox;

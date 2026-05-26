@@ -93,9 +93,10 @@ export const OPENING_RIBBON_KEYS_ACTIONS = {
   exportSchedulePdf: 'opening.actions.exportSchedulePdf',
 } as const;
 
-const OPENING_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(OPENING_RIBBON_KEYS_ACTIONS),
-);
+const OPENING_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>([
+  ...Object.values(OPENING_RIBBON_KEYS_ACTIONS),
+  OPENING_TAG_STYLE_KEYS.leaderVisible,
+]);
 
 export function isOpeningActionKey(action: string): boolean {
   return OPENING_ACTION_KEY_SET.has(action);

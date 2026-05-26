@@ -93,20 +93,6 @@ const LEADER_STYLE_OPTIONS = [
   { value: 'dotted', labelKey: 'ribbon.commands.openingEditor.tagStyle.leaderStyleOptions.dotted', isLiteralLabel: false },
 ] as const;
 
-const PILL_BG_COLOR_OPTIONS = [
-  { value: 'rgba(255,255,255,0.88)', labelKey: 'ribbon.commands.openingEditor.tagStyle.bgColorOptions.white',  isLiteralLabel: false },
-  { value: 'rgba(255,253,200,0.88)', labelKey: 'ribbon.commands.openingEditor.tagStyle.bgColorOptions.yellow', isLiteralLabel: false },
-  { value: 'rgba(200,220,255,0.88)', labelKey: 'ribbon.commands.openingEditor.tagStyle.bgColorOptions.blue',   isLiteralLabel: false },
-  { value: 'rgba(200,240,210,0.88)', labelKey: 'ribbon.commands.openingEditor.tagStyle.bgColorOptions.green',  isLiteralLabel: false },
-  { value: 'rgba(40,40,40,0.90)',    labelKey: 'ribbon.commands.openingEditor.tagStyle.bgColorOptions.dark',   isLiteralLabel: false },
-] as const;
-
-const LEADER_COLOR_OPTIONS = [
-  { value: '#7a8696', labelKey: 'ribbon.commands.openingEditor.tagStyle.leaderColorOptions.gray',  isLiteralLabel: false },
-  { value: '#000000', labelKey: 'ribbon.commands.openingEditor.tagStyle.leaderColorOptions.black', isLiteralLabel: false },
-  { value: '#2266cc', labelKey: 'ribbon.commands.openingEditor.tagStyle.leaderColorOptions.blue',  isLiteralLabel: false },
-  { value: '#cc3333', labelKey: 'ribbon.commands.openingEditor.tagStyle.leaderColorOptions.red',   isLiteralLabel: false },
-] as const;
 
 const SILL_MM_OPTIONS = [
   { value: '0',    labelKey: '0',    isLiteralLabel: true },
@@ -336,26 +322,24 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
           isInFlyout: false,
           buttons: [
             {
-              type: 'combobox',
+              type: 'widget',
               size: 'small',
               command: {
                 id: 'opening.tagStyle.pillBgColor',
                 labelKey: 'ribbon.commands.openingEditor.tagStyle.ribbon.bgColorLabel',
                 commandKey: OPENING_TAG_STYLE_KEYS.pillBgColor,
-                comboboxWidthPx: 130,
-                options: PILL_BG_COLOR_OPTIONS,
               },
+              widgetId: 'opening-tag-pill-color',
             },
             {
-              type: 'combobox',
+              type: 'widget',
               size: 'small',
               command: {
                 id: 'opening.tagStyle.leaderColor',
                 labelKey: 'ribbon.commands.openingEditor.tagStyle.ribbon.leaderColorLabel',
                 commandKey: OPENING_TAG_STYLE_KEYS.leaderColor,
-                comboboxWidthPx: 110,
-                options: LEADER_COLOR_OPTIONS,
               },
+              widgetId: 'opening-tag-leader-color',
             },
             {
               type: 'simple',

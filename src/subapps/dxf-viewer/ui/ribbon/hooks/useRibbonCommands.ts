@@ -28,7 +28,7 @@ import type { RibbonLineToolBridge } from './useRibbonLineToolBridge';
 import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
 import { isStairRibbonKey, isStairRibbonStringKey } from './bridge/stair-command-keys';
 import { isWallRibbonKey, isWallRibbonStringKey, isWallRibbonToggleKey, isWallActionKey } from './bridge/wall-command-keys';
-import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningActionKey } from './bridge/opening-command-keys';
+import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningActionKey, isOpeningTagStyleComboboxKey } from './bridge/opening-command-keys';
 import { isSlabRibbonKey, isSlabRibbonStringKey, isSlabActionKey } from './bridge/slab-command-keys';
 import { isColumnRibbonKey, isColumnRibbonStringKey, isColumnActionKey } from './bridge/column-command-keys';
 import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamActionKey } from './bridge/beam-command-keys';
@@ -114,7 +114,7 @@ export function useRibbonCommands({
         wallBridge.onComboboxChange(key, value);
         return;
       }
-      if (isOpeningRibbonKey(key) || isOpeningRibbonStringKey(key)) {
+      if (isOpeningRibbonKey(key) || isOpeningRibbonStringKey(key) || isOpeningTagStyleComboboxKey(key)) {
         openingBridge.onComboboxChange(key, value);
         return;
       }
@@ -158,7 +158,7 @@ export function useRibbonCommands({
       }
       if (isStairRibbonKey(key) || isStairRibbonStringKey(key)) return stairBridge.getComboboxState(key);
       if (isWallRibbonKey(key) || isWallRibbonStringKey(key) || isWallRibbonToggleKey(key)) return wallBridge.getComboboxState(key);
-      if (isOpeningRibbonKey(key) || isOpeningRibbonStringKey(key)) return openingBridge.getComboboxState(key);
+      if (isOpeningRibbonKey(key) || isOpeningRibbonStringKey(key) || isOpeningTagStyleComboboxKey(key)) return openingBridge.getComboboxState(key);
       if (isSlabRibbonKey(key) || isSlabRibbonStringKey(key)) return slabBridge.getComboboxState(key);
       if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key)) return columnBridge.getComboboxState(key);
       if (isBeamRibbonKey(key) || isBeamRibbonStringKey(key)) return beamBridge.getComboboxState(key);

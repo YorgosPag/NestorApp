@@ -44,6 +44,8 @@ import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getSlabGrips } from '../slabs/slab-grips';
+import { getLayer } from '../../stores/LayerStore';
+import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 
 /** Stroke colour per kind. */
 const KIND_STROKE: Readonly<Record<SlabKind, string>> = {
@@ -135,6 +137,11 @@ export class SlabRenderer extends BaseEntityRenderer {
     // ADR-363 Phase 3.7 — subtract hosted slab-opening outlines από το fill.
     this.punchHostedSlabOpenings(slab);
 
+    const _slabLayer = slab.layerId ? getLayer(slab.layerId) : null;
+    const _slabLayerOverride = _slabLayer ? {
+      lineweightMm: isConcreteLineweight(_slabLayer.lineweight) ? _slabLayer.lineweight : undefined,
+      color: _slabLayer.color ?? undefined,
+    } : undefined;
     const _slabZTop = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
     const _slabCutState = resolveCutState(
       { zBottomMm: _slabZTop - slab.params.thickness, zTopMm: _slabZTop, category: 'slab' },
@@ -144,7 +151,7 @@ export class SlabRenderer extends BaseEntityRenderer {
       category: 'slab', subcategoryKey: 'common-edges',
       cutState: _slabCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
       dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
-      elementOverride: slab.styleOverride,
+      elementOverride: slab.styleOverride, layerOverride: _slabLayerOverride,
     });
     this.ctx.lineWidth = _slabLwPx;
     this.ctx.setLineDash(linePatternToDashArray(_slabPattern) as number[]);

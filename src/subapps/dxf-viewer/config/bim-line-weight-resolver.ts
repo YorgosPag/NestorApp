@@ -10,7 +10,7 @@ import { PEN_TABLE_MM, SCALE_COLUMNS, type PenIndex } from './bim-pen-table';
 import type { EffectivePenTable } from './bim-pen-table-types';
 import { DEFAULT_OBJECT_STYLES, type BimCategory, type ObjectStyle, type BimElementStyleOverride } from './bim-object-styles';
 import { type CutState } from './bim-view-range';
-import { lineweightToPx } from './lineweight-iso-catalog';
+import { lineweightToPx, isConcreteLineweight, type ConcreteLineweightMm } from './lineweight-iso-catalog';
 import { type LinePatternKey } from './bim-line-patterns';
 
 /** Map a numeric view scale denominator (e.g., 100 for 1:100) to nearest SCALE_COLUMN index. */
@@ -40,11 +40,21 @@ export interface LineWeightContext {
   objectStyles?: Partial<Record<BimCategory, ObjectStyle>>;
 }
 
+/** ADR-375 Phase C.6 — Layer-driven lineweight/color override. */
+export interface BimLayerOverride {
+  /** Concrete ISO mm value from SceneLayer.lineweight. undefined = no override. */
+  lineweightMm?: ConcreteLineweightMm;
+  /** Layer color hex or null. undefined = no override. */
+  color?: string | null;
+}
+
 export interface SubcategoryResolutionContext extends LineWeightContext {
   /** Subcategory key for this render pass (e.g., 'treads', 'common-edges'). */
   subcategoryKey?: string;
   /** Per-element style override (ADR-375 C.5). Highest priority after hidden/category-visible. */
   elementOverride?: BimElementStyleOverride;
+  /** Per-layer lineweight/color override (ADR-375 C.6). */
+  layerOverride?: BimLayerOverride;
 }
 
 export interface ResolvedSubcategoryStyle {
@@ -86,18 +96,19 @@ export function setPenTableSource(table: EffectivePenTable): void {
 const BEYOND_PEN: PenIndex = 3;
 
 /**
- * Resolve full subcategory style for a BIM render pass (ADR-377 Phase B, ADR-375 Phase C.4+C.5).
+ * Resolve full subcategory style for a BIM render pass (ADR-377 Phase B, ADR-375 Phase C.4+C.5+C.6).
  *
  * Resolution order (highest priority first):
  *   1. hidden cutState → zero/solid/null
  *   2. category visible=false (C.4 per-view) → zero/solid/null
  *   3. elementOverride.visible === false (C.5 per-element) → zero/solid/null
  *   4. elementOverride.cutPen / projectionPen (C.5) → override pen + optional color/pattern
- *   5. subcategory override (per-subcategory key)
- *   6. per-view category V/G override (C.4: color + pattern)
- *   7. DEFAULT_OBJECT_STYLES global defaults
+ *   5. layerOverride.lineweightMm (C.6) → concrete mm → px (bypass pen table)
+ *   6. subcategory override (per-subcategory key)
+ *   7. per-view category V/G override (C.4: color + pattern)
+ *   8. DEFAULT_OBJECT_STYLES global defaults
  *
- * Partial elementOverride (color/pattern only, no pen) falls through to step 5-7 for pen,
+ * Partial elementOverride (color/pattern only, no pen) falls through to step 5-8 for pen,
  * but the override color/pattern takes priority at final assembly.
  */
 export function resolveSubcategoryStyle(
@@ -148,6 +159,23 @@ export function resolveSubcategoryStyle(
     }
   }
 
+  // ADR-375 C.6 — layer lineweight override (concrete mm → px, bypasses pen table)
+  if (ctx.layerOverride?.lineweightMm !== undefined) {
+    const lineWidthPx = lineweightToPx(ctx.layerOverride.lineweightMm, ctx.dpi ?? 96);
+    const color = ctx.elementOverride?.color !== undefined
+      ? ctx.elementOverride.color
+      : (ctx.layerOverride.color !== undefined
+          ? ctx.layerOverride.color
+          : (ctx.cutState === 'cut'
+              ? (sub?.cutColor ?? parent.cutColor ?? null)
+              : (sub?.projectionColor ?? parent.projectionColor ?? null)));
+    const linePattern = ctx.elementOverride?.linePattern
+      ?? (sub?.linePattern ?? (ctx.cutState === 'cut'
+          ? (parent.cutPattern ?? 'solid')
+          : (parent.projectionPattern ?? 'solid')));
+    return { lineWidthPx, linePattern, color };
+  }
+
   let penIdx: PenIndex;
   if (ctx.cutState === 'cut') {
     penIdx = sub?.cutPen ?? parent.cutPen;
@@ -161,12 +189,14 @@ export function resolveSubcategoryStyle(
   const mm = _activePenTable[penIdx - 1][scaleCol];
   const lineWidthPx = lineweightToPx(mm, ctx.dpi ?? 96);
 
-  // ADR-375 C.4+C.5 — color: elementOverride > subcategory > parent V/G > null (canvas token)
+  // ADR-375 C.4+C.5+C.6 — color: elementOverride > layerOverride > subcategory > parent V/G > null
   const color = ctx.elementOverride?.color !== undefined
     ? ctx.elementOverride.color
-    : (ctx.cutState === 'cut'
-        ? (sub?.cutColor ?? parent.cutColor ?? null)
-        : (sub?.projectionColor ?? parent.projectionColor ?? null));
+    : (ctx.layerOverride?.color !== undefined
+        ? ctx.layerOverride.color
+        : (ctx.cutState === 'cut'
+            ? (sub?.cutColor ?? parent.cutColor ?? null)
+            : (sub?.projectionColor ?? parent.projectionColor ?? null)));
 
   // ADR-375 C.4+C.5 — pattern: elementOverride > subcategory > parent V/G > 'solid'
   const linePattern = ctx.elementOverride?.linePattern

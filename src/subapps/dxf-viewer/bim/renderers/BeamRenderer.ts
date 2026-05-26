@@ -37,6 +37,8 @@ import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { getLayer } from '../../stores/LayerStore';
+import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getBeamGrips, beamDepthHandlePosition } from '../beams/beam-grips';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
 import {
@@ -124,6 +126,11 @@ export class BeamRenderer extends BaseEntityRenderer {
     this.drawMaterialHatch(beam);
 
     // ADR-377 C.2 — hidden-lines subcategory (dashed outline convention).
+    const _beamLayer = beam.layerId ? getLayer(beam.layerId) : null;
+    const _beamLayerOverride = _beamLayer ? {
+      lineweightMm: isConcreteLineweight(_beamLayer.lineweight) ? _beamLayer.lineweight : undefined,
+      color: _beamLayer.color ?? undefined,
+    } : undefined;
     const _beamZTop = beam.params.topElevation + (beam.params.zOffset ?? 0);
     const _beamDs = useDrawingScaleStore.getState();
     const _beamCutState = resolveCutState(
@@ -134,7 +141,7 @@ export class BeamRenderer extends BaseEntityRenderer {
       category: 'beam', subcategoryKey: 'hidden-lines',
       cutState: _beamCutState, scaleDenominator: _beamDs.drawingScale,
       dpi: 96, objectStyles: _beamDs.objectStyles,
-      elementOverride: beam.styleOverride,
+      elementOverride: beam.styleOverride, layerOverride: _beamLayerOverride,
     });
     this.ctx.strokeStyle = KIND_STROKE[beam.kind];
     this.ctx.lineWidth = _beamPx;
@@ -300,6 +307,11 @@ export class BeamRenderer extends BaseEntityRenderer {
     if (this.transform.scale < SECTION_MIN_SCALE) return;
 
     const _spDs = useDrawingScaleStore.getState();
+    const _spLayer = beam.layerId ? getLayer(beam.layerId) : null;
+    const _spLayerOverride = _spLayer ? {
+      lineweightMm: isConcreteLineweight(_spLayer.lineweight) ? _spLayer.lineweight : undefined,
+      color: _spLayer.color ?? undefined,
+    } : undefined;
     const _spZTop = beam.params.topElevation + (beam.params.zOffset ?? 0);
     const _spCutState = resolveCutState(
       { zBottomMm: _spZTop - beam.params.depth, zTopMm: _spZTop, category: 'beam' },
@@ -309,7 +321,7 @@ export class BeamRenderer extends BaseEntityRenderer {
       category: 'beam', subcategoryKey: 'section-profile',
       cutState: _spCutState, scaleDenominator: _spDs.drawingScale,
       dpi: 96, objectStyles: _spDs.objectStyles,
-      elementOverride: beam.styleOverride,
+      elementOverride: beam.styleOverride, layerOverride: _spLayerOverride,
     });
 
     const [sp, ep] = getBimEntityKeyPoints2D(beam);

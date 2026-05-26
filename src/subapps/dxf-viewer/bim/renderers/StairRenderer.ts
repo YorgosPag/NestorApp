@@ -35,6 +35,8 @@ import { linePatternToDashArray, type LinePatternKey } from '../../config/bim-li
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { getLayer } from '../../stores/LayerStore';
+import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 // ADR-358 Phase 7c — per-structureType plan symbology lives in a dedicated
 // module so the per-style branches (monolithic / stringer-1side / central /
 // cantilever / suspended / glass / grating) stay testable in isolation and
@@ -117,11 +119,16 @@ export class StairRenderer extends BaseEntityRenderer {
       },
       ds.viewRange,
     );
+    const _stairLayer = stair.layerId ? getLayer(stair.layerId) : null;
+    const _stairLayerOverride = _stairLayer ? {
+      lineweightMm: isConcreteLineweight(_stairLayer.lineweight) ? _stairLayer.lineweight : undefined,
+      color: _stairLayer.color ?? undefined,
+    } : undefined;
     // ADR-377 C.3 — per-subcategory style resolution.
     const _rss = (subcat: string) => resolveSubcategoryStyle({
       category: 'stair', subcategoryKey: subcat,
       cutState, scaleDenominator: ds.drawingScale, dpi: 96, objectStyles: ds.objectStyles,
-      elementOverride: stair.styleOverride,
+      elementOverride: stair.styleOverride, layerOverride: _stairLayerOverride,
     });
     const _treadsS    = _rss('treads');
     const _stringersS = _rss('outlines');

@@ -28,13 +28,15 @@ import type { WallCategory, WallEntity } from '../types/wall-types';
 import type { OpeningEntity } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle, type BimLayerOverride } from '../../config/bim-line-weight-resolver';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getWallGrips } from '../walls/wall-grips';
+import { getLayer } from '../../stores/LayerStore';
+import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import {
   computeWallHatchPlan,
   resolveWallMaterialKey,
@@ -103,8 +105,13 @@ export class WallRenderer extends BaseEntityRenderer {
 
     // Main pass — phase style + fill + hatch + stroke.
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.drawFootprint(wall);
-    this.drawMaterialHatch(wall);
+    const _wLayer = wall.layerId ? getLayer(wall.layerId) : null;
+    const _wLayerOverride: BimLayerOverride | undefined = _wLayer ? {
+      lineweightMm: isConcreteLineweight(_wLayer.lineweight) ? _wLayer.lineweight : undefined,
+      color: _wLayer.color ?? undefined,
+    } : undefined;
+    this.drawFootprint(wall, _wLayerOverride);
+    this.drawMaterialHatch(wall, _wLayerOverride);
     this.drawAxis(wall);
 
     this.finalizeRender(entity, options);
@@ -157,7 +164,7 @@ export class WallRenderer extends BaseEntityRenderer {
    * neighbouring renderers see the temporary composite mode. Strokes follow
    * the cutout so the wall outline stays intact around the opening jambs.
    */
-  private drawFootprint(wall: WallEntity): void {
+  private drawFootprint(wall: WallEntity, layerOverride?: BimLayerOverride): void {
     const outer = wall.geometry.outerEdge.points;
     const inner = wall.geometry.innerEdge.points;
     if (outer.length < 2 || inner.length < 2) return;
@@ -172,7 +179,7 @@ export class WallRenderer extends BaseEntityRenderer {
       category: 'wall', subcategoryKey: 'common-edges',
       cutState: _cutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
       dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
-      elementOverride: wall.styleOverride,
+      elementOverride: wall.styleOverride, layerOverride,
     });
     this.ctx.lineWidth = _edgePx;
     this.ctx.setLineDash(linePatternToDashArray(_edgePattern) as number[]);
@@ -269,7 +276,7 @@ export class WallRenderer extends BaseEntityRenderer {
    * Skip for DNA-bearing walls (per-layer DNA rendering governs materials).
    * Skip at extreme zoom-out (scale < 0.001, perf saver).
    */
-  private drawMaterialHatch(wall: WallEntity): void {
+  private drawMaterialHatch(wall: WallEntity, layerOverride?: BimLayerOverride): void {
     if (wall.params.dna) return;
     if (this.transform.scale < 0.001) return;
     const key = resolveWallMaterialKey(wall.params.material);
@@ -288,7 +295,7 @@ export class WallRenderer extends BaseEntityRenderer {
       category: 'wall', subcategoryKey: 'cut-pattern',
       cutState: _hatchCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
       objectStyles: useDrawingScaleStore.getState().objectStyles,
-      elementOverride: wall.styleOverride,
+      elementOverride: wall.styleOverride, layerOverride,
     });
     const _hatchStroke = _hatchColor ?? HATCH_STROKE_RGBA;
 

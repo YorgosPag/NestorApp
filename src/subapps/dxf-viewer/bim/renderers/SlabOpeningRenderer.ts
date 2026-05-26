@@ -41,6 +41,8 @@ import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getSlabOpeningGrips } from '../slab-openings/slab-opening-grips';
+import { getLayer } from '../../stores/LayerStore';
+import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 
 /**
  * Stroke colour per kind — saturated, high-contrast over typical slab fills
@@ -103,6 +105,11 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
     this.drawPolygonPath(verts);
     this.ctx.fill();
 
+    const _soLayer = opening.layerId ? getLayer(opening.layerId) : null;
+    const _soLayerOverride = _soLayer ? {
+      lineweightMm: isConcreteLineweight(_soLayer.lineweight) ? _soLayer.lineweight : undefined,
+      color: _soLayer.color ?? undefined,
+    } : undefined;
     const _soZTop = opening.params.elevationOverride ?? 0;
     const _soCutState = resolveCutState(
       { zBottomMm: _soZTop - 200, zTopMm: _soZTop, category: 'slab-opening' },
@@ -112,7 +119,7 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
       category: 'slab-opening', subcategoryKey: 'edges',
       cutState: _soCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
       dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
-      elementOverride: opening.styleOverride,
+      elementOverride: opening.styleOverride, layerOverride: _soLayerOverride,
     });
     this.ctx.lineWidth = _soLwPx;
     const _soDash = _soPattern !== 'solid'
