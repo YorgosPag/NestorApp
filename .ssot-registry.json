@@ -3306,6 +3306,63 @@
       "addedByAdr": "ADR-376",
       "tier": 3
     },
+    "opening-boq-grouper": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/services/opening-boq-grouper.ts",
+      "description": "ADR-376 Phase B.2 §7: BOQ signature-group aggregation for openings. `computeOpeningSignature()` + `signatureKey()` + `signatureGroupBoqId()` + `groupBySignature()` + `buildOpeningGroupPayload()` + `compactMarkRange()` are the single source for how openings collapse into one BOQ row per (kind+width+height+sillHeight+openDirection) signature group per floorplan. Consumers (opening-boq-sync.ts, OpeningBOQHost) MUST route through this module; inline signature recomputation, ad-hoc grouping logic, or duplicate compactMarkRange implementations outside this file fragment the aggregation contract and produce split rows where the industry standard (Revit Schedule pattern 6/6 convergence) requires one.",
+      "forbiddenPatterns": [
+        "function\\s+computeOpeningSignature\\b",
+        "function\\s+groupBySignature\\b",
+        "function\\s+buildOpeningGroupPayload\\b",
+        "function\\s+compactMarkRange\\b",
+        "function\\s+signatureGroupBoqId\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/services/opening-boq-grouper.ts",
+        "src/subapps/dxf-viewer/bim/services/__tests__/opening-boq-grouper.test.ts",
+        "src/subapps/dxf-viewer/bim/services/opening-boq-sync.ts"
+      ],
+      "addedDate": "2026-05-26",
+      "addedByAdr": "ADR-376",
+      "tier": 3
+    },
+    "opening-tag-drag-controller": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/services/opening-tag-drag-controller.ts",
+      "description": "ADR-376 Phase C.1 §7: FSM controller for draggable opening tags + leader geometry. `OpeningTagDragController` is the single owner of the idle/dragging state machine, tag hit-testing (`hitTestTag()`), world-center computation (`tagWorldCenter()`), offset persistence (`getOffsetOrZero()`), and screen-to-world delta conversion (`screenDeltaToWorldDelta()`). Hit-box constants (`TAG_HIT_HALF_WIDTH_PX`, `TAG_HIT_HALF_HEIGHT_PX`, `LEADER_MIN_SCREEN_DISTANCE_PX`) MUST NOT be re-declared — consumers (canvas leaf, OpeningTagRenderer) import from this module. Inline FSM re-implementation or duplicate hit-box constants produce divergent drag behaviour and break the RAF-coalesced scene patch pipeline (ADR-040 §4 micro-leaf pattern).",
+      "forbiddenPatterns": [
+        "class\\s+OpeningTagDragController\\b",
+        "TAG_HIT_HALF_WIDTH_PX\\s*=",
+        "TAG_HIT_HALF_HEIGHT_PX\\s*=",
+        "LEADER_MIN_SCREEN_DISTANCE_PX\\s*="
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/services/opening-tag-drag-controller.ts",
+        "src/subapps/dxf-viewer/bim/services/__tests__/opening-tag-drag-controller.test.ts",
+        "src/subapps/dxf-viewer/components/dxf-layout/canvas-layer-stack-opening-tag-drag.tsx",
+        "src/subapps/dxf-viewer/bim/renderers/OpeningTagRenderer.ts"
+      ],
+      "addedDate": "2026-05-26",
+      "addedByAdr": "ADR-376",
+      "tier": 3
+    },
+    "opening-tag-style": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/services/opening-tag-style-service.ts",
+      "description": "ADR-376 Phase C.2 §7: per-project opening tag style singleton (fontSize, borderWidth, leaderStyle, pillBgColor, leaderColor, leaderVisible). `getOpeningTagStyleService()` is the single entry point for style mutations and subscriber registration; `getCurrentOpeningTagStyle()` is the single getter for render paths (OpeningTagRenderer, OpeningTagStyleDialog preview). `OPENING_TAG_STYLE_DEFAULTS` is the canonical baseline — no inline defaults elsewhere. `resolveOpeningTagStyle()` owns clamping + validation; consumers MUST NOT re-implement field validation. Direct construction of `OpeningTagStyleServiceImpl` outside the singleton factory is forbidden. Debounce (200ms) is owned by the service; callers MUST NOT add their own debounce on top.",
+      "forbiddenPatterns": [
+        "new\\s+OpeningTagStyleServiceImpl\\b",
+        "OPENING_TAG_STYLE_DEFAULTS\\s*=\\s*\\{",
+        "function\\s+resolveOpeningTagStyle\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/services/opening-tag-style-service.ts",
+        "src/subapps/dxf-viewer/bim/services/__tests__/opening-tag-style-service.test.ts",
+        "src/subapps/dxf-viewer/bim/renderers/OpeningTagRenderer.ts",
+        "src/subapps/dxf-viewer/ui/components/bim-openings/OpeningTagStyleDialog.tsx",
+        "src/subapps/dxf-viewer/ui/components/bim-openings/OpeningTagStyleHost.tsx"
+      ],
+      "addedDate": "2026-05-26",
+      "addedByAdr": "ADR-376",
+      "tier": 3
+    },
     "resolve-entity-style": {
       "ssotFile": "src/subapps/dxf-viewer/systems/properties/resolve-entity-style.ts",
       "description": "ADR-358 §G7 Phase 6: the ByLayer/ByBlock/Concrete cascade — entity → block → layer → system default for color + linetype + lineweight + transparency — is owned by `resolve-entity-style.ts`. Calls to `resolveEntityStyle()` must live in the centralised renderer path (`DxfRenderer.resolveStyleForRender`) so that `AdminLayerManager` edits propagate live to canvas and snapshot/print/export paths share the same resolution semantics. Bypass call sites flatten styles ad-hoc and break the §G7 LIVE pipeline. Property panels reading provenance for inspection are allowlisted.",
