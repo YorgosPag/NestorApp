@@ -1,6 +1,6 @@
 # ADR-377: BIM Subcategories System
 
-**Status**: 🟡 DRAFT v0.1
+**Status**: 🟡 ACTIVE v0.2 — Phase A implemented, Phase B pending
 **Date**: 2026-05-26
 **Author**: Giorgio Pagonis (orchestrated via Claude)
 **Related**:
@@ -690,6 +690,7 @@ Deferred to draft review (best-guess in this doc):
 
 ## 11. Changelog
 
+- **v0.2 (2026-05-26)** — Phase A IMPLEMENTED. 2 NEW SSoT files (`bim-line-patterns.ts`: 28 patterns + `linePatternToDashArray()`, `bim-subcategories.ts`: 47 keys + 23-entry WIRED_SUBCATEGORIES + 2 helpers). 1 MODIFIED (`bim-object-styles.ts`: `SubcategoryStyle` interface + `ObjectStyle.subcategories?` extension). Cache invalidation verified automatic via existing `JSON.stringify` in `dxf-bitmap-cache.ts:54`. 47 new tests + 35 regression = 82 tests PASS. TSC clean. Pending commit.
 - **v0.1 (2026-05-26)** — DRAFT created. Clarification phase με Giorgio (Q1-Q11 locked). Industry research confirms 47 subcategories taxonomy. Architecture decided: extend ADR-375 Tier 2 with optional `subcategories` map. 6-phase plan ~29-46h total. Custom Wall Types / Door Types etc deferred to ADR-378 BIM Family Types.
 
 ---
