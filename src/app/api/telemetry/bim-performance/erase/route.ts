@@ -88,7 +88,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse<EraseRespo
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  if (!isPlainObject(raw) || (raw as EraseBody).sessionId !== headerSession) {
+  if (!isPlainObject(raw) || (raw as unknown as EraseBody).sessionId !== headerSession) {
     return NextResponse.json({ error: 'Session id mismatch' }, { status: 400 });
   }
 

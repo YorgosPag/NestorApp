@@ -75,8 +75,14 @@ const ENTITY_TYPE_TO_COLLECTION_KEY: Record<AuditEntityType, string> = {
   wall: '',
   opening: '',
   slab: '',
+  'slab-opening': '',
   column: '',
   beam: '',
+  // Performance / 3D BIM telemetry (ADR-366) — not backed up via this service
+  performance_diagnostic: '',
+  performance_telemetry: '',
+  bim_dimension_3d: '',
+  bim_animation: '',
 };
 
 /** Actions that indicate a document was removed */

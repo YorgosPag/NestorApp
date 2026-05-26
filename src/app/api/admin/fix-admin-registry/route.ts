@@ -12,7 +12,7 @@ import { nowISO } from '@/lib/date-local';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
 
-export const POST = withAuth(async (_req: Request, ctx: AuthContext) => {
+export const POST = withAuth<{ success: boolean; updated: string[] }>(async (_req: Request, ctx: AuthContext) => {
   if (ctx.globalRole !== 'super_admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

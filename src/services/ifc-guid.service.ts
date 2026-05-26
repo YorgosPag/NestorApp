@@ -41,21 +41,26 @@ export function encodeIfcGuidFromBytes(bytes: Uint8Array): string {
   }
 
   // Pack 16 bytes σε BigInt (avoids JS 53-bit precision limit).
-  let value = 0n;
+  // BigInt() factory used instead of literal (target ES2017).
+  const SHIFT_8 = BigInt(8);
+  const SHIFT_6 = BigInt(6);
+  const MASK_6 = BigInt(0x3f);
+  const MASK_2 = BigInt(0x3);
+  let value = BigInt(0);
   for (let i = 0; i < IFC_GUID_BYTES; i++) {
-    value = (value << 8n) | BigInt(bytes[i]);
+    value = (value << SHIFT_8) | BigInt(bytes[i]);
   }
 
   const chars: string[] = new Array(IFC_GUID_CHAR_COUNT);
 
   // Chars 21 → 1: 6 bits each (21 chars × 6 bits = 126 bits).
   for (let i = IFC_GUID_CHAR_COUNT - 1; i >= 1; i--) {
-    const digit = Number(value & 0x3fn);
+    const digit = Number(value & MASK_6);
     chars[i] = IFC_GUID_ALPHABET[digit];
-    value >>= 6n;
+    value >>= SHIFT_6;
   }
   // Char 0: top 2 bits.
-  chars[0] = IFC_GUID_ALPHABET[Number(value & 0x3n)];
+  chars[0] = IFC_GUID_ALPHABET[Number(value & MASK_2)];
 
   return chars.join('');
 }

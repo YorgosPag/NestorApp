@@ -17,7 +17,7 @@ import { EllipseRenderer } from '../entities/EllipseRenderer';
 import { SplineRenderer } from '../entities/SplineRenderer';
 import { AngleMeasurementRenderer } from '../entities/AngleMeasurementRenderer';
 import { PointRenderer } from '../entities/PointRenderer';
-import { StairRenderer } from '../entities/StairRenderer';
+import { StairRenderer } from '../../bim/renderers/StairRenderer';
 // ADR-359 Phase 4.b — XLINE (infinite) + RAY (semi-infinite) construction line renderers.
 import { XLineRenderer } from '../entities/XLineRenderer';
 import { RayRenderer } from '../entities/RayRenderer';

@@ -87,7 +87,7 @@ function validateSample(raw: unknown, sessionId: string): TelemetrySample | null
 
 function validateBody(raw: unknown, sessionId: string): TelemetrySample[] | null {
   if (!isPlainObject(raw)) return null;
-  const samples = (raw as IngestBody).samples;
+  const samples = (raw as unknown as IngestBody).samples;
   if (!Array.isArray(samples) || samples.length === 0 || samples.length > MAX_BATCH_SIZE) {
     return null;
   }

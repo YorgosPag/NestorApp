@@ -115,7 +115,7 @@ export function detectSpiDrop(
       title: worstPhase ? worstPhase.name : 'Πρόγραμμα',
       message: `SPI: ${evm.spi.toFixed(2)} (όριο: ${threshold}). Το έργο είναι πίσω από το πρόγραμμα.`,
       phaseId: worstPhase?.id,
-      data: { spi: evm.spi, threshold, earnedValue: evm.ev, plannedValue: evm.pv },
+      data: { spi: evm.spi, threshold, earnedValue: evm.earnedValue, plannedValue: evm.plannedValue },
     },
   ];
 }
@@ -132,7 +132,7 @@ export function detectCpiDrop(evm: EVMResult, threshold = 0.85): AlertCandidate[
       severity: 'medium',
       title: 'Υπέρβαση Κόστους',
       message: `CPI: ${evm.cpi.toFixed(2)} (όριο: ${threshold}). Κίνδυνος υπέρβασης προϋπολογισμού.`,
-      data: { cpi: evm.cpi, threshold, earnedValue: evm.ev, actualCost: evm.ac },
+      data: { cpi: evm.cpi, threshold, earnedValue: evm.earnedValue, actualCost: evm.actualCost },
     },
   ];
 }
@@ -199,7 +199,7 @@ export function detectNoProgress(phases: ConstructionPhase[], staleDays = 5): Al
   const results: AlertCandidate[] = [];
 
   for (const phase of phases) {
-    if (phase.status === 'completed' || phase.status === 'pending') continue;
+    if (phase.status === 'completed' || phase.status === 'planning') continue;
 
     const lastUpdate = phase.updatedAt ?? phase.createdAt;
     if (!lastUpdate) continue;

@@ -22,6 +22,14 @@ import {
   Receipt,
   FilePlus2,
   FileMinus2,
+  AlertTriangle,
+  Send,
+  Check,
+  X,
+  Eraser,
+  Flag,
+  UserCheck,
+  StickyNote,
 } from "lucide-react";
 import type { AuditAction } from "@/types/audit-trail";
 
@@ -121,6 +129,54 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   vendor_notified: {
     icon: Mail,
     labelKey: "audit.actions.vendor_notified",
+    color: "text-primary",
+    bgColor: "bg-[hsl(var(--bg-info))]/20",
+  },
+  orphaned: {
+    icon: AlertTriangle,
+    labelKey: "audit.actions.orphaned",
+    color: "text-[hsl(var(--text-warning))]",
+    bgColor: "bg-[hsl(var(--bg-warning))]/40",
+  },
+  auto_submit_prompted: {
+    icon: Send,
+    labelKey: "audit.actions.auto_submit_prompted",
+    color: "text-primary",
+    bgColor: "bg-[hsl(var(--bg-info))]/20",
+  },
+  auto_submit_accepted: {
+    icon: Check,
+    labelKey: "audit.actions.auto_submit_accepted",
+    color: "text-green-707",
+    bgColor: "bg-[hsl(var(--bg-success))]/10",
+  },
+  auto_submit_declined: {
+    icon: X,
+    labelKey: "audit.actions.auto_submit_declined",
+    color: "text-muted-foreground",
+    bgColor: "bg-muted",
+  },
+  erased: {
+    icon: Eraser,
+    labelKey: "audit.actions.erased",
+    color: "text-destructive",
+    bgColor: "bg-destructive/10",
+  },
+  triage_status_changed: {
+    icon: Flag,
+    labelKey: "audit.actions.triage_status_changed",
+    color: "text-[hsl(var(--text-warning))]",
+    bgColor: "bg-[hsl(var(--bg-warning))]/40",
+  },
+  triage_assigned: {
+    icon: UserCheck,
+    labelKey: "audit.actions.triage_assigned",
+    color: "text-primary",
+    bgColor: "bg-accent",
+  },
+  internal_note_added: {
+    icon: StickyNote,
+    labelKey: "audit.actions.internal_note_added",
     color: "text-primary",
     bgColor: "bg-[hsl(var(--bg-info))]/20",
   },

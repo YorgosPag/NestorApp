@@ -140,7 +140,7 @@ export function FinancialQueryChat() {
       className={cn('border rounded-lg overflow-hidden', colors.border.default)}
     >
       {/* Header */}
-      <header className={cn('flex items-center justify-between px-4 py-3 border-b', colors.border.default, colors.bg.subtle)}>
+      <header className={cn('flex items-center justify-between px-4 py-3 border-b', colors.border.default, colors.bg.muted)}>
         <div className="flex items-center gap-2">
           <Bot className={cn('h-5 w-5', colors.text.primary)} aria-hidden />
           <div>
@@ -229,7 +229,7 @@ export function FinancialQueryChat() {
               </div>
               {/* Chart */}
               {msg.chartData && msg.chartData.length > 0 && (
-                <div className={cn('w-full mt-1 p-3 rounded-lg border', colors.border.default, colors.bg.subtle)}>
+                <div className={cn('w-full mt-1 p-3 rounded-lg border', colors.border.default, colors.bg.muted)}>
                   <p className={cn('text-xs font-medium mb-2', colors.text.muted)}>
                     {t('financialQuery.chartTitle')}
                   </p>

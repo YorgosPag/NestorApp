@@ -2,7 +2,7 @@
  * ADR-363 Phase 1D-B — Perpendicular auto-trim for wall↔wall intersections.
  *
  * Pure module: given the full set of WallEntity objects in a scene, computes
- * `startBevel` / `endBevel` patches (mm) so that axis endpoints are shortened
+ * `startBevel` / `endBevel` patches (canvas world units) so that axis endpoints are shortened
  * to eliminate the rectangular overlap that appears at wall junctions.
  *
  * Algorithm (per pair):
@@ -22,6 +22,7 @@
 import type { WallEntity, WallParams } from '../types/wall-types';
 import type { AnySceneEntity } from '../../types/entities';
 import { computeWallGeometry } from '../geometry/wall-geometry';
+import { mmToSceneUnits } from '../../utils/scene-units';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -38,8 +39,8 @@ const MAX_BEVEL_FRACTION = 0.40;
 
 /** Per-wall trim patch returned by `computeWallTrims`. undefined = no change. */
 export interface WallTrimPatch {
-  readonly startBevel?: number; // mm
-  readonly endBevel?: number;   // mm
+  readonly startBevel?: number; // canvas world units (same space as params.start/end)
+  readonly endBevel?: number;   // canvas world units
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
@@ -178,8 +179,14 @@ function processPair(
   const sinA = sinAngleBetween(a2x - a1x, a2y - a1y, b2x - b1x, b2y - b1y);
   if (sinA < Math.sin(MIN_ANGLE_RAD)) return;
 
-  const epsA = JOIN_THRESHOLD_MM / lenA;
-  const epsB = JOIN_THRESHOLD_MM / lenB;
+  // Convert mm scalars to canvas world units so bevel values are in the same
+  // space as params.start/end (which applyAxisBevels operates on).
+  const s = mmToSceneUnits(a.params.sceneUnits ?? 'mm');
+  const halfA = (a.params.thickness / 2) * s;
+  const halfB = (b.params.thickness / 2) * s;
+  const joinThreshold = JOIN_THRESHOLD_MM * s;
+  const epsA = joinThreshold / lenA;
+  const epsB = joinThreshold / lenB;
 
   const tNearStart = t >= -epsA && t <= epsA;
   const tNearEnd   = t >= 1 - epsA && t <= 1 + epsA;
@@ -188,9 +195,6 @@ function processPair(
   const uNearStart = u >= -epsB && u <= epsB;
   const uNearEnd   = u >= 1 - epsB && u <= 1 + epsB;
   const uInterior  = u > epsB && u < 1 - epsB;
-
-  const halfA = a.params.thickness / 2;
-  const halfB = b.params.thickness / 2;
 
   if ((tNearStart || tNearEnd) && (uNearStart || uNearEnd)) {
     // Corner: both endpoints meet — trim each by half-thickness of the other.

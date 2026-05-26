@@ -126,6 +126,12 @@ export interface SemanticTextColors {
   readonly cyanLight: string;
   readonly cyanAccent: string;
   readonly orangeLight: string;
+
+  // Text-on-colored-bg variants (paired with bg.success/error/warning/info)
+  readonly onSuccess: string;
+  readonly onError: string;
+  readonly onWarning: string;
+  readonly onInfo: string;
 }
 
 /**

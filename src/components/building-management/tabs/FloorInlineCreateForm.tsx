@@ -261,7 +261,7 @@ export function FloorInlineCreateForm({
       const result = await createFloorWithPolicy<FloorMutationResponse>({ payload });
       success(t('tabs.floors.createSuccess'));
       const createdId = result?.floorId ?? result?.data?.floorId;
-      onCreated(createdId, { number: num, name: floor.name });
+      onCreated(createdId, { number: num, name: floor.name ?? '' });
     } catch (err) {
       if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
         notifyError(t('tabs.floors.duplicateNumber'));

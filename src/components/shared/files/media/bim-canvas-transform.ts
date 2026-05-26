@@ -9,11 +9,8 @@
  */
 
 import type { PanOffset } from '@/hooks/useZoomPan';
-import {
-  COORDINATE_LAYOUT,
-  type ViewTransform,
-  type Viewport,
-} from '@/subapps/dxf-viewer/rendering/core/CoordinateTransforms';
+import { COORDINATE_LAYOUT } from '@/subapps/dxf-viewer/rendering/core/CoordinateTransforms';
+import type { ViewTransform, Viewport } from '@/subapps/dxf-viewer/rendering/types/Types';
 
 type ViewTransformLocal = ViewTransform;
 
