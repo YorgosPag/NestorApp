@@ -177,15 +177,18 @@ export function EnterpriseColorDialog({
     onClose();
   }, [localColor, onChange, onChangeEnd, onClose]);
 
-  // Handle cancel - restore original color
+  // Handle cancel — semantics depend on footer presence:
+  //   showFooter=true  → buffered Apply/Cancel UX (Photoshop pattern): X / Cancel reverts to originalValue.
+  //   showFooter=false → commit-on-pick UX (Revit V/G pattern): X commits latest localColor, no revert.
   const handleCancel = useCallback(() => {
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    onChange(originalValue);
+    onChange(showFooter ? originalValue : localColor);
+    if (!showFooter) onChangeEnd?.(localColor);
     onClose();
-  }, [originalValue, onChange, onClose]);
+  }, [showFooter, originalValue, localColor, onChange, onChangeEnd, onClose]);
 
   // Overlay props (backdrop + escape)
   // ✅ FIX: isDismissable: false - το dialog κλείνει ΜΟΝΟ με το X button ή Cancel

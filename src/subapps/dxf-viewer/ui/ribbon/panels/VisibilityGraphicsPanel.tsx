@@ -190,6 +190,7 @@ export const VisibilityGraphicsPanel: React.FC = () => {
                         onChange={(v) => handleColor(cat, 'projectionColor', v)}
                         disabled={isHidden}
                         title={t('ribbon.commands.visibilityGraphics.projColorTitle')}
+                        showModalFooter={false}
                       />
                     </span>
                   </TooltipTrigger>
@@ -228,6 +229,7 @@ export const VisibilityGraphicsPanel: React.FC = () => {
                         onChange={(v) => handleColor(cat, 'cutColor', v)}
                         disabled={isHidden}
                         title={t('ribbon.commands.visibilityGraphics.cutColorTitle')}
+                        showModalFooter={false}
                       />
                     </span>
                   </TooltipTrigger>
