@@ -47,6 +47,7 @@ export enum ExtendedSnapType {
   BIM_SLAB_CORNER    = 'bim_slab_corner',    // ADR-370: slab polygon vertex
   BIM_COLUMN_CORNER  = 'bim_column_corner',  // ADR-370: column perimeter corner
   BIM_OPENING_CORNER = 'bim_opening_corner', // ADR-370: opening (door/window) face corner
+  TEXT               = 'text',                // ADR-378 Phase 3: TEXT/MTEXT 8-point snap (insertion + 4 corners + center + 2 edge mids)
   AUTO = 'auto'
 }
 
@@ -126,6 +127,7 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.BIM_SLAB_CORNER,     // ADR-370: slab polygon vertex
     ExtendedSnapType.BIM_COLUMN_CORNER,   // ADR-370: column perimeter corner
     ExtendedSnapType.BIM_OPENING_CORNER,  // ADR-370: opening face corner
+    ExtendedSnapType.TEXT,                // ADR-378 Phase 3: TEXT/MTEXT 8-point snap
   ]),
   showSnapMarkers: true,
   showSnapTooltips: true,
@@ -139,6 +141,8 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.INTERSECTION,
     ExtendedSnapType.ENDPOINT,
     ExtendedSnapType.MIDPOINT,
+    ExtendedSnapType.INSERTION,           // ADR-378 §5: priority 2 — before TEXT (also 2)
+    ExtendedSnapType.TEXT,                // ADR-378 Phase 3: text 8-point snap — priority 2 (after INSERTION)
     ExtendedSnapType.CENTER,
     ExtendedSnapType.PERPENDICULAR,
     ExtendedSnapType.TANGENT,
@@ -146,7 +150,6 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.QUADRANT,
     ExtendedSnapType.EXTENSION,
     ExtendedSnapType.NODE,
-    ExtendedSnapType.INSERTION,
     ExtendedSnapType.NEAREST,
     ExtendedSnapType.NEAR,
     ExtendedSnapType.GUIDE,              // ADR-189: Construction guide snap
@@ -182,6 +185,7 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     [ExtendedSnapType.BIM_SLAB_CORNER]:     10, // ADR-370
     [ExtendedSnapType.BIM_COLUMN_CORNER]:   10, // ADR-370
     [ExtendedSnapType.BIM_OPENING_CORNER]:  10, // ADR-370
+    [ExtendedSnapType.TEXT]:                10, // ADR-378 Phase 3: text 8-point snap (insertion/corners/center/edges)
   }
 };
 
