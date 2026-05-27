@@ -172,10 +172,10 @@ export function useSlabPersistence(
   const serviceRef = useRef<SlabFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, SlabEntity['params']>>(new Map());
-  // ADR-381 — tracks IDs με in-flight first save (drawn or restored). Replaces
+  // ADR-390 — tracks IDs με in-flight first save (drawn or restored). Replaces
   // the buggy `neverSaved` guard that kept DXF-JSON-only ghost entities in scene.
   const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
-  // ADR-381 — tombstone Set που blocks subscribe loop from re-adding entities
+  // ADR-390 — tombstone Set που blocks subscribe loop from re-adding entities
   // that were just deleted (race between Firestore snapshot + local delete).
   const deletedIdsRef = useRef<Set<string>>(new Set());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -221,7 +221,7 @@ export function useSlabPersistence(
         const nextSlabs: SlabEntity[] = [];
         let mutated = false;
 
-        // ADR-381 — block subscribe from re-adding tombstoned IDs (delete race).
+        // ADR-390 — block subscribe from re-adding tombstoned IDs (delete race).
         const deleted = deletedIdsRef.current;
         const pending = pendingFirstSaveIdsRef.current;
 
@@ -247,7 +247,7 @@ export function useSlabPersistence(
           }
         }
 
-        // ADR-381 — replaces buggy `neverSaved` guard. Keep entities only αν
+        // ADR-390 — replaces buggy `neverSaved` guard. Keep entities only αν
         // είναι (a) dirty (locally being edited), or (b) pendingFirstSave
         // (just drawn / just restored, in-flight first persist). DXF-JSON-only
         // ghost entities (loaded after refresh με κενό pendingRef) DROP από
@@ -323,7 +323,7 @@ export function useSlabPersistence(
   useEffect(() => {
     const slab = primarySelectedSlab;
     if (!slab || !serviceRef.current) return;
-    // ADR-381 — Bug A defense-in-depth: don't auto-persist entities που είναι
+    // ADR-390 — Bug A defense-in-depth: don't auto-persist entities που είναι
     // στο scene αλλά ΟΥΤΕ έχουν σωθεί ποτέ ΟΥΤΕ είναι pending first save.
     // Καλύπτει: (a) entities loaded από DXF JSON only (Bug B race), (b) stale
     // primarySelected ref μετά από delete (Bug A zombie write).
@@ -394,12 +394,12 @@ export function useSlabPersistence(
     dirtyIdsRef.current.delete(slabId);
     lastSavedParamsRef.current.delete(slabId);
     pendingFirstSaveIdsRef.current.delete(slabId);
-    // ADR-381 — tombstone tracking για subscribe loop race protection.
+    // ADR-390 — tombstone tracking για subscribe loop race protection.
     deletedIdsRef.current.add(slabId);
   }, [levelManager, companyId]);
 
-  // ADR-381 — persistRestore writes Firestore με `action='restored'` (όχι
-  // misleading `'created'`). Pre-ADR-381 zombie write went through `persist()`
+  // ADR-390 — persistRestore writes Firestore με `action='restored'` (όχι
+  // misleading `'created'`). Pre-ADR-390 zombie write went through `persist()`
   // και επέφερε `'created'` audit row για entity που είχε προηγουμένως διαγραφεί.
   const persistRestore = useCallback(async (entity: SlabEntity) => {
     const svc = serviceRef.current;
@@ -435,7 +435,7 @@ export function useSlabPersistence(
       const entity = payload.entity as SlabEntity | undefined;
       if (!entity || (entity as { type?: string }).type !== 'slab') return;
       if (!serviceRef.current) return;
-      // ADR-381 — mark pending BEFORE persist so subscribe loop doesn't drop
+      // ADR-390 — mark pending BEFORE persist so subscribe loop doesn't drop
       // entity during the race window.
       pendingFirstSaveIdsRef.current.add(entity.id);
       dirtyIdsRef.current.add(entity.id);
@@ -482,7 +482,7 @@ export function useSlabPersistence(
   }, [levelManager, companyId, projectId, buildingId]);
 
   useBimEntityMovedPersistEffect(isSlab, serviceRef, dirtyIdsRef, persist);
-  // ADR-381 — symmetric undo→Firestore restore.
+  // ADR-390 — symmetric undo→Firestore restore.
   useBimEntityRestoredPersistEffect(
     'slab',
     isSlab,

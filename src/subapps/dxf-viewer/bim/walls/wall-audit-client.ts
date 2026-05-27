@@ -78,7 +78,7 @@ function buildChanges(
   };
 
   if (action === 'created' || action === 'restored') {
-    // ADR-381 — 'restored' (undo→Firestore re-create) carries full snapshot
+    // ADR-390 — 'restored' (undo→Firestore re-create) carries full snapshot
     // identical to 'created'; only the audit action label differs.
     return ensureNonEmptyChanges(
       buildBimCreationChanges(snapshot, WALL_TRACKED_FIELDS),

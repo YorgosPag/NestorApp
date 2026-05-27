@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ADR-381 SSoT — `bim:entity-restore-requested` persistence side-effect.
+ * ADR-390 SSoT — `bim:entity-restore-requested` persistence side-effect.
  *
  * Symmetric inverse του `useBimEntityMovedPersistEffect` για undo→restore flow.
  * Each BIM persistence hook (`useWallPersistence`, `useSlabPersistence`, κλπ)
@@ -18,7 +18,7 @@
  *   4. Invoke per-hook `persistRestore(entity)` — writes Firestore doc +
  *      audit row με `action='restored'` (όχι misleading `'created'`)
  *
- * @see docs/centralized-systems/reference/adrs/ADR-381-symmetric-bim-delete-undo.md
+ * @see docs/centralized-systems/reference/adrs/ADR-390-symmetric-bim-delete-undo.md
  */
 
 import { useEffect } from 'react';

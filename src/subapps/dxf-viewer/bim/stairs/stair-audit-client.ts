@@ -65,7 +65,7 @@ function buildChanges(
   };
 
   if (action === 'created' || action === 'restored') {
-    // ADR-381 — 'restored' (undo→Firestore re-create) reuses creation builder.
+    // ADR-390 — 'restored' (undo→Firestore re-create) reuses creation builder.
     return ensureNonEmptyChanges(
       buildBimCreationChanges(snapshot, STAIR_TRACKED_FIELDS),
       { field: 'kind', oldValue: null, newValue: entity.kind },

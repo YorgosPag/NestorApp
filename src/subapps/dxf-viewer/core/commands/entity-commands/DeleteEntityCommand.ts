@@ -11,7 +11,7 @@ import { deepClone } from '../../../utils/clone-utils';
 import { EventBus } from '../../../systems/events/EventBus';
 import type { AnySceneEntity } from '../../../types/scene';
 
-// ADR-381 — BIM entity types eligible για symmetric undo→Firestore restore.
+// ADR-390 — BIM entity types eligible για symmetric undo→Firestore restore.
 const BIM_ENTITY_TYPES = new Set<string>([
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair',
 ]);
@@ -68,9 +68,9 @@ export class DeleteEntityCommand implements ICommand {
   /**
    * Undo: Restore the entity
    *
-   * ADR-381 — also emits `bim:entity-restore-requested` so BIM persistence
+   * ADR-390 — also emits `bim:entity-restore-requested` so BIM persistence
    * hooks re-create the Firestore doc + audit row (`action='restored'`).
-   * Pre-ADR-381 behavior accidentally re-persisted via auto-save side effect
+   * Pre-ADR-390 behavior accidentally re-persisted via auto-save side effect
    * (zombie write με ίδιο UUID + misleading `action='created'`).
    */
   undo(): void {
@@ -180,7 +180,7 @@ export class DeleteMultipleEntitiesCommand implements ICommand {
   /**
    * Undo: Restore all entities
    *
-   * ADR-381 — emits `bim:entity-restore-requested` per BIM snapshot so each
+   * ADR-390 — emits `bim:entity-restore-requested` per BIM snapshot so each
    * persistence hook re-creates its Firestore doc + audit row.
    */
   undo(): void {

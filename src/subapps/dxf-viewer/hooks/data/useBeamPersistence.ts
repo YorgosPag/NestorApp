@@ -127,7 +127,7 @@ export function useBeamPersistence(
   const serviceRef = useRef<BeamFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, BeamEntity['params']>>(new Map());
-  // ADR-381 — pending first save (drawn or restored) + tombstone tracking.
+  // ADR-390 — pending first save (drawn or restored) + tombstone tracking.
   const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
   const deletedIdsRef = useRef<Set<string>>(new Set());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -198,7 +198,7 @@ export function useBeamPersistence(
           }
         }
 
-        // ADR-381 — replaces buggy `neverSaved` guard.
+        // ADR-390 — replaces buggy `neverSaved` guard.
         for (const [id, entity] of sceneBeams) {
           if (docsById.has(id)) continue;
           if (dirty.has(id) || pending.has(id)) {
@@ -263,7 +263,7 @@ export function useBeamPersistence(
   useEffect(() => {
     const beam = primarySelectedBeam;
     if (!beam || !serviceRef.current) return;
-    // ADR-381 — Bug A defense-in-depth.
+    // ADR-390 — Bug A defense-in-depth.
     const known = lastSavedParamsRef.current.has(beam.id);
     const pendingBeam = pendingFirstSaveIdsRef.current.has(beam.id);
     if (!known && !pendingBeam) return;
@@ -335,7 +335,7 @@ export function useBeamPersistence(
     deletedIdsRef.current.add(beamId);
   }, [levelManager, companyId, floorplanId]);
 
-  // ADR-381 — persistRestore: undo→Firestore re-create + audit 'restored'.
+  // ADR-390 — persistRestore: undo→Firestore re-create + audit 'restored'.
   const persistRestore = useCallback(async (entity: BeamEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;

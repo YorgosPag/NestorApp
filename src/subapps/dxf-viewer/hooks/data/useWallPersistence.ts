@@ -156,7 +156,7 @@ export function useWallPersistence(
   const serviceRef = useRef<WallFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const deletedIdsRef = useRef<Set<string>>(new Set());
-  // ADR-381 — pending first save (drawn or restored).
+  // ADR-390 — pending first save (drawn or restored).
   const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, WallEntity['params']>>(new Map());
   const lockHeldRef = useRef<string | null>(null);
@@ -231,7 +231,7 @@ export function useWallPersistence(
           if (docsById.has(id)) continue;
           // Explicitly deleted — never re-add regardless of save state.
           if (deleted.has(id)) { mutated = true; continue; }
-          // ADR-381 — replaces buggy `neverSaved` guard. Preserve walls only αν
+          // ADR-390 — replaces buggy `neverSaved` guard. Preserve walls only αν
           // είναι dirty ή pendingFirstSave (just drawn / restored via undo).
           if (dirty.has(id) || pending.has(id)) {
             nextWalls.push(entity);
@@ -346,7 +346,7 @@ export function useWallPersistence(
   useEffect(() => {
     const wall = primarySelectedWall;
     if (!wall || !serviceRef.current) return;
-    // ADR-381 — Bug A defense-in-depth.
+    // ADR-390 — Bug A defense-in-depth.
     const known = lastSavedParamsRef.current.has(wall.id);
     const pendingWall = pendingFirstSaveIdsRef.current.has(wall.id);
     if (!known && !pendingWall) return;
@@ -422,7 +422,7 @@ export function useWallPersistence(
     }
   }, [levelManager, releaseLock, companyId]);
 
-  // ADR-381 — persistRestore: undo→Firestore re-create + audit 'restored'.
+  // ADR-390 — persistRestore: undo→Firestore re-create + audit 'restored'.
   const persistRestore = useCallback(async (entity: WallEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;

@@ -110,7 +110,7 @@ export function useOpeningPersistence(
   const serviceRef = useRef<OpeningFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const deletedIdsRef = useRef<Set<string>>(new Set());
-  // ADR-381 — pending first save (drawn or restored via undo).
+  // ADR-390 — pending first save (drawn or restored via undo).
   const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, OpeningEntity['params']>>(new Map());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -222,7 +222,7 @@ export function useOpeningPersistence(
           if (docsById.has(id)) continue;
           // Explicitly deleted — never re-add regardless of save state.
           if (deletedIdsRef.current.has(id)) { mutated = true; continue; }
-          // ADR-381 — replaces buggy `neverSaved` guard.
+          // ADR-390 — replaces buggy `neverSaved` guard.
           if (dirty.has(id) || pending.has(id)) {
             nextOpenings.push(entity);
           } else {
@@ -298,7 +298,7 @@ export function useOpeningPersistence(
   useEffect(() => {
     const opening = primarySelectedOpening;
     if (!opening || !serviceRef.current) return;
-    // ADR-381 — Bug A defense-in-depth.
+    // ADR-390 — Bug A defense-in-depth.
     const known = lastSavedParamsRef.current.has(opening.id);
     const pendingOpening = pendingFirstSaveIdsRef.current.has(opening.id);
     if (!known && !pendingOpening) return;
@@ -384,7 +384,7 @@ export function useOpeningPersistence(
     pendingFirstSaveIdsRef.current.delete(openingId);
   }, [levelManager, companyId, projectId, buildingId, floorplanId]);
 
-  // ADR-381 — persistRestore: undo→Firestore re-create + audit 'restored'.
+  // ADR-390 — persistRestore: undo→Firestore re-create + audit 'restored'.
   const persistRestore = useCallback(async (entity: OpeningEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;
@@ -458,7 +458,7 @@ export function useOpeningPersistence(
     return cleanup;
   }, [deleteOpening]);
 
-  // ADR-381 — symmetric undo→Firestore restore.
+  // ADR-390 — symmetric undo→Firestore restore.
   useBimEntityRestoredPersistEffect(
     'opening',
     isOpening,

@@ -125,7 +125,7 @@ export function useSlabOpeningPersistence(
   const serviceRef = useRef<SlabOpeningFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, SlabOpeningEntity['params']>>(new Map());
-  // ADR-381 — pending first save (drawn or restored) + tombstone tracking.
+  // ADR-390 — pending first save (drawn or restored) + tombstone tracking.
   const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
   const deletedIdsRef = useRef<Set<string>>(new Set());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -196,7 +196,7 @@ export function useSlabOpeningPersistence(
           }
         }
 
-        // ADR-381 — replaces buggy `neverSaved` guard.
+        // ADR-390 — replaces buggy `neverSaved` guard.
         for (const [id, entity] of sceneEntities) {
           if (docsById.has(id)) continue;
           if (dirty.has(id) || pending.has(id)) {
@@ -251,7 +251,7 @@ export function useSlabOpeningPersistence(
   useEffect(() => {
     const entity = primarySelectedSlabOpening;
     if (!entity || !serviceRef.current) return;
-    // ADR-381 — Bug A defense-in-depth.
+    // ADR-390 — Bug A defense-in-depth.
     const known = lastSavedParamsRef.current.has(entity.id);
     const pendingEntity = pendingFirstSaveIdsRef.current.has(entity.id);
     if (!known && !pendingEntity) return;
@@ -325,7 +325,7 @@ export function useSlabOpeningPersistence(
     deletedIdsRef.current.add(slabOpeningId);
   }, [levelManager]);
 
-  // ADR-381 — persistRestore: undo→Firestore re-create + audit 'restored'.
+  // ADR-390 — persistRestore: undo→Firestore re-create + audit 'restored'.
   const persistRestore = useCallback(async (entity: SlabOpeningEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;

@@ -211,7 +211,7 @@ export interface DrawingEventMap {
   'bim:beam-delete-requested': { beamId: string };
   // ADR-358 Phase 9C-3 — stair delete (Firestore cleanup on canvas Delete key)
   'bim:stair-delete-requested': { stairId: string };
-  // ADR-381 — Symmetric undo/restore for BIM entity deletion.
+  // ADR-390 — Symmetric undo/restore for BIM entity deletion.
   // Single generic event with type-discriminated payload — listeners type-guard
   // via `payload.entityType` + `isXType(snapshot)`. Emitted by
   // DeleteEntityCommand.undo() and DeleteMultipleEntitiesCommand.undo().

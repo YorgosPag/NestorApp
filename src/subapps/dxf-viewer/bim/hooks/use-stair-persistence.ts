@@ -109,7 +109,7 @@ export function useStairPersistence(
   const serviceRef = useRef<StairFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, StairEntity['params']>>(new Map());
-  // ADR-381 — pending first save (drawn or restored) + tombstone tracking.
+  // ADR-390 — pending first save (drawn or restored) + tombstone tracking.
   const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
   const deletedIdsRef = useRef<Set<string>>(new Set());
   const lockHeldRef = useRef<string | null>(null);
@@ -185,7 +185,7 @@ export function useStairPersistence(
           }
         }
 
-        // ADR-381 — replaces buggy `neverSaved` guard. Preserve stairs only
+        // ADR-390 — replaces buggy `neverSaved` guard. Preserve stairs only
         // αν είναι dirty ή pendingFirstSave (drawn / restored via undo). Closes
         // the Bug B ghost-render path όπου fresh refresh με κενό `lastSavedParamsRef`
         // κρατούσε ορφανές entities σε scene.
@@ -297,7 +297,7 @@ export function useStairPersistence(
   useEffect(() => {
     const stair = primarySelectedStair;
     if (!stair || !serviceRef.current) return;
-    // ADR-381 — Bug A defense-in-depth.
+    // ADR-390 — Bug A defense-in-depth.
     const known = lastSavedParamsRef.current.has(stair.id);
     const pendingStair = pendingFirstSaveIdsRef.current.has(stair.id);
     if (!known && !pendingStair) return;
@@ -365,7 +365,7 @@ export function useStairPersistence(
     }
   }, [levelManager, releaseLock]);
 
-  // ADR-381 — persistRestore: undo→Firestore re-create + audit 'restored'.
+  // ADR-390 — persistRestore: undo→Firestore re-create + audit 'restored'.
   const persistRestore = useCallback(async (entity: StairEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;
@@ -426,7 +426,7 @@ export function useStairPersistence(
     return cleanup;
   }, [persist]);
 
-  // ADR-381 — symmetric undo→Firestore restore.
+  // ADR-390 — symmetric undo→Firestore restore.
   useBimEntityRestoredPersistEffect(
     'stair',
     isStair,
