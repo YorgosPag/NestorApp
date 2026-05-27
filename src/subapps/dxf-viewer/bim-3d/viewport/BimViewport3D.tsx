@@ -35,6 +35,7 @@ import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-inter
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useBim3DStoreSync } from './use-bim3d-store-sync';
 import { useBim3DVgResync, EMPTY_BIM_ENTITIES } from './use-bim3d-vg-resync';
+import { UnifiedFrameScheduler, RENDER_PRIORITIES } from '../../rendering/core/UnifiedFrameScheduler';
 
 const HOVER_DEBOUNCE_MS = 800;
 
@@ -65,6 +66,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   const managerRef = useRef<ThreeJsSceneManager | null>(null);
   const errorRef = useRef<string | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** ADR-040 Phase XXIII — handle to unregister BIM 3D scene from UnifiedFrameScheduler. */
+  const unregisterSchedulerRef = useRef<(() => void) | null>(null);
   const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
   const [renderDialogOpen, setRenderDialogOpen] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
@@ -132,6 +135,17 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       return;
     }
 
+    // ADR-040 Phase XXIII / ADR-366 Phase 4.2 — BIM 3D scene driven by the master rAF.
+    // Industry-standard pattern (Forge Viewer SDK / Three.js Editor / iModel.js /
+    // AutoCAD Web): single master rAF + per-subsystem dirty-check + on-demand render.
+    unregisterSchedulerRef.current = UnifiedFrameScheduler.register(
+      'bim-3d-scene',
+      'BIM 3D Scene',
+      RENDER_PRIORITIES.NORMAL,
+      (deltaTime) => managerRef.current?.tick(performance.now(), deltaTime),
+      () => managerRef.current?.isSceneDirty() ?? false,
+    );
+
     setCanvasEl(managerRef.current.getRendererCanvas());
 
     // ADR-366 §C.1.b — bridge real scene bbox σε `useDxfViewerCallbacks` animation actions.
@@ -174,6 +188,10 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       useQuickProperties3DStore.getState().clearHover();
       useSelection3DStore.getState().clearSelection();
       clearSceneBboxGetter();
+      // ADR-040 Phase XXIII — unregister from scheduler BEFORE disposing the manager
+      // so no in-flight tick can race a disposed Three.js renderer.
+      unregisterSchedulerRef.current?.();
+      unregisterSchedulerRef.current = null;
       managerRef.current?.dispose();
       managerRef.current = null;
       errorRef.current = null;

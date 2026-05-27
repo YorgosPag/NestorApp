@@ -14,15 +14,13 @@ import * as THREE from 'three';
 import { createPoi } from '../viewport/viewport-poi';
 import { renderSceneFrame, type RenderFrameContext } from './scene-render-frame';
 import { BimSceneLayer } from './BimSceneLayer';
-import { PerformanceCollector } from '../performance/PerformanceCollector';
+import type { PerformanceCollector } from '../performance/PerformanceCollector';
 import type { IdleDetector } from '../lighting/idle-detector';
-import { QualityModulator } from '../lighting/quality-modulator';
-import { SSAOModulator } from '../lighting/ssao-modulator';
-import { createSceneIdleDetector } from './scene-idle-handlers';
-import { EnvmapGenerator } from '../lighting/envmap-generator';
-import { PathTracerRenderer } from '../render/PathTracerRenderer';
+import type { QualityModulator } from '../lighting/quality-modulator';
+import type { SSAOModulator } from '../lighting/ssao-modulator';
+import type { EnvmapGenerator } from '../lighting/envmap-generator';
+import type { PathTracerRenderer } from '../render/PathTracerRenderer';
 import type { LightPreset } from '../lighting/lighting-presets';
-import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { SectionSceneController } from './section-scene-controller';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
@@ -49,7 +47,6 @@ import type { AnimationManager } from '../viewport/animation-manager';
 import { computeFramingTargetBounds, computeSceneFramingBounds } from './scene-framing-bounds';
 import { createBimRenderer, createBimLights, createBimScene, initViewportCamera, initViewCube } from './scene-setup';
 import { bimEdgeResolutionStore } from '../edges/bim-edge-resolution-store';
-import { applyDxfOverlayFraming } from './scene-sync-dxf-overlay';
 import { createKeyboardFocusManager, type KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
 import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer';
 import type { FocusEntityLabelData } from '../accessibility/FocusIndicator3D';
@@ -58,6 +55,14 @@ import { applyLightPresetToScene, updateSunDirection } from '../lighting/apply-l
 import { type ReducedMotionOverride } from '../accessibility/use-reduced-motion';
 import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
 import { disposeSceneManagerResources } from './scene-dispose';
+import { isSceneDirtyFromState } from './scene-dirty-state';
+import { createSceneRenderingSubsystems } from './scene-rendering-subsystems';
+import {
+  syncBimEntitiesIntoScene,
+  syncDxfOverlayIntoScene,
+  resolveBimEntityType,
+  loadHdriIntoStore,
+} from './scene-manager-actions';
 
 const INITIAL_CAMERA_POSITION = new THREE.Vector3(15, 10, 15);
 const INITIAL_CAMERA_TARGET = new THREE.Vector3(0, 0, 0);
@@ -93,10 +98,14 @@ export class ThreeJsSceneManager {
   private readonly focusUnsub: () => void;
   /** ADR-366 §C.1.b — waypoint drag-handle sprites (visualization only για C.1.b). */
   private readonly waypointDragHandleRenderer: WaypointDragHandleRenderer;
-  private rafHandle: number | null = null;
+  /** ADR-040 Phase XXIII — render-frame ctx cached once, reused per tick (zero per-frame alloc). */
+  private readonly frameContext: RenderFrameContext;
+  /** ADR-040 Phase XXIII — true when scene needs draw; set by mutators, cleared after tick. */
+  private _sceneDirty = true;
+  /** ADR-040 Phase XXIII — last frame time used to derive delta when scheduler provides 0. */
+  private lastTickTime = performance.now();
   private disposed = false;
   private reducedMotionOverride: ReducedMotionOverride = 'auto';
-  private lastFrameTime = performance.now();
   private isInteracting = false;
   private initialCameraFitDone = false;
   /** Phase 4.3: mutable callback for ViewCube right-click context menu. */
@@ -109,7 +118,6 @@ export class ThreeJsSceneManager {
     this.ambient = lights.ambient;
     this.hemi = lights.hemi;
     this.scene = createBimScene(lights);
-    this.qualityModulator = new QualityModulator(this.sun);
     this.bimLayer = new BimSceneLayer(this.scene);
     this.selectionHighlighter = new BimSelectionHighlighter(this.bimLayer.group);
     this.dxfConverter = new DxfToThreeConverter(this.scene);
@@ -117,30 +125,24 @@ export class ThreeJsSceneManager {
       rendererDomElement: this.renderer.domElement,
       initialPosition: INITIAL_CAMERA_POSITION,
       initialTarget: INITIAL_CAMERA_TARGET,
-      onInteractionStart: () => { this.isInteracting = true; this.poi.onNavigationActive(); },
-      onInteractionEnd: () => { this.isInteracting = false; },
+      onInteractionStart: () => { this.isInteracting = true; this.poi.onNavigationActive(); this.markSceneDirty(); },
+      // ADR-040 Phase XXIII — onInteractionEnd keeps scene dirty for one more tick so
+      // OrbitControls damping inertia (`dampingFactor=0.25`) completes the slide
+      // before scheduler skips. controls.change → onRenderNeeded re-marks during damping.
+      onInteractionEnd: () => { this.isInteracting = false; this.markSceneDirty(); },
+      onRenderNeeded: () => this.markSceneDirty(),
       getReducedMotionOverride: () => this.reducedMotionOverride,
     });
-    const { width, height } = this.getViewportSize();
-    this.ssaoModulator = new SSAOModulator(
-      this.renderer,
-      this.scene,
-      () => this.viewport.camera,
-      width,
-      height,
-    );
-    this.envmapGenerator = new EnvmapGenerator(this.renderer, this.scene);
-    this.pathTracerRenderer = new PathTracerRenderer(
-      this.renderer,
-      this.scene,
-      () => this.viewport.camera,
-    );
-    this.idleDetector = createSceneIdleDetector({
-      qualityModulator: this.qualityModulator,
-      ssaoModulator: this.ssaoModulator,
-      bimLayer: this.bimLayer,
-      pathTracerRenderer: this.pathTracerRenderer,
+    const subs = createSceneRenderingSubsystems({
+      renderer: this.renderer, scene: this.scene, sun: this.sun, bimLayer: this.bimLayer,
+      getCamera: () => this.viewport.camera, viewportSize: this.getViewportSize(),
     });
+    this.qualityModulator = subs.qualityModulator;
+    this.ssaoModulator = subs.ssaoModulator;
+    this.envmapGenerator = subs.envmapGenerator;
+    this.pathTracerRenderer = subs.pathTracerRenderer;
+    this.idleDetector = subs.idleDetector;
+    this.performanceCollector = subs.performanceCollector;
     this.poi = createPoi();
     this.scene.add(this.poi.root);
     // Phase 4.2: single animation manager (ADR-040 — ticked by main RAF below).
@@ -159,24 +161,26 @@ export class ThreeJsSceneManager {
       canonicalViewService: this.canonicalViewService,
       onContextMenuRequest: (x, y) => this.viewCubeContextMenuCb?.(x, y),
     });
-    this.performanceCollector = new PerformanceCollector(this.renderer, this.scene);
-    this.performanceCollector.start();
     this.envStoreUnsub = useEnvironmentStore.subscribe(
       (s) => s.hdriUrl,
       (url) => { if (url) void this.loadHdriEnvironment(url); },
     );
     // ADR-366 §A.3 Phase 7.0 — Section Cuts wiring (delegated to controller).
     this.sectionController = new SectionSceneController({
-      renderer: this.renderer,
-      scene: this.scene,
-      getCamera: () => this.viewport.camera,
-      getBimGroup: () => this.bimLayer.group,
-      getDxfBounds: () => this.dxfConverter.getBounds(),
+      renderer: this.renderer, scene: this.scene, getCamera: () => this.viewport.camera,
+      getBimGroup: () => this.bimLayer.group, getDxfBounds: () => this.dxfConverter.getBounds(),
       invalidatePathTracer: () => this.pathTracerRenderer.invalidateScene(),
     });
     // ADR-366 §C.1.b — waypoint drag-handle sprites. Auto-subscribes σε AnimationStore.
     this.waypointDragHandleRenderer = new WaypointDragHandleRenderer(this.scene);
-    this.startLoop();
+    // ADR-040 Phase XXIII — cache render-frame context once. Scheduler drives tick().
+    this.frameContext = {
+      viewport: this.viewport, viewCube: this.viewCube,
+      animationManager: this.animationManager, focusOutlineRenderer: this.focusOutlineRenderer,
+      idleDetector: this.idleDetector, ssaoModulator: this.ssaoModulator,
+      pathTracerRenderer: this.pathTracerRenderer, sectionController: this.sectionController,
+      poi: this.poi, isInteracting: () => this.isInteracting,
+    };
   }
 
   private getViewportSize(): { width: number; height: number } {
@@ -242,11 +246,7 @@ export class ThreeJsSceneManager {
     const focusedId = this.keyboardFocusManager.getFocused();
     if (!focusedId) return;
     const currentSelected = useSelection3DStore.getState().selectedBimId;
-    if (currentSelected === focusedId) {
-      this.selectBimEntity(null);
-    } else {
-      this.selectBimEntity(focusedId);
-    }
+    this.selectBimEntity(currentSelected === focusedId ? null : focusedId);
   }
 
   /** ADR-366 Phase 4.5 / A.7.Q1 — Esc clears focus ring (selection untouched). */
@@ -280,12 +280,14 @@ export class ThreeJsSceneManager {
   setWaypointHoverState(role: 'position' | 'target' | null): void {
     if (this.disposed) return;
     this.waypointDragHandleRenderer.setHoverState(role);
+    this.markSceneDirty();
   }
 
   /** ADR-366 §C.1.b — Sync axis lock visual with gizmo arrows. */
   setDragAxisLock(axis: 'X' | 'Y' | 'Z' | null): void {
     if (this.disposed) return;
     this.waypointDragHandleRenderer.setAxisLockVisual(axis);
+    this.markSceneDirty();
   }
 
   /** ADR-366 §C.1.b — Raycast gizmo arrows for axis-click detection. */
@@ -307,30 +309,42 @@ export class ThreeJsSceneManager {
   /** Phase 4.3: propagate user compass visibility preference to the ViewCube. */
   setViewCubeCompassVisible(visible: boolean): void {
     this.viewCube.setCompassVisible(visible);
+    this.markSceneDirty();
   }
 
-  private startLoop(): void {
-    const ctx: RenderFrameContext = {
-      viewport: this.viewport,
-      viewCube: this.viewCube,
-      animationManager: this.animationManager,
-      focusOutlineRenderer: this.focusOutlineRenderer,
-      idleDetector: this.idleDetector,
-      ssaoModulator: this.ssaoModulator,
-      pathTracerRenderer: this.pathTracerRenderer,
-      sectionController: this.sectionController,
-      poi: this.poi,
-      isInteracting: () => this.isInteracting,
-    };
-    const animate = () => {
-      if (this.disposed) return;
-      this.rafHandle = requestAnimationFrame(animate);
-      const now = performance.now();
-      const delta = now - this.lastFrameTime;
-      this.lastFrameTime = now;
-      renderSceneFrame(ctx, now, delta);
-    };
-    this.rafHandle = requestAnimationFrame(animate);
+  /**
+   * ADR-040 Phase XXIII / ADR-366 Phase 4.2 — driven by UnifiedFrameScheduler.
+   * Called once per master-rAF tick **only when `isSceneDirty()` returns true**.
+   * Scheduler skips this system entirely while the scene is idle.
+   */
+  tick(now: number, scheduledDelta: number): void {
+    if (this.disposed) return;
+    // Scheduler may pass deltaTime=0 on first frame; derive locally as safety net.
+    const delta = scheduledDelta > 0 ? scheduledDelta : now - this.lastTickTime;
+    this.lastTickTime = now;
+    renderSceneFrame(this.frameContext, now, delta);
+    this._sceneDirty = false;
+  }
+
+  /**
+   * ADR-040 Phase XXIII — true when the scene must be redrawn this frame.
+   * Industry pattern: Forge Viewer SDK / Three.js Editor / iModel.js / AutoCAD Web —
+   * single master rAF + per-subsystem dirty-check + on-demand rendering.
+   */
+  isSceneDirty(): boolean {
+    if (this.disposed) return false;
+    return isSceneDirtyFromState({
+      isInteracting: this.isInteracting,
+      viewportAnimating: this.viewport.isAnimating,
+      animationManagerActive: this.animationManager.isAnimating,
+      pathTracerActive: this.pathTracerRenderer.isActive,
+      explicitDirty: this._sceneDirty,
+    });
+  }
+
+  /** ADR-040 Phase XXIII — flag the scene as needing render. Idempotent. */
+  markSceneDirty(): void {
+    if (!this.disposed) this._sceneDirty = true;
   }
 
   syncBimEntities(
@@ -343,52 +357,46 @@ export class ThreeJsSceneManager {
     buildingVisModes: ReadonlyMap<string, BuildingVisMode> = new Map(),
   ): void {
     if (this.disposed) return;
-    const selectedId = useSelection3DStore.getState().selectedBimId;
-    this.selectionHighlighter.onClear();
-    // Phase 4.5: stale bimId refs die on rebuild — clear focus before new traversal.
-    this.keyboardFocusManager.clear();
-    this.bimLayer.sync(entities, floorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes);
-    if (buildingVisModes.size > 0) applyBuildingVisibility(this.bimLayer.group, buildingVisModes);
-    if (selectedId) this.selectionHighlighter.onSelect(selectedId);
-    this.pathTracerRenderer.invalidateScene();
-    this.sectionController.ensureInit();
-    this.sectionController.applyState();
+    syncBimEntitiesIntoScene(
+      { bimLayer: this.bimLayer, selectionHighlighter: this.selectionHighlighter,
+        keyboardFocusManager: this.keyboardFocusManager,
+        pathTracerRenderer: this.pathTracerRenderer, sectionController: this.sectionController },
+      { entities, floorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes },
+    );
+    this.markSceneDirty();
   }
 
   applyFloorVisibility(modes: ReadonlyMap<string, FloorVisMode>): void {
-    if (!this.disposed) applyFloorVisibility(this.bimLayer.group, modes);
+    if (this.disposed) return;
+    applyFloorVisibility(this.bimLayer.group, modes);
+    this.markSceneDirty();
   }
 
   applyBuildingVisibility(modes: ReadonlyMap<string, BuildingVisMode>): void {
-    if (!this.disposed) applyBuildingVisibility(this.bimLayer.group, modes);
+    if (this.disposed) return;
+    applyBuildingVisibility(this.bimLayer.group, modes);
+    this.markSceneDirty();
   }
 
   syncDxfOverlay(dxfScene: DxfScene | null): void {
     if (this.disposed) return;
-    this.dxfConverter.sync(dxfScene);
-    this.pathTracerRenderer.invalidateScene();
-    applyDxfOverlayFraming(
-      { viewport: this.viewport, bounds: this.dxfConverter.getBounds(),
-        fitDone: this.initialCameraFitDone, onFitApplied: () => { this.initialCameraFitDone = true; } },
+    syncDxfOverlayIntoScene(
+      { dxfConverter: this.dxfConverter, pathTracerRenderer: this.pathTracerRenderer,
+        sectionController: this.sectionController, viewport: this.viewport },
+      dxfScene, this.initialCameraFitDone, () => { this.initialCameraFitDone = true; },
     );
-    this.sectionController.ensureInit();
-    this.sectionController.applyState();
+    this.markSceneDirty();
   }
 
   selectBimEntity(bimId: string | null): void {
     if (this.disposed) return;
+    this.markSceneDirty();
     if (bimId === null) {
       this.selectionHighlighter.onClear();
       useSelection3DStore.getState().clearSelection();
       return;
     }
-    // Resolve bimType from the live group before highlighting.
-    let bimType = '';
-    this.bimLayer.group.traverse((obj) => {
-      if (bimType) return;
-      const id = obj.userData['bimId'] as string | undefined;
-      if (id === bimId) bimType = (obj.userData['bimType'] as string | undefined) ?? '';
-    });
+    const bimType = resolveBimEntityType(this.bimLayer.group, bimId);
     this.selectionHighlighter.onSelect(bimId);
     useSelection3DStore.getState().selectEntity(bimId, bimType);
   }
@@ -405,7 +413,9 @@ export class ThreeJsSceneManager {
   }
 
   updateSunPosition(azimuthDeg: number, elevationDeg: number): void {
-    if (!this.disposed) updateSunDirection(this.sun, azimuthDeg, elevationDeg);
+    if (this.disposed) return;
+    updateSunDirection(this.sun, azimuthDeg, elevationDeg);
+    this.markSceneDirty();
   }
 
   /** Public bridge για το ADR-366 §A.3 Section controller (BimViewport3D safety effect). */
@@ -413,21 +423,12 @@ export class ThreeJsSceneManager {
     if (this.disposed) return;
     this.sectionController.ensureInit();
     this.sectionController.applyState();
+    this.markSceneDirty();
   }
 
   async loadHdriEnvironment(url: string): Promise<void> {
     if (this.disposed) return;
-    const store = useEnvironmentStore.getState();
-    store.setLoading(true);
-    store.setError(false);
-    try {
-      await this.envmapGenerator.loadHdri(url);
-      this.pathTracerRenderer.invalidateScene();
-    } catch {
-      store.setError(true);
-    } finally {
-      store.setLoading(false);
-    }
+    await loadHdriIntoStore(url, this.envmapGenerator, this.pathTracerRenderer, () => this.markSceneDirty());
   }
 
   applyLightPreset(preset: LightPreset): void {
@@ -437,6 +438,7 @@ export class ThreeJsSceneManager {
       preset,
       this.envmapGenerator,
     );
+    this.markSceneDirty();
   }
 
   getRendererCanvas(): HTMLCanvasElement {
@@ -465,13 +467,16 @@ export class ThreeJsSceneManager {
     this.viewCube.setVisible(width >= VIEWCUBE_HIDE_WIDTH_PX);
     // ADR-375 Phase C.7 — feed renderer size into BIM edge LineMaterial resolution.
     bimEdgeResolutionStore.setSize(width, height);
+    this.markSceneDirty();
   }
 
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    // ADR-040 Phase XXIII — no rafHandle: scheduler unregister happens in BimViewport3D
+    // BEFORE dispose() is invoked, guaranteeing no in-flight tick can race with teardown.
     disposeSceneManagerResources({
-      renderer: this.renderer, rafHandle: this.rafHandle,
+      renderer: this.renderer,
       envStoreUnsub: this.envStoreUnsub, focusUnsub: this.focusUnsub,
       sectionController: this.sectionController,
       waypointDragHandleRenderer: this.waypointDragHandleRenderer,
@@ -486,6 +491,5 @@ export class ThreeJsSceneManager {
       bimLayer: this.bimLayer, dxfConverter: this.dxfConverter,
       viewport: this.viewport, viewCube: this.viewCube, poi: this.poi,
     });
-    this.rafHandle = null;
   }
 }

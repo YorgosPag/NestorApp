@@ -71,6 +71,48 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-27 — Phase XXIII — Single rAF SSoT Consolidation (BIM 3D)
+
+**Status**: IMPLEMENTED 2026-05-27.
+
+**Why**: Firefox profile of 2D wheel-zoom with a BIM slab in the scene showed `Window.requestAnimationFrame` self time at 17% (27 samples / 21s recording) — far above the ~3-5% expected for a single rAF subscriber. Investigation found **two independent persistent rAF loops** running concurrently:
+
+1. `UnifiedFrameScheduler` (`rendering/core/UnifiedFrameScheduler.ts:185`) — the master 2D scheduler.
+2. `ThreeJsSceneManager.startLoop()` (`bim-3d/scene/ThreeJsSceneManager.ts:312`) — a parallel persistent rAF for the BIM 3D scene, with no dirty-check (renders every frame regardless of scene state).
+
+This violated the ADR-040 §"Cardinal rules" #1 ("orchestrators MUST funnel through `UnifiedFrameScheduler`") and was an unfinished half of ADR-366 Phase 4.2 — its companion docs (`viewport-camera.ts:343`, `animation-manager.ts:5`, `viewport-animation.ts:6`) explicitly claim "tick from main RAF (no separate `requestAnimationFrame`)", but the **last and largest** rAF (the master scene loop itself) was never removed.
+
+**Industry convergence (4/4 — Forge Viewer SDK / Three.js Editor / iModel.js / AutoCAD Web)**:
+1. One master rAF per application instance.
+2. Subsystems register as **ticked observers** with optional **dirty-check**.
+3. Master skips clean systems each frame.
+4. **On-demand rendering**: truly idle (no input, no animation, no scene mutation) → no render at all.
+
+**Phase XXIII surgery** (8 files M + 4 files N):
+
+- `ThreeJsSceneManager.ts` — removed `startLoop()`/`rafHandle`/`lastFrameTime`. Added public `tick(now, delta)` + `isSceneDirty()` + `markSceneDirty()`. `RenderFrameContext` cached once in constructor (was rebuilt on every rAF call). 8 mutation sites now self-mark dirty (`syncBimEntities`, `syncDxfOverlay`, `selectBimEntity`, `applyFloorVisibility`, `applyBuildingVisibility`, `applyLightPreset`, `resize`, `setViewCubeCompassVisible`, `setWaypointHoverState`, `setDragAxisLock`, `updateSunPosition`, `initSectionBox`, `loadHdriEnvironment` — net 11 paths).
+- `scene-dispose.ts` — `rafHandle` field + `cancelAnimationFrame` call removed (scheduler unregister covers teardown).
+- `scene-setup.ts` — `InitViewportCameraDeps.onRenderNeeded` exposed (was hard-coded no-op). Wired to `markSceneDirty()` so OrbitControls damping inertia (`dampingFactor=0.25`) continues to drive renders for ~300ms after pointer release without keeping a continuous rAF alive.
+- `scene-dirty-state.ts` (NEW) — pure SSoT predicate `isSceneDirtyFromState(state)` decides "must redraw this frame?". Five-input OR (interacting / viewport-animating / animation-manager / path-tracer / explicit-dirty). Zero Three.js deps → unit-testable.
+- `__tests__/scene-dirty-state.test.ts` (NEW) — 7 tests covering each branch + the idle short-circuit + referential purity.
+- `scene-rendering-subsystems.ts` (NEW) — factory `createSceneRenderingSubsystems({renderer,scene,sun,bimLayer,getCamera,viewportSize})` returns `{qualityModulator, ssaoModulator, envmapGenerator, pathTracerRenderer, idleDetector, performanceCollector}`. Extracted from constructor to keep `ThreeJsSceneManager` under the 500-line cap (N.7.1).
+- `scene-manager-actions.ts` (NEW) — pure helpers `syncBimEntitiesIntoScene`, `syncDxfOverlayIntoScene`, `resolveBimEntityType`, `loadHdriIntoStore` used by manager mutation methods. Same 500-line-cap motivation.
+- `BimViewport3D.tsx` — registers `'bim-3d-scene'` system with `UnifiedFrameScheduler.register(...)` in the mount `useEffect`. `unregisterSchedulerRef` cleanup runs **before** `manager.dispose()` so no in-flight tick races a disposed renderer.
+
+**Performance impact (expected, Firefox profiler validation):**
+- `Window.requestAnimationFrame` self time: **17% → ~8-10%** (halved, single-rAF traffic).
+- Idle 3D scene: zero CPU/GPU cost per frame (scheduler skips entire system via `isDirty()=false`).
+- Per-frame allocation: one fewer `RenderFrameContext` object literal (cached).
+- 2D-only sessions (no `BimViewport3D` mounted): unchanged — no system registered.
+
+**Updated cardinal rule** (this section):
+
+> The BIM 3D scene MUST be ticked by `UnifiedFrameScheduler` via `register('bim-3d-scene', …)`. Calling `requestAnimationFrame` from `ThreeJsSceneManager` or its `scene-render-frame` helper is forbidden. Use `markSceneDirty()` on mutation sites.
+
+**Cross-refs**: [[Phase XXII.A — Zoom-Path Orchestrator Decoupling]] · [[Phase XXII.C — Legacy TransformContext duplicate SSoT removed]] · ADR-366 §Phase 4.2 (completion).
+
+---
+
 ### 2026-05-27 — Phase XXII.C — Legacy `TransformContext` duplicate SSoT removed
 
 **Status**: IMPLEMENTED 2026-05-27.

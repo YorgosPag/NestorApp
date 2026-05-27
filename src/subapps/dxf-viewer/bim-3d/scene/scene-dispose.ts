@@ -26,7 +26,6 @@ import type { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle
 
 export interface SceneManagerDisposeDeps {
   readonly renderer: THREE.WebGLRenderer;
-  readonly rafHandle: number | null;
   readonly envStoreUnsub: () => void;
   readonly focusUnsub: () => void;
   readonly sectionController: SectionSceneController;
@@ -53,7 +52,7 @@ export function disposeSceneManagerResources(deps: SceneManagerDisposeDeps): voi
   deps.sectionController.dispose();
   deps.waypointDragHandleRenderer.dispose();
   const dom = deps.renderer.domElement;
-  if (deps.rafHandle !== null) cancelAnimationFrame(deps.rafHandle);
+  // ADR-040 Phase XXIII — no cancelAnimationFrame: scheduler unregister handled by caller.
   deps.animationManager.dispose();
   deps.focusUnsub();
   deps.focusOutlineRenderer.dispose();

@@ -3810,6 +3810,19 @@
       "addedDate": "2026-05-21",
       "addedByAdr": "ADR-366",
       "tier": 3
+    },
+    "frame-scheduler-master-raf": {
+      "ssotFile": "src/subapps/dxf-viewer/rendering/core/UnifiedFrameScheduler.ts",
+      "description": "ADR-040 Phase XXIII + ADR-366 Phase 4.2 (2026-05-27): UnifiedFrameScheduler is the sole master `requestAnimationFrame` for the DXF viewer subapp. The BIM 3D scene MUST be ticked via `UnifiedFrameScheduler.register('bim-3d-scene', …)` and provide a dirty-check (`isSceneDirty()`); it MUST NOT call `requestAnimationFrame` itself. Industry alignment 4/4 — Forge Viewer SDK / Three.js Editor / iModel.js / AutoCAD Web. Forbidden patterns target the recurring-loop signature `this.rafHandle = requestAnimationFrame(animate)` and the recursive `this.rafHandle = requestAnimationFrame((ts) => …)` shape that the scheduler itself uses, with allowlists for the scheduler internals and tool-preview one-shots (those rAFs are gated by tool-active state, not persistent during wheel-zoom).",
+      "forbiddenPatterns": [
+        "this\\.rafHandle\\s*=\\s*requestAnimationFrame"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/rendering/core/UnifiedFrameScheduler.ts"
+      ],
+      "addedDate": "2026-05-27",
+      "addedByAdr": "ADR-040",
+      "tier": 3
     }
   }
 }

@@ -335,14 +335,16 @@ src/subapps/dxf-viewer/bim-3d/
 
 ---
 
-##### Phase 4.2 — Animated Transitions (~2-3h) ✅ DONE (2026-05-21)
+##### Phase 4.2 — Animated Transitions (~2-3h) ✅ DONE (2026-05-21) + ✅ FULLY CLOSED (2026-05-27 via ADR-040 Phase XXIII)
+
+> **2026-05-27 closure note** — when Phase 4.2 originally shipped, the `viewport-animation.ts`, `animation-manager.ts`, and `viewport-camera.ts` modules dropped their internal `requestAnimationFrame` calls (per the "single RAF coordination" promise), but the **last and largest** rAF — the master scene loop in `ThreeJsSceneManager.startLoop()` — was never removed. A Firefox profile on 2026-05-27 found dual persistent rAFs (`UnifiedFrameScheduler` + `ThreeJsSceneManager.startLoop`) running concurrently during 2D wheel-zoom with a BIM slab visible (`Window.requestAnimationFrame` self-time = 17%). The promise was fulfilled in **ADR-040 Phase XXIII** (same date): `ThreeJsSceneManager` now registers as a `'bim-3d-scene'` system with the master scheduler, dirty-checked via `isSceneDirty()` (interacting / viewport-animating / animation-manager / path-tracer / explicit). See ADR-040 §"2026-05-27 — Phase XXIII — Single rAF SSoT Consolidation (BIM 3D)" for the full surgery.
 
 **Scope**:
 - Port GenArc `viewport-animation.ts` (~709 LOC PORT_AS_IS per SPEC-3D-004A)
 - 500ms cubic ease-in-out (A.4 decision, locked)
 - Ortho ↔ perspective smooth FOV interpolation (όχι abrupt switch)
 - Interruptible animations (νέο request cancels current με fade-blend)
-- Animation manager (`bim-3d/viewport/animation-manager.ts`) με **single RAF loop** (ADR-040 compliant)
+- Animation manager (`bim-3d/viewport/animation-manager.ts`) με **single RAF loop** (ADR-040 compliant) — finalised in ADR-040 Phase XXIII (2026-05-27)
 
 **Files (NEW)**:
 - `bim-3d/viewport/animation-manager.ts` (~200 LOC)

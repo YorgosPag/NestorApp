@@ -24,6 +24,8 @@ export interface InitViewportCameraDeps {
   readonly initialTarget: THREE.Vector3;
   readonly onInteractionStart: () => void;
   readonly onInteractionEnd: () => void;
+  /** ADR-040 Phase XXIII — fired by OrbitControls 'change' (covers damping inertia). */
+  readonly onRenderNeeded: () => void;
   readonly getReducedMotionOverride: () => ReducedMotionOverride;
 }
 
@@ -31,7 +33,7 @@ export function initViewportCamera(deps: InitViewportCameraDeps): ViewportCamera
   return createViewportCamera(deps.rendererDomElement, {
     initialPosition: deps.initialPosition.clone(),
     initialTarget: deps.initialTarget.clone(),
-    onRenderNeeded: () => { /* RAF drives rendering — no-op */ },
+    onRenderNeeded: deps.onRenderNeeded,
     onInteractionStart: deps.onInteractionStart,
     onInteractionEnd: deps.onInteractionEnd,
     getReducedMotion: () => checkReducedMotion(deps.getReducedMotionOverride()),
