@@ -434,6 +434,8 @@ export const SNAP_ENGINE_PRIORITIES = {
   BIM_SLAB_CORNER:    -2,
   BIM_COLUMN_CORNER:  -2,
   BIM_OPENING_CORNER: -2,
+  /** ADR-378 Phase 3: TEXT/MTEXT 8-point snap (insertion + 4 corners + center + 2 edge mids) — same tier as INSERTION */
+  TEXT: 2,
 } as const;
 
 // ===== SNAP UI OFFSETS =====
