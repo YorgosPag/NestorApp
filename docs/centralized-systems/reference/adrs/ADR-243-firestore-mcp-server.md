@@ -154,3 +154,4 @@ All permissive licenses (ADR-034 Appendix C compliant):
 |------|--------|
 | 2026-03-19 | Initial implementation — 9 Firestore tools, security model, audit logging |
 | 2026-03-19 | v1.1.0 — Added 6 Firebase Storage tools (list, metadata, read, signed-url, upload, delete), path-based access control, separate rate limits |
+| 2026-05-27 | v1.2.0 — Extended `WRITE_ALLOWED_COLLECTIONS` με 26 DXF/BIM collections (canonical SSoT: `src/config/firestore-collections.ts`). Unblocks Bug B / ADR-390 ghost-render verification via manual `firestore_delete_document`. Categories: 7 BIM entities (walls/openings/slabs/slab_openings/columns/beams/stairs), 2 storage layers, 10 BIM config/presets, 6 DXF viewer state. All companyId+projectId scoped — same risk profile as `projects`/`buildings`/`tasks` already in allowlist. |

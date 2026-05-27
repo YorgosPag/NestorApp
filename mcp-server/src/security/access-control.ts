@@ -96,6 +96,39 @@ const WRITE_ALLOWED_COLLECTIONS = new Set([
   'external_identities',
   'contact_relationships',
   'search_documents',
+
+  // ── DXF Viewer / BIM (ADR-363, ADR-358, ADR-375, ADR-390) ──
+  // Canonical SSoT names: src/config/firestore-collections.ts
+  // Required for Bug B verification (ghost render) + ADR-390 symmetric delete/undo tests.
+  // BIM entity SSoT (7 types — companyId+projectId scoped, ADR-363/358):
+  'floorplan_walls',
+  'floorplan_openings',
+  'floorplan_slabs',
+  'floorplan_slab_openings',
+  'floorplan_columns',
+  'floorplan_beams',
+  'floorplan_stairs',
+  // DXF storage layers (companyId-scoped):
+  'floorplan_backgrounds',
+  'floorplan_overlays',
+  // BIM config/presets/library (companyId-scoped, ADR-330/375):
+  'bim_presets',
+  'bim_materials',
+  'bim_settings',
+  'bim_3d_preferences',
+  'bim_renders',
+  'bim_dimensions_3d',
+  'bim_comments',
+  'bim_performance_telemetry',
+  'bim_animations',
+  'stair_presets',
+  // DXF Viewer state (companyId-scoped):
+  'dxf_overlay_levels',
+  'dxf_viewer_levels',
+  'dxf_viewer_view_templates',
+  'dxf_viewer_pen_tables',
+  'dxf_layer_state_templates',
+  'dxf_template_categories',
 ]);
 
 // ============================================================================
