@@ -471,11 +471,11 @@ describe('DXF Entity Creation Flow', () => {
 # BACKUP: F:\Pagonis_Nestor\backups\advanced-features-20250923_112319 ✅
 ```
 
-**ΔΗΜΙΟΥΡΓΗΘΗΚΕ**:
+**ΔΗΜΙΟΥΡΓΗΘΗΚΕ** (⚠️ DELETED 2026-05-27 — ADR-378 Phase 1, dead "conference demo" code):
 ```
-/systems/ai-snapping/
-  ├── AISnappingEngine.ts      # 450 lines - ML-like snapping
-  └── useAISnapping.ts         # 250 lines - React integration
+/systems/ai-snapping/  # REMOVED
+  ├── AISnappingEngine.ts      # 450 lines - DELETED
+  └── useAISnapping.ts         # 250 lines - DELETED
 ```
 
 **FEATURES**:

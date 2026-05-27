@@ -4,7 +4,7 @@
 **Date**: 2026-05-16
 **Category**: Drawing System / DXF Viewer / Construction Geometry
 **Author**: Giorgio Pagonis + Claude (Opus 4.7)
-**Related ADRs**: ADR-031 (Command History), ADR-040 (Canvas Performance), ADR-055 (Tool State), ADR-057 (Unified Completion), ADR-065 (Intersection cache), ADR-149 (Snap Priorities), ADR-189 (Construction Guides — distinct system), ADR-294 (SSoT Ratchet), **ADR-357 §G16** (origine), **ADR-358** (consumer di `LayerStore` + `resolveEntityStyle`).
+**Related ADRs**: ADR-031 (Command History), ADR-040 (Canvas Performance), ADR-055 (Tool State), ADR-057 (Unified Completion), ADR-065 (Intersection cache), ADR-378 (Snap System Master Architecture — supersedes phantom ADR-149), ADR-189 (Construction Guides — distinct system), ADR-294 (SSoT Ratchet), **ADR-357 §G16** (origine), **ADR-358** (consumer di `LayerStore` + `resolveEntityStyle`).
 
 > **Posizione nel piano** (ADR-357 §7.1):
 > 1. ✅ ADR-357 (LINE tool Google-Level) — ACCEPTED.

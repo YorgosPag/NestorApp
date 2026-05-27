@@ -124,7 +124,7 @@ clamp(cosAngle, -1, 1);  // Math.acos domain constraint
 | `settings-core/types/domain.ts` | Migrated | 13 clamp calls updated |
 | `types/gripSettings.ts` | Migrated | 5 clamp calls updated |
 | `core/spatial/SpatialUtils.ts` | Migrated | 1 clamp call updated |
-| `systems/ai-snapping/AISnappingEngine.ts` | Migrated | 1 clamp call updated |
+| ~~`systems/ai-snapping/AISnappingEngine.ts`~~ | Removed | File deleted as dead code (ADR-378 Phase 1, 2026-05-27) |
 | `services/FitToViewService.ts` | N/A | Already uses FIT_TO_VIEW_DEFAULTS from transform-config |
 | `systems/zoom/utils/bounds.ts` | Migrated | `isValidBounds` delegates to `SpatialUtils.isValidRect` |
 

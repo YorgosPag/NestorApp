@@ -448,7 +448,7 @@ src/subapps/dxf-viewer/
 │   ├── dxf-parser-types.ts              [modify: full DimStyleEntry]
 │   └── dxf-scene-builder.ts             [modify: wire dimensions]
 ├── snapping/
-│   └── pro-snap-engine.ts               [modify: add def-point snap mode]
+│   └── engines/{DimDefPointSnapEngine,DimLineSnapEngine}.ts  [NEW per ADR-378 registry pattern; ghost pro-snap-engine.ts deleted in ADR-378 Phase 2]
 ├── hooks/drawing/useDrawingHandlers.ts  [modify: wire dim tool handlers]
 └── i18n/locales/{el,en}/
     └── dimensions.json                  [NEW namespace]
@@ -618,7 +618,7 @@ Dopo ogni Phase 5A-5J:
 
 | # | Phase | Files | Output |
 |---|---|---|---|
-| **I1** | Snap def-point + dim-line modes | `snapping/pro-snap-engine.ts` (mod), `snapping/SnapPresets.ts` (mod) | Snap a def points + dim lines |
+| **I1** | Snap def-point + dim-line modes | `snapping/engines/DimDefPointSnapEngine.ts` + `snapping/engines/DimLineSnapEngine.ts` (NEW per ADR-378 registry pattern), `snapping/SnapPresets.ts` (mod) | Snap a def points + dim lines |
 | **I2** | Grip editing (5 grips per dim) | `hooks/dimensions/useDimensionGrips.ts` (NEW), grip system wiring | Drag def points / text / ext lines |
 
 ### Group J — ASSOCIATIVITY D11 (2 sessions)

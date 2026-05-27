@@ -35,7 +35,7 @@
   - `STORAGE_KEYS.RECENT_COLORS` - `'dxf-viewer:recent-colors'`
   - `STORAGE_KEYS.DXF_SETTINGS` - `'dxf-settings-v2'`
   - `STORAGE_KEYS.CURSOR_SETTINGS` - `'autocad_cursor_settings'`
-  - `STORAGE_KEYS.AI_SNAPPING` - `'ai-snapping-data'`
+  - ~~`STORAGE_KEYS.AI_SNAPPING` - `'ai-snapping-data'`~~ — Removed 2026-05-27 (ADR-378 Phase 1: AISnappingEngine deleted)
   - `STORAGE_KEYS.RULERS_GRID_PREFIX` - `'rulers-grid-persistence'`
   - `STORAGE_KEYS.CONSTRAINTS_PREFIX` - `'dxf-viewer-constraints'`
   - `STORAGE_KEYS.COMMAND_HISTORY_PREFIX` - `'dxf-command-history'`
@@ -52,7 +52,7 @@
   - `systems/rulers-grid/usePersistence.ts` - Rulers/Grid persistence hook
   - `systems/rulers-grid/RulersGridSystem.tsx` - Main rulers/grid system
   - `systems/constraints/useConstraintsSystemState.ts` - Constraints system state
-  - `systems/ai-snapping/AISnappingEngine.ts` - AI snapping learned data
+  - ~~`systems/ai-snapping/AISnappingEngine.ts`~~ - Removed 2026-05-27 (ADR-378 Phase 1: file deleted as dead code)
   - `core/commands/CommandPersistence.ts` - Command history fallback storage
   - `ui/CursorSettingsPanel.tsx` - Cursor settings clear & reload
 - **Relationship to LocalStorageDriver**:

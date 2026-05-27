@@ -9,7 +9,7 @@
 | **Category** | DXF Viewer — Snapping / BIM Precision |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-370-bim-corner-snap-system.md` (official number: ADR-371) |
 | **Author** | Claude Opus 4.7 + Γιώργος Παγώνης |
-| **Related ADRs** | ADR-040 (Preview Canvas Perf), ADR-087 (Snap Engine Config), ADR-137 (Snap Icon Geometry), ADR-149 (Snap Engine Priorities), ADR-189 (Construction Guides), ADR-363 (BIM Drawing Mode — Phase 5.5d/5.5i column anchor template), ADR-362 (Dimensions) |
+| **Related ADRs** | ADR-040 (Preview Canvas Perf), ADR-087 (Snap Engine Config), ADR-137 (Snap Icon Geometry), ADR-378 (Snap System Master Architecture — supersedes phantom ADR-149), ADR-189 (Construction Guides), ADR-363 (BIM Drawing Mode — Phase 5.5d/5.5i column anchor template), ADR-362 (Dimensions) |
 | **Implementation template** | `ColumnCenterSnapEngine` (ADR-363 Phase 5.5i) + `column-anchors.ts` (ADR-363 Phase 5.5d) |
 
 ---
@@ -20,7 +20,7 @@
 
 **Το πρόβλημα**: Όταν ο μηχανικός σχεδιάζει έναν τοίχο BIM, εμφανίζονται 3 grips πάνω στον άξονα (start/end/midpoint). Αν θέλει να ενώσει τις **εξωτερικές γωνίες** δύο τοίχων (industry-standard wall corner alignment), τα grips δεν αρκούν — βρίσκονται μισό πάχος μέσα από την πραγματική γωνία.
 
-**Η λύση**: Ξεχωριστά snap engines που εκθέτουν τα 4 corner points (start-left, start-right, end-left, end-right για τοίχους — 4 outline vertices για δοκάρια — N polygon vertices για πλάκες — 4 bbox corners για κολώνες — 4 outline corners για ανοίγματα), διαθέσιμα ως snap targets με την υψηλότερη προτεραιότητα (-2 στην ιεραρχία ADR-149).
+**Η λύση**: Ξεχωριστά snap engines που εκθέτουν τα 4 corner points (start-left, start-right, end-left, end-right για τοίχους — 4 outline vertices για δοκάρια — N polygon vertices για πλάκες — 4 bbox corners για κολώνες — 4 outline corners για ανοίγματα), διαθέσιμα ως snap targets με την υψηλότερη προτεραιότητα (-2 στην ιεραρχία ADR-378 §5).
 
 Mirror του Revit "Wall Endpoint snap" + ArchiCAD "Hotspots on edges" + Vectorworks "Smart Edge" pattern.
 
@@ -839,7 +839,7 @@ Mirror `ColumnCenterSnapEngine.test.ts` (10 test cases each):
 - **ADR-040** — Preview canvas perf (lifecycle owner = useGlobalSnapSceneSync).
 - **ADR-087** — Snap engine config centralization (tolerance-config.ts).
 - **ADR-137** — Snap icon geometry (SVG sizes via SNAP_ICON_GEOMETRY).
-- **ADR-149** — Snap engine priorities (BIM_*_CORNER = -2 entry in `SNAP_ENGINE_PRIORITIES`).
+- **ADR-378** — Snap System Master Architecture + Priority Hierarchy §5 (BIM_*_CORNER = -2 entry in `SNAP_ENGINE_PRIORITIES`). Supersedes phantom ADR-149 reference.
 - **ADR-363 Phase 5.5d** — Column anchor world points (template for §5.1-5.5 anchor modules).
 - **ADR-363 Phase 5.5i** — ColumnCenterSnapEngine (template for §6 snap engines).
 

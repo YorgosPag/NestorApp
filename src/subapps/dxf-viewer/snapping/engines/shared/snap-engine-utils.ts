@@ -33,7 +33,7 @@ export interface LegacyRectangleEntity {
 // Snap context interface
 interface SnapContext {
   maxCandidates: number;
-  lastPoint?: Point2D; // ✅ ENTERPRISE FIX: Added lastPoint για AISnappingEngine.ts
+  lastPoint?: Point2D;
 }
 
 /**

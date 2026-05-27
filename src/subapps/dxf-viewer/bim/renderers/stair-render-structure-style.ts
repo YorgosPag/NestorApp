@@ -47,6 +47,13 @@ export interface StairStyleContext {
   /** ADR-377 C.3 — subcategory-resolved widths (fall back to baseLineWidth when absent). */
   readonly treadsLineWidth?: number;
   readonly stringersLineWidth?: number;
+  /**
+   * ADR-375 v2.12 — pre-computed V/G category fill tint (rgba string) when the
+   * user has set a V/G color for category `stair`, otherwise `null`. When set,
+   * tread render passes use this in place of the hardcoded `TREAD_FILL_*`
+   * constants (Revit "cut pattern background" parity for stair treads).
+   */
+  readonly vgFillTint?: string | null;
 }
 
 const TREAD_FILL_ALPHA = 0.12;
@@ -86,7 +93,7 @@ export function renderTreadsForStructure(
   const { ctx } = scx;
   const isGlass = structureType === 'glass-tread';
   const isGrating = structureType === 'steel-grating';
-  const fillStyle = isGlass ? TREAD_FILL_GLASS : TREAD_FILL_DEFAULT;
+  const fillStyle = scx.vgFillTint ?? (isGlass ? TREAD_FILL_GLASS : TREAD_FILL_DEFAULT);
 
   ctx.save();
   ctx.lineWidth = scx.treadsLineWidth ?? scx.baseLineWidth;

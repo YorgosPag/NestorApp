@@ -40,9 +40,6 @@ export const STORAGE_KEYS = {
   DXF_SETTINGS: 'dxf-settings-v2',
   CURSOR_SETTINGS: 'autocad_cursor_settings',
 
-  // AI Snapping
-  AI_SNAPPING: 'ai-snapping-data',
-
   // Rulers/Grid Persistence (dynamic key - used with prefix)
   RULERS_GRID_PREFIX: 'rulers-grid-persistence',
 

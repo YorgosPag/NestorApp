@@ -19,8 +19,8 @@ snapping/
 │   ├── BaseSnapEngine.ts       # Base class για engines
 │   ├── GeometricCalculations.ts # Γεωμετρικοί υπολογισμοί
 │   └── SpatialIndex.ts         # Spatial indexing
-├── ProSnapEngineV2.ts          # Νέα κύρια κλάση
-├── pro-snap-engine.ts          # Legacy engine
+├── ProSnapEngineV2.ts          # Κύρια κλάση (μοναδική μετά ADR-378 Phase 2)
+├── global-snap-engine.ts       # Module singleton (sole production instance, ADR-040)
 └── index.ts                    # Exports
 ```
 

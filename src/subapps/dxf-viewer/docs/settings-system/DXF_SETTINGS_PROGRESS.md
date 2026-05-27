@@ -150,9 +150,9 @@
 - ✅ Error handling
 
 ### BONUS: Advanced Features ✅ ΟΛΟΚΛΗΡΩΘΗΚΕ
-**AI-Powered Snapping**:
-- `/systems/ai-snapping/AISnappingEngine.ts` - ML-like algorithms
-- `/systems/ai-snapping/useAISnapping.ts` - React integration
+**AI-Powered Snapping** ⚠️ DELETED 2026-05-27 (ADR-378 Phase 1 — dead "conference demo" code, zero production wiring):
+- ~~`/systems/ai-snapping/AISnappingEngine.ts`~~ - REMOVED
+- ~~`/systems/ai-snapping/useAISnapping.ts`~~ - REMOVED
 
 **Real-Time Collaboration**:
 - `/systems/collaboration/CollaborationEngine.ts` - Multi-user system

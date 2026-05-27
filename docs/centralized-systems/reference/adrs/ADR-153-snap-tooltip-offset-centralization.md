@@ -37,4 +37,4 @@
   - Single place to adjust snap tooltip offset
   - Consistent visual feedback across snap rendering systems
   - Follows established snap constants pattern (SNAP_TOLERANCE, SNAP_ENGINE_PRIORITIES)
-- **Companion**: ADR-095 (Snap Tolerance), ADR-149 (Snap Engine Priorities)
+- **Companion**: ADR-095 (Snap Tolerance), ADR-378 (Snap System Master Architecture — supersedes phantom ADR-149)

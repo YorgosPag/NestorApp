@@ -31,6 +31,7 @@ import { isStairEntity } from '../../types/entities';
 import { getStairGrips } from '../stairs/stair-grips';
 import { DEFAULT_CUT_PLANE_HEIGHT } from '../geometry/stairs/stair-geometry-shared';
 import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
+import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { linePatternToDashArray, type LinePatternKey } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -145,6 +146,8 @@ export class StairRenderer extends BaseEntityRenderer {
       baseLineWidth: _treadsS.lineWidthPx,
       treadsLineWidth: _treadsS.lineWidthPx,
       stringersLineWidth: _stringersS.lineWidthPx,
+      // ADR-375 v2.12 — V/G category color tints stair treads (SSoT helper).
+      vgFillTint: resolveVgFillTint('stair', cutState, ds.objectStyles),
     };
     renderTreadsForStructure(scx, stair.params.structureType, geometry.treadsBelowCut);
     renderStringersForStructure(scx, stair.params.structureType, geometry);

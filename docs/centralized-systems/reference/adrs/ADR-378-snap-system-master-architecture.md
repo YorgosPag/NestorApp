@@ -479,14 +479,35 @@ getLockedGripWorldPos(): Point2D | null
 - `GeoCanvasContent.tsx` — confirm public surface unchanged
 - **User-visible win**: property floorplan tab gains 25 modes (BIM corners, dimensions, guides) vs previous 6
 
-### Phase 5 — Doc cleanup (Sonnet, ~15min)
+### Phase 5 — Doc cleanup ✅ DONE 2026-05-27 (Sonnet, EXPANDED scope)
 
-#### 5.1 Fix ADR-371 phantom reference
-- Edit `docs/centralized-systems/reference/adrs/ADR-370-bim-corner-snap-system.md`
-- Replace `ADR-149 (Snap Engine Priorities)` → `ADR-378 (Snap System Master Architecture)`
+Original plan: 2 edits. Actual: 12 edits across 11 files after Phase 1+2 verification uncovered wider stale-ref surface.
 
-#### 5.2 ADR index
-- Edit `docs/centralized-systems/reference/adr-index.md` — add ADR-378 entry in Active list
+#### 5.1 ADR phantom reference fixes — ALL ADR-149 → ADR-378
+- ✅ `ADR-370-bim-corner-snap-system.md` line 12 (Related ADRs row), line 23 (ιεραρχία ADR-149 → ADR-378 §5), line 842 (References list entry)
+- ✅ `ADR-153-snap-tooltip-offset-centralization.md` line 40 (Companion ADRs)
+- ✅ `ADR-359-auxiliary-geometry-tools.md` line 7 (Related ADRs)
+
+#### 5.2 Stale paths in Active ADRs
+- ✅ `ADR-034-validation-bounds-centralization.md` line 127 — AISnappingEngine row strikethrough + "Removed (ADR-378 Phase 1)"
+- ✅ `ADR-092-centralized-localstorage-service.md` lines 38, 55 — STORAGE_KEYS.AI_SNAPPING + AISnappingEngine.ts file refs strikethrough + removal note
+- ✅ `ADR-362-enterprise-dimension-system.md` lines 451, 621 — `pro-snap-engine.ts` (deleted) → `engines/DimDefPointSnapEngine.ts + DimLineSnapEngine.ts` (NEW per ADR-378 registry pattern)
+
+#### 5.3 DXF Viewer subapp docs
+- ✅ `src/subapps/dxf-viewer/docs/features/snapping/ARCHITECTURE.md` line 23 — Removed `pro-snap-engine.ts # Legacy engine`, added `global-snap-engine.ts # Module singleton`
+- ✅ `src/subapps/dxf-viewer/docs/settings-system/DXF_SETTINGS_PROGRESS.md` lines 153-155 — AI-Powered Snapping section marked DELETED + entries strikethrough
+- ✅ `src/subapps/dxf-viewer/docs/DXF_VIEWER_CONFERENCE_REPORT.md` lines 474-479 — `/systems/ai-snapping/` tree marked DELETED
+
+#### 5.4 Code cleanup (N.0.2 Boy Scout)
+- ✅ `src/subapps/dxf-viewer/utils/storage-utils.ts` lines 42-44 — Orphan `AI_SNAPPING: 'ai-snapping-data'` constant deleted (zero consumers post-Phase 1)
+- ✅ `src/subapps/dxf-viewer/snapping/engines/shared/snap-engine-utils.ts` line 36 — Stale comment `"για AISnappingEngine.ts"` removed (field `lastPoint?: Point2D` kept — used by other consumers)
+
+#### 5.5 ADR index polish
+- ✅ `docs/centralized-systems/reference/adr-index.md` line 372 — ADR-378 status DRAFT→ACTIVE, Phases 1+2+5 DONE noted
+
+#### 5.6 Verification
+- Grep `AISnappingEngine|useProSnapShortcuts|pro-snap-engine|AI_SNAPPING` → only legit remaining: tracking files (ADR-378 self-refs, pending-ratchet, ΑΝΑΦΟΡΑ_2, memory), historical entries (ADR-314 Phase C.5.32 2026-04-19), archived ADRs (067/079), research/analysis MDs, baseline JSON (Phase 6 scope), backup files
+- Grep `ADR-149` → only legit remaining: 3 Active ADRs (370/153/359) all now in "supersedes phantom ADR-149" wording + ADR-378 itself documenting the phantom history
 
 ### Phase 6 — SSoT registry + trackers (Sonnet, ~30min)
 
@@ -570,6 +591,7 @@ These remain as-is. Future ADR may unify 3D snap if/when 3D BIM Viewer matures.
 | 2026-05-27 | 0 | ADR-378 written. Phases 1-6 pending. |
 | 2026-05-27 | 1 | Phase 1 — Dead code deleted (AISnappingEngine + AISnappingEngine.types + useProSnapShortcuts). 3 files removed via `git rm`. Zero production references confirmed via grep (only 1 stale comment in `snap-engine-utils.ts:36` + 6 doc/analysis files info-only). `ai-snapping/` folder empty. Sonnet 4.6, ~10min. |
 | 2026-05-27 | 2 | Phase 2 — `pro-snap-engine.ts` ghost deleted. `snapping/index.ts` re-export line removed. **Discovery**: ZERO production consumers of `snapSystem` existed — ADR §3.3 and §9.2.1 claims about `measure-snap-bridge.ts` were incorrect (that file is in `src/components/shared/files/media/` and unrelated). No migration step needed. §3.3 + §9 Phase 2 corrected to match reality. Sonnet 4.6, ~10min. |
+| 2026-05-27 | 5 | Phase 5 — Doc cleanup (EXPANDED from 2 to 12 edits across 11 files). All ADR-149 phantom refs updated to ADR-378 in 3 Active ADRs (370/153/359). All stale paths in Active ADRs (034/092/362) marked Removed or pointed to new SSoT engines. DXF Viewer subapp docs (ARCHITECTURE/SETTINGS_PROGRESS/CONFERENCE_REPORT) cleaned. Code: orphan AI_SNAPPING storage constant deleted, stale comment in snap-engine-utils.ts removed. adr-index.md status DRAFT→ACTIVE. Sonnet 4.6, ~20min. |
 
 ---
 
