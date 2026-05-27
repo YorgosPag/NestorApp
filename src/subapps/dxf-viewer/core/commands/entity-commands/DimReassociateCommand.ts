@@ -108,8 +108,10 @@ export class DimReassociateCommand implements ICommand {
   serialize(): SerializedCommand {
     return {
       id: this.id,
+      name: this.name,
       type: this.type,
       timestamp: this.timestamp,
+      version: 1,
       data: {
         dimId: this.dimId,
         associationIndex: this.associationIndex,
