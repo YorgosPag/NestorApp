@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 339 ADRs | Last Updated: 2026-05-27
+**📊 Stats**: 342 ADRs | Last Updated: 2026-05-27
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 132 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 133 | [View](#uncategorized) |
 
 ---
 
@@ -372,9 +372,11 @@
 | **ADR-378** | Snap System Master Architecture & SSoT | ✅ ✅ **COMPLETE** 2026-05-27 — Master ADR + Phases 1+2+3+4+5+6 ALL DONE | 2026-05-27 | DXF Viewer — Snapping (Master) | [📄](./adrs/ADR-378-snap-system-master-architecture.md) |
 | **ADR-379** | BIM Entity Audit Coverage Fix | ✅ ✅ **DONE** 2026-05-27 — Phases A→E shipped, Phase F (this ADR + cross-refs) pending commit | 2026-05-27 | DXF Viewer — Persistence / Audit Trail | [📄](./adrs/ADR-379-bim-entity-audit-coverage.md) |
 | **ADR-380** | Stair + Slab-Opening Audit Coverage | ✅ ✅ **DONE** 2026-05-27 — All phases shipped, pending commit | 2026-05-27 | DXF Viewer — Persistence / Audit Trail | [📄](./adrs/ADR-380-stair-slab-opening-audit-coverage.md) |
-| **ADR-381** | DXF Viewer Subsystem Duplication Audit (Master) | ✅ 🟢 **RESEARCH COMPLETE** 2026-05-27 — 7 parallel domain audits executed (read-only). Implementation roadmap pending — sub-ADRs εκκρεμούν ανά finding. **C1 closed by ADR-382 (2026-05-27).** | 2026-05-27 | DXF Viewer — Architecture Audit (Master) | [📄](./adrs/ADR-381-dxf-viewer-duplication-audit-master.md) |
-| **ADR-382** | BIM Visibility Resolver SSoT (2D + 3D) | ✅ 🟢 **COMPLETE** 2026-05-27 — Phase A (Haiku) + B+C+D+E (Opus). Revit-style intersection (V/G + Layer + Floor + Building, ANY-hides-wins). 7/7 BIM 2D renderers + 3D BimSceneLayer per-entity loop. Production bug closed: 2D⟷3D parity για layer.visible. 54/54 tests PASS. | 2026-05-27 | DXF Viewer — Visibility / Cross-Cutting | [📄](./adrs/ADR-382-visibility-resolver-ssot.md) |
+| **ADR-381** | DXF Viewer Subsystem Duplication Audit (Master) | ✅ 🟢 **RESEARCH COMPLETE** 2026-05-27 — 7 parallel domain audits executed (read-only). Implementation roadmap pending — sub-ADRs εκκρεμούν ανά finding. | 2026-05-27 | DXF Viewer — Architecture Audit (Master) | [📄](./adrs/ADR-381-dxf-viewer-duplication-audit-master.md) |
+| **ADR-382** | Visibility Resolver SSoT (BIM 2D + 3D) | ✅ 🟢 **PHASE A+B+C+D+E COMPLETE** 2026-05-27 — Resolver SSoT + 7/7 BIM 2D renderers (Phase A by Haiku + Phase B by Opus) + 3D BimSceneLayer per-entity loop + floorVisModes propagation chain + LayerStore subscriber wiring (Phase C by Opus). SSoT registry entry + ΕΚΚΡΕΜΟΤΗΤΕΣ + ADR-381 §3 closure (Phase D). 54/54 tests PASS (27 resolver unit + 10 V/G regression + 17 Phase C integration). 2D⟷3D parity achieved — `layer.visible=false` now hides BIM entities in both viewports. | 2026-05-27 | DXF Viewer — Visibility / Cross-Cutting | [📄](./adrs/ADR-382-visibility-resolver-ssot.md) |
 | **ADR-390** | Symmetric BIM Entity Delete/Undo Persistence | ✅ ✅ **DONE** 2026-05-27 — Phase 1 (event infra + slab pilot) + Phase 2 (extend 7/7 BIM entities) + Phase 3 (ADR + tests + docs) shipped | 2026-05-27 | DXF Viewer — Commands / Persistence / Audit Trail | [📄](./adrs/ADR-390-symmetric-bim-delete-undo.md) |
+| **ADR-391** | AdminLayerManager Ribbon Wiring | ✅ 🟢 **APPROVED & IMPLEMENTED** 2026-05-27 — Mount path closed από orphan component → modal dialog στο View tab του ribbon + Ctrl+L keyboard fallback. | 2026-05-27 | DXF Viewer — Ribbon / UI Wiring | [📄](./adrs/ADR-391-admin-layer-manager-ribbon-wiring.md) |
+| **ADR-392** | BIM Stair Extended Parametric Grips (Industry-Aligned Symmetric Pattern) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-392-bim-stair-extended-grips.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -735,6 +737,7 @@
 | **ADR-372** | Contact Relationship Bidirectional Crossing Matrix | ✅ APPROVED | [View](./adrs/ADR-372-relationship-crossings-matrix.md) |
 | **ADR-375** | BIM Entity Line Weight Semantic System (Revit-Equivalent) | ✅ APPROVED | [View](./adrs/ADR-375-bim-entity-line-weight-semantic-system.md) |
 | **ADR-377** | BIM Subcategories System | ✅ APPROVED | [View](./adrs/ADR-377-bim-subcategories-system.md) |
+| **ADR-392** | BIM Stair Extended Parametric Grips (Industry-Aligned Symmetric Pattern) | ✅ APPROVED | [View](./adrs/ADR-392-bim-stair-extended-grips.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
