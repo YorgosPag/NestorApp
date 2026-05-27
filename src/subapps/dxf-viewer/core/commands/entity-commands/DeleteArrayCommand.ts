@@ -47,7 +47,7 @@ export class DeleteArrayCommand implements ICommand {
     this.sceneManager.removeEntity(this.arrayId);
   }
 
-  canMergeWith(): boolean {
+  canMergeWith(_other: ICommand): boolean {
     return false;
   }
 

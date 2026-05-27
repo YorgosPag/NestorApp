@@ -10,7 +10,7 @@
 
 import { validateSlabOpeningParams } from '../slab-opening-validator';
 import type { SlabOpeningParams } from '../../types/slab-opening-types';
-import type { SlabEntity } from '../../types/slab-types';
+import type { SlabEntity, SlabParams } from '../../types/slab-types';
 import { computeSlabGeometry } from '../../geometry/slab-geometry';
 
 function makeOpening(
@@ -22,13 +22,13 @@ function makeOpening(
     slabId: 'slab_test',
     outline: { vertices: verts.map((v) => ({ x: v.x, y: v.y, z: 0 })) },
     ...overrides,
-  } as SlabParams;
+  } as SlabOpeningParams;
 }
 
 function makeSlab(): SlabEntity {
   // 10m × 10m floor slab (mm world coords).
-  const params = {
-    kind: 'floor' as const,
+  const params: SlabParams = {
+    kind: 'floor',
     outline: {
       vertices: [
         { x: 0, y: 0, z: 0 },

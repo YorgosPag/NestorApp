@@ -60,10 +60,10 @@ export interface CanvasSectionOverlaysProps {
 export const CanvasSectionOverlays: React.FC<CanvasSectionOverlaysProps> = (p) => {
   return (
     <>
-      <DrawingContextMenu ref={p.drawingMenuRef} {...p.drawingMenu} />
-      <EntityContextMenu ref={p.entityMenuRef} {...p.entityMenu} />
-      <GuideContextMenu ref={p.guideMenuRef} {...p.guideMenu} />
-      <GuideBatchContextMenu ref={p.guideBatchMenuRef} {...p.guideBatchMenu} />
+      <DrawingContextMenu ref={p.drawingMenuRef as React.Ref<DrawingContextMenuHandle>} {...p.drawingMenu} />
+      <EntityContextMenu ref={p.entityMenuRef as React.Ref<EntityContextMenuHandle>} {...p.entityMenu} />
+      <GuideContextMenu ref={p.guideMenuRef as React.Ref<GuideContextMenuHandle>} {...p.guideMenu} />
+      <GuideBatchContextMenu ref={p.guideBatchMenuRef as React.Ref<GuideBatchContextMenuHandle>} {...p.guideBatchMenu} />
       <PromptDialog />
       <GripHoverMenu />
       {/* ADR-357 Phase 11 — Right-click hot grip context menu (AutoCAD, micro-leaf, ADR-040) */}

@@ -38,8 +38,12 @@ function makeColumn(overrides?: Partial<ColumnParams>): ColumnParams {
     depth: 400,
     height: 3000,
     rotation: 0,
+    baseBinding: 'storey-floor',
+    topBinding: 'storey-ceiling',
+    baseOffset: 0,
+    topOffset: 0,
     ...overrides,
-  };
+  } as ColumnParams;
 }
 
 describe('computeColumnGeometry — footprint shape', () => {

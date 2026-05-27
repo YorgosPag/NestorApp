@@ -37,6 +37,7 @@ const SLAB_4X4: SlabParams = {
   },
   levelElevation: 0,
   thickness: 200,
+  geometryType: 'box',
 };
 
 /** Beam fully inside slab: 1m × 0.25m rectangle, depth 500mm. */

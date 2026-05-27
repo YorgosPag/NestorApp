@@ -26,6 +26,10 @@ function makeSceneManager(initial: Array<{ id: string }> = []): { sm: ISceneMana
     insertVertex: () => {},
     removeVertex: () => {},
     getVertices: () => undefined,
+    updateEntities: () => {},
+    getEntityIndex: () => -1,
+    reorderEntity: () => {},
+    moveEntityToIndex: () => {},
   };
   return { sm, store };
 }

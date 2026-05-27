@@ -137,7 +137,7 @@ describe('opening-tag-style-service — singleton', () => {
   });
 
   test('debounced persister fires once per burst', () => {
-    const persister: jest.MockedFunction<OpeningTagStylePersister> = jest.fn(
+    const persister: jest.MockedFunction<OpeningTagStylePersister> = jest.fn<Promise<void>, [string, OpeningTagStyle]>(
       async () => undefined,
     );
     service.setPersister(persister);
@@ -169,7 +169,7 @@ describe('opening-tag-style-service — singleton', () => {
   });
 
   test('reset clears state + flushes empty payload', () => {
-    const persister: jest.MockedFunction<OpeningTagStylePersister> = jest.fn(
+    const persister: jest.MockedFunction<OpeningTagStylePersister> = jest.fn<Promise<void>, [string, OpeningTagStyle]>(
       async () => undefined,
     );
     service.setPersister(persister);
@@ -185,7 +185,7 @@ describe('opening-tag-style-service — singleton', () => {
   });
 
   test('project switch cancels pending write', () => {
-    const persister: jest.MockedFunction<OpeningTagStylePersister> = jest.fn(
+    const persister: jest.MockedFunction<OpeningTagStylePersister> = jest.fn<Promise<void>, [string, OpeningTagStyle]>(
       async () => undefined,
     );
     service.setPersister(persister);
@@ -209,7 +209,7 @@ describe('opening-tag-style-service — singleton', () => {
   });
 
   test('persister rejection does not crash the service', () => {
-    const persister: jest.MockedFunction<OpeningTagStylePersister> = jest.fn(
+    const persister: jest.MockedFunction<OpeningTagStylePersister> = jest.fn<Promise<void>, [string, OpeningTagStyle]>(
       async () => {
         throw new Error('firestore down');
       },

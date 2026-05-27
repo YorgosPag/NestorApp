@@ -85,10 +85,11 @@ export const TextTemplateManager: React.FC<ManagerProps> = ({ previewLocale = 'e
       readonly contentChanged: boolean;
     }) => {
       if (editor.seed && !editor.seed.isDefault) {
-        const patch: UpdateTemplatePatch = {};
-        if (payload.name !== editor.seed.name) patch.name = payload.name;
-        if (payload.category !== editor.seed.category) patch.category = payload.category;
-        if (payload.contentChanged) patch.content = payload.content;
+        const patch: UpdateTemplatePatch = {
+          ...(payload.name !== editor.seed.name && { name: payload.name }),
+          ...(payload.category !== editor.seed.category && { category: payload.category }),
+          ...(payload.contentChanged && { content: payload.content }),
+        };
         if (Object.keys(patch).length === 0) return;
         await mutations.updateTemplate(editor.seed.id, patch);
         return;

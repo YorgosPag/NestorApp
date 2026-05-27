@@ -71,6 +71,14 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-27 — Phase XXII.A follow-up — TS strictness noise (CanvasSectionOverlays refs)
+
+**Scope**: TypeScript-only noise. No architectural change.
+
+`CanvasSectionOverlays.tsx` (the JSX portal extracted in XXII.A) had its 4 context-menu `ref={...}` props lose nominal typing under stricter `exactOptionalPropertyTypes` / handle-type narrowing. Added explicit `as React.Ref<DrawingContextMenuHandle | EntityContextMenuHandle | GuideContextMenuHandle | GuideBatchContextMenuHandle>` casts at the four call sites.
+
+Pure pass-through — the file remains a thin presentational sibling of `CanvasSection`. ADR-040 invariants intact (no `useSyncExternalStore`, no high-freq subscriptions, render-only).
+
 ### 2026-05-27 — Phase XXII.A — Zoom-Path Orchestrator Decoupling (foundation)
 
 **Bug**: Firefox profile during DXF/BIM wheel-zoom showed ~77% time inside `flushSyncWorkOnAllRoots` → `performSyncWorkOnRoot` → `renderWithHooks`, with Tooltip render at 19%, `defineProperty` (self-hosted) 10.1ms JIT-off, and `validateChildKeys` (React DEV) frequent. Even on a tiny DXF + a handful of BIM entities, zoom dropped to 1-2 FPS.

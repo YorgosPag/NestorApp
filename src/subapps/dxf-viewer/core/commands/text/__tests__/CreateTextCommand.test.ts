@@ -83,6 +83,10 @@ function makeScene(): {
     insertVertex: () => {},
     removeVertex: () => {},
     getVertices: () => undefined,
+    updateEntities: () => {},
+    getEntityIndex: () => -1,
+    reorderEntity: () => {},
+    moveEntityToIndex: () => {},
   };
   return { scene, added };
 }

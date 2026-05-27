@@ -97,6 +97,10 @@ function makeDeps(initial: DxfTextSceneEntity[] = []): {
     insertVertex: () => {},
     removeVertex: () => {},
     getVertices: () => undefined,
+    updateEntities: () => {},
+    getEntityIndex: () => -1,
+    reorderEntity: () => {},
+    moveEntityToIndex: () => {},
   };
   const executed: ICommand[] = [];
   const history: ICommandHistory & { executed: ICommand[] } = {

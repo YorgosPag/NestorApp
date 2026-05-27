@@ -99,7 +99,7 @@ export class CreateArrayCommand implements ICommand {
     return null;
   }
 
-  canMergeWith(): boolean {
+  canMergeWith(_other: ICommand): boolean {
     return false;
   }
 

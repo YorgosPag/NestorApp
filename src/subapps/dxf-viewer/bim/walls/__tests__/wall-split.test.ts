@@ -36,6 +36,7 @@ function makeWall(
     type: 'wall',
     kind: overrides.kind ?? 'straight',
     layerId: 'layer-0',
+    ifcType: 'IfcWallStandardCase',
     params,
     geometry: {
       axisPolyline: { points: [params.start, params.end] },
@@ -46,8 +47,9 @@ function makeWall(
       area: 15,
       volume: 3,
     },
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
     visible: true,
-  };
+  } as unknown as WallEntity;
 }
 
 function makeOpening(
@@ -65,13 +67,13 @@ function makeOpening(
     geometry: {
       position: { x: 0, y: 0, z: 0 },
       rotation: 0,
-      outline: { points: [] },
+      outline: { vertices: [] },
       bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 1, y: 1, z: 1 } },
       area: 0,
       perimeter: 0,
     },
     visible: true,
-  };
+  } as unknown as OpeningEntity;
 }
 
 // ── computeSplitOffset ────────────────────────────────────────────────────────

@@ -57,7 +57,7 @@ export class ExplodeArrayCommand implements ICommand {
     this._doExplode();
   }
 
-  canMergeWith(): boolean {
+  canMergeWith(_other: ICommand): boolean {
     return false;
   }
 

@@ -86,7 +86,7 @@ function ceilingEntity(elevationMm: number): Entity {
     startPoint: { x: -1000, y: -1000 },
     endPoint: { x: 1000, y: 1000 },
     metadata: { elevation: elevationMm },
-  } as Entity;
+  } as unknown as Entity;
 }
 
 // ─── Hard errors ─────────────────────────────────────────────────────────────
@@ -368,7 +368,7 @@ describe('validateStairParams — headroom proxy', () => {
       layerId: 'lyr_test_default',
       startPoint: { x: 0, y: 0 },
       endPoint: { x: 1, y: 1 },
-    } as Entity;
+    } as unknown as Entity;
     const r = validateStairParams(params, [noMeta], undefined, CEILING_LAYERS);
     expect(r.headroomViolations ?? []).toHaveLength(0);
   });

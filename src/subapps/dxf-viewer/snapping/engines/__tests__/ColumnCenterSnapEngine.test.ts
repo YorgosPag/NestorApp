@@ -44,12 +44,12 @@ function circColumn(x: number, y: number, id = 'col_circ'): ColumnEntity {
 }
 
 function lColumn(x: number, y: number, id = 'col_l'): ColumnEntity {
-  const base = buildDefaultColumnParams({ x, y }, 'l-shape');
+  const base = buildDefaultColumnParams({ x, y }, 'L-shape');
   return makeColumnEntity(base, id);
 }
 
 function tColumn(x: number, y: number, id = 'col_t'): ColumnEntity {
-  const base = buildDefaultColumnParams({ x, y }, 't-shape');
+  const base = buildDefaultColumnParams({ x, y }, 'T-shape');
   return makeColumnEntity(base, id);
 }
 

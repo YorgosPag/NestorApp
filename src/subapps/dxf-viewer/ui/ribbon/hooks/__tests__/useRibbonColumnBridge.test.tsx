@@ -82,8 +82,8 @@ const rectColumn = {
   params: { ...polygonColumn.params, kind: 'rectangular' as const, polygon: undefined },
 };
 
-function makeLevelManager(entity: typeof polygonColumn | null) {
-  const scene = entity ? { entities: [entity] } : null;
+function makeLevelManager(entity: unknown | null) {
+  const scene = entity ? { entities: [entity as typeof polygonColumn] } : null;
   return {
     currentLevelId: 'lvl-1',
     getLevelScene: jest.fn(() => scene),

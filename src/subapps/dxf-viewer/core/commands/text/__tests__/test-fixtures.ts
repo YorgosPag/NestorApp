@@ -106,6 +106,10 @@ export function makeScene(initial: DxfTextSceneEntity[] = []): {
     insertVertex: () => {},
     removeVertex: () => {},
     getVertices: () => undefined,
+    updateEntities: () => {},
+    getEntityIndex: () => -1,
+    reorderEntity: () => {},
+    moveEntityToIndex: () => {},
   };
   return { scene, store };
 }

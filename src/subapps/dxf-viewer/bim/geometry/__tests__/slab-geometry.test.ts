@@ -32,8 +32,9 @@ function makeSlab(verts: ReadonlyArray<{ x: number; y: number }>, overrides?: Pa
     outline: { vertices: verts.map((v) => ({ x: v.x, y: v.y, z: 0 })) },
     levelElevation: 0,
     thickness: 200,
+    geometryType: 'box',
     ...overrides,
-  };
+  } as SlabParams;
 }
 
 describe('computeSlabGeometry — area', () => {
