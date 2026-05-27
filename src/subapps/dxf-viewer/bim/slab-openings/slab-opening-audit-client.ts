@@ -24,7 +24,7 @@ import {
   type BimAuditSnapshot,
 } from '../utils/bim-audit-helpers';
 
-export type SlabOpeningAuditAction = 'created' | 'updated' | 'deleted';
+export type SlabOpeningAuditAction = 'created' | 'updated' | 'deleted' | 'restored';
 
 export type SlabOpeningAuditSnapshot = Pick<SlabOpeningEntity, 'id' | 'kind'> & {
   readonly layerId?: string;
@@ -66,7 +66,8 @@ function buildChanges(
     params: entity.params as Record<string, unknown> | undefined,
   };
 
-  if (action === 'created') {
+  if (action === 'created' || action === 'restored') {
+    // ADR-381 — 'restored' (undo→Firestore re-create) reuses creation builder.
     return ensureNonEmptyChanges(
       buildBimCreationChanges(snapshot, SLAB_OPENING_TRACKED_FIELDS),
       { field: 'kind', oldValue: null, newValue: entity.kind },

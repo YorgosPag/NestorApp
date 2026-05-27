@@ -20,7 +20,7 @@ import {
   type BimAuditSnapshot,
 } from '../utils/bim-audit-helpers';
 
-export type ColumnAuditAction = 'created' | 'updated' | 'deleted';
+export type ColumnAuditAction = 'created' | 'updated' | 'deleted' | 'restored';
 
 export type ColumnAuditSnapshot = Pick<ColumnEntity, 'id' | 'kind'> & {
   readonly layerId?: string;
@@ -62,7 +62,8 @@ function buildChanges(
     params: entity.params as Record<string, unknown> | undefined,
   };
 
-  if (action === 'created') {
+  if (action === 'created' || action === 'restored') {
+    // ADR-381 — 'restored' (undo→Firestore re-create) reuses creation builder.
     return ensureNonEmptyChanges(
       buildBimCreationChanges(snapshot, COLUMN_TRACKED_FIELDS),
       { field: 'kind', oldValue: null, newValue: entity.kind },

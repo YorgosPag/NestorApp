@@ -22,7 +22,7 @@ import {
   type BimAuditSnapshot,
 } from '../utils/bim-audit-helpers';
 
-export type StairAuditAction = 'created' | 'updated' | 'deleted';
+export type StairAuditAction = 'created' | 'updated' | 'deleted' | 'restored';
 
 export type StairAuditSnapshot = Pick<StairEntity, 'id' | 'kind'> & {
   readonly layerId?: string;
@@ -64,7 +64,8 @@ function buildChanges(
     params: entity.params as Record<string, unknown> | undefined,
   };
 
-  if (action === 'created') {
+  if (action === 'created' || action === 'restored') {
+    // ADR-381 — 'restored' (undo→Firestore re-create) reuses creation builder.
     return ensureNonEmptyChanges(
       buildBimCreationChanges(snapshot, STAIR_TRACKED_FIELDS),
       { field: 'kind', oldValue: null, newValue: entity.kind },

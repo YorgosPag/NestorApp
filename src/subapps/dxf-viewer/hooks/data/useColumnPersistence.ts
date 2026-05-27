@@ -39,6 +39,7 @@ import {
 import { recordColumnChange } from '../../bim/columns/column-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
+import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
 // ============================================================================
 // TYPES
@@ -126,6 +127,9 @@ export function useColumnPersistence(
   const serviceRef = useRef<ColumnFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, ColumnEntity['params']>>(new Map());
+  // ADR-381 — pending first save (drawn or restored) + tombstone tracking.
+  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
+  const deletedIdsRef = useRef<Set<string>>(new Set());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedColumnRef = useRef<ColumnEntity | null>(null);
   selectedColumnRef.current = primarySelectedColumn;
@@ -169,7 +173,11 @@ export function useColumnPersistence(
         const nextColumns: ColumnEntity[] = [];
         let mutated = false;
 
+        const deleted = deletedIdsRef.current;
+        const pending = pendingFirstSaveIdsRef.current;
+
         for (const doc of docs) {
+          if (deleted.has(doc.id)) continue;
           const existing = sceneColumns.get(doc.id);
           if (!existing) {
             if (!dirty.has(doc.id)) {
@@ -190,10 +198,10 @@ export function useColumnPersistence(
           }
         }
 
+        // ADR-381 — replaces buggy `neverSaved` guard.
         for (const [id, entity] of sceneColumns) {
           if (docsById.has(id)) continue;
-          const neverSaved = !lastSavedParamsRef.current.has(id);
-          if (dirty.has(id) || neverSaved) {
+          if (dirty.has(id) || pending.has(id)) {
             nextColumns.push(entity);
           } else {
             mutated = true;
@@ -228,6 +236,7 @@ export function useColumnPersistence(
       await svc.saveColumn(entityToSaveInput(entity));
       lastSavedParamsRef.current.set(entity.id, entity.params);
       dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
       void recordColumnChange(
@@ -253,6 +262,10 @@ export function useColumnPersistence(
   useEffect(() => {
     const column = primarySelectedColumn;
     if (!column || !serviceRef.current) return;
+    // ADR-381 — Bug A defense-in-depth.
+    const known = lastSavedParamsRef.current.has(column.id);
+    const pending = pendingFirstSaveIdsRef.current.has(column.id);
+    if (!known && !pending) return;
     const lastSaved = lastSavedParamsRef.current.get(column.id);
     if (lastSaved && dequal(lastSaved, column.params)) return;
 
@@ -316,7 +329,37 @@ export function useColumnPersistence(
 
     dirtyIdsRef.current.delete(columnId);
     lastSavedParamsRef.current.delete(columnId);
+    pendingFirstSaveIdsRef.current.delete(columnId);
+    deletedIdsRef.current.add(columnId);
   }, [levelManager, companyId]);
+
+  // ADR-381 — persistRestore: undo→Firestore re-create + audit 'restored'.
+  const persistRestore = useCallback(async (entity: ColumnEntity) => {
+    const svc = serviceRef.current;
+    if (!svc) return;
+    setSaveState('saving');
+    setError(null);
+    try {
+      await svc.saveColumn(entityToSaveInput(entity));
+      lastSavedParamsRef.current.set(entity.id, entity.params);
+      dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
+      setSaveState('saved');
+      setLastSavedAt(Date.now());
+      void recordColumnChange('restored', entity);
+      if (companyId && projectId && buildingId) {
+        void bimToBoqBridge.upsertBoqItemForBim(
+          'column',
+          { id: entity.id, kind: entity.kind, geometry: entity.geometry },
+          { companyId, projectId, buildingId },
+          'created',
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'COLUMN_RESTORE_ERROR');
+      setSaveState('error');
+    }
+  }, [companyId, projectId, buildingId]);
 
   // First-save listener — fires άμεσα για freshly drawn columns.
   useEffect(() => {
@@ -325,6 +368,7 @@ export function useColumnPersistence(
       const entity = payload.entity as ColumnEntity | undefined;
       if (!entity || (entity as { type?: string }).type !== 'column') return;
       if (!serviceRef.current) return;
+      pendingFirstSaveIdsRef.current.add(entity.id);
       dirtyIdsRef.current.add(entity.id);
       void persist(entity);
     });
@@ -340,6 +384,14 @@ export function useColumnPersistence(
   }, [deleteColumn]);
 
   useBimEntityMovedPersistEffect(isColumn, serviceRef, dirtyIdsRef, persist);
+  useBimEntityRestoredPersistEffect(
+    'column',
+    isColumn,
+    serviceRef,
+    pendingFirstSaveIdsRef,
+    deletedIdsRef,
+    persistRestore,
+  );
 
   // Unmount cleanup — flush pending timers.
   useEffect(() => {

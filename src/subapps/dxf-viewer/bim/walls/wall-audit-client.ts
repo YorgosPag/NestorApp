@@ -27,7 +27,7 @@ import {
   type BimAuditSnapshot,
 } from '../utils/bim-audit-helpers';
 
-export type WallAuditAction = 'created' | 'updated' | 'deleted';
+export type WallAuditAction = 'created' | 'updated' | 'deleted' | 'restored';
 
 /** Minimum shape needed. Full `WallEntity` satisfies it; delete-fallback can pass a stub. */
 export type WallAuditSnapshot = Pick<WallEntity, 'id' | 'kind'> & {
@@ -77,7 +77,9 @@ function buildChanges(
     params: entity.params as Record<string, unknown> | undefined,
   };
 
-  if (action === 'created') {
+  if (action === 'created' || action === 'restored') {
+    // ADR-381 — 'restored' (undo→Firestore re-create) carries full snapshot
+    // identical to 'created'; only the audit action label differs.
     return ensureNonEmptyChanges(
       buildBimCreationChanges(snapshot, WALL_TRACKED_FIELDS),
       { field: 'kind', oldValue: null, newValue: entity.kind },
