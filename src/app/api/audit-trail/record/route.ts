@@ -106,16 +106,23 @@ export const POST = withStandardRateLimit(
       }
 
       const entityDoc = await db.collection(collectionName).doc(body.entityId).get();
+
+      // Action 'deleted' is recorded AFTER the entity is removed from
+      // Firestore, so `!entityDoc.exists` is the normal case. Returning 404
+      // here silently dropped every BIM delete audit entry (the client
+      // swallows errors via `.catch(() => {})`). Allow the missing doc only
+      // for the 'deleted' action and tag the audit row with the caller's
+      // companyId — defense-in-depth: a malicious caller can only pollute
+      // their own tenant's audit trail with fake IDs, never cross-tenant.
       if (!entityDoc.exists) {
-        throw new ApiError(404, `Entity not found: ${body.entityType}/${body.entityId}`);
-      }
-
-      const entityData = entityDoc.data();
-      const entityCompanyId = entityData?.companyId as string | undefined;
-
-      // Ownership check (super_admin bypasses)
-      if (ctx.globalRole !== 'super_admin' && entityCompanyId && entityCompanyId !== ctx.companyId) {
-        throw new ApiError(403, 'Access denied: entity belongs to a different company');
+        if (body.action !== 'deleted') {
+          throw new ApiError(404, `Entity not found: ${body.entityType}/${body.entityId}`);
+        }
+      } else {
+        const entityCompanyId = entityDoc.data()?.companyId as string | undefined;
+        if (ctx.globalRole !== 'super_admin' && entityCompanyId && entityCompanyId !== ctx.companyId) {
+          throw new ApiError(403, 'Access denied: entity belongs to a different company');
+        }
       }
 
       // Record via EntityAuditService (server-side, fire-and-forget safe)

@@ -1,14 +1,8 @@
 'use client';
 
 /**
- * ADR-363 Phase 3 — Fire-and-forget audit client για slab create/update/delete.
- *
- * POSTs σε /api/audit-trail/record (ADR-195 centralized endpoint).
- * EntityAuditService έχει `import 'server-only'` άρα δεν μπορεί να κληθεί
- * απευθείας από client code — αυτό το thin client το γεφυρώνει.
- *
- * Caller MUST treat the return value as void και ΟΧΙ to await it.
- * Audit failures swallowed silently — δεν διακόπτουν slab operations.
+ * ADR-363 Phase 3 + ADR-XXX — Fire-and-forget audit client για slab
+ * create / update / delete. Mirrors wall-audit-client.ts.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.17
  * @see docs/centralized-systems/reference/adrs/ADR-195-entity-audit-trail.md
@@ -16,54 +10,78 @@
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
+import { SLAB_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import type { SlabEntity } from '../types/slab-types';
-
-// ============================================================================
-// TYPES
-// ============================================================================
+import {
+  buildBimCreationChanges,
+  buildBimDeletionChanges,
+  buildBimUpdateChanges,
+  ensureNonEmptyChanges,
+  type BimAuditSnapshot,
+} from '../utils/bim-audit-helpers';
 
 export type SlabAuditAction = 'created' | 'updated' | 'deleted';
 
-// ============================================================================
-// PUBLIC API
-// ============================================================================
+export type SlabAuditSnapshot = Pick<SlabEntity, 'id' | 'kind'> & {
+  readonly layerId?: string;
+  readonly params?: Partial<SlabEntity['params']>;
+};
 
-/**
- * Fire-and-forget audit entry για slab mutation.
- *
- * @param action       created | updated | deleted
- * @param entity       must contain at minimum `id` + `kind`
- * @param entityName   optional display name για audit log
- */
+export interface RecordSlabChangeOptions {
+  readonly entityName?: string | null;
+  readonly prevParams?: Partial<SlabEntity['params']> | null;
+}
+
 export function recordSlabChange(
   action: SlabAuditAction,
-  entity: Pick<SlabEntity, 'id' | 'kind'>,
-  entityName?: string | null,
+  entity: SlabAuditSnapshot,
+  options?: RecordSlabChangeOptions,
 ): void {
+  const changes = buildChanges(action, entity, options?.prevParams ?? null);
+  if (changes === null) return;
+
   apiClient
     .post('/api/audit-trail/record', {
       entityType: 'slab',
       entityId: entity.id,
-      entityName: entityName ?? null,
+      entityName: options?.entityName ?? null,
       action: action as AuditAction,
-      changes: buildSlabChanges(action, entity),
+      changes,
     })
-    .catch(() => { /* fire-and-forget — audit failures never surface to UX */ });
+    .catch(() => { /* fire-and-forget */ });
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function buildSlabChanges(
+function buildChanges(
   action: SlabAuditAction,
-  entity: Pick<SlabEntity, 'id' | 'kind'>,
-): AuditFieldChange[] {
+  entity: SlabAuditSnapshot,
+  prevParams: Partial<SlabEntity['params']> | null,
+): AuditFieldChange[] | null {
+  const snapshot: BimAuditSnapshot = {
+    kind: entity.kind,
+    layerId: entity.layerId,
+    params: entity.params as Record<string, unknown> | undefined,
+  };
+
   if (action === 'created') {
-    return [{ field: 'kind', oldValue: null, newValue: entity.kind }];
+    return ensureNonEmptyChanges(
+      buildBimCreationChanges(snapshot, SLAB_TRACKED_FIELDS),
+      { field: 'kind', oldValue: null, newValue: entity.kind },
+    );
   }
+
   if (action === 'deleted') {
-    return [{ field: 'kind', oldValue: entity.kind, newValue: null }];
+    return ensureNonEmptyChanges(
+      buildBimDeletionChanges(snapshot, SLAB_TRACKED_FIELDS),
+      { field: 'kind', oldValue: entity.kind, newValue: null },
+    );
   }
-  return [{ field: 'params', oldValue: null, newValue: null }];
+
+  if (!prevParams) return null;
+  const prevSnapshot: BimAuditSnapshot = {
+    kind: entity.kind,
+    layerId: entity.layerId,
+    params: prevParams as Record<string, unknown>,
+  };
+  const changes = buildBimUpdateChanges(prevSnapshot, snapshot, SLAB_TRACKED_FIELDS);
+  return changes.length > 0 ? changes : null;
 }

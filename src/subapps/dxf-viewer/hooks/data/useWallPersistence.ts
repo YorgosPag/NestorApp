@@ -307,7 +307,8 @@ export function useWallPersistence(
   const persist = useCallback(async (entity: WallEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;
-    const isNew = !lastSavedParamsRef.current.has(entity.id);
+    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
+    const isNew = prevParams === null;
     setSaveState('saving');
     setError(null);
     try {
@@ -317,7 +318,11 @@ export function useWallPersistence(
       dirtyIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
-      void recordWallChange(isNew ? 'created' : 'updated', entity);
+      void recordWallChange(
+        isNew ? 'created' : 'updated',
+        entity,
+        { prevParams: prevParams ?? undefined },
+      );
       if (companyId && projectId && buildingId) {
         void bimToBoqBridge.upsertBoqItemForBim(
           'wall',
@@ -379,11 +384,14 @@ export function useWallPersistence(
     const scene = levelManager.getLevelScene(levelId);
     const deletedEntity = scene?.entities.find((e) => e.id === wallId);
 
+    const deletedWall = (deletedEntity && isWall(deletedEntity)) ? deletedEntity : null;
     try {
       await svc.deleteWall(wallId);
       void recordWallChange(
         'deleted',
-        { id: wallId, kind: (deletedEntity as Partial<WallEntity>)?.kind ?? 'straight' },
+        deletedWall
+          ? { id: deletedWall.id, kind: deletedWall.kind, layerId: deletedWall.layerId, params: deletedWall.params }
+          : { id: wallId, kind: 'straight' },
       );
       void bimToBoqBridge.deleteBoqItemForBim(wallId, companyId ?? '');
     } catch {

@@ -265,7 +265,8 @@ export function useSlabPersistence(
   const persist = useCallback(async (entity: SlabEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;
-    const isNew = !lastSavedParamsRef.current.has(entity.id);
+    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
+    const isNew = prevParams === null;
     setSaveState('saving');
     setError(null);
     try {
@@ -274,7 +275,11 @@ export function useSlabPersistence(
       dirtyIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
-      void recordSlabChange(isNew ? 'created' : 'updated', entity);
+      void recordSlabChange(
+        isNew ? 'created' : 'updated',
+        entity,
+        { prevParams: prevParams ?? undefined },
+      );
       if (companyId && projectId && buildingId) {
         const levelId = levelManager.currentLevelId;
         const scene = levelId ? levelManager.getLevelScene(levelId) : null;
@@ -343,11 +348,14 @@ export function useSlabPersistence(
     const scene = levelManager.getLevelScene(levelId);
     const deletedEntity = scene?.entities.find((e) => e.id === slabId);
 
+    const deletedSlab = (deletedEntity && isSlab(deletedEntity)) ? deletedEntity : null;
     try {
       await svc.deleteSlab(slabId);
       void recordSlabChange(
         'deleted',
-        { id: slabId, kind: (deletedEntity as Partial<SlabEntity>)?.kind ?? 'floor' },
+        deletedSlab
+          ? { id: deletedSlab.id, kind: deletedSlab.kind, layerId: deletedSlab.layerId, params: deletedSlab.params }
+          : { id: slabId, kind: 'floor' },
       );
       void bimToBoqBridge.deleteBoqItemForBim(slabId, companyId ?? '');
     } catch {

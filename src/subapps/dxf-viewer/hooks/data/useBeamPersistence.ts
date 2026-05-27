@@ -220,7 +220,8 @@ export function useBeamPersistence(
   const persist = useCallback(async (entity: BeamEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;
-    const isNew = !lastSavedParamsRef.current.has(entity.id);
+    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
+    const isNew = prevParams === null;
     setSaveState('saving');
     setError(null);
     try {
@@ -229,7 +230,11 @@ export function useBeamPersistence(
       dirtyIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
-      void recordBeamChange(isNew ? 'created' : 'updated', entity);
+      void recordBeamChange(
+        isNew ? 'created' : 'updated',
+        entity,
+        { prevParams: prevParams ?? undefined },
+      );
       if (companyId && projectId && buildingId) {
         void bimToBoqBridge.upsertBoqItemForBim(
           'beam',
@@ -291,11 +296,14 @@ export function useBeamPersistence(
     const scene = levelManager.getLevelScene(levelId);
     const deletedEntity = scene?.entities.find((e) => e.id === beamId);
 
+    const deletedBeam = (deletedEntity && isBeam(deletedEntity)) ? deletedEntity : null;
     try {
       await svc.deleteBeam(beamId);
       void recordBeamChange(
         'deleted',
-        { id: beamId, kind: (deletedEntity as Partial<BeamEntity>)?.kind ?? 'straight' },
+        deletedBeam
+          ? { id: deletedBeam.id, kind: deletedBeam.kind, layerId: deletedBeam.layerId, params: deletedBeam.params }
+          : { id: beamId, kind: 'straight' },
       );
       void bimToBoqBridge.deleteBoqItemForBim(beamId, companyId ?? '');
       if (floorplanId) EventBus.emit('bim:beam-persisted', { floorplanId });

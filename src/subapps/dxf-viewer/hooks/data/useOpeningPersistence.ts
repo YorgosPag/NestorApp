@@ -296,7 +296,11 @@ export function useOpeningPersistence(
       dirtyIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
-      void recordOpeningChange(isNew ? 'created' : 'updated', entity);
+      void recordOpeningChange(
+        isNew ? 'created' : 'updated',
+        entity,
+        { prevParams: prevParams ?? undefined },
+      );
       // ADR-376 Phase B.2 — signature-group aggregation (όχι per-opening row).
       // opening-boq-sync recomputes the new signature group (+ old αν άλλαξε).
       if (companyId && projectId && buildingId && floorplanId) {
@@ -421,11 +425,19 @@ export function useOpeningPersistence(
       lastSavedParamsRef.current.get(openingId) ??
       ((deletedEntity as Partial<OpeningEntity> | undefined)?.params ?? null);
 
+    const deletedOpening = (deletedEntity && isOpening(deletedEntity)) ? deletedEntity : null;
     try {
       await svc.deleteOpening(openingId);
       void recordOpeningChange(
         'deleted',
-        { id: openingId, kind: (deletedEntity as Partial<OpeningEntity>)?.kind ?? 'door' },
+        deletedOpening
+          ? {
+              id: deletedOpening.id,
+              kind: deletedOpening.kind,
+              layerId: deletedOpening.layerId,
+              params: lastKnownParams ?? deletedOpening.params,
+            }
+          : { id: openingId, kind: 'door' },
       );
       // ADR-376 Phase B.2 — recompute signature group post-delete (count
       // decrements; row deleted if last opening of signature gone).

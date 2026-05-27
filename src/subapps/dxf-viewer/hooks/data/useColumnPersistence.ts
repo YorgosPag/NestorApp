@@ -220,7 +220,8 @@ export function useColumnPersistence(
   const persist = useCallback(async (entity: ColumnEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;
-    const isNew = !lastSavedParamsRef.current.has(entity.id);
+    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
+    const isNew = prevParams === null;
     setSaveState('saving');
     setError(null);
     try {
@@ -229,7 +230,11 @@ export function useColumnPersistence(
       dirtyIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
-      void recordColumnChange(isNew ? 'created' : 'updated', entity);
+      void recordColumnChange(
+        isNew ? 'created' : 'updated',
+        entity,
+        { prevParams: prevParams ?? undefined },
+      );
       if (companyId && projectId && buildingId) {
         void bimToBoqBridge.upsertBoqItemForBim(
           'column',
@@ -290,11 +295,14 @@ export function useColumnPersistence(
     const scene = levelManager.getLevelScene(levelId);
     const deletedEntity = scene?.entities.find((e) => e.id === columnId);
 
+    const deletedColumn = (deletedEntity && isColumn(deletedEntity)) ? deletedEntity : null;
     try {
       await svc.deleteColumn(columnId);
       void recordColumnChange(
         'deleted',
-        { id: columnId, kind: (deletedEntity as Partial<ColumnEntity>)?.kind ?? 'rectangular' },
+        deletedColumn
+          ? { id: deletedColumn.id, kind: deletedColumn.kind, layerId: deletedColumn.layerId, params: deletedColumn.params }
+          : { id: columnId, kind: 'rectangular' },
       );
       void bimToBoqBridge.deleteBoqItemForBim(columnId, companyId ?? '');
     } catch {

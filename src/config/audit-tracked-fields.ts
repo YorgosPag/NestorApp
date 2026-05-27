@@ -602,6 +602,127 @@ const PARKING_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const PARKING_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(PARKING_TRACKED_FIELDS_RAW, {});
 
+// ============================================================================
+// BIM TRACKED FIELDS — wall / column / slab / beam / opening (ADR-363 §5.17)
+// ============================================================================
+//
+// Coordinate-heavy fields (start/end/position/outline/polylineVertices/...)
+// are intentionally OUT. They produce noise (xyz triples) every grip drag,
+// and the entity_audit_trail is a human-readable history — not a geometry log.
+// The dimensional intent lives in width/depth/height/thickness/etc., which
+// IS tracked.
+
+const WALL_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  category: 'category',
+  height: 'height',
+  thickness: 'thickness',
+  flip: 'flip',
+  material: 'material',
+  measurementLength: 'measurementLength',
+  startBevel: 'startBevel',
+  endBevel: 'endBevel',
+  storeyId: 'storeyId',
+  offsetFromStorey: 'offsetFromStorey',
+  baseBinding: 'baseBinding',
+  topBinding: 'topBinding',
+  baseOffset: 'baseOffset',
+  topOffset: 'topOffset',
+  unconnectedHeight: 'unconnectedHeight',
+  // `dna` is an object (totalThickness + layers[]) — serialized as JSON scalar.
+  // Per-layer diffing would need a collection def; deferred until BIM history
+  // surfaces require it.
+  dna: 'dna',
+};
+
+export const WALL_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(WALL_TRACKED_FIELDS_RAW, {});
+
+const COLUMN_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  anchor: 'anchor',
+  width: 'width',
+  depth: 'depth',
+  height: 'height',
+  rotation: 'rotation',
+  material: 'material',
+  catalogProfile: 'catalogProfile',
+  storeyId: 'storeyId',
+  offsetFromStorey: 'offsetFromStorey',
+  baseBinding: 'baseBinding',
+  topBinding: 'topBinding',
+  baseOffset: 'baseOffset',
+  topOffset: 'topOffset',
+  unconnectedHeight: 'unconnectedHeight',
+  // Variant overrides serialized as JSON scalars.
+  lshape: 'lshape',
+  tshape: 'tshape',
+  polygon: 'polygon',
+  ishape: 'ishape',
+};
+
+export const COLUMN_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(COLUMN_TRACKED_FIELDS_RAW, {});
+
+const SLAB_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  levelElevation: 'levelElevation',
+  heightOffsetFromLevel: 'heightOffsetFromLevel',
+  thickness: 'thickness',
+  geometryType: 'geometryType',
+  reinforcement: 'reinforcement',
+  material: 'material',
+  storeyId: 'storeyId',
+  offsetFromStorey: 'offsetFromStorey',
+  // `slope` is a nested object (direction/angle/pivotEdge) — JSON scalar.
+  slope: 'slope',
+};
+
+export const SLAB_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(SLAB_TRACKED_FIELDS_RAW, {});
+
+const BEAM_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  width: 'width',
+  depth: 'depth',
+  topElevation: 'topElevation',
+  zOffset: 'zOffset',
+  material: 'material',
+  supportType: 'supportType',
+  sectionType: 'sectionType',
+  profileDesignation: 'profileDesignation',
+  storeyId: 'storeyId',
+  offsetFromStorey: 'offsetFromStorey',
+};
+
+export const BEAM_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(BEAM_TRACKED_FIELDS_RAW, {});
+
+const OPENING_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  wallId: 'wallId',
+  offsetFromStart: 'offsetFromStart',
+  width: 'width',
+  height: 'height',
+  sillHeight: 'sillHeight',
+  frameWidth: 'frameWidth',
+  handing: 'handing',
+  openDirection: 'openDirection',
+  material: 'material',
+  glazingPanes: 'glazingPanes',
+  mark: 'mark',
+  markIsManual: 'markIsManual',
+  tagVisible: 'tagVisible',
+};
+
+export const OPENING_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(OPENING_TRACKED_FIELDS_RAW, {});
+
 /** Project audit registry — `field → TrackedFieldDef`. */
 export const PROJECT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(PROJECT_TRACKED_FIELDS_RAW, PROJECT_COLLECTION_DEFS);
@@ -636,6 +757,16 @@ export function getTrackedFieldsForEntityAuditType(
       return STORAGE_TRACKED_FIELDS;
     case 'parking':
       return PARKING_TRACKED_FIELDS;
+    case 'wall':
+      return WALL_TRACKED_FIELDS;
+    case 'column':
+      return COLUMN_TRACKED_FIELDS;
+    case 'slab':
+      return SLAB_TRACKED_FIELDS;
+    case 'beam':
+      return BEAM_TRACKED_FIELDS;
+    case 'opening':
+      return OPENING_TRACKED_FIELDS;
     default:
       return null;
   }
