@@ -644,7 +644,7 @@ Renderer mapping:
 
 ### Phase B — User Customization (Sub-phases B.1 / B.2 / B.3) ⏸️ PENDING
 
-> **Scope decision (Giorgio, 2026-05-25)**: Σπάσιμο σε 3 υπο-φάσεις, μία ανά session (≤70% context per `feedback_phase_per_session`). Κάθε υπο-φάση = αυτόνομο commit chain + ADR update + ΑΝΑΦΟΡΑ_2 update.
+> **Scope decision (Giorgio, 2026-05-25)**: Σπάσιμο σε 3 υπο-φάσεις, μία ανά session (≤70% context per `feedback_phase_per_session`). Κάθε υπο-φάση = αυτόνομο commit chain + ADR update + ΕΚΚΡΕΜΟΤΗΤΕΣ update.
 >
 > **Σύνολο scope**: ~22-30 αρχεία, 5 domains (BIM resolver / Ribbon UI / Firestore / state / i18n).
 > **Execution mode** (αν συνεχιστεί ως ενιαίο): Orchestrator. Με σπάσιμο: Plan Mode + Sonnet σειριακά ανά υπο-φάση.
@@ -844,7 +844,7 @@ interface Floorplan {
 | B.2 | ~3-4h | ≤70% | 2-3 commits (service / panels / wiring) |
 | B.3 | ~3-4h | ≤70% | 2-3 commits (service / panels / wiring) |
 
-> **Rule**: Each sub-phase ends with explicit ADR-375 changelog entry + ΑΝΑΦΟΡΑ_2 update (per CLAUDE.md N.15) + `pending-ratchet-work.md` update if applicable.
+> **Rule**: Each sub-phase ends with explicit ADR-375 changelog entry + ΕΚΚΡΕΜΟΤΗΤΕΣ update (per CLAUDE.md N.15) + `pending-ratchet-work.md` update if applicable.
 
 ### Phase C — Advanced
 

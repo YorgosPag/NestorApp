@@ -199,6 +199,8 @@ Consumed by drawing/measure hooks via `useSyncExternalStore`. Documented here so
 | `SnapContext` / `SnapProvider` | `snapping/context/SnapContext.tsx` | Toggle state SSoT (Firestore-persisted) |
 | `SnapOverrideOrchestrator` | `snapping/overrides/SnapOverrideOrchestrator.ts` | ADR-357 command-mode overrides (separate concern) |
 | `TextSnapEngine` | `snapping/engines/TextSnapEngine.ts` | **ADR-378 Phase 3 (2026-05-27)** — TEXT/MTEXT 8-point snap (insertion + 4 corners + center + 2 edge mids). Linear scan over text-filtered entities. Approximate bbox from fontSize/text length (TEXT) or width × height (MTEXT). Priority 2 (same tier as INSERTION). Registered as `ExtendedSnapType.TEXT`. |
+| Geo-canvas `useSnapEngine` façade | `geo-canvas/floor-plan-system/snapping/hooks/useSnapEngine.ts` | **ADR-378 Phase 4 (2026-05-27)** — React hook façade that delegates to `getGlobalSnapEngine()`. Internally calls `parserResultToEntities(parserResult)` adapter + maps `ProSnapResult` → geo-canvas `SnapResult` shape via `EXTENDED_TO_GEO_MODE` (6 classic CAD types preserved; other 19+ ExtendedSnapType fall through to `SnapMode.ENDPOINT` for render-layer compatibility). Public API surface `UseSnapEngineReturn` unchanged for back-compat. |
+| Geo-canvas `parser-result-to-entities` adapter | `geo-canvas/floor-plan-system/snapping/adapter/parser-result-to-entities.ts` | **ADR-378 Phase 4 (2026-05-27)** — Maps GeoJSON `FeatureCollection` (LineString / Polygon / MultiLineString) → DXF `Entity[]` (LineEntity / PolylineEntity). Mirror pattern of `overlays/snap-adapter.ts::regionsToSnapEntities`. |
 
 ### 3.2 Active production performance layer
 
@@ -218,7 +220,7 @@ Consumed by drawing/measure hooks via `useSyncExternalStore`. Documented here so
 | `useProSnapShortcuts` | `keyboard/useProSnapShortcuts.ts` | **Delete** — never wired, 2 doc references | 1 |
 | `pro-snap-engine.ts` (`snapSystem` global) | `snapping/pro-snap-engine.ts` | **Delete εντελώς (no migration)** — Phase 2 verification revealed ZERO production consumers. Original claim about `measure-snap-bridge.ts` was incorrect (that file lives in `src/components/shared/files/media/` and is unrelated). | 2 ✅ |
 | `TextSnapProvider` (Phase 6.B math helpers) | `text-engine/interaction/TextSnapProvider.ts` | **Kept as-is** — pure math helpers preserved for tests + future external use. New `TextSnapEngine.ts` reimplements the same 8-point geometry directly over `Entity` union (TEXT/MTEXT) so the engine works on the production EntityModel pipeline without requiring `DxfTextSceneEntity` adapter. | 3 ✅ |
-| Geo-canvas `SnapEngine` (6-mode parallel) | `geo-canvas/floor-plan-system/snapping/engine/SnapEngine.ts` | **Replace with adapter to `getGlobalSnapEngine()`** | 4 |
+| ~~Geo-canvas `SnapEngine` (6-mode parallel)~~ | ~~`geo-canvas/floor-plan-system/snapping/engine/SnapEngine.ts`~~ | **DELETED** — replaced with façade hook + adapter (see §3.1 rows) | 4 ✅ |
 
 ### 3.4 Out-of-scope (legitimately separate domains)
 
@@ -464,26 +466,37 @@ getLockedGripWorldPos(): Point2D | null
 - `text-engine/interaction/__tests__/TextSnapProvider.test.ts` — NO update needed (TextSnapProvider math helpers preserved untouched; engine reimplements geometry, doesn't wrap)
 - Verification: 28/28 text snap tests PASS, broader snap suite 168/169 PASS (1 pre-existing unrelated failure in `bim-corner-alignment.integration.test.ts`)
 
-### Phase 4 — Geo-canvas unification (Opus, ~3h)
+### Phase 4 — Geo-canvas unification ✅ DONE 2026-05-27 (Opus 4.7, ~2h)
 
-#### 4.1 Migrate hooks
-- `geo-canvas/floor-plan-system/snapping/hooks/useSnapEngine.ts` — replace local `new SnapEngine()` → `getGlobalSnapEngine()`
-- `useSnapPoints.ts` — replace local extraction → use new adapter
+#### 4.1 Migrate hooks — DONE
+- `geo-canvas/floor-plan-system/snapping/hooks/useSnapEngine.ts` ✅ full rewrite (~190 LOC). Internally: `getGlobalSnapEngine()` + `parserResultToEntities(parserResult)` on parserResult change + `engine.findSnapPoint({x, y})` per cursor move. Maps `ProSnapResult` → geo-canvas `SnapResult` via `EXTENDED_TO_GEO_MODE` (6 classic modes preserved; other 19+ ExtendedSnapType fall through to `SnapMode.ENDPOINT` for render-layer compatibility). Public API surface `UseSnapEngineReturn` UNCHANGED.
+- `useSnapPoints.ts` ✅ DELETED — zero production callers verified via grep (only barrel re-export + self-reference).
 
-#### 4.2 Create adapter
-- New: `geo-canvas/floor-plan-system/snapping/adapter/parser-result-to-entities.ts`
-- Function: `parserResultToEntities(result: ParserResult): Entity[]`
-- Maps `ParserResult.lines/polylines/circles` → DXF `Entity[]`
+#### 4.2 Create adapter — DONE
+- New: `geo-canvas/floor-plan-system/snapping/adapter/parser-result-to-entities.ts` (108 LOC)
+- Function: `parserResultToEntities(result: ParserResult | null): Entity[]`
+- Maps GeoJSON `LineString` (2 pts → `LineEntity`, 3+ pts → open `PolylineEntity`), `Polygon` (exterior ring → closed `PolylineEntity`), `MultiLineString` (multiple PolylineEntities) → DXF `Entity[]`
+- Mirror pattern of `dxf-viewer/overlays/snap-adapter.ts::regionsToSnapEntities`
+- Internal `_counter` for stable id allocation + `__resetParserResultIdCounterForTests()` test helper
 
-#### 4.3 Delete legacy geo-canvas snap
-- Delete `geo-canvas/floor-plan-system/snapping/engine/SnapEngine.ts`
-- Delete `engine/endpoint-detector.ts`
-- Delete `engine/snap-distance.ts`
-- (Possibly) `types/snap-types.ts`, `config/snap-defaults.ts`
+#### 4.3 Delete legacy geo-canvas snap — DONE
+- ✅ `git rm` `engine/SnapEngine.ts` (275 LOC parallel class)
+- ✅ `git rm` `engine/endpoint-detector.ts` (202 LOC GeoJSON point extraction)
+- ✅ `git rm` `engine/snap-distance.ts` (139 LOC distance calc)
+- ✅ `git rm` `engine/index.ts` (barrel)
+- ✅ `git rm` `hooks/useSnapPoints.ts` (zero callers)
+- ✅ `hooks/index.ts` updated (drop useSnapPoints re-export)
+- ✅ `snapping/index.ts` updated (drop `export * from './engine'`)
+- **KEPT** (required by render layer): `types/snap-types.ts` (SnapPoint/SnapResult/SnapMode/SnapSettings), `config/snap-defaults.ts` (DEFAULT_SNAP_SETTINGS, SNAP_VISUAL, SNAP_MODE_LABELS, SNAP_MODE_PRIORITY), `rendering/SnapIndicator.tsx`
 
-#### 4.4 Verify
-- `GeoCanvasContent.tsx` — confirm public surface unchanged
-- **User-visible win**: property floorplan tab gains 25 modes (BIM corners, dimensions, guides) vs previous 6
+#### 4.4 Verify — DONE
+- `GeoCanvasContent.tsx:93` ✅ unchanged: `const snapEngine = useSnapEngine(floorPlanUpload.result, { debug: false })` — public surface preserved
+- `FloorPlanCanvasLayer.tsx:11` ✅ unchanged: `import type { UseSnapEngineReturn }` + consumes `snapEngine.snapResult`, `snapEngine.calculateSnap(localX, localY)`, `snapEngine.snapResult.point` — all preserved
+- **Verification grep**: zero production references to `new SnapEngine` / `extractEndpoints` / `deduplicateSnapPoints` / `findNearestSnapPoint` / `useSnapPoints` / `createSnapEngine` in geo-canvas namespace
+- **User-visible win**: property floorplan tab gains 26 modes (BIM corners + dimensions + guides + text + all classic CAD) vs previous 6 endpoint-only
+
+#### 4.5 Concurrency note (single-scene-at-a-time assumption)
+Because `getGlobalSnapEngine()` is a module-level singleton, if both DXF Viewer and geo-canvas property floorplan tab were simultaneously active in the same tab, each would call `engine.initialize(...)` with its own entity set and race for the latest. In practice the two subapps live on different routes and are not concurrently mounted, so this is acceptable for Phase 4. Future work (post-Phase 6) may add a scene-tag fingerprint to disambiguate.
 
 ### Phase 5 — Doc cleanup ✅ DONE 2026-05-27 (Sonnet, EXPANDED scope)
 
@@ -512,7 +525,7 @@ Original plan: 2 edits. Actual: 12 edits across 11 files after Phase 1+2 verific
 - ✅ `docs/centralized-systems/reference/adr-index.md` line 372 — ADR-378 status DRAFT→ACTIVE, Phases 1+2+5 DONE noted
 
 #### 5.6 Verification
-- Grep `AISnappingEngine|useProSnapShortcuts|pro-snap-engine|AI_SNAPPING` → only legit remaining: tracking files (ADR-378 self-refs, pending-ratchet, ΑΝΑΦΟΡΑ_2, memory), historical entries (ADR-314 Phase C.5.32 2026-04-19), archived ADRs (067/079), research/analysis MDs, baseline JSON (Phase 6 scope), backup files
+- Grep `AISnappingEngine|useProSnapShortcuts|pro-snap-engine|AI_SNAPPING` → only legit remaining: tracking files (ADR-378 self-refs, pending-ratchet, ΕΚΚΡΕΜΟΤΗΤΕΣ, memory), historical entries (ADR-314 Phase C.5.32 2026-04-19), archived ADRs (067/079), research/analysis MDs, baseline JSON (Phase 6 scope), backup files
 - Grep `ADR-149` → only legit remaining: 3 Active ADRs (370/153/359) all now in "supersedes phantom ADR-149" wording + ADR-378 itself documenting the phantom history
 
 ### Phase 6 — SSoT registry + trackers (Sonnet, ~30min)
@@ -523,7 +536,7 @@ Original plan: 2 edits. Actual: 12 edits across 11 files after Phase 1+2 verific
   - Reference ADR-378 in description
 - Refresh: `npm run ssot:baseline`
 
-#### 6.2 ΑΝΑΦΟΡΑ_2
+#### 6.2 ΕΚΚΡΕΜΟΤΗΤΕΣ
 - Add «Snap System Centralization — ADR-378» section, mark ✅ after commit
 
 #### 6.3 pending-ratchet-work.md
@@ -599,6 +612,7 @@ These remain as-is. Future ADR may unify 3D snap if/when 3D BIM Viewer matures.
 | 2026-05-27 | 2 | Phase 2 — `pro-snap-engine.ts` ghost deleted. `snapping/index.ts` re-export line removed. **Discovery**: ZERO production consumers of `snapSystem` existed — ADR §3.3 and §9.2.1 claims about `measure-snap-bridge.ts` were incorrect (that file is in `src/components/shared/files/media/` and unrelated). No migration step needed. §3.3 + §9 Phase 2 corrected to match reality. Sonnet 4.6, ~10min. |
 | 2026-05-27 | 5 | Phase 5 — Doc cleanup (EXPANDED from 2 to 12 edits across 11 files). All ADR-149 phantom refs updated to ADR-378 in 3 Active ADRs (370/153/359). All stale paths in Active ADRs (034/092/362) marked Removed or pointed to new SSoT engines. DXF Viewer subapp docs (ARCHITECTURE/SETTINGS_PROGRESS/CONFERENCE_REPORT) cleaned. Code: orphan AI_SNAPPING storage constant deleted, stale comment in snap-engine-utils.ts removed. adr-index.md status DRAFT→ACTIVE. Sonnet 4.6, ~20min. |
 | 2026-05-27 | 3 | Phase 3 — TextSnapEngine completion (ADR-344 Phase 6.C delivered). NEW `engines/TextSnapEngine.ts` (151 LOC) extends `BaseSnapEngine`, registered as `ExtendedSnapType.TEXT` in `SnapEngineRegistry`, emits 8 candidates per visible TEXT/MTEXT entity (insertion + 4 corners + center + 2 edge mids), works directly on `Entity` union with approximate bbox + rotation. SnapIndicatorOverlay gains `case 'text':` nested-square ▣ symbol. i18n el+en `snapModes.labels.text.*` 8 sub-keys + tooltips.text. Type system constants already committed in HEAD (`7f788d8d` + `aabfb04f`). Phase 3.4 N/A (no manual feed existed in text-layout-engine, same surprise pattern as Phase 2). 14 new TextSnapEngine.test.ts cases PASS (broader snap suite 168/169 PASS, 1 pre-existing unrelated failure). TextSnapProvider.test.ts intact (kept math helpers untouched for legacy/test stability). Sonnet 4.6, ~2h. |
+| 2026-05-27 | 4 | Phase 4 — Geo-canvas SnapEngine unification with DXF Viewer SSoT. NEW `geo-canvas/floor-plan-system/snapping/adapter/parser-result-to-entities.ts` (108 LOC) maps GeoJSON FeatureCollection (LineString/Polygon/MultiLineString) → DXF Entity[] (mirror `regionsToSnapEntities` pattern). REFACTORED `hooks/useSnapEngine.ts` (~190 LOC) — façade over `getGlobalSnapEngine()` with `EXTENDED_TO_GEO_MODE` mapper collapsing 26-mode ProSnapEngineV2 output to 6 classic geo-canvas `SnapMode` values for render-layer back-compat. Public API surface `UseSnapEngineReturn` UNCHANGED — `GeoCanvasContent.tsx:93` + `FloorPlanCanvasLayer.tsx` consumers work as-is. DELETED `engine/SnapEngine.ts` (275 LOC) + `endpoint-detector.ts` (202 LOC) + `snap-distance.ts` (139 LOC) + `engine/index.ts` barrel + `useSnapPoints.ts` (zero callers). KEPT `types/snap-types.ts` + `config/snap-defaults.ts` + `rendering/SnapIndicator.tsx` (required by render layer). Property floorplan tab user-visible win: 26 modes (BIM corners + dim + guides + text + classic CAD) vs previous 6 endpoint-only. Tsc zero new errors. Jest 188 pass / 2 pre-existing unrelated fails (bim-corner-alignment + DxfGeoTransform i18n drift). Single-scene-at-a-time assumption documented in §9 Phase 4.5 (DXF Viewer + geo-canvas not concurrently mounted). Opus 4.7, ~2h. |
 
 ---
 

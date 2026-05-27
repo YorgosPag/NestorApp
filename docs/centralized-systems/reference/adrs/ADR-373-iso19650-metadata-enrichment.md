@@ -376,7 +376,7 @@ Phase 3 (μελλοντικό ADR): ZIP EXPORT + ISO COMPLIANCE
 | 9 | `docs/centralized-systems/reference/adrs/ADR-191-enterprise-document-management.md` | EDIT — changelog entry + cross-link | +5 |
 | 10 | `docs/centralized-systems/reference/adrs/ADR-293-file-naming-storage-path-ssot-audit.md` | EDIT — changelog "ADR-373 metadata-only" | +3 |
 | 11 | `docs/centralized-systems/reference/adr-index.md` | EDIT — auto-regen script | auto |
-| 12 | `local_ΑΝΑΦΟΡΑ_2.txt` | EDIT — add ADR-373 status entry | +1 row |
+| 12 | `local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt` | EDIT — add ADR-373 status entry | +1 row |
 
 **Σύνολο Phase 1**: 6 new + 4 edits + 1 auto + 1 ADR file = **~12 files**, **~715 LOC νέου κώδικα + 350 LOC docs**.
 

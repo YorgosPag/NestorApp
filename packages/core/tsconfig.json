@@ -24,7 +24,8 @@
       "@geo-alert/core/database-system": ["./database-system"],
       "@geo-alert/core/database-system/*": ["./database-system/*"],
       "@geo-alert/core/alert-engine": ["./alert-engine"],
-      "@geo-alert/core/alert-engine/*": ["./alert-engine/*"]
+      "@geo-alert/core/alert-engine/*": ["./alert-engine/*"],
+      "@/*": ["../../src/*"]
     }
   },
   "include": [

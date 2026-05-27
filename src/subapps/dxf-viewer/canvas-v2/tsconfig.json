@@ -5,7 +5,10 @@
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    "../types/dxf-window.d.ts",
+    "../types/dxf-modules.d.ts",
+    "../../../types/utif.d.ts"
   ],
   "exclude": [
     "node_modules"
