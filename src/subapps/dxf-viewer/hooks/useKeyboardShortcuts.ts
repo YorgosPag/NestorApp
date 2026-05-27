@@ -31,6 +31,8 @@ import { useEscapeHandler, ESC_PRIORITY } from '../systems/escape-bus';
 // DIM_TOOL slot (priority 550) sits above the DRAW_TOOL slot (priority 500)
 // and consumes ESC first, so this remains correct.
 import { isInteractiveTool } from '../systems/tools/ToolStateManager';
+// ADR-391 — Ctrl+L opens AdminLayerManager dialog (toggleLayers shortcut SSoT)
+import { AdminLayerManagerDialogStore } from '../stores/AdminLayerManagerDialogStore';
 
 // Hook parameters interface
 interface KeyboardShortcutsConfig {
@@ -140,6 +142,15 @@ export const useKeyboardShortcuts = ({
         if (inputFocused) return;
         e.preventDefault();
         onSelectAll?.();
+        return;
+      }
+
+      // ADR-391: Ctrl+L → toggle AdminLayerManager dialog (Revit/AutoCAD parity).
+      // Consumes the previously-dead `toggleLayers` shortcut declared in keyboard-shortcuts.ts.
+      if (matchesShortcut(e, 'toggleLayers')) {
+        if (inputFocused) return;
+        e.preventDefault();
+        AdminLayerManagerDialogStore.toggle();
         return;
       }
 

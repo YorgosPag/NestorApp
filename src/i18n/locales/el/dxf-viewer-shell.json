@@ -753,7 +753,8 @@
       "layers": "Επίπεδα",
       "lineToolQuickStyle": "Γρήγορο Στυλ",
       "xlineMode": "Λειτουργία",
-      "bimSchedule": "Πίνακας BIM"
+      "bimSchedule": "Πίνακας BIM",
+      "layerManager": "Διαχειριστής Στρώσεων"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -1624,6 +1625,7 @@
       "togglePerf": "Παρακολ. Απόδοσης",
       "aiAssistant": "Βοηθός AI",
       "layering": "Σχεδίαση Επιπέδων",
+      "layerManager": "Διαχειριστής Στρώσεων",
       "fullscreen": "Πλήρης Οθόνη",
       "bimSchedule": "Πίνακας BIM",
       "quickStyle": {
@@ -1908,5 +1910,9 @@
       "noBuildings": "Δεν βρέθηκαν κτήρια για το έργο",
       "failed": "Αποτυχία εξαγωγής IFC"
     }
+  },
+  "layerManagerDialog": {
+    "title": "Διαχειριστής Στρώσεων",
+    "description": "Διαχείριση ορατότητας, χρώματος και ιδιοτήτων κάθε στρώσης (Ctrl+L)."
   }
 }

@@ -175,10 +175,21 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
       wallGripKind: 'wall-thickness',
     });
 
-    // 4..7 — Phase 1C-bis corner handles (straight kind only). Both perp sides
-    // are emitted regardless of `params.flip` (flip is a presentation hint, not
-    // a structural mirror). See header for ArchiCAD/Vectorworks parity rationale.
-    if (kind === 'straight') {
+    // 4..7 — Phase 1C-bis corner handles. Emitted for straight kind (default)
+    // and for legacy walls without a `kind` field (permissive — undefined kind
+    // is treated as straight, since older Firestore docs may predate the kind
+    // discriminator). Explicitly skipped only for curved/polyline kinds where
+    // the rectangular outline assumption does not hold.
+    //
+    // Type is `vertex` (not 'corner') so the unified grip pipeline
+    // (`grip-registry.wrapDxfGrip`) does NOT subject them to the
+    // `showMidpoints` filter — corners are primary editing affordances per the
+    // direct-manipulation principle, not secondary midpoint helpers.
+    //
+    // Both perpendicular sides are emitted regardless of `params.flip` (flip
+    // is a presentation hint, not a structural mirror). See header for
+    // ArchiCAD/Vectorworks/AutoCAD parity rationale.
+    if (kind !== 'curved' && kind !== 'polyline') {
       const halfTNoFlip = params.thickness / 2;
       const startPos: Point2D = { x: start.x + halfTNoFlip * p.x, y: start.y + halfTNoFlip * p.y };
       const startNeg: Point2D = { x: start.x - halfTNoFlip * p.x, y: start.y - halfTNoFlip * p.y };
@@ -187,7 +198,7 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
       grips.push({
         entityId: entity.id,
         gripIndex: grips.length,
-        type: 'corner',
+        type: 'vertex',
         position: startPos,
         movesEntity: false,
         wallGripKind: 'wall-corner-start-pos',
@@ -195,7 +206,7 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
       grips.push({
         entityId: entity.id,
         gripIndex: grips.length,
-        type: 'corner',
+        type: 'vertex',
         position: startNeg,
         movesEntity: false,
         wallGripKind: 'wall-corner-start-neg',
@@ -203,7 +214,7 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
       grips.push({
         entityId: entity.id,
         gripIndex: grips.length,
-        type: 'corner',
+        type: 'vertex',
         position: endPos,
         movesEntity: false,
         wallGripKind: 'wall-corner-end-pos',
@@ -211,7 +222,7 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
       grips.push({
         entityId: entity.id,
         gripIndex: grips.length,
-        type: 'corner',
+        type: 'vertex',
         position: endNeg,
         movesEntity: false,
         wallGripKind: 'wall-corner-end-neg',

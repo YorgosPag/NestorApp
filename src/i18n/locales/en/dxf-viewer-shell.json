@@ -753,7 +753,8 @@
       "layers": "Layers",
       "lineToolQuickStyle": "Quick Style",
       "xlineMode": "Mode",
-      "bimSchedule": "BIM Schedule"
+      "bimSchedule": "BIM Schedule",
+      "layerManager": "Layer Manager"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -1624,6 +1625,7 @@
       "togglePerf": "Performance Monitor",
       "aiAssistant": "AI Assistant",
       "layering": "Layer Drawing",
+      "layerManager": "Layer Manager",
       "fullscreen": "Full Screen",
       "bimSchedule": "BIM Schedule",
       "quickStyle": {
@@ -1908,5 +1910,9 @@
       "noBuildings": "No buildings found for project",
       "failed": "IFC export failed"
     }
+  },
+  "layerManagerDialog": {
+    "title": "Layer Manager",
+    "description": "Manage layer visibility, color and properties (Ctrl+L)."
   }
 }

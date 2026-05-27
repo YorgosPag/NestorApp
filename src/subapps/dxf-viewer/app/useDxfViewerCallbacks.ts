@@ -35,6 +35,8 @@ import {
   type AnimationActionDeps,
 } from '../bim-3d/animation/animation-action-handlers';
 import { useAuth } from '@/auth/hooks/useAuth';
+// ADR-391 — open AdminLayerManager dialog via store SSoT
+import { AdminLayerManagerDialogStore } from '../stores/AdminLayerManagerDialogStore';
 
 /** Structural overlay entry shape used by callbacks */
 interface OverlayEntry {
@@ -176,6 +178,11 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     // 🏢 ADR-241: Fullscreen toggle (Portal-based, zero remount)
     if (action === 'toggle-fullscreen') {
       fullscreen.toggle();
+      return;
+    }
+    // ADR-391: Open AdminLayerManager modal dialog (Revit View > Layer Manager pattern)
+    if (action === 'open-layer-manager') {
+      AdminLayerManagerDialogStore.open();
       return;
     }
     // ADR-345 Fase 6: Import/export dialog actions (migrated from toolbar)
