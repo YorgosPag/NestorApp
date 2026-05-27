@@ -41,7 +41,7 @@ export async function optimizeResources(
       model: openai(AI_ANALYSIS_DEFAULTS.OPENAI.TEXT_MODEL),
       system: SYSTEM_PROMPT,
       prompt,
-      maxTokens: 700,
+      maxOutputTokens: 700,
     });
 
     return parseResourceResponse(text);
@@ -74,7 +74,7 @@ function parseResourceResponse(text: string): ResourceConflict[] {
   const jsonMatch = text.match(/\[[\s\S]*\]/);
   if (!jsonMatch) return [];
 
-  const parsed = safeJsonParse<ResourceConflict[]>(jsonMatch[0]);
+  const parsed = safeJsonParse<ResourceConflict[]>(jsonMatch[0], []);
   if (!Array.isArray(parsed)) return [];
 
   return parsed

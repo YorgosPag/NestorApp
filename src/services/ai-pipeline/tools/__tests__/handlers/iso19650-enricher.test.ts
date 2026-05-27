@@ -1,5 +1,12 @@
 /**
+ * @jest-environment node
+ *
  * Unit tests for ISO 19650 enricher (ADR-373 Phase 1).
+ *
+ * NOTE: Runs in Node env (not default jsdom). The enricher's runtime
+ * server-only guard (`typeof window !== 'undefined'` → return 'skipped',
+ * ADR-373 §D9 hotfix) short-circuits under jsdom. Node env keeps `window`
+ * undefined so the production decision tree is actually exercised.
  *
  * Covers:
  *  - Pre-flight gates (missing API key, hard size limit, budget cap)

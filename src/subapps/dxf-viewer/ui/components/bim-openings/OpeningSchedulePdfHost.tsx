@@ -62,7 +62,7 @@ export function OpeningSchedulePdfHost(props: OpeningSchedulePdfHostProps): null
   const { t: tShell } = useTranslation('dxf-viewer-shell');
 
   const handleExport = React.useCallback(async (): Promise<void> => {
-    const entities = getEntities() as AnyBimEntity[];
+    const entities = getEntities() as unknown as AnyBimEntity[];
     const kindResolver = (kind: string) => tSchedule(`openingKind.${kind}`, { defaultValue: kind });
     const lookups = buildLookupsFromLevels(levels, kindResolver);
     const doorSchedule = buildSchedule(entities, { entityType: 'door', filters: {} }, lookups);

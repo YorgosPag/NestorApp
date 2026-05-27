@@ -179,7 +179,7 @@ export class QuadTreeSpatialIndex implements ISpatialIndex {
   // SPECIALIZED QUERIES
   // ========================================
 
-  querySnap(point: Point2D, tolerance: number, snapType: 'endpoint' | 'midpoint' | 'center' | 'dim_def_point' | 'dim_line'): SpatialQueryResult[] {
+  querySnap(point: Point2D, tolerance: number, snapType: 'endpoint' | 'midpoint' | 'center' | 'dim_def_point' | 'dim_line' | 'beam_corner' | 'column_center' | 'column_corner' | 'opening_corner' | 'slab_corner' | 'wall_corner'): SpatialQueryResult[] {
     const results = this.queryNear(point, tolerance);
 
     // Filter based on snap type (basic implementation)

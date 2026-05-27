@@ -30,6 +30,7 @@ import { BIM_LINE_PATTERNS, type LinePatternKey } from '../../../config/bim-line
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
+import { UnifiedColorPicker } from '../../color/UnifiedColorPicker';
 
 const PEN_OPTIONS = Array.from({ length: 16 }, (_, i) => i + 1);
 
@@ -93,7 +94,15 @@ export const VisibilityGraphicsPanel: React.FC = () => {
       <span className="dxf-ribbon-combobox-label">
         {t('ribbon.commands.visibilityGraphics.label')}
       </span>
-      <DropdownMenu open={open} onOpenChange={setOpen}>
+      {/*
+        ADR-375 v2.9: modal={false} + onInteractOutside preserve για nested
+        EnterpriseColorDialog. Default modal={true} έβαζε Radix FocusScope
+        contain που συγκρουόταν με το React Aria FocusScope του dialog →
+        focusin/focusout recursion crash (browser freeze). Industry-standard
+        Radix nested-overlay pattern: disable dropdown focus trap, preserve
+        open state όταν click target = portaled dialog.
+      */}
+      <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
         <DropdownMenuTrigger asChild>
           <button
             aria-label={t('ribbon.commands.visibilityGraphics.openAriaLabel')}
@@ -108,7 +117,15 @@ export const VisibilityGraphicsPanel: React.FC = () => {
             <ChevronDown className="w-3 h-3 opacity-60" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="p-2" style={{ minWidth: '640px' }}>
+        <DropdownMenuContent
+          align="start"
+          className="p-2"
+          style={{ minWidth: '640px' }}
+          onInteractOutside={(e) => {
+            const target = e.target as HTMLElement | null;
+            if (target?.closest('[role="dialog"]')) e.preventDefault();
+          }}
+        >
           {/* Header row */}
           <div className={`grid gap-x-1.5 gap-y-0.5 items-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} font-medium mb-1`}
             style={{ gridTemplateColumns: '100px 22px 44px 64px 56px 44px 64px 56px' }}>
@@ -163,16 +180,18 @@ export const VisibilityGraphicsPanel: React.FC = () => {
                   {PEN_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
 
-                {/* Projection Color */}
+                {/* Projection Color — ADR-375 v2.7: UnifiedColorPicker (Enterprise dialog) αντί native Windows input */}
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <input
-                      type="color"
-                      value={style.projectionColor ?? '#888888'}
-                      onChange={(e) => handleColor(cat, 'projectionColor', e.target.value)}
-                      disabled={isHidden}
-                      className="w-12 h-5 rounded cursor-pointer border-0 bg-transparent disabled:opacity-40"
-                    />
+                    <span className="inline-flex">
+                      <UnifiedColorPicker
+                        variant="modal"
+                        value={style.projectionColor ?? '#888888'}
+                        onChange={(v) => handleColor(cat, 'projectionColor', v)}
+                        disabled={isHidden}
+                        title={t('ribbon.commands.visibilityGraphics.projColorTitle')}
+                      />
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent>{t('ribbon.commands.visibilityGraphics.projColorTitle')}</TooltipContent>
                 </Tooltip>
@@ -199,16 +218,18 @@ export const VisibilityGraphicsPanel: React.FC = () => {
                   {PEN_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
 
-                {/* Cut Color */}
+                {/* Cut Color — ADR-375 v2.7: UnifiedColorPicker (Enterprise dialog) αντί native Windows input */}
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <input
-                      type="color"
-                      value={style.cutColor ?? '#000000'}
-                      onChange={(e) => handleColor(cat, 'cutColor', e.target.value)}
-                      disabled={isHidden}
-                      className="w-12 h-5 rounded cursor-pointer border-0 bg-transparent disabled:opacity-40"
-                    />
+                    <span className="inline-flex">
+                      <UnifiedColorPicker
+                        variant="modal"
+                        value={style.cutColor ?? '#000000'}
+                        onChange={(v) => handleColor(cat, 'cutColor', v)}
+                        disabled={isHidden}
+                        title={t('ribbon.commands.visibilityGraphics.cutColorTitle')}
+                      />
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent>{t('ribbon.commands.visibilityGraphics.cutColorTitle')}</TooltipContent>
                 </Tooltip>

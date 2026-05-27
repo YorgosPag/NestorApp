@@ -33,7 +33,7 @@ import {
   DEFAULT_WALL_TOP_BINDING,
 } from '../../bim/types/bim-binding';
 import { createWall } from '@/services/factories/wall.factory';
-import type { SceneUnits } from '../../utils/scene-units';
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 export type { SceneUnits };
 
@@ -70,43 +70,87 @@ export function buildDefaultWallParams(
   endPoint: Readonly<Point2D>,
   overrides: WallParamOverrides = {},
   sceneUnits: SceneUnits = 'mm',
+  alignmentPoint?: Readonly<Point2D> | null,
 ): WallParams {
   const category: WallCategory = overrides.category ?? 'exterior';
   const height = overrides.height ?? DEFAULT_WALL_HEIGHT_MM;
-  const start: Point3D = { x: startPoint.x, y: startPoint.y, z: 0 };
-  const end: Point3D = { x: endPoint.x, y: endPoint.y, z: 0 };
   // Thickness resolution (Revit "Generic Wall" pattern):
   //   - Explicit override → manual wall, NO DNA attached (caller owns layers).
   //   - Else → DNA preset SSoT, thickness === dna.totalThickness.
-  if (overrides.thickness !== undefined) {
-    return {
-      category,
-      start,
-      end,
-      height,
-      thickness: overrides.thickness,
-      flip: overrides.flip ?? false,
-      sceneUnits,
-      baseBinding: DEFAULT_WALL_BASE_BINDING,
-      topBinding: DEFAULT_WALL_TOP_BINDING,
-      baseOffset: 0,
-      topOffset: 0,
-    };
+  // Resolved upfront so the alignment-offset path (below) knows the thickness.
+  const overrideThickness = overrides.thickness;
+  let thickness: number;
+  let dna: ReturnType<typeof getDefaultDnaForCategory> | null;
+  if (overrideThickness === undefined) {
+    dna = getDefaultDnaForCategory(category);
+    thickness = dna.totalThickness;
+  } else {
+    dna = null;
+    thickness = overrideThickness;
   }
-  const dna = getDefaultDnaForCategory(category);
-  return {
+  // ADR-363 Phase 1F — alignment offset: shift the axis perpendicular toward
+  // `alignmentPoint` so the edge AWAY from C sits on the original A→B line and
+  // the wall body extends TOWARD C. `null`/`undefined` ⇒ classic centered axis.
+  const offset = alignmentPoint
+    ? computeWallAlignmentOffset(startPoint, endPoint, alignmentPoint, thickness, sceneUnits)
+    : { x: 0, y: 0 };
+  const start: Point3D = { x: startPoint.x + offset.x, y: startPoint.y + offset.y, z: 0 };
+  const end: Point3D = { x: endPoint.x + offset.x, y: endPoint.y + offset.y, z: 0 };
+
+  const base = {
     category,
     start,
     end,
     height,
-    thickness: dna.totalThickness,
+    thickness,
     flip: overrides.flip ?? false,
-    dna,
     sceneUnits,
     baseBinding: DEFAULT_WALL_BASE_BINDING,
     topBinding: DEFAULT_WALL_TOP_BINDING,
     baseOffset: 0,
     topOffset: 0,
+  };
+  return dna === null ? base : { ...base, dna };
+}
+
+/**
+ * Compute the perpendicular offset that shifts a wall axis (A→B) so that one
+ * edge coincides with the A→B click line and the wall body extends toward
+ * `alignmentPoint` (ADR-363 Phase 1F):
+ *
+ *   - cross > 0 (C on the +n_ccw / "left" side of A→B): axis shifts +n_ccw →
+ *     wall extends LEFT; the "right" edge of the wall stays on A→B.
+ *   - cross < 0 (C on the "right" side): axis shifts -n_ccw → wall extends
+ *     RIGHT; the "left" edge of the wall stays on A→B.
+ *   - cross = 0 (C colinear with axis) or len(A→B) ≈ 0: zero offset (centered).
+ *
+ * The returned offset is in canvas world units and is meant to be ADDED to
+ * BOTH start and end of the original axis before constructing `WallParams`.
+ */
+export function computeWallAlignmentOffset(
+  startPoint: Readonly<Point2D>,
+  endPoint: Readonly<Point2D>,
+  alignmentPoint: Readonly<Point2D>,
+  thicknessMm: number,
+  sceneUnits: SceneUnits = 'mm',
+): Point2D {
+  const dx = endPoint.x - startPoint.x;
+  const dy = endPoint.y - startPoint.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-9) return { x: 0, y: 0 };
+
+  const nx = -dy / len;
+  const ny = dx / len;
+
+  const cross = dx * (alignmentPoint.y - startPoint.y) - dy * (alignmentPoint.x - startPoint.x);
+  if (cross === 0) return { x: 0, y: 0 };
+  const sign = cross > 0 ? 1 : -1;
+
+  const halfThicknessCanvas = (thicknessMm / 2) * mmToSceneUnits(sceneUnits);
+
+  return {
+    x: sign * halfThicknessCanvas * nx,
+    y: sign * halfThicknessCanvas * ny,
   };
 }
 
@@ -163,7 +207,8 @@ export function completeWallFromTwoClicks(
   layerId: string,
   overrides: WallParamOverrides = {},
   sceneUnits: SceneUnits = 'mm',
+  alignmentPoint?: Readonly<Point2D> | null,
 ): BuildWallEntityResult {
-  const params = buildDefaultWallParams(startPoint, endPoint, overrides, sceneUnits);
+  const params = buildDefaultWallParams(startPoint, endPoint, overrides, sceneUnits, alignmentPoint);
   return buildWallEntity(params, layerId, 'straight', sceneUnits);
 }

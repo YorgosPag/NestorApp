@@ -30,7 +30,9 @@ import type {
   Waypoint,
 } from './animation-types';
 
-interface AnimationState extends AnimationConfig {
+interface AnimationState extends Omit<AnimationConfig, 'waypoints'> {
+  /** Mutable inside Immer drafts; selectors return the same reference. */
+  waypoints: Waypoint[];
   readonly activeWaypointIndex: number | null;
   /** Last-loaded doc id (null = unsaved / fresh). */
   readonly loadedDocId: string | null;
@@ -125,7 +127,7 @@ export const useAnimationStore = create<AnimationStore>()(
 
         setWaypoints: (waypoints) =>
           set((s) => {
-            s.waypoints = waypoints;
+            s.waypoints = [...waypoints];
             if (s.activeWaypointIndex !== null && s.activeWaypointIndex >= waypoints.length) {
               s.activeWaypointIndex = waypoints.length === 0 ? null : waypoints.length - 1;
             }
@@ -214,7 +216,7 @@ export const useAnimationStore = create<AnimationStore>()(
 
         loadFromDoc: (doc) =>
           set((s) => {
-            s.waypoints = doc.waypoints;
+            s.waypoints = [...doc.waypoints];
             s.durationSec = doc.durationSec;
             s.fps = doc.fps;
             s.axis = doc.axis;

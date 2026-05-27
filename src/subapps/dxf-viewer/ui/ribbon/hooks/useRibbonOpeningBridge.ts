@@ -178,7 +178,7 @@ export function useRibbonOpeningBridge(
     (commandKey: string, value: string): void => {
       // Tag style — per-project, routed directly to service (no undo entry needed).
       if (isOpeningTagStyleComboboxKey(commandKey)) {
-        const patch: OpeningTagStyle = {};
+        const patch: { -readonly [K in keyof OpeningTagStyle]?: OpeningTagStyle[K] } = {};
         switch (commandKey) {
           case OPENING_TAG_STYLE_KEYS.fontSizePx:    patch.fontSizePx    = Number(value); break;
           case OPENING_TAG_STYLE_KEYS.borderWidthPx: patch.borderWidthPx = Number(value); break;

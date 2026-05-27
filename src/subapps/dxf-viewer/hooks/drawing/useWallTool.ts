@@ -33,7 +33,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../../bim/types/bim-base';
 import type { WallEntity, WallKind, WallCategory } from '../../bim/types/wall-types';
-import type { DynamicSubmitDetail } from '../../systems/dynamic-input/utils/events';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 import {
   buildDefaultWallParams,
@@ -41,6 +40,10 @@ import {
   type SceneUnits,
   type WallParamOverrides,
 } from './wall-completion';
+import {
+  useWallToolDynamicInputListener,
+  useWallToolEnterListener,
+} from './use-wall-tool-event-listeners';
 import { EventBus } from '../../systems/events/EventBus';
 
 // ─── State machine types ─────────────────────────────────────────────────────
@@ -49,6 +52,7 @@ export type WallToolPhase =
   | 'idle'
   | 'awaitingStart'
   | 'awaitingEnd'
+  | 'awaitingAlignment'
   | 'awaitingCurveControl'
   | 'awaitingNextVertex';
 
@@ -105,6 +109,7 @@ export interface UseWallToolResult {
   readonly isActive: boolean;
   readonly isAwaitingStart: boolean;
   readonly isAwaitingEnd: boolean;
+  readonly isAwaitingAlignment: boolean;
   readonly isAwaitingCurveControl: boolean;
   readonly isAwaitingNextVertex: boolean;
 }
@@ -132,8 +137,15 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       state.kind === 'curved' && state.phase === 'awaitingCurveControl' && state.endPoint
         ? null // user has not picked the control point yet — preview generator will use cursor
         : null;
+    // ADR-363 Phase 1F — surface endPoint to the preview store only during the
+    // straight-kind awaitingAlignment phase. In every other state (including
+    // curved awaitingCurveControl) the preview falls back to the legacy
+    // "start → cursor" rubber band by leaving endPoint null.
+    const endPoint =
+      state.kind === 'straight' && state.phase === 'awaitingAlignment' ? state.endPoint : null;
     wallPreviewStore.set({
       startPoint: state.startPoint,
+      endPoint,
       curveControl,
       polylineVertices: state.polylineVertices,
       overrides: state.overrides,
@@ -201,7 +213,11 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
    * `true` on successful commit.
    */
   const commitStraightFromState = useCallback(
-    (s: WallToolState, endPoint: Readonly<Point2D>): boolean => {
+    (
+      s: WallToolState,
+      endPoint: Readonly<Point2D>,
+      alignmentPoint?: Readonly<Point2D> | null,
+    ): boolean => {
       if (s.startPoint === null) return false;
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       const params = buildDefaultWallParams(
@@ -209,6 +225,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         endPoint,
         s.overrides,
         sceneUnits,
+        alignmentPoint,
       );
       const result = buildWallEntity(params, currentLevelId, 'straight', sceneUnits);
       if (!result.ok) {
@@ -348,7 +365,10 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         return false;
       }
 
-      // Straight kind — 2-click chain (Phase 1B preserved).
+      // Straight kind — 3-click chain (ADR-363 Phase 1F):
+      //   click 1 (awaitingStart)     → store start, → awaitingEnd
+      //   click 2 (awaitingEnd)       → store end,   → awaitingAlignment
+      //   click 3 (awaitingAlignment) → commit with lateral offset toward C
       if (s.phase === 'awaitingStart') {
         setState({
           ...s,
@@ -359,7 +379,16 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         return true;
       }
       if (s.phase === 'awaitingEnd' && s.startPoint) {
-        return commitStraightFromState(s, point);
+        setState({
+          ...s,
+          phase: 'awaitingAlignment',
+          endPoint: { x: point.x, y: point.y },
+          error: null,
+        });
+        return true;
+      }
+      if (s.phase === 'awaitingAlignment' && s.startPoint && s.endPoint) {
+        return commitStraightFromState(s, s.endPoint, point);
       }
       return false;
     },
@@ -383,6 +412,8 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         return s.kind === 'curved'
           ? 'tools.wall.statusCurveEnd'
           : 'tools.wall.statusEnd';
+      case 'awaitingAlignment':
+        return 'tools.wall.statusAlignment';
       case 'awaitingCurveControl':
         return 'tools.wall.statusCurveControl';
       case 'awaitingNextVertex':
@@ -392,88 +423,14 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     }
   }, []);
 
-  // ── Dynamic Input commit-wall listener ───────────────────────────────────
-  // Stream from `systems/dynamic-input` — when overlay submits the second
-  // coordinate explicitly (length + angle / x,y), commit atomically with
-  // current state overrides. Inline overrides (height/thickness/category/flip)
-  // also flow through the same submit event (Phase 1C extension).
-  useEffect(() => {
-    const onDynSubmit = (e: Event) => {
-      const ce = e as CustomEvent<DynamicSubmitDetail>;
-      if (!ce.detail || ce.detail.tool !== 'wall') return;
-      if (ce.detail.action !== 'commit-wall') return;
-      const s = stateRef.current;
-      // Apply inline overrides ahead of commit (parity with stair Stream E).
-      const inlineOverrides: WallParamOverrides = {
-        ...(typeof ce.detail.height === 'number' ? { height: ce.detail.height } : {}),
-        ...(typeof ce.detail.thickness === 'number' ? { thickness: ce.detail.thickness } : {}),
-        ...(typeof ce.detail.category === 'string' ? { category: ce.detail.category as WallParamOverrides['category'] } : {}),
-        ...(typeof ce.detail.flip === 'boolean' ? { flip: ce.detail.flip } : {}),
-      };
-      const mergedState: WallToolState = Object.keys(inlineOverrides).length > 0
-        ? { ...s, overrides: { ...s.overrides, ...inlineOverrides } }
-        : s;
-
-      const target = ce.detail.coordinates ?? ce.detail.secondPoint;
-      if (!target) return;
-
-      if (s.kind === 'polyline') {
-        // Submit event in polyline mode = append vertex (or finish if explicit).
-        if (s.phase === 'awaitingNextVertex') {
-          setState({
-            ...mergedState,
-            polylineVertices: [...mergedState.polylineVertices, { x: target.x, y: target.y }],
-            error: null,
-          });
-        }
-        return;
-      }
-      if (s.kind === 'curved') {
-        if (s.phase === 'awaitingEnd') {
-          setState({
-            ...mergedState,
-            phase: 'awaitingCurveControl',
-            endPoint: { x: target.x, y: target.y },
-            error: null,
-          });
-          return;
-        }
-        if (s.phase === 'awaitingCurveControl' && s.startPoint && s.endPoint) {
-          commitCurvedFromState(mergedState, target);
-          return;
-        }
-        return;
-      }
-      if (s.phase === 'awaitingEnd' && mergedState.startPoint) {
-        commitStraightFromState(mergedState, target);
-      }
-    };
-    window.addEventListener('dynamic-input-coordinate-submit', onDynSubmit);
-    return () => window.removeEventListener('dynamic-input-coordinate-submit', onDynSubmit);
-  }, [commitStraightFromState, commitCurvedFromState]);
-
-  // ── Enter / double-click to finish polyline (Phase 1C) ───────────────────
-  // Industry convention (AutoCAD PLINE, Revit Wall): Enter on the last vertex
-  // commits the chain. The listener stays inert unless the active phase is
-  // `awaitingNextVertex` so it does not clobber Enter handling for other tools.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Enter') return;
-      const s = stateRef.current;
-      if (s.kind !== 'polyline' || s.phase !== 'awaitingNextVertex') return;
-      // Avoid swallowing Enter when an editable element is focused (Dynamic
-      // Input fields handle their own Enter → submit event).
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
-      const ok = commitPolylineFromState(s);
-      if (ok) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [commitPolylineFromState]);
+  // ── side-effect listeners (extracted for N.7.1, parity preserved) ────────
+  useWallToolDynamicInputListener({
+    stateRef,
+    setState,
+    commitStraightFromState,
+    commitCurvedFromState,
+  });
+  useWallToolEnterListener({ stateRef, commitPolylineFromState });
 
   return {
     state,
@@ -488,6 +445,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     isActive: state.phase !== 'idle',
     isAwaitingStart: state.phase === 'awaitingStart',
     isAwaitingEnd: state.phase === 'awaitingEnd',
+    isAwaitingAlignment: state.phase === 'awaitingAlignment',
     isAwaitingCurveControl: state.phase === 'awaitingCurveControl',
     isAwaitingNextVertex: state.phase === 'awaitingNextVertex',
   };

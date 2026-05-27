@@ -96,20 +96,36 @@ export function setPenTableSource(table: EffectivePenTable): void {
 const BEYOND_PEN: PenIndex = 3;
 
 /**
- * Resolve full subcategory style for a BIM render pass (ADR-377 Phase B, ADR-375 Phase C.4+C.5+C.6).
+ * Resolve full subcategory style for a BIM render pass (ADR-377 Phase B, ADR-375 Phase C.4–C.6).
  *
- * Resolution order (highest priority first):
- *   1. hidden cutState → zero/solid/null
- *   2. category visible=false (C.4 per-view) → zero/solid/null
- *   3. elementOverride.visible === false (C.5 per-element) → zero/solid/null
- *   4. elementOverride.cutPen / projectionPen (C.5) → override pen + optional color/pattern
- *   5. layerOverride.lineweightMm (C.6) → concrete mm → px (bypass pen table)
- *   6. subcategory override (per-subcategory key)
- *   7. per-view category V/G override (C.4: color + pattern)
- *   8. DEFAULT_OBJECT_STYLES global defaults
+ * **Industry-faithful priority stack (Revit V/G + ArchiCAD Graphic Override + AutoCAD Layer Override)**
+ * — highest priority first:
  *
- * Partial elementOverride (color/pattern only, no pen) falls through to step 5-8 for pen,
- * but the override color/pattern takes priority at final assembly.
+ *   1. cutState === 'hidden'                                        → zero/solid/null
+ *   2. parent.visible === false  (C.4 category V/G visibility)      → zero/solid/null
+ *   3. elementOverride.visible === false  (C.5 per-element)         → zero/solid/null
+ *   4. elementOverride  (C.5 per-element user-set in view)          → pen/color/pattern wins
+ *   5. **Sub Object Style default** (ADR-377 hardcoded subcategory) → when sub field is defined
+ *   6. **V/G category override (C.4)** — user-explicit in `objectStyles[cat]` → wins over Layer
+ *   7. **Layer override (C.6)** — `layerOverride.lineweightMm/.color` (LayerStore)
+ *   8. DEFAULT_OBJECT_STYLES global (parent fallback)
+ *
+ * **Why V/G beats Layer (industry parity, 2026-05-26 v2.8 fix)**: Revit's "Override Graphics in View"
+ * is the canonical "make this category look like X in THIS view" knob. It overrides Material/Layer
+ * colors but NOT Object Style subcategory defaults (which encode structural intent like
+ * `walkline` = dashed, `hidden-lines` = dashed — these are not user-V/G entries). ArchiCAD Graphic
+ * Override Rule + AutoCAD Layer State Override σε layouts follow the same V/G > Layer pattern.
+ * v2.6/v2.7 had the stack flipped (Layer > V/G), so V/G color/pen toggles did nothing on entities
+ * with assigned layers (production entities). Resolves Giorgio runtime report 2026-05-26.
+ *
+ * **Beyond cutState special case**: Revit Line Styles always uses the finest pen (BEYOND_PEN) for
+ * geometry below the view range — V/G category pen and Layer mm bypass are skipped to preserve
+ * the representational convention.
+ *
+ * **User-set detection**: we look up `ctx.objectStyles?.[ctx.category]` (raw user input — NO merge
+ * with DEFAULT_OBJECT_STYLES) so a `field !== undefined` check distinguishes user-explicit values
+ * from globals. DEFAULT_OBJECT_STYLES carries only pen indices (no colors/patterns), so absence in
+ * raw user input ⇒ "no V/G override active for this field".
  */
 export function resolveSubcategoryStyle(
   ctx: SubcategoryResolutionContext,
@@ -137,72 +153,95 @@ export function resolveSubcategoryStyle(
     return { lineWidthPx: 0, linePattern: 'solid', color: null };
   }
 
-  // ADR-375 C.5 — per-element pen override (wins over subcategory + objectStyles)
-  if (ctx.elementOverride) {
-    const overridePen = ctx.cutState === 'cut'
-      ? (ctx.elementOverride.cutPen ?? null)
-      : (ctx.elementOverride.projectionPen ?? null);
-    if (overridePen !== null) {
-      const scaleCol = closestScaleColumn(ctx.scaleDenominator);
-      const mm = _activePenTable[overridePen - 1][scaleCol];
-      const lineWidthPx = lineweightToPx(mm, ctx.dpi ?? 96);
-      const color = ctx.elementOverride.color !== undefined
-        ? ctx.elementOverride.color
-        : (ctx.cutState === 'cut'
-            ? (sub?.cutColor ?? parent.cutColor ?? null)
-            : (sub?.projectionColor ?? parent.projectionColor ?? null));
-      const linePattern = ctx.elementOverride.linePattern
-        ?? (sub?.linePattern ?? (ctx.cutState === 'cut'
-            ? (parent.cutPattern ?? 'solid')
-            : (parent.projectionPattern ?? 'solid')));
-      return { lineWidthPx, linePattern, color };
-    }
-  }
+  // ── Raw user V/G overrides (v2.8: `field !== undefined` ⇒ user explicitly set in panel) ───
+  const userOverride = ctx.objectStyles?.[ctx.category];
+  const userVgPen = ctx.cutState === 'cut'
+    ? userOverride?.cutPen
+    : userOverride?.projectionPen;
+  const userVgColor = ctx.cutState === 'cut'
+    ? userOverride?.cutColor
+    : userOverride?.projectionColor;
+  const userVgPattern = ctx.cutState === 'cut'
+    ? userOverride?.cutPattern
+    : userOverride?.projectionPattern;
 
-  // ADR-375 C.6 — layer lineweight override (concrete mm → px, bypasses pen table)
-  if (ctx.layerOverride?.lineweightMm !== undefined) {
-    const lineWidthPx = lineweightToPx(ctx.layerOverride.lineweightMm, ctx.dpi ?? 96);
-    const color = ctx.elementOverride?.color !== undefined
-      ? ctx.elementOverride.color
-      : (ctx.layerOverride.color !== undefined
-          ? ctx.layerOverride.color
-          : (ctx.cutState === 'cut'
-              ? (sub?.cutColor ?? parent.cutColor ?? null)
-              : (sub?.projectionColor ?? parent.projectionColor ?? null)));
-    const linePattern = ctx.elementOverride?.linePattern
-      ?? (sub?.linePattern ?? (ctx.cutState === 'cut'
-          ? (parent.cutPattern ?? 'solid')
-          : (parent.projectionPattern ?? 'solid')));
+  // ── Pre-compute fallbacks for color/pattern (shared across all pen branches) ───
+  const subColor = sub
+    ? (ctx.cutState === 'cut' ? sub.cutColor : sub.projectionColor)
+    : undefined;
+  const parentColorRaw = ctx.cutState === 'cut' ? parent.cutColor : parent.projectionColor;
+  const parentPatternRaw = ctx.cutState === 'cut' ? parent.cutPattern : parent.projectionPattern;
+
+  /** Color priority: elem > sub Object Style > V/G user > Layer > parent DEFAULT > null. */
+  const resolveColor = (): string | null => {
+    if (ctx.elementOverride?.color !== undefined) return ctx.elementOverride.color;
+    if (subColor !== undefined) return subColor;
+    if (userVgColor !== undefined) return userVgColor;
+    if (ctx.layerOverride?.color !== undefined) return ctx.layerOverride.color;
+    return parentColorRaw ?? null;
+  };
+
+  /** Pattern priority: elem > sub Object Style > V/G user > parent DEFAULT > 'solid'. */
+  const resolvePattern = (): LinePatternKey =>
+    ctx.elementOverride?.linePattern
+    ?? sub?.linePattern
+    ?? userVgPattern
+    ?? parentPatternRaw
+    ?? 'solid';
+
+  const color = resolveColor();
+  const linePattern = resolvePattern();
+  const scaleCol = closestScaleColumn(ctx.scaleDenominator);
+
+  // ── Line width priority: elem pen > sub Object Style pen > V/G user pen > Layer mm > parent DEFAULT ──
+
+  // 1. Element pen override (C.5)
+  const elemPen = ctx.elementOverride
+    ? (ctx.cutState === 'cut' ? ctx.elementOverride.cutPen : ctx.elementOverride.projectionPen) ?? null
+    : null;
+  if (elemPen !== null) {
+    const mm = _activePenTable[elemPen - 1][scaleCol];
+    const lineWidthPx = lineweightToPx(mm, ctx.dpi ?? 96);
     return { lineWidthPx, linePattern, color };
   }
 
+  // 2. Subcategory Object Style pen (ADR-377 hardcoded structural intent).
+  // 'beyond' cutState bypasses sub pen — Revit Line Styles always uses BEYOND_PEN below the
+  // view range as a representational convention.
+  const subPen = ctx.cutState === 'cut' ? sub?.cutPen
+    : ctx.cutState === 'projection' ? sub?.projectionPen
+    : undefined;
+  if (ctx.cutState !== 'beyond' && subPen !== undefined) {
+    const mm = _activePenTable[subPen - 1][scaleCol];
+    const lineWidthPx = lineweightToPx(mm, ctx.dpi ?? 96);
+    return { lineWidthPx, linePattern, color };
+  }
+
+  // 3. V/G category user pen (C.4 — wins over Layer per Revit V/G semantics).
+  // Skip for 'beyond' (BEYOND_PEN convention, same as sub pen above).
+  if (ctx.cutState !== 'beyond' && userVgPen !== undefined) {
+    const mm = _activePenTable[userVgPen - 1][scaleCol];
+    const lineWidthPx = lineweightToPx(mm, ctx.dpi ?? 96);
+    return { lineWidthPx, linePattern, color };
+  }
+
+  // 4. Layer concrete mm (C.6 — bypasses pen table, wins over DEFAULT).
+  if (ctx.cutState !== 'beyond' && ctx.layerOverride?.lineweightMm !== undefined) {
+    const lineWidthPx = lineweightToPx(ctx.layerOverride.lineweightMm, ctx.dpi ?? 96);
+    return { lineWidthPx, linePattern, color };
+  }
+
+  // 5. Parent DEFAULT pen (from merged DEFAULT_OBJECT_STYLES + user V/G overlay).
   let penIdx: PenIndex;
   if (ctx.cutState === 'cut') {
-    penIdx = sub?.cutPen ?? parent.cutPen;
+    penIdx = parent.cutPen;
   } else if (ctx.cutState === 'projection') {
-    penIdx = sub?.projectionPen ?? parent.projectionPen;
+    penIdx = parent.projectionPen;
   } else {
     penIdx = BEYOND_PEN;
   }
-
-  const scaleCol = closestScaleColumn(ctx.scaleDenominator);
   const mm = _activePenTable[penIdx - 1][scaleCol];
   const lineWidthPx = lineweightToPx(mm, ctx.dpi ?? 96);
-
-  // ADR-375 C.4+C.5+C.6 — color: elementOverride > layerOverride > subcategory > parent V/G > null
-  const color = ctx.elementOverride?.color !== undefined
-    ? ctx.elementOverride.color
-    : (ctx.layerOverride?.color !== undefined
-        ? ctx.layerOverride.color
-        : (ctx.cutState === 'cut'
-            ? (sub?.cutColor ?? parent.cutColor ?? null)
-            : (sub?.projectionColor ?? parent.projectionColor ?? null)));
-
-  // ADR-375 C.4+C.5 — pattern: elementOverride > subcategory > parent V/G > 'solid'
-  const linePattern = ctx.elementOverride?.linePattern
-    ?? (sub?.linePattern ?? (ctx.cutState === 'cut'
-        ? (parent.cutPattern ?? 'solid')
-        : (parent.projectionPattern ?? 'solid')));
 
   return { lineWidthPx, linePattern, color };
 }

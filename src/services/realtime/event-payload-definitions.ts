@@ -366,6 +366,8 @@ export interface FileUpdatedPayload {
     lifecycleState?: string;
     sizeBytes?: number;
     hasDownloadUrl?: boolean;
+    /** ADR-373: ISO 19650 metadata was edited (discipline/series/state/etc) */
+    iso19650MetadataUpdated?: boolean;
   };
   timestamp: number;
 }

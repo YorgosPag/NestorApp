@@ -13,11 +13,13 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { CanvasSection } from './CanvasSection';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { StandaloneStatusBar } from '../../ui/toolbar/StandaloneStatusBar';
+import { useSelection } from '../../systems/selection';
 
 export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
   const iconSizes = useIconSizes();
   const { quick, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const { selectedRegionIds: selectedEntityIds } = useSelection();
 
   return (
   <div className={`fixed ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.Z_INDEX['50']} ${colors.bg.accent} flex flex-col`}>
@@ -58,10 +60,10 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
           />
         )}
 
-        {props.selectedEntityIds.length > 0 && (
+        {selectedEntityIds.length > 0 && (
           <CommonBadge
             status="company"
-            customLabel={`🔺 Selected: ${props.selectedEntityIds.length}`}
+            customLabel={`🔺 Selected: ${selectedEntityIds.length}`}
             variant="secondary"
             className={`${colors.bg.secondary} ${colors.text.inverted}`}
           />

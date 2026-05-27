@@ -44,7 +44,7 @@ export async function autoSchedule(
       model: openai(AI_ANALYSIS_DEFAULTS.OPENAI.TEXT_MODEL),
       system: SYSTEM_PROMPT,
       prompt,
-      maxTokens: 1000,
+      maxOutputTokens: 1000,
     });
 
     return parseScheduleResponse(text, actionableTasks);
@@ -76,7 +76,7 @@ function parseScheduleResponse(text: string, tasks: ConstructionTask[]): Schedul
   const jsonMatch = text.match(/\[[\s\S]*\]/);
   if (!jsonMatch) return [];
 
-  const parsed = safeJsonParse<ScheduleSuggestion[]>(jsonMatch[0]);
+  const parsed = safeJsonParse<ScheduleSuggestion[]>(jsonMatch[0], []);
   if (!Array.isArray(parsed)) return [];
 
   return parsed

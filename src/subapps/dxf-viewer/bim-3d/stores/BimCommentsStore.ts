@@ -33,7 +33,7 @@ export interface CommentFilters {
 
 interface BimCommentsState {
   comments: Record<string, BimComment>;
-  replies: Record<string, readonly BimCommentReply[]>;
+  replies: Record<string, BimCommentReply[]>;
   selectedCommentId: string | null;
   panelOpen: boolean;
   filters: CommentFilters;
@@ -72,7 +72,7 @@ export const useBimCommentsStore = create<BimCommentsStoreType>()(
 
         setReplies(commentId, replies) {
           set((draft) => {
-            draft.replies[commentId] = replies;
+            draft.replies[commentId] = [...replies];
           });
         },
 

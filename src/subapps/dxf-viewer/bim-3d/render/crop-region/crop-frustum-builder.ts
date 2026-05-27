@@ -14,7 +14,7 @@
  */
 
 import * as THREE from 'three';
-import type { CropRegionRect } from '../../../stores/ViewMode3DStore';
+import type { CropRegionRect } from '../../stores/ViewMode3DStore';
 
 const _v = new THREE.Vector3();
 

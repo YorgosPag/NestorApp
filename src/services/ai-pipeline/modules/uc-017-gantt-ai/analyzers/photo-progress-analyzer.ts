@@ -52,7 +52,7 @@ export async function analyzePhotoProgress(photoUrls: string[]): Promise<PhotoPr
           ],
         },
       ],
-      maxTokens: 500,
+      maxOutputTokens: 500,
     });
 
     return parsePhotoResponse(text);

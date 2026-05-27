@@ -36,7 +36,7 @@ export function projectPointOnSlabEdge(
   slab: SlabEntity,
   cursor: Point2D,
 ): Point2D | null {
-  const points = slab.geometry?.polygon?.points;
+  const points = slab.geometry?.polygon?.vertices;
   if (!points || points.length < 3) return null;
 
   let closest: Point2D | null = null;
@@ -71,7 +71,7 @@ export function getSlabEdgePerpendicularFeet(
   cursor: Point2D,
   maxDistance: number,
 ): Array<{ point: Point2D; edgeIndex: number }> {
-  const points = slab.geometry?.polygon?.points;
+  const points = slab.geometry?.polygon?.vertices;
   if (!points || points.length < 3) return [];
 
   const feet: Array<{ point: Point2D; edgeIndex: number }> = [];

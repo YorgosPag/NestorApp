@@ -384,7 +384,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     getSelectedEntityIds, dxfScene, handleMouseMove: unified.handleMouseMove,
     levelManager, currentOverlays, transformScale: transform.scale,
   });
-  const entityLayerCommands = useEntityLayerCommands(selectedEntityIds, props.currentScene, executeCommand);
+  const entityLayerCommands = useEntityLayerCommands(selectedEntityIds, dxfScene, executeCommand);
   // ADR-374 — ZOOM Window tool lifecycle (EventBus listener + Escape + return-to-select).
   // Combined transform handler: must mirror CanvasLayerStack.handleTransformChange — bare
   // setTransform leaves zoomSystem with stale internal transform, so the next wheel zoom

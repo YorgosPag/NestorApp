@@ -44,8 +44,14 @@ export function getBimEntityKeyPoints2D(entity: Entity): Point2D[] {
     ];
   }
 
-  if (isSlabEntity(entity) || isSlabOpeningEntity(entity) || isOpeningEntity(entity)) {
+  if (isSlabEntity(entity) || isSlabOpeningEntity(entity)) {
     const verts = entity.params.outline?.vertices;
+    if (!verts) return [];
+    return verts.map(v => ({ x: v.x, y: v.y }));
+  }
+
+  if (isOpeningEntity(entity)) {
+    const verts = entity.geometry?.outline?.vertices;
     if (!verts) return [];
     return verts.map(v => ({ x: v.x, y: v.y }));
   }
@@ -86,8 +92,17 @@ export function getBimEntityEdgeMidpoints2D(entity: Entity): Point2D[] {
     return [{ x: (s.x + e.x) / 2, y: (s.y + e.y) / 2 }];
   }
 
-  if (isSlabEntity(entity) || isSlabOpeningEntity(entity) || isOpeningEntity(entity)) {
+  if (isSlabEntity(entity) || isSlabOpeningEntity(entity)) {
     const verts = entity.params.outline?.vertices;
+    if (!verts) return [];
+    return verts.map((v, i) => {
+      const next = verts[(i + 1) % verts.length]!;
+      return { x: (v.x + next.x) / 2, y: (v.y + next.y) / 2 };
+    });
+  }
+
+  if (isOpeningEntity(entity)) {
+    const verts = entity.geometry?.outline?.vertices;
     if (!verts) return [];
     return verts.map((v, i) => {
       const next = verts[(i + 1) % verts.length]!;

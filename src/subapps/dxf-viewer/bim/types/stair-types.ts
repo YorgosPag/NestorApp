@@ -15,7 +15,7 @@
  */
 import type { Timestamp } from 'firebase/firestore';
 import type { Point2D, Point3D } from '../../rendering/types/Types';
-import type { BimEntity, BimLock } from './bim-base';
+import type { BimEntity, BimLock, BimQuantityTakeoff } from './bim-base';
 
 // ============================================================================
 // 3D GEOMETRY PRIMITIVES (stair-local; z required — uses rendering Point3D)
@@ -375,6 +375,11 @@ export interface StairParams {
 
   readonly codeProfile: StairCodeProfile;
   readonly nokSubType?: StairNokSubType;
+
+  /** ADR-369 — Storey FK (alias for floorId). */
+  readonly storeyId?: string;
+  /** ADR-369 — Elevation offset from storey reference (mm). Default 0. */
+  readonly offsetFromStorey?: number;
 }
 
 // ============================================================================
@@ -458,7 +463,7 @@ export interface StairValidationState {
 // QTO — IFC4 Qto_StairBaseQuantities (G23, §6.5)
 // ============================================================================
 
-export interface StairQTO {
+export interface StairQTO extends BimQuantityTakeoff {
   readonly grossVolume: number; // m³
   readonly netVolume: number; // m³
   readonly grossFootprintArea: number; // m²

@@ -50,8 +50,14 @@ const ENTITY_COLLECTION_MAP: Readonly<Record<AuditEntityType, string>> = {
   wall: '',
   opening: '',
   slab: '',
+  'slab-opening': '',
   column: '',
   beam: '',
+  // Performance / 3D BIM telemetry (ADR-366) — no rename propagation
+  performance_diagnostic: '',
+  performance_telemetry: '',
+  bim_dimension_3d: '',
+  bim_animation: '',
 };
 
 interface PropagateRenameRequest {

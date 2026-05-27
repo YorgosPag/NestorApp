@@ -34,6 +34,13 @@ export interface WallPreviewState {
   /** First click location (axis start). `null` when wall tool is idle / awaitingStart. */
   readonly startPoint: Point2D | null;
   /**
+   * ADR-363 Phase 1F — second click location (axis end) for the straight-kind
+   * 3-click alignment flow. Set during the `awaitingAlignment` phase so the
+   * preview can render the wall from start→endPoint shifted toward the live
+   * cursor. `null` in every other phase / kind.
+   */
+  readonly endPoint: Point2D | null;
+  /**
    * Quadratic Bezier control point for curved walls (3-click flow). `null`
    * until the user clicks the curve handle in the awaitingCurveControl phase.
    */
@@ -50,6 +57,7 @@ export interface WallPreviewState {
 
 const EMPTY: WallPreviewState = Object.freeze({
   startPoint: null,
+  endPoint: null,
   curveControl: null,
   polylineVertices: Object.freeze([]) as readonly Point2D[],
   overrides: Object.freeze({}) as WallParamOverrides,
@@ -105,6 +113,7 @@ export const wallPreviewStore = {
   set(next: WallPreviewState): void {
     if (
       pointsEqual(currentState.startPoint, next.startPoint) &&
+      pointsEqual(currentState.endPoint, next.endPoint) &&
       pointsEqual(currentState.curveControl, next.curveControl) &&
       polylinesEqual(currentState.polylineVertices, next.polylineVertices) &&
       overridesEqual(currentState.overrides, next.overrides)
@@ -113,6 +122,7 @@ export const wallPreviewStore = {
     }
     currentState = {
       startPoint: next.startPoint ? { x: next.startPoint.x, y: next.startPoint.y } : null,
+      endPoint: next.endPoint ? { x: next.endPoint.x, y: next.endPoint.y } : null,
       curveControl: next.curveControl ? { x: next.curveControl.x, y: next.curveControl.y } : null,
       polylineVertices: next.polylineVertices.map((p) => ({ x: p.x, y: p.y })),
       overrides: { ...next.overrides },

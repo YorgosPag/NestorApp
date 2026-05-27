@@ -13,7 +13,7 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { CropRegionRect } from '../../../stores/ViewMode3DStore';
+import type { CropRegionRect } from '../../stores/ViewMode3DStore';
 
 export type HandleId = 'tl' | 'tc' | 'tr' | 'ml' | 'mr' | 'bl' | 'bc' | 'br';
 export type CropEditState = 'idle' | 'dragging' | 'editing' | 'committed';

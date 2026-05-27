@@ -70,9 +70,28 @@ export function generateWallPreview(
   }
 
   const startPt = tempPoints[0];
+
+  // ADR-363 Phase 1F — `awaitingAlignment` phase: endPoint is fixed (click 2),
+  // cursor is the live alignment-side pick. Render the wall along start→endPoint
+  // SHIFTED toward the cursor so the user sees the final wall position before
+  // committing with click 3. `preview.endPoint` is only set by `useWallTool`
+  // during the straight-kind awaitingAlignment phase (see Phase 1F effect).
+  if (preview.endPoint) {
+    return makeWallFootprintGhost(
+      'preview_wall_footprint',
+      startPt,
+      preview.endPoint,
+      overrides,
+      'straight',
+      sceneUnits,
+      null,
+      cursorPoint,
+    );
+  }
+
   const endPt = cursorPoint;
   const kind: WallKind = preview.curveControl ? 'curved' : 'straight';
-  return makeWallFootprintGhost('preview_wall_footprint', startPt, endPt, overrides, kind, sceneUnits, preview.curveControl);
+  return makeWallFootprintGhost('preview_wall_footprint', startPt, endPt, overrides, kind, sceneUnits, preview.curveControl, null);
 }
 
 /**
@@ -88,8 +107,9 @@ function makeWallFootprintGhost(
   kind: WallKind,
   sceneUnits: SceneUnits,
   curveControl: Point2D | null,
+  alignmentPoint: Point2D | null = null,
 ): ExtendedPolylineEntity {
-  const params = buildDefaultWallParams(startPt, endPt, overrides, sceneUnits);
+  const params = buildDefaultWallParams(startPt, endPt, overrides, sceneUnits, alignmentPoint);
   const finalParams = curveControl
     ? { ...params, curveControl: { x: curveControl.x, y: curveControl.y, z: 0 } as Point3D }
     : params;

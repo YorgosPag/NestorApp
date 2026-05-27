@@ -42,7 +42,7 @@ export async function assessRisks(
       model: openai(AI_ANALYSIS_DEFAULTS.OPENAI.TEXT_MODEL),
       system: SYSTEM_PROMPT,
       prompt,
-      maxTokens: 800,
+      maxOutputTokens: 800,
     });
 
     return parseRiskResponse(text, phases);
@@ -75,7 +75,7 @@ function parseRiskResponse(text: string, phases: ConstructionPhase[]): RiskItem[
   const jsonMatch = text.match(/\[[\s\S]*\]/);
   if (!jsonMatch) return [];
 
-  const parsed = safeJsonParse<RiskItem[]>(jsonMatch[0]);
+  const parsed = safeJsonParse<RiskItem[]>(jsonMatch[0], []);
   if (!Array.isArray(parsed)) return [];
 
   return parsed

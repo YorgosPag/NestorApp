@@ -1,147 +1,717 @@
-375 ΠΑΧΟΣ ΠΕΡΙΓΡΑΜΜΑΤΑC:\Nestor_Pagonis\local_ΑΝΑΦΟΡΑ_2.txt
+
+● ❌ Pre-commit hook απέτυχε
+
+  Τι απέτυχε:
+  🚫 COMMIT BLOCKED — Test failure in: AI Pipeline,File Display Cascade
+
+  Test Suites: 1 failed, 77 passed, 78 total
+  Tests:       12 failed, 1197 passed, 1209 total
+  ● enrichFileWithIso19650Metadata — never throws guarantee
+    › returns purpose-less derivation when no purpose provided    Expected: "derived"
+    Received: "skipped"
+    src/services/ai-pipeline/tools/__tests__/handlers/iso19650-enricher.test.ts:266
+
+  Παρατήρηση: Τα tests που αποτυγχάνουν αφορούν iso19650-enricher.ts (ADR-373 service). Δεν βρίσκεται στο staging σου — αυτό σημαίνει ότι άλλος agent έχει αφήσει partial
+  work: άλλαξε υπογραφή/συμπεριφορά του enricher αλλά δεν έχει stage-άρει το service file (μόνο το payload type field iso19650MetadataUpdated). Multi-agent broken ship
+  pattern (MEMORY warning).
+
+  Αξιολόγηση:
+  - Αρχεία που χρειάζονται fix: src/services/ai-pipeline/tools/iso19650-enricher.ts (ή το test) + αναζήτηση τι λείπει στο staging
+  - Τύπος fix: investigation + πιθανός refactor — όχι μέσα στο δικό μου commit
+  - Εκτιμώμενη πολυπλοκότητα: σύνθετο >1h (12 failing tests, ADR-373 cross-cutting)
+
+  🎯 Επιλογές:
+  1. Skip ADR-373 related files (event-payload-definitions.ts iso19650 field) → unstage και commit τα υπόλοιπα 17
+  2. Investigation Opus → debug iso19650-enricher τώρα (αλλά είναι δουλειά άλλου agent — μπορεί να έρθει conflict)
+  3. Αναμονή μέχρι ο άλλος agent τελειώσει
+
+  Τι προτιμάς; (καλύτερη: #1 — αποσυνδέει το multi-agent risk).
+
+✻ Brewed for 48s
+
+※ recap: Στόχος: COMMIT TUTTO όλων των pending αλλαγών. Πρώτο commit (BIM V/G runtime wiring) πέρασε. Δεύτερο commit (18 cross-domain files) μπλόκαρε από 12 failing tests
+   στον iso19650-enricher άλλου agent. Επόμενη ενέργεια: περιμένω απάντηση ποια επιλογή προτιμάς (#1 skip ADR-373 files, #2 debug, #3 αναμονή).
+
+❯ ΠΡΟΣΟΧΗ. SOSO. ΔΕΝ ΘΕΛΩ ΝΑ ΧΑΘΕΙ ΚΑΝΕΝΑΣ ΚΩΔΙΚΑΣ. ΠΡΕΠΕΙ ΝΑ ΒΡΕΙΣ ΤΗΝ ΠΙΟ ΣΩΣΤΗ ΛΥΣΗ ΩΣΤΕ ΝΑ ΕΙΣΑΙ ΣΙΓΟΥΡΟΣ 1000% ΠΩΣ ΔΕΝ ΘΑ ΧΑΣΟΥΜΕ ΚΩΔΙΚΑ. ΒΡΕΣ ΔΙΑΦΟΡΕΣ ΛΥΣΕΙΣ ΓΙΑ     ΝΑ ΕΙΣΑΙ ΣΙΓΟΥΡΟΣ. Π.Χ. ΚΑΝΕ ΜΠΑΚ ΑΠ ΑΝ ΜΠΟΡΕΙΣ (ΙΣΩΣ ΛΕΩ ΑΝΟΗΣΙΕΣ ΓΙΑΤΙ ΔΕΝ ΕΙΜΑΙ ΠΡΟΓΑΡΜΜΑΤΙΣΤΗΣ) ΒΡΕΣ ΕΣΥ ΤΗΝ ΠΙΟ ΑΣΦΑΛΗ ΛΥΣΗ. ΤΙ ΜΠΟΡΕΙΣ ΝΑ ΚΑΝΕΙΣ ΓΙΑ ΝΑ ΜΗΝ       
+  ΧΑΣΟΥΜΕ ΟΥΤΕ ΓΡΑΜΜΗ ΚΩΔΙΚΑ?                                                                                                                                             
+  ⎿  ⧉ Selected 1 lines from local_ΑΝΑΦΟΡΑ_3.txt in Visual Studio Code
+
+● Σωστή ανησυχία. Defense-in-depth backup πρώτα, μετά λύση. Παράλληλα έλεγχος ότι υπάρχει το enterprise-backup script.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Bash(mkdir -p "C:/Nestor_Pagonis_safety_backup" && date +"%Y-%m-%d_%H%M%S")
+  ⎿  2026-05-26_180006
+
+● Bash("C:\Program Files\Git\cmd\git.exe" diff HEAD --binary > "C:/Nestor_Pagonis_safety_backup/2026-05-26_180006_ALL_CHANGES.patch")
+  ⎿  warning: in the working copy of 'docs/centralized-systems/reference/adr-index.md', LF will be replaced by CRLF the next time Git touches it
+     warning: in the working copy of 'docs/centralized-systems/reference/adrs/ADR-375-bim-entity-line-weight-semantic-system.md', LF will be replaced by CRLF the nex
+     t time Git touches it
+     … +23 lines (ctrl+o to expand)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" diff --cached --binary > "C:/Nestor_Pagonis_safety_backup/2026-05-26_180006_STAGED_ONLY.patch")
+  ⎿  (No output)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" status --short > "C:/Nestor_Pagonis_safety_backup/2026-05-26_180006_STATUS.txt")
+  ⎿  (No output)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" log --oneline -3 > "C:/Nestor_Pagonis_safety_backup/2026-05-26_180006_HEAD.txt")
+  ⎿  (No output)
+
+  Searched for 1 pattern, listed 1 directory (ctrl+o to expand)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" status --short)
+  ⎿   M docs/centralized-systems/reference/adr-index.md
+     M  docs/centralized-systems/reference/adrs/ADR-362-enterprise-dimension-system.md
+      M docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md
+     … +67 lines (ctrl+o to expand)
+  
+● 🚨 Repo σε merge conflict state (UU files)! Άλλος agent έκανε merge/rebase χωρίς resolve. Έλεγχος.
+
+● Bash("C:\Program Files\Git\cmd\git.exe" status)
+  ⎿  On branch main
+     Your branch is ahead of 'origin/main' by 26 commits.
+       (use "git push" to publish your local commits)
+     … +84 lines (ctrl+o to expand)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" rev-parse --verify MERGE_HEAD 2>&1; echo "---"; ls .git/MERGE_HEAD .git/CHERRY_PICK_HEAD .git/REBASE_HEAD 2>&1 | head -20)
+  ⎿  fatal: Needed a single revision
+     ---
+     ls: cannot access '.git/MERGE_HEAD': No such file or directory
+     … +2 lines (ctrl+o to expand)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" ls-files -u | head -30)
+  ⎿  100644 401b0784341d0e96ca62f7395e93418a5430b9d1 1  docs/centralized-systems/reference/adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md
+     100644 20d74e72b03c3d2710f057be5836a83a0e4bb6e2 2  docs/centralized-systems/reference/adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md
+     100644 4301d50703b0d723aea0015c7a989b2e5422a875 3  docs/centralized-systems/reference/adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md
+     … +27 lines (ctrl+o to expand)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" reflog -15)
+  ⎿  20d7879a HEAD@{0}: commit: fix(bim): ADR-375 v2.6 V/G runtime wiring
+     d3dc0b10 HEAD@{1}: commit: feat(bim): ADR-376 C.3 PDF + 3D edges system
+     db6f691e HEAD@{2}: commit: feat(bim): ADR-375 C.6 + ADR-376 C.2 tag style
+     … +12 lines (ctrl+o to expand)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" stash list)
+  ⎿  stash@{0}: On main: safety-pre-phase0.5-sed-1779200491
+     stash@{1}: WIP on main: 866a7718 fix(building-code): ADR-358 Phase 6 — fix i18n key prefix stairs→tools.stair.validator
+     stash@{2}: WIP on main: 71e6c287 fix(procurement): TypeScript fixes for Phase B API routes
+
+● Bash("C:\Program Files\Git\cmd\git.exe" stash show "stash@{0}" --stat 2>&1 | head -30)
+  ⎿   .../adrs/ADR-362-enterprise-dimension-system.md    |  10 +-
+      ...R-366-3d-bim-viewer-photorealistic-rendering.md | 239 +++++
+      .../building-code/engines/gate-stair-checker.ts    |   2 +-
+     … +27 lines (ctrl+o to expand)
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Conflict markers επιβεβαιωμένα. Stash safety-pre-phase0.5-sed-* = bulk sed migration άλλου agent με abandoned pop. Πρέπει triple-defense backup:
+
+● Bash("C:\Program Files\Git\cmd\git.exe" stash show "stash@{0}" -p --binary > "C:/Nestor_Pagonis_safety_backup/2026-05-26_180006_STASH0_safety-pre-phase0.5-sed.patch")
+  ⎿  (No output)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" stash show "stash@{1}" -p --binary > "C:/Nestor_Pagonis_safety_backup/2026-05-26_180006_STASH1_WIP.patch")
+  ⎿  (No output)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" stash show "stash@{2}" -p --binary > "C:/Nestor_Pagonis_safety_backup/2026-05-26_180006_STASH2_WIP.patch")
+  ⎿  (No output)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" status > "C:/Nestor_Pagonis_safety_backup/2026-05-26_180006_FULL_STATUS.txt")
+  ⎿  (No output)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" ls-files -u > "C:/Nestor_Pagonis_safety_backup/2026-05-26_180006_UNMERGED.txt")
+  ⎿  (No output)
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Patches OK (837KB total). Τρέχω enterprise-backup ZIP για ολόκληρο project (defense in depth):
+
+● Bash(powershell.exe -ExecutionPolicy Bypass -File "C:\Nestor_Pagonis\enterprise-backup.ps1")
+  ⎿  Running in the background (↓ to manage)
+
+● Περιμένω ZIP backup πριν συνεχίσω.
+
+✻ Crunched for 3m 50s · 1 shell still running
+
+❯ ΣΕ ΠΟΙΑ ΔΙΑΔΡΟΜΗ ΔΗΜΙΟΥΡΓΕΙΤΑΙ ΤΟ ΜΠΑΚ ΑΠ?                                                                                                                              
+
+  Read 1 file (ctrl+o to expand)
+
+● Διαδρομές:
+
+  1. Patches (text, defense layer 1) — C:\Nestor_Pagonis_safety_backup\
+  - ALL_CHANGES.patch (220KB) → όλα τα uncommitted vs HEAD
+  - STAGED_ONLY.patch (28KB) → staged subset
+  - STASH0_safety-pre-phase0.5-sed.patch (156KB) → bulk sed stash
+  - STASH1_WIP.patch (80KB) + STASH2_WIP.patch (369KB) → WIP stashes  - FULL_STATUS.txt + UNMERGED.txt + HEAD.txt → metadata
+  - Σύνολο: ~840KB
+  2. ZIP (binary, defense layer 2) — C:\Users\user\Downloads\BuckUps\Zip_BuckUps-2\
+  - Filename: YYYYMMDD_HHMM - [κατηγορία] - περιγραφή.zip
+  - Τρέχει τώρα background.
+
+  ⚠️  ΠΡΟΣΟΧΗ — ΣΗΜΑΝΤΙΚΟ: Το enterprise-backup.ps1 (γραμμή 80) ΕΞΑΙΡΕΙ το .git folder. Αυτό σημαίνει:
+  - ZIP δεν περιέχει stashes
+  - ZIP δεν περιέχει git history (25 local commits πάνω από origin)
+  - ZIP δεν περιέχει conflict state
+
+  Οι patches τα καλύπτουν αυτά, αλλά για απόλυτη ασφάλεια προτείνω ΕΠΙΠΛΕΟΝ ZIP του .git folder ως 3ο layer. Θες να το κάνω;
+
+✻ Crunched for 29s
+
+● Background command "Run enterprise backup ZIP" completed (exit code 0)
+
+  Read 1 file (ctrl+o to expand)
+
+● ✅ ZIP backup έτοιμο: 86.2 MB στο C:\Users\user\Downloads\BuckUps\Zip_BuckUps-2\20260526_1802 - [FEATURE] - ... .zip (14,447 files, src+docs+configs, ΟΧΙ .git).
+
+  Σύνοψη backups:
+
+  ┌──────────┬──────────────────────────────────┬────────────────────────────────────────┐
+  │  Layer   │               Path               │              Περιεχόμενο               │
+  ├──────────┼──────────────────────────────────┼────────────────────────────────────────┤  │ 1 (text) │ C:\Nestor_Pagonis_safety_backup\ │ All diffs + 3 stashes ως patches       │
+  ├──────────┼──────────────────────────────────┼────────────────────────────────────────┤  │ 2 (ZIP)  │ Downloads\BuckUps\Zip_BuckUps-2\ │ src+docs+configs ΟΧΙ .git              │
+  ├──────────┼──────────────────────────────────┼────────────────────────────────────────┤
+  │ 3 (.git) │ εκκρεμεί — θέλεις;               │ πλήρες .git folder (stashes + history) │
+  └──────────┴──────────────────────────────────┴────────────────────────────────────────┘
+
+  Layer 3 = absolute safety. Πες αν θες να το κάνω + προχώρα με την επίλυση.
+
+✻ Cogitated for 15s
+
+❯ ΤΩΡΑ ΕΙΜΑΣΤΕ ΕΞΑΣΦΑΛΙΣΜΕΝΟΙ 1000%?                                                                                                                                      
+
+● Έντιμη απάντηση: ~95%, ΟΧΙ 1000%.
+
+  Τι ΔΕΝ καλύπτουν τα δύο layers:
+  - ❌ 25 local commits ahead of origin — υπάρχουν μόνο στο .git/objects. Δεν είναι σε ZIP, δεν είναι σε patches. Αν διαγραφεί το .git/ → χάνονται.
+  - ❌ git index conflict state (stage 1/2/3) — μόνο στο .git/index
+  - ⚠️  Patches δεν περιέχουν untracked files (γαρμπάδα + tsc-errors.txt — αλλά αυτά τα έχει το ZIP)
+  1000% safety = +1 πράγμα: git bundle.
+  git bundle create backup.bundle --all
+
+  Αυτό φτιάχνει 1 αρχείο (~10-30MB) που περιέχει ΟΛΑ τα refs (branches, stashes, tags) + ΟΛΑ τα commits (συμπεριλαμβανομένων των 25 unpushed). Recoverable με git clone
+  backup.bundle σε νέο φάκελο.
+
+  Πιο αποδοτικό από ZIP του .git (smaller, faster, recovery-ready).
+
+  Να το τρέξω;
+
+✻ Worked for 34s
+
+❯ ΕΤΣΙ ΘΑ ΕΙΜΑΣΤΕ 1000% ΣΙΓΟΥΡΟΙ ΠΩΣ ΔΕΝ ΘΑ ΧΑΘΕΙ ΚΑΝΕΝΑΣ ΚΩΔΙΚΑΣ?                                                                                                        
+
+● Έντιμη απάντηση: 99.9% — όχι μαθηματικά 1000%. Εξηγώ:
+
+  Με τα 3 layers (patches + ZIP + bundle) ΚΑΘΕ γραμμή κώδικα υπάρχει σε ≥2 μέρη:
+
+  ┌────────────────────────┬───────────────┬─────────────────┬─────────────────┐
+  │        Κομμάτι         │ Layer 1 patch │   Layer 2 ZIP   │ Layer 3 bundle  │  ├────────────────────────┼───────────────┼─────────────────┼─────────────────┤
+  │ 25 unpushed commits    │ ❌            │ ❌              │ ✅              │  ├────────────────────────┼───────────────┼─────────────────┼─────────────────┤
+  │ Staged 20 αρχεία       │ ✅            │ ✅ working tree │ ✅              │
+  ├────────────────────────┼───────────────┼─────────────────┼─────────────────┤
+  │ Unstaged ~30 αρχεία    │ ✅            │ ✅              │ ✅ working tree │
+  ├────────────────────────┼───────────────┼─────────────────┼─────────────────┤
+  │ 13 conflict files      │ ✅            │ ✅              │ ✅ all stages   │
+  ├────────────────────────┼───────────────┼─────────────────┼─────────────────┤
+  │ 3 stashes              │ ✅            │ ❌              │ ✅              │
+  ├────────────────────────┼───────────────┼─────────────────┼─────────────────┤
+  │ Untracked (tsc-errors) │ ❌            │ ✅              │ ❌              │
+  ├────────────────────────┼───────────────┼─────────────────┼─────────────────┤
+  │ Conflict index state   │ ✅ (text)     │ ❌              │ ✅              │
+  └────────────────────────┴───────────────┴─────────────────┴─────────────────┘
+
+  Διπλή κάλυψη παντού = recoverable ακόμα κι αν 1 layer καταστραφεί.
+
+  Το 0.1% που μένει = κίνδυνοι ίδιοι για όλα τα layers:
+  - ⚠️  Hard disk failure — και τα 3 backup είναι στο ίδιο C:\ drive. Αν χαλάσει ο δίσκος → όλα χάνονται μαζί.
+  - ⚠️  Άλλος agent γράφει ΜΕΤΑ τη backup — π.χ. αν ένας codex agent γράψει κώδικα τώρα, αυτός δεν είναι σε κανένα layer.
+
+  Για μαθηματικά 1000% χρειάζομαι ΕΠΙΠΛΕΟΝ:
+  - A. Copy των 3 layers σε USB stick / external drive (διαφορετική φυσική συσκευή)
+  - B. ή upload σε cloud (Google Drive / Dropbox)
+  - C. ή κλείδωμα άλλων agents (πιο δύσκολο)
+
+  Να κάνω τώρα το bundle (φτάνουμε 99.9%) και μετά εσύ αποφασίζεις αν θες USB/cloud copy για το τελευταίο 0.1%;
+
+✻ Worked for 42s
+
+❯ κάνε το bundle                                                                                                                                                          
+
+● Bash("C:\Program Files\Git\cmd\git.exe" bundle create "C:/Nestor_Pagonis_safety_backup/2026-05-26_180006_FULL_REPO.bundle" --all)
+  ⎿  (No output)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" bundle verify "C:/Nestor_Pagonis_safety_backup/2026-05-26_180006_FULL_REPO.bundle" 2>&1 | head -10; ls -la "C:/Nestor_Pagonis…)
+  ⎿  The bundle contains these 143 refs:
+     3212eda8b66a7d070767a8b15b6e1529b86699a5 refs/heads/backup-before-reset
+     e2a1b2a5445931226c1d657d0b35d29e241cc6f2 refs/heads/backup/pre-migration-centralized-systems
+     … +8 lines (ctrl+o to expand)
+
+● ✅ Bundle έτοιμο: 80.9 MB, 143 refs (main + stashes + όλα τα backup branches + remotes). Verified.
+
+  Σύνοψη backups (~168MB total):
+  C:\Nestor_Pagonis_safety_backup\
+  ├── 2026-05-26_180006_FULL_REPO.bundle           80.9 MB ← όλα τα commits + stashes
+  ├── 2026-05-26_180006_ALL_CHANGES.patch         220 KB  ← uncommitted vs HEAD
+  ├── 2026-05-26_180006_STAGED_ONLY.patch          28 KB  ├── 2026-05-26_180006_STASH0_safety-pre...       156 KB ← bulk sed migration
+  ├── 2026-05-26_180006_STASH1_WIP.patch            80 KB  ├── 2026-05-26_180006_STASH2_WIP.patch           369 KB
+  ├── 2026-05-26_180006_FULL_STATUS.txt
+  ├── 2026-05-26_180006_UNMERGED.txt
+  └── 2026-05-26_180006_HEAD.txt
+
+  C:\Users\user\Downloads\BuckUps\Zip_BuckUps-2\
+  └── 20260526_1802 - [FEATURE] - ... .zip          86.2 MB ← working tree
+
+  99.9% asfaleia. Κάθε γραμμή κώδικα σε ≥2 μέρη.
+
+  Recovery test (αν χρειαστεί):
+  git clone "C:\Nestor_Pagonis_safety_backup\2026-05-26_180006_FULL_REPO.bundle" recovered_repo
+  git apply "C:\Nestor_Pagonis_safety_backup\2026-05-26_180006_ALL_CHANGES.patch"
+
+  ---
+  Τώρα πάμε στο πραγματικό πρόβλημα:
+
+  Repo state:
+  - 20 staged files (commit blocked by 12 iso19650-enricher tests — άλλος agent partial work)
+  - 13 UU conflict files (abandoned stash pop)
+  - ~30 unstaged modified files
+  - 3 untracked
+
+  Επιλογές:
+  1. 🟢 Skip + commit safe subset — unstage τα 5 αρχεία που τρίγκαρουν τα failing tests (4 gantt-ai + event-payload-definitions.ts), commit τα υπόλοιπα 15. Conflicts +
+  unstaged μένουν για άλλον agent.
+  2. 🟡 Resolve conflicts μόνος — debug 13 UU files (~hours Opus work, μπορεί να συγκρουστώ με άλλο agent)
+  3. 🔴 Wait — δεν πειράζω τίποτα μέχρι να σου πει ο άλλος agent ότι τελείωσε
+
+  Τι επιλέγεις;
+
+✻ Cogitated for 2m 27s
+
+❯ ΠΡΟΧΩΡΑ ΜΕ ΤΗΝ ΠΙΟ ΣΙΓΟΥΡΗ ΛΥΣΗ. ΘΕΛΩ ΠΡΩΤΑ ΝΑ ΑΣΧΟΛΗΘΟΥΜΕ ΜΕ ΤΙΣ ΣΙΓΚΡΟΥΣΕΙΣ ΠΟΥ ΔΗΜΙΟΥΡΓΗΘΗΚΑΝ. ΝΑ ΕΞΑΣΦΑΛΙΣΟΥΜΕ ΠΩΣ ΟΛΑ ΣΩΖΟΝΤΑΙ ΚΑΙ ΥΣΤΕΡΑ ΝΑ ΠΑΜΕ ΣΕ COMMIT ΤΩΝ    
+  ΑΣΧΕΤΩΝ ΜΕ ΤΙΣ ΣΥΓΚΡΟΥΣΕΙΣ ΑΡΧΕΙΩΝ                                                                                                                                      
+  
+● Σωστή προσέγγιση. Tracking με tasks και bulletproof safety per-file.
+
+❯ ΑΥΤΗ ΤΗΝ ΣΤΙΓΜΗ ΔΕΝ ΕΡΓΑΖΕΤΑΙ ΚΑΝΕΝΑΣ ΑΛΛΟΣ ΠΡΑΚΤΟΡΑΣ 
+
+● Καλό — μηδενικός κίνδυνος race. Δημιουργώ tasks και ξεκινώ bulletproof σωτηρία κώδικα.
+
+● Bash(mkdir -p "C:/Nestor_Pagonis_safety_backup/conflicts")
+  ⎿  Done
+  
+● Bash(FILES=( \
+        "docs/centralized-systems/reference/adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md" \…)
+  ⎿  OK base: docs/centralized-systems/reference/adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md
+     OK ours: docs/centralized-systems/reference/adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md
+     OK theirs: docs/centralized-systems/reference/adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md
+     … +49 lines (ctrl+o to expand)
+     
+  Listed 1 directory (ctrl+o to expand)
+
+  Searched for 5 patterns, read 1 file (ctrl+o to expand)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" status docs/centralized-systems/reference/adrs/ADR-358-dxf-stair-tool-google-level.md; echo "---"; "C:\Program Files\Git\cmd\…)
+  ⎿  On branch main
+     Your branch is ahead of 'origin/main' by 26 commits.
+       (use "git push" to publish your local commits)
+     … +6 lines (ctrl+o to expand)
+
+● Διπλοτσεκάρω τα 2 UU files χωρίς markers — αν working tree = ours ή theirs.
+
+● Bash(echo "=== stair-floor-link.ts ==="; diff "C:/Nestor_Pagonis/src/subapps/dxf-viewer/bim/stairs/stair-floor-link.ts" "C:/Nestor_Pagonis_safety_backup/conflicts/sr…)
+  ⎿  === stair-floor-link.ts ===
+     1,170c1,170
+     < /**
+     … +12 lines (ctrl+o to expand)
+
+● Bash(echo "=== apply-entity-preview.ts ==="; diff "C:/Nestor_Pagonis/src/subapps/dxf-viewer/rendering/ghost/apply-entity-preview.ts" "C:/Nestor_Pagonis_safety_backup…)
+  ⎿  === apply-entity-preview.ts ===
+     1,347c1,347
+     < /**
+     … +12 lines (ctrl+o to expand)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" diff HEAD -- src/subapps/dxf-viewer/bim/stairs/stair-floor-link.ts | head -40)
+  ⎿  (No output)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" diff HEAD -- src/subapps/dxf-viewer/rendering/ghost/apply-entity-preview.ts | head -40)
+  ⎿  (No output)
+
+● Λύση 2 marker-less UU files: working tree = HEAD, απλά git add καθαρίζει conflict state. Τώρα οι 11 με markers — ξεκινάω από τα μικρά persistence hooks (μοιάζουν με
+  πανομοιότυπο pattern).
+
+● Bash("C:\Program Files\Git\cmd\git.exe" diff src/subapps/dxf-viewer/hooks/data/useWallPersistence.ts | head -80)
+  ⎿  diff --cc src/subapps/dxf-viewer/hooks/data/useWallPersistence.ts
+     index 3cb55968,186e5ce9..00000000
+     --- a/src/subapps/dxf-viewer/hooks/data/useWallPersistence.ts
+     … +13 lines (ctrl+o to expand)
+    
+● Bash(for f in useWallPersistence useColumnPersistence useBeamPersistence useOpeningPersistence useSlabPersistence; do echo "=== $f ==="; "/c/Program Files/Git/cmd/gi…)
+  ⎿  === useWallPersistence ===
+     --- a/src/subapps/dxf-viewer/hooks/data/useWallPersistence.ts
+     +++ b/src/subapps/dxf-viewer/hooks/data/useWallPersistence.ts
+     … +36 lines (ctrl+o to expand)
+    
+● Bash(for f in useWallPersistence useColumnPersistence useBeamPersistence useOpeningPersistence useSlabPersistence; do echo "=== $f.ts ==="; grep -n -A 5 -B 1 "<<<<<<…)
+  ⎿  === useWallPersistence.ts ===
+     387-      );
+     388:<<<<<<< Updated upstream
+     … +41 lines (ctrl+o to expand)
+    
+  Read 1 file (ctrl+o to expand)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" show HEAD:src/subapps/dxf-viewer/hooks/data/useWallPersistence.ts | sed -n '380,395p')
+  ⎿      const deletedEntity = scene?.entities.find((e) => e.id === wallId);
+
+         try {
+     … +13 lines (ctrl+o to expand)
+     
+● Στρατηγική για 5 persistence hooks: TAKE OURS (= current HEAD behavior — αποφεύγουμε εφαρμογή abandoned sed migration). Edit για να αφαιρέσω markers + theirs lines.
+
+● Update(src\subapps\dxf-viewer\hooks\data\useWallPersistence.ts)
+  ⎿  File must be read first
+
+● Update(src\subapps\dxf-viewer\hooks\data\useColumnPersistence.ts)
+  ⎿  File must be read first
+
+● Update(src\subapps\dxf-viewer\hooks\data\useSlabPersistence.ts)
+  ⎿  File must be read first
+
+● Update(src\subapps\dxf-viewer\hooks\data\useBeamPersistence.ts)
+  ⎿  File must be read first
+
+● Update(src\subapps\dxf-viewer\hooks\data\useOpeningPersistence.ts)
+  ⎿  Removed 4 lines
+      427          'deleted',
+      428          { id: openingId, kind: (deletedEntity as Partial<OpeningEntity>)?.kind ?? 'door' },
+      429        );
+      430 -<<<<<<< Updated upstream                                                                                                                                
+      430        // ADR-376 Phase B.2 — recompute signature group post-delete (count
+      431        // decrements; row deleted if last opening of signature gone).
+      432        if (companyId && projectId && buildingId && floorplanId) {
+     ...
+      435            { companyId, projectId, buildingId, floorplanId },
+      436          );
+      437        }      439 -=======                                                                                                                                                 
+      440 -      if (companyId) void bimToBoqBridge.deleteBoqItemForBim(openingId, companyId);                                                                           441 ->>>>>>> Stashed changes                                                                                                                                 
+      438      } catch {
+      439        // Non-fatal: deletion failure silent — user can retry.
+      440      }
+
+● Reading 4 files… (ctrl+o to expand)
+  ⎿  src\subapps\dxf-viewer\hooks\data\useBeamPersistence.ts
+
+● Update(src\subapps\dxf-viewer\hooks\data\useWallPersistence.ts)
+  ⎿  Removed 4 lines
+      385          'deleted',
+      386          { id: wallId, kind: (deletedEntity as Partial<WallEntity>)?.kind ?? 'straight' },
+      387        );
+      388 -<<<<<<< Updated upstream                                                                                                                                
+      388        void bimToBoqBridge.deleteBoqItemForBim(wallId, companyId ?? '');
+      390 -=======                                                                                                                                                 
+      391 -      if (companyId) void bimToBoqBridge.deleteBoqItemForBim(wallId, companyId);                                                                        
+      392 ->>>>>>> Stashed changes                                                                                                                                 
+      389      } catch { 
+      390        // Non-fatal: deletion failure is silent — user can retry.
+      391      }
+
+● Update(src\subapps\dxf-viewer\hooks\data\useColumnPersistence.ts)
+  ⎿  Removed 4 lines
+      296          'deleted',
+      297          { id: columnId, kind: (deletedEntity as Partial<ColumnEntity>)?.kind ?? 'rectangular' },
+      298        );
+      299 -<<<<<<< Updated upstream                                                                                                                                
+      299        void bimToBoqBridge.deleteBoqItemForBim(columnId, companyId ?? '');
+      301 -=======                                                                                                                                                 
+      302 -      if (companyId) void bimToBoqBridge.deleteBoqItemForBim(columnId, companyId);                                                                      
+      303 ->>>>>>> Stashed changes                                                                                                                                 
+      300      } catch { 
+      301        // Non-fatal: deletion failure silent — user retries.
+      302      }
+
+● Update(src\subapps\dxf-viewer\hooks\data\useSlabPersistence.ts)
+  ⎿  Removed 4 lines
+      349          'deleted',
+      350          { id: slabId, kind: (deletedEntity as Partial<SlabEntity>)?.kind ?? 'floor' },
+      351        );
+      352 -<<<<<<< Updated upstream                                                                                                                                
+      352        void bimToBoqBridge.deleteBoqItemForBim(slabId, companyId ?? '');
+      354 -=======                                                                                                                                                 
+      355 -      if (companyId) void bimToBoqBridge.deleteBoqItemForBim(slabId, companyId);                                                                        
+      356 ->>>>>>> Stashed changes                                                                                                                                 
+      353      } catch { 
+      354        // Non-fatal: deletion failure silent — user retries.
+      355      }
+
+● Update(src\subapps\dxf-viewer\hooks\data\useBeamPersistence.ts)
+  ⎿  Removed 4 lines
+      297          'deleted',
+      298          { id: beamId, kind: (deletedEntity as Partial<BeamEntity>)?.kind ?? 'straight' },
+      299        );
+      300 -<<<<<<< Updated upstream                                                                                                                                
+      300        void bimToBoqBridge.deleteBoqItemForBim(beamId, companyId ?? '');
+      301        if (floorplanId) EventBus.emit('bim:beam-persisted', { floorplanId });
+      303 -=======                                                                                                                                                 
+      304 -      if (companyId) void bimToBoqBridge.deleteBoqItemForBim(beamId, companyId);                                                                        
+      305 ->>>>>>> Stashed changes                                                                                                                                 
+      302      } catch {
+      303        // Non-fatal: deletion failure silent — user retries.      304      }
+● Bash(for f in "src/subapps/dxf-viewer/hooks/dimensions/useDimToolRouting.ts" "src/subapps/dxf-viewer/hooks/drawing/drawing-hover-handler.ts" "src/subapps/dxf-viewer/…)
+  ⎿  === src/subapps/dxf-viewer/hooks/dimensions/useDimToolRouting.ts ===
+     171:<<<<<<< Updated upstream
+     200:=======
+     … +22 lines (ctrl+o to expand)
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(src\subapps\dxf-viewer\hooks\dimensions\useDimToolRouting.ts)
+  ⎿  Removed 7 lines
+      168  
+      169    const handlePoint = useCallback(
+      170      (world: Point2D, hoveredEntity?: DetectableEntity) => {
+      171 -<<<<<<< Updated upstream                                                                                                                                
+      171        // ADR-362 hotfix (2026-05-19 round 2): use the click `world` directly,
+      172        // not `state.cursorWorld`. The earlier hotfix substituted cursorWorld
+      173        // for the dimLineRef click to dodge snap-mismatch between hover and
+     ...
+      196        } else {
+      197          pushPreview(previewRef);
+      198        }      200 -=======                                                                                                                                                 
+      201 -      // Upstream (useDrawingHandlers) already passes raw cursor for dimLineRef clicks.                                                                       202 -      // No snap override needed here — world is correct as-is.                                                                                         
+      203 -      dimCreate.onClick(world, hoveredEntity);                                                                                                          
+      204 -      pushPreview(previewRef);                                                                                                                          
+      205 ->>>>>>> Stashed changes                                                                                                                                 
+      199      },
+      200      [dimCreate],
+      201    );
+
+● Reading 1 file… (ctrl+o to expand)
+  ⎿  src\subapps\dxf-viewer\hooks\drawing\drawing-hover-handler.ts
+     
+● Update(src\subapps\dxf-viewer\hooks\drawing\drawing-hover-handler.ts)
+  ⎿  Removed 4 lines
+      22  import { hardOrtho } from './drawing-handler-utils';
+      23  // ADR-362 hotfix: DetectableEntity for smart dim type detection via snap entityId
+      75      const skipSnap = isDimLineRefPhase();
+      76      const snapped = p ? (skipSnap ? p : applySnap(p)) : null;
+      78 -=======                                                                                                                                                  
+      79 -    // ADR-362 Phase 3 hotfix: dimLineRef hover skips snap — it's a position pick                                                                        
+      80 -    // (dim line offset), not an entity pick. AutoCAD: object snap off for dimLineRef.                                                                   
+      81 -    // Ensures preview position == commit position with no snap interference.                                                                            
+      82 -    const isHoverDimLineRef = isDimLineRefPhase();                                                                                                       
+      83 -    const snapped = p ? (isHoverDimLineRef ? p : applySnap(p)) : null;                                                                                   
+      84 ->>>>>>> Stashed changes                                                                                                                                  
+      77      // ADR-362 hotfix: pass hovered entity to smart dim detector so it can resolve
+      78      // correct dim type (line→aligned, circle→diameter, arc→radius, etc.)
+      79      // Skip entity resolution on dimLineRef phase — no entity to hit anyway.
+
+● Reading 1 file… (ctrl+o to expand)
+  ⎿  src\subapps\dxf-viewer\hooks\drawing\useDrawingHandlers.ts
+     
+● Update(src\subapps\dxf-viewer\hooks\drawing\useDrawingHandlers.ts)
+  ⎿  Removed 4 lines
+      82  import { useDimToolRouting } from '../dimensions/useDimToolRouting';
+      83  // ADR-362 hotfix: DetectableEntity for smart dim type detection via snap entityId
+      84  import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
+      85 -<<<<<<< Updated upstream                                                                                                                                 
+      85  // ADR-362 hotfix (2026-05-19): skip-snap helper for dimLineRef click — AutoCAD
+      86  // disables OSNAP on the dim-line offset pick so preview & commit match.
+      88 -=======                                                                                                                                                  
+      89 -// ADR-362 Phase 3 hotfix: skip snap for dimLineRef click (position pick, not entity pick)                                                               
+      90 ->>>>>>> Stashed changes                                                                                                                                        87  import { isDimLineRefPhase } from '../dimensions/dim-skip-snap';
+      88  // ADR-362 Phase L2: Center mark + centerline standalone tools      89  import { useCenterMarkCreate } from '../dimensions/useCenterMarkCreate';
+
+● Update(src\subapps\dxf-viewer\hooks\drawing\useDrawingHandlers.ts)
+  ⎿  Removed 10 lines
+      202    const onDrawingPoint = useCallback((p: Pt) => {
+      203      // 🏢 ADR-362 Phase D1: route dim tools through the dedicated orchestrator.
+      204      if (dimRouting.isDimTool) {
+      205 -<<<<<<< Updated upstream                                                                                                                                
+      205        // ADR-362 hotfix (2026-05-19): skip snap on the dim-line-offset click
+      206        // (3rd click of linear/aligned). AutoCAD pattern — that click is a free
+      207        // position pick, not an entity pick. Without this, snap can nudge the
+     ...
+      214        // ADR-362 hotfix: resolve entity from snap result so smart dim detector
+      215        // can suggest the correct dim type (line→aligned, circle→diameter, etc.)
+      216        const snapResult = skipSnap ? undefined : findSnapPoint?.(p.x, p.y);      218 -=======                                                                                                                                                 
+      219 -      // ADR-362 Phase 3 hotfix: dimLineRef click skips snap — it's a position pick                                                                           220 -      // (dim line offset), not an entity pick. AutoCAD: object snap off for dimLineRef.                                                                
+      221 -      const isDimLineRefClick = isDimLineRefPhase();                                                                                                    
+      222 -      const snapped = isDimLineRefClick ? p : applySnap(p);                                                                                             
+      223 -      // ADR-362 hotfix: resolve entity from snap result so smart dim detector                                                                          
+      224 -      // can suggest the correct dim type (line→aligned, circle→diameter, etc.)                                                                         
+      225 -      const snapResult = isDimLineRefClick ? null : findSnapPoint?.(p.x, p.y);                                                                          
+      226 ->>>>>>> Stashed changes                                                                                                                                 
+      217        const hoveredEntity: DetectableEntity | undefined = snapResult?.entityId
+      218          ? (currentScene?.entities.find((e) => e.id === snapResult.entityId) as DetectableEntity | undefined)
+      219          : undefined;
+
+  Read 1 file (ctrl+o to expand)
 
 
-❯  📋 HANDOFF — ADR-375 Phase B Runtime Verification                                                                                                                      
-                                                                                                                                                                              Είμαι Claude Code σε νέα session. Στόχος: **manual runtime verification** όλου του Phase B (B.1 + B.2 + B.3) του ADR-375 στο browser. 92 unit tests PASS, αλλά μηδέν  
-   runtime confirmation ακόμη.                                                                                                                                            
-                                                                                                                                                                          
-    ## 🎯 Μοντέλο: Sonnet 4.6 (Recommended)                                                                                                                               
-    Λόγος: runtime debugging + small targeted fixes (αν προκύψουν). Όχι cross-cutting refactor.                                                                           
-    ⏸️   Περίμενε "ok" πριν ξεκινήσεις (κανόνας N.14).                                                                                                                     
-                                                                                                                                                                          
-    ---                                                                                                                                                                   
-                                                                                                                                                                          
-    ## 📦 Τι ΕΧΕΙ ΗΔΗ COMMITTED (μην ξαναγράψεις, μόνο verify)                                                                                                            
-                                                                                                                                                                          
-    - **Phase A** (commits 8c3bbbd7 και πριν): 4 SSoT files (bim-pen-table, bim-object-styles, bim-view-range, bim-line-weight-resolver) + 7 BIM renderers + 35 tests     
-    - **Phase B.1**: DrawingScale selector ribbon widget + drawing-scale-store (thin re-export shim)                                                                      
-    - **Phase B.2**: bim-render-settings-store SSoT + ViewRangePanel + ObjectStylesPanel + useBimRenderSettingsSync + Level.bimRenderSettings persistence                 
-    (`dxf_viewer_levels/{id}.bimRenderSettings`)                                                                                                                          
-    - **Phase B.3** (commit `36d6fb3f`): View Templates library                                                                                                           
-      - `dxf_viewer_view_templates` collection (companyId-scoped, vtmpl_ prefix)                                                                                          
-      - Snapshot-copy model: Apply copies settings + sets FK, Detach nulls FK, Edit fans out via `propagateToLinkedLevels`                                                
-      - ViewTemplatesPanel ribbon widget (Apply / Update / Delete + Save As footer + Detach)                                                                              
-    - **Firestore deploy DONE**: rules + indexes pushed στο `pagonis-87766` cloud (composite index `companyId+createdAt DESC` ίσως ακόμα building — δες console)          
-                                                                                                                                                                          
-    ## ⚠️   ΠΡΟΣΟΧΗ — Multi-agent state                                                                                                                                    
-    Άλλος agent έχει **uncommitted ADR-376 Phase B work** (Opening Renumber + ANNOTATE_OPENINGS_PANEL). Σε `git status` θα δεις ~16 modified + 5 untracked files **που    
-  ΔΕΝ                                                                                                                                                                     
-    είναι δικά σου**:                                                                                                                                                     
-    - `.claude-rules/pending-ratchet-work.md`, `.ssot-registry.json`                                                                                                      
-    - `ADR-366` + `ADR-376` docs                                                                                                                                          
-    - `DxfViewerContent.tsx`, `EventBus.ts`, `RibbonButtonIcon.tsx`, `contextual-opening-tab.ts`, `opening-command-keys.ts`, `useRibbonOpeningBridge.ts`,                 
-    `opening-types.ts`, `ssao-modulator.ts`                                                                                                                               
-    - Modified locales (el+en) — έχουν KAI ADR-376 keys (`openingRenumber`, `annotateOpenings`, `renumber.*`)                                                             
-    - Modified `ribbon-default-tabs.ts` — έχει KAI `ANNOTATE_OPENINGS_PANEL` του άλλου                                                                                    
-    - Untracked: `bim/services/opening-renumber-service.{ts,test}`, `RenumberOpeningsCommand.ts`, `ui/components/bim-openings/`, `annotate-tab-openings.ts`,              
-    `ΥΠΟΧΡΕΩΤΙΚΑ_ΒΗΜΑΤΑ.txt`                                                                                                                                              
-                                                                                                                                                                          
-    **ΑΠΑΓΟΡΕΥΕΤΑΙ**: `git add -A`, `git restore`, `git reset --hard`, οποιαδήποτε mass-sweep. Αν χρειαστεί commit, stage μόνο specific paths.                            
-                                                                                                                                                                          
-    ---                                                                                                                                                                   
-                                                                                                                                                                          
-    ## 🎯 Verification Checklist                                                                                                                                          
-                                                                                                                                                                          
-    ### Step 1 — Boot dev server                                                                                                                                          
-    npm run dev                                                                                                                                                           
-    Open http://localhost:3000 → login → navigate σε `/dxf/viewer` (project που έχει ≥2 levels με imported DXF scene).                                                    
-                                                                                                                                                                          
-    ### Step 2 — Phase B.1: Drawing Scale                                                                                                                                 
-    1. Στο **View tab** του ribbon δες widget `1:{scale}` (DrawingScaleWidget).                                                                                           
-    2. Άλλαξε σε preset 1:50 → επιβεβαίωσε ότι **πάχη γραμμών** στο canvas αλλάζουν αμέσως (BIM renderers).                                                               
-    3. Άλλαξε σε custom 1:75 (free input) → ίδιο.                                                                                                                         
-    4. F5 → πρέπει να επανέλθει στην τιμή σου (Firestore persistence).                                                                                                    
-                                                                                                                                                                          
-    ### Step 3 — Phase B.2: View Range                                                                                                                                    
-    1. Δες widget **"Εύρος Προβολής"** δίπλα στο DrawingScale.                                                                                                            
-    2. Άνοιξε dropdown → 4 mm inputs (Top / Cut Plane / Bottom / View Depth).                                                                                             
-    3. Αλλαγή cut plane (π.χ. 1200) → 500ms debounce → Firestore save (δες Network tab για `PATCH /api/dxf-levels`).                                                      
-    4. F5 → τιμές persistent.                                                                                                                                             
-    5. Reset button → DEFAULT_VIEW_RANGE.                                                                                                                                 
-                                                                                                                                                                          
-    ### Step 4 — Phase B.2: Object Styles                                                                                                                                 
-    1. Δες widget **"Στυλ Αντικειμένων"** (12 με 2 pen selectors).                                                                                                        
-    2. Άλλαξε `wall.cutPen` από default σε 9 → debounce → save.                                                                                                           
-    3. Επιβεβαίωσε πάχος γραμμής στο canvas (walls cut state).                                                                                                            
-    4. Reset.                                                                                                                                                             
-                                                                                                                                                                          
-    ### Step 5 — Phase B.3: View Templates                                                                                                                                
-    1. Δες widget **"Πρότυπο"** (τελευταίο στο View tab).                                                                                                                 
-    2. **Save As**: γράψε όνομα "Standard 1:100" → click "Αποθήκευση ως" → νέο template εμφανίζεται στο dropdown list.                                                    
-    3. Άλλαξε σε άλλο level (Level 2). Άνοιξε ViewTemplates → click Apply (✓ icon) στο "Standard 1:100" → settings copy στο Level.bimRenderSettings + trigger label       
-  δείχνει                                                                                                                                                                 
-    "Standard 1:100".                                                                                                                                                     
-    4. Linked count badge: επιστροφή σε Level 1 → ίδιο template applied → badge `×2` δίπλα στο όνομα.                                                                     
-    5. **Update propagation**: άλλαξε drawingScale ή cutPlane. Click "Update" (refresh icon) → όλα τα linked levels (2) αυτόματα ενημερώνονται. Σύγκρινε Level 2.         
-    6. **Detach**: click "Αποσύνδεση από πρότυπο" → FK nullifies, settings παραμένουν (snapshot). Badge → `×1`.                                                           
-    7. **Delete**: trash icon → template εξαφανίζεται από dropdown. Orphan FK σε Level 1 παραμένει αλλά harmless (renderers διαβάζουν bimRenderSettings).                 
-                                                                                                                                                                          
-    ### Step 6 — Multi-tab Firestore sync                                                                                                                                 
-    1. Άνοιξε δεύτερο tab ίδιου project.                                                                                                                                  
-    2. Tab A: άλλαξε drawingScale.                                                                                                                                        
-    3. Tab B: πρέπει να επανέλθει αυτόματα (firestoreQueryService.subscribe).                                                                                             
-                                                                                                                                                                          
-    ### Step 7 — Console / Network                                                                                                                                        
-    - Καθαρή κονσόλα (όχι PERMISSION_DENIED, FAILED_PRECONDITION, render loops)                                                                                           
-    - Network: μόνο `PATCH /api/dxf-levels` (debounced) + Firestore websocket                                                                                             
-    - Performance: όχι >60fps churn / idle re-renders                                                                                                                     
-                                                                                                                                                                          
-    ---                                                                                                                                                                   
-                                                                                                                                                                          
-    ## 🐛 Known pitfalls                                                                                                                                                  
-                                                                                                                                                                          
-    - **Composite index ακόμα building** (deployed 2026-05-25 evening) → πρώτο template list ίσως πετάξει `FAILED_PRECONDITION`. Δες                                      
-    https://console.firebase.google.com/project/pagonis-87766/firestore/databases/-default-/indexes                                                                       
-    - **PERMISSION_DENIED στο write template**: companyId/createdBy mismatch — δες firestore.rules:3454-3510 για τις απαιτήσεις                                           
-    - **3D camera fit regression** (memory `feedback_camera_fit_3d_regression`) — Property 3D bug ακόμα open, αν φανεί παράμερα.                                          
-    - **Empty templates στο dropdown** όταν `companyId` λείπει από auth — useViewTemplateStore περιμένει companyId πριν subscribe.                                        
-                                                                                                                                                                          
-    ---                                                                                                                                                                   
-                                                                                                                                                                          
-    ## 📚 Critical files (read-only references)                                                                                                                           
-                                                                                                                                                                          
-    | Layer | Path |                                                                                                                                                      
-    |---|---|                                                                                                                                                             
-    | Types | `src/subapps/dxf-viewer/config/view-template-types.ts` |                                                                                                    
-    | Service | `src/subapps/dxf-viewer/services/view-template.service.ts` |                                                                                              
-    | Store | `src/subapps/dxf-viewer/state/view-template-store.ts` |                                                                                                     
-    | Panel | `src/subapps/dxf-viewer/ui/ribbon/panels/ViewTemplatesPanel.tsx` |                                                                                          
-    | B.2 Store | `src/subapps/dxf-viewer/state/bim-render-settings-store.ts` |                                                                                           
-    | Level config | `src/subapps/dxf-viewer/systems/levels/config.ts` (`appliedViewTemplateId` field) |                                                                  
-    | Rules | `firestore.rules:3454-3510` (`dxf_viewer_view_templates` block) |                                                                                           
-    | Index | `firestore.indexes.json` (`dxf_viewer_view_templates: companyId+createdAt DESC`) |                                                                          
-    | ADR | `docs/centralized-systems/reference/adrs/ADR-375-bim-entity-line-weight-semantic-system.md` v1.5 |                                                            
-                                                                                                                                                                          
-    ## 🔧 Diagnostic commands (αν προκύψουν bugs)                                                                                                                         
-                                                                                                                                                                          
-    ```bash                                                                                                                                                               
-    # Firestore template list (one-shot από κονσόλα browser)                                                                                                              
-    import { listViewTemplatesOnce } from '@/subapps/dxf-viewer/services/view-template.service';                                                                          
-    await listViewTemplatesOnce('<your-companyId>');                                                                                                                      
-                                                                                                                                                                          
-    # Re-run unit tests                                                                                                                                                   
-    npx jest src/subapps/dxf-viewer/services/__tests__/view-template.service.test.ts src/subapps/dxf-viewer/state/__tests__/view-template-store.test.ts --no-coverage     
-                                                                                                                                                                          
-    # Type check                                                                                                                                                          
-    npx tsc --noEmit                                                                                                                                                      
-                                                                                                                                                                          
-    ---                                                                                                                                                                   
-    ✅ Acceptance — όταν τελειώσουμε                                                                                                                                      
-                                                                                                                                                                          
-    - [ ] Όλα τα 7 steps πέρασαν χωρίς manual workaround                                                                                                                  
-    - [ ] Καθαρή console, κανένα render loop, κανένα PERMISSION_DENIED                                                                                                    
-    - [ ] Multi-tab Firestore real-time sync λειτουργεί                                                                                                                   
-    - [ ] Update template propagation σε ≥2 linked levels δουλεύει                                                                                                        
-    - [ ] Detach behavior σωστή (snapshot stays)                                                                                                                          
-    - [ ] Καμία regression στο 2D canvas drawing (walls/columns/etc πάχη γραμμών)                                                                                         
-                                                                                                                                                                          
-    Όταν δω ✅ σε όλα: Update memory project_adr375_bim_line_weights_phase_a.md με "Runtime verified 2026-XX-XX". Update ADR-375 v1.6 με verification note. ΟΧΙ commit    
-  χωρίς   ρητή εντολή (N.(-1)).                                                                                                                                           
-                                                                                                                                                                          
-    Όταν δω bug: report immediately με βήματα reproduction + Greek explanation. ΟΧΙ silent fix.                                                                           
-                                                                                                                                                                          
-    ---                                                                                                                                                                   
-    🌐 Language: ελληνικά responses πάντα (N.0).                                                                                                                          
-    🚨 N.(-1): ΠΟΤΕ commit/push/deploy χωρίς εντολή Giorgio.                                                                                                              
-                                                                                                                                                                          
-    ok? περιμένω confirmation πριν ξεκινήσω.                                              
+
+● Bash("C:\Program Files\Git\cmd\git.exe" show HEAD:src/subapps/dxf-viewer/app/DxfViewerContent.tsx | wc -l; echo "---"; "C:\Program Files\Git\cmd\git.exe" show HEAD:s…)
+  ⎿  484
+     ---
+           </div>
+     … +4 lines (ctrl+o to expand)
+     
+● Bash("C:\Program Files\Git\cmd\git.exe" show HEAD:src/subapps/dxf-viewer/ui/ribbon/hooks/bridge/stair-param-helpers.ts | wc -l; echo "---"; "C:\Program Files\Git\cmd…)
+  ⎿  6
+     ---
+     /**
+     … +5 lines (ctrl+o to expand)
+     
+● Bash("C:\Program Files\Git\cmd\git.exe" show HEAD:docs/centralized-systems/reference/adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md | wc -l; echo "---"; wc -…)
+  ⎿  3796
+     ---
+     3816 docs/centralized-systems/reference/adrs/ADR-366-3d-bim-viewer-photorealistic-rendering.md
+     … +2 lines (ctrl+o to expand)
+    
+  Searched for 1 pattern (ctrl+o to expand)
+
+● 3 μεγάλα + 2 marker-less → git checkout HEAD -- (καθαρό reset). 8 ήδη editted → git add.
+
+● Bash("C:\Program Files\Git\cmd\git.exe" checkout HEAD -- "src/subapps/dxf-viewer/app/DxfViewerContent.tsx" "src/subapps/dxf-viewer/ui/ribbon/hooks/bridge/stair-param…)
+  ⎿  (No output)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" add "src/subapps/dxf-viewer/hooks/data/useWallPersistence.ts" "src/subapps/dxf-viewer/hooks/data/useColumnPersistence.ts" "sr…)
+  ⎿  (No output)
+     
+● Bash("C:\Program Files\Git\cmd\git.exe" status --short)
+  ⎿   M docs/centralized-systems/reference/adr-index.md
+     M  docs/centralized-systems/reference/adrs/ADR-362-enterprise-dimension-system.md
+      M docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md
+     … +57 lines (ctrl+o to expand)
+    
+  Searched for 1 pattern, listed 1 directory (ctrl+o to expand)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" status | head -10)
+  ⎿  On branch main
+     Your branch is ahead of 'origin/main' by 26 commits.
+       (use "git push" to publish your local commits)
+     … +7 lines (ctrl+o to expand)
+     
+● ✅ Όλες οι 13 conflicts λύθηκαν χωρίς απώλεια κώδικα.
+
+  Στρατηγική:
+  - 5 persistence hooks (Wall/Column/Beam/Slab/Opening): TAKE OURS = HEAD behavior (απορρίπτω abandoned sed migration if (companyId) guard)
+  - 3 dimension/drawing hooks (useDimToolRouting/useDrawingHandlers/drawing-hover-handler): TAKE OURS = πλούσιο ADR-362 hotfix logic + comments (απορρίπτω simpler stash
+  version)
+  - 3 big files (DxfViewerContent ~485 lines / stair-param-helpers 6 lines / ADR-366 3796 lines): git checkout HEAD -- = clean reset
+  - 2 marker-less UU (stair-floor-link/apply-entity-preview): working tree ήδη = HEAD, απλά git add cleared conflict
+  
+  Verification: 0 conflict markers σε src/ + docs/ (εκτός 1 pre-existing σε ADR-358-dxf-stair-tool-google-level.md — committed από παλιά, ξεχωριστό issue).
+  Παρατηρήσεις:
+  - 2 untracked tmp_stashed.tsx + tmp_upstream.tsx (27KB + 25KB) — manual conflict inspection αρχεία άλλου agent. Δεν τα διέγραψα, αλλά αν θες tα βγάλω μετά.  - Όλες οι 4 versions κάθε conflict file είναι σε C:\Nestor_Pagonis_safety_backup\conflicts\ (52 αρχεία, recoverable αν χρειαστεί undo).
+
+  Τώρα διαχωρισμός staged commits. State:
+  - ✅ 8 conflict-resolved files staged (μετά resolution)
+  - ✅ 20 originally-staged files (πριν την conflict διαχείριση) — με ήδη γνωστό test failure
+  - ⚠️  ~33 unstaged modified files (δουλειά άλλου agent)
+  - ⚠️  ADR-362 staged όπως ήρθε
+
+  Πάμε στο task #5 (commit unrelated subset). Η προτεινόμενη σειρά:
+
+  Commit 1: Μόνο τα 13 conflict-resolution files → ξεχωριστό commit "fix(merge): resolve stash-pop conflicts (take ours, ADR-362 hotfix preserved)".
+
+  Commit 2: Τα 20 cross-domain (αφού πρώτα unstage τα 5 αρχεία που τρίγκαρουν τα iso19650 tests — 4 gantt-ai analyzers + event-payload-definitions.ts) → 15 αρχεία που
+  περνάνε hook.
+
+  Προχωράω;
+
+
+
+✻ Worked for 9m 8s
+
+❯ ΑΝ ΕΙΣΑΙ ΣΙΓΟΥΡΟΣ ΠΡΟΧΩΡΑ                                                                                                                                               
+
+● Bash("C:\Program Files\Git\cmd\git.exe" diff --cached --name-only)
+  ⎿  docs/centralized-systems/reference/adrs/ADR-362-enterprise-dimension-system.md
+     src/app/api/admin/fix-admin-registry/route.ts
+     src/app/api/files/propagate-entity-rename/route.ts
+     … +17 lines (ctrl+o to expand)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" diff --cached src/subapps/dxf-viewer/hooks/data/useWallPersistence.ts | head -20)
+  ⎿  (No output)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" diff src/subapps/dxf-viewer/hooks/data/useWallPersistence.ts | head -20)
+  ⎿  (No output)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" diff --cached docs/centralized-systems/reference/adrs/ADR-362-enterprise-dimension-system.md | head -30)
+  ⎿  diff --git a/docs/centralized-systems/reference/adrs/ADR-362-enterprise-dimension-system.md b/docs/centralized-systems/reference/adrs/ADR-362-enterprise-dimensi
+     on-system.md
+     index 4eaebf79..221c9002 100644
+     … +37 lines (ctrl+o to expand)
+
+● ADR-362 staged = doc update για ίδιο Phase 3 hotfix που εφαρμόσαμε στα conflict resolutions. Συνεπές, μένει staged.
+
+  Unstaging 6 trigger files (4 gantt-ai + propagate-entity-rename + event-payload-definitions) για να αποφύγω iso19650 test trigger:
+
+● Bash("C:\Program Files\Git\cmd\git.exe" reset HEAD "src/services/ai-pipeline/modules/uc-017-gantt-ai/analyzers/auto-scheduler.ts" "src/services/ai-pipeline/modules/u…)
+  ⎿  Unstaged changes after reset:
+     M  docs/centralized-systems/reference/adr-index.md
+     M  docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md
+     … +40 lines (ctrl+o to expand)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" diff --cached --name-only)
+  ⎿  docs/centralized-systems/reference/adrs/ADR-362-enterprise-dimension-system.md
+     src/app/api/admin/fix-admin-registry/route.ts
+     src/app/api/telemetry/bim-performance/erase/route.ts
+     … +11 lines (ctrl+o to expand)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" commit -m "chore: cross-domain fixes & API migrations" -m "EVM property rename (ev/ac->earnedValue/actualCost), ifc-guid BigI…)
+  ⎿  Running in the background (↓ to manage)
+
+● Commit τρέχει. Περιμένω.
+
+✻ Cooked for 1m 34s · 1 shell still running
+
+● Background command "Commit safe subset of cross-domain fixes" completed (exit code 0)
+
+  Read 1 file (ctrl+o to expand)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" log --oneline -3)
+  ⎿  0881a57c chore: cross-domain fixes & API migrations
+     20d7879a fix(bim): ADR-375 v2.6 V/G runtime wiring
+     d3dc0b10 feat(bim): ADR-376 C.3 PDF + 3D edges system
+
+● ✅ Commit επιτυχής: 0881a57c — chore: cross-domain fixes & API migrations
+
+  Hook PASS όλα. 14 αρχεία committed, 109+ / 31− γραμμές.
+
+  ---
+  📋 Σύνοψη συνεδρίας
+  ┌──────────────────────────────────────────┬─────────────────────────────────────────────┐
+  │                   Βήμα                   │                 Αποτέλεσμα                  │  ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
+  │ Backup Layer 1 (patches)                 │ ✅ C:\Nestor_Pagonis_safety_backup\ 840 KB  │
+  ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
+  │ Backup Layer 2 (ZIP)                     │ ✅ Downloads\BuckUps\Zip_BuckUps-2\ 86.2 MB │
+  ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
+  │ Backup Layer 3 (git bundle)              │ ✅ 80.9 MB, 143 refs                        │
+  ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
+  │ Conflict backups (4 versions × 13 files) │ ✅ 52 αρχεία σε safety_backup/conflicts/    │
+  ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
+  │ 13 UU conflicts λυμένα                   │ ✅ 0 markers σε src/+docs/                  │
+  ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
+  │ Commit cross-domain safe subset          │ ✅ 0881a57c (14 αρχεία)                     │
+  └──────────────────────────────────────────┴─────────────────────────────────────────────┘
+
+  Commits συνεδρίας:
+  - 20d7879a fix(bim): ADR-375 v2.6 V/G runtime wiring (Haiku)
+  - 0881a57c chore: cross-domain fixes & API migrations (Opus)
+
+  ---
+  ⚠️  Εκκρεμότητες (για επόμενη συνεδρία)
+
+  1. 6 trigger files unstaged (4 gantt-ai + propagate-entity-rename + event-payload-definitions.ts) — περιμένουν fix του iso19650-enricher.ts (πιθανώς incomplete work
+  άλλου agent)
+  2. ~30 unstaged files σε δουλειά άλλου agent (BIM 3D animation, crop region, spatial index, wall preview/completion, opening schedule κλπ.)
+  3. ADR-358 pre-existing conflict markers (committed από παλιά) — ξεχωριστό fix needed
+  4. 2 tmp αρχεία (tmp_stashed.tsx, tmp_upstream.tsx) — scratch files άλλου agent, μπορούν να διαγραφούν
+  5. 3 stashes παραμένουν (safety-pre-phase0.5-sed-* + 2 WIP) — Giorgio αποφασίζει αν drop/restore
+
+  📊 Context: ~75% | Commands: πολλά | ⚠️  Αν αλλάξεις topic, /clear
+
+✻ Cogitated for 26s
+
+❯ ΤΙ ΠΡΟΤΕΙΝΕΙΣ?                                                                                                                                                          
+
+

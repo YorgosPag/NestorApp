@@ -383,6 +383,7 @@
     "wall": {
       "statusStart": "Pick wall start point",
       "statusEnd": "Pick wall end point",
+      "statusAlignment": "Click on a side to align: right → left edge on line, left → right edge on line",
       "statusCurveEnd": "Pick curved wall end point",
       "statusCurveControl": "Pick curve control point",
       "statusPolyNext": "Pick next vertex (Enter to finish)"

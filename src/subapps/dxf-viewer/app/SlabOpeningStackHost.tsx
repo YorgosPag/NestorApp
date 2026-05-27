@@ -64,7 +64,7 @@ export function SlabOpeningStackHost({ levelManager }: SlabOpeningStackHostProps
       if (srcScene) {
         const nextEntities = srcScene.entities.map((e) =>
           e.id === opening.id
-            ? { ...e, params: { ...(e as SlabOpeningEntity).params, multiStoreyStackGroupId: groupId } }
+            ? ({ ...e, params: { ...(e as SlabOpeningEntity).params, multiStoreyStackGroupId: groupId } } as typeof e)
             : e,
         );
         levelManager.setLevelScene(srcLevelId, { ...srcScene, entities: nextEntities });

@@ -320,6 +320,17 @@ export async function commitSignatory(
         derivesWorkAddress: 'never',
         isEmployment: false, isOwnership: false, isGovernment: false, isProperty: false,
         allowedFor: ['individual', 'company', 'service'],
+        allowedCrossings: [
+          { source: 'individual', target: 'individual' },
+          { source: 'individual', target: 'company' },
+          { source: 'individual', target: 'service' },
+          { source: 'company', target: 'individual' },
+          { source: 'company', target: 'company' },
+          { source: 'company', target: 'service' },
+          { source: 'service', target: 'individual' },
+          { source: 'service', target: 'company' },
+          { source: 'service', target: 'service' },
+        ],
       },
       isStatic: true,
     };

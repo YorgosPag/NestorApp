@@ -40,6 +40,7 @@ interface UniversalSelectionLike {
   select: (id: string, type: 'overlay' | 'dxf-entity') => void;
   clearByType: (type: 'overlay' | 'dxf-entity') => void;
   selectMultiple: (items: Array<{ id: string; type: 'overlay' }>) => void;
+  handleOverlaySelect: (id: string | null) => void;
 }
 
 export interface UseOverlayInteractionParams {

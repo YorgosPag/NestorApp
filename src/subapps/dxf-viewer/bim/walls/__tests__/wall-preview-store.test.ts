@@ -18,6 +18,7 @@ describe('wall-preview-store (Phase 1C)', () => {
   it('1. initial snapshot is the frozen EMPTY tuple', () => {
     const s = wallPreviewStore.get();
     expect(s.startPoint).toBeNull();
+    expect(s.endPoint).toBeNull();
     expect(s.curveControl).toBeNull();
     expect(s.polylineVertices).toEqual([]);
     expect(s.overrides).toEqual({});
@@ -26,6 +27,7 @@ describe('wall-preview-store (Phase 1C)', () => {
   it('2. set() updates startPoint', () => {
     wallPreviewStore.set({
       startPoint: { x: 10, y: 20 },
+      endPoint: null,
       curveControl: null,
       polylineVertices: [],
       overrides: {},
@@ -37,6 +39,7 @@ describe('wall-preview-store (Phase 1C)', () => {
   it('3. set() with identical state returns same snapshot reference', () => {
     wallPreviewStore.set({
       startPoint: { x: 10, y: 20 },
+      endPoint: null,
       curveControl: null,
       polylineVertices: [],
       overrides: {},
@@ -44,6 +47,7 @@ describe('wall-preview-store (Phase 1C)', () => {
     const a = wallPreviewStore.get();
     wallPreviewStore.set({
       startPoint: { x: 10, y: 20 },
+      endPoint: null,
       curveControl: null,
       polylineVertices: [],
       overrides: {},
@@ -55,6 +59,7 @@ describe('wall-preview-store (Phase 1C)', () => {
   it('4. polyline vertices propagate', () => {
     wallPreviewStore.set({
       startPoint: { x: 0, y: 0 },
+      endPoint: null,
       curveControl: null,
       polylineVertices: [
         { x: 0, y: 0 },
@@ -69,6 +74,7 @@ describe('wall-preview-store (Phase 1C)', () => {
   it('5. reset() returns to EMPTY identity', () => {
     wallPreviewStore.set({
       startPoint: { x: 1, y: 2 },
+      endPoint: null,
       curveControl: null,
       polylineVertices: [],
       overrides: { category: 'partition' },
@@ -83,6 +89,7 @@ describe('wall-preview-store (Phase 1C)', () => {
     const ctrl = { x: 50, y: 50 };
     wallPreviewStore.set({
       startPoint: { x: 0, y: 0 },
+      endPoint: null,
       curveControl: ctrl,
       polylineVertices: [],
       overrides: {},
@@ -94,6 +101,7 @@ describe('wall-preview-store (Phase 1C)', () => {
   it('7. overrides propagate', () => {
     wallPreviewStore.set({
       startPoint: { x: 0, y: 0 },
+      endPoint: null,
       curveControl: null,
       polylineVertices: [],
       overrides: { category: 'interior', height: 2500 },
@@ -101,5 +109,52 @@ describe('wall-preview-store (Phase 1C)', () => {
     const s = wallPreviewStore.get();
     expect(s.overrides.category).toBe('interior');
     expect(s.overrides.height).toBe(2500);
+  });
+
+  // ADR-363 Phase 1F — awaitingAlignment phase
+  it('8. endPoint propagates (Phase 1F awaitingAlignment surface)', () => {
+    wallPreviewStore.set({
+      startPoint: { x: 0, y: 0 },
+      endPoint: { x: 1000, y: 0 },
+      curveControl: null,
+      polylineVertices: [],
+      overrides: {},
+    });
+    const s = wallPreviewStore.get();
+    expect(s.endPoint).toEqual({ x: 1000, y: 0 });
+  });
+
+  it('9. endPoint is deep-copied (mutation isolation)', () => {
+    const endPt = { x: 50, y: 80 };
+    wallPreviewStore.set({
+      startPoint: { x: 0, y: 0 },
+      endPoint: endPt,
+      curveControl: null,
+      polylineVertices: [],
+      overrides: {},
+    });
+    endPt.x = 999;
+    expect(wallPreviewStore.get().endPoint?.x).toBe(50);
+  });
+
+  it('10. endPoint change triggers a new snapshot (identity broken)', () => {
+    wallPreviewStore.set({
+      startPoint: { x: 0, y: 0 },
+      endPoint: null,
+      curveControl: null,
+      polylineVertices: [],
+      overrides: {},
+    });
+    const a = wallPreviewStore.get();
+    wallPreviewStore.set({
+      startPoint: { x: 0, y: 0 },
+      endPoint: { x: 100, y: 100 },
+      curveControl: null,
+      polylineVertices: [],
+      overrides: {},
+    });
+    const b = wallPreviewStore.get();
+    expect(b).not.toBe(a);
+    expect(b.endPoint).toEqual({ x: 100, y: 100 });
   });
 });

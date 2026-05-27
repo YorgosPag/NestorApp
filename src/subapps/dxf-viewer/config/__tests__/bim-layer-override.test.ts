@@ -44,13 +44,21 @@ describe('ADR-375 C.6 — layer lineweight override', () => {
       expect(withoutSubcat.lineWidthPx).toBeCloseTo(lineweightToPx(0.25 as any, 96), 5);
     });
 
-    it('layerOverride.lineweightMm wins over objectStyles pen', () => {
+    it('ADR-375 v2.8 (Revit V/G semantics) — objectStyles V/G pen wins over layerOverride.lineweightMm', () => {
+      // Industry parity (Revit V/G + ArchiCAD Graphic Override + AutoCAD Layer State):
+      // explicit per-view category override (V/G) wins over Layer Object Style defaults.
+      // Pre-v2.8 had Layer > V/G which silently nullified the V/G panel on entities with
+      // assigned layers (Giorgio runtime report 2026-05-26).
       const result = resolveSubcategoryStyle({
         ...BASE_CTX,
         objectStyles: { wall: { projectionPen: 5, cutPen: 7, visible: true } },
         layerOverride: { lineweightMm: 0.7 as any },
       });
-      expect(result.lineWidthPx).toBeCloseTo(lineweightToPx(0.7 as any, 96), 5);
+      // V/G cutPen=7 ⇒ pen table lookup (NOT the layer 0.7mm bypass).
+      const expectedFromPenTable = lineweightToPx(0.35 as any, 96); // PEN_TABLE_MM pen 7 @ 1:100 = 0.35mm
+      expect(result.lineWidthPx).toBeCloseTo(expectedFromPenTable, 5);
+      // Sanity: result must NOT equal the layer 0.7mm bypass value.
+      expect(result.lineWidthPx).not.toBeCloseTo(lineweightToPx(0.7 as any, 96), 5);
     });
 
     it('layerOverride converted via lineweightToPx (not pen table)', () => {
@@ -87,6 +95,51 @@ describe('ADR-375 C.6 — layer lineweight override', () => {
         elementOverride: { color: '#112233' },
       });
       expect(result.color).toBe('#112233');
+    });
+  });
+
+  describe('ADR-375 v2.8 — V/G category color wins over Layer color (Revit-faithful)', () => {
+    it('objectStyles.wall.cutColor (V/G user) wins over layerOverride.color — Giorgio runtime bug 2026-05-26', () => {
+      // Pre-v2.8: Layer > V/G silently nullified the V/G eye-icon color picker for entities
+      // with assigned layers. Per Revit V/G semantics, explicit per-view category color must
+      // win over Material/Layer color (Revit "Override Graphics in View" → projection/cut color).
+      const result = resolveSubcategoryStyle({
+        ...BASE_CTX,
+        cutState: 'cut',
+        objectStyles: { wall: { projectionPen: 5, cutPen: 7, cutColor: '#ff0000' } },
+        layerOverride: { color: '#0000ff' },
+      });
+      expect(result.color).toBe('#ff0000');
+    });
+
+    it('objectStyles.wall.projectionColor wins over layerOverride.color in projection state', () => {
+      const result = resolveSubcategoryStyle({
+        ...BASE_CTX,
+        cutState: 'projection',
+        objectStyles: { wall: { projectionPen: 5, cutPen: 7, projectionColor: '#00ff00' } },
+        layerOverride: { color: '#0000ff' },
+      });
+      expect(result.color).toBe('#00ff00');
+    });
+
+    it('explicit null V/G cutColor wins over layerOverride.color (user reset to canvas token)', () => {
+      const result = resolveSubcategoryStyle({
+        ...BASE_CTX,
+        cutState: 'cut',
+        objectStyles: { wall: { projectionPen: 5, cutPen: 7, cutColor: null } },
+        layerOverride: { color: '#0000ff' },
+      });
+      expect(result.color).toBeNull();
+    });
+
+    it('without V/G color override, layerOverride.color applies (existing behavior preserved)', () => {
+      const result = resolveSubcategoryStyle({
+        ...BASE_CTX,
+        cutState: 'cut',
+        objectStyles: { wall: { projectionPen: 5, cutPen: 7 } },
+        layerOverride: { color: '#0000ff' },
+      });
+      expect(result.color).toBe('#0000ff');
     });
   });
 

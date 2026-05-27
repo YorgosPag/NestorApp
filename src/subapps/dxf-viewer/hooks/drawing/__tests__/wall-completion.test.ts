@@ -13,6 +13,7 @@ import {
   buildDefaultWallParams,
   buildWallEntity,
   completeWallFromTwoClicks,
+  computeWallAlignmentOffset,
 } from '../wall-completion';
 import { DEFAULT_WALL_HEIGHT_MM } from '../../../bim/types/wall-types';
 
@@ -64,13 +65,16 @@ describe('buildDefaultWallParams', () => {
     expect(params.flip).toBe(true);
   });
 
-  it('scene-unit m scales mm defaults', () => {
+  it('scene-unit m: scalar params stay in mm (SSoT — boundary conversion lives in computeWallGeometry)', () => {
     const params = buildDefaultWallParams({ x: 0, y: 0 }, { x: 1, y: 0 }, undefined, 'm');
-    // DEFAULT_WALL_HEIGHT_MM (3000) × (1/1000) = 3.0 in metres
-    expect(params.height).toBeCloseTo(3.0, 6);
-    // exterior preset 250 mm → 0.25 m
-    expect(params.thickness).toBeCloseTo(0.25, 6);
-    expect(params.dna?.totalThickness).toBeCloseTo(0.25, 6);
+    // Spec (wall-completion.ts L65): "Scalars (height, thickness) stored in mm
+    // — always, regardless of sceneUnits. Boundary conversion (mm → canvas
+    // units) happens in computeWallGeometry." So height stays at 3000 mm even
+    // when sceneUnits = 'm', and the DNA preset stays at its raw mm value.
+    expect(params.height).toBe(DEFAULT_WALL_HEIGHT_MM);
+    expect(params.thickness).toBe(250); // exterior preset, raw mm
+    expect(params.dna?.totalThickness).toBe(250);
+    expect(params.sceneUnits).toBe('m');
   });
 });
 
@@ -128,5 +132,110 @@ describe('completeWallFromTwoClicks', () => {
     if (!r.ok) return;
     expect(r.entity.params.category).toBe('partition');
     expect(r.entity.params.height).toBe(2400);
+  });
+});
+
+// ─── ADR-363 Phase 1F — alignment offset ────────────────────────────────────
+
+describe('computeWallAlignmentOffset', () => {
+  it('returns zero offset when alignment point is colinear with axis', () => {
+    const offset = computeWallAlignmentOffset(
+      { x: 0, y: 0 }, { x: 1000, y: 0 },
+      { x: 500, y: 0 }, // on the axis line
+      200, 'mm',
+    );
+    expect(offset.x).toBeCloseTo(0, 9);
+    expect(offset.y).toBeCloseTo(0, 9);
+  });
+
+  it('returns zero offset when start == end (degenerate axis)', () => {
+    const offset = computeWallAlignmentOffset(
+      { x: 100, y: 100 }, { x: 100, y: 100 },
+      { x: 500, y: 500 },
+      200, 'mm',
+    );
+    expect(offset.x).toBe(0);
+    expect(offset.y).toBe(0);
+  });
+
+  it('shifts axis +Y when alignment point is on +Y side (cross > 0, axis +X)', () => {
+    // Axis A→B along +X; CCW perpendicular = +Y. C at (500, 100) → cross > 0.
+    // halfThickness = 200/2 = 100 mm → shift by +100 along +Y.
+    const offset = computeWallAlignmentOffset(
+      { x: 0, y: 0 }, { x: 1000, y: 0 },
+      { x: 500, y: 100 },
+      200, 'mm',
+    );
+    expect(offset.x).toBeCloseTo(0, 6);
+    expect(offset.y).toBeCloseTo(100, 6);
+  });
+
+  it('shifts axis -Y when alignment point is on -Y side (cross < 0, axis +X)', () => {
+    const offset = computeWallAlignmentOffset(
+      { x: 0, y: 0 }, { x: 1000, y: 0 },
+      { x: 500, y: -100 },
+      200, 'mm',
+    );
+    expect(offset.x).toBeCloseTo(0, 6);
+    expect(offset.y).toBeCloseTo(-100, 6);
+  });
+
+  it('handles diagonal axis: perpendicular shift, not parallel', () => {
+    // Axis at 45° along (+X, +Y). CCW perp = (-1, 1)/√2.
+    // halfThickness 200/2 = 100 mm. Shift magnitude = 100, along (-1, 1)/√2.
+    // C at (0, 100) → cross = 1*100 - 1*0 = 100 > 0 → sign +1.
+    const offset = computeWallAlignmentOffset(
+      { x: 0, y: 0 }, { x: 1000, y: 1000 },
+      { x: 0, y: 100 },
+      200, 'mm',
+    );
+    const expected = 100 / Math.SQRT2;
+    expect(offset.x).toBeCloseTo(-expected, 6);
+    expect(offset.y).toBeCloseTo(+expected, 6);
+  });
+
+  it('scales offset magnitude with sceneUnits = m', () => {
+    // halfThickness 100 mm × mmToSceneUnits('m')=0.001 → 0.1 in metres.
+    const offset = computeWallAlignmentOffset(
+      { x: 0, y: 0 }, { x: 1, y: 0 },
+      { x: 0.5, y: 1 },
+      200, 'm',
+    );
+    expect(offset.x).toBeCloseTo(0, 9);
+    expect(offset.y).toBeCloseTo(0.1, 9);
+  });
+});
+
+describe('buildDefaultWallParams alignment integration', () => {
+  it('omits alignment when alignmentPoint is undefined (back-compat)', () => {
+    const params = buildDefaultWallParams({ x: 0, y: 0 }, { x: 1000, y: 0 });
+    expect(params.start).toMatchObject({ x: 0, y: 0 });
+    expect(params.end).toMatchObject({ x: 1000, y: 0 });
+  });
+
+  it('shifts both start and end by the same offset toward alignmentPoint', () => {
+    const params = buildDefaultWallParams(
+      { x: 0, y: 0 }, { x: 1000, y: 0 },
+      undefined, 'mm',
+      { x: 500, y: 100 }, // +Y side
+    );
+    // exterior DNA thickness = 250 mm → half = 125 → shift +Y by 125.
+    expect(params.start.x).toBeCloseTo(0, 6);
+    expect(params.start.y).toBeCloseTo(125, 6);
+    expect(params.end.x).toBeCloseTo(1000, 6);
+    expect(params.end.y).toBeCloseTo(125, 6);
+  });
+
+  it('alignment offset uses overridden thickness when provided', () => {
+    const params = buildDefaultWallParams(
+      { x: 0, y: 0 }, { x: 1000, y: 0 },
+      { thickness: 400 }, 'mm',
+      { x: 500, y: 100 },
+    );
+    // thickness override → half = 200, no DNA.
+    expect(params.thickness).toBe(400);
+    expect(params.dna).toBeUndefined();
+    expect(params.start.y).toBeCloseTo(200, 6);
+    expect(params.end.y).toBeCloseTo(200, 6);
   });
 });

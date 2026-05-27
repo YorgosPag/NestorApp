@@ -71,6 +71,16 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-27 — CanvasSection scene wiring + level-manager type tightened
+
+`CanvasSection.tsx` (orchestrator): `useEntityLayerCommands(...)` now receives the locally-resolved `dxfScene` instead of `props.currentScene`. The orchestrator's `dxfScene` is the snapshot already threaded through every leaf renderer; reusing it removes a stale-prop divergence path where command-mode entity operations could fire against an outdated scene reference (no observable bug in the wild, but the prop chain was no longer SSoT-aligned post-ADR-374). One-line swap; orchestrator subscription topology unchanged.
+
+`canvas-layer-stack-leaves.tsx`: `PreviewCanvasMountsProps.levelManager` typed as the existing `MovePreviewMountProps['levelManager']` **intersected** with `{ setLevelScene: (levelId, scene) => void }`. Leaves can now call `levelManager.setLevelScene(...)` directly from preview-completion paths (e.g. opening commit → host scene mutation) without crossing the orchestrator boundary. Pure type tightening — leaf subscription set untouched, no new hooks, no new high-freq stores.
+
+**Cardinal rule compliance**: orchestrators still don't `useSyncExternalStore` against high-freq stores; leaf subscriber count unchanged; bitmap cache key untouched; no event-handler stale-snapshot regression (commands receive the same `dxfScene` instance the renderer sees that frame).
+
+**Files touched**: `CanvasSection.tsx` (1 LOC), `canvas-layer-stack-leaves.tsx` (+`SceneModel` type import + level-manager intersection, ~5 LOC).
+
 ### 2026-05-26 — Bitmap cache key extended for opening tag style (ADR-376 Phase C.2)
 
 `dxf-bitmap-cache.ts` `bimSettingsHash` now also folds `getCurrentOpeningTagStyle()` into its key. Per-project tag style mutations (showSize/showHeight/labelFormat/leaderVisible/leaderColor/textColor) must bust the cache so the next render reflects the updated label content/visibility. Mutations happen via ribbon dropdown — rare events, no per-frame cost.

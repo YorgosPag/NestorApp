@@ -19,10 +19,10 @@
  * recursively, so disposal is automatic.
  */
 import * as THREE from 'three';
-import { Line2 } from 'three/examples/jsm/lines/Line2';
-import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2';
-import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry';
-import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
+import { Line2 } from 'three/examples/jsm/lines/Line2.js';
+import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { bimEdgeResolutionStore } from './bim-edge-resolution-store';
 
 /** Fallback color when the resolver returns null (= token-driven). */

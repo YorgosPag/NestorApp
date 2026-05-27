@@ -45,6 +45,7 @@ import type { DxfGripDragPreview } from '../../hooks/grip-computation';
 import { useHoveredEntity } from '../../systems/hover/useHover';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+import type { SceneModel } from '../../types/scene';
 import type { DxfCanvasRef } from '../../canvas-v2';
 import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
 import type { DxfScene, DxfRenderOptions } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -296,7 +297,9 @@ interface PreviewCanvasMountsProps {
   openingGhost: Omit<OpeningGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   gripDragPreview: DxfGripDragPreview | null;
   selectedEntityIds: string[];
-  levelManager: MovePreviewMountProps['levelManager'];
+  levelManager: MovePreviewMountProps['levelManager'] & {
+    setLevelScene: (levelId: string, scene: SceneModel) => void;
+  };
   transform: ViewTransform;
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
