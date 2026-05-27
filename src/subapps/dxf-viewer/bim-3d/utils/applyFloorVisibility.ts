@@ -1,6 +1,16 @@
 /**
- * applyFloorVisibility — mutates Three.js Group mesh visibility per floor mode.
+ * applyFloorVisibility — post-hoc mesh.visible / material mutation per floor mode.
  * ADR-366 Phase 4 Group B (B.3). Pure function, no React.
+ *
+ * ADR-382 Phase C role split:
+ *   - **Primary 'hide' path**: pre-mesh filter στο `BimSceneLayer.sync()`. Meshes
+ *     για levels με mode='hide' δεν δημιουργούνται καθόλου (resolver intersection).
+ *   - **This function**: applies ghost styling for mode='ghost', and serves as
+ *     defense-in-depth for floor toggles between rebuilds (mode flip on already-
+ *     built meshes without triggering a re-sync). Show restores original material.
+ *
+ * Symmetric with `applyBuildingVisibility`. Keep idempotent — running twice with
+ * identical modes leaves meshes unchanged.
  */
 
 import * as THREE from 'three';

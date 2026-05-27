@@ -5,6 +5,11 @@
  * Phase 3+: incremental dirty-tracking via entity.updatedAt comparison.
  *
  * ADR-366 Phase 2. Owned exclusively by ThreeJsSceneManager.
+ *
+ * ADR-382 Phase C — visibility decisions delegate to `resolveIsEntityVisible()`
+ * SSoT (V/G category + Layer + Floor + Building intersection). Per-entity
+ * pre-mesh filter mirrors the 2D BIM renderers, achieving 2D⟷3D parity for
+ * Layer.visible / Layer.frozen toggles (the bug ADR-382 §1.1 resolves).
  */
 
 import * as THREE from 'three';
@@ -14,10 +19,34 @@ import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import type { BuildingVisMode } from '../utils/building-visibility-state';
-import { resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
+import type { FloorVisMode } from '../utils/floor-visibility-state';
+import { resolveIsEntityVisible } from '../../bim/visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
+import { getLayer } from '../../stores/LayerStore';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
+import type { BimCategory, ObjectStyle } from '../../config/bim-object-styles';
+import type { SceneLayer } from '../../types/entities';
+
+interface SyncContext {
+  readonly objectStyles: Partial<Record<BimCategory, ObjectStyle>>;
+  readonly floors: readonly FloorRef[];
+  readonly buildings: readonly BuildingRef[];
+  readonly buildingVisModes: ReadonlyMap<string, BuildingVisMode>;
+  /** Shared floor mode — 3D viewer renders one active level at a time. */
+  readonly floorMode: FloorVisMode | undefined;
+  readonly activeBuildingId: string | null;
+  readonly useNewSystem: boolean;
+  readonly floorElevationMm: number;
+  readonly activeLevelId: string | undefined;
+}
+
+interface EntityResolution {
+  readonly layer: SceneLayer | null;
+  readonly buildingId: string;
+  readonly buildingMode: BuildingVisMode | undefined;
+  readonly baseElevation: number;
+}
 
 export class BimSceneLayer {
   readonly group: THREE.Group;
@@ -37,92 +66,151 @@ export class BimSceneLayer {
     buildings: readonly BuildingRef[] = [],
     activeBuildingId: string | null = null,
     buildingVisModes: ReadonlyMap<string, BuildingVisMode> = new Map(),
+    floorVisModes: ReadonlyMap<string, FloorVisMode> = new Map(),
   ): void {
     this.clearGroup();
-    const useNewSystem = buildingVisModes.size > 0;
-    // ADR-375 Phase C.4 v2.6 — V/G category visibility hotfix.
-    // Snapshot lifted once: when a category is hidden via per-view override
-    // we skip the entire loop so no mesh + edge overlay reaches the scene.
-    // Walls/slabs hidden also remove their hosted opening cutouts; opening
-    // categories hidden keep host walls/slabs solid (no THREE.Shape holes).
     const objectStyles = useDrawingScaleStore.getState().objectStyles;
-    const wallVisible        = resolveIsCategoryVisible('wall', objectStyles);
-    const columnVisible      = resolveIsCategoryVisible('column', objectStyles);
-    const beamVisible        = resolveIsCategoryVisible('beam', objectStyles);
-    const slabVisible        = resolveIsCategoryVisible('slab', objectStyles);
-    const stairVisible       = resolveIsCategoryVisible('stair', objectStyles);
-    const openingVisible     = resolveIsCategoryVisible('opening', objectStyles);
-    const slabOpeningVisible = resolveIsCategoryVisible('slab-opening', objectStyles);
-    const EMPTY_OPENINGS: readonly OpeningEntity[] = [];
-    const EMPTY_SLAB_OPENINGS: readonly SlabOpeningEntity[] = [];
+    const useNewSystem = buildingVisModes.size > 0;
+    const floorMode = activeLevelId ? floorVisModes.get(activeLevelId) : undefined;
+    const ctx: SyncContext = {
+      objectStyles, floors, buildings, buildingVisModes,
+      floorMode, activeBuildingId, useNewSystem,
+      floorElevationMm, activeLevelId,
+    };
 
-    // ADR-363 Bug 2 — wall openings render ως THREE.Shape.holes cutouts στους
-    // τοίχους. Mirror του slab→slab-opening pattern: openings filtered per
-    // wall με `wallId` FK, passed inline στο wallToMesh.
-    if (wallVisible) {
-      for (const wall of entities.walls) {
-        const resolved = resolveEntityBuilding(wall, floors, buildings);
-        const buildingId = resolved?.id ?? '';
-        if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) continue;
-        const openingsForWall = openingVisible
-          ? entities.openings.filter((o) => o.params.wallId === wall.id)
-          : EMPTY_OPENINGS;
-        const mesh = wallToMesh(wall, openingsForWall, floorElevationMm, activeLevelId, resolved?.baseElevation ?? 0);
-        if (mesh) { mesh.userData['buildingId'] = buildingId; this.group.add(mesh); }
-      }
-    }
-    if (columnVisible) {
-      for (const column of entities.columns) {
-        const resolved = resolveEntityBuilding(column, floors, buildings);
-        const buildingId = resolved?.id ?? '';
-        if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) continue;
-        const mesh = columnToMesh(column, floorElevationMm, activeLevelId, resolved?.baseElevation ?? 0);
-        if (mesh) { mesh.userData['buildingId'] = buildingId; this.group.add(mesh); }
-      }
-    }
-    if (beamVisible) {
-      for (const beam of entities.beams) {
-        const resolved = resolveEntityBuilding(beam, floors, buildings);
-        const buildingId = resolved?.id ?? '';
-        if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) continue;
-        const mesh = beamToMesh(beam, activeLevelId, resolved?.baseElevation ?? 0);
-        if (mesh) { mesh.userData['buildingId'] = buildingId; this.group.add(mesh); }
-      }
-    }
-    // ADR-363 §11.Q3 Phase 3.7d + ADR-370 §6 Phase 7 — slab cutouts.
-    // Openings live as first-class entities (own Firestore collection) but are
-    // rendered as holes in their host slab's extrude (THREE.Shape.holes). No
-    // separate loop — passed inline so triangulation cuts the slab geometry.
-    if (slabVisible) {
-      for (const slab of entities.slabs) {
-        const resolved = resolveEntityBuilding(slab, floors, buildings);
-        const buildingId = resolved?.id ?? '';
-        if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) continue;
-        const openingsForSlab = slabOpeningVisible
-          ? entities.slabOpenings.filter((o) => o.params.slabId === slab.id)
-          : EMPTY_SLAB_OPENINGS;
-        const mesh = slabToMesh(slab, openingsForSlab, activeLevelId, resolved?.baseElevation ?? 0);
-        if (mesh) { mesh.userData['buildingId'] = buildingId; this.group.add(mesh); }
-      }
-    }
-    // ADR-370 Phase 5 — stairs render as multi-mesh components (treads/risers/
-    // stringers/handrails/landings). stairToMeshes returns a flat array; each
-    // mesh carries its own userData.stairComponent for raycast resolution.
-    if (stairVisible) {
-      for (const stair of entities.stairs) {
-        const resolved = resolveEntityBuilding(stair, floors, buildings);
-        const buildingId = resolved?.id ?? '';
-        if (!this.shouldRender(buildingId, useNewSystem, buildingVisModes, activeBuildingId)) continue;
-        const meshes = stairToMeshes(stair, floorElevationMm, activeLevelId, resolved?.baseElevation ?? 0);
-        for (const mesh of meshes) {
-          mesh.userData['buildingId'] = buildingId;
-          this.group.add(mesh);
-        }
-      }
-    }
+    this.syncWalls(entities, ctx);
+    this.syncColumns(entities, ctx);
+    this.syncBeams(entities, ctx);
+    this.syncSlabs(entities, ctx);
+    this.syncStairs(entities, ctx);
+
     let found = false;
     this.group.traverse((obj) => { if (!found && obj instanceof THREE.Mesh) found = true; });
     this._hasMesh = found;
+  }
+
+  /**
+   * Per-entity visibility + building binding. Returns null when the entity
+   * is filtered out (V/G hide, Layer hide/frozen, Floor hide, Building hide,
+   * or active-building outside-of-view). Single SSoT for ADR-382 intersection.
+   */
+  private resolveEntity(
+    entity: { layerId?: string },
+    category: BimCategory,
+    ctx: SyncContext,
+  ): EntityResolution | null {
+    const layer = entity.layerId ? getLayer(entity.layerId) : null;
+    const resolved = resolveEntityBuilding(
+      entity as Parameters<typeof resolveEntityBuilding>[0],
+      ctx.floors,
+      ctx.buildings,
+    );
+    const buildingId = resolved?.id ?? '';
+    const buildingMode = ctx.buildingVisModes.get(buildingId);
+
+    if (!resolveIsEntityVisible(
+      { category, layerId: entity.layerId },
+      { objectStyles: ctx.objectStyles, layer, floorMode: ctx.floorMode, buildingMode },
+    )) return null;
+
+    if (!this.shouldRender(buildingId, ctx.useNewSystem, ctx.buildingVisModes, ctx.activeBuildingId)) {
+      return null;
+    }
+    return { layer, buildingId, buildingMode, baseElevation: resolved?.baseElevation ?? 0 };
+  }
+
+  /** Filter hosted openings by per-entity visibility (V/G + Layer + Floor + Building). */
+  private filterHostedOpenings(
+    openings: readonly OpeningEntity[],
+    hostKey: 'wallId',
+    hostId: string,
+    parentBuildingMode: BuildingVisMode | undefined,
+    ctx: SyncContext,
+  ): readonly OpeningEntity[] {
+    return openings.filter((o) =>
+      o.params[hostKey] === hostId && resolveIsEntityVisible(
+        { category: 'opening', layerId: o.layerId },
+        {
+          objectStyles: ctx.objectStyles,
+          layer: o.layerId ? getLayer(o.layerId) : null,
+          floorMode: ctx.floorMode,
+          buildingMode: parentBuildingMode,
+        },
+      )
+    );
+  }
+
+  private filterHostedSlabOpenings(
+    slabOpenings: readonly SlabOpeningEntity[],
+    slabId: string,
+    parentBuildingMode: BuildingVisMode | undefined,
+    ctx: SyncContext,
+  ): readonly SlabOpeningEntity[] {
+    return slabOpenings.filter((o) =>
+      o.params.slabId === slabId && resolveIsEntityVisible(
+        { category: 'slab-opening', layerId: o.layerId },
+        {
+          objectStyles: ctx.objectStyles,
+          layer: o.layerId ? getLayer(o.layerId) : null,
+          floorMode: ctx.floorMode,
+          buildingMode: parentBuildingMode,
+        },
+      )
+    );
+  }
+
+  private syncWalls(entities: Bim3DEntities, ctx: SyncContext): void {
+    for (const wall of entities.walls) {
+      const r = this.resolveEntity(wall, 'wall', ctx);
+      if (!r) continue;
+      const openingsForWall = this.filterHostedOpenings(
+        entities.openings, 'wallId', wall.id, r.buildingMode, ctx,
+      );
+      const mesh = wallToMesh(wall, openingsForWall, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
+  private syncColumns(entities: Bim3DEntities, ctx: SyncContext): void {
+    for (const column of entities.columns) {
+      const r = this.resolveEntity(column, 'column', ctx);
+      if (!r) continue;
+      const mesh = columnToMesh(column, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
+  private syncBeams(entities: Bim3DEntities, ctx: SyncContext): void {
+    for (const beam of entities.beams) {
+      const r = this.resolveEntity(beam, 'beam', ctx);
+      if (!r) continue;
+      const mesh = beamToMesh(beam, ctx.activeLevelId, r.baseElevation);
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
+  private syncSlabs(entities: Bim3DEntities, ctx: SyncContext): void {
+    for (const slab of entities.slabs) {
+      const r = this.resolveEntity(slab, 'slab', ctx);
+      if (!r) continue;
+      const openingsForSlab = this.filterHostedSlabOpenings(
+        entities.slabOpenings, slab.id, r.buildingMode, ctx,
+      );
+      const mesh = slabToMesh(slab, openingsForSlab, ctx.activeLevelId, r.baseElevation);
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
+  private syncStairs(entities: Bim3DEntities, ctx: SyncContext): void {
+    for (const stair of entities.stairs) {
+      const r = this.resolveEntity(stair, 'stair', ctx);
+      if (!r) continue;
+      const meshes = stairToMeshes(stair, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      for (const mesh of meshes) {
+        mesh.userData['buildingId'] = r.buildingId;
+        this.group.add(mesh);
+      }
+    }
   }
 
   /** Returns true if a mesh for buildingId should be added to the scene. */

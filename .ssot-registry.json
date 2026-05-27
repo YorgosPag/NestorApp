@@ -2791,6 +2791,20 @@
       "addedByAdr": "ADR-340",
       "tier": 3
     },
+    "visibility-resolver": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/visibility/visibility-resolver.ts",
+      "description": "ADR-382 BIM visibility resolver SSoT — single intersection authority for V/G + Layer + Floor + Building (ANY-hides-wins). Consumed by all 7 BIM 2D renderers (Wall/Column/Beam/Slab/Stair/Opening/SlabOpening) and the 3D BimSceneLayer.sync() per-entity loop (Phase C). Forbids direct V/G category visibility reads (`objectStyles[cat]?.visible`) outside the resolver internals — bypasses the intersection and silently re-introduces the original 2D/3D parity bug (ADR-382 §1.1: hidden layer entities stayed visible in 3D because only V/G was consulted). resolveIsCategoryVisible() remains exported as a deprecated backward-compat wrapper for unit tests + legacy callers; new code must use resolveIsEntityVisible.",
+      "forbiddenPatterns": [
+        "objectStyles\\[['\"](?:wall|column|beam|slab|stair|opening|slab-opening)['\"]\\]\\?\\.visible"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/visibility/",
+        "src/subapps/dxf-viewer/config/bim-line-weight-resolver.ts"
+      ],
+      "addedDate": "2026-05-27",
+      "addedByAdr": "ADR-382",
+      "tier": 2
+    },
     "snap-engine": {
       "ssotFile": "src/subapps/dxf-viewer/snapping/global-snap-engine.ts",
       "description": "ProSnapEngineV2 single production singleton SSoT (ADR-378 Master Snap Architecture, 2026-05-27; supersedes ADR-040 Phase VIII narrow scope). Canonical access: `getGlobalSnapEngine()`. Scene-initialize lifecycle owned exclusively by `useGlobalSnapSceneSync` (called once from CanvasSection); other call sites forbidden. 26 sub-engines registered via SnapEngineRegistry (Orchestrator pattern — Revit/AutoCAD/ArchiCAD/BricsCAD/SketchUp/Vectorworks/Bentley industry convergence, 7/7). Forbidden: (1) `new ProSnapEngineV2(` outside canonical — parallel instance breaks ADR-040 perf invariants; (2) `new SnapManager(` legacy name; (3) `new SnapEngine(` — geo-canvas parallel 6-mode class deleted in ADR-378 Phase 4 (2026-05-27), reintroduction blocked; (4) `class AISnappingEngine` — conference demo dead code deleted in ADR-378 Phase 1 (2026-05-27), reintroduction blocked. Geo-canvas property floorplan tab now consumes the same engine via `useSnapEngine` façade + `parserResultToEntities` adapter (ADR-378 §3.1).",

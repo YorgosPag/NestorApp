@@ -71,6 +71,22 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-27 — ADR-382 Visibility Resolver — micro-leaf compliance note (Phase C)
+
+**Status**: COMPLIANT — no ADR-040 invariants broken.
+
+**Why noted here**: [ADR-382](./ADR-382-visibility-resolver-ssot.md) Phase C adds per-entity `resolveIsEntityVisible()` calls inside `BimSceneLayer.sync()` (3D) + each of the 7 BIM 2D renderers. Two compliance points worth recording so future devs don't try to "optimize" by moving the call elsewhere:
+
+1. **Event-time, not subscription-time**: `resolveIsEntityVisible()` is a pure function. Each renderer reads `useDrawingScaleStore.getState().objectStyles` + `getLayer(id)` at call time — no `useSyncExternalStore`, no `subscribe` in the render path. Matches the existing 2D BIM renderer pattern (Phase B identical refactor).
+
+2. **Pre-mesh filter, not mesh-mutation**: 3D hide is now achieved by **not creating** the Three.js mesh in `BimSceneLayer.sync()` (resolver returns false → `continue` in the per-entity loop). `applyFloorVisibility` / `applyBuildingVisibility` retain their role for ghost styling + defense-in-depth (rebuilds between toggles), but the primary hide path bypasses mesh creation entirely. This is a strict improvement over the pre-ADR-382 post-hoc `mesh.visible = false` approach (which still allocated GPU geometry).
+
+**New subscriber added (compliant)**: `use-bim3d-store-sync.ts` gains a `subscribeLayerStore()` consumer that triggers `syncBimEntities()` when `LayerStore.snapshot.version` changes. Low-frequency (user toggles in Layer Manager), not 60fps — same class as the existing `useViewMode3DStore` subscriptions. ADR-040 Cardinal Rule #1 unaffected (orchestrators still don't subscribe to high-freq stores).
+
+**Cross-refs**: [ADR-382 §3.4 3D pipeline pattern](./ADR-382-visibility-resolver-ssot.md) · `BimSceneLayer.sync()` (event-time read site) · `use-bim3d-store-sync.ts` (low-freq subscriber).
+
+---
+
 ### 2026-05-27 — Phase XXIII — Single rAF SSoT Consolidation (BIM 3D)
 
 **Status**: IMPLEMENTED 2026-05-27.

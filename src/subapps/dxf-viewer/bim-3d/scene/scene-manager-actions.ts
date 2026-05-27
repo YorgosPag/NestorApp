@@ -13,6 +13,7 @@ import type { BimSceneLayer } from './BimSceneLayer';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import type { BuildingVisMode } from '../utils/building-visibility-state';
+import type { FloorVisMode } from '../utils/floor-visibility-state';
 import type { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
 import type { KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
 import type { EnvmapGenerator } from '../lighting/envmap-generator';
@@ -38,6 +39,8 @@ export interface SyncBimEntitiesArgs {
   readonly buildings: readonly BuildingRef[];
   readonly activeBuildingId: string | null;
   readonly buildingVisModes: ReadonlyMap<string, BuildingVisMode>;
+  /** ADR-382 Phase C — per-level visibility modes for pre-mesh hide filter. */
+  readonly floorVisModes: ReadonlyMap<string, FloorVisMode>;
 }
 
 export function syncBimEntitiesIntoScene(
@@ -56,6 +59,7 @@ export function syncBimEntitiesIntoScene(
     args.buildings,
     args.activeBuildingId,
     args.buildingVisModes,
+    args.floorVisModes,
   );
   if (args.buildingVisModes.size > 0) applyBuildingVisibility(deps.bimLayer.group, args.buildingVisModes);
   if (selectedId) deps.selectionHighlighter.onSelect(selectedId);

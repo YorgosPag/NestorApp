@@ -1,7 +1,15 @@
 /**
- * applyBuildingVisibility — mutates Three.js Group mesh visibility per building mode.
+ * applyBuildingVisibility — post-hoc mesh.visible / material mutation per building mode.
  * ADR-369 Q2.3. Pure function, no React.
  * Ghost material reuses getGhostMaterial from floor-visibility-state (SSoT).
+ *
+ * ADR-382 Phase C role split:
+ *   - **Primary 'hide' path**: pre-mesh filter στο `BimSceneLayer.sync()` (resolver
+ *     intersection). Buildings με mode='hide' δεν παράγουν meshes καθόλου.
+ *   - **This function**: applies ghost styling for mode='ghost', and defense-in-
+ *     depth for building toggles between rebuilds. Show restores original material.
+ *
+ * Symmetric με `applyFloorVisibility`. Keep idempotent.
  */
 
 import * as THREE from 'three';

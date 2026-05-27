@@ -152,18 +152,19 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     setSceneBboxGetter(() => managerRef.current?.getSceneFramingBounds() ?? null);
 
     // Initial entity sync — external prop overrides global store when provided (ADR-371).
+    const initialFloorModes = useViewMode3DStore.getState().floorVisibilityModes;
     if (externalEntitiesMode) {
-      managerRef.current.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined);
+      managerRef.current.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined, [], [], null, new Map(), initialFloorModes);
     } else {
       const entitiesState = useBim3DEntitiesStore.getState();
       const { walls, columns, beams, slabs, slabOpenings, openings, stairs, activeLevelId, floors, buildings, activeBuildingId, buildingVisibilityModes } = entitiesState;
-      managerRef.current.syncBimEntities({ walls, columns, beams, slabs, slabOpenings, openings, stairs }, 0, activeLevelId ?? undefined, floors, buildings, activeBuildingId, buildingVisibilityModes);
+      managerRef.current.syncBimEntities({ walls, columns, beams, slabs, slabOpenings, openings, stairs }, 0, activeLevelId ?? undefined, floors, buildings, activeBuildingId, buildingVisibilityModes, initialFloorModes);
     }
     managerRef.current.syncDxfOverlay(useDxfOverlay3DStore.getState().dxfScene);
 
-    // Apply current floor visibility modes immediately.
-    const modes = useViewMode3DStore.getState().floorVisibilityModes;
-    if (modes.size > 0) managerRef.current.applyFloorVisibility(modes);
+    // ADR-382 Phase C — post-hoc apply preserves ghost styling + defense-in-depth
+    // for floor-mode toggles between rebuilds. Hide is handled pre-mesh in sync().
+    if (initialFloorModes.size > 0) managerRef.current.applyFloorVisibility(initialFloorModes);
 
     // Apply current lighting preset immediately.
     const { sunPreset } = useViewMode3DStore.getState();
@@ -203,6 +204,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   useEffect(() => {
     if (externalEntitiesMode) return;
     return useBim3DEntitiesStore.subscribe((s) => {
+      const floorModes = useViewMode3DStore.getState().floorVisibilityModes;
       managerRef.current?.syncBimEntities(
         { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs, slabOpenings: s.slabOpenings, openings: s.openings, stairs: s.stairs },
         0,
@@ -211,6 +213,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         s.buildings,
         s.activeBuildingId,
         s.buildingVisibilityModes,
+        floorModes,
       );
     });
   }, [externalEntitiesMode]);
@@ -229,7 +232,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // ADR-371: external entity feed — push prop changes into the scene.
   useEffect(() => {
     if (!externalEntitiesMode) return;
-    managerRef.current?.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined);
+    const floorModes = useViewMode3DStore.getState().floorVisibilityModes;
+    managerRef.current?.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined, [], [], null, new Map(), floorModes);
   }, [externalEntitiesMode, bimEntities]);
 
   useBim3DStoreSync(managerRef);

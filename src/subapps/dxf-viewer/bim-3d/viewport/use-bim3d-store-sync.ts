@@ -7,6 +7,8 @@ import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { useSectionStore } from '../stores/SectionStore';
 import { LIGHT_PRESETS } from '../lighting/lighting-presets';
 import { getHdriPreset } from '../lighting/hdri-environment';
+import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
+import { subscribeLayerStore, getLayerStoreSnapshot } from '../../stores/LayerStore';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 
 // ADR-366 store→manager subscription sync. Wires low-frequency store updates
@@ -18,11 +20,56 @@ export function useBim3DStoreSync(managerRef: RefObject<ThreeJsSceneManager | nu
     });
   }, [managerRef]);
 
+  // ADR-382 Phase C — floor mode change must trigger BOTH a scene rebuild
+  // (so 'hide' modes filter pre-mesh via resolver) AND post-hoc apply for
+  // 'show'/'ghost' styling on already-built meshes. Defense-in-depth.
   useEffect(() => {
     return useViewMode3DStore.subscribe(
       (s) => s.floorVisibilityModes,
-      (modes) => { managerRef.current?.applyFloorVisibility(modes); },
+      (modes) => {
+        const manager = managerRef.current;
+        if (!manager) return;
+        const s = useBim3DEntitiesStore.getState();
+        manager.syncBimEntities(
+          { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs, slabOpenings: s.slabOpenings, openings: s.openings, stairs: s.stairs },
+          0,
+          s.activeLevelId ?? undefined,
+          s.floors,
+          s.buildings,
+          s.activeBuildingId,
+          s.buildingVisibilityModes,
+          modes,
+        );
+        manager.applyFloorVisibility(modes);
+      },
     );
+  }, [managerRef]);
+
+  // ADR-382 Phase C — LayerStore.visible / .frozen toggles trigger a 3D rebuild
+  // so the resolver's pre-mesh filter removes hidden entities. Without this,
+  // toggling a layer in the Layer Manager would only affect 2D (the bug ADR-382
+  // resolves). snapshot.version is the monotonic change marker.
+  useEffect(() => {
+    let prevVersion = getLayerStoreSnapshot().version;
+    return subscribeLayerStore(() => {
+      const next = getLayerStoreSnapshot();
+      if (next.version === prevVersion) return;
+      prevVersion = next.version;
+      const manager = managerRef.current;
+      if (!manager) return;
+      const s = useBim3DEntitiesStore.getState();
+      const floorModes = useViewMode3DStore.getState().floorVisibilityModes;
+      manager.syncBimEntities(
+        { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs, slabOpenings: s.slabOpenings, openings: s.openings, stairs: s.stairs },
+        0,
+        s.activeLevelId ?? undefined,
+        s.floors,
+        s.buildings,
+        s.activeBuildingId,
+        s.buildingVisibilityModes,
+        floorModes,
+      );
+    });
   }, [managerRef]);
 
   useEffect(() => {

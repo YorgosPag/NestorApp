@@ -355,13 +355,14 @@ export class ThreeJsSceneManager {
     buildings: readonly BuildingRef[] = [],
     activeBuildingId: string | null = null,
     buildingVisModes: ReadonlyMap<string, BuildingVisMode> = new Map(),
+    floorVisModes: ReadonlyMap<string, FloorVisMode> = new Map(),
   ): void {
     if (this.disposed) return;
     syncBimEntitiesIntoScene(
       { bimLayer: this.bimLayer, selectionHighlighter: this.selectionHighlighter,
         keyboardFocusManager: this.keyboardFocusManager,
         pathTracerRenderer: this.pathTracerRenderer, sectionController: this.sectionController },
-      { entities, floorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes },
+      { entities, floorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
     );
     this.markSceneDirty();
   }

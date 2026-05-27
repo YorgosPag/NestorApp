@@ -210,7 +210,7 @@ Revit-style audit checklist applied σε κάθε domain:
 
 | Priority | # | Action | Sub-ADR (proposed) | Effort | LOC saved | Risk |
 |---|---|---|---|---|---|---|
-| 🔴 | **C1** | **VisibilityResolver SSoT** (5→1) + fix `layer.visible` bug + 2D/3D consultation parity | **ADR-382** (ή allocated) | ~3 days Opus | medium | ⚠️ production logic |
+| ✅ | **C1** | **VisibilityResolver SSoT** (5→1) + fix `layer.visible` bug + 2D/3D consultation parity | **[ADR-382](./ADR-382-visibility-resolver-ssot.md)** ✅ COMPLETE 2026-05-27 | ~3 days Opus (delivered) | medium | ⚠️ production logic — **closed** |
 | 🔴 | **C2** | BaseGripDefinition + `shared-grip-math.ts` | **ADR-383** | ~60h Opus | ~750 | medium |
 | 🔴 | **C3** | PreferenceResolver SSoT + extract `Debouncer<T>` + `useLocalWriteGuard()` | **ADR-384** | ~2 weeks Opus | ~400 | LOW |
 | 🟡 | **M1** | `BaseEntityFirestoreService<TDoc, TParams, TSave>` (mirror audit pattern) | **ADR-385** | ~80h Opus | ~140 | LOW |

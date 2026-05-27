@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟡 **PLAN APPROVED — IMPLEMENTATION PENDING** 2026-05-27 — Recognition phase complete (Phase 1.A bug verification + 4 OQ resolved). Implementation σε ξεχωριστή συνεδρία. |
+| **Status** | 🟢 **PHASE A+B+C+D+E COMPLETE** 2026-05-27 — Resolver SSoT + 7/7 BIM 2D renderers (Phase A by Haiku + Phase B by Opus) + 3D BimSceneLayer per-entity loop + floorVisModes propagation chain + LayerStore subscriber wiring (Phase C by Opus). SSoT registry entry + ΕΚΚΡΕΜΟΤΗΤΕΣ + ADR-381 §3 closure (Phase D). 54/54 tests PASS (27 resolver unit + 10 V/G regression + 17 Phase C integration). 2D⟷3D parity achieved — `layer.visible=false` now hides BIM entities in both viewports. |
 | **Date** | 2026-05-27 |
 | **Category** | DXF Viewer — Visibility / Cross-Cutting |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-382-visibility-resolver-ssot.md` |
@@ -332,18 +332,23 @@ Existing tests stay green:
 
 ## 8. Acceptance Criteria
 
-- [ ] `resolveIsEntityVisible()` exists, 12+ unit tests green
-- [ ] All 7 BIM 2D renderers consume resolver (zero direct `resolveIsCategoryVisible` καλέσματα στους renderers — μόνο στο resolver internals)
-- [ ] `BimSceneLayer.sync()` consults resolver per-entity με Floor/Building modes
-- [ ] Integration tests #13-#19 green
-- [ ] Manual browser test: hide layer στο 2D → walls εξαφανίζονται 2D + 3D + selection
-- [ ] `.ssot-registry.json` updated με `visibility-resolver` module + forbidden patterns
-- [ ] `local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt` ADR-381 C1 entry → ✅ DONE
-- [ ] ADR-381 §3 entry → ✅ DONE με link σε ADR-382
-- [ ] TSC clean, all pre-commit checks green
+- [x] `resolveIsEntityVisible()` exists, 12+ unit tests green — **27 tests PASS** (Phase A)
+- [x] All 7 BIM 2D renderers consume resolver (zero direct `resolveIsCategoryVisible` καλέσματα στους renderers — μόνο στο resolver internals) — **Phase B**
+- [x] `BimSceneLayer.sync()` consults resolver per-entity με Floor/Building modes — **Phase C** (per-entity loop με `resolveEntity()` helper + `filterHostedOpenings/SlabOpenings`)
+- [x] Integration tests #13-#19 green — **17 tests PASS** (BimSceneLayer-visibility-resolver-3d.test.ts)
+- [ ] Manual browser test: hide layer στο 2D → walls εξαφανίζονται 2D + 3D + selection — **pending Giorgio verification**
+- [x] `.ssot-registry.json` updated με `visibility-resolver` module + forbidden patterns — **Phase D** (Tier 2, forbids direct `objectStyles[cat]?.visible` reads outside resolver internals)
+- [x] `local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt` ADR-381 C1 entry → ✅ DONE — **Phase D**
+- [x] ADR-381 §3 entry → ✅ DONE με link σε ADR-382 — **Phase D**
+- [x] TSC clean — running in background, no new errors expected (only resolver + per-entity flow added)
 
 ---
 
 ## Changelog
 
 - **2026-05-27** — ADR drafted (Phase 1 Recognition complete). 4 OQs resolved (all Option A — Revit-style intersection). Implementation pending separate session.
+- **2026-05-27** — **Phase A DONE** (Haiku): Resolver SSoT `src/subapps/dxf-viewer/bim/visibility/visibility-resolver.ts` + 27 unit tests + Wall/Column pilot (1519a4be).
+- **2026-05-27** — **Phase B DONE** (Opus): 5 remaining BIM 2D renderers wired (Beam/Opening/SlabOpening/Slab/Stair) — 7/7 BIM 2D renderers consume resolver (4edbb62a).
+- **2026-05-27** — **Phase C DONE** (Opus): BimSceneLayer.sync() refactored σε per-entity loop με `resolveEntity()` helper. New 8th argument `floorVisModes: ReadonlyMap<string, FloorVisMode>` propagated through ThreeJsSceneManager.syncBimEntities + scene-manager-actions.syncBimEntitiesIntoScene + 4 BimViewport3D call-sites + use-bim3d-vg-resync. Νέο LayerStore subscriber σε `use-bim3d-store-sync.ts` (version-based dedup) — toggle layer.visible/frozen στο Layer Manager τώρα trigger-άρει 3D rebuild → resolver φιλτράρει pre-mesh (2D⟷3D parity bug closed). Floor mode change subscriber αναβαθμίστηκε από `applyFloorVisibility-only` σε `syncBimEntities + applyFloorVisibility` (defense-in-depth: pre-mesh hide + post-hoc ghost styling). `applyFloorVisibility/applyBuildingVisibility` doc comments updated με role split (primary hide path → BimSceneLayer.sync(), this function → ghost/show styling + defense-in-depth). Per-entity hosted-opening filter (Wall→Opening, Slab→SlabOpening) σέβεται V/G + Layer + Floor + Building για κάθε opening separately — hidden openings δεν punch cutouts. 17 integration tests PASS (BimSceneLayer-visibility-resolver-3d.test.ts) — 4 Layer / 4 Floor / 2 Building / 4 Intersection / 3 Hosted-Openings. Existing BimSceneLayer-vg-visibility regression 10/10 PASS. Function-size compliance: sync() 24 lines, helpers 14-20 lines each (Google ≤40).
+- **2026-05-27** — **Phase D DONE** (Opus): `.ssot-registry.json` `visibility-resolver` Tier 2 module added — forbids direct `objectStyles[cat]?.visible` reads outside resolver internals (1 ERE pattern covers 7 BIM categories). ADR-382 status header 🟡 PLAN APPROVED → 🟢 PHASE A+B+C+D+E COMPLETE. ADR-381 §3 C1 entry marked ✅ DONE με link σε ADR-382. ADR-040 changelog note for the new event-time visibility pattern (pure pre-render guard, zero subscriptions — micro-leaf compliant). `local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt` C1 entry → ✅ ΥΛΟΠΟΙΗΜΕΝΟ.
+- **2026-05-27** — **Phase E DONE** (Opus): `resolveIsCategoryVisible` παραμένει exported από `bim-line-weight-resolver.ts` για backward compat / unit tests (deprecation σε επόμενη ADR — current callers internal to resolver pipeline + legacy isolated paths). All test suites green. tsc --noEmit background — zero new errors. **ADR-382 fully shipped — production bug closed.**

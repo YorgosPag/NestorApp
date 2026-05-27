@@ -3,6 +3,7 @@
 import { useEffect, type RefObject } from 'react';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { useBim3DEntitiesStore, type Bim3DEntities } from '../stores/Bim3DEntitiesStore';
+import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 
 export const EMPTY_BIM_ENTITIES: Bim3DEntities = {
@@ -33,8 +34,9 @@ export function useBim3DVgResync(
       prevObjectStyles = state.objectStyles;
       const manager = managerRef.current;
       if (!manager) return;
+      const floorModes = useViewMode3DStore.getState().floorVisibilityModes;
       if (externalEntitiesMode) {
-        manager.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined);
+        manager.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined, [], [], null, new Map(), floorModes);
         return;
       }
       const s = useBim3DEntitiesStore.getState();
@@ -46,6 +48,7 @@ export function useBim3DVgResync(
         s.buildings,
         s.activeBuildingId,
         s.buildingVisibilityModes,
+        floorModes,
       );
     });
   }, [managerRef, externalEntitiesMode, bimEntities]);
