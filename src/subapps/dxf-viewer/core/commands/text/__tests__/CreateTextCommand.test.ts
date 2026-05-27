@@ -28,7 +28,7 @@ function makeRun(text: string): TextRun {
       widthFactor: 1,
       obliqueAngle: 0,
       tracking: 1,
-      color: { kind: 'byLayer' },
+      color: { kind: 'ByLayer' },
     },
   };
 }

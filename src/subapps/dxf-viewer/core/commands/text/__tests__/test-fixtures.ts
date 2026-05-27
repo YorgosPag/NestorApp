@@ -32,7 +32,7 @@ export function makeStyle(over: Partial<TextRunStyle> = {}): TextRunStyle {
     widthFactor: 1,
     obliqueAngle: 0,
     tracking: 1,
-    color: { kind: 'byLayer' },
+    color: { kind: 'ByLayer' },
     ...over,
   };
 }

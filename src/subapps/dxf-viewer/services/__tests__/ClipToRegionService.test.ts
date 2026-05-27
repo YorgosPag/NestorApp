@@ -16,7 +16,7 @@ function makeTextNode(text: string, height = 2.5): DxfTextNode {
   return {
     paragraphs: [
       {
-        runs: [{ text, style: { fontFamily: 'Arial', bold: false, italic: false, underline: false, overline: false, strikethrough: false, height, widthFactor: 1, obliqueAngle: 0, tracking: 1, color: { kind: 'byLayer' } } }],
+        runs: [{ text, style: { fontFamily: 'Arial', bold: false, italic: false, underline: false, overline: false, strikethrough: false, height, widthFactor: 1, obliqueAngle: 0, tracking: 1, color: { kind: 'ByLayer' } } }],
         indent: 0, leftMargin: 0, rightMargin: 0, tabs: [], justification: 0, lineSpacingMode: 'multiple', lineSpacingFactor: 1,
       },
     ],
@@ -105,8 +105,8 @@ describe('ClipToRegionService.clipText — textNode entities', () => {
       paragraphs: [
         {
           runs: [
-            { text: 'Hello', style: { fontFamily: 'Arial', bold: false, italic: false, underline: false, overline: false, strikethrough: false, height: 2.5, widthFactor: 1, obliqueAngle: 0, tracking: 1, color: { kind: 'byLayer' } } },
-            { text: ' World', style: { fontFamily: 'Arial', bold: true, italic: false, underline: false, overline: false, strikethrough: false, height: 2.5, widthFactor: 1, obliqueAngle: 0, tracking: 1, color: { kind: 'byLayer' } } },
+            { text: 'Hello', style: { fontFamily: 'Arial', bold: false, italic: false, underline: false, overline: false, strikethrough: false, height: 2.5, widthFactor: 1, obliqueAngle: 0, tracking: 1, color: { kind: 'ByLayer' } } },
+            { text: ' World', style: { fontFamily: 'Arial', bold: true, italic: false, underline: false, overline: false, strikethrough: false, height: 2.5, widthFactor: 1, obliqueAngle: 0, tracking: 1, color: { kind: 'ByLayer' } } },
           ],
           indent: 0, leftMargin: 0, rightMargin: 0, tabs: [], justification: 0, lineSpacingMode: 'multiple', lineSpacingFactor: 1,
         },

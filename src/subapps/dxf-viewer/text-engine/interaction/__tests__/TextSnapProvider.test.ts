@@ -31,7 +31,7 @@ function makeNode(rotation = 0): DxfTextNode {
               widthFactor: 1,
               obliqueAngle: 0,
               tracking: 1,
-              color: { kind: 'byLayer' },
+              color: { kind: 'ByLayer' },
             },
           },
         ],

@@ -8,7 +8,6 @@
     "**/*.ts",
     "**/*.tsx",
     "types/dxf-modules.d.ts",
-    "types/jest-globals.d.ts",
     "types/dxf-window.d.ts",
     "types/test-modules.d.ts"
   ],
