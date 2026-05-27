@@ -55,6 +55,14 @@ interface BimRenderSettingsState extends ResolvedBimSettings {
   /** Raw overrides stored in Firestore (null = not yet loaded for current level). */
   rawSettings: BimRenderSettings | null;
   currentLevelId: string | null;
+  /**
+   * ADR-375 v2.11 — Epoch ms of the most recent local mutation (any V/G or
+   * ObjectStyles setter). `useBimRenderSettingsSync` reads this to skip
+   * `loadForLevel` reloads while a debounced Firestore write is still
+   * in-flight (otherwise a stale snapshot echo would wipe local pending
+   * changes). 0 = no local mutation since last `loadForLevel`.
+   */
+  lastLocalMutationAt: number;
 
   // ── Actions ─────────────────────────────────────────────────────────────
   /** Called when active level changes — syncs store from Level.bimRenderSettings. */
@@ -117,6 +125,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
     ...defaultResolved,
     rawSettings: null,
     currentLevelId: null,
+    lastLocalMutationAt: 0,
 
     loadForLevel(levelId, settings) {
       const resolved = resolveBimSettings(settings ?? null);
@@ -126,12 +135,13 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         drawingScale: resolved.drawingScale,
         viewRange: resolved.viewRange,
         objectStyles: resolved.objectStyles,
+        lastLocalMutationAt: 0,
       });
     },
 
     setDrawingScale(scale) {
       const clamped = clampScale(scale);
-      set({ drawingScale: clamped });
+      set({ drawingScale: clamped, lastLocalMutationAt: Date.now() });
       const { currentLevelId } = get();
       if (currentLevelId) debounceWrite(currentLevelId, buildRaw({ ...get(), drawingScale: clamped }));
     },
@@ -139,14 +149,14 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
     resetDrawingScale() {
       const { currentLevelId } = get();
       const clamped = clampScale(DEFAULT_DRAWING_SCALE);
-      set({ drawingScale: clamped });
+      set({ drawingScale: clamped, lastLocalMutationAt: Date.now() });
       if (currentLevelId) debounceWrite(currentLevelId, buildRaw({ ...get(), drawingScale: clamped }));
     },
 
     setViewRangeField(field, valueMm) {
       const state = get();
       const next: ViewRange = { ...state.viewRange, [field]: valueMm };
-      set({ viewRange: next });
+      set({ viewRange: next, lastLocalMutationAt: Date.now() });
       if (state.currentLevelId)
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), viewRange: next }));
     },
@@ -156,7 +166,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       const prev = state.objectStyles[category];
       const nextCat: ObjectStyle = { ...prev, [key]: pen };
       const nextStyles = { ...state.objectStyles, [category]: nextCat };
-      set({ objectStyles: nextStyles });
+      set({ objectStyles: nextStyles, lastLocalMutationAt: Date.now() });
       if (state.currentLevelId)
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
     },
@@ -166,7 +176,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       const prev = state.objectStyles[category];
       const nextCat: ObjectStyle = { ...prev, visible };
       const nextStyles = { ...state.objectStyles, [category]: nextCat };
-      set({ objectStyles: nextStyles });
+      set({ objectStyles: nextStyles, lastLocalMutationAt: Date.now() });
       if (state.currentLevelId)
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
     },
@@ -176,7 +186,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       const prev = state.objectStyles[category];
       const nextCat: ObjectStyle = { ...prev, [key]: color };
       const nextStyles = { ...state.objectStyles, [category]: nextCat };
-      set({ objectStyles: nextStyles });
+      set({ objectStyles: nextStyles, lastLocalMutationAt: Date.now() });
       if (state.currentLevelId)
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
     },
@@ -186,7 +196,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       const prev = state.objectStyles[category];
       const nextCat: ObjectStyle = { ...prev, [key]: pattern };
       const nextStyles = { ...state.objectStyles, [category]: nextCat };
-      set({ objectStyles: nextStyles });
+      set({ objectStyles: nextStyles, lastLocalMutationAt: Date.now() });
       if (state.currentLevelId)
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
     },
