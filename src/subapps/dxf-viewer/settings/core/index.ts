@@ -24,7 +24,6 @@ export type {
 
 export {
   SUPPORTED_MODES,
-  ENTITY_TYPES,
   isViewerMode,
   isEntityType,
   isStorageMode

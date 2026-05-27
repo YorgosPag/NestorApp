@@ -15,6 +15,7 @@
  */
 import type { Timestamp } from 'firebase/firestore';
 import type { Point2D, Point3D } from '../../rendering/types/Types';
+export type { Point2D, Point3D };
 import type { BimEntity, BimLock, BimQuantityTakeoff } from './bim-base';
 
 // ============================================================================
