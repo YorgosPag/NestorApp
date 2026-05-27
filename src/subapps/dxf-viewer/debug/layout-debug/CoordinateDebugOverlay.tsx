@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Point2D, Viewport } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { useTransformValue } from '../../contexts/TransformContext';
+import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
 // Enterprise CSS Module - CLAUDE.md Protocol N.3 compliance
 import styles from './DebugOverlay.module.css';
 import { cn } from '@/lib/utils';

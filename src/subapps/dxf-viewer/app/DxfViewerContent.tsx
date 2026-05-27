@@ -8,7 +8,6 @@ import { useFullscreen } from '@/hooks/useFullscreen';
 import { FullscreenOverlay } from '@/core/containers/FullscreenOverlay';
 import React from 'react';
 import type { DxfViewerAppProps } from '../types';
-import type { ViewTransform } from '../rendering/types/Types';
 import type { ToolType } from '../ui/toolbar/types';
 import { useDxfViewerState } from '../hooks/useDxfViewerState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -46,10 +45,9 @@ import {
 import { SidebarSection } from '../layout/SidebarSection';
 import { MobileSidebarDrawer } from '../layout/MobileSidebarDrawer';
 import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
-// ✅ ENTERPRISE ARCHITECTURE: Transform Context (Single Source of Truth)
-import { TransformProvider } from '../contexts/TransformContext';
-// ADR-040 Phase XIII: TransformStore SSoT — used for initialTransform read
-import { getImmediateTransform } from '../systems/cursor/ImmediateTransformStore';
+// ADR-040 Phase XXII.C: TransformContext duplicate SSoT removed. ImmediateTransformStore
+// (Phase XIII) is the sole transform SSoT. Legacy React Context Provider deleted to kill
+// per-notch useState cascade + duplicate EventBus.emit on wheel zoom.
 import { type UnifiedTestReport } from '../debug/unified-test-runner';
 import { usePerformanceMonitorToggle } from '../hooks/usePerformanceMonitorToggle';
 import { PerformanceCategory } from '@/core/performance/types/performance.types';
@@ -177,7 +175,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     debug: false,
   });
   // Refs for effects hook
-  const contextSetTransformRef = React.useRef<((t: ViewTransform) => void) | null>(null);
   const prevGripStateRef = React.useRef<{ shouldEnableGrips: boolean } | null>(null);
   const prevPrimarySelectedIdRef = React.useRef<string | null>(null);
   const levelManagerRef = React.useRef(levelManager);
@@ -198,7 +195,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   });
   // ✅ ADR-065 SRP: Extracted callbacks
   const {
-    showCopyableNotification, wrappedHandleAction, handleTransformReady,
+    showCopyableNotification, wrappedHandleAction,
     wrappedHandleTransformChange, panToWorldOrigin, handleFileImportWithEncoding,
     handleRegionClick, nudgeSelection, selectionIdSet,
   } = useDxfViewerCallbacks({
@@ -206,7 +203,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     togglePerfMonitor, perfMonitorEnabled, fullscreen,
     setTestsModalOpen, setPdfPanelOpen, setAiChatOpen,
     setShowEnhancedImport, setShowImportWizard, setShowLegacyImport,
-    setCanvasTransform, contextSetTransformRef,
+    setCanvasTransform,
     currentScene, selectedEntityIds, handleSceneChange,
     handleFileImport, levelManager, overlayStore,
     universalSelection, setOverlayStatus, setOverlayKind,
@@ -292,10 +289,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     slabOpeningBridge, lineToolBridge, xlineModeBridge,
   });
   return (
-      <TransformProvider
-        initialTransform={getImmediateTransform()}
-        onTransformReady={handleTransformReady}
-      >
       <div className="flex flex-col h-full min-h-0">
         <DxfViewerTopBar
           ribbonCommands={ribbonCommands}
@@ -479,7 +472,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       )}
       </section>
       </div>
-      </TransformProvider>
   );
 });
 export default DxfViewerContent;

@@ -81,7 +81,6 @@ export interface DxfViewerCallbacksParams {
   setShowImportWizard: React.Dispatch<React.SetStateAction<boolean>>;
   setShowLegacyImport: React.Dispatch<React.SetStateAction<boolean>>;
   setCanvasTransform: (t: { scale: number; offsetX: number; offsetY: number }) => void;
-  contextSetTransformRef: React.MutableRefObject<((t: ViewTransform) => void) | null>;
   currentScene: SceneModel | null;
   selectedEntityIds: string[];
   handleSceneChange: (scene: SceneModel) => void;
@@ -102,7 +101,6 @@ export interface DxfViewerCallbacksParams {
 export interface DxfViewerCallbacksReturn {
   showCopyableNotification: (message: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
   wrappedHandleAction: (action: string, data?: string | number | Record<string, unknown>) => void;
-  handleTransformReady: (setTransform: (t: ViewTransform) => void) => void;
   wrappedHandleTransformChange: (transform: ViewTransform) => void;
   panToWorldOrigin: () => void;
   handleFileImportWithEncoding: (file: File, encoding?: string, saveContext?: DxfSaveContext) => Promise<void>;
@@ -123,7 +121,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     togglePerfMonitor, perfMonitorEnabled, fullscreen,
     setTestsModalOpen, setPdfPanelOpen, setAiChatOpen,
     setShowEnhancedImport, setShowImportWizard, setShowLegacyImport,
-    setCanvasTransform, contextSetTransformRef,
+    setCanvasTransform,
     currentScene, selectedEntityIds, handleSceneChange,
     handleFileImport, levelManager, overlayStore,
     universalSelection, setOverlayStatus, setOverlayKind,
@@ -273,26 +271,16 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       setShowEnhancedImport, setShowImportWizard, setShowLegacyImport,
       levelManager.saveContext, params.selectedEntityIds, user, t]);
 
-  // ✅ STABLE CALLBACK: handleTransformReady
-  const handleTransformReady = React.useCallback((setTransform: (t: ViewTransform) => void) => {
-    contextSetTransformRef.current = setTransform;
-  }, [contextSetTransformRef]);
-
-  // Wrap handleTransformChange to also update canvasTransform state.
-  // ADR-040 Phase XIII: setCanvasTransform writes through TransformStore SSoT,
-  // which fans out scale/offset notifications. The redundant ZoomStore.setScale
-  // call removed — ZoomStore is now a facade over TransformStore.
+  // ADR-040 Phase XXII.C: TransformContext duplicate SSoT removed. Mutation writes
+  // through TransformStore singleton (ImmediateTransformStore) only — no React
+  // useState cascade, no duplicate EventBus.emit('dxf-zoom-changed') per notch.
   const wrappedHandleTransformChange = React.useCallback((transform: ViewTransform) => {
-    const normalizedTransform = {
+    setCanvasTransform({
       scale: transform.scale || 1,
       offsetX: transform.offsetX || 0,
       offsetY: transform.offsetY || 0,
-    };
-    setCanvasTransform(normalizedTransform);
-    if (contextSetTransformRef.current) {
-      contextSetTransformRef.current(normalizedTransform);
-    }
-  }, [setCanvasTransform, contextSetTransformRef]);
+    });
+  }, [setCanvasTransform]);
 
   // 🏠 PAN TO WORLD ORIGIN (0,0) - Function for DebugToolbar
   const panToWorldOrigin = React.useCallback(() => {
@@ -427,7 +415,6 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
   return {
     showCopyableNotification,
     wrappedHandleAction,
-    handleTransformReady,
     wrappedHandleTransformChange,
     panToWorldOrigin,
     handleFileImportWithEncoding,

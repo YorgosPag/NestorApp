@@ -9,7 +9,7 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import type { TestDefinition, NotificationFn, WindowWithDxfTransform } from '../types/tests.types';
+import type { TestDefinition, NotificationFn } from '../types/tests.types';
 import {
   Triangle,
   Target,
@@ -131,7 +131,9 @@ export function getDebugTools(showCopyableNotification: NotificationFn): TestDef
             existingCoords.remove();
             showCopyableNotification('Live Coordinates: DISABLED ❌', 'info');
           } else {
-            const TransformModule = await import('../../../../contexts/TransformContext');
+            // ADR-040 Phase XXII.C: TransformContext duplicate SSoT removed.
+            // CoordinateDebugOverlay now reads transform from the singleton
+            // ImmediateTransformStore — no provider wrap required.
             const CoordinateModule = await import('../../../../debug/layout-debug/CoordinateDebugOverlay');
 
             const container = document.createElement('div');
@@ -139,19 +141,7 @@ export function getDebugTools(showCopyableNotification: NotificationFn): TestDef
             document.body.appendChild(container);
 
             const root = ReactDOM.createRoot(container);
-            root.render(
-              React.createElement(
-                TransformModule.TransformProvider,
-                {
-                  initialTransform: {
-                    scale: (window as WindowWithDxfTransform).dxfTransform?.scale || 1,
-                    offsetX: (window as WindowWithDxfTransform).dxfTransform?.offsetX || 0,
-                    offsetY: (window as WindowWithDxfTransform).dxfTransform?.offsetY || 0
-                  },
-                  children: React.createElement(CoordinateModule.default)
-                }
-              )
-            );
+            root.render(React.createElement(CoordinateModule.default));
 
             showCopyableNotification(
               'Live Coordinates: ENABLED ✅\n\n' +

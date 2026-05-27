@@ -71,6 +71,53 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-27 — Phase XXII.C — Legacy `TransformContext` duplicate SSoT removed
+
+**Status**: IMPLEMENTED 2026-05-27.
+
+**Why**: After Phase XXII.A landed, Firefox profile of wheel zoom still showed ~70% React reconciliation. Investigation revealed a vestigial dual-source-of-truth: `contexts/TransformContext.tsx` (React Context + `useState<ViewTransform>`) lived alongside the canonical `ImmediateTransformStore` (Phase XIII). Both received writes on every wheel notch via `wrappedHandleTransformChange` in `useDxfViewerCallbacks.ts`. Per-notch effects:
+
+- `TransformProvider.setTransformState(newTransform)` → React Provider re-render
+- Duplicate `EventBus.emit('dxf-zoom-changed', { transform })` (one from `TransformContext.setTransform`, one from `useCanvasOperations.handleTransformChange`)
+- New `value` memo object → context consumers re-render
+
+The Phase XIII migration note in `useCanvasTransformState.ts:8-15` documented that `DxfViewerContent` was supposed to stop holding React state for transform. The Provider duplicate was the last leftover write path. Only one production consumer (`debug/layout-debug/CoordinateDebugOverlay.tsx`) ever called `useTransform()` from this context — a debug-only overlay.
+
+**Phase XXII.C surgery** (5 files, ~120 LOC net delete):
+
+| File | Change |
+|------|--------|
+| `contexts/TransformContext.tsx` | **DELETED** — entire file removed via `git rm` |
+| `app/useDxfViewerCallbacks.ts` | Drop `contextSetTransformRef` param + `handleTransformReady` callback + return field. `wrappedHandleTransformChange` simplified to single `setCanvasTransform` write (which itself writes through `updateImmediateTransform`). |
+| `app/DxfViewerContent.tsx` | Drop `TransformProvider` import + wrap, drop `contextSetTransformRef` `useRef`, drop `handleTransformReady` destructure + param, drop unused `ViewTransform` type import. |
+| `debug/layout-debug/CoordinateDebugOverlay.tsx` | Migrate `useTransformValue` import: `../../contexts/TransformContext` → `../../systems/cursor/ImmediateTransformStore`. Same hook signature (`(): ViewTransform`), backed by `useSyncExternalStore` against the singleton — no behavior change for the overlay; it now subscribes selectively without a Provider. |
+| `ui/components/tests-modal/constants/debugTools.ts` | Live-coordinates debug tool no longer wraps `CoordinateDebugOverlay` in a runtime-created `TransformProvider`; renders the overlay directly (singleton subscription). Drop unused `WindowWithDxfTransform` import. |
+
+**SSoT topology after XXII.C**:
+
+```
+wheel notch
+  → useViewportManager.setTransform (CanvasSection)
+    → updateImmediateTransform()      ← canonical Phase XIII SSoT
+        ├─ markSystemsDirty(['dxf-canvas','layer-canvas'])
+        ├─ fullListeners.forEach(...)   ← CanvasLayerStackTransformBridge (Phase XXII.A)
+        ├─ scaleListeners.forEach(...)  ← ZoomControlsWidget
+        └─ offsetListeners.forEach(...)
+  → setCanvasTransform (useDxfViewerCallbacks) → updateImmediateTransform (idempotent write-through)
+```
+
+Zero React `useState` cascades on wheel zoom. Zero duplicate `EventBus.emit('dxf-zoom-changed')`. Zero ghost Provider re-render. ADR-040 cardinal rules unchanged.
+
+**Profile-driven scope decision**: Brief planned Phase XXII.B (bitmap-cache CSS-transform live zoom). Production-profile inspection of the Phase XXII.A baseline revealed (a) the `dxf-bitmap-cache.ts` is currently dead code (instantiated in `useDxfCanvasRenderer` but `rebuild()`/`blit()` never invoked — `DxfRenderer.render()` is called directly), and (b) raster cost is < 10% of frame budget; the 14% concentrated React time labeled `RibbonGroupRoot` was the remaining tall pole. Phase XXII.B is therefore **archived as "obviated by profile data"** in this changelog. XXII.C addresses the actual root cause; if production profile still shows unacceptable wheel-zoom FPS after XXII.C lands, the surviving options are (i) audit `RibbonGroupRoot` displayName (component identity unclear from JPG; need clarification) + memo/leaf-isolate, or (ii) write ADR-379 for a WebGL migration roadmap.
+
+**Verification plan**: production build (`npm run build && npm run start`) + Firefox profiler at `localhost:3000/dxf/viewer`. Target: wheel-zoom FPS ≥ 50, total React time < 30% of frame budget, zero `TransformContext` references in stack samples.
+
+**Files changed**: 4 modified + 1 deleted. TS check: clean (background). Pending commit.
+
+**Cross-refs**: [[Phase XIII — TransformStore SSoT]] · [[Phase XXII.A — Zoom-Path Orchestrator Decoupling]] · `useDxfViewerCallbacks.ts:285` · `ImmediateTransformStore.ts:30` (canonical write).
+
+---
+
 ### 2026-05-27 — Phase XXII.A follow-up — TS strictness noise (CanvasSectionOverlays refs)
 
 **Scope**: TypeScript-only noise. No architectural change.
