@@ -53,6 +53,7 @@ const ENTITY_COLLECTION_MAP: Readonly<Record<AuditEntityType, string>> = {
   'slab-opening': '',
   column: '',
   beam: '',
+  stair: '',
   // Performance / 3D BIM telemetry (ADR-366) — no rename propagation
   performance_diagnostic: '',
   performance_telemetry: '',

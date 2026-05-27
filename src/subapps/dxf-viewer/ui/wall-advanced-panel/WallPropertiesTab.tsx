@@ -7,6 +7,11 @@
  * `BimPropertiesRouter` when the primary selected entity is a wall. Resolves
  * auth + persistence context (no-ops internally until scope is set) and
  * forwards the entity + writers to `WallAdvancedPanel`.
+ *
+ * 2026-05-27 follow-up — persistence πλέον διαβάζεται από
+ * `BimPersistenceStateStore` (γραμμένο από `WallPersistenceHost`) αντί για
+ * δεύτερη κλήση του `useWallPersistence`. Closes duplicate-audit emission
+ * (2× 'created' / 2× 'deleted' per action) λόγω 2 instances ίδιου hook.
  */
 
 import React from 'react';
@@ -15,7 +20,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useLevels } from '../../systems/levels';
 import { useSelectedWall } from './hooks/useSelectedWall';
 import { useWallParamsDispatcher } from './commands/dispatchWallParamPatch';
-import { useWallPersistence } from '../../hooks/data/useWallPersistence';
+import { useBimPersistenceStateStore } from '../../bim/persistence/bim-persistence-state-store';
 import { WallAdvancedPanel } from './WallAdvancedPanel';
 import type { SceneModel } from '../../types/scene';
 
@@ -29,24 +34,13 @@ export interface WallPropertiesTabProps {
 export function WallPropertiesTab({
   primarySelectedId,
   currentScene,
-  projectId,
-  floorplanId,
 }: WallPropertiesTabProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
   const wall = useSelectedWall(primarySelectedId, currentScene);
   const levelManager = useLevels();
   const dispatchPatch = useWallParamsDispatcher({ levelManager });
   const { user } = useAuth();
-
-  const persistence = useWallPersistence({
-    companyId: user?.companyId ?? null,
-    projectId,
-    floorplanId,
-    buildingId: null,
-    userId: user?.uid ?? null,
-    levelManager,
-    primarySelectedWall: wall,
-  });
+  const persistence = useBimPersistenceStateStore((s) => s.wall);
 
   if (!wall) {
     return (
@@ -62,7 +56,7 @@ export function WallPropertiesTab({
       dispatchPatch={dispatchPatch}
       userId={user?.uid ?? null}
       levelManager={levelManager}
-      persistence={persistence}
+      persistence={persistence ?? undefined}
       hideHeader
       containerClassName="flex flex-col gap-3 p-2"
     />

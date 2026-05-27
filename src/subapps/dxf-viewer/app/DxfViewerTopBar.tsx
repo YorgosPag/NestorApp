@@ -3,8 +3,16 @@
 /**
  * ADR-358 Phase 8 size-extract — top-bar wrapper estratto da `DxfViewerContent`
  * per rispettare N.7.1 (max 500 righe / file). Raggruppa il `RibbonRoot` con
- * il `StairAdvancedPanelHost` floating panel, e deriva qui i campi di scope
- * `projectId` / `floorplanId` dal `levelManager` (Phase 8 reactive mirrors).
+ * gli always-on BIM persistence hosts (Wall/Opening/Slab/Column/Beam/SlabOpening/
+ * Stair) + ausiliari (SlabOpeningStack/PsetEditor/IfcExport). Deriva qui i campi
+ * di scope `projectId` / `floorplanId` dal `levelManager` (Phase 8 reactive
+ * mirrors).
+ *
+ * 2026-05-27 — `StairAdvancedPanelHost` rimosso (era gated `{false && ...}`
+ * dal sidebar dock 2026-05-17); il suo `useStairPersistence` lifecycle è
+ * stato spostato dentro `StairPersistenceHost` always-on per parità con gli
+ * altri sei BIM hosts e per chiudere il bug "stair drawn ma non saved in
+ * `floorplan_stairs`".
  *
  * Zero subscriptions a high-frequency stores: questo wrapper riceve tutto via
  * props e rispetta CHECK 6B/6C (orchestrator non aggiunge `useSyncExternalStore`).
@@ -16,7 +24,6 @@ import type { RibbonTab } from '../ui/ribbon/types/ribbon-types';
 import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import { RibbonRoot } from '../ui/ribbon/components/RibbonRoot';
-import { StairAdvancedPanelHost } from './StairAdvancedPanelHost';
 import { WallPersistenceHost } from './WallPersistenceHost';
 import { OpeningPersistenceHost } from './OpeningPersistenceHost';
 import { SlabPersistenceHost } from './SlabPersistenceHost';
@@ -111,18 +118,15 @@ export function DxfViewerTopBar({
         buildingId={levelManager.saveContext?.buildingId ?? undefined}
       />
       <SlabOpeningStackHost levelManager={levelManager} />
-      <StairPersistenceHost currentScene={currentScene} />
+      <StairPersistenceHost
+        primarySelectedId={primarySelectedId}
+        currentScene={currentScene}
+        levelManager={levelManager}
+        projectId={levelManager.saveContext?.projectId ?? undefined}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+      />
       <PsetEditorHost levelManager={levelManager} />
       <IfcExportHost />
-      {false && (
-        <StairAdvancedPanelHost
-          primarySelectedId={primarySelectedId}
-          currentScene={currentScene}
-          levelManager={levelManager}
-          projectId={levelManager.saveContext?.projectId ?? undefined}
-          floorplanId={levelManager.fileRecordId ?? undefined}
-        />
-      )}
     </>
   );
 }

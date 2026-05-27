@@ -30,6 +30,7 @@ import { useWallPersistence } from '../hooks/data/useWallPersistence';
 import { useWallSplitPersistence } from '../hooks/data/useWallSplitPersistence';
 import { WallCascadeDeleteDialog } from '../ui/dialogs/WallCascadeDeleteDialog';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
+import { useBimPersistenceStateStore } from '../bim/persistence/bim-persistence-state-store';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -62,7 +63,7 @@ export function WallPersistenceHost({
     return e;
   }, [primarySelectedId, currentScene]);
 
-  useWallPersistence({
+  const wallPersistence = useWallPersistence({
     companyId: user?.companyId ?? null,
     projectId,
     floorplanId,
@@ -71,6 +72,17 @@ export function WallPersistenceHost({
     levelManager,
     primarySelectedWall,
   });
+
+  // ADR-358/363 follow-up 2026-05-27 — single-instance persistence: ο
+  // WallPropertiesTab διαβάζει τα saveState/saveNow από εδώ αντί να καλέσει
+  // ξανά το useWallPersistence (αποφυγή 2 instances → 2× audit events,
+  // διπλά Firestore subscriptions, διπλά soft-lock acquire/release).
+  React.useEffect(() => {
+    useBimPersistenceStateStore.getState().setWall(wallPersistence);
+    return () => {
+      useBimPersistenceStateStore.getState().setWall(null);
+    };
+  }, [wallPersistence]);
 
   React.useEffect(() => {
     const walls = currentScene?.entities.filter(isWallEntity) ?? [];

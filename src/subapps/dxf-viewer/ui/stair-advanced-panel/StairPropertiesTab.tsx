@@ -15,6 +15,11 @@
  *   - stair selected → mount `StairAdvancedPanel` with all sections
  *   - no stair selected → small empty-state hint
  *
+ * 2026-05-27 follow-up — persistence πλέον διαβάζεται από
+ * `BimPersistenceStateStore` (γραμμένο από `StairPersistenceHost`) αντί για
+ * δεύτερη κλήση του `useStairPersistence`. Closes duplicate-audit emission
+ * (2× 'created' / 2× 'deleted' per action) λόγω 2 instances ίδιου hook.
+ *
  * Auto-tab-switch and disabling of the right floating host are handled at
  * `DxfViewerContent` / `FloatingPanelContainer` orchestration sites — this
  * component stays presentational + side-effect-free for the inner panel.
@@ -26,7 +31,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useLevels } from '../../systems/levels';
 import { useSelectedStair } from './hooks/useSelectedStair';
 import { useStairParamsDispatcher } from './commands/dispatchStairParamPatch';
-import { useStairPersistence } from '../../bim/hooks/use-stair-persistence';
+import { useBimPersistenceStateStore } from '../../bim/persistence/bim-persistence-state-store';
 import { StairAdvancedPanel } from './StairAdvancedPanel';
 import type { SceneModel } from '../../types/scene';
 
@@ -41,24 +46,13 @@ export function StairPropertiesTab({
   primarySelectedId,
   currentScene,
   projectId,
-  floorplanId,
 }: StairPropertiesTabProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
   const stair = useSelectedStair(primarySelectedId, currentScene);
   const levelManager = useLevels();
   const dispatchPatch = useStairParamsDispatcher({ levelManager });
   const { user } = useAuth();
-
-  // Phase 8 — persistence + soft-lock. Hook always called (rules of hooks);
-  // it no-ops internally until companyId/projectId/floorplanId/userId are set.
-  const persistence = useStairPersistence({
-    companyId: user?.companyId ?? null,
-    projectId,
-    floorplanId,
-    userId: user?.uid ?? null,
-    levelManager,
-    primarySelectedStair: stair,
-  });
+  const persistence = useBimPersistenceStateStore((s) => s.stair);
 
   if (!stair) {
     return (
@@ -76,7 +70,7 @@ export function StairPropertiesTab({
       userId={user?.uid ?? null}
       projectId={projectId}
       levelManager={levelManager}
-      persistence={persistence}
+      persistence={persistence ?? undefined}
       hideHeader
       containerClassName="flex flex-col gap-3 p-2"
     />

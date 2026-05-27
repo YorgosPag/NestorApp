@@ -78,6 +78,7 @@ const ENTITY_TYPE_TO_COLLECTION_KEY: Record<AuditEntityType, string> = {
   'slab-opening': '',
   column: '',
   beam: '',
+  stair: '',
   // Performance / 3D BIM telemetry (ADR-366) — not backed up via this service
   performance_diagnostic: '',
   performance_telemetry: '',
