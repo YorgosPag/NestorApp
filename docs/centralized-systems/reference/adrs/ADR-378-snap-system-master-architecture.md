@@ -569,6 +569,7 @@ These remain as-is. Future ADR may unify 3D snap if/when 3D BIM Viewer matures.
 |---|---|---|
 | 2026-05-27 | — | Initial ADR-378 design (Opus 4.7 + Γιώργος). Master architecture document covering Orchestrator→Registry→26 engines, priority hierarchy table (resurrecting phantom ADR-149), centralization roadmap. |
 | 2026-05-27 | 0 | ADR-378 written. Phases 1-6 pending. |
+| 2026-05-27 | 1 | Phase 1 — Dead code deleted (AISnappingEngine + AISnappingEngine.types + useProSnapShortcuts). 3 files removed via `git rm`. Zero production references confirmed via grep (only 1 stale comment in `snap-engine-utils.ts:36` + 6 doc/analysis files info-only). `ai-snapping/` folder empty. Sonnet 4.6, ~10min. |
 
 ---
 

@@ -129,6 +129,14 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
 
     loadForLevel(levelId, settings) {
       const resolved = resolveBimSettings(settings ?? null);
+      // eslint-disable-next-line no-console
+      console.log('[ADR-375 v2.11+] loadForLevel CALLED', {
+        levelId,
+        incomingWallProjColor: settings?.objectStyles?.wall?.projectionColor,
+        currentWallProjColor: get().objectStyles.wall?.projectionColor,
+        msSinceLocalMutation: get().lastLocalMutationAt === 0 ? 'NEVER' : Date.now() - get().lastLocalMutationAt,
+        stack: new Error().stack?.split('\n').slice(2, 6).join(' | '),
+      });
       set({
         currentLevelId: levelId,
         rawSettings: settings ?? null,
@@ -186,6 +194,8 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       const prev = state.objectStyles[category];
       const nextCat: ObjectStyle = { ...prev, [key]: color };
       const nextStyles = { ...state.objectStyles, [category]: nextCat };
+      // eslint-disable-next-line no-console
+      console.log('[ADR-375 v2.11+] setObjectStyleVgColor', { category, key, color, prevColor: prev?.[key] });
       set({ objectStyles: nextStyles, lastLocalMutationAt: Date.now() });
       if (state.currentLevelId)
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));

@@ -54,6 +54,16 @@ const CATEGORY_FILL: Readonly<Record<WallCategory, string>> = {
   fence:     'rgba(141, 110, 99, 0.18)',  // stone brown
 };
 
+/** Translucent body-fill alpha when a V/G category color is applied (Revit cut-pattern background convention). */
+const VG_FILL_ALPHA = 0.2;
+
+function hexToRgba(hex: string, alpha: number): string | null {
+  const m = /^#([0-9a-fA-F]{6})$/.exec(hex);
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 0xff}, ${(n >> 8) & 0xff}, ${n & 0xff}, ${alpha})`;
+}
+
 
 const AXIS_DASH: readonly [number, number] = [6, 4];
 
@@ -175,7 +185,6 @@ export class WallRenderer extends BaseEntityRenderer {
     if (outer.length < 2 || inner.length < 2) return;
 
     const cat = wall.params.category;
-    this.ctx.fillStyle = CATEGORY_FILL[cat];
     const _cutState = resolveCutState(
       { zBottomMm: wall.params.baseOffset ?? 0, zTopMm: (wall.params.baseOffset ?? 0) + wall.params.height, category: 'wall' },
       useDrawingScaleStore.getState().viewRange,
@@ -186,6 +195,11 @@ export class WallRenderer extends BaseEntityRenderer {
       dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
       elementOverride: wall.styleOverride, layerOverride,
     });
+    // ADR-375 v2.12 — V/G category color tints the body fill (Revit "cut pattern
+    // background" convention). When V/G is unset the resolver returns null and
+    // we fall back to the per-category hardcoded translucent tint.
+    const _vgFill = _edgeColor ? hexToRgba(_edgeColor, VG_FILL_ALPHA) : null;
+    this.ctx.fillStyle = _vgFill ?? CATEGORY_FILL[cat];
     this.ctx.lineWidth = _edgePx;
     this.ctx.setLineDash(linePatternToDashArray(_edgePattern) as number[]);
 
