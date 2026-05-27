@@ -840,21 +840,33 @@ export const HOME_BIM_PANEL: RibbonPanelDef = {
 
 **Pre-commit hook CHECK 6B/6C** ήδη ελέγχει αυτές τις rules. Νέοι BIM renderers MUST stage μαζί ADR-040 changelog entry.
 
-### 5.17 EntityAudit Integration (ADR-195)
+### 5.17 EntityAudit Integration (ADR-195 + ADR-379)
 
-Κάθε create/update/delete BIM entity → `EntityAuditService.recordChange()`:
+Κάθε create/update/delete BIM entity → fire-and-forget POST to `/api/audit-trail/record` via thin client `bim/<type>/<type>-audit-client.ts`. Server route dispatches σε `EntityAuditService.recordChange()` (server-only) με payload diffed στον client μέσω `bim/utils/bim-audit-helpers.ts` SSoT + 5 tracked-fields registries στο `src/config/audit-tracked-fields.ts`:
+
 ```typescript
-await entityAuditService.recordChange({
-  entityType: 'wall',                  // ή 'opening', 'slab', ...
-  entityId: wall.id,
-  changeType: 'created' | 'updated' | 'deleted',
-  before: oldParams,
-  after: newParams,
-  context: { projectId, buildingId, floorplanId, floorId },
-});
+// Client (persistence hook)
+const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
+const isNew = prevParams === null;
+await svc.saveWall(entityToSaveInput(entity));
+void recordWallChange(
+  isNew ? 'created' : 'updated',
+  entity,
+  { prevParams: prevParams ?? undefined },
+);
 ```
 
-**Pre-commit CHECK 3.17** baseline=0 από 2026-04-13 — όλα τα νέα writers πρέπει να καλούν `recordChange` αμέσως. Hard gate.
+Helper routing (ADR-379 §2.3):
+- `created` → `buildBimCreationChanges(snapshot, WALL_TRACKED_FIELDS)` — one entry per non-null tracked field, `oldValue: null → newValue: X`
+- `updated` → `buildBimUpdateChanges(prev, next, WALL_TRACKED_FIELDS)` — only changed fields; **skip POST if empty** (debounced auto-save fires on identical params often)
+- `deleted` → `buildBimDeletionChanges(snapshot, WALL_TRACKED_FIELDS)` — reverse diff, `oldValue: X → newValue: null` per non-null tracked field
+
+Server route handles two race scenarios (ADR-379 §2.1):
+- `action === 'deleted'` + `!entityDoc.exists` → 200 (entity already removed client-side); audit row tagged με `ctx.companyId` (defense-in-depth)
+- Other actions + `!entityDoc.exists` → 404 (legitimate not-found)
+- `entityDoc.exists` + foreign companyId → 403 (cross-tenant block)
+
+**Pre-commit CHECK 3.17** baseline=0 από 2026-04-13 — όλα τα νέα writers πρέπει να καλούν `recordChange` αμέσως. Hard gate. Static analysis δεν εντοπίζει payload-quality issues; ADR-379 closed the runtime gap.
 
 ### 5.18 SSoT Registry — νέα modules
 
@@ -1122,8 +1134,8 @@ await entityAuditService.recordChange({
 - [x] `src/types/audit-trail.ts` — `AuditEntityType` extended με `'wall'`.
 - [x] `src/app/api/audit-trail/record/route.ts` — `VALID_ENTITY_TYPES` + `ENTITY_COLLECTION_MAP` entries για wall (`FLOORPLAN_WALLS`). Ownership check via Admin SDK read.
 - [x] Firestore rules — audit entries land in `entity_audit_trail` (existing collection, already covered by 3490-line rules; no new rules needed).
-- [x] Client helper `bim/walls/wall-audit-client.ts` — `recordWallChange(action, entity, entityName?)` fire-and-forget POST to `/api/audit-trail/record`. `buildWallChanges()` emits `kind` field for created/deleted, `params` marker for updated.
-- [x] Hook `useWallPersistence.ts` — `isNew` flag captured before save; `void recordWallChange(isNew ? 'created' : 'updated', entity)` after successful `svc.saveWall()`. Fire-and-forget (never awaited, audit failure ≠ UX impact).
+- [x] Client helper `bim/walls/wall-audit-client.ts` — `recordWallChange(action, entity, { prevParams, entityName }?)` fire-and-forget POST to `/api/audit-trail/record`. Diff via `bim-audit-helpers.ts` SSoT + `WALL_TRACKED_FIELDS` registry (17 fields). **ADR-379 refactor 2026-05-27**: original Phase 1D-C signature was `Pick<WallEntity, 'id'|'kind'>` και emitted `[{ field: 'kind' }]` placeholders only — replaced με full-entity diff + skip-on-no-diff semantics.
+- [x] Hook `useWallPersistence.ts` — `prevParams` snapshot captured before save; `void recordWallChange(isNew ? 'created' : 'updated', entity, { prevParams })` after successful `svc.saveWall()`. Delete path captures `deletedEntity` snapshot BEFORE `svc.deleteWall` και περνά full entity για reverse-diff. Fire-and-forget (never awaited, audit failure ≠ UX impact).
 - [x] Delete path — `WallFirestoreService.deleteWall()` exists (Phase 1B); delete UI + audit wired in Phase 1E (ribbon button → bridge → EventBus → useWallPersistence).
 - [ ] Stair audit: same pattern applicable; deferred (no stair delete UI either — consistent with walls).
 - [x] CHECK 3.17 scanner: `TRACKED_COLLECTION_KEYS` extended με `FLOORPLAN_WALLS`; `wall-firestore-service.ts` added to `HARD_EXEMPT_PATTERNS` (client-SDK, audit at hook layer); baseline refreshed (1 pre-existing `property-deletion-guard.ts` grandfathered — unrelated to ADR-363).

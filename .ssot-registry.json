@@ -3675,6 +3675,24 @@
       "addedByAdr": "ADR-364",
       "tier": 1
     },
+    "bim-audit-helpers": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/utils/bim-audit-helpers.ts",
+      "description": "ADR-379 (2026-05-27): SSoT for building AuditFieldChange[] payloads from BIM entity snapshots (wall/column/slab/beam/opening). Three canonical builders: buildBimCreationChanges (oldDoc={}), buildBimUpdateChanges (prev→next diff via diffTrackedFields), buildBimDeletionChanges (reverse diff, oldValue→null). Replaces 5 copy-pasted buildXxxChanges() functions that emitted only {field:'kind'} placeholders. All BIM audit-clients MUST consume these helpers — forbidden patterns block any re-introduction of the legacy per-type builders.",
+      "forbiddenPatterns": [
+        "function\\s+buildWallChanges\\s*\\(",
+        "function\\s+buildColumnChanges\\s*\\(",
+        "function\\s+buildSlabChanges\\s*\\(",
+        "function\\s+buildBeamChanges\\s*\\(",
+        "function\\s+buildOpeningChanges\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/utils/bim-audit-helpers.ts",
+        "src/subapps/dxf-viewer/bim/utils/__tests__/bim-audit-helpers.test.ts"
+      ],
+      "addedDate": "2026-05-27",
+      "addedByAdr": "ADR-379",
+      "tier": 3
+    },
     "bim-renderer-finalize": {
       "ssotFile": "src/subapps/dxf-viewer/rendering/entities/BaseEntityRenderer.ts",
       "description": "ADR-363 Boy Scout N.0.2 (2026-05-19): `BaseEntityRenderer.finalizeRender(entity, options)` is the SSoT for grip rendering in BIM renderers. The inline `if (options.grips) { this.renderGrips(entity, options); }` pattern was copy-pasted into 7 BIM renderers (WallRenderer, ColumnRenderer, BeamRenderer, OpeningRenderer, SlabOpeningRenderer, SlabRenderer, StairRenderer) and centralized in this session. All BIM renderers MUST call `this.finalizeRender(entity, options)` — no inline renderGrips calls. Note: `finalizeRendering` (with -ing suffix) is the older method used by TextRenderer (grips + cleanup); BIM renderers use the shorter `finalizeRender` (grips only).",
