@@ -45,6 +45,7 @@ import {
 import { recordSlabChange } from '../../bim/slabs/slab-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
+import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
 // ============================================================================
 // TYPES
@@ -171,6 +172,12 @@ export function useSlabPersistence(
   const serviceRef = useRef<SlabFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, SlabEntity['params']>>(new Map());
+  // ADR-381 — tracks IDs με in-flight first save (drawn or restored). Replaces
+  // the buggy `neverSaved` guard that kept DXF-JSON-only ghost entities in scene.
+  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
+  // ADR-381 — tombstone Set που blocks subscribe loop from re-adding entities
+  // that were just deleted (race between Firestore snapshot + local delete).
+  const deletedIdsRef = useRef<Set<string>>(new Set());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedSlabRef = useRef<SlabEntity | null>(null);
   selectedSlabRef.current = primarySelectedSlab;
@@ -214,7 +221,12 @@ export function useSlabPersistence(
         const nextSlabs: SlabEntity[] = [];
         let mutated = false;
 
+        // ADR-381 — block subscribe from re-adding tombstoned IDs (delete race).
+        const deleted = deletedIdsRef.current;
+        const pending = pendingFirstSaveIdsRef.current;
+
         for (const doc of docs) {
+          if (deleted.has(doc.id)) continue;
           const existing = sceneSlabs.get(doc.id);
           if (!existing) {
             if (!dirty.has(doc.id)) {
@@ -235,10 +247,14 @@ export function useSlabPersistence(
           }
         }
 
+        // ADR-381 — replaces buggy `neverSaved` guard. Keep entities only αν
+        // είναι (a) dirty (locally being edited), or (b) pendingFirstSave
+        // (just drawn / just restored, in-flight first persist). DXF-JSON-only
+        // ghost entities (loaded after refresh με κενό pendingRef) DROP από
+        // scene — Bug B fix.
         for (const [id, entity] of sceneSlabs) {
           if (docsById.has(id)) continue;
-          const neverSaved = !lastSavedParamsRef.current.has(id);
-          if (dirty.has(id) || neverSaved) {
+          if (dirty.has(id) || pending.has(id)) {
             nextSlabs.push(entity);
           } else {
             mutated = true;
@@ -273,6 +289,7 @@ export function useSlabPersistence(
       await svc.saveSlab(entityToSaveInput(entity));
       lastSavedParamsRef.current.set(entity.id, entity.params);
       dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
       void recordSlabChange(
@@ -306,6 +323,13 @@ export function useSlabPersistence(
   useEffect(() => {
     const slab = primarySelectedSlab;
     if (!slab || !serviceRef.current) return;
+    // ADR-381 — Bug A defense-in-depth: don't auto-persist entities που είναι
+    // στο scene αλλά ΟΥΤΕ έχουν σωθεί ποτέ ΟΥΤΕ είναι pending first save.
+    // Καλύπτει: (a) entities loaded από DXF JSON only (Bug B race), (b) stale
+    // primarySelected ref μετά από delete (Bug A zombie write).
+    const known = lastSavedParamsRef.current.has(slab.id);
+    const pending = pendingFirstSaveIdsRef.current.has(slab.id);
+    if (!known && !pending) return;
     const lastSaved = lastSavedParamsRef.current.get(slab.id);
     if (lastSaved && dequal(lastSaved, slab.params)) return;
 
@@ -369,7 +393,40 @@ export function useSlabPersistence(
 
     dirtyIdsRef.current.delete(slabId);
     lastSavedParamsRef.current.delete(slabId);
+    pendingFirstSaveIdsRef.current.delete(slabId);
+    // ADR-381 — tombstone tracking για subscribe loop race protection.
+    deletedIdsRef.current.add(slabId);
   }, [levelManager, companyId]);
+
+  // ADR-381 — persistRestore writes Firestore με `action='restored'` (όχι
+  // misleading `'created'`). Pre-ADR-381 zombie write went through `persist()`
+  // και επέφερε `'created'` audit row για entity που είχε προηγουμένως διαγραφεί.
+  const persistRestore = useCallback(async (entity: SlabEntity) => {
+    const svc = serviceRef.current;
+    if (!svc) return;
+    setSaveState('saving');
+    setError(null);
+    try {
+      await svc.saveSlab(entityToSaveInput(entity));
+      lastSavedParamsRef.current.set(entity.id, entity.params);
+      dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
+      setSaveState('saved');
+      setLastSavedAt(Date.now());
+      void recordSlabChange('restored', entity);
+      if (companyId && projectId && buildingId) {
+        void bimToBoqBridge.upsertBoqItemForBim(
+          'slab',
+          { id: entity.id, kind: entity.kind, geometry: entity.geometry },
+          { companyId, projectId, buildingId },
+          'created',
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'SLAB_RESTORE_ERROR');
+      setSaveState('error');
+    }
+  }, [companyId, projectId, buildingId]);
 
   // First-save listener — fires άμεσα για freshly drawn slabs.
   useEffect(() => {
@@ -378,6 +435,9 @@ export function useSlabPersistence(
       const entity = payload.entity as SlabEntity | undefined;
       if (!entity || (entity as { type?: string }).type !== 'slab') return;
       if (!serviceRef.current) return;
+      // ADR-381 — mark pending BEFORE persist so subscribe loop doesn't drop
+      // entity during the race window.
+      pendingFirstSaveIdsRef.current.add(entity.id);
       dirtyIdsRef.current.add(entity.id);
       void persist(entity);
     });
@@ -422,6 +482,15 @@ export function useSlabPersistence(
   }, [levelManager, companyId, projectId, buildingId]);
 
   useBimEntityMovedPersistEffect(isSlab, serviceRef, dirtyIdsRef, persist);
+  // ADR-381 — symmetric undo→Firestore restore.
+  useBimEntityRestoredPersistEffect(
+    'slab',
+    isSlab,
+    serviceRef,
+    pendingFirstSaveIdsRef,
+    deletedIdsRef,
+    persistRestore,
+  );
 
   // Unmount cleanup — flush pending timers.
   useEffect(() => {

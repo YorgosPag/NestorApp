@@ -8,6 +8,26 @@
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
+import { EventBus } from '../../../systems/events/EventBus';
+import type { AnySceneEntity } from '../../../types/scene';
+
+// ADR-381 — BIM entity types eligible για symmetric undo→Firestore restore.
+const BIM_ENTITY_TYPES = new Set<string>([
+  'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair',
+]);
+
+type BimEntityType =
+  | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair';
+
+function emitBimRestoreIfApplicable(snapshot: SceneEntity): void {
+  const type = (snapshot as { type?: string }).type;
+  if (!type || !BIM_ENTITY_TYPES.has(type)) return;
+  EventBus.emit('bim:entity-restore-requested', {
+    entityType: type as BimEntityType,
+    entitySnapshot: snapshot as AnySceneEntity,
+    source: 'undo-delete',
+  });
+}
 
 /**
  * Command for deleting an entity
@@ -45,10 +65,16 @@ export class DeleteEntityCommand implements ICommand {
 
   /**
    * Undo: Restore the entity
+   *
+   * ADR-381 — also emits `bim:entity-restore-requested` so BIM persistence
+   * hooks re-create the Firestore doc + audit row (`action='restored'`).
+   * Pre-ADR-381 behavior accidentally re-persisted via auto-save side effect
+   * (zombie write με ίδιο UUID + misleading `action='created'`).
    */
   undo(): void {
     if (this.entitySnapshot && this.wasExecuted) {
       this.sceneManager.addEntity(this.entitySnapshot);
+      emitBimRestoreIfApplicable(this.entitySnapshot);
     }
   }
 
@@ -151,11 +177,15 @@ export class DeleteMultipleEntitiesCommand implements ICommand {
 
   /**
    * Undo: Restore all entities
+   *
+   * ADR-381 — emits `bim:entity-restore-requested` per BIM snapshot so each
+   * persistence hook re-creates its Firestore doc + audit row.
    */
   undo(): void {
     if (this.wasExecuted) {
       for (const entity of this.entitySnapshots) {
         this.sceneManager.addEntity(entity);
+        emitBimRestoreIfApplicable(entity);
       }
     }
   }

@@ -20,7 +20,7 @@ import {
   type BimAuditSnapshot,
 } from '../utils/bim-audit-helpers';
 
-export type SlabAuditAction = 'created' | 'updated' | 'deleted';
+export type SlabAuditAction = 'created' | 'updated' | 'deleted' | 'restored';
 
 export type SlabAuditSnapshot = Pick<SlabEntity, 'id' | 'kind'> & {
   readonly layerId?: string;
@@ -62,7 +62,9 @@ function buildChanges(
     params: entity.params as Record<string, unknown> | undefined,
   };
 
-  if (action === 'created') {
+  if (action === 'created' || action === 'restored') {
+    // ADR-381 — 'restored' (undo→Firestore re-create) carries full snapshot
+    // identical to 'created'; only the audit action label differs.
     return ensureNonEmptyChanges(
       buildBimCreationChanges(snapshot, SLAB_TRACKED_FIELDS),
       { field: 'kind', oldValue: null, newValue: entity.kind },

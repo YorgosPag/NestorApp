@@ -36,7 +36,7 @@ const VALID_ENTITY_TYPES: ReadonlySet<string> = new Set<AuditEntityType>([
 ]);
 
 const VALID_ACTIONS: ReadonlySet<string> = new Set<AuditAction>([
-  'created', 'updated', 'deleted', 'status_changed', 'linked', 'unlinked',
+  'created', 'updated', 'deleted', 'restored', 'status_changed', 'linked', 'unlinked',
   'professional_assigned', 'professional_removed', 'email_sent', 'invoice_created',
   'document_added', 'document_removed',
 ]);

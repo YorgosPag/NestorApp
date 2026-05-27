@@ -211,6 +211,15 @@ export interface DrawingEventMap {
   'bim:beam-delete-requested': { beamId: string };
   // ADR-358 Phase 9C-3 — stair delete (Firestore cleanup on canvas Delete key)
   'bim:stair-delete-requested': { stairId: string };
+  // ADR-381 — Symmetric undo/restore for BIM entity deletion.
+  // Single generic event with type-discriminated payload — listeners type-guard
+  // via `payload.entityType` + `isXType(snapshot)`. Emitted by
+  // DeleteEntityCommand.undo() and DeleteMultipleEntitiesCommand.undo().
+  'bim:entity-restore-requested': {
+    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair';
+    entitySnapshot: AnySceneEntity;
+    source: 'undo-delete' | 'redo-restore';
+  };
   // ADR-363 Phase 5.5i+ — beam persisted → slabs re-compute BOQ deductions
   'bim:beam-persisted': { floorplanId: string };
   // ADR-363 Phase X — Wall split committed: persist delete+create+opening patch
