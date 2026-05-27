@@ -30,7 +30,8 @@ import type { Entity } from '../../types/entities';
 import { isStairEntity } from '../../types/entities';
 import { getStairGrips } from '../stairs/stair-grips';
 import { DEFAULT_CUT_PLANE_HEIGHT } from '../geometry/stairs/stair-geometry-shared';
-import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { linePatternToDashArray, type LinePatternKey } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
@@ -58,9 +59,14 @@ const ADA_TOP_EXTENSION_MM = 305;
 export class StairRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isStairEntity(entity)) return;
-    // ADR-375 Phase C.4 v2.6 — V/G visibility hotfix (see WallRenderer for rationale).
-    if (!resolveIsCategoryVisible('stair', useDrawingScaleStore.getState().objectStyles)) return;
     const stair = entity as StairEntity;
+
+    // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
+    const _stairLayer = stair.layerId ? getLayer(stair.layerId) : null;
+    if (!resolveIsEntityVisible(
+      { category: 'stair', layerId: stair.layerId },
+      { objectStyles: useDrawingScaleStore.getState().objectStyles, layer: _stairLayer },
+    )) return;
     // ADR-358 Phase 8 — defensive: legacy / partially-serialized stair entries
     // can arrive without `geometry` (e.g. Storage scene blob saved before the
     // ADR §G6 contract was enforced). Skip render rather than crash so the
@@ -122,7 +128,6 @@ export class StairRenderer extends BaseEntityRenderer {
       },
       ds.viewRange,
     );
-    const _stairLayer = stair.layerId ? getLayer(stair.layerId) : null;
     const _stairLayerOverride = _stairLayer ? {
       lineweightMm: isConcreteLineweight(_stairLayer.lineweight) ? _stairLayer.lineweight : undefined,
       color: _stairLayer.color ?? undefined,

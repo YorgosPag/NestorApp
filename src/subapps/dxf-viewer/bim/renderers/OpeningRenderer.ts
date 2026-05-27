@@ -30,7 +30,8 @@ import type { OpeningEntity } from '../types/opening-types';
 import { isHingedKind, isGlazedKind } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -56,9 +57,15 @@ const GLAZING_INSET_RATIO = 0.25; // 25% of thickness inset for double-line glas
 export class OpeningRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isOpeningEntity(entity)) return;
-    // ADR-375 Phase C.4 v2.6 — V/G visibility hotfix (see WallRenderer for rationale).
-    if (!resolveIsCategoryVisible('opening', useDrawingScaleStore.getState().objectStyles)) return;
     const opening = entity as OpeningEntity;
+
+    // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
+    const _opLayer = opening.layerId ? getLayer(opening.layerId) : null;
+    if (!resolveIsEntityVisible(
+      { category: 'opening', layerId: opening.layerId },
+      { objectStyles: useDrawingScaleStore.getState().objectStyles, layer: _opLayer },
+    )) return;
+
     if (!opening.geometry || !opening.params) return;
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
@@ -81,7 +88,6 @@ export class OpeningRenderer extends BaseEntityRenderer {
       { zBottomMm: opening.params.sillHeight, zTopMm: opening.params.sillHeight + opening.params.height, category: 'opening' },
       _opDs.viewRange,
     );
-    const _opLayer = opening.layerId ? getLayer(opening.layerId) : null;
     const _opLayerOverride = _opLayer ? {
       lineweightMm: isConcreteLineweight(_opLayer.lineweight) ? _opLayer.lineweight : undefined,
       color: _opLayer.color ?? undefined,

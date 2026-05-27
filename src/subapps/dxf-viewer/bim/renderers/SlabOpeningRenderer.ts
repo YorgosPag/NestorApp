@@ -35,7 +35,8 @@ import type {
 } from '../types/slab-opening-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
@@ -80,9 +81,15 @@ const KIND_DASH: Readonly<Record<SlabOpeningKind, readonly [number, number]>> = 
 export class SlabOpeningRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isSlabOpeningEntity(entity)) return;
-    // ADR-375 Phase C.4 v2.6 — V/G visibility hotfix (see WallRenderer for rationale).
-    if (!resolveIsCategoryVisible('slab-opening', useDrawingScaleStore.getState().objectStyles)) return;
     const opening = entity as SlabOpeningEntity;
+
+    // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
+    const _soLayer = opening.layerId ? getLayer(opening.layerId) : null;
+    if (!resolveIsEntityVisible(
+      { category: 'slab-opening', layerId: opening.layerId },
+      { objectStyles: useDrawingScaleStore.getState().objectStyles, layer: _soLayer },
+    )) return;
+
     if (!opening.geometry || !opening.params) return;
     const verts = opening.geometry.polygon.vertices;
     if (verts.length < 3) return;
@@ -115,7 +122,6 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
     this.drawPolygonPath(verts);
     this.ctx.fill();
 
-    const _soLayer = opening.layerId ? getLayer(opening.layerId) : null;
     const _soLayerOverride = _soLayer ? {
       lineweightMm: isConcreteLineweight(_soLayer.lineweight) ? _soLayer.lineweight : undefined,
       color: _soLayer.color ?? undefined,

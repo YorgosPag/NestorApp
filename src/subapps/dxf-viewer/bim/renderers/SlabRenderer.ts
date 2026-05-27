@@ -38,7 +38,8 @@ import type { SlabEntity, SlabKind, SlabReinforcement } from '../types/slab-type
 import type { SlabOpeningEntity } from '../types/slab-opening-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
@@ -105,9 +106,15 @@ export class SlabRenderer extends BaseEntityRenderer {
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isSlabEntity(entity)) return;
-    // ADR-375 Phase C.4 v2.6 — V/G visibility hotfix (see WallRenderer for rationale).
-    if (!resolveIsCategoryVisible('slab', useDrawingScaleStore.getState().objectStyles)) return;
     const slab = entity as SlabEntity;
+
+    // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
+    const _slabLayer = slab.layerId ? getLayer(slab.layerId) : null;
+    if (!resolveIsEntityVisible(
+      { category: 'slab', layerId: slab.layerId },
+      { objectStyles: useDrawingScaleStore.getState().objectStyles, layer: _slabLayer },
+    )) return;
+
     if (!slab.geometry || !slab.params) return;
     const verts = slab.geometry.polygon.vertices;
     if (verts.length < 3) return;
@@ -147,7 +154,6 @@ export class SlabRenderer extends BaseEntityRenderer {
     // ADR-363 Phase 3.7 — subtract hosted slab-opening outlines από το fill.
     this.punchHostedSlabOpenings(slab);
 
-    const _slabLayer = slab.layerId ? getLayer(slab.layerId) : null;
     const _slabLayerOverride = _slabLayer ? {
       lineweightMm: isConcreteLineweight(_slabLayer.lineweight) ? _slabLayer.lineweight : undefined,
       color: _slabLayer.color ?? undefined,

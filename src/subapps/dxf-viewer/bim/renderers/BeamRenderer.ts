@@ -32,7 +32,8 @@ import { isBeamEntity } from '../../types/entities';
 import type { BeamEntity, BeamKind } from '../types/beam-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
@@ -96,9 +97,15 @@ const ANCHOR_PULSE_LINE_W_PX = 1.5;
 export class BeamRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isBeamEntity(entity)) return;
-    // ADR-375 Phase C.4 v2.6 — V/G visibility hotfix (see WallRenderer for rationale).
-    if (!resolveIsCategoryVisible('beam', useDrawingScaleStore.getState().objectStyles)) return;
     const beam = entity as BeamEntity;
+
+    // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
+    const _beamLayer = beam.layerId ? getLayer(beam.layerId) : null;
+    if (!resolveIsEntityVisible(
+      { category: 'beam', layerId: beam.layerId },
+      { objectStyles: useDrawingScaleStore.getState().objectStyles, layer: _beamLayer },
+    )) return;
+
     if (!beam.geometry || !beam.params) return;
     const verts = beam.geometry.outline.vertices;
     if (verts.length < 3) return;
@@ -136,7 +143,6 @@ export class BeamRenderer extends BaseEntityRenderer {
     this.drawMaterialHatch(beam);
 
     // ADR-377 C.2 — hidden-lines subcategory (dashed outline convention).
-    const _beamLayer = beam.layerId ? getLayer(beam.layerId) : null;
     const _beamLayerOverride = _beamLayer ? {
       lineweightMm: isConcreteLineweight(_beamLayer.lineweight) ? _beamLayer.lineweight : undefined,
       color: _beamLayer.color ?? undefined,
