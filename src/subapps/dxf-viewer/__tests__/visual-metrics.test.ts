@@ -4,7 +4,7 @@
  * NDJSON format για time series analysis
  */
 
-/// <reference path="../types/jest-globals.d.ts" />
+// jest-globals.d.ts removed (now handled by /jest)
 
 import fs from 'node:fs';
 import path from 'node:path';

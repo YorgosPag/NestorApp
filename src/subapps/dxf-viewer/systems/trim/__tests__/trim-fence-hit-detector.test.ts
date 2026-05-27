@@ -19,7 +19,7 @@ import type {
 
 function makeLine(id: string, x1: number, y1: number, x2: number, y2: number, layer = 'L0'): LineEntity {
   // layerId mirrors `layer` name — allows tests to key layersById by name for simplicity.
-  return { id, type: 'line', start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, layer, layerId: layer };
+  return { id, type: 'line', start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, layerId: layer };
 }
 
 function makeScene(

@@ -67,7 +67,7 @@ describe('stair-completion builders (Phase 5a)', () => {
     const params = buildDefaultStairParams(basePoint, 0);
     const entity = buildStairEntity(params, 'level-42');
     expect(entity.levelId).toBe('level-42');
-    expect(entity.layer).toBeUndefined();
+    expect(entity.layerId).toBeUndefined();
   });
 
   it('extra: directionFromPoints returns 0 for +X cardinal direction', () => {

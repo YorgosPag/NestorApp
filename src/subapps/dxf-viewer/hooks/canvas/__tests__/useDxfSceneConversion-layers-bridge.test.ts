@@ -30,10 +30,10 @@ function makeLineEntity(id: string, layer: string): LineEntity {
 function makeScene(layers: Record<string, ReturnType<typeof createSceneLayer>>, entities = [] as unknown as LineEntity[]): SceneModel {
   return {
     entities,
-    layers,
+    layersById: layers,
     bounds: { min: { x: 0, y: 0 }, max: { x: 10, y: 10 } },
     units: 'mm',
-  };
+  } as unknown as SceneModel;
 }
 
 describe('useDxfSceneConversion — Phase 5 layersById bridge', () => {

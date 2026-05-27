@@ -22,7 +22,7 @@ function makeOpening(
     slabId: 'slab_test',
     outline: { vertices: verts.map((v) => ({ x: v.x, y: v.y, z: 0 })) },
     ...overrides,
-  };
+  } as SlabParams;
 }
 
 function makeSlab(): SlabEntity {

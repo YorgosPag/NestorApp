@@ -25,9 +25,9 @@ describe('line', () => {
   });
 
   it('preserves other fields (id, layer)', () => {
-    const withLayer = { ...line, layer: 'Layer0', layerId: 'lyr_test_default' } as Entity;
+    const withLayer = { ...line, layerId: 'Layer0' } as Entity;
     const result = applyTransformToEntity(withLayer, NO_ROTATE, PIVOT);
-    expect((result as Extract<Entity, { type: 'line' }>).layer).toBe('Layer0');
+    expect((result as Extract<Entity, { type: 'line' }>).layerId).toBe('Layer0');
     expect(result.id).toBe('l1');
   });
 

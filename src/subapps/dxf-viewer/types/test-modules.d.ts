@@ -13,18 +13,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 declare module '@jest/globals' {
-  type TestFn = (name: string, fn?: (...args: any[]) => any, timeout?: number) => void;
-  type HookFn = (fn: (...args: any[]) => any, timeout?: number) => void;
-
-  export const describe: TestFn & { each: <T>(cases: T[]) => TestFn; only: TestFn; skip: TestFn };
-  export const test: TestFn & { each: <T>(cases: T[]) => TestFn; only: TestFn; skip: TestFn };
-  export const it: TestFn & { each: <T>(cases: T[]) => TestFn; only: TestFn; skip: TestFn };
-  export const expect: any;
-  export const beforeAll: HookFn;
-  export const afterAll: HookFn;
-  export const beforeEach: HookFn;
-  export const afterEach: HookFn;
-  export const jest: any;
+  // @types/jest provides the global `jest`, `describe`, `it`, `expect`, etc.
+  // We re-export them as named imports so `import { jest } from '@jest/globals'`
+  // resolves to the proper @types/jest typings (incl. generic `jest.fn<R, A>()`).
+  export const describe: typeof globalThis.describe;
+  export const test: typeof globalThis.test;
+  export const it: typeof globalThis.it;
+  export const expect: typeof globalThis.expect;
+  export const beforeAll: typeof globalThis.beforeAll;
+  export const afterAll: typeof globalThis.afterAll;
+  export const beforeEach: typeof globalThis.beforeEach;
+  export const afterEach: typeof globalThis.afterEach;
+  export const jest: typeof globalThis.jest;
   export const vi: any;
 }
 

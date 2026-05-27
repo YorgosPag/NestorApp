@@ -4,7 +4,7 @@
  * Strict threshold assertions και comprehensive CI artifacts
  */
 
-/// <reference path="../types/jest-globals.d.ts" />
+// jest-globals.d.ts removed (now handled by /jest)
 
 import path from 'node:path';
 import type { PixelmatchFn, PNGCombined } from '../test/visual/types';

@@ -41,7 +41,7 @@ export function resolveGripColors(colors: {
 }
 
 // Core UI Colors (Base)
-const UI_COLORS_BASE = {
+export const UI_COLORS_BASE = {
   // Basic colors
   WHITE: '#FFFFFF',
   BLACK: '#000000',

@@ -26,10 +26,10 @@ function makeScene(
 ): SceneModel {
   return {
     entities,
-    layers,
+    layersById: layers,
     bounds: { min: { x: 0, y: 0 }, max: { x: 10, y: 10 } },
     units: 'mm',
-  };
+  } as unknown as SceneModel;
 }
 
 function makeByLayerLine(id: string, layer: string, extra: Partial<BaseEntity> = {}): LineEntity {

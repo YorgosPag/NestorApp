@@ -26,7 +26,7 @@ beforeEach(() => {
 
 describe('resolveEntityLayerName — ADR-358 Phase 9D-5b-iii id-only', () => {
   it('returns undefined when only legacy `.layer` is set (no layerId fallback post-flip)', () => {
-    const entity = { layer: 'Walls' };
+    const entity = { layerId: 'Walls' };
     expect(resolveEntityLayerName(entity)).toBeUndefined();
   });
 

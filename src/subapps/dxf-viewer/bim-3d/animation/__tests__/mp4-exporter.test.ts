@@ -75,8 +75,6 @@ describe('exportAnimationMP4 — input validation', () => {
     await expect(
       exportAnimationMP4({
         scene: {} as never,
-        renderer: {} as never,
-        camera: {} as never,
         frames: [],
         fps: 30,
         width: 1920,
@@ -97,8 +95,6 @@ describe('exportAnimationMP4 — input validation', () => {
     await expect(
       exportAnimationMP4({
         scene: {} as never,
-        renderer: {} as never,
-        camera: {} as never,
         frames: [frame],
         fps: 30,
         width: 1920,

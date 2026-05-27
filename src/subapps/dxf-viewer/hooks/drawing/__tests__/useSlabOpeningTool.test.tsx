@@ -34,7 +34,7 @@ function makeSlab(id = 'slab_test', overrides?: Partial<SlabParams>): SlabEntity
     thickness: 200,
     geometryType: 'box',
     ...overrides,
-  };
+  } as SlabParams;
   return {
     id,
     type: 'slab',
