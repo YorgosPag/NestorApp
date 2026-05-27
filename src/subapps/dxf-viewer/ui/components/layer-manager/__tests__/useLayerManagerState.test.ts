@@ -16,9 +16,9 @@ import {
   setLayers,
   setCurrentLayerId,
   __resetLayerStoreForTesting,
-} from '../../../stores/LayerStore';
-import { createSceneLayer } from '../../../types/entities';
-import type { SceneModel } from '../../../types/entities';
+} from '../../../../stores/LayerStore';
+import { createSceneLayer } from '../../../../types/entities';
+import type { SceneModel } from '../../../../types/entities';
 
 // Mock useLevelSelection to avoid Firebase import
 const mockUseLevelSelection = vi.fn(() => ({

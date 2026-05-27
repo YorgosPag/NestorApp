@@ -16,7 +16,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import type { MissingFontReport } from '../text-engine/fonts/font-loader';
+import type { MissingFontReport } from '../../text-engine/fonts/font-loader';
 
 interface MissingFontBannerProps {
   report: MissingFontReport;

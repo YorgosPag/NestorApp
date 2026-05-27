@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { ZoomWindowState } from './useZoomWindow';
+import type { ZoomWindowState } from '../systems/zoom-window/ZoomWindowStore';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση κεντρικής υπηρεσίας αντί για διάσπαρτη fit logic
 import { FitToViewService } from '../services/FitToViewService';
 import type { Viewport } from '../rendering/types/Types';
