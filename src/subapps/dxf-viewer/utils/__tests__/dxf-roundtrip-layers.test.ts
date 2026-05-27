@@ -186,9 +186,9 @@ describe('DXF layer round-trip — fixture 5: Q15 + Q16 scaffold preservation', 
   });
 
   it('vpOverrides (Q16) survives XDATA NestorVpOverride JSON round trip', () => {
-    const overrides = {
+    const overrides: Record<string, Partial<import('../../types/entities').VpLayerProps>> = {
       vp_floor1: { visible: false, frozen: true },
-      vp_floor2: { colorAci: 6, lineweight: 0.13 },
+      vp_floor2: { colorAci: 6, lineweight: 0.13 as import('../../types/entities').VpLayerProps['lineweight'] },
     };
     const original = [
       createSceneLayer({

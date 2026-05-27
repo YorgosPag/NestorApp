@@ -14,7 +14,7 @@
  * @see systems/dimensions/dim-association-service.ts — recomputeAssociatedDefPoint
  */
 
-import type { ICommand, ISceneManager, SceneEntity } from '../interfaces';
+import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import type { DimensionEntity, DimensionAssociation } from '../../../types/dimension';
 import type { Point2D } from '../../../rendering/types/Types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
@@ -99,5 +99,24 @@ export class DimReassociateCommand implements ICommand {
 
   getDescription(): string {
     return `Reassociate dimension to geometry ${this.newGeometryId}`;
+  }
+
+  getAffectedEntityIds(): string[] {
+    return [this.dimId];
+  }
+
+  serialize(): SerializedCommand {
+    return {
+      id: this.id,
+      type: this.type,
+      timestamp: this.timestamp,
+      data: {
+        dimId: this.dimId,
+        associationIndex: this.associationIndex,
+        newGeometryId: this.newGeometryId,
+        previousGeometryId: this.previousGeometryId,
+        previousDefPoint: this.previousDefPoint,
+      },
+    };
   }
 }

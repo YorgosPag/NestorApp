@@ -64,6 +64,12 @@ export class LegacyGridAdapter {
       axesColor: settings.axesColor ?? GRID_AXES_DEFAULTS.axesColor,
       axesWeight: settings.axesWeight ?? GRID_AXES_DEFAULTS.axesWeight,
 
+      // SmoothFade defaults — feature disabled in legacy adapter.
+      smoothFade: false,
+      smoothFadeMinPx: 0,
+      smoothFadeMaxPx: 0,
+      smoothFadeDurationMs: 0,
+
       zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
     };
 

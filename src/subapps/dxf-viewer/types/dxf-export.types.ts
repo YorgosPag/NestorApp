@@ -309,6 +309,16 @@ export const ENTITY_TYPE_MAPPING: Record<EntityType, EzdxfEntityType | null> = {
   'hatch': 'HATCH',
   'xline': 'XLINE',
   'ray': 'RAY',
+  'array': null,           // Internal associative array — exploded for export
+  'stair': null,           // BIM stair — not exported as native DXF entity
+  'center-mark': null,     // ADR-362 — center mark annotation, exported via composite
+  'centerline': null,      // ADR-362 — centerline annotation, exported via composite
+  'wall': null,            // BIM wall — exported via composite
+  'opening': null,         // BIM opening — exported via composite
+  'slab': null,            // BIM slab — exported via composite
+  'slab-opening': null,    // BIM slab opening — exported via composite
+  'column': null,          // BIM column — exported via composite
+  'beam': null,            // BIM beam — exported via composite
 } as const;
 
 /**

@@ -22,7 +22,7 @@ import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
   if (entity.type !== 'text' && entity.type !== 'mtext') return;
 
-  const e = entity as Record<string, unknown>;
+  const e = entity as unknown as Record<string, unknown>;
   const position = e.position as Point2D | undefined;
 
   // Support flat `text` (DXF-imported) and `textNode` AST (CreateTextCommand).

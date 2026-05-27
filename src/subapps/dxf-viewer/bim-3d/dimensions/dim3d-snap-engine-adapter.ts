@@ -73,7 +73,7 @@ export function pickDim3DSnap(opts: RaycastOptions): Dim3DSnapResult {
     -((opts.clientY - rect.top) / rect.height) * 2 + 1,
   );
   _raycaster.setFromCamera(_ndc, opts.camera);
-  const hits = _raycaster.intersectObjects(opts.targets, true);
+  const hits = _raycaster.intersectObjects(opts.targets as Object3D[], true);
   if (hits.length === 0) {
     return { mode: 'none', position: { x: 0, y: 0, z: 0 } };
   }

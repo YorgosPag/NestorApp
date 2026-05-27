@@ -30,10 +30,10 @@ jest.mock('firebase/firestore', () => ({
   setDoc: (...args: unknown[]) => mockSetDoc(...args),
   deleteDoc: (...args: unknown[]) => mockDeleteDoc(...args),
   getDocs: (...args: unknown[]) => mockGetDocs(...args),
-  doc: (...args: unknown[]) => mockDoc(...args),
+  doc: (...args: unknown[]) => mockDoc(...(args as [unknown, unknown, unknown])),
   query: (...args: unknown[]) => mockQuery(...args),
   where: (...args: [string, string, unknown]) => mockWhere(...args),
-  collection: (...args: unknown[]) => mockCollection(...args),
+  collection: (...args: unknown[]) => mockCollection(...(args as [unknown, unknown])),
 }));
 
 jest.mock('@/lib/firebase', () => ({ db: {} }));

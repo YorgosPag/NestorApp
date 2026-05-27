@@ -100,7 +100,7 @@ export const useBimDimensions3DStore = create<BimDimensions3DStoreType>()(
         // ── Cache mutations ───────────────────────────────────────────────────
         setDimensionsForProject(projectId, dimensions) {
           set((draft) => {
-            draft.dimensionsByProjectId[projectId] = dimensions;
+            draft.dimensionsByProjectId[projectId] = castDraft(dimensions);
           });
         },
 

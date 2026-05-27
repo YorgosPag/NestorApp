@@ -65,9 +65,15 @@ function makeQueryResult(filterCompanyId?: string) {
   return { docs: matched };
 }
 
+interface MockQueryBuilder {
+  where: jest.Mock;
+  orderBy: jest.Mock;
+  get: jest.Mock;
+  doc: jest.Mock;
+}
 const mockCollection = jest.fn(() => {
   let filterCompanyId: string | undefined;
-  const builder = {
+  const builder: MockQueryBuilder = {
     where: jest.fn((field: string, _op: string, value: unknown) => {
       if (field === 'companyId') filterCompanyId = String(value);
       return builder;

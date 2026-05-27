@@ -80,6 +80,20 @@ declare module 'three/examples/jsm/lines/LineSegmentsGeometry' {
   }
 }
 
+// `utif` ships with raw .js + no .d.ts. The src/types/utif.d.ts module
+// declaration is invisible to this tsconfig include scope; re-declare here.
+declare module 'utif' {
+  export interface UtifPage {
+    width: number;
+    height: number;
+    data?: Uint8Array;
+    [key: string]: unknown;
+  }
+  export function decode(buffer: ArrayBuffer): UtifPage[];
+  export function decodeImages(buffer: ArrayBuffer, pages: UtifPage[]): void;
+  export function toRGBA8(page: UtifPage): Uint8Array;
+}
+
 // `@google-cloud/storage` ships with firebase-admin as a peer dependency.
 // pnpm hoists firebase-admin but not its peers — TS standalone resolution
 // can't see them. Only the `Bucket` type is imported by src/lib/firebaseAdmin.ts.

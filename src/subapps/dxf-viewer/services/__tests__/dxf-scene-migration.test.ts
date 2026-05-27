@@ -195,7 +195,7 @@ describe('migrateLayersById', () => {
       WALLS: { name: 'WALLS', color: '#f00', visible: true, locked: false },
       DIMS:  { name: 'DIMS',  color: '#0f0', visible: false, locked: true },
     };
-    const result = migrateLayersById(raw as Record<string, never>);
+    const result = migrateLayersById(raw as unknown as Record<string, never>);
     expect(Object.keys(result)).toEqual(['WALLS', 'DIMS']);
     expect(result.WALLS.id).toBe('WALLS');
     expect(result.DIMS.id).toBe('DIMS');
@@ -209,7 +209,7 @@ describe('migrateLayersById', () => {
 
   it('preserves map keys (= layer name slug)', () => {
     const raw = { '0': { name: '0', color: '#fff', visible: true, locked: false } };
-    const result = migrateLayersById(raw as Record<string, never>);
+    const result = migrateLayersById(raw as unknown as Record<string, never>);
     expect(result['0']).toBeDefined();
     expect(result['0'].id).toBe('0');
   });

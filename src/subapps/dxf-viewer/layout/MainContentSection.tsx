@@ -162,6 +162,7 @@ export const MainContentSection = React.memo<MainContentSectionProps>(({
           onCanvasMouseDown={() => {}}
           onCanvasMouseMove={() => {}}
           entities={[]}
+          selectedEntityIds={[]}
           layers={[]}
           scene={currentScene || {} as SceneModel}
           handleTransformChange={wrappedHandleTransformChange}

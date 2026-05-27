@@ -46,12 +46,12 @@ jest.mock('../../../../hooks/useCanEditText', () => ({
 
 const mockRepoIsReady = jest.fn(() => false);
 const mockRepoUpdate = jest.fn();
-const mockRepoGetSlice = jest.fn(() => undefined);
+const mockRepoGetSlice = jest.fn<unknown, [unknown]>(() => undefined);
 jest.mock('@/services/user-settings', () => ({
   userSettingsRepository: {
     isReady: () => mockRepoIsReady(),
     updateSlice: (...args: unknown[]) => mockRepoUpdate(...args),
-    getSlice: (...args: unknown[]) => mockRepoGetSlice(...args),
+    getSlice: (...args: unknown[]) => mockRepoGetSlice(...(args as [unknown])),
   },
 }));
 

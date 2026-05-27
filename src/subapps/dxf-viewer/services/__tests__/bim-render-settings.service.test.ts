@@ -34,7 +34,7 @@ describe('saveBimRenderSettings', () => {
       drawingScale: 100,
       objectStyles: { wall: { projectionPen: 4, cutPen: 9 } },
     };
-    await saveBimRenderSettings('lvl-2', settings);
+    await saveBimRenderSettings('lvl-2', settings as unknown as Parameters<typeof saveBimRenderSettings>[1]);
     expect(mockPatch).toHaveBeenCalledWith({
       payload: { levelId: 'lvl-2', bimRenderSettings: settings },
     });

@@ -24,7 +24,7 @@ const { __setSceneForTest } = jest.requireMock('../useCurrentSceneModel') as {
 };
 
 function makeLayer(over: Partial<SceneLayer>): SceneLayer {
-  return { name: 'L', color: '#fff', visible: true, locked: false, ...over };
+  return { name: 'L', color: '#fff', visible: true, locked: false, ...over } as SceneLayer;
 }
 
 function makeScene(layersById: Record<string, SceneLayer>): SceneModel {
