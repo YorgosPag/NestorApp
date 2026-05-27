@@ -45,6 +45,7 @@ import {
   entityToSaveInput,
   StairFirestoreService,
 } from '../stairs/stair-firestore-service';
+import { recordStairChange } from '../stairs/stair-audit-client';
 
 // ============================================================================
 // TYPES
@@ -320,6 +321,8 @@ export function useStairPersistence(
   const persist = useCallback(async (entity: StairEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;
+    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
+    const isNew = prevParams === null;
     setSaveState('saving');
     setError(null);
     try {
@@ -329,6 +332,11 @@ export function useStairPersistence(
       dirtyIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
+      void recordStairChange(
+        isNew ? 'created' : 'updated',
+        { id: entity.id, kind: entity.kind, layerId: entity.layerId, params: entity.params },
+        { prevParams: prevParams ?? undefined },
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'STAIR_SAVE_ERROR');
       setSaveState('error');
@@ -370,13 +378,22 @@ export function useStairPersistence(
       saveTimerRef.current = null;
     }
 
+    const scene = levelManager.getLevelScene(levelId);
+    const deletedEntity = scene?.entities.find((e) => e.id === stairId);
+    const deletedStair = (deletedEntity && isStair(deletedEntity)) ? deletedEntity : null;
+
     try {
       await svc.deleteStair(stairId);
+      void recordStairChange(
+        'deleted',
+        deletedStair
+          ? { id: deletedStair.id, kind: deletedStair.kind, layerId: deletedStair.layerId, params: deletedStair.params }
+          : { id: stairId, kind: 'straight' },
+      );
     } catch {
       // Non-fatal — scene already updated by DeleteEntityCommand.
     }
 
-    const scene = levelManager.getLevelScene(levelId);
     if (scene) {
       const nextEntities = scene.entities.filter((e) => e.id !== stairId);
       if (nextEntities.length !== scene.entities.length) {

@@ -3677,20 +3677,22 @@
     },
     "bim-audit-helpers": {
       "ssotFile": "src/subapps/dxf-viewer/bim/utils/bim-audit-helpers.ts",
-      "description": "ADR-379 (2026-05-27): SSoT for building AuditFieldChange[] payloads from BIM entity snapshots (wall/column/slab/beam/opening). Three canonical builders: buildBimCreationChanges (oldDoc={}), buildBimUpdateChanges (prev→next diff via diffTrackedFields), buildBimDeletionChanges (reverse diff, oldValue→null). Replaces 5 copy-pasted buildXxxChanges() functions that emitted only {field:'kind'} placeholders. All BIM audit-clients MUST consume these helpers — forbidden patterns block any re-introduction of the legacy per-type builders.",
+      "description": "ADR-379 (2026-05-27) + ADR-380 (2026-05-27): SSoT for building AuditFieldChange[] payloads from BIM entity snapshots — wall/column/slab/beam/opening (ADR-379) + stair/slab-opening (ADR-380). Three canonical builders: buildBimCreationChanges (oldDoc={}), buildBimUpdateChanges (prev→next diff via diffTrackedFields), buildBimDeletionChanges (reverse diff, oldValue→null). Replaces 7 copy-pasted buildXxxChanges() functions that emitted only {field:'kind'} placeholders. All BIM audit-clients MUST consume these helpers — forbidden patterns block any re-introduction of the legacy per-type builders.",
       "forbiddenPatterns": [
         "function\\s+buildWallChanges\\s*\\(",
         "function\\s+buildColumnChanges\\s*\\(",
         "function\\s+buildSlabChanges\\s*\\(",
         "function\\s+buildBeamChanges\\s*\\(",
-        "function\\s+buildOpeningChanges\\s*\\("
+        "function\\s+buildOpeningChanges\\s*\\(",
+        "function\\s+buildStairChanges\\s*\\(",
+        "function\\s+buildSlabOpeningChanges\\s*\\("
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/bim/utils/bim-audit-helpers.ts",
         "src/subapps/dxf-viewer/bim/utils/__tests__/bim-audit-helpers.test.ts"
       ],
       "addedDate": "2026-05-27",
-      "addedByAdr": "ADR-379",
+      "addedByAdr": "ADR-379, ADR-380",
       "tier": 3
     },
     "bim-renderer-finalize": {

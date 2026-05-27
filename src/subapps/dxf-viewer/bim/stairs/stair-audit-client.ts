@@ -1,11 +1,9 @@
 'use client';
 
 /**
- * ADR-380 — Fire-and-forget audit client για slab-opening create/update/delete.
- * Refactored από placeholder `[{ field: 'kind', ... }]` σε diffTrackedFields
- * SSoT (mirror beam-audit-client / wall-audit-client pattern, ADR-379).
- *
- * POSTs σε /api/audit-trail/record (ADR-195 centralized endpoint).
+ * ADR-380 — Fire-and-forget audit client για stair create / update / delete.
+ * Mirrors beam-audit-client.ts (ADR-379 pattern). Uses the BIM audit-helpers
+ * SSoT so diff semantics match the other 5 BIM entity types.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-380-stair-slab-opening-audit-coverage.md
  * @see docs/centralized-systems/reference/adrs/ADR-379-bim-entity-audit-coverage.md
@@ -14,8 +12,8 @@
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
-import { SLAB_OPENING_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
-import type { SlabOpeningEntity } from '../types/slab-opening-types';
+import { STAIR_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
+import type { StairEntity } from '../types/stair-types';
 import {
   buildBimCreationChanges,
   buildBimDeletionChanges,
@@ -24,41 +22,41 @@ import {
   type BimAuditSnapshot,
 } from '../utils/bim-audit-helpers';
 
-export type SlabOpeningAuditAction = 'created' | 'updated' | 'deleted';
+export type StairAuditAction = 'created' | 'updated' | 'deleted';
 
-export type SlabOpeningAuditSnapshot = Pick<SlabOpeningEntity, 'id' | 'kind'> & {
+export type StairAuditSnapshot = Pick<StairEntity, 'id' | 'kind'> & {
   readonly layerId?: string;
-  readonly params?: Partial<SlabOpeningEntity['params']>;
+  readonly params?: Partial<StairEntity['params']>;
 };
 
-export interface RecordSlabOpeningChangeOptions {
+export interface RecordStairChangeOptions {
   readonly entityName?: string | null;
-  readonly prevParams?: Partial<SlabOpeningEntity['params']> | null;
+  readonly prevParams?: Partial<StairEntity['params']> | null;
 }
 
-export function recordSlabOpeningChange(
-  action: SlabOpeningAuditAction,
-  entity: SlabOpeningAuditSnapshot,
-  options?: RecordSlabOpeningChangeOptions,
+export function recordStairChange(
+  action: StairAuditAction,
+  entity: StairAuditSnapshot,
+  options?: RecordStairChangeOptions,
 ): void {
   const changes = buildChanges(action, entity, options?.prevParams ?? null);
   if (changes === null) return;
 
   apiClient
     .post('/api/audit-trail/record', {
-      entityType: 'slab-opening',
+      entityType: 'stair',
       entityId: entity.id,
       entityName: options?.entityName ?? null,
       action: action as AuditAction,
       changes,
     })
-    .catch(() => { /* fire-and-forget — audit failures never surface to UX */ });
+    .catch(() => { /* fire-and-forget */ });
 }
 
 function buildChanges(
-  action: SlabOpeningAuditAction,
-  entity: SlabOpeningAuditSnapshot,
-  prevParams: Partial<SlabOpeningEntity['params']> | null,
+  action: StairAuditAction,
+  entity: StairAuditSnapshot,
+  prevParams: Partial<StairEntity['params']> | null,
 ): AuditFieldChange[] | null {
   const snapshot: BimAuditSnapshot = {
     kind: entity.kind,
@@ -68,14 +66,14 @@ function buildChanges(
 
   if (action === 'created') {
     return ensureNonEmptyChanges(
-      buildBimCreationChanges(snapshot, SLAB_OPENING_TRACKED_FIELDS),
+      buildBimCreationChanges(snapshot, STAIR_TRACKED_FIELDS),
       { field: 'kind', oldValue: null, newValue: entity.kind },
     );
   }
 
   if (action === 'deleted') {
     return ensureNonEmptyChanges(
-      buildBimDeletionChanges(snapshot, SLAB_OPENING_TRACKED_FIELDS),
+      buildBimDeletionChanges(snapshot, STAIR_TRACKED_FIELDS),
       { field: 'kind', oldValue: entity.kind, newValue: null },
     );
   }
@@ -86,6 +84,6 @@ function buildChanges(
     layerId: entity.layerId,
     params: prevParams as Record<string, unknown>,
   };
-  const changes = buildBimUpdateChanges(prevSnapshot, snapshot, SLAB_OPENING_TRACKED_FIELDS);
+  const changes = buildBimUpdateChanges(prevSnapshot, snapshot, STAIR_TRACKED_FIELDS);
   return changes.length > 0 ? changes : null;
 }

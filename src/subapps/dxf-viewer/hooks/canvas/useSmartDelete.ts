@@ -186,6 +186,12 @@ export function useSmartDelete({
       const deletingSlabIds = new Set(
         selectedDxfEntityIds.filter((id) => adapter.getEntity(id)?.type === 'slab'),
       );
+      const deletingColumnIds = new Set(
+        selectedDxfEntityIds.filter((id) => adapter.getEntity(id)?.type === 'column'),
+      );
+      const deletingBeamIds = new Set(
+        selectedDxfEntityIds.filter((id) => adapter.getEntity(id)?.type === 'beam'),
+      );
       const needsScene = deletingWallIds.size > 0 || deletingSlabIds.size > 0;
       const scene = needsScene
         ? levelManager.getLevelScene(levelManager.currentLevelId)
@@ -211,6 +217,8 @@ export function useSmartDelete({
       // Collect BIM IDs BEFORE executeCommand removes them from scene.
       const wallIdsInBatch = [...deletingWallIds];
       const slabIdsInBatch = [...deletingSlabIds];
+      const columnIdsInBatch = [...deletingColumnIds];
+      const beamIdsInBatch = [...deletingBeamIds];
       const stairIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'stair',
       );
@@ -235,6 +243,12 @@ export function useSmartDelete({
       }
       for (const slabId of slabIdsInBatch) {
         eventBus.emit('bim:slab-delete-requested', { slabId });
+      }
+      for (const columnId of columnIdsInBatch) {
+        eventBus.emit('bim:column-delete-requested', { columnId });
+      }
+      for (const beamId of beamIdsInBatch) {
+        eventBus.emit('bim:beam-delete-requested', { beamId });
       }
       // ADR-358 Phase 9C-3 — trigger Firestore deleteDoc for each deleted stair.
       for (const stairId of stairIdsInBatch) {

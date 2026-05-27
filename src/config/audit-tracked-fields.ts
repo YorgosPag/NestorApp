@@ -723,6 +723,69 @@ const OPENING_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const OPENING_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(OPENING_TRACKED_FIELDS_RAW, {});
 
+const SLAB_OPENING_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  slabId: 'slabId',
+  elevationOverride: 'elevationOverride',
+  multiStoreyStackGroupId: 'multiStoreyStackGroupId',
+  fireRating: 'fireRating',
+  material: 'material',
+  sceneUnits: 'sceneUnits',
+  // `outline` (Polygon3D coords) is intentionally OUT — coord triples
+  // produce noise every grip drag.
+};
+
+export const SLAB_OPENING_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(SLAB_OPENING_TRACKED_FIELDS_RAW, {});
+
+const STAIR_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  // Dimensional intent (scalar)
+  rise: 'rise',
+  tread: 'tread',
+  nosing: 'nosing',
+  nosingSide: 'nosingSide',
+  width: 'width',
+  stepCount: 'stepCount',
+  totalRise: 'totalRise',
+  totalRun: 'totalRun',
+  pitch: 'pitch',
+  // Structure / code semantics
+  structureType: 'structureType',
+  riserType: 'riserType',
+  codeProfile: 'codeProfile',
+  nokSubType: 'nokSubType',
+  antiskidNosing: 'antiskidNosing',
+  adaContrastStrip: 'adaContrastStrip',
+  cutPlaneHeight: 'cutPlaneHeight',
+  occupancyLoad: 'occupancyLoad',
+  // Walkline / direction
+  walklineOffset: 'walklineOffset',
+  upDirection: 'upDirection',
+  // Tread labelling
+  treadNumberStart: 'treadNumberStart',
+  treadLabelDisplay: 'treadLabelDisplay',
+  treadLabelEveryN: 'treadLabelEveryN',
+  treadLabelRestartPerFlight: 'treadLabelRestartPerFlight',
+  treadLabelHeight: 'treadLabelHeight',
+  // Storey FK
+  storeyId: 'storeyId',
+  offsetFromStorey: 'offsetFromStorey',
+  // Nested objects serialized as JSON scalars (per wall.dna / column.lshape pattern).
+  variant: 'variant',
+  multiStoryConfig: 'multiStoryConfig',
+  stringerParams: 'stringerParams',
+  materials: 'materials',
+  handrails: 'handrails',
+  // `basePoint` / `direction` / `perTreadOverrides` intentionally OUT
+  // (coord triples + would explode payload per-tread).
+};
+
+export const STAIR_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(STAIR_TRACKED_FIELDS_RAW, {});
+
 /** Project audit registry — `field → TrackedFieldDef`. */
 export const PROJECT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(PROJECT_TRACKED_FIELDS_RAW, PROJECT_COLLECTION_DEFS);
@@ -767,6 +830,10 @@ export function getTrackedFieldsForEntityAuditType(
       return BEAM_TRACKED_FIELDS;
     case 'opening':
       return OPENING_TRACKED_FIELDS;
+    case 'slab-opening':
+      return SLAB_OPENING_TRACKED_FIELDS;
+    case 'stair':
+      return STAIR_TRACKED_FIELDS;
     default:
       return null;
   }

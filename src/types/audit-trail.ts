@@ -36,6 +36,7 @@ export type AuditEntityType =
   | 'slab-opening'
   | 'column'
   | 'beam'
+  | 'stair'
   | 'performance_diagnostic'
   | 'performance_telemetry'
   | 'bim_dimension_3d'

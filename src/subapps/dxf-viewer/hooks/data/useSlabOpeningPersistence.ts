@@ -217,7 +217,8 @@ export function useSlabOpeningPersistence(
   const persist = useCallback(async (entity: SlabOpeningEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;
-    const isNew = !lastSavedParamsRef.current.has(entity.id);
+    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
+    const isNew = prevParams === null;
     setSaveState('saving');
     setError(null);
     try {
@@ -226,7 +227,11 @@ export function useSlabOpeningPersistence(
       dirtyIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
-      void recordSlabOpeningChange(isNew ? 'created' : 'updated', entity);
+      void recordSlabOpeningChange(
+        isNew ? 'created' : 'updated',
+        { id: entity.id, kind: entity.kind, layerId: entity.layerId, params: entity.params },
+        { prevParams: prevParams ?? undefined },
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'SLAB_OPENING_SAVE_ERROR');
       setSaveState('error');
@@ -277,15 +282,20 @@ export function useSlabOpeningPersistence(
 
     const scene = levelManager.getLevelScene(levelId);
     const deletedEntity = scene?.entities.find((e) => e.id === slabOpeningId);
+    const deletedSlabOpening = (deletedEntity && isSlabOpening(deletedEntity)) ? deletedEntity : null;
 
     try {
       await svc.deleteSlabOpening(slabOpeningId);
       void recordSlabOpeningChange(
         'deleted',
-        {
-          id: slabOpeningId,
-          kind: (deletedEntity as Partial<SlabOpeningEntity>)?.kind ?? 'shaft',
-        },
+        deletedSlabOpening
+          ? {
+              id: deletedSlabOpening.id,
+              kind: deletedSlabOpening.kind,
+              layerId: deletedSlabOpening.layerId,
+              params: deletedSlabOpening.params,
+            }
+          : { id: slabOpeningId, kind: 'shaft' },
       );
     } catch {
       // Non-fatal: deletion failure silent — user retries.
