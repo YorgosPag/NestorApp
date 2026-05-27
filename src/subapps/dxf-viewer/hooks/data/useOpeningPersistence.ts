@@ -26,16 +26,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { dequal } from 'dequal';
-import { doc, getDoc } from 'firebase/firestore';
 
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { Level } from '../../systems/levels/config';
-import { computeOpeningGeometry } from '../../bim/geometry/opening-geometry';
-import { validateOpeningParams } from '../../bim/validators/opening-validator';
 import { EventBus } from '../../systems/events/EventBus';
 import {
   createOpeningFirestoreService,
@@ -44,11 +39,13 @@ import {
   type OpeningDoc,
 } from '../../bim/walls/opening-firestore-service';
 import { recordOpeningChange } from '../../bim/walls/opening-audit-client';
+import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 import {
   deleteOpeningFromGroup,
   upsertOpeningGroupForOpening,
 } from '../../bim/services/opening-boq-sync';
-import { getOpeningMarkService } from '../../bim/services/opening-mark-service';
+import { isOpening, isWall, openingDocToEntity } from '../../bim/walls/opening-doc-hydration';
+import { allocateMarkAndPatchScene } from '../../bim/walls/opening-mark-allocator';
 
 // ============================================================================
 // TYPES
@@ -88,41 +85,6 @@ export interface UseOpeningPersistenceResult {
 const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 // ============================================================================
-// HELPERS
-// ============================================================================
-
-function isOpening(entity: AnySceneEntity): entity is OpeningEntity {
-  return (entity as { type?: string }).type === 'opening';
-}
-
-function isWall(entity: AnySceneEntity): entity is WallEntity {
-  return (entity as { type?: string }).type === 'wall';
-}
-
-/**
- * Build a scene-side `OpeningEntity` από a persisted `OpeningDoc` + host wall.
- * Returns `null` όταν ο host wall δεν είναι ακόμα στο scene — caller skips
- * the snapshot entry until the next round-trip (re-hydrate).
- */
-function docToEntity(
-  doc: OpeningDoc,
-  hostWall: WallEntity | null,
-): OpeningEntity | null {
-  if (!hostWall) return null;
-  const validation = doc.validation ?? validateOpeningParams(doc.params, hostWall).bimValidation;
-  return {
-    id: doc.id,
-    type: 'opening',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: doc.geometry ?? computeOpeningGeometry(doc.params, hostWall, hostWall.params.sceneUnits ?? 'mm'),
-    validation,
-    visible: true,
-  } as OpeningEntity;
-}
-
-// ============================================================================
 // HOOK
 // ============================================================================
 
@@ -148,6 +110,8 @@ export function useOpeningPersistence(
   const serviceRef = useRef<OpeningFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const deletedIdsRef = useRef<Set<string>>(new Set());
+  // ADR-381 — pending first save (drawn or restored via undo).
+  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, OpeningEntity['params']>>(new Map());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedOpeningRef = useRef<OpeningEntity | null>(null);
@@ -219,7 +183,7 @@ export function useOpeningPersistence(
           const host = wallsById.get(doc.params.wallId) ?? null;
           if (!existing) {
             if (!dirty.has(doc.id)) {
-              const entity = docToEntity(doc, host);
+              const entity = openingDocToEntity(doc, host);
               if (entity) {
                 nextOpenings.push(entity);
                 mutated = true;
@@ -232,7 +196,7 @@ export function useOpeningPersistence(
             continue;
           }
           if (!dequal(existing.params, doc.params)) {
-            const entity = docToEntity(doc, host);
+            const entity = openingDocToEntity(doc, host);
             if (entity) {
               nextOpenings.push(entity);
               mutated = true;
@@ -253,12 +217,13 @@ export function useOpeningPersistence(
           }
         }
 
+        const pending = pendingFirstSaveIdsRef.current;
         for (const [id, entity] of sceneOpenings) {
           if (docsById.has(id)) continue;
           // Explicitly deleted — never re-add regardless of save state.
           if (deletedIdsRef.current.has(id)) { mutated = true; continue; }
-          const neverSaved = !lastSavedParamsRef.current.has(id);
-          if (dirty.has(id) || neverSaved) {
+          // ADR-381 — replaces buggy `neverSaved` guard.
+          if (dirty.has(id) || pending.has(id)) {
             nextOpenings.push(entity);
           } else {
             mutated = true;
@@ -294,6 +259,7 @@ export function useOpeningPersistence(
         : svc.updateOpening(entity.id, { kind: entity.kind, params: entity.params, validation: entity.validation, layerId: entity.layerId }));
       lastSavedParamsRef.current.set(entity.id, entity.params);
       dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
       void recordOpeningChange(
@@ -318,57 +284,10 @@ export function useOpeningPersistence(
 
   // ADR-376 Phase A — allocate mark before first persist (idempotent if already set).
   const allocateAndPersistOpening = useCallback(async (entity: OpeningEntity) => {
-    let finalEntity: OpeningEntity = entity;
-    if (
-      entity.params.mark === undefined &&
-      companyId &&
-      projectId &&
-      floorplanId &&
-      levelManager.currentLevelId
-    ) {
-      const level = levelManager.levels.find((l) => l.id === levelManager.currentLevelId);
-      if (!level?.floorId) {
-        // Blank-canvas / non-wizard placement — pending Phase B per handoff Α.
-        // eslint-disable-next-line no-console
-        console.warn('[opening-mark] skipped allocation: level.floorId missing');
-      } else {
-        try {
-          const floorSnap = await getDoc(doc(db, COLLECTIONS.FLOORS, level.floorId));
-          const floorNumber = (floorSnap.data() as { number?: number } | undefined)?.number;
-          if (typeof floorNumber === 'number') {
-            const kindPrefix = t(`opening.tag.prefix.${entity.kind}`);
-            const basementPrefix = t('opening.tag.basementPrefix');
-            const mark = await getOpeningMarkService().allocateMark({
-              companyId,
-              projectId,
-              floorplanId,
-              floorNumber,
-              kind: entity.kind,
-              kindPrefix,
-              basementPrefix,
-            });
-            finalEntity = {
-              ...entity,
-              params: { ...entity.params, mark },
-            } as OpeningEntity;
-
-            // Optimistic scene patch — ο tag εμφανίζεται immediately χωρίς να
-            // περιμένουμε round-trip από Firestore snapshot.
-            const levelId = levelManager.currentLevelId;
-            const scene = levelManager.getLevelScene(levelId);
-            if (scene) {
-              const nextEntities = scene.entities.map((e) =>
-                e.id === finalEntity.id ? finalEntity : e,
-              );
-              levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
-            }
-          }
-        } catch {
-          // Non-fatal — persist χωρίς mark, lazy-allocate σε επόμενο placement
-          // ή μέσω migration script (`npm run bim:migrate:opening-tags`).
-        }
-      }
-    }
+    const finalEntity =
+      companyId && projectId && floorplanId
+        ? await allocateMarkAndPatchScene(entity, { companyId, projectId, floorplanId, levelManager, t })
+        : entity;
     await persist(finalEntity);
   }, [persist, companyId, projectId, floorplanId, levelManager, t]);
 
@@ -379,6 +298,10 @@ export function useOpeningPersistence(
   useEffect(() => {
     const opening = primarySelectedOpening;
     if (!opening || !serviceRef.current) return;
+    // ADR-381 — Bug A defense-in-depth.
+    const known = lastSavedParamsRef.current.has(opening.id);
+    const pendingOpening = pendingFirstSaveIdsRef.current.has(opening.id);
+    if (!known && !pendingOpening) return;
     const lastSaved = lastSavedParamsRef.current.get(opening.id);
     if (lastSaved && dequal(lastSaved, opening.params)) return;
 
@@ -458,7 +381,35 @@ export function useOpeningPersistence(
 
     dirtyIdsRef.current.delete(openingId);
     lastSavedParamsRef.current.delete(openingId);
+    pendingFirstSaveIdsRef.current.delete(openingId);
   }, [levelManager, companyId, projectId, buildingId, floorplanId]);
+
+  // ADR-381 — persistRestore: undo→Firestore re-create + audit 'restored'.
+  const persistRestore = useCallback(async (entity: OpeningEntity) => {
+    const svc = serviceRef.current;
+    if (!svc) return;
+    setSaveState('saving');
+    setError(null);
+    try {
+      await svc.saveOpening(entityToSaveInput(entity, currentFloorIdRef.current ?? undefined));
+      lastSavedParamsRef.current.set(entity.id, entity.params);
+      dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
+      setSaveState('saved');
+      setLastSavedAt(Date.now());
+      void recordOpeningChange('restored', entity);
+      if (companyId && projectId && buildingId && floorplanId) {
+        void upsertOpeningGroupForOpening(
+          { id: entity.id, kind: entity.kind, params: entity.params },
+          null,
+          { companyId, projectId, buildingId, floorplanId },
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'OPENING_RESTORE_ERROR');
+      setSaveState('error');
+    }
+  }, [companyId, projectId, buildingId, floorplanId]);
 
   // First-save listener — fires άμεσα για freshly drawn openings.
   // ADR-376 Phase A: lazy-allocate `params.mark` here (single SSoT lifecycle
@@ -470,6 +421,7 @@ export function useOpeningPersistence(
       const entity = payload.entity as OpeningEntity | undefined;
       if (!entity || (entity as { type?: string }).type !== 'opening') return;
       if (!serviceRef.current) return;
+      pendingFirstSaveIdsRef.current.add(entity.id);
       dirtyIdsRef.current.add(entity.id);
       void allocateAndPersistOpening(entity);
     });
@@ -505,6 +457,16 @@ export function useOpeningPersistence(
     });
     return cleanup;
   }, [deleteOpening]);
+
+  // ADR-381 — symmetric undo→Firestore restore.
+  useBimEntityRestoredPersistEffect(
+    'opening',
+    isOpening,
+    serviceRef,
+    pendingFirstSaveIdsRef,
+    deletedIdsRef,
+    persistRestore,
+  );
 
   // Unmount cleanup — flush pending timers.
   useEffect(() => {

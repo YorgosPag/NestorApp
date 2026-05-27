@@ -28,17 +28,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { nowTimestamp } from '@/lib/firestore-now';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
-import type {
-  StairDoc,
-  StairEntity,
-  StairParams,
-  StairValidationState,
-} from '../types/stair-types';
-import { computeStairGeometry } from '../geometry/stairs/StairGeometryService';
+import type { StairDoc, StairEntity } from '../types/stair-types';
 import { EventBus } from '../../systems/events/EventBus';
 import {
   createStairFirestoreService,
@@ -46,6 +39,8 @@ import {
   StairFirestoreService,
 } from '../stairs/stair-firestore-service';
 import { recordStairChange } from '../stairs/stair-audit-client';
+import { useBimEntityRestoredPersistEffect } from '../../hooks/data/useBimEntityRestoredPersistEffect';
+import { stairDocToEntity } from '../stairs/stair-doc-hydration';
 
 // ============================================================================
 // TYPES
@@ -87,54 +82,6 @@ const LOCK_TTL_MS = 5 * 60 * 1000;
 // HELPERS
 // ============================================================================
 
-/**
- * ADR-358 Phase 3f + 3g — back-compat hydration for legacy `StairDoc.params`:
- *
- *   - Phase 3f: l-shape variant without `cornerStyle` → defaults to `'landing'`.
- *   - Phase 3g: `nokSubType: 'secondary'` → rewritten to `'low-rise'` (same
- *     legal width minimum 0.90 m; clearer semantic match to ΝΟΚ scope table).
- */
-function hydrateLegacyParams(params: StairParams): StairParams {
-  let out: StairParams = params;
-  const v = out.variant;
-  if (v.kind === 'l-shape' && (v as { cornerStyle?: string }).cornerStyle === undefined) {
-    out = { ...out, variant: { ...v, cornerStyle: 'landing' } as typeof v };
-  }
-  if (out.nokSubType === 'secondary') {
-    out = { ...out, nokSubType: 'low-rise' };
-  }
-  return out;
-}
-
-/**
- * Build a scene-side `StairEntity` from a persisted `StairDoc`. Geometry is
- * recomputed via the SSoT `computeStairGeometry` — ADR §G6: geometry is NOT
- * persisted (re-derivable from params).
- */
-function docToEntity(doc: StairDoc): StairEntity {
-  const validation: StairValidationState = doc.validation ?? {
-    hasCodeViolations: false,
-    violationKeys: [],
-    lastValidatedAt: nowTimestamp(),
-  };
-  const params = hydrateLegacyParams(doc.params);
-  return {
-    id: doc.id,
-    type: 'stair',
-    kind: doc.kind,
-    params,
-    geometry: computeStairGeometry(params),
-    validation,
-    layerId: doc.layer ?? 'STAIRS',
-    levelId: doc.levelId,
-    floorId: doc.floorId,
-    buildingId: doc.buildingId,
-    visible: true,
-    editingBy: doc.editingBy,
-    qto: doc.qto,
-  } as StairEntity;
-}
-
 function isStair(entity: AnySceneEntity): entity is StairEntity {
   return (entity as { type?: string }).type === 'stair';
 }
@@ -162,6 +109,9 @@ export function useStairPersistence(
   const serviceRef = useRef<StairFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, StairEntity['params']>>(new Map());
+  // ADR-381 — pending first save (drawn or restored) + tombstone tracking.
+  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
+  const deletedIdsRef = useRef<Set<string>>(new Set());
   const lockHeldRef = useRef<string | null>(null);
   const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -207,12 +157,16 @@ export function useStairPersistence(
         const nextStairs: StairEntity[] = [];
         let mutated = false;
 
+        const deleted = deletedIdsRef.current;
+        const pending = pendingFirstSaveIdsRef.current;
+
         for (const doc of docs) {
+          if (deleted.has(doc.id)) continue;
           const existing = sceneStairs.get(doc.id);
           if (!existing) {
             // Remote add — only if not currently in local-create flow.
             if (!dirty.has(doc.id)) {
-              nextStairs.push(docToEntity(doc));
+              nextStairs.push(stairDocToEntity(doc));
               mutated = true;
             }
             continue;
@@ -224,25 +178,20 @@ export function useStairPersistence(
           }
           // Remote update — merge if params actually differ.
           if (!dequal(existing.params, doc.params) || !dequal(existing.editingBy, doc.editingBy)) {
-            nextStairs.push(docToEntity(doc));
+            nextStairs.push(stairDocToEntity(doc));
             mutated = true;
           } else {
             nextStairs.push(existing);
           }
         }
 
+        // ADR-381 — replaces buggy `neverSaved` guard. Preserve stairs only
+        // αν είναι dirty ή pendingFirstSave (drawn / restored via undo). Closes
+        // the Bug B ghost-render path όπου fresh refresh με κενό `lastSavedParamsRef`
+        // κρατούσε ορφανές entities σε scene.
         for (const [id, entity] of sceneStairs) {
           if (docsById.has(id)) continue;
-          // ADR-358 Phase Q17 9B-6 — preserve local stairs that have NEVER
-          // been persisted yet (optimistic insert). Without this guard, a
-          // freshly drawn stair flickers in then out: tool adds it to the
-          // local scene → snapshot fires → diff-merge sees "in scene but
-          // not in docs" and drops it. Industry pattern (Revit transaction
-          // model + Firestore optimistic UI 5/5): local-never-saved always
-          // wins until either a save round-trip completes OR the user
-          // explicitly deletes it via a delete command.
-          const neverSaved = !lastSavedParamsRef.current.has(id);
-          if (dirty.has(id) || neverSaved) {
+          if (dirty.has(id) || pending.has(id)) {
             nextStairs.push(entity);
           } else {
             mutated = true;
@@ -330,6 +279,7 @@ export function useStairPersistence(
       await svc.saveStair(entityToSaveInput(entity));
       lastSavedParamsRef.current.set(entity.id, entity.params);
       dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
       void recordStairChange(
@@ -347,6 +297,10 @@ export function useStairPersistence(
   useEffect(() => {
     const stair = primarySelectedStair;
     if (!stair || !serviceRef.current) return;
+    // ADR-381 — Bug A defense-in-depth.
+    const known = lastSavedParamsRef.current.has(stair.id);
+    const pendingStair = pendingFirstSaveIdsRef.current.has(stair.id);
+    if (!known && !pendingStair) return;
     const lastSaved = lastSavedParamsRef.current.get(stair.id);
     if (lastSaved && dequal(lastSaved, stair.params)) return;
 
@@ -403,11 +357,37 @@ export function useStairPersistence(
 
     dirtyIdsRef.current.delete(stairId);
     lastSavedParamsRef.current.delete(stairId);
+    pendingFirstSaveIdsRef.current.delete(stairId);
+    deletedIdsRef.current.add(stairId);
 
     if (lockHeldRef.current === stairId) {
       void releaseLock();
     }
   }, [levelManager, releaseLock]);
+
+  // ADR-381 — persistRestore: undo→Firestore re-create + audit 'restored'.
+  const persistRestore = useCallback(async (entity: StairEntity) => {
+    const svc = serviceRef.current;
+    if (!svc) return;
+    setSaveState('saving');
+    setError(null);
+    try {
+      await acquireLock(entity.id);
+      await svc.saveStair(entityToSaveInput(entity));
+      lastSavedParamsRef.current.set(entity.id, entity.params);
+      dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
+      setSaveState('saved');
+      setLastSavedAt(Date.now());
+      void recordStairChange(
+        'restored',
+        { id: entity.id, kind: entity.kind, layerId: entity.layerId, params: entity.params },
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'STAIR_RESTORE_ERROR');
+      setSaveState('error');
+    }
+  }, [acquireLock]);
 
   // Imperative save trigger (explicit "Αποθήκευση" button).
   const saveNow = useCallback(async () => {
@@ -439,11 +419,22 @@ export function useStairPersistence(
       const entity = payload.entity as StairEntity | undefined;
       if (!entity || (entity as { type?: string }).type !== 'stair') return;
       if (!serviceRef.current) return;
+      pendingFirstSaveIdsRef.current.add(entity.id);
       dirtyIdsRef.current.add(entity.id);
       void persist(entity);
     });
     return cleanup;
   }, [persist]);
+
+  // ADR-381 — symmetric undo→Firestore restore.
+  useBimEntityRestoredPersistEffect(
+    'stair',
+    isStair,
+    serviceRef,
+    pendingFirstSaveIdsRef,
+    deletedIdsRef,
+    persistRestore,
+  );
 
   // Unmount cleanup — release lock + flush pending timers.
   useEffect(() => {
