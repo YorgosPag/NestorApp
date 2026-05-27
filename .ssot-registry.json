@@ -2793,17 +2793,20 @@
     },
     "snap-engine": {
       "ssotFile": "src/subapps/dxf-viewer/snapping/global-snap-engine.ts",
-      "description": "ProSnapEngineV2 / SnapManager singleton SSoT (ADR-040 Phase VIII, 2026-05-11). Prior architecture instantiated `new ProSnapEngineV2()` inside every `useSnapManager()` hook call — three active call sites produced three independent engines, each rebuilding spatial indices for all 17 sub-engines on every scene change (verified: 1498ms React commit blocked + 4 redundant initialize runs at N=3263 entities). Canonical access: `getGlobalSnapEngine()`. Scene-initialize lifecycle is owned exclusively by `useGlobalSnapSceneSync` (called once from CanvasSection); other call sites are forbidden. Direct construction (`new ProSnapEngineV2(`, `new SnapManager(`) outside the canonical file is a SSoT violation.",
+      "description": "ProSnapEngineV2 single production singleton SSoT (ADR-378 Master Snap Architecture, 2026-05-27; supersedes ADR-040 Phase VIII narrow scope). Canonical access: `getGlobalSnapEngine()`. Scene-initialize lifecycle owned exclusively by `useGlobalSnapSceneSync` (called once from CanvasSection); other call sites forbidden. 26 sub-engines registered via SnapEngineRegistry (Orchestrator pattern — Revit/AutoCAD/ArchiCAD/BricsCAD/SketchUp/Vectorworks/Bentley industry convergence, 7/7). Forbidden: (1) `new ProSnapEngineV2(` outside canonical — parallel instance breaks ADR-040 perf invariants; (2) `new SnapManager(` legacy name; (3) `new SnapEngine(` — geo-canvas parallel 6-mode class deleted in ADR-378 Phase 4 (2026-05-27), reintroduction blocked; (4) `class AISnappingEngine` — conference demo dead code deleted in ADR-378 Phase 1 (2026-05-27), reintroduction blocked. Geo-canvas property floorplan tab now consumes the same engine via `useSnapEngine` façade + `parserResultToEntities` adapter (ADR-378 §3.1).",
       "forbiddenPatterns": [
         "new\\s+ProSnapEngineV2\\s*\\(",
-        "new\\s+SnapManager\\s*\\("
+        "new\\s+SnapManager\\s*\\(",
+        "new\\s+SnapEngine\\s*\\(",
+        "class\\s+AISnappingEngine"
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/snapping/global-snap-engine.ts",
-        "src/subapps/dxf-viewer/snapping/ProSnapEngineV2.ts"
+        "src/subapps/dxf-viewer/snapping/ProSnapEngineV2.ts",
+        "src/subapps/dxf-viewer/snapping/__tests__/**"
       ],
       "addedDate": "2026-05-11",
-      "addedByAdr": "ADR-040",
+      "addedByAdr": "ADR-378",
       "tier": 2
     },
     "dxf-viewport-culling": {

@@ -15,7 +15,7 @@ function translate(t: ItemTransform): Entity {
 // ── LINE ─────────────────────────────────────────────────────────────────────
 
 describe('line', () => {
-  const line: Entity = { id: 'l1', type: 'line', start: { x: 0, y: 0 }, end: { x: 10, y: 0 } } as Entity;
+  const line = { id: 'l1', type: 'line', start: { x: 0, y: 0 }, end: { x: 10, y: 0 } } as Extract<Entity, { type: 'line' }>;
 
   it('translation only: shifts start+end', () => {
     const result = applyTransformToEntity(line, TRANSLATE_10, PIVOT) as Extract<Entity, { type: 'line' }>;

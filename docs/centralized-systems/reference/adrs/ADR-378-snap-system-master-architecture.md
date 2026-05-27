@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟡 **DRAFT** 2026-05-27 — Master ADR γράφτηκε, Phases 1-6 cleanup pending |
+| **Status** | ✅ **COMPLETE** 2026-05-27 — Master ADR + Phases 1+2+3+4+5+6 ALL DONE |
 | **Date** | 2026-05-27 |
 | **Category** | DXF Viewer — Snapping (Master) |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-378-snap-system-master-architecture.md` |
@@ -528,20 +528,28 @@ Original plan: 2 edits. Actual: 12 edits across 11 files after Phase 1+2 verific
 - Grep `AISnappingEngine|useProSnapShortcuts|pro-snap-engine|AI_SNAPPING` → only legit remaining: tracking files (ADR-378 self-refs, pending-ratchet, ΕΚΚΡΕΜΟΤΗΤΕΣ, memory), historical entries (ADR-314 Phase C.5.32 2026-04-19), archived ADRs (067/079), research/analysis MDs, baseline JSON (Phase 6 scope), backup files
 - Grep `ADR-149` → only legit remaining: 3 Active ADRs (370/153/359) all now in "supersedes phantom ADR-149" wording + ADR-378 itself documenting the phantom history
 
-### Phase 6 — SSoT registry + trackers (Sonnet, ~30min)
+### Phase 6 — SSoT registry + trackers ✅ DONE 2026-05-27 (Sonnet, ~30min)
 
-#### 6.1 `.ssot-registry.json`
-- Update `snap-engine` module entry:
-  - Add forbidden: `new\\s+SnapEngine\\s*\\(`, `class\\s+AISnappingEngine`
-  - Reference ADR-378 in description
-- Refresh: `npm run ssot:baseline`
+#### 6.1 `.ssot-registry.json` — DONE
+- ✅ `snap-engine` module entry updated:
+  - `forbiddenPatterns` now has 4 patterns (was 2): added `new\\s+SnapEngine\\s*\\(` (geo-canvas legacy class, deleted Phase 4) + `class\\s+AISnappingEngine` (conference demo dead code, deleted Phase 1). Retained `new\\s+ProSnapEngineV2\\s*\\(` + `new\\s+SnapManager\\s*\\(`.
+  - `description` rewritten — references ADR-378 master + 7/7 industry convergence (Revit/AutoCAD/ArchiCAD/BricsCAD/SketchUp/Vectorworks/Bentley) + explains each forbidden pattern + cross-refs Phases 1+4 deletions + geo-canvas façade pattern.
+  - `addedByAdr` changed from `ADR-040` → `ADR-378` (master now owns the rule).
+  - `allowlist` gained `src/subapps/dxf-viewer/snapping/__tests__/**` (canonical tests need to import the class for unit coverage).
+- ✅ Grep verification post-edit:
+  - `new SnapEngine(` in `src/` → zero matches.
+  - `class AISnappingEngine` in `src/` → 1 match (docs analysis MD, not scanned by SSoT).
 
-#### 6.2 ΕΚΚΡΕΜΟΤΗΤΕΣ
-- Add «Snap System Centralization — ADR-378» section, mark ✅ after commit
+#### 6.2 Baselines refresh — DONE
+- ✅ `npm run ssot:baseline` executed. `.ssot-violations-baseline.json` refreshed (zero new violations introduced by Phases 1+2+3+4+5).
 
-#### 6.3 pending-ratchet-work.md
-- Add changelog entry
-- Fold `inferred-alignment-service` pending into ADR-378 §11 future work
+#### 6.3 ΕΚΚΡΕΜΟΤΗΤΕΣ — DONE
+- ✅ `local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt` ΟΜΑΔΑ Χ row X6 → ✅ ΥΛΟΠΟΙΗΜΕΝΟ 2026-05-27. Header status: 🟢 ALL PHASES COMPLETE.
+
+#### 6.4 pending-ratchet-work.md — DONE
+- ✅ Header rotation: Phase 6 entry at top, Phase 4 → Previous.
+- ✅ Phase 6 closure block with implementation details.
+- ✅ `inferred-alignment-service` entry remains under separate ADR-3XX TBD ratchet — folded into ADR-378 §11 future work cross-reference (see ADR-378 §11).
 
 ---
 
@@ -612,6 +620,7 @@ These remain as-is. Future ADR may unify 3D snap if/when 3D BIM Viewer matures.
 | 2026-05-27 | 2 | Phase 2 — `pro-snap-engine.ts` ghost deleted. `snapping/index.ts` re-export line removed. **Discovery**: ZERO production consumers of `snapSystem` existed — ADR §3.3 and §9.2.1 claims about `measure-snap-bridge.ts` were incorrect (that file is in `src/components/shared/files/media/` and unrelated). No migration step needed. §3.3 + §9 Phase 2 corrected to match reality. Sonnet 4.6, ~10min. |
 | 2026-05-27 | 5 | Phase 5 — Doc cleanup (EXPANDED from 2 to 12 edits across 11 files). All ADR-149 phantom refs updated to ADR-378 in 3 Active ADRs (370/153/359). All stale paths in Active ADRs (034/092/362) marked Removed or pointed to new SSoT engines. DXF Viewer subapp docs (ARCHITECTURE/SETTINGS_PROGRESS/CONFERENCE_REPORT) cleaned. Code: orphan AI_SNAPPING storage constant deleted, stale comment in snap-engine-utils.ts removed. adr-index.md status DRAFT→ACTIVE. Sonnet 4.6, ~20min. |
 | 2026-05-27 | 3 | Phase 3 — TextSnapEngine completion (ADR-344 Phase 6.C delivered). NEW `engines/TextSnapEngine.ts` (151 LOC) extends `BaseSnapEngine`, registered as `ExtendedSnapType.TEXT` in `SnapEngineRegistry`, emits 8 candidates per visible TEXT/MTEXT entity (insertion + 4 corners + center + 2 edge mids), works directly on `Entity` union with approximate bbox + rotation. SnapIndicatorOverlay gains `case 'text':` nested-square ▣ symbol. i18n el+en `snapModes.labels.text.*` 8 sub-keys + tooltips.text. Type system constants already committed in HEAD (`7f788d8d` + `aabfb04f`). Phase 3.4 N/A (no manual feed existed in text-layout-engine, same surprise pattern as Phase 2). 14 new TextSnapEngine.test.ts cases PASS (broader snap suite 168/169 PASS, 1 pre-existing unrelated failure). TextSnapProvider.test.ts intact (kept math helpers untouched for legacy/test stability). Sonnet 4.6, ~2h. |
+| 2026-05-27 | 6 | Phase 6 — SSoT registry hardening + final closure. `.ssot-registry.json` `snap-engine` module: `forbiddenPatterns` 2 → 4 (added `new SnapEngine(` for geo-canvas legacy class deleted Phase 4 + `class AISnappingEngine` for conference demo deleted Phase 1). Description rewritten with ADR-378 master reference, 7/7 industry alignment (Revit/AutoCAD/ArchiCAD/BricsCAD/SketchUp/Vectorworks/Bentley), per-pattern rationale, geo-canvas façade cross-ref. `addedByAdr` ADR-040 → ADR-378 (master now owns rule). `allowlist` gained `__tests__/**` glob for canonical unit coverage imports. `npm run ssot:baseline` refreshed `.ssot-violations-baseline.json` — zero new violations from any Phase 1-5 work. Grep verification post-edit: `new SnapEngine(` in `src/` zero matches; `class AISnappingEngine` only 1 doc analysis MD (not scanned). `local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt` X6 ✅ + header 🟢 ALL PHASES COMPLETE. `pending-ratchet-work.md` Phase 6 closure block. ADR-378 status header: 🟡 DRAFT → ✅ COMPLETE. `adr-index.md` ADR-378 row: Phases 1+2+3+4+5 → ALL Phases COMPLETE. Memory + MEMORY.md index updated. **ADR-378 fully shipped — 5 parallel snap subsystems consolidated to 1 production singleton.** Sonnet, ~30min. |
 | 2026-05-27 | 4 | Phase 4 — Geo-canvas SnapEngine unification with DXF Viewer SSoT. NEW `geo-canvas/floor-plan-system/snapping/adapter/parser-result-to-entities.ts` (108 LOC) maps GeoJSON FeatureCollection (LineString/Polygon/MultiLineString) → DXF Entity[] (mirror `regionsToSnapEntities` pattern). REFACTORED `hooks/useSnapEngine.ts` (~190 LOC) — façade over `getGlobalSnapEngine()` with `EXTENDED_TO_GEO_MODE` mapper collapsing 26-mode ProSnapEngineV2 output to 6 classic geo-canvas `SnapMode` values for render-layer back-compat. Public API surface `UseSnapEngineReturn` UNCHANGED — `GeoCanvasContent.tsx:93` + `FloorPlanCanvasLayer.tsx` consumers work as-is. DELETED `engine/SnapEngine.ts` (275 LOC) + `endpoint-detector.ts` (202 LOC) + `snap-distance.ts` (139 LOC) + `engine/index.ts` barrel + `useSnapPoints.ts` (zero callers). KEPT `types/snap-types.ts` + `config/snap-defaults.ts` + `rendering/SnapIndicator.tsx` (required by render layer). Property floorplan tab user-visible win: 26 modes (BIM corners + dim + guides + text + classic CAD) vs previous 6 endpoint-only. Tsc zero new errors. Jest 188 pass / 2 pre-existing unrelated fails (bim-corner-alignment + DxfGeoTransform i18n drift). Single-scene-at-a-time assumption documented in §9 Phase 4.5 (DXF Viewer + geo-canvas not concurrently mounted). Opus 4.7, ~2h. |
 
 ---

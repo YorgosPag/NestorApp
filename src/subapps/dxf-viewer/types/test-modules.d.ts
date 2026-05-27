@@ -53,12 +53,12 @@ declare module 'three/examples/jsm/lines/LineSegments2' {
 }
 
 declare module 'three/examples/jsm/lines/LineMaterial' {
-  import { ShaderMaterial } from 'three';
+  import { ShaderMaterial, Vector2 } from 'three';
   export class LineMaterial extends ShaderMaterial {
     constructor(parameters?: Record<string, unknown>);
     linewidth: number;
     color: any;
-    resolution: { set: (w: number, h: number) => void };
+    resolution: Vector2;
     dashed: boolean;
     dispose(): void;
   }
@@ -80,4 +80,14 @@ declare module 'three/examples/jsm/lines/LineSegmentsGeometry' {
   }
 }
 
-export {};
+// `@google-cloud/storage` ships with firebase-admin as a peer dependency.
+// pnpm hoists firebase-admin but not its peers — TS standalone resolution
+// can't see them. Only the `Bucket` type is imported by src/lib/firebaseAdmin.ts.
+declare module '@google-cloud/storage' {
+  export interface Bucket {
+    name: string;
+    file(path: string): unknown;
+    upload(...args: unknown[]): Promise<unknown>;
+    [key: string]: unknown;
+  }
+}
