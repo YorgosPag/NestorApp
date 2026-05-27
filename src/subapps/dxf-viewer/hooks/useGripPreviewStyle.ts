@@ -14,7 +14,7 @@ import { UI_SIZE_DEFAULTS } from '../config/text-rendering-config';
 export interface GripPreviewStyle {
   enabled: boolean;
   colors: {
-    cold: string;
+    cold: string | null;
     warm: string;
     hot: string;
     contour: string;

@@ -29,6 +29,9 @@ const KIND_STROKE: Readonly<Record<ColumnKind, string>> = {
   'circular':    '#3a3a40',
   'L-shape':     '#a07a2b',
   'T-shape':     '#3a5a78',
+  'polygon':     '#4a5566',
+  'shear-wall':  '#5b6478',
+  'I-shape':     '#2f3b4d',
 };
 
 /** Active-ghost fill (rgba @30% opacity). Mirror της `ColumnRenderer.KIND_FILL`
@@ -39,6 +42,9 @@ const KIND_FILL_ACTIVE: Readonly<Record<ColumnKind, string>> = {
   'circular':    'rgba(96, 96, 102, 0.30)',
   'L-shape':     'rgba(192, 148, 56, 0.30)',
   'T-shape':     'rgba(110, 140, 178, 0.30)',
+  'polygon':     'rgba(120, 138, 158, 0.30)',
+  'shear-wall':  'rgba(140, 158, 178, 0.30)',
+  'I-shape':     'rgba(90, 110, 138, 0.30)',
 };
 
 const INACTIVE_OPACITY = 0.15;

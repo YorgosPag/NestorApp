@@ -152,7 +152,7 @@ export function useMouseMoveHandler({
         scene &&
         (activeDragGrip.gripKind === 'wall-start' || activeDragGrip.gripKind === 'wall-end')
       ) {
-        const draggedEntity = scene.entities?.find(e => e.id === activeDragGrip.entityId);
+        const draggedEntity = scene.entities?.find(e => e.id === activeDragGrip.entityId) as unknown as import('../../types/entities').Entity | undefined;
         if (draggedEntity && isWallEntity(draggedEntity)) {
           const faceSnap = findWallFaceCornerSnap(
             draggedEntity,

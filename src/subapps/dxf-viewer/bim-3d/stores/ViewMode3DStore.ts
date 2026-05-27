@@ -226,7 +226,7 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
 
         setVisibleFloors(floorIds) {
           set((draft) => {
-            draft.visibleFloors = floorIds;
+            draft.visibleFloors = new Set(floorIds);
           });
         },
 

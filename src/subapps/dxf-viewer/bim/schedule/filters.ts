@@ -171,8 +171,8 @@ export function applyScheduleFilters<E extends FilterableBimEntity>(
  * NOTE: this is a structural cast helper — no runtime work. Used by
  * builder when iterating heterogeneous `BimEntity<string, unknown, ...>[]`.
  */
-export function asFilterable<TKind extends string, TParams, TGeometry extends { bbox: BoundingBox3D }>(
-  entity: BimEntity<TKind, TParams, TGeometry>,
+export function asFilterable(
+  entity: BimEntity<string, unknown, { bbox: BoundingBox3D }>,
 ): FilterableBimEntity {
   return entity as unknown as FilterableBimEntity;
 }

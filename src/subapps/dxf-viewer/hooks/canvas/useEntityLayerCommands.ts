@@ -5,6 +5,7 @@
  */
 import { useMemo } from 'react';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { ICommand } from '../../core/commands/interfaces';
 
 type LayerCommandProps =
   | { readonly canApplyLayerCommands: false }
@@ -17,7 +18,7 @@ type LayerCommandProps =
     };
 
 interface ExecuteCommand {
-  (cmd: unknown): void;
+  (cmd: ICommand): void;
 }
 
 export function useEntityLayerCommands(

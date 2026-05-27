@@ -63,6 +63,9 @@ const COLUMN_MAPPING: Readonly<Record<ColumnKind, AtoeMappingEntry>> = {
   'circular':    { categoryCode: 'OIK-2.03', unit: 'm3', titleEL: 'Κολώνα RC κυκλική (BIM)' },
   'L-shape':     { categoryCode: 'OIK-2.03', unit: 'm3', titleEL: 'Κολώνα RC Γ-τομής (BIM)' },
   'T-shape':     { categoryCode: 'OIK-2.03', unit: 'm3', titleEL: 'Κολώνα RC Τ-τομής (BIM)' },
+  'polygon':     { categoryCode: 'OIK-2.03', unit: 'm3', titleEL: 'Κολώνα RC πολυγωνική (BIM)' },
+  'shear-wall':  { categoryCode: 'OIK-2.03', unit: 'm3', titleEL: 'Τοιχείο RC (BIM)' },
+  'I-shape':     { categoryCode: 'MET-1.01', unit: 'kg', titleEL: 'Κολώνα μεταλλική Ι-τομής (BIM)' },
 };
 
 const BEAM_MAPPING: Readonly<Record<BeamKind, AtoeMappingEntry>> = {

@@ -126,9 +126,10 @@ function moveBeam(entity: BeamEntity, delta: Point2D): Partial<SceneEntity> {
 }
 
 function moveStair(entity: StairEntity, delta: Point2D): Partial<SceneEntity> {
+  const shifted = shiftPoint3D(entity.params.basePoint, delta);
   const newParams: StairParams = {
     ...entity.params,
-    basePoint: shiftPoint3D(entity.params.basePoint, delta),
+    basePoint: { x: shifted.x, y: shifted.y, z: shifted.z ?? 0 },
   };
   const geometry = computeStairGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;

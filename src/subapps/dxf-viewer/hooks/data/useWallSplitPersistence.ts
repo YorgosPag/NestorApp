@@ -110,13 +110,13 @@ export function useWallSplitPersistence(params: UseWallSplitPersistenceParams): 
       void bimToBoqBridge.deleteBoqItemForBim(originalWallId, cId);
       void bimToBoqBridge.upsertBoqItemForBim(
         'wall',
-        { id: wall1.id, kind: wall1.kind, geometry: wall1.geometry, params: wall1.params },
+        { id: wall1.id, kind: wall1.kind, geometry: wall1.geometry, params: wall1.params as unknown as Readonly<{ [key: string]: unknown; category?: string }> },
         { companyId: cId, projectId: pId, buildingId: bId },
         'created',
       );
       void bimToBoqBridge.upsertBoqItemForBim(
         'wall',
-        { id: wall2.id, kind: wall2.kind, geometry: wall2.geometry, params: wall2.params },
+        { id: wall2.id, kind: wall2.kind, geometry: wall2.geometry, params: wall2.params as unknown as Readonly<{ [key: string]: unknown; category?: string }> },
         { companyId: cId, projectId: pId, buildingId: bId },
         'created',
       );

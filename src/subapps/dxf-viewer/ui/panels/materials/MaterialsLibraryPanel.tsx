@@ -197,7 +197,7 @@ interface MaterialCardProps {
   material: BimMaterial;
   onEdit: (m: BimMaterial) => void;
   onDelete: (m: BimMaterial) => void;
-  t: (k: string) => string;
+  t: (k: string, opts?: Record<string, string>) => string;
   colors: ReturnType<typeof useSemanticColors>;
 }
 

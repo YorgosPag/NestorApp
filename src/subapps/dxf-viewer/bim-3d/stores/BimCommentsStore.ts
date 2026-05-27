@@ -16,6 +16,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { castDraft } from 'immer';
 import { BimCommentsService } from '../comments/bim-comments.service';
 import type {
   BimComment,
@@ -54,25 +55,29 @@ interface BimCommentsActions {
 
 type BimCommentsStoreType = BimCommentsState & BimCommentsActions;
 
+const initialState: BimCommentsState = {
+  comments: {},
+  replies: {},
+  selectedCommentId: null,
+  panelOpen: false,
+  filters: {},
+};
+
 export const useBimCommentsStore = create<BimCommentsStoreType>()(
   devtools(
     subscribeWithSelector(
       immer((set) => ({
-        comments: {},
-        replies: {},
-        selectedCommentId: null,
-        panelOpen: false,
-        filters: {},
+        ...initialState,
 
         setComments(comments) {
           set((draft) => {
-            draft.comments = Object.fromEntries(comments.map((c) => [c.id, c]));
+            draft.comments = castDraft(Object.fromEntries(comments.map((c) => [c.id, c])));
           });
         },
 
         setReplies(commentId, replies) {
           set((draft) => {
-            draft.replies[commentId] = [...replies];
+            draft.replies[commentId] = castDraft([...replies]);
           });
         },
 
@@ -108,7 +113,7 @@ export const useBimCommentsStore = create<BimCommentsStoreType>()(
           );
         },
 
-        subscribeToReplies(commentId) {
+        subscribeToReplies(commentId: string) {
           return BimCommentsService.subscribeReplies(
             commentId,
             (replies) => useBimCommentsStore.getState().setReplies(commentId, replies),

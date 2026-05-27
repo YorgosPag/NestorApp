@@ -23,7 +23,7 @@ interface DxfFindReplaceHostProps {
   readonly onOpenChange: (open: boolean) => void;
 }
 
-function isTextEntity(e: Entity): e is DxfTextSceneEntity {
+function isTextEntity(e: Entity): boolean {
   return e.type === 'text' || e.type === 'mtext';
 }
 
@@ -31,8 +31,8 @@ export function DxfFindReplaceHost({ open, onOpenChange }: DxfFindReplaceHostPro
   const services = useDxfTextServices();
   const scene = useCurrentSceneModel();
 
-  const entities = useMemo(
-    () => (scene ? scene.entities.filter(isTextEntity) : []),
+  const entities = useMemo<readonly DxfTextSceneEntity[]>(
+    () => (scene ? (scene.entities.filter(isTextEntity) as unknown as DxfTextSceneEntity[]) : []),
     [scene],
   );
 

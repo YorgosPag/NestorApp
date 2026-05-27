@@ -71,10 +71,12 @@ export const gripStyleStore = {
     guardGlobalAccess('GRIP_STYLE_READ');
     return current;
   },
-  set(next: Partial<GripStyle> & { colors?: { cold: string | null; warm: string; hot: string; contour: string } }) {
+  set(next: Omit<Partial<GripStyle>, 'colors'> & { colors?: { cold: string | null; warm: string; hot: string; contour: string } }) {
     // 🔥 GUARD: Προστασία ενημέρωσης των γενικών grip settings όταν override ενεργό
     guardGlobalAccess('GRIP_STYLE_UPDATE');
-    const resolved = next.colors ? { ...next, colors: resolveGripColors(next.colors) } : next;
+    const resolved: Partial<GripStyle> = next.colors
+      ? { ...next, colors: resolveGripColors(next.colors) }
+      : (next as Partial<GripStyle>);
     current = { ...current, ...resolved };
     listeners.forEach(l => l());
   },

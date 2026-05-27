@@ -455,7 +455,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       <React.Suspense fallback={<div className="hidden" />}><DxfSymbolPickerHost open={state.symbolPickerOpen} onOpenChange={state.setSymbolPickerOpen} /></React.Suspense>
       <React.Suspense fallback={<div className="hidden" />}><RenumberOpeningsHost projectId={levelManager.saveContext?.projectId ?? undefined} floorplanId={levelManager.fileRecordId ?? undefined} /></React.Suspense>
       <React.Suspense fallback={<div className="hidden" />}><OpeningTagStyleHost projectId={levelManager.saveContext?.projectId ?? undefined} /></React.Suspense>
-      <React.Suspense fallback={<div className="hidden" />}><OpeningSchedulePdfHost getEntities={() => levelManager.getLevelScene(levelManager.currentLevelId ?? '')?.entities ?? []} levels={levelManager.levels} /></React.Suspense>
+      <React.Suspense fallback={<div className="hidden" />}><OpeningSchedulePdfHost getEntities={() => (levelManager.getLevelScene(levelManager.currentLevelId ?? '')?.entities ?? []) as unknown as ReadonlyArray<Record<string, unknown>>} levels={levelManager.levels} /></React.Suspense>
       {USE_AI_DRAWING_ASSISTANT && (
         <React.Suspense fallback={<div className="hidden" />}>
           <DxfAiChatPanel

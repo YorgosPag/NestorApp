@@ -257,6 +257,32 @@ function SnapShape({ type, color }: { type: string; color: string }) {
         </svg>
       );
 
+    // ▣ TEXT: Nested square (outer + inner) — ADR-378 Phase 3 TEXT/MTEXT 8-point snap
+    // Industry convention: text snap rendered as concentric rectangles (Revit/AutoCAD distinct from generic endpoint).
+    case 'text':
+      return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <rect
+            x={strokeWidth / 2}
+            y={strokeWidth / 2}
+            width={size - strokeWidth}
+            height={size - strokeWidth}
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+          />
+          <rect
+            x={size * 0.3}
+            y={size * 0.3}
+            width={size * 0.4}
+            height={size * 0.4}
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+          />
+        </svg>
+      );
+
     // ✦ CONSTRUCTION_POINT: Diamond with center dot — ADR-189
     case 'construction_point':
       return (

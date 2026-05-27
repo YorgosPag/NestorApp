@@ -267,7 +267,7 @@ function useLevelsSystemState({
   const setUserDrawingUnits = useCallback(
     (units: SceneUnits | 'auto') => {
       setImportWizard(prev => ({ ...prev, userDrawingUnits: units }));
-      importWizardHook.setUserDrawingUnits(units);
+      importWizardHook.setUserDrawingUnits?.(units);
     },
     [importWizardHook]
   );

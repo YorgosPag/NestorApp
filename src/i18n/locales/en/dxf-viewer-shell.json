@@ -576,6 +576,17 @@
         "slabCorner": "Slab corner",
         "columnCorner": "Column corner",
         "openingCorner": "Opening corner"
+      },
+      "text": "Text",
+      "textPoints": {
+        "insertion": "Text insertion point",
+        "cornerTl": "Text top-left corner",
+        "cornerTr": "Text top-right corner",
+        "cornerBl": "Text bottom-left corner",
+        "cornerBr": "Text bottom-right corner",
+        "center": "Text center",
+        "edgeTopMid": "Text top-edge midpoint",
+        "edgeBottomMid": "Text bottom-edge midpoint"
       }
     },
     "tooltips": {
@@ -604,7 +615,8 @@
         "slabCorner":    "Slab Corner - Snap to slab outline vertex",
         "columnCorner":  "Column Corner - Snap to column perimeter corner",
         "openingCorner": "Opening Corner - Snap to door/window face corner"
-      }
+      },
+      "text": "Text - Snap to insertion point, corners, center and edge midpoints of TEXT/MTEXT"
     },
     "ui": {
       "showAdvanced": "Show advanced features",

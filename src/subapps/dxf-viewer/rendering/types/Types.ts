@@ -124,7 +124,7 @@ export interface GripSettings {
 
   // === Grip Colors (AutoCAD style) ===
   colors: {
-    cold: string;           // GRIPCOLOR: unselected (default blue)
+    cold: string | null;    // GRIPCOLOR: unselected (default blue). null = resolved via GRIP_COLD_COLOR SSoT
     warm: string;           // GRIPHOVER: hover (default orange)
     hot: string;            // GRIPHOT: selected (default red)
     contour: string;        // GRIPCONTOUR: border (default black)

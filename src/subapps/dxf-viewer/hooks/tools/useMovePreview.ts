@@ -182,9 +182,9 @@ export function useMovePreview(props: UseMovePreviewProps): void {
         // Resolve entity color for solid-looking preview (AutoCAD parity).
         // ByLayer/ByBlock: cascade to LayerStore for the actual displayed color.
         const useLayerColor = !entity.color || entity.colorMode === 'ByLayer' || entity.colorMode === 'ByBlock';
-        const color = useLayerColor
+        const color: string = useLayerColor
           ? (getLayer(entity.layerId)?.color ?? '#FFFFFF')
-          : entity.color;
+          : (entity.color ?? '#FFFFFF');
         ctx.strokeStyle = color;
         ctx.fillStyle = color;
         drawGhostEntity(ctx, transformed, transform, vp);

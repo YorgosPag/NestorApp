@@ -46,9 +46,10 @@ interface GripSettings {
   gripShape: 'square' | 'circle';
   showFill: boolean;
   colors: {
-    cold: string;
+    cold: string | null;
     warm: string;
     hot: string;
+    contour: string;
   };
 }
 

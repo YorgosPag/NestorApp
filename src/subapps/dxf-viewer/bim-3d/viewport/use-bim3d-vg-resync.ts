@@ -27,26 +27,26 @@ export function useBim3DVgResync(
   bimEntities: Bim3DEntities | null | undefined,
 ): void {
   useEffect(() => {
-    return useBimRenderSettingsStore.subscribe(
-      (s) => s.objectStyles,
-      () => {
-        const manager = managerRef.current;
-        if (!manager) return;
-        if (externalEntitiesMode) {
-          manager.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined);
-          return;
-        }
-        const s = useBim3DEntitiesStore.getState();
-        manager.syncBimEntities(
-          { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs, slabOpenings: s.slabOpenings, openings: s.openings, stairs: s.stairs },
-          0,
-          s.activeLevelId ?? undefined,
-          s.floors,
-          s.buildings,
-          s.activeBuildingId,
-          s.buildingVisibilityModes,
-        );
-      },
-    );
+    let prevObjectStyles = useBimRenderSettingsStore.getState().objectStyles;
+    return useBimRenderSettingsStore.subscribe((state) => {
+      if (state.objectStyles === prevObjectStyles) return;
+      prevObjectStyles = state.objectStyles;
+      const manager = managerRef.current;
+      if (!manager) return;
+      if (externalEntitiesMode) {
+        manager.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined);
+        return;
+      }
+      const s = useBim3DEntitiesStore.getState();
+      manager.syncBimEntities(
+        { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs, slabOpenings: s.slabOpenings, openings: s.openings, stairs: s.stairs },
+        0,
+        s.activeLevelId ?? undefined,
+        s.floors,
+        s.buildings,
+        s.activeBuildingId,
+        s.buildingVisibilityModes,
+      );
+    });
   }, [managerRef, externalEntitiesMode, bimEntities]);
 }

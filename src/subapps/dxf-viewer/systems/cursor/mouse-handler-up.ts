@@ -119,7 +119,7 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
             scene &&
             (activeDragGrip.gripKind === 'wall-start' || activeDragGrip.gripKind === 'wall-end')
           ) {
-            const draggedEntity = scene.entities?.find(en => en.id === activeDragGrip.entityId);
+            const draggedEntity = scene.entities?.find(en => en.id === activeDragGrip.entityId) as unknown as import('../../types/entities').Entity | undefined;
             if (draggedEntity && isWallEntity(draggedEntity)) {
               const faceSnap = findWallFaceCornerSnap(
                 draggedEntity,
