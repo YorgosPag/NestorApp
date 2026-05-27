@@ -29,6 +29,7 @@ import type { OpeningEntity } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle, resolveIsCategoryVisible, type BimLayerOverride } from '../../config/bim-line-weight-resolver';
+import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -53,16 +54,6 @@ const CATEGORY_FILL: Readonly<Record<WallCategory, string>> = {
   parapet:   'rgba(120, 144, 156, 0.22)', // concrete deeper
   fence:     'rgba(141, 110, 99, 0.18)',  // stone brown
 };
-
-/** Translucent body-fill alpha when a V/G category color is applied (Revit cut-pattern background convention). */
-const VG_FILL_ALPHA = 0.2;
-
-function hexToRgba(hex: string, alpha: number): string | null {
-  const m = /^#([0-9a-fA-F]{6})$/.exec(hex);
-  if (!m) return null;
-  const n = parseInt(m[1], 16);
-  return `rgba(${(n >> 16) & 0xff}, ${(n >> 8) & 0xff}, ${n & 0xff}, ${alpha})`;
-}
 
 
 const AXIS_DASH: readonly [number, number] = [6, 4];
@@ -185,6 +176,7 @@ export class WallRenderer extends BaseEntityRenderer {
     if (outer.length < 2 || inner.length < 2) return;
 
     const cat = wall.params.category;
+    const _styles = useDrawingScaleStore.getState().objectStyles;
     const _cutState = resolveCutState(
       { zBottomMm: wall.params.baseOffset ?? 0, zTopMm: (wall.params.baseOffset ?? 0) + wall.params.height, category: 'wall' },
       useDrawingScaleStore.getState().viewRange,
@@ -192,14 +184,11 @@ export class WallRenderer extends BaseEntityRenderer {
     const { lineWidthPx: _edgePx, linePattern: _edgePattern, color: _edgeColor } = resolveSubcategoryStyle({
       category: 'wall', subcategoryKey: 'common-edges',
       cutState: _cutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
-      dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
+      dpi: 96, objectStyles: _styles,
       elementOverride: wall.styleOverride, layerOverride,
     });
-    // ADR-375 v2.12 — V/G category color tints the body fill (Revit "cut pattern
-    // background" convention). When V/G is unset the resolver returns null and
-    // we fall back to the per-category hardcoded translucent tint.
-    const _vgFill = _edgeColor ? hexToRgba(_edgeColor, VG_FILL_ALPHA) : null;
-    this.ctx.fillStyle = _vgFill ?? CATEGORY_FILL[cat];
+    // ADR-375 v2.12 — V/G category color tints the body fill (SSoT helper).
+    this.ctx.fillStyle = resolveVgFillTint('wall', _cutState, _styles) ?? CATEGORY_FILL[cat];
     this.ctx.lineWidth = _edgePx;
     this.ctx.setLineDash(linePatternToDashArray(_edgePattern) as number[]);
 

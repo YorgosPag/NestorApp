@@ -39,6 +39,7 @@ import type { SlabOpeningEntity } from '../types/slab-opening-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
+import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -127,8 +128,15 @@ export class SlabRenderer extends BaseEntityRenderer {
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
+    // ADR-375 v2.12 — V/G category color tints the body fill (SSoT helper).
+    const _slabStyles = useDrawingScaleStore.getState().objectStyles;
+    const _slabZTop = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
+    const _slabCutState = resolveCutState(
+      { zBottomMm: _slabZTop - slab.params.thickness, zTopMm: _slabZTop, category: 'slab' },
+      useDrawingScaleStore.getState().viewRange,
+    );
     // Fill first, hatch clipped inside, stroke on top so outline stays sharp.
-    this.ctx.fillStyle = KIND_FILL[slab.kind];
+    this.ctx.fillStyle = resolveVgFillTint('slab', _slabCutState, _slabStyles) ?? KIND_FILL[slab.kind];
     this.drawPolygonPath(verts);
     this.ctx.fill();
 
@@ -144,15 +152,10 @@ export class SlabRenderer extends BaseEntityRenderer {
       lineweightMm: isConcreteLineweight(_slabLayer.lineweight) ? _slabLayer.lineweight : undefined,
       color: _slabLayer.color ?? undefined,
     } : undefined;
-    const _slabZTop = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
-    const _slabCutState = resolveCutState(
-      { zBottomMm: _slabZTop - slab.params.thickness, zTopMm: _slabZTop, category: 'slab' },
-      useDrawingScaleStore.getState().viewRange,
-    );
     const { lineWidthPx: _slabLwPx, linePattern: _slabPattern, color: _slabColor } = resolveSubcategoryStyle({
       category: 'slab', subcategoryKey: 'common-edges',
       cutState: _slabCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
-      dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
+      dpi: 96, objectStyles: _slabStyles,
       elementOverride: slab.styleOverride, layerOverride: _slabLayerOverride,
     });
     this.ctx.lineWidth = _slabLwPx;

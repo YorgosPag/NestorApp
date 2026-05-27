@@ -36,6 +36,7 @@ import type {
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
+import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -103,7 +104,14 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
 
-    this.ctx.fillStyle = KIND_FILL[opening.kind];
+    // ADR-375 v2.12 — V/G category color tints the body fill (SSoT helper).
+    const _soStyles = useDrawingScaleStore.getState().objectStyles;
+    const _soZTop = opening.params.elevationOverride ?? 0;
+    const _soCutState = resolveCutState(
+      { zBottomMm: _soZTop - 200, zTopMm: _soZTop, category: 'slab-opening' },
+      useDrawingScaleStore.getState().viewRange,
+    );
+    this.ctx.fillStyle = resolveVgFillTint('slab-opening', _soCutState, _soStyles) ?? KIND_FILL[opening.kind];
     this.drawPolygonPath(verts);
     this.ctx.fill();
 
@@ -112,15 +120,10 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
       lineweightMm: isConcreteLineweight(_soLayer.lineweight) ? _soLayer.lineweight : undefined,
       color: _soLayer.color ?? undefined,
     } : undefined;
-    const _soZTop = opening.params.elevationOverride ?? 0;
-    const _soCutState = resolveCutState(
-      { zBottomMm: _soZTop - 200, zTopMm: _soZTop, category: 'slab-opening' },
-      useDrawingScaleStore.getState().viewRange,
-    );
     const { lineWidthPx: _soLwPx, linePattern: _soPattern, color: _soColor } = resolveSubcategoryStyle({
       category: 'slab-opening', subcategoryKey: 'edges',
       cutState: _soCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
-      dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
+      dpi: 96, objectStyles: _soStyles,
       elementOverride: opening.styleOverride, layerOverride: _soLayerOverride,
     });
     this.ctx.lineWidth = _soLwPx;

@@ -40,6 +40,7 @@ import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
+import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -119,8 +120,14 @@ export class ColumnRenderer extends BaseEntityRenderer {
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
+    // ADR-375 v2.12 — V/G category color tints the body fill (SSoT helper).
+    const _colStyles = useDrawingScaleStore.getState().objectStyles;
+    const _colCutState = resolveCutState(
+      { zBottomMm: column.params.baseOffset ?? 0, zTopMm: (column.params.baseOffset ?? 0) + column.params.height, category: 'column' },
+      useDrawingScaleStore.getState().viewRange,
+    );
     // Fill first, hatch clipped inside, stroke on top so outline stays sharp.
-    this.ctx.fillStyle = KIND_FILL[column.kind];
+    this.ctx.fillStyle = resolveVgFillTint('column', _colCutState, _colStyles) ?? KIND_FILL[column.kind];
     this.drawPolygonPath(verts);
     this.ctx.fill();
 
@@ -133,14 +140,10 @@ export class ColumnRenderer extends BaseEntityRenderer {
       lineweightMm: isConcreteLineweight(_colLayer.lineweight) ? _colLayer.lineweight : undefined,
       color: _colLayer.color ?? undefined,
     } : undefined;
-    const _colCutState = resolveCutState(
-      { zBottomMm: column.params.baseOffset ?? 0, zTopMm: (column.params.baseOffset ?? 0) + column.params.height, category: 'column' },
-      useDrawingScaleStore.getState().viewRange,
-    );
     const { lineWidthPx: _colLwPx, color: _colColor } = resolveSubcategoryStyle({
       category: 'column', subcategoryKey: 'common-edges',
       cutState: _colCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
-      dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
+      dpi: 96, objectStyles: _colStyles,
       elementOverride: column.styleOverride, layerOverride: _colLayerOverride,
     });
     this.ctx.lineWidth = _colLwPx;

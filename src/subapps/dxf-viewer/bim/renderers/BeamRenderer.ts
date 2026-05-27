@@ -33,6 +33,7 @@ import type { BeamEntity, BeamKind } from '../types/beam-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
+import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -119,8 +120,15 @@ export class BeamRenderer extends BaseEntityRenderer {
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
 
+    // ADR-375 v2.12 — V/G category color tints the body fill (SSoT helper).
+    const _beamDs = useDrawingScaleStore.getState();
+    const _beamZTop = beam.params.topElevation + (beam.params.zOffset ?? 0);
+    const _beamCutState = resolveCutState(
+      { zBottomMm: _beamZTop - beam.params.depth, zTopMm: _beamZTop, category: 'beam' },
+      _beamDs.viewRange,
+    );
     // Translucent fill first.
-    this.ctx.fillStyle = KIND_FILL[beam.kind];
+    this.ctx.fillStyle = resolveVgFillTint('beam', _beamCutState, _beamDs.objectStyles) ?? KIND_FILL[beam.kind];
     this.drawPolygonPath(verts);
     this.ctx.fill();
 
@@ -133,12 +141,6 @@ export class BeamRenderer extends BaseEntityRenderer {
       lineweightMm: isConcreteLineweight(_beamLayer.lineweight) ? _beamLayer.lineweight : undefined,
       color: _beamLayer.color ?? undefined,
     } : undefined;
-    const _beamZTop = beam.params.topElevation + (beam.params.zOffset ?? 0);
-    const _beamDs = useDrawingScaleStore.getState();
-    const _beamCutState = resolveCutState(
-      { zBottomMm: _beamZTop - beam.params.depth, zTopMm: _beamZTop, category: 'beam' },
-      _beamDs.viewRange,
-    );
     const { lineWidthPx: _beamPx, linePattern: _beamPat, color: _beamCol } = resolveSubcategoryStyle({
       category: 'beam', subcategoryKey: 'hidden-lines',
       cutState: _beamCutState, scaleDenominator: _beamDs.drawingScale,

@@ -215,7 +215,7 @@ Consumed by drawing/measure hooks via `useSyncExternalStore`. Documented here so
 |---|---|---|---|
 | `AISnappingEngine` | `systems/ai-snapping/AISnappingEngine.ts` | **Delete εντελώς** — "conference demo", zero production wiring | 1 |
 | `useProSnapShortcuts` | `keyboard/useProSnapShortcuts.ts` | **Delete** — never wired, 2 doc references | 1 |
-| `pro-snap-engine.ts` (`snapSystem` global) | `snapping/pro-snap-engine.ts` | **Migrate consumer + Delete** — second instance, only `measure-snap-bridge.ts` uses it | 2 |
+| `pro-snap-engine.ts` (`snapSystem` global) | `snapping/pro-snap-engine.ts` | **Delete εντελώς (no migration)** — Phase 2 verification revealed ZERO production consumers. Original claim about `measure-snap-bridge.ts` was incorrect (that file lives in `src/components/shared/files/media/` and is unrelated). | 2 ✅ |
 | `TextSnapProvider` (Phase 6.B) | `text-engine/interaction/TextSnapProvider.ts` | **Wrap in `TextSnapEngine`** + register | 3 |
 | Geo-canvas `SnapEngine` (6-mode parallel) | `geo-canvas/floor-plan-system/snapping/engine/SnapEngine.ts` | **Replace with adapter to `getGlobalSnapEngine()`** | 4 |
 
@@ -422,16 +422,15 @@ getLockedGripWorldPos(): Point2D | null
 - Delete `src/subapps/dxf-viewer/keyboard/useProSnapShortcuts.ts`
 - Verify: `Grep "useProSnapShortcuts"` → zero callers
 
-### Phase 2 — Migrate ghost singleton + delete `pro-snap-engine.ts` (Sonnet, ~30min)
+### Phase 2 — Delete `pro-snap-engine.ts` ghost ✅ DONE 2026-05-27 (Sonnet, ~10min)
 
-#### 2.1 Migrate `measure-snap-bridge.ts`
-- Replace `import { snapSystem } from './pro-snap-engine'` → `import { getGlobalSnapEngine } from './global-snap-engine'`
-- Replace direct `snapSystem.X` calls → `getGlobalSnapEngine().X`
+#### 2.1 ~~Migrate `measure-snap-bridge.ts`~~ — N/A
+**Phase 2 verification revealed ZERO production consumers of `snapSystem`.** The original ADR claim that `measure-snap-bridge.ts` consumed it was incorrect — that file lives in `src/components/shared/files/media/` and handles a completely different domain (media file snap interactions). The only references to `snapSystem` were the definition itself + the re-export in `snapping/index.ts`. No migration needed.
 
-#### 2.2 Delete ghost
-- Delete `src/subapps/dxf-viewer/snapping/pro-snap-engine.ts`
-- Edit `src/subapps/dxf-viewer/snapping/index.ts` — remove `./pro-snap-engine` re-export
-- Verify: `npx tsc --noEmit` passes
+#### 2.2 Delete ghost — DONE
+- ✅ Edited `src/subapps/dxf-viewer/snapping/index.ts` — removed `export { snapSystem } from './pro-snap-engine'` line
+- ✅ `git rm src/subapps/dxf-viewer/snapping/pro-snap-engine.ts`
+- ✅ Grep verification: zero production `snapSystem` references remain (1 stale doc line in `docs/features/snapping/ARCHITECTURE.md:23` — Phase 5 doc cleanup scope)
 
 ### Phase 3 — TextSnapEngine (Sonnet, ~2h)
 
@@ -570,6 +569,7 @@ These remain as-is. Future ADR may unify 3D snap if/when 3D BIM Viewer matures.
 | 2026-05-27 | — | Initial ADR-378 design (Opus 4.7 + Γιώργος). Master architecture document covering Orchestrator→Registry→26 engines, priority hierarchy table (resurrecting phantom ADR-149), centralization roadmap. |
 | 2026-05-27 | 0 | ADR-378 written. Phases 1-6 pending. |
 | 2026-05-27 | 1 | Phase 1 — Dead code deleted (AISnappingEngine + AISnappingEngine.types + useProSnapShortcuts). 3 files removed via `git rm`. Zero production references confirmed via grep (only 1 stale comment in `snap-engine-utils.ts:36` + 6 doc/analysis files info-only). `ai-snapping/` folder empty. Sonnet 4.6, ~10min. |
+| 2026-05-27 | 2 | Phase 2 — `pro-snap-engine.ts` ghost deleted. `snapping/index.ts` re-export line removed. **Discovery**: ZERO production consumers of `snapSystem` existed — ADR §3.3 and §9.2.1 claims about `measure-snap-bridge.ts` were incorrect (that file is in `src/components/shared/files/media/` and unrelated). No migration step needed. §3.3 + §9 Phase 2 corrected to match reality. Sonnet 4.6, ~10min. |
 
 ---
 
