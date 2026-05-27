@@ -270,6 +270,7 @@ Pre-fix το ownership check ήταν δίκοπο μαχαίρι: legitimate de
 ## 7. Changelog
 
 - **2026-05-27** — Initial ADR. Phases A→E shipped same day. ADR + cross-refs (Phase F) pending commit.
+- **2026-05-27 (later)** — **Follow-up: ADR-380** ολοκληρώνει το audit coverage για τα τελευταία 2 BIM entity types (`stair` + `slab-opening`) που έμειναν εκτός scope. Live verification αυτής της συνεδρίας αποκάλυψε ότι (a) stair δεν είχε καθόλου audit-client / registry / type union entry, (b) slab-opening είχε placeholder pattern (mirror του Bug #2). Bundled commit ADR-379 + ADR-380 μαζί. 7/7 BIM entities audit-covered.
 
 ---
 
@@ -278,4 +279,5 @@ Pre-fix το ownership check ήταν δίκοπο μαχαίρι: legitimate de
 - ADR-195 §3.2 — Centralized audit endpoint architecture
 - ADR-195 §4 — TrackedFieldDef pattern + diffTrackedFields SSoT
 - ADR-363 §5.17 — BIM audit clients (initial scaffolding; this ADR completes them)
+- ADR-380 — Stair + Slab-Opening audit coverage (follow-up, same session)
 - ADR-294 — SSoT Ratchet enforcement (CHECK 3.7 / 3.17 / 3.18)

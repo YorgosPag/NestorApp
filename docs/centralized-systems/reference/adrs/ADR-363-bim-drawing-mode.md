@@ -840,9 +840,9 @@ export const HOME_BIM_PANEL: RibbonPanelDef = {
 
 **Pre-commit hook CHECK 6B/6C** ήδη ελέγχει αυτές τις rules. Νέοι BIM renderers MUST stage μαζί ADR-040 changelog entry.
 
-### 5.17 EntityAudit Integration (ADR-195 + ADR-379)
+### 5.17 EntityAudit Integration (ADR-195 + ADR-379 + ADR-380)
 
-Κάθε create/update/delete BIM entity → fire-and-forget POST to `/api/audit-trail/record` via thin client `bim/<type>/<type>-audit-client.ts`. Server route dispatches σε `EntityAuditService.recordChange()` (server-only) με payload diffed στον client μέσω `bim/utils/bim-audit-helpers.ts` SSoT + 5 tracked-fields registries στο `src/config/audit-tracked-fields.ts`:
+Κάθε create/update/delete BIM entity → fire-and-forget POST to `/api/audit-trail/record` via thin client `bim/<type>/<type>-audit-client.ts`. Server route dispatches σε `EntityAuditService.recordChange()` (server-only) με payload diffed στον client μέσω `bim/utils/bim-audit-helpers.ts` SSoT + **7 tracked-fields registries** στο `src/config/audit-tracked-fields.ts` (WALL/COLUMN/SLAB/BEAM/OPENING από ADR-379, **STAIR + SLAB_OPENING από ADR-380**):
 
 ```typescript
 // Client (persistence hook)
@@ -866,7 +866,7 @@ Server route handles two race scenarios (ADR-379 §2.1):
 - Other actions + `!entityDoc.exists` → 404 (legitimate not-found)
 - `entityDoc.exists` + foreign companyId → 403 (cross-tenant block)
 
-**Pre-commit CHECK 3.17** baseline=0 από 2026-04-13 — όλα τα νέα writers πρέπει να καλούν `recordChange` αμέσως. Hard gate. Static analysis δεν εντοπίζει payload-quality issues; ADR-379 closed the runtime gap.
+**Pre-commit CHECK 3.17** baseline=0 από 2026-04-13 — όλα τα νέα writers πρέπει να καλούν `recordChange` αμέσως. Hard gate. Static analysis δεν εντοπίζει payload-quality issues; ADR-379 (wall/column/slab/beam/opening) + ADR-380 (stair + slab-opening) closed the runtime gap για 7/7 BIM entity types.
 
 ### 5.18 SSoT Registry — νέα modules
 
@@ -1137,7 +1137,8 @@ Server route handles two race scenarios (ADR-379 §2.1):
 - [x] Client helper `bim/walls/wall-audit-client.ts` — `recordWallChange(action, entity, { prevParams, entityName }?)` fire-and-forget POST to `/api/audit-trail/record`. Diff via `bim-audit-helpers.ts` SSoT + `WALL_TRACKED_FIELDS` registry (17 fields). **ADR-379 refactor 2026-05-27**: original Phase 1D-C signature was `Pick<WallEntity, 'id'|'kind'>` και emitted `[{ field: 'kind' }]` placeholders only — replaced με full-entity diff + skip-on-no-diff semantics.
 - [x] Hook `useWallPersistence.ts` — `prevParams` snapshot captured before save; `void recordWallChange(isNew ? 'created' : 'updated', entity, { prevParams })` after successful `svc.saveWall()`. Delete path captures `deletedEntity` snapshot BEFORE `svc.deleteWall` και περνά full entity για reverse-diff. Fire-and-forget (never awaited, audit failure ≠ UX impact).
 - [x] Delete path — `WallFirestoreService.deleteWall()` exists (Phase 1B); delete UI + audit wired in Phase 1E (ribbon button → bridge → EventBus → useWallPersistence).
-- [ ] Stair audit: same pattern applicable; deferred (no stair delete UI either — consistent with walls).
+- [x] **Stair audit (ADR-380, 2026-05-27)**: same pattern applied. NEW `bim/stairs/stair-audit-client.ts` (mirror beam) + `STAIR_TRACKED_FIELDS` registry (~28 fields). `'stair'` προστέθηκε σε `AuditEntityType` + `VALID_ENTITY_TYPES` + `ENTITY_COLLECTION_MAP` (FLOORPLAN_STAIRS). `use-stair-persistence.ts` capture prevParams + full snapshot on delete.
+- [x] **Slab-opening audit (ADR-380, 2026-05-27)**: legacy placeholder pattern (`[{ field: 'kind' }]`) refactored σε diffTrackedFields SSoT. NEW `SLAB_OPENING_TRACKED_FIELDS` registry (8 fields). `slab-opening-audit-client.ts` πλέον χρησιμοποιεί `bim-audit-helpers.ts`. `useSlabOpeningPersistence.ts` passes prevParams + full snapshot on delete.
 - [x] CHECK 3.17 scanner: `TRACKED_COLLECTION_KEYS` extended με `FLOORPLAN_WALLS`; `wall-firestore-service.ts` added to `HARD_EXEMPT_PATTERNS` (client-SDK, audit at hook layer); baseline refreshed (1 pre-existing `property-deletion-guard.ts` grandfathered — unrelated to ADR-363).
 
 **Phase 1D-B deferred item (now done in Phase 1E)**:

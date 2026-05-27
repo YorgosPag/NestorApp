@@ -281,7 +281,7 @@ IFC4 `Qto_StairBaseQuantities`: `GrossVolume`, `NetVolume`, `GrossFootprintArea`
 
 ### G24 — Audit trail + soft-lock multi-user
 
-`EntityAuditService.recordChange()` (ADR-195) copre già history. Soft-lock display-only: `editingBy?: { userId: string; since: Timestamp }` in StairDoc. Non-bloccante (non lock vero, solo indicator UI). CRDT full = Phase 9+.
+`EntityAuditService.recordChange()` (ADR-195) copre già history. **Wired 2026-05-27 via ADR-380**: `recordStairChange()` thin client (`bim/stairs/stair-audit-client.ts`) + `STAIR_TRACKED_FIELDS` registry (~28 fields) + `use-stair-persistence.ts` capture prevParams + full snapshot on delete. Soft-lock display-only: `editingBy?: { userId: string; since: Timestamp }` in StairDoc. Non-bloccante (non lock vero, solo indicator UI). CRDT full = Phase 9+.
 
 ### G25 — Hotkey shortcut
 
