@@ -11,7 +11,7 @@ import type { ArcEntity, EllipseEntity, LineEntity, RayEntity } from '../../../t
 // ── LINE → XLINE ──────────────────────────────────────────────────────────────
 
 describe('extendEdge — LINE', () => {
-  const line: LineEntity = { id: 'l1', type: 'line', start: { x: 0, y: 0 }, end: { x: 3, y: 4 }, layer: '0', layerId: 'lyr_test_default' };
+  const line: LineEntity = { id: 'l1', type: 'line', start: { x: 0, y: 0 }, end: { x: 3, y: 4 }, layerId: 'lyr_test_default' };
 
   it('converts LINE to XLINE', () => {
     const result = extendEdge(line);
@@ -42,7 +42,7 @@ describe('extendEdge — ARC', () => {
     id: 'a1', type: 'arc',
     center: { x: 2, y: 3 }, radius: 5,
     startAngle: 0, endAngle: Math.PI,
-    layer: '0', layerId: 'lyr_test_default',
+    layerId: 'lyr_test_default',
   };
 
   it('converts ARC to CIRCLE', () => {
@@ -68,7 +68,7 @@ describe('extendEdge — ELLIPSE arc', () => {
     id: 'e1', type: 'ellipse',
     center: { x: 0, y: 0 }, majorAxis: 6, minorAxis: 3,
     startParam: 0, endParam: Math.PI,
-    layer: '0', layerId: 'lyr_test_default',
+    layerId: 'lyr_test_default',
   };
 
   it('strips startParam/endParam to create full ellipse', () => {
@@ -91,7 +91,7 @@ describe('extendEdge — full ELLIPSE (no arc params)', () => {
   const ell: EllipseEntity = {
     id: 'e2', type: 'ellipse',
     center: { x: 0, y: 0 }, majorAxis: 4, minorAxis: 2,
-    layer: '0', layerId: 'lyr_test_default',
+    layerId: 'lyr_test_default',
   };
 
   it('returns the same entity when already full ellipse', () => {
@@ -105,7 +105,7 @@ describe('extendEdge — RAY', () => {
   const ray: RayEntity = {
     id: 'r1', type: 'ray',
     basePoint: { x: 1, y: 2 }, direction: { x: 1, y: 0 },
-    layer: '0', layerId: 'lyr_test_default',
+    layerId: 'lyr_test_default',
   };
 
   it('converts RAY to XLINE', () => {
@@ -124,12 +124,12 @@ describe('extendEdge — RAY', () => {
 
 describe('extendEdge — passthrough types', () => {
   it('CIRCLE passes through unchanged', () => {
-    const circle = { id: 'c1', type: 'circle' as const, center: { x: 0, y: 0 }, radius: 3, layer: '0', layerId: 'lyr_test_default' };
+    const circle = { id: 'c1', type: 'circle' as const, center: { x: 0, y: 0 }, radius: 3, layerId: 'lyr_test_default' };
     expect(extendEdge(circle)).toBe(circle);
   });
 
   it('POLYLINE passes through unchanged', () => {
-    const poly = { id: 'p1', type: 'polyline' as const, vertices: [], closed: false, layer: '0', layerId: 'lyr_test_default' };
+    const poly = { id: 'p1', type: 'polyline' as const, vertices: [], closed: false, layerId: 'lyr_test_default' };
     expect(extendEdge(poly)).toBe(poly);
   });
 });

@@ -34,7 +34,7 @@ const wallEntity: WallEntity = {
   },
   validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null as never },
   visible: true,
-} as WallEntity;
+} as unknown as WallEntity;
 
 const otherEntity = { id: 'line-9', type: 'line' } as never;
 

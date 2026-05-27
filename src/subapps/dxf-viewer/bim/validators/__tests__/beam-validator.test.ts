@@ -18,7 +18,7 @@ const goodBase: BeamParams = {
   endPoint: { x: 4000, y: 0, z: 0 },
   width: 250,
   depth: 500,
-  elevation: 3000,
+  topElevation: 3000,
   supportType: 'simple',
 };
 

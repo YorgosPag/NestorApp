@@ -64,8 +64,9 @@ function makeSlab(id = 'slab_test'): SlabEntity {
         { x: 0, y: 10000, z: 0 },
       ],
     },
-    elevation: 0,
+    levelElevation: 0,
     thickness: 200,
+    geometryType: 'box',
   };
   return {
     id,
@@ -76,7 +77,7 @@ function makeSlab(id = 'slab_test'): SlabEntity {
     geometry: computeSlabGeometry(params),
     validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
     visible: true,
-  } as SlabEntity;
+  } as unknown as SlabEntity;
 }
 
 function makeShaft(slab: SlabEntity, cx = 3000, cy = 3000): SlabOpeningEntity {
@@ -101,7 +102,7 @@ function makeShaft(slab: SlabEntity, cx = 3000, cy = 3000): SlabOpeningEntity {
     geometry: computeSlabOpeningGeometry(params),
     validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
     visible: true,
-  } as SlabOpeningEntity;
+  } as unknown as SlabOpeningEntity;
 }
 
 function shiftedOutline(p: SlabOpeningParams, dx: number, dy: number): SlabOpeningParams {

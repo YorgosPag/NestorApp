@@ -43,6 +43,8 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import { dlog, dwarn } from '../../debug';
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
 import { resolveEntityText } from '../../utils/text-node-utils';
+// ADR-040 Phase XXII.A — transform reads from SSoT (orchestrator-decoupling).
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 // ── Re-exports for backward compatibility ───────────────────────────────────
 export type {
   ArcPickableEntity,
@@ -64,8 +66,9 @@ import type { EntityPickContext } from './entity-pick-handlers';
 // HOOK
 // ============================================================================
 export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseCanvasClickHandlerReturn {
+  // ADR-040 XXII.A: `transform` param retained for signature compat; reads via SSoT.
   const {
-    viewportReady, viewport, transform,
+    viewportReady, viewport, transform: _transform,
     activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, dxfGripInteraction,
     stairTool,
@@ -98,6 +101,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     draggingOverlayBody,
     currentOverlays, handleOverlayClick,
   } = params;
+  void _transform;
   const handleCanvasClick = useCallback((worldPoint: Point2D, shiftKey: boolean = false) => {
     // Block interactions until viewport is ready
     if (!viewportReady) {
@@ -181,7 +185,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
     // PRIORITY 1.6: ADR-189 — Construction guide tools
-    const guideCtx: GuideClickContext = { worldPoint, shiftKey, transform, levelManager };
+    // ADR-040 XXII.A: live SSoT read at click time.
+    const guideCtx: GuideClickContext = { worldPoint, shiftKey, transform: getImmediateTransform(), levelManager };
     if (handleGuideToolClick(guideCtx, params)) {
       return;
     }
@@ -191,7 +196,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
     // PRIORITY 1.9-4: Entity picking tools (angle, circle-ttt, perpendicular, parallel)
-    const entityCtx: EntityPickContext = { worldPoint, transform, levelManager };
+    // ADR-040 XXII.A: live SSoT read at click time.
+    const entityCtx: EntityPickContext = { worldPoint, transform: getImmediateTransform(), levelManager };
     if (handleAngleEntityPick(entityCtx, angleEntityMeasurement, universalSelection.replaceEntitySelection)) return;
     if (handleCircleTTTPick(entityCtx, circleTTT, activeTool)) return;
     if (handleLinePerpendicularPick(entityCtx, linePerpendicular, activeTool)) return;
@@ -243,7 +249,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
         const dx = worldPoint.x - fx;
         const dy = worldPoint.y - fy;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        return distance < (POLYGON_TOLERANCES.CLOSE_DETECTION / transform.scale);
+        // ADR-040 XXII.A: live SSoT read.
+        return distance < (POLYGON_TOLERANCES.CLOSE_DETECTION / getImmediateTransform().scale);
       })();
       if (isNearFirst && draftPolygon.length >= 3) {
         setIsSavingPolygon(true);
@@ -295,8 +302,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       }
       entitySelectedOnMouseDownRef.current = false;
     }
+  // ADR-040 XXII.A: `transform` removed from deps — SSoT read at event time.
   }, [
-    viewportReady, viewport, transform,
+    viewportReady, viewport,
     activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, dxfGripInteraction,
     stairTool,
@@ -345,7 +353,8 @@ function handleRotationEntitySelection(
     ? p.levelManager.getLevelScene(p.levelManager.currentLevelId)
     : null;
   if (scene?.entities) {
-    const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / p.transform.scale;
+    // ADR-040 XXII.A: live SSoT read (p.transform is dead since Phase XXII.A).
+    const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / getImmediateTransform().scale;
     for (const entity of scene.entities) {
       if (testEntityHit(worldPoint, entity, hitTolerance)) {
         p.universalSelection.replaceEntitySelection([entity.id]);
@@ -439,17 +448,19 @@ function testEntityHit(
 // ============================================================================
 /** Finds smallest closed polygon at worldPoint → writes result to AutoAreaResultStore. */
 function handleAutoAreaClick(worldPoint: Point2D, p: UseCanvasClickHandlerParams): void {
-  const screen = CoordinateTransforms.worldToScreen(worldPoint, p.transform, p.viewport);
+  // ADR-040 XXII.A: live SSoT read.
+  const liveTransform = getImmediateTransform();
+  const screen = CoordinateTransforms.worldToScreen(worldPoint, liveTransform, p.viewport);
   const scene = p.levelManager.currentLevelId
     ? p.levelManager.getLevelScene(p.levelManager.currentLevelId)
     : null;
-  const candidates = collectAreaCandidates(worldPoint, scene?.entities ?? [], p.currentOverlays, p.transform.scale);
+  const candidates = collectAreaCandidates(worldPoint, scene?.entities ?? [], p.currentOverlays, liveTransform.scale);
   if (candidates.length === 0) {
     setAutoAreaState({ found: false, screenX: screen.x, screenY: screen.y });
     return;
   }
   const best = candidates.reduce((a, b) => a.area < b.area ? a : b);
-  const holes = collectHoleAreas(best.polygon, best.area, scene?.entities ?? [], p.currentOverlays, p.transform.scale);
+  const holes = collectHoleAreas(best.polygon, best.area, scene?.entities ?? [], p.currentOverlays, liveTransform.scale);
   const holesArea = holes.reduce((sum, h) => sum + h.area, 0);
   setAutoAreaState({
     found: true,

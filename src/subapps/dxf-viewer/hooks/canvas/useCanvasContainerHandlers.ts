@@ -11,6 +11,8 @@ import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { getImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { LassoFreehandStore } from '../../systems/lasso/LassoFreehandStore';
+// ADR-040 Phase XXII.A — transform reads from SSoT, not React prop (orchestrator-decoupling).
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type { GridAxis } from '../../systems/guides/guide-types';
 import { MoveGuideCommand } from '../../systems/guides/commands';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
@@ -50,7 +52,11 @@ export interface UseCanvasContainerHandlersReturn {
 export function useCanvasContainerHandlers(
   params: UseCanvasContainerHandlersParams,
 ): UseCanvasContainerHandlersReturn {
-  const { activeTool, transform, containerRef, executeCommand, unified } = params;
+  // ADR-040 Phase XXII.A: `transform` param retained for signature compat but no
+  // longer read inside callbacks — all transform reads go through getImmediateTransform()
+  // (SSoT). Renamed to `_transform` to mark as unused; will be dropped in Phase XXII.B.
+  const { activeTool, transform: _transform, containerRef, executeCommand, unified } = params;
+  void _transform;
 
   // 🚀 PERF (2026-05-09): mouse world pos read live from ImmediatePositionStore
   // instead of CanvasSection useState — avoids full subtree re-render on
@@ -147,9 +153,11 @@ export function useCanvasContainerHandlers(
       const snap = getPointerSnapshotFromElement(containerRef.current);
       if (snap) {
         const screenPos = getScreenPosFromEvent(e, snap);
-        const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
+        // ADR-040 XXII.A: live SSoT read.
+        const liveTransform = getImmediateTransform();
+        const worldPos = screenToWorldWithSnapshot(screenPos, liveTransform, snap);
         const store = getGlobalGuideStore();
-        const hitTolerance = 30 / transform.scale;
+        const hitTolerance = 30 / liveTransform.scale;
         const nearest = store.findNearestGuide(worldPos.x, worldPos.y, hitTolerance);
 
         if (nearest && !nearest.locked) {
@@ -178,7 +186,7 @@ export function useCanvasContainerHandlers(
       e.stopPropagation();
       return;
     }
-  }, [unified, activeTool, containerRef, transform, setDraggingGuide]);
+  }, [unified, activeTool, containerRef, setDraggingGuide]);
 
   const handleContainerMouseUp = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
     // Freehand lasso-crop: mouseup finishes the trace and emits crop:lasso-polygon
@@ -193,7 +201,8 @@ export function useCanvasContainerHandlers(
       const snap = getPointerSnapshotFromElement(containerRef.current);
       if (snap) {
         const screenPos = getScreenPosFromEvent(e, snap);
-        const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
+        // ADR-040 XXII.A: live SSoT read.
+        const worldPos = screenToWorldWithSnapshot(screenPos, getImmediateTransform(), snap);
         const deltaX = worldPos.x - draggingGuide.startMouseWorld.x;
         const deltaY = worldPos.y - draggingGuide.startMouseWorld.y;
         const hasMovement = Math.abs(deltaX) > MOVEMENT_DETECTION.MIN_MOVEMENT ||
@@ -239,7 +248,7 @@ export function useCanvasContainerHandlers(
     }
     const consumed = await unified.handleMouseUp(worldPos);
     if (consumed) return;
-  }, [unified, draggingGuide, containerRef, transform, setDraggingGuide, handleGuideDragComplete]);
+  }, [unified, draggingGuide, containerRef, setDraggingGuide, handleGuideDragComplete]);
 
   return {
     draggingGuide,

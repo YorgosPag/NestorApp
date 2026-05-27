@@ -26,7 +26,7 @@ function makeScene(
   return {
     entities,
     layersById: layersById as Record<string, SceneLayer>,
-  } as SceneModel;
+  } as unknown as SceneModel;
 }
 
 // ── isValidCuttingCandidate ───────────────────────────────────────────────────
@@ -156,7 +156,7 @@ describe('resolveCuttingEdges — layersById (id-keyed, Phase 9E-2)', () => {
     const scene: SceneModel = {
       entities: [makeLine('a', 'L1', 'lyr_1')],
       layersById: { lyr_1: { locked: true } as SceneLayer },
-    } as SceneModel;
+    } as unknown as SceneModel;
     const edges = resolveCuttingEdges({ mode: 'quick', scene, selectedEdgeIds: [], edgeMode: 'noExtend' });
     expect(edges).toHaveLength(0);
   });
@@ -165,7 +165,7 @@ describe('resolveCuttingEdges — layersById (id-keyed, Phase 9E-2)', () => {
     const scene: SceneModel = {
       entities: [makeLine('a', 'L1', 'lyr_1')],
       layersById: { lyr_1: { visible: true, locked: false } as SceneLayer },
-    } as SceneModel;
+    } as unknown as SceneModel;
     const edges = resolveCuttingEdges({ mode: 'quick', scene, selectedEdgeIds: [], edgeMode: 'noExtend' });
     expect(edges).toHaveLength(1);
   });

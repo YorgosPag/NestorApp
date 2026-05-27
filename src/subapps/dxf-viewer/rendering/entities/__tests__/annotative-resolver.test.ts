@@ -24,6 +24,7 @@ function makeAnnotativeText(overrides: Partial<TextEntity> = {}): TextEntity {
   return {
     id: 'text_1',
     type: 'text',
+    layerId: 'lyr_test_default',
     position: { x: 0, y: 0 },
     text: 'Hello',
     height: 999, // baseline (should be overridden when annotative)
@@ -37,6 +38,7 @@ function makeNonAnnotativeMText(): MTextEntity {
   return {
     id: 'mtext_1',
     type: 'mtext',
+    layerId: 'lyr_test_default',
     position: { x: 0, y: 0 },
     text: 'World',
     width: 100,
@@ -98,6 +100,7 @@ describe('resolveAnnotativeEntity', () => {
     const line: LineEntity = {
       id: 'line_1',
       type: 'line',
+    layerId: 'lyr_test_default',
       start: { x: 0, y: 0 },
       end: { x: 10, y: 10 },
     };

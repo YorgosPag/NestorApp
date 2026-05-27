@@ -65,6 +65,8 @@ import { useMoveEntities } from '../useMoveEntities';
 import { useCommandHistory } from '../../core/commands';
 import { useLevels } from '../../systems/levels';
 import { setActiveDragGrip, clearActiveDragGrip } from '../../systems/cursor/GripDragStore';
+// ADR-040 Phase XXII.A — transform reads from SSoT (orchestrator-decoupling).
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 // Re-export types for consumers
 export type { UseUnifiedGripInteractionParams, UseUnifiedGripInteractionReturn, DxfProjection };
 export type { OverlayProjection } from './unified-grip-types';
@@ -76,12 +78,14 @@ const GRIP_HOVER_THROTTLE_MS = 100;
 export function useUnifiedGripInteraction(
   params: UseUnifiedGripInteractionParams,
 ): UseUnifiedGripInteractionReturn {
+  // ADR-040 XXII.A: `transform` param retained for signature compat; reads via SSoT.
   const {
-    selectedEntityIds, dxfScene, transform,
+    selectedEntityIds, dxfScene, transform: _transform,
     currentOverlays, universalSelection, overlayStore, overlayStoreRef,
     activeTool, gripSettings, executeCommand, movementDetectionThreshold,
     onToolChange,
   } = params;
+  void _transform;
   // ── Commit deps ──
   const { moveEntities } = useMoveEntities();
   const { execute } = useCommandHistory();
@@ -197,7 +201,8 @@ export function useUnifiedGripInteraction(
         if (activeGrip.source === 'overlay') setDragPreviewPosition(worldPos);
         return;
       }
-      const nearGrip = findNearestGrip(worldPos, allGrips, effectiveTolerance, transform.scale);
+      // ADR-040 XXII.A: live SSoT read — no stale-closure on rapid zoom.
+      const nearGrip = findNearestGrip(worldPos, allGrips, effectiveTolerance, getImmediateTransform().scale);
       if (nearGrip) {
         if (!hoveredGrip || hoveredGrip.id !== nearGrip.id) {
           setHoveredGrip(nearGrip);
@@ -213,7 +218,8 @@ export function useUnifiedGripInteraction(
         if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
       }
     },
-    [isGripMode, allGrips, phase, activeGrip, hoveredGrip, effectiveTolerance, transform.scale],
+    // ADR-040 XXII.A: scale removed from deps — SSoT read at event time.
+    [isGripMode, allGrips, phase, activeGrip, hoveredGrip, effectiveTolerance],
   );
   // ── MOUSE DOWN ──
   const handleMouseDown = useCallback(
@@ -270,7 +276,8 @@ export function useUnifiedGripInteraction(
       // the mutex once the current event tick (canvas + bubbled container)
       // has finished dispatching.
       Promise.resolve().then(() => { mouseDownInProgressRef.current = false; });
-      const nearGrip = findNearestGrip(worldPos, allGrips, effectiveTolerance, transform.scale);
+      // ADR-040 XXII.A: live SSoT read.
+      const nearGrip = findNearestGrip(worldPos, allGrips, effectiveTolerance, getImmediateTransform().scale);
       if (!nearGrip) {
         if (!isShift && selectedGrips.length > 0) setSelectedGrips([]);
         return false;
@@ -354,7 +361,8 @@ export function useUnifiedGripInteraction(
       }
       return false;
     },
-    [isGripMode, allGrips, phase, activeGrip, effectiveTolerance, transform.scale, selectedGrips, universalSelection, overlayStoreRef, currentOverlays, resetToIdle],
+    // ADR-040 XXII.A: scale removed from deps — SSoT read at event time.
+    [isGripMode, allGrips, phase, activeGrip, effectiveTolerance, selectedGrips, universalSelection, overlayStoreRef, currentOverlays, resetToIdle],
   );
   // ── MOUSE UP ──
   const handleMouseUp = useCallback(

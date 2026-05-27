@@ -35,7 +35,7 @@ const SLAB_4X4: SlabParams = {
       { x: 0, y: 4000, z: 0 },
     ],
   },
-  elevation: 0,
+  levelElevation: 0,
   thickness: 200,
 };
 

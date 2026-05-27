@@ -24,7 +24,7 @@ function makeParams(overrides?: Partial<WallParams>): WallParams {
     end: { x: 1000, y: 0, z: 0 },
     height: 3000,
     thickness: 250,
-    flip: false,
+    flip: false, baseBinding: 'storey-floor', topBinding: 'storey-ceiling', baseOffset: 0, topOffset: 0,
     ...overrides,
   };
 }

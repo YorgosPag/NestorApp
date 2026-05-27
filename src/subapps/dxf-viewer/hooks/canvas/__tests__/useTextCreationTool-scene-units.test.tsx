@@ -140,7 +140,7 @@ describe('useTextCreationTool — scene-units awareness (ADR-344 Phase 13)', () 
             ],
           },
         ],
-      } as DxfTextNode);
+      } as unknown as DxfTextNode);
     });
 
     expect(capturedNode).not.toBeNull();
@@ -178,7 +178,7 @@ describe('useTextCreationTool — scene-units awareness (ADR-344 Phase 13)', () 
             },
           }],
         }],
-      } as DxfTextNode);
+      } as unknown as DxfTextNode);
     });
 
     expect(capturedNode).not.toBeNull();
@@ -215,7 +215,7 @@ describe('useTextCreationTool — scene-units awareness (ADR-344 Phase 13)', () 
             },
           }],
         }],
-      } as DxfTextNode);
+      } as unknown as DxfTextNode);
     });
 
     expect(capturedNode).not.toBeNull();

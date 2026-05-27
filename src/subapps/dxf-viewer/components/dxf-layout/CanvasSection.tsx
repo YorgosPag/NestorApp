@@ -6,9 +6,17 @@
  */
 'use client';
 import React, { useRef, useCallback, useMemo, useEffect } from 'react';
-import { CanvasLayerStack } from './CanvasLayerStack';
+// ADR-040 Phase XXII.A: rendering CanvasLayerStack via the TransformBridge so the
+// transform subscription lives below CanvasSection — CanvasSection stays inert on
+// wheel zoom. Direct render is preserved as the historical reference point.
+import { CanvasLayerStackTransformBridge as CanvasLayerStack } from './CanvasLayerStackTransformBridge';
 import { perfStart, perfEnd, PERF_LINE_PROFILE } from '../../debug/perf-line-profile';
-import { useCanvasContext } from '../../contexts/CanvasContext';
+// ADR-040 Phase XXII.A: switched from merged useCanvasContext (volatile, re-renders on
+// every wheel zoom) to useCanvasRefs (stable refs + setTransform). Transform values are
+// now read from ImmediateTransformStore at event time, not from React context. This breaks
+// the orchestrator-leak cascade documented in Phase XXII.A.
+import { useCanvasRefs } from '../../contexts/CanvasContext';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { useLiveOverlaysForLevel } from '../../hooks/useLiveOverlaysForLevel';
 import { useLevels } from '../../systems/levels';
@@ -41,34 +49,28 @@ import { useSpecialTools } from '../../hooks/tools'; import { useModifyTools } f
 import { useZoomWindowTool } from '../../hooks/tools/useZoomWindowTool';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useGripHoverMenuController } from '../../hooks/grips/useGripHoverMenuController'; import { useGripContextMenuController } from '../../hooks/grips/useGripContextMenuController';
-import { GripHoverMenu } from '../grip/GripHoverMenu';
-import { GripContextMenu } from '../grip/GripContextMenu';
-import { QuickPropertiesHoverPopover } from '../../systems/properties/QuickPropertiesHoverPopover';
-import { QuickPropertiesMiniPanel } from '../../systems/properties/QuickPropertiesMiniPanel';
-import { PropertiesPalette } from '../../systems/properties/PropertiesPalette';
 import { useGuideActions } from '../../hooks/state/useGuideActions';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { useConstructionPointState } from '../../hooks/state/useConstructionPointState';
-import { PromptDialog, usePromptDialog } from '../../systems/prompt-dialog';
+import { usePromptDialog } from '../../systems/prompt-dialog';
 import { useNotifications } from '../../../../providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import DrawingContextMenu, { type DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
+import { type DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
-import EntityContextMenu, { type EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
-import GuideContextMenu, { type GuideContextMenuHandle } from '../../ui/components/GuideContextMenu';
-import GuideBatchContextMenu, { type GuideBatchContextMenuHandle } from '../../ui/components/GuideBatchContextMenu';
+import { type EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
+import { type GuideContextMenuHandle } from '../../ui/components/GuideContextMenu';
+import { type GuideBatchContextMenuHandle } from '../../ui/components/GuideBatchContextMenu';
 import type { ToolType } from '../../ui/toolbar/types';
 import { isWallEntity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
-import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
-import { MirrorConfirmOverlay } from '../../ui/components/MirrorConfirmOverlay';
 import { useFloorplanAutoFit } from '../../hooks/canvas/useFloorplanAutoFit'; import { useCanvasEditActions } from '../../hooks/canvas/useCanvasEditActions';
 import { useCanvasSectionUI } from '../../hooks/canvas/useCanvasSectionUI';
 import { useEntityLayerCommands } from '../../hooks/canvas/useEntityLayerCommands';
 import { useSelectionCycling } from '../../systems/selection/use-selection-cycling';
-import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover'; import { useCanvasSection2DFocus } from '../../hooks/canvas/useCanvasSection2DFocus';
+import { useCanvasSection2DFocus } from '../../hooks/canvas/useCanvasSection2DFocus';
+import { CanvasSectionOverlays } from './CanvasSectionOverlays';
 /**
  * Canvas orchestrator — wires hooks together and delegates rendering to CanvasLayerStack.
  * No business logic beyond hook composition.
@@ -88,22 +90,28 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   useEffect(() => {
     if (PERF_LINE_PROFILE) perfEnd('CanvasSection.commit', _perfRenderStart);
   });
-  // === Canvas context ===
-  const canvasContext = useCanvasContext();
-  if (process.env.NODE_ENV === 'development' && !canvasContext) {
+  // === Canvas context (refs only — ADR-040 Phase XXII.A) ===
+  // ADR-040 XXII.A: useCanvasRefs returns a STABLE value (refs + setTransform),
+  // never recreated on transform change. Eliminates the wheel-zoom re-render
+  // cascade through 15+ child hooks (was the root cause of 1-2 FPS during zoom).
+  const canvasRefs = useCanvasRefs();
+  if (process.env.NODE_ENV === 'development' && !canvasRefs) {
     dwarn('CanvasSection', 'CanvasProvider not found — zoom buttons will not work.');
   }
-  const dxfCanvasRef = canvasContext?.dxfRef;
+  const dxfCanvasRef = canvasRefs?.dxfRef;
   if (!dxfCanvasRef) {
-    derr('CanvasSection', 'CanvasContext.dxfRef is null — zoom buttons will not work.');
+    derr('CanvasSection', 'CanvasRefs.dxfRef is null — zoom buttons will not work.');
   }
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const previewCanvasRef = useRef<PreviewCanvasHandle>(null);
   // === Transform + Viewport ===
-  const defaultTransform = useMemo(() => ({ scale: 1, offsetX: 0, offsetY: 0 }), []);
-  const transform = canvasContext?.transform || defaultTransform;
-  const contextSetTransform = canvasContext?.setTransform || (() => {
-    derr('CanvasSection', 'setTransform called but CanvasContext not available');
+  // ADR-040 XXII.A: transform value read once at render-top from SSoT. Hooks below
+  // read live transform at event time via `getImmediateTransform()` directly — the
+  // value passed here is for backward-compat signatures only and is effectively
+  // dead weight (renamed `_transform` in each hook). Will be removed in Phase XXII.B.
+  const transform = getImmediateTransform();
+  const contextSetTransform = canvasRefs?.setTransform || (() => {
+    derr('CanvasSection', 'setTransform called but CanvasRefs not available');
   });
   const containerRef = useRef<HTMLDivElement>(null);
   const { viewport, viewportRef, viewportReady, setTransform, transformRef } = useViewportManager({
@@ -402,7 +410,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   return (
     <>
       <CanvasLayerStack
-        transform={transform} viewport={viewport} activeTool={activeTool} overlayMode={overlayMode}
+        viewport={viewport} activeTool={activeTool} overlayMode={overlayMode}
         showLayers={showLayers} showDxfCanvas={showDxfCanvas} showLayerCanvas={showLayerCanvas}
         containerRef={containerRef} dxfCanvasRef={dxfCanvasRef} overlayCanvasRef={overlayCanvasRef}
         previewCanvasRef={previewCanvasRef} drawingHandlersRef={drawingHandlersRef}
@@ -436,58 +444,18 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         openingGhostPreview={{ isAwaitingPosition: openingTool.isAwaitingPosition, kind: openingTool.state.kind, overrides: openingTool.state.overrides, getHostWall: () => { const id = openingTool.state.hostWallId; const lvl = levelManager.currentLevelId; if (!id || !lvl) return null; const scene = levelManager.getLevelScene(lvl); if (!scene) return null; const e = scene.entities.find((x) => x.id === id); return e && isWallEntity(e) ? (e as WallEntity) : null; }, getSceneUnits: () => { const lvl = levelManager.currentLevelId; return resolveSceneUnits(lvl ? levelManager.getLevelScene(lvl) : null); } }}
         levelManager={levelManager}
       />
-      <DrawingContextMenu ref={drawingMenuRef} activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}
-        pointCount={overlayMode === 'draw' ? draftPolygon.length : (drawingHandlers?.drawingState?.tempPoints?.length ?? 0)}
-        onFinish={activeTool === 'line' ? handleDrawingCancel : handleDrawingFinish}
-        onClose={handleDrawingClose} onUndoLastPoint={handleDrawingUndoLastPoint} onCancel={handleDrawingCancel} onFlipArc={handleFlipArc}
-        onSnapOverride={(mode) => { SnapOverrideOrchestrator.setOverride(mode); }} />
-      <EntityContextMenu ref={entityMenuRef} selectedCount={selectedEntityIds.length}
-        canJoin={entityJoinState.canJoin} joinResultLabel={entityJoinState.joinResultLabel}
-        onJoin={() => entityJoinHook.joinEntities(selectedEntityIds)} onDelete={() => handleSmartDelete()} onCancel={() => entityMenuRef.current?.close()}
-        canSplit={selectedEntityIds.length === 1 && !!props.currentScene?.entities.find((x) => x.id === selectedEntityIds[0] && isWallEntity(x))} onSplit={() => { entityMenuRef.current?.close(); props.onToolChange?.('wall-split' as ToolType); }}
-        {...entityLayerCommands} />
-      <GuideContextMenu ref={guideMenuRef}
-        onDelete={guideWorkflows.handleGuideContextDelete} onToggleLock={guideWorkflows.handleGuideContextToggleLock}
-        onEditLabel={guideWorkflows.handleGuideContextEditLabel} onChangeColor={guideWorkflows.handleGuideContextChangeColor}
-        onToggleVisibility={guideState.toggleVisibility} guidesVisible={guideState.guidesVisible} onCancel={() => guideMenuRef.current?.close()} />
-      <GuideBatchContextMenu ref={guideBatchMenuRef}
-        onDeleteSelected={() => { if (guideWorkflows.selectedGuideIds.size > 0) { guideState.batchDeleteGuides(Array.from(guideWorkflows.selectedGuideIds)); guideWorkflows.setSelectedGuideIds(new Set()); } }}
-        onLockSelected={() => { guideState.getStore().setGuidesLocked(Array.from(guideWorkflows.selectedGuideIds), true); }}
-        onUnlockSelected={() => { guideState.getStore().setGuidesLocked(Array.from(guideWorkflows.selectedGuideIds), false); }}
-        onChangeColor={(color) => { guideState.getStore().setGuidesColor(Array.from(guideWorkflows.selectedGuideIds), color); }}
-        onGroupSelected={() => { const store = guideState.getStore(); const group = store.addGroup(`Group ${Date.now()}`); if (group) { for (const gid of guideWorkflows.selectedGuideIds) store.setGuideGroupId(gid, group.id); } }}
-        onCancel={() => guideBatchMenuRef.current?.close()} />
-      <PromptDialog />
-      <GripHoverMenu />
-      {/* ADR-357 Phase 11 — Right-click hot grip context menu (AutoCAD, micro-leaf, ADR-040) */}
-      <GripContextMenu />
-      {/* ADR-357 Phase 8 — Quick Properties hover tooltip (micro-leaf, ADR-040) */}
-      <QuickPropertiesHoverPopover dxfScene={dxfScene} activeTool={activeTool} />
-      {/* ADR-357 Phase 9 — Quick Properties mini-panel on double-click (micro-leaf, ADR-040) */}
-      <QuickPropertiesMiniPanel dxfScene={dxfScene} activeTool={activeTool} executeCommand={executeCommand} levelManager={levelManager} />
-      {/* ADR-357 Phase 10 — Full Properties Palette F11/Ctrl+1 (micro-leaf, ADR-040) */}
-      <PropertiesPalette dxfScene={dxfScene} selectedEntityIds={selectedEntityIds} activeTool={activeTool} executeCommand={executeCommand} levelManager={levelManager} />
-      {mirrorTool.phase === 'awaiting-keep-originals' && <MirrorConfirmOverlay onConfirm={mirrorTool.handleMirrorConfirm} onCancel={mirrorTool.handleMirrorEscape} />}
-      {textEditor.editingState && (
-        <TextEditorOverlay
-          entityId={textEditor.editingState.entityId}
-          initial={textEditor.editingState.initial}
-          anchorRect={textEditor.editingState.anchorRect}
-          onCommit={textEditor.onCommit}
-          onCancel={textEditor.onCancel}
-        />
-      )}
-      {textCreation.creatingState && (
-        <TextEditorOverlay
-          entityId={textCreation.creatingState.entityId}
-          initial={textCreation.creatingState.initial}
-          anchorRect={textCreation.creatingState.anchorRect}
-          onCommit={textCreation.onCommit}
-          onCancel={textCreation.onCancel}
-        />
-      )}
-      {/* ADR-357 Phase 15 — G13 Selection Cycling popover (portal, micro-leaf, ADR-040) */}
-      <SelectionCyclingPopover onSelectEntity={handleCycleEntitySelect} />
+      <CanvasSectionOverlays
+        drawingMenuRef={drawingMenuRef} entityMenuRef={entityMenuRef} guideMenuRef={guideMenuRef} guideBatchMenuRef={guideBatchMenuRef}
+        drawingMenu={{ activeTool: (overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType, pointCount: overlayMode === 'draw' ? draftPolygon.length : (drawingHandlers?.drawingState?.tempPoints?.length ?? 0), onFinish: activeTool === 'line' ? handleDrawingCancel : handleDrawingFinish, onClose: handleDrawingClose, onUndoLastPoint: handleDrawingUndoLastPoint, onCancel: handleDrawingCancel, onFlipArc: handleFlipArc, onSnapOverride: (mode) => { SnapOverrideOrchestrator.setOverride(mode); } }}
+        entityMenu={{ selectedCount: selectedEntityIds.length, canJoin: entityJoinState.canJoin, joinResultLabel: entityJoinState.joinResultLabel, onJoin: () => entityJoinHook.joinEntities(selectedEntityIds), onDelete: () => handleSmartDelete(), onCancel: () => entityMenuRef.current?.close(), canSplit: selectedEntityIds.length === 1 && !!props.currentScene?.entities.find((x) => x.id === selectedEntityIds[0] && isWallEntity(x)), onSplit: () => { entityMenuRef.current?.close(); props.onToolChange?.('wall-split' as ToolType); }, ...entityLayerCommands }}
+        guideMenu={{ onDelete: guideWorkflows.handleGuideContextDelete, onToggleLock: guideWorkflows.handleGuideContextToggleLock, onEditLabel: guideWorkflows.handleGuideContextEditLabel, onChangeColor: guideWorkflows.handleGuideContextChangeColor, onToggleVisibility: guideState.toggleVisibility, guidesVisible: guideState.guidesVisible, onCancel: () => guideMenuRef.current?.close() }}
+        guideBatchMenu={{ onDeleteSelected: () => { if (guideWorkflows.selectedGuideIds.size > 0) { guideState.batchDeleteGuides(Array.from(guideWorkflows.selectedGuideIds)); guideWorkflows.setSelectedGuideIds(new Set()); } }, onLockSelected: () => { guideState.getStore().setGuidesLocked(Array.from(guideWorkflows.selectedGuideIds), true); }, onUnlockSelected: () => { guideState.getStore().setGuidesLocked(Array.from(guideWorkflows.selectedGuideIds), false); }, onChangeColor: (color) => { guideState.getStore().setGuidesColor(Array.from(guideWorkflows.selectedGuideIds), color); }, onGroupSelected: () => { const store = guideState.getStore(); const group = store.addGroup(`Group ${Date.now()}`); if (group) { for (const gid of guideWorkflows.selectedGuideIds) store.setGuideGroupId(gid, group.id); } }, onCancel: () => guideBatchMenuRef.current?.close() }}
+        quickHover={{ dxfScene, activeTool }} quickMini={{ dxfScene, activeTool, executeCommand, levelManager }} propertiesPalette={{ dxfScene, selectedEntityIds, activeTool, executeCommand, levelManager }}
+        mirrorOverlay={mirrorTool.phase === 'awaiting-keep-originals' ? { onConfirm: mirrorTool.handleMirrorConfirm, onCancel: mirrorTool.handleMirrorEscape } : null}
+        textEditorOverlay={textEditor.editingState ? { entityId: textEditor.editingState.entityId, initial: textEditor.editingState.initial, anchorRect: textEditor.editingState.anchorRect, onCommit: textEditor.onCommit, onCancel: textEditor.onCancel } : null}
+        textCreationOverlay={textCreation.creatingState ? { entityId: textCreation.creatingState.entityId, initial: textCreation.creatingState.initial, anchorRect: textCreation.creatingState.anchorRect, onCommit: textCreation.onCommit, onCancel: textCreation.onCancel } : null}
+        selectionCycling={{ onSelectEntity: handleCycleEntitySelect }}
+      />
     </>
   );
 };

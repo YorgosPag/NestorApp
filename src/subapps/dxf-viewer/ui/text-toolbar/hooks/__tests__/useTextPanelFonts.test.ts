@@ -43,7 +43,7 @@ function makeScene(fonts: string[]): SceneModel {
       text: 'x',
       fontFamily,
     })) as unknown as SceneModel['entities'],
-    layers: {},
+    layersById: {},
     bounds: { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } },
     units: 'mm',
   };

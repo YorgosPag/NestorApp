@@ -29,6 +29,7 @@ describe('trimEntity — LINE', () => {
   const line: LineEntity = {
     id: 'line-1',
     type: 'line',
+    layerId: 'lyr_test_default',
     start: { x: 0, y: 0 },
     end: { x: 10, y: 0 },
   };
@@ -92,6 +93,7 @@ describe('trimEntity — CIRCLE', () => {
   const circle: CircleEntity = {
     id: 'circle-1',
     type: 'circle',
+    layerId: 'lyr_test_default',
     center: { x: 0, y: 0 },
     radius: 5,
   };
@@ -142,6 +144,7 @@ describe('trimEntity — ARC', () => {
   const arc: ArcEntity = {
     id: 'arc-1',
     type: 'arc',
+    layerId: 'lyr_test_default',
     center: { x: 0, y: 0 },
     radius: 5,
     startAngle: 0,
@@ -170,6 +173,7 @@ describe('trimEntity — POLYLINE', () => {
   const poly: PolylineEntity = {
     id: 'poly-1',
     type: 'polyline',
+    layerId: 'lyr_test_default',
     vertices: [
       { x: 0, y: 0 },
       { x: 10, y: 0 },
@@ -196,6 +200,7 @@ describe('trimEntity — RAY', () => {
   const ray: RayEntity = {
     id: 'ray-1',
     type: 'ray',
+    layerId: 'lyr_test_default',
     basePoint: { x: 0, y: 0 },
     direction: { x: 1, y: 0 },
   };
@@ -239,6 +244,7 @@ describe('trimEntity — XLINE', () => {
   const xl: XLineEntity = {
     id: 'xl-1',
     type: 'xline',
+    layerId: 'lyr_test_default',
     basePoint: { x: 0, y: 0 },
     direction: { x: 1, y: 0 },
   };
@@ -266,6 +272,7 @@ describe('trimEntity — ELLIPSE', () => {
   const ellipse: EllipseEntity = {
     id: 'ell-1',
     type: 'ellipse',
+    layerId: 'lyr_test_default',
     center: { x: 0, y: 0 },
     majorAxis: 6,
     minorAxis: 3,
@@ -332,6 +339,7 @@ describe('trimEntity — SPLINE', () => {
   const spline: SplineEntity = {
     id: 'sp-1',
     type: 'spline',
+    layerId: 'lyr_test_default',
     controlPoints: [
       { x: 0, y: 0 },
       { x: 3, y: 4 },
@@ -380,6 +388,7 @@ describe('trimEntity — POLYLINE closed (G1)', () => {
   const closedPoly: PolylineEntity = {
     id: 'cpoly-1',
     type: 'polyline',
+    layerId: 'lyr_test_default',
     vertices: [
       { x: 0, y: 0 },
       { x: 10, y: 0 },

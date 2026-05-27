@@ -22,7 +22,7 @@ function makeActions() {
   };
 }
 
-function Harness({ stateId, actions }: Parameters<typeof LayerStateContextMenu>[0]): React.ReactElement {
+function Harness({ stateId, actions }: Omit<Parameters<typeof LayerStateContextMenu>[0], 'children'>): React.ReactElement {
   return (
     <LayerStateContextMenu stateId={stateId} actions={actions}>
       <button type="button" data-testid="trigger">Open</button>

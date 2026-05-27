@@ -37,8 +37,9 @@ function makeSlab(): SlabEntity {
         { x: 0, y: 10000, z: 0 },
       ],
     },
-    elevation: 0,
+    levelElevation: 0,
     thickness: 200,
+    geometryType: 'box',
   };
   return {
     id: 'slab_test',
@@ -49,7 +50,7 @@ function makeSlab(): SlabEntity {
     geometry: computeSlabGeometry(params),
     validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
     visible: true,
-  } as SlabEntity;
+  } as unknown as SlabEntity;
 }
 
 describe('validateSlabOpeningParams — hard errors', () => {

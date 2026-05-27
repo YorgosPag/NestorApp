@@ -8,11 +8,11 @@ import type { XLineEntity, EllipseEntity, PolylineEntity, RectangleEntity } from
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function xline(bx: number, by: number, dx: number, dy: number): XLineEntity {
-  return { id: 'xl', type: 'xline', basePoint: { x: bx, y: by }, direction: { x: dx, y: dy } };
+  return { id: 'xl', type: 'xline', layerId: 'lyr_test_default', basePoint: { x: bx, y: by }, direction: { x: dx, y: dy } };
 }
 
 function polyline(vertices: { x: number; y: number }[], closed = false): PolylineEntity {
-  return { id: 'pl', type: 'polyline', vertices, closed } as PolylineEntity;
+  return { id: 'pl', type: 'polyline', layerId: 'lyr_test_default', vertices, closed } as PolylineEntity;
 }
 
 function ellipse(
@@ -22,12 +22,12 @@ function ellipse(
   startParam?: number,
   endParam?: number,
 ): EllipseEntity {
-  return { id: 'el', type: 'ellipse', center: { x: cx, y: cy }, majorAxis, minorAxis, rotation, startParam, endParam } as EllipseEntity;
+  return { id: 'el', type: 'ellipse', layerId: 'lyr_test_default', center: { x: cx, y: cy }, majorAxis, minorAxis, rotation, startParam, endParam } as EllipseEntity;
 }
 
 function rectangle(x: number, y: number, w: number, h: number): RectangleEntity {
   return {
-    id: 're', type: 'rectangle', x, y, width: w, height: h,
+    id: 're', type: 'rectangle', layerId: 'lyr_test_default', x, y, width: w, height: h,
     corner1: { x, y },
     corner2: { x: x + w, y: y + h },
   } as RectangleEntity;

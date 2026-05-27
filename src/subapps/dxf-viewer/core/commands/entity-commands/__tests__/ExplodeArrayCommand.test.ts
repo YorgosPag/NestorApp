@@ -102,7 +102,7 @@ describe('ExplodeArrayCommand', () => {
     cmd.undo();
 
     expect(scene.has('arr1')).toBe(true);
-    expect((scene.get('arr1') as ArrayEntity).hiddenSources).toHaveLength(1);
+    expect((scene.get('arr1') as unknown as ArrayEntity).hiddenSources).toHaveLength(1);
     // No stray line entities should remain
     for (const e of scene.values()) {
       expect(e.type).toBe('array');

@@ -23,6 +23,8 @@ import { MoveOverlayCommand, MoveMultipleOverlaysCommand } from '../../core/comm
 import { subscribeToImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { distanceToEntity } from '../../utils/entity-distance';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+// ADR-040 Phase XXII.A — transform reads from SSoT (orchestrator-decoupling).
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
 import type { useLevels } from '../../systems/levels';
@@ -61,7 +63,8 @@ export function useModifyTools({
   executeCommand,
   onToolChange,
   previewCanvasRef,
-  transformScale,
+  // ADR-040 XXII.A: `transformScale` retained for signature compat; reads via SSoT.
+  transformScale: _transformScale,
   overlayStore,
   universalSelection,
   currentOverlays,
@@ -69,6 +72,7 @@ export function useModifyTools({
   showPromptDialog,
   t,
 }: UseModifyToolsProps) {
+  void _transformScale;
   const rotationTool = useRotationTool({
     activeTool, selectedEntityIds, levelManager, executeCommand, previewCanvasRef,
     onToolChange, currentOverlays, overlayUpdate,
@@ -96,11 +100,12 @@ export function useModifyTools({
   });
 
   // ADR-363 Phase 5.6 — Wall Split Tool (Revit Split Element pattern)
+  // ADR-040 XXII.A: pass live scale via SSoT — useWallSplitTool now reads at event time.
   const wallSplitTool = useWallSplitTool({
     activeTool,
     levelManager,
     executeCommand,
-    transformScale,
+    transformScale: getImmediateTransform().scale,
     onToolChange,
   });
 
@@ -108,7 +113,8 @@ export function useModifyTools({
     if (!levelManager.currentLevelId) return null;
     const scene = levelManager.getLevelScene(levelManager.currentLevelId);
     if (!scene?.entities) return null;
-    const tol = TOLERANCE_CONFIG.SNAP_DEFAULT / transformScale;
+    // ADR-040 XXII.A: live SSoT read at event time, no closure capture.
+    const tol = TOLERANCE_CONFIG.SNAP_DEFAULT / getImmediateTransform().scale;
     let best: { id: string; d: number } | null = null;
     for (const e of scene.entities) {
       const d = distanceToEntity(worldPoint, e, tol);
@@ -116,7 +122,8 @@ export function useModifyTools({
       if (!best || d < best.d) best = { id: e.id, d };
     }
     return best?.id ?? null;
-  }, [levelManager, transformScale]);
+    // ADR-040 XXII.A: transformScale removed — SSoT read at event time.
+  }, [levelManager]);
 
   const trimTool = useTrimTool({
     activeTool, levelManager, executeCommand, hitTestEntity: trimHitTest, onToolChange,

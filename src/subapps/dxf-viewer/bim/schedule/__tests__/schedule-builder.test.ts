@@ -80,7 +80,7 @@ function makeWall(id: string, overrides: Partial<WallEntity> = {}): WallEntity {
     },
     validation: emptyValidation(),
     ...overrides,
-  } as WallEntity;
+  } as unknown as WallEntity;
 }
 
 function makeOpening(
@@ -114,7 +114,7 @@ function makeOpening(
       perimeter: 6,
     },
     validation: emptyValidation(),
-  } as OpeningEntity;
+  } as unknown as OpeningEntity;
 }
 
 function makeSlab(id: string, levelElevation = 0): SlabEntity {
@@ -140,7 +140,7 @@ function makeSlab(id: string, levelElevation = 0): SlabEntity {
       perimeter: 20,
     },
     validation: emptyValidation(),
-  } as SlabEntity;
+  } as unknown as SlabEntity;
 }
 
 function makeColumn(id: string): ColumnEntity {
@@ -166,7 +166,7 @@ function makeColumn(id: string): ColumnEntity {
       height: 3000,
     },
     validation: emptyValidation(),
-  } as ColumnEntity;
+  } as unknown as ColumnEntity;
 }
 
 function makeBeam(id: string): BeamEntity {
@@ -193,7 +193,7 @@ function makeBeam(id: string): BeamEntity {
       volume: 0.5,
     },
     validation: emptyValidation(),
-  } as BeamEntity;
+  } as unknown as BeamEntity;
 }
 
 function makeSlabOpening(id: string): SlabOpeningEntity {
@@ -215,7 +215,7 @@ function makeSlabOpening(id: string): SlabOpeningEntity {
       perimeter: 6,
     },
     validation: emptyValidation(),
-  } as SlabOpeningEntity;
+  } as unknown as SlabOpeningEntity;
 }
 
 // ─── Handing helpers ─────────────────────────────────────────────────────────

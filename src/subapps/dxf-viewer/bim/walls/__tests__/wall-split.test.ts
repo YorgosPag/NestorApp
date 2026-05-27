@@ -28,7 +28,7 @@ function makeWall(
     end: { x: 5000, y: 0, z: 0 }, // 5000mm horizontal
     height: 3000,
     thickness: 200,
-    flip: false,
+    flip: false, baseBinding: 'storey-floor', topBinding: 'storey-ceiling', baseOffset: 0, topOffset: 0,
     ...overrides,
   };
   return {

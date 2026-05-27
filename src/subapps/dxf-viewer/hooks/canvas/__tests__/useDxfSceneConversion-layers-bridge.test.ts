@@ -24,10 +24,10 @@ function makeLineEntity(id: string, layer: string): LineEntity {
     start: { x: 0, y: 0 },
     end: { x: 10, y: 0 },
     visible: true,
-  } as LineEntity;
+  } as unknown as LineEntity;
 }
 
-function makeScene(layers: Record<string, ReturnType<typeof createSceneLayer>>, entities = [] as LineEntity[]): SceneModel {
+function makeScene(layers: Record<string, ReturnType<typeof createSceneLayer>>, entities = [] as unknown as LineEntity[]): SceneModel {
   return {
     entities,
     layers,
@@ -37,7 +37,7 @@ function makeScene(layers: Record<string, ReturnType<typeof createSceneLayer>>, 
 }
 
 describe('useDxfSceneConversion — Phase 5 layersById bridge', () => {
-  it('exposes full SceneLayer map on layersById (same ref as SceneModel.layers)', () => {
+  it('exposes full SceneLayer map on layersById (same ref as unknown as SceneModel.layers)', () => {
     const layers = {
       WALLS: createSceneLayer({ name: 'WALLS', color: '#FF0000', colorAci: 1, lineweight: 0.5 }),
       DOORS: createSceneLayer({ name: 'DOORS', color: '#00FF00', colorAci: 3, lineweight: 0.25 }),

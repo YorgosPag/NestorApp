@@ -12,6 +12,8 @@
 import { useCallback } from 'react';
 import type React from 'react';
 import { use2DKeyboardFocus } from '../state/use2DKeyboardFocus';
+// ADR-040 Phase XXII.A — transform reads from SSoT, not React prop.
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { SelectableEntityType } from '../../systems/selection/types';
@@ -29,13 +31,16 @@ export interface UseCanvasSection2DFocusArgs {
 }
 
 export function useCanvasSection2DFocus(args: UseCanvasSection2DFocusArgs): void {
-  const { dxfSceneRef, transformRef, transform, viewport, universalSelectionRef } = args;
+  // ADR-040 XXII.A: `transform` param retained for signature compat; fallback via SSoT.
+  const { dxfSceneRef, transformRef, transform: _transform, viewport, universalSelectionRef } = args;
+  void _transform;
   const toggleFocusedEntity = useCallback<
     Parameters<typeof use2DKeyboardFocus>[0]['toggleEntity']
   >((id, type) => universalSelectionRef.current.toggle(id, type), [universalSelectionRef]);
   use2DKeyboardFocus({
     getScene: () => dxfSceneRef.current,
-    getTransform: () => transformRef.current ?? transform,
+    // ADR-040 XXII.A: prefer transformRef (writer-maintained), fallback to SSoT.
+    getTransform: () => transformRef.current ?? getImmediateTransform(),
     getViewport: () => viewport,
     toggleEntity: toggleFocusedEntity,
   });

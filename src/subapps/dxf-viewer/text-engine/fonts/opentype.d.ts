@@ -53,15 +53,12 @@ declare module 'opentype.js' {
     y2: number;
   }
 
-  export interface PathCommand {
-    type: 'M' | 'L' | 'C' | 'Q' | 'Z';
-    x?: number;
-    y?: number;
-    x1?: number;
-    y1?: number;
-    x2?: number;
-    y2?: number;
-  }
+  export type PathCommand =
+    | { type: 'M'; x: number; y: number }
+    | { type: 'L'; x: number; y: number }
+    | { type: 'Q'; x: number; y: number; x1: number; y1: number }
+    | { type: 'C'; x: number; y: number; x1: number; y1: number; x2: number; y2: number }
+    | { type: 'Z' };
 
   export interface PathOptions {
     kerning?: boolean;

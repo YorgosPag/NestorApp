@@ -16,6 +16,9 @@ import type { DxfCanvasRef } from '../canvas-v2';
 // 🏢 ENTERPRISE FIX (2026-01-27): Use canonical ViewTransform from centralized types
 // REMOVED duplicate type definition - using Single Source of Truth
 import type { ViewTransform } from '../rendering/types/Types';
+// ADR-040 Phase XXII.A: setTransform writes through to ImmediateTransformStore (SSoT).
+// Keeps useState in sync for legacy consumers; primary read path is the store.
+import { updateImmediateTransform } from '../systems/cursor/ImmediateTransformStore';
 
 // Mock missing types
 type OverlayCanvasImperativeAPI = {
@@ -77,8 +80,11 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
   const overlayRef = useRef<OverlayCanvasImperativeAPI>(null);
   const [transform, setTransformInternal] = useState<ViewTransform>({ scale: 1, offsetX: 0, offsetY: 0 });
 
-  // ADR-040 Phase VII: stable callback — created once on mount
+  // ADR-040 Phase VII + XXII.A: stable callback — writes BOTH to ImmediateTransformStore
+  // (SSoT, sole authoritative source) AND legacy useState (backward compat for any
+  // remaining consumer that still subscribes to the merged context).
   const setTransform = useCallback((newTransform: ViewTransform) => {
+    updateImmediateTransform(newTransform);
     setTransformInternal(newTransform);
   }, []);
 

@@ -42,8 +42,8 @@ const ADMIN_ROLES = new Set(['super_admin', 'admin', 'company_admin']);
 
 export const CustomDictionaryManager: React.FC = () => {
   const { t } = useTranslation(['textSpell']);
-  const { user } = useUserRole();
-  const companyId = user?.companyId ?? null;
+  const { user, firebaseUser } = useUserRole();
+  const companyId = firebaseUser?.companyId ?? null;
   const role = user?.role ?? null;
   const capabilities = useCanEditText();
   const canManage = role !== null && ADMIN_ROLES.has(role);

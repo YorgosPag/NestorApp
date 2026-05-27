@@ -9,19 +9,19 @@ import type { XLineEntity, LineEntity, CircleEntity, ArcEntity } from '../../../
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function xline(bx: number, by: number, dx: number, dy: number): XLineEntity {
-  return { id: 'xl', type: 'xline', basePoint: { x: bx, y: by }, direction: { x: dx, y: dy } };
+  return { id: 'xl', type: 'xline', layerId: 'lyr_test_default', basePoint: { x: bx, y: by }, direction: { x: dx, y: dy } };
 }
 
 function line(sx: number, sy: number, ex: number, ey: number): LineEntity {
-  return { id: 'ln', type: 'line', start: { x: sx, y: sy }, end: { x: ex, y: ey } };
+  return { id: 'ln', type: 'line', layerId: 'lyr_test_default', start: { x: sx, y: sy }, end: { x: ex, y: ey } };
 }
 
 function circle(cx: number, cy: number, r: number): CircleEntity {
-  return { id: 'ci', type: 'circle', center: { x: cx, y: cy }, radius: r };
+  return { id: 'ci', type: 'circle', layerId: 'lyr_test_default', center: { x: cx, y: cy }, radius: r };
 }
 
 function arc(cx: number, cy: number, r: number, startAngle: number, endAngle: number): ArcEntity {
-  return { id: 'ar', type: 'arc', center: { x: cx, y: cy }, radius: r, startAngle, endAngle };
+  return { id: 'ar', type: 'arc', layerId: 'lyr_test_default', center: { x: cx, y: cy }, radius: r, startAngle, endAngle };
 }
 
 const PREC = 8;

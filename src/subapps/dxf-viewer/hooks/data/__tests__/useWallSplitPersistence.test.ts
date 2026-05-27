@@ -180,13 +180,13 @@ describe('useWallSplitPersistence — opening redistribution', () => {
   const openingUpdates: OpeningUpdate[] = [
     {
       openingId: 'op-1',
-      previousParams: { wallId: 'orig-id', offsetFromStart: 200, width: 900, height: 2100, sillHeight: 0 },
-      nextParams:     { wallId: 'w1',      offsetFromStart: 200, width: 900, height: 2100, sillHeight: 0 },
+      previousParams: { kind: 'door', wallId: 'orig-id', offsetFromStart: 200, width: 900, height: 2100, sillHeight: 0 },
+      nextParams:     { kind: 'door', wallId: 'w1',      offsetFromStart: 200, width: 900, height: 2100, sillHeight: 0 },
     },
     {
       openingId: 'op-2',
-      previousParams: { wallId: 'orig-id', offsetFromStart: 700, width: 900, height: 2100, sillHeight: 0 },
-      nextParams:     { wallId: 'w2',      offsetFromStart: 100, width: 900, height: 2100, sillHeight: 0 },
+      previousParams: { kind: 'door', wallId: 'orig-id', offsetFromStart: 700, width: 900, height: 2100, sillHeight: 0 },
+      nextParams:     { kind: 'door', wallId: 'w2',      offsetFromStart: 100, width: 900, height: 2100, sillHeight: 0 },
     },
   ];
 

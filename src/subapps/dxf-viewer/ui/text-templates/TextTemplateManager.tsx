@@ -47,8 +47,8 @@ type CategoryFilter = TextTemplateCategory | 'all';
 
 export const TextTemplateManager: React.FC<ManagerProps> = ({ previewLocale = 'el' }) => {
   const { t } = useTranslation(['textTemplates']);
-  const { user } = useUserRole();
-  const companyId = user?.companyId ?? null;
+  const { user: _user, firebaseUser } = useUserRole();
+  const companyId = firebaseUser?.companyId ?? null;
   const capabilities = useCanEditText();
   const scope = useTextTemplatePreviewScope(previewLocale);
 

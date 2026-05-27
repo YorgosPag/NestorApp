@@ -30,8 +30,9 @@ function makeSlab(id = 'slab_test', overrides?: Partial<SlabParams>): SlabEntity
         { x: 0, y: 10000, z: 0 },
       ],
     },
-    elevation: 0,
+    levelElevation: 0,
     thickness: 200,
+    geometryType: 'box',
     ...overrides,
   };
   return {
@@ -43,7 +44,7 @@ function makeSlab(id = 'slab_test', overrides?: Partial<SlabParams>): SlabEntity
     geometry: computeSlabGeometry(params),
     validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
     visible: true,
-  } as SlabEntity;
+  } as unknown as SlabEntity;
 }
 
 interface Harness {
@@ -135,7 +136,7 @@ describe('useSlabOpeningTool', () => {
       result.current.onCanvasClick({ x: 4000, y: 4000 });
     });
     expect(onSlabOpeningCreated).toHaveBeenCalledTimes(1);
-    const entity = onSlabOpeningCreated.mock.calls[0][0] as SlabOpeningEntity;
+    const entity = onSlabOpeningCreated.mock.calls[0][0] as unknown as SlabOpeningEntity;
     expect(entity.type).toBe('slab-opening');
     expect(entity.params.slabId).toBe(slab.id);
     expect(entity.params.kind).toBe('shaft');

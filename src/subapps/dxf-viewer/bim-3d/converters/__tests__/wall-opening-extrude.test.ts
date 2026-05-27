@@ -22,7 +22,7 @@ function makeStraightWall(overrides?: Partial<WallParams>): WallEntity {
     end: { x: 5, y: 0, z: 0 },  // 5m wall in 'm' scene
     height: 3000,
     thickness: 250,
-    flip: false,
+    flip: false, baseBinding: 'storey-floor', topBinding: 'storey-ceiling', baseOffset: 0, topOffset: 0,
     sceneUnits: 'm',
     ...overrides,
   };
@@ -35,7 +35,7 @@ function makeStraightWall(overrides?: Partial<WallParams>): WallEntity {
     geometry: computeWallGeometry(params, 'straight'),
     validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
     visible: true,
-  } as WallEntity;
+  } as unknown as WallEntity;
 }
 
 function makePolylineWall(): WallEntity {
@@ -46,7 +46,7 @@ function makePolylineWall(): WallEntity {
     end: { x: 5, y: 3, z: 0 },
     height: 3000,
     thickness: 250,
-    flip: false,
+    flip: false, baseBinding: 'storey-floor', topBinding: 'storey-ceiling', baseOffset: 0, topOffset: 0,
     sceneUnits: 'm',
     polylineVertices: [
       { x: 0, y: 0, z: 0 },
@@ -63,7 +63,7 @@ function makePolylineWall(): WallEntity {
     geometry: computeWallGeometry(params, 'polyline'),
     validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
     visible: true,
-  } as WallEntity;
+  } as unknown as WallEntity;
 }
 
 function makeOpening(wallId: string, overrides?: Partial<OpeningParams>): OpeningEntity {
@@ -87,7 +87,7 @@ function makeOpening(wallId: string, overrides?: Partial<OpeningParams>): Openin
     geometry: { position: { x: 0, y: 0, z: 0 }, rotation: 0, outline: { vertices: [] }, bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } }, area: 0, perimeter: 0 },
     validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
     visible: true,
-  } as OpeningEntity;
+  } as unknown as OpeningEntity;
 }
 
 const MAT = new THREE.MeshBasicMaterial();

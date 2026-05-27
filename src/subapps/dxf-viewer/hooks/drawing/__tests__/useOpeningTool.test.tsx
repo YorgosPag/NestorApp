@@ -24,7 +24,7 @@ function makeWall(id = 'wall_test', overrides?: Partial<WallParams>): WallEntity
     end: { x: 5000, y: 0, z: 0 },
     height: 3000,
     thickness: 500,
-    flip: false,
+    flip: false, baseBinding: 'storey-floor', topBinding: 'storey-ceiling', baseOffset: 0, topOffset: 0,
     ...overrides,
   };
   return {
@@ -36,7 +36,7 @@ function makeWall(id = 'wall_test', overrides?: Partial<WallParams>): WallEntity
     geometry: computeWallGeometry(params, 'straight'),
     validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
     visible: true,
-  } as WallEntity;
+  } as unknown as WallEntity;
 }
 
 interface Harness {
@@ -128,7 +128,7 @@ describe('useOpeningTool', () => {
       result.current.onCanvasClick({ x: 2000, y: 0 });
     });
     expect(onOpeningCreated).toHaveBeenCalledTimes(1);
-    const entity = onOpeningCreated.mock.calls[0][0] as OpeningEntity;
+    const entity = onOpeningCreated.mock.calls[0][0] as unknown as OpeningEntity;
     expect(entity.type).toBe('opening');
     expect(entity.params.wallId).toBe(wall.id);
     expect(entity.params.kind).toBe('door');

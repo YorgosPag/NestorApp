@@ -18,6 +18,8 @@ import { findOverlayEdgeForGrip } from '../../utils/entity-conversion';
 import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 import { deepClone } from '../../utils/clone-utils';
 import { derr } from '../../debug';
+// ADR-040 Phase XXII.A — transform reads from SSoT (orchestrator-decoupling).
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type { Overlay, OverlayEditorMode, UpdateOverlayData } from '../../overlays/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { EdgeHoverInfo, DraggingOverlayBodyState } from './useCanvasMouse';
@@ -84,7 +86,8 @@ export function useOverlayInteraction({
   universalSelection,
   overlayStore,
   hoveredEdgeInfo,
-  transformScale,
+  // ADR-040 XXII.A: `transformScale` retained for signature compat; live read via SSoT.
+  transformScale: _transformScale,
   fitToOverlay,
   setDraggingOverlayBody,
   setDragPreviewPosition,
@@ -121,7 +124,9 @@ export function useOverlayInteraction({
     if ((activeTool === 'select' || activeTool === 'layering') && hoveredEdgeInfo?.overlayId === overlayId) {
       const overlay = currentOverlays.find(o => o.id === overlayId);
       if (overlay?.polygon) {
-        const edgeTolerance = POLYGON_TOLERANCES.EDGE_DETECTION / transformScale;
+        // ADR-040 XXII.A: live SSoT read.
+        void _transformScale;
+        const edgeTolerance = POLYGON_TOLERANCES.EDGE_DETECTION / getImmediateTransform().scale;
         const edgeInfo = findOverlayEdgeForGrip(point, overlay.polygon, edgeTolerance);
 
         if (edgeInfo && edgeInfo.edgeIndex === hoveredEdgeInfo.edgeIndex) {

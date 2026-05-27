@@ -71,6 +71,61 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-27 — Phase XXII.A — Zoom-Path Orchestrator Decoupling (foundation)
+
+**Bug**: Firefox profile during DXF/BIM wheel-zoom showed ~77% time inside `flushSyncWorkOnAllRoots` → `performSyncWorkOnRoot` → `renderWithHooks`, with Tooltip render at 19%, `defineProperty` (self-hosted) 10.1ms JIT-off, and `validateChildKeys` (React DEV) frequent. Even on a tiny DXF + a handful of BIM entities, zoom dropped to 1-2 FPS.
+
+**Diagnosis**:
+1. `CanvasSection.tsx:92` consumed `useCanvasContext()` (the **merged** context, which carries `transform` alongside refs). Every `setTransform` from wheel events recreated `contextValue` (`{ ...refsValue, transform }`) → CanvasSection re-rendered on every wheel notch.
+2. CanvasSection forwarded `transform` (or `transform.scale`) as a React value to **11 child hooks**: `useViewportManager`, `useZoom`, `useCanvasSection2DFocus`, `useUnifiedGripInteraction`, `useTouchGestures`, `useCanvasContainerHandlers`, `useCanvasMouse`, `useModifyTools` (transformScale), `useOverlayInteraction` (transformScale), `useCanvasClickHandler` — each with its own dep arrays, closures, sub-callbacks, and effects. Wheel zoom = 11-hook cascade per notch.
+3. CanvasLayerStack received `transform` directly from CanvasSection prop, so the shell + leaves re-rendered as a follow-on cost (unavoidable for visual layers, but the *11-hook cascade above it* was the heavy multiplier).
+4. The TransformStore SSoT (this ADR, Phase XIII) already existed (`ImmediateTransformStore` with canonical `TransformStore` alias) and `useViewportManager.setTransform` already wrote to it — but CanvasSection never read from it; it kept consuming the React-state merged context.
+
+**Industry pattern (AutoCAD / Revit / Figma / Photoshop)**: view transform = runtime singleton, not React state. Wheel events write to the runtime. RAF reads it. React tree does not re-render on view change; canvas elements redraw imperatively via `markSystemsDirty()`.
+
+**Fix — Phase XXII.A**: surgical, behavior-preserving migration. No new SSoT created (re-uses Phase XIII `ImmediateTransformStore`); no signature breakage; hook params retained for compat and marked `_transform` / `_transformScale`.
+
+| File | Change |
+|---|---|
+| `contexts/CanvasContext.tsx` | `setTransform` now writes to `ImmediateTransformStore` (SSoT) **in addition to** the legacy `useState` (kept for backward compat). |
+| `components/dxf-layout/CanvasSection.tsx` | `useCanvasContext()` → `useCanvasRefs()` (stable refs only — never recreated on transform change). `transform` value at render-top now reads `getImmediateTransform()` once; passes a frozen value to child hooks where needed (hooks ignore it and read live SSoT internally). Default-transform `useMemo` removed. |
+| `components/dxf-layout/CanvasLayerStackTransformBridge.tsx` (**NEW**) | Thin subscriber wrapper around `CanvasLayerStack`. Uses `useTransformValue()` to subscribe to the SSoT and pass live transform to the shell. Pre-commit CHECK 6C bans `useSyncExternalStore` in CanvasSection and CanvasLayerStack directly; this bridge sits between them as the sole subscription point. |
+| `components/dxf-layout/CanvasSectionOverlays.tsx` (**NEW**) | File-size split (CLAUDE.md N.7.1, 500-line budget). After the Phase XXII.A header additions CanvasSection.tsx grew to 507 lines and CHECK 4 blocked the commit. JSX portal overlays (4 context menus, 3 quick-properties leaves, grip menus, mirror confirm, text editors, selection cycling popover) extracted to this sibling component. Pure passthrough — props typed via `React.ComponentProps<typeof X>` so child component types remain SSoT. CanvasSection now 461 lines. |
+| `hooks/canvas/useCanvasMouse.ts` | Internal `transform` reads → `getImmediateTransform()`; `transform` removed from `handleContainerMouseMove` + `handleContainerMouseDown` deps. |
+| `hooks/canvas/useCanvasContainerHandlers.ts` | Same pattern (mouse-down + mouse-up reads); `transform` removed from both `useCallback` deps. |
+| `hooks/canvas/useCanvasSection2DFocus.ts` | Fallback `transformRef.current ?? transform` → `transformRef.current ?? getImmediateTransform()`. |
+| `hooks/canvas/useCanvasClickHandler.ts` | 5 internal reads + module-level `handleRotationEntitySelection` + `handleAutoAreaClick` switched to `getImmediateTransform()`. `guideCtx` / `entityCtx` constructed with live SSoT value at click time. `transform` removed from `useCallback` deps. |
+| `hooks/canvas/useOverlayInteraction.ts` | `transformScale` retained for signature compat; `handleOverlayClick` reads live `getImmediateTransform().scale`. |
+| `hooks/grips/useUnifiedGripInteraction.ts` | Two `findNearestGrip(...)` calls in `handleMouseMove` + `handleMouseDown` switched to `getImmediateTransform().scale`. `transform.scale` removed from both `useCallback` deps. |
+| `hooks/gestures/useTouchGestures.ts` | Pinch + pan handlers read live SSoT; closes the stale-closure path where rapid pinch read stale transform from the dep array. `transform` removed from both `useCallback` deps. |
+| `hooks/tools/useModifyTools.ts` | `trimHitTest` reads live `getImmediateTransform().scale`; `transformScale` retained for sub-tool propagation (`useWallSplitTool`). `transformScale` removed from `trimHitTest` deps. |
+
+**What stays inert on wheel zoom**:
+- CanvasSection (orchestrator) — no longer subscribes to transform context.
+- All 11 child hooks — no longer re-execute their dep-array changes on wheel.
+- All callbacks that read transform inside event handlers — fresh SSoT value at event time, no stale closure.
+
+**What still re-renders on wheel zoom** (expected, Phase XXII.B will tighten):
+- `CanvasLayerStackTransformBridge` (the single subscriber on this path).
+- `CanvasLayerStack` (shell — receives new transform prop, React.memo doesn't help since transform changes).
+- Leaves below CanvasLayerStack that consume the `transform` prop. Same as pre-fix cost — but no longer multiplied by the 11-hook orchestrator cascade above.
+
+**What still writes to the legacy useState** (transitional, removed in Phase XXII.B):
+- `CanvasProvider.setTransform` writes to both `ImmediateTransformStore` (SSoT) and the local `useState` (so `CanvasTransformContext` consumers, if any return, still work). Currently zero consumers of `useCanvasTransformContext` and only CanvasSection used the merged `useCanvasContext`. The useState block is dead weight pending Phase XXII.B.
+
+**Risk mitigation**:
+- Hook signatures unchanged — no call-site breakage.
+- Deps arrays only had `transform` removed where the value is now read live (callback closures cannot go stale because the read is at event time, not at closure-creation time).
+- `_transform` / `_transformScale` rename signals "param accepted, value unused" without erasing the param (TS public API preserved).
+- TransformBridge keeps visual layers fed with live transform — no frozen overlay regression.
+- Backward-compat useState kept in CanvasProvider — any remaining consumer (none identified) keeps working.
+
+**Phase XXII.B (next session)**: bitmap cache CSS-transform for live zoom + idle re-raster debounce (Figma pattern). Currently `dxf-bitmap-cache.ts` lines 73-82 invalidate the cache on every `scale/offsetX/offsetY` change — full re-raster per wheel notch. CSS `transform: scale(...)` on the offscreen canvas + 250ms idle re-raster removes this cost without sacrificing crispness at rest.
+
+**Phase XXII.C (conditional)**: `React.memo(CadStatusBar)` + Tooltip audit. Profile-driven decision after XXII.A+B ship.
+
+**Files touched**: 1 NEW + 11 MOD (1 ADR + 10 code).
+
 ### 2026-05-27 — CanvasSection scene wiring + level-manager type tightened
 
 `CanvasSection.tsx` (orchestrator): `useEntityLayerCommands(...)` now receives the locally-resolved `dxfScene` instead of `props.currentScene`. The orchestrator's `dxfScene` is the snapshot already threaded through every leaf renderer; reusing it removes a stale-prop divergence path where command-mode entity operations could fire against an outdated scene reference (no observable bug in the wild, but the prop chain was no longer SSoT-aligned post-ADR-374). One-line swap; orchestrator subscription topology unchanged.

@@ -30,7 +30,7 @@ function makeSlab(verts: ReadonlyArray<{ x: number; y: number }>, overrides?: Pa
   return {
     kind: 'floor',
     outline: { vertices: verts.map((v) => ({ x: v.x, y: v.y, z: 0 })) },
-    elevation: 0,
+    levelElevation: 0,
     thickness: 200,
     ...overrides,
   };

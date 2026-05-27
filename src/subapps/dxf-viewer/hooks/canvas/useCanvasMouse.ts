@@ -25,6 +25,8 @@ import {
   screenToWorldWithSnapshot
 } from '../../rendering/core/CoordinateTransforms';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
+// ADR-040 Phase XXII.A — transform reads from SSoT, not React prop (orchestrator-decoupling).
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 // 🏢 ADR-065: Extracted types and drag handlers
 import type { UseCanvasMouseProps, UseCanvasMouseReturn, SelectedGrip, DraggingVertexState } from './canvas-mouse-types';
 import { handleVertexDragEnd, handleEdgeMidpointDragEnd, handleOverlayBodyDragEnd } from './canvas-mouse-drag-handlers';
@@ -63,8 +65,9 @@ export type {
  * ```
  */
 export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn {
+  // ADR-040 XXII.A: `transform` param retained for signature compat; reads go via SSoT.
   const {
-    transform,
+    transform: _transform,
     activeTool,
     updatePosition,
     setActive,
@@ -94,6 +97,7 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     justFinishedDragRef,
     markDragFinished,
   } = props;
+  void _transform;
 
   // ============================================================================
   // 🚀 PERF (2026-05-09): mouseCss / mouseWorld React state REMOVED.
@@ -146,7 +150,8 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     if (draggingOverlayBody || draggingVertices || draggingEdgeMidpoint) {
       const snap = getPointerSnapshotFromElement(container);
       if (snap) {
-        const worldPoint = screenToWorldWithSnapshot(screenPos, transform, snap);
+        // ADR-040 XXII.A: live SSoT read.
+        const worldPoint = screenToWorldWithSnapshot(screenPos, getImmediateTransform(), snap);
         setDragPreviewPosition(worldPoint);
       }
     }
@@ -155,7 +160,8 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     if (draggingGuide) {
       const snap = getPointerSnapshotFromElement(container);
       if (snap) {
-        const worldPoint = screenToWorldWithSnapshot(screenPos, transform, snap);
+        // ADR-040 XXII.A: live SSoT read.
+        const worldPoint = screenToWorldWithSnapshot(screenPos, getImmediateTransform(), snap);
         const store = getGlobalGuideStore();
         const deltaX = worldPoint.x - draggingGuide.startMouseWorld.x;
         const deltaY = worldPoint.y - draggingGuide.startMouseWorld.y;
@@ -173,7 +179,8 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
         }
       }
     }
-  }, [containerRef, draggingOverlayBody, draggingVertices, draggingEdgeMidpoint, draggingGuide, transform, setDragPreviewPosition]);
+  // ADR-040 XXII.A: `transform` removed from deps — reads come from SSoT, not closure.
+  }, [containerRef, draggingOverlayBody, draggingVertices, draggingEdgeMidpoint, draggingGuide, setDragPreviewPosition]);
 
   /**
    * 🏢 ENTERPRISE: Container mouse enter handler
@@ -239,7 +246,8 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     const snap = getPointerSnapshotFromElement(container);
     if (!snap) return; // Fail-fast: Cannot transform without valid snapshot
     const screenPos = getScreenPosFromEvent(e, snap);
-    const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
+    // ADR-040 XXII.A: live SSoT read.
+    const worldPos = screenToWorldWithSnapshot(screenPos, getImmediateTransform(), snap);
 
     // === VERTEX GRIP CLICK ===
     if (hoveredVertexInfo) {
@@ -338,7 +346,7 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     hoveredVertexInfo,
     hoveredEdgeInfo,
     selectedGrips,
-    transform,
+    // ADR-040 XXII.A: `transform` removed — SSoT read at event time.
     containerRef,
     setSelectedGrips,
     setDraggingVertices,
@@ -354,8 +362,9 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
    * 🏢 ADR-065: Handler bodies delegated to canvas-mouse-drag-handlers.ts
    */
   const handleContainerMouseUp = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
+    // ADR-040 XXII.A: live SSoT read at mouseup time, not closure capture.
     const dragCtx = {
-      e, transform, containerRef, overlayStoreRef, executeCommand,
+      e, transform: getImmediateTransform(), containerRef, overlayStoreRef, executeCommand,
       setDragPreviewPosition, markDragFinished, movementDetectionThreshold,
     };
 
@@ -379,7 +388,7 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     draggingVertices,
     draggingEdgeMidpoint,
     draggingOverlayBody,
-    transform,
+    // ADR-040 XXII.A: transform removed — SSoT read at event time.
     containerRef,
     executeCommand,
     setDraggingVertices,

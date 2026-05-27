@@ -43,6 +43,7 @@ export interface DXFViewerLayoutProps extends Omit<DxfViewerState, 'snapEnabled'
   // Props from useDxfViewerState that need to be passed down
   className?: string;
   entities: DXFEntity[];
+  selectedEntityIds: string[];
   layers: Layer[];
   scene: SceneModel;
   handleTransformChange: (transform: ViewTransform) => void;

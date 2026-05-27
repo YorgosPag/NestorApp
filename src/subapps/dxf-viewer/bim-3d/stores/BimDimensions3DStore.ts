@@ -17,6 +17,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { castDraft } from 'immer';
 import {
   DEFAULT_DIM3D_SNAP_TOGGLES,
   type Dim3DSnapMode,
@@ -108,10 +109,10 @@ export const useBimDimensions3DStore = create<BimDimensions3DStoreType>()(
             const current = draft.dimensionsByProjectId[projectId] ?? [];
             const idx = current.findIndex((d) => d.id === dim.id);
             if (idx === -1) {
-              draft.dimensionsByProjectId[projectId] = [...current, dim];
+              draft.dimensionsByProjectId[projectId] = castDraft([...current, dim]);
             } else {
               const next = [...current];
-              next[idx] = dim;
+              next[idx] = castDraft(dim);
               draft.dimensionsByProjectId[projectId] = next;
             }
           });
@@ -142,7 +143,7 @@ export const useBimDimensions3DStore = create<BimDimensions3DStoreType>()(
             draft.toolActive = true;
             draft.toolMode = next.context.mode;
             draft.fsmState = next.state;
-            draft.fsmContext = next.context;
+            draft.fsmContext = castDraft(next.context);
           });
         },
 
@@ -150,7 +151,7 @@ export const useBimDimensions3DStore = create<BimDimensions3DStoreType>()(
           set((draft) => {
             draft.toolActive = false;
             draft.fsmState = 'idle';
-            draft.fsmContext = INITIAL_CONTEXT;
+            draft.fsmContext = castDraft(INITIAL_CONTEXT);
             draft.snapPreview = null;
           });
         },
@@ -165,7 +166,7 @@ export const useBimDimensions3DStore = create<BimDimensions3DStoreType>()(
         cycleToolMode() {
           set((draft) => {
             const next = cycleMode(draft.fsmContext);
-            draft.fsmContext = next;
+            draft.fsmContext = castDraft(next);
             draft.toolMode = next.mode;
           });
         },
@@ -188,7 +189,7 @@ export const useBimDimensions3DStore = create<BimDimensions3DStoreType>()(
           set((draft) => {
             const next = placeFirstPoint(draft.fsmContext, point);
             draft.fsmState = next.state;
-            draft.fsmContext = next.context;
+            draft.fsmContext = castDraft(next.context);
           });
         },
 
@@ -196,7 +197,7 @@ export const useBimDimensions3DStore = create<BimDimensions3DStoreType>()(
           set((draft) => {
             const next = placeSecondPoint(draft.fsmContext, point);
             draft.fsmState = next.state;
-            draft.fsmContext = next.context;
+            draft.fsmContext = castDraft(next.context);
           });
         },
 
@@ -207,7 +208,7 @@ export const useBimDimensions3DStore = create<BimDimensions3DStoreType>()(
           const anchor = buildAnchorFromContext(next.context);
           set((draft) => {
             draft.fsmState = next.state;
-            draft.fsmContext = next.context;
+            draft.fsmContext = castDraft(next.context);
           });
           return { anchor, mode: ctx.mode };
         },
@@ -216,7 +217,7 @@ export const useBimDimensions3DStore = create<BimDimensions3DStoreType>()(
           set((draft) => {
             const next = continueTool(draft.fsmContext);
             draft.fsmState = next.state;
-            draft.fsmContext = next.context;
+            draft.fsmContext = castDraft(next.context);
             draft.snapPreview = null;
           });
         },
@@ -225,7 +226,7 @@ export const useBimDimensions3DStore = create<BimDimensions3DStoreType>()(
           set((draft) => {
             const next = cancelTool();
             draft.fsmState = next.state;
-            draft.fsmContext = { ...next.context, mode: draft.toolMode };
+            draft.fsmContext = castDraft({ ...next.context, mode: draft.toolMode });
             draft.snapPreview = null;
           });
         },

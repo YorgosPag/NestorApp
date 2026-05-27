@@ -25,10 +25,7 @@ export type {
 
 // Stair types (Phase 0.5 — migrated from types/stair.ts to bim/types/stair-types.ts)
 export type {
-  Polygon3D,
-  Polyline3D,
   Segment3D,
-  BoundingBox3D,
   StairKind,
   StairStructureType,
   StairRiserType,

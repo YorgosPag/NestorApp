@@ -16,29 +16,29 @@ import type {
 // ── Minimal entity factories ───────────────────────────────────────────────
 
 function line(x1: number, y1: number, x2: number, y2: number): LineEntity {
-  return { id: 'l', type: 'line', start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, name: 'l' };
+  return { id: 'l', type: 'line', layerId: 'lyr_test_default', start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, name: 'l' };
 }
 
 function poly(pts: [number, number][], closed = false): PolylineEntity {
   return {
-    id: 'p', type: 'polyline', closed,
+    id: 'p', type: 'polyline', layerId: 'lyr_test_default', closed,
     vertices: pts.map(([x, y]) => ({ x, y })), name: 'p',
   };
 }
 
 function lwpoly(pts: [number, number][], closed = false): LWPolylineEntity {
   return {
-    id: 'lp', type: 'lwpolyline', closed,
+    id: 'lp', type: 'lwpolyline', layerId: 'lyr_test_default', closed,
     vertices: pts.map(([x, y]) => ({ x, y })), name: 'lp',
   };
 }
 
 function arc(cx: number, cy: number, r: number, startAngle: number, endAngle: number, ccw = false): ArcEntity {
-  return { id: 'a', type: 'arc', center: { x: cx, y: cy }, radius: r, startAngle, endAngle, counterclockwise: ccw, name: 'a' };
+  return { id: 'a', type: 'arc', layerId: 'lyr_test_default', center: { x: cx, y: cy }, radius: r, startAngle, endAngle, counterclockwise: ccw, name: 'a' };
 }
 
 function circle(cx: number, cy: number, r: number): CircleEntity {
-  return { id: 'c', type: 'circle', center: { x: cx, y: cy }, radius: r, name: 'c' };
+  return { id: 'c', type: 'circle', layerId: 'lyr_test_default', center: { x: cx, y: cy }, radius: r, name: 'c' };
 }
 
 const COS45 = Math.SQRT2 / 2;
@@ -68,22 +68,22 @@ describe('getPathSamplerStrategy', () => {
   });
 
   it('returns strategy for SPLINE (C2)', () => {
-    const spline = { id: 's', type: 'spline', name: 's', controlPoints: [] } as unknown as Entity;
+    const spline = { id: 's', type: 'spline', layerId: 'lyr_test_default', name: 's', controlPoints: [] } as unknown as Entity;
     expect(getPathSamplerStrategy(spline)).not.toBeNull();
   });
 
   it('returns strategy for ELLIPSE (C2)', () => {
-    const ellipse = { id: 'e', type: 'ellipse', name: 'e', center: { x: 0, y: 0 }, majorAxis: 1, minorAxis: 1 } as unknown as Entity;
+    const ellipse = { id: 'e', type: 'ellipse', layerId: 'lyr_test_default', name: 'e', center: { x: 0, y: 0 }, majorAxis: 1, minorAxis: 1 } as unknown as Entity;
     expect(getPathSamplerStrategy(ellipse)).not.toBeNull();
   });
 
   it('returns null for TEXT', () => {
-    const text = { id: 't', type: 'text', name: 't' } as unknown as Entity;
+    const text = { id: 't', type: 'text', layerId: 'lyr_test_default', name: 't' } as unknown as Entity;
     expect(getPathSamplerStrategy(text)).toBeNull();
   });
 
   it('returns null for RECTANGLE', () => {
-    const rect = { id: 'r', type: 'rectangle', name: 'r' } as unknown as Entity;
+    const rect = { id: 'r', type: 'rectangle', layerId: 'lyr_test_default', name: 'r' } as unknown as Entity;
     expect(getPathSamplerStrategy(rect)).toBeNull();
   });
 });
@@ -97,14 +97,14 @@ describe('isPathEntity', () => {
   });
 
   it('true for SPLINE and ELLIPSE (C2)', () => {
-    const spline = { id: 's', type: 'spline', name: 's', controlPoints: [] } as unknown as Entity;
-    const ellipse = { id: 'e', type: 'ellipse', name: 'e', center: { x: 0, y: 0 }, majorAxis: 1, minorAxis: 1 } as unknown as Entity;
+    const spline = { id: 's', type: 'spline', layerId: 'lyr_test_default', name: 's', controlPoints: [] } as unknown as Entity;
+    const ellipse = { id: 'e', type: 'ellipse', layerId: 'lyr_test_default', name: 'e', center: { x: 0, y: 0 }, majorAxis: 1, minorAxis: 1 } as unknown as Entity;
     expect(isPathEntity(spline)).toBe(true);
     expect(isPathEntity(ellipse)).toBe(true);
   });
 
   it('false for TEXT (truly unsupported)', () => {
-    const text = { id: 't', type: 'text', name: 't' } as unknown as Entity;
+    const text = { id: 't', type: 'text', layerId: 'lyr_test_default', name: 't' } as unknown as Entity;
     expect(isPathEntity(text)).toBe(false);
   });
 });
@@ -374,17 +374,17 @@ describe('CircleStrategy', () => {
 
 describe('samplePath null for truly unsupported types', () => {
   it('returns null for TEXT', () => {
-    const text = { id: 't', type: 'text', name: 't' } as unknown as Entity;
+    const text = { id: 't', type: 'text', layerId: 'lyr_test_default', name: 't' } as unknown as Entity;
     expect(samplePath(text, 0.5)).toBeNull();
   });
 
   it('pathTotalLength returns 0 for TEXT', () => {
-    const text = { id: 't', type: 'text', name: 't' } as unknown as Entity;
+    const text = { id: 't', type: 'text', layerId: 'lyr_test_default', name: 't' } as unknown as Entity;
     expect(pathTotalLength(text)).toBe(0);
   });
 
   it('SPLINE now supported (C2) — not null', () => {
-    const spline = { id: 's', type: 'spline', name: 's', controlPoints: [{ x: 0, y: 0 }, { x: 1, y: 0 }] } as unknown as Entity;
+    const spline = { id: 's', type: 'spline', layerId: 'lyr_test_default', name: 's', controlPoints: [{ x: 0, y: 0 }, { x: 1, y: 0 }] } as unknown as Entity;
     expect(samplePath(spline, 0.5)).not.toBeNull();
   });
 });

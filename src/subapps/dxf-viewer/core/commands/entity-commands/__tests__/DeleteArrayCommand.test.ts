@@ -69,7 +69,7 @@ describe('DeleteArrayCommand', () => {
     cmd.execute();
     cmd.undo();
 
-    const restored = scene.get('arr1') as ArrayEntity;
+    const restored = scene.get('arr1') as unknown as ArrayEntity;
     expect(restored).toBeDefined();
     expect(restored.type).toBe('array');
     expect(restored.hiddenSources).toHaveLength(1);

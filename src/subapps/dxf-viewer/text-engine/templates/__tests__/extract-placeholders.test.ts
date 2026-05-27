@@ -96,7 +96,7 @@ describe('extractPlaceholders (DxfTextNode)', () => {
       type: 'horizontal',
       style: { fontFamily: 'Arial', height: 2.5, color: DXF_COLOR_BY_LAYER },
     };
-    const node = makeNode([makeParagraph([stack])]);
+    const node = makeNode([makeParagraph([stack as unknown as Parameters<typeof makeParagraph>[0][number]])]);
     expect(extractPlaceholders(node)).toEqual(['revision.date', 'revision.number']);
   });
 });

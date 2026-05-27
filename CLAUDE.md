@@ -652,8 +652,9 @@ powershell.exe -ExecutionPolicy Bypass -File "C:\Nestor_Pagonis\enterprise-backu
 
 | File | Architecture role |
 |------|------------------|
-| `components/dxf-layout/CanvasSection.tsx` | Orchestrator — MUST NOT subscribe to high-freq stores |
-| `components/dxf-layout/CanvasLayerStack.tsx` | Shell — MUST NOT subscribe to high-freq stores |
+| `components/dxf-layout/CanvasSection.tsx` | Orchestrator — MUST NOT subscribe to high-freq stores (Phase XXII.A: uses `useCanvasRefs()` only, reads transform via `getImmediateTransform()` at event time) |
+| `components/dxf-layout/CanvasLayerStack.tsx` | Shell — MUST NOT subscribe to high-freq stores (receives transform via Bridge wrapper) |
+| `components/dxf-layout/CanvasLayerStackTransformBridge.tsx` | Sole transform subscriber on CanvasSection→Shell path (ADR-040 Phase XXII.A). MUST stay thin — only `useTransformValue()` + pass-through to `<CanvasLayerStack>` |
 | `components/dxf-layout/canvas-layer-stack-leaves.tsx` | Micro-leaves — the ONLY subscribers to high-freq stores |
 | `canvas-v2/dxf-canvas/dxf-canvas-renderer.ts` | Bitmap cache — invalidation rules in ADR-040 |
 | `canvas-v2/dxf-canvas/DxfRenderer.ts` | Entity render pipeline |
@@ -663,6 +664,7 @@ powershell.exe -ExecutionPolicy Bypass -File "C:\Nestor_Pagonis\enterprise-backu
 | `hooks/canvas/useCanvasContextMenu.ts` | Event-time reads — MUST use getter, not snapshot |
 | `systems/hover/HoverStore.ts` | Hover SSoT — zero React state |
 | `systems/cursor/ImmediatePositionStore.ts` | Cursor SSoT — zero React state |
+| `systems/cursor/ImmediateTransformStore.ts` | Transform SSoT — zero React state. Read via `getImmediateTransform()` (event-time) or `useTransformValue()` (leaf subscriber). Sole writer: `useViewportManager.setTransform` + `CanvasContext.setTransform`. |
 | `rendering/core/UnifiedFrameScheduler.ts` | RAF orchestrator |
 
 ### Cardinal rules (violations cause 60fps re-renders or stale data):

@@ -49,11 +49,11 @@ describe('CreateArrayCommand', () => {
     cmd.execute();
 
     expect(scene.has('src1')).toBe(false);
-    const arr = [...scene.values()].find(e => e.type === 'array') as ArrayEntity | undefined;
+    const arr = [...scene.values()].find(e => e.type === 'array') as unknown as ArrayEntity | undefined;
     expect(arr).toBeDefined();
-    expect((arr as ArrayEntity).arrayKind).toBe('rect');
-    expect((arr as ArrayEntity).hiddenSources).toHaveLength(1);
-    expect((arr as ArrayEntity).hiddenSources[0].id).toBe('src1');
+    expect((arr as unknown as ArrayEntity).arrayKind).toBe('rect');
+    expect((arr as unknown as ArrayEntity).hiddenSources).toHaveLength(1);
+    expect((arr as unknown as ArrayEntity).hiddenSources[0].id).toBe('src1');
   });
 
   it('undo: removes ArrayEntity and restores source entities', () => {
@@ -94,7 +94,7 @@ describe('CreateArrayCommand', () => {
     expect(scene.has('s1')).toBe(false);
     expect(scene.has('s2')).toBe(false);
     expect(scene.has('s3')).toBe(false);
-    const arr = [...scene.values()].find(e => e.type === 'array') as ArrayEntity;
+    const arr = [...scene.values()].find(e => e.type === 'array') as unknown as ArrayEntity;
     expect(arr.hiddenSources).toHaveLength(3);
   });
 
@@ -105,7 +105,7 @@ describe('CreateArrayCommand', () => {
     const cmd = new CreateArrayCommand(['exists', 'ghost'], 'rect', RECT_PARAMS, sm);
     cmd.execute();
 
-    const arr = [...scene.values()].find(e => e.type === 'array') as ArrayEntity;
+    const arr = [...scene.values()].find(e => e.type === 'array') as unknown as ArrayEntity;
     expect(arr).toBeDefined();
     expect(arr.hiddenSources).toHaveLength(1);
   });
@@ -153,7 +153,7 @@ describe('CreateArrayCommand', () => {
     const cmd = new CreateArrayCommand(['src1'], 'rect', RECT_PARAMS, sm);
     cmd.execute();
 
-    const arr = [...scene.values()].find(e => e.type === 'array') as ArrayEntity;
+    const arr = [...scene.values()].find(e => e.type === 'array') as unknown as ArrayEntity;
     expect(arr).toBeDefined();
     expect(arr.layerId).toBe('lyr_walls_001');
     expect((arr as unknown as Record<string, unknown>).layer).toBeUndefined();

@@ -12,8 +12,8 @@ import type { LineEntity, ArcEntity } from '../../../../types/entities';
 
 // ── Mock scene manager ────────────────────────────────────────────────────────
 
-function makeSceneManager(initial: SceneEntity[] = []): { sm: ISceneManager; store: Map<string, SceneEntity> } {
-  const store = new Map<string, SceneEntity>(initial.map((e) => [e.id, e]));
+function makeSceneManager(initial: Array<{ id: string }> = []): { sm: ISceneManager; store: Map<string, SceneEntity> } {
+  const store = new Map<string, SceneEntity>(initial.map((e) => [e.id, e as unknown as SceneEntity]));
   const sm: ISceneManager = {
     addEntity: (e) => { store.set(e.id, e); },
     removeEntity: (id) => { store.delete(id); },
@@ -33,11 +33,11 @@ function makeSceneManager(initial: SceneEntity[] = []): { sm: ISceneManager; sto
 // ── Entity fixtures ───────────────────────────────────────────────────────────
 
 function makeLine(id: string, x1 = 0, y1 = 0, x2 = 10, y2 = 0): LineEntity {
-  return { id, type: 'line', start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, layer: '0', layerId: 'lyr_test_default' };
+  return { id, type: 'line', start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, layerId: 'lyr_test_default' };
 }
 
 function makeArc(id: string): ArcEntity {
-  return { id, type: 'arc', center: { x: 0, y: 0 }, radius: 5, startAngle: 0, endAngle: Math.PI, layer: '0', layerId: 'lyr_test_default' };
+  return { id, type: 'arc', center: { x: 0, y: 0 }, radius: 5, startAngle: 0, endAngle: Math.PI, layerId: 'lyr_test_default' };
 }
 
 const PICK = { x: 5, y: 0 };
@@ -57,7 +57,7 @@ describe('TrimEntityCommand — shorten', () => {
     const op: TrimOperation = { kind: 'shorten', entityId: 'l1', originalGeom: orig, newGeom: shortened };
     const { sm, store } = makeSceneManager([orig]);
     makeCmd([op], sm).execute();
-    expect((store.get('l1') as LineEntity).end.x).toBeCloseTo(5);
+    expect((store.get('l1') as unknown as LineEntity).end.x).toBeCloseTo(5);
   });
 
   it('undo restores original geometry', () => {
@@ -68,7 +68,7 @@ describe('TrimEntityCommand — shorten', () => {
     const cmd = makeCmd([op], sm);
     cmd.execute();
     cmd.undo();
-    expect((store.get('l1') as LineEntity).end.x).toBeCloseTo(10);
+    expect((store.get('l1') as unknown as LineEntity).end.x).toBeCloseTo(10);
   });
 });
 
@@ -106,7 +106,7 @@ describe('TrimEntityCommand — split', () => {
 
 describe('TrimEntityCommand — promote', () => {
   it('execute removes original and adds promoted entity', () => {
-    const orig = { id: 'c1', type: 'circle' as const, center: { x: 0, y: 0 }, radius: 5, layer: '0', layerId: 'lyr_test_default' };
+    const orig = { id: 'c1', type: 'circle' as const, center: { x: 0, y: 0 }, radius: 5, layerId: 'lyr_test_default', visible: true };
     const promoted = makeArc('c1');
     const op: TrimOperation = {
       kind: 'promote', entityId: 'c1',
@@ -119,7 +119,7 @@ describe('TrimEntityCommand — promote', () => {
   });
 
   it('undo removes promoted entity and restores original', () => {
-    const orig = { id: 'c1', type: 'circle' as const, center: { x: 0, y: 0 }, radius: 5, layer: '0', layerId: 'lyr_test_default' };
+    const orig = { id: 'c1', type: 'circle' as const, center: { x: 0, y: 0 }, radius: 5, layerId: 'lyr_test_default', visible: true };
     const promoted = makeArc('c1');
     const op: TrimOperation = {
       kind: 'promote', entityId: 'c1',

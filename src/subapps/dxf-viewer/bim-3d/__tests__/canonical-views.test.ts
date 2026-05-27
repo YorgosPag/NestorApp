@@ -126,6 +126,7 @@ describe('CanonicalViewService', () => {
       setSpeedModifier: jest.fn(),
       goHome: jest.fn(),
       applyTumble: jest.fn(),
+      pan: jest.fn(),
     };
     return { setProjection, snapToViewDirection, viewport };
   }

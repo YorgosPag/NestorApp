@@ -31,7 +31,7 @@ const mockUseLevelSelection = vi.fn(() => ({
         { layer: 'Electrical', layerId: 'lyr_test_default', type: 'polyline' },
         { layer: 'Plumbing', layerId: 'lyr_test_default', type: 'circle' },
       ],
-    } as SceneModel,
+    } as unknown as SceneModel,
   },
   setCurrentLevel: vi.fn(),
   levels: [],

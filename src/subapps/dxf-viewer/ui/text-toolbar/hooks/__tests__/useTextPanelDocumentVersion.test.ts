@@ -31,7 +31,7 @@ const { __setSceneForTest } = jest.requireMock('../useCurrentSceneModel') as {
 function makeScene(version?: string): SceneModel {
   return {
     entities: [],
-    layers: {},
+    layersById: {},
     bounds: { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } },
     units: 'mm',
     version,
