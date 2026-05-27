@@ -28,7 +28,8 @@ import type { WallCategory, WallEntity } from '../types/wall-types';
 import type { OpeningEntity } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveSubcategoryStyle, resolveIsCategoryVisible, type BimLayerOverride } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle, type BimLayerOverride } from '../../config/bim-line-weight-resolver';
+import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
@@ -81,12 +82,18 @@ export class WallRenderer extends BaseEntityRenderer {
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isWallEntity(entity)) return;
-    // ADR-375 Phase C.4 v2.6 — V/G visibility hotfix: hide entire entity
-    // when the per-view override marks the category invisible. Resolver
-    // already returns lineWidthPx=0 for strokes but fill/hatch/grips run
-    // outside that path, so an early-return at render entry is required.
-    if (!resolveIsCategoryVisible('wall', useDrawingScaleStore.getState().objectStyles)) return;
     const wall = entity as WallEntity;
+
+    // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
+    // Layer fetched here is reused για BimLayerOverride downstream (zero extra cost).
+    // Runs BEFORE the geometry/params guard so V/G + Layer suppression applies
+    // uniformly even σε partially-loaded entities (mirror του ADR-375 v2.6 order).
+    const _wLayer = wall.layerId ? getLayer(wall.layerId) : null;
+    if (!resolveIsEntityVisible(
+      { category: 'wall', layerId: wall.layerId },
+      { objectStyles: useDrawingScaleStore.getState().objectStyles, layer: _wLayer },
+    )) return;
+
     if (!wall.geometry || !wall.params) return;
 
     // Hover halo via OBB outline (stair pattern). Per-edge glow loses to the
@@ -111,7 +118,6 @@ export class WallRenderer extends BaseEntityRenderer {
 
     // Main pass — phase style + fill + hatch + stroke.
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    const _wLayer = wall.layerId ? getLayer(wall.layerId) : null;
     const _wLayerOverride: BimLayerOverride | undefined = _wLayer ? {
       lineweightMm: isConcreteLineweight(_wLayer.lineweight) ? _wLayer.lineweight : undefined,
       color: _wLayer.color ?? undefined,

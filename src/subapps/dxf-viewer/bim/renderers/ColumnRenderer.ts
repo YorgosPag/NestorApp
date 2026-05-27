@@ -38,7 +38,8 @@ import { isColumnEntity } from '../../types/entities';
 import type { ColumnEntity, ColumnKind } from '../types/column-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveSubcategoryStyle, resolveIsCategoryVisible } from '../../config/bim-line-weight-resolver';
+import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -97,9 +98,15 @@ const KIND_FILL: Readonly<Record<ColumnKind, string>> = {
 export class ColumnRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isColumnEntity(entity)) return;
-    // ADR-375 Phase C.4 v2.6 — V/G visibility hotfix (see WallRenderer for rationale).
-    if (!resolveIsCategoryVisible('column', useDrawingScaleStore.getState().objectStyles)) return;
     const column = entity as ColumnEntity;
+
+    // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
+    const _colLayer = column.layerId ? getLayer(column.layerId) : null;
+    if (!resolveIsEntityVisible(
+      { category: 'column', layerId: column.layerId },
+      { objectStyles: useDrawingScaleStore.getState().objectStyles, layer: _colLayer },
+    )) return;
+
     if (!column.geometry || !column.params) return;
     const verts = column.geometry.footprint.vertices;
     if (verts.length < 3) return;
@@ -135,7 +142,6 @@ export class ColumnRenderer extends BaseEntityRenderer {
     this.drawMaterialHatch(column);
 
     this.ctx.strokeStyle = KIND_STROKE[column.kind];
-    const _colLayer = column.layerId ? getLayer(column.layerId) : null;
     const _colLayerOverride = _colLayer ? {
       lineweightMm: isConcreteLineweight(_colLayer.lineweight) ? _colLayer.lineweight : undefined,
       color: _colLayer.color ?? undefined,

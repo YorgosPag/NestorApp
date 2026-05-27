@@ -1,0 +1,190 @@
+/**
+ * ADR-382 — Visibility Resolver SSoT — Unit tests.
+ *
+ * Pure-function tests για `resolveIsEntityVisible()`. Covers:
+ *   - Each of the 4 sources independently hides (V/G, Layer.visible,
+ *     Layer.frozen, Floor 'hide', Building 'hide')
+ *   - Ghost mode counts as visible (Q4 — stylistic-only)
+ *   - undefined ctx fields default σε no-constraint
+ *   - Multi-source hide combinations (AND-of-shows intersection)
+ */
+
+import { resolveIsEntityVisible } from '../visibility-resolver';
+import type { SceneLayer } from '../../../types/scene-types';
+
+function visibleLayer(overrides: Partial<SceneLayer> = {}): SceneLayer {
+  return {
+    id: 'lyr_test',
+    name: 'Test Layer',
+    color: '#ffffff',
+    visible: true,
+    locked: false,
+    ...overrides,
+  } as SceneLayer;
+}
+
+describe('ADR-382 resolveIsEntityVisible', () => {
+  describe('all sources visible (default)', () => {
+    it('returns true when ctx is empty', () => {
+      expect(resolveIsEntityVisible({ category: 'wall' }, {})).toBe(true);
+    });
+
+    it('returns true when all 4 sources explicitly visible', () => {
+      const result = resolveIsEntityVisible(
+        { category: 'wall', layerId: 'lyr_a' },
+        {
+          objectStyles: { wall: { projectionPen: 5, cutPen: 7, visible: true } },
+          layer: visibleLayer(),
+          floorMode: 'show',
+          buildingMode: 'show',
+        },
+      );
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('V/G hide (source #1)', () => {
+    it('returns false when V/G category visible=false', () => {
+      const result = resolveIsEntityVisible(
+        { category: 'wall' },
+        { objectStyles: { wall: { projectionPen: 5, cutPen: 7, visible: false } } },
+      );
+      expect(result).toBe(false);
+    });
+
+    it('returns true when objectStyles undefined (default visible)', () => {
+      expect(resolveIsEntityVisible({ category: 'column' }, { objectStyles: undefined })).toBe(true);
+    });
+
+    it('returns true when category entry missing (default visible)', () => {
+      expect(
+        resolveIsEntityVisible({ category: 'column' }, { objectStyles: { wall: { projectionPen: 5, cutPen: 7, visible: false } } }),
+      ).toBe(true);
+    });
+  });
+
+  describe('Layer hide (source #2 — Q1 absolute hide)', () => {
+    it('returns false when layer.visible=false', () => {
+      expect(
+        resolveIsEntityVisible({ category: 'wall', layerId: 'lyr_a' }, { layer: visibleLayer({ visible: false }) }),
+      ).toBe(false);
+    });
+
+    it('returns false when layer.frozen=true', () => {
+      expect(
+        resolveIsEntityVisible({ category: 'wall', layerId: 'lyr_a' }, { layer: visibleLayer({ frozen: true }) }),
+      ).toBe(false);
+    });
+
+    it('returns true when layer=null (no layer constraint)', () => {
+      expect(resolveIsEntityVisible({ category: 'wall' }, { layer: null })).toBe(true);
+    });
+
+    it('returns true when layer=undefined (no layer constraint)', () => {
+      expect(resolveIsEntityVisible({ category: 'wall' }, {})).toBe(true);
+    });
+  });
+
+  describe('Floor mode (source #3 — Q4 ghost stylistic)', () => {
+    it('returns false when floorMode=hide', () => {
+      expect(resolveIsEntityVisible({ category: 'wall' }, { floorMode: 'hide' })).toBe(false);
+    });
+
+    it('returns true when floorMode=ghost (Q4 stylistic-only)', () => {
+      expect(resolveIsEntityVisible({ category: 'wall' }, { floorMode: 'ghost' })).toBe(true);
+    });
+
+    it('returns true when floorMode=show', () => {
+      expect(resolveIsEntityVisible({ category: 'wall' }, { floorMode: 'show' })).toBe(true);
+    });
+  });
+
+  describe('Building mode (source #4)', () => {
+    it('returns false when buildingMode=hide', () => {
+      expect(resolveIsEntityVisible({ category: 'wall' }, { buildingMode: 'hide' })).toBe(false);
+    });
+
+    it('returns true when buildingMode=ghost (Q4 stylistic-only)', () => {
+      expect(resolveIsEntityVisible({ category: 'wall' }, { buildingMode: 'ghost' })).toBe(true);
+    });
+
+    it('returns true when buildingMode=show', () => {
+      expect(resolveIsEntityVisible({ category: 'wall' }, { buildingMode: 'show' })).toBe(true);
+    });
+  });
+
+  describe('AND-of-shows intersection (Q2)', () => {
+    it('hides when any single source disagrees (V/G fail, others pass)', () => {
+      const result = resolveIsEntityVisible(
+        { category: 'wall' },
+        {
+          objectStyles: { wall: { projectionPen: 5, cutPen: 7, visible: false } },
+          layer: visibleLayer(),
+          floorMode: 'show',
+          buildingMode: 'show',
+        },
+      );
+      expect(result).toBe(false);
+    });
+
+    it('hides when any single source disagrees (Layer fail, others pass)', () => {
+      const result = resolveIsEntityVisible(
+        { category: 'wall', layerId: 'lyr_a' },
+        {
+          objectStyles: { wall: { projectionPen: 5, cutPen: 7, visible: true } },
+          layer: visibleLayer({ visible: false }),
+          floorMode: 'show',
+          buildingMode: 'show',
+        },
+      );
+      expect(result).toBe(false);
+    });
+
+    it('hides when multiple sources hide', () => {
+      const result = resolveIsEntityVisible(
+        { category: 'wall', layerId: 'lyr_a' },
+        {
+          objectStyles: { wall: { projectionPen: 5, cutPen: 7, visible: false } },
+          layer: visibleLayer({ visible: false }),
+          floorMode: 'hide',
+          buildingMode: 'hide',
+        },
+      );
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('Q4 ghost > V/G hide precedence', () => {
+    it('Floor ghost + V/G hide → entity hidden (V/G wins over ghost)', () => {
+      const result = resolveIsEntityVisible(
+        { category: 'wall' },
+        {
+          objectStyles: { wall: { projectionPen: 5, cutPen: 7, visible: false } },
+          floorMode: 'ghost',
+        },
+      );
+      expect(result).toBe(false);
+    });
+
+    it('Floor ghost + Layer hide → entity hidden', () => {
+      const result = resolveIsEntityVisible(
+        { category: 'wall', layerId: 'lyr_a' },
+        { layer: visibleLayer({ visible: false }), floorMode: 'ghost' },
+      );
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('per-category isolation', () => {
+    const categories = ['wall', 'column', 'slab', 'beam', 'stair', 'opening', 'slab-opening'] as const;
+    for (const cat of categories) {
+      it(`hides ${cat} when its own V/G entry says hidden`, () => {
+        const result = resolveIsEntityVisible(
+          { category: cat },
+          { objectStyles: { [cat]: { projectionPen: 5, cutPen: 7, visible: false } } },
+        );
+        expect(result).toBe(false);
+      });
+    }
+  });
+});
