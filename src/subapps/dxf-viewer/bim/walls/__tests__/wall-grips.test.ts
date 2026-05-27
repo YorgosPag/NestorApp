@@ -55,7 +55,7 @@ describe('wall-grips (Phase 1C)', () => {
 
   // ─── getWallGrips ──────────────────────────────────────────────────────
 
-  it('1. straight wall → 4 grips (start / end / midpoint / thickness)', () => {
+  it('1. straight wall → 8 grips (start / end / midpoint / thickness + 4 Phase 1C-bis corners)', () => {
     const entity = makeStraight();
     const grips = getWallGrips(entity);
     expect(grips.map((g) => g.wallGripKind)).toEqual([
@@ -63,6 +63,10 @@ describe('wall-grips (Phase 1C)', () => {
       'wall-end',
       'wall-midpoint',
       'wall-thickness',
+      'wall-corner-start-pos',
+      'wall-corner-start-neg',
+      'wall-corner-end-pos',
+      'wall-corner-end-neg',
     ]);
   });
 
@@ -198,5 +202,124 @@ describe('wall-grips (Phase 1C)', () => {
       currentPos: { x: 100, y: 0 },
     });
     expect(next).toEqual(entity.params);
+  });
+
+  // ─── Phase 1C-bis: asymmetric corner grips + axis recenter ───────────────
+
+  it('15. corner positions equal axis endpoints ± perp · (thickness/2)', () => {
+    const entity = makeStraight();
+    const grips = getWallGrips(entity);
+    const halfT = entity.params.thickness / 2;
+    // axis along +X → perpUnit (CCW 90°) = +Y.
+    expect(grips[4].wallGripKind).toBe('wall-corner-start-pos');
+    expect(grips[4].position).toEqual({ x: 0, y: halfT });
+    expect(grips[5].wallGripKind).toBe('wall-corner-start-neg');
+    expect(grips[5].position).toEqual({ x: 0, y: -halfT });
+    expect(grips[6].wallGripKind).toBe('wall-corner-end-pos');
+    expect(grips[6].position).toEqual({ x: 1000, y: halfT });
+    expect(grips[7].wallGripKind).toBe('wall-corner-end-neg');
+    expect(grips[7].position).toEqual({ x: 1000, y: -halfT });
+  });
+
+  it('16. corner-start-pos axial drag moves only params.start (thickness unchanged)', () => {
+    const entity = makeStraight();
+    const t = entity.params.thickness;
+    const next = applyWallGripDrag('wall-corner-start-pos', {
+      originalParams: entity.params,
+      delta: { x: 100, y: 0 },
+      currentPos: { x: 100, y: t / 2 },
+    });
+    expect(next.start.x).toBeCloseTo(100, 6);
+    expect(next.start.y).toBeCloseTo(0, 6);
+    expect(next.end).toEqual(entity.params.end);
+    expect(next.thickness).toBeCloseTo(t, 6);
+  });
+
+  it('17. corner-end-pos perp drag (+Y) grows thickness, axis shifts +Y by Δ/2', () => {
+    const entity = makeStraight();
+    const t = entity.params.thickness;
+    const dy = 100;
+    const next = applyWallGripDrag('wall-corner-end-pos', {
+      originalParams: entity.params,
+      delta: { x: 0, y: dy },
+      currentPos: { x: 1000, y: t / 2 + dy },
+    });
+    expect(next.thickness).toBeCloseTo(t + dy, 6);
+    expect(next.start.y).toBeCloseTo(dy / 2, 6);
+    expect(next.end.y).toBeCloseTo(dy / 2, 6);
+    expect(next.start.x).toBeCloseTo(0, 6);
+    expect(next.end.x).toBeCloseTo(1000, 6);
+    expect(next.dna).toBeUndefined(); // manual override drops DNA
+  });
+
+  it('18. corner-start-neg perp drag (-Y) grows thickness, axis shifts -Y by Δ/2', () => {
+    const entity = makeStraight();
+    const t = entity.params.thickness;
+    const dy = -80;
+    const next = applyWallGripDrag('wall-corner-start-neg', {
+      originalParams: entity.params,
+      delta: { x: 0, y: dy },
+      currentPos: { x: 0, y: -t / 2 + dy },
+    });
+    expect(next.thickness).toBeCloseTo(t + Math.abs(dy), 6);
+    expect(next.start.y).toBeCloseTo(dy / 2, 6);
+    expect(next.end.y).toBeCloseTo(dy / 2, 6);
+  });
+
+  it('19. corner-end-neg diagonal drag — axial + perp simultaneously', () => {
+    const entity = makeStraight();
+    const t = entity.params.thickness;
+    const dx = 50;
+    const dy = -60; // outward for -perp corner
+    const next = applyWallGripDrag('wall-corner-end-neg', {
+      originalParams: entity.params,
+      delta: { x: dx, y: dy },
+      currentPos: { x: 1000 + dx, y: -t / 2 + dy },
+    });
+    expect(next.end.x).toBeCloseTo(1000 + dx, 6);
+    expect(next.start.x).toBeCloseTo(0, 6);
+    expect(next.thickness).toBeCloseTo(t + Math.abs(dy), 6);
+    expect(next.start.y).toBeCloseTo(dy / 2, 6);
+    expect(next.end.y).toBeCloseTo(dy / 2, 6);
+  });
+
+  it('20. corner perp drag clamps thickness at scene-unit min floor', () => {
+    const entity = makeStraight();
+    const t = entity.params.thickness;
+    const next = applyWallGripDrag('wall-corner-start-pos', {
+      originalParams: entity.params,
+      delta: { x: 0, y: -10000 },
+      currentPos: { x: 0, y: t / 2 - 10000 },
+    });
+    const minT = t < 10 ? 0.05 : t < 100 ? 5 : 50;
+    expect(next.thickness).toBeGreaterThanOrEqual(minT);
+    expect(next.thickness).toBeLessThanOrEqual(t);
+  });
+
+  it('21. corner drag preserves axis direction (parallel faces invariant)', () => {
+    const entity = makeStraight();
+    const next = applyWallGripDrag('wall-corner-end-pos', {
+      originalParams: entity.params,
+      delta: { x: 75, y: 120 },
+      currentPos: { x: 1075, y: entity.params.thickness / 2 + 120 },
+    });
+    const axisDx = next.end.x - next.start.x;
+    const axisDy = next.end.y - next.start.y;
+    expect(axisDy).toBeCloseTo(0, 6); // axis stays horizontal
+    expect(axisDx).toBeGreaterThan(0);
+  });
+
+  it('22. corner-end-pos drag does NOT move opposite face (-perp face Y unchanged)', () => {
+    const entity = makeStraight();
+    const t = entity.params.thickness;
+    const dy = 200;
+    const next = applyWallGripDrag('wall-corner-end-pos', {
+      originalParams: entity.params,
+      delta: { x: 0, y: dy },
+      currentPos: { x: 1000, y: t / 2 + dy },
+    });
+    // -perp face Y = axis_y_new - new_thickness/2. Must equal original -t/2.
+    const oppositeFaceY = next.start.y - next.thickness / 2;
+    expect(oppositeFaceY).toBeCloseTo(-t / 2, 6);
   });
 });

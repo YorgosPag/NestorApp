@@ -43,15 +43,31 @@ export type DimensionGripKind =
  *   - `wall-start`     → translate axis start endpoint
  *   - `wall-end`       → translate axis end endpoint
  *   - `wall-midpoint`  → translate whole wall (axis midpoint anchor)
- *   - `wall-thickness` → resize thickness perpendicular to axis
+ *   - `wall-thickness` → resize thickness perpendicular to axis (symmetric)
  *   - `wall-curve`     → move quadratic Bezier control point (curved kind only)
  *   - `wall-vertex-N`  → translate polyline interior vertex N (polyline kind only)
+ *
+ * Phase 1C-bis (2026-05-27) — Asymmetric corner grips (ArchiCAD / Vectorworks /
+ * AutoCAD reference-line pattern). Each corner exposes 2 DOF:
+ *   - axial component → moves only the nearest axis endpoint (start or end);
+ *   - perpendicular component → grows/shrinks ONLY the corner's side, keeps
+ *     the opposite face fixed, and re-centers the axis by half the displacement
+ *     so the wall stays rectangular (parallel faces preserved).
+ *
+ *   - `wall-corner-start-pos` → start endpoint + positive perpendicular face
+ *   - `wall-corner-start-neg` → start endpoint + negative perpendicular face
+ *   - `wall-corner-end-pos`   → end   endpoint + positive perpendicular face
+ *   - `wall-corner-end-neg`   → end   endpoint + negative perpendicular face
  */
 export type WallGripKind =
   | 'wall-start'
   | 'wall-end'
   | 'wall-midpoint'
   | 'wall-thickness'
+  | 'wall-corner-start-pos'
+  | 'wall-corner-start-neg'
+  | 'wall-corner-end-pos'
+  | 'wall-corner-end-neg'
   | 'wall-curve'
   | `wall-vertex-${number}`;
 

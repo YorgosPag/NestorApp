@@ -29,7 +29,12 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     source: 'dxf',
     entityId: grip.entityId,
     gripIndex: grip.gripIndex,
-    type: grip.type === 'corner' || grip.type === 'midpoint' ? 'edge' : grip.type,
+    // 'corner' → 'vertex' (a corner IS a vertex of the entity outline, NOT a midpoint).
+    // Previously bundled με 'midpoint' → 'edge' → filtered by `!showMidpoints` even
+    // όταν ο χρήστης ήθελε corners visible. ADR-363 Phase 1C-bis wall corner grips
+    // πρέπει να φαίνονται ανεξάρτητα από το showMidpoints preference. Direct-
+    // manipulation principle: pickable corners are primary editing affordances.
+    type: grip.type === 'corner' ? 'vertex' : grip.type === 'midpoint' ? 'edge' : grip.type,
     position: grip.position,
     movesEntity: grip.movesEntity,
     edgeVertexIndices: grip.edgeVertexIndices,

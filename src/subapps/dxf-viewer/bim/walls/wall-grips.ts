@@ -8,9 +8,20 @@
  *   - `wall-start`     → translate axis start endpoint (no other params change)
  *   - `wall-end`       → translate axis end endpoint
  *   - `wall-midpoint`  → translate whole wall (axis midpoint anchor, moves both endpoints)
- *   - `wall-thickness` → resize thickness perpendicular to axis; manual override drops `dna`
+ *   - `wall-thickness` → resize thickness perpendicular to axis (symmetric);
+ *                        manual override drops `dna`
  *   - `wall-curve`     → move quadratic Bezier control point (curved kind only)
  *   - `wall-vertex-N`  → translate polyline interior vertex N (polyline kind only)
+ *
+ * Phase 1C-bis (2026-05-27) — Asymmetric corner grips
+ * (ArchiCAD / Vectorworks / AutoCAD reference-line pattern). Each corner is a
+ * 2-DOF grip: axial component moves only the nearest axis endpoint; perpendicular
+ * component grows/shrinks ONLY the corner's side while the opposite face stays
+ * fixed and the axis re-centers by half the displacement so the wall remains
+ * rectangular (parallel faces preserved). Manual override drops `dna`.
+ *
+ *   - `wall-corner-start-pos` / `wall-corner-start-neg` → start-side corners
+ *   - `wall-corner-end-pos`   / `wall-corner-end-neg`   → end-side corners
  *
  * SSoT:
  *   - Geometry math via `computeWallGeometry()` (called by `UpdateWallParamsCommand`
@@ -19,10 +30,10 @@
  *
  * Manual-thickness override semantics mirror the ribbon bridge
  * (`ui/ribbon/hooks/bridge/wall-param-helpers.ts`): when the user drags the
- * thickness handle we drop `dna` so the validator does not fire
+ * thickness handle or any corner we drop `dna` so the validator does not fire
  * `dnaThicknessMismatch` against the legacy preset.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.3 §6 Phase 1C
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.3 §6 Phase 1C / 1C-bis
  * @see docs/centralized-systems/reference/adrs/ADR-358-dxf-stair-tool-google-level.md §5.12
  */
 
@@ -94,9 +105,16 @@ function maxThicknessCeilingFor(currentThickness: number): number {
  *   0 → axis start (translate start endpoint)
  *   1 → axis end (translate end endpoint)
  *   2 → axis midpoint (translate whole wall)
- *   3 → thickness handle (mid-axis offset by thickness/2 along perpendicular)
- *   4 → curve control (curved kind only, emitted only when `params.curveControl` set)
- *   5..N → polyline interior vertex handles (polyline kind only)
+ *   3 → thickness handle (symmetric resize, mid-axis offset by thickness/2)
+ *   straight kind only:
+ *     4 → corner start-pos   (Phase 1C-bis, asymmetric 2-DOF)
+ *     5 → corner start-neg
+ *     6 → corner end-pos
+ *     7 → corner end-neg
+ *   curved kind only:
+ *     4 → curve control (emitted only when `params.curveControl` set)
+ *   polyline kind only:
+ *     4..N → interior vertex handles
  */
 export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
   const { params, kind } = entity;
@@ -156,6 +174,49 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
       movesEntity: false,
       wallGripKind: 'wall-thickness',
     });
+
+    // 4..7 — Phase 1C-bis corner handles (straight kind only). Both perp sides
+    // are emitted regardless of `params.flip` (flip is a presentation hint, not
+    // a structural mirror). See header for ArchiCAD/Vectorworks parity rationale.
+    if (kind === 'straight') {
+      const halfTNoFlip = params.thickness / 2;
+      const startPos: Point2D = { x: start.x + halfTNoFlip * p.x, y: start.y + halfTNoFlip * p.y };
+      const startNeg: Point2D = { x: start.x - halfTNoFlip * p.x, y: start.y - halfTNoFlip * p.y };
+      const endPos: Point2D = { x: end.x + halfTNoFlip * p.x, y: end.y + halfTNoFlip * p.y };
+      const endNeg: Point2D = { x: end.x - halfTNoFlip * p.x, y: end.y - halfTNoFlip * p.y };
+      grips.push({
+        entityId: entity.id,
+        gripIndex: grips.length,
+        type: 'corner',
+        position: startPos,
+        movesEntity: false,
+        wallGripKind: 'wall-corner-start-pos',
+      });
+      grips.push({
+        entityId: entity.id,
+        gripIndex: grips.length,
+        type: 'corner',
+        position: startNeg,
+        movesEntity: false,
+        wallGripKind: 'wall-corner-start-neg',
+      });
+      grips.push({
+        entityId: entity.id,
+        gripIndex: grips.length,
+        type: 'corner',
+        position: endPos,
+        movesEntity: false,
+        wallGripKind: 'wall-corner-end-pos',
+      });
+      grips.push({
+        entityId: entity.id,
+        gripIndex: grips.length,
+        type: 'corner',
+        position: endNeg,
+        movesEntity: false,
+        wallGripKind: 'wall-corner-end-neg',
+      });
+    }
   }
 
   // 4 — curve control (curved kind only)
@@ -216,6 +277,10 @@ export function applyWallGripDrag(
   if (gripKind === 'wall-end') return moveEnd(input);
   if (gripKind === 'wall-midpoint') return moveMidpoint(input);
   if (gripKind === 'wall-thickness') return resizeThickness(input);
+  if (gripKind === 'wall-corner-start-pos') return moveCorner(input, 'start', +1);
+  if (gripKind === 'wall-corner-start-neg') return moveCorner(input, 'start', -1);
+  if (gripKind === 'wall-corner-end-pos') return moveCorner(input, 'end', +1);
+  if (gripKind === 'wall-corner-end-neg') return moveCorner(input, 'end', -1);
   if (gripKind === 'wall-curve') return moveCurveControl(input);
   if (gripKind.startsWith('wall-vertex-')) {
     const idx = parseInt(gripKind.slice('wall-vertex-'.length), 10);
@@ -282,6 +347,64 @@ function resizeThickness(input: Readonly<WallGripDragInput>): WallParams {
   // `dnaThicknessMismatch` (parity with `wall-param-helpers` ribbon path).
   const { dna: _dropped, ...rest } = originalParams;
   return { ...rest, thickness: clamped };
+}
+
+/**
+ * Phase 1C-bis — Asymmetric corner drag.
+ *
+ * Decomposes the cursor delta into axial (along axis) + perpendicular components.
+ *   - axial → translates only the corner's nearest axis endpoint (start or end);
+ *     opposite endpoint stays anchored (besides the axis recenter shift below).
+ *   - perpendicular → grows/shrinks the corner's perpendicular face only;
+ *     the opposite face stays anchored, and the axis re-centers by half the
+ *     displacement so the wall remains rectangular (parallel faces preserved).
+ *
+ * Thickness is clamped scene-unit-aware (mirror `resizeThickness`). When the
+ * clamp engages, the perpendicular shift is back-derived from the clamped
+ * thickness so the opposite face never moves past its original position.
+ *
+ * Manual override drops `dna` (parity με `resizeThickness` και `wall-param-helpers`).
+ */
+function moveCorner(
+  input: Readonly<WallGripDragInput>,
+  side: 'start' | 'end',
+  perpSign: 1 | -1,
+): WallParams {
+  const { originalParams, delta } = input;
+  const u = unitAxis(originalParams);
+  if (!u) return originalParams;
+  const p = perpUnit(u);
+  // Decompose delta into axial (along u) + perpendicular (along p, signed).
+  const axialD = delta.x * u.x + delta.y * u.y;
+  const perpD = delta.x * p.x + delta.y * p.y;
+  // Thickness change: outward drag on the corner's face grows thickness.
+  // perpSign * perpD > 0 means the dragged face moved AWAY from the axis.
+  const rawThickness = originalParams.thickness + perpSign * perpD;
+  const minT = minThicknessFloorFor(originalParams.thickness);
+  const maxT = maxThicknessCeilingFor(originalParams.thickness);
+  const clampedThickness = Math.max(minT, Math.min(maxT, rawThickness));
+  // Back-derive the actual perpendicular displacement after clamping. The
+  // opposite face stays at its original position; the moving face has shifted
+  // by `perpSign * (clampedThickness - thickness)` in the +p basis.
+  const actualPerpD = perpSign * (clampedThickness - originalParams.thickness);
+  // Axis recenter: midpoint of faces shifts by half the moving face displacement.
+  const axisShiftPerp = actualPerpD / 2;
+  const axisShiftX = axisShiftPerp * p.x;
+  const axisShiftY = axisShiftPerp * p.y;
+  const startAxial = side === 'start' ? axialD : 0;
+  const endAxial = side === 'end' ? axialD : 0;
+  const newStart: Point3D = {
+    x: originalParams.start.x + startAxial * u.x + axisShiftX,
+    y: originalParams.start.y + startAxial * u.y + axisShiftY,
+    z: originalParams.start.z,
+  };
+  const newEnd: Point3D = {
+    x: originalParams.end.x + endAxial * u.x + axisShiftX,
+    y: originalParams.end.y + endAxial * u.y + axisShiftY,
+    z: originalParams.end.z,
+  };
+  const { dna: _dropped, ...rest } = originalParams;
+  return { ...rest, start: newStart, end: newEnd, thickness: clampedThickness };
 }
 
 function moveCurveControl(input: Readonly<WallGripDragInput>): WallParams {
