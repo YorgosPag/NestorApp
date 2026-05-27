@@ -51,6 +51,18 @@ export function useBimRenderSettingsSync({
     const level = levels.find((l) => l.id === currentLevelId);
     const incoming = level?.bimRenderSettings ?? null;
     const store = useBimRenderSettingsStore.getState();
+    const msSince = store.lastLocalMutationAt === 0 ? -1 : Date.now() - store.lastLocalMutationAt;
+    // eslint-disable-next-line no-console
+    console.log('[ADR-375 v2.11+] sync useEffect FIRED', {
+      currentLevelId,
+      storeLevelId: store.currentLevelId,
+      levelSwitch: store.currentLevelId !== currentLevelId,
+      msSinceLocalMutation: msSince,
+      quietWindow: LOCAL_WRITE_QUIET_WINDOW_MS,
+      willSkip: store.currentLevelId === currentLevelId && msSince >= 0 && msSince < LOCAL_WRITE_QUIET_WINDOW_MS,
+      incomingWallProjColor: incoming?.objectStyles?.wall?.projectionColor,
+      storeCurrentWallProjColor: store.objectStyles.wall?.projectionColor,
+    });
 
     // Level switch always reloads — user explicitly navigated to a new floor.
     if (store.currentLevelId !== currentLevelId) {
