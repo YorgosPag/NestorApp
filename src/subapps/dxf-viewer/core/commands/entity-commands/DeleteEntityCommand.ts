@@ -22,9 +22,11 @@ type BimEntityType =
 function emitBimRestoreIfApplicable(snapshot: SceneEntity): void {
   const type = (snapshot as { type?: string }).type;
   if (!type || !BIM_ENTITY_TYPES.has(type)) return;
+  // SceneEntity (loose interface) → AnySceneEntity (BIM-union) cast μέσω
+  // unknown — bypass δικαιολογημένο γιατί έχουμε ήδη τσεκάρει type discriminator.
   EventBus.emit('bim:entity-restore-requested', {
     entityType: type as BimEntityType,
-    entitySnapshot: snapshot as AnySceneEntity,
+    entitySnapshot: snapshot as unknown as AnySceneEntity,
     source: 'undo-delete',
   });
 }
