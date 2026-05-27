@@ -40,11 +40,36 @@ const pendingTimers: Map<string, Timer> = new Map();
 function debounceWrite(levelId: string, settings: BimRenderSettings, delayMs = 500): void {
   const existing = pendingTimers.get(levelId);
   if (existing) clearTimeout(existing);
+  // [ADR-375 v2.13 DIAG — remove after root-cause]
+  const _scheduledAt = Date.now();
+  // eslint-disable-next-line no-console
+  console.warn('[ADR-375 DIAG] debounceWrite SCHEDULED', {
+    t: _scheduledAt,
+    levelId,
+    wallProjColor: settings.objectStyles?.wall?.projectionColor,
+  });
   const t = setTimeout(() => {
     pendingTimers.delete(levelId);
-    saveBimRenderSettings(levelId, settings).catch(() => {
-      // fire-and-forget: transient failures are non-critical
+    // [ADR-375 v2.13 DIAG — remove after root-cause]
+    const _flushAt = Date.now();
+    // eslint-disable-next-line no-console
+    console.warn('[ADR-375 DIAG] debounceWrite FLUSH→Firestore', {
+      t: _flushAt,
+      sinceScheduledMs: _flushAt - _scheduledAt,
+      levelId,
     });
+    saveBimRenderSettings(levelId, settings)
+      .then(() => {
+        // eslint-disable-next-line no-console
+        console.warn('[ADR-375 DIAG] debounceWrite RESOLVED', {
+          t: Date.now(),
+          sinceFlushMs: Date.now() - _flushAt,
+          levelId,
+        });
+      })
+      .catch(() => {
+        // fire-and-forget: transient failures are non-critical
+      });
   }, delayMs);
   pendingTimers.set(levelId, t);
 }
@@ -129,6 +154,22 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
 
     loadForLevel(levelId, settings) {
       const resolved = resolveBimSettings(settings ?? null);
+      // [ADR-375 v2.13 DIAG — remove after root-cause]
+      const _prev = get();
+      // eslint-disable-next-line no-console
+      console.warn('[ADR-375 DIAG] loadForLevel', {
+        t: Date.now(),
+        levelId,
+        prevLevelId: _prev.currentLevelId,
+        incomingWallProjColor: settings?.objectStyles?.wall?.projectionColor,
+        incomingWallCutColor: settings?.objectStyles?.wall?.cutColor,
+        currentWallProjColor: _prev.objectStyles?.wall?.projectionColor,
+        currentWallCutColor: _prev.objectStyles?.wall?.cutColor,
+        sinceLastLocalMs: _prev.lastLocalMutationAt
+          ? Date.now() - _prev.lastLocalMutationAt
+          : null,
+        stack: new Error().stack?.split('\n').slice(2, 8).join(' | '),
+      });
       set({
         currentLevelId: levelId,
         rawSettings: settings ?? null,
@@ -186,6 +227,16 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       const prev = state.objectStyles[category];
       const nextCat: ObjectStyle = { ...prev, [key]: color };
       const nextStyles = { ...state.objectStyles, [category]: nextCat };
+      // [ADR-375 v2.13 DIAG — remove after root-cause]
+      // eslint-disable-next-line no-console
+      console.warn('[ADR-375 DIAG] setObjectStyleVgColor', {
+        t: Date.now(),
+        category,
+        key,
+        color,
+        prevColor: prev?.[key],
+        levelId: state.currentLevelId,
+      });
       set({ objectStyles: nextStyles, lastLocalMutationAt: Date.now() });
       if (state.currentLevelId)
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
