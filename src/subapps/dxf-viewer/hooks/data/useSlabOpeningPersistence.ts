@@ -38,6 +38,7 @@ import {
 } from '../../bim/slab-openings/slab-opening-firestore-service';
 import { recordSlabOpeningChange } from '../../bim/slab-openings/slab-opening-audit-client';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
+import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
 // ============================================================================
 // TYPES
@@ -124,6 +125,9 @@ export function useSlabOpeningPersistence(
   const serviceRef = useRef<SlabOpeningFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, SlabOpeningEntity['params']>>(new Map());
+  // ADR-381 — pending first save (drawn or restored) + tombstone tracking.
+  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
+  const deletedIdsRef = useRef<Set<string>>(new Set());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedRef = useRef<SlabOpeningEntity | null>(null);
   selectedRef.current = primarySelectedSlabOpening;
@@ -167,7 +171,11 @@ export function useSlabOpeningPersistence(
         const nextSlabOpenings: SlabOpeningEntity[] = [];
         let mutated = false;
 
+        const deleted = deletedIdsRef.current;
+        const pending = pendingFirstSaveIdsRef.current;
+
         for (const doc of docs) {
+          if (deleted.has(doc.id)) continue;
           const existing = sceneEntities.get(doc.id);
           if (!existing) {
             if (!dirty.has(doc.id)) {
@@ -188,10 +196,10 @@ export function useSlabOpeningPersistence(
           }
         }
 
+        // ADR-381 — replaces buggy `neverSaved` guard.
         for (const [id, entity] of sceneEntities) {
           if (docsById.has(id)) continue;
-          const neverSaved = !lastSavedParamsRef.current.has(id);
-          if (dirty.has(id) || neverSaved) {
+          if (dirty.has(id) || pending.has(id)) {
             nextSlabOpenings.push(entity);
           } else {
             mutated = true;
@@ -225,6 +233,7 @@ export function useSlabOpeningPersistence(
       await svc.saveSlabOpening(entityToSaveInput(entity));
       lastSavedParamsRef.current.set(entity.id, entity.params);
       dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
       void recordSlabOpeningChange(
@@ -242,6 +251,10 @@ export function useSlabOpeningPersistence(
   useEffect(() => {
     const entity = primarySelectedSlabOpening;
     if (!entity || !serviceRef.current) return;
+    // ADR-381 — Bug A defense-in-depth.
+    const known = lastSavedParamsRef.current.has(entity.id);
+    const pendingEntity = pendingFirstSaveIdsRef.current.has(entity.id);
+    if (!known && !pendingEntity) return;
     const lastSaved = lastSavedParamsRef.current.get(entity.id);
     if (lastSaved && dequal(lastSaved, entity.params)) return;
 
@@ -308,7 +321,32 @@ export function useSlabOpeningPersistence(
 
     dirtyIdsRef.current.delete(slabOpeningId);
     lastSavedParamsRef.current.delete(slabOpeningId);
+    pendingFirstSaveIdsRef.current.delete(slabOpeningId);
+    deletedIdsRef.current.add(slabOpeningId);
   }, [levelManager]);
+
+  // ADR-381 — persistRestore: undo→Firestore re-create + audit 'restored'.
+  const persistRestore = useCallback(async (entity: SlabOpeningEntity) => {
+    const svc = serviceRef.current;
+    if (!svc) return;
+    setSaveState('saving');
+    setError(null);
+    try {
+      await svc.saveSlabOpening(entityToSaveInput(entity));
+      lastSavedParamsRef.current.set(entity.id, entity.params);
+      dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
+      setSaveState('saved');
+      setLastSavedAt(Date.now());
+      void recordSlabOpeningChange(
+        'restored',
+        { id: entity.id, kind: entity.kind, layerId: entity.layerId, params: entity.params },
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'SLAB_OPENING_RESTORE_ERROR');
+      setSaveState('error');
+    }
+  }, []);
 
   // First-save listener — fires άμεσα για freshly drawn slab-openings.
   useEffect(() => {
@@ -317,6 +355,7 @@ export function useSlabOpeningPersistence(
       const entity = payload.entity as SlabOpeningEntity | undefined;
       if (!entity || (entity as { type?: string }).type !== 'slab-opening') return;
       if (!serviceRef.current) return;
+      pendingFirstSaveIdsRef.current.add(entity.id);
       dirtyIdsRef.current.add(entity.id);
       void persist(entity);
     });
@@ -335,6 +374,14 @@ export function useSlabOpeningPersistence(
   }, [deleteSlabOpening]);
 
   useBimEntityMovedPersistEffect(isSlabOpening, serviceRef, dirtyIdsRef, persist);
+  useBimEntityRestoredPersistEffect(
+    'slab-opening',
+    isSlabOpening,
+    serviceRef,
+    pendingFirstSaveIdsRef,
+    deletedIdsRef,
+    persistRestore,
+  );
 
   // Unmount cleanup — flush pending timers.
   useEffect(() => {

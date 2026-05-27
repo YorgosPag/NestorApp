@@ -40,6 +40,7 @@ import {
 import { recordWallChange } from '../../bim/walls/wall-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
+import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
 // ============================================================================
 // TYPES
@@ -155,6 +156,8 @@ export function useWallPersistence(
   const serviceRef = useRef<WallFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const deletedIdsRef = useRef<Set<string>>(new Set());
+  // ADR-381 — pending first save (drawn or restored).
+  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, WallEntity['params']>>(new Map());
   const lockHeldRef = useRef<string | null>(null);
   const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -223,13 +226,14 @@ export function useWallPersistence(
           }
         }
 
+        const pending = pendingFirstSaveIdsRef.current;
         for (const [id, entity] of sceneWalls) {
           if (docsById.has(id)) continue;
           // Explicitly deleted — never re-add regardless of save state.
           if (deleted.has(id)) { mutated = true; continue; }
-          // Preserve local-never-saved walls (optimistic insert, stair parallel).
-          const neverSaved = !lastSavedParamsRef.current.has(id);
-          if (dirty.has(id) || neverSaved) {
+          // ADR-381 — replaces buggy `neverSaved` guard. Preserve walls only αν
+          // είναι dirty ή pendingFirstSave (just drawn / restored via undo).
+          if (dirty.has(id) || pending.has(id)) {
             nextWalls.push(entity);
           } else {
             mutated = true;
@@ -316,6 +320,7 @@ export function useWallPersistence(
       await svc.saveWall(entityToSaveInput(entity));
       lastSavedParamsRef.current.set(entity.id, entity.params);
       dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
       void recordWallChange(
@@ -341,6 +346,10 @@ export function useWallPersistence(
   useEffect(() => {
     const wall = primarySelectedWall;
     if (!wall || !serviceRef.current) return;
+    // ADR-381 — Bug A defense-in-depth.
+    const known = lastSavedParamsRef.current.has(wall.id);
+    const pendingWall = pendingFirstSaveIdsRef.current.has(wall.id);
+    if (!known && !pendingWall) return;
     const lastSaved = lastSavedParamsRef.current.get(wall.id);
     if (lastSaved && dequal(lastSaved, wall.params)) return;
 
@@ -406,11 +415,41 @@ export function useWallPersistence(
 
     dirtyIdsRef.current.delete(wallId);
     lastSavedParamsRef.current.delete(wallId);
+    pendingFirstSaveIdsRef.current.delete(wallId);
 
     if (lockHeldRef.current === wallId) {
       void releaseLock();
     }
   }, [levelManager, releaseLock, companyId]);
+
+  // ADR-381 — persistRestore: undo→Firestore re-create + audit 'restored'.
+  const persistRestore = useCallback(async (entity: WallEntity) => {
+    const svc = serviceRef.current;
+    if (!svc) return;
+    setSaveState('saving');
+    setError(null);
+    try {
+      await acquireLock(entity.id);
+      await svc.saveWall(entityToSaveInput(entity));
+      lastSavedParamsRef.current.set(entity.id, entity.params);
+      dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
+      setSaveState('saved');
+      setLastSavedAt(Date.now());
+      void recordWallChange('restored', entity);
+      if (companyId && projectId && buildingId) {
+        void bimToBoqBridge.upsertBoqItemForBim(
+          'wall',
+          { id: entity.id, kind: entity.kind, params: entity.params as unknown as Readonly<{ category?: string; [key: string]: unknown }>, geometry: entity.geometry },
+          { companyId, projectId, buildingId },
+          'created',
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'WALL_RESTORE_ERROR');
+      setSaveState('error');
+    }
+  }, [acquireLock, companyId, projectId, buildingId]);
 
   // First-save listener — fires immediately for freshly drawn walls so the
   // local scene survives the next Firestore snapshot AND lands in
@@ -421,6 +460,7 @@ export function useWallPersistence(
       const entity = payload.entity as WallEntity | undefined;
       if (!entity || (entity as { type?: string }).type !== 'wall') return;
       if (!serviceRef.current) return;
+      pendingFirstSaveIdsRef.current.add(entity.id);
       dirtyIdsRef.current.add(entity.id);
       void persist(entity);
     });
@@ -438,6 +478,14 @@ export function useWallPersistence(
   }, [deleteWall]);
 
   useBimEntityMovedPersistEffect(isWall, serviceRef, dirtyIdsRef, persist);
+  useBimEntityRestoredPersistEffect(
+    'wall',
+    isWall,
+    serviceRef,
+    pendingFirstSaveIdsRef,
+    deletedIdsRef,
+    persistRestore,
+  );
 
   // Unmount cleanup — release lock + flush pending timers.
   useEffect(() => {

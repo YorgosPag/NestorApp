@@ -39,6 +39,7 @@ import {
 import { recordBeamChange } from '../../bim/beams/beam-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
+import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
 // ============================================================================
 // TYPES
@@ -126,6 +127,9 @@ export function useBeamPersistence(
   const serviceRef = useRef<BeamFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, BeamEntity['params']>>(new Map());
+  // ADR-381 — pending first save (drawn or restored) + tombstone tracking.
+  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
+  const deletedIdsRef = useRef<Set<string>>(new Set());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedBeamRef = useRef<BeamEntity | null>(null);
   selectedBeamRef.current = primarySelectedBeam;
@@ -169,7 +173,11 @@ export function useBeamPersistence(
         const nextBeams: BeamEntity[] = [];
         let mutated = false;
 
+        const deleted = deletedIdsRef.current;
+        const pending = pendingFirstSaveIdsRef.current;
+
         for (const doc of docs) {
+          if (deleted.has(doc.id)) continue;
           const existing = sceneBeams.get(doc.id);
           if (!existing) {
             if (!dirty.has(doc.id)) {
@@ -190,10 +198,10 @@ export function useBeamPersistence(
           }
         }
 
+        // ADR-381 — replaces buggy `neverSaved` guard.
         for (const [id, entity] of sceneBeams) {
           if (docsById.has(id)) continue;
-          const neverSaved = !lastSavedParamsRef.current.has(id);
-          if (dirty.has(id) || neverSaved) {
+          if (dirty.has(id) || pending.has(id)) {
             nextBeams.push(entity);
           } else {
             mutated = true;
@@ -228,6 +236,7 @@ export function useBeamPersistence(
       await svc.saveBeam(entityToSaveInput(entity));
       lastSavedParamsRef.current.set(entity.id, entity.params);
       dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
       void recordBeamChange(
@@ -254,6 +263,10 @@ export function useBeamPersistence(
   useEffect(() => {
     const beam = primarySelectedBeam;
     if (!beam || !serviceRef.current) return;
+    // ADR-381 — Bug A defense-in-depth.
+    const known = lastSavedParamsRef.current.has(beam.id);
+    const pendingBeam = pendingFirstSaveIdsRef.current.has(beam.id);
+    if (!known && !pendingBeam) return;
     const lastSaved = lastSavedParamsRef.current.get(beam.id);
     if (lastSaved && dequal(lastSaved, beam.params)) return;
 
@@ -318,7 +331,38 @@ export function useBeamPersistence(
 
     dirtyIdsRef.current.delete(beamId);
     lastSavedParamsRef.current.delete(beamId);
+    pendingFirstSaveIdsRef.current.delete(beamId);
+    deletedIdsRef.current.add(beamId);
   }, [levelManager, companyId, floorplanId]);
+
+  // ADR-381 — persistRestore: undo→Firestore re-create + audit 'restored'.
+  const persistRestore = useCallback(async (entity: BeamEntity) => {
+    const svc = serviceRef.current;
+    if (!svc) return;
+    setSaveState('saving');
+    setError(null);
+    try {
+      await svc.saveBeam(entityToSaveInput(entity));
+      lastSavedParamsRef.current.set(entity.id, entity.params);
+      dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
+      setSaveState('saved');
+      setLastSavedAt(Date.now());
+      void recordBeamChange('restored', entity);
+      if (companyId && projectId && buildingId) {
+        void bimToBoqBridge.upsertBoqItemForBim(
+          'beam',
+          { id: entity.id, kind: entity.kind, geometry: entity.geometry },
+          { companyId, projectId, buildingId },
+          'created',
+        );
+      }
+      if (floorplanId) EventBus.emit('bim:beam-persisted', { floorplanId });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'BEAM_RESTORE_ERROR');
+      setSaveState('error');
+    }
+  }, [companyId, projectId, buildingId, floorplanId]);
 
   // First-save listener — fires άμεσα για freshly drawn beams.
   useEffect(() => {
@@ -327,6 +371,7 @@ export function useBeamPersistence(
       const entity = payload.entity as BeamEntity | undefined;
       if (!entity || (entity as { type?: string }).type !== 'beam') return;
       if (!serviceRef.current) return;
+      pendingFirstSaveIdsRef.current.add(entity.id);
       dirtyIdsRef.current.add(entity.id);
       void persist(entity);
     });
@@ -342,6 +387,14 @@ export function useBeamPersistence(
   }, [deleteBeam]);
 
   useBimEntityMovedPersistEffect(isBeam, serviceRef, dirtyIdsRef, persist);
+  useBimEntityRestoredPersistEffect(
+    'beam',
+    isBeam,
+    serviceRef,
+    pendingFirstSaveIdsRef,
+    deletedIdsRef,
+    persistRestore,
+  );
 
   // Unmount cleanup — flush pending timers.
   useEffect(() => {
