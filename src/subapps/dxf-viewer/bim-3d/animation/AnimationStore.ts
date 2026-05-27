@@ -15,6 +15,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { castDraft } from 'immer';
 import {
   createDefaultAnimationConfig,
   TURNTABLE_DEFAULTS,
@@ -77,15 +78,19 @@ interface AnimationActions {
 
 type AnimationStore = AnimationState & AnimationActions;
 
-const initialState: AnimationState = {
-  ...createDefaultAnimationConfig(),
-  activeWaypointIndex: null,
-  loadedDocId: null,
-  toolActive: false,
-  snapEnabled: false,
-  snapStepUnits: DEFAULT_SNAP_STEP,
-  dragAxisLock: null,
-};
+const initialState: AnimationState = (() => {
+  const cfg = createDefaultAnimationConfig();
+  return {
+    ...cfg,
+    waypoints: [...cfg.waypoints],
+    activeWaypointIndex: null,
+    loadedDocId: null,
+    toolActive: false,
+    snapEnabled: false,
+    snapStepUnits: DEFAULT_SNAP_STEP,
+    dragAxisLock: null,
+  };
+})();
 
 function clampIndex(idx: number, length: number): number {
   if (length <= 0) return 0;
@@ -98,7 +103,7 @@ export const useAnimationStore = create<AnimationStore>()(
   devtools(
     subscribeWithSelector(
       immer((set) => ({
-        ...initialState,
+        ...castDraft(initialState),
 
         setDurationSec: (durationSec) =>
           set((s) => {
@@ -127,7 +132,7 @@ export const useAnimationStore = create<AnimationStore>()(
 
         setWaypoints: (waypoints) =>
           set((s) => {
-            s.waypoints = [...waypoints];
+            s.waypoints = castDraft([...waypoints]);
             if (s.activeWaypointIndex !== null && s.activeWaypointIndex >= waypoints.length) {
               s.activeWaypointIndex = waypoints.length === 0 ? null : waypoints.length - 1;
             }
@@ -135,25 +140,25 @@ export const useAnimationStore = create<AnimationStore>()(
 
         addWaypoint: (waypoint) =>
           set((s) => {
-            s.waypoints = [...s.waypoints, waypoint];
+            s.waypoints = castDraft([...s.waypoints, waypoint]);
             s.activeWaypointIndex = s.waypoints.length - 1;
           }),
 
         insertWaypointAt: (index, waypoint) =>
           set((s) => {
             const safeIdx = Math.max(0, Math.min(index, s.waypoints.length));
-            const next = [...s.waypoints];
+            const next: Waypoint[] = [...s.waypoints];
             next.splice(safeIdx, 0, waypoint);
-            s.waypoints = next;
+            s.waypoints = castDraft(next);
             s.activeWaypointIndex = safeIdx;
           }),
 
         removeWaypoint: (index) =>
           set((s) => {
             if (index < 0 || index >= s.waypoints.length) return;
-            const next = [...s.waypoints];
+            const next: Waypoint[] = [...s.waypoints];
             next.splice(index, 1);
-            s.waypoints = next;
+            s.waypoints = castDraft(next);
             if (s.activeWaypointIndex === index) {
               s.activeWaypointIndex = next.length === 0 ? null : clampIndex(index, next.length);
             } else if (s.activeWaypointIndex !== null && s.activeWaypointIndex > index) {
@@ -165,9 +170,9 @@ export const useAnimationStore = create<AnimationStore>()(
           set((s) => {
             if (index < 0 || index >= s.waypoints.length) return;
             const current = s.waypoints[index]!;
-            const next = [...s.waypoints];
+            const next: Waypoint[] = [...s.waypoints];
             next[index] = { ...current, ...patch };
-            s.waypoints = next;
+            s.waypoints = castDraft(next);
           }),
 
         reorderWaypoints: (fromIndex, toIndex) =>
@@ -175,10 +180,10 @@ export const useAnimationStore = create<AnimationStore>()(
             if (fromIndex === toIndex) return;
             if (fromIndex < 0 || fromIndex >= s.waypoints.length) return;
             if (toIndex < 0 || toIndex >= s.waypoints.length) return;
-            const next = [...s.waypoints];
+            const next: Waypoint[] = [...s.waypoints];
             const [moved] = next.splice(fromIndex, 1);
             next.splice(toIndex, 0, moved!);
-            s.waypoints = next;
+            s.waypoints = castDraft(next);
             if (s.activeWaypointIndex === fromIndex) {
               s.activeWaypointIndex = toIndex;
             }
@@ -216,7 +221,7 @@ export const useAnimationStore = create<AnimationStore>()(
 
         loadFromDoc: (doc) =>
           set((s) => {
-            s.waypoints = [...doc.waypoints];
+            s.waypoints = castDraft([...doc.waypoints]);
             s.durationSec = doc.durationSec;
             s.fps = doc.fps;
             s.axis = doc.axis;
@@ -228,7 +233,7 @@ export const useAnimationStore = create<AnimationStore>()(
 
         reset: () =>
           set((s) => {
-            Object.assign(s, initialState);
+            Object.assign(s, castDraft(initialState));
           }),
       }))
     ),
