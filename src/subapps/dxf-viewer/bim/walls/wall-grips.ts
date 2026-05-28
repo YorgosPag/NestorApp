@@ -42,7 +42,8 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { GripInfo } from '../../hooks/useGripMovement';
+import type { GripInfo, WallGripKind } from '../../hooks/useGripMovement';
+import type { GripShape } from '../../rendering/grips/types';
 import type { WallEntity } from '../types/wall-types';
 import { mmScaleFor } from '../../utils/scene-units';
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-utils';
@@ -51,6 +52,32 @@ import { unitAxis, perpUnit, project2D } from './wall-grip-math';
 // Public API re-exports (consumers import from this module).
 export { applyWallGripDrag } from './wall-grip-transforms';
 export type { WallGripDragInput } from './wall-grip-transforms';
+
+/**
+ * Physical distance the rotation handle sits beyond the wall's end short edge
+ * (scene-scaled via `mmScaleFor`). Matches the stair direction-handle offset
+ * order of magnitude so the curved-arrow glyph reads as a rotation affordance
+ * without overlapping the corner grips.
+ */
+const WALL_ROTATION_GRIP_OFFSET_MM = 200;
+
+/**
+ * Phase 1C-ter (2026-05-28) — map a wall grip kind to its rendered glyph shape.
+ * The midpoint (whole-wall MOVE) and the rotation handle get icon glyphs
+ * (4-arrow / curved-arrow) instead of the default square — the SAME vocabulary
+ * as the stair base/direction grips (`stairGripGlyphShape`). All other wall
+ * grips stay square. Consumed by `WallRenderer.getGrips`.
+ */
+export function wallGripGlyphShape(kind: WallGripKind | undefined): GripShape {
+  switch (kind) {
+    case 'wall-midpoint':
+      return 'move';
+    case 'wall-rotation':
+      return 'rotation';
+    default:
+      return 'square';
+  }
+}
 
 // ─── Grip position computation (ADR-363 §6 Phase 1C) ─────────────────────────
 
@@ -185,6 +212,23 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
         entityId: entity.id, gripIndex: 8, type: 'vertex',
         position: negEnd, movesEntity: false, wallGripKind: 'wall-corner-end-neg',
       });
+      // 9 — rotation handle just outside the END short edge (offset along +axis).
+      // Renders the curved ROTATION glyph (`wallGripGlyphShape`) and rotates the
+      // whole wall around its midpoint — same affordance as the stair direction
+      // handle. Straight only (a single segment can spin rigidly; curved/polyline
+      // would distort their interior, so they keep endpoint editing instead).
+      const axis = unitAxis(params);
+      if (axis) {
+        const offsetCanvas = WALL_ROTATION_GRIP_OFFSET_MM * mmScaleFor(params);
+        grips.push({
+          entityId: entity.id,
+          gripIndex: 9,
+          type: 'vertex',
+          position: { x: end.x + offsetCanvas * axis.x, y: end.y + offsetCanvas * axis.y },
+          movesEntity: false,
+          wallGripKind: 'wall-rotation',
+        });
+      }
     }
   } else {
     // CURVED / POLYLINE — single symmetric thickness handle at the axis

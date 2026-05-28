@@ -14,7 +14,7 @@
  *       wall-vertex-N translates the N-th interior polyline vertex
  */
 
-import { applyWallGripDrag, getWallGrips } from '../wall-grips';
+import { applyWallGripDrag, getWallGrips, wallGripGlyphShape } from '../wall-grips';
 import { buildDefaultWallParams, buildWallEntity } from '../../../hooks/drawing/wall-completion';
 import type { WallEntity, WallParams } from '../../types/wall-types';
 
@@ -55,17 +55,19 @@ describe('wall-grips (Phase 1C)', () => {
 
   // ─── getWallGrips ──────────────────────────────────────────────────────
 
-  it('1. straight wall → 5 VISIBLE grips (midpoint + 4 corners; Phase 1C-ter hides 0/1/3/4)', () => {
+  it('1. straight wall → 6 VISIBLE grips (midpoint + 4 corners + rotation; Phase 1C-ter hides 0/1/3/4)', () => {
     const entity = makeStraight();
     const grips = getWallGrips(entity);
     // endpoint (wall-start/wall-end) + both thickness handles suppressed —
-    // corners cover length + thickness. Center stays (whole-wall translate).
+    // corners cover length + thickness. Center stays (whole-wall translate);
+    // rotation handle appended (gripIndex 9, survives suppression).
     expect(grips.map((g) => g.wallGripKind)).toEqual([
       'wall-midpoint',
       'wall-corner-start-pos',
       'wall-corner-start-neg',
       'wall-corner-end-pos',
       'wall-corner-end-neg',
+      'wall-rotation',
     ]);
   });
 
@@ -384,5 +386,52 @@ describe('wall-grips (Phase 1C)', () => {
       currentPos: { x: 500, y: 0.15 },
     });
     expect(next.thickness).toBeCloseTo(300, 6);
+  });
+
+  // ─── Phase 1C-ter: move/rotation glyphs + wall-rotation grip ──────────────
+
+  it('26. wallGripGlyphShape — midpoint→move, rotation→rotation, others→square', () => {
+    expect(wallGripGlyphShape('wall-midpoint')).toBe('move');
+    expect(wallGripGlyphShape('wall-rotation')).toBe('rotation');
+    expect(wallGripGlyphShape('wall-corner-start-pos')).toBe('square');
+    expect(wallGripGlyphShape('wall-thickness')).toBe('square');
+    expect(wallGripGlyphShape(undefined)).toBe('square');
+  });
+
+  it('27. straight wall emits wall-rotation handle outside the end short edge', () => {
+    const grips = getWallGrips(makeStraight());
+    const rot = grips.find((g) => g.wallGripKind === 'wall-rotation');
+    expect(rot).toBeDefined();
+    // end (1000,0) + 200mm·u (u=+X, mm scene s=1) → (1200, 0).
+    expect(rot!.position.x).toBeCloseTo(1200, 6);
+    expect(rot!.position.y).toBeCloseTo(0, 6);
+  });
+
+  it('28. wall-rotation spins both endpoints 90° CCW about the midpoint', () => {
+    const entity = makeStraight(); // start (0,0) end (1000,0), midpoint (500,0)
+    // anchor = currentPos − delta = (1200,0) (handle, angle 0 about midpoint);
+    // currentPos relative to midpoint = (0,700) → swept = +90°.
+    const next = applyWallGripDrag('wall-rotation', {
+      originalParams: entity.params,
+      delta: { x: -700, y: 700 },
+      currentPos: { x: 500, y: 700 },
+    });
+    expect(next.start.x).toBeCloseTo(500, 6);
+    expect(next.start.y).toBeCloseTo(-500, 6);
+    expect(next.end.x).toBeCloseTo(500, 6);
+    expect(next.end.y).toBeCloseTo(500, 6);
+    // Midpoint + length invariant under rotation.
+    expect((next.start.x + next.end.x) / 2).toBeCloseTo(500, 6);
+    expect(Math.hypot(next.end.x - next.start.x, next.end.y - next.start.y)).toBeCloseTo(1000, 6);
+  });
+
+  it('29. wall-rotation no-op when cursor sits on the pivot (degenerate)', () => {
+    const entity = makeStraight();
+    const next = applyWallGripDrag('wall-rotation', {
+      originalParams: entity.params,
+      delta: { x: 0, y: 0 },
+      currentPos: { x: 500, y: 0 }, // == midpoint → zero-length vector
+    });
+    expect(next).toBe(entity.params);
   });
 });

@@ -86,6 +86,7 @@ export function applyWallGripDrag(
   if (gripKind === 'wall-corner-start-neg') return moveCorner(input, 'start', -1);
   if (gripKind === 'wall-corner-end-pos') return moveCorner(input, 'end', +1);
   if (gripKind === 'wall-corner-end-neg') return moveCorner(input, 'end', -1);
+  if (gripKind === 'wall-rotation') return rotateWall(input);
   if (gripKind === 'wall-curve') return moveCurveControl(input);
   if (gripKind.startsWith('wall-vertex-')) {
     const idx = parseInt(gripKind.slice('wall-vertex-'.length), 10);
@@ -127,6 +128,45 @@ function moveMidpoint(input: Readonly<WallGripDragInput>): WallParams {
     z: originalParams.end.z,
   };
   return { ...originalParams, start: newStart, end: newEnd };
+}
+
+/** Below this magnitude a pivot→cursor vector is treated as degenerate. */
+const ROTATE_EPS = 1e-9;
+
+/**
+ * Phase 1C-ter — rotate the whole wall around its midpoint. Mirror of the stair
+ * `rotateDirection` (anchor-relative): the handle sits just outside the end
+ * short edge (OFF the start→end axis), so using the cursor's absolute bearing
+ * would snap the wall the instant the handle is grabbed. Instead we rotate by
+ * the angle SWEPT from the anchor (the grip world position at mousedown =
+ * `currentPos − delta`) about the midpoint, then spin both endpoints by it.
+ */
+function rotateWall(input: Readonly<WallGripDragInput>): WallParams {
+  const { originalParams, currentPos, delta } = input;
+  const cx = (originalParams.start.x + originalParams.end.x) / 2;
+  const cy = (originalParams.start.y + originalParams.end.y) / 2;
+  const curDx = currentPos.x - cx;
+  const curDy = currentPos.y - cy;
+  const anchorDx = currentPos.x - delta.x - cx;
+  const anchorDy = currentPos.y - delta.y - cy;
+  if (Math.hypot(curDx, curDy) < ROTATE_EPS || Math.hypot(anchorDx, anchorDy) < ROTATE_EPS) {
+    return originalParams;
+  }
+  const swept = Math.atan2(curDy, curDx) - Math.atan2(anchorDy, anchorDx);
+  const cos = Math.cos(swept);
+  const sin = Math.sin(swept);
+  const spin = (px: number, py: number): Point2D => {
+    const dx = px - cx;
+    const dy = py - cy;
+    return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
+  };
+  const ns = spin(originalParams.start.x, originalParams.start.y);
+  const ne = spin(originalParams.end.x, originalParams.end.y);
+  return {
+    ...originalParams,
+    start: { x: ns.x, y: ns.y, z: originalParams.start.z },
+    end: { x: ne.x, y: ne.y, z: originalParams.end.z },
+  };
 }
 
 function resizeThickness(input: Readonly<WallGripDragInput>): WallParams {

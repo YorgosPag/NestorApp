@@ -85,12 +85,19 @@ export type DimensionGripKind =
  *   - `wall-corner-start-neg` → start endpoint + negative perpendicular face
  *   - `wall-corner-end-pos`   → end   endpoint + positive perpendicular face
  *   - `wall-corner-end-neg`   → end   endpoint + negative perpendicular face
+ *
+ * Phase 1C-ter (2026-05-28) — `wall-midpoint` renders the 4-arrow MOVE glyph and
+ * `wall-rotation` (a handle just outside the end short edge) renders the curved
+ * ROTATION glyph — same icon vocabulary as the stair base/direction grips
+ * (`stairGripGlyphShape`). `wall-rotation` rotates the whole wall around its
+ * midpoint (anchor-relative swept angle, mirror of stair `rotateDirection`).
  */
 export type WallGripKind =
   | 'wall-start'
   | 'wall-end'
   | 'wall-midpoint'
   | 'wall-thickness'
+  | 'wall-rotation'
   | 'wall-corner-start-pos'
   | 'wall-corner-start-neg'
   | 'wall-corner-end-pos'

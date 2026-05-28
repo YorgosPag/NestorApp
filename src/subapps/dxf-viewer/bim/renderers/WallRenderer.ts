@@ -36,7 +36,7 @@ import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
-import { getWallGrips } from '../walls/wall-grips';
+import { getWallGrips, wallGripGlyphShape } from '../walls/wall-grips';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import {
@@ -141,6 +141,9 @@ export class WallRenderer extends BaseEntityRenderer {
       entityId: g.entityId,
       isVisible: true,
       gripIndex: g.gripIndex,
+      // ADR-363 Phase 1C-ter — carry the icon glyph for the move/rotation handles
+      // (midpoint → 4-arrow, wall-rotation → curved arrow), mirror StairRenderer.
+      shape: wallGripGlyphShape(g.wallGripKind),
     }));
   }
 
