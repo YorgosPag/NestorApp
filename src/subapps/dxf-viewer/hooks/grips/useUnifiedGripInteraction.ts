@@ -33,25 +33,15 @@ import type {
 } from './unified-grip-types';
 import { useGripRegistry } from './grip-registry';
 import { findNearestGrip } from './grip-hit-testing';
-import {
-  commitDxfGripDragModeAware,
-  type DxfCommitDeps,
-  type OverlayCommitDeps,
-} from './grip-commit-adapters';
-import {
-  commitOverlayVertexDrag,
-  commitOverlayEdgeMidpointDrag,
-  commitOverlayBodyDrag,
-} from './overlay-grip-commit-adapters';
-import { GripModeStore } from '../../systems/grip/GripModeStore';
+import type { WallHotGripOp, HotGripStep } from './wall-hot-grip-fsm';
+import { WallRotateHotGripStore } from '../../bim/walls/wall-rotate-hotgrip-store';
+import { runGripMouseDown, runGripMouseUp } from './grip-mouse-handlers';
+import type { DxfCommitDeps, OverlayCommitDeps } from './grip-commit-adapters';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
 import { GripReferenceStore } from '../../systems/grip/GripReferenceStore';
 import { GripSessionUndoStore } from '../../systems/grip/GripSessionUndoStore';
-import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
-import { toolHintOverrideStore } from '../toolHintOverrideStore';
-import i18next from 'i18next';
 import { useGripSpacebarCycle } from './useGripSpacebarCycle';
 import {
   buildDxfDragPreview,
@@ -64,7 +54,7 @@ import {
 import { useMoveEntities } from '../useMoveEntities';
 import { useCommandHistory } from '../../core/commands';
 import { useLevels } from '../../systems/levels';
-import { setActiveDragGrip, clearActiveDragGrip } from '../../systems/cursor/GripDragStore';
+import { clearActiveDragGrip } from '../../systems/cursor/GripDragStore';
 // ADR-040 Phase XXII.A — transform reads from SSoT (orchestrator-decoupling).
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 // Re-export types for consumers
@@ -72,6 +62,10 @@ export type { UseUnifiedGripInteractionParams, UseUnifiedGripInteractionReturn, 
 export type { OverlayProjection } from './unified-grip-types';
 const WARM_DELAY_MS = 1000;
 const GRIP_HOVER_THROTTLE_MS = 100;
+// ADR-363 Phase 1G — squared world-distance threshold above which the hot-grip
+// cursor counts as "moved from the anchor". Tiny (essentially "moved at all"):
+// any real cursor move dwarfs it, while an exact same-spot release stays below.
+const HOT_GRIP_MOVE_EPS_SQ = 1e-12;
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -119,6 +113,20 @@ export function useUnifiedGripInteraction(
   const [currentWorldPos, setCurrentWorldPos] = useState<Point2D | null>(null);
   const anchorRef = useRef<Point2D | null>(null);
   const warmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ADR-363 Phase 1G — distinguishes the 1st-click release (arm, stay hot) from
+  // the 2nd-click release (commit) while `phase === 'hotGrip'`.
+  const hotGripAwaitingFirstReleaseRef = useRef(false);
+  // ADR-363 Phase 1G — true once the cursor has moved away from the grip anchor
+  // since arming. Gates the commit so a stray same-spot release (the 2nd fire of
+  // the canvas+container mouseup pair) cannot resetToIdle and kill the hot move.
+  const hotGripMovedRef = useRef(false);
+  // ADR-363 Phase 1G — move/rotate 3-click hot-grip context.
+  //   op   = corner (2-click) | move | rotate (both 3-click with a base-pick step).
+  //   step = await-base (waiting for the centre/base click) | tracking.
+  //   base = the picked base point (move) / rotation centre (rotate).
+  const hotGripOpRef = useRef<WallHotGripOp | null>(null);
+  const hotGripStepRef = useRef<HotGripStep>('tracking');
+  const hotGripBaseRef = useRef<Point2D | null>(null);
   // ── Overlay grip state (backward compat) ──
   const [selectedGrips, setSelectedGrips] = useState<SelectedGrip[]>([]);
   const [draggingVertices, setDraggingVertices] = useState<DraggingVertexState[] | null>(null);
@@ -154,6 +162,12 @@ export function useUnifiedGripInteraction(
     setActiveGrip(null);
     setCurrentWorldPos(null);
     anchorRef.current = null;
+    hotGripAwaitingFirstReleaseRef.current = false;
+    hotGripMovedRef.current = false;
+    hotGripOpRef.current = null;
+    hotGripStepRef.current = 'tracking';
+    hotGripBaseRef.current = null;
+    WallRotateHotGripStore.clear();
     if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
     // ADR-357 Phase 12 — selection change ends the grip-hot session: clear
     // all 4 grip-extras micro-leaf SSoT stores so the next session starts clean.
@@ -185,6 +199,12 @@ export function useUnifiedGripInteraction(
     setHoveredGrip(null);
     setCurrentWorldPos(null);
     anchorRef.current = null;
+    hotGripAwaitingFirstReleaseRef.current = false;
+    hotGripMovedRef.current = false;
+    hotGripOpRef.current = null;
+    hotGripStepRef.current = 'tracking';
+    hotGripBaseRef.current = null;
+    WallRotateHotGripStore.clear();
     clearActiveDragGrip();
   }, []);
   // ── MOUSE MOVE ──
@@ -193,11 +213,49 @@ export function useUnifiedGripInteraction(
       if (!isGripMode || allGrips.length === 0) return;
       const now = performance.now();
       const throttle = gripHoverThrottleRef.current;
-      if (phase !== 'dragging' && now - throttle.lastCheckTime < GRIP_HOVER_THROTTLE_MS) return;
-      if (phase !== 'dragging') throttle.lastCheckTime = now;
+      // ADR-363 Phase 1G — hotGrip follows the cursor at full rate like dragging
+      // (no hover throttle), so the rubber-band + ghost track smoothly.
+      const isFollowing = phase === 'dragging' || phase === 'hotGrip';
+      if (!isFollowing && now - throttle.lastCheckTime < GRIP_HOVER_THROTTLE_MS) return;
+      if (!isFollowing) throttle.lastCheckTime = now;
       throttle.lastWorldPoint = worldPos;
-      if (phase === 'dragging' && activeGrip) {
+      if (isFollowing && activeGrip) {
         setCurrentWorldPos(worldPos);
+        if (phase === 'hotGrip') {
+          // ADR-363 Phase 1G.2 — await-base (move/rotate before the base/centre
+          // pick): ANY real cursor move marks "moved" so the next deliberate click
+          // resolves to 'set-base'. The same-tick double mouseup (canvas+container)
+          // produces NO mousemove, so its stray fire2 stays at moved=false → 'stay',
+          // and the 1st click can no longer prematurely set the base (3-click stays
+          // 3-click). anchorRef is null here, so the distance check below is skipped.
+          if (hotGripStepRef.current === 'await-base') {
+            hotGripMovedRef.current = true;
+          }
+          // ADR-363 Phase 1G — rotate: establish the reference arm on the first
+          // move after the centre pick (anchor still null), so the swept angle
+          // starts at 0 (no snap). pivot+anchor go to the commit-bridge store.
+          if (
+            hotGripOpRef.current === 'rotate' &&
+            hotGripStepRef.current === 'tracking' &&
+            !anchorRef.current &&
+            hotGripBaseRef.current
+          ) {
+            const cx = worldPos.x - hotGripBaseRef.current.x;
+            const cy = worldPos.y - hotGripBaseRef.current.y;
+            if (cx * cx + cy * cy > HOT_GRIP_MOVE_EPS_SQ) {
+              anchorRef.current = { x: worldPos.x, y: worldPos.y };
+              WallRotateHotGripStore.set(hotGripBaseRef.current, anchorRef.current);
+            }
+          }
+          // Once the cursor leaves the anchor (grip / base / reference arm), mark
+          // moved so the next deliberate click commits (a stray same-spot release
+          // stays hot).
+          if (anchorRef.current) {
+            const adx = worldPos.x - anchorRef.current.x;
+            const ady = worldPos.y - anchorRef.current.y;
+            if (adx * adx + ady * ady > HOT_GRIP_MOVE_EPS_SQ) hotGripMovedRef.current = true;
+          }
+        }
         if (activeGrip.source === 'overlay') setDragPreviewPosition(worldPos);
         return;
       }
@@ -223,210 +281,34 @@ export function useUnifiedGripInteraction(
   );
   // ── MOUSE DOWN ──
   const handleMouseDown = useCallback(
-    (worldPos: Point2D, isShift: boolean): boolean => {
-      if (mouseDownInProgressRef.current) return false;
-      // ADR-357 Phase 12 — pick-mode interception: BasePoint and Reference picks
-      // run DURING an active drag (phase === 'dragging') and must be consumed
-      // BEFORE the normal grip-drag mouse-down logic short-circuits via the
-      // `phase === 'dragging'` early-return below.
-      if (GripBasePointStore.getSnapshot().pickPhase === 'awaiting-click') {
-        GripBasePointStore.setOverrideAnchor(worldPos);
-        // Drop the override-pick prompt and restore the active mode hint.
-        const modeLabel = i18next.t(`tool-hints:gripMode.${GripModeStore.getSnapshot()}`);
-        toolHintOverrideStore.setOverride(
-          i18next.t('tool-hints:gripMode.cycleHint', { mode: modeLabel }),
-        );
-        return true;
-      }
-      const refSnap = GripReferenceStore.getSnapshot();
-      if (refSnap.phase === 'pick-first') {
-        GripReferenceStore.setRefStart(worldPos);
-        toolHintOverrideStore.setOverride(
-          i18next.t('tool-hints:gripContextMenu.prompts.pickRefEnd'),
-        );
-        return true;
-      }
-      if (refSnap.phase === 'pick-second') {
-        GripReferenceStore.setRefEnd(worldPos);
-        // Second click completes the reference pick — fire the mode handoff
-        // straight away so the downstream tool (Scale or Rotate) takes over
-        // with `refStart` / `refEnd` (and optionally `copyMode`) pre-loaded.
-        const after = GripReferenceStore.getSnapshot();
-        const mode = after.mode;
-        if ((mode === 'scale' || mode === 'rotate') && after.refStart && after.refEnd) {
-          const anchor = GripBasePointStore.getSnapshot().overrideAnchor
-            ?? activeGrip?.position
-            ?? anchorRef.current
-            ?? worldPos;
-          GripHandoffStore.set(mode, anchor, {
-            refStart: after.refStart,
-            refEnd: after.refEnd,
-            copyMode: GripCopyModeStore.getSnapshot().enabled || undefined,
-          });
-          onToolChangeRef.current?.(mode);
-        }
-        GripReferenceStore.clear();
-        GripBasePointStore.clear();
-        resetToIdle();
-        return true;
-      }
-      if (!isGripMode || allGrips.length === 0 || phase === 'dragging') return false;
-      mouseDownInProgressRef.current = true;
-      // The handler is fully synchronous, so a microtask is enough to release
-      // the mutex once the current event tick (canvas + bubbled container)
-      // has finished dispatching.
-      Promise.resolve().then(() => { mouseDownInProgressRef.current = false; });
-      // ADR-040 XXII.A: live SSoT read.
-      const nearGrip = findNearestGrip(worldPos, allGrips, effectiveTolerance, getImmediateTransform().scale);
-      if (!nearGrip) {
-        if (!isShift && selectedGrips.length > 0) setSelectedGrips([]);
-        return false;
-      }
-      // DXF grip
-      if (nearGrip.source === 'dxf') {
-        setActiveGrip(nearGrip);
-        setPhase('dragging');
-        unlockGripSnapPosition();
-        anchorRef.current = nearGrip.position;
-        setCurrentWorldPos(nearGrip.position);
-        if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
-        // ADR-371 extension — expose active grip to mouse handlers for face corner projection snap
-        setActiveDragGrip({ entityId: nearGrip.entityId!, gripKind: nearGrip.wallGripKind ?? null });
-        // ADR-357 Phase 12 — mark the start of the grip-hot session so the
-        // right-click `Undo` extra can bound the global CommandHistory to
-        // commands produced during this session. Idempotent (no-op if already armed).
-        GripSessionUndoStore.markSessionStart(getGlobalCommandHistory().size());
-        return true;
-      }
-      // Overlay grip
-      if (nearGrip.source === 'overlay') {
-        if (!universalSelection.isSelected(nearGrip.overlayId!)) {
-          if (!isShift && selectedGrips.length > 0) setSelectedGrips([]);
-          return false;
-        }
-        // Vertex grip
-        if (nearGrip.type === 'vertex') {
-          const clickedGrip: SelectedGrip = { type: 'vertex', overlayId: nearGrip.overlayId!, index: nearGrip.gripIndex };
-          const isAlreadySelected = selectedGrips.some(
-            (g) => g.type === 'vertex' && g.overlayId === clickedGrip.overlayId && g.index === clickedGrip.index,
-          );
-          if (isShift && gripStyleStore.get().multiGripEdit) {
-            if (isAlreadySelected) {
-              setSelectedGrips(selectedGrips.filter(
-                (g) => !(g.type === 'vertex' && g.overlayId === clickedGrip.overlayId && g.index === clickedGrip.index),
-              ));
-            } else {
-              setSelectedGrips([...selectedGrips, clickedGrip]);
-            }
-            return true;
-          }
-          const gripsToMove = isAlreadySelected ? selectedGrips.filter((g) => g.type === 'vertex') : [clickedGrip];
-          if (!isAlreadySelected) setSelectedGrips([clickedGrip]);
-          if (gripsToMove.length > 0) {
-            const store = overlayStoreRef.current;
-            const draggingData: DraggingVertexState[] = gripsToMove.map((grip) => {
-              const overlay = store.overlays[grip.overlayId];
-              const originalPosition = overlay?.polygon?.[grip.index]
-                ? { x: overlay.polygon[grip.index][0], y: overlay.polygon[grip.index][1] }
-                : worldPos;
-              return { overlayId: grip.overlayId, vertexIndex: grip.index, startPoint: worldPos, originalPosition };
-            });
-            setDraggingVertices(draggingData);
-            setDragPreviewPosition(worldPos);
-            setActiveGrip(nearGrip);
-            setPhase('dragging');
-            unlockGripSnapPosition();
-            anchorRef.current = nearGrip.position;
-            setCurrentWorldPos(nearGrip.position);
-          }
-          return true;
-        }
-        // Edge midpoint grip
-        if (nearGrip.type === 'edge' && nearGrip.edgeInsertIndex !== undefined) {
-          const edgeIndex = nearGrip.gripIndex - (currentOverlays.find((o) => o.id === nearGrip.overlayId)?.polygon?.length ?? 0);
-          setSelectedGrips([{ type: 'edge-midpoint', overlayId: nearGrip.overlayId!, index: edgeIndex }]);
-          setDraggingEdgeMidpoint({
-            overlayId: nearGrip.overlayId!, edgeIndex, insertIndex: nearGrip.edgeInsertIndex,
-            startPoint: worldPos, newVertexCreated: false,
-          });
-          setDragPreviewPosition(worldPos);
-          setActiveGrip(nearGrip);
-          setPhase('dragging');
-          unlockGripSnapPosition();
-          anchorRef.current = nearGrip.position;
-          setCurrentWorldPos(nearGrip.position);
-          if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
-          return true;
-        }
-      }
-      return false;
-    },
+    (worldPos: Point2D, isShift: boolean): boolean =>
+      runGripMouseDown(worldPos, isShift, {
+        mouseDownInProgressRef, activeGrip, anchorRef, onToolChangeRef, resetToIdle,
+        isGripMode, allGrips, phase, effectiveTolerance, hoveredGrip, selectedGrips,
+        setSelectedGrips, setActiveGrip, setPhase, setCurrentWorldPos,
+        hotGripOpRef, hotGripStepRef, hotGripAwaitingFirstReleaseRef, hotGripMovedRef, hotGripBaseRef,
+        warmTimerRef, universalSelection, setDraggingVertices, setDragPreviewPosition,
+        overlayStoreRef, currentOverlays, setDraggingEdgeMidpoint,
+      }),
     // ADR-040 XXII.A: scale removed from deps — SSoT read at event time.
-    [isGripMode, allGrips, phase, activeGrip, effectiveTolerance, selectedGrips, universalSelection, overlayStoreRef, currentOverlays, resetToIdle],
+    [isGripMode, allGrips, phase, activeGrip, hoveredGrip, effectiveTolerance, selectedGrips, universalSelection, overlayStoreRef, currentOverlays, resetToIdle],
   );
   // ── MOUSE UP ──
   const handleMouseUp = useCallback(
-    async (worldPos: Point2D): Promise<boolean> => {
-      if (mouseUpInProgressRef.current) return false;
-      mouseUpInProgressRef.current = true;
-      try {
-        if (phase === 'dragging' && activeGrip?.source === 'dxf' && anchorRef.current) {
-          // ADR-357 Phase 12 — honor the `Base Point` override: when the user
-          // re-anchored the drag through the right-click menu, the displacement
-          // is measured from the user-picked anchor instead of `grip.position`.
-          const effectiveAnchor = GripBasePointStore.getSnapshot().overrideAnchor ?? anchorRef.current;
-          const delta: Point2D = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
-          commitDxfGripDragModeAware(activeGrip, delta, dxfCommitDeps, GripModeStore.getSnapshot());
-          // The override is a per-drag modifier — clear it at commit so the
-          // next drag starts from the natural grip anchor.
-          GripBasePointStore.clear();
-          resetToIdle();
-          return true;
-        }
-        if (draggingVertices && draggingVertices.length > 0) {
-          const delta = { x: worldPos.x - draggingVertices[0].startPoint.x, y: worldPos.y - draggingVertices[0].startPoint.y };
-          const vertexGrips: UnifiedGripInfo[] = draggingVertices.map((dv) => ({
-            id: `overlay_${dv.overlayId}_v${dv.vertexIndex}`, source: 'overlay' as const,
-            overlayId: dv.overlayId, gripIndex: dv.vertexIndex, type: 'vertex' as const,
-            position: dv.originalPosition, movesEntity: false,
-          }));
-          await commitOverlayVertexDrag(vertexGrips, delta, overlayCommitDeps);
-          // Clear selection so the dragged grip drops out of the 'hot' visual
-          // state on release — otherwise the renderer keeps painting it red
-          // because `isSelected` maps to the hot color in layer-polygon-renderer.
-          setSelectedGrips([]);
-          setDraggingVertices(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();
-          return true;
-        }
-        if (draggingEdgeMidpoint) {
-          const edgeGrip: UnifiedGripInfo = {
-            id: `overlay_${draggingEdgeMidpoint.overlayId}_e${draggingEdgeMidpoint.edgeIndex}`,
-            source: 'overlay', overlayId: draggingEdgeMidpoint.overlayId,
-            gripIndex: draggingEdgeMidpoint.edgeIndex, type: 'edge',
-            position: worldPos, movesEntity: false, edgeInsertIndex: draggingEdgeMidpoint.insertIndex,
-          };
-          await commitOverlayEdgeMidpointDrag(edgeGrip, worldPos, draggingEdgeMidpoint.newVertexCreated, overlayCommitDeps);
-          setSelectedGrips([]);
-          setDraggingEdgeMidpoint(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();
-          return true;
-        }
-        if (draggingOverlayBody) {
-          const delta = { x: worldPos.x - draggingOverlayBody.startPoint.x, y: worldPos.y - draggingOverlayBody.startPoint.y };
-          await commitOverlayBodyDrag(draggingOverlayBody.overlayId, delta, overlayCommitDeps);
-          setSelectedGrips([]);
-          setDraggingOverlayBody(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();
-          return true;
-        }
-        return false;
-      } finally {
-        mouseUpInProgressRef.current = false;
-      }
-    },
+    (worldPos: Point2D): Promise<boolean> =>
+      runGripMouseUp(worldPos, {
+        mouseUpInProgressRef, phase, hotGripAwaitingFirstReleaseRef, hotGripStepRef,
+        hotGripMovedRef, hotGripBaseRef, hotGripOpRef, activeGrip, anchorRef,
+        dxfCommitDeps, overlayCommitDeps, resetToIdle, setCurrentWorldPos, markDragFinished,
+        draggingVertices, setDraggingVertices, draggingEdgeMidpoint, setDraggingEdgeMidpoint,
+        draggingOverlayBody, setDraggingOverlayBody, setSelectedGrips, setDragPreviewPosition,
+      }),
     [phase, activeGrip, dxfCommitDeps, overlayCommitDeps, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody, resetToIdle, markDragFinished],
   );
   // ── ESCAPE ──
   const handleEscape = useCallback((): boolean => {
-    if (phase === 'dragging') {
+    // ADR-363 Phase 1G — ESC / right-click also cancels an active corner hot-grip.
+    if (phase === 'dragging' || phase === 'hotGrip') {
       setDraggingVertices(null); setDraggingEdgeMidpoint(null);
       setDraggingOverlayBody(null); setDragPreviewPosition(null);
       resetToIdle();
@@ -436,22 +318,33 @@ export function useUnifiedGripInteraction(
   }, [phase, resetToIdle]);
   // ── PROJECTIONS (from grip-projections.ts) ──
   const dxfDragPreview = useMemo(
-    () => buildDxfDragPreview(phase, activeGrip, anchorRef.current, currentWorldPos),
+    () => {
+      const preview = buildDxfDragPreview(phase, activeGrip, anchorRef.current, currentWorldPos);
+      // ADR-363 Phase 1G — rotate hot-grip: surface the picked centre so the ghost
+      // rotates around it and the rubber-band leader starts there (centre → cursor).
+      if (preview && hotGripOpRef.current === 'rotate' && hotGripBaseRef.current) {
+        return { ...preview, rotatePivot: hotGripBaseRef.current };
+      }
+      return preview;
+    },
     [phase, activeGrip, currentWorldPos],
   );
   const gripInteractionState = useMemo(
     () => buildGripInteractionState(hoveredGrip, activeGrip, phase),
     [hoveredGrip, activeGrip, phase],
   );
+  // ADR-363 Phase 1G — hotGrip counts as "following" so upstream snap applies to
+  // the live rubber-band move and the lasso gate (`!isGripDragging`) stays closed.
+  const isDxfFollowing = (phase === 'dragging' || phase === 'hotGrip') && activeGrip?.source === 'dxf';
   const dxfProjection = useMemo<DxfProjection>(() => ({
     gripInteractionState,
-    isDraggingGrip: phase === 'dragging' && activeGrip?.source === 'dxf',
-    isFollowingGrip: phase === 'dragging' && activeGrip?.source === 'dxf',
+    isDraggingGrip: isDxfFollowing,
+    isFollowingGrip: isDxfFollowing,
     handleGripMouseMove: (worldPos: Point2D, screenPos: Point2D) => {
       handleMouseMove(worldPos, screenPos);
       // Suppress upstream handlers (drawing preview, hover, etc.) for ANY active
       // grip drag, not only DXF — overlay grips also flow through DxfCanvas.
-      return phase === 'dragging' || draggingVertices !== null || draggingEdgeMidpoint !== null || draggingOverlayBody !== null;
+      return phase === 'dragging' || phase === 'hotGrip' || draggingVertices !== null || draggingEdgeMidpoint !== null || draggingOverlayBody !== null;
     },
     handleGripMouseDown: (worldPos: Point2D) => handleMouseDown(worldPos, false),
     handleGripMouseUp: (worldPos: Point2D) => {
@@ -459,7 +352,9 @@ export function useUnifiedGripInteraction(
       // tells the canvas mouse-up handler to skip onCanvasClick — otherwise the
       // active drawing tool (e.g. layering / polygon) registers a stray click
       // and creates a new polygon point while a vertex was being dragged.
-      const wasDragging = phase === 'dragging' || draggingVertices !== null || draggingEdgeMidpoint !== null || draggingOverlayBody !== null;
+      // ADR-363 Phase 1G — hotGrip release (arm + commit) must also suppress
+      // onCanvasClick so the corner click-click move never deselects the wall.
+      const wasDragging = phase === 'dragging' || phase === 'hotGrip' || draggingVertices !== null || draggingEdgeMidpoint !== null || draggingOverlayBody !== null;
       handleMouseUp(worldPos);
       return wasDragging;
     },
@@ -467,7 +362,7 @@ export function useUnifiedGripInteraction(
     handleGripEscape: handleEscape,
     handleGripRightClick: handleEscape,
     dragPreview: dxfDragPreview,
-  }), [gripInteractionState, phase, activeGrip, handleMouseMove, handleMouseDown, handleMouseUp, handleEscape, dxfDragPreview, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody]);
+  }), [gripInteractionState, isDxfFollowing, phase, activeGrip, handleMouseMove, handleMouseDown, handleMouseUp, handleEscape, dxfDragPreview, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody]);
   const overlayHoveredVertex = useMemo(() => buildOverlayHoveredVertex(hoveredGrip), [hoveredGrip]);
   const overlayHoveredEdge = useMemo(() => buildOverlayHoveredEdge(hoveredGrip, currentOverlays), [hoveredGrip, currentOverlays]);
   const draggingVertex: DraggingVertexState | null = draggingVertices?.[0] ?? null;

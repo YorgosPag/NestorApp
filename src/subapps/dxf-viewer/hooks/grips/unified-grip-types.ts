@@ -203,8 +203,13 @@ export interface UnifiedGripInfo {
 /**
  * State machine phases — superset of both systems.
  * idle → hovering (cursor near grip) → warm (timer) → dragging (mouseDown) → commit/cancel → idle
+ *
+ * ADR-363 Phase 1G — `hotGrip` is the AutoCAD click-click move state for the 4
+ * wall corner grips: 1st click enters (no drag), cursor moves live, 2nd click
+ * commits. Distinct from `dragging` so the press-drag-release mouseup-commit
+ * logic does not fire for corners.
  */
-export type UnifiedGripPhase = 'idle' | 'hovering' | 'warm' | 'dragging';
+export type UnifiedGripPhase = 'idle' | 'hovering' | 'warm' | 'dragging' | 'hotGrip';
 
 /**
  * Internal state of the unified grip state machine.

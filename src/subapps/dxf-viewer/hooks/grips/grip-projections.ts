@@ -29,7 +29,9 @@ export function buildDxfDragPreview(
   anchorPos: Point2D | null,
   currentWorldPos: Point2D | null,
 ): DxfGripDragPreview | null {
-  if (phase !== 'dragging' || !activeGrip || activeGrip.source !== 'dxf' || !anchorPos || !currentWorldPos) {
+  // ADR-363 Phase 1G — `hotGrip` reuses the same preview pipeline as `dragging`
+  // (live ghost + delta) so the corner click-click move shows the same wall ghost.
+  if ((phase !== 'dragging' && phase !== 'hotGrip') || !activeGrip || activeGrip.source !== 'dxf' || !anchorPos || !currentWorldPos) {
     return null;
   }
   return {
@@ -41,6 +43,8 @@ export function buildDxfDragPreview(
     },
     movesEntity: activeGrip.movesEntity,
     edgeVertexIndices: activeGrip.edgeVertexIndices,
+    // ADR-363 Phase 1G — flag the dashed rubber-band leader for the corner hot-grip.
+    ...(phase === 'hotGrip' ? { hotGrip: true } : {}),
     // ADR-358 Phase 5d — propagate parametric stair discriminator + anchor
     // so `applyEntityPreview` can reach `applyStairGripDrag` with the same
     // inputs the commit adapter uses (origin/delta/currentPos).

@@ -78,6 +78,12 @@ export interface EntityPreviewTransform {
    * `applyWallGripDrag` + `computeWallGeometry` (mirrors stair pattern).
    */
   readonly wallGripKind?: WallGripKind;
+  /**
+   * ADR-363 Phase 1G — rotation centre for the `wall-rotation` 3-click hot-grip.
+   * Passed to `applyWallGripDrag` as `pivot` so the live ghost rotates around the
+   * picked centre instead of the wall midpoint.
+   */
+  readonly rotatePivot?: Point2D;
   readonly beamGripKind?: BeamGripKind;
   readonly slabGripKind?: SlabGripKind;
   readonly slabOpeningGripKind?: SlabOpeningGripKind;
@@ -127,14 +133,16 @@ export function applyEntityPreview(
   preview: EntityPreviewTransform | undefined,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, slabGripKind, slabOpeningGripKind, anchorPos } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, slabGripKind, slabOpeningGripKind, anchorPos, rotatePivot } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
   if (wallGripKind && anchorPos && entity.type === 'wall') {
     const wall = entity as unknown as WallEntity;
     const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
-    const newParams = applyWallGripDrag(wallGripKind, { originalParams: wall.params, delta, currentPos });
+    // ADR-363 Phase 1G — `rotatePivot` (set only for the wall-rotation 3-click
+    // hot-grip) rotates the ghost around the picked centre instead of the midpoint.
+    const newParams = applyWallGripDrag(wallGripKind, { originalParams: wall.params, delta, currentPos, ...(rotatePivot ? { pivot: rotatePivot } : {}) });
     if (newParams === wall.params) return entity;
     const newGeometry = computeWallGeometry(newParams, wall.kind);
     return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;

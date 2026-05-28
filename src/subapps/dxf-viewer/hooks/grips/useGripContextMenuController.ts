@@ -124,6 +124,15 @@ export function useGripContextMenuController(
       const isGripMode = d.activeTool === 'select' || d.activeTool === 'layering';
       if (!isGripMode) return;
 
+      // ADR-363 Phase 1G — right-click during a corner hot-grip aborts the move
+      // (AutoCAD: Esc / right-click cancels) instead of opening the grip menu.
+      if (d.phase === 'hotGrip') {
+        e.preventDefault();
+        e.stopPropagation();
+        d.handleEscape();
+        return;
+      }
+
       const grip = pickTargetGrip(d.hoveredGrip, d.activeGrip, d.phase);
       if (!grip || grip.source !== 'dxf' || !grip.entityId) return;
 

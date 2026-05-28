@@ -31,6 +31,12 @@ import {
   GHOST_DEFAULTS,
   type EntityPreviewTransform,
 } from '../../rendering/ghost';
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+/** ADR-363 Phase 1G — dash pattern for the corner hot-grip rubber-band leader. */
+const HOT_GRIP_RUBBER_BAND_DASH: readonly number[] = [6, 4];
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -111,9 +117,37 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       ...(dragPreview.slabGripKind        ? { slabGripKind:        dragPreview.slabGripKind }         : {}),
       ...(dragPreview.slabOpeningGripKind ? { slabOpeningGripKind: dragPreview.slabOpeningGripKind }  : {}),
       ...(dragPreview.anchorPos           ? { anchorPos:           dragPreview.anchorPos }            : {}),
+      // ADR-363 Phase 1G — rotation centre for the wall-rotation hot-grip ghost.
+      ...(dragPreview.rotatePivot         ? { rotatePivot:         dragPreview.rotatePivot }          : {}),
     };
 
     const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview);
+
+    // ADR-363 Phase 1G — dashed rubber-band leader to the cursor. Drawn BEFORE
+    // the ghost short-circuit so it shows even when the params clamp to an
+    // identical entity reference (e.g. thickness floor reached). The start point
+    // is the rotation centre when set (wall-rotation), else the move/corner
+    // anchor; the end is always the cursor (anchorPos + delta).
+    if (
+      dragPreview.hotGrip &&
+      dragPreview.anchorPos &&
+      (dragPreview.delta.x !== 0 || dragPreview.delta.y !== 0)
+    ) {
+      const fromW = dragPreview.rotatePivot ?? dragPreview.anchorPos;
+      const toW = { x: dragPreview.anchorPos.x + dragPreview.delta.x, y: dragPreview.anchorPos.y + dragPreview.delta.y };
+      const fromS = CoordinateTransforms.worldToScreen(fromW, transform, vp);
+      const toS = CoordinateTransforms.worldToScreen(toW, transform, vp);
+      ctx.save();
+      ctx.setLineDash([...HOT_GRIP_RUBBER_BAND_DASH]);
+      ctx.strokeStyle = GHOST_DEFAULTS.color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(fromS.x, fromS.y);
+      ctx.lineTo(toS.x, toS.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // applyEntityPreview returns the *same* reference for zero-delta or
     // unsupported types → skip drawing (avoids a redundant overlay).
     if (transformed === entity) return;

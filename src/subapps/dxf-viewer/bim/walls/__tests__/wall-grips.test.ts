@@ -434,4 +434,34 @@ describe('wall-grips (Phase 1C)', () => {
     });
     expect(next).toBe(entity.params);
   });
+
+  // ─── Phase 1G: wall-rotation around an arbitrary picked pivot ──────────────
+  it('30. wall-rotation spins about a picked pivot (start point), not the midpoint', () => {
+    const entity = makeStraight(); // start (0,0) end (1000,0)
+    // Pivot = start (0,0). anchor (currentPos − delta) = (100,0) (angle 0 about
+    // pivot); currentPos = (0,100) (angle 90) → swept = +90° CCW about (0,0).
+    const next = applyWallGripDrag('wall-rotation', {
+      originalParams: entity.params,
+      delta: { x: -100, y: 100 },
+      currentPos: { x: 0, y: 100 },
+      pivot: { x: 0, y: 0 },
+    });
+    expect(next.start.x).toBeCloseTo(0, 6);
+    expect(next.start.y).toBeCloseTo(0, 6);
+    expect(next.end.x).toBeCloseTo(0, 6);
+    expect(next.end.y).toBeCloseTo(1000, 6);
+    // Length invariant; pivot (start) stays fixed.
+    expect(Math.hypot(next.end.x - next.start.x, next.end.y - next.start.y)).toBeCloseTo(1000, 6);
+  });
+
+  it('31. wall-rotation degenerate when cursor sits on the picked pivot', () => {
+    const entity = makeStraight();
+    const next = applyWallGripDrag('wall-rotation', {
+      originalParams: entity.params,
+      delta: { x: 0, y: 0 },
+      currentPos: { x: 250, y: 0 },
+      pivot: { x: 250, y: 0 }, // currentPos == pivot → zero-length vector
+    });
+    expect(next).toBe(entity.params);
+  });
 });

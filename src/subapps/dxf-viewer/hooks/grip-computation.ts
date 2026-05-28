@@ -72,6 +72,19 @@ export interface DxfGripDragPreview {
   slabGripKind?: SlabGripKind;
   slabOpeningGripKind?: SlabOpeningGripKind;
   openingGripKind?: OpeningGripKind;
+  /**
+   * ADR-363 Phase 1G — set when the active grip is a wall corner being moved via
+   * the hot-grip (click-click) state. Consumed by `useGripGhostPreview` to draw
+   * the dashed rubber-band leader from `anchorPos` → cursor (anchorPos + delta).
+   */
+  hotGrip?: boolean;
+  /**
+   * ADR-363 Phase 1G — rotation centre for the `wall-rotation` 3-click hot-grip.
+   * When set: (a) the live ghost rotates around it (passed to `applyWallGripDrag`
+   * as `pivot`), and (b) the rubber-band leader starts here (centre → cursor)
+   * instead of at `anchorPos`.
+   */
+  rotatePivot?: Point2D;
 }
 
 /** Grip interaction state for rendering pipeline */

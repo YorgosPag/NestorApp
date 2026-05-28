@@ -63,6 +63,14 @@ export interface WallGripDragInput {
   readonly delta: Point2D;
   /** Current world cursor position (used for thickness resolve). */
   readonly currentPos: Point2D;
+  /**
+   * ADR-363 Phase 1G — optional rotation pivot for `wall-rotation`. When set, the
+   * wall rotates around this point instead of its midpoint (the AutoCAD ROTATE
+   * "specify center" flow where the user picks an arbitrary rotation centre). The
+   * swept angle is still anchor-relative (`currentPos − delta` → `currentPos`),
+   * so there is no snap when rotation starts. Undefined → legacy midpoint pivot.
+   */
+  readonly pivot?: Point2D;
 }
 
 /**
@@ -142,9 +150,11 @@ const ROTATE_EPS = 1e-9;
  * `currentPos − delta`) about the midpoint, then spin both endpoints by it.
  */
 function rotateWall(input: Readonly<WallGripDragInput>): WallParams {
-  const { originalParams, currentPos, delta } = input;
-  const cx = (originalParams.start.x + originalParams.end.x) / 2;
-  const cy = (originalParams.start.y + originalParams.end.y) / 2;
+  const { originalParams, currentPos, delta, pivot } = input;
+  // ADR-363 Phase 1G — rotate around the picked pivot when supplied, else the
+  // wall midpoint (legacy drag-handle behaviour).
+  const cx = pivot ? pivot.x : (originalParams.start.x + originalParams.end.x) / 2;
+  const cy = pivot ? pivot.y : (originalParams.start.y + originalParams.end.y) / 2;
   const curDx = currentPos.x - cx;
   const curDy = currentPos.y - cy;
   const anchorDx = currentPos.x - delta.x - cx;

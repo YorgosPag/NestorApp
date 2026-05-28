@@ -1329,6 +1329,72 @@ offset = sign * (thicknessMm/2) * mmToSceneUnits(sceneUnits) * n
 - A keyboard shortcut to commit centered on click 2 (skipping alignment) is intentionally NOT provided — the user explicitly requested mandatory 3 clicks.
 - Curved + polyline kinds keep their existing flows. Curved already has a 3rd click (Bezier control); polyline uses Enter to finish. Adding a 4th alignment click on top is deferred until there is a concrete request.
 
+**Phase 1G — Hot-grip click-click move for the 4 corner grips** *(✅ IMPLEMENTED 2026-05-28)*
+
+**Motivation.** All wall grips used press-drag-release (mousedown → drag → mouseup commit) via `useUnifiedGripInteraction` (`idle → hovering → warm → dragging`). For the 4 asymmetric corner grips (Phase 1C-bis: `wall-corner-{start,end}-{pos,neg}`) the user requested the AutoCAD **hot grip** pattern: 1st click activates "move mode" (NOT a drag), the cursor moves the corner live with a dashed rubber-band leader + live wall ghost, and a 2nd click commits. Press-drag-release is removed **only** for these 4 corners; every other wall grip (start/end/midpoint/thickness/rotation/curve/vertex) keeps drag.
+
+**FSM extension.** `UnifiedGripPhase` gains `'hotGrip'` (distinct from `dragging` so the press-drag-release mouseup-commit logic does NOT fire for corners). Two refs drive it: `hotGripAwaitingFirstReleaseRef` (1st-click release vs later) and `hotGripMovedRef` (has the cursor left the anchor since arming):
+
+```
+mousedown on corner grip (phase≠hotGrip) → enter hotGrip (activeGrip, anchor=grip.pos, awaiting=true, moved=false)
+mouseup  (awaiting)                        → arm: clear awaiting, re-baseline moved=false, stay hot (NO commit/deselect)
+mousemove (hotGrip, moved>ε from anchor)   → setCurrentWorldPos + moved=true → live ghost + rubber band
+mousedown (phase=hotGrip, 2nd click)       → consume (suppress lasso/selection); commit fires on its mouseup
+mouseup  (!awaiting & moved)               → commit (delta = upWorldPos − anchor) → resetToIdle
+mouseup  (!awaiting & !moved)              → stay: redundant same-spot release → stay hot (NO reset)
+ESC / right-click (hotGrip)                → resetToIdle (cancel, no commit)
+selection change                           → reset refs (existing effect)
+```
+
+**Why the `stay` guard (the reset-on-release bug).** `handleMouseUp` is `async` with NO `await` before the hot-grip branch, so its `finally` (mutex release) runs **synchronously**. The canvas + container `onMouseUp` pair therefore both pass the mutex within one tick: without a guard the 2nd fire saw `awaiting=false` → `commit` → a zero-delta no-op commit that STILL ran `resetToIdle`, dropping back to `idle` on the 1st click. Symptom: the rubber-band only appeared while the button was held. Fix: a `commit` requires `moved=true`; a stray same-spot release (no intervening mousemove) resolves to `stay` and keeps the wall hot. This also makes press-drag-release on a corner resolve to `arm` (not commit), enforcing the click-click contract Giorgio asked for even when the user instinctively drags.
+
+**Forgiving entry.** On mousedown, if `findNearestGrip` just misses the handle but a wall corner grip is currently highlighted (`hoveredGrip`), that hovered corner is taken as the hit — "it's blue → the click grabs it", even with a slightly-off click.
+
+**Why commit on the 2nd mouseup (not mousedown):** `mouse-handler-up.ts` already applies OSNAP to the up world point, so the commit point is snapped — unlike the un-snapped grip mousedown path. The dispatcher `commitDxfGripDragModeAware` checks `grip.wallGripKind` first, so the corner always routes to `commitWallGripDrag` (parametric `moveCorner` + `UpdateWallParamsCommand`) regardless of GripMode. **No new transform/commit code** — Phase 1C-bis math is reused as-is.
+
+**onCanvasClick suppression.** The `handleGripMouseUp` projection returns `wasDragging` (now `|| phase==='hotGrip'`) which gates the upstream `onCanvasClick`, so neither the 1st-click release nor the commit deselects the wall. `isDraggingGrip`/`isFollowingGrip` also include `hotGrip` so the upstream snap applies to the live rubber-band move and the lasso gate stays closed on the 2nd click.
+
+**ADR-040 compliance.** Hot-grip state lives in `useUnifiedGripInteraction` as React state, exactly mirroring the existing `dragging` re-render path (no NEW store, no orchestrator `useSyncExternalStore`). The dashed rubber-band is drawn in the existing micro-leaf `useGripGhostPreview` (mounted via `GripDragPreviewMount`), not in any orchestrator.
+
+**Files.**
+
+- [x] **NEW** `hooks/grips/wall-hot-grip-fsm.ts` — pure (zero React) SSoT for the decisions: `WALL_CORNER_GRIP_KINDS`, `isWallCornerGripKind()`, `resolveHotGripMouseDown()` → `enter|consume|none`, `resolveHotGripMouseUp()` → `arm|set-base|stay|commit|none` (the `stay`/`set-base` actions land with 1G.2 below).
+- [x] **NEW** `hooks/grips/__tests__/wall-hot-grip-fsm.test.ts` — predicate (corner/move/rotate vs others + null) + every mousedown/mouseup transition across all phases/steps.
+- [x] `hooks/grips/unified-grip-types.ts` — `UnifiedGripPhase` += `'hotGrip'`.
+- [x] `hooks/grip-computation.ts` — `DxfGripDragPreview` += `hotGrip?: boolean`.
+- [x] `hooks/grips/grip-projections.ts` — `buildDxfDragPreview` guard accepts `hotGrip`, emits the `hotGrip` flag.
+- [x] `hooks/grips/useUnifiedGripInteraction.ts` — `hotGripAwaitingFirstReleaseRef` + `hotGripMovedRef`; `handleMouseDown` enter (with forgiving hovered-corner fallback) / consume; `handleMouseMove` full-rate follow + sets `moved` once the cursor leaves the anchor; `handleMouseUp` arm / stay / commit branch; `handleEscape` += hotGrip; `resetToIdle` + selection-change effect reset both refs; `dxfProjection` `isDxfFollowing` + suppress + `wasDragging` extensions.
+- [x] `hooks/grips/useGripContextMenuController.ts` — right-click during `hotGrip` aborts the move (`handleEscape`) instead of opening the grip menu.
+- [x] `hooks/tools/useGripGhostPreview.ts` — `drawFrame` strokes a dashed (`[6,4]`) leader anchor→cursor via `CoordinateTransforms.worldToScreen` when `dragPreview.hotGrip`, drawn before the ghost short-circuit so it shows even on a thickness clamp.
+
+**Phase 1G.2 — Move & Rotation glyphs (3-click with explicit base / centre pick)** *(✅ IMPLEMENTED 2026-05-28)*
+
+Extends the hot-grip flow to the **move glyph** (`wall-midpoint`, 4-arrow) and the **rotation glyph** (`wall-rotation`). Unlike corners (where the grip IS the anchor → 2 clicks), these use **3 clicks** so the user picks an explicit base point / rotation centre (Giorgio's choice, confirmed 2026-05-28):
+
+```
+MOVE:    click glyph → click = base point → move (rubber-band base→cursor, wall translates) → click = commit
+ROTATE:  click glyph → click = rotation centre → move (rubber-band centre→cursor, wall rotates around it) → click = commit
+```
+
+- **`hotGripOpRef`** ∈ `corner | move | rotate` + **`hotGripStepRef`** ∈ `await-base | tracking`. Corner enters straight into `tracking` (anchor = grip); move/rotate enter `await-base` (no anchor/preview until the centre/base is picked). The mouseup FSM gains `'set-base'` (the 2nd click that declares the base/centre, on mouseup so it is OSNAP-snapped).
+- **MOVE** reuses the existing `wall-midpoint` translate: anchor = base, `delta = cursor − base`, `moveMidpoint` translates the whole wall. The rubber-band is base→cursor (`anchorPos + delta`).
+- **ROTATE** rotates around the picked centre, not the wall midpoint. `rotateWall` gains an optional **`pivot`** (`WallGripDragInput.pivot`); the swept angle stays anchor-relative against a **reference arm** (the cursor at the first move after the centre pick) so there is no snap. The pivot+anchor reach the commit via **`WallRotateHotGripStore`** (the same store-bridge pattern the commit adapters already use for `GripBasePointStore` / `ShiftKeyTracker`, because the generic dispatcher only forwards `(grip, delta)`). The rubber-band starts at the centre (`rotatePivot`) → cursor.
+- Live ghost: `DxfGripDragPreview.rotatePivot` + `EntityPreviewTransform.rotatePivot` thread the centre to `applyWallGripDrag` so the preview rotates around it.
+- **Double-fire fix (2026-05-28).** The same-tick canvas+container mouseup pair collapsed move/rotate into 2 clicks: on the 1st click, `fire1='arm'` then `fire2` (still `await-base`, no mousemove between) prematurely resolved `'set-base'` at the glyph position — burning 2 steps in 1 click. Fix: `resolveHotGripMouseUp` now evaluates `!movedSinceArm → 'stay'` **before** the `await-base → 'set-base'` branch (order: `none → arm → stay → set-base → commit`), and `handleMouseMove` marks `hotGripMovedRef=true` on **any** real cursor move while `step==='await-base'`. A stray same-tick release produces no mousemove → stays `moved=false` → `'stay'`; only a deliberate 2nd click (preceded by movement) resolves `'set-base'`. Corners (2-click) are unaffected (they already require movement before commit).
+
+**Files (Phase 1G.2): 1 NEW + 6 MOD.**
+- [x] **NEW** `bim/walls/wall-rotate-hotgrip-store.ts` — `{ pivot, anchor }` commit-bridge singleton.
+- [x] `bim/walls/wall-grip-transforms.ts` — `WallGripDragInput.pivot?`; `rotateWall` rotates around `pivot ?? midpoint`.
+- [x] `hooks/grips/wall-hot-grip-fsm.ts` — `hotGripOpForKind` / `isWallHotGripKind` / `initialHotGripStep`; `resolveHotGripMouseUp(phase, awaiting, step, moved)` += `'set-base'`.
+- [x] `hooks/grip-computation.ts` + `rendering/ghost/apply-entity-preview.ts` — `rotatePivot?` threaded to `applyWallGripDrag` ghost.
+- [x] `hooks/tools/useGripGhostPreview.ts` — rubber-band start = `rotatePivot ?? anchorPos`.
+- [x] `hooks/grips/grip-parametric-commits.ts` — `commitWallGripDrag` reads `WallRotateHotGripStore` for `wall-rotation` (pivot + reference anchor).
+- [x] `hooks/grips/useUnifiedGripInteraction.ts` — `hotGripOpRef` / `hotGripStepRef` / `hotGripBaseRef`; enter is op-aware; `set-base` step; rotate reference-arm capture on first move; `dxfDragPreview` surfaces `rotatePivot`.
+
+**SRP split (file-size compliance, SOS N.7.1).** Phase 1G pushed `useUnifiedGripInteraction.ts` past the 500-line limit. The two large mouse-event bodies were extracted **verbatim** into **NEW** `hooks/grips/grip-mouse-handlers.ts` (`runGripMouseDown` / `runGripMouseUp`, driven by a destructured context object) — pure relocation, zero behaviour change. Hook drops to ~394 lines; the new module is ~406. The hook's `useCallback` wrappers just forward to the two functions with the same dependency arrays.
+
+**Out of scope.** No change to non-hot-grip wall grips (start/end/thickness/curve/vertex stay drag). Hot-grip is NOT added to stair/beam/slab/column grips. The corner `moveCorner` math is untouched.
+
 ### Phase 2 — Opening *(✅ CORE IMPLEMENTED 2026-05-18)*
 
 **Files added (Phase 2 core):**

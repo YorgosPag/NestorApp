@@ -30,6 +30,7 @@ import { UpdateBeamParamsCommand } from '../../core/commands/entity-commands/Upd
 import { UpdateColumnParamsCommand } from '../../core/commands/entity-commands/UpdateColumnParamsCommand';
 import { applyStairGripDrag } from '../../bim/stairs/stair-grips';
 import { applyWallGripDrag } from '../../bim/walls/wall-grips';
+import { WallRotateHotGripStore } from '../../bim/walls/wall-rotate-hotgrip-store';
 import { applyOpeningGripDrag } from '../../bim/walls/opening-grips';
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
@@ -109,14 +110,24 @@ export function commitWallGripDrag(
   if (candidate.type !== 'wall' || !candidate.params) return;
   const wall = candidate as WallEntity;
   const originalParams = wall.params;
+  // ADR-363 Phase 1G — the wall-rotation 3-click hot-grip rotates around a picked
+  // centre. The hook publishes {pivot, anchor} in WallRotateHotGripStore; the
+  // delta passed here is `cursor − anchor`, so `currentPos = anchor + delta` is
+  // the live cursor and `pivot` is the rotation centre. All other wall grips (and
+  // the legacy rotation drag) use the grip position as the anchor.
+  const rotateCtx = WallRotateHotGripStore.getSnapshot();
+  const useRotatePivot =
+    grip.wallGripKind === 'wall-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = {
-    x: grip.position.x + delta.x,
-    y: grip.position.y + delta.y,
+    x: anchor.x + delta.x,
+    y: anchor.y + delta.y,
   };
   const newParams = applyWallGripDrag(grip.wallGripKind, {
     originalParams,
     delta,
     currentPos,
+    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
   });
   const kind: WallKind = wall.kind ?? 'straight';
   const wallCmd = new UpdateWallParamsCommand(
