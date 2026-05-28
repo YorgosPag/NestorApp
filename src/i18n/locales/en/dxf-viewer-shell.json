@@ -1095,6 +1095,7 @@
         "lengthUnit": "m",
         "lengthIncrease": "Increase length",
         "lengthDecrease": "Decrease length",
+        "presetMenu": "Presets",
         "split": "Split",
         "close": "Close",
         "delete": "Delete",

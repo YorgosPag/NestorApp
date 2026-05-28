@@ -1,56 +1,122 @@
 'use client';
 
 /**
- * ADR-363 — Editable wall length field for the contextual Wall ribbon.
+ * ADR-363 — Editable wall dimension field (length / height / thickness) for the
+ * contextual Wall ribbon. ONE widget, three configs (Giorgio: "ίδιος κώδικας").
  *
- * Mirror του `RibbonStairDimensionsWidget` (meters read-out convention,
- * building-scale). Commit μετακινεί το `end` κατά μήκος του axis κρατώντας
- * `start` + bearing (Revit "location line" length edit) μέσω
- * `setWallLengthMeters` + `UpdateWallParamsCommand` (undo/redo + geometry
- * recompute). Straight-only — curved/polyline εμφανίζονται read-only.
+ * Each field:
+ *   - meters I/O, building-scale (mirror `RibbonStairDimensionsWidget`)
+ *   - `type=text` + `inputMode=decimal` → δέχεται ΚΑΙ τελεία ΚΑΙ κόμμα
+ *     (el-GR υποδιαστολή), normalize μέσω `normalizeNumber` SSoT
+ *   - optional dropdown με presets (height/thickness· length = free-form)
+ *   - custom stepper βελάκια (▲▼) + ArrowUp/Down
+ *   - background = `useSemanticColors().bg.primary` SSoT (ίδιο με τα Radix
+ *     Select combobox triggers του ribbon)
+ *   - real-time commit μέσω `UpdateWallParamsCommand` (typing → debounced·
+ *     preset/stepper/Enter/blur → immediate flush· ESC → cancel + revert)
  *
- * Input = `type="text"` + `inputMode="decimal"` ώστε να δέχεται ΚΑΙ τελεία ΚΑΙ
- * κόμμα (el-GR υποδιαστολή). Normalize μέσω `normalizeNumber` SSoT. Custom
- * stepper βελάκια (▲▼) αντί native number spinner (το `type=number` μπλοκάρει
- * το κόμμα ανάλογα με locale) — step 0.1 m, immediate commit, κρατούν το focus.
+ * length → μετακινεί `end` κατά μήκος axis (Revit location-line edit, straight
+ * only). height/thickness → set param σε mm (×1000· height/thickness ΠΑΝΤΑ mm).
  *
- * Live commit: typing → debounced (coalesce mid-type keystrokes σε 1 undo step),
- * steppers/Enter/blur → immediate flush, ESC → cancel + revert (escape-bus SSoT).
- *
- * ADR-040 micro-leaf: selection + level-scene subscribed στο leaf, όχι στο
- * orchestrator panel.
+ * ADR-040 micro-leaf: selection + level-scene subscribed στο leaf.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { useLevels } from '../../../systems/levels';
 import { useUniversalSelection } from '../../../systems/selection';
 import { useEscapeHandler, ESC_PRIORITY } from '../../../systems/escape-bus';
 import { normalizeNumber } from '../../../systems/dynamic-input/utils/number';
 import { isWallEntity } from '../../../types/entities';
-import type { WallEntity } from '../../../bim/types/wall-types';
+import type { WallEntity, WallParams } from '../../../bim/types/wall-types';
 import { setWallLengthMeters } from '../../../bim/walls/wall-length-edit';
+import {
+  setWallHeightMeters,
+  setWallThicknessMeters,
+} from '../../../bim/walls/wall-dimension-edit';
 import { useWallParamsDispatcher } from '../../wall-advanced-panel/commands/dispatchWallParamPatch';
+
+export type WallDimension = 'length' | 'height' | 'thickness';
+
+interface DimensionConfig {
+  readonly labelKey: string;
+  /** Dropdown presets in meters (empty = free-form, no dropdown). */
+  readonly presets: readonly number[];
+  /** Stepper increment (meters). */
+  readonly step: number;
+  /** Stepper floor (meters). */
+  readonly min: number;
+  /** Editable only on straight walls (length depends on a single axis). */
+  readonly straightOnly: boolean;
+  read(wall: WallEntity): number | null;
+  commit(params: WallParams, meters: number): Partial<WallParams> | null;
+}
+
+const CONFIGS: Record<WallDimension, DimensionConfig> = {
+  length: {
+    labelKey: 'ribbon.commands.wallEditor.length',
+    presets: [],
+    step: 0.1,
+    min: 0.1,
+    straightOnly: true,
+    read: (w) => w.geometry.length,
+    commit: (p, m) => {
+      const next = setWallLengthMeters(p, m);
+      if (!next) return null;
+      if (
+        Math.abs(next.end.x - p.end.x) < 1e-6 &&
+        Math.abs(next.end.y - p.end.y) < 1e-6
+      ) return null;
+      return { end: next.end };
+    },
+  },
+  height: {
+    labelKey: 'ribbon.commands.wallEditor.height',
+    presets: [2.4, 2.7, 3.0, 3.3, 3.6, 4.0],
+    step: 0.1,
+    min: 0.1,
+    straightOnly: false,
+    read: (w) => w.params.height / 1000,
+    commit: (p, m) => setWallHeightMeters(p, m),
+  },
+  thickness: {
+    labelKey: 'ribbon.commands.wallEditor.thickness',
+    presets: [0.1, 0.15, 0.2, 0.25, 0.3, 0.5],
+    step: 0.05,
+    min: 0.05,
+    straightOnly: false,
+    read: (w) => w.params.thickness / 1000,
+    commit: (p, m) => setWallThicknessMeters(p, m),
+  },
+};
 
 /** Debounce window for live commit while typing. */
 const COMMIT_DEBOUNCE_MS = 200;
-/** Stepper increment (meters). */
-const STEP_M = 0.1;
-/** Minimum length (meters) — mirrors MIN_WALL_LENGTH_MM clamp in setWallLengthMeters. */
-const MIN_M = 0.1;
 
 function toDraft(meters: number | null): string {
   if (meters === null || !Number.isFinite(meters)) return '';
   return meters.toFixed(2);
 }
 
-/** Parse a draft string accepting both '.' and ',' as the decimal separator. */
+/** Parse a draft accepting both '.' and ',' as the decimal separator. */
 function parseMeters(raw: string): number {
   return Number.parseFloat(normalizeNumber(raw.trim()));
 }
 
-export function RibbonWallLengthWidget(): React.JSX.Element {
+export function RibbonWallDimensionWidget(
+  { dimension }: { readonly dimension: WallDimension },
+): React.JSX.Element {
+  const cfg = CONFIGS[dimension];
   const { t } = useTranslation('dxf-viewer-shell');
+  const colors = useSemanticColors();
   const levelManager = useLevels();
   const universalSelection = useUniversalSelection();
   const dispatchPatch = useWallParamsDispatcher({ levelManager });
@@ -65,8 +131,8 @@ export function RibbonWallLengthWidget(): React.JSX.Element {
     return e;
   }, [levelManager, universalSelection]);
 
-  const currentMeters = wall ? wall.geometry.length : null;
-  const editable = !!wall && wall.kind === 'straight';
+  const currentMeters = wall ? cfg.read(wall) : null;
+  const editable = !!wall && (!cfg.straightOnly || wall.kind === 'straight');
 
   const initialString = useMemo(() => toDraft(currentMeters), [currentMeters]);
   const [draft, setDraft] = useState<string>(initialString);
@@ -74,9 +140,8 @@ export function RibbonWallLengthWidget(): React.JSX.Element {
   const focusedRef = useRef<boolean>(false);
   const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Reset draft when the selection / external geometry changes — but NOT while
-  // the user is editing: a live commit re-renders the scene and would otherwise
-  // clobber the in-flight draft / cursor mid-type.
+  // Reset draft on selection / external change — NOT while editing (a live
+  // commit re-renders the scene and would clobber the in-flight draft).
   useEffect(() => {
     if (!focusedRef.current) setDraft(initialString);
   }, [initialString]);
@@ -88,21 +153,14 @@ export function RibbonWallLengthWidget(): React.JSX.Element {
     }
   }, []);
 
-  // Cancel any pending commit on unmount.
   useEffect(() => clearCommitTimer, [clearCommitTimer]);
 
-  // Core numeric commit — moves `end`, skips no-op dispatch so an unchanged
-  // value (debounce re-fire / clamped step) never pollutes the undo stack.
   const commitMeters = useCallback((meters: number) => {
     if (!wall) return;
-    const next = setWallLengthMeters(wall.params, meters);
-    if (!next) return;
-    if (
-      Math.abs(next.end.x - wall.params.end.x) < 1e-6 &&
-      Math.abs(next.end.y - wall.params.end.y) < 1e-6
-    ) return;
-    dispatchPatch(wall, { end: next.end });
-  }, [wall, dispatchPatch]);
+    const patch = cfg.commit(wall.params, meters);
+    if (!patch) return; // no-op / invalid → skip dispatch (no undo pollution)
+    dispatchPatch(wall, patch);
+  }, [wall, cfg, dispatchPatch]);
 
   const commitDraft = useCallback((raw: string) => {
     const parsed = parseMeters(raw);
@@ -110,8 +168,7 @@ export function RibbonWallLengthWidget(): React.JSX.Element {
     commitMeters(parsed);
   }, [initialString, commitMeters]);
 
-  // Typing → debounced commit (coalesces mid-type keystrokes). Filters to
-  // digits + the two decimal separators so junk chars never enter the draft.
+  // Typing → debounced commit (coalesces mid-type keystrokes into 1 undo step).
   const onChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^\d.,]/g, '');
     setDraft(value);
@@ -128,20 +185,25 @@ export function RibbonWallLengthWidget(): React.JSX.Element {
     commitDraft(draft);
   }, [clearCommitTimer, commitDraft, draft]);
 
-  // Stepper (buttons + Arrow keys) — immediate commit. Base = current draft if
-  // valid, else the committed geometry length, so steps never drift.
+  // Stepper + Arrow keys — immediate commit. Base = valid draft else committed.
   const stepBy = useCallback((delta: number) => {
     const parsed = parseMeters(draft);
     const base = Number.isNaN(parsed) ? (currentMeters ?? 0) : parsed;
-    const nextVal = Math.max(MIN_M, Math.round((base + delta) * 100) / 100);
+    const nextVal = Math.max(cfg.min, Math.round((base + delta) * 100) / 100);
     setDraft(nextVal.toFixed(2));
     clearCommitTimer();
     commitMeters(nextVal);
-  }, [draft, currentMeters, clearCommitTimer, commitMeters]);
+  }, [draft, currentMeters, cfg.min, clearCommitTimer, commitMeters]);
+
+  const selectPreset = useCallback((meters: number) => {
+    setDraft(meters.toFixed(2));
+    clearCommitTimer();
+    commitMeters(meters);
+  }, [clearCommitTimer, commitMeters]);
 
   // ESC reverts draft + blurs (ADR-364 escape-bus SSoT — owns ESC while focused).
   useEscapeHandler({
-    id: 'ribbon-wall-length',
+    id: `ribbon-wall-${dimension}`,
     priority: ESC_PRIORITY.POPOVER_DROPDOWN,
     allowWhenEditable: true,
     canHandle: () => focusedRef.current,
@@ -159,15 +221,16 @@ export function RibbonWallLengthWidget(): React.JSX.Element {
       e.currentTarget.blur();
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      stepBy(STEP_M);
+      stepBy(cfg.step);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      stepBy(-STEP_M);
+      stepBy(-cfg.step);
     }
-  }, [stepBy]);
+  }, [stepBy, cfg.step]);
 
-  const label = t('ribbon.commands.wallEditor.length');
+  const label = t(cfg.labelKey);
   const unit = t('ribbon.commands.wallEditor.lengthUnit');
+  const inputBg = colors.bg.primary;
 
   if (!wall) {
     return (
@@ -188,7 +251,7 @@ export function RibbonWallLengthWidget(): React.JSX.Element {
     );
   }
 
-  // Keep focus in the input when a stepper is pressed (no blur-commit race).
+  // Keep input focus when a stepper is pressed (no blur-commit race).
   const preventBlur = (e: React.MouseEvent): void => e.preventDefault();
 
   return (
@@ -197,7 +260,7 @@ export function RibbonWallLengthWidget(): React.JSX.Element {
       <span className="dxf-ribbon-wall-length-field">
         <input
           ref={inputRef}
-          className="dxf-ribbon-wall-length-input"
+          className={cn('dxf-ribbon-wall-length-input', inputBg)}
           type="text"
           inputMode="decimal"
           autoComplete="off"
@@ -208,24 +271,45 @@ export function RibbonWallLengthWidget(): React.JSX.Element {
           onKeyDown={onKeyDown}
           aria-label={label}
         />
+        {cfg.presets.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                tabIndex={-1}
+                className={cn('dxf-ribbon-wall-length-preset', inputBg)}
+                aria-label={t('ribbon.commands.wallEditor.presetMenu')}
+              >
+                <span aria-hidden="true">▾</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {cfg.presets.map((preset) => (
+                <DropdownMenuItem key={preset} onSelect={() => selectPreset(preset)}>
+                  {`${preset.toFixed(2)} ${unit}`}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         <span className="dxf-ribbon-wall-length-steppers">
           <button
             type="button"
             tabIndex={-1}
-            className="dxf-ribbon-wall-length-step"
+            className={cn('dxf-ribbon-wall-length-step', inputBg)}
             aria-label={t('ribbon.commands.wallEditor.lengthIncrease')}
             onMouseDown={preventBlur}
-            onClick={() => stepBy(STEP_M)}
+            onClick={() => stepBy(cfg.step)}
           >
             <span aria-hidden="true">▲</span>
           </button>
           <button
             type="button"
             tabIndex={-1}
-            className="dxf-ribbon-wall-length-step"
+            className={cn('dxf-ribbon-wall-length-step', inputBg)}
             aria-label={t('ribbon.commands.wallEditor.lengthDecrease')}
             onMouseDown={preventBlur}
-            onClick={() => stepBy(-STEP_M)}
+            onClick={() => stepBy(-cfg.step)}
           >
             <span aria-hidden="true">▼</span>
           </button>

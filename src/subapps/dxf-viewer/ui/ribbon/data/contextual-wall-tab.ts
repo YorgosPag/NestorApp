@@ -38,24 +38,6 @@ const WALL_CATEGORY_OPTIONS = [
   { value: 'fence',     labelKey: 'ribbon.commands.wallEditor.category.fence',     isLiteralLabel: false },
 ] as const;
 
-const HEIGHT_MM_OPTIONS = [
-  { value: '2400', labelKey: '2400', isLiteralLabel: true },
-  { value: '2700', labelKey: '2700', isLiteralLabel: true },
-  { value: '3000', labelKey: '3000', isLiteralLabel: true },
-  { value: '3300', labelKey: '3300', isLiteralLabel: true },
-  { value: '3600', labelKey: '3600', isLiteralLabel: true },
-  { value: '4000', labelKey: '4000', isLiteralLabel: true },
-] as const;
-
-const THICKNESS_MM_OPTIONS = [
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '150', labelKey: '150', isLiteralLabel: true },
-  { value: '200', labelKey: '200', isLiteralLabel: true },
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-] as const;
-
 const FLIP_OPTIONS = [
   { value: 'false', labelKey: 'ribbon.commands.wallEditor.flip.off', isLiteralLabel: false },
   { value: 'true',  labelKey: 'ribbon.commands.wallEditor.flip.on',  isLiteralLabel: false },
@@ -122,38 +104,39 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
           isInFlyout: false,
           buttons: [
             {
-              type: 'combobox',
+              // Editable height (meters) — typing (. or ,) + preset dropdown +
+              // steppers + real-time commit. RibbonWallDimensionWidget SSoT.
+              type: 'widget',
               size: 'small',
+              widgetId: 'wall-height',
               command: {
                 id: 'wall.height',
                 labelKey: 'ribbon.commands.wallEditor.height',
-                commandKey: WALL_RIBBON_KEYS.params.height,
-                comboboxWidthPx: 80,
-                options: HEIGHT_MM_OPTIONS,
+                commandKey: 'wall.height.field',
               },
             },
             {
-              type: 'combobox',
+              // Editable thickness (meters) — same widget as height.
+              type: 'widget',
               size: 'small',
+              widgetId: 'wall-thickness',
               command: {
                 id: 'wall.thickness',
                 labelKey: 'ribbon.commands.wallEditor.thickness',
-                commandKey: WALL_RIBBON_KEYS.params.thickness,
-                comboboxWidthPx: 80,
-                options: THICKNESS_MM_OPTIONS,
+                commandKey: 'wall.thickness.field',
               },
             },
             {
               // Editable axis length (meters). Read = computed geometry length;
               // commit moves the end endpoint along the axis (Revit location-line
-              // length edit). Widget-based since length is free-form, not a preset.
+              // length edit). Free-form (no preset dropdown), straight-only.
               type: 'widget',
               size: 'small',
               widgetId: 'wall-length',
               command: {
                 id: 'wall.length',
                 labelKey: 'ribbon.commands.wallEditor.length',
-                commandKey: 'wall.length.readout',
+                commandKey: 'wall.length.field',
               },
             },
           ],

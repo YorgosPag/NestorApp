@@ -28,7 +28,7 @@ import { VisibilityGraphicsPanel } from '../panels/VisibilityGraphicsPanel';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 import { RibbonStairFloorInfoWidget } from './RibbonStairFloorInfoWidget';
 import { RibbonStairDimensionsWidget } from './RibbonStairDimensionsWidget';
-import { RibbonWallLengthWidget } from './RibbonWallLengthWidget';
+import { RibbonWallDimensionWidget } from './RibbonWallDimensionWidget';
 import { MultiSelectionCommonPropertiesPanel } from './MultiSelectionCommonPropertiesPanel';
 import { MultiSelectionFilterPanel } from './MultiSelectionFilterPanel';
 import { CurrentLayerPicker } from '../../components/layer-picker/CurrentLayerPicker';
@@ -93,7 +93,13 @@ function renderButton(button: RibbonButton): React.ReactNode {
       return <RibbonStairDimensionsWidget key="stair-dimensions-widget" />;
     }
     if (button.widgetId === 'wall-length') {
-      return <RibbonWallLengthWidget key="wall-length-widget" />;
+      return <RibbonWallDimensionWidget key="wall-length-widget" dimension="length" />;
+    }
+    if (button.widgetId === 'wall-height') {
+      return <RibbonWallDimensionWidget key="wall-height-widget" dimension="height" />;
+    }
+    if (button.widgetId === 'wall-thickness') {
+      return <RibbonWallDimensionWidget key="wall-thickness-widget" dimension="thickness" />;
     }
     if (button.widgetId === 'multi-selection-common-properties') {
       return <MultiSelectionCommonPropertiesPanel key="multi-selection-common-widget" />;

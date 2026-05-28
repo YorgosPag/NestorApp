@@ -886,13 +886,14 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
   height: 22px;
 }
 
+/* Background-color is SSoT via `useSemanticColors().bg.primary` (bg-background),
+   same as the Radix Select combobox triggers — applied as a className, NOT here. */
 .dxf-ribbon-wall-length-input {
   height: 22px;
   width: 64px;
   padding: 0 6px;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  background-color: var(--ribbon-input-bg, var(--ribbon-bg));
   color: var(--ribbon-text);
   border: 1px solid var(--ribbon-border, transparent);
   border-radius: 3px 0 0 3px;
@@ -901,6 +902,24 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
 .dxf-ribbon-wall-length-input:focus-visible {
   outline: 2px solid var(--ribbon-focus, currentColor);
   outline-offset: 1px;
+}
+
+.dxf-ribbon-wall-length-preset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  padding: 0;
+  font-size: 8px;
+  line-height: 1;
+  color: var(--ribbon-text-muted);
+  border: 1px solid var(--ribbon-border, transparent);
+  border-left: none;
+  cursor: pointer;
+}
+
+.dxf-ribbon-wall-length-preset:hover {
+  color: var(--ribbon-text);
 }
 
 .dxf-ribbon-wall-length-steppers {
@@ -918,7 +937,6 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
   font-size: 7px;
   line-height: 1;
   color: var(--ribbon-text-muted);
-  background-color: var(--ribbon-input-bg, var(--ribbon-bg));
   border: 1px solid var(--ribbon-border, transparent);
   border-left: none;
   cursor: pointer;
@@ -935,7 +953,6 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
 
 .dxf-ribbon-wall-length-step:hover {
   color: var(--ribbon-text);
-  background-color: var(--ribbon-hover-bg, var(--ribbon-bg));
 }
 
 .dxf-ribbon-multi-filter {
