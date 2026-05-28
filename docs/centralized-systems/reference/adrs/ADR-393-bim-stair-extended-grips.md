@@ -1,6 +1,6 @@
 # ADR-393 — BIM Stair Extended Parametric Grips (Industry-Aligned Symmetric Pattern)
 
-**Status**: 🟢 IMPLEMENTED v1 + 🟡 v2 Phase 1 DONE / Phase 2 PENDING (see §12 — grip UX redesign, 2026-05-28, 29/29 tests PASS)
+**Status**: 🟢 IMPLEMENTED v1 + v2 Phase 1+2 DONE (see §12 — grip UX redesign, 2026-05-28, 37/37 tests PASS)
 **Date**: 2026-05-27 (v1) · 2026-05-28 (v2)
 **Category**: Drawing System / DXF Viewer / BIM
 **Author**: Giorgio Pagonis + Claude (Opus 4.7)
@@ -282,6 +282,7 @@ Giorgio SSoT review αποκάλυψε δύο διορθώσεις που έγι
 
 ## 10. Changelog
 
+- **2026-05-28** (v2 Phase 2, Opus 4.7) — **L/U/Γ corner grips** (§12.5). (1) `getStairGrips` branch split: `hasSplitGrip` (l-shape/u-shape/gamma) → `pushFlightBasedCorners` (4 corners, positions READ from `stringers` endpoints + classified by perp side) + `pushLandingGrips`, width/length SUPPRESSED; curved variants keep on-axis width/length. (2) `applyStairGripDrag` corner cases → `moveCornerDispatch`: straight keeps `moveCorner`, split → new `moveCornerMultiFlight` (perp→width + start-only base recenter; axial start→`flightSplit[0]`+base forward; axial end→`flightSplit[last]` on the last flight's direction). (3) Last-flight direction read from `walkline` (SSoT, no turn-math dup) → `StairGeometry` threaded into `StairGripDragInput`; `commitStairGripDrag` passes `stair.geometry`. (4) Math: `flightCount` / `setFlightSplitCount` / `lastSegmentDir` added to `stair-grip-math.ts`; legacy `flightSplitFirst` folded into `flightCount`. 5 code files. 37/37 tests PASS (8 new: l/u/gamma emit + positions + perp/axial transforms + metre-scene + last-flight-dir guard), tsc clean. **Phase 2 CLOSED — ADR-393 v2 COMPLETE.**
 - **2026-05-28** (v2 Phase 1, Opus 4.7) — **Grip UX redesign** (§12). (1) `stair-base` MOVE handle relocated to the walkline arc-midpoint + 4-arrow icon glyph; `stair-direction` ROTATION handle relocated to front-centre (base − offset·u) + curved-arrow icon glyph. (2) `rotateDirection` made anchor-relative (was absolute atan2 → would flip the stair when grabbing the off-axis front handle). (3) **straight** stairs SUPPRESS `stair-width`/`stair-length`/`stair-start-side` — the 4 corners own both resize axes (Q2 superseded); transforms + union members kept (corners reuse them). L/U/Γ + curved keep width/length unchanged this phase. (4) Glyph plumbing: `GripShape` += `'move'|'rotation'`; rendering `GripInfo.shape?` hint (type-only import); `StairRenderer.getGrips` maps kind→shape via new `stairGripGlyphShape()`; `GripPhaseRenderer.renderStandardGrips` honours `grip.shape`; `GripShapeRenderer` draws the two glyphs. 9 files. 29/29 tests PASS, tsc clean. **Phase 2 PENDING**: hide width/length on L/U/Γ + add corners there (positions from `geometry.stringers`, multi-flight transforms).
 - **2026-05-28** (SSoT review) — Two on-the-spot fixes post Giorgio review (§8.1): (1) removed duplicate `unitVectorFromDirection`/`perpUnit`, now consume `directionToUnitVector`/`perp` from `stair-geometry-shared`; (2) scaled the 100 mm direction/mid-front handle offset via `mmFactorFromWidth` SSoT → fixes 1000×-off-screen handles in metre scenes (G1 pre-existing + G11 new). Added metre-scene regression test 5b. Removed dead `DEG_TO_RAD`. Cross-BIM-grip duplication (project2D / corner-decompose math / scene-floor) flagged to pending-ratchet (§8.2). 27/27 tests PASS.
 - **2026-05-28** — Phase A1+A2+B1+B2 IMPLEMENTED (Opus 4.7). 9 new `StairGripKind` members + `stair-split` removed. `stair-grips.ts` split into 3 modules (math / transforms / positions) to stay under the 500-line ceiling (N.7.1). Corner transforms mirror `wall-grips.ts:moveCorner` (width↔thickness, basePoint/totalRun↔start/end). Per-flight grips (G12/G13) both reapportion `flightSplit` via run-axis projection (landing slides as a rigid block). Landing depth/corner-radius reuse existing `landingDepth`/`landingCornerRadius` fields → zero data-model change. 26/26 tests PASS. Status 🟢 APPROVED → 🟢 IMPLEMENTED.
@@ -308,17 +309,23 @@ handles να κρύβονται. Επίσης restyle των move/rotation handl
 | Phase | Scope | Status |
 |-------|-------|--------|
 | **1** | move/rotation relocate + glyphs · anchor-relative rotation · hide width/length/mid-front στην **ίσια** · καμπύλες αμετάβλητες · tests | ✅ DONE 2026-05-28 |
-| **2** | **L/U/Γ**: hide width/length + add 4 corners (θέσεις από `geometry.stringers` · multi-flight transforms: perp→width, axial start→`flightSplit[0]`, axial end→`flightSplit[last]`) + tests | ❌ PENDING |
+| **2** | **L/U/Γ**: hide width/length + add 4 corners (θέσεις από `geometry.stringers` · multi-flight transforms: perp→width, axial start→`flightSplit[0]`, axial end→`flightSplit[last]`) + tests | ✅ DONE 2026-05-28 |
 
 ### 12.3 Glyph render path (Phase 1)
 `getStairGrips` (stairGripKind) → `StairRenderer.getGrips` map kind→`shape` via `stairGripGlyphShape()` → `GripInfo.shape?` (rendering type, type-only import) → `GripPhaseRenderer.renderStandardGrips` (`grip.shape ?? 'square'`) → `GripShapeRenderer.renderShape` (`'move'` 4-arrow / `'rotation'` curved-arrow). SSoT mapping = `stairGripGlyphShape` (tested).
 
-### 12.4 Emit ανά variant (v2 Phase 1)
+### 12.4 Emit ανά variant (v2 Phase 1+2)
 | Variant | Grips | Count |
 |---------|-------|-------|
 | `straight` | move + rotation + 4 corners | **6** |
-| `l-shape`/`u-shape`/`gamma` | move + rotation + width + length + landing grips (Phase 1· corners → Phase 2) | 7-9 |
+| `l-shape`/`u-shape`/`gamma` | move + rotation + 4 corners + landing grips (Phase 2· width/length κρυμμένα) | 8-10 |
 | καμπύλες (spiral/helical/elliptical/winder/triangular×2/sketch/v-shape) | move + rotation + width + length | **4** |
+
+### 12.5 Phase 2 — multi-flight corner mechanics (2026-05-28)
+- **Θέσεις (read-from-geometry SSoT)**: start corners = `geometry.stringers.{outer,inner}[0]` (entry flight-1)· end corners = `…[last]` (exit τελευταίου flight). Left/right ταξινόμηση με dot στο perp του οικείου flight (start → `perp(u1)`· end → `perp(u')`), ΟΧΙ υπόθεση outer=left.
+- **`u'` (τελευταίο flight dir)**: `lastSegmentDir(geometry.walkline)` — όχι re-derive από turn params (θα ήταν duplicate των geometry builders, N.0.2). Το `geometry` περνά πλέον στο `StairGripDragInput` (call-site `commitStairGripDrag` το έχει διαθέσιμο).
+- **Transforms (`moveCornerMultiFlight`)**: perp → ενιαίο scalar `width` (clamp scene-floor)· start corner re-centers `basePoint` κατά perp/2·`p1` (αντίθετη όψη flight-1 αγκυρωμένη)· end corner αφήνει base αγκυρωμένο στο flight-1. Axial start → `flightSplit[0] ∓ round(axial/tread)` + base forward· axial end → `flightSplit[last] ± steps`, base fixed. `stepCount` ακολουθεί το flight delta. Straight αμετάβλητο (`moveCornerDispatch`: straight → υπάρχον `moveCorner`).
+- **Render**: ΚΑΜΙΑ αλλαγή — οι γωνίες είναι square (`stairGripGlyphShape` default), ήδη ζωγραφισμένες από Phase 1.
 
 ---
 

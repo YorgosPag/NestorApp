@@ -72,6 +72,9 @@ export function commitStairGripDrag(
     originalParams,
     delta,
     currentPos,
+    // ADR-393 v2 Phase 2 — multi-flight corner transforms read the last flight's
+    // direction from the walkline; supply the drag-start geometry as that SSoT.
+    geometry: stair.geometry,
   });
   const command = new UpdateStairParamsCommand(
     grip.entityId,
@@ -129,26 +132,6 @@ export function commitWallGripDrag(
     wallCmd, grip.entityId, originalParams, newParams, sceneManager, true,
   );
   deps.execute(command);
-  // TEMP DIAGNOSTIC (ADR-363 wall+opening grip revert) — REMOVE after root cause.
-  // Shows: command type (CompoundCommand ⇒ wall+opening) vs intended params vs
-  // scene-actual immediately + after the 800ms persist window. Sync revert ⇒
-  // immediate==OLD (CompoundCommand rollback); async revert ⇒ immediate==NEW but
-  // after800==OLD (persistence/snapshot overwrite).
-  const readWall = (): unknown => {
-    const w = sceneManager.getEntity(grip.entityId) as unknown as WallEntity | undefined;
-    if (!w) return null;
-    return { t: w.params.thickness, sx: w.params.start.x, sy: w.params.start.y, ex: w.params.end.x, ey: w.params.end.y };
-  };
-  // eslint-disable-next-line no-console
-  console.warn(
-    `[WALL-GRIP-DEBUG] cmd=${(command as { constructor?: { name?: string } }).constructor?.name} kind=${grip.wallGripKind}`,
-    'applied=', { t: newParams.thickness, sx: newParams.start.x, ex: newParams.end.x },
-    'immediate=', readWall(),
-  );
-  setTimeout(() => {
-    // eslint-disable-next-line no-console
-    console.warn('[WALL-GRIP-DEBUG] after800ms=', readWall());
-  }, 800);
   EventBus.emit('bim:wall-params-updated', { wallId: grip.entityId });
 }
 

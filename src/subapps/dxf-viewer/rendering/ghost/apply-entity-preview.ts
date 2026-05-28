@@ -181,6 +181,11 @@ export function applyEntityPreview(
       originalParams: stair.params,
       delta,
       currentPos,
+      // ADR-393 v2 Phase 2 — multi-flight corner transforms read the last
+      // flight's direction from the walkline; supply geometry so the live ghost
+      // matches the commit path (otherwise an L/U/Γ end-corner preview would
+      // decompose on flight-1's axis and snap on release).
+      geometry: stair.geometry,
     });
     if (newParams === stair.params) return entity;
     const newGeometry = computeStairGeometry(newParams);

@@ -45,6 +45,8 @@ import {
   project2D,
   polygonCentroid2D,
   polylineArcMidpoint,
+  lastSegmentDir,
+  flightCount,
 } from './stair-grip-math';
 import { mmFactorFromWidth } from './stair-floor-link';
 
@@ -125,14 +127,19 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
     // axial→length, opposite face anchored). The transforms + union members are
     // kept (the corners reuse them); they are simply not emitted here.
     pushStraightGrips(grips, entity, base, u, p);
+  } else if (hasSplitGrip(params.variant)) {
+    // ADR-393 v2 Phase 2 — L/U/Γ: the on-axis width + length handles are
+    // SUPPRESSED here too; 4 corner grips (positions READ from the computed
+    // stringer endpoints, SSoT) own width + per-flight length. Landing grips
+    // stay. The end corner sits on the LAST flight (a different direction than
+    // the start corner — the stair bends at the landing).
+    pushFlightBasedCorners(grips, entity, u, p);
+    pushLandingGrips(grips, entity, base, u, p);
   } else {
-    // Non-straight (L/U/Γ + curved): keep the axis width + length handles.
-    // ADR-393 v2 Phase 2 will replace them with corners on L/U/Γ; curved
-    // variants keep them permanently (no rectangular footprint → no corners).
+    // Curved (spiral/helical/elliptical/winder/triangular×2/sketch/v-shape):
+    // no rectangular footprint → keep the on-axis width + length handles
+    // permanently (no corners make sense on an arc).
     pushAxisWidthLength(grips, entity, base, u, p);
-    if (hasSplitGrip(params.variant)) {
-      pushLandingGrips(grips, entity, base, u, p);
-    }
   }
 
   return grips;
@@ -219,6 +226,72 @@ function pushStraightGrips(
   // retained for backward-compat / Phase-2 reuse.
 }
 
+// ─── ADR-393 v2 Phase 2 — flight-based corners (L/U/Γ) ───────────────────────
+
+/** Signed side of `pt` relative to `ref` along `perpDir` (>0 ⇒ +perp = left). */
+function sidePerp(pt: Point2D, ref: Point2D, perpDir: { x: number; y: number }): number {
+  return (pt.x - ref.x) * perpDir.x + (pt.y - ref.y) * perpDir.y;
+}
+
+/**
+ * Emit the 4 asymmetric corner grips for a split variant (l-shape / u-shape /
+ * gamma). Positions are READ from the computed geometry (`stringers` endpoints
+ * + `walkline`) — the SSoT rule: grip positions come from geometry, never
+ * re-derived from raw mm params (off-screen-in-metre-scenes class of bug).
+ *
+ * The start corners are the entry edge of flight-1 (`stringers.*[0]`); the end
+ * corners are the exit edge of the LAST flight (`stringers.*[last]`). Each pair
+ * is classified left/right by the side of its flight's perpendicular it sits on
+ * (start uses flight-1's perp `p`, end uses the last segment's perp) so the kind
+ * matches the transform's `perpSign` (+1 = left).
+ */
+function pushFlightBasedCorners(
+  grips: GripInfo[],
+  entity: Readonly<StairEntity>,
+  u: { x: number; y: number },
+  p: { x: number; y: number },
+): void {
+  const { geometry, params } = entity;
+  const walk = geometry.walkline;
+  const outer = geometry.stringers.outer;
+  const inner = geometry.stringers.inner;
+
+  // Defensive: geometry not computed yet → fall back to flight-1 footprint.
+  if (walk.length < 2 || outer.length < 1 || inner.length < 1) {
+    pushStraightGrips(grips, entity, project2D(params.basePoint), u, p);
+    return;
+  }
+
+  const startRef = project2D(walk[0]);
+  const endRef = project2D(walk[walk.length - 1]);
+  const pLast = perpUnit(lastSegmentDir(walk) ?? u);
+
+  const startA = project2D(outer[0]);
+  const startB = project2D(inner[0]);
+  const endA = project2D(outer[outer.length - 1]);
+  const endB = project2D(inner[inner.length - 1]);
+
+  const startLeftIsA = sidePerp(startA, startRef, p) >= 0;
+  const endLeftIsA = sidePerp(endA, endRef, pLast) >= 0;
+
+  const corners: ReadonlyArray<{ pos: Point2D; kind: GripInfo['stairGripKind'] }> = [
+    { pos: startLeftIsA ? startA : startB, kind: 'stair-corner-start-left' },
+    { pos: startLeftIsA ? startB : startA, kind: 'stair-corner-start-right' },
+    { pos: endLeftIsA ? endA : endB, kind: 'stair-corner-end-left' },
+    { pos: endLeftIsA ? endB : endA, kind: 'stair-corner-end-right' },
+  ];
+  for (const c of corners) {
+    grips.push({
+      entityId: entity.id,
+      gripIndex: grips.length,
+      type: 'vertex',
+      position: c.pos,
+      movesEntity: false,
+      stairGripKind: c.kind,
+    });
+  }
+}
+
 // ─── ADR-393 Phase B1 + B2 — landing edge + depth + corner-radius grips ──────
 
 interface LandingFrameBox {
@@ -257,7 +330,7 @@ function pushLandingGrips(
   const landing = geometry.landings.length > 0 ? geometry.landings[0] : undefined;
 
   // Flight-1 length along u (for fallbacks when no landing geometry exists yet).
-  const n1 = flightSplitFirst(variant);
+  const n1 = flightCount(variant, 'first');
   const flight1Run = n1 * params.tread;
   const fallbackDepth = params.width;
 
@@ -318,17 +391,6 @@ function pushLandingGrips(
       stairGripKind: 'stair-landing-corner-radius',
     });
   }
-}
-
-function flightSplitFirst(variant: StairVariantParams): number {
-  if (
-    variant.kind === 'l-shape' ||
-    variant.kind === 'u-shape' ||
-    variant.kind === 'gamma'
-  ) {
-    return variant.flightSplit[0];
-  }
-  return 1;
 }
 
 function variantHasLandingDepthEmit(

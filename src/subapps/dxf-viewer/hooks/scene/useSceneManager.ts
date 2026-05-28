@@ -21,11 +21,18 @@ export function useSceneManager(): SceneManagerState {
   levelScenesRef.current = levelScenes;
 
   const setLevelScene = useCallback((levelId: string, scene: SceneModel) => {
-    setLevelScenes(prev => {
-      // No-op if pointer unchanged (avoids rerender loops)
-      if (prev[levelId] === scene) return prev;
-      return { ...prev, [levelId]: scene };
-    });
+    const prev = levelScenesRef.current;
+    // No-op if pointer unchanged (avoids rerender loops)
+    if (prev[levelId] === scene) return;
+    const next = { ...prev, [levelId]: scene };
+    // Update the ref SYNCHRONOUSLY so getLevelScene() reflects this write within
+    // the same tick. Critical for multi-entity commands: a CompoundCommand
+    // applies its children sequentially (e.g. wall then hosted opening) and each
+    // child reads getLevelScene() to rebuild the scene — if the ref still held
+    // the pre-write value, the 2nd child would clobber the 1st's change (wall
+    // reverted to its original position). React state mirrors the ref to render.
+    levelScenesRef.current = next;
+    setLevelScenes(next);
   }, []);
 
   const getLevelScene = useCallback((levelId: string): SceneModel | null => {
@@ -34,15 +41,13 @@ export function useSceneManager(): SceneManagerState {
   }, []); // ← STABILE: reads from ref, no deps needed
 
   const clearLevelScene = useCallback((levelId: string) => {
-
-    setLevelScenes(prev => {
-      const { [levelId]: removed, ...rest } = prev;
-      return rest;
-    });
+    const { [levelId]: _removed, ...rest } = levelScenesRef.current;
+    levelScenesRef.current = rest;
+    setLevelScenes(rest);
   }, []);
 
   const clearAllScenes = useCallback(() => {
-
+    levelScenesRef.current = {};
     setLevelScenes({});
   }, []);
 

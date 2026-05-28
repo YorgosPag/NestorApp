@@ -3,9 +3,13 @@
  *
  * Coverage:
  *   - `getStairGrips()` grip layout per variant (ADR-393 v2: straight = 6 grips
- *     = move + rotation + 4 corners, width/length/mid-front suppressed;
- *     l-shape/u-shape/gamma = move + rotation + width + length + per-flight +
- *     landing grips; legacy `stair-split` removed per ADR-393 Q4).
+ *     = move + rotation + 4 corners, width/length/mid-front suppressed; Phase 2:
+ *     l-shape/u-shape/gamma = move + rotation + 4 flight-based corners + landing
+ *     grips, width/length also suppressed; curved = move + rotation + width +
+ *     length; legacy `stair-split` removed per ADR-393 Q4).
+ *   - ADR-393 v2 Phase 2 multi-flight corner transforms (perp→width, axial
+ *     start→flightSplit[0], axial end→flightSplit[last] on the LAST flight's
+ *     direction read from the walkline geometry).
  *   - `stairGripGlyphShape()` + `polylineArcMidpoint()` (ADR-393 v2 helpers).
  *   - `applyStairGripDrag()` transforms for the ADR-358 base grips AND the
  *     ADR-393 corner / mid-front / per-flight / landing transforms (kept even
@@ -92,6 +96,20 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
     return buildStairEntity(params, '0');
   }
 
+  function makeUShape(): StairEntity {
+    const base = buildDefaultStairParams(basePoint, 0);
+    const params: StairParams = {
+      ...base,
+      variant: {
+        kind: 'u-shape',
+        turnDirection: 'right',
+        landingDepth: 'auto',
+        flightSplit: [6, 6],
+      },
+    };
+    return buildStairEntity(params, '0');
+  }
+
   // ─── getStairGrips: layout (ADR-358 base) ─────────────────────────────────
 
   it('1. straight stair → 6 grips (move + rotation + 4 corners; ADR-393 v2)', () => {
@@ -158,7 +176,7 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
 
   // ─── getStairGrips: ADR-393 Phase B (L/U/Γ) ───────────────────────────────
 
-  it('6. l-shape (landing, sharp) → base + 2 flight + landing-depth (no corner-radius)', () => {
+  it('6. l-shape (landing, sharp) → 4 corners + 2 flight + landing-depth, no width/length (ADR-393 v2 Phase 2)', () => {
     const grips = getStairGrips(makeLShape());
     const kinds = grips.map((g) => g.stairGripKind);
     expect(kinds).toContain('stair-flight1-end');
@@ -166,7 +184,14 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
     expect(kinds).toContain('stair-landing-depth');
     expect(kinds).not.toContain('stair-landing-corner-radius');
     expect(kinds).not.toContain('stair-split'); // removed (ADR-393 Q4)
-    expect(kinds).not.toContain('stair-corner-start-left'); // corners are straight-only
+    // ADR-393 v2 Phase 2 — L/U/Γ now own the 4 asymmetric corners (was straight-only)
+    // and SUPPRESS the on-axis width/length handles (the corners replace them).
+    expect(kinds).toContain('stair-corner-start-left');
+    expect(kinds).toContain('stair-corner-start-right');
+    expect(kinds).toContain('stair-corner-end-left');
+    expect(kinds).toContain('stair-corner-end-right');
+    expect(kinds).not.toContain('stair-width');
+    expect(kinds).not.toContain('stair-length');
   });
 
   it('7. l-shape with fillet corner → also emits landing-corner-radius', () => {
@@ -429,5 +454,131 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
     expect(mid).toEqual({ x: 2, y: 0 });
     expect(polylineArcMidpoint([])).toBeNull();
     expect(polylineArcMidpoint([{ x: 5, y: 7, z: 0 }])).toEqual({ x: 5, y: 7 });
+  });
+
+  // ─── ADR-393 v2 Phase 2 — L/U/Γ corners (emit + positions + transforms) ───
+
+  it('29. u-shape → 4 corners + no width/length', () => {
+    const kinds = getStairGrips(makeUShape()).map((g) => g.stairGripKind);
+    expect(kinds).toContain('stair-corner-start-left');
+    expect(kinds).toContain('stair-corner-start-right');
+    expect(kinds).toContain('stair-corner-end-left');
+    expect(kinds).toContain('stair-corner-end-right');
+    expect(kinds).not.toContain('stair-width');
+    expect(kinds).not.toContain('stair-length');
+  });
+
+  it('30. gamma → 4 corners + flight grips, no width/length', () => {
+    const kinds = getStairGrips(makeGamma()).map((g) => g.stairGripKind);
+    expect(kinds).toContain('stair-corner-start-left');
+    expect(kinds).toContain('stair-corner-end-right');
+    expect(kinds).toContain('stair-flight1-end');
+    expect(kinds).not.toContain('stair-width');
+    expect(kinds).not.toContain('stair-length');
+  });
+
+  it('31. l-shape corner positions read from stringer endpoints', () => {
+    const grips = getStairGrips(makeLShape());
+    const byKind = Object.fromEntries(grips.map((g) => [g.stairGripKind, g.position]));
+    // flight-1 entry on ±p1 (width=1200 → ±600); turnDirection right → flight 2
+    // descends along −y, its exit endpoints sit on ±x of the last vertex.
+    expect(byKind['stair-corner-start-left'].x).toBeCloseTo(0, 4);
+    expect(byKind['stair-corner-start-left'].y).toBeCloseTo(600, 4);
+    expect(byKind['stair-corner-start-right'].y).toBeCloseTo(-600, 4);
+    expect(byKind['stair-corner-end-left'].x).toBeCloseTo(2880, 4);
+    expect(byKind['stair-corner-end-left'].y).toBeCloseTo(-2000, 4);
+    expect(byKind['stair-corner-end-right'].x).toBeCloseTo(1680, 4);
+    expect(byKind['stair-corner-end-right'].y).toBeCloseTo(-2000, 4);
+  });
+
+  it('32. l-shape corner-start perp drag → width grows + axis recenters (split unchanged)', () => {
+    const entity = makeLShape();
+    const next = applyStairGripDrag('stair-corner-start-left', {
+      originalParams: entity.params,
+      delta: { x: 0, y: 200 },
+      currentPos: { x: 0, y: 800 },
+      geometry: entity.geometry,
+    });
+    expect(next.width).toBeCloseTo(1400, 4); // 1200 + 200
+    expect(next.basePoint.y).toBeCloseTo(100, 4); // recenter by half
+    expect(next.variant.kind).toBe('l-shape');
+    if (next.variant.kind === 'l-shape') {
+      expect(next.variant.flightSplit[0]).toBe(6); // no axial → split untouched
+      expect(next.variant.flightSplit[1]).toBe(6);
+    }
+  });
+
+  it('33. l-shape corner-end axial drag → extends last flight, base fixed', () => {
+    const entity = makeLShape();
+    const next = applyStairGripDrag('stair-corner-end-left', {
+      originalParams: entity.params,
+      delta: { x: 0, y: -280 }, // one tread along the last flight (−y)
+      currentPos: { x: 2280, y: -2280 },
+      geometry: entity.geometry,
+    });
+    expect(next.variant.kind).toBe('l-shape');
+    if (next.variant.kind === 'l-shape') {
+      expect(next.variant.flightSplit[1]).toBe(7); // 6 + 1
+      expect(next.variant.flightSplit[0]).toBe(6); // first flight untouched
+    }
+    expect(next.stepCount).toBe(entity.params.stepCount + 1);
+    expect(next.basePoint.x).toBeCloseTo(0, 6); // end corner anchors base
+    expect(next.basePoint.y).toBeCloseTo(0, 6);
+  });
+
+  it('34. l-shape corner-start axial drag → shrinks flight 1, base moves forward', () => {
+    const entity = makeLShape();
+    const next = applyStairGripDrag('stair-corner-start-left', {
+      originalParams: entity.params,
+      delta: { x: 280, y: 0 }, // pull entry one tread toward the landing (+u1)
+      currentPos: { x: 280, y: 600 },
+      geometry: entity.geometry,
+    });
+    expect(next.variant.kind).toBe('l-shape');
+    if (next.variant.kind === 'l-shape') {
+      expect(next.variant.flightSplit[0]).toBe(5); // 6 − 1
+      expect(next.variant.flightSplit[1]).toBe(6);
+    }
+    expect(next.stepCount).toBe(entity.params.stepCount - 1);
+    expect(next.basePoint.x).toBeCloseTo(280, 6); // base moved forward one tread
+  });
+
+  it('35. metre-scene l-shape corners stay scene-scaled (±0.6 m, not ±600)', () => {
+    const base = buildDefaultStairParams(basePoint, 0, {}, 'm');
+    const params: StairParams = {
+      ...base,
+      variant: {
+        kind: 'l-shape',
+        cornerStyle: 'landing',
+        turnDirection: 'right',
+        landingDepth: 'auto',
+        flightSplit: [6, 6],
+      },
+    };
+    const grips = getStairGrips(buildStairEntity(params, '0'));
+    const byKind = Object.fromEntries(grips.map((g) => [g.stairGripKind, g.position]));
+    expect(byKind['stair-corner-start-left'].y).toBeCloseTo(0.6, 6);
+    expect(byKind['stair-corner-start-right'].y).toBeCloseTo(-0.6, 6);
+    // Regression guard: positions read from geometry, never raw mm constants.
+    expect(Math.abs(byKind['stair-corner-start-left'].y)).toBeLessThan(1);
+  });
+
+  it('36. u-shape corner-end axial uses the LAST flight direction (−u1), not flight-1', () => {
+    // U-shape flight 2 is anti-parallel to flight 1. Decomposing the drag on
+    // flight-1's axis would shrink instead of extend; the geometry-read uLast
+    // makes a −u1 drag extend the last flight. Guards the geometry threading.
+    const entity = makeUShape();
+    const next = applyStairGripDrag('stair-corner-end-left', {
+      originalParams: entity.params,
+      delta: { x: -280, y: 0 }, // one tread along the last flight (−u1)
+      currentPos: { x: 0, y: -1200 },
+      geometry: entity.geometry,
+    });
+    expect(next.variant.kind).toBe('u-shape');
+    if (next.variant.kind === 'u-shape') {
+      expect(next.variant.flightSplit[1]).toBe(7); // extended, not shrunk
+      expect(next.variant.flightSplit[0]).toBe(6);
+    }
+    expect(next.stepCount).toBe(entity.params.stepCount + 1);
   });
 });
