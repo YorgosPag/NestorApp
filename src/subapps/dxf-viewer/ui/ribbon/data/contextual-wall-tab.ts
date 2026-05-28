@@ -143,6 +143,19 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
                 options: THICKNESS_MM_OPTIONS,
               },
             },
+            {
+              // Editable axis length (meters). Read = computed geometry length;
+              // commit moves the end endpoint along the axis (Revit location-line
+              // length edit). Widget-based since length is free-form, not a preset.
+              type: 'widget',
+              size: 'small',
+              widgetId: 'wall-length',
+              command: {
+                id: 'wall.length',
+                labelKey: 'ribbon.commands.wallEditor.length',
+                commandKey: 'wall.length.readout',
+              },
+            },
           ],
         },
       ],

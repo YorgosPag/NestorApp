@@ -1091,6 +1091,10 @@
       "wallEditor": {
         "height": "Height",
         "thickness": "Thickness",
+        "length": "Length",
+        "lengthUnit": "m",
+        "lengthIncrease": "Increase length",
+        "lengthDecrease": "Decrease length",
         "split": "Split",
         "close": "Close",
         "delete": "Delete",

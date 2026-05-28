@@ -1091,6 +1091,10 @@
       "wallEditor": {
         "height": "Ύψος",
         "thickness": "Πάχος",
+        "length": "Μήκος",
+        "lengthUnit": "m",
+        "lengthIncrease": "Αύξηση μήκους",
+        "lengthDecrease": "Μείωση μήκους",
         "split": "Χωρισμός",
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",

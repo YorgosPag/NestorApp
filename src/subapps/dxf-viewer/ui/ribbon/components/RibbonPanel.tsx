@@ -28,6 +28,7 @@ import { VisibilityGraphicsPanel } from '../panels/VisibilityGraphicsPanel';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 import { RibbonStairFloorInfoWidget } from './RibbonStairFloorInfoWidget';
 import { RibbonStairDimensionsWidget } from './RibbonStairDimensionsWidget';
+import { RibbonWallLengthWidget } from './RibbonWallLengthWidget';
 import { MultiSelectionCommonPropertiesPanel } from './MultiSelectionCommonPropertiesPanel';
 import { MultiSelectionFilterPanel } from './MultiSelectionFilterPanel';
 import { CurrentLayerPicker } from '../../components/layer-picker/CurrentLayerPicker';
@@ -90,6 +91,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'stair-dimensions') {
       return <RibbonStairDimensionsWidget key="stair-dimensions-widget" />;
+    }
+    if (button.widgetId === 'wall-length') {
+      return <RibbonWallLengthWidget key="wall-length-widget" />;
     }
     if (button.widgetId === 'multi-selection-common-properties') {
       return <MultiSelectionCommonPropertiesPanel key="multi-selection-common-widget" />;
