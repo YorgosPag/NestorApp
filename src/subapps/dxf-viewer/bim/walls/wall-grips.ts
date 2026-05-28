@@ -45,6 +45,8 @@ import {
   MAX_WALL_THICKNESS_MM,
 } from '../types/wall-types';
 import type { Point3D } from '../types/bim-base';
+import { mmScaleFor } from '../../utils/scene-units';
+import { calculateMidpoint } from '../../rendering/entities/shared/geometry-utils';
 
 const DEGENERATE_EPS = 0.001;
 
@@ -105,16 +107,17 @@ function maxThicknessCeilingFor(currentThickness: number): number {
  *   0 → axis start (translate start endpoint)
  *   1 → axis end (translate end endpoint)
  *   2 → axis midpoint (translate whole wall)
- *   3 → thickness handle (symmetric resize, mid-axis offset by thickness/2)
- *   straight kind only:
- *     4 → corner start-pos   (Phase 1C-bis, asymmetric 2-DOF)
- *     5 → corner start-neg
- *     6 → corner end-pos
- *     7 → corner end-neg
+ *   straight kind only (positions read from the computed footprint):
+ *     3 → thickness handle, +perp face edge-midpoint (symmetric resize)
+ *     4 → thickness handle, -perp face edge-midpoint (symmetric, AutoCAD parity)
+ *     5 → corner start-pos   (Phase 1C-bis, asymmetric 2-DOF)
+ *     6 → corner start-neg
+ *     7 → corner end-pos
+ *     8 → corner end-neg
  *   curved kind only:
- *     4 → curve control (emitted only when `params.curveControl` set)
+ *     3 → curve control (emitted only when `params.curveControl` set)
  *   polyline kind only:
- *     4..N → interior vertex handles
+ *     3..N → interior vertex handles
  */
 export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
   const { params, kind } = entity;
@@ -157,75 +160,88 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
     wallGripKind: 'wall-midpoint',
   });
 
-  // 3 — thickness handle (mid-axis offset by half-thickness along perpendicular)
-  const u = unitAxis(params);
-  if (u) {
-    const p = perpUnit(u);
-    const sign = params.flip ? -1 : 1;
-    const halfT = params.thickness / 2;
-    grips.push({
-      entityId: entity.id,
-      gripIndex: 3,
-      type: 'edge',
-      position: {
-        x: mid.x + sign * halfT * p.x,
-        y: mid.y + sign * halfT * p.y,
-      },
-      movesEntity: false,
-      wallGripKind: 'wall-thickness',
-    });
+  // 3..8 — thickness handles + Phase 1C-bis corners. Positions read DIRECTLY
+  // from the computed footprint (`geometry.outerEdge` / `innerEdge` — the SAME
+  // SSoT the renderer draws) so the handles can never drift from the wall
+  // faces. Mirrors the stair grip pattern (read from geometry, never re-derive
+  // from raw params). The drag transforms (`resizeThickness` / `moveCorner`)
+  // still convert canvas↔mm — that boundary is inherent to a mm param store
+  // driven by canvas-space cursors and cannot be read off the geometry.
+  //
+  // Emitted for straight kind (and legacy walls with undefined kind, treated as
+  // straight). Skipped for curved/polyline where the rectangular outline does
+  // not hold. Corners use type 'vertex' (not 'corner') so `wrapDxfGrip` keeps
+  // them out of the `showMidpoints` filter — corners are primary editing
+  // affordances (direct-manipulation principle), not secondary helpers.
+  const outerPts = entity.geometry?.outerEdge?.points;
+  const innerPts = entity.geometry?.innerEdge?.points;
+  if (kind !== 'curved' && kind !== 'polyline') {
+    // STRAIGHT — handles read from the footprint vertices (the SSoT geometry).
+    if (outerPts && innerPts && outerPts.length >= 2 && innerPts.length >= 2) {
+      // `computeWallGeometry` bakes `flip` into outer/inner; remap to the +perp
+      // ("pos") / -perp ("neg") basis the drag transforms use (`moveCorner` is
+      // flip-agnostic) so the picked corner and its drag direction stay in sync.
+      const posSide = params.flip ? innerPts : outerPts; // +perp face
+      const negSide = params.flip ? outerPts : innerPts; // -perp face
+      const posStart = project2D(posSide[0]);
+      const posEnd = project2D(posSide[posSide.length - 1]);
+      const negStart = project2D(negSide[0]);
+      const negEnd = project2D(negSide[negSide.length - 1]);
 
-    // 4..7 — Phase 1C-bis corner handles. Emitted for straight kind (default)
-    // and for legacy walls without a `kind` field (permissive — undefined kind
-    // is treated as straight, since older Firestore docs may predate the kind
-    // discriminator). Explicitly skipped only for curved/polyline kinds where
-    // the rectangular outline assumption does not hold.
-    //
-    // Type is `vertex` (not 'corner') so the unified grip pipeline
-    // (`grip-registry.wrapDxfGrip`) does NOT subject them to the
-    // `showMidpoints` filter — corners are primary editing affordances per the
-    // direct-manipulation principle, not secondary midpoint helpers.
-    //
-    // Both perpendicular sides are emitted regardless of `params.flip` (flip
-    // is a presentation hint, not a structural mirror). See header for
-    // ArchiCAD/Vectorworks/AutoCAD parity rationale.
-    if (kind !== 'curved' && kind !== 'polyline') {
-      const halfTNoFlip = params.thickness / 2;
-      const startPos: Point2D = { x: start.x + halfTNoFlip * p.x, y: start.y + halfTNoFlip * p.y };
-      const startNeg: Point2D = { x: start.x - halfTNoFlip * p.x, y: start.y - halfTNoFlip * p.y };
-      const endPos: Point2D = { x: end.x + halfTNoFlip * p.x, y: end.y + halfTNoFlip * p.y };
-      const endNeg: Point2D = { x: end.x - halfTNoFlip * p.x, y: end.y - halfTNoFlip * p.y };
+      // 3 — thickness handle on the +perp face (edge midpoint, SSoT helper).
       grips.push({
         entityId: entity.id,
-        gripIndex: grips.length,
-        type: 'vertex',
-        position: startPos,
+        gripIndex: 3,
+        type: 'edge',
+        position: calculateMidpoint(posStart, posEnd),
         movesEntity: false,
-        wallGripKind: 'wall-corner-start-pos',
+        wallGripKind: 'wall-thickness',
+      });
+      // 4 — symmetric thickness handle on the -perp face (AutoCAD edge-midpoint
+      // parity). Same `wall-thickness` transform: `resizeThickness` is symmetric
+      // about the axis, so either face drives the same resize.
+      grips.push({
+        entityId: entity.id,
+        gripIndex: 4,
+        type: 'edge',
+        position: calculateMidpoint(negStart, negEnd),
+        movesEntity: false,
+        wallGripKind: 'wall-thickness',
+      });
+      // 5..8 — corners at the footprint vertices.
+      grips.push({
+        entityId: entity.id, gripIndex: 5, type: 'vertex',
+        position: posStart, movesEntity: false, wallGripKind: 'wall-corner-start-pos',
       });
       grips.push({
-        entityId: entity.id,
-        gripIndex: grips.length,
-        type: 'vertex',
-        position: startNeg,
-        movesEntity: false,
-        wallGripKind: 'wall-corner-start-neg',
+        entityId: entity.id, gripIndex: 6, type: 'vertex',
+        position: negStart, movesEntity: false, wallGripKind: 'wall-corner-start-neg',
       });
       grips.push({
-        entityId: entity.id,
-        gripIndex: grips.length,
-        type: 'vertex',
-        position: endPos,
-        movesEntity: false,
-        wallGripKind: 'wall-corner-end-pos',
+        entityId: entity.id, gripIndex: 7, type: 'vertex',
+        position: posEnd, movesEntity: false, wallGripKind: 'wall-corner-end-pos',
       });
       grips.push({
+        entityId: entity.id, gripIndex: 8, type: 'vertex',
+        position: negEnd, movesEntity: false, wallGripKind: 'wall-corner-end-neg',
+      });
+    }
+  } else {
+    // CURVED / POLYLINE — single symmetric thickness handle at the axis
+    // midpoint (no rectangular footprint to read corners from). Scene-scaled
+    // perpendicular offset (mm → canvas), mirror `computeWallGeometry`.
+    const u = unitAxis(params);
+    if (u) {
+      const p = perpUnit(u);
+      const sign = params.flip ? -1 : 1;
+      const halfT = (params.thickness / 2) * mmScaleFor(params);
+      grips.push({
         entityId: entity.id,
-        gripIndex: grips.length,
-        type: 'vertex',
-        position: endNeg,
+        gripIndex: 3,
+        type: 'edge',
+        position: { x: mid.x + sign * halfT * p.x, y: mid.y + sign * halfT * p.y },
         movesEntity: false,
-        wallGripKind: 'wall-corner-end-neg',
+        wallGripKind: 'wall-thickness',
       });
     }
   }
@@ -346,11 +362,12 @@ function resizeThickness(input: Readonly<WallGripDragInput>): WallParams {
     y: (originalParams.start.y + originalParams.end.y) / 2,
   };
   // Signed projection of (cursor − mid) onto the (signed) perpendicular.
-  // Thickness = 2 * |proj| (handle is mid-axis offset by ±t/2).
+  // Thickness = 2 * |proj| (handle is mid-axis offset by ±t/2). `proj` is in
+  // canvas units; thickness is stored in mm, so divide by sceneScale.
   const dx = currentPos.x - mid.x;
   const dy = currentPos.y - mid.y;
   const proj = (dx * p.x + dy * p.y) * sign;
-  const rawThickness = Math.abs(proj) * 2;
+  const rawThickness = (Math.abs(proj) * 2) / mmScaleFor(originalParams);
   const minT = minThicknessFloorFor(originalParams.thickness);
   const maxT = maxThicknessCeilingFor(originalParams.thickness);
   const clamped = Math.max(minT, Math.min(maxT, rawThickness));
@@ -385,21 +402,27 @@ function moveCorner(
   const u = unitAxis(originalParams);
   if (!u) return originalParams;
   const p = perpUnit(u);
+  const s = mmScaleFor(originalParams);
   // Decompose delta into axial (along u) + perpendicular (along p, signed).
+  // `delta` is in canvas units; convert the perpendicular component to mm
+  // before mixing with `thickness` (mm). Axial stays in canvas (applied to
+  // start/end which are canvas coords).
   const axialD = delta.x * u.x + delta.y * u.y;
-  const perpD = delta.x * p.x + delta.y * p.y;
+  const perpDCanvas = delta.x * p.x + delta.y * p.y;
+  const perpDMm = perpDCanvas / s;
   // Thickness change: outward drag on the corner's face grows thickness.
-  // perpSign * perpD > 0 means the dragged face moved AWAY from the axis.
-  const rawThickness = originalParams.thickness + perpSign * perpD;
+  // perpSign * perpDMm > 0 means the dragged face moved AWAY from the axis.
+  const rawThickness = originalParams.thickness + perpSign * perpDMm;
   const minT = minThicknessFloorFor(originalParams.thickness);
   const maxT = maxThicknessCeilingFor(originalParams.thickness);
   const clampedThickness = Math.max(minT, Math.min(maxT, rawThickness));
-  // Back-derive the actual perpendicular displacement after clamping. The
+  // Back-derive the actual perpendicular displacement after clamping (mm). The
   // opposite face stays at its original position; the moving face has shifted
   // by `perpSign * (clampedThickness - thickness)` in the +p basis.
-  const actualPerpD = perpSign * (clampedThickness - originalParams.thickness);
-  // Axis recenter: midpoint of faces shifts by half the moving face displacement.
-  const axisShiftPerp = actualPerpD / 2;
+  const actualPerpMm = perpSign * (clampedThickness - originalParams.thickness);
+  // Axis recenter: midpoint of faces shifts by half the moving face
+  // displacement. Convert mm → canvas before applying to start/end.
+  const axisShiftPerp = (actualPerpMm * s) / 2;
   const axisShiftX = axisShiftPerp * p.x;
   const axisShiftY = axisShiftPerp * p.y;
   const startAxial = side === 'start' ? axialD : 0;

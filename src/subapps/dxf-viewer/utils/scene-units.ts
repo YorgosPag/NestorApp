@@ -7,8 +7,8 @@
  * that builds geometry from defaults (e.g. the ADR-358 stair tool) render
  * at the wrong scale whenever the file was in meters or centimeters.
  *
- * This module owns three responsibilities, used by every tool that needs to
- * convert between mm-baked defaults and the active scene's coordinate space:
+ * This module owns the following responsibilities, used by every tool that
+ * needs to convert between mm-baked defaults and the active scene's space:
  *
  *   1. `SceneUnits` — the discriminated union of all unit identifiers we
  *      surface via `SceneModel.units`.
@@ -22,6 +22,11 @@
  *      `'mm'` AND the scene bounds suggest a non-mm scale, falls back to
  *      `detectSceneUnits(bounds)`. Encapsulates the legacy `'mm'`-default
  *      compatibility quirk in one place.
+ *   5. `mmScaleFor(params)` / `canvasToMmScaleFor(params)` — resolve the
+ *      mm⇄canvas scale directly from any BIM `*Params` object carrying an
+ *      optional `sceneUnits` field. SSoT for the `mmToSceneUnits(p.sceneUnits
+ *      ?? 'mm')` idiom (and its inverse) previously inlined across the BIM
+ *      geometry / grip / validator modules.
  *
  * Industry alignment: AutoCAD `$INSUNITS`, Revit shared coordinates, IFC4
  * `IfcSIUnit` — every CAD/BIM stack carries a scene-level unit field; this
@@ -44,6 +49,29 @@ export function mmToSceneUnits(units: SceneUnits): number {
     case 'in': return 1 / 25.4;
     case 'ft': return 1 / 304.8;
   }
+}
+
+/**
+ * mm → canvas scale resolved directly from any params object carrying an
+ * optional `sceneUnits` field (`WallParams` / `SlabParams` / `BeamParams` /
+ * `ColumnParams` / `SlabOpeningParams` / `StairParams`). Encapsulates the
+ * `?? 'mm'` legacy-default fallback so the `mmToSceneUnits(p.sceneUnits ?? 'mm')`
+ * idiom lives in ONE place. `valueMm * mmScaleFor(params)` → canvas units.
+ *
+ * SSoT for the 14+ BIM call-sites that previously inlined the fallback (see
+ * `.claude-rules/pending-ratchet-work.md` migrate-on-touch entry).
+ */
+export function mmScaleFor(params: { readonly sceneUnits?: SceneUnits | null }): number {
+  return mmToSceneUnits(params.sceneUnits ?? 'mm');
+}
+
+/**
+ * Inverse of `mmScaleFor`: canvas → mm. `valueCanvas * canvasToMmScaleFor(params)`
+ * → mm. Encapsulates the `1 / mmToSceneUnits(p.sceneUnits ?? 'mm')` idiom (slab /
+ * slab-opening geometry + validators).
+ */
+export function canvasToMmScaleFor(params: { readonly sceneUnits?: SceneUnits | null }): number {
+  return 1 / mmToSceneUnits(params.sceneUnits ?? 'mm');
 }
 
 /**

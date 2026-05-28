@@ -1141,6 +1141,52 @@ handle κρατήθηκε γιατί προσφέρει διαφορετική, 
 πάχους χωρίς axis recenter (mirror του Revit "Wall Centerline" location-line
 mode όταν θες symmetric resize).
 
+**Phase 1C-bis hotfix — geometry-driven grip positions + symmetric thickness handle (✅ FIXED 2026-05-28)**
+
+**Σύμπτωμα (live browser).** Ο χρήστης επέλεγε straight wall και έβλεπε ΜΟΝΟ 3
+χερούλια (start / end / midpoint — τα σημεία πάνω στον άξονα), ενώ ο υπολογισμός
+έβγαζε σωστά 8 grips (`getWallGrips` + `WallRenderer.getGrips` επιστρέφουν 8). Τα
+5 χερούλια εκτός άξονα (thickness handle + 4 corners) ζωγραφίζονταν αλλά σε λάθος
+θέση εκτός οθόνης.
+
+**Root cause (unit mismatch — ίδια οικογένεια με το Phase 1F wall-trims footgun).**
+Το `thickness` αποθηκεύεται ΠΑΝΤΑ σε mm (SSoT, `WallParams` §5.3), ενώ τα `start`/`end`
+είναι σε canvas world units. Το `getWallGrips` ΞΑΝΑΫΠΟΛΟΓΙΖΕ τις θέσεις των off-axis
+grips από raw params ως σκέτο `params.thickness / 2` — ΧΩΡΙΣ τον `mmToSceneUnits(sceneUnits)`
+factor που εφαρμόζει το `computeWallGeometry` (`halfThicknessCanvas = thickness/2 · s`,
+wall-geometry.ts:63). Σε meter-based scene (`s = 0.001`) τα corners έπεφταν 1000×
+μακρύτερα → εκτός viewport. mm-scene (`s = 1`) δούλευε — γι' αυτό τα 22 mm-only tests
+περνούσαν ενώ το production (meters) έσπαγε.
+
+**Fix — geometry-driven SSoT (όχι "scale-the-mirror"), mirror του stair grip pattern.**
+Η σωστή Google-level λύση: τα grips ΔΙΑΒΑΖΟΝΤΑΙ από το ήδη-computed footprint
+(`geometry.outerEdge` / `innerEdge` — η ΙΔΙΑ SSoT που ζωγραφίζει ο renderer), αντί να
+ξανα-υπολογίζονται από raw params. Έτσι οι handles ΔΕΝ ΜΠΟΡΟΥΝ να αποκλίνουν από τις
+όψεις (όπως κάνει το `getStairGrips`, που διαβάζει `geometry.stringers`/`walkline`).
+- `getWallGrips` (straight kind): corners = footprint vertices, thickness handles =
+  edge-midpoints — όλα από `geometry.outerEdge`/`innerEdge`. Το `flip` (baked στο
+  geometry από `computeWallGeometry`) remapped στο +perp/-perp basis που χρησιμοποιεί
+  το `moveCorner` (flip-agnostic) ώστε picked corner ↔ drag direction να μένουν συνεπή.
+- **+2ο symmetric thickness handle** στην απέναντι μακριά όψη (AutoCAD edge-midpoint
+  parity — σύρεις οποιαδήποτε όψη). Ίδιο `wall-thickness` transform (το `resizeThickness`
+  είναι symmetric γύρω από άξονα → οποιαδήποτε όψη οδηγεί ίδιο resize). Σύνολο straight
+  grips: 9 (3 axis + 2 thickness faces + 4 corners).
+- Curved/polyline: κρατούν 1 thickness handle στο axis-mid (δεν υπάρχει ορθογώνιο
+  footprint), scene-scaled (`· mmToSceneUnits`).
+- DRAG transforms ΚΡΑΤΟΥΝ conversion (αναπόφευκτο canvas↔mm boundary, δεν διαβάζεται
+  από geometry): `resizeThickness` `|proj|·2 / s`· `moveCorner` perp `/s` (canvas→mm
+  thickness) + axis-recenter shift `·s` (mm→canvas). Helper `sceneScale(params) =
+  mmToSceneUnits(params.sceneUnits ?? 'mm')`.
+- Αφαιρέθηκαν τα 2 temp-debug blocks (`window.__wallGripsDebug` / `__wallRendererGetGrips`).
+- Tests: 26/26 PASS — #1 → 9 grips, #15b (2 thickness faces), #23–#25 (`sceneUnits='m'`:
+  positions scale, drag canvas→mm). Τα meter tests θα είχαν πιάσει το αρχικό bug.
+
+**Γιατί geometry-driven και όχι το αρχικό "× s" mirror:** το `× s` ΔΟΥΛΕΥΕ αλλά κρατούσε
+την offset math duplicated σε 2 σημεία (footprint + grips) → δυνητική απόκλιση. Geometry-
+read = single source, ταυτόσημο με το stair pattern και με Revit/AutoCAD (τα grips ΕΙΝΑΙ
+οι κορυφές του model). Bonus: corners πλέον σωστά και σε beveled walls (`startBevel`/
+`endBevel`), που το raw-param re-derive αγνοούσε.
+
 **Phase 1D — Advanced Editing + Audit + BOQ (split στα 4 sub-phases)**
 
 Συγκεντρώνει τα items που μεταφέρθηκαν από Phase 1B/1C καθώς και το BOQ feed. Suddivisione σε 4 sub-phases για phase-per-session compliance (memory: `phase_per_session`).

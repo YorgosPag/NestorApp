@@ -1,11 +1,12 @@
 /**
- * ADR-358 Phase 5b — `stair-grips` pure handlers tests.
+ * ADR-358 Phase 5b + ADR-393 — `stair-grips` pure handlers tests.
  *
  * Coverage:
- *   - `getStairGrips()` returns 4 grips for straight/spiral/winder (no split)
- *     and 5 grips for l-shape/u-shape/gamma (with split).
- *   - `applyStairGripDrag()` produces correct `StairParams` for each of the
- *     5 grip kinds (base / direction / width / length / split).
+ *   - `getStairGrips()` grip layout per variant (straight = 9 grips incl. 4
+ *     corners + mid-front; l-shape/u-shape/gamma = base + per-flight + landing
+ *     grips; legacy `stair-split` removed per ADR-393 Q4).
+ *   - `applyStairGripDrag()` transforms for the ADR-358 base grips AND the
+ *     ADR-393 corner / mid-front / per-flight / landing transforms.
  */
 
 import {
@@ -15,7 +16,7 @@ import {
 import { applyStairGripDrag, getStairGrips } from '../stair-grips';
 import type { StairEntity, StairParams } from '../../../bim/types/stair-types';
 
-describe('stair-grips (Phase 5b)', () => {
+describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
   const basePoint = { x: 0, y: 0 };
 
   function makeStraight(): StairEntity {
@@ -38,129 +39,368 @@ describe('stair-grips (Phase 5b)', () => {
     return buildStairEntity(params, '0');
   }
 
-  // ─── getStairGrips ────────────────────────────────────────────────────
+  // Chamfer/fillet landing GEOMETRY is not implemented yet (StairGeometryService
+  // Phase 3c throws), so we cannot `buildStairEntity` a fillet variant. The grip
+  // layout + transforms only read `params.variant` + the landing polygon, so we
+  // overlay a fillet corner style onto an already-built square l-shape entity.
+  function makeLShapeFillet(): StairEntity {
+    const sharp = makeLShape();
+    const v = sharp.params.variant;
+    if (v.kind !== 'l-shape' || v.cornerStyle !== 'landing') {
+      throw new Error('makeLShape did not produce an l-shape landing variant');
+    }
+    return {
+      ...sharp,
+      params: {
+        ...sharp.params,
+        variant: { ...v, landingCornerStyle: 'fillet', landingCornerRadius: 0 },
+      },
+    };
+  }
 
-  it('1. straight stair → 4 grips (no split)', () => {
-    const entity = makeStraight();
-    const grips = getStairGrips(entity);
-    expect(grips).toHaveLength(4);
+  function makeLShapeWinders(): StairEntity {
+    const base = buildDefaultStairParams(basePoint, 0);
+    const params: StairParams = {
+      ...base,
+      variant: {
+        kind: 'l-shape',
+        cornerStyle: 'winders',
+        turnDirection: 'right',
+        winderCount: 3,
+        winderMethod: 'equal-going',
+        flightSplit: [5, 4],
+      },
+    };
+    return buildStairEntity(params, '0');
+  }
+
+  function makeGamma(): StairEntity {
+    const base = buildDefaultStairParams(basePoint, 0);
+    const params: StairParams = {
+      ...base,
+      variant: {
+        kind: 'gamma',
+        turnSequence: ['right', 'right'],
+        landings: ['auto', 'auto'],
+        flightSplit: [4, 3, 3],
+      },
+    };
+    return buildStairEntity(params, '0');
+  }
+
+  // ─── getStairGrips: layout (ADR-358 base) ─────────────────────────────────
+
+  it('1. straight stair → 9 grips (4 base + 4 corners + mid-front)', () => {
+    const grips = getStairGrips(makeStraight());
+    expect(grips).toHaveLength(9);
     expect(grips.map((g) => g.stairGripKind)).toEqual([
       'stair-base',
       'stair-direction',
       'stair-width',
       'stair-length',
+      'stair-corner-start-left',
+      'stair-corner-start-right',
+      'stair-corner-end-left',
+      'stair-corner-end-right',
+      'stair-start-side',
     ]);
   });
 
-  it('2. l-shape stair → 5 grips (with split)', () => {
-    const entity = makeLShape();
-    const grips = getStairGrips(entity);
-    expect(grips).toHaveLength(5);
-    expect(grips[4].stairGripKind).toBe('stair-split');
+  it('2. basePoint grip at entity.params.basePoint', () => {
+    const grips = getStairGrips(makeStraight());
+    expect(grips[0].position.x).toBeCloseTo(0, 6);
+    expect(grips[0].position.y).toBeCloseTo(0, 6);
   });
 
-  it('3. basePoint grip at entity.params.basePoint', () => {
-    const entity = makeStraight();
-    const grips = getStairGrips(entity);
-    const base = grips[0];
-    expect(base.position.x).toBeCloseTo(entity.params.basePoint.x, 6);
-    expect(base.position.y).toBeCloseTo(entity.params.basePoint.y, 6);
+  it('3. direction grip at basePoint + 100mm·u', () => {
+    const grips = getStairGrips(makeStraight());
+    expect(grips[1].position.x).toBeCloseTo(100, 6);
+    expect(grips[1].position.y).toBeCloseTo(0, 6);
   });
 
-  it('4. direction grip at basePoint + 100mm·u', () => {
-    const entity = makeStraight();
-    const grips = getStairGrips(entity);
-    const dir = grips[1];
-    // direction=0 → unit vector (1,0) → handle at base + (100, 0).
-    expect(dir.position.x).toBeCloseTo(entity.params.basePoint.x + 100, 6);
-    expect(dir.position.y).toBeCloseTo(entity.params.basePoint.y, 6);
+  // ─── getStairGrips: ADR-393 Phase A1 corners (straight) ───────────────────
+
+  it('4. straight corners at footprint ±width/2 on front and back edges', () => {
+    const grips = getStairGrips(makeStraight());
+    // width=1200 → half=600 ; totalRun=280*11=3080 ; direction=0 → p=(0,1).
+    const byKind = Object.fromEntries(grips.map((g) => [g.stairGripKind, g.position]));
+    expect(byKind['stair-corner-start-left']).toEqual({ x: 0, y: 600 });
+    expect(byKind['stair-corner-start-right']).toEqual({ x: 0, y: -600 });
+    expect(byKind['stair-corner-end-left']).toEqual({ x: 3080, y: 600 });
+    expect(byKind['stair-corner-end-right']).toEqual({ x: 3080, y: -600 });
   });
 
-  // ─── applyStairGripDrag ───────────────────────────────────────────────
+  it('5. mid-front start grip ahead of first riser (−u side, clear of basePoint)', () => {
+    const grips = getStairGrips(makeStraight());
+    const mid = grips.find((g) => g.stairGripKind === 'stair-start-side');
+    expect(mid?.position).toEqual({ x: -100, y: 0 });
+  });
 
-  it('5. stair-base drag → translates basePoint by delta', () => {
+  it('5b. metre-scene: handle offsets stay scene-scaled (not 1000× off-screen)', () => {
+    // Rule: BIM grip positions must be scene-unit-correct. In a metre scene the
+    // 100 mm direction/mid-front offset must resolve to 0.1 m, NOT 100 m.
+    const params = buildDefaultStairParams(basePoint, 0, {}, 'm');
+    const grips = getStairGrips(buildStairEntity(params, '0'));
+    const byKind = Object.fromEntries(grips.map((g) => [g.stairGripKind, g.position]));
+    // width=1.2 → half=0.6 ; tread=0.28 → totalRun=3.08
+    expect(byKind['stair-direction'].x).toBeCloseTo(0.1, 6);
+    expect(byKind['stair-start-side'].x).toBeCloseTo(-0.1, 6);
+    expect(byKind['stair-corner-start-left']).toEqual({ x: 0, y: 0.6 });
+    expect(byKind['stair-corner-end-left'].x).toBeCloseTo(3.08, 6);
+    // Regression guard: the old mm-constant bug placed these at ±100 (metres).
+    expect(byKind['stair-direction'].x).toBeLessThan(1);
+  });
+
+  // ─── getStairGrips: ADR-393 Phase B (L/U/Γ) ───────────────────────────────
+
+  it('6. l-shape (landing, sharp) → base + 2 flight + landing-depth (no corner-radius)', () => {
+    const grips = getStairGrips(makeLShape());
+    const kinds = grips.map((g) => g.stairGripKind);
+    expect(kinds).toContain('stair-flight1-end');
+    expect(kinds).toContain('stair-flight2-start');
+    expect(kinds).toContain('stair-landing-depth');
+    expect(kinds).not.toContain('stair-landing-corner-radius');
+    expect(kinds).not.toContain('stair-split'); // removed (ADR-393 Q4)
+    expect(kinds).not.toContain('stair-corner-start-left'); // corners are straight-only
+  });
+
+  it('7. l-shape with fillet corner → also emits landing-corner-radius', () => {
+    const kinds = getStairGrips(makeLShapeFillet()).map((g) => g.stairGripKind);
+    expect(kinds).toContain('stair-landing-corner-radius');
+  });
+
+  it('8. l-shape winders → flight grips but no landing-depth/corner-radius', () => {
+    const kinds = getStairGrips(makeLShapeWinders()).map((g) => g.stairGripKind);
+    expect(kinds).toContain('stair-flight1-end');
+    expect(kinds).toContain('stair-flight2-start');
+    expect(kinds).not.toContain('stair-landing-depth');
+    expect(kinds).not.toContain('stair-landing-corner-radius');
+  });
+
+  it('9. gamma → flight grips, no landing-depth (uses landings tuple)', () => {
+    const kinds = getStairGrips(makeGamma()).map((g) => g.stairGripKind);
+    expect(kinds).toContain('stair-flight1-end');
+    expect(kinds).toContain('stair-flight2-start');
+    expect(kinds).not.toContain('stair-landing-depth');
+  });
+
+  // ─── applyStairGripDrag: ADR-358 base grips ───────────────────────────────
+
+  it('10. stair-base drag → translates basePoint by delta', () => {
     const entity = makeStraight();
-    const newParams = applyStairGripDrag('stair-base', {
+    const next = applyStairGripDrag('stair-base', {
       originalParams: entity.params,
       delta: { x: 50, y: 30 },
       currentPos: { x: 50, y: 30 },
     });
-    expect(newParams.basePoint.x).toBe(entity.params.basePoint.x + 50);
-    expect(newParams.basePoint.y).toBe(entity.params.basePoint.y + 30);
-    expect(newParams.basePoint.z).toBe(entity.params.basePoint.z);
+    expect(next.basePoint.x).toBe(50);
+    expect(next.basePoint.y).toBe(30);
   });
 
-  it('6. stair-direction drag → recomputes direction via atan2', () => {
+  it('11. stair-direction drag → recomputes direction via atan2', () => {
     const entity = makeStraight();
-    const newParams = applyStairGripDrag('stair-direction', {
+    const next = applyStairGripDrag('stair-direction', {
       originalParams: entity.params,
       delta: { x: 0, y: 100 },
       currentPos: { x: 0, y: 100 },
     });
-    // atan2(100, 0) = π/2 = 90°
-    expect(newParams.direction).toBeCloseTo(90, 4);
+    expect(next.direction).toBeCloseTo(90, 4);
   });
 
-  it('7. stair-width drag → updates width to 2·|projection on perp|', () => {
+  it('12. stair-width drag → width = 2·|projection on perp|', () => {
     const entity = makeStraight();
-    // direction = 0 → perp unit = (0, 1). Cursor at y = 600 → width = 1200.
-    const newParams = applyStairGripDrag('stair-width', {
+    const next = applyStairGripDrag('stair-width', {
       originalParams: entity.params,
       delta: { x: 0, y: 600 },
       currentPos: { x: 0, y: 600 },
     });
-    expect(newParams.width).toBeCloseTo(1200, 4);
+    expect(next.width).toBeCloseTo(1200, 4);
   });
 
-  it('8. stair-length drag → derives stepCount from projection / tread', () => {
+  it('13. stair-length drag → derives stepCount from projection / tread', () => {
     const entity = makeStraight();
-    // tread = 280. projection = 1000 → stepCount = floor(1000/280)+1 = 4.
-    const newParams = applyStairGripDrag('stair-length', {
+    const next = applyStairGripDrag('stair-length', {
       originalParams: entity.params,
       delta: { x: 1000, y: 0 },
       currentPos: { x: 1000, y: 0 },
     });
-    expect(newParams.stepCount).toBe(4);
-    expect(newParams.totalRun).toBeCloseTo(280 * 3, 4);
+    expect(next.stepCount).toBe(4); // floor(1000/280)+1
+    expect(next.totalRun).toBeCloseTo(280 * 3, 4);
   });
 
-  it('9. stair-split drag on l-shape → updates flightSplit to integer step counts summing to stepCount', () => {
-    // ADR-358 Phase 3d hotfix — `flightSplit` carries integer step counts
-    // (consumed by `new Array(n_i)` in flight builders), not ratios. Pushing
-    // the split far past the end clamps the ratio to MAX_FLIGHT_SPLIT_RATIO
-    // and then rounds to step counts that satisfy `n1 + n2 === stepCount`
-    // and `n_i >= 1`.
+  // ─── applyStairGripDrag: ADR-393 Phase A1 corners ─────────────────────────
+
+  it('14. corner-start-left perp drag → width grows + axis recenters by half', () => {
+    const entity = makeStraight();
+    const next = applyStairGripDrag('stair-corner-start-left', {
+      originalParams: entity.params,
+      delta: { x: 0, y: 200 },
+      currentPos: { x: 0, y: 200 },
+    });
+    expect(next.width).toBeCloseTo(1400, 4); // 1200 + 200
+    expect(next.basePoint.y).toBeCloseTo(100, 4); // recenter by half of 200
+    expect(next.stepCount).toBe(12); // run unchanged
+  });
+
+  it('15. corner-start-right perp drag (−p) → width grows symmetrically', () => {
+    const entity = makeStraight();
+    const next = applyStairGripDrag('stair-corner-start-right', {
+      originalParams: entity.params,
+      delta: { x: 0, y: -200 }, // drag the −p face outward
+      currentPos: { x: 0, y: -200 },
+    });
+    expect(next.width).toBeCloseTo(1400, 4);
+    expect(next.basePoint.y).toBeCloseTo(-100, 4);
+  });
+
+  it('16. corner-end-left axial drag → grows run, basePoint fixed', () => {
+    const entity = makeStraight();
+    const next = applyStairGripDrag('stair-corner-end-left', {
+      originalParams: entity.params,
+      delta: { x: 280, y: 0 }, // one tread forward
+      currentPos: { x: 3080 + 280, y: 600 },
+    });
+    expect(next.stepCount).toBe(13); // floor(3360/280)+1
+    expect(next.totalRun).toBeCloseTo(3360, 4);
+    expect(next.basePoint.x).toBeCloseTo(0, 4); // end corner leaves base fixed
+  });
+
+  it('17. corner-start axial drag → moves base forward, keeps back edge fixed', () => {
+    const entity = makeStraight();
+    const next = applyStairGripDrag('stair-corner-start-left', {
+      originalParams: entity.params,
+      delta: { x: 280, y: 0 }, // pull start one tread toward the back
+      currentPos: { x: 280, y: 600 },
+    });
+    expect(next.stepCount).toBe(11); // floor(2800/280)+1
+    expect(next.totalRun).toBeCloseTo(2800, 4);
+    expect(next.basePoint.x).toBeCloseTo(280, 4); // base moved forward
+    // back edge = base + run = 280 + 2800 = 3080 (original back) → fixed
+    expect(next.basePoint.x + next.totalRun).toBeCloseTo(3080, 4);
+  });
+
+  it('18. corner width clamps to scene-unit-aware floor (no collapse)', () => {
+    const entity = makeStraight();
+    const next = applyStairGripDrag('stair-corner-start-left', {
+      originalParams: entity.params,
+      delta: { x: 0, y: -100000 }, // collapse the +p face far past the axis
+      currentPos: { x: 0, y: -100000 },
+    });
+    expect(next.width).toBeGreaterThanOrEqual(50); // MIN_WIDTH_MM floor for mm scene
+  });
+
+  // ─── applyStairGripDrag: ADR-393 Phase A2 mid-front ───────────────────────
+
+  it('19. stair-start-side drag → moves base along direction, run shrinks, back fixed', () => {
+    const entity = makeStraight();
+    const next = applyStairGripDrag('stair-start-side', {
+      originalParams: entity.params,
+      delta: { x: 280, y: 0 },
+      currentPos: { x: 180, y: 0 },
+    });
+    expect(next.stepCount).toBe(11);
+    expect(next.totalRun).toBeCloseTo(2800, 4);
+    expect(next.basePoint.x).toBeCloseTo(280, 4);
+    expect(next.basePoint.x + next.totalRun).toBeCloseTo(3080, 4); // back edge fixed
+    expect(next.width).toBe(entity.params.width); // no width change
+  });
+
+  // ─── applyStairGripDrag: ADR-393 Phase B1 per-flight ──────────────────────
+
+  it('20. flight1-end drag → flightSplit integers summing to corner budget', () => {
     const entity = makeLShape();
-    const newParams = applyStairGripDrag('stair-split', {
+    const next = applyStairGripDrag('stair-flight1-end', {
       originalParams: entity.params,
       delta: { x: 100000, y: 0 },
       currentPos: { x: 100000, y: 0 },
     });
-    expect(newParams.variant.kind).toBe('l-shape');
-    if (newParams.variant.kind === 'l-shape') {
-      const [a, b] = newParams.variant.flightSplit;
+    expect(next.variant.kind).toBe('l-shape');
+    if (next.variant.kind === 'l-shape') {
+      const [a, b] = next.variant.flightSplit;
       expect(Number.isInteger(a)).toBe(true);
       expect(Number.isInteger(b)).toBe(true);
       expect(a).toBeGreaterThanOrEqual(1);
       expect(b).toBeGreaterThanOrEqual(1);
-      expect(a).toBeLessThanOrEqual(newParams.stepCount - 1);
-      // ADR-358 Phase 3f — l-shape landing: n1 + 1(landing) + n2 = stepCount
-      // ⇒ split sum = stepCount - 1 (γ count conservation, fixes Phase 3e regression).
-      const expectedTotal =
-        newParams.variant.cornerStyle === 'winders'
-          ? newParams.stepCount - newParams.variant.winderCount
-          : newParams.stepCount - 1;
-      expect(a + b).toBe(expectedTotal);
+      expect(a + b).toBe(next.stepCount - 1); // landing: n1 + 1 + n2 = stepCount
     }
   });
 
-  it('10. stair-split on straight → returns originalParams unchanged (no split)', () => {
+  it('21. flight2-start drag uses the same reapportion math as flight1-end', () => {
+    const entity = makeLShape();
+    const input = {
+      originalParams: entity.params,
+      delta: { x: 1000, y: 0 },
+      currentPos: { x: 1000, y: 0 },
+    };
+    const a = applyStairGripDrag('stair-flight1-end', input);
+    const b = applyStairGripDrag('stair-flight2-start', input);
+    expect(a.variant).toEqual(b.variant);
+  });
+
+  it('22. flight grip on straight → returns originalParams unchanged (no split)', () => {
     const entity = makeStraight();
-    const newParams = applyStairGripDrag('stair-split', {
+    const next = applyStairGripDrag('stair-flight1-end', {
       originalParams: entity.params,
       delta: { x: 100, y: 0 },
       currentPos: { x: 100, y: 0 },
     });
-    expect(newParams).toBe(entity.params);
+    expect(next).toBe(entity.params);
+  });
+
+  // ─── applyStairGripDrag: ADR-393 Phase B2 landing ─────────────────────────
+
+  it('23. landing-depth drag → sets depth from distance past flight-1', () => {
+    const entity = makeLShape();
+    // flight1Run = flightSplit[0]·tread = 6·280 = 1680. cursor at x=2000 → depth 320.
+    const next = applyStairGripDrag('stair-landing-depth', {
+      originalParams: entity.params,
+      delta: { x: 0, y: 0 },
+      currentPos: { x: 2000, y: 0 },
+    });
+    expect(next.variant.kind).toBe('l-shape');
+    if (next.variant.kind === 'l-shape' && next.variant.cornerStyle === 'landing') {
+      expect(next.variant.landingDepth).toBeCloseTo(320, 4);
+    }
+  });
+
+  it('24. landing-depth floored at one tread', () => {
+    const entity = makeLShape();
+    const next = applyStairGripDrag('stair-landing-depth', {
+      originalParams: entity.params,
+      delta: { x: 0, y: 0 },
+      currentPos: { x: 0, y: 0 }, // projection well below flight-1
+    });
+    if (next.variant.kind === 'l-shape' && next.variant.cornerStyle === 'landing') {
+      expect(next.variant.landingDepth).toBeCloseTo(280, 4);
+    }
+  });
+
+  it('25. landing-corner-radius drag inward grows radius, clamped to max', () => {
+    const entity = makeLShapeFillet();
+    const next = applyStairGripDrag('stair-landing-corner-radius', {
+      originalParams: entity.params,
+      delta: { x: -100, y: -100 }, // inward toward landing centre
+      currentPos: { x: 0, y: 0 },
+    });
+    if (next.variant.kind === 'l-shape' && next.variant.cornerStyle === 'landing') {
+      expect(next.variant.landingCornerRadius).toBeGreaterThan(0);
+      expect(next.variant.landingCornerRadius).toBeLessThanOrEqual(600); // min(width,depth)/2
+    }
+  });
+
+  it('26. landing transforms on straight → returns originalParams unchanged', () => {
+    const entity = makeStraight();
+    const depth = applyStairGripDrag('stair-landing-depth', {
+      originalParams: entity.params,
+      delta: { x: 0, y: 0 },
+      currentPos: { x: 2000, y: 0 },
+    });
+    const radius = applyStairGripDrag('stair-landing-corner-radius', {
+      originalParams: entity.params,
+      delta: { x: -100, y: -100 },
+      currentPos: { x: 0, y: 0 },
+    });
+    expect(depth).toBe(entity.params);
+    expect(radius).toBe(entity.params);
   });
 });

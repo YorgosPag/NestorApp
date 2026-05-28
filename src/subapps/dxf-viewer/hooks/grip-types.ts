@@ -9,17 +9,44 @@ import type { Point2D } from '../rendering/types/Types';
 export type GripType = 'vertex' | 'center' | 'edge' | 'corner' | 'midpoint';
 
 /**
- * ADR-358 Phase 5b — Stair grip kind (parametric grip type).
- * One of 5 grips exposed by `StairEntity`: base point translate, direction
- * rotate, width resize, length (stepCount) resize, split (flightSplit) for
- * L/U/gamma variants only. See `bim/stairs/stair-grips.ts`.
+ * ADR-358 Phase 5b + ADR-393 — Stair grip kind (parametric grip type).
+ *
+ * ADR-358 Phase 5b base grips: base point translate, direction rotate, width
+ * resize, length (stepCount) resize.
+ *
+ * ADR-393 (2026-05-28) extends with asymmetric corner grips + a mid-front
+ * start grip + per-flight landing-edge grips (replacing the legacy
+ * `stair-split` centroid grip) + landing depth / corner-radius grips:
+ *   - `stair-corner-{start,end}-{left,right}` → 2-DOF asymmetric (mirror
+ *     ADR-363 Phase 1C-bis wall corners): axial moves nearest end, perp grows
+ *     width symmetrically with axis recenter.
+ *   - `stair-start-side` → mid-front edge, moves basePoint along direction.
+ *   - `stair-flight1-end` / `stair-flight2-start` → landing entry/exit edges
+ *     (L/U/Γ only); replace the removed `stair-split` ratio grip.
+ *   - `stair-landing-depth` → resize landing depth (L/U/Γ only).
+ *   - `stair-landing-corner-radius` → resize landing corner radius (emitted
+ *     only when `landingCornerStyle !== 'sharp'`).
+ *
+ * See `bim/stairs/stair-grips.ts`.
  */
 export type StairGripKind =
   | 'stair-base'
   | 'stair-direction'
   | 'stair-width'
   | 'stair-length'
-  | 'stair-split';
+  // ADR-393 Phase A1 — asymmetric corner grips (straight)
+  | 'stair-corner-start-left'
+  | 'stair-corner-start-right'
+  | 'stair-corner-end-left'
+  | 'stair-corner-end-right'
+  // ADR-393 Phase A2 — mid-front start grip (straight)
+  | 'stair-start-side'
+  // ADR-393 Phase B1 — per-flight landing edges (L/U/Γ) — replace 'stair-split'
+  | 'stair-flight1-end'
+  | 'stair-flight2-start'
+  // ADR-393 Phase B2 — landing depth + corner radius (L/U/Γ)
+  | 'stair-landing-depth'
+  | 'stair-landing-corner-radius';
 
 /**
  * ADR-362 Phase I2 — Dimension grip kind.

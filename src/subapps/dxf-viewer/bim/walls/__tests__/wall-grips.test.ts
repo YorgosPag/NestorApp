@@ -55,14 +55,15 @@ describe('wall-grips (Phase 1C)', () => {
 
   // ─── getWallGrips ──────────────────────────────────────────────────────
 
-  it('1. straight wall → 8 grips (start / end / midpoint / thickness + 4 Phase 1C-bis corners)', () => {
+  it('1. straight wall → 9 grips (start / end / midpoint / 2 thickness faces + 4 corners)', () => {
     const entity = makeStraight();
     const grips = getWallGrips(entity);
     expect(grips.map((g) => g.wallGripKind)).toEqual([
       'wall-start',
       'wall-end',
       'wall-midpoint',
-      'wall-thickness',
+      'wall-thickness',      // +perp face edge-midpoint
+      'wall-thickness',      // -perp face edge-midpoint (symmetric, AutoCAD parity)
       'wall-corner-start-pos',
       'wall-corner-start-neg',
       'wall-corner-end-pos',
@@ -206,19 +207,33 @@ describe('wall-grips (Phase 1C)', () => {
 
   // ─── Phase 1C-bis: asymmetric corner grips + axis recenter ───────────────
 
-  it('15. corner positions equal axis endpoints ± perp · (thickness/2)', () => {
+  it('15. corner positions equal footprint vertices (read from geometry.outer/inner)', () => {
+    const entity = makeStraight();
+    const grips = getWallGrips(entity);
+    const halfT = entity.params.thickness / 2; // mm scene → s=1, canvas == mm.
+    // axis along +X → perpUnit (CCW 90°) = +Y. Corners now at indices 5..8.
+    expect(grips[5].wallGripKind).toBe('wall-corner-start-pos');
+    expect(grips[5].position).toMatchObject({ x: 0 });
+    expect(grips[5].position.y).toBeCloseTo(halfT, 6);
+    expect(grips[6].wallGripKind).toBe('wall-corner-start-neg');
+    expect(grips[6].position.y).toBeCloseTo(-halfT, 6);
+    expect(grips[7].wallGripKind).toBe('wall-corner-end-pos');
+    expect(grips[7].position.x).toBeCloseTo(1000, 6);
+    expect(grips[7].position.y).toBeCloseTo(halfT, 6);
+    expect(grips[8].wallGripKind).toBe('wall-corner-end-neg');
+    expect(grips[8].position.y).toBeCloseTo(-halfT, 6);
+  });
+
+  it('15b. two thickness handles at opposite face edge-midpoints', () => {
     const entity = makeStraight();
     const grips = getWallGrips(entity);
     const halfT = entity.params.thickness / 2;
-    // axis along +X → perpUnit (CCW 90°) = +Y.
-    expect(grips[4].wallGripKind).toBe('wall-corner-start-pos');
-    expect(grips[4].position).toEqual({ x: 0, y: halfT });
-    expect(grips[5].wallGripKind).toBe('wall-corner-start-neg');
-    expect(grips[5].position).toEqual({ x: 0, y: -halfT });
-    expect(grips[6].wallGripKind).toBe('wall-corner-end-pos');
-    expect(grips[6].position).toEqual({ x: 1000, y: halfT });
-    expect(grips[7].wallGripKind).toBe('wall-corner-end-neg');
-    expect(grips[7].position).toEqual({ x: 1000, y: -halfT });
+    expect(grips[3].wallGripKind).toBe('wall-thickness');
+    expect(grips[3].position.x).toBeCloseTo(500, 6); // mid of long edge
+    expect(grips[3].position.y).toBeCloseTo(halfT, 6);
+    expect(grips[4].wallGripKind).toBe('wall-thickness');
+    expect(grips[4].position.x).toBeCloseTo(500, 6);
+    expect(grips[4].position.y).toBeCloseTo(-halfT, 6); // opposite face
   });
 
   it('16. corner-start-pos axial drag moves only params.start (thickness unchanged)', () => {
@@ -321,5 +336,63 @@ describe('wall-grips (Phase 1C)', () => {
     // -perp face Y = axis_y_new - new_thickness/2. Must equal original -t/2.
     const oppositeFaceY = next.start.y - next.thickness / 2;
     expect(oppositeFaceY).toBeCloseTo(-t / 2, 6);
+  });
+
+  // ─── sceneUnits scaling (regression: ADR-363 Phase 1C-bis render hotfix) ──
+  // thickness is always mm; start/end are canvas coords. Perpendicular grip
+  // offsets MUST scale by mmToSceneUnits(sceneUnits) so handles land on the
+  // rendered footprint. The mm-only suite above (s=1) never exercised this; a
+  // meters scene (s=0.001) caught corners drawn 1000× off-screen in production.
+
+  function makeStraightMeters(): WallEntity {
+    const params = buildDefaultWallParams({ x: 0, y: 0 }, { x: 1000, y: 0 }, {}, 'm');
+    return unwrap(buildWallEntity(params, '0', 'straight', 'm'));
+  }
+
+  it('23. meters scene → thickness + corner positions scale by 0.001 (match footprint)', () => {
+    const entity = makeStraightMeters();
+    expect(entity.params.sceneUnits).toBe('m');
+    const grips = getWallGrips(entity);
+    const halfTCanvas = (entity.params.thickness / 2) * 0.001;
+    // grips 3+4 thickness handles at long-edge midpoints (±perp · halfTCanvas)
+    expect(grips[3].wallGripKind).toBe('wall-thickness');
+    expect(grips[3].position.x).toBeCloseTo(500, 6);
+    expect(grips[3].position.y).toBeCloseTo(halfTCanvas, 6);
+    expect(grips[4].wallGripKind).toBe('wall-thickness');
+    expect(grips[4].position.y).toBeCloseTo(-halfTCanvas, 6);
+    // corners (5..8) at endpoints ± perp · halfTCanvas
+    expect(grips[5].position.y).toBeCloseTo(halfTCanvas, 6);   // start-pos
+    expect(grips[6].position.y).toBeCloseTo(-halfTCanvas, 6);  // start-neg
+    expect(grips[7].position.x).toBeCloseTo(1000, 6);          // end-pos x
+    expect(grips[7].position.y).toBeCloseTo(halfTCanvas, 6);
+    expect(grips[8].position.y).toBeCloseTo(-halfTCanvas, 6);  // end-neg
+    // Offsets must NOT be the raw mm value (the pre-fix bug).
+    expect(Math.abs(grips[5].position.y)).toBeLessThan(1);
+  });
+
+  it('24. meters scene → corner perp drag converts canvas delta → mm thickness', () => {
+    const entity = makeStraightMeters();
+    const t = entity.params.thickness;
+    // 0.1 canvas (m) perpendicular drag → 100 mm thickness growth.
+    const next = applyWallGripDrag('wall-corner-end-pos', {
+      originalParams: entity.params,
+      delta: { x: 0, y: 0.1 },
+      currentPos: { x: 1000, y: t / 2 * 0.001 + 0.1 },
+    });
+    expect(next.thickness).toBeCloseTo(t + 100, 6);
+    // axis recenter = actualPerp(100mm) → canvas (100·0.001)/2 = 0.05.
+    expect(next.start.y).toBeCloseTo(0.05, 6);
+    expect(next.end.y).toBeCloseTo(0.05, 6);
+  });
+
+  it('25. meters scene → wall-thickness drag converts canvas proj → mm', () => {
+    const entity = makeStraightMeters();
+    // proj = currentPos.y - mid.y = 0.15 canvas → thickness = 0.15·2 / 0.001 = 300 mm.
+    const next = applyWallGripDrag('wall-thickness', {
+      originalParams: entity.params,
+      delta: { x: 0, y: 0.15 },
+      currentPos: { x: 500, y: 0.15 },
+    });
+    expect(next.thickness).toBeCloseTo(300, 6);
   });
 });

@@ -97,6 +97,48 @@
 
 ---
 
+### 📐 BIM scene-units helper — migrate-on-touch (priorità bassa, ~30min)
+
+**Discovered 2026-05-28** (ADR-363 Phase 1C-bis HOTFIX#2 centralization audit). Δημιουργήθηκε SSoT helper `mmScaleFor(params)` + `canvasToMmScaleFor(params)` στο `src/subapps/dxf-viewer/utils/scene-units.ts` (encapsulates το `mmToSceneUnits(params.sceneUnits ?? 'mm')` + inverse `1 / mmToSceneUnits(...)` idiom). Υιοθετήθηκε ΗΔΗ στο `bim/walls/wall-grips.ts`. Τα υπόλοιπα call-sites inlinάρουν ακόμα το pattern — **migrate when you touch each file** (Boy Scout, N.0.2):
+
+- [ ] `bim/geometry/wall-geometry.ts:57` → `mmScaleFor(params)`
+- [ ] `bim/walls/wall-trims.ts:184` → `mmScaleFor(a.params)`
+- [ ] `bim/geometry/beam-geometry.ts:40,76` → `mmScaleFor(params)`
+- [ ] `bim/geometry/column-geometry.ts:61` → `mmScaleFor(params)`
+- [ ] `bim/geometry/slab-geometry.ts:84,147` → `mmScaleFor(params)`; `:208` → `canvasToMmScaleFor(params) * MM_TO_M`
+- [ ] `bim/geometry/slab-opening-geometry.ts:42` → `mmScaleFor(params)`; `:65,77` → `canvasToMmScaleFor(params)`
+- [ ] `bim/validators/slab-opening-validator.ts:96` → `mmScaleFor(params)`
+- [ ] `systems/cursor/wall-face-corner-snap.ts:57` → `mmScaleFor(params)`
+- [ ] `rendering/entities/dimension/dim-text-renderer.ts:87` → `mmScaleFor(params)`
+
+NOTE: `bim/stairs/stair-floor-link.ts:42` + `stair-auto-fix.ts:131` χρησιμοποιούν `1 / mmToSceneUnits(inferSceneUnitsFromWidth(width))` — διαφορετική πηγή (width-heuristic, ΟΧΙ params.sceneUnits) → ΔΕΝ migrate σε `mmScaleFor` (θα ήταν λάθος abstraction). Άσ' τα ως έχουν.
+
+---
+
+### 🔧 BIM GRIP GEOMETRY — shared module extraction (priorità media, ~2-3h, cross-cutting)
+
+**Discovered 2026-05-28** (ADR-393 stair extended grips SSoT review). Τα 3 BIM grip families (`bim/walls/wall-grips.ts`, `bim/beams/beam-grips.ts`, `bim/stairs/stair-grip-{math,transforms}.ts`) αντιγράφουν τα ίδια primitives αντί να μοιράζονται SSoT:
+
+1. **`project2D(p3): Point2D`** (`{x:p3.x, y:p3.y}`) — αντίγραφο σε wall-grips + beam-grips + stair-grip-math. 1-liner αλλά 3×.
+2. **`unitAxis`/`perpUnit` family** — wall+beam έχουν δικά τους `unitAxis(params)` + `perpUnit(u)`. Το stair πλέον καταναλώνει `directionToUnitVector`/`perp` από `stair-geometry-shared.ts` (ADR-393 fix). wall/beam ΟΧΙ ακόμη.
+3. **Asymmetric corner decompose+recenter math** — `wall-grips.ts:moveCorner` και `stair-grip-transforms.ts:moveCorner` είναι ο ΙΔΙΟΣ αλγόριθμος (axial/perp split + symmetric thickness/width grow + axis recenter), σε διαφορετικά param shapes. Extractable σε generic `decomposeCornerDrag(delta, u, p) → {axial, perp}` + `applySymmetricResize(...)`.
+4. **scene-floor heuristic** — `minWidthFloorFor` (stair) vs `minThicknessFloorFor`/`maxThicknessCeilingFor` (wall). Width-heuristic family (βλ. NOTE παραπάνω) — δεν είναι `mmScaleFor` αλλά μπορεί να γίνει ένα shared `physicalFloorFor(value, mm)`.
+
+**Fix**: νέο `bim/grips/shared/bim-grip-geometry.ts` (project2D + decomposeCornerDrag + applySymmetricCornerResize + physicalFloorFor), consumed από wall/beam/stair. **Γιατί pending (όχι on-the-spot)**: >1h, 4+ files, ΚΑΙ το `wall-grips.ts` είναι σε parallel uncommitted flux (2026-05-28 positions-from-geometry fix) → extraction τώρα = merge conflict risk. Κάνε το αφού σταθεροποιηθεί το wall.
+
+- [ ] Δημιούργησε `bim/grips/shared/bim-grip-geometry.ts` με τα 4 primitives
+- [ ] Migrate wall-grips + beam-grips + stair-grip-{math,transforms} να καταναλώνουν
+- [ ] `.ssot-registry.json` entry `bim-grip-geometry` (forbid re-impl `project2D`/corner-decompose εκτός module)
+- [ ] Tests + metre-scene regression για κάθε family
+
+### 📐 ADR-393 stair grip purity follow-up (priorità bassa, ~30min)
+
+**Discovered 2026-05-28** (ίδιο review). Τα stair corner positions (G5-G8) στο `getStairGrips` derive από `params.width`/`totalRun`/`basePoint` — scene-units **by construction** (builder κλιμακώνει), άρα **όχι active bug**. Αλλά ο κανόνας [[feedback-grip-positions-read-geometry]] προτιμά read από `geometry.stringers`. Επίσης το `DIRECTION_GRIP_OFFSET_MM` στο G1 (direction) ήταν latent unit-unsafe — **fixed** μέσω `mmFactorFromWidth` (ADR-393 §8.1). Purity item:
+
+- [ ] Corner positions G5-G8 → read από `geometry.stringers.outer/inner` endpoints (perp-sign left/right classify) αντί raw params, με raw fallback (mirror G2/G3 pattern). Verify με metre-scene test.
+
+---
+
 ### 🎨 ADR-365 TAILWIND SEMANTIC PALETTE ENFORCEMENT (priorità alta, ~5h totali, 9 φάσεις)
 
 Discovered 2026-05-19 (hover audit follow-up). ADR: `docs/centralized-systems/reference/adrs/ADR-365-tailwind-semantic-palette-enforcement.md`
