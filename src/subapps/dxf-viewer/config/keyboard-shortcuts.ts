@@ -1125,8 +1125,17 @@ export const matchesShortcutDef = (
     return event.code === shortcut.key;
   }
 
-  // Standard letter/number keys
-  return eventKey === shortcutKey;
+  // Standard letter/number keys.
+  // Layout-independent fallback: when a non-Latin keyboard layout is active
+  // (e.g. Greek), pressing the physical Z key yields event.key='ζ' → 'Ζ'
+  // (U+0396), which never equals the Latin 'Z' (U+005A). event.code reports the
+  // physical key position ('KeyZ') regardless of layout, so single Latin
+  // letter shortcuts keep working in any language. (AutoCAD-style behavior.)
+  if (eventKey === shortcutKey) return true;
+  if (/^[A-Z]$/.test(shortcutKey) && event.code === `Key${shortcutKey}`) {
+    return true;
+  }
+  return false;
 };
 
 /**

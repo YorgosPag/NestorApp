@@ -97,3 +97,4 @@ keydown 'Z' (no modifier)
 ## Changelog
 
 - **2026-05-28** — ADR-394 created + implemented. `Z` = Fit to View Selected (DXF + BIM + mixed). Home unchanged. SSoT `calculateCombinedEntityBounds`. Command-line precedence + empty-selection fallthrough. Opus 4.7.
+- **2026-05-29** — Hotfix: `Z` δεν λειτουργούσε σε **ελληνικό keyboard layout**. `matchesShortcutDef` σύγκρινε `event.key.toUpperCase()` ('Ζ' U+0396) με Latin 'Z' (U+005A) → fail. Προστέθηκε layout-independent fallback μέσω `event.code === 'Key' + letter` (physical key, AutoCAD-style) για ΟΛΑ τα single Latin-letter shortcuts. 1 file (`config/keyboard-shortcuts.ts`). Opus 4.8.
