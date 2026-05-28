@@ -11,6 +11,7 @@ import { useRef, type ChangeEvent, type DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Paperclip, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { generateAttachmentId } from '@/services/enterprise-id.service';
 
 export interface StagedFile {
   readonly id: string;
@@ -43,7 +44,7 @@ async function stageFiles(raw: FileList, existing: readonly StagedFile[]): Promi
   for (const file of toAdd) {
     if (!ALLOWED_TYPES.has(file.type) || file.size > MAX_SIZE_BYTES) continue;
     const thumbnailDataUrl = await generateThumbnail(file);
-    staged.push({ id: crypto.randomUUID(), file, thumbnailDataUrl });
+    staged.push({ id: generateAttachmentId(), file, thumbnailDataUrl });
   }
   return staged;
 }
