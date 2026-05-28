@@ -28,8 +28,6 @@ import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
-import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
-import { validateWallParams } from '../../bim/validators/wall-validator';
 import { EventBus } from '../../systems/events/EventBus';
 import {
   createWallFirestoreService,
@@ -41,6 +39,7 @@ import { recordWallChange } from '../../bim/walls/wall-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
+import { docToEntity, isWall } from './wall-persistence-helpers';
 
 // ============================================================================
 // TYPES
@@ -78,59 +77,6 @@ export interface UseWallPersistenceResult {
 
 const AUTO_SAVE_DEBOUNCE_MS = 500;
 const LOCK_TTL_MS = 5 * 60 * 1000;
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-/**
- * Migrate legacy WallParams (pre-ADR-363 SSOT fix) from scene-unit storage to mm.
- * Detection: sceneUnits absent AND height < 100 (clearly sub-100m → was in meters).
- * Safe to call on already-migrated params (idempotent: sceneUnits present → no-op).
- */
-function migrateParamsToMm(params: WallDoc['params']): WallDoc['params'] {
-  if (params.sceneUnits) return params;
-  if (params.height >= 100) return { ...params, sceneUnits: 'mm' };
-  const k = 1000;
-  return {
-    ...params,
-    height: params.height * k,
-    thickness: params.thickness * k,
-    dna: params.dna
-      ? {
-          ...params.dna,
-          totalThickness: params.dna.totalThickness * k,
-          layers: params.dna.layers.map((l) => ({ ...l, thickness: l.thickness * k })),
-        }
-      : undefined,
-    sceneUnits: 'mm',
-  };
-}
-
-/**
- * Build a scene-side `WallEntity` from a persisted `WallDoc`. Geometry +
- * validation are recomputed via the SSoT pure functions — ADR §G6 stair
- * parallel: geometry is NOT persisted (re-derivable from params).
- */
-function docToEntity(doc: WallDoc): WallEntity {
-  const params = migrateParamsToMm(doc.params);
-  const validation = doc.validation ?? validateWallParams(params).bimValidation;
-  return {
-    id: doc.id,
-    type: 'wall',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params,
-    geometry: doc.geometry ?? computeWallGeometry(params, doc.kind),
-    validation,
-    visible: true,
-    editingBy: doc.editingBy,
-  } as WallEntity;
-}
-
-function isWall(entity: AnySceneEntity): entity is WallEntity {
-  return (entity as { type?: string }).type === 'wall';
-}
 
 // ============================================================================
 // HOOK
@@ -226,6 +172,18 @@ export function useWallPersistence(
           }
         }
 
+        // Mark every Firestore doc as "exists in DB" (mirror useOpeningPersistence)
+        // so the auto-save gate treats loaded walls as `known` and `persist`
+        // routes through `updateWall` (UPDATE) instead of `saveWall` (setDoc,
+        // resets createdAt → rejected by the immutability rule). Without this,
+        // editing a wall loaded from a previous session was silently never
+        // persisted, and the next snapshot reverted it to the stored position.
+        for (const doc of docs) {
+          if (!lastSavedParamsRef.current.has(doc.id)) {
+            lastSavedParamsRef.current.set(doc.id, doc.params);
+          }
+        }
+
         const pending = pendingFirstSaveIdsRef.current;
         for (const [id, entity] of sceneWalls) {
           if (docsById.has(id)) continue;
@@ -317,7 +275,20 @@ export function useWallPersistence(
     setError(null);
     try {
       await acquireLock(entity.id);
-      await svc.saveWall(entityToSaveInput(entity));
+      // setDoc (saveWall) only on first write — it stamps createdAt, which the
+      // UPDATE rule treats as immutable. Existing walls go through updateWall
+      // (updateDoc) so re-edits persist instead of being rejected (mirror the
+      // opening persistence saveOpening/updateOpening split).
+      if (isNew) {
+        await svc.saveWall(entityToSaveInput(entity));
+      } else {
+        await svc.updateWall(entity.id, {
+          params: entity.params,
+          validation: entity.validation,
+          geometry: entity.geometry,
+          layerId: entity.layerId,
+        });
+      }
       lastSavedParamsRef.current.set(entity.id, entity.params);
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);

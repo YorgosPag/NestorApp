@@ -181,7 +181,9 @@ export class GripPhaseRenderer {
       position: grip.position,
       type: ((grip.type ?? 'vertex') as GripRenderConfig['type']),
       temperature: this.getGripTemperature(entity.id, grip.gripIndex ?? i, state),
-      shape: 'square' as const,
+      // ADR-393 v2 — honour a per-grip shape hint (BIM move/rotation icon
+      // glyphs); default to the AutoCAD square otherwise.
+      shape: grip.shape ?? 'square',
     }));
     this.gripRenderer.renderGripSetBatched(gripConfigs, settings);
   }

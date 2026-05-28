@@ -3,6 +3,10 @@
  * ✅ ΕΝΟΠΟΙΗΜΕΝΟ: Κοινά types για όλο το rendering system
  */
 
+// ADR-393 v2 — type-only import (erased at runtime, no require cycle) so a
+// computed grip can carry an optional rendered-shape hint (move/rotation icon
+// glyphs for BIM parametric handles).
+import type { GripShape } from '../grips/types';
 
 // ===== BASIC GEOMETRY TYPES =====
 /**
@@ -113,6 +117,11 @@ export interface GripInfo {
   // ✅ ENTERPRISE FIX: Missing properties for useEntityGripInteraction
   gripIndex?: number;   // Index of the grip within the entity
   gripType?: 'corner' | 'midpoint' | 'center' | 'control' | 'vertex' | 'edge'; // Alias for type (backward compatibility)
+
+  // ADR-393 v2 — optional rendered-shape hint. When set (e.g. by
+  // StairRenderer.getGrips for the move/rotation handles), GripPhaseRenderer
+  // uses it instead of the default 'square'. Generic — no entity coupling.
+  shape?: GripShape;
 }
 
 export interface GripSettings {

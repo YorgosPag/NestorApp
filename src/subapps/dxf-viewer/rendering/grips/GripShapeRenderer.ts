@@ -100,6 +100,15 @@ export class GripShapeRenderer {
         this.renderDiamond(ctx, position, size, fillColor, outlineColor, outlineWidth);
         break;
 
+      // ADR-393 v2 — BIM parametric handle icon glyphs.
+      case 'move':
+        this.renderMoveGlyph(ctx, position, size, fillColor);
+        break;
+
+      case 'rotation':
+        this.renderRotationGlyph(ctx, position, size, fillColor);
+        break;
+
       default:
         // Fallback to square for unknown shapes
         renderSquareGrip(ctx, position, size, fillColor, outlineColor);
@@ -221,5 +230,91 @@ export class GripShapeRenderer {
     ctx.stroke();
 
     ctx.restore();
+  }
+
+  /**
+   * ADR-393 v2 — MOVE handle glyph: a 4-way arrow (basePoint translate). Arm
+   * length scales with the grip size so it reads as an icon, not a dot. Drawn
+   * in the temperature `color` so it warms/heats on hover/drag.
+   */
+  private renderMoveGlyph(
+    ctx: CanvasRenderingContext2D,
+    position: Point2D,
+    size: number,
+    color: string,
+  ): void {
+    const arm = Math.max(5, size);
+    const head = Math.max(2.5, size * 0.5);
+    const { x, y } = position;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x - arm, y);
+    ctx.lineTo(x + arm, y);
+    ctx.moveTo(x, y - arm);
+    ctx.lineTo(x, y + arm);
+    ctx.stroke();
+    this.fillArrowHead(ctx, x + arm, y, 1, 0, head);
+    this.fillArrowHead(ctx, x - arm, y, -1, 0, head);
+    this.fillArrowHead(ctx, x, y - arm, 0, -1, head);
+    this.fillArrowHead(ctx, x, y + arm, 0, 1, head);
+    ctx.restore();
+  }
+
+  /**
+   * ADR-393 v2 — ROTATION handle glyph: a ~270° curved arrow (direction
+   * rotate). Marks the rotate pivot; drawn in the temperature `color`.
+   */
+  private renderRotationGlyph(
+    ctx: CanvasRenderingContext2D,
+    position: Point2D,
+    size: number,
+    color: string,
+  ): void {
+    const r = Math.max(5, size * 0.9);
+    const head = Math.max(2.5, size * 0.5);
+    const { x, y } = position;
+    const start = -Math.PI * 0.75;
+    const end = Math.PI * 0.9;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(x, y, r, start, end);
+    ctx.stroke();
+    // Arrowhead at the arc end, pointing along the CCW tangent (−sin, cos).
+    const ex = x + r * Math.cos(end);
+    const ey = y + r * Math.sin(end);
+    this.fillArrowHead(ctx, ex, ey, -Math.sin(end), Math.cos(end), head);
+    ctx.restore();
+  }
+
+  /**
+   * Fill a small triangular arrowhead with its tip at (tipX,tipY) pointing
+   * along the unit vector (ux,uy). `h` is the head length.
+   */
+  private fillArrowHead(
+    ctx: CanvasRenderingContext2D,
+    tipX: number,
+    tipY: number,
+    ux: number,
+    uy: number,
+    h: number,
+  ): void {
+    const px = -uy;
+    const py = ux;
+    const baseX = tipX - h * ux;
+    const baseY = tipY - h * uy;
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(baseX + h * 0.6 * px, baseY + h * 0.6 * py);
+    ctx.lineTo(baseX - h * 0.6 * px, baseY - h * 0.6 * py);
+    ctx.closePath();
+    ctx.fill();
   }
 }

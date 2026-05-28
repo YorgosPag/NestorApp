@@ -19,7 +19,7 @@
 
 import type { Point2D, Point3D } from '../../rendering/types/Types';
 import type { StairGripKind } from '../../hooks/useGripMovement';
-import type { StairParams, StairVariantParams } from '../../bim/types/stair-types';
+import type { StairGeometry, StairParams, StairVariantParams } from '../../bim/types/stair-types';
 import { mmFactorFromWidth } from './stair-floor-link';
 import {
   RAD_TO_DEG,
@@ -31,6 +31,10 @@ import {
   unitVectorFromDirection,
   perpUnit,
   minWidthFloorFor,
+  flightCount,
+  setFlightSplitCount,
+  lastSegmentDir,
+  withFlightSplitStepCounts,
 } from './stair-grip-math';
 
 export interface StairGripDragInput {
@@ -40,6 +44,13 @@ export interface StairGripDragInput {
   readonly delta: Point2D;
   /** Current world cursor position (used for direction/width/length resolves). */
   readonly currentPos: Point2D;
+  /**
+   * ADR-393 v2 Phase 2 — geometry at drag start. The multi-flight corner
+   * transforms read the last flight's direction from `walkline` (SSoT — no
+   * re-implementation of the per-variant turn→direction math the geometry
+   * builders own). Optional: straight corners + the ADR-358 base grips ignore it.
+   */
+  readonly geometry?: StairGeometry;
 }
 
 /**
@@ -59,13 +70,13 @@ export function applyStairGripDrag(
     case 'stair-length':
       return resizeLength(input);
     case 'stair-corner-start-left':
-      return moveCorner(input, 'start', +1);
+      return moveCornerDispatch(input, 'start', +1);
     case 'stair-corner-start-right':
-      return moveCorner(input, 'start', -1);
+      return moveCornerDispatch(input, 'start', -1);
     case 'stair-corner-end-left':
-      return moveCorner(input, 'end', +1);
+      return moveCornerDispatch(input, 'end', +1);
     case 'stair-corner-end-right':
-      return moveCorner(input, 'end', -1);
+      return moveCornerDispatch(input, 'end', -1);
     case 'stair-start-side':
       return moveStartSide(input);
     case 'stair-flight1-end':
@@ -95,12 +106,29 @@ function moveBasePoint(input: Readonly<StairGripDragInput>): StairParams {
 }
 
 function rotateDirection(input: Readonly<StairGripDragInput>): StairParams {
-  const { originalParams, currentPos } = input;
-  const dx = currentPos.x - originalParams.basePoint.x;
-  const dy = currentPos.y - originalParams.basePoint.y;
-  if (dx === 0 && dy === 0) return originalParams;
-  const newDirection = Math.atan2(dy, dx) * RAD_TO_DEG;
-  return { ...originalParams, direction: newDirection };
+  const { originalParams, currentPos, delta } = input;
+  const pivotX = originalParams.basePoint.x;
+  const pivotY = originalParams.basePoint.y;
+  const curDx = currentPos.x - pivotX;
+  const curDy = currentPos.y - pivotY;
+  if (curDx === 0 && curDy === 0) return originalParams;
+
+  // ADR-393 v2 — anchor-relative rotation. The rotation handle is now drawn at
+  // the front-centre (base − offset·u), OFF the pivot→direction axis. Using the
+  // absolute atan2 of the cursor would snap `direction` to the cursor bearing
+  // and flip the stair the instant the handle is grabbed (anchor at angle 180°).
+  // Instead rotate by the angle SWEPT from the anchor (the grip world position
+  // at mousedown = currentPos − delta), pivoting around `basePoint`.
+  const anchorX = currentPos.x - delta.x - pivotX;
+  const anchorY = currentPos.y - delta.y - pivotY;
+  if (Math.hypot(anchorX, anchorY) < 1e-9) {
+    // Degenerate anchor (e.g. direct unit-test input fed relative to pivot):
+    // fall back to absolute bearing.
+    return { ...originalParams, direction: Math.atan2(curDy, curDx) * RAD_TO_DEG };
+  }
+  const sweptDeg =
+    (Math.atan2(curDy, curDx) - Math.atan2(anchorY, anchorX)) * RAD_TO_DEG;
+  return { ...originalParams, direction: originalParams.direction + sweptDeg };
 }
 
 function resizeWidth(input: Readonly<StairGripDragInput>): StairParams {
@@ -229,6 +257,92 @@ function moveCorner(
   };
 }
 
+// ─── ADR-393 v2 Phase 2 — multi-flight corner grips (L/U/Γ) ──────────────────
+
+/**
+ * Dispatch a corner drag to the right transform. `straight` keeps the original
+ * single-axis `moveCorner` (footprint = `base + totalRun·u`); the split
+ * variants (l-shape / u-shape / gamma) route to `moveCornerMultiFlight`, where
+ * the start corner lives on flight-1's frame and the end corner on the last
+ * flight's frame (directions differ — the stair bends at the landing(s)).
+ */
+function moveCornerDispatch(
+  input: Readonly<StairGripDragInput>,
+  side: 'start' | 'end',
+  perpSign: 1 | -1,
+): StairParams {
+  return input.originalParams.variant.kind === 'straight'
+    ? moveCorner(input, side, perpSign)
+    : moveCornerMultiFlight(input, side, perpSign);
+}
+
+/**
+ * Asymmetric corner drag for the split variants. The drag is decomposed in the
+ * frame of the corner's OWN flight (start → flight-1 `u1`; end → last flight
+ * `u'`, read from the walkline so the per-variant turn math is not duplicated):
+ *
+ *   - perpendicular → grows/shrinks the single scalar `width` (clamped). The
+ *     start corner re-centers `basePoint` by half the change along `p1` so
+ *     flight-1's opposite face stays anchored (mirror of the straight corner);
+ *     the end corner leaves `basePoint` anchored to flight-1 (the last flight's
+ *     opposite face moves instead).
+ *   - axial start → adds/removes whole treads from `flightSplit[0]` and shifts
+ *     `basePoint` forward by the removed run so the landing + rest of the stair
+ *     stay put ("pull the entry toward the landing").
+ *   - axial end → adds/removes whole treads from `flightSplit[last]`, basePoint
+ *     fixed ("stretch the exit outward").
+ *
+ * `stepCount` tracks the flight delta so geometry (built from `flightSplit`) and
+ * the label/validation count stay consistent.
+ */
+function moveCornerMultiFlight(
+  input: Readonly<StairGripDragInput>,
+  side: 'start' | 'end',
+  perpSign: 1 | -1,
+): StairParams {
+  const { originalParams, delta, geometry } = input;
+  const variant = originalParams.variant;
+  if (!hasSplitGrip(variant)) return originalParams;
+  const u1 = unitVectorFromDirection(originalParams.direction);
+  const p1 = perpUnit(u1);
+  const uLast = (geometry && lastSegmentDir(geometry.walkline)) || u1;
+  const frameU = side === 'start' ? u1 : uLast;
+  const frameP = perpUnit(frameU);
+  const axialD = delta.x * frameU.x + delta.y * frameU.y;
+  const perpD = delta.x * frameP.x + delta.y * frameP.y;
+  // Width (single scalar) — clamped to the scene-unit floor.
+  const minWidth = minWidthFloorFor(originalParams.width);
+  const clampedWidth = Math.max(minWidth, originalParams.width + perpSign * perpD);
+  const actualPerpD = perpSign * (clampedWidth - originalParams.width);
+  // Axial → whole-tread change to the corner's flight.
+  const which: 'first' | 'last' = side === 'start' ? 'first' : 'last';
+  const oldCount = flightCount(variant, which);
+  const deltaSteps = Math.round(axialD / originalParams.tread);
+  const signedDelta = side === 'start' ? -deltaSteps : deltaSteps;
+  const newCount = Math.max(1, oldCount + signedDelta);
+  const appliedDelta = newCount - oldCount;
+  const newStepCount = Math.max(MIN_STEP_COUNT, originalParams.stepCount + appliedDelta);
+  const newVariant = setFlightSplitCount(variant, which, newCount);
+  // Base shift — start corner only (end corner anchors flight-1).
+  let baseX = originalParams.basePoint.x;
+  let baseY = originalParams.basePoint.y;
+  if (side === 'start') {
+    const axialShift = -appliedDelta * originalParams.tread; // forward when treads removed
+    const axisShiftPerp = actualPerpD / 2;
+    baseX += axialShift * u1.x + axisShiftPerp * p1.x;
+    baseY += axialShift * u1.y + axisShiftPerp * p1.y;
+  }
+  return {
+    ...originalParams,
+    basePoint: { x: baseX, y: baseY, z: originalParams.basePoint.z },
+    width: clampedWidth,
+    stepCount: newStepCount,
+    totalRun: originalParams.tread * Math.max(0, newStepCount - 1),
+    totalRise: originalParams.rise * newStepCount,
+    variant: newVariant,
+  };
+}
+
 // ─── ADR-393 Phase A2 — mid-front start grip (straight) ──────────────────────
 
 /**
@@ -284,43 +398,6 @@ function adjustFlightSplit(input: Readonly<StairGripDragInput>): StairParams {
 
   const newVariant = withFlightSplitStepCounts(variant, r, originalParams.stepCount);
   return { ...originalParams, variant: newVariant };
-}
-
-/**
- * ADR-358 Phase 3d hotfix — convert split-grip ratio into integer step counts.
- * Geometry builders interpret `flightSplit` as `[stepCount1, stepCount2(, 3)]`
- * and call `new Array(n_i)`; a float ratio threw `RangeError: invalid array
- * length`. Round-trip stays for clamping continuity; the persisted shape uses
- * integers summing to the corner-conserving budget.
- */
-function withFlightSplitStepCounts(
-  variant: StairVariantParams,
-  r: number,
-  stepCount: number,
-): StairVariantParams {
-  if (variant.kind === 'l-shape') {
-    const consumed =
-      variant.cornerStyle === 'winders' ? Math.max(1, variant.winderCount) : 1;
-    const total = Math.max(2, stepCount - consumed);
-    const n1 = Math.max(1, Math.min(total - 1, Math.round(r * total)));
-    const n2 = total - n1;
-    return { ...variant, flightSplit: [n1, n2] as const };
-  }
-  if (variant.kind === 'u-shape') {
-    const total = Math.max(2, stepCount - 1); // 1 landing
-    const n1 = Math.max(1, Math.min(total - 1, Math.round(r * total)));
-    const n2 = total - n1;
-    return { ...variant, flightSplit: [n1, n2] as const };
-  }
-  if (variant.kind === 'gamma') {
-    const total = Math.max(3, stepCount - 2); // 2 landings
-    const n1 = Math.max(1, Math.min(total - 2, Math.round(r * total)));
-    const remaining = total - n1;
-    const n2 = Math.max(1, Math.floor(remaining / 2));
-    const n3 = Math.max(1, remaining - n2);
-    return { ...variant, flightSplit: [n1, n2, n3] as const };
-  }
-  return variant;
 }
 
 // ─── ADR-393 Phase B2 — landing depth + corner radius (L/U/Γ) ────────────────

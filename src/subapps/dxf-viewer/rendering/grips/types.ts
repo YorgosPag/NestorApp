@@ -41,7 +41,10 @@ export type GripTemperature =
 export type GripShape =
   | 'square'   // Standard AutoCAD grip (default)
   | 'circle'   // Alternative shape (future)
-  | 'diamond'; // Special case grips (future)
+  | 'diamond'  // Special case grips (future)
+  // ADR-393 v2 — parametric handle icon glyphs (BIM stair move/rotation).
+  | 'move'     // 4-way arrow (basePoint translate handle)
+  | 'rotation'; // curved arrow (direction rotate handle)
 
 // ============================================================================
 // GRIP CONFIGURATION INTERFACES

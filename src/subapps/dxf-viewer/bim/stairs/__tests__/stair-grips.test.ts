@@ -2,18 +2,22 @@
  * ADR-358 Phase 5b + ADR-393 — `stair-grips` pure handlers tests.
  *
  * Coverage:
- *   - `getStairGrips()` grip layout per variant (straight = 9 grips incl. 4
- *     corners + mid-front; l-shape/u-shape/gamma = base + per-flight + landing
- *     grips; legacy `stair-split` removed per ADR-393 Q4).
+ *   - `getStairGrips()` grip layout per variant (ADR-393 v2: straight = 6 grips
+ *     = move + rotation + 4 corners, width/length/mid-front suppressed;
+ *     l-shape/u-shape/gamma = move + rotation + width + length + per-flight +
+ *     landing grips; legacy `stair-split` removed per ADR-393 Q4).
+ *   - `stairGripGlyphShape()` + `polylineArcMidpoint()` (ADR-393 v2 helpers).
  *   - `applyStairGripDrag()` transforms for the ADR-358 base grips AND the
- *     ADR-393 corner / mid-front / per-flight / landing transforms.
+ *     ADR-393 corner / mid-front / per-flight / landing transforms (kept even
+ *     where the grip is no longer emitted — corners reuse them).
  */
 
 import {
   buildDefaultStairParams,
   buildStairEntity,
 } from '../../../hooks/drawing/stair-completion';
-import { applyStairGripDrag, getStairGrips } from '../stair-grips';
+import { applyStairGripDrag, getStairGrips, stairGripGlyphShape } from '../stair-grips';
+import { polylineArcMidpoint } from '../stair-grip-math';
 import type { StairEntity, StairParams } from '../../../bim/types/stair-types';
 
 describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
@@ -90,31 +94,31 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
 
   // ─── getStairGrips: layout (ADR-358 base) ─────────────────────────────────
 
-  it('1. straight stair → 9 grips (4 base + 4 corners + mid-front)', () => {
+  it('1. straight stair → 6 grips (move + rotation + 4 corners; ADR-393 v2)', () => {
     const grips = getStairGrips(makeStraight());
-    expect(grips).toHaveLength(9);
+    expect(grips).toHaveLength(6);
     expect(grips.map((g) => g.stairGripKind)).toEqual([
       'stair-base',
       'stair-direction',
-      'stair-width',
-      'stair-length',
       'stair-corner-start-left',
       'stair-corner-start-right',
       'stair-corner-end-left',
       'stair-corner-end-right',
-      'stair-start-side',
     ]);
   });
 
-  it('2. basePoint grip at entity.params.basePoint', () => {
+  it('2. basePoint MOVE grip at walkline arc-midpoint (totalRun/2), not basePoint', () => {
     const grips = getStairGrips(makeStraight());
-    expect(grips[0].position.x).toBeCloseTo(0, 6);
+    expect(grips[0].stairGripKind).toBe('stair-base');
+    // tread=280, stepCount=12 → totalRun=3080 → midpoint x=1540, y=0
+    expect(grips[0].position.x).toBeCloseTo(1540, 4);
     expect(grips[0].position.y).toBeCloseTo(0, 6);
   });
 
-  it('3. direction grip at basePoint + 100mm·u', () => {
+  it('3. direction ROTATION grip at front-centre (base − 100mm·u, −u side)', () => {
     const grips = getStairGrips(makeStraight());
-    expect(grips[1].position.x).toBeCloseTo(100, 6);
+    expect(grips[1].stairGripKind).toBe('stair-direction');
+    expect(grips[1].position.x).toBeCloseTo(-100, 6);
     expect(grips[1].position.y).toBeCloseTo(0, 6);
   });
 
@@ -130,25 +134,26 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
     expect(byKind['stair-corner-end-right']).toEqual({ x: 3080, y: -600 });
   });
 
-  it('5. mid-front start grip ahead of first riser (−u side, clear of basePoint)', () => {
-    const grips = getStairGrips(makeStraight());
-    const mid = grips.find((g) => g.stairGripKind === 'stair-start-side');
-    expect(mid?.position).toEqual({ x: -100, y: 0 });
+  it('5. straight no longer emits width / length / mid-front grips (ADR-393 v2)', () => {
+    const kinds = getStairGrips(makeStraight()).map((g) => g.stairGripKind);
+    expect(kinds).not.toContain('stair-width');
+    expect(kinds).not.toContain('stair-length');
+    expect(kinds).not.toContain('stair-start-side');
   });
 
   it('5b. metre-scene: handle offsets stay scene-scaled (not 1000× off-screen)', () => {
     // Rule: BIM grip positions must be scene-unit-correct. In a metre scene the
-    // 100 mm direction/mid-front offset must resolve to 0.1 m, NOT 100 m.
+    // 100 mm direction offset must resolve to 0.1 m, NOT 100 m.
     const params = buildDefaultStairParams(basePoint, 0, {}, 'm');
     const grips = getStairGrips(buildStairEntity(params, '0'));
     const byKind = Object.fromEntries(grips.map((g) => [g.stairGripKind, g.position]));
-    // width=1.2 → half=0.6 ; tread=0.28 → totalRun=3.08
-    expect(byKind['stair-direction'].x).toBeCloseTo(0.1, 6);
-    expect(byKind['stair-start-side'].x).toBeCloseTo(-0.1, 6);
+    // width=1.2 → half=0.6 ; tread=0.28 → totalRun=3.08 → walkline mid=1.54
+    expect(byKind['stair-direction'].x).toBeCloseTo(-0.1, 6); // front-centre, −u side
+    expect(byKind['stair-base'].x).toBeCloseTo(1.54, 6);       // walkline arc-midpoint
     expect(byKind['stair-corner-start-left']).toEqual({ x: 0, y: 0.6 });
     expect(byKind['stair-corner-end-left'].x).toBeCloseTo(3.08, 6);
     // Regression guard: the old mm-constant bug placed these at ±100 (metres).
-    expect(byKind['stair-direction'].x).toBeLessThan(1);
+    expect(Math.abs(byKind['stair-direction'].x)).toBeLessThan(1);
   });
 
   // ─── getStairGrips: ADR-393 Phase B (L/U/Γ) ───────────────────────────────
@@ -402,5 +407,27 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
     });
     expect(depth).toBe(entity.params);
     expect(radius).toBe(entity.params);
+  });
+
+  // ─── ADR-393 v2 — glyph shape mapping + walkline arc-midpoint ─────────────
+
+  it('27. stairGripGlyphShape: base→move, direction→rotation, else→square', () => {
+    expect(stairGripGlyphShape('stair-base')).toBe('move');
+    expect(stairGripGlyphShape('stair-direction')).toBe('rotation');
+    expect(stairGripGlyphShape('stair-corner-start-left')).toBe('square');
+    expect(stairGripGlyphShape('stair-width')).toBe('square');
+    expect(stairGripGlyphShape(undefined)).toBe('square');
+  });
+
+  it('28. polylineArcMidpoint: half-arc-length point on a multi-segment path', () => {
+    // L-path total length 4 (2 + 2); half = 2 lands exactly at the corner.
+    const mid = polylineArcMidpoint([
+      { x: 0, y: 0, z: 0 },
+      { x: 2, y: 0, z: 0 },
+      { x: 2, y: 2, z: 0 },
+    ]);
+    expect(mid).toEqual({ x: 2, y: 0 });
+    expect(polylineArcMidpoint([])).toBeNull();
+    expect(polylineArcMidpoint([{ x: 5, y: 7, z: 0 }])).toEqual({ x: 5, y: 7 });
   });
 });

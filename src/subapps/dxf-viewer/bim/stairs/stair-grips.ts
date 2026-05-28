@@ -8,11 +8,14 @@
  * shared math in `stair-grip-math.ts`.
  *
  * Grip layout:
- *   ADR-358 Phase 5b (all variants):
- *     0 → basePoint              (`stair-base`)
- *     1 → direction handle       (`stair-direction`, base + 100mm·u)
- *     2 → width handle           (`stair-width`, outer stringer midpoint)
- *     3 → length handle          (`stair-length`, walkline end)
+ *   ADR-358 Phase 5b + ADR-393 v2:
+ *     0 → basePoint (MOVE)       (`stair-base`, displayed at walkline arc-midpoint)
+ *     1 → direction (ROTATION)   (`stair-direction`, displayed front-centre = base − 100mm·u)
+ *     2 → width handle           (`stair-width`, outer stringer midpoint — NON-straight only)
+ *     3 → length handle          (`stair-length`, walkline end — NON-straight only)
+ *   ADR-393 v2: for `straight` the width/length/mid-front grips are SUPPRESSED
+ *   (the 4 corners own both resize axes); for curved variants they stay. The
+ *   MOVE + ROTATION handles get icon glyphs via `stairGripGlyphShape()`.
  *   ADR-393 Phase A1 (straight only) — asymmetric corners (mirror ADR-363
  *   Phase 1C-bis walls):
  *     · start-left / start-right (`stair-corner-start-{left,right}`)
@@ -31,7 +34,8 @@
  */
 
 import type { Point2D, Point3D } from '../../rendering/types/Types';
-import type { GripInfo } from '../../hooks/useGripMovement';
+import type { GripInfo, StairGripKind } from '../../hooks/useGripMovement';
+import type { GripShape } from '../../rendering/grips/types';
 import type { StairEntity, StairVariantParams } from '../../bim/types/stair-types';
 import {
   DIRECTION_GRIP_OFFSET_MM,
@@ -40,12 +44,31 @@ import {
   perpUnit,
   project2D,
   polygonCentroid2D,
+  polylineArcMidpoint,
 } from './stair-grip-math';
 import { mmFactorFromWidth } from './stair-floor-link';
 
 // Public API re-exports (consumers import from this module).
 export { applyStairGripDrag } from './stair-grip-transforms';
 export type { StairGripDragInput } from './stair-grip-transforms';
+
+/**
+ * ADR-393 v2 — map a stair grip kind to its rendered glyph shape. The move
+ * (basePoint) and rotation (direction) handles get icon glyphs (4-arrow /
+ * curved-arrow) instead of the default square so the user reads their function
+ * at a glance (AutoCAD/Revit rotation-grip convention). All other stair grips
+ * stay square. Consumed by `StairRenderer.getGrips`.
+ */
+export function stairGripGlyphShape(kind: StairGripKind | undefined): GripShape {
+  switch (kind) {
+    case 'stair-base':
+      return 'move';
+    case 'stair-direction':
+      return 'rotation';
+    default:
+      return 'square';
+  }
+}
 
 /**
  * Compute the parametric grip positions for a `StairEntity`. Order is stable so
@@ -65,61 +88,99 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
 
   const grips: GripInfo[] = [];
 
-  // 0 — basePoint
+  // 0 — basePoint (MOVE handle). ADR-393 v2: displayed at the walkline
+  // arc-midpoint (centre of the climbing path) instead of the front edge so it
+  // reads as "grab here to move the whole stair". Drag is delta-based, so the
+  // display position does not affect the transform.
+  const moveAnchor: Point2D = polylineArcMidpoint(geometry.walkline) ?? {
+    x: base.x + (params.totalRun / 2) * u.x,
+    y: base.y + (params.totalRun / 2) * u.y,
+  };
   grips.push({
     entityId: entity.id,
     gripIndex: 0,
     type: 'center',
-    position: base,
+    position: moveAnchor,
     movesEntity: true,
     stairGripKind: 'stair-base',
   });
 
-  // 1 — direction handle
+  // 1 — direction handle (ROTATION). ADR-393 v2: displayed at the front-centre
+  // (one scene-scaled handle offset ahead of the first riser, −u side). The
+  // rotation pivot stays `basePoint` (= front-edge centre); `rotateDirection`
+  // is anchor-relative so grabbing the handle off the +u axis no longer flips
+  // the stair on mousedown.
   grips.push({
     entityId: entity.id,
     gripIndex: 1,
     type: 'vertex',
-    position: { x: base.x + handleOffset * u.x, y: base.y + handleOffset * u.y },
+    position: { x: base.x - handleOffset * u.x, y: base.y - handleOffset * u.y },
     movesEntity: false,
     stairGripKind: 'stair-direction',
   });
 
-  // 2 — width handle (outer stringer midpoint; fallback to params.width/2)
+  if (params.variant.kind === 'straight') {
+    // ADR-393 v2: width + length + mid-front grips are SUPPRESSED for straight
+    // stairs — the 4 corner grips own both resize axes (perp→width,
+    // axial→length, opposite face anchored). The transforms + union members are
+    // kept (the corners reuse them); they are simply not emitted here.
+    pushStraightGrips(grips, entity, base, u, p);
+  } else {
+    // Non-straight (L/U/Γ + curved): keep the axis width + length handles.
+    // ADR-393 v2 Phase 2 will replace them with corners on L/U/Γ; curved
+    // variants keep them permanently (no rectangular footprint → no corners).
+    pushAxisWidthLength(grips, entity, base, u, p);
+    if (hasSplitGrip(params.variant)) {
+      pushLandingGrips(grips, entity, base, u, p);
+    }
+  }
+
+  return grips;
+}
+
+// ─── ADR-358 Phase 5b — axis width + length handles (non-straight variants) ──
+
+/**
+ * The two on-axis resize handles (`stair-width` at the outer-stringer midpoint,
+ * `stair-length` at the walkline end). Emitted for every non-straight variant.
+ * Straight stairs suppress these in favour of the 4 corner grips (ADR-393 v2).
+ */
+function pushAxisWidthLength(
+  grips: GripInfo[],
+  entity: Readonly<StairEntity>,
+  base: Point2D,
+  u: { x: number; y: number },
+  p: { x: number; y: number },
+): void {
+  const { params, geometry } = entity;
+
+  // width handle (outer stringer midpoint; fallback to params.width/2)
   const outer = geometry.stringers.outer;
   const widthPos: Point2D = outer.length >= 2
     ? project2D(outer[Math.floor(outer.length / 2)])
     : { x: base.x + (params.width / 2) * p.x, y: base.y + (params.width / 2) * p.y };
   grips.push({
     entityId: entity.id,
-    gripIndex: 2,
+    gripIndex: grips.length,
     type: 'vertex',
     position: widthPos,
     movesEntity: false,
     stairGripKind: 'stair-width',
   });
 
-  // 3 — length handle (walkline end; fallback to base + totalRun·u)
+  // length handle (walkline end; fallback to base + totalRun·u)
   const walk = geometry.walkline;
   const lengthPos: Point2D = walk.length >= 1
     ? project2D(walk[walk.length - 1])
     : { x: base.x + params.totalRun * u.x, y: base.y + params.totalRun * u.y };
   grips.push({
     entityId: entity.id,
-    gripIndex: 3,
+    gripIndex: grips.length,
     type: 'vertex',
     position: lengthPos,
     movesEntity: false,
     stairGripKind: 'stair-length',
   });
-
-  if (params.variant.kind === 'straight') {
-    pushStraightGrips(grips, entity, base, u, p, handleOffset);
-  } else if (hasSplitGrip(params.variant)) {
-    pushLandingGrips(grips, entity, base, u, p);
-  }
-
-  return grips;
 }
 
 // ─── ADR-393 Phase A1 + A2 — straight corner + mid-front grips ───────────────
@@ -130,7 +191,6 @@ function pushStraightGrips(
   base: Point2D,
   u: { x: number; y: number },
   p: { x: number; y: number },
-  handleOffset: number,
 ): void {
   const { params } = entity;
   const half = params.width / 2;
@@ -153,18 +213,10 @@ function pushStraightGrips(
       stairGripKind: c.kind,
     });
   }
-
-  // Mid-front start grip — placed one (scene-scaled) handle offset ahead of the
-  // first riser (−u side) so it stays clickable instead of colliding with the
-  // basePoint grip.
-  grips.push({
-    entityId: entity.id,
-    gripIndex: grips.length,
-    type: 'vertex',
-    position: { x: base.x - handleOffset * u.x, y: base.y - handleOffset * u.y },
-    movesEntity: false,
-    stairGripKind: 'stair-start-side',
-  });
+  // ADR-393 v2: the legacy `stair-start-side` mid-front grip is no longer
+  // emitted — the rotation handle now occupies the front-centre slot, and the
+  // start corners cover the front-edge resize. The transform + union member are
+  // retained for backward-compat / Phase-2 reuse.
 }
 
 // ─── ADR-393 Phase B1 + B2 — landing edge + depth + corner-radius grips ──────

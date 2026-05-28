@@ -1,7 +1,7 @@
 # ADR-393 — BIM Stair Extended Parametric Grips (Industry-Aligned Symmetric Pattern)
 
-**Status**: 🟢 IMPLEMENTED (Phase A1+A2+B1+B2 — 2026-05-28, 9 new grips + 1 replacement, 26/26 tests PASS)
-**Date**: 2026-05-27
+**Status**: 🟢 IMPLEMENTED v1 + 🟡 v2 Phase 1 DONE / Phase 2 PENDING (see §12 — grip UX redesign, 2026-05-28, 29/29 tests PASS)
+**Date**: 2026-05-27 (v1) · 2026-05-28 (v2)
 **Category**: Drawing System / DXF Viewer / BIM
 **Author**: Giorgio Pagonis + Claude (Opus 4.7)
 **Related ADRs**: ADR-031, ADR-040, ADR-294, ADR-345, ADR-353, ADR-358 (parent), ADR-363 (Wall corner-grip pattern mirror), ADR-369
@@ -271,7 +271,7 @@ Giorgio SSoT review αποκάλυψε δύο διορθώσεις που έγι
 | # | Question | Answer | Impact |
 |---|----------|--------|--------|
 | **Q1** | Πόσα grips στην πρώτη φάση; | **Γ** — όλα Phase A + Phase B (~6h) | Phase A1+A2+B1+B2 entered scope. C/D deferred. |
-| **Q2** | Drag αριστερής πλευράς width → δεξιά πλευρά τι κάνει; | **Συμμετρική** (κουνιέται κι αυτή) | G9, G10 dropped. G2 (existing symmetric) sufficient. |
+| **Q2** | Drag αριστερής πλευράς width → δεξιά πλευρά τι κάνει; | **Συμμετρική** (κουνιέται κι αυτή) | G9, G10 dropped. G2 (existing symmetric) sufficient. ⚠️ **SUPERSEDED by v2 §12** — η ασυμμετρία γίνεται πλέον μέσω γωνιών (αντίθετη όψη αγκυρωμένη)· τα G2/G3 (width/length) ΚΡΥΒΟΝΤΑΙ στην ίσια. |
 | **Q3** | Σκάλες Γ/U/Π — διαφορετικό πλάτος ανά σκέλος; | **Όχι — ενιαίο** | G14 dropped. No `flight2Width` field. |
 | **Q4** | Πλατύσκαλο L/U/Γ — ποια χερούλια κρατάμε; | **Μόνο 2 στα άκρα** (όχι κεντρικό) | G4 removed, G12+G13 replace. Existing tests migrate. |
 | **Q5** | Πλατύσκαλο διαφορετικό πλάτος από σκάλα; | **Όχι — ίδιο πάντα** | G16 dropped. No `landingWidthOverride` field. |
@@ -282,10 +282,43 @@ Giorgio SSoT review αποκάλυψε δύο διορθώσεις που έγι
 
 ## 10. Changelog
 
+- **2026-05-28** (v2 Phase 1, Opus 4.7) — **Grip UX redesign** (§12). (1) `stair-base` MOVE handle relocated to the walkline arc-midpoint + 4-arrow icon glyph; `stair-direction` ROTATION handle relocated to front-centre (base − offset·u) + curved-arrow icon glyph. (2) `rotateDirection` made anchor-relative (was absolute atan2 → would flip the stair when grabbing the off-axis front handle). (3) **straight** stairs SUPPRESS `stair-width`/`stair-length`/`stair-start-side` — the 4 corners own both resize axes (Q2 superseded); transforms + union members kept (corners reuse them). L/U/Γ + curved keep width/length unchanged this phase. (4) Glyph plumbing: `GripShape` += `'move'|'rotation'`; rendering `GripInfo.shape?` hint (type-only import); `StairRenderer.getGrips` maps kind→shape via new `stairGripGlyphShape()`; `GripPhaseRenderer.renderStandardGrips` honours `grip.shape`; `GripShapeRenderer` draws the two glyphs. 9 files. 29/29 tests PASS, tsc clean. **Phase 2 PENDING**: hide width/length on L/U/Γ + add corners there (positions from `geometry.stringers`, multi-flight transforms).
 - **2026-05-28** (SSoT review) — Two on-the-spot fixes post Giorgio review (§8.1): (1) removed duplicate `unitVectorFromDirection`/`perpUnit`, now consume `directionToUnitVector`/`perp` from `stair-geometry-shared`; (2) scaled the 100 mm direction/mid-front handle offset via `mmFactorFromWidth` SSoT → fixes 1000×-off-screen handles in metre scenes (G1 pre-existing + G11 new). Added metre-scene regression test 5b. Removed dead `DEG_TO_RAD`. Cross-BIM-grip duplication (project2D / corner-decompose math / scene-floor) flagged to pending-ratchet (§8.2). 27/27 tests PASS.
 - **2026-05-28** — Phase A1+A2+B1+B2 IMPLEMENTED (Opus 4.7). 9 new `StairGripKind` members + `stair-split` removed. `stair-grips.ts` split into 3 modules (math / transforms / positions) to stay under the 500-line ceiling (N.7.1). Corner transforms mirror `wall-grips.ts:moveCorner` (width↔thickness, basePoint/totalRun↔start/end). Per-flight grips (G12/G13) both reapportion `flightSplit` via run-axis projection (landing slides as a rigid block). Landing depth/corner-radius reuse existing `landingDepth`/`landingCornerRadius` fields → zero data-model change. 26/26 tests PASS. Status 🟢 APPROVED → 🟢 IMPLEMENTED.
 - **2026-05-27** (later) — Round 1 Q&A resolved (Opus 4.7, Q1-Q5 answered by Giorgio). Scope reduced from 22 new grips → 9 new + 1 replacement. Phase C/D deferred. Zero data-model changes (όλα τα νέα grips χρησιμοποιούν existing `StairParams`/`StairVariantParams` fields). Effort 18.5h → 6h. Status 🟡 PROPOSED → 🟢 APPROVED. Έτοιμο για Phase A1 implementation (model: Sonnet 4.6).
 - **2026-05-27** — ADR-393 created (Opus 4.7, round 1). Gap analysis: stairs σήμερα 5 grips vs industry 8-12 (straight) / 14-18 (L/U/Γ). Proposed +22 grips σε 4 phases (A: corners + per-side, B: per-flight L/U/Γ, C: universal utility incl. click-flip, D: 3D/multi-story). Mirror pattern ADR-363 Phase 1C-bis walls.
+
+---
+
+## 12. ADR-393 v2 — Grip UX Redesign (2026-05-28)
+
+Μετά τη v1 (13 grips), ο Giorgio ζήτησε ανασχεδιασμό της εμπειρίας ώστε οι γωνίες
+να αναλαμβάνουν πλάτος+μήκος (αντίθετη όψη αγκυρωμένη) και τα on-axis width/length
+handles να κρύβονται. Επίσης restyle των move/rotation handles σε εικονίδια.
+
+### 12.1 Αποφάσεις (Giorgio, 2026-05-28)
+- **Εύρος**: κρύβουμε width/length σε **όλες** τις σκάλες· γωνίες σε **ίσια + Γ/U/Π** (όχι καμπύλες — δεν υπάρχει ορθογώνιο αποτύπωμα).
+- **MOVE handle** (`stair-base`): θέση = arc-midpoint του walkline (κέντρο διαδρομής)· glyph = 4-βέλη.
+- **ROTATION handle** (`stair-direction`): θέση = μπρος-κέντρο (base − offset·u)· glyph = καμπύλο βέλος· pivot = `basePoint` (= μπρος-κέντρο)· drag-to-rotate **anchor-relative** (όχι click-mode — Q-A).
+- **Q2 superseded**: η ασυμμετρία γίνεται μέσω γωνιών, όχι symmetric width grip.
+- **walkline "μέσο"** = arc-length midpoint (όχι bbox center — Q-B).
+- **ίσια corners**: παραμένουν param-derived (purity → ratchet)· **L/U/Γ end-corners** read-from-geometry (`stringers`).
+
+### 12.2 Φάσεις
+| Phase | Scope | Status |
+|-------|-------|--------|
+| **1** | move/rotation relocate + glyphs · anchor-relative rotation · hide width/length/mid-front στην **ίσια** · καμπύλες αμετάβλητες · tests | ✅ DONE 2026-05-28 |
+| **2** | **L/U/Γ**: hide width/length + add 4 corners (θέσεις από `geometry.stringers` · multi-flight transforms: perp→width, axial start→`flightSplit[0]`, axial end→`flightSplit[last]`) + tests | ❌ PENDING |
+
+### 12.3 Glyph render path (Phase 1)
+`getStairGrips` (stairGripKind) → `StairRenderer.getGrips` map kind→`shape` via `stairGripGlyphShape()` → `GripInfo.shape?` (rendering type, type-only import) → `GripPhaseRenderer.renderStandardGrips` (`grip.shape ?? 'square'`) → `GripShapeRenderer.renderShape` (`'move'` 4-arrow / `'rotation'` curved-arrow). SSoT mapping = `stairGripGlyphShape` (tested).
+
+### 12.4 Emit ανά variant (v2 Phase 1)
+| Variant | Grips | Count |
+|---------|-------|-------|
+| `straight` | move + rotation + 4 corners | **6** |
+| `l-shape`/`u-shape`/`gamma` | move + rotation + width + length + landing grips (Phase 1· corners → Phase 2) | 7-9 |
+| καμπύλες (spiral/helical/elliptical/winder/triangular×2/sketch/v-shape) | move + rotation + width + length | **4** |
 
 ---
 
