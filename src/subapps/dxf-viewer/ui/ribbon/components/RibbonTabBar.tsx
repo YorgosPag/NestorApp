@@ -6,6 +6,8 @@ import type { RibbonMinimizeState, RibbonTab } from '../types/ribbon-types';
 import type { TabDragHandlers } from '../hooks/useRibbonTabDrag';
 import { RibbonTabItem } from './RibbonTabItem';
 import { RibbonMinimizeButton } from './RibbonMinimizeButton';
+import { RibbonHeaderToggleButton } from './RibbonHeaderToggleButton';
+import { RibbonUndoRedoButtons } from './RibbonUndoRedoButtons';
 
 interface RibbonTabBarProps {
   tabs: RibbonTab[];
@@ -35,6 +37,8 @@ export const RibbonTabBar: React.FC<RibbonTabBarProps> = ({
       role="tablist"
       aria-label={t('ribbon.ariaLabels.tabBar')}
     >
+      <RibbonHeaderToggleButton />
+      <RibbonUndoRedoButtons />
       <div className="dxf-ribbon-tab-list">
         {tabs.map((tab) => (
           <RibbonTabItem

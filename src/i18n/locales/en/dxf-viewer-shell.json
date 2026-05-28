@@ -767,7 +767,12 @@
       "tabBar": "Ribbon Tab Bar",
       "tabBody": "Ribbon Tab Content",
       "minimize": "Minimize Ribbon",
-      "expandPanel": "Expand Panel"
+      "expandPanel": "Expand Panel",
+      "toggleHeader": "Toggle app header"
+    },
+    "headerToggle": {
+      "show": "Show header",
+      "hide": "Hide header"
     },
     "contextMenu": {
       "minimize": "Minimize the Ribbon",

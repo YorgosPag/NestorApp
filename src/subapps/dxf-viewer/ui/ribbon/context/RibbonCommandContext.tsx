@@ -42,6 +42,14 @@ export interface RibbonCommandsApi {
    */
   onAction: (action: string, data?: RibbonActionPayload) => void;
   /**
+   * ADR-345 Fase 5.7 — Command-history availability, used by the tab-bar
+   * undo/redo buttons to render their disabled (greyed) state. Bridged from
+   * `useDxfViewerState.canUndo` / `canRedo` (CommandHistory, ADR-032).
+   * Default `false` when no bridge supplies them.
+   */
+  canUndo?: boolean;
+  canRedo?: boolean;
+  /**
    * ADR-345 §4.4 Fase 5.5 — toggle button click.
    * `commandKey` identifies the field (e.g. 'text.style.bold');
    * the bridge decides which store to mutate and which command to fire.
@@ -86,6 +94,8 @@ interface RibbonCommandContextValue {
   onToolChange: (tool: ToolType) => void;
   onComingSoon: (label: string) => void;
   onAction: (action: string, data?: RibbonActionPayload) => void;
+  canUndo: boolean;
+  canRedo: boolean;
   onToggle: (commandKey: string, nextValue: boolean) => void;
   onComboboxChange: (commandKey: string, value: string) => void;
   getToggleState: (commandKey: string) => RibbonToggleState;
@@ -126,6 +136,8 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
       onToolChange: commands.onToolChange,
       onComingSoon: commands.onComingSoon,
       onAction: commands.onAction,
+      canUndo: commands.canUndo ?? false,
+      canRedo: commands.canRedo ?? false,
       onToggle: commands.onToggle ?? NOOP_TOGGLE,
       onComboboxChange: commands.onComboboxChange ?? NOOP_COMBOBOX_CHANGE,
       getToggleState: commands.getToggleState ?? NOOP_TOGGLE_STATE,
@@ -140,6 +152,8 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
       commands.onToolChange,
       commands.onComingSoon,
       commands.onAction,
+      commands.canUndo,
+      commands.canRedo,
       commands.onToggle,
       commands.onComboboxChange,
       commands.getToggleState,

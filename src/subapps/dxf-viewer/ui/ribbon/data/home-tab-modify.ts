@@ -32,16 +32,6 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
           type: 'simple',
           size: 'large',
           command: {
-            id: 'modify.gripEdit',
-            labelKey: 'ribbon.commands.gripEdit',
-            icon: 'grip-edit',
-            commandKey: 'grip-edit',
-          },
-        },
-        {
-          type: 'simple',
-          size: 'large',
-          command: {
             id: 'modify.move',
             labelKey: 'ribbon.commands.move',
             icon: 'move',

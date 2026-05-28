@@ -44,6 +44,9 @@ interface UseRibbonCommandsProps {
   handleToolChange: (tool: ToolType) => void;
   handleRibbonComingSoon: (label: string) => void;
   wrappedHandleAction: (action: string, data?: RibbonActionPayload) => void;
+  /** ADR-345 Fase 5.7 — CommandHistory availability for tab-bar undo/redo. */
+  canUndo: boolean;
+  canRedo: boolean;
   textEditorBridge: RibbonTextEditorBridge;
   /** ADR-353 Phase A — Array contextual tab bridge. */
   arrayBridge: RibbonArrayBridge;
@@ -78,6 +81,8 @@ export function useRibbonCommands({
   handleToolChange,
   handleRibbonComingSoon,
   wrappedHandleAction,
+  canUndo,
+  canRedo,
   textEditorBridge,
   arrayBridge,
   stairBridge,
@@ -269,6 +274,8 @@ export function useRibbonCommands({
       onToolChange: handleToolChange,
       onComingSoon: handleRibbonComingSoon,
       onAction,
+      canUndo,
+      canRedo,
       onToggle,
       onComboboxChange,
       getToggleState,
@@ -281,6 +288,8 @@ export function useRibbonCommands({
       handleToolChange,
       handleRibbonComingSoon,
       onAction,
+      canUndo,
+      canRedo,
       onToggle,
       onComboboxChange,
       getToggleState,

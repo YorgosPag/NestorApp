@@ -37,6 +37,14 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
   border-bottom-width: 0;
 }
 
+/* ADR-345 — Toggle the WHOLE global app header on /dxf/viewer.
+   Driven by RibbonHeaderToggleButton via the `data-dxf-header-hidden`
+   attribute on <html> (sole writer: useDxfGlobalHeaderToggle). Default
+   hidden on viewer mount; the button flips it for the current session. */
+html[data-dxf-header-hidden="true"] header.sticky.top-0 {
+  display: none;
+}
+
 .dark,
 [data-theme="dark"] {
   --ribbon-bg: hsl(var(--showcase-bg)); /* #1D283A navy brand (globals.css SSoT) */
@@ -171,6 +179,54 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
 
 .dxf-ribbon-minimize-button:hover {
   background: var(--ribbon-btn-hover);
+}
+
+.dxf-ribbon-header-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 100%;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--ribbon-text);
+  cursor: pointer;
+}
+
+.dxf-ribbon-header-toggle-button:hover {
+  background: var(--ribbon-btn-hover);
+}
+
+/* ADR-345 Fase 5.7 — Undo/Redo group in the tab bar (after header-toggle,
+   before the first tab). Mirrors the minimize button styling; disabled
+   state greys out when CommandHistory has nothing to undo/redo. */
+.dxf-ribbon-tabbar-actions {
+  display: inline-flex;
+  align-items: stretch;
+  flex-shrink: 0;
+}
+
+.dxf-ribbon-tabbar-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 100%;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--ribbon-text);
+  cursor: pointer;
+}
+
+.dxf-ribbon-tabbar-action-button:hover:not(:disabled) {
+  background: var(--ribbon-btn-hover);
+}
+
+.dxf-ribbon-tabbar-action-button:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 .dxf-ribbon-body {

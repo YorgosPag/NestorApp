@@ -18,7 +18,6 @@ import { VIEW_RANGE_PANEL, OBJECT_STYLES_PANEL, VIEW_TEMPLATES_PANEL, PEN_TABLE_
 import { VIEW_LAYER_MANAGER_PANEL } from './view-tab-layer-manager';
 import { ANNOTATE_MEASURE_PANEL } from './home-tab-measure';
 import { HOME_DIMENSIONS_PANEL } from './home-tab-dimensions';
-import { HOME_HISTORY_PANEL } from './home-tab-history';
 import { HOME_GUIDES_PANEL } from './home-tab-guides';
 import { HOME_AI_PANEL } from './home-tab-ai';
 import { SETTINGS_CURSOR_PANEL } from './settings-tab-cursor';
@@ -40,7 +39,6 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
     id: 'home',
     labelKey: 'ribbon.tabs.home',
     panels: [
-      HOME_HISTORY_PANEL,
       HOME_LAYERS_PANEL,
       HOME_DRAW_PANEL,
       HOME_MODIFY_PANEL,

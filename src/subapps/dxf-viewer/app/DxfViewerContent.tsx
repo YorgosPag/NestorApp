@@ -286,6 +286,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const ribbonCommands = useRibbonCommands({
     activeTool, handleToolChange, handleRibbonComingSoon,
     wrappedHandleAction: arrayActionInterceptor,
+    canUndo, canRedo,
     textEditorBridge, arrayBridge, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge,
     slabOpeningBridge, lineToolBridge, xlineModeBridge,
   });
