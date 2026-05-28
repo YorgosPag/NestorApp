@@ -832,6 +832,16 @@
         "src/config/boq-subcategories.ts"
       ]
     },
+    "iso19650-constants": {
+      "ssotFile": "src/config/iso19650-constants.ts",
+      "description": "ISO 19650-1/-2:2018 + BS 1192 metadata enums + regex validators (ADR-373). DISCIPLINE_CODES / DOCUMENT_SERIES / CDE_STATES / SUITABILITY_CODES must not be redeclared inline — single source for FileRecord enrichment, validators, and AI enricher.",
+      "forbiddenPatterns": [
+        "(DISCIPLINE_CODES|DOCUMENT_SERIES|CDE_STATES|SUITABILITY_CODES)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/iso19650-constants.ts"
+      ]
+    },
     "department-codes": {
       "ssotFile": "src/config/department-codes.ts",
       "description": "Department codes canonical registry (ADR-326 §3.3) — DEPARTMENT_CODES must not be redeclared inline.",
