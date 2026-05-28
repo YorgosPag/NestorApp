@@ -40,6 +40,12 @@ export interface OpeningBoqContext {
   readonly projectId: string;
   readonly buildingId: string;
   readonly floorplanId: string;
+  /**
+   * ADR-395 Phase 1 (G7) — floor link. All openings in a signature group share
+   * the same floorplan → same floor, so it is stamped on the group row as
+   * `linkedFloorId` + `scope: 'floor'`.
+   */
+  readonly floorId?: string;
 }
 
 // ────────────────────────────────────────────────────────────────────────────

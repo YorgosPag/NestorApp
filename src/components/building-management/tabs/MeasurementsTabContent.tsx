@@ -21,7 +21,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { BOQSummaryCards } from './MeasurementsTabContent/BOQSummaryCards';
 import { BOQCoverageIndicator } from './MeasurementsTabContent/BOQCoverageIndicator';
 import { BOQFilterBar } from './MeasurementsTabContent/BOQFilterBar';
-import { BOQCategoryAccordion, getCategoryCodes } from './MeasurementsTabContent/BOQCategoryAccordion';
+import { BOQCategoryAccordion, getFloorGroupKeys } from './MeasurementsTabContent/BOQCategoryAccordion';
 import { BOQItemEditor } from './MeasurementsTabContent/BOQItemEditor';
 import { Button } from '@/components/ui/button';
 import { Ruler, Plus, AlertCircle, ChevronRight, ChevronDown, FileText } from 'lucide-react';
@@ -85,15 +85,15 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BOQItem | null>(null);
 
-  // Accordion expand/collapse state (controlled mode)
-  const allCategoryCodes = useMemo(() => getCategoryCodes(filteredItems), [filteredItems]);
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(allCategoryCodes);
+  // Accordion expand/collapse state (controlled mode) — ADR-395 per-floor groups.
+  const allFloorKeys = useMemo(() => getFloorGroupKeys(filteredItems), [filteredItems]);
+  const [expandedFloors, setExpandedFloors] = useState<string[]>(allFloorKeys);
 
-  const handleToggleAllCategories = useCallback(() => {
-    setExpandedCategories(prev =>
-      prev.length === allCategoryCodes.length ? [] : [...allCategoryCodes]
+  const handleToggleAllFloors = useCallback(() => {
+    setExpandedFloors(prev =>
+      prev.length === allFloorKeys.length ? [] : [...allFloorKeys]
     );
-  }, [allCategoryCodes]);
+  }, [allFloorKeys]);
 
   // --- HANDLERS ---
 
@@ -269,17 +269,17 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
             <Plus className="h-4 w-4 mr-2" />
             {t('tabs.measurements.actions.newItem')}
           </Button>
-          {allCategoryCodes.length > 0 && (
+          {allFloorKeys.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleToggleAllCategories}
-              aria-label={expandedCategories.length === allCategoryCodes.length
+              onClick={handleToggleAllFloors}
+              aria-label={expandedFloors.length === allFloorKeys.length
                 ? t('tabs.measurements.actions.collapseAll')
                 : t('tabs.measurements.actions.expandAll')
               }
             >
-              {expandedCategories.length === allCategoryCodes.length
+              {expandedFloors.length === allFloorKeys.length
                 ? <ChevronDown className={iconSizes.sm} />
                 : <ChevronRight className={iconSizes.sm} />
               }
@@ -290,16 +290,17 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
         </nav>
       </header>
 
-      {/* Category Accordion with Items */}
+      {/* Per-floor BOQ groups with category tables (ADR-395 G7) */}
       <BOQCategoryAccordion
         items={filteredItems}
         categories={categories}
+        buildingId={building.id}
         onEdit={handleEdit}
         onDelete={(item) => void handleDelete(item)}
         onStatusChange={handleStatusChange}
         onDetach={(item) => void handleDetach(item)}
-        expandedCategories={expandedCategories}
-        onExpandedChange={(expanded) => setExpandedCategories(expanded as string[])}
+        expandedCategories={expandedFloors}
+        onExpandedChange={(expanded) => setExpandedFloors(expanded as string[])}
       />
 
       {/* Editor Dialog */}

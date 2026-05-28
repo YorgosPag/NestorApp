@@ -34,6 +34,7 @@ import { StairPersistenceHost } from './StairPersistenceHost';
 import { SlabOpeningStackHost } from './SlabOpeningStackHost';
 import { PsetEditorHost } from './PsetEditorHost';
 import { IfcExportHost } from './IfcExportHost';
+import { useFloorMetadata } from '../hooks/data/useFloorMetadata';
 
 type LevelManager = ReturnType<typeof useLevels>;
 
@@ -54,6 +55,19 @@ export function DxfViewerTopBar({
   currentScene,
   levelManager,
 }: DxfViewerTopBarProps) {
+  // ADR-395 Phase 1 (G3+G7) — resolve buildingId + floorId once for all BIM
+  // persistence hosts. Import-σε-όροφο δίνει `saveContext.floorId` αλλά ΟΧΙ
+  // `buildingId` → χωρίς resolution ο BimToBoqBridge έκανε σιωπηρό skip και η
+  // καρτέλα «Επιμετρήσεις» έμενε κενή. 3-tier fallback (saveContext → linked
+  // Level → FLOORS doc μέσω useFloorMetadata) + floorId για per-floor grouping.
+  const currentLevel = levelManager.levels?.find((l) => l.id === levelManager.currentLevelId);
+  const floorId = levelManager.saveContext?.floorId ?? currentLevel?.floorId ?? undefined;
+  const floorMeta = useFloorMetadata(floorId ?? null);
+  const buildingId =
+    levelManager.saveContext?.buildingId
+    ?? currentLevel?.buildingId
+    ?? (floorMeta?.buildingId || undefined);
+
   return (
     <>
       <RibbonRoot
@@ -75,7 +89,8 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
-        buildingId={levelManager.saveContext?.buildingId ?? undefined}
+        buildingId={buildingId}
+        floorId={floorId}
       />
       <OpeningPersistenceHost
         primarySelectedId={primarySelectedId}
@@ -83,7 +98,7 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
-        buildingId={levelManager.saveContext?.buildingId ?? undefined}
+        buildingId={buildingId}
       />
       <SlabPersistenceHost
         primarySelectedId={primarySelectedId}
@@ -91,7 +106,8 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
-        buildingId={levelManager.saveContext?.buildingId ?? undefined}
+        buildingId={buildingId}
+        floorId={floorId}
       />
       <ColumnPersistenceHost
         primarySelectedId={primarySelectedId}
@@ -99,7 +115,8 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
-        buildingId={levelManager.saveContext?.buildingId ?? undefined}
+        buildingId={buildingId}
+        floorId={floorId}
       />
       <BeamPersistenceHost
         primarySelectedId={primarySelectedId}
@@ -107,7 +124,8 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
-        buildingId={levelManager.saveContext?.buildingId ?? undefined}
+        buildingId={buildingId}
+        floorId={floorId}
       />
       <SlabOpeningPersistenceHost
         primarySelectedId={primarySelectedId}
@@ -115,7 +133,7 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
-        buildingId={levelManager.saveContext?.buildingId ?? undefined}
+        buildingId={buildingId}
       />
       <SlabOpeningStackHost levelManager={levelManager} />
       <StairPersistenceHost

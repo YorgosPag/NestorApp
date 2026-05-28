@@ -58,6 +58,8 @@ export interface UseWallPersistenceParams {
   readonly projectId: string | null | undefined;
   readonly floorplanId: string | null | undefined;
   readonly buildingId: string | null | undefined;
+  /** ADR-395 Phase 1 (G7) — floor link for per-floor BOQ grouping. */
+  readonly floorId: string | null | undefined;
   readonly userId: string | null;
   readonly levelManager: LevelManagerLike;
   readonly primarySelectedWall: WallEntity | null;
@@ -90,6 +92,7 @@ export function useWallPersistence(
     projectId,
     floorplanId,
     buildingId,
+    floorId,
     userId,
     levelManager,
     primarySelectedWall,
@@ -303,7 +306,7 @@ export function useWallPersistence(
         void bimToBoqBridge.upsertBoqItemForBim(
           'wall',
           { id: entity.id, kind: entity.kind, params: entity.params as unknown as Readonly<{ category?: string; [key: string]: unknown }>, geometry: entity.geometry },
-          { companyId, projectId, buildingId },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           isNew ? 'created' : 'updated',
         );
       }
@@ -311,7 +314,7 @@ export function useWallPersistence(
       setError(err instanceof Error ? err.message : 'WALL_SAVE_ERROR');
       setSaveState('error');
     }
-  }, [acquireLock, companyId, projectId, buildingId]);
+  }, [acquireLock, companyId, projectId, buildingId, floorId]);
 
   // Auto-save debounce on selected wall params change.
   useEffect(() => {
@@ -412,7 +415,7 @@ export function useWallPersistence(
         void bimToBoqBridge.upsertBoqItemForBim(
           'wall',
           { id: entity.id, kind: entity.kind, params: entity.params as unknown as Readonly<{ category?: string; [key: string]: unknown }>, geometry: entity.geometry },
-          { companyId, projectId, buildingId },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           'created',
         );
       }
@@ -420,7 +423,7 @@ export function useWallPersistence(
       setError(err instanceof Error ? err.message : 'WALL_RESTORE_ERROR');
       setSaveState('error');
     }
-  }, [acquireLock, companyId, projectId, buildingId]);
+  }, [acquireLock, companyId, projectId, buildingId, floorId]);
 
   // First-save listener — fires immediately for freshly drawn walls so the
   // local scene survives the next Firestore snapshot AND lands in

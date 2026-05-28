@@ -44,6 +44,7 @@ export interface WallPersistenceHostProps {
   readonly projectId?: string;
   readonly floorplanId?: string;
   readonly buildingId?: string;
+  readonly floorId?: string;
 }
 
 export function WallPersistenceHost({
@@ -53,6 +54,7 @@ export function WallPersistenceHost({
   projectId,
   floorplanId,
   buildingId,
+  floorId,
 }: WallPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -68,6 +70,7 @@ export function WallPersistenceHost({
     projectId,
     floorplanId,
     buildingId,
+    floorId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedWall,
@@ -94,6 +97,7 @@ export function WallPersistenceHost({
     projectId,
     floorplanId,
     buildingId,
+    floorId,
     userId: user?.uid ?? null,
   });
 

@@ -43,6 +43,8 @@ export interface UseWallSplitPersistenceParams {
   readonly projectId: string | null | undefined;
   readonly floorplanId: string | null | undefined;
   readonly buildingId: string | null | undefined;
+  /** ADR-395 Phase 1 (G7) — floor link for per-floor BOQ grouping. */
+  readonly floorId: string | null | undefined;
   readonly userId: string | null;
 }
 
@@ -51,7 +53,7 @@ export interface UseWallSplitPersistenceParams {
 // ============================================================================
 
 export function useWallSplitPersistence(params: UseWallSplitPersistenceParams): void {
-  const { companyId, projectId, floorplanId, buildingId, userId } = params;
+  const { companyId, projectId, floorplanId, buildingId, floorId, userId } = params;
 
   const wallSvcRef = useRef<WallFirestoreService | null>(null);
   const openingSvcRef = useRef<OpeningFirestoreService | null>(null);
@@ -63,6 +65,8 @@ export function useWallSplitPersistence(params: UseWallSplitPersistenceParams): 
   projectIdRef.current = projectId;
   const buildingIdRef = useRef(buildingId);
   buildingIdRef.current = buildingId;
+  const floorIdRef = useRef(floorId);
+  floorIdRef.current = floorId;
 
   useEffect(() => {
     if (!companyId || !projectId || !floorplanId || !userId) {
@@ -106,18 +110,19 @@ export function useWallSplitPersistence(params: UseWallSplitPersistenceParams): 
     const cId = companyIdRef.current;
     const pId = projectIdRef.current;
     const bId = buildingIdRef.current;
+    const fId = floorIdRef.current ?? undefined;
     if (cId && pId && bId) {
       void bimToBoqBridge.deleteBoqItemForBim(originalWallId, cId);
       void bimToBoqBridge.upsertBoqItemForBim(
         'wall',
         { id: wall1.id, kind: wall1.kind, geometry: wall1.geometry, params: wall1.params as unknown as Readonly<{ [key: string]: unknown; category?: string }> },
-        { companyId: cId, projectId: pId, buildingId: bId },
+        { companyId: cId, projectId: pId, buildingId: bId, floorId: fId },
         'created',
       );
       void bimToBoqBridge.upsertBoqItemForBim(
         'wall',
         { id: wall2.id, kind: wall2.kind, geometry: wall2.geometry, params: wall2.params as unknown as Readonly<{ [key: string]: unknown; category?: string }> },
-        { companyId: cId, projectId: pId, buildingId: bId },
+        { companyId: cId, projectId: pId, buildingId: bId, floorId: fId },
         'created',
       );
     }

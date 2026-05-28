@@ -64,6 +64,8 @@ export interface UseSlabPersistenceParams {
   readonly projectId: string | null | undefined;
   readonly floorplanId: string | null | undefined;
   readonly buildingId: string | null | undefined;
+  /** ADR-395 Phase 1 (G7) — floor link for per-floor BOQ grouping. */
+  readonly floorId: string | null | undefined;
   readonly userId: string | null;
   readonly levelManager: LevelManagerLike;
   readonly primarySelectedSlab: SlabEntity | null;
@@ -160,6 +162,7 @@ export function useSlabPersistence(
     projectId,
     floorplanId,
     buildingId,
+    floorId,
     userId,
     levelManager,
     primarySelectedSlab,
@@ -309,7 +312,7 @@ export function useSlabPersistence(
         void bimToBoqBridge.upsertBoqItemForBim(
           'slab',
           { id: entity.id, kind: entity.kind, geometry: boqGeometry },
-          { companyId, projectId, buildingId },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           isNew ? 'created' : 'updated',
         );
       }
@@ -317,7 +320,7 @@ export function useSlabPersistence(
       setError(err instanceof Error ? err.message : 'SLAB_SAVE_ERROR');
       setSaveState('error');
     }
-  }, [companyId, projectId, buildingId, levelManager]);
+  }, [companyId, projectId, buildingId, floorId, levelManager]);
 
   // Auto-save debounce σε selected slab params change.
   useEffect(() => {
@@ -418,7 +421,7 @@ export function useSlabPersistence(
         void bimToBoqBridge.upsertBoqItemForBim(
           'slab',
           { id: entity.id, kind: entity.kind, geometry: entity.geometry },
-          { companyId, projectId, buildingId },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           'created',
         );
       }
@@ -426,7 +429,7 @@ export function useSlabPersistence(
       setError(err instanceof Error ? err.message : 'SLAB_RESTORE_ERROR');
       setSaveState('error');
     }
-  }, [companyId, projectId, buildingId]);
+  }, [companyId, projectId, buildingId, floorId]);
 
   // First-save listener — fires άμεσα για freshly drawn slabs.
   useEffect(() => {
@@ -456,7 +459,7 @@ export function useSlabPersistence(
   // Reads scene beams from memory — no extra Firestore query.
   useEffect(() => {
     if (!companyId || !projectId || !buildingId) return;
-    const ctx = { companyId, projectId, buildingId };
+    const ctx = { companyId, projectId, buildingId, floorId: floorId ?? undefined };
     const cleanup = EventBus.on('bim:beam-persisted', () => {
       const levelId = levelManager.currentLevelId;
       const scene = levelId ? levelManager.getLevelScene(levelId) : null;
@@ -479,7 +482,7 @@ export function useSlabPersistence(
       }
     });
     return cleanup;
-  }, [levelManager, companyId, projectId, buildingId]);
+  }, [levelManager, companyId, projectId, buildingId, floorId]);
 
   useBimEntityMovedPersistEffect(isSlab, serviceRef, dirtyIdsRef, persist);
   // ADR-390 — symmetric undo→Firestore restore.

@@ -58,6 +58,8 @@ export interface UseColumnPersistenceParams {
   readonly projectId: string | null | undefined;
   readonly floorplanId: string | null | undefined;
   readonly buildingId: string | null | undefined;
+  /** ADR-395 Phase 1 (G7) — floor link for per-floor BOQ grouping. */
+  readonly floorId: string | null | undefined;
   readonly userId: string | null;
   readonly levelManager: LevelManagerLike;
   readonly primarySelectedColumn: ColumnEntity | null;
@@ -115,6 +117,7 @@ export function useColumnPersistence(
     projectId,
     floorplanId,
     buildingId,
+    floorId,
     userId,
     levelManager,
     primarySelectedColumn,
@@ -248,7 +251,7 @@ export function useColumnPersistence(
         void bimToBoqBridge.upsertBoqItemForBim(
           'column',
           { id: entity.id, kind: entity.kind, geometry: entity.geometry },
-          { companyId, projectId, buildingId },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           isNew ? 'created' : 'updated',
         );
       }
@@ -256,7 +259,7 @@ export function useColumnPersistence(
       setError(err instanceof Error ? err.message : 'COLUMN_SAVE_ERROR');
       setSaveState('error');
     }
-  }, [companyId, projectId, buildingId]);
+  }, [companyId, projectId, buildingId, floorId]);
 
   // Auto-save debounce σε selected column params change.
   useEffect(() => {
@@ -351,7 +354,7 @@ export function useColumnPersistence(
         void bimToBoqBridge.upsertBoqItemForBim(
           'column',
           { id: entity.id, kind: entity.kind, geometry: entity.geometry },
-          { companyId, projectId, buildingId },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           'created',
         );
       }
@@ -359,7 +362,7 @@ export function useColumnPersistence(
       setError(err instanceof Error ? err.message : 'COLUMN_RESTORE_ERROR');
       setSaveState('error');
     }
-  }, [companyId, projectId, buildingId]);
+  }, [companyId, projectId, buildingId, floorId]);
 
   // First-save listener — fires άμεσα για freshly drawn columns.
   useEffect(() => {

@@ -38,7 +38,7 @@ jest.mock('firebase/firestore', () => ({
 
 jest.mock('@/lib/firebase', () => ({ db: {} }));
 jest.mock('@/config/firestore-collections', () => ({ COLLECTIONS: { BOQ_ITEMS: 'boq_items' } }));
-jest.mock('@/lib/telemetry', () => ({ createModuleLogger: () => ({ error: jest.fn() }) }));
+jest.mock('@/lib/telemetry', () => ({ createModuleLogger: () => ({ error: jest.fn(), warn: jest.fn() }) }));
 jest.mock('@/lib/date-local', () => ({ nowISO: () => '2026-05-18T00:00:00.000Z' }));
 jest.mock('@/utils/firestore-sanitize', () => ({
   stripUndefinedDeep: (v: unknown) => v,
@@ -153,7 +153,7 @@ describe('bimToBoqBridge.upsertBoqItemForBim', () => {
     expect(mockSetDoc).not.toHaveBeenCalled();
   });
 
-  it('uses quantity=1 for openings (unit=pcs)', async () => {
+  it('skips openings entirely — routed through opening-boq-sync signature groups (ADR-376 B.2)', async () => {
     mockGetDoc.mockResolvedValue(makeSnap(false));
     mockSetDoc.mockResolvedValue(undefined);
 
@@ -164,9 +164,9 @@ describe('bimToBoqBridge.upsertBoqItemForBim', () => {
       'created',
     );
 
-    const payload = mockSetDoc.mock.calls[0][1] as Record<string, unknown>;
-    expect(payload.unit).toBe('pcs');
-    expect(payload.estimatedQuantity).toBe(1);
+    // Openings no longer create per-entity rows here (warn + early return);
+    // aggregation lives in opening-boq-grouper/sync.
+    expect(mockSetDoc).not.toHaveBeenCalled();
   });
 });
 
@@ -489,6 +489,64 @@ describe('bimToBoqBridge — wall single-entry BOQ categories (Phase 1D-D)', () 
 
     expect(mockWhere).toHaveBeenCalledWith('companyId', '==', 'company-abc');
     expect(mockDeleteDoc).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('bimToBoqBridge — per-floor stamping (ADR-395 Phase 1 / G7)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetDoc.mockResolvedValue(makeSnap(false));
+    mockSetDoc.mockResolvedValue(undefined);
+    mockGetDocs.mockResolvedValue({ docs: [] });
+  });
+
+  const contextWithFloor = { companyId: 'c1', projectId: 'p1', buildingId: 'b1', floorId: 'floor-A' };
+
+  it('single-entry: floorId in context → linkedFloorId + scope="floor"', async () => {
+    await bimToBoqBridge.upsertBoqItemForBim(
+      'column',
+      { id: 'col-900', kind: 'rectangular', geometry: { volume: 0.8 } },
+      contextWithFloor,
+      'created',
+    );
+    const payload = mockSetDoc.mock.calls[0]![1] as Record<string, unknown>;
+    expect(payload.linkedFloorId).toBe('floor-A');
+    expect(payload.scope).toBe('floor');
+  });
+
+  it('single-entry: no floorId → linkedFloorId null + scope="building" (back-compat)', async () => {
+    await bimToBoqBridge.upsertBoqItemForBim(
+      'column',
+      { id: 'col-901', kind: 'rectangular', geometry: { volume: 0.8 } },
+      context,
+      'created',
+    );
+    const payload = mockSetDoc.mock.calls[0]![1] as Record<string, unknown>;
+    expect(payload.linkedFloorId).toBeNull();
+    expect(payload.scope).toBe('building');
+  });
+
+  it('multi-layer wall: parent + all children carry the same floorId + scope="floor"', async () => {
+    const dna3Layer = {
+      totalThickness: 250,
+      layers: [
+        { id: 'L0', name: 'Plaster Ext', thickness: 20, materialId: 'mat-plaster-ext', side: 'exterior' as const },
+        { id: 'L1', name: 'Concrete', thickness: 210, materialId: 'mat-concrete-c25', side: 'core' as const },
+        { id: 'L2', name: 'Plaster Int', thickness: 20, materialId: 'mat-plaster-int', side: 'interior' as const },
+      ],
+    };
+    await bimToBoqBridge.upsertBoqItemForBim(
+      'wall',
+      { id: 'wall-900', kind: 'straight', params: { category: 'exterior', dna: dna3Layer }, geometry: { area: 30 } },
+      contextWithFloor,
+      'created',
+    );
+    expect(mockSetDoc).toHaveBeenCalledTimes(4);
+    for (const call of mockSetDoc.mock.calls) {
+      const payload = call[1] as Record<string, unknown>;
+      expect(payload.linkedFloorId).toBe('floor-A');
+      expect(payload.scope).toBe('floor');
+    }
   });
 });
 

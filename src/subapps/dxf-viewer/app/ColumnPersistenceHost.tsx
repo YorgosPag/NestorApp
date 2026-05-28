@@ -36,6 +36,7 @@ export interface ColumnPersistenceHostProps {
   readonly projectId?: string;
   readonly floorplanId?: string;
   readonly buildingId?: string;
+  readonly floorId?: string;
 }
 
 export function ColumnPersistenceHost({
@@ -45,6 +46,7 @@ export function ColumnPersistenceHost({
   projectId,
   floorplanId,
   buildingId,
+  floorId,
 }: ColumnPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -65,6 +67,7 @@ export function ColumnPersistenceHost({
     projectId,
     floorplanId,
     buildingId,
+    floorId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedColumn,

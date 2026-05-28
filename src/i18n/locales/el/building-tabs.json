@@ -344,6 +344,10 @@
         "bimAuto": "Αυτόματο από BIM",
         "bimDetached": "Αποσυνδεδεμένο από BIM"
       },
+      "floorGroup": {
+        "noFloor": "Γενικά κτιρίου",
+        "totalsByCategory": "Σύνολα ανά κατηγορία"
+      },
       "units": {
         "m": "μ.",
         "m2": "τ.μ.",

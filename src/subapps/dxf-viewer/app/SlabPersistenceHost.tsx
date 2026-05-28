@@ -36,6 +36,7 @@ export interface SlabPersistenceHostProps {
   readonly projectId?: string;
   readonly floorplanId?: string;
   readonly buildingId?: string;
+  readonly floorId?: string;
 }
 
 export function SlabPersistenceHost({
@@ -45,6 +46,7 @@ export function SlabPersistenceHost({
   projectId,
   floorplanId,
   buildingId,
+  floorId,
 }: SlabPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -65,6 +67,7 @@ export function SlabPersistenceHost({
     projectId,
     floorplanId,
     buildingId,
+    floorId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedSlab,

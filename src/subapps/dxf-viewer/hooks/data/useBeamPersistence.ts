@@ -58,6 +58,8 @@ export interface UseBeamPersistenceParams {
   readonly projectId: string | null | undefined;
   readonly floorplanId: string | null | undefined;
   readonly buildingId: string | null | undefined;
+  /** ADR-395 Phase 1 (G7) — floor link for per-floor BOQ grouping. */
+  readonly floorId: string | null | undefined;
   readonly userId: string | null;
   readonly levelManager: LevelManagerLike;
   readonly primarySelectedBeam: BeamEntity | null;
@@ -115,6 +117,7 @@ export function useBeamPersistence(
     projectId,
     floorplanId,
     buildingId,
+    floorId,
     userId,
     levelManager,
     primarySelectedBeam,
@@ -248,7 +251,7 @@ export function useBeamPersistence(
         void bimToBoqBridge.upsertBoqItemForBim(
           'beam',
           { id: entity.id, kind: entity.kind, geometry: entity.geometry },
-          { companyId, projectId, buildingId },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           isNew ? 'created' : 'updated',
         );
       }
@@ -257,7 +260,7 @@ export function useBeamPersistence(
       setError(err instanceof Error ? err.message : 'BEAM_SAVE_ERROR');
       setSaveState('error');
     }
-  }, [companyId, projectId, buildingId, floorplanId]);
+  }, [companyId, projectId, buildingId, floorId, floorplanId]);
 
   // Auto-save debounce σε selected beam params change.
   useEffect(() => {
@@ -353,7 +356,7 @@ export function useBeamPersistence(
         void bimToBoqBridge.upsertBoqItemForBim(
           'beam',
           { id: entity.id, kind: entity.kind, geometry: entity.geometry },
-          { companyId, projectId, buildingId },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           'created',
         );
       }
@@ -362,7 +365,7 @@ export function useBeamPersistence(
       setError(err instanceof Error ? err.message : 'BEAM_RESTORE_ERROR');
       setSaveState('error');
     }
-  }, [companyId, projectId, buildingId, floorplanId]);
+  }, [companyId, projectId, buildingId, floorId, floorplanId]);
 
   // First-save listener — fires άμεσα για freshly drawn beams.
   useEffect(() => {

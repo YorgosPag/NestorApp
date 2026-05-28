@@ -347,6 +347,34 @@ describe('buildOpeningGroupPayload', () => {
     expect('sourceEntityId' in built.payload ? built.payload.sourceEntityId : undefined).toBeNull();
   });
 
+  it('ADR-395 G7: floorId in context → linkedFloorId + scope="floor"', () => {
+    const members = buildContiguousWindows(3);
+    const sig = computeOpeningSignature(members[0]!.params);
+    const built = buildOpeningGroupPayload({
+      context: { ...CONTEXT, floorId: 'floor-A' },
+      signature: sig,
+      members,
+      mapping: WINDOW_MAPPING,
+      existingCreatedAt: null,
+    });
+    expect(built.payload.linkedFloorId).toBe('floor-A');
+    expect(built.payload.scope).toBe('floor');
+  });
+
+  it('ADR-395 G7: no floorId → linkedFloorId null + scope="building" (back-compat)', () => {
+    const members = buildContiguousWindows(3);
+    const sig = computeOpeningSignature(members[0]!.params);
+    const built = buildOpeningGroupPayload({
+      context: CONTEXT,
+      signature: sig,
+      members,
+      mapping: WINDOW_MAPPING,
+      existingCreatedAt: null,
+    });
+    expect(built.payload.linkedFloorId).toBeNull();
+    expect(built.payload.scope).toBe('building');
+  });
+
   it('members without mark → description null', () => {
     const noMark = row({ id: 'unmark1', kind: 'window' });
     const sig = computeOpeningSignature(noMark.params);

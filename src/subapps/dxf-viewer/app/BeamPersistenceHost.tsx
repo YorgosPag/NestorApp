@@ -36,6 +36,7 @@ export interface BeamPersistenceHostProps {
   readonly projectId?: string;
   readonly floorplanId?: string;
   readonly buildingId?: string;
+  readonly floorId?: string;
 }
 
 export function BeamPersistenceHost({
@@ -45,6 +46,7 @@ export function BeamPersistenceHost({
   projectId,
   floorplanId,
   buildingId,
+  floorId,
 }: BeamPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -65,6 +67,7 @@ export function BeamPersistenceHost({
     projectId,
     floorplanId,
     buildingId,
+    floorId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedBeam,

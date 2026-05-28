@@ -273,7 +273,7 @@ export function useOpeningPersistence(
         void upsertOpeningGroupForOpening(
           { id: entity.id, kind: entity.kind, params: entity.params },
           prevParams,
-          { companyId, projectId, buildingId, floorplanId },
+          { companyId, projectId, buildingId, floorplanId, floorId: currentFloorIdRef.current ?? undefined },
         );
       }
     } catch (err) {
@@ -367,7 +367,7 @@ export function useOpeningPersistence(
       if (companyId && projectId && buildingId && floorplanId) {
         void deleteOpeningFromGroup(
           lastKnownParams,
-          { companyId, projectId, buildingId, floorplanId },
+          { companyId, projectId, buildingId, floorplanId, floorId: currentFloorIdRef.current ?? undefined },
         );
       }
     } catch {
@@ -402,7 +402,7 @@ export function useOpeningPersistence(
         void upsertOpeningGroupForOpening(
           { id: entity.id, kind: entity.kind, params: entity.params },
           null,
-          { companyId, projectId, buildingId, floorplanId },
+          { companyId, projectId, buildingId, floorplanId, floorId: currentFloorIdRef.current ?? undefined },
         );
       }
     } catch (err) {

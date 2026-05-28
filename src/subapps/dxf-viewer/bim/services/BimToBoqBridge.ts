@@ -76,6 +76,14 @@ export interface BimBoqContext {
   readonly projectId: string;
   readonly buildingId: string;
   /**
+   * ADR-395 Phase 1 (G7) — floor link. Stamped on the BOQ row as
+   * `linkedFloorId` + `scope: 'floor'` so the building Επιμετρήσεις tab can
+   * group BIM quantities per floor. Resolved upstream από `floorId` (import
+   * destination) ή `Level.buildingId` chain. Όταν λείπει → `scope: 'building'`,
+   * `linkedFloorId: null` (back-compat).
+   */
+  readonly floorId?: string;
+  /**
    * ADR-376 Phase B.2 — opening signature group scope. Required όταν το
    * entityType είναι `'opening'` (per-floorplan aggregation). Ignored από
    * το wall/slab/column/beam single-entry + multi-layer path.
@@ -109,8 +117,8 @@ function buildSingleEntryPayload(
     companyId: context.companyId,
     projectId: context.projectId,
     buildingId: context.buildingId,
-    scope: 'building',
-    linkedFloorId: null,
+    scope: context.floorId ? 'floor' : 'building',
+    linkedFloorId: context.floorId ?? null,
     linkedUnitId: null,
     linkedUnitIds: null,
     costAllocationMethod: 'by_area',

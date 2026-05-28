@@ -39,6 +39,8 @@ export interface MultiLayerBuildContext {
   readonly companyId: string;
   readonly projectId: string;
   readonly buildingId: string;
+  /** ADR-395 Phase 1 (G7) — floor link → `linkedFloorId` + `scope: 'floor'`. */
+  readonly floorId?: string;
 }
 
 export interface MultiLayerBuildInput {
@@ -111,8 +113,8 @@ function buildBaseRow(
     companyId: context.companyId,
     projectId: context.projectId,
     buildingId: context.buildingId,
-    scope: 'building',
-    linkedFloorId: null,
+    scope: context.floorId ? 'floor' : 'building',
+    linkedFloorId: context.floorId ?? null,
     linkedUnitId: null,
     linkedUnitIds: null,
     costAllocationMethod: 'by_area',

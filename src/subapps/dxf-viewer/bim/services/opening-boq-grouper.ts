@@ -55,6 +55,8 @@ export interface OpeningGroupBuildContext {
   readonly buildingId: string;
   /** Group scope — per-floorplan aggregation (ADR-376 §7 B.2 v7 scope). */
   readonly floorplanId: string;
+  /** ADR-395 Phase 1 (G7) — floor link → `linkedFloorId` + `scope: 'floor'`. */
+  readonly floorId?: string;
 }
 
 export interface BuiltOpeningGroupRow {
@@ -260,8 +262,8 @@ export function buildOpeningGroupPayload(args: BuildGroupPayloadArgs): BuiltOpen
     companyId: context.companyId,
     projectId: context.projectId,
     buildingId: context.buildingId,
-    scope: 'building',
-    linkedFloorId: null,
+    scope: context.floorId ? 'floor' : 'building',
+    linkedFloorId: context.floorId ?? null,
     linkedUnitId: null,
     linkedUnitIds: null,
     costAllocationMethod: 'by_area',

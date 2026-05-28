@@ -344,6 +344,10 @@
         "bimAuto": "Auto from BIM",
         "bimDetached": "Detached from BIM"
       },
+      "floorGroup": {
+        "noFloor": "Building-level",
+        "totalsByCategory": "Totals by category"
+      },
       "units": {
         "m": "m",
         "m2": "sq.m",

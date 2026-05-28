@@ -1,11 +1,14 @@
 /**
- * BOQCategoryAccordion — ATOE category groups with item tables
+ * BOQCategoryAccordion — per-floor BOQ groups (ADR-395 Phase 1 / G7)
  *
- * Groups BOQ items by categoryCode, displays in EnterpriseAccordion.
- * Each section has a table with item rows + subtotal footer.
+ * Outer axis = floor (Ισόγειο / Α' όροφος / …), resolved via
+ * `useFloorsByBuilding`. Inside each floor, items are grouped by ATOE category
+ * (see `BOQFloorGroup`). Items without a `linkedFloorId` (manual building-level
+ * rows + legacy BIM rows) fall into a «Γενικά κτιρίου» bucket shown last.
+ * A compact per-category quantity total closes the view.
  *
  * @module components/building-management/tabs/MeasurementsTabContent/BOQCategoryAccordion
- * @see ADR-175 §4.4.3 (Category Accordion)
+ * @see ADR-175 §4.4.3 (Category Accordion) · ADR-395 §4 (per-floor grouping)
  */
 
 /* eslint-disable design-system/enforce-semantic-colors */
@@ -14,27 +17,23 @@
 import { useMemo } from 'react';
 import { EnterpriseAccordion } from '@/components/ui/accordion';
 import type { EnterpriseAccordionItem } from '@/components/ui/accordion';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
-import { Pencil, Trash2, Unlink } from 'lucide-react';
 import type { BOQItem, BOQItemStatus } from '@/types/boq';
 import type { MasterBOQCategory } from '@/config/boq-categories';
-import { findSubCategory } from '@/config/boq-subcategories';
-import { computeItemCost, computeVariance } from '@/services/measurements';
+import { computeItemCost } from '@/services/measurements';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
+import { BOQFloorGroup } from './BOQFloorGroup';
 import '@/lib/design-system';
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+/** Bucket key for items with no `linkedFloorId` (building-level / legacy). */
+const NO_FLOOR_KEY = '__no_floor__';
 
 // ============================================================================
 // TYPES
@@ -43,53 +42,33 @@ import '@/lib/design-system';
 interface BOQCategoryAccordionProps {
   items: BOQItem[];
   categories: readonly MasterBOQCategory[];
+  /** Building scope — resolves the floor list for per-floor grouping (G7). */
+  buildingId: string;
   onEdit: (item: BOQItem) => void;
   onDelete: (item: BOQItem) => void;
   onStatusChange: (item: BOQItem, status: BOQItemStatus) => void;
   onDetach?: (item: BOQItem) => void;
-  /** Controlled expanded categories (for expand/collapse all) */
+  /** Controlled expanded floor keys (for expand/collapse all) */
   expandedCategories?: string[];
-  /** Callback when user manually expands/collapses a category */
+  /** Callback when user manually expands/collapses a floor */
   onExpandedChange?: (expanded: string[]) => void;
 }
 
-interface CategoryGroup {
-  code: string;
-  name: string;
-  sortOrder: number;
+interface FloorGroup {
+  key: string;
+  label: string;
+  /** Sort key — floor.number ascending; NO_FLOOR bucket last. */
+  sortKey: number;
   items: BOQItem[];
   totalCost: number;
 }
 
-// ============================================================================
-// STATUS BADGE STYLES
-// ============================================================================
-
-const STATUS_VARIANT: Record<BOQItemStatus, 'secondary' | 'default' | 'outline' | 'destructive'> = {
-  draft: 'secondary',
-  submitted: 'default',
-  approved: 'default',
-  certified: 'default',
-  locked: 'outline',
-};
-
-const STATUS_CLASS: Record<BOQItemStatus, string> = {
-  draft: 'bg-muted text-muted-foreground',
-  submitted: 'bg-[hsl(var(--bg-info))]/20 text-primary',
-  approved: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
-  certified: 'bg-accent text-primary',
-  locked: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
-};
-
-// ============================================================================
-// VARIANCE INDICATOR
-// ============================================================================
-
-function getVarianceClass(percent: number): string {
-  const abs = Math.abs(percent);
-  if (abs <= 5) return 'text-green-707';
-  if (abs <= 15) return 'text-[hsl(var(--text-warning))]';
-  return 'text-destructive';
+interface CategoryTotal {
+  code: string;
+  name: string;
+  sortOrder: number;
+  unit: string;
+  quantity: number;
 }
 
 // ============================================================================
@@ -99,6 +78,7 @@ function getVarianceClass(percent: number): string {
 export function BOQCategoryAccordion({
   items,
   categories,
+  buildingId,
   onEdit,
   onDelete,
   onStatusChange,
@@ -108,56 +88,77 @@ export function BOQCategoryAccordion({
 }: BOQCategoryAccordionProps) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
+  const { floors } = useFloorsByBuilding(buildingId);
 
-  // Group items by category
-  const groups = useMemo<CategoryGroup[]>(() => {
-    const map = new Map<string, CategoryGroup>();
+  // floorId → { name, number } for label + ordering.
+  const floorMeta = useMemo(() => {
+    const map = new Map<string, { name: string; number: number }>();
+    for (const f of floors) map.set(f.id, { name: f.name, number: f.number });
+    return map;
+  }, [floors]);
 
+  // Group items by floor (linkedFloorId), ordered by floor.number; NO_FLOOR last.
+  const floorGroups = useMemo<FloorGroup[]>(() => {
+    const map = new Map<string, FloorGroup>();
     for (const item of items) {
-      const existing = map.get(item.categoryCode);
+      const key = item.linkedFloorId ?? NO_FLOOR_KEY;
       const cost = computeItemCost(item);
-
+      const existing = map.get(key);
       if (existing) {
         existing.items.push(item);
         existing.totalCost += cost.totalCost;
+      } else {
+        const meta = key === NO_FLOOR_KEY ? null : floorMeta.get(key);
+        map.set(key, {
+          key,
+          label: key === NO_FLOOR_KEY
+            ? t('tabs.measurements.floorGroup.noFloor')
+            : (meta?.name || key),
+          sortKey: key === NO_FLOOR_KEY ? Number.POSITIVE_INFINITY : (meta?.number ?? 9998),
+          items: [item],
+          totalCost: cost.totalCost,
+        });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.sortKey - b.sortKey);
+  }, [items, floorMeta, t]);
+
+  // Per-category quantity totals across all floors (Σύνολα ανά κατηγορία).
+  const categoryTotals = useMemo<CategoryTotal[]>(() => {
+    const map = new Map<string, CategoryTotal>();
+    for (const item of items) {
+      const existing = map.get(item.categoryCode);
+      if (existing) {
+        existing.quantity += item.estimatedQuantity;
       } else {
         const cat = categories.find((c) => c.code === item.categoryCode);
         map.set(item.categoryCode, {
           code: item.categoryCode,
           name: cat?.nameEL ?? item.categoryCode,
           sortOrder: cat?.sortOrder ?? 999,
-          items: [item],
-          totalCost: cost.totalCost,
+          unit: item.unit,
+          quantity: item.estimatedQuantity,
         });
       }
     }
-
     return Array.from(map.values()).sort((a, b) => a.sortOrder - b.sortOrder);
   }, [items, categories]);
 
-  // Build accordion items
-  const accordionItems: EnterpriseAccordionItem[] = groups.map((group) => ({
-    value: group.code,
+  const accordionItems: EnterpriseAccordionItem[] = floorGroups.map((group) => ({
+    value: group.key,
     trigger: (
       <span className="flex items-center justify-between w-full pr-2">
-        <span className="font-medium">
-          {group.code} — {group.name}
-        </span>
+        <span className="font-medium">{group.label}</span>
         <span className={cn("flex items-center gap-2 text-sm", colors.text.muted)}>
-          <span>
-            {group.items.length} {t('tabs.measurements.table.items')}
-          </span>
-          <span className="font-semibold tabular-nums">
-            {formatCurrency(group.totalCost)}
-          </span>
+          <span>{group.items.length} {t('tabs.measurements.table.items')}</span>
+          <span className="font-semibold tabular-nums">{formatCurrency(group.totalCost)}</span>
         </span>
       </span>
     ),
     content: (
-      <CategoryItemsTable
+      <BOQFloorGroup
         items={group.items}
-        totalCost={group.totalCost}
-        categoryName={`${group.code} — ${group.name}`}
+        categories={categories}
         onEdit={onEdit}
         onDelete={onDelete}
         onStatusChange={onStatusChange}
@@ -167,169 +168,49 @@ export function BOQCategoryAccordion({
     ),
   }));
 
-  if (groups.length === 0) return null;
+  if (floorGroups.length === 0) return null;
 
-  // Controlled vs uncontrolled: if expandedCategories is provided, use controlled mode
   const isControlled = expandedCategories !== undefined;
 
   return (
-    <EnterpriseAccordion
-      items={accordionItems}
-      type="multiple"
-      variant="card"
-      size="md"
-      {...(isControlled
-        ? { value: expandedCategories, onValueChange: onExpandedChange as (v: string | string[]) => void }
-        : { defaultValue: groups.map((g) => g.code) }
+    <section className="space-y-3">
+      <EnterpriseAccordion
+        items={accordionItems}
+        type="multiple"
+        variant="card"
+        size="md"
+        {...(isControlled
+          ? { value: expandedCategories, onValueChange: onExpandedChange as (v: string | string[]) => void }
+          : { defaultValue: floorGroups.map((g) => g.key) }
+        )}
+      />
+
+      {categoryTotals.length > 0 && (
+        <section className="rounded-md border p-3">
+          <h4 className={cn("text-sm font-semibold mb-2", colors.text.muted)}>
+            {t('tabs.measurements.floorGroup.totalsByCategory')}
+          </h4>
+          <ul className="space-y-1">
+            {categoryTotals.map((ct) => (
+              <li key={ct.code} className="flex items-center justify-between text-sm">
+                <span>{ct.code} — {ct.name}</span>
+                <span className="tabular-nums font-medium">
+                  {formatNumber(ct.quantity, { maximumFractionDigits: 2 })} {t(`tabs.measurements.units.${ct.unit}`)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
-    />
+    </section>
   );
 }
 
-/** Returns all category codes from items — used by parent for expand/collapse all */
-export function getCategoryCodes(items: BOQItem[]): string[] {
-  const codes = new Set<string>();
+/** Returns the floor-group keys present in items — used by parent for expand/collapse all. */
+export function getFloorGroupKeys(items: BOQItem[]): string[] {
+  const keys = new Set<string>();
   for (const item of items) {
-    codes.add(item.categoryCode);
+    keys.add(item.linkedFloorId ?? NO_FLOOR_KEY);
   }
-  return Array.from(codes);
-}
-
-// ============================================================================
-// INNER TABLE COMPONENT
-// ============================================================================
-
-interface CategoryItemsTableProps {
-  items: BOQItem[];
-  totalCost: number;
-  categoryName: string;
-  onEdit: (item: BOQItem) => void;
-  onDelete: (item: BOQItem) => void;
-  onStatusChange: (item: BOQItem, status: BOQItemStatus) => void;
-  onDetach?: (item: BOQItem) => void;
-  t: (key: string) => string;
-}
-
-function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, onDetach, t }: CategoryItemsTableProps) {
-  const colors = useSemanticColors();
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-10">{t('tabs.measurements.table.index')}</TableHead>
-          <TableHead>{t('tabs.measurements.table.description')}</TableHead>
-          <TableHead className="w-16 text-center">{t('tabs.measurements.table.unit')}</TableHead>
-          <TableHead className="w-24 text-right">{t('tabs.measurements.table.estimatedQty')}</TableHead>
-          <TableHead className="w-16 text-right">{t('tabs.measurements.table.waste')}</TableHead>
-          <TableHead className="w-28 text-right">{t('tabs.measurements.table.totalCost')}</TableHead>
-          <TableHead className="w-28 text-center">{t('tabs.measurements.table.statusLabel')}</TableHead>
-          <TableHead className="w-20 text-center">{t('tabs.measurements.table.actions')}</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {items.map((item, idx) => {
-          const cost = computeItemCost(item);
-          const variance = computeVariance(item);
-
-          return (
-            <TableRow key={item.id}>
-              <TableCell className={cn("tabular-nums", colors.text.muted)}>{idx + 1}</TableCell>
-              <TableCell>
-                <p className="font-medium text-sm">{item.title}</p>
-                {item.subCategoryCode && (
-                  <p className={cn('text-xs mt-0.5', colors.text.muted)}>
-                    {findSubCategory(item.subCategoryCode)?.nameEL ?? item.subCategoryCode}
-                  </p>
-                )}
-                {item.sourceType === 'bim-auto' && (
-                  <Badge
-                    variant="secondary"
-                    className={cn('text-xs mt-1', item.detached
-                      ? 'bg-muted text-muted-foreground'
-                      : 'bg-accent text-primary'
-                    )}
-                  >
-                    {item.detached
-                      ? t('tabs.measurements.badge.bimDetached')
-                      : t('tabs.measurements.badge.bimAuto')}
-                  </Badge>
-                )}
-                {variance && (
-                  <p className={cn('text-xs tabular-nums mt-0.5', getVarianceClass(variance.percent))}>
-                    {variance.percent > 0 ? '+' : ''}{formatNumber(variance.percent, { maximumFractionDigits: 1 })}%
-                  </p>
-                )}
-              </TableCell>
-              <TableCell className={cn("text-center text-xs", colors.text.muted)}>
-                {t(`tabs.measurements.units.${item.unit}`)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatNumber(item.estimatedQuantity, { maximumFractionDigits: 2 })}
-              </TableCell>
-              <TableCell className={cn("text-right tabular-nums", colors.text.muted)}>
-                {formatNumber(item.wasteFactor * 100, { maximumFractionDigits: 0 })}%
-              </TableCell>
-              <TableCell className="text-right tabular-nums font-medium">
-                {formatCurrency(cost.totalCost)}
-              </TableCell>
-              <TableCell className="text-center">
-                <Badge
-                  variant={STATUS_VARIANT[item.status]}
-                  className={cn('text-xs', STATUS_CLASS[item.status])}
-                >
-                  {t(`tabs.measurements.status.${item.status}`)}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <nav className="flex items-center justify-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onEdit(item)}
-                    aria-label={t('tabs.measurements.actions.edit')}
-                    className="h-7 w-7"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  {item.sourceType === 'bim-auto' && !item.detached && onDetach && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDetach(item)}
-                      aria-label={t('tabs.measurements.actions.detachFromBim')}
-                      className="h-7 w-7 text-primary hover:text-primary"
-                    >
-                      <Unlink className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                  {item.status === 'draft' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDelete(item)}
-                      aria-label={t('tabs.measurements.actions.delete')}
-                      className="h-7 w-7 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </nav>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-      <TableFooter>
-        <TableRow>
-          <TableCell colSpan={5} className="text-right font-medium text-sm">
-            {t('tabs.measurements.table.subtotal')} — {categoryName}
-          </TableCell>
-          <TableCell className="text-right tabular-nums font-bold">
-            {formatCurrency(totalCost)}
-          </TableCell>
-          <TableCell colSpan={2} />
-        </TableRow>
-      </TableFooter>
-    </Table>
-  );
+  return Array.from(keys);
 }
