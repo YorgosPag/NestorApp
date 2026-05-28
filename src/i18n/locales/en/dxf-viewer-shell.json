@@ -861,6 +861,10 @@
         "beam": {
           "label": "Beam",
           "tooltip": "Draw beam (shortcut BM)"
+        },
+        "group": {
+          "label": "Structural Elements",
+          "tooltip": "BIM structural elements (wall, opening, slab, slab opening, column, beam, stair)"
         }
       },
       "select": "Select",
