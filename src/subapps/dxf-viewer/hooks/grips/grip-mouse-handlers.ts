@@ -22,6 +22,8 @@ import {
 } from './wall-hot-grip-fsm';
 import { WallRotateHotGripStore } from '../../bim/walls/wall-rotate-hotgrip-store';
 import { commitDxfGripDragModeAware, type DxfCommitDeps, type OverlayCommitDeps } from './grip-commit-adapters';
+import { commitWallCopy } from './grip-parametric-commits';
+import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 import {
   commitOverlayVertexDrag,
   commitOverlayEdgeMidpointDrag,
@@ -360,7 +362,14 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       if (!anchorRef.current) return true;
       const effectiveAnchor = GripBasePointStore.getSnapshot().overrideAnchor ?? anchorRef.current;
       const delta: Point2D = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
-      commitDxfGripDragModeAware(activeGrip, delta, dxfCommitDeps, GripModeStore.getSnapshot());
+      // ADR-363 Phase 1G.4 — Ctrl (or ⌘) held at the terminal click of a wall
+      // MOVE hot-grip copies the wall (AutoCAD MOVE→COPY) instead of translating
+      // it. Single copy — the flow resets afterwards either way.
+      if (hotOp === 'move' && activeGrip.wallGripKind === 'wall-midpoint' && CtrlKeyTracker.getSnapshot()) {
+        commitWallCopy(activeGrip, delta, dxfCommitDeps);
+      } else {
+        commitDxfGripDragModeAware(activeGrip, delta, dxfCommitDeps, GripModeStore.getSnapshot());
+      }
       GripBasePointStore.clear();
       resetToIdle();
       return true;

@@ -38,6 +38,7 @@ import { useAngleEntityMeasurement, type AngleEntityVariant } from './useAngleEn
 import type { AngleMeasurementEntity, Entity } from '../../types/entities';
 import { isWallEntity } from '../../types/entities';
 import { computeWallTrims, applyTrimPatches } from '../../bim/walls/wall-trims';
+import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
 // 🏢 ENTERPRISE: Import actual level system types for type safety
 import type { LevelsHookReturn } from '../../systems/levels';
 
@@ -319,22 +320,10 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       if (!levelId) return 'mm';
       return resolveSceneUnits(levelManager.getLevelScene(levelId));
     },
-    onWallCreated: (wallEntity) => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return;
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return;
-      // Include new wall before computing trims so neighbors are also patched.
-      const entitiesWithNew = [...(scene.entities || []), wallEntity];
-      const allWalls = entitiesWithNew.filter(isWallEntity);
-      const trims = computeWallTrims(allWalls);
-      const patchedEntities = applyTrimPatches(entitiesWithNew, trims);
-      levelManager.setLevelScene(levelId, { ...scene, entities: patchedEntities });
-      console.debug('[WallTool] Wall added to scene:', wallEntity.id, 'trims:', trims.size);
-      // Broadcast with trim-patched entity so persistence layer saves correct params.
-      const patchedNewWall = (patchedEntities.find(e => e.id === wallEntity.id) as (typeof wallEntity) | undefined) ?? wallEntity;
-      EventBus.emit('drawing:entity-created', { entity: patchedNewWall, tool: 'wall' });
-    },
+    // ADR-363 Phase 1G.4 — append + trim + broadcast via the shared SSoT
+    // (`addWallToScene`) so the DRAW path and the Ctrl-COPY hot-grip path use
+    // ONE insertion routine (N.0.2 — no copy-paste of the persistence trigger).
+    onWallCreated: (wallEntity) => addWallToScene(wallEntity, levelManager),
   });
   useToolLifecycle(activeTool === 'wall', wallTool.activate, wallTool.deactivate);
   // ADR-363 Phase 2 — OPENING TOOL (resolvers extracted: useSpecialTools-opening.ts)

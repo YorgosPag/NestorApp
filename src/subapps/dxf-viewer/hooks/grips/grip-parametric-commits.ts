@@ -30,6 +30,8 @@ import { UpdateBeamParamsCommand } from '../../core/commands/entity-commands/Upd
 import { UpdateColumnParamsCommand } from '../../core/commands/entity-commands/UpdateColumnParamsCommand';
 import { applyStairGripDrag } from '../../bim/stairs/stair-grips';
 import { applyWallGripDrag } from '../../bim/walls/wall-grips';
+import { buildWallEntity } from '../drawing/wall-completion';
+import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
 import { WallRotateHotGripStore } from '../../bim/walls/wall-rotate-hotgrip-store';
 import { applyOpeningGripDrag } from '../../bim/walls/opening-grips';
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
@@ -144,6 +146,38 @@ export function commitWallGripDrag(
   );
   deps.execute(command);
   EventBus.emit('bim:wall-params-updated', { wallId: grip.entityId });
+}
+
+/**
+ * ADR-363 Phase 1G.4 — Ctrl-COPY at the terminal click of a wall MOVE hot-grip
+ * (AutoCAD MOVE→COPY). Instead of translating the existing wall, builds a NEW
+ * `WallEntity` whose params are the original shifted by `delta` (the same
+ * `wall-midpoint` whole-wall translate the MOVE uses) and inserts it via the
+ * shared `addWallToScene` SSoT — fresh enterprise ID (N.6, via `buildWallEntity`
+ * → `createWall`), trims recomputed, `drawing:entity-created` broadcast so
+ * persistence saves the copy. The original is left untouched. Single copy: the
+ * hot-grip resets after this call (no continuous copy chain).
+ */
+export function commitWallCopy(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || grip.wallGripKind !== 'wall-midpoint') return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<WallEntity>;
+  if (candidate.type !== 'wall' || !candidate.params) return;
+  const wall = candidate as WallEntity;
+  const originalParams = wall.params;
+  const currentPos: Point2D = { x: grip.position.x + delta.x, y: grip.position.y + delta.y };
+  const translated = applyWallGripDrag('wall-midpoint', { originalParams, delta, currentPos });
+  const sceneUnits = originalParams.sceneUnits ?? 'mm';
+  const built = buildWallEntity(translated, wall.layerId, wall.kind ?? 'straight', sceneUnits);
+  if (!built.ok) return;
+  addWallToScene(built.entity, deps);
 }
 
 /**

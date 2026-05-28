@@ -43,6 +43,8 @@ export interface HotGripActionCtx {
 // explanatory. Returns null when no override is needed.
 function hotGripHintKey(op: WallHotGripOp | null, step: HotGripStep): string | null {
   if (op === 'move' && step === 'await-base') return 'tool-hints:gripContextMenu.prompts.pickMoveBase';
+  // ADR-363 Phase 1G.4 — during the live move, surface the Ctrl=copy affordance.
+  if (op === 'move' && step === 'tracking') return 'tool-hints:gripContextMenu.prompts.moveOrCopy';
   if (op === 'rotate') {
     switch (step) {
       case 'await-base': return 'tool-hints:gripContextMenu.prompts.pickRotateCentre';

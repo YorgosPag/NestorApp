@@ -848,6 +848,7 @@
       "pickRefStart": "Click for 1st reference point",
       "pickRefEnd": "Click for 2nd reference point",
       "pickMoveBase": "Click the move base point",
+      "moveOrCopy": "Click to place · Ctrl = copy",
       "pickRotateCentre": "Click the rotation centre",
       "pickRefLineStart": "Reference line: click the 1st point",
       "pickRefLineEnd": "Reference line: click the 2nd point",
