@@ -64,6 +64,10 @@
       "unisolate": "Unisolate (restore)",
       "thawAll": "Thaw all layers",
       "onAll": "Turn on all layers"
+    },
+    "zoom": {
+      "fitToView": "Fit all to view",
+      "fitToViewSelected": "Fit selection to view"
     }
   },
   "calibration": {

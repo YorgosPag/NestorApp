@@ -141,8 +141,37 @@ export function useFitToView({
       }
     };
 
+    // ADR-394: fit to the selection's pre-computed bounds (Z key). Bounds arrive
+    // ready from useKeyboardShortcuts (DXF + BIM), so this only maps bounds→transform.
+    const handleFitToViewSelected = (payload: { bounds: { min: Point2D; max: Point2D } }) => {
+      const bounds = payload?.bounds;
+      if (!bounds) return;
+
+      const container = containerRef.current;
+      const snap = getPointerSnapshotFromElement(container);
+      if (!snap) {
+        dwarn('useFitToView', 'handleFitToViewSelected: Cannot fit - viewport not ready');
+        return; // 🏢 Fail-fast: Cannot fit without valid viewport
+      }
+
+      try {
+        const zoomResult = zoomSystem.zoomToFit(bounds, snap.viewport, false);
+        if (zoomResult && zoomResult.transform) {
+          const { scale, offsetX, offsetY } = zoomResult.transform;
+          if (isNaN(scale) || isNaN(offsetX) || isNaN(offsetY)) {
+            derr('useFitToView', '🚨 Z fit-to-selection failed: Invalid transform (NaN values)');
+            return;
+          }
+          setTransform(zoomResult.transform);
+        }
+      } catch (error) {
+        derr('useFitToView', '🚨 Z fit-to-selection failed:', error);
+      }
+    };
+
     const cleanup = EventBus.on('canvas-fit-to-view', handleFitToView);
-    return cleanup;
+    const cleanupSelected = EventBus.on('canvas-fit-to-view-selected', handleFitToViewSelected);
+    return () => { cleanup(); cleanupSelected(); };
   }, [dxfScene, colorLayers, zoomSystem]); // 🚀 Include colorLayers για combined bounds
 
   return { fitToOverlay };

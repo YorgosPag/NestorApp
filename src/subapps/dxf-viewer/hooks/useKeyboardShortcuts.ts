@@ -15,6 +15,8 @@ import type { Overlay, CreateOverlayData, UpdateOverlayData } from '../overlays/
 import { matchesShortcut } from '../config/keyboard-shortcuts';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../systems/selection';
+// ADR-394: combined AABB over selected entities (DXF + BIM) for Z = fit-to-selection
+import { calculateCombinedEntityBounds } from '../systems/selection/shared/selection-duplicate-utils';
 // 🏢 ENTERPRISE: Unified EventBus for type-safe event dispatch
 import { EventBus } from '../systems/events';
 // ADR-357 Phase 14-B: Command line activation
@@ -92,6 +94,27 @@ export const useKeyboardShortcuts = ({
          document.activeElement.getAttribute('contenteditable') === 'true');
 
       // ⌨️ SPECIAL SHORTCUTS - Using centralized matchesShortcut()
+
+      // ADR-394: Z → Fit to View to current selection (DXF + BIM). MUST run
+      // before the command-line activation gate below — otherwise 'Z' in select
+      // mode opens the command line instead of zooming. When nothing is selected
+      // we fall through, so 'Z' still opens the command line (AutoCAD ZOOM alias).
+      if (
+        matchesShortcut(e, 'fitToViewSelected') &&
+        !inputFocused &&
+        selectedEntityIds.length > 0 &&
+        currentScene
+      ) {
+        e.preventDefault();
+        const selectedSet = new Set(selectedEntityIds);
+        const bounds = calculateCombinedEntityBounds(
+          currentScene.entities.filter(en => selectedSet.has(en.id)),
+        );
+        if (bounds) {
+          EventBus.emit('canvas-fit-to-view-selected', { bounds });
+        }
+        return;
+      }
 
       // ADR-357 Phase 14-B: letter/digit in select mode → open command line.
       // Gate: select tool, no input focused, no modifier keys.
@@ -222,7 +245,7 @@ export const useKeyboardShortcuts = ({
 
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [selectedEntityIds, onNudgeSelection, activeTool, overlayMode, overlayStore, onColorMenuClose, onSelectAll]);
+  }, [selectedEntityIds, currentScene, onNudgeSelection, activeTool, overlayMode, overlayStore, onColorMenuClose, onSelectAll]);
 
   // ADR-364 — ESC bus registration #1: cancel drawing/measurement tool.
   // Single Source of Truth: `isInteractiveTool` reads category from

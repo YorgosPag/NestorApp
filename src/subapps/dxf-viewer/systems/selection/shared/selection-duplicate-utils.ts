@@ -256,3 +256,27 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
       return null;
   }
 }
+
+/**
+ * ADR-394 — Combined AABB for a list of mixed entities (DXF + BIM).
+ *
+ * Merges each entity's bounds via `calculateEntityBounds` (the SSoT that already
+ * covers wall/column/slab/beam/stair/opening). Entities that yield no bounds are
+ * skipped. Returns null when none produce bounds (e.g. empty selection).
+ */
+export function calculateCombinedEntityBounds(
+  entities: AnySceneEntity[],
+): { min: Point2D, max: Point2D } | null {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let found = false;
+  for (const entity of entities) {
+    const b = calculateEntityBounds(entity);
+    if (!b) continue;
+    found = true;
+    if (b.min.x < minX) minX = b.min.x;
+    if (b.min.y < minY) minY = b.min.y;
+    if (b.max.x > maxX) maxX = b.max.x;
+    if (b.max.y > maxY) maxY = b.max.y;
+  }
+  return found ? { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } } : null;
+}

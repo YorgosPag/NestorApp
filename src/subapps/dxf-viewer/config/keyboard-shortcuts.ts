@@ -657,6 +657,18 @@ export const DXF_ZOOM_SHORTCUTS: Record<string, ShortcutDefinition> = {
     category: 'zoom',
     mode: 'mode-aware',
   },
+  // ADR-394 — Fit to View to the current selection (DXF + BIM). Mirrors Home
+  // (fit-all). Single key 'Z' (AutoCAD ZOOM alias). When no entity is selected,
+  // useKeyboardShortcuts lets the keystroke fall through to the command-line
+  // activation, preserving the AutoCAD-style 'Z' ZOOM command entry point.
+  fitToViewSelected: {
+    key: 'Z',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.zoom.fitToViewSelected',
+    action: 'zoom:fit-to-view-selected',
+    category: 'zoom',
+    mode: 'mode-aware',
+  },
   zoom100: {
     key: '0',
     modifier: 'shift',

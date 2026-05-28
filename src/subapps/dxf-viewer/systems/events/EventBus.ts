@@ -64,6 +64,12 @@ export interface DrawingEventMap {
     source?: string; // 'middle-double-click' | 'keyboard' | 'auto' | undefined
     viewport?: { width: number; height: number };
   };
+  // ADR-394: Fit-to-view to the bounding box of the current selection (Z key).
+  // Bounds are pre-computed by useKeyboardShortcuts at keypress time over the
+  // selected DXF + BIM entities (calculateCombinedEntityBounds SSoT).
+  'canvas-fit-to-view-selected': {
+    bounds: { min: Point2D; max: Point2D };
+  };
   'canvas-pan': {
     /** Pixel delta to apply to offsetX (positive = right) */
     dx: number;
