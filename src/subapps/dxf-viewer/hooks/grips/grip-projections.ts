@@ -20,6 +20,7 @@ import type {
   DraggingOverlayBodyState,
   OverlayProjection,
 } from './unified-grip-types';
+import type { HotGripStep } from './wall-hot-grip-fsm';
 
 // ── DXF Projection Builders ──
 
@@ -62,6 +63,60 @@ export function buildDxfDragPreview(
     ...(activeGrip.slabOpeningGripKind ? { slabOpeningGripKind: activeGrip.slabOpeningGripKind, anchorPos } : {}),
     ...(activeGrip.openingGripKind     ? { openingGripKind:     activeGrip.openingGripKind,     anchorPos } : {}),
   };
+}
+
+/**
+ * ADR-363 Phase 1G.3 — live preview for the wall-rotation 6-click reference flow.
+ *
+ * Drives two things off the hot-grip refs:
+ *  - dashed guide segments (`rotateRefLine` / `rotateAlignLine`) drawn on the
+ *    preview canvas so the user sees the reference + alignment lines being traced;
+ *  - the rotating wall ghost (during the final `await-align-end` step only), by
+ *    re-using the existing delta+pivot ghost pipeline via the identity
+ *    `anchor = pivot + refDir`, `currentPos = pivot + alignDir` so
+ *    `applyWallGripDrag('wall-rotation', …)` sweeps `angle(align) − angle(ref)`.
+ *
+ * Returns null until the centre is picked and there is a segment to show (the
+ * `await-base` / `await-ref-start` steps draw nothing).
+ */
+export function buildRotateReferencePreview(
+  activeGrip: UnifiedGripInfo | null,
+  step: HotGripStep,
+  pivot: Point2D | null,
+  refStart: Point2D | null,
+  refEnd: Point2D | null,
+  alignStart: Point2D | null,
+  cursor: Point2D | null,
+): DxfGripDragPreview | null {
+  if (!activeGrip || activeGrip.source !== 'dxf' || !pivot) return null;
+  const base = {
+    entityId: activeGrip.entityId!,
+    gripIndex: activeGrip.gripIndex,
+    movesEntity: activeGrip.movesEntity,
+    ...(activeGrip.wallGripKind ? { wallGripKind: activeGrip.wallGripKind } : {}),
+    hotGrip: true as const,
+    rotatePivot: pivot,
+    delta: { x: 0, y: 0 },
+    anchorPos: pivot,
+  };
+  if (step === 'await-ref-end' && refStart && cursor) {
+    return { ...base, rotateRefLine: { from: refStart, to: cursor } };
+  }
+  if (step === 'await-align-start' && refStart && refEnd) {
+    return { ...base, rotateRefLine: { from: refStart, to: refEnd } };
+  }
+  if (step === 'await-align-end' && refStart && refEnd && alignStart && cursor) {
+    const refDir = { x: refEnd.x - refStart.x, y: refEnd.y - refStart.y };
+    const alignDir = { x: cursor.x - alignStart.x, y: cursor.y - alignStart.y };
+    return {
+      ...base,
+      anchorPos: { x: pivot.x + refDir.x, y: pivot.y + refDir.y },
+      delta: { x: alignDir.x - refDir.x, y: alignDir.y - refDir.y },
+      rotateRefLine: { from: refStart, to: refEnd },
+      rotateAlignLine: { from: alignStart, to: cursor },
+    };
+  }
+  return null; // await-base / await-ref-start — centre picked but no line yet.
 }
 
 export function buildGripInteractionState(

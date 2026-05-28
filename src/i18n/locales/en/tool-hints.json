@@ -847,6 +847,12 @@
       "pickBasePoint": "Click for new base point",
       "pickRefStart": "Click for 1st reference point",
       "pickRefEnd": "Click for 2nd reference point",
+      "pickMoveBase": "Click the move base point",
+      "pickRotateCentre": "Click the rotation centre",
+      "pickRefLineStart": "Reference line: click the 1st point",
+      "pickRefLineEnd": "Reference line: click the 2nd point",
+      "pickAlignStart": "Alignment line: click the 1st point",
+      "pickAlignEnd": "Alignment line: click the 2nd point",
       "copyOn": "Copy mode: ON",
       "copyOff": "Copy mode: OFF"
     }

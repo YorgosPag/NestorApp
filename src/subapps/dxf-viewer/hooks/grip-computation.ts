@@ -79,12 +79,19 @@ export interface DxfGripDragPreview {
    */
   hotGrip?: boolean;
   /**
-   * ADR-363 Phase 1G — rotation centre for the `wall-rotation` 3-click hot-grip.
-   * When set: (a) the live ghost rotates around it (passed to `applyWallGripDrag`
-   * as `pivot`), and (b) the rubber-band leader starts here (centre → cursor)
-   * instead of at `anchorPos`.
+   * ADR-363 Phase 1G — rotation centre for the `wall-rotation` hot-grip. When set
+   * the live ghost rotates around it (passed to `applyWallGripDrag` as `pivot`).
    */
   rotatePivot?: Point2D;
+  /**
+   * ADR-363 Phase 1G.3 — rotate-reference (6-click) guide segments, drawn dashed
+   * by `useGripGhostPreview` (display-only; NOT consumed by `applyEntityPreview`).
+   * `rotateRefLine` = the existing/reference direction the user traced (2 clicks);
+   * `rotateAlignLine` = the target/alignment direction being traced live. The wall
+   * spins by `angle(align) − angle(ref)` around `rotatePivot`.
+   */
+  rotateRefLine?: { from: Point2D; to: Point2D };
+  rotateAlignLine?: { from: Point2D; to: Point2D };
 }
 
 /** Grip interaction state for rendering pipeline */

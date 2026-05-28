@@ -398,13 +398,17 @@ describe('wall-grips (Phase 1C)', () => {
     expect(wallGripGlyphShape(undefined)).toBe('square');
   });
 
-  it('27. straight wall emits wall-rotation handle outside the end short edge', () => {
+  it('27. wall-rotation handle sits at the +perp face midpoint (on the wall, centre of length, between the 2 +perp corners)', () => {
     const grips = getWallGrips(makeStraight());
     const rot = grips.find((g) => g.wallGripKind === 'wall-rotation');
     expect(rot).toBeDefined();
-    // end (1000,0) + 200mm·u (u=+X, mm scene s=1) → (1200, 0).
-    expect(rot!.position.x).toBeCloseTo(1200, 6);
-    expect(rot!.position.y).toBeCloseTo(0, 6);
+    // Read from geometry: midpoint of the two +perp corner handles (not a raw-mm
+    // offset beyond the end edge). Centre of length (x≈500), on the +perp face.
+    const posStart = grips.find((g) => g.wallGripKind === 'wall-corner-start-pos')!.position;
+    const posEnd = grips.find((g) => g.wallGripKind === 'wall-corner-end-pos')!.position;
+    expect(rot!.position.x).toBeCloseTo((posStart.x + posEnd.x) / 2, 6);
+    expect(rot!.position.y).toBeCloseTo((posStart.y + posEnd.y) / 2, 6);
+    expect(rot!.position.x).toBeCloseTo(500, 6); // centre of the 0→1000 length
   });
 
   it('28. wall-rotation spins both endpoints 90° CCW about the midpoint', () => {

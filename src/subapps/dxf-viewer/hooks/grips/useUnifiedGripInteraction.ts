@@ -45,12 +45,14 @@ import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 import { useGripSpacebarCycle } from './useGripSpacebarCycle';
 import {
   buildDxfDragPreview,
+  buildRotateReferencePreview,
   buildGripInteractionState,
   buildOverlayHoveredVertex,
   buildOverlayHoveredEdge,
   buildOverlayProjection,
   buildGripStateForStack,
 } from './grip-projections';
+import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { useMoveEntities } from '../useMoveEntities';
 import { useCommandHistory } from '../../core/commands';
 import { useLevels } from '../../systems/levels';
@@ -120,13 +122,18 @@ export function useUnifiedGripInteraction(
   // since arming. Gates the commit so a stray same-spot release (the 2nd fire of
   // the canvas+container mouseup pair) cannot resetToIdle and kill the hot move.
   const hotGripMovedRef = useRef(false);
-  // ADR-363 Phase 1G — move/rotate 3-click hot-grip context.
-  //   op   = corner (2-click) | move | rotate (both 3-click with a base-pick step).
-  //   step = await-base (waiting for the centre/base click) | tracking.
+  // ADR-363 Phase 1G — hot-grip context.
+  //   op   = corner (2-click) | move (3-click) | rotate (6-click reference flow).
+  //   step = which point the next deliberate click picks (see HotGripStep).
   //   base = the picked base point (move) / rotation centre (rotate).
   const hotGripOpRef = useRef<WallHotGripOp | null>(null);
   const hotGripStepRef = useRef<HotGripStep>('tracking');
   const hotGripBaseRef = useRef<Point2D | null>(null);
+  // ADR-363 Phase 1G.3 — rotate-reference (6-click): the existing (reference) line
+  // and the alignment line points. The wall spins by angle(align) − angle(ref).
+  const hotGripRefStartRef = useRef<Point2D | null>(null);
+  const hotGripRefEndRef = useRef<Point2D | null>(null);
+  const hotGripAlignStartRef = useRef<Point2D | null>(null);
   // ── Overlay grip state (backward compat) ──
   const [selectedGrips, setSelectedGrips] = useState<SelectedGrip[]>([]);
   const [draggingVertices, setDraggingVertices] = useState<DraggingVertexState[] | null>(null);
@@ -167,6 +174,9 @@ export function useUnifiedGripInteraction(
     hotGripOpRef.current = null;
     hotGripStepRef.current = 'tracking';
     hotGripBaseRef.current = null;
+    hotGripRefStartRef.current = null;
+    hotGripRefEndRef.current = null;
+    hotGripAlignStartRef.current = null;
     WallRotateHotGripStore.clear();
     if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
     // ADR-357 Phase 12 — selection change ends the grip-hot session: clear
@@ -204,7 +214,13 @@ export function useUnifiedGripInteraction(
     hotGripOpRef.current = null;
     hotGripStepRef.current = 'tracking';
     hotGripBaseRef.current = null;
+    hotGripRefStartRef.current = null;
+    hotGripRefEndRef.current = null;
+    hotGripAlignStartRef.current = null;
     WallRotateHotGripStore.clear();
+    // ADR-363 Phase 1G.3 — drop any hot-grip step hint so a finished/cancelled
+    // flow does not leave a stale "click alignment point" prompt in the status bar.
+    toolHintOverrideStore.setOverride(null);
     clearActiveDragGrip();
   }, []);
   // ── MOUSE MOVE ──
@@ -222,34 +238,17 @@ export function useUnifiedGripInteraction(
       if (isFollowing && activeGrip) {
         setCurrentWorldPos(worldPos);
         if (phase === 'hotGrip') {
-          // ADR-363 Phase 1G.2 — await-base (move/rotate before the base/centre
-          // pick): ANY real cursor move marks "moved" so the next deliberate click
-          // resolves to 'set-base'. The same-tick double mouseup (canvas+container)
-          // produces NO mousemove, so its stray fire2 stays at moved=false → 'stay',
-          // and the 1st click can no longer prematurely set the base (3-click stays
-          // 3-click). anchorRef is null here, so the distance check below is skipped.
-          if (hotGripStepRef.current === 'await-base') {
+          // ADR-363 Phase 1G.2/1G.3 — any pick step (waiting for a deliberate
+          // click: base/centre/ref/align) marks "moved" on a real mousemove so the
+          // next click advances/commits. The same-tick double mouseup (canvas+
+          // container) produces NO mousemove, so its stray fire2 stays moved=false
+          // → 'stay', and a single click can never burn two steps. The terminal
+          // 'tracking' step (move/corner) uses the anchor-distance check below.
+          if (hotGripStepRef.current !== 'tracking') {
             hotGripMovedRef.current = true;
           }
-          // ADR-363 Phase 1G — rotate: establish the reference arm on the first
-          // move after the centre pick (anchor still null), so the swept angle
-          // starts at 0 (no snap). pivot+anchor go to the commit-bridge store.
-          if (
-            hotGripOpRef.current === 'rotate' &&
-            hotGripStepRef.current === 'tracking' &&
-            !anchorRef.current &&
-            hotGripBaseRef.current
-          ) {
-            const cx = worldPos.x - hotGripBaseRef.current.x;
-            const cy = worldPos.y - hotGripBaseRef.current.y;
-            if (cx * cx + cy * cy > HOT_GRIP_MOVE_EPS_SQ) {
-              anchorRef.current = { x: worldPos.x, y: worldPos.y };
-              WallRotateHotGripStore.set(hotGripBaseRef.current, anchorRef.current);
-            }
-          }
-          // Once the cursor leaves the anchor (grip / base / reference arm), mark
-          // moved so the next deliberate click commits (a stray same-spot release
-          // stays hot).
+          // Tracking (move/corner): once the cursor leaves the anchor, mark moved
+          // so the next deliberate click commits (a stray same-spot release stays hot).
           if (anchorRef.current) {
             const adx = worldPos.x - anchorRef.current.x;
             const ady = worldPos.y - anchorRef.current.y;
@@ -287,6 +286,7 @@ export function useUnifiedGripInteraction(
         isGripMode, allGrips, phase, effectiveTolerance, hoveredGrip, selectedGrips,
         setSelectedGrips, setActiveGrip, setPhase, setCurrentWorldPos,
         hotGripOpRef, hotGripStepRef, hotGripAwaitingFirstReleaseRef, hotGripMovedRef, hotGripBaseRef,
+        hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef,
         warmTimerRef, universalSelection, setDraggingVertices, setDragPreviewPosition,
         overlayStoreRef, currentOverlays, setDraggingEdgeMidpoint,
       }),
@@ -299,6 +299,7 @@ export function useUnifiedGripInteraction(
       runGripMouseUp(worldPos, {
         mouseUpInProgressRef, phase, hotGripAwaitingFirstReleaseRef, hotGripStepRef,
         hotGripMovedRef, hotGripBaseRef, hotGripOpRef, activeGrip, anchorRef,
+        hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef,
         dxfCommitDeps, overlayCommitDeps, resetToIdle, setCurrentWorldPos, markDragFinished,
         draggingVertices, setDraggingVertices, draggingEdgeMidpoint, setDraggingEdgeMidpoint,
         draggingOverlayBody, setDraggingOverlayBody, setSelectedGrips, setDragPreviewPosition,
@@ -319,13 +320,20 @@ export function useUnifiedGripInteraction(
   // ── PROJECTIONS (from grip-projections.ts) ──
   const dxfDragPreview = useMemo(
     () => {
-      const preview = buildDxfDragPreview(phase, activeGrip, anchorRef.current, currentWorldPos);
-      // ADR-363 Phase 1G — rotate hot-grip: surface the picked centre so the ghost
-      // rotates around it and the rubber-band leader starts there (centre → cursor).
-      if (preview && hotGripOpRef.current === 'rotate' && hotGripBaseRef.current) {
-        return { ...preview, rotatePivot: hotGripBaseRef.current };
+      // ADR-363 Phase 1G.3 — wall-rotation uses the 6-click reference flow with its
+      // own guide-line + rotating-ghost preview (built from the hot-grip refs).
+      if (phase === 'hotGrip' && hotGripOpRef.current === 'rotate' && activeGrip?.source === 'dxf') {
+        return buildRotateReferencePreview(
+          activeGrip,
+          hotGripStepRef.current,
+          hotGripBaseRef.current,
+          hotGripRefStartRef.current,
+          hotGripRefEndRef.current,
+          hotGripAlignStartRef.current,
+          currentWorldPos,
+        );
       }
-      return preview;
+      return buildDxfDragPreview(phase, activeGrip, anchorRef.current, currentWorldPos);
     },
     [phase, activeGrip, currentWorldPos],
   );

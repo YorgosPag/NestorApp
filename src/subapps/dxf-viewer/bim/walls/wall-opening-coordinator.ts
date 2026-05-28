@@ -28,10 +28,10 @@ function axisLengthMm(params: WallParams, kind: WallKind): number {
   return computePolylineLengthMm(getWallAxisVertices(params, kind));
 }
 
-/** Exact coordinate equality (Point3D structural). */
+/** Exact coordinate equality (Point3D structural; `z` optional — walls may omit it). */
 function samePoint(
-  a: { x: number; y: number; z: number },
-  b: { x: number; y: number; z: number },
+  a: { x: number; y: number; z?: number },
+  b: { x: number; y: number; z?: number },
 ): boolean {
   return a.x === b.x && a.y === b.y && a.z === b.z;
 }

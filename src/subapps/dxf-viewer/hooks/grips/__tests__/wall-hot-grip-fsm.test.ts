@@ -5,7 +5,8 @@
  *   - WALL_CORNER_GRIP_KINDS holds exactly the 4 corner kinds.
  *   - isWallCornerGripKind true για corners, false για κάθε άλλο wall grip + null/undefined.
  *   - resolveHotGripMouseDown: hotGrip→consume, corner+non-hot→enter, else→none.
- *   - resolveHotGripMouseUp: σειρά none → arm → stay(!moved) → set-base(await-base) → commit.
+ *   - resolveHotGripMouseUp: σειρά none → arm → stay(!moved) → advance|commit.
+ *   - advanceHotGripStep: per-op step progression (corner/move/rotate 6-click).
  */
 
 import {
@@ -14,6 +15,7 @@ import {
   isWallHotGripKind,
   hotGripOpForKind,
   initialHotGripStep,
+  advanceHotGripStep,
   resolveHotGripMouseDown,
   resolveHotGripMouseUp,
 } from '../wall-hot-grip-fsm';
@@ -117,46 +119,68 @@ describe('resolveHotGripMouseDown', () => {
   });
 });
 
+describe('advanceHotGripStep', () => {
+  it("corner: tracking = terminal (self)", () => {
+    expect(advanceHotGripStep('corner', 'tracking')).toBe('tracking');
+  });
+
+  it("move: await-base → tracking (terminal)", () => {
+    expect(advanceHotGripStep('move', 'await-base')).toBe('tracking');
+    expect(advanceHotGripStep('move', 'tracking')).toBe('tracking');
+  });
+
+  it("rotate: 6-click chain await-base → … → await-align-end (terminal)", () => {
+    expect(advanceHotGripStep('rotate', 'await-base')).toBe('await-ref-start');
+    expect(advanceHotGripStep('rotate', 'await-ref-start')).toBe('await-ref-end');
+    expect(advanceHotGripStep('rotate', 'await-ref-end')).toBe('await-align-start');
+    expect(advanceHotGripStep('rotate', 'await-align-start')).toBe('await-align-end');
+    expect(advanceHotGripStep('rotate', 'await-align-end')).toBe('await-align-end');
+  });
+});
+
 describe('resolveHotGripMouseUp', () => {
   it("μη-hotGrip phase → 'none' (ανεξαρτήτως flags)", () => {
     for (const phase of ['idle', 'hovering', 'warm', 'dragging'] as UnifiedGripPhase[]) {
       for (const awaiting of [true, false]) {
-        for (const step of ['await-base', 'tracking'] as const) {
-          for (const moved of [true, false]) {
-            expect(resolveHotGripMouseUp(phase, awaiting, step, moved)).toBe('none');
-          }
+        for (const moved of [true, false]) {
+          expect(resolveHotGripMouseUp('rotate', phase, awaiting, 'await-base', moved)).toBe('none');
         }
       }
     }
   });
 
   it("awaitingFirstRelease → 'arm' (1ο κλικ release, μένει hot, υπερισχύει step/moved)", () => {
-    expect(resolveHotGripMouseUp('hotGrip', true, 'tracking', false)).toBe('arm');
-    expect(resolveHotGripMouseUp('hotGrip', true, 'await-base', true)).toBe('arm');
+    expect(resolveHotGripMouseUp('corner', 'hotGrip', true, 'tracking', false)).toBe('arm');
+    expect(resolveHotGripMouseUp('rotate', 'hotGrip', true, 'await-base', true)).toBe('arm');
   });
 
-  it("await-base + moved → 'set-base' (αληθινό 2ο κλικ ορίζει βάση/κέντρο)", () => {
-    expect(resolveHotGripMouseUp('hotGrip', false, 'await-base', true)).toBe('set-base');
+  it("!moved → 'stay' ανεξαρτήτως op/step (stray same-tick fire, ΔΕΝ καίει βήμα)", () => {
+    expect(resolveHotGripMouseUp('move', 'hotGrip', false, 'await-base', false)).toBe('stay');
+    expect(resolveHotGripMouseUp('move', 'hotGrip', false, 'tracking', false)).toBe('stay');
+    expect(resolveHotGripMouseUp('rotate', 'hotGrip', false, 'await-ref-end', false)).toBe('stay');
+    expect(resolveHotGripMouseUp('rotate', 'hotGrip', false, 'await-align-end', false)).toBe('stay');
   });
 
-  it("await-base + !moved → 'stay' (stray same-tick fire του 1ου κλικ, ΔΕΝ ορίζει base)", () => {
-    expect(resolveHotGripMouseUp('hotGrip', false, 'await-base', false)).toBe('stay');
+  it("move: await-base + moved → 'advance', tracking + moved → 'commit'", () => {
+    expect(resolveHotGripMouseUp('move', 'hotGrip', false, 'await-base', true)).toBe('advance');
+    expect(resolveHotGripMouseUp('move', 'hotGrip', false, 'tracking', true)).toBe('commit');
   });
 
-  it("tracking + moved → 'commit'", () => {
-    expect(resolveHotGripMouseUp('hotGrip', false, 'tracking', true)).toBe('commit');
+  it("corner: tracking + moved → 'commit'", () => {
+    expect(resolveHotGripMouseUp('corner', 'hotGrip', false, 'tracking', true)).toBe('commit');
   });
 
-  it("tracking + !moved → 'stay' (stray release, ΔΕΝ κάνει reset)", () => {
-    expect(resolveHotGripMouseUp('hotGrip', false, 'tracking', false)).toBe('stay');
-  });
-
-  it("σειρά αξιολόγησης: stay υπερισχύει του set-base/commit όταν !moved", () => {
-    // !moved → 'stay' ανεξαρτήτως step (λύνει το διπλό-fire του 1ου κλικ).
-    for (const step of ['await-base', 'tracking'] as const) {
-      expect(resolveHotGripMouseUp('hotGrip', false, step, false)).toBe('stay');
+  it("rotate: non-terminal pick steps + moved → 'advance'", () => {
+    for (const step of ['await-base', 'await-ref-start', 'await-ref-end', 'await-align-start'] as const) {
+      expect(resolveHotGripMouseUp('rotate', 'hotGrip', false, step, true)).toBe('advance');
     }
-    // arm υπερισχύει όλων (1ο κλικ release).
-    expect(resolveHotGripMouseUp('hotGrip', true, 'await-base', true)).toBe('arm');
+  });
+
+  it("rotate: await-align-end + moved → 'commit' (terminal)", () => {
+    expect(resolveHotGripMouseUp('rotate', 'hotGrip', false, 'await-align-end', true)).toBe('commit');
+  });
+
+  it("op=null + moved → 'commit' (defensive)", () => {
+    expect(resolveHotGripMouseUp(null, 'hotGrip', false, 'tracking', true)).toBe('commit');
   });
 });

@@ -53,17 +53,61 @@ export function isWallHotGripKind(kind: WallGripKind | undefined | null): boolea
 }
 
 /**
- * Hot-grip step within `phase === 'hotGrip'`:
- *  - `'await-base'` → move/rotate, waiting for the 2nd click to pick the base
- *    point / rotation centre (no preview yet).
- *  - `'tracking'`   → anchor established, cursor moves drive the live ghost +
- *    rubber-band; the next moved click commits.
+ * Hot-grip step within `phase === 'hotGrip'`. Each pick step waits for one
+ * deliberate (moved) click; the terminal step's click commits.
+ *
+ *  - `'await-base'`        → move/rotate: pick the base point (move) / rotation
+ *                            centre (rotate). No preview yet.
+ *  - `'tracking'`          → move/corner terminal: anchor established, cursor
+ *                            moves drive the live ghost + leader; next click commits.
+ *  - `'await-ref-start'`   → rotate-reference: pick the 1st point of the existing
+ *                            (reference) line.
+ *  - `'await-ref-end'`     → rotate-reference: pick the 2nd point of the reference
+ *                            line (rubber-band start→cursor). Fixes the reference angle.
+ *  - `'await-align-start'` → rotate-reference: pick the 1st point of the alignment
+ *                            (target) line.
+ *  - `'await-align-end'`   → rotate-reference terminal: pick the 2nd alignment
+ *                            point (wall rotates live: align angle − reference
+ *                            angle, around the centre). Next click commits.
+ *
+ * Rotate uses the AutoCAD "ROTATE → Reference" flow (6 clicks total): glyph →
+ * centre → reference line (2 clicks) → alignment line (2 clicks). The wall spins
+ * so the reference direction maps onto the alignment direction.
  */
-export type HotGripStep = 'await-base' | 'tracking';
+export type HotGripStep =
+  | 'await-base'
+  | 'tracking'
+  | 'await-ref-start'
+  | 'await-ref-end'
+  | 'await-align-start'
+  | 'await-align-end';
 
 /** Corners anchor on the glyph itself (straight to tracking); move/rotate must pick a base first. */
 export function initialHotGripStep(op: WallHotGripOp): HotGripStep {
   return op === 'corner' ? 'tracking' : 'await-base';
+}
+
+/**
+ * Next step after a deliberate (moved) click during `step` for operation `op`.
+ * Returns the SAME step when `step` is the terminal step for that op (the click
+ * is a commit, not an advance). Pure table:
+ *   corner: tracking (terminal)
+ *   move:   await-base → tracking (terminal)
+ *   rotate: await-base → await-ref-start → await-ref-end → await-align-start
+ *           → await-align-end (terminal)
+ */
+export function advanceHotGripStep(op: WallHotGripOp, step: HotGripStep): HotGripStep {
+  if (op === 'rotate') {
+    switch (step) {
+      case 'await-base': return 'await-ref-start';
+      case 'await-ref-start': return 'await-ref-end';
+      case 'await-ref-end': return 'await-align-start';
+      case 'await-align-start': return 'await-align-end';
+      default: return step; // await-align-end = terminal
+    }
+  }
+  if (op === 'move' && step === 'await-base') return 'tracking';
+  return step; // move/corner tracking = terminal
 }
 
 /**
@@ -86,31 +130,31 @@ export function resolveHotGripMouseDown(
 
 /**
  * Απόφαση για mouseup ενώ είμαστε σε hot-grip. Σειρά αξιολόγησης:
- *   none → arm → stay → set-base → commit
+ *   none → arm → stay → (advance | commit)
  *
- *  - `'arm'`      → release του 1ου κλικ (awaitingFirstRelease) → μένει hot.
- *  - `'stay'`     → release ΧΩΡΙΣ ενδιάμεση κίνηση κέρσορα (`!movedSinceArm`) →
- *                   stray/redundant release (π.χ. 2ο fire του διπλού canvas+
- *                   container mouseup του ίδιου tick). Μένει hot, ΔΕΝ ορίζει base
- *                   και ΔΕΝ κάνει commit/reset. Ισχύει για ΚΑΘΕ step.
- *  - `'set-base'` → release ενώ `step === 'await-base'` ΜΕ προηγηθείσα κίνηση
- *                   (move/rotate 2ο κλικ) → ορίζει σημείο βάσης / κέντρο
- *                   περιστροφής, πάει σε tracking.
- *  - `'commit'`   → tracking release ΜΕ κίνηση → οριστικοποίηση + reset.
- *  - `'none'`     → δεν είμαστε σε hot-grip· ο caller συνεχίζει με το κανονικό path.
+ *  - `'arm'`     → release του 1ου κλικ (awaitingFirstRelease) → μένει hot.
+ *  - `'stay'`    → release ΧΩΡΙΣ ενδιάμεση κίνηση κέρσορα (`!movedSinceArm`) →
+ *                  stray/redundant release (π.χ. 2ο fire του διπλού canvas+
+ *                  container mouseup του ίδιου tick). Μένει hot, ΔΕΝ ορίζει σημείο
+ *                  και ΔΕΝ κάνει commit/reset. Ισχύει για ΚΑΘΕ step.
+ *  - `'advance'` → deliberate (moved) click σε μη-terminal step → ορίζει το σημείο
+ *                  του τρέχοντος step (base/centre/ref/align) και προχωρά step.
+ *  - `'commit'`  → deliberate (moved) click στο terminal step → οριστικοποίηση + reset.
+ *  - `'none'`    → δεν είμαστε σε hot-grip· ο caller συνεχίζει με το κανονικό path.
  *
- * Το `'stay'`-πριν-`'set-base'` guard λύνει το διπλό-fire bug: το async
+ * Το `'stay'`-πριν-`'advance'/'commit'` guard λύνει το διπλό-fire bug: το async
  * `handleMouseUp` κάνει το `finally` (mutex release) σύγχρονα, οπότε το 2ο mouseup
- * fire του ίδιου tick δεν μπλοκάρεται. Χωρίς αυτό, στο 1ο κλικ ενός move/rotate
- * glyph το fire1='arm' και το fire2 (await-base, καμία ενδιάμεση κίνηση) θα έκανε
- * πρόωρα 'set-base' πάνω στη θέση του glyph — «καίγοντας» 2 βήματα στο 1ο κλικ
- * (το 3-click pattern κατέρρεε σε 2-click). Ο `movedSinceArm` (που ανεβαίνει μόνο
- * σε πραγματικό mousemove, ΟΧΙ στο same-tick double fire) ξεχωρίζει το αληθινό
- * 2ο κλικ από το stray release.
+ * fire του ίδιου tick δεν μπλοκάρεται. Χωρίς αυτό κάθε κλικ θα «έκαιγε» 2 βήματα.
+ * Ο `movedSinceArm` (που ανεβαίνει μόνο σε πραγματικό mousemove, ΟΧΙ στο same-tick
+ * double fire) ξεχωρίζει το αληθινό deliberate κλικ από το stray release.
+ *
+ * Το terminal step ανά op προκύπτει από το `advanceHotGripStep` (terminal ⇔ το
+ * επόμενο step ισούται με το τρέχον).
  */
-export type HotGripMouseUpAction = 'arm' | 'set-base' | 'stay' | 'commit' | 'none';
+export type HotGripMouseUpAction = 'arm' | 'advance' | 'stay' | 'commit' | 'none';
 
 export function resolveHotGripMouseUp(
+  op: WallHotGripOp | null,
   phase: UnifiedGripPhase,
   awaitingFirstRelease: boolean,
   step: HotGripStep,
@@ -119,6 +163,6 @@ export function resolveHotGripMouseUp(
   if (phase !== 'hotGrip') return 'none';
   if (awaitingFirstRelease) return 'arm';
   if (!movedSinceArm) return 'stay';
-  if (step === 'await-base') return 'set-base';
-  return 'commit';
+  if (op === null) return 'commit';
+  return advanceHotGripStep(op, step) === step ? 'commit' : 'advance';
 }

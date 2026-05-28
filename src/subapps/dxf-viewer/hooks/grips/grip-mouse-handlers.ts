@@ -21,12 +21,11 @@ import {
   type WallHotGripOp, type HotGripStep,
 } from './wall-hot-grip-fsm';
 import { WallRotateHotGripStore } from '../../bim/walls/wall-rotate-hotgrip-store';
-import { commitDxfGripDragModeAware, type DxfCommitDeps } from './grip-commit-adapters';
+import { commitDxfGripDragModeAware, type DxfCommitDeps, type OverlayCommitDeps } from './grip-commit-adapters';
 import {
   commitOverlayVertexDrag,
   commitOverlayEdgeMidpointDrag,
   commitOverlayBodyDrag,
-  type OverlayCommitDeps,
 } from './overlay-grip-commit-adapters';
 import { GripModeStore } from '../../systems/grip/GripModeStore';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
@@ -48,6 +47,7 @@ import type {
   DraggingEdgeMidpointState,
   DraggingOverlayBodyState,
 } from './unified-grip-types';
+import { applyHotGripHint, advanceHotGripPick, commitRotateReference } from './grip-hotgrip-actions';
 
 export interface GripMouseDownCtx {
   mouseDownInProgressRef: MutableRefObject<boolean>;
@@ -70,6 +70,10 @@ export interface GripMouseDownCtx {
   hotGripAwaitingFirstReleaseRef: MutableRefObject<boolean>;
   hotGripMovedRef: MutableRefObject<boolean>;
   hotGripBaseRef: MutableRefObject<Point2D | null>;
+  // ADR-363 Phase 1G.3 — rotate-reference (6-click) line points.
+  hotGripRefStartRef: MutableRefObject<Point2D | null>;
+  hotGripRefEndRef: MutableRefObject<Point2D | null>;
+  hotGripAlignStartRef: MutableRefObject<Point2D | null>;
   warmTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
   universalSelection: UseUnifiedGripInteractionParams['universalSelection'];
   setDraggingVertices: Dispatch<SetStateAction<DraggingVertexState[] | null>>;
@@ -87,6 +91,10 @@ export interface GripMouseUpCtx {
   hotGripMovedRef: MutableRefObject<boolean>;
   hotGripBaseRef: MutableRefObject<Point2D | null>;
   hotGripOpRef: MutableRefObject<WallHotGripOp | null>;
+  // ADR-363 Phase 1G.3 — rotate-reference (6-click) line points.
+  hotGripRefStartRef: MutableRefObject<Point2D | null>;
+  hotGripRefEndRef: MutableRefObject<Point2D | null>;
+  hotGripAlignStartRef: MutableRefObject<Point2D | null>;
   activeGrip: UnifiedGripInfo | null;
   anchorRef: MutableRefObject<Point2D | null>;
   dxfCommitDeps: DxfCommitDeps;
@@ -113,6 +121,7 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     isGripMode, allGrips, phase, effectiveTolerance, hoveredGrip, selectedGrips,
     setSelectedGrips, setActiveGrip, setPhase, setCurrentWorldPos,
     hotGripOpRef, hotGripStepRef, hotGripAwaitingFirstReleaseRef, hotGripMovedRef, hotGripBaseRef,
+    hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef,
     warmTimerRef, universalSelection, setDraggingVertices, setDragPreviewPosition,
     overlayStoreRef, currentOverlays, setDraggingEdgeMidpoint,
   } = ctx;
@@ -197,10 +206,14 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
       setPhase('hotGrip');
       unlockGripSnapPosition();
       hotGripOpRef.current = op;
-      hotGripStepRef.current = initialHotGripStep(op);
+      const initialStep = initialHotGripStep(op);
+      hotGripStepRef.current = initialStep;
       hotGripAwaitingFirstReleaseRef.current = true;
       hotGripMovedRef.current = false;
       hotGripBaseRef.current = null;
+      hotGripRefStartRef.current = null;
+      hotGripRefEndRef.current = null;
+      hotGripAlignStartRef.current = null;
       WallRotateHotGripStore.clear();
       if (op === 'corner') {
         // Corner: the grip itself is the anchor (2-click flow).
@@ -212,6 +225,8 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
         anchorRef.current = null;
         setCurrentWorldPos(null);
       }
+      // ADR-363 Phase 1G.3 — prompt the first awaited pick (centre / base).
+      applyHotGripHint(op, initialStep);
       if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
       setActiveDragGrip({ entityId: nearGrip.entityId!, gripKind: nearGrip.wallGripKind ?? null });
       GripSessionUndoStore.markSessionStart(getGlobalCommandHistory().size());
@@ -301,49 +316,47 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
 export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Promise<boolean> {
   const {
     mouseUpInProgressRef, phase, hotGripAwaitingFirstReleaseRef, hotGripStepRef,
-    hotGripMovedRef, hotGripBaseRef, hotGripOpRef, activeGrip, anchorRef,
-    dxfCommitDeps, overlayCommitDeps, resetToIdle, setCurrentWorldPos, markDragFinished,
+    hotGripMovedRef, hotGripOpRef, activeGrip, anchorRef,
+    dxfCommitDeps, overlayCommitDeps, resetToIdle, markDragFinished,
     draggingVertices, setDraggingVertices, draggingEdgeMidpoint, setDraggingEdgeMidpoint,
     draggingOverlayBody, setDraggingOverlayBody, setSelectedGrips, setDragPreviewPosition,
   } = ctx;
   if (mouseUpInProgressRef.current) return false;
   mouseUpInProgressRef.current = true;
   try {
-    // ADR-363 Phase 1G — wall corner hot-grip release. The 1st-click release
-    // arms the move (stays hot); the 2nd-click release commits. mouseup snap
-    // is already applied upstream (mouse-handler-up), so the commit point is
-    // snapped — unlike the un-snapped mousedown path.
+    // ADR-363 Phase 1G — wall hot-grip release. 1st-click release arms (stays hot);
+    // subsequent deliberate (moved) clicks advance the pick steps; the terminal
+    // step's click commits. mouseup snap is already applied upstream
+    // (mouse-handler-up), so each picked point is snapped (vs the un-snapped down).
+    const hotOp = hotGripOpRef.current;
     const hotUp = resolveHotGripMouseUp(
-      phase, hotGripAwaitingFirstReleaseRef.current, hotGripStepRef.current, hotGripMovedRef.current,
+      hotOp, phase, hotGripAwaitingFirstReleaseRef.current, hotGripStepRef.current, hotGripMovedRef.current,
     );
     if (hotUp !== 'none' && activeGrip?.source === 'dxf') {
       if (hotUp === 'arm') {
         // 1st-click release — arm the move, stay hot. Re-baseline the move flag
-        // so the cursor must leave the anchor before the next click commits.
+        // so the cursor must leave the anchor before the next click counts.
         hotGripAwaitingFirstReleaseRef.current = false;
         hotGripMovedRef.current = false;
         return true;
       }
-      if (hotUp === 'set-base') {
-        // 2nd click — declare the base point (move) / rotation centre (rotate).
-        const base: Point2D = { x: worldPos.x, y: worldPos.y };
-        hotGripBaseRef.current = base;
-        hotGripStepRef.current = 'tracking';
-        hotGripMovedRef.current = false;
-        if (hotGripOpRef.current === 'move') {
-          anchorRef.current = base;        // base = delta anchor for the translate
-        } else {
-          anchorRef.current = null;        // rotate: reference arm set on first move
-        }
-        setCurrentWorldPos(base);
-        return true;
-      }
       if (hotUp === 'stay') {
         // Stray same-spot release (e.g. 2nd fire of the canvas+container mouseup
-        // pair) — keep hot, do NOT reset, so the rubber-band survives the click.
+        // pair) — keep hot, do NOT advance/commit, so the flow survives the click.
         return true;
       }
-      // commit — needs an anchor (null only if a rotate never left its centre).
+      if (hotUp === 'advance') {
+        // Deliberate click on a non-terminal step — record its point + step on.
+        advanceHotGripPick(worldPos, ctx);
+        hotGripMovedRef.current = false;
+        return true;
+      }
+      // commit (terminal step).
+      if (hotOp === 'rotate') {
+        commitRotateReference(worldPos, activeGrip, ctx);
+        return true;
+      }
+      // move / corner — needs an anchor (base point / grip position).
       if (!anchorRef.current) return true;
       const effectiveAnchor = GripBasePointStore.getSnapshot().overrideAnchor ?? anchorRef.current;
       const delta: Point2D = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };

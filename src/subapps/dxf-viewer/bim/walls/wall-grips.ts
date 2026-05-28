@@ -54,14 +54,6 @@ export { applyWallGripDrag } from './wall-grip-transforms';
 export type { WallGripDragInput } from './wall-grip-transforms';
 
 /**
- * Physical distance the rotation handle sits beyond the wall's end short edge
- * (scene-scaled via `mmScaleFor`). Matches the stair direction-handle offset
- * order of magnitude so the curved-arrow glyph reads as a rotation affordance
- * without overlapping the corner grips.
- */
-const WALL_ROTATION_GRIP_OFFSET_MM = 200;
-
-/**
  * Phase 1C-ter (2026-05-28) — map a wall grip kind to its rendered glyph shape.
  * The midpoint (whole-wall MOVE) and the rotation handle get icon glyphs
  * (4-arrow / curved-arrow) instead of the default square — the SAME vocabulary
@@ -212,23 +204,23 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
         entityId: entity.id, gripIndex: 8, type: 'vertex',
         position: negEnd, movesEntity: false, wallGripKind: 'wall-corner-end-neg',
       });
-      // 9 — rotation handle just outside the END short edge (offset along +axis).
-      // Renders the curved ROTATION glyph (`wallGripGlyphShape`) and rotates the
-      // whole wall around its midpoint — same affordance as the stair direction
-      // handle. Straight only (a single segment can spin rigidly; curved/polyline
-      // would distort their interior, so they keep endpoint editing instead).
-      const axis = unitAxis(params);
-      if (axis) {
-        const offsetCanvas = WALL_ROTATION_GRIP_OFFSET_MM * mmScaleFor(params);
-        grips.push({
-          entityId: entity.id,
-          gripIndex: 9,
-          type: 'vertex',
-          position: { x: end.x + offsetCanvas * axis.x, y: end.y + offsetCanvas * axis.y },
-          movesEntity: false,
-          wallGripKind: 'wall-rotation',
-        });
-      }
+      // 9 — rotation handle at the +perp face midpoint: ON the wall body, at the
+      // centre of its length, between the two +perp corner handles (Giorgio
+      // 2026-05-29: «στο κέντρο ανάμεσα στα δύο χερούλια» — the prior "200mm beyond
+      // the end edge" placement read OUTSIDE the wall). Position is read DIRECTLY
+      // from the footprint geometry (`posStart`/`posEnd`, the same SSoT the renderer
+      // draws) — never re-derived from raw mm — so it stays on the wall in any
+      // scene unit (the old `OFFSET_MM * mmScaleFor` drifted off-screen in metre
+      // scenes; see grip-positions-read-geometry rule). Renders the curved ROTATION
+      // glyph; the 6-click reference flow (ADR-363 §6 Phase 1G.3) rotates the wall.
+      grips.push({
+        entityId: entity.id,
+        gripIndex: 9,
+        type: 'vertex',
+        position: calculateMidpoint(posStart, posEnd),
+        movesEntity: false,
+        wallGripKind: 'wall-rotation',
+      });
     }
   } else {
     // CURVED / POLYLINE — single symmetric thickness handle at the axis

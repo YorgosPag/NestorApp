@@ -65,6 +65,27 @@ function clearCanvas(canvas: HTMLCanvasElement): void {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
+/** ADR-363 Phase 1G.3 — draw one dashed world-space segment on the preview canvas. */
+function drawDashedSegment(
+  ctx: CanvasRenderingContext2D,
+  fromW: { x: number; y: number },
+  toW: { x: number; y: number },
+  transform: ViewTransform,
+  vp: { width: number; height: number },
+): void {
+  const fromS = CoordinateTransforms.worldToScreen(fromW, transform, vp);
+  const toS = CoordinateTransforms.worldToScreen(toW, transform, vp);
+  ctx.save();
+  ctx.setLineDash([...HOT_GRIP_RUBBER_BAND_DASH]);
+  ctx.strokeStyle = GHOST_DEFAULTS.color;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(fromS.x, fromS.y);
+  ctx.lineTo(toS.x, toS.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
@@ -123,29 +144,28 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
 
     const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview);
 
-    // ADR-363 Phase 1G — dashed rubber-band leader to the cursor. Drawn BEFORE
-    // the ghost short-circuit so it shows even when the params clamp to an
-    // identical entity reference (e.g. thickness floor reached). The start point
-    // is the rotation centre when set (wall-rotation), else the move/corner
-    // anchor; the end is always the cursor (anchorPos + delta).
-    if (
+    // ADR-363 Phase 1G.3 — rotate-reference (6-click) guide segments. Drawn for
+    // the reference + alignment lines regardless of ghost delta (they exist even
+    // while the wall is not yet rotating, e.g. tracing the reference line).
+    if (dragPreview.rotateRefLine || dragPreview.rotateAlignLine) {
+      if (dragPreview.rotateRefLine) {
+        drawDashedSegment(ctx, dragPreview.rotateRefLine.from, dragPreview.rotateRefLine.to, transform, vp);
+      }
+      if (dragPreview.rotateAlignLine) {
+        drawDashedSegment(ctx, dragPreview.rotateAlignLine.from, dragPreview.rotateAlignLine.to, transform, vp);
+      }
+    } else if (
+      // ADR-363 Phase 1G — dashed rubber-band leader to the cursor (corner/move
+      // hot-grip). Drawn BEFORE the ghost short-circuit so it shows even when the
+      // params clamp to an identical entity reference (e.g. thickness floor). The
+      // start is the move/corner anchor; the end is the cursor (anchorPos + delta).
       dragPreview.hotGrip &&
       dragPreview.anchorPos &&
       (dragPreview.delta.x !== 0 || dragPreview.delta.y !== 0)
     ) {
       const fromW = dragPreview.rotatePivot ?? dragPreview.anchorPos;
       const toW = { x: dragPreview.anchorPos.x + dragPreview.delta.x, y: dragPreview.anchorPos.y + dragPreview.delta.y };
-      const fromS = CoordinateTransforms.worldToScreen(fromW, transform, vp);
-      const toS = CoordinateTransforms.worldToScreen(toW, transform, vp);
-      ctx.save();
-      ctx.setLineDash([...HOT_GRIP_RUBBER_BAND_DASH]);
-      ctx.strokeStyle = GHOST_DEFAULTS.color;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(fromS.x, fromS.y);
-      ctx.lineTo(toS.x, toS.y);
-      ctx.stroke();
-      ctx.restore();
+      drawDashedSegment(ctx, fromW, toW, transform, vp);
     }
 
     // applyEntityPreview returns the *same* reference for zero-delta or
