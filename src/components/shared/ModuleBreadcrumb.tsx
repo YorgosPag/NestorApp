@@ -51,45 +51,47 @@ import '@/lib/design-system';
  * Config per URL segment: i18n key, icon, and color class.
  * Matches NavigationBreadcrumb pattern (colored icons + entity-specific styling).
  */
+// ADR-365 follow-up: icons use VIVID theme-aware tokens (--text-*/--status-*/--hue-*),
+// NEVER text-primary (dark navy = flat) or text-muted-foreground (grey = flat) for icons.
 const SEGMENT_CONFIG: Record<string, { labelKey: string; icon: LucideIcon; color: string }> = {
   // CRM
-  'crm':            { labelKey: 'module.crm',            icon: BarChart,     color: 'text-primary' },
-  'dashboard':      { labelKey: 'module.crmDashboard',   icon: BarChart,     color: 'text-primary' },
-  'tasks':          { labelKey: 'module.tasks',           icon: ClipboardList, color: 'text-primary' },
-  'calendar':       { labelKey: 'module.calendar',        icon: CalendarDays, color: 'text-primary' },
+  'crm':            { labelKey: 'module.crm',            icon: BarChart,     color: 'text-[hsl(var(--text-info))]' },
+  'dashboard':      { labelKey: 'module.crmDashboard',   icon: BarChart,     color: 'text-[hsl(var(--text-info))]' },
+  'tasks':          { labelKey: 'module.tasks',           icon: ClipboardList, color: 'text-[hsl(var(--text-info))]' },
+  'calendar':       { labelKey: 'module.calendar',        icon: CalendarDays, color: 'text-[hsl(var(--status-purple))]' },
   'leads':          { labelKey: 'module.leads',           icon: Target,       color: 'text-[hsl(var(--text-warning))]' },
   'pipeline':       { labelKey: 'module.pipeline',        icon: Filter,       color: 'text-[hsl(var(--text-warning))]' },
-  'communications': { labelKey: 'module.communications',  icon: Phone,        color: 'text-primary' },
-  'teams':          { labelKey: 'module.teams',           icon: Users,        color: 'text-primary' },
+  'communications': { labelKey: 'module.communications',  icon: Phone,        color: 'text-[hsl(var(--hue-teal))]' },
+  'teams':          { labelKey: 'module.teams',           icon: Users,        color: 'text-[hsl(var(--hue-teal))]' },
   'notifications':  { labelKey: 'module.notifications',   icon: Bell,         color: 'text-[hsl(var(--text-warning))]' },
-  'email-analytics': { labelKey: 'module.emailAnalytics', icon: BarChart,     color: 'text-primary' },
+  'email-analytics': { labelKey: 'module.emailAnalytics', icon: BarChart,     color: 'text-[hsl(var(--text-info))]' },
   // Sales, Spaces
   'sales':          { labelKey: 'module.sales',           icon: DollarSign,   color: 'text-[hsl(var(--text-success))]' },
-  'spaces':         { labelKey: 'module.spaces',          icon: Layout,       color: 'text-primary' },
+  'spaces':         { labelKey: 'module.spaces',          icon: Layout,       color: 'text-[hsl(var(--hue-indigo))]' },
   // Obligations, Contacts
   'obligations':    { labelKey: 'module.obligations',     icon: Scale,        color: 'text-destructive' },
   'contacts':       { labelKey: 'module.contacts',        icon: Users,        color: 'text-[hsl(var(--text-success))]' },
   // Accounting
   'accounting':     { labelKey: 'module.accounting',      icon: Calculator,   color: 'text-[hsl(var(--text-success))]' },
-  'setup':          { labelKey: 'module.setup',           icon: Settings,     color: 'text-muted-foreground' },
+  'setup':          { labelKey: 'module.setup',           icon: Settings,     color: 'text-[hsl(var(--hue-pink))]' },
   'invoices':       { labelKey: 'module.invoices',        icon: DollarSign,   color: 'text-[hsl(var(--text-success))]' },
-  'journal':        { labelKey: 'module.journal',         icon: ClipboardList, color: 'text-primary' },
+  'journal':        { labelKey: 'module.journal',         icon: ClipboardList, color: 'text-[hsl(var(--text-info))]' },
   'vat':            { labelKey: 'module.vat',             icon: Calculator,   color: 'text-[hsl(var(--text-success))]' },
   'bank':           { labelKey: 'module.bank',            icon: DollarSign,   color: 'text-[hsl(var(--text-success))]' },
   'efka':           { labelKey: 'module.efka',            icon: Shield,       color: 'text-destructive' },
-  'assets':         { labelKey: 'module.assets',          icon: Layout,       color: 'text-primary' },
-  'documents':      { labelKey: 'module.documents',       icon: ClipboardList, color: 'text-primary' },
-  'reports':        { labelKey: 'module.reports',         icon: BarChart,     color: 'text-primary' },
+  'assets':         { labelKey: 'module.assets',          icon: Layout,       color: 'text-[hsl(var(--hue-indigo))]' },
+  'documents':      { labelKey: 'module.documents',       icon: ClipboardList, color: 'text-[hsl(var(--text-info))]' },
+  'reports':        { labelKey: 'module.reports',         icon: BarChart,     color: 'text-[hsl(var(--text-info))]' },
   // Account
-  'account':        { labelKey: 'module.account',         icon: User,         color: 'text-muted-foreground' },
-  'profile':        { labelKey: 'module.profile',         icon: User,         color: 'text-primary' },
-  'preferences':    { labelKey: 'module.preferences',     icon: Settings,     color: 'text-muted-foreground' },
+  'account':        { labelKey: 'module.account',         icon: User,         color: 'text-[hsl(var(--hue-teal))]' },
+  'profile':        { labelKey: 'module.profile',         icon: User,         color: 'text-[hsl(var(--hue-teal))]' },
+  'preferences':    { labelKey: 'module.preferences',     icon: Settings,     color: 'text-[hsl(var(--hue-pink))]' },
   'privacy':        { labelKey: 'module.privacy',         icon: Lock,         color: 'text-[hsl(var(--text-warning))]' },
   'security':       { labelKey: 'module.security',        icon: Shield,       color: 'text-destructive' },
   // Admin
   'admin':          { labelKey: 'module.admin',           icon: Settings,     color: 'text-destructive' },
-  'ai-inbox':       { labelKey: 'module.aiInbox',         icon: Inbox,        color: 'text-primary' },
-  'operator-inbox': { labelKey: 'module.operatorInbox',   icon: Headphones,   color: 'text-primary' },
+  'ai-inbox':       { labelKey: 'module.aiInbox',         icon: Inbox,        color: 'text-[hsl(var(--text-info))]' },
+  'operator-inbox': { labelKey: 'module.operatorInbox',   icon: Headphones,   color: 'text-[hsl(var(--text-info))]' },
   // Financial Intelligence (SPEC-242C)
   'financial-intelligence': { labelKey: 'module.financialIntelligence', icon: BarChart3, color: 'text-[hsl(var(--text-success))]' },
   // Procurement (ADR-267 + ADR-327 + ADR-328)
@@ -150,7 +152,7 @@ export function ModuleBreadcrumb({ className }: ModuleBreadcrumbProps) {
         href="/"
         className={cn("flex items-center gap-1 hover:text-foreground transition-colors", colors.text.muted)}
       >
-        <Home className="h-3.5 w-3.5" />
+        <Home className="h-3.5 w-3.5 text-[hsl(var(--text-info))]" />
         <span>{t('module.home')}</span>
       </Link>
 
