@@ -30,6 +30,8 @@ export interface ViewportCameraOptions {
   readonly onInteractionEnd: () => void;
   /** Returns true when reduced motion is active. Checked at animation call time. */
   readonly getReducedMotion?: () => boolean;
+  /** ADR-366 §A.6.Q5 — static Alt+left-click in perspective (forwarded to tumble). */
+  readonly onAltClick?: (clientX: number, clientY: number) => void;
 }
 
 const _snapDir = new THREE.Vector3();
@@ -81,6 +83,7 @@ export function createViewportCamera(
     onStart: onInteractionStart,
     onChange: onRenderNeeded,
     onEnd: onInteractionEnd,
+    onAltClick: options.onAltClick,
   });
 
   const animation = createViewportAnimation();
@@ -316,6 +319,23 @@ export function createViewportCamera(
     onRenderNeeded();
   }
 
+  /**
+   * ADR-366 §A.6.Q5 — re-center the orbit pivot on a world point.
+   *
+   * Copies `point` into `controls.target` and calls `controls.update()`. Because
+   * OrbitControls preserves the camera→target offset across an update, the camera
+   * position is unchanged → no visual jump. Tumble reads `controls.target` live,
+   * so the next rotation orbits around the new pivot. The POI cross (driven by
+   * `viewport.target` each frame) flashes at the new center via the manager.
+   */
+  function setOrbitPivot(point: THREE.Vector3): void {
+    animation.cancel();
+    controls.enabled = true;
+    controls.target.copy(point);
+    controls.update();
+    onRenderNeeded();
+  }
+
   function swapControlsCamera(cam: THREE.PerspectiveCamera | THREE.OrthographicCamera): void {
     controls.object = cam;
     controls.update();
@@ -364,5 +384,6 @@ export function createViewportCamera(
     snapToViewDirection, goHome,
     applyTumble: (dx: number, dy: number) => tumble.applyExternalRotation(dx, dy),
     pan,
+    setOrbitPivot,
   };
 }

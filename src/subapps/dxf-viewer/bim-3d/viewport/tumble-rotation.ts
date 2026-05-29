@@ -21,6 +21,14 @@ export interface TumbleOptions {
   readonly onStart: () => void;
   readonly onChange: () => void;
   readonly onEnd: () => void;
+  /**
+   * ADR-366 §A.6.Q5 — fired on a STATIC Alt+left-click (Alt+pointerdown then
+   * pointerup with no drag past threshold). The drag path still rotates; this
+   * fires only when the gesture never crossed into a rotation. Tumble owns the
+   * Alt+pointer gesture, so this is the reliable place to detect Alt-click
+   * (the React `onClick` is suppressed by the intervening pointer drag).
+   */
+  readonly onAltClick?: (clientX: number, clientY: number) => void;
 }
 
 const DRAG_THRESHOLD_SQ = 9;
@@ -33,7 +41,7 @@ const _qH = new THREE.Quaternion();
 const _qV = new THREE.Quaternion();
 
 export function createTumbleRotation(opts: TumbleOptions): TumbleRotation {
-  const { getCamera, getTarget, domElement, onStart, onChange, onEnd } = opts;
+  const { getCamera, getTarget, domElement, onStart, onChange, onEnd, onAltClick } = opts;
 
   let speed = TUMBLE_BASE_SPEED;
   let enabled = true;
@@ -99,7 +107,11 @@ export function createTumbleRotation(opts: TumbleOptions): TumbleRotation {
   function onPointerUp(e: PointerEvent): void {
     if (e.button !== 0 || !pointerDown) return;
     pointerDown = false;
-    if (!dragActive) return;
+    if (!dragActive) {
+      // Static Alt+click (gesture never became a rotation) → orbit-pivot pick.
+      onAltClick?.(e.clientX, e.clientY);
+      return;
+    }
     if (Math.abs(velX) > 0.5 || Math.abs(velY) > 0.5) {
       damping = true;
     } else {

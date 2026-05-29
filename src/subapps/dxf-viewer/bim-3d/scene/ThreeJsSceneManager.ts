@@ -24,7 +24,7 @@ import type { LightPreset } from '../lighting/lighting-presets';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { SectionSceneController } from './section-scene-controller';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
-import { raycastBimGroup, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
+import { raycastBimGroup, raycastWorldPoint, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
 import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { applyFloorVisibility } from '../utils/applyFloorVisibility';
@@ -51,6 +51,7 @@ import { createKeyboardFocusManager, type KeyboardFocusManagerApi } from '../acc
 import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer';
 import type { FocusEntityLabelData } from '../accessibility/FocusIndicator3D';
 import { computeFocusOrder, findFocusedEntityData } from '../accessibility/focus-order';
+import { cycleKeyboardFocus as a11yCycleFocus, selectFocusedEntity as a11ySelectFocused } from './scene-manager-a11y';
 import { applyLightPresetToScene, updateSunDirection } from '../lighting/apply-light-preset';
 import { type ReducedMotionOverride } from '../accessibility/use-reduced-motion';
 import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
@@ -132,6 +133,10 @@ export class ThreeJsSceneManager {
       onInteractionEnd: () => { this.isInteracting = false; this.markSceneDirty(); },
       onRenderNeeded: () => this.markSceneDirty(),
       getReducedMotionOverride: () => this.reducedMotionOverride,
+      // ADR-366 §A.6.Q5 — tumble forwards static Alt+click here (reliable in
+      // perspective; React onClick fallback covers ortho). this.viewport is
+      // assigned by the time this fires (click is always post-construction).
+      onAltClick: (clientX, clientY) => { this.setOrbitPivotAt(clientX, clientY); },
     });
     const subs = createSceneRenderingSubsystems({
       renderer: this.renderer, scene: this.scene, sun: this.sun, bimLayer: this.bimLayer,
@@ -192,17 +197,11 @@ export class ThreeJsSceneManager {
   }
 
   /** ADR-366 Phase 9 / C.5.Q5 — update override; viewport reads it at animation-call time. */
-  setReducedMotionOverride(override: ReducedMotionOverride): void {
-    this.reducedMotionOverride = override;
-  }
+  setReducedMotionOverride(override: ReducedMotionOverride): void { this.reducedMotionOverride = override; }
 
   // Phase 4.4 keyboard-shortcut façade (use3DShortcuts → manager → viewport).
-  snapToCanonicalView(view: CanonicalViewId): void {
-    if (!this.disposed) this.canonicalViewService.snapTo(view);
-  }
-  snapToHomeView(): void {
-    if (!this.disposed) this.canonicalViewService.snapHome();
-  }
+  snapToCanonicalView(view: CanonicalViewId): void { if (!this.disposed) this.canonicalViewService.snapTo(view); }
+  snapToHomeView(): void { if (!this.disposed) this.canonicalViewService.snapHome(); }
   /** ADR-366 A.6.Q4 selection-aware F — bounds math in `scene-framing-bounds.ts`. */
   frameSelectionOrFitExtents(): void {
     if (this.disposed) return;
@@ -221,91 +220,68 @@ export class ThreeJsSceneManager {
     return computeSceneFramingBounds(this.bimLayer.group, this.dxfConverter.getBounds());
   }
 
-  // ── Phase 4.5 / A.7 — Accessibility public surface ─────────────────────────
-  /** ADR-366 Phase 4.5 / A.7.Q4 — screen-space pan (dxPx > 0 = view right, dyPx > 0 = view up). */
-  panViewportByPixels(dxPx: number, dyPx: number): void {
-    if (!this.disposed) this.viewport.pan(dxPx, dyPx);
-  }
+  // ── Phase 4.5 / A.7 — Accessibility public surface (logic in scene-manager-a11y) ──
+  /** A.7.Q4 — screen-space pan (dxPx > 0 = view right, dyPx > 0 = view up). */
+  panViewportByPixels(dxPx: number, dyPx: number): void { if (!this.disposed) this.viewport.pan(dxPx, dyPx); }
 
-  /** ADR-366 Phase 9 / C.5.Q3 — current frustum-culled entity order for keyboard navigator. */
+  /** C.5.Q3 — current frustum-culled entity order for keyboard navigator. */
   getEntityFocusOrder(): readonly string[] {
-    if (this.disposed) return [];
-    return computeFocusOrder(this.bimLayer.group, this.viewport.camera);
+    return this.disposed ? [] : computeFocusOrder(this.bimLayer.group, this.viewport.camera);
   }
 
-  /** ADR-366 Phase 4.5 / A.7.Q1 — Tab/Shift+Tab cycle through visible entities. */
+  /** A.7.Q1 — Tab/Shift+Tab cycle through visible entities. */
   cycleKeyboardFocus(direction: 'next' | 'prev'): void {
-    if (this.disposed) return;
-    this.keyboardFocusManager.setOrder(computeFocusOrder(this.bimLayer.group, this.viewport.camera));
-    if (direction === 'next') this.keyboardFocusManager.next();
-    else this.keyboardFocusManager.prev();
+    if (!this.disposed) a11yCycleFocus(this.bimLayer.group, this.viewport.camera, this.keyboardFocusManager, direction);
   }
 
-  /** ADR-366 Phase 4.5 / A.7.Q1 — Enter on focused entity → toggle selection (ADR-030 integration). */
+  /** A.7.Q1 — Enter on focused entity → toggle selection (ADR-030 integration). */
   selectFocusedEntity(): void {
-    if (this.disposed) return;
-    const focusedId = this.keyboardFocusManager.getFocused();
-    if (!focusedId) return;
-    const currentSelected = useSelection3DStore.getState().selectedBimId;
-    this.selectBimEntity(currentSelected === focusedId ? null : focusedId);
+    if (!this.disposed) a11ySelectFocused(this.keyboardFocusManager, (id) => this.selectBimEntity(id));
   }
 
-  /** ADR-366 Phase 4.5 / A.7.Q1 — Esc clears focus ring (selection untouched). */
-  clearKeyboardFocus(): void {
-    if (!this.disposed) this.keyboardFocusManager.clear();
-  }
+  /** A.7.Q1 — Esc clears focus ring (selection untouched). */
+  clearKeyboardFocus(): void { if (!this.disposed) this.keyboardFocusManager.clear(); }
 
   /** Read-only handle for FocusIndicator3D React subscriber. */
-  getKeyboardFocusManager(): KeyboardFocusManagerApi {
-    return this.keyboardFocusManager;
-  }
+  getKeyboardFocusManager(): KeyboardFocusManagerApi { return this.keyboardFocusManager; }
 
   /** Resolve label data for the floating focus label (entity type + name + world center). */
   getFocusedEntityData(bimId: string): FocusEntityLabelData | null {
-    if (this.disposed) return null;
-    return findFocusedEntityData(this.bimLayer.group, bimId);
+    return this.disposed ? null : findFocusedEntityData(this.bimLayer.group, bimId);
   }
 
   /** Expose live camera for screen-projection (FocusIndicator3D label positioning). */
-  getCamera(): THREE.Camera {
-    return this.viewport.camera;
-  }
+  getCamera(): THREE.Camera { return this.viewport.camera; }
 
-  /** ADR-366 §C.1.b — Waypoint handles Group για raycast picking (null when hidden). */
+  // ── ADR-366 §C.1.b — Waypoint drag-handle public surface (delegations) ──
+  /** Waypoint handles Group για raycast picking (null when hidden). */
   getWaypointHandlesRoot(): THREE.Group | null {
-    if (this.disposed) return null;
-    return this.waypointDragHandleRenderer.getHandlesGroup();
+    return this.disposed ? null : this.waypointDragHandleRenderer.getHandlesGroup();
   }
 
-  /** ADR-366 §C.1.b — Hover/drag highlight για waypoint handles (null = clear). */
+  /** Hover/drag highlight για waypoint handles (null = clear). */
   setWaypointHoverState(role: 'position' | 'target' | null): void {
     if (this.disposed) return;
     this.waypointDragHandleRenderer.setHoverState(role);
     this.markSceneDirty();
   }
 
-  /** ADR-366 §C.1.b — Sync axis lock visual with gizmo arrows. */
+  /** Sync axis lock visual with gizmo arrows. */
   setDragAxisLock(axis: 'X' | 'Y' | 'Z' | null): void {
     if (this.disposed) return;
     this.waypointDragHandleRenderer.setAxisLockVisual(axis);
     this.markSceneDirty();
   }
 
-  /** ADR-366 §C.1.b — Raycast gizmo arrows for axis-click detection. */
+  /** Raycast gizmo arrows for axis-click detection. */
   pickWaypointAxisArrow(
-    domElement: HTMLElement,
-    camera: import('three').Camera,
-    clientX: number,
-    clientY: number,
+    domElement: HTMLElement, camera: import('three').Camera, clientX: number, clientY: number,
   ): 'X' | 'Y' | 'Z' | null {
-    if (this.disposed) return null;
-    return this.waypointDragHandleRenderer.pickAxisArrow(domElement, camera, clientX, clientY);
+    return this.disposed ? null : this.waypointDragHandleRenderer.pickAxisArrow(domElement, camera, clientX, clientY);
   }
 
   /** Phase 4.3: wire BimViewport3D's React context menu callback into the ViewCube. */
-  setViewCubeContextMenuCallback(cb: (x: number, y: number) => void): void {
-    this.viewCubeContextMenuCb = cb;
-  }
+  setViewCubeContextMenuCallback(cb: (x: number, y: number) => void): void { this.viewCubeContextMenuCb = cb; }
 
   /** Phase 4.3: propagate user compass visibility preference to the ViewCube. */
   setViewCubeCompassVisible(visible: boolean): void {
@@ -344,9 +320,7 @@ export class ThreeJsSceneManager {
   }
 
   /** ADR-040 Phase XXIII — flag the scene as needing render. Idempotent. */
-  markSceneDirty(): void {
-    if (!this.disposed) this._sceneDirty = true;
-  }
+  markSceneDirty(): void { if (!this.disposed) this._sceneDirty = true; }
 
   syncBimEntities(
     entities: Bim3DEntities,
@@ -416,6 +390,30 @@ export class ThreeJsSceneManager {
     );
   }
 
+  /**
+   * ADR-366 §A.6.Q5 — Alt+click orbit-pivot picking.
+   *
+   * Raycasts the BIM scene at the cursor; if a surface is hit, makes that world
+   * point the camera orbit center (no camera movement) and flashes the POI cross
+   * there. Returns true when a pivot was set, false when the ray missed geometry
+   * (caller leaves the current pivot + selection untouched).
+   */
+  setOrbitPivotAt(clientX: number, clientY: number): boolean {
+    if (this.disposed) return false;
+    const point = raycastWorldPoint(
+      this.bimLayer.group,
+      this.viewport.camera,
+      this.renderer.domElement,
+      clientX,
+      clientY,
+    );
+    if (!point) return false;
+    this.viewport.setOrbitPivot(point);
+    this.poi.onNavigationActive();
+    this.markSceneDirty();
+    return true;
+  }
+
   updateSunPosition(azimuthDeg: number, elevationDeg: number): void {
     if (this.disposed) return;
     updateSunDirection(this.sun, azimuthDeg, elevationDeg);
@@ -445,9 +443,7 @@ export class ThreeJsSceneManager {
     this.markSceneDirty();
   }
 
-  getRendererCanvas(): HTMLCanvasElement {
-    return this.renderer.domElement;
-  }
+  getRendererCanvas(): HTMLCanvasElement { return this.renderer.domElement; }
 
   startFinalRender(
     config: FinalRenderConfig,
@@ -459,9 +455,7 @@ export class ThreeJsSceneManager {
     runFinalRender(this.pathTracerRenderer, this.renderer.domElement, config, renderContext, onProgress, onComplete);
   }
 
-  cancelFinalRender(): void {
-    if (!this.disposed) this.pathTracerRenderer.cancelFinal();
-  }
+  cancelFinalRender(): void { if (!this.disposed) this.pathTracerRenderer.cancelFinal(); }
 
   resize(width: number, height: number): void {
     if (this.disposed || width === 0 || height === 0) return;

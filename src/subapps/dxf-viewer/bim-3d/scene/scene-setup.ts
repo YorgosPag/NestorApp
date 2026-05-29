@@ -27,6 +27,8 @@ export interface InitViewportCameraDeps {
   /** ADR-040 Phase XXIII — fired by OrbitControls 'change' (covers damping inertia). */
   readonly onRenderNeeded: () => void;
   readonly getReducedMotionOverride: () => ReducedMotionOverride;
+  /** ADR-366 §A.6.Q5 — static Alt+left-click → orbit-pivot pick (clientX, clientY). */
+  readonly onAltClick: (clientX: number, clientY: number) => void;
 }
 
 export function initViewportCamera(deps: InitViewportCameraDeps): ViewportCamera {
@@ -37,6 +39,7 @@ export function initViewportCamera(deps: InitViewportCameraDeps): ViewportCamera
     onInteractionStart: deps.onInteractionStart,
     onInteractionEnd: deps.onInteractionEnd,
     getReducedMotion: () => checkReducedMotion(deps.getReducedMotionOverride()),
+    onAltClick: deps.onAltClick,
   });
 }
 

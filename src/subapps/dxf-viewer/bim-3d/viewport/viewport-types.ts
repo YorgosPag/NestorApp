@@ -54,6 +54,12 @@ export interface ViewportCamera {
   readonly applyTumble: (dxPx: number, dyPx: number) => void;
   /** ADR-366 Phase 4.5 / A.7.Q4 — screen-space pan (positive dx = view right, positive dy = view up). */
   readonly pan: (dxScreenPx: number, dyScreenPx: number) => void;
+  /**
+   * ADR-366 §A.6.Q5 — set the orbit pivot (rotation center) to a world point
+   * WITHOUT moving the camera. The view stays visually identical; only future
+   * tumble/orbit rotates around `point`. Used by Alt+click pivot picking.
+   */
+  readonly setOrbitPivot: (point: THREE.Vector3) => void;
 }
 
 /** All 12 canonical view IDs: 6 ortho face + 6 isometric. */

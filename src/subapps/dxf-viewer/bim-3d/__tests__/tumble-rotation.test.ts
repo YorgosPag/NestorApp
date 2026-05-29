@@ -102,3 +102,61 @@ describe('createTumbleRotation — quaternion orbit math', () => {
     expect(camera.up.z).toBeCloseTo(-1, 5);
   });
 });
+
+describe('createTumbleRotation — ADR-366 §A.6.Q5 Alt+click orbit-pivot', () => {
+  function listenerCapturingElement(): {
+    el: HTMLElement;
+    fire: (type: string, e: Partial<PointerEvent>) => void;
+  } {
+    const handlers: Record<string, (e: PointerEvent) => void> = {};
+    const el = {
+      addEventListener: (type: string, fn: (e: PointerEvent) => void) => { handlers[type] = fn; },
+      removeEventListener: () => {},
+    } as unknown as HTMLElement;
+    const fire = (type: string, e: Partial<PointerEvent>) =>
+      handlers[type]?.({ button: 0, ...e } as PointerEvent);
+    return { el, fire };
+  }
+
+  function makeTumble(onAltClick: jest.Mock) {
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+    camera.position.set(0, 0, 5);
+    const target = new THREE.Vector3(0, 0, 0);
+    const { el, fire } = listenerCapturingElement();
+    createTumbleRotation({
+      getCamera: () => camera,
+      getTarget: () => target,
+      domElement: el,
+      onStart: jest.fn(),
+      onChange: jest.fn(),
+      onEnd: jest.fn(),
+      onAltClick,
+    });
+    return fire;
+  }
+
+  it('fires onAltClick with client coords on static Alt+click (no drag)', () => {
+    const onAltClick = jest.fn();
+    const fire = makeTumble(onAltClick);
+    fire('pointerdown', { altKey: true, clientX: 120, clientY: 240 });
+    fire('pointerup', { altKey: true, clientX: 121, clientY: 241 }); // <3px → no drag
+    expect(onAltClick).toHaveBeenCalledWith(121, 241);
+  });
+
+  it('does NOT fire onAltClick when the gesture became a rotation (drag past threshold)', () => {
+    const onAltClick = jest.fn();
+    const fire = makeTumble(onAltClick);
+    fire('pointerdown', { altKey: true, clientX: 100, clientY: 100 });
+    fire('pointermove', { clientX: 140, clientY: 140 }); // >3px → dragActive
+    fire('pointerup', { clientX: 140, clientY: 140 });
+    expect(onAltClick).not.toHaveBeenCalled();
+  });
+
+  it('does NOT fire onAltClick when Alt was not held at pointerdown', () => {
+    const onAltClick = jest.fn();
+    const fire = makeTumble(onAltClick);
+    fire('pointerdown', { altKey: false, clientX: 100, clientY: 100 });
+    fire('pointerup', { altKey: false, clientX: 100, clientY: 100 });
+    expect(onAltClick).not.toHaveBeenCalled();
+  });
+});

@@ -35,9 +35,8 @@ import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-inter
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useBim3DStoreSync } from './use-bim3d-store-sync';
 import { useBim3DVgResync, EMPTY_BIM_ENTITIES } from './use-bim3d-vg-resync';
+import { useBim3DPointerHandlers } from './use-bim3d-pointer-handlers';
 import { UnifiedFrameScheduler, RENDER_PRIORITIES } from '../../rendering/core/UnifiedFrameScheduler';
-
-const HOVER_DEBOUNCE_MS = 800;
 
 // ── BimViewport3D ─────────────────────────────────────────────────────────────
 // ADR-040 micro-leaf compliant: subscribes to ViewMode3DStore (not high-freq),
@@ -328,34 +327,11 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     onCropRegionToggle,
   });
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    const { clientX, clientY } = e;
-    if (debounceTimerRef.current !== null) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(() => {
-      debounceTimerRef.current = null;
-      const hit = managerRef.current?.raycastBimEntities(clientX, clientY);
-      if (hit) {
-        useQuickProperties3DStore.getState().setHovered(hit.bimId, hit.bimType, clientX, clientY);
-      } else {
-        useQuickProperties3DStore.getState().clearHover();
-      }
-    }, HOVER_DEBOUNCE_MS);
-  }, []);
-
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    const hit = managerRef.current?.raycastBimEntities(e.clientX, e.clientY);
-    managerRef.current?.selectBimEntity(hit?.bimId ?? null);
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    if (debounceTimerRef.current !== null) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
-    useQuickProperties3DStore.getState().clearHover();
-  }, []);
+  // Pointer interaction (hover-raycast + click-select + Alt+click pivot) — ADR-366 §A.6.Q5.
+  const { handleMouseMove, handleClick, handleMouseLeave } = useBim3DPointerHandlers(
+    managerRef,
+    debounceTimerRef,
+  );
 
   if (!effectiveVisible) return null;
 
