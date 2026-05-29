@@ -82,3 +82,44 @@ export function classifyWallMaterial(
   if (id === undefined || id === '') return 'empty';
   return catalog.resolvePreset(id) === null ? 'custom' : 'preset';
 }
+
+// ============================================================================
+// THERMAL CONDUCTIVITY (λ) — ADR-396 P8 SSoT (§3.2b)
+// ============================================================================
+
+/**
+ * Θερμική αγωγιμότητα λ (W/mK) ανά preset υλικό. SSoT για τον υπολογισμό
+ * U-value (ETICS θερμοπρόσοψη — ADR-396 P8) + μελλοντικό IFC `Pset_MaterialThermal`
+ * (P9). Τιμές αντιπροσωπευτικές (ΤΟΤΕΕ 20701-2 / EN ISO 10456). Υλικά χωρίς
+ * θερμική σημασία (vapor barrier, tile, marble, osb, cladding) παραλείπονται.
+ */
+export const WALL_MATERIAL_LAMBDA: Partial<Record<WallMaterialPresetId, number>> = {
+  // Μονωτικά (ETICS + cavity core)
+  'mat-eps-graphite': 0.031, // γραφιτούχα EPS (Neopor)
+  'mat-xps': 0.034, // εξηλασμένη πολυστερίνη
+  'mat-eps': 0.035, // διογκωμένη πολυστερίνη
+  'mat-mineral-wool': 0.035, // ορυκτοβάμβακας
+  'mat-plaster-thermal': 0.09, // θερμομονωτικό επίχρισμα
+  // Φέρων / πλήρωση
+  'mat-concrete-c20': 2.0,
+  'mat-concrete-c25': 2.0,
+  'mat-concrete-c30': 2.0,
+  'mat-concrete-block': 1.0,
+  'mat-brick-masonry': 0.51, // οπτοπλινθοδομή
+  'mat-stone-masonry': 2.0, // λιθοδομή
+  // Επιχρίσματα / επενδύσεις
+  'mat-plaster-ext': 0.87, // εξωτ. σοβάς
+  'mat-plaster-int': 0.7, // εσωτ. σοβάς
+  'mat-gypsum-board': 0.25, // γυψοσανίδα
+};
+
+/**
+ * Επιστρέφει τη θερμική αγωγιμότητα λ (W/mK) ενός υλικού, ή `undefined` αν
+ * δεν είναι γνωστό preset (custom / άγνωστο → ο caller αποφασίζει fallback).
+ */
+export function getThermalConductivityLambda(
+  materialId: string | undefined,
+): number | undefined {
+  if (!materialId) return undefined;
+  return WALL_MATERIAL_LAMBDA[materialId as WallMaterialPresetId];
+}

@@ -1673,6 +1673,23 @@
           "Z4": "Z4 — Opening reveals"
         },
         "kenakWarning": "Below the KENAK advisory minimum — allowed, but review the thermal performance.",
+        "climateZone": {
+          "label": "Climate Zone (KENAK)",
+          "placeholder": "Select zone…",
+          "zones": {
+            "A": "Zone A — Southern Greece / islands",
+            "B": "Zone B — Athens / central Greece",
+            "C": "Zone C — Northern Greece",
+            "D": "Zone D — Mountainous areas"
+          }
+        },
+        "performance": {
+          "uValue": "Thermal transmittance U = {value} W/m²K",
+          "kenakLimit": "KENAK limit: {value} W/m²K",
+          "pass": "within limit ✓",
+          "warn": "exceeds limit — increase insulation thickness",
+          "noZone": "Set a climate zone to check KENAK compliance."
+        },
         "actions": {
           "apply": "Apply",
           "applyAllFloors": "All floors",

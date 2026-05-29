@@ -32,7 +32,10 @@
 import * as React from 'react';
 
 import { useAuth } from '@/auth/hooks/useAuth';
+import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
+import { updateBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
 import { markAllCanvasDirty } from '../../../rendering/core/frame-scheduler-api';
+import type { ClimateZone } from '../../../bim/thermal/kenak-thermal-config';
 import { EventBus } from '../../../systems/events/EventBus';
 import {
   buildDefaultSpec,
@@ -81,6 +84,39 @@ export function ThermalEnvelopeHost(
   const companyId = user?.companyId ?? null;
   const [open, setOpen] = React.useState(false);
   const [draft, setDraft] = React.useState<ThermalEnvelopeSpec>(buildDefaultSpec);
+
+  // ADR-396 P8 — κλιματική ζώνη = ρύθμιση κτιρίου (OQ-7a). Resolve από το
+  // building doc του τρέχοντος ορόφου· optimistic override μέχρι να γυρίσει
+  // το persisted snapshot.
+  const { buildings } = useFirestoreBuildings();
+  const buildingId = React.useMemo(
+    () => levels.find((l) => l.id === currentLevelId)?.buildingId ?? null,
+    [levels, currentLevelId],
+  );
+  const persistedZone = React.useMemo<ClimateZone | null>(() => {
+    const z = buildings.find((b) => b.id === buildingId)?.climateZone;
+    return z === 'A' || z === 'B' || z === 'C' || z === 'D' ? z : null;
+  }, [buildings, buildingId]);
+  const [zoneOverride, setZoneOverride] = React.useState<ClimateZone | null>(null);
+  // Καθάρισε το optimistic override όταν αλλάζει κτίριο (νέο context).
+  React.useEffect(() => setZoneOverride(null), [buildingId]);
+  const climateZone = zoneOverride ?? persistedZone;
+
+  const handleClimateZoneChange = React.useCallback(
+    (zone: ClimateZone) => {
+      setZoneOverride(zone); // optimistic — instant UI
+      if (!buildingId) {
+        logger.warn('climate zone change χωρίς buildingId — skip persist', { currentLevelId });
+        return;
+      }
+      void updateBuildingWithPolicy({ buildingId, updates: { climateZone: zone } })
+        .then((r) => {
+          if (!r.success) logger.error('climate zone persist failed', { buildingId, error: r.error });
+        })
+        .catch((err: unknown) => logger.error('climate zone persist threw', { buildingId, err }));
+    },
+    [buildingId, currentLevelId],
+  );
 
   // EventBus listener — ribbon button → init draft από το spec του ορόφου + open.
   React.useEffect(() => {
@@ -147,6 +183,8 @@ export function ThermalEnvelopeHost(
       onChange={setDraft}
       onApply={handleApply}
       onApplyAll={handleApplyAll}
+      climateZone={climateZone}
+      onClimateZoneChange={handleClimateZoneChange}
     />
   );
 }

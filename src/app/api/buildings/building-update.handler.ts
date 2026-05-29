@@ -99,6 +99,8 @@ interface BuildingUpdatePayload {
   company?: string | null;
   addresses?: Record<string, unknown>[];
   category?: string;
+  /** ADR-396 P8: κλιματική ζώνη ΚΕΝΑΚ (passthrough → Firestore· no allowlist). */
+  climateZone?: 'A' | 'B' | 'C' | 'D';
 }
 
 interface BuildingUpdateResponse {

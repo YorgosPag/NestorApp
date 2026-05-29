@@ -47,6 +47,15 @@ import {
   type EnvelopeZoneId,
   type ThermalEnvelopeSpec,
 } from '../../../bim/types/thermal-envelope-types';
+import {
+  CLIMATE_ZONE_OPTIONS,
+  REFERENCE_BARE_WALL_LAYERS,
+  getKenakMaxUWall,
+  isAboveKenakUMax,
+  type ClimateZone,
+} from '../../../bim/thermal/kenak-thermal-config';
+import { computeAssemblyUValue } from '../../../bim/thermal/assembly-u-value';
+import { getThermalConductivityLambda } from '../../../bim/walls/wall-material-catalog';
 
 export interface ThermalEnvelopeDialogProps {
   readonly open: boolean;
@@ -55,13 +64,33 @@ export interface ThermalEnvelopeDialogProps {
   readonly onChange: (next: ThermalEnvelopeSpec) => void;
   readonly onApply: () => void;
   readonly onApplyAll: () => void;
+  /** Κλιματική ζώνη κτιρίου (ρύθμιση κτιρίου, ADR-396 P8 OQ-7a) — null αν αόριστη. */
+  readonly climateZone: ClimateZone | null;
+  readonly onClimateZoneChange: (zone: ClimateZone) => void;
 }
 
 const ZONES: ReadonlyArray<EnvelopeZoneId> = ['Z1', 'Z2', 'Z3', 'Z4'];
 
+/** Format U-value για εμφάνιση (2 δεκαδικά, em-dash αν μη υπολογίσιμο). */
+function formatUValue(u: number): string {
+  return Number.isFinite(u) ? u.toFixed(2) : '—';
+}
+
 export function ThermalEnvelopeDialog(props: ThermalEnvelopeDialogProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { value, onChange } = props;
+  const { value, onChange, climateZone, onClimateZoneChange } = props;
+
+  // ADR-396 P8 — assembly U-value: τυπικός τοίχος (config) + ETICS μόνωση.
+  const uValue = React.useMemo(() => {
+    const lambda = getThermalConductivityLambda(value.materialId);
+    const layers =
+      lambda !== undefined
+        ? [...REFERENCE_BARE_WALL_LAYERS, { thickness_m: value.thickness_m, lambda }]
+        : [...REFERENCE_BARE_WALL_LAYERS];
+    return computeAssemblyUValue(layers);
+  }, [value.materialId, value.thickness_m]);
+
+  const uAboveKenak = climateZone !== null && isAboveKenakUMax(uValue, climateZone);
 
   const setMaterial = (id: string) => onChange({ ...value, materialId: id });
   const setThickness = (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -161,6 +190,61 @@ export function ThermalEnvelopeDialog(props: ThermalEnvelopeDialogProps): React.
               </div>
             ))}
           </fieldset>
+        </section>
+
+        <section className="space-y-3 border-t border-[hsl(var(--border))] py-3">
+          <div className="space-y-2">
+            <Label htmlFor="envelope-climate-zone">
+              {t('ribbon.commands.thermalEnvelope.climateZone.label')}
+            </Label>
+            <Select
+              value={climateZone ?? undefined}
+              onValueChange={(v) => onClimateZoneChange(v as ClimateZone)}
+            >
+              <SelectTrigger id="envelope-climate-zone">
+                <SelectValue
+                  placeholder={t('ribbon.commands.thermalEnvelope.climateZone.placeholder')}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {CLIMATE_ZONE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.id} value={opt.id}>
+                    {t(opt.labelKey)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-sm font-medium">
+              {t('ribbon.commands.thermalEnvelope.performance.uValue', {
+                value: formatUValue(uValue),
+              })}
+            </p>
+            {climateZone === null ? (
+              <p className="text-xs text-muted-foreground">
+                {t('ribbon.commands.thermalEnvelope.performance.noZone')}
+              </p>
+            ) : (
+              <p
+                className={
+                  uAboveKenak
+                    ? 'text-xs text-[hsl(var(--text-warning))]'
+                    : 'text-xs text-[hsl(var(--text-success))]'
+                }
+                role={uAboveKenak ? 'alert' : undefined}
+              >
+                {t('ribbon.commands.thermalEnvelope.performance.kenakLimit', {
+                  value: getKenakMaxUWall(climateZone).toFixed(2),
+                })}
+                {' — '}
+                {uAboveKenak
+                  ? t('ribbon.commands.thermalEnvelope.performance.warn')
+                  : t('ribbon.commands.thermalEnvelope.performance.pass')}
+              </p>
+            )}
+          </div>
         </section>
 
         <DialogFooter>

@@ -140,6 +140,15 @@ export type {
     rotation?: number;
     /** Lifecycle phase: planned → permitted → under_construction → completed. */
     phase?: BuildingPhase;
+
+    // ─── ADR-396 P8: Θερμική απόδοση (ΚΕΝΑΚ) ───────────────────────────────
+    /**
+     * Κλιματική ζώνη Ελλάδας (ΤΟΤΕΕ 20701-3) — καθορίζει το ανώτατο U_max για
+     * τον έλεγχο συμμόρφωσης της θερμοπρόσοψης (ETICS). Inline union (όχι import
+     * από subapp — dependency direction)· ταυτίζεται με `ClimateZone` στο
+     * `bim/thermal/kenak-thermal-config.ts`.
+     */
+    climateZone?: 'A' | 'B' | 'C' | 'D';
   }
   
   export interface Floor {
