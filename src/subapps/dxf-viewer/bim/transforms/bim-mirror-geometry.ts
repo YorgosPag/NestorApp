@@ -172,9 +172,11 @@ function mirrorOpening(entity: OpeningEntity): Partial<SceneEntity> {
   if (!handing) return {};
   const flipped: OpeningHanding = handing === 'left' ? 'right' : 'left';
   const newParams: OpeningParams = { ...entity.params, handing: flipped };
-  // Geometry intentionally not recomputed here — `computeOpeningGeometry`
-  // requires the host wall, which the persistence layer re-feeds on the
-  // next subscribe roundtrip. The `hingeArc` re-derives correctly then.
+  // Geometry not recomputed here (needs the host wall). When the host wall is
+  // also mirrored, the ADR-363 §5.4 cascade (`cascadeHostedOpeningsForWalls`)
+  // recomputes the opening geometry against the mirrored wall using these
+  // flipped params. If only the opening is selected, the next host edit (or a
+  // persistence roundtrip) re-derives the `hingeArc`.
   return { params: newParams } as unknown as Partial<SceneEntity>;
 }
 

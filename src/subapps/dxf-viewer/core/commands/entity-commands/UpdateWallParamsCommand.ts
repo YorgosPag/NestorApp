@@ -20,6 +20,11 @@ import { computeWallGeometry } from '../../../bim/geometry/wall-geometry';
 import { validateWallParams } from '../../../bim/validators/wall-validator';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { DEFAULT_MERGE_CONFIG } from '../interfaces';
+// ADR-363 §5.4 — hosted-opening cascade SSoT. After the wall geometry is
+// patched, every opening hosted on this wall is recomputed atomically so it
+// follows the wall (grip / endpoint / length-edit / ribbon / bulk all funnel
+// through this command). Same offsetFromStart, new wall → computeOpeningGeometry.
+import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
 
 export class UpdateWallParamsCommand implements ICommand {
   readonly id: string;
@@ -63,6 +68,8 @@ export class UpdateWallParamsCommand implements ICommand {
       geometry,
       validation,
     } as unknown as Record<string, unknown>);
+    // ADR-363 §5.4 — recompute hosted openings against the now-updated wall.
+    cascadeHostedOpeningsForWalls([this.wallId], this.sceneManager);
   }
 
   canMergeWith(other: ICommand): boolean {

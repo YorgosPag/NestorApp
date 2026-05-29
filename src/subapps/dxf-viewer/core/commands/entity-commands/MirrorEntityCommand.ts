@@ -22,6 +22,8 @@ import type { Entity } from '../../../types/entities';
 // atomic geometry recompute). Returns null for non-BIM, falls through to the
 // generic mirrorEntity() path below.
 import { calculateBimMirroredGeometry } from '../../../bim/transforms/bim-mirror-geometry';
+// ADR-363 §5.4 — recompute hosted openings against mirrored walls (in-place mode).
+import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
 
 export class MirrorEntityCommand implements ICommand {
   readonly id: string;
@@ -67,6 +69,10 @@ export class MirrorEntityCommand implements ICommand {
     this.wasExecuted = this.keepOriginals
       ? this.createdEntityIds.length > 0
       : this.entitySnapshots.size > 0;
+
+    // ADR-363 §5.4 — in-place mirror: hosted openings follow the mirrored wall.
+    // (copy+mirror clones carry no hosted openings.)
+    if (!this.keepOriginals) cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
   }
 
   /**
@@ -97,6 +103,8 @@ export class MirrorEntityCommand implements ICommand {
         const { id: _id, type: _type, layer: _layer, visible: _visible, ...geometry } = snapshot;
         this.sceneManager.updateEntity(entityId, geometry);
       }
+      // ADR-363 §5.4 — re-derive hosted openings against the restored walls.
+      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
     }
   }
 
@@ -120,6 +128,8 @@ export class MirrorEntityCommand implements ICommand {
           this.sceneManager.updateEntity(entityId, updates);
         }
       }
+      // ADR-363 §5.4 — hosted openings follow the re-mirrored walls.
+      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
     }
   }
 

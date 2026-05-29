@@ -1,123 +1,130 @@
 /**
- * Wall-Opening Coordinator — ADR-363 (Revit Transaction Pattern).
+ * Wall-Opening Coordinator — ADR-363 §5.4 (hosted-opening cascade SSoT).
  *
- * When a wall axis changes via grip drag, hosted openings reposition
- * proportionally. Wraps `UpdateWallParamsCommand` + N `UpdateOpeningParamsCommand`
- * into one `CompoundCommand` — single atomic undo/redo entry for the user.
+ * Openings are stored parametrically: `OpeningParams.wallId` + `offsetFromStart`
+ * (mm along the host axis). Their WORLD geometry (outline / position / hingeArc /
+ * bbox) is a pure derivation `computeOpeningGeometry(params, hostWall)`. That
+ * cache is only refreshed when the opening itself is edited — so ANY change to
+ * the host wall's geometry (move / rotate / mirror / grip / endpoint / thickness
+ * / length-edit / ribbon) left the opening rendering at its OLD position.
  *
- * Ratio-preserving: newOffset = (oldOffset / oldLength) × newLength.
- * Overflow clamp: if wall shrinks and opening overflows → clamp to maxOffset
- * (wall end − opening width). Degenerate walls (length=0) are skipped safely.
+ * This module is the single place that fixes it: whenever a wall's geometry
+ * changes, every opening hosted on that wall is recomputed ATOMICALLY against
+ * the new wall, keeping the SAME `offsetFromStart` (Giorgio 2026-05-29: a length
+ * change keeps the opening at its absolute distance from the wall start, Revit
+ * "location line" semantics — NOT proportional).
  *
- * Curved/polyline walls use the real arc length via `getWallAxisVertices` +
- * `computePolylineLengthMm` — Phase 2 leftover resolved.
+ * Two integration families, ONE recompute mechanism:
+ *   A) Param paths (grip / length-edit / ribbon / bulk) — `UpdateWallParamsCommand`
+ *      calls `cascadeHostedOpeningsForWalls([wallId])` after patching the wall.
+ *   B) Transform paths — `Move/Rotate/Mirror/Scale` commands call
+ *      `cascadeHostedOpeningsForWalls(entityIds)` after applying their batch.
  *
- * @see ADR-363-bim-drawing-mode.md §Wall-Grip-Opening-Recompute
+ * Geometry is derived, so undo/redo needs NO opening snapshots: re-running the
+ * cascade against the restored wall recomputes the previous geometry.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4
+ * @see bim/cascade/bim-cascade-resolver.ts — `findHostedOpenings` (wallId scan)
+ * @see bim/geometry/opening-geometry.ts — `computeOpeningGeometry` (the SSoT)
  */
 
-import type { ICommand, ISceneManager } from '../../core/commands/interfaces';
-import type { WallEntity, WallParams, WallKind } from '../types/wall-types';
-import type { OpeningEntity } from '../types/opening-types';
-import { getWallAxisVertices, computePolylineLengthMm } from '../geometry/wall-geometry';
-import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/UpdateWallParamsCommand';
-import { UpdateOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateOpeningParamsCommand';
-import { CompoundCommand } from '../../core/commands/CompoundCommand';
+import type { ISceneManager, SceneEntity } from '../../core/commands/interfaces';
+import type { Entity } from '../../types/entities';
+import type { WallEntity } from '../types/wall-types';
+import type { OpeningEntity, OpeningGeometry } from '../types/opening-types';
+import { computeOpeningGeometry } from '../geometry/opening-geometry';
+import { findHostedOpenings } from '../cascade/bim-cascade-resolver';
 
-/** True arc length in mm for any wall kind — curved/polyline safe. */
-function axisLengthMm(params: WallParams, kind: WallKind): number {
-  return computePolylineLengthMm(getWallAxisVertices(params, kind));
-}
+/**
+ * Minimal scene-manager surface the cascade needs. `getEntities` is optional
+ * (real adapters implement it; lightweight test mocks fall back to the wall's
+ * `hostedOpeningIds` mirror).
+ */
+type CascadeSceneManager = Pick<ISceneManager, 'getEntity' | 'updateEntities'> & {
+  getEntities?(): readonly SceneEntity[];
+};
 
-/** Exact coordinate equality (Point3D structural; `z` optional — walls may omit it). */
-function samePoint(
-  a: { x: number; y: number; z?: number },
-  b: { x: number; y: number; z?: number },
-): boolean {
-  return a.x === b.x && a.y === b.y && a.z === b.z;
+/** A single derived geometry patch for one hosted opening. */
+export interface HostedOpeningGeometryPatch {
+  readonly openingId: string;
+  readonly geometry: OpeningGeometry;
 }
 
 /**
- * Wrap `wallCmd` with coordinated opening repositioning commands.
+ * Resolve the ids of openings hosted on `wall`.
  *
- * Returns `wallCmd` unchanged when:
- *   - wall has no hosted openings
- *   - old wall length is degenerate (≤ 0)
- *   - no opening is affected: offset delta < 0.1 mm AND the host thickness /
- *     flip / axis are all unchanged (nothing the opening geometry depends on)
- *
- * Otherwise returns CompoundCommand([wallCmd, openingCmd × N]) which executes
- * atomically and merges during drag via CompoundCommand.canMergeWith. A
- * thickness/flip/axis change emits a same-params opening command so the cutout
- * geometry (depth = host.thickness) refreshes even without a reposition.
+ * Authoritative path: scan all entities by `opening.params.wallId === wall.id`
+ * (the child→parent foreign key, always present) via the cascade-resolver SSoT.
+ * Fallback (mocks without `getEntities`): the `wall.hostedOpeningIds` mirror.
  */
-export function coordinateWallUpdate(
-  wallCmd: UpdateWallParamsCommand,
-  wallId: string,
-  oldParams: WallParams,
-  newParams: WallParams,
-  sceneManager: ISceneManager,
-  isDragging: boolean,
-): ICommand {
-  const rawWall = sceneManager.getEntity(wallId);
-  const wallCandidate = rawWall as unknown as Partial<WallEntity>;
-  if (wallCandidate.type !== 'wall' || !wallCandidate.hostedOpeningIds?.length) {
-    return wallCmd;
+function resolveHostedOpeningIds(
+  wall: WallEntity,
+  sceneManager: CascadeSceneManager,
+): string[] {
+  const all = sceneManager.getEntities?.();
+  if (all) {
+    return findHostedOpenings(new Set([wall.id]), all as unknown as readonly Entity[]);
+  }
+  return [...(wall.hostedOpeningIds ?? [])];
+}
+
+/**
+ * Recompute the world geometry of every opening hosted on `newWall`, keeping
+ * each opening's params (offsetFromStart / kind / handing …) unchanged. Pure:
+ * reads the scene, returns patches — does not mutate.
+ *
+ * `sceneUnits` is read from the host (`newWall.params.sceneUnits ?? 'mm'`) so
+ * meter scenes stay aligned (ADR-397 #2 / ADR-398 unit-mismatch lesson) — the
+ * same source `UpdateOpeningParamsCommand` already trusts.
+ */
+export function recomputeHostedOpeningGeometry(
+  newWall: WallEntity,
+  sceneManager: CascadeSceneManager,
+): HostedOpeningGeometryPatch[] {
+  const openingIds = resolveHostedOpeningIds(newWall, sceneManager);
+  if (openingIds.length === 0) return [];
+
+  const sceneUnits = newWall.params.sceneUnits ?? 'mm';
+  const patches: HostedOpeningGeometryPatch[] = [];
+  for (const openingId of openingIds) {
+    const raw = sceneManager.getEntity(openingId);
+    const candidate = raw as unknown as Partial<OpeningEntity> | undefined;
+    if (!candidate || candidate.type !== 'opening' || !candidate.params) continue;
+    const geometry = computeOpeningGeometry(candidate.params, newWall, sceneUnits);
+    patches.push({ openingId, geometry });
+  }
+  return patches;
+}
+
+/**
+ * For every wall id in `candidateIds`, recompute its hosted openings against the
+ * wall's CURRENT (already-updated) state and apply the `{ geometry }` patches in
+ * a single batch `updateEntities` commit. No-op for non-wall ids, walls without
+ * hosted openings, or empty input.
+ *
+ * Callers invoke this AFTER the wall mutation has landed in the scene (so
+ * `getEntity(wallId)` returns the new params/geometry).
+ */
+export function cascadeHostedOpeningsForWalls(
+  candidateIds: readonly string[],
+  sceneManager: CascadeSceneManager,
+): void {
+  if (candidateIds.length === 0) return;
+
+  const patches = new Map<string, Partial<SceneEntity>>();
+  for (const id of candidateIds) {
+    const raw = sceneManager.getEntity(id);
+    const candidate = raw as unknown as Partial<WallEntity> | undefined;
+    if (!candidate || candidate.type !== 'wall' || !candidate.params || !candidate.geometry) {
+      continue;
+    }
+    for (const { openingId, geometry } of recomputeHostedOpeningGeometry(
+      candidate as WallEntity,
+      sceneManager,
+    )) {
+      patches.set(openingId, { geometry } as unknown as Partial<SceneEntity>);
+    }
   }
 
-  const kind: WallKind = wallCandidate.kind ?? 'straight';
-  const oldLen = axisLengthMm(oldParams, kind);
-  const newLen = axisLengthMm(newParams, kind);
-  if (oldLen <= 0) return wallCmd;
-
-  // Opening geometry is fully host-derived: cut depth = host.thickness
-  // (opening-geometry.ts:60), world position = host axis + offset, mirror side =
-  // host flip. So a thickness / flip / axis change leaves the opening's own
-  // params (offset) untouched yet still requires a geometry refresh — otherwise
-  // the cutout keeps the OLD wall depth (Giorgio 2026-05-28: «αλλάζω πάχος
-  // τοίχου, το πάχος κουφώματος μένει ίδιο»). Length change additionally
-  // repositions the opening along the axis (ratio-preserving).
-  const hostGeomChanged =
-    oldParams.thickness !== newParams.thickness ||
-    (oldParams.flip ?? false) !== (newParams.flip ?? false) ||
-    !samePoint(oldParams.start, newParams.start) ||
-    !samePoint(oldParams.end, newParams.end);
-
-  const openingCmds: UpdateOpeningParamsCommand[] = [];
-
-  for (const openingId of wallCandidate.hostedOpeningIds) {
-    const rawOpening = sceneManager.getEntity(openingId);
-    const candidate = rawOpening as unknown as Partial<OpeningEntity>;
-    if (candidate.type !== 'opening' || !candidate.params) continue;
-    const opening = candidate as OpeningEntity;
-
-    const ratio = opening.params.offsetFromStart / oldLen;
-    const rawOffset = ratio * newLen;
-    const maxOffset = Math.max(0, newLen - opening.params.width);
-    const newOffset = Math.max(0, Math.min(rawOffset, maxOffset));
-    const offsetChanged = Math.abs(newOffset - opening.params.offsetFromStart) >= 0.1;
-
-    // Skip only when nothing the opening depends on moved.
-    if (!offsetChanged && !hostGeomChanged) continue;
-
-    // Reposition along the axis only when the length changed; otherwise keep the
-    // params identical (a same-params command still recomputes geometry against
-    // the updated host — refreshing the cut depth on a thickness drag).
-    const nextParams = offsetChanged
-      ? { ...opening.params, offsetFromStart: newOffset }
-      : opening.params;
-
-    openingCmds.push(
-      new UpdateOpeningParamsCommand(
-        openingId,
-        nextParams,
-        opening.params,
-        sceneManager,
-        isDragging,
-      ),
-    );
-  }
-
-  if (openingCmds.length === 0) return wallCmd;
-
-  return new CompoundCommand('Wall + Openings Update', [wallCmd, ...openingCmds]);
+  if (patches.size > 0) sceneManager.updateEntities(patches);
 }

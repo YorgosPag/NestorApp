@@ -158,10 +158,10 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
         if (selectedEntityIds.length > 0) {
           const sm = getSceneManager();
           if (sm) {
-            // ADR-363 Phase 7A — slab→slab-opening cascade. Wall→opening NOT
-            // cascaded: opening world geometry derives from host wall, so the
-            // wall move alone carries it (computeOpeningGeometry recomputes
-            // off the new wall.params.start downstream).
+            // ADR-363 Phase 7A — slab→slab-opening cascade (independent world
+            // coords, must be in the move set). Wall→opening is NOT added here:
+            // the move command recomputes hosted openings against the moved wall
+            // via the ADR-363 §5.4 `cascadeHostedOpeningsForWalls` SSoT.
             const scene = levelManager.currentLevelId
               ? levelManager.getLevelScene(levelManager.currentLevelId)
               : null;

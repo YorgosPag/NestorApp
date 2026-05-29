@@ -325,6 +325,15 @@ export interface ISceneManager {
   /** Get an entity by ID */
   getEntity(entityId: string): SceneEntity | undefined;
 
+  /**
+   * Return all entities in the current scene. Optional — real adapters
+   * (LevelSceneManagerAdapter + grip inline adapter) implement it so SSoT
+   * helpers can scan relationships by foreign-key (e.g. ADR-363 hosted-opening
+   * cascade scans openings by `params.wallId`). Lightweight test mocks may omit
+   * it; callers fall back to back-reference fields when absent.
+   */
+  getEntities?(): readonly SceneEntity[];
+
   /** Update an entity */
   updateEntity(entityId: string, updates: Partial<SceneEntity>): void;
 

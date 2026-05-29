@@ -189,6 +189,16 @@ export class LevelSceneManagerAdapter implements ISceneManager {
   }
 
   /**
+   * Return all entities in the current scene (pending-cache aware).
+   * Used by SSoT cascade helpers that scan relationships by foreign-key
+   * (ADR-363 hosted-opening recompute scans openings by `params.wallId`).
+   */
+  getEntities(): readonly SceneEntity[] {
+    const scene = this.getLatestScene();
+    return (scene?.entities ?? []) as unknown as readonly SceneEntity[];
+  }
+
+  /**
    * Update an entity's properties
    * Called by MoveEntityCommand and other modification commands
    */

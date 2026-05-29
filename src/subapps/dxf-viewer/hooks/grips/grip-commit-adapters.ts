@@ -70,6 +70,10 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
       const scene = getLevelScene(currentLevelId);
       return scene?.entities?.find((e) => e.id === id) as SceneEntity | undefined;
     },
+    getEntities: () => {
+      const scene = getLevelScene(currentLevelId);
+      return (scene?.entities ?? []) as unknown as readonly SceneEntity[];
+    },
     updateEntity: (id: string, updates: Partial<SceneEntity>) => {
       const scene = getLevelScene(currentLevelId);
       if (scene) {

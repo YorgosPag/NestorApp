@@ -20,9 +20,11 @@
  *   MOVE — only the relationships whose child has INDEPENDENT world coords:
  *     slab   → slab-opening  (slab-opening.outline is its own polygon in world mm)
  *
- *   Walls do NOT cascade for move: openings derive their world geometry from
- *   `wall.params.start + offsetFromStart × axisDir`, so moving the wall
- *   automatically carries the opening through `computeOpeningGeometry()`.
+ *   Walls do NOT add openings to the move SET here: openings derive their world
+ *   geometry from `wall.params.start + offsetFromStart × axisDir`. The move /
+ *   rotate / mirror commands recompute them against the transformed wall via the
+ *   ADR-363 §5.4 cascade (`cascadeHostedOpeningsForWalls`, same offsetFromStart)
+ *   — see bim/walls/wall-opening-coordinator.ts.
  *
  * @see ADR-363 §Phase 7
  * @see ADR-294 SSoT Ratchet — registry module `bim-cascade-resolver` (Tier 3)

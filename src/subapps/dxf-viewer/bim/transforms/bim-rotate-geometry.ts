@@ -213,7 +213,9 @@ export function calculateBimRotatedGeometry(
     case 'wall':
       return rotateWall(entity, pivot, angleDeg);
     case 'opening':
-      // Hosted-derived — wall carries the rotation through its own update.
+      // Hosted-derived — no own params change. The opening follows via the
+      // ADR-363 §5.4 cascade: RotateEntityCommand calls
+      // `cascadeHostedOpeningsForWalls(entityIds)` after rotating the wall.
       return {};
     case 'slab':
       return rotateSlab(entity, pivot, angleDeg);

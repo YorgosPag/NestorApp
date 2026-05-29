@@ -18,6 +18,8 @@ import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { scaleEntity } from '../../../systems/scale/scale-entity-transform';
 import type { Entity } from '../../../types/entities';
+// ADR-363 §5.4 — recompute hosted openings against scaled walls (in-place mode).
+import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
 
 export type ScaleParams =
   | { mode: 'uniform'; factor: number }
@@ -77,6 +79,9 @@ export class ScaleEntityCommand implements ICommand {
     this.wasExecuted = this.copyMode
       ? this.createdEntityIds.length > 0
       : this.entitySnapshots.size > 0;
+
+    // ADR-363 §5.4 — in-place scale: hosted openings follow the scaled wall.
+    if (!this.copyMode) cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
   }
 
   undo(): void {
@@ -91,6 +96,8 @@ export class ScaleEntityCommand implements ICommand {
         const { id: _id, layer: _layer, visible: _visible, ...geometry } = snapshot;
         this.sceneManager.updateEntity(entityId, geometry);
       }
+      // ADR-363 §5.4 — re-derive hosted openings against the restored walls.
+      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
     }
   }
 
@@ -115,6 +122,8 @@ export class ScaleEntityCommand implements ICommand {
         const updates = scaleEntity(snapshot as unknown as Entity, this.basePoint, sx, sy);
         this.sceneManager.updateEntity(entityId, updates);
       }
+      // ADR-363 §5.4 — hosted openings follow the re-scaled walls.
+      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
     }
   }
 

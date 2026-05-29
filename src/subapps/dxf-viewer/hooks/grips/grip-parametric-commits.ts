@@ -42,7 +42,6 @@ import { applyDimensionGripDrag } from '../dimensions/useDimensionGrips';
 import { EventBus } from '../../systems/events/EventBus';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
-import { coordinateWallUpdate } from '../../bim/walls/wall-opening-coordinator';
 
 // ADR-397 — MOVE→COPY hot-grip handlers live in grip-parametric-copy.ts
 // (N.7.1 file-size split). Re-exported here so the commit API stays one import.
@@ -143,10 +142,9 @@ export function commitWallGripDrag(
     kind,
   );
   if (wallCmd.validate() !== null) return;
-  const command = coordinateWallUpdate(
-    wallCmd, grip.entityId, originalParams, newParams, sceneManager, true,
-  );
-  deps.execute(command);
+  // ADR-363 §5.4 — hosted-opening cascade now lives inside UpdateWallParamsCommand
+  // (covers every param path uniformly, same offsetFromStart). No wrapper needed.
+  deps.execute(wallCmd);
   EventBus.emit('bim:wall-params-updated', { wallId: grip.entityId });
 }
 

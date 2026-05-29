@@ -153,7 +153,10 @@ export function calculateBimMovedGeometry(
     case 'wall':
       return moveWall(entity, delta);
     case 'opening':
-      // Hosted-derived geometry — no direct delta, follows host wall.
+      // Hosted-derived geometry — no direct delta here. The opening follows its
+      // host wall via the ADR-363 §5.4 cascade: the move command calls
+      // `cascadeHostedOpeningsForWalls(entityIds)` AFTER applying wall deltas,
+      // which recomputes `computeOpeningGeometry(opening.params, movedWall)`.
       return {};
     case 'slab':
       return moveSlab(entity, delta);

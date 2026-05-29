@@ -28,6 +28,9 @@ import { deepClone } from '../../../utils/clone-utils';
 // 🏢 ADR-065: Extracted geometry utilities
 import { calculateMovedGeometry, reverseDelta } from './move-entity-geometry';
 import { EventBus } from '../../../systems/events/EventBus';
+// ADR-363 §5.4 — when a moved entity is a wall, recompute its hosted openings
+// against the moved wall so they follow (same offsetFromStart).
+import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
 
 /**
  * Command for moving a single entity by delta
@@ -66,6 +69,7 @@ export class MoveEntityCommand implements ICommand {
 
       // Apply updates
       this.sceneManager.updateEntity(this.entityId, updates);
+      cascadeHostedOpeningsForWalls([this.entityId], this.sceneManager);
       this.wasExecuted = true;
     }
   }
@@ -80,6 +84,7 @@ export class MoveEntityCommand implements ICommand {
       if (entity) {
         const reversedUpdates = calculateMovedGeometry(entity, reverseDelta(this.delta));
         this.sceneManager.updateEntity(this.entityId, reversedUpdates);
+        cascadeHostedOpeningsForWalls([this.entityId], this.sceneManager);
       }
     }
   }
@@ -236,6 +241,7 @@ export class MoveMultipleEntitiesCommand implements ICommand {
 
     if (updatesMap.size > 0) {
       this.sceneManager.updateEntities(updatesMap);
+      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
       this.wasExecuted = true;
       // Build post-move entities from snapshots+updates (safe: no getLevelScene call,
       // which would return stale React state at synchronous emit time).
@@ -265,6 +271,7 @@ export class MoveMultipleEntitiesCommand implements ICommand {
 
     if (updatesMap.size > 0) {
       this.sceneManager.updateEntities(updatesMap);
+      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
       // After undo, entities are at their original (snapshot) positions.
       const revertedEntities: SceneEntity[] = [];
       for (const entityId of this.entityIds) {
@@ -294,6 +301,7 @@ export class MoveMultipleEntitiesCommand implements ICommand {
 
     if (updatesMap.size > 0) {
       this.sceneManager.updateEntities(updatesMap);
+      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       EventBus.emit('bim:entities-moved', { movedEntities: movedEntities as any });
     }
