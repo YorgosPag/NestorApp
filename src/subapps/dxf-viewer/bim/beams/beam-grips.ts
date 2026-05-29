@@ -40,8 +40,10 @@ import type { GripInfo, BeamGripKind } from '../../hooks/useGripMovement';
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import { MIN_BEAM_WIDTH_MM, MIN_BEAM_DEPTH_MM } from '../types/beam-types';
 import type { Point3D } from '../types/bim-base';
-
-const DEGENERATE_EPS = 0.001;
+// ADR-397 §12 D3 — shared BIM grip math SSoT (no per-entity copies of
+// project2D / perpUnit / axis-unit). Replaces the local duplicates flagged in
+// ADR-393 §8.2.
+import { project2D, perpUnit, unitVector } from '../grips/grip-math';
 
 /**
  * Phase 5.5c — Extra perpendicular offset (mm) πέρα από `width/2` ώστε το
@@ -52,10 +54,6 @@ const DEGENERATE_EPS = 0.001;
 export const DEPTH_GRIP_OFFSET_MM = 250;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function project2D(p: Point3D): Point2D {
-  return { x: p.x, y: p.y };
-}
 
 function axisMidpoint2D(params: BeamParams): Point2D {
   return {
@@ -70,16 +68,7 @@ function translate3D(p: Point3D, delta: Point2D): Point3D {
 
 /** Unit axis vector (params.startPoint → params.endPoint). null on degenerate. */
 function unitAxis(params: BeamParams): { x: number; y: number } | null {
-  const dx = params.endPoint.x - params.startPoint.x;
-  const dy = params.endPoint.y - params.startPoint.y;
-  const len = Math.hypot(dx, dy);
-  if (len < DEGENERATE_EPS) return null;
-  return { x: dx / len, y: dy / len };
-}
-
-/** CCW 90° rotation: (x,y) → (-y,x). */
-function perpUnit(u: { x: number; y: number }): { x: number; y: number } {
-  return { x: -u.y, y: u.x };
+  return unitVector(params.startPoint, params.endPoint);
 }
 
 /**

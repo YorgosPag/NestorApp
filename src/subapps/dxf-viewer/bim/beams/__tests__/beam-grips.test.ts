@@ -128,10 +128,14 @@ describe('beam-grips (Phase 5.5a)', () => {
   it('5. curved beam without curveControl seeds curve grip at axis midpoint', () => {
     const beam = makeCurvedWithoutControl();
     const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(5);
+    // start + end + midpoint + curve + width + depth (Phase 5.5b/5.5c added the
+    // width/depth dimension handles for every non-degenerate beam, incl. curved).
+    expect(grips).toHaveLength(6);
     expect(grips[3].beamGripKind).toBe('beam-curve');
     // Axis midpoint of (0,0)→(4000,0) is (2000,0).
     expect(grips[3].position).toEqual({ x: 2000, y: 0 });
+    expect(grips[4].beamGripKind).toBe('beam-width');
+    expect(grips[5].beamGripKind).toBe('beam-depth');
   });
 
   it('6. midpoint grip carries movesEntity=true, others false (incl. width + depth)', () => {
