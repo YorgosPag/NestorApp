@@ -51,6 +51,9 @@
     --radius: 0.5rem;
 
     /* Semantic Status Colors */
+    /* ✅ SSoT for VIVID/SOLID status fills (badges/dots/toggles) — ADR-365 follow-up.
+       Consumed via COLOR_BRIDGE.bg.{success,error,warning,info,purple}Solid.
+       Subtle alert surfaces use --bg-* (below) instead. */
     --status-success: 142 71% 45%;    /* Green for success/available */
     --status-info: 221 83% 53%;       /* Blue for info/active */
     --status-warning: 32 95% 44%;     /* Orange for warning/reserved */

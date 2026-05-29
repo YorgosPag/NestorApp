@@ -47,11 +47,21 @@ export const COLOR_BRIDGE = {
     hover: 'bg-accent',            // Hover state → --accent
     active: 'bg-accent/80',        // Active state → --accent with opacity
 
-    // Status colors - ✅ ENTERPRISE FIX: Use CSS variables for theme support
-    success: 'bg-[hsl(var(--bg-success))]',        // Success background (theme-aware)
-    error: 'bg-[hsl(var(--bg-error))]',            // Error background (theme-aware)
-    warning: 'bg-[hsl(var(--bg-warning))]',        // Warning background (theme-aware)
-    info: 'bg-[hsl(var(--bg-info))]',              // Info background (theme-aware)
+    // Status colors (SUBTLE surfaces) - ✅ ENTERPRISE FIX: Use CSS variables for theme support
+    // ⚠️ These are SOFT alert/surface backgrounds (--bg-* = *-50). For VIVID filled
+    // badges/dots/toggles use the *Solid variants below (ADR-365 follow-up).
+    success: 'bg-[hsl(var(--bg-success))]',        // Success background (theme-aware, subtle)
+    error: 'bg-[hsl(var(--bg-error))]',            // Error background (theme-aware, subtle)
+    warning: 'bg-[hsl(var(--bg-warning))]',        // Warning background (theme-aware, subtle)
+    info: 'bg-[hsl(var(--bg-info))]',              // Info background (theme-aware, subtle)
+
+    // ✅ SOLID status fills (vivid, theme-aware) — ADR-365 follow-up.
+    // Reuse the existing --status-* SSoT (globals.css). Pair with text.onSolid.
+    successSolid: 'bg-[hsl(var(--status-success))]', // Vivid success fill (badges/dots/toggles)
+    errorSolid: 'bg-[hsl(var(--status-error))]',     // Vivid error fill
+    warningSolid: 'bg-[hsl(var(--status-warning))]', // Vivid warning fill
+    infoSolid: 'bg-[hsl(var(--status-info))]',       // Vivid info fill
+    purpleSolid: 'bg-[hsl(var(--status-purple))]',   // Vivid purple/special fill
 
     // ✅ ENTERPRISE MISSING STATUS VARIANTS - Use CSS variables for theme support
     danger: 'bg-[hsl(var(--bg-error))]',           // Danger background (alias for error, theme-aware)
@@ -139,11 +149,16 @@ export const COLOR_BRIDGE = {
     DARKER: 'text-gray-800',              // Darker text for ui/effects
 
     // Status text colors (WCAG AA: -700 for 4.5:1 contrast on light backgrounds)
-    success: 'text-green-700',            // Success text
+    // ✅ ADR-365 follow-up: success/price point to --text-success var (SSoT) — one source,
+    //    matches green-700 in light, auto green-400 in dark. (was duplicated 'text-green-700')
+    success: 'text-[hsl(var(--text-success))]', // Success text (theme-aware SSoT)
     error: 'text-red-700',                // Error text
     warning: 'text-yellow-700',           // Warning text
     info: 'text-blue-700',               // Info text
-    price: 'text-green-700',              // Price text (reuse success)
+    price: 'text-[hsl(var(--text-success))]', // Price text (reuse success SSoT)
+
+    // ✅ Text on SOLID status fills (vivid bg) — ADR-365 follow-up
+    onSolid: 'text-white',                // White text on *Solid status backgrounds
 
     // Strong text variants
     successStrong: 'text-green-800',      // Strong success text

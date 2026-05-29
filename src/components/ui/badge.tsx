@@ -18,19 +18,20 @@ const createBadgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>, c
           `border-transparent ${colors.bg.primary} ${colors.text.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER || 'hover:opacity-90'}`,
         secondary:
           `border-transparent ${colors.bg.secondary} ${colors.text.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:opacity-90'}`,
+        // ✅ ADR-365 follow-up: SOLID vivid status badges (filled bg + white text)
         destructive:
-          `border-transparent ${colors.bg.error} text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER || 'hover:opacity-90'}`,
+          `border-transparent ${colors.bg.errorSolid} ${colors.text.onSolid} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER || 'hover:opacity-90'}`,
         outline: "text-foreground",
         success:
-          `border-transparent ${colors.bg.success} ${colors.text.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER || 'hover:opacity-90'}`,
+          `border-transparent ${colors.bg.successSolid} ${colors.text.onSolid} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER || 'hover:opacity-90'}`,
         warning:
-          `border-transparent ${colors.bg.warning} ${colors.text.warning} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:opacity-90'}`,
+          `border-transparent ${colors.bg.warningSolid} ${colors.text.onSolid} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:opacity-90'}`,
         info:
-          `border-transparent ${colors.bg.info} ${colors.text.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER || 'hover:opacity-90'}`,
+          `border-transparent ${colors.bg.infoSolid} ${colors.text.onSolid} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER || 'hover:opacity-90'}`,
         error:
-          `border-transparent ${colors.bg.error} ${colors.text.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER || 'hover:opacity-90'}`,
+          `border-transparent ${colors.bg.errorSolid} ${colors.text.onSolid} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER || 'hover:opacity-90'}`,
         purple:
-          `border-transparent ${colors.bg.secondary} ${colors.text.primary} ${INTERACTIVE_PATTERNS.ACCENT_HOVER || 'hover:opacity-90'}`,
+          `border-transparent ${colors.bg.purpleSolid} ${colors.text.onSolid} ${INTERACTIVE_PATTERNS.ACCENT_HOVER || 'hover:opacity-90'}`,
         light:
           `border-transparent ${colors.bg.muted} ${colors.text.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:opacity-90'}`,
         muted:
@@ -74,13 +75,14 @@ const staticBadgeVariants = cva(
       variant: {
         default: "border-transparent bg-background text-foreground hover:opacity-90",
         secondary: "border-transparent bg-muted text-muted-foreground hover:opacity-90",
-        destructive: "border-transparent bg-[hsl(var(--bg-error))] text-white hover:opacity-90",
+        // ✅ ADR-365 follow-up: SOLID vivid status badges (--status-* fill + white text)
+        destructive: "border-transparent bg-[hsl(var(--status-error))] text-white hover:opacity-90",
         outline: "text-foreground",
-        success: "border-transparent bg-[hsl(var(--bg-success))] text-[hsl(var(--text-success))] hover:opacity-90",
-        warning: "border-transparent bg-[hsl(var(--bg-warning))] text-[hsl(var(--text-warning))] hover:opacity-90",
-        info: "border-transparent bg-[hsl(var(--bg-info))] text-[hsl(var(--text-info))] hover:opacity-90",
-        error: "border-transparent bg-[hsl(var(--bg-error))] text-[hsl(var(--text-error))] hover:opacity-90",
-        purple: "border-transparent bg-muted text-foreground hover:opacity-90",
+        success: "border-transparent bg-[hsl(var(--status-success))] text-white hover:opacity-90",
+        warning: "border-transparent bg-[hsl(var(--status-warning))] text-white hover:opacity-90",
+        info: "border-transparent bg-[hsl(var(--status-info))] text-white hover:opacity-90",
+        error: "border-transparent bg-[hsl(var(--status-error))] text-white hover:opacity-90",
+        purple: "border-transparent bg-[hsl(var(--status-purple))] text-white hover:opacity-90",
         light: "border-transparent bg-muted text-muted-foreground hover:opacity-90",
         muted: "border-transparent bg-muted text-muted-foreground hover:opacity-90",
         subtle: "border-transparent bg-muted text-muted-foreground hover:opacity-90",
