@@ -67,14 +67,14 @@ function ViolationList({
   const wrap =
     variant === 'hard'
       ? 'flex flex-col gap-1.5 rounded border border-destructive/40 bg-destructive/20 p-2'
-      : 'flex flex-col gap-1.5 rounded border border-[hsl(var(--bg-warning))]/40 bg-[hsl(var(--bg-warning))]/20 p-2';
-  const dot = variant === 'hard' ? 'text-destructive' : 'text-[hsl(var(--bg-warning))]';
+      : 'flex flex-col gap-1.5 rounded border border-[hsl(var(--text-warning))]/40 bg-[hsl(var(--bg-warning))]/20 p-2';
+  const dot = variant === 'hard' ? 'text-destructive' : 'text-[hsl(var(--text-warning))]';
   const title = variant === 'hard' ? 'text-destructive-foreground' : 'text-foreground';
   const item = variant === 'hard' ? 'text-foreground' : 'text-foreground';
   const btn =
     variant === 'hard'
       ? 'rounded border border-destructive/60 bg-destructive/50 px-2 py-1 text-xs font-medium text-destructive-foreground hover:bg-destructive/70'
-      : 'rounded border border-[hsl(var(--bg-warning))]/60 bg-[hsl(var(--bg-warning))]/50 px-2 py-1 text-xs font-medium text-foreground hover:bg-[hsl(var(--bg-warning))]/70';
+      : 'rounded border border-[hsl(var(--text-warning))]/60 bg-[hsl(var(--bg-warning))]/50 px-2 py-1 text-xs font-medium text-foreground hover:bg-[hsl(var(--bg-warning))]/70';
   return (
     <section role="alert" aria-label={t(titleKey)} className={wrap}>
       <header className="flex items-center justify-between gap-2">

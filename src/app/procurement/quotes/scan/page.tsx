@@ -187,7 +187,7 @@ export default function ScanQuotePage() {
           </div>
 
           {missingFields.length > 0 && (
-            <p className="rounded-md bg-[hsl(var(--bg-warning))]/40 px-3 py-2 text-sm text-[hsl(var(--bg-warning))]">
+            <p className="rounded-md bg-[hsl(var(--bg-warning))]/40 px-3 py-2 text-sm text-[hsl(var(--text-warning))]">
               {t('quotes.scan.requiredHint')} <strong>{missingFields.join(', ')}</strong>
             </p>
           )}

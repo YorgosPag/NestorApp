@@ -151,14 +151,14 @@ function DnaHeader({
             <button
               type="button"
               onClick={onAdd}
-              className="rounded border border-[hsl(var(--bg-success))] bg-[hsl(var(--bg-success))] px-2 py-1 text-xs text-white hover:bg-[hsl(var(--bg-success))]/90"
+              className="rounded border border-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))] px-2 py-1 text-xs text-white hover:bg-[hsl(var(--bg-success))]/90"
             >
               {t('wallAdvancedPanel.sections.dna.addLayer')}
             </button>
             <button
               type="button"
               onClick={onDetach}
-              className="rounded border border-[hsl(var(--bg-warning))] bg-[hsl(var(--bg-warning))]/70 px-2 py-1 text-xs text-white hover:bg-[hsl(var(--bg-warning))]/90"
+              className="rounded border border-[hsl(var(--text-warning))] bg-[hsl(var(--bg-warning))]/70 px-2 py-1 text-xs text-white hover:bg-[hsl(var(--bg-warning))]/90"
             >
               {t('wallAdvancedPanel.sections.dna.detach')}
             </button>

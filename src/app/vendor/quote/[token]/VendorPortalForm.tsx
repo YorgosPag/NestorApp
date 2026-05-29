@@ -268,7 +268,7 @@ export function VendorPortalForm({
       </Section>
 
       {(validationError || errorKey) && (
-        <div className="rounded-md border border-[hsl(var(--bg-error))]/60 bg-[hsl(var(--bg-error))]/40 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-md border border-[hsl(var(--text-error))]/60 bg-[hsl(var(--bg-error))]/40 px-4 py-3 text-sm text-destructive">
           {validationError ?? t(`vendor-portal:${errorKey}`)}
           {errorReason && <span className="ml-2 text-xs text-destructive">[{errorReason}]</span>}
         </div>

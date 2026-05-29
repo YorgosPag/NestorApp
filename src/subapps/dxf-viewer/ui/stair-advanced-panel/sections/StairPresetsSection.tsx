@@ -153,7 +153,7 @@ export function StairPresetsSection({
               type="button"
               onClick={() => void onSaveConfirm()}
               disabled={!pendingName.trim()}
-              className="rounded border border-[hsl(var(--bg-success))] bg-[hsl(var(--bg-success))] px-2 py-1 text-xs text-white hover:bg-[hsl(var(--bg-success))]/90 disabled:opacity-50"
+              className="rounded border border-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))] px-2 py-1 text-xs text-white hover:bg-[hsl(var(--bg-success))]/90 disabled:opacity-50"
             >
               {t('stairAdvancedPanel.sections.presets.confirmSave')}
             </button>

@@ -21,8 +21,8 @@ interface VendorDetailProps {
 const COLOR_MAP: Record<string, string> = {
   gray:    'bg-muted text-foreground',
   blue:    'bg-[hsl(var(--bg-info))]/40 text-primary',
-  yellow:  'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--bg-warning))]',
-  orange:  'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--bg-warning))]',
+  yellow:  'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
+  orange:  'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
   green:   'bg-[hsl(var(--bg-success))]/40 text-[hsl(var(--text-success))]',
   emerald: 'bg-[hsl(var(--bg-success))]/40 text-[hsl(var(--text-success))]',
   red:     'bg-[hsl(var(--bg-error))]/40 text-destructive',

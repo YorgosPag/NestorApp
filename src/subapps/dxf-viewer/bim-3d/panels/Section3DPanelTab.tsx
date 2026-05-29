@@ -208,7 +208,7 @@ export function Section3DPanelTab() {
               ))}
 
               {planes.length >= SECTION_MAX_PLANES && (
-                <p className="text-[10px] text-[hsl(var(--bg-warning))]/80">{t('section.maxPlanes')}</p>
+                <p className="text-[10px] text-[hsl(var(--text-warning))]/80">{t('section.maxPlanes')}</p>
               )}
 
               {selectedPlaneIds.size >= 2 && (

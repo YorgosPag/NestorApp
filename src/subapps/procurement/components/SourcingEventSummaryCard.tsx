@@ -65,7 +65,7 @@ export function SourcingEventSummaryCard({
                 {formatCurrency(aggregate.bestPackageTotal)}
               </span>
               {aggregate.isPartialTotal && (
-                <span className="ml-1 text-xs text-[hsl(var(--bg-warning))]">
+                <span className="ml-1 text-xs text-[hsl(var(--text-warning))]">
                   ({t('comparison.sourcingEvent.partialHint')})
                 </span>
               )}

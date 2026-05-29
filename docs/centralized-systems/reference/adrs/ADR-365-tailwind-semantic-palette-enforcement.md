@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | ✅ **APPROVED** 2026-05-29 — All 8 phases complete. Baseline 0/0, zero-tolerance CHECK 3.26 active. The `green-707` typo incident (303 occurrences / 181 files) is **RESOLVED**: all renamed to `[hsl(var(--text-success))]` theme-aware classes, and CHECK 3.26 now hard-blocks any non-existent Tailwind shade (invalid-shade detection). See Changelog 2026-05-29 entry. |
+| **Status** | ✅ **APPROVED** 2026-05-29 — All 8 phases complete. Baseline 0/0, zero-tolerance CHECK 3.26 active. The `green-707` typo incident (303 occurrences / 181 files) is **RESOLVED**: all renamed to `[hsl(var(--text-success))]` theme-aware classes, and CHECK 3.26 now hard-blocks any non-existent Tailwind shade (invalid-shade detection). **Follow-up 2026-05-29**: faded SOLID status colors fixed — new `--status-*` solid tier in COLOR_BRIDGE (`bg.*Solid`/`text.onSolid`) + green text unification + 214 foreground-misuse fixes (`(text\|border\|ring)-[hsl(var(--bg-X))]` → `--text-X`) across 97 files. See Changelog top entry. |
 | **Date** | 2026-05-19 |
 | **Category** | Design System — Theming & Color Tokens |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-365-tailwind-semantic-palette-enforcement.md` |
@@ -121,14 +121,14 @@ dark:(hover:)?{bg,text,border}-*                          # semantic tokens εί
 
 | Raw pattern | Semantic replacement | Notes |
 |-------------|---------------------|-------|
-| `bg-amber-{50,100}`, `bg-yellow-{50,100}` | `bg-[hsl(var(--bg-warning))]/40` | warning subtle |
-| `bg-yellow-{500..700}` | `bg-[hsl(var(--bg-warning))]` | warning full |
-| `bg-emerald-{50,100}`, `bg-green-{50,100}` | `bg-[hsl(var(--bg-success))]/40` | success subtle |
-| `bg-emerald-{500..700}`, `bg-green-{500..700}` | `bg-[hsl(var(--bg-success))]` | success full |
-| `bg-rose-{50,100}`, `bg-red-{50,100}` | `bg-[hsl(var(--bg-error))]/40` | error subtle |
-| `bg-rose-{500..900}`, `bg-red-{500..900}` | `bg-destructive` ή `bg-[hsl(var(--bg-error))]` | destructive action vs error state |
-| `bg-blue-{50,100}` | `bg-[hsl(var(--bg-info))]/40` | info subtle |
-| `bg-blue-{500..700}` | `bg-primary` ή `bg-[hsl(var(--bg-info))]` | primary action vs info state |
+| `bg-amber-{50,100}`, `bg-yellow-{50,100}` | `bg-[hsl(var(--bg-warning))]/40` | warning **subtle SURFACE** (alert bg) |
+| `bg-yellow-{500..700}`, `bg-amber-{500..700}` | `bg-[hsl(var(--status-warning))]` (= `colors.bg.warningSolid`) | warning **SOLID fill** (badge/dot/toggle) — pair `text-white` |
+| `bg-emerald-{50,100}`, `bg-green-{50,100}` | `bg-[hsl(var(--bg-success))]/40` | success **subtle SURFACE** |
+| `bg-emerald-{500..700}`, `bg-green-{500..700}` | `bg-[hsl(var(--status-success))]` (= `colors.bg.successSolid`) | success **SOLID fill** — pair `text-white` |
+| `bg-rose-{50,100}`, `bg-red-{50,100}` | `bg-[hsl(var(--bg-error))]/40` | error **subtle SURFACE** |
+| `bg-rose-{500..900}`, `bg-red-{500..900}` | `bg-destructive` (destructive action) ή `bg-[hsl(var(--status-error))]` (= `colors.bg.errorSolid`, status badge/dot) | **SOLID fill** — pair `text-white` |
+| `bg-blue-{50,100}` | `bg-[hsl(var(--bg-info))]/40` | info **subtle SURFACE** |
+| `bg-blue-{500..700}` | `bg-primary` (primary action) ή `bg-[hsl(var(--status-info))]` (= `colors.bg.infoSolid`, info badge/dot) | **SOLID fill** — pair `text-white` |
 | `bg-slate-{50,100}`, `bg-gray-{50,100}` | `bg-muted` | neutral light |
 | `bg-slate-{700..900}`, `bg-gray-{700..900}` | `bg-card` (dark theme) ή `bg-muted` | neutral dark |
 | `bg-purple-*`, `bg-pink-*`, `bg-violet-*` | `bg-accent` ή ADR-specific (e.g., debug overlays exempt) | brand-tertiary |
@@ -148,11 +148,13 @@ dark:(hover:)?{bg,text,border}-*                          # semantic tokens εί
 
 | Raw pattern | Semantic replacement |
 |-------------|---------------------|
-| `text-red-{600..800}` | `text-destructive` |
-| `text-green-{600..800}` | `text-green-700` (WCAG exception — documented in COLOR_BRIDGE) |
-| `text-blue-{600..800}` | `text-primary` ή `text-blue-700` (info exception) |
+| `text-red-{600..800}` | `text-destructive` ή `text-[hsl(var(--text-error))]` |
+| `text-green-{600..800}` | `text-[hsl(var(--text-success))]` (= `COLOR_BRIDGE.text.success`, theme-aware SSoT) |
+| `text-amber/yellow/orange-{600..800}` | `text-[hsl(var(--text-warning))]` |
+| `text-blue-{600..800}` | `text-primary` ή `text-[hsl(var(--text-info))]` |
 | `text-slate-{500..900}`, `text-gray-{500..900}` | `text-foreground` ή `text-muted-foreground` |
 | `hover:text-red-*` | `hover:text-destructive` |
+| ⚠️ **NEVER** `text-/border-/ring-[hsl(var(--bg-X))]` | the `--bg-*` tokens are near-white SURFACES — using them as foreground = invisible text. Use `--text-X` (foreground) or `--status-X` (solid). |
 
 #### Border
 
@@ -493,6 +495,7 @@ Grep for violations in this phase's files. Confirm count matches baseline delta.
 
 | Date | Change |
 |------|--------|
+| 2026-05-29 | **✅ FOLLOW-UP — Faded SOLID status colors fixed + green text unification (SSoT solid tier).** Post-migration symptom (Giorgio, runtime `/`): vivid filled status colors (red/amber/blue) rendered near-white; only green looked alive. **Two root causes:** (1) `COLOR_BRIDGE.bg.{success,error,warning,info}` map only to the SUBTLE `--bg-*` tokens (green-50 etc, lightness 95–97%) — there was **no token for a vivid filled status**; (2) the migration used the subtle `--bg-*` vars as a **foreground** color (`text-`/`border-`/`ring-[hsl(var(--bg-X))]`) in 97 files, i.e. near-white text/icons/outlines. **Fix — new SOLID tier reusing the existing (unused) `--status-*` SSoT** (`globals.css` :54–58 light / :174–178 dark, already vivid + theme-aware, zero new vars): `color-bridge.ts` adds `bg.{success,error,warning,info,purple}Solid → bg-[hsl(var(--status-*))]` + `text.onSolid → text-white`. **Green unification (§follow-up #3):** `COLOR_BRIDGE.text.success` & `.price` `'text-green-700'` → `'text-[hsl(var(--text-success))]'` — kills the dual definition (`--text-success` var was already green-700 in light, green-400 in dark → strictly better). **Re-maps:** `badge.tsx` all status variants (success/warning/info/error/destructive/purple) → SOLID fill + white text (both `createBadgeVariants` dynamic & `staticBadgeVariants`); fixes the invisible `destructive` (was subtle `--bg-error` + `text-white` = white-on-white). `status-helpers.ts` fill-style helpers (`colorStorage`/`colorBuildingTimeline`/`colorBuildingProject` dots/nodes) → `*Solid`; soft-pill helpers (`colorObligation`/`colorLead`/`colorProject`) left subtle by design. **Foreground sweep:** 214 occurrences / 97 files `(text\|border\|ring)-[hsl(var(--bg-X))]` → `-[hsl(var(--text-X))]` (literal-string, prefix-anchored — `bg-[...]` surfaces never touched). All arbitrary-value classes ⇒ CHECK 3.26 ratchet unaffected (0/0 maintained). Subtle alert surfaces (`--bg-*` backgrounds, `.success/.warning/.info/.error-state` CSS rules) deliberately preserved. Verified: ratchet `--all` 0/0, 0 invalid shades, `background-centralization.test.ts` 7/7 PASS, tsc clean. |
 | 2026-05-29 | **✅ `green-707` TYPO INCIDENT — RESOLVED + ratchet hardened.** All `green-707` occurrences renamed to the equivalent theme-aware semantic class (NOT a raw palette utility, so baseline stays 0/0). **Scope: 303 occurrences / 181 files.** Mapping: `text-green-707`/`hover:text-green-707` → `text-[hsl(var(--text-success))]`; `bg-green-707`/`data-[state=checked]:bg-green-707`/`:bg-green-707` → `bg-[hsl(var(--text-success))]` (solid green-700 fill for dots/toggles/badges/timeline — `--text-success` HSL = `142 76% 36%` = green-700, NOT the green-50 `--bg-success` subtle surface); `border-green-707` → `border-[hsl(var(--text-success))]`; `border-l-green-707` → `border-l-[hsl(var(--text-success))]`; `ring-green-707`/`focus:ring-green-707` → `ring-[hsl(var(--text-success))]`. The `--text-success` var was already defined in `src/app/globals.css` (light :67, dark :187). **§2.1 correction**: `green-707` was NEVER a "WCAG documented exception" — that wording in the Phase 2-8 changelog entries below is wrong; the canonical success text token is `COLOR_BRIDGE.text.success = 'text-green-700'` (`src/design-system/color-bridge.ts:142`, allowlisted), and consumers now use the equivalent CSS-var arbitrary-value class. **Ratchet hardening** (`scripts/check-tailwind-palette-ratchet.js`): new `INVALID_SHADE_REGEX` + `countInvalidShades()` hard-block any `(bg\|text\|border\|ring\|fill\|stroke)(-[lrtbxy])?-(palette)-(\d+)` whose shade ∉ `SHADES` whitelist — zero-tolerance, no baseline (catches the v3.0-class typo at presubmit). Wired into staged-files ratchet path + `--report`/`--all` audit output. Smoke-tested: synthetic `green-707` (incl. `data-[state=checked]:` prefix) blocks; valid `green-700` still caught by PALETTE_REGEX ratchet; `[hsl(var(--text-success))]` passes. **Boy-scout (N.0.2)**: `ThermalEnvelopeDialog.tsx` (ADR-396 ETICS) had regressed 4 raw-palette violations past the 0/0 baseline (`text-amber-600 dark:text-amber-400` ×2) — fixed to `text-[hsl(var(--text-warning))]`. **Boy-scout**: `OrgStructureTab.tsx` 4× glued-class typo `text-muted-foregroundhover:` → `text-muted-foreground hover:`. Re-baseline: 0 files / 0 violations confirmed. tsc clean. Verified `grep green-707 src` = 0. |
 | 2026-05-22 | **🚨 KNOWN BUG — `green-707` TYPO INCIDENT (RESOLVED 2026-05-29, see entry above).** Phases 3-8 migration mapping `green-*` → `text-green-707` / `bg-green-707` is a **typo** for `green-700` (the COLOR_BRIDGE canonical at `src/design-system/color-bridge.ts:142`: `success: 'text-green-700'`). `green-707` does **not** exist in `tailwind.config.ts`, in `src/styles/`, in `globals.css`, or in Tailwind's default palette (valid shades: `50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950`). **Scope: 304 occurrences / 183 files** (grep `green-707`). **Render impact**: Tailwind JIT does not emit CSS for these classes → success text/badges/borders render as default (no color) in 183 files (success banners, toggles, form validation labels, terminal-log displays, contract timelines, sales cards κ.ά.). **Why CHECK 3.26 ratchet passes 0/0**: `scripts/check-tailwind-palette-ratchet.js:80` defines `SHADES = ['50','100','200','300','400','500','600','700','800','900','950']` — `707` not in list, regex bypassed entirely. The "complete" status is **only formally complete** (no Tailwind shade-suffixed utility matches); semantic intent is correct but emitted CSS is broken. **§2.1 "WCAG documented exception"** entries (Phases 2-5 changelog) are incorrect — they describe `green-707` as canonical but it never was. **Pending fix** (next phase, separate ADR or §2.1 update): (1) global rename `green-707` → `text-[hsl(var(--text-success))]` / equivalent semantic token, (2) remove `green-707` references from ADR changelog and §2.1 exception, (3) enhance ratchet script with **invalid-shade detection** — flag any `(bg\|text\|border\|ring\|fill\|stroke)-(palette)-(\d+)` where shade ∉ `SHADES` whitelist (catches typos), (4) re-baseline. Origin commit: `1788cad9` (Phase 5, 2026-05-22). |
 | 2026-05-19 | ADR created (Proposed). Hover audit revealed 249 violations / 86 files. Plan: Phase 0 infrastructure + Phases 1-8 per-domain migration. Status: awaits Phase 0 implementation. |

@@ -22,7 +22,7 @@ export function RfqCard() {
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
-          <ClipboardList className="h-8 w-8 text-[hsl(var(--bg-info))]" aria-hidden />
+          <ClipboardList className="h-8 w-8 text-[hsl(var(--text-info))]" aria-hidden />
         </div>
         <CardTitle className="text-lg">{t('hub.rfq.title')}</CardTitle>
         <CardDescription>{t('hub.rfq.description')}</CardDescription>

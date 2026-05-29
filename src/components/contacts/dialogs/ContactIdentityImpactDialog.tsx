@@ -68,7 +68,7 @@ function getCategoryClassName(category: IndividualIdentityFieldCategory | Servic
     case 'display':
       return 'bg-muted text-muted-foreground';
     case 'identity':
-      return 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--bg-warning))]';
+      return 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]';
     case 'regulated':
       return 'bg-destructive/10 text-destructive';
     case 'administrative':
@@ -94,7 +94,7 @@ export function ContactIdentityImpactDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-2xl">
         <AlertDialogHeader>
-          <AlertDialogTitle className={cn('flex items-center gap-2', isBlocked ? 'text-destructive' : 'text-[hsl(var(--bg-warning))]')}>
+          <AlertDialogTitle className={cn('flex items-center gap-2', isBlocked ? 'text-destructive' : 'text-[hsl(var(--text-warning))]')}>
             <Icon className={iconSizes.md} />
             {t(`identityImpact.titles.${mode}`)}
           </AlertDialogTitle>
@@ -148,7 +148,7 @@ export function ContactIdentityImpactDialog({
                           <span className="font-medium text-foreground">
                             {t(`identityImpact.dependencies.${dependency.id}.label`)}
                           </span>
-                          <span className={dependency.mode === 'block' ? 'text-destructive' : 'text-[hsl(var(--bg-warning))]'}>
+                          <span className={dependency.mode === 'block' ? 'text-destructive' : 'text-[hsl(var(--text-warning))]'}>
                             {t(`identityImpact.dependencySeverity.${dependency.mode}`, { count: dependency.count })}
                           </span>
                         </div>

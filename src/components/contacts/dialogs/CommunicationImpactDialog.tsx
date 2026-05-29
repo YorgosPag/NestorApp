@@ -62,7 +62,7 @@ function getChangeTypeVisuals(changeType: CommunicationChangeType) {
     case 'corporateWebsiteChanged':
       return { Icon: Globe, className: 'text-primary' };
     default:
-      return { Icon: Mail, className: 'text-[hsl(var(--bg-warning))]' };
+      return { Icon: Mail, className: 'text-[hsl(var(--text-warning))]' };
   }
 }
 
@@ -99,7 +99,7 @@ export function CommunicationImpactDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-lg">
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-[hsl(var(--bg-warning))]">
+          <AlertDialogTitle className="flex items-center gap-2 text-[hsl(var(--text-warning))]">
             <Mail className={iconSizes.md} />
             {ci('title')}
           </AlertDialogTitle>
@@ -188,7 +188,7 @@ export function CommunicationImpactDialog({
                 </article>
               )}
 
-              <p className="text-sm text-[hsl(var(--bg-warning))]">
+              <p className="text-sm text-[hsl(var(--text-warning))]">
                 {ci('warningLive', { count: totalLive })}
               </p>
             </section>

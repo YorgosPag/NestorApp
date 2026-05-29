@@ -77,14 +77,14 @@ export function ProcurementContactTab({
   return (
     <div className="space-y-4">
       {archived && (
-        <div className="flex items-center gap-2 rounded-md border border-[hsl(var(--bg-warning))]/60 bg-[hsl(var(--bg-warning))]/40 p-3 text-sm text-foreground">
+        <div className="flex items-center gap-2 rounded-md border border-[hsl(var(--text-warning))]/60 bg-[hsl(var(--bg-warning))]/40 p-3 text-sm text-foreground">
           <AlertTriangle className="h-4 w-4" />
           {t('procurementTab.archived.banner')}
         </div>
       )}
 
       {errorMessage && (
-        <div className="rounded-md border border-[hsl(var(--bg-error))]/60 bg-[hsl(var(--bg-error))]/40 p-3 text-sm text-destructive">
+        <div className="rounded-md border border-[hsl(var(--text-error))]/60 bg-[hsl(var(--bg-error))]/40 p-3 text-sm text-destructive">
           {errorMessage}
         </div>
       )}

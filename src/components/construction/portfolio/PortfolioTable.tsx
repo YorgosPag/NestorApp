@@ -25,8 +25,8 @@ function MetricCell({ value, warn }: { value: number; warn: boolean }) {
       className={[
         'tabular-nums font-medium',
         warn
-          ? 'text-[hsl(var(--bg-error))]'
-          : 'text-[hsl(var(--bg-success))]',
+          ? 'text-[hsl(var(--text-error))]'
+          : 'text-[hsl(var(--text-success))]',
       ].join(' ')}
     >
       {value.toFixed(2)}
@@ -94,7 +94,7 @@ export function PortfolioTable({ items, loading }: PortfolioTableProps) {
             </TableCell>
             <TableCell className="text-right">
               {item.delayedTasksCount > 0 ? (
-                <span className="tabular-nums text-[hsl(var(--bg-error))]">
+                <span className="tabular-nums text-[hsl(var(--text-error))]">
                   {item.delayedTasksCount}
                 </span>
               ) : (

@@ -83,7 +83,7 @@ export function WallPersistenceSection({
           type="button"
           onClick={() => void saveNow()}
           disabled={saveState === 'saving'}
-          className="rounded border border-[hsl(var(--bg-success))] bg-[hsl(var(--bg-success))] px-2 py-1 text-xs text-white hover:bg-[hsl(var(--bg-success))]/90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded border border-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))] px-2 py-1 text-xs text-white hover:bg-[hsl(var(--bg-success))]/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {t('wallAdvancedPanel.sections.persistence.saveButton')}
         </button>
@@ -96,7 +96,7 @@ export function WallPersistenceSection({
           saveState === 'error'
             ? 'text-xs text-destructive'
             : saveState === 'saving'
-              ? 'text-xs text-[hsl(var(--bg-warning))]'
+              ? 'text-xs text-[hsl(var(--text-warning))]'
               : 'text-xs text-muted-foreground'
         }
       >
@@ -106,7 +106,7 @@ export function WallPersistenceSection({
       {lockedByOther && (
         <p
           role="status"
-          className="rounded border border-[hsl(var(--bg-warning))]/40 bg-[hsl(var(--bg-warning))]/30 px-2 py-1 text-xs text-foreground"
+          className="rounded border border-[hsl(var(--text-warning))]/40 bg-[hsl(var(--bg-warning))]/30 px-2 py-1 text-xs text-foreground"
         >
           {t('wallAdvancedPanel.sections.persistence.editingByOther')}
         </p>

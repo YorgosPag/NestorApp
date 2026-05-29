@@ -194,7 +194,7 @@ export function ExtractedDataReviewPanel({
           {overall >= 80 ? (
             <CheckCircle2 className="h-4 w-4 text-[hsl(var(--text-success))]" />
           ) : (
-            <AlertTriangle className="h-4 w-4 text-[hsl(var(--bg-warning))]" />
+            <AlertTriangle className="h-4 w-4 text-[hsl(var(--text-warning))]" />
           )}
           <span className="text-sm text-muted-foreground">{t('quotes.scan.overallConfidence')}:</span>
           <ConfidenceBadge confidence={overall} />
@@ -203,14 +203,14 @@ export function ExtractedDataReviewPanel({
 
       <CardContent className="space-y-5">
         {showMismatchBanner && mismatch && (
-          <div className="flex flex-col gap-2 rounded-md border border-[hsl(var(--bg-warning))]/60 bg-[hsl(var(--bg-warning))]/40 px-4 py-3">
+          <div className="flex flex-col gap-2 rounded-md border border-[hsl(var(--text-warning))]/60 bg-[hsl(var(--bg-warning))]/40 px-4 py-3">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--bg-warning))]" />
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--text-warning))]" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-foreground">
                   {t('quotes.scan.vendorMismatch.title')}
                 </p>
-                <p className="mt-0.5 break-words text-sm text-[hsl(var(--bg-warning))]">
+                <p className="mt-0.5 break-words text-sm text-[hsl(var(--text-warning))]">
                   {mismatch.type === 'vat'
                     ? t('quotes.scan.vendorMismatch.bodyVat', {
                         extractedVat: mismatch.extractedVat ?? '—',
@@ -253,7 +253,7 @@ export function ExtractedDataReviewPanel({
                   {t('quotes.scan.vendorMismatch.goBack')}
                 </Button>
               )}
-              <Button size="sm" variant="ghost" className="text-[hsl(var(--bg-warning))] hover:text-[hsl(var(--bg-warning))]" disabled={isSwitchingVendor} onClick={() => setMismatchDismissed(true)}>
+              <Button size="sm" variant="ghost" className="text-[hsl(var(--text-warning))] hover:text-[hsl(var(--text-warning))]" disabled={isSwitchingVendor} onClick={() => setMismatchDismissed(true)}>
                 {t('quotes.scan.vendorMismatch.dismiss')}
               </Button>
             </div>
@@ -382,13 +382,13 @@ export function ExtractedDataReviewPanel({
                 <Badge variant="outline" className="border-ring text-primary text-xs">{t('quotes.scan.vatIncludedYes')}</Badge>
               )}
               {extracted.vatIncluded?.value === false && (
-                <Badge variant="outline" className="border-[hsl(var(--bg-warning))] text-[hsl(var(--bg-warning))] text-xs">{t('quotes.scan.vatIncludedNo')}</Badge>
+                <Badge variant="outline" className="border-[hsl(var(--text-warning))] text-[hsl(var(--text-warning))] text-xs">{t('quotes.scan.vatIncludedNo')}</Badge>
               )}
               {extracted.vatIncluded?.value === null && (
                 <Badge variant="outline" className="border-muted-foreground/40 text-muted-foreground text-xs">{t('quotes.scan.vatIncludedUnknown')}</Badge>
               )}
               {extracted.laborIncluded?.value === true && (
-                <Badge variant="outline" className="border-[hsl(var(--bg-success))] text-[hsl(var(--text-success))] text-xs">{t('quotes.scan.laborIncludedYes')}</Badge>
+                <Badge variant="outline" className="border-[hsl(var(--text-success))] text-[hsl(var(--text-success))] text-xs">{t('quotes.scan.laborIncludedYes')}</Badge>
               )}
               {extracted.laborIncluded?.value === false && (
                 <Badge variant="outline" className="border-destructive text-destructive text-xs">{t('quotes.scan.laborIncludedNo')}</Badge>
@@ -411,9 +411,9 @@ export function ExtractedDataReviewPanel({
         </section>
 
         {showWarningBanner && quoteValidation.warnings.linesSumMismatch && (
-          <div className="rounded-md border border-[hsl(var(--bg-warning))]/60 bg-[hsl(var(--bg-warning))]/40 px-4 py-3">
+          <div className="rounded-md border border-[hsl(var(--text-warning))]/60 bg-[hsl(var(--bg-warning))]/40 px-4 py-3">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--bg-warning))]" />
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--text-warning))]" />
               <p className="text-sm text-foreground">
                 {t('rfqs.quoteEdit.warning.linesSumMismatch', {
                   sum: formatEuro(quoteValidation.warnings.linesSumMismatch.sum),

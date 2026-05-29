@@ -33,7 +33,7 @@ export const CONTACT_COLORS = {
     hover: HOVER_TEXT_EFFECTS.GREEN,
     bg: 'bg-[hsl(var(--bg-success))]/10',
     border: 'border-border',
-    ring: 'ring-[hsl(var(--bg-success))]/20',
+    ring: 'ring-[hsl(var(--text-success))]/20',
   },
 } as const;
 

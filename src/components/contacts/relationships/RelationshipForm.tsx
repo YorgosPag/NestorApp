@@ -244,9 +244,9 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
 
           {/* Pending data reminder */}
           {hasContact && !loading && !displayError && (
-            <Alert className="mt-4 border-[hsl(var(--bg-warning))] bg-[hsl(var(--bg-warning))]/40">
-              <Info className={designSystem.cn(iconSizes.sm, "text-[hsl(var(--bg-warning))]")} />
-              <AlertDescription className="text-[hsl(var(--bg-warning))] text-sm">
+            <Alert className="mt-4 border-[hsl(var(--text-warning))] bg-[hsl(var(--bg-warning))]/40">
+              <Info className={designSystem.cn(iconSizes.sm, "text-[hsl(var(--text-warning))]")} />
+              <AlertDescription className="text-[hsl(var(--text-warning))] text-sm">
                 {t('relationships.form.pendingReminder')}
               </AlertDescription>
             </Alert>

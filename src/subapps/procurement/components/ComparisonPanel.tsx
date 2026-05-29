@@ -298,7 +298,7 @@ function TcoTotalCell({ total, tco }: { total: number; tco: TcoNormalization }) 
   return (
     <div className="flex flex-col items-end gap-0.5">
       <span>{formatCurrency(tco.normalizedTotal)}</span>
-      <span className="text-[10px] text-[hsl(var(--bg-warning))] tabular-nums">
+      <span className="text-[10px] text-[hsl(var(--text-warning))] tabular-nums">
         +{formatCurrency(tco.vatDelta)} {t('comparison.tco.vatDeltaLabel')}
       </span>
     </div>
@@ -310,7 +310,7 @@ function TcoFlagsRow({ tco }: { tco: TcoNormalization }) {
   const items: React.ReactNode[] = [];
   if (tco.laborFlag) {
     items.push(
-      <span key="labor" className="flex items-center gap-1 text-[10px] text-[hsl(var(--bg-warning))]">
+      <span key="labor" className="flex items-center gap-1 text-[10px] text-[hsl(var(--text-warning))]">
         <HardHat className="h-3 w-3 shrink-0" />
         {t('comparison.tco.laborWarning')}
       </span>
@@ -318,7 +318,7 @@ function TcoFlagsRow({ tco }: { tco: TcoNormalization }) {
   }
   if (tco.deliveryFlag) {
     items.push(
-      <span key="delivery" className="flex items-center gap-1 text-[10px] text-[hsl(var(--bg-warning))]">
+      <span key="delivery" className="flex items-center gap-1 text-[10px] text-[hsl(var(--text-warning))]">
         <Truck className="h-3 w-3 shrink-0" />
         {t('comparison.tco.deliveryWarning')}
       </span>

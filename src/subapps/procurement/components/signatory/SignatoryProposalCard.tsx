@@ -79,9 +79,9 @@ function ConfidencePill({ confidence }: { confidence: number }) {
   const band = getSignatoryConfidenceBand(confidence);
   const cls =
     band === 'high'
-      ? 'border-[hsl(var(--bg-success))] text-[hsl(var(--text-success))]'
+      ? 'border-[hsl(var(--text-success))] text-[hsl(var(--text-success))]'
       : band === 'medium'
-      ? 'border-[hsl(var(--bg-warning))] text-[hsl(var(--bg-warning))]'
+      ? 'border-[hsl(var(--text-warning))] text-[hsl(var(--text-warning))]'
       : 'border-destructive text-destructive';
   return (
     <Badge variant="outline" className={`text-xs ${cls}`}>

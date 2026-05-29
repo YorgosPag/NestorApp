@@ -167,7 +167,7 @@ export function VendorPortalClient({ token, initialData }: Props) {
             {t('vendor-portal:page.languageToggle')}
           </button>
         </div>
-        <div className="border-t border-[hsl(var(--bg-warning))]/60 bg-[hsl(var(--bg-warning))]/40 px-4 py-2 text-xs text-foreground">
+        <div className="border-t border-[hsl(var(--text-warning))]/60 bg-[hsl(var(--bg-warning))]/40 px-4 py-2 text-xs text-foreground">
           {t('vendor-portal:security.warning')}
         </div>
       </header>

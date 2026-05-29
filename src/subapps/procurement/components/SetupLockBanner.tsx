@@ -42,7 +42,7 @@ export function SetupLockBanner({
 
   if (lockState === 'awardLocked') {
     return (
-      <div className="flex items-center justify-between gap-4 rounded-lg border border-[hsl(var(--bg-warning))]/60 bg-[hsl(var(--bg-warning))]/40 px-4 py-3 text-sm">
+      <div className="flex items-center justify-between gap-4 rounded-lg border border-[hsl(var(--text-warning))]/60 bg-[hsl(var(--bg-warning))]/40 px-4 py-3 text-sm">
         <div className="flex items-center gap-2 text-foreground">
           <Lock className="size-4 shrink-0" />
           <span>{t('rfqs.setup.banner.awardLocked', { vendor: vendorName ?? '—' })}</span>
@@ -57,7 +57,7 @@ export function SetupLockBanner({
   }
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg border border-[hsl(var(--bg-error))]/60 bg-[hsl(var(--bg-error))]/40 px-4 py-3 text-sm">
+    <div className="flex items-center justify-between gap-4 rounded-lg border border-[hsl(var(--text-error))]/60 bg-[hsl(var(--bg-error))]/40 px-4 py-3 text-sm">
       <div className="flex items-center gap-2 text-destructive">
         <Lock className="size-4 shrink-0" />
         <span>{t('rfqs.setup.banner.poLocked', { poNumber: poNumber ?? '—' })}</span>

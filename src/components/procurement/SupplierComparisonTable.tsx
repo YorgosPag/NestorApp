@@ -115,7 +115,7 @@ export function SupplierComparisonTable({ suppliers, className }: SupplierCompar
                     {s.averageLeadTimeDays !== null ? `${s.averageLeadTimeDays} ${t('supplierMetrics.days')}` : '—'}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={cn(s.cancellationRate > 20 && 'text-[hsl(var(--bg-warning))]')}>
+                    <span className={cn(s.cancellationRate > 20 && 'text-[hsl(var(--text-warning))]')}>
                       {s.cancellationRate}%
                     </span>
                   </td>
@@ -211,9 +211,9 @@ function MobileSupplierCard({ supplier, rank }: { supplier: SupplierMetrics; ran
 
 function getRankColor(index: number): string {
   switch (index) {
-    case 0: return 'text-[hsl(var(--bg-warning))]';
+    case 0: return 'text-[hsl(var(--text-warning))]';
     case 1: return 'text-muted-foreground';
-    case 2: return 'text-[hsl(var(--bg-warning))]';
+    case 2: return 'text-[hsl(var(--text-warning))]';
     default: return 'text-muted-foreground';
   }
 }

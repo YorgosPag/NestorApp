@@ -71,7 +71,7 @@ export function AddressImpactDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-[hsl(var(--bg-warning))]">
+          <AlertDialogTitle className="flex items-center gap-2 text-[hsl(var(--text-warning))]">
             <MapPin className={iconSizes.md} />
             {ai('title')}
           </AlertDialogTitle>
@@ -125,7 +125,7 @@ export function AddressImpactDialog({
                 </article>
               )}
 
-              <p className="text-sm text-[hsl(var(--bg-warning))]">
+              <p className="text-sm text-[hsl(var(--text-warning))]">
                 {ai('warningLive', { count: totalLive })}
               </p>
             </section>

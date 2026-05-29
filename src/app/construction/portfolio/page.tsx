@@ -31,7 +31,7 @@ export default function ConstructionPortfolioPage() {
       </header>
 
       {error && (
-        <p role="alert" className="rounded border border-[hsl(var(--bg-error))/30] bg-[hsl(var(--bg-error))/10] px-4 py-2 text-sm text-[hsl(var(--bg-error))]">
+        <p role="alert" className="rounded border border-[hsl(var(--bg-error))/30] bg-[hsl(var(--bg-error))/10] px-4 py-2 text-sm text-[hsl(var(--text-error))]">
           {error}
         </p>
       )}

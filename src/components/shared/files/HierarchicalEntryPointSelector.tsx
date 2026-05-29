@@ -305,9 +305,9 @@ export function HierarchicalEntryPointSelector({
           })()}
 
           {hasPerFloorTemplates && floors.length === 0 && (
-            <div className="flex items-start gap-2 p-2 rounded-lg bg-[hsl(var(--bg-warning))]/40 border border-[hsl(var(--bg-warning))]">
-              <LucideIcons.AlertTriangle className={cn(iconSizes.sm, 'text-[hsl(var(--bg-warning))] mt-0.5 flex-shrink-0')} aria-hidden="true" />
-              <p className="text-xs text-[hsl(var(--bg-warning))]">
+            <div className="flex items-start gap-2 p-2 rounded-lg bg-[hsl(var(--bg-warning))]/40 border border-[hsl(var(--text-warning))]">
+              <LucideIcons.AlertTriangle className={cn(iconSizes.sm, 'text-[hsl(var(--text-warning))] mt-0.5 flex-shrink-0')} aria-hidden="true" />
+              <p className="text-xs text-[hsl(var(--text-warning))]">
                 {t('studies.noFloorsWarning')}
                 {onNavigateToFloors && (
                   <>
@@ -315,7 +315,7 @@ export function HierarchicalEntryPointSelector({
                     <button
                       type="button"
                       onClick={onNavigateToFloors}
-                      className="inline-flex items-center gap-1 font-semibold text-[hsl(var(--bg-warning))] underline underline-offset-2 hover:text-[hsl(var(--bg-warning))]/80 transition-colors"
+                      className="inline-flex items-center gap-1 font-semibold text-[hsl(var(--text-warning))] underline underline-offset-2 hover:text-[hsl(var(--text-warning))]/80 transition-colors"
                     >
                       {navigateToFloorsLabel || t('studies.goToFloors')}
                       <LucideIcons.ArrowRight className="inline h-3 w-3" aria-hidden="true" />

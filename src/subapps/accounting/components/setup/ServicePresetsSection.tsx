@@ -205,7 +205,7 @@ export function ServicePresetsSection() {
         {saveSuccess && (
           <div
             role="status"
-            className="rounded-md border border-[hsl(var(--bg-success))] bg-[hsl(var(--bg-success))]/10 p-3 text-sm text-[hsl(var(--text-success))]"
+            className="rounded-md border border-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))]/10 p-3 text-sm text-[hsl(var(--text-success))]"
           >
             {t('servicePresets.saveSuccess')}
           </div>

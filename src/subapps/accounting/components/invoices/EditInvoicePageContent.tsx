@@ -111,7 +111,7 @@ export function EditInvoicePageContent({ invoiceId }: EditInvoicePageContentProp
       <main className="min-h-screen bg-background p-6">
         <Card>
           <CardContent className="pt-6 flex flex-col items-center gap-3">
-            <AlertTriangle className="h-8 w-8 text-[hsl(var(--bg-warning))]" />
+            <AlertTriangle className="h-8 w-8 text-[hsl(var(--text-warning))]" />
             <p className="text-sm text-center">
               {t('invoices.editNotAllowed', { status: mydataStatus })}
             </p>

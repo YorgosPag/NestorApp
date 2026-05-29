@@ -42,7 +42,7 @@ interface CardConfig {
 const REPORT_CARD_CONFIG: Record<ReportType, CardConfig> = {
   profit_and_loss: { icon: TrendingUp, colorClass: 'text-[hsl(var(--text-success))]' },
   trial_balance: { icon: Scale, colorClass: 'text-primary' },
-  ar_aging: { icon: Clock, colorClass: 'text-[hsl(var(--bg-warning))]' },
+  ar_aging: { icon: Clock, colorClass: 'text-[hsl(var(--text-warning))]' },
   tax_summary: { icon: Calculator, colorClass: 'text-primary' },
   bank_reconciliation: { icon: GitCompareArrows, colorClass: 'text-primary' },
   cash_flow: { icon: Banknote, colorClass: 'text-[hsl(var(--text-success))]' },

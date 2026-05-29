@@ -219,7 +219,7 @@ export function ReplyComposer({
       {isEditMode && editingMessage && (
         <div className="flex items-start gap-2 mb-3 p-3 rounded-lg border-l-4 border-l-[hsl(var(--bg-warning))] bg-[hsl(var(--bg-warning))]/10">
           <div className="flex-shrink-0 mt-0.5">
-            <Pencil className={`${iconSizes.sm} text-[hsl(var(--bg-warning))]`} />
+            <Pencil className={`${iconSizes.sm} text-[hsl(var(--text-warning))]`} />
           </div>
           <div className="flex-1 min-w-0">
             <div className={`text-xs font-medium ${colors.text.muted} mb-1`}>

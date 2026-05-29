@@ -297,7 +297,7 @@ export function ArchiveView({
                 className={`flex-shrink-0 w-10 h-10 bg-[hsl(var(--bg-warning))]/10 ${quick.card} flex items-center justify-center`}
                 aria-hidden="true"
               >
-                <Archive className={`${iconSizes.md} text-[hsl(var(--bg-warning))]`} />
+                <Archive className={`${iconSizes.md} text-[hsl(var(--text-warning))]`} />
               </div>
 
               <div className="flex-1 min-w-0">

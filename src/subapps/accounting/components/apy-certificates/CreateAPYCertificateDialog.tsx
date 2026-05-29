@@ -347,8 +347,8 @@ export function CreateAPYCertificateDialog({
 
           {/* Duplicate warning */}
           {duplicateId && (
-            <div className="flex items-start gap-2 p-3 bg-[hsl(var(--bg-warning))]/40 border border-[hsl(var(--bg-warning))] rounded-md">
-              <AlertCircle className="h-4 w-4 text-[hsl(var(--bg-warning))] mt-0.5 shrink-0" />
+            <div className="flex items-start gap-2 p-3 bg-[hsl(var(--bg-warning))]/40 border border-[hsl(var(--text-warning))] rounded-md">
+              <AlertCircle className="h-4 w-4 text-[hsl(var(--text-warning))] mt-0.5 shrink-0" />
               <div className="text-sm text-foreground">
                 <p className="font-medium">{t('apy.duplicate.title')}</p>
                 <p>{t('apy.duplicate.message', { year: fiscalYear })}</p>

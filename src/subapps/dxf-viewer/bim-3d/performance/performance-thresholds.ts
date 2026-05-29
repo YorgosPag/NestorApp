@@ -20,8 +20,8 @@ type ThresholdKey = keyof typeof PERFORMANCE_THRESHOLDS;
 
 /** Maps MetricTier to ADR-365 semantic Tailwind token (text utility). */
 export const TIER_TEXT_CLASS: Record<MetricTier, string> = {
-  good:     'text-[hsl(var(--bg-success))]',
-  warn:     'text-[hsl(var(--bg-warning))]',
+  good:     'text-[hsl(var(--text-success))]',
+  warn:     'text-[hsl(var(--text-warning))]',
   critical: 'text-destructive',
 };
 

@@ -66,7 +66,7 @@ export function EntryCard({
             isSelected
               ? 'border-primary bg-primary/10 shadow-md scale-105'
               : isCustomTitle
-                ? 'border-dashed border-[hsl(var(--bg-warning))] bg-[hsl(var(--bg-warning))]/40 hover:border-[hsl(var(--bg-warning))]'
+                ? 'border-dashed border-[hsl(var(--text-warning))] bg-[hsl(var(--bg-warning))]/40 hover:border-[hsl(var(--text-warning))]'
                 : 'border-border bg-card hover:border-primary/50'
           )}
           role="radio"
@@ -79,7 +79,7 @@ export function EntryCard({
               isSelected
                 ? 'bg-primary text-primary-foreground'
                 : isCustomTitle
-                  ? 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--bg-warning))]'
+                  ? 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]'
                   : `bg-muted ${colors.text.muted}`
             )}
           >
@@ -92,7 +92,7 @@ export function EntryCard({
               isSelected
                 ? 'text-primary'
                 : isCustomTitle
-                  ? 'text-[hsl(var(--bg-warning))]'
+                  ? 'text-[hsl(var(--text-warning))]'
                   : 'text-foreground'
             )}
           >
@@ -100,7 +100,7 @@ export function EntryCard({
           </span>
 
           {isCustomTitle && (
-            <span className="text-[10px] text-[hsl(var(--bg-warning))] leading-tight">
+            <span className="text-[10px] text-[hsl(var(--text-warning))] leading-tight">
               {freeTitleLabel}
             </span>
           )}

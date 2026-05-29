@@ -79,8 +79,8 @@ export function PropertyTrashActionsBar({
       aria-label={t('trash.viewTrash')}
     >
       {/* 30-day auto-purge warning */}
-      <div className={`flex items-center gap-2 px-3 py-2 rounded-md bg-[hsl(var(--bg-warning))]/40 border border-[hsl(var(--bg-warning))] text-sm ${colors.text.muted}`}>
-        <AlertTriangle className={`${iconSizes.sm} text-[hsl(var(--bg-warning))] shrink-0`} />
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-md bg-[hsl(var(--bg-warning))]/40 border border-[hsl(var(--text-warning))] text-sm ${colors.text.muted}`}>
+        <AlertTriangle className={`${iconSizes.sm} text-[hsl(var(--text-warning))] shrink-0`} />
         <p>{t('trash.autoDeleteWarning')}</p>
       </div>
 

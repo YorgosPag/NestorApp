@@ -130,10 +130,10 @@ export function SearchBackfillPageContent() {
       </Card>
 
       {/* Contact Migration */}
-      <Card className="mb-6 border-[hsl(var(--bg-warning))]">
+      <Card className="mb-6 border-[hsl(var(--text-warning))]">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <User className={cn(iconSizes.md, 'text-[hsl(var(--bg-warning))]')} />
+            <User className={cn(iconSizes.md, 'text-[hsl(var(--text-warning))]')} />
             <CardTitle>{t('searchBackfill.contactMigration.title')}</CardTitle>
           </div>
           <CardDescription>
@@ -179,10 +179,10 @@ export function SearchBackfillPageContent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Alert className="mb-4 border-[hsl(var(--bg-warning))] bg-[hsl(var(--bg-warning))]/40">
-            <AlertTriangle className={cn(iconSizes.sm, 'text-[hsl(var(--bg-warning))]')} />
-            <AlertTitle className="text-[hsl(var(--bg-warning))]">{t('searchBackfill.parkingMigration.reseedTitle')}</AlertTitle>
-            <AlertDescription className="text-[hsl(var(--bg-warning))]">
+          <Alert className="mb-4 border-[hsl(var(--text-warning))] bg-[hsl(var(--bg-warning))]/40">
+            <AlertTriangle className={cn(iconSizes.sm, 'text-[hsl(var(--text-warning))]')} />
+            <AlertTitle className="text-[hsl(var(--text-warning))]">{t('searchBackfill.parkingMigration.reseedTitle')}</AlertTitle>
+            <AlertDescription className="text-[hsl(var(--text-warning))]">
               {t('searchBackfill.parkingMigration.reseedDescription')}
             </AlertDescription>
           </Alert>
@@ -202,7 +202,7 @@ export function SearchBackfillPageContent() {
 
           {/* Re-seed Result */}
           {s.parkingReseedResult && (
-            <div className="mb-6 p-4 rounded-lg border border-[hsl(var(--bg-success))] bg-[hsl(var(--bg-success))]/10">
+            <div className="mb-6 p-4 rounded-lg border border-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))]/10">
               <div className="flex items-center gap-2 text-[hsl(var(--text-success))] font-medium mb-2">
                 <CheckCircle className={iconSizes.sm} />
                 {t('searchBackfill.parkingMigration.reseedComplete')}
@@ -283,7 +283,7 @@ export function SearchBackfillPageContent() {
 
       {/* Contact Migration Results */}
       {s.migrationResult && (
-        <Card className="mb-6 border-[hsl(var(--bg-warning))]">
+        <Card className="mb-6 border-[hsl(var(--text-warning))]">
           <CardHeader>
             <div className="flex items-center gap-2">
               <CheckCircle className={cn(iconSizes.md, 'text-[hsl(var(--text-success))]')} />
@@ -353,7 +353,7 @@ export function SearchBackfillPageContent() {
                     <div className="flex items-center gap-4 text-sm">
                       <span>{t('searchBackfill.stats.nProcessed', { n: stats.processed })}</span>
                       <span className="text-[hsl(var(--text-success))]">{t('searchBackfill.stats.nIndexed', { n: stats.indexed })}</span>
-                      {stats.skipped > 0 && <span className="text-[hsl(var(--bg-warning))]">{t('searchBackfill.stats.nSkipped', { n: stats.skipped })}</span>}
+                      {stats.skipped > 0 && <span className="text-[hsl(var(--text-warning))]">{t('searchBackfill.stats.nSkipped', { n: stats.skipped })}</span>}
                       {stats.errors > 0 && <span className="text-destructive">{t('searchBackfill.stats.nErrors', { n: stats.errors })}</span>}
                     </div>
                   </div>

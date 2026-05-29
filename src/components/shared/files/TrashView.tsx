@@ -412,7 +412,7 @@ export function TrashView({
                           isExpired
                             ? 'text-destructive'
                             : daysUntilPurge <= 7
-                            ? 'text-[hsl(var(--bg-warning))]'
+                            ? 'text-[hsl(var(--text-warning))]'
                             : ''
                         }`}
                       >
@@ -425,7 +425,7 @@ export function TrashView({
 
                     {/* Hold status */}
                     {holdDisplay && (
-                      <span className="flex items-center gap-1 text-[hsl(var(--bg-warning))]">
+                      <span className="flex items-center gap-1 text-[hsl(var(--text-warning))]">
                         <Shield className={iconSizes.xs} aria-hidden="true" />
                         {holdDisplay}
                       </span>

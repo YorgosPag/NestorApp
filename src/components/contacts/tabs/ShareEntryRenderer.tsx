@@ -24,7 +24,7 @@ export function getStatusConfig(status: PhotoShareStatus) {
     case 'sent':
       return { color: 'text-[hsl(var(--text-success))]', bg: 'bg-[hsl(var(--bg-success))]/10' };
     case 'partial':
-      return { color: 'text-[hsl(var(--bg-warning))]', bg: 'bg-[hsl(var(--bg-warning))]/40' };
+      return { color: 'text-[hsl(var(--text-warning))]', bg: 'bg-[hsl(var(--bg-warning))]/40' };
     case 'failed':
       return { color: 'text-destructive', bg: 'bg-destructive/10' };
   }

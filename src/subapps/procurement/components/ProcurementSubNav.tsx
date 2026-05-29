@@ -27,13 +27,13 @@ const PROCUREMENT_TABS: readonly TabsNavTab[] = [
     href: '/procurement/rfqs',
     labelKey: 'nav.rfqs',
     icon: ClipboardList,
-    iconColor: 'text-[hsl(var(--bg-info))]',
+    iconColor: 'text-[hsl(var(--text-info))]',
   },
   {
     href: '/procurement/quotes',
     labelKey: 'nav.quotes',
     icon: FileText,
-    iconColor: 'text-[hsl(var(--bg-warning))]',
+    iconColor: 'text-[hsl(var(--text-warning))]',
   },
   {
     href: '/procurement/purchase-orders',
@@ -51,7 +51,7 @@ const PROCUREMENT_TABS: readonly TabsNavTab[] = [
     href: '/procurement/materials',
     labelKey: 'nav.materials',
     icon: Layers,
-    iconColor: 'text-[hsl(var(--bg-warning))]',
+    iconColor: 'text-[hsl(var(--text-warning))]',
   },
   {
     href: '/procurement/agreements',

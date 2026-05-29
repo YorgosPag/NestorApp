@@ -99,7 +99,7 @@ function EmailHistoryRow({ record, index }: EmailHistoryRowProps) {
       <TableCell className="text-sm text-foreground">{record.subject}</TableCell>
       <TableCell className="text-center">
         {record.status === 'sent' ? (
-          <Badge className="bg-[hsl(var(--bg-success))]/40 text-[hsl(var(--text-success))] border-[hsl(var(--bg-success))] text-xs">
+          <Badge className="bg-[hsl(var(--bg-success))]/40 text-[hsl(var(--text-success))] border-[hsl(var(--text-success))] text-xs">
             <CheckCircle2 className="h-3 w-3 mr-1" />
             {t('apy.emailHistory.sent')}
           </Badge>
@@ -211,12 +211,12 @@ export function APYCertificateDetails({
                 {t('apy.certificateTitle', { year: cert.fiscalYear })}
               </h1>
               {cert.isReceived ? (
-                <Badge className="bg-[hsl(var(--bg-success))]/40 text-[hsl(var(--text-success))] border-[hsl(var(--bg-success))]">
+                <Badge className="bg-[hsl(var(--bg-success))]/40 text-[hsl(var(--text-success))] border-[hsl(var(--text-success))]">
                   <CheckCircle2 className="h-3 w-3 mr-1" />
                   {t('apy.status.received')}
                 </Badge>
               ) : (
-                <Badge className="bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--bg-warning))] border-[hsl(var(--bg-warning))]">
+                <Badge className="bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))] border-[hsl(var(--text-warning))]">
                   <Clock className="h-3 w-3 mr-1" />
                   {t('apy.status.pending')}
                 </Badge>
@@ -233,7 +233,7 @@ export function APYCertificateDetails({
               variant="outline"
               onClick={handleMarkReceived}
               disabled={markingReceived}
-              className="text-[hsl(var(--text-success))] border-[hsl(var(--bg-success))] hover:bg-[hsl(var(--bg-success))]/10"
+              className="text-[hsl(var(--text-success))] border-[hsl(var(--text-success))] hover:bg-[hsl(var(--bg-success))]/10"
             >
               {markingReceived ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

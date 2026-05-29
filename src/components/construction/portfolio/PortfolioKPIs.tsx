@@ -60,7 +60,7 @@ export function PortfolioKPIs({ totals, loading }: PortfolioKPIsProps) {
               <Icon
                 className={[
                   'h-4 w-4',
-                  card.atRisk ? 'text-[hsl(var(--bg-error))]' : colors.text.muted,
+                  card.atRisk ? 'text-[hsl(var(--text-error))]' : colors.text.muted,
                 ].join(' ')}
               />
               <span className="text-xs text-muted-foreground">{t(card.labelKey)}</span>
@@ -69,7 +69,7 @@ export function PortfolioKPIs({ totals, loading }: PortfolioKPIsProps) {
               className={[
                 'text-2xl font-semibold tabular-nums',
                 loading ? 'animate-pulse text-muted-foreground' : '',
-                card.atRisk ? 'text-[hsl(var(--bg-error))]' : 'text-foreground',
+                card.atRisk ? 'text-[hsl(var(--text-error))]' : 'text-foreground',
               ]
                 .filter(Boolean)
                 .join(' ')}

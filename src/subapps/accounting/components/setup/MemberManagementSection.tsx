@@ -163,7 +163,7 @@ export function MemberManagementSection({
           <div
             className={`flex items-center gap-2 rounded-md border p-3 text-sm ${
               shareValid
-                ? 'border-[hsl(var(--bg-success))] bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]'
+                ? 'border-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]'
                 : 'border-destructive/50 bg-destructive/5 text-destructive'
             }`}
             role={shareValid ? 'status' : 'alert'}

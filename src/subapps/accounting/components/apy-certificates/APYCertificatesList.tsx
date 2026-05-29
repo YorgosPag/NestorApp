@@ -210,12 +210,12 @@ function APYCertificateRow({ cert, onClick }: APYCertificateRowProps) {
       </TableCell>
       <TableCell className="text-center">
         {cert.isReceived ? (
-          <Badge className="bg-[hsl(var(--bg-success))]/40 text-[hsl(var(--text-success))] border-[hsl(var(--bg-success))]">
+          <Badge className="bg-[hsl(var(--bg-success))]/40 text-[hsl(var(--text-success))] border-[hsl(var(--text-success))]">
             <CheckCircle2 className="h-3 w-3 mr-1" />
             {t('apy.status.received')}
           </Badge>
         ) : (
-          <Badge className="bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--bg-warning))] border-[hsl(var(--bg-warning))]">
+          <Badge className="bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))] border-[hsl(var(--text-warning))]">
             <Clock className="h-3 w-3 mr-1" />
             {t('apy.status.pending')}
           </Badge>

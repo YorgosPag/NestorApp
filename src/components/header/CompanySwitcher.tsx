@@ -27,7 +27,7 @@ export function CompanySwitcher() {
 
   return (
     <div className="flex items-center gap-1.5 px-2">
-      <Building2 className="h-4 w-4 shrink-0 text-[hsl(var(--bg-warning))]" />
+      <Building2 className="h-4 w-4 shrink-0 text-[hsl(var(--text-warning))]" />
       <Select
         value={activeCompanyId ?? ''}
         onValueChange={setActiveCompanyId}
@@ -35,9 +35,9 @@ export function CompanySwitcher() {
       >
         <SelectTrigger
           className={cn(
-            'h-8 min-w-[140px] max-w-[200px] text-xs border-[hsl(var(--bg-warning))]/40',
-            'bg-[hsl(var(--bg-warning))]/10 text-[hsl(var(--bg-warning))] hover:bg-[hsl(var(--bg-warning))]/20',
-            'focus:ring-[hsl(var(--bg-warning))]/50'
+            'h-8 min-w-[140px] max-w-[200px] text-xs border-[hsl(var(--text-warning))]/40',
+            'bg-[hsl(var(--bg-warning))]/10 text-[hsl(var(--text-warning))] hover:bg-[hsl(var(--bg-warning))]/20',
+            'focus:ring-[hsl(var(--text-warning))]/50'
           )}
         >
           <SelectValue placeholder={t('companySwitcher.selectCompany')} />

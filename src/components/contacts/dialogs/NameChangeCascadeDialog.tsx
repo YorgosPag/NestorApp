@@ -66,7 +66,7 @@ export function NameChangeCascadeDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-[hsl(var(--bg-warning))]">
+          <AlertDialogTitle className="flex items-center gap-2 text-[hsl(var(--text-warning))]">
             <RefreshCw className={iconSizes.md} />
             {nc('title')}
           </AlertDialogTitle>
@@ -93,7 +93,7 @@ export function NameChangeCascadeDialog({
                 )}
               </ul>
 
-              <p className="text-sm text-[hsl(var(--bg-warning))]">
+              <p className="text-sm text-[hsl(var(--text-warning))]">
                 {nc('warning', { count: totalAffected })}
               </p>
             </section>

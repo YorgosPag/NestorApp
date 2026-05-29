@@ -81,7 +81,7 @@ export function VendorGridCard({
     if (metrics.lastOrderDate) {
       items.push({
         icon: Clock,
-        iconColor: 'text-[hsl(var(--bg-warning))]',
+        iconColor: 'text-[hsl(var(--text-warning))]',
         label: t('hub.vendorMaster.lastOrder'),
         value: formatDate(metrics.lastOrderDate),
       });

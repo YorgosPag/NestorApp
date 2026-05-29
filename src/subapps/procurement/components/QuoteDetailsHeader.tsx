@@ -142,14 +142,14 @@ function ExpiryBanner({ validUntilDate, daysAgo, onRequestRenewal, t }: {
   t: (key: string, vars?: Record<string, unknown>) => string;
 }) {
   return (
-    <div className="mx-2 mb-2 px-3 py-2 rounded-md bg-[hsl(var(--bg-warning))]/40 border border-[hsl(var(--bg-warning))]/60 flex items-center justify-between gap-3 text-sm">
+    <div className="mx-2 mb-2 px-3 py-2 rounded-md bg-[hsl(var(--bg-warning))]/40 border border-[hsl(var(--text-warning))]/60 flex items-center justify-between gap-3 text-sm">
       <span className="text-foreground font-medium">
         {daysAgo === 1
           ? t('rfqs.expiry.banner.title', { date: validUntilDate, daysAgo })
           : t('rfqs.expiry.banner.titlePlural', { date: validUntilDate, daysAgo })}
       </span>
       {onRequestRenewal && (
-        <Button size="sm" variant="outline" onClick={onRequestRenewal} className="shrink-0 text-foreground border-[hsl(var(--bg-warning))]/60 hover:bg-[hsl(var(--bg-warning))]/90">
+        <Button size="sm" variant="outline" onClick={onRequestRenewal} className="shrink-0 text-foreground border-[hsl(var(--text-warning))]/60 hover:bg-[hsl(var(--bg-warning))]/90">
           {t('rfqs.expiry.banner.requestRenewalCta')} →
         </Button>
       )}

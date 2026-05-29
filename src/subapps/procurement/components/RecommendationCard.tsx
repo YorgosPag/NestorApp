@@ -27,7 +27,7 @@ export function RecommendationCard({ recommendation, winner }: RecommendationCar
   const confidencePct = Math.round(recommendation.confidence * 100);
 
   return (
-    <Card className="border-2 border-[hsl(var(--bg-success))]/40 bg-[hsl(var(--bg-success))]/40">
+    <Card className="border-2 border-[hsl(var(--text-success))]/40 bg-[hsl(var(--bg-success))]/40">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Sparkles className="h-5 w-5 text-[hsl(var(--text-success))]" />
@@ -70,7 +70,7 @@ export function RecommendationCard({ recommendation, winner }: RecommendationCar
         </div>
 
         {winner.hasRiskFlags && (
-          <div className="flex items-start gap-2 rounded-md border border-[hsl(var(--bg-warning))]/50 bg-[hsl(var(--bg-warning))]/60 p-2 text-xs text-foreground">
+          <div className="flex items-start gap-2 rounded-md border border-[hsl(var(--text-warning))]/50 bg-[hsl(var(--bg-warning))]/60 p-2 text-xs text-foreground">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             <span>{t('comparison.riskWarning')}</span>
           </div>

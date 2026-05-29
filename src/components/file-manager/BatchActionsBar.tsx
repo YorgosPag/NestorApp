@@ -233,7 +233,7 @@ export function BatchActionsBar({
               size="sm"
               onClick={() => setArchiveDialogOpen(true)}
               disabled={archiving}
-              className="h-7 px-2 text-xs text-[hsl(var(--bg-warning))] hover:text-[hsl(var(--bg-warning))]/80"
+              className="h-7 px-2 text-xs text-[hsl(var(--text-warning))] hover:text-[hsl(var(--text-warning))]/80"
             >
               {archiving ? (
                 <Spinner size="small" color="inherit" className="mr-1" />

@@ -263,7 +263,7 @@ export function PurchaseOrderForm({
 
               {faInfo.activeFa && (
                 <>
-                  <div className="rounded-md border border-[hsl(var(--bg-success))]/60 bg-[hsl(var(--bg-success))]/40 px-2 py-1 text-xs text-[hsl(var(--text-success))] text-left">
+                  <div className="rounded-md border border-[hsl(var(--text-success))]/60 bg-[hsl(var(--bg-success))]/40 px-2 py-1 text-xs text-[hsl(var(--text-success))] text-left">
                     {t('form.faBannerApplied', {
                       title: faInfo.activeFa.title,
                       percent: faInfo.discountPercent,

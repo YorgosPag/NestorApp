@@ -43,8 +43,8 @@ export function OfflineBanner({ isConnected }: OfflineBannerProps) {
       className={cn(
         'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
         state === 'offline'
-          ? 'bg-[hsl(var(--bg-warning))]/40 text-foreground border border-[hsl(var(--bg-warning))]/60'
-          : 'bg-[hsl(var(--bg-success))]/40 text-[hsl(var(--text-success))] border border-[hsl(var(--bg-success))]/60',
+          ? 'bg-[hsl(var(--bg-warning))]/40 text-foreground border border-[hsl(var(--text-warning))]/60'
+          : 'bg-[hsl(var(--bg-success))]/40 text-[hsl(var(--text-success))] border border-[hsl(var(--text-success))]/60',
       )}
     >
       {state === 'offline' ? (

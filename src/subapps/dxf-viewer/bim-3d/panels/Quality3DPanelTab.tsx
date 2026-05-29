@@ -187,7 +187,7 @@ export function Quality3DPanelTab() {
                 : t('performance.telemetry.eraseButton')}
             </Button>
             {eraseStatus === 'success' && (
-              <span className="text-[hsl(var(--bg-success))]">{t('performance.telemetry.eraseSuccess')}</span>
+              <span className="text-[hsl(var(--text-success))]">{t('performance.telemetry.eraseSuccess')}</span>
             )}
             {eraseStatus === 'error' && (
               <span className="text-destructive">{t('performance.telemetry.eraseError')}</span>

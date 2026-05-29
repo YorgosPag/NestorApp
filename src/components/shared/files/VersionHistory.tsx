@@ -233,7 +233,7 @@ export function VersionHistory({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-[hsl(var(--bg-warning))] hover:text-[hsl(var(--bg-warning))]/80"
+                    className="h-7 w-7 text-[hsl(var(--text-warning))] hover:text-[hsl(var(--text-warning))]/80"
                     onClick={() => handleRollback(version.versionNumber)}
                     disabled={rollingBack !== null}
                   >

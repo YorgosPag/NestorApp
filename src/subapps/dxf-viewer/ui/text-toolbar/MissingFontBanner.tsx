@@ -40,7 +40,7 @@ export function MissingFontBanner({
     <aside
       role="status"
       aria-live="polite"
-      className="flex items-center justify-between gap-3 border-b border-[hsl(var(--bg-warning))] bg-[hsl(var(--bg-warning))]/40 px-4 py-2 text-sm"
+      className="flex items-center justify-between gap-3 border-b border-[hsl(var(--text-warning))] bg-[hsl(var(--bg-warning))]/40 px-4 py-2 text-sm"
     >
       <div className="flex min-w-0 flex-col">
         <span className="font-medium text-foreground">

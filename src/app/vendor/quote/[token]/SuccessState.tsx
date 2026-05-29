@@ -23,7 +23,7 @@ export function SuccessState({ editWindowExpiresAt, locale, onEditAgain }: Props
     : '—';
 
   return (
-    <section className="rounded-lg border border-[hsl(var(--bg-success))]/60 bg-white p-6 text-center shadow-sm">
+    <section className="rounded-lg border border-[hsl(var(--text-success))]/60 bg-white p-6 text-center shadow-sm">
       <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[hsl(var(--bg-success))]/40 text-[hsl(var(--text-success))]">
         ✓
       </div>

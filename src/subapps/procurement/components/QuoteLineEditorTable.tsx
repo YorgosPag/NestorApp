@@ -25,10 +25,10 @@ import type { QuoteLine, ExtractedQuoteLine } from '@/subapps/procurement/types/
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
   if (confidence >= 80) {
-    return <Badge variant="outline" className="border-[hsl(var(--bg-success))] text-[hsl(var(--text-success))] text-xs">{confidence}%</Badge>;
+    return <Badge variant="outline" className="border-[hsl(var(--text-success))] text-[hsl(var(--text-success))] text-xs">{confidence}%</Badge>;
   }
   if (confidence >= 50) {
-    return <Badge variant="outline" className="border-[hsl(var(--bg-warning))] text-[hsl(var(--bg-warning))] text-xs">{confidence}%</Badge>;
+    return <Badge variant="outline" className="border-[hsl(var(--text-warning))] text-[hsl(var(--text-warning))] text-xs">{confidence}%</Badge>;
   }
   return <Badge variant="outline" className="border-destructive text-destructive text-xs">{confidence}%</Badge>;
 }
@@ -182,7 +182,7 @@ export function QuoteLineEditorTable({
                   />
                   {v.errors.quantity && <p className="mt-0.5 text-xs text-destructive">{t(v.errors.quantity)}</p>}
                   {v.warnings.quantityMismatch && (
-                    <p className="mt-0.5 text-xs text-[hsl(var(--bg-warning))]">
+                    <p className="mt-0.5 text-xs text-[hsl(var(--text-warning))]">
                       {t('rfqs.lineEdit.warning.quantityMismatch', {
                         vendorQty: v.warnings.quantityMismatch.vendorQty,
                         requestedQty: v.warnings.quantityMismatch.requestedQty,
@@ -217,8 +217,8 @@ export function QuoteLineEditorTable({
                     step={0.01}
                   />
                   {v.errors.unitPrice && <p className="mt-0.5 text-xs text-destructive">{t(v.errors.unitPrice)}</p>}
-                  {v.warnings.negativePrice && <p className="mt-0.5 text-xs text-[hsl(var(--bg-warning))]">{t('rfqs.lineEdit.warning.negativePrice')}</p>}
-                  {v.warnings.zeroQuantityWithPrice && <p className="mt-0.5 text-xs text-[hsl(var(--bg-warning))]">{t('rfqs.lineEdit.warning.zeroQuantityWithPrice')}</p>}
+                  {v.warnings.negativePrice && <p className="mt-0.5 text-xs text-[hsl(var(--text-warning))]">{t('rfqs.lineEdit.warning.negativePrice')}</p>}
+                  {v.warnings.zeroQuantityWithPrice && <p className="mt-0.5 text-xs text-[hsl(var(--text-warning))]">{t('rfqs.lineEdit.warning.zeroQuantityWithPrice')}</p>}
                 </td>
                 <td className="w-32 py-1 pr-2 text-right">
                   <div className="flex items-center justify-end gap-1">
@@ -250,7 +250,7 @@ export function QuoteLineEditorTable({
                     </Tooltip>
                   </div>
                   {v.warnings.totalMismatch && (
-                    <p className="mt-0.5 text-xs text-[hsl(var(--bg-warning))]">
+                    <p className="mt-0.5 text-xs text-[hsl(var(--text-warning))]">
                       {t('rfqs.lineEdit.warning.totalMismatch', {
                         statedTotal: v.warnings.totalMismatch.statedTotal.toFixed(2),
                         computedTotal: v.warnings.totalMismatch.computedTotal.toFixed(2),

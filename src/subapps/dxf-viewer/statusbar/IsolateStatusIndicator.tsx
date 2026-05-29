@@ -46,7 +46,7 @@ export function IsolateStatusIndicator(): JSX.Element | null {
           type="button"
           onClick={handleClick}
           aria-label={t('layer.isolate.tooltipClickToUnisolate')}
-          className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-[hsl(var(--bg-warning))]/15 text-[hsl(var(--bg-warning))] hover:bg-[hsl(var(--bg-warning))]/25 transition-colors"
+          className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-[hsl(var(--bg-warning))]/15 text-[hsl(var(--text-warning))] hover:bg-[hsl(var(--bg-warning))]/25 transition-colors"
         >
           <span aria-hidden="true">🎯</span>
           <span>

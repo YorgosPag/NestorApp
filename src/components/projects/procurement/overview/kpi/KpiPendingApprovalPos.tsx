@@ -23,7 +23,7 @@ export function KpiPendingApprovalPos({ stats }: Props) {
         <ClipboardCheck className="h-4 w-4 text-muted-foreground" aria-hidden />
       </CardHeader>
       <CardContent>
-        <p className={cn('text-3xl font-bold tabular-nums', count > 0 && 'text-[hsl(var(--bg-warning))]')}>
+        <p className={cn('text-3xl font-bold tabular-nums', count > 0 && 'text-[hsl(var(--text-warning))]')}>
           {count}
         </p>
         {count === 0 && (

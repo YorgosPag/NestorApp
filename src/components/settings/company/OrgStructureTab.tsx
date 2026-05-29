@@ -108,8 +108,8 @@ export function OrgStructureTab({ orgStructure, saving, onSave }: OrgStructureTa
         ? t('orgStructure.dept.routingCustomRules', { count: customRules.length })
         : null;
     return (
-      <div className="mt-2 rounded border border-[hsl(var(--bg-warning))]/40 bg-[hsl(var(--bg-warning))]/10 p-2 space-y-1 text-xs">
-        <p className="font-semibold text-[hsl(var(--bg-warning))]">{t('orgStructure.dept.routingImpactTitle')}</p>
+      <div className="mt-2 rounded border border-[hsl(var(--text-warning))]/40 bg-[hsl(var(--bg-warning))]/10 p-2 space-y-1 text-xs">
+        <p className="font-semibold text-[hsl(var(--text-warning))]">{t('orgStructure.dept.routingImpactTitle')}</p>
         {customLine && <p>• {customLine}</p>}
         {defaultEvents.length > 0 && (
           <>
@@ -119,7 +119,7 @@ export function OrgStructureTab({ orgStructure, saving, onSave }: OrgStructureTa
             ))}
           </>
         )}
-        <p className="text-[hsl(var(--bg-warning))] mt-1">{note}</p>
+        <p className="text-[hsl(var(--text-warning))] mt-1">{note}</p>
       </div>
     );
   };
