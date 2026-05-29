@@ -104,6 +104,8 @@ function serializeValue(value: IfcValue): string {
       return v.value ? '.T.' : '.F.';
     case 'ref':
       return `#${v.id}`;
+    case 'typed':
+      return `${v.typeName}(${serializeValue(v.inner)})`;
   }
 }
 

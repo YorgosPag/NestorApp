@@ -15,6 +15,7 @@ import type { Project } from '@/types/project';
 import type { Building } from '@/types/building/contracts';
 import type { FloorDocument } from '@/app/api/floors/floors.types';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
+import type { ThermalEnvelopeSpec } from '@/subapps/dxf-viewer/bim/types/thermal-envelope-types';
 
 import { IfcGraph } from './ifc-entity-graph';
 import {
@@ -34,6 +35,13 @@ export interface IfcExportParams {
   readonly floors: readonly FloorDocument[];
   /** Optional per-floor scene used by entity serializers (Q8.4). */
   readonly scenes?: ReadonlyMap<string, SceneModel>;
+  /**
+   * Optional per-floor ETICS thermal-envelope spec (floorId → spec), consumed
+   * by the covering serializer (ADR-396 P9) to emit `IfcCovering` for the
+   * facade walls (whose Z1 insulation lives on the per-floor spec, not on the
+   * wall entity). Columns/beams/slabs/openings read their own per-element layer.
+   */
+  readonly envelopeSpecs?: ReadonlyMap<string, ThermalEnvelopeSpec>;
   /** When true (default), include per-entity Property Sets (Q8.5). */
   readonly includePsets?: boolean;
   /** Optional STEP21 file header overrides. */

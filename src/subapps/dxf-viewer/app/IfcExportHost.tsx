@@ -30,6 +30,7 @@ import { EventBus } from '../systems/events/EventBus';
 import { IfcExporter } from '@/services/ifc/ifc-exporter.service';
 import { CombinedEntitySerializer } from '@/services/ifc/serializers';
 import { loadBimScenesForProject } from '@/services/ifc/ifc-bim-scene-loader';
+import { loadEnvelopeSpecsForProject } from '@/services/ifc/ifc-envelope-spec-loader';
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -64,7 +65,10 @@ export function IfcExportHost(): React.ReactElement | null {
           return;
         }
         const floors = await loadFloorsForBuildings(buildings);
-        const scenes = await loadBimScenesForProject(projectId, floors);
+        const [scenes, envelopeSpecs] = await Promise.all([
+          loadBimScenesForProject(projectId, floors),
+          loadEnvelopeSpecsForProject(projectId),
+        ]);
 
         const exporter = new IfcExporter();
         const result = exporter.exportProject({
@@ -72,6 +76,7 @@ export function IfcExportHost(): React.ReactElement | null {
           buildings,
           floors,
           scenes,
+          envelopeSpecs,
           entitySerializer: new CombinedEntitySerializer(),
           includePsets: payload.includePsets ?? true,
         });

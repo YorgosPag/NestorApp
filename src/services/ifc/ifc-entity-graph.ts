@@ -30,12 +30,28 @@ export type IfcBoolValue = { readonly kind: 'bool'; readonly value: boolean };
 /** Reference to another entity record by id. */
 export type IfcRefValue = { readonly kind: 'ref'; readonly id: number };
 
+/**
+ * Inline typed (defined-type) value, e.g. `IFCTHERMALCONDUCTIVITYMEASURE(0.031)`.
+ * Needed for SELECT slots such as `IfcPropertySingleValue.NominalValue` where a
+ * bare literal is invalid — STEP requires the wrapping defined-type name.
+ */
+export type IfcTypedValue = {
+  readonly kind: 'typed';
+  readonly typeName: string;
+  readonly inner: IfcValue;
+};
+
 export const lbl = (value: string): IfcStringValue => ({ kind: 'label', value });
 export const real = (value: number): IfcRealValue => ({ kind: 'real', value });
 export const integer = (value: number): IfcIntegerValue => ({ kind: 'integer', value });
 export const enumValue = (value: string): IfcEnumValue => ({ kind: 'enum', value });
 export const bool = (value: boolean): IfcBoolValue => ({ kind: 'bool', value });
 export const ref = (id: number): IfcRefValue => ({ kind: 'ref', id });
+export const typed = (typeName: string, inner: IfcValue): IfcTypedValue => ({
+  kind: 'typed',
+  typeName: typeName.toUpperCase(),
+  inner,
+});
 
 /**
  * Any value that may appear inside an IFC entity attribute slot.
@@ -52,6 +68,7 @@ export type IfcValue =
   | IfcEnumValue
   | IfcBoolValue
   | IfcRefValue
+  | IfcTypedValue
   | readonly IfcValue[];
 
 // ─── Entity record ──────────────────────────────────────────────────────────
