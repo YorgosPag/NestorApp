@@ -27,11 +27,13 @@ interface NavigationCardProps {
   subItemCount?: number;
 }
 
+// ✅ ADR-365 follow-up: each tile = soft tinted chip + VIVID colored icon (SAP Fiori).
+// Reuse vivid theme-aware SSoT vars (--text-*/--status-*/--hue-*); never dark navy icons.
 const COLOR_MAP: Record<ColorVariant, { iconBg: string; iconText: string; ringHover: string }> = {
   blue: {
     iconBg: 'bg-[hsl(var(--bg-info))]/20',
-    iconText: 'text-primary',
-    ringHover: 'group-hover:ring-ring',
+    iconText: 'text-[hsl(var(--text-info))]',
+    ringHover: 'group-hover:ring-[hsl(var(--text-info))]',
   },
   green: {
     iconBg: 'bg-[hsl(var(--bg-success))]/10',
@@ -39,9 +41,9 @@ const COLOR_MAP: Record<ColorVariant, { iconBg: string; iconText: string; ringHo
     ringHover: 'group-hover:ring-[hsl(var(--text-success))]',
   },
   purple: {
-    iconBg: 'bg-accent',
-    iconText: 'text-primary',
-    ringHover: 'group-hover:ring-ring',
+    iconBg: 'bg-[hsl(var(--status-purple))]/12',
+    iconText: 'text-[hsl(var(--status-purple))]',
+    ringHover: 'group-hover:ring-[hsl(var(--status-purple))]',
   },
   orange: {
     iconBg: 'bg-[hsl(var(--bg-warning))]/40',
@@ -54,19 +56,19 @@ const COLOR_MAP: Record<ColorVariant, { iconBg: string; iconText: string; ringHo
     ringHover: 'group-hover:ring-[hsl(var(--text-warning))]',
   },
   pink: {
-    iconBg: 'bg-accent',
-    iconText: 'text-primary',
-    ringHover: 'group-hover:ring-ring',
+    iconBg: 'bg-[hsl(var(--hue-pink))]/12',
+    iconText: 'text-[hsl(var(--hue-pink))]',
+    ringHover: 'group-hover:ring-[hsl(var(--hue-pink))]',
   },
   indigo: {
-    iconBg: 'bg-accent',
-    iconText: 'text-primary',
-    ringHover: 'group-hover:ring-ring',
+    iconBg: 'bg-[hsl(var(--hue-indigo))]/12',
+    iconText: 'text-[hsl(var(--hue-indigo))]',
+    ringHover: 'group-hover:ring-[hsl(var(--hue-indigo))]',
   },
   teal: {
-    iconBg: 'bg-accent',
-    iconText: 'text-primary',
-    ringHover: 'group-hover:ring-ring',
+    iconBg: 'bg-[hsl(var(--hue-teal))]/12',
+    iconText: 'text-[hsl(var(--hue-teal))]',
+    ringHover: 'group-hover:ring-[hsl(var(--hue-teal))]',
   },
 };
 

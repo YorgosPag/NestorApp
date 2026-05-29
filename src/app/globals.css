@@ -60,6 +60,11 @@
     --status-error: 0 72% 51%;        /* Red for error/sold */
     --status-purple: 271 76% 53%;     /* Purple for special states */
 
+    /* Additional vivid category hues (theme-aware) — dashboard launchpad tiles (ADR-179) */
+    --hue-teal: 173 80% 36%;          /* teal-600 */
+    --hue-pink: 330 81% 51%;          /* pink-600 */
+    --hue-indigo: 243 75% 58%;        /* indigo-500/600 */
+
     /* Enterprise Background Variables - SINGLE SOURCE OF TRUTH */
     --bg-success: 142 45% 97%;        /* success background - green-50 */
     --bg-error: 0 86% 97%;            /* error background - red-50 */
@@ -179,6 +184,11 @@
     --status-warning: 32 95% 44%;     /* Same orange works in dark */
     --status-error: 0 72% 51%;        /* Same red works in dark */
     --status-purple: 271 76% 53%;     /* Same purple works in dark */
+
+    /* Additional vivid category hues — Dark Mode (lighter for contrast) */
+    --hue-teal: 172 66% 50%;          /* teal-400 */
+    --hue-pink: 327 87% 68%;          /* pink-400 */
+    --hue-indigo: 239 84% 74%;        /* indigo-300/400 */
 
     /* Enterprise Background Variables - Dark Mode */
     --bg-success: 142 45% 15%;        /* dark success background */
