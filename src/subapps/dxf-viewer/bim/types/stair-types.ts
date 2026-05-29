@@ -344,6 +344,15 @@ export interface StairParams {
   readonly structureType: StairStructureType;
   readonly stringerParams?: StairStringerParams;
 
+  /**
+   * ADR-395 G1 — equivalent RC waist-slab thickness (mm) for the concrete
+   * volume BOQ row. Per-stair editable override; when `undefined` the BOQ
+   * calculator falls back to `DEFAULT_WAIST_SLAB_THICKNESS_MM` (150 mm,
+   * industry typical residential RC). NOT consumed by `computeStairGeometry`
+   * (BOQ-only input, stored in plain mm — no scene-unit scaling).
+   */
+  readonly waistThickness?: number; // mm
+
   readonly riserType: StairRiserType;
   readonly materials?: StairMaterials;
   readonly perTreadOverrides?: Readonly<Record<number, StairPerTreadOverride>>;

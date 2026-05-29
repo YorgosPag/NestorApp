@@ -60,6 +60,12 @@ export const STAIR_RIBBON_KEYS = {
     storyCount: 'stair.params.storyCount',
     storyHeight: 'stair.params.storyHeight',
     /**
+     * ADR-395 G1 — RC waist-slab thickness (mm) feeding the concrete BOQ
+     * row. Plain-mm numeric combobox (NOT scene-scaled, like storyHeight);
+     * default 150 mm when unset. Affects `concreteVolumeM3` only.
+     */
+    waistThickness: 'stair.params.waistThickness',
+    /**
      * ADR-358 Phase 3f — winder count for l-shape with winders. Numeric
      * combobox 1-5 (NOK quarter-turn default 3). Recomputes `flightSplit`
      * so `n1 + winderCount + n2 = stepCount` invariant holds.
@@ -103,6 +109,7 @@ export type StairRibbonComboKey =
   | typeof STAIR_RIBBON_KEYS.params.stepCount
   | typeof STAIR_RIBBON_KEYS.params.storyCount
   | typeof STAIR_RIBBON_KEYS.params.storyHeight
+  | typeof STAIR_RIBBON_KEYS.params.waistThickness
   | typeof STAIR_RIBBON_KEYS.params.winderCount;
 
 export type StairRibbonStringComboKey =
@@ -128,6 +135,7 @@ const ALL_STAIR_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
   STAIR_RIBBON_KEYS.params.stepCount,
   STAIR_RIBBON_KEYS.params.storyCount,
   STAIR_RIBBON_KEYS.params.storyHeight,
+  STAIR_RIBBON_KEYS.params.waistThickness,
   STAIR_RIBBON_KEYS.params.winderCount,
 ]);
 

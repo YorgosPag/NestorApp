@@ -152,6 +152,20 @@ const STEP_COUNT_OPTIONS = [
   { value: '20', labelKey: '20', isLiteralLabel: true },
 ] as const;
 
+// ADR-395 G1 — RC waist-slab thickness (mm) options feeding the concrete BOQ
+// row. Industry-typical residential/commercial RC flight thicknesses; default
+// 150 mm (`DEFAULT_WAIST_SLAB_THICKNESS_MM`). Plain mm (not scene-scaled).
+const WAIST_THICKNESS_MM_OPTIONS = [
+  { value: '120', labelKey: '120', isLiteralLabel: true },
+  { value: '140', labelKey: '140', isLiteralLabel: true },
+  { value: '150', labelKey: '150', isLiteralLabel: true },
+  { value: '160', labelKey: '160', isLiteralLabel: true },
+  { value: '180', labelKey: '180', isLiteralLabel: true },
+  { value: '200', labelKey: '200', isLiteralLabel: true },
+  { value: '220', labelKey: '220', isLiteralLabel: true },
+  { value: '250', labelKey: '250', isLiteralLabel: true },
+] as const;
+
 const STORY_COUNT_OPTIONS = [
   { value: '1', labelKey: '1', isLiteralLabel: true },
   { value: '2', labelKey: '2', isLiteralLabel: true },
@@ -395,6 +409,21 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 commandKey: STAIR_RIBBON_KEYS.params.stepCount,
                 comboboxWidthPx: 70,
                 options: STEP_COUNT_OPTIONS,
+              },
+            },
+            {
+              // ADR-395 G1 — RC waist-slab thickness (mm). Feeds the concrete
+              // BOQ row (όγκος σκυροδέματος); irrelevant for steel/glass
+              // structures (concrete = 0) but kept always-visible for
+              // simplicity. Default 150 mm.
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.waistThickness',
+                labelKey: 'ribbon.commands.stairEditor.waistThickness',
+                commandKey: STAIR_RIBBON_KEYS.params.waistThickness,
+                comboboxWidthPx: 70,
+                options: WAIST_THICKNESS_MM_OPTIONS,
               },
             },
           ],

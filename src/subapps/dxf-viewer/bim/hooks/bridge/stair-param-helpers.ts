@@ -34,6 +34,7 @@ import {
   buildLShapeWindersVariant,
   splitTwoFlightsForWinders,
 } from '../../stairs/stair-variant-defaults';
+import { DEFAULT_WAIST_SLAB_THICKNESS_MM } from '../../stairs/stair-boq-quantities';
 
 // ── Module-private constants ─────────────────────────────────────────────────
 
@@ -157,6 +158,11 @@ export function readStairNumericField(
     case STAIR_RIBBON_KEYS.params.storyCount:  return p.multiStoryConfig ? String(p.multiStoryConfig.storyCount) : null;
     // storyHeight stays in mm in StairMultiStoryConfig (Phase 7a contract).
     case STAIR_RIBBON_KEYS.params.storyHeight: return p.multiStoryConfig ? String(p.multiStoryConfig.storyHeight) : null;
+    // ADR-395 G1 — waist thickness is stored in plain mm (BOQ-only, not
+    // scene-scaled). Surface the effective value: the per-stair override or
+    // the SSoT default (150 mm) so the combobox always shows a live number.
+    case STAIR_RIBBON_KEYS.params.waistThickness:
+      return String(p.waistThickness ?? DEFAULT_WAIST_SLAB_THICKNESS_MM);
     case STAIR_RIBBON_KEYS.params.winderCount:
       return p.variant.kind === 'l-shape' && p.variant.cornerStyle === 'winders'
         ? String(p.variant.winderCount)
@@ -317,6 +323,7 @@ export function patchStairNumericParam(
     case STAIR_RIBBON_KEYS.params.stepCount:     return patchStepCount(prev, numeric);
     case STAIR_RIBBON_KEYS.params.storyCount:    return patchStoryCount(prev, numeric, ctx);
     case STAIR_RIBBON_KEYS.params.storyHeight:   return patchStoryHeight(prev, numeric);
+    case STAIR_RIBBON_KEYS.params.waistThickness: return patchWaistThickness(prev, numeric);
     case STAIR_RIBBON_KEYS.params.winderCount:   return patchLShapeWinderCount(prev, numeric);
     default: return null;
   }
@@ -432,6 +439,19 @@ function patchStoryHeight(prev: StairParams, raw: number): StairParams | null {
     ? { ...cur, storyHeight, linkedToFloor: false }
     : { topLevel: '', storyHeight, storyCount: 1, linkedToFloor: false };
   return { ...prev, multiStoryConfig };
+}
+
+/**
+ * ADR-395 G1 — patch the RC waist-slab thickness (mm). Input arrives in plain
+ * mm (combobox option strings are mm) and is stored unscaled — it feeds the
+ * concrete BOQ row only, not `computeStairGeometry`. Clamped to a sane RC
+ * range [80, 400] mm. No-op when unchanged vs the effective current value.
+ */
+function patchWaistThickness(prev: StairParams, rawMm: number): StairParams | null {
+  const waistThickness = Math.round(clamp(rawMm, 80, 400));
+  const current = prev.waistThickness ?? DEFAULT_WAIST_SLAB_THICKNESS_MM;
+  if (waistThickness === current) return null;
+  return { ...prev, waistThickness };
 }
 
 // ── Geometry recompute ───────────────────────────────────────────────────────

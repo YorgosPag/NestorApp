@@ -20,12 +20,13 @@ import type { StairParams, StairStructureType } from '../types/stair-types';
 // ============================================================================
 
 /**
- * Equivalent RC waist-slab thickness used for the concrete volume model.
- * `StairParams` carries no waist/slab thickness field, so a fixed default is
- * used (industry typical 150 mm for residential RC flights). Adjust here — or
- * promote to a `StairParams` field in a follow-up — without touching callers.
+ * ADR-395 G1 — default equivalent RC waist-slab thickness (mm) for the
+ * concrete volume model, used when `StairParams.waistThickness` is unset
+ * (industry typical 150 mm for residential RC flights). SSoT default shared
+ * with the ribbon read-fallback (`stair-param-helpers`); the per-stair
+ * override flows in via `params.waistThickness`.
  */
-const WAIST_SLAB_THICKNESS_MM = 150;
+export const DEFAULT_WAIST_SLAB_THICKNESS_MM = 150;
 
 const MM_TO_M = 1e-3;
 const MM2_TO_M2 = 1e-6;
@@ -74,8 +75,9 @@ export function computeStairBoqQuantities(params: StairParams): StairBoqQuantiti
 
   let concreteVolumeM3 = 0;
   if (!NON_CONCRETE_STRUCTURE_TYPES.has(params.structureType)) {
+    const waistThicknessMm = Math.max(0, params.waistThickness ?? DEFAULT_WAIST_SLAB_THICKNESS_MM);
     const inclinedRunMm = stepCount * stepHypotenuseMm;
-    const waistVolumeMm3 = inclinedRunMm * width * WAIST_SLAB_THICKNESS_MM;
+    const waistVolumeMm3 = inclinedRunMm * width * waistThicknessMm;
     const stepWedgesMm3 = stepCount * 0.5 * going * rise * width;
     concreteVolumeM3 = (waistVolumeMm3 + stepWedgesMm3) * MM3_TO_M3;
   }
