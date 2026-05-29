@@ -35,6 +35,7 @@ import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import type { BOQItem } from '@/types/boq';
 import {
   resolveAtoeMapping,
+  deriveAtoeQuantity,
   type AtoeMappingEntry,
   type BimEntityType,
 } from '../config/bim-to-atoe-mapping';
@@ -95,13 +96,6 @@ export interface BimBoqContext {
 // HELPERS — single-entry path
 // ============================================================================
 
-function deriveQuantity(unit: string, geometry?: BimEntityForBoq['geometry']): number {
-  if (unit === 'pcs') return 1;
-  if (unit === 'm2') return geometry?.area ?? 0;
-  if (unit === 'm3') return geometry?.volume ?? 0;
-  return 0;
-}
-
 function buildSingleEntryPayload(
   deterministicId: string,
   entityType: BimEntityType,
@@ -111,7 +105,7 @@ function buildSingleEntryPayload(
   existingCreatedAt: string | null,
 ): Record<string, unknown> {
   const now = nowISO();
-  const quantity = deriveQuantity(mapping.unit, entity.geometry);
+  const quantity = deriveAtoeQuantity(mapping.unit, entity.geometry);
   const payload: BOQItem = {
     id: deterministicId,
     companyId: context.companyId,

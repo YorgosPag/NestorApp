@@ -326,7 +326,7 @@ export type {
 import type { SlabOpeningEntity } from '../bim/types/slab-opening-types';
 
 // Re-export BIM base types for downstream consumers
-export type { BimEntity, BimElementKind, BimValidation, BimQuantityTakeoff, SoftLock, Point3D, AtoeCategoryCode } from '../bim/types/bim-base';
+export type { BimEntity, BimElementKind, BimValidation, SoftLock, Point3D, AtoeCategoryCode } from '../bim/types/bim-base';
 
 // ADR-362 Phase A1: standalone Center Mark + Centerline (D13).
 import type { CenterMarkEntity, CenterLineEntity } from './center-mark';
@@ -412,7 +412,6 @@ export type {
   StairGeometry,
   StairDoc,
   StairPresetDoc,
-  StairQTO,
 } from '../bim/types/stair-types';
 
 export interface ArrayEntity extends BaseEntity {

@@ -38,7 +38,7 @@ import type {
   WallGeometry,
   WallKind,
 } from '@/subapps/dxf-viewer/bim/types/wall-types';
-import type { BimValidation, BimQuantityTakeoff } from '@/subapps/dxf-viewer/bim/types/bim-base';
+import type { BimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
 import type { IfcPropertySet } from '@/subapps/dxf-viewer/bim/types/ifc-entity-mixin';
 
 /** WallParams χωρίς τα ADR-369 binding fields (factory τα γεμίζει με defaults). */
@@ -73,8 +73,6 @@ export interface CreateWallInput {
   pset?: IfcPropertySet;
   /** Optional validation block. Default = empty BimValidation. */
   validation?: BimValidation;
-  /** Optional QTO block. */
-  qto?: BimQuantityTakeoff;
   /** Optional back-ref για render + QTO subtraction. */
   hostedOpeningIds?: readonly string[];
   /** Optional tenant fields — pass-through to caller. */
@@ -149,7 +147,6 @@ export function createWall(input: CreateWallInput): WallEntity {
     ifcType: inferWallIfcType(input.kind),
     ...(input.visible !== undefined && { visible: input.visible }),
     ...(input.pset !== undefined && { pset: input.pset }),
-    ...(input.qto !== undefined && { qto: input.qto }),
     ...(input.hostedOpeningIds !== undefined && {
       hostedOpeningIds: input.hostedOpeningIds,
     }),

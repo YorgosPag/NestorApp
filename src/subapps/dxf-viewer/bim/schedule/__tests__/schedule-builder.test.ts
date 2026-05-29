@@ -284,7 +284,7 @@ describe('getPreset', () => {
     expect(keys).toContain('glazing');
     expect(keys).not.toContain('handingText');
   });
-  test('combined preset includes qto columns', () => {
+  test('combined preset has geometry-derived quantity columns (ADR-395 G5)', () => {
     const preset = getPreset('combined');
     const keys = preset.columns.map((c) => c.key);
     expect(keys).toContain('primaryQuantity');
@@ -304,6 +304,19 @@ describe('buildSchedule', () => {
     expect(schedule.rows).toHaveLength(2);
     expect(schedule.rows.map((r) => r.entityId)).toEqual(['w1', 'w2']);
     expect(schedule.rows[0].cells['length']).toBe(5); // m, από makeWall geometry.length
+  });
+
+  // ADR-395 §4.6 (G5): combined preset derives primaryQuantity/unit/ΑΤΟΕ από
+  // computed geometry + ΑΤΟΕ SSoT (όχι από το αφαιρεμένο `qto` field).
+  test('combined schedule derives primary quantity from geometry + ΑΤΟΕ (ADR-395 G5)', () => {
+    const entities: AnyBimEntity[] = [makeWall('w1')];
+    const config: ScheduleConfig = { entityType: 'combined', filters: {} };
+    const schedule = buildSchedule(entities, config, lookups);
+    expect(schedule.rows).toHaveLength(1);
+    const cells = schedule.rows[0].cells;
+    expect(cells['primaryQuantity']).toBe(15); // m² από makeWall geometry.area
+    expect(cells['primaryUnit']).toBe('m2');
+    expect(cells['atoeCategory']).toBe('OIK-3.05'); // exterior wall ΑΤΟΕ
   });
 
   test('door schedule routes only door-kind openings', () => {

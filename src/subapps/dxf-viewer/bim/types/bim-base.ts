@@ -2,7 +2,7 @@
  * BIM Drawing Mode — Base Types
  * ADR-363: Generic Parametric Building Element pattern (§5.1)
  *
- * Pattern mirrors ADR-358 StairEntity: kind + params + geometry cache + validation + qto.
+ * Pattern mirrors ADR-358 StairEntity: kind + params + geometry cache + validation.
  * All geometry stored in mm (same as stair §5.0).
  * Point3D has optional z for 3D-readiness (G11).
  */
@@ -70,16 +70,6 @@ export interface BimValidation {
   readonly lastValidatedAt: Timestamp | null;
 }
 
-// ─── Quantity Take-Off metadata (feeds BOQ ADR-175) ──────────────────────────
-
-export interface BimQuantityTakeoff {
-  /** Primary quantity — m² for walls/slabs/openings, m³ for columns/beams, pcs for openings */
-  readonly primaryQuantity: number;
-  readonly primaryUnit: 'm' | 'm2' | 'm3' | 'pcs' | 'kg';
-  readonly atoeCategory: AtoeCategoryCode;
-  readonly computedAt: Timestamp | null;
-}
-
 // ─── Multi-user soft lock (ADR-358 G24 pattern) ───────────────────────────────
 
 /** Minimal lock shape — all BIM entities satisfy this. Concrete types can extend it. */
@@ -100,19 +90,19 @@ export interface SoftLock extends BimLock {
  * TKind narrows to the element's sub-type union (e.g. WallKind, StairKind).
  * TParams holds user-editable parameters.
  * TGeometry holds computed geometry cache (re-derivable from params on corruption).
- * TQto holds quantity take-off metadata (defaults to BimQuantityTakeoff; stair uses StairQTO).
  *
  * Constraint: TKind extends string (not BimElementKind) so that StairKind can also use this generic.
+ *
+ * ADR-395 §4.6 (G5): no `qto` field — BIM quantities are geometry-derived at
+ * read time (BOQ bridge + Schedule combined preset via `deriveAtoeQuantity`).
  */
-export interface BimEntity<TKind extends string, TParams, TGeometry, TQto = BimQuantityTakeoff>
+export interface BimEntity<TKind extends string, TParams, TGeometry>
   extends BaseEntity {
   readonly kind: TKind;
   readonly params: TParams;
   /** Computed geometry cache. Source of truth = params. */
   readonly geometry: TGeometry;
   readonly validation: BimValidation;
-  /** BOQ feed metadata — optional; populated after first save, updated on param change */
-  readonly qto?: TQto;
   /** Display-only multi-user lock (never blocks writes) */
   readonly editingBy?: BimLock;
   /** Per-element style override (ADR-375 Phase C.5). Persisted in Firestore entity doc. */
@@ -145,15 +135,3 @@ export function makeBimValidation(): BimValidation {
   };
 }
 
-export function makeBimQto(
-  primaryQuantity: number,
-  primaryUnit: BimQuantityTakeoff['primaryUnit'],
-  atoeCategory: AtoeCategoryCode,
-): BimQuantityTakeoff {
-  return {
-    primaryQuantity,
-    primaryUnit,
-    atoeCategory,
-    computedAt: null,
-  };
-}

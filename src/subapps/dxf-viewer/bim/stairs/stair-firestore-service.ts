@@ -70,7 +70,6 @@ export interface StairSaveInput {
   readonly params: StairParams;
   readonly validation: StairDoc['validation'];
   readonly geometry?: StairDoc['geometry'];
-  readonly qto?: StairDoc['qto'];
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layer?: string;
@@ -81,7 +80,6 @@ export interface StairUpdateInput {
   readonly params?: StairParams;
   readonly validation?: StairDoc['validation'];
   readonly geometry?: StairDoc['geometry'];
-  readonly qto?: StairDoc['qto'];
   readonly layer?: string;
   readonly levelId?: string;
 }
@@ -125,7 +123,7 @@ export class StairFirestoreService {
    * Audit fields: `createdBy/createdAt` set only on first write,
    * `updatedBy/updatedAt` refreshed every call. `setDoc` with `merge: false`
    * is intentional — payload contains the full canonical document shape so
-   * partial deletions of optional fields (geometry/qto) are honored.
+   * partial deletions of optional fields (geometry) are honored.
    *
    * Enterprise-id (SOS N.6): `generateStairId()` when `id` not provided;
    * auto-id writes are forbidden.
@@ -150,7 +148,6 @@ export class StairFirestoreService {
 
     // Firestore rejects `undefined` — only include optional fields when set.
     if (input.geometry !== undefined) base.geometry = input.geometry;
-    if (input.qto !== undefined) base.qto = input.qto;
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
     if (input.floorId !== undefined) base.floorId = input.floorId;
     if (input.layer !== undefined) base.layer = input.layer;
@@ -174,7 +171,6 @@ export class StairFirestoreService {
     if (patch.params !== undefined) payload.params = patch.params;
     if (patch.validation !== undefined) payload.validation = patch.validation;
     if (patch.geometry !== undefined) payload.geometry = patch.geometry;
-    if (patch.qto !== undefined) payload.qto = patch.qto;
     if (patch.layer !== undefined) payload.layer = patch.layer;
     if (patch.levelId !== undefined) payload.levelId = patch.levelId;
 
@@ -245,7 +241,6 @@ export function entityToSaveInput(entity: StairEntity): StairSaveInput {
     kind: entity.kind,
     params: entity.params,
     validation: entity.validation,
-    qto: entity.qto,
     levelId: entity.levelId,
     floorId: entity.floorId,
     buildingId: entity.buildingId,

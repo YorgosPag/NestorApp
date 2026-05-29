@@ -3,9 +3,9 @@
  *
  * A stair feeds THREE BOQ rows. Quantities are derived from the canonical mm
  * `StairParams` (the same inputs `computeStairGeometry` consumes), NOT from a
- * stored `qto` field — `StairEntity.qto` is never populated in code, and
- * ADR-395 §4.6 (G5) mandates the bridge be the geometry-derived source of
- * truth (mirrors wall/slab/column/beam `geometry.area`/`volume`).
+ * stored `qto` field — the legacy `qto` field was removed (ADR-395 §4.6 / G5),
+ * and the bridge is the geometry-derived source of truth (mirrors
+ * wall/slab/column/beam `geometry.area`/`volume`).
  *
  * Pure + side-effect free → unit-testable in isolation. Firestore I/O lives in
  * `stair-boq-sync.ts`.

@@ -140,3 +140,26 @@ export function resolveAtoeMapping(
 export function resolveStairComponentMapping(component: StairBoqComponent): AtoeMappingEntry {
   return STAIR_COMPONENT_MAPPING[component];
 }
+
+/**
+ * Derive the primary BOQ quantity from a unit + computed geometry cache.
+ *
+ * SSoT for the geometry→quantity rule shared by the auto-feed bridge
+ * (`BimToBoqBridge`) and the Schedule combined preset (`mapCombined`):
+ *   - `pcs` → 1 (openings count as one piece)
+ *   - `m2`  → `geometry.area`
+ *   - `m3`  → `geometry.volume`
+ *
+ * ADR-395 §4.6 (G5): geometry is the single source of truth for BIM
+ * quantities — the legacy `entity.qto` field was never populated and was
+ * removed. Anything reading a primary quantity reads it from geometry here.
+ */
+export function deriveAtoeQuantity(
+  unit: BOQMeasurementUnit,
+  geometry?: { readonly area?: number; readonly volume?: number } | null,
+): number {
+  if (unit === 'pcs') return 1;
+  if (unit === 'm2') return geometry?.area ?? 0;
+  if (unit === 'm3') return geometry?.volume ?? 0;
+  return 0;
+}

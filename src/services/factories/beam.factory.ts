@@ -30,7 +30,7 @@ import {
   type BeamParams,
 } from '@/subapps/dxf-viewer/bim/types/beam-types';
 import { makeBimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
-import type { BimValidation, BimQuantityTakeoff } from '@/subapps/dxf-viewer/bim/types/bim-base';
+import type { BimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
 import type { IfcPropertySet } from '@/subapps/dxf-viewer/bim/types/ifc-entity-mixin';
 
 /**
@@ -58,8 +58,6 @@ export interface CreateBeamInput {
   pset?: IfcPropertySet;
   /** Optional validation block. Default = empty BimValidation. */
   validation?: BimValidation;
-  /** Optional QTO block. */
-  qto?: BimQuantityTakeoff;
   /** Optional tenant fields — pass-through. */
   companyId?: string;
   projectId?: string;
@@ -100,7 +98,6 @@ export function createBeam(input: CreateBeamInput): BeamEntity {
     ifcType: 'IfcBeam',
     ...(input.visible !== undefined && { visible: input.visible }),
     ...(input.pset !== undefined && { pset: input.pset }),
-    ...(input.qto !== undefined && { qto: input.qto }),
     ...(input.companyId !== undefined && { companyId: input.companyId }),
     ...(input.projectId !== undefined && { projectId: input.projectId }),
     ...(input.buildingId !== undefined && { buildingId: input.buildingId }),

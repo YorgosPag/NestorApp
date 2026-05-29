@@ -2,7 +2,7 @@
  * Tests for BIM → ATOE mapping resolver (ADR-363 Phase 6)
  */
 
-import { resolveAtoeMapping, resolveStairComponentMapping, BIM_TO_ATOE_MAPPING } from '../bim-to-atoe-mapping';
+import { resolveAtoeMapping, resolveStairComponentMapping, deriveAtoeQuantity, BIM_TO_ATOE_MAPPING } from '../bim-to-atoe-mapping';
 
 describe('resolveAtoeMapping', () => {
   describe('wall', () => {
@@ -121,6 +121,34 @@ describe('resolveAtoeMapping', () => {
     it('returns null for unknown slab kind', () => {
       const result = resolveAtoeMapping('slab', 'bridge');
       expect(result).toBeNull();
+    });
+  });
+
+  // ADR-395 §4.6 (G5): geometry→quantity SSoT shared by the BOQ bridge + the
+  // Schedule combined preset (replaces the removed `qto` field).
+  describe('deriveAtoeQuantity (ADR-395 G5)', () => {
+    it('pcs → 1 regardless of geometry', () => {
+      expect(deriveAtoeQuantity('pcs')).toBe(1);
+      expect(deriveAtoeQuantity('pcs', { area: 99, volume: 99 })).toBe(1);
+    });
+
+    it('m2 → geometry.area', () => {
+      expect(deriveAtoeQuantity('m2', { area: 15 })).toBe(15);
+    });
+
+    it('m3 → geometry.volume', () => {
+      expect(deriveAtoeQuantity('m3', { volume: 3.75 })).toBe(3.75);
+    });
+
+    it('returns 0 when the matching geometry dimension is missing', () => {
+      expect(deriveAtoeQuantity('m2')).toBe(0);
+      expect(deriveAtoeQuantity('m3', { area: 15 })).toBe(0);
+      expect(deriveAtoeQuantity('m2', null)).toBe(0);
+    });
+
+    it('returns 0 for unhandled units (m / kg)', () => {
+      expect(deriveAtoeQuantity('m', { area: 5 })).toBe(0);
+      expect(deriveAtoeQuantity('kg', { volume: 5 })).toBe(0);
     });
   });
 

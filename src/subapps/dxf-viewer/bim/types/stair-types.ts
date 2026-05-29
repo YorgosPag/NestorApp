@@ -4,7 +4,7 @@
  * Discriminated union over 11 `StairKind` variants. Storage canonical in mm
  * (ISO/Firestore/DXF); display user switchable cm/mm via formatter SSoT.
  *
- * StairEntity extends BimEntity<StairKind, StairParams, StairGeometry, StairQTO>
+ * StairEntity extends BimEntity<StairKind, StairParams, StairGeometry>
  * (ADR-363 Phase 0.5 migration).
  *
  * NOTE: Uses rendering/types/Types Point3D (z: required) — NOT bim-base Point3D (z?: optional).
@@ -16,7 +16,7 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { Point2D, Point3D } from '../../rendering/types/Types';
 export type { Point2D, Point3D };
-import type { BimEntity, BimLock, BimQuantityTakeoff } from './bim-base';
+import type { BimEntity, BimLock } from './bim-base';
 
 // ============================================================================
 // 3D GEOMETRY PRIMITIVES (stair-local; z required — uses rendering Point3D)
@@ -470,21 +470,6 @@ export interface StairValidationState {
 }
 
 // ============================================================================
-// QTO — IFC4 Qto_StairBaseQuantities (G23, §6.5)
-// ============================================================================
-
-export interface StairQTO extends BimQuantityTakeoff {
-  readonly grossVolume: number; // m³
-  readonly netVolume: number; // m³
-  readonly grossFootprintArea: number; // m²
-  readonly netSideArea: number; // m²
-  readonly height: number; // mm
-  readonly length: number; // mm
-  readonly handrailLinearMeters: number; // m
-  readonly treadCladdingArea: number; // m²
-}
-
-// ============================================================================
 // STAIR ENTITY — extends BimEntity<> (ADR-363 Phase 0.5)
 // ============================================================================
 
@@ -497,16 +482,18 @@ export interface StairEditingLock extends BimLock {
 }
 
 /**
- * StairEntity extends BimEntity<StairKind, StairParams, StairGeometry, StairQTO>.
+ * StairEntity extends BimEntity<StairKind, StairParams, StairGeometry>.
  *
  * kind, params, geometry come from BimEntity<>.
  * validation overrides BimValidation with the richer StairValidationState (structural subtype).
- * qto overrides BimQuantityTakeoff with stair-specific QTO (IFC4 Qto_StairBaseQuantities).
  * editingBy uses StairEditingLock (extends BimLock — has userId).
+ *
+ * ADR-395 §4.6 (G5): no `qto` field — stair quantities are geometry-derived
+ * via `computeStairBoqQuantities` (BOQ sync + Schedule combined preset).
  *
  * ADR-363 Phase 0.5: migrated from types/stair.ts. Barrel re-export preserved at old path.
  */
-export interface StairEntity extends BimEntity<StairKind, StairParams, StairGeometry, StairQTO> {
+export interface StairEntity extends BimEntity<StairKind, StairParams, StairGeometry> {
   readonly type: 'stair';
   /** Overrides BimValidation with richer stair-specific validation state. */
   readonly validation: StairValidationState;
@@ -535,7 +522,6 @@ export interface StairDoc {
   readonly params: StairParams;
   readonly geometry?: StairGeometry; // optional — re-derivable from params
   readonly validation: StairValidationState;
-  readonly qto?: StairQTO;
 
   readonly editingBy?: StairEditingLock;
 

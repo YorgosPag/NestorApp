@@ -438,7 +438,6 @@ describe('entityToSaveInput', () => {
       kind: 'straight',
       params: MINIMAL_PARAMS,
       validation: MINIMAL_VALIDATION,
-      qto: undefined,
     } as unknown as StairEntity;
 
     const input = entityToSaveInput(entity);

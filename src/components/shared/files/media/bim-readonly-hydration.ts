@@ -183,6 +183,5 @@ export function hydrateStair(doc: StairDoc): StairEntity {
     buildingId: doc.buildingId,
     visible: true,
     editingBy: doc.editingBy,
-    qto: doc.qto,
   } as StairEntity;
 }

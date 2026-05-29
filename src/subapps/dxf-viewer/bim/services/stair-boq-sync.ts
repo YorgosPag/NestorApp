@@ -11,7 +11,7 @@
  *   - `boq_bim_<stairId>_handrail` — OIK-12.01, m
  *
  * Quantities are geometry-derived (`computeStairBoqQuantities`), mirroring the
- * wall/slab/column/beam path — `StairEntity.qto` is never populated in code
+ * wall/slab/column/beam path — the legacy `qto` field was removed
  * (ADR-395 §4.6 / G5). A component whose quantity resolves to 0 (e.g. handrail
  * on a stair with no rails, concrete on a steel-grating stair) is deleted
  * instead of written as a noise row — mirrors the opening signature-group
