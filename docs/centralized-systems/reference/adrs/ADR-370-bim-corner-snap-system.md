@@ -4,7 +4,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | ✅ **IMPLEMENTED** 2026-05-22 — Phases 2A-2F complete. 27 files created/edited. Integration test (S1-S5) added 2026-05-22. Bugfix: SnapContext.ALL_MODES missing BIM types fixed 2026-05-22. Extension: Wall Face Corner Projection Snap (Revit-style) added 2026-05-22. |
+| **Status** | ✅ **IMPLEMENTED** 2026-05-22 — Phases 2A-2F complete. 27 files created/edited. Integration test (S1-S5) added 2026-05-22. Bugfix: SnapContext.ALL_MODES missing BIM types fixed 2026-05-22. Extension: Wall Face Corner Projection Snap (Revit-style) added 2026-05-22. Extension (ADR-398): Column Body Corner Projection Snap — move/resize/draw parity, added 2026-05-29 (§17). |
 | **Date** | 2026-05-22 |
 | **Category** | DXF Viewer — Snapping / BIM Precision |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-370-bim-corner-snap-system.md` (official number: ADR-371) |
@@ -831,10 +831,78 @@ Mirror `ColumnCenterSnapEngine.test.ts` (10 test cases each):
 | 2026-05-22 | Rename | ADR number corrected from ADR-370 → ADR-371 (collision with ADR-370-bim-readonly-visualization.md). Filename preserved for git-blame. |
 | 2026-05-22 | Bugfix | `SnapContext.ALL_MODES` δεν περιλάμβανε BIM/DIM snap types → `enabledModes` Set ποτέ δεν τα περιλάμβανε → `useSnapManager.updateSettings({ enabledTypes })` αντικαθιστούσε το `DEFAULT_PRO_SNAP_SETTINGS.enabledTypes` με Set χωρίς BIM types → οι 5 BIM corner snap engines ποτέ δεν αρχικοποιούνταν. Fix: +8 types στο `ALL_MODES` + matching default enabled state. File: `SnapContext.tsx`. |
 | 2026-05-22 | Extension | **Wall Face Corner Projection Snap** (Revit-style). Όταν κάνει drag ένα endpoint grip τοίχου, τα face corners (cursor ± halfThickness × perp) ελκύονται στις BIM γωνίες γειτονικών οντοτήτων. Τα νέα αρχεία: `GripDragStore.ts` (imperative grip context store), `wall-face-corner-snap.ts` (projection utility). Edits: `useUnifiedGripInteraction.ts` (set/clearActiveDragGrip), `mouse-handler-move.ts` + `mouse-handler-up.ts` (face corner projection block). |
+| 2026-05-29 | Extension (ADR-398) | **Column Body Corner Projection Snap** — column parity με τον τοίχο (§17). Όταν ο χρήστης μετακινεί (hot-grip 3-click), αλλάζει διαστάσεις (resize grips) ή σχεδιάζει κολώνα, οι 4 footprint γωνίες της προβάλλονται και η πιο κοντινή ελκύεται σε στόχο (το label δείχνει τον τύπο στόχου, π.χ. «Γωνία κολώνας»). NEW: `bim/columns/column-corner-snap.ts` (core SSoT) + `column-corner-snap.test.ts` (9/9). Refactor (params-based core, μηδέν duplication): `column-anchors.ts` (`getColumnAnchorWorldPointsFromParams`), `column-corner-anchors.ts` (`getColumnCornerWorldPointsFromParams`). Bridge: `GripDragStore.ts` (+`dragAnchor` + `setActiveDragGripAnchor`), `grip-hotgrip-actions.ts` (publish move base), `grip-mouse-handlers.ts` (publish columnGripKind + resize anchor), `column-tool-bridge-store.ts` + `useColumnTool.ts` (+`getSceneUnits`). Consumers: `mouse-handler-move.ts` (grip + draw branches), `mouse-handler-up.ts` (grip + draw commit). |
 
 ---
 
-## 16. Related Work & References
+## 17. Column Body Corner Projection Snap (ADR-398 extension, 2026-05-29)
+
+### 17.1 Πρόβλημα / parity gap
+
+Το §5.4 + §6.4 (`ColumnCornerSnapEngine`) δίνει **passive** snap: ο κέρσορας
+κολλάει στις γωνίες **άλλων** κολωνών (label «Γωνία κολώνας»). Έλειπε το
+**active projection** του τοίχου (Changelog 2026-05-22 «Wall Face Corner
+Projection Snap»): όταν ο χρήστης κινεί/σχεδιάζει την οντότητα, οι **δικές της**
+γωνίες να προβάλλονται και να ελκύονται σε στόχους.
+
+### 17.2 Διαφορά από τον τοίχο
+
+| | Τοίχος (ADR-371) | Κολώνα (ADR-398) |
+|---|---|---|
+| Operation | drag endpoint grip | μετακίνηση σώματος / resize / σχεδίαση |
+| Cursor | ≈ γωνία (axis), offset ±πάχος/2 | base point / resize handle / anchor |
+| Σταθερό σημείο | άλλο άκρο | drag anchor (από `GripDragStore.dragAnchor`) |
+| Corners | 2 face corners | 4 (N για polygon) footprint corners, best-wins |
+
+### 17.3 SSoT αλυσίδα (zero duplication)
+
+```
+ColumnParams (proposed)
+  → applyColumnGripDrag(gripKind, {delta})   // move/resize — ίδιος transform με commit
+  → buildDefaultColumnParams(cursor, …)      // draw
+        ↓
+  getColumnCornerWorldPointsFromParams(params)   // params-based core (column-corner-anchors → column-anchors)
+        ↓
+  column-corner-snap.ts :: projectAndSnap → findSnapPoint σε κάθε γωνία, best (self-match φιλτράρεται)
+        ↓
+  { snapResult (→ indicator + label στον στόχο), adjustedCursorPos (→ ghost anchor / commit) }
+```
+
+### 17.4 Wiring (4 consumers, single core)
+
+- **Move** (hot-grip 3-click, `column-center`): base point γράφεται στο
+  `GripDragStore.dragAnchor` μέσω `setActiveDragGripAnchor` (grip-hotgrip-actions
+  await-base). `mouse-handler-move` (preview) + `mouse-handler-up` (commit)
+  καλούν `findColumnGripCornerSnap` → override του effective cursor.
+- **Resize** (press-drag `column-width`/`-depth`/variants): `grip-mouse-handlers`
+  publish-άρει `columnGripKind` + `dragAnchor = grip.position`. Ο ίδιος consumer·
+  το `applyColumnGripDrag` καταναλώνει μόνο το local-axis component της διόρθωσης.
+- **Draw** (placement): `mouse-handler-move` (ghost: `ImmediateSnap.point =
+  adjustedCursorPos`, indicator: `fullSnapResult = target`) + `mouse-handler-up`
+  (commit) καλούν `findColumnDrawCornerSnap` με params από `columnToolBridgeStore`
+  (+`getSceneUnits`). Ghost === commit (μάθημα ADR-397).
+
+`column-rotation` εξαιρείται (γωνιακή πράξη, όχι corner-alignment).
+
+### 17.5 Files
+
+- **NEW**: `bim/columns/column-corner-snap.ts`, `__tests__/column-corner-snap.test.ts` (9/9).
+- **MOD**: `bim/columns/column-anchors.ts`, `bim/columns/column-corner-anchors.ts`,
+  `systems/cursor/GripDragStore.ts`, `hooks/grips/grip-hotgrip-actions.ts`,
+  `hooks/grips/grip-mouse-handlers.ts`, `systems/cursor/mouse-handler-move.ts`,
+  `systems/cursor/mouse-handler-up.ts`,
+  `ui/ribbon/hooks/bridge/column-tool-bridge-store.ts`, `hooks/drawing/useColumnTool.ts`.
+
+### 17.6 Google-Level (N.7.2)
+
+Proactive (projection at event time)· no race (pure core, single SSoT)·
+idempotent· belt-and-suspenders (preview+commit share core)· SSoT (one core,
+params-based anchors reused)· await (sync)· lifecycle owner explicit
+(`GripDragStore` bridge + bridge store). ✅
+
+---
+
+## 18. Related Work & References
 
 - **ADR-040** — Preview canvas perf (lifecycle owner = useGlobalSnapSceneSync).
 - **ADR-087** — Snap engine config centralization (tolerance-config.ts).

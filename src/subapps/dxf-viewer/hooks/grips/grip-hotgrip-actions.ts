@@ -18,6 +18,7 @@ import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store'
 import { commitDxfGripDragModeAware } from './grip-commit-adapters';
 import { GripModeStore } from '../../systems/grip/GripModeStore';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
+import { setActiveDragGripAnchor } from '../../systems/cursor/GripDragStore';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import i18next from 'i18next';
 
@@ -84,6 +85,9 @@ export function advanceHotGripPick(worldPos: Point2D, ctx: HotGripActionCtx): vo
       anchorRef.current = p;
       hotGripStepRef.current = 'tracking';
       setCurrentWorldPos(p);
+      // ADR-398 — publish the move base so the column Body Corner Projection snap
+      // can compute the proposed footprint (cursor − base = translation delta).
+      setActiveDragGripAnchor(p);
     } else {
       anchorRef.current = null;
       hotGripStepRef.current = 'await-ref-start';

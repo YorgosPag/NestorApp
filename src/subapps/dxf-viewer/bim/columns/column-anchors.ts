@@ -41,6 +41,7 @@ import {
   MAX_POLYGON_SIDES,
   MIN_POLYGON_SIDES,
 } from '../types/column-types';
+import { mmScaleFor } from '../../utils/scene-units';
 
 const DEG_TO_RAD = Math.PI / 180;
 const SQRT2_HALF = Math.SQRT2 / 2;
@@ -72,7 +73,19 @@ export interface ColumnAnchorWorldPoint {
 export function getColumnAnchorWorldPoints(
   column: Readonly<ColumnEntity>,
 ): readonly ColumnAnchorWorldPoint[] {
-  const { params } = column;
+  return getColumnAnchorWorldPointsFromParams(column.params);
+}
+
+/**
+ * ADR-398 — params-based core of {@link getColumnAnchorWorldPoints}. Exposed so
+ * the corner-projection snap (`column-corner-snap.ts`) can compute the anchors of
+ * a PROPOSED column (drag/draw preview params) without first materializing a full
+ * `ColumnEntity`. The entity-based variant delegates here — single SSoT, zero
+ * duplication of the local→world transform.
+ */
+export function getColumnAnchorWorldPointsFromParams(
+  params: Readonly<ColumnParams>,
+): readonly ColumnAnchorWorldPoint[] {
   const result: ColumnAnchorWorldPoint[] = [];
   for (const anchor of ANCHOR_CYCLE_ORDER) {
     const local = anchorLocalPoint(anchor, params);
@@ -134,8 +147,15 @@ function circularAnchorLocal(anchor: ColumnAnchor, radius: number): Point2D {
  * bbox depends on N).
  */
 function localToWorld(local: Point2D, params: ColumnParams): Point2D {
+  // ADR-398 — the mm local offsets must be converted to scene units (× mmScaleFor)
+  // before being added to `position` (which is already in scene units). Without
+  // this, meter/cm scenes placed the anchors 1000×/10× off the column → the corner
+  // snap candidates landed far off-screen and never matched the visible corners.
+  // Mirrors `computeColumnGeometry` (the drawn footprint) + `column-grip-utils`
+  // (ADR-397 #2 grip fix). `position` is NOT scaled (already scene units).
+  const s = mmScaleFor(params);
   if (params.kind === 'circular') {
-    return { x: params.position.x + local.x, y: params.position.y + local.y };
+    return { x: params.position.x + local.x * s, y: params.position.y + local.y * s };
   }
   const { dx, dy } = ANCHOR_OFFSETS[params.anchor];
   let dimX: number;
@@ -154,7 +174,7 @@ function localToWorld(local: Point2D, params: ColumnParams): Point2D {
   const ly = local.y + shiftY;
   const rx = lx * cos - ly * sin;
   const ry = lx * sin + ly * cos;
-  return { x: params.position.x + rx, y: params.position.y + ry };
+  return { x: params.position.x + rx * s, y: params.position.y + ry * s };
 }
 
 // ─── Polygon bbox SSoT (Phase 8C) ───────────────────────────────────────────

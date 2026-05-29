@@ -261,6 +261,8 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       setKind,
       setAnchor,
       setParamOverrides,
+      // ADR-398 — expose scene units for the Body Corner Projection snap.
+      getSceneUnits: () => getSceneUnitsRef.current?.() ?? 'mm',
     });
     return () => {
       // Only clear if we're the current publisher (prevents wiping a newer

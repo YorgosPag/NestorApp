@@ -240,8 +240,14 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     anchorRef.current = nearGrip.position;
     setCurrentWorldPos(nearGrip.position);
     if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
-    // ADR-371 extension — expose active grip to mouse handlers for face corner projection snap
-    setActiveDragGrip({ entityId: nearGrip.entityId!, gripKind: nearGrip.wallGripKind ?? null });
+    // ADR-371 extension — expose active grip to mouse handlers for face corner projection snap.
+    // ADR-398 — also publish the column grip kind + the resize/drag anchor (grip
+    // position) so the column Body Corner Projection snap can run on press-drag.
+    setActiveDragGrip({
+      entityId: nearGrip.entityId!,
+      gripKind: nearGrip.wallGripKind ?? nearGrip.columnGripKind ?? null,
+      dragAnchor: nearGrip.position,
+    });
     // ADR-357 Phase 12 — mark the start of the grip-hot session so the
     // right-click `Undo` extra can bound the global CommandHistory to
     // commands produced during this session. Idempotent (no-op if already armed).

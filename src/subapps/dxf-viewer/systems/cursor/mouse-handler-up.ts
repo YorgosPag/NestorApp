@@ -26,7 +26,14 @@ import type { Entity } from '../../types/entities';
 import { isDimLineRefPhase } from '../../hooks/dimensions/dim-skip-snap';
 import { getActiveDragGrip } from './GripDragStore';
 import { findWallFaceCornerSnap } from './wall-face-corner-snap';
-import { isWallEntity } from '../../types/entities';
+import { isWallEntity, isColumnEntity } from '../../types/entities';
+import {
+  findColumnGripCornerSnap,
+  findColumnDrawCornerSnap,
+  isColumnCornerSnapGrip,
+} from '../../bim/columns/column-corner-snap';
+import type { ColumnGripKind } from '../../hooks/useGripMovement';
+import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { LassoStore, computeLassoMode } from './LassoStore';
 import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
 
@@ -103,6 +110,9 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
       if (upSnap) {
         const upScreenPos = getScreenPosFromEvent(e, upSnap);
         let upWorldPos = screenToWorldWithSnapshot(upScreenPos, transform, upSnap);
+        // ADR-398 — raw cursor (pre center-snap) for the column corner projection,
+        // so the committed delta matches the preview (which used the raw cursor).
+        const rawUpWorldPos = upWorldPos;
 
         if (snapEnabled && findSnapPoint) {
           const snapResult = findSnapPoint(upWorldPos.x, upWorldPos.y);
@@ -129,6 +139,29 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
               );
               if (faceSnap) {
                 upWorldPos = faceSnap.adjustedAxisPos;
+              }
+            }
+          }
+
+          // ADR-398 — Column Body Corner Projection Snap commit (move + resize).
+          // Mirror of the move handler so the committed position equals the ghost.
+          if (
+            activeDragGrip &&
+            activeDragGrip.dragAnchor &&
+            scene &&
+            isColumnCornerSnapGrip(activeDragGrip.gripKind)
+          ) {
+            const draggedColumn = scene.entities?.find(en => en.id === activeDragGrip.entityId) as unknown as import('../../types/entities').Entity | undefined;
+            if (draggedColumn && isColumnEntity(draggedColumn)) {
+              const cornerSnap = findColumnGripCornerSnap(
+                draggedColumn,
+                activeDragGrip.gripKind as ColumnGripKind,
+                activeDragGrip.dragAnchor,
+                rawUpWorldPos,
+                findSnapPoint,
+              );
+              if (cornerSnap) {
+                upWorldPos = cornerSnap.adjustedCursorPos;
               }
             }
           }
@@ -161,9 +194,25 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
       // same predicate (symmetric with `drawing-hover-handler` on the hover side).
       const dimLineRefPhase = isDimLineRefPhase();
       if (snapEnabled && findSnapPoint && !dimLineRefPhase) {
-        const snapResult = findSnapPoint(worldPoint.x, worldPoint.y);
-        if (snapResult && snapResult.found && snapResult.snappedPoint) {
-          worldPoint = snapResult.snappedPoint;
+        // ADR-398 — Column draw: a corner projection match shifts the commit
+        // anchor so the corner lands on the target (matches the ghost). Falls
+        // back to the plain cursor snap when no corner is near a target.
+        const colHandle = activeTool === 'column' ? columnToolBridgeStore.get() : null;
+        const drawCorner = colHandle?.isActive
+          ? findColumnDrawCornerSnap(
+              worldPoint,
+              { ...colHandle.overrides, kind: colHandle.kind, anchor: colHandle.anchor },
+              colHandle.getSceneUnits(),
+              findSnapPoint,
+            )
+          : null;
+        if (drawCorner) {
+          worldPoint = drawCorner.adjustedCursorPos;
+        } else {
+          const snapResult = findSnapPoint(worldPoint.x, worldPoint.y);
+          if (snapResult && snapResult.found && snapResult.snappedPoint) {
+            worldPoint = snapResult.snappedPoint;
+          }
         }
       }
 

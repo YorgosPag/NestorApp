@@ -25,8 +25,11 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { ColumnEntity } from '../types/column-types';
-import { getColumnAnchorWorldPoints } from './column-anchors';
+import type { ColumnEntity, ColumnParams } from '../types/column-types';
+import {
+  getColumnAnchorWorldPoints,
+  getColumnAnchorWorldPointsFromParams,
+} from './column-anchors';
 
 // ─── Tagged result ─────────────────────────────────────────────────────────────
 
@@ -60,7 +63,24 @@ const CORNER_LABELS = new Set<ColumnCornerLabel>(['nw', 'ne', 'se', 'sw']);
 export function getColumnCornerWorldPoints(
   column: Readonly<ColumnEntity>,
 ): readonly ColumnCornerWorldPoint[] {
-  const all = getColumnAnchorWorldPoints(column);
+  return filterCorners(getColumnAnchorWorldPoints(column));
+}
+
+/**
+ * ADR-398 — params-based core of {@link getColumnCornerWorldPoints}. Used by the
+ * corner-projection snap to derive the 4 diagonal corners of a PROPOSED column
+ * (drag/draw preview params) without a full `ColumnEntity`. Delegates to the
+ * shared 9-anchor SSoT — same filter, zero duplication.
+ */
+export function getColumnCornerWorldPointsFromParams(
+  params: Readonly<ColumnParams>,
+): readonly ColumnCornerWorldPoint[] {
+  return filterCorners(getColumnAnchorWorldPointsFromParams(params));
+}
+
+function filterCorners(
+  all: readonly { readonly anchor: string; readonly point: Point2D }[],
+): readonly ColumnCornerWorldPoint[] {
   const result: ColumnCornerWorldPoint[] = [];
   for (const { anchor, point } of all) {
     if (CORNER_LABELS.has(anchor as ColumnCornerLabel)) {

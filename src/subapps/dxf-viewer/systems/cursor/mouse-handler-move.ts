@@ -23,7 +23,14 @@ import { dperf } from '../../debug';
 import type { CentralizedMouseHandlersProps, MouseHandlerRefs, SnapManagerAPI, SnapResultItem, DEBUG_MOUSE_HANDLERS } from './mouse-handler-types';
 import { getActiveDragGrip } from './GripDragStore';
 import { findWallFaceCornerSnap } from './wall-face-corner-snap';
-import { isWallEntity } from '../../types/entities';
+import { isWallEntity, isColumnEntity } from '../../types/entities';
+import {
+  findColumnGripCornerSnap,
+  findColumnDrawCornerSnap,
+  isColumnCornerSnapGrip,
+} from '../../bim/columns/column-corner-snap';
+import type { ColumnGripKind } from '../../hooks/useGripMovement';
+import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { LassoStore } from './LassoStore';
 import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
 
@@ -179,6 +186,45 @@ export function useMouseMoveHandler({
           }
         }
       }
+
+      // ADR-398 — Column Body Corner Projection Snap (move + resize). The dragged
+      // column's own footprint corners project onto nearby targets so a corner
+      // snaps exactly, mirroring the wall face-corner projection above. The drag
+      // anchor (move base / resize handle) rides on GripDragStore.
+      if (
+        activeDragGrip &&
+        activeDragGrip.dragAnchor &&
+        scene &&
+        isColumnCornerSnapGrip(activeDragGrip.gripKind)
+      ) {
+        const draggedColumn = scene.entities?.find(en => en.id === activeDragGrip.entityId) as unknown as import('../../types/entities').Entity | undefined;
+        if (draggedColumn && isColumnEntity(draggedColumn)) {
+          const cornerSnap = findColumnGripCornerSnap(
+            draggedColumn,
+            activeDragGrip.gripKind as ColumnGripKind,
+            activeDragGrip.dragAnchor,
+            worldPos,
+            findSnapPoint!,
+          );
+          if (cornerSnap) {
+            moveWorldPos = cornerSnap.adjustedCursorPos;
+            setSnapResults([{
+              point: cornerSnap.snapResult.snappedPoint!,
+              type: cornerSnap.snapResult.activeMode || 'default',
+              entityId: cornerSnap.snapResult.snapPoint?.entityId || null,
+              distance: cornerSnap.snapResult.snapPoint?.distance || 0,
+              priority: 0,
+            }]);
+            setFullSnapResult(cornerSnap.snapResult);
+            setImmediateSnap({
+              found: true,
+              point: cornerSnap.snapResult.snappedPoint!,
+              mode: cornerSnap.snapResult.activeMode || 'endpoint',
+              entityId: cornerSnap.snapResult.snapPoint?.entityId,
+            });
+          }
+        }
+      }
     }
 
     onMouseMove?.(screenPos, moveWorldPos);
@@ -204,7 +250,23 @@ export function useMouseMoveHandler({
         snapThrottle.lastSnapTime = snapNow;
 
         try {
-          const snapResult = withPerf('snap-find', () => findSnapPoint(worldPos.x, worldPos.y));
+          // ADR-398 — Column draw: project the would-be column's corners; a
+          // corner match wins over the plain center-cursor snap. The indicator
+          // shows the target corner; the ghost anchor (ImmediateSnap.point) is
+          // shifted to `adjustedCursorPos` so the corner lands on the target.
+          const colHandle = activeTool === 'column' ? columnToolBridgeStore.get() : null;
+          const drawCorner = colHandle?.isActive
+            ? findColumnDrawCornerSnap(
+                worldPos,
+                { ...colHandle.overrides, kind: colHandle.kind, anchor: colHandle.anchor },
+                colHandle.getSceneUnits(),
+                findSnapPoint,
+              )
+            : null;
+
+          const snapResult = drawCorner
+            ? drawCorner.snapResult
+            : withPerf('snap-find', () => findSnapPoint(worldPos.x, worldPos.y));
 
           if (snapResult && snapResult.found && snapResult.snappedPoint) {
             const sx = snapResult.snappedPoint.x;
@@ -226,7 +288,8 @@ export function useMouseMoveHandler({
                 setFullSnapResult(snapResult);
                 setImmediateSnap({
                   found: true,
-                  point: snapResult.snappedPoint!,
+                  // ADR-398 — ghost anchor follows the corner-aligned cursor.
+                  point: drawCorner ? drawCorner.adjustedCursorPos : snapResult.snappedPoint!,
                   mode: snapResult.activeMode || 'endpoint',
                   entityId: snapResult.snapPoint?.entityId,
                 });

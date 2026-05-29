@@ -42,6 +42,12 @@ export interface ColumnToolBridgeHandle {
   setKind(kind: ColumnKind): void;
   setAnchor(anchor: ColumnAnchor): void;
   setParamOverrides(overrides: ColumnParamOverrides): void;
+  /**
+   * ADR-398 — active scene units, so the Column Body Corner Projection snap
+   * (`mouse-handler-move` / `mouse-handler-up`) can build the would-be column at
+   * the cursor with correct mm→scene conversion during placement.
+   */
+  getSceneUnits(): SceneUnits;
 }
 
 type Listener = () => void;
