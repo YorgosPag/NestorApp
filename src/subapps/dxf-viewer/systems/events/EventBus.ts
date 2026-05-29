@@ -250,6 +250,12 @@ export interface DrawingEventMap {
   // Carries the post-move entities directly so listeners never call
   // getLevelScene() (which returns stale React state at emit time).
   'bim:entities-moved': { movedEntities: ReadonlyArray<AnySceneEntity> };
+  // ADR-396 P7 Part B — thermal envelope applied to a floor: per-element
+  // `envelopeLayer`/`revealInsulation` written into the scene. Carries the
+  // changed entities directly (same stale-state guard as `bim:entities-moved`)
+  // so the existing persistence hooks (column/beam/slab via the shared moved
+  // effect + opening via its own listener) save + audit + structural-BOQ them.
+  'bim:envelope-applied': { entities: ReadonlyArray<AnySceneEntity> };
   /** ADR-369 Q8.2 — ribbon IFC button → open PsetEditorHost dialog. */
   'bim:pset-editor-open': { entityId: string; levelId: string; entityType: string };
   /** ADR-369 Q8.3 — ribbon IFC Export button → IfcExportHost downloads .ifc file. */

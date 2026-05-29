@@ -186,8 +186,12 @@ export interface BOQItem {
   /** ID του BIM entity που δημιούργησε αυτό το item (wall/opening/slab/column/beam/stair ID). */
   sourceEntityId?: string | null;
 
-  /** Τύπος BIM entity πηγής. */
-  sourceEntityType?: 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | null;
+  /**
+   * Τύπος BIM entity πηγής. `'envelope'` (ADR-396 P7 Part B) = συγκεντρωτική
+   * γραμμή θερμοπρόσοψης ανά ζώνη+όροφο (δεν αντιστοιχεί σε ένα entity — id
+   * `boq_env_<floorId>_<zone>`). sourceType παραμένει `'bim-auto'`.
+   */
+  sourceEntityType?: 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | 'envelope' | null;
 
   /** Αν true: ο χρήστης το αποσύνδεσε από BIM — δεν ενημερώνεται αυτόματα πλέον. */
   detached?: boolean | null;

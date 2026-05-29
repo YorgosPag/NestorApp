@@ -332,6 +332,21 @@ export function useOpeningPersistence(
     await persist(opening);
   }, [persist]);
 
+  // ADR-396 P7 Part B — thermal envelope applied → persist Z4 reveal insulation
+  // on exterior openings. Openings are NOT in the shared moved-persist family
+  // (`useBimEntityMovedPersistEffect`), so they need their own listener. Payload
+  // carries the changed entities directly (no stale getLevelScene read).
+  useEffect(() => {
+    return EventBus.on('bim:envelope-applied', ({ entities }) => {
+      if (!serviceRef.current) return;
+      for (const entity of entities) {
+        if (!isOpening(entity)) continue;
+        dirtyIdsRef.current.add(entity.id);
+        void persist(entity);
+      }
+    });
+  }, [persist]);
+
   // Phase 2 — Delete opening: remove από Firestore + scene + audit.
   const deleteOpening = useCallback(async (openingId: string) => {
     const svc = serviceRef.current;

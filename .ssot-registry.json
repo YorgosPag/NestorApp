@@ -3679,6 +3679,23 @@
       "addedByAdr": "ADR-363",
       "tier": 3
     },
+    "thermal-envelope": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/services/envelope-element-applicator.ts",
+      "description": "ADR-396 P7 (2026-05-29): SSoT for ETICS thermal-envelope per-element application + BOQ. Per-element envelopeLayer/revealInsulation generation MUST go through envelope-element-applicator.ts; per-zone+floor BOQ rows (boq_env_<floorId>_<zone>) MUST be built only by envelope-boq-sync.ts; the EnvelopeLayer/ThermalEnvelopeSpec Zod schemas live only in thermal-envelope.schemas.ts. Forbidden: re-declaring EnvelopeLayerSchema or constructing boq_env_ rows outside these files.",
+      "forbiddenPatterns": [
+        "(const|let)\\s+EnvelopeLayerSchema\\s*=",
+        "`boq_env_"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/services/envelope-element-applicator.ts",
+        "src/subapps/dxf-viewer/bim/services/envelope-boq-sync.ts",
+        "src/subapps/dxf-viewer/bim/types/thermal-envelope.schemas.ts",
+        "src/subapps/dxf-viewer/bim/services/__tests__/"
+      ],
+      "addedDate": "2026-05-29",
+      "addedByAdr": "ADR-396",
+      "tier": 3
+    },
     "escape-command-bus": {
       "ssotFile": "src/subapps/dxf-viewer/systems/escape-bus/EscapeCommandBus.ts",
       "description": "All Escape-key dispatch in the DXF viewer MUST go through escapeBus.register() or the useEscapeHandler() hook (ADR-364). Direct window/document keydown listeners that branch on e.key === 'Escape' are forbidden outside the escape-bus folder. Allowlist contains the three legacy capture hooks that retain non-ESC keys + the registrations shim + tooling that needs to synthesize a fake Escape event for Strategy-handler routing.",

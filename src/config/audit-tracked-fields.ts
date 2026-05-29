@@ -661,6 +661,9 @@ const COLUMN_TRACKED_FIELDS_RAW: Record<string, string> = {
   tshape: 'tshape',
   polygon: 'polygon',
   ishape: 'ishape',
+  // ADR-396 P7 Part B — ETICS exterior insulation layer (Z1). Object
+  // (materialId+thickness_m+zone) serialized as JSON scalar, mirror wall `dna`.
+  envelopeLayer: 'envelopeLayer',
 };
 
 export const COLUMN_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
@@ -679,6 +682,9 @@ const SLAB_TRACKED_FIELDS_RAW: Record<string, string> = {
   offsetFromStorey: 'offsetFromStorey',
   // `slope` is a nested object (direction/angle/pivotEdge) — JSON scalar.
   slope: 'slope',
+  // ADR-396 P7 Part B — ETICS exterior insulation layer (Z2 πιλοτή / Z3 δώμα).
+  // Object serialized as JSON scalar, mirror wall `dna`.
+  envelopeLayer: 'envelopeLayer',
 };
 
 export const SLAB_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
@@ -697,6 +703,8 @@ const BEAM_TRACKED_FIELDS_RAW: Record<string, string> = {
   profileDesignation: 'profileDesignation',
   storeyId: 'storeyId',
   offsetFromStorey: 'offsetFromStorey',
+  // ADR-396 P7 Part B — ETICS exterior insulation layer (Z1). JSON scalar.
+  envelopeLayer: 'envelopeLayer',
 };
 
 export const BEAM_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
@@ -718,6 +726,8 @@ const OPENING_TRACKED_FIELDS_RAW: Record<string, string> = {
   mark: 'mark',
   markIsManual: 'markIsManual',
   tagVisible: 'tagVisible',
+  // ADR-396 P7 Part B — ETICS reveal insulation (Z4 περβάζια). JSON scalar.
+  revealInsulation: 'revealInsulation',
 };
 
 export const OPENING_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
