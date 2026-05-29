@@ -201,6 +201,18 @@ export function useColumnPersistence(
           }
         }
 
+        // ADR-397 — seed the "known/last-saved" baseline for every Firestore doc
+        // so a subsequently edited column (loaded this session, not freshly drawn)
+        // passes the auto-save gate (`lastSavedParamsRef.has(id)`) and its dirty
+        // flag protects the local edit from this snapshot. Without this, edits to
+        // pre-existing columns were silently skipped → snapshot reverted the
+        // rotation/move (snap-back). Mirror of useWallPersistence.
+        for (const doc of docs) {
+          if (!lastSavedParamsRef.current.has(doc.id)) {
+            lastSavedParamsRef.current.set(doc.id, doc.params);
+          }
+        }
+
         // ADR-390 — replaces buggy `neverSaved` guard.
         for (const [id, entity] of sceneColumns) {
           if (docsById.has(id)) continue;
@@ -236,7 +248,21 @@ export function useColumnPersistence(
     setSaveState('saving');
     setError(null);
     try {
-      await svc.saveColumn(entityToSaveInput(entity));
+      // ADR-397 — setDoc (saveColumn) only on first write — it stamps createdAt,
+      // which the Firestore UPDATE rule treats as immutable. Existing columns go
+      // through updateColumn (updateDoc) so re-edits (rotation/move/resize)
+      // persist instead of being silently rejected → snapshot revert / snap-back.
+      // Mirror of useWallPersistence (saveWall/updateWall split).
+      if (isNew) {
+        await svc.saveColumn(entityToSaveInput(entity));
+      } else {
+        await svc.updateColumn(entity.id, {
+          params: entity.params,
+          validation: entity.validation,
+          geometry: entity.geometry,
+          layerId: entity.layerId,
+        });
+      }
       lastSavedParamsRef.current.set(entity.id, entity.params);
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);

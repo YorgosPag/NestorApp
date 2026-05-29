@@ -259,6 +259,17 @@ Column ήδη: `applyColumnGripDrag` → `UpdateColumnParamsCommand` → `comput
 5. `draw-ghost-entity.ts` (ghost renderer) — **καμία `case 'column'`** → ακόμα κι αν περνούσε το transformed column, δεν ζωγραφιζόταν. +footprint polygon (mirror beam).
 
 Τώρα: build→preview→apply→draw όλα entity-agnostic για column. Ghost παρ === commit. +3 tests (`apply-entity-preview-column.test.ts`: move + 6-click rotation orbit + no-op). **Μάθημα:** ο commit path ≠ preview path· για πλήρη grip parity ένα entity πρέπει να είναι και στα ΔΥΟ (+ στο `computeDxfEntityGrips` + HitTestingService).
+
+## 12f. Snap-back μετά την περιστροφή — column PERSISTENCE διέφερε από wall SSoT (2026-05-29)
+
+Giorgio: «κάνω περιστροφή και επανέρχεται στην αρχική θέση η κολώνα. SSoT ή όχι;». **Απάντηση: ΟΧΙ** — το `useColumnPersistence` ήταν **μερικό αντίγραφο** του `useWallPersistence` template που έχασε ΔΥΟ κρίσιμα κομμάτια (το preview/commit pivot ΗΤΑΝ μία πηγή — το bug ήταν 100% persistence, όχι math):
+
+1. **🔴 Λείπε το `lastSavedParamsRef` seed** στο Firestore subscribe callback (wall: `useWallPersistence` το έχει). Κολώνα φορτωμένη από Firestore (όχι freshly-drawn) → ποτέ «known» → auto-save gate (`lastSavedParamsRef.has(id)`) skip → ο επόμενος snapshot έβρισκε `dirty=false` → `dequal(local rotated, doc old)` false → **ξανάγραφε την παλιά un-rotated** → snap-back. **Fix:** seed loop (mirror wall).
+2. **🟡 `persist()` πάντα `setDoc` (saveColumn)** αντί `isNew ? saveColumn : updateColumn(updateDoc)`. `setDoc` resets immutable `createdAt` → Firestore UPDATE rule reject → silent fail. **Fix:** isNew branch → `updateColumn` (υπήρχε ήδη στο service, απλώς δεν καλούνταν).
+
+**Boy Scout:** Το `useBeamPersistence` είχε ΤΟ ΙΔΙΟ διπλό bug (ίδιο template· beam move/resize σε saved beam θα έκανε snap-back) → fixed κι αυτό. tsc clean. (Δεν υπάρχουν column/beam persistence unit tests — μόνο `useWallSplitPersistence.test`· το fix mirror-άρει το proven wall pattern· Firestore-mock test = follow-up.)
+
+**Μάθημα (ενισχυμένο):** όταν κάνεις mirror ένα SSoT template (wall→column), πρέπει να αντιγραφεί ΟΛΟΚΛΗΡΟ — εδώ ο τοίχος είχε seed + isNew/updateDoc που το column-copy παρέλειψε. Partial copy = SSoT divergence = silent revert.
 **Εναπομείνον (flagged):** variant **resize drag** (L/T/I `resizeArmLength`/`resizeFlangeLength`/… σε `column-variant-grips.ts`) έχει το ίδιο mm/scene mismatch — οι POSITIONS διορθώθηκαν (via `localToWorld`), το resize-drag των variants σε non-mm scenes μένει follow-up (Giorgio δοκίμασε rectangular). `calculatePriority` column case (cosmetic) deferred.
 
 ---

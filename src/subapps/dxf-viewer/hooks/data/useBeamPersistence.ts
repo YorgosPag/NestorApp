@@ -201,6 +201,15 @@ export function useBeamPersistence(
           }
         }
 
+        // ADR-397 — seed the "known/last-saved" baseline for every Firestore doc
+        // so edits to a pre-existing beam pass the auto-save gate + dirty-guard
+        // instead of being reverted by the next snapshot (mirror wall/column).
+        for (const doc of docs) {
+          if (!lastSavedParamsRef.current.has(doc.id)) {
+            lastSavedParamsRef.current.set(doc.id, doc.params);
+          }
+        }
+
         // ADR-390 — replaces buggy `neverSaved` guard.
         for (const [id, entity] of sceneBeams) {
           if (docsById.has(id)) continue;
@@ -236,7 +245,19 @@ export function useBeamPersistence(
     setSaveState('saving');
     setError(null);
     try {
-      await svc.saveBeam(entityToSaveInput(entity));
+      // ADR-397 — setDoc (saveBeam) only on first write (stamps immutable
+      // createdAt); existing beams go through updateBeam (updateDoc) so re-edits
+      // persist instead of being silently rejected → snapshot revert. Mirror wall/column.
+      if (isNew) {
+        await svc.saveBeam(entityToSaveInput(entity));
+      } else {
+        await svc.updateBeam(entity.id, {
+          params: entity.params,
+          validation: entity.validation,
+          geometry: entity.geometry,
+          layerId: entity.layerId,
+        });
+      }
       lastSavedParamsRef.current.set(entity.id, entity.params);
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);
