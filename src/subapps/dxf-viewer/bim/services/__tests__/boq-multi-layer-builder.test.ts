@@ -118,6 +118,20 @@ describe('buildMultiLayerBoqPayloads — children quantities', () => {
     expect(children[2]!.payload.layerIndex).toBe(2);
   });
 
+  it('net wallNetArea (ADR-395 G6) propagates identically to parent + area children', () => {
+    // After G6 the wall geometry feeds NET area; parent summary and every
+    // single-side (area-kind) layer child must reflect the SAME net value —
+    // no path re-derives from gross (parent == Σ-consistent with children).
+    const netArea = 13; // gross 15 − openings 2
+    const { parent, children } = buildMultiLayerBoqPayloads(makeInput({ wallNetArea: netArea }), emptyExisting);
+    expect(parent.payload.estimatedQuantity).toBe(netArea);
+    const areaChildren = children.filter((c) => c.payload.unit === 'm2');
+    expect(areaChildren.length).toBeGreaterThan(0);
+    for (const c of areaChildren) {
+      expect(c.payload.estimatedQuantity).toBe(netArea);
+    }
+  });
+
   it('children parentBoqItemId points to parent.id', () => {
     const { parent, children } = buildMultiLayerBoqPayloads(makeInput(), emptyExisting);
     for (const c of children) {

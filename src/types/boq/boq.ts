@@ -183,11 +183,11 @@ export interface BOQItem {
   /** Discriminator για BIM-generated items: 'bim-auto' | 'manual'. Optional for backwards compat. */
   sourceType?: 'manual' | 'bim-auto';
 
-  /** ID του BIM entity που δημιούργησε αυτό το item (wall/opening/slab/column/beam ID). */
+  /** ID του BIM entity που δημιούργησε αυτό το item (wall/opening/slab/column/beam/stair ID). */
   sourceEntityId?: string | null;
 
   /** Τύπος BIM entity πηγής. */
-  sourceEntityType?: 'wall' | 'opening' | 'slab' | 'column' | 'beam' | null;
+  sourceEntityType?: 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | null;
 
   /** Αν true: ο χρήστης το αποσύνδεσε από BIM — δεν ενημερώνεται αυτόματα πλέον. */
   detached?: boolean | null;

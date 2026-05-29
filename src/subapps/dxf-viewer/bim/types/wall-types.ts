@@ -134,9 +134,10 @@ export interface WallGeometry {
   readonly bbox: BoundingBox3D;
   /** m — geometric axis length. */
   readonly length: number;
-  /** m² — `length × height` (openings subtraction lands Phase 2). */
+  /** m² — `length × height`, net of openings when computed with the opening
+   *  list (ADR-395 G6); gross otherwise (render/grips/3D path). */
   readonly area: number;
-  /** m³ — `area × thickness/1000`. */
+  /** m³ — `area × thickness/1000` (follows net area when openings subtracted). */
   readonly volume: number;
 }
 

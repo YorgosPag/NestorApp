@@ -27,13 +27,7 @@ import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SlabEntity } from '../../bim/types/slab-types';
-import type { BeamEntity } from '../../bim/types/beam-types';
-import type { WallEntity } from '../../bim/types/wall-types';
-import {
-  computeSlabGeometry,
-  type BeamFootprintForDeduction,
-  type WallFootprintForSpan,
-} from '../../bim/geometry/slab-geometry';
+import { computeSlabGeometry } from '../../bim/geometry/slab-geometry';
 import { validateSlabParams } from '../../bim/validators/slab-validator';
 import { EventBus } from '../../systems/events/EventBus';
 import {
@@ -46,6 +40,7 @@ import { recordSlabChange } from '../../bim/slabs/slab-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
+import { slabBoqGeometry } from './slab-boq-feed';
 
 // ============================================================================
 // TYPES
@@ -91,43 +86,6 @@ const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 function isSlab(entity: AnySceneEntity): entity is SlabEntity {
   return (entity as { type?: string }).type === 'slab';
-}
-
-/**
- * Phase 5.5i+ — Collect beam footprints from scene for slab BOQ volume deduction.
- * Reads beams already in memory (no Firestore query).
- */
-function collectBeamFootprints(scene: SceneModel | null): BeamFootprintForDeduction[] {
-  if (!scene) return [];
-  const result: BeamFootprintForDeduction[] = [];
-  for (const e of scene.entities) {
-    if ((e as { type?: string }).type !== 'beam') continue;
-    const beam = e as BeamEntity;
-    if (beam.geometry?.outline && beam.params.depth > 0) {
-      result.push({ outline: beam.geometry.outline, depthMm: beam.params.depth });
-    }
-  }
-  return result;
-}
-
-/**
- * Phase 3.8 — Collect wall footprints from scene for slab free-span computation.
- * Constructs plan-view outline from outerEdge + innerEdge (already in memory).
- */
-function collectWallFootprints(scene: SceneModel | null): WallFootprintForSpan[] {
-  if (!scene) return [];
-  const result: WallFootprintForSpan[] = [];
-  for (const e of scene.entities) {
-    if ((e as { type?: string }).type !== 'wall') continue;
-    const wall = e as WallEntity;
-    const outer = wall.geometry?.outerEdge?.points;
-    const inner = wall.geometry?.innerEdge?.points;
-    if (!outer || !inner || outer.length < 2 || inner.length < 2) continue;
-    // CCW outline: outer start→end, inner reversed (end→start)
-    const outlineVertices = [...outer, ...[...inner].reverse()];
-    result.push({ outline: { vertices: outlineVertices } });
-  }
-  return result;
 }
 
 /**
@@ -303,15 +261,9 @@ export function useSlabPersistence(
       if (companyId && projectId && buildingId) {
         const levelId = levelManager.currentLevelId;
         const scene = levelId ? levelManager.getLevelScene(levelId) : null;
-        const beamFootprints = collectBeamFootprints(scene);
-        const wallFootprints = collectWallFootprints(scene);
-        const hasSupports = beamFootprints.length > 0 || wallFootprints.length > 0;
-        const boqGeometry = hasSupports
-          ? computeSlabGeometry(entity.params, undefined, beamFootprints, wallFootprints)
-          : entity.geometry;
         void bimToBoqBridge.upsertBoqItemForBim(
           'slab',
-          { id: entity.id, kind: entity.kind, geometry: boqGeometry },
+          { id: entity.id, kind: entity.kind, geometry: slabBoqGeometry(entity, scene) },
           { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           isNew ? 'created' : 'updated',
         );
@@ -418,9 +370,11 @@ export function useSlabPersistence(
       setLastSavedAt(Date.now());
       void recordSlabChange('restored', entity);
       if (companyId && projectId && buildingId) {
+        const levelId = levelManager.currentLevelId;
+        const scene = levelId ? levelManager.getLevelScene(levelId) : null;
         void bimToBoqBridge.upsertBoqItemForBim(
           'slab',
-          { id: entity.id, kind: entity.kind, geometry: entity.geometry },
+          { id: entity.id, kind: entity.kind, geometry: slabBoqGeometry(entity, scene) },
           { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           'created',
         );
@@ -429,7 +383,7 @@ export function useSlabPersistence(
       setError(err instanceof Error ? err.message : 'SLAB_RESTORE_ERROR');
       setSaveState('error');
     }
-  }, [companyId, projectId, buildingId, floorId]);
+  }, [companyId, projectId, buildingId, floorId, levelManager]);
 
   // First-save listener — fires άμεσα για freshly drawn slabs.
   useEffect(() => {
@@ -464,22 +418,41 @@ export function useSlabPersistence(
       const levelId = levelManager.currentLevelId;
       const scene = levelId ? levelManager.getLevelScene(levelId) : null;
       if (!scene) return;
-      const beamFootprints = collectBeamFootprints(scene);
-      const wallFootprints = collectWallFootprints(scene);
       for (const entity of scene.entities) {
         if ((entity as { type?: string }).type !== 'slab') continue;
         const slab = entity as SlabEntity;
-        const hasSupports = beamFootprints.length > 0 || wallFootprints.length > 0;
-        const boqGeometry = hasSupports
-          ? computeSlabGeometry(slab.params, undefined, beamFootprints, wallFootprints)
-          : slab.geometry;
         void bimToBoqBridge.upsertBoqItemForBim(
           'slab',
-          { id: slab.id, kind: slab.kind, geometry: boqGeometry },
+          { id: slab.id, kind: slab.kind, geometry: slabBoqGeometry(slab, scene) },
           ctx,
           'updated',
         );
       }
+    });
+    return cleanup;
+  }, [levelManager, companyId, projectId, buildingId, floorId]);
+
+  // ADR-395 G2 — re-feed host slab BOQ net volume when one of its cutouts is
+  // added / edited / deleted (cutout area changes the slab's net m³). Mirror
+  // wall's `bim:opening-persisted` listener. Reads scene from memory — no query.
+  useEffect(() => {
+    if (!companyId || !projectId || !buildingId) return;
+    const ctx = { companyId, projectId, buildingId, floorId: floorId ?? undefined };
+    const cleanup = EventBus.on('bim:slab-opening-persisted', ({ slabId }) => {
+      // Skip slabs whose own first save hasn't landed — their persist feeds net
+      // itself (collects cutouts too), and a premature row would race it.
+      if (!lastSavedParamsRef.current.has(slabId)) return;
+      const levelId = levelManager.currentLevelId;
+      const scene = levelId ? levelManager.getLevelScene(levelId) : null;
+      if (!scene) return;
+      const host = scene.entities.find((e) => e.id === slabId);
+      if (!host || !isSlab(host)) return;
+      void bimToBoqBridge.upsertBoqItemForBim(
+        'slab',
+        { id: host.id, kind: host.kind, geometry: slabBoqGeometry(host, scene) },
+        ctx,
+        'updated',
+      );
     });
     return cleanup;
   }, [levelManager, companyId, projectId, buildingId, floorId]);

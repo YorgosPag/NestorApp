@@ -276,6 +276,9 @@ export function useOpeningPersistence(
           { companyId, projectId, buildingId, floorplanId, floorId: currentFloorIdRef.current ?? undefined },
         );
       }
+      // ADR-395 G6 — host wall net area depends on its openings; signal the wall
+      // persistence hook to re-feed BOQ with the updated subtraction.
+      EventBus.emit('bim:opening-persisted', { wallId: entity.params.wallId });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'OPENING_SAVE_ERROR');
       setSaveState('error');
@@ -370,6 +373,10 @@ export function useOpeningPersistence(
           { companyId, projectId, buildingId, floorplanId, floorId: currentFloorIdRef.current ?? undefined },
         );
       }
+      // ADR-395 G6 — removing an opening grows the host wall's net area.
+      if (lastKnownParams?.wallId) {
+        EventBus.emit('bim:opening-persisted', { wallId: lastKnownParams.wallId });
+      }
     } catch {
       // Non-fatal: deletion failure silent — user can retry.
     }
@@ -405,6 +412,8 @@ export function useOpeningPersistence(
           { companyId, projectId, buildingId, floorplanId, floorId: currentFloorIdRef.current ?? undefined },
         );
       }
+      // ADR-395 G6 — restored opening re-shrinks the host wall's net area.
+      EventBus.emit('bim:opening-persisted', { wallId: entity.params.wallId });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'OPENING_RESTORE_ERROR');
       setSaveState('error');

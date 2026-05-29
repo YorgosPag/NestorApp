@@ -142,6 +142,8 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
+        buildingId={buildingId}
+        floorId={floorId}
       />
       <PsetEditorHost levelManager={levelManager} />
       <IfcExportHost />

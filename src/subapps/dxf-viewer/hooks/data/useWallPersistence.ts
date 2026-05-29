@@ -40,6 +40,7 @@ import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 import { docToEntity, isWall } from './wall-persistence-helpers';
+import { wallBoqEntity } from './wall-boq-feed';
 
 // ============================================================================
 // TYPES
@@ -303,9 +304,11 @@ export function useWallPersistence(
         { prevParams: prevParams ?? undefined },
       );
       if (companyId && projectId && buildingId) {
+        const levelId = levelManager.currentLevelId;
+        const scene = levelId ? levelManager.getLevelScene(levelId) : null;
         void bimToBoqBridge.upsertBoqItemForBim(
           'wall',
-          { id: entity.id, kind: entity.kind, params: entity.params as unknown as Readonly<{ category?: string; [key: string]: unknown }>, geometry: entity.geometry },
+          wallBoqEntity(entity, scene),
           { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           isNew ? 'created' : 'updated',
         );
@@ -314,7 +317,7 @@ export function useWallPersistence(
       setError(err instanceof Error ? err.message : 'WALL_SAVE_ERROR');
       setSaveState('error');
     }
-  }, [acquireLock, companyId, projectId, buildingId, floorId]);
+  }, [acquireLock, companyId, projectId, buildingId, floorId, levelManager]);
 
   // Auto-save debounce on selected wall params change.
   useEffect(() => {
@@ -412,9 +415,11 @@ export function useWallPersistence(
       setLastSavedAt(Date.now());
       void recordWallChange('restored', entity);
       if (companyId && projectId && buildingId) {
+        const levelId = levelManager.currentLevelId;
+        const scene = levelId ? levelManager.getLevelScene(levelId) : null;
         void bimToBoqBridge.upsertBoqItemForBim(
           'wall',
-          { id: entity.id, kind: entity.kind, params: entity.params as unknown as Readonly<{ category?: string; [key: string]: unknown }>, geometry: entity.geometry },
+          wallBoqEntity(entity, scene),
           { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           'created',
         );
@@ -423,7 +428,7 @@ export function useWallPersistence(
       setError(err instanceof Error ? err.message : 'WALL_RESTORE_ERROR');
       setSaveState('error');
     }
-  }, [acquireLock, companyId, projectId, buildingId, floorId]);
+  }, [acquireLock, companyId, projectId, buildingId, floorId, levelManager]);
 
   // First-save listener — fires immediately for freshly drawn walls so the
   // local scene survives the next Firestore snapshot AND lands in
@@ -450,6 +455,23 @@ export function useWallPersistence(
     });
     return cleanup;
   }, [deleteWall]);
+
+  // ADR-395 G6 — re-feed host wall net BOQ area when one of its openings changes (mirror slab bim:beam-persisted). Scene read from memory.
+  useEffect(() => {
+    if (!companyId || !projectId || !buildingId) return;
+    const ctx = { companyId, projectId, buildingId, floorId: floorId ?? undefined };
+    const cleanup = EventBus.on('bim:opening-persisted', ({ wallId }) => {
+      // Skip walls whose first save hasn't landed — their own persist feeds net.
+      if (!lastSavedParamsRef.current.has(wallId)) return;
+      const levelId = levelManager.currentLevelId;
+      const scene = levelId ? levelManager.getLevelScene(levelId) : null;
+      if (!scene) return;
+      const host = scene.entities.find((e) => e.id === wallId);
+      if (!host || !isWall(host)) return;
+      void bimToBoqBridge.upsertBoqItemForBim('wall', wallBoqEntity(host, scene), ctx, 'updated');
+    });
+    return cleanup;
+  }, [levelManager, companyId, projectId, buildingId, floorId]);
 
   useBimEntityMovedPersistEffect(isWall, serviceRef, dirtyIdsRef, persist);
   useBimEntityRestoredPersistEffect(

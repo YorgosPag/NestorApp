@@ -228,6 +228,10 @@ export interface DrawingEventMap {
   };
   // ADR-363 Phase 5.5i+ — beam persisted → slabs re-compute BOQ deductions
   'bim:beam-persisted': { floorplanId: string };
+  // ADR-395 G6 — opening persisted/deleted → host wall re-computes net BOQ area
+  'bim:opening-persisted': { wallId: string };
+  // ADR-395 G2 — slab-opening persisted/deleted → host slab re-computes net BOQ volume
+  'bim:slab-opening-persisted': { slabId: string };
   // ADR-363 Phase X — Wall split committed: persist delete+create+opening patch
   'bim:wall-split-committed': {
     originalWallId: string;

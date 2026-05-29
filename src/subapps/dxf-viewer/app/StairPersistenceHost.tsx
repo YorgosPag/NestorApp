@@ -42,6 +42,10 @@ export interface StairPersistenceHostProps {
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
+  /** ADR-395 Phase 2 (G1) — BOQ auto-feed scope. */
+  readonly buildingId?: string;
+  /** ADR-395 Phase 1 (G7) — floor link for per-floor BOQ grouping. */
+  readonly floorId?: string;
 }
 
 export function StairPersistenceHost({
@@ -50,6 +54,8 @@ export function StairPersistenceHost({
   levelManager,
   projectId,
   floorplanId,
+  buildingId,
+  floorId,
 }: StairPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -69,6 +75,8 @@ export function StairPersistenceHost({
     companyId: user?.companyId ?? null,
     projectId,
     floorplanId,
+    buildingId,
+    floorId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedStair,

@@ -2,7 +2,7 @@
  * Tests for BIM → ATOE mapping resolver (ADR-363 Phase 6)
  */
 
-import { resolveAtoeMapping, BIM_TO_ATOE_MAPPING } from '../bim-to-atoe-mapping';
+import { resolveAtoeMapping, resolveStairComponentMapping, BIM_TO_ATOE_MAPPING } from '../bim-to-atoe-mapping';
 
 describe('resolveAtoeMapping', () => {
   describe('wall', () => {
@@ -85,6 +85,30 @@ describe('resolveAtoeMapping', () => {
     it('maps cantilever to OIK-2.04', () => {
       const result = resolveAtoeMapping('beam', 'cantilever');
       expect(result!.categoryCode).toBe('OIK-2.04');
+    });
+  });
+
+  describe('stair (ADR-395 Phase 2 / G1)', () => {
+    it('resolveAtoeMapping returns null for stair — uses component resolver instead', () => {
+      expect(resolveAtoeMapping('stair', 'straight')).toBeNull();
+    });
+
+    it('concrete component → OIK-2.05 m3', () => {
+      const m = resolveStairComponentMapping('concrete');
+      expect(m.categoryCode).toBe('OIK-2.05');
+      expect(m.unit).toBe('m3');
+    });
+
+    it('cladding component → OIK-5.05 m2', () => {
+      const m = resolveStairComponentMapping('cladding');
+      expect(m.categoryCode).toBe('OIK-5.05');
+      expect(m.unit).toBe('m2');
+    });
+
+    it('handrail component → OIK-12.01 m', () => {
+      const m = resolveStairComponentMapping('handrail');
+      expect(m.categoryCode).toBe('OIK-12.01');
+      expect(m.unit).toBe('m');
     });
   });
 

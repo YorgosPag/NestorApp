@@ -9,7 +9,9 @@
  *   - απλοποίηση: Phase 1 υποστηρίζει μόνο `straight` kind. Curved/polyline
  *     land Phase 1.5 — οι signature θέσεις διατηρούνται για μέλλον.
  *   - 3D-readiness: `Point3D` με optional z (G11). Phase 1 z παραμένει 0.
- *   - openings subtraction → Phase 2 (όταν existe opening entity).
+ *   - openings subtraction (ADR-395 G6): όταν δοθεί `openings`, το `area` (και
+ *     κατ' επέκταση το `volume`) είναι net = gross − Σ(opening width × height),
+ *     clamped ≥ 0. Παραλείπεται → gross (display/render/3D path — ίδιο με slab).
  *
  * Σύμβαση μονάδων: όλα τα input/output γεωμετρικά σημεία σε mm. Μόνο τα
  * αριθμητικά scalars (`length`, `area`, `volume`) εκφράζονται σε m / m² / m³
@@ -21,16 +23,31 @@
 import type { Point3D, Polyline3D, BoundingBox3D } from '../types/bim-base';
 import type { WallParams, WallGeometry, WallKind } from '../types/wall-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { offsetPolyline } from './shared/polygon-utils';
 
 const MM_TO_M = 1 / 1000;
-/** Minimum axis length (mm) below which geometry degenerates. */
-const DEGENERATE_LENGTH_EPS_MM = 0.001;
+/** mm² → m² (1e6). ADR-395 G6 opening face area conversion. */
+const MM2_TO_M2 = 1 / 1_000_000;
 /**
  * ADR-363 Phase 1C — quadratic Bezier subdivision count for `curved` kind.
  * 16 segments give a visually smooth curve while keeping the offset-polyline
  * vertex-normal approximation accurate (mirrors AutoCAD `SPLINESEGS` default).
  */
 const CURVED_SUBDIVISIONS = 16;
+
+/**
+ * Minimal opening descriptor for wall net-area subtraction (ADR-395 G6).
+ * Passed by `useWallPersistence` from the host wall's hosted openings already
+ * in memory — no Firestore query (mirror `BeamFootprintForDeduction`). Industry
+ * (Revit / ArchiCAD): wall net area = gross − Σ(opening width × height), full
+ * face area regardless of partial-in-wall.
+ */
+export interface OpeningFootprintForDeduction {
+  /** mm. Opening width along wall axis. */
+  readonly width: number;
+  /** mm. Opening vertical extent (sill → head). */
+  readonly height: number;
+}
 
 /**
  * Compute `WallGeometry` from `WallParams`. SSoT for all wall-derived geometry.
@@ -41,16 +58,20 @@ const CURVED_SUBDIVISIONS = 16;
  *   3. half-thickness offset along perpendicular → outerEdge / innerEdge
  *   4. bbox folds all 4 corner vertices + start.z/end.z
  *   5. length = ‖end − start‖ in mm → m
- *   6. area = length × height (m × m → m²; height converted from mm)
+ *   6. area = length × height − Σ(opening width × height) (m²; clamp ≥ 0)
  *   7. volume = area × thickness (m² × m → m³)
  *
  * `params.kind` is honoured for polyline (when `polylineVertices` present);
  * curved kind falls back to straight axis until Phase 1.5 — the function is
  * `kind`-agnostic except for vertex selection.
+ *
+ * ADR-395 G6: όταν δοθεί `openings`, το `area`/`volume` είναι net (gross −
+ * Σ ανοιγμάτων). Παραλείπεται → gross (back-compat — render/grips/3D path).
  */
 export function computeWallGeometry(
   params: WallParams,
   kind: WallKind = 'straight',
+  openings?: readonly OpeningFootprintForDeduction[],
 ): WallGeometry {
   // s converts mm scalar params → canvas world units (matches start/end coordinate space).
   // height and thickness are always stored in mm (SSOT); start/end are canvas world coords.
@@ -73,8 +94,11 @@ export function computeWallGeometry(
   const heightM = params.height * MM_TO_M;
   const thicknessM = params.thickness * MM_TO_M;
 
-  // Phase 1: area = length × height. Openings subtraction lands Phase 2.
-  const area = lengthM * heightM;
+  // ADR-395 G6: net area = gross − Σ(opening face area), clamped ≥ 0. Volume
+  // follows the net area (a window void removes wall material). No openings →
+  // gross (render/grips/3D callers pass none).
+  const grossArea = lengthM * heightM;
+  const area = Math.max(0, grossArea - sumOpeningAreasM2(openings));
   const volume = area * thicknessM;
 
   return {
@@ -89,6 +113,24 @@ export function computeWallGeometry(
 }
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
+
+/**
+ * Σ opening face areas in m² (width × height, mm → m²). Skips non-finite /
+ * non-positive dimensions defensively. Undefined / empty list → 0 (gross).
+ * Mirror `sumSlabOpeningAreasM2` (slab-geometry). ADR-395 G6.
+ */
+function sumOpeningAreasM2(
+  openings: readonly OpeningFootprintForDeduction[] | undefined,
+): number {
+  if (!openings || openings.length === 0) return 0;
+  let total = 0;
+  for (const o of openings) {
+    if (Number.isFinite(o.width) && Number.isFinite(o.height) && o.width > 0 && o.height > 0) {
+      total += o.width * o.height * MM2_TO_M2;
+    }
+  }
+  return total;
+}
 
 /**
  * Pick the axis vertices based on wall kind:
@@ -189,94 +231,19 @@ function offsetAxisToEdges(
   halfThicknessMm: number,
   sign: number,
 ): { outerEdge: Polyline3D; innerEdge: Polyline3D } {
-  const n = vertices.length;
-  if (n < 2) {
+  if (vertices.length < 2) {
     return {
       outerEdge: { points: vertices, closed: false },
       innerEdge: { points: vertices, closed: false },
     };
   }
 
-  const outer: Point3D[] = [];
-  const inner: Point3D[] = [];
-
-  for (let i = 0; i < n; i++) {
-    const nx = vertexNormalX(vertices, i);
-    const ny = vertexNormalY(vertices, i);
-    const v = vertices[i];
-    const dx = sign * halfThicknessMm * nx;
-    const dy = sign * halfThicknessMm * ny;
-    outer.push({ x: v.x + dx, y: v.y + dy, z: v.z });
-    inner.push({ x: v.x - dx, y: v.y - dy, z: v.z });
-  }
-
+  // SSoT offset-with-mitre (shared/polygon-utils). outer = +sign side,
+  // inner = −sign side. halfThicknessMm is already in canvas units here.
   return {
-    outerEdge: { points: outer, closed: false },
-    innerEdge: { points: inner, closed: false },
+    outerEdge: { points: offsetPolyline(vertices, halfThicknessMm, sign), closed: false },
+    innerEdge: { points: offsetPolyline(vertices, halfThicknessMm, -sign), closed: false },
   };
-}
-
-/**
- * Vertex normal X component — averages adjacent segment normals (CCW 90°
- * rotation of segment tangent). Endpoint vertices use their adjacent segment.
- */
-function vertexNormalX(vertices: readonly Point3D[], i: number): number {
-  const n = vertices.length;
-  let acc = 0;
-  let count = 0;
-  if (i > 0) {
-    const seg = segmentNormalX(vertices[i - 1], vertices[i]);
-    if (seg !== null) {
-      acc += seg;
-      count += 1;
-    }
-  }
-  if (i < n - 1) {
-    const seg = segmentNormalX(vertices[i], vertices[i + 1]);
-    if (seg !== null) {
-      acc += seg;
-      count += 1;
-    }
-  }
-  return count > 0 ? acc / count : 0;
-}
-
-function vertexNormalY(vertices: readonly Point3D[], i: number): number {
-  const n = vertices.length;
-  let acc = 0;
-  let count = 0;
-  if (i > 0) {
-    const seg = segmentNormalY(vertices[i - 1], vertices[i]);
-    if (seg !== null) {
-      acc += seg;
-      count += 1;
-    }
-  }
-  if (i < n - 1) {
-    const seg = segmentNormalY(vertices[i], vertices[i + 1]);
-    if (seg !== null) {
-      acc += seg;
-      count += 1;
-    }
-  }
-  return count > 0 ? acc / count : 0;
-}
-
-function segmentNormalX(a: Point3D, b: Point3D): number | null {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const len = Math.hypot(dx, dy);
-  if (len < DEGENERATE_LENGTH_EPS_MM) return null;
-  // CCW 90° rotation of (dx, dy) → (-dy, dx). Normalised.
-  return -dy / len;
-}
-
-function segmentNormalY(a: Point3D, b: Point3D): number | null {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const len = Math.hypot(dx, dy);
-  if (len < DEGENERATE_LENGTH_EPS_MM) return null;
-  return dx / len;
 }
 
 /**

@@ -20,7 +20,7 @@ import type { BeamKind } from '../types/beam-types';
 // TYPES
 // ============================================================================
 
-export type BimEntityType = 'wall' | 'opening' | 'slab' | 'column' | 'beam';
+export type BimEntityType = 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair';
 
 export interface AtoeMappingEntry {
   /** Latin OIK-x.xx code — must match boq_categories or be a valid subcategory. */
@@ -29,6 +29,16 @@ export interface AtoeMappingEntry {
   /** Greek title stored in the auto-generated BOQ item. */
   readonly titleEL: string;
 }
+
+/**
+ * ADR-395 Phase 2 (G1) — a stair is NOT a single-row entity like walls/slabs.
+ * It produces THREE independent BOQ rows (Revit Material Takeoff pattern):
+ * concrete (m³) + tread cladding (m²) + handrail (m). Each row is keyed by a
+ * fixed component (not the stair `kind`), so it lives outside the
+ * kind-dispatched `BIM_TO_ATOE_MAPPING` table and is resolved via
+ * `resolveStairComponentMapping`.
+ */
+export type StairBoqComponent = 'concrete' | 'cladding' | 'handrail';
 
 // ============================================================================
 // MAPPING TABLE
@@ -65,7 +75,19 @@ const COLUMN_MAPPING: Readonly<Record<ColumnKind, AtoeMappingEntry>> = {
   'T-shape':     { categoryCode: 'OIK-2.03', unit: 'm3', titleEL: 'Κολώνα RC Τ-τομής (BIM)' },
   'polygon':     { categoryCode: 'OIK-2.03', unit: 'm3', titleEL: 'Κολώνα RC πολυγωνική (BIM)' },
   'shear-wall':  { categoryCode: 'OIK-2.03', unit: 'm3', titleEL: 'Τοιχείο RC (BIM)' },
-  'I-shape':     { categoryCode: 'MET-1.01', unit: 'kg', titleEL: 'Κολώνα μεταλλική Ι-τομής (BIM)' },
+  'I-shape':     { categoryCode: 'OIK-12.10', unit: 'kg', titleEL: 'Κολώνα μεταλλική Ι-τομής (BIM)' },
+};
+
+/**
+ * ADR-395 Phase 2 (G1) — stair component → ΑΤΟΕ. Three fixed rows per stair:
+ *   - concrete  → OIK-2 Σκυροδέματα (next after slab/column/beam 2.01-2.04)
+ *   - cladding  → OIK-5 Πατώματα/Δάπεδα (tread surface, marble/tile)
+ *   - handrail  → OIK-12 Μεταλλικά (master catalog explicitly lists «κάγκελα, σκάλες»)
+ */
+const STAIR_COMPONENT_MAPPING: Readonly<Record<StairBoqComponent, AtoeMappingEntry>> = {
+  concrete: { categoryCode: 'OIK-2.05',  unit: 'm3', titleEL: 'Σκάλα σκυρόδεμα (BIM)' },
+  cladding: { categoryCode: 'OIK-5.05',  unit: 'm2', titleEL: 'Σκάλα επένδυση πατημάτων (BIM)' },
+  handrail: { categoryCode: 'OIK-12.01', unit: 'm',  titleEL: 'Σκάλα κουπαστή (BIM)' },
 };
 
 const BEAM_MAPPING: Readonly<Record<BeamKind, AtoeMappingEntry>> = {
@@ -106,6 +128,15 @@ export function resolveAtoeMapping(
     return WALL_MAPPING[wallCategory] ?? null;
   }
 
+  // Stair is multi-row (concrete/cladding/handrail) — resolved per component,
+  // never per kind. Callers use `resolveStairComponentMapping` instead.
+  if (entityType === 'stair') return null;
+
   const typeMap = BIM_TO_ATOE_MAPPING[entityType] as Readonly<Record<string, AtoeMappingEntry>>;
   return typeMap?.[kind] ?? null;
+}
+
+/** Resolve the ΑΤΟΕ mapping for a single stair BOQ component (ADR-395 §G1). */
+export function resolveStairComponentMapping(component: StairBoqComponent): AtoeMappingEntry {
+  return STAIR_COMPONENT_MAPPING[component];
 }

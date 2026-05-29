@@ -41,6 +41,7 @@ import {
 import { recordStairChange } from '../stairs/stair-audit-client';
 import { useBimEntityRestoredPersistEffect } from '../../hooks/data/useBimEntityRestoredPersistEffect';
 import { stairDocToEntity } from '../stairs/stair-doc-hydration';
+import { upsertStairBoq, deleteStairBoq } from '../services/stair-boq-sync';
 
 // ============================================================================
 // TYPES
@@ -58,6 +59,10 @@ export interface UseStairPersistenceParams {
   readonly companyId: string | null;
   readonly projectId: string | null | undefined;
   readonly floorplanId: string | null | undefined;
+  /** ADR-395 Phase 2 (G1) — BOQ auto-feed scope. Omitted by hosts that don't feed BOQ. */
+  readonly buildingId?: string | null | undefined;
+  /** ADR-395 Phase 1 (G7) — floor link for per-floor BOQ grouping. */
+  readonly floorId?: string | null | undefined;
   readonly userId: string | null;
   readonly levelManager: LevelManagerLike;
   readonly primarySelectedStair: StairEntity | null;
@@ -97,6 +102,8 @@ export function useStairPersistence(
     companyId,
     projectId,
     floorplanId,
+    buildingId,
+    floorId,
     userId,
     levelManager,
     primarySelectedStair,
@@ -287,11 +294,18 @@ export function useStairPersistence(
         { id: entity.id, kind: entity.kind, layerId: entity.layerId, params: entity.params },
         { prevParams: prevParams ?? undefined },
       );
+      if (companyId && projectId && buildingId) {
+        void upsertStairBoq(
+          { id: entity.id, kind: entity.kind, params: entity.params },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
+          isNew ? 'created' : 'updated',
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'STAIR_SAVE_ERROR');
       setSaveState('error');
     }
-  }, [acquireLock]);
+  }, [acquireLock, companyId, projectId, buildingId, floorId]);
 
   // Auto-save debounce on selected stair params change.
   useEffect(() => {
@@ -344,6 +358,7 @@ export function useStairPersistence(
           ? { id: deletedStair.id, kind: deletedStair.kind, layerId: deletedStair.layerId, params: deletedStair.params }
           : { id: stairId, kind: 'straight' },
       );
+      void deleteStairBoq(stairId);
     } catch {
       // Non-fatal — scene already updated by DeleteEntityCommand.
     }
@@ -383,11 +398,18 @@ export function useStairPersistence(
         'restored',
         { id: entity.id, kind: entity.kind, layerId: entity.layerId, params: entity.params },
       );
+      if (companyId && projectId && buildingId) {
+        void upsertStairBoq(
+          { id: entity.id, kind: entity.kind, params: entity.params },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
+          'created',
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'STAIR_RESTORE_ERROR');
       setSaveState('error');
     }
-  }, [acquireLock]);
+  }, [acquireLock, companyId, projectId, buildingId, floorId]);
 
   // Imperative save trigger (explicit "Αποθήκευση" button).
   const saveNow = useCallback(async () => {

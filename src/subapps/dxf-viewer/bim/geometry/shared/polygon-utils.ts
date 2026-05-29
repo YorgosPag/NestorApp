@@ -214,3 +214,112 @@ function shIntersect(p1: Point3D, p2: Point3D, a: Point3D, b: Point3D): Point3D 
   const t = ((a.x - p1.x) * dy2 - (a.y - p1.y) * dx2) / denom;
   return { x: p1.x + t * dx1, y: p1.y + t * dy1, z: 0 };
 }
+
+// ─── Offset-with-mitre helpers (SSoT) ─────────────────────────────────────────
+//
+// Canonical polyline-offset math, extracted from `wall-geometry.ts` and
+// `beam-geometry.ts` (verbatim duplicate before this SSoT). Consumed by walls
+// (axis → outer/inner edge), beams (axis → outline rect) and ADR-396 envelope
+// perimeter (exterior face → insulation outer loop). N.0.2 / N.12 dedup.
+
+/** Below this segment length (mm/canvas) a segment is treated as degenerate. */
+const DEGENERATE_LENGTH_EPS = 0.001;
+
+/**
+ * CCW 90° unit segment normal X component (rotate tangent (dx,dy) → (-dy,dx)).
+ * Returns `null` for degenerate (near-zero-length) segments.
+ */
+export function segmentNormalX(a: Point3D, b: Point3D): number | null {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy);
+  if (len < DEGENERATE_LENGTH_EPS) return null;
+  return -dy / len;
+}
+
+/** CCW 90° unit segment normal Y component. Returns `null` for degenerate. */
+export function segmentNormalY(a: Point3D, b: Point3D): number | null {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy);
+  if (len < DEGENERATE_LENGTH_EPS) return null;
+  return dx / len;
+}
+
+/**
+ * Vertex normal X — averages the adjacent segment normals (CCW 90°). Endpoint
+ * vertices use their single adjacent segment. Degenerate segments are skipped.
+ * The averaging is the mitre approximation at internal corners.
+ */
+export function vertexNormalX(vertices: readonly Point3D[], i: number): number {
+  const n = vertices.length;
+  let acc = 0;
+  let count = 0;
+  if (i > 0) {
+    const seg = segmentNormalX(vertices[i - 1], vertices[i]);
+    if (seg !== null) { acc += seg; count += 1; }
+  }
+  if (i < n - 1) {
+    const seg = segmentNormalX(vertices[i], vertices[i + 1]);
+    if (seg !== null) { acc += seg; count += 1; }
+  }
+  return count > 0 ? acc / count : 0;
+}
+
+/** Vertex normal Y — averages adjacent segment normals (mitre at corners). */
+export function vertexNormalY(vertices: readonly Point3D[], i: number): number {
+  const n = vertices.length;
+  let acc = 0;
+  let count = 0;
+  if (i > 0) {
+    const seg = segmentNormalY(vertices[i - 1], vertices[i]);
+    if (seg !== null) { acc += seg; count += 1; }
+  }
+  if (i < n - 1) {
+    const seg = segmentNormalY(vertices[i], vertices[i + 1]);
+    if (seg !== null) { acc += seg; count += 1; }
+  }
+  return count > 0 ? acc / count : 0;
+}
+
+/**
+ * Offset a polyline by `distance` along the per-vertex normals, scaled by
+ * `sign` (+1 = CCW outward, -1 = inward). Returns a new array of the same
+ * length; corners are mitred via the averaged vertex normal. `distance` is in
+ * the same unit as the vertex coordinates (caller scales mm→canvas).
+ */
+export function offsetPolyline(
+  vertices: readonly Point3D[],
+  distance: number,
+  sign: number,
+): Point3D[] {
+  const out: Point3D[] = [];
+  for (let i = 0; i < vertices.length; i++) {
+    const nx = vertexNormalX(vertices, i);
+    const ny = vertexNormalY(vertices, i);
+    const v = vertices[i];
+    out.push({
+      x: v.x + sign * distance * nx,
+      y: v.y + sign * distance * ny,
+      z: v.z ?? 0,
+    });
+  }
+  return out;
+}
+
+/**
+ * Arithmetic-mean centroid of a polygon's vertices (XY plane, z ignored).
+ * Sufficient for near-convex building outlines (ADR-396 D2 exterior-face
+ * selection). Returns `{x:0, y:0}` for an empty vertex list.
+ */
+export function polygonCentroid(vertices: readonly Point3D[]): { x: number; y: number } {
+  const n = vertices.length;
+  if (n === 0) return { x: 0, y: 0 };
+  let sumX = 0;
+  let sumY = 0;
+  for (const v of vertices) {
+    sumX += v.x;
+    sumY += v.y;
+  }
+  return { x: sumX / n, y: sumY / n };
+}

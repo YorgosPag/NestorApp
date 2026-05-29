@@ -26,9 +26,9 @@ import type { Point3D, Polyline3D, Polygon3D, BoundingBox3D } from '../types/bim
 import type { BeamGeometry, BeamParams } from '../types/beam-types';
 import { CURVED_BEAM_SUBDIVISIONS } from '../types/beam-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { offsetPolyline } from './shared/polygon-utils';
 
 const MM_TO_M = 1 / 1000;
-const DEGENERATE_LENGTH_EPS_MM = 0.001;
 
 /**
  * Compute `BeamGeometry` από `BeamParams`. Pure SSoT για beam-derived
@@ -144,69 +144,15 @@ function buildOutlineRect(axis: readonly Point3D[], widthMm: number, s: number):
   if (n < 2 || widthMm <= 0) {
     return [...axis];
   }
-  // Convert mm scalar → canvas units for correct 2D offset.
+  // Convert mm scalar → canvas units for correct 2D offset. SSoT offset-with-
+  // mitre (shared/polygon-utils): +half and −half sides around the axis.
   const half = (widthMm * s) / 2;
-  const plus: Point3D[] = [];
-  const minus: Point3D[] = [];
-  for (let i = 0; i < n; i++) {
-    const nx = vertexNormalX(axis, i);
-    const ny = vertexNormalY(axis, i);
-    const v = axis[i];
-    plus.push({ x: v.x + half * nx, y: v.y + half * ny, z: v.z ?? 0 });
-    minus.push({ x: v.x - half * nx, y: v.y - half * ny, z: v.z ?? 0 });
-  }
+  const plus = offsetPolyline(axis, half, 1);
+  const minus = offsetPolyline(axis, half, -1);
   // CCW: +offset start→end, then -offset end→start
-  const polygon: Point3D[] = [];
-  for (const p of plus) polygon.push(p);
+  const polygon: Point3D[] = [...plus];
   for (let i = minus.length - 1; i >= 0; i--) polygon.push(minus[i]);
   return polygon;
-}
-
-function vertexNormalX(vertices: readonly Point3D[], i: number): number {
-  const n = vertices.length;
-  let acc = 0;
-  let count = 0;
-  if (i > 0) {
-    const seg = segmentNormalX(vertices[i - 1], vertices[i]);
-    if (seg !== null) { acc += seg; count += 1; }
-  }
-  if (i < n - 1) {
-    const seg = segmentNormalX(vertices[i], vertices[i + 1]);
-    if (seg !== null) { acc += seg; count += 1; }
-  }
-  return count > 0 ? acc / count : 0;
-}
-
-function vertexNormalY(vertices: readonly Point3D[], i: number): number {
-  const n = vertices.length;
-  let acc = 0;
-  let count = 0;
-  if (i > 0) {
-    const seg = segmentNormalY(vertices[i - 1], vertices[i]);
-    if (seg !== null) { acc += seg; count += 1; }
-  }
-  if (i < n - 1) {
-    const seg = segmentNormalY(vertices[i], vertices[i + 1]);
-    if (seg !== null) { acc += seg; count += 1; }
-  }
-  return count > 0 ? acc / count : 0;
-}
-
-function segmentNormalX(a: Point3D, b: Point3D): number | null {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const len = Math.hypot(dx, dy);
-  if (len < DEGENERATE_LENGTH_EPS_MM) return null;
-  // CCW 90° rotation of (dx, dy) → (-dy, dx). Normalised.
-  return -dy / len;
-}
-
-function segmentNormalY(a: Point3D, b: Point3D): number | null {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const len = Math.hypot(dx, dy);
-  if (len < DEGENERATE_LENGTH_EPS_MM) return null;
-  return dx / len;
 }
 
 /** Polyline length in mm (sum of segment lengths). */

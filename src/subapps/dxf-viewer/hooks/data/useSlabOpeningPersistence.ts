@@ -241,6 +241,9 @@ export function useSlabOpeningPersistence(
         { id: entity.id, kind: entity.kind, layerId: entity.layerId, params: entity.params },
         { prevParams: prevParams ?? undefined },
       );
+      // ADR-395 G2 — host slab net volume depends on its cutouts; signal the slab
+      // persistence hook to re-feed BOQ with the updated subtraction.
+      EventBus.emit('bim:slab-opening-persisted', { slabId: entity.params.slabId });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'SLAB_OPENING_SAVE_ERROR');
       setSaveState('error');
@@ -296,6 +299,8 @@ export function useSlabOpeningPersistence(
     const scene = levelManager.getLevelScene(levelId);
     const deletedEntity = scene?.entities.find((e) => e.id === slabOpeningId);
     const deletedSlabOpening = (deletedEntity && isSlabOpening(deletedEntity)) ? deletedEntity : null;
+    const hostSlabId =
+      deletedSlabOpening?.params.slabId ?? lastSavedParamsRef.current.get(slabOpeningId)?.slabId;
 
     try {
       await svc.deleteSlabOpening(slabOpeningId);
@@ -310,6 +315,10 @@ export function useSlabOpeningPersistence(
             }
           : { id: slabOpeningId, kind: 'shaft' },
       );
+      // ADR-395 G2 — removing a cutout grows the host slab's net volume.
+      if (hostSlabId) {
+        EventBus.emit('bim:slab-opening-persisted', { slabId: hostSlabId });
+      }
     } catch {
       // Non-fatal: deletion failure silent — user retries.
     }
@@ -342,6 +351,8 @@ export function useSlabOpeningPersistence(
         'restored',
         { id: entity.id, kind: entity.kind, layerId: entity.layerId, params: entity.params },
       );
+      // ADR-395 G2 — restored cutout re-shrinks the host slab's net volume.
+      EventBus.emit('bim:slab-opening-persisted', { slabId: entity.params.slabId });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'SLAB_OPENING_RESTORE_ERROR');
       setSaveState('error');

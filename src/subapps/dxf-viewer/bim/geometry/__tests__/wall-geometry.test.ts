@@ -10,7 +10,7 @@
  *   - Vertex normal averaging at corners (multi-segment polyline)
  */
 
-import { computeWallGeometry } from '../wall-geometry';
+import { computeWallGeometry, type OpeningFootprintForDeduction } from '../wall-geometry';
 import type { WallParams } from '../../types/wall-types';
 import type { Point3D } from '../../types/bim-base';
 
@@ -93,6 +93,68 @@ describe('computeWallGeometry — straight kind', () => {
     const g = computeWallGeometry(makeParams());
     expect(g.outerEdge.points.length).toBe(g.innerEdge.points.length);
     expect(g.outerEdge.points.length).toBe(g.axisPolyline.points.length);
+  });
+});
+
+// ─── ADR-395 G6 — net area (openings subtraction) ────────────────────────────
+
+describe('computeWallGeometry — net area (ADR-395 G6)', () => {
+  // 5 m × 3 m wall → gross area 15 m², thickness 200 mm.
+  function grossWall(overrides?: Partial<WallParams>): WallParams {
+    return makeParams({ end: { x: 5000, y: 0, z: 0 }, height: 3000, thickness: 200, ...overrides });
+  }
+
+  it('omitted openings → gross area (back-compat, render/3D path)', () => {
+    const g = computeWallGeometry(grossWall());
+    expect(g.area).toBeCloseTo(15, FLOAT_TOL);
+  });
+
+  it('empty openings list → gross area (no subtraction)', () => {
+    const g = computeWallGeometry(grossWall(), 'straight', []);
+    expect(g.area).toBeCloseTo(15, FLOAT_TOL);
+  });
+
+  it('net area = gross − single opening face area', () => {
+    // door 1000 × 2000 mm = 2 m² → 15 − 2 = 13 m²
+    const openings: OpeningFootprintForDeduction[] = [{ width: 1000, height: 2000 }];
+    const g = computeWallGeometry(grossWall(), 'straight', openings);
+    expect(g.area).toBeCloseTo(13, FLOAT_TOL);
+  });
+
+  it('net area subtracts the sum of multiple openings', () => {
+    // 1000×2000 (2 m²) + 1200×1400 (1.68 m²) = 3.68 m² → 15 − 3.68 = 11.32
+    const openings: OpeningFootprintForDeduction[] = [
+      { width: 1000, height: 2000 },
+      { width: 1200, height: 1400 },
+    ];
+    const g = computeWallGeometry(grossWall(), 'straight', openings);
+    expect(g.area).toBeCloseTo(11.32, FLOAT_TOL);
+  });
+
+  it('volume follows the net area (window void removes wall material)', () => {
+    const openings: OpeningFootprintForDeduction[] = [{ width: 1000, height: 2000 }];
+    const g = computeWallGeometry(grossWall(), 'straight', openings);
+    // net 13 m² × 0.2 m = 2.6 m³
+    expect(g.volume).toBeCloseTo(2.6, FLOAT_TOL);
+  });
+
+  it('clamps net area to ≥ 0 when openings exceed gross', () => {
+    // one 6000×4000 mm opening = 24 m² > 15 m² gross → clamp 0 (area + volume)
+    const openings: OpeningFootprintForDeduction[] = [{ width: 6000, height: 4000 }];
+    const g = computeWallGeometry(grossWall(), 'straight', openings);
+    expect(g.area).toBe(0);
+    expect(g.volume).toBe(0);
+  });
+
+  it('ignores non-positive / non-finite opening dimensions defensively', () => {
+    const openings: OpeningFootprintForDeduction[] = [
+      { width: 0, height: 2000 },
+      { width: 1000, height: -1 },
+      { width: Number.NaN, height: 2000 },
+      { width: 1000, height: 2000 }, // only this one counts → 2 m²
+    ];
+    const g = computeWallGeometry(grossWall(), 'straight', openings);
+    expect(g.area).toBeCloseTo(13, FLOAT_TOL);
   });
 });
 

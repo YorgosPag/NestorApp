@@ -84,6 +84,14 @@ describe('resolveMaterialAtoeMapping', () => {
       expect(resolveMaterialAtoeMapping('mat-xps')!.categoryCode).toBe('OIK-10.05');
     });
 
+    it('maps mat-eps-graphite (Neopor / ADR-396 P1) → OIK-10.05 m2 area', () => {
+      const result = resolveMaterialAtoeMapping('mat-eps-graphite');
+      expect(result).not.toBeNull();
+      expect(result!.categoryCode).toBe('OIK-10.05');
+      expect(result!.unit).toBe('m2');
+      expect(result!.quantityKind).toBe('area');
+    });
+
     it('maps mat-mineral-wool → OIK-10.06', () => {
       expect(resolveMaterialAtoeMapping('mat-mineral-wool')!.categoryCode).toBe('OIK-10.06');
     });

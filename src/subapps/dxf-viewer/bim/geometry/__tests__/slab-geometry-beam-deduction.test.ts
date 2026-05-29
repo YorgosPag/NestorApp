@@ -18,8 +18,10 @@ import {
   type BeamFootprintForDeduction,
   type WallFootprintForSpan,
 } from '../slab-geometry';
+import { computeSlabOpeningGeometry } from '../slab-opening-geometry';
 import { polygonIntersectionAreaMm2, clipPolygonBySH } from '../shared/polygon-utils';
 import type { SlabParams } from '../../types/slab-types';
+import type { SlabOpeningEntity, SlabOpeningParams } from '../../types/slab-opening-types';
 import type { Point3D, Polygon3D } from '../../types/bim-base';
 
 // ─── Test fixtures ────────────────────────────────────────────────────────────
@@ -232,6 +234,62 @@ describe('computeSlabGeometry — beam deductions (Phase 5.5i+)', () => {
     const geom = computeSlabGeometry(SLAB_4X4);
     // 4m × 4m square → min = 4m
     expect(geom.maxFreeSpanM).toBeCloseTo(4, 3);
+  });
+});
+
+// ─── computeSlabGeometry — combined cutouts + beams (ADR-395 G2) ─────────────
+
+describe('computeSlabGeometry — combined slab-opening + beam deductions (ADR-395 G2)', () => {
+  /** Square slab-opening cutout centred at (cx,cy), half-side `half` mm. */
+  function makeCutout(cx: number, cy: number, half: number): SlabOpeningEntity {
+    const params: SlabOpeningParams = {
+      kind: 'shaft',
+      slabId: 'slab_test',
+      outline: {
+        vertices: [
+          { x: cx - half, y: cy - half, z: 0 },
+          { x: cx + half, y: cy - half, z: 0 },
+          { x: cx + half, y: cy + half, z: 0 },
+          { x: cx - half, y: cy + half, z: 0 },
+        ],
+      },
+    };
+    return {
+      id: `slbopn_${cx}_${cy}`,
+      type: 'slab-opening',
+      kind: 'shaft',
+      layerId: '0',
+      params,
+      geometry: computeSlabOpeningGeometry(params),
+      validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+      visible: true,
+    } as SlabOpeningEntity;
+  }
+
+  it('26. net volume = (area − Σ cutouts) × thickness − beam deductions', () => {
+    // 4×4m slab @200mm. One 1×1m cutout (1 m²) + one beam (fully inside, depth>thk).
+    const cutout = makeCutout(1000, 3000, 500); // 1000×1000mm = 1 m²
+    const beam = beamFullyInside();             // 250,000 mm² × min(500,200)=200mm = 0.05 m³
+    const geom = computeSlabGeometry(SLAB_4X4, [cutout], [beam]);
+    // netArea = 16 − 1 = 15 m²; grossVol = 15 × 0.2 = 3.0; beamDeduct = 0.05 → 2.95 m³.
+    expect(geom.netArea).toBeCloseTo(15, 6);
+    expect(geom.volume).toBeCloseTo(2.95, 6);
+  });
+
+  it('27. cutouts shrink netArea; beams leave netArea untouched', () => {
+    const cutout = makeCutout(1000, 3000, 500); // 1 m²
+    const geomWithBeam = computeSlabGeometry(SLAB_4X4, [cutout], [beamFullyInside()]);
+    const geomNoBeam = computeSlabGeometry(SLAB_4X4, [cutout]);
+    // Beam never touches the (plan-view) netArea — only the volume.
+    expect(geomWithBeam.netArea).toBeCloseTo(15, 6);
+    expect(geomNoBeam.netArea).toBeCloseTo(15, 6);
+    expect(geomWithBeam.volume).toBeLessThan(geomNoBeam.volume);
+  });
+
+  it('28. zero cutouts + zero beams → gross volume unchanged (back-compat)', () => {
+    const geom = computeSlabGeometry(SLAB_4X4, [], []);
+    expect(geom.netArea).toBeCloseTo(16, 6);
+    expect(geom.volume).toBeCloseTo(16 * 0.2, 6);
   });
 });
 

@@ -82,6 +82,8 @@ const MATERIAL_MAPPING: Readonly<Record<string, MaterialAtoeMapping>> = {
 
   // ΟΙΚ-10 Μονώσεις/Στεγανώσεις (area)
   'mat-eps':           { materialId: 'mat-eps',           categoryCode: 'OIK-10.05', unit: 'm2', quantityKind: 'area', titleEL: 'Θερμομόνωση EPS (BIM layer)' },
+  // ADR-396 P1 — Γραφιτούχα EPS (Neopor) ETICS κέλυφος· ίδιο ΑΤΟΕ άρθρο με γενικό EPS (OQ-2 RESOLVED 2026-05-29)
+  'mat-eps-graphite':  { materialId: 'mat-eps-graphite',  categoryCode: 'OIK-10.05', unit: 'm2', quantityKind: 'area', titleEL: 'Θερμομόνωση γραφιτούχας EPS / Neopor (BIM layer)' },
   'mat-xps':           { materialId: 'mat-xps',           categoryCode: 'OIK-10.05', unit: 'm2', quantityKind: 'area', titleEL: 'Θερμομόνωση XPS (BIM layer)' },
   'mat-mineral-wool':  { materialId: 'mat-mineral-wool',  categoryCode: 'OIK-10.06', unit: 'm2', quantityKind: 'area', titleEL: 'Θερμομόνωση πετροβάμβακα (BIM layer)' },
   'mat-vapor-barrier': { materialId: 'mat-vapor-barrier', categoryCode: 'OIK-10.10', unit: 'm2', quantityKind: 'area', titleEL: 'Φράγμα υδρατμών (BIM layer)' },
