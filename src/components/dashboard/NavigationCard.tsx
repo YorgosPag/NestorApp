@@ -45,13 +45,13 @@ const COLOR_MAP: Record<ColorVariant, { iconBg: string; iconText: string; ringHo
   },
   orange: {
     iconBg: 'bg-[hsl(var(--bg-warning))]/40',
-    iconText: 'text-[hsl(var(--bg-warning))]',
-    ringHover: 'group-hover:ring-[hsl(var(--bg-warning))]',
+    iconText: 'text-[hsl(var(--text-warning))]',
+    ringHover: 'group-hover:ring-[hsl(var(--text-warning))]',
   },
   yellow: {
     iconBg: 'bg-[hsl(var(--bg-warning))]/40',
-    iconText: 'text-[hsl(var(--bg-warning))]',
-    ringHover: 'group-hover:ring-[hsl(var(--bg-warning))]',
+    iconText: 'text-[hsl(var(--text-warning))]',
+    ringHover: 'group-hover:ring-[hsl(var(--text-warning))]',
   },
   pink: {
     iconBg: 'bg-accent',

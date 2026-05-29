@@ -76,21 +76,22 @@ export interface StatusOptions {
 // Per-domain color helpers
 // ============================================================================
 
+// ✅ ADR-365 follow-up: storage status are FILL indicators (dots/cards) → SOLID vivid
 function colorStorage(status: string, colors?: SemanticColors): string {
   if (!colors) {
     switch (status) {
-      case 'available': return 'bg-[hsl(var(--bg-success))]';
-      case 'sold': return 'bg-[hsl(var(--bg-info))]';
-      case 'reserved': return 'bg-[hsl(var(--bg-warning))]';
-      case 'maintenance': return 'bg-[hsl(var(--bg-error))]';
+      case 'available': return 'bg-[hsl(var(--status-success))]';
+      case 'sold': return 'bg-[hsl(var(--status-info))]';
+      case 'reserved': return 'bg-[hsl(var(--status-warning))]';
+      case 'maintenance': return 'bg-[hsl(var(--status-error))]';
       default: return 'bg-muted';
     }
   }
   switch (status) {
-    case 'available': return colors.bg.success;
-    case 'sold': return colors.bg.info;
-    case 'reserved': return colors.bg.warning;
-    case 'maintenance': return colors.bg.error;
+    case 'available': return colors.bg.successSolid;
+    case 'sold': return colors.bg.infoSolid;
+    case 'reserved': return colors.bg.warningSolid;
+    case 'maintenance': return colors.bg.errorSolid;
     default: return colors.bg.muted;
   }
 }
@@ -154,39 +155,41 @@ function colorCommunication(status: string): string {
   }
 }
 
+// ✅ ADR-365 follow-up: timeline nodes are SOLID fill dots → vivid --status-*
 function colorBuildingTimeline(status: string, colors?: SemanticColors): string {
   if (!colors) {
     switch (status) {
-      case 'completed': return 'bg-[hsl(var(--bg-success))]';
-      case 'in-progress': return 'bg-[hsl(var(--bg-info))]';
-      case 'delayed': return 'bg-[hsl(var(--bg-error))]';
+      case 'completed': return 'bg-[hsl(var(--status-success))]';
+      case 'in-progress': return 'bg-[hsl(var(--status-info))]';
+      case 'delayed': return 'bg-[hsl(var(--status-error))]';
       case 'pending':
       default: return 'bg-muted';
     }
   }
   switch (status) {
-    case 'completed': return `${colors.bg.success} ${colors.border.success}`;
-    case 'in-progress': return `${colors.bg.info} ${colors.border.info}`;
-    case 'delayed': return `${colors.bg.error} ${colors.border.error}`;
+    case 'completed': return `${colors.bg.successSolid} ${colors.border.success}`;
+    case 'in-progress': return `${colors.bg.infoSolid} ${colors.border.info}`;
+    case 'delayed': return `${colors.bg.errorSolid} ${colors.border.error}`;
     case 'pending':
     default: return `${colors.bg.muted} ${colors.border.muted}`;
   }
 }
 
+// ✅ ADR-365 follow-up: project status badges/dots are SOLID fills → vivid --status-*
 function colorBuildingProject(status: string, colors?: SemanticColors): string {
   if (!colors) {
     switch (status) {
-      case 'active': return 'bg-[hsl(var(--bg-success))]';
+      case 'active': return 'bg-[hsl(var(--status-success))]';
       case 'construction': return brandClasses.primary.bgDark;
-      case 'planned': return 'bg-[hsl(var(--bg-warning))]';
+      case 'planned': return 'bg-[hsl(var(--status-warning))]';
       case 'completed': return 'bg-muted';
       default: return 'bg-muted';
     }
   }
   switch (status) {
-    case 'active': return colors.bg.success;
+    case 'active': return colors.bg.successSolid;
     case 'construction': return brandClasses.primary.bgDark;
-    case 'planned': return colors.bg.warning;
+    case 'planned': return colors.bg.warningSolid;
     case 'completed': return colors.bg.muted;
     default: return colors.bg.mutedLight;
   }
