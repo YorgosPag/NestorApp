@@ -26,6 +26,8 @@ import { useUniversalSelection } from '../systems/selection';
 import { useLevelManager } from '../systems/levels/useLevels';
 // ADR-375 Phase B.2 — sync per-level BIM render settings into the store
 import { useBimRenderSettingsSync } from '../state/hooks/useBimRenderSettingsSync';
+// ADR-396 P7 — sync per-level thermal envelope spec into the store
+import { useThermalEnvelopeSync } from '../state/hooks/useThermalEnvelopeSync';
 // ADR-375 Phase C.1 — sync per-company pen table overrides into the resolver
 import { useBimPenTableSync } from '../state/hooks/useBimPenTableSync';
 import { useDimAssociationObserver } from '../hooks/dimensions/useDimAssociationObserver';
@@ -161,6 +163,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const levelManager = useLevelManager();
   // ADR-375 Phase B.2 — load BimRenderSettings for active level on every switch / Firestore push
   useBimRenderSettingsSync({
+    currentLevelId: levelManager.currentLevelId,
+    levels: levelManager.levels,
+  });
+  // ADR-396 P7 — load per-level ThermalEnvelopeSpec on every switch / Firestore push
+  useThermalEnvelopeSync({
     currentLevelId: levelManager.currentLevelId,
     levels: levelManager.levels,
   });

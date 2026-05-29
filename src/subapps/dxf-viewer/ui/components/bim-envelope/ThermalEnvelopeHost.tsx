@@ -30,7 +30,11 @@ import {
   setEnvelopeSpec,
 } from '../../../bim/stores/envelope-spec-store';
 import type { ThermalEnvelopeSpec } from '../../../bim/types/thermal-envelope-types';
+import { saveThermalEnvelopeSpec } from '../../../services/thermal-envelope.service';
+import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { ThermalEnvelopeDialog } from './ThermalEnvelopeDialog';
+
+const logger = createModuleLogger('ThermalEnvelopeHost');
 
 export interface ThermalEnvelopeHostProps {
   /** Τρέχων BIM όροφος — κλειδί του per-level spec (D3). */
@@ -56,7 +60,16 @@ export function ThermalEnvelopeHost(
 
   const applyToLevels = React.useCallback(
     (levelIds: readonly string[]) => {
-      for (const id of levelIds) setEnvelopeSpec(id, draft);
+      for (const id of levelIds) {
+        // Optimistic in-memory update (instant 2D/3D repaint)…
+        setEnvelopeSpec(id, draft);
+        // …+ persist στο level doc (ADR-396 P7) ώστε να επιβιώνει reload.
+        // Fire-and-forget: το store έχει ήδη ενημερωθεί· ο sync-hook quiet
+        // window αγνοεί το Firestore echo που ακολουθεί.
+        void saveThermalEnvelopeSpec(id, draft).catch((err: unknown) => {
+          logger.error('persist failed', { levelId: id, err });
+        });
+      }
       markAllCanvasDirty();
       setOpen(false);
     },

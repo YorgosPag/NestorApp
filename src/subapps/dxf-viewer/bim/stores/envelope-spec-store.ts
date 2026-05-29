@@ -28,6 +28,20 @@ import {
 const specsByLevel = new Map<string, ThermalEnvelopeSpec>();
 const subscribers = new Set<() => void>();
 
+/**
+ * ADR-396 P7 — last level whose spec was loaded από Firestore (level doc).
+ * Mirror `bim-render-settings-store.currentLevelId`: ο sync hook reload-άρει
+ * μόνο σε αλλαγή ορόφου, αλλιώς σέβεται το quiet window (κάτω).
+ */
+let currentLevelId: string | null = null;
+
+/**
+ * ADR-396 P7 — timestamp τελευταίας τοπικής εγγραφής (`setEnvelopeSpec`). Ο sync
+ * hook αγνοεί Firestore echoes εντός quiet window ώστε να μη σβήσει pending
+ * debounced PATCH (ADR-375 v2.11 pattern). 0 = καμία εκκρεμής τοπική εγγραφή.
+ */
+let lastLocalMutationAt = 0;
+
 function notify(): void {
   subscribers.forEach((cb) => cb());
 }
@@ -40,10 +54,41 @@ export function getEnvelopeSpec(levelId: string | null | undefined): ThermalEnve
 }
 
 // ─── Writes ────────────────────────────────────────────────────────────────--
-/** Ορίζει/αντικαθιστά το spec ενός ορόφου + notify (P6 command θα το καλεί). */
+/** Ορίζει/αντικαθιστά το spec ενός ορόφου + notify (P6 command το καλεί). */
 export function setEnvelopeSpec(levelId: string, spec: ThermalEnvelopeSpec): void {
   specsByLevel.set(levelId, spec);
+  lastLocalMutationAt = Date.now();
   notify();
+}
+
+/**
+ * ADR-396 P7 — φορτώνει το persisted spec ενός ορόφου από το level doc (ή το
+ * καθαρίζει αν `incoming` είναι null) και σημειώνει τον ενεργό όροφο. Reset το
+ * quiet-window stamp (server load = authoritative). Mirror
+ * `bim-render-settings-store.loadForLevel`.
+ */
+export function loadForLevel(
+  levelId: string,
+  incoming: ThermalEnvelopeSpec | null | undefined,
+): void {
+  currentLevelId = levelId;
+  lastLocalMutationAt = 0;
+  if (incoming) {
+    specsByLevel.set(levelId, incoming);
+  } else {
+    specsByLevel.delete(levelId);
+  }
+  notify();
+}
+
+/** ADR-396 P7 — ο όροφος του οποίου το spec έχει φορτωθεί τελευταία (sync hook). */
+export function getCurrentLevelId(): string | null {
+  return currentLevelId;
+}
+
+/** ADR-396 P7 — timestamp τελευταίας τοπικής εγγραφής (sync hook quiet window). */
+export function getLastLocalMutationAt(): number {
+  return lastLocalMutationAt;
 }
 
 /** Default ETICS spec (Neopor, 10εκ όψη / 5εκ περβάζια, όλες οι ζώνες ON). */
@@ -81,4 +126,6 @@ export function subscribeEnvelopeSpec(callback: () => void): () => void {
 export function __resetEnvelopeSpecStore(): void {
   specsByLevel.clear();
   subscribers.clear();
+  currentLevelId = null;
+  lastLocalMutationAt = 0;
 }
