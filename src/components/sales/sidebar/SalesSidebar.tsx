@@ -90,23 +90,25 @@ interface SalesTabConfig {
   id: string;
   icon: React.ElementType;
   labelKey: string;
+  /** ADR-365: vivid theme-aware icon color (never inherited muted/grey) */
+  color: string;
 }
 
-/** Base tabs — always visible */
+/** Base tabs — always visible. ADR-365: vivid per-tab icon colors (no faded grey). */
 const BASE_SALES_TABS: SalesTabConfig[] = [
-  { id: 'sale-info', icon: DollarSign, labelKey: 'sales.tabs.saleInfo' },
-  { id: 'unit-summary', icon: Home, labelKey: 'sales.tabs.unitSummary' },
-  { id: 'documents', icon: FileText, labelKey: 'sales.tabs.documents' },
-  { id: 'photos', icon: Camera, labelKey: 'sales.tabs.photos' },
-  { id: 'videos', icon: Video, labelKey: 'sales.tabs.videos' },
-  { id: 'history', icon: Clock, labelKey: 'sales.tabs.history' },
+  { id: 'sale-info', icon: DollarSign, labelKey: 'sales.tabs.saleInfo', color: 'text-[hsl(var(--text-success))]' },
+  { id: 'unit-summary', icon: Home, labelKey: 'sales.tabs.unitSummary', color: 'text-[hsl(var(--hue-indigo))]' },
+  { id: 'documents', icon: FileText, labelKey: 'sales.tabs.documents', color: 'text-[hsl(var(--text-info))]' },
+  { id: 'photos', icon: Camera, labelKey: 'sales.tabs.photos', color: 'text-[hsl(var(--status-purple))]' },
+  { id: 'videos', icon: Video, labelKey: 'sales.tabs.videos', color: 'text-[hsl(var(--hue-pink))]' },
+  { id: 'history', icon: Clock, labelKey: 'sales.tabs.history', color: 'text-[hsl(var(--text-warning))]' },
 ];
 
 /** Legal tab — conditional, visible ONLY for reserved/sold units (ADR-230) */
-const LEGAL_TAB: SalesTabConfig = { id: 'legal', icon: Scale, labelKey: 'sales.tabs.legal' };
+const LEGAL_TAB: SalesTabConfig = { id: 'legal', icon: Scale, labelKey: 'sales.tabs.legal', color: 'text-destructive' };
 
 /** Payment tab — conditional, visible ONLY for reserved/sold units (ADR-234) */
-const PAYMENT_TAB: SalesTabConfig = { id: 'payments', icon: CreditCard, labelKey: 'sales.tabs.payments' };
+const PAYMENT_TAB: SalesTabConfig = { id: 'payments', icon: CreditCard, labelKey: 'sales.tabs.payments', color: 'text-[hsl(var(--hue-teal))]' };
 
 /** Check if unit has reserved/sold status → show legal tab */
 function shouldShowLegalTab(unit: Property | null): boolean {
@@ -194,7 +196,7 @@ export function SalesSidebar({
                 value={tab.id}
                 className="flex items-center gap-1 text-xs font-medium"
               >
-                <tab.icon className={iconSizes.sm} />
+                <tab.icon className={cn(iconSizes.sm, tab.color)} />
                 <span className="hidden sm:inline">
                   {t(tab.labelKey)}
                 </span>

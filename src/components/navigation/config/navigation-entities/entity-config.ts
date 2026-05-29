@@ -24,7 +24,7 @@ import type { NavigationEntitiesConfig } from './types';
 export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
   company: {
     icon: Factory,
-    color: 'text-primary',
+    color: 'text-[hsl(var(--text-info))]',
     label: 'navigation.entities.company.label',
     pluralLabel: 'navigation.entities.company.plural',
     description: 'navigation.entities.company.description',
@@ -38,14 +38,14 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
   },
   building: {
     icon: Building,
-    color: 'text-primary',
+    color: 'text-[hsl(var(--hue-indigo))]',
     label: 'navigation.entities.building.label',
     pluralLabel: 'navigation.entities.building.plural',
     description: 'navigation.entities.building.description',
   },
   property: {
     icon: Home,
-    color: 'text-primary',
+    color: 'text-[hsl(var(--hue-teal))]',
     label: 'navigation.entities.property.label',
     pluralLabel: 'navigation.entities.property.plural',
     description: 'navigation.entities.property.description',
@@ -66,14 +66,14 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
   },
   storage: {
     icon: Package,
-    color: 'text-primary',
+    color: 'text-[hsl(var(--hue-indigo))]',
     label: 'navigation.entities.storage.label',
     pluralLabel: 'navigation.entities.storage.plural',
     description: 'navigation.entities.storage.description',
   },
   procurement: {
     icon: Package,
-    color: 'text-primary',
+    color: 'text-[hsl(var(--text-warning))]',
     label: 'navigation.entities.procurement.label',
     pluralLabel: 'navigation.entities.procurement.plural',
     description: 'navigation.entities.procurement.description',
@@ -94,7 +94,7 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
   },
   area: {
     icon: Ruler,
-    color: 'text-primary',
+    color: 'text-[hsl(var(--text-info))]',
     label: 'navigation.entities.area.label',
     pluralLabel: 'navigation.entities.area.plural',
     description: 'navigation.entities.area.description',
@@ -108,7 +108,7 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
   },
   phone: {
     icon: Phone,
-    color: 'text-primary',
+    color: 'text-[hsl(var(--hue-teal))]',
     label: 'navigation.entities.phone.label',
     pluralLabel: 'navigation.entities.phone.plural',
     description: 'navigation.entities.phone.description',
@@ -122,21 +122,21 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
   },
   vat: {
     icon: Receipt,
-    color: 'text-muted-foreground',
+    color: 'text-[hsl(var(--text-success))]',
     label: 'navigation.entities.vat.label',
     pluralLabel: 'navigation.entities.vat.plural',
     description: 'navigation.entities.vat.description',
   },
   contactIndividual: {
     icon: User,
-    color: 'text-primary',
+    color: 'text-[hsl(var(--hue-teal))]',
     label: 'navigation.entities.contactIndividual.label',
     pluralLabel: 'navigation.entities.contactIndividual.plural',
     description: 'navigation.entities.contactIndividual.description',
   },
   contactCompany: {
     icon: Factory,
-    color: 'text-primary',
+    color: 'text-[hsl(var(--text-info))]',
     label: 'navigation.entities.contactCompany.label',
     pluralLabel: 'navigation.entities.contactCompany.plural',
     description: 'navigation.entities.contactCompany.description',
@@ -150,14 +150,14 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
   },
   contact: {
     icon: User,
-    color: 'text-primary',
+    color: 'text-[hsl(var(--hue-teal))]',
     label: 'navigation.entities.contact.label',
     pluralLabel: 'navigation.entities.contact.plural',
     description: 'navigation.entities.contact.description',
   },
   file: {
     icon: FileText,
-    color: 'text-muted-foreground',
+    color: 'text-[hsl(var(--text-info))]',
     label: 'navigation.entities.file.label',
     pluralLabel: 'navigation.entities.file.plural',
     description: 'navigation.entities.file.description',
@@ -171,7 +171,7 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
   },
   communication: {
     icon: MessageSquare,
-    color: 'text-primary',
+    color: 'text-[hsl(var(--hue-teal))]',
     label: 'navigation.entities.communication.label',
     pluralLabel: 'navigation.entities.communication.plural',
     description: 'navigation.entities.communication.description',
