@@ -69,12 +69,17 @@ export function renderSceneFrame(ctx: RenderFrameContext, now: number, delta: nu
     }
   } else if (sectionController.isStencilActive()) {
     sectionController.renderFrameWithCaps(viewport.camera);
-  } else {
+  } else if (ssaoModulator.isSsaoActive()) {
+    // Camera settled → full composer pass with SSAO (Revit-style refine-on-idle).
     try {
       ssaoModulator.render();
     } catch (err) {
       console.error('[3D] ssaoModulator.render() threw:', err);
       ssaoModulator.disableSSAO();
     }
+  } else {
+    // Navigating (or pre-idle window) → direct raster, no post-FX. Skips the
+    // composer FBO round-trip + program churn that caused zoom/orbit lag.
+    ssaoModulator.renderRaster();
   }
 }

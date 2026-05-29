@@ -136,6 +136,7 @@ export class ThreeJsSceneManager {
     const subs = createSceneRenderingSubsystems({
       renderer: this.renderer, scene: this.scene, sun: this.sun, bimLayer: this.bimLayer,
       getCamera: () => this.viewport.camera, viewportSize: this.getViewportSize(),
+      onNeedsRender: () => this.markSceneDirty(),
     });
     this.qualityModulator = subs.qualityModulator;
     this.ssaoModulator = subs.ssaoModulator;
@@ -364,6 +365,8 @@ export class ThreeJsSceneManager {
         pathTracerRenderer: this.pathTracerRenderer, sectionController: this.sectionController },
       { entities, floorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
     );
+    // Pre-compile SSAO/composer programs once geometry exists (idempotent) — avoids first-idle shader-link stall.
+    this.ssaoModulator.warmUp();
     this.markSceneDirty();
   }
 

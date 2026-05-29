@@ -40,7 +40,9 @@ export class SSAOModulator {
   private readonly ssaoPass: BimSSAOPass;
   private readonly renderPass: RenderPass;
   private readonly getCamera: () => THREE.Camera;
+  private readonly onNeedsRender: () => void;
   private animFrame: number | null = null;
+  private warmedUp = false;
 
   constructor(
     renderer: THREE.WebGLRenderer,
@@ -48,8 +50,10 @@ export class SSAOModulator {
     getCamera: () => THREE.Camera,
     width: number,
     height: number,
+    onNeedsRender: () => void = () => {},
   ) {
     this.getCamera = getCamera;
+    this.onNeedsRender = onNeedsRender;
     const camera = getCamera();
 
     this.renderPass = new RenderPass(scene, camera);
@@ -89,11 +93,16 @@ export class SSAOModulator {
     const start = performance.now();
     this.ssaoPass.enabled = true;
     this.ssaoPass.kernelRadius = 0;
+    // Mark the scene dirty so the master scheduler renders the SSAO composer
+    // path (isSsaoActive() is now true). Without this the ramp would mutate
+    // kernelRadius invisibly — the scene would never redraw at idle.
+    this.onNeedsRender();
 
     const animate = () => {
       const t = Math.min((performance.now() - start) / SSAO_TRANSITION_MS, 1);
       const eased = 1 - Math.pow(1 - t, 3);
       this.ssaoPass.kernelRadius = 8 * eased;
+      this.onNeedsRender();
       if (t < 1) {
         this.animFrame = requestAnimationFrame(animate);
       } else {
@@ -118,6 +127,52 @@ export class SSAOModulator {
       this.composer.renderer.setRenderTarget(null);
       this.composer.renderer.render(this.renderPass.scene, camera);
     } catch { /* ignore fallback failures */ }
+  }
+
+  /** True when SSAO is on and the composer path must run this frame. */
+  isSsaoActive(): boolean {
+    return this.ssaoPass.enabled;
+  }
+
+  /**
+   * Direct single-pass render, bypassing EffectComposer/SSAO entirely.
+   * Used on every interaction frame (orbit/zoom) — the industry "adaptive
+   * degradation" path (Revit Ambient Shadows, Forge/APS Viewer): expensive
+   * post-FX is skipped while the camera moves, then `render()` (SSAO) takes
+   * over once the camera settles. Avoids the per-frame FBO+CopyPass round-trip
+   * and the program churn that the composer path incurs during navigation.
+   */
+  renderRaster(): void {
+    const camera = this.getCamera();
+    this.composer.renderer.setRenderTarget(null);
+    this.composer.renderer.render(this.renderPass.scene, camera);
+    this.renderPass.scene.overrideMaterial = null;
+  }
+
+  /**
+   * Pre-compile the SSAO/composer shader programs once, so the first idle frame
+   * after navigation does not stall on shader link (the `getUniforms` pause).
+   * Renders one composer frame to the internal targets with SSAO forced on, then
+   * restores the prior enabled state. Idempotent — owns its own once-guard so
+   * callers can invoke it freely (Three.js also caches linked programs).
+   */
+  warmUp(): void {
+    if (this.warmedUp) return;
+    const camera = this.getCamera();
+    if (!(camera instanceof THREE.PerspectiveCamera)) return;
+    this.warmedUp = true;
+    const prevEnabled = this.ssaoPass.enabled;
+    try {
+      this.renderPass.camera = camera;
+      this.ssaoPass.camera = camera;
+      this.ssaoPass.enabled = true;
+      this.composer.render();
+    } catch {
+      /* warm-up best-effort; lazy compile on first idle is the fallback */
+    } finally {
+      this.ssaoPass.enabled = prevEnabled;
+      this.renderPass.scene.overrideMaterial = null;
+    }
   }
 
   render(): void {

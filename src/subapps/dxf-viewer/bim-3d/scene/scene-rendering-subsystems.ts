@@ -22,6 +22,8 @@ export interface SceneRenderingSubsystemsDeps {
   readonly bimLayer: BimSceneLayer;
   readonly getCamera: () => THREE.Camera;
   readonly viewportSize: { readonly width: number; readonly height: number };
+  /** Marks the scene dirty so the master scheduler renders an SSAO ramp frame. */
+  readonly onNeedsRender: () => void;
 }
 
 export interface SceneRenderingSubsystems {
@@ -43,6 +45,7 @@ export function createSceneRenderingSubsystems(
     deps.getCamera,
     deps.viewportSize.width,
     deps.viewportSize.height,
+    deps.onNeedsRender,
   );
   const envmapGenerator = new EnvmapGenerator(deps.renderer, deps.scene);
   const pathTracerRenderer = new PathTracerRenderer(deps.renderer, deps.scene, deps.getCamera);

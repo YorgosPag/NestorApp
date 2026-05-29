@@ -89,7 +89,7 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ### 2026-05-27 — Phase XXIII — Single rAF SSoT Consolidation (BIM 3D)
 
-**Status**: IMPLEMENTED 2026-05-27.
+**Status**: IMPLEMENTED 2026-05-27. **Follow-up 2026-05-29** — SSAO render path now feeds this dirty SSoT: `SSAOModulator`'s idle-ramp calls a new `onNeedsRender → markSceneDirty()` callback each frame, so the composer (refine-on-idle) renders without a parallel rAF; interaction frames use the new `renderRaster()` direct path (no composer/FBO). Detail in ADR-366 changelog 2026-05-29 (B.1.Q3 SSAO perf hotfix). Phase XXIII dirty-state SSoT (`scene-dirty-state.ts`) unchanged.
 
 **Why**: Firefox profile of 2D wheel-zoom with a BIM slab in the scene showed `Window.requestAnimationFrame` self time at 17% (27 samples / 21s recording) — far above the ~3-5% expected for a single rAF subscriber. Investigation found **two independent persistent rAF loops** running concurrently:
 
