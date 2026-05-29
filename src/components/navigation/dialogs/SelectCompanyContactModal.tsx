@@ -196,7 +196,7 @@ export function SelectCompanyContactModal({
                       {existingCompanyIds.length > 0 ? (
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <CheckCircle2 className="h-6 w-6 text-green-707" />
+                            <CheckCircle2 className="h-6 w-6 text-[hsl(var(--text-success))]" />
                             <p className="font-medium">{t('company.nav.allAdded')}</p>
                           </div>
                           <p className={cn("text-sm", colors.text.muted)}>

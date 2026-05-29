@@ -28,7 +28,7 @@ interface NavigationButtonProps {
   isSelected?: boolean;
   variant?: 'default' | 'compact';
   // 🏢 ENTERPRISE: Custom icon color for entity type consistency
-  iconColor?: string; // e.g., 'text-primary', 'text-green-707', etc.
+  iconColor?: string; // e.g., 'text-primary', 'text-[hsl(var(--text-success))]', etc.
   // Νέο κεντρικοποιημένο badge system
   badgeStatus?: NavigationStatus;
   badgeText?: string; // Override default badge text

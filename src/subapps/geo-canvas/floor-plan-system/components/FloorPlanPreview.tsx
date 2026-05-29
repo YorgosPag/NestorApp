@@ -84,7 +84,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
       {/* DXF-specific metadata */}
       {result.format === 'DXF' && result.geoJSON && result.bounds && (
         <section className={`${colors.bg.success} ${quick.card} p-4 ${getStatusBorder('success')}`}>
-          <h3 className="text-sm font-semibold text-green-707 mb-3">
+          <h3 className="text-sm font-semibold text-[hsl(var(--text-success))] mb-3">
             {t('floorPlan.preview.dxfDataTitle')}
           </h3>
           <div className="grid grid-cols-2 gap-2 text-sm">
@@ -106,20 +106,20 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
           {/* Layer list */}
           {result.layers && result.layers.length > 0 && (
             <div className={`mt-3 pt-3 ${getDirectionalBorder('muted', 'top')}`}>
-              <div className="text-xs font-semibold text-green-707 mb-2">
+              <div className="text-xs font-semibold text-[hsl(var(--text-success))] mb-2">
                 {t('floorPlan.preview.layerList')}:
               </div>
               <div className="flex flex-wrap gap-1">
                 {result.layers.slice(0, 10).map((layer, index) => (
                   <span
                     key={index}
-                    className={`px-2 py-1 ${colors.bg.success} text-green-707 text-xs ${quick.input}`}
+                    className={`px-2 py-1 ${colors.bg.success} text-[hsl(var(--text-success))] text-xs ${quick.input}`}
                   >
                     {layer}
                   </span>
                 ))}
                 {result.layers.length > 10 && (
-                  <span className="px-2 py-1 text-green-707 text-xs">
+                  <span className="px-2 py-1 text-[hsl(var(--text-success))] text-xs">
                     +{result.layers.length - 10} {t('floorPlan.preview.moreLayers')}
                   </span>
                 )}

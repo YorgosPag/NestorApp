@@ -61,7 +61,7 @@ export function LoanStatusTimeline({ status, compact = false }: LoanStatusTimeli
         return (
           <figure key={step} className="flex items-center gap-2 py-0.5">
             {isCompleted && (
-              <CheckCircle2 className="h-3 w-3 text-green-707 shrink-0" />
+              <CheckCircle2 className="h-3 w-3 text-[hsl(var(--text-success))] shrink-0" />
             )}
             {isCurrent && (
               <Loader2 className="h-3 w-3 text-primary animate-spin shrink-0" />

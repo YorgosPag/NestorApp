@@ -198,7 +198,7 @@ function ComparisonRow({ entry, isRecommended, rfqAwarded, winnerQuoteId, onAwar
       aria-label={clickable ? t('rfqs.comparison.rowAriaLabel') : undefined}
     >
       <TableCell className="font-medium">
-        {(isWinner || entry.rank === 1) && <Trophy className="inline h-4 w-4 text-green-707" />}
+        {(isWinner || entry.rank === 1) && <Trophy className="inline h-4 w-4 text-[hsl(var(--text-success))]" />}
         {entry.rank}
       </TableCell>
       <TableCell>{entry.vendorName}</TableCell>

@@ -44,7 +44,7 @@ const TestCursorPageClient = () => {
           Ανοίξτε τα Developer Tools (F12) και δείτε το Console για debug μηνύματα.
         </div>
         {CursorComponent ? (
-          <div className="mt-4 text-green-707 text-sm">
+          <div className="mt-4 text-[hsl(var(--text-success))] text-sm">
             ✓ CursorSettingsPanel loaded successfully
           </div>
         ) : (

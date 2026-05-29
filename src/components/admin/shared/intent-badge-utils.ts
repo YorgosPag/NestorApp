@@ -93,7 +93,7 @@ export const getConfidenceBadgeVariant = (confidence?: number): IntentBadgeVaria
  * @returns Tailwind color class string
  */
 export const getConfidenceColor = (confidence: number): string => {
-  if (confidence >= 90) return 'text-green-707';
+  if (confidence >= 90) return 'text-[hsl(var(--text-success))]';
   if (confidence >= 60) return 'text-[hsl(var(--text-warning))]';
   return 'text-destructive';
 };

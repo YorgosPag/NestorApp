@@ -323,7 +323,7 @@ export function EquityWaterfallDialog({
                 </dl>
                 <dl className="rounded-lg border p-3 space-y-1">
                   <InfoDt label={t('costCalculator.waterfall.gpTotal')} tooltip={t('costCalculator.waterfall.gpTotalTooltip')} className={cn("text-xs", colors.text.muted)} />
-                  <dd className="text-lg font-bold text-green-707">{fmt(result.totalGP)}</dd>
+                  <dd className="text-lg font-bold text-[hsl(var(--text-success))]">{fmt(result.totalGP)}</dd>
                 </dl>
                 <dl className="rounded-lg border p-3 space-y-1">
                   <InfoDt label={t('costCalculator.waterfall.lpMultiple')} tooltip={t('costCalculator.waterfall.lpMultipleTooltip')} className={cn("text-xs", colors.text.muted)} />
@@ -380,7 +380,7 @@ export function EquityWaterfallDialog({
                     <tr>
                       <th className="p-2 text-left border border-border font-medium">Tier</th>
                       <th className="p-2 text-right border border-border font-medium text-primary">LP</th>
-                      <th className="p-2 text-right border border-border font-medium text-green-707">GP</th>
+                      <th className="p-2 text-right border border-border font-medium text-[hsl(var(--text-success))]">GP</th>
                       <th className="p-2 text-right border border-border font-medium">Total</th>
                     </tr>
                   </thead>
@@ -398,7 +398,7 @@ export function EquityWaterfallDialog({
                     <tr className="font-semibold">
                       <td className="p-2 border border-border">Total</td>
                       <td className="p-2 text-right border border-border text-primary">{fmt(result.totalLP)}</td>
-                      <td className="p-2 text-right border border-border text-green-707">{fmt(result.totalGP)}</td>
+                      <td className="p-2 text-right border border-border text-[hsl(var(--text-success))]">{fmt(result.totalGP)}</td>
                       <td className="p-2 text-right border border-border">{fmt(result.totalLP + result.totalGP)}</td>
                     </tr>
                   </tfoot>

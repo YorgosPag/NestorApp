@@ -16,7 +16,7 @@ import { cn } from '@/lib/design-system';
 const DOCUMENT_COLORS = [
   { className: 'doc-text-red', swatch: 'bg-destructive', labelKey: 'toolbar.colors.red' },
   { className: 'doc-text-blue', swatch: 'bg-primary', labelKey: 'toolbar.colors.blue' },
-  { className: 'doc-text-green', swatch: 'bg-green-707', labelKey: 'toolbar.colors.green' },
+  { className: 'doc-text-green', swatch: 'bg-[hsl(var(--text-success))]', labelKey: 'toolbar.colors.green' },
   { className: 'doc-text-purple', swatch: 'bg-accent-foreground', labelKey: 'toolbar.colors.purple' },
   { className: 'doc-text-orange', swatch: 'bg-[hsl(var(--text-warning))]', labelKey: 'toolbar.colors.orange' },
   { className: 'doc-text-gray', swatch: 'bg-muted-foreground', labelKey: 'toolbar.colors.gray' },

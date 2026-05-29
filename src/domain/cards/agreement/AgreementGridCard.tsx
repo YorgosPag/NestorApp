@@ -62,7 +62,7 @@ export function AgreementGridCard({
     if (vendorName) {
       items.push({
         icon: Building2,
-        iconColor: 'text-green-707',
+        iconColor: 'text-[hsl(var(--text-success))]',
         label: t('hub.frameworkAgreements.detail.vendor'),
         value: vendorName,
       });
@@ -76,7 +76,7 @@ export function AgreementGridCard({
     if (agreement.totalCommitment !== null) {
       items.push({
         icon: DollarSign,
-        iconColor: 'text-green-707',
+        iconColor: 'text-[hsl(var(--text-success))]',
         label: t('hub.frameworkAgreements.totalCommitment'),
         value: formatCurrency(agreement.totalCommitment),
       });

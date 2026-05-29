@@ -192,7 +192,7 @@ export function ExtractedDataReviewPanel({
         <CardTitle className="text-base">{t('quotes.scan.reviewTitle')}</CardTitle>
         <div className="flex items-center gap-2">
           {overall >= 80 ? (
-            <CheckCircle2 className="h-4 w-4 text-green-707" />
+            <CheckCircle2 className="h-4 w-4 text-[hsl(var(--text-success))]" />
           ) : (
             <AlertTriangle className="h-4 w-4 text-[hsl(var(--bg-warning))]" />
           )}
@@ -388,7 +388,7 @@ export function ExtractedDataReviewPanel({
                 <Badge variant="outline" className="border-muted-foreground/40 text-muted-foreground text-xs">{t('quotes.scan.vatIncludedUnknown')}</Badge>
               )}
               {extracted.laborIncluded?.value === true && (
-                <Badge variant="outline" className="border-[hsl(var(--bg-success))] text-green-707 text-xs">{t('quotes.scan.laborIncludedYes')}</Badge>
+                <Badge variant="outline" className="border-[hsl(var(--bg-success))] text-[hsl(var(--text-success))] text-xs">{t('quotes.scan.laborIncludedYes')}</Badge>
               )}
               {extracted.laborIncluded?.value === false && (
                 <Badge variant="outline" className="border-destructive text-destructive text-xs">{t('quotes.scan.laborIncludedNo')}</Badge>

@@ -47,12 +47,12 @@ export function SystemStatusPanel({ t, colors, borders, iconSizes }: SystemStatu
         </h3>
         <div className="space-y-3">
           <div className={`p-3 ${colors.bg.success}/20 ${borders.quick.card} ${borders.getStatusBorder('success')}`}>
-            <div className="text-sm font-medium text-green-707">{t('sidebar.phaseProgress.phase1Title')}</div>
-            <div className="text-xs text-green-707">{t('sidebar.phaseProgress.phase1Description')}</div>
+            <div className="text-sm font-medium text-[hsl(var(--text-success))]">{t('sidebar.phaseProgress.phase1Title')}</div>
+            <div className="text-xs text-[hsl(var(--text-success))]">{t('sidebar.phaseProgress.phase1Description')}</div>
           </div>
           <div className={`p-3 ${colors.bg.success}/20 ${borders.quick.card} ${borders.getStatusBorder('success')}`}>
-            <div className="text-sm font-medium text-green-707">{t('sidebar.phaseProgress.phase2Title')}</div>
-            <div className="text-xs text-green-707">{t('sidebar.phaseProgress.phase2Description')}</div>
+            <div className="text-sm font-medium text-[hsl(var(--text-success))]">{t('sidebar.phaseProgress.phase2Title')}</div>
+            <div className="text-xs text-[hsl(var(--text-success))]">{t('sidebar.phaseProgress.phase2Description')}</div>
           </div>
           <div className={`p-3 ${colors.bg.hover} rounded`}>
             <div className="text-sm font-medium text-[hsl(var(--text-warning))]">{t('sidebar.phaseProgress.phase3Title')}</div>
@@ -70,7 +70,7 @@ export function SystemStatusPanel({ t, colors, borders, iconSizes }: SystemStatu
       </section>
 
       <section>
-        <h3 className="text-lg font-semibold mb-4 text-green-707">
+        <h3 className="text-lg font-semibold mb-4 text-[hsl(var(--text-success))]">
           {t('sidebar.availableFeatures.title')}
         </h3>
         <ul className="space-y-2 text-sm list-none">
@@ -90,7 +90,7 @@ export function SystemStatusPanel({ t, colors, borders, iconSizes }: SystemStatu
         <dl className="space-y-2 text-sm text-muted-foreground">
           {[
             { key: 'transformation', color: 'text-primary' },
-            { key: 'accuracy', color: 'text-green-707' },
+            { key: 'accuracy', color: 'text-[hsl(var(--text-success))]' },
             { key: 'crsSupport', color: 'text-primary' },
             { key: 'mathEngine', color: 'text-[hsl(var(--text-warning))]' },
             { key: 'standards', color: 'text-primary' },

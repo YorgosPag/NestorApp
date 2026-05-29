@@ -61,7 +61,7 @@ function FieldRow({
       <span
         className={cn(
           'truncate px-1.5 py-0.5 rounded',
-          decision === 'apply' ? 'bg-[hsl(var(--bg-success))]/10 font-medium text-green-707' : 'text-muted-foreground',
+          decision === 'apply' ? 'bg-[hsl(var(--bg-success))]/10 font-medium text-[hsl(var(--text-success))]' : 'text-muted-foreground',
         )}
       >
         {conflict.resolvedValue || '—'}

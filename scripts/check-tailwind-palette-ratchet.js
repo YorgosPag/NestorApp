@@ -96,6 +96,29 @@ const PALETTE_REGEX = new RegExp(
 );
 
 // ---------------------------------------------------------------------------
+// Invalid-shade detection (ADR-365 §10 — green-707 typo incident, 2026-05-29)
+// ---------------------------------------------------------------------------
+// Same shape as PALETTE_REGEX but captures ANY numeric shade, including the
+// `-l-`/`-r-`/`-t-`/`-b-`/`-x-`/`-y-` directional border infix. A match whose
+// shade is NOT in the SHADES whitelist (e.g. `green-707` typo for `green-700`)
+// is a non-existent Tailwind class → emits zero CSS → silent visual regression.
+// Zero-tolerance hard block (no baseline): valid shades are already governed by
+// the PALETTE_REGEX ratchet, so the only matches here are real typos.
+const SHADE_SET = new Set(SHADES);
+const INVALID_SHADE_REGEX = new RegExp(
+  '(?<![\\w-])' +
+  '(?:dark:)?' +
+  '(?:' + STATE_PREFIXES.map((p) => p.replace(':', '\\:')).join('|') + ')?' +
+  '(?:[\\w-]+\\:)?' + // tolerate arbitrary state/variant prefixes like data-[state=checked]:
+  '(' + UTILITIES.join('|') + ')' +
+  '(?:-[lrtbxy])?' + // directional border infix (border-l-, border-x-, …)
+  '-(' + PALETTES.join('|') + ')' +
+  '-(\\d{2,3})' +
+  '(?![\\w-])',
+  'g',
+);
+
+// ---------------------------------------------------------------------------
 // Registry-driven allowlist + global exempt patterns
 // ---------------------------------------------------------------------------
 function loadRegistry() {
@@ -151,6 +174,22 @@ function countViolations(content) {
     hits.push({
       match: m[0],
       utility: m[1],
+      palette: m[2],
+      shade: m[3],
+      line: getLineNumber(content, m.index),
+    });
+  }
+  return hits;
+}
+
+// Detect raw-palette utilities with a NON-existent shade (typos like green-707).
+function countInvalidShades(content) {
+  INVALID_SHADE_REGEX.lastIndex = 0;
+  const hits = [];
+  for (const m of content.matchAll(INVALID_SHADE_REGEX)) {
+    if (SHADE_SET.has(m[3])) continue; // valid shade — governed by PALETTE_REGEX ratchet
+    hits.push({
+      match: m[0],
       palette: m[2],
       shade: m[3],
       line: getLineNumber(content, m.index),
@@ -240,8 +279,15 @@ if (wantReport || wantAll) {
   const files = walkSrc('src');
   const entries = [];
   let totalViolations = 0;
+  let totalInvalidShades = 0;
+  const invalidEntries = [];
   for (const file of files) {
     const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+    const invalid = countInvalidShades(content);
+    if (invalid.length > 0) {
+      totalInvalidShades += invalid.length;
+      invalidEntries.push({ file: normalizePath(file), invalid });
+    }
     const hits = countViolations(content);
     if (hits.length === 0) continue;
     totalViolations += hits.length;
@@ -256,11 +302,22 @@ if (wantReport || wantAll) {
         console.log(`  L${h.line}  ${h.match}`);
       }
     }
+    if (invalidEntries.length > 0) {
+      console.log(`\n${RED}Invalid shades (non-existent classes):${NC}`);
+      for (const { file, invalid } of invalidEntries) {
+        for (const h of invalid) console.log(`  ${RED}${file}:${h.line}  ${h.match}${NC}`);
+      }
+    }
     console.log('');
   }
   console.log(
     `${GREEN}📊 Tailwind palette audit: ${entries.length} files / ${totalViolations} violations${NC}`,
   );
+  if (totalInvalidShades > 0) {
+    console.log(
+      `${RED}🚫 Invalid shades: ${invalidEntries.length} files / ${totalInvalidShades} non-existent classes (emit no CSS)${NC}`,
+    );
+  }
   process.exit(0);
 }
 
@@ -286,6 +343,21 @@ for (const file of stagedFiles) {
   totalChecked += 1;
 
   const content = fs.readFileSync(abs, 'utf8');
+
+  // Zero-tolerance: invalid-shade typos (e.g. green-707) emit no CSS — always block.
+  const invalid = countInvalidShades(content);
+  if (invalid.length > 0) {
+    hasBlock = true;
+    console.log(
+      `${RED}  🚫 ${rel}: ${invalid.length} invalid Tailwind shade(s) — non-existent class, emits NO CSS${NC}`,
+    );
+    for (const { match, line, palette, shade } of invalid) {
+      console.log(
+        `${YELLOW}     Line ${line}: ${match} — shade '${shade}' not in ${palette} palette (valid: ${SHADES.join(',')})${NC}`,
+      );
+    }
+  }
+
   const hits = countViolations(content);
   if (hits.length === 0) continue;
 

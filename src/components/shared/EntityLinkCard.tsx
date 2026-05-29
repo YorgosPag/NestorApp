@@ -462,7 +462,7 @@ export function EntityLinkCard({
           </p>
         )}
         {saveStatus === 'success' && (
-          <p className="flex items-center gap-1 text-sm text-green-707 pt-1">
+          <p className="flex items-center gap-1 text-sm text-[hsl(var(--text-success))] pt-1">
             <CheckCircle className={iconSizes.sm} />
             {labels.success}
           </p>

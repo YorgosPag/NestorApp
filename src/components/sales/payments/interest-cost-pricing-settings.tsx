@@ -54,11 +54,11 @@ export function PricingTab({ result, salePrice, t }: PricingTabProps) {
 
       {/* Hero callout */}
       <section className="rounded-lg border-2 border-border bg-[hsl(var(--bg-success))]/10 p-4 text-center space-y-2">
-        <TrendingUp className="h-10 w-10 mx-auto text-green-707" />
+        <TrendingUp className="h-10 w-10 mx-auto text-[hsl(var(--text-success))]" />
         <p className={cn("text-sm", colors.text.muted)}>
           {t('costCalculator.pricing.sellAtLeast')}
         </p>
-        <p className="text-3xl font-bold text-green-707">
+        <p className="text-3xl font-bold text-[hsl(var(--text-success))]">
           {formatCurrency(result.recommendedPrice)}
         </p>
         <p className={cn("text-sm", colors.text.muted)}>

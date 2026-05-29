@@ -10,14 +10,14 @@ import type { ActivityLevel, ActivityVerbosity, GeocodingActivityEvent } from '.
 
 const LEVEL_TEXT_CLASS: Record<ActivityLevel, string> = {
   info: 'text-muted-foreground',
-  success: 'text-green-707',
+  success: 'text-[hsl(var(--text-success))]',
   warn: 'text-[hsl(var(--text-warning))]',
   error: 'text-destructive',
 };
 
 const LEVEL_DOT_CLASS: Record<ActivityLevel, string> = {
   info: 'bg-muted-foreground/40',
-  success: 'bg-green-707',
+  success: 'bg-[hsl(var(--text-success))]',
   warn: 'bg-[hsl(var(--text-warning))]',
   error: 'bg-destructive',
 };

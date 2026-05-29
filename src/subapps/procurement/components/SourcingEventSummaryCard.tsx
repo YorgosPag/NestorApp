@@ -59,8 +59,8 @@ export function SourcingEventSummaryCard({
             {t('comparison.sourcingEvent.vendorsCount', { count: aggregate.uniqueVendorCount })}
           </StatPill>
           {aggregate.bestPackageTotal !== null && (
-            <StatPill icon={<Trophy className="h-3.5 w-3.5 text-green-707" />}>
-              <span className="font-semibold text-green-707">
+            <StatPill icon={<Trophy className="h-3.5 w-3.5 text-[hsl(var(--text-success))]" />}>
+              <span className="font-semibold text-[hsl(var(--text-success))]">
                 {t('comparison.sourcingEvent.bestTotal')}:{' '}
                 {formatCurrency(aggregate.bestPackageTotal)}
               </span>
@@ -113,7 +113,7 @@ export function SourcingEventSummaryCard({
                       </Badge>
                     )}
                     {row.winnerQuoteId && (
-                      <Trophy className="inline h-3.5 w-3.5 text-green-707 ml-1" />
+                      <Trophy className="inline h-3.5 w-3.5 text-[hsl(var(--text-success))] ml-1" />
                     )}
                   </TableCell>
                 </TableRow>

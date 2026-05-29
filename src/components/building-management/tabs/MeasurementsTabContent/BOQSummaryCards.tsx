@@ -78,7 +78,7 @@ export function BOQSummaryCards({ items }: BOQSummaryCardsProps) {
       labelKey: 'tabs.measurements.summary.equipment',
       amount: totals.equipmentCost,
       icon: Truck,
-      accentClass: 'text-green-707',
+      accentClass: 'text-[hsl(var(--text-success))]',
     },
     {
       labelKey: 'tabs.measurements.summary.total',

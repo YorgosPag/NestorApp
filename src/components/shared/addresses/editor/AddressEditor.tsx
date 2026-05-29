@@ -53,7 +53,7 @@ const PHASE_STATUS_CLASS: Record<AddressEditorState['phase'], string> = {
   typing: 'text-muted-foreground',
   debouncing: 'text-muted-foreground',
   loading: 'text-primary',
-  success: 'text-green-707',
+  success: 'text-[hsl(var(--text-success))]',
   partial: 'text-[hsl(var(--text-warning))]',
   conflict: 'text-[hsl(var(--text-warning))]',
   suggestions: 'text-primary',

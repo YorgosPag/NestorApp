@@ -76,7 +76,7 @@ export function VendorListCard({
   return (
     <ListCard
       customIcon={Building2}
-      customIconColor="text-green-707"
+      customIconColor="text-[hsl(var(--text-success))]"
       title={displayName}
       subtitle={subtitle}
       badges={badges}

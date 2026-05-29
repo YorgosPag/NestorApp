@@ -118,7 +118,7 @@ const ComplianceResultSection: React.FC<ComplianceResultSectionProps> = ({ resul
     {/* Pass/Fail banner */}
     <div className={`flex items-center gap-1.5 rounded px-2 py-1 text-sm font-medium ${
       result.passed
-        ? 'bg-[hsl(var(--bg-success))]/10 text-green-707'
+        ? 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]'
         : 'bg-destructive/10 text-destructive'
     }`}>
       {result.passed
@@ -145,7 +145,7 @@ const ComplianceResultSection: React.FC<ComplianceResultSectionProps> = ({ resul
             <td className="text-right py-1 tabular-nums">{check.limit?.toFixed(2) ?? '—'}</td>
             <td className="text-center py-1">
               {check.status === 'pass'
-                ? <CheckCircle2 className="inline h-3.5 w-3.5 text-green-707" />
+                ? <CheckCircle2 className="inline h-3.5 w-3.5 text-[hsl(var(--text-success))]" />
                 : <XCircle className="inline h-3.5 w-3.5 text-destructive" />}
             </td>
           </tr>

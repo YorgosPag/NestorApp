@@ -85,7 +85,7 @@ export function FloorPlanControls({
               onClick={() => onVisibilityChange(!visible)}
               className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
                 visible
-                  ? `${colors.bg.success} text-green-707 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                  ? `${colors.bg.success} text-[hsl(var(--text-success))] ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                   : `${colors.bg.muted} text-muted-foreground ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
               }`}
             >

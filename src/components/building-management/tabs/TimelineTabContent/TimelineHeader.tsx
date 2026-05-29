@@ -32,7 +32,7 @@ export function TimelineHeader({ milestones }: TimelineHeaderProps) {
                   customLabel={t('tabs.timeline.header.completedCount', { completed: completedCount, total: milestones.length })}
                   variant="outline"
                   size="sm"
-                  className="bg-[hsl(var(--bg-success))]/10 text-green-707"
+                  className="bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]"
                 />
             </div>
         </div>

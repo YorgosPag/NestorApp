@@ -148,7 +148,7 @@ export function CriticalPathCard({ buildingId }: CriticalPathCardProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Route className={cn(iconSizes.md, 'text-green-707')} />
+            <Route className={cn(iconSizes.md, 'text-[hsl(var(--text-success))]')} />
             {t('tabs.timeline.criticalPath.title')}
           </CardTitle>
         </CardHeader>

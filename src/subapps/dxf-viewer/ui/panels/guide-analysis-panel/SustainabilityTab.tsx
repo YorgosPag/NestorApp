@@ -148,7 +148,7 @@ export const SustainabilityTab: React.FC = () => {
           <ul className="space-y-0.5">
             {greenDeal.findings.map((f, i) => (
               <li key={i} className="flex items-start gap-1.5 text-sm">
-                {f.status === 'pass' && <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-707" />}
+                {f.status === 'pass' && <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[hsl(var(--text-success))]" />}
                 {f.status === 'warning' && <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[hsl(var(--text-warning))]" />}
                 {f.status === 'fail' && <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />}
                 <span>{f.detail}</span>

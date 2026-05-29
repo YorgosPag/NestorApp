@@ -221,7 +221,7 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
     return (
       <>
         <div className="flex flex-col items-center justify-center gap-3 py-12">
-          <CheckCircle2 className={`${iconSizes.xl3} text-green-707`} />
+          <CheckCircle2 className={`${iconSizes.xl3} text-[hsl(var(--text-success))]`} />
           <p className="text-sm font-medium">{t('floorplanImport.success')}</p>
           {showCalibratePrompt && (
             <section className="mt-4 flex flex-col items-center gap-2 rounded-md border border-border bg-muted/30 px-4 py-3 text-sm">

@@ -210,7 +210,7 @@ function APYCertificateRow({ cert, onClick }: APYCertificateRowProps) {
       </TableCell>
       <TableCell className="text-center">
         {cert.isReceived ? (
-          <Badge className="bg-[hsl(var(--bg-success))]/40 text-green-707 border-[hsl(var(--bg-success))]">
+          <Badge className="bg-[hsl(var(--bg-success))]/40 text-[hsl(var(--text-success))] border-[hsl(var(--bg-success))]">
             <CheckCircle2 className="h-3 w-3 mr-1" />
             {t('apy.status.received')}
           </Badge>

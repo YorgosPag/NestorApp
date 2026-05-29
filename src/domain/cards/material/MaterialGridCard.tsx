@@ -57,7 +57,7 @@ export function MaterialGridCard({
     if (material.lastPrice !== null) {
       items.push({
         icon: DollarSign,
-        iconColor: 'text-green-707',
+        iconColor: 'text-[hsl(var(--text-success))]',
         label: t('hub.materialCatalog.lastPrice'),
         value: formatCurrency(material.lastPrice),
       });

@@ -196,7 +196,7 @@ export function ToolbarShowcase() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 border rounded-lg">
-            <h3 className="font-medium text-green-707 mb-2">✅ Unified Interface</h3>
+            <h3 className="font-medium text-[hsl(var(--text-success))] mb-2">✅ Unified Interface</h3>
             <p className={cn("text-sm", colors.text.muted)}>
               Όλα τα toolbars χρησιμοποιούν το ίδιο BaseToolbar system για consistent behavior και styling
             </p>

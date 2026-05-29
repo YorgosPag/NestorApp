@@ -257,7 +257,7 @@ export function UserCard({
               )}
               {user.projectsAssigned !== undefined && (
                 <div>
-                  <div className="text-lg font-semibold text-green-707">
+                  <div className="text-lg font-semibold text-[hsl(var(--text-success))]">
                     {user.projectsAssigned}
                   </div>
                   <div className={cn("text-xs", colors.text.muted)}>{t('card.stats.projects')}</div>

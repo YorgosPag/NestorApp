@@ -77,10 +77,10 @@ export const BUTTON_STYLES = {
     restore: BUTTON_CATEGORIES.secondary,
 
     // Utility Actions (Dark with colored text for differentiation)
-    call: `${BUTTON_CATEGORIES.utility} text-green-707`,
+    call: `${BUTTON_CATEGORIES.utility} text-[hsl(var(--text-success))]`,
     email: `${BUTTON_CATEGORIES.utility} text-primary`,
     sms: `${BUTTON_CATEGORIES.utility} text-primary`,
-    export: `${BUTTON_CATEGORIES.utility} text-green-707`,
+    export: `${BUTTON_CATEGORIES.utility} text-[hsl(var(--text-success))]`,
     import: `${BUTTON_CATEGORIES.utility} text-[hsl(var(--text-warning))]`,
     help: `${BUTTON_CATEGORIES.utility} text-primary`,
     sort: `${BUTTON_CATEGORIES.utility} text-primary`,

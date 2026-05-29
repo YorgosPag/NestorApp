@@ -72,14 +72,14 @@ const STATUS_VARIANT: Record<BOQItemStatus, 'secondary' | 'default' | 'outline' 
 const STATUS_CLASS: Record<BOQItemStatus, string> = {
   draft: 'bg-muted text-muted-foreground',
   submitted: 'bg-[hsl(var(--bg-info))]/20 text-primary',
-  approved: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+  approved: 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
   certified: 'bg-accent text-primary',
   locked: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
 };
 
 function getVarianceClass(percent: number): string {
   const abs = Math.abs(percent);
-  if (abs <= 5) return 'text-green-707';
+  if (abs <= 5) return 'text-[hsl(var(--text-success))]';
   if (abs <= 15) return 'text-[hsl(var(--text-warning))]';
   return 'text-destructive';
 }

@@ -67,13 +67,13 @@ export function VendorGridCard({
       },
       {
         icon: DollarSign,
-        iconColor: 'text-green-707',
+        iconColor: 'text-[hsl(var(--text-success))]',
         label: t('hub.vendorMaster.totalSpend'),
         value: formatCurrency(metrics.totalSpend),
       },
       {
         icon: TrendingUp,
-        iconColor: 'text-green-707',
+        iconColor: 'text-[hsl(var(--text-success))]',
         label: t('hub.vendorMaster.onTimeRate'),
         value: `${metrics.onTimeDeliveryRate}%`,
       },
@@ -106,7 +106,7 @@ export function VendorGridCard({
   return (
     <GridCard
       customIcon={Building2}
-      customIconColor="text-green-707"
+      customIconColor="text-[hsl(var(--text-success))]"
       title={displayName}
       subtitle={subtitle}
       badges={badges}

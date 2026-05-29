@@ -56,7 +56,7 @@ export function getCategoryIcon(category: string | undefined, iconSizes: ReturnT
       return React.createElement(FileText, { className: `${iconSizes.md} text-[hsl(var(--text-warning))]` });
     case 'floorplans':
     case 'drawings':
-      return React.createElement(FileText, { className: `${iconSizes.md} text-green-707` });
+      return React.createElement(FileText, { className: `${iconSizes.md} text-[hsl(var(--text-success))]` });
     default:
       return React.createElement(File, { className: `${iconSizes.md} text-muted-foreground` });
   }

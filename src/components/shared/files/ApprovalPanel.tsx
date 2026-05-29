@@ -65,7 +65,7 @@ const STATUS_ICON_CONFIG: Record<
   { icon: typeof CheckCircle2; colorClass: string }
 > = {
   pending: { icon: Clock, colorClass: 'text-[hsl(var(--bg-warning))]' },
-  approved: { icon: CheckCircle2, colorClass: 'text-green-707' },
+  approved: { icon: CheckCircle2, colorClass: 'text-[hsl(var(--text-success))]' },
   rejected: { icon: XCircle, colorClass: 'text-destructive' },
   cancelled: { icon: Ban, colorClass: COLOR_BRIDGE.text.muted },
 };

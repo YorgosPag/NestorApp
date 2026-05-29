@@ -183,7 +183,7 @@ export function CounterproposalTab({
       {sweetSpot && sweetSpot.builderNetGain > 0 && (
         <div className="rounded-lg border border-border bg-[hsl(var(--bg-success))]/10 p-3">
           <div className="flex gap-2">
-            <Lightbulb className="h-4 w-4 mt-0.5 shrink-0 text-green-707" />
+            <Lightbulb className="h-4 w-4 mt-0.5 shrink-0 text-[hsl(var(--text-success))]" />
             <p className="text-xs text-foreground">
               {t('costCalculator.counterproposal.insightCard', {
                 upfront: String(sweetSpot.upfrontPercent),
@@ -346,7 +346,7 @@ export function CounterproposalTab({
               tooltip={t('costCalculator.counterproposal.slider.savingTooltip')}
               className={cn("text-xs", colors.text.muted)}
             />
-            <dd className="font-mono font-medium tabular-nums text-green-707">
+            <dd className="font-mono font-medium tabular-nums text-[hsl(var(--text-success))]">
               {fmtCurrency(sliderScenario.timeCostSaved)}
             </dd>
           </div>

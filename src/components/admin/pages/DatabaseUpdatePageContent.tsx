@@ -166,7 +166,7 @@ export function DatabaseUpdatePageContent() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="text-center">
-            <Plus className={`${iconSizes.xl} mx-auto ${completed.contacts ? 'text-green-707' : 'text-primary'}`} />
+            <Plus className={`${iconSizes.xl} mx-auto ${completed.contacts ? 'text-[hsl(var(--text-success))]' : 'text-primary'}`} />
             <CardTitle className="text-sm">{t('databaseUpdate.cards.newContacts')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -176,7 +176,7 @@ export function DatabaseUpdatePageContent() {
         </Card>
         <Card>
           <CardHeader className="text-center">
-            <Edit className={`${iconSizes.xl} mx-auto ${completed.updates ? 'text-green-707' : 'text-[hsl(var(--text-warning))]'}`} />
+            <Edit className={`${iconSizes.xl} mx-auto ${completed.updates ? 'text-[hsl(var(--text-success))]' : 'text-[hsl(var(--text-warning))]'}`} />
             <CardTitle className="text-sm">{t('databaseUpdate.cards.updates')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -186,7 +186,7 @@ export function DatabaseUpdatePageContent() {
         </Card>
         <Card>
           <CardHeader className="text-center">
-            <Building className={`${iconSizes.xl} mx-auto ${completed.units ? 'text-green-707' : 'text-primary'}`} />
+            <Building className={`${iconSizes.xl} mx-auto ${completed.units ? 'text-[hsl(var(--text-success))]' : 'text-primary'}`} />
             <CardTitle className="text-sm">{t('databaseUpdate.cards.units')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -196,7 +196,7 @@ export function DatabaseUpdatePageContent() {
         </Card>
         <Card>
           <CardHeader className="text-center">
-            <Users className={`${iconSizes.xl} mx-auto ${completed.relationships ? 'text-green-707' : 'text-destructive'}`} />
+            <Users className={`${iconSizes.xl} mx-auto ${completed.relationships ? 'text-[hsl(var(--text-success))]' : 'text-destructive'}`} />
             <CardTitle className="text-sm">{t('databaseUpdate.cards.relationships')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">

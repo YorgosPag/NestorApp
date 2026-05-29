@@ -34,8 +34,8 @@ export function ProvenanceBadge({ provenance, zoneId }: ProvenanceBadgeProps) {
 
   if (provenance === 'zone') {
     return (
-      <span className="text-xs text-green-707 inline-flex items-center">
-        <span className={`${DOT_BASE} bg-green-707`} aria-hidden />
+      <span className="text-xs text-[hsl(var(--text-success))] inline-flex items-center">
+        <span className={`${DOT_BASE} bg-[hsl(var(--text-success))]`} aria-hidden />
         {t('provenance.fromZone', { zoneId })}
       </span>
     );

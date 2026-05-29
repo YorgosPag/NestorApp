@@ -72,7 +72,7 @@ const CHANNEL_ICONS: Record<string, typeof MessageSquare> = {
 const CHANNEL_COLORS: Record<string, string> = {
   [COMMUNICATION_CHANNELS.EMAIL]: 'text-primary',
   [COMMUNICATION_CHANNELS.TELEGRAM]: 'text-primary',
-  [COMMUNICATION_CHANNELS.WHATSAPP]: 'text-green-707',
+  [COMMUNICATION_CHANNELS.WHATSAPP]: 'text-[hsl(var(--text-success))]',
   [COMMUNICATION_CHANNELS.MESSENGER]: 'text-primary',
   [COMMUNICATION_CHANNELS.SMS]: 'text-[hsl(var(--text-warning))]',
 };

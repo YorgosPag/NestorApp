@@ -235,7 +235,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                           <td className="px-2 py-2">
                             <nav className="flex justify-end gap-1">
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSaveEdit} disabled={saving || !editName.trim()}>
-                                {saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-green-707" />}
+                                {saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-[hsl(var(--text-success))]" />}
                               </Button>
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEdit} disabled={saving}><X className="h-3.5 w-3.5" /></Button>
                             </nav>

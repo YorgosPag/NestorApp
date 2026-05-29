@@ -36,7 +36,7 @@ const getLeadStageBadgeClass = (stage: string): string => {
     'proposal': 'bg-accent text-foreground',
     'negotiation': 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
     'contract': 'bg-accent text-foreground',
-    'closed_won': 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+    'closed_won': 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
     'closed_lost': 'bg-destructive/10 text-destructive'
   };
   return stageClasses[stage] || 'bg-muted text-muted-foreground';
@@ -74,7 +74,7 @@ export function ContactCard({
       // Header configuration
       headerConfig={{
         backgroundGradient: "from-[hsl(var(--bg-success))]/20 via-[hsl(var(--bg-success))]/10 to-accent",
-        logo: <User className={`${iconSizes.xl} text-green-707`} />,
+        logo: <User className={`${iconSizes.xl} text-[hsl(var(--text-success))]`} />,
         showImageOverlay: false
       }}
       
@@ -184,7 +184,7 @@ export function ContactCard({
         lead.estimatedValue && {
           title: t('contactCard.estimatedValue'),
           content: (
-            <div className="text-lg font-semibold text-green-707">
+            <div className="text-lg font-semibold text-[hsl(var(--text-success))]">
               {typeof lead.estimatedValue === 'number' ? formatCurrency(lead.estimatedValue) : lead.estimatedValue}
             </div>
           )

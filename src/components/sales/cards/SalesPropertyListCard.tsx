@@ -120,7 +120,7 @@ export function SalesPropertyListCard({
     const stats = [
       {
         icon: DollarSign,
-        iconColor: 'text-green-707',
+        iconColor: 'text-[hsl(var(--text-success))]',
         label: t('sales.fields.askingPrice'),
         value: formatCurrencyWhole(askingPrice),
       },

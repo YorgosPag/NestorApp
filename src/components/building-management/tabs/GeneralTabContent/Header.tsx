@@ -39,8 +39,8 @@ export function Header({ isEditing, autoSaving, lastSaved, setIsEditing, handleS
               </>
             ) : lastSaved ? (
               <>
-                <CheckCircle className={`${iconSizes.xs} text-green-707`} />
-                <span className="text-green-707">
+                <CheckCircle className={`${iconSizes.xs} text-[hsl(var(--text-success))]`} />
+                <span className="text-[hsl(var(--text-success))]">
                   {t('tabs.general.header.saved')} {lastSaved ? formatDateTime(lastSaved, { timeStyle: 'medium' }).split(' ')[1] : '--'}
                 </span>
               </>

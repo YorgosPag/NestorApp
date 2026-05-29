@@ -30,7 +30,7 @@ export function RecommendationCard({ recommendation, winner }: RecommendationCar
     <Card className="border-2 border-[hsl(var(--bg-success))]/40 bg-[hsl(var(--bg-success))]/40">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Sparkles className="h-5 w-5 text-green-707" />
+          <Sparkles className="h-5 w-5 text-[hsl(var(--text-success))]" />
           {t('comparison.recommendation.title')}
         </CardTitle>
       </CardHeader>

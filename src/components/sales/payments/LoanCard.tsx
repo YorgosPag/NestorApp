@@ -128,7 +128,7 @@ export function LoanCard({ loan, onViewDetails }: LoanCardProps) {
             <span className={
               ltvLevel === 'exceeded' ? 'text-destructive font-medium'
                 : ltvLevel === 'warning' ? 'text-[hsl(var(--text-warning))] font-medium'
-                  : 'text-green-707'
+                  : 'text-[hsl(var(--text-success))]'
             }>
               {ltv}%
             </span>

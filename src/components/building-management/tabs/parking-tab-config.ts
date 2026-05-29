@@ -40,7 +40,7 @@ export interface ParkingTabContentProps {
 // ============================================================================
 
 export const PARKING_STATUS_COLORS: Record<string, string> = {
-  available: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+  available: 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
   occupied: 'bg-[hsl(var(--bg-info))]/20 text-primary',
   reserved: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
   sold: 'bg-accent text-primary',

@@ -302,7 +302,7 @@ export function WhatIfTab({
           </dd>
 
           <InfoDt label={t('costCalculator.whatIf.resultRecommended')} tooltip={t('costCalculator.whatIf.resultRecommendedTooltip')} />
-          <dd className="text-right font-bold text-green-707">
+          <dd className="text-right font-bold text-[hsl(var(--text-success))]">
             {formatCurrency(whatIfResult.recommendedPrice)}
           </dd>
 
@@ -323,12 +323,12 @@ export function WhatIfTab({
               : 'border-muted bg-muted/30'
         }`}>
           <TrendingUp className={`h-4 w-4 shrink-0 mt-0.5 ${
-            diff > 0 ? 'text-green-707' : diff < 0 ? 'text-destructive' : colors.text.muted
+            diff > 0 ? 'text-[hsl(var(--text-success))]' : diff < 0 ? 'text-destructive' : colors.text.muted
           }`} />
           <div>
             <p className="text-sm font-semibold">{t('costCalculator.whatIf.comparedToCurrent')}</p>
             <p className={`text-sm font-medium ${
-              diff > 0 ? 'text-green-707' : diff < 0 ? 'text-destructive' : colors.text.muted
+              diff > 0 ? 'text-[hsl(var(--text-success))]' : diff < 0 ? 'text-destructive' : colors.text.muted
             }`}>
               {diff > 0
                 ? t('costCalculator.whatIf.betterBy', { amount: formatCurrency(Math.abs(diff)) })

@@ -40,7 +40,7 @@ export function BuildingCardTimeline({ building }: BuildingCardTimelineProps) {
             <p className={cn(
               "text-xs",
               daysUntilCompletion < 0 ? "text-destructive" :
-              daysUntilCompletion < 30 ? "text-[hsl(var(--text-warning))]" : "text-green-707"
+              daysUntilCompletion < 30 ? "text-[hsl(var(--text-warning))]" : "text-[hsl(var(--text-success))]"
             )}>
               {/* 🏢 ENTERPRISE: Fallback to raw values when namespace not ready */}
               {daysUntilCompletion < 0

@@ -27,7 +27,7 @@ const STATUS_VARIANTS: Record<VendorInvite['status'], string> = {
   pending: 'bg-muted text-foreground',
   sent: 'bg-[hsl(var(--bg-info))]/40 text-primary',
   opened: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--bg-warning))]',
-  submitted: 'bg-[hsl(var(--bg-success))]/40 text-green-707',
+  submitted: 'bg-[hsl(var(--bg-success))]/40 text-[hsl(var(--text-success))]',
   declined: 'bg-[hsl(var(--bg-error))]/40 text-destructive',
   expired: 'bg-muted text-foreground',
 };

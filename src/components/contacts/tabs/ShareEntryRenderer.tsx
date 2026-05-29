@@ -22,7 +22,7 @@ import type { PhotoShareRecord, PhotoShareStatus } from '@/types/photo-share';
 export function getStatusConfig(status: PhotoShareStatus) {
   switch (status) {
     case 'sent':
-      return { color: 'text-green-707', bg: 'bg-[hsl(var(--bg-success))]/10' };
+      return { color: 'text-[hsl(var(--text-success))]', bg: 'bg-[hsl(var(--bg-success))]/10' };
     case 'partial':
       return { color: 'text-[hsl(var(--bg-warning))]', bg: 'bg-[hsl(var(--bg-warning))]/40' };
     case 'failed':

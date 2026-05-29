@@ -48,7 +48,7 @@ const getRelationshipColors = (colors?: ReturnType<typeof useSemanticColors>) =>
   if (!colors) {
     return {
       employment:   `${getStatusColor('info', 'bg')} text-primary`,
-      ownership:    `${getStatusColor('success', 'bg')} text-green-707`,
+      ownership:    `${getStatusColor('success', 'bg')} text-[hsl(var(--text-success))]`,
       board:        'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
       government:   'bg-accent text-foreground',
       professional: `${getStatusColor('info', 'bg')} text-primary`,

@@ -255,8 +255,8 @@ export function AdminSetupPageContent() {
             ) : currentConfig ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-707" />
-                  <span className="font-medium text-green-707">{t('setup.configActive')}</span>
+                  <CheckCircle2 className="h-5 w-5 text-[hsl(var(--text-success))]" />
+                  <span className="font-medium text-[hsl(var(--text-success))]">{t('setup.configActive')}</span>
                 </div>
                 <div className="grid gap-2 text-sm">
                   <div className="flex justify-between">
@@ -284,7 +284,7 @@ export function AdminSetupPageContent() {
                 {currentConfig.primaryAdminUid === user.uid ? (
                   <div className="mt-4 space-y-3">
                     <div className="p-3 bg-[hsl(var(--bg-success))]/10 border border-border rounded-md">
-                      <p className="text-sm text-green-707">
+                      <p className="text-sm text-[hsl(var(--text-success))]">
                         <CheckCircle2 className="h-4 w-4 inline mr-1" />
                         {t('setup.youArePrimaryAdmin')}
                       </p>
@@ -392,7 +392,7 @@ export function AdminSetupPageContent() {
         {/* Success Message */}
         {success && (
           <div className="p-4 bg-[hsl(var(--bg-success))]/10 border border-border rounded-md">
-            <p className="text-sm text-green-707 flex items-center gap-2">
+            <p className="text-sm text-[hsl(var(--text-success))] flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4" />
               {t('setup.successMessage')}
             </p>

@@ -45,7 +45,7 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   created: {
     icon: Plus,
     labelKey: "audit.actions.created",
-    color: "text-green-707",
+    color: "text-[hsl(var(--text-success))]",
     bgColor: "bg-[hsl(var(--bg-success))]/10",
   },
   updated: {
@@ -69,7 +69,7 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   restored: {
     icon: RefreshCw,
     labelKey: "audit.actions.restored",
-    color: "text-green-707",
+    color: "text-[hsl(var(--text-success))]",
     bgColor: "bg-[hsl(var(--bg-success))]/10",
   },
   status_changed: {
@@ -111,7 +111,7 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   invoice_created: {
     icon: Receipt,
     labelKey: "audit.actions.invoice_created",
-    color: "text-green-707",
+    color: "text-[hsl(var(--text-success))]",
     bgColor: "bg-[hsl(var(--bg-success))]/10",
   },
   document_added: {
@@ -147,7 +147,7 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
   auto_submit_accepted: {
     icon: Check,
     labelKey: "audit.actions.auto_submit_accepted",
-    color: "text-green-707",
+    color: "text-[hsl(var(--text-success))]",
     bgColor: "bg-[hsl(var(--bg-success))]/10",
   },
   auto_submit_declined: {

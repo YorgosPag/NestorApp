@@ -111,7 +111,7 @@ export function PaymentReportDialog({
               <SummaryCard
                 label={t('report.totalWithPlan')}
                 value={String(report.summary.totalPropertiesWithPlan)}
-                icon={<CheckCircle2 className="h-4 w-4 text-green-707" />}
+                icon={<CheckCircle2 className="h-4 w-4 text-[hsl(var(--text-success))]" />}
               />
               <SummaryCard
                 label={t('labels.totalAmount')}
@@ -129,7 +129,7 @@ export function PaymentReportDialog({
                   report.summary.totalOverdueCount > 0 ? (
                     <AlertTriangle className="h-4 w-4 text-[hsl(var(--text-warning))]" />
                   ) : (
-                    <CheckCircle2 className="h-4 w-4 text-green-707" />
+                    <CheckCircle2 className="h-4 w-4 text-[hsl(var(--text-success))]" />
                   )
                 }
                 variant={report.summary.totalOverdueCount > 0 ? 'warning' : 'default'}

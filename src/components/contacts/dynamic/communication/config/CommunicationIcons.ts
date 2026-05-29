@@ -58,6 +58,6 @@ export const COMMUNICATION_ICON_COLORS: Record<CommunicationType, string> = {
   website: 'text-primary',
   social: 'text-primary',
   identity: 'text-[hsl(var(--text-warning))]',
-  professional: 'text-green-707',
+  professional: 'text-[hsl(var(--text-success))]',
   address: 'text-destructive',
 } as const;

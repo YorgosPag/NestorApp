@@ -73,13 +73,13 @@ export function PurchaseOrderGridCard({
     () => [
       {
         icon: Building2,
-        iconColor: 'text-green-707',
+        iconColor: 'text-[hsl(var(--text-success))]',
         label: t('detail.supplier'),
         value: supplierName,
       },
       {
         icon: DollarSign,
-        iconColor: 'text-green-707',
+        iconColor: 'text-[hsl(var(--text-success))]',
         label: t('detail.total'),
         value: formatPOCurrency(po.total),
       },

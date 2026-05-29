@@ -40,12 +40,12 @@ interface CardConfig {
 }
 
 const REPORT_CARD_CONFIG: Record<ReportType, CardConfig> = {
-  profit_and_loss: { icon: TrendingUp, colorClass: 'text-green-707' },
+  profit_and_loss: { icon: TrendingUp, colorClass: 'text-[hsl(var(--text-success))]' },
   trial_balance: { icon: Scale, colorClass: 'text-primary' },
   ar_aging: { icon: Clock, colorClass: 'text-[hsl(var(--bg-warning))]' },
   tax_summary: { icon: Calculator, colorClass: 'text-primary' },
   bank_reconciliation: { icon: GitCompareArrows, colorClass: 'text-primary' },
-  cash_flow: { icon: Banknote, colorClass: 'text-green-707' },
+  cash_flow: { icon: Banknote, colorClass: 'text-[hsl(var(--text-success))]' },
   income_by_customer: { icon: Users, colorClass: 'text-primary' },
   expense_by_category: { icon: PieChart, colorClass: 'text-destructive' },
 };

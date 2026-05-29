@@ -59,7 +59,7 @@ export const kpis = {
 };
 
 export const getEfficiencyColor = (value: number) => {
-    if (value >= 90) return 'text-green-707';
+    if (value >= 90) return 'text-[hsl(var(--text-success))]';
     if (value >= 75) return 'text-[hsl(var(--text-warning))]';
     return 'text-destructive';
 };

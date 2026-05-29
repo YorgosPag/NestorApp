@@ -59,7 +59,7 @@ const CHANNEL_ICONS: Record<ChannelProvider, React.FC<{ className?: string }>> =
 const CHANNEL_COLORS: Record<ChannelProvider, string> = {
   email: 'bg-muted text-foreground',
   telegram: 'bg-[hsl(var(--bg-info))]/20 text-primary',
-  whatsapp: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+  whatsapp: 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
   messenger: 'bg-[hsl(var(--bg-info))]/20 text-primary',
   instagram: 'bg-accent text-primary',
 };

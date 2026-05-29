@@ -166,7 +166,7 @@ export function BankAccountCard({
                     aria-label={t('account.copyIban')}
                   >
                     {copied ? (
-                      <Check size={iconSizes.numeric.sm} className="text-green-707" />
+                      <Check size={iconSizes.numeric.sm} className="text-[hsl(var(--text-success))]" />
                     ) : (
                       <Copy size={iconSizes.numeric.sm} />
                     )}

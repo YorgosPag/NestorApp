@@ -213,7 +213,7 @@ function SuggestionsDemo() {
   return (
     <div className="space-y-2">
       {selected && (
-        <p className="text-xs text-green-707">Selected: {selected}</p>
+        <p className="text-xs text-[hsl(var(--text-success))]">Selected: {selected}</p>
       )}
       <AddressSuggestionsPanel
         trigger="low-confidence"

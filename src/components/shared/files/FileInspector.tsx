@@ -288,7 +288,7 @@ export function FileInspector({
                     <span
                       className={cn(
                         'inline-flex items-center px-2 py-1 rounded text-xs font-medium',
-                        file.status === 'ready' && 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+                        file.status === 'ready' && 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
                         file.status === 'pending' && 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
                         file.status === 'failed' && 'bg-destructive/10 text-destructive'
                       )}

@@ -35,7 +35,7 @@ const COLOR_MAP: Record<ColorVariant, { iconBg: string; iconText: string; ringHo
   },
   green: {
     iconBg: 'bg-[hsl(var(--bg-success))]/10',
-    iconText: 'text-green-707',
+    iconText: 'text-[hsl(var(--text-success))]',
     ringHover: 'group-hover:ring-[hsl(var(--bg-success))]',
   },
   purple: {

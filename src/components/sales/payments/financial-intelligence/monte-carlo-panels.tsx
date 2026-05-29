@@ -305,7 +305,7 @@ export function DynamicHelpPanel({
           </section>
 
           <section className="space-y-1 border-t border-dashed pt-2">
-            <p className="text-xs font-semibold text-green-707">
+            <p className="text-xs font-semibold text-[hsl(var(--text-success))]">
               {h('recommendTitle')}
             </p>
             <p className={cn("text-xs leading-relaxed", colors.text.muted)}>
@@ -345,7 +345,7 @@ export function DynamicHelpPanel({
 
         {hoveredItem.field === 'main' && (
           <section className="space-y-1 border-t border-dashed pt-2">
-            <p className="text-xs font-semibold text-green-707">
+            <p className="text-xs font-semibold text-[hsl(var(--text-success))]">
               {h('recommendTitle')}
             </p>
             <p className={cn("text-xs leading-relaxed", colors.text.muted)}>

@@ -3,7 +3,7 @@
     "module": "tailwind-hardcoded-palette",
     "description": "Tailwind raw palette utilities baseline. Ratchet enforced via CHECK 3.26 (ADR-365). Counts can only decrease per-file. New files: zero tolerance.",
     "adr": "ADR-365",
-    "generatedAt": "2026-05-22T13:28:04.643Z",
+    "generatedAt": "2026-05-29T11:34:06.618Z",
     "totalFiles": 0,
     "totalViolations": 0
   },

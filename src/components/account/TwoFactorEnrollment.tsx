@@ -138,7 +138,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
             <code className="break-all">{totpSecret.secretKey}</code>
             <Button variant="ghost" size="sm" onClick={handleCopySecret} aria-label={t('copy.copyText')}>
               {copiedSecret ? (
-                <Check className={cn(iconSizes.xs, 'text-green-707')} />
+                <Check className={cn(iconSizes.xs, 'text-[hsl(var(--text-success))]')} />
               ) : (
                 <Copy className={iconSizes.xs} />
               )}
@@ -231,7 +231,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
       <nav className={cn(layout.flexCenterGap2)}>
         <Button variant="outline" onClick={handleCopyBackupCodes} className="flex-1">
           {copiedCodes ? (
-            <Check className={cn(iconSizes.sm, 'mr-2 text-green-707')} />
+            <Check className={cn(iconSizes.sm, 'mr-2 text-[hsl(var(--text-success))]')} />
           ) : (
             <Copy className={cn(iconSizes.sm, 'mr-2')} />
           )}

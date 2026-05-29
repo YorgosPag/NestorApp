@@ -77,7 +77,7 @@ export function MultiLevelNavigation({
     <Card className={cn(quick.card, colors.bg.card)}>
       <CardHeader className="!p-2 flex flex-col space-y-2">
         <CardTitle className={cn('flex items-center', spacing.gap.sm, typography.card.titleCompact)}>
-          <ChevronsUpDown className={cn(iconSizes.md, 'text-green-707')} />
+          <ChevronsUpDown className={cn(iconSizes.md, 'text-[hsl(var(--text-success))]')} />
           {t('properties:multiLevel.title')}
         </CardTitle>
       </CardHeader>

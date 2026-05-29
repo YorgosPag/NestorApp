@@ -88,7 +88,7 @@ export interface ReportKPIGridProps {
 
 const COLOR_MAP: Record<string, string> = {
   blue: "text-primary",
-  green: "text-green-707",
+  green: "text-[hsl(var(--text-success))]",
   purple: "text-primary",
   orange: "text-[hsl(var(--text-warning))]",
   cyan: "text-primary",
@@ -156,7 +156,7 @@ function KPICard({
 
   const trendIcon = kpi.trend ? (
     kpi.trend.value > 0 ? (
-      <TrendingUp className="h-3.5 w-3.5 text-green-707" />
+      <TrendingUp className="h-3.5 w-3.5 text-[hsl(var(--text-success))]" />
     ) : kpi.trend.value < 0 ? (
       <TrendingDown className="h-3.5 w-3.5 text-destructive" />
     ) : (
@@ -166,7 +166,7 @@ function KPICard({
 
   const trendColor = kpi.trend
     ? kpi.trend.value > 0
-      ? "text-green-707"
+      ? "text-[hsl(var(--text-success))]"
       : kpi.trend.value < 0
         ? "text-destructive"
         : "text-muted-foreground"

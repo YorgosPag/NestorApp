@@ -146,7 +146,7 @@ export const PHOTO_SEMANTIC_COLORS = {
   ERROR: 'text-destructive',
 
   /** Success states */
-  SUCCESS: 'text-green-707',
+  SUCCESS: 'text-[hsl(var(--text-success))]',
 
   /** Loading states */
   LOADING: 'text-primary',

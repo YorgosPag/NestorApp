@@ -108,7 +108,7 @@ export const PHOTO_STATE_EFFECTS = {
   ERROR: 'border-destructive bg-destructive/10',
 
   /** Success state styling */
-  SUCCESS: 'border-green-707 bg-[hsl(var(--bg-success))]/10',
+  SUCCESS: 'border-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))]/10',
 
   /** Selected state styling */
   SELECTED: 'border-primary bg-[hsl(var(--bg-info))]/20',

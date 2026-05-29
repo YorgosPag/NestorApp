@@ -10,7 +10,7 @@ interface AddressConfidenceMeterProps {
 }
 
 function getMeterColorClass(confidence: number): string {
-  if (confidence >= 0.85) return 'bg-green-707';
+  if (confidence >= 0.85) return 'bg-[hsl(var(--text-success))]';
   if (confidence >= 0.70) return 'bg-[hsl(var(--bg-warning))]';
   if (confidence >= 0.50) return 'bg-[hsl(var(--bg-warning))]/60';
   return 'bg-destructive';

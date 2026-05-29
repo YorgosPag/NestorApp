@@ -35,7 +35,7 @@ const STATUS_CONFIG: Record<InstallmentStatus, {
   variant: 'default' | 'secondary' | 'destructive' | 'outline';
   className: string;
 }> = {
-  paid: { icon: CheckCircle2, variant: 'default', className: 'text-green-707' },
+  paid: { icon: CheckCircle2, variant: 'default', className: 'text-[hsl(var(--text-success))]' },
   partial: { icon: CircleDashed, variant: 'secondary', className: 'text-primary' },
   due: { icon: AlertTriangle, variant: 'destructive', className: 'text-destructive' },
   pending: { icon: Clock, variant: 'outline', className: '' },
@@ -127,7 +127,7 @@ export function InstallmentSchedule({
                 </TableCell>
                 <TableCell className="text-right text-sm">
                   {inst.paidAmount > 0 ? (
-                    <span className="text-green-707">
+                    <span className="text-[hsl(var(--text-success))]">
                       €{inst.paidAmount.toLocaleString('el-GR')}
                     </span>
                   ) : (

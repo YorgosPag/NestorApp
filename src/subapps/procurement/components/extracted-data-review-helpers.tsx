@@ -25,7 +25,7 @@ export function levelClasses(level: ConfidenceLevel): string {
 
 export function ConfidenceBadge({ confidence }: { confidence: number }) {
   if (confidence >= 80) {
-    return <Badge variant="outline" className="border-[hsl(var(--bg-success))] text-green-707">{confidence}%</Badge>;
+    return <Badge variant="outline" className="border-[hsl(var(--bg-success))] text-[hsl(var(--text-success))]">{confidence}%</Badge>;
   }
   if (confidence >= 50) {
     return <Badge variant="outline" className="border-[hsl(var(--bg-warning))] text-[hsl(var(--bg-warning))]">{confidence}%</Badge>;

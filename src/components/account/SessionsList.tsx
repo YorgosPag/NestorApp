@@ -90,7 +90,7 @@ function getDeviceIcon(deviceType: DeviceType, className: string): React.ReactNo
 function getBrowserColor(browserType: BrowserType): string {
   switch (browserType) {
     case 'Chrome':
-      return 'text-green-707';
+      return 'text-[hsl(var(--text-success))]';
     case 'Firefox':
       return 'text-[hsl(var(--text-warning))]';
     case 'Safari':

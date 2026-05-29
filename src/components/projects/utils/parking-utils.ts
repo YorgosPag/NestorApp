@@ -22,7 +22,7 @@ export const getParkingStatusColors = (
       available: 'bg-muted text-muted-foreground',
       occupied: 'bg-[hsl(var(--bg-info))]/20 text-primary',
       reserved: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
-      sold: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+      sold: 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
       maintenance: 'bg-destructive/10 text-destructive',
       deleted: 'bg-muted text-muted-foreground',
     };
@@ -42,7 +42,7 @@ export const PARKING_STATUS_COLORS: Record<ParkingSpotStatus, string> = {
   available: 'bg-muted text-muted-foreground',
   occupied: 'bg-[hsl(var(--bg-info))]/20 text-primary',
   reserved: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
-  sold: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+  sold: 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
   maintenance: 'bg-destructive/10 text-destructive',
   deleted: 'bg-muted text-muted-foreground',
 };

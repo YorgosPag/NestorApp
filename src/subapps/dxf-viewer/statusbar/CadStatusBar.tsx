@@ -135,7 +135,7 @@ function CadToggleRow({ id, label, fkey, description, toggle }: {
             htmlFor={id}
             className="flex items-center gap-1 cursor-pointer select-none"
           >
-            <span className={`text-xs leading-none font-semibold ${toggle.on ? 'text-green-707' : 'text-muted-foreground'}`}>{label}</span>
+            <span className={`text-xs leading-none font-semibold ${toggle.on ? 'text-[hsl(var(--text-success))]' : 'text-muted-foreground'}`}>{label}</span>
             {fkey && (
               <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded border border-border leading-none py-0.5">
                 {fkey}
@@ -146,7 +146,7 @@ function CadToggleRow({ id, label, fkey, description, toggle }: {
             id={id}
             checked={toggle.on}
             onCheckedChange={() => toggle.toggle()}
-            className="scale-75 origin-left data-[state=checked]:bg-green-707"
+            className="scale-75 origin-left data-[state=checked]:bg-[hsl(var(--text-success))]"
           />
         </div>
       </TooltipTrigger>
@@ -192,7 +192,7 @@ function PolarToggleWithPopover({ id, label, fkey, description, toggle }: {
         <TooltipTrigger asChild>
           <div className="flex items-center gap-1.5">
             <label htmlFor={id} className="flex items-center gap-1 cursor-pointer select-none">
-              <span className={`text-xs leading-none font-semibold ${toggle.on ? 'text-green-707' : 'text-muted-foreground'}`}>{label}</span>
+              <span className={`text-xs leading-none font-semibold ${toggle.on ? 'text-[hsl(var(--text-success))]' : 'text-muted-foreground'}`}>{label}</span>
               {fkey && (
                 <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded border border-border leading-none py-0.5">
                   {fkey}
@@ -203,7 +203,7 @@ function PolarToggleWithPopover({ id, label, fkey, description, toggle }: {
               id={id}
               checked={toggle.on}
               onCheckedChange={() => toggle.toggle()}
-              className="scale-75 origin-left data-[state=checked]:bg-green-707"
+              className="scale-75 origin-left data-[state=checked]:bg-[hsl(var(--text-success))]"
             />
           </div>
         </TooltipTrigger>
@@ -330,7 +330,7 @@ function OsnapToggleWithPopover({ id, label, fkey, description, toggle, enabledM
               htmlFor={id}
               className="flex items-center gap-1 cursor-pointer select-none"
             >
-              <span className={`text-xs leading-none font-semibold ${toggle.on ? 'text-green-707' : 'text-muted-foreground'}`}>{label}</span>
+              <span className={`text-xs leading-none font-semibold ${toggle.on ? 'text-[hsl(var(--text-success))]' : 'text-muted-foreground'}`}>{label}</span>
               {fkey && (
                 <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded border border-border leading-none py-0.5">
                   {fkey}
@@ -341,7 +341,7 @@ function OsnapToggleWithPopover({ id, label, fkey, description, toggle, enabledM
               id={id}
               checked={toggle.on}
               onCheckedChange={() => toggle.toggle()}
-              className="scale-75 origin-left data-[state=checked]:bg-green-707"
+              className="scale-75 origin-left data-[state=checked]:bg-[hsl(var(--text-success))]"
             />
           </div>
         </TooltipTrigger>

@@ -74,8 +74,8 @@ const STATUS_CONFIG: Record<SaveStatus, StatusConfig> = {
   },
   success: {
     icon: CheckCircle2,
-    dotColor: 'bg-green-707',
-    textColor: 'text-green-707',
+    dotColor: 'bg-[hsl(var(--text-success))]',
+    textColor: 'text-[hsl(var(--text-success))]',
     badgeBg: 'bg-[hsl(var(--bg-success))]/10',
   },
   error: {

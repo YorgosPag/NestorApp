@@ -88,7 +88,7 @@ export function PaymentPlanOverview({ plan }: PaymentPlanOverviewProps) {
           <dt className={cn("text-[10px] uppercase", colors.text.muted)}>
             {t('labels.paidAmount')}
           </dt>
-          <dd className="text-sm font-semibold text-green-707">
+          <dd className="text-sm font-semibold text-[hsl(var(--text-success))]">
             €{plan.paidAmount.toLocaleString('el-GR')}
           </dd>
         </div>

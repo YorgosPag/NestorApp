@@ -70,7 +70,7 @@ function getInvoiceIcon(type: string): React.ElementType {
 
 function getPaymentBadgeClass(status: string): string {
   switch (status) {
-    case 'paid': return 'bg-[hsl(var(--bg-success))]/10 text-green-707';
+    case 'paid': return 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]';
     case 'partial': return 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]';
     default: return 'bg-destructive/10 text-destructive';
   }

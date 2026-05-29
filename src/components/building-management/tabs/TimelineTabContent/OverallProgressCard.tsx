@@ -42,7 +42,7 @@ export function OverallProgressCard({ building, milestones }: OverallProgressCar
                 />
                 <dl className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                     <div className="text-center">
-                        <dd className="text-2xl font-bold text-green-707">{milestones.filter(m => m.status === 'completed').length}</dd>
+                        <dd className="text-2xl font-bold text-[hsl(var(--text-success))]">{milestones.filter(m => m.status === 'completed').length}</dd>
                         <dt className={colors.text.muted}>{t('tabs.timeline.overallProgress.completed')}</dt>
                     </div>
                     <div className="text-center">

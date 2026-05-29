@@ -54,7 +54,7 @@ interface UserTableProps {
 
 const AVATAR_COLORS = [
   'bg-primary',
-  'bg-green-707',
+  'bg-[hsl(var(--text-success))]',
   'bg-[hsl(var(--bg-warning))]',
   'bg-destructive',
   'bg-accent-foreground',
@@ -237,7 +237,7 @@ export function UserTable({
                         <span
                           className={cn(
                             'text-sm',
-                            companyUser.mfaEnrolled ? 'text-green-707' : colors.text.muted
+                            companyUser.mfaEnrolled ? 'text-[hsl(var(--text-success))]' : colors.text.muted
                           )}
                           aria-label={companyUser.mfaEnrolled ? t('roleManagement.mfa.enabled') : t('roleManagement.mfa.notEnabled')}
                         >

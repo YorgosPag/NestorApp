@@ -40,7 +40,7 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
                         </figure>
 
                         <figure className={`text-center p-2 ${quick.card}`}>
-                            <p className="text-3xl font-bold text-green-707 mb-2">88%</p>
+                            <p className="text-3xl font-bold text-[hsl(var(--text-success))] mb-2">88%</p>
                             <figcaption className={cn("text-sm", colors.text.muted)}>{t('tabs.analytics.progress.efficiency')}</figcaption>
                             <ThemeProgressBar
                               progress={88}
@@ -66,11 +66,11 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                             <div>
-                                <div className="font-medium text-green-707 mb-2 flex items-center gap-2">
+                                <div className="font-medium text-[hsl(var(--text-success))] mb-2 flex items-center gap-2">
                                     <CheckCircle className={iconSizes.sm} />
                                     {t('tabs.analytics.progress.positivePoints')}
                                 </div>
-                                <ul className="space-y-1 text-green-707">
+                                <ul className="space-y-1 text-[hsl(var(--text-success))]">
                                     <li>• {t('tabs.analytics.progress.positive1')}</li>
                                     <li>• {t('tabs.analytics.progress.positive2')}</li>
                                     <li>• {t('tabs.analytics.progress.positive3')}</li>

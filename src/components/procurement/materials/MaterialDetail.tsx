@@ -69,7 +69,7 @@ export function MaterialDetail({ material, onEdit, onDelete, onCreateNew }: Mate
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">{t('hub.materialCatalog.avgPrice')}</dt>
-            <dd className="text-base font-semibold mt-0.5 text-green-707">
+            <dd className="text-base font-semibold mt-0.5 text-[hsl(var(--text-success))]">
               {material.avgPrice !== null ? formatCurrency(material.avgPrice) : '—'}
             </dd>
           </div>

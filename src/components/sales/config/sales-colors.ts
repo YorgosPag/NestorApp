@@ -6,7 +6,7 @@
 
 export const SALES_ICON_COLORS = {
   // Pricing concepts
-  askingPrice: 'text-green-707',
+  askingPrice: 'text-[hsl(var(--text-success))]',
   finalPrice: 'text-primary',
   pricePerSqm: 'text-primary',
   deposit: 'text-[hsl(var(--text-warning))]',
@@ -17,7 +17,7 @@ export const SALES_ICON_COLORS = {
   // Date concepts
   listedDate: 'text-primary',
   reservationDate: 'text-primary',
-  saleDate: 'text-green-707',
+  saleDate: 'text-[hsl(var(--text-success))]',
   cancellationDate: 'text-destructive',
   daysOnMarket: 'text-muted-foreground',
 
@@ -30,9 +30,9 @@ export const SALES_ICON_COLORS = {
   locationZone: 'text-[hsl(var(--text-warning))]',
 
   // Section headers
-  pricingSection: 'text-green-707',
+  pricingSection: 'text-[hsl(var(--text-success))]',
   reservationSection: 'text-primary',
   datesSection: 'text-[hsl(var(--text-warning))]',
-  financialSection: 'text-green-707',
+  financialSection: 'text-[hsl(var(--text-success))]',
   basicInfoSection: 'text-primary',
 } as const;

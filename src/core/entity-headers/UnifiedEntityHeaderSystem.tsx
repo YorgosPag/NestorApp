@@ -240,7 +240,7 @@ const EntityBadge: React.FC<EntityHeaderBadge> = ({
 
   const typeClasses = {
     status: `${colors.bg.info} text-primary`,
-    progress: `${colors.bg.success} text-green-707`,
+    progress: `${colors.bg.success} text-[hsl(var(--text-success))]`,
     category: `${colors.bg.accent} text-primary`,
     custom: variantClasses[variant]
   };

@@ -45,7 +45,7 @@ const PROCUREMENT_TABS: readonly TabsNavTab[] = [
     href: '/procurement/vendors',
     labelKey: 'nav.vendors',
     icon: Users2,
-    iconColor: 'text-green-707',
+    iconColor: 'text-[hsl(var(--text-success))]',
   },
   {
     href: '/procurement/materials',

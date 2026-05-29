@@ -81,9 +81,9 @@ export function getPropertyStatusLabel(status: string, t: TFunction): string {
 }
 
 export const UNIT_STATUS_COLOR_MAP: Record<string, string> = {
-  available: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
-  'for-sale': 'bg-[hsl(var(--bg-success))]/10 text-green-707',
-  'for-rent': 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+  available: 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
+  'for-sale': 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
+  'for-rent': 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
   sold: 'bg-accent text-primary',
   reserved: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
   rented: 'bg-[hsl(var(--bg-info))]/20 text-primary',

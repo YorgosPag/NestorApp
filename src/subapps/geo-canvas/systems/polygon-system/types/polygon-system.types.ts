@@ -353,7 +353,7 @@ export const DEFAULT_NOTIFICATION_CONFIG: NotificationConfig = {
   position: 'fixed top-4 right-4',
   autoRemoveDelay: 3000,
   styles: {
-    success: 'bg-green-707 text-primary-foreground p-4 rounded-lg shadow-lg animate-pulse',
+    success: 'bg-[hsl(var(--text-success))] text-primary-foreground p-4 rounded-lg shadow-lg animate-pulse',
     warning: 'bg-[hsl(var(--bg-warning))] text-foreground p-4 rounded-lg shadow-lg animate-pulse',
     error: 'bg-destructive text-destructive-foreground p-4 rounded-lg shadow-lg animate-pulse'
   }

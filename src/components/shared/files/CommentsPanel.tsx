@@ -153,7 +153,7 @@ function CommentItem({
             className={cn("h-6 px-1.5 text-xs", colors.text.muted)}
           >
             {comment.resolved ? (
-              <CheckCircle2 className="h-3 w-3 mr-1 text-green-707" /> // eslint-disable-line design-system/enforce-semantic-colors
+              <CheckCircle2 className="h-3 w-3 mr-1 text-[hsl(var(--text-success))]" /> // eslint-disable-line design-system/enforce-semantic-colors
             ) : (
               <Circle className="h-3 w-3 mr-1" />
             )}

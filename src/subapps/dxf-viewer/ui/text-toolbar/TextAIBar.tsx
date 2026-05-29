@@ -264,7 +264,7 @@ export function TextAIBar({ aiContext, onExecuteCommand, disabled = false }: Tex
         </div>
 
         {isSuccess && (
-          <p className="text-xs text-green-707">
+          <p className="text-xs text-[hsl(var(--text-success))]">
             {t('textAi:success')}
           </p>
         )}

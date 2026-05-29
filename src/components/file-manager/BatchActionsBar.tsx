@@ -256,7 +256,7 @@ export function BatchActionsBar({
               size="sm"
               onClick={() => setUnarchiveDialogOpen(true)}
               disabled={unarchiving}
-              className="h-7 px-2 text-xs text-green-707 hover:text-green-707"
+              className="h-7 px-2 text-xs text-[hsl(var(--text-success))] hover:text-[hsl(var(--text-success))]"
             >
               {unarchiving ? (
                 <Spinner size="small" color="inherit" className="mr-1" />

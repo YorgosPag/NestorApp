@@ -82,7 +82,7 @@ export function SalesParkingCard({
       },
       {
         icon: DollarSign,
-        iconColor: 'text-green-707',
+        iconColor: 'text-[hsl(var(--text-success))]',
         label: t('parking:general.fields.price'),
         value: formatCurrencyWhole(price > 0 ? price : null),
       },

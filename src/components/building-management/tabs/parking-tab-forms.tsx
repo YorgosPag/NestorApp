@@ -194,7 +194,7 @@ export function ParkingEditRow({ state, t }: ParkingEditRowProps) {
       <TableCell>
         <nav className="flex justify-end gap-1">
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={state.handleSaveEdit} disabled={state.saving || !state.editNumber.trim()}>
-            {state.saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-green-707" />}
+            {state.saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-[hsl(var(--text-success))]" />}
           </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={state.cancelEdit} disabled={state.saving}>
             <X className="h-3.5 w-3.5" />

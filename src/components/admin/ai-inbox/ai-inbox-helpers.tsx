@@ -131,7 +131,7 @@ export const getFileTypeInfo = (url: string): FileTypeInfo => {
     return {
       icon: FileText,
       type: 'spreadsheet',
-      color: 'text-green-707',
+      color: 'text-[hsl(var(--text-success))]',
       bgColor: 'bg-[hsl(var(--bg-success))]/10',
     };
   }

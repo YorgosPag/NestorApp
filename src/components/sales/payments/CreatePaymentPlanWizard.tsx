@@ -363,7 +363,7 @@ export function CreatePaymentPlanWizard({
 
             <footer className="flex items-center justify-between pt-2 border-t text-sm">
               <span className="font-medium">{t('wizard.totalInstallments')}</span>
-              <span className={sumMatch ? 'text-green-707 font-semibold' : 'text-destructive font-semibold'}>
+              <span className={sumMatch ? 'text-[hsl(var(--text-success))] font-semibold' : 'text-destructive font-semibold'}>
                 €{installmentSum.toLocaleString('el-GR')}
                 {!sumMatch && ` (≠ €${total.toLocaleString('el-GR')})`}
               </span>

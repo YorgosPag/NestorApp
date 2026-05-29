@@ -247,7 +247,7 @@ export function PolygonControls({
               </div>
             )}
             {state.isPolygonComplete && (
-              <div className={config.role === 'technical' ? 'text-primary' : 'text-green-707'}>
+              <div className={config.role === 'technical' ? 'text-primary' : 'text-[hsl(var(--text-success))]'}>
                 {config.role === 'technical' ? 'LEGACY_COMPLETE: TRUE' : '✅ Πολύγωνο κλειστό'}
               </div>
             )}

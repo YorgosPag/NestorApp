@@ -55,7 +55,7 @@ export function ScenarioRow({ scenario, variant, t }: ScenarioRowProps) {
         <span className="flex items-center gap-1.5">
           {t(scenario.nameKey)}
           {variant === 'sweetSpot' && (
-            <Badge variant="outline" className="text-[10px] border-border text-green-707">
+            <Badge variant="outline" className="text-[10px] border-border text-[hsl(var(--text-success))]">
               {t('costCalculator.counterproposal.badges.sweetSpot')}
             </Badge>
           )}
@@ -77,7 +77,7 @@ export function ScenarioRow({ scenario, variant, t }: ScenarioRowProps) {
       <TableCell className="text-right text-xs font-mono tabular-nums">
         {fmtCurrency(scenario.npv)}
       </TableCell>
-      <TableCell className="text-right text-xs font-mono tabular-nums text-green-707">
+      <TableCell className="text-right text-xs font-mono tabular-nums text-[hsl(var(--text-success))]">
         {scenario.timeCostSaved > 0 ? fmtCurrency(scenario.timeCostSaved) : '—'}
       </TableCell>
       <TableCell className="text-right text-xs font-mono tabular-nums">

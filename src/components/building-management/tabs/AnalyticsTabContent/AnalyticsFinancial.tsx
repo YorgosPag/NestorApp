@@ -27,7 +27,7 @@ export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps
             <section className="grid grid-cols-1 md:grid-cols-4 gap-2">
                 <Card>
                     <CardContent className="p-2 text-center">
-                        <div className="text-lg font-bold text-green-707">
+                        <div className="text-lg font-bold text-[hsl(var(--text-success))]">
                             {formatCurrency(building.totalValue || 0)}
                         </div>
                         <div className={cn("text-xs", colors.text.muted)}>{t('tabs.analytics.financial.totalBudget')}</div>
@@ -82,7 +82,7 @@ export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps
                                         {t('tabs.analytics.financial.cumulative')} {formatCurrency(monthlyProgress.slice(0, index + 1).reduce((sum, m) => sum + m.cost, 0))}
                                     </div>
                                     <div className={cn(`text-sm px-2 py-1 ${quick.input}`,
-                                        month.cost < 95000 ? 'bg-[hsl(var(--bg-success))]/10 text-green-707' : 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]'
+                                        month.cost < 95000 ? 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]' : 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]'
                                     )}>
                                         {month.cost < 95000 ? t('tabs.analytics.financial.withinBudget') : t('tabs.analytics.financial.attention')}
                                     </div>

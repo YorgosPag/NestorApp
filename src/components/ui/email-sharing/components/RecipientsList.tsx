@@ -185,7 +185,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
             {showValidation && email.trim() && (
               <aside className="absolute right-2 top-1/2 transform -translate-y-1/2" role="status" aria-label={t('recipients.validationStatus')}>
                 {validation.isValid ? (
-                  <CheckCircle className={`${iconSizes.sm} text-green-707`} />
+                  <CheckCircle className={`${iconSizes.sm} text-[hsl(var(--text-success))]`} />
                 ) : (
                   <AlertCircle className={`${iconSizes.sm} text-destructive`} />
                 )}

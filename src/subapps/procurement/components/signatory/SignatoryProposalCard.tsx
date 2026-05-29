@@ -79,7 +79,7 @@ function ConfidencePill({ confidence }: { confidence: number }) {
   const band = getSignatoryConfidenceBand(confidence);
   const cls =
     band === 'high'
-      ? 'border-[hsl(var(--bg-success))] text-green-707'
+      ? 'border-[hsl(var(--bg-success))] text-[hsl(var(--text-success))]'
       : band === 'medium'
       ? 'border-[hsl(var(--bg-warning))] text-[hsl(var(--bg-warning))]'
       : 'border-destructive text-destructive';

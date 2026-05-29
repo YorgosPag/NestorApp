@@ -184,9 +184,9 @@ export function TotalsFieldset({ grossQuantity, materialCost, laborCost, equipme
           <span className="text-sm font-semibold tabular-nums text-[hsl(var(--text-warning))]">{formatCurrency(laborCost * grossQuantity)}</span>
         </li>
         <li className="flex items-center gap-2">
-          <Truck className="h-3.5 w-3.5 shrink-0 text-green-707" />
+          <Truck className="h-3.5 w-3.5 shrink-0 text-[hsl(var(--text-success))]" />
           <span className={cn('text-sm flex-1', colors.text.muted)}>{t('tabs.measurements.editor.fields.equipmentUnitCost')}</span>
-          <span className="text-sm font-semibold tabular-nums text-green-707">{formatCurrency(equipmentCost * grossQuantity)}</span>
+          <span className="text-sm font-semibold tabular-nums text-[hsl(var(--text-success))]">{formatCurrency(equipmentCost * grossQuantity)}</span>
         </li>
       </ul>
       <div className="flex items-center gap-2 border-t border-border/50 pt-2">

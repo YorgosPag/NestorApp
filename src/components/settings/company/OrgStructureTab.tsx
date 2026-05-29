@@ -205,7 +205,7 @@ export function OrgStructureTab({ orgStructure, saving, onSave }: OrgStructureTa
                         <button
                           onClick={() => setEditingDept(dept)}
                           disabled={saving}
-                          className="h-6 w-6 flex items-center justify-center rounded text-muted-foregroundhover:text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           <Pencil className="h-3 w-3" />
                         </button>
@@ -218,7 +218,7 @@ export function OrgStructureTab({ orgStructure, saving, onSave }: OrgStructureTa
                           <button
                             onClick={() => setArchivingDeptId(dept.id)}
                             disabled={saving}
-                            className="h-6 w-6 flex items-center justify-center rounded text-muted-foregroundhover:text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             <Archive className="h-3 w-3" />
                           </button>
@@ -231,7 +231,7 @@ export function OrgStructureTab({ orgStructure, saving, onSave }: OrgStructureTa
                           <button
                             onClick={() => handleRestoreDept(dept.id)}
                             disabled={saving}
-                            className="h-6 w-6 flex items-center justify-center rounded text-muted-foregroundhover:text-green-707 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-[hsl(var(--text-success))] hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             <RotateCcw className="h-3 w-3" />
                           </button>
@@ -244,7 +244,7 @@ export function OrgStructureTab({ orgStructure, saving, onSave }: OrgStructureTa
                         <button
                           onClick={() => setDeletingDeptId(dept.id)}
                           disabled={saving}
-                          className="h-6 w-6 flex items-center justify-center rounded text-muted-foregroundhover:text-destructive hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>

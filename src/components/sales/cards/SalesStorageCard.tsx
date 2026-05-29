@@ -82,7 +82,7 @@ export function SalesStorageCard({
       },
       {
         icon: DollarSign,
-        iconColor: 'text-green-707',
+        iconColor: 'text-[hsl(var(--text-success))]',
         label: t('storage:general.fields.price'),
         value: formatCurrencyWhole(price > 0 ? price : null),
       },

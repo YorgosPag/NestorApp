@@ -41,7 +41,7 @@ export default function AnalyticsComparison() {
                                 </div>
                                 <div className={cn(`px-2 py-1 ${quick.input} text-sm`,
                                     item.status === 'better'
-                                        ? 'bg-[hsl(var(--bg-success))]/10 text-green-707'
+                                        ? 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]'
                                         : 'bg-destructive/10 text-destructive'
                                 )}>
                                     {item.status === 'better'

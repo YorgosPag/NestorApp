@@ -52,7 +52,7 @@ export function AutoAreaResultPanel(): React.ReactElement | null {
     >
       {/* Header */}
       <header className="flex items-center justify-between px-3 py-2 border-b border-white/10">
-        <span className="flex items-center gap-1.5 text-xs font-semibold text-green-707">
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-[hsl(var(--text-success))]">
           <ScanLine size={13} />
           {t('autoArea.title')}
         </span>
@@ -111,7 +111,7 @@ function Row({ label, value, highlight, muted }: RowProps): React.ReactElement {
   return (
     <div className="flex items-baseline justify-between gap-2">
       <dt className="text-xs text-muted-foreground shrink-0">{label}</dt>
-      <dd className={`text-xs font-mono truncate ${highlight ? 'text-green-707 font-semibold' : muted ? 'text-muted-foreground' : 'text-foreground'}`}>
+      <dd className={`text-xs font-mono truncate ${highlight ? 'text-[hsl(var(--text-success))] font-semibold' : muted ? 'text-muted-foreground' : 'text-foreground'}`}>
         {value}
       </dd>
     </div>

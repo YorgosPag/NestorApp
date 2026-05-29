@@ -30,7 +30,7 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <TrendingUp className={`${iconSizes.md} text-green-707`} />
+                        <TrendingUp className={`${iconSizes.md} text-[hsl(var(--text-success))]`} />
                         {t('tabs.timeline.forecast.title')}
                     </CardTitle>
                 </CardHeader>
@@ -47,7 +47,7 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className={`${iconSizes.md} text-green-707`} />
+                    <TrendingUp className={`${iconSizes.md} text-[hsl(var(--text-success))]`} />
                     {t('tabs.timeline.forecast.title')}
                 </CardTitle>
             </CardHeader>

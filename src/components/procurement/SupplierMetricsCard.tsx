@@ -135,7 +135,7 @@ function MetricItem({ label, value, icon, variant = 'default' }: MetricItemProps
       </dt>
       <dd className={cn(
         'text-lg font-semibold',
-        variant === 'success' && 'text-green-707',
+        variant === 'success' && 'text-[hsl(var(--text-success))]',
         variant === 'warning' && 'text-[hsl(var(--bg-warning))]',
       )}>
         {value}

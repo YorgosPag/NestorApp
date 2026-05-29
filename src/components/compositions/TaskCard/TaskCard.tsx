@@ -127,7 +127,7 @@ export function TaskCard({
           ? "from-destructive/10 via-destructive/5 to-destructive/10"
           : "from-[hsl(var(--bg-info))]/20 via-accent to-accent",
         logo: <TaskTypeIcon className={`${iconSizes.xl} ${
-          task.status === 'completed' ? 'text-green-707' :
+          task.status === 'completed' ? 'text-[hsl(var(--text-success))]' :
           overdue ? 'text-destructive' :
           'text-primary'
         }`} />,
@@ -246,7 +246,7 @@ export function TaskCard({
         task.status === 'completed' && task.completedAt && {
           title: t('card.sections.completed'),
           content: (
-            <div className="flex items-center gap-2 text-sm text-green-707">
+            <div className="flex items-center gap-2 text-sm text-[hsl(var(--text-success))]">
               <CheckCircle className={iconSizes.sm} />
               <span>{formatLocalizedTaskDate(task.completedAt)}</span>
             </div>

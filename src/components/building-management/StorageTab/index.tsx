@@ -218,7 +218,7 @@ export function StorageTab({ building }: StorageTabProps) {
 
   const getStatusBadge = (status: StorageStatus) => {
     const colorMap: Record<StorageStatus, string> = {
-      available: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+      available: 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
       occupied: 'bg-[hsl(var(--bg-info))]/20 text-primary',
       reserved: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
       maintenance: 'bg-destructive/10 text-destructive',
@@ -431,7 +431,7 @@ export function StorageTab({ building }: StorageTabProps) {
                             onClick={handleSaveEdit}
                             disabled={saving || !editName.trim()}
                           >
-                            {saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-green-707" />}
+                            {saving ? <Spinner size="small" color="inherit" /> : <Check className="h-3.5 w-3.5 text-[hsl(var(--text-success))]" />}
                           </Button>
                           <Button
                             variant="ghost"

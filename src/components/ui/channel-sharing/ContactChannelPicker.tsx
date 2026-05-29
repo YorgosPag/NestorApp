@@ -81,7 +81,7 @@ const CHANNEL_ICONS: Record<ChannelProvider, React.FC<{ className?: string }>> =
 const CHANNEL_COLORS: Record<ChannelProvider, string> = {
   email: 'text-muted-foreground',
   telegram: 'text-primary',
-  whatsapp: 'text-green-707',
+  whatsapp: 'text-[hsl(var(--text-success))]',
   messenger: 'text-primary',
   instagram: 'text-primary',
 };
@@ -350,7 +350,7 @@ export function ContactChannelPicker({ onChannelSelect, onBack }: ContactChannel
                   <span className={cn(
                     'text-xs px-2 py-0.5 rounded-full shrink-0',
                     channel.capabilities.supportsNativePhoto
-                      ? 'bg-[hsl(var(--bg-success))]/10 text-green-707'
+                      ? 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]'
                       : 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]'
                   )}>
                     {t(`channelShare.capability.${capabilityKey}`)}
@@ -358,7 +358,7 @@ export function ContactChannelPicker({ onChannelSelect, onBack }: ContactChannel
 
                   {/* Verified badge */}
                   {channel.verified && (
-                    <CheckCircle className="w-4 h-4 text-green-707 shrink-0" aria-label={t('channelShare.verified')} />
+                    <CheckCircle className="w-4 h-4 text-[hsl(var(--text-success))] shrink-0" aria-label={t('channelShare.verified')} />
                   )}
                 </button>
               </li>

@@ -205,8 +205,8 @@ export function PropertyGridCard({
     if (property.condition) {
       // Color coding based on condition
       const conditionColors: Record<string, string> = {
-        'new': 'text-green-707',
-        'excellent': 'text-green-707',
+        'new': 'text-[hsl(var(--text-success))]',
+        'excellent': 'text-[hsl(var(--text-success))]',
         'good': 'text-primary',
         'needs-renovation': 'text-[hsl(var(--text-warning))]'
       };

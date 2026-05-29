@@ -60,7 +60,7 @@ export function TeamPerformance() {
                             <td className="p-2 font-medium">{member.name}</td>
                             <td className={`p-2 ${colors.text.muted}`}>{member.leads}</td>
                             {/* eslint-disable-next-line design-system/enforce-semantic-colors */}
-                            <td className="p-2 text-green-707">{member.value}</td>
+                            <td className="p-2 text-[hsl(var(--text-success))]">{member.value}</td>
                         </tr>
                     ))}
                 </tbody>

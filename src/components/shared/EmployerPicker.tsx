@@ -369,7 +369,7 @@ export function EmployerPicker({
           />
           {/* LINKED badge when a company is selected */}
           {hasLinkedSelection && !disabled && (
-            <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs font-medium text-green-707 bg-[hsl(var(--bg-success))]/10 px-1.5 py-0.5 rounded">
+            <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs font-medium text-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))]/10 px-1.5 py-0.5 rounded">
               {t('employer.linkedBadge', 'LINKED')}
             </span>
           )}

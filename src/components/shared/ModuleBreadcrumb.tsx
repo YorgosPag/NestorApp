@@ -64,18 +64,18 @@ const SEGMENT_CONFIG: Record<string, { labelKey: string; icon: LucideIcon; color
   'notifications':  { labelKey: 'module.notifications',   icon: Bell,         color: 'text-[hsl(var(--text-warning))]' },
   'email-analytics': { labelKey: 'module.emailAnalytics', icon: BarChart,     color: 'text-primary' },
   // Sales, Spaces
-  'sales':          { labelKey: 'module.sales',           icon: DollarSign,   color: 'text-green-707' },
+  'sales':          { labelKey: 'module.sales',           icon: DollarSign,   color: 'text-[hsl(var(--text-success))]' },
   'spaces':         { labelKey: 'module.spaces',          icon: Layout,       color: 'text-primary' },
   // Obligations, Contacts
   'obligations':    { labelKey: 'module.obligations',     icon: Scale,        color: 'text-destructive' },
-  'contacts':       { labelKey: 'module.contacts',        icon: Users,        color: 'text-green-707' },
+  'contacts':       { labelKey: 'module.contacts',        icon: Users,        color: 'text-[hsl(var(--text-success))]' },
   // Accounting
-  'accounting':     { labelKey: 'module.accounting',      icon: Calculator,   color: 'text-green-707' },
+  'accounting':     { labelKey: 'module.accounting',      icon: Calculator,   color: 'text-[hsl(var(--text-success))]' },
   'setup':          { labelKey: 'module.setup',           icon: Settings,     color: 'text-muted-foreground' },
-  'invoices':       { labelKey: 'module.invoices',        icon: DollarSign,   color: 'text-green-707' },
+  'invoices':       { labelKey: 'module.invoices',        icon: DollarSign,   color: 'text-[hsl(var(--text-success))]' },
   'journal':        { labelKey: 'module.journal',         icon: ClipboardList, color: 'text-primary' },
-  'vat':            { labelKey: 'module.vat',             icon: Calculator,   color: 'text-green-707' },
-  'bank':           { labelKey: 'module.bank',            icon: DollarSign,   color: 'text-green-707' },
+  'vat':            { labelKey: 'module.vat',             icon: Calculator,   color: 'text-[hsl(var(--text-success))]' },
+  'bank':           { labelKey: 'module.bank',            icon: DollarSign,   color: 'text-[hsl(var(--text-success))]' },
   'efka':           { labelKey: 'module.efka',            icon: Shield,       color: 'text-destructive' },
   'assets':         { labelKey: 'module.assets',          icon: Layout,       color: 'text-primary' },
   'documents':      { labelKey: 'module.documents',       icon: ClipboardList, color: 'text-primary' },
@@ -91,7 +91,7 @@ const SEGMENT_CONFIG: Record<string, { labelKey: string; icon: LucideIcon; color
   'ai-inbox':       { labelKey: 'module.aiInbox',         icon: Inbox,        color: 'text-primary' },
   'operator-inbox': { labelKey: 'module.operatorInbox',   icon: Headphones,   color: 'text-primary' },
   // Financial Intelligence (SPEC-242C)
-  'financial-intelligence': { labelKey: 'module.financialIntelligence', icon: BarChart3, color: 'text-green-707' },
+  'financial-intelligence': { labelKey: 'module.financialIntelligence', icon: BarChart3, color: 'text-[hsl(var(--text-success))]' },
   // Procurement (ADR-267 + ADR-327 + ADR-328)
   'procurement':    { labelKey: 'module.procurement',     icon: Package,     color: 'text-[hsl(var(--text-warning))]' },
   'quotes':         { labelKey: 'module.quotes',          icon: FileText,    color: 'text-[hsl(var(--text-warning))]' },

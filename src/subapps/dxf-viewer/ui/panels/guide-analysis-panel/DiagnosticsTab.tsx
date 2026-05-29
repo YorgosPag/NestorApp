@@ -100,7 +100,7 @@ export const DiagnosticsTab: React.FC = () => {
             {t('guideAnalysis.diagnostics.anomalies')}
           </h4>
           {anomalies.length === 0 ? (
-            <p className="text-sm text-green-707">{t('guideAnalysis.diagnostics.noAnomalies')}</p>
+            <p className="text-sm text-[hsl(var(--text-success))]">{t('guideAnalysis.diagnostics.noAnomalies')}</p>
           ) : (
             <ul className="space-y-1">
               {anomalies.map((a, i) => (

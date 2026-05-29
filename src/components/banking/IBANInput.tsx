@@ -157,7 +157,7 @@ export function IBANInput({
           placeholder={placeholder}
           className={cn(
             'pr-10 font-mono tracking-wide',
-            showSuccess && 'border-green-707 focus:ring-green-707',
+            showSuccess && 'border-[hsl(var(--text-success))] focus:ring-[hsl(var(--text-success))]',
             showError && 'border-destructive focus:ring-destructive'
           )}
           aria-invalid={showError}
@@ -169,7 +169,7 @@ export function IBANInput({
           {showSuccess && (
             <CheckCircle2
               size={iconSizes.numeric.md}
-              className="text-green-707"
+              className="text-[hsl(var(--text-success))]"
               aria-label={t('iban.valid')}
             />
           )}

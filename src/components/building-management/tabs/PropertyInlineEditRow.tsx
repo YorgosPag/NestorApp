@@ -114,7 +114,7 @@ export function PropertyInlineEditRow({ edit, tUnits }: PropertyInlineEditRowPro
             {edit.saving ? (
               <Spinner size="small" color="inherit" />
             ) : (
-              <Check className="h-3.5 w-3.5 text-green-707" />
+              <Check className="h-3.5 w-3.5 text-[hsl(var(--text-success))]" />
             )}
           </Button>
           <Button

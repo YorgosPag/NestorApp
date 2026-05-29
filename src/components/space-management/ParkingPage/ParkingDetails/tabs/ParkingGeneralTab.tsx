@@ -348,7 +348,7 @@ export function ParkingGeneralTab({
         <Card>
           <CardHeader className="p-2">
             <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-              <MapPin className={cn(iconSizes.md, 'text-green-707')} />
+              <MapPin className={cn(iconSizes.md, 'text-[hsl(var(--text-success))]')} />
               {t('general.fields.floor')}
             </CardTitle>
           </CardHeader>

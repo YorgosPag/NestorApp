@@ -310,7 +310,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
             'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
             {
               'text-destructive': hasError,
-              'text-green-707': isValid,
+              'text-[hsl(var(--text-success))]': isValid,
             },
             labelClassName
           )}

@@ -62,7 +62,7 @@ const STATUS_KEYS: Record<ContractStatus, string> = {
 const STATUS_COLORS: Record<ContractStatus, string> = {
   draft: 'bg-muted text-foreground',
   pending_signature: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
-  signed: 'bg-[hsl(var(--bg-success))]/10 text-green-707',
+  signed: 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))]',
   completed: 'bg-[hsl(var(--bg-info))]/20 text-primary',
 };
 

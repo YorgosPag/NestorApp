@@ -160,7 +160,7 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
           {/* Μονάδα + Όροφος */}
           <HierarchyNode
             icon={Home}
-            iconColor="text-green-707"
+            iconColor="text-[hsl(var(--text-success))]"
             label={t('sales.hierarchy.unit')}
             value={`${hierarchy.property.name} — ${formatFloorLabel(hierarchy.property.floor)}`}
             iconSizeClass={iconSizes.xs}

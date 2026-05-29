@@ -184,7 +184,7 @@ export function CashFlowTab({ analysis, salePrice, t }: CashFlowTabProps) {
           </section>
         ) : (
           <section className="flex gap-2 rounded-lg border border-border bg-[hsl(var(--bg-success))]/10 p-3">
-            <Info className="h-5 w-5 text-green-707 shrink-0 mt-0.5" />
+            <Info className="h-5 w-5 text-[hsl(var(--text-success))] shrink-0 mt-0.5" />
             <p className="text-sm text-foreground leading-relaxed">
               {t('costCalculator.cashFlow.summaryNoLoss')}
             </p>

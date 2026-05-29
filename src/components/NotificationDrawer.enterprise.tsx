@@ -44,7 +44,7 @@ const iconMap: Record<Severity, React.ComponentType<{ className?: string }>> = {
 };
 
 const colorMap: Record<Severity, string> = {
-  success: 'text-green-707',
+  success: 'text-[hsl(var(--text-success))]',
   error: 'text-destructive',
   warning: 'text-[hsl(var(--bg-warning))]',
   info: 'text-primary',
@@ -443,7 +443,7 @@ export function NotificationDrawer() {
                         variant="outline"
                         size="xs"
                         disabled={!isUnread}
-                        className="border-[hsl(var(--bg-success))]/50 text-green-707 hover:bg-[hsl(var(--bg-success))]/10"
+                        className="border-[hsl(var(--bg-success))]/50 text-[hsl(var(--text-success))] hover:bg-[hsl(var(--bg-success))]/10"
                         onClick={(e) => { e.stopPropagation(); void markRead([n.id]); }}
                       >
                         <CheckCheck className="h-3.5 w-3.5" />

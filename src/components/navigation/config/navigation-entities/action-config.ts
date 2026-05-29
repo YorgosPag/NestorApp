@@ -26,7 +26,7 @@ export const NAVIGATION_ACTIONS: NavigationActionsConfig = {
   },
   add: {
     icon: Plus,
-    color: 'text-green-707',
+    color: 'text-[hsl(var(--text-success))]',
     label: 'actions.add.label',
     description: 'actions.add.description',
   },

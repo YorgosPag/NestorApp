@@ -8,9 +8,9 @@ export const getCommunicationTypeIcon = (type: string) => ({
 
 export const getTypeColor = (type: string) => ({
   email: 'text-primary bg-[hsl(var(--bg-info))]/20',
-  sms: 'text-green-707 bg-[hsl(var(--bg-success))]/10',
+  sms: 'text-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))]/10',
   call: 'text-primary bg-accent',
-  whatsapp: 'text-green-707 bg-[hsl(var(--bg-success))]/10',
+  whatsapp: 'text-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))]/10',
   telegram: 'text-primary bg-[hsl(var(--bg-info))]/20',
 }[type] || 'text-muted-foreground bg-muted');
 

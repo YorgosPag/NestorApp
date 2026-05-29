@@ -326,7 +326,7 @@ export function ArchiveView({
                     variant="ghost"
                     size="sm"
                     onClick={() => handleUnarchiveClick(file.id)}
-                    className="text-green-707 hover:text-green-707 hover:bg-[hsl(var(--bg-success))]/10"
+                    className="text-[hsl(var(--text-success))] hover:text-[hsl(var(--text-success))] hover:bg-[hsl(var(--bg-success))]/10"
                     aria-label={t('archived.unarchiveFile')}
                   >
                     <RotateCcw className={`${iconSizes.sm} mr-1`} aria-hidden="true" />

@@ -13,7 +13,7 @@ import { PROPERTY_STATUS_LABELS } from '@/constants/property-statuses-enterprise
 const STATUS_COLORS = {
   active: {
     bg: 'bg-[hsl(var(--bg-success))]/10',
-    text: 'text-green-707',
+    text: 'text-[hsl(var(--text-success))]',
     border: 'border-border',
   },
   pending: {

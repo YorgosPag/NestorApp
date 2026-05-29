@@ -148,7 +148,7 @@ export function PropertyStatusDemoPageContent() {
           {t('propertyStatusDemo.title')}
         </h1>
         <p className={colors.text.muted}>{t('propertyStatusDemo.subtitle')}</p>
-        <div className="flex items-center justify-center gap-2 text-sm text-green-707">
+        <div className="flex items-center justify-center gap-2 text-sm text-[hsl(var(--text-success))]">
           <CheckCircle className={iconSizes.sm} />
           <span>{t('propertyStatusDemo.productionReady')}</span>
         </div>
@@ -159,7 +159,7 @@ export function PropertyStatusDemoPageContent() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="text-center">
-            <Zap className={`${iconSizes.xl} mx-auto text-green-707`} />
+            <Zap className={`${iconSizes.xl} mx-auto text-[hsl(var(--text-success))]`} />
             <CardTitle className="text-sm">{t('propertyStatusDemo.cards.available')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -286,7 +286,7 @@ export function PropertyStatusDemoPageContent() {
       {selectedProperty && (
         <Card className={getStatusBorder('success')}>
           <CardHeader>
-            <CardTitle className="text-green-707">
+            <CardTitle className="text-[hsl(var(--text-success))]">
               {t('propertyStatusDemo.propertyDetails')}: {selectedProperty.name}
             </CardTitle>
           </CardHeader>

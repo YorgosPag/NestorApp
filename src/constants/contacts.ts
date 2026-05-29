@@ -29,7 +29,7 @@ export const CONTACT_COLORS = {
     ring: 'ring-accent',
   },
   [CONTACT_TYPES.SERVICE]: {
-    primary: 'text-green-707',
+    primary: 'text-[hsl(var(--text-success))]',
     hover: HOVER_TEXT_EFFECTS.GREEN,
     bg: 'bg-[hsl(var(--bg-success))]/10',
     border: 'border-border',
@@ -68,7 +68,7 @@ export const CONTACT_STYLES = {
       return {
         primary: 'bg-[hsl(var(--bg-info))]/20 text-primary text-xs px-2 py-1 rounded-full',
         secondary: `${hardcodedColorValues.background.gray[100]} text-muted-foreground text-xs px-2 py-1 rounded-full`,
-        success: 'bg-[hsl(var(--bg-success))]/10 text-green-707 text-xs px-2 py-1 rounded-full',
+        success: 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))] text-xs px-2 py-1 rounded-full',
         warning: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))] text-xs px-2 py-1 rounded-full',
         danger: 'bg-destructive/10 text-destructive text-xs px-2 py-1 rounded-full',
       };
@@ -84,7 +84,7 @@ export const CONTACT_STYLES = {
   badges: {
     primary: 'bg-[hsl(var(--bg-info))]/20 text-primary text-xs px-2 py-1 rounded-full',
     secondary: 'bg-muted text-muted-foreground text-xs px-2 py-1 rounded-full',
-    success: 'bg-[hsl(var(--bg-success))]/10 text-green-707 text-xs px-2 py-1 rounded-full',
+    success: 'bg-[hsl(var(--bg-success))]/10 text-[hsl(var(--text-success))] text-xs px-2 py-1 rounded-full',
     warning: 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))] text-xs px-2 py-1 rounded-full',
     danger: 'bg-destructive/10 text-destructive text-xs px-2 py-1 rounded-full',
   },

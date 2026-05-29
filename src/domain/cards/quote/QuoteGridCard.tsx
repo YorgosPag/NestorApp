@@ -85,13 +85,13 @@ export function QuoteGridCard({
     const items: StatItem[] = [
       {
         icon: Building2,
-        iconColor: 'text-green-707',
+        iconColor: 'text-[hsl(var(--text-success))]',
         label: t('list.vendorLabel'),
         value: vendorName,
       },
       {
         icon: DollarSign,
-        iconColor: 'text-green-707',
+        iconColor: 'text-[hsl(var(--text-success))]',
         label: t('list.totalLabel'),
         value: formatCurrency(quote.totals.total),
       },

@@ -150,7 +150,7 @@ export function HierarchyDebugPanel() {
       {selectedProject && (
         <section className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.MARGIN.LEFT_LG} ${getDirectionalBorder('success', 'left')}`}>
           {/* 🏢 ENTERPRISE: Construction icon (green) - same as project cards in NAVIGATION_ENTITIES */}
-          <h4 className={`text-green-707 ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+          <h4 className={`text-[hsl(var(--text-success))] ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <Construction className={iconSizes.sm} />
             <span>{selectedProject.name}</span>
           </h4>

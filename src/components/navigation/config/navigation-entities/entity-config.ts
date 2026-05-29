@@ -31,7 +31,7 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
   },
   project: {
     icon: Construction,
-    color: 'text-green-707',
+    color: 'text-[hsl(var(--text-success))]',
     label: 'navigation.entities.project.label',
     pluralLabel: 'navigation.entities.project.plural',
     description: 'navigation.entities.project.description',
@@ -101,7 +101,7 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
   },
   price: {
     icon: Euro,
-    color: 'text-green-707',
+    color: 'text-[hsl(var(--text-success))]',
     label: 'navigation.entities.price.label',
     pluralLabel: 'navigation.entities.price.plural',
     description: 'navigation.entities.price.description',
@@ -164,7 +164,7 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
   },
   opportunity: {
     icon: Target,
-    color: 'text-green-707',
+    color: 'text-[hsl(var(--text-success))]',
     label: 'navigation.entities.opportunity.label',
     pluralLabel: 'navigation.entities.opportunity.plural',
     description: 'navigation.entities.opportunity.description',
