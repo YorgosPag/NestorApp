@@ -135,6 +135,8 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       ...(dragPreview.wallGripKind        ? { wallGripKind:        dragPreview.wallGripKind }         : {}),
       // ADR-363 Phase 5.5 / 3.5 / 3.7a — beam / slab / slab-opening parametric ghost.
       ...(dragPreview.beamGripKind        ? { beamGripKind:        dragPreview.beamGripKind }         : {}),
+      // ADR-397 — column parametric ghost (move/rotation/resize) pass-through.
+      ...(dragPreview.columnGripKind      ? { columnGripKind:      dragPreview.columnGripKind }       : {}),
       ...(dragPreview.slabGripKind        ? { slabGripKind:        dragPreview.slabGripKind }         : {}),
       ...(dragPreview.slabOpeningGripKind ? { slabOpeningGripKind: dragPreview.slabOpeningGripKind }  : {}),
       ...(dragPreview.anchorPos           ? { anchorPos:           dragPreview.anchorPos }            : {}),

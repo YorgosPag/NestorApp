@@ -39,6 +39,11 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
 import type { BeamEntity } from '../../bim/types/beam-types';
+// ADR-397 — parametric column drag preview (mirrors wall: move/rotation/resize).
+import { applyColumnGripDrag } from '../../bim/columns/column-grips';
+import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
+import type { ColumnEntity } from '../../bim/types/column-types';
+import type { ColumnGripKind } from '../../hooks/grip-types';
 // ADR-363 Phase 3.5 — parametric slab drag preview.
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import type { SlabEntity } from '../../bim/types/slab-types';
@@ -85,6 +90,12 @@ export interface EntityPreviewTransform {
    */
   readonly rotatePivot?: Point2D;
   readonly beamGripKind?: BeamGripKind;
+  /**
+   * ADR-397 — parametric column discriminator. Routes preview through
+   * `applyColumnGripDrag` + `computeColumnGeometry` (mirrors wall). With
+   * `rotatePivot` set (column-rotation 6-click) the ghost orbits the picked centre.
+   */
+  readonly columnGripKind?: ColumnGripKind;
   readonly slabGripKind?: SlabGripKind;
   readonly slabOpeningGripKind?: SlabOpeningGripKind;
   readonly anchorPos?: Point2D;
@@ -133,7 +144,7 @@ export function applyEntityPreview(
   preview: EntityPreviewTransform | undefined,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, slabGripKind, slabOpeningGripKind, anchorPos, rotatePivot } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, slabGripKind, slabOpeningGripKind, anchorPos, rotatePivot } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
@@ -145,6 +156,20 @@ export function applyEntityPreview(
     const newParams = applyWallGripDrag(wallGripKind, { originalParams: wall.params, delta, currentPos, ...(rotatePivot ? { pivot: rotatePivot } : {}) });
     if (newParams === wall.params) return entity;
     const newGeometry = computeWallGeometry(newParams, wall.kind);
+    return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-397 — parametric column live preview (move / rotation / resize) ────
+  // Mirror of the wall branch: routes through `applyColumnGripDrag` so the live
+  // ghost matches the commit. `rotatePivot` (column-rotation 6-click) orbits the
+  // picked centre; width/depth/center need no pivot. Without this branch columns
+  // had ZERO live preview (commit worked on release only) → "δεν συμπεριφέρεται σωστά".
+  if (columnGripKind && anchorPos && entity.type === 'column') {
+    const col = entity as unknown as ColumnEntity;
+    const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
+    const newParams = applyColumnGripDrag(columnGripKind, { originalParams: col.params, delta, currentPos, ...(rotatePivot ? { pivot: rotatePivot } : {}) });
+    if (newParams === col.params) return entity;
+    const newGeometry = computeColumnGeometry(newParams);
     return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
   }
 
@@ -244,6 +269,14 @@ export function applyEntityPreview(
         const beam = entity as unknown as BeamEntity;
         const newParams = applyBeamGripDrag('beam-midpoint', { originalParams: beam.params, delta });
         const newGeometry = computeBeamGeometry(newParams);
+        return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+      }
+      case 'column': {
+        // ADR-397 — toolbar Move-tool ghost (no columnGripKind): translate via
+        // the `column-center` SSoT, mirror wall/beam.
+        const col = entity as unknown as ColumnEntity;
+        const newParams = applyColumnGripDrag('column-center', { originalParams: col.params, delta });
+        const newGeometry = computeColumnGeometry(newParams);
         return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
       }
       case 'slab': {

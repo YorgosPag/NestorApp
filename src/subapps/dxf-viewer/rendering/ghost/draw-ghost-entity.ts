@@ -236,6 +236,18 @@ export function drawGhostEntity(
       return;
     }
 
+    // ADR-397 — column ghost: footprint polygon (scene-units, from ColumnGeometry).
+    // Mirror beam/slab so the live move/rotation/resize ghost paints.
+    case 'column': {
+      const col = entity as unknown as {
+        geometry?: { footprint?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+      };
+      const verts = col.geometry?.footprint?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
     // ADR-363 Phase 2.5 — opening ghost: cutout rectangle outline from raw OpeningEntity.geometry.
     case 'opening': {
       const opening = entity as unknown as {

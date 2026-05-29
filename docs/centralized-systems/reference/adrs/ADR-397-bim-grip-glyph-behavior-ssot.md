@@ -247,6 +247,18 @@ Column ήδη: `applyColumnGripDrag` → `UpdateColumnParamsCommand` → `comput
 4. **🟡 Drag math** — `resizeWidth`/`resizeDepth` ανέμειγναν scene-unit delta με mm param. **Fix:** `÷ mmScaleFor` (mirror wall `resizeThickness`).
 
 **Tests:** +2 νέα (metre-scene grip-position scaling + width-resize tracking). Existing mm tests intact (s=1 no-op).
+
+## 12e. Live-ghost preview pipeline — η κολώνα ΕΛΕΙΠΕ από 5 layers (2026-05-29, «column rotation δεν συμπεριφέρεται σωστά»)
+
+Ο Giorgio ζήτησε να διαβάσω ΠΟΙΟΣ κώδικας τρέχει στο rotation click τοίχου vs κολώνας. Ο **commit** μοιράζεται (`commitRotateReference`→`commitDxfGripDragModeAware`→`commitColumnGripDrag`), αλλά το **live-ghost preview pipeline** ήταν **wall-only** — η κολώνα δεν εμφάνιζε κανένα ghost κατά move/rotate/resize (ο commit δούλευε μόνο on-release → «δεν συμπεριφέρεται σωστά»). Έλειπε από **5 σημεία**, όλα διορθώθηκαν για πλήρες SSoT:
+
+1. `apply-entity-preview.ts` (ghost SSoT) — **καμία `column` branch** (υπήρχαν wall/beam/slab/slab-opening/stair). +column parametric branch (move/rotation+pivot/resize via `applyColumnGripDrag`+`computeColumnGeometry`, mirror wall) + `case 'column'` στο movesEntity switch (toolbar Move).
+2. `EntityPreviewTransform` interface — **χωρίς `columnGripKind`**. +field.
+3. `grip-projections.buildRotateReferencePreview` — προωθούσε **μόνο `wallGripKind`**. +`columnGripKind`.
+4. `useGripGhostPreview` — hand-picked fields, **έκοβε `columnGripKind`**. +pass-through.
+5. `draw-ghost-entity.ts` (ghost renderer) — **καμία `case 'column'`** → ακόμα κι αν περνούσε το transformed column, δεν ζωγραφιζόταν. +footprint polygon (mirror beam).
+
+Τώρα: build→preview→apply→draw όλα entity-agnostic για column. Ghost παρ === commit. +3 tests (`apply-entity-preview-column.test.ts`: move + 6-click rotation orbit + no-op). **Μάθημα:** ο commit path ≠ preview path· για πλήρη grip parity ένα entity πρέπει να είναι και στα ΔΥΟ (+ στο `computeDxfEntityGrips` + HitTestingService).
 **Εναπομείνον (flagged):** variant **resize drag** (L/T/I `resizeArmLength`/`resizeFlangeLength`/… σε `column-variant-grips.ts`) έχει το ίδιο mm/scene mismatch — οι POSITIONS διορθώθηκαν (via `localToWorld`), το resize-drag των variants σε non-mm scenes μένει follow-up (Giorgio δοκίμασε rectangular). `calculatePriority` column case (cosmetic) deferred.
 
 ---
