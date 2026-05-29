@@ -8,8 +8,11 @@
 
 import {
   buildEnvelopeRenderPlan,
+  buildSlabHatchPlan,
+  buildRevealBandPlan,
   resolveEnvelopeHatchKey,
 } from '../envelope-render-plan';
+import type { Point3D } from '../../types/bim-base';
 import type { EnvelopeChain } from '../../geometry/envelope-perimeter';
 import { computeWallHatchPlan } from '../../walls/wall-hatch-patterns';
 import { resolveIsEntityVisible } from '../../visibility/visibility-resolver';
@@ -61,6 +64,43 @@ describe('buildEnvelopeRenderPlan', () => {
       insulationOuterLoop: { points: [{ x: 0, y: 0 }], closed: false },
     };
     expect(buildEnvelopeRenderPlan(degenerate, GRAPHITE_EPS_MATERIAL_ID)).toBeNull();
+  });
+});
+
+describe('buildSlabHatchPlan (Z2/Z3 εκτεθειμένη πλάκα)', () => {
+  const footprint: Point3D[] = [
+    { x: 0, y: 0 }, { x: 2000, y: 0 }, { x: 2000, y: 1500 }, { x: 0, y: 1500 },
+  ];
+
+  it('περνά το footprint ως polygon + γεμίζει hatch (reuse SSoT)', () => {
+    const plan = buildSlabHatchPlan(footprint, GRAPHITE_EPS_MATERIAL_ID);
+    expect(plan).not.toBeNull();
+    expect(plan!.polygon).toEqual(footprint);
+    expect(plan!.hatch.lines.length).toBeGreaterThan(0);
+  });
+
+  it('επιστρέφει null για degenerate footprint (< 3 κορυφές)', () => {
+    expect(buildSlabHatchPlan([{ x: 0, y: 0 }, { x: 1, y: 1 }], GRAPHITE_EPS_MATERIAL_ID)).toBeNull();
+  });
+});
+
+describe('buildRevealBandPlan (Z4 περβάζια ανοίγματος)', () => {
+  const outline: Point3D[] = [
+    { x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 250 }, { x: 0, y: 250 },
+  ];
+
+  it('χτίζει inset frame band ring (outline + inner reversed) + hatch', () => {
+    const plan = buildRevealBandPlan(outline, 50, GRAPHITE_EPS_MATERIAL_ID);
+    expect(plan).not.toBeNull();
+    expect(plan!.bandRing).toHaveLength(8); // 4 outline + 4 inset
+    expect(plan!.outerLoop).toEqual(outline);
+    expect(plan!.outerClosed).toBe(true);
+    expect(plan!.hatch.lines.length).toBeGreaterThan(0);
+  });
+
+  it('επιστρέφει null για insetCanvas <= 0 ή degenerate outline', () => {
+    expect(buildRevealBandPlan(outline, 0, GRAPHITE_EPS_MATERIAL_ID)).toBeNull();
+    expect(buildRevealBandPlan([{ x: 0, y: 0 }, { x: 1, y: 0 }], 50, GRAPHITE_EPS_MATERIAL_ID)).toBeNull();
   });
 });
 

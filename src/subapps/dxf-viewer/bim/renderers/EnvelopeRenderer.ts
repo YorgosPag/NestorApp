@@ -17,10 +17,15 @@
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { HATCH_STROKE_RGBA } from '../walls/wall-hatch-patterns';
-import type { EnvelopeRenderPlan } from './envelope-render-plan';
+import type { EnvelopeRenderPlan, EnvelopeSlabHatchPlan } from './envelope-render-plan';
 
-export type { EnvelopeRenderPlan } from './envelope-render-plan';
-export { buildEnvelopeRenderPlan, resolveEnvelopeHatchKey } from './envelope-render-plan';
+export type { EnvelopeRenderPlan, EnvelopeSlabHatchPlan } from './envelope-render-plan';
+export {
+  buildEnvelopeRenderPlan,
+  buildSlabHatchPlan,
+  buildRevealBandPlan,
+  resolveEnvelopeHatchKey,
+} from './envelope-render-plan';
 
 // ─── Visual constants ─────────────────────────────────────────────────────────
 /** Insulation hatch line width (px). Reuse-aligned με wall hatch (~0.5). */
@@ -44,6 +49,43 @@ export class EnvelopeRenderer {
   ): void {
     this.drawHatchBand(plan, transform, viewport);
     this.strokeOuterLoop(plan, transform, viewport);
+  }
+
+  /**
+   * Z2/Z3 — διαγράμμιση μόνωσης σε ΟΛΟ το footprint μιας εκτεθειμένης πλάκας
+   * (clip polygon → hatch lines εντός). Το περίγραμμα της πλάκας το ζωγραφίζει
+   * ήδη ο `SlabRenderer` — εδώ μόνο η μόνωση από πάνω.
+   */
+  renderSlabHatch(
+    plan: EnvelopeSlabHatchPlan,
+    transform: ViewTransform,
+    viewport: EnvelopeRenderViewport,
+  ): void {
+    if (plan.polygon.length < 3 || plan.hatch.lines.length === 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.beginPath();
+    const first = this.toScreen(plan.polygon[0], transform, viewport);
+    ctx.moveTo(first.x, first.y);
+    for (let i = 1; i < plan.polygon.length; i++) {
+      const s = this.toScreen(plan.polygon[i], transform, viewport);
+      ctx.lineTo(s.x, s.y);
+    }
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.strokeStyle = HATCH_STROKE_RGBA;
+    ctx.lineWidth = HATCH_LINE_WIDTH_PX;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    for (const seg of plan.hatch.lines) {
+      const a = this.toScreen(seg.start, transform, viewport);
+      const b = this.toScreen(seg.end, transform, viewport);
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+    }
+    ctx.stroke();
+    ctx.restore();
   }
 
   private toScreen(

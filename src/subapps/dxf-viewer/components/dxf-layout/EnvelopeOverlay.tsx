@@ -25,13 +25,19 @@ import { useEffect, useRef, useSyncExternalStore } from 'react';
 import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import { computeEnvelopePerimeter } from '../../bim/geometry/envelope-perimeter';
-import { EnvelopeRenderer, buildEnvelopeRenderPlan } from '../../bim/renderers/EnvelopeRenderer';
+import {
+  EnvelopeRenderer,
+  buildEnvelopeRenderPlan,
+  buildSlabHatchPlan,
+  buildRevealBandPlan,
+} from '../../bim/renderers/EnvelopeRenderer';
 import {
   getEnvelopeSpec,
   subscribeEnvelopeSpec,
 } from '../../bim/stores/envelope-spec-store';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { resolveIsEntityVisible } from '../../bim/visibility/visibility-resolver';
+import { mmToSceneUnits } from '../../utils/scene-units';
 
 export interface EnvelopeOverlayProps {
   readonly scene: DxfScene | null;
@@ -39,6 +45,48 @@ export interface EnvelopeOverlayProps {
   readonly viewport: Viewport;
   /** Τρέχων BIM όροφος — κλειδί του per-level spec store. */
   readonly currentLevelId: string | null;
+}
+
+/**
+ * Z2/Z3 — διαγράμμιση μόνωσης πάνω στο footprint κάθε εκτεθειμένης πλάκας. Διαβάζει
+ * το per-element `slabEntity.params.envelopeLayer` (γραμμένο από τον applicator P7B).
+ */
+function drawExposedSlabHatch(
+  renderer: EnvelopeRenderer,
+  scene: DxfScene,
+  transform: ViewTransform,
+  viewport: Viewport,
+): void {
+  for (const e of scene.entities) {
+    if (e.type !== 'slab') continue;
+    const layer = e.slabEntity.params.envelopeLayer;
+    const footprint = e.slabEntity.geometry?.polygon?.vertices;
+    if (!layer || !footprint) continue;
+    const plan = buildSlabHatchPlan(footprint, layer.materialId);
+    if (plan) renderer.renderSlabHatch(plan, transform, viewport);
+  }
+}
+
+/**
+ * Z4 — λωρίδες μόνωσης (inset frame) γύρω από κάθε εξωτερικό άνοιγμα. Διαβάζει το
+ * per-element `openingEntity.params.revealInsulation`. Το πάχος (meters) → canvas
+ * units μέσω `mmToSceneUnits` (mirror του applicator `buildPerimeterContext`).
+ */
+function drawOpeningReveals(
+  renderer: EnvelopeRenderer,
+  scene: DxfScene,
+  transform: ViewTransform,
+  viewport: Viewport,
+): void {
+  const canvasPerM = mmToSceneUnits(scene.units) * 1000;
+  for (const e of scene.entities) {
+    if (e.type !== 'opening') continue;
+    const reveal = e.openingEntity.params.revealInsulation;
+    const outline = e.openingEntity.geometry?.outline?.vertices;
+    if (!reveal || !outline) continue;
+    const plan = buildRevealBandPlan(outline, reveal.thickness_m * canvasPerM, reveal.materialId);
+    if (plan) renderer.render(plan, transform, viewport);
+  }
 }
 
 export function EnvelopeOverlay({
@@ -75,16 +123,22 @@ export function EnvelopeOverlay({
     const walls = scene.entities.filter(
       (e): e is Extract<DxfEntityUnion, { type: 'wall' }> => e.type === 'wall',
     );
-    if (walls.length === 0) return;
-
-    const { chains } = computeEnvelopePerimeter(walls, spec.thickness_m, scene.units);
-    if (chains.length === 0) return;
 
     const renderer = new EnvelopeRenderer(ctx);
-    for (const chain of chains) {
-      const plan = buildEnvelopeRenderPlan(chain, spec.materialId);
-      if (plan) renderer.render(plan, transform, viewport);
+
+    // Z1 — κατακόρυφο κέλυφος (offset perimeter των τοίχων, spec-driven).
+    if (walls.length > 0) {
+      const { chains } = computeEnvelopePerimeter(walls, spec.thickness_m, scene.units);
+      for (const chain of chains) {
+        const plan = buildEnvelopeRenderPlan(chain, spec.materialId);
+        if (plan) renderer.render(plan, transform, viewport);
+      }
     }
+
+    // Z2/Z3 — εκτεθειμένες πλάκες· Z4 — περβάζια. Pure read των per-element
+    // δεδομένων (envelopeLayer / revealInsulation) — ΟΧΙ re-classify εδώ.
+    drawExposedSlabHatch(renderer, scene, transform, viewport);
+    drawOpeningReveals(renderer, scene, transform, viewport);
   }, [scene, transform, viewport, spec, visible]);
 
   return (

@@ -71,6 +71,19 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-29 — ADR-396 P-RENDER — Envelope Z2/Z3/Z4 overlay (compliance note)
+
+**Status**: COMPLIANT — no ADR-040 invariants broken.
+
+`EnvelopeOverlay.tsx` (always-on floor micro-leaf, ADR-396 P4) επεκτάθηκε για να
+ζωγραφίζει Z2/Z3 (slab hatch) + Z4 (reveal frame) πέρα από Z1. Subscriptions
+αμετάβλητες — μόνο τα ίδια `useSyncExternalStore(envelope-spec)` + `objectStyles`
+slice (CHECK 6C safe· κανένα νέο high-freq subscription στον orchestrator). Το
+extra draw διαβάζει per-element `slab.envelopeLayer` / `opening.revealInsulation`
+από το ήδη-subscribed `scene` prop (repaint piggybacks στο υπάρχον scene/transform
+dep). `EnvelopeRenderer.ts` (+`renderSlabHatch`) thin ctx drawer — μηδέν state.
+CHECK 6B/6D: ADR-040 staged μαζί με τα canvas/renderer αρχεία.
+
 ### 2026-05-27 — ADR-382 Visibility Resolver — micro-leaf compliance note (Phase C)
 
 **Status**: COMPLIANT — no ADR-040 invariants broken.

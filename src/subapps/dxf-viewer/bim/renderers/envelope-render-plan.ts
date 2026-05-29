@@ -23,6 +23,7 @@ import {
   type WallMaterialKey,
   type HatchPlan,
 } from '../walls/wall-hatch-patterns';
+import { insetClosedPolygon } from '../geometry/shared/polygon-utils';
 
 export interface EnvelopeRenderPlan {
   /** Κλειστό δαχτυλίδι πάχους μόνωσης (outer forward + exterior face reversed). */
@@ -70,4 +71,54 @@ export function buildEnvelopeRenderPlan(
   const bandRing: Point3D[] = [...outer, ...[...inner].reverse()];
   const hatch = computeWallHatchPlan(bboxOf(bandRing), resolveEnvelopeHatchKey(materialId));
   return { bandRing, outerLoop: outer, outerClosed: chain.closed, hatch };
+}
+
+// ─── Z2 / Z3 — εκτεθειμένες πλάκες (soffit πιλοτής / δώμα top) ──────────────────
+
+/**
+ * Render plan για την επίπεδη μόνωση μιας εκτεθειμένης πλάκας (Z2/Z3). Στην
+ * κάτοψη φαίνεται ως διαγράμμιση μόνωσης σε ΟΛΟ το footprint της πλάκας (απόφαση
+ * Giorgio). Z2 και Z3 μοιράζονται το ίδιο 2D visual — η ζώνη μετράει μόνο για 3D.
+ */
+export interface EnvelopeSlabHatchPlan {
+  /** Κλειστό polygon footprint πλάκας (canvas units) — clip + stroke. */
+  readonly polygon: readonly Point3D[];
+  /** Hatch lines (canvas units) από το `computeWallHatchPlan`. */
+  readonly hatch: HatchPlan;
+}
+
+/**
+ * Χτίζει το hatch plan μιας εκτεθειμένης πλάκας. Επιστρέφει null αν το footprint
+ * δεν είναι έγκυρο polygon (< 3 κορυφές).
+ */
+export function buildSlabHatchPlan(
+  footprint: readonly Point3D[],
+  materialId: EnvelopeMaterialId,
+): EnvelopeSlabHatchPlan | null {
+  if (footprint.length < 3) return null;
+  const hatch = computeWallHatchPlan(bboxOf(footprint), resolveEnvelopeHatchKey(materialId));
+  return { polygon: footprint, hatch };
+}
+
+// ─── Z4 — περβάζια κουφωμάτων (4 λωρίδες = inset frame) ─────────────────────────
+
+/**
+ * Render plan για τη μόνωση περβαζιών ενός ανοίγματος (Z4). Reuse του
+ * `EnvelopeRenderPlan` — το «δαχτυλίδι» εδώ είναι ανάμεσα στο `outline` της τρύπας
+ * και το inset του (frame γύρω-γύρω). Ο renderer το ζωγραφίζει με την ίδια
+ * `render()` (hatch band + outline stroke). `insetCanvas` = πάχος περβαζιού σε
+ * canvas units (ο caller μετατρέπει meters → canvas).
+ */
+export function buildRevealBandPlan(
+  outline: readonly Point3D[],
+  insetCanvas: number,
+  materialId: EnvelopeMaterialId,
+): EnvelopeRenderPlan | null {
+  if (outline.length < 3 || insetCanvas <= 0) return null;
+  const inner = insetClosedPolygon(outline, insetCanvas);
+  if (!inner) return null;
+
+  const bandRing: Point3D[] = [...outline, ...[...inner].reverse()];
+  const hatch = computeWallHatchPlan(bboxOf(bandRing), resolveEnvelopeHatchKey(materialId));
+  return { bandRing, outerLoop: outline, outerClosed: true, hatch };
 }

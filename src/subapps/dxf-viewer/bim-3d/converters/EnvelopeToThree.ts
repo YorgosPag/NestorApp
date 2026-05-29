@@ -24,6 +24,7 @@ import * as THREE from 'three';
 import type { Point3D } from '../../bim/types/bim-base';
 import type { EnvelopeChain } from '../../bim/geometry/envelope-perimeter';
 import type { EnvelopeMaterialId } from '../../bim/types/thermal-envelope-types';
+import { insetClosedPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { resolveEnvelopeMaterial } from '../materials/envelope-material-resolver';
 import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
 import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
@@ -44,6 +45,28 @@ function attachEnvelopeEdges(mesh: THREE.Mesh): void {
     dpi: EDGE_DEFAULT_DPI,
   });
   attachEdgeOverlay(mesh, buildEdgeOverlay(mesh, style));
+}
+
+/**
+ * Κοινό finalize για όλα τα envelope meshes (Z1 κέλυφος / Z2-Z3 flat layers /
+ * Z4 reveal linings): υλικό + κατακόρυφη θέση + tags + shadows + edge overlay.
+ * SSoT για το styling — όλες οι ζώνες μοιράζονται `elem-envelope` + edge style.
+ */
+function makeEnvelopeMesh(
+  geometry: THREE.BufferGeometry,
+  materialId: EnvelopeMaterialId,
+  posY: number,
+  levelId?: string,
+): THREE.Mesh {
+  const mesh = new THREE.Mesh(geometry, resolveEnvelopeMaterial(materialId));
+  mesh.position.y = posY;
+  mesh.userData['bimType'] = 'envelope';
+  mesh.userData['matId'] = 'elem-envelope';
+  if (levelId !== undefined) mesh.userData['levelId'] = levelId;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  attachEnvelopeEdges(mesh);
+  return mesh;
 }
 
 /**
@@ -86,15 +109,93 @@ export function envelopeChainToMesh(
   const geo = new THREE.ExtrudeGeometry(shape, { depth: heightM, bevelEnabled: false });
   geo.applyMatrix4(ROT_X_NEG_90);
 
-  const mesh = new THREE.Mesh(geo, resolveEnvelopeMaterial(materialId));
   // Ίδια κατακόρυφη βάση με τους τοίχους που τυλίγει (wallToMesh:159).
-  mesh.position.y = floorElevationMm * MM_TO_M + buildingBaseElevationM;
-  mesh.userData['bimType'] = 'envelope';
-  mesh.userData['matId'] = 'elem-envelope';
-  if (levelId !== undefined) mesh.userData['levelId'] = levelId;
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
+  return makeEnvelopeMesh(
+    geo,
+    materialId,
+    floorElevationMm * MM_TO_M + buildingBaseElevationM,
+    levelId,
+  );
+}
 
-  attachEnvelopeEdges(mesh);
-  return mesh;
+/**
+ * ADR-396 P-RENDER — Z2/Z3 flat μόνωση εκτεθειμένης πλάκας (3D).
+ *
+ * Λεπτή στρώση που εξωθείται από το footprint της πλάκας: Z3 (δώμα) ΠΑΝΩ από την
+ * άνω παρειά (top face), Z2 (πιλοτή) ΚΑΤΩ από την κάτω παρειά (soffit). Ίδιο
+ * coordinate convention με `slabToMesh` (`BimToThreeConverter:230`): `levelElevation`
+ * = top face FFL, η πλάκα κρέμεται κάτω κατά `thickness`.
+ *
+ * @param footprint        polygon πλάκας (meters, ίδιος χώρος με wall geometry).
+ * @param zone             'Z2' (κάτω) ή 'Z3' (πάνω).
+ * @param slabTopMm        top face elevation της πλάκας σε mm (levelElevation + offset).
+ * @param slabThicknessMm  πάχος πλάκας σε mm.
+ * @param layerThicknessM  πάχος μόνωσης σε ΜΕΤΡΑ (από `envelopeLayer.thickness_m`).
+ * @returns null αν degenerate footprint ή `layerThicknessM <= 0`.
+ */
+export function slabFlatLayerToMesh(
+  footprint: readonly Point3D[],
+  zone: 'Z2' | 'Z3',
+  slabTopMm: number,
+  slabThicknessMm: number,
+  layerThicknessM: number,
+  materialId: EnvelopeMaterialId,
+  levelId?: string,
+  baseElevationM = 0,
+): THREE.Mesh | null {
+  if (footprint.length < 3 || layerThicknessM <= 0) return null;
+
+  const shape = new THREE.Shape();
+  shape.moveTo(footprint[0].x, footprint[0].y);
+  for (let i = 1; i < footprint.length; i++) shape.lineTo(footprint[i].x, footprint[i].y);
+  shape.closePath();
+
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: layerThicknessM, bevelEnabled: false });
+  geo.applyMatrix4(ROT_X_NEG_90);
+
+  // Extrude μετά το ROT_X_NEG_90 μεγαλώνει προς +y από το position.y.
+  const slabTopM = slabTopMm * MM_TO_M + baseElevationM;
+  const slabBottomM = slabTopM - slabThicknessMm * MM_TO_M;
+  const posY = zone === 'Z3' ? slabTopM : slabBottomM - layerThicknessM;
+
+  return makeEnvelopeMesh(geo, materialId, posY, levelId);
+}
+
+/**
+ * ADR-396 P-RENDER — Z4 μόνωση περβαζιών ανοίγματος (3D lining).
+ *
+ * Frame (band ανάμεσα στο `outline` της τρύπας και το inset του) εξωθημένο
+ * καθ' ύψος του ανοίγματος — ντύνει εσωτερικά τις 4 παρειές (αρ./δεξ./πάνω/κάτω).
+ * `outline` = meters (ίδιος χώρος με wall geometry). Κατακόρυφη βάση = ποδιά
+ * ανοίγματος (`sillHeight`) πάνω από τη βάση ορόφου (mirror `wall-opening-extrude`).
+ *
+ * @param outline          4-vertex cutout rectangle (meters).
+ * @param revealThicknessM πάχος περβαζιού σε ΜΕΤΡΑ (`revealInsulation.thickness_m`).
+ * @param sillHeightMm     ποδιά ανοίγματος σε mm (0 για πόρτες).
+ * @param openingHeightMm  ύψος ανοίγματος σε mm.
+ * @returns null αν degenerate inset/outline ή ύψος ≤ 0.
+ */
+export function revealLiningToMesh(
+  outline: readonly Point3D[],
+  revealThicknessM: number,
+  sillHeightMm: number,
+  openingHeightMm: number,
+  floorElevationMm: number,
+  baseElevationM: number,
+  materialId: EnvelopeMaterialId,
+  levelId?: string,
+): THREE.Mesh | null {
+  const openingHeightM = openingHeightMm * MM_TO_M;
+  if (openingHeightM <= 0 || revealThicknessM <= 0) return null;
+
+  const inner = insetClosedPolygon(outline, revealThicknessM);
+  if (!inner) return null;
+  const shape = buildBandShape(outline, inner);
+  if (!shape) return null;
+
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: openingHeightM, bevelEnabled: false });
+  geo.applyMatrix4(ROT_X_NEG_90);
+
+  const posY = floorElevationMm * MM_TO_M + baseElevationM + sillHeightMm * MM_TO_M;
+  return makeEnvelopeMesh(geo, materialId, posY, levelId);
 }

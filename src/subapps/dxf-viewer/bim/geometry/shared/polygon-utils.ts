@@ -308,6 +308,25 @@ export function offsetPolyline(
 }
 
 /**
+ * Inset ενός κλειστού polygon κατά `distance` προς τα ΜΕΣΑ, winding-agnostic:
+ * δοκιμάζει και τα δύο πρόσημα του `offsetPolyline` και κρατά αυτό με το ΜΙΚΡΟΤΕΡΟ
+ * εμβαδόν (= προς τα μέσα). Επιστρέφει `null` αν το polygon είναι μη-έγκυρο
+ * (< 3 κορυφές, `distance ≤ 0`) ή το inset καταρρέει (degenerate). Χρήση: ETICS
+ * περβάζια (ADR-396 Z4 — frame γύρω από την τρύπα ανοίγματος, 2D + 3D).
+ */
+export function insetClosedPolygon(
+  vertices: readonly Point3D[],
+  distance: number,
+): Point3D[] | null {
+  if (vertices.length < 3 || distance <= 0) return null;
+  const plus = offsetPolyline(vertices, distance, 1);
+  const minus = offsetPolyline(vertices, distance, -1);
+  const inner = polygonArea(plus) <= polygonArea(minus) ? plus : minus;
+  if (inner.length < 3 || polygonArea(inner) <= 0) return null;
+  return inner;
+}
+
+/**
  * Arithmetic-mean centroid of a polygon's vertices (XY plane, z ignored).
  * Sufficient for near-convex building outlines (ADR-396 D2 exterior-face
  * selection). Returns `{x:0, y:0}` for an empty vertex list.
