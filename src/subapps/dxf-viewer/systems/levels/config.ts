@@ -6,6 +6,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { BimRenderSettings } from '../../config/bim-render-settings-types';
+import type { ThermalEnvelopeSpec } from '../../bim/types/thermal-envelope-types';
 
 /** 🏢 ADR-309 Phase 3: Context-aware floorplan type — set by wizard on import */
 export type FloorplanType = 'project' | 'building' | 'floor' | 'unit';
@@ -34,6 +35,8 @@ export interface Level {
    *  bimRenderSettings is a snapshot of the linked template; edits to the
    *  template are fanned out to all levels with the same FK. */
   appliedViewTemplateId?: string | null;
+  /** ADR-396 P7: per-floor ETICS thermal envelope spec (preset + display driver). */
+  thermalEnvelopeSpec?: ThermalEnvelopeSpec | null;
 }
 
 export interface FloorplanDoc {

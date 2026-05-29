@@ -21,6 +21,7 @@ import {
   IfcGuidSchema,
   IfcPropertySetSchema,
 } from './ifc-entity-mixin';
+import { EnvelopeLayerSchema } from './thermal-envelope.schemas';
 
 // ─── Primitive schemas ──────────────────────────────────────────────────────
 
@@ -90,6 +91,8 @@ const SlabParamsBaseSchema = z
     sceneUnits: z.string().optional(),
     storeyId: z.string().min(1).optional(),
     offsetFromStorey: z.number().finite().optional(),
+    // ─── ADR-396 P7 — ETICS exposed-slab insulation layer (Z2 soffit / Z3 top)
+    envelopeLayer: EnvelopeLayerSchema.optional(),
   })
   .strict();
 

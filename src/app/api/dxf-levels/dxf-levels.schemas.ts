@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ThermalEnvelopeSpecSchema } from '@/subapps/dxf-viewer/bim/types/thermal-envelope.schemas';
 
 // ── Reusable BIM render-settings sub-schemas (ADR-375 + ADR-377) ─────────────
 // Centralised here because they are the SSoT for the API payload contract;
@@ -96,6 +97,8 @@ export const UpdateDxfLevelSchema = z.object({
   bimRenderSettings: BimRenderSettingsSchema.nullable().optional(),
   /** ADR-375 Phase B.3: FK → dxf_viewer_view_templates. Null = detached. */
   appliedViewTemplateId: z.string().min(1).max(128).nullable().optional(),
+  /** ADR-396 P7: per-floor ETICS thermal envelope spec (preset + display driver). */
+  thermalEnvelopeSpec: ThermalEnvelopeSpecSchema.nullable().optional(),
   _v: z.number().int().optional(),
 }).passthrough();
 

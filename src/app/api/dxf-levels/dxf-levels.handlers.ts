@@ -184,6 +184,8 @@ export async function handleUpdateDxfLevel(
     if (body.bimRenderSettings !== undefined) updates.bimRenderSettings = body.bimRenderSettings ?? null;
     // ADR-375 Phase B.3: FK → dxf_viewer_view_templates (or null = detached)
     if (body.appliedViewTemplateId !== undefined) updates.appliedViewTemplateId = body.appliedViewTemplateId ?? null;
+    // ADR-396 P7: per-floor ETICS thermal envelope spec
+    if (body.thermalEnvelopeSpec !== undefined) updates.thermalEnvelopeSpec = body.thermalEnvelopeSpec ?? null;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });

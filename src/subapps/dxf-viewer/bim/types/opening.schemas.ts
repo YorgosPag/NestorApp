@@ -20,6 +20,7 @@ import {
   IfcGuidSchema,
   IfcPropertySetSchema,
 } from './ifc-entity-mixin';
+import { RevealInsulationSchema } from './thermal-envelope.schemas';
 
 // ─── Enums (mirror opening-types.ts unions) ──────────────────────────────────
 
@@ -61,6 +62,8 @@ export const OpeningParamsSchema = z
     openDirection: OpeningSwingSchema.optional(),
     material: z.string().min(1).optional(),
     glazingPanes: OpeningGlazingPanesSchema.optional(),
+    // ─── ADR-396 P7 — ETICS reveal insulation strips (Z4) ────────────────────
+    revealInsulation: RevealInsulationSchema.optional(),
   })
   .strict();
 
