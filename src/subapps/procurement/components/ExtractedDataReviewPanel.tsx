@@ -203,7 +203,7 @@ export function ExtractedDataReviewPanel({
 
       <CardContent className="space-y-5">
         {showMismatchBanner && mismatch && (
-          <div className="flex flex-col gap-2 rounded-md border border-[hsl(var(--text-warning))]/60 bg-[hsl(var(--bg-warning))]/40 px-4 py-3">
+          <div className="flex flex-col gap-2 rounded-md border border-[hsl(var(--text-warning))]/60 bg-[hsl(var(--status-warning))]/40 px-4 py-3">
             <div className="flex items-start gap-2">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--text-warning))]" />
               <div className="min-w-0 flex-1">
@@ -224,7 +224,7 @@ export function ExtractedDataReviewPanel({
               {onSwitchVendor && mismatch.extractedVendorName && (
                 <Button
                   size="sm"
-                  className="bg-[hsl(var(--bg-warning))] text-white hover:bg-[hsl(var(--bg-warning))]/90"
+                  className="bg-[hsl(var(--status-warning))] text-white hover:bg-[hsl(var(--status-warning))]/90"
                   disabled={isSwitchingVendor || isSaving}
                   onClick={() =>
                     void onSwitchVendor(
@@ -411,7 +411,7 @@ export function ExtractedDataReviewPanel({
         </section>
 
         {showWarningBanner && quoteValidation.warnings.linesSumMismatch && (
-          <div className="rounded-md border border-[hsl(var(--text-warning))]/60 bg-[hsl(var(--bg-warning))]/40 px-4 py-3">
+          <div className="rounded-md border border-[hsl(var(--text-warning))]/60 bg-[hsl(var(--status-warning))]/40 px-4 py-3">
             <div className="flex items-start gap-2">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--text-warning))]" />
               <p className="text-sm text-foreground">

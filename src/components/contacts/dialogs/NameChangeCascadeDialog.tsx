@@ -104,7 +104,7 @@ export function NameChangeCascadeDialog({
           <AlertDialogCancel>{nc('cancel')}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="bg-[hsl(var(--bg-warning))] hover:bg-[hsl(var(--bg-warning))]/90 text-white"
+            className="bg-[hsl(var(--status-warning))] hover:bg-[hsl(var(--status-warning))]/90 text-white"
           >
             {nc('confirm')}
           </AlertDialogAction>

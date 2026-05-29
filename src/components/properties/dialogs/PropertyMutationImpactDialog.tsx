@@ -111,7 +111,7 @@ export function PropertyMutationImpactDialog({
         <AlertDialogFooter>
           <AlertDialogCancel>{t('impactGuard.actions.cancel')}</AlertDialogCancel>
           {preview?.mode === 'warn' ? (
-            <AlertDialogAction onClick={onConfirm} className="bg-[hsl(var(--bg-warning))] text-white hover:bg-[hsl(var(--bg-warning))]/90">
+            <AlertDialogAction onClick={onConfirm} className="bg-[hsl(var(--status-warning))] text-white hover:bg-[hsl(var(--status-warning))]/90">
               {t('impactGuard.actions.confirm')}
             </AlertDialogAction>
           ) : (

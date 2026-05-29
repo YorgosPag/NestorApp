@@ -18,9 +18,9 @@ export function UnsavedBanner({ show }: UnsavedBannerProps) {
   if (!show) return null;
 
   return (
-    <div className={`bg-[hsl(var(--bg-warning))]/40 ${quick.warning} rounded-lg p-3`}>
+    <div className={`bg-[hsl(var(--status-warning))]/40 ${quick.warning} rounded-lg p-3`}>
       <div className="flex items-center gap-2 text-[hsl(var(--text-warning))] text-sm">
-        <div className={`${iconSizes.xs.replace('w-3 h-3', 'w-2 h-2')} bg-[hsl(var(--bg-warning))] rounded-full`} />
+        <div className={`${iconSizes.xs.replace('w-3 h-3', 'w-2 h-2')} bg-[hsl(var(--status-warning))] rounded-full`} />
         <span>{t('sectionEditor.unsavedBanner')}</span>
       </div>
     </div>

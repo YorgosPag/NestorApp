@@ -68,7 +68,7 @@ function getCategoryClassName(category: IndividualIdentityFieldCategory | Servic
     case 'display':
       return 'bg-muted text-muted-foreground';
     case 'identity':
-      return 'bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]';
+      return 'bg-[hsl(var(--status-warning))]/40 text-[hsl(var(--text-warning))]';
     case 'regulated':
       return 'bg-destructive/10 text-destructive';
     case 'administrative':
@@ -186,7 +186,7 @@ export function ContactIdentityImpactDialog({
         <AlertDialogFooter>
           <AlertDialogCancel>{t('identityImpact.actions.cancel')}</AlertDialogCancel>
           {preview?.mode === 'warn' ? (
-            <AlertDialogAction onClick={onConfirm} className="bg-[hsl(var(--bg-warning))] text-white hover:bg-[hsl(var(--bg-warning))]/90">
+            <AlertDialogAction onClick={onConfirm} className="bg-[hsl(var(--status-warning))] text-white hover:bg-[hsl(var(--status-warning))]/90">
               {t('identityImpact.actions.confirm')}
             </AlertDialogAction>
           ) : (

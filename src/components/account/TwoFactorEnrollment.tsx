@@ -334,7 +334,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
           <Smartphone className={iconSizes.md} aria-hidden="true" />
           {t('account.security.twoFactorTitle')}
           {twoFactorState?.status === 'enrolled' ? (
-            <Badge variant="default" className="ml-2 bg-[hsl(var(--bg-success))]">
+            <Badge variant="default" className="ml-2 bg-[hsl(var(--status-success))]">
               {t('twoFactor.active')}
             </Badge>
           ) : (

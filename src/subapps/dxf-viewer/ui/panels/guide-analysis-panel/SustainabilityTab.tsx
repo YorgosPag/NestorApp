@@ -28,10 +28,10 @@ import type {
 } from '../../../systems/guides';
 
 const RATING_COLORS: Record<string, string> = {
-  A: 'bg-[hsl(var(--bg-success))]',
+  A: 'bg-[hsl(var(--status-success))]',
   B: 'bg-accent',
-  C: 'bg-[hsl(var(--bg-warning))]',
-  D: 'bg-[hsl(var(--bg-warning))]',
+  C: 'bg-[hsl(var(--status-warning))]',
+  D: 'bg-[hsl(var(--status-warning))]',
   E: 'bg-destructive',
 };
 

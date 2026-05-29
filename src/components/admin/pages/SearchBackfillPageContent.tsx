@@ -153,7 +153,7 @@ export function SearchBackfillPageContent() {
               <Eye className={cn(iconSizes.sm, 'mr-2')} />
               {t('searchBackfill.contactMigration.preview')}
             </Button>
-            <Button variant="default" className="bg-[hsl(var(--bg-warning))] hover:bg-[hsl(var(--bg-warning))]/80" onClick={() => s.executeMigration(false)} disabled={s.isMigrating}>
+            <Button variant="default" className="bg-[hsl(var(--status-warning))] hover:bg-[hsl(var(--status-warning))]/80" onClick={() => s.executeMigration(false)} disabled={s.isMigrating}>
               <PlayCircle className={cn(iconSizes.sm, 'mr-2')} />
               {t('searchBackfill.contactMigration.execute')}
             </Button>
@@ -179,7 +179,7 @@ export function SearchBackfillPageContent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Alert className="mb-4 border-[hsl(var(--text-warning))] bg-[hsl(var(--bg-warning))]/40">
+          <Alert className="mb-4 border-[hsl(var(--text-warning))] bg-[hsl(var(--status-warning))]/40">
             <AlertTriangle className={cn(iconSizes.sm, 'text-[hsl(var(--text-warning))]')} />
             <AlertTitle className="text-[hsl(var(--text-warning))]">{t('searchBackfill.parkingMigration.reseedTitle')}</AlertTitle>
             <AlertDescription className="text-[hsl(var(--text-warning))]">

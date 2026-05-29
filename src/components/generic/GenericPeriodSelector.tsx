@@ -77,7 +77,7 @@ export function GenericPeriodSelector({
               <TabsTrigger
                 value={period.value}
                 disabled={disabled || period.enabled === false}
-                className={`text-xs data-[state=active]:bg-[hsl(var(--bg-warning))] data-[state=active]:text-foreground ${INTERACTIVE_PATTERNS.BUTTON_ORANGE_GHOST}`}
+                className={`text-xs data-[state=active]:bg-[hsl(var(--status-warning))] data-[state=active]:text-foreground ${INTERACTIVE_PATTERNS.BUTTON_ORANGE_GHOST}`}
               >
                 {t(period.label)}
               </TabsTrigger>

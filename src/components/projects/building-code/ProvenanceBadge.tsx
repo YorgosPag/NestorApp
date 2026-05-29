@@ -43,7 +43,7 @@ export function ProvenanceBadge({ provenance, zoneId }: ProvenanceBadgeProps) {
 
   return (
     <span className="text-xs text-[hsl(var(--text-warning))] inline-flex items-center">
-      <span className={`${DOT_BASE} bg-[hsl(var(--bg-warning))]`} aria-hidden />
+      <span className={`${DOT_BASE} bg-[hsl(var(--status-warning))]`} aria-hidden />
       {t('provenance.userOverride')}
     </span>
   );

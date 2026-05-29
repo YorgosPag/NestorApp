@@ -389,7 +389,7 @@ export function ApprovalPanel({
                               variant="default"
                               size="sm"
                               onClick={() => handleApprove(approval.id)}
-                              className="h-6 px-2 text-xs bg-[hsl(var(--bg-success))] hover:bg-[hsl(var(--bg-success))]/90"
+                              className="h-6 px-2 text-xs bg-[hsl(var(--status-success))] hover:bg-[hsl(var(--status-success))]/90"
                             >
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               {t('approvals.approve')}

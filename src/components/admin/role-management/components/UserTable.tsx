@@ -55,11 +55,11 @@ interface UserTableProps {
 const AVATAR_COLORS = [
   'bg-primary',
   'bg-[hsl(var(--text-success))]',
-  'bg-[hsl(var(--bg-warning))]',
+  'bg-[hsl(var(--status-warning))]',
   'bg-destructive',
   'bg-accent-foreground',
   'bg-primary',
-  'bg-[hsl(var(--bg-warning))]',
+  'bg-[hsl(var(--status-warning))]',
   'bg-primary',
 ] as const;
 

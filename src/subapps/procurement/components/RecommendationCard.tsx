@@ -66,7 +66,7 @@ export function RecommendationCard({ recommendation, winner }: RecommendationCar
             <span>{t('comparison.confidence')}</span>
             <span>{confidencePct}% (Δ {recommendation.deltaFromSecond.toFixed(1)})</span>
           </div>
-          <Progress value={confidencePct} className="h-2" indicatorClassName="bg-[hsl(var(--bg-success))]/400" />
+          <Progress value={confidencePct} className="h-2" indicatorClassName="bg-[hsl(var(--status-success))]" />
         </div>
 
         {winner.hasRiskFlags && (

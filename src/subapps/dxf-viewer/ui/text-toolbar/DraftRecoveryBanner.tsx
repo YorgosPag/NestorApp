@@ -33,7 +33,7 @@ export function DraftRecoveryBanner({ draft, onRestore, onDiscard }: DraftRecove
     <aside
       role="status"
       aria-label={t('textDraft:banner.ariaLabel')}
-      className="flex items-center justify-between gap-3 rounded-md border border-[hsl(var(--text-warning))]/40 bg-[hsl(var(--bg-warning))]/10 px-3 py-2 text-sm"
+      className="flex items-center justify-between gap-3 rounded-md border border-[hsl(var(--text-warning))]/40 bg-[hsl(var(--status-warning))]/10 px-3 py-2 text-sm"
     >
       <span className="text-foreground">
         {t('textDraft:banner.message', { date: dateLabel })}
@@ -43,7 +43,7 @@ export function DraftRecoveryBanner({ draft, onRestore, onDiscard }: DraftRecove
           variant="outline"
           size="sm"
           onClick={onDiscard}
-          className="h-7 border-[hsl(var(--text-warning))]/40 text-foreground hover:bg-[hsl(var(--bg-warning))]/20"
+          className="h-7 border-[hsl(var(--text-warning))]/40 text-foreground hover:bg-[hsl(var(--status-warning))]/20"
           aria-label={t('textDraft:banner.discard')}
         >
           <Trash2 className="mr-1 h-3 w-3" />
@@ -52,7 +52,7 @@ export function DraftRecoveryBanner({ draft, onRestore, onDiscard }: DraftRecove
         <Button
           size="sm"
           onClick={onRestore}
-          className="h-7 bg-[hsl(var(--bg-warning))] text-white hover:bg-[hsl(var(--bg-warning))]/90"
+          className="h-7 bg-[hsl(var(--status-warning))] text-white hover:bg-[hsl(var(--status-warning))]/90"
           aria-label={t('textDraft:banner.restore')}
         >
           <RotateCcw className="mr-1 h-3 w-3" />

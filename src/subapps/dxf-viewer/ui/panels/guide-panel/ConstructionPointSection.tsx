@@ -160,7 +160,7 @@ export const ConstructionPointSection: React.FC<ConstructionPointSectionProps> =
       {groups.map((group) => (
         <Collapsible key={group.groupId ?? '__individual'} defaultOpen>
           <CollapsibleTrigger className={`flex items-center ${PANEL_LAYOUT.GAP.XS} w-full ${PANEL_LAYOUT.SPACING.XS} hover:bg-accent/30 rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.secondary}`}>
-            <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-[hsl(var(--bg-warning))]" />
+            <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-[hsl(var(--status-warning))]" />
             <span className="flex-1 text-left truncate">{group.label}</span>
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>({group.points.length})</span>
           </CollapsibleTrigger>

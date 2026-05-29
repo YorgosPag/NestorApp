@@ -104,7 +104,7 @@ export function LandownerRemovalDialog({
               <AlertDialogAction
                 onClick={onConfirm}
                 className={variant === 'warning'
-                  ? 'bg-[hsl(var(--bg-warning))] hover:bg-[hsl(var(--bg-warning))]/80 text-foreground'
+                  ? 'bg-[hsl(var(--status-warning))] hover:bg-[hsl(var(--status-warning))]/80 text-foreground'
                   : 'bg-destructive hover:bg-destructive/90 text-destructive-foreground'
                 }
               >

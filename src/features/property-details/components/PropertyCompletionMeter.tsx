@@ -79,12 +79,12 @@ function resolveBucketTextClass(
 function resolveProgressIndicatorClass(bucket: CompletionBucket): string {
   switch (bucket) {
     case 'green':
-      return 'bg-[hsl(var(--bg-success))]';
+      return 'bg-[hsl(var(--status-success))]';
     case 'amber':
-      return 'bg-[hsl(var(--bg-warning))]';
+      return 'bg-[hsl(var(--status-warning))]';
     case 'red':
     default:
-      return 'bg-[hsl(var(--bg-error))]';
+      return 'bg-[hsl(var(--status-error))]';
   }
 }
 

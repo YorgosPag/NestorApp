@@ -91,7 +91,7 @@ export default function OperatorInboxClient({ adminContext: _adminContext }: Ope
           showDashboard,
           onDashboardToggle: () => setShowDashboard(!showDashboard),
           customActions: [
-            <Badge key="live-indicator" variant="default" className="bg-[hsl(var(--bg-success))] hover:bg-[hsl(var(--bg-success))] text-white animate-pulse">
+            <Badge key="live-indicator" variant="default" className="bg-[hsl(var(--status-success))] hover:bg-[hsl(var(--status-success))] text-white animate-pulse">
               <span className="mr-1">&#9679;</span>Live
             </Badge>,
             stats.proposed > 0 ? (

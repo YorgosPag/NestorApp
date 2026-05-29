@@ -87,7 +87,7 @@ export function StairPersistenceSection({
           type="button"
           onClick={() => void saveNow()}
           disabled={saveState === 'saving'}
-          className="rounded border border-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))] px-2 py-1 text-xs text-white hover:bg-[hsl(var(--bg-success))]/90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded border border-[hsl(var(--text-success))] bg-[hsl(var(--status-success))] px-2 py-1 text-xs text-white hover:bg-[hsl(var(--status-success))]/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {t('stairAdvancedPanel.sections.persistence.saveButton')}
         </button>

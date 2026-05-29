@@ -60,7 +60,7 @@ interface BuildingSpaceConfirmDialogProps {
 
 const VARIANT_CLASSES: Record<ConfirmVariant, string> = {
   destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-  warning: 'bg-[hsl(var(--bg-warning))] text-foreground hover:bg-[hsl(var(--bg-warning))]/80',
+  warning: 'bg-[hsl(var(--status-warning))] text-foreground hover:bg-[hsl(var(--status-warning))]/80',
   default: '',
 };
 

@@ -69,8 +69,8 @@ const BAND_BORDER: Record<SignatoryConfidenceBand, string> = {
 };
 
 const BAND_BUTTON: Record<SignatoryConfidenceBand, string> = {
-  high: 'bg-[hsl(var(--bg-success))] hover:bg-[hsl(var(--bg-success))]/90 text-white',
-  medium: 'bg-[hsl(var(--bg-warning))]/400 hover:bg-[hsl(var(--bg-warning))]/90 text-white',
+  high: 'bg-[hsl(var(--status-success))] hover:bg-[hsl(var(--status-success))]/90 text-white',
+  medium: 'bg-[hsl(var(--status-warning))] hover:bg-[hsl(var(--status-warning))]/90 text-white',
   low: '',
 };
 

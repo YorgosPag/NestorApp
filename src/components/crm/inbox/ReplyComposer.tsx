@@ -217,7 +217,7 @@ export function ReplyComposer({
 
       {/* Edit mode banner */}
       {isEditMode && editingMessage && (
-        <div className="flex items-start gap-2 mb-3 p-3 rounded-lg border-l-4 border-l-[hsl(var(--bg-warning))] bg-[hsl(var(--bg-warning))]/10">
+        <div className="flex items-start gap-2 mb-3 p-3 rounded-lg border-l-4 border-l-[hsl(var(--bg-warning))] bg-[hsl(var(--status-warning))]/10">
           <div className="flex-shrink-0 mt-0.5">
             <Pencil className={`${iconSizes.sm} text-[hsl(var(--text-warning))]`} />
           </div>
@@ -343,7 +343,7 @@ export function ReplyComposer({
         <Button
           onClick={handleSend}
           disabled={!canSend}
-          className={`flex-shrink-0 ${isEditMode ? 'bg-[hsl(var(--bg-warning))] hover:bg-[hsl(var(--bg-warning))]/80' : ''}`}
+          className={`flex-shrink-0 ${isEditMode ? 'bg-[hsl(var(--status-warning))] hover:bg-[hsl(var(--status-warning))]/80' : ''}`}
           aria-label={
             isEditMode
               ? isSavingEdit

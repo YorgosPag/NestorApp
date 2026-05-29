@@ -199,7 +199,7 @@ export function CommunicationImpactDialog({
           <AlertDialogCancel>{ci('cancel')}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="bg-[hsl(var(--bg-warning))] hover:bg-[hsl(var(--bg-warning))]/90 text-white"
+            className="bg-[hsl(var(--status-warning))] hover:bg-[hsl(var(--status-warning))]/90 text-white"
           >
             {ci('confirm')}
           </AlertDialogAction>
