@@ -187,7 +187,9 @@ function orderComponent(
   while (cur !== null && !oset.has(cur)) {
     ordered.push(cur);
     oset.add(cur);
-    const next = (adj.get(cur) ?? []).find(e => e.neighborId !== prev && !oset.has(e.neighborId));
+    const next: WallEdge | undefined = (adj.get(cur) ?? []).find(
+      e => e.neighborId !== prev && !oset.has(e.neighborId),
+    );
     prev = cur;
     cur = next ? next.neighborId : null;
   }

@@ -49,10 +49,36 @@ export const ANALYZE_SCHEDULE_PANEL: RibbonPanelDef = {
   ],
 };
 
+// ADR-396 Phase P6 — Thermal Envelope (ETICS) authoring command. Building-wide
+// BIM tool, mirror του Schedule panel (action → wrappedHandleAction → EventBus).
+export const THERMAL_ENVELOPE_PANEL: RibbonPanelDef = {
+  id: 'bim-thermal-envelope',
+  labelKey: 'ribbon.panels.thermalEnvelope',
+  rows: [
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'analyze.thermal-envelope',
+            labelKey: 'ribbon.commands.thermalEnvelope.label',
+            icon: 'bim-thermal-envelope',
+            commandKey: 'thermal-envelope.open',
+            action: 'thermal-envelope.open',
+            tooltipKey: 'ribbon.tooltips.thermalEnvelope',
+          },
+        },
+      ],
+    },
+  ],
+};
+
 // ─── Tab ─────────────────────────────────────────────────────────────────────
 
 export const ANALYZE_TAB: RibbonTab = {
   id: 'analyze',
   labelKey: 'ribbon.tabs.analyze',
-  panels: [ANALYZE_SCHEDULE_PANEL],
+  panels: [ANALYZE_SCHEDULE_PANEL, THERMAL_ENVELOPE_PANEL],
 } as const;

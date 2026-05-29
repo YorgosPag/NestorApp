@@ -754,7 +754,8 @@
       "lineToolQuickStyle": "Γρήγορο Στυλ",
       "xlineMode": "Λειτουργία",
       "bimSchedule": "Πίνακας BIM",
-      "layerManager": "Διαχειριστής Στρώσεων"
+      "layerManager": "Διαχειριστής Στρώσεων",
+      "thermalEnvelope": "Θερμοπρόσοψη"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -1557,7 +1558,8 @@
           "ceiling": "Ταβάνι",
           "dimension": "Διάσταση",
           "hatch": "Διαγράμμιση",
-          "grip": "Λαβή"
+          "grip": "Λαβή",
+          "envelope": "Θερμοπρόσοψη"
         }
       },
       "visibilityGraphics": {
@@ -1647,10 +1649,40 @@
         "lineweight": "Πάχος",
         "linetype": "Τύπος Γραμμής",
         "color": "Χρώμα"
+      },
+      "thermalEnvelope": {
+        "label": "Εφαρμογή Θερμοπρόσοψης",
+        "dialog": {
+          "title": "Θερμοπρόσοψη (ETICS)",
+          "description": "Όρισε υλικό, πάχη και ζώνες για το εξωτερικό κέλυφος μόνωσης του ορόφου."
+        },
+        "fields": {
+          "material": "Υλικό",
+          "thickness": "Πάχος όψης (mm)",
+          "revealThickness": "Πάχος περβαζιών (mm)",
+          "zones": "Ζώνες μόνωσης"
+        },
+        "materials": {
+          "graphiteEps": "Γραφιτούχα EPS (Neopor)",
+          "xps": "Εξηλασμένη Πολυστερίνη (XPS)"
+        },
+        "zones": {
+          "Z1": "Z1 — Κατακόρυφη όψη",
+          "Z2": "Z2 — Οροφή πιλοτής",
+          "Z3": "Z3 — Δώμα",
+          "Z4": "Z4 — Περβάζια κουφωμάτων"
+        },
+        "kenakWarning": "Κάτω από το ΚΕΝΑΚ ενδεικτικό όριο — επιτρεπτό, αλλά έλεγξε τη θερμομόνωση.",
+        "actions": {
+          "apply": "Εφαρμογή",
+          "applyAllFloors": "Σε όλους τους ορόφους",
+          "close": "Κλείσιμο"
+        }
       }
     },
     "tooltips": {
-      "bimSchedule": "Άνοιγμα Πίνακα BIM — εξαγωγή δομικών στοιχείων"
+      "bimSchedule": "Άνοιγμα Πίνακα BIM — εξαγωγή δομικών στοιχείων",
+      "thermalEnvelope": "Εφαρμογή ενιαίας εξωτερικής θερμοπρόσοψης (ETICS) στον όροφο"
     },
     "symbolPicker": {
       "title": "Επιλογή Συμβόλου",

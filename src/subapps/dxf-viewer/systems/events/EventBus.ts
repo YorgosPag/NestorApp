@@ -201,6 +201,8 @@ export interface DrawingEventMap {
   'bim:opening-tag-style-requested': Record<string, never>;
   // ADR-376 Phase C.3 — Opening Schedule PDF export trigger
   'bim:opening-schedule-pdf-requested': Record<string, never>;
+  // ADR-396 Phase P6 — Thermal Envelope (ETICS) authoring dialog trigger
+  'bim:thermal-envelope-requested': Record<string, never>;
   // ADR-363 Phase 3 — BIM slab params + delete events
   'bim:slab-params-updated': { slabId: string };
   'bim:slab-delete-requested': { slabId: string };

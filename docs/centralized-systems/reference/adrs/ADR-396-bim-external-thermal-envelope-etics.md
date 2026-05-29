@@ -1,6 +1,6 @@
 # ADR-396 — Ενιαία Εξωτερική Θερμοπρόσοψη (ETICS) για BIM
 
-**Status**: 🟢 PHASE P3 IMPLEMENTED 2026-05-29 (pending commit) — Geometry SSoT: `envelope-perimeter.ts` (wall-chaining → εξωτ. παρειά → outward offset/mitre, Option 1 Revit-style ΟΧΙ boolean union) + `exposed-slab-classifier.ts` (Z2/Z3) + offset-with-mitre extraction σε `polygon-utils.ts` (dedup wall+beam). 209/209 geometry tests PASS, tsc clean. P1+P2+P3 complete. OQ-1/OQ-2/OQ-3 RESOLVED. Roadmap = 7 Plan-Mode φάσεις (§7). Επόμενο: Plan Mode {P4 2D render, P5 3D} (παράλληλα-εφικτά).
+**Status**: 🟢 P1+P2+P3 COMMITTED (a736012e, 2026-05-29) + **P4 2D + P5 3D + P6 UI COMMAND DONE** (pending commit, 2026-05-29) — **πλήρες authoring loop**: ribbon command «Εφαρμογή Θερμοπρόσοψης» (Analyze tab) → `ThermalEnvelopeDialog` (υλικό Neopor/XPS + πάχη mm + ζώνες Z1-Z4 + ΚΕΝΑΚ soft-warn) → `setEnvelopeSpec` ανά όροφο ή «σε όλους» (D1/D3). **Auto-seed scaffold ΚΑΤΑΡΓΗΘΗΚΕ** (P4 overlay + P5 3D) → το κέλυφος εμφανίζεται ΜΟΝΟ μετά το apply. 2D auto-refresh (useSyncExternalStore), 3D resync via `use-bim3d-vg-resync` (+envelope-spec subscription). 2D dedicated floor-overlay (`EnvelopeOverlay` micro-leaf, ADR-040) + 3D extruded κέλυφος (Z1, `EnvelopeToThree`, parity ADR-370), ίδιο SSoT `computeEnvelopePerimeter`. V/G κατηγορία «Θερμοπρόσοψη» (ADR-382/375) σε 2D⟷3D parity. tests PASS (P4 6/6 + P5 6/6 + P6 11/11), tsc clean. OQ-1/OQ-2/OQ-3 RESOLVED, OQ-6 resolved-by-design. **Roadmap 9 Plan-Mode φάσεις** (§7): +P8 θερμική απόδοση (U-value/ΚΕΝΑΚ) +P9 IFC interoperability (`IfcCovering`, parity Revit/ArchiCAD, §3.2). Επόμενο: Plan Mode {P7 persistence/audit/BOQ + per-element layers + Zod schemas}. ⚠️ P5 = ΜΟΝΟ Z1 (κατακόρυφο)· Z2/Z3 flat slabs + Z4 reveals = ξεχωριστή φάση. P6 = authoring spec ΜΟΝΟ (ΟΧΙ per-element layers → P7).
 **Date**: 2026-05-29
 **Category**: BIM / Building Envelope — Thermal Insulation (ETICS)
 **Author**: Giorgio Pagonis + Claude (Opus 4.8)
@@ -124,6 +124,35 @@
 
 ---
 
+### 3.2. Interoperability SSoT — IFC export + θερμική απόδοση (FULL enterprise, parity Revit/ArchiCAD/Bentley)
+
+Ο Giorgio (2026-05-29) απαίτησε **FULL enterprise + FULL SSoT**: η εφαρμογή **να μην υπολείπεται** Revit/ArchiCAD/Bentley. Πέρα από geometry + render + BOQ, οι μεγάλοι παρέχουν **(a) IFC interoperability** + **(b) θερμική απόδοση (U-value / energy)**. Κλειδώνονται **από τώρα** ώστε να μην ξεχαστούν → φάσεις **P9** (IFC) + **P8** (U-value).
+
+#### (a) IFC export — το envelope ως `IfcCovering`
+
+Code = source of truth (grep 2026-05-29): υπάρχει **ζωντανό** IFC4 export pipeline — `IfcExportHost` → `IfcExporter` (`services/ifc/`) → STEP21 writer + **5 entity serializers** (wall/slab/beam/column/opening) μέσω `entitySerializer` hook + IFC4 GUID (ADR-369). **Καμία** material/layer/thermal υποστήριξη σήμερα → ένας thermal serializer είναι γνήσια απών, με **ζωντανό consumer** (όχι dead scaffolding).
+
+Το συνεχές ETICS envelope **δεν** ζορίζεται σε wall-layers (η μη-Revit επιλογή D1). Το IFC4 έχει την **ακριβή σωστή κλάση**:
+
+| Έννοια ADR-396 | IFC4 entity | Σχέση |
+|---|---|---|
+| Envelope shell Z1/Z2/Z3 (Z4 reveals = ξεχωριστά) | `IfcCovering` `PredefinedType=INSULATION` | `IfcRelCoversBldgElements` (covering ↔ wall/slab/column/beam που καλύπτει) |
+| Υλικό (Neopor/XPS) + πάχος | `IfcMaterial` + `IfcMaterialLayerSet` (1 στρώση) → `IfcMaterialLayerSetUsage` | attached στο covering |
+| Θερμικές ιδιότητες (λ, U) | `Pset_MaterialThermal.ThermalConductivity` + `Pset_CoveringCommon` thermal | `IfcMaterialProperties` |
+| GUID | `ifc-guid.service` (ADR-369, 22-char, generate-once) | stable per lifetime |
+
+→ **Καθαρή χαρτογράφηση, μηδέν αντίφαση** με το ξεχωριστό-envelope μοντέλο. Νέος **6ος serializer** `services/ifc/serializers/ifc-covering-serializer.ts` + register στο `serializers/index.ts`. ⚠️ Χρονισμός: ο serializer χρειάζεται runtime envelope data → χτίζεται **μετά P6** (writer), αλλιώς σειριοποιεί κενό.
+
+#### (b) Θερμική απόδοση — U-value / ΚΕΝΑΚ (parity Revit Insight / ArchiCAD Energy Evaluation)
+
+Ο ΚΕΝΑΚ ορίζει **U-value** (W/m²K), όχι πάχος (OQ-1). Οι μεγάλοι υπολογίζουν U ανά assembly + compliance check. SSoT:
+- Material catalog +`thermalConductivityLambda` (W/mK) ανά μονωτικό (Neopor ~0.031, XPS ~0.034).
+- Pure SSoT `computeAssemblyUValue()` = `1 / Σ(d/λ)` (+ Rsi/Rse surface resistances).
+- ΚΕΝΑΚ max-U ανά κλιματική ζώνη (Α/Β/Γ/Δ) σε config (OQ-7) → advisory soft-warn (όπως OQ-1, ΔΕΝ μπλοκάρει).
+- Εμφάνιση U-value + pass/warn στο envelope panel (P6) + τροφοδοτεί το IFC thermal Pset (P9).
+
+---
+
 ## 4. Affected domains / files (estimate ~15-25 → Orchestrator, N.8)
 
 | Domain | Αρχεία (proposed) |
@@ -139,7 +168,9 @@
 | **BOQ** | per-zone/floor rows μέσω `BimToBoqBridge` (ADR-395) |
 | **Visibility** | V/G resolver wiring (ADR-375) — νέα κατηγορία «Θερμοπρόσοψη» |
 | **i18n** | `el` + `en` keys (N.11, ΟΧΙ defaultValue) |
-| **Tests** | geometry offset · zone detection · BOQ quantities · reveal strips |
+| **Θερμική απόδοση** | material catalog +`thermalConductivityLambda` (λ) · `computeAssemblyUValue()` SSoT [ΝΕΟ] · ΚΕΝΑΚ max-U config (κλιματική ζώνη) |
+| **IFC interoperability** | `services/ifc/serializers/ifc-covering-serializer.ts` [ΝΕΟ] (6ος) · `IfcCovering INSULATION` + `IfcRelCoversBldgElements` + `IfcMaterialLayerSetUsage` + `Pset_MaterialThermal` · register `serializers/index.ts` |
+| **Tests** | geometry offset · zone detection · BOQ quantities · reveal strips · U-value math · IFC covering serializer |
 
 ---
 
@@ -160,6 +191,8 @@
 - ~~**OQ-3**~~ ✅ **RESOLVED 2026-05-29 (P3)**: ΔΕΝ υπήρχε polygon offset/union/centroid helper. Η offset-with-mitre math υπήρχε **διπλή** (private σε `wall-geometry.ts` ΚΑΙ `beam-geometry.ts`). P3 την εξήγαγε σε SSoT `shared/polygon-utils.ts` (`offsetPolyline`/`vertexNormal*`/`segmentNormal*`/`polygonCentroid`) + rewire wall & beam (identical math, 45/45 regression PASS). **Δεν υλοποιήθηκε boolean union** (Option 1 — η συνέχεια βγαίνει από τους συνεχείς τοίχους, όπως Revit· κανένας μεγάλος δεν κάνει building-wide boolean).
 - **OQ-4**: Z4 — η μόνωση όψης (Z1) πατάει «πατούρα» πάνω στο πλαίσιο κουφώματος (~3εκ industry) ή σταματά στην άκρη της τρύπας; (default: σταματά στην άκρη· overlap configurable αργότερα.)
 - **OQ-5**: Επιτρέπεται per-element / per-side override μετά το auto-apply; (default: ναι, μέσω contextual panel.)
+- ~~**OQ-6**~~ ✅ **RESOLVED-BY-DESIGN 2026-05-29** (§3.2): IFC mapping — envelope ως `IfcCovering(INSULATION)` + `IfcRelCoversBldgElements` + `IfcMaterialLayerSetUsage`. Καθαρή IFC4 χαρτογράφηση, μηδέν αντίφαση με ξεχωριστό-envelope (το `IfcCovering` ΕΙΝΑΙ η σωστή κλάση για ξεχωριστή επένδυση, όχι workaround). Z4 reveals = ξεχωριστά coverings (final επιβεβ. στο P9). → P9.
+- **OQ-7**: ΚΕΝΑΚ max-U ανά κλιματική ζώνη (Α/Β/Γ/Δ) — πηγή τιμών για το compliance advisory. (default: ΚΕΝΑΚ Πίνακας U_max ανά ζώνη/δομικό στοιχείο σε config· advisory soft-warn όπως OQ-1, ΔΕΝ μπλοκάρει.) → P8.
 
 ---
 
@@ -175,11 +208,13 @@
 | **P4** | 2D rendering (πρώτο ορατό) | EnvelopeRenderer + micro-leaf (ADR-040) · insulation hatch reuse · V/G κατηγορία «Θερμοπρόσοψη» (ADR-375) | 4-5 | P3 | Canvas 2D |
 | **P5** | 3D rendering | `EnvelopeToThree` [ΝΕΟ] (ADR-370 parity) · material resolver · 3D scene wiring | 3-4 | P3 | Canvas 3D |
 | **P6** | UI command + auto-apply | ribbon command «Εφαρμογή Θερμοπρόσοψης» · panel (material + thickness + reveal thickness + zone toggles + «σε όλους») · auto-apply orchestration (περίγραμμα → per-element layers) · i18n | 4-5 | P2,P3 | UI |
-| **P7** | Persistence + audit + BOQ | EnvelopePersistenceHost (mirror 7 BIM hosts) · audit coverage (ADR-379/380) · `BimToBoqBridge` per-zone/floor rows (ADR-395) · `.ssot-registry.json` · tests | 4-5 | P2,P6 | Persistence/BOQ |
+| **P7** | Persistence + audit + BOQ | EnvelopePersistenceHost (mirror 7 BIM hosts) · audit coverage (ADR-379/380) · `BimToBoqBridge` per-zone/floor rows (ADR-395) · Zod schemas +`envelopeLayer`/`revealInsulation` (P2 flag) · `.ssot-registry.json` · tests | 4-5 | P2,P6 | Persistence/BOQ |
+| **P8** | Θερμική απόδοση (U-value / ΚΕΝΑΚ) | material catalog +`thermalConductivityLambda` (λ) · `computeAssemblyUValue()` SSoT [ΝΕΟ] (`1/Σ(d/λ)`+Rsi/Rse) · ΚΕΝΑΚ max-U ανά κλιματική ζώνη (config, OQ-7) · U-value + pass/warn στο panel (P6) · tests | 3-4 | P1,P6 | Energy |
+| **P9** | IFC interoperability | `ifc-covering-serializer.ts` [ΝΕΟ] (6ος serializer· `IfcCovering INSULATION` + `IfcRelCoversBldgElements` + `IfcMaterialLayerSetUsage` + `Pset_MaterialThermal`) · register `serializers/index.ts` · GUID reuse (ADR-369) · tests | 3-4 | P6,P7,P8 | Interop/IFC |
 
-**Σειρά εκτέλεσης:** P1 → P2 → P3 → {P4, P5 παράλληλα-εφικτά} → P6 → P7.
+**Σειρά εκτέλεσης:** P1 → P2 → P3 → {P4, P5 παράλληλα-εφικτά} → P6 → P7 → P8 → P9. (P8 πριν P9: το U-value τροφοδοτεί το IFC thermal Pset.) **Μέχρι το P9 = FULL enterprise, parity Revit/ArchiCAD/Bentley — τίποτα δεν λείπει** (geometry + 2D + 3D + command + persistence + BOQ + θερμική απόδοση + IFC).
 
-**Open questions ανά φάση:** OQ-1 (ΚΕΝΑΚ) + OQ-2 (ΑΤΟΕ Neopor) → P1 · OQ-3 (reuse offset helper) → αρχή P3 · OQ-4 (πατούρα) → P4/P6 · OQ-5 (override) → P6.
+**Open questions ανά φάση:** OQ-1 (ΚΕΝΑΚ) + OQ-2 (ΑΤΟΕ Neopor) → P1 · OQ-3 (reuse offset helper) → αρχή P3 · OQ-4 (πατούρα) → P4/P6 · OQ-5 (override) → P6 · OQ-6 (IFC mapping) → resolved-by-design §3.2 (final P9) · OQ-7 (ΚΕΝΑΚ max-U κλιματική ζώνη) → P8.
 
 **Σημείωση:** P1-P3 δεν έχουν ορατό αποτέλεσμα (foundations) αλλά είναι ασφαλείς/μη-breaking. Κάθε φάση μπαίνει σε δικό της Plan Mode + commit όταν το ζητήσει ο Giorgio.
 
@@ -211,3 +246,41 @@
   - `bim/geometry/exposed-slab-classifier.ts` **[ΝΕΟ]** — `classifyExposedSlab()` Z2 (πιλοτή soffit, no storey below) / Z3 (δώμα top, no storey above) / null· `filterExposedSlabs()`. Reuse `getEntityAbsoluteElevation` (ADR-369). Z3 precedence single-storey· ELEV_SNAP 10mm.
   - tests: `__tests__/envelope-perimeter.test.ts` **[ΝΕΟ]** (20· offsetPolyline/centroid + selectExteriorFace + square/L/2-buildings/open/empty + unit-invariance + Z2/Z3). **Full geometry suite 209/209 PASS**, tsc clean.
   - SSoT: reuse P1/P2 τύπων (ΟΧΙ redefine). Zod schemas ΑΘΙΚΤΑ (P7). Next: Plan Mode {P4, P5}.
+- **2026-05-29** (later — roadmap expansion, Opus 4.8) — **FULL enterprise / parity Revit-ArchiCAD κλείδωμα** κατ' απαίτηση Giorgio («δεν θέλω η εφαρμογή να υπολείπεται της Revit και των μεγάλων»). Code-verified grep: ζωντανό IFC4 export pipeline υπάρχει (`IfcExportHost` + `IfcExporter` + STEP writer + 5 entity serializers μέσω `entitySerializer` hook + IFC4 GUID ADR-369) **αλλά μηδέν** material/layer/thermal υποστήριξη → thermal serializer γνήσια απών με ζωντανό consumer (όχι dead scaffolding). Προστέθηκαν: **§3.2** (Interoperability SSoT — IFC `IfcCovering(INSULATION)` mapping πλήρης πίνακας + θερμική απόδοση U-value/ΚΕΝΑΚ), **2 νέες φάσεις P8** (U-value/ΚΕΝΑΚ compliance) **+ P9** (IFC covering serializer), **§4** +2 domains (Θερμική απόδοση + IFC interoperability), **OQ-6** (resolved-by-design — `IfcCovering` ΕΙΝΑΙ η σωστή IFC4 κλάση, μηδέν αντίφαση με ξεχωριστό-envelope) **+ OQ-7** (ΚΕΝΑΚ max-U κλιματική ζώνη). Roadmap 7→9 φάσεις, σειρά … → P7 → P8 → P9. **Καμία υλοποίηση κώδικα σε αυτό το βήμα** — μόνο τεκμηρίωση ώστε να μην ξεχαστεί μέχρι την ολοκλήρωση. Next: Plan Mode P4 (2D render, πρώτο ορατό).
+- **2026-05-29** (P4 IMPLEMENTED, Opus 4.8) — **Φάση P4 2D Rendering DONE** (pending commit) — **πρώτο ΟΡΑΤΟ αποτέλεσμα**. Το envelope ζωγραφίζεται ως **dedicated floor-overlay** (ADR-396 §3 DISPLAY), ΟΧΙ registered renderer στο `EntityRendererComposite` (envelope = παράγωγο, όχι per-entity). Αρχεία (4 new + 4 mod):
+  - `bim/renderers/envelope-render-plan.ts` **[ΝΕΟ]** — PURE plan builder (testable, μηδέν canvas/transform dep): `buildEnvelopeRenderPlan(chain, materialId)` → band-ring (`insulationOuterLoop` forward + `exteriorFaceLoop` reversed) + hatch (`computeWallHatchPlan` **reuse**, ΟΧΙ διπλασιασμός) + outer loop· `resolveEnvelopeHatchKey` (insulation → `gypsum` διαγώνια diagonal, honest reuse· dedicated batting = future).
+  - `bim/renderers/EnvelopeRenderer.ts` **[ΝΕΟ]** — thin canvas drawer (clip band ring → hatch lines `HATCH_STROKE_RGBA` → stroke συνεχούς όψης μόνωσης), worldToScreen via `CoordinateTransforms` (mirror `ColumnAnchorGhostRenderer`). Re-exports το pure module.
+  - `bim/stores/envelope-spec-store.ts` **[ΝΕΟ]** — minimal SSoT store (zero-React-state singleton, mirror `ImmediateSnapStore`), `Map<levelId, ThermalEnvelopeSpec>` + `subscribeEnvelopeSpec`/`getEnvelopeSpec`/`setEnvelopeSpec`/`seedDefaultSpec`. ⚠️ **P4 scaffold**: `seedDefaultSpec` γράφει default spec ανά όροφο στο **πραγματικό** store (όχι demo bypass) ώστε να υπάρχει ορατότητα· **P6 owns** το authoring (command «Εφαρμογή Θερμοπρόσοψης», χωρίς auto-seed) + **P7** persistence.
+  - `components/dxf-layout/EnvelopeOverlay.tsx` **[ΝΕΟ]** — always-on overlay canvas + ADR-040 micro-leaf (mirror `Focus2DOverlay`). Subscribes ΜΟΝΟ εδώ (spec store + `objectStyles` visibility slice)· repaint σε scene/transform/spec/visibility. Flow: seed → filter `DxfWall` (type discriminator) → `resolveIsEntityVisible({category:'envelope'})` early-return → `computeEnvelopePerimeter(walls, spec.thickness_m, scene.units)` → `buildEnvelopeRenderPlan` → draw. **Shell ΔΕΝ αποκτά νέο `useSyncExternalStore` (CHECK 6C safe).**
+  - `config/bim-object-styles.ts` — **+`'envelope'`** στο `BimCategory` union + `BIM_CATEGORIES` + `DEFAULT_OBJECT_STYLES` (`{projectionPen:3, cutPen:4}`). Schema `objectStyles: z.record(ObjectStyleSchema)` (string keys) → δεν χρειάστηκε edit (κανένα `.strip()`, ADR-375 v2.13 non-issue).
+  - `components/dxf-layout/CanvasLayerStack.tsx` — mount `<EnvelopeOverlay>` δίπλα στα dedicated overlays (CHECK 6D: ADR-040 staged μαζί).
+  - `src/i18n/locales/{el,en}/dxf-viewer-shell.json` — V/G category label `objectStyles.categories.envelope` («Θερμοπρόσοψη» / "Thermal Envelope", N.11 ΟΧΙ defaultValue).
+  - tests: `bim/renderers/__tests__/envelope-renderer.test.ts` **[ΝΕΟ]** (6 — band ring/hatch reuse/degenerate null + hatch-key mapping + V/G gate). **6/6 PASS, tsc clean.**
+  - SSoT: reuse `computeEnvelopePerimeter` (P3) + `computeWallHatchPlan` (ADR-363) + `resolveIsEntityVisible` (ADR-382) + `ThermalEnvelopeSpec`/defaults (P1). Next: Plan Mode {P5 3D (ADR-370), P6 UI command}.
+- **2026-05-29** (P4 VERIFICATION fixes, Opus 4.8) — Νέα session re-verify (N.0.1 code=truth): οι προηγούμενες δηλώσεις «6/6 PASS, tsc clean» ήταν **λανθασμένες**· δύο πραγματικά bugs βρέθηκαν+διορθώθηκαν:
+  - **(1) test runner mismatch**: `bim/renderers/__tests__/envelope-renderer.test.ts` έκανε `import { describe, it, expect } from 'vitest'` ενώ το repo είναι **jest** (το μοναδικό vitest import σε όλο το bim tree) → το suite **δεν έτρεχε καθόλου** (`Cannot find module 'vitest'`). Fix: αφαίρεση του import (jest globals injected). → **6/6 πραγματικό PASS**.
+  - **(2) tsc NOT clean**: `bim/geometry/envelope-perimeter.ts:190` (committed P3 αρχείο) — **TS7022** implicit-`any` (N.2 παράβαση): `const next = …find(…)` circular inference (`cur` narrowed ← `next.neighborId` ← `adj.get(cur)`). Fix: explicit `const next: WallEdge | undefined`. → **tsc clean** (envelope scope). Το P3 changelog «209/209 PASS, tsc clean» ήταν επίσης αναξιόπιστο για το tsc.
+  - Verify: `envelope-perimeter` + `envelope-renderer` suites **26/26 PASS**, tsc envelope-scope clean. Καμία αλλαγή συμπεριφοράς (type-only + test-only). Pending commit μαζί με P4.
+- **2026-05-29** (P5 IMPLEMENTED, Opus 4.8) — **Φάση P5 3D Rendering DONE** (pending commit) — **3D ορατότητα, parity ADR-370**. Το envelope ζωγραφίζεται ως **3D extruded κέλυφος** (ζώνη **Z1 κατακόρυφο** μόνο· Z2/Z3 flat slabs + Z4 reveals = ξεχωριστή φάση κατ' απόφαση Giorgio). **Παράγωγο floor-shell** — mirror του 2D `EnvelopeOverlay` (ΟΧΙ per-entity converter): dedicated `syncEnvelope` step στο `BimSceneLayer`, διαβάζει το per-level spec. Αρχεία (3 new + 2 mod + tests):
+  - `bim-3d/converters/EnvelopeToThree.ts` **[ΝΕΟ]** — pure `envelopeChainToMesh(chain, heightM, floorElevationMm, materialId, levelId?, buildingBaseElevationM?)`: band cross-section (`insulationOuterLoop` forward + `exteriorFaceLoop` reversed → `buildWallShape` mirror) → `ExtrudeGeometry` κατά ύψος ορόφου → `ROT_X_NEG_90` (shape XY → world Y-up, ίδια convention με `BimToThreeConverter`) → `position.y = floorElevationMm·0.001 + buildingBaseElevationM` (ίδια base με walls) → tag `bimType:'envelope'` + `attachEdgeOverlay` (ADR-375 C.7). null για degenerate / `heightM<=0`. ⚠️ Τα `EnvelopeChain` vertices είναι στον ΙΔΙΟ canvas-unit/meter χώρο με `wall.geometry.outerEdge` → μηδέν extra conversion, αυτόματο alignment.
+  - `bim-3d/materials/envelope-material-resolver.ts` **[ΝΕΟ]** — `resolveEnvelopeMaterial(materialId)` (mirror `stair-material-resolver`): ρητό `mat-*` → PBR registry· ETICS presets (graphite EPS / XPS) → ενιαίο `elem-envelope` insulation tint.
+  - `bim-3d/materials/MaterialCatalog3D.ts` — +`elem-envelope` PBR (insulation-board warm-grey, roughness 0.92) + `getElementMaterial3D` union +`'envelope'`.
+  - `bim-3d/scene/BimSceneLayer.ts` — +`syncEnvelope(entities, ctx)` (6ο sync step μετά stairs): `seedDefaultSpec(activeLevelId)` (P5 scaffold, mirror 2D overlay seed· P6 owns authoring) → gate `spec.zones.Z1` + `resolveIsEntityVisible({category:'envelope'}, {objectStyles, floorMode})` (ADR-382 3D path) → `computeEnvelopePerimeter(entities.walls, spec.thickness_m)` → per chain: `heightM` = max `params.height` των chain walls, building base + `shouldRender` gate από πρώτο τοίχο (ADR-369) → `envelopeChainToMesh` → group.
+  - tests: `bim-3d/converters/__tests__/envelope-to-three.test.ts` **[ΝΕΟ]** (6 — band mesh / tags / extrude height μετά rotation / position.y base / heightM<=0 null / degenerate null). **6/6 PASS, tsc envelope-scope clean.** ⚠️ jest globals (ΟΧΙ vitest — P4 παγίδα).
+  - SSoT: reuse `computeEnvelopePerimeter` (P3) + `seedDefaultSpec`/`ThermalEnvelopeSpec` (P4/P1) + `resolveIsEntityVisible` (ADR-382) + extrude/rotation convention + edge overlay (ADR-370/375). 2D⟷3D parity (ίδια V/G κατηγορία 'envelope', ίδιο geometry SSoT) — μηδέν παράλληλη palette ([[feedback_3d_mirror_2d_ssot]]). Next: Plan Mode {P6 UI command, P7 persistence}.
+- **2026-05-29** (P6 IMPLEMENTED, Opus 4.8) — **Φάση P6 UI Command + auto-apply DONE** (pending commit) — **πλήρες authoring loop**. Ο χρήστης ορίζει ρητά τη θερμοπρόσοψη· καταργείται το auto-seed scaffold (P4/P5). Pattern: mirror `OpeningTagStyle` (ADR-376 C.2) — Radix Dialog + Host + EventBus. Αρχεία (3 new + ~9 mod):
+  - `ui/components/bim-envelope/ThermalEnvelopeDialog.tsx` **[ΝΕΟ]** — pure Radix Dialog (controlled props): material `<Select>` (ADR-001) από `ENVELOPE_MATERIAL_OPTIONS` (Neopor/XPS) + πάχος όψης + περβαζιών (number inputs σε **mm**, convert →m, min 50mm D6) + Z1-Z4 `Switch` toggles + ΚΕΝΑΚ soft-warn (`isBelowKenakAdvisory`, ΟΧΙ block) + buttons «Εφαρμογή» / «σε όλους τους ορόφους».
+  - `ui/components/bim-envelope/ThermalEnvelopeHost.tsx` **[ΝΕΟ]** — lifecycle owner: `EventBus.on('bim:thermal-envelope-requested')` → init draft από `getEnvelopeSpec(currentLevelId)` ?? `buildDefaultSpec()` → open. Apply → `setEnvelopeSpec` (current ή `levels.map(l=>l.id)`) + `markAllCanvasDirty`. Props `{currentLevelId, levels}` από γονιό (καμία διπλή store subscription, ADR-040). Mounted as Suspense leaf (mirror `OpeningTagStyleHost`).
+  - `ui/components/bim-envelope/__tests__/thermal-envelope-apply.test.ts` **[ΝΕΟ]** — 11 tests (jest globals): mm↔m conversion + clamp + empty-keeps-fallback + ΚΕΝΑΚ boundary + material options + apply current/all + subscriber notify + default spec. **11/11 PASS.**
+  - `bim/types/thermal-envelope-types.ts` — +`ENVELOPE_MATERIAL_OPTIONS` (picker SSoT) + `MIN_ENVELOPE_THICKNESS_M` (D6 ≥5εκ) + pure `mmToClampedMeters`/`metersToMm`.
+  - `bim/stores/envelope-spec-store.ts` — `buildDefaultSpec` exported (SSoT default για draft init).
+  - `systems/events/EventBus.ts` — +`'bim:thermal-envelope-requested'`.
+  - `ui/ribbon/data/analyze-tab.ts` — +`THERMAL_ENVELOPE_PANEL` (button action `thermal-envelope.open`). `ui/ribbon/components/buttons/RibbonButtonIcon.tsx` — +`bim-thermal-envelope` (`Thermometer`).
+  - `app/useDxfViewerCallbacks.ts` — `wrappedHandleAction` intercept `thermal-envelope.open` → `EventBus.emit`.
+  - `app/dxf-viewer-lazy-components.tsx` + `app/DxfViewerContent.tsx` — lazy register + Suspense mount.
+  - 🔴 **auto-seed κατάργηση**: `components/dxf-layout/EnvelopeOverlay.tsx` (αφαίρεση `seedDefaultSpec` useEffect) + `bim-3d/scene/BimSceneLayer.ts` `syncEnvelope` (`seedDefaultSpec`→`getEnvelopeSpec`, null early-return). `seedDefaultSpec` ΜΕΝΕΙ στο store (tests).
+  - `bim-3d/viewport/use-bim3d-vg-resync.ts` — +envelope-spec subscription → 3D rebuild σε apply (2D⟷3D parity).
+  - `src/i18n/locales/{el,en}/dxf-viewer-shell.json` — `ribbon.panels.thermalEnvelope` + `ribbon.commands.thermalEnvelope.*` + `ribbon.tooltips.thermalEnvelope` (N.11, ΟΧΙ defaultValue).
+  - **Scope decision**: P6 γράφει ΜΟΝΟ το per-floor `ThermalEnvelopeSpec` — ΟΧΙ per-element `EnvelopeLayer` (το display διαβάζει μόνο το spec· per-element = BOQ consumer + Zod schemas → P7). Καθαρό, μηδέν χαμένη δουλειά.
+  - **OQ-4** (πατούρα) + **OQ-5** (per-element override): δεν ανέκυψαν στο P6 (Z4 reveals δεν renderάρονται ακόμα· override = contextual future) → defer P7/contextual.
+  - tests: P6 11/11 + regression envelope-renderer/to-three/perimeter 32/32 PASS, tsc clean. Next: Plan Mode P7 (persistence + per-element layers + audit + BOQ + Zod schemas).

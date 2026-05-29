@@ -185,6 +185,11 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       AdminLayerManagerDialogStore.open();
       return;
     }
+    // ADR-396 P6: Open Thermal Envelope (ETICS) authoring dialog (ThermalEnvelopeHost listens)
+    if (action === 'thermal-envelope.open') {
+      EventBus.emit('bim:thermal-envelope-requested', {});
+      return;
+    }
     // ADR-345 Fase 6: Import/export dialog actions (migrated from toolbar)
     if (action === 'import-dxf-enhanced') {
       setShowEnhancedImport(true);

@@ -27,7 +27,9 @@ export type BimCategory =
   | 'ceiling'
   | 'dimension'
   | 'hatch'
-  | 'grip';
+  | 'grip'
+  // ADR-396 P4 — ETICS εξωτερική θερμοπρόσοψη (floor-overlay, V/G κατηγορία).
+  | 'envelope';
 
 /**
  * Per-subcategory style overrides (ADR-377).
@@ -93,7 +95,7 @@ export interface ObjectStyle {
 /** All BIM categories in display order (matches DEFAULT_OBJECT_STYLES keys). */
 export const BIM_CATEGORIES: readonly BimCategory[] = [
   'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening',
-  'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip',
+  'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip', 'envelope',
 ] as const;
 
 export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> = {
@@ -118,4 +120,6 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   dimension:      { projectionPen: 3,  cutPen: 3  },
   hatch:          { projectionPen: 1,  cutPen: 1  },
   grip:           { projectionPen: 3,  cutPen: 3  },
+  // ADR-396 P4 — ETICS θερμοπρόσοψη: λεπτή γραμμή (όπως opening), thin hatch band.
+  envelope:       { projectionPen: 3,  cutPen: 4  },
 } as const;

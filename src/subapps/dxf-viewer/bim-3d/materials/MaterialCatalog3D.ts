@@ -39,6 +39,9 @@ const MAT_DEFS: Record<string, PbrDef> = {
   'elem-stair-stringer': { color: 0x6b6b6b, roughness: 0.40, metalness: 0.80 },
   'elem-stair-landing':  { color: 0xbdbdbd, roughness: 0.80, metalness: 0.00 },
   'elem-stair-handrail': { color: 0x999999, roughness: 0.25, metalness: 0.90 },
+  // ADR-396 Phase P5 — envelope (ETICS) shell default. Insulation-board tint:
+  // warm light grey (graphite EPS / XPS boards), matte non-metallic surface.
+  'elem-envelope':       { color: 0xe6ddcf, roughness: 0.92, metalness: 0.00 },
 };
 
 export type Stair3DComponent =
@@ -81,7 +84,7 @@ export function getMaterial3D(materialId: string): THREE.MeshStandardMaterial {
 
 /** Resolve MeshStandardMaterial for element types without DNA. */
 export function getElementMaterial3D(
-  type: 'column' | 'beam' | 'slab' | Stair3DComponent,
+  type: 'column' | 'beam' | 'slab' | 'envelope' | Stair3DComponent,
 ): THREE.MeshStandardMaterial {
   const key = `elem-${type}`;
   let mat = CACHE.get(key);

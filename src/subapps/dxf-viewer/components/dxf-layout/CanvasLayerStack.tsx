@@ -41,6 +41,8 @@ import { AutoAreaResultPanel } from './AutoAreaResultPanel'; import { AutoAreaPr
 import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay'; import { DynamicInputSubscriber } from './DynamicInputSubscriber'; import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf';
 import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton'; import { Focus2DOverlayLeaf } from './Focus2DOverlayLeaf'; import { SelectionCursorIcon } from '../../accessibility/SelectionCursorIcon';
 import { useDxfOverlay3DSync } from './useDxfOverlay3DSync'; import { useLevelId3DSync } from './useLevelId3DSync';
+// ADR-396 P4 — ETICS θερμοπρόσοψη 2D overlay (dedicated floor-overlay micro-leaf).
+import { EnvelopeOverlay } from './EnvelopeOverlay';
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 const EMPTY_SNAP_RESULTS: readonly never[] = Object.freeze([]);
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
@@ -453,6 +455,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           />
           <CanvasLayerStack3dLeaf />
           <Focus2DOverlayLeaf scene={dxfScene} transform={transform} viewport={viewport} />
+          {/* ADR-396 P4 — ETICS θερμοπρόσοψη: συνεχές offset περίγραμμα + insulation hatch band. */}
+          <EnvelopeOverlay scene={dxfScene} transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} />
           {/* ADR-366 §A.7.Q3 Phase 4.7 — cross-mode cursor modifier badge (fixed, single instance) */}
           <SelectionCursorIcon />
           <ViewMode3DToggleButton />

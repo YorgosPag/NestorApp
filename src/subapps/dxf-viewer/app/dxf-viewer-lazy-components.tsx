@@ -29,6 +29,8 @@ export const DxfSymbolPickerHost = React.lazy(() => import('../ui/text-toolbar/D
 export const RenumberOpeningsHost = React.lazy(() => import('../ui/components/bim-openings/RenumberOpeningsHost').then(mod => ({ default: mod.RenumberOpeningsHost })));
 export const OpeningTagStyleHost = React.lazy(() => import('../ui/components/bim-openings/OpeningTagStyleHost').then(mod => ({ default: mod.OpeningTagStyleHost })));
 export const OpeningSchedulePdfHost = React.lazy(() => import('../ui/components/bim-openings/OpeningSchedulePdfHost').then(mod => ({ default: mod.OpeningSchedulePdfHost })));
+// ADR-396 P6 — Thermal Envelope (ETICS) authoring dialog host
+export const ThermalEnvelopeHost = React.lazy(() => import('../ui/components/bim-envelope/ThermalEnvelopeHost').then(mod => ({ default: mod.ThermalEnvelopeHost })));
 // ADR-391 — AdminLayerManager dialog host
 export const AdminLayerManagerDialogHost = React.lazy(() => import('./AdminLayerManagerDialogHost').then(mod => ({ default: mod.AdminLayerManagerDialogHost })));
 export const DxfImportModal = React.lazy(() => import('../components/DxfImportModal'));

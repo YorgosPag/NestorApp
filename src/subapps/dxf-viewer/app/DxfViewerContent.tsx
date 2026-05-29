@@ -38,6 +38,7 @@ import {
   DraggableOverlayToolbar, DraggableOverlayProperties, FloorplanBackgroundPanel,
   ReplaceConfirmDialog, CalibrationDialog, DxfAiChatPanel, DxfFindReplaceHost,
   DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost, OpeningSchedulePdfHost,
+  ThermalEnvelopeHost,
   AdminLayerManagerDialogHost,
   DxfImportModal, SimpleProjectDialog, ConstructionLayerScaffoldDialog,
   FloorplanImportWizard, MainContentSection, FloatingPanelsSection,
@@ -451,6 +452,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       <React.Suspense fallback={<div className="hidden" />}><RenumberOpeningsHost projectId={levelManager.saveContext?.projectId ?? undefined} floorplanId={levelManager.fileRecordId ?? undefined} /></React.Suspense>
       <React.Suspense fallback={<div className="hidden" />}><OpeningTagStyleHost projectId={levelManager.saveContext?.projectId ?? undefined} /></React.Suspense>
       <React.Suspense fallback={<div className="hidden" />}><OpeningSchedulePdfHost getEntities={() => (levelManager.getLevelScene(levelManager.currentLevelId ?? '')?.entities ?? []) as unknown as ReadonlyArray<Record<string, unknown>>} levels={levelManager.levels} /></React.Suspense>
+      {/* ADR-396 P6 — Thermal Envelope (ETICS) authoring dialog (opened via Analyze tab). */}
+      <React.Suspense fallback={<div className="hidden" />}><ThermalEnvelopeHost currentLevelId={levelManager.currentLevelId} levels={levelManager.levels} /></React.Suspense>
       {/* ADR-391 — AdminLayerManager modal (opened via View tab button or Ctrl+L). */}
       <React.Suspense fallback={<div className="hidden" />}><AdminLayerManagerDialogHost projectId={levelManager.saveContext?.projectId ?? null} /></React.Suspense>
       {USE_AI_DRAWING_ASSISTANT && (

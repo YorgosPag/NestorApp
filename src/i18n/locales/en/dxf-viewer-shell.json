@@ -754,7 +754,8 @@
       "lineToolQuickStyle": "Quick Style",
       "xlineMode": "Mode",
       "bimSchedule": "BIM Schedule",
-      "layerManager": "Layer Manager"
+      "layerManager": "Layer Manager",
+      "thermalEnvelope": "Thermal Envelope"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -1557,7 +1558,8 @@
           "ceiling": "Ceiling",
           "dimension": "Dimension",
           "hatch": "Hatch",
-          "grip": "Grip"
+          "grip": "Grip",
+          "envelope": "Thermal Envelope"
         }
       },
       "visibilityGraphics": {
@@ -1647,10 +1649,40 @@
         "lineweight": "Lineweight",
         "linetype": "Linetype",
         "color": "Color"
+      },
+      "thermalEnvelope": {
+        "label": "Apply Thermal Envelope",
+        "dialog": {
+          "title": "Thermal Envelope (ETICS)",
+          "description": "Define material, thicknesses and zones for the floor's external insulation shell."
+        },
+        "fields": {
+          "material": "Material",
+          "thickness": "Facade thickness (mm)",
+          "revealThickness": "Reveal thickness (mm)",
+          "zones": "Insulation zones"
+        },
+        "materials": {
+          "graphiteEps": "Graphite EPS (Neopor)",
+          "xps": "Extruded Polystyrene (XPS)"
+        },
+        "zones": {
+          "Z1": "Z1 — Vertical facade",
+          "Z2": "Z2 — Pilotis soffit",
+          "Z3": "Z3 — Roof slab",
+          "Z4": "Z4 — Opening reveals"
+        },
+        "kenakWarning": "Below the KENAK advisory minimum — allowed, but review the thermal performance.",
+        "actions": {
+          "apply": "Apply",
+          "applyAllFloors": "All floors",
+          "close": "Close"
+        }
       }
     },
     "tooltips": {
-      "bimSchedule": "Open BIM Schedule — export structural elements"
+      "bimSchedule": "Open BIM Schedule — export structural elements",
+      "thermalEnvelope": "Apply a unified external thermal envelope (ETICS) to the floor"
     },
     "symbolPicker": {
       "title": "Symbol Picker",

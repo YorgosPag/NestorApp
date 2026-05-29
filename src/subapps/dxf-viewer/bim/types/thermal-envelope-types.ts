@@ -118,9 +118,47 @@ export const KENAK_MIN_THICKNESS_M = {
   reveal: 0.02,
 } as const;
 
+/**
+ * Επιλογές υλικού για το ETICS κέλυφος (Φάση P6 picker SSoT). ΜΟΝΟ τα δύο
+ * προϊόντα εξωτερικής μόνωσης (§2.2): γραφιτούχα EPS (Neopor) + εξηλασμένη XPS.
+ * Πετροβάμβακας/υαλοβάμβακας = εσωτερική μόνωση (Wall DNA), ΕΚΤΟΣ scope.
+ *
+ * `labelKey` = i18n key στο `dxf-viewer-shell` namespace (N.11, ΟΧΙ defaultValue).
+ */
+export interface EnvelopeMaterialOption {
+  readonly id: EnvelopeMaterialId;
+  readonly labelKey: string;
+}
+
+export const ENVELOPE_MATERIAL_OPTIONS: readonly EnvelopeMaterialOption[] = [
+  { id: GRAPHITE_EPS_MATERIAL_ID, labelKey: 'ribbon.commands.thermalEnvelope.materials.graphiteEps' },
+  { id: 'mat-xps', labelKey: 'ribbon.commands.thermalEnvelope.materials.xps' },
+] as const;
+
+/** Ελάχιστο επιτρεπτό πάχος (ΜΕΤΡΑ) — D6: «πάχος ελεύθερο ≥5εκ». */
+export const MIN_ENVELOPE_THICKNESS_M = 0.05 as const;
+
 // ============================================================================
 // ADVISORY HELPERS (pure, SSoT για threshold logic)
 // ============================================================================
+
+/**
+ * UI conversion (P6): πάχος mm (input) → ΜΕΤΡΑ (spec SSoT), με κατώφλι D6 (≥5εκ).
+ * Μη-πεπερασμένο input → επιστρέφει το `fallback_m` (κρατά την παλιά τιμή).
+ */
+export function mmToClampedMeters(raw: string | number, fallback_m: number): number {
+  // Κενό/whitespace string (ο χρήστης καθαρίζει το input mid-edit) → κρατά την
+  // παλιά τιμή· `Number('')` είναι 0, οπότε χρειάζεται ρητός έλεγχος.
+  if (typeof raw === 'string' && raw.trim() === '') return fallback_m;
+  const mm = typeof raw === 'number' ? raw : Number(raw);
+  if (!Number.isFinite(mm)) return fallback_m;
+  return Math.max(MIN_ENVELOPE_THICKNESS_M, mm / 1000);
+}
+
+/** ΜΕΤΡΑ → mm ακέραιο (για το number input). */
+export function metersToMm(m: number): number {
+  return Math.round(m * 1000);
+}
 
 /** Επιστρέφει το advisory ελάχιστο πάχος (ΜΕΤΡΑ) για μια ζώνη. */
 export function getEnvelopeMinThickness(zone: EnvelopeZoneId): number {
