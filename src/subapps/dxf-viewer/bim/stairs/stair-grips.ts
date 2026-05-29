@@ -49,27 +49,20 @@ import {
   flightCount,
 } from './stair-grip-math';
 import { mmFactorFromWidth } from './stair-floor-link';
+import { gripGlyphShape } from '../grips/grip-glyph-registry';
 
 // Public API re-exports (consumers import from this module).
 export { applyStairGripDrag } from './stair-grip-transforms';
 export type { StairGripDragInput } from './stair-grip-transforms';
 
 /**
- * ADR-393 v2 — map a stair grip kind to its rendered glyph shape. The move
- * (basePoint) and rotation (direction) handles get icon glyphs (4-arrow /
- * curved-arrow) instead of the default square so the user reads their function
- * at a glance (AutoCAD/Revit rotation-grip convention). All other stair grips
- * stay square. Consumed by `StairRenderer.getGrips`.
+ * ADR-393 v2 — map a stair grip kind to its rendered glyph shape. ADR-397: thin
+ * wrapper over the shared `gripGlyphShape` registry SSoT (the basePoint MOVE +
+ * direction ROTATION glyphs live there alongside every other BIM entity). Kept
+ * for back-compat call sites. Consumed by `StairRenderer.getGrips`.
  */
 export function stairGripGlyphShape(kind: StairGripKind | undefined): GripShape {
-  switch (kind) {
-    case 'stair-base':
-      return 'move';
-    case 'stair-direction':
-      return 'rotation';
-    default:
-      return 'square';
-  }
+  return gripGlyphShape(kind);
 }
 
 /**

@@ -1,0 +1,111 @@
+/**
+ * Hot-grip Ctrl-COPY commit handlers (wall / column).
+ *
+ * Extracted from grip-parametric-commits.ts (N.7.1 file-size; ADR-363 Phase
+ * 1G.4 + ADR-397). The MOVE→COPY family is its own concern: instead of
+ * translating the existing entity, each handler mints a NEW entity (fresh
+ * enterprise ID, recomputed geometry) via the shared per-entity insertion SSoT
+ * (`addWallToScene` / `addColumnToScene` — the same routines the draw tools
+ * use). `commitHotGripCopy` is the entity-agnostic dispatch consumed by
+ * `grip-mouse-handlers`. Re-exported from grip-parametric-commits.ts so the
+ * public commit API stays single-import.
+ *
+ * @see ./grip-parametric-commits.ts
+ * @see docs/centralized-systems/reference/adrs/ADR-397-bim-grip-glyph-behavior-ssot.md
+ */
+import type { Point2D } from '../../rendering/types/Types';
+import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
+import type { WallEntity } from '../../bim/types/wall-types';
+import type { ColumnEntity } from '../../bim/types/column-types';
+import { applyWallGripDrag } from '../../bim/walls/wall-grips';
+import { buildWallEntity } from '../drawing/wall-completion';
+import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
+import { applyColumnGripDrag } from '../../bim/columns/column-grips';
+import { buildColumnEntity } from '../drawing/column-completion';
+import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
+import { createSceneManagerAdapter } from './grip-commit-adapters';
+
+/**
+ * ADR-363 Phase 1G.4 — Ctrl-COPY at the terminal click of a wall MOVE hot-grip
+ * (AutoCAD MOVE→COPY). Instead of translating the existing wall, builds a NEW
+ * `WallEntity` whose params are the original shifted by `delta` (the same
+ * `wall-midpoint` whole-wall translate the MOVE uses) and inserts it via the
+ * shared `addWallToScene` SSoT — fresh enterprise ID (N.6, via `buildWallEntity`
+ * → `createWall`), trims recomputed, `drawing:entity-created` broadcast so
+ * persistence saves the copy. The original is left untouched. Single copy: the
+ * hot-grip resets after this call (no continuous copy chain).
+ */
+export function commitWallCopy(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || grip.wallGripKind !== 'wall-midpoint') return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<WallEntity>;
+  if (candidate.type !== 'wall' || !candidate.params) return;
+  const wall = candidate as WallEntity;
+  const originalParams = wall.params;
+  const currentPos: Point2D = { x: grip.position.x + delta.x, y: grip.position.y + delta.y };
+  const translated = applyWallGripDrag('wall-midpoint', { originalParams, delta, currentPos });
+  const sceneUnits = originalParams.sceneUnits ?? 'mm';
+  const built = buildWallEntity(translated, wall.layerId, wall.kind ?? 'straight', sceneUnits);
+  if (!built.ok) return;
+  addWallToScene(built.entity, deps);
+}
+
+/**
+ * ADR-397 — Ctrl-COPY at the terminal click of a column MOVE hot-grip
+ * (AutoCAD MOVE→COPY). Mirror of `commitWallCopy`: builds a NEW `ColumnEntity`
+ * whose params are the original shifted by `delta` (the same `column-center`
+ * whole-column translate the MOVE uses) and inserts it via the shared
+ * `addColumnToScene` SSoT — fresh enterprise ID (N.6, via `buildColumnEntity`
+ * → `createColumn`), `drawing:entity-created` broadcast so persistence saves the
+ * copy. The original is left untouched. Single copy: the hot-grip resets after.
+ */
+export function commitColumnCopy(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || grip.columnGripKind !== 'column-center') return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<ColumnEntity>;
+  if (candidate.type !== 'column' || !candidate.params) return;
+  const column = candidate as ColumnEntity;
+  const originalParams = column.params;
+  const translated = applyColumnGripDrag('column-center', { originalParams, delta });
+  const sceneUnits = originalParams.sceneUnits ?? 'mm';
+  const built = buildColumnEntity(translated, column.layerId, sceneUnits);
+  if (!built.ok) return;
+  addColumnToScene(built.entity, deps);
+}
+
+/**
+ * ADR-397 — entity-agnostic Ctrl-COPY dispatch for the MOVE hot-grip terminal
+ * click. Routes to the per-entity copy SSoT by the grip's kind. Returns `true`
+ * when a copy was made (caller skips the translate), `false` when the kind has
+ * no copy path (caller falls through to the normal move commit). Keeps
+ * `grip-mouse-handlers` free of per-entity branching.
+ */
+export function commitHotGripCopy(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): boolean {
+  if (grip.wallGripKind === 'wall-midpoint') {
+    commitWallCopy(grip, delta, deps);
+    return true;
+  }
+  if (grip.columnGripKind === 'column-center') {
+    commitColumnCopy(grip, delta, deps);
+    return true;
+  }
+  return false;
+}

@@ -8,26 +8,15 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.3 §6 Phase 1C / 1C-bis
  */
 
-import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../types/bim-base';
 import type { WallParams } from '../types/wall-types';
+import { DEGENERATE_EPS, perpUnit, project2D, unitVector } from '../grips/grip-math';
 
-export const DEGENERATE_EPS = 0.001;
+// ADR-397 §12 D3 — primitives now live in the shared `bim/grips/grip-math.ts`
+// SSoT; re-exported here so existing `wall-grips.ts` / `wall-grip-transforms.ts`
+// import sites keep working unchanged.
+export { DEGENERATE_EPS, perpUnit, project2D };
 
 /** Unit axis vector from `params.start → params.end`. Returns null when degenerate. */
 export function unitAxis(params: WallParams): { x: number; y: number } | null {
-  const dx = params.end.x - params.start.x;
-  const dy = params.end.y - params.start.y;
-  const len = Math.hypot(dx, dy);
-  if (len < DEGENERATE_EPS) return null;
-  return { x: dx / len, y: dy / len };
-}
-
-/** CCW 90° rotation: (x,y) → (-y,x). Mirrors `wall-geometry` segment normal sign. */
-export function perpUnit(u: { x: number; y: number }): { x: number; y: number } {
-  return { x: -u.y, y: u.x };
-}
-
-export function project2D(p: Point3D): Point2D {
-  return { x: p.x, y: p.y };
+  return unitVector(params.start, params.end);
 }

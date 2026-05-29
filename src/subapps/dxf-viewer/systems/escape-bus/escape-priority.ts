@@ -81,6 +81,17 @@ export const ESC_PRIORITY = {
   DIM_TOOL: 550,
 
   /**
+   * P525 — Wall tool incremental-back (ADR-363 Phase 1H).
+   *
+   * Straight-wall 3-click flow only: while in `awaitingAlignment` (end picked,
+   * side not yet picked), ESC steps back to `awaitingEnd` so the user can
+   * re-pick the end instead of cancelling the whole tool. Must beat DRAW_TOOL
+   * (500) so the generic "cancel drawing" handler does not deactivate the tool
+   * first. Revit "Modify | Place Wall" parity: Esc backs out one pick at a time.
+   */
+  WALL_ALIGNMENT_BACK: 525,
+
+  /**
    * P500 — Drawing tool active (entity-creation tools).
    *
    * line, polyline, polygon, rectangle, circle, stair, wall, column, beam,

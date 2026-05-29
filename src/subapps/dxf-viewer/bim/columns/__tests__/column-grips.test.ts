@@ -756,3 +756,51 @@ describe('column-grips — Phase 8C: I-shape kind', () => {
     });
   });
 });
+
+describe('column-grips — applyColumnGripDrag rotate-around-pivot (ADR-397 6-click)', () => {
+  it('orbits position around an external pivot AND adds the swept angle (90° CCW)', () => {
+    // Column at (50,0). Pivot at origin. Reference arm anchor at (100,0) → 0°,
+    // current cursor at (0,100) → 90°. swept = +90°. delta = current − anchor.
+    const col = makeOfKind('rectangular', { position: { x: 50, y: 0, z: 0 }, rotation: 0 });
+    const pivot = { x: 0, y: 0 };
+    const currentPos = { x: 0, y: 100 };
+    const delta = { x: currentPos.x - 100, y: currentPos.y - 0 }; // anchor = (100,0)
+    const next = applyColumnGripDrag('column-rotation', {
+      originalParams: col.params,
+      delta,
+      currentPos,
+      pivot,
+    });
+    // position (50,0) rotated 90° CCW about origin → (0,50).
+    expect(next.position.x).toBeCloseTo(0, 6);
+    expect(next.position.y).toBeCloseTo(50, 6);
+    expect(next.rotation).toBeCloseTo(90, 6);
+    expect(next.width).toBe(col.params.width);
+    expect(next.depth).toBe(col.params.depth);
+  });
+
+  it('without pivot → legacy handle-delta rotation about own position (no orbit)', () => {
+    const col = makeRect(); // position (0,0)
+    const next = applyColumnGripDrag('column-rotation', {
+      originalParams: col.params,
+      delta: { x: 100, y: 0 },
+    });
+    // legacy path: position unchanged, rotation changes.
+    expect(next.position.x).toBe(0);
+    expect(next.position.y).toBe(0);
+    expect(next.rotation).not.toBe(col.params.rotation);
+  });
+
+  it('degenerate reference arm (zero-length) → params unchanged', () => {
+    const col = makeOfKind('rectangular', { position: { x: 50, y: 0, z: 0 } });
+    const pivot = { x: 0, y: 0 };
+    // currentPos == pivot → current arm degenerate.
+    const next = applyColumnGripDrag('column-rotation', {
+      originalParams: col.params,
+      delta: { x: 5, y: 5 },
+      currentPos: { x: 0, y: 0 },
+      pivot,
+    });
+    expect(next).toBe(col.params);
+  });
+});

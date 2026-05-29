@@ -234,4 +234,60 @@ describe('useWallTool', () => {
     expect(ok).toBe(false);
     expect(onWallCreated).not.toHaveBeenCalled();
   });
+
+  // ─── ADR-363 Phase 1H — ESC incremental back-step ──────────────────────
+
+  it('backToAwaitingEnd steps awaitingAlignment → awaitingEnd, drops end, keeps start', () => {
+    const { result } = renderHook(() => useWallTool());
+    act(() => result.current.activate());
+    act(() => { result.current.onCanvasClick({ x: 0, y: 0 }); });
+    act(() => { result.current.onCanvasClick({ x: 5000, y: 0 }); });
+    expect(result.current.state.phase).toBe('awaitingAlignment');
+    let stepped = false;
+    act(() => { stepped = result.current.backToAwaitingEnd(); });
+    expect(stepped).toBe(true);
+    expect(result.current.state.phase).toBe('awaitingEnd');
+    expect(result.current.state.endPoint).toBeNull();
+    expect(result.current.state.startPoint).toEqual({ x: 0, y: 0 });
+  });
+
+  it('backToAwaitingEnd lets the user re-pick the end (back to awaitingAlignment)', () => {
+    const onWallCreated = jest.fn();
+    const { result } = renderHook(() => useWallTool({ onWallCreated }));
+    act(() => result.current.activate());
+    act(() => { result.current.onCanvasClick({ x: 0, y: 0 }); });
+    act(() => { result.current.onCanvasClick({ x: 5000, y: 0 }); });
+    act(() => { result.current.backToAwaitingEnd(); });
+    // Re-pick a different end, then alignment, then commit.
+    act(() => { result.current.onCanvasClick({ x: 3000, y: 0 }); });
+    expect(result.current.state.phase).toBe('awaitingAlignment');
+    expect(result.current.state.endPoint).toEqual({ x: 3000, y: 0 });
+    act(() => { result.current.onCanvasClick({ x: 1500, y: 1000 }); });
+    expect(onWallCreated).toHaveBeenCalledTimes(1);
+    const entity = onWallCreated.mock.calls[0][0] as WallEntity;
+    expect(entity.params.end.x).toBeCloseTo(3000, 6);
+  });
+
+  it('backToAwaitingEnd is a no-op outside awaitingAlignment', () => {
+    const { result } = renderHook(() => useWallTool());
+    act(() => result.current.activate());
+    expect(result.current.backToAwaitingEnd()).toBe(false);
+    act(() => { result.current.onCanvasClick({ x: 0, y: 0 }); });
+    expect(result.current.state.phase).toBe('awaitingEnd');
+    expect(result.current.backToAwaitingEnd()).toBe(false);
+    expect(result.current.state.phase).toBe('awaitingEnd');
+  });
+
+  it('ESC key routes through the escape bus to the back-step while awaitingAlignment', () => {
+    const { result } = renderHook(() => useWallTool());
+    act(() => result.current.activate());
+    act(() => { result.current.onCanvasClick({ x: 0, y: 0 }); });
+    act(() => { result.current.onCanvasClick({ x: 5000, y: 0 }); });
+    expect(result.current.state.phase).toBe('awaitingAlignment');
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    });
+    expect(result.current.state.phase).toBe('awaitingEnd');
+    expect(result.current.state.endPoint).toBeNull();
+  });
 });

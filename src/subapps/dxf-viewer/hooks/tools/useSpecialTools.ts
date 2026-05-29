@@ -35,27 +35,23 @@ import { resolveSceneUnits, mmToSceneUnits } from '../../utils/scene-units';
 import { useFloorMetadata } from '../data/useFloorMetadata';
 import type { StairFloorLinkInput } from '../drawing/stair-completion';
 import { useAngleEntityMeasurement, type AngleEntityVariant } from './useAngleEntityMeasurement';
-import type { AngleMeasurementEntity, Entity } from '../../types/entities';
+import type { AngleMeasurementEntity } from '../../types/entities';
 import { isWallEntity } from '../../types/entities';
 import { computeWallTrims, applyTrimPatches } from '../../bim/walls/wall-trims';
 import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
+import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
+import { appendEntityToScene } from '../../bim/scene/append-entity-to-scene';
 // 🏢 ENTERPRISE: Import actual level system types for type safety
 import type { LevelsHookReturn } from '../../systems/levels';
 
+// ADR-397 — delegates to the `appendEntityToScene` SSoT (slab / beam draw).
+// Column draw + Ctrl-copy go through `addColumnToScene` (same SSoT, 'column' tag).
 function appendAndBroadcast<E extends { id: string }>(
   levelManager: LevelsHookReturn,
   entity: E,
   tool: string,
 ): void {
-  const levelId = levelManager.currentLevelId;
-  if (!levelId) return;
-  const scene = levelManager.getLevelScene(levelId);
-  if (!scene) return;
-  levelManager.setLevelScene(levelId, {
-    ...scene,
-    entities: [...(scene.entities || []), entity as unknown as Entity],
-  });
-  EventBus.emit('drawing:entity-created', { entity: entity as unknown as Entity, tool });
+  appendEntityToScene(levelManager, entity, tool);
 }
 // TYPES & INTERFACES
 /**
@@ -361,7 +357,9 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
    */
   const columnTool = useColumnTool({
     currentLevelId: levelManager.currentLevelId || '0',
-    onColumnCreated: (columnEntity) => appendAndBroadcast(levelManager, columnEntity, 'column'),
+    // ADR-397 — append + broadcast via the shared SSoT (`addColumnToScene`) so
+    // the DRAW path and the Ctrl-COPY hot-grip path use ONE insertion routine.
+    onColumnCreated: (columnEntity) => addColumnToScene(columnEntity, levelManager),
     getSceneUnits: () => {
       const levelId = levelManager.currentLevelId;
       if (!levelId) return 'mm';

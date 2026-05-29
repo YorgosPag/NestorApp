@@ -1,20 +1,26 @@
 /**
- * ADR-363 Phase 1G — Wall corner hot-grip state-machine decisions (pure).
+ * ADR-363 Phase 1G + ADR-397 — BIM hot-grip state-machine decisions (pure,
+ * entity-agnostic).
  *
- * AutoCAD "hot grip" pattern για τα 4 corner grips τοίχου: 1ο κλικ ενεργοποιεί
- * move mode (όχι drag), ο κέρσορας σύρει live (rubber-band + ghost), 2ο κλικ
- * οριστικοποιεί. Press-drag-release καταργείται ΜΟΝΟ για αυτά τα 4 kinds — όλα
- * τα υπόλοιπα wall grips (start/end/midpoint/thickness/rotation/curve/vertex)
- * παραμένουν drag.
+ * AutoCAD "hot grip" pattern: 1st click activates move mode (not drag), the
+ * cursor tracks live (rubber-band + ghost), subsequent clicks pick points and
+ * the terminal click commits. Press-drag-release is replaced ONLY for the kinds
+ * registered in {@link HOT_GRIP_OP_REGISTRY} — every other grip stays drag.
  *
- * Zero React / DOM / store deps — οι αποφάσεις της μηχανής ζουν εδώ ώστε να
- * unit-testάρονται ανεξάρτητα από το `useUnifiedGripInteraction` wiring.
+ * ADR-397: generalized from wall-only to ALL BIM entities (wall corners/move/
+ * rotate + column center/rotation + future). The step engine was already
+ * entity-agnostic; only the kind→op mapping is now a shared registry so a new
+ * entity opts in by adding rows, never by forking this FSM.
  *
+ * Zero React / DOM / store deps — decisions live here so they unit-test
+ * independently of the `useUnifiedGripInteraction` wiring.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-397-bim-grip-glyph-behavior-ssot.md §12 D2
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §6 Phase 1G
  */
 
 import type { WallGripKind } from '../useGripMovement';
-import type { UnifiedGripPhase } from './unified-grip-types';
+import type { UnifiedGripInfo, UnifiedGripPhase } from './unified-grip-types';
 
 /** Τα 4 corner grip kinds που υποστηρίζουν hot-grip (asymmetric corner drag, Phase 1C-bis). */
 export const WALL_CORNER_GRIP_KINDS: readonly WallGripKind[] = [
@@ -24,32 +30,58 @@ export const WALL_CORNER_GRIP_KINDS: readonly WallGripKind[] = [
   'wall-corner-end-neg',
 ] as const;
 
-/** True μόνο για τα 4 corner grip kinds — αυτά παίρνουν 2-click hot-grip. */
-export function isWallCornerGripKind(kind: WallGripKind | undefined | null): boolean {
+/** True μόνο για τα 4 wall corner grip kinds — αυτά παίρνουν 2-click hot-grip. */
+export function isWallCornerGripKind(kind: string | undefined | null): boolean {
   return kind != null && (WALL_CORNER_GRIP_KINDS as readonly string[]).includes(kind);
 }
 
 /**
  * ADR-363 Phase 1G — hot-grip operation flavours:
- *  - `'corner'` → 2-click (the grip itself is the anchor; Phase 1C-bis corners).
- *  - `'move'`   → 3-click (`wall-midpoint` glyph): click glyph → pick base point →
- *                 move (rubber-band base→cursor) → commit (whole-wall translate).
- *  - `'rotate'` → 3-click (`wall-rotation` glyph): click glyph → pick rotation
- *                 centre → rotate (rubber-band centre→cursor) → commit.
+ *  - `'corner'` → 2-click (the grip itself is the anchor; wall Phase 1C-bis corners).
+ *  - `'move'`   → 3-click (move glyph): click glyph → pick base point → move
+ *                 (rubber-band base→cursor) → commit (whole-entity translate).
+ *  - `'rotate'` → 6-click AutoCAD ROTATE→Reference (rotation glyph): click glyph →
+ *                 pick centre → reference line (2 pts) → alignment line (2 pts).
  */
 export type WallHotGripOp = 'corner' | 'move' | 'rotate';
 
-/** Map a wall grip kind to its hot-grip operation, or null if it stays drag. */
-export function hotGripOpForKind(kind: WallGripKind | undefined | null): WallHotGripOp | null {
-  if (isWallCornerGripKind(kind)) return 'corner';
-  if (kind === 'wall-midpoint') return 'move';
-  if (kind === 'wall-rotation') return 'rotate';
-  return null;
+/**
+ * ADR-397 §12 D2 — single registry mapping a grip KIND (any BIM entity) to its
+ * hot-grip operation. A kind absent here stays press-drag-release. Add rows to
+ * opt an entity's grip in — never fork the FSM.
+ */
+export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
+  // Walls (ADR-363 Phase 1G)
+  'wall-corner-start-pos': 'corner',
+  'wall-corner-start-neg': 'corner',
+  'wall-corner-end-pos': 'corner',
+  'wall-corner-end-neg': 'corner',
+  'wall-midpoint': 'move',
+  'wall-rotation': 'rotate',
+  // Columns (ADR-397) — center MOVE (3-click), rotation REFERENCE (6-click)
+  'column-center': 'move',
+  'column-rotation': 'rotate',
+} as const;
+
+/** Map any grip kind to its hot-grip operation, or null if it stays drag. */
+export function hotGripOpForKind(kind: string | undefined | null): WallHotGripOp | null {
+  if (kind == null) return null;
+  return HOT_GRIP_OP_REGISTRY[kind] ?? null;
 }
 
-/** True for any wall grip kind that uses the hot-grip (click-click) flow. */
-export function isWallHotGripKind(kind: WallGripKind | undefined | null): boolean {
+/** True for any grip kind that uses the hot-grip (click-click) flow. */
+export function isWallHotGripKind(kind: string | undefined | null): boolean {
   return hotGripOpForKind(kind) !== null;
+}
+
+/**
+ * ADR-397 — read the parametric grip kind from a unified grip regardless of which
+ * BIM entity owns it (wall / column / stair are mutually exclusive discriminators).
+ * Entity-agnostic key for the hot-grip routing in `grip-mouse-handlers`.
+ */
+export function hotGripKindOf(grip: UnifiedGripInfo | null | undefined): string | undefined {
+  if (!grip) return undefined;
+  return grip.wallGripKind ?? grip.columnGripKind ?? grip.stairGripKind;
 }
 
 /**
@@ -121,10 +153,10 @@ export type HotGripMouseDownAction = 'enter' | 'consume' | 'none';
 
 export function resolveHotGripMouseDown(
   phase: UnifiedGripPhase,
-  hitWallGripKind: WallGripKind | undefined | null,
+  hitGripKind: string | undefined | null,
 ): HotGripMouseDownAction {
   if (phase === 'hotGrip') return 'consume';
-  if (isWallHotGripKind(hitWallGripKind)) return 'enter';
+  if (isWallHotGripKind(hitGripKind)) return 'enter';
   return 'none';
 }
 

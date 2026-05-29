@@ -59,6 +59,7 @@ import type { ColumnGripKind, GripInfo } from '../../hooks/useGripMovement';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import { ANCHOR_OFFSETS, MIN_COLUMN_DIMENSION_MM } from '../types/column-types';
 import { polygonBboxMm } from './column-anchors';
+import { rotatePoint } from '../../utils/rotation-math';
 import {
   RAD_TO_DEG,
   ROTATION_HANDLE_OFFSET_MM,
@@ -301,7 +302,23 @@ export interface ColumnGripDragInput {
   readonly originalParams: ColumnParams;
   /** World-space delta from drag anchor to current cursor position. */
   readonly delta: Point2D;
+  /**
+   * ADR-397 — current world cursor position. Supplied by the 6-click rotation
+   * hot-grip (`column-rotation`); the anchor is `currentPos − delta`.
+   */
+  readonly currentPos?: Point2D;
+  /**
+   * ADR-397 — optional rotation pivot for `column-rotation`. When set (6-click
+   * AutoCAD ROTATE→Reference flow), the column rotates around this user-picked
+   * centre: both `position` and `rotation` change. The swept angle is
+   * anchor-relative (`currentPos − delta` → `currentPos`), so there is no snap.
+   * Undefined → legacy handle-delta rotation about the column's own `position`.
+   */
+  readonly pivot?: Point2D;
 }
+
+/** Below this radius the rotate reference/align arm is degenerate → no rotation. */
+const ROTATE_EPS = 1e-6;
 
 /**
  * Pure transform: column grip kind + drag input → new `ColumnParams`. Geometry
@@ -318,7 +335,9 @@ export function applyColumnGripDrag(
 ): ColumnParams {
   if (input.delta.x === 0 && input.delta.y === 0) return input.originalParams;
   if (gripKind === 'column-center') return moveCenter(input);
-  if (gripKind === 'column-rotation') return rotateAroundPosition(input);
+  if (gripKind === 'column-rotation') {
+    return input.pivot ? rotateAroundPivot(input) : rotateAroundPosition(input);
+  }
   if (gripKind === 'column-width') return resizeWidth(input);
   if (gripKind === 'column-depth') return resizeDepth(input);
   if (gripKind === 'column-arm-length') return resizeArmLength(input);
@@ -361,6 +380,39 @@ function rotateAroundPosition(input: Readonly<ColumnGripDragInput>): ColumnParam
   const newAngle = Math.atan2(newVec.y, newVec.x);
   const deltaDeg = (newAngle - oldAngle) * RAD_TO_DEG;
   return { ...originalParams, rotation: originalParams.rotation + deltaDeg };
+}
+
+/**
+ * ADR-397 — 6-click AutoCAD ROTATE→Reference rotation about a user-picked pivot.
+ * Both `position` and `rotation` change so the column ORBITS the pivot (mirror of
+ * the wall `rotateWall` pivot path). Swept angle is anchor-relative
+ * (`currentPos − delta` → `currentPos`) so grabbing the handle does not snap.
+ *
+ * Point rotation delegates to the canonical `rotatePoint` SSoT (ADR-188,
+ * `utils/rotation-math.ts`) — the same primitive `bim-rotate-geometry.rotateColumn`,
+ * RotateEntityCommand and the array/guide rotate tools use. No re-implemented cos/sin.
+ */
+function rotateAroundPivot(input: Readonly<ColumnGripDragInput>): ColumnParams {
+  const { originalParams, delta, currentPos, pivot } = input;
+  if (!currentPos || !pivot) return originalParams;
+  const curDx = currentPos.x - pivot.x;
+  const curDy = currentPos.y - pivot.y;
+  const anchorDx = currentPos.x - delta.x - pivot.x;
+  const anchorDy = currentPos.y - delta.y - pivot.y;
+  if (Math.hypot(curDx, curDy) < ROTATE_EPS || Math.hypot(anchorDx, anchorDy) < ROTATE_EPS) {
+    return originalParams;
+  }
+  const sweptDeg = (Math.atan2(curDy, curDx) - Math.atan2(anchorDy, anchorDx)) * RAD_TO_DEG;
+  const newPos = rotatePoint(
+    { x: originalParams.position.x, y: originalParams.position.y },
+    pivot,
+    sweptDeg,
+  );
+  return {
+    ...originalParams,
+    position: { x: newPos.x, y: newPos.y, z: originalParams.position.z ?? 0 },
+    rotation: originalParams.rotation + sweptDeg,
+  };
 }
 
 function resizeWidth(input: Readonly<ColumnGripDragInput>): ColumnParams {

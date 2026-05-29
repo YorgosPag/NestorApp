@@ -14,7 +14,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallHotGripOp, HotGripStep } from './wall-hot-grip-fsm';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
-import { WallRotateHotGripStore } from '../../bim/walls/wall-rotate-hotgrip-store';
+import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { commitDxfGripDragModeAware } from './grip-commit-adapters';
 import { GripModeStore } from '../../systems/grip/GripModeStore';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
@@ -100,7 +100,7 @@ export function advanceHotGripPick(worldPos: Point2D, ctx: HotGripActionCtx): vo
     if (rs && pv) {
       const anchor: Point2D = { x: pv.x + (p.x - rs.x), y: pv.y + (p.y - rs.y) };
       anchorRef.current = anchor;
-      WallRotateHotGripStore.set(pv, anchor);
+      BimRotateHotGripStore.set(pv, anchor);
     }
   } else if (step === 'await-align-start') {
     hotGripAlignStartRef.current = p;

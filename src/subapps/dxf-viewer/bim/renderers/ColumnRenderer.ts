@@ -47,6 +47,7 @@ import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getColumnGrips } from '../columns/column-grips';
+import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import {
   computeHatchPlan,
   computeCircularHatchPlan,
@@ -428,6 +429,10 @@ export class ColumnRenderer extends BaseEntityRenderer {
       entityId: g.entityId,
       isVisible: true,
       gripIndex: g.gripIndex,
+      // ADR-397 — icon glyph for the move/rotation handles (column-center →
+      // 4-arrow, column-rotation → curved arrow) via the shared registry SSoT,
+      // mirror Wall/StairRenderer. Other column grips stay square.
+      shape: gripGlyphShape(g.columnGripKind),
     }));
   }
 

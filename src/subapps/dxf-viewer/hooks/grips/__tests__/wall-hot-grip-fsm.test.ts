@@ -14,13 +14,14 @@ import {
   isWallCornerGripKind,
   isWallHotGripKind,
   hotGripOpForKind,
+  hotGripKindOf,
   initialHotGripStep,
   advanceHotGripStep,
   resolveHotGripMouseDown,
   resolveHotGripMouseUp,
 } from '../wall-hot-grip-fsm';
 import type { WallGripKind } from '../../useGripMovement';
-import type { UnifiedGripPhase } from '../unified-grip-types';
+import type { UnifiedGripInfo, UnifiedGripPhase } from '../unified-grip-types';
 
 const NON_CORNER_KINDS: WallGripKind[] = [
   'wall-start',
@@ -89,6 +90,36 @@ describe('hotGripOpForKind / isWallHotGripKind / initialHotGripStep', () => {
     expect(initialHotGripStep('corner')).toBe('tracking');
     expect(initialHotGripStep('move')).toBe('await-base');
     expect(initialHotGripStep('rotate')).toBe('await-base');
+  });
+});
+
+describe('ADR-397 — column hot-grip kinds (shared registry)', () => {
+  it("column-center → 'move', column-rotation → 'rotate'", () => {
+    expect(hotGripOpForKind('column-center')).toBe('move');
+    expect(hotGripOpForKind('column-rotation')).toBe('rotate');
+  });
+
+  it('column resize/variant grips stay drag (null op)', () => {
+    for (const k of ['column-width', 'column-depth', 'column-arm-length', 'column-i-web-thickness']) {
+      expect(hotGripOpForKind(k)).toBeNull();
+      expect(isWallHotGripKind(k)).toBe(false);
+    }
+  });
+
+  it("column-center/rotation enter hot-grip on mousedown", () => {
+    expect(resolveHotGripMouseDown('idle', 'column-center')).toBe('enter');
+    expect(resolveHotGripMouseDown('warm', 'column-rotation')).toBe('enter');
+  });
+
+  it('hotGripKindOf reads the set discriminator regardless of entity', () => {
+    const wall = { wallGripKind: 'wall-midpoint' } as unknown as UnifiedGripInfo;
+    const col = { columnGripKind: 'column-rotation' } as unknown as UnifiedGripInfo;
+    const stair = { stairGripKind: 'stair-base' } as unknown as UnifiedGripInfo;
+    expect(hotGripKindOf(wall)).toBe('wall-midpoint');
+    expect(hotGripKindOf(col)).toBe('column-rotation');
+    expect(hotGripKindOf(stair)).toBe('stair-base');
+    expect(hotGripKindOf(null)).toBeUndefined();
+    expect(hotGripKindOf({} as UnifiedGripInfo)).toBeUndefined();
   });
 });
 

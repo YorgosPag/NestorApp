@@ -17,12 +17,12 @@ import { gripStyleStore } from '../../stores/GripStyleStore';
 import { findNearestGrip } from './grip-hit-testing';
 import {
   resolveHotGripMouseDown, resolveHotGripMouseUp, isWallHotGripKind,
-  hotGripOpForKind, initialHotGripStep,
+  hotGripOpForKind, initialHotGripStep, hotGripKindOf,
   type WallHotGripOp, type HotGripStep,
 } from './wall-hot-grip-fsm';
-import { WallRotateHotGripStore } from '../../bim/walls/wall-rotate-hotgrip-store';
+import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { commitDxfGripDragModeAware, type DxfCommitDeps, type OverlayCommitDeps } from './grip-commit-adapters';
-import { commitWallCopy } from './grip-parametric-commits';
+import { commitHotGripCopy } from './grip-parametric-commits';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 import {
   commitOverlayVertexDrag,
@@ -175,7 +175,7 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
   }
   // ADR-363 Phase 1G — 2nd click of a corner hot-grip: consume the mousedown
   // so lasso/selection do not arm; the commit fires on the matching mouseup.
-  if (isGripMode && resolveHotGripMouseDown(phase, activeGrip?.wallGripKind) === 'consume') {
+  if (isGripMode && resolveHotGripMouseDown(phase, hotGripKindOf(activeGrip)) === 'consume') {
     return true;
   }
   if (!isGripMode || allGrips.length === 0 || phase === 'dragging') return false;
@@ -191,7 +191,7 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
   // highlighted (hovered/warm), treat it as the hit so the click still grabs it
   // (AutoCAD-like: "it's blue → click grabs it", even with a slightly off click).
   const nearGrip = hitGrip
-    ?? (hoveredGrip?.source === 'dxf' && isWallHotGripKind(hoveredGrip.wallGripKind) ? hoveredGrip : null);
+    ?? (hoveredGrip?.source === 'dxf' && isWallHotGripKind(hotGripKindOf(hoveredGrip)) ? hoveredGrip : null);
   if (!nearGrip) {
     if (!isShift && selectedGrips.length > 0) setSelectedGrips([]);
     return false;
@@ -202,8 +202,8 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     // click) flow instead of press-drag-release: 1st click enters `hotGrip`,
     // cursor moves live, 2nd click (mouseup) commits. All other wall grips
     // fall through to the standard `dragging` path below.
-    if (resolveHotGripMouseDown(phase, nearGrip.wallGripKind) === 'enter') {
-      const op = hotGripOpForKind(nearGrip.wallGripKind)!; // non-null: 'enter' ⇒ hot kind
+    if (resolveHotGripMouseDown(phase, hotGripKindOf(nearGrip)) === 'enter') {
+      const op = hotGripOpForKind(hotGripKindOf(nearGrip))!; // non-null: 'enter' ⇒ hot kind
       setActiveGrip(nearGrip);
       setPhase('hotGrip');
       unlockGripSnapPosition();
@@ -216,7 +216,7 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
       hotGripRefStartRef.current = null;
       hotGripRefEndRef.current = null;
       hotGripAlignStartRef.current = null;
-      WallRotateHotGripStore.clear();
+      BimRotateHotGripStore.clear();
       if (op === 'corner') {
         // Corner: the grip itself is the anchor (2-click flow).
         anchorRef.current = nearGrip.position;
@@ -230,7 +230,7 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
       // ADR-363 Phase 1G.3 — prompt the first awaited pick (centre / base).
       applyHotGripHint(op, initialStep);
       if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
-      setActiveDragGrip({ entityId: nearGrip.entityId!, gripKind: nearGrip.wallGripKind ?? null });
+      setActiveDragGrip({ entityId: nearGrip.entityId!, gripKind: hotGripKindOf(nearGrip) ?? null });
       GripSessionUndoStore.markSessionStart(getGlobalCommandHistory().size());
       return true;
     }
@@ -362,12 +362,15 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       if (!anchorRef.current) return true;
       const effectiveAnchor = GripBasePointStore.getSnapshot().overrideAnchor ?? anchorRef.current;
       const delta: Point2D = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
-      // ADR-363 Phase 1G.4 — Ctrl (or ⌘) held at the terminal click of a wall
-      // MOVE hot-grip copies the wall (AutoCAD MOVE→COPY) instead of translating
-      // it. Single copy — the flow resets afterwards either way.
-      if (hotOp === 'move' && activeGrip.wallGripKind === 'wall-midpoint' && CtrlKeyTracker.getSnapshot()) {
-        commitWallCopy(activeGrip, delta, dxfCommitDeps);
-      } else {
+      // ADR-363 Phase 1G.4 + ADR-397 — Ctrl (or ⌘) held at the terminal click of
+      // a MOVE hot-grip copies the entity (AutoCAD MOVE→COPY) instead of
+      // translating it. Dispatched entity-agnostically (wall-midpoint /
+      // column-center) via `commitHotGripCopy`; falls through to the move commit
+      // when the kind has no copy path. Single copy — the flow resets afterwards.
+      const copied =
+        hotOp === 'move' && CtrlKeyTracker.getSnapshot() &&
+        commitHotGripCopy(activeGrip, delta, dxfCommitDeps);
+      if (!copied) {
         commitDxfGripDragModeAware(activeGrip, delta, dxfCommitDeps, GripModeStore.getSnapshot());
       }
       GripBasePointStore.clear();

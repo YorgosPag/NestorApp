@@ -45,6 +45,7 @@ import {
   useWallToolEnterListener,
 } from './use-wall-tool-event-listeners';
 import { EventBus } from '../../systems/events/EventBus';
+import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -98,6 +99,13 @@ export interface UseWallToolResult {
   setKind(kind: WallKind): void;
   deactivate(): void;
   reset(): void;
+  /**
+   * ADR-363 Phase 1H — incremental ESC: step the straight-wall flow back from
+   * `awaitingAlignment` to `awaitingEnd` (drops the picked end, keeps the
+   * start) so the user can re-pick the end instead of cancelling the tool.
+   * No-op outside `awaitingAlignment`. Returns true if a step-back occurred.
+   */
+  backToAwaitingEnd(): boolean;
   /** Returns true if the click advanced the state machine. */
   onCanvasClick(point: Readonly<Point2D>): boolean;
   /** Commit-and-finish the polyline chain (Enter key path). Returns true on commit. */
@@ -204,6 +212,26 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   const setParamOverrides = useCallback((overrides: WallParamOverrides) => {
     setState((prev) => ({ ...prev, overrides: { ...prev.overrides, ...overrides } }));
   }, []);
+
+  // ── incremental back (ADR-363 Phase 1H) ──────────────────────────────────
+  // ESC during the straight-wall side-pick (`awaitingAlignment`) rolls back one
+  // pick: drop the end, keep the start, return to `awaitingEnd`. Mirrors Revit
+  // "Place Wall" Esc semantics (back out one pick instead of exiting). Curved /
+  // polyline kinds never reach `awaitingAlignment`, so this is straight-only.
+  const backToAwaitingEnd = useCallback((): boolean => {
+    if (stateRef.current.phase !== 'awaitingAlignment') return false;
+    setState((prev) => ({ ...prev, phase: 'awaitingEnd', endPoint: null, error: null }));
+    return true;
+  }, []);
+
+  // ESC bus registration — priority above DRAW_TOOL so the incremental back-step
+  // wins over the generic "cancel drawing" handler that would deactivate the tool.
+  useEscapeHandler({
+    id: 'wall-tool/alignment-back',
+    priority: ESC_PRIORITY.WALL_ALIGNMENT_BACK,
+    canHandle: () => stateRef.current.phase === 'awaitingAlignment',
+    handle: () => backToAwaitingEnd(),
+  });
 
   // ── commit (straight + curved) ───────────────────────────────────────────
   /**
@@ -438,6 +466,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     setKind,
     deactivate,
     reset,
+    backToAwaitingEnd,
     onCanvasClick,
     finishPolyline,
     setParamOverrides,

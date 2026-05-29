@@ -48,6 +48,7 @@ import type { WallEntity } from '../types/wall-types';
 import { mmScaleFor } from '../../utils/scene-units';
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-utils';
 import { unitAxis, perpUnit, project2D } from './wall-grip-math';
+import { gripGlyphShape } from '../grips/grip-glyph-registry';
 
 // Public API re-exports (consumers import from this module).
 export { applyWallGripDrag } from './wall-grip-transforms';
@@ -55,20 +56,13 @@ export type { WallGripDragInput } from './wall-grip-transforms';
 
 /**
  * Phase 1C-ter (2026-05-28) — map a wall grip kind to its rendered glyph shape.
- * The midpoint (whole-wall MOVE) and the rotation handle get icon glyphs
- * (4-arrow / curved-arrow) instead of the default square — the SAME vocabulary
- * as the stair base/direction grips (`stairGripGlyphShape`). All other wall
- * grips stay square. Consumed by `WallRenderer.getGrips`.
+ * ADR-397: thin wrapper over the shared `gripGlyphShape` registry SSoT (the
+ * midpoint MOVE + rotation handle glyphs live there alongside every other BIM
+ * entity). Kept for back-compat call sites; new code may call `gripGlyphShape`
+ * directly. Consumed by `WallRenderer.getGrips`.
  */
 export function wallGripGlyphShape(kind: WallGripKind | undefined): GripShape {
-  switch (kind) {
-    case 'wall-midpoint':
-      return 'move';
-    case 'wall-rotation':
-      return 'rotation';
-    default:
-      return 'square';
-  }
+  return gripGlyphShape(kind);
 }
 
 // ─── Grip position computation (ADR-363 §6 Phase 1C) ─────────────────────────
