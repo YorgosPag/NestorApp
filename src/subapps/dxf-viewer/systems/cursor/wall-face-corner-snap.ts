@@ -14,6 +14,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { ProSnapResult } from '../../snapping/extended-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { findBestCornerProjection } from './corner-projection-snap';
 
 export interface FaceCornerSnapResult {
   /** Snap result at the beam/wall corner (indicator shows HERE) */
@@ -56,37 +57,16 @@ export function findWallFaceCornerSnap(
 
   const halfWidthWorld = (params.thickness / 2) * mmToSceneUnits(params.sceneUnits ?? 'mm');
 
-  // The two face corners at the dragged endpoint
-  const faceCorners = [
-    {
-      pt: { x: cursorPos.x + perpX * halfWidthWorld, y: cursorPos.y + perpY * halfWidthWorld },
-      offsetX: perpX * halfWidthWorld,
-      offsetY: perpY * halfWidthWorld,
-    },
-    {
-      pt: { x: cursorPos.x - perpX * halfWidthWorld, y: cursorPos.y - perpY * halfWidthWorld },
-      offsetX: -perpX * halfWidthWorld,
-      offsetY: -perpY * halfWidthWorld,
-    },
+  // The two face corners at the dragged endpoint (axis ± halfThickness ⟂).
+  const faceCorners: Point2D[] = [
+    { x: cursorPos.x + perpX * halfWidthWorld, y: cursorPos.y + perpY * halfWidthWorld },
+    { x: cursorPos.x - perpX * halfWidthWorld, y: cursorPos.y - perpY * halfWidthWorld },
   ];
 
-  let best: FaceCornerSnapResult | null = null;
-
-  for (const corner of faceCorners) {
-    const result = findSnapPoint(corner.pt.x, corner.pt.y);
-    if (!result?.found || !result.snappedPoint) continue;
-
-    const dist = result.distance ?? 0;
-    if (!best || dist < (best.snapResult.distance ?? Infinity)) {
-      best = {
-        snapResult: result,
-        adjustedAxisPos: {
-          x: result.snappedPoint.x - corner.offsetX,
-          y: result.snappedPoint.y - corner.offsetY,
-        },
-      };
-    }
-  }
-
-  return best;
+  // Delegate the query/best/correction loop to the shared SSoT core (ADR-398).
+  // `adjustedCursorPos` (= cursor + (target − corner)) equals the wall's historical
+  // `adjustedAxisPos` because each face corner is a fixed ⟂ offset from the axis.
+  const projection = findBestCornerProjection(faceCorners, cursorPos, findSnapPoint);
+  if (!projection) return null;
+  return { snapResult: projection.snapResult, adjustedAxisPos: projection.adjustedCursorPos };
 }

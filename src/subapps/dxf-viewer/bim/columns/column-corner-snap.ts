@@ -34,7 +34,6 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { ProSnapResult } from '../../snapping/extended-types';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import type { ColumnGripKind } from '../../hooks/useGripMovement';
 import type { ColumnParamOverrides } from '../../hooks/drawing/column-completion';
@@ -42,16 +41,16 @@ import type { SceneUnits } from '../../utils/scene-units';
 import { getColumnCornerWorldPointsFromParams } from './column-corner-anchors';
 import { applyColumnGripDrag } from './column-grips';
 import { buildDefaultColumnParams } from '../../hooks/drawing/column-completion';
+import {
+  findBestCornerProjection,
+  type CornerProjectionResult,
+  type FindSnapPoint,
+} from '../../systems/cursor/corner-projection-snap';
 
-/** Snap-engine query signature (matches `wall-face-corner-snap`). */
-export type FindSnapPoint = (x: number, y: number) => ProSnapResult | null;
-
-export interface ColumnCornerSnapResult {
-  /** Snap result at the matched target corner (indicator + label shown HERE). */
-  readonly snapResult: ProSnapResult;
-  /** Effective cursor so the matched column corner aligns with the target. */
-  readonly adjustedCursorPos: Point2D;
-}
+// Re-export the shared types so column callers keep one import path.
+export type { FindSnapPoint };
+/** @deprecated alias — use {@link CornerProjectionResult}. */
+export type ColumnCornerSnapResult = CornerProjectionResult;
 
 /** Grip kinds that translate/resize the body — corner projection applies. */
 const PROJECTION_GRIP_KINDS = new Set<ColumnGripKind>([
@@ -90,7 +89,7 @@ export function findColumnGripCornerSnap(
   dragAnchor: Point2D,
   cursorPos: Point2D,
   findSnapPoint: FindSnapPoint,
-): ColumnCornerSnapResult | null {
+): CornerProjectionResult | null {
   if (!isColumnCornerSnapGrip(gripKind)) return null;
   const delta: Point2D = { x: cursorPos.x - dragAnchor.x, y: cursorPos.y - dragAnchor.y };
   const proposed = applyColumnGripDrag(gripKind, {
@@ -98,7 +97,7 @@ export function findColumnGripCornerSnap(
     delta,
     currentPos: cursorPos,
   });
-  return projectAndSnap(proposed, cursorPos, findSnapPoint, column.id);
+  return projectColumn(proposed, cursorPos, findSnapPoint, column.id);
 }
 
 /**
@@ -110,46 +109,23 @@ export function findColumnDrawCornerSnap(
   overrides: Readonly<ColumnParamOverrides>,
   sceneUnits: SceneUnits,
   findSnapPoint: FindSnapPoint,
-): ColumnCornerSnapResult | null {
+): CornerProjectionResult | null {
   const proposed = buildDefaultColumnParams(cursorPos, overrides.kind, overrides, sceneUnits);
   // Draw has no existing entity to exclude from the snap index.
-  return projectAndSnap(proposed, cursorPos, findSnapPoint, null);
+  return projectColumn(proposed, cursorPos, findSnapPoint, null);
 }
 
 /**
- * Project the proposed column's corners, query the snap engine at each, and keep
- * the closest valid match. Self-matches (the dragged column's own stale corners
- * in the spatial index) are filtered out by `excludeEntityId`.
+ * Column-specific adapter: derive the proposed column's footprint corners (SSoT
+ * `getColumnCornerWorldPointsFromParams`) and delegate the query/best/correction
+ * loop to the shared {@link findBestCornerProjection} core (zero duplication).
  */
-function projectAndSnap(
+function projectColumn(
   proposed: Readonly<ColumnParams>,
   cursorPos: Point2D,
   findSnapPoint: FindSnapPoint,
   excludeEntityId: string | null,
-): ColumnCornerSnapResult | null {
-  const corners = getColumnCornerWorldPointsFromParams(proposed);
-  let best: ColumnCornerSnapResult | null = null;
-  let bestDistance = Infinity;
-
-  for (const { point: corner } of corners) {
-    const result = findSnapPoint(corner.x, corner.y);
-    if (!result?.found || !result.snappedPoint) continue;
-
-    const targetEntityId = result.entityId ?? result.snapPoint?.entityId;
-    if (excludeEntityId && targetEntityId === excludeEntityId) continue;
-
-    const distance = result.distance ?? result.snapPoint?.distance ?? 0;
-    if (distance >= bestDistance) continue;
-
-    bestDistance = distance;
-    best = {
-      snapResult: result,
-      adjustedCursorPos: {
-        x: cursorPos.x + (result.snappedPoint.x - corner.x),
-        y: cursorPos.y + (result.snappedPoint.y - corner.y),
-      },
-    };
-  }
-
-  return best;
+): CornerProjectionResult | null {
+  const corners = getColumnCornerWorldPointsFromParams(proposed).map((c) => c.point);
+  return findBestCornerProjection(corners, cursorPos, findSnapPoint, excludeEntityId);
 }
