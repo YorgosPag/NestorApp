@@ -139,4 +139,15 @@ describe('findColumnDrawCornerSnap', () => {
     const find = snapStub([{ near: { x: 9000, y: 9000 }, snap: { x: 9000, y: 9000 }, dist: 1 }]);
     expect(findColumnDrawCornerSnap({ x: 0, y: 0 }, { kind: 'rectangular', anchor: 'center' }, 'mm', find)).toBeNull();
   });
+
+  // ADR-398 — regression for the meter-scene unit-mismatch bug (ADR-397 #2 class):
+  // 400mm column in a 'm' scene ⇒ corners at position ± 0.2 scene units (NOT ±200).
+  it('scales corners by sceneUnits — meter scene corner near position, not 1000× off', () => {
+    // Place at (1,1) scene-m; NE corner at (1.2, 1.2). Pre-fix it was at (201, 201).
+    const find = snapStub([{ near: { x: 1.2, y: 1.2 }, snap: { x: 1.25, y: 1.25 }, dist: 0.07 }], 0.3);
+    const r = findColumnDrawCornerSnap({ x: 1, y: 1 }, { kind: 'rectangular', anchor: 'center' }, 'm', find);
+    expect(r).not.toBeNull();
+    expect(r!.adjustedCursorPos.x).toBeCloseTo(1.05, 6);
+    expect(r!.adjustedCursorPos.y).toBeCloseTo(1.05, 6);
+  });
 });

@@ -831,6 +831,7 @@ Mirror `ColumnCenterSnapEngine.test.ts` (10 test cases each):
 | 2026-05-22 | Rename | ADR number corrected from ADR-370 → ADR-371 (collision with ADR-370-bim-readonly-visualization.md). Filename preserved for git-blame. |
 | 2026-05-22 | Bugfix | `SnapContext.ALL_MODES` δεν περιλάμβανε BIM/DIM snap types → `enabledModes` Set ποτέ δεν τα περιλάμβανε → `useSnapManager.updateSettings({ enabledTypes })` αντικαθιστούσε το `DEFAULT_PRO_SNAP_SETTINGS.enabledTypes` με Set χωρίς BIM types → οι 5 BIM corner snap engines ποτέ δεν αρχικοποιούνταν. Fix: +8 types στο `ALL_MODES` + matching default enabled state. File: `SnapContext.tsx`. |
 | 2026-05-22 | Extension | **Wall Face Corner Projection Snap** (Revit-style). Όταν κάνει drag ένα endpoint grip τοίχου, τα face corners (cursor ± halfThickness × perp) ελκύονται στις BIM γωνίες γειτονικών οντοτήτων. Τα νέα αρχεία: `GripDragStore.ts` (imperative grip context store), `wall-face-corner-snap.ts` (projection utility). Edits: `useUnifiedGripInteraction.ts` (set/clearActiveDragGrip), `mouse-handler-move.ts` + `mouse-handler-up.ts` (face corner projection block). |
+| 2026-05-29 | Bugfix (ADR-398) | **Meter-scene corner-anchor unit mismatch** (root cause «δεν εμφανίζονται έλξεις/κείμενα στις γωνίες κολώνας»). `column-anchors.ts::localToWorld` πρόσθετε mm local offsets σε `position` (scene units) ΧΩΡΙΣ `mmScaleFor` → σε meter/cm scenes οι 4 corner anchors έπεφταν 1000×/10× off-screen → ΚΑΙ το passive `ColumnCornerSnapEngine` ΚΑΙ το νέο projection δεν έβρισκαν τίποτα στις ορατές γωνίες (ίδια κλάση με ADR-397 #2 grip fix, που είχε διορθωθεί μόνο στο `column-grip-utils`). Fix: ×`mmScaleFor(params)` στα offsets (mirror `computeColumnGeometry`). Διορθώνει επίσης beam→column anchor snap σε non-mm scenes (Boy Scout). +1 meter-scene test. mm scenes αμετάβλητα (s=1). |
 | 2026-05-29 | Extension (ADR-398) | **Column Body Corner Projection Snap** — column parity με τον τοίχο (§17). Όταν ο χρήστης μετακινεί (hot-grip 3-click), αλλάζει διαστάσεις (resize grips) ή σχεδιάζει κολώνα, οι 4 footprint γωνίες της προβάλλονται και η πιο κοντινή ελκύεται σε στόχο (το label δείχνει τον τύπο στόχου, π.χ. «Γωνία κολώνας»). NEW: `bim/columns/column-corner-snap.ts` (core SSoT) + `column-corner-snap.test.ts` (9/9). Refactor (params-based core, μηδέν duplication): `column-anchors.ts` (`getColumnAnchorWorldPointsFromParams`), `column-corner-anchors.ts` (`getColumnCornerWorldPointsFromParams`). Bridge: `GripDragStore.ts` (+`dragAnchor` + `setActiveDragGripAnchor`), `grip-hotgrip-actions.ts` (publish move base), `grip-mouse-handlers.ts` (publish columnGripKind + resize anchor), `column-tool-bridge-store.ts` + `useColumnTool.ts` (+`getSceneUnits`). Consumers: `mouse-handler-move.ts` (grip + draw branches), `mouse-handler-up.ts` (grip + draw commit). |
 
 ---
@@ -883,6 +884,20 @@ ColumnParams (proposed)
   (+`getSceneUnits`). Ghost === commit (μάθημα ADR-397).
 
 `column-rotation` εξαιρείται (γωνιακή πράξη, όχι corner-alignment).
+
+### 17.4b 🔴 ROOT-CAUSE fix — meter-scene unit mismatch (2026-05-29)
+
+Giorgio live test: «πάλι τα ίδια — δεν εμφανίζονται έλξεις/κείμενα στις γωνίες
+κολώνας». Αιτία ΟΧΙ το νέο projection αλλά **προϋπάρχον** bug που έσπαγε ΚΑΙ το
+passive `ColumnCornerSnapEngine`: το `column-anchors.ts::localToWorld` πρόσθετε mm
+local offsets (`dx·width` κ.λπ.) στο `position` (scene units) **χωρίς**
+`mmScaleFor`. Σε meter scene (`mmScaleFor=0.001`) μια 400mm κολώνα → corner anchors
+στα `position ± 200` scene units (= 200 m) → off-screen → καμία έλξη στις ορατές
+γωνίες (που ζωγραφίζονται σωστά μέσω `computeColumnGeometry`, το οποίο ΕΦΑΡΜΟΖΕΙ
+`s`). Ίδια κλάση με ADR-397 #2 (grip off-screen), που είχε διορθωθεί ΜΟΝΟ στο
+`column-grip-utils`, όχι στο snap-anchors path. Fix: `× mmScaleFor(params)` στα
+offsets (`position` μένει αμετάβλητο). Μάθημα (ξανά): partial fix ενός unit-mismatch
+= silent divergence σε άλλο pipeline.
 
 ### 17.5 Files
 
