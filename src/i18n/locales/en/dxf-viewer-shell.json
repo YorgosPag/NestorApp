@@ -1861,6 +1861,7 @@
         "mat-stone-masonry": "Stone masonry",
         "mat-concrete-block": "Concrete block",
         "mat-eps": "Expanded polystyrene (EPS)",
+        "mat-eps-graphite": "Graphite polystyrene (Neopor)",
         "mat-xps": "Extruded polystyrene (XPS)",
         "mat-mineral-wool": "Mineral wool",
         "mat-plaster-int": "Interior plaster",

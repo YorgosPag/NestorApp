@@ -38,6 +38,7 @@ import type {
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { ColumnBaseBinding, ColumnTopBinding } from './bim-binding';
+import type { EnvelopeLayer } from './thermal-envelope-types';
 
 // ─── Sub-type discriminator (ADR-363 §5.6) ───────────────────────────────────
 
@@ -166,6 +167,13 @@ export interface ColumnParams {
   readonly polygon?: ColumnPolygonParams;
   /** ADR-363 Phase 8 — I-shape override (only meaningful αν kind='I-shape'). */
   readonly ishape?: ColumnIShapeParams;
+  /**
+   * ADR-396 Phase P2 — External thermal envelope (ETICS) exterior layer.
+   * Zone Z1 (κατακόρυφη όψη). Optional/non-breaking: στήλες χωρίς
+   * θερμοπρόσοψη δουλεύουν ως έχουν. Set by the P6 auto-apply command.
+   * `thickness_m` σε ΜΕΤΡΑ (SSoT unit), όχι mm.
+   */
+  readonly envelopeLayer?: EnvelopeLayer;
   /**
    * DXF canvas coordinate unit. Always stored so `computeColumnGeometry` can
    * convert mm scalars (width/depth) → canvas units for 2D footprint offsets.

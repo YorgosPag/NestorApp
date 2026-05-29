@@ -36,6 +36,7 @@ import type {
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
+import type { EnvelopeLayer } from './thermal-envelope-types';
 
 // ─── Sub-type discriminator (ADR-363 §5.5) ───────────────────────────────────
 
@@ -120,6 +121,14 @@ export interface SlabParams {
   readonly storeyId?: string;
   /** mm. Top face offset από storey reference elevation. Default 0 = FFL @ storey level. */
   readonly offsetFromStorey?: number;
+  /**
+   * ADR-396 Phase P2 — External thermal envelope (ETICS) flat layer.
+   * Zone Z2 (οροφή πιλοτής / soffit, κάτω παρειά εκτεθειμένης πλάκας) ή
+   * Z3 (δώμα / top, επάνω παρειά). Η ζώνη καθορίζεται στο `EnvelopeLayer.zone`.
+   * Optional/non-breaking. Set by the P6 auto-apply command.
+   * `thickness_m` σε ΜΕΤΡΑ (SSoT unit), όχι mm.
+   */
+  readonly envelopeLayer?: EnvelopeLayer;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

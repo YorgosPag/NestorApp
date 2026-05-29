@@ -1861,6 +1861,7 @@
         "mat-stone-masonry": "Λιθοδομή",
         "mat-concrete-block": "Τσιμεντόλιθος",
         "mat-eps": "Διογκωμένη πολυστερίνη",
+        "mat-eps-graphite": "Γραφιτούχα πολυστερίνη (Neopor)",
         "mat-xps": "Εξηλασμένη πολυστερίνη",
         "mat-mineral-wool": "Πετροβάμβακας",
         "mat-plaster-int": "Εσωτερικός σοβάς",

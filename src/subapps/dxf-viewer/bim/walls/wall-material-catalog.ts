@@ -27,6 +27,7 @@ export const WALL_MATERIAL_PRESET_IDS = [
   'mat-stone-masonry',
   'mat-concrete-block',
   'mat-eps',
+  'mat-eps-graphite',
   'mat-xps',
   'mat-mineral-wool',
   'mat-plaster-int',

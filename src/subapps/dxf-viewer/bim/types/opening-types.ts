@@ -26,6 +26,7 @@ import type {
   BoundingBox3D,
 } from './bim-base';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
+import type { EnvelopeLayer } from './thermal-envelope-types';
 
 // ─── Sub-type discriminator (ADR-363 §5.4) ───────────────────────────────────
 
@@ -111,6 +112,15 @@ export interface OpeningParams {
    * Phase A leaves this `undefined`; reserved για draggable tag implementation.
    */
   readonly tagOffset?: { readonly dx: number; readonly dy: number };
+  /**
+   * ADR-396 Phase P2 — Reveal insulation (Zone Z4, περβάζια κουφωμάτων).
+   * Ένα `EnvelopeLayer` (zone='Z4') που εκφράζει κοινό υλικό + πάχος για τις
+   * 4 λωρίδες (αρ./δεξ./πάνω/κάτω) που ντύνουν εσωτερικά το άνοιγμα. Οι
+   * γεωμετρικές διαστάσεις των λωρίδων υπολογίζονται από
+   * `computeRevealStrips()` (envelope-contribution). Optional/non-breaking·
+   * χωριστό πάχος από Z1 (default 0.05m). Set by the P6 auto-apply command.
+   */
+  readonly revealInsulation?: EnvelopeLayer;
 }
 
 // ─── Geometry cache (derivable from params + host wall; SSoT = params) ──────
