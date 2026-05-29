@@ -16,6 +16,7 @@ import {
   IfcGuidSchema,
   IfcPropertySetSchema,
 } from './ifc-entity-mixin';
+import { EnvelopeLayerSchema } from './thermal-envelope.schemas';
 
 // ─── Primitive schemas ──────────────────────────────────────────────────────
 
@@ -57,6 +58,8 @@ export const BeamParamsSchema = z
     sceneUnits: z.string().optional(),
     storeyId: z.string().min(1).optional(),
     offsetFromStorey: z.number().finite().optional(),
+    // ─── ADR-396 P7 — ETICS exterior insulation layer (Z1) ───────────────────
+    envelopeLayer: EnvelopeLayerSchema.optional(),
   })
   .strict();
 
