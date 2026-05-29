@@ -111,7 +111,7 @@ export function ConflictDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="size-5 text-[hsl(var(--bg-warning))]" aria-hidden="true" />
+            <AlertTriangle className="size-5 text-[hsl(var(--text-warning))]" aria-hidden="true" />
             {t(titleKey, { defaultValue: '' })}
           </DialogTitle>
           <DialogDescription className="whitespace-pre-line">{body}</DialogDescription>
