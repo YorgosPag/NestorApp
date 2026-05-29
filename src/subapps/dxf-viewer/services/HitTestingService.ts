@@ -23,6 +23,7 @@ import { resolveEntityLayerName } from '../stores/LayerStore';
 // ADR-358 Phase 8 — fallback to recompute stair geometry when missing (StairDoc
 // from Firestore is persisted without geometry, ADR §G6 re-derivable contract).
 import { computeStairGeometry } from '../bim/geometry/stairs/StairGeometryService';
+import { computeColumnGeometry } from '../bim/geometry/column-geometry';
 import { buildBimEntityModel } from '../bim/utils/bim-entity-passthrough';
 import type { BimElementType } from '../bim/types/bim-base';
 
@@ -310,11 +311,19 @@ export class HitTestingService {
           validation: stairData.validation,
         } as unknown as EntityModel;
       }
-      // ADR-363 Phases 1B/4/5 — wall/column/beam are direct entities (no DXF wrapper).
+      // ADR-397 — column needs a geometry-recompute fallback (mirror stair):
+      // a Firestore-loaded `ColumnEntity` may arrive before its geometry cache is
+      // hydrated; without `geometry.bbox` BoundsCalculator drops it from the
+      // spatial index → body-click selection silently fails.
+      case 'column': {
+        const col = entity as unknown as Partial<import('../bim/types/column-types').ColumnEntity>;
+        const geometry = col.geometry ?? (col.params ? computeColumnGeometry(col.params) : undefined);
+        return buildBimEntityModel('column', { ...(entity as object), geometry } as typeof entity, baseModel);
+      }
+      // ADR-363 Phases 1B/5 — wall/beam are direct entities (no DXF wrapper).
       // `geometry.bbox` powers spatial broad-phase via BoundsCalculator.calculateBimEntityBounds.
       // SSoT: buildBimEntityModel in bim/utils/bim-entity-passthrough.ts.
       case 'wall':
-      case 'column':
       case 'beam':
         return buildBimEntityModel(entity.type as BimElementType, entity, baseModel);
       // ADR-363 Bug 1 v2 fix (2026-05-25) — `opening` IS wrapped στο

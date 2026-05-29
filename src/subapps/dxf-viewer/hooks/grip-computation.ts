@@ -15,10 +15,12 @@ import type { GripInfo, StairGripKind, WallGripKind } from './useGripMovement';
 import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, OpeningGripKind } from './grip-types';
 import type { WallEntity } from '../bim/types/wall-types';
 import type { BeamEntity } from '../bim/types/beam-types';
+import type { ColumnEntity } from '../bim/types/column-types';
 import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
 import { getStairGrips } from '../bim/stairs/stair-grips';
 import { getWallGrips } from '../bim/walls/wall-grips';
 import { getBeamGrips } from '../bim/beams/beam-grips';
+import { getColumnGrips } from '../bim/columns/column-grips';
 import { getSlabGrips } from '../bim/slabs/slab-grips';
 import { getSlabOpeningGrips } from '../bim/slab-openings/slab-opening-grips';
 import { getOpeningGrips } from '../bim/walls/opening-grips';
@@ -273,6 +275,15 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
 
     case 'beam': {
       grips.push(...getBeamGrips(entity as unknown as BeamEntity));
+      break;
+    }
+
+    case 'column': {
+      // ADR-397 — parametric column grips (center MOVE / rotation / width / depth
+      // + variant handles). Without this case the interactive grip registry got
+      // ZERO column grips, so hover/hot-grip/drag never fired (only the render-loop
+      // move glyph was visible). Mirrors wall/beam dispatch.
+      grips.push(...getColumnGrips(entity as unknown as ColumnEntity));
       break;
     }
 

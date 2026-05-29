@@ -83,6 +83,48 @@ describe('column-grips — getColumnGrips (Phase 4.5)', () => {
     expect(grips[3].columnGripKind).toBe('column-depth');
   });
 
+  it('ADR-397 — grip handles stay on the column body in a metre-unit scene (mm→scene scaled)', () => {
+    // position in scene units (metres), width/depth in mm. With sceneUnits='m'
+    // the scale is 0.001 → handle offsets must be tiny (~0.2-0.5), NOT 200+.
+    const col = makeColumnEntity({
+      ...buildDefaultColumnParams({ x: 10, y: 8 }, 'rectangular'),
+      sceneUnits: 'm',
+      position: { x: 10, y: 8, z: 0 },
+      width: 400,
+      depth: 600,
+      rotation: 0,
+      anchor: 'center',
+    });
+    const grips = getColumnGrips(col);
+    // centroid (anchor=center) == position.
+    expect(grips[0].position).toEqual({ x: 10, y: 8 });
+    // rotation handle: y + (600/2 + 200)*0.001 = 8 + 0.5 = 8.5 (on body, not 508).
+    expect(grips[1].position.x).toBeCloseTo(10, 6);
+    expect(grips[1].position.y).toBeCloseTo(8.5, 6);
+    // width handle: x + (400/2)*0.001 = 10.2 (not 210).
+    expect(grips[2].position.x).toBeCloseTo(10.2, 6);
+    expect(grips[2].position.y).toBeCloseTo(8, 6);
+    // depth handle: y + (600/2)*0.001 = 8.3 (not 308).
+    expect(grips[3].position.y).toBeCloseTo(8.3, 6);
+  });
+
+  it('ADR-397 — width resize tracks cursor 1:1 in a metre scene (scene delta ÷ s → mm)', () => {
+    const col = makeColumnEntity({
+      ...buildDefaultColumnParams({ x: 0, y: 0 }, 'rectangular'),
+      sceneUnits: 'm',
+      width: 400,
+      anchor: 'center',
+      rotation: 0,
+    });
+    // Drag the width handle +0.1 scene-units (metres) along +X. anchor=center →
+    // coefX=0.5, s=0.001 → newWidth = 400 + 0.1/(0.5*0.001) = 400 + 200 = 600 mm.
+    const next = applyColumnGripDrag('column-width', {
+      originalParams: col.params,
+      delta: { x: 0.1, y: 0 },
+    });
+    expect(next.width).toBeCloseTo(600, 3);
+  });
+
   it('2. circular → 2 grips (center, width=radius)', () => {
     const grips = getColumnGrips(makeCircular());
     expect(grips).toHaveLength(2);

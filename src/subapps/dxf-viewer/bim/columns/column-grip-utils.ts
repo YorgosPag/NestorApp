@@ -13,6 +13,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnParams } from '../types/column-types';
 import { ANCHOR_OFFSETS } from '../types/column-types';
 import { polygonBboxMm } from './column-anchors';
+import { mmScaleFor } from '../../utils/scene-units';
 
 export const DEG_TO_RAD = Math.PI / 180;
 export const RAD_TO_DEG = 180 / Math.PI;
@@ -57,6 +58,11 @@ export function computeCentroidWorld(params: ColumnParams): Point2D {
   if (params.kind === 'circular') {
     return { x: params.position.x, y: params.position.y };
   }
+  // ADR-397 — `params.position` is in scene units (the click point) but
+  // width/depth are in mm; scale the anchor shift by `mmScaleFor` so the centroid
+  // lands correctly in metre/cm scenes (same SSoT factor `computeColumnGeometry`
+  // applies). See feedback: BIM grip positions must be scene-unit-correct.
+  const s = mmScaleFor(params);
   const { dx, dy } = ANCHOR_OFFSETS[params.anchor];
   let dimX: number;
   let dimY: number;
@@ -66,7 +72,7 @@ export function computeCentroidWorld(params: ColumnParams): Point2D {
     dimX = params.width;
     dimY = params.depth;
   }
-  const shift = rotate({ x: -dx * dimX, y: -dy * dimY }, params.rotation);
+  const shift = rotate({ x: -dx * dimX * s, y: -dy * dimY * s }, params.rotation);
   return { x: params.position.x + shift.x, y: params.position.y + shift.y };
 }
 
@@ -76,8 +82,12 @@ export function computeCentroidWorld(params: ColumnParams): Point2D {
  * centroid.
  */
 export function localToWorld(local: Point2D, params: ColumnParams): Point2D {
+  // ADR-397 — `local` is a mm offset in the column's own frame; scale to scene
+  // units (mirror `computeCentroidWorld`) so variant handles do not drift
+  // off-screen in metre/cm scenes.
+  const s = mmScaleFor(params);
   const centroid = computeCentroidWorld(params);
-  const rotated = rotate(local, params.rotation);
+  const rotated = rotate({ x: local.x * s, y: local.y * s }, params.rotation);
   return { x: centroid.x + rotated.x, y: centroid.y + rotated.y };
 }
 

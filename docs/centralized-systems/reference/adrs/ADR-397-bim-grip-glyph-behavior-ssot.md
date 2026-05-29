@@ -237,6 +237,18 @@ Column ήδη: `applyColumnGripDrag` → `UpdateColumnParamsCommand` → `comput
 
 **Εναπομείναντα γνωστά (όχι regression ADR-397, pre-existing tech-debt):** stair `project2D` local· `opening`/`slab-opening` tools inline emit (δικό τους resolver pattern)· wall `rotateWall` inlines spin. Καταγράφονται ως Boy-Scout/ratchet follow-ups, όχι silent.
 
+## 12d. Runtime fixes — column grips δεν δούλευαν end-to-end (2026-05-29, Giorgio test)
+
+Ο Giorgio δοκίμασε ορθογώνια κολώνα: δεν επιλεγόταν, φαινόταν ΜΟΝΟ το move glyph, όχι rotation/width/depth. Διάγνωση (parallel Explore) αποκάλυψε **4 pre-existing bugs** που έκαναν τις κολώνες μη-λειτουργικές — το ADR-397 Phase 2 ισχυριζόταν parity αλλά τα unit tests έλεγχαν `getColumnGrips` ΑΠΟΜΟΝΩΜΕΝΑ, όχι το πλήρες interactive pipeline. Διορθώθηκαν:
+
+1. **🔴 `computeDxfEntityGrips` (`hooks/grip-computation.ts`) δεν είχε `case 'column'`** → ο interactive grip registry έπαιρνε ΜΗΔΕΝ column grips (hover/hot-grip/drag ποτέ δεν πυροδοτούνταν· φαινόταν μόνο το render-loop move glyph). **Fix:** προστέθηκε `case 'column'` → `getColumnGrips` (mirror wall/beam). **Root cause του «μόνο move glyph».**
+2. **🔴 Unit mismatch (off-screen grips)** — `params.position` σε scene-units αλλά width/depth/`ROTATION_HANDLE_OFFSET_MM` σε mm, ΧΩΡΙΣ `mmScaleFor` (η ίδια παραβίαση [[feedback_grip_positions_read_geometry]] που είχαν οι τοίχοι). Σε metre scene τα handles έπεφταν 1000× μακριά· μόνο το centroid (anchor=center, shift=0) έμενε on-screen. **Fix:** `computeCentroidWorld` + `localToWorld` (→ καλύπτει ΚΑΙ variant handles) + width/depth/rotation handle fns scale by `mmScaleFor`.
+3. **🟡 Selection** — `HitTestingService.convertToEntityModel` `case 'column'` δεν είχε geometry-recompute fallback (το stair είχε)· Firestore-loaded column χωρίς `geometry` → dropped από spatial index → body-click δεν επέλεγε. **Fix:** `computeColumnGeometry(params)` fallback.
+4. **🟡 Drag math** — `resizeWidth`/`resizeDepth` ανέμειγναν scene-unit delta με mm param. **Fix:** `÷ mmScaleFor` (mirror wall `resizeThickness`).
+
+**Tests:** +2 νέα (metre-scene grip-position scaling + width-resize tracking). Existing mm tests intact (s=1 no-op).
+**Εναπομείνον (flagged):** variant **resize drag** (L/T/I `resizeArmLength`/`resizeFlangeLength`/… σε `column-variant-grips.ts`) έχει το ίδιο mm/scene mismatch — οι POSITIONS διορθώθηκαν (via `localToWorld`), το resize-drag των variants σε non-mm scenes μένει follow-up (Giorgio δοκίμασε rectangular). `calculatePriority` column case (cosmetic) deferred.
+
 ---
 
 ## 13. Out of scope / flagged

@@ -66,9 +66,10 @@ import {
   computeCentroidWorld,
   farEdgeSignX,
   farEdgeSignY,
+  localToWorld,
   projectDeltaToLocal,
-  rotate,
 } from './column-grip-utils';
+import { mmScaleFor } from '../../utils/scene-units';
 import {
   armLengthHandlePosition,
   armWidthHandlePosition,
@@ -93,34 +94,30 @@ import {
  * radius representation — visually πέφτει στην περίμετρο του circumscribed
  * circle, ελαφρώς εκτός polygon για N≠4).
  */
+// ADR-397 — handle positions go through `localToWorld`, which scales the mm
+// local offset by `mmScaleFor(params)` so the handles stay on the column body in
+// metre/cm scenes (the off-screen-grip bug). `localToWorld` already adds the
+// centroid + applies rotation.
 function widthHandleWorld(params: ColumnParams): Point2D {
   if (params.kind === 'circular') {
-    return { x: params.position.x + params.width / 2, y: params.position.y };
+    // Circular handle sits on the world +X radius from `position` (no rotation).
+    return { x: params.position.x + (params.width / 2) * mmScaleFor(params), y: params.position.y };
   }
   if (params.kind === 'polygon') {
-    const centroid = computeCentroidWorld(params);
-    const local = { x: params.width / 2, y: 0 };
-    const rotated = rotate(local, params.rotation);
-    return { x: centroid.x + rotated.x, y: centroid.y + rotated.y };
+    return localToWorld({ x: params.width / 2, y: 0 }, params);
   }
-  const centroid = computeCentroidWorld(params);
   const { dx } = ANCHOR_OFFSETS[params.anchor];
   const signX = farEdgeSignX(dx);
-  const local = { x: (signX * params.width) / 2, y: 0 };
-  const rotated = rotate(local, params.rotation);
-  return { x: centroid.x + rotated.x, y: centroid.y + rotated.y };
+  return localToWorld({ x: (signX * params.width) / 2, y: 0 }, params);
 }
 
 /**
  * World position of the depth grip handle (far edge midpoint along local Y).
  */
 function depthHandleWorld(params: ColumnParams): Point2D {
-  const centroid = computeCentroidWorld(params);
   const { dy } = ANCHOR_OFFSETS[params.anchor];
   const signY = farEdgeSignY(dy);
-  const local = { x: 0, y: (signY * params.depth) / 2 };
-  const rotated = rotate(local, params.rotation);
-  return { x: centroid.x + rotated.x, y: centroid.y + rotated.y };
+  return localToWorld({ x: 0, y: (signY * params.depth) / 2 }, params);
 }
 
 /**
@@ -129,13 +126,10 @@ function depthHandleWorld(params: ColumnParams): Point2D {
  * N-gon bbox dimY (από `polygonBboxMm`) αντί για το meaningless `params.depth`.
  */
 function rotationHandleWorld(params: ColumnParams): Point2D {
-  const centroid = computeCentroidWorld(params);
   const dimY = params.kind === 'polygon'
     ? polygonBboxMm(params.width, params.polygon?.sides).dimY
     : params.depth;
-  const local = { x: 0, y: dimY / 2 + ROTATION_HANDLE_OFFSET_MM };
-  const rotated = rotate(local, params.rotation);
-  return { x: centroid.x + rotated.x, y: centroid.y + rotated.y };
+  return localToWorld({ x: 0, y: dimY / 2 + ROTATION_HANDLE_OFFSET_MM }, params);
 }
 
 // ─── Grip emission (ADR-363 §6 Phase 4.5 + 4.5b) ─────────────────────────────
@@ -417,8 +411,12 @@ function rotateAroundPivot(input: Readonly<ColumnGripDragInput>): ColumnParams {
 
 function resizeWidth(input: Readonly<ColumnGripDragInput>): ColumnParams {
   const { originalParams, delta } = input;
+  // ADR-397 — `delta` is in scene units, `width` in mm; convert the scene-unit
+  // local delta back to mm (÷ s) before adding, so resize tracks the cursor 1:1
+  // in metre/cm scenes (mirror wall `resizeThickness` / `mmScaleFor`).
+  const s = mmScaleFor(originalParams);
   if (originalParams.kind === 'circular') {
-    const newWidth = Math.max(MIN_COLUMN_DIMENSION_MM, originalParams.width + 2 * delta.x);
+    const newWidth = Math.max(MIN_COLUMN_DIMENSION_MM, originalParams.width + (2 * delta.x) / s);
     return { ...originalParams, width: newWidth };
   }
   if (originalParams.kind === 'polygon') {
@@ -426,14 +424,14 @@ function resizeWidth(input: Readonly<ColumnGripDragInput>): ColumnParams {
     // (width/2, 0) → drag dxLocal → newWidth = width + 2·dxLocal (mirror των
     // T-shape flange-length / column-web-thickness symmetric 2× pattern).
     const { dxLocal } = projectDeltaToLocal(delta, originalParams.rotation);
-    const newWidth = Math.max(MIN_COLUMN_DIMENSION_MM, originalParams.width + 2 * dxLocal);
+    const newWidth = Math.max(MIN_COLUMN_DIMENSION_MM, originalParams.width + (2 * dxLocal) / s);
     return { ...originalParams, width: newWidth };
   }
   const { dx } = ANCHOR_OFFSETS[originalParams.anchor];
   const signX = farEdgeSignX(dx);
   const coefX = signX * 0.5 - dx;
   const { dxLocal } = projectDeltaToLocal(delta, originalParams.rotation);
-  const newWidth = Math.max(MIN_COLUMN_DIMENSION_MM, originalParams.width + dxLocal / coefX);
+  const newWidth = Math.max(MIN_COLUMN_DIMENSION_MM, originalParams.width + dxLocal / (coefX * s));
   return { ...originalParams, width: newWidth };
 }
 
@@ -442,10 +440,11 @@ function resizeDepth(input: Readonly<ColumnGripDragInput>): ColumnParams {
   if (originalParams.kind === 'circular' || originalParams.kind === 'polygon') {
     return originalParams;
   }
+  const s = mmScaleFor(originalParams);
   const { dy } = ANCHOR_OFFSETS[originalParams.anchor];
   const signY = farEdgeSignY(dy);
   const coefY = signY * 0.5 - dy;
   const { dyLocal } = projectDeltaToLocal(delta, originalParams.rotation);
-  const newDepth = Math.max(MIN_COLUMN_DIMENSION_MM, originalParams.depth + dyLocal / coefY);
+  const newDepth = Math.max(MIN_COLUMN_DIMENSION_MM, originalParams.depth + dyLocal / (coefY * s));
   return { ...originalParams, depth: newDepth };
 }
