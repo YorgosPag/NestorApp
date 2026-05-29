@@ -164,8 +164,8 @@ Code = source of truth (grep 2026-05-29): υπάρχει **ζωντανό** IFC4
 | **Ribbon / command / UI** | command «Εφαρμογή Θερμοπρόσοψης» + panel (material picker + thickness + reveal thickness + zone toggles + «σε όλους») |
 | **Material catalog** | +`mat-eps-graphite` (Neopor) preset · XPS υπάρχει |
 | **ΑΤΟΕ map** | +graphite EPS → `OIK-10.0x` (επιβεβ. κωδικός OQ-2) |
-| **Persistence + audit** | EnvelopePersistenceHost (mirror 7 BIM hosts) · audit coverage (ADR-379/380 pattern) |
-| **BOQ** | per-zone/floor rows μέσω `BimToBoqBridge` (ADR-395) |
+| **Persistence + audit** | ✅ P7B: ride existing persist hooks via `bim:envelope-applied` event (ΜΗΔΕΝ νέο host) · audit tracked-fields (envelopeLayer/revealInsulation, ADR-379 `diffTrackedFields`) |
+| **BOQ** | ✅ P7B: `envelope-boq-sync.ts` per-zone/floor rows `boq_env_<floorId>_<zone>` (mirror `stair-boq-sync`/ADR-395, ΟΧΙ μέσω `BimToBoqBridge`) |
 | **Visibility** | V/G resolver wiring (ADR-375) — νέα κατηγορία «Θερμοπρόσοψη» |
 | **i18n** | `el` + `en` keys (N.11, ΟΧΙ defaultValue) |
 | **Θερμική απόδοση** | material catalog +`thermalConductivityLambda` (λ) · `computeAssemblyUValue()` SSoT [ΝΕΟ] · ΚΕΝΑΚ max-U config (κλιματική ζώνη) |
@@ -208,7 +208,7 @@ Code = source of truth (grep 2026-05-29): υπάρχει **ζωντανό** IFC4
 | **P4** | 2D rendering (πρώτο ορατό) | EnvelopeRenderer + micro-leaf (ADR-040) · insulation hatch reuse · V/G κατηγορία «Θερμοπρόσοψη» (ADR-375) | 4-5 | P3 | Canvas 2D |
 | **P5** | 3D rendering | `EnvelopeToThree` [ΝΕΟ] (ADR-370 parity) · material resolver · 3D scene wiring | 3-4 | P3 | Canvas 3D |
 | **P6** | UI command + auto-apply | ribbon command «Εφαρμογή Θερμοπρόσοψης» · panel (material + thickness + reveal thickness + zone toggles + «σε όλους») · auto-apply orchestration (περίγραμμα → per-element layers) · i18n | 4-5 | P2,P3 | UI |
-| **P7** | Persistence + audit + BOQ | EnvelopePersistenceHost (mirror 7 BIM hosts) · audit coverage (ADR-379/380) · `BimToBoqBridge` per-zone/floor rows (ADR-395) · Zod schemas +`envelopeLayer`/`revealInsulation` (P2 flag) · `.ssot-registry.json` · tests | 4-5 | P2,P6 | Persistence/BOQ |
+| **P7** ✅ | Persistence + audit + BOQ | **A**: spec persistence (level doc) + Zod unblock. **B**: `envelope-element-applicator` (Z1-Z4 classify) + ride existing persist hooks via `bim:envelope-applied` (ΜΗΔΕΝ νέο host) + audit tracked-fields (ADR-379) + `envelope-boq-sync` per-zone/floor rows (mirror `stair-boq-sync`) + `.ssot-registry.json` + tests | 4-5 | P2,P6 | Persistence/BOQ |
 | **P8** | Θερμική απόδοση (U-value / ΚΕΝΑΚ) | material catalog +`thermalConductivityLambda` (λ) · `computeAssemblyUValue()` SSoT [ΝΕΟ] (`1/Σ(d/λ)`+Rsi/Rse) · ΚΕΝΑΚ max-U ανά κλιματική ζώνη (config, OQ-7) · U-value + pass/warn στο panel (P6) · tests | 3-4 | P1,P6 | Energy |
 | **P9** | IFC interoperability | `ifc-covering-serializer.ts` [ΝΕΟ] (6ος serializer· `IfcCovering INSULATION` + `IfcRelCoversBldgElements` + `IfcMaterialLayerSetUsage` + `Pset_MaterialThermal`) · register `serializers/index.ts` · GUID reuse (ADR-369) · tests | 3-4 | P6,P7,P8 | Interop/IFC |
 
