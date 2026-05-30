@@ -60,15 +60,23 @@ const DIAGONAL_SPACING_MM: Readonly<Record<'aerated-concrete' | 'gypsum', number
 
 // ─── Plan computation ────────────────────────────────────────────────────────
 
-/** Compute `HatchPlan` for a wall body bbox + material. */
+/**
+ * Compute `HatchPlan` for a wall body bbox + material.
+ *
+ * @param spacingScale  Πολλαπλασιαστής spacing (mm → scene units). Default `1`
+ *   (mm scenes, μηδέν αλλαγή στους υπάρχοντες callers). Σε meter scenes ο caller
+ *   περνά `mmToSceneUnits('m')` (=0.001) ώστε το spacing να μετράται στις
+ *   μονάδες του bbox — αλλιώς 80mm = 80m → καμία γραμμή στο band.
+ */
 export function computeWallHatchPlan(
   bbox: BoundingBox3D,
   key: WallMaterialKey,
+  spacingScale = 1,
 ): HatchPlan {
   if (key === 'rc') return computeHatchPlan(bbox, 'rc');
   if (key === 'masonry') return computeHatchPlan(bbox, 'masonry');
   if (key === 'aerated-concrete') {
-    const s = DIAGONAL_SPACING_MM['aerated-concrete'];
+    const s = DIAGONAL_SPACING_MM['aerated-concrete'] * spacingScale;
     return {
       lines: [
         ...buildDiagonalLines(bbox, s, +1),
@@ -80,7 +88,7 @@ export function computeWallHatchPlan(
   }
   // gypsum — single diagonal
   return {
-    lines: buildDiagonalLines(bbox, DIAGONAL_SPACING_MM['gypsum'], +1),
+    lines: buildDiagonalLines(bbox, DIAGONAL_SPACING_MM['gypsum'] * spacingScale, +1),
     dots: [],
     arcs: [],
   };

@@ -11,6 +11,7 @@
 
 import * as THREE from 'three';
 import { buildWallMeshWithOpenings } from '../wall-opening-extrude';
+import { buildStraightWallWithOpenings } from '../BimToThreeConverter';
 import { computeWallGeometry } from '../../../bim/geometry/wall-geometry';
 import type { WallEntity, WallParams } from '../../../bim/types/wall-types';
 import type { OpeningEntity, OpeningParams } from '../../../bim/types/opening-types';
@@ -154,5 +155,58 @@ describe('buildWallMeshWithOpenings', () => {
     const mesh = (result as THREE.Group).children[0] as THREE.Mesh;
     // floorY = 3000 × 0.001 + 5 = 8
     expect(mesh.position.y).toBeCloseTo(8, 5);
+  });
+});
+
+// ADR-363 Phase 1J — straight wall WITH openings, mitered vertical-split.
+describe('buildStraightWallWithOpenings (mitered, vertical split)', () => {
+  it('window (sill>0, top<height) → 2 jambs + sill + header = 4 pieces', () => {
+    const wall = makeStraightWall();
+    const op = makeOpening(wall.id, { kind: 'window', offsetFromStart: 2000, width: 900, sillHeight: 900, height: 1400 });
+    const group = buildStraightWallWithOpenings(wall, [op], MAT, 0, 0) as THREE.Group;
+    expect(group).not.toBeNull();
+    expect(group.children.length).toBe(4);
+    expect(group.userData['bimId']).toBe('wall_test');
+  });
+
+  it('door (sill=0, top<height) → 2 jambs + header = 3 pieces (no sill)', () => {
+    const wall = makeStraightWall();
+    const op = makeOpening(wall.id, { kind: 'door', offsetFromStart: 2000, width: 900, sillHeight: 0, height: 2100 });
+    const group = buildStraightWallWithOpenings(wall, [op], MAT, 0, 0) as THREE.Group;
+    expect(group.children.length).toBe(3);
+  });
+
+  it('opening at the very start (offset 0) → no leading jamb (sill + header + trailing jamb = 3)', () => {
+    const wall = makeStraightWall();
+    const op = makeOpening(wall.id, { kind: 'window', offsetFromStart: 0, width: 900, sillHeight: 900, height: 1400 });
+    const group = buildStraightWallWithOpenings(wall, [op], MAT, 0, 0) as THREE.Group;
+    expect(group.children.length).toBe(3);
+  });
+
+  it('end pieces use the MITERED corner: group plan extent reaches startMiter.outer', () => {
+    // Inject a start miter that pushes the outer-start corner beyond the raw axis start (x<0).
+    const wall = makeStraightWall();
+    const rawOuterStartX = wall.geometry.outerEdge.points[0].x;
+    const mitered = {
+      ...wall,
+      params: {
+        ...wall.params,
+        startMiter: { outer: { x: -0.4, y: -0.2, z: 0 }, inner: { x: 0.1, y: 0.2, z: 0 } },
+      },
+    } as unknown as typeof wall;
+    // Recompute geometry so outerEdge/innerEdge carry the miter.
+    const withGeo = { ...mitered, geometry: (computeWallGeometry(mitered.params, 'straight')) } as typeof wall;
+    expect(withGeo.geometry.outerEdge.points[0].x).toBeCloseTo(-0.4, 6);
+    expect(withGeo.geometry.outerEdge.points[0].x).not.toBeCloseTo(rawOuterStartX, 6);
+    const op = makeOpening(withGeo.id, { offsetFromStart: 2000, width: 900 });
+    const group = buildStraightWallWithOpenings(withGeo, [op], MAT, 0, 0) as THREE.Group;
+    // Some piece vertex must reach the mitered outer-start corner in plan (world x ≈ -0.4).
+    let minX = Infinity;
+    for (const child of group.children) {
+      const geo = (child as THREE.Mesh).geometry;
+      geo.computeBoundingBox();
+      if (geo.boundingBox) minX = Math.min(minX, geo.boundingBox.min.x + child.position.x);
+    }
+    expect(minX).toBeCloseTo(-0.4, 4);
   });
 });

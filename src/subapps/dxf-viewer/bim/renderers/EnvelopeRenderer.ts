@@ -17,13 +17,14 @@
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { HATCH_STROKE_RGBA } from '../walls/wall-hatch-patterns';
+import type { EnvelopeOpeningCut } from '../geometry/envelope-opening-cuts';
 import type { EnvelopeRenderPlan, EnvelopeSlabHatchPlan } from './envelope-render-plan';
 
 export type { EnvelopeRenderPlan, EnvelopeSlabHatchPlan } from './envelope-render-plan';
 export {
   buildEnvelopeRenderPlan,
   buildSlabHatchPlan,
-  buildRevealBandPlan,
+  buildRevealJambPlans,
   resolveEnvelopeHatchKey,
 } from './envelope-render-plan';
 
@@ -85,6 +86,38 @@ export class EnvelopeRenderer {
       ctx.lineTo(b.x, b.y);
     }
     ctx.stroke();
+    ctx.restore();
+  }
+
+  /**
+   * ADR-396 — «τρυπάει» τα ανοίγματα στο band μόνωσης (`destination-out`): η Z1
+   * δεν σκεπάζει πόρτες/παράθυρα. Καλείται ΜΕΤΑ το `render` του ίδιου chain, ΠΡΙΝ
+   * τα Z4 reveals (ώστε τα περβάζια να μην σβήνονται). Ίδιο SSoT band sub-quad με
+   * το 3D (`computeEnvelopeOpeningCuts`) → 2D⟷3D parity.
+   */
+  renderOpeningCuts(
+    cuts: readonly EnvelopeOpeningCut[],
+    transform: ViewTransform,
+    viewport: EnvelopeRenderViewport,
+  ): void {
+    if (cuts.length === 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+    for (const cut of cuts) {
+      const q = cut.bandQuad;
+      if (q.length < 3) continue;
+      ctx.beginPath();
+      const first = this.toScreen(q[0], transform, viewport);
+      ctx.moveTo(first.x, first.y);
+      for (let i = 1; i < q.length; i++) {
+        const s = this.toScreen(q[i], transform, viewport);
+        ctx.lineTo(s.x, s.y);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
     ctx.restore();
   }
 

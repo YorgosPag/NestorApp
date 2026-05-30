@@ -138,8 +138,15 @@ export interface OpeningGeometry {
   readonly position: Point3D;
   /** rad. Host wall axis direction. */
   readonly rotation: number;
-  /** mm. Cutout rectangle outline (4 vertices, world coords). */
+  /** mm. ΕΛΕΥΘΕΡΟ cutout rectangle outline (4 vertices, world coords) = το κούφωμα. */
   readonly outline: Polygon3D;
+  /**
+   * mm. STRUCTURAL cutout outline (ADR-396) — το ελεύθερο `outline` διευρυμένο κατά
+   * το πάχος της περιμετρικής μόνωσης (Z4) σε κάθε άκρο κατά τον άξονα. Ορίζει το
+   * **δομικό κενό στον τοίχο** (η μόνωση τρώει τον τοίχο, όχι το κούφωμα). Present
+   * μόνο όταν `params.revealInsulation` υπάρχει — αλλιώς undefined (consumers → free).
+   */
+  readonly revealOutline?: Polygon3D;
   /** mm. Door swing arc — present only για door / french-door. */
   readonly hingeArc?: Polyline3D;
   /**

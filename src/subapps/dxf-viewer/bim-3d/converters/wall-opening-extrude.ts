@@ -35,6 +35,7 @@ import * as THREE from 'three';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import { getWallAxisVertices } from '../../bim/geometry/wall-geometry';
+import { structuralRevealHeightRangeMm } from '../../bim/geometry/opening-geometry';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
 import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
@@ -93,8 +94,12 @@ export function buildWallMeshWithOpenings(
     // Find openings whose arc range overlaps this segment, push as CW holes.
     const arcEndScene = arcStartScene + segLenScene;
     for (const op of openings) {
-      const openingStartScene = op.params.offsetFromStart * mmFactor;
-      const openingEndScene = openingStartScene + op.params.width * mmFactor;
+      // ADR-396 — STRUCTURAL κενό: η μόνωση Z4 τρώει τον τοίχο → η τρύπα διευρύνεται
+      // κατά `t` περιμετρικά (πλάτος ±t· ύψος structuralRevealHeightRangeMm). Χωρίς
+      // reveal → tScene=0 + range=free (αμετάβλητο).
+      const tScene = (op.params.revealInsulation?.thickness_m ?? 0) * 1000 * mmFactor;
+      const openingStartScene = op.params.offsetFromStart * mmFactor - tScene;
+      const openingEndScene = op.params.offsetFromStart * mmFactor + op.params.width * mmFactor + tScene;
       if (openingEndScene <= arcStartScene) continue;
       if (openingStartScene >= arcEndScene) continue;
 
@@ -103,8 +108,9 @@ export function buildWallMeshWithOpenings(
       const localEndScene = Math.min(segLenScene, openingEndScene - arcStartScene);
       const localStartM = localStartScene;
       const localEndM = localEndScene;
-      const sillM = op.params.sillHeight * MM_TO_M;
-      const topM = sillM + op.params.height * MM_TO_M;
+      const { bottomMm, topMm } = structuralRevealHeightRangeMm(op.params);
+      const sillM = bottomMm * MM_TO_M;
+      const topM = topMm * MM_TO_M;
 
       // CW hole winding (THREE.Path) — opposite of outer ring CCW.
       const hole = new THREE.Path();

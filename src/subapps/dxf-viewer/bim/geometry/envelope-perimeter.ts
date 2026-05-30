@@ -16,7 +16,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { COLUMN_BRIDGE_TOL_M } from '../types/thermal-envelope-types';
 import { computeWallGeometry } from './wall-geometry';
-import { offsetPolyline, polygonCentroid } from './shared/polygon-utils';
+import { offsetPolyline, polygonCentroid, stripClosingDuplicate } from './shared/polygon-utils';
 import {
   prepareColumns,
   captureColumnId,
@@ -411,11 +411,21 @@ function offsetLoopOutward(
   loop: readonly Point3D[],
   thicknessCanvas: number,
   centroid: { x: number; y: number },
+  closed: boolean,
 ): Point3D[] {
   if (thicknessCanvas <= 0 || loop.length < 2) return [...loop];
-  const a = offsetPolyline(loop, thicknessCanvas, 1);
-  const b = offsetPolyline(loop, thicknessCanvas, -1);
-  return meanDistToCentroid(a, centroid) >= meanDistToCentroid(b, centroid) ? a : b;
+  // A closed face loop carries its first point repeated at the end. Offsetting it
+  // as an open polyline mis-mitres that seam vertex → a `thickness`-long diagonal
+  // jog at one corner. Strip the duplicate, offset with closed-mitre, then restore
+  // the closing duplicate so the loop representation matches `exteriorFaceLoop`.
+  const ring = closed ? stripClosingDuplicate(loop) : loop;
+  const a = offsetPolyline(ring, thicknessCanvas, 1, closed);
+  const b = offsetPolyline(ring, thicknessCanvas, -1, closed);
+  const chosen = meanDistToCentroid(a, centroid) >= meanDistToCentroid(b, centroid) ? a : b;
+  if (closed && chosen.length > 0 && ring.length < loop.length) {
+    chosen.push({ ...chosen[0] });
+  }
+  return chosen;
 }
 
 function polylinePerimeterM(points: readonly Point3D[], closed: boolean, s: number): number {
@@ -462,7 +472,7 @@ export function computeEnvelopePerimeter(
     const { ids, closed } = orderComponent(k.id, adj, visited);
     const centroid = componentCentroid(ids, byId, colById);
     const exteriorFace = assembleFaceLoop(ids, closed, byId, adj, colById, centroid, snapCanvas);
-    const insulationOuter = offsetLoopOutward(exteriorFace, thicknessCanvas, centroid);
+    const insulationOuter = offsetLoopOutward(exteriorFace, thicknessCanvas, centroid, closed);
     chains.push({
       exteriorFaceLoop: { points: exteriorFace, closed },
       insulationOuterLoop: { points: insulationOuter, closed },

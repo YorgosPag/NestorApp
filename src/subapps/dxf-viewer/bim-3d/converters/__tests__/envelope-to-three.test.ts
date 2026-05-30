@@ -36,33 +36,59 @@ function squareChain(): EnvelopeChain {
   };
 }
 
+/** Πρώτο child mesh του group κελύφους (per-edge prisms — ADR-396 cutouts). */
+function firstMesh(obj: THREE.Object3D | null): THREE.Mesh {
+  let found: THREE.Mesh | null = null;
+  obj?.traverse((c) => { if (!found && (c as THREE.Mesh).isMesh) found = c as THREE.Mesh; });
+  if (!found) throw new Error('no child mesh');
+  return found;
+}
+
 describe('envelopeChainToMesh (ADR-396 P5)', () => {
-  it('builds an extruded band mesh από closed chain', () => {
-    const mesh = envelopeChainToMesh(squareChain(), 3, 0, GRAPHITE_EPS_MATERIAL_ID, 'lvl-1');
-    expect(mesh).not.toBeNull();
-    expect(mesh).toBeInstanceOf(THREE.Mesh);
-    expect(mesh!.geometry).toBeInstanceOf(THREE.BufferGeometry);
-    expect(mesh!.geometry.getAttribute('position').count).toBeGreaterThan(0);
+  it('builds a per-edge prism group από closed chain', () => {
+    const grp = envelopeChainToMesh(squareChain(), 3, 0, GRAPHITE_EPS_MATERIAL_ID, 'lvl-1');
+    expect(grp).not.toBeNull();
+    expect(grp).toBeInstanceOf(THREE.Group);
+    // 4 ακμές (closed square, no opening cuts) → 4 prism meshes.
+    expect(grp!.children.length).toBe(4);
+    const mesh = firstMesh(grp);
+    expect(mesh.geometry).toBeInstanceOf(THREE.BufferGeometry);
+    expect(mesh.geometry.getAttribute('position').count).toBeGreaterThan(0);
   });
 
-  it('tags το mesh με bimType=envelope + levelId + matId', () => {
-    const mesh = envelopeChainToMesh(squareChain(), 3, 0, GRAPHITE_EPS_MATERIAL_ID, 'lvl-1');
-    expect(mesh!.userData['bimType']).toBe('envelope');
-    expect(mesh!.userData['levelId']).toBe('lvl-1');
-    expect(mesh!.userData['matId']).toBe('elem-envelope');
+  it('tags group με bimType=envelope + levelId· child meshes με matId', () => {
+    const grp = envelopeChainToMesh(squareChain(), 3, 0, GRAPHITE_EPS_MATERIAL_ID, 'lvl-1');
+    expect(grp!.userData['bimType']).toBe('envelope');
+    expect(grp!.userData['levelId']).toBe('lvl-1');
+    expect(firstMesh(grp).userData['matId']).toBe('elem-envelope');
   });
 
-  it('extrude depth = ύψος ορόφου (bbox height σε world Y μετά rotation)', () => {
-    const mesh = envelopeChainToMesh(squareChain(), 3, 0, GRAPHITE_EPS_MATERIAL_ID);
-    mesh!.geometry.computeBoundingBox();
-    const bb = mesh!.geometry.boundingBox!;
+  it('extrude depth = ύψος ορόφου (world bbox height μετά rotation)', () => {
+    const grp = envelopeChainToMesh(squareChain(), 3, 0, GRAPHITE_EPS_MATERIAL_ID);
+    const bb = new THREE.Box3().setFromObject(grp!);
     // Μετά το ROT_X_NEG_90, το extrude (local Z) γίνεται world Y → ύψος ≈ 3.
     expect(bb.max.y - bb.min.y).toBeCloseTo(3, 5);
   });
 
-  it('position.y = floorElevationMm*0.001 + buildingBaseElevationM (ίδια base με walls)', () => {
-    const mesh = envelopeChainToMesh(squareChain(), 3, 3000, GRAPHITE_EPS_MATERIAL_ID, 'lvl-2', 10);
-    expect(mesh!.position.y).toBeCloseTo(3 + 10, 5);
+  it('base = floorElevationMm*0.001 + buildingBaseElevationM (ίδια με walls)', () => {
+    const grp = envelopeChainToMesh(squareChain(), 3, 3000, GRAPHITE_EPS_MATERIAL_ID, 'lvl-2', 10);
+    const bb = new THREE.Box3().setFromObject(grp!);
+    // base = 3000mm→3 + 10 = 13· κορυφή = 13 + ύψος 3 = 16.
+    expect(bb.min.y).toBeCloseTo(13, 5);
+    expect(bb.max.y).toBeCloseTo(16, 5);
+  });
+
+  it('cuts τρυπάνε το κέλυφος (ανοιχτό κουφώμα → επιπλέον prisms)', () => {
+    const chain = squareChain();
+    // Παράθυρο στο μέσο της ακμής 0: span [0.4,0.6], sill 0.9, head 2.3 (m).
+    const grp = envelopeChainToMesh(
+      chain, 3, 0, GRAPHITE_EPS_MATERIAL_ID, 'lvl-1', 0,
+      [{ edgeIndex: 0, tStart: 0.4, tEnd: 0.6, sillM: 0.9, headM: 2.3,
+         bandQuad: [pt(-0.1, -0.1), pt(-0.1, -0.1), pt(0, 0), pt(0, 0)] }],
+    );
+    // Ακμή 0 → 4 prisms (left solid + under-sill + above-head + right solid)·
+    // ακμές 1,2,3 → 1 prism έκαστη. Σύνολο 7 > 4 (baseline χωρίς cuts).
+    expect(grp!.children.length).toBeGreaterThan(4);
   });
 
   it('επιστρέφει null όταν heightM <= 0', () => {
@@ -111,25 +137,45 @@ describe('slabFlatLayerToMesh (ADR-396 Z2/Z3)', () => {
   });
 });
 
-describe('revealLiningToMesh (ADR-396 Z4)', () => {
-  const OUTLINE: Point3D[] = [pt(0, 0), pt(1, 0), pt(1, 0.25), pt(0, 0.25)];
+describe('revealLiningToMesh (ADR-396 Z4 — λωρίδες περβαζιού, structural)', () => {
+  // free outline (width 1m άξονας x, depth 0.25m)· structural = +0.05 σε κάθε άκρο
+  // (η μόνωση τρώει τον τοίχο, ΕΞΩ από το ελεύθερο άνοιγμα).
+  const FREE: Point3D[] = [pt(0, 0), pt(1, 0), pt(1, 0.25), pt(0, 0.25)];
+  const STRUCT: Point3D[] = [pt(-0.05, 0), pt(1.05, 0), pt(1.05, 0.25), pt(-0.05, 0.25)];
 
-  it('χτίζει lining frame extruded καθ’ ύψος ανοίγματος', () => {
-    const mesh = revealLiningToMesh(OUTLINE, 0.05, 900, 1100, 0, 0, GRAPHITE_EPS_MATERIAL_ID, 'lvl-1');
-    expect(mesh).not.toBeNull();
-    expect(mesh!.userData['bimType']).toBe('envelope');
-    mesh!.geometry.computeBoundingBox();
-    const bb = mesh!.geometry.boundingBox!;
-    expect(bb.max.y - bb.min.y).toBeCloseTo(1.1, 5); // openingHeight
+  it('παράθυρο (sill>0) → 4 λωρίδες (2 παραστάδες + πρέκι + ποδιά)', () => {
+    const grp = revealLiningToMesh(FREE, STRUCT, 0.05, 900, 1100, 0, 0, GRAPHITE_EPS_MATERIAL_ID, 'lvl-1');
+    expect(grp).not.toBeNull();
+    expect(grp).toBeInstanceOf(THREE.Group);
+    expect(grp!.children.length).toBe(4);
+    expect(grp!.userData['bimType']).toBe('envelope');
+    expect(grp!.userData['levelId']).toBe('lvl-1');
+    expect(firstMesh(grp).userData['matId']).toBe('elem-envelope');
   });
 
-  it('position.y = floorElev + base + sillHeight (ποδιά ανοίγματος)', () => {
-    const mesh = revealLiningToMesh(OUTLINE, 0.05, 900, 1100, 0, 0, GRAPHITE_EPS_MATERIAL_ID);
-    expect(mesh!.position.y).toBeCloseTo(0.9, 5);
+  it('πόρτα (sill=0) → 3 λωρίδες (παραστάδες + πρέκι, ΧΩΡΙΣ ποδιά)', () => {
+    const grp = revealLiningToMesh(FREE, STRUCT, 0.05, 0, 2100, 0, 0, GRAPHITE_EPS_MATERIAL_ID);
+    expect(grp!.children.length).toBe(3);
   });
 
-  it('επιστρέφει null για ύψος ≤ 0 ή πάχος ≤ 0', () => {
-    expect(revealLiningToMesh(OUTLINE, 0.05, 900, 0, 0, 0, GRAPHITE_EPS_MATERIAL_ID)).toBeNull();
-    expect(revealLiningToMesh(OUTLINE, 0, 900, 1100, 0, 0, GRAPHITE_EPS_MATERIAL_ID)).toBeNull();
+  it('structural ύψος: βάση = sill−t (0.85)· κορυφή = head+t (2.05)', () => {
+    // sill 0.9, head 2.0, t 0.05 → structBottom 0.85, structTop 2.05 (η μόνωση τρώει πρέκι/ποδιά).
+    const grp = revealLiningToMesh(FREE, STRUCT, 0.05, 900, 1100, 0, 0, GRAPHITE_EPS_MATERIAL_ID);
+    const bb = new THREE.Box3().setFromObject(grp!);
+    expect(bb.min.y).toBeCloseTo(0.85, 5);
+    expect(bb.max.y).toBeCloseTo(2.05, 5);
+  });
+
+  it('εφαρμόζει floorElevationMm + buildingBaseElevationM στη βάση (sill−t)', () => {
+    // floorElev 3000mm→3 + base 10 + (sill 0.9 − t 0.05) = 13.85.
+    const grp = revealLiningToMesh(FREE, STRUCT, 0.05, 900, 1100, 3000, 10, GRAPHITE_EPS_MATERIAL_ID);
+    const bb = new THREE.Box3().setFromObject(grp!);
+    expect(bb.min.y).toBeCloseTo(13.85, 5);
+  });
+
+  it('επιστρέφει null για ύψος ≤ 0, πάχος ≤ 0, ή free outline < 4 κορυφές', () => {
+    expect(revealLiningToMesh(FREE, STRUCT, 0.05, 900, 0, 0, 0, GRAPHITE_EPS_MATERIAL_ID)).toBeNull();
+    expect(revealLiningToMesh(FREE, STRUCT, 0, 900, 1100, 0, 0, GRAPHITE_EPS_MATERIAL_ID)).toBeNull();
+    expect(revealLiningToMesh([pt(0, 0), pt(1, 0)], STRUCT, 0.05, 900, 1100, 0, 0, GRAPHITE_EPS_MATERIAL_ID)).toBeNull();
   });
 });

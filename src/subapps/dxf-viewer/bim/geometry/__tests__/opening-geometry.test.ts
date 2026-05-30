@@ -14,7 +14,11 @@
  *   - `projectPointToWallOffset` returns the axis-projected scalar for valid points
  */
 
-import { computeOpeningGeometry, projectPointToWallOffset } from '../opening-geometry';
+import {
+  computeOpeningGeometry,
+  projectPointToWallOffset,
+  structuralRevealHeightRangeMm,
+} from '../opening-geometry';
 import { computeWallGeometry } from '../wall-geometry';
 import type { WallEntity, WallParams } from '../../types/wall-types';
 import type { OpeningParams } from '../../types/opening-types';
@@ -57,6 +61,38 @@ function makeOpening(overrides?: Partial<OpeningParams>): OpeningParams {
     ...overrides,
   };
 }
+
+describe('computeOpeningGeometry — outline projects onto actual wall edges (mitered/slanted)', () => {
+  // Straight wall με miters που κάνουν την OUTER ακμή ΛΟΞΗ ως προς τον άξονα.
+  const miteredWall = (): WallEntity => makeWall({
+    thickness: 200,
+    startMiter: { outer: { x: -300, y: 350 }, inner: { x: 80, y: -100 } },
+    endMiter: { outer: { x: 5000, y: 100 }, inner: { x: 5000, y: -100 } },
+  } as Partial<WallParams>);
+  const miteredOpening = () => makeOpening({ kind: 'window', width: 1000, offsetFromStart: 2000, sillHeight: 900 });
+  const yOnLine = (p0: { x: number; y: number }, p1: { x: number; y: number }, x: number) =>
+    p0.y + (p1.y - p0.y) * ((x - p0.x) / (p1.x - p0.x));
+
+  it('reaches the slanted outer/inner edges (μηδέν τραπεζοειδές υπόλειμμα)', () => {
+    const wall = miteredWall();
+    const outer = wall.geometry.outerEdge.points;
+    const inner = wall.geometry.innerEdge.points;
+    const v = computeOpeningGeometry(miteredOpening(), wall).outline.vertices;
+    // Σειρά: v0,v1 = inner side· v2,v3 = outer side. Κάθε κορυφή ΠΑΝΩ στην ακμή.
+    expect(v[0].y).toBeCloseTo(yOnLine(inner[0], inner[1], v[0].x), 4);
+    expect(v[1].y).toBeCloseTo(yOnLine(inner[0], inner[1], v[1].x), 4);
+    expect(v[2].y).toBeCloseTo(yOnLine(outer[0], outer[1], v[2].x), 4);
+    expect(v[3].y).toBeCloseTo(yOnLine(outer[0], outer[1], v[3].x), 4);
+    // Επιβεβαίωση ότι ΟΝΤΩΣ έφτασε τη λοξή ακμή (όχι το παλιό halfT=100).
+    expect(v[3].y).toBeGreaterThan(200);
+  });
+
+  it('jamb faces μένουν κάθετες στον άξονα (ίδιο x ανά παρειά, horizontal wall)', () => {
+    const v = computeOpeningGeometry(miteredOpening(), miteredWall()).outline.vertices;
+    expect(v[0].x).toBeCloseTo(v[3].x, 4); // start jamb: inner & outer ίδιο x
+    expect(v[1].x).toBeCloseTo(v[2].x, 4); // end jamb
+  });
+});
 
 describe('computeOpeningGeometry — outline', () => {
   it('produces a 4-vertex rectangle outline', () => {
@@ -341,5 +377,58 @@ describe("computeOpeningGeometry — scene units 'm'", () => {
       gExplicit.outline.vertices[0].x,
       FLOAT_TOL,
     );
+  });
+});
+
+// ─── ADR-396 — Structural reveal outline (η μόνωση τρώει τον τοίχο) ────────────
+
+const REVEAL = { materialId: 'mat-eps-graphite', thickness_m: 0.05, zone: 'Z4' } as const;
+
+describe('computeOpeningGeometry — revealOutline (structural)', () => {
+  it('απουσιάζει χωρίς revealInsulation', () => {
+    const g = computeOpeningGeometry(makeOpening({ kind: 'window' }), makeWall());
+    expect(g.revealOutline).toBeUndefined();
+  });
+
+  it('διευρύνει το free outline κατά t σε κάθε άκρο ΚΑΤΑ ΤΟΝ ΑΞΟΝΑ (horizontal wall)', () => {
+    // free width 1000 @ offset 2000 → x∈[2000,3000]· reveal 50mm → structural x∈[1950,3050].
+    const op = makeOpening({ kind: 'window', width: 1000, offsetFromStart: 2000, revealInsulation: { ...REVEAL } });
+    const g = computeOpeningGeometry(op, makeWall());
+    expect(g.revealOutline).toBeDefined();
+    const xs = g.revealOutline!.vertices.map((v) => v.x);
+    expect(Math.min(...xs)).toBeCloseTo(1950, 4);
+    expect(Math.max(...xs)).toBeCloseTo(3050, 4);
+    // πάχος (perpendicular) αμετάβλητο = free (250).
+    const ys = g.revealOutline!.vertices.map((v) => v.y);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(250, 4);
+    // το ελεύθερο outline ΜΕΝΕΙ 1000 (κούφωμα σταθερό).
+    const fxs = g.outline.vertices.map((v) => v.x);
+    expect(Math.max(...fxs) - Math.min(...fxs)).toBeCloseTo(1000, 4);
+  });
+
+  it('παρειές structural ΚΑΘΕΤΕΣ στον άξονα (ίδιο x ανά παρειά, horizontal)', () => {
+    const op = makeOpening({ kind: 'window', revealInsulation: { ...REVEAL } });
+    const v = computeOpeningGeometry(op, makeWall()).revealOutline!.vertices;
+    expect(v[0].x).toBeCloseTo(v[3].x, 4); // start jamb
+    expect(v[1].x).toBeCloseTo(v[2].x, 4); // end jamb
+  });
+});
+
+describe('structuralRevealHeightRangeMm', () => {
+  it('πόρτα (sill 0) + reveal 50 → [0 .. head+50]', () => {
+    const r = structuralRevealHeightRangeMm(makeOpening({ kind: 'door', sillHeight: 0, height: 2100, revealInsulation: { ...REVEAL } }));
+    expect(r.bottomMm).toBe(0);
+    expect(r.topMm).toBe(2150); // 0+2100 + 50
+  });
+
+  it('παράθυρο (sill 900) + reveal 50 → [850 .. 2350]', () => {
+    const r = structuralRevealHeightRangeMm(makeOpening({ kind: 'window', sillHeight: 900, height: 1400, revealInsulation: { ...REVEAL } }));
+    expect(r.bottomMm).toBe(850);  // 900 − 50
+    expect(r.topMm).toBe(2350);    // 900+1400 + 50
+  });
+
+  it('χωρίς reveal → αμετάβλητο (door [0..head], window [sill..head])', () => {
+    expect(structuralRevealHeightRangeMm(makeOpening({ kind: 'door', sillHeight: 0, height: 2100 }))).toEqual({ bottomMm: 0, topMm: 2100 });
+    expect(structuralRevealHeightRangeMm(makeOpening({ kind: 'window', sillHeight: 900, height: 1400 }))).toEqual({ bottomMm: 900, topMm: 2300 });
   });
 });

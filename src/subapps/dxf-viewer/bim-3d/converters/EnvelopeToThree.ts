@@ -23,8 +23,10 @@
 import * as THREE from 'three';
 import type { Point3D } from '../../bim/types/bim-base';
 import type { EnvelopeChain } from '../../bim/geometry/envelope-perimeter';
+import type { EnvelopeOpeningCut } from '../../bim/geometry/envelope-opening-cuts';
+import { envelopeFaceEdges } from '../../bim/geometry/envelope-opening-cuts';
+import { computeRevealJambQuads } from '../../bim/geometry/reveal-lining-geometry';
 import type { EnvelopeMaterialId } from '../../bim/types/thermal-envelope-types';
-import { insetClosedPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { resolveEnvelopeMaterial } from '../materials/envelope-material-resolver';
 import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
 import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
@@ -69,29 +71,98 @@ function makeEnvelopeMesh(
   return mesh;
 }
 
-/**
- * Band cross-section: outer (insulation outer face) forward → inner (wall exterior
- * face) reversed → close. Mirror του `buildWallShape`.
- */
-function buildBandShape(outer: readonly Point3D[], inner: readonly Point3D[]): THREE.Shape | null {
-  if (outer.length < 2 || inner.length < 2) return null;
-  const shape = new THREE.Shape();
-  shape.moveTo(outer[0].x, outer[0].y);
-  for (let i = 1; i < outer.length; i++) shape.lineTo(outer[i].x, outer[i].y);
-  for (let i = inner.length - 1; i >= 0; i--) shape.lineTo(inner[i].x, inner[i].y);
-  shape.closePath();
-  return shape;
+const POS_EPS = 1e-4;
+const T_EPS = 1e-6;
+
+function lerpPt(a: Point3D, b: Point3D, t: number): Point3D {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
+}
+
+/** Band sub-quad `[O_a, O_b, F_b, F_a]` (outer fwd → inner reversed) στο [t0,t1]. */
+function bandQuadAt(
+  f0: Point3D, f1: Point3D, o0: Point3D, o1: Point3D, t0: number, t1: number,
+): Point3D[] {
+  return [lerpPt(o0, o1, t0), lerpPt(o0, o1, t1), lerpPt(f0, f1, t1), lerpPt(f0, f1, t0)];
 }
 
 /**
- * Χτίζει το 3D mesh ενός envelope chain (Z1 κατακόρυφο κέλυφος).
+ * Ένα κατακόρυφο prism: band quad (canvas units) εξωθημένο κατακόρυφα στο
+ * εύρος [z0,z1] (ΜΕΤΡΑ) πάνω από τη βάση `baseY`. Mirror της convention του
+ * `envelopeChainToMesh` (shape XY → Y-up μέσω ROT_X_NEG_90).
+ */
+function addBandPrism(
+  group: THREE.Group,
+  quad: readonly Point3D[],
+  z0: number,
+  z1: number,
+  baseY: number,
+  materialId: EnvelopeMaterialId,
+  levelId?: string,
+): void {
+  const depth = z1 - z0;
+  if (depth <= POS_EPS) return;
+  const shape = new THREE.Shape();
+  shape.moveTo(quad[0].x, quad[0].y);
+  for (let i = 1; i < quad.length; i++) shape.lineTo(quad[i].x, quad[i].y);
+  shape.closePath();
+
+  const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false });
+  geo.applyMatrix4(ROT_X_NEG_90);
+  group.add(makeEnvelopeMesh(geo, materialId, baseY + z0, levelId));
+}
+
+/**
+ * Χτίζει μια ακμή του κελύφους με κατακόρυφο split στα ανοίγματα: solid spans
+ * πλήρους ύψους + ανά άνοιγμα prism κάτω από ποδιά [0,sill] + πάνω από πρέκι
+ * [head,height]. Το κενό του κουφώματος μένει διαμπερές (Z4 reveal το ντύνει).
+ */
+function addEdge(
+  group: THREE.Group,
+  f0: Point3D, f1: Point3D, o0: Point3D, o1: Point3D,
+  heightM: number,
+  baseY: number,
+  edgeCuts: readonly EnvelopeOpeningCut[],
+  materialId: EnvelopeMaterialId,
+  levelId?: string,
+): void {
+  if (edgeCuts.length === 0) {
+    addBandPrism(group, bandQuadAt(f0, f1, o0, o1, 0, 1), 0, heightM, baseY, materialId, levelId);
+    return;
+  }
+  const sorted = [...edgeCuts].sort((a, b) => a.tStart - b.tStart);
+  let cursor = 0;
+  for (const c of sorted) {
+    const a = Math.max(0, Math.min(1, c.tStart));
+    const b = Math.max(0, Math.min(1, c.tEnd));
+    if (b - a < T_EPS) continue;
+    if (a > cursor + T_EPS) {
+      addBandPrism(group, bandQuadAt(f0, f1, o0, o1, cursor, a), 0, heightM, baseY, materialId, levelId);
+    }
+    const sill = Math.max(0, Math.min(heightM, c.sillM));
+    const head = Math.max(0, Math.min(heightM, c.headM));
+    const span = bandQuadAt(f0, f1, o0, o1, a, b);
+    if (sill > POS_EPS) addBandPrism(group, span, 0, sill, baseY, materialId, levelId);
+    if (head < heightM - POS_EPS) addBandPrism(group, span, head, heightM, baseY, materialId, levelId);
+    cursor = Math.max(cursor, b);
+  }
+  if (cursor < 1 - T_EPS) {
+    addBandPrism(group, bandQuadAt(f0, f1, o0, o1, cursor, 1), 0, heightM, baseY, materialId, levelId);
+  }
+}
+
+/**
+ * Χτίζει το 3D κέλυφος ενός envelope chain (Z1) ως **per-edge band prisms**.
+ * Διαδοχικές ακμές μοιράζονται ακριβώς τις κορυφές γωνίας (mitered offset loop)
+ * → μηδέν gap, καθαρές γωνίες. Τα `cuts` σπάνε κατακόρυφα τις ακμές ώστε τα
+ * ανοίγματα να μένουν διαμπερή (ADR-396 — η μόνωση δεν σκεπάζει κουφώματα).
  *
  * @param chain                 το chain από `computeEnvelopePerimeter` (P3).
- * @param heightM               ύψος ορόφου σε ΜΕΤΡΑ (extrude depth).
+ * @param heightM               ύψος ορόφου σε ΜΕΤΡΑ.
  * @param floorElevationMm      base elevation ορόφου σε mm (ίδιο με walls).
  * @param materialId            υλικό κελύφους από `ThermalEnvelopeSpec`.
  * @param levelId               ενεργός όροφος (tag).
  * @param buildingBaseElevationM building base σε ΜΕΤΡΑ (ADR-369, ίδιο με walls).
+ * @param cuts                  opening cutouts από `computeEnvelopeOpeningCuts`.
  * @returns null αν το chain είναι degenerate ή `heightM <= 0`.
  */
 export function envelopeChainToMesh(
@@ -101,21 +172,35 @@ export function envelopeChainToMesh(
   materialId: EnvelopeMaterialId,
   levelId?: string,
   buildingBaseElevationM = 0,
-): THREE.Mesh | null {
+  cuts: readonly EnvelopeOpeningCut[] = [],
+): THREE.Object3D | null {
   if (heightM <= 0) return null;
-  const shape = buildBandShape(chain.insulationOuterLoop.points, chain.exteriorFaceLoop.points);
-  if (!shape) return null;
+  const face = chain.exteriorFaceLoop.points;
+  const outer = chain.insulationOuterLoop.points;
+  if (face.length < 2 || outer.length !== face.length) return null;
 
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: heightM, bevelEnabled: false });
-  geo.applyMatrix4(ROT_X_NEG_90);
+  const baseY = floorElevationMm * MM_TO_M + buildingBaseElevationM;
+  const byEdge = new Map<number, EnvelopeOpeningCut[]>();
+  for (const c of cuts) {
+    const arr = byEdge.get(c.edgeIndex);
+    if (arr) arr.push(c);
+    else byEdge.set(c.edgeIndex, [c]);
+  }
 
-  // Ίδια κατακόρυφη βάση με τους τοίχους που τυλίγει (wallToMesh:159).
-  return makeEnvelopeMesh(
-    geo,
-    materialId,
-    floorElevationMm * MM_TO_M + buildingBaseElevationM,
-    levelId,
-  );
+  const edges = envelopeFaceEdges(chain.exteriorFaceLoop);
+  const group = new THREE.Group();
+  for (let i = 0; i < edges.length; i++) {
+    const [a, b] = edges[i];
+    addEdge(
+      group, face[a], face[b], outer[a], outer[b],
+      heightM, baseY, byEdge.get(i) ?? [], materialId, levelId,
+    );
+  }
+
+  if (group.children.length === 0) return null;
+  group.userData['bimType'] = 'envelope';
+  if (levelId !== undefined) group.userData['levelId'] = levelId;
+  return group;
 }
 
 /**
@@ -161,22 +246,43 @@ export function slabFlatLayerToMesh(
   return makeEnvelopeMesh(geo, materialId, posY, levelId);
 }
 
+/** Prism από ένα plan quad (scene/meter units) εξωθημένο κατά `depthM` (Y-up). */
+function stripPrismGeometry(quad: readonly Point3D[], depthM: number): THREE.BufferGeometry | null {
+  if (quad.length < 3 || depthM <= 0) return null;
+  const shape = new THREE.Shape();
+  shape.moveTo(quad[0].x, quad[0].y);
+  for (let i = 1; i < quad.length; i++) shape.lineTo(quad[i].x, quad[i].y);
+  shape.closePath();
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: depthM, bevelEnabled: false });
+  geo.applyMatrix4(ROT_X_NEG_90);
+  return geo;
+}
+
 /**
- * ADR-396 P-RENDER — Z4 μόνωση περβαζιών ανοίγματος (3D lining).
+ * ADR-396 P-RENDER — Z4 μόνωση περβαζιών ανοίγματος (3D lining), **ανά λωρίδα**.
  *
- * Frame (band ανάμεσα στο `outline` της τρύπας και το inset του) εξωθημένο
- * καθ' ύψος του ανοίγματος — ντύνει εσωτερικά τις 4 παρειές (αρ./δεξ./πάνω/κάτω).
- * `outline` = meters (ίδιος χώρος με wall geometry). Κατακόρυφη βάση = ποδιά
- * ανοίγματος (`sillHeight`) πάνω από τη βάση ορόφου (mirror `wall-opening-extrude`).
+ * Ντύνει εσωτερικά τις παρειές του ανοίγματος με ρητές λωρίδες (όχι κλειστή
+ * «κάννη»), ώστε να αντιστοιχούν στο φυσικό ETICS detail:
+ *   - **Παραστάδες** (αριστερά/δεξιά): κατακόρυφα prisms σε όλο το ύψος ανοίγματος,
+ *     πάχους `revealThicknessM` κατά τον άξονα, βάθους = πάχος τοίχου.
+ *   - **Πρέκι** (πάνω): οριζόντια λωρίδα στην οροφή της τρύπας (W × T × reveal).
+ *   - **Ποδιά** (κάτω): οριζόντια λωρίδα στη βάση — **ΜΟΝΟ για παράθυρα**
+ *     (`sillHeightMm > 0`)· οι πόρτες (sill 0) δεν έχουν ποδιά (mirror του
+ *     `buildStraightWallWithOpenings`: sill piece μόνο όταν `sillM > 0`).
+ *
+ * `outline` = 4 κορυφές (CCW: start-outer, end-outer, end-inner, start-inner) σε
+ * scene/meter units (ίδιος χώρος με wall geometry). Κατακόρυφη βάση = `sillHeight`
+ * πάνω από τη βάση ορόφου.
  *
  * @param outline          4-vertex cutout rectangle (meters).
  * @param revealThicknessM πάχος περβαζιού σε ΜΕΤΡΑ (`revealInsulation.thickness_m`).
- * @param sillHeightMm     ποδιά ανοίγματος σε mm (0 για πόρτες).
+ * @param sillHeightMm     ποδιά ανοίγματος σε mm (0 για πόρτες → χωρίς κάτω λωρίδα).
  * @param openingHeightMm  ύψος ανοίγματος σε mm.
- * @returns null αν degenerate inset/outline ή ύψος ≤ 0.
+ * @returns `THREE.Group` με τις λωρίδες, ή null αν degenerate.
  */
 export function revealLiningToMesh(
-  outline: readonly Point3D[],
+  freeOutline: readonly Point3D[],
+  structuralOutline: readonly Point3D[],
   revealThicknessM: number,
   sillHeightMm: number,
   openingHeightMm: number,
@@ -184,18 +290,42 @@ export function revealLiningToMesh(
   baseElevationM: number,
   materialId: EnvelopeMaterialId,
   levelId?: string,
-): THREE.Mesh | null {
+): THREE.Group | null {
   const openingHeightM = openingHeightMm * MM_TO_M;
-  if (openingHeightM <= 0 || revealThicknessM <= 0) return null;
+  if (freeOutline.length < 4 || openingHeightM <= 0 || revealThicknessM <= 0) return null;
 
-  const inner = insetClosedPolygon(outline, revealThicknessM);
-  if (!inner) return null;
-  const shape = buildBandShape(outline, inner);
-  if (!shape) return null;
+  // ADR-396 — η μόνωση τρώει τον ΤΟΙΧΟ (όχι το κούφωμα). Παραστάδες = δαχτυλίδι ΕΞΩ από
+  // το free (το `computeRevealJambQuads` κάνει πλέον ring, κοινό SSoT με 2D). Πρέκι/ποδιά
+  // = ΠΑΝΩ/ΚΑΤΩ από το ελεύθερο head/sill, σε structural footprint (πλήρες πλάτος).
+  const jambs = computeRevealJambQuads(freeOutline, revealThicknessM);
+  if (!jambs) return null;
 
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: openingHeightM, bevelEnabled: false });
-  geo.applyMatrix4(ROT_X_NEG_90);
+  const tM = revealThicknessM;
+  const sillM = sillHeightMm * MM_TO_M;
+  const headM = sillM + openingHeightM;
+  const isWindow = sillHeightMm > 0; // πόρτα (sill 0) → χωρίς ποδιά
+  // Structural κατακόρυφο εύρος: πρέκι +t πάνω από head· ποδιά −t κάτω από sill (παράθυρα).
+  const structBottomM = isWindow ? Math.max(0, sillM - tM) : 0;
+  const structTopM = headM + tM;
+  const baseY = floorElevationMm * MM_TO_M + baseElevationM;
+  const lining = structuralOutline.length >= 4 ? structuralOutline : freeOutline;
 
-  const posY = floorElevationMm * MM_TO_M + baseElevationM + sillHeightMm * MM_TO_M;
-  return makeEnvelopeMesh(geo, materialId, posY, levelId);
+  const group = new THREE.Group();
+  group.userData['bimType'] = 'envelope';
+  if (levelId !== undefined) group.userData['levelId'] = levelId;
+  const addStrip = (quad: readonly Point3D[], depthM: number, posY: number): void => {
+    if (depthM <= 1e-6) return;
+    const geo = stripPrismGeometry(quad, depthM);
+    if (geo) group.add(makeEnvelopeMesh(geo, materialId, posY, levelId));
+  };
+
+  // Παραστάδες — κατακόρυφες, σε όλο το structural ύψος (συναντούν πρέκι/ποδιά).
+  addStrip(jambs.startJamb, structTopM - structBottomM, baseY + structBottomM);
+  addStrip(jambs.endJamb, structTopM - structBottomM, baseY + structBottomM);
+  // Πρέκι — οριζόντια λωρίδα ΠΑΝΩ από το head [head .. head+t].
+  addStrip(lining, tM, baseY + headM);
+  // Ποδιά — μόνο για παράθυρα — ΚΑΤΩ από το sill [sill−t .. sill].
+  if (isWindow) addStrip(lining, tM, baseY + structBottomM);
+
+  return group.children.length > 0 ? group : null;
 }

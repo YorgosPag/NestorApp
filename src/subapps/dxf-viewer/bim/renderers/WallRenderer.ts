@@ -203,6 +203,24 @@ export class WallRenderer extends BaseEntityRenderer {
 
     // Build closed polygon: outer (start→end) + inner (end→start) reverses
     // so the perimeter is well-oriented for fill.
+    this.traceFootprintRing(outer, inner);
+    this.ctx.fill();
+
+    // ADR-363 Phase 2.5 — subtract hosted opening outlines from the fill.
+    this.punchHostedOpenings(wall);
+
+    // ADR-396 fix — `punchHostedOpenings` issues its own `beginPath()` calls, so
+    // the current canvas path is now the LAST opening rectangle, NOT the wall
+    // ring (save/restore does NOT restore the path). Re-trace the ring before
+    // stroking, else the wall outline + mitred corners vanish when an opening
+    // is hosted (the stroke would draw the opening rect instead).
+    this.traceFootprintRing(outer, inner);
+    if (_edgeColor !== null) this.ctx.strokeStyle = _edgeColor;
+    this.ctx.stroke();
+  }
+
+  /** Traces the wall footprint ring (outer fwd + inner reversed) as a closed path. */
+  private traceFootprintRing(outer: readonly Point3D[], inner: readonly Point3D[]): void {
     this.ctx.beginPath();
     const first = this.worldToScreen({ x: outer[0].x, y: outer[0].y });
     this.ctx.moveTo(first.x, first.y);
@@ -215,13 +233,6 @@ export class WallRenderer extends BaseEntityRenderer {
       this.ctx.lineTo(s.x, s.y);
     }
     this.ctx.closePath();
-    this.ctx.fill();
-
-    // ADR-363 Phase 2.5 — subtract hosted opening outlines from the fill.
-    this.punchHostedOpenings(wall);
-
-    if (_edgeColor !== null) this.ctx.strokeStyle = _edgeColor;
-    this.ctx.stroke();
   }
 
   /**
@@ -237,7 +248,10 @@ export class WallRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.ctx.globalCompositeOperation = 'destination-out';
     for (const opening of openings) {
-      const verts = opening.geometry?.outline.vertices;
+      // ADR-396 — η τρύπα στον τοίχο = STRUCTURAL outline (free + reveal margin) ώστε
+      // η περιμετρική μόνωση Z4 να γεμίζει το δαχτυλίδι σε ΤΡΥΠΑ, όχι πάνω σε γεμάτο
+      // τοίχο. Χωρίς reveal → revealOutline undefined → free outline (αμετάβλητο).
+      const verts = opening.geometry?.revealOutline?.vertices ?? opening.geometry?.outline.vertices;
       if (!verts || verts.length < 3) continue;
       this.ctx.beginPath();
       const start = this.worldToScreen({ x: verts[0].x, y: verts[0].y });

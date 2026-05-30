@@ -194,9 +194,23 @@ function setPatchField(acc: Map<string, MutablePatch>, id: string, field: keyof 
 /**
  * Compute geometric miter points for a corner junction between two walls.
  *
- * The outer miter point is the intersection of the two outer edge lines
- * (both running parallel to their respective axes, offset by signed halfThickness).
- * The inner miter point is the intersection of the two inner edge lines.
+ * Each wall's `outer` edge is the +sign (CCW-perpendicular) side of its own axis.
+ * Whether wall A's outer side faces the SAME physical side as wall B's outer side
+ * depends on how the two walls meet at the corner:
+ *
+ *   - "Consistent traversal" (A.end ↔ B.start, or A.start ↔ B.end): the walls form
+ *     a continuous path through the corner. A's outer and B's outer face the same
+ *     side → pair A_outer with B_outer. Both walls share an identical MiterPt.
+ *
+ *   - "Inconsistent" (A.end ↔ B.end, or A.start ↔ B.start): the walls meet
+ *     head-to-head / tail-to-tail. A's outer faces the concave side while B's outer
+ *     faces the convex side (or vice-versa) → pair A_outer with B_INNER. Wall B then
+ *     receives a SWAPPED MiterPt so its own outer/inner endpoints land on the right
+ *     physical corners. Pairing outer-with-outer here would produce a phantom vertex
+ *     outside the wall outline (the triangular-gap / wrong-corner bug).
+ *
+ * `swap` (computed by the caller from the start/end parity XOR the walls' flip
+ * difference) selects the inconsistent pairing.
  *
  * Returns null if either edge pair is parallel (shouldn't happen when sinAngle
  * already passed MIN_ANGLE check) or if the miter extension exceeds
@@ -209,6 +223,9 @@ function setPatchField(acc: Map<string, MutablePatch>, id: string, field: keyof 
  * @param aLen - Full axis length of A (canvas units) — for overflow guard
  * @param bPt  - Corner axis point of wall B
  * @param bUx, bUy, bHalfSigned, bLen — same for wall B
+ * @param swap - true → inconsistent corner (pair A_outer with B_inner, swap B's MiterPt)
+ * @returns `{ miterA, miterB }` — per-wall miter points (identical when !swap,
+ *          mirror-swapped when swap) — or null when the miter is degenerate/overflows.
  */
 function cornerMiter(
   aPt: { x: number; y: number },
@@ -219,7 +236,8 @@ function cornerMiter(
   bUx: number, bUy: number,
   bHalfSigned: number,
   bLen: number,
-): MiterPt | null {
+  swap: boolean,
+): { miterA: MiterPt; miterB: MiterPt } | null {
   // Outer and inner edge start points at the corner, perpendicular offset:
   //   CCW 90° of (ux, uy) = (-uy, ux) scaled by halfSigned.
   const aOuterX = aPt.x + (-aUy) * aHalfSigned;
@@ -232,18 +250,25 @@ function cornerMiter(
   const bInnerX = bPt.x - (-bUy) * bHalfSigned;
   const bInnerY = bPt.y - ( bUx) * bHalfSigned;
 
-  // Outer-outer edge intersection (both parallel to their axis, so pass a
-  // second point 1 unit along the axis direction).
+  // Select which of B's edges pairs with A's outer/inner. Consistent corner →
+  // outer↔outer, inner↔inner. Inconsistent corner (swap) → outer↔inner.
+  const bForOuterX = swap ? bInnerX : bOuterX;
+  const bForOuterY = swap ? bInnerY : bOuterY;
+  const bForInnerX = swap ? bOuterX : bInnerX;
+  const bForInnerY = swap ? bOuterY : bInnerY;
+
+  // A_outer ∩ (B's outer-side edge) — both parallel to their axis, so pass a
+  // second point 1 unit along the axis direction.
   const outerIsect = lineLineIntersect(
     aOuterX, aOuterY, aOuterX + aUx, aOuterY + aUy,
-    bOuterX, bOuterY, bOuterX + bUx, bOuterY + bUy,
+    bForOuterX, bForOuterY, bForOuterX + bUx, bForOuterY + bUy,
   );
   if (!outerIsect) return null;
 
-  // Inner-inner edge intersection.
+  // A_inner ∩ (B's inner-side edge).
   const innerIsect = lineLineIntersect(
     aInnerX, aInnerY, aInnerX + aUx, aInnerY + aUy,
-    bInnerX, bInnerY, bInnerX + bUx, bInnerY + bUy,
+    bForInnerX, bForInnerY, bForInnerX + bUx, bForInnerY + bUy,
   );
   if (!innerIsect) return null;
 
@@ -260,15 +285,24 @@ function cornerMiter(
     return null;
   }
 
-  const outer = {
+  // A's corners lie on A's own outer/inner edge lines (parametrised by t along A).
+  const outerA = {
     x: aOuterX + outerIsect.t * aUx,
     y: aOuterY + outerIsect.t * aUy,
   };
-  const inner = {
+  const innerA = {
     x: aInnerX + innerIsect.t * aUx,
     y: aInnerY + innerIsect.t * aUy,
   };
-  return { outer, inner };
+
+  const miterA: MiterPt = { outer: outerA, inner: innerA };
+  // Inconsistent corner → B's outer edge is the one paired with A's inner, so B's
+  // own MiterPt is the mirror of A's. Consistent corner → identical.
+  const miterB: MiterPt = swap
+    ? { outer: innerA, inner: outerA }
+    : { outer: outerA, inner: innerA };
+
+  return { miterA, miterB };
 }
 
 /**
@@ -335,15 +369,25 @@ function processPair(
     const aHalfSigned = (a.params.flip ? -1 : 1) * halfA;
     const bHalfSigned = (b.params.flip ? -1 : 1) * halfB;
 
+    // Corner orientation. When both endpoints are the same type (start+start or
+    // end+end) the walls meet head-to-head / tail-to-tail, so A's outer side and
+    // B's outer side face opposite physical sides → swap. Each wall's `flip`
+    // inverts which physical side its outer edge is on, so an odd number of flips
+    // toggles the swap back. (XOR of the two booleans.)
+    const baseSwap = tNearStart === uNearStart;
+    const flipsDiffer = (!!a.params.flip) !== (!!b.params.flip);
+    const swap = baseSwap !== flipsDiffer;
+
     const miter = cornerMiter(
       aPt, aUx, aUy, aHalfSigned, lenA,
       bPt, bUx, bUy, bHalfSigned, lenB,
+      swap,
     );
 
     if (miter) {
-      // Geometric miter available — store for both walls.
-      setPatchField(acc, a.id, tNearStart ? 'startMiter' : 'endMiter', miter);
-      setPatchField(acc, b.id, uNearStart ? 'startMiter' : 'endMiter', miter);
+      // Geometric miter available — store each wall's own (possibly swapped) MiterPt.
+      setPatchField(acc, a.id, tNearStart ? 'startMiter' : 'endMiter', miter.miterA);
+      setPatchField(acc, b.id, uNearStart ? 'startMiter' : 'endMiter', miter.miterB);
     } else {
       // Miter overflows wall bounds → fall back to axis-bevel (Phase 1D-B logic).
       const bevelA = Math.min(halfB / sinA, MAX_BEVEL_FRACTION * lenA);

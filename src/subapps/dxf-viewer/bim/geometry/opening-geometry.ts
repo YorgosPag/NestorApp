@@ -63,7 +63,36 @@ export function computeOpeningGeometry(
   const px = -uy;
   const py = ux;
 
-  const outline = buildOutline(center, ux, uy, px, py, widthScene, thicknessScene);
+  // ADR-363/396 — οι παρειές πρέπει να φτάνουν τις ΠΡΑΓΜΑΤΙΚΕΣ ακμές του τοίχου
+  // (`outerEdge`/`innerEdge`), ΟΧΙ το `άξονας ± πάχος/2`. Σε λοξές γωνίες (miter
+  // junctions) οι ακμές είναι λοξές ως προς τον άξονα → αλλιώς το κόψιμο δεν τις
+  // φτάνει και μένει τραπεζοειδές υπόλειμμα τοίχου στην παρειά. Fallback σε
+  // perpendicular offset όταν λείπει η geometry (π.χ. pre-geometry callers).
+  const halfW = widthScene / 2;
+  const halfT = thicknessScene / 2;
+  const startAxis = { x: center.x - ux * halfW, y: center.y - uy * halfW };
+  const endAxis = { x: center.x + ux * halfW, y: center.y + uy * halfW };
+  const outline = buildOutline(
+    startAxis, endAxis, px, py, halfT,
+    hostWall.geometry?.outerEdge?.points,
+    hostWall.geometry?.innerEdge?.points,
+  );
+  // ADR-396 — structural reveal outline: το ΕΛΕΥΘΕΡΟ άνοιγμα διευρυμένο κατά το πάχος
+  // της περιμετρικής μόνωσης (Z4) σε κάθε άκρο ΚΑΤΑ ΤΟΝ ΑΞΟΝΑ. Η μόνωση τρώει τον
+  // τοίχο (όχι το κούφωμα) → το δομικό κενό = free + 2·t. Reuse `buildOutline` με
+  // μετατοπισμένα axis points → κάθετες παρειές στις ΠΡΑΓΜΑΤΙΚΕΣ ακμές. Present μόνο
+  // όταν υπάρχει reveal (αλλιώς undefined → οι consumers πέφτουν στο free outline).
+  const revealThkScene = (params.revealInsulation?.thickness_m ?? 0) * 1000 * mmFactor;
+  let revealOutline: Polygon3D | undefined;
+  if (revealThkScene > 0) {
+    const sStart = { x: startAxis.x - ux * revealThkScene, y: startAxis.y - uy * revealThkScene };
+    const sEnd = { x: endAxis.x + ux * revealThkScene, y: endAxis.y + uy * revealThkScene };
+    revealOutline = buildOutline(
+      sStart, sEnd, px, py, halfT,
+      hostWall.geometry?.outerEdge?.points,
+      hostWall.geometry?.innerEdge?.points,
+    );
+  }
   const hingeResult = isHingedKind(params.kind)
     ? buildHingeArc(params.kind, center, ux, uy, px, py, params, widthScene)
     : undefined;
@@ -79,6 +108,7 @@ export function computeOpeningGeometry(
     position: center,
     rotation,
     outline,
+    revealOutline,
     hingeArc: hingeResult?.arc,
     hingeAnchor: hingeResult?.hingeAnchor,
     hingeAnchor2: hingeResult?.hingeAnchor2,
@@ -86,6 +116,21 @@ export function computeOpeningGeometry(
     area: (params.width * params.height) * (MM_TO_M * MM_TO_M),
     perimeter: 2 * (params.width + params.height) * MM_TO_M,
   };
+}
+
+/**
+ * ADR-396 — Structural κατακόρυφο εύρος του cutout όταν υπάρχει reveal μόνωση (3D).
+ * Η μόνωση τρώει το περιβάλλον υλικό: πρέκι `+t` πάνω από το head (πάντα)· ποδιά
+ * `−t` κάτω από το sill (μόνο παράθυρα, `sillHeight > 0`· η πόρτα φτάνει στο δάπεδο).
+ * Χωρίς reveal → `[0|sill .. head]` αμετάβλητο (backward-compat). Όλα σε mm.
+ */
+export function structuralRevealHeightRangeMm(
+  params: OpeningParams,
+): { bottomMm: number; topMm: number } {
+  const t = (params.revealInsulation?.thickness_m ?? 0) * 1000;
+  const headMm = params.sillHeight + params.height;
+  const bottomMm = params.sillHeight > 0 ? Math.max(0, params.sillHeight - t) : 0;
+  return { bottomMm, topMm: headMm + t };
 }
 
 // ─── Polyline axis helpers ────────────────────────────────────────────────────
@@ -173,45 +218,87 @@ function projectPointToPolylineOffset(
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
+/** Max παρειάς reach ως πολλαπλάσιο του halfT — sanity guard για degenerate miters. */
+const MAX_JAMB_REACH = 16;
+
 /**
  * Build the cutout rectangle (4 vertices, world coords). Vertices are ordered
- * CCW starting from the "start-outer" corner so the renderer can stroke /
- * fill consistently with the wall outer / inner edges.
+ * CCW: `[start-(−px), end-(−px), end-(+px), start-(+px)]` (ίδια σειρά με την
+ * προηγούμενη perpendicular έκδοση), ώστε όλοι οι consumers (wall punch, reveal
+ * jambs, 3D, hit-test) να μένουν αμετάβλητοι.
+ *
+ * Κάθε γωνία = τομή της κάθετης γραμμής της παρειάς (από το axis point, διεύθυνση
+ * `±(px,py)`) με την ΠΡΑΓΜΑΤΙΚΗ ακμή τοίχου (`outerEdge`/`innerEdge`). Έτσι το
+ * κόψιμο φτάνει τις λοξές (mitered) ακμές → καθαρή κάθετη παρειά, μηδέν υπόλειμμα.
+ * Fallback σε `axisPt ± px·halfT` όταν λείπουν/δεν τέμνονται οι ακμές.
  */
 function buildOutline(
-  center: Point3D,
-  ux: number,
-  uy: number,
+  startAxis: { readonly x: number; readonly y: number },
+  endAxis: { readonly x: number; readonly y: number },
   px: number,
   py: number,
-  width: number,
-  thickness: number,
+  halfT: number,
+  outerPts: readonly Point3D[] | undefined,
+  innerPts: readonly Point3D[] | undefined,
 ): Polygon3D {
-  const halfW = width / 2;
-  const halfT = thickness / 2;
-  const corners: readonly Point3D[] = [
-    {
-      x: center.x - ux * halfW - px * halfT,
-      y: center.y - uy * halfW - py * halfT,
-      z: 0,
-    },
-    {
-      x: center.x + ux * halfW - px * halfT,
-      y: center.y + uy * halfW - py * halfT,
-      z: 0,
-    },
-    {
-      x: center.x + ux * halfW + px * halfT,
-      y: center.y + uy * halfW + py * halfT,
-      z: 0,
-    },
-    {
-      x: center.x - ux * halfW + px * halfT,
-      y: center.y - uy * halfW + py * halfT,
-      z: 0,
-    },
-  ];
-  return { vertices: corners };
+  const start = jambCorners(startAxis, px, py, halfT, outerPts, innerPts);
+  const end = jambCorners(endAxis, px, py, halfT, outerPts, innerPts);
+  return { vertices: [start.minus, end.minus, end.plus, start.plus] };
+}
+
+/**
+ * Οι δύο γωνίες (±px πλευρές) μιας παρειάς: τομή της κάθετης γραμμής με τις
+ * ακμές του τοίχου, classified κατά πρόσημο προβολής στο `(px,py)`. Fallback σε
+ * perpendicular offset `halfT` αν λείπει/απορρίπτεται η τομή.
+ */
+function jambCorners(
+  origin: { readonly x: number; readonly y: number },
+  px: number,
+  py: number,
+  halfT: number,
+  outerPts: readonly Point3D[] | undefined,
+  innerPts: readonly Point3D[] | undefined,
+): { plus: Point3D; minus: Point3D } {
+  let plus: Point3D | null = null, plusProj = 0;
+  let minus: Point3D | null = null, minusProj = 0;
+  const consider = (h: Point3D | null): void => {
+    if (!h) return;
+    const proj = (h.x - origin.x) * px + (h.y - origin.y) * py;
+    if (Math.abs(proj) > halfT * MAX_JAMB_REACH) return;
+    if (proj >= 0) { if (!plus || proj > plusProj) { plus = h; plusProj = proj; } }
+    else if (!minus || proj < minusProj) { minus = h; minusProj = proj; }
+  };
+  if (outerPts && outerPts.length >= 2) consider(lineHitPolyline(origin.x, origin.y, px, py, outerPts));
+  if (innerPts && innerPts.length >= 2) consider(lineHitPolyline(origin.x, origin.y, px, py, innerPts));
+  return {
+    plus: plus ?? { x: origin.x + px * halfT, y: origin.y + py * halfT, z: 0 },
+    minus: minus ?? { x: origin.x - px * halfT, y: origin.y - py * halfT, z: 0 },
+  };
+}
+
+/**
+ * Τομή της άπειρης γραμμής `(ox,oy) + t·(dx,dy)` με μια polyline. Επιστρέφει το
+ * σημείο τομής με το μικρότερο `|t|` (πλησιέστερη παρειά), ή null αν καμία ακμή
+ * δεν τέμνεται εντός τμήματος.
+ */
+function lineHitPolyline(
+  ox: number, oy: number, dx: number, dy: number, pts: readonly Point3D[],
+): Point3D | null {
+  let best: Point3D | null = null;
+  let bestAbsT = Infinity;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const ax = pts[i].x, ay = pts[i].y;
+    const ex = pts[i + 1].x - ax, ey = pts[i + 1].y - ay;
+    const denom = ex * dy - ey * dx; // cross(edge, dir)
+    if (Math.abs(denom) < 1e-9) continue; // parallel
+    const s = ((ox - ax) * dy - (oy - ay) * dx) / denom; // param κατά μήκος της ακμής
+    if (s < -1e-6 || s > 1 + 1e-6) continue;
+    const hx = ax + ex * s, hy = ay + ey * s;
+    const t = (hx - ox) * dx + (hy - oy) * dy;
+    const absT = Math.abs(t);
+    if (absT < bestAbsT) { bestAbsT = absT; best = { x: hx, y: hy, z: 0 }; }
+  }
+  return best;
 }
 
 /**

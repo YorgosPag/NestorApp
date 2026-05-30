@@ -23,6 +23,7 @@ import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { getMaterial3D, getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildWallMeshWithOpenings } from './wall-opening-extrude';
+import { computeWallOpeningPieces } from './wall-opening-pieces';
 import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
 import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
 import type { BimCategory } from '../../config/bim-object-styles';
@@ -116,6 +117,61 @@ function buildWallShape(outer: readonly Point3D[], inner: readonly Point3D[]): T
   return shape;
 }
 
+// ── Straight wall WITH openings — mitered vertical-split (ADR-363 Phase 1J) ────
+
+/**
+ * Build a straight wall that hosts openings, PRESERVING the corner miters.
+ *
+ * The per-segment front-face extrude (`buildWallMeshWithOpenings`) builds raw
+ * rectangles from the bare axis and ignores `startMiter`/`endMiter` — so a wall
+ * with a door/window rendered as a blunt box that didn't meet its neighbours
+ * (Giorgio 3D report 2026-05-30). This path instead mirrors the SOLID path: it
+ * reads the MITERED `wall.geometry.outerEdge`/`innerEdge` and splits the wall
+ * into vertical solid pieces — full-height jambs between/around openings + a
+ * sill piece (floor→sill) and header piece (lintel→ceiling) across each opening
+ * — each piece an outer/inner footprint quad (interpolated by arc fraction)
+ * extruded vertically via the shared `buildShape` + `extrudeAndRotate`. The two
+ * wall ends use the exact mitered corner points, so the miters survive.
+ *
+ * Straight-only: outer/inner are 2-point edges, so arc-fraction interpolation is
+ * exact at the ends (the corners). Returns null on degenerate input → caller
+ * falls back to the solid (uncut) path.
+ */
+export function buildStraightWallWithOpenings(
+  wall: WallEntity,
+  openings: readonly OpeningEntity[],
+  material: THREE.Material,
+  floorElevationMm: number,
+  buildingBaseElevationM: number,
+): THREE.Object3D | null {
+  // Κάθετη παρειά κάθε ανοίγματος από το `outline` SSoT (collinear με wall punch
+  // 2D + Z4 + Z1) — ΟΧΙ fraction-lerp ανά πλευρά (που έβγαζε λοξή παρειά σε miters).
+  const pieces = computeWallOpeningPieces(wall, openings);
+  if (!pieces) return null;
+
+  const floorY = floorElevationMm * MM_TO_M + buildingBaseElevationM;
+  const group = new THREE.Group();
+  for (const pc of pieces) {
+    const depth = pc.zTopM - pc.zBotM;
+    if (depth <= 1e-6) continue;
+    const shape = buildShape(pc.quad);
+    if (!shape) continue;
+    const geo = extrudeAndRotate(shape, depth);
+    const mesh = new THREE.Mesh(geo, material);
+    mesh.position.y = floorY + pc.zBotM;
+    mesh.userData['bimId'] = wall.id;
+    mesh.userData['bimType'] = 'wall';
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    attachEdgesProjection(mesh, 'wall');
+    group.add(mesh);
+  }
+  if (group.children.length === 0) return null;
+  group.userData['bimId'] = wall.id;
+  group.userData['bimType'] = 'wall';
+  return group;
+}
+
 // ── Public converters ─────────────────────────────────────────────────────────
 
 export function wallToMesh(
@@ -129,17 +185,16 @@ export function wallToMesh(
   const matId = coreLayer?.materialId ?? CATEGORY_MAT_ID[wall.params.category] ?? 'mat-concrete';
   const material = getMaterial3D(matId);
 
-  // ADR-363 Bug 2 — opening cutouts via per-segment front-face re-extrude.
-  // Mirror του ADR-370 Phase 7 slab-opening pattern, εξαπλωμένο σε όλα τα
-  // wall kinds (straight / curved / polyline) μέσω axis vertex iteration.
+  // ADR-363 Bug 2 — opening cutouts.
+  //   - straight walls: vertical-split pieces from the MITERED footprint
+  //     (`buildStraightWallWithOpenings`) so corner miters survive (Phase 1J fix).
+  //   - curved / polyline: per-segment front-face re-extrude (raw axis — miters
+  //     N/A on multi-segment ends; ADR-370 Phase 7 slab-opening pattern).
   if (openings.length > 0) {
-    const group = buildWallMeshWithOpenings(
-      wall,
-      openings,
-      material,
-      floorElevationMm,
-      buildingBaseElevationM,
-    );
+    const group =
+      wall.kind === 'straight'
+        ? buildStraightWallWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM)
+        : buildWallMeshWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM);
     if (group) {
       group.userData['matId'] = matId;
       if (levelId !== undefined) group.userData['levelId'] = levelId;

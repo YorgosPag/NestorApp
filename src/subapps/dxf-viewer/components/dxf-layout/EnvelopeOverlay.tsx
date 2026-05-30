@@ -25,11 +25,12 @@ import { useEffect, useRef, useSyncExternalStore } from 'react';
 import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import { computeEnvelopePerimeter } from '../../bim/geometry/envelope-perimeter';
+import { computeEnvelopeOpeningCuts } from '../../bim/geometry/envelope-opening-cuts';
 import {
   EnvelopeRenderer,
   buildEnvelopeRenderPlan,
   buildSlabHatchPlan,
-  buildRevealBandPlan,
+  buildRevealJambPlans,
 } from '../../bim/renderers/EnvelopeRenderer';
 import {
   getEnvelopeSpec,
@@ -38,6 +39,7 @@ import {
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { resolveIsEntityVisible } from '../../bim/visibility/visibility-resolver';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { resolveCutState, type ViewRange } from '../../config/bim-view-range';
 
 export interface EnvelopeOverlayProps {
   readonly scene: DxfScene | null;
@@ -56,36 +58,53 @@ function drawExposedSlabHatch(
   scene: DxfScene,
   transform: ViewTransform,
   viewport: Viewport,
+  spacingScale: number,
 ): void {
   for (const e of scene.entities) {
     if (e.type !== 'slab') continue;
     const layer = e.slabEntity.params.envelopeLayer;
     const footprint = e.slabEntity.geometry?.polygon?.vertices;
     if (!layer || !footprint) continue;
-    const plan = buildSlabHatchPlan(footprint, layer.materialId);
+    const plan = buildSlabHatchPlan(footprint, layer.materialId, spacingScale);
     if (plan) renderer.renderSlabHatch(plan, transform, viewport);
   }
 }
 
 /**
- * Z4 — λωρίδες μόνωσης (inset frame) γύρω από κάθε εξωτερικό άνοιγμα. Διαβάζει το
+ * Z4 — μόνωση περβαζιών γύρω από κάθε εξωτερικό άνοιγμα. Στην κάτοψη φαίνονται
+ * **μόνο οι 2 παραστάδες** (jamb strips), ΚΑΘΕΤΕΣ στον άξονα του τοίχου, σε όλο το
+ * πάχος (πρέκι/ποδιά είναι πάνω/κάτω στο Z, μόνο 3D). Solid-polygon hatch ανά
+ * παραστάδα (όπως Z2/Z3) — όχι inset frame (που έβγαζε λοξή παρειά). Διαβάζει το
  * per-element `openingEntity.params.revealInsulation`. Το πάχος (meters) → canvas
  * units μέσω `mmToSceneUnits` (mirror του applicator `buildPerimeterContext`).
+ *
+ * Cut-plane gating (ADR-396): το περβάζι εμφανίζεται ΜΟΝΟ όταν η οριζόντια τομή
+ * της κάτοψης περνά μέσα από το άνοιγμα (`resolveCutState === 'cut'`, ίδιο SSoT με
+ * `OpeningRenderer`). Τομή κάτω από την ποδιά ή πάνω από το πρέκι → ο τοίχος είναι
+ * συμπαγής εκεί → η μόνωση φαίνεται συνεχής μέσω Z1, χωρίς περβάζι.
  */
 function drawOpeningReveals(
   renderer: EnvelopeRenderer,
   scene: DxfScene,
   transform: ViewTransform,
   viewport: Viewport,
+  viewRange: ViewRange,
 ): void {
-  const canvasPerM = mmToSceneUnits(scene.units ?? 'mm') * 1000;
+  const spacingScale = mmToSceneUnits(scene.units ?? 'mm');
+  const canvasPerM = spacingScale * 1000;
   for (const e of scene.entities) {
     if (e.type !== 'opening') continue;
     const reveal = e.openingEntity.params.revealInsulation;
     const outline = e.openingEntity.geometry?.outline?.vertices;
     if (!reveal || !outline) continue;
-    const plan = buildRevealBandPlan(outline, reveal.thickness_m * canvasPerM, reveal.materialId);
-    if (plan) renderer.render(plan, transform, viewport);
+    const { sillHeight, height } = e.openingEntity.params;
+    const cutState = resolveCutState(
+      { zBottomMm: sillHeight, zTopMm: sillHeight + height, category: 'opening' },
+      viewRange,
+    );
+    if (cutState !== 'cut') continue;
+    const jambPlans = buildRevealJambPlans(outline, reveal.thickness_m * canvasPerM, reveal.materialId, spacingScale);
+    for (const plan of jambPlans) renderer.render(plan, transform, viewport);
   }
 }
 
@@ -104,6 +123,7 @@ export function EnvelopeOverlay({
     () => null,
   );
   const objectStyles = useDrawingScaleStore((s) => s.objectStyles);
+  const viewRange = useDrawingScaleStore((s) => s.viewRange);
   const visible = resolveIsEntityVisible({ category: 'envelope' }, { objectStyles });
 
   // ADR-396 P6: ΟΧΙ auto-seed. Το envelope εμφανίζεται ΜΟΝΟ όταν ο χρήστης
@@ -127,8 +147,15 @@ export function EnvelopeOverlay({
     const columns = scene.entities
       .filter((e): e is Extract<DxfEntityUnion, { type: 'column' }> => e.type === 'column')
       .map((c) => ({ id: c.id, params: c.params }));
+    // ADR-396 — ανοίγματα για cutouts στο band μόνωσης (η Z1 δεν σκεπάζει κουφώματα).
+    const openings = scene.entities
+      .filter((e): e is Extract<DxfEntityUnion, { type: 'opening' }> => e.type === 'opening')
+      .map((o) => o.openingEntity);
 
     const renderer = new EnvelopeRenderer(ctx);
+    // Hatch spacing (mm) → scene units· σε meter scenes 80mm θα γινόταν 80m
+    // (καμία γραμμή) — βλ. computeWallHatchPlan.
+    const spacingScale = mmToSceneUnits(scene.units ?? 'mm');
 
     // Z1 — κατακόρυφο κέλυφος (offset perimeter των τοίχων, spec-driven).
     if (walls.length > 0) {
@@ -139,16 +166,19 @@ export function EnvelopeOverlay({
         // → εμφάνιση (isCycle=false λόγω T αλλά ΔΕΝ είναι isolated). Δύο τοίχοι
         // L-shape = ανοιχτό, οριακό — αποκλείεται για καθαρότητα.
         if (chain.wallIds.length < 3) continue;
-        const plan = buildEnvelopeRenderPlan(chain, spec.materialId);
+        const plan = buildEnvelopeRenderPlan(chain, spec.materialId, spacingScale);
         if (plan) renderer.render(plan, transform, viewport);
+        // Τρύπησε τα ανοίγματα ΜΕΤΑ το band του ίδιου chain (πριν τα Z4 reveals).
+        const cuts = computeEnvelopeOpeningCuts(chain, openings, scene.units ?? 'mm');
+        renderer.renderOpeningCuts(cuts, transform, viewport);
       }
     }
 
     // Z2/Z3 — εκτεθειμένες πλάκες· Z4 — περβάζια. Pure read των per-element
     // δεδομένων (envelopeLayer / revealInsulation) — ΟΧΙ re-classify εδώ.
-    drawExposedSlabHatch(renderer, scene, transform, viewport);
-    drawOpeningReveals(renderer, scene, transform, viewport);
-  }, [scene, transform, viewport, spec, visible]);
+    drawExposedSlabHatch(renderer, scene, transform, viewport, spacingScale);
+    drawOpeningReveals(renderer, scene, transform, viewport, viewRange);
+  }, [scene, transform, viewport, spec, visible, viewRange]);
 
   return (
     <canvas

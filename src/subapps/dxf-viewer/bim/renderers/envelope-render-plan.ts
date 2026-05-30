@@ -23,7 +23,7 @@ import {
   type WallMaterialKey,
   type HatchPlan,
 } from '../walls/wall-hatch-patterns';
-import { insetClosedPolygon } from '../geometry/shared/polygon-utils';
+import { computeRevealJambQuads } from '../geometry/reveal-lining-geometry';
 
 export interface EnvelopeRenderPlan {
   /** Κλειστό δαχτυλίδι πάχους μόνωσης (outer forward + exterior face reversed). */
@@ -63,13 +63,14 @@ function bboxOf(points: readonly Point3D[]): BoundingBox3D {
 export function buildEnvelopeRenderPlan(
   chain: EnvelopeChain,
   materialId: EnvelopeMaterialId,
+  spacingScale = 1,
 ): EnvelopeRenderPlan | null {
   const outer = chain.insulationOuterLoop.points;
   const inner = chain.exteriorFaceLoop.points;
   if (outer.length < 2 || inner.length < 2) return null;
 
   const bandRing: Point3D[] = [...outer, ...[...inner].reverse()];
-  const hatch = computeWallHatchPlan(bboxOf(bandRing), resolveEnvelopeHatchKey(materialId));
+  const hatch = computeWallHatchPlan(bboxOf(bandRing), resolveEnvelopeHatchKey(materialId), spacingScale);
   return { bandRing, outerLoop: outer, outerClosed: chain.closed, hatch };
 }
 
@@ -94,31 +95,43 @@ export interface EnvelopeSlabHatchPlan {
 export function buildSlabHatchPlan(
   footprint: readonly Point3D[],
   materialId: EnvelopeMaterialId,
+  spacingScale = 1,
 ): EnvelopeSlabHatchPlan | null {
   if (footprint.length < 3) return null;
-  const hatch = computeWallHatchPlan(bboxOf(footprint), resolveEnvelopeHatchKey(materialId));
+  const hatch = computeWallHatchPlan(bboxOf(footprint), resolveEnvelopeHatchKey(materialId), spacingScale);
   return { polygon: footprint, hatch };
 }
 
-// ─── Z4 — περβάζια κουφωμάτων (4 λωρίδες = inset frame) ─────────────────────────
+// ─── Z4 — περβάζια κουφωμάτων (2 παραστάδες = jamb strips) ──────────────────────
 
 /**
- * Render plan για τη μόνωση περβαζιών ενός ανοίγματος (Z4). Reuse του
- * `EnvelopeRenderPlan` — το «δαχτυλίδι» εδώ είναι ανάμεσα στο `outline` της τρύπας
- * και το inset του (frame γύρω-γύρω). Ο renderer το ζωγραφίζει με την ίδια
- * `render()` (hatch band + outline stroke). `insetCanvas` = πάχος περβαζιού σε
- * canvas units (ο caller μετατρέπει meters → canvas).
+ * Render plans για τη μόνωση περβαζιών ενός ανοίγματος (Z4) στην **κάτοψη**.
+ *
+ * Η τομή κάτοψης περνά μέσα από το άνοιγμα → φαίνονται **μόνο οι 2 παραστάδες**
+ * (jamb strips), ΚΑΘΕΤΕΣ στον άξονα του τοίχου, σε όλο το πάχος (πρέκι/ποδιά είναι
+ * πάνω/κάτω στο Z, μόνο 3D). Κάθε παραστάδα = solid-polygon hatch (ίδιο pattern με
+ * Z2/Z3, μέσω `EnvelopeSlabHatchPlan`) — ΟΧΙ inset frame (που έβγαζε 45° mitered
+ * γωνίες = λοξή παρειά). Γεωμετρία παραστάδων: κοινό SSoT `computeRevealJambQuads`
+ * (2D⟷3D parity με `revealLiningToMesh`). `insetCanvas` = πάχος περβαζιού σε canvas
+ * units (ο caller μετατρέπει meters → canvas).
+ *
+ * @returns άδειο array αν degenerate (caller κάνει iterate, ασφαλές).
  */
-export function buildRevealBandPlan(
+export function buildRevealJambPlans(
   outline: readonly Point3D[],
   insetCanvas: number,
   materialId: EnvelopeMaterialId,
-): EnvelopeRenderPlan | null {
-  if (outline.length < 3 || insetCanvas <= 0) return null;
-  const inner = insetClosedPolygon(outline, insetCanvas);
-  if (!inner) return null;
-
-  const bandRing: Point3D[] = [...outline, ...[...inner].reverse()];
-  const hatch = computeWallHatchPlan(bboxOf(bandRing), resolveEnvelopeHatchKey(materialId));
-  return { bandRing, outerLoop: outline, outerClosed: true, hatch };
+  spacingScale = 1,
+): EnvelopeRenderPlan[] {
+  const jambs = computeRevealJambQuads(outline, insetCanvas);
+  if (!jambs) return [];
+  const plans: EnvelopeRenderPlan[] = [];
+  for (const quad of [jambs.startJamb, jambs.endJamb]) {
+    // bandRing = το ίδιο το quad (solid) → ο renderer κάνει clip+hatch εντός·
+    // outerLoop = quad κλειστό → strokeOuterLoop τραβά το περίγραμμα (ορατότητα,
+    // αλλιώς το μόνο hatch σε λεπτή παραστάδα είναι σχεδόν αόρατο).
+    const hatch = computeWallHatchPlan(bboxOf(quad), resolveEnvelopeHatchKey(materialId), spacingScale);
+    plans.push({ bandRing: quad, outerLoop: quad, outerClosed: true, hatch });
+  }
+  return plans;
 }

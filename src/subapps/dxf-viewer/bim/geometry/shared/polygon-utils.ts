@@ -247,39 +247,70 @@ export function segmentNormalY(a: Point3D, b: Point3D): number | null {
 }
 
 /**
- * Vertex normal X — averages the adjacent segment normals (CCW 90°). Endpoint
- * vertices use their single adjacent segment. Degenerate segments are skipped.
- * The averaging is the mitre approximation at internal corners.
+ * Vertex normal X — averages the adjacent segment normals (CCW 90°).
+ *
+ * `closed = false` (open polyline): endpoint vertices use their single adjacent
+ * segment (walls/beams — the free ends are square-cut, not mitred).
+ *
+ * `closed = true` (ring): EVERY vertex — including index 0 and n-1 — averages
+ * BOTH adjacent segments with wrap-around. Without this, the seam vertex of a
+ * closed loop is offset perpendicular to only one edge, splitting the corner into
+ * a `distance`-long diagonal jog (ADR-396 insulation-loop + Z4 reveal-frame bug).
+ *
+ * Degenerate segments are skipped. The averaging is the mitre approximation at
+ * internal corners (shared by all callers — consistent across every corner).
  */
-export function vertexNormalX(vertices: readonly Point3D[], i: number): number {
+export function vertexNormalX(vertices: readonly Point3D[], i: number, closed = false): number {
   const n = vertices.length;
   let acc = 0;
   let count = 0;
-  if (i > 0) {
-    const seg = segmentNormalX(vertices[i - 1], vertices[i]);
+  if (i > 0 || closed) {
+    const prev = i > 0 ? i - 1 : n - 1;
+    const seg = segmentNormalX(vertices[prev], vertices[i]);
     if (seg !== null) { acc += seg; count += 1; }
   }
-  if (i < n - 1) {
-    const seg = segmentNormalX(vertices[i], vertices[i + 1]);
+  if (i < n - 1 || closed) {
+    const next = i < n - 1 ? i + 1 : 0;
+    const seg = segmentNormalX(vertices[i], vertices[next]);
     if (seg !== null) { acc += seg; count += 1; }
   }
   return count > 0 ? acc / count : 0;
 }
 
-/** Vertex normal Y — averages adjacent segment normals (mitre at corners). */
-export function vertexNormalY(vertices: readonly Point3D[], i: number): number {
+/** Vertex normal Y — averages adjacent segment normals (mitre at corners). See `vertexNormalX` for `closed`. */
+export function vertexNormalY(vertices: readonly Point3D[], i: number, closed = false): number {
   const n = vertices.length;
   let acc = 0;
   let count = 0;
-  if (i > 0) {
-    const seg = segmentNormalY(vertices[i - 1], vertices[i]);
+  if (i > 0 || closed) {
+    const prev = i > 0 ? i - 1 : n - 1;
+    const seg = segmentNormalY(vertices[prev], vertices[i]);
     if (seg !== null) { acc += seg; count += 1; }
   }
-  if (i < n - 1) {
-    const seg = segmentNormalY(vertices[i], vertices[i + 1]);
+  if (i < n - 1 || closed) {
+    const next = i < n - 1 ? i + 1 : 0;
+    const seg = segmentNormalY(vertices[i], vertices[next]);
     if (seg !== null) { acc += seg; count += 1; }
   }
   return count > 0 ? acc / count : 0;
+}
+
+/**
+ * Drop a trailing vertex that coincides with the first (within `eps`). A closed
+ * ring is sometimes represented with its first point repeated at the end (e.g. the
+ * assembled envelope face loop); that duplicate creates a zero-length wrap-around
+ * segment that breaks the closed-mitre at the seam. Returns the input unchanged
+ * when there is no such duplicate.
+ */
+export function stripClosingDuplicate(vertices: readonly Point3D[], eps = 1e-6): readonly Point3D[] {
+  const n = vertices.length;
+  if (n < 2) return vertices;
+  const a = vertices[0];
+  const b = vertices[n - 1];
+  if (Math.abs(a.x - b.x) <= eps && Math.abs(a.y - b.y) <= eps) {
+    return vertices.slice(0, n - 1);
+  }
+  return vertices;
 }
 
 /**
@@ -287,16 +318,22 @@ export function vertexNormalY(vertices: readonly Point3D[], i: number): number {
  * `sign` (+1 = CCW outward, -1 = inward). Returns a new array of the same
  * length; corners are mitred via the averaged vertex normal. `distance` is in
  * the same unit as the vertex coordinates (caller scales mm→canvas).
+ *
+ * `closed = true` treats the input as a ring (vertex 0 and n-1 are corners that
+ * wrap around), so a closed loop offsets without a seam jog. Callers offsetting a
+ * ring MUST first drop any trailing closing-duplicate (`stripClosingDuplicate`),
+ * otherwise the zero-length seam segment defeats the wrap-around.
  */
 export function offsetPolyline(
   vertices: readonly Point3D[],
   distance: number,
   sign: number,
+  closed = false,
 ): Point3D[] {
   const out: Point3D[] = [];
   for (let i = 0; i < vertices.length; i++) {
-    const nx = vertexNormalX(vertices, i);
-    const ny = vertexNormalY(vertices, i);
+    const nx = vertexNormalX(vertices, i, closed);
+    const ny = vertexNormalY(vertices, i, closed);
     const v = vertices[i];
     out.push({
       x: v.x + sign * distance * nx,
@@ -319,8 +356,12 @@ export function insetClosedPolygon(
   distance: number,
 ): Point3D[] | null {
   if (vertices.length < 3 || distance <= 0) return null;
-  const plus = offsetPolyline(vertices, distance, 1);
-  const minus = offsetPolyline(vertices, distance, -1);
+  // Ring offset: strip any closing-duplicate + closed-mitre so the seam vertex
+  // does not produce a diagonal jog (same fix as the envelope insulation loop).
+  const ring = stripClosingDuplicate(vertices);
+  if (ring.length < 3) return null;
+  const plus = offsetPolyline(ring, distance, 1, true);
+  const minus = offsetPolyline(ring, distance, -1, true);
   const inner = polygonArea(plus) <= polygonArea(minus) ? plus : minus;
   if (inner.length < 3 || polygonArea(inner) <= 0) return null;
   return inner;

@@ -11,13 +11,15 @@ import {
   type WallForEnvelope,
   type ColumnForEnvelope,
 } from '../envelope-perimeter';
+import { computeWallTrims } from '../../walls/wall-trims';
+import type { WallEntity } from '../../types/wall-types';
 import type { ColumnParams } from '../../types/column-types';
 import {
   classifyExposedSlab,
   filterExposedSlabs,
   type SlabForZoneClassification,
 } from '../exposed-slab-classifier';
-import { offsetPolyline, polygonCentroid } from '../shared/polygon-utils';
+import { offsetPolyline, polygonCentroid, insetClosedPolygon, stripClosingDuplicate } from '../shared/polygon-utils';
 import { computeWallGeometry } from '../wall-geometry';
 import type { Point3D } from '../../types/bim-base';
 import type { WallParams } from '../../types/wall-types';
@@ -93,6 +95,64 @@ function square(prefix: string, ox: number, oy: number, size: number, units: 'mm
   ];
 }
 
+/**
+ * Ορθογώνιο σχεδιασμένο με τον ΦΥΣΙΚΟ τρόπο του χρήστη: 2 οριζόντιοι τοίχοι ΙΔΙΑΣ
+ * φοράς (αριστερά→δεξιά) + 2 κάθετοι ΙΔΙΑΣ φοράς (κάτω→πάνω). Αυτό παράγει 2 γωνίες
+ * end+start (consistent) + 2 γωνίες start+start / end+end (inconsistent) — το diagonal
+ * pattern του bug. Αντίθετα το `square()` σχεδιάζει τέλειο CCW (όλες consistent), που
+ * ΔΕΝ εκθέτει το bug. Ref ADR-363 §12 diagonal-corner fix.
+ */
+function naturalRect(prefix: string, w: number, h: number): WallForEnvelope[] {
+  const p = (x: number, y: number): Point3D => ({ x, y, z: 0 });
+  return [
+    wall(`${prefix}B`, p(0, 0), p(w, 0)),  // bottom  L→R
+    wall(`${prefix}T`, p(0, h), p(w, h)),  // top     L→R  (ίδια φορά)
+    wall(`${prefix}L`, p(0, 0), p(0, h)),  // left    B→T
+    wall(`${prefix}R`, p(w, 0), p(w, h)),  // right   B→T  (ίδια φορά)
+  ];
+}
+
+/**
+ * Εφαρμόζει το πραγματικό pipeline trims: computeWallTrims → merge miter/bevel
+ * patches στα `params` (όπως κάνει το `applyTrimPatches` + persistence στο runtime).
+ * Έτσι το envelope διαβάζει mitered τοίχους, ακριβώς όπως στην εφαρμογή.
+ */
+function withMiters(walls: WallForEnvelope[]): WallForEnvelope[] {
+  const entities = walls.map(w => ({ id: w.id, type: 'wall', kind: w.kind, params: w.params } as unknown as WallEntity));
+  const trims = computeWallTrims(entities);
+  return walls.map(w => {
+    const patch = trims.get(w.id);
+    if (!patch) return w;
+    return {
+      ...w,
+      params: {
+        ...w.params,
+        ...(patch.startMiter !== undefined ? { startMiter: patch.startMiter } : {}),
+        ...(patch.endMiter !== undefined ? { endMiter: patch.endMiter } : {}),
+        ...(patch.startBevel !== undefined ? { startBevel: patch.startBevel } : {}),
+        ...(patch.endBevel !== undefined ? { endBevel: patch.endBevel } : {}),
+      },
+    };
+  });
+}
+
+/** Μέγιστη απόκλιση ακμής από axis-aligned (0 = τέλεια οριζόντια/κάθετη). */
+function maxDiagonalJog(loop: readonly Point3D[], closed: boolean): number {
+  const n = loop.length;
+  if (n < 2) return 0;
+  let worst = 0;
+  const lim = closed ? n : n - 1;
+  for (let i = 0; i < lim; i++) {
+    const a = loop[i];
+    const b = loop[(i + 1) % n];
+    const dx = Math.abs(b.x - a.x);
+    const dy = Math.abs(b.y - a.y);
+    // Axis-aligned edge → min(dx,dy) ≈ 0. Diagonal edge → both large.
+    worst = Math.max(worst, Math.min(dx, dy));
+  }
+  return worst;
+}
+
 function slab(levelElevation: number, extra: Partial<SlabForZoneClassification['params']> = {}, top: Partial<Omit<SlabForZoneClassification, 'params'>> = {}): SlabForZoneClassification {
   return { ...top, params: { levelElevation, thickness: 200, ...extra } };
 }
@@ -128,6 +188,47 @@ describe('polygon-utils — offsetPolyline / polygonCentroid (ADR-396 P3 SSoT)',
 
   it('returns {0,0} for empty vertices', () => {
     expect(polygonCentroid([])).toEqual({ x: 0, y: 0 });
+  });
+
+  // ── closed-ring offset (seam-mitre fix, ADR-396) ────────────────────────────
+  const sq: Point3D[] = [
+    { x: 0, y: 0, z: 0 }, { x: 1000, y: 0, z: 0 },
+    { x: 1000, y: 1000, z: 0 }, { x: 0, y: 1000, z: 0 },
+  ];
+
+  it('closed=false MIS-mitres the seam vertex (i=0 uses one edge only) — the bug', () => {
+    // Open-polyline offset: vertex 0 is offset perpendicular to edge 0→1 only,
+    // while the other corners use the averaged normal → seam corner is different.
+    const open = offsetPolyline(sq, 100, 1, false);
+    const v0 = open[0];          // seam (single-edge normal)
+    const v1 = open[1];          // interior corner (averaged normal)
+    // v1 moved diagonally (both components), v0 did not → they differ in pattern.
+    expect(Math.min(Math.abs(v1.x - 1000), Math.abs(v1.y))).toBeGreaterThan(1); // v1 diagonal
+    expect(Math.abs(v0.x - 0)).toBeLessThan(1e-6); // v0 moved only in y (single edge)
+  });
+
+  it('closed=true mitres EVERY corner identically — no seam jog', () => {
+    const ring = offsetPolyline(sq, 100, 1, true);
+    const c = { x: 500, y: 500 };
+    // All 4 offset corners equidistant from centre → still a square (no jog).
+    const d = ring.map(p => Math.hypot(p.x - c.x, p.y - c.y));
+    for (let i = 1; i < d.length; i++) expect(d[i]).toBeCloseTo(d[0], 6);
+  });
+
+  it('stripClosingDuplicate drops a repeated first point', () => {
+    const withDup = [...sq, { x: 0, y: 0, z: 0 }];
+    expect(stripClosingDuplicate(withDup)).toHaveLength(4);
+    expect(stripClosingDuplicate(sq)).toHaveLength(4); // no-op when no dup
+  });
+
+  it('insetClosedPolygon insets a square uniformly (all corners symmetric)', () => {
+    const inner = insetClosedPolygon(sq, 100);
+    expect(inner).not.toBeNull();
+    const c = { x: 500, y: 500 };
+    const d = inner!.map(p => Math.hypot(p.x - c.x, p.y - c.y));
+    for (let i = 1; i < d.length; i++) expect(d[i]).toBeCloseTo(d[0], 6);
+    // Inset → smaller than original (corner dist 500√2 ≈ 707 → inner < that).
+    expect(d[0]).toBeLessThan(707);
   });
 });
 
@@ -181,6 +282,33 @@ describe('computeEnvelopePerimeter — closed loops', () => {
     const walls = [...square('a', 0, 0, 5000), ...square('b', 50000, 50000, 5000)];
     const r = computeEnvelopePerimeter(walls, 0.1);
     expect(r.chains.filter(c => c.closed)).toHaveLength(2);
+  });
+});
+
+describe('computeEnvelopePerimeter — naturally-drawn rectangle (inconsistent corners)', () => {
+  it('DIAGNOSTIC: raw natural rectangle WITHOUT trims still closes', () => {
+    // Sanity: το envelope chaining δουλεύει ανεξαρτήτως draw direction.
+    const r = computeEnvelopePerimeter(naturalRect('raw', 4000, 3000), 0.1);
+    expect(r.primaryChain?.closed).toBe(true);
+    expect(r.primaryChain?.wallIds).toHaveLength(4);
+  });
+
+  it('REGRESSION: insulation loop is axis-aligned (no diagonal jog) at ALL 4 corners', () => {
+    // Το πραγματικό pipeline: φυσικό ορθογώνιο → trims (mitered) → envelope.
+    // Πριν το diagonal-corner fix, οι 2 inconsistent γωνίες παρήγαγαν phantom
+    // miter points → η γραμμή μόνωσης «έσπαγε» λοξά σε 2 από τις 4 γωνίες.
+    const walls = withMiters(naturalRect('nr', 4000, 3000));
+    const r = computeEnvelopePerimeter(walls, 0.1);
+
+    expect(r.primaryChain?.closed).toBe(true);
+
+    const insul = r.primaryChain!.insulationOuterLoop.points;
+    const face = r.primaryChain!.exteriorFaceLoop.points;
+
+    // Καμία ακμή δεν πρέπει να είναι λοξή (ορθογώνιο = μόνο οριζόντιες/κάθετες).
+    // Tolerance 2mm για bevel/snap rounding· diagonal jog >> 2mm.
+    expect(maxDiagonalJog(face, r.primaryChain!.closed)).toBeLessThan(2);
+    expect(maxDiagonalJog(insul, r.primaryChain!.closed)).toBeLessThan(2);
   });
 });
 

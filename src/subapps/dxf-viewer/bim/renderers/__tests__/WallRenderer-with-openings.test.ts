@@ -183,6 +183,32 @@ describe('WallRenderer + openings (Phase 2.5)', () => {
     expect(tail.some((c) => c.fn === 'stroke')).toBe(true);
   });
 
+  it('5b. ADR-396 — wall ring re-traced (beginPath+moveTo) AFTER cutout, BEFORE stroke', () => {
+    // Bug regression: punchHostedOpenings issues beginPath per opening, leaving
+    // the current path = last opening rect. Without a re-trace, the final stroke
+    // would draw the opening rect instead of the wall outline → miters + outline
+    // vanish when an opening is hosted.
+    const { renderer, mock } = makeRenderer();
+    const wall = makeWall();
+    const door = makeDoor(wall, 2000);
+    renderer.setOpeningsByWall(new Map([[wall.id, [door]]]));
+    renderer.render(wall as unknown as EntityModel, {});
+
+    const idxComp = mock.calls.findIndex(
+      (c) => c.fn === 'set:globalCompositeOperation' && c.args[0] === 'destination-out',
+    );
+    const idxRestoreAfter = mock.calls.findIndex((c, i) => i > idxComp && c.fn === 'restore');
+    const tail = mock.calls.slice(idxRestoreAfter);
+    const idxStroke = tail.findIndex((c) => c.fn === 'stroke');
+    expect(idxStroke).toBeGreaterThan(-1);
+    // Between restore and that stroke there MUST be a beginPath followed by moveTo
+    // (the re-traced wall ring), else the stroke draws the dangling opening path.
+    const beforeStroke = tail.slice(0, idxStroke);
+    const idxBegin = beforeStroke.findIndex((c) => c.fn === 'beginPath');
+    expect(idxBegin).toBeGreaterThan(-1);
+    expect(beforeStroke.slice(idxBegin).some((c) => c.fn === 'moveTo')).toBe(true);
+  });
+
   it('6. multiple openings on same wall → cutout per opening', () => {
     const { renderer, mock } = makeRenderer();
     const wall = makeWall();
