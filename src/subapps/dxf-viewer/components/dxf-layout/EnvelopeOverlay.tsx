@@ -161,11 +161,12 @@ export function EnvelopeOverlay({
     if (walls.length > 0) {
       const { chains } = computeEnvelopePerimeter(walls, spec.thickness_m, scene.units, columns);
       for (const chain of chains) {
-        // ADR-396 gating (2026-05-30): μεμονωμένος τοίχος (1 τοίχος, 0 γείτονες)
-        // → χωρίς μόνωση. T-junctions / σύνθετα κτίρια = 3+ τοίχοι συνδεδεμένοι
-        // → εμφάνιση (isCycle=false λόγω T αλλά ΔΕΝ είναι isolated). Δύο τοίχοι
-        // L-shape = ανοιχτό, οριακό — αποκλείεται για καθαρότητα.
-        if (chain.wallIds.length < 3) continue;
+        // ADR-396 v2 gating (Phase 1): ETICS ΜΟΝΟ όταν οι τοίχοι **περικλείουν
+        // χώρο** (κύκλος στο γράφημα). Ανοιχτή αλυσίδα (Π/L/ζιγκ-ζαγκ/μεμονωμένος)
+        // → enclosesRegion=false → καμία μόνωση. Κτίριο με εσωτερικό χώρισμα
+        // (T-junction) → έχει κύκλο → enclosesRegion=true → εμφάνιση. Αντικαθιστά
+        // το παλιό `wallIds.length >= 3` που περνούσε λάθος τις ανοιχτές αλυσίδες.
+        if (!chain.enclosesRegion) continue;
         const plan = buildEnvelopeRenderPlan(chain, spec.materialId, spacingScale);
         if (plan) renderer.render(plan, transform, viewport);
         // Τρύπησε τα ανοίγματα ΜΕΤΑ το band του ίδιου chain (πριν τα Z4 reveals).

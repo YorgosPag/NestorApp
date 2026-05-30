@@ -33,6 +33,7 @@ function squareChain(): EnvelopeChain {
     exteriorFaceLoop: { points: exterior, closed: true },
     insulationOuterLoop: { points: outer, closed: true },
     closed: true,
+    enclosesRegion: true,
     perimeterM: 4.8,
     wallIds: ['w1', 'w2', 'w3', 'w4'],
   };

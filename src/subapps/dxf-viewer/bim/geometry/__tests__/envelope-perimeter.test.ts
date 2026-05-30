@@ -341,6 +341,61 @@ describe('computeEnvelopePerimeter — open / degenerate', () => {
   });
 });
 
+// ─── enclosesRegion gate (ADR-396 v2 Phase 1 — open-chain bug fix) ────────────
+
+describe('computeEnvelopePerimeter — enclosesRegion gate (Phase 1)', () => {
+  it('closed square encloses a region', () => {
+    const r = computeEnvelopePerimeter(square('w', 0, 0, 10000), 0.1);
+    expect(r.chains).toHaveLength(1);
+    expect(r.chains[0].enclosesRegion).toBe(true);
+  });
+
+  it('L-shaped closed building encloses a region', () => {
+    const p = (x: number, y: number): Point3D => ({ x, y, z: 0 });
+    const ring = [p(0, 0), p(6000, 0), p(6000, 3000), p(3000, 3000), p(3000, 6000), p(0, 6000)];
+    const walls: WallForEnvelope[] = ring.map((s, i) => wall(`L${i}`, s, ring[(i + 1) % ring.length]));
+    expect(computeEnvelopePerimeter(walls, 0.1).chains[0].enclosesRegion).toBe(true);
+  });
+
+  it('THE BUG: open 3-wall chain (Π-shape) does NOT enclose a region', () => {
+    // Παλιό gate `wallIds.length >= 3` → 3 >= 3 → ΠΕΡΝΟΥΣΕ (λάθος μόνωση).
+    // Νέο gate `enclosesRegion` → δέντρο (καμία κυκλική διαδρομή) → ΔΕΝ περνά.
+    const walls = square('w', 0, 0, 10000).slice(0, 3); // U-shape (3 connected walls)
+    const chain = computeEnvelopePerimeter(walls, 0.1).chains[0];
+    expect(chain.wallIds).toHaveLength(3);     // θα περνούσε το παλιό gate…
+    expect(chain.enclosesRegion).toBe(false);  // …αλλά δεν περικλείει χώρο → out
+  });
+
+  it('isolated single wall does NOT enclose a region', () => {
+    const r = computeEnvelopePerimeter([wall('solo', { x: 0, y: 0, z: 0 }, { x: 5000, y: 0, z: 0 })], 0.1);
+    expect(r.chains.every(c => !c.enclosesRegion)).toBe(true);
+  });
+
+  it('two-wall L (one shared corner) does NOT enclose a region', () => {
+    const walls: WallForEnvelope[] = [
+      wall('a', { x: 0, y: 0, z: 0 }, { x: 5000, y: 0, z: 0 }),
+      wall('b', { x: 5000, y: 0, z: 0 }, { x: 5000, y: 5000, z: 0 }),
+    ];
+    expect(computeEnvelopePerimeter(walls, 0.1).chains.every(c => !c.enclosesRegion)).toBe(true);
+  });
+
+  it('column-bridged closed square encloses a region (columns close the cycle)', () => {
+    const SIZE = 10000;
+    const cols: ColumnForEnvelope[] = [
+      column('c0', 0, 0), column('c1', SIZE, 0), column('c2', SIZE, SIZE), column('c3', 0, SIZE),
+    ];
+    const chain = computeEnvelopePerimeter(squareWithGaps('g', SIZE, 300), 0.1, 'mm', cols).primaryChain!;
+    expect(chain.enclosesRegion).toBe(true);
+  });
+
+  it('two detached buildings: BOTH enclose a region', () => {
+    const walls = [...square('a', 0, 0, 5000), ...square('b', 50000, 50000, 5000)];
+    const r = computeEnvelopePerimeter(walls, 0.1);
+    expect(r.chains).toHaveLength(2);
+    expect(r.chains.every(c => c.enclosesRegion)).toBe(true);
+  });
+});
+
 // ─── Column bridging + gating (ADR-396 2026-05-30) ────────────────────────────
 
 describe('computeEnvelopePerimeter — column bridging (Επιλογή Α)', () => {

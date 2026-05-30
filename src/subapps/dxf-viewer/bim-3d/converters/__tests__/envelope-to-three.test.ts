@@ -31,6 +31,7 @@ function squareChain(): EnvelopeChain {
       closed: true,
     },
     closed: true,
+    enclosesRegion: true,
     perimeterM: 40.8,
     wallIds: ['w1', 'w2', 'w3', 'w4'],
   };
@@ -122,6 +123,7 @@ describe('envelopeChainToMesh (ADR-396 P5)', () => {
       exteriorFaceLoop: { points: [pt(0, 0)], closed: false },
       insulationOuterLoop: { points: [pt(0, 0)], closed: false },
       closed: false,
+      enclosesRegion: false,
       perimeterM: 0,
       wallIds: [],
     };

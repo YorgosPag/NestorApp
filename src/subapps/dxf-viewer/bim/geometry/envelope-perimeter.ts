@@ -1,13 +1,9 @@
 /**
  * ADR-396 Phase P3 — Envelope perimeter (ETICS) geometry SSoT.
  *
- * Adjacency (2026-05-30 fix): χρησιμοποιεί τα FACE CORNER keys (outerEdge +
- * innerEdge start/end) αντί για raw `params.start/end`. Beveled walls δεν
- * μοιράζονται axis endpoints — μοιράζονται ακριβώς ΕΝΑ face corner point σε κάθε
- * junction (outer του ενός = inner του άλλου). Με 2 κλειδιά ανά άκρο (outer+inner)
- * βρίσκουμε πάντα το shared corner.
- *
- * @see ADR-396 §3.1
+ * Adjacency (2026-05-30 fix): FACE CORNER keys (outerEdge+innerEdge start/end)
+ * αντί raw `params.start/end` — beveled walls μοιράζονται face corner, όχι axis
+ * endpoint· 2 κλειδιά/άκρο βρίσκουν πάντα το shared corner. @see ADR-396 §3.1
  */
 
 import type { Point3D, Polyline3D } from '../types/bim-base';
@@ -46,6 +42,12 @@ export interface EnvelopeChain {
   readonly exteriorFaceLoop: Polyline3D;
   readonly insulationOuterLoop: Polyline3D;
   readonly closed: boolean;
+  /**
+   * ADR-396 v2 (Phase 1) — true όταν το component **περικλείει χώρο** (κύκλος στο
+   * γράφημα: ακμές ≥ κόμβοι). Πιάνει και T-junctions (σε αντίθεση με `closed`)·
+   * ανοιχτή αλυσίδα (Π/L/μεμονωμένος) = δέντρο → false. SSoT ETICS gate (§3.1).
+   */
+  readonly enclosesRegion: boolean;
   readonly perimeterM: number;
   readonly wallIds: readonly string[];
   readonly columnIds: readonly string[];
@@ -250,7 +252,7 @@ function orderComponent(
   seedId: string,
   adj: Map<string, WallEdge[]>,
   visited: Set<string>,
-): { ids: string[]; closed: boolean } {
+): { ids: string[]; closed: boolean; enclosesRegion: boolean } {
   const comp = new Set<string>([seedId]);
   const queue = [seedId];
   while (queue.length > 0) {
@@ -260,6 +262,11 @@ function orderComponent(
     }
   }
   comp.forEach(id => visited.add(id));
+
+  // ADR-396 v2 — «περικλείει χώρο;»: κύκλος ⟺ ακμές ≥ κόμβοι (degreeSum/2 ≥ comp).
+  let degreeSum = 0;
+  for (const id of comp) degreeSum += adj.get(id)?.length ?? 0;
+  const enclosesRegion = degreeSum / 2 >= comp.size;
 
   const isCycle = [...comp].every(id => (adj.get(id)?.length ?? 0) === 2);
   let start = seedId;
@@ -282,7 +289,7 @@ function orderComponent(
     cur = next ? next.neighborId : null;
   }
   const closed = isCycle && ordered.length === comp.size && ordered.length >= 3;
-  return { ids: ordered, closed };
+  return { ids: ordered, closed, enclosesRegion };
 }
 
 // ============================================================================
@@ -469,7 +476,7 @@ export function computeEnvelopePerimeter(
   const chains: EnvelopeChain[] = [];
   for (const k of keyed) {
     if (visited.has(k.id)) continue;
-    const { ids, closed } = orderComponent(k.id, adj, visited);
+    const { ids, closed, enclosesRegion } = orderComponent(k.id, adj, visited);
     const centroid = componentCentroid(ids, byId, colById);
     const exteriorFace = assembleFaceLoop(ids, closed, byId, adj, colById, centroid, snapCanvas);
     const insulationOuter = offsetLoopOutward(exteriorFace, thicknessCanvas, centroid, closed);
@@ -477,6 +484,7 @@ export function computeEnvelopePerimeter(
       exteriorFaceLoop: { points: exteriorFace, closed },
       insulationOuterLoop: { points: insulationOuter, closed },
       closed,
+      enclosesRegion,
       perimeterM: polylinePerimeterM(insulationOuter, closed, s),
       wallIds: ids,
       columnIds: collectColumnIds(ids, byId),

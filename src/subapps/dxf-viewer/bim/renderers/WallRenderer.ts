@@ -262,6 +262,13 @@ export class WallRenderer extends BaseEntityRenderer {
 
     this.ctx.save();
     this.ctx.globalCompositeOperation = 'destination-out';
+    // The wall fill was painted with the translucent category tint (alpha ≈ 0.18)
+    // and the phase `globalAlpha`. `destination-out` erases dst·(1 − src.alpha),
+    // so inheriting those low alphas would clear only ~18% of the fill → the hole
+    // is imperceptible (the "wall doesn't open at the doorway" bug). Force a fully
+    // opaque source so the punch removes 100% of the wall pixels (clean doorway).
+    this.ctx.globalAlpha = 1;
+    this.ctx.fillStyle = '#000';
     for (const opening of cutOpenings) {
       // ADR-396 — η τρύπα στον τοίχο = STRUCTURAL outline (free + reveal margin) ώστε
       // η περιμετρική μόνωση Z4 να γεμίζει το δαχτυλίδι σε ΤΡΥΠΑ, όχι πάνω σε γεμάτο

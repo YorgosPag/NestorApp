@@ -244,6 +244,25 @@ describe('WallRenderer + openings (Phase 2.5)', () => {
     expect(countCalls(cutoutPass, 'fill')).toBe(1);
   });
 
+  it('9. punch forces opaque source (globalAlpha=1) so the hole fully clears', () => {
+    // Regression: the wall fill is painted at ~0.18 alpha; without resetting the
+    // source alpha, destination-out clears only ~18% → the doorway stays nearly
+    // solid ("wall doesn't disappear at the opening").
+    const { renderer, mock } = makeRenderer();
+    const wall = makeWall();
+    const door = makeDoor(wall, 2000);
+    renderer.setOpeningsByWall(new Map([[wall.id, [door]]]));
+    renderer.render(wall as unknown as EntityModel, {});
+
+    const idxComp = mock.calls.findIndex(
+      (c) => c.fn === 'set:globalCompositeOperation' && c.args[0] === 'destination-out',
+    );
+    const idxRestoreAfter = mock.calls.findIndex((c, i) => i > idxComp && c.fn === 'restore');
+    const pass = mock.calls.slice(idxComp, idxRestoreAfter);
+    // An opaque source alpha must be set before the fill removes the wall pixels.
+    expect(pass.some((c) => c.fn === 'set:globalAlpha' && c.args[0] === 1)).toBe(true);
+  });
+
   it('6. multiple openings on same wall → cutout per opening', () => {
     const { renderer, mock } = makeRenderer();
     const wall = makeWall();

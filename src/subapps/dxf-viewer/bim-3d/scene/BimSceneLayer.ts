@@ -330,11 +330,12 @@ export class BimSceneLayer {
     materialId: string,
     levelId: string,
   ): void {
-    // ADR-396 gating: κολώνες γεφυρώνουν κενά (Επιλογή Α). Gating: ≥3 τοίχοι
-    // συνδεδεμένοι (mirror EnvelopeOverlay). T-junctions = isCycle false αλλά
-    // ΔΕΝ είναι isolated → εμφανίζονται. 2D⟷3D parity.
+    // ADR-396 v2 gating (Phase 1): κολώνες γεφυρώνουν κενά (Επιλογή Α). ETICS ΜΟΝΟ
+    // σε αλυσίδες που **περικλείουν χώρο** (enclosesRegion — κύκλος στο γράφημα).
+    // Ανοιχτή αλυσίδα → καμία μόνωση. T-junction (εσωτερικό χώρισμα) → έχει κύκλο →
+    // εμφανίζεται. mirror EnvelopeOverlay — 2D⟷3D parity.
     const { chains } = computeEnvelopePerimeter(entities.walls, thicknessM, undefined, entities.columns);
-    const activeChains = chains.filter((c) => c.wallIds.length >= 3);
+    const activeChains = chains.filter((c) => c.enclosesRegion);
     if (activeChains.length === 0) return;
     const wallById = new Map(entities.walls.map((w) => [w.id, w] as const));
     // Ίδιες μονάδες με το chain (computeEnvelopePerimeter fallback) ώστε τα opening

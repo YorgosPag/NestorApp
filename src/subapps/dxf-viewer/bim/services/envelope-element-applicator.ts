@@ -120,9 +120,10 @@ interface PerimeterContext {
 }
 
 /**
- * Χτίζει το exterior-face context μία φορά. ADR-396 gating: ΜΟΝΟ κλειστά
- * περιγράμματα (κολώνες γεφυρώνουν κενά). Αν κανένα δεν κλείνει → κενό context
- * (καμία στρώση) — consistent με 2D/3D render (αποφάσεις Giorgio 2026-05-30).
+ * Χτίζει το exterior-face context μία φορά. ADR-396 v2 gating: ΜΟΝΟ αλυσίδες που
+ * **περικλείουν χώρο** (`enclosesRegion` — κύκλος στο γράφημα· κολώνες γεφυρώνουν
+ * κενά). Ανοιχτή αλυσίδα → κενό context (καμία στρώση) — consistent με 2D/3D
+ * render (Phase 1, αντικαθιστά το `wallIds.length >= 3`).
  */
 function buildPerimeterContext(
   walls: readonly WallForEnvelope[],
@@ -131,8 +132,10 @@ function buildPerimeterContext(
   units: SceneUnits,
 ): PerimeterContext {
   const { chains } = computeEnvelopePerimeter(walls, thickness_m, units, columns);
-  // Gating: ≥3 τοίχοι (mirror EnvelopeOverlay — T-junctions ΔΕΝ αποκλείονται).
-  const active = chains.filter((c) => c.wallIds.length >= 3);
+  // ADR-396 v2 gating (Phase 1): ETICS ΜΟΝΟ σε αλυσίδες που περικλείουν χώρο
+  // (enclosesRegion — κύκλος στο γράφημα). Ανοιχτή αλυσίδα → κανένα στοιχείο
+  // εξωτερικό. T-junctions ΔΕΝ αποκλείονται. mirror EnvelopeOverlay/BimSceneLayer.
+  const active = chains.filter((c) => c.enclosesRegion);
   return {
     loops: active.map((c) => c.exteriorFaceLoop.points),
     exteriorWallIds: new Set(active.flatMap((c) => c.wallIds)),
