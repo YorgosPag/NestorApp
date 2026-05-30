@@ -114,10 +114,13 @@
 
 ### 3.1. Geometry SSoT — `computeEnvelopePerimeter()`
 
-- Είσοδος: εξωτ. footprints των στοιχείων του ορόφου + thickness.
+- Είσοδος: εξωτ. footprints των στοιχείων του ορόφου + thickness + **columns** (νέο, 2026-05-30).
 - Έξοδος: **outward offset** της ένωσης (union) των footprints κατά `thickness`.
 - D4: σταθερό πάχος → ακολουθεί καμπούρες· γωνίες = mitre (φυσικό αποτέλεσμα του offset μη-κυρτού πολυγώνου).
 - Z1 measurement = μήκος περιγράμματος × ύψος ορόφου − ανοίγματα (net, §2.1).
+- **Gating (2026-05-30):** render ΜΟΝΟ σε `closed` chains. Μεμονωμένος/ανοιχτός τοίχος → `closed:false` → 0 εμφάνιση.
+- **Column bridge (2026-05-30, Επιλογή Α):** κολώνα που βρίσκεται ≤ `COLUMN_BRIDGE_TOL_M` (0.30m) από ελεύθερο άκρο τοίχου → κόμβος-γέφυρα. Δύο γεφυρωτικά άκρα στην ίδια κολώνα κλείνουν το κενό· οι εξωτ. όψεις της κολώνας εισάγονται στο `exteriorFaceLoop` (η μόνωση τυλίγει την κολώνα με σκαλοπάτια — η γραμμή ακολουθεί το πραγματικό σχήμα). Helper: `envelope-column-bridge.ts`.
+- **Per-component centroid** (2026-05-30): κάθε connected component έχει δικό του centroid (ΟΧΙ global) → δύο κτίρια μακριά offset σωστά.
 
 > ✅ **P3 IMPLEMENTED** (2026-05-29): `bim/geometry/envelope-perimeter.ts` →
 > `computeEnvelopePerimeter(walls, envelopeThickness_m, sceneUnits?)`. Option 1
@@ -127,6 +130,12 @@
 > (winding-agnostic, centroid-pick). meters-in/out. Reuse `offsetPolyline`/
 > `polygonCentroid` (SSoT `polygon-utils.ts`, OQ-3). Exposed slabs (Z2/Z3) =
 > `exposed-slab-classifier.ts`.
+>
+> ✅ **P3 UPDATE (2026-05-30):** Column bridge + gating + per-component centroid.
+> Νέα signature: `computeEnvelopePerimeter(walls, thickness_m, sceneUnits?, columns?)`.
+> Helper: `bim/geometry/envelope-column-bridge.ts`. Constant: `COLUMN_BRIDGE_TOL_M=0.3m`
+> (`thermal-envelope-types.ts`). 2D (`EnvelopeOverlay`) + 3D (`BimSceneLayer.addEnvelopeShell`)
+> + applicator (`buildPerimeterContext`) ενημερωμένα. 28/28 + 124/124 tests PASS.
 
 ---
 
@@ -344,3 +353,16 @@ Code = source of truth (grep 2026-05-29): υπάρχει **ζωντανό** IFC4
   - tests: `services/ifc/serializers/__tests__/ifc-covering-serializer.test.ts` **[ΝΕΟ]** (10· wall/column/slab/opening coverings + semantic-only + includePsets gate + custom-material skip + Z1-off + typed STEP measure). **10/10 PASS** + roundtrip regression 8/8. tsc IFC-scope clean.
   - **Απόκλιση από §3.2(a):** παραλείπεται το `IfcMaterialLayerSetUsage` — η Usage κουβαλά **γεωμετρική** τοποθέτηση (offset/reference line), χωρίς νόημα στο semantic-only μοντέλο (OQ-P9-2)· το LayerSet associate-άρεται απευθείας (valid IFC4, καθαρότερο).
   - **Deferred:** U-value (assembly) στο IFC — ανήκει σε `Pset_WallCommon.ThermalTransmittance` του host (οι τοίχοι δεν έχουν κανένα Pset στο pipeline σήμερα)· εκτός covering scope, το U μένει στο app panel (P8). λ (per-material) επαρκεί για το covering thermal Pset.
+
+- **2026-05-30** (BUGFIX P3 geometry — end-cap wrap σε ελεύθερες άκρες, Opus 4.8, pending commit) — **Browser verification (Giorgio) βρήκε 2 πραγματικά runtime bugs** που τα changelogs «tsc clean / X PASS» δεν είχαν πιάσει:
+  - **Bug A — εκτεθειμένη μούρη τοίχου χωρίς μόνωση** (διορθώθηκε): το `computeEnvelopePerimeter` αλυσίδωνε & offset-άριζε **μόνο τη μακριά εξωτ. παρειά**· σε **ελεύθερο εκτεθειμένο άκρο** (valence-1 open-chain end) η μόνωση **δεν «επέστρεφε»** γύρω από τη στενή διατομή (μούρη) του τοίχου → η εκτεθειμένη άκρη έμενε άβαφη (ETICS λάθος). **Fix:** `PreparedWall +oppositeFace` (εσωτ. παρειά) + `assembleFaceLoop` προσθέτει την **εσωτερική γωνία** στο ελεύθερο άκρο (`firstForward`/`lastForward` orientation-aware) → το exteriorFaceLoop γεφυρώνει `face↔oppositeFace` στη μούρη → το offset band την τυλίγει (mitre via `offsetPolyline` vertex normals). Κλειστές αλυσίδες = καμία αλλαγή (μηδέν ελεύθερα άκρα). **2D + 3D parity** (ίδιο `exteriorFaceLoop` SSoT). 2 νέα tests (end-cap return + closed-no-caps), envelope-perimeter **22/22**, regression envelope suites **78/78 PASS**.
+  - **Bug B — προηγούμενο «μόνωση στην ΕΣΩ πλευρά»** (RESOLVED-by-data): με λίγους/ανοιχτούς τοίχους το centroid (`envelope-perimeter.ts:302`, μέσος όρος ΟΛΩΝ των αξόνων) έπεφτε εκτός κτιρίου → `selectExteriorFace` αναποδογύριζε όλους μαζί. Με κλειστό/σωστό σχήμα διορθώθηκε μόνο του (επιβεβαιώθηκε browser). ⚠️ Latent: αν υπάρχουν πολλαπλές ομάδες τοίχων/stray geometry, το global centroid μένει ευάλωτο → πιθανό future per-component centroid (OQ).
+  - 🔴 **Εκκρεμούν 2 pre-existing tsc errors** (από ανεξάρτητο `tsc --noEmit` re-run, ΟΧΙ από changelog): `EnvelopeOverlay.tsx:81` (`scene.units` πιθανό `undefined` → χρειάζεται `?? 'mm'`, trivial) + `envelope-element-applicator.ts:213` (`entity.params` δεν υπάρχει στο `Entity` type — οι renderers διαβάζουν εμφωλευμένα `e.slabEntity.params`· ΥΠΟΠΤΟ για write/read path mismatch — χρειάζεται διερεύνηση). **Όλο το ADR-396 = pending commit + pending browser re-verify.**
+
+- **2026-05-30** (P3 UPDATE — Column bridge + gating + per-component centroid, Sonnet 4.6, pending commit) — **Νέα απαίτηση Giorgio: μόνωση ΜΟΝΟ σε κλειστά περιγράμματα· κολώνες γεφυρώνουν κενά (Επιλογή Α — η μόνωση τυλίγει τις εξωτ. όψεις της κολώνας).** 3 αλλαγές στο geometry SSoT:
+  - **Gating:** render ΜΟΝΟ σε `chain.closed === true` (`EnvelopeOverlay` + `BimSceneLayer.addEnvelopeShell` + `buildPerimeterContext`). Μεμονωμένος/ανοιχτός τοίχος → 0 εμφάνιση.
+  - **Column bridge:** νέος `envelope-column-bridge.ts` helper (SSoT). Ελεύθερο valence-1 άκρο τοίχου ≤ `COLUMN_BRIDGE_TOL_M=0.30m` από κολώνα → reassign σε `col:<id>` node key. Δύο τέτοια άκρα στην ίδια κολώνα κλείνουν το component. `assembleFaceLoop` εισάγει το εξωτ. τόξο του column outline (entry→εξωτ. κορυφές→exit, επιλογή μακριά από centroid). 2D⟷3D parity: ίδιο `exteriorFaceLoop` SSoT → renderers δεν αλλάζουν.
+  - **Per-component centroid:** κάθε connected component (τοίχοι + γεφυρωτικές κολώνες) → δικό του centroid αντί global. Διορθώνει latent bug σε σκηνές με πολλά κτίρια.
+  - **End-cap wrap αφαιρέθηκε** (`oppositeFace` + free-end caps): με το gating οι ανοιχτές αλυσίδες δεν ζωγραφίζονται, άρα ήταν νεκρός κώδικας σε σύγκρουση με τη νέα απαίτηση.
+  - Νέα σταθερά `COLUMN_BRIDGE_TOL_M=0.30m` (αρχείο `thermal-envelope-types.ts`). Νέο πεδίο `columnIds` στο `EnvelopeChain` (debug/BOQ follow-up).
+  - Αρχεία: `envelope-perimeter.ts` (rewrite) + NEW `envelope-column-bridge.ts` + `thermal-envelope-types.ts` + `EnvelopeOverlay.tsx` + `BimSceneLayer.ts` + `envelope-element-applicator.ts` + tests. **28/28 + 124/124 PASS.** tsc scope clean.

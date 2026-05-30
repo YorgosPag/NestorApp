@@ -276,11 +276,15 @@ export class BimSceneLayer {
     materialId: string,
     levelId: string,
   ): void {
-    const { chains } = computeEnvelopePerimeter(entities.walls, thicknessM);
-    if (chains.length === 0) return;
+    // ADR-396 gating: κολώνες γεφυρώνουν κενά (Επιλογή Α). Gating: ≥3 τοίχοι
+    // συνδεδεμένοι (mirror EnvelopeOverlay). T-junctions = isCycle false αλλά
+    // ΔΕΝ είναι isolated → εμφανίζονται. 2D⟷3D parity.
+    const { chains } = computeEnvelopePerimeter(entities.walls, thicknessM, undefined, entities.columns);
+    const activeChains = chains.filter((c) => c.wallIds.length >= 3);
+    if (activeChains.length === 0) return;
     const wallById = new Map(entities.walls.map((w) => [w.id, w] as const));
 
-    for (const chain of chains) {
+    for (const chain of activeChains) {
       // Ύψος ορόφου = max height των τοίχων του chain (ήδη σε ΜΕΤΡΑ).
       let heightM = 0;
       for (const wid of chain.wallIds) {

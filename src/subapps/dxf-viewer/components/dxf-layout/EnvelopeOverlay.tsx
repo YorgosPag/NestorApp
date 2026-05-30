@@ -78,7 +78,7 @@ function drawOpeningReveals(
   transform: ViewTransform,
   viewport: Viewport,
 ): void {
-  const canvasPerM = mmToSceneUnits(scene.units) * 1000;
+  const canvasPerM = mmToSceneUnits(scene.units ?? 'mm') * 1000;
   for (const e of scene.entities) {
     if (e.type !== 'opening') continue;
     const reveal = e.openingEntity.params.revealInsulation;
@@ -123,13 +123,22 @@ export function EnvelopeOverlay({
     const walls = scene.entities.filter(
       (e): e is Extract<DxfEntityUnion, { type: 'wall' }> => e.type === 'wall',
     );
+    // ADR-396 gating: οι κολώνες γεφυρώνουν κενά στο περίγραμμα (Επιλογή Α).
+    const columns = scene.entities
+      .filter((e): e is Extract<DxfEntityUnion, { type: 'column' }> => e.type === 'column')
+      .map((c) => ({ id: c.id, params: c.params }));
 
     const renderer = new EnvelopeRenderer(ctx);
 
     // Z1 — κατακόρυφο κέλυφος (offset perimeter των τοίχων, spec-driven).
     if (walls.length > 0) {
-      const { chains } = computeEnvelopePerimeter(walls, spec.thickness_m, scene.units);
+      const { chains } = computeEnvelopePerimeter(walls, spec.thickness_m, scene.units, columns);
       for (const chain of chains) {
+        // ADR-396 gating (2026-05-30): μεμονωμένος τοίχος (1 τοίχος, 0 γείτονες)
+        // → χωρίς μόνωση. T-junctions / σύνθετα κτίρια = 3+ τοίχοι συνδεδεμένοι
+        // → εμφάνιση (isCycle=false λόγω T αλλά ΔΕΝ είναι isolated). Δύο τοίχοι
+        // L-shape = ανοιχτό, οριακό — αποκλείεται για καθαρότητα.
+        if (chain.wallIds.length < 3) continue;
         const plan = buildEnvelopeRenderPlan(chain, spec.materialId);
         if (plan) renderer.render(plan, transform, viewport);
       }

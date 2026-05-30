@@ -42,7 +42,11 @@ import { EXTERIOR_PROXIMITY_M } from '../types/thermal-envelope-types';
 import type { StoreyRef } from '../utils/bim-floor-utils';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmToSceneUnits } from '../../utils/scene-units';
-import { computeEnvelopePerimeter, type WallForEnvelope } from '../geometry/envelope-perimeter';
+import {
+  computeEnvelopePerimeter,
+  type WallForEnvelope,
+  type ColumnForEnvelope,
+} from '../geometry/envelope-perimeter';
 import { filterExposedSlabs, type SlabForZoneClassification } from '../geometry/exposed-slab-classifier';
 import { polygonCentroid } from '../geometry/shared/polygon-utils';
 import { pointToSegmentDistance } from '../../systems/guides';
@@ -115,15 +119,20 @@ interface PerimeterContext {
   readonly proximityCanvas: number;
 }
 
-/** Χτίζει το exterior-face context μία φορά (κλειστές αλυσίδες· fallback σε όλες). */
+/**
+ * Χτίζει το exterior-face context μία φορά. ADR-396 gating: ΜΟΝΟ κλειστά
+ * περιγράμματα (κολώνες γεφυρώνουν κενά). Αν κανένα δεν κλείνει → κενό context
+ * (καμία στρώση) — consistent με 2D/3D render (αποφάσεις Giorgio 2026-05-30).
+ */
 function buildPerimeterContext(
   walls: readonly WallForEnvelope[],
+  columns: readonly ColumnForEnvelope[],
   thickness_m: number,
   units: SceneUnits,
 ): PerimeterContext {
-  const { chains } = computeEnvelopePerimeter(walls, thickness_m, units);
-  const closed = chains.filter((c) => c.closed);
-  const active = closed.length > 0 ? closed : chains;
+  const { chains } = computeEnvelopePerimeter(walls, thickness_m, units, columns);
+  // Gating: ≥3 τοίχοι (mirror EnvelopeOverlay — T-junctions ΔΕΝ αποκλείονται).
+  const active = chains.filter((c) => c.wallIds.length >= 3);
   return {
     loops: active.map((c) => c.exteriorFaceLoop.points),
     exteriorWallIds: new Set(active.flatMap((c) => c.wallIds)),
@@ -151,10 +160,11 @@ export function computeEnvelopeAssignments(
   sceneUnits?: SceneUnits,
 ): ElementEnvelopeAssignment[] {
   const walls = entities.filter(isWallEntity);
+  const columns = entities.filter(isColumnEntity);
   const units = sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
   const needPerimeter = spec.zones.Z1 || spec.zones.Z4;
   const ctx = needPerimeter
-    ? buildPerimeterContext(walls, spec.thickness_m, units)
+    ? buildPerimeterContext(walls, columns, spec.thickness_m, units)
     : { loops: [], exteriorWallIds: new Set<string>(), proximityCanvas: 0 };
 
   const out: ElementEnvelopeAssignment[] = [];
@@ -210,7 +220,15 @@ function patchEntityField<T extends AnySceneEntity>(
   field: 'envelopeLayer' | 'revealInsulation',
   value: EnvelopeLayer | undefined,
 ): T {
-  const params = entity.params as Readonly<Record<string, unknown>>;
+  // Μόνο BIM entities (column/beam/slab/opening) φτάνουν εδώ — assignment-gated
+  // στον caller· όλα έχουν `params`. Type-safe narrowing (ΟΧΙ `any`).
+  if (
+    !isColumnEntity(entity) && !isBeamEntity(entity) &&
+    !isSlabEntity(entity) && !isOpeningEntity(entity)
+  ) {
+    return entity;
+  }
+  const params = entity.params as unknown as Readonly<Record<string, unknown>>;
   if (dequal(params[field], value)) return entity;
   const nextParams: Record<string, unknown> = { ...params };
   if (value === undefined) delete nextParams[field];

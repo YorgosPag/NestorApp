@@ -9,7 +9,9 @@ import {
   computeEnvelopePerimeter,
   selectExteriorFace,
   type WallForEnvelope,
+  type ColumnForEnvelope,
 } from '../envelope-perimeter';
+import type { ColumnParams } from '../../types/column-types';
 import {
   classifyExposedSlab,
   filterExposedSlabs,
@@ -41,6 +43,43 @@ function wallParams(start: Point3D, end: Point3D, units: 'mm' | 'm' = 'mm'): Wal
 
 function wall(id: string, start: Point3D, end: Point3D, units: 'mm' | 'm' = 'mm'): WallForEnvelope {
   return { id, kind: 'straight', params: wallParams(start, end, units) };
+}
+
+/** Κολώνα (rectangular) με κέντρο (x,y), πλευρά `size` mm. */
+function column(id: string, x: number, y: number, size = 400, units: 'mm' | 'm' = 'mm'): ColumnForEnvelope {
+  return {
+    id,
+    params: {
+      kind: 'rectangular',
+      position: { x, y, z: 0 },
+      anchor: 'center',
+      width: size,
+      depth: size,
+      height: 3000,
+      rotation: 0,
+      sceneUnits: units,
+      baseBinding: 'storey-floor',
+      topBinding: 'storey-ceiling',
+      baseOffset: 0,
+      topOffset: 0,
+    } as ColumnParams,
+  };
+}
+
+/**
+ * Τετράγωνο `size`×`size` του οποίου οι τοίχοι σταματούν `gap` ΠΡΙΝ από κάθε
+ * γωνία (4 ελεύθερα ζεύγη άκρων). 4 τοίχοι CCW — κλείνει ΜΟΝΟ αν γεφυρωθεί.
+ */
+function squareWithGaps(prefix: string, size: number, gap: number): WallForEnvelope[] {
+  const p = (x: number, y: number): Point3D => ({ x, y, z: 0 });
+  const lo = gap;
+  const hi = size - gap;
+  return [
+    wall(`${prefix}1`, p(lo, 0), p(hi, 0)),        // bottom
+    wall(`${prefix}2`, p(size, lo), p(size, hi)),  // right
+    wall(`${prefix}3`, p(hi, size), p(lo, size)),  // top
+    wall(`${prefix}4`, p(0, hi), p(0, lo)),        // left
+  ];
 }
 
 /** Κλειστό τετράγωνο `size`×`size` με origin (ox,oy). 4 τοίχοι CCW. */
@@ -157,6 +196,79 @@ describe('computeEnvelopePerimeter — open / degenerate', () => {
     const r = computeEnvelopePerimeter([], 0.1);
     expect(r.chains).toHaveLength(0);
     expect(r.primaryChain).toBeNull();
+  });
+
+  it('isolated single wall → open chain (no closed primary)', () => {
+    const r = computeEnvelopePerimeter([wall('solo', { x: 0, y: 0, z: 0 }, { x: 5000, y: 0, z: 0 })], 0.1);
+    expect(r.primaryChain).toBeNull();
+    expect(r.chains.every(c => !c.closed)).toBe(true);
+  });
+
+  it('two walls meeting at one corner only → open (no closure)', () => {
+    const walls: WallForEnvelope[] = [
+      wall('a', { x: 0, y: 0, z: 0 }, { x: 5000, y: 0, z: 0 }),
+      wall('b', { x: 5000, y: 0, z: 0 }, { x: 5000, y: 5000, z: 0 }),
+    ];
+    expect(computeEnvelopePerimeter(walls, 0.1).primaryChain).toBeNull();
+  });
+});
+
+// ─── Column bridging + gating (ADR-396 2026-05-30) ────────────────────────────
+
+describe('computeEnvelopePerimeter — column bridging (Επιλογή Α)', () => {
+  // 10m square· κάθε τοίχος σταματά 300mm πριν τη γωνία· 400mm κολώνες στις γωνίες.
+  const SIZE = 10000;
+  const GAP = 300;
+  const corners = (): ColumnForEnvelope[] => [
+    column('c0', 0, 0), column('c1', SIZE, 0), column('c2', SIZE, SIZE), column('c3', 0, SIZE),
+  ];
+
+  it('open chain (no columns) → NOT closed', () => {
+    const r = computeEnvelopePerimeter(squareWithGaps('g', SIZE, GAP), 0.1);
+    expect(r.primaryChain).toBeNull();
+  });
+
+  it('4 corner columns bridge the gaps → ONE closed chain of 4 walls', () => {
+    const r = computeEnvelopePerimeter(squareWithGaps('g', SIZE, GAP), 0.1, 'mm', corners());
+    expect(r.primaryChain).not.toBeNull();
+    expect(r.primaryChain?.closed).toBe(true);
+    expect(r.primaryChain?.wallIds).toHaveLength(4);
+    expect(r.primaryChain?.columnIds).toHaveLength(4);
+  });
+
+  it('wraps the column OUTER corner into the exterior face loop', () => {
+    const chain = computeEnvelopePerimeter(squareWithGaps('g', SIZE, GAP), 0.1, 'mm', corners()).primaryChain!;
+    const pts = chain.exteriorFaceLoop.points;
+    // Εξωτ. γωνία της κάτω-αριστερά κολώνας (κέντρο 0,0· half=200) = (-200,-200).
+    expect(pts.some(p => p.x < -150 && p.y < -150)).toBe(true);
+  });
+
+  it('a column too FAR from the free ends does NOT bridge', () => {
+    // Κενό 2m (πολύ > tol 0.30m) → η κολώνα δεν φτάνει τα άκρα → open chains.
+    const r = computeEnvelopePerimeter(squareWithGaps('g', SIZE, 2000), 0.1, 'mm', corners());
+    expect(r.primaryChain).toBeNull();
+    // Τα chains παράγονται αλλά δεν κλείνουν:
+    expect(r.chains.every(c => !c.closed)).toBe(true);
+  });
+
+  it('direct wall-wall corner WINS over a coincident column (no bridge)', () => {
+    // Πλήρες κλειστό τετράγωνο (τοίχοι ενώνονται) + κολώνα στη γωνία → κλείνει
+    // από τοίχους, η κολώνα ΔΕΝ χρησιμοποιείται ως γέφυρα.
+    const r = computeEnvelopePerimeter(square('w', 0, 0, SIZE), 0.1, 'mm', [column('c0', 0, 0)]);
+    expect(r.primaryChain?.closed).toBe(true);
+    expect(r.primaryChain?.columnIds).toHaveLength(0);
+  });
+
+  it('per-component centroid: two detached buildings both offset OUTWARD', () => {
+    const walls = [...square('a', 0, 0, 5000), ...square('b', 50000, 50000, 5000)];
+    const closed = computeEnvelopePerimeter(walls, 0.1).chains.filter(c => c.closed);
+    expect(closed).toHaveLength(2);
+    // axis perimeter 5m square = 20m· offset προς τα έξω → > 20m (per-component
+    // centroid· global centroid θα έσπρωχνε το ένα προς τα μέσα < 20m).
+    for (const c of closed) {
+      expect(c.perimeterM).toBeGreaterThan(20);
+      expect(c.perimeterM).toBeLessThan(23);
+    }
   });
 });
 
