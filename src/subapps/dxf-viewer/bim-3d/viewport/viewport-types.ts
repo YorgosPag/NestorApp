@@ -60,6 +60,11 @@ export interface ViewportCamera {
    * tumble/orbit rotates around `point`. Used by Alt+click pivot picking.
    */
   readonly setOrbitPivot: (point: THREE.Vector3) => void;
+  /**
+   * ADR-402 §Sub-Phase 2 — enable/disable camera navigation (OrbitControls +
+   * tumble). The 3D BIM edit gizmos call this to own the pointer during a drag.
+   */
+  readonly setControlsEnabled: (enabled: boolean) => void;
 }
 
 /** All 12 canonical view IDs: 6 ortho face + 6 isometric. */

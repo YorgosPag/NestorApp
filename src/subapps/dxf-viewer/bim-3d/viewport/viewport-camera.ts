@@ -364,6 +364,18 @@ export function createViewportCamera(
     animation.tick(performance.now());
   }
 
+  /**
+   * ADR-402 §Sub-Phase 2 — suspend camera navigation while a BIM edit gizmo
+   * drag owns the pointer. OrbitControls' `onPointerMove` bails on
+   * `enabled === false`, so toggling this mid-gesture cleanly stops orbit/pan
+   * without stealing the pointer-capture the gizmo relies on. Tumble (Alt+drag)
+   * is gated too, mirroring the controls flag.
+   */
+  function setControlsEnabled(enabled: boolean): void {
+    controls.enabled = enabled;
+    tumble.setEnabled(enabled);
+  }
+
   function dispose(): void {
     controls.removeEventListener('change', onRenderNeeded);
     controls.removeEventListener('start', onInteractionStart);
@@ -385,5 +397,6 @@ export function createViewportCamera(
     applyTumble: (dx: number, dy: number) => tumble.applyExternalRotation(dx, dy),
     pan,
     setOrbitPivot,
+    setControlsEnabled,
   };
 }

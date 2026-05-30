@@ -106,6 +106,11 @@ export { MoveEntityCommand, MoveMultipleEntitiesCommand } from './entity-command
 export { JoinEntityCommand } from './entity-commands/JoinEntityCommand';
 export { ScaleEntityCommand } from './entity-commands/ScaleEntityCommand';
 export type { ScaleParams } from './entity-commands/ScaleEntityCommand';
+// ADR-188 / ADR-402 — transform commands (rotate/mirror). Exported for reuse
+// from the 3D viewport edit gizmos (ADR-402 Phase 1); previously imported
+// directly by the 2D tool hooks only.
+export { RotateEntityCommand } from './entity-commands/RotateEntityCommand';
+export { MirrorEntityCommand } from './entity-commands/MirrorEntityCommand';
 export { StretchEntityCommand } from './entity-commands/StretchEntityCommand';
 export type { StretchParams, StretchVertexMove } from './entity-commands/StretchEntityCommand';
 export { LengthenCommand } from './entity-commands/LengthenCommand';

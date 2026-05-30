@@ -15,6 +15,8 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
+import { useSelection3DStore } from '../stores/Selection3DStore';
+import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import {
   dispatchShortcut,
@@ -76,6 +78,16 @@ export function use3DShortcuts({ getManager, active, onCropRegionToggle }: Use3D
         onFocusSelect3D: () => manager.selectFocusedEntity(),
         onFocusClear3D: () => manager.clearKeyboardFocus(),
         onCropRegionToggle,
+        // ADR-402 §Sub-Phase 2 — BIM move gizmo keys (read stores at keydown time).
+        editActive: useBim3DEditStore.getState().editToolActive,
+        onMoveGizmoToggle3D: () => {
+          const edit = useBim3DEditStore.getState();
+          if (edit.editToolActive) { edit.deactivate(); return; }
+          const sel = useSelection3DStore.getState();
+          if (sel.selectedBimId) edit.activateMove(sel.selectedBimId, sel.selectedBimType);
+        },
+        onEditEscape3D: () => useBim3DEditStore.getState().deactivate(),
+        onEditAxisLock3D: (axis) => useBim3DEditStore.getState().toggleAxisLock(axis),
       };
 
       const result = dispatchShortcut(event, ctx);

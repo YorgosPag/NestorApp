@@ -64,6 +64,14 @@ export interface ShortcutDispatchContext {
   readonly onFocusClear3D: () => void;
   /** ADR-366 §C.6.Q4 — Crop region tool toggle (Ctrl+Alt+R). Optional. */
   readonly onCropRegionToggle?: () => void;
+  /** ADR-402 §Sub-Phase 2 — true while a 3D BIM edit gizmo is mounted. */
+  readonly editActive?: boolean;
+  /** ADR-402 §Sub-Phase 2 — G toggles the move gizmo on the selected element. */
+  readonly onMoveGizmoToggle3D?: () => void;
+  /** ADR-402 §Sub-Phase 2 — Escape tears the active gizmo down. */
+  readonly onEditEscape3D?: () => void;
+  /** ADR-402 §Sub-Phase 2 — X/Z toggle the floor-plane axis lock during edit. */
+  readonly onEditAxisLock3D?: (axis: 'X' | 'Z') => void;
 }
 
 export interface DispatchResult {
@@ -91,6 +99,15 @@ export function dispatchShortcut(
   event: KeyboardEvent,
   ctx: ShortcutDispatchContext,
 ): DispatchResult {
+  // ── Branch 0: 3D BIM edit gizmo keys (ADR-402 §Sub-Phase 2) ───────────────
+  // Must run BEFORE the view/focus/auto-switch branches: G would otherwise
+  // auto-switch to 2D (grip-edit tool), Escape would hit focus-clear, and X/Z
+  // could collide with canonical views.
+  if (ctx.is3D) {
+    const edit = dispatchEditKeys(event, ctx);
+    if (edit) return edit;
+  }
+
   // ── Branch 1: 3D shortcut match ───────────────────────────────────────────
   const matched = matchView3DShortcut(event);
   if (matched) {
@@ -179,6 +196,44 @@ function dispatchMatched3D(
 }
 
 // ============================================================================
+// 🎯 INTERNAL — 3D BIM EDIT GIZMO KEYS (ADR-402 §Sub-Phase 2)
+// ============================================================================
+
+/**
+ * Route the move-gizmo keys, all plain (no modifier):
+ *   G        → toggle the move gizmo on the selected element (always).
+ *   Escape   → tear the gizmo down            (only while editing).
+ *   X / Z    → toggle the floor-plane axis lock (only while editing).
+ *
+ * Returns a DispatchResult when consumed, or null to fall through. Uses
+ * `event.code` (layout-independent — works on Greek keyboards like Ctrl+Z does).
+ */
+function dispatchEditKeys(
+  event: KeyboardEvent,
+  ctx: ShortcutDispatchContext,
+): DispatchResult | null {
+  if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) return null;
+  if (event.code === 'KeyG') {
+    ctx.onMoveGizmoToggle3D?.();
+    return HANDLED;
+  }
+  if (!ctx.editActive) return null;
+  if (event.code === 'Escape') {
+    ctx.onEditEscape3D?.();
+    return HANDLED;
+  }
+  if (event.code === 'KeyX') {
+    ctx.onEditAxisLock3D?.('X');
+    return HANDLED;
+  }
+  if (event.code === 'KeyZ') {
+    ctx.onEditAxisLock3D?.('Z');
+    return HANDLED;
+  }
+  return null;
+}
+
+// ============================================================================
 // 🖐️ PAN STEP HELPER (exposed for ThreeJsSceneManager direction → dx/dy)
 // ============================================================================
 
@@ -231,4 +286,5 @@ function formatShortcutLabel(def: ShortcutDefinition): string {
 export const _internals = {
   match2DOnlyDrawingTool,
   dispatchMatched3D,
+  dispatchEditKeys,
 } as const;
