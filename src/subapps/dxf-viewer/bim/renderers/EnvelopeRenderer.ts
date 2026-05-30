@@ -121,6 +121,49 @@ export class EnvelopeRenderer {
     ctx.restore();
   }
 
+  /**
+   * ADR-396 — Κλείνει το προφίλ της μόνωσης στα άκρα κάθε opening cut με τις 2
+   * **κάθετες απολήξεις** (small brown lines): `[O_a→F_a]` (bandQuad 0→3) και
+   * `[O_b→F_b]` (bandQuad 1→2). Όπως η συνεχής `strokeOuterLoop` κλείνει την εξωτ.
+   * όψη, αυτές κλείνουν την τομή του πάχους μόνωσης στο άνοιγμα (ευθυγραμμισμένες με
+   * την παρειά τοίχου/Z4). Καλείται **ΜΕΤΑ** το `renderOpeningCuts` (`destination-out`)
+   * ώστε να μη σβηστούν. Ίδιο `bandQuad` SSoT → 2D⟷3D parity.
+   */
+  strokeOpeningCutCaps(
+    cuts: readonly EnvelopeOpeningCut[],
+    transform: ViewTransform,
+    viewport: EnvelopeRenderViewport,
+  ): void {
+    if (cuts.length === 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.strokeStyle = ENVELOPE_OUTLINE_RGBA;
+    ctx.lineWidth = ENVELOPE_OUTLINE_WIDTH_PX;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    for (const cut of cuts) {
+      const q = cut.bandQuad;
+      if (q.length < 4) continue;
+      this.strokeSegment(q[0], q[3], transform, viewport); // O_a → F_a
+      this.strokeSegment(q[1], q[2], transform, viewport); // O_b → F_b
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /** Προσθέτει ένα τμήμα `a→b` στο τρέχον path (ο caller έχει κάνει beginPath/stroke). */
+  private strokeSegment(
+    a: { readonly x: number; readonly y: number },
+    b: { readonly x: number; readonly y: number },
+    transform: ViewTransform,
+    viewport: EnvelopeRenderViewport,
+  ): void {
+    const pa = this.toScreen(a, transform, viewport);
+    const pb = this.toScreen(b, transform, viewport);
+    this.ctx.moveTo(pa.x, pa.y);
+    this.ctx.lineTo(pb.x, pb.y);
+  }
+
   private toScreen(
     p: { readonly x: number; readonly y: number },
     transform: ViewTransform,

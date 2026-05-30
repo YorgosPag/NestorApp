@@ -80,15 +80,36 @@ describe('envelopeChainToMesh (ADR-396 P5)', () => {
 
   it('cuts τρυπάνε το κέλυφος (ανοιχτό κουφώμα → επιπλέον prisms)', () => {
     const chain = squareChain();
-    // Παράθυρο στο μέσο της ακμής 0: span [0.4,0.6], sill 0.9, head 2.3 (m).
+    // Παράθυρο στο μέσο της ακμής 0 (f0=(0,0)→f1=(10,0), outer y=-0.1): span [0.4,0.6],
+    // sill 0.9, head 2.3 (m). bandQuad = ΚΑΘΕΤΕΣ απολήξεις [O_a,O_b,F_b,F_a] (το 3D
+    // πλέον ΚΑΤΑΝΑΛΩΝΕΙ το cut.bandQuad — δεν κάνει re-lerp).
     const grp = envelopeChainToMesh(
       chain, 3, 0, GRAPHITE_EPS_MATERIAL_ID, 'lvl-1', 0,
       [{ edgeIndex: 0, tStart: 0.4, tEnd: 0.6, sillM: 0.9, headM: 2.3,
-         bandQuad: [pt(-0.1, -0.1), pt(-0.1, -0.1), pt(0, 0), pt(0, 0)] }],
+         bandQuad: [pt(4, -0.1), pt(6, -0.1), pt(6, 0), pt(4, 0)] }],
     );
     // Ακμή 0 → 4 prisms (left solid + under-sill + above-head + right solid)·
     // ακμές 1,2,3 → 1 prism έκαστη. Σύνολο 7 > 4 (baseline χωρίς cuts).
     expect(grp!.children.length).toBeGreaterThan(4);
+  });
+
+  it('οι απολήξεις του cut (κάθετες παρειές x=4 / x=6) εμφανίζονται στη γεωμετρία', () => {
+    // Το left-solid prism εκτείνεται έως x=4 (κάθετη παρειά), το right-solid από x=6.
+    // Άρα η γεωμετρία περιέχει επίπεδα στο x=4 και x=6 — ευθυγραμμισμένα με Z4.
+    const grp = envelopeChainToMesh(
+      squareChain(), 3, 0, GRAPHITE_EPS_MATERIAL_ID, 'lvl-1', 0,
+      [{ edgeIndex: 0, tStart: 0.4, tEnd: 0.6, sillM: 0.9, headM: 2.3,
+         bandQuad: [pt(4, -0.1), pt(6, -0.1), pt(6, 0), pt(4, 0)] }],
+    )!;
+    const xs = new Set<number>();
+    grp.traverse((c) => {
+      const mesh = c as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const pos = mesh.geometry.getAttribute('position');
+      for (let i = 0; i < pos.count; i++) xs.add(Math.round(pos.getX(i) * 1000) / 1000);
+    });
+    expect([...xs].some((x) => Math.abs(x - 4) < 1e-3)).toBe(true);
+    expect([...xs].some((x) => Math.abs(x - 6) < 1e-3)).toBe(true);
   });
 
   it('επιστρέφει null όταν heightM <= 0', () => {

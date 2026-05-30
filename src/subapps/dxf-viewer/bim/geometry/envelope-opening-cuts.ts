@@ -16,7 +16,10 @@
  *   2. Πλησιέστερη ακμή του `exteriorFaceLoop` στο κέντρο → `edgeIndex`.
  *   3. Προβολή των δύο άκρων στην ακμή → `[tStart, tEnd]` (param 0..1).
  *   4. Band sub-quad = `[O_a, O_b, F_b, F_a]` (outer fwd → inner reversed), όπου
- *      `O` = `insulationOuterLoop` (1:1 offset, mitered corners encoded στις κορυφές).
+ *      `F` = `lerp(exteriorFaceLoop)` στο tStart/tEnd και `O` = **κάθετη** προβολή
+ *      του F προς τα έξω κατά το πάχος μόνωσης (ΟΧΙ same-param lerp στο outer loop,
+ *      που σε γωνίες δίνει λοξές απολήξεις). Έτσι οι απολήξεις [O_a→F_a]/[O_b→F_b]
+ *      είναι κάθετες στην παρειά → collinear με wall jamb/Z4.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §3, §5
  * @see ./envelope-perimeter (EnvelopeChain — geometry SSoT)
@@ -96,7 +99,11 @@ export interface EnvelopeOpeningCut {
   readonly sillM: number;
   /** ΜΕΤΡΑ. Πρέκι πάνω από τη βάση ορόφου. */
   readonly headM: number;
-  /** Canvas-unit band sub-quad `[O_a, O_b, F_b, F_a]` (outer fwd → inner reversed). */
+  /**
+   * Canvas-unit band sub-quad `[O_a, O_b, F_b, F_a]` (outer fwd → inner reversed).
+   * `O_a/O_b` = **κάθετη** προβολή των `F_a/F_b` προς τα έξω → απολήξεις [O_a→F_a]
+   * και [O_b→F_b] κάθετες στην παρειά (collinear με Z4). Κοινό SSoT 2D punch+cap & 3D.
+   */
   readonly bandQuad: readonly Point3D[];
 }
 
@@ -204,6 +211,21 @@ function projectExteriorCorner(corners: readonly XY[], a: Point3D, b: Point3D): 
   return bestT;
 }
 
+/**
+ * Μοναδιαίο **προς-τα-έξω** κάθετο διάνυσμα της ακμής `a→b`, προσανατολισμένο προς
+ * το σημείο `ref` (που κείτεται στην εξωτ. πλευρά, π.χ. κορυφή του outer loop).
+ * @returns `null` αν η ακμή είναι degenerate.
+ */
+function outwardNormal(a: Point3D, b: Point3D, ref: Point3D): { nx: number; ny: number } | null {
+  let ex = b.x - a.x, ey = b.y - a.y;
+  const len = Math.hypot(ex, ey);
+  if (len < 1e-9) return null;
+  ex /= len; ey /= len;
+  let nx = -ey, ny = ex;
+  if ((ref.x - a.x) * nx + (ref.y - a.y) * ny < 0) { nx = -nx; ny = -ny; }
+  return { nx, ny };
+}
+
 // ============================================================================
 // PUBLIC ENTRY
 // ============================================================================
@@ -263,8 +285,21 @@ export function computeEnvelopeOpeningCuts(
     // τοίχο (structural cutout), όχι το άνοιγμα — η Z1 πρόσοψη συνεχίζει μέχρι το free
     // edge και η Z4 ring γεμίζει εμπρός (collinear). Το `op.params.revealInsulation`
     // δεν χρησιμοποιείται πλέον εδώ.
+    const F_a = lerp(F0, F1, tStart);
+    const F_b = lerp(F0, F1, tEnd);
+
+    // ADR-396 (2026-05-30 cap-fix) — Τα outer σημεία = **κάθετη** προβολή των F_a/F_b
+    // προς τα έξω κατά το πάχος μόνωσης, ΟΧΙ same-param lerp στο outer loop. Το outer
+    // loop είναι μακρύτερο/μετατοπισμένο στις γωνίες → same-param lerp έδινε ΛΟΞΕΣ
+    // απολήξεις (splay) μη ευθυγραμμισμένες με την κάθετη παρειά τοίχου/Z4. Κάθετη
+    // προβολή = καθαρό ορθογώνιο punch + απολήξεις [O_a→F_a]/[O_b→F_b] κάθετες
+    // (collinear με Z4). Το πάχος `d` είναι miter-invariant (perpendicular component).
     const O0 = outer[ai];
-    const O1 = outer[bi];
+    const n = outwardNormal(F0, F1, O0);
+    if (!n) continue;
+    const d = (O0.x - F0.x) * n.nx + (O0.y - F0.y) * n.ny;
+    const O_a: Point3D = { x: F_a.x + n.nx * d, y: F_a.y + n.ny * d, z: 0 };
+    const O_b: Point3D = { x: F_b.x + n.nx * d, y: F_b.y + n.ny * d, z: 0 };
 
     cuts.push({
       edgeIndex: bestEdge,
@@ -272,7 +307,7 @@ export function computeEnvelopeOpeningCuts(
       tEnd,
       sillM: op.params.sillHeight * MM_TO_M,
       headM: (op.params.sillHeight + op.params.height) * MM_TO_M,
-      bandQuad: [lerp(O0, O1, tStart), lerp(O0, O1, tEnd), lerp(F0, F1, tEnd), lerp(F0, F1, tStart)],
+      bandQuad: [O_a, O_b, F_b, F_a],
     });
   }
 

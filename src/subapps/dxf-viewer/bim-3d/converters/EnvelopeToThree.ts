@@ -74,15 +74,13 @@ function makeEnvelopeMesh(
 const POS_EPS = 1e-4;
 const T_EPS = 1e-6;
 
-function lerpPt(a: Point3D, b: Point3D, t: number): Point3D {
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
-}
-
-/** Band sub-quad `[O_a, O_b, F_b, F_a]` (outer fwd → inner reversed) στο [t0,t1]. */
-function bandQuadAt(
-  f0: Point3D, f1: Point3D, o0: Point3D, o1: Point3D, t0: number, t1: number,
-): Point3D[] {
-  return [lerpPt(o0, o1, t0), lerpPt(o0, o1, t1), lerpPt(f0, f1, t1), lerpPt(f0, f1, t0)];
+/**
+ * Band quad `[O_start, O_end, F_end, F_start]` (outer fwd → inner reversed) από
+ * ρητά σημεία. Στα όρια ανοίγματος τα O είναι οι **κάθετες** απολήξεις του
+ * `cut.bandQuad` (collinear με Z4)· στις γωνίες είναι οι κορυφές του outer loop.
+ */
+function makeQuad(oStart: Point3D, oEnd: Point3D, fStart: Point3D, fEnd: Point3D): Point3D[] {
+  return [oStart, oEnd, fEnd, fStart];
 }
 
 /**
@@ -126,27 +124,33 @@ function addEdge(
   levelId?: string,
 ): void {
   if (edgeCuts.length === 0) {
-    addBandPrism(group, bandQuadAt(f0, f1, o0, o1, 0, 1), 0, heightM, baseY, materialId, levelId);
+    addBandPrism(group, makeQuad(o0, o1, f0, f1), 0, heightM, baseY, materialId, levelId);
     return;
   }
   const sorted = [...edgeCuts].sort((a, b) => a.tStart - b.tStart);
   let cursor = 0;
+  let cursorO = o0; // outer σημείο στο cursor (corner ή προηγ. cut boundary — κάθετο)
+  let cursorF = f0;
   for (const c of sorted) {
     const a = Math.max(0, Math.min(1, c.tStart));
     const b = Math.max(0, Math.min(1, c.tEnd));
     if (b - a < T_EPS) continue;
+    // Κάθετες απολήξεις από το cut.bandQuad = [O_a, O_b, F_b, F_a].
+    const oA = c.bandQuad[0], oB = c.bandQuad[1], fB = c.bandQuad[2], fA = c.bandQuad[3];
     if (a > cursor + T_EPS) {
-      addBandPrism(group, bandQuadAt(f0, f1, o0, o1, cursor, a), 0, heightM, baseY, materialId, levelId);
+      addBandPrism(group, makeQuad(cursorO, oA, cursorF, fA), 0, heightM, baseY, materialId, levelId);
     }
     const sill = Math.max(0, Math.min(heightM, c.sillM));
     const head = Math.max(0, Math.min(heightM, c.headM));
-    const span = bandQuadAt(f0, f1, o0, o1, a, b);
+    const span = makeQuad(oA, oB, fA, fB);
     if (sill > POS_EPS) addBandPrism(group, span, 0, sill, baseY, materialId, levelId);
     if (head < heightM - POS_EPS) addBandPrism(group, span, head, heightM, baseY, materialId, levelId);
     cursor = Math.max(cursor, b);
+    cursorO = oB;
+    cursorF = fB;
   }
   if (cursor < 1 - T_EPS) {
-    addBandPrism(group, bandQuadAt(f0, f1, o0, o1, cursor, 1), 0, heightM, baseY, materialId, levelId);
+    addBandPrism(group, makeQuad(cursorO, o1, cursorF, f1), 0, heightM, baseY, materialId, levelId);
   }
 }
 

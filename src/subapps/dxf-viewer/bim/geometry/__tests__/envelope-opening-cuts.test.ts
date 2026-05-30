@@ -93,7 +93,7 @@ describe('computeEnvelopeOpeningCuts', () => {
     expect(cuts[0].headM).toBeCloseTo(2.1, 5);
   });
 
-  it('band sub-quad = [O_a, O_b, F_b, F_a] (outer fwd → inner reversed)', () => {
+  it('band sub-quad = [O_a, O_b, F_b, F_a] με ΚΑΘΕΤΕΣ απολήξεις', () => {
     const chain = squareChain(['w1']);
     const cuts = computeEnvelopeOpeningCuts(chain, [windowOnBottomEdge('w1')], 'mm');
     const q = cuts[0].bandQuad;
@@ -102,9 +102,37 @@ describe('computeEnvelopeOpeningCuts', () => {
     // F_a = lerp((0,0)->(5000,0), 0.4) = (2000, 0)· F_b = (3000, 0).
     expect(q[3]).toMatchObject({ x: 2000, y: 0 }); // F_a
     expect(q[2]).toMatchObject({ x: 3000, y: 0 }); // F_b
-    // O_a = lerp((-100,-100)->(5100,-100), 0.4) = (1980, -100)· O_b = (3020, -100).
-    expect(q[0]).toMatchObject({ x: 1980, y: -100 }); // O_a
-    expect(q[1]).toMatchObject({ x: 3020, y: -100 }); // O_b
+    // O = ΚΑΘΕΤΗ προβολή του F προς τα έξω κατά το πάχος 100 (ΟΧΙ same-param lerp,
+    // που έδινε λοξά (1980,-100)/(3020,-100)). Απολήξεις κάθετες στην παρειά.
+    expect(q[0]).toMatchObject({ x: 2000, y: -100 }); // O_a (κάθετα έξω από F_a)
+    expect(q[1]).toMatchObject({ x: 3000, y: -100 }); // O_b
+    // Απολήξεις [O_a→F_a]/[O_b→F_b] κάθετες στην ακμή face (+x) → x-component = 0.
+    expect(q[0].x - q[3].x).toBeCloseTo(0, 9);
+    expect(q[1].x - q[2].x).toBeCloseTo(0, 9);
+  });
+
+  it('απολήξεις παραμένουν ΚΑΘΕΤΕΣ ακόμη και σε άνοιγμα κοντά σε γωνία (no splay)', () => {
+    // Same-param lerp έδινε αυξανόμενο splay κοντά στις γωνίες· η κάθετη προβολή το
+    // εξαλείφει. Παράθυρο κέντρο 1200 (κοντά στην αριστερή γωνία).
+    const chain = squareChain(['w1']);
+    const win: OpeningForCut = {
+      params: { wallId: 'w1', width: 1000, sillHeight: 900, height: 1400 },
+      geometry: {
+        outline: {
+          vertices: [
+            { x: 700, y: -100, z: 0 }, { x: 1700, y: -100, z: 0 },
+            { x: 1700, y: 100, z: 0 }, { x: 700, y: 100, z: 0 },
+          ],
+        },
+      },
+    };
+    const q = computeEnvelopeOpeningCuts(chain, [win], 'mm')[0].bandQuad;
+    expect(q[0].x - q[3].x).toBeCloseTo(0, 9); // O_a κάθετα πάνω από F_a
+    expect(q[1].x - q[2].x).toBeCloseTo(0, 9);
+    expect(q[0].x).toBeCloseTo(700, 6);
+    expect(q[0].y).toBeCloseTo(-100, 6);
+    expect(q[1].x).toBeCloseTo(1700, 6);
+    expect(q[1].y).toBeCloseTo(-100, 6);
   });
 
   it('reveal ΔΕΝ επηρεάζει το Z1 cut (ADR-396: η μόνωση τρώει τον τοίχο, όχι το άνοιγμα)', () => {

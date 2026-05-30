@@ -7,13 +7,16 @@
  */
 
 import {
+  EnvelopeRenderer,
   buildEnvelopeRenderPlan,
   buildSlabHatchPlan,
   buildRevealJambPlans,
   resolveEnvelopeHatchKey,
-} from '../envelope-render-plan';
+} from '../EnvelopeRenderer';
 import type { Point3D } from '../../types/bim-base';
 import type { EnvelopeChain } from '../../geometry/envelope-perimeter';
+import type { EnvelopeOpeningCut } from '../../geometry/envelope-opening-cuts';
+import type { ViewTransform } from '../../../rendering/types/Types';
 import { computeWallHatchPlan } from '../../walls/wall-hatch-patterns';
 import { resolveIsEntityVisible } from '../../visibility/visibility-resolver';
 import { GRAPHITE_EPS_MATERIAL_ID } from '../../types/thermal-envelope-types';
@@ -110,6 +113,50 @@ describe('resolveEnvelopeHatchKey', () => {
   it('maps insulation material → diagonal hatch family (gypsum)', () => {
     expect(resolveEnvelopeHatchKey(GRAPHITE_EPS_MATERIAL_ID)).toBe('gypsum');
     expect(resolveEnvelopeHatchKey('mat-xps')).toBe('gypsum');
+  });
+});
+
+describe('EnvelopeRenderer.strokeOpeningCutCaps (Z1 cut απολήξεις)', () => {
+  interface MockCtx {
+    save: jest.Mock; restore: jest.Mock; beginPath: jest.Mock;
+    moveTo: jest.Mock; lineTo: jest.Mock; stroke: jest.Mock; setLineDash: jest.Mock;
+    strokeStyle: string; lineWidth: number;
+  }
+  function mockCtx(): MockCtx {
+    return {
+      save: jest.fn(), restore: jest.fn(), beginPath: jest.fn(),
+      moveTo: jest.fn(), lineTo: jest.fn(), stroke: jest.fn(), setLineDash: jest.fn(),
+      strokeStyle: '', lineWidth: 0,
+    };
+  }
+  const transform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
+  const viewport = { width: 800, height: 600 };
+  const cut: EnvelopeOpeningCut = {
+    edgeIndex: 0, tStart: 0.4, tEnd: 0.6, sillM: 0.9, headM: 2.3,
+    // [O_a, O_b, F_b, F_a] με κάθετες απολήξεις: O_a→F_a και O_b→F_b.
+    bandQuad: [
+      { x: 2000, y: -100, z: 0 }, { x: 3000, y: -100, z: 0 },
+      { x: 3000, y: 0, z: 0 }, { x: 2000, y: 0, z: 0 },
+    ],
+  };
+
+  it('σχεδιάζει 2 κάθετες απολήξεις ανά cut ([O_a→F_a], [O_b→F_b])', () => {
+    const ctx = mockCtx();
+    new EnvelopeRenderer(ctx as unknown as CanvasRenderingContext2D)
+      .strokeOpeningCutCaps([cut], transform, viewport);
+    // 1 cut → 2 απολήξεις → 2 moveTo + 2 lineTo + 1 stroke.
+    expect(ctx.moveTo).toHaveBeenCalledTimes(2);
+    expect(ctx.lineTo).toHaveBeenCalledTimes(2);
+    expect(ctx.stroke).toHaveBeenCalledTimes(1);
+    // Χρώμα = θερμό insulation tint (ίδιο με τη μεγάλη γραμμή).
+    expect(ctx.strokeStyle).toBe('rgba(184, 92, 28, 0.95)');
+  });
+
+  it('no-op όταν δεν υπάρχουν cuts', () => {
+    const ctx = mockCtx();
+    new EnvelopeRenderer(ctx as unknown as CanvasRenderingContext2D)
+      .strokeOpeningCutCaps([], transform, viewport);
+    expect(ctx.stroke).not.toHaveBeenCalled();
   });
 });
 

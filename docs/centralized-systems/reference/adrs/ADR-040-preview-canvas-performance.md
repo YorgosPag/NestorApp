@@ -2543,6 +2543,10 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 
 Bugfix-only αλλαγή στο `EnvelopeOverlay.tsx` (ETICS Z4 reveal): η μόνωση περβαζιών ζωγραφίζεται πλέον ως **2 παραστάδες** (jamb hatch bands μέσω `renderSlabHatch`) αντί inset frame — διορθώνει λοξή παρειά. Μηδέν αλλαγή στο micro-leaf subscription pattern: το overlay παραμένει always-on leaf, subscribe μόνο σε `envelope-spec-store` + `useDrawingScaleStore(objectStyles/viewRange)` (όχι high-freq stores). Καμία νέα `useSyncExternalStore` σε orchestrator. Staged για CHECK 6D (canvas drawing file touch). Βλ. ADR-396 §3 P-RENDER + changelog 2026-05-30.
 
+## 2026-05-30: ADR-396 Z1 cut end-cap touch — `EnvelopeOverlay.strokeOpeningCutCaps` (CHECK 6D stage)
+
+Bugfix-only αλλαγή στο `EnvelopeOverlay.tsx`: μετά το `renderOpeningCuts` (`destination-out`) καλείται το νέο `EnvelopeRenderer.strokeOpeningCutCaps` που κλείνει το προφίλ μόνωσης στα άκρα κάθε Z1 cut με τις 2 **κάθετες απολήξεις** (collinear με Z4). **Μηδέν αλλαγή στο micro-leaf subscription pattern** — το overlay παραμένει always-on leaf, subscribe μόνο σε `envelope-spec-store` + `useDrawingScaleStore(objectStyles/viewRange)`· καμία νέα `useSyncExternalStore` σε orchestrator (CHECK 6C safe). Η γεωμετρία προέρχεται από το ίδιο `cut.bandQuad` SSoT (`computeEnvelopeOpeningCuts`, perpendicular O). Staged για CHECK 6D (canvas drawing file touch). Βλ. ADR-396 §3 + changelog 2026-05-30.
+
 ## 2026-05-30: ADR-399 Phase D — `FloorUnderlayOverlay` read-only 2Δ underlay micro-leaf («Όλοι οι όροφοι»)
 
 Νέο **read-only** overlay canvas `components/dxf-layout/FloorUnderlayOverlay.tsx` mounted στο `CanvasLayerStack` shell, **πίσω** από τον ενεργό DXF canvas (z-[5] < DxfCanvas z-10, πάνω από floorplan background z-0). Ζωγραφίζει τις κατόψεις DXF των **άλλων** ορόφων του κτιρίου, ξεθωριασμένες (AutoCAD xref fade), όταν `floor3DScope==='all'` ΚΑΙ `mode==='2d'`.

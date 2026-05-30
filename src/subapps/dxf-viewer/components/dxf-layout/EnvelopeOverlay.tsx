@@ -171,6 +171,9 @@ export function EnvelopeOverlay({
         // Τρύπησε τα ανοίγματα ΜΕΤΑ το band του ίδιου chain (πριν τα Z4 reveals).
         const cuts = computeEnvelopeOpeningCuts(chain, openings, scene.units ?? 'mm');
         renderer.renderOpeningCuts(cuts, transform, viewport);
+        // Κλείσε το προφίλ μόνωσης στα άκρα κάθε cut με τις κάθετες απολήξεις
+        // (ΜΕΤΑ το destination-out ώστε να μη σβηστούν).
+        renderer.strokeOpeningCutCaps(cuts, transform, viewport);
       }
     }
 
