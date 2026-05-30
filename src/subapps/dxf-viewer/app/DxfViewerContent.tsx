@@ -60,6 +60,7 @@ import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/Cl
 import { useDxfViewerCallbacks } from './useDxfViewerCallbacks';
 import { useDxfViewerEffects } from './useDxfViewerEffects';
 import { useAutoFitOnFileChange } from './useAutoFitOnFileChange';
+import { useViewportUrlSync } from '../hooks/canvas/useViewportUrlSync';
 // 📐 ADR-345 Fase 4: i18n for the "Coming Soon" toast on unwired ribbon buttons.
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 📐 ADR-345/353: contextual tabs config + trigger resolver (SSoT)
@@ -284,6 +285,12 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     levelManager, universalSelection,
     handleToolChange, fallback: wrappedHandleAction,
   });
+  // ADR-400: persist + restore pan/zoom + active floor via URL (+localStorage, ADR-040 safe).
+  useViewportUrlSync({
+    fileRecordId: levelManager.fileRecordId ?? null,
+    levelId: levelManager.currentLevelId,
+  });
+
   // ADR-362 Phase J2 — Dimension associativity observer (auto-follow geometry).
   useDimAssociationObserver(levelManager.getLevelScene, levelManager.setLevelScene, () => levelManager.currentLevelId);
   // ADR-358 Phase 7a / ADR-363 — BIM contextual bridges (stair / wall / opening / slab / column / beam).
@@ -488,4 +495,4 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       </div>
   );
 });
-export default DxfViewerContent;
+export default DxfViewerContent;

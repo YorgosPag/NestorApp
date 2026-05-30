@@ -21,6 +21,11 @@ import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
 import type { Overlay } from '../../overlays/types';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 
+// ADR-400: payload type for canvas-restore-viewport event.
+interface RestoreViewportPayload {
+  transform: ViewTransform;
+}
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -169,9 +174,20 @@ export function useFitToView({
       }
     };
 
+    // ADR-400: Restore a persisted viewport transform (absolute, no bounds calc needed).
+    const handleRestoreViewport = (payload: RestoreViewportPayload) => {
+      const { scale, offsetX, offsetY } = payload.transform;
+      if (!Number.isFinite(scale) || scale <= 0 || !Number.isFinite(offsetX) || !Number.isFinite(offsetY)) {
+        derr('useFitToView', '🚨 canvas-restore-viewport: invalid transform, ignoring');
+        return;
+      }
+      setTransform(payload.transform);
+    };
+
     const cleanup = EventBus.on('canvas-fit-to-view', handleFitToView);
     const cleanupSelected = EventBus.on('canvas-fit-to-view-selected', handleFitToViewSelected);
-    return () => { cleanup(); cleanupSelected(); };
+    const cleanupRestore = EventBus.on('canvas-restore-viewport', handleRestoreViewport);
+    return () => { cleanup(); cleanupSelected(); cleanupRestore(); };
   }, [dxfScene, colorLayers, zoomSystem]); // 🚀 Include colorLayers για combined bounds
 
   return { fitToOverlay };

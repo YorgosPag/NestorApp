@@ -284,6 +284,12 @@ export interface DrawingEventMap {
     worldBounds: { min: { x: number; y: number }; max: { x: number; y: number } };
     viewport: { width: number; height: number };
   };
+  // ADR-400 — Restore persisted viewport transform (pan+zoom) without bounds recalc.
+  // Emitted by useAutoFitOnFileChange when a valid persisted transform is found on
+  // first scene load. Consumed by useFitToView which applies it via setTransform.
+  'canvas-restore-viewport': {
+    transform: { scale: number; offsetX: number; offsetY: number };
+  };
 }
 
 export type DrawingEventType = keyof DrawingEventMap;

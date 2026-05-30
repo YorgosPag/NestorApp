@@ -47,7 +47,10 @@ export function useBimRenderSettingsSync({
   levels,
 }: UseBimRenderSettingsSyncParams): void {
   useEffect(() => {
-    if (!currentLevelId) return;
+    // Defense-in-depth: `levels` is typed required, but a caller mid-refactor can
+    // still pass undefined (Next dev does not type-check) — degrade gracefully
+    // instead of crashing the whole viewer on a passive mount effect.
+    if (!currentLevelId || !levels) return;
     const level = levels.find((l) => l.id === currentLevelId);
     const incoming = level?.bimRenderSettings ?? null;
     const store = useBimRenderSettingsStore.getState();

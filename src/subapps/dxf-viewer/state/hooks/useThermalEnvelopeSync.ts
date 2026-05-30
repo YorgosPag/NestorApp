@@ -42,7 +42,9 @@ export function useThermalEnvelopeSync({
   levels,
 }: UseThermalEnvelopeSyncParams): void {
   useEffect(() => {
-    if (!currentLevelId) return;
+    // Defense-in-depth (mirror useBimRenderSettingsSync): tolerate an undefined
+    // `levels` from a caller mid-refactor instead of crashing on mount.
+    if (!currentLevelId || !levels) return;
     const level = levels.find((l) => l.id === currentLevelId);
     const incoming = level?.thermalEnvelopeSpec ?? null;
 

@@ -24,6 +24,7 @@ import { useLevelsFirestoreSync } from './hooks/useLevelsFirestoreSync';
 import { useLevelOperations } from './hooks/useLevelOperations';
 import { useLevelFloorplanSync } from './hooks/useLevelFloorplanSync';
 import { useAuth } from '@/auth';
+import { readViewportFromUrl } from '../../services/viewport-persistence';
 
 // ============================================================================
 // 🏢 ENTERPRISE: STATIC CONTEXT CREATION (ADR-125)
@@ -238,6 +239,25 @@ function useLevelsSystemState({
 
   // 🏢 ENTERPRISE: Bidirectional sync — external floorplan deletion clears canvas scene
   useLevelFloorplanSync({ levels, clearLevelScene });
+
+  // ADR-400 — One-shot URL level restore: when the levels list first becomes non-empty
+  // (Firestore delivery), check if the URL carries a `lvl` param that matches an
+  // existing level. If so, select it once (restores floor on page refresh / shared link).
+  // Guard: useRef<boolean> ensures this runs at most once per mount.
+  const urlLevelRestoredRef = useRef(false);
+  React.useEffect(() => {
+    if (urlLevelRestoredRef.current || levels.length === 0) return;
+    const urlLevelId = readViewportFromUrl().levelId ?? null;
+    if (!urlLevelId) return;
+    const levelExists = levels.some(l => l.id === urlLevelId);
+    if (levelExists && urlLevelId !== currentLevelId) {
+      urlLevelRestoredRef.current = true;
+      setCurrentLevelId(urlLevelId);
+    } else if (levelExists) {
+      // Already selected — still mark as done so we don't loop.
+      urlLevelRestoredRef.current = true;
+    }
+  }, [levels, currentLevelId, setCurrentLevelId]);
 
   // Import wizard operations
   const startImportWizard = useCallback(
