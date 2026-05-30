@@ -4,8 +4,8 @@
  * Παίρνει ένα `ThermalEnvelopeSpec` ορόφου + τα entities του ορόφου και
  * αποφασίζει ποιο δομικό στοιχείο παίρνει στρώση μόνωσης (per-element = source
  * of truth, Revit pattern — ADR-396 OQ-A/OQ-B):
- *   - **Z1** κολώνες/δοκάρια: εξωτερικά αν η αντιπροσωπευτική θέση τους απέχει
- *     ≤ `EXTERIOR_PROXIMITY_M` (configurable) από τη γραμμή εξωτ. όψης τοίχων.
+ *   - **Z1** κολώνες/δοκάρια: εξωτερικά ⟺ ανήκουν στο footprint κέλυφος (διαβάζεται
+ *     απευθείας από `chain.columnIds`/`beamIds` του `computeEnvelopeShell`, v2 Φ5B).
  *   - **Z2/Z3** πλάκες: μέσω `classifyExposedSlab` (πιλοτή soffit / δώμα top).
  *   - **Z4** ανοίγματα: σε εξωτερικό host wall → reveal μόνωση περβαζιών.
  * Κάθε ζώνη gated από `spec.zones[Zx]`. Στοιχείο που δεν qualify-άρει πλέον (ή
@@ -30,28 +30,17 @@ import {
   isSlabEntity,
   isOpeningEntity,
 } from '../../types/entities';
-import type { ColumnEntity } from '../types/column-types';
-import type { BeamEntity } from '../types/beam-types';
-import type { Point3D } from '../types/bim-base';
 import type {
   EnvelopeLayer,
   EnvelopeZoneId,
   ThermalEnvelopeSpec,
 } from '../types/thermal-envelope-types';
-import { EXTERIOR_PROXIMITY_M } from '../types/thermal-envelope-types';
 import type { StoreyRef } from '../utils/bim-floor-utils';
 import type { SceneUnits } from '../../utils/scene-units';
-import { mmToSceneUnits } from '../../utils/scene-units';
-import {
-  computeEnvelopePerimeter,
-  type WallForEnvelope,
-  type ColumnForEnvelope,
-} from '../geometry/envelope-perimeter';
+import { computeEnvelopeShell, collectEnvelopeOverrides } from '../geometry/envelope-shell';
+import type { WallForEnvelope, ColumnForEnvelope } from '../geometry/envelope-perimeter';
+import type { BeamForFootprint } from '../geometry/building-footprint';
 import { filterExposedSlabs, type SlabForZoneClassification } from '../geometry/exposed-slab-classifier';
-import { polygonCentroid } from '../geometry/shared/polygon-utils';
-import { pointToSegmentDistance } from '../../systems/guides';
-
-const MM_PER_M = 1000;
 
 // ============================================================================
 // PUBLIC TYPES
@@ -71,75 +60,43 @@ export interface ElementEnvelopeAssignment {
 }
 
 // ============================================================================
-// GEOMETRY HELPERS (pure, canvas-unit space)
+// SHELL MEMBERSHIP (footprint-driven exterior element ids — ADR-396 v2 Φ5B)
 // ============================================================================
 
-/** Αντιπροσωπευτικό κέντρο στοιχείου σε canvas units (κολώνα footprint / δοκάρι άξονας). */
-function representativeCenter(entity: ColumnEntity | BeamEntity): Point3D | null {
-  const pts = isColumnEntity(entity)
-    ? entity.geometry?.footprint?.vertices
-    : entity.geometry?.axisPolyline?.points;
-  if (!pts || pts.length === 0) return null;
-  return polygonCentroid(pts);
-}
-
-/** Ελάχιστη απόσταση σημείου από όλες τις ακμές των loops (canvas units). */
-function minDistanceToLoops(point: Point3D, loops: readonly (readonly Point3D[])[]): number {
-  let min = Infinity;
-  for (const loop of loops) {
-    const n = loop.length;
-    if (n < 2) continue;
-    for (let i = 0; i < n; i++) {
-      const d = pointToSegmentDistance(point, loop[i], loop[(i + 1) % n]);
-      if (d < min) min = d;
-    }
-  }
-  return min;
-}
-
-/** True όταν κολώνα/δοκάρι είναι εξωτερικό (κέντρο ≤ proximity από εξωτ. όψη). */
-function isExteriorElement(
-  entity: ColumnEntity | BeamEntity,
-  loops: readonly (readonly Point3D[])[],
-  proximityCanvas: number,
-): boolean {
-  if (loops.length === 0) return false;
-  const center = representativeCenter(entity);
-  if (!center) return false;
-  return minDistanceToLoops(center, loops) <= proximityCanvas;
-}
-
-// ============================================================================
-// PERIMETER CONTEXT (exterior face loops + exterior wall ids)
-// ============================================================================
-
-interface PerimeterContext {
-  readonly loops: readonly (readonly Point3D[])[];
+interface ShellMembership {
   readonly exteriorWallIds: ReadonlySet<string>;
-  readonly proximityCanvas: number;
+  readonly exteriorColumnIds: ReadonlySet<string>;
+  readonly exteriorBeamIds: ReadonlySet<string>;
 }
+
+const EMPTY_MEMBERSHIP: ShellMembership = {
+  exteriorWallIds: new Set(),
+  exteriorColumnIds: new Set(),
+  exteriorBeamIds: new Set(),
+};
 
 /**
- * Χτίζει το exterior-face context μία φορά. ADR-396 v2 gating: ΜΟΝΟ αλυσίδες που
- * **περικλείουν χώρο** (`enclosesRegion` — κύκλος στο γράφημα· κολώνες γεφυρώνουν
- * κενά). Ανοιχτή αλυσίδα → κενό context (καμία στρώση) — consistent με 2D/3D
- * render (Phase 1, αντικαθιστά το `wallIds.length >= 3`).
+ * Ποια στοιχεία ανήκουν στο μονωμένο κέλυφος — διαβασμένα ΑΠΕΥΘΕΙΑΣ από τα
+ * `EnvelopeChain` ids του `computeEnvelopeShell` (footprint union + hole-gate +
+ * per-element override). Αντικαθιστά το παλιό proximity heuristic: το footprint
+ * ορίζει πλέον ρητά τη συμμετοχή (απλούστερο, SSoT, σέβεται αυτόματα τα overrides).
+ * Στοιχείο εκτός κάθε chain → δεν μονώνεται. Mirror 2D/3D render — full parity.
  */
-function buildPerimeterContext(
+function buildShellMembership(
   walls: readonly WallForEnvelope[],
   columns: readonly ColumnForEnvelope[],
-  thickness_m: number,
+  beams: readonly BeamForFootprint[],
+  spec: ThermalEnvelopeSpec,
   units: SceneUnits,
-): PerimeterContext {
-  const { chains } = computeEnvelopePerimeter(walls, thickness_m, units, columns);
-  // ADR-396 v2 gating (Phase 1): ETICS ΜΟΝΟ σε αλυσίδες που περικλείουν χώρο
-  // (enclosesRegion — κύκλος στο γράφημα). Ανοιχτή αλυσίδα → κανένα στοιχείο
-  // εξωτερικό. T-junctions ΔΕΝ αποκλείονται. mirror EnvelopeOverlay/BimSceneLayer.
-  const active = chains.filter((c) => c.enclosesRegion);
+): ShellMembership {
+  const overrides = collectEnvelopeOverrides([...walls, ...columns, ...beams]);
+  const { chains } = computeEnvelopeShell(walls, columns, beams, spec, overrides, [], {
+    sceneUnits: units,
+  });
   return {
-    loops: active.map((c) => c.exteriorFaceLoop.points),
-    exteriorWallIds: new Set(active.flatMap((c) => c.wallIds)),
-    proximityCanvas: EXTERIOR_PROXIMITY_M * MM_PER_M * mmToSceneUnits(units),
+    exteriorWallIds: new Set(chains.flatMap((c) => c.wallIds)),
+    exteriorColumnIds: new Set(chains.flatMap((c) => c.columnIds)),
+    exteriorBeamIds: new Set(chains.flatMap((c) => c.beamIds ?? [])),
   };
 }
 
@@ -164,17 +121,20 @@ export function computeEnvelopeAssignments(
 ): ElementEnvelopeAssignment[] {
   const walls = entities.filter(isWallEntity);
   const columns = entities.filter(isColumnEntity);
+  const beams = entities.filter(isBeamEntity);
   const units = sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
-  const needPerimeter = spec.zones.Z1 || spec.zones.Z4;
-  const ctx = needPerimeter
-    ? buildPerimeterContext(walls, columns, spec.thickness_m, units)
-    : { loops: [], exteriorWallIds: new Set<string>(), proximityCanvas: 0 };
+  const needShell = spec.zones.Z1 || spec.zones.Z4;
+  const ctx = needShell
+    ? buildShellMembership(walls, columns, beams, spec, units)
+    : EMPTY_MEMBERSHIP;
 
   const out: ElementEnvelopeAssignment[] = [];
 
   for (const e of entities) {
     if (isColumnEntity(e) || isBeamEntity(e)) {
-      const want = spec.zones.Z1 && isExteriorElement(e, ctx.loops, ctx.proximityCanvas);
+      // Z1 κολώνας/δοκαριού: εξωτερικό ⟺ ανήκει στο footprint κέλυφος (chain ids).
+      const want =
+        spec.zones.Z1 && (ctx.exteriorColumnIds.has(e.id) || ctx.exteriorBeamIds.has(e.id));
       out.push({
         entityId: e.id,
         entityType: e.type,

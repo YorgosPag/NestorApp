@@ -1,9 +1,9 @@
 /**
  * ADR-396 P7 Part B — Tests για envelope-element-applicator (PURE).
  *
- * Καλύπτει: Z1 proximity (εξωτ./εσωτ. κολώνα+δοκάρι + tolerance), Z2/Z3 slab
- * classification, Z4 opening σε εξωτ. host wall, zone gates → clear, idempotent
- * dequal-skip, και το `applyAssignmentsToEntities` patch/changed contract.
+ * Καλύπτει: Z1 footprint-shell membership (εξωτ. κολώνα/δοκάρι στο περίγραμμα vs
+ * εσωτερικό), Z2/Z3 slab classification, Z4 opening σε εξωτ. host wall, zone gates
+ * → clear, idempotent dequal-skip, και το `applyAssignmentsToEntities` patch/changed.
  */
 
 import {
@@ -53,22 +53,27 @@ function squareWalls(): AnySceneEntity[] {
   ];
 }
 
+// Φ5B: ο shell διαβάζει τα ΠΑΡΑΜΕΤΡΑ (position/width/depth — όχι geometry.footprint).
 function columnAt(id: string, cx: number, cy: number, envelopeLayer?: unknown): AnySceneEntity {
-  const v: Point3D[] = [
-    { x: cx - 200, y: cy - 200 }, { x: cx + 200, y: cy - 200 },
-    { x: cx + 200, y: cy + 200 }, { x: cx - 200, y: cy + 200 },
-  ];
   return {
     id, type: 'column', kind: 'rectangular',
-    params: { sceneUnits: 'mm', ...(envelopeLayer ? { envelopeLayer } : {}) },
-    geometry: { footprint: { vertices: v }, area: 0.16, volume: 0.48, height: 3000 },
+    params: {
+      kind: 'rectangular', position: { x: cx, y: cy, z: 0 }, anchor: 'center',
+      width: 400, depth: 400, height: 3000, rotation: 0, sceneUnits: 'mm',
+      baseBinding: 'storey-floor', topBinding: 'storey-ceiling', baseOffset: 0, topOffset: 0,
+      ...(envelopeLayer ? { envelopeLayer } : {}),
+    },
+    geometry: { area: 0.16, volume: 0.48, height: 3000 },
   } as unknown as AnySceneEntity;
 }
 
 function beamAt(id: string, a: Point3D, b: Point3D): AnySceneEntity {
   return {
     id, type: 'beam', kind: 'straight',
-    params: { sceneUnits: 'mm' },
+    params: {
+      kind: 'straight', startPoint: a, endPoint: b, width: 400, depth: 500,
+      topElevation: 3000, sceneUnits: 'mm',
+    },
     geometry: { axisPolyline: { points: [a, b] } },
   } as unknown as AnySceneEntity;
 }

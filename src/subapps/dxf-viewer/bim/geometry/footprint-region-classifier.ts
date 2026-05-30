@@ -4,10 +4,13 @@
  * Παίρνει το περίγραμμα κτιρίου (`building-footprint.ts`, Φάση 2) + τις πλάκες
  * των ψηλότερων ορόφων και αποφασίζει **αυτόματα** ποια όρια παίρνουν μόνωση:
  *
- *   - **Στρ.1 — εξώτατο όριο** (`outerRings`): ΠΑΝΤΑ μόνωση (`role: 'exterior'`).
- *   - **Στρ.2 — κάθε τρύπα** (`holes`): **αίθριο** (ανοιχτό στον ουρανό → μόνωση
- *     γύρω) ή **κλειστό δωμάτιο** (έχει πλάκα από πάνω → καμία μόνωση). Κανόνας
- *     (ADR-396 §3.1.2): τρύπα ΧΩΡΙΣ πλάκα από πάνω = αίθριο· ΜΕ πλάκα = δωμάτιο.
+ *   - **Στρ.1 — εξώτατο όριο** (ανά component): μόνωση ΜΟΝΟ αν το component έχει
+ *     ≥1 τρύπα (περικλείει χώρο, `role: 'exterior'`). Ανοιχτό σχήμα χωρίς τρύπα
+ *     (Π/L/μονός τοίχος) → `role: 'open-structure'`, καμία μόνωση (hole-gate).
+ *   - **Στρ.2 — κάθε τρύπα**: **αίθριο** (ανοιχτό στον ουρανό → μόνωση γύρω) ή
+ *     **κλειστό δωμάτιο** (έχει πλάκα από πάνω, Ή λείπουν δεδομένα → καμία μόνωση).
+ *     Κανόνας (ADR-396 §3.1.2): τρύπα ΧΩΡΙΣ πλάκα από πάνω = αίθριο· ΜΕ πλάκα ή
+ *     χωρίς δεδομένα = δωμάτιο.
  *   - **Στρ.3 — per-element χειροκίνητη παράκαμψη** (Revit-style): Φάση 4 + 6.
  *
  * Ο έλεγχος «έχει η τρύπα πλάκα από πάνω;» γίνεται με **γεωμετρική τομή** (ίδια
@@ -38,14 +41,21 @@ import type { StoreyRef } from '../utils/bim-floor-utils';
 // PUBLIC TYPES
 // ============================================================================
 
-/** Ρόλος ενός ορίου ως προς τη μόνωση κελύφους. */
-export type RegionEnvelopeRole = 'exterior' | 'atrium' | 'interior-room';
+/**
+ * Ρόλος ενός ορίου ως προς τη μόνωση κελύφους.
+ * - `exterior` — εξώτατο όριο component που **περικλείει χώρο** (έχει ≥1 τρύπα).
+ * - `atrium` — ακάλυπτη τρύπα (μόνωση γύρω, προς το κενό).
+ * - `interior-room` — τρύπα-δωμάτιο (σκεπασμένη ή χωρίς δεδομένα) — καμία μόνωση.
+ * - `open-structure` — εξώτατο όριο **ανοιχτού** component (Π/L/μονός τοίχος, καμία
+ *   τρύπα) — ΚΑΜΙΑ μόνωση (αλλιώς θα τύλιγε και την ανοιχτή πλευρά, ADR-396 §3 gate).
+ */
+export type RegionEnvelopeRole = 'exterior' | 'atrium' | 'interior-room' | 'open-structure';
 
 /** Ένα δαχτυλίδι του περιγράμματος με την απόφαση μόνωσης. */
 export interface ClassifiedFootprintRing {
   readonly ring: FootprintRing;
   readonly role: RegionEnvelopeRole;
-  /** `exterior` + `atrium` = true · `interior-room` = false. */
+  /** `exterior` + `atrium` = true · `interior-room` + `open-structure` = false. */
   readonly insulated: boolean;
   /** Ποσοστό (0..1) της τρύπας που σκεπάζεται από πλάκα ψηλότερου ορόφου (0 για outer). */
   readonly coverageAbove: number;
@@ -56,6 +66,8 @@ export interface FootprintClassificationResult {
   readonly exterior: readonly ClassifiedFootprintRing[];
   readonly atria: readonly ClassifiedFootprintRing[];
   readonly interiorRooms: readonly ClassifiedFootprintRing[];
+  /** Εξώτατα όρια ανοιχτών components (καμία τρύπα → καμία μόνωση). */
+  readonly openStructures: readonly ClassifiedFootprintRing[];
 }
 
 /** Ελάχιστο σχήμα πλάκας για τον coverage έλεγχο (footprint σε canvas units). */
@@ -86,6 +98,7 @@ const EMPTY_RESULT: FootprintClassificationResult = {
   exterior: [],
   atria: [],
   interiorRooms: [],
+  openStructures: [],
 };
 
 // ============================================================================
@@ -153,11 +166,22 @@ function computeHoleCoverage(
 // ============================================================================
 
 /**
- * Ταξινομεί τα όρια του περιγράμματος σε `exterior` / `atrium` / `interior-room`.
+ * Ταξινομεί τα όρια του περιγράμματος σε `exterior` / `atrium` / `interior-room` /
+ * `open-structure`. Δουλεύει **ανά component** (`footprint.components`) ώστε να
+ * εφαρμόσει τα 2 gates (ADR-396 §3, αποφάσεις Giorgio):
+ *
+ *   1. **Hole-gate:** εξώτατο όριο μονώνεται ΜΟΝΟ αν το component του έχει ≥1 τρύπα
+ *      (περικλείει χώρο). Καμία τρύπα (Π/L/μονός τοίχος) → `open-structure`, καμία
+ *      μόνωση — αλλιώς θα τύλιγε λάθος και την ανοιχτή πλευρά.
+ *   2. **No-slab-data default:** όταν `slabsAbove` είναι ΚΕΝΟ (καθόλου δεδομένα),
+ *      κάθε τρύπα = `interior-room` (όχι αίθριο) → μόνωση μόνο εξωτερικά (μηδέν
+ *      regression vs παλιό σύστημα). Τα αίθρια ανιχνεύονται όταν δοθούν `slabsAbove`
+ *      (Φάση 5C) και η κάλυψη είναι < threshold.
  *
  * @param footprint  - έξοδος `computeBuildingFootprint` (τρέχων όροφος).
  * @param slabsAbove - footprints πλακών οποιουδήποτε ψηλότερου ορόφου (canvas
- *                     units). Δες `selectSlabsAboveFloor` για το resolve.
+ *                     units). Δες `selectSlabsAboveFloor` για το resolve. Κενό =
+ *                     καμία ανίχνευση αίθριου (όλες οι τρύπες = δωμάτια).
  * @param options.coverageThreshold - override του `ATRIUM_COVERAGE_THRESHOLD`.
  */
 export function classifyFootprintRegions(
@@ -165,42 +189,45 @@ export function classifyFootprintRegions(
   slabsAbove: readonly SlabRegionFootprint[] = [],
   options?: { readonly coverageThreshold?: number },
 ): FootprintClassificationResult {
-  if (footprint.outerRings.length === 0 && footprint.holes.length === 0) {
-    return EMPTY_RESULT;
-  }
+  if (footprint.components.length === 0) return EMPTY_RESULT;
   const threshold = options?.coverageThreshold ?? ATRIUM_COVERAGE_THRESHOLD;
+  // Κανένα δεδομένο πλακών → δεν μπορούμε να ξεχωρίσουμε αίθριο από δωμάτιο →
+  // ασφαλές default = δωμάτιο (μόνο εξωτερική περίμετρος, ADR-396 §3 / Φάση 5B).
+  const noSlabData = slabsAbove.length === 0;
 
   const rings: ClassifiedFootprintRing[] = [];
   const exterior: ClassifiedFootprintRing[] = [];
   const atria: ClassifiedFootprintRing[] = [];
   const interiorRooms: ClassifiedFootprintRing[] = [];
+  const openStructures: ClassifiedFootprintRing[] = [];
 
-  for (const ring of footprint.outerRings) {
-    const classified: ClassifiedFootprintRing = {
-      ring,
-      role: 'exterior',
-      insulated: true,
+  for (const comp of footprint.components) {
+    const enclosed = comp.holes.length > 0; // hole-gate: περικλείει χώρο;
+    const outer: ClassifiedFootprintRing = {
+      ring: comp.outer,
+      role: enclosed ? 'exterior' : 'open-structure',
+      insulated: enclosed,
       coverageAbove: 0,
     };
-    rings.push(classified);
-    exterior.push(classified);
+    rings.push(outer);
+    (enclosed ? exterior : openStructures).push(outer);
+
+    for (const hole of comp.holes) {
+      const coverage = computeHoleCoverage(hole, slabsAbove);
+      // Degenerate (μηδενικού εμβαδού) τρύπα → δωμάτιο. Κενά δεδομένα → δωμάτιο.
+      const isRoom = noSlabData || hole.areaCanvas <= AREA_EPS || coverage >= threshold;
+      const classified: ClassifiedFootprintRing = {
+        ring: hole,
+        role: isRoom ? 'interior-room' : 'atrium',
+        insulated: !isRoom,
+        coverageAbove: coverage,
+      };
+      rings.push(classified);
+      (isRoom ? interiorRooms : atria).push(classified);
+    }
   }
 
-  for (const hole of footprint.holes) {
-    const coverage = computeHoleCoverage(hole, slabsAbove);
-    // Degenerate (μηδενικού εμβαδού) τρύπα → δωμάτιο (καμία μόνωση σε ανύπαρκτο κενό).
-    const isRoom = hole.areaCanvas <= AREA_EPS || coverage >= threshold;
-    const classified: ClassifiedFootprintRing = {
-      ring: hole,
-      role: isRoom ? 'interior-room' : 'atrium',
-      insulated: !isRoom,
-      coverageAbove: coverage,
-    };
-    rings.push(classified);
-    (isRoom ? interiorRooms : atria).push(classified);
-  }
-
-  return { rings, exterior, atria, interiorRooms };
+  return { rings, exterior, atria, interiorRooms, openStructures };
 }
 
 // ============================================================================

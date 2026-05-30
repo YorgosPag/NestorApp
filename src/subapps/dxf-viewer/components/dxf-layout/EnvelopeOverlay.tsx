@@ -17,14 +17,14 @@
  * visibility — anchored στο world bbox, άρα pan/zoom ξαναζωγραφίζουν.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §3, §7 (P4)
- * @see ../../bim/geometry/envelope-perimeter (computeEnvelopePerimeter)
+ * @see ../../bim/geometry/envelope-shell (computeEnvelopeShell — footprint-driven, v2 Φ5B)
  * @see ../../bim/renderers/EnvelopeRenderer (plan + draw)
  */
 
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
-import { computeEnvelopePerimeter } from '../../bim/geometry/envelope-perimeter';
+import { computeEnvelopeShell, collectEnvelopeOverrides } from '../../bim/geometry/envelope-shell';
 import { computeEnvelopeOpeningCuts } from '../../bim/geometry/envelope-opening-cuts';
 import {
   EnvelopeRenderer,
@@ -143,10 +143,14 @@ export function EnvelopeOverlay({
     const walls = scene.entities.filter(
       (e): e is Extract<DxfEntityUnion, { type: 'wall' }> => e.type === 'wall',
     );
-    // ADR-396 gating: οι κολώνες γεφυρώνουν κενά στο περίγραμμα (Επιλογή Α).
+    // ADR-396 v2 (Φ5B): κολώνες + δοκάρια συμμετέχουν first-class στο footprint
+    // union (προεξοχές τυλίγονται «ίδια με τοίχους») — όχι απλώς bridge κενών.
     const columns = scene.entities
       .filter((e): e is Extract<DxfEntityUnion, { type: 'column' }> => e.type === 'column')
       .map((c) => ({ id: c.id, params: c.params }));
+    const beams = scene.entities
+      .filter((e): e is Extract<DxfEntityUnion, { type: 'beam' }> => e.type === 'beam')
+      .map((b) => ({ id: b.id, params: b.params }));
     // ADR-396 — ανοίγματα για cutouts στο band μόνωσης (η Z1 δεν σκεπάζει κουφώματα).
     const openings = scene.entities
       .filter((e): e is Extract<DxfEntityUnion, { type: 'opening' }> => e.type === 'opening')
@@ -157,16 +161,17 @@ export function EnvelopeOverlay({
     // (καμία γραμμή) — βλ. computeWallHatchPlan.
     const spacingScale = mmToSceneUnits(scene.units ?? 'mm');
 
-    // Z1 — κατακόρυφο κέλυφος (offset perimeter των τοίχων, spec-driven).
-    if (walls.length > 0) {
-      const { chains } = computeEnvelopePerimeter(walls, spec.thickness_m, scene.units, columns);
+    // Z1 — κατακόρυφο κέλυφος (footprint-driven shell, spec-driven).
+    if (walls.length > 0 || columns.length > 0 || beams.length > 0) {
+      // ADR-396 v2 (Φ5B): πηγή = `computeEnvelopeShell` (footprint union + hole-gate
+      // + per-element override). Ο engine επιστρέφει ΜΟΝΟ ό,τι μονώνεται (το
+      // hole-gate ζει στον classifier), οπότε ΟΛΑ τα chains ζωγραφίζονται — δεν
+      // φιλτράρουμε `enclosesRegion` (θα έκοβε τα ανοιχτά runs από 'interior' override).
+      const overrides = collectEnvelopeOverrides([...walls, ...columns, ...beams]);
+      const { chains } = computeEnvelopeShell(
+        walls, columns, beams, spec, overrides, [], { sceneUnits: scene.units },
+      );
       for (const chain of chains) {
-        // ADR-396 v2 gating (Phase 1): ETICS ΜΟΝΟ όταν οι τοίχοι **περικλείουν
-        // χώρο** (κύκλος στο γράφημα). Ανοιχτή αλυσίδα (Π/L/ζιγκ-ζαγκ/μεμονωμένος)
-        // → enclosesRegion=false → καμία μόνωση. Κτίριο με εσωτερικό χώρισμα
-        // (T-junction) → έχει κύκλο → enclosesRegion=true → εμφάνιση. Αντικαθιστά
-        // το παλιό `wallIds.length >= 3` που περνούσε λάθος τις ανοιχτές αλυσίδες.
-        if (!chain.enclosesRegion) continue;
         const plan = buildEnvelopeRenderPlan(chain, spec.materialId, spacingScale);
         if (plan) renderer.render(plan, transform, viewport);
         // Τρύπησε τα ανοίγματα ΜΕΤΑ το band του ίδιου chain (πριν τα Z4 reveals).

@@ -79,6 +79,15 @@ function opening(id: string, wallId: string): AnySceneEntity {
     params: { wallId, offsetFromStart: 1000, width: 1200, height: 1400, sillHeight: 900 },
   } as unknown as AnySceneEntity;
 }
+function beamEntity(id: string, a: Point3D, b: Point3D): AnySceneEntity {
+  return {
+    id, type: 'beam', kind: 'straight',
+    params: {
+      kind: 'straight', startPoint: a, endPoint: b, width: 400, depth: 500,
+      topElevation: 3000, sceneUnits: 'mm',
+    },
+  } as unknown as AnySceneEntity;
+}
 
 const storeys: StoreyRef[] = [{ id: 'f0', elevation: 0 }, { id: 'f1', elevation: 3 }];
 const ctx = { companyId: 'c1', projectId: 'p1', buildingId: 'b1', floorId: 'f1' };
@@ -109,6 +118,15 @@ describe('computeEnvelopeZoneAreas', () => {
       entities, storeys, spec({ zones: { Z1: false, Z2: false, Z3: false, Z4: false } }),
     );
     expect(areas).toEqual({ Z1: 0, Z2: 0, Z3: 0, Z4: 0 });
+  });
+
+  it('Φ5B: προεξέχον δοκάρι συνεισφέρει στην περίμετρο → αυξάνει το Z1', () => {
+    const base = computeEnvelopeZoneAreas(squareWalls(), storeys, spec());
+    const withBeam = computeEnvelopeZoneAreas(
+      [...squareWalls(), beamEntity('b1', { x: 5000, y: 10000, z: 0 }, { x: 5000, y: 13000, z: 0 })],
+      storeys, spec(),
+    );
+    expect(withBeam.Z1).toBeGreaterThan(base.Z1);
   });
 });
 

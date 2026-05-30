@@ -71,6 +71,21 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-31 — ADR-396 v2 Phase 5B — envelope shell consumer wiring (compliance note)
+
+**Status**: COMPLIANT — no ADR-040 invariants broken.
+
+Wiring της ορατής μόνωσης στο νέο `computeEnvelopeShell` (footprint-driven) αγγίζει 2 CHECK 6B/6D αρχεία:
+- `EnvelopeOverlay.tsx` (2D micro-leaf) — άλλαξε ΜΟΝΟ η πηγή γεωμετρίας (`computeEnvelopePerimeter` →
+  `computeEnvelopeShell`) + προστέθηκε beams filter + `collectEnvelopeOverrides`. Οι **subscriptions
+  μένουν αμετάβλητες** (`subscribeEnvelopeSpec` + `objectStyles` slice) — κανένα νέο `useSyncExternalStore`,
+  CHECK 6C safe. Repaint εξαρτήσεις ίδιες (scene/transform/viewport/spec/visibility/viewRange).
+- `BimSceneLayer.ts::addEnvelopeShell` (3D) — ίδια αλλαγή πηγής· τρέχει στο 3D resync path (όχι 60fps
+  React render). Καμία αλλαγή σε bitmap cache-key, micro-leaf δομή, ή orchestrator subscription.
+
+Καθαρά αλλαγή υπολογισμού γεωμετρίας — μηδέν επίπτωση στο high-frequency render pipeline. Λεπτομέρεια
+στο ADR-396 §3.1.5.
+
 ### 2026-05-30 — ADR-363 Phase 1K Mode C — `wall-in-region` box-select (compliance note)
 
 **Status**: COMPLIANT — no ADR-040 invariants broken.

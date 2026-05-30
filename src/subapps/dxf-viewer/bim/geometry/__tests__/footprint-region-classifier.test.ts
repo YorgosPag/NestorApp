@@ -36,28 +36,43 @@ function ring(points: Point3D[], isHole: boolean): FootprintRing {
 }
 
 function footprint(outer: FootprintRing[], holes: FootprintRing[]): BuildingFootprintResult {
-  return { components: [], outerRings: outer, holes };
+  // Test builder: ένα component ανά outer· οι τρύπες προσαρτώνται στο 1ο outer
+  // (τα σενάρια έχουν ≤1 outer). Ο classifier δουλεύει πλέον ανά component.
+  const components = outer.map((o, i) => ({ outer: o, holes: i === 0 ? holes : [] }));
+  return { components, outerRings: outer, holes };
 }
 
 const slab = (poly: Point3D[]): SlabRegionFootprint => ({ polygon: poly });
 
 // ─── Στρ.1: εξώτατο όριο ─────────────────────────────────────────────────────
 
-describe('classifyFootprintRegions — outer rings (Στρ.1)', () => {
-  it('outer ring → exterior, insulated, coverageAbove 0', () => {
+describe('classifyFootprintRegions — outer rings (Στρ.1) + hole-gate', () => {
+  it('lone outer ΧΩΡΙΣ τρύπα (Π/μονός τοίχος) → open-structure, ΟΧΙ insulated', () => {
     const res = classifyFootprintRegions(footprint([ring(rect(0, 0, 1000, 1000), false)], []));
+    expect(res.openStructures).toHaveLength(1);
+    expect(res.openStructures[0].role).toBe('open-structure');
+    expect(res.openStructures[0].insulated).toBe(false);
+    expect(res.exterior).toHaveLength(0);
+    expect(res.atria).toHaveLength(0);
+    expect(res.interiorRooms).toHaveLength(0);
+  });
+
+  it('outer ΜΕ τρύπα (περικλείει χώρο) → exterior, insulated, coverageAbove 0', () => {
+    const outer = ring(rect(0, 0, 3000, 3000), false);
+    const hole = ring(rect(1000, 1000, 1000, 1000), true);
+    const res = classifyFootprintRegions(footprint([outer], [hole]), []);
     expect(res.exterior).toHaveLength(1);
     expect(res.exterior[0].role).toBe('exterior');
     expect(res.exterior[0].insulated).toBe(true);
     expect(res.exterior[0].coverageAbove).toBe(0);
-    expect(res.atria).toHaveLength(0);
-    expect(res.interiorRooms).toHaveLength(0);
+    expect(res.openStructures).toHaveLength(0);
   });
 
   it('κενό footprint → κενό result', () => {
     const res = classifyFootprintRegions(footprint([], []));
     expect(res.rings).toHaveLength(0);
     expect(res.exterior).toHaveLength(0);
+    expect(res.openStructures).toHaveLength(0);
   });
 });
 
@@ -66,14 +81,24 @@ describe('classifyFootprintRegions — outer rings (Στρ.1)', () => {
 describe('classifyFootprintRegions — holes (Στρ.2)', () => {
   const outer = ring(rect(0, 0, 3000, 3000), false);
   const hole = ring(rect(1000, 1000, 1000, 1000), true); // 1m × 1m στο κέντρο
+  // Μακρινή πλάκα: δεδομένα ΥΠΑΡΧΟΥΝ αλλά δεν καλύπτουν την τρύπα (coverage 0).
+  const farSlab = slab(rect(100000, 100000, 1000, 1000));
 
-  it('τρύπα ΧΩΡΙΣ πλάκα από πάνω → αίθριο, insulated', () => {
-    const res = classifyFootprintRegions(footprint([outer], [hole]), []);
+  it('τρύπα με δεδομένα πλακών αλλά ΧΩΡΙΣ κάλυψη → αίθριο, insulated', () => {
+    const res = classifyFootprintRegions(footprint([outer], [hole]), [farSlab]);
     expect(res.atria).toHaveLength(1);
     expect(res.atria[0].role).toBe('atrium');
     expect(res.atria[0].insulated).toBe(true);
     expect(res.atria[0].coverageAbove).toBe(0);
     expect(res.interiorRooms).toHaveLength(0);
+  });
+
+  it('ΚΕΝΑ δεδομένα slabsAbove → δωμάτιο (safe default Φ5B), ΟΧΙ μόνωση', () => {
+    const res = classifyFootprintRegions(footprint([outer], [hole]), []);
+    expect(res.interiorRooms).toHaveLength(1);
+    expect(res.interiorRooms[0].role).toBe('interior-room');
+    expect(res.interiorRooms[0].insulated).toBe(false);
+    expect(res.atria).toHaveLength(0);
   });
 
   it('τρύπα πλήρως καλυμμένη από πλάκα → κλειστό δωμάτιο, όχι insulated', () => {
@@ -122,7 +147,8 @@ describe('classifyFootprintRegions — holes (Στρ.2)', () => {
 
   it('degenerate (μηδενικού εμβαδού) τρύπα → δωμάτιο (καμία μόνωση)', () => {
     const degenerate = ring([p(0, 0), p(1000, 0)], true); // 2 σημεία → area 0
-    const res = classifyFootprintRegions(footprint([outer], [degenerate]), []);
+    // farSlab: δεδομένα υπάρχουν (noSlabData=false) → η ταξινόμηση οφείλεται στο area 0.
+    const res = classifyFootprintRegions(footprint([outer], [degenerate]), [farSlab]);
     expect(res.interiorRooms).toHaveLength(1);
     expect(res.interiorRooms[0].insulated).toBe(false);
     expect(res.atria).toHaveLength(0);

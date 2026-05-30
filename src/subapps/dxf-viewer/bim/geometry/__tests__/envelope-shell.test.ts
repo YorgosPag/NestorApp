@@ -7,7 +7,7 @@
  * opening-cut compatibility. Repo = jest (ΟΧΙ vitest) — τρέξε από REPO ROOT.
  */
 
-import { computeEnvelopeShell } from '../envelope-shell';
+import { computeEnvelopeShell, collectEnvelopeOverrides } from '../envelope-shell';
 import { computeEnvelopeOpeningCuts, type OpeningForCut } from '../envelope-opening-cuts';
 import type { WallForEnvelope, ColumnForEnvelope } from '../envelope-perimeter';
 import type { BeamForFootprint } from '../building-footprint';
@@ -141,11 +141,21 @@ describe('computeEnvelopeShell — closed building (slab above → room interior
   });
 });
 
-// ─── 3. Rectangle, NO slab above → atrium → 2 chains (outer out + hole in) ─────
+// ─── 3. Hole default (Φ5B): no slab data → room · non-covering data → atrium ───
 
-describe('computeEnvelopeShell — atrium (no slab above)', () => {
-  it('2 closed chains: one expands (outer), one contracts (hole inward)', () => {
-    const r = computeEnvelopeShell(square('w', 0, 0, 10000), [], [], spec(), NO_OVERRIDES, []);
+describe('computeEnvelopeShell — hole default vs atrium', () => {
+  const walls = square('w', 0, 0, 10000);
+
+  it('NO slab data → hole=room (Φ5B safe default) → 1 outer chain only', () => {
+    const r = computeEnvelopeShell(walls, [], [], spec(), NO_OVERRIDES, []);
+    expect(r.chains).toHaveLength(1);
+    expect(r.chains[0].closed).toBe(true);
+    expect(expansion(r.chains[0].exteriorFaceLoop, r.chains[0].insulationOuterLoop)).toBeGreaterThan(0);
+  });
+
+  it('slab data present but NOT covering → atrium → 2 chains (outer out + hole in)', () => {
+    const farSlab = coverSlab(500000, 500000, 1000); // δεδομένα υπάρχουν, δεν καλύπτουν
+    const r = computeEnvelopeShell(walls, [], [], spec(), NO_OVERRIDES, [farSlab]);
     expect(r.chains).toHaveLength(2);
     expect(r.chains.every((c) => c.closed)).toBe(true);
     const exps = r.chains.map((c) => expansion(c.exteriorFaceLoop, c.insulationOuterLoop));
@@ -250,10 +260,12 @@ describe('computeEnvelopeShell — redundant exterior override', () => {
 // ─── 10. Beam protruding → wrapped, beamIds populated ─────────────────────────
 
 describe('computeEnvelopeShell — beam contributes to shell', () => {
-  it('protruding beam appears in beamIds of some chain', () => {
-    const w = wall('w', p(0, 0), p(5000, 0), 200);
-    const b = beam('b', p(2500, -1000), p(2500, 2000), 400); // προεξέχει κάτω/πάνω
-    const r = computeEnvelopeShell([w], [], [b], spec(), NO_OVERRIDES, []);
+  it('beam protruding έξω από κλειστό τετράγωνο → μπαίνει στα beamIds', () => {
+    // Το τετράγωνο περικλείει χώρο (hole-gate ✓)· το δοκάρι προεξέχει πάνω από τον
+    // top τοίχο → η ένωση το τυλίγει στο εξωτ. όριο → attribution → beamIds.
+    const walls = square('w', 0, 0, 10000);
+    const b = beam('b', p(5000, 10000), p(5000, 13000), 400);
+    const r = computeEnvelopeShell(walls, [], [b], spec(), NO_OVERRIDES, [coverSlab(0, 0, 10000)]);
     const beamIds = new Set(r.chains.flatMap((c) => c.beamIds ?? []));
     expect(beamIds.has('b')).toBe(true);
   });
@@ -306,6 +318,23 @@ describe('computeEnvelopeShell — coverageThreshold option', () => {
   it('high threshold → atrium (insulated): 2 chains', () => {
     const r = computeEnvelopeShell(walls, [], [], spec(), NO_OVERRIDES, partial, { coverageThreshold: 0.9 });
     expect(r.chains).toHaveLength(2);
+  });
+});
+
+// ─── 15. collectEnvelopeOverrides helper ───────────────────────────────────────
+
+describe('collectEnvelopeOverrides', () => {
+  it('μαζεύει μόνο τα στοιχεία με envelopeFunction (skip undefined = auto)', () => {
+    const items = [
+      { id: 'a', params: { envelopeFunction: 'exterior' as EnvelopeFunction } },
+      { id: 'b', params: {} },
+      { id: 'c', params: { envelopeFunction: 'interior' as EnvelopeFunction } },
+    ];
+    const m = collectEnvelopeOverrides(items);
+    expect(m.size).toBe(2);
+    expect(m.get('a')).toBe('exterior');
+    expect(m.get('c')).toBe('interior');
+    expect(m.has('b')).toBe(false);
   });
 });
 

@@ -67,6 +67,15 @@ export interface EnvelopeChain {
    * `?? []`. Τροφοδοτεί BOQ per-element attribution (Φάση 5B).
    */
   readonly beamIds?: readonly string[];
+  /**
+   * ADR-401 v2 (Phase B3b) — source wall id **ανά ακμή** του `exteriorFaceLoop`,
+   * ευθυγραμμισμένο 1:1 με `envelopeFaceEdges(exteriorFaceLoop)`. `null` = ακμή
+   * γωνίας/column-arc/μη-τοίχου (→ επίπεδο fallback). Δίνεται ΜΟΝΟ από το
+   * `computeEnvelopeShell` (κρατά `ShellEdge.sourceEntityId` per edge)· το legacy
+   * `computeEnvelopePerimeter` το αφήνει `undefined` (consumers → flat heightM).
+   * Τροφοδοτεί τη μεταβλητή (σκαλωτή/κεκλιμένη) κορυφή του Z1 κελύφους.
+   */
+  readonly edgeWallIds?: readonly (string | null)[];
 }
 
 export interface EnvelopePerimeterResult {

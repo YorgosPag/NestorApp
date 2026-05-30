@@ -36,11 +36,29 @@ import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import type { BOQItem } from '@/types/boq';
 
 import type { AnySceneEntity } from '../../types/entities';
-import { isWallEntity, isSlabEntity, isOpeningEntity } from '../../types/entities';
+import {
+  isWallEntity,
+  isColumnEntity,
+  isBeamEntity,
+  isSlabEntity,
+  isOpeningEntity,
+} from '../../types/entities';
 import type { SceneUnits } from '../../utils/scene-units';
+import { mmToSceneUnits } from '../../utils/scene-units';
 import type { StoreyRef } from '../utils/bim-floor-utils';
 import type { EnvelopeZoneId, ThermalEnvelopeSpec } from '../types/thermal-envelope-types';
-import { computeEnvelopePerimeter } from '../geometry/envelope-perimeter';
+import { computeEnvelopeShell, collectEnvelopeOverrides } from '../geometry/envelope-shell';
+import type { EnvelopeChain } from '../geometry/envelope-perimeter';
+import { resolveWallTopProfile } from '../geometry/wall-top-profile';
+import { buildWallHostInputs, makeWallTopContext } from '../geometry/wall-host-plan-builder';
+import {
+  resolveEnvelopeEdgeTops,
+  chainProfileAreaM2,
+  type WallTopRef,
+} from '../geometry/envelope-wall-top';
+import type { BeamEntity } from '../types/beam-types';
+import type { SlabEntity } from '../types/slab-types';
+import type { WallEntity } from '../types/wall-types';
 import { filterExposedSlabs, type SlabForZoneClassification } from '../geometry/exposed-slab-classifier';
 import { computeRevealContributionArea } from '../types/envelope-contribution';
 import { resolveMaterialAtoeMapping, type MaterialAtoeMapping } from '../config/material-to-atoe-mapping';
@@ -84,6 +102,44 @@ function maxWallHeightM(walls: readonly { params: { height?: number } }[]): numb
 }
 
 /**
+ * ADR-401 B3b — Z1 facade area (m²). Όταν υπάρχει ≥1 `attached` τοίχος, το προφίλ
+ * κορυφής είναι σκαλωτό/κεκλιμένο → integration ανά ακμή
+ * (`chainProfileAreaM2`, μήκος × μέσο ύψος). Αλλιώς (flat) → `Σ perimeterM ×
+ * maxWallHeightM` (ΑΜΕΤΑΒΛΗΤΟ). `floorElevationMm = 0`: active level scene =
+ * floor-relative (mirror `wall-boq-feed`). Flat chain → identical και στα δύο paths.
+ */
+function computeZ1FacadeArea(
+  chains: readonly EnvelopeChain[],
+  walls: readonly WallEntity[],
+  beams: readonly BeamEntity[],
+  slabs: readonly SlabEntity[],
+  units: SceneUnits,
+): number {
+  const fallbackHeightM = maxWallHeightM(walls);
+  const attached = walls.filter((w) => w.params.topBinding === 'attached');
+  if (attached.length === 0) {
+    return chains.reduce((s, c) => s + c.perimeterM, 0) * fallbackHeightM;
+  }
+  const sceneScale = mmToSceneUnits(units);
+  const hostInputs = buildWallHostInputs(beams, slabs);
+  const refs = new Map<string, WallTopRef>();
+  for (const w of attached) {
+    const start = { x: w.params.start.x, y: w.params.start.y };
+    const end = { x: w.params.end.x, y: w.params.end.y };
+    refs.set(w.id, {
+      start,
+      end,
+      profile: resolveWallTopProfile(w.params, makeWallTopContext(start, end, hostInputs, { floorElevationMm: 0 })),
+    });
+  }
+  let area = 0;
+  for (const c of chains) {
+    area += chainProfileAreaM2(c, resolveEnvelopeEdgeTops(c, refs, 0), fallbackHeightM, sceneScale);
+  }
+  return area;
+}
+
+/**
  * Υπολογίζει την επιφάνεια μόνωσης (m²) ανά ζώνη από τα entities ενός ορόφου +
  * το spec. Pure (test-friendly). Ζώνες off → 0.
  */
@@ -94,19 +150,23 @@ export function computeEnvelopeZoneAreas(
   sceneUnits?: SceneUnits,
 ): EnvelopeZoneAreas {
   const walls = entities.filter(isWallEntity);
+  const columns = entities.filter(isColumnEntity);
+  const beams = entities.filter(isBeamEntity);
+  const slabs = entities.filter(isSlabEntity);
   const units = sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
-  const { chains } = computeEnvelopePerimeter(walls, spec.thickness_m, units);
-  const closed = chains.filter((c) => c.closed);
-  const active = closed.length > 0 ? closed : chains;
-  const exteriorWallIds = new Set(active.flatMap((c) => c.wallIds));
+  // ADR-396 v2 (Φ5B): πηγή = footprint shell (κολώνες/δοκάρια συνεισφέρουν στην
+  // περίμετρο → «τα δοκάρια μετράνε»). Όλα τα chains = μονωμένα (engine authoritative).
+  const overrides = collectEnvelopeOverrides([...walls, ...columns, ...beams]);
+  const { chains } = computeEnvelopeShell(walls, columns, beams, spec, overrides, [], {
+    sceneUnits: units,
+  });
+  const exteriorWallIds = new Set(chains.flatMap((c) => c.wallIds));
 
-  const z1 = spec.zones.Z1
-    ? active.reduce((s, c) => s + c.perimeterM, 0) * maxWallHeightM(walls)
-    : 0;
+  // ADR-401 B3b — profile-aware όταν υπάρχουν attached τοίχοι (σκαλωτό κέλυφος).
+  const z1 = spec.zones.Z1 ? computeZ1FacadeArea(chains, walls, beams, slabs, units) : 0;
 
   let z2 = 0;
   let z3 = 0;
-  const slabs = entities.filter(isSlabEntity);
   for (const { slab, zone } of filterExposedSlabs(
     slabs as unknown as SlabForZoneClassification[],
     storeys,

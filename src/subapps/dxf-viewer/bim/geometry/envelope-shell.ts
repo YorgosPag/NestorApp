@@ -68,6 +68,28 @@ export interface EnvelopeShellResult {
   readonly primaryChain: EnvelopeChain | null;
 }
 
+/** Ελάχιστο σχήμα στοιχείου με per-element `envelopeFunction` override. */
+export interface ItemWithEnvelopeFunction {
+  readonly id: string;
+  readonly params: { readonly envelopeFunction?: EnvelopeFunction };
+}
+
+/**
+ * Μαζεύει τα per-element `envelopeFunction` overrides σε `Map<id, fn>` (SSoT — οι
+ * consumers δεν επαναλαμβάνουν το scan). Πέρασε `[...walls, ...columns, ...beams]`.
+ * Στοιχεία χωρίς override (undefined = auto) παραλείπονται.
+ */
+export function collectEnvelopeOverrides(
+  items: readonly ItemWithEnvelopeFunction[],
+): Map<string, EnvelopeFunction> {
+  const out = new Map<string, EnvelopeFunction>();
+  for (const item of items) {
+    const fn = item.params.envelopeFunction;
+    if (fn) out.set(item.id, fn);
+  }
+  return out;
+}
+
 // ============================================================================
 // INTERNAL TYPES
 // ============================================================================
@@ -215,6 +237,7 @@ function buildChain(
   thicknessCanvas: number,
   ids: ShellIds,
   sceneScale: number,
+  edgeWallIds?: readonly (string | null)[],
 ): EnvelopeChain | null {
   const face = closed ? stripClosingDuplicate(facePts) : facePts;
   if (face.length < 2) return null;
@@ -228,7 +251,18 @@ function buildChain(
     wallIds: ids.wallIds,
     columnIds: ids.columnIds,
     beamIds: ids.beamIds,
+    edgeWallIds,
   };
+}
+
+/**
+ * ADR-401 B3b — source wall id ανά ακμή του run (ευθυγραμμισμένο με
+ * `envelopeFaceEdges`: ακμή `i` = `edges[i].a → edges[i].b`). Μη-τοίχος (column-arc
+ * τομή κ.λπ.) → `null` (επίπεδο fallback στον consumer). Τροφοδοτεί τη μεταβλητή
+ * κορυφή του Z1 κελύφους πάνω από `attached` τοίχους.
+ */
+function runEdgeWallIds(edges: readonly ShellEdge[]): (string | null)[] {
+  return edges.map((e) => (e.sourceEntityType === 'wall' ? e.sourceEntityId : null));
 }
 
 function buildRingChains(
@@ -244,6 +278,7 @@ function buildRingChains(
   for (const run of extractRuns(toRingEdges(classified, overrides))) {
     const chain = buildChain(
       runPolyline(run), run.closed, outward, reference, thicknessCanvas, runEntityIds(run.edges), sceneScale,
+      runEdgeWallIds(run.edges),
     );
     if (chain) chains.push(chain);
   }
@@ -284,12 +319,16 @@ function orphanWrap(
   ids: ShellIds,
   thicknessCanvas: number,
   sceneScale: number,
+  uniformWallId: string | null,
 ): EnvelopeChain | null {
   const ring = largestOuterRing(footprint);
   if (!ring) return null;
   const pts = stripClosingDuplicate(ring.points.points);
   if (pts.length < 3) return null;
-  return buildChain(pts, true, true, polygonCentroid(pts), thicknessCanvas, ids, sceneScale);
+  // Single-element wrap → όλες οι ακμές ανήκουν στο ίδιο στοιχείο (closed loop
+  // incl. wrap → edge count = pts.length). Τοίχος → uniform id· κολώνα/δοκάρι → null.
+  const edgeWallIds = Array.from({ length: pts.length }, () => uniformWallId);
+  return buildChain(pts, true, true, polygonCentroid(pts), thicknessCanvas, ids, sceneScale, edgeWallIds);
 }
 
 function buildOrphanExteriorWraps(
@@ -309,13 +348,13 @@ function buildOrphanExteriorWraps(
     if (chain) out.push(chain);
   };
   for (const w of walls.filter((x) => isOrphan(x.id))) {
-    push(orphanWrap(computeBuildingFootprint([w], [], [], units), { wallIds: [w.id], columnIds: [], beamIds: [] }, thicknessCanvas, sceneScale));
+    push(orphanWrap(computeBuildingFootprint([w], [], [], units), { wallIds: [w.id], columnIds: [], beamIds: [] }, thicknessCanvas, sceneScale, w.id));
   }
   for (const c of columns.filter((x) => isOrphan(x.id))) {
-    push(orphanWrap(computeBuildingFootprint([], [c], [], units), { wallIds: [], columnIds: [c.id], beamIds: [] }, thicknessCanvas, sceneScale));
+    push(orphanWrap(computeBuildingFootprint([], [c], [], units), { wallIds: [], columnIds: [c.id], beamIds: [] }, thicknessCanvas, sceneScale, null));
   }
   for (const b of beams.filter((x) => isOrphan(x.id))) {
-    push(orphanWrap(computeBuildingFootprint([], [], [b], units), { wallIds: [], columnIds: [], beamIds: [b.id] }, thicknessCanvas, sceneScale));
+    push(orphanWrap(computeBuildingFootprint([], [], [b], units), { wallIds: [], columnIds: [], beamIds: [b.id] }, thicknessCanvas, sceneScale, null));
   }
   return out;
 }
