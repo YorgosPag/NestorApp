@@ -25,6 +25,13 @@ import type { ColumnEntity } from '../../bim/types/column-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
+import {
+  resolveWallBaseZmm,
+  resolveWallTopProfile,
+  evaluateWallTopAt,
+  type WallTopProfile,
+  type HostUndersidePlan,
+} from '../../bim/geometry/wall-top-profile';
 
 const MM_TO_M = 0.001;
 
@@ -51,7 +58,14 @@ export interface WallPlan {
   readonly ex: number; readonly ey: number;
   readonly thicknessM: number;
   readonly baseY: number;
+  /** Nominal/maximum top (m) — back-compat scalar (= `topProfile.maxTopZmm`). */
   readonly topY: number;
+  /**
+   * ADR-401 Phase B: πλήρες προφίλ κορυφής (absolute mm). Παρόν πάντα· για
+   * `attached` τοίχους με hosts είναι σκαλωτό/κεκλιμένο. Η `wallSection`
+   * αποτιμά το προφίλ στο σημείο της τομής (single-point top).
+   */
+  readonly topProfile?: WallTopProfile;
 }
 
 export interface ColumnPlan {
@@ -92,16 +106,21 @@ export interface OpeningPlan {
 /**
  * Convert WallEntity → plan-space input. `floorElevationM` provides the level
  * FFL for storey-relative base/top binding (defaults to 0).
+ *
+ * ADR-401 Phase B: η κάθετη επίλυση delegate-άρει στον SSoT `wall-top-profile`
+ * resolver. Όταν δοθεί `resolveHost` (host context από beams/slabs), οι
+ * `attached` τοίχοι παίρνουν **πλήρες προφίλ** (σκαλωτό/κεκλιμένο)· χωρίς host
+ * context → nominal single-segment (back-compat με storey-ceiling/absolute/
+ * unconnected). `topY` = `maxTopZmm` (back-compat scalar).
  */
-export function toWallPlan(wall: WallEntity, floorElevationM = 0): WallPlan {
-  const baseY = wall.params.baseBinding === 'absolute'
-    ? wall.params.baseOffset * MM_TO_M
-    : floorElevationM + wall.params.baseOffset * MM_TO_M;
-  const topY = wall.params.topBinding === 'unconnected' && wall.params.unconnectedHeight !== undefined
-    ? baseY + wall.params.unconnectedHeight * MM_TO_M
-    : wall.params.topBinding === 'absolute'
-      ? wall.params.topOffset * MM_TO_M
-      : baseY + wall.params.height * MM_TO_M;
+export function toWallPlan(
+  wall: WallEntity,
+  floorElevationM = 0,
+  resolveHost?: (id: string) => HostUndersidePlan | null,
+): WallPlan {
+  const ctx = { floorElevationMm: floorElevationM / MM_TO_M, resolveHost };
+  const baseY = resolveWallBaseZmm(wall.params, ctx) * MM_TO_M;
+  const topProfile = resolveWallTopProfile(wall.params, ctx);
   return {
     id: wall.id,
     sx: wall.params.start.x,
@@ -110,7 +129,8 @@ export function toWallPlan(wall: WallEntity, floorElevationM = 0): WallPlan {
     ey: wall.params.end.y,
     thicknessM: wall.params.thickness * MM_TO_M,
     baseY,
-    topY,
+    topY: topProfile.maxTopZmm * MM_TO_M,
+    topProfile,
   };
 }
 
@@ -256,13 +276,31 @@ export function intersectPolygon(
 
 // ─── Per-element section rect ────────────────────────────────────────────────
 
+/**
+ * Παράμετρος `t` (0..1) πάνω στον άξονα του τοίχου, στο σημείο που τον τέμνει
+ * η cutting line. `null` αν ο τοίχος είναι παράλληλος στην τομή (degenerate).
+ */
+function wallAxisParamAtCut(w: WallPlan, axis: SectionAxis, pos: number): number | null {
+  const d = axis === 'x' ? w.ex - w.sx : w.ey - w.sy;
+  if (Math.abs(d) < 1e-9) return null;
+  const t = axis === 'x' ? (pos - w.sx) / d : (pos - w.sy) / d;
+  return t < 0 ? 0 : t > 1 ? 1 : t;
+}
+
 export function wallSection(w: WallPlan, axis: SectionAxis, pos: number): SectionRect | null {
   const span = intersectPolygon(
     quadCorners(w.sx, w.sy, w.ex, w.ey, w.thicknessM / 2),
     axis, pos,
   );
   if (!span) return null;
-  return { hMin: span[0], hMax: span[1], yMin: w.baseY, yMax: w.topY };
+  // ADR-401 Phase B: σκαλωτή/κεκλιμένη κορυφή → αποτίμησε το προφίλ στο σημείο
+  // της εγκάρσιας τομής. Flat top (μη-attached) → ίδιο με `topY`.
+  let yMax = w.topY;
+  if (w.topProfile && w.topProfile.hasAttach) {
+    const t = wallAxisParamAtCut(w, axis, pos);
+    if (t !== null) yMax = evaluateWallTopAt(w.topProfile, t) * MM_TO_M;
+  }
+  return { hMin: span[0], hMax: span[1], yMin: w.baseY, yMax };
 }
 
 export function columnSection(c: ColumnPlan, axis: SectionAxis, pos: number): SectionRect | null {

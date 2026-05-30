@@ -29,6 +29,7 @@ import type { WallDna } from './wall-dna-types';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { WallBaseBinding, WallTopBinding } from './bim-binding';
+import type { EnvelopeFunction } from './thermal-envelope-types';
 
 // ─── Sub-type & category enums (ADR-363 §5.3) ────────────────────────────────
 
@@ -127,6 +128,20 @@ export interface WallParams {
   readonly topOffset: number;
   /** mm. Required ΟΤΑΝ topBinding='unconnected'. Free-standing height. */
   readonly unconnectedHeight?: number;
+  /**
+   * ADR-401 — Συσχετιστικό «Attach Top to Structural». FK list προς δομικά
+   * στοιχεία (beam / slab / roof / wall) στων οποίων την κάτω παρειά «κολλάει»
+   * η κορυφή. Required (≥1) ΟΤΑΝ `topBinding='attached'`. Πολλαπλά → σκαλωτή
+   * κορυφή (lower-envelope, `resolveWallTopProfile`). Το πραγματικό ύψος
+   * υπολογίζεται ζωντανά — ΔΕΝ αποθηκεύεται.
+   */
+  readonly attachTopToIds?: readonly string[];
+  /**
+   * ADR-396 v2 Φάση 4 — Χειροκίνητη παράκαμψη (Revit-style) της αυτόματης ETICS
+   * ταξινόμησης ορίων (Στρ.3). `undefined` = auto· 'exterior'/'interior' = override.
+   * Αποσυνδεδεμένο από το δομικό `category`. Set χειροκίνητα (UI Φάση 6).
+   */
+  readonly envelopeFunction?: EnvelopeFunction;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

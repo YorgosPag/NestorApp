@@ -18,6 +18,8 @@ import type { FloorStackEntry } from './multi-floor-3d-source';
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh } from '../converters/BimToThreeConverter';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { envelopeChainToMesh, slabFlatLayerToMesh, revealLiningToMesh } from '../converters/EnvelopeToThree';
+import { resolveWallTopProfile } from '../../bim/geometry/wall-top-profile';
+import { makeWallTopContext, beamHostInput, slabHostInput } from '../../bim/geometry/wall-host-plan-builder';
 import { computeEnvelopePerimeter } from '../../bim/geometry/envelope-perimeter';
 import { computeEnvelopeOpeningCuts } from '../../bim/geometry/envelope-opening-cuts';
 import { getEnvelopeSpec } from '../../bim/stores/envelope-spec-store';
@@ -218,13 +220,35 @@ export class BimSceneLayer {
   }
 
   private syncWalls(entities: Bim3DEntities, ctx: SyncContext): void {
+    // ADR-401 Phase B2 — host inputs (δοκάρια + πλάκες) για τη μεταβλητή κορυφή
+    // των `attached` τοίχων. Footprints + wall axis στο ΙΔΙΟ plan space
+    // (`*.params`, mirror του `section-scene-sync`)· χτίζονται μόνο όταν υπάρχει
+    // τουλάχιστον ένας attached τοίχος (κοινό case = κανένας → μηδέν κόστος).
+    const hasAttached = entities.walls.some((w) => w.params?.topBinding === 'attached');
+    const hostInputs = hasAttached
+      ? [...entities.beams.map(beamHostInput), ...entities.slabs.map(slabHostInput)]
+      : [];
+
     for (const wall of entities.walls) {
       const r = this.resolveEntity(wall, 'wall', ctx);
       if (!r) continue;
       const openingsForWall = this.filterHostedOpenings(
         entities.openings, 'wallId', wall.id, r.buildingMode, ctx,
       );
-      const mesh = wallToMesh(wall, openingsForWall, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      const profile = wall.params?.topBinding === 'attached'
+        ? resolveWallTopProfile(
+            wall.params,
+            makeWallTopContext(
+              { x: wall.params.start.x, y: wall.params.start.y },
+              { x: wall.params.end.x, y: wall.params.end.y },
+              hostInputs,
+              { floorElevationMm: ctx.floorElevationMm },
+            ),
+          )
+        : undefined;
+      const mesh = wallToMesh(
+        wall, openingsForWall, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, profile,
+      );
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

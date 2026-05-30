@@ -119,8 +119,8 @@ describe('computeWallOpeningPieces — structural reveal (η μόνωση τρώ
     const wall = makeWall();
     const opRev = makeOpening(wall, { revealInsulation: { ...REVEAL } }); // window sill 900
     const pieces = computeWallOpeningPieces(wall, [opRev])!;
-    const sill = pieces.find((p) => p.zBotM === 0 && p.zTopM < 1);
+    const sill = pieces.find((p) => p.zBotM === 0 && p.zTopAM < 1);
     expect(sill).toBeDefined();
-    expect(sill!.zTopM).toBeCloseTo(0.85, 3); // 0.9 − 0.05
+    expect(sill!.zTopAM).toBeCloseTo(0.85, 3); // 0.9 − 0.05 (επίπεδη ποδιά: zTopAM === zTopBM)
   });
 });

@@ -36,6 +36,7 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import { getWallAxisVertices } from '../../bim/geometry/wall-geometry';
 import { structuralRevealHeightRangeMm } from '../../bim/geometry/opening-geometry';
+import type { WallTopLocalFn } from './wall-opening-pieces';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
 import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
@@ -55,6 +56,7 @@ export function buildWallMeshWithOpenings(
   material: THREE.Material,
   floorElevationMm: number,
   buildingBaseElevationM: number,
+  wallTop?: WallTopLocalFn,
 ): THREE.Object3D | null {
   const axisVertices = getWallAxisVertices(wall.params, wall.kind);
   if (axisVertices.length < 2) return null;
@@ -64,6 +66,17 @@ export function buildWallMeshWithOpenings(
   const wallHeightM = wall.params.height * MM_TO_M;
   const thicknessM = wall.params.thickness * MM_TO_M;
   const floorY = floorElevationMm * MM_TO_M + buildingBaseElevationM;
+
+  // ADR-401 Phase B2 — μεταβλητή κορυφή: συνολικό μήκος τόξου ώστε το global
+  // fraction `t = arc/total` (0..1) να αντιστοιχίζει το προφίλ στην τοπική X.
+  let totalArcScene = 0;
+  for (let i = 0; i < axisVertices.length - 1; i++) {
+    totalArcScene += Math.hypot(
+      axisVertices[i + 1].x - axisVertices[i].x,
+      axisVertices[i + 1].y - axisVertices[i].y,
+    );
+  }
+  const heightAtT = (t: number): number => (wallTop && totalArcScene > 1e-9 ? wallTop.at(t) : wallHeightM);
 
   const group = new THREE.Group();
 
@@ -83,16 +96,30 @@ export function buildWallMeshWithOpenings(
     const ux = dx / segLenScene;
     const uy = dy / segLenScene;
 
-    // Front-face shape (X = along segment, Y = vertical).
+    const arcEndScene = arcStartScene + segLenScene;
+    const tStart = totalArcScene > 1e-9 ? arcStartScene / totalArcScene : 0;
+    const tEnd = totalArcScene > 1e-9 ? arcEndScene / totalArcScene : 1;
+
+    // Front-face shape (X = along segment, Y = vertical). ADR-401 B2: η top ακμή
+    // ακολουθεί το προφίλ (σκαλωτό + κεκλιμένο ενιαία) — polyline από δεξιά προς
+    // αριστερά μέσα από τα profile breakpoints· flat τοίχος → ίσια ακμή.
     const shape = new THREE.Shape();
     shape.moveTo(0, 0);
     shape.lineTo(segLenM, 0);
-    shape.lineTo(segLenM, wallHeightM);
-    shape.lineTo(0, wallHeightM);
+    shape.lineTo(segLenM, heightAtT(tEnd));
+    if (wallTop) {
+      const cuts = wallTop.breakpoints
+        .filter((t) => t > tStart + 1e-6 && t < tEnd - 1e-6)
+        .sort((x, y) => y - x); // φθίνουσα: δεξιά → αριστερά
+      for (const tc of cuts) {
+        const localX = tc * totalArcScene - arcStartScene; // scene-units = meters
+        shape.lineTo(localX, heightAtT(tc));
+      }
+    }
+    shape.lineTo(0, heightAtT(tStart));
     shape.closePath();
 
     // Find openings whose arc range overlaps this segment, push as CW holes.
-    const arcEndScene = arcStartScene + segLenScene;
     for (const op of openings) {
       // ADR-396 — STRUCTURAL κενό: η μόνωση Z4 τρώει τον τοίχο → η τρύπα διευρύνεται
       // κατά `t` περιμετρικά (πλάτος ±t· ύψος structuralRevealHeightRangeMm). Χωρίς

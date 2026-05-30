@@ -23,7 +23,9 @@ import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { getMaterial3D, getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildWallMeshWithOpenings } from './wall-opening-extrude';
-import { computeWallOpeningPieces } from './wall-opening-pieces';
+import { computeWallOpeningPieces, type WallTopLocalFn } from './wall-opening-pieces';
+import { buildSlopedWallPieceGeometry } from './wall-piece-geometry';
+import { evaluateWallTopAt, type WallTopProfile } from '../../bim/geometry/wall-top-profile';
 import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
 import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
 import type { BimCategory } from '../../config/bim-object-styles';
@@ -117,6 +119,25 @@ function buildWallShape(outer: readonly Point3D[], inner: readonly Point3D[]): T
   return shape;
 }
 
+// ── ADR-401 Phase B2 — μεταβλητή κορυφή (σκαλωτή/κεκλιμένη) ────────────────────
+
+/**
+ * `WallTopProfile` (απόλυτα mm) → `WallTopLocalFn` σε **τοπικά μέτρα** πάνω από το
+ * δάπεδο, που καταναλώνουν οι piece builders. `localTop(t) = (top_mm − FFL_mm) · 0.001`.
+ * Τα breakpoints είναι τα εσωτερικά segment όρια (σημεία αλλαγής κλίσης).
+ */
+export function makeWallTopLocalFn(profile: WallTopProfile, floorElevationMm: number): WallTopLocalFn {
+  const bps = new Set<number>();
+  for (const s of profile.segments) {
+    if (s.t0 > 1e-6 && s.t0 < 1 - 1e-6) bps.add(s.t0);
+    if (s.t1 > 1e-6 && s.t1 < 1 - 1e-6) bps.add(s.t1);
+  }
+  return {
+    breakpoints: [...bps].sort((a, b) => a - b),
+    at: (f) => (evaluateWallTopAt(profile, f) - floorElevationMm) * MM_TO_M,
+  };
+}
+
 // ── Straight wall WITH openings — mitered vertical-split (ADR-363 Phase 1J) ────
 
 /**
@@ -143,22 +164,37 @@ export function buildStraightWallWithOpenings(
   material: THREE.Material,
   floorElevationMm: number,
   buildingBaseElevationM: number,
+  wallTop?: WallTopLocalFn,
 ): THREE.Object3D | null {
   // Κάθετη παρειά κάθε ανοίγματος από το `outline` SSoT (collinear με wall punch
   // 2D + Z4 + Z1) — ΟΧΙ fraction-lerp ανά πλευρά (που έβγαζε λοξή παρειά σε miters).
-  const pieces = computeWallOpeningPieces(wall, openings);
+  // ADR-401 B2: `wallTop` → κάθε κομμάτι παίρνει την κορυφή του από το προφίλ
+  // (επίπεδο → ExtrudeGeometry· κεκλιμένο → custom wedge BufferGeometry).
+  const pieces = computeWallOpeningPieces(wall, openings, wallTop);
   if (!pieces) return null;
 
   const floorY = floorElevationMm * MM_TO_M + buildingBaseElevationM;
   const group = new THREE.Group();
   for (const pc of pieces) {
-    const depth = pc.zTopM - pc.zBotM;
-    if (depth <= 1e-6) continue;
-    const shape = buildShape(pc.quad);
-    if (!shape) continue;
-    const geo = extrudeAndRotate(shape, depth);
+    let geo: THREE.BufferGeometry;
+    let yOffset: number;
+    if (Math.abs(pc.zTopAM - pc.zTopBM) < 1e-6) {
+      // Επίπεδη κορυφή → extrude από τη βάση κατά (zTop − zBot).
+      const depth = pc.zTopAM - pc.zBotM;
+      if (depth <= 1e-6) continue;
+      const shape = buildShape(pc.quad);
+      if (!shape) continue;
+      geo = extrudeAndRotate(shape, depth);
+      yOffset = floorY + pc.zBotM;
+    } else {
+      // Κεκλιμένη κορυφή → wedge με ρητές κορυφές σε floor-local Y.
+      const wedge = buildSlopedWallPieceGeometry(pc);
+      if (!wedge) continue;
+      geo = wedge;
+      yOffset = floorY;
+    }
     const mesh = new THREE.Mesh(geo, material);
-    mesh.position.y = floorY + pc.zBotM;
+    mesh.position.y = yOffset;
     mesh.userData['bimId'] = wall.id;
     mesh.userData['bimType'] = 'wall';
     mesh.castShadow = true;
@@ -180,21 +216,28 @@ export function wallToMesh(
   floorElevationMm = 0,
   levelId?: string,
   buildingBaseElevationM = 0,
+  profile?: WallTopProfile,
 ): THREE.Object3D | null {
   const coreLayer = wall.params.dna?.layers.find((l) => l.side === 'core');
   const matId = coreLayer?.materialId ?? CATEGORY_MAT_ID[wall.params.category] ?? 'mat-concrete';
   const material = getMaterial3D(matId);
+
+  // ADR-401 Phase B2 — μεταβλητή κορυφή (σκαλωτή/κεκλιμένη) μόνο σε `attached`
+  // τοίχους· flat τοίχος → undefined → fast solid path (μηδέν regression).
+  const wallTop = profile?.hasAttach ? makeWallTopLocalFn(profile, floorElevationMm) : undefined;
 
   // ADR-363 Bug 2 — opening cutouts.
   //   - straight walls: vertical-split pieces from the MITERED footprint
   //     (`buildStraightWallWithOpenings`) so corner miters survive (Phase 1J fix).
   //   - curved / polyline: per-segment front-face re-extrude (raw axis — miters
   //     N/A on multi-segment ends; ADR-370 Phase 7 slab-opening pattern).
-  if (openings.length > 0) {
+  // ADR-401 B2: ο piece path ενεργοποιείται ΚΑΙ χωρίς ανοίγματα όταν υπάρχει
+  // μεταβλητή κορυφή (το ίσιο solid extrude δεν την υποστηρίζει).
+  if (openings.length > 0 || wallTop) {
     const group =
       wall.kind === 'straight'
-        ? buildStraightWallWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM)
-        : buildWallMeshWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM);
+        ? buildStraightWallWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop)
+        : buildWallMeshWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop);
     if (group) {
       group.userData['matId'] = matId;
       if (levelId !== undefined) group.userData['levelId'] = levelId;

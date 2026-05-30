@@ -11,8 +11,11 @@
  * Refinements:
  *   - topBinding='unconnected' MUST provide positive `unconnectedHeight`.
  *   - topBinding !== 'unconnected' MUST NOT provide `unconnectedHeight`.
+ *   - topBinding='attached' MUST provide non-empty `attachTopToIds` (ADR-401).
+ *   - topBinding !== 'attached' MUST NOT provide `attachTopToIds`.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-369-bim-elevation-convention-revit-alignment.md §9 Q5, Q8
+ * @see docs/centralized-systems/reference/adrs/ADR-401-bim-wall-top-base-constraints-attach-to-structural.md §2.1
  */
 
 import { z } from 'zod';
@@ -24,6 +27,7 @@ import {
   IfcGuidSchema,
   IfcPropertySetSchema,
 } from './ifc-entity-mixin';
+import { EnvelopeFunctionSchema } from './thermal-envelope.schemas';
 
 // ─── Primitive schemas (Point3D) ─────────────────────────────────────────────
 
@@ -79,6 +83,10 @@ const WallParamsBaseSchema = z
     baseOffset: z.number().finite(),
     topOffset: z.number().finite(),
     unconnectedHeight: z.number().positive().optional(),
+    // ─── ADR-401 — Attach-to-structural ───────────────────────────────────────
+    attachTopToIds: z.array(z.string().min(1)).optional(),
+    // ─── ADR-396 v2 Φάση 4 — ETICS classification override (Στρ.3) ─────────────
+    envelopeFunction: EnvelopeFunctionSchema.optional(),
   })
   .strict();
 
@@ -103,6 +111,21 @@ export const WallParamsSchema = WallParamsBaseSchema.superRefine((data, ctx) => 
       path: ['unconnectedHeight'],
       message:
         "WallParams: unconnectedHeight επιτρέπεται μόνο όταν topBinding='unconnected'.",
+    });
+  }
+  // ─── ADR-401 — attach refinement ──────────────────────────────────────────
+  if (data.topBinding === 'attached' && (data.attachTopToIds === undefined || data.attachTopToIds.length === 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['attachTopToIds'],
+      message: "WallParams: topBinding='attached' απαιτεί ≥1 attachTopToIds (host FK).",
+    });
+  }
+  if (data.topBinding !== 'attached' && data.attachTopToIds !== undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['attachTopToIds'],
+      message: "WallParams: attachTopToIds επιτρέπεται μόνο όταν topBinding='attached'.",
     });
   }
 });

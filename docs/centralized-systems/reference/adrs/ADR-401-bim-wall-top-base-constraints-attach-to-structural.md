@@ -1,6 +1,6 @@
 # ADR-401 — BIM Wall Top/Base Constraints + Attach-to-Structural (associative auto-height)
 
-- **Status**: 🟡 PROPOSED — σχεδιασμός (έρευνα + ερωτήσεις). Καμία υλοποίηση κώδικα ακόμη.
+- **Status**: 🟢 ACCEPTED — **Phase A + B1 + B2 DONE** (A: 2026-05-30 resolver SSoT + τύποι + Zod· B1: 2026-05-31 host-plan builder SSoT + 2D section full-profile· B2: 2026-05-31 stepped/sloped 3D solid + syncWalls wiring + tests). Phase B3 + C–F εκκρεμούν.
 - **Date**: 2026-05-30
 - **Author**: Giorgio Pagonis + Claude (Opus 4.8)
 - **Scope**: BIM `wall` (primary) — `column` mirror σε επόμενη φάση. Καταναλώνει `beam` + `slab` ως «structural hosts».
@@ -161,14 +161,36 @@ wall.top(t)        = min{ host.underside(t) : host καλύπτει t } ⊓ stor
 
 ---
 
-## 5. Φάσεις υλοποίησης (FULL — όλες εντός scope, ΥΠΟ ΕΓΚΡΙΣΗ σειράς)
+## 5. Φάσεις υλοποίησης (FULL — όλες εντός scope)
 
-- **Phase A — Resolver SSoT**: `resolveWallTopProfile` (stepped/sloped, lower-envelope) + `topBinding='attached'` + `attachTopToIds: string[]` στους τύπους/Zod. Διόρθωση `storey-ceiling` ώστε να αφαιρεί πλάκα οροφής. `section-intersect`, 3D extrude, bbox, BOQ → consumers του resolver.
-- **Phase B — Stepped/sloped solid**: piece-wise prism geometry (top faces per segment) σε 3D + section + 2D height annotation + BOQ volume integration.
-- **Phase C — Associative cascade**: `cascadeStructuralAttachForHosts` σε όλα τα host & wall transform paths (client commands + server batch + EntityAudit). Detach-on-host-delete → fallback nominal + warning.
-- **Phase D — Auto-attach UX**: εντοπισμός τοίχων κατά την τοποθέτηση δοκαριού/πλάκας + `AttachWallsTopCommand` (undoable, batch).
-- **Phase E — Manual attach/detach ribbon** (Revit parity: «Κόλλησε κορυφή σε…» / «Αποκόλληση», multi-host) **+ E2 κεκλιμένη στέγη/δοκάρι** + base-attach (δοκός θεμελίωσης).
-- **Phase F — Column mirror** (ίδιος resolver + cascade, generalized).
+> **Re-scope 2026-05-30 (υλοποίηση):** Το Phase A περιοριστηκε στον **πυρήνα**
+> (resolver + τύποι + Zod + section consumer + tests) ώστε να είναι αυτοτελές,
+> testable και low-risk (κανόνας «phase per session»). Η ενσωμάτωση στο **3D
+> extrude / bbox / BOQ** μετακινήθηκε στο Phase B (απαιτεί το stepped-solid),
+> γιατί χρειάζονται variable-height geometry, όχι μόνο τον resolver.
+
+- **Phase A — Resolver SSoT ✅ DONE (2026-05-30)**: NEW `bim/geometry/wall-top-profile.ts` — `resolveWallTopProfile` (stepped/sloped lower-envelope) + `resolveWallBaseZmm` + `resolveWallNominalTopZmm` (shared nominal scalar) + types (`HostUndersidePlan`/`WallVerticalContext`/`WallTopSegment`/`WallTopProfile`). `topBinding='attached'` + `attachTopToIds: string[]` στους τύπους (`bim-binding.ts`, `wall-types.ts`) + Zod (`wall.schemas.ts`, attach refinement). `section-intersect.toWallPlan` → consumer του shared nominal resolver (μηδέν behavior change· `storey-ceiling` αφαίρεση πλάκας ενεργοποιείται όταν δοθεί `nextFloorElevationMm`/`ceilingSlabThicknessMm` context). Tests: `wall-top-profile.test.ts` (παράδειγμα 3.00→2.50, σκαλωτή, μερική κάλυψη, κεκλιμένη + τομή baseline, missing-host).
+- **Phase B — Stepped/sloped solid + downstream** (σπασμένο σε B1/B2/B3, «phase per session»):
+  - **B1 — Host-plan builder + 2D section ✅ DONE (2026-05-31)**: NEW `bim/geometry/wall-host-plan-builder.ts` (SSoT) — `buildHostUndersidePlans` / `makeResolveHost` / `makeWallTopContext` (plan-overlap = **segment ∩ polygon** t-intervals, robust convex+concave μέσω midpoint-inside ray-cast reuse `isPointInPolygon`) + `beamHostInput`/`slabHostInput` adapters (§2.3 underside formulas σε mm). NEW `evaluateWallTopAt(profile,t)` SSoT helper στο `wall-top-profile.ts`. **2D section full-profile**: `section-intersect.toWallPlan` δέχεται `resolveHost` + carry-άρει `WallTopProfile`· `wallSection` αποτιμά το προφίλ στο σημείο της εγκάρσιας τομής (single-point top, σκαλωτή κορυφή)· `section-scene-sync` χτίζει per-wall `resolveHost` από beams+slabs. Beam/slab = οριζόντια (z0=z1)· concave multi-span host → largest-span (Phase E refinement). 37/37 tests (18 builder + 14 resolver + 5 wallSection). tsc clean.
+  - **B2 — Stepped/sloped 3D solid ✅ DONE (2026-05-31)**: host-plan wiring στο `BimSceneLayer.syncWalls` (beams+slabs → `makeWallTopContext`/`resolveWallTopProfile`, μόνο όταν υπάρχει attached τοίχος) + piece-wise prism σε **3 converter paths**. NEW `wall-piece-geometry.ts` (`buildSlopedWallPieceGeometry` — custom 8-vertex wedge για κεκλιμένη κορυφή). `WallOpeningPiece.zTopM` → `zTopAM`/`zTopBM` (per-boundary top → flat ⇒ ίσα, sloped ⇒ διαφορετικά). `computeWallOpeningPieces(wall, openings, wallTop?)` — jambs/πρέκια ακολουθούν το προφίλ + **split στα profile breakpoints** (interior-biased eval για σκαλωτό/ασυνεχές προφίλ)· ποδιά=επίπεδη. `BimToThreeConverter.wallToMesh(..., profile?)` + `makeWallTopLocalFn` (mm→local m) + flat=`ExtrudeGeometry`/sloped=`buildSlopedWallPieceGeometry` routing· straight piece-path ενεργό ΚΑΙ χωρίς ανοίγματα όταν `hasAttach`. `wall-opening-extrude` (curved/polyline): top ακμή front-face = polyline προφίλ (stepped+sloped ενιαία). **Flat τοίχος = αμετάβλητο fast path (μηδέν regression).** 61/61 tests (16 stepped-solid + back-compat). bbox → B3 (ο `computeWallGeometry` δεν δέχεται resolver context).
+  - **B3 — BOQ + ETICS + 2D plan** (εκκρεμεί): `computeWallGeometry` profile-aware area/volume (Σ segment area × thickness) + `envelope-boq-sync.maxWallHeightM` + ETICS Z1 3D band (`BimSceneLayer:350`) + `WallRenderer` cut-state.
+- **Phase C — Associative cascade**: `cascadeStructuralAttachForHosts` σε όλα τα host & wall transform paths (client commands mirror ADR-363 §5.4 `cascadeHostedOpeningsForWalls` + server batch mirror `floor-height-cascade.service.ts` + EntityAudit). Detach-on-host-delete → fallback nominal + warning (EventBus → `notifications.warning`).
+- **Phase D — Auto-attach UX**: εντοπισμός τοίχων (`polygonIntersectionAreaMm2`) κατά το `onBeamCreated`/slab commit + `AttachWallsTopCommand` (undoable, batch). Μόνο `topBinding='storey-ceiling'` τοίχοι attach-άρουν.
+- **Phase E — Manual attach/detach ribbon** (Revit parity: «Κόλλησε κορυφή σε…» / «Αποκόλληση», multi-host) + wall-top vertical grip + manual-height-edit-breaks-attach **+ E2 κεκλιμένη στέγη/δοκάρι** + base-attach (δοκός θεμελίωσης).
+- **Phase F — Column mirror** (ίδιος resolver + cascade, generalized· `attachTopToIds` ήδη στο shared `WallTopBinding`/column alias).
+
+### 5.1 Consumer map (σημεία που διαβάζουν scalar `wall.params.height` — Phase B/C targets)
+| Site | Αρχείο | Φάση |
+|------|--------|------|
+| Geometry SSoT (area/volume/bbox) | `bim/geometry/wall-geometry.ts:112,117,123` | B3 |
+| 2D section topY | `bim-3d/2d-section/section-intersect.ts` (✅ B1: full-profile via `resolveHost` + `wallSection` profile-at-cut) | A✅/B1✅ |
+| 3D extrude (solid) | `bim-3d/converters/BimToThreeConverter.ts` (✅ B2: `wallToMesh(profile?)` + `makeWallTopLocalFn` + flat/sloped routing) | B2✅ |
+| 3D extrude (openings, curved) | `wall-opening-extrude.ts` (✅ B2: front-face top polyline), `wall-opening-pieces.ts` (✅ B2: `zTopAM`/`zTopBM` + `wallTop?` split) | B2✅ |
+| 3D wedge (κεκλιμένη κορυφή) | `bim-3d/converters/wall-piece-geometry.ts` (NEW B2: `buildSlopedWallPieceGeometry`) | B2✅ |
+| 3D scene wiring | `bim-3d/scene/BimSceneLayer.ts` `syncWalls` (✅ B2: hostInputs + `resolveWallTopProfile`) | B2✅ |
+| ETICS Z1 BOQ area | `bim/services/envelope-boq-sync.ts:80` (`maxWallHeightM`) | B3 |
+| ETICS Z1 3D band | `bim-3d/scene/BimSceneLayer.ts:350` | B3 |
+| 2D plan cut-state | `bim/renderers/WallRenderer.ts:190,344` | B3 |
 
 ---
 
@@ -201,3 +223,6 @@ wall.top(t)        = min{ host.underside(t) : host καλύπτει t } ⊓ stor
 |------|--------|--------|
 | 2026-05-30 | Giorgio + Claude (Opus 4.8) | Initial PROPOSED — έρευνα (ADR-369 datum ήδη αποφασισμένο = Επιλογή Α· current code: bindings μη-καταναλωμένα από geometry· floor-height-cascade υπάρχει· hosted-opening cascade pattern). Industry Revit Attach Top/Base. Decision: associative resolver + element attach + auto-attach UX. Q&A §6 ανοιχτό. |
 | 2026-05-30 | Giorgio + Claude (Opus 4.8) | **Giorgio: «ΘΕΛΩ ΛΟΓΙΚΗ ΚΑΙ ΥΛΟΠΟΙΗΣΗ FULL ENTERPRISE + FULL SSOT».** Όλα τα §6 ανοιχτά → ΑΠΟΦΑΣΙΣΜΕΝΑ στην πλήρη μορφή: σκαλωτή/κεκλιμένη κορυφή (lower-envelope `resolveWallTopProfile` αντί single-scalar), `attachTopToIds[]` multi-host (δοκάρι/πλάκα/στέγη/τοίχος), auto+manual attach, detach-on-delete+warning, manual-edit-breaks-attach. §2.2 resolver → top-profile· §2.4 stepped/sloped solid· §5 φάσεις A-F (όλες in-scope). |
+| 2026-05-30 | Claude (Opus 4.8) | **Phase A IMPLEMENTED** (pending commit). NEW `bim/geometry/wall-top-profile.ts`: `resolveWallTopProfile` (exact piecewise-linear lower-envelope με pairwise-intersection splitting → σκαλωτή + κεκλιμένη + τομή baseline) + `resolveWallBaseZmm` + `resolveWallNominalTopZmm` (shared nominal scalar SSoT) + 5 types. `WallTopBinding` += `'attached'` (+ values + Zod), `WallParams.attachTopToIds?: readonly string[]`, Zod attach refinement (attached⇔≥1 id). `section-intersect.toWallPlan` → consumer (μηδέν behavior change· `storey-ceiling` slab-subtraction ενεργό με context). NEW `__tests__/wall-top-profile.test.ts` (15 cases incl. ADR §1 3.00→2.50). §5 re-scope: 3D/bbox/BOQ → Phase B. |
+| 2026-05-31 | Claude (Opus 4.8) | **Phase B2 IMPLEMENTED** (pending commit). Stepped/sloped 3D wall solid σε **3 converter paths** + scene wiring. NEW `wall-piece-geometry.ts` `buildSlopedWallPieceGeometry` (8-vertex wedge, κεκλιμένη κορυφή). `WallOpeningPiece.zTopM` → `zTopAM`/`zTopBM` (per-boundary, §2.4)· `computeWallOpeningPieces(wall, openings, wallTop?)` (jambs/πρέκια ακολουθούν προφίλ + split στα breakpoints, interior-biased eval για σκαλωτό ασυνεχές)· `BimToThreeConverter.wallToMesh(..., profile?)` + `makeWallTopLocalFn` (mm→local m) + flat=ExtrudeGeometry/sloped=wedge routing (piece-path ενεργό ΚΑΙ χωρίς ανοίγματα όταν `hasAttach`)· `wall-opening-extrude` front-face top = polyline προφίλ (curved/polyline). `BimSceneLayer.syncWalls` χτίζει hostInputs (beams+slabs) + `resolveWallTopProfile` ανά attached τοίχο (guarded — μηδέν κόστος όταν κανένας attached). Flat τοίχος = αμετάβλητο fast path. Tests: NEW `wall-stepped-solid.test.ts` (16: flat back-compat, οριζόντιο σκαλωτό, breakpoint split, sloped wedge, ADR §1 3.00→2.50, opening+stepped) → 61/61 + BimSceneLayer 32/32. tsc clean. bbox → B3. |
+| 2026-05-31 | Claude (Opus 4.8) | **Phase B1 IMPLEMENTED** (pending commit). NEW `bim/geometry/wall-host-plan-builder.ts` (SSoT): `buildHostUndersidePlans`/`makeResolveHost`/`makeWallTopContext` — plan-overlap = **segment ∩ polygon** t-intervals (robust convex+concave, midpoint-inside via `isPointInPolygon` SSoT) + `beamHostInput`/`slabHostInput` (§2.3 underside, reuse `computeBeamGeometry.outline`). NEW `evaluateWallTopAt(profile,t)` SSoT στο `wall-top-profile.ts`. **2D section full-profile**: `WallPlan.topProfile?`, `toWallPlan(wall, floorElevationM, resolveHost?)`, `wallSection` profile-at-cut (single-point top στην εγκάρσια τομή), `section-scene-sync` per-wall `resolveHost` από beams+slabs. Beam/slab οριζόντια (z0=z1)· concave multi-span→largest. Tests: `wall-host-plan-builder.test.ts` (18) + `section-intersect-wall-profile.test.ts` (5) + resolver 14 = **37 PASS**. tsc clean. Phase B split → B1✅/B2(3D solid)/B3(BOQ+ETICS). |

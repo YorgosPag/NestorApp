@@ -31,12 +31,36 @@ import { structuralRevealHeightRangeMm } from '../../bim/geometry/opening-geomet
 
 const MM_TO_M = 0.001;
 
-/** Ένα κατακόρυφο κομμάτι τοίχου: footprint quad (plan) + κατακόρυφο εύρος (ΜΕΤΡΑ). */
+/**
+ * Ένα κατακόρυφο κομμάτι τοίχου: footprint quad (plan) + κατακόρυφο εύρος (ΜΕΤΡΑ).
+ *
+ * ADR-401 Phase B2 — η κορυφή μπορεί να είναι **κεκλιμένη** κατά μήκος του άξονα:
+ * `zTopAM` = top στη boundary `a` (quad[0]/quad[3]), `zTopBM` = top στη boundary `b`
+ * (quad[1]/quad[2]). Οριζόντια κορυφή → `zTopAM === zTopBM` (flat ExtrudeGeometry)·
+ * κεκλιμένη → custom BufferGeometry (στέγη/κεκλιμένο δοκάρι, Phase E2). Ο πάτος
+ * παραμένει επίπεδος (`zBotM`).
+ */
 export interface WallOpeningPiece {
   /** 4 plan κορυφές `[outer@a, outer@b, inner@b, inner@a]` (ίδιο winding με buildWallShape). */
   readonly quad: readonly [Point3D, Point3D, Point3D, Point3D];
   readonly zBotM: number;
-  readonly zTopM: number;
+  /** Top (ΜΕΤΡΑ) στη boundary `a`. Flat piece → `zTopAM === zTopBM`. */
+  readonly zTopAM: number;
+  /** Top (ΜΕΤΡΑ) στη boundary `b`. */
+  readonly zTopBM: number;
+}
+
+/**
+ * ADR-401 Phase B2 — μεταβλητή κορυφή τοίχου (lower-envelope προφίλ) σε **τοπικά
+ * μέτρα** πάνω από το δάπεδο. Όταν δοθεί, jambs/πρέκια ακολουθούν το `at(f)` αντί
+ * για σταθερό `params.height`, και σπάνε στα `breakpoints` (όπου αλλάζει η κλίση).
+ * Χωρίς αυτό → σταθερό ύψος (100% back-compat με flat τοίχο).
+ */
+export interface WallTopLocalFn {
+  /** Εσωτερικά profile breakpoints (0..1) — σημεία αλλαγής κλίσης κορυφής. */
+  readonly breakpoints: readonly number[];
+  /** Top (τοπικά μέτρα πάνω από το δάπεδο) στο fraction `f` (0..1). */
+  readonly at: (f: number) => number;
 }
 
 interface Boundary {
@@ -67,10 +91,15 @@ function distToLine2(p: Point3D, a: Point3D, b: Point3D): number {
 /**
  * Υπολογίζει τα κατακόρυφα κομμάτια ενός straight τοίχου με ανοίγματα. Pure SSoT —
  * ο 3D builder κάνει μόνο extrude + position. Επιστρέφει null σε degenerate input.
+ *
+ * ADR-401 Phase B2 — `wallTop` (προαιρετικό): μεταβλητή κορυφή (σκαλωτή/κεκλιμένη)·
+ * jambs/πρέκια ακολουθούν το προφίλ και σπάνε στα breakpoints. Χωρίς αυτό →
+ * σταθερό ύψος `params.height` (αμετάβλητη συμπεριφορά flat τοίχου).
  */
 export function computeWallOpeningPieces(
   wall: WallEntity,
   openings: readonly OpeningEntity[],
+  wallTop?: WallTopLocalFn,
 ): WallOpeningPiece[] | null {
   const outer = wall.geometry.outerEdge.points;
   const inner = wall.geometry.innerEdge.points;
@@ -93,13 +122,51 @@ export function computeWallOpeningPieces(
       ? { outer: cA, inner: cB }
       : { outer: cB, inner: cA };
 
-  const makePiece = (a: Boundary, b: Boundary, zBotM: number, zTopM: number): WallOpeningPiece => ({
-    quad: [a.outer, b.outer, b.inner, a.inner],
-    zBotM,
-    zTopM,
-  });
+  const topAt = (f: number): number => (wallTop ? wallTop.at(f) : heightM);
 
   const pieces: WallOpeningPiece[] = [];
+
+  /** Επίπεδη μπάντα (ποδιά): σταθερή κορυφή `zTopM` και στις δύο boundaries. */
+  const pushFlatPiece = (a: Boundary, b: Boundary, zBotM: number, zTopM: number): void => {
+    if (b.f - a.f < 1e-6 || zTopM - zBotM < 1e-6) return;
+    pieces.push({ quad: [a.outer, b.outer, b.inner, a.inner], zBotM, zTopAM: zTopM, zTopBM: zTopM });
+  };
+
+  /** Γραμμική παρεμβολή boundary outer/inner μεταξύ a→b στο global fraction `f`. */
+  const lerpBetween = (a: Boundary, b: Boundary, f: number): Boundary => {
+    const span = b.f - a.f;
+    if (Math.abs(span) < 1e-12) return { f, outer: a.outer, inner: a.inner };
+    const u = (f - a.f) / span;
+    return { f, outer: lerpPt(a.outer, b.outer, u), inner: lerpPt(a.inner, b.inner, u) };
+  };
+
+  /**
+   * Κομμάτι που η κορυφή του ακολουθεί το προφίλ (jamb full-height / πρέκι). Σπάει
+   * στα profile breakpoints εντός (a.f, b.f) ώστε κάθε sub-piece να έχει γραμμική
+   * (flat ή sloped) κορυφή. Παραλείπει sub-pieces όπου η κορυφή ≤ `zBotM`.
+   */
+  const pushTopPiece = (a: Boundary, b: Boundary, zBotM: number): void => {
+    if (b.f - a.f < 1e-6) return;
+    const cuts = wallTop
+      ? wallTop.breakpoints.filter((t) => t > a.f + 1e-6 && t < b.f - 1e-6).sort((x, y) => x - y)
+      : [];
+    const fs = [a.f, ...cuts, b.f];
+    for (let i = 0; i < fs.length - 1; i++) {
+      const fa = fs[i];
+      const fb = fs[i + 1];
+      const sa = i === 0 ? a : lerpBetween(a, b, fa);
+      const sb = i === fs.length - 2 ? b : lerpBetween(a, b, fb);
+      // Interior-biased αποτίμηση: σκαλωτό (ασυνεχές) προφίλ → στο breakpoint η
+      // τιμή είναι αμφίσημη· δειγματίζουμε ελάχιστα ΜΕΣΑ στο sub-interval ώστε να
+      // πιάσουμε το σωστό segment (σφάλμα ein·κλίση = αμελητέο για κεκλιμένο).
+      const ein = (fb - fa) * 1e-4;
+      const zA = Math.max(topAt(fa + ein), zBotM);
+      const zB = Math.max(topAt(fb - ein), zBotM);
+      if (zA - zBotM < 1e-6 && zB - zBotM < 1e-6) continue; // κάτω από τη βάση → κενό
+      pieces.push({ quad: [sa.outer, sb.outer, sb.inner, sa.inner], zBotM, zTopAM: zA, zTopBM: zB });
+    }
+  };
+
   const sorted = [...openings].sort((a, b) => a.params.offsetFromStart - b.params.offsetFromStart);
   let cursor: Boundary = lerpBoundary(0);
 
@@ -126,15 +193,15 @@ export function computeWallOpeningPieces(
       eBound = lerpBoundary(eF);
     }
 
-    if (sF > cursor.f + 1e-6) pieces.push(makePiece(cursor, sBound, 0, heightM)); // jamb πριν
+    if (sF > cursor.f + 1e-6) pushTopPiece(cursor, sBound, 0); // jamb πριν (ακολουθεί κορυφή)
     const { bottomMm, topMm } = structuralRevealHeightRangeMm(op.params);
     const bottomM = bottomMm * MM_TO_M;
     const topM = topMm * MM_TO_M;
-    if (bottomM > 1e-6) pieces.push(makePiece(sBound, eBound, 0, Math.min(bottomM, heightM))); // ποδιά
-    if (topM < heightM - 1e-6) pieces.push(makePiece(sBound, eBound, topM, heightM)); // πρέκι
+    if (bottomM > 1e-6) pushFlatPiece(sBound, eBound, 0, Math.min(bottomM, heightM)); // ποδιά (επίπεδη)
+    pushTopPiece(sBound, eBound, topM); // πρέκι (lintel → κορυφή προφίλ)
     cursor = eBound;
   }
-  if (cursor.f < 1 - 1e-6) pieces.push(makePiece(cursor, lerpBoundary(1), 0, heightM)); // jamb μετά
+  if (cursor.f < 1 - 1e-6) pushTopPiece(cursor, lerpBoundary(1), 0); // jamb μετά
 
   return pieces.length > 0 ? pieces : null;
 }

@@ -33,6 +33,11 @@ import {
   type WallPlan,
 } from './section-intersect';
 import { buildSectionPanelScene, type SectionEntitiesInput } from './section-geometry';
+import {
+  beamHostInput,
+  slabHostInput,
+  makeResolveHost,
+} from '../../bim/geometry/wall-host-plan-builder';
 import { deriveAvailablePlanes, type ActivePlane2D } from './active-plane-derivation';
 import type { SectionPanelRenderer } from './section-renderer';
 
@@ -49,7 +54,17 @@ export function createSectionPanelSceneSync(): SectionPanelSceneSync {
 
   function buildEntitiesInput(): { entities: SectionEntitiesInput; walls: WallPlan[] } {
     const { walls, columns, beams, slabs } = useBim3DEntitiesStore.getState();
-    const wallPlans = walls.map((w) => toWallPlan(w));
+    // ADR-401 Phase B: host inputs (beams + slabs) → per-wall resolveHost για
+    // σκαλωτή/κεκλιμένη κορυφή σε `attached` τοίχους. Footprints + wall axis
+    // στο ίδιο plan space (canvas units).
+    const hostInputs = [...beams.map(beamHostInput), ...slabs.map(slabHostInput)];
+    const wallPlans = walls.map((w) =>
+      toWallPlan(
+        w,
+        0,
+        makeResolveHost({ x: w.params.start.x, y: w.params.start.y }, { x: w.params.end.x, y: w.params.end.y }, hostInputs),
+      ),
+    );
     return {
       entities: {
         walls: wallPlans,
