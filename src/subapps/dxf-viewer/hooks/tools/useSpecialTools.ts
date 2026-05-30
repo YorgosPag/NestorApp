@@ -316,12 +316,31 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       if (!levelId) return 'mm';
       return resolveSceneUnits(levelManager.getLevelScene(levelId));
     },
+    // ADR-363 Phase 1J — live scene entities for the on-entity placement mode
+    // (hit-test of existing 2D lines/rectangles under the click).
+    getSceneEntities: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return [];
+      return levelManager.getLevelScene(levelId)?.entities ?? [];
+    },
     // ADR-363 Phase 1G.4 — append + trim + broadcast via the shared SSoT
     // (`addWallToScene`) so the DRAW path and the Ctrl-COPY hot-grip path use
     // ONE insertion routine (N.0.2 — no copy-paste of the persistence trigger).
     onWallCreated: (wallEntity) => addWallToScene(wallEntity, levelManager),
   });
-  useToolLifecycle(activeTool === 'wall', wallTool.activate, wallTool.deactivate);
+  // ADR-363 Phase 1J — both the freehand wall tool ('wall') and the on-entity
+  // variant ('wall-on-entity') share ONE useWallTool instance; lifecycle covers
+  // both ids and the placement mode is driven by the active tool id.
+  useToolLifecycle(
+    activeTool === 'wall' || activeTool === 'wall-on-entity',
+    wallTool.activate,
+    wallTool.deactivate,
+  );
+  useEffect(() => {
+    if (activeTool === 'wall' || activeTool === 'wall-on-entity') {
+      wallTool.setPlacementMode(activeTool === 'wall-on-entity' ? 'on-entity' : 'freehand');
+    }
+  }, [activeTool, wallTool.setPlacementMode]);
   // ADR-363 Phase 2 — OPENING TOOL (resolvers extracted: useSpecialTools-opening.ts)
   const openingTool = useOpeningTool(buildOpeningResolvers(levelManager));
   useToolLifecycle(activeTool === 'opening', openingTool.activate, openingTool.deactivate);

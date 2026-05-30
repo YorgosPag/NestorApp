@@ -36,6 +36,8 @@ import { dlog, dwarn } from '../../debug';
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
 // ADR-040 Phase XXII.A — transform reads from SSoT (orchestrator-decoupling).
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+// ADR-363 Phase 1J — wall-on-entity selects the hovered (picked) source entity.
+import { getHoveredEntity } from '../../systems/hover/HoverStore';
 // ADR-363 — apply F8 ortho / F10 polar to BIM tool clicks (wall/stair/beam/slab)
 // using their preview-store anchor, so the committed point matches the preview.
 import { applyBimDrawingConstraint } from '../drawing/bim-ortho-reference';
@@ -209,7 +211,25 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
     // PRIORITY 4.6: ADR-363 Phase 1B — Wall tool 2-click placement (continuous).
-    if (activeTool === 'wall' && wallTool?.isActive) {
+    // Phase 1J — 'wall-on-entity' shares the same tool; it hit-tests existing 2D
+    // geometry so it must receive the RAW worldPoint (ORTHO/POLAR must NOT shift
+    // the pick), whereas freehand 'wall' keeps the F8/F10-constrained bimPoint.
+    if ((activeTool === 'wall' || activeTool === 'wall-on-entity') && wallTool?.isActive) {
+      if (activeTool === 'wall-on-entity') {
+        // Click 1 (awaitingStart) picks the source entity; select the hovered
+        // entity for highlight + grips. Click 2 (awaitingSide) places the wall →
+        // clear the source selection. `isAwaitingStart` is read BEFORE the call
+        // (reflects the committed render state at this click boundary).
+        const wasPick = wallTool.isAwaitingStart;
+        const advanced = wallTool.onCanvasClick(worldPoint);
+        if (wasPick) {
+          const hoveredId = getHoveredEntity();
+          if (advanced && hoveredId) universalSelection.replaceEntitySelection([hoveredId]);
+        } else if (advanced) {
+          universalSelection.replaceEntitySelection([]);
+        }
+        return;
+      }
       wallTool.onCanvasClick(bimPoint);
       return;
     }

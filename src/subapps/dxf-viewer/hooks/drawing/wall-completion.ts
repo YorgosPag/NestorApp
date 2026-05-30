@@ -65,6 +65,18 @@ export interface WallParamOverrides {
  *   4. Scalars (height, thickness) stored in mm — always, regardless of sceneUnits.
  *      Boundary conversion (mm → canvas units) happens in computeWallGeometry.
  */
+/**
+ * Resolve the wall thickness (mm) a given override set will produce — SSoT for
+ * both `buildDefaultWallParams` and any caller that needs the thickness BEFORE
+ * building (e.g. the on-entity rectangle axis-offset in `wall-from-entity.ts`).
+ * Mirrors the Revit "Generic Wall" rule: explicit override wins, else the DNA
+ * preset's `totalThickness` for the category.
+ */
+export function resolveWallThicknessMm(overrides: WallParamOverrides = {}): number {
+  if (overrides.thickness !== undefined) return overrides.thickness;
+  return getDefaultDnaForCategory(overrides.category ?? 'exterior').totalThickness;
+}
+
 export function buildDefaultWallParams(
   startPoint: Readonly<Point2D>,
   endPoint: Readonly<Point2D>,
@@ -74,20 +86,13 @@ export function buildDefaultWallParams(
 ): WallParams {
   const category: WallCategory = overrides.category ?? 'exterior';
   const height = overrides.height ?? DEFAULT_WALL_HEIGHT_MM;
-  // Thickness resolution (Revit "Generic Wall" pattern):
+  // Thickness resolution (Revit "Generic Wall" pattern, SSoT `resolveWallThicknessMm`):
   //   - Explicit override → manual wall, NO DNA attached (caller owns layers).
   //   - Else → DNA preset SSoT, thickness === dna.totalThickness.
-  // Resolved upfront so the alignment-offset path (below) knows the thickness.
   const overrideThickness = overrides.thickness;
-  let thickness: number;
-  let dna: ReturnType<typeof getDefaultDnaForCategory> | null;
-  if (overrideThickness === undefined) {
-    dna = getDefaultDnaForCategory(category);
-    thickness = dna.totalThickness;
-  } else {
-    dna = null;
-    thickness = overrideThickness;
-  }
+  const thickness = resolveWallThicknessMm(overrides);
+  const dna: ReturnType<typeof getDefaultDnaForCategory> | null =
+    overrideThickness === undefined ? getDefaultDnaForCategory(category) : null;
   // ADR-363 Phase 1F — alignment offset: shift the axis perpendicular toward
   // `alignmentPoint` so the edge AWAY from C sits on the original A→B line and
   // the wall body extends TOWARD C. `null`/`undefined` ⇒ classic centered axis.

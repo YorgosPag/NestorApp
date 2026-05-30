@@ -71,6 +71,17 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-30 — ADR-363 Phase 1J — `wall-on-entity` hover/grip affordance (compliance note)
+
+**Status**: COMPLIANT — no ADR-040 invariants broken.
+
+Two single-token additions so the «Τοίχος πάνω σε οντότητα 2Δ» tool highlights the
+hovered source entity and shows grips on the picked one:
+- `CanvasSection.tsx` — `entityPickingActive` prop expression gains `|| activeTool === 'wall-on-entity'`. This is an existing pass-through boolean that flips the hover hit-test on in `mouse-handler-move`; **no new `useSyncExternalStore`** on the orchestrator (CHECK 6C safe).
+- `canvas-v2/dxf-canvas/dxf-canvas-renderer.ts` — `gripsAllowed` (already reads `refs.activeToolRef.current`) gains `|| activeTool === 'wall-on-entity'`. Bitmap-cache key / invalidation rules unchanged (still keyed without hover/selection/grip state per the cardinal rule); only the selected-entity grip-paint gate widened by one tool id.
+
+No subscription, cache-key, or micro-leaf structural change. Detail in ADR-363 Phase 1J changelog.
+
 ### 2026-05-29 — ADR-396 P-RENDER — Envelope Z2/Z3/Z4 overlay (compliance note)
 
 **Status**: COMPLIANT — no ADR-040 invariants broken.

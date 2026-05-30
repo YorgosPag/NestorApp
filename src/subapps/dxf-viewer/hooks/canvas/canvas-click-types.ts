@@ -86,6 +86,8 @@ export interface StairToolLike {
 export interface WallToolLike {
   readonly isActive: boolean;
   onCanvasClick: (point: Point2D) => boolean;
+  /** ADR-363 Phase 1J — true while the on-entity tool awaits the source pick (click 1). */
+  readonly isAwaitingStart?: boolean;
 }
 
 /** ADR-363 Phase 3 — Minimal slab tool interface for click routing. */

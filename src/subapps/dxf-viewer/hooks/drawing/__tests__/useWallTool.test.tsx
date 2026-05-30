@@ -290,4 +290,77 @@ describe('useWallTool', () => {
     expect(result.current.state.phase).toBe('awaitingEnd');
     expect(result.current.state.endPoint).toBeNull();
   });
+
+  // ─── ADR-363 Phase 1J — on-entity placement (pick line/rectangle) ──────
+
+  const lineEnt = {
+    id: 'l1', type: 'line', layer: '0',
+    start: { x: 0, y: 0 }, end: { x: 5000, y: 0 },
+  } as unknown as import('../../../types/entities').Entity;
+
+  const rectEnt = {
+    id: 'r1', type: 'rectangle', layer: '0',
+    x: 0, y: 0, width: 5000, height: 3000,
+  } as unknown as import('../../../types/entities').Entity;
+
+  it('on-entity: first click picks the line → awaitingSide', () => {
+    const { result } = renderHook(() => useWallTool({ getSceneEntities: () => [lineEnt] }));
+    act(() => result.current.setPlacementMode('on-entity'));
+    act(() => result.current.activate());
+    act(() => { result.current.onCanvasClick({ x: 2500, y: 0 }); });
+    expect(result.current.state.phase).toBe('awaitingSide');
+    expect(result.current.isAwaitingSide).toBe(true);
+    expect(result.current.state.pickedSource?.kind).toBe('line');
+  });
+
+  it('on-entity: line 2-click flow creates exactly one wall', () => {
+    const onWallCreated = jest.fn();
+    const { result } = renderHook(() =>
+      useWallTool({ onWallCreated, getSceneEntities: () => [lineEnt] }),
+    );
+    act(() => result.current.setPlacementMode('on-entity'));
+    act(() => result.current.activate());
+    act(() => { result.current.onCanvasClick({ x: 2500, y: 0 }); });
+    act(() => { result.current.onCanvasClick({ x: 2500, y: 1000 }); });
+    expect(onWallCreated).toHaveBeenCalledTimes(1);
+    const entity = onWallCreated.mock.calls[0][0] as WallEntity;
+    expect(entity.kind).toBe('straight');
+    // Continuous: back to awaitingStart, source cleared.
+    expect(result.current.state.phase).toBe('awaitingStart');
+    expect(result.current.state.pickedSource).toBeNull();
+  });
+
+  it('on-entity: rectangle 2-click flow creates four walls', () => {
+    const onWallCreated = jest.fn();
+    const { result } = renderHook(() =>
+      useWallTool({ onWallCreated, getSceneEntities: () => [rectEnt] }),
+    );
+    act(() => result.current.setPlacementMode('on-entity'));
+    act(() => result.current.activate());
+    act(() => { result.current.onCanvasClick({ x: 2500, y: 0 }); }); // hit perimeter
+    expect(result.current.state.pickedSource?.kind).toBe('closed');
+    act(() => { result.current.onCanvasClick({ x: 2500, y: 1500 }); }); // inside
+    expect(onWallCreated).toHaveBeenCalledTimes(4);
+  });
+
+  it('on-entity: click on empty space is a no-op (stays awaitingStart)', () => {
+    const onWallCreated = jest.fn();
+    const { result } = renderHook(() =>
+      useWallTool({ onWallCreated, getSceneEntities: () => [lineEnt] }),
+    );
+    act(() => result.current.setPlacementMode('on-entity'));
+    act(() => result.current.activate());
+    act(() => { result.current.onCanvasClick({ x: 2500, y: 999 }); }); // far from line
+    expect(result.current.state.phase).toBe('awaitingStart');
+    expect(onWallCreated).not.toHaveBeenCalled();
+  });
+
+  it('on-entity: getStatusText returns the pick/side i18n keys', () => {
+    const { result } = renderHook(() => useWallTool({ getSceneEntities: () => [lineEnt] }));
+    act(() => result.current.setPlacementMode('on-entity'));
+    act(() => result.current.activate());
+    expect(result.current.getStatusText()).toBe('tools.wall.statusPickEntity');
+    act(() => { result.current.onCanvasClick({ x: 2500, y: 0 }); });
+    expect(result.current.getStatusText()).toBe('tools.wall.statusPickSide');
+  });
 });

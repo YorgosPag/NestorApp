@@ -393,7 +393,9 @@
       "statusAlignment": "Click on a side to align: right → left edge on line, left → right edge on line",
       "statusCurveEnd": "Pick curved wall end point",
       "statusCurveControl": "Pick curve control point",
-      "statusPolyNext": "Pick next vertex (Enter to finish)"
+      "statusPolyNext": "Pick next vertex (Enter to finish)",
+      "statusPickEntity": "Pick a line or rectangle to place a wall",
+      "statusPickSide": "Click a side: line → wall extends toward it; rectangle → inside = interior walls, outside = exterior"
     },
     "opening": {
       "statusHostWall": "Pick a host wall to place the opening",
@@ -842,6 +844,10 @@
         "wall": {
           "label": "Wall",
           "tooltip": "Draw wall (shortcut W)"
+        },
+        "wallOnEntity": {
+          "label": "Wall on 2D entity",
+          "tooltip": "Pick a line or rectangle and place wall(s) on it"
         },
         "opening": {
           "label": "Opening",

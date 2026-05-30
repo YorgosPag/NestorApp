@@ -277,6 +277,14 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'wall',
               shortcut: 'W',
             },
+            // ADR-363 Phase 1J — Wall on existing 2D entity (pick line/rectangle).
+            {
+              id: 'draw.bim.wallOnEntity',
+              labelKey: 'ribbon.commands.bim.wallOnEntity.label',
+              tooltipKey: 'ribbon.commands.bim.wallOnEntity.tooltip',
+              icon: 'bim-wall',
+              commandKey: 'wall-on-entity',
+            },
             {
               id: 'draw.bim.opening',
               labelKey: 'ribbon.commands.bim.opening.label',

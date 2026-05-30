@@ -31,101 +31,33 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
-import type { WallEntity, WallKind, WallCategory } from '../../bim/types/wall-types';
+import type { WallKind, WallCategory } from '../../bim/types/wall-types';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
-import {
-  buildDefaultWallParams,
-  buildWallEntity,
-  type SceneUnits,
-  type WallParamOverrides,
-} from './wall-completion';
+// ADR-363 Phase 1J — «Τοίχος πάνω σε οντότητα 2Δ» geometry bridge.
+import { pickWallSourceFromEntity } from '../../bim/walls/wall-from-entity';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+import type { WallParamOverrides } from './wall-completion';
 import {
   useWallToolDynamicInputListener,
   useWallToolEnterListener,
 } from './use-wall-tool-event-listeners';
 import { EventBus } from '../../systems/events/EventBus';
 import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
-
-// ─── State machine types ─────────────────────────────────────────────────────
-
-export type WallToolPhase =
-  | 'idle'
-  | 'awaitingStart'
-  | 'awaitingEnd'
-  | 'awaitingAlignment'
-  | 'awaitingCurveControl'
-  | 'awaitingNextVertex';
-
-export interface WallToolState {
-  readonly phase: WallToolPhase;
-  readonly kind: WallKind;
-  readonly startPoint: Point2D | null;
-  readonly endPoint: Point2D | null;
-  readonly polylineVertices: readonly Point2D[];
-  readonly overrides: WallParamOverrides;
-  readonly error: string | null;
-}
-
-const INITIAL_STATE: WallToolState = {
-  phase: 'idle',
-  kind: 'straight',
-  startPoint: null,
-  endPoint: null,
-  polylineVertices: [],
-  overrides: {},
-  error: null,
-};
-
-// ─── Hook options + return ───────────────────────────────────────────────────
-
-export interface UseWallToolOptions {
-  /** Callback fired after a `WallEntity` is built & committed. */
-  readonly onWallCreated?: (entity: WallEntity) => void;
-  /** Layer ID at which the WallEntity is registered. */
-  readonly currentLevelId?: string;
-  /**
-   * Scene units getter (called at commit time so the builder converts the
-   * mm-baked defaults into the active scene's units). Defaults to `'mm'`
-   * when omitted (back-compat). Mirrors stair `getSceneUnits` contract.
-   */
-  readonly getSceneUnits?: () => SceneUnits;
-}
-
-export interface UseWallToolResult {
-  readonly state: WallToolState;
-  activate(): void;
-  /** Switch active kind (`'straight' | 'curved' | 'polyline'`). Resets the state machine. */
-  setKind(kind: WallKind): void;
-  deactivate(): void;
-  reset(): void;
-  /**
-   * ADR-363 Phase 1H — incremental ESC: step the straight-wall flow back from
-   * `awaitingAlignment` to `awaitingEnd` (drops the picked end, keeps the
-   * start) so the user can re-pick the end instead of cancelling the tool.
-   * No-op outside `awaitingAlignment`. Returns true if a step-back occurred.
-   */
-  backToAwaitingEnd(): boolean;
-  /** Returns true if the click advanced the state machine. */
-  onCanvasClick(point: Readonly<Point2D>): boolean;
-  /** Commit-and-finish the polyline chain (Enter key path). Returns true on commit. */
-  finishPolyline(): boolean;
-  /** Dynamic Input field overrides (category/height/thickness/flip). */
-  setParamOverrides(overrides: WallParamOverrides): void;
-  /** Status text for status-bar / Dynamic Input prompt (i18n key). */
-  getStatusText(): string;
-  readonly isActive: boolean;
-  readonly isAwaitingStart: boolean;
-  readonly isAwaitingEnd: boolean;
-  readonly isAwaitingAlignment: boolean;
-  readonly isAwaitingCurveControl: boolean;
-  readonly isAwaitingNextVertex: boolean;
-}
+// ADR-363 — state-machine types + commit builders extracted for N.7.1 (≤500 lines).
+import {
+  INITIAL_STATE,
+  type WallPlacementMode,
+  type WallToolState,
+  type UseWallToolOptions,
+  type UseWallToolResult,
+} from './wall-tool-types';
+import { useWallCommit } from './use-wall-commit';
 
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
 export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult {
-  const { onWallCreated, currentLevelId = '0', getSceneUnits } = options;
+  const { onWallCreated, currentLevelId = '0', getSceneUnits, getSceneEntities } = options;
 
   const [state, setState] = useState<WallToolState>(INITIAL_STATE);
   const stateRef = useRef<WallToolState>(state);
@@ -139,6 +71,23 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   useEffect(() => {
     if (state.phase === 'idle') {
       wallPreviewStore.reset();
+      return;
+    }
+    // ADR-363 Phase 1J — on-entity: surface the picked line as a straight ghost
+    // (start→end shifted toward the live cursor, reusing the Phase 1F preview
+    // generator). Closed sources have no rubber-band ghost (multi-wall).
+    if (state.placementMode === 'on-entity') {
+      if (state.phase === 'awaitingSide' && state.pickedSource?.kind === 'line') {
+        wallPreviewStore.set({
+          startPoint: state.pickedSource.start,
+          endPoint: state.pickedSource.end,
+          curveControl: null,
+          polylineVertices: [],
+          overrides: state.overrides,
+        });
+      } else {
+        wallPreviewStore.reset();
+      }
       return;
     }
     const curveControl =
@@ -169,16 +118,37 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
 
   // ── lifecycle ────────────────────────────────────────────────────────────
   const activate = useCallback(() => {
-    setState((prev) => ({ ...INITIAL_STATE, kind: prev.kind, phase: 'awaitingStart' }));
+    setState((prev) => ({
+      ...INITIAL_STATE,
+      kind: prev.kind,
+      placementMode: prev.placementMode,
+      phase: 'awaitingStart',
+    }));
   }, []);
 
   const setKind = useCallback((kind: WallKind) => {
     setState((prev) => ({
       ...INITIAL_STATE,
       kind,
+      placementMode: prev.placementMode,
       phase: prev.phase === 'idle' ? 'idle' : 'awaitingStart',
       overrides: prev.overrides,
     }));
+  }, []);
+
+  // ADR-363 Phase 1J — switch placement mode (freehand ⇄ on-entity). Resets the
+  // state machine (keeps kind + overrides). No-op effect when phase is idle.
+  const setPlacementMode = useCallback((mode: WallPlacementMode) => {
+    setState((prev) => {
+      if (prev.placementMode === mode) return prev;
+      return {
+        ...INITIAL_STATE,
+        kind: prev.kind,
+        overrides: prev.overrides,
+        placementMode: mode,
+        phase: prev.phase === 'idle' ? 'idle' : 'awaitingStart',
+      };
+    });
   }, []);
 
   // ADR-363 Phase 7B — keyboard W+n chord: set wall kind + (re-)activate the tool.
@@ -204,6 +174,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     setState((prev) => ({
       ...INITIAL_STATE,
       kind: prev.kind,
+      placementMode: prev.placementMode,
       overrides: prev.overrides,
       phase: prev.phase === 'idle' ? 'idle' : 'awaitingStart',
     }));
@@ -233,115 +204,49 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     handle: () => backToAwaitingEnd(),
   });
 
-  // ── commit (straight + curved) ───────────────────────────────────────────
-  /**
-   * Build + commit a wall from a fully-resolved straight state (startPoint set
-   * + endPoint provided). Validator failure (hardErrors) aborts the commit
-   * silently — the tool stays in awaitingEnd so the user can retry. Returns
-   * `true` on successful commit.
-   */
-  const commitStraightFromState = useCallback(
-    (
-      s: WallToolState,
-      endPoint: Readonly<Point2D>,
-      alignmentPoint?: Readonly<Point2D> | null,
-    ): boolean => {
-      if (s.startPoint === null) return false;
-      const sceneUnits = getSceneUnits?.() ?? 'mm';
-      const params = buildDefaultWallParams(
-        s.startPoint,
-        endPoint,
-        s.overrides,
-        sceneUnits,
-        alignmentPoint,
-      );
-      const result = buildWallEntity(params, currentLevelId, 'straight', sceneUnits);
-      if (!result.ok) {
-        setState({ ...s, error: result.hardErrors[0] ?? null });
-        return false;
-      }
-      onWallCreated?.(result.entity);
-      setState({
-        ...INITIAL_STATE,
-        kind: s.kind,
-        overrides: s.overrides,
-        phase: 'awaitingStart',
-      });
+  // ADR-363 Phase 1J — on-entity incremental back: ESC during the side-pick drops
+  // the picked source and returns to awaitingStart (re-pick the entity) instead
+  // of deactivating the tool.
+  useEscapeHandler({
+    id: 'wall-tool/on-entity-back',
+    priority: ESC_PRIORITY.WALL_ALIGNMENT_BACK,
+    canHandle: () =>
+      stateRef.current.placementMode === 'on-entity' && stateRef.current.phase === 'awaitingSide',
+    handle: () => {
+      setState((prev) => ({ ...prev, phase: 'awaitingStart', pickedSource: null, error: null }));
       return true;
     },
-    [currentLevelId, onWallCreated, getSceneUnits],
-  );
+  });
 
-  /**
-   * Commit a curved wall (3-click flow). `s.startPoint` + `s.endPoint` are the
-   * two endpoints; `controlPoint` is the quadratic Bezier control.
-   */
-  const commitCurvedFromState = useCallback(
-    (s: WallToolState, controlPoint: Readonly<Point2D>): boolean => {
-      if (s.startPoint === null || s.endPoint === null) return false;
-      const sceneUnits = getSceneUnits?.() ?? 'mm';
-      const base = buildDefaultWallParams(
-        s.startPoint,
-        s.endPoint,
-        s.overrides,
-        sceneUnits,
-      );
-      const curveControl: Point3D = { x: controlPoint.x, y: controlPoint.y, z: 0 };
-      const params = { ...base, curveControl };
-      const result = buildWallEntity(params, currentLevelId, 'curved', sceneUnits);
-      if (!result.ok) {
-        setState({ ...s, error: result.hardErrors[0] ?? null });
-        return false;
-      }
-      onWallCreated?.(result.entity);
-      setState({
-        ...INITIAL_STATE,
-        kind: s.kind,
-        overrides: s.overrides,
-        phase: 'awaitingStart',
-      });
-      return true;
-    },
-    [currentLevelId, onWallCreated, getSceneUnits],
-  );
-
-  /**
-   * Commit a polyline wall (N-click flow, Enter to finish). Requires ≥2
-   * vertices (start + at least one more). Endpoints map to params.start +
-   * params.end; interior vertices flow into `polylineVertices`.
-   */
-  const commitPolylineFromState = useCallback(
-    (s: WallToolState): boolean => {
-      const verts = s.polylineVertices;
-      if (verts.length < 2) return false;
-      const sceneUnits = getSceneUnits?.() ?? 'mm';
-      const startPt = verts[0];
-      const endPt = verts[verts.length - 1];
-      const base = buildDefaultWallParams(startPt, endPt, s.overrides, sceneUnits);
-      const polylineVertices: Point3D[] = verts.map((v) => ({ x: v.x, y: v.y, z: 0 }));
-      const params = { ...base, polylineVertices };
-      const result = buildWallEntity(params, currentLevelId, 'polyline', sceneUnits);
-      if (!result.ok) {
-        setState({ ...s, error: result.hardErrors[0] ?? null });
-        return false;
-      }
-      onWallCreated?.(result.entity);
-      setState({
-        ...INITIAL_STATE,
-        kind: s.kind,
-        overrides: s.overrides,
-        phase: 'awaitingStart',
-      });
-      return true;
-    },
-    [currentLevelId, onWallCreated, getSceneUnits],
-  );
+  // ── commit builders (extracted to ./use-wall-commit for N.7.1) ───────────
+  const {
+    commitStraightFromState,
+    commitCurvedFromState,
+    commitPolylineFromState,
+    commitOnEntity,
+  } = useWallCommit({ currentLevelId, onWallCreated, getSceneUnits, setState });
 
   // ── click pipeline ───────────────────────────────────────────────────────
   const onCanvasClick = useCallback(
     (point: Readonly<Point2D>): boolean => {
       const s = stateRef.current;
       if (s.phase === 'idle') return false;
+
+      // ADR-363 Phase 1J — on-entity placement (pick entity → pick side).
+      if (s.placementMode === 'on-entity') {
+        if (s.phase === 'awaitingStart') {
+          const entities = getSceneEntities?.() ?? [];
+          const tol = TOLERANCE_CONFIG.SNAP_DEFAULT / getImmediateTransform().scale;
+          const source = pickWallSourceFromEntity(point, entities, tol);
+          if (!source) return false; // missed — stay in awaitingStart
+          setState({ ...s, phase: 'awaitingSide', pickedSource: source, error: null });
+          return true;
+        }
+        if (s.phase === 'awaitingSide') {
+          return commitOnEntity(s, point);
+        }
+        return false;
+      }
 
       // Polyline kind — N-click flow.
       if (s.kind === 'polyline') {
@@ -420,7 +325,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       }
       return false;
     },
-    [commitStraightFromState, commitCurvedFromState],
+    [commitStraightFromState, commitCurvedFromState, commitOnEntity, getSceneEntities],
   );
 
   const finishPolyline = useCallback((): boolean => {
@@ -433,6 +338,12 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   // ── status text (i18n keys returned for caller-resolved translation) ─────
   const getStatusText = useCallback((): string => {
     const s = stateRef.current;
+    // ADR-363 Phase 1J — on-entity prompts.
+    if (s.placementMode === 'on-entity') {
+      if (s.phase === 'awaitingStart') return 'tools.wall.statusPickEntity';
+      if (s.phase === 'awaitingSide') return 'tools.wall.statusPickSide';
+      return '';
+    }
     switch (s.phase) {
       case 'awaitingStart':
         return 'tools.wall.statusStart';
@@ -464,6 +375,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     state,
     activate,
     setKind,
+    setPlacementMode,
     deactivate,
     reset,
     backToAwaitingEnd,
@@ -477,5 +389,6 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     isAwaitingAlignment: state.phase === 'awaitingAlignment',
     isAwaitingCurveControl: state.phase === 'awaitingCurveControl',
     isAwaitingNextVertex: state.phase === 'awaitingNextVertex',
+    isAwaitingSide: state.phase === 'awaitingSide',
   };
 }
