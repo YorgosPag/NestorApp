@@ -4,6 +4,13 @@ import { useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
+// 🏢 ADR-366: This button overlays the canvas (z-30) and is a child of the canvas
+// container, so the container's onMouseLeave never fires when the cursor moves onto
+// it — leaving the crosshair frozen on screen. Clear the SSoT cursor position on
+// enter (same mechanism as handleContainerMouseLeave) so the crosshair hides
+// instantly; it reappears automatically when the cursor returns to the canvas and
+// DxfCanvas's mousemove repopulates the position.
+import { setImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 
 // Visible only in 2D mode — entry point into 3D viewport (ADR-366 §9 Q1).
 // In 3D mode this component unmounts; the Three.js ViewCube takes over top-right.
@@ -22,6 +29,7 @@ export function ViewMode3DToggleButton() {
       <TooltipTrigger asChild>
         <button
           onClick={() => useViewMode3DStore.getState().toggle2D3D()}
+          onMouseEnter={() => setImmediatePosition(null)}
           aria-label={t('modeToggle.aria')}
           className="absolute right-3 top-3 z-30 flex select-none items-center gap-1.5 rounded border border-border bg-background/80 px-2 py-1.5 text-xs font-semibold text-foreground shadow-md backdrop-blur-sm transition-colors hover:bg-accent hover:text-accent-foreground"
         >
