@@ -747,6 +747,7 @@
 | **ADR-394** | Fit to View to Selected Entities (Z key) | ✅ APPROVED | [View](./adrs/ADR-394-fit-to-view-selected-entities.md) |
 | **ADR-395** | Ενσωμάτωση BIM οντοτήτων στην καρτέλα «Επιμετρήσεις» Κτιρίου | ✅ APPROVED | [View](./adrs/ADR-395-bim-quantities-building-measurements.md) |
 | **ADR-396** | Ενιαία Εξωτερική Θερμοπρόσοψη (ETICS) για BIM | ✅ APPROVED | [View](./adrs/ADR-396-bim-external-thermal-envelope-etics.md) |
+| **ADR-401** | BIM Wall Top/Base Constraints + Attach-to-Structural (συσχετιστικό αυτόματο ύψος) | 🟡 PROPOSED | [View](./adrs/ADR-401-bim-wall-top-base-constraints-attach-to-structural.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
