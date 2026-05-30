@@ -20,6 +20,10 @@ import { polarTrackingStore } from '../../systems/constraints/polar-tracking-sto
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
 import { hardOrtho } from './drawing-handler-utils';
+// ADR-363: BIM tools (wall/stair/beam/slab) keep their points in dedicated
+// preview stores, not in `tempPoints`. Resolve the ortho/polar anchor from
+// there so the rubber-band preview honours F8/F10 (preview == commit).
+import { getBimOrthoReference } from './bim-ortho-reference';
 // ADR-362 hotfix: DetectableEntity for smart dim type detection via snap entityId
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
 // ADR-362 hotfix (2026-05-19): skip-snap helper for dimLineRef phase — preview
@@ -109,8 +113,10 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     // The mouse event handler is already called on each mousemove - no need to batch.
     const transformUtils = getTransformUtils();
     const t1 = performance.now();
-    // Apply ortho (F8) or polar (F10) constraint before preview — mutually exclusive
-    const lastRefPt = tempPoints[tempPoints.length - 1];
+    // Apply ortho (F8) or polar (F10) constraint before preview — mutually exclusive.
+    // BIM tools have an empty `tempPoints`; fall back to their preview-store anchor
+    // so the ghost follows F8/F10 exactly like the committed geometry will.
+    const lastRefPt = tempPoints[tempPoints.length - 1] ?? getBimOrthoReference(activeTool) ?? undefined;
     const afterOrtho = orthoOnRef.current && lastRefPt ? hardOrtho(p, lastRefPt) : p;
     let polarSnapResult: PolarSnapResult | null = null;
     let previewPt = afterOrtho;

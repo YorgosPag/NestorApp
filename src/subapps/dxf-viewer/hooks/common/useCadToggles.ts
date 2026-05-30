@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { userSettingsRepository, stableHash } from '@/services/user-settings';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import type { CadTogglesSettingsSlice } from '@/services/user-settings/user-settings-schema';
+import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 
 export interface CadToggle {
   on: boolean;
@@ -63,6 +64,13 @@ export const useCadToggles = (): CadToggles => {
     return () => { unsubscribe(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, companyId]);
+
+  // Mirror ortho/polar into the non-React SSoT store so the event-time BIM
+  // commit path (useCanvasClickHandler) can read the live toggle synchronously
+  // without subscribing to this React hook (ADR-040 orchestrator-decoupling).
+  useEffect(() => {
+    cadToggleState.set(state.ortho, state.polar);
+  }, [state.ortho, state.polar]);
 
   // Persist state changes to Firestore (debounced 500ms by repository)
   useEffect(() => {

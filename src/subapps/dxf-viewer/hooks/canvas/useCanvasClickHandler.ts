@@ -26,14 +26,6 @@
 'use client';
 import { useCallback } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
-import {
-  isLineEntity, isPolylineEntity, isLWPolylineEntity,
-  isArcEntity, isCircleEntity, isRectangleEntity, isRectEntity,
-  isTextEntity, isMTextEntity, isEllipseEntity,
-} from '../../types/entities';
-import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
-import { pointToArcDistance } from '../../utils/angle-entity-math';
 import { isInteractiveTool } from '../../systems/tools/ToolStateManager';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { TOLERANCE_CONFIG, POLYGON_TOLERANCES } from '../../config/tolerance-config';
@@ -42,9 +34,11 @@ import { collectAreaCandidates, collectHoleAreas } from '../../systems/auto-area
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { dlog, dwarn } from '../../debug';
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
-import { resolveEntityText } from '../../utils/text-node-utils';
 // ADR-040 Phase XXII.A — transform reads from SSoT (orchestrator-decoupling).
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+// ADR-363 — apply F8 ortho / F10 polar to BIM tool clicks (wall/stair/beam/slab)
+// using their preview-store anchor, so the committed point matches the preview.
+import { applyBimDrawingConstraint } from '../drawing/bim-ortho-reference';
 // ── Re-exports for backward compatibility ───────────────────────────────────
 export type {
   ArcPickableEntity,
@@ -62,6 +56,7 @@ import {
   handleLineParallelPick,
 } from './entity-pick-handlers';
 import type { EntityPickContext } from './entity-pick-handlers';
+import { testEntityHit } from './canvas-click-entity-hit';
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -202,19 +197,25 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     if (handleCircleTTTPick(entityCtx, circleTTT, activeTool)) return;
     if (handleLinePerpendicularPick(entityCtx, linePerpendicular, activeTool)) return;
     if (handleLineParallelPick(entityCtx, lineParallel, activeTool)) return;
+    // ADR-363 — F8 ortho / F10 polar for BIM tools with a placement anchor
+    // (wall/stair/beam/slab). No-op for every other tool and for column /
+    // opening / slab-opening (no free directional reference). Reads the live
+    // toggle from the cadToggleState SSoT mirror and the anchor from the tool's
+    // preview store, so the committed point equals the rubber-band preview.
+    const bimPoint = applyBimDrawingConstraint(activeTool, worldPoint);
     // PRIORITY 4.5: ADR-358 Phase 5a — Stair tool 2-click placement.
     if (activeTool === 'stair' && stairTool?.isActive) {
-      stairTool.onCanvasClick(worldPoint);
+      stairTool.onCanvasClick(bimPoint);
       return;
     }
     // PRIORITY 4.6: ADR-363 Phase 1B — Wall tool 2-click placement (continuous).
     if (activeTool === 'wall' && wallTool?.isActive) {
-      wallTool.onCanvasClick(worldPoint);
+      wallTool.onCanvasClick(bimPoint);
       return;
     }
     // PRIORITY 4.7: ADR-363 Phase 3 — Slab tool N-click polygon (Enter to commit).
     if (activeTool === 'slab' && slabTool?.isActive) {
-      slabTool.onCanvasClick(worldPoint);
+      slabTool.onCanvasClick(bimPoint);
       return;
     }
     // PRIORITY 4.8: ADR-363 Phase 4 — Column tool single-click placement.
@@ -224,7 +225,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     }
     // PRIORITY 4.9: ADR-363 Phase 5 — Beam tool 2-click (straight/cantilever) or 3-click (curved).
     if (activeTool === 'beam' && beamTool?.isActive) {
-      beamTool.onCanvasClick(worldPoint);
+      beamTool.onCanvasClick(bimPoint);
       return;
     }
     // PRIORITY 4.95: ADR-363 Phase 3.7 — Slab-opening tool 2-click (host slab + position).
@@ -376,74 +377,6 @@ function handleRotationEntitySelection(
   return false;
 }
 // ============================================================================
-// ENTITY HIT-TESTING (used by rotation selection)
-// ============================================================================
-/**
- * Tests if a world point hits any entity type. Returns true if hit.
- * Supports: LINE, ARC, CIRCLE, POLYLINE, LWPOLYLINE, RECTANGLE, ELLIPSE, TEXT, MTEXT.
- */
-function testEntityHit(
-  worldPoint: Point2D,
-  entity: Entity,
-  hitTolerance: number,
-): boolean {
-  if (isLineEntity(entity)) {
-    return pointToLineDistance(worldPoint, entity.start, entity.end) <= hitTolerance;
-  }
-  if (isArcEntity(entity)) {
-    return pointToArcDistance(worldPoint, entity) <= hitTolerance;
-  }
-  if (isCircleEntity(entity)) {
-    const dx = worldPoint.x - entity.center.x;
-    const dy = worldPoint.y - entity.center.y;
-    const distFromCenter = Math.sqrt(dx * dx + dy * dy);
-    return Math.abs(distFromCenter - entity.radius) <= hitTolerance;
-  }
-  if (isPolylineEntity(entity)) {
-    return testPolylineHit(worldPoint, entity.vertices, entity.closed, hitTolerance);
-  }
-  if (isLWPolylineEntity(entity)) {
-    return testPolylineHit(worldPoint, entity.vertices, entity.closed, hitTolerance);
-  }
-  if (isRectangleEntity(entity) || isRectEntity(entity)) {
-    const { x, y, width: w, height: h } = entity;
-    const corners = [
-      { x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h },
-    ];
-    for (let i = 0; i < 4; i++) {
-      if (pointToLineDistance(worldPoint, corners[i], corners[(i + 1) % 4]) <= hitTolerance) {
-        return true;
-      }
-    }
-    return false;
-  }
-  if (isEllipseEntity(entity)) {
-    const dx = worldPoint.x - entity.center.x;
-    const dy = worldPoint.y - entity.center.y;
-    const rx = entity.majorAxis;
-    const ry = entity.minorAxis;
-    const normalizedDist = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry);
-    return Math.abs(normalizedDist - 1) <= hitTolerance / Math.min(rx, ry);
-  }
-  if (isTextEntity(entity)) {
-    const height = entity.height ?? entity.fontSize ?? 2.5;
-    const width = resolveEntityText(entity).length * height * 0.6;
-    return worldPoint.x >= entity.position.x - hitTolerance &&
-           worldPoint.x <= entity.position.x + width + hitTolerance &&
-           worldPoint.y >= entity.position.y - height - hitTolerance &&
-           worldPoint.y <= entity.position.y + hitTolerance;
-  }
-  if (isMTextEntity(entity)) {
-    const height = entity.height ?? entity.fontSize ?? 2.5;
-    const width = entity.width || (resolveEntityText(entity).length * height * 0.6);
-    return worldPoint.x >= entity.position.x - hitTolerance &&
-           worldPoint.x <= entity.position.x + width + hitTolerance &&
-           worldPoint.y >= entity.position.y - height - hitTolerance &&
-           worldPoint.y <= entity.position.y + hitTolerance;
-  }
-  return false;
-}
-// ============================================================================
 // AUTO AREA CLICK (PRIORITY 1.7)
 // ============================================================================
 /** Finds smallest closed polygon at worldPoint → writes result to AutoAreaResultStore. */
@@ -475,24 +408,4 @@ function handleAutoAreaClick(worldPoint: Point2D, p: UseCanvasClickHandlerParams
     screenY: screen.y,
   });
   dlog('handleAutoAreaClick', `area=${best.area.toFixed(2)} netArea=${(best.area - holesArea).toFixed(2)} holes=${holes.length} source=${best.source}`);
-}
-/** Helper: Test if point hits a polyline (vertices + optional closed) */
-function testPolylineHit(
-  worldPoint: Point2D,
-  vertices: ReadonlyArray<{ x: number; y: number }> | undefined,
-  closed: boolean | undefined,
-  hitTolerance: number,
-): boolean {
-  if (!vertices || vertices.length < 2) return false;
-  for (let i = 0; i < vertices.length - 1; i++) {
-    if (pointToLineDistance(worldPoint, vertices[i], vertices[i + 1]) <= hitTolerance) {
-      return true;
-    }
-  }
-  if (closed && vertices.length > 2) {
-    if (pointToLineDistance(worldPoint, vertices[vertices.length - 1], vertices[0]) <= hitTolerance) {
-      return true;
-    }
-  }
-  return false;
 }
