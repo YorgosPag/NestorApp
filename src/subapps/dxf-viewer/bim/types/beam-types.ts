@@ -38,7 +38,7 @@ import type {
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
-import type { EnvelopeLayer } from './thermal-envelope-types';
+import type { EnvelopeFunction, EnvelopeLayer } from './thermal-envelope-types';
 
 // ─── Sub-type discriminators (ADR-363 §5.7) ─────────────────────────────────
 
@@ -117,6 +117,12 @@ export interface BeamParams {
    * auto-apply command. `thickness_m` σε ΜΕΤΡΑ (SSoT unit), όχι mm.
    */
   readonly envelopeLayer?: EnvelopeLayer;
+  /**
+   * ADR-396 v2 Φάση 4 — Χειροκίνητη παράκαμψη (Revit-style) της αυτόματης ETICS
+   * ταξινόμησης (Στρ.3). `undefined` = auto· 'exterior'/'interior' = override.
+   * Set χειροκίνητα (UI Φάση 6).
+   */
+  readonly envelopeFunction?: EnvelopeFunction;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

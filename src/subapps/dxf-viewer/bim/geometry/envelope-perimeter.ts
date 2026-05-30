@@ -12,7 +12,12 @@ import type { SceneUnits } from '../../utils/scene-units';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { COLUMN_BRIDGE_TOL_M } from '../types/thermal-envelope-types';
 import { computeWallGeometry } from './wall-geometry';
-import { offsetPolyline, polygonCentroid, stripClosingDuplicate } from './shared/polygon-utils';
+import {
+  offsetPolyline,
+  polygonCentroid,
+  polylinePerimeterMeters,
+  stripClosingDuplicate,
+} from './shared/polygon-utils';
 import {
   prepareColumns,
   captureColumnId,
@@ -23,10 +28,14 @@ import {
   type ColumnForEnvelope,
   type PreparedColumn,
 } from './envelope-column-bridge';
+import {
+  buildWallAdjacency,
+  sharedKey,
+  orderComponent,
+  type WallEdge,
+} from './envelope-wall-graph';
 
 export type { ColumnForEnvelope } from './envelope-column-bridge';
-
-const MM_TO_M = 1 / 1000;
 
 // ============================================================================
 // PUBLIC TYPES
@@ -51,6 +60,13 @@ export interface EnvelopeChain {
   readonly perimeterM: number;
   readonly wallIds: readonly string[];
   readonly columnIds: readonly string[];
+  /**
+   * ADR-396 v2 (Phase 5) — δοκάρια που συνεισφέρουν στο κέλυφος (όταν η πηγή είναι
+   * το footprint pipeline `computeEnvelopeShell`). Optional: το παλιό
+   * `computeEnvelopePerimeter` (μόνο τοίχοι) το αφήνει `[]`· consumers διαβάζουν
+   * `?? []`. Τροφοδοτεί BOQ per-element attribution (Φάση 5B).
+   */
+  readonly beamIds?: readonly string[];
 }
 
 export interface EnvelopePerimeterResult {
@@ -192,104 +208,6 @@ function endpointsOf(params: WallParams, kind: WallKind): { start: Point3D; end:
     return { start: pv[0], end: pv[pv.length - 1] };
   }
   return { start: params.start, end: params.end };
-}
-
-// ============================================================================
-// ADJACENCY GRAPH
-// ============================================================================
-
-interface WallEdge {
-  readonly neighborId: string;
-  readonly viaKey: string;
-}
-
-/**
- * Χτίζει wall→wall adjacency από κοινά face corner keys (valence-2).
- * Dedup: κάθε ζεύγος τοίχων συνδέεται το πολύ μία φορά (πρώτο shared key).
- */
-function buildWallAdjacency(prepared: readonly KeyedWall[]): Map<string, WallEdge[]> {
-  // nodeMap: key → list of {wallId, side}
-  type Side = 'start' | 'end';
-  const nodeMap = new Map<string, Array<{ wallId: string; side: Side }>>();
-  const reg = (keys: readonly string[], wallId: string, side: Side): void => {
-    for (const k of keys) {
-      const arr = nodeMap.get(k);
-      if (arr) arr.push({ wallId, side });
-      else nodeMap.set(k, [{ wallId, side }]);
-    }
-  };
-  for (const p of prepared) {
-    reg(p.startKeys, p.id, 'start');
-    reg(p.endKeys, p.id, 'end');
-  }
-
-  const adj = new Map<string, WallEdge[]>();
-  for (const p of prepared) adj.set(p.id, []);
-
-  const seen = new Set<string>(); // dedup wall pairs
-  for (const [key, entries] of nodeMap) {
-    if (entries.length < 2) continue;
-    // Find the 2 DISTINCT wall ids (valence-2 = exactly 2 distinct walls).
-    const distinct = entries.filter((a, i) =>
-      !entries.slice(0, i).some(b => b.wallId === a.wallId),
-    );
-    if (distinct.length !== 2) continue;
-    const [a, b] = distinct;
-    const pairKey = [a.wallId, b.wallId].sort().join(':');
-    if (seen.has(pairKey)) continue;
-    seen.add(pairKey);
-    adj.get(a.wallId)?.push({ neighborId: b.wallId, viaKey: key });
-    adj.get(b.wallId)?.push({ neighborId: a.wallId, viaKey: key });
-  }
-  return adj;
-}
-
-function sharedKey(adj: Map<string, WallEdge[]>, aId: string, bId: string): string | null {
-  return adj.get(aId)?.find(e => e.neighborId === bId)?.viaKey ?? null;
-}
-
-function orderComponent(
-  seedId: string,
-  adj: Map<string, WallEdge[]>,
-  visited: Set<string>,
-): { ids: string[]; closed: boolean; enclosesRegion: boolean } {
-  const comp = new Set<string>([seedId]);
-  const queue = [seedId];
-  while (queue.length > 0) {
-    const c = queue.pop() as string;
-    for (const e of adj.get(c) ?? []) {
-      if (!comp.has(e.neighborId)) { comp.add(e.neighborId); queue.push(e.neighborId); }
-    }
-  }
-  comp.forEach(id => visited.add(id));
-
-  // ADR-396 v2 — «περικλείει χώρο;»: κύκλος ⟺ ακμές ≥ κόμβοι (degreeSum/2 ≥ comp).
-  let degreeSum = 0;
-  for (const id of comp) degreeSum += adj.get(id)?.length ?? 0;
-  const enclosesRegion = degreeSum / 2 >= comp.size;
-
-  const isCycle = [...comp].every(id => (adj.get(id)?.length ?? 0) === 2);
-  let start = seedId;
-  if (!isCycle) {
-    for (const id of comp) {
-      if ((adj.get(id)?.length ?? 0) < 2) { start = id; break; }
-    }
-  }
-
-  const ordered: string[] = [];
-  const oset = new Set<string>();
-  let prev: string | null = null;
-  let cur: string | null = start;
-  while (cur !== null && !oset.has(cur)) {
-    ordered.push(cur); oset.add(cur);
-    const next: WallEdge | undefined = (adj.get(cur) ?? []).find(
-      e => e.neighborId !== prev && !oset.has(e.neighborId),
-    );
-    prev = cur;
-    cur = next ? next.neighborId : null;
-  }
-  const closed = isCycle && ordered.length === comp.size && ordered.length >= 3;
-  return { ids: ordered, closed, enclosesRegion };
 }
 
 // ============================================================================
@@ -435,15 +353,6 @@ function offsetLoopOutward(
   return chosen;
 }
 
-function polylinePerimeterM(points: readonly Point3D[], closed: boolean, s: number): number {
-  const n = points.length;
-  if (n < 2) return 0;
-  let canvas = 0;
-  for (let i = 1; i < n; i++) canvas += Math.sqrt(dist2(points[i - 1], points[i]));
-  if (closed) canvas += Math.sqrt(dist2(points[n - 1], points[0]));
-  return canvas * (1 / s) * MM_TO_M;
-}
-
 // ============================================================================
 // PUBLIC ENTRY
 // ============================================================================
@@ -485,9 +394,10 @@ export function computeEnvelopePerimeter(
       insulationOuterLoop: { points: insulationOuter, closed },
       closed,
       enclosesRegion,
-      perimeterM: polylinePerimeterM(insulationOuter, closed, s),
+      perimeterM: polylinePerimeterMeters(insulationOuter, closed, s),
       wallIds: ids,
       columnIds: collectColumnIds(ids, byId),
+      beamIds: [],
     });
   }
 

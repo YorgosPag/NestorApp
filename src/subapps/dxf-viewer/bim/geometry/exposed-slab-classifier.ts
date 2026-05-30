@@ -59,7 +59,7 @@ const ELEV_SNAP_MM = 10;
  * της λίστας) → χρησιμοποιεί το SSoT `getEntityAbsoluteElevation` (ADR-369).
  * Αλλιώς → το authoritative `levelElevation` (+ `heightOffsetFromLevel`).
  */
-function resolveSlabTopMm(
+export function resolveSlabTopMm(
   slab: SlabForZoneClassification,
   floors: readonly StoreyRef[],
 ): number {

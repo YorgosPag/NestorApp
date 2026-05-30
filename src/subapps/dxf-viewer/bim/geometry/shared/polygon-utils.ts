@@ -368,6 +368,27 @@ export function insetClosedPolygon(
 }
 
 /**
+ * Μήκος μιας polyline σε ΜΕΤΡΑ. `points` σε canvas units· `sceneScale` =
+ * `mmToSceneUnits(units)` (canvas ανά mm). `closed` → προσθέτει την ακμή
+ * last→first. SSoT για το ETICS perimeter (ADR-396) — καταναλώνεται και από
+ * `envelope-perimeter.ts` και από `envelope-shell.ts` (μηδέν duplication, N.12).
+ */
+export function polylinePerimeterMeters(
+  points: readonly Point3D[],
+  closed: boolean,
+  sceneScale: number,
+): number {
+  const n = points.length;
+  if (n < 2 || sceneScale === 0) return 0;
+  let canvas = 0;
+  for (let i = 1; i < n; i++) {
+    canvas += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+  }
+  if (closed) canvas += Math.hypot(points[0].x - points[n - 1].x, points[0].y - points[n - 1].y);
+  return canvas / sceneScale / 1000;
+}
+
+/**
  * Arithmetic-mean centroid of a polygon's vertices (XY plane, z ignored).
  * Sufficient for near-convex building outlines (ADR-396 D2 exterior-face
  * selection). Returns `{x:0, y:0}` for an empty vertex list.

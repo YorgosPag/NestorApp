@@ -20,7 +20,10 @@ import {
   IfcGuidSchema,
   IfcPropertySetSchema,
 } from './ifc-entity-mixin';
-import { EnvelopeLayerSchema } from './thermal-envelope.schemas';
+import {
+  EnvelopeFunctionSchema,
+  EnvelopeLayerSchema,
+} from './thermal-envelope.schemas';
 
 // ─── Point3D ────────────────────────────────────────────────────────────────
 
@@ -98,6 +101,8 @@ const ColumnParamsBaseSchema = z
     unconnectedHeight: z.number().positive().optional(),
     // ─── ADR-396 P7 — ETICS exterior insulation layer (Z1) ───────────────────
     envelopeLayer: EnvelopeLayerSchema.optional(),
+    // ─── ADR-396 v2 Φάση 4 — ETICS classification override (Στρ.3) ─────────────
+    envelopeFunction: EnvelopeFunctionSchema.optional(),
   })
   .strict();
 

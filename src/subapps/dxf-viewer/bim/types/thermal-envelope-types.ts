@@ -59,6 +59,29 @@ export type EnvelopeMaterialId =
   | string;
 
 /**
+ * ADR-396 v2 Φάση 4 — Χειροκίνητη παράκαμψη (Revit Wall-Function-style) της
+ * αυτόματης ταξινόμησης ορίων του `footprint-region-classifier` (Στρ.3, §3.1.2).
+ * Per-element· προσαρτάται σε wall/column/beam (στοιχεία που σχηματίζουν το
+ * πλευρικό footprint / ζώνη Z1). ΟΧΙ σε slab/opening (Z2/Z3 = άξονας υψομέτρου,
+ * Z4 = ακολουθεί host wall — διαφορετικός άξονας).
+ *
+ * `undefined` = **auto** (χρησιμοποίησε την αυτόματη γεωμετρική ταξινόμηση).
+ * Ρητή τιμή = override που υπερισχύει της auto απόφασης:
+ *   - `'exterior'` → να μονωθεί η εξωτ. όψη (μέρος του κελύφους), ακόμη κι αν η
+ *     γεωμετρία το έβγαζε εσωτερικό.
+ *   - `'interior'` → να ΜΗΝ μονωθεί, ακόμη κι αν η γεωμετρία το έβγαζε εξωτερικό
+ *     (π.χ. τοίχος προς εσωτερικό αίθριο).
+ *
+ * Αποσυνδεδεμένο από το δομικό `WallParams.category` (που έχει 5 τιμές
+ * exterior/interior/partition/parapet/fence): το `category` είναι ο **δομικός**
+ * ρόλος· το `envelopeFunction` είναι η **θερμική** παράκαμψη ETICS. Καθαρό SSoT,
+ * ένα ομοιόμορφο πεδίο και στα τρία στοιχεία (κολώνες/δοκάρια δεν έχουν category).
+ *
+ * Data model μόνο (Φάση 4)· ο applicator το καταναλώνει στη Φάση 5, UI panel Φάση 6.
+ */
+export type EnvelopeFunction = 'exterior' | 'interior';
+
+/**
  * Per-element εξωτερική στρώση μόνωσης (industry-standard, ADR-396 §3 DATA).
  * Προσαρτάται σε column/beam/slab/opening στη Φάση P2.
  */
@@ -157,6 +180,16 @@ export const EXTERIOR_PROXIMITY_M = 0.2 as const;
  * **configurable** — όχι hardcoded κατώφλι στη γεωμετρία.
  */
 export const COLUMN_BRIDGE_TOL_M = 0.3 as const;
+
+/**
+ * ADR-396 v2 Phase 3 — κατώφλι κάλυψης (0..1) για τον διαχωρισμό **αίθριου** από
+ * **κλειστό δωμάτιο** σε μια τρύπα του περιγράμματος κτιρίου (§3.1.2). Μια τρύπα
+ * θεωρείται κλειστό δωμάτιο (καμία μόνωση) όταν το εμβαδόν της που σκεπάζεται από
+ * πλάκα οποιουδήποτε ψηλότερου ορόφου είναι ≥ αυτού του ποσοστού· αλλιώς είναι
+ * αίθριο (ανοιχτό στον ουρανό → μόνωση γύρω). Απόφαση Giorgio (2026-05-30): 50%,
+ * **configurable** — όχι hardcoded κατώφλι στον classifier.
+ */
+export const ATRIUM_COVERAGE_THRESHOLD = 0.5 as const;
 
 // ============================================================================
 // ADVISORY HELPERS (pure, SSoT για threshold logic)

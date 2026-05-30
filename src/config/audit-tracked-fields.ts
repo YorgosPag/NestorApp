@@ -634,6 +634,9 @@ const WALL_TRACKED_FIELDS_RAW: Record<string, string> = {
   // Per-layer diffing would need a collection def; deferred until BIM history
   // surfaces require it.
   dna: 'dna',
+  // ADR-396 v2 Φάση 4 — ETICS classification override (Στρ.3). Scalar string
+  // 'exterior'|'interior' (undefined=auto).
+  envelopeFunction: 'envelopeFunction',
 };
 
 export const WALL_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
@@ -664,6 +667,8 @@ const COLUMN_TRACKED_FIELDS_RAW: Record<string, string> = {
   // ADR-396 P7 Part B — ETICS exterior insulation layer (Z1). Object
   // (materialId+thickness_m+zone) serialized as JSON scalar, mirror wall `dna`.
   envelopeLayer: 'envelopeLayer',
+  // ADR-396 v2 Φάση 4 — ETICS classification override (Στρ.3). Scalar string.
+  envelopeFunction: 'envelopeFunction',
 };
 
 export const COLUMN_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
@@ -705,6 +710,8 @@ const BEAM_TRACKED_FIELDS_RAW: Record<string, string> = {
   offsetFromStorey: 'offsetFromStorey',
   // ADR-396 P7 Part B — ETICS exterior insulation layer (Z1). JSON scalar.
   envelopeLayer: 'envelopeLayer',
+  // ADR-396 v2 Φάση 4 — ETICS classification override (Στρ.3). Scalar string.
+  envelopeFunction: 'envelopeFunction',
 };
 
 export const BEAM_TRACKED_FIELDS: Record<string, TrackedFieldDef> =

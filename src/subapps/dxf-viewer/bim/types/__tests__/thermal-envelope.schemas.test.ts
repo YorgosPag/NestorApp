@@ -10,10 +10,12 @@
  */
 
 import {
+  EnvelopeFunctionSchema,
   EnvelopeLayerSchema,
   RevealInsulationSchema,
   ThermalEnvelopeSpecSchema,
 } from '../thermal-envelope.schemas';
+import { WallParamsSchema } from '../wall.schemas';
 import { ColumnParamsSchema } from '../column.schemas';
 import { BeamParamsSchema } from '../beam.schemas';
 import { SlabParamsSchema } from '../slab.schemas';
@@ -66,6 +68,66 @@ describe('ThermalEnvelopeSpecSchema', () => {
   it('απορρίπτει spec χωρίς zones', () => {
     const { zones: _omit, ...noZones } = SPEC;
     expect(() => ThermalEnvelopeSpecSchema.parse(noZones)).toThrow();
+  });
+});
+
+describe('EnvelopeFunctionSchema (v2 Φάση 4 — classification override)', () => {
+  it('δέχεται exterior / interior', () => {
+    expect(EnvelopeFunctionSchema.parse('exterior')).toBe('exterior');
+    expect(EnvelopeFunctionSchema.parse('interior')).toBe('interior');
+  });
+
+  it("απορρίπτει 'auto' (undefined=auto, ΟΧΙ literal)", () => {
+    expect(() => EnvelopeFunctionSchema.parse('auto')).toThrow();
+  });
+
+  it('απορρίπτει άγνωστη τιμή / κενό', () => {
+    expect(() => EnvelopeFunctionSchema.parse('outside')).toThrow();
+    expect(() => EnvelopeFunctionSchema.parse('')).toThrow();
+  });
+});
+
+describe('entity param schemas — envelopeFunction round-trip (.strict, no strip)', () => {
+  const WALL = {
+    category: 'exterior', start: { x: 0, y: 0 }, end: { x: 1000, y: 0 },
+    height: 3000, thickness: 200, flip: false,
+    baseBinding: 'storey-floor', topBinding: 'storey-ceiling',
+    baseOffset: 0, topOffset: 0,
+  };
+  const COLUMN = {
+    kind: 'rectangular', position: { x: 0, y: 0 }, anchor: 'center',
+    width: 400, depth: 400, height: 3000, rotation: 0,
+    baseBinding: 'storey-floor', topBinding: 'storey-ceiling',
+    baseOffset: 0, topOffset: 0,
+  };
+  const BEAM = {
+    kind: 'straight', startPoint: { x: 0, y: 0 }, endPoint: { x: 1000, y: 0 },
+    width: 200, depth: 400, topElevation: 3000,
+  };
+
+  it('WallParamsSchema διατηρεί envelopeFunction', () => {
+    const parsed = WallParamsSchema.parse({ ...WALL, envelopeFunction: 'interior' });
+    expect(parsed.envelopeFunction).toBe('interior');
+  });
+
+  it('ColumnParamsSchema διατηρεί envelopeFunction', () => {
+    const parsed = ColumnParamsSchema.parse({ ...COLUMN, envelopeFunction: 'exterior' });
+    expect(parsed.envelopeFunction).toBe('exterior');
+  });
+
+  it('BeamParamsSchema διατηρεί envelopeFunction', () => {
+    const parsed = BeamParamsSchema.parse({ ...BEAM, envelopeFunction: 'exterior' });
+    expect(parsed.envelopeFunction).toBe('exterior');
+  });
+
+  it('απουσία envelopeFunction = auto (undefined, optional)', () => {
+    expect(WallParamsSchema.parse(WALL).envelopeFunction).toBeUndefined();
+    expect(ColumnParamsSchema.parse(COLUMN).envelopeFunction).toBeUndefined();
+    expect(BeamParamsSchema.parse(BEAM).envelopeFunction).toBeUndefined();
+  });
+
+  it('απορρίπτει μη-έγκυρη τιμή envelopeFunction (.strict enum)', () => {
+    expect(() => WallParamsSchema.parse({ ...WALL, envelopeFunction: 'auto' })).toThrow();
   });
 });
 

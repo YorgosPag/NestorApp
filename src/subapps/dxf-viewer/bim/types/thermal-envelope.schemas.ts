@@ -32,6 +32,13 @@ const EnvelopeThicknessSchema = z
 export const EnvelopeZoneSchema = z.enum(['Z1', 'Z2', 'Z3', 'Z4']);
 
 /**
+ * ADR-396 v2 Φάση 4 — Παράκαμψη ταξινόμησης κελύφους (mirror `EnvelopeFunction`).
+ * Per-element override σε wall/column/beam params. `undefined` (απουσία) = auto·
+ * ρητή τιμή υπερισχύει της αυτόματης γεωμετρικής ταξινόμησης (§3.1.2 Στρ.3).
+ */
+export const EnvelopeFunctionSchema = z.enum(['exterior', 'interior']);
+
+/**
  * Per-element εξωτερική στρώση μόνωσης (mirror `EnvelopeLayer`). Προσαρτάται σε
  * column/beam/slab params. Το `materialId` είναι free-form (preset ή custom).
  */

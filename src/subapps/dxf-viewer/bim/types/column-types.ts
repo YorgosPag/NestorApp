@@ -38,7 +38,7 @@ import type {
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { ColumnBaseBinding, ColumnTopBinding } from './bim-binding';
-import type { EnvelopeLayer } from './thermal-envelope-types';
+import type { EnvelopeFunction, EnvelopeLayer } from './thermal-envelope-types';
 
 // ─── Sub-type discriminator (ADR-363 §5.6) ───────────────────────────────────
 
@@ -174,6 +174,12 @@ export interface ColumnParams {
    * `thickness_m` σε ΜΕΤΡΑ (SSoT unit), όχι mm.
    */
   readonly envelopeLayer?: EnvelopeLayer;
+  /**
+   * ADR-396 v2 Φάση 4 — Χειροκίνητη παράκαμψη (Revit-style) της αυτόματης ETICS
+   * ταξινόμησης (Στρ.3). `undefined` = auto· 'exterior'/'interior' = override.
+   * Set χειροκίνητα (UI Φάση 6).
+   */
+  readonly envelopeFunction?: EnvelopeFunction;
   /**
    * DXF canvas coordinate unit. Always stored so `computeColumnGeometry` can
    * convert mm scalars (width/depth) → canvas units for 2D footprint offsets.
