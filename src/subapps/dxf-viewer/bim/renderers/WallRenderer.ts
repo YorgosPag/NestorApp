@@ -186,6 +186,12 @@ export class WallRenderer extends BaseEntityRenderer {
 
     const cat = wall.params.category;
     const _styles = useDrawingScaleStore.getState().objectStyles;
+    // ADR-401 B3c — cut-state = nominal `baseOffset + height` ΣΚΟΠΙΜΑ (όχι attached
+    // top profile). Είναι render leaf (ADR-040 — ΔΕΝ σκανάρει hosts). Το cut plane
+    // (~1.2m) πέφτει πάντα μεταξύ base και attached top (~2.5m) όσο και του nominal →
+    // η cut-state μένει 'cut' και στις δύο περιπτώσεις = NO-OP. (Θα διέφερε μόνο αν
+    // ένα δοκάρι κατέβαζε την κορυφή κάτω από το cut plane — extreme edge case που θα
+    // απαιτούσε host scan σε leaf· εκτός scope, δες ADR-401 §5 B3c.)
     const _cutState = resolveCutState(
       { zBottomMm: wall.params.baseOffset ?? 0, zTopMm: (wall.params.baseOffset ?? 0) + wall.params.height, category: 'wall' },
       useDrawingScaleStore.getState().viewRange,

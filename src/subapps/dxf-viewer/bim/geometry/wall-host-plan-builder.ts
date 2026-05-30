@@ -191,3 +191,17 @@ export function slabHostInput(slab: SlabEntity): HostFootprintInput {
     slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0) - slab.params.thickness;
   return { hostId: slab.id, hostType: 'slab', footprint, undersideZmm };
 }
+
+/**
+ * Όλοι οι structural hosts ενός ορόφου (δοκάρια + πλάκες) → `HostFootprintInput[]`,
+ * έτοιμοι για `makeWallTopContext` / `makeResolveHost`. ΕΝΑΣ τόπος που συνθέτει το
+ * `[...beams.map(beamHostInput), ...slabs.map(slabHostInput)]` — καταναλώνεται από
+ * `BimSceneLayer.syncWalls`/`addEnvelopeShell`, `section-scene-sync`, `wall-boq-feed`
+ * (Boy Scout N.0.2 — πρώην τετραπλό inline pattern).
+ */
+export function buildWallHostInputs(
+  beams: readonly BeamEntity[],
+  slabs: readonly SlabEntity[],
+): HostFootprintInput[] {
+  return [...beams.map(beamHostInput), ...slabs.map(slabHostInput)];
+}

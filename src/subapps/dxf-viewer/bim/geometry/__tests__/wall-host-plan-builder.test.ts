@@ -11,6 +11,7 @@ import {
   makeResolveHost,
   beamHostInput,
   slabHostInput,
+  buildWallHostInputs,
   type HostFootprintInput,
   type Pt2,
 } from '../wall-host-plan-builder';
@@ -270,5 +271,40 @@ describe('beamHostInput / slabHostInput — underside formulas', () => {
     expect(input.hostType).toBe('slab');
     expect(input.undersideZmm).toBe(2850); // 3000 + 0 − 150
     expect(input.footprint).toHaveLength(4);
+  });
+});
+
+// ─── buildWallHostInputs (SSoT, B3b) ─────────────────────────────────────────
+
+describe('buildWallHostInputs — SSoT σύνθεση beams + slabs', () => {
+  const beam = {
+    id: 'beam_1', type: 'beam', kind: 'straight',
+    params: {
+      kind: 'straight', startPoint: { x: 0, y: 0 }, endPoint: { x: 4000, y: 0 },
+      width: 250, depth: 500, topElevation: 3000, zOffset: 0, sceneUnits: 'mm',
+    },
+  } as unknown as BeamEntity;
+  const slab = {
+    id: 'slab_1', type: 'slab', kind: 'floor',
+    params: {
+      kind: 'floor',
+      outline: { vertices: [{ x: 0, y: 0 }, { x: 5000, y: 0 }, { x: 5000, y: 5000 }, { x: 0, y: 5000 }] },
+      levelElevation: 3000, heightOffsetFromLevel: 0, thickness: 150, geometryType: 'box',
+    },
+  } as unknown as SlabEntity;
+
+  it('beams first, slabs after — ίδιο output με το inline pattern', () => {
+    const out = buildWallHostInputs([beam], [slab]);
+    expect(out).toHaveLength(2);
+    expect(out[0].hostId).toBe('beam_1');
+    expect(out[0].hostType).toBe('beam');
+    expect(out[1].hostId).toBe('slab_1');
+    expect(out[1].hostType).toBe('slab');
+    expect(out[0].undersideZmm).toBe(2500);
+    expect(out[1].undersideZmm).toBe(2850);
+  });
+
+  it('κενά arrays → κενό', () => {
+    expect(buildWallHostInputs([], [])).toHaveLength(0);
   });
 });

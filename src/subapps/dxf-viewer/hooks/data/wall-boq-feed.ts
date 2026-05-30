@@ -8,12 +8,21 @@
  */
 
 import type { SceneModel } from '../../types/entities';
+import { isBeamEntity, isSlabEntity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import {
   computeWallGeometry,
   type OpeningFootprintForDeduction,
 } from '../../bim/geometry/wall-geometry';
+import {
+  resolveWallTopProfile,
+  type WallTopProfile,
+} from '../../bim/geometry/wall-top-profile';
+import {
+  buildWallHostInputs,
+  makeWallTopContext,
+} from '../../bim/geometry/wall-host-plan-builder';
 import type { BimEntityForBoq } from '../../bim/services/BimToBoqBridge';
 
 /**
@@ -38,14 +47,41 @@ function collectWallOpenings(
 }
 
 /**
+ * ADR-401 B3a — top profile για `attached` τοίχο (μεταβλητή κορυφή κάτω από
+ * δοκάρι/πλάκα). Χτίζει per-wall `resolveHost` από τα beams+slabs της σκηνής
+ * (ίδιο plan space = `*.params`, mirror του `section-scene-sync`) και αποτιμά
+ * τον resolver SSoT. `floorElevationMm = 0`: το active level scene είναι
+ * floor-relative (datum ορόφου = 0), όπως το 2D section. Μη-attached → null.
+ */
+function resolveAttachedWallProfile(
+  entity: WallEntity,
+  scene: SceneModel | null,
+): WallTopProfile | null {
+  if (entity.params.topBinding !== 'attached' || !scene) return null;
+  const hostInputs = buildWallHostInputs(
+    scene.entities.filter(isBeamEntity),
+    scene.entities.filter(isSlabEntity),
+  );
+  const ctx = makeWallTopContext(
+    { x: entity.params.start.x, y: entity.params.start.y },
+    { x: entity.params.end.x, y: entity.params.end.y },
+    hostInputs,
+    { floorElevationMm: 0 },
+  );
+  return resolveWallTopProfile(entity.params, ctx);
+}
+
+/**
  * Build the BOQ-feed entity for a wall with net geometry (gross − openings).
- * Geometry recomputed only when openings exist; otherwise reuse the entity's
- * own (gross) geometry.
+ * Geometry recomputed when openings exist **or** the wall is `attached`
+ * (ADR-401 B3a — profile-aware gross area/volume)· otherwise reuse the entity's
+ * own (gross/flat) geometry.
  */
 export function wallBoqEntity(entity: WallEntity, scene: SceneModel | null): BimEntityForBoq {
   const openings = collectWallOpenings(scene, entity.id);
-  const geometry = openings.length > 0
-    ? computeWallGeometry(entity.params, entity.kind, openings)
+  const profile = resolveAttachedWallProfile(entity, scene);
+  const geometry = openings.length > 0 || profile !== null
+    ? computeWallGeometry(entity.params, entity.kind, openings, profile ?? undefined)
     : entity.geometry;
   return {
     id: entity.id,

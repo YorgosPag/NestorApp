@@ -13,6 +13,7 @@
 import { computeWallGeometry, type OpeningFootprintForDeduction } from '../wall-geometry';
 import type { WallParams } from '../../types/wall-types';
 import type { Point3D } from '../../types/bim-base';
+import type { WallTopProfile, WallTopSegment } from '../wall-top-profile';
 
 const FLOAT_TOL = 1e-9;
 const EDGE_TOL = 1e-6;
@@ -279,5 +280,86 @@ describe('computeWallGeometry — curved kind (Phase 1C)', () => {
     const g = computeWallGeometry(makeCurvedParams({ x: 500, y: 500, z: 0 }), 'curved');
     // For control well off-axis, axis polyline length exceeds 1.0 m chord.
     expect(g.length).toBeGreaterThan(1.0);
+  });
+});
+
+// ─── ADR-401 B3a — profile-aware area / volume / bbox ────────────────────────
+
+describe('computeWallGeometry — profile-aware (ADR-401 B3a)', () => {
+  // 5 m horizontal wall, thickness 200 mm (so volume = area × 0.2).
+  function wall5m(overrides?: Partial<WallParams>): WallParams {
+    return makeParams({ end: { x: 5000, y: 0, z: 0 }, height: 3000, thickness: 200, ...overrides });
+  }
+  function profileOf(
+    segments: readonly WallTopSegment[],
+    baseZmm = 0,
+    hasAttach = true,
+  ): WallTopProfile {
+    let maxTopZmm = -Infinity;
+    let minTopZmm = Infinity;
+    for (const s of segments) {
+      maxTopZmm = Math.max(maxTopZmm, s.z0mm, s.z1mm);
+      minTopZmm = Math.min(minTopZmm, s.z0mm, s.z1mm);
+    }
+    return { baseZmm, segments, maxTopZmm, minTopZmm, hasAttach, missingHostIds: [] };
+  }
+
+  it('single lowered segment (attached under beam) → area = length × resolved height', () => {
+    // top 2500 mm (vs nominal 3000) → 5 m × 2.5 m = 12.5 m².
+    const profile = profileOf([{ t0: 0, t1: 1, z0mm: 2500, z1mm: 2500, source: 'attached' }]);
+    const g = computeWallGeometry(wall5m(), 'straight', undefined, profile);
+    expect(g.area).toBeCloseTo(12.5, FLOAT_TOL);
+    expect(g.volume).toBeCloseTo(12.5 * 0.2, FLOAT_TOL);
+    expect(g.bbox.max.z).toBeCloseTo(2.5, FLOAT_TOL); // maxTop − base = 2500 mm
+  });
+
+  it('stepped profile (50% @3.0 m, 50% @2.5 m) → Σ segment areas', () => {
+    const profile = profileOf([
+      { t0: 0, t1: 0.5, z0mm: 3000, z1mm: 3000, source: 'storey-ceiling' },
+      { t0: 0.5, t1: 1, z0mm: 2500, z1mm: 2500, source: 'attached' },
+    ]);
+    const g = computeWallGeometry(wall5m(), 'straight', undefined, profile);
+    // 5 × (0.5×3.0 + 0.5×2.5) = 5 × 2.75 = 13.75 m².
+    expect(g.area).toBeCloseTo(13.75, FLOAT_TOL);
+    expect(g.bbox.max.z).toBeCloseTo(3.0, FLOAT_TOL); // bbox top = max segment top
+  });
+
+  it('sloped segment (z0 ≠ z1) → average height over the span', () => {
+    const profile = profileOf([{ t0: 0, t1: 1, z0mm: 2000, z1mm: 3000, source: 'attached' }]);
+    const g = computeWallGeometry(wall5m(), 'straight', undefined, profile);
+    // avg height = (2000+3000)/2 = 2500 mm → 5 × 2.5 = 12.5 m².
+    expect(g.area).toBeCloseTo(12.5, FLOAT_TOL);
+    expect(g.bbox.max.z).toBeCloseTo(3.0, FLOAT_TOL); // maxTop
+  });
+
+  it('flat profile at nominal top === no-profile flat path (back-compat)', () => {
+    const profile = profileOf(
+      [{ t0: 0, t1: 1, z0mm: 3000, z1mm: 3000, source: 'storey-ceiling' }],
+      0,
+      false,
+    );
+    const withProfile = computeWallGeometry(wall5m(), 'straight', undefined, profile);
+    const flat = computeWallGeometry(wall5m());
+    expect(withProfile.area).toBeCloseTo(flat.area, FLOAT_TOL);
+    expect(withProfile.volume).toBeCloseTo(flat.volume, FLOAT_TOL);
+    expect(withProfile.bbox.max.z).toBeCloseTo(flat.bbox.max.z, FLOAT_TOL);
+  });
+
+  it('profile + openings → net = profile gross − Σ openings, clamped', () => {
+    const profile = profileOf([{ t0: 0, t1: 1, z0mm: 2500, z1mm: 2500, source: 'attached' }]);
+    const openings: OpeningFootprintForDeduction[] = [{ width: 1000, height: 2000 }]; // 2 m²
+    const g = computeWallGeometry(wall5m(), 'straight', openings, profile);
+    expect(g.area).toBeCloseTo(12.5 - 2, FLOAT_TOL); // 10.5 m²
+    expect(g.volume).toBeCloseTo(10.5 * 0.2, FLOAT_TOL);
+  });
+
+  it('bbox base follows params.baseOffset; top extent = maxTop − profile base', () => {
+    const profile = profileOf(
+      [{ t0: 0, t1: 1, z0mm: 3000, z1mm: 3000, source: 'attached' }],
+      500, // profile baseZmm = floorElev(0) + baseOffset 500
+    );
+    const g = computeWallGeometry(wall5m({ baseOffset: 500 }), 'straight', undefined, profile);
+    expect(g.bbox.min.z).toBeCloseTo(0.5, FLOAT_TOL); // baseOffset/1000
+    expect(g.bbox.max.z).toBeCloseTo(0.5 + 2.5, FLOAT_TOL); // base + (3000−500)/1000
   });
 });
