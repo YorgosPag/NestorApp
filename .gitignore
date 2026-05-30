@@ -142,6 +142,9 @@ ngrok-bin/
 reports/visual/
 reports/junit/
 
+# DXF Viewer jest test reports (generated locally — html/junit artifacts)
+src/subapps/dxf-viewer/reports/
+
 # Playwright generated artifacts (ephemeral test run output)
 /playwright-report/
 /test-results/
