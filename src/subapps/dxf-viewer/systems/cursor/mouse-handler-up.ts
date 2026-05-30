@@ -325,6 +325,32 @@ function processMarqueeSelection(
   const canvas = canvasRef?.current ?? null;
   const marqueeSnap = getPointerSnapshotFromElement(canvas);
 
+  // ADR-363 Phase 1K Mode C — wall-in-region box-select: intercept the marquee →
+  // run window/crossing selection to collect line entities → hand their ids to
+  // the wall tool via EventBus (which detects enclosed rectangles + builds the
+  // filling wall(s)). MUST NOT mutate selection (mirrors crop-window below).
+  if (activeTool === 'wall-in-region' && marqueeSnap) {
+    const regionResult = UniversalMarqueeSelector.performSelection(
+      cursor.selectionStart!,
+      cursor.position!,
+      transform,
+      marqueeSnap.rect,
+      {
+        colorLayers: colorLayers ?? [],
+        entities: (scene?.entities ?? []) as unknown as Entity[],
+        tolerance: TOLERANCE_CONFIG.HIT_TEST_FALLBACK,
+        enableDebugLogs: false,
+        onLayerSelected: undefined,
+        currentPosition: cursor.position!,
+      },
+    );
+    const entityIds = regionResult.breakdown?.entityIds ?? [];
+    if (entityIds.length > 0) {
+      EventBus.emit('bim:wall-region-box-select', { entityIds });
+    }
+    return;
+  }
+
   // Crop-window: intercept marquee → emit world-space rect, skip normal selection
   if (activeTool === 'crop-window' && marqueeSnap) {
     const worldStart = screenToWorldWithSnapshot(cursor.selectionStart!, transform, marqueeSnap);

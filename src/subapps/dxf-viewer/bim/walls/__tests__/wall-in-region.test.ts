@@ -8,7 +8,9 @@
  */
 
 import type { WallEntity } from '../../types/wall-types';
+import type { Entity, LineEntity } from '../../../types/entities';
 import {
+  extractLineSegments,
   findRectanglesFromSegments,
   findEnclosingRectangle,
   buildWallFillingRect,
@@ -151,5 +153,61 @@ describe('wall-in-region — buildWallFillingRect', () => {
     // A 5000×3000 room outline → 3 m thick "wall" is unphysical → validator reject.
     const [rect] = findRectanglesFromSegments(rectSegments(5000, 3000), TOL);
     expect(buildWallFillingRect(rect, {}, SU, LEVEL)).toBeNull();
+  });
+});
+
+// ─── Box-select (Mode C) pipeline — filter scene by selected ids → rects ──────
+// Mirrors the EventBus path in useWallTool: a marquee collects line-entity ids,
+// the tool filters the live scene to those ids, extracts segments, and detects
+// EVERY enclosed rectangle (one filling wall built per rectangle downstream).
+
+/** Build a LINE Entity (minimal valid shape for extractLineSegments). */
+function lineEntity(id: string, sx: number, sy: number, ex: number, ey: number): LineEntity {
+  return { id, type: 'line', layerId: 'lyr_test', start: { x: sx, y: sy }, end: { x: ex, y: ey } };
+}
+
+/** 4 LINE entities closing one axis-aligned rectangle. */
+function rectLineEntities(prefix: string, w: number, h: number): LineEntity[] {
+  return [
+    lineEntity(`${prefix}-b`, 0, 0, w, 0),
+    lineEntity(`${prefix}-r`, w, 0, w, h),
+    lineEntity(`${prefix}-t`, w, h, 0, h),
+    lineEntity(`${prefix}-l`, 0, h, 0, 0),
+  ];
+}
+
+describe('wall-in-region — box-select (Mode C) filter-by-ids → rectangles', () => {
+  it('detects the rectangle from the selected line ids only', () => {
+    const scene: Entity[] = [
+      ...rectLineEntities('rect', 5000, 250),
+      lineEntity('noise', 10000, 10000, 12000, 11000), // not selected
+    ];
+    const selected = new Set(['rect-b', 'rect-r', 'rect-t', 'rect-l']);
+    const segs = extractLineSegments(scene.filter((e) => selected.has(e.id)));
+    const rects = findRectanglesFromSegments(segs, TOL);
+    expect(rects).toHaveLength(1);
+    const entity = buildWallFillingRect(rects[0], {}, SU, LEVEL);
+    expect((entity as WallEntity).params.thickness).toBeCloseTo(250, 3);
+  });
+
+  it('finds multiple rectangles when the marquee covers two rooms', () => {
+    const roomA = rectLineEntities('a', 4000, 250);
+    const roomB = [
+      lineEntity('b-b', 0, 5000, 4000, 5000),
+      lineEntity('b-r', 4000, 5000, 4000, 5250),
+      lineEntity('b-t', 4000, 5250, 0, 5250),
+      lineEntity('b-l', 0, 5250, 0, 5000),
+    ];
+    const scene: Entity[] = [...roomA, ...roomB];
+    const segs = extractLineSegments(scene); // marquee selected everything
+    const rects = findRectanglesFromSegments(segs, TOL);
+    expect(rects).toHaveLength(2);
+  });
+
+  it('detects no rectangle when only 3 of the 4 sides are selected', () => {
+    const scene: Entity[] = rectLineEntities('rect', 5000, 250);
+    const selected = new Set(['rect-b', 'rect-r', 'rect-t']); // missing left
+    const segs = extractLineSegments(scene.filter((e) => selected.has(e.id)));
+    expect(findRectanglesFromSegments(segs, TOL)).toHaveLength(0);
   });
 });

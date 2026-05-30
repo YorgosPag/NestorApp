@@ -15,6 +15,13 @@ import { useEffect } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { DynamicSubmitDetail } from '../../systems/dynamic-input/utils/events';
+import type { Entity } from '../../types/entities';
+import { EventBus } from '../../systems/events/EventBus';
+import {
+  extractLineSegments,
+  findRectanglesFromSegments,
+  type DetectedRectangle,
+} from '../../bim/walls/wall-in-region';
 import type { WallParamOverrides } from './wall-completion';
 import type { WallToolState } from './wall-tool-types';
 
@@ -141,4 +148,39 @@ export function useWallToolEnterListener(ctx: WallToolEnterListenerCtx): void {
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
   }, [stateRef, commitPolylineFromState]);
+}
+
+export interface WallToolRegionBoxSelectCtx {
+  readonly stateRef: MutableRefObject<WallToolState>;
+  readonly getSceneEntities?: () => readonly Entity[];
+  readonly regionTol: () => number;
+  readonly commitInRegionRects: (
+    s: WallToolState,
+    rects: readonly DetectedRectangle[],
+  ) => boolean;
+}
+
+/**
+ * ADR-363 Phase 1K Mode C — box-select: a drag-rectangle marquee in the
+ * wall-in-region tool collects line ids (mouse-up handler → EventBus). Re-read
+ * the live scene, keep only the selected lines, detect EVERY enclosed rectangle
+ * among them, and build one filling wall per rectangle. Inert unless in-region
+ * placement is engaged.
+ */
+export function useWallToolRegionBoxSelectListener(ctx: WallToolRegionBoxSelectCtx): void {
+  const { stateRef, getSceneEntities, regionTol, commitInRegionRects } = ctx;
+  useEffect(
+    () =>
+      EventBus.on('bim:wall-region-box-select', ({ entityIds }) => {
+        const s = stateRef.current;
+        if (s.placementMode !== 'in-region' || s.phase === 'idle') return;
+        const idSet = new Set(entityIds);
+        const segs = extractLineSegments(
+          (getSceneEntities?.() ?? []).filter((e) => idSet.has(e.id)),
+        );
+        const rects = findRectanglesFromSegments(segs, regionTol());
+        if (rects.length > 0) commitInRegionRects(s, rects);
+      }),
+    [stateRef, getSceneEntities, regionTol, commitInRegionRects],
+  );
 }

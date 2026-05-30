@@ -49,6 +49,7 @@ import type { WallParamOverrides } from './wall-completion';
 import {
   useWallToolDynamicInputListener,
   useWallToolEnterListener,
+  useWallToolRegionBoxSelectListener,
 } from './use-wall-tool-event-listeners';
 import { EventBus } from '../../systems/events/EventBus';
 import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
@@ -290,6 +291,9 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     },
     [getSceneEntities, regionTol, commitInRegionRects],
   );
+
+  // ADR-363 Phase 1K Mode C — box-select listener extracted for N.7.1 (≤500 lines).
+  useWallToolRegionBoxSelectListener({ stateRef, getSceneEntities, regionTol, commitInRegionRects });
 
   // ── click pipeline ───────────────────────────────────────────────────────
   const onCanvasClick = useCallback(

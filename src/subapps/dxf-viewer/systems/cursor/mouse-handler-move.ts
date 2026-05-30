@@ -381,6 +381,23 @@ export function useMouseMoveHandler({
       }
     }
 
+    // ADR-363 Phase 1K Mode C — wall-in-region box-select: a button-held drag past
+    // threshold arms a RECTANGLE marquee (window/crossing), NOT a lasso. A plain
+    // click (no drag) leaves `isSelecting` false → falls through to the tool's
+    // pick pipeline (Mode A/B). Mutually exclusive with an in-progress selection.
+    const REGION_BOX_ACTIVATE_PX = 5;
+    const regionDown = refs.lassoDownRef.current;
+    if (
+      regionDown.buttonHeld && regionDown.pos &&
+      activeTool === 'wall-in-region' && !cursor.isSelecting
+    ) {
+      const rdx = screenPos.x - regionDown.pos.x;
+      const rdy = screenPos.y - regionDown.pos.y;
+      if (Math.sqrt(rdx * rdx + rdy * rdy) >= REGION_BOX_ACTIVATE_PX) {
+        cursor.startSelection(regionDown.pos);
+      }
+    }
+
     // Lasso detection: if button held + dragged > threshold → activate / extend lasso.
     // Mutually exclusive with two-click marquee (cursor.isSelecting guard).
     const LASSO_ACTIVATE_PX = 5;

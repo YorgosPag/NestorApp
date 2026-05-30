@@ -71,13 +71,31 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-30 — ADR-363 Phase 1K Mode C — `wall-in-region` box-select (compliance note)
+
+**Status**: COMPLIANT — no ADR-040 invariants broken.
+
+The box-select drag-rectangle for «Τοίχος σε περιοχή» touches three `systems/cursor/`
+mouse handlers (CHECK 6D files) and routes its result through `EventBus`, NOT through any
+high-frequency store or orchestrator subscription:
+- `useCentralizedMouseHandlers.ts` (mousedown) — arms the existing `lassoDownRef` (already a plain `useRef`, not a store) for `'wall-in-region'`. No new subscription.
+- `mouse-handler-move.ts` — a drag past threshold calls `cursor.startSelection` (the same two-click marquee API the `'select'` tool already uses). Same `CursorSystem` context, no extra `useSyncExternalStore`.
+- `mouse-handler-up.ts` (`processMarqueeSelection`) — a `'wall-in-region'` branch runs `UniversalMarqueeSelector.performSelection` then `EventBus.emit('bim:wall-region-box-select')` and returns **without mutating selection** (mirrors the existing `crop-window` / `crop:marquee-rect` branch). No render-path change.
+
+The wall build runs in `useWallTool` (an ADR-040 micro-leaf-compliant tool hook that owns its
+own React state, no high-freq `useSyncExternalStore`). No bitmap cache-key, subscription, or
+micro-leaf structural change. Detail in ADR-363 Phase 1K Mode C changelog.
+
 ### 2026-05-30 — ADR-363 Phase 1K — `wall-in-region` hover affordance (compliance note)
 
 **Status**: COMPLIANT — no ADR-040 invariants broken.
 
-Single-token addition so the «Τοίχος σε περιοχή (4 γραμμές)» tool highlights the hovered
-line while the user picks the 4 sides:
-- `CanvasSection.tsx` — `entityPickingActive` prop expression gains `|| activeTool === 'wall-in-region'`. Existing pass-through boolean (flips the hover hit-test on in `mouse-handler-move`); **no new `useSyncExternalStore`** on the orchestrator (CHECK 6C safe). No cache-key / subscription / micro-leaf structural change. Detail in ADR-363 Phase 1K changelog.
+Two single-token additions so the «Τοίχος σε περιοχή (4 γραμμές)» tool highlights the
+hovered line and shows grips on the accumulated 4-line picks:
+- `CanvasSection.tsx` — `entityPickingActive` prop expression gains `|| activeTool === 'wall-in-region'`. Existing pass-through boolean (flips the hover hit-test on in `mouse-handler-move`); **no new `useSyncExternalStore`** on the orchestrator (CHECK 6C safe).
+- `canvas-v2/dxf-canvas/dxf-canvas-renderer.ts` — `gripsAllowed` (already reads `refs.activeToolRef.current`) gains `|| activeTool === 'wall-in-region'`. Grips paint in the **selected-entity overlay pass** (`selectedEntityIds` loop), NOT in the cached bitmap; cache key / invalidation rules unchanged (still keyed without hover/selection/grip state per the cardinal rule). Only the selected-entity grip-paint gate widened by one tool id.
+
+No subscription, cache-key, or micro-leaf structural change. Detail in ADR-363 Phase 1K changelog.
 
 ### 2026-05-30 — ADR-363 Phase 1J — `wall-on-entity` hover/grip affordance (compliance note)
 

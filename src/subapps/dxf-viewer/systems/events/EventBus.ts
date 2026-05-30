@@ -246,6 +246,11 @@ export interface DrawingEventMap {
   'bim:set-opening-kind': { kind: OpeningKind };
   'bim:set-wall-kind': { kind: WallKind };
   'bim:set-wall-category': { category: WallCategory };
+  // ADR-363 Phase 1K Mode C — «Τοίχος σε περιοχή» box-select: the marquee
+  // (window/crossing) collected these line-entity ids. The wall tool detects
+  // ALL enclosed rectangles among them and builds one filling wall per
+  // rectangle. Carries only ids (the tool re-reads the live scene geometry).
+  'bim:wall-region-box-select': { entityIds: string[] };
   // ADR-363 fix — multi-entity move dirty-flag propagation.
   // Carries the post-move entities directly so listeners never call
   // getLevelScene() (which returns stale React state at emit time).

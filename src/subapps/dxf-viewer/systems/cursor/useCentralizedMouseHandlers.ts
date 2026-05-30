@@ -182,9 +182,16 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
       return;
     }
 
-    // Lasso drag detection: record button-down position for move handler.
-    // Only arm on left button + select tool (not pan, not drawing, not grip drag).
-    if (e.button === 0 && activeTool === 'select' && !isToolInteractive && !isGripDragging) {
+    // Lasso / box-select drag detection: record button-down position for the
+    // move handler. Armed for left button + select tool (lasso) OR the
+    // wall-in-region tool (ADR-363 Phase 1K Mode C — drag = rectangle marquee
+    // collecting lines; a plain click without drag still falls through to the
+    // tool's pick pipeline). Never during pan / grip drag.
+    if (
+      e.button === 0 &&
+      !isGripDragging &&
+      ((activeTool === 'select' && !isToolInteractive) || activeTool === 'wall-in-region')
+    ) {
       lassoDownRef.current = { pos: screenPos, buttonHeld: true };
     }
 
