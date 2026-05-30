@@ -2,12 +2,14 @@
  * ADR-362 Phase D3 — useDimensionKeyboardRouting unit tests.
  *
  * Covers Q-C global-listener + dim-tool gate:
- *   - Tab / Space / Escape fire onKey when a dim tool is active
+ *   - Tab / Space fire onKey when a dim tool is active
+ *   - Escape is NOT routed here (ADR-364: ESC migrated to the centralized
+ *     EscapeCommandBus via the DIM_TOOL slot in useDimToolRouting). The hook
+ *     never calls onKey for Escape and never preventDefaults it.
  *   - Other keys are ignored
  *   - Listener removed (no dispatch) when activeTool flips away from dim
  *   - Editable focus (INPUT / TEXTAREA / contentEditable) suppresses dispatch
- *   - Tab + Space `preventDefault`, Escape does not (cooperates with the
- *     legacy useKeyboardShortcuts ESC handler downstream)
+ *   - Tab + Space `preventDefault`
  */
 
 import { renderHook } from '@testing-library/react';
@@ -27,7 +29,7 @@ const isDimTool = (tool: ToolType): boolean =>
   tool === 'dim-baseline' || tool === 'dim-linear' || tool === 'dim-smart';
 
 describe('useDimensionKeyboardRouting — gate', () => {
-  it('dispatches Tab / Space / Escape when a dim tool is active', () => {
+  it('dispatches Tab / Space when a dim tool is active (Escape → EscapeCommandBus, ADR-364)', () => {
     const onKey = jest.fn<void, [DimensionCreateKey]>();
     renderHook(() =>
       useDimensionKeyboardRouting({ activeTool: 'dim-baseline', isDimTool, onKey }),
@@ -37,7 +39,8 @@ describe('useDimensionKeyboardRouting — gate', () => {
     fireKey('Escape');
     expect(onKey).toHaveBeenNthCalledWith(1, 'Tab');
     expect(onKey).toHaveBeenNthCalledWith(2, 'Space');
-    expect(onKey).toHaveBeenNthCalledWith(3, 'Escape');
+    // ADR-364: Escape is no longer routed through this hook.
+    expect(onKey).toHaveBeenCalledTimes(2);
   });
 
   it('ignores unrelated keys', () => {
@@ -119,7 +122,7 @@ describe('useDimensionKeyboardRouting — gate', () => {
     }
   });
 
-  it('dispatches Escape even when INPUT is focused — blurs input, does NOT prevent default', () => {
+  it('ignores Escape even when INPUT is focused — ESC owned by EscapeCommandBus (ADR-364)', () => {
     const onKey = jest.fn<void, [DimensionCreateKey]>();
     renderHook(() =>
       useDimensionKeyboardRouting({ activeTool: 'dim-smart', isDimTool, onKey }),
@@ -129,10 +132,10 @@ describe('useDimensionKeyboardRouting — gate', () => {
     input.focus();
     try {
       const ev = fireKey('Escape');
-      expect(onKey).toHaveBeenCalledWith('Escape');
-      // Legacy ESC handler must still be able to fire → no preventDefault
+      // ADR-364: Escape is handled by the centralized EscapeCommandBus, not here.
+      expect(onKey).not.toHaveBeenCalled();
+      // No preventDefault → the EscapeCommandBus downstream still sees it.
       expect(ev.defaultPrevented).toBe(false);
-      expect(document.activeElement).not.toBe(input);
     } finally {
       input.remove();
     }

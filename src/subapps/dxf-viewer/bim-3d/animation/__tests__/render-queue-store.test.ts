@@ -2,7 +2,6 @@
  * ADR-366 §C.1.c — RenderQueueStore FSM + selectors tests.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
 import {
   getAbortSignal,
   registerAbortController,

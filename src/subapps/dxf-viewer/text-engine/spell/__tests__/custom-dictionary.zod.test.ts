@@ -2,7 +2,6 @@
  * ADR-344 Phase 8 — Zod schema tests for custom-dictionary input.
  */
 
-import { describe, expect, it } from 'vitest';
 import {
   CUSTOM_DICTIONARY_TERM_MAX,
   collectIssues,

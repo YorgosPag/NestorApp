@@ -2,7 +2,6 @@
  * ADR-366 §C.1.b — SceneBboxProvider tests.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   clearSceneBboxGetter,

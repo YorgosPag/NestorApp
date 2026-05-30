@@ -37,7 +37,7 @@ const config = {
     // =================================================================
     // Asset mocks
     // =================================================================
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/cssModuleStub.js',
     '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/__mocks__/fileStub.js'
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],

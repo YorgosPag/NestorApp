@@ -128,10 +128,13 @@ describe('resolveEntityColor', () => {
     expect(resolveEntityColor(entity, { lyr_test: layer })).toBe(0x0000FF);
   });
 
-  it('name-keyed layer lookup (legacy scenes)', () => {
+  it('legacy name-only entity (no layerId) → DEFAULT white (id-only resolution, ADR-358 9D-5a)', () => {
+    // `resolveLayer` is id-only — the legacy `entity.layer` name backref was removed
+    // (ADR-358 Phase 9D-5a). A name-only entity no longer resolves to a layer color and
+    // falls through to DEFAULT (white). The id-based path is covered by the test above.
     const entity = makeLine({ colorMode: 'ByLayer', layer: 'TEST' });
     const layer = makeLayer({ color: '#00FFFF' });
-    expect(resolveEntityColor(entity, { TEST: layer })).toBe(0x00FFFF);
+    expect(resolveEntityColor(entity, { TEST: layer })).toBe(0xFFFFFF);
   });
 
   it('no layersById → white fallback', () => {
@@ -179,9 +182,11 @@ describe('appendEntitySegments', () => {
   it('circle segments form a closed ring (last end = first start)', () => {
     const buf: number[] = [];
     appendEntitySegments(buf, makeCircle({ center: { x: 0, y: 0 }, radius: 1 }));
-    // Last end point (buf[282], buf[283], buf[284]) = first start (buf[0], buf[1], buf[2])
-    expect(buf[282]).toBeCloseTo(buf[0], 4);
-    expect(buf[284]).toBeCloseTo(buf[2], 4);
+    // 48 segments × 6 = 288 numbers. The LAST segment (idx 47) occupies buf[282..287]:
+    // its start = buf[282..284] (angle 47/48·360°), its END = buf[285..287] (angle 360°).
+    // The ring closes when the last segment's END equals the first segment's START.
+    expect(buf[285]).toBeCloseTo(buf[0], 4);
+    expect(buf[287]).toBeCloseTo(buf[2], 4);
   });
 
   it('full-circle arc → 48 segments (same as circle)', () => {

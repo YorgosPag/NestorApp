@@ -2,7 +2,6 @@
  * ADR-366 §C.1.b — WaypointDragController FSM + plane math tests.
  */
 
-import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   WaypointDragController,
@@ -97,7 +96,7 @@ describe('WaypointDragController — FSM', () => {
 
   it('idle → hovering on handleHover(role)', () => {
     const c = new WaypointDragController();
-    const onHoverChange = vi.fn();
+    const onHoverChange = jest.fn();
     c.handleHover('position', { onHoverChange });
     expect(c.getState()).toBe('hovering');
     expect(onHoverChange).toHaveBeenCalledWith('position');
@@ -105,7 +104,7 @@ describe('WaypointDragController — FSM', () => {
 
   it('hovering → idle on handleHover(null)', () => {
     const c = new WaypointDragController();
-    const events: DragControllerEvents = { onHoverChange: vi.fn() };
+    const events: DragControllerEvents = { onHoverChange: jest.fn() };
     c.handleHover('position', events);
     c.handleHover(null, events);
     expect(c.getState()).toBe('idle');
@@ -116,7 +115,7 @@ describe('WaypointDragController — FSM', () => {
     const c = new WaypointDragController();
     const cam = makeCamera();
     c.startDrag('position', new THREE.Vector3(0, 0, 0), cam);
-    const onHoverChange = vi.fn();
+    const onHoverChange = jest.fn();
     c.handleHover('target', { onHoverChange });
     expect(c.getState()).toBe('dragging');
     expect(onHoverChange).not.toHaveBeenCalled();
@@ -124,7 +123,7 @@ describe('WaypointDragController — FSM', () => {
 
   it('startDrag transitions to dragging + fires onDragStart', () => {
     const c = new WaypointDragController();
-    const onDragStart = vi.fn();
+    const onDragStart = jest.fn();
     c.startDrag('position', new THREE.Vector3(1, 2, 3), makeCamera(), { onDragStart });
     expect(c.getState()).toBe('dragging');
     expect(onDragStart).toHaveBeenCalledWith('position', expect.any(THREE.Vector3));
@@ -133,8 +132,8 @@ describe('WaypointDragController — FSM', () => {
 
   it('endDrag returns to idle + fires onDragEnd + clears hover', () => {
     const c = new WaypointDragController();
-    const onDragEnd = vi.fn();
-    const onHoverChange = vi.fn();
+    const onDragEnd = jest.fn();
+    const onHoverChange = jest.fn();
     c.startDrag('target', new THREE.Vector3(), makeCamera());
     const role = c.endDrag({ onDragEnd, onHoverChange });
     expect(role).toBe('target');
@@ -145,7 +144,7 @@ describe('WaypointDragController — FSM', () => {
 
   it('cancelDrag returns to idle + fires onDragCancel', () => {
     const c = new WaypointDragController();
-    const onDragCancel = vi.fn();
+    const onDragCancel = jest.fn();
     c.startDrag('position', new THREE.Vector3(), makeCamera());
     c.cancelDrag({ onDragCancel });
     expect(c.getState()).toBe('idle');
@@ -154,7 +153,7 @@ describe('WaypointDragController — FSM', () => {
 
   it('endDrag is a no-op when not dragging', () => {
     const c = new WaypointDragController();
-    const onDragEnd = vi.fn();
+    const onDragEnd = jest.fn();
     expect(c.endDrag({ onDragEnd })).toBeNull();
     expect(onDragEnd).not.toHaveBeenCalled();
   });
@@ -188,7 +187,7 @@ describe('WaypointDragController — pick + drag projection', () => {
     const cam = makeCamera(new THREE.Vector3(0, 0, 10));
     const canvas = makeFakeCanvas(200, 200);
     const startWorld = new THREE.Vector3(0, 0, 0);
-    const onDragMove = vi.fn();
+    const onDragMove = jest.fn();
     c.startDrag('position', startWorld, cam, { onDragMove });
 
     // Cursor at centre → projected world should be near (0,0,0)
@@ -208,7 +207,7 @@ describe('WaypointDragController — pick + drag projection', () => {
     const c = new WaypointDragController();
     const cam = makeCamera();
     const canvas = makeFakeCanvas();
-    const onDragMove = vi.fn();
+    const onDragMove = jest.fn();
     expect(c.updateDrag(cam, canvas, 50, 50, { onDragMove })).toBeNull();
     expect(onDragMove).not.toHaveBeenCalled();
   });

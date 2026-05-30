@@ -2,7 +2,6 @@
  * ADR-366 §C.1.Q4 — cubicBezier pure math tests.
  */
 
-import { describe, expect, it } from 'vitest';
 import { bezierValueAt, cubicBezier } from '../bezier-easing';
 
 const EPSILON = 1e-4;

@@ -98,10 +98,18 @@ afterAll(() => {
   console.error = originalError;
 });
 
-// Mock Firebase για tests
+// Mock Firebase για tests.
+// `auth` exposes a no-op `onAuthStateChanged` (v8-compat method): modules that
+// instantiate a singleton at import time (e.g. EnterpriseApiClient via
+// dxf-level-mutation-gateway) call `auth.onAuthStateChanged(cb)` in their
+// constructor under jsdom (window defined). Without it, importing any renderer
+// that transitively pulls drawing-scale-store crashes the suite at load.
 jest.mock('./src/lib/firebase', () => ({
   db: {},
-  auth: {},
+  auth: {
+    currentUser: null,
+    onAuthStateChanged: () => () => {},
+  },
   functions: {},
   storage: {},
   default: {}

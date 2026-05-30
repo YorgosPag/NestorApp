@@ -33,9 +33,21 @@ describe('ADR-362 Phase E1 — HOME_DIMENSIONS_PANEL', () => {
   it('declares the dimensions panel with the canonical id + label key', () => {
     expect(HOME_DIMENSIONS_PANEL.id).toBe('dimensions');
     expect(HOME_DIMENSIONS_PANEL.labelKey).toBe('ribbon.panels.dimensions');
-    expect(HOME_DIMENSIONS_PANEL.rows).toHaveLength(2);
+    expect(HOME_DIMENSIONS_PANEL.rows).toHaveLength(3);
     expect(HOME_DIMENSIONS_PANEL.rows[0].buttons).toHaveLength(1);
     expect(HOME_DIMENSIONS_PANEL.rows[1].buttons).toHaveLength(2);
+    expect(HOME_DIMENSIONS_PANEL.rows[2].buttons).toHaveLength(1);
+  });
+
+  it('exposes Center Mark + Center Line as a small split button (ADR-362 Phase M)', () => {
+    const center = HOME_DIMENSIONS_PANEL.rows[2].buttons[0];
+    expect(center.type).toBe('split');
+    expect(center.size).toBe('small');
+    expect(center.command.commandKey).toBe('dim-center-mark');
+    expect((center.variants ?? []).map((v) => v.commandKey)).toEqual([
+      'dim-center-mark',
+      'dim-centerline',
+    ]);
   });
 
   it('exposes Smart DIM as a large split button with shortcut DIM', () => {
@@ -69,6 +81,8 @@ describe('ADR-362 Phase E1 — HOME_DIMENSIONS_PANEL', () => {
       HOME_DIMENSIONS_PANEL.rows[0].buttons[0].command,
       ...(HOME_DIMENSIONS_PANEL.rows[0].buttons[0].variants ?? []),
       ...HOME_DIMENSIONS_PANEL.rows[1].buttons.map((b) => b.command),
+      HOME_DIMENSIONS_PANEL.rows[2].buttons[0].command,
+      ...(HOME_DIMENSIONS_PANEL.rows[2].buttons[0].variants ?? []),
     ];
     for (const command of allCommands) {
       expect(command.labelKey).toMatch(/^ribbon\.(commands|panels)\./);
@@ -81,6 +95,8 @@ describe('ADR-362 Phase E1 — HOME_DIMENSIONS_PANEL', () => {
       HOME_DIMENSIONS_PANEL.rows[0].buttons[0].command,
       ...(HOME_DIMENSIONS_PANEL.rows[0].buttons[0].variants ?? []),
       ...HOME_DIMENSIONS_PANEL.rows[1].buttons.map((b) => b.command),
+      HOME_DIMENSIONS_PANEL.rows[2].buttons[0].command,
+      ...(HOME_DIMENSIONS_PANEL.rows[2].buttons[0].variants ?? []),
     ];
     for (const command of allCommands) {
       expect(typeof command.icon).toBe('string');
@@ -99,6 +115,12 @@ describe('ADR-362 Phase E1 — HOME_DIMENSIONS_PANEL', () => {
     }
     for (const button of HOME_DIMENSIONS_PANEL.rows[1].buttons) {
       collect(button.command.shortcut);
+    }
+    for (const button of HOME_DIMENSIONS_PANEL.rows[2].buttons) {
+      collect(button.command.shortcut);
+      for (const variant of button.variants ?? []) {
+        collect(variant.shortcut);
+      }
     }
     expect(new Set(shortcuts).size).toBe(shortcuts.length);
   });

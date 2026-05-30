@@ -20,11 +20,18 @@ import {
   DIMENSION_CONTEXTUAL_TRIGGER,
 } from '../contextual-dimension-tab';
 
-const PANEL_IDS = ['dim-style', 'dim-override', 'dim-text', 'dim-properties'];
+const PANEL_IDS = [
+  'dim-style',
+  'dim-override',
+  'dim-text',
+  'dim-modify',
+  'dim-properties',
+];
 const PANEL_LABEL_KEYS = [
   'ribbon.panels.dimStyle',
   'ribbon.panels.dimOverride',
   'ribbon.panels.dimText',
+  'ribbon.panels.dimModify',
   'ribbon.panels.dimProperties',
 ];
 
@@ -46,12 +53,12 @@ describe('ADR-362 Phase E2 — DIMENSION_CONTEXTUAL_TAB', () => {
     expect(DIMENSION_CONTEXTUAL_TAB.labelKey).toBe('ribbon.tabs.dimension');
   });
 
-  it('declares exactly 4 panels in the canonical order', () => {
-    expect(DIMENSION_CONTEXTUAL_TAB.panels).toHaveLength(4);
+  it('declares exactly 5 panels in the canonical order', () => {
+    expect(DIMENSION_CONTEXTUAL_TAB.panels).toHaveLength(5);
     expect(DIMENSION_CONTEXTUAL_TAB.panels.map((p) => p.id)).toEqual(PANEL_IDS);
   });
 
-  it('assigns correct labelKeys to all 4 panels (ribbon.panels.dim* namespace)', () => {
+  it('assigns correct labelKeys to all 5 panels (ribbon.panels.dim* namespace)', () => {
     expect(DIMENSION_CONTEXTUAL_TAB.panels.map((p) => p.labelKey)).toEqual(PANEL_LABEL_KEYS);
   });
 
@@ -85,15 +92,27 @@ describe('ADR-362 Phase E2 — DIMENSION_CONTEXTUAL_TAB', () => {
     expect(colorBtn.command.commandKey).toBe('dim.override.color');
   });
 
-  it('dim-text panel has 4 buttons across 2 rows', () => {
+  it('dim-text panel has 6 buttons across 4 rows (ADR-362 Phase G1 override + K3 tfill)', () => {
     const panel = DIMENSION_CONTEXTUAL_TAB.panels[2];
     const buttons = panel.rows.flatMap((r) => r.buttons);
-    expect(buttons).toHaveLength(4);
-    expect(panel.rows).toHaveLength(2);
+    expect(buttons).toHaveLength(6);
+    expect(panel.rows).toHaveLength(4);
+  });
+
+  it('dim-modify panel has 2 buttons in 1 row (ADR-362 Phase K — DIMBREAK + DIMSPACE)', () => {
+    const panel = DIMENSION_CONTEXTUAL_TAB.panels[3];
+    const buttons = panel.rows.flatMap((r) => r.buttons);
+    expect(panel.id).toBe('dim-modify');
+    expect(buttons).toHaveLength(2);
+    expect(panel.rows).toHaveLength(1);
+    expect(buttons.map((b) => b.command.commandKey)).toEqual([
+      'dim.modify.dimBreak',
+      'dim.modify.dimSpace',
+    ]);
   });
 
   it('dim-properties panel has 3 buttons across 2 rows', () => {
-    const panel = DIMENSION_CONTEXTUAL_TAB.panels[3];
+    const panel = DIMENSION_CONTEXTUAL_TAB.panels[4];
     const buttons = panel.rows.flatMap((r) => r.buttons);
     expect(buttons).toHaveLength(3);
     expect(panel.rows).toHaveLength(2);

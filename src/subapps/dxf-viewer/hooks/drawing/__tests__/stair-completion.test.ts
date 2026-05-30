@@ -67,7 +67,9 @@ describe('stair-completion builders (Phase 5a)', () => {
     const params = buildDefaultStairParams(basePoint, 0);
     const entity = buildStairEntity(params, 'level-42');
     expect(entity.levelId).toBe('level-42');
-    expect(entity.layerId).toBeUndefined();
+    // base-entity requires `layerId: string`; the builder uses '' (no layer)
+    // rather than abusing it to carry the level — the level lives in `levelId`.
+    expect(entity.layerId).toBe('');
   });
 
   it('extra: directionFromPoints returns 0 for +X cardinal direction', () => {

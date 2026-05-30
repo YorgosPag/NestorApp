@@ -32,7 +32,7 @@ jest.mock('../../../core/commands/entity-commands/BimCopyCommand', () => ({
   })),
 }));
 
-jest.mock('../toolHintOverrideStore', () => ({
+jest.mock('../../toolHintOverrideStore', () => ({
   toolHintOverrideStore: { setOverride: jest.fn() },
 }));
 

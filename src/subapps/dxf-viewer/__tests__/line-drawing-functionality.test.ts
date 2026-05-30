@@ -104,10 +104,11 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
         result.current.addPoint(endPoint, mockTransform);
       });
 
-      // After second point, line entity is completed and tool is re-armed
-      // (allowsContinuous=true for line tool — AutoCAD pattern)
-      // tempPoints resets to 0 because the entity was created
-      expect(result.current.state.tempPoints).toHaveLength(0);
+      // After the 2nd point the segment completes; ADR-357 Phase 5 G5 chain
+      // mode (line.allowsChain) re-seeds tempPoints with the last endpoint as
+      // the start of the next chain segment (AutoCAD LINE continuous pattern).
+      expect(result.current.state.tempPoints).toHaveLength(1);
+      expect(result.current.state.tempPoints[0]).toEqual(endPoint);
       // isDrawing stays true because line tool has allowsContinuous
       expect(result.current.state.isDrawing).toBe(true);
     });
@@ -185,7 +186,7 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
       expect(result.current.state.currentTool).toBe('line');
     });
 
-    it('should reset tempPoints and previewEntity after completing line', () => {
+    it('seeds the next chain segment from the last endpoint after completing a line (ADR-357 Phase 5 G5)', () => {
       const { result } = renderHook(() => useUnifiedDrawing(), { wrapper: TestProviders });
 
       // ✅ ENTERPRISE FIX: Separate act() blocks for each state update
@@ -201,9 +202,10 @@ describe('🎯 Line Drawing Functionality (CRITICAL)', () => {
         result.current.addPoint({ x: 100, y: 100 }, mockTransform);
       });
 
-      // After completing line, tempPoints and previewEntity reset
-      // isDrawing stays true because line tool has allowsContinuous (AutoCAD pattern)
-      expect(result.current.state.tempPoints).toHaveLength(0);
+      // ADR-357 Phase 5 G5 chain mode: the completed segment's endpoint becomes
+      // the start of the next chain segment; the preview entity is cleared.
+      expect(result.current.state.tempPoints).toHaveLength(1);
+      expect(result.current.state.tempPoints[0]).toEqual({ x: 100, y: 100 });
       expect(result.current.state.previewEntity).toBeNull();
     });
   });

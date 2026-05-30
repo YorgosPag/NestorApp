@@ -13,7 +13,8 @@ import {
   DEFAULT_GRIP_SETTINGS,
   DEFAULT_CURSOR_SETTINGS,
   DEFAULT_GRID_SETTINGS,
-  DEFAULT_RULER_SETTINGS
+  DEFAULT_RULER_SETTINGS,
+  DEFAULT_LAYER_ISOLATE_SETTINGS
 } from '../../settings-core/defaults';
 
 describe('DxfSettingsStore', () => {
@@ -84,7 +85,8 @@ describe('DxfSettingsStore', () => {
         grip: DEFAULT_GRIP_SETTINGS,
         cursor: DEFAULT_CURSOR_SETTINGS,
         grid: DEFAULT_GRID_SETTINGS,
-        ruler: DEFAULT_RULER_SETTINGS
+        ruler: DEFAULT_RULER_SETTINGS,
+        layerIsolate: DEFAULT_LAYER_ISOLATE_SETTINGS
       });
     });
   });
@@ -178,7 +180,8 @@ describe('DxfSettingsStore', () => {
         grip: DEFAULT_GRIP_SETTINGS,
         cursor: DEFAULT_CURSOR_SETTINGS,
         grid: DEFAULT_GRID_SETTINGS,
-        ruler: DEFAULT_RULER_SETTINGS
+        ruler: DEFAULT_RULER_SETTINGS,
+        layerIsolate: DEFAULT_LAYER_ISOLATE_SETTINGS
       });
     });
 
@@ -318,7 +321,8 @@ describe('DxfSettingsStore', () => {
         grip: DEFAULT_GRIP_SETTINGS,
         cursor: DEFAULT_CURSOR_SETTINGS,
         grid: DEFAULT_GRID_SETTINGS,
-        ruler: DEFAULT_RULER_SETTINGS
+        ruler: DEFAULT_RULER_SETTINGS,
+        layerIsolate: DEFAULT_LAYER_ISOLATE_SETTINGS
       });
       expect(result.current.isLoaded).toBe(true);
     });

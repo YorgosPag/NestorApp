@@ -2,7 +2,6 @@
  * ADR-366 §C.1.Q4 — preset bezier mapping tests.
  */
 
-import { describe, expect, it } from 'vitest';
 import { cubicBezier } from '../../../viewport/bezier-easing';
 import {
   EASING_PRESET_IDS,

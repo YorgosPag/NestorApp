@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-vi.mock('../../providers/provider-registry', () => ({
-  getProvider: vi.fn(),
+jest.mock('../../providers/provider-registry', () => ({
+  getProvider: jest.fn(),
 }));
 
 import { useFloorplanBackgroundStore } from '../floorplanBackgroundStore';
@@ -18,19 +17,19 @@ function makeMockProvider(): IFloorplanBackgroundProvider {
     id: 'image',
     capabilities: { multiPage: false, exifAware: true, vectorEquivalent: false, calibratable: true },
     supportedMimeTypes: ['image/png'],
-    loadAsync: vi.fn().mockResolvedValue({
+    loadAsync: jest.fn().mockResolvedValue({
       success: true,
       bounds: MOCK_BOUNDS,
       metadata: { imageOrientation: 1 },
     } satisfies ProviderLoadResult),
-    render: vi.fn(),
-    getNaturalBounds: vi.fn().mockReturnValue(MOCK_BOUNDS),
-    dispose: vi.fn(),
+    render: jest.fn(),
+    getNaturalBounds: jest.fn().mockReturnValue(MOCK_BOUNDS),
+    dispose: jest.fn(),
   };
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  jest.clearAllMocks();
   useFloorplanBackgroundStore.setState({
     floors: {},
     activeFloorId: null,
@@ -41,7 +40,7 @@ beforeEach(() => {
 describe('floorplanBackgroundStore', () => {
   it('addBackground → floor state populated with correct bounds', async () => {
     const provider = makeMockProvider();
-    vi.mocked(getProvider).mockReturnValue(provider);
+    jest.mocked(getProvider).mockReturnValue(provider);
 
     await useFloorplanBackgroundStore.getState().addBackground(
       DEMO_FLOOR,
@@ -60,7 +59,7 @@ describe('floorplanBackgroundStore', () => {
 
   it('addBackground second time same floor → pendingReplaceRequest set, background not overwritten', async () => {
     const provider = makeMockProvider();
-    vi.mocked(getProvider).mockReturnValue(provider);
+    jest.mocked(getProvider).mockReturnValue(provider);
 
     await useFloorplanBackgroundStore.getState().addBackground(
       DEMO_FLOOR,
@@ -85,7 +84,7 @@ describe('floorplanBackgroundStore', () => {
 
   it('removeBackground → slot deleted and provider disposed', async () => {
     const provider = makeMockProvider();
-    vi.mocked(getProvider).mockReturnValue(provider);
+    jest.mocked(getProvider).mockReturnValue(provider);
 
     await useFloorplanBackgroundStore.getState().addBackground(
       DEMO_FLOOR,
@@ -98,12 +97,12 @@ describe('floorplanBackgroundStore', () => {
     await useFloorplanBackgroundStore.getState().removeBackground(DEMO_FLOOR);
 
     expect(useFloorplanBackgroundStore.getState().floors[DEMO_FLOOR]).toBeUndefined();
-    expect(vi.mocked(provider.dispose)).toHaveBeenCalledOnce();
+    expect(jest.mocked(provider.dispose)).toHaveBeenCalledTimes(1);
   });
 
   it('setTransform → transform fields updated, others unchanged', async () => {
     const provider = makeMockProvider();
-    vi.mocked(getProvider).mockReturnValue(provider);
+    jest.mocked(getProvider).mockReturnValue(provider);
 
     await useFloorplanBackgroundStore.getState().addBackground(
       DEMO_FLOOR,

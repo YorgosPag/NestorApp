@@ -123,8 +123,10 @@ describe('S1 — Wall-to-wall corner alignment', () => {
     expect(nearA.candidates.length).toBeGreaterThan(0);
     expect(nearA.candidates.every((c) => c.type === ExtendedSnapType.BIM_WALL_CORNER)).toBe(true);
 
-    // Near wallB — a corner should be found
-    const nearB = engine.findSnapCandidates({ x: 1000, y: 500 }, makeContext());
+    // At wallB outer-end corner (900, 1000) → wall_b corner found independently.
+    // (wallB is vertical 1000,0→1000,1000 thickness 200, so its outer face sits
+    // at x=900; probe the exact corner — the same convention as nearA above.)
+    const nearB = engine.findSnapCandidates({ x: 900, y: 1000 }, makeContext());
     expect(nearB.candidates.some((c) => c.entityId === 'wall_b')).toBe(true);
 
     engine.dispose();

@@ -2,7 +2,6 @@
  * ADR-366 §C.1.c — render-checkpoint round-trip tests.
  */
 
-import { describe, expect, it } from 'vitest';
 import {
   deserializeCheckpoint,
   resumeFrameIndex,

@@ -7,7 +7,6 @@
  * validation, and the AbortSignal contract.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { detectSupportedCodec, exportAnimationMP4 } from '../MP4Exporter';
 import type { InterpolatedFrame } from '../animation-types';
 
@@ -34,7 +33,7 @@ describe('detectSupportedCodec', () => {
 
   it("returns 'h264' when H.264 is supported", async () => {
     getGlobal().VideoEncoder = {
-      isConfigSupported: vi.fn(async (cfg: { codec: string }) => ({
+      isConfigSupported: jest.fn(async (cfg: { codec: string }) => ({
         supported: cfg.codec.startsWith('avc1'),
         config: cfg,
       })),
@@ -44,7 +43,7 @@ describe('detectSupportedCodec', () => {
 
   it("falls back to 'vp9' when H.264 is rejected", async () => {
     getGlobal().VideoEncoder = {
-      isConfigSupported: vi.fn(async (cfg: { codec: string }) => ({
+      isConfigSupported: jest.fn(async (cfg: { codec: string }) => ({
         supported: cfg.codec.startsWith('vp09'),
         config: cfg,
       })),
@@ -54,7 +53,7 @@ describe('detectSupportedCodec', () => {
 
   it('throws when neither codec is supported', async () => {
     getGlobal().VideoEncoder = {
-      isConfigSupported: vi.fn(async () => ({ supported: false })),
+      isConfigSupported: jest.fn(async () => ({ supported: false })),
     };
     await expect(detectSupportedCodec()).rejects.toThrow(/Neither H\.264 nor VP9/);
   });

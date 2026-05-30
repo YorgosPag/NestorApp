@@ -6,6 +6,8 @@
  * touch are populated.
  */
 
+import { setLayers } from '../../../../stores/LayerStore';
+import { createSceneLayer } from '../../../../types/scene-types';
 import type { ISceneManager, SceneEntity } from '../../interfaces';
 import type {
   DxfTextNode,
@@ -71,11 +73,17 @@ export function makeTextEntity(
   id: string,
   over: Partial<DxfTextSceneEntity> = {},
 ): DxfTextSceneEntity {
+  // resolveEntityLayerName() resolves layer NAME via entity.layerId → the
+  // global LayerStore registry. Derive a deterministic layerId from the
+  // overridden layer name so the locked/frozen guard fixtures resolve
+  // (makeLayerProvider registers `lyr_<name>` into the registry).
+  const layerId =
+    over.layerId ?? (over.layer ? `lyr_${over.layer}` : 'lyr_test_default');
   return {
     id,
     type: 'mtext',
     layer: '0',
-    layerId: 'lyr_test_default',
+    layerId,
     visible: true,
     position: { x: 0, y: 0 },
     textNode: makeNode(),
@@ -118,6 +126,19 @@ export function makeLayerProvider(
   layers: Record<string, Partial<LayerSnapshot>> = {},
   canUnlockLayer = false,
 ): ILayerAccessProvider {
+  // Register these layers into the global LayerStore so the command path's
+  // resolveEntityLayerName(entity) (layerId → registry → name) resolves to
+  // them. The entity's layerId is `lyr_<name>` (see makeTextEntity).
+  setLayers(
+    Object.entries(layers).map(([name, partial]) =>
+      createSceneLayer({
+        id: `lyr_${name}`,
+        name,
+        locked: partial.locked ?? false,
+        frozen: partial.frozen ?? false,
+      }),
+    ),
+  );
   return {
     getLayer: (name) => {
       const partial = layers[name];

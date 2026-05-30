@@ -9,7 +9,10 @@
  *   - setCurrentLayer action wires LayerStore.setCurrentLayerId
  */
 
-import { describe, it, expect, beforeEach, vi } from '@jest/globals';
+// jest globals (describe/it/expect/beforeEach/jest) are injected — NOT imported from
+// '@jest/globals': @swc/jest only hoists `jest.mock` above imports when `jest` is the
+// global binding. Importing it would leave the mock below the hook import → real module
+// loads → "fetch is not defined" (firebase). Matches the repo-wide convention.
 import { renderHook, act } from '@testing-library/react';
 import { useLayerManagerState } from '../useLayerManagerState';
 import {
@@ -20,29 +23,31 @@ import {
 import { createSceneLayer } from '../../../../types/entities';
 import type { SceneModel } from '../../../../types/entities';
 
-// Mock useLevelSelection to avoid Firebase import
-const mockUseLevelSelection = vi.fn(() => ({
-  currentLevelId: 'level_1',
-  currentLevel: {
-    id: 'level_1',
-    scene: {
-      entities: [
-        { layer: 'Electrical', layerId: 'lyr_test_default', type: 'line' },
-        { layer: 'Electrical', layerId: 'lyr_test_default', type: 'polyline' },
-        { layer: 'Plumbing', layerId: 'lyr_test_default', type: 'circle' },
-      ],
-    } as unknown as SceneModel,
-  },
-  setCurrentLevel: vi.fn(),
-  levels: [],
-}));
+// Mock useLevels to avoid Firebase import. The hook reads `getLevelScene(levelId)`
+// (ADR-358 Phase 9D-5b — Level interface has no `scene` field; scene access is via
+// the SSoT action). Element counts below drive the "elements: 2/1" assertions.
+// Entities keyed by layerId — `resolveEntityLayerName` (LayerStore SSoT) resolves
+// strictly via `layersById` lookup (no entity.layer name fallback), so the ids MUST
+// match the layers the "element count" test registers (lyr_e ×2, lyr_p ×1).
+const MOCK_SCENE = {
+  entities: [
+    { layerId: 'lyr_e', type: 'line' },
+    { layerId: 'lyr_e', type: 'polyline' },
+    { layerId: 'lyr_p', type: 'circle' },
+  ],
+} as unknown as SceneModel;
 
-vi.mock('../../../systems/levels/useLevels', () => ({
-  useLevelSelection: mockUseLevelSelection,
+const mockGetLevelScene = jest.fn(() => MOCK_SCENE);
+
+jest.mock('../../../../systems/levels/useLevels', () => ({
+  useLevels: () => ({
+    currentLevelId: 'level_1',
+    getLevelScene: mockGetLevelScene,
+  }),
 }));
 
 // Mock i18n
-vi.mock('@/i18n', () => ({
+jest.mock('@/i18n', () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const map: Record<string, string> = {
@@ -58,14 +63,16 @@ vi.mock('@/i18n', () => ({
 
 beforeEach(() => {
   __resetLayerStoreForTesting();
-  vi.clearAllMocks();
+  jest.clearAllMocks();
 });
 
 describe('useLayerManagerState — empty store', () => {
   it('returns empty layers when store has no layers', () => {
     const { result } = renderHook(() => useLayerManagerState());
     expect(result.current.layers).toEqual([]);
-    expect(result.current.categories).toHaveLength(0);
+    // The hook always seeds the 'all' filter option (even with zero layers) — the
+    // populated-store test relies on it too. No layer-derived categories are added.
+    expect(result.current.categories).toEqual([{ value: 'all', label: 'All' }]);
   });
 });
 

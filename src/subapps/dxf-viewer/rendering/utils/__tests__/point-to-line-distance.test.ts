@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import { pointToInfiniteLineDistance, pointToRayDistance } from '../point-to-line-distance';
 
 const tol = 1e-9;

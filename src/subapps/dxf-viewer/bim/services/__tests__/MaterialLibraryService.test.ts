@@ -9,6 +9,13 @@
  * test pattern). Subscribe path tested separately σε integration tests.
  */
 
+jest.mock('firebase/auth', () => ({
+  __esModule: true,
+  getAuth: () => ({ currentUser: null }),
+  onAuthStateChanged: (_a: unknown, cb: (u: null) => void) => { cb(null); return () => {}; },
+  signInAnonymously: jest.fn(),
+}));
+
 import {
   BIM_MATERIAL_ERRORS,
   type BimMaterial,
