@@ -28,6 +28,7 @@ import type {
 import type { WallEntity } from '../../../bim/types/wall-types';
 import { computeOpeningGeometry } from '../../../bim/geometry/opening-geometry';
 import { validateOpeningParams } from '../../../bim/validators/opening-validator';
+import { inferOpeningIfcType } from '@/services/factories/opening.factory';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { DEFAULT_MERGE_CONFIG } from '../interfaces';
 
@@ -66,7 +67,15 @@ export class UpdateOpeningParamsCommand implements ICommand {
 
   private applyPatch(params: OpeningParams): void {
     const host = this.resolveHostWall(params.wallId);
-    const patch: Record<string, unknown> = { params };
+    // ADR-363 §5.4 — keep the DERIVED top-level discriminator (`kind` + `ifcType`)
+    // in lock-step with `params.kind` (single source of truth). A kind change that
+    // patched only `params` would leave the renderer dispatching on a stale `kind`
+    // (door overlay on window geometry → no symbol, "continuous wall" bug).
+    const patch: Record<string, unknown> = {
+      params,
+      kind: params.kind,
+      ifcType: inferOpeningIfcType(params.kind),
+    };
     if (host) {
       const geometry: OpeningGeometry = computeOpeningGeometry(params, host, host.params.sceneUnits ?? 'mm');
       const validation = validateOpeningParams(params, host).bimValidation;

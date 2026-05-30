@@ -53,6 +53,8 @@ import { isOpeningTagLayerVisible } from '../../systems/layers/opening-tag-layer
 const HINGE_DASH: readonly [number, number] = [4, 3];
 const SLIDING_DASH: readonly [number, number] = [10, 4];
 const GLAZING_INSET_RATIO = 0.25; // 25% of thickness inset for double-line glass
+/** ADR-375 — dashed outline for an opening projected as "<Beyond>" (not cut). */
+const BEYOND_DASH: readonly number[] = [6, 4];
 
 export class OpeningRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -67,6 +69,21 @@ export class OpeningRenderer extends BaseEntityRenderer {
     )) return;
 
     if (!opening.geometry || !opening.params) return;
+
+    // ADR-375 — cut-plane gating (Revit parity). Compute the opening's display
+    // state against the active view range BEFORE drawing:
+    //   · hidden            → not drawn at all,
+    //   · cut               → full plan symbol (swing / glazing) + solid outline,
+    //   · projection/beyond → dashed "<Beyond>" outline, NO cut symbol.
+    // The host-wall punch (WallRenderer) gates on the same rule, so an opening
+    // above/below the cut plane leaves a solid wall instead of a wrong hole.
+    const _opDs = useDrawingScaleStore.getState();
+    const _opCutState = resolveCutState(
+      { zBottomMm: opening.params.sillHeight, zTopMm: opening.params.sillHeight + opening.params.height, category: 'opening' },
+      _opDs.viewRange,
+    );
+    if (_opCutState === 'hidden') return;
+    const _isCut = _opCutState === 'cut';
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
@@ -83,11 +100,6 @@ export class OpeningRenderer extends BaseEntityRenderer {
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.strokeStyle = OPENING_KIND_STROKE[opening.kind];
-    const _opDs = useDrawingScaleStore.getState();
-    const _opCutState = resolveCutState(
-      { zBottomMm: opening.params.sillHeight, zTopMm: opening.params.sillHeight + opening.params.height, category: 'opening' },
-      _opDs.viewRange,
-    );
     const _opLayerOverride = _opLayer ? {
       lineweightMm: isConcreteLineweight(_opLayer.lineweight) ? _opLayer.lineweight : undefined,
       color: _opLayer.color ?? undefined,
@@ -103,10 +115,14 @@ export class OpeningRenderer extends BaseEntityRenderer {
     const _overlayS = _rso(openingOverlaySubcat(opening.kind));
 
     this.ctx.lineWidth = _outlineS.lineWidthPx;
-    this.ctx.setLineDash(linePatternToDashArray(_outlineS.linePattern) as number[]);
+    // Cut → subcategory line pattern (solid poché jambs). Beyond → dashed.
+    this.ctx.setLineDash(
+      _isCut ? (linePatternToDashArray(_outlineS.linePattern) as number[]) : (BEYOND_DASH as number[]),
+    );
     if (_outlineS.color !== null) this.ctx.strokeStyle = _outlineS.color;
     this.drawOutline(opening);
-    this.drawKindOverlay(opening, _overlayS.lineWidthPx);
+    // Plan symbol (swing arc / glazing / slide track) only when actually cut.
+    if (_isCut) this.drawKindOverlay(opening, _overlayS.lineWidthPx);
 
     // ADR-376 Phase A — paint instance Mark tag overlay (canvas-pill SSoT).
     // Layer toggle gating is read μέσω the dedicated module; tag renderer

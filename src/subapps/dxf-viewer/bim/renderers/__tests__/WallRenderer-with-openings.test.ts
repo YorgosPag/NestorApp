@@ -92,6 +92,14 @@ function makeDoor(host: WallEntity, clickX: number): OpeningEntity {
   return r.entity;
 }
 
+/** High window above the cut plane (sill 2000mm vs default cut 1200mm). */
+function makeHighWindow(host: WallEntity, clickX: number): OpeningEntity {
+  const params = buildDefaultOpeningParams(host, { x: clickX, y: 0 }, { kind: 'window', sillHeight: 2000, height: 400 });
+  const r = buildOpeningEntity(params, host, '0');
+  if (!r.ok) throw new Error('window build failed');
+  return r.entity;
+}
+
 function makeRenderer() {
   const mock = createMockCtx();
   const renderer = new WallRenderer(mock.ctx);
@@ -207,6 +215,33 @@ describe('WallRenderer + openings (Phase 2.5)', () => {
     const idxBegin = beforeStroke.findIndex((c) => c.fn === 'beginPath');
     expect(idxBegin).toBeGreaterThan(-1);
     expect(beforeStroke.slice(idxBegin).some((c) => c.fn === 'moveTo')).toBe(true);
+  });
+
+  it('7. ADR-375 — opening above the cut plane is NOT punched (solid wall)', () => {
+    const { renderer, mock } = makeRenderer();
+    const wall = makeWall();
+    const highWindow = makeHighWindow(wall, 2000); // sill 2000mm > cut 1200mm
+    renderer.setOpeningsByWall(new Map([[wall.id, [highWindow]]]));
+    renderer.render(wall as unknown as EntityModel, {});
+    // Not cut → no destination-out punch → wall reads solid (Revit parity).
+    expect(compositeOpsAfter(mock.calls)).not.toContain('destination-out');
+  });
+
+  it('8. ADR-375 — mixed: cut door punches, high window does not', () => {
+    const { renderer, mock } = makeRenderer();
+    const wall = makeWall();
+    const door = makeDoor(wall, 1000);            // 0..2100mm → cut
+    const highWindow = makeHighWindow(wall, 3000); // 2000..2400mm → projection
+    renderer.setOpeningsByWall(new Map([[wall.id, [door, highWindow]]]));
+    renderer.render(wall as unknown as EntityModel, {});
+
+    const idxComp = mock.calls.findIndex(
+      (c) => c.fn === 'set:globalCompositeOperation' && c.args[0] === 'destination-out',
+    );
+    const idxRestoreAfter = mock.calls.findIndex((c, i) => i > idxComp && c.fn === 'restore');
+    const cutoutPass = mock.calls.slice(idxComp, idxRestoreAfter);
+    // Exactly ONE opening punched (the door) — the high window is gated out.
+    expect(countCalls(cutoutPass, 'fill')).toBe(1);
   });
 
   it('6. multiple openings on same wall → cutout per opening', () => {

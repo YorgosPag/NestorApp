@@ -157,3 +157,40 @@ describe('OpeningRenderer — wall-cutout-jambs subcategory wiring (Phase C.3)',
     expect(lineDashCalls(mock.calls)).toContain('[8,4]');
   });
 });
+
+// ─── ADR-375 cut-plane gating ────────────────────────────────────────────────
+
+/** Opening fixture at explicit Z (sillHeight / height in mm). */
+function makeOpeningZ(kind: string, sillHeight: number, height: number): OpeningEntity {
+  const op = makeOpening(kind) as unknown as { params: Record<string, unknown> };
+  op.params.sillHeight = sillHeight;
+  op.params.height = height;
+  return op as unknown as OpeningEntity;
+}
+
+function countFn(calls: MockCall[], fn: string): number {
+  return calls.filter(c => c.fn === fn).length;
+}
+
+describe('OpeningRenderer — cut-plane gating (ADR-375)', () => {
+  beforeEach(() => mockGetState.mockReturnValue(makeStoreState()));
+
+  it('7. cut window (sill 900..2300, cut 1200) → solid outline, NO beyond dash', () => {
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeOpeningZ('window', 900, 1400) as unknown as EntityModel, {});
+    expect(lineDashCalls(mock.calls)).not.toContain('[6,4]'); // not "beyond"
+    expect(countFn(mock.calls, 'stroke')).toBeGreaterThan(0);
+  });
+
+  it('8. high window above cut (sill 2000..2400) → dashed "beyond" outline', () => {
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeOpeningZ('window', 2000, 400) as unknown as EntityModel, {});
+    expect(lineDashCalls(mock.calls)).toContain('[6,4]'); // BEYOND_DASH
+  });
+
+  it('9. opening above the view top (sill 2500 > topMm 2300) → hidden, not drawn', () => {
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeOpeningZ('window', 2500, 400) as unknown as EntityModel, {});
+    expect(countFn(mock.calls, 'stroke')).toBe(0);
+  });
+});

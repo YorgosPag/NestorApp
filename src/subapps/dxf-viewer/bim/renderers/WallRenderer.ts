@@ -245,9 +245,24 @@ export class WallRenderer extends BaseEntityRenderer {
     const openings = this.openingsByWall.get(wall.id);
     if (!openings || openings.length === 0) return;
 
+    // ADR-375 — only an opening genuinely CUT by the active plane punches a hole
+    // in the wall fill. An opening above/below the cut plane (e.g. a high window,
+    // sill 2000mm vs cut 1200mm) must read as a solid wall (Revit parity) — the
+    // OpeningRenderer draws its dashed "<Beyond>" projection instead. Pre-filter
+    // BEFORE switching composite mode so a wall with only off-plane openings
+    // never enters the destination-out pass at all.
+    const _viewRange = useDrawingScaleStore.getState().viewRange;
+    const cutOpenings = openings.filter((o) =>
+      resolveCutState(
+        { zBottomMm: o.params.sillHeight, zTopMm: o.params.sillHeight + o.params.height, category: 'opening' },
+        _viewRange,
+      ) === 'cut',
+    );
+    if (cutOpenings.length === 0) return;
+
     this.ctx.save();
     this.ctx.globalCompositeOperation = 'destination-out';
-    for (const opening of openings) {
+    for (const opening of cutOpenings) {
       // ADR-396 — η τρύπα στον τοίχο = STRUCTURAL outline (free + reveal margin) ώστε
       // η περιμετρική μόνωση Z4 να γεμίζει το δαχτυλίδι σε ΤΡΥΠΑ, όχι πάνω σε γεμάτο
       // τοίχο. Χωρίς reveal → revealOutline undefined → free outline (αμετάβλητο).

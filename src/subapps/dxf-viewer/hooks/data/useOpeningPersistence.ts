@@ -45,7 +45,7 @@ import {
   upsertOpeningGroupForOpening,
 } from '../../bim/services/opening-boq-sync';
 import { isOpening, isWall, openingDocToEntity } from '../../bim/walls/opening-doc-hydration';
-import { allocateMarkAndPatchScene } from '../../bim/walls/opening-mark-allocator';
+import { allocateMarkAndPatchScene, syncMarkToKindAndPatchScene } from '../../bim/walls/opening-mark-allocator';
 
 // ============================================================================
 // TYPES
@@ -251,39 +251,49 @@ export function useOpeningPersistence(
     if (!svc) return;
     const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
     const isNew = prevParams === null;
+    // ADR-363 §5.4 — kind change on an AUTO mark re-aligns the mark prefix
+    // (Θ↔Π). Detected vs the last-saved kind; manual marks skipped inside the
+    // helper. Re-allocation patches the scene, so persist the returned entity.
+    let toSave = entity;
+    if (
+      !isNew && prevParams && prevParams.kind !== entity.params.kind &&
+      companyId && projectId && floorplanId
+    ) {
+      toSave = await syncMarkToKindAndPatchScene(entity, { companyId, projectId, floorplanId, levelManager, t });
+    }
     setSaveState('saving');
     setError(null);
     try {
       await (isNew
-        ? svc.saveOpening(entityToSaveInput(entity, currentFloorIdRef.current ?? undefined))
-        : svc.updateOpening(entity.id, { kind: entity.kind, params: entity.params, validation: entity.validation, layerId: entity.layerId }));
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
+        ? svc.saveOpening(entityToSaveInput(toSave, currentFloorIdRef.current ?? undefined))
+        : svc.updateOpening(toSave.id, { kind: toSave.params.kind, params: toSave.params, validation: toSave.validation, layerId: toSave.layerId }));
+      lastSavedParamsRef.current.set(toSave.id, toSave.params);
+      dirtyIdsRef.current.delete(toSave.id);
+      pendingFirstSaveIdsRef.current.delete(toSave.id);
       setSaveState('saved');
       setLastSavedAt(Date.now());
       void recordOpeningChange(
         isNew ? 'created' : 'updated',
-        entity,
+        toSave,
         { prevParams: prevParams ?? undefined },
       );
       // ADR-376 Phase B.2 — signature-group aggregation (όχι per-opening row).
       // opening-boq-sync recomputes the new signature group (+ old αν άλλαξε).
       if (companyId && projectId && buildingId && floorplanId) {
         void upsertOpeningGroupForOpening(
-          { id: entity.id, kind: entity.kind, params: entity.params },
+          { id: toSave.id, kind: toSave.params.kind, params: toSave.params },
           prevParams,
           { companyId, projectId, buildingId, floorplanId, floorId: currentFloorIdRef.current ?? undefined },
         );
       }
       // ADR-395 G6 — host wall net area depends on its openings; signal the wall
       // persistence hook to re-feed BOQ with the updated subtraction.
-      EventBus.emit('bim:opening-persisted', { wallId: entity.params.wallId });
+      EventBus.emit('bim:opening-persisted', { wallId: toSave.params.wallId });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'OPENING_SAVE_ERROR');
       setSaveState('error');
     }
-  }, [companyId, projectId, buildingId, floorplanId]);
+  }, [companyId, projectId, buildingId, floorplanId, levelManager, t]);
 
   // ADR-376 Phase A — allocate mark before first persist (idempotent if already set).
   const allocateAndPersistOpening = useCallback(async (entity: OpeningEntity) => {

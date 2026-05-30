@@ -222,6 +222,34 @@ describe('UpdateOpeningParamsCommand (Phase 2.5)', () => {
     expect(badOffset.validate()).toMatch(/offsetFromStart/);
   });
 
+  it('12. kind change: patches DERIVED top-level kind + ifcType (ADR-363 §5.4 SSoT)', () => {
+    const wall = makeWall();
+    const opening = makeDoor(wall, 2000);
+    expect(opening.kind).toBe('door');
+    expect(opening.ifcType).toBe('IfcDoor');
+    const { scene, sm } = makeMockScene([
+      wall as unknown as SceneEntity,
+      opening as unknown as SceneEntity,
+    ]);
+    const toWindow: OpeningParams = { ...opening.params, kind: 'window' };
+
+    const cmd = new UpdateOpeningParamsCommand(opening.id, toWindow, opening.params, sm);
+    cmd.execute();
+
+    const updated = scene.get(opening.id) as unknown as OpeningEntity;
+    expect(updated.params.kind).toBe('window');
+    // Top-level discriminator + IFC class follow params.kind — no divergence.
+    expect(updated.kind).toBe('window');
+    expect(updated.ifcType).toBe('IfcWindow');
+
+    // undo restores both the param and the derived mirrors.
+    cmd.undo();
+    const reverted = scene.get(opening.id) as unknown as OpeningEntity;
+    expect(reverted.params.kind).toBe('door');
+    expect(reverted.kind).toBe('door');
+    expect(reverted.ifcType).toBe('IfcDoor');
+  });
+
   it('11. serialize: round-trips key fields', () => {
     const wall = makeWall();
     const opening = makeDoor(wall, 2000);

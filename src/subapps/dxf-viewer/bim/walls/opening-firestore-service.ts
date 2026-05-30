@@ -208,7 +208,11 @@ export function createOpeningFirestoreService(
 export function entityToSaveInput(entity: OpeningEntity, floorId?: string): OpeningSaveInput {
   return {
     id: entity.id,
-    kind: entity.kind,
+    // ADR-363 §5.4 — persist `kind` DERIVED from `params.kind` (single source of
+    // truth). Never read the top-level `entity.kind` here: a stale denormalized
+    // copy (e.g. after a kind change that only patched `params`) would otherwise
+    // diverge `doc.kind` from `doc.params.kind` and break the renderer overlay.
+    kind: entity.params.kind,
     params: entity.params,
     validation: entity.validation,
     layerId: entity.layerId,
