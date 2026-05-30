@@ -35,6 +35,14 @@ import type { WallKind, WallCategory } from '../../bim/types/wall-types';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 // ADR-363 Phase 1J — «Τοίχος πάνω σε οντότητα 2Δ» geometry bridge.
 import { pickWallSourceFromEntity } from '../../bim/walls/wall-from-entity';
+// ADR-363 Phase 1K — «Τοίχος σε περιοχή (4 γραμμές)» geometry SSoT.
+import {
+  extractLineSegments,
+  pickSegmentAt,
+  findRectanglesFromSegments,
+  findEnclosingRectangle,
+  type RegionLineSeg,
+} from '../../bim/walls/wall-in-region';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import type { WallParamOverrides } from './wall-completion';
@@ -70,6 +78,12 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   // synchronously without subscribing to wall-tool React state.
   useEffect(() => {
     if (state.phase === 'idle') {
+      wallPreviewStore.reset();
+      return;
+    }
+    // ADR-363 Phase 1K — in-region: picked lines are surfaced via selection
+    // highlight (getRegionPickIds), not a rubber-band ghost. No preview shape.
+    if (state.placementMode === 'in-region') {
       wallPreviewStore.reset();
       return;
     }
@@ -224,13 +238,69 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     commitCurvedFromState,
     commitPolylineFromState,
     commitOnEntity,
+    commitInRegionRects,
   } = useWallCommit({ currentLevelId, onWallCreated, getSceneUnits, setState });
+
+  // ── in-region helpers (ADR-363 Phase 1K) ─────────────────────────────────
+  // Live scene-units-agnostic endpoint-merge / hit-test tolerance (world units),
+  // derived from the same SNAP_DEFAULT/scale rule as the on-entity pick.
+  const regionTol = useCallback(
+    (): number => TOLERANCE_CONFIG.SNAP_DEFAULT / getImmediateTransform().scale,
+    [],
+  );
+
+  /** Same physical segment already picked? (id + endpoints, polyline-edge aware). */
+  const sameSeg = (a: RegionLineSeg, b: RegionLineSeg): boolean =>
+    a.id === b.id &&
+    Math.abs(a.start.x - b.start.x) < 1e-6 &&
+    Math.abs(a.start.y - b.start.y) < 1e-6 &&
+    Math.abs(a.end.x - b.end.x) < 1e-6 &&
+    Math.abs(a.end.y - b.end.y) < 1e-6;
+
+  // Click while in-region: hit a line → accumulate (commit when 4 close a rect);
+  // miss → treat the click as "inside a region" and fill the enclosing rectangle.
+  const onRegionClick = useCallback(
+    (s: WallToolState, point: Readonly<Point2D>): boolean => {
+      const segs = extractLineSegments(getSceneEntities?.() ?? []);
+      const tol = regionTol();
+      const hit = pickSegmentAt(point, segs, tol);
+      if (hit) {
+        const picks = s.regionPicks.some((p) => sameSeg(p, hit))
+          ? s.regionPicks
+          : [...s.regionPicks, hit];
+        const rects = findRectanglesFromSegments(picks, tol);
+        if (rects.length > 0) {
+          const ok = commitInRegionRects({ ...s, regionPicks: picks }, [rects[0]]);
+          // Keep the ref coherent for getRegionPickIds() read right after the click.
+          stateRef.current = { ...stateRef.current, regionPicks: [] };
+          return ok;
+        }
+        const next = { ...s, regionPicks: picks, error: null };
+        stateRef.current = next;
+        setState(next);
+        return true;
+      }
+      const rect = findEnclosingRectangle(segs, point, tol);
+      if (rect) {
+        const ok = commitInRegionRects(s, [rect]);
+        stateRef.current = { ...stateRef.current, regionPicks: [] };
+        return ok;
+      }
+      return false;
+    },
+    [getSceneEntities, regionTol, commitInRegionRects],
+  );
 
   // ── click pipeline ───────────────────────────────────────────────────────
   const onCanvasClick = useCallback(
     (point: Readonly<Point2D>): boolean => {
       const s = stateRef.current;
       if (s.phase === 'idle') return false;
+
+      // ADR-363 Phase 1K — in-region placement (pick 4 lines / click inside).
+      if (s.placementMode === 'in-region') {
+        return onRegionClick(s, point);
+      }
 
       // ADR-363 Phase 1J — on-entity placement (pick entity → pick side).
       if (s.placementMode === 'on-entity') {
@@ -325,8 +395,21 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       }
       return false;
     },
-    [commitStraightFromState, commitCurvedFromState, commitOnEntity, getSceneEntities],
+    [commitStraightFromState, commitCurvedFromState, commitOnEntity, getSceneEntities, onRegionClick],
   );
+
+  // ESC during in-region: drop accumulated picks (back to empty collecting)
+  // instead of deactivating; no-op when there are no picks (generic ESC exits).
+  useEscapeHandler({
+    id: 'wall-tool/in-region-back',
+    priority: ESC_PRIORITY.WALL_ALIGNMENT_BACK,
+    canHandle: () =>
+      stateRef.current.placementMode === 'in-region' && stateRef.current.regionPicks.length > 0,
+    handle: () => {
+      setState((prev) => ({ ...prev, regionPicks: [], error: null }));
+      return true;
+    },
+  });
 
   const finishPolyline = useCallback((): boolean => {
     const s = stateRef.current;
@@ -338,6 +421,12 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   // ── status text (i18n keys returned for caller-resolved translation) ─────
   const getStatusText = useCallback((): string => {
     const s = stateRef.current;
+    // ADR-363 Phase 1K — in-region prompts.
+    if (s.placementMode === 'in-region') {
+      return s.regionPicks.length > 0
+        ? 'tools.wall.statusRegionMore'
+        : 'tools.wall.statusRegionPick';
+    }
     // ADR-363 Phase 1J — on-entity prompts.
     if (s.placementMode === 'on-entity') {
       if (s.phase === 'awaitingStart') return 'tools.wall.statusPickEntity';
@@ -371,6 +460,15 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   });
   useWallToolEnterListener({ stateRef, commitPolylineFromState });
 
+  // ADR-363 Phase 1K — live ids of accumulated in-region picks (selection highlight).
+  const getRegionPickIds = useCallback(
+    (): string[] => {
+      const ids = stateRef.current.regionPicks.map((p) => p.id).filter((id): id is string => !!id);
+      return [...new Set(ids)];
+    },
+    [],
+  );
+
   return {
     state,
     activate,
@@ -383,6 +481,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     finishPolyline,
     setParamOverrides,
     getStatusText,
+    getRegionPickIds,
     isActive: state.phase !== 'idle',
     isAwaitingStart: state.phase === 'awaitingStart',
     isAwaitingEnd: state.phase === 'awaitingEnd',

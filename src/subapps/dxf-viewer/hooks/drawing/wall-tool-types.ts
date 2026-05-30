@@ -11,6 +11,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { WallEntity, WallKind } from '../../bim/types/wall-types';
 import type { Entity } from '../../types/entities';
 import type { WallSource } from '../../bim/walls/wall-from-entity';
+import type { RegionLineSeg } from '../../bim/walls/wall-in-region';
 import type { SceneUnits, WallParamOverrides } from './wall-completion';
 
 // ─── State machine types ─────────────────────────────────────────────────────
@@ -26,11 +27,14 @@ export type WallToolPhase =
   | 'awaitingSide';
 
 /**
- * ADR-363 Phase 1J — wall placement mode:
+ * Wall placement mode:
  *   - 'freehand'  — classic click-to-click drawing (straight/curved/polyline).
- *   - 'on-entity' — pick an existing 2D entity (line/rectangle), then a side.
+ *   - 'on-entity' — (Phase 1J) pick an existing 2D entity (line/rectangle), then a side.
+ *   - 'in-region' — (Phase 1K) pick 4 lines that close a rectangle (or click inside
+ *                   a region / box-select) → ONE wall filling it (length = long side,
+ *                   thickness = short side).
  */
-export type WallPlacementMode = 'freehand' | 'on-entity';
+export type WallPlacementMode = 'freehand' | 'on-entity' | 'in-region';
 
 export interface WallToolState {
   readonly phase: WallToolPhase;
@@ -41,6 +45,8 @@ export interface WallToolState {
   readonly polylineVertices: readonly Point2D[];
   /** ADR-363 Phase 1J — picked 2D entity source (on-entity mode, awaitingSide). */
   readonly pickedSource: WallSource | null;
+  /** ADR-363 Phase 1K — accumulated line picks (in-region mode, 4-click flow). */
+  readonly regionPicks: readonly RegionLineSeg[];
   readonly overrides: WallParamOverrides;
   readonly error: string | null;
 }
@@ -53,6 +59,7 @@ export const INITIAL_STATE: WallToolState = {
   endPoint: null,
   polylineVertices: [],
   pickedSource: null,
+  regionPicks: [],
   overrides: {},
   error: null,
 };
@@ -106,6 +113,12 @@ export interface UseWallToolResult {
   setParamOverrides(overrides: WallParamOverrides): void;
   /** Status text for status-bar / Dynamic Input prompt (i18n key). */
   getStatusText(): string;
+  /**
+   * ADR-363 Phase 1K — entity ids of the currently accumulated in-region line
+   * picks (for selection highlight). Empty array outside in-region mode or after
+   * a commit clears the picks. Reads the live ref (post-click accurate).
+   */
+  getRegionPickIds(): string[];
   readonly isActive: boolean;
   readonly isAwaitingStart: boolean;
   readonly isAwaitingEnd: boolean;

@@ -15,6 +15,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../../bim/types/bim-base';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { buildWallForLine, buildWallsForClosed } from '../../bim/walls/wall-from-entity';
+import { buildWallFillingRect, type DetectedRectangle } from '../../bim/walls/wall-in-region';
 import { buildDefaultWallParams, buildWallEntity, type SceneUnits } from './wall-completion';
 import { INITIAL_STATE, type WallToolState } from './wall-tool-types';
 
@@ -38,6 +39,13 @@ export interface WallCommitApi {
   commitPolylineFromState(s: WallToolState): boolean;
   /** ADR-363 Phase 1J on-entity commit (pick-side click → wall(s)). */
   commitOnEntity(s: WallToolState, sidePoint: Readonly<Point2D>): boolean;
+  /**
+   * ADR-363 Phase 1K in-region commit: ONE filling wall per detected rectangle
+   * (length = long side, thickness = short side). Multiple rects (box-select).
+   * Clears `regionPicks`, stays in-region (continuous chain). Returns true if
+   * ≥1 wall was built.
+   */
+  commitInRegionRects(s: WallToolState, rects: readonly DetectedRectangle[]): boolean;
 }
 
 /**
@@ -177,10 +185,40 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
     [currentLevelId, onWallCreated, getSceneUnits, setState],
   );
 
+  // ── commit (in-region, ADR-363 Phase 1K) ─────────────────────────────────
+  const commitInRegionRects = useCallback(
+    (s: WallToolState, rects: readonly DetectedRectangle[]): boolean => {
+      const sceneUnits = getSceneUnits?.() ?? 'mm';
+      let built = 0;
+      for (const rect of rects) {
+        const entity = buildWallFillingRect(rect, s.overrides, sceneUnits, currentLevelId);
+        if (entity) {
+          onWallCreated?.(entity);
+          built++;
+        }
+      }
+      if (built === 0) {
+        // Validator rejected every rect (e.g. short side > MAX_WALL_THICKNESS_MM).
+        setState({ ...s, regionPicks: [], error: 'wall.validation.hardErrors.thicknessExceedsMax' });
+        return false;
+      }
+      setState({
+        ...INITIAL_STATE,
+        kind: s.kind,
+        placementMode: s.placementMode,
+        overrides: s.overrides,
+        phase: 'awaitingStart',
+      });
+      return true;
+    },
+    [currentLevelId, onWallCreated, getSceneUnits, setState],
+  );
+
   return {
     commitStraightFromState,
     commitCurvedFromState,
     commitPolylineFromState,
     commitOnEntity,
+    commitInRegionRects,
   };
 }

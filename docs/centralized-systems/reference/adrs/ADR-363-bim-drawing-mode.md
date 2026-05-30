@@ -1472,6 +1472,41 @@ Closes the Phase 1F out-of-scope item. In the straight-wall 3-click flow (`await
 
 **Phase 1J 3D fix #3 — τοίχος με κούφωμα γινόταν ορθογώνιος (χωρίς miter) στο 3D (Giorgio 3D report 2026-05-30).** Στην κάτοψη ο τοίχος-με-κούφωμα έδειχνε σωστά miter, αλλά στο 3D οι άκρες του γίνονταν τετράγωνες και δεν ένωναν με τους γειτονικούς. Root cause (pre-existing, ανεξάρτητο του 2D feature — αφορά **κάθε** mitered τοίχο με κούφωμα): ο 3D converter έχει 2 paths — χωρίς κούφωμα `buildWallShape(wall.geometry.outerEdge, innerEdge)` (mitered footprint, σωστό)· **με κούφωμα** `buildWallMeshWithOpenings` (`wall-opening-extrude.ts`) χτίζει per-segment raw ορθογώνια από `getWallAxisVertices` (μόνο bevel, **αγνοεί `startMiter`/`endMiter`** που ζουν μόνο στο `wall.geometry.outerEdge/innerEdge`). **Fix: `buildStraightWallWithOpenings`** (νέο, στο `BimToThreeConverter.ts`) — για straight τοίχους σπάει σε **κατακόρυφα solid κομμάτια** (full-height jambs μεταξύ/γύρω από κουφώματα + sill floor→ποδιά + header πρέκι→ταβάνι), κάθε κομμάτι = outer/inner **mitered** footprint quad (interpolated κατά arc fraction) extruded κατακόρυφα μέσω των κοινών `buildShape`+`extrudeAndRotate` (ίδια σύμβαση με το solid path). Οι 2 άκρες χρησιμοποιούν τα ΑΚΡΙΒΗ mitered corner points → τα miter επιβιώνουν. Curved/polyline κρατούν το per-segment path (miters N/A σε multi-segment άκρες). 2 MOD (`BimToThreeConverter.ts`, +import `mmToSceneUnits`) + 4 tests (`wall-opening-extrude.test.ts`, incl. miter-corner regression). 10/10 PASS, tsc clean. 🔴 3D browser verify εκκρεμεί (δεν επαληθεύεται mesh εδώ).
 
+**Phase 1K — «Τοίχος σε περιοχή (4 γραμμές)» (Wall in region)** *(✅ IMPLEMENTED 2026-05-30 — modes A+B)*
+
+**Motivation (Giorgio 2026-05-30).** Ο χρήστης διαλέγει **4 ανεξάρτητες γραμμές** που ενώνονται και σχηματίζουν ορθογώνιο/τετράγωνο, και από το dropdown «Δομικά Στοιχεία» διαλέγει νέα εντολή «Τοίχος σε περιοχή (4 γραμμές)»: μέσα στην περιοχή τοποθετείται **ΕΝΑΣ γεμάτος τοίχος** BIM με **μήκος = μεγάλη πλευρά, πάχος = μικρή πλευρά** (γεμίζει το ορθογώνιο). Command-first ροή (CAD prototype: πρώτα η εντολή, μετά τα αντικείμενα — επιβεβαίωση Giorgio).
+
+**Σημασιολογία (command-first, υβριδική επιλογή).**
+- **Mode A — 4 κλικ μία-μία:** κλικ σε κάθε γραμμή· μόλις 4 picks κλείνουν ορθογώνιο → τοποθέτηση. Συνεχόμενη λειτουργία (επόμενο ορθογώνιο)· ESC καθαρίζει τα picks (όχι deactivate).
+- **Mode B — 1 κλικ μέσα στην περιοχή:** κλικ σε κενό → εύρεση του **ελάχιστου** ορθογωνίου (από όλες τις scene γραμμές) που περικλείει το σημείο → τοποθέτηση.
+- **Mode C — box-select:** 🔴 **DEFERRED** — χρειάζεται ξεχωριστό UX (το marquee του viewer είναι two-click, όχι drag, και είναι select-gated· συγκρούεται με το single-click pick του mode A).
+
+**Πυρήνας SSoT (corner-graph, στραμμένα ορθογώνια OK).** Νέο `bim/walls/wall-in-region.ts`:
+- `findRectanglesFromSegments(segments, tol)` — μερτζάρει κοντινά άκρα σε κόμβους, βρίσκει 4-κύκλους με 3 ορθές γωνίες + ίσες απέναντι πλευρές (dedup με κανονικό κλειδί). Δουλεύει και για στραμμένα ορθογώνια.
+- `findEnclosingRectangle(segments, point, tol)` — min-area ορθογώνιο που περιέχει το σημείο (`isPointInPolygon`).
+- `buildWallFillingRect(rect, …)` — άξονας στη μεσοκάθετο των ΜΕΓΑΛΩΝ πλευρών (μήκος = μεγάλη), `thickness override` = μικρή πλευρά (scene→mm). Reuse `buildDefaultWallParams`/`buildWallEntity`.
+- `extractLineSegments(entities)` (LINE + ακμές POLYLINE/LWPOLYLINE) + `pickSegmentAt(point, segs, tol)` — input adapters.
+
+**Design — ένα tool, τρίτο placement mode.** Νέο `ToolType 'wall-in-region'`· το ΙΔΙΟ `useWallTool` αποκτά `placementMode: 'in-region'` (μηδέν διπλό tool). Click routing περνά **raw** worldPoint. Τα accumulated picks φωτίζονται ως selection highlight μέσω νέου `getRegionPickIds()` (ref-backed, post-click accurate)· commit καθαρίζει τα picks → selection clears.
+
+**Files (Phase 1K): 1 NEW geometry + 1 NEW test + 9 MOD + i18n.**
+- [x] **NEW** `bim/walls/wall-in-region.ts` — pure SSoT (detection + builder + adapters).
+- [x] `hooks/drawing/wall-tool-types.ts` — `'in-region'` mode, `regionPicks` state, `getRegionPickIds()` result.
+- [x] `hooks/drawing/useWallTool.ts` — `onRegionClick` (hit→accumulate→commit-on-close / miss→enclosing), in-region ESC clear, status keys, preview reset, `getRegionPickIds`.
+- [x] `hooks/drawing/use-wall-commit.ts` — `commitInRegionRects` (ένας γεμάτος τοίχος / ορθογώνιο· validator-abort).
+- [x] `hooks/tools/useSpecialTools.ts` — lifecycle + `setPlacementMode('in-region')` για `'wall-in-region'`.
+- [x] `hooks/canvas/useCanvasClickHandler.ts` (PRIORITY 4.65, raw worldPoint + highlight) + `canvas-click-types.ts` (`getRegionPickIds`).
+- [x] `ui/toolbar/types.ts` + `systems/tools/ToolStateManager.ts` (`'wall-in-region'`, drawing, continuous).
+- [x] `ui/ribbon/data/home-tab-draw.ts` (variant `draw.bim.wallInRegion`) + `app/ribbon-contextual-config.ts` (shares wall contextual tab).
+- [x] `components/dxf-layout/CanvasSection.tsx` — `entityPickingActive` περιλαμβάνει `'wall-in-region'` (hover highlight γραμμών· ADR-040 micro-leaf — one-tool-id σε υπάρχον boolean, μηδέν subscription change).
+- [x] i18n `el`/`en` `dxf-viewer-shell.json` — `ribbon.commands.bim.wallInRegion.{label,tooltip}` + `tools.wall.{statusRegionPick,statusRegionMore}`.
+- [x] Tests: **NEW** `bim/walls/__tests__/wall-in-region.test.ts` (12/12). tsc clean.
+
+**Out of scope / limitations.**
+- **Πάχος-cap:** ο `wall-validator` απορρίπτει `thickness > MAX_WALL_THICKNESS_MM` (2000mm). Αν η **μικρή** πλευρά > 2m, ο γεμάτος τοίχος είναι μη-φυσικός → δεν δημιουργείται (canonical χρήση = footprint τοίχου, λεπτό ορθογώνιο· για «δωμάτιο» → Phase 1J «Τοίχος πάνω σε οντότητα» = 4 περιμετρικοί).
+- **Mode C (box-select) deferred.**
+- 🔴 browser verify εκκρεμεί (mode A 4-κλικ, mode B κλικ-μέσα, ESC clear, highlight).
+
 ### Phase 2 — Opening *(✅ CORE IMPLEMENTED 2026-05-18)*
 
 **Files added (Phase 2 core):**

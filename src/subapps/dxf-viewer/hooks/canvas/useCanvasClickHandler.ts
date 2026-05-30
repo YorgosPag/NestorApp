@@ -214,6 +214,15 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // Phase 1J — 'wall-on-entity' shares the same tool; it hit-tests existing 2D
     // geometry so it must receive the RAW worldPoint (ORTHO/POLAR must NOT shift
     // the pick), whereas freehand 'wall' keeps the F8/F10-constrained bimPoint.
+    // PRIORITY 4.65: ADR-363 Phase 1K — Wall-in-region (pick 4 lines / click
+    // inside / box). Uses the RAW worldPoint (hit-tests existing 2D geometry, so
+    // ORTHO/POLAR must NOT shift the pick). Accumulated line picks are reflected
+    // as a selection highlight; a commit clears the picks → selection clears.
+    if (activeTool === 'wall-in-region' && wallTool?.isActive) {
+      wallTool.onCanvasClick(worldPoint);
+      universalSelection.replaceEntitySelection(wallTool.getRegionPickIds?.() ?? []);
+      return;
+    }
     if ((activeTool === 'wall' || activeTool === 'wall-on-entity') && wallTool?.isActive) {
       if (activeTool === 'wall-on-entity') {
         // Click 1 (awaitingStart) picks the source entity; select the hovered

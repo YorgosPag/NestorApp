@@ -331,15 +331,16 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   // ADR-363 Phase 1J — both the freehand wall tool ('wall') and the on-entity
   // variant ('wall-on-entity') share ONE useWallTool instance; lifecycle covers
   // both ids and the placement mode is driven by the active tool id.
-  useToolLifecycle(
-    activeTool === 'wall' || activeTool === 'wall-on-entity',
-    wallTool.activate,
-    wallTool.deactivate,
-  );
+  // ADR-363 Phase 1J/1K — the freehand wall ('wall'), the on-entity variant
+  // ('wall-on-entity') and the in-region variant ('wall-in-region') all share
+  // ONE useWallTool instance; the placement mode is driven by the active tool id.
+  const isWallTool =
+    activeTool === 'wall' || activeTool === 'wall-on-entity' || activeTool === 'wall-in-region';
+  useToolLifecycle(isWallTool, wallTool.activate, wallTool.deactivate);
   useEffect(() => {
-    if (activeTool === 'wall' || activeTool === 'wall-on-entity') {
-      wallTool.setPlacementMode(activeTool === 'wall-on-entity' ? 'on-entity' : 'freehand');
-    }
+    if (activeTool === 'wall') wallTool.setPlacementMode('freehand');
+    else if (activeTool === 'wall-on-entity') wallTool.setPlacementMode('on-entity');
+    else if (activeTool === 'wall-in-region') wallTool.setPlacementMode('in-region');
   }, [activeTool, wallTool.setPlacementMode]);
   // ADR-363 Phase 2 — OPENING TOOL (resolvers extracted: useSpecialTools-opening.ts)
   const openingTool = useOpeningTool(buildOpeningResolvers(levelManager));

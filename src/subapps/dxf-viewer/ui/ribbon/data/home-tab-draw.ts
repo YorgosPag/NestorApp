@@ -285,6 +285,14 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               icon: 'bim-wall',
               commandKey: 'wall-on-entity',
             },
+            // ADR-363 Phase 1K — Wall in region (pick 4 lines / click inside / box).
+            {
+              id: 'draw.bim.wallInRegion',
+              labelKey: 'ribbon.commands.bim.wallInRegion.label',
+              tooltipKey: 'ribbon.commands.bim.wallInRegion.tooltip',
+              icon: 'bim-wall',
+              commandKey: 'wall-in-region',
+            },
             {
               id: 'draw.bim.opening',
               labelKey: 'ribbon.commands.bim.opening.label',

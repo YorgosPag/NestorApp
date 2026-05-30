@@ -85,7 +85,9 @@ export function useActiveContextualTrigger({
     const fromSelection = entity ? resolveContextualTrigger(entity) : null;
     if (fromSelection) return fromSelection;
     if (activeTool === 'stair') return STAIR_CONTEXTUAL_TRIGGER;
-    if (activeTool === 'wall') return WALL_CONTEXTUAL_TRIGGER;
+    // ADR-363 Phase 1K — in-region shares the wall contextual tab (category/height
+    // feed the filling wall; thickness is geometry-driven from the rectangle).
+    if (activeTool === 'wall' || activeTool === 'wall-in-region') return WALL_CONTEXTUAL_TRIGGER;
     if (activeTool === 'opening') return OPENING_CONTEXTUAL_TRIGGER;
     if (activeTool === 'slab') return SLAB_CONTEXTUAL_TRIGGER;
     if (activeTool === 'column') return COLUMN_CONTEXTUAL_TRIGGER;

@@ -108,6 +108,8 @@ export type ToolType =
   | 'wall'
   // ADR-363 Phase 1J: BIM Wall on existing 2D entity (pick line/rectangle → wall(s))
   | 'wall-on-entity'
+  // ADR-363 Phase 1K: BIM Wall in region (pick 4 lines / click inside / box → one filling wall)
+  | 'wall-in-region'
   // ADR-363 Phase 5.6: BIM Wall Split tool (Revit Split Element pattern)
   | 'wall-split'
   // ADR-363 Phase 2: BIM Opening drawing tool (5 kinds — door/window/sliding/french/fixed)

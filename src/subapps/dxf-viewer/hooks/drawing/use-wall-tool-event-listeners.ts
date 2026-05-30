@@ -16,7 +16,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { DynamicSubmitDetail } from '../../systems/dynamic-input/utils/events';
 import type { WallParamOverrides } from './wall-completion';
-import type { WallToolState } from './useWallTool';
+import type { WallToolState } from './wall-tool-types';
 
 export interface WallToolListenerCtx {
   readonly stateRef: MutableRefObject<WallToolState>;

@@ -395,7 +395,9 @@
       "statusCurveControl": "Pick curve control point",
       "statusPolyNext": "Pick next vertex (Enter to finish)",
       "statusPickEntity": "Pick a line or rectangle to place a wall",
-      "statusPickSide": "Click a side: line → wall extends toward it; rectangle → inside = interior walls, outside = exterior"
+      "statusPickSide": "Click a side: line → wall extends toward it; rectangle → inside = interior walls, outside = exterior",
+      "statusRegionPick": "Pick 4 lines that form a rectangle (or click inside the region)",
+      "statusRegionMore": "Pick more lines until the rectangle closes (ESC to cancel)"
     },
     "opening": {
       "statusHostWall": "Pick a host wall to place the opening",
@@ -848,6 +850,10 @@
         "wallOnEntity": {
           "label": "Wall on 2D entity",
           "tooltip": "Pick a line or rectangle and place wall(s) on it"
+        },
+        "wallInRegion": {
+          "label": "Wall in region (4 lines)",
+          "tooltip": "Pick 4 lines that form a rectangle (or click inside the region) → one filling wall"
         },
         "opening": {
           "label": "Opening",

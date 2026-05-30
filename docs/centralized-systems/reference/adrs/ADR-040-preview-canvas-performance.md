@@ -71,6 +71,14 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-30 — ADR-363 Phase 1K — `wall-in-region` hover affordance (compliance note)
+
+**Status**: COMPLIANT — no ADR-040 invariants broken.
+
+Single-token addition so the «Τοίχος σε περιοχή (4 γραμμές)» tool highlights the hovered
+line while the user picks the 4 sides:
+- `CanvasSection.tsx` — `entityPickingActive` prop expression gains `|| activeTool === 'wall-in-region'`. Existing pass-through boolean (flips the hover hit-test on in `mouse-handler-move`); **no new `useSyncExternalStore`** on the orchestrator (CHECK 6C safe). No cache-key / subscription / micro-leaf structural change. Detail in ADR-363 Phase 1K changelog.
+
 ### 2026-05-30 — ADR-363 Phase 1J — `wall-on-entity` hover/grip affordance (compliance note)
 
 **Status**: COMPLIANT — no ADR-040 invariants broken.
