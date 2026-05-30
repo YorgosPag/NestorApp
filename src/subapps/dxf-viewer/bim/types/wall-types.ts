@@ -77,6 +77,18 @@ export interface WallParams {
   readonly startBevel?: number;
   /** mm. End endpoint trim. */
   readonly endBevel?: number;
+  /**
+   * ADR-363 Phase 1D-C — Geometric miter join at the **start** endpoint.
+   * When present, the outerEdge[0] and innerEdge[0] are replaced with these
+   * exact canvas-world-unit points (computed by `computeWallTrims` for corner
+   * junctions). Supersedes `startBevel` when both are set.
+   */
+  readonly startMiter?: { readonly outer: { readonly x: number; readonly y: number }; readonly inner: { readonly x: number; readonly y: number } };
+  /**
+   * ADR-363 Phase 1D-C — Geometric miter join at the **end** endpoint.
+   * Same semantics as `startMiter` but for `outerEdge[last]`/`innerEdge[last]`.
+   */
+  readonly endMiter?: { readonly outer: { readonly x: number; readonly y: number }; readonly inner: { readonly x: number; readonly y: number } };
   /** Defined when `kind === 'polyline'`. mm. */
   readonly polylineVertices?: readonly Point3D[];
   /** Defined when `kind === 'curved'`. mm. Quadratic Bezier control point. */

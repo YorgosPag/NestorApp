@@ -1,26 +1,36 @@
 /**
- * ADR-363 Phase 1D-B — `wall-trims` pure geometry tests.
+ * ADR-363 Phase 1D-B/C — `wall-trims` pure geometry tests.
  *
  * Coverage:
  *   computeWallTrims():
- *     1. 90° corner — both walls trimmed by halfThickness
- *     2. Oblique corner (45°) — bevel scales as 1/sin(45°)
- *     3. T-junction — only stem wall trimmed
- *     4. Parallel walls — no intersection, no trim
- *     5. Far-apart walls — intersection outside JOIN_THRESHOLD, no trim
- *     6. Nearly-parallel angle (<15°) — skipped
- *     7. Empty / single wall — no crash, empty map
- *     8. Corner on end+start (A.end meets B.start) — correct endpoint chosen
+ *     Phase 1D-C (corner miter):
+ *       3. 90° corner — endMiter computed, outer/inner correct
+ *       4. 90° corner — startMiter computed for both
+ *       5. 45° oblique corner — miter points computed (not bevel)
+ *      11. Very short wall (overflow guard) → falls back to axis-bevel
+ *     Phase 1D-B (T-junction bevel):
+ *       6. T-junction — only stem wall trimmed (bevel)
+ *       7. T-junction reversed
+ *       8. Parallel — no trim
+ *       9. Far-apart — no trim
+ *      10. Nearly-parallel — no trim
  *
  *   applyTrimPatches():
- *     9. Patches wall params + recomputes geometry
- *    10. Non-wall entities pass through unchanged
- *    11. Empty trim map → entities array cloned unchanged
+ *     Phase 1D-C:
+ *      20. miter patch applied → edges match miter points
+ *     Phase 1D-B:
+ *      12. bevel patch applied → geometry.length decreases
+ *      13. non-wall entities pass through
+ *      14. empty trim map
+ *      15. wall not in trim map unchanged
  *
  *   wall-geometry bevel integration:
- *    12. startBevel shortens axis at start
- *    13. endBevel shortens axis at end
- *    14. Both bevels shorten both ends
+ *    16-19. startBevel/endBevel integration (unchanged)
+ *
+ *   computeWallTrims end-to-end miter:
+ *    21. 90° corner two ends → both walls have endMiter
+ *    22. 90° corner outer point matches (3100,100) for the standard test config
+ *    23. Corner + T-junction in one scene — corner gets miter, stem gets bevel
  */
 
 import { computeWallTrims, applyTrimPatches } from '../wall-trims';
@@ -58,8 +68,8 @@ describe('computeWallTrims', () => {
     expect(computeWallTrims([w])).toEqual(new Map());
   });
 
-  it('3. 90° corner — A.end meets B.start → both walls trimmed by ~halfThickness', () => {
-    // A horizontal 3000mm, B vertical 3000mm, meeting at (3000, 0)
+  it('3. 90° corner — A.end meets B.end → both walls get endMiter (Phase 1D-C)', () => {
+    // A horizontal 3000mm, B vertical 3000mm, both ending at (3000, 0)
     const wallA = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'A');
     const wallB = makeWall({ x: 3000, y: 3000 }, { x: 3000, y: 0 }, 200, 'B');
 
@@ -71,14 +81,20 @@ describe('computeWallTrims', () => {
     const trimA = trims.get(wallA.id)!;
     const trimB = trims.get(wallB.id)!;
 
-    // At 90°: sin=1, bevel = halfThickness / 1 = 100mm
-    expect(trimA.endBevel).toBeCloseTo(100, 0);
-    expect(trimB.endBevel).toBeCloseTo(100, 0);
-    expect(trimA.startBevel).toBeUndefined();
-    expect(trimB.startBevel).toBeUndefined();
+    // Corner → geometric miter, NOT axis-bevel
+    expect(trimA.endMiter).toBeDefined();
+    expect(trimB.endMiter).toBeDefined();
+    expect(trimA.endBevel).toBeUndefined();
+    expect(trimB.endBevel).toBeUndefined();
+    expect(trimA.startMiter).toBeUndefined();
+    expect(trimB.startMiter).toBeUndefined();
+
+    // Both walls share the same miter corner points
+    expect(trimA.endMiter!.outer.x).toBeCloseTo(trimB.endMiter!.outer.x, 1);
+    expect(trimA.endMiter!.outer.y).toBeCloseTo(trimB.endMiter!.outer.y, 1);
   });
 
-  it('4. 90° corner — A.start meets B.start → startBevels set for both', () => {
+  it('4. 90° corner — A.start meets B.start → both walls get startMiter', () => {
     // A goes right from (1000,0), B goes up from (1000,0)
     const wallA = makeWall({ x: 1000, y: 0 }, { x: 4000, y: 0 }, 200, 'A');
     const wallB = makeWall({ x: 1000, y: 0 }, { x: 1000, y: 3000 }, 200, 'B');
@@ -87,24 +103,30 @@ describe('computeWallTrims', () => {
 
     const trimA = trims.get(wallA.id)!;
     const trimB = trims.get(wallB.id)!;
-    expect(trimA.startBevel).toBeCloseTo(100, 0);
-    expect(trimB.startBevel).toBeCloseTo(100, 0);
-    expect(trimA.endBevel).toBeUndefined();
-    expect(trimB.endBevel).toBeUndefined();
+    expect(trimA.startMiter).toBeDefined();
+    expect(trimB.startMiter).toBeDefined();
+    expect(trimA.endMiter).toBeUndefined();
+    expect(trimB.endMiter).toBeUndefined();
   });
 
-  it('5. 45° oblique corner — bevel scales by 1/sin(45°) ≈ √2', () => {
-    // A horizontal, B at 45°, meeting at origin (both go away from origin)
+  it('5. 45° oblique corner — miter points computed (not bevel)', () => {
+    // A horizontal, B at 45°, both starting at origin
     const wallA = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'A');
-    const wallB = makeWall({ x: 0, y: 0 }, { x: 2121, y: 2121 }, 200, 'B'); // 45° direction
+    const wallB = makeWall({ x: 0, y: 0 }, { x: 2121, y: 2121 }, 200, 'B');
 
     const trims = computeWallTrims([wallA, wallB]);
     const trimA = trims.get(wallA.id);
     const trimB = trims.get(wallB.id);
 
-    // halfThickness=100, sin(45°)=√2/2≈0.707 → bevel ≈ 141mm
-    expect(trimA?.startBevel ?? trimA?.endBevel).toBeCloseTo(141, -1); // within 10mm
-    expect(trimB?.startBevel ?? trimB?.endBevel).toBeCloseTo(141, -1);
+    // Phase 1D-C: long walls → miter (not bevel)
+    expect(trimA?.startMiter).toBeDefined();
+    expect(trimB?.startMiter).toBeDefined();
+    expect(trimA?.startBevel).toBeUndefined();
+    expect(trimB?.startBevel).toBeUndefined();
+
+    // Both walls share same miter point
+    expect(trimA!.startMiter!.outer.x).toBeCloseTo(trimB!.startMiter!.outer.x, 1);
+    expect(trimA!.startMiter!.outer.y).toBeCloseTo(trimB!.startMiter!.outer.y, 1);
   });
 
   it('6. T-junction — A continues, B perpendicular stem hits A.body → only B trimmed', () => {
@@ -163,14 +185,17 @@ describe('computeWallTrims', () => {
     expect(trims.size).toBe(0);
   });
 
-  it('11. Max bevel clamped to MAX_BEVEL_FRACTION of axis length for very thin long walls', () => {
-    // Very short wall B (100mm) at 90° → bevel cannot exceed 40mm (40% of 100)
+  it('11. Very short wall (overflow guard) → falls back to axis-bevel, not miter', () => {
+    // Wall B only 100mm tall, 200mm thick — miter would extend 100% of lenB → overflow
+    // → Phase 1D-C overflow guard triggers → falls back to Phase 1D-B axis-bevel
     const wallA = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'A');
     const wallB = makeWall({ x: 3000, y: 100 }, { x: 3000, y: 0 }, 200, 'B');
 
     const trims = computeWallTrims([wallA, wallB]);
     const trimB = trims.get(wallB.id);
 
+    // Falls back to bevel (not miter)
+    expect(trimB?.endMiter).toBeUndefined();
     // halfThicknessA = 100, lenB = 100, MAX_BEVEL_FRACTION=0.40 → max 40mm
     if (trimB?.endBevel !== undefined) {
       expect(trimB.endBevel).toBeLessThanOrEqual(40 + 0.1);
@@ -181,7 +206,7 @@ describe('computeWallTrims', () => {
 // ─── applyTrimPatches ─────────────────────────────────────────────────────────
 
 describe('applyTrimPatches', () => {
-  it('12. patches wall params and recomputes geometry', () => {
+  it('12. patches wall params (bevel) and recomputes geometry', () => {
     const wall = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200);
     const trims = new Map([[wall.id, { endBevel: 100 }]]);
 
@@ -191,6 +216,27 @@ describe('applyTrimPatches', () => {
     expect(patched.params.endBevel).toBe(100);
     // Geometry should reflect the shorter axis
     expect(patched.geometry.length).toBeLessThan(wall.geometry.length);
+  });
+
+  it('20. applyTrimPatches with endMiter → outer/inner edge endpoints replaced', () => {
+    // Horizontal wall (0,0)→(3000,0), thickness 200 (half=100), flip=false
+    // endMiter = { outer: {x:3100,y:100}, inner: {x:2900,y:-100} }
+    const wall = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200);
+    const miter = { outer: { x: 3100, y: 100 }, inner: { x: 2900, y: -100 } };
+    const trims = new Map([[wall.id, { endMiter: miter }]]);
+
+    const result = applyTrimPatches([wall], trims);
+    const patched = result[0] as WallEntity;
+
+    expect(patched.params.endMiter).toEqual(miter);
+
+    // The last point of outerEdge should be the miter outer point
+    const outerPts = patched.geometry.outerEdge.points;
+    const innerPts = patched.geometry.innerEdge.points;
+    expect(outerPts[outerPts.length - 1].x).toBeCloseTo(3100, 1);
+    expect(outerPts[outerPts.length - 1].y).toBeCloseTo(100, 1);
+    expect(innerPts[innerPts.length - 1].x).toBeCloseTo(2900, 1);
+    expect(innerPts[innerPts.length - 1].y).toBeCloseTo(-100, 1);
   });
 
   it('13. non-wall entities pass through unchanged', () => {
@@ -255,3 +301,68 @@ describe('wall-geometry bevel integration (Phase 1D-B)', () => {
     expect(geoZero.length).toBeCloseTo(geoNo.length, 5);
   });
 });
+
+// ─── Phase 1D-C: miter geometry end-to-end ───────────────────────────────────
+
+describe('wall-geometry miter integration (Phase 1D-C)', () => {
+  it('21. endMiter replaces edge endpoints — outer at (3100,100), inner at (2900,-100)', () => {
+    // Horizontal wall (0,0)→(3000,0), thickness 200, flip=false
+    // Standard 90° corner config: outer north (+y), inner south (−y)
+    const params: WallParams = {
+      ...buildDefaultWallParams({ x: 0, y: 0 }, { x: 3000, y: 0 }),
+      thickness: 200,
+      dna: undefined,
+      endMiter: { outer: { x: 3100, y: 100 }, inner: { x: 2900, y: -100 } },
+    };
+    const geo = computeWallGeometry(params, 'straight');
+    const outer = geo.outerEdge.points;
+    const inner = geo.innerEdge.points;
+
+    expect(outer[outer.length - 1].x).toBeCloseTo(3100, 1);
+    expect(outer[outer.length - 1].y).toBeCloseTo(100, 1);
+    expect(inner[inner.length - 1].x).toBeCloseTo(2900, 1);
+    expect(inner[inner.length - 1].y).toBeCloseTo(-100, 1);
+
+    // Start endpoints unchanged (no startMiter)
+    expect(outer[0].y).toBeCloseTo(100, 1);
+    expect(inner[0].y).toBeCloseTo(-100, 1);
+  });
+
+  it('22. computeWallTrims 90° corner: shared miter outer=(3100,100), inner=(2900,-100)', () => {
+    // A: (0,0)→(3000,0), B: (3000,3000)→(3000,0), both end at (3000,0)
+    const wallA = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'A');
+    const wallB = makeWall({ x: 3000, y: 3000 }, { x: 3000, y: 0 }, 200, 'B');
+
+    const trims = computeWallTrims([wallA, wallB]);
+    const miterA = trims.get(wallA.id)!.endMiter!;
+
+    // Outer miter = intersection of A's outer (y=100, going east) and B's outer (x=3100, going south)
+    expect(miterA.outer.x).toBeCloseTo(3100, 1);
+    expect(miterA.outer.y).toBeCloseTo(100, 1);
+    // Inner miter = intersection of A's inner (y=-100) and B's inner (x=2900)
+    expect(miterA.inner.x).toBeCloseTo(2900, 1);
+    expect(miterA.inner.y).toBeCloseTo(-100, 1);
+  });
+
+  it('23. scene with corner + T-junction: corner gets miter, T-stem gets bevel', () => {
+    // A: long horizontal 6000mm (body of T + corner)
+    // B: short vertical 3000mm ending at A's midpoint → T-junction
+    // C: 3000mm vertical ending at A's right end → corner junction
+    const wallA = makeWall({ x: 0, y: 0 }, { x: 6000, y: 0 }, 200, 'A');
+    const wallB = makeWall({ x: 3000, y: 2000 }, { x: 3000, y: 0 }, 200, 'B'); // T-junction
+    const wallC = makeWall({ x: 6000, y: 3000 }, { x: 6000, y: 0 }, 200, 'C'); // corner
+
+    const trims = computeWallTrims([wallA, wallB, wallC]);
+
+    // B is T-junction stem → bevel, not miter
+    const trimB = trims.get(wallB.id)!;
+    expect(trimB.endBevel).toBeDefined();
+    expect(trimB.endMiter).toBeUndefined();
+
+    // C meets A's end → corner → miter
+    const trimC = trims.get(wallC.id)!;
+    expect(trimC.endMiter).toBeDefined();
+    expect(trimC.endBevel).toBeUndefined();
+  });
+});
+

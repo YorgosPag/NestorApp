@@ -86,7 +86,30 @@ export function computeWallGeometry(
 
   const { outerEdge, innerEdge } = offsetAxisToEdges(vertices, halfThicknessCanvas, sign);
 
-  const bbox = computeBbox(vertices, outerEdge.points, innerEdge.points, params.height, params.baseOffset ?? 0);
+  // ADR-363 Phase 1D-C: override edge endpoints with true geometric miter points when
+  // computed by `computeWallTrims` for corner junctions. startMiter/endMiter supersede
+  // the axis-bevel approach (they are exact face intersections, not approximations).
+  // Only straight/polyline kinds are relevant — the points array length is preserved.
+  const outerPts = [...outerEdge.points];
+  const innerPts = [...innerEdge.points];
+  let edgesModified = false;
+  if (params.startMiter && outerPts.length > 0) {
+    const z = outerPts[0].z;
+    outerPts[0] = { x: params.startMiter.outer.x, y: params.startMiter.outer.y, z };
+    innerPts[0] = { x: params.startMiter.inner.x, y: params.startMiter.inner.y, z };
+    edgesModified = true;
+  }
+  if (params.endMiter && outerPts.length > 0) {
+    const last = outerPts.length - 1;
+    const z = outerPts[last].z;
+    outerPts[last] = { x: params.endMiter.outer.x, y: params.endMiter.outer.y, z };
+    innerPts[last] = { x: params.endMiter.inner.x, y: params.endMiter.inner.y, z };
+    edgesModified = true;
+  }
+  const finalOuter: Polyline3D = edgesModified ? { points: outerPts, closed: false } : outerEdge;
+  const finalInner: Polyline3D = edgesModified ? { points: innerPts, closed: false } : innerEdge;
+
+  const bbox = computeBbox(vertices, finalOuter.points, finalInner.points, params.height, params.baseOffset ?? 0);
 
   // lengthCanvas is in canvas world units; convert to meters for BOQ.
   const lengthCanvas = computePolylineLengthMm(vertices);
@@ -103,8 +126,8 @@ export function computeWallGeometry(
 
   return {
     axisPolyline,
-    outerEdge,
-    innerEdge,
+    outerEdge: finalOuter,
+    innerEdge: finalInner,
     bbox,
     length: lengthM,
     area,

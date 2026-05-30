@@ -25,6 +25,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
+import { recomputeWallTrimsAfterDelete } from '../../bim/walls/add-wall-to-scene';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
@@ -388,6 +389,10 @@ export function useWallPersistence(
     if (scene) {
       const nextEntities = scene.entities.filter((e) => e.id !== wallId);
       levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
+      // Recompute neighbour miter/bevel patches now that this wall is gone, and
+      // persist the updated params so Firestore stays in sync. Symmetric to the
+      // addWallToScene re-trim pass that runs on insertion.
+      recomputeWallTrimsAfterDelete(levelManager);
     }
 
     dirtyIdsRef.current.delete(wallId);

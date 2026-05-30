@@ -17,8 +17,9 @@
 import { EventBus } from '../../systems/events/EventBus';
 import type { SceneModel } from '../../types/scene';
 import { isWallEntity } from '../../types/entities';
-import type { WallEntity } from '../types/wall-types';
+import type { WallEntity, WallParams } from '../types/wall-types';
 import { computeWallTrims, applyTrimPatches } from './wall-trims';
+import { computeWallGeometry } from '../geometry/wall-geometry';
 
 /**
  * Minimal level-scene accessor — structurally satisfied by both
@@ -51,4 +52,86 @@ export function addWallToScene(wallEntity: WallEntity, accessor: WallSceneAccess
   const patchedNewWall =
     (patchedEntities.find((e) => e.id === wallEntity.id) as WallEntity | undefined) ?? wallEntity;
   EventBus.emit('drawing:entity-created', { entity: patchedNewWall, tool: 'wall' });
+
+  // Persist miter/bevel patches for EXISTING neighbour walls updated by
+  // computeWallTrims. Only the new wall gets `drawing:entity-created` above;
+  // existing walls' `useWallPersistence` auto-save only fires for the selected
+  // wall, so their updated miter params would be lost on the next Firestore
+  // snapshot. Re-emit for each patched neighbour — `persist` inside the hook
+  // routes to `updateWall` (not `saveWall`) because their IDs are already in
+  // `lastSavedParamsRef`.
+  for (const entity of patchedEntities) {
+    if (entity.id === wallEntity.id) continue;          // new wall already handled
+    if (!isWallEntity(entity)) continue;
+    if (!trims.has(entity.id)) continue;               // no patch → nothing changed
+    EventBus.emit('drawing:entity-created', { entity, tool: 'wall' });
+  }
+}
+
+/**
+ * Recompute miter / bevel patches for all remaining walls after one wall is
+ * deleted. Symmetric to `addWallToScene`: clears stale trim data from walls
+ * that were previously joined to the deleted wall, then emits
+ * `drawing:entity-created` for each wall whose params changed so
+ * `useWallPersistence` saves the corrected state to Firestore.
+ *
+ * Must be called AFTER the deleted wall has already been removed from the scene
+ * (i.e. after `setLevelScene` with the filtered entity list).
+ *
+ * @see hooks/data/useWallPersistence.ts — deleteWall caller
+ */
+export function recomputeWallTrimsAfterDelete(accessor: WallSceneAccessor): void {
+  const levelId = accessor.currentLevelId;
+  if (!levelId) return;
+  const scene = accessor.getLevelScene(levelId);
+  if (!scene) return;
+
+  // Snapshot of trim-field values BEFORE recompute so we can detect changes.
+  const prevTrimById = new Map<string, Pick<WallParams, 'startMiter' | 'endMiter' | 'startBevel' | 'endBevel'>>();
+  for (const e of scene.entities) {
+    if (!isWallEntity(e)) continue;
+    prevTrimById.set(e.id, {
+      startMiter: e.params.startMiter,
+      endMiter:   e.params.endMiter,
+      startBevel: e.params.startBevel,
+      endBevel:   e.params.endBevel,
+    });
+  }
+
+  // Strip all existing trim data from every remaining wall before fresh recompute.
+  // This clears miter patches that referred to the now-deleted wall's endpoints.
+  const strippedEntities = scene.entities.map((e) => {
+    if (!isWallEntity(e)) return e;
+    const prev = prevTrimById.get(e.id);
+    if (!prev?.startMiter && !prev?.endMiter && !prev?.startBevel && !prev?.endBevel) return e;
+    // Destructure out the four trim fields; rest is a valid subset of WallParams.
+    const { startMiter: _sm, endMiter: _em, startBevel: _sb, endBevel: _eb, ...rest } = e.params;
+    const cleanParams = rest as WallParams;
+    return {
+      ...e,
+      params: cleanParams,
+      geometry: computeWallGeometry(cleanParams, e.kind),
+    } as WallEntity;
+  });
+
+  const remainingWalls = strippedEntities.filter(isWallEntity);
+  const newTrims = computeWallTrims(remainingWalls);
+  const patchedEntities = applyTrimPatches(strippedEntities, newTrims);
+  accessor.setLevelScene(levelId, { ...scene, entities: patchedEntities });
+
+  // Emit for every wall whose trim params changed (gained, lost, or different).
+  for (const entity of patchedEntities) {
+    if (!isWallEntity(entity)) continue;
+    const prev = prevTrimById.get(entity.id);
+    if (!prev) continue;
+    const n = entity.params;
+    const changed =
+      JSON.stringify(prev.startMiter) !== JSON.stringify(n.startMiter) ||
+      JSON.stringify(prev.endMiter)   !== JSON.stringify(n.endMiter)   ||
+      prev.startBevel !== n.startBevel ||
+      prev.endBevel   !== n.endBevel;
+    if (changed) {
+      EventBus.emit('drawing:entity-created', { entity, tool: 'wall' });
+    }
+  }
 }
