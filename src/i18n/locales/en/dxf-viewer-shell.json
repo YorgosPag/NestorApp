@@ -247,6 +247,13 @@
     "importFloorplan": "Import Floorplan",
     "importFloorplanWizard": "Import Floorplan (Wizard)"
   },
+  "floorTabs": {
+    "ariaLabel": "Building floor navigation",
+    "emptyBadge": "empty",
+    "allFloors": "All floors",
+    "allFloorsAria": "Show all floors stacked in 3D",
+    "floorVisibleAria": "Show floor {floor} in the all-floors view"
+  },
   "toolbarStatus": {
     "tool": "Tool",
     "zoom": "Zoom",

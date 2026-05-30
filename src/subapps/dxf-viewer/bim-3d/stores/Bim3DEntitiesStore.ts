@@ -43,6 +43,22 @@ export interface Bim3DEntities {
   readonly stairs: readonly StairEntity[];
 }
 
+/**
+ * Empty entity bundle — canonical "no BIM entities" value. Defined here (the
+ * type's home) so non-React SSoT helpers can import it without pulling in a
+ * React hook module (ADR-399 cycle-avoidance). Re-exported from
+ * `use-bim3d-vg-resync` for backward compatibility.
+ */
+export const EMPTY_BIM_ENTITIES: Bim3DEntities = {
+  walls: [],
+  columns: [],
+  beams: [],
+  slabs: [],
+  slabOpenings: [],
+  openings: [],
+  stairs: [],
+};
+
 interface Bim3DEntitiesStoreState extends Bim3DEntities {
   /** Level currently loaded into the 3D scene. Fed by useLevelId3DSync. */
   activeLevelId: string | null;

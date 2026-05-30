@@ -16,6 +16,7 @@ import { where } from 'firebase/firestore';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isFloorKind, type FloorKind } from '@/utils/floor-naming';
 
 const logger = createModuleLogger('useFloorsByBuilding');
 
@@ -24,6 +25,17 @@ export interface FloorOption {
   number: number;
   name: string;
   buildingId: string;
+  /** ADR-399: Greek canonical label (ADR-369) — used by the floor-tab strip. */
+  longName?: string;
+  /** ADR-399: Revit-style classification (ADR-369) — drives label fallback. */
+  kind?: FloorKind;
+  /**
+   * ADR-369 storey elevation in **metres** (world Y), as entered in the building
+   * «Όροφοι» tab (default = number × 3.0m). Canonical source for 3D multi-floor
+   * stacking (ADR-399 Phase B) — read straight from the FLOORS doc here so the
+   * stack height matches the tab, bypassing the lossy ProjectHierarchyContext.
+   */
+  elevation?: number;
 }
 
 export interface UseFloorsByBuildingResult {
@@ -56,6 +68,9 @@ export function useFloorsByBuilding(
             number: typeof data.number === 'number' ? data.number : 0,
             name: (data.name as string) || '',
             buildingId: (data.buildingId as string) || '',
+            longName: typeof data.longName === 'string' ? data.longName : undefined,
+            kind: isFloorKind(data.kind) ? data.kind : undefined,
+            elevation: typeof data.elevation === 'number' ? data.elevation : undefined,
           }))
           .sort((a, b) => a.number - b.number);
         setFloors(items);

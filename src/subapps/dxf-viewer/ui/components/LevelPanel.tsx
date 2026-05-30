@@ -438,7 +438,9 @@ export function LevelPanel({
                   entityLabel: meta.entityLabel,
                   projectId: meta.projectId,
                   floorId: saveContext.floorId,
-                  buildingId: saveContext.buildingId,
+                  // ADR-399: building comes from the wizard selection (saveContext only
+                  // carries buildingId for 'building' imports, not for 'floor').
+                  buildingId: meta.buildingId ?? saveContext.buildingId,
                 });
               }
             }

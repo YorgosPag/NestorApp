@@ -355,6 +355,57 @@ function convertEntity(entity: SceneEntity, layers: SceneLayers, layersById?: Sc
 }
 
 // ============================================================================
+// PURE SSoT CONVERTER (non-cached) — ADR-399 Phase D
+// ============================================================================
+
+/**
+ * One-shot SceneModel → DxfScene conversion (SSoT, no WeakMap cache).
+ *
+ * Shared core extracted from {@link useDxfSceneConversion} so non-active,
+ * read-only scenes (e.g. the ADR-399 Phase D «Όλοι οι όροφοι» 2D underlay of
+ * other building floors) reuse the exact same `convertEntity` + array-expansion
+ * pipeline instead of duplicating it. The hook keeps its per-entity WeakMap cache
+ * for the hot active-floor path; static snapshots use this uncached variant.
+ *
+ * IMPORTANT: pure — performs NONE of the hook's side effects (LayerStore hydration,
+ * DIMSTYLE registration). Those are owned exclusively by the active scene so an
+ * underlay floor never clobbers the active floor's runtime layer/style registries.
+ */
+export function convertSceneToDxf(
+  scene: SceneModel | null,
+  userDrawingUnits?: SceneUnits,
+): DxfScene {
+  const entities = scene?.entities ?? [];
+  const layers = scene?.layersById ?? {};
+  const layersById = scene?.layersById;
+  const converted: DxfEntityUnion[] = [];
+
+  for (const entity of entities) {
+    // ADR-353: ArrayEntity expands 1→N items before conversion.
+    if (isArrayEntity(entity)) {
+      const pathEnt = entity.arrayKind === 'path' && entity.params.kind === 'path'
+        ? (entities as Entity[]).find(e => e.id === (entity.params as PathParams).pathEntityId)
+        : undefined;
+      for (const e of expandArrayEntity(entity, pathEnt)) {
+        const c = convertEntity(e, layers, layersById);
+        if (c) converted.push(c);
+      }
+      continue;
+    }
+    const c = convertEntity(entity, layers, layersById);
+    if (c) converted.push(c);
+  }
+
+  return {
+    entities: converted,
+    layers: Object.keys(layers),
+    layersById,
+    bounds: scene?.bounds ?? null,
+    units: userDrawingUnits ?? resolveSceneUnits(scene),
+  };
+}
+
+// ============================================================================
 // HOOK
 // ============================================================================
 

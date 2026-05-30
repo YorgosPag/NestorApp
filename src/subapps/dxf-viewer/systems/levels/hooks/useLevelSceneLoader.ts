@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { DxfFirestoreService } from '../../../services/dxf-firestore.service';
 import { useAutoSaveSceneManager } from '../../../hooks/scene/useAutoSaveSceneManager';
 import { onSuperAdminActiveCompanyChange } from '@/services/firestore/super-admin-active-company';
+import { isCrossFloorSceneLink } from '../cross-floor-link';
 import type { Level } from '../config';
 
 // 🔺 FIXED: Helper για ΠΡΑΓΜΑΤΙΚΑ κενή σκηνή χωρίς default layer
@@ -70,11 +71,27 @@ export function useLevelSceneLoader({
     const level = levels.find(l => l.id === currentLevelId);
     const sceneFileId = level?.sceneFileId;
 
+    // ADR-399 — reset the DXF auto-save target so edits on THIS level can never
+    // persist into a PREVIOUSLY-loaded level's file. Root cause of cross-floor
+    // contamination: the auto-save `fileRecordId` / `currentFileName` were sticky
+    // across level switches, so drawing on a file-less (or wrongly-linked) floor
+    // saved into — and re-linked — the previous floor's DXF file, making every
+    // floor render the same scene. Nulling `currentFileName` also disables the
+    // auto-save gate (it requires a filename), so a file-less level never writes a
+    // DXF scene. BIM entities keep persisting through their own floorId-keyed
+    // persistence, unaffected.
+    const resetDxfAutoSaveTarget = () => {
+      sceneManager.setFileRecordId?.(null);
+      sceneManager.setSaveContext?.(null);
+      sceneManager.setCurrentFileName?.(null);
+    };
+
     if (!sceneFileId) {
       // No DXF linked to this level yet — create empty scene
       if (!existingScene) {
         sceneManager.setLevelScene(currentLevelId, createEmptyScene());
       }
+      resetDxfAutoSaveTarget();
       return;
     }
 
@@ -101,6 +118,23 @@ export function useLevelSceneLoader({
 
         // Check if this load was cancelled (user switched to another level)
         if (abortController.signal.aborted) return;
+
+        // 🚨 ADR-399 — cross-floor link guard. A level must only load a scene file
+        // that belongs to its OWN floor. A stale / cross-linked `sceneFileId` (left
+        // by the sticky auto-save target bug above, or a mis-link) would otherwise
+        // load another floor's DXF into this level — making every floor render the
+        // same scene — and a subsequent auto-save would overwrite that other floor's
+        // file. Detect the mismatch, keep this level empty, and reset the save
+        // target. See `isCrossFloorSceneLink` for the conservative predicate.
+        if (isCrossFloorSceneLink(fileRecord, level?.floorId)) {
+          console.warn(
+            `[LevelsSystem] sceneFileId ${sceneFileId} belongs to floor ${fileRecord?.entityId} ` +
+            `but level ${currentLevelId} is floor ${level?.floorId} — skipping cross-floor load.`,
+          );
+          sceneManager.setLevelScene(currentLevelId, createEmptyScene());
+          resetDxfAutoSaveTarget();
+          return;
+        }
 
         if (fileRecord?.scene && Array.isArray(fileRecord.scene.entities) && fileRecord.scene.layersById != null) {
           sceneManager.setLevelScene(currentLevelId, fileRecord.scene);

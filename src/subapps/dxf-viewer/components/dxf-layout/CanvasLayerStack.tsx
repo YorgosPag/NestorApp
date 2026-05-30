@@ -43,6 +43,8 @@ import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleBu
 import { useDxfOverlay3DSync } from './useDxfOverlay3DSync'; import { useLevelId3DSync } from './useLevelId3DSync';
 // ADR-396 P4 — ETICS θερμοπρόσοψη 2D overlay (dedicated floor-overlay micro-leaf).
 import { EnvelopeOverlay } from './EnvelopeOverlay';
+// ADR-399 Phase D — 2D «Όλοι οι όροφοι» read-only underlay (other floors, faded, behind active).
+import { FloorUnderlayOverlay } from './FloorUnderlayOverlay';
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 const EMPTY_SNAP_RESULTS: readonly never[] = Object.freeze([]);
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
@@ -333,6 +335,9 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             />
           )}
+          {/* ADR-399 Phase D — 2D underlay of other building floors (read-only, faded),
+              behind the active DXF canvas. Self-gated to floor3DScope==='all' && mode==='2d'. */}
+          <FloorUnderlayOverlay transform={transform} viewport={viewport} />
           {showLayerCanvas && (
             <DraftLayerSubscriber
               canvasRef={overlayCanvasRef as React.RefObject<HTMLCanvasElement>}

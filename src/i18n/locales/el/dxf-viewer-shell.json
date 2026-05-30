@@ -247,6 +247,13 @@
     "importFloorplan": "Εισαγωγή Κάτοψης",
     "importFloorplanWizard": "Εισαγωγή Κάτοψης (Wizard)"
   },
+  "floorTabs": {
+    "ariaLabel": "Πλοήγηση ορόφων κτιρίου",
+    "emptyBadge": "κενός",
+    "allFloors": "Όλοι οι όροφοι",
+    "allFloorsAria": "Προβολή όλων των ορόφων στοιβαγμένων σε 3Δ",
+    "floorVisibleAria": "Εμφάνιση ορόφου {floor} στην προβολή όλων των ορόφων"
+  },
   "toolbarStatus": {
     "tool": "Εργαλείο",
     "zoom": "Μεγέθυνση",

@@ -5,6 +5,7 @@ import { CanvasSection } from './CanvasSection';
 import CadStatusBar from '../../statusbar/CadStatusBar';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { StandaloneStatusBar } from '../../ui/toolbar/StandaloneStatusBar';
+import { FloorTabBar } from './FloorTabBar';
 import { useDxfToolbarShortcuts } from '../../hooks/useDxfToolbarShortcuts';
 import type { OverlayEditorMode } from '../../overlays/types';
 
@@ -26,6 +27,8 @@ export const NormalView: React.FC<DXFViewerLayoutProps> = (props) => {
         onAction={props.onAction}
         onSidebarToggle={props.onSidebarToggle}
       />
+      {/* ADR-399: μπάρα πλοήγησης ορόφων — εμφανίζεται μόνο σε context κάτοψης ορόφου */}
+      <FloorTabBar />
       <div className={`flex-1 flex ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}>
         <CanvasSection
           {...props}

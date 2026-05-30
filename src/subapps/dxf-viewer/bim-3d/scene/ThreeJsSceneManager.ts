@@ -24,7 +24,7 @@ import type { LightPreset } from '../lighting/lighting-presets';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { SectionSceneController } from './section-scene-controller';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
-import { raycastBimGroup, raycastWorldPoint, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
+import { raycastBimGroup, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
 import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { applyFloorVisibility } from '../utils/applyFloorVisibility';
@@ -60,10 +60,13 @@ import { isSceneDirtyFromState } from './scene-dirty-state';
 import { createSceneRenderingSubsystems } from './scene-rendering-subsystems';
 import {
   syncBimEntitiesIntoScene,
+  syncMultiFloorBimEntitiesIntoScene,
   syncDxfOverlayIntoScene,
+  setBimOrbitPivot,
   resolveBimEntityType,
   loadHdriIntoStore,
 } from './scene-manager-actions';
+import type { FloorStackEntry } from './multi-floor-3d-source';
 
 const INITIAL_CAMERA_POSITION = new THREE.Vector3(15, 10, 15);
 const INITIAL_CAMERA_TARGET = new THREE.Vector3(0, 0, 0);
@@ -333,13 +336,34 @@ export class ThreeJsSceneManager {
     floorVisModes: ReadonlyMap<string, FloorVisMode> = new Map(),
   ): void {
     if (this.disposed) return;
-    syncBimEntitiesIntoScene(
-      { bimLayer: this.bimLayer, selectionHighlighter: this.selectionHighlighter,
-        keyboardFocusManager: this.keyboardFocusManager,
-        pathTracerRenderer: this.pathTracerRenderer, sectionController: this.sectionController },
+    syncBimEntitiesIntoScene(this.bimSyncDeps(),
       { entities, floorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
     );
     // Pre-compile SSAO/composer programs once geometry exists (idempotent) — avoids first-idle shader-link stall.
+    this.ssaoModulator.warmUp();
+    this.markSceneDirty();
+  }
+
+  /** Shared sync deps (BIM layer + selection/focus/render subsystems). */
+  private bimSyncDeps() {
+    return { bimLayer: this.bimLayer, selectionHighlighter: this.selectionHighlighter,
+      keyboardFocusManager: this.keyboardFocusManager,
+      pathTracerRenderer: this.pathTracerRenderer, sectionController: this.sectionController };
+  }
+
+  /** ADR-399 Phase B — build the whole building stacked by elevation ("Όλοι οι όροφοι"). */
+  syncBimEntitiesMultiFloor(
+    stack: readonly FloorStackEntry[],
+    floors: readonly FloorRef[] = [],
+    buildings: readonly BuildingRef[] = [],
+    activeBuildingId: string | null = null,
+    buildingVisModes: ReadonlyMap<string, BuildingVisMode> = new Map(),
+    floorVisModes: ReadonlyMap<string, FloorVisMode> = new Map(),
+  ): void {
+    if (this.disposed) return;
+    syncMultiFloorBimEntitiesIntoScene(this.bimSyncDeps(),
+      { stack, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
+    );
     this.ssaoModulator.warmUp();
     this.markSceneDirty();
   }
@@ -381,37 +405,19 @@ export class ThreeJsSceneManager {
 
   raycastBimEntities(clientX: number, clientY: number): RaycastHit | null {
     if (this.disposed) return null;
-    return raycastBimGroup(
-      this.bimLayer.group,
-      this.viewport.camera,
-      this.renderer.domElement,
-      clientX,
-      clientY,
-    );
+    return raycastBimGroup(this.bimLayer.group, this.viewport.camera, this.renderer.domElement, clientX, clientY);
   }
 
-  /**
-   * ADR-366 §A.6.Q5 — Alt+click orbit-pivot picking.
-   *
-   * Raycasts the BIM scene at the cursor; if a surface is hit, makes that world
-   * point the camera orbit center (no camera movement) and flashes the POI cross
-   * there. Returns true when a pivot was set, false when the ray missed geometry
-   * (caller leaves the current pivot + selection untouched).
-   */
+  /** ADR-366 §A.6.Q5 — Alt+click orbit-pivot picking (delegates to `setBimOrbitPivot`). */
   setOrbitPivotAt(clientX: number, clientY: number): boolean {
     if (this.disposed) return false;
-    const point = raycastWorldPoint(
-      this.bimLayer.group,
-      this.viewport.camera,
-      this.renderer.domElement,
-      clientX,
-      clientY,
+    return setBimOrbitPivot(
+      { bimGroup: this.bimLayer.group, camera: this.viewport.camera, canvas: this.renderer.domElement,
+        setOrbitPivot: (p) => this.viewport.setOrbitPivot(p),
+        onNavigationActive: () => this.poi.onNavigationActive(),
+        markDirty: () => this.markSceneDirty() },
+      clientX, clientY,
     );
-    if (!point) return false;
-    this.viewport.setOrbitPivot(point);
-    this.poi.onNavigationActive();
-    this.markSceneDirty();
-    return true;
   }
 
   updateSunPosition(azimuthDeg: number, elevationDeg: number): void {

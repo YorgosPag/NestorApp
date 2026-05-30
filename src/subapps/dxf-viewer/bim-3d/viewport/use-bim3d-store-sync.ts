@@ -7,8 +7,8 @@ import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { useSectionStore } from '../stores/SectionStore';
 import { LIGHT_PRESETS } from '../lighting/lighting-presets';
 import { getHdriPreset } from '../lighting/hdri-environment';
-import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { subscribeLayerStore, getLayerStoreSnapshot } from '../../stores/LayerStore';
+import { resyncBimScene } from '../scene/bim3d-resync';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 
 // ADR-366 store→manager subscription sync. Wires low-frequency store updates
@@ -23,24 +23,21 @@ export function useBim3DStoreSync(managerRef: RefObject<ThreeJsSceneManager | nu
   // ADR-382 Phase C — floor mode change must trigger BOTH a scene rebuild
   // (so 'hide' modes filter pre-mesh via resolver) AND post-hoc apply for
   // 'show'/'ghost' styling on already-built meshes. Defense-in-depth.
+  // ADR-399 — routed through the scope-aware SSoT so a checkbox toggle in
+  // "Όλοι οι όροφοι" rebuilds the STACKED building (not just the active level);
+  // resyncBimScene re-applies floor visibility itself in the 'all' branch.
   useEffect(() => {
     return useViewMode3DStore.subscribe(
       (s) => s.floorVisibilityModes,
       (modes) => {
         const manager = managerRef.current;
         if (!manager) return;
-        const s = useBim3DEntitiesStore.getState();
-        manager.syncBimEntities(
-          { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs, slabOpenings: s.slabOpenings, openings: s.openings, stairs: s.stairs },
-          0,
-          s.activeLevelId ?? undefined,
-          s.floors,
-          s.buildings,
-          s.activeBuildingId,
-          s.buildingVisibilityModes,
-          modes,
-        );
-        manager.applyFloorVisibility(modes);
+        resyncBimScene(manager, { externalEntitiesMode: false });
+        // 'single' branch needs the explicit visibility pass (the 'all' branch
+        // already applies it inside resyncBimScene).
+        if (useViewMode3DStore.getState().floor3DScope !== 'all') {
+          manager.applyFloorVisibility(modes);
+        }
       },
     );
   }, [managerRef]);
@@ -55,20 +52,7 @@ export function useBim3DStoreSync(managerRef: RefObject<ThreeJsSceneManager | nu
       const next = getLayerStoreSnapshot();
       if (next.version === prevVersion) return;
       prevVersion = next.version;
-      const manager = managerRef.current;
-      if (!manager) return;
-      const s = useBim3DEntitiesStore.getState();
-      const floorModes = useViewMode3DStore.getState().floorVisibilityModes;
-      manager.syncBimEntities(
-        { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs, slabOpenings: s.slabOpenings, openings: s.openings, stairs: s.stairs },
-        0,
-        s.activeLevelId ?? undefined,
-        s.floors,
-        s.buildings,
-        s.activeBuildingId,
-        s.buildingVisibilityModes,
-        floorModes,
-      );
+      resyncBimScene(managerRef.current, { externalEntitiesMode: false });
     });
   }, [managerRef]);
 

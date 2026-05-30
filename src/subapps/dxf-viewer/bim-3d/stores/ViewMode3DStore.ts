@@ -25,6 +25,14 @@ export type { FloorVisMode };
  */
 export type ViewMode3D = '2d' | '3d-raster' | '3d-preview' | '3d-final';
 
+/**
+ * 3D floor source scope (ADR-399 Phase B):
+ * - 'single' → render only the active level (default, legacy behaviour).
+ * - 'all'    → render every floor of the building stacked by elevation
+ *              (the "Όλοι οι όροφοι" tab). Drives `BimSceneLayer.syncMultiFloor`.
+ */
+export type Floor3DScope = 'single' | 'all';
+
 export type RenderPreset = 'draft' | 'standard' | 'high' | 'production';
 export type RenderFormat = 'png' | 'jpg' | 'exr';
 export type RenderResolutionPreset = 'hd' | '4k' | '8k' | 'custom';
@@ -89,6 +97,8 @@ interface ViewMode3DState {
   visibleFloors: ReadonlySet<string>;
   /** Whether "Show All Floors" is active */
   showAllFloors: boolean;
+  /** ADR-399 Phase B — 3D floor source scope ('single' active level | 'all' stacked). */
+  floor3DScope: Floor3DScope;
   /** Per-level visibility mode (B.3): 'show' | 'ghost' | 'hide'. */
   floorVisibilityModes: ReadonlyMap<string, FloorVisMode>;
   /** Active lighting preset (B.1 Phase 5A) */
@@ -120,6 +130,8 @@ interface ViewMode3DActions {
   setVisibleFloors(floorIds: ReadonlySet<string>): void;
   /** Toggle "Show All Floors" (Q2) */
   toggleShowAllFloors(): void;
+  /** ADR-399 Phase B — set the 3D floor source scope ('single' | 'all'). */
+  setFloor3DScope(scope: Floor3DScope): void;
   /** Seed initial floor when project loads */
   setActiveFloor(floorId: string | null): void;
   /** Set show/ghost/hide for a single level (B.3). */
@@ -156,6 +168,7 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
         finalRenderProgress: -1,
         visibleFloors: new Set<string>(),
         showAllFloors: false,
+        floor3DScope: 'single' as Floor3DScope,
         floorVisibilityModes: new Map<string, FloorVisMode>(),
         sunPreset: DEFAULT_PRESET,
         sunAzimuthDeg: LIGHT_PRESETS[DEFAULT_PRESET].azimuthDeg,
@@ -233,6 +246,12 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
         toggleShowAllFloors() {
           set((draft) => {
             draft.showAllFloors = !draft.showAllFloors;
+          });
+        },
+
+        setFloor3DScope(scope) {
+          set((draft) => {
+            draft.floor3DScope = scope;
           });
         },
 
@@ -315,3 +334,4 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
 export const selectIs3D = (s: ViewMode3DState) => s.mode !== '2d';
 export const selectViewMode = (s: ViewMode3DState) => s.mode;
 export const selectVisibleFloors = (s: ViewMode3DState) => s.visibleFloors;
+export const selectFloor3DScope = (s: ViewMode3DState) => s.floor3DScope;

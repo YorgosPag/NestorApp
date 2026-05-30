@@ -54,6 +54,9 @@ export interface WizardCompleteMeta {
   projectId?: string;
   entityType: EntityType;
   entityId: string;
+  /** ADR-399: building context of the selection (set for floor/building/property
+   *  selections) — needed so floor-plan levels carry buildingId for the floor-tab strip. */
+  buildingId?: string;
   purpose: string;
   /** Human-readable entity label (e.g., "Κτήριο Α", "ΣΟΦΙΤΑ") for displayName generation */
   entityLabel?: string;
@@ -154,6 +157,8 @@ export function FloorplanImportWizard({
         projectId: cfg.projectId,
         entityType: cfg.entityType as WizardCompleteMeta['entityType'],
         entityId: cfg.entityId,
+        // ADR-399: carry the selected building so floor-plan levels get buildingId.
+        buildingId: state.selection.buildingId ?? undefined,
         purpose: cfg.purpose ?? '',
         entityLabel: cfg.entityLabel,
         fileId,
@@ -171,7 +176,7 @@ export function FloorplanImportWizard({
         userDrawingUnits,
       });
     }
-  }, [onComplete, state.uploadConfig]);
+  }, [onComplete, state.uploadConfig, state.selection.buildingId]);
 
   const handleClose = useCallback(() => {
     state.reset();

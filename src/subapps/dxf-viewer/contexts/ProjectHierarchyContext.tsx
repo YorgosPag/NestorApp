@@ -255,11 +255,11 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
               if ((typeof id !== 'string' && typeof id !== 'number') || typeof name !== 'string') {
                 return acc;
               }
-              const numberValue = typeof floorRecord.number === 'number' ? floorRecord.number : 0;
               acc.push({
                 id: String(id),
                 name,
-                number: numberValue,
+                number: typeof floorRecord.number === 'number' ? floorRecord.number : 0,
+                elevation: typeof floorRecord.elevation === 'number' ? floorRecord.elevation : undefined, // ADR-399: keep storey elevation (else 3D stacks floors at Y=0)
                 units: []
               });
               return acc;

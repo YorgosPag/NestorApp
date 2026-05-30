@@ -14,10 +14,12 @@
 
 import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
+import type { FloorStackEntry } from './multi-floor-3d-source';
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh } from '../converters/BimToThreeConverter';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { envelopeChainToMesh, slabFlatLayerToMesh, revealLiningToMesh } from '../converters/EnvelopeToThree';
 import { computeEnvelopePerimeter } from '../../bim/geometry/envelope-perimeter';
+import { computeEnvelopeOpeningCuts } from '../../bim/geometry/envelope-opening-cuts';
 import { getEnvelopeSpec } from '../../bim/stores/envelope-spec-store';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
@@ -72,22 +74,74 @@ export class BimSceneLayer {
     floorVisModes: ReadonlyMap<string, FloorVisMode> = new Map(),
   ): void {
     this.clearGroup();
+    const ctx = this.buildContext(
+      floorElevationMm, activeLevelId, floors, buildings,
+      activeBuildingId, buildingVisModes, floorVisModes,
+    );
+    this.syncFloorEntities(entities, ctx);
+    this.recomputeHasMesh();
+  }
+
+  /**
+   * ADR-399 Phase B — render every floor of the building stacked by elevation
+   * («Όλοι οι όροφοι» scope). One `clearGroup` then a loop over the per-floor
+   * stack, building a fresh context per floor (its own `floorElevationMm` +
+   * `activeLevelId` = the floor's levelId) so the EXISTING per-entity converters
+   * place each floor at the right height and tag meshes with their levelId
+   * (drives the `applyFloorVisibility` show/ghost/hide post-pass). Floor + V/G +
+   * Layer + Building visibility gating stays identical to the single path.
+   */
+  syncMultiFloor(
+    stack: readonly FloorStackEntry[],
+    floors: readonly FloorRef[] = [],
+    buildings: readonly BuildingRef[] = [],
+    activeBuildingId: string | null = null,
+    buildingVisModes: ReadonlyMap<string, BuildingVisMode> = new Map(),
+    floorVisModes: ReadonlyMap<string, FloorVisMode> = new Map(),
+  ): void {
+    this.clearGroup();
+    for (const floor of stack) {
+      const ctx = this.buildContext(
+        floor.floorElevationMm, floor.levelId, floors, buildings,
+        activeBuildingId, buildingVisModes, floorVisModes,
+      );
+      this.syncFloorEntities(floor.entities, ctx);
+    }
+    this.recomputeHasMesh();
+  }
+
+  /** Assemble the per-floor sync context (shared by single + multi-floor). */
+  private buildContext(
+    floorElevationMm: number,
+    activeLevelId: string | undefined,
+    floors: readonly FloorRef[],
+    buildings: readonly BuildingRef[],
+    activeBuildingId: string | null,
+    buildingVisModes: ReadonlyMap<string, BuildingVisMode>,
+    floorVisModes: ReadonlyMap<string, FloorVisMode>,
+  ): SyncContext {
     const objectStyles = useDrawingScaleStore.getState().objectStyles;
     const useNewSystem = buildingVisModes.size > 0;
     const floorMode = activeLevelId ? floorVisModes.get(activeLevelId) : undefined;
-    const ctx: SyncContext = {
+    return {
       objectStyles, floors, buildings, buildingVisModes,
       floorMode, activeBuildingId, useNewSystem,
       floorElevationMm, activeLevelId,
     };
+  }
 
+  /** Build the meshes for one floor's entities into the shared group. */
+  private syncFloorEntities(entities: Bim3DEntities, ctx: SyncContext): void {
     this.syncWalls(entities, ctx);
     this.syncColumns(entities, ctx);
     this.syncBeams(entities, ctx);
     this.syncSlabs(entities, ctx);
     this.syncStairs(entities, ctx);
     this.syncEnvelope(entities, ctx);
+  }
 
+  /** Cache whether the group holds ≥1 triangle mesh (last build). */
+  private recomputeHasMesh(): void {
     let found = false;
     this.group.traverse((obj) => { if (!found && obj instanceof THREE.Mesh) found = true; });
     this._hasMesh = found;
@@ -283,13 +337,16 @@ export class BimSceneLayer {
     const activeChains = chains.filter((c) => c.wallIds.length >= 3);
     if (activeChains.length === 0) return;
     const wallById = new Map(entities.walls.map((w) => [w.id, w] as const));
+    // Ίδιες μονάδες με το chain (computeEnvelopePerimeter fallback) ώστε τα opening
+    // cuts (mm → canvas) να ευθυγραμμίζονται με τα face/outer loops.
+    const sceneUnits = entities.walls[0]?.params.sceneUnits ?? 'mm';
 
     for (const chain of activeChains) {
-      // Ύψος ορόφου = max height των τοίχων του chain (ήδη σε ΜΕΤΡΑ).
+      // Ύψος ορόφου = max height των τοίχων του chain. params.height είναι mm → / 1000.
       let heightM = 0;
       for (const wid of chain.wallIds) {
         const w = wallById.get(wid);
-        if (w && w.params.height > heightM) heightM = w.params.height;
+        if (w && w.params.height > heightM) heightM = w.params.height / 1000;
       }
       if (heightM <= 0) continue;
 
@@ -297,17 +354,45 @@ export class BimSceneLayer {
       const r = this.resolveEnvelopeBuilding(firstWall, ctx);
       if (!r) continue;
 
+      // ADR-396 — η μόνωση δεν σκεπάζει κουφώματα: cut ανά visible opening του
+      // chain (ίδιο visibility filter με wallToMesh → 2D⟷3D parity).
+      const chainOpenings = this.filterEnvelopeOpenings(entities.openings, chain.wallIds, ctx);
+      const cuts = computeEnvelopeOpeningCuts(chain, chainOpenings, sceneUnits);
+
       const mesh = envelopeChainToMesh(
-        chain, heightM, ctx.floorElevationMm, materialId, levelId, r.baseElevation,
+        chain, heightM, ctx.floorElevationMm, materialId, levelId, r.baseElevation, cuts,
       );
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }
 
+  /**
+   * Ανοίγματα τοίχων του chain που περνούν το opening visibility filter. Το
+   * building-level gating έχει ήδη γίνει στο `resolveEnvelopeBuilding` (το chain
+   * παραλείπεται όταν το κτίριο είναι κρυφό), οπότε δεν περνάμε buildingMode εδώ.
+   */
+  private filterEnvelopeOpenings(
+    openings: readonly OpeningEntity[],
+    wallIds: readonly string[],
+    ctx: SyncContext,
+  ): readonly OpeningEntity[] {
+    const wallSet = new Set(wallIds);
+    return openings.filter((o) =>
+      wallSet.has(o.params.wallId) && resolveIsEntityVisible(
+        { category: 'opening', layerId: o.layerId },
+        {
+          objectStyles: ctx.objectStyles,
+          layer: o.layerId ? getLayer(o.layerId) : null,
+          floorMode: ctx.floorMode,
+        },
+      ),
+    );
+  }
+
   /** Z2/Z3 — flat μόνωση εκτεθειμένων πλακών (per-element `envelopeLayer`). */
   private addFlatLayers(entities: Bim3DEntities, ctx: SyncContext, levelId: string): void {
     for (const slab of entities.slabs) {
-      const layer = slab.params.envelopeLayer;
+      const layer = slab.params?.envelopeLayer;
       if (!layer || (layer.zone !== 'Z2' && layer.zone !== 'Z3')) continue;
       const footprint = slab.geometry?.polygon?.vertices;
       if (!footprint) continue;
@@ -327,17 +412,22 @@ export class BimSceneLayer {
   private addRevealLinings(entities: Bim3DEntities, ctx: SyncContext, levelId: string): void {
     const wallById = new Map(entities.walls.map((w) => [w.id, w] as const));
     for (const op of entities.openings) {
-      const reveal = op.params.revealInsulation;
+      const reveal = op.params?.revealInsulation;
       const outline = op.geometry?.outline?.vertices;
       if (!reveal || !outline) continue;
       const r = this.resolveEnvelopeBuilding(wallById.get(op.params.wallId), ctx);
       if (!r) continue;
 
-      const mesh = revealLiningToMesh(
-        outline, reveal.thickness_m, op.params.sillHeight, op.params.height,
+      const grp = revealLiningToMesh(
+        outline, op.geometry?.revealOutline?.vertices ?? outline,
+        reveal.thickness_m, op.params.sillHeight, op.params.height,
         ctx.floorElevationMm, r.baseElevation, reveal.materialId, levelId,
       );
-      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+      if (grp) {
+        grp.userData['buildingId'] = r.buildingId;
+        for (const c of grp.children) c.userData['buildingId'] = r.buildingId;
+        this.group.add(grp);
+      }
     }
   }
 

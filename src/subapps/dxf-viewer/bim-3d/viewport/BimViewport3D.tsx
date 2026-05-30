@@ -34,7 +34,9 @@ import { useAnimationQueueProcessor } from '../animation/animation-queue-process
 import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-interaction';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useBim3DStoreSync } from './use-bim3d-store-sync';
-import { useBim3DVgResync, EMPTY_BIM_ENTITIES } from './use-bim3d-vg-resync';
+import { useBim3DVgResync } from './use-bim3d-vg-resync';
+import { useBim3DMultiFloorSync } from './use-bim3d-multifloor-sync';
+import { resyncBimScene } from '../scene/bim3d-resync';
 import { useBim3DPointerHandlers } from './use-bim3d-pointer-handlers';
 import { UnifiedFrameScheduler, RENDER_PRIORITIES } from '../../rendering/core/UnifiedFrameScheduler';
 
@@ -150,15 +152,10 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     // ADR-366 §C.1.b — bridge real scene bbox σε `useDxfViewerCallbacks` animation actions.
     setSceneBboxGetter(() => managerRef.current?.getSceneFramingBounds() ?? null);
 
-    // Initial entity sync — external prop overrides global store when provided (ADR-371).
+    // Initial entity sync — ADR-399 scope-aware SSoT (single active level OR the
+    // stacked building). External prop overrides global store when provided (ADR-371).
     const initialFloorModes = useViewMode3DStore.getState().floorVisibilityModes;
-    if (externalEntitiesMode) {
-      managerRef.current.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined, [], [], null, new Map(), initialFloorModes);
-    } else {
-      const entitiesState = useBim3DEntitiesStore.getState();
-      const { walls, columns, beams, slabs, slabOpenings, openings, stairs, activeLevelId, floors, buildings, activeBuildingId, buildingVisibilityModes } = entitiesState;
-      managerRef.current.syncBimEntities({ walls, columns, beams, slabs, slabOpenings, openings, stairs }, 0, activeLevelId ?? undefined, floors, buildings, activeBuildingId, buildingVisibilityModes, initialFloorModes);
-    }
+    resyncBimScene(managerRef.current, { externalEntitiesMode, bimEntities });
     managerRef.current.syncDxfOverlay(useDxfOverlay3DStore.getState().dxfScene);
 
     // ADR-382 Phase C — post-hoc apply preserves ghost styling + defense-in-depth
@@ -202,18 +199,10 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // ADR-371: skipped when external bimEntities prop drives the scene.
   useEffect(() => {
     if (externalEntitiesMode) return;
-    return useBim3DEntitiesStore.subscribe((s) => {
-      const floorModes = useViewMode3DStore.getState().floorVisibilityModes;
-      managerRef.current?.syncBimEntities(
-        { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs, slabOpenings: s.slabOpenings, openings: s.openings, stairs: s.stairs },
-        0,
-        s.activeLevelId ?? undefined,
-        s.floors,
-        s.buildings,
-        s.activeBuildingId,
-        s.buildingVisibilityModes,
-        floorModes,
-      );
+    // ADR-399 — scope-aware: 'single' rebuilds the active level; 'all' rebuilds
+    // the stacked building from the current multi-floor source snapshot.
+    return useBim3DEntitiesStore.subscribe(() => {
+      resyncBimScene(managerRef.current, { externalEntitiesMode: false });
     });
   }, [externalEntitiesMode]);
 
@@ -231,11 +220,12 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // ADR-371: external entity feed — push prop changes into the scene.
   useEffect(() => {
     if (!externalEntitiesMode) return;
-    const floorModes = useViewMode3DStore.getState().floorVisibilityModes;
-    managerRef.current?.syncBimEntities(bimEntities ?? EMPTY_BIM_ENTITIES, 0, undefined, [], [], null, new Map(), floorModes);
+    resyncBimScene(managerRef.current, { externalEntitiesMode: true, bimEntities });
   }, [externalEntitiesMode, bimEntities]);
 
   useBim3DStoreSync(managerRef);
+  // ADR-399 Phase B — multi-floor ("Όλοι οι όροφοι") aggregation + sync wiring.
+  useBim3DMultiFloorSync(managerRef, externalEntitiesMode, bimEntities);
 
   const handleRenderConfirm = useCallback((config: FinalRenderConfig) => {
     const manager = managerRef.current;
