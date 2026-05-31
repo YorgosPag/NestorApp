@@ -262,3 +262,40 @@ export function selectSlabsAboveFloor(
   }
   return result;
 }
+
+/**
+ * ADR-396 v2 Φ5C — απόλυτο υψόμετρο (mm) της οροφής/άνω ορίου του target ορόφου,
+ * δηλαδή το όριο πάνω από το οποίο μια πλάκα θεωρείται «ψηλότερου ορόφου».
+ *
+ * = το ΙΔΙΟ το υψόμετρο του target ορόφου × 1000 (ADR-369: storey elevation =
+ * top-face της πλάκας του). Έτσι το `selectSlabsAboveFloor` αποκλείει την ΔΙΚΗ
+ * του πλάκα (ίδιο επίπεδο, εντός snap) και κρατά μόνο τις πλάκες των ΠΑΝΩ ορόφων.
+ * Τελευταίος όροφος (καμία πλάκα ψηλότερα) → καμία επιλέγεται → όλες οι τρύπες =
+ * αίθρια. Floors-list-driven, ΧΩΡΙΣ heuristic ύψους τοίχου.
+ *
+ * @param floors        - StoreyRef λίστα (elevation σε ΜΕΤΡΑ).
+ * @param targetFloorId - id του ορόφου που χτίζεται το κέλυφος (null → 0).
+ */
+export function resolveCurrentFloorTopMm(
+  floors: readonly StoreyRef[],
+  targetFloorId: string | null | undefined,
+): number {
+  if (!targetFloorId) return 0;
+  const target = floors.find((f) => f.id === targetFloorId);
+  return (target?.elevation ?? 0) * 1000;
+}
+
+/**
+ * ADR-396 v2 Φ5C — convenience SSoT: footprints των πλακών που βρίσκονται πάνω
+ * από τον target όροφο, έτοιμα input για το `classifyFootprintRegions` /
+ * `computeEnvelopeShell`. Συνδυάζει {@link resolveCurrentFloorTopMm} +
+ * {@link selectSlabsAboveFloor} ώστε ΟΛΟΙ οι consumers (2D overlay, 3D scene,
+ * applicator, BOQ) να μοιράζονται ΑΚΡΙΒΩΣ τον ίδιο ορισμό «πλάκα από πάνω». Pure.
+ */
+export function resolveSlabsAboveForLevel(
+  slabs: readonly SlabForRegionCoverage[],
+  floors: readonly StoreyRef[],
+  targetFloorId: string | null | undefined,
+): SlabRegionFootprint[] {
+  return selectSlabsAboveFloor(slabs, floors, resolveCurrentFloorTopMm(floors, targetFloorId));
+}
