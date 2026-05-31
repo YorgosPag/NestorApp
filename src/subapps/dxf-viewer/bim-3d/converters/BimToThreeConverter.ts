@@ -25,6 +25,8 @@ import { getMaterial3D, getElementMaterial3D } from '../materials/MaterialCatalo
 import { buildWallMeshWithOpenings } from './wall-opening-extrude';
 import { computeWallOpeningPieces, type WallTopLocalFn, type WallBaseLocalFn } from './wall-opening-pieces';
 import { buildSlopedWallPieceGeometry } from './wall-piece-geometry';
+import { buildColumnPrismGeometry } from './column-piece-geometry';
+import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
 import { evaluateWallTopAt, type WallTopProfile } from '../../bim/geometry/wall-top-profile';
 import { evaluateWallBaseAt, type WallBaseProfile } from '../../bim/geometry/wall-base-profile';
 import { slabSlopeOffsetZmm } from '../../bim/geometry/slab-slope';
@@ -280,7 +282,11 @@ export function wallToMesh(
 
   const geo = extrudeAndRotate(shape, wall.params.height * MM_TO_M);
   const mesh = new THREE.Mesh(geo, material);
-  mesh.position.y = floorElevationMm * MM_TO_M + buildingBaseElevationM;
+  // ADR-402 — `baseOffset` (mm, base face from storey FFL) lifts the whole wall so the
+  // vertical (axis-Y) move arrow shows in 3D. ONLY on this flat solid path: the
+  // profiled/pieces path (makeWallBaseLocalFn) already bakes baseOffset into the
+  // geometry z, so adding it here too would double-count. baseOffset=0 → no change.
+  mesh.position.y = (floorElevationMm + wall.params.baseOffset) * MM_TO_M + buildingBaseElevationM;
   const tagged = tagMesh(mesh, wall.id, 'wall', matId, levelId);
   attachEdgesProjection(tagged, 'wall');
   return tagged;
@@ -291,20 +297,72 @@ export function columnToMesh(
   floorElevationMm = 0,
   levelId?: string,
   buildingBaseElevationM = 0,
+  topProfile?: ColumnTopProfile,
+  baseProfile?: ColumnBaseProfile,
 ): THREE.Mesh | null {
   const verts = column.geometry.footprint.vertices;
   if (verts.length < 3) return null;
+
+  const matId = column.params.material ?? 'elem-column';
+
+  // ADR-401 Phase F.2 — attached κολώνα (κορυφή Ή/ΚΑΙ βάση): per-corner prism που
+  // σταματά στην παρειά κάθε host (στρεβλή/κεκλιμένη κορυφή & βάση). Ενεργό ΜΟΝΟ
+  // όταν τουλάχιστον μία γωνία πήρε top/base από host (`hasAttach`)· αλλιώς πέφτει
+  // στο ίσιο extrude fast-path παρακάτω (μηδέν regression — μη-attached κολώνα).
+  if (topProfile?.hasAttach || baseProfile?.hasAttach) {
+    const prism = buildAttachedColumnPrism(verts, floorElevationMm, topProfile, baseProfile);
+    if (prism) {
+      const mesh = new THREE.Mesh(prism, getElementMaterial3D('column'));
+      mesh.position.y = floorElevationMm * MM_TO_M + buildingBaseElevationM;
+      const tagged = tagMesh(mesh, column.id, 'column', matId, levelId);
+      attachEdgesProjection(tagged, 'column');
+      return tagged;
+    }
+    // Fall through to flat solid αν το prism εκφυλίζεται (defensive).
+  }
 
   const shape = buildShape(verts);
   if (!shape) return null;
 
   const geo = extrudeAndRotate(shape, column.params.height * MM_TO_M);
-  const matId = column.params.material ?? 'elem-column';
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('column'));
-  mesh.position.y = floorElevationMm * MM_TO_M + buildingBaseElevationM;
+  // ADR-402 — `baseOffset` lifts the whole column (vertical move). ONLY on this flat
+  // path: the attached-prism path bakes baseOffset into its profile z. baseOffset=0 → no change.
+  mesh.position.y = (floorElevationMm + column.params.baseOffset) * MM_TO_M + buildingBaseElevationM;
   const tagged = tagMesh(mesh, column.id, 'column', matId, levelId);
   attachEdgesProjection(tagged, 'column');
   return tagged;
+}
+
+/**
+ * ADR-401 Phase F.2 — μετατρέπει τα per-corner απόλυτα-mm προφίλ της attached
+ * κολώνας σε floor-local μέτρα και χτίζει το prism. Top corners από το
+ * `topProfile` (ή flat top σε `maxTopZmm` αν λείπει)· base corners από το
+ * `baseProfile` (ή flat base σε `nominalBaseZmm`/`baseZmm`). `localZ = (zmm −
+ * FFL_mm) · MM_TO_M` (ίδια σύμβαση με `makeWallTopLocalFn`).
+ */
+function buildAttachedColumnPrism(
+  footprint: readonly Point3D[],
+  floorElevationMm: number,
+  topProfile?: ColumnTopProfile,
+  baseProfile?: ColumnBaseProfile,
+): THREE.BufferGeometry | null {
+  const n = footprint.length;
+  const toLocal = (zmm: number): number => (zmm - floorElevationMm) * MM_TO_M;
+  // Top: per-corner profile, ή flat στο nominal (maxTopZmm == minTopZmm σε flat top).
+  const topZmm = topProfile?.cornerTopZmm ?? new Array<number>(n).fill(baseProfile ? baseProfile.maxBaseZmm : 0);
+  // Base: per-corner profile, ή flat στο nominal base (από όποιο προφίλ υπάρχει).
+  const nominalBaseZmm = baseProfile?.nominalBaseZmm ?? topProfile?.baseZmm ?? 0;
+  const baseZmm = baseProfile?.cornerBaseZmm ?? new Array<number>(n).fill(nominalBaseZmm);
+  if (topZmm.length !== n || baseZmm.length !== n) return null;
+
+  const cornerTopLocalM = topZmm.map(toLocal);
+  const cornerBaseLocalM = baseZmm.map(toLocal);
+  return buildColumnPrismGeometry(
+    footprint.map((p) => ({ x: p.x, y: p.y })),
+    cornerBaseLocalM,
+    cornerTopLocalM,
+  );
 }
 
 /**

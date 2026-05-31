@@ -38,6 +38,7 @@ import {
 } from '../../bim/columns/column-firestore-service';
 import { recordColumnChange } from '../../bim/columns/column-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
+import { columnBoqEntity } from './column-boq-feed';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -274,9 +275,12 @@ export function useColumnPersistence(
         { prevParams: prevParams ?? undefined },
       );
       if (companyId && projectId && buildingId) {
+        // ADR-401 F.2 — profile-aware BOQ (attached κολώνα → ύψος/όγκος από top−base).
+        const levelId = levelManager.currentLevelId;
+        const scene = levelId ? levelManager.getLevelScene(levelId) ?? null : null;
         void bimToBoqBridge.upsertBoqItemForBim(
           'column',
-          { id: entity.id, kind: entity.kind, geometry: entity.geometry },
+          columnBoqEntity(entity, scene),
           { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           isNew ? 'created' : 'updated',
         );
@@ -285,7 +289,7 @@ export function useColumnPersistence(
       setError(err instanceof Error ? err.message : 'COLUMN_SAVE_ERROR');
       setSaveState('error');
     }
-  }, [companyId, projectId, buildingId, floorId]);
+  }, [companyId, projectId, buildingId, floorId, levelManager]);
 
   // Auto-save debounce σε selected column params change.
   useEffect(() => {
@@ -377,9 +381,12 @@ export function useColumnPersistence(
       setLastSavedAt(Date.now());
       void recordColumnChange('restored', entity);
       if (companyId && projectId && buildingId) {
+        // ADR-401 F.2 — profile-aware BOQ (attached κολώνα → ύψος/όγκος από top−base).
+        const levelId = levelManager.currentLevelId;
+        const scene = levelId ? levelManager.getLevelScene(levelId) ?? null : null;
         void bimToBoqBridge.upsertBoqItemForBim(
           'column',
-          { id: entity.id, kind: entity.kind, geometry: entity.geometry },
+          columnBoqEntity(entity, scene),
           { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           'created',
         );
@@ -388,7 +395,7 @@ export function useColumnPersistence(
       setError(err instanceof Error ? err.message : 'COLUMN_RESTORE_ERROR');
       setSaveState('error');
     }
-  }, [companyId, projectId, buildingId, floorId]);
+  }, [companyId, projectId, buildingId, floorId, levelManager]);
 
   // First-save listener — fires άμεσα για freshly drawn columns.
   useEffect(() => {

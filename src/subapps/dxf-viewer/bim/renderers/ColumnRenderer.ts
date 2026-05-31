@@ -130,6 +130,12 @@ export class ColumnRenderer extends BaseEntityRenderer {
     this.ctx.save();
     // ADR-375 v2.12 — V/G category color tints the body fill (SSoT helper).
     const _colStyles = useDrawingScaleStore.getState().objectStyles;
+    // ADR-401 F.2 — cut-state = nominal `baseOffset + height` ΣΚΟΠΙΜΑ (όχι attached
+    // top/base profile). Render leaf (ADR-040 — ΔΕΝ σκανάρει hosts), όπως ο τοίχος
+    // (WallRenderer B3c). Το cut plane (~1.2m) πέφτει πάντα μεταξύ base και attached
+    // top (~2.5m) όσο και του nominal → cut-state 'cut' και στις δύο = NO-OP. Θα
+    // διέφερε μόνο αν host κατέβαζε την κορυφή κάτω από το cut plane (extreme edge
+    // case, host scan σε leaf) → εκτός scope, δες ADR-401 §5 F.2.
     const _colCutState = resolveCutState(
       { zBottomMm: column.params.baseOffset ?? 0, zTopMm: (column.params.baseOffset ?? 0) + column.params.height, category: 'column' },
       useDrawingScaleStore.getState().viewRange,

@@ -297,3 +297,76 @@ describe('computeColumnGeometry — I-shape (double-T)', () => {
     expect(g.area).toBeCloseTo(expected, 5);
   });
 });
+
+// ─── ADR-401 Phase F.2 — profile-aware effective ύψος (attached κολώνα) ────────
+
+describe('computeColumnGeometry — profile-aware (ADR-401 F.2)', () => {
+  /** 400×400 κολώνα: area 0.16 m². Literal profiles (decoupled από resolver). */
+  function topProfile(cornerTopZmm: number[], baseZmm = 0) {
+    return {
+      baseZmm,
+      cornerTopZmm,
+      maxTopZmm: Math.max(...cornerTopZmm),
+      minTopZmm: Math.min(...cornerTopZmm),
+      hasAttach: true,
+      missingHostIds: [],
+    };
+  }
+  function baseProfile(cornerBaseZmm: number[], nominalBaseZmm = 0) {
+    return {
+      nominalBaseZmm,
+      cornerBaseZmm,
+      maxBaseZmm: Math.max(...cornerBaseZmm),
+      minBaseZmm: Math.min(...cornerBaseZmm),
+      hasAttach: true,
+      missingHostIds: [],
+    };
+  }
+
+  it('χωρίς profiles → byte-for-byte fast path (params.height)', () => {
+    const flat = computeColumnGeometry(makeColumn({ width: 400, depth: 400, height: 3000 }));
+    expect(flat.height).toBeCloseTo(3000, FLOAT_TOL);
+    expect(flat.volume).toBeCloseTo(0.48, 4);
+  });
+
+  it('top-attach: effective ύψος = avg(cornerTopZmm) − nominal base', () => {
+    // cornerTopZmm μέσος = 2250 → height 2250, volume 0.16 × 2.25 = 0.36.
+    const g = computeColumnGeometry(
+      makeColumn({ width: 400, depth: 400, height: 3000 }),
+      topProfile([2500, 2500, 2000, 2000]),
+    );
+    expect(g.height).toBeCloseTo(2250, FLOAT_TOL);
+    expect(g.volume).toBeCloseTo(0.16 * 2.25, 4);
+  });
+
+  it('base-attach: effective ύψος = nominal top − avg(cornerBaseZmm)', () => {
+    // top nominal = 0 + 3000 = 3000· base μέσος = 250 → height 2750.
+    const g = computeColumnGeometry(
+      makeColumn({ width: 400, depth: 400, height: 3000 }),
+      undefined,
+      baseProfile([500, 500, 0, 0]),
+    );
+    expect(g.height).toBeCloseTo(2750, FLOAT_TOL);
+    expect(g.volume).toBeCloseTo(0.16 * 2.75, 4);
+  });
+
+  it('top + base: effective ύψος = avg(top) − avg(base)', () => {
+    const g = computeColumnGeometry(
+      makeColumn({ width: 400, depth: 400, height: 3000 }),
+      topProfile([2400, 2400, 2600, 2600]), // avg 2500
+      baseProfile([200, 200, 0, 0]),         // avg 100
+    );
+    expect(g.height).toBeCloseTo(2400, FLOAT_TOL);
+    expect(g.volume).toBeCloseTo(0.16 * 2.4, 4);
+  });
+
+  it('εκφυλισμός (top κάτω από base) → height clamp στο 0', () => {
+    const g = computeColumnGeometry(
+      makeColumn({ width: 400, depth: 400, height: 3000 }),
+      topProfile([100, 100, 100, 100]),
+      baseProfile([500, 500, 500, 500]),
+    );
+    expect(g.height).toBe(0);
+    expect(g.volume).toBe(0);
+  });
+});

@@ -42,19 +42,55 @@ import {
   MIN_POLYGON_SIDES,
 } from '../types/column-types';
 import type { Point3D } from '../types/bim-base';
+import type { ColumnTopProfile, ColumnBaseProfile } from './column-vertical-profile';
 import { polygonArea, polygonBbox } from './shared/polygon-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
 
 const MM_TO_M = 1 / 1000;
 const DEG_TO_RAD = Math.PI / 180;
 
+/** Αριθμητικός μέσος όρος (mm) μιας readonly λίστας — άδεια → fallback. */
+function mean(values: readonly number[], fallback: number): number {
+  if (values.length === 0) return fallback;
+  let sum = 0;
+  for (const v of values) sum += v;
+  return sum / values.length;
+}
+
+/**
+ * ADR-401 Phase F.2 — effective ύψος (mm) attached κολώνας για BOQ. Per-corner
+ * profiles → μέσο ύψος ανά footprint = `avg(cornerTopZmm) − avg(cornerBaseZmm)`
+ * (για ~ομοιόμορφο footprint το avg αρκεί· mirror του wall `profileGrossAreaM2`).
+ * Top-only → base = nominal· base-only → top = nominal. Flat → `params.height`.
+ */
+function effectiveColumnHeightMm(
+  params: ColumnParams,
+  topProfile?: ColumnTopProfile,
+  baseProfile?: ColumnBaseProfile,
+): number {
+  const heightMm = Math.max(0, params.height);
+  const nominalBaseZmm = baseProfile?.nominalBaseZmm ?? topProfile?.baseZmm ?? 0;
+  const nominalTopMm = nominalBaseZmm + heightMm;
+  const effTopMm = topProfile ? mean(topProfile.cornerTopZmm, nominalTopMm) : nominalTopMm;
+  const effBaseMm = baseProfile ? mean(baseProfile.cornerBaseZmm, nominalBaseZmm) : nominalBaseZmm;
+  return Math.max(0, effTopMm - effBaseMm);
+}
+
 /**
  * Compute `ColumnGeometry` από `ColumnParams`. Pure SSoT για column-derived
  * γεωμετρία. Caller MUST ensure width/depth > 0 (validator guard upstream).
  *
+ * ADR-401 Phase F.2: όταν δοθούν `topProfile`/`baseProfile` (attach σε host),
+ * το `height`/`volume` γίνονται profile-aware (effective μέσο ύψος αντί
+ * `params.height`)· χωρίς προφίλ = byte-for-byte fast path (μηδέν regression).
+ *
  * Throws nothing — validation σε `validateColumnParams()`.
  */
-export function computeColumnGeometry(params: ColumnParams): ColumnGeometry {
+export function computeColumnGeometry(
+  params: ColumnParams,
+  topProfile?: ColumnTopProfile,
+  baseProfile?: ColumnBaseProfile,
+): ColumnGeometry {
   // s: canvas units per 1 mm. Shape builders emit local vertices in canvas
   // units (mm × s) so anchor-offset + rotation stay in the same space as
   // `params.position` (always canvas units from user click).
@@ -76,7 +112,10 @@ export function computeColumnGeometry(params: ColumnParams): ColumnGeometry {
   const areaCanvas2 = polygonArea(transformed);
   const canvasToM = (1 / s) * MM_TO_M;
   const areaM2 = areaCanvas2 * canvasToM * canvasToM;
-  const heightMm = Math.max(0, params.height);
+  // ADR-401 F.2: profile-aware effective ύψος (attached κολώνα)· αλλιώς params.height.
+  const heightMm = (topProfile || baseProfile)
+    ? effectiveColumnHeightMm(params, topProfile, baseProfile)
+    : Math.max(0, params.height);
   const volumeM3 = areaM2 * heightMm * MM_TO_M;
 
   return {

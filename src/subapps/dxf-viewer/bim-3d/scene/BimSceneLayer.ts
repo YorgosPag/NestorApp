@@ -20,6 +20,11 @@ import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { resolveWallTopProfile } from '../../bim/geometry/wall-top-profile';
 import { resolveWallBaseProfile } from '../../bim/geometry/wall-base-profile';
 import { makeWallTopContext, makeWallBaseContext, buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
+import {
+  resolveColumnTopProfile,
+  resolveColumnBaseProfile,
+  makeColumnHostResolver,
+} from '../../bim/geometry/column-vertical-profile';
 import { addEnvelopeToScene } from './bim-envelope-scene-builder';
 import type { SyncContext } from './bim-scene-context';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
@@ -247,10 +252,35 @@ export class BimSceneLayer {
   }
 
   private syncColumns(entities: Bim3DEntities, ctx: SyncContext): void {
+    // ADR-401 Phase F.2 — host inputs (δοκάρια + πλάκες) για τη μεταβλητή/κεκλιμένη
+    // κορυφή (top-attach) ΚΑΙ βάση (base-attach) των `attached` κολωνών· χτίζονται
+    // μόνο όταν υπάρχει τουλάχιστον μία attached κολώνα (κοινό case = καμία → μηδέν
+    // κόστος). Mirror του `syncWalls`. Footprints στο ίδιο plan space.
+    const hasAttached = entities.columns.some(
+      (c) => c.params?.topBinding === 'attached' || c.params?.baseBinding === 'attached',
+    );
+    const resolveHostInput = hasAttached
+      ? makeColumnHostResolver(buildWallHostInputs(entities.beams, entities.slabs))
+      : undefined;
+
     for (const column of entities.columns) {
       const r = this.resolveEntity(column, 'column', ctx);
       if (!r) continue;
-      const mesh = columnToMesh(column, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      // Profiles μόνο για attached κολώνες με geometry· αλλιώς undefined → fast path
+      // (byte-for-byte παλιά συμπεριφορά, μηδέν geometry access για μη-attached).
+      const topAttached = column.params?.topBinding === 'attached';
+      const baseAttached = column.params?.baseBinding === 'attached';
+      let topProfile, baseProfile;
+      const footVerts = column.geometry?.footprint?.vertices;
+      if ((topAttached || baseAttached) && footVerts && footVerts.length >= 3) {
+        const footprint = footVerts.map((v) => ({ x: v.x, y: v.y }));
+        const colCtx = { floorElevationMm: ctx.floorElevationMm, resolveHostInput };
+        topProfile = topAttached ? resolveColumnTopProfile(column.params, footprint, colCtx) : undefined;
+        baseProfile = baseAttached ? resolveColumnBaseProfile(column.params, footprint, colCtx) : undefined;
+      }
+      const mesh = columnToMesh(
+        column, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, topProfile, baseProfile,
+      );
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }
