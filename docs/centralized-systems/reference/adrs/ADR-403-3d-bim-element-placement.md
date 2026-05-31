@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | 🟢 ACCEPTED — Column placement DONE (pending commit, 🔴 browser verify) |
+| Status | 🟢 ACCEPTED — Column placement DONE + ✅ browser-verified 2026-06-01 (pending commit) |
 | Date | 2026-06-01 |
 | Owner | Giorgio / Claude (Opus 4.8) |
 | Related | ADR-402 (3Δ BIM editing), ADR-366 (3Δ viewport), ADR-363 (BIM column tool/FSM), ADR-399 (multi-floor 3Δ), ADR-398 (column corner snap), ADR-040 (micro-leaf), ADR-009 (3Δ units) |
@@ -106,13 +106,27 @@
 
 ## Verification
 - ✅ 22/22 placement tests PASS (`npx jest src/subapps/dxf-viewer/bim-3d/placement`).
-- ⏳ `npx tsc --noEmit` (background).
-- 🔴 Browser `/dxf/viewer`: 3Δ → «Κολώνα» → ghost ακολουθεί κέρσορα → κλικ τοποθετεί στο
-  ακριβές σημείο (σύγκριση με 2Δ) → continuous placement → Esc τερματίζει → undo αναιρεί →
-  multi-floor «Όλοι» τοποθετεί στον ενεργό όροφο.
+- ✅ `npx tsc --noEmit` clean.
+- ✅ Browser `/dxf/viewer` 2026-06-01 (Giorgio): 3Δ → «Κολώνα» → ghost ακολουθεί κέρσορα →
+  σταυρόνημα cursor → κλικ τοποθετεί στον ενεργό όροφο. Επιλογή υπάρχουσας κολώνας →
+  move gizmo· ενεργοποίηση εργαλείου → gizmo σβήνει (single-mode). Σωστή ροή place vs edit.
 
 ---
 
 ## Changelog
 - **2026-06-01** — Column placement σε 3Δ (this document). 4 νέα αρχεία + 4 μικρά
   modified, 22 tests. Pending commit + browser verify.
+- **2026-06-01 (integration fixes, browser-verified)** — 3 διορθώσεις ενσωμάτωσης που
+  αποκαλύφθηκαν στο browser test (τα isolated tests δεν τα έπιαναν):
+  1. **Root bug — dead mount.** Το `useBim3DColumnPlacement` ήταν imported αλλά **ΠΟΤΕ
+     καλεσμένο** στο `BimViewport3D.tsx` (το crash του προηγ. session διέκοψε στο τελευταίο
+     βήμα). Ολόκληρη η αλυσίδα placement δεν εκτελούνταν → καθόλου ghost/click. Fix: προστέθηκε
+     η κλήση `useBim3DColumnPlacement({ managerRef, canvasEl })` δίπλα στο `useBim3DEditInteraction`.
+     (`tsc` δεν το έπιασε — `noUnusedLocals` off· τα 38 tests περνούσαν γιατί δοκιμάζουν τον
+     hook απομονωμένα, όχι το mounting.)
+  2. **Placement cursor.** Όσο το εργαλείο είναι ενεργό, ο κέρσορας του canvas γίνεται
+     `crosshair` (mirror του 2Δ DXF canvas) αντί για το orbit-grab «χεράκι» — set/restore στο
+     `setup()`/`teardown()` του hook.
+  3. **Single-mode (place XOR edit).** Το arming του placement καλεί
+     `useSelection3DStore.clearSelection()` → το move-gizmo μιας προηγουμένως επιλεγμένης
+     οντότητας σβήνει (Revit/AutoCAD). Ποτέ gizmo + ghost ταυτόχρονα.

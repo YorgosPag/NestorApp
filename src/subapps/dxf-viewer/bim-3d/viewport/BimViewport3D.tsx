@@ -290,6 +290,13 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // openings cascade). Disabled when there is no levels context (ADR-371).
   useBim3DEditInteraction({ managerRef, canvasEl });
 
+  // ADR-403 — 3D column placement. Armed only while the column tool is active
+  // AND the viewport is in 3D: raycasts the active floor plane, shows a WYSIWYG
+  // ghost on pointer move, and on click routes the scene-units point through the
+  // existing 2D column FSM (`useColumnTool.onCanvasClick`) via the
+  // `bim:place-column-3d` EventBus bridge (zero duplication, full commit path).
+  useBim3DColumnPlacement({ managerRef, canvasEl });
+
   // Phase 9 / C.1.c — Animation render queue driver. Mounted once; subscribes
   // to RenderQueueStore and drives the MP4 encode pipeline when a job is queued.
   const notifications = useNotifications();

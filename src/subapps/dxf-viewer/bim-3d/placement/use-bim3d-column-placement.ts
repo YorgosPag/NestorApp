@@ -25,6 +25,7 @@ import { EventBus } from '../../systems/events/EventBus';
 import { toolStateStore } from '../../stores/ToolStateStore';
 import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
+import { useSelection3DStore } from '../stores/Selection3DStore';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { ColumnPlacementGhost } from './ColumnPlacementGhost';
@@ -90,12 +91,21 @@ export function useBim3DColumnPlacement({ managerRef, canvasEl }: UseBim3DColumn
 
     const setup = (): void => {
       if (abort) return;
+      // Industry standard (Revit / AutoCAD): arming a placement tool clears the
+      // current selection, so the edit gizmo on a previously-selected entity
+      // tears down (`useBim3DEditInteraction` reacts to Selection3DStore). Only
+      // ONE mode is ever active — edit-selected OR place-new, never both.
+      useSelection3DStore.getState().clearSelection();
       abort = new AbortController();
       const { signal } = abort;
       canvasEl.addEventListener('pointermove', onMove, { signal });
       canvasEl.addEventListener('pointerleave', onLeave, { signal });
       canvasEl.addEventListener('pointerdown', onDown, { signal });
       canvasEl.addEventListener('click', onClick, { signal });
+      // Placement-mode cursor (mirrors the 2D DXF canvas `crosshair`) so the
+      // pointer signals "place a column", not the orbit-grab hand the 3D
+      // overlay shows by default.
+      canvasEl.style.cursor = 'crosshair';
     };
 
     const teardown = (): void => {
@@ -103,6 +113,8 @@ export function useBim3DColumnPlacement({ managerRef, canvasEl }: UseBim3DColumn
       abort = null;
       downPos = null;
       ghost.setVisible(false);
+      // Restore the orbit-grab cursor owned by the viewport overlay.
+      canvasEl.style.cursor = '';
       manager.markSceneDirty();
     };
 
