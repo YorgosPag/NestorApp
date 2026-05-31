@@ -748,6 +748,7 @@
 | **ADR-395** | Ενσωμάτωση BIM οντοτήτων στην καρτέλα «Επιμετρήσεις» Κτιρίου | ✅ APPROVED | [View](./adrs/ADR-395-bim-quantities-building-measurements.md) |
 | **ADR-396** | Ενιαία Εξωτερική Θερμοπρόσοψη (ETICS) για BIM | ✅ APPROVED | [View](./adrs/ADR-396-bim-external-thermal-envelope-etics.md) |
 | **ADR-401** | BIM Wall Top/Base Constraints + Attach-to-Structural (συσχετιστικό αυτόματο ύψος) | 🟢 ACCEPTED — Phase A+B1+B2+B3a+B3b+B3c DONE (C–F pending) | [View](./adrs/ADR-401-bim-wall-top-base-constraints-attach-to-structural.md) |
+| **ADR-402** | 3D Viewport BIM Element Editing (επεξεργασία δομικών στοιχείων στην 3Δ προβολή) | 🟢 ACCEPTED — Sub-Phase 0+1+2 + GenArc gizmo **Phase A** DONE + **Phase B resize scaffold + COLUMN resize** DONE (resize-x→width/resize-z→depth via `bim3d-resize-bridge`)· wall/beam/slab + Y→elevation/snap/multi-select = υπόλοιπο Phase B | [View](./adrs/ADR-402-3d-bim-element-editing.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

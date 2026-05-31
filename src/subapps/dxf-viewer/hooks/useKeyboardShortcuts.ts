@@ -21,6 +21,7 @@ import { calculateCombinedEntityBounds } from '../systems/selection/shared/selec
 import { EventBus } from '../systems/events';
 // ADR-357 Phase 14-B: Command line activation
 import { CommandLineStore } from '../systems/command-line/CommandLineStore';
+import { useViewMode3DStore, selectIs3D } from '../bim-3d/stores/ViewMode3DStore';
 // ADR-364 — Escape Command Bus SSoT
 import { useEscapeHandler, ESC_PRIORITY } from '../systems/escape-bus';
 // ADR-036 / ADR-364 Group 3 follow-up (2026-05-19): Single Source of Truth for
@@ -119,9 +120,13 @@ export const useKeyboardShortcuts = ({
       // ADR-357 Phase 14-B: letter/digit in select mode → open command line.
       // Gate: select tool, no input focused, no modifier keys.
       // Exclusion: 'J' is reserved for entity Join (useCanvasKeyboardShortcuts).
+      // ADR-402 §Sub-Phase 2: NEVER in 3D view — the command line is a 2D feature,
+      // and opening it steals focus from the 3D edit-gizmo keys (G/X/Z), which the
+      // 3D dispatcher (run later in the same capture phase) would otherwise handle.
       if (
         activeTool === 'select' &&
         !inputFocused &&
+        !selectIs3D(useViewMode3DStore.getState()) &&
         !e.ctrlKey && !e.metaKey && !e.altKey &&
         e.key !== 'j' && e.key !== 'J' &&
         /^[A-Za-z0-9]$/.test(e.key)

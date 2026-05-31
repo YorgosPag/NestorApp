@@ -86,4 +86,3 @@ export const useBim3DEditStore = create<Bim3DEditStoreType>()(
 // Selectors (stable references for subscribeWithSelector consumers).
 export const selectEditToolActive = (s: Bim3DEditStoreType): boolean => s.editToolActive;
 export const selectEditEntityId = (s: Bim3DEditStoreType): string | null => s.editEntityId;
-export const selectEditAxisLock = (s: Bim3DEditStoreType): Bim3DAxisLock => s.axisLock;
