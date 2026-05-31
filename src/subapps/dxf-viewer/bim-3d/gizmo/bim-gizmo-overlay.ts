@@ -25,6 +25,7 @@ import type { GizmoHandleId } from './gizmo-types';
 import {
   AXIS_COLORS, PLANE_COLORS, RESIZE_IDLE_COLORS, GIZMO_COLOR_CENTER, GIZMO_COLOR_HOVER,
   GIZMO_SCREEN_SCALE, GIZMO_RENDER_ORDER,
+  SNAP_MARKER_COLOR, SNAP_MARKER_RADIUS, SNAP_MARKER_SCREEN_SCALE, SNAP_MARKER_RENDER_ORDER,
 } from './gizmo-constants';
 
 /** Move/rotate handles wired in Phase A — active for every selected entity. */
@@ -34,11 +35,23 @@ const BASE_HANDLES: readonly GizmoHandleId[] = [
 
 /**
  * ADR-402 Phase B — extra resize handles shown per entity type (world-axis
- * aligned; the per-type grip math projects onto the entity's local frame). Columns
- * resize width (X) + depth (Z); wall/beam/slab land in a later Phase B slice.
+ * aligned; the per-type grip math projects onto the entity's local frame, so both
+ * plan handles are offered and the perpendicular one drives the dimension). The
+ * mapping per type (Revit-standard, see `bim3d-resize-bridge`):
+ *   - column → X width, Z depth, Y height
+ *   - wall   → X/Z thickness, Y height (length stays an endpoint-grip edit)
+ *   - beam   → X/Z width,     Y depth  (length stays an endpoint-grip edit)
+ *   - slab   → Y thickness only (footprint is edited per-vertex in 2D)
  */
 const RESIZE_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {
-  column: ['resize-x', 'resize-z'],
+  column: ['resize-x', 'resize-z', 'resize-y'],
+  wall: ['resize-x', 'resize-z', 'resize-y'],
+  beam: ['resize-x', 'resize-z', 'resize-y'],
+  slab: ['resize-y'],
+  // ADR-402 Sub-Phase 1 — stair: plan-only handles. The bridge projects the slide
+  // onto the stair's local frame (perp → width, axial → run/stepCount); there is no
+  // vertical handle (height = rise × stepCount, building-code → properties panel).
+  stair: ['resize-x', 'resize-z'],
 };
 
 /** Active handle id set for a selected entity: base move/rotate + any resize handles. */
@@ -56,6 +69,8 @@ export class BimGizmoOverlay {
   private activeHitboxes: THREE.Mesh[] = [];
   private hovered: GizmoHandleId | null = null;
   private disposed = false;
+  /** ADR-402 Phase B — drag snap marker (square frame, depth-test off → always visible). */
+  private readonly snapMarker: THREE.LineSegments;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -66,6 +81,9 @@ export class BimGizmoOverlay {
     // Start with the move/rotate base; the hook reconfigures per selected type.
     this.applyActiveHandles(new Set(BASE_HANDLES));
     this.scene.add(this.meshSet.root);
+
+    this.snapMarker = createSnapMarker();
+    this.scene.add(this.snapMarker);
   }
 
   get visible(): boolean {
@@ -80,6 +98,30 @@ export class BimGizmoOverlay {
   setVisible(visible: boolean): void {
     if (this.disposed) return;
     this.meshSet.root.visible = visible;
+    if (!visible) this.hideSnapMarker();
+  }
+
+  /**
+   * Show the drag snap marker at a world point (ADR-402 Phase B), sized
+   * screen-constant like the gizmo so it stays a fixed pixel size during zoom.
+   */
+  showSnapMarker(world: THREE.Vector3, camera: THREE.Camera): void {
+    if (this.disposed) return;
+    this.snapMarker.position.copy(world);
+    let s = SNAP_MARKER_RADIUS;
+    if (camera instanceof THREE.PerspectiveCamera) {
+      const dist = camera.position.distanceTo(world);
+      s = dist * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * SNAP_MARKER_SCREEN_SCALE;
+    }
+    this.snapMarker.scale.setScalar(Math.max(s, 1e-3));
+    this.snapMarker.visible = true;
+    this.snapMarker.updateMatrixWorld(true);
+  }
+
+  /** Hide the drag snap marker. */
+  hideSnapMarker(): void {
+    if (this.disposed) return;
+    this.snapMarker.visible = false;
   }
 
   /**
@@ -133,6 +175,9 @@ export class BimGizmoOverlay {
     this.disposed = true;
     this.scene.remove(this.meshSet.root);
     this.meshSet.dispose();
+    this.scene.remove(this.snapMarker);
+    this.snapMarker.geometry.dispose();
+    (this.snapMarker.material as THREE.Material).dispose();
   }
 
   // ── internals ──────────────────────────────────────────────────────────────
@@ -166,6 +211,25 @@ export class BimGizmoOverlay {
       }
     });
   }
+}
+
+/**
+ * Build the drag snap marker — a small cube wireframe (reads as a square frame
+ * from any orbit angle, mirroring the 2D endpoint square). Depth-test off + high
+ * render order so it stays visible through geometry. Unit half-extent (box side 2)
+ * so `scale.setScalar(s)` gives a half-extent of `s` metres.
+ */
+function createSnapMarker(): THREE.LineSegments {
+  const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(2, 2, 2));
+  const material = new THREE.LineBasicMaterial({
+    color: SNAP_MARKER_COLOR,
+    depthTest: false,
+    transparent: true,
+  });
+  const marker = new THREE.LineSegments(edges, material);
+  marker.renderOrder = SNAP_MARKER_RENDER_ORDER;
+  marker.visible = false;
+  return marker;
 }
 
 /** Idle colour for a handle id (restored when hover leaves). */

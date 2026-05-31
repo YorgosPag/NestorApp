@@ -39,17 +39,22 @@ export function computeSceneFramingBounds(
 }
 
 /**
- * Selection-aware framing: tries selection first, falls back to scene extents.
+ * Selection-aware framing: tries the selection first, falls back to scene extents.
+ * ADR-402 Phase C — frames the union bounds of the whole multi-selection.
  * Returns null when nothing is framable (caller should no-op).
  */
 export function computeFramingTargetBounds(
   bimGroup: THREE.Object3D,
   dxfBounds: THREE.Box3 | null,
-  selectedBimId: string | null,
+  selectedBimIds: readonly string[],
 ): THREE.Box3 | null {
-  if (selectedBimId) {
-    const sel = computeBimSelectionBounds(bimGroup, selectedBimId);
-    if (sel && !sel.isEmpty()) return sel;
+  let sel: THREE.Box3 | null = null;
+  for (const id of selectedBimIds) {
+    const b = computeBimSelectionBounds(bimGroup, id);
+    if (!b || b.isEmpty()) continue;
+    if (sel) sel.union(b);
+    else sel = b;
   }
+  if (sel && !sel.isEmpty()) return sel;
   return computeSceneFramingBounds(bimGroup, dxfBounds);
 }

@@ -23,8 +23,14 @@ interface Bim3DEditState {
   /** True while a gizmo is mounted on an element (G/R toggled on). */
   editToolActive: boolean;
   editMode: Bim3DEditMode;
-  /** bimId of the element under edit (the gizmo anchor target). */
+  /**
+   * bimIds of the elements under edit (the gizmo anchors on their union centroid).
+   * ADR-402 Phase C — widened single→multi. [0] = primary.
+   */
+  editEntityIds: string[];
+  /** Derived (compat): primary edited id = editEntityIds[0] ?? null. */
   editEntityId: string | null;
+  /** Primary type when a single element is edited; `null` for multi (hides resize handles). */
   editBimType: string | null;
   /** Level the edited element lives on — resolved lazily; null = use currentLevelId. */
   targetLevelId: string | null;
@@ -32,8 +38,11 @@ interface Bim3DEditState {
 }
 
 interface Bim3DEditActions {
-  /** Mount the move gizmo on an element. Resets any axis lock. */
-  activateMove(entityId: string, bimType: string | null): void;
+  /**
+   * Mount the move gizmo on one or more elements. Resets any axis lock.
+   * `bimType` is the primary type for a single element, or `null` for multi.
+   */
+  activateMove(entityIds: string[], bimType: string | null): void;
   /** Tear the gizmo down (Escape / G-toggle-off / deselection). */
   deactivate(): void;
   /** Record the resolved level for the active edit target (multi-floor edge case). */
@@ -49,16 +58,18 @@ export const useBim3DEditStore = create<Bim3DEditStoreType>()(
   subscribeWithSelector((set) => ({
     editToolActive: false,
     editMode: null,
+    editEntityIds: [],
     editEntityId: null,
     editBimType: null,
     targetLevelId: null,
     axisLock: null,
 
-    activateMove: (entityId, bimType) =>
+    activateMove: (entityIds, bimType) =>
       set({
         editToolActive: true,
         editMode: 'move',
-        editEntityId: entityId,
+        editEntityIds: entityIds,
+        editEntityId: entityIds[0] ?? null,
         editBimType: bimType,
         targetLevelId: null,
         axisLock: null,
@@ -68,6 +79,7 @@ export const useBim3DEditStore = create<Bim3DEditStoreType>()(
       set({
         editToolActive: false,
         editMode: null,
+        editEntityIds: [],
         editEntityId: null,
         editBimType: null,
         targetLevelId: null,
@@ -85,4 +97,9 @@ export const useBim3DEditStore = create<Bim3DEditStoreType>()(
 
 // Selectors (stable references for subscribeWithSelector consumers).
 export const selectEditToolActive = (s: Bim3DEditStoreType): boolean => s.editToolActive;
-export const selectEditEntityId = (s: Bim3DEditStoreType): string | null => s.editEntityId;
+/**
+ * Membership key for the whole edit set — fires when the *set* changes, not just
+ * the primary [0]. Needed so adding a 2nd element re-anchors the gizmo on the
+ * group centroid (the primary id may stay identical). ADR-402 Phase C.
+ */
+export const selectEditEntityKey = (s: Bim3DEditStoreType): string => s.editEntityIds.join('|');

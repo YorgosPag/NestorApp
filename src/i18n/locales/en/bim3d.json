@@ -707,6 +707,7 @@
     "live": {
       "selectionChanged": "Selected: {type} {name}",
       "selectionChangedTypeOnly": "Selected: {type}",
+      "selectionMultiple": "{count} entities selected",
       "selectionCleared": "Selection cleared",
       "modeSwitchedTo3D": "Switched to 3D view",
       "modeSwitchedTo2D": "Switched to 2D view",

@@ -707,6 +707,7 @@
     "live": {
       "selectionChanged": "Επιλέχθηκε: {type} {name}",
       "selectionChangedTypeOnly": "Επιλέχθηκε: {type}",
+      "selectionMultiple": "Επιλέχθηκαν {count} στοιχεία",
       "selectionCleared": "Καθαρίστηκε επιλογή",
       "modeSwitchedTo3D": "Μεταβήκατε σε 3D",
       "modeSwitchedTo2D": "Μεταβήκατε σε 2D",

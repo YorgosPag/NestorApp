@@ -63,7 +63,7 @@ import {
   syncMultiFloorBimEntitiesIntoScene,
   syncDxfOverlayIntoScene,
   setBimOrbitPivot,
-  resolveBimEntityType,
+  applyBimSelection,
   loadHdriIntoStore,
 } from './scene-manager-actions';
 import type { FloorStackEntry } from './multi-floor-3d-source';
@@ -211,7 +211,7 @@ export class ThreeJsSceneManager {
     const bounds = computeFramingTargetBounds(
       this.bimLayer.group,
       this.dxfConverter.getBounds(),
-      useSelection3DStore.getState().selectedBimId,
+      useSelection3DStore.getState().selectedBimIds,
     );
     if (!bounds || bounds.isEmpty()) return;
     this.viewport.frameBounds(bounds.min, bounds.max);
@@ -390,17 +390,17 @@ export class ThreeJsSceneManager {
     this.markSceneDirty();
   }
 
+  /** Replace the selection with one entity (plain click), or clear it (null). */
   selectBimEntity(bimId: string | null): void {
     if (this.disposed) return;
     this.markSceneDirty();
-    if (bimId === null) {
-      this.selectionHighlighter.onClear();
-      useSelection3DStore.getState().clearSelection();
-      return;
-    }
-    const bimType = resolveBimEntityType(this.bimLayer.group, bimId);
-    this.selectionHighlighter.onSelect(bimId);
-    useSelection3DStore.getState().selectEntity(bimId, bimType);
+    applyBimSelection({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, bimId, 'replace');
+  }
+  /** ADR-402 Phase C — Shift+click: add/remove one entity from the selection. */
+  toggleBimEntity(bimId: string | null): void {
+    if (this.disposed) return;
+    this.markSceneDirty();
+    applyBimSelection({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, bimId, 'toggle');
   }
 
   raycastBimEntities(clientX: number, clientY: number): RaycastHit | null {

@@ -89,6 +89,87 @@ describe('BimGizmoDragBridge — resize (ADR-402 Phase B)', () => {
     b.update(s.o, s.d, camDir);
     expect(b.getOutcome().kind).toBe('none');
   });
+
+  it('resize-y slides along world Y → resize outcome carries deltaUpMm (deltaMm 0)', () => {
+    // Horizontal camera so axis-Y projects onto the vertical line (not top-down).
+    const camHoriz = new THREE.Vector3(0, 0, -1);
+    const dir = new THREE.Vector3(-1, 0, 0); // ray perpendicular to the Y axis
+    const b = new BimGizmoDragBridge();
+    expect(
+      b.start({ kind: 'resize', axis: 'y', mode: 'normal' }, anchor, new THREE.Vector3(10, 0, 0), dir, camHoriz),
+    ).toBe(true);
+    b.update(new THREE.Vector3(10, 5, 0), dir, camHoriz); // +5m world-up
+    const out = b.getOutcome();
+    // A purely vertical resize has deltaMm (0,0); the guard must NOT classify it none.
+    expect(out.kind).toBe('resize');
+    if (out.kind !== 'resize') return;
+    expect(out.axis).toBe('y');
+    expect(out.deltaUpMm).toBeCloseTo(5000, 3);
+    expect(out.deltaMm.x).toBeCloseTo(0, 3);
+    expect(out.deltaMm.y).toBeCloseTo(0, 3);
+  });
+});
+
+describe('BimGizmoDragBridge — snap injection (ADR-402 Phase B)', () => {
+  it('snaps the move outcome + exposes the snap marker world point', () => {
+    const b = new BimGizmoDragBridge();
+    const s = vertRay(0, 0);
+    b.start({ kind: 'plane', plane: 'xz' }, anchor, s.o, s.d, camDir);
+    // Free end would be DXF (4000, -6000); snap forces (5000, -7000).
+    b.setSnapFn(() => ({ snappedMm: { x: 5000, y: -7000 }, markerMm: { x: 5000, y: -7000 } }));
+    const u = vertRay(4, 6);
+    b.update(u.o, u.d, camDir);
+    const out = b.getOutcome();
+    if (out.kind !== 'move') throw new Error('expected move');
+    expect(out.deltaDxf.x).toBeCloseTo(5000, 3);
+    expect(out.deltaDxf.y).toBeCloseTo(-7000, 3);
+    const m = b.getActiveSnapWorld();
+    expect(m).not.toBeNull();
+    expect(m?.x).toBeCloseTo(5, 6); // 5000mm → 5m
+    expect(m?.y).toBeCloseTo(0, 6); // elevation preserved
+    expect(m?.z).toBeCloseTo(7, 6); // DXF y -7000 → world z +7
+  });
+
+  it('keeps the free drag (no marker) when the snap callback returns null', () => {
+    const b = new BimGizmoDragBridge();
+    const s = vertRay(0, 0);
+    b.start({ kind: 'plane', plane: 'xz' }, anchor, s.o, s.d, camDir);
+    b.setSnapFn(() => null); // OSNAP off / nothing in range
+    const u = vertRay(4, 6);
+    b.update(u.o, u.d, camDir);
+    const out = b.getOutcome();
+    if (out.kind !== 'move') throw new Error('expected move');
+    expect(out.deltaDxf.x).toBeCloseTo(4000, 3);
+    expect(out.deltaDxf.y).toBeCloseTo(-6000, 3);
+    expect(b.getActiveSnapWorld()).toBeNull();
+  });
+
+  it('snaps a horizontal resize handle (deltaMm + cursorMm follow the snap)', () => {
+    const b = new BimGizmoDragBridge();
+    const s = vertRay(0, 0);
+    b.start({ kind: 'resize', axis: 'x', mode: 'normal' }, anchor, s.o, s.d, camDir);
+    b.setSnapFn(() => ({ snappedMm: { x: 5200, y: 0 }, markerMm: { x: 5200, y: 0 } }));
+    const u = vertRay(5, 9); // free X end = 5000mm
+    b.update(u.o, u.d, camDir);
+    const out = b.getOutcome();
+    if (out.kind !== 'resize') throw new Error('expected resize');
+    expect(out.deltaMm.x).toBeCloseTo(5200, 3);
+    expect(out.cursorMm.x).toBeCloseTo(5200, 3);
+    expect(b.getActiveSnapWorld()).not.toBeNull();
+  });
+
+  it('does NOT snap a vertical (axis-Y) resize — dimension edit stays free', () => {
+    const camHoriz = new THREE.Vector3(0, 0, -1);
+    const dir = new THREE.Vector3(-1, 0, 0);
+    const b = new BimGizmoDragBridge();
+    b.start({ kind: 'resize', axis: 'y', mode: 'normal' }, anchor, new THREE.Vector3(10, 0, 0), dir, camHoriz);
+    b.setSnapFn(() => ({ snappedMm: { x: 9999, y: 9999 }, markerMm: { x: 9999, y: 9999 } }));
+    b.update(new THREE.Vector3(10, 5, 0), dir, camHoriz); // +5m world-up
+    const out = b.getOutcome();
+    if (out.kind !== 'resize') throw new Error('expected resize');
+    expect(out.deltaUpMm).toBeCloseTo(5000, 3); // unaffected by the (skipped) snap
+    expect(b.getActiveSnapWorld()).toBeNull();
+  });
 });
 
 describe('BimGizmoDragBridge — rotate-Y', () => {

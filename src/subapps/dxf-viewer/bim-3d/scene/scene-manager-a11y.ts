@@ -28,6 +28,8 @@ export function selectFocusedEntity(
 ): void {
   const focusedId = manager.getFocused();
   if (!focusedId) return;
-  const currentSelected = useSelection3DStore.getState().selectedBimId;
-  toggleSelection(currentSelected === focusedId ? null : focusedId);
+  // ADR-402 Phase C — Enter deselects when the focused entity is anywhere in the
+  // multi-selection, otherwise selects it.
+  const selectedIds = useSelection3DStore.getState().selectedBimIds;
+  toggleSelection(selectedIds.includes(focusedId) ? null : focusedId);
 }

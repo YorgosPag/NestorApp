@@ -4,7 +4,17 @@
  */
 
 import * as THREE from 'three';
-import { computeFloorPlane, worldDeltaToDxfDelta } from '../bim3d-edit-math';
+import {
+  computeFloorPlane,
+  worldDeltaToDxfDelta,
+  mmToEntityUnitFactor,
+} from '../bim3d-edit-math';
+import type { Entity } from '../../../types/entities';
+import {
+  buildDefaultStairParams,
+  buildStairEntity,
+} from '../../../hooks/drawing/stair-completion';
+import { mmToSceneUnits, inferSceneUnitsFromWidth } from '../../../utils/scene-units';
 
 describe('computeFloorPlane', () => {
   it('returns a Y-up plane through the origin for elevation 0', () => {
@@ -62,5 +72,37 @@ describe('worldDeltaToDxfDelta', () => {
     );
     expect(delta.x).toBeCloseTo(250, 6);
     expect(delta.y).toBeCloseTo(400, 6); // −(−3.4 − −3) · 1000 = −(−0.4)·1000 = 400
+  });
+});
+
+describe('mmToEntityUnitFactor (ADR-402 — stair move unit fix)', () => {
+  it('returns 1 for the raw-mm types (wall/column/beam/slab) — mm delta is native', () => {
+    expect(mmToEntityUnitFactor({ type: 'wall' } as unknown as Entity)).toBe(1);
+    expect(mmToEntityUnitFactor({ type: 'column' } as unknown as Entity)).toBe(1);
+    expect(mmToEntityUnitFactor({ type: 'slab' } as unknown as Entity)).toBe(1);
+  });
+
+  it('uses the stair grip SSoT factor (drawing units), matching getStairGrips / the resize bridge', () => {
+    const stair = buildStairEntity(buildDefaultStairParams({ x: 0, y: 0 }, 0), '0');
+    const mmStair = { ...stair, params: { ...stair.params, width: 1200 } };
+    const mStair = { ...stair, params: { ...stair.params, width: 1.2 } };
+
+    expect(mmToEntityUnitFactor(mmStair)).toBeCloseTo(
+      mmToSceneUnits(inferSceneUnitsFromWidth(1200)),
+      9,
+    );
+    expect(mmToEntityUnitFactor(mStair)).toBeCloseTo(
+      mmToSceneUnits(inferSceneUnitsFromWidth(1.2)),
+      9,
+    );
+  });
+
+  it('is unit-aware: a mm-scale stair and a metre-scale stair get DIFFERENT factors', () => {
+    const stair = buildStairEntity(buildDefaultStairParams({ x: 0, y: 0 }, 0), '0');
+    const mmStair = { ...stair, params: { ...stair.params, width: 1200 } };
+    const mStair = { ...stair, params: { ...stair.params, width: 1.2 } };
+    // This divergence is exactly what the move path was ignoring: the same mm gizmo
+    // delta must scale differently per the stair's stored unit.
+    expect(mmToEntityUnitFactor(mmStair)).not.toBeCloseTo(mmToEntityUnitFactor(mStair), 9);
   });
 });

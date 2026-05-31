@@ -49,7 +49,13 @@ export function useBim3DPointerHandlers(
       return;
     }
     const hit = managerRef.current?.raycastBimEntities(e.clientX, e.clientY);
-    managerRef.current?.selectBimEntity(hit?.bimId ?? null);
+    // ADR-402 Phase C — Shift+click adds/removes from the multi-selection;
+    // a plain click replaces it (or clears on empty space).
+    if (e.shiftKey && hit?.bimId) {
+      managerRef.current?.toggleBimEntity(hit.bimId);
+    } else {
+      managerRef.current?.selectBimEntity(hit?.bimId ?? null);
+    }
   }, [managerRef]);
 
   const handleMouseLeave = useCallback(() => {

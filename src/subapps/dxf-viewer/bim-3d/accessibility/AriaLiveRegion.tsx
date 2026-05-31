@@ -58,14 +58,20 @@ export function AriaLiveRegion({ focusManager, getEntityData }: AriaLiveRegionPr
   }, []);
 
   // Auto-announce selection changes (low-frequency, user-triggered).
+  // ADR-402 Phase C — multi-select aware: announces "N entities selected" for >1.
   useEffect(() => {
     return useSelection3DStore.subscribe(
-      (s) => s.selectedBimId,
-      (bimId) => {
-        if (bimId === null) {
+      (s) => s.selectedBimIds,
+      (ids) => {
+        if (ids.length === 0) {
           ariaLiveBus.announce(tBim3d('aria.live.selectionCleared'), 'polite');
           return;
         }
+        if (ids.length > 1) {
+          ariaLiveBus.announce(tBim3d('aria.live.selectionMultiple', { count: ids.length }), 'polite');
+          return;
+        }
+        const bimId = ids[0];
         const type = useSelection3DStore.getState().selectedBimType;
         const typeLabel = entityTypeLabel(type, tBim3d);
         const msg = typeLabel

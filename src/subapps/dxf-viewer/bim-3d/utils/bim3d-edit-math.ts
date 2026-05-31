@@ -17,6 +17,8 @@
 
 import * as THREE from 'three';
 import type { Point2D } from '../../rendering/types/Types';
+import type { Entity } from '../../types/entities';
+import { mmToSceneUnits, inferSceneUnitsFromWidth } from '../../utils/scene-units';
 
 const MM_TO_M = 0.001;
 const M_TO_MM = 1000;
@@ -56,4 +58,45 @@ export function worldDeltaToDxfDelta(
     x: (worldEnd.x - worldStart.x) * M_TO_MM,
     y: -(worldEnd.z - worldStart.z) * M_TO_MM,
   };
+}
+
+/**
+ * Convert a world-space drag (start → end) into a vertical (elevation) delta in mm.
+ *
+ *   Δup_mm = (end.y − start.y) · 1000   (world Y-up = DXF z = elevation)
+ *
+ * The counterpart of {@link worldDeltaToDxfDelta} for the ONE case that needs the
+ * vertical component: gizmo axis-Y resize (height / depth / thickness) and future
+ * elevation edits. Horizontal (move / plan-resize) paths ignore world Y; this is
+ * the SSoT for the world-Y → mm conversion so the sign/scale lives in one place.
+ */
+export function worldUpDeltaToMm(
+  worldStart: THREE.Vector3,
+  worldEnd: THREE.Vector3,
+): number {
+  return (worldEnd.y - worldStart.y) * M_TO_MM;
+}
+
+/**
+ * Factor that converts a plan value expressed in **mm** (what
+ * {@link worldDeltaToDxfDelta} / `worldToDxfPlan` produce) into an entity's
+ * NATIVE parameter units. A pure scale about the shared origin, so it applies to
+ * both a delta (move) and a position (rotate pivot) alike — a 3D gizmo gesture
+ * then transforms the entity by the right amount.
+ *
+ * - wall / column / beam / slab store **raw mm** (`BimToThreeConverter` scales by
+ *   a fixed `MM_TO_M`) → factor `1` (the mm value is already native).
+ * - **stairs** (ADR-358) store geometry + `basePoint` in **inferred drawing
+ *   units** (`StairToThreeConverter` derives `sceneToM` from
+ *   `inferSceneUnitsFromWidth`) → factor `mmToSceneUnits(inferSceneUnitsFromWidth(width))`,
+ *   the SAME factor `getStairGrips` and the Sub-Phase 1 resize bridge use. Without
+ *   it the shared `moveStair` / `rotateEntity` SSoT (which in 2D already receive
+ *   drawing-unit inputs) over-transform a stair by 1/sceneToM in non-mm drawings
+ *   (ADR-402 fix).
+ */
+export function mmToEntityUnitFactor(entity: Entity): number {
+  if (entity.type === 'stair') {
+    return mmToSceneUnits(inferSceneUnitsFromWidth(entity.params.width));
+  }
+  return 1;
 }

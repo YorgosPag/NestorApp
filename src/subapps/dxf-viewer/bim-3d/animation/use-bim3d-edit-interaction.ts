@@ -26,7 +26,7 @@ import { BimGizmoController } from '../gizmo/bim-gizmo-controller';
 import {
   useBim3DEditStore,
   selectEditToolActive,
-  selectEditEntityId,
+  selectEditEntityKey,
 } from '../stores/Bim3DEditStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
@@ -85,13 +85,14 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
 
     const applyActiveState = (): void => {
       const st = useBim3DEditStore.getState();
-      const active = st.editToolActive && !!st.editEntityId;
+      const active = st.editToolActive && st.editEntityIds.length > 0;
       if (active && !levelsRef.current) {
         useBim3DEditStore.getState().deactivate(); // ADR-371 read-only — editing disabled
         return;
       }
-      if (active && st.editEntityId) {
-        const ok = computeEditAnchor(ctx, st.editEntityId);
+      if (active) {
+        const ok = computeEditAnchor(ctx, st.editEntityIds);
+        // Multi-select: editBimType is null → only move + rotate handles (no resize).
         overlay.setActiveHandles(activeHandlesFor(st.editBimType));
         overlay.setVisible(ok);
         if (ok) setupListeners();
@@ -103,13 +104,16 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       manager.markSceneDirty();
     };
 
-    // Auto-on-selection: a 3D BIM selection mounts the gizmo; deselection tears it down.
+    // Auto-on-selection: a 3D BIM selection mounts the gizmo; deselection tears it
+    // down. ADR-402 Phase C — the gizmo anchors on the union centroid of the whole
+    // multi-selection; editBimType is null for >1 (suppresses resize handles).
     const syncFromSelection = (): void => {
       const sel = useSelection3DStore.getState();
       const edit = useBim3DEditStore.getState();
-      if (sel.selectedBimId && levelsRef.current) {
-        if (edit.editEntityId !== sel.selectedBimId) {
-          edit.activateMove(sel.selectedBimId, sel.selectedBimType);
+      if (sel.selectedBimIds.length > 0 && levelsRef.current) {
+        if (edit.editEntityIds.join('|') !== sel.selectedBimIds.join('|')) {
+          const type = sel.selectedBimIds.length === 1 ? sel.selectedBimType : null;
+          edit.activateMove([...sel.selectedBimIds], type);
         }
       } else if (edit.editToolActive) {
         edit.deactivate();
@@ -120,7 +124,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
     applyActiveState();
 
     const unsubActive = useBim3DEditStore.subscribe(selectEditToolActive, applyActiveState);
-    const unsubEntity = useBim3DEditStore.subscribe(selectEditEntityId, applyActiveState);
+    const unsubEntity = useBim3DEditStore.subscribe(selectEditEntityKey, applyActiveState);
     const unsubSelection = useSelection3DStore.subscribe(syncFromSelection);
 
     // Re-anchor the gizmo after auto-resync (move/rotate commit OR a panel param
@@ -128,8 +132,8 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
     const unsubEntities = useBim3DEntitiesStore.subscribe(() => {
       if (controller.isDragging()) return;
       const st = useBim3DEditStore.getState();
-      if (!st.editToolActive || !st.editEntityId) return;
-      overlay.setVisible(computeEditAnchor(ctx, st.editEntityId));
+      if (!st.editToolActive || st.editEntityIds.length === 0) return;
+      overlay.setVisible(computeEditAnchor(ctx, st.editEntityIds));
       manager.markSceneDirty();
     });
 

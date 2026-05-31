@@ -14,27 +14,53 @@ import * as THREE from 'three';
 const HIGHLIGHT_EMISSIVE = new THREE.Color(0xffd700);
 const HIGHLIGHT_EMISSIVE_INTENSITY = 0.3;
 
+/** Set equality (same size + every member shared). */
+function sameSet(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const v of a) if (!b.has(v)) return false;
+  return true;
+}
+
 export class BimSelectionHighlighter {
   private readonly _originals = new Map<
     string,
     THREE.Material | THREE.Material[]
   >();
-  private _currentBimId: string | null = null;
+  /** ADR-402 Phase C — the set of currently highlighted bimIds (multi-select). */
+  private _currentBimIds = new Set<string>();
 
   constructor(private readonly group: THREE.Group) {}
 
-  onSelect(bimId: string): void {
-    if (bimId === this._currentBimId) return;
-    this.onClear();
-    this._currentBimId = bimId;
+  /**
+   * Highlight exactly the given set of bimIds, diffing against the current set so
+   * a Shift+click toggle only touches the meshes that changed (no full re-traverse
+   * + re-clone of the whole selection on every click). ADR-402 Phase C.
+   */
+  onSelect(bimIds: ReadonlySet<string>): void {
+    if (sameSet(bimIds, this._currentBimIds)) return;
 
     this.group.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return;
-      if ((obj.userData['bimId'] as string | undefined) !== bimId) return;
+      const bimId = obj.userData['bimId'] as string | undefined;
+      if (bimId === undefined) return;
 
-      this._originals.set(obj.uuid, obj.material);
-      obj.material = this._cloneWithHighlight(obj.material);
+      const shouldHighlight = bimIds.has(bimId);
+      const isHighlighted = this._originals.has(obj.uuid);
+
+      if (shouldHighlight && !isHighlighted) {
+        this._originals.set(obj.uuid, obj.material);
+        obj.material = this._cloneWithHighlight(obj.material);
+      } else if (!shouldHighlight && isHighlighted) {
+        const orig = this._originals.get(obj.uuid);
+        if (orig !== undefined) {
+          this._disposeClone(obj.material);
+          obj.material = orig;
+          this._originals.delete(obj.uuid);
+        }
+      }
     });
+
+    this._currentBimIds = new Set(bimIds);
   }
 
   onClear(): void {
@@ -47,7 +73,7 @@ export class BimSelectionHighlighter {
       obj.material = orig;
     });
     this._originals.clear();
-    this._currentBimId = null;
+    this._currentBimIds.clear();
   }
 
   dispose(): void {

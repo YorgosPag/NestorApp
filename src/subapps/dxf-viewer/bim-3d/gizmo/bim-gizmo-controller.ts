@@ -16,9 +16,10 @@
 
 import * as THREE from 'three';
 import { setNdcFromClient } from '../animation/waypoint-drag-controller';
-import { parseHandleId, handleToConstraint } from './gizmo-types';
+import { parseHandleId, handleToConstraint, type GizmoDragConstraint } from './gizmo-types';
 import { testGizmoHit } from './gizmo-hit-test';
 import { BimGizmoDragBridge, type BridgeOutcome } from './bim-gizmo-drag-bridge';
+import type { SnapFn } from './bim3d-snap-bridge';
 import type { BimGizmoOverlay } from './bim-gizmo-overlay';
 
 export class BimGizmoController {
@@ -35,6 +36,16 @@ export class BimGizmoController {
 
   isDragging(): boolean {
     return this.bridge.isDragging();
+  }
+
+  /** Inject the snap callback for the active drag (ADR-402 Phase B). */
+  setSnapFn(fn: SnapFn | null): void {
+    this.bridge.setSnapFn(fn);
+  }
+
+  /** The active drag constraint (null when idle) — lets the handler build the right snapFn. */
+  getActiveConstraint(): GizmoDragConstraint | null {
+    return this.bridge.getActiveConstraint();
   }
 
   /** Hover highlight under the cursor. Returns true when the hovered handle changed. */
@@ -74,6 +85,12 @@ export class BimGizmoController {
     if (changed && kind !== 'rotate' && kind !== 'resize') {
       this.overlay.updatePosition(this.startAnchor.clone().add(this.bridge.getLiveTranslation()));
     }
+    // ADR-402 Phase B — surface the live snap target as a 3D marker (square frame).
+    if (changed) {
+      const snapWorld = this.bridge.getActiveSnapWorld();
+      if (snapWorld) this.overlay.showSnapMarker(snapWorld, camera);
+      else this.overlay.hideSnapMarker();
+    }
     return changed;
   }
 
@@ -81,6 +98,7 @@ export class BimGizmoController {
   endDrag(): BridgeOutcome {
     const outcome = this.bridge.getOutcome();
     this.bridge.end();
+    this.overlay.hideSnapMarker();
     return outcome;
   }
 
@@ -88,6 +106,7 @@ export class BimGizmoController {
   cancelDrag(): void {
     this.bridge.cancel();
     this.overlay.updatePosition(this.startAnchor);
+    this.overlay.hideSnapMarker();
   }
 
   // ── internals ──────────────────────────────────────────────────────────────

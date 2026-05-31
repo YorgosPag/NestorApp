@@ -16,6 +16,8 @@ import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, O
 import type { WallEntity } from '../bim/types/wall-types';
 import type { BeamEntity } from '../bim/types/beam-types';
 import type { ColumnEntity } from '../bim/types/column-types';
+import type { StairEntity } from '../bim/types/stair-types';
+import type { SlabEntity } from '../bim/types/slab-types';
 import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
 import { getStairGrips } from '../bim/stairs/stair-grips';
 import { getWallGrips } from '../bim/walls/wall-grips';
@@ -245,7 +247,12 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
 
     case 'stair': {
       // ADR-358 Phase 5b — parametric stair grips (5 kinds, §5.12).
-      grips.push(...getStairGrips(entity.stairEntity));
+      // ADR-402: accept BOTH shapes — the 2D canvas passes the DxfStair wrapper
+      // (`.stairEntity`), the 3D snap path (buildDragSnapFn) passes the domain
+      // StairEntity directly (params at top level). Mirrors wall/beam/column,
+      // which already take the raw entity.
+      const stair = entity.stairEntity ?? (entity as unknown as StairEntity);
+      grips.push(...getStairGrips(stair));
       break;
     }
 
@@ -288,7 +295,10 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
     }
 
     case 'slab': {
-      grips.push(...getSlabGrips(entity.slabEntity));
+      // ADR-402: accept BOTH shapes (see 'stair' note) — 3D snap passes the
+      // domain SlabEntity directly, 2D canvas passes the DxfSlab wrapper.
+      const slab = entity.slabEntity ?? (entity as unknown as SlabEntity);
+      grips.push(...getSlabGrips(slab));
       break;
     }
 

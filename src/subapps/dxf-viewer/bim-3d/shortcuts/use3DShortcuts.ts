@@ -84,7 +84,10 @@ export function use3DShortcuts({ getManager, active, onCropRegionToggle }: Use3D
           const edit = useBim3DEditStore.getState();
           if (edit.editToolActive) { edit.deactivate(); return; }
           const sel = useSelection3DStore.getState();
-          if (sel.selectedBimId) edit.activateMove(sel.selectedBimId, sel.selectedBimType);
+          if (sel.selectedBimIds.length > 0) {
+            const type = sel.selectedBimIds.length === 1 ? sel.selectedBimType : null;
+            edit.activateMove([...sel.selectedBimIds], type);
+          }
         },
         onEditEscape3D: () => useBim3DEditStore.getState().deactivate(),
         onEditAxisLock3D: (axis) => useBim3DEditStore.getState().toggleAxisLock(axis),

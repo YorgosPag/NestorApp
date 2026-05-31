@@ -49,7 +49,7 @@ export function syncBimEntitiesIntoScene(
   deps: SyncBimEntitiesDeps,
   args: SyncBimEntitiesArgs,
 ): void {
-  const selectedId = useSelection3DStore.getState().selectedBimId;
+  const selectedIds = useSelection3DStore.getState().selectedBimIds;
   deps.selectionHighlighter.onClear();
   // Phase 4.5: stale bimId refs die on rebuild — clear focus before new traversal.
   deps.keyboardFocusManager.clear();
@@ -64,7 +64,8 @@ export function syncBimEntitiesIntoScene(
     args.floorVisModes,
   );
   if (args.buildingVisModes.size > 0) applyBuildingVisibility(deps.bimLayer.group, args.buildingVisModes);
-  if (selectedId) deps.selectionHighlighter.onSelect(selectedId);
+  // ADR-402 Phase C — re-apply the highlight for the whole multi-selection.
+  if (selectedIds.length > 0) deps.selectionHighlighter.onSelect(new Set(selectedIds));
   deps.pathTracerRenderer.invalidateScene();
   deps.sectionController.ensureInit();
   deps.sectionController.applyState();
@@ -89,7 +90,7 @@ export function syncMultiFloorBimEntitiesIntoScene(
   deps: SyncBimEntitiesDeps,
   args: SyncMultiFloorBimEntitiesArgs,
 ): void {
-  const selectedId = useSelection3DStore.getState().selectedBimId;
+  const selectedIds = useSelection3DStore.getState().selectedBimIds;
   deps.selectionHighlighter.onClear();
   deps.keyboardFocusManager.clear();
   deps.bimLayer.syncMultiFloor(
@@ -101,7 +102,8 @@ export function syncMultiFloorBimEntitiesIntoScene(
     args.floorVisModes,
   );
   if (args.buildingVisModes.size > 0) applyBuildingVisibility(deps.bimLayer.group, args.buildingVisModes);
-  if (selectedId) deps.selectionHighlighter.onSelect(selectedId);
+  // ADR-402 Phase C — re-apply the highlight for the whole multi-selection.
+  if (selectedIds.length > 0) deps.selectionHighlighter.onSelect(new Set(selectedIds));
   deps.pathTracerRenderer.invalidateScene();
   deps.sectionController.ensureInit();
   deps.sectionController.applyState();
@@ -165,6 +167,36 @@ export function resolveBimEntityType(bimGroup: THREE.Group, bimId: string): stri
     if (id === bimId) bimType = (obj.userData['bimType'] as string | undefined) ?? '';
   });
   return bimType;
+}
+
+export interface BimSelectionDeps {
+  readonly bimGroup: THREE.Group;
+  readonly selectionHighlighter: BimSelectionHighlighter;
+}
+
+/**
+ * ADR-402 Phase C — selection mutation extracted from ThreeJsSceneManager
+ * (keeps the manager under the 500-line cap, N.7.1).
+ *
+ * `replace` (plain click): null clears, otherwise the selection becomes exactly
+ * the picked entity. `toggle` (Shift+click): adds/removes the picked entity.
+ * In both cases the highlighter is re-synced to the resulting multi-selection.
+ */
+export function applyBimSelection(
+  deps: BimSelectionDeps,
+  bimId: string | null,
+  mode: 'replace' | 'toggle',
+): void {
+  const store = useSelection3DStore.getState();
+  if (mode === 'replace') {
+    if (bimId === null) store.clearSelection();
+    else store.selectEntity(bimId, resolveBimEntityType(deps.bimGroup, bimId));
+  } else if (bimId !== null) {
+    store.toggleEntity(bimId, resolveBimEntityType(deps.bimGroup, bimId));
+  }
+  const ids = useSelection3DStore.getState().selectedBimIds;
+  if (ids.length === 0) deps.selectionHighlighter.onClear();
+  else deps.selectionHighlighter.onSelect(new Set(ids));
 }
 
 export async function loadHdriIntoStore(

@@ -89,6 +89,16 @@ export const RETICLE_SEGMENTS = 24;
 /** Multiplier: gizmoScale = cameraDistance * tan(fov/2) * GIZMO_SCREEN_SCALE */
 export const GIZMO_SCREEN_SCALE = 0.45;
 
+// -- Snap Marker (ADR-402 Phase B — drag snap indicator) -----------------------
+/** Snap marker colour (cyan — distinct from axis/hover golds and from geometry). */
+export const SNAP_MARKER_COLOR = 0x00e5ff;
+/** Base marker box radius in world metres before screen-constant scaling. */
+export const SNAP_MARKER_RADIUS = 0.06;
+/** Screen-constant multiplier: markerScale = cameraDistance * tan(fov/2) * this. */
+export const SNAP_MARKER_SCREEN_SCALE = 0.13;
+/** Render order — above geometry, below the gizmo handles so it never hides them. */
+export const SNAP_MARKER_RENDER_ORDER = 1999;
+
 // -- Rendering -----------------------------------------------------------------
 export const GIZMO_RENDER_ORDER = 2000;
 

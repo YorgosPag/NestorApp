@@ -88,3 +88,29 @@ describe('BimGizmoOverlay — active-handle visibility', () => {
     overlay.dispose();
   });
 });
+
+describe('activeHandlesFor — per-type resize handles (ADR-402 Phase B, Revit)', () => {
+  it.each(['column', 'wall', 'beam'])(
+    'exposes plan + vertical resize handles for %s',
+    (bimType) => {
+      const ids = activeHandlesFor(bimType);
+      expect(ids.has('resize-x')).toBe(true);
+      expect(ids.has('resize-z')).toBe(true);
+      expect(ids.has('resize-y')).toBe(true);
+    },
+  );
+
+  it('slab exposes only the vertical (thickness) resize handle — footprint is 2D per-vertex', () => {
+    const ids = activeHandlesFor('slab');
+    expect(ids.has('resize-y')).toBe(true);
+    expect(ids.has('resize-x')).toBe(false);
+    expect(ids.has('resize-z')).toBe(false);
+  });
+
+  it('a base-only / unknown selection exposes no resize handles', () => {
+    const ids = activeHandlesFor(null);
+    expect(ids.has('resize-x')).toBe(false);
+    expect(ids.has('resize-z')).toBe(false);
+    expect(ids.has('resize-y')).toBe(false);
+  });
+});
