@@ -10,6 +10,10 @@ import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { EventBus } from '../../../systems/events/EventBus';
 import type { AnySceneEntity } from '../../../types/scene';
+// ADR-401 Phase C — deleting a structural host (beam/slab) leaves any `attached`
+// wall without its top support. The wall auto-falls-back to baseline geometry
+// (resolveWallTopProfile); this surfaces a non-blocking warning.
+import { notifyWallsOnHostDeletion } from '../../../bim/walls/wall-structural-attach-coordinator';
 
 // ADR-390 — BIM entity types eligible για symmetric undo→Firestore restore.
 const BIM_ENTITY_TYPES = new Set<string>([
@@ -62,6 +66,9 @@ export class DeleteEntityCommand implements ICommand {
       this.entitySnapshot = deepClone(entity);
       this.sceneManager.removeEntity(this.entityId);
       this.wasExecuted = true;
+      // ADR-401 Phase C — warn if this entity was a structural host for an
+      // attached wall (the wall already fell back to baseline; this is the signal).
+      notifyWallsOnHostDeletion([this.entityId], this.sceneManager);
     }
   }
 
@@ -175,6 +182,12 @@ export class DeleteMultipleEntitiesCommand implements ICommand {
     }
 
     this.wasExecuted = this.entitySnapshots.length > 0;
+
+    // ADR-401 Phase C — warn if any deleted entity was a structural host for an
+    // attached wall (walls already fell back to baseline; this is the signal).
+    if (this.wasExecuted) {
+      notifyWallsOnHostDeletion(this.entityIds, this.sceneManager);
+    }
   }
 
   /**

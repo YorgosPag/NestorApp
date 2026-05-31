@@ -59,6 +59,7 @@ import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/Cl
 // ✅ ADR-065 SRP: Extracted hooks
 import { useDxfViewerCallbacks } from './useDxfViewerCallbacks';
 import { useDxfViewerEffects } from './useDxfViewerEffects';
+import { useDxfViewerNotifications } from '../hooks/useDxfViewerNotifications';
 import { useAutoFitOnFileChange } from './useAutoFitOnFileChange';
 import { useViewportUrlSync } from '../hooks/canvas/useViewportUrlSync';
 // 📐 ADR-345 Fase 4: i18n for the "Coming Soon" toast on unwired ribbon buttons.
@@ -111,10 +112,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-345 Fase 5.5 — text editor bridge (toggle/combobox state + handlers).
   const textEditorBridge = useRibbonTextEditorBridge();
   // ADR-344 Phase 6.E — selection → toolbar populate (Layer 1) + toolbar → CommandHistory (Layer 2).
-  // Mounted here (always-on orchestrator) so both the ribbon and the floating panel stay in sync
-  // regardless of which UI surface the user has open.
+  // Mounted here (always-on orchestrator) so ribbon + floating panel stay in sync on any UI surface.
   useTextToolbarSelectionSync();
   useTextToolbarCommandBridge();
+  useDxfViewerNotifications(); // ADR-401 Phase C — decoupled host-missing warning toast bridge
   const eventBus = useEventBus();
   const colors = useSemanticColors();
   const { copy: copyToClipboard } = useCopyToClipboard();

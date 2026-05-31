@@ -79,6 +79,27 @@ export function findHostedSlabOpenings(
   return out;
 }
 
+/**
+ * Finds `attached` wall ids whose `params.attachTopToIds` reference any host in
+ * `hostIds` (ADR-401 Phase C — host-deletion warning reverse lookup). Mirror of
+ * {@link findHostedOpenings} for the beam/slab→wall direction. Walls with a
+ * non-`attached` top binding (or no attach list) are skipped.
+ */
+export function findAttachedWalls(
+  hostIds: ReadonlySet<string>,
+  entities: readonly Entity[],
+): string[] {
+  if (hostIds.size === 0) return [];
+  const out: string[] = [];
+  for (const e of entities) {
+    if (!isWallEntity(e)) continue;
+    if (e.params.topBinding !== 'attached') continue;
+    const ids = e.params.attachTopToIds;
+    if (ids && ids.some((id) => hostIds.has(id))) out.push(e.id);
+  }
+  return out;
+}
+
 // ─── Composition helpers ────────────────────────────────────────────────────
 
 /**

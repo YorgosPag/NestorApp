@@ -3,6 +3,9 @@
     "confirm": "Επιβεβαίωση",
     "cancel": "Ακύρωση"
   },
+  "attachToStructural": {
+    "hostMissing": "Ο τοίχος έχασε το δομικό στήριγμα κορυφής (διαγράφηκε το στοιχείο στήριξης)."
+  },
   "bim": {
     "wallCascadeDelete": {
       "title": "Διαγραφή Τοιχώματος",

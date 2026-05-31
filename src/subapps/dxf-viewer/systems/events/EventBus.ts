@@ -251,6 +251,11 @@ export interface DrawingEventMap {
   // ALL enclosed rectangles among them and builds one filling wall per
   // rectangle. Carries only ids (the tool re-reads the live scene geometry).
   'bim:wall-region-box-select': { entityIds: string[] };
+  // ADR-401 Phase C — a deleted structural host (beam/slab) left ≥1 `attached`
+  // wall without its top support. The wall falls back to baseline geometry
+  // automatically (resolveWallTopProfile.missingHostIds); this signal lets the
+  // UI surface a non-blocking warning (Revit "Top Constraint no longer valid").
+  'bim:wall-attach-host-missing': { wallIds: string[]; deletedHostIds: string[] };
   // ADR-363 fix — multi-entity move dirty-flag propagation.
   // Carries the post-move entities directly so listeners never call
   // getLevelScene() (which returns stale React state at emit time).

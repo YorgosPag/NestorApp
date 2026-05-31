@@ -3,6 +3,9 @@
     "confirm": "Confirm",
     "cancel": "Cancel"
   },
+  "attachToStructural": {
+    "hostMissing": "Wall lost its top structural support (the supporting element was deleted)."
+  },
   "bim": {
     "wallCascadeDelete": {
       "title": "Delete Wall",
