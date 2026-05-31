@@ -274,6 +274,22 @@ describe('StairFirestoreService.saveStair', () => {
     expect(payload.layer).toBe('STAIRS');
   });
 
+  it('strips nested undefined from params before setDoc (Firestore rejects undefined) — ADR-402', async () => {
+    const svc = createStairFirestoreService(CONFIG);
+    const paramsWithUndef = {
+      ...MINIMAL_PARAMS,
+      walklineOffset: undefined,
+    } as unknown as StairParams;
+    await svc.saveStair({
+      kind: 'straight',
+      params: paramsWithUndef,
+      validation: MINIMAL_VALIDATION,
+    });
+    const payload = mockSetDoc.mock.calls[0][1] as { params: Record<string, unknown> };
+    expect(payload.params).not.toHaveProperty('walklineOffset');
+    expect(payload.params.width).toBe(1000);
+  });
+
   it('NEVER calls addDoc (SOS N.6 enforcement)', async () => {
     const svc = createStairFirestoreService(CONFIG);
     await svc.saveStair({
@@ -298,10 +314,25 @@ describe('StairFirestoreService.updateStair', () => {
     });
     expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
     const payload = mockUpdateDoc.mock.calls[0][1];
-    expect(payload.params).toBe(MINIMAL_PARAMS);
-    expect(payload.validation).toBe(MINIMAL_VALIDATION);
+    // ADR-402: params/validation are deep-stripped of undefined before the write,
+    // so they are a value-equal COPY (not the same reference).
+    expect(payload.params).toEqual(MINIMAL_PARAMS);
+    expect(payload.validation).toEqual(MINIMAL_VALIDATION);
     expect(payload.updatedBy).toBe('u1');
     expect(payload.updatedAt).toBe('__server_timestamp__');
+  });
+
+  it('strips nested undefined from params before updateDoc (Firestore rejects undefined) — ADR-402', async () => {
+    const svc = createStairFirestoreService(CONFIG);
+    // A straight stair carries optional fields that may be explicit `undefined`.
+    const paramsWithUndef = {
+      ...MINIMAL_PARAMS,
+      walklineOffset: undefined,
+    } as unknown as StairParams;
+    await svc.updateStair('stair_x', { params: paramsWithUndef });
+    const payload = mockUpdateDoc.mock.calls[0][1] as { params: Record<string, unknown> };
+    expect(payload.params).not.toHaveProperty('walklineOffset');
+    expect(payload.params.width).toBe(1000); // defined fields survive
   });
 
   it('does NOT include unspecified optional fields', async () => {

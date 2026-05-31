@@ -44,6 +44,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateWallId } from '@/services/enterprise-id-convenience';
 import { firestoreQueryService } from '@/services/firestore';
+import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import type {
   WallEntity,
   WallGeometry,
@@ -158,8 +159,11 @@ export class WallFirestoreService {
       projectId: this.config.projectId,
       floorplanId: this.config.floorplanId,
       kind: input.kind,
-      params: input.params,
-      validation: input.validation,
+      // Firestore rejects nested `undefined` (e.g. `params.polylineVertices` on a
+      // straight wall) — deep-strip the pure-data sub-objects. serverTimestamp()
+      // sentinels stay at the top level, untouched (SSoT: firestore-sanitize).
+      params: stripUndefinedDeep(input.params),
+      validation: stripUndefinedDeep(input.validation),
       createdBy: this.config.userId,
       createdAt: serverTimestamp(),
       updatedBy: this.config.userId,
@@ -167,7 +171,7 @@ export class WallFirestoreService {
     };
 
     // Firestore rejects `undefined` — only include optional fields when set.
-    if (input.geometry !== undefined) base.geometry = input.geometry;
+    if (input.geometry !== undefined) base.geometry = stripUndefinedDeep(input.geometry);
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
     if (input.floorId !== undefined) base.floorId = input.floorId;
     if (input.layerId !== undefined) base.layerId = input.layerId;
@@ -182,9 +186,12 @@ export class WallFirestoreService {
       updatedBy: this.config.userId,
       updatedAt: serverTimestamp(),
     };
-    if (patch.params !== undefined) payload.params = patch.params;
-    if (patch.validation !== undefined) payload.validation = patch.validation;
-    if (patch.geometry !== undefined) payload.geometry = patch.geometry;
+    // Deep-strip nested `undefined` from the pure-data sub-objects (Firestore
+    // rejects undefined, e.g. `params.polylineVertices` on a straight wall). The
+    // serverTimestamp() sentinels above are left untouched (SSoT: firestore-sanitize).
+    if (patch.params !== undefined) payload.params = stripUndefinedDeep(patch.params);
+    if (patch.validation !== undefined) payload.validation = stripUndefinedDeep(patch.validation);
+    if (patch.geometry !== undefined) payload.geometry = stripUndefinedDeep(patch.geometry);
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
 
     await updateDoc(ref, payload);
