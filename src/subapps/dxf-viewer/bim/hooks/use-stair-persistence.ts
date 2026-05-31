@@ -169,6 +169,14 @@ export function useStairPersistence(
 
         for (const doc of docs) {
           if (deleted.has(doc.id)) continue;
+          // ADR-402 — seed the saved baseline for loaded stairs (mirror
+          // useWallPersistence) so the auto-save gate treats them as `known`.
+          // Without this a 3D gizmo edit of a previously-loaded stair never
+          // passed the `known` check → never persisted → the next snapshot's
+          // diff-merge reverted it to the stored position (the revert bug).
+          if (!dirty.has(doc.id) && !lastSavedParamsRef.current.has(doc.id)) {
+            lastSavedParamsRef.current.set(doc.id, doc.params);
+          }
           const existing = sceneStairs.get(doc.id);
           if (!existing) {
             // Remote add — only if not currently in local-create flow.
