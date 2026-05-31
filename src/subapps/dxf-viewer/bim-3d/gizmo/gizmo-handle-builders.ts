@@ -229,9 +229,16 @@ export function buildCenterHandle(color: number): THREE.Group {
   const inv3 = 1 / Math.sqrt(3);
   const dvec = [inv3, inv3, inv3];
 
-  const rawP1 = [dvec[1] - dvec[2], dvec[2] - dvec[0], dvec[0] - dvec[1]];
-  const p1m = Math.sqrt(rawP1[0] ** 2 + rawP1[1] ** 2 + rawP1[2] ** 2);
-  const p1 = rawP1.map((v) => v / p1m);
+  // Perpendicular basis (p1, p2) to the [1,1,1] diagonal. The original
+  // `[d1-d2, d2-d0, d0-d1]` shortcut is degenerate here: all components of `dvec`
+  // are equal, so it yields [0,0,0] → divide-by-zero → NaN vertices for the whole
+  // pyramid (THREE then warns "computeBoundingSphere(): radius is NaN" every frame
+  // the gizmo renders). Build a robust unit perpendicular by crossing with a
+  // non-parallel axis instead; p2 = dvec × p1 (already unit since both are unit ⊥).
+  const p1v = new THREE.Vector3(dvec[0], dvec[1], dvec[2])
+    .cross(new THREE.Vector3(1, 0, 0))
+    .normalize();
+  const p1 = [p1v.x, p1v.y, p1v.z];
   const p2 = [
     dvec[1] * p1[2] - dvec[2] * p1[1],
     dvec[2] * p1[0] - dvec[0] * p1[2],

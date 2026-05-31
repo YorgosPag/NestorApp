@@ -1,21 +1,16 @@
 'use client';
 import { useNotifications } from '../../../providers/NotificationProvider';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
-// 🤖 ADR-185: AI Drawing Assistant feature flag
-import { USE_AI_DRAWING_ASSISTANT } from '../config/feature-flags';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { FullscreenOverlay } from '@/core/containers/FullscreenOverlay';
 import React from 'react';
 import type { DxfViewerAppProps } from '../types';
-import type { ToolType } from '../ui/toolbar/types';
 import { useDxfViewerState } from '../hooks/useDxfViewerState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useLayerCommandShortcuts } from '../hooks/useLayerCommandShortcuts';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { useOverlayDrawing } from '../hooks/useOverlayDrawing';
-import { useSnapContext } from '../snapping/context/SnapContext';
-import { useCanvasOperations } from '../hooks/interfaces/useCanvasOperations';
 import { useEventBus, EventBus } from '../systems/events/EventBus';
 import { useEntityCreationManager } from '../systems/entity-creation';
 import { useOverlayState } from '../hooks/state/useOverlayState';
@@ -33,17 +28,7 @@ import { useDimAssociationObserver } from '../hooks/dimensions/useDimAssociation
 import { useGripContext } from '../providers/GripProvider';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
-import {
-  OverlayToolbar, ColorManager, ProSnapToolbar, TestsModal, CursorSettingsPanel,
-  CoordinateCalibrationOverlay, AutoSaveStatus, CentralizedAutoSaveStatus, OverlayProperties,
-  DraggableOverlayToolbar, DraggableOverlayProperties, FloorplanBackgroundPanel,
-  ReplaceConfirmDialog, CalibrationDialog, DxfAiChatPanel, DxfFindReplaceHost,
-  DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost, OpeningSchedulePdfHost,
-  ThermalEnvelopeHost,
-  AdminLayerManagerDialogHost,
-  DxfImportModal, SimpleProjectDialog, ConstructionLayerScaffoldDialog,
-  FloorplanImportWizard, MainContentSection, FloatingPanelsSection,
-} from './dxf-viewer-lazy-components';
+import { MainContentSection, FloatingPanelsSection } from './dxf-viewer-lazy-components';
 // Layout Components - Canvas V2
 import { SidebarSection } from '../layout/SidebarSection';
 import { MobileSidebarDrawer } from '../layout/MobileSidebarDrawer';
@@ -51,10 +36,7 @@ import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResp
 // ADR-040 Phase XXII.C: TransformContext duplicate SSoT removed. ImmediateTransformStore
 // (Phase XIII) is the sole transform SSoT. Legacy React Context Provider deleted to kill
 // per-notch useState cascade + duplicate EventBus.emit on wheel zoom.
-import { type UnifiedTestReport } from '../debug/unified-test-runner';
 import { usePerformanceMonitorToggle } from '../hooks/usePerformanceMonitorToggle';
-import { PerformanceCategory } from '@/core/performance/types/performance.types';
-import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
 // ✅ ADR-065 SRP: Extracted hooks
 import { useDxfViewerCallbacks } from './useDxfViewerCallbacks';
 import { useDxfViewerEffects } from './useDxfViewerEffects';
@@ -64,23 +46,15 @@ import { useAutoFitOnFileChange } from './useAutoFitOnFileChange';
 import { useViewportUrlSync } from '../hooks/canvas/useViewportUrlSync';
 // 📐 ADR-345 Fase 4: i18n for the "Coming Soon" toast on unwired ribbon buttons.
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-// 📐 ADR-345/353: contextual tabs config + trigger resolver (SSoT)
-import { RIBBON_CONTEXTUAL_TABS, useActiveContextualTrigger } from './ribbon-contextual-config';
-import { useRibbonArrayBridge } from '../ui/ribbon/hooks/useRibbonArrayBridge';
-import { useArrayRibbonActions } from '../ui/ribbon/hooks/useArrayRibbonActions';
-// 📐 ADR-358 Phase 7a / ADR-363: BIM contextual bridges aggregated
-import { useDxfBimBridges } from './useDxfBimBridges';
-import { useRibbonLineToolBridge } from '../ui/ribbon/hooks/useRibbonLineToolBridge';
-import { useRibbonXlineModeBridge } from '../ui/ribbon/hooks/useRibbonXlineModeBridge';
-// 📐 ADR-358 Phase 8: top-bar wrapper (RibbonRoot + StairAdvancedPanelHost) — N.7.1 size split
+// 📐 ADR-358 Phase 8: top-bar wrapper (RibbonRoot + persistence hosts) — N.7.1 size split
 import { DxfViewerTopBar } from './DxfViewerTopBar';
-// 📐 ADR-345 Fase 5.5: bridge text-engine ↔ ribbon contextual tab (toggles + comboboxes)
-import { useRibbonTextEditorBridge } from '../ui/ribbon/hooks/useRibbonTextEditorBridge';
-import { useRibbonCommands } from '../ui/ribbon/hooks/useRibbonCommands';
 // ADR-344 Phase 6.E: selection→toolbar + toolbar→CommandHistory always-on bridges
 import { useTextToolbarSelectionSync } from '../ui/text-toolbar/hooks/useTextToolbarSelectionSync';
 import { useTextToolbarCommandBridge } from '../ui/text-toolbar/hooks/useTextToolbarCommandBridge';
-import { buildDxfImportSaveContext } from './dxf-import-save-context';
+// ✅ N.7.1 size split — extracted UI-state + ribbon assembly + dialogs modules
+import { useDxfViewerUiState } from './useDxfViewerUiState';
+import { useDxfViewerRibbon } from './useDxfViewerRibbon';
+import { DxfViewerDialogs } from './DxfViewerDialogs';
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-345 — mark the document root while the DXF viewer route is mounted
   // so route-scoped CSS (e.g. hiding the global header border-bottom) only
@@ -107,10 +81,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     },
     [notifications, tShell],
   );
-  // ADR-345 Fase 5B + ADR-353 Phase A — contextual tab list.
-  const ribbonContextualTabs = RIBBON_CONTEXTUAL_TABS;
-  // ADR-345 Fase 5.5 — text editor bridge (toggle/combobox state + handlers).
-  const textEditorBridge = useRibbonTextEditorBridge();
   // ADR-344 Phase 6.E — selection→toolbar (L1) + toolbar→CommandHistory (L2); always-on orchestrator.
   useTextToolbarSelectionSync();
   useTextToolbarCommandBridge();
@@ -122,19 +92,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const fullscreen = useFullscreen();
   // ADR-176: Responsive layout + sidebar drawer state
   const { layoutMode } = useResponsiveLayout();
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  // 🧪 Test runner state
-  const [testModalOpen, setTestModalOpen] = React.useState(false);
-  const [testReport, setTestReport] = React.useState<UnifiedTestReport | null>(null);
-  const [formattedTestReport, setFormattedTestReport] = React.useState<string>('');
-  const [testsModalOpen, setTestsModalOpen] = React.useState(false);
-  // 🏢 PDF + AI panel state
-  const [pdfPanelOpen, setPdfPanelOpen] = React.useState(false);
-  const [aiChatOpen, setAiChatOpen] = React.useState(false);
-  // ADR-345 Fase 6: Import dialog state (lifted from EnhancedDXFToolbar — SSOT)
-  const [showEnhancedImport, setShowEnhancedImport] = React.useState(false);
-  const [showImportWizard, setShowImportWizard] = React.useState(false);
-  const [showLegacyImport, setShowLegacyImport] = React.useState(false);
+  // ✅ N.7.1 size split — ephemeral UI/dialog/canvas-visibility toggle state (SSoT).
+  const ui = useDxfViewerUiState();
   // 🏢 Performance Monitor Toggle
   const { isEnabled: perfMonitorEnabled, toggle: togglePerfMonitor } = usePerformanceMonitorToggle();
   // ✅ ENTERPRISE: State Management Hooks (PHASE 4)
@@ -144,9 +103,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // on pan/zoom. Leaf consumers subscribe via useTransformValue / useTransformScale.
   const { setCanvasTransform } = useCanvasTransformState({ currentScene: state.currentScene, activeTool: state.activeTool });
   const { colorMenu, openColorMenu, closeColorMenu, colorMenuRef } = useColorMenuState();
-  // 🎯 Canvas visibility states
-  const [dxfCanvasVisible, setDxfCanvasVisible] = React.useState(true);
-  const [layerCanvasVisible, setLayerCanvasVisible] = React.useState(true);
   // Destructure state
   const {
     activeTool, handleToolChange, handleAction, showGrid, toggleGrid,
@@ -175,8 +131,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-375 Phase C.1 — subscribe to per-company pen table overrides
   useBimPenTableSync();
   const { updateGripSettings } = useGripContext();
-  const { enabledModes, toggleMode } = useSnapContext();
-  const canvasOps = useCanvasOperations();
   // 🏢 ADR-055: Entity Creation Manager
   useEntityCreationManager({
     getLevelScene: levelManager.getLevelScene,
@@ -196,7 +150,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   );
   // 🏢 Universal selection primary ID
   const primarySelectedId = universalSelection.getPrimaryId();
-  const activeContextualTrigger = useActiveContextualTrigger({ primarySelectedId, selectedEntityIds, currentScene, activeTool });
   // Auto fit-to-view on FileRecord transition (extracted hook, ADR-340 Phase 9).
   useAutoFitOnFileChange({
     currentScene,
@@ -211,8 +164,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   } = useDxfViewerCallbacks({
     notifications, copyToClipboard, handleAction,
     togglePerfMonitor, perfMonitorEnabled, fullscreen,
-    setTestsModalOpen, setPdfPanelOpen, setAiChatOpen,
-    setShowEnhancedImport, setShowImportWizard, setShowLegacyImport,
+    setTestsModalOpen: ui.setTestsModalOpen, setPdfPanelOpen: ui.setPdfPanelOpen, setAiChatOpen: ui.setAiChatOpen,
+    setShowEnhancedImport: ui.setShowEnhancedImport, setShowImportWizard: ui.setShowImportWizard, setShowLegacyImport: ui.setShowLegacyImport,
     setCanvasTransform,
     currentScene, selectedEntityIds, handleSceneChange,
     handleFileImport, levelManager, overlayStore,
@@ -239,13 +192,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     handleAction: wrappedHandleAction,
     onAction: wrappedHandleAction
   }), [state, selectedEntityIds, wrappedHandleAction]);
-  // Overlay drawing hook
-  const {
-    overlayCanvasRef, draftPolygon, snapPoint,
-    handleOverlayCanvasClick, finishDrawing, handleVertexDrag,
-    handleRegionUpdate, handleOverlayMouseMove, clearSnapPoint,
-    setDraftPolygon, snapManager
-  } = useOverlayDrawing({
+  // Overlay drawing hook — retained for its registration side-effects (outputs unused here).
+  useOverlayDrawing({
     overlayMode, activeTool, overlayKind, overlayStatus, overlayStore,
     levelManager: {
       getCurrentLevel: () => levelManager.currentLevelId ? { id: levelManager.currentLevelId } : null,
@@ -279,12 +227,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     layoutMode === 'desktop' && activeTool === 'layering'
       ? PANEL_LAYOUT.POINTER_EVENTS.NONE
       : PANEL_LAYOUT.POINTER_EVENTS.AUTO;
-  // ADR-353 Phase A — Array contextual bridge + action interception.
-  const arrayBridge = useRibbonArrayBridge({ levelManager, universalSelection });
-  const arrayActionInterceptor = useArrayRibbonActions({
-    levelManager, universalSelection,
-    handleToolChange, fallback: wrappedHandleAction,
-  });
   // ADR-400: persist + restore pan/zoom + active floor via URL (+localStorage, ADR-040 safe).
   useViewportUrlSync({
     fileRecordId: levelManager.fileRecordId ?? null,
@@ -294,17 +236,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-362 Phase J2 — Dimension associativity observer (auto-follow geometry).
   useDimAssociationObserver(levelManager.getLevelScene, levelManager.setLevelScene, () => levelManager.currentLevelId);
   useStructuralAutoAttach({ levelManager }); // ADR-401 Phase D — auto-attach walls under new beam/slab
-  // ADR-358 Phase 7a / ADR-363 — BIM contextual bridges (stair / wall / opening / slab / column / beam).
-  const { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge } =
-    useDxfBimBridges({ levelManager, universalSelection });
-  const lineToolBridge = useRibbonLineToolBridge();
-  const xlineModeBridge = useRibbonXlineModeBridge();
-  const ribbonCommands = useRibbonCommands({
-    activeTool, handleToolChange, handleRibbonComingSoon,
-    wrappedHandleAction: arrayActionInterceptor,
-    canUndo, canRedo,
-    textEditorBridge, arrayBridge, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge,
-    slabOpeningBridge, lineToolBridge, xlineModeBridge,
+  // ADR-345/353/358/363 — ribbon command assembly (contextual trigger + BIM/array/text bridges).
+  const { ribbonCommands, ribbonContextualTabs, activeContextualTrigger } = useDxfViewerRibbon({
+    levelManager, universalSelection, activeTool,
+    handleToolChange, handleRibbonComingSoon, wrappedHandleAction,
+    canUndo, canRedo, primarySelectedId, selectedEntityIds, currentScene,
   });
   return (
       <div className="flex flex-col h-full min-h-0">
@@ -333,8 +269,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         />
       ) : (
         <MobileSidebarDrawer
-          open={sidebarOpen}
-          onOpenChange={setSidebarOpen}
+          open={ui.sidebarOpen}
+          onOpenChange={ui.setSidebarOpen}
           floatingRef={floatingRef}
           currentScene={currentScene}
           activeTool={activeTool}
@@ -363,24 +299,24 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           setOverlayMode={setOverlayMode}
           setOverlayStatus={setOverlayStatus}
           setOverlayKind={setOverlayKind}
-          dxfCanvasVisible={dxfCanvasVisible}
-          layerCanvasVisible={layerCanvasVisible}
-          setDxfCanvasVisible={setDxfCanvasVisible}
-          setLayerCanvasVisible={setLayerCanvasVisible}
+          dxfCanvasVisible={ui.dxfCanvasVisible}
+          layerCanvasVisible={ui.layerCanvasVisible}
+          setDxfCanvasVisible={ui.setDxfCanvasVisible}
+          setLayerCanvasVisible={ui.setLayerCanvasVisible}
           showCopyableNotification={showCopyableNotification}
           showGrid={showGrid}
           activeTool={activeTool}
           handleToolChange={handleToolChange}
-          testModalOpen={testModalOpen}
-          setTestModalOpen={setTestModalOpen}
-          testReport={testReport}
-          setTestReport={setTestReport}
-          formattedTestReport={formattedTestReport}
-          setFormattedTestReport={setFormattedTestReport}
+          testModalOpen={ui.testModalOpen}
+          setTestModalOpen={ui.setTestModalOpen}
+          testReport={ui.testReport}
+          setTestReport={ui.setTestReport}
+          formattedTestReport={ui.formattedTestReport}
+          setFormattedTestReport={ui.setFormattedTestReport}
           panToWorldOrigin={panToWorldOrigin}
           showCalibration={showCalibration}
           handleCalibrationToggle={handleCalibrationToggle}
-          onSidebarToggle={() => setSidebarOpen(prev => !prev)}
+          onSidebarToggle={() => ui.setSidebarOpen(prev => !prev)}
           isFullscreen={fullscreen.isFullscreen}
           />
         </React.Suspense>
@@ -409,89 +345,24 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           canRedo={canRedo}
           overlayStore={overlayStore}
           isFullscreen={fullscreen.isFullscreen}
-          testModalOpen={testModalOpen}
-          setTestModalOpen={setTestModalOpen}
-          testReport={testReport}
-          formattedTestReport={formattedTestReport}
+          testModalOpen={ui.testModalOpen}
+          setTestModalOpen={ui.setTestModalOpen}
+          testReport={ui.testReport}
+          formattedTestReport={ui.formattedTestReport}
           />
         </React.Suspense>
       </FullscreenOverlay>
-      <React.Suspense fallback={<div className="hidden" />}>
-        <TestsModal
-          isOpen={testsModalOpen}
-          onClose={() => setTestsModalOpen(false)}
-          showCopyableNotification={showCopyableNotification}
-        />
-      </React.Suspense>
-      <React.Suspense fallback={<div className="hidden" />}>
-        <FloorplanBackgroundPanel
-          isOpen={pdfPanelOpen}
-          onClose={() => setPdfPanelOpen(false)}
-        />
-      </React.Suspense>
-      <React.Suspense fallback={<div className="hidden" />}>
-        <ReplaceConfirmDialog />
-      </React.Suspense>
-      <React.Suspense fallback={<div className="hidden" />}>
-        <CalibrationDialog />
-      </React.Suspense>
-      {/* ADR-345 Fase 6: Import dialogs — SSOT owner (migrated from EnhancedDXFToolbar) */}
-      <React.Suspense fallback={<div className="hidden" />}>
-        <DxfImportModal
-          isOpen={showLegacyImport}
-          onClose={() => setShowLegacyImport(false)}
-          onImport={async (file, encoding) => { await handleFileImportWithEncoding(file, encoding); }}
-        />
-      </React.Suspense>
-      <React.Suspense fallback={<div className="hidden" />}>
-        <SimpleProjectDialog
-          isOpen={showEnhancedImport}
-          onClose={() => setShowEnhancedImport(false)}
-          onFileImport={(file: File) => handleFileImportWithEncoding(file)}
-        />
-      </React.Suspense>
-      <React.Suspense fallback={<div className="hidden" />}>
-        <FloorplanImportWizard
-          isOpen={showImportWizard}
-          onClose={() => setShowImportWizard(false)}
-          onComplete={(file, meta) => {
-            setShowImportWizard(false);
-            if (meta.format && meta.format !== 'dxf') return;
-            void handleFileImportWithEncoding(file, undefined, buildDxfImportSaveContext(meta));
-          }}
-        />
-      </React.Suspense>
-      <React.Suspense fallback={<div className="hidden" />}><ConstructionLayerScaffoldDialog /></React.Suspense>
-      <React.Suspense fallback={<div className="hidden" />}><DxfFindReplaceHost open={state.findReplaceOpen} onOpenChange={state.setFindReplaceOpen} /></React.Suspense>
-      <React.Suspense fallback={<div className="hidden" />}><DxfSymbolPickerHost open={state.symbolPickerOpen} onOpenChange={state.setSymbolPickerOpen} /></React.Suspense>
-      <React.Suspense fallback={<div className="hidden" />}><RenumberOpeningsHost projectId={levelManager.saveContext?.projectId ?? undefined} floorplanId={levelManager.fileRecordId ?? undefined} /></React.Suspense>
-      <React.Suspense fallback={<div className="hidden" />}><OpeningTagStyleHost projectId={levelManager.saveContext?.projectId ?? undefined} /></React.Suspense>
-      <React.Suspense fallback={<div className="hidden" />}><OpeningSchedulePdfHost getEntities={() => (levelManager.getLevelScene(levelManager.currentLevelId ?? '')?.entities ?? []) as unknown as ReadonlyArray<Record<string, unknown>>} levels={levelManager.levels} /></React.Suspense>
-      {/* ADR-396 P6 — Thermal Envelope (ETICS) authoring dialog (opened via Analyze tab). */}
-      <React.Suspense fallback={<div className="hidden" />}><ThermalEnvelopeHost currentLevelId={levelManager.currentLevelId} levels={levelManager.levels} getLevelScene={levelManager.getLevelScene} setLevelScene={levelManager.setLevelScene} projectId={levelManager.saveContext?.projectId ?? undefined} /></React.Suspense>
-      {/* ADR-391 — AdminLayerManager modal (opened via View tab button or Ctrl+L). */}
-      <React.Suspense fallback={<div className="hidden" />}><AdminLayerManagerDialogHost projectId={levelManager.saveContext?.projectId ?? null} /></React.Suspense>
-      {USE_AI_DRAWING_ASSISTANT && (
-        <React.Suspense fallback={<div className="hidden" />}>
-          <DxfAiChatPanel
-            isOpen={aiChatOpen}
-            onClose={() => setAiChatOpen(false)}
-            getScene={levelManager.getLevelScene}
-            setScene={levelManager.setLevelScene}
-            levelId={levelManager.currentLevelId || '0'}
-          />
-        </React.Suspense>
-      )}
-      {perfMonitorEnabled && (
-        <ClientOnlyPerformanceDashboard
-          showDetails
-          updateInterval={2000}
-          categories={[
-            PerformanceCategory.RENDERING,
-            PerformanceCategory.MEMORY
-          ]}
-        />
-      )}
+      <DxfViewerDialogs
+        ui={ui}
+        levelManager={levelManager}
+        perfMonitorEnabled={perfMonitorEnabled}
+        handleFileImportWithEncoding={handleFileImportWithEncoding}
+        showCopyableNotification={showCopyableNotification}
+        findReplaceOpen={state.findReplaceOpen}
+        setFindReplaceOpen={state.setFindReplaceOpen}
+        symbolPickerOpen={state.symbolPickerOpen}
+        setSymbolPickerOpen={state.setSymbolPickerOpen}
+      />
       </section>
       </div>
   );

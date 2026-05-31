@@ -71,6 +71,28 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-31 — DxfViewerContent N.7.1 size-split (compliance note)
+
+**Status**: COMPLIANT — no ADR-040 invariants broken.
+
+`DxfViewerContent.tsx` έφτασε στα όρια των 500 γραμμών (CHECK 4) και γέμιζε γρήγορα με κάθε νέο
+ribbon bridge / modal host. Έγινε **καθαρό SRP size-split** (ADR-065 pattern) σε 3 νέα cohesive αρχεία
+στο ίδιο φάκελο `app/`:
+- `useDxfViewerUiState.ts` — owner του ephemeral UI/dialog/canvas-visibility toggle state (growth sink για νέα modals).
+- `useDxfViewerRibbon.ts` — ribbon command assembly + contextual trigger + BIM/array/text bridges (growth sink για νέα ribbon bridges).
+- `DxfViewerDialogs.tsx` — presentational container όλων των Suspense modal/host portals + perf dashboard.
+
+**CHECK 6B/6C/6D safe — ΜΗΔΕΝ αρχιτεκτονική αλλαγή:**
+- Κανένα νέο `useSyncExternalStore` δεν προστέθηκε· τα hooks απλώς **μεταφέρθηκαν** στο ίδιο render scope
+  (wrapper hooks τρέχουν στο ίδιο component → identical subscription topology). Ο orchestrator εξακολουθεί
+  να ΜΗΝ κάνει subscribe σε high-frequency stores.
+- `DxfViewerDialogs` δέχεται τα πάντα via props (zero subscriptions).
+- Hook call order παραμένει unconditional & stable across renders (Rules of Hooks ✅).
+
+**Boy-Scout (N.0.2) dead-code cleanup** στο ίδιο pass: αφαιρέθηκαν αχρησιμοποίητα imports/bindings
+(`useSnapContext`, `useCanvasOperations`, `ToolType`, 10 lazy-component imports, και το unused
+`useOverlayDrawing` destructure → bare side-effect call). Αποτέλεσμα: **503 → 370 γραμμές**.
+
 ### 2026-05-31 — ADR-396 v2 Phase 5C — cross-floor slab wiring (compliance note)
 
 **Status**: COMPLIANT — no ADR-040 invariants broken.

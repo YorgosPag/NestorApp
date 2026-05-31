@@ -41,16 +41,18 @@ describe('createSceneIdleDetector — auto-preview gate', () => {
     useEnvironmentStore.getState().setHdriUrl(null);
   });
 
-  it('does NOT start the path tracer on idle when auto-preview is OFF', () => {
+  it('skips ALL idle escalation (path tracer + SSAO + quality) when auto-preview is OFF', () => {
     const { deps, start } = makeDeps();
     const detector = createSceneIdleDetector(deps);
 
     detector.notifyIdle();
     jest.advanceTimersByTime(THRESHOLD_MS);
 
+    // OFF → idle leaves the fast interaction raster untouched: no path-trace, no
+    // SSAO refine-on-idle composer pass, no render-quality bump.
     expect(start).not.toHaveBeenCalled();
-    // SSAO refine-on-idle still fires (light path stays).
-    expect(deps.ssaoModulator.onCameraIdle).toHaveBeenCalled();
+    expect(deps.ssaoModulator.onCameraIdle).not.toHaveBeenCalled();
+    expect(deps.qualityModulator.onCameraIdle).not.toHaveBeenCalled();
     detector.dispose();
   });
 

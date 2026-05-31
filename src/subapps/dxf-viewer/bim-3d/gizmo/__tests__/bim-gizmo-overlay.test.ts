@@ -48,6 +48,31 @@ describe('BimGizmoOverlay — active-handle visibility', () => {
     overlay.dispose();
   });
 
+  it('builds all gizmo geometry with finite vertex positions (no NaN)', () => {
+    // Regression: the center pyramid basis divided by zero for the [1,1,1] diagonal
+    // → NaN vertices → THREE "computeBoundingSphere(): radius is NaN" every frame the
+    // gizmo rendered (triggered on selecting any entity, e.g. a wall).
+    const scene = new THREE.Scene();
+    const overlay = new BimGizmoOverlay(scene);
+    overlay.setActiveHandles(activeHandlesFor('wall')); // base handles incl. center pyramid
+
+    const offenders: string[] = [];
+    scene.traverse((obj) => {
+      const geo = (obj as THREE.Mesh | THREE.LineSegments).geometry as THREE.BufferGeometry | undefined;
+      const pos = geo?.getAttribute?.('position');
+      if (!pos) return;
+      for (let i = 0; i < pos.array.length; i++) {
+        if (!Number.isFinite(pos.array[i])) {
+          offenders.push(obj.name || obj.type);
+          break;
+        }
+      }
+    });
+
+    expect(offenders).toEqual([]);
+    overlay.dispose();
+  });
+
   it('exposes the resize-x / resize-z hitboxes for a column (hittable)', () => {
     const scene = new THREE.Scene();
     const overlay = new BimGizmoOverlay(scene);

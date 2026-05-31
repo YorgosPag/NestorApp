@@ -129,6 +129,7 @@ view-agnostic commands (cascade κουφωμάτων + undo — που το GenA
 ---
 
 ## Changelog
+- **2026-05-31 (Opus 4.8)** — **🐛 FIX: NaN gizmo geometry (center pyramid) → `computeBoundingSphere(): radius is NaN` κάθε frame** (Giorgio runtime: εμφανιζόταν μόλις γινόταν κλικ σε τοίχο 3Δ κι εμφανιζόταν το gizmo). Root στο `gizmo-handle-builders.ts` `buildCenterHandle`: η πορτοκαλί πυραμίδα «center» (handle σε ΟΛΕΣ τις επιλογές) χτίζει κάθετη βάση στο διαγώνιο `[1,1,1]` μέσω `[d1-d2, d2-d0, d0-d1]`· επειδή `dvec` έχει και τα 3 components ίσα → `[0,0,0]` → `/p1m` (=0) → `[NaN,NaN,NaN]` → όλες οι κορυφές της πυραμίδας NaN → THREE warning κάθε frame που ζωγραφιζόταν το gizmo. Υπάρχει από το Phase A (committed 55090f56). **Fix**: robust unit κάθετο μέσω `THREE.Vector3(dvec).cross([1,0,0]).normalize()` (p2 = dvec × p1, ήδη unit). +NEW test στο `bim-gizmo-overlay.test.ts` που σαρώνει ΟΛΗ τη gizmo geometry για non-finite κορυφές. 28/28 gizmo PASS, tsc clean. 🔴 browser verify (warning φεύγει).
 - **2026-05-31 (Opus 4.8)** — **🐛 FIX: column resize handles ήταν αόρατα → resize «δεν λειτουργούσε»**
   (Giorgio runtime report). Root cause στο `gizmo-geometry.ts`: το resize octahedron visual καταχωρείται
   σε **δύο** ids — `resize-x` ΚΑΙ τη mirror του `resize-m-x` — που δείχνουν στο **ίδιο** mesh. Το

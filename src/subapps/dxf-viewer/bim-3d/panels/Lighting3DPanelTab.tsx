@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Switch } from '@/components/ui/switch';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { PRESET_ORDER } from '../lighting/lighting-presets';
@@ -52,21 +53,16 @@ export function Lighting3DPanelTab() {
   return (
     <div className="space-y-3 p-3 text-xs text-white/80">
       <div className="flex items-center justify-between rounded border border-white/10 px-2 py-1.5">
-        <div className="flex flex-col">
+        <label htmlFor="bim3d-auto-preview" className="flex cursor-pointer select-none flex-col">
           <span>{t('lighting.autoPreview.label')}</span>
           <span className="text-[10px] text-white/40">{t('lighting.autoPreview.hint')}</span>
-        </div>
-        <button
-          type="button"
-          onClick={() => useViewMode3DStore.getState().setAutoPreviewEnabled(!autoPreviewEnabled)}
-          aria-pressed={autoPreviewEnabled}
-          className={[
-            'rounded border px-2 py-0.5 transition-colors',
-            autoPreviewEnabled ? 'border-primary text-white' : 'border-white/20 text-white/40',
-          ].join(' ')}
-        >
-          {autoPreviewEnabled ? '◉' : '○'}
-        </button>
+        </label>
+        <Switch
+          id="bim3d-auto-preview"
+          checked={autoPreviewEnabled}
+          onCheckedChange={(v) => useViewMode3DStore.getState().setAutoPreviewEnabled(v)}
+          className="scale-90 origin-right data-[state=checked]:bg-[hsl(var(--text-success))]"
+        />
       </div>
 
       <div className="grid grid-cols-3 gap-1">

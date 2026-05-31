@@ -15,12 +15,15 @@ export function createSceneIdleDetector(deps: {
   return new IdleDetector({
     thresholdMs: 800,
     onIdle: () => {
+      // ADR-366 — ALL idle quality escalation is opt-in via `autoPreviewEnabled`
+      // (default OFF): the SSAO refine-on-idle composer pass, the render-quality
+      // bump AND the photorealism path tracer. When OFF the idle leaves the fast
+      // interaction raster untouched, so the machine never re-renders / grinds on a
+      // camera pause during ordinary editing (the SSAO composer pass alone — heavy
+      // FBO round-trip — was what kept "doing photorealism" on every stop).
+      if (!useViewMode3DStore.getState().autoPreviewEnabled) return;
       deps.qualityModulator.onCameraIdle();
       deps.ssaoModulator.onCameraIdle();
-      // ADR-366 — the auto idle photorealism preview is opt-in (default OFF). When
-      // disabled, idle keeps the light SSAO refine-on-idle pass and never kicks the
-      // path tracer, so ordinary editing never grinds on every camera pause.
-      if (!useViewMode3DStore.getState().autoPreviewEnabled) return;
       const hasBimMesh = deps.bimLayer.hasMesh;
       const hdriLoaded = useEnvironmentStore.getState().hdriUrl !== null;
       if (hasBimMesh && hdriLoaded) deps.pathTracerRenderer.start();
