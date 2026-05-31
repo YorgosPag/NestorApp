@@ -308,3 +308,69 @@ describe('buildWallHostInputs — SSoT σύνθεση beams + slabs', () => {
     expect(buildWallHostInputs([], [])).toHaveLength(0);
   });
 });
+
+// ─── Phase E2 — tilted roof/slab host (κεκλιμένη κάτω-παρειά) ─────────────────
+
+describe('slabHostInput — tilted roof host (Phase E2)', () => {
+  /** Roof slab 0..10000mm, level 3000, thick 200, 10% κλίση +X, pivot center. */
+  const tiltedRoof = {
+    id: 'roof_1', type: 'slab', kind: 'roof',
+    params: {
+      kind: 'roof',
+      outline: { vertices: [{ x: 0, y: 0 }, { x: 10000, y: 0 }, { x: 10000, y: 10000 }, { x: 0, y: 10000 }] },
+      levelElevation: 3000, thickness: 200,
+      geometryType: 'tilted',
+      slope: { direction: 0, angle: 10, pivotEdge: 'center' },
+    },
+  } as unknown as SlabEntity;
+
+  it('roof slab → hostType=roof + undersideZmmAt ορισμένο', () => {
+    const input = slabHostInput(tiltedRoof);
+    expect(input.hostType).toBe('roof');
+    expect(typeof input.undersideZmmAt).toBe('function');
+    // x=10000 → top 3500, underside 3300· x=0 → underside 2300.
+    expect(input.undersideZmmAt!({ x: 10000, y: 5000 })).toBeCloseTo(3300, 6);
+    expect(input.undersideZmmAt!({ x: 0, y: 5000 })).toBeCloseTo(2300, 6);
+  });
+
+  it('box slab → ΧΩΡΙΣ undersideZmmAt (flat scalar back-compat)', () => {
+    const boxSlab = {
+      id: 'slab_2', type: 'slab', kind: 'floor',
+      params: {
+        kind: 'floor',
+        outline: { vertices: [{ x: 0, y: 0 }, { x: 5000, y: 0 }, { x: 5000, y: 5000 }, { x: 0, y: 5000 }] },
+        levelElevation: 3000, heightOffsetFromLevel: 0, thickness: 150, geometryType: 'box',
+      },
+    } as unknown as SlabEntity;
+    expect(slabHostInput(boxSlab).undersideZmmAt).toBeUndefined();
+  });
+
+  it('buildHostUndersidePlans → sloped plan z0mm ≠ z1mm κατά μήκος άξονα', () => {
+    const wallStart: Pt2 = { x: 1000, y: 5000 };
+    const wallEnd: Pt2 = { x: 9000, y: 5000 };
+    const plans = buildHostUndersidePlans(wallStart, wallEnd, [slabHostInput(tiltedRoof)]);
+    expect(plans).toHaveLength(1);
+    // t0 @ x=1000 → top 2600, underside 2400· t1 @ x=9000 → top 3400, underside 3200.
+    expect(plans[0].z0mm).toBeCloseTo(2400, 6);
+    expect(plans[0].z1mm).toBeCloseTo(3200, 6);
+  });
+
+  it('πλήρες chain → wall top ακολουθεί κλίση (evaluateWallTopAt 0≠1)', () => {
+    const wallStart: Pt2 = { x: 1000, y: 5000 };
+    const wallEnd: Pt2 = { x: 9000, y: 5000 };
+    const resolveHost = makeResolveHost(wallStart, wallEnd, [slabHostInput(tiltedRoof)]);
+    const params: WallVerticalParams = {
+      baseBinding: 'storey-floor', topBinding: 'attached',
+      baseOffset: 0, topOffset: 0, height: 5000, // nominal ψηλό → host είναι το lower-envelope
+      attachTopToIds: ['roof_1'],
+    };
+    const ctx: WallVerticalContext = { floorElevationMm: 0, resolveHost };
+    const profile = resolveWallTopProfile(params, ctx);
+    expect(profile.hasAttach).toBe(true);
+    expect(profile.missingHostIds).toHaveLength(0);
+    expect(evaluateWallTopAt(profile, 0)).toBeCloseTo(2400, 6);
+    expect(evaluateWallTopAt(profile, 1)).toBeCloseTo(3200, 6);
+    // monotonικά αύξον (κλίση) — μέσο ~2800
+    expect(evaluateWallTopAt(profile, 0.5)).toBeCloseTo(2800, 6);
+  });
+});

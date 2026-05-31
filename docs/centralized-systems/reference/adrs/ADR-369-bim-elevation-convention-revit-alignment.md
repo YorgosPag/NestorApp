@@ -148,7 +148,7 @@ Mirror Wall — `baseElevation`, `baseOffset`, `height`.
 
 Όλες οι entities expose computed reporting params (read-only, ίδιο pattern με Revit):
 - **Slab**: `topElevation`, `bottomElevation`
-- **Beam**: `topElevation` (= levelElevation), `bottomElevation` (= top - depth)
+- **Beam**: `topElevation` (= levelElevation), `bottomElevation` (= top - depth). ADR-401 Phase E (β): optional `topElevationEnd?` (πάνω παρειά στο `endPoint`) → **κεκλιμένη δοκός** γραμμικά κατά μήκος του άξονα· απών = οριζόντια (back-compat). SSoT `bim/geometry/beam-slope.ts`.
 - **Wall**: `baseElevationActual`, `topElevationActual`
 - **Column**: ίδιο με Wall
 - **Opening**: `sillElevation` (= hostWall.baseElevation + sillHeight), `headElevation` (= sill + height)
@@ -300,6 +300,7 @@ Only invert slab semantic, leave wall/column hardcoded at z=0.
 
 | Date | Author | Change |
 |------|--------|--------|
+| 2026-05-31 | Giorgio + Claude (Opus 4.8) | **§9 Q7 — tilted slab/roof RENDER path SHIPPED** (ADR-401 Phase E2 follow-up, pending commit, 🔴 browser verify). `BimToThreeConverter.slabToMesh` πλέον render-άρει την `geometryType='tilted'` πλάκα **κεκλιμένη** (πριν: πάντα επίπεδο box· flagged κενό). NEW `applySlabSlope(geo, params)` = per-vertex affine shear στο world-Y που καταναλώνει το `bim/geometry/slab-slope.ts` SSoT (`slabSlopeOffsetZmm`) — ίδια ποσότητα με τον ADR-401 `wall-top-profile` resolver → attached τοίχος εφάπτεται· σταθερό πάχος· holes/openings ανέπαφα· flat = no-op. 2D `section-intersect.slabSection` slope-at-cut (`toSlabPlan.slopeYAt`, single-point rect mirror `wallSection`). Tests: `slab-slope-mesh.test.ts` (4) + `section-intersect-slab-slope.test.ts` (7) → 11 νέα, 54/54+39/39 regression PASS, tsc clean. `mesh` editor (Phase 2) + parallelogram section cross-section παραμένουν deferred. |
 | 2026-05-20 | Giorgio + Claude | Initial ADR — PROPOSED status. Research-backed industry alignment decision. Migration plan Phase A-G. |
 | 2026-05-20 | Giorgio + Claude | §9 added — Deep multi-platform research (ArchiCAD, Vectorworks, Allplan, BricsCAD, IFC standard, Revit advanced). Major scope expansion: **Storey System** + Project Base Point/Survey Point distinction + Parametric coupling. Q&A clarification phase initiated. |
 | 2026-05-20 | Giorgio + Claude | Q1/Q4/Q6/Q5 answered (Floor entity already exists, FFL Hybrid, signed-number basements with `kind` field, Hybrid binding). Discovery: `floors` + `buildings` collections fully live, gaps in 3D rendering wiring only. |
@@ -416,7 +417,7 @@ Only invert slab semantic, leave wall/column hardcoded at z=0.
 
 ### Phase A4 — Q&A status updates
 
-- **Q7 (Slab geometry types)** → Phase 1 subset ✅ shipped (`geometryType: 'box'|'tilted'` + `slope?: SlabSlope` in schema + factory + Zod superRefine). `mesh` field reserved in types comment, not implemented (Phase 2 deferred).
+- **Q7 (Slab geometry types)** → Phase 1 subset ✅ shipped (`geometryType: 'box'|'tilted'` + `slope?: SlabSlope` in schema + factory + Zod superRefine). `mesh` field reserved in types comment, not implemented (Phase 2 deferred). **2026-05-31 (ADR-401 Phase E2 follow-up):** ο `tilted` **render path** ✅ shipped — `BimToThreeConverter.slabToMesh` γέρνει την πλάκα/στέγη μέσω `applySlabSlope` (affine shear, καταναλώνει το `slab-slope.ts` SSoT `slabSlopeOffsetZmm`) + 2D `slabSection` slope-at-cut. Καθιερωμένη ερμηνεία `SlabSlope` (single-plane: `direction`° CCW from +X = ανηφόρα, `angle`% = mm/mm, `pivotEdge` default κέντρο AABB). `mesh` editor ακόμη Phase 2.
 - **Q8 (IFC Export)** → Slab + Beam + Opening `IfcEntityMixin` ✅ shipped (ifcGuid required + ifcType literals 'IfcSlab'/'IfcBeam'/'IfcDoor'/'IfcWindow'). All 5 entity types complete. IFC writer (web-ifc WASM) deferred Phase B+.
 - **§2.1 Slab top-face semantic** → ✅ fully applied in schema + factory + 3D converter + ribbon + locales.
 - **§2.2 Beam topElevation rename** → ✅ fully applied schema-to-renderer chain.

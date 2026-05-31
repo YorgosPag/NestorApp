@@ -53,7 +53,18 @@ export function computeBeamGeometry(params: BeamParams): BeamGeometry {
   const area = lengthM * widthM;
   const volume = area * depthM;
 
-  const bbox = computeBbox(axisVertices, outlineVertices, params.topElevation, params.zOffset ?? 0, params.depth);
+  // ADR-401 Phase E/(β): κεκλιμένη δοκός → η κορυφή κυμαίνεται [topElevation,
+  // topElevationEnd]· το bbox κρατά το ακραίο high/low ώστε fit-to-view (ADR-394)
+  // + culling να καλύπτουν όλο το prism. Οριζόντια δοκός → end = topElevation.
+  const topEndMm = params.topElevationEnd ?? params.topElevation;
+  const bbox = computeBbox(
+    axisVertices,
+    outlineVertices,
+    Math.max(params.topElevation, topEndMm),
+    Math.min(params.topElevation, topEndMm),
+    params.zOffset ?? 0,
+    params.depth,
+  );
 
   return {
     axisPolyline,
@@ -168,12 +179,14 @@ function computePolylineLengthMm(vertices: readonly Point3D[]): number {
 
 /**
  * Axis-aligned 3D bounding box. Phase B: z in metres (ADR-369 §2.2 Phase B).
- * top = (topElevation + zOffset) / 1000 m, bottom = top − depth / 1000 m.
+ * top = (topMaxMm + zOffset) / 1000 m, bottom = (topMinMm + zOffset − depth) / 1000 m.
+ * Για οριζόντια δοκό topMaxMm === topMinMm === topElevation (ADR-401 Phase E/(β)).
  */
 function computeBbox(
   axis: readonly Point3D[],
   outline: readonly Point3D[],
-  topElevationMm: number,
+  topMaxMm: number,
+  topMinMm: number,
   zOffsetMm: number,
   depthMm: number,
 ): BoundingBox3D {
@@ -187,8 +200,8 @@ function computeBbox(
   };
   for (const p of axis) fold(p);
   for (const p of outline) fold(p);
-  const topFaceM = (topElevationMm + zOffsetMm) / 1000;
-  const botFaceM = topFaceM - depthMm / 1000;
+  const topFaceM = (topMaxMm + zOffsetMm) / 1000;
+  const botFaceM = (topMinMm + zOffsetMm - depthMm) / 1000;
   return {
     min: { x: minX, y: minY, z: botFaceM },
     max: { x: maxX, y: maxY, z: topFaceM },

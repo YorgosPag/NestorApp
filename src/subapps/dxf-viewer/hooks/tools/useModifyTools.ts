@@ -18,6 +18,7 @@ import { useArrayTool } from './useArrayTool';
 import { useArrayPolarTool } from './useArrayPolarTool';
 import { useArrayPathTool } from './useArrayPathTool';
 import { useWallSplitTool } from './useWallSplitTool';
+import { useWallAttachTool } from './useWallAttachTool';
 import { useBimCopyTool } from './useBimCopyTool';
 import { MoveOverlayCommand, MoveMultipleOverlaysCommand } from '../../core/commands';
 import { subscribeToImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
@@ -103,6 +104,16 @@ export function useModifyTools({
   // ADR-040 XXII.A: pass live scale via SSoT — useWallSplitTool now reads at event time.
   const wallSplitTool = useWallSplitTool({
     activeTool,
+    levelManager,
+    executeCommand,
+    transformScale: getImmediateTransform().scale,
+    onToolChange,
+  });
+
+  // ADR-401 Phase E.1 — Wall Attach Top/Base Tool (Revit Attach pick-host).
+  const wallAttachTool = useWallAttachTool({
+    activeTool,
+    selectedEntityIds,
     levelManager,
     executeCommand,
     transformScale: getImmediateTransform().scale,
@@ -225,6 +236,7 @@ export function useModifyTools({
     arrayPolarTool,
     arrayPathTool,
     wallSplitTool,
+    wallAttachTool,
     bimCopyTool,
     handleRotationAnglePrompt,
   };

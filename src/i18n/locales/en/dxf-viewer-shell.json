@@ -5,7 +5,10 @@
   },
   "attachToStructural": {
     "hostMissing": "Wall lost its top structural support (the supporting element was deleted).",
-    "autoAttached": "Walls auto-attached their top to the structural element."
+    "autoAttached": "Walls auto-attached their top to the structural element.",
+    "pickHostPrompt": "Click a beam or slab to attach to.",
+    "attachedManual": "Walls attached to the structural element.",
+    "detached": "Walls detached from the structural element."
   },
   "bim": {
     "wallCascadeDelete": {
@@ -712,6 +715,7 @@
       "wallGeometry": "Geometry",
       "wallMaterial": "Material",
       "wallActions": "Actions",
+      "wallStructuralAttach": "Structural Attach",
       "openingMark": "Mark",
       "openingKind": "Type",
       "openingSize": "Size",
@@ -736,6 +740,7 @@
       "beamGeometry": "Geometry",
       "beamMaterial": "Material",
       "beamActions": "Actions",
+      "envelopeFunction": "Thermal Envelope ETICS",
       "ifcProperties": "IFC Properties",
       "slabOpeningKind": "Type",
       "slabOpeningActions": "Actions",
@@ -1133,6 +1138,10 @@
         "split": "Split",
         "close": "Close",
         "delete": "Delete",
+        "attachTop": "Attach Top",
+        "attachBase": "Attach Base",
+        "detachTop": "Detach Top",
+        "detachBase": "Detach Base",
         "deleteConfirm": "Delete wall? This action cannot be undone.",
         "category": {
           "section": {
@@ -1162,6 +1171,15 @@
           "tooltip": "Select wall material for hatch pattern",
           "comingSoon": "Available with WallDna Phase 1D"
         }
+      },
+      "envelopeFunction": {
+        "section": {
+          "title": "Thermal Envelope"
+        },
+        "auto": "Auto",
+        "exterior": "Exterior (insulated)",
+        "interior": "Interior (no insulation)",
+        "tooltip": "Manual override of the automatic ETICS envelope classification: Exterior = insulated, Interior = not insulated, Auto = geometry decides."
       },
       "openingEditor": {
         "mark": "Mark",
@@ -1696,6 +1714,18 @@
           "Z4": "Z4 — Opening reveals"
         },
         "kenakWarning": "Below the KENAK advisory minimum — allowed, but review the thermal performance.",
+        "regions": {
+          "title": "Boundaries by region",
+          "description": "Insulation override per detected floor boundary — written to all of the boundary's elements.",
+          "empty": "No boundaries detected on this floor.",
+          "mixed": "Mixed",
+          "roles": {
+            "exterior": "Exterior outline",
+            "atrium": "Atrium",
+            "interiorRoom": "Room",
+            "openStructure": "Open outline"
+          }
+        },
         "climateZone": {
           "label": "Climate Zone (KENAK)",
           "placeholder": "Select zone…",

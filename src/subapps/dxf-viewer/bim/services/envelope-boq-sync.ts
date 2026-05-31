@@ -51,12 +51,18 @@ import { computeEnvelopeShell, collectEnvelopeOverrides } from '../geometry/enve
 import type { SlabRegionFootprint } from '../geometry/footprint-region-classifier';
 import type { EnvelopeChain } from '../geometry/envelope-perimeter';
 import { resolveWallTopProfile } from '../geometry/wall-top-profile';
-import { buildWallHostInputs, makeWallTopContext } from '../geometry/wall-host-plan-builder';
+import { resolveWallBaseProfile } from '../geometry/wall-base-profile';
+import { buildWallHostInputs, makeWallTopContext, makeWallBaseContext } from '../geometry/wall-host-plan-builder';
 import {
   resolveEnvelopeEdgeTops,
   chainProfileAreaM2,
   type WallTopRef,
 } from '../geometry/envelope-wall-top';
+import {
+  resolveEnvelopeEdgeBases,
+  chainBaseAreaM2,
+  type WallBaseRef,
+} from '../geometry/envelope-wall-base';
 import type { BeamEntity } from '../types/beam-types';
 import type { SlabEntity } from '../types/slab-types';
 import type { WallEntity } from '../types/wall-types';
@@ -102,10 +108,42 @@ function maxWallHeightM(walls: readonly { params: { height?: number } }[]): numb
   return max / MM_PER_M;
 }
 
+/** `WallTopRef` ανά top-attached τοίχο (active-level scene → floorElevationMm 0). */
+function boqTopRefs(
+  walls: readonly WallEntity[],
+  hostInputs: ReturnType<typeof buildWallHostInputs>,
+): Map<string, WallTopRef> {
+  const refs = new Map<string, WallTopRef>();
+  for (const w of walls) {
+    const start = { x: w.params.start.x, y: w.params.start.y };
+    const end = { x: w.params.end.x, y: w.params.end.y };
+    const profile = resolveWallTopProfile(w.params, makeWallTopContext(start, end, hostInputs, { floorElevationMm: 0 }));
+    refs.set(w.id, { start, end, profile });
+  }
+  return refs;
+}
+
+/** `WallBaseRef` ανά base-attached τοίχο (ADR-401 (γ), floorElevationMm 0). */
+function boqBaseRefs(
+  walls: readonly WallEntity[],
+  hostInputs: ReturnType<typeof buildWallHostInputs>,
+): Map<string, WallBaseRef> {
+  const refs = new Map<string, WallBaseRef>();
+  for (const w of walls) {
+    const start = { x: w.params.start.x, y: w.params.start.y };
+    const end = { x: w.params.end.x, y: w.params.end.y };
+    const profile = resolveWallBaseProfile(w.params, makeWallBaseContext(start, end, hostInputs, { floorElevationMm: 0 }));
+    refs.set(w.id, { start, end, profile });
+  }
+  return refs;
+}
+
 /**
- * ADR-401 B3b — Z1 facade area (m²). Όταν υπάρχει ≥1 `attached` τοίχος, το προφίλ
- * κορυφής είναι σκαλωτό/κεκλιμένο → integration ανά ακμή
- * (`chainProfileAreaM2`, μήκος × μέσο ύψος). Αλλιώς (flat) → `Σ perimeterM ×
+ * ADR-401 B3b / (γ) — Z1 facade area (m²). Όταν υπάρχει ≥1 top- ή base-`attached`
+ * τοίχος, το κατακόρυφο εύρος είναι σκαλωτό/κεκλιμένο → integration ανά ακμή:
+ * **area = topArea − baseArea** (`chainProfileAreaM2` − `chainBaseAreaM2`, μήκος ×
+ * μέσο εύρος). Επειδή η βάση μπορεί να είναι αρνητική (θεμέλιο κάτω από το floor),
+ * η αφαίρεση **μεγαλώνει** σωστά το κέλυφος. Χωρίς attach (flat) → `Σ perimeterM ×
  * maxWallHeightM` (ΑΜΕΤΑΒΛΗΤΟ). `floorElevationMm = 0`: active level scene =
  * floor-relative (mirror `wall-boq-feed`). Flat chain → identical και στα δύο paths.
  */
@@ -117,25 +155,22 @@ function computeZ1FacadeArea(
   units: SceneUnits,
 ): number {
   const fallbackHeightM = maxWallHeightM(walls);
-  const attached = walls.filter((w) => w.params.topBinding === 'attached');
-  if (attached.length === 0) {
+  const topAttached = walls.filter((w) => w.params.topBinding === 'attached');
+  const baseAttached = walls.filter((w) => w.params.baseBinding === 'attached');
+  if (topAttached.length === 0 && baseAttached.length === 0) {
     return chains.reduce((s, c) => s + c.perimeterM, 0) * fallbackHeightM;
   }
   const sceneScale = mmToSceneUnits(units);
   const hostInputs = buildWallHostInputs(beams, slabs);
-  const refs = new Map<string, WallTopRef>();
-  for (const w of attached) {
-    const start = { x: w.params.start.x, y: w.params.start.y };
-    const end = { x: w.params.end.x, y: w.params.end.y };
-    refs.set(w.id, {
-      start,
-      end,
-      profile: resolveWallTopProfile(w.params, makeWallTopContext(start, end, hostInputs, { floorElevationMm: 0 })),
-    });
-  }
+  const topRefs = boqTopRefs(topAttached, hostInputs);
+  const baseRefs = boqBaseRefs(baseAttached, hostInputs);
   let area = 0;
   for (const c of chains) {
-    area += chainProfileAreaM2(c, resolveEnvelopeEdgeTops(c, refs, 0), fallbackHeightM, sceneScale);
+    const edgeTops = topRefs.size > 0 ? resolveEnvelopeEdgeTops(c, topRefs, 0) : [];
+    area += chainProfileAreaM2(c, edgeTops, fallbackHeightM, sceneScale);
+    if (baseRefs.size > 0) {
+      area -= chainBaseAreaM2(c, resolveEnvelopeEdgeBases(c, baseRefs, 0), sceneScale);
+    }
   }
   return area;
 }

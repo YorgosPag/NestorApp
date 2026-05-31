@@ -20,23 +20,24 @@ import * as THREE from 'three';
 import type { WallOpeningPiece } from './wall-opening-pieces';
 
 /**
- * Στερεό «σφήνα» για κομμάτι τοίχου με κεκλιμένη κορυφή. 8 κορυφές (4 βάση @zBot,
- * 4 κορυφή @zTopA/@zTopB), 6 έδρες (12 τρίγωνα). Επιστρέφει null αν το ύψος
- * εκφυλίζεται (κορυφή ≤ βάση παντού).
+ * Στερεό «σφήνα» για κομμάτι τοίχου με κεκλιμένη κορυφή **ή/και** κεκλιμένο πάτο
+ * (ADR-401 (γ) base-attach). 8 κορυφές (4 βάση @zBotA/@zBotB, 4 κορυφή
+ * @zTopA/@zTopB), 6 έδρες (12 τρίγωνα). Επιστρέφει null αν το ύψος εκφυλίζεται
+ * (κορυφή ≤ βάση παντού).
  */
 export function buildSlopedWallPieceGeometry(piece: WallOpeningPiece): THREE.BufferGeometry | null {
-  const { quad, zBotM, zTopAM, zTopBM } = piece;
-  if (zTopAM - zBotM < 1e-6 && zTopBM - zBotM < 1e-6) return null;
+  const { quad, zBotAM, zBotBM, zTopAM, zTopBM } = piece;
+  if (zTopAM - zBotAM < 1e-6 && zTopBM - zBotBM < 1e-6) return null;
 
   const [pAo, pBo, pBi, pAi] = quad;
-  // Top y ανά boundary: a-boundary = quad[0]/quad[3], b-boundary = quad[1]/quad[2].
-  // plan (x, y) → world (x, height, -y).
+  // Y ανά boundary: a-boundary = quad[0]/quad[3] (zBotA/zTopA), b-boundary =
+  // quad[1]/quad[2] (zBotB/zTopB). plan (x, y) → world (x, height, -y).
   const positions = new Float32Array([
-    // bottom (y = zBotM): Ao, Bo, Bi, Ai
-    pAo.x, zBotM, -pAo.y, // 0
-    pBo.x, zBotM, -pBo.y, // 1
-    pBi.x, zBotM, -pBi.y, // 2
-    pAi.x, zBotM, -pAi.y, // 3
+    // bottom: Ao@zBotA, Bo@zBotB, Bi@zBotB, Ai@zBotA
+    pAo.x, zBotAM, -pAo.y, // 0
+    pBo.x, zBotBM, -pBo.y, // 1
+    pBi.x, zBotBM, -pBi.y, // 2
+    pAi.x, zBotAM, -pAi.y, // 3
     // top: Ao@zTopA, Bo@zTopB, Bi@zTopB, Ai@zTopA
     pAo.x, zTopAM, -pAo.y, // 4
     pBo.x, zTopBM, -pBo.y, // 5

@@ -134,7 +134,7 @@ export interface SectionEntitiesInput {
 export function buildSectionPanelScene(
   plane: SectionPlaneInput,
   entities: SectionEntitiesInput,
-  selectedBimId: string | null,
+  selectedBimIds: readonly string[],
 ): SectionPanelScene {
   const mats = buildMaterials();
   const root = new THREE.Group();
@@ -160,7 +160,7 @@ export function buildSectionPanelScene(
       const oRect = openingSection(op, axis, pos);
       if (oRect) gaps.push({ yMin: oRect.yMin, yMax: oRect.yMax });
     }
-    const fill = wall.id === selectedBimId ? mats.selected : mats.wall;
+    const fill = selectedBimIds.includes(wall.id) ? mats.selected : mats.wall;
     for (const r of clipByOpenings(wRect, gaps)) {
       addFilledRect(r, fill, mats.outline, root, geos, bbox, wall.id, 'wall');
     }
@@ -170,7 +170,7 @@ export function buildSectionPanelScene(
   for (const col of entities.columns) {
     const rect = columnSection(col, axis, pos);
     if (!rect) continue;
-    const fill = col.id === selectedBimId ? mats.selected : mats.column;
+    const fill = selectedBimIds.includes(col.id) ? mats.selected : mats.column;
     addFilledRect(rect, fill, mats.outline, root, geos, bbox, col.id, 'column');
   }
 
@@ -178,7 +178,7 @@ export function buildSectionPanelScene(
   for (const beam of entities.beams) {
     const rect = beamSection(beam, axis, pos);
     if (!rect) continue;
-    const fill = beam.id === selectedBimId ? mats.selected : mats.beam;
+    const fill = selectedBimIds.includes(beam.id) ? mats.selected : mats.beam;
     addFilledRect(rect, fill, mats.outline, root, geos, bbox, beam.id, 'beam');
   }
 
@@ -186,7 +186,7 @@ export function buildSectionPanelScene(
   for (const slab of entities.slabs) {
     const rect = slabSection(slab, axis, pos);
     if (!rect) continue;
-    const fill = slab.id === selectedBimId ? mats.selected : mats.slab;
+    const fill = selectedBimIds.includes(slab.id) ? mats.selected : mats.slab;
     addFilledRect(rect, fill, mats.outline, root, geos, bbox, slab.id, 'slab');
   }
 

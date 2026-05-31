@@ -22,9 +22,13 @@ import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   findWallsToAutoAttachToHost,
-  type WallAttachTarget,
+  findWallsToAutoAttachBaseToHost,
 } from '../bim/walls/wall-structural-attach-coordinator';
-import { AttachWallsTopCommand } from '../core/commands/entity-commands/AttachWallsTopCommand';
+import {
+  AttachWallsTopCommand,
+  type WallAttachTarget,
+} from '../core/commands/entity-commands/AttachWallsTopCommand';
+import { AttachWallsBaseCommand } from '../core/commands/entity-commands/AttachWallsBaseCommand';
 import { isWallEntity } from '../types/entities';
 import type { Entity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
@@ -34,6 +38,19 @@ interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene: (levelId: string) => SceneModel | null;
   setLevelScene: (levelId: string, scene: SceneModel) => void;
+}
+
+/** Map wall ids → attach targets ({wallId, kind}) από το live scene. */
+function buildAttachTargets(
+  wallIds: readonly string[],
+  entities: readonly Entity[],
+): WallAttachTarget[] {
+  const targets: WallAttachTarget[] = [];
+  for (const id of wallIds) {
+    const w = entities.find((e) => e.id === id);
+    if (w && isWallEntity(w)) targets.push({ wallId: id, kind: (w as WallEntity).kind });
+  }
+  return targets;
 }
 
 export function useStructuralAutoAttach(props: { levelManager: LevelManagerLike }): void {
@@ -48,23 +65,24 @@ export function useStructuralAutoAttach(props: { levelManager: LevelManagerLike 
       if (!scene) return;
 
       const entities = scene.entities as unknown as readonly Entity[];
-      const wallIds = findWallsToAutoAttachToHost(entity as unknown as Entity, entities);
-      if (wallIds.length === 0) return;
-
-      const targets: WallAttachTarget[] = [];
-      for (const id of wallIds) {
-        const w = entities.find((e) => e.id === id);
-        if (w && isWallEntity(w)) targets.push({ wallId: id, kind: (w as WallEntity).kind });
-      }
-      if (targets.length === 0) return;
+      const host = entity as unknown as Entity;
+      const topTargets = buildAttachTargets(findWallsToAutoAttachToHost(host, entities), entities);
+      const baseTargets = buildAttachTargets(findWallsToAutoAttachBaseToHost(host, entities), entities);
+      if (topTargets.length === 0 && baseTargets.length === 0) return;
 
       const sm = new LevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelId,
       );
-      execute(new AttachWallsTopCommand(entity.id, targets, sm));
-      EventBus.emit('bim:walls-auto-attached', { wallIds: targets.map((t) => t.wallId), hostId: entity.id });
+      if (topTargets.length > 0) {
+        execute(new AttachWallsTopCommand(entity.id, topTargets, sm));
+        EventBus.emit('bim:walls-auto-attached', { wallIds: topTargets.map((t) => t.wallId), hostId: entity.id });
+      }
+      if (baseTargets.length > 0) {
+        execute(new AttachWallsBaseCommand(entity.id, baseTargets, sm));
+        EventBus.emit('bim:walls-auto-attached-base', { wallIds: baseTargets.map((t) => t.wallId), hostId: entity.id });
+      }
     });
     return () => unsub();
   }, [levelManager, execute]);

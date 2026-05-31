@@ -26,12 +26,19 @@ import type { BeamEntity } from '../../bim/types/beam-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import {
-  resolveWallBaseZmm,
   resolveWallTopProfile,
   evaluateWallTopAt,
   type WallTopProfile,
   type HostUndersidePlan,
+  type HostTopsidePlan,
 } from '../../bim/geometry/wall-top-profile';
+import {
+  resolveWallBaseProfile,
+  evaluateWallBaseAt,
+  type WallBaseProfile,
+} from '../../bim/geometry/wall-base-profile';
+import { slabSlopeOffsetZmm, type SlabPlanPoint } from '../../bim/geometry/slab-slope';
+import { beamSlopeOffsetZmm, isBeamTilted, type BeamPlanPoint } from '../../bim/geometry/beam-slope';
 
 const MM_TO_M = 0.001;
 
@@ -57,6 +64,7 @@ export interface WallPlan {
   readonly sx: number; readonly sy: number;
   readonly ex: number; readonly ey: number;
   readonly thicknessM: number;
+  /** Nominal/minimum base (m) — back-compat scalar (= `baseProfile.minBaseZmm`). */
   readonly baseY: number;
   /** Nominal/maximum top (m) — back-compat scalar (= `topProfile.maxTopZmm`). */
   readonly topY: number;
@@ -66,6 +74,12 @@ export interface WallPlan {
    * αποτιμά το προφίλ στο σημείο της τομής (single-point top).
    */
   readonly topProfile?: WallTopProfile;
+  /**
+   * ADR-401 (γ): πλήρες προφίλ **βάσης** (absolute mm). Για `attached` βάση με
+   * hosts είναι σκαλωτό/κεκλιμένο (upper-envelope)· αλλιώς flat στο nominal. Η
+   * `wallSection` το αποτιμά στο σημείο της τομής (single-point base → `yMin`).
+   */
+  readonly baseProfile?: WallBaseProfile;
 }
 
 export interface ColumnPlan {
@@ -80,16 +94,32 @@ export interface BeamPlan {
   readonly id: string;
   /** Beam outline στο plan view (m). Closed CCW polygon. */
   readonly outline: readonly (readonly [number, number])[];
+  /** Nominal κάτω/πάνω παρειά (m) — οριζόντια δοκός ή στάθμη στο startPoint. */
   readonly bottomY: number;
   readonly topY: number;
+  /**
+   * ADR-401 Phase E/(β): για κεκλιμένη δοκό (`topElevationEnd` ≠ `topElevation`),
+   * αποτιμά την κεκλιμένη πάνω/κάτω παρειά (world m) σε plan-point. Η `beamSection`
+   * το καλεί στο σημείο της τομής (single-point, mirror `slabSection`/`wallSection`).
+   * Απών για οριζόντια δοκό → flat `bottomY`/`topY`.
+   */
+  readonly slopeYAt?: (pt: BeamPlanPoint) => { bottomY: number; topY: number };
 }
 
 export interface SlabPlan {
   readonly id: string;
   /** Slab outline στο XY plane (m). Closed CCW. */
   readonly outline: readonly (readonly [number, number])[];
+  /** Nominal κάτω/πάνω παρειά (m) — επίπεδη ή pivot-level της κεκλιμένης. */
   readonly bottomY: number;
   readonly topY: number;
+  /**
+   * ADR-401 Phase E2 / ADR-369 §9 Q7: για `geometryType='tilted'` πλάκα/στέγη,
+   * αποτιμά την κεκλιμένη πάνω/κάτω παρειά (world m) σε plan-point. Η `slabSection`
+   * το καλεί στο σημείο της τομής (single-point, mirror `wallSection`). Απών για
+   * επίπεδη πλάκα → flat `bottomY`/`topY`.
+   */
+  readonly slopeYAt?: (pt: SlabPlanPoint) => { bottomY: number; topY: number };
 }
 
 export interface OpeningPlan {
@@ -112,15 +142,19 @@ export interface OpeningPlan {
  * `attached` τοίχοι παίρνουν **πλήρες προφίλ** (σκαλωτό/κεκλιμένο)· χωρίς host
  * context → nominal single-segment (back-compat με storey-ceiling/absolute/
  * unconnected). `topY` = `maxTopZmm` (back-compat scalar).
+ *
+ * ADR-401 (γ): `resolveHostTopside` (host **άνω**-παρειές) → base-attach προφίλ.
+ * `baseY` = `minBaseZmm` (χαμηλότερη βάση· back-compat = nominal όταν μη-attached).
  */
 export function toWallPlan(
   wall: WallEntity,
   floorElevationM = 0,
   resolveHost?: (id: string) => HostUndersidePlan | null,
+  resolveHostTopside?: (id: string) => HostTopsidePlan | null,
 ): WallPlan {
-  const ctx = { floorElevationMm: floorElevationM / MM_TO_M, resolveHost };
-  const baseY = resolveWallBaseZmm(wall.params, ctx) * MM_TO_M;
+  const ctx = { floorElevationMm: floorElevationM / MM_TO_M, resolveHost, resolveHostTopside };
   const topProfile = resolveWallTopProfile(wall.params, ctx);
+  const baseProfile = resolveWallBaseProfile(wall.params, ctx);
   return {
     id: wall.id,
     sx: wall.params.start.x,
@@ -128,9 +162,10 @@ export function toWallPlan(
     ex: wall.params.end.x,
     ey: wall.params.end.y,
     thicknessM: wall.params.thickness * MM_TO_M,
-    baseY,
+    baseY: baseProfile.minBaseZmm * MM_TO_M,
     topY: topProfile.maxTopZmm * MM_TO_M,
     topProfile,
+    baseProfile,
   };
 }
 
@@ -153,23 +188,48 @@ export function toColumnPlan(column: ColumnEntity, floorElevationM = 0): ColumnP
 
 export function toBeamPlan(beam: BeamEntity): BeamPlan {
   const topY = (beam.params.topElevation + (beam.params.zOffset ?? 0)) * MM_TO_M;
-  const bottomY = topY - beam.params.depth * MM_TO_M;
+  const depthMm = beam.params.depth;
+  const bottomY = topY - depthMm * MM_TO_M;
   return {
     id: beam.id,
     outline: beam.geometry.outline.vertices.map((v) => [v.x, v.y] as const),
     bottomY,
     topY,
+    // ADR-401 Phase E/(β): κεκλιμένη δοκός → η παρειά είναι κεκλιμένο επίπεδο
+    // κατά μήκος του άξονα. slope offset (mm) × MM_TO_M = world m (ίδια μετατροπή
+    // με 3D + τοίχο). Unit-safe (axis fraction — βλ. beam-slope.ts).
+    ...(isBeamTilted(beam.params)
+      ? {
+          slopeYAt: (pt: BeamPlanPoint) => {
+            const top = topY + beamSlopeOffsetZmm(beam.params, pt) * MM_TO_M;
+            return { topY: top, bottomY: top - depthMm * MM_TO_M };
+          },
+        }
+      : {}),
   };
 }
 
 export function toSlabPlan(slab: SlabEntity): SlabPlan {
-  const topY = (slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0)) * MM_TO_M;
-  const bottomY = topY - slab.params.thickness * MM_TO_M;
+  const nominalTopMm = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
+  const topY = nominalTopMm * MM_TO_M;
+  const thicknessMm = slab.params.thickness;
+  const bottomY = topY - thicknessMm * MM_TO_M;
+  // ADR-401 Phase E2: κεκλιμένη πλάκα/στέγη → η παρειά είναι κεκλιμένο επίπεδο.
+  // slope offset (canvas units) × MM_TO_M = world m (ίδια μετατροπή με 3D + τοίχο).
+  const tilted = slab.params.geometryType === 'tilted' && slab.params.slope !== undefined;
   return {
     id: slab.id,
     outline: slab.params.outline.vertices.map((v) => [v.x, v.y] as const),
     bottomY,
     topY,
+    ...(tilted
+      ? {
+          slopeYAt: (pt: SlabPlanPoint) => {
+            const top = topY + slabSlopeOffsetZmm(slab.params, pt) * MM_TO_M;
+            return { topY: top, bottomY: top - thicknessMm * MM_TO_M };
+          },
+        }
+      : {}),
   };
 }
 
@@ -293,14 +353,19 @@ export function wallSection(w: WallPlan, axis: SectionAxis, pos: number): Sectio
     axis, pos,
   );
   if (!span) return null;
-  // ADR-401 Phase B: σκαλωτή/κεκλιμένη κορυφή → αποτίμησε το προφίλ στο σημείο
-  // της εγκάρσιας τομής. Flat top (μη-attached) → ίδιο με `topY`.
+  // ADR-401 Phase B/(γ): σκαλωτή/κεκλιμένη κορυφή **και** βάση → αποτίμησε τα προφίλ
+  // στο σημείο της εγκάρσιας τομής. Flat (μη-attached) → ίδιο με `topY`/`baseY`.
   let yMax = w.topY;
-  if (w.topProfile && w.topProfile.hasAttach) {
+  let yMin = w.baseY;
+  const needsT = (w.topProfile?.hasAttach ?? false) || (w.baseProfile?.hasAttach ?? false);
+  if (needsT) {
     const t = wallAxisParamAtCut(w, axis, pos);
-    if (t !== null) yMax = evaluateWallTopAt(w.topProfile, t) * MM_TO_M;
+    if (t !== null) {
+      if (w.topProfile?.hasAttach) yMax = evaluateWallTopAt(w.topProfile, t) * MM_TO_M;
+      if (w.baseProfile?.hasAttach) yMin = evaluateWallBaseAt(w.baseProfile, t) * MM_TO_M;
+    }
   }
-  return { hMin: span[0], hMax: span[1], yMin: w.baseY, yMax };
+  return { hMin: span[0], hMax: span[1], yMin, yMax };
 }
 
 export function columnSection(c: ColumnPlan, axis: SectionAxis, pos: number): SectionRect | null {
@@ -312,12 +377,29 @@ export function columnSection(c: ColumnPlan, axis: SectionAxis, pos: number): Se
 export function beamSection(b: BeamPlan, axis: SectionAxis, pos: number): SectionRect | null {
   const span = intersectPolygon(b.outline, axis, pos);
   if (!span) return null;
+  // ADR-401 Phase E/(β): κεκλιμένη δοκός → αποτίμησε την παρειά στο μέσο της τομής
+  // (single-point rect, ίδιος περιορισμός με `slabSection`/`wallSection`).
+  if (b.slopeYAt) {
+    const mid = (span[0] + span[1]) / 2;
+    const pt: BeamPlanPoint = axis === 'x' ? { x: pos, y: mid } : { x: mid, y: pos };
+    const { bottomY, topY } = b.slopeYAt(pt);
+    return { hMin: span[0], hMax: span[1], yMin: bottomY, yMax: topY };
+  }
   return { hMin: span[0], hMax: span[1], yMin: b.bottomY, yMax: b.topY };
 }
 
 export function slabSection(s: SlabPlan, axis: SectionAxis, pos: number): SectionRect | null {
   const span = intersectPolygon(s.outline, axis, pos);
   if (!span) return null;
+  // ADR-401 Phase E2: κεκλιμένη πλάκα → αποτίμησε την παρειά στο μέσο της τομής
+  // (single-point rect, ίδιος περιορισμός με `wallSection`· το πλήρες
+  // παραλληλόγραμμο cross-section = follow-up αν χρειαστεί SectionRect επέκταση).
+  if (s.slopeYAt) {
+    const mid = (span[0] + span[1]) / 2;
+    const pt: SlabPlanPoint = axis === 'x' ? { x: pos, y: mid } : { x: mid, y: pos };
+    const { bottomY, topY } = s.slopeYAt(pt);
+    return { hMin: span[0], hMax: span[1], yMin: bottomY, yMax: topY };
+  }
   return { hMin: span[0], hMax: span[1], yMin: s.bottomY, yMax: s.topY };
 }
 

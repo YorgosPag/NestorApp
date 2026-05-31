@@ -13,6 +13,8 @@
  *   - topBinding !== 'unconnected' MUST NOT provide `unconnectedHeight`.
  *   - topBinding='attached' MUST provide non-empty `attachTopToIds` (ADR-401).
  *   - topBinding !== 'attached' MUST NOT provide `attachTopToIds`.
+ *   - baseBinding='attached' MUST provide non-empty `attachBaseToIds` (ADR-401 γ).
+ *   - baseBinding !== 'attached' MUST NOT provide `attachBaseToIds`.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-369-bim-elevation-convention-revit-alignment.md §9 Q5, Q8
  * @see docs/centralized-systems/reference/adrs/ADR-401-bim-wall-top-base-constraints-attach-to-structural.md §2.1
@@ -85,6 +87,7 @@ const WallParamsBaseSchema = z
     unconnectedHeight: z.number().positive().optional(),
     // ─── ADR-401 — Attach-to-structural ───────────────────────────────────────
     attachTopToIds: z.array(z.string().min(1)).optional(),
+    attachBaseToIds: z.array(z.string().min(1)).optional(),
     // ─── ADR-396 v2 Φάση 4 — ETICS classification override (Στρ.3) ─────────────
     envelopeFunction: EnvelopeFunctionSchema.optional(),
   })
@@ -126,6 +129,21 @@ export const WallParamsSchema = WallParamsBaseSchema.superRefine((data, ctx) => 
       code: z.ZodIssueCode.custom,
       path: ['attachTopToIds'],
       message: "WallParams: attachTopToIds επιτρέπεται μόνο όταν topBinding='attached'.",
+    });
+  }
+  // ─── ADR-401 (γ) — base attach refinement ─────────────────────────────────
+  if (data.baseBinding === 'attached' && (data.attachBaseToIds === undefined || data.attachBaseToIds.length === 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['attachBaseToIds'],
+      message: "WallParams: baseBinding='attached' απαιτεί ≥1 attachBaseToIds (host FK).",
+    });
+  }
+  if (data.baseBinding !== 'attached' && data.attachBaseToIds !== undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['attachBaseToIds'],
+      message: "WallParams: attachBaseToIds επιτρέπεται μόνο όταν baseBinding='attached'.",
     });
   }
 });

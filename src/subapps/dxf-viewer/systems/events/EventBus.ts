@@ -260,6 +260,14 @@ export interface DrawingEventMap {
   // structural host (beam/slab over them). Lets the UI surface a non-blocking
   // info toast (Revit auto-attach feedback). Undoable via AttachWallsTopCommand.
   'bim:walls-auto-attached': { wallIds: string[]; hostId: string };
+  // ADR-401 (γ) — N walls auto-attached their BASE to a just-created foundation
+  // host (beam/slab below them). Undoable via AttachWallsBaseCommand.
+  'bim:walls-auto-attached-base': { wallIds: string[]; hostId: string };
+  // ADR-401 Phase E.1 — manual attach/detach of wall top/base to a structural
+  // host (ribbon «Σύνδεση/Αποκόλληση Κορυφής/Βάσης»). Undoable. UI surfaces a
+  // non-blocking info toast (Revit Attach/Detach feedback).
+  'bim:walls-attached-manual': { side: 'top' | 'base'; wallIds: string[]; hostId: string };
+  'bim:walls-detached': { side: 'top' | 'base'; wallIds: string[] };
   // ADR-363 fix — multi-entity move dirty-flag propagation.
   // Carries the post-move entities directly so listeners never call
   // getLevelScene() (which returns stale React state at emit time).

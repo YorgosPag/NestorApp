@@ -114,7 +114,7 @@ export function Section2DPanel() {
   useEffect(() => {
     if (!visible || !sectionEnabled) return;
     const unsubEntities = useBim3DEntitiesStore.subscribe(refresh);
-    const unsubSelection = useSelection3DStore.subscribe((s) => s.selectedBimId, refresh);
+    const unsubSelection = useSelection3DStore.subscribe((s) => s.selectedBimIds, refresh);
     return () => {
       unsubEntities();
       unsubSelection();

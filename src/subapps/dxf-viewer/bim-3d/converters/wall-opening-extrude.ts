@@ -36,7 +36,7 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import { getWallAxisVertices } from '../../bim/geometry/wall-geometry';
 import { structuralRevealHeightRangeMm } from '../../bim/geometry/opening-geometry';
-import type { WallTopLocalFn } from './wall-opening-pieces';
+import type { WallTopLocalFn, WallBaseLocalFn } from './wall-opening-pieces';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
 import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
@@ -57,6 +57,7 @@ export function buildWallMeshWithOpenings(
   floorElevationMm: number,
   buildingBaseElevationM: number,
   wallTop?: WallTopLocalFn,
+  wallBase?: WallBaseLocalFn,
 ): THREE.Object3D | null {
   const axisVertices = getWallAxisVertices(wall.params, wall.kind);
   if (axisVertices.length < 2) return null;
@@ -77,6 +78,10 @@ export function buildWallMeshWithOpenings(
     );
   }
   const heightAtT = (t: number): number => (wallTop && totalArcScene > 1e-9 ? wallTop.at(t) : wallHeightM);
+  // ADR-401 (γ) — base-attach: η κάτω ακμή ακολουθεί το προφίλ βάσης (τοπικά m,
+  // μπορεί <0). Χωρίς wallBase → σταθερό 0 (back-compat). Holes (sill/lintel)
+  // μένουν floor-relative — δεν ακολουθούν τη βάση.
+  const baseAtT = (t: number): number => (wallBase && totalArcScene > 1e-9 ? wallBase.at(t) : 0);
 
   const group = new THREE.Group();
 
@@ -101,11 +106,21 @@ export function buildWallMeshWithOpenings(
     const tEnd = totalArcScene > 1e-9 ? arcEndScene / totalArcScene : 1;
 
     // Front-face shape (X = along segment, Y = vertical). ADR-401 B2: η top ακμή
-    // ακολουθεί το προφίλ (σκαλωτό + κεκλιμένο ενιαία) — polyline από δεξιά προς
-    // αριστερά μέσα από τα profile breakpoints· flat τοίχος → ίσια ακμή.
+    // ακολουθεί το προφίλ (σκαλωτό + κεκλιμένο ενιαία) μέσα από τα top breakpoints.
+    // ADR-401 (γ): η bottom ακμή ακολουθεί ομοίως το προφίλ βάσης (αριστερά→δεξιά
+    // μέσα από τα base breakpoints). Flat τοίχος → ίσιες ακμές @0 / @height.
     const shape = new THREE.Shape();
-    shape.moveTo(0, 0);
-    shape.lineTo(segLenM, 0);
+    shape.moveTo(0, baseAtT(tStart));
+    if (wallBase) {
+      const baseCuts = wallBase.breakpoints
+        .filter((t) => t > tStart + 1e-6 && t < tEnd - 1e-6)
+        .sort((x, y) => x - y); // αύξουσα: αριστερά → δεξιά
+      for (const tc of baseCuts) {
+        const localX = tc * totalArcScene - arcStartScene; // scene-units = meters
+        shape.lineTo(localX, baseAtT(tc));
+      }
+    }
+    shape.lineTo(segLenM, baseAtT(tEnd));
     shape.lineTo(segLenM, heightAtT(tEnd));
     if (wallTop) {
       const cuts = wallTop.breakpoints

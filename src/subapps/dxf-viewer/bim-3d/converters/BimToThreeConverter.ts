@@ -17,15 +17,18 @@ import * as THREE from 'three';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
-import type { SlabEntity } from '../../bim/types/slab-types';
+import type { SlabEntity, SlabParams } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { getMaterial3D, getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildWallMeshWithOpenings } from './wall-opening-extrude';
-import { computeWallOpeningPieces, type WallTopLocalFn } from './wall-opening-pieces';
+import { computeWallOpeningPieces, type WallTopLocalFn, type WallBaseLocalFn } from './wall-opening-pieces';
 import { buildSlopedWallPieceGeometry } from './wall-piece-geometry';
 import { evaluateWallTopAt, type WallTopProfile } from '../../bim/geometry/wall-top-profile';
+import { evaluateWallBaseAt, type WallBaseProfile } from '../../bim/geometry/wall-base-profile';
+import { slabSlopeOffsetZmm } from '../../bim/geometry/slab-slope';
+import { beamSlopeOffsetZmm, isBeamTilted } from '../../bim/geometry/beam-slope';
 import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
 import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
 import type { BimCategory } from '../../config/bim-object-styles';
@@ -138,6 +141,24 @@ export function makeWallTopLocalFn(profile: WallTopProfile, floorElevationMm: nu
   };
 }
 
+/**
+ * ADR-401 (γ) Phase γ2 — `WallBaseProfile` (απόλυτα mm) → `WallBaseLocalFn` σε
+ * **τοπικά μέτρα** πάνω από το δάπεδο (mirror του `makeWallTopLocalFn`).
+ * `localBase(t) = (base_mm − FFL_mm) · 0.001` — μπορεί <0 (π.χ. θεμέλιο κάτω από
+ * τη στάθμη). Τα breakpoints είναι τα εσωτερικά segment όρια (βήματα/αλλαγή κλίσης).
+ */
+export function makeWallBaseLocalFn(profile: WallBaseProfile, floorElevationMm: number): WallBaseLocalFn {
+  const bps = new Set<number>();
+  for (const s of profile.segments) {
+    if (s.t0 > 1e-6 && s.t0 < 1 - 1e-6) bps.add(s.t0);
+    if (s.t1 > 1e-6 && s.t1 < 1 - 1e-6) bps.add(s.t1);
+  }
+  return {
+    breakpoints: [...bps].sort((a, b) => a - b),
+    at: (f) => (evaluateWallBaseAt(profile, f) - floorElevationMm) * MM_TO_M,
+  };
+}
+
 // ── Straight wall WITH openings — mitered vertical-split (ADR-363 Phase 1J) ────
 
 /**
@@ -165,12 +186,14 @@ export function buildStraightWallWithOpenings(
   floorElevationMm: number,
   buildingBaseElevationM: number,
   wallTop?: WallTopLocalFn,
+  wallBase?: WallBaseLocalFn,
 ): THREE.Object3D | null {
   // Κάθετη παρειά κάθε ανοίγματος από το `outline` SSoT (collinear με wall punch
   // 2D + Z4 + Z1) — ΟΧΙ fraction-lerp ανά πλευρά (που έβγαζε λοξή παρειά σε miters).
-  // ADR-401 B2: `wallTop` → κάθε κομμάτι παίρνει την κορυφή του από το προφίλ
-  // (επίπεδο → ExtrudeGeometry· κεκλιμένο → custom wedge BufferGeometry).
-  const pieces = computeWallOpeningPieces(wall, openings, wallTop);
+  // ADR-401 B2: `wallTop` → κάθε κομμάτι παίρνει την κορυφή του από το προφίλ.
+  // ADR-401 (γ): `wallBase` → ο πάτος ακολουθεί base-attach (επίπεδο/σκαλωτό →
+  // ExtrudeGeometry· κεκλιμένο top ή base → custom wedge BufferGeometry).
+  const pieces = computeWallOpeningPieces(wall, openings, wallTop, wallBase);
   if (!pieces) return null;
 
   const floorY = floorElevationMm * MM_TO_M + buildingBaseElevationM;
@@ -178,16 +201,16 @@ export function buildStraightWallWithOpenings(
   for (const pc of pieces) {
     let geo: THREE.BufferGeometry;
     let yOffset: number;
-    if (Math.abs(pc.zTopAM - pc.zTopBM) < 1e-6) {
-      // Επίπεδη κορυφή → extrude από τη βάση κατά (zTop − zBot).
-      const depth = pc.zTopAM - pc.zBotM;
+    if (Math.abs(pc.zTopAM - pc.zTopBM) < 1e-6 && Math.abs(pc.zBotAM - pc.zBotBM) < 1e-6) {
+      // Επίπεδη κορυφή ΚΑΙ επίπεδος πάτος → extrude κατά (zTop − zBot).
+      const depth = pc.zTopAM - pc.zBotAM;
       if (depth <= 1e-6) continue;
       const shape = buildShape(pc.quad);
       if (!shape) continue;
       geo = extrudeAndRotate(shape, depth);
-      yOffset = floorY + pc.zBotM;
+      yOffset = floorY + pc.zBotAM;
     } else {
-      // Κεκλιμένη κορυφή → wedge με ρητές κορυφές σε floor-local Y.
+      // Κεκλιμένη κορυφή ή/και πάτος → wedge με ρητές κορυφές σε floor-local Y.
       const wedge = buildSlopedWallPieceGeometry(pc);
       if (!wedge) continue;
       geo = wedge;
@@ -217,6 +240,7 @@ export function wallToMesh(
   levelId?: string,
   buildingBaseElevationM = 0,
   profile?: WallTopProfile,
+  baseProfile?: WallBaseProfile,
 ): THREE.Object3D | null {
   const coreLayer = wall.params.dna?.layers.find((l) => l.side === 'core');
   const matId = coreLayer?.materialId ?? CATEGORY_MAT_ID[wall.params.category] ?? 'mat-concrete';
@@ -225,19 +249,21 @@ export function wallToMesh(
   // ADR-401 Phase B2 — μεταβλητή κορυφή (σκαλωτή/κεκλιμένη) μόνο σε `attached`
   // τοίχους· flat τοίχος → undefined → fast solid path (μηδέν regression).
   const wallTop = profile?.hasAttach ? makeWallTopLocalFn(profile, floorElevationMm) : undefined;
+  // ADR-401 (γ) — μεταβλητός πάτος (base-attach) μόνο όταν η βάση κολλάει σε host.
+  const wallBase = baseProfile?.hasAttach ? makeWallBaseLocalFn(baseProfile, floorElevationMm) : undefined;
 
   // ADR-363 Bug 2 — opening cutouts.
   //   - straight walls: vertical-split pieces from the MITERED footprint
   //     (`buildStraightWallWithOpenings`) so corner miters survive (Phase 1J fix).
   //   - curved / polyline: per-segment front-face re-extrude (raw axis — miters
   //     N/A on multi-segment ends; ADR-370 Phase 7 slab-opening pattern).
-  // ADR-401 B2: ο piece path ενεργοποιείται ΚΑΙ χωρίς ανοίγματα όταν υπάρχει
-  // μεταβλητή κορυφή (το ίσιο solid extrude δεν την υποστηρίζει).
-  if (openings.length > 0 || wallTop) {
+  // ADR-401 B2/(γ): ο piece path ενεργοποιείται ΚΑΙ χωρίς ανοίγματα όταν υπάρχει
+  // μεταβλητή κορυφή Ή μεταβλητός πάτος (το ίσιο solid extrude δεν τα υποστηρίζει).
+  if (openings.length > 0 || wallTop || wallBase) {
     const group =
       wall.kind === 'straight'
-        ? buildStraightWallWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop)
-        : buildWallMeshWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop);
+        ? buildStraightWallWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop, wallBase)
+        : buildWallMeshWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop, wallBase);
     if (group) {
       group.userData['matId'] = matId;
       if (levelId !== undefined) group.userData['levelId'] = levelId;
@@ -281,6 +307,33 @@ export function columnToMesh(
   return tagged;
 }
 
+/**
+ * ADR-401 Phase E/(β) — κεκλιμένη δοκός (sloped beam).
+ *
+ * Καθρέφτης του `applySlabSlope`: η πάνω παρειά γέρνει γραμμικά κατά μήκος του
+ * άξονα (`topElevation`→`topElevationEnd`) → per-vertex shear στο world-Y που
+ * καταναλώνει το `beamSlopeOffsetZmm` SSoT (την ΙΔΙΑ ποσότητα με τον
+ * `wall-top-profile` resolver → ο attached τοίχος εφάπτεται). Top & bottom face
+ * γέρνουν ίσα → σταθερό βάθος. Flat (μη-tilted) → no-op fast-path.
+ *
+ * Coords είναι μετα-rotation (ROT_X_NEG_90): shape(sx,sy) → world(sx, z, −sy),
+ * άρα plan-point = `{x: worldX, y: −worldZ}`. Το offset (mm) × MM_TO_M δίνει
+ * world-meters. Στο `startPoint` (f=0) → offset 0 → η `mesh.position.y`
+ * (nominal, top-at-start) μένει αμετάβλητη· στο `endPoint` (f=1) → +Δ.
+ */
+function applyBeamSlope(geo: THREE.BufferGeometry, params: BeamEntity['params']): void {
+  if (!isBeamTilted(params)) return;
+  const pos = geo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const sx = pos.getX(i);
+    const sy = -pos.getZ(i);
+    const offsetM = beamSlopeOffsetZmm(params, { x: sx, y: sy }) * MM_TO_M;
+    pos.setY(i, pos.getY(i) + offsetM);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+}
+
 export function beamToMesh(
   beam: BeamEntity,
   levelId?: string,
@@ -294,6 +347,7 @@ export function beamToMesh(
 
   const beamDepthM = beam.params.depth * MM_TO_M;
   const geo = extrudeAndRotate(shape, beamDepthM);
+  applyBeamSlope(geo, beam.params);
   const matId = beam.params.material ?? 'elem-beam';
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('beam'));
   // ADR-369 §2.2: topElevation = top of beam; extrusion goes from y=0 → y=depthM.
@@ -325,6 +379,34 @@ function pushHoles(shape: THREE.Shape, openings: readonly SlabOpeningEntity[]): 
   }
 }
 
+/**
+ * ADR-401 Phase E2 / ADR-369 §9 Q7 — κεκλιμένη πλάκα/στέγη (tilted).
+ *
+ * Η κλίση είναι **ένα affine επίπεδο** → η επίπεδη extruded πλάκα γίνεται
+ * κεκλιμένο prism με per-vertex shear στο world-Y, καταναλώνοντας το
+ * `slabSlopeOffsetZmm` SSoT (την ΙΔΙΑ ποσότητα με τον `wall-top-profile`
+ * resolver → ο attached τοίχος εφάπτεται). Top & bottom face γέρνουν ίσα →
+ * σταθερό πάχος· holes/openings διατηρούνται (shear στα κοινά vertices).
+ *
+ * Coords είναι μετα-rotation (ROT_X_NEG_90): shape(sx,sy) → world(sx, z, −sy),
+ * άρα plan-point = `{x: worldX, y: −worldZ}`. Το offset (mm) × MM_TO_M δίνει
+ * world-meters (ίδια μετατροπή με τον τοίχο). Pivot offset = 0 → η πλάκα γέρνει
+ * γύρω από το pivot, η `mesh.position.y` (nominal) μένει αμετάβλητη.
+ * `geometryType !== 'tilted'` → no-op fast-path (byte-for-byte η επίπεδη πλάκα).
+ */
+function applySlabSlope(geo: THREE.BufferGeometry, params: SlabParams): void {
+  if (params.geometryType !== 'tilted' || !params.slope) return;
+  const pos = geo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const sx = pos.getX(i);
+    const sy = -pos.getZ(i);
+    const offsetM = slabSlopeOffsetZmm(params, { x: sx, y: sy }) * MM_TO_M;
+    pos.setY(i, pos.getY(i) + offsetM);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+}
+
 export function slabToMesh(
   slab: SlabEntity,
   openings: readonly SlabOpeningEntity[] = [],
@@ -340,6 +422,7 @@ export function slabToMesh(
 
   const thicknessM = slab.params.thickness * MM_TO_M;
   const geo = extrudeAndRotate(shape, thicknessM);
+  applySlabSlope(geo, slab.params);
   const matId = slab.params.material ?? 'elem-slab';
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('slab'));
   // ADR-369 §2.1: levelElevation = top face (FFL). Slab hangs DOWN by thickness.

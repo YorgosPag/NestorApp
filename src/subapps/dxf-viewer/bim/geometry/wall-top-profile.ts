@@ -24,9 +24,9 @@
 import type { WallBaseBinding, WallTopBinding } from '../types/bim-binding';
 
 /** Αριθμητικό όριο για να θεωρηθεί ένα t-διάστημα μη-εκφυλισμένο. */
-const T_EPS = 1e-9;
+export const T_EPS = 1e-9;
 /** Όριο για να θεωρηθούν δύο Z τιμές ίσες (mm) — collinear merge. */
-const Z_EPS = 1e-6;
+export const Z_EPS = 1e-6;
 
 /**
  * Κάθετο εύρος ενός host προβαλλόμενο στον άξονα του τοίχου. Το `resolveHost`
@@ -45,6 +45,22 @@ export interface HostUndersidePlan {
   readonly z1mm: number;
 }
 
+/**
+ * ADR-401 (γ) — mirror του `HostUndersidePlan` για base-attach: η **άνω-παρειά**
+ * (topside) ενός host προβαλλόμενη στον άξονα του τοίχου. Distinct type (ΟΧΙ
+ * alias) ώστε ένα underside↔topside swap να αποτυγχάνει στο compile.
+ * Καταναλώνεται από `resolveWallBaseProfile` (`wall-base-profile.ts`).
+ */
+export interface HostTopsidePlan {
+  readonly hostId: string;
+  readonly hostType: 'beam' | 'slab' | 'roof' | 'wall';
+  readonly t0: number;
+  readonly t1: number;
+  /** topside (απόλυτο mm) στα t0, t1 αντίστοιχα. */
+  readonly z0mm: number;
+  readonly z1mm: number;
+}
+
 /** Context που χρειάζεται ο resolver — όλα προαιρετικά πλην του FFL. */
 export interface WallVerticalContext {
   /** FFL του ορόφου του τοίχου (απόλυτο mm, ADR-369 datum). */
@@ -55,6 +71,8 @@ export interface WallVerticalContext {
   readonly ceilingSlabThicknessMm?: number;
   /** Lookup host plan ανά id (για `topBinding='attached'`). */
   readonly resolveHost?: (id: string) => HostUndersidePlan | null;
+  /** ADR-401 (γ) — lookup host topside ανά id (για `baseBinding='attached'`). */
+  readonly resolveHostTopside?: (id: string) => HostTopsidePlan | null;
 }
 
 /** Από πού προέρχεται το top ενός segment. */
@@ -100,6 +118,8 @@ export interface WallVerticalParams {
   readonly height: number;
   readonly unconnectedHeight?: number;
   readonly attachTopToIds?: readonly string[];
+  /** ADR-401 (γ) — base-attach host ids (bidirectional). Βλ. `wall-base-profile.ts`. */
+  readonly attachBaseToIds?: readonly string[];
 }
 
 // ─── Base + nominal-top scalar resolution (shared με section-intersect) ───────
@@ -144,8 +164,11 @@ function nominalSource(params: WallVerticalParams, ctx: WallVerticalContext): Wa
 
 // ─── Lower-envelope core (attached profile) ──────────────────────────────────
 
-/** Γραμμική συνάρτηση z(t)=a+b·t έγκυρη σε [t0,t1] + provenance. */
-interface TopLine {
+/**
+ * Γραμμική συνάρτηση z(t)=a+b·t έγκυρη σε [t0,t1] + provenance. Envelope-agnostic
+ * (επαναχρησιμοποιείται από `wall-base-profile.ts` για το upper-envelope).
+ */
+export interface TopLine {
   readonly a: number;
   readonly b: number;
   readonly t0: number;
@@ -154,7 +177,7 @@ interface TopLine {
   readonly hostId?: string;
 }
 
-const clamp01 = (t: number): number => (t < 0 ? 0 : t > 1 ? 1 : t);
+export const clamp01 = (t: number): number => (t < 0 ? 0 : t > 1 ? 1 : t);
 
 function lineFromHost(h: HostUndersidePlan): TopLine {
   const t0 = clamp01(Math.min(h.t0, h.t1));
@@ -165,11 +188,11 @@ function lineFromHost(h: HostUndersidePlan): TopLine {
   return { a, b, t0, t1, source: 'attached', hostId: h.hostId };
 }
 
-const evalLine = (l: TopLine, t: number): number => l.a + l.b * t;
-const coversLine = (l: TopLine, t: number): boolean => t >= l.t0 - T_EPS && t <= l.t1 + T_EPS;
+export const evalLine = (l: TopLine, t: number): number => l.a + l.b * t;
+export const coversLine = (l: TopLine, t: number): boolean => t >= l.t0 - T_EPS && t <= l.t1 + T_EPS;
 
 /** Όλα τα t-breakpoints: άκρα hosts + ζεύγη τομών + {0,1}. */
-function collectBreakpoints(lines: readonly TopLine[]): number[] {
+export function collectBreakpoints(lines: readonly TopLine[]): number[] {
   const bps = new Set<number>([0, 1]);
   for (const l of lines) {
     bps.add(clamp01(l.t0));

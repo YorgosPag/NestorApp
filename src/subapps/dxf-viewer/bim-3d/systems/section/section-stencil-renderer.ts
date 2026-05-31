@@ -240,10 +240,10 @@ export class SectionStencilRenderer {
       );
     }
 
-    const selectedBimId = useSelection3DStore.getState().selectedBimId;
-    if (selectedBimId !== null) {
+    const selectedBimIds = useSelection3DStore.getState().selectedBimIds;
+    if (selectedBimIds.length > 0) {
       this.renderEmphasisCapForPlane(
-        renderer, mainScene, camera, gl, others, currentPlane, capSize, selectedBimId,
+        renderer, mainScene, camera, gl, others, currentPlane, capSize, selectedBimIds,
       );
     }
   }
@@ -256,17 +256,17 @@ export class SectionStencilRenderer {
     otherPlanes: THREE.Plane[],
     currentPlane: THREE.Plane,
     capSize: number,
-    selectedBimId: string,
+    selectedBimIds: readonly string[],
   ): void {
     this.selectedCapMat.clippingPlanes = otherPlanes;
 
-    // Temporarily hide BIM meshes that are NOT the selected entity so that
-    // the stencil pass encodes only the selected entity's solid interior.
+    // Temporarily hide BIM meshes that are NOT in the selection so that the
+    // stencil pass encodes only the selected entities' solid interior.
     const hidden: THREE.Object3D[] = [];
     mainScene.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return;
       const bimId = (obj.userData as Record<string, unknown>)['bimId'];
-      if (bimId !== undefined && bimId !== selectedBimId) {
+      if (bimId !== undefined && !selectedBimIds.includes(bimId as string)) {
         hidden.push(obj);
         obj.visible = false;
       }

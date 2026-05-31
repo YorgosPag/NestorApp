@@ -114,6 +114,10 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleWallSplitEscape?: () => void;
   /** ADR-363 Phase 5.6: Whether the wall-split tool is active */
   wallSplitIsActive?: boolean;
+  /** ADR-401 Phase E.1: Wall Attach Top/Base ESC handler */
+  handleWallAttachEscape?: () => void;
+  /** ADR-401 Phase E.1: Whether the wall-attach pick-host tool is active */
+  wallAttachIsActive?: boolean;
   /** ADR-363 R1: BIM Copy ESC handler */
   handleBimCopyEscape?: () => void;
   /** ADR-363 R1: Whether the bim-copy tool is active */
@@ -185,6 +189,8 @@ export function useCanvasKeyboardShortcuts({
   arrayPathIsActive = false,
   handleWallSplitEscape,
   wallSplitIsActive = false,
+  handleWallAttachEscape,
+  wallAttachIsActive = false,
   handleBimCopyEscape,
   bimCopyIsActive = false,
   clearEntitySelection,
@@ -438,6 +444,8 @@ export function useCanvasKeyboardShortcuts({
     arrayPathIsActive,
     handleWallSplitEscape,
     wallSplitIsActive,
+    handleWallAttachEscape,
+    wallAttachIsActive,
     handleBimCopyEscape,
     bimCopyIsActive,
     handleRotationEscape,

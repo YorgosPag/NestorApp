@@ -11,6 +11,7 @@
 import {
   notifyWallsOnHostDeletion,
   findWallsToAutoAttachToHost,
+  findWallsToAutoAttachBaseToHost,
 } from '../wall-structural-attach-coordinator';
 import { findAttachedWalls } from '../../cascade/bim-cascade-resolver';
 import { EventBus, type DrawingEventPayload } from '../../../systems/events/EventBus';
@@ -202,5 +203,46 @@ describe('findWallsToAutoAttachToHost (Phase D)', () => {
     const line = { id: 'l1', type: 'line', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } } as unknown as Entity;
     const wall = ceilingWall('w1', 0);
     expect(findWallsToAutoAttachToHost(line, [wall])).toEqual([]);
+  });
+});
+
+// ─── ADR-401 (γ) — base auto-attach detection (inverted Z gate) ───────────────
+
+describe('findWallsToAutoAttachBaseToHost (γ)', () => {
+  it('attaches a storey-floor wall over a FOUNDATION beam (topside below base)', () => {
+    const beam = beamOverWall(-100); // topElevation -100 → topside -100 < base 0
+    const wall = ceilingWall('w1', 0); // y=0 inside beam band [-125,125]
+    expect(findWallsToAutoAttachBaseToHost(beam as unknown as Entity, [wall])).toEqual(['w1']);
+  });
+
+  it('attaches walls over a FOUNDATION slab (topside below base)', () => {
+    const slab = slabAt(-100); // topside -100 < base 0
+    const wall = ceilingWall('w1', 1000); // inside slab footprint
+    expect(findWallsToAutoAttachBaseToHost(slab as unknown as Entity, [wall])).toEqual(['w1']);
+  });
+
+  it('does NOT attach to a CEILING slab above the wall base (inverted Z gate)', () => {
+    const slab = slabAt(3000); // topside 3000 > base 0 → skip
+    const wall = ceilingWall('w1', 1000); // overlaps in plan, but host is above
+    expect(findWallsToAutoAttachBaseToHost(slab as unknown as Entity, [wall])).toEqual([]);
+  });
+
+  it('does NOT attach when the host does not overlap the wall in plan', () => {
+    const beam = beamOverWall(-100);
+    const wall = ceilingWall('w1', 5000); // far from beam band
+    expect(findWallsToAutoAttachBaseToHost(beam as unknown as Entity, [wall])).toEqual([]);
+  });
+
+  it('ignores walls whose baseBinding is not "storey-floor"', () => {
+    const beam = beamOverWall(-100);
+    const wall = { ...ceilingWall('w1', 0) } as unknown as { params: Record<string, unknown> };
+    wall.params.baseBinding = 'absolute';
+    expect(findWallsToAutoAttachBaseToHost(beam as unknown as Entity, [wall as unknown as Entity])).toEqual([]);
+  });
+
+  it('returns [] for a non-host entity (not beam/slab)', () => {
+    const line = { id: 'l1', type: 'line', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } } as unknown as Entity;
+    const wall = ceilingWall('w1', 0);
+    expect(findWallsToAutoAttachBaseToHost(line, [wall])).toEqual([]);
   });
 });

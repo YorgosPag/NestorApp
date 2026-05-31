@@ -23,6 +23,7 @@
 import type { Point3D, Polyline3D, BoundingBox3D } from '../types/bim-base';
 import type { WallParams, WallGeometry, WallKind } from '../types/wall-types';
 import type { WallTopProfile } from './wall-top-profile';
+import type { WallBaseProfile } from './wall-base-profile';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { offsetPolyline } from './shared/polygon-utils';
 
@@ -70,16 +71,20 @@ export interface OpeningFootprintForDeduction {
  * Σ ανοιγμάτων). Παραλείπεται → gross (back-compat — render/grips/3D path).
  *
  * ADR-401 Phase B3a: όταν δοθεί `profile` (attached τοίχος — μεταβλητή κορυφή),
- * το gross area γίνεται **profile-aware** = Σ(segment length × avg segment
- * height) αντί `length × height`, και το bbox top ακολουθεί το πραγματικό
- * `maxTopZmm` αντί το nominal `params.height`. Παραλείπεται → flat fast path
- * (byte-for-byte ίδιο με πριν· flat τοίχος ⇒ topExtent = height).
+ * το gross area γίνεται **profile-aware** = ∫(top(t)−base(t)) αντί `length ×
+ * height`, και το bbox top ακολουθεί το πραγματικό `maxTopZmm`. Παραλείπεται →
+ * flat fast path (byte-for-byte ίδιο με πριν· flat τοίχος ⇒ topExtent = height).
+ *
+ * ADR-401 (γ): όταν δοθεί `baseProfile` (base-attach — μεταβλητός πάτος), το
+ * ύψος/area/volume γίνονται top − base (αντί top − nominalBase) και το bbox
+ * bottom ακολουθεί το `minBaseZmm` (π.χ. θεμέλιο κάτω από τη στάθμη).
  */
 export function computeWallGeometry(
   params: WallParams,
   kind: WallKind = 'straight',
   openings?: readonly OpeningFootprintForDeduction[],
   profile?: WallTopProfile,
+  baseProfile?: WallBaseProfile,
 ): WallGeometry {
   // s converts mm scalar params → canvas world units (matches start/end coordinate space).
   // height and thickness are always stored in mm (SSOT); start/end are canvas world coords.
@@ -117,12 +122,16 @@ export function computeWallGeometry(
   const finalOuter: Polyline3D = edgesModified ? { points: outerPts, closed: false } : outerEdge;
   const finalInner: Polyline3D = edgesModified ? { points: innerPts, closed: false } : innerEdge;
 
-  // ADR-401 B3a: attached τοίχος → bbox top από το πραγματικό προφίλ (max top −
-  // base). Flat/χωρίς profile → nominal `params.height` (ταυτόσημο με πριν).
-  const topExtentMm = profile
-    ? Math.max(0, profile.maxTopZmm - profile.baseZmm)
-    : params.height;
-  const bbox = computeBbox(vertices, finalOuter.points, finalInner.points, topExtentMm, params.baseOffset ?? 0);
+  // ADR-401 B3a/(γ): attached τοίχος → bbox από τα πραγματικά προφίλ. Top =
+  // `maxTopZmm` (top-attach) ή nominal `baseOffset + height`. Bottom =
+  // `minBaseZmm` (base-attach, π.χ. θεμέλιο κάτω από τη στάθμη) ή `baseOffset`.
+  // Floor-relative datum: ο BOQ feed περνά profiles με floorElevationMm=0, άρα
+  // absolute mm == floor-relative mm (ίδια σύμβαση με B3a). Flat → ταυτόσημο.
+  const nominalBaseOffsetMm = params.baseOffset ?? 0;
+  const bboxBottomMm = baseProfile ? baseProfile.minBaseZmm : nominalBaseOffsetMm;
+  const bboxTopMm = profile ? profile.maxTopZmm : nominalBaseOffsetMm + params.height;
+  const topExtentMm = Math.max(0, bboxTopMm - bboxBottomMm);
+  const bbox = computeBbox(vertices, finalOuter.points, finalInner.points, topExtentMm, bboxBottomMm);
 
   // lengthCanvas is in canvas world units; convert to meters for BOQ.
   const lengthCanvas = computePolylineLengthMm(vertices);
@@ -133,9 +142,12 @@ export function computeWallGeometry(
   // ADR-395 G6: net area = gross − Σ(opening face area), clamped ≥ 0. Volume
   // follows the net area (a window void removes wall material). No openings →
   // gross (render/grips/3D callers pass none).
-  // ADR-401 B3a: attached τοίχος → profile-aware gross = Σ(segment area). Αλλιώς
-  // flat length × height (back-compat).
-  const grossArea = profile ? profileGrossAreaM2(profile, lengthM) : lengthM * heightM;
+  // ADR-401 B3a/(γ): attached τοίχος (κορυφή Ή/ΚΑΙ βάση) → profile-aware gross =
+  // ∫(top(t) − base(t)) dt × length (σκαλωτό/κεκλιμένο top & base). Αλλιώς flat
+  // length × height (back-compat).
+  const grossArea = (profile || baseProfile)
+    ? profileGrossAreaM2(lengthM, params.height, profile, baseProfile)
+    : lengthM * heightM;
   const area = Math.max(0, grossArea - sumOpeningAreasM2(openings));
   const volume = area * thicknessM;
 
@@ -152,22 +164,65 @@ export function computeWallGeometry(
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
+/** Ελάχιστο piecewise-linear segment (top ή base) — κοινό σχήμα. */
+interface ProfileSeg {
+  readonly t0: number;
+  readonly t1: number;
+  readonly z0mm: number;
+  readonly z1mm: number;
+}
+
 /**
- * ADR-401 B3a — profile-aware gross wall face area (m²). Σ ανά segment:
- * (segment length κατά μήκος άξονα) × (μέσο ύψος segment πάνω από τη βάση).
- *   - segment length (m) = (t1 − t0) × lengthM  (t αδιάστατο 0..1)
- *   - avg height (m)     = max(0, ((z0 + z1)/2 − baseZmm)) × MM_TO_M
- * Έτσι βγαίνει αυτόματα σκαλωτή (διαφορετικά segments) + κεκλιμένη (z0≠z1)
- * κορυφή. Flat single-seg στο nominal top → length × height (back-compat).
+ * Αποτίμηση piecewise-linear προφίλ στο `tEval` (mm), επιλέγοντας segment από το
+ * `tMid` (interior-biased ώστε σε σκαλωτό/ασυνεχές προφίλ να μην παίρνουμε το
+ * λάθος segment στα boundaries). `fallback` όταν το `tMid` πέφτει εκτός κάλυψης.
  */
-function profileGrossAreaM2(profile: WallTopProfile, lengthM: number): number {
+function evalProfileSegAt(segs: readonly ProfileSeg[], tMid: number, tEval: number, fallback: number): number {
+  const s = segs.find((seg) => tMid >= seg.t0 - 1e-9 && tMid <= seg.t1 + 1e-9);
+  if (!s) return fallback;
+  const span = s.t1 - s.t0;
+  if (span < 1e-9) return s.z0mm;
+  return s.z0mm + ((s.z1mm - s.z0mm) * (tEval - s.t0)) / span;
+}
+
+/**
+ * ADR-401 B3a/(γ) — profile-aware gross wall face area (m²) = ∫(top(t) − base(t))
+ * dt × length, με trapezoidal ολοκλήρωση πάνω στα **union** breakpoints των δύο
+ * προφίλ (κάθε sub-interval έχει γραμμικό top & base → exact). Top: από το top
+ * profile ή nominal `baseZmm + heightMm`. Base: από το base profile ή το nominal
+ * baseline. Έτσι βγαίνει αυτόματα σκαλωτή (διαφορετικά segments) + κεκλιμένη
+ * (z0≠z1) κορυφή ΚΑΙ βάση. Top-only flat → ισοδύναμο με `length × height`.
+ */
+function profileGrossAreaM2(
+  lengthM: number,
+  heightMm: number,
+  topProfile?: WallTopProfile,
+  baseProfile?: WallBaseProfile,
+): number {
+  const nominalBaseZmm = baseProfile?.nominalBaseZmm ?? topProfile?.baseZmm ?? 0;
+  const nominalTopMm = nominalBaseZmm + heightMm;
+  const nominalBaselineZmm = topProfile?.baseZmm ?? nominalBaseZmm;
+
+  const bps = new Set<number>([0, 1]);
+  if (topProfile) for (const s of topProfile.segments) { bps.add(s.t0); bps.add(s.t1); }
+  if (baseProfile) for (const s of baseProfile.segments) { bps.add(s.t0); bps.add(s.t1); }
+  const sorted = [...bps].sort((x, y) => x - y);
+
+  const topAt = (tMid: number, tEval: number): number =>
+    topProfile ? evalProfileSegAt(topProfile.segments, tMid, tEval, nominalTopMm) : nominalTopMm;
+  const baseAt = (tMid: number, tEval: number): number =>
+    baseProfile ? evalProfileSegAt(baseProfile.segments, tMid, tEval, nominalBaselineZmm) : nominalBaselineZmm;
+
   let total = 0;
-  for (const s of profile.segments) {
-    const segLengthM = (s.t1 - s.t0) * lengthM;
-    const avgHeightMm = (s.z0mm + s.z1mm) / 2 - profile.baseZmm;
-    if (segLengthM > 0 && avgHeightMm > 0) {
-      total += segLengthM * avgHeightMm * MM_TO_M;
-    }
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const ta = sorted[i];
+    const tb = sorted[i + 1];
+    const segLengthM = (tb - ta) * lengthM;
+    if (segLengthM <= 0) continue;
+    const tMid = (ta + tb) / 2;
+    const hA = Math.max(0, topAt(tMid, ta) - baseAt(tMid, ta));
+    const hB = Math.max(0, topAt(tMid, tb) - baseAt(tMid, tb));
+    total += segLengthM * ((hA + hB) / 2) * MM_TO_M;
   }
   return total;
 }

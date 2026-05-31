@@ -53,6 +53,8 @@ export const BeamParamsSchema = z
     width: z.number().positive(),
     depth: z.number().positive(),
     topElevation: z.number().finite(),
+    // ─── ADR-401 Phase E/(β) — κεκλιμένη δοκός (top face στο endPoint) ────────
+    topElevationEnd: z.number().finite().optional(),
     zOffset: z.number().finite().optional(),
     material: z.string().min(1).optional(),
     supportType: BeamSupportTypeSchema.optional(),

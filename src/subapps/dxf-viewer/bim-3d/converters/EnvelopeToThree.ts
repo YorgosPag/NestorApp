@@ -26,136 +26,121 @@ import type { EnvelopeChain } from '../../bim/geometry/envelope-perimeter';
 import type { EnvelopeOpeningCut } from '../../bim/geometry/envelope-opening-cuts';
 import { envelopeFaceEdges } from '../../bim/geometry/envelope-opening-cuts';
 import type { EnvelopeEdgeTop } from '../../bim/geometry/envelope-wall-top';
+import type { EnvelopeEdgeBase } from '../../bim/geometry/envelope-wall-base';
 import type { WallOpeningPiece } from './wall-opening-pieces';
 import { buildSlopedWallPieceGeometry } from './wall-piece-geometry';
 import { computeRevealJambQuads } from '../../bim/geometry/reveal-lining-geometry';
 import type { EnvelopeMaterialId } from '../../bim/types/thermal-envelope-types';
-import { resolveEnvelopeMaterial } from '../materials/envelope-material-resolver';
-import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
-import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
+import {
+  ROT_X_NEG_90,
+  MM_TO_M,
+  POS_EPS,
+  T_EPS,
+  makeEnvelopeMesh,
+  makeQuad,
+  addBandPrism,
+  stripPrismGeometry,
+} from './envelope-three-mesh';
 
-// Ίδια convention με BimToThreeConverter: shape XY → Y-up, mm→m για scalar params.
-const ROT_X_NEG_90 = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
-const MM_TO_M = 0.001;
-
-// ADR-375 Phase C.7 — default 3D edge resolution context (mirror BimToThreeConverter).
-const EDGE_DEFAULT_SCALE = 100;
-const EDGE_DEFAULT_DPI = 96;
-
-function attachEnvelopeEdges(mesh: THREE.Mesh): void {
-  const style = resolve3DEdgeStyle({
-    category: 'envelope',
-    cutState: 'projection',
-    scaleDenominator: EDGE_DEFAULT_SCALE,
-    dpi: EDGE_DEFAULT_DPI,
-  });
-  attachEdgeOverlay(mesh, buildEdgeOverlay(mesh, style));
-}
-
-/**
- * Κοινό finalize για όλα τα envelope meshes (Z1 κέλυφος / Z2-Z3 flat layers /
- * Z4 reveal linings): υλικό + κατακόρυφη θέση + tags + shadows + edge overlay.
- * SSoT για το styling — όλες οι ζώνες μοιράζονται `elem-envelope` + edge style.
- */
-function makeEnvelopeMesh(
-  geometry: THREE.BufferGeometry,
-  materialId: EnvelopeMaterialId,
-  posY: number,
-  levelId?: string,
-): THREE.Mesh {
-  const mesh = new THREE.Mesh(geometry, resolveEnvelopeMaterial(materialId));
-  mesh.position.y = posY;
-  mesh.userData['bimType'] = 'envelope';
-  mesh.userData['matId'] = 'elem-envelope';
-  if (levelId !== undefined) mesh.userData['levelId'] = levelId;
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  attachEnvelopeEdges(mesh);
-  return mesh;
-}
-
-const POS_EPS = 1e-4;
-const T_EPS = 1e-6;
-
-/**
- * Band quad `[O_start, O_end, F_end, F_start]` (outer fwd → inner reversed) από
- * ρητά σημεία. Στα όρια ανοίγματος τα O είναι οι **κάθετες** απολήξεις του
- * `cut.bandQuad` (collinear με Z4)· στις γωνίες είναι οι κορυφές του outer loop.
- */
-function makeQuad(oStart: Point3D, oEnd: Point3D, fStart: Point3D, fEnd: Point3D): Point3D[] {
-  return [oStart, oEnd, fEnd, fStart];
-}
-
-/**
- * Ένα κατακόρυφο prism: band quad (canvas units) εξωθημένο κατακόρυφα στο
- * εύρος [z0,z1] (ΜΕΤΡΑ) πάνω από τη βάση `baseY`. Mirror της convention του
- * `envelopeChainToMesh` (shape XY → Y-up μέσω ROT_X_NEG_90).
- */
-function addBandPrism(
-  group: THREE.Group,
-  quad: readonly Point3D[],
-  z0: number,
-  z1: number,
-  baseY: number,
-  materialId: EnvelopeMaterialId,
-  levelId?: string,
-): void {
-  const depth = z1 - z0;
-  if (depth <= POS_EPS) return;
-  const shape = new THREE.Shape();
-  shape.moveTo(quad[0].x, quad[0].y);
-  for (let i = 1; i < quad.length; i++) shape.lineTo(quad[i].x, quad[i].y);
-  shape.closePath();
-
-  const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false });
-  geo.applyMatrix4(ROT_X_NEG_90);
-  group.add(makeEnvelopeMesh(geo, materialId, baseY + z0, levelId));
-}
-
-// ─── ADR-401 B3b — μεταβλητή (σκαλωτή/κεκλιμένη) κορυφή κελύφους ───────────────
+// ─── ADR-401 B3b / (γ) — μεταβλητή κορυφή ΚΑΙ μεταβλητή βάση κελύφους ──────────
 
 function lerpP(a: Point3D, b: Point3D, t: number): Point3D {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
 }
 
 /**
- * Band με μεταβλητή κορυφή πάνω σε plan quad που εκτείνεται σε edge-local
- * `[sStart,sEnd]` (γωνίες lerp `oStart→oEnd` / `fStart→fEnd`), βάση `zBot`. Κλιπάρει
- * τα `edgeTop.segments` στο [sStart,sEnd]· επίπεδο sub-piece (`z0≈z1`) → φθηνό
- * `addBandPrism`, κεκλιμένο → reuse `buildSlopedWallPieceGeometry` (wedge, ίδια
- * convention `(x,y)→(x,height,−y)`). Ανεξάρτητα sub-segments → σκαλοπάτι = καθαρή
- * κατακόρυφη ασυνέχεια (μηδέν λοξό «γεφύρωμα» στο breakpoint).
+ * Κοινό σχήμα top (B3b) / base ((γ)) edge profile: ordered sub-segments σε
+ * edge-local `s∈[0,1]` με γραμμικά z0M→z1M (ΜΕΤΡΑ πάνω από τη βάση ορόφου· το base
+ * μπορεί <0). `EnvelopeEdgeTop` και `EnvelopeEdgeBase` είναι structurally αυτό.
  */
-function addVariableTopBand(
+interface EdgeProfile {
+  readonly segments: readonly { s0: number; s1: number; z0M: number; z1M: number }[];
+}
+
+/** Επίπεδο edge profile σε σταθερό `z` (top fallback heightM / lintel head). */
+function flatProfile(z: number): EdgeProfile {
+  return { segments: [{ s0: 0, s1: 1, z0M: z, z1M: z }] };
+}
+
+/** Το segment του profile που καλύπτει το `s` (πρώτο που ταιριάζει· fallback τελευταίο). */
+function segAt(p: EdgeProfile, s: number): EdgeProfile['segments'][number] {
+  const segs = p.segments;
+  for (const seg of segs) if (s >= seg.s0 - T_EPS && s <= seg.s1 + T_EPS) return seg;
+  return segs[segs.length - 1];
+}
+
+/** z (m) ενός segment στο `s` (γραμμικά z0→z1, clamped στο span). */
+function segZAt(seg: EdgeProfile['segments'][number], s: number): number {
+  const span = seg.s1 - seg.s0;
+  if (span < T_EPS) return seg.z0M;
+  const sc = s < seg.s0 ? seg.s0 : s > seg.s1 ? seg.s1 : s;
+  return seg.z0M + ((seg.z1M - seg.z0M) * (sc - seg.s0)) / span;
+}
+
+/** Ενωμένα s-breakpoints (top + base) εντός (sStart,sEnd), αύξοντα, deduped. */
+function bandBreakpoints(top: EdgeProfile, bottom: EdgeProfile | null, sStart: number, sEnd: number): number[] {
+  const set = new Set<number>([sStart, sEnd]);
+  const add = (p: EdgeProfile): void => {
+    for (const seg of p.segments) {
+      if (seg.s0 > sStart + T_EPS && seg.s0 < sEnd - T_EPS) set.add(seg.s0);
+      if (seg.s1 > sStart + T_EPS && seg.s1 < sEnd - T_EPS) set.add(seg.s1);
+    }
+  };
+  add(top);
+  if (bottom) add(bottom);
+  return [...set].sort((a, b) => a - b);
+}
+
+/**
+ * Band με μεταβλητή κορυφή (`top`) ΚΑΙ μεταβλητή/επίπεδη βάση (`bottom`: profile →
+ * ακολουθεί base-attach· number → επίπεδο floor, π.χ. 0 ή head πρεκιού) πάνω σε
+ * plan quad που εκτείνεται σε edge-local `[sStart,sEnd]` (γωνίες lerp). Σπάει στο
+ * **union** των top+base breakpoints· interior-biased eval (segment του midpoint)
+ * → σκαλοπάτι = καθαρή κατακόρυφη ασυνέχεια. Επίπεδο sub-piece (top & base flat) →
+ * φθηνό `addBandPrism`· αλλιώς `buildSlopedWallPieceGeometry` (wedge, 4 ανεξάρτητες
+ * γωνίες). Top-only (bottom = scalar) → byte-for-byte με προ-(γ) συμπεριφορά.
+ */
+function addProfiledBand(
   group: THREE.Group,
   oStart: Point3D, oEnd: Point3D, fStart: Point3D, fEnd: Point3D,
   sStart: number, sEnd: number,
-  zBot: number,
-  edgeTop: EnvelopeEdgeTop,
+  top: EdgeProfile,
+  bottom: EdgeProfile | number,
   baseY: number,
   materialId: EnvelopeMaterialId,
   levelId?: string,
 ): void {
   const span = sEnd - sStart;
   if (span < T_EPS) return;
-  for (const seg of edgeTop.segments) {
-    const cs0 = Math.max(seg.s0, sStart);
-    const cs1 = Math.min(seg.s1, sEnd);
-    if (cs1 - cs0 < T_EPS) continue;
-    const segSpan = seg.s1 - seg.s0;
-    const zA = segSpan < T_EPS ? seg.z0M : seg.z0M + ((seg.z1M - seg.z0M) * (cs0 - seg.s0)) / segSpan;
-    const zB = segSpan < T_EPS ? seg.z1M : seg.z0M + ((seg.z1M - seg.z0M) * (cs1 - seg.s0)) / segSpan;
-    if (zA - zBot <= POS_EPS && zB - zBot <= POS_EPS) continue;
-    const f0 = (cs0 - sStart) / span;
-    const f1 = (cs1 - sStart) / span;
+  const botProfile = typeof bottom === 'number' ? null : bottom;
+  const botFlatZ = typeof bottom === 'number' ? bottom : 0;
+  const bps = bandBreakpoints(top, botProfile, sStart, sEnd);
+  for (let k = 0; k < bps.length - 1; k++) {
+    const u0 = bps[k];
+    const u1 = bps[k + 1];
+    if (u1 - u0 < T_EPS) continue;
+    const mid = (u0 + u1) / 2;
+    const ts = segAt(top, mid);
+    const zT0 = segZAt(ts, u0);
+    const zT1 = segZAt(ts, u1);
+    let zB0 = botFlatZ;
+    let zB1 = botFlatZ;
+    if (botProfile) {
+      const bs = segAt(botProfile, mid);
+      zB0 = segZAt(bs, u0);
+      zB1 = segZAt(bs, u1);
+    }
+    if (zT0 - zB0 <= POS_EPS && zT1 - zB1 <= POS_EPS) continue;
+    const f0 = (u0 - sStart) / span;
+    const f1 = (u1 - sStart) / span;
     const o0 = lerpP(oStart, oEnd, f0);
     const o1 = lerpP(oStart, oEnd, f1);
     const fp0 = lerpP(fStart, fEnd, f0);
     const fp1 = lerpP(fStart, fEnd, f1);
-    if (Math.abs(zA - zB) < POS_EPS) {
-      addBandPrism(group, makeQuad(o0, o1, fp0, fp1), zBot, zA, baseY, materialId, levelId);
+    if (Math.abs(zT0 - zT1) < POS_EPS && Math.abs(zB0 - zB1) < POS_EPS) {
+      addBandPrism(group, makeQuad(o0, o1, fp0, fp1), zB0, zT0, baseY, materialId, levelId);
     } else {
-      const piece: WallOpeningPiece = { quad: [o0, o1, fp1, fp0], zBotM: zBot, zTopAM: zA, zTopBM: zB };
+      const piece: WallOpeningPiece = { quad: [o0, o1, fp1, fp0], zBotAM: zB0, zBotBM: zB1, zTopAM: zT0, zTopBM: zT1 };
       const geo = buildSlopedWallPieceGeometry(piece);
       if (geo) group.add(makeEnvelopeMesh(geo, materialId, baseY, levelId));
     }
@@ -163,15 +148,11 @@ function addVariableTopBand(
 }
 
 /**
- * Χτίζει μια ακμή του κελύφους με κατακόρυφο split στα ανοίγματα: solid spans
- * πλήρους ύψους + ανά άνοιγμα prism κάτω από ποδιά [0,sill] + πάνω από πρέκι
- * [head,height]. Το κενό του κουφώματος μένει διαμπερές (Z4 reveal το ντύνει).
- *
- * ADR-401 B3b — όταν δοθεί `edgeTop` (η ακμή πατά σε `attached` τοίχο), η κορυφή
- * γίνεται μεταβλητή (σκαλωτή/κεκλιμένη) μέσω `addVariableTopBand`. Χωρίς `edgeTop`
- * (flat/μη-attached) → ΑΜΕΤΑΒΛΗΤΟ fast path (byte-for-byte με προ-B3b).
+ * Flat fast path (ούτε attached κορυφή ούτε βάση): solid spans πλήρους ύψους +
+ * ανά άνοιγμα prism κάτω από ποδιά [0,sill] + πάνω από πρέκι [head,height].
+ * ΑΜΕΤΑΒΛΗΤΟ (byte-for-byte με προ-B3b) — το κοινό case (μη-attached τοίχοι).
  */
-function addEdge(
+function addFlatEdge(
   group: THREE.Group,
   f0: Point3D, f1: Point3D, o0: Point3D, o1: Point3D,
   heightM: number,
@@ -179,14 +160,9 @@ function addEdge(
   edgeCuts: readonly EnvelopeOpeningCut[],
   materialId: EnvelopeMaterialId,
   levelId?: string,
-  edgeTop?: EnvelopeEdgeTop | null,
 ): void {
   if (edgeCuts.length === 0) {
-    if (edgeTop) {
-      addVariableTopBand(group, o0, o1, f0, f1, 0, 1, 0, edgeTop, baseY, materialId, levelId);
-    } else {
-      addBandPrism(group, makeQuad(o0, o1, f0, f1), 0, heightM, baseY, materialId, levelId);
-    }
+    addBandPrism(group, makeQuad(o0, o1, f0, f1), 0, heightM, baseY, materialId, levelId);
     return;
   }
   const sorted = [...edgeCuts].sort((a, b) => a.tStart - b.tStart);
@@ -200,34 +176,75 @@ function addEdge(
     // Κάθετες απολήξεις από το cut.bandQuad = [O_a, O_b, F_b, F_a].
     const oA = c.bandQuad[0], oB = c.bandQuad[1], fB = c.bandQuad[2], fA = c.bandQuad[3];
     if (a > cursor + T_EPS) {
-      if (edgeTop) {
-        addVariableTopBand(group, cursorO, oA, cursorF, fA, cursor, a, 0, edgeTop, baseY, materialId, levelId);
-      } else {
-        addBandPrism(group, makeQuad(cursorO, oA, cursorF, fA), 0, heightM, baseY, materialId, levelId);
-      }
+      addBandPrism(group, makeQuad(cursorO, oA, cursorF, fA), 0, heightM, baseY, materialId, levelId);
     }
     const span = makeQuad(oA, oB, fA, fB);
-    if (edgeTop) {
-      // Ποδιά: επίπεδη [0, sill]. Πρέκι: μεταβλητή [head, top(s)].
-      const sill = Math.max(0, c.sillM);
-      if (sill > POS_EPS) addBandPrism(group, span, 0, sill, baseY, materialId, levelId);
-      addVariableTopBand(group, oA, oB, fA, fB, a, b, Math.max(0, c.headM), edgeTop, baseY, materialId, levelId);
-    } else {
-      const sill = Math.max(0, Math.min(heightM, c.sillM));
-      const head = Math.max(0, Math.min(heightM, c.headM));
-      if (sill > POS_EPS) addBandPrism(group, span, 0, sill, baseY, materialId, levelId);
-      if (head < heightM - POS_EPS) addBandPrism(group, span, head, heightM, baseY, materialId, levelId);
-    }
+    const sill = Math.max(0, Math.min(heightM, c.sillM));
+    const head = Math.max(0, Math.min(heightM, c.headM));
+    if (sill > POS_EPS) addBandPrism(group, span, 0, sill, baseY, materialId, levelId);
+    if (head < heightM - POS_EPS) addBandPrism(group, span, head, heightM, baseY, materialId, levelId);
     cursor = Math.max(cursor, b);
     cursorO = oB;
     cursorF = fB;
   }
   if (cursor < 1 - T_EPS) {
-    if (edgeTop) {
-      addVariableTopBand(group, cursorO, o1, cursorF, f1, cursor, 1, 0, edgeTop, baseY, materialId, levelId);
-    } else {
-      addBandPrism(group, makeQuad(cursorO, o1, cursorF, f1), 0, heightM, baseY, materialId, levelId);
+    addBandPrism(group, makeQuad(cursorO, o1, cursorF, f1), 0, heightM, baseY, materialId, levelId);
+  }
+}
+
+/**
+ * Χτίζει μια ακμή του κελύφους με κατακόρυφο split στα ανοίγματα. Το κενό του
+ * κουφώματος μένει διαμπερές (Z4 reveal το ντύνει).
+ *
+ * - **Flat** (ούτε `edgeTop` ούτε `edgeBase`) → `addFlatEdge` (ΑΜΕΤΑΒΛΗΤΟ).
+ * - **Attached** (B3b κορυφή ‖ (γ) βάση) → `addProfiledBand` με `top` = `edgeTop`
+ *   (ή επίπεδο `heightM`) και `bottom` = `edgeBase` (μεταβλητός πάτος) ή `0`. Στα
+ *   ανοίγματα: η **ποδιά** ακολουθεί τη βάση [base..sill], το **πρέκι** μένει στο
+ *   floor-relative head [head..top] (Revit: το άνοιγμα μετριέται από το floor).
+ */
+function addEdge(
+  group: THREE.Group,
+  f0: Point3D, f1: Point3D, o0: Point3D, o1: Point3D,
+  heightM: number,
+  baseY: number,
+  edgeCuts: readonly EnvelopeOpeningCut[],
+  materialId: EnvelopeMaterialId,
+  levelId?: string,
+  edgeTop?: EnvelopeEdgeTop | null,
+  edgeBase?: EnvelopeEdgeBase | null,
+): void {
+  if (!edgeTop && !edgeBase) {
+    addFlatEdge(group, f0, f1, o0, o1, heightM, baseY, edgeCuts, materialId, levelId);
+    return;
+  }
+  const top: EdgeProfile = edgeTop ?? flatProfile(heightM);
+  const base: EdgeProfile | number = edgeBase ?? 0;
+
+  if (edgeCuts.length === 0) {
+    addProfiledBand(group, o0, o1, f0, f1, 0, 1, top, base, baseY, materialId, levelId);
+    return;
+  }
+  const sorted = [...edgeCuts].sort((a, b) => a.tStart - b.tStart);
+  let cursor = 0;
+  let cursorO = o0;
+  let cursorF = f0;
+  for (const c of sorted) {
+    const a = Math.max(0, Math.min(1, c.tStart));
+    const b = Math.max(0, Math.min(1, c.tEnd));
+    if (b - a < T_EPS) continue;
+    const oA = c.bandQuad[0], oB = c.bandQuad[1], fB = c.bandQuad[2], fA = c.bandQuad[3];
+    if (a > cursor + T_EPS) {
+      addProfiledBand(group, cursorO, oA, cursorF, fA, cursor, a, top, base, baseY, materialId, levelId);
     }
+    // Ποδιά: [base .. sill] (μεταβλητός πάτος αν base-attach). Πρέκι: [head .. top(s)].
+    addProfiledBand(group, oA, oB, fA, fB, a, b, flatProfile(Math.max(0, c.sillM)), base, baseY, materialId, levelId);
+    addProfiledBand(group, oA, oB, fA, fB, a, b, top, Math.max(0, c.headM), baseY, materialId, levelId);
+    cursor = Math.max(cursor, b);
+    cursorO = oB;
+    cursorF = fB;
+  }
+  if (cursor < 1 - T_EPS) {
+    addProfiledBand(group, cursorO, o1, cursorF, f1, cursor, 1, top, base, baseY, materialId, levelId);
   }
 }
 
@@ -248,6 +265,9 @@ function addEdge(
  *                              με `envelopeFaceEdges`). `null`/απών edge → επίπεδο
  *                              `heightM` (flat/μη-attached τοίχος). Όλο undefined →
  *                              ΑΜΕΤΑΒΛΗΤΟ flat κέλυφος (zero regression).
+ * @param edgeBases             ADR-401 (γ) — μεταβλητή **βάση** ανά ακμή (base-attach
+ *                              σε θεμέλιο). `null`/απών edge → επίπεδος πάτος `0`
+ *                              (floor). Όλο undefined → ο πάτος μένει στο floor.
  * @returns null αν το chain είναι degenerate ή `heightM <= 0`.
  */
 export function envelopeChainToMesh(
@@ -259,6 +279,7 @@ export function envelopeChainToMesh(
   buildingBaseElevationM = 0,
   cuts: readonly EnvelopeOpeningCut[] = [],
   edgeTops: readonly (EnvelopeEdgeTop | null)[] = [],
+  edgeBases: readonly (EnvelopeEdgeBase | null)[] = [],
 ): THREE.Object3D | null {
   if (heightM <= 0) return null;
   const face = chain.exteriorFaceLoop.points;
@@ -279,7 +300,8 @@ export function envelopeChainToMesh(
     const [a, b] = edges[i];
     addEdge(
       group, face[a], face[b], outer[a], outer[b],
-      heightM, baseY, byEdge.get(i) ?? [], materialId, levelId, edgeTops[i] ?? null,
+      heightM, baseY, byEdge.get(i) ?? [], materialId, levelId,
+      edgeTops[i] ?? null, edgeBases[i] ?? null,
     );
   }
 
@@ -330,18 +352,6 @@ export function slabFlatLayerToMesh(
   const posY = zone === 'Z3' ? slabTopM : slabBottomM - layerThicknessM;
 
   return makeEnvelopeMesh(geo, materialId, posY, levelId);
-}
-
-/** Prism από ένα plan quad (scene/meter units) εξωθημένο κατά `depthM` (Y-up). */
-function stripPrismGeometry(quad: readonly Point3D[], depthM: number): THREE.BufferGeometry | null {
-  if (quad.length < 3 || depthM <= 0) return null;
-  const shape = new THREE.Shape();
-  shape.moveTo(quad[0].x, quad[0].y);
-  for (let i = 1; i < quad.length; i++) shape.lineTo(quad[i].x, quad[i].y);
-  shape.closePath();
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: depthM, bevelEnabled: false });
-  geo.applyMatrix4(ROT_X_NEG_90);
-  return geo;
 }
 
 /**

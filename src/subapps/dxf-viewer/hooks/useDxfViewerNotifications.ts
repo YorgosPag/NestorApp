@@ -36,6 +36,18 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-401 Phase E.1 — manual attach/detach from the contextual wall ribbon.
+    unsubs.push(
+      EventBus.on('bim:walls-attached-manual', () => {
+        toast.info(t('attachToStructural.attachedManual'));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:walls-detached', () => {
+        toast.info(t('attachToStructural.detached'));
+      }),
+    );
+
     return () => unsubs.forEach((u) => u());
   }, [t]);
 }

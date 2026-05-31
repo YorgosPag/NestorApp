@@ -2,8 +2,10 @@ import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { envelopeChainToMesh, slabFlatLayerToMesh, revealLiningToMesh } from '../converters/EnvelopeToThree';
 import { resolveWallTopProfile } from '../../bim/geometry/wall-top-profile';
-import { makeWallTopContext, buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
+import { resolveWallBaseProfile } from '../../bim/geometry/wall-base-profile';
+import { makeWallTopContext, makeWallBaseContext, buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
 import { resolveEnvelopeEdgeTops, type WallTopRef } from '../../bim/geometry/envelope-wall-top';
+import { resolveEnvelopeEdgeBases, type WallBaseRef } from '../../bim/geometry/envelope-wall-base';
 import { computeEnvelopeShell, collectEnvelopeOverrides } from '../../bim/geometry/envelope-shell';
 import { resolveSlabsAboveForLevel } from '../../bim/geometry/footprint-region-classifier';
 import type { ThermalEnvelopeSpec } from '../../bim/types/thermal-envelope-types';
@@ -104,6 +106,8 @@ function addEnvelopeShell(
   const wallById = new Map(entities.walls.map((w) => [w.id, w] as const));
   // ADR-401 B3b — προφίλ κορυφής ανά attached τοίχο (μηδέν κόστος όταν κανένας).
   const wallTopRefs = buildEnvelopeWallTopRefs(entities, ctx.floorElevationMm);
+  // ADR-401 (γ) — προφίλ ΒΑΣΗΣ ανά base-attached τοίχο (μηδέν κόστος όταν κανένας).
+  const wallBaseRefs = buildEnvelopeWallBaseRefs(entities, ctx.floorElevationMm);
 
   for (const chain of chains) {
     // Ύψος ορόφου = max height των τοίχων του chain. params.height είναι mm → / 1000.
@@ -128,9 +132,14 @@ function addEnvelopeShell(
     const edgeTops = wallTopRefs.size > 0
       ? resolveEnvelopeEdgeTops(chain, wallTopRefs, ctx.floorElevationMm)
       : [];
+    // ADR-401 (γ) — μεταβλητή βάση ανά ακμή όταν το chain ακουμπά base-attached
+    // τοίχο· αλλιώς [] → επίπεδος πάτος στο floor (ΑΜΕΤΑΒΛΗΤΟ).
+    const edgeBases = wallBaseRefs.size > 0
+      ? resolveEnvelopeEdgeBases(chain, wallBaseRefs, ctx.floorElevationMm)
+      : [];
 
     const mesh = envelopeChainToMesh(
-      chain, heightM, ctx.floorElevationMm, materialId, levelId, r.baseElevation, cuts, edgeTops,
+      chain, heightM, ctx.floorElevationMm, materialId, levelId, r.baseElevation, cuts, edgeTops, edgeBases,
     );
     if (mesh) { mesh.userData['buildingId'] = r.buildingId; group.add(mesh); }
   }
@@ -156,6 +165,32 @@ function buildEnvelopeWallTopRefs(
     const profile = resolveWallTopProfile(
       w.params,
       makeWallTopContext(start, end, hostInputs, { floorElevationMm }),
+    );
+    refs.set(w.id, { start, end, profile });
+  }
+  return refs;
+}
+
+/**
+ * ADR-401 (γ) — `WallBaseRef` (άξονας + προφίλ βάσης) ανά `base-attached` τοίχο
+ * του ορόφου, για τη μεταβλητή βάση του Z1 κελύφους (dual-band). Κενό map όταν
+ * κανένας base-attached (κοινό case → μηδέν κόστος). Host inputs (beams+slabs)
+ * μέσω του SSoT `buildWallHostInputs` (ίδιο plan space με τα chains = `*.params`).
+ */
+function buildEnvelopeWallBaseRefs(
+  entities: Bim3DEntities,
+  floorElevationMm: number,
+): Map<string, WallBaseRef> {
+  const refs = new Map<string, WallBaseRef>();
+  const attached = entities.walls.filter((w) => w.params?.baseBinding === 'attached');
+  if (attached.length === 0) return refs;
+  const hostInputs = buildWallHostInputs(entities.beams, entities.slabs);
+  for (const w of attached) {
+    const start = { x: w.params.start.x, y: w.params.start.y };
+    const end = { x: w.params.end.x, y: w.params.end.y };
+    const profile = resolveWallBaseProfile(
+      w.params,
+      makeWallBaseContext(start, end, hostInputs, { floorElevationMm }),
     );
     refs.set(w.id, { start, end, profile });
   }

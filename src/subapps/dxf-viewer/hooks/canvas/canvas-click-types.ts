@@ -209,6 +209,12 @@ export interface UseCanvasClickHandlerParams {
   /** Click handler for wall-split state machine. */
   handleWallSplitClick?: (worldPoint: Point2D) => void;
 
+  // ── ADR-401 Phase E.1: Wall Attach Top/Base tool ──────────────────────
+  /** Whether the wall-attach pick-host tool is active (one pick → act, ESC to exit). */
+  wallAttachIsActive?: boolean;
+  /** Click handler — picks the structural host (beam/slab) under the cursor. */
+  handleWallAttachClick?: (worldPoint: Point2D) => void;
+
   // ── ADR-363 R1: BIM Copy tool ──────────────────────────────────────────
   /** Whether the bim-copy tool is active (base-point + continuous target picks). */
   bimCopyIsActive?: boolean;

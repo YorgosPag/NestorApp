@@ -137,6 +137,14 @@ export interface WallParams {
    */
   readonly attachTopToIds?: readonly string[];
   /**
+   * ADR-401 (γ) — Συσχετιστικό «Attach Base to Structural» (Revit bidirectional).
+   * FK list προς δομικά στοιχεία (beam / slab / foundation) στων οποίων την **άνω
+   * παρειά** «κάθεται» η βάση. Required (≥1) ΟΤΑΝ `baseBinding='attached'`.
+   * Πολλαπλά → upper-envelope (πατάει στο ψηλότερο στήριγμα, `resolveWallBaseProfile`).
+   * Το πραγματικό ύψος υπολογίζεται ζωντανά — ΔΕΝ αποθηκεύεται.
+   */
+  readonly attachBaseToIds?: readonly string[];
+  /**
    * ADR-396 v2 Φάση 4 — Χειροκίνητη παράκαμψη (Revit-style) της αυτόματης ETICS
    * ταξινόμησης ορίων (Στρ.3). `undefined` = auto· 'exterior'/'interior' = override.
    * Αποσυνδεδεμένο από το δομικό `category`. Set χειροκίνητα (UI Φάση 6).

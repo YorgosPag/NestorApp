@@ -92,6 +92,17 @@ export interface BeamParams {
   readonly depth: number;
   /** mm. Top face (top-of-beam) από project origin. ADR-369 §2.2. */
   readonly topElevation: number;
+  /**
+   * mm. **Top face στο `endPoint`** (ADR-401 Phase E/(β) — κεκλιμένη δοκός).
+   * Όταν δοθεί ΚΑΙ διαφέρει από το `topElevation`, η πάνω παρειά γέρνει
+   * **γραμμικά κατά μήκος του άξονα** (`topElevation` στο `startPoint` →
+   * `topElevationEnd` στο `endPoint`), σταθερό βάθος (Revit sloped beam).
+   * Απών / ίσο με `topElevation` → οριζόντια δοκός (flat fast-path, byte-for-byte
+   * back-compat). Η κλίση οδηγείται από **αδιάστατο axis fraction** × Δmm →
+   * unit-safe σε mm-scene ΚΑΙ meter-scene (σε αντίθεση με το slab slope).
+   * SSoT υπολογισμός: `bim/geometry/beam-slope.ts`.
+   */
+  readonly topElevationEnd?: number;
   /** mm. Drop-from-ceiling offset (default 0). ADR-369 §854. */
   readonly zOffset?: number;
   readonly material?: string;

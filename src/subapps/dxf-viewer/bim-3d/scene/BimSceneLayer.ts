@@ -18,7 +18,8 @@ import type { FloorStackEntry } from './multi-floor-3d-source';
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh } from '../converters/BimToThreeConverter';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { resolveWallTopProfile } from '../../bim/geometry/wall-top-profile';
-import { makeWallTopContext, buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
+import { resolveWallBaseProfile } from '../../bim/geometry/wall-base-profile';
+import { makeWallTopContext, makeWallBaseContext, buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
 import { addEnvelopeToScene } from './bim-envelope-scene-builder';
 import type { SyncContext } from './bim-scene-context';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
@@ -205,11 +206,14 @@ export class BimSceneLayer {
   }
 
   private syncWalls(entities: Bim3DEntities, ctx: SyncContext): void {
-    // ADR-401 Phase B2 — host inputs (δοκάρια + πλάκες) για τη μεταβλητή κορυφή
-    // των `attached` τοίχων. Footprints + wall axis στο ΙΔΙΟ plan space
-    // (`*.params`, mirror του `section-scene-sync`)· χτίζονται μόνο όταν υπάρχει
-    // τουλάχιστον ένας attached τοίχος (κοινό case = κανένας → μηδέν κόστος).
-    const hasAttached = entities.walls.some((w) => w.params?.topBinding === 'attached');
+    // ADR-401 Phase B2/(γ) — host inputs (δοκάρια + πλάκες) για τη μεταβλητή κορυφή
+    // (top-attach) ΚΑΙ τον μεταβλητό πάτο (base-attach) των `attached` τοίχων.
+    // Footprints + wall axis στο ΙΔΙΟ plan space (`*.params`, mirror του
+    // `section-scene-sync`)· χτίζονται μόνο όταν υπάρχει τουλάχιστον ένας attached
+    // τοίχος (κορυφή Ή βάση· κοινό case = κανένας → μηδέν κόστος).
+    const hasAttached = entities.walls.some(
+      (w) => w.params?.topBinding === 'attached' || w.params?.baseBinding === 'attached',
+    );
     const hostInputs = hasAttached
       ? buildWallHostInputs(entities.beams, entities.slabs)
       : [];
@@ -220,19 +224,23 @@ export class BimSceneLayer {
       const openingsForWall = this.filterHostedOpenings(
         entities.openings, 'wallId', wall.id, r.buildingMode, ctx,
       );
+      const start = { x: wall.params.start.x, y: wall.params.start.y };
+      const end = { x: wall.params.end.x, y: wall.params.end.y };
       const profile = wall.params?.topBinding === 'attached'
         ? resolveWallTopProfile(
             wall.params,
-            makeWallTopContext(
-              { x: wall.params.start.x, y: wall.params.start.y },
-              { x: wall.params.end.x, y: wall.params.end.y },
-              hostInputs,
-              { floorElevationMm: ctx.floorElevationMm },
-            ),
+            makeWallTopContext(start, end, hostInputs, { floorElevationMm: ctx.floorElevationMm }),
+          )
+        : undefined;
+      // ADR-401 (γ) — base-attach: ο πάτος ακολουθεί την άνω-παρειά host(s).
+      const baseProfile = wall.params?.baseBinding === 'attached'
+        ? resolveWallBaseProfile(
+            wall.params,
+            makeWallBaseContext(start, end, hostInputs, { floorElevationMm: ctx.floorElevationMm }),
           )
         : undefined;
       const mesh = wallToMesh(
-        wall, openingsForWall, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, profile,
+        wall, openingsForWall, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, profile, baseProfile,
       );
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }

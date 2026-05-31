@@ -25,7 +25,9 @@ import type { BeamEntity } from '../types/beam-types';
 import type { SlabEntity } from '../types/slab-types';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { computeBeamGeometry } from './beam-geometry';
-import type { HostUndersidePlan, WallVerticalContext } from './wall-top-profile';
+import { slabUndersideZmmAt, slabTopZmmAt } from './slab-slope';
+import { beamUndersideZmmAt, beamTopZmmAt, isBeamTilted } from './beam-slope';
+import type { HostUndersidePlan, HostTopsidePlan, WallVerticalContext } from './wall-top-profile';
 
 /** Ελάχιστο 2D σημείο (plan space). */
 export interface Pt2 {
@@ -35,15 +37,33 @@ export interface Pt2 {
 
 /**
  * Host έτοιμος για projection: footprint (ίδιες μονάδες με τον άξονα τοίχου) +
- * οριζόντια κάτω-παρειά σε **απόλυτα mm**. Κεκλιμένο host = Phase E2.
+ * κάτω-παρειά σε **απόλυτα mm**.
+ *
+ * Default = **οριζόντια** παρειά (`undersideZmm` scalar → z0mm===z1mm). Για
+ * **κεκλιμένο** host (tilted στέγη/πλάκα, Phase E2) δίνεται προαιρετικά το
+ * `undersideZmmAt(pt)` — αποτιμάται στα άκρα του covered span ώστε το προκύπτον
+ * `HostUndersidePlan` να έχει z0mm ≠ z1mm. Το `pt` ΠΡΕΠΕΙ να είναι στο ίδιο
+ * plan space (mm) με το `footprint`.
  */
 export interface HostFootprintInput {
   readonly hostId: string;
   readonly hostType: HostUndersidePlan['hostType'];
   /** Plan footprint (closed polygon). */
   readonly footprint: readonly Pt2[];
-  /** Κάτω-παρειά (absolute mm) — οριζόντια. */
+  /** Κάτω-παρειά (absolute mm) — οριζόντια / nominal fallback. */
   readonly undersideZmm: number;
+  /**
+   * Κεκλιμένη κάτω-παρειά (absolute mm) ως συνάρτηση plan-point. Όταν δοθεί,
+   * υπερισχύει του `undersideZmm` και παράγει sloped plan (z0mm ≠ z1mm). Phase E2.
+   */
+  readonly undersideZmmAt?: (pt: Pt2) => number;
+  /**
+   * ADR-401 (γ) — **άνω-παρειά** (absolute mm) για base-attach. Ένα struct
+   * εξυπηρετεί ΚΑΙ τις δύο φορές. Οριζόντια / nominal fallback.
+   */
+  readonly topsideZmm?: number;
+  /** Κεκλιμένη άνω-παρειά (absolute mm) — υπερισχύει του `topsideZmm` (tilted). */
+  readonly topsideZmmAt?: (pt: Pt2) => number;
 }
 
 /** Αριθμητικό όριο για μη-εκφυλισμένο t / non-parallel cross product. */
@@ -116,18 +136,55 @@ export function buildHostUndersidePlans(
   wallEnd: Pt2,
   hosts: readonly HostFootprintInput[],
 ): HostUndersidePlan[] {
+  const dx = wallEnd.x - wallStart.x;
+  const dy = wallEnd.y - wallStart.y;
+  /** Plan-point (mm) στον άξονα του τοίχου για παράμετρο t∈[0,1]. */
+  const axisPt = (t: number): Pt2 => ({ x: wallStart.x + t * dx, y: wallStart.y + t * dy });
   const plans: HostUndersidePlan[] = [];
   for (const h of hosts) {
     if (h.footprint.length < 3) continue;
+    const at = h.undersideZmmAt;
     for (const [t0, t1] of coveredIntervals(wallStart, wallEnd, h.footprint)) {
+      // Sloped host → αποτίμησε την παρειά στα plan-points των άκρων του span·
+      // flat host → scalar (z0mm===z1mm, byte-for-byte back-compat).
+      const z0mm = at ? at(axisPt(t0)) : h.undersideZmm;
+      const z1mm = at ? at(axisPt(t1)) : h.undersideZmm;
       plans.push({
         hostId: h.hostId,
         hostType: h.hostType,
         t0,
         t1,
-        z0mm: h.undersideZmm,
-        z1mm: h.undersideZmm,
+        z0mm,
+        z1mm,
       });
+    }
+  }
+  return plans;
+}
+
+/**
+ * ADR-401 (γ) — mirror του `buildHostUndersidePlans` για base-attach: προβάλλει
+ * κάθε host στον άξονα του τοίχου και επιστρέφει ένα `HostTopsidePlan` (άνω-
+ * παρειά) ανά covered span. Hosts χωρίς topside data (legacy inputs) → skip.
+ */
+export function buildHostTopsidePlans(
+  wallStart: Pt2,
+  wallEnd: Pt2,
+  hosts: readonly HostFootprintInput[],
+): HostTopsidePlan[] {
+  const dx = wallEnd.x - wallStart.x;
+  const dy = wallEnd.y - wallStart.y;
+  const axisPt = (t: number): Pt2 => ({ x: wallStart.x + t * dx, y: wallStart.y + t * dy });
+  const plans: HostTopsidePlan[] = [];
+  for (const h of hosts) {
+    if (h.footprint.length < 3) continue;
+    if (h.topsideZmm === undefined && !h.topsideZmmAt) continue;
+    const at = h.topsideZmmAt;
+    const flat = h.topsideZmm ?? 0;
+    for (const [t0, t1] of coveredIntervals(wallStart, wallEnd, h.footprint)) {
+      const z0mm = at ? at(axisPt(t0)) : flat;
+      const z1mm = at ? at(axisPt(t1)) : flat;
+      plans.push({ hostId: h.hostId, hostType: h.hostType, t0, t1, z0mm, z1mm });
     }
   }
   return plans;
@@ -167,29 +224,92 @@ export function makeWallTopContext(
   return { ...base, resolveHost: makeResolveHost(wallStart, wallEnd, hosts) };
 }
 
+/**
+ * ADR-401 (γ) — mirror του `makeResolveHost` για base-attach: lookup host
+ * **topside** plan κατά `hostId` (μεγαλύτερο span όταν concave → ≥2 spans).
+ */
+export function makeResolveHostTopside(
+  wallStart: Pt2,
+  wallEnd: Pt2,
+  hosts: readonly HostFootprintInput[],
+): (id: string) => HostTopsidePlan | null {
+  const byId = new Map<string, HostTopsidePlan>();
+  for (const plan of buildHostTopsidePlans(wallStart, wallEnd, hosts)) {
+    const existing = byId.get(plan.hostId);
+    if (!existing || plan.t1 - plan.t0 > existing.t1 - existing.t0) {
+      byId.set(plan.hostId, plan);
+    }
+  }
+  return (id: string) => byId.get(id) ?? null;
+}
+
+/**
+ * Convenience: `WallVerticalContext` με `resolveHostTopside` δεμένο στους hosts
+ * (mirror του `makeWallTopContext`). `base` παρέχει τα floor/storey πεδία.
+ */
+export function makeWallBaseContext(
+  wallStart: Pt2,
+  wallEnd: Pt2,
+  hosts: readonly HostFootprintInput[],
+  base: Omit<WallVerticalContext, 'resolveHostTopside'>,
+): WallVerticalContext {
+  return { ...base, resolveHostTopside: makeResolveHostTopside(wallStart, wallEnd, hosts) };
+}
+
 // ─── Entity → HostFootprintInput adapters (§2.3 underside formulas) ───────────
 
 /**
  * Beam → host input. Footprint = `computeBeamGeometry().outline` (SSoT 4-vertex
  * ορθογώνιο). Underside = `topElevation + zOffset − depth` (mirror του
  * `section-intersect.toBeamPlan` bottomY, εδώ σε mm).
+ *
+ * Phase E/(β): όταν η δοκός είναι **κεκλιμένη** (`topElevationEnd` ≠
+ * `topElevation`), η κάτω-παρειά γίνεται **κεκλιμένο επίπεδο** κατά μήκος του
+ * άξονα (`beamUndersideZmmAt` SSoT) → ο attached τοίχος ακολουθεί την κλίση
+ * (z0mm ≠ z1mm). Ίδιο pattern με τον `slabHostInput` (tilted slab/roof).
  */
 export function beamHostInput(beam: BeamEntity): HostFootprintInput {
   const footprint = computeBeamGeometry(beam.params).outline.vertices.map((v) => ({ x: v.x, y: v.y }));
-  const undersideZmm = beam.params.topElevation + (beam.params.zOffset ?? 0) - beam.params.depth;
-  return { hostId: beam.id, hostType: 'beam', footprint, undersideZmm };
+  const zOff = beam.params.zOffset ?? 0;
+  const undersideZmm = beam.params.topElevation + zOff - beam.params.depth;
+  const topsideZmm = beam.params.topElevation + zOff; // ADR-401 (γ) — άνω παρειά (χωρίς −depth).
+  const tilted = isBeamTilted(beam.params);
+  return {
+    hostId: beam.id,
+    hostType: 'beam',
+    footprint,
+    undersideZmm,
+    topsideZmm,
+    ...(tilted ? { undersideZmmAt: (pt) => beamUndersideZmmAt(beam.params, pt) } : {}),
+    ...(tilted ? { topsideZmmAt: (pt) => beamTopZmmAt(beam.params, pt) } : {}),
+  };
 }
 
 /**
  * Slab → host input. Footprint = `params.outline`. Underside =
  * `levelElevation + heightOffsetFromLevel − thickness` (mirror του
  * `section-intersect.toSlabPlan` bottomY).
+ *
+ * Phase E2: όταν η πλάκα/στέγη είναι `geometryType='tilted'`, η κάτω-παρειά
+ * γίνεται **κεκλιμένο επίπεδο** (`slabUndersideZmmAt` SSoT) → ο attached τοίχος
+ * ακολουθεί την κλίση (z0mm ≠ z1mm). `hostType='roof'` όταν `kind==='roof'`
+ * (semantic — ο resolver χειρίζεται beam/slab/roof ομοιόμορφα).
  */
 export function slabHostInput(slab: SlabEntity): HostFootprintInput {
   const footprint = slab.params.outline.vertices.map((v) => ({ x: v.x, y: v.y }));
-  const undersideZmm =
-    slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0) - slab.params.thickness;
-  return { hostId: slab.id, hostType: 'slab', footprint, undersideZmm };
+  const topZmm = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0); // άνω παρειά.
+  const undersideZmm = topZmm - slab.params.thickness;
+  const hostType: HostUndersidePlan['hostType'] = slab.params.kind === 'roof' ? 'roof' : 'slab';
+  const tilted = slab.params.geometryType === 'tilted' && slab.params.slope !== undefined;
+  return {
+    hostId: slab.id,
+    hostType,
+    footprint,
+    undersideZmm,
+    topsideZmm: topZmm,
+    ...(tilted ? { undersideZmmAt: (pt) => slabUndersideZmmAt(slab.params, pt) } : {}),
+    ...(tilted ? { topsideZmmAt: (pt) => slabTopZmmAt(slab.params, pt) } : {}),
+  };
 }
 
 /**

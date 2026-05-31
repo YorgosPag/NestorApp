@@ -35,6 +35,7 @@ import {
   beamHostInput,
   slabHostInput,
   buildHostUndersidePlans,
+  buildHostTopsidePlans,
   type HostFootprintInput,
 } from '../geometry/wall-host-plan-builder';
 import { resolveWallBaseZmm } from '../geometry/wall-top-profile';
@@ -130,6 +131,46 @@ export function findWallsToAutoAttachToHost(
     // (3) Z gate — host πάνω από τη βάση του τοίχου (οροφή/δοκάρι, όχι πάτωμα).
     const baseZmm = resolveWallBaseZmm(e.params, { floorElevationMm: ACTIVE_LEVEL_FLOOR_MM });
     if (hostInput.undersideZmm <= baseZmm + AUTO_ATTACH_Z_GATE_MM) continue;
+    out.push(e.id);
+  }
+  return out;
+}
+
+/**
+ * ADR-401 (γ) — mirror του `findWallsToAutoAttachToHost` για **base** auto-attach.
+ * Όταν δημιουργείται δοκός/πλάκα-θεμέλιο, βρες τους τοίχους που πρέπει να
+ * «κατεβάσουν» τη βάση τους πάνω της. Pure detection — ο καλών εκτελεί
+ * `AttachWallsBaseCommand`.
+ *
+ * Κριτήρια (συντηρητικό auto, ΟΧΙ το πλήρες bidirectional manual attach):
+ *   1. Μόνο τοίχοι με `baseBinding='storey-floor'` (default — δεν πειράζουμε
+ *      ήδη-attached / absolute).
+ *   2. **Κάτοψη**: ο host περνά κάτω από τον άξονα του τοίχου (plan overlap).
+ *   3. **Ύψος (Z gate)**: η ΑΝΩ-παρειά του host είναι **κάτω** από τη βάση του
+ *      τοίχου (θεμέλιο/πεδιλοδοκός από κάτω → η βάση κατεβαίνει να πατήσει).
+ *      Αντίστροφο gate από το top (όπου ο host είναι ΠΑΝΩ από τη βάση).
+ */
+export function findWallsToAutoAttachBaseToHost(
+  host: Entity,
+  entities: readonly Entity[],
+): string[] {
+  let hostInput: HostFootprintInput;
+  if (isBeamEntity(host)) hostInput = beamHostInput(host);
+  else if (isSlabEntity(host)) hostInput = slabHostInput(host);
+  else return [];
+  if (hostInput.topsideZmm === undefined) return [];
+
+  const out: string[] = [];
+  for (const e of entities) {
+    if (!isWallEntity(e)) continue;
+    if (e.params.baseBinding !== 'storey-floor') continue;
+    const start = { x: e.params.start.x, y: e.params.start.y };
+    const end = { x: e.params.end.x, y: e.params.end.y };
+    // (2) plan overlap.
+    if (buildHostTopsidePlans(start, end, [hostInput]).length === 0) continue;
+    // (3) inverted Z gate — host ΚΑΤΩ από τη βάση (θεμέλιο, όχι ταβάνι/ίδιο πάτωμα).
+    const baseZmm = resolveWallBaseZmm(e.params, { floorElevationMm: ACTIVE_LEVEL_FLOOR_MM });
+    if (hostInput.topsideZmm >= baseZmm - AUTO_ATTACH_Z_GATE_MM) continue;
     out.push(e.id);
   }
   return out;

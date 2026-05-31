@@ -71,6 +71,16 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-31 — ADR-401 E.1 `wall-attach` tool pass-through (compliance note)
+
+**Status**: COMPLIANT — no ADR-040 invariants broken.
+
+Το ADR-401 Phase E.1 (manual attach/detach top/base ribbon) πρόσθεσε νέο `wallAttachTool` στο
+`useModifyTools`. Το `CanvasSection.tsx` απλώς **περνά** το tool handle ως pass-through props
+(`wallAttachIsActive`/`handleWallAttachClick`/`handleWallAttachEscape`) στα κατάλληλα handler hooks,
+ακριβώς όπως ο υπάρχων `wallSplitTool`/`bimCopyTool`. **Καμία νέα `useSyncExternalStore` συνδρομή**
+στον orchestrator· τα reads γίνονται event-time μέσω getters. CHECK 6B/6C/6D safe.
+
 ### 2026-05-31 — DxfViewerContent N.7.1 size-split (compliance note)
 
 **Status**: COMPLIANT — no ADR-040 invariants broken.

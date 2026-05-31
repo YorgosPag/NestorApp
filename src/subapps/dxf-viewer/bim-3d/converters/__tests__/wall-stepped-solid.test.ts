@@ -75,7 +75,8 @@ describe('B2 — flat back-compat (χωρίς προφίλ)', () => {
   it('χωρίς wallTop → 1 κομμάτι, επίπεδη κορυφή στο ύψος τοίχου (3.0m)', () => {
     const pieces = computeWallOpeningPieces(makeWall(), [])!;
     expect(pieces).toHaveLength(1);
-    expect(pieces[0].zBotM).toBe(0);
+    expect(pieces[0].zBotAM).toBe(0);
+    expect(pieces[0].zBotBM).toBe(0);
     expect(pieces[0].zTopAM).toBeCloseTo(3.0, TOL);
     expect(pieces[0].zTopBM).toBeCloseTo(3.0, TOL); // flat
   });
@@ -138,7 +139,7 @@ describe('B2 — κεκλιμένη κορυφή (wedge BufferGeometry)', () => 
         { x: 0, y: 0.125, z: 0 }, { x: 5, y: 0.125, z: 0 },
         { x: 5, y: -0.125, z: 0 }, { x: 0, y: -0.125, z: 0 },
       ],
-      zBotM: 0, zTopAM: 2.0, zTopBM: 3.0,
+      zBotAM: 0, zBotBM: 0, zTopAM: 2.0, zTopBM: 3.0,
     })!;
     expect(geo).not.toBeNull();
     const pos = geo.getAttribute('position');
@@ -156,7 +157,7 @@ describe('B2 — κεκλιμένη κορυφή (wedge BufferGeometry)', () => 
       quad: [
         { x: 0, y: 0, z: 0 }, { x: 5, y: 0, z: 0 }, { x: 5, y: 0, z: 0 }, { x: 0, y: 0, z: 0 },
       ],
-      zBotM: 3, zTopAM: 3, zTopBM: 3,
+      zBotAM: 3, zBotBM: 3, zTopAM: 3, zTopBM: 3,
     });
     expect(geo).toBeNull();
   });
@@ -178,7 +179,7 @@ describe('B2 — άνοιγμα + σκαλωτή κορυφή', () => {
       expect(p.zTopBM).toBeLessThanOrEqual(2.5 + 1e-3);
     }
     // Υπάρχει πρέκι πάνω από την πόρτα (zBot = lintel 2.1m, zTop = 2.5m).
-    const lintel = pieces.find((p) => Math.abs(p.zBotM - 2.1) < 1e-2);
+    const lintel = pieces.find((p) => Math.abs(p.zBotAM - 2.1) < 1e-2);
     expect(lintel).toBeDefined();
     expect(lintel!.zTopAM).toBeCloseTo(2.5, 2);
   });
