@@ -40,6 +40,7 @@ import {
   type ColumnGhostOverrides,
 } from '../../bim/columns/column-anchor-ghosts';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
+import { EventBus } from '../../systems/events/EventBus';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -211,6 +212,19 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     },
     [commitColumnFromState],
   );
+
+  // ── ADR-403 — 3D placement bridge ─────────────────────────────────────────
+  // The 3D viewport (`useBim3DColumnPlacement`) raycasts the active floor plane
+  // and emits the scene-units point; route it through the SAME `onCanvasClick`
+  // commit path so 2D and 3D share one column FSM (zero duplication). Ref keeps
+  // the listener stable while always calling the latest callback.
+  const onCanvasClickRef = useRef(onCanvasClick);
+  onCanvasClickRef.current = onCanvasClick;
+  useEffect(() => {
+    return EventBus.on('bim:place-column-3d', ({ point }) => {
+      onCanvasClickRef.current(point);
+    });
+  }, []);
 
   // ── status text (i18n keys returned για caller-resolved translation) ─────
   const getStatusText = useCallback((): string => {

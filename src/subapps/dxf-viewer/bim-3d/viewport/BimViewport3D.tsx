@@ -33,6 +33,7 @@ import { useBimEntityProxyAccessibility } from '../accessibility/use-bim-entity-
 import { useAnimationQueueProcessor } from '../animation/animation-queue-processor';
 import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-interaction';
 import { useBim3DEditInteraction } from '../animation/use-bim3d-edit-interaction';
+import { useBim3DColumnPlacement } from '../placement/use-bim3d-column-placement';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useBim3DStoreSync } from './use-bim3d-store-sync';
 import { useBim3DVgResync } from './use-bim3d-vg-resync';

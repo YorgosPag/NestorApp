@@ -22,8 +22,13 @@ const _ndc = new THREE.Vector2();
  * SSoT client (px) → NDC [-1,1] conversion against a dom element rect.
  * Writes into the module-level `_ndc` and returns it, or null when the rect
  * has zero area (element not laid out yet).
+ *
+ * Exported (ADR-403) so the 3D placement floor-plane raycaster reuses the ONE
+ * client→NDC math instead of re-deriving the rect arithmetic. The returned
+ * vector is the shared module singleton — consume it immediately (e.g. pass to
+ * `raycaster.setFromCamera`, which copies it) before the next call.
  */
-function clientToNdc(domElement: HTMLElement, clientX: number, clientY: number): THREE.Vector2 | null {
+export function clientToNdc(domElement: HTMLElement, clientX: number, clientY: number): THREE.Vector2 | null {
   const rect = domElement.getBoundingClientRect();
   if (rect.width === 0 || rect.height === 0) return null;
   _ndc.set(

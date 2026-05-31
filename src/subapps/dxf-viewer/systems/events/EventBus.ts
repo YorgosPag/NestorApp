@@ -214,6 +214,11 @@ export interface DrawingEventMap {
   // ADR-363 Phase 4 — BIM column params + delete events
   'bim:column-params-updated': { columnId: string };
   'bim:column-delete-requested': { columnId: string };
+  // ADR-403 — 3D column placement: the 3D viewport projected a click onto the
+  // active floor plane and converted it to the active scene units. The 2D
+  // `useColumnTool` listens and runs its existing `onCanvasClick(point)` commit
+  // path (enterprise id + scene append + auto 3D-resync) — no logic duplicated.
+  'bim:place-column-3d': { point: Point2D };
   // ADR-363 Phase 5 — BIM beam params + delete events
   'bim:beam-params-updated': { beamId: string };
   'bim:beam-delete-requested': { beamId: string };

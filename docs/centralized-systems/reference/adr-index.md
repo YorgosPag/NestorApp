@@ -385,6 +385,7 @@
 | **ADR-400** | Viewport State Persistence (DXF Viewer) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-400-viewport-state-persistence.md) |
 | **ADR-401** | BIM Wall Top/Base Constraints + Attach-to-Structural (associative auto-height) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-401-bim-wall-top-base-constraints-attach-to-structural.md) |
 | **ADR-402** | 3D Viewport BIM Element Editing | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-402-3d-bim-element-editing.md) |
+| **ADR-403** | 3D Viewport BIM Element Placement (Column) | ✅ APPROVED | 2026-06-01 | Uncategorized | [📄](./adrs/ADR-403-3d-bim-element-placement.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -754,6 +755,7 @@
 | **ADR-400** | Viewport State Persistence (DXF Viewer) | ✅ APPROVED | [View](./adrs/ADR-400-viewport-state-persistence.md) |
 | **ADR-401** | BIM Wall Top/Base Constraints + Attach-to-Structural (associative auto-height) | ✅ APPROVED | [View](./adrs/ADR-401-bim-wall-top-base-constraints-attach-to-structural.md) |
 | **ADR-402** | 3D Viewport BIM Element Editing | ✅ APPROVED | [View](./adrs/ADR-402-3d-bim-element-editing.md) |
+| **ADR-403** | 3D Viewport BIM Element Placement (Column) | ✅ APPROVED | [View](./adrs/ADR-403-3d-bim-element-placement.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
