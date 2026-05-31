@@ -17,6 +17,8 @@ export const COLUMN_RIBBON_KEYS = {
     material: 'column.params.material',
     /** ADR-363 Phase 8E — catalog profile ID (e.g. 'IPE-300', 'C25/30', or 'custom' sentinel). */
     catalogProfile: 'column.params.catalogProfile',
+    /** ADR-396 v2 Φ6a — ETICS envelope-function override (auto/exterior/interior). */
+    envelopeFunction: 'column.params.envelopeFunction',
   },
   params: {
     /** mm — column width (διάμετρος αν circular). */
@@ -49,7 +51,8 @@ export type ColumnRibbonStringCommandKey =
   | typeof COLUMN_RIBBON_KEYS.stringParams.kind
   | typeof COLUMN_RIBBON_KEYS.stringParams.anchor
   | typeof COLUMN_RIBBON_KEYS.stringParams.material
-  | typeof COLUMN_RIBBON_KEYS.stringParams.catalogProfile;
+  | typeof COLUMN_RIBBON_KEYS.stringParams.catalogProfile
+  | typeof COLUMN_RIBBON_KEYS.stringParams.envelopeFunction;
 
 export const COLUMN_RIBBON_NUMBER_KEYS: readonly ColumnRibbonNumberCommandKey[] = [
   COLUMN_RIBBON_KEYS.params.width,
@@ -66,6 +69,7 @@ export const COLUMN_RIBBON_STRING_KEYS: readonly ColumnRibbonStringCommandKey[] 
   COLUMN_RIBBON_KEYS.stringParams.anchor,
   COLUMN_RIBBON_KEYS.stringParams.material,
   COLUMN_RIBBON_KEYS.stringParams.catalogProfile,
+  COLUMN_RIBBON_KEYS.stringParams.envelopeFunction,
 ];
 
 export const COLUMN_RIBBON_KEYS_ACTIONS = {

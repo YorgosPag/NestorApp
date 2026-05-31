@@ -23,6 +23,7 @@ import {
   COLUMN_RIBBON_BADGE_KEYS,
   COLUMN_RIBBON_VISIBILITY_KEYS,
 } from '../hooks/bridge/column-command-keys';
+import { ENVELOPE_FUNCTION_OPTIONS } from '../hooks/bridge/envelope-function-param';
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
 
 export const COLUMN_CONTEXTUAL_TRIGGER = 'column-selected';
@@ -389,6 +390,31 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.stringParams.material,
                 comboboxWidthPx: 180,
                 options: COLUMN_MATERIAL_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-396 v2 Φ6a — ETICS θερμοπρόσοψη: per-element override της αυτόματης
+      // ταξινόμησης κελύφους (auto / εξωτερικό / εσωτερικό), Revit Wall-Function.
+      id: 'column-envelope',
+      labelKey: 'ribbon.panels.envelopeFunction',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.envelopeFunction',
+                labelKey: 'ribbon.commands.envelopeFunction.section.title',
+                tooltipKey: 'ribbon.commands.envelopeFunction.tooltip',
+                commandKey: COLUMN_RIBBON_KEYS.stringParams.envelopeFunction,
+                comboboxWidthPx: 150,
+                options: ENVELOPE_FUNCTION_OPTIONS,
               },
             },
           ],

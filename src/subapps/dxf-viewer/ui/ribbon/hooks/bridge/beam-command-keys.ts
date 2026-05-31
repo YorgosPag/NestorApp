@@ -18,6 +18,8 @@ export const BEAM_RIBBON_KEYS = {
     sectionType: 'beam.params.sectionType',
     /** ADR-363 Phase 5.5i+ — Free-text profile designation (e.g. "IPE 300"). */
     profileDesignation: 'beam.params.profileDesignation',
+    /** ADR-396 v2 Φ6a — ETICS envelope-function override (auto/exterior/interior). */
+    envelopeFunction: 'beam.params.envelopeFunction',
   },
   params: {
     /** mm — beam cross-section width. */
@@ -39,7 +41,8 @@ export type BeamRibbonStringCommandKey =
   | typeof BEAM_RIBBON_KEYS.stringParams.supportType
   | typeof BEAM_RIBBON_KEYS.stringParams.material
   | typeof BEAM_RIBBON_KEYS.stringParams.sectionType
-  | typeof BEAM_RIBBON_KEYS.stringParams.profileDesignation;
+  | typeof BEAM_RIBBON_KEYS.stringParams.profileDesignation
+  | typeof BEAM_RIBBON_KEYS.stringParams.envelopeFunction;
 
 export const BEAM_RIBBON_NUMBER_KEYS: readonly BeamRibbonNumberCommandKey[] = [
   BEAM_RIBBON_KEYS.params.width,
@@ -53,6 +56,7 @@ export const BEAM_RIBBON_STRING_KEYS: readonly BeamRibbonStringCommandKey[] = [
   BEAM_RIBBON_KEYS.stringParams.material,
   BEAM_RIBBON_KEYS.stringParams.sectionType,
   BEAM_RIBBON_KEYS.stringParams.profileDesignation,
+  BEAM_RIBBON_KEYS.stringParams.envelopeFunction,
 ];
 
 export const BEAM_RIBBON_KEYS_ACTIONS = {

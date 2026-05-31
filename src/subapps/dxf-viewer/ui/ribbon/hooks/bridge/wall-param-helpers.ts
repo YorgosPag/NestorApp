@@ -18,6 +18,10 @@
 
 import type { WallCategory, WallParams } from '../../../../bim/types/wall-types';
 import { WALL_RIBBON_KEYS } from './wall-command-keys';
+import {
+  readEnvelopeFunctionValue,
+  parseEnvelopeFunctionValue,
+} from './envelope-function-param';
 
 const VALID_CATEGORIES: ReadonlySet<WallCategory> = new Set<WallCategory>([
   'exterior',
@@ -47,6 +51,10 @@ export function readWallStringField(
   if (commandKey === WALL_RIBBON_KEYS.stringParams.material) {
     return params.material ?? null;
   }
+  // ADR-396 v2 Φ6a — ETICS override: undefined (απών) → 'auto' sentinel.
+  if (commandKey === WALL_RIBBON_KEYS.stringParams.envelopeFunction) {
+    return readEnvelopeFunctionValue(params.envelopeFunction);
+  }
   return null;
 }
 
@@ -66,6 +74,12 @@ export function patchWallStringParam(
   }
   if (commandKey === WALL_RIBBON_KEYS.stringParams.material) {
     return { ...params, material: value || undefined };
+  }
+  // ADR-396 v2 Φ6a — ETICS override: 'auto' → clear (undefined)· άκυρη τιμή → no-op.
+  if (commandKey === WALL_RIBBON_KEYS.stringParams.envelopeFunction) {
+    const parsed = parseEnvelopeFunctionValue(value);
+    if (!parsed) return null;
+    return { ...params, envelopeFunction: parsed.fn };
   }
   return null;
 }

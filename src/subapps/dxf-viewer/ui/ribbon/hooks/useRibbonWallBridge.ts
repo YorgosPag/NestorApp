@@ -22,6 +22,8 @@
 import { useCallback, useMemo } from 'react';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateWallParamsCommand } from '../../../core/commands/entity-commands/UpdateWallParamsCommand';
+import { DetachWallsCommand, type WallDetachSide } from '../../../core/commands/entity-commands/DetachWallsCommand';
+import { resolveWallAttachTargets } from '../../../bim/walls/wall-attach-pick';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { isWallEntity } from '../../../types/entities';
 import type { WallEntity } from '../../../bim/types/wall-types';
@@ -56,7 +58,7 @@ type LevelManagerLike = Pick<
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId'
+  'getPrimaryId' | 'getSelectedEntityIds'
 >;
 
 export interface UseRibbonWallBridgeProps {
@@ -193,6 +195,29 @@ export function useRibbonWallBridge(
     return false;
   }, [resolveWall]);
 
+  // ADR-401 Phase E.1 — manual detach of ALL selected walls' top/base from their
+  // structural host(s). Restores default binding + clears attach ids (one undo).
+  const handleDetach = useCallback(
+    (side: WallDetachSide): void => {
+      if (!levelManager.currentLevelId) return;
+      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
+      if (!scene) return;
+      const targets = resolveWallAttachTargets(
+        universalSelection.getSelectedEntityIds(),
+        scene.entities,
+      );
+      if (targets.length === 0) return;
+      const sm = new LevelSceneManagerAdapter(
+        levelManager.getLevelScene,
+        levelManager.setLevelScene,
+        levelManager.currentLevelId,
+      );
+      executeCommand(new DetachWallsCommand(side, targets, sm));
+      EventBus.emit('bim:walls-detached', { side, wallIds: targets.map((t) => t.wallId) });
+    },
+    [levelManager, universalSelection, executeCommand],
+  );
+
   const onAction = useCallback(
     (action: string): void => {
       if (action === PSET_RIBBON_ACTION) {
@@ -205,12 +230,14 @@ export function useRibbonWallBridge(
         });
         return;
       }
+      if (action === WALL_RIBBON_KEYS_ACTIONS.detachTop) { handleDetach('top'); return; }
+      if (action === WALL_RIBBON_KEYS_ACTIONS.detachBase) { handleDetach('base'); return; }
       if (action !== WALL_RIBBON_KEYS_ACTIONS.delete) return;
       const wall = resolveWall();
       if (!wall) return;
       EventBus.emit('bim:wall-delete-requested', { wallId: wall.id });
     },
-    [resolveWall, levelManager],
+    [resolveWall, levelManager, handleDetach],
   );
 
   // Memoize return so RibbonCommandProvider deps stay stable (ADR-040 Phase XIX).

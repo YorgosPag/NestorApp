@@ -24,6 +24,7 @@ import {
   WALL_RIBBON_KEYS_ACTIONS,
   WALL_RIBBON_BADGE_KEYS,
 } from '../hooks/bridge/wall-command-keys';
+import { ENVELOPE_FUNCTION_OPTIONS } from '../hooks/bridge/envelope-function-param';
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
 
 export const WALL_CONTEXTUAL_TRIGGER = 'wall-selected';
@@ -169,6 +170,31 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
       ],
     },
     {
+      // ADR-396 v2 Φ6a — ETICS θερμοπρόσοψη: per-element override της αυτόματης
+      // ταξινόμησης κελύφους (auto / εξωτερικό / εσωτερικό), Revit Wall-Function.
+      id: 'wall-envelope',
+      labelKey: 'ribbon.panels.envelopeFunction',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'wall.envelopeFunction',
+                labelKey: 'ribbon.commands.envelopeFunction.section.title',
+                tooltipKey: 'ribbon.commands.envelopeFunction.tooltip',
+                commandKey: WALL_RIBBON_KEYS.stringParams.envelopeFunction,
+                comboboxWidthPx: 150,
+                options: ENVELOPE_FUNCTION_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'wall-ifc',
       labelKey: 'ribbon.panels.ifcProperties',
       rows: [
@@ -184,6 +210,62 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
                 icon: 'ifc-pset',
                 commandKey: 'wall.pset.open',
                 action: PSET_RIBBON_ACTION,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-401 Phase E.1 — manual «Attach/Detach Top/Base to structural» (Revit
+      // parity). Attach buttons activate a pick-host tool (commandKey = ToolType,
+      // no `action`); detach buttons fire a bridge action on the selected walls.
+      id: 'wall-structural-attach',
+      labelKey: 'ribbon.panels.wallStructuralAttach',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'wall.attachTop',
+                labelKey: 'ribbon.commands.wallEditor.attachTop',
+                icon: 'bim-wall-attach-top',
+                commandKey: 'wall-attach-top',
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'wall.attachBase',
+                labelKey: 'ribbon.commands.wallEditor.attachBase',
+                icon: 'bim-wall-attach-base',
+                commandKey: 'wall-attach-base',
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'wall.detachTop',
+                labelKey: 'ribbon.commands.wallEditor.detachTop',
+                icon: 'bim-wall-detach',
+                commandKey: WALL_RIBBON_KEYS_ACTIONS.detachTop,
+                action: WALL_RIBBON_KEYS_ACTIONS.detachTop,
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'wall.detachBase',
+                labelKey: 'ribbon.commands.wallEditor.detachBase',
+                icon: 'bim-wall-detach',
+                commandKey: WALL_RIBBON_KEYS_ACTIONS.detachBase,
+                action: WALL_RIBBON_KEYS_ACTIONS.detachBase,
               },
             },
           ],

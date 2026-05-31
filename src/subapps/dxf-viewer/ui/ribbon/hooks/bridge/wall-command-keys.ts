@@ -16,6 +16,8 @@ export const WALL_RIBBON_KEYS = {
     category: 'wall.params.category',
     /** Material key (rc/masonry/aerated-concrete/gypsum). DNA walls ignore this. */
     material: 'wall.params.material',
+    /** ADR-396 v2 Φ6a — ETICS envelope-function override (auto/exterior/interior). */
+    envelopeFunction: 'wall.params.envelopeFunction',
   },
   params: {
     /** mm — wall height. */
@@ -35,7 +37,8 @@ export type WallRibbonNumberCommandKey =
 
 export type WallRibbonStringCommandKey =
   | typeof WALL_RIBBON_KEYS.stringParams.category
-  | typeof WALL_RIBBON_KEYS.stringParams.material;
+  | typeof WALL_RIBBON_KEYS.stringParams.material
+  | typeof WALL_RIBBON_KEYS.stringParams.envelopeFunction;
 
 export type WallRibbonToggleCommandKey =
   | typeof WALL_RIBBON_KEYS.toggles.flip;
@@ -48,6 +51,7 @@ export const WALL_RIBBON_NUMBER_KEYS: readonly WallRibbonNumberCommandKey[] = [
 export const WALL_RIBBON_STRING_KEYS: readonly WallRibbonStringCommandKey[] = [
   WALL_RIBBON_KEYS.stringParams.category,
   WALL_RIBBON_KEYS.stringParams.material,
+  WALL_RIBBON_KEYS.stringParams.envelopeFunction,
 ];
 
 export const WALL_RIBBON_TOGGLE_KEYS: readonly WallRibbonToggleCommandKey[] = [
@@ -57,6 +61,9 @@ export const WALL_RIBBON_TOGGLE_KEYS: readonly WallRibbonToggleCommandKey[] = [
 export const WALL_RIBBON_KEYS_ACTIONS = {
   close: 'wall.actions.close',
   delete: 'wall.actions.delete',
+  // ADR-401 Phase E.1 — manual detach of wall top/base from a structural host.
+  detachTop: 'wall.actions.detachTop',
+  detachBase: 'wall.actions.detachBase',
 } as const;
 
 const WALL_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

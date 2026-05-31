@@ -22,6 +22,7 @@ import {
   BEAM_RIBBON_KEYS_ACTIONS,
   BEAM_RIBBON_BADGE_KEYS,
 } from '../hooks/bridge/beam-command-keys';
+import { ENVELOPE_FUNCTION_OPTIONS } from '../hooks/bridge/envelope-function-param';
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
 
 export const BEAM_CONTEXTUAL_TRIGGER = 'beam-selected';
@@ -234,6 +235,31 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
                 commandKey: BEAM_RIBBON_KEYS.stringParams.profileDesignation,
                 comboboxWidthPx: 110,
                 options: BEAM_PROFILE_DESIGNATION_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-396 v2 Φ6a — ETICS θερμοπρόσοψη: per-element override της αυτόματης
+      // ταξινόμησης κελύφους (auto / εξωτερικό / εσωτερικό), Revit Wall-Function.
+      id: 'beam-envelope',
+      labelKey: 'ribbon.panels.envelopeFunction',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'beam.envelopeFunction',
+                labelKey: 'ribbon.commands.envelopeFunction.section.title',
+                tooltipKey: 'ribbon.commands.envelopeFunction.tooltip',
+                commandKey: BEAM_RIBBON_KEYS.stringParams.envelopeFunction,
+                comboboxWidthPx: 150,
+                options: ENVELOPE_FUNCTION_OPTIONS,
               },
             },
           ],

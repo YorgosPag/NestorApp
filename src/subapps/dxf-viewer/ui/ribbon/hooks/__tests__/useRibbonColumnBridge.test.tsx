@@ -17,6 +17,7 @@ import {
   COLUMN_RIBBON_KEYS,
   COLUMN_RIBBON_VISIBILITY_KEYS,
 } from '../bridge/column-command-keys';
+import { UpdateColumnParamsCommand } from '../../../../core/commands/entity-commands/UpdateColumnParamsCommand';
 import { columnToolBridgeStore } from '../bridge/column-tool-bridge-store';
 import {
   DEFAULT_I_FLANGE_THICKNESS_MM,
@@ -312,5 +313,79 @@ describe('useRibbonColumnBridge — drawing-mode synthetic resolver', () => {
     );
     expect(result.current.getComboboxState(COLUMN_RIBBON_KEYS.stringParams.kind)).toBe(null);
     expect(result.current.getPanelVisibility(COLUMN_RIBBON_VISIBILITY_KEYS.polygonParams)).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADR-396 v2 Φ6a — ETICS envelopeFunction override
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('useRibbonColumnBridge — envelopeFunction override', () => {
+  const envKey = COLUMN_RIBBON_KEYS.stringParams.envelopeFunction;
+
+  it('reads auto sentinel when params.envelopeFunction is undefined', () => {
+    const { result } = renderHook(() =>
+      useRibbonColumnBridge({
+        levelManager: makeLevelManager(rectColumn),
+        universalSelection: makeSelection('col-rect-1'),
+      }),
+    );
+    expect(result.current.getComboboxState(envKey)?.value).toBe('auto');
+  });
+
+  it('reads the explicit value when set', () => {
+    const overridden = {
+      ...rectColumn,
+      params: { ...rectColumn.params, envelopeFunction: 'interior' as const },
+    };
+    const { result } = renderHook(() =>
+      useRibbonColumnBridge({
+        levelManager: makeLevelManager(overridden),
+        universalSelection: makeSelection('col-rect-1'),
+      }),
+    );
+    expect(result.current.getComboboxState(envKey)?.value).toBe('interior');
+  });
+
+  it('write sets envelopeFunction on the dispatched params', () => {
+    (UpdateColumnParamsCommand as jest.Mock).mockClear();
+    const { result } = renderHook(() =>
+      useRibbonColumnBridge({
+        levelManager: makeLevelManager(rectColumn),
+        universalSelection: makeSelection('col-rect-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(envKey, 'exterior'));
+    const next = (UpdateColumnParamsCommand as jest.Mock).mock.calls[0]?.[1];
+    expect(next.envelopeFunction).toBe('exterior');
+  });
+
+  it("write 'auto' clears the field (undefined)", () => {
+    const overridden = {
+      ...rectColumn,
+      params: { ...rectColumn.params, envelopeFunction: 'exterior' as const },
+    };
+    (UpdateColumnParamsCommand as jest.Mock).mockClear();
+    const { result } = renderHook(() =>
+      useRibbonColumnBridge({
+        levelManager: makeLevelManager(overridden),
+        universalSelection: makeSelection('col-rect-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(envKey, 'auto'));
+    const next = (UpdateColumnParamsCommand as jest.Mock).mock.calls[0]?.[1];
+    expect(next.envelopeFunction).toBeUndefined();
+  });
+
+  it('invalid value is a no-op (no dispatch)', () => {
+    (UpdateColumnParamsCommand as jest.Mock).mockClear();
+    const { result } = renderHook(() =>
+      useRibbonColumnBridge({
+        levelManager: makeLevelManager(rectColumn),
+        universalSelection: makeSelection('col-rect-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(envKey, 'bogus'));
+    expect((UpdateColumnParamsCommand as jest.Mock).mock.calls.length).toBe(0);
   });
 });

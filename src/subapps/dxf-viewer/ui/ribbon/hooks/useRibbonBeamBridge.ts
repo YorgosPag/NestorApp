@@ -38,6 +38,10 @@ import {
   isBeamRibbonKey,
   isBeamRibbonStringKey,
 } from './bridge/beam-command-keys';
+import {
+  readEnvelopeFunctionValue,
+  parseEnvelopeFunctionValue,
+} from './bridge/envelope-function-param';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
 import type {
@@ -133,6 +137,10 @@ export function useRibbonBeamBridge(
     (commandKey: string): RibbonComboboxState | null => {
       const beam = resolveBeam();
       if (!beam) return null;
+      // ADR-396 v2 Φ6a — ETICS override: undefined (απών) → 'auto' sentinel.
+      if (commandKey === BEAM_RIBBON_KEYS.stringParams.envelopeFunction) {
+        return { value: readEnvelopeFunctionValue(beam.params.envelopeFunction), options: [] };
+      }
       if (isBeamRibbonStringKey(commandKey)) {
         const field = STRING_KEY_TO_FIELD[commandKey];
         const raw = beam.params[field];
@@ -160,6 +168,14 @@ export function useRibbonBeamBridge(
     (commandKey: string, value: string): void => {
       const beam = resolveBeam();
       if (!beam) return;
+
+      // ADR-396 v2 Φ6a — ETICS override: 'auto' → clear (undefined)· άκυρη → no-op.
+      if (commandKey === BEAM_RIBBON_KEYS.stringParams.envelopeFunction) {
+        const parsed = parseEnvelopeFunctionValue(value);
+        if (!parsed) return;
+        dispatchParams(beam, { ...beam.params, envelopeFunction: parsed.fn });
+        return;
+      }
 
       if (isBeamRibbonStringKey(commandKey)) {
         const field = STRING_KEY_TO_FIELD[commandKey];

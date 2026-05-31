@@ -48,6 +48,10 @@ import {
   isColumnVisibilityKey,
 } from './bridge/column-command-keys';
 import { columnToolBridgeStore } from './bridge/column-tool-bridge-store';
+import {
+  readEnvelopeFunctionValue,
+  parseEnvelopeFunctionValue,
+} from './bridge/envelope-function-param';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import {
   applyEntityCatalogPreset,
@@ -221,6 +225,10 @@ export function useRibbonColumnBridge(
       const column = resolveColumn();
       // ── SELECTED ENTITY BRANCH ────────────────────────────────────────────
       if (column) {
+        // ADR-396 v2 Φ6a — ETICS override: undefined (απών) → 'auto' sentinel.
+        if (commandKey === COLUMN_RIBBON_KEYS.stringParams.envelopeFunction) {
+          return { value: readEnvelopeFunctionValue(column.params.envelopeFunction), options: [] };
+        }
         if (isColumnRibbonStringKey(commandKey)) {
           const field = STRING_KEY_TO_FIELD[commandKey];
           const raw = column.params[field];
@@ -285,6 +293,13 @@ export function useRibbonColumnBridge(
 
       // ── SELECTED ENTITY BRANCH ────────────────────────────────────────────
       if (column) {
+        // ADR-396 v2 Φ6a — ETICS override: 'auto' → clear (undefined)· άκυρη → no-op.
+        if (commandKey === COLUMN_RIBBON_KEYS.stringParams.envelopeFunction) {
+          const parsed = parseEnvelopeFunctionValue(value);
+          if (!parsed) return;
+          dispatchParams(column, { ...column.params, envelopeFunction: parsed.fn });
+          return;
+        }
         // ADR-363 Phase 8E — catalog preset: batch-write all preset dims + catalogProfile.
         if (commandKey === COLUMN_RIBBON_KEYS.stringParams.catalogProfile) {
           applyEntityCatalogPreset(column, value, dispatchParams);
