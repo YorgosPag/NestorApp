@@ -42,7 +42,10 @@ import {
   getEnvelopeSpec,
   setEnvelopeSpec,
 } from '../../../bim/stores/envelope-spec-store';
-import type { ThermalEnvelopeSpec } from '../../../bim/types/thermal-envelope-types';
+import {
+  parseEnvelopeFunctionValue,
+  type ThermalEnvelopeSpec,
+} from '../../../bim/types/thermal-envelope-types';
 import { saveThermalEnvelopeSpec } from '../../../services/thermal-envelope.service';
 import {
   computeEnvelopeAssignments,
@@ -50,7 +53,20 @@ import {
 } from '../../../bim/services/envelope-element-applicator';
 import { syncEnvelopeBoq } from '../../../bim/services/envelope-boq-sync';
 import { getEnvelopeFloorSlabs } from '../../../bim/stores/envelope-floor-slabs-store';
-import { resolveSlabsAboveForLevel } from '../../../bim/geometry/footprint-region-classifier';
+import {
+  classifyFootprintRegions,
+  resolveSlabsAboveForLevel,
+} from '../../../bim/geometry/footprint-region-classifier';
+import { computeBuildingFootprint } from '../../../bim/geometry/building-footprint';
+import { collectEnvelopeOverrides } from '../../../bim/geometry/envelope-shell';
+import {
+  buildRegionOverrideTargets,
+  buildRegionOverrideCommand,
+  type RegionOverrideTarget,
+} from '../../../bim/services/envelope-region-override.service';
+import { isWallEntity, isColumnEntity, isBeamEntity } from '../../../types/entities';
+import { useCommandHistory } from '../../../core/commands';
+import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { useEnvelopeFloorSlabs } from '../../../hooks/data/useEnvelopeFloorSlabs';
 import { useBim3DEntitiesStore } from '../../../bim-3d/stores/Bim3DEntitiesStore';
 import type { SceneModel } from '../../../types/scene';
@@ -89,8 +105,11 @@ export function ThermalEnvelopeHost(
   useEnvelopeFloorSlabs();
   const { user } = useAuth();
   const companyId = user?.companyId ?? null;
+  const { execute: executeCommand } = useCommandHistory();
   const [open, setOpen] = React.useState(false);
   const [draft, setDraft] = React.useState<ThermalEnvelopeSpec>(buildDefaultSpec);
+  // ADR-396 v2 Φ6b — ανιχνευμένα όρια τρέχοντος ορόφου (per-region override panel).
+  const [regions, setRegions] = React.useState<readonly RegionOverrideTarget[]>([]);
 
   // ADR-396 P8 — κλιματική ζώνη = ρύθμιση κτιρίου (OQ-7a). Resolve από το
   // building doc του τρέχοντος ορόφου· optimistic override μέχρι να γυρίσει
@@ -125,13 +144,45 @@ export function ThermalEnvelopeHost(
     [buildingId, currentLevelId],
   );
 
-  // EventBus listener — ribbon button → init draft από το spec του ορόφου + open.
+  // ADR-396 v2 Φ6b — υπολογίζει τα όρια του τρέχοντος ορόφου (footprint union +
+  // αυτόματη ταξινόμηση αίθριο/δωμάτιο) → στόχοι per-region override. Ίδιο SSoT
+  // με 2D/3D (`computeBuildingFootprint` + `classifyFootprintRegions` + ίδιο
+  // `slabsAbove` με τον applicator). Imperative read — apply = action, όχι render.
+  const recomputeRegions = React.useCallback((): void => {
+    if (!currentLevelId) {
+      setRegions([]);
+      return;
+    }
+    const scene = getLevelScene(currentLevelId);
+    if (!scene) {
+      setRegions([]);
+      return;
+    }
+    const walls = scene.entities.filter(isWallEntity);
+    const columns = scene.entities.filter(isColumnEntity);
+    const beams = scene.entities.filter(isBeamEntity);
+    if (walls.length === 0 && columns.length === 0 && beams.length === 0) {
+      setRegions([]);
+      return;
+    }
+    const level = levels.find((l) => l.id === currentLevelId);
+    const slabsSnap = getEnvelopeFloorSlabs();
+    const slabsAbove = resolveSlabsAboveForLevel(slabsSnap.slabs, slabsSnap.floors, level?.floorId ?? null);
+    const footprint = computeBuildingFootprint(walls, columns, beams);
+    const classification = classifyFootprintRegions(footprint, slabsAbove);
+    const overrides = collectEnvelopeOverrides([...walls, ...columns, ...beams]);
+    setRegions(buildRegionOverrideTargets(classification, overrides));
+  }, [currentLevelId, getLevelScene, levels]);
+
+  // EventBus listener — ribbon button → init draft από το spec του ορόφου +
+  // υπολογισμός ορίων (Φ6b) + open.
   React.useEffect(() => {
     return EventBus.on('bim:thermal-envelope-requested', () => {
       setDraft(getEnvelopeSpec(currentLevelId) ?? buildDefaultSpec());
+      recomputeRegions();
       setOpen(true);
     });
-  }, [currentLevelId]);
+  }, [currentLevelId, recomputeRegions]);
 
   // P7 Part B — per-element apply + BOQ για έναν όροφο (idempotent).
   const applyPerElement = React.useCallback(
@@ -186,6 +237,28 @@ export function ThermalEnvelopeHost(
     applyToLevels(levels.map((l) => l.id));
   }, [levels, applyToLevels]);
 
+  // ADR-396 v2 Φ6b — per-region override: γράφει το `envelopeFunction` σε ΟΛΑ τα
+  // στοιχεία ενός ορίου ως ΕΝΑ undo entry (CompoundCommand → undoable, atomic,
+  // last-write-wins αν στοιχείο ανήκει σε 2 όρια). Re-derive layers/BOQ ΜΟΝΟ αν
+  // υπάρχει ήδη εφαρμοσμένο spec· αλλιώς το override είναι απλώς input για το
+  // επόμενο «Εφαρμογή». markAllCanvasDirty → 2D overlay ξαναϋπολογίζει το κέλυφος.
+  const handleRegionFunctionChange = React.useCallback(
+    (region: RegionOverrideTarget, value: string): void => {
+      if (!currentLevelId) return;
+      const parsed = parseEnvelopeFunctionValue(value);
+      if (!parsed) return;
+      const sm = new LevelSceneManagerAdapter(getLevelScene, setLevelScene, currentLevelId);
+      const command = buildRegionOverrideCommand(region.elementIds, parsed.fn, sm);
+      if (command.size() === 0) return;
+      executeCommand(command);
+      const appliedSpec = getEnvelopeSpec(currentLevelId);
+      if (appliedSpec) applyPerElement(currentLevelId, appliedSpec);
+      markAllCanvasDirty();
+      recomputeRegions();
+    },
+    [currentLevelId, getLevelScene, setLevelScene, executeCommand, applyPerElement, recomputeRegions],
+  );
+
   return (
     <ThermalEnvelopeDialog
       open={open}
@@ -196,6 +269,8 @@ export function ThermalEnvelopeHost(
       onApplyAll={handleApplyAll}
       climateZone={climateZone}
       onClimateZoneChange={handleClimateZoneChange}
+      regions={regions}
+      onRegionFunctionChange={handleRegionFunctionChange}
     />
   );
 }

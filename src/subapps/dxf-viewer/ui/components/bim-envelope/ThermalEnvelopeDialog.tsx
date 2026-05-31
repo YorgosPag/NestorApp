@@ -39,14 +39,22 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  ENVELOPE_FUNCTION_OPTIONS,
   ENVELOPE_MATERIAL_OPTIONS,
   MIN_ENVELOPE_THICKNESS_M,
   isBelowKenakAdvisory,
   mmToClampedMeters,
   metersToMm,
+  readEnvelopeFunctionValue,
   type EnvelopeZoneId,
   type ThermalEnvelopeSpec,
 } from '../../../bim/types/thermal-envelope-types';
+import type {
+  RegionEnvelopeRole,
+} from '../../../bim/geometry/footprint-region-classifier';
+import type {
+  RegionOverrideTarget,
+} from '../../../bim/services/envelope-region-override.service';
 import {
   CLIMATE_ZONE_OPTIONS,
   REFERENCE_BARE_WALL_LAYERS,
@@ -67,9 +75,24 @@ export interface ThermalEnvelopeDialogProps {
   /** Κλιματική ζώνη κτιρίου (ρύθμιση κτιρίου, ADR-396 P8 OQ-7a) — null αν αόριστη. */
   readonly climateZone: ClimateZone | null;
   readonly onClimateZoneChange: (zone: ClimateZone) => void;
+  /**
+   * ADR-396 v2 Φ6b — ανιχνευμένα όρια ορόφου (εξωτερικό/αίθριο/δωμάτιο) για
+   * per-region override του `envelopeFunction`. Υπολογίζεται από τον host.
+   */
+  readonly regions: readonly RegionOverrideTarget[];
+  /** Αλλαγή override ενός ορίου → γράφεται σε ΟΛΑ τα στοιχεία του (last write wins). */
+  readonly onRegionFunctionChange: (region: RegionOverrideTarget, value: string) => void;
 }
 
 const ZONES: ReadonlyArray<EnvelopeZoneId> = ['Z1', 'Z2', 'Z3', 'Z4'];
+
+/** i18n key ανά ρόλο ορίου (region panel Φ6b). */
+const REGION_ROLE_LABEL_KEYS: Readonly<Record<RegionEnvelopeRole, string>> = {
+  exterior: 'ribbon.commands.thermalEnvelope.regions.roles.exterior',
+  atrium: 'ribbon.commands.thermalEnvelope.regions.roles.atrium',
+  'interior-room': 'ribbon.commands.thermalEnvelope.regions.roles.interiorRoom',
+  'open-structure': 'ribbon.commands.thermalEnvelope.regions.roles.openStructure',
+};
 
 /** Format U-value για εμφάνιση (2 δεκαδικά, em-dash αν μη υπολογίσιμο). */
 function formatUValue(u: number): string {
@@ -78,7 +101,20 @@ function formatUValue(u: number): string {
 
 export function ThermalEnvelopeDialog(props: ThermalEnvelopeDialogProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { value, onChange, climateZone, onClimateZoneChange } = props;
+  const { value, onChange, climateZone, onClimateZoneChange, regions, onRegionFunctionChange } = props;
+
+  // Πλήθος ορίων ανά ρόλο — ώστε να μπει αύξων αριθμός μόνο όταν υπάρχουν πολλά
+  // του ίδιου τύπου (π.χ. «Αίθριο 1 / 2», αλλά σκέτο «Εξωτερικό περίγραμμα»).
+  const roleCounts = React.useMemo(() => {
+    const counts = new Map<RegionEnvelopeRole, number>();
+    for (const region of regions) counts.set(region.role, (counts.get(region.role) ?? 0) + 1);
+    return counts;
+  }, [regions]);
+
+  const regionLabel = (region: RegionOverrideTarget): string => {
+    const base = t(REGION_ROLE_LABEL_KEYS[region.role]);
+    return (roleCounts.get(region.role) ?? 0) > 1 ? `${base} ${region.ordinal}` : base;
+  };
 
   // ADR-396 P8 — assembly U-value: τυπικός τοίχος (config) + ETICS μόνωση.
   const uValue = React.useMemo(() => {
@@ -190,6 +226,56 @@ export function ThermalEnvelopeDialog(props: ThermalEnvelopeDialogProps): React.
               </div>
             ))}
           </fieldset>
+        </section>
+
+        <section className="space-y-3 border-t border-[hsl(var(--border))] py-3">
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium">
+              {t('ribbon.commands.thermalEnvelope.regions.title')}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {t('ribbon.commands.thermalEnvelope.regions.description')}
+            </p>
+          </div>
+          {regions.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {t('ribbon.commands.thermalEnvelope.regions.empty')}
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {regions.map((region) => (
+                <li
+                  key={region.regionId}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <Label htmlFor={`envelope-region-${region.regionId}`} className="text-sm">
+                    {regionLabel(region)}
+                  </Label>
+                  <Select
+                    value={
+                      region.currentFn === 'mixed'
+                        ? undefined
+                        : readEnvelopeFunctionValue(region.currentFn)
+                    }
+                    onValueChange={(next) => onRegionFunctionChange(region, next)}
+                  >
+                    <SelectTrigger id={`envelope-region-${region.regionId}`} className="w-44">
+                      <SelectValue
+                        placeholder={t('ribbon.commands.thermalEnvelope.regions.mixed')}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ENVELOPE_FUNCTION_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {t(opt.labelKey)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         <section className="space-y-3 border-t border-[hsl(var(--border))] py-3">

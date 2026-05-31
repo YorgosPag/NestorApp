@@ -81,6 +81,59 @@ export type EnvelopeMaterialId =
  */
 export type EnvelopeFunction = 'exterior' | 'interior';
 
+// ============================================================================
+// ENVELOPE FUNCTION OVERRIDE — UI tri-state SSoT (v2 Φ6a ribbon + Φ6b region panel)
+// ============================================================================
+
+/**
+ * Tri-state dropdown sentinel για «αυτόματη ταξινόμηση» (= πεδίο `envelopeFunction`
+ * **απών**). Το UI (ribbon combobox Φ6a + region panel Φ6b) χρειάζεται μια ρητή τιμή
+ * για το «auto», αλλά το `.strict()` Zod enum ΔΕΝ δέχεται literal `'auto'` →
+ * το `parseEnvelopeFunctionValue('auto')` πάντα επιστρέφει `{ fn: undefined }` (clear).
+ *
+ * Ζει ΕΔΩ (neutral types SSoT, όχι σε ribbon code) ώστε ribbon ΚΑΙ
+ * `ThermalEnvelopeDialog` region panel να μοιράζονται ΕΝΑ ορισμό χωρίς το dialog να
+ * εξαρτάται από ribbon-bridge κώδικα (N.0.2/N.12, Φ6b).
+ */
+export const ENVELOPE_FUNCTION_AUTO = 'auto' as const;
+
+/** Μία επιλογή του tri-state dropdown (κοινή σε ribbon combobox + region panel). */
+export interface EnvelopeFunctionOption {
+  readonly value: typeof ENVELOPE_FUNCTION_AUTO | EnvelopeFunction;
+  /** i18n key στο `dxf-viewer-shell` namespace (N.11, ΟΧΙ defaultValue). */
+  readonly labelKey: string;
+  /** Πάντα `false` — οι ετικέτες είναι i18n keys, όχι literal strings. */
+  readonly isLiteralLabel: false;
+}
+
+/**
+ * Επιλογές tri-state override (auto/exterior/interior). Κοινό SSoT για τα 3
+ * contextual ribbon tabs (Φ6a) ΚΑΙ το per-region panel του dialog (Φ6b).
+ */
+export const ENVELOPE_FUNCTION_OPTIONS: readonly EnvelopeFunctionOption[] = [
+  { value: ENVELOPE_FUNCTION_AUTO, labelKey: 'ribbon.commands.envelopeFunction.auto', isLiteralLabel: false },
+  { value: 'exterior', labelKey: 'ribbon.commands.envelopeFunction.exterior', isLiteralLabel: false },
+  { value: 'interior', labelKey: 'ribbon.commands.envelopeFunction.interior', isLiteralLabel: false },
+] as const;
+
+/** Τρέχουσα τιμή πεδίου → dropdown value (`undefined` = auto → sentinel). */
+export function readEnvelopeFunctionValue(fn: EnvelopeFunction | undefined): string {
+  return fn ?? ENVELOPE_FUNCTION_AUTO;
+}
+
+/**
+ * Dropdown value → επιθυμητή τιμή πεδίου. Επιστρέφει `{ fn }` σε έγκυρη τιμή
+ * (`fn === undefined` σημαίνει «καθάρισε», δηλ. auto), ή `null` σε άκυρη τιμή
+ * (ο caller κάνει no-op). Ποτέ δεν επιστρέφει το literal `'auto'`.
+ */
+export function parseEnvelopeFunctionValue(
+  value: string,
+): { readonly fn: EnvelopeFunction | undefined } | null {
+  if (value === ENVELOPE_FUNCTION_AUTO) return { fn: undefined };
+  if (value === 'exterior' || value === 'interior') return { fn: value };
+  return null;
+}
+
 /**
  * Per-element εξωτερική στρώση μόνωσης (industry-standard, ADR-396 §3 DATA).
  * Προσαρτάται σε column/beam/slab/opening στη Φάση P2.
