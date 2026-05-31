@@ -166,6 +166,22 @@ view-agnostic commands (cascade κουφωμάτων + undo — που το GenA
 ---
 
 ## Changelog
+- **2026-06-02 (Opus 4.8, Developer A SOLO)** — **🐛 FIX (cross-cutting): 3Δ gizmo edit δεν persist-άρει →
+  optimistic revert** (pending commit). Σύμπτωμα: σκάλα → 3Δ move → πάει στη σωστή νέα θέση, μετά **επιστρέφει
+  ακαριαία στην αρχική + αποεπιλέγεται**. **Root cause (ΟΛΟΙ οι BIM τύποι, όχι μόνο σκάλα):** το per-type
+  Firestore persistence (`useStairPersistence`/`useWallPersistence`/…) κάνει auto-save **μόνο** το
+  `primarySelectedId`, και το diff-merge subscription **επαναφέρει** κάθε scene-entity που δεν είναι «dirty»
+  στα remote params. Το `primarySelectedId` προκύπτει από το **`universalSelection`** (2Δ), αλλά η **3Δ
+  επιλογή** (`Selection3DStore`) **δεν** το τροφοδοτούσε → το 3Δ edit δεν μάρκαρε ποτέ dirty → δεν
+  persist-άρει → snapshot revert. (Το Phase A/B «walls work» αφορούσε μόνο «εμφανίζεται gizmo» — η 3Δ
+  persistence δεν είχε επαληθευτεί ποτέ.) **Fix (full SSoT, Revit/ArchiCAD unified-selection model, απόφαση
+  Giorgio «full enterprise + SSoT»):** νέο one-way bridge `use3DSelectionUniversalBridge`
+  (`bim-3d/systems/selection/`) — mirror της 3Δ επιλογής στο `universalSelection.replaceEntitySelection`
+  (BIM entities = `dxf-entity`), με value diff-guard (loop-safe, καμία universal→3Δ φορά) + zustand subscribe
+  (fires μόνο σε αλλαγή 3Δ set → pure-2Δ session ανέπαφο). Mount στο `DxfViewerContent`. **ΜΗΔΕΝ per-type
+  wiring** — το ΥΠΑΡΧΟΝ auto-save των 7 hosts ενεργοποιείται αυτόματα για move/rotate/resize ΟΛΩΝ· bonus:
+  το 2Δ contextual ribbon ακολουθεί την 3Δ επιλογή. Selection3DStore/Bim3DEditStore/gizmo/edit-math 88/88
+  PASS, tsc 0. 🔴 browser verify (σκάλα **+ τοίχος**: move/rotate/resize → μένει στη νέα θέση μετά το release).
 - **2026-06-02 (Opus 4.8, Developer A SOLO)** — **🐛 FIX: η σκάλα δεν μετακινούνταν/περιστρεφόταν με
   το gizmo (unit mismatch)** (pending commit, βγήκε στο browser verify). Σύρσιμο move/rotate gizmo σε
   σκάλα → μετακινούνταν μόνο το gizmo, η σκάλα «έφευγε»/δεν κουνιόταν. **Root cause:** wall/column/beam/

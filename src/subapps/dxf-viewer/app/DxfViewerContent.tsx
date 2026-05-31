@@ -51,6 +51,7 @@ import { DxfViewerTopBar } from './DxfViewerTopBar';
 // ADR-344 Phase 6.E: selection→toolbar + toolbar→CommandHistory always-on bridges
 import { useTextToolbarSelectionSync } from '../ui/text-toolbar/hooks/useTextToolbarSelectionSync';
 import { useTextToolbarCommandBridge } from '../ui/text-toolbar/hooks/useTextToolbarCommandBridge';
+import { use3DSelectionUniversalBridge } from '../bim-3d/systems/selection/use-3d-selection-universal-bridge';
 // ✅ N.7.1 size split — extracted UI-state + ribbon assembly + dialogs modules
 import { useDxfViewerUiState } from './useDxfViewerUiState';
 import { useDxfViewerRibbon } from './useDxfViewerRibbon';
@@ -130,6 +131,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   });
   // ADR-375 Phase C.1 — subscribe to per-company pen table overrides
   useBimPenTableSync();
+  // ADR-402 — unified selection: mirror 3D BIM selection into the universal
+  // selection so 3D gizmo edits engage the existing per-type persistence
+  // auto-save (otherwise the optimistic 3D edit reverts on the next snapshot).
+  use3DSelectionUniversalBridge();
   const { updateGripSettings } = useGripContext();
   // 🏢 ADR-055: Entity Creation Manager
   useEntityCreationManager({
