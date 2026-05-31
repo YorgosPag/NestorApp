@@ -122,6 +122,61 @@ describe('computeColumnResizeParams (ADR-402 Phase B)', () => {
   });
 });
 
+describe('computeColumnResizeParams — top/base vertical grips (ADR-401 F.3)', () => {
+  it("TOP grip (mode 'normal') → height += Δ, base fixed", () => {
+    const p = rect();
+    const next = computeColumnResizeParams(p, drag('y', { x: 0, y: 0 }, 400, 'normal'));
+    expect(next).not.toBeNull();
+    expect(next!.height).toBeCloseTo(p.height + 400, 6);
+    expect(next!.baseOffset).toBe(p.baseOffset);
+  });
+
+  it("BASE grip (mode 'mirror') dragged DOWN (Δ<0) → base lowers, top stays (height grows)", () => {
+    const p = rect();
+    const next = computeColumnResizeParams(p, drag('y', { x: 0, y: 0 }, -300, 'mirror'));
+    expect(next).not.toBeNull();
+    expect(next!.baseOffset).toBeCloseTo(p.baseOffset - 300, 6);
+    expect(next!.height).toBeCloseTo(p.height + 300, 6);
+  });
+
+  it("BASE grip dragged UP (Δ>0) → base rises, top stays (height shrinks)", () => {
+    const p = rect();
+    const next = computeColumnResizeParams(p, drag('y', { x: 0, y: 0 }, 200, 'mirror'));
+    expect(next).not.toBeNull();
+    expect(next!.baseOffset).toBeCloseTo(p.baseOffset + 200, 6);
+    expect(next!.height).toBeCloseTo(p.height - 200, 6);
+  });
+
+  it('BASE grip with zero vertical delta → null', () => {
+    expect(computeColumnResizeParams(rect(), drag('y', { x: 0, y: 0 }, 0, 'mirror'))).toBeNull();
+  });
+
+  it('dragging the TOP grip while top is attached → detaches top first, then edits height', () => {
+    const p = rect({ topBinding: 'attached', attachTopToIds: ['beam-1'] });
+    const next = computeColumnResizeParams(p, drag('y', { x: 0, y: 0 }, 500, 'normal'));
+    expect(next).not.toBeNull();
+    expect(next!.topBinding).not.toBe('attached');
+    expect(next!.attachTopToIds).toBeUndefined();
+    expect(next!.height).toBeCloseTo(p.height + 500, 6);
+  });
+
+  it('dragging the BASE grip while base is attached → detaches base first, then edits baseOffset', () => {
+    const p = rect({ baseBinding: 'attached', attachBaseToIds: ['slab-1'] });
+    const next = computeColumnResizeParams(p, drag('y', { x: 0, y: 0 }, -150, 'mirror'));
+    expect(next).not.toBeNull();
+    expect(next!.baseBinding).not.toBe('attached');
+    expect(next!.attachBaseToIds).toBeUndefined();
+    expect(next!.baseOffset).toBeCloseTo(p.baseOffset - 150, 6);
+  });
+
+  it('TOP grip on a non-attached column leaves the top binding untouched', () => {
+    const p = rect();
+    const next = computeColumnResizeParams(p, drag('y', { x: 0, y: 0 }, 100, 'normal'));
+    expect(next!.topBinding).toBe(p.topBinding);
+    expect(next!.attachTopToIds).toBe(p.attachTopToIds);
+  });
+});
+
 describe('computeWallResizeParams (ADR-402 Phase B)', () => {
   it('plan resize perpendicular to the axis → thickness += 2·perp (relative)', () => {
     const p = wallAlongX();

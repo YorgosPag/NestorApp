@@ -22,6 +22,18 @@ import { BimGizmoDragBridge, type BridgeOutcome } from './bim-gizmo-drag-bridge'
 import type { SnapFn } from './bim3d-snap-bridge';
 import type { BimGizmoOverlay } from './bim-gizmo-overlay';
 
+type ResizeOutcome = Extract<BridgeOutcome, { kind: 'resize' }>;
+
+/**
+ * Live snapshot of the in-progress drag, for the entity follow preview (ADR-402).
+ * Move/rotate map to a rigid mesh transform; resize carries the resize outcome so
+ * the handler can rebuild the single entity's geometry via the converter SSoT.
+ */
+export type GizmoLivePreview =
+  | { readonly kind: 'move'; readonly translation: THREE.Vector3 }
+  | { readonly kind: 'rotate'; readonly pivot: THREE.Vector3; readonly angleRad: number }
+  | { readonly kind: 'resize'; readonly outcome: ResizeOutcome };
+
 export class BimGizmoController {
   private readonly overlay: BimGizmoOverlay;
   private readonly bridge = new BimGizmoDragBridge();
@@ -92,6 +104,25 @@ export class BimGizmoController {
       else this.overlay.hideSnapMarker();
     }
     return changed;
+  }
+
+  /**
+   * Live preview of the in-progress drag (ADR-402) — the entity follow. Move/rotate
+   * yield a rigid transform; resize yields the live resize outcome (peek — does NOT
+   * end the drag). Null when idle or for a not-yet-meaningful drag.
+   */
+  getLivePreview(): GizmoLivePreview | null {
+    const kind = this.bridge.getActiveConstraint()?.kind;
+    if (!kind) return null;
+    if (kind === 'rotate') {
+      return { kind: 'rotate', pivot: this.startAnchor.clone(), angleRad: this.bridge.getLiveRotationRad() };
+    }
+    if (kind === 'resize') {
+      const outcome = this.bridge.getOutcome();
+      return outcome.kind === 'resize' ? { kind: 'resize', outcome } : null;
+    }
+    // axis / plane / free → a rigid translation in world space.
+    return { kind: 'move', translation: this.bridge.getLiveTranslation() };
   }
 
   /** Finish the drag and return the command-ready outcome (caller dispatches it). */

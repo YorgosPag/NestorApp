@@ -23,6 +23,7 @@ import { useEffect, useRef, type MutableRefObject } from 'react';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { BimGizmoOverlay, activeHandlesFor } from '../gizmo/bim-gizmo-overlay';
 import { BimGizmoController } from '../gizmo/bim-gizmo-controller';
+import { Bim3DEditLivePreview } from './bim3d-edit-live-preview';
 import {
   useBim3DEditStore,
   selectEditToolActive,
@@ -57,8 +58,9 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
 
     const overlay = new BimGizmoOverlay(manager.scene);
     const controller = new BimGizmoController(overlay);
+    const preview = new Bim3DEditLivePreview();
     const ctx: EditInteractionCtx = {
-      manager, canvasEl, overlay, controller,
+      manager, canvasEl, overlay, controller, preview,
       getLevels: () => levelsRef.current,
     };
     let activeAbort: AbortController | null = null;
@@ -68,6 +70,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       activeAbort = null;
       if (controller.isDragging()) {
         controller.cancelDrag();
+        preview.reset(); // ADR-402 — abort mid-drag: restore the live-preview meshes.
         manager.viewport.setControlsEnabled(true);
       }
     };

@@ -44,7 +44,8 @@ const BASE_HANDLES: readonly GizmoHandleId[] = [
  * aligned; the per-type grip math projects onto the entity's local frame, so both
  * plan handles are offered and the perpendicular one drives the dimension). The
  * mapping per type (Revit-standard, see `bim3d-resize-bridge`):
- *   - column → X width, Z depth, Y height
+ *   - column → X width, Z depth, Y-top height + Y-base offset (ADR-401 F.3 — same
+ *              top/base octahedra as the wall)
  *   - wall   → X/Z thickness, Y-top height + Y-base offset (ADR-401 E.3 — the top
  *              octahedron edits HEIGHT, the base octahedron below it edits the base
  *              offset; length stays an endpoint-grip edit)
@@ -52,8 +53,8 @@ const BASE_HANDLES: readonly GizmoHandleId[] = [
  *   - slab   → Y thickness only (footprint is edited per-vertex in 2D)
  */
 const RESIZE_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {
-  column: ['resize-x', 'resize-z', 'resize-y'],
-  // `resize-m-y` = the second (base) vertical grip below the centroid — wall only.
+  // `resize-m-y` = the second (base) vertical grip below the centroid (top + base).
+  column: ['resize-x', 'resize-z', 'resize-y', 'resize-m-y'],
   wall: ['resize-x', 'resize-z', 'resize-y', 'resize-m-y'],
   beam: ['resize-x', 'resize-z', 'resize-y'],
   slab: ['resize-y'],

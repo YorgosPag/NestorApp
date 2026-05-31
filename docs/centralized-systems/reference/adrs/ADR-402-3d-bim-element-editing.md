@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | 🟢 ACCEPTED — Sub-Phase 0+1+2 DONE · GenArc gizmo port **Phase A** DONE · **Phase B resize (column/wall/beam/slab + axis-Y)** DONE · **Phase B snap-during-drag (move + horizontal resize)** DONE · **Phase C multi-select 3Δ (centroid move/rotate + snap-from-all)** DONE · **Sub-Phase 1 stair gizmo resize (width / run, gizmo handles)** DONE (pending commit, 🔴 browser verify) |
+| Status | 🟢 ACCEPTED — Sub-Phase 0+1+2 DONE · GenArc gizmo port **Phase A** DONE · **Phase B resize (column/wall/beam/slab + axis-Y)** DONE · **Phase B snap-during-drag (move + horizontal resize)** DONE · **Phase C multi-select 3Δ (centroid move/rotate + snap-from-all)** DONE · **Sub-Phase 1 stair gizmo resize (width / run, gizmo handles)** DONE · **Live preview (move/rotate/resize — η οντότητα ακολουθεί ζωντανά)** DONE (pending commit, 🔴 browser verify) |
 | Date | 2026-05-31 |
 | Owner | Giorgio / Claude (Opus) |
 | Related | ADR-366 (3D viewport), ADR-363 (BIM grips/commands), ADR-371 (Properties pipeline), ADR-040 (micro-leaf), ADR-188 (rotation), GenArc ADR-022 (gizmo system) |
@@ -43,6 +43,7 @@ subscription → resyncBimScene`). Το `cascadeHostedOpeningsForWalls` ζει *
 | **GenArc Port A** | **Persistent auto-on-selection gizmo: Move (axis/plane/free) + Rotate-Y** | ✅ **DONE** (αυτό το έγγραφο) |
 | **GenArc Port B** | **Resize handles (column/wall/beam/slab) + κατακόρυφος άξονας-Y + snap-during-drag (move + οριζόντιο resize)** | ✅ **DONE** |
 | **GenArc Port C** | **Multi-select 3Δ (Shift+click → centroid move/rotate + snap-from-all, ΕΝΑ undo)** | ✅ **DONE** (resize σε multi εκτός scope) |
+| **Live preview** | **Η οντότητα ακολουθεί ζωντανά τον κέρσορα κατά το drag (move/κάθετο/rotate/resize) — όχι «πήδημα» στο release** | ✅ **DONE** |
 
 ### GenArc Gizmo Port — Phase A (απόφαση Giorgio 2026-05-31)
 
@@ -119,6 +120,38 @@ view-agnostic commands (cascade κουφωμάτων + undo — που το GenA
 - **Limitations:** cross-floor multi-move χρησιμοποιεί το level του primary (same-floor = η κοινή
   περίπτωση, πλήρως λειτουργική)· snap exclude μόνο primary· centroid resize follow-up.
 
+### Live preview — η οντότητα ακολουθεί ζωντανά (απόφαση Giorgio 2026-06-01)
+**Πρόβλημα:** κατά το drag κινούνταν **μόνο το gizmo overlay**· το ίδιο το mesh έμενε ακίνητο και
+«πηδούσε» στη νέα θέση μόνο στο `pointerup` (single-commit-on-release). Ο Giorgio ζήτησε η **ίδια η
+οντότητα** να ακολουθεί ζωντανά (Revit/Forge), **χωρίς** να σπάσει το single-commit (ΕΝΑ undo step).
+
+**Στρατηγική hybrid (Q1: «να κινείται το ίδιο το αντικείμενο», Q2: FULL):**
+- **Move / κάθετο move / Rotate → rigid live mesh transform.** Κάθε BIM οντότητα = **direct child** του
+  `bimLayer.group` με `userData['bimId']` (η σκάλα = πολλά children)· το group είναι identity → τα
+  `position`/`quaternion` είναι ουσιαστικά world, οπότε world-space translate/rotate εφαρμόζεται απευθείας.
+  Για την επιλεγμένη οντότητα, rigid translate/rotate = **ΑΚΡΙΒΩΣ** ό,τι παράγει η εντολή. **DXF CCW
+  περιστροφή κατά θ ≡ world περιστροφή περί +Y κατά θ** (αφού `worldToDxfPlan`: world z = −DXF y) → το live
+  rotate ταυτίζεται με το `RotateEntityCommand`.
+- **Resize → per-frame geometry rebuild της ΜΙΑΣ οντότητας** μέσω των ΥΠΑΡΧΟΝΤΩΝ public converters
+  (`wallToMesh`/`columnToMesh`/`beamToMesh`/`slabToMesh`/`stairToMeshes`) + των ΥΠΑΡΧΟΝΤΩΝ
+  `compute*ResizeParams` (`bim3d-resize-bridge`) + `compute*Geometry`. Ένα transform δεν εκφράζει αλλαγή
+  διάστασης· μόνο rebuild το κάνει σωστά (ghost === commit, με miters/openings της ίδιας οντότητας).
+- **Lifecycle:** pointerdown→`captureTransform`/`captureResize`· pointermove→`applyMove`/`applyRotate`/
+  `applyResize` + `markSceneDirty()` (ΟΧΙ νέο rAF — UnifiedFrameScheduler, ADR-040/366)· pointerup
+  **committed**→`commit()` (drop refs· το resync αντικαθιστά τα meshes — μηδέν πήδημα γιατί το preview ήδη
+  δείχνει το τελικό)· pointerup **no-op** ή **Esc/cancel**→`reset()` (restore originals, κανένα command).
+- **Units:** το move δουλεύει σε **world** (`getLiveTranslation` ήδη snap-corrected) — καμία mm/drawing-unit
+  μετατροπή (αυτές αφορούν μόνο την εντολή στο release).
+- **Αρχεία:** ΝΕΑ `bim3d-edit-live-preview.ts` (pure THREE class: capture/applyMove/applyRotate/applyResize/
+  commit/reset) + `bim3d-preview-rebuild.ts` (resize rebuild via converters + `resolveEntityBuilding` base
+  elevation· διαβάζει τα ΙΔΙΑ canonical sources με το `BimSceneLayer` **χωρίς** να το αγγίζει)· MOD
+  `bim-gizmo-drag-bridge` (`getLiveRotationRad`), `bim-gizmo-controller` (`getLivePreview` peek),
+  `bim3d-edit-interaction-handlers` (capture/apply/commit-vs-reset· `dispatchOutcome` → boolean),
+  `use-bim3d-edit-interaction` (instantiate + teardown reset).
+- **Limitations (διορθώνονται στο release resync):** γειτονικά miters τοίχων & hosted κουφώματα ΔΕΝ
+  ακολουθούν live σε move/rotate (Revit-parity· είναι άλλες οντότητες)· resize-live μόνο σε single-floor
+  scope (`floor3DScope='all'`→commit-on-release)· attached top/base profiles flat κατά το resize drag.
+
 ---
 
 ## SSoT reuse (μηδέν διπλά μαθηματικά/εντολές)
@@ -166,6 +199,7 @@ view-agnostic commands (cascade κουφωμάτων + undo — που το GenA
 ---
 
 ## Changelog
+- **2026-06-01 (Opus 4.8, Developer A SOLO)** — **Live preview: η οντότητα ακολουθεί ζωντανά τον κέρσορα κατά το drag** (pending commit, 🔴 browser verify). Πρόβλημα Giorgio: κατά το σύρσιμο βέλους gizmo (μετακίνηση/περιστροφή/κάθετο/resize) κινούνταν **μόνο το gizmo overlay**· το ίδιο το mesh έμενε ακίνητο και «πηδούσε» στη νέα θέση μόνο στο `pointerup`. Απαντήσεις Giorgio: (Q1) **να κινείται το ίδιο το αντικείμενο** (Revit/Forge, όχι ghost clone)· (Q2) **FULL** (όλες οι κινήσεις). **Στρατηγική hybrid:** (α) **move/κάθετο/rotate → rigid live mesh transform** — κάθε οντότητα είναι direct child του `bimLayer.group` (identity → world space), οπότε world translate/rotate εφαρμόζεται απευθείας στα `position`/`quaternion`· για την επιλεγμένη οντότητα ταυτίζεται ΑΚΡΙΒΩΣ με την εντολή (DXF CCW θ ≡ world +Y θ, αφού world z = −DXF y). (β) **resize → per-frame geometry rebuild της ΜΙΑΣ οντότητας** μέσω των ΥΠΑΡΧΟΝΤΩΝ converters (`wallToMesh`/…) + `compute*ResizeParams` + `compute*Geometry` (ghost === commit). **Lifecycle:** capture@down → apply@move (`markSceneDirty`, ΟΧΙ νέο rAF) → committed@up `commit()` (το resync αντικαθιστά, μηδέν πήδημα) / no-op ή Esc `reset()` (restore, κανένα command)· `dispatchOutcome` επιστρέφει πλέον boolean (committed). **Αρχεία:** ΝΕΑ `bim3d-edit-live-preview.ts` (pure THREE) + `bim3d-preview-rebuild.ts` (resize via converters, διαβάζει `Bim3DEntitiesStore` + `resolveEntityBuilding` — **δεν αγγίζει** `BimSceneLayer`)· MOD `bim-gizmo-drag-bridge` (`getLiveRotationRad`), `bim-gizmo-controller` (`getLivePreview` peek), `bim3d-edit-interaction-handlers`, `use-bim3d-edit-interaction`. Tests: ΝΕΟ `bim3d-edit-live-preview.test.ts` (move/rotate/reset/commit/resize-swap) + `bim-gizmo-drag-bridge` (`getLiveRotationRad`) → 25/25 (live-preview+drag-bridge) PASS, tsc 0. **Limitations:** miters γειτόνων & hosted κουφώματα δεν ακολουθούν live σε move/rotate (διόρθωση στο release resync, Revit-parity)· resize-live μόνο single-floor scope· attached top/base profiles flat κατά το resize drag.
 - **2026-06-02 (Opus 4.8, Developer A SOLO)** — **Κάθετο βελάκι ΜΕΤΑΚΙΝΗΣΗΣ (axis-Y move) σε ΟΛΑ τα στοιχεία** (pending commit, 🔴 browser verify). Πρόβλημα Giorgio: το gizmo είχε μόνο 2 **οριζόντια** βελάκια μετακίνησης (X κόκκινο, Z μπλε)· έλειπε το **κάθετο** (Y πράσινο = πάνω-κάτω). Σύγχυση ονομασίας: ο «άξονας Z» (κάθετος, AutoCAD) = **Y** στο three.js engine. Το `axis-y` ήταν εξ αρχής εκτός `BASE_HANDLES` (σκόπιμα, Phase A). **Υλοποίηση (mirror του resize-y precedent):** (1) `bim-gizmo-overlay.ts` → `axis-y` στα `BASE_HANDLES` (το βέλος+hitbox υπήρχαν ήδη στη γεωμετρία). (2) `bim-gizmo-drag-bridge.ts` → `BridgeOutcome.move` απέκτησε `deltaUpMm` (reuse `worldUpDeltaToMm`)· none-guard + snap-exclusion για axis-Y (η κάθετη μετακίνηση δεν snap-άρει plan, mirror resize-Y). (3) ΝΕΟ SSoT `bim3d-vertical-move.ts` (sibling του `bim3d-resize-bridge`): pure per-type elevation patch — wall/column `baseOffset`, beam `topElevation`, slab `levelElevation`, stair `basePoint.z` (×`mmToEntityUnitFactor`, drawing-units)· όλα +up (ADR-369). (4) `bim3d-edit-interaction-handlers.ts` → move arm route σε `buildVerticalMoveCommand` όταν `deltaUpMm≠0`· single → `Update*ParamsCommand`, multi → `CompoundCommand` (ΕΝΑ undo, μικτοί τύποι). `EditCommand` union += `CompoundCommand` + `UpdateStairParamsCommand` (έλειπε → tsc latent fix)· dispatch guard για optional `validate()`. (5) **Converter wiring (κρίσιμο):** ο **flat** path `wallToMesh`/`columnToMesh` αγνοούσε το `baseOffset` στο `mesh.position.y` → η κάθετη μετακίνηση τοίχου/κολώνας δεν φαινόταν· τώρα `(floorElevationMm + baseOffset)·MM_TO_M` ΜΟΝΟ στο flat path (το profiled/attached path ψήνει ήδη το baseOffset → αποφυγή διπλομέτρησης). beam/slab/stair αντιδρούσαν ήδη. Tests: ΝΕΑ `bim3d-vertical-move.test.ts` (12) + `wall-column-base-offset-y.test.ts` (5)· +`bim-gizmo-overlay` (axis-Y σε όλους) +`bim-gizmo-drag-bridge` (vertical move outcome). 103/103 (gizmo+converters+vertical) PASS, tsc 0 (όλη η εφαρμογή). **Documented limitations:** attached τοίχος → vertical move γράφει baseOffset (resolver μπορεί να το override-άρει· πιθανό follow-up «drag breaks attach»)· mixed-unit multi με σκάλα = OK (per-entity factor, σε αντίθεση με planar `MoveMultipleEntitiesCommand`).
 - **2026-05-31 (Opus 4.8)** — **Wall axis-Y resize → ΔΥΟ grips (ADR-401 E.3 consumer)** (pending commit, 🔴 browser verify). Το `RESIZE_HANDLES_BY_TYPE.wall` axis-Y έσπασε σε **top** (`resize-y`, +Y → `height`) + **base** (`resize-m-y`, −Y → `baseOffset`, με αντίστροφο `height` ώστε η κορυφή να μένει σταθερή). Αξιοποιεί την υπάρχουσα `GizmoResizeMode 'normal'|'mirror'` (ήδη ρέει gizmo-types→parseHandleId→handleToConstraint→drag-bridge→`ResizeDragMm`) — **μηδέν νέο taxonomy**. `gizmo-geometry.ts`: δεύτερο Y octahedron @`−RESIZE_HANDLE_OFFSET` (όλα τα hitboxes του πάνω→`resize-y`, του κάτω→`resize-m-y`· X/Z αμετάβλητα). `bim3d-resize-bridge.computeWallResizeParams`: branch ανά `mode` + detach-on-drag (`detachWallSide` SSoT, Revit «edit breaks attach») — λεπτομέρειες στο **ADR-401 §5/§8**. Μόνο ο τοίχος (beam/column/slab κρατούν single vertical handle). Tests: `bim3d-resize-bridge.test.ts` +7, `bim-gizmo-overlay.test.ts` +2, `gizmo-hit-test` 3/3 αμετάβλητο, tsc 0.
 - **2026-06-02 (Opus 4.8, Developer A SOLO)** — **🐛 FIX (cross-cutting): 3Δ gizmo edit δεν persist-άρει →

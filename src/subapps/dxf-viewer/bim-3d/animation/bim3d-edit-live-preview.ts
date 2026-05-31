@@ -1,0 +1,170 @@
+'use client';
+
+/**
+ * bim3d-edit-live-preview.ts — live "the entity follows the cursor" preview for
+ * the 3D BIM gizmo drag (ADR-402, live move/rotate/resize preview).
+ *
+ * Before this, the gizmo overlay followed the cursor during a drag but the entity
+ * itself stayed put and "jumped" to the new place only on pointer-up (single-
+ * commit-on-release). Giorgio asked the entity to follow live (Revit/Forge style).
+ *
+ * Two kinds of preview, both honouring single-commit-on-release (the real command
+ * still fires once on release; this only changes what the user SEES mid-drag):
+ *
+ *   • RIGID transform (move / vertical move / rotate) — mutate the edited entities'
+ *     top-level meshes (`position` / `quaternion`) directly. Each BIM entity is a
+ *     DIRECT child of `bimLayer.group` tagged with `userData['bimId']` (a stair is
+ *     several children sharing the id); the group sits at identity, so the meshes
+ *     live in world space and a world-space translate/rotate applies as-is. For the
+ *     selected entity this is EXACTLY what the command produces (walls/columns
+ *     translate & rotate rigidly), so ghost === commit for that entity.
+ *
+ *   • RESIZE — a dimension change is not a transform, so the caller rebuilds the
+ *     single entity's geometry via the converter SSoT and hands the fresh object
+ *     here; we hide the originals and swap it in. This object keeps THIS class pure
+ *     (THREE only, no converter import → trivially testable).
+ *
+ * Lifecycle (driven by the interaction handlers):
+ *   pointerdown → captureTransform / captureResize
+ *   pointermove → applyMove / applyRotate / applyResize   (+ manager.markSceneDirty)
+ *   pointerup,  committed   → commit()  (drop refs; the command's resync replaces the meshes)
+ *   pointerup,  no command  → reset()   (restore; no resync is coming)
+ *   pointercancel / Esc     → reset()
+ *
+ * Render happens through the shared rAF SSoT (markSceneDirty + UnifiedFrameScheduler,
+ * ADR-040/366) — this class never spins its own requestAnimationFrame.
+ */
+
+import * as THREE from 'three';
+
+interface CapturedTransform {
+  readonly obj: THREE.Object3D;
+  readonly position: THREE.Vector3;
+  readonly quaternion: THREE.Quaternion;
+}
+
+const UP = new THREE.Vector3(0, 1, 0);
+
+export class Bim3DEditLivePreview {
+  /** Originals captured for a rigid move/rotate preview (restored on cancel). */
+  private transforms: CapturedTransform[] = [];
+  /** Originals hidden for a resize preview (un-hidden on cancel). */
+  private hidden: THREE.Object3D[] = [];
+  /** The swapped-in resize preview object (removed + disposed on cancel). */
+  private previewObject: THREE.Object3D | null = null;
+  /** The `bimLayer.group` the resize preview is parented to. */
+  private parent: THREE.Object3D | null = null;
+
+  /** True while a preview is in effect (capture done, not yet committed/reset). */
+  get isActive(): boolean {
+    return this.transforms.length > 0 || this.hidden.length > 0 || this.previewObject !== null;
+  }
+
+  /**
+   * Capture the edited entities' top-level meshes for a rigid move/rotate preview.
+   * Scans the DIRECT children of `group` (one per entity, several for a stair) and
+   * stores each one's original world transform.
+   */
+  captureTransform(group: THREE.Object3D, ids: ReadonlySet<string>): void {
+    this.reset();
+    for (const child of group.children) {
+      const id = child.userData['bimId'] as string | undefined;
+      if (id !== undefined && ids.has(id)) {
+        this.transforms.push({
+          obj: child,
+          position: child.position.clone(),
+          quaternion: child.quaternion.clone(),
+        });
+      }
+    }
+  }
+
+  /** Live move: each captured mesh sits at `original + translation` (world space). */
+  applyMove(translation: THREE.Vector3): void {
+    for (const t of this.transforms) t.obj.position.copy(t.position).add(translation);
+  }
+
+  /**
+   * Live rotate about the world-Y axis through `pivot` by `angleRad`. Rotates both
+   * the position (orbit around the pivot) and the orientation of every captured mesh.
+   * DXF-plan CCW rotation maps 1:1 to world +Y rotation (see coordinate-transforms),
+   * so this matches the `RotateEntityCommand` result on release.
+   */
+  applyRotate(pivot: THREE.Vector3, angleRad: number): void {
+    const q = new THREE.Quaternion().setFromAxisAngle(UP, angleRad);
+    for (const t of this.transforms) {
+      t.obj.position.copy(t.position).sub(pivot).applyQuaternion(q).add(pivot);
+      t.obj.quaternion.copy(q).multiply(t.quaternion);
+    }
+  }
+
+  /**
+   * Begin a resize preview: remember (and prepare to hide) the original direct
+   * children that render `entityId` under `group`. The fresh geometry is supplied
+   * per-frame to `applyResize` by the caller (built via the converter SSoT).
+   */
+  captureResize(group: THREE.Object3D, entityId: string): void {
+    this.reset();
+    this.parent = group;
+    for (const child of group.children) {
+      if ((child.userData['bimId'] as string | undefined) === entityId) this.hidden.push(child);
+    }
+  }
+
+  /**
+   * Swap in the freshly rebuilt resize object: hide the originals, replace the
+   * previous preview object (disposing it). A `null` object (no-op resize frame)
+   * leaves the last preview standing.
+   */
+  applyResize(rebuilt: THREE.Object3D | null): void {
+    if (!rebuilt || !this.parent) return;
+    for (const o of this.hidden) o.visible = false;
+    if (this.previewObject) {
+      this.parent.remove(this.previewObject);
+      disposeObject(this.previewObject);
+    }
+    this.previewObject = rebuilt;
+    this.parent.add(rebuilt);
+  }
+
+  /**
+   * Commit: the real command ran, so its scene re-sync will rebuild every mesh.
+   * Drop the captured refs WITHOUT touching the scene — the preview already shows
+   * the final result, so there is no jump (the rebuilt meshes replace it).
+   */
+  commit(): void {
+    this.clearState();
+  }
+
+  /**
+   * Cancel / no-op release: restore everything to its pre-drag state. Rigid
+   * transforms snap back to the captured pose; hidden originals re-appear; the
+   * resize preview object is removed and disposed. No command runs.
+   */
+  reset(): void {
+    for (const t of this.transforms) {
+      t.obj.position.copy(t.position);
+      t.obj.quaternion.copy(t.quaternion);
+    }
+    for (const o of this.hidden) o.visible = true;
+    if (this.previewObject) {
+      this.parent?.remove(this.previewObject);
+      disposeObject(this.previewObject);
+    }
+    this.clearState();
+  }
+
+  private clearState(): void {
+    this.transforms = [];
+    this.hidden = [];
+    this.previewObject = null;
+    this.parent = null;
+  }
+}
+
+/** Recursively dispose a temporary preview object's geometries (materials are shared SSoT). */
+function disposeObject(obj: THREE.Object3D): void {
+  obj.traverse((o) => {
+    if (o instanceof THREE.Mesh) o.geometry.dispose();
+  });
+}

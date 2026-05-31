@@ -205,9 +205,9 @@ export function createGizmoMeshes(): GizmoMeshSet {
     root.add(visual, hitbox);
   }
 
-  // --- Wall BASE grip: a second Y resize octahedron BELOW the centroid (ADR-401 E.3) -
-  // The top Y handle (above) edits the wall HEIGHT (top face); this one edits the
-  // BASE offset (bottom face). Only walls activate `resize-m-y`
+  // --- BASE grip: a second Y resize octahedron BELOW the centroid (ADR-401 E.3/F.3) -
+  // The top Y handle (above) edits the HEIGHT (top face); this one edits the
+  // BASE offset (bottom face). Walls + columns activate `resize-m-y`
   // (see `RESIZE_HANDLES_BY_TYPE`), so it stays hidden for other element types.
   {
     const color = RESIZE_IDLE_COLORS['y'];

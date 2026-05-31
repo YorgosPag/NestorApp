@@ -93,6 +93,14 @@ export class BimGizmoDragBridge {
   }
 
   /**
+   * Signed rotation (radians, about world +Y) accumulated this drag — drives the
+   * live entity rotate preview (ADR-402 live preview). 0 for a non-rotate drag.
+   */
+  getLiveRotationRad(): number {
+    return this.rotationRad;
+  }
+
+  /**
    * Begin a constrained drag. `anchorWorld` is the gizmo origin (entity world
    * centre). Returns false for unsupported constraints (rotate ray parallel).
    */

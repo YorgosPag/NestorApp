@@ -215,4 +215,23 @@ describe('BimGizmoDragBridge — rotate-Y', () => {
     expect(out.pivotDxf.y).toBeCloseTo(0, 6);
     expect(out.angleDeg).toBeCloseTo(-90, 3);
   });
+
+  it('getLiveRotationRad tracks the in-progress rotate angle (live preview, ADR-402)', () => {
+    const b = new BimGizmoDragBridge();
+    expect(b.getLiveRotationRad()).toBe(0);
+    const s = vertRay(1, 0); // start vector (1,0,0)
+    b.start({ kind: 'rotate', axis: 'y' }, anchor, s.o, s.d, camDir);
+    const u = vertRay(0, 1); // current vector (0,0,1) → -90° (-π/2) about +Y
+    b.update(u.o, u.d, camDir);
+    expect(b.getLiveRotationRad()).toBeCloseTo(-Math.PI / 2, 6);
+    expect(THREE.MathUtils.radToDeg(b.getLiveRotationRad())).toBeCloseTo(-90, 3);
+  });
+
+  it('a move drag carries no live rotation (getLiveRotationRad stays 0)', () => {
+    const b = new BimGizmoDragBridge();
+    const s = vertRay(0, 0);
+    b.start({ kind: 'plane', plane: 'xz' }, anchor, s.o, s.d, camDir);
+    b.update(vertRay(4, 6).o, s.d, camDir);
+    expect(b.getLiveRotationRad()).toBe(0);
+  });
 });

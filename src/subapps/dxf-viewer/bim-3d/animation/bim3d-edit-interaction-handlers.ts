@@ -59,6 +59,8 @@ import type { BimGizmoController } from '../gizmo/bim-gizmo-controller';
 import type { BridgeOutcome } from '../gizmo/bim-gizmo-drag-bridge';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
+import { Bim3DEditLivePreview } from './bim3d-edit-live-preview';
+import { buildResizePreviewObject } from './bim3d-preview-rebuild';
 
 /** Commands the gizmo can dispatch from a drag outcome (one undo step each). */
 type EditCommand =
@@ -80,6 +82,8 @@ export interface EditInteractionCtx {
   readonly canvasEl: HTMLCanvasElement;
   readonly overlay: BimGizmoOverlay;
   readonly controller: BimGizmoController;
+  /** Live "entity follows the cursor" preview during a drag (ADR-402). */
+  readonly preview: Bim3DEditLivePreview;
   /** Latest levels context (null = read-only, ADR-371). */
   readonly getLevels: () => LevelsHookReturn | null;
 }
@@ -111,6 +115,15 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
   // ADR-402 Phase B — build the snap callback for this drag from the snap-engine
   // SSoT (null = OSNAP off / rotate / vertical resize → free drag).
   ctx.controller.setSnapFn(buildDragSnapFn(ctx));
+  // ADR-402 — capture the edited meshes so the entity follows the cursor live.
+  // Move/rotate → rigid mesh transform; resize → per-frame geometry rebuild (single).
+  const ids = useBim3DEditStore.getState().editEntityIds;
+  const constraint = ctx.controller.getActiveConstraint();
+  if (constraint?.kind === 'resize') {
+    if (ids[0]) ctx.preview.captureResize(ctx.manager.bimLayer.group, ids[0]);
+  } else {
+    ctx.preview.captureTransform(ctx.manager.bimLayer.group, new Set(ids));
+  }
   e.preventDefault();
   e.stopPropagation();
   ctx.manager.viewport.setControlsEnabled(false);
@@ -171,6 +184,7 @@ export function onEditPointerMove(ctx: EditInteractionCtx, e: PointerEvent): voi
   if (ctx.controller.isDragging()) {
     const changed = ctx.controller.updateDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
     if (changed) {
+      applyLivePreview(ctx);
       e.preventDefault();
       e.stopPropagation();
       ctx.manager.markSceneDirty();
@@ -190,7 +204,12 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
   e.stopPropagation();
   ctx.canvasEl.releasePointerCapture?.(e.pointerId);
   ctx.controller.updateDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
-  dispatchOutcome(ctx, ctx.controller.endDrag());
+  const committed = dispatchOutcome(ctx, ctx.controller.endDrag());
+  // ADR-402 — committed: the preview already shows the final pose, so just drop the
+  // refs and let the command's re-sync replace the meshes (no jump). No command
+  // (no-op drag): restore the originals, since no re-sync is coming.
+  if (committed) ctx.preview.commit();
+  else ctx.preview.reset();
   ctx.manager.viewport.setControlsEnabled(true);
   ctx.manager.markSceneDirty();
 }
@@ -198,8 +217,46 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
 export function onEditPointerCancel(ctx: EditInteractionCtx): void {
   if (!ctx.controller.isDragging()) return;
   ctx.controller.cancelDrag();
+  ctx.preview.reset(); // Esc / cancel → entity snaps back, no command (ADR-402).
   ctx.manager.viewport.setControlsEnabled(true);
   ctx.manager.markSceneDirty();
+}
+
+/**
+ * Drive the live "entity follows the cursor" preview from the controller's live
+ * drag snapshot (ADR-402): rigid mesh transform for move/rotate, per-frame geometry
+ * rebuild (converter SSoT) for resize. Runs every changed pointermove frame.
+ */
+function applyLivePreview(ctx: EditInteractionCtx): void {
+  const live = ctx.controller.getLivePreview();
+  if (!live) return;
+  if (live.kind === 'move') {
+    // Mirror the command's keyboard axis lock so the preview matches the commit:
+    // 'X' keeps world-X (DXF x) → drop world-Z; 'Z' keeps world-Z (DXF y) → drop
+    // world-X. The vertical (world-Y) component is untouched (axis-Y elevation move).
+    const lock = useBim3DEditStore.getState().axisLock;
+    const t = live.translation.clone();
+    if (lock === 'X') t.z = 0;
+    else if (lock === 'Z') t.x = 0;
+    ctx.preview.applyMove(t);
+    return;
+  }
+  if (live.kind === 'rotate') {
+    ctx.preview.applyRotate(live.pivot, live.angleRad);
+    return;
+  }
+  // resize — rebuild the single dragged entity's geometry via the converter SSoT.
+  const id = useBim3DEditStore.getState().editEntityIds[0];
+  if (!id) return;
+  ctx.preview.applyResize(
+    buildResizePreviewObject(id, {
+      axis: live.outcome.axis,
+      mode: live.outcome.mode,
+      deltaMm: live.outcome.deltaMm,
+      deltaUpMm: live.outcome.deltaUpMm,
+      cursorMm: live.outcome.cursorMm,
+    }),
+  );
 }
 
 /** Wheel zoom changes camera distance → refresh the screen-constant gizmo scale. */
@@ -222,28 +279,31 @@ interface CommandBuildCtx {
 
 /**
  * Dispatch ONE view-agnostic command from the drag outcome (one undo step).
+ * Returns true when a command actually executed (the caller keeps the live preview
+ * and lets the re-sync replace the meshes; false → it restores the originals).
  * ADR-402 Phase C — move/rotate apply to the whole multi-selection; the adapter
  * resolves the primary element's level (same-floor multi is the common case —
  * cross-floor multi falls back to the active level, see ADR-402 limitations).
  */
-function dispatchOutcome(ctx: EditInteractionCtx, outcome: BridgeOutcome): void {
-  if (outcome.kind === 'none') return;
+function dispatchOutcome(ctx: EditInteractionCtx, outcome: BridgeOutcome): boolean {
+  if (outcome.kind === 'none') return false;
   const edit = useBim3DEditStore.getState();
   const levels = ctx.getLevels();
   const entityIds = edit.editEntityIds;
   const entityId = entityIds[0];
-  if (!levels || !entityId) return;
+  if (!levels || !entityId) return false;
   const levelId = resolveEntityLevelId(levels, entityId) ?? levels.currentLevelId;
-  if (!levelId) return;
+  if (!levelId) return false;
   const sm = createSceneManagerAdapter(buildDeps(levels, levelId));
-  if (!sm) return;
+  if (!sm) return false;
   const cmd = buildEditCommand(outcome, { entityIds, entityId, edit, sm, levels, levelId });
-  if (!cmd) return;
+  if (!cmd) return false;
   // `validate` is optional on ICommand (CompoundCommand has none — it validates each
   // child at execute time and rolls back on failure). Only block on a real error.
-  if ('validate' in cmd && cmd.validate() !== null) return;
+  if ('validate' in cmd && cmd.validate() !== null) return false;
   getGlobalCommandHistory().execute(cmd);
   useBim3DEditStore.getState().setTargetLevel(levelId);
+  return true;
 }
 
 /** Map a drag outcome to its view-agnostic command (null = no-op / unsupported type). */

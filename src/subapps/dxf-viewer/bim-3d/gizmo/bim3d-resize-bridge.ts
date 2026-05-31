@@ -60,6 +60,7 @@ import { MIN_BEAM_DEPTH_MM } from '../../bim/types/beam-types';
 import { MIN_SLAB_THICKNESS_MM } from '../../bim/types/slab-types';
 import { perpUnit, unitVector } from '../../bim/grips/grip-math';
 import { detachWallSide, isWallSideAttached } from '../../bim/walls/wall-attach-detach';
+import { detachEntitySide, isEntitySideAttached } from '../../bim/entities/entity-attach-detach';
 import { directionToUnitVector, perp as stairPerp } from '../../bim/geometry/stairs/stair-geometry-shared';
 import { mmScaleFor, mmToSceneUnits, inferSceneUnitsFromWidth } from '../../utils/scene-units';
 
@@ -104,17 +105,37 @@ function columnGripFor(axis: GizmoAxis): ColumnGripKind | null {
 }
 
 /**
- * Column resize → new `ColumnParams`, or `null` for a no-op drag (e.g. depth on a
- * circular/polygon column — `applyColumnGripDrag` returns the original params
- * referentially) / unmapped axis.
+ * Column resize → new `ColumnParams`, or `null` for a no-op drag.
+ *
+ * Axis-Y mirrors the wall (ADR-401 F.3, Revit-standard top/base faces):
+ *   • mode 'normal' (TOP octahedron) → `height` (top face moves, base fixed).
+ *   • mode 'mirror' (BASE octahedron below it) → `baseOffset` (base face moves),
+ *     with an inverse `height` adjustment so the TOP stays put.
+ * Dragging a side attached to a structural host DETACHES it first (Revit "edit
+ * breaks attach", Giorgio-confirmed) — reusing the generic `detachEntitySide` SSoT.
+ *
+ * Axis-X/Z → width / depth via the 2D `applyColumnGripDrag` SSoT (returns the
+ * original params referentially on a no-op, e.g. depth on a circular column).
  */
 export function computeColumnResizeParams(
   params: ColumnParams,
   drag: ResizeDragMm,
 ): ColumnParams | null {
   if (drag.axis === 'y') {
-    const height = clampMin(params.height + drag.deltaUpMm, MIN_BIM_HEIGHT_MM);
-    return height === params.height ? null : { ...params, height };
+    if (drag.deltaUpMm === 0) return null;
+    if (drag.mode === 'mirror') {
+      // BASE grip: base += Δ, height -= Δ (keep top fixed).
+      const base = isEntitySideAttached(params, 'base') ? detachEntitySide(params, 'base') : params;
+      const baseOffset = base.baseOffset + drag.deltaUpMm;
+      const height = clampMin(base.height - drag.deltaUpMm, MIN_BIM_HEIGHT_MM);
+      return base === params && baseOffset === params.baseOffset && height === params.height
+        ? null
+        : { ...base, baseOffset, height };
+    }
+    // TOP grip: height += Δ (base fixed).
+    const top = isEntitySideAttached(params, 'top') ? detachEntitySide(params, 'top') : params;
+    const height = clampMin(top.height + drag.deltaUpMm, MIN_BIM_HEIGHT_MM);
+    return top === params && height === params.height ? null : { ...top, height };
   }
   const gripKind = columnGripFor(drag.axis);
   if (!gripKind) return null;
