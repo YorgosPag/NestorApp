@@ -21,6 +21,7 @@ import { useCommandHistory } from '../../../core/commands';
 import { UpdateWallParamsCommand } from '../../../core/commands/entity-commands/UpdateWallParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import type { WallEntity, WallParams } from '../../../bim/types/wall-types';
+import { detachSidesAffectedByVerticalEdit } from '../../../bim/walls/wall-attach-detach';
 import type { useLevels } from '../../../systems/levels';
 
 type LevelManagerLike = Pick<
@@ -48,7 +49,12 @@ export function useWallParamsDispatcher(
   return useCallback<DispatchWallParamPatch>(
     (wall, patch) => {
       if (!levelManager.currentLevelId) return;
-      const next: WallParams = { ...wall.params, ...patch };
+      // ADR-401 Phase E.4 — a manual height/baseOffset edit breaks the matching
+      // top/base structural attach first (Revit «edit breaks attach»), so the
+      // explicit numeric value wins over the host follow. Detach + edit collapse
+      // into one undo step (prevParams below restores both).
+      const base = detachSidesAffectedByVerticalEdit(wall.params, patch);
+      const next: WallParams = { ...base, ...patch };
       const sm = new LevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,

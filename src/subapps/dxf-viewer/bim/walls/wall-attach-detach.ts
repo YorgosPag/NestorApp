@@ -41,3 +41,39 @@ export function detachWallSide(params: WallParams, side: WallAttachSide): WallPa
 export function isWallSideAttached(params: WallParams, side: WallAttachSide): boolean {
   return side === 'top' ? params.topBinding === 'attached' : params.baseBinding === 'attached';
 }
+
+/**
+ * ADR-401 Phase E.4 — «manual vertical edit breaks attach» (Revit semantics).
+ *
+ * Given a manual UI param patch, reset the binding of any vertical side whose
+ * driving scalar the patch explicitly changes while that side is attached:
+ *   • `height`     → top side (the top extent driver),
+ *   • `baseOffset` → base side (the base extent driver).
+ *
+ * Mirror of the 3D vertical grip's edit-breaks-attach (Phase E.3): an explicit
+ * numeric edit wins over the structural follow. Pure — returns `params`
+ * untouched when the patch touches neither driver or the side isn't attached.
+ * Wire this BEFORE merging the patch so the detached binding survives the merge
+ * (the patch never carries binding/host-id keys).
+ */
+export function detachSidesAffectedByVerticalEdit(
+  params: WallParams,
+  patch: Partial<WallParams>,
+): WallParams {
+  let next = params;
+  if (
+    patch.height !== undefined &&
+    patch.height !== params.height &&
+    isWallSideAttached(next, 'top')
+  ) {
+    next = detachWallSide(next, 'top');
+  }
+  if (
+    patch.baseOffset !== undefined &&
+    patch.baseOffset !== params.baseOffset &&
+    isWallSideAttached(next, 'base')
+  ) {
+    next = detachWallSide(next, 'base');
+  }
+  return next;
+}

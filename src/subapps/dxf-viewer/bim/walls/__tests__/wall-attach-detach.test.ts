@@ -5,7 +5,11 @@
  * the `isWallSideAttached` guard the 3D grip uses for Revit "edit breaks attach".
  */
 
-import { detachWallSide, isWallSideAttached } from '../wall-attach-detach';
+import {
+  detachWallSide,
+  isWallSideAttached,
+  detachSidesAffectedByVerticalEdit,
+} from '../wall-attach-detach';
 import {
   DEFAULT_WALL_TOP_BINDING,
   DEFAULT_WALL_BASE_BINDING,
@@ -51,5 +55,71 @@ describe('isWallSideAttached', () => {
   it('reports the base side attached state', () => {
     expect(isWallSideAttached(wall({ baseBinding: 'attached' }), 'base')).toBe(true);
     expect(isWallSideAttached(wall(), 'base')).toBe(false);
+  });
+});
+
+describe('detachSidesAffectedByVerticalEdit (Phase E.4)', () => {
+  it('height edit while top-attached → breaks top binding only', () => {
+    const p = wall({
+      topBinding: 'attached',
+      attachTopToIds: ['beam-1'],
+      baseBinding: 'attached',
+      attachBaseToIds: ['slab-1'],
+    });
+    const out = detachSidesAffectedByVerticalEdit(p, { height: 2800 });
+    expect(out.topBinding).toBe(DEFAULT_WALL_TOP_BINDING);
+    expect(out.attachTopToIds).toBeUndefined();
+    // base side untouched — the patch did not change baseOffset
+    expect(out.baseBinding).toBe('attached');
+    expect(out.attachBaseToIds).toEqual(['slab-1']);
+  });
+
+  it('baseOffset edit while base-attached → breaks base binding only', () => {
+    const p = wall({
+      topBinding: 'attached',
+      attachTopToIds: ['beam-1'],
+      baseBinding: 'attached',
+      attachBaseToIds: ['slab-1'],
+    });
+    const out = detachSidesAffectedByVerticalEdit(p, { baseOffset: 150 });
+    expect(out.baseBinding).toBe(DEFAULT_WALL_BASE_BINDING);
+    expect(out.attachBaseToIds).toBeUndefined();
+    expect(out.topBinding).toBe('attached');
+    expect(out.attachTopToIds).toEqual(['beam-1']);
+  });
+
+  it('editing both drivers at once breaks both attached sides', () => {
+    const p = wall({
+      topBinding: 'attached',
+      attachTopToIds: ['beam-1'],
+      baseBinding: 'attached',
+      attachBaseToIds: ['slab-1'],
+    });
+    const out = detachSidesAffectedByVerticalEdit(p, { height: 2800, baseOffset: 150 });
+    expect(out.topBinding).toBe(DEFAULT_WALL_TOP_BINDING);
+    expect(out.baseBinding).toBe(DEFAULT_WALL_BASE_BINDING);
+    expect(out.attachTopToIds).toBeUndefined();
+    expect(out.attachBaseToIds).toBeUndefined();
+  });
+
+  it('no-op when the patch leaves the driver value unchanged', () => {
+    const p = wall({ topBinding: 'attached', attachTopToIds: ['beam-1'], height: 3000 });
+    const out = detachSidesAffectedByVerticalEdit(p, { height: 3000 });
+    expect(out).toBe(p); // same reference — nothing detached
+    expect(out.topBinding).toBe('attached');
+  });
+
+  it('no-op when the side is not attached (e.g. plain thickness edit)', () => {
+    const p = wall({ topBinding: 'attached', attachTopToIds: ['beam-1'] });
+    const out = detachSidesAffectedByVerticalEdit(p, { thickness: 250 });
+    expect(out).toBe(p);
+    expect(out.topBinding).toBe('attached');
+  });
+
+  it('height edit while NOT top-attached leaves the binding intact', () => {
+    const p = wall({ topBinding: 'unconnected', unconnectedHeight: 2400, height: 2400 });
+    const out = detachSidesAffectedByVerticalEdit(p, { height: 2800 });
+    expect(out).toBe(p);
+    expect(out.topBinding).toBe('unconnected');
   });
 });
