@@ -4,6 +4,7 @@ import { useEffect, type RefObject } from 'react';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { type Bim3DEntities, EMPTY_BIM_ENTITIES } from '../stores/Bim3DEntitiesStore';
 import { subscribeEnvelopeSpec } from '../../bim/stores/envelope-spec-store';
+import { subscribeEnvelopeFloorSlabs } from '../../bim/stores/envelope-floor-slabs-store';
 import { resyncBimScene } from '../scene/bim3d-resync';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 
@@ -42,9 +43,15 @@ export function useBim3DVgResync(
     // εφαρμόσει/αλλάξει θερμοπρόσοψη, rebuild για 2D⟷3D parity.
     const unsubEnvelope = subscribeEnvelopeSpec(resync);
 
+    // (c) ADR-396 v2 Φ5C — cross-floor slab snapshot (αίθριο vs δωμάτιο). Όταν
+    // αλλάζει ο όροφος/οι πλάκες ψηλότερων ορόφων, το Z1 κέλυφος μπορεί να αλλάξει
+    // (τρύπα γίνεται αίθριο→μονώνεται γύρω) → rebuild για 2D⟷3D parity.
+    const unsubFloorSlabs = subscribeEnvelopeFloorSlabs(resync);
+
     return () => {
       unsubVg();
       unsubEnvelope();
+      unsubFloorSlabs();
     };
   }, [managerRef, externalEntitiesMode, bimEntities]);
 }

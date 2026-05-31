@@ -36,6 +36,11 @@ import {
   getEnvelopeSpec,
   subscribeEnvelopeSpec,
 } from '../../bim/stores/envelope-spec-store';
+import {
+  getEnvelopeFloorSlabs,
+  subscribeEnvelopeFloorSlabs,
+} from '../../bim/stores/envelope-floor-slabs-store';
+import { resolveSlabsAboveForLevel } from '../../bim/geometry/footprint-region-classifier';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { resolveIsEntityVisible } from '../../bim/visibility/visibility-resolver';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -122,6 +127,14 @@ export function EnvelopeOverlay({
     () => getEnvelopeSpec(currentLevelId),
     () => null,
   );
+  // ADR-396 v2 Φ5C — cross-floor slabs (αίθριο vs δωμάτιο). Leaf-only subscription
+  // (ADR-040): ο classifier μέσα στο `computeEnvelopeShell` ξεχωρίζει ακάλυπτη
+  // τρύπα (αίθριο → μόνωση γύρω) από σκεπασμένη (δωμάτιο). Stable snapshot ref.
+  const floorSlabs = useSyncExternalStore(
+    subscribeEnvelopeFloorSlabs,
+    getEnvelopeFloorSlabs,
+    getEnvelopeFloorSlabs,
+  );
   const objectStyles = useDrawingScaleStore((s) => s.objectStyles);
   const viewRange = useDrawingScaleStore((s) => s.viewRange);
   const visible = resolveIsEntityVisible({ category: 'envelope' }, { objectStyles });
@@ -168,8 +181,13 @@ export function EnvelopeOverlay({
       // hole-gate ζει στον classifier), οπότε ΟΛΑ τα chains ζωγραφίζονται — δεν
       // φιλτράρουμε `enclosesRegion` (θα έκοβε τα ανοιχτά runs από 'interior' override).
       const overrides = collectEnvelopeOverrides([...walls, ...columns, ...beams]);
+      // Φ5C — πλάκες ψηλότερων ορόφων του ενεργού floor (αίθριο vs δωμάτιο). Κενό
+      // snapshot → όλες οι τρύπες = δωμάτια (μηδέν regression, safe default).
+      const slabsAbove = resolveSlabsAboveForLevel(
+        floorSlabs.slabs, floorSlabs.floors, floorSlabs.activeFloorId,
+      );
       const { chains } = computeEnvelopeShell(
-        walls, columns, beams, spec, overrides, [], { sceneUnits: scene.units },
+        walls, columns, beams, spec, overrides, slabsAbove, { sceneUnits: scene.units },
       );
       for (const chain of chains) {
         const plan = buildEnvelopeRenderPlan(chain, spec.materialId, spacingScale);
@@ -187,7 +205,7 @@ export function EnvelopeOverlay({
     // δεδομένων (envelopeLayer / revealInsulation) — ΟΧΙ re-classify εδώ.
     drawExposedSlabHatch(renderer, scene, transform, viewport, spacingScale);
     drawOpeningReveals(renderer, scene, transform, viewport, viewRange);
-  }, [scene, transform, viewport, spec, visible, viewRange]);
+  }, [scene, transform, viewport, spec, visible, viewRange, floorSlabs]);
 
   return (
     <canvas

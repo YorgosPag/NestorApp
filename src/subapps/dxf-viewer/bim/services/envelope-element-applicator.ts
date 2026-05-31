@@ -40,6 +40,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import { computeEnvelopeShell, collectEnvelopeOverrides } from '../geometry/envelope-shell';
 import type { WallForEnvelope, ColumnForEnvelope } from '../geometry/envelope-perimeter';
 import type { BeamForFootprint } from '../geometry/building-footprint';
+import type { SlabRegionFootprint } from '../geometry/footprint-region-classifier';
 import { filterExposedSlabs, type SlabForZoneClassification } from '../geometry/exposed-slab-classifier';
 
 // ============================================================================
@@ -87,10 +88,11 @@ function buildShellMembership(
   columns: readonly ColumnForEnvelope[],
   beams: readonly BeamForFootprint[],
   spec: ThermalEnvelopeSpec,
+  slabsAbove: readonly SlabRegionFootprint[],
   units: SceneUnits,
 ): ShellMembership {
   const overrides = collectEnvelopeOverrides([...walls, ...columns, ...beams]);
-  const { chains } = computeEnvelopeShell(walls, columns, beams, spec, overrides, [], {
+  const { chains } = computeEnvelopeShell(walls, columns, beams, spec, overrides, slabsAbove, {
     sceneUnits: units,
   });
   return {
@@ -117,6 +119,7 @@ export function computeEnvelopeAssignments(
   spec: ThermalEnvelopeSpec,
   entities: readonly AnySceneEntity[],
   storeys: readonly StoreyRef[],
+  slabsAbove: readonly SlabRegionFootprint[] = [],
   sceneUnits?: SceneUnits,
 ): ElementEnvelopeAssignment[] {
   const walls = entities.filter(isWallEntity);
@@ -125,7 +128,7 @@ export function computeEnvelopeAssignments(
   const units = sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
   const needShell = spec.zones.Z1 || spec.zones.Z4;
   const ctx = needShell
-    ? buildShellMembership(walls, columns, beams, spec, units)
+    ? buildShellMembership(walls, columns, beams, spec, slabsAbove, units)
     : EMPTY_MEMBERSHIP;
 
   const out: ElementEnvelopeAssignment[] = [];

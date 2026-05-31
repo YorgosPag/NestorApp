@@ -49,6 +49,9 @@ import {
   applyAssignmentsToEntities,
 } from '../../../bim/services/envelope-element-applicator';
 import { syncEnvelopeBoq } from '../../../bim/services/envelope-boq-sync';
+import { getEnvelopeFloorSlabs } from '../../../bim/stores/envelope-floor-slabs-store';
+import { resolveSlabsAboveForLevel } from '../../../bim/geometry/footprint-region-classifier';
+import { useEnvelopeFloorSlabs } from '../../../hooks/data/useEnvelopeFloorSlabs';
 import { useBim3DEntitiesStore } from '../../../bim-3d/stores/Bim3DEntitiesStore';
 import type { SceneModel } from '../../../types/scene';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -80,6 +83,10 @@ export function ThermalEnvelopeHost(
   props: ThermalEnvelopeHostProps,
 ): React.ReactElement | null {
   const { currentLevelId, levels, getLevelScene, setLevelScene, projectId } = props;
+  // ADR-396 v2 Φ5C — always-on producer των cross-floor slabs (αίθριο vs δωμάτιο)
+  // για το envelope store. Mounted εδώ (always-on host, εντός LevelsSystem) αντί
+  // στο DxfViewerContent (N.7.1 — εκείνο στο όριο 500 γρ.). No-op εκτός LevelsSystem.
+  useEnvelopeFloorSlabs();
   const { user } = useAuth();
   const companyId = user?.companyId ?? null;
   const [open, setOpen] = React.useState(false);
@@ -132,19 +139,23 @@ export function ThermalEnvelopeHost(
       const scene = getLevelScene(levelId);
       if (!scene) return;
       const storeys = useBim3DEntitiesStore.getState().floors;
-      const assignments = computeEnvelopeAssignments(spec, scene.entities, storeys);
+      const level = levels.find((l) => l.id === levelId);
+      // ADR-396 v2 Φ5C — πλάκες ψηλότερων ορόφων του target floor → ο classifier
+      // ξεχωρίζει αίθριο (ανοιχτό, μονώνεται γύρω) από δωμάτιο. Ίδιο SSoT με 2D/3D.
+      const slabsSnap = getEnvelopeFloorSlabs();
+      const slabsAbove = resolveSlabsAboveForLevel(slabsSnap.slabs, slabsSnap.floors, level?.floorId ?? null);
+      const assignments = computeEnvelopeAssignments(spec, scene.entities, storeys, slabsAbove);
       const { entities, changed } = applyAssignmentsToEntities(scene.entities, assignments);
       if (changed.length > 0) {
         setLevelScene(levelId, { ...scene, entities });
         EventBus.emit('bim:envelope-applied', { entities: changed });
       }
-      const level = levels.find((l) => l.id === levelId);
       void syncEnvelopeBoq(entities, storeys, spec, {
         companyId: companyId ?? '',
         projectId: level?.projectId ?? projectId ?? '',
         buildingId: level?.buildingId ?? '',
         floorId: level?.floorId ?? '',
-      }).catch((err: unknown) => logger.error('envelope BOQ sync failed', { levelId, err }));
+      }, slabsAbove).catch((err: unknown) => logger.error('envelope BOQ sync failed', { levelId, err }));
     },
     [getLevelScene, setLevelScene, levels, companyId, projectId],
   );

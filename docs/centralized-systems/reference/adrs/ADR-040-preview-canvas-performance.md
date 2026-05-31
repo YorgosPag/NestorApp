@@ -71,6 +71,23 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-31 — ADR-396 v2 Phase 5C — cross-floor slab wiring (compliance note)
+
+**Status**: COMPLIANT — no ADR-040 invariants broken.
+
+Το Φ5C wiring (αίθριο vs δωμάτιο, βλ. ADR-396 §3.1.6) τροφοδοτεί `slabsAbove` σε 2 CHECK 6B/6D αρχεία:
+- `EnvelopeOverlay.tsx` (2D micro-leaf) — προστέθηκε **ΝΕΟ `useSyncExternalStore(subscribeEnvelopeFloorSlabs,
+  getEnvelopeFloorSlabs)`** + `floorSlabs` στις effect deps. **CHECK 6C safe:** το subscription ζει σε
+  **leaf** (`EnvelopeOverlay`), ΟΧΙ σε orchestrator (CanvasSection/CanvasLayerStack) — ακριβώς το pattern που
+  επιβάλλει το ADR-040 («only leaves subscribe»). Η νέα πηγή είναι **low-frequency** (snapshot αλλάζει σε
+  level switch / slab edit, ΟΧΙ 60fps) → μηδέν επίπτωση στο high-frequency render pipeline.
+- `bim-3d/scene/bim-envelope-scene-builder.ts::addEnvelopeShell` (3D) — **event-time getter**
+  `getEnvelopeFloorSlabs()` (ΟΧΙ snapshot subscription· τρέχει στο 3D resync path) + rebuild trigger μέσω
+  `use-bim3d-vg-resync` (`subscribeEnvelopeFloorSlabs(resync)`, δίπλα στο υπάρχον `subscribeEnvelopeSpec`).
+  Καμία αλλαγή σε bitmap cache-key, micro-leaf δομή, ή orchestrator subscription.
+
+Λεπτομέρεια στο ADR-396 §3.1.6.
+
 ### 2026-05-31 — ADR-396 v2 Phase 5B — envelope shell consumer wiring (compliance note)
 
 **Status**: COMPLIANT — no ADR-040 invariants broken.

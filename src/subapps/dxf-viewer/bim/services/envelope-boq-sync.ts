@@ -48,6 +48,7 @@ import { mmToSceneUnits } from '../../utils/scene-units';
 import type { StoreyRef } from '../utils/bim-floor-utils';
 import type { EnvelopeZoneId, ThermalEnvelopeSpec } from '../types/thermal-envelope-types';
 import { computeEnvelopeShell, collectEnvelopeOverrides } from '../geometry/envelope-shell';
+import type { SlabRegionFootprint } from '../geometry/footprint-region-classifier';
 import type { EnvelopeChain } from '../geometry/envelope-perimeter';
 import { resolveWallTopProfile } from '../geometry/wall-top-profile';
 import { buildWallHostInputs, makeWallTopContext } from '../geometry/wall-host-plan-builder';
@@ -147,6 +148,7 @@ export function computeEnvelopeZoneAreas(
   entities: readonly AnySceneEntity[],
   storeys: readonly StoreyRef[],
   spec: ThermalEnvelopeSpec,
+  slabsAbove: readonly SlabRegionFootprint[] = [],
   sceneUnits?: SceneUnits,
 ): EnvelopeZoneAreas {
   const walls = entities.filter(isWallEntity);
@@ -156,8 +158,9 @@ export function computeEnvelopeZoneAreas(
   const units = sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
   // ADR-396 v2 (Φ5B): πηγή = footprint shell (κολώνες/δοκάρια συνεισφέρουν στην
   // περίμετρο → «τα δοκάρια μετράνε»). Όλα τα chains = μονωμένα (engine authoritative).
+  // Φ5C: `slabsAbove` → ο classifier ξεχωρίζει αίθριο (μονώνεται γύρω) από δωμάτιο.
   const overrides = collectEnvelopeOverrides([...walls, ...columns, ...beams]);
-  const { chains } = computeEnvelopeShell(walls, columns, beams, spec, overrides, [], {
+  const { chains } = computeEnvelopeShell(walls, columns, beams, spec, overrides, slabsAbove, {
     sceneUnits: units,
   });
   const exteriorWallIds = new Set(chains.flatMap((c) => c.wallIds));
@@ -315,10 +318,11 @@ export async function syncEnvelopeBoq(
   storeys: readonly StoreyRef[],
   spec: ThermalEnvelopeSpec,
   context: EnvelopeBoqContext,
+  slabsAbove: readonly SlabRegionFootprint[] = [],
 ): Promise<void> {
   if (!context.companyId || !context.projectId || !context.buildingId || !context.floorId) return;
   const mapping = resolveMaterialAtoeMapping(spec.materialId);
   if (!mapping) return;
-  const areas = computeEnvelopeZoneAreas(entities, storeys, spec);
+  const areas = computeEnvelopeZoneAreas(entities, storeys, spec, slabsAbove);
   await Promise.all(ZONES.map((zone) => syncZoneRow(zone, areas[zone], spec, context, mapping)));
 }

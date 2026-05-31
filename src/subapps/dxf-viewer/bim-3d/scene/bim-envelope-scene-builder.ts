@@ -5,9 +5,11 @@ import { resolveWallTopProfile } from '../../bim/geometry/wall-top-profile';
 import { makeWallTopContext, buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
 import { resolveEnvelopeEdgeTops, type WallTopRef } from '../../bim/geometry/envelope-wall-top';
 import { computeEnvelopeShell, collectEnvelopeOverrides } from '../../bim/geometry/envelope-shell';
+import { resolveSlabsAboveForLevel } from '../../bim/geometry/footprint-region-classifier';
 import type { ThermalEnvelopeSpec } from '../../bim/types/thermal-envelope-types';
 import { computeEnvelopeOpeningCuts } from '../../bim/geometry/envelope-opening-cuts';
 import { getEnvelopeSpec } from '../../bim/stores/envelope-spec-store';
+import { getEnvelopeFloorSlabs } from '../../bim/stores/envelope-floor-slabs-store';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 import { resolveIsEntityVisible } from '../../bim/visibility/visibility-resolver';
 import { getLayer } from '../../stores/LayerStore';
@@ -89,8 +91,13 @@ function addEnvelopeShell(
   const overrides = collectEnvelopeOverrides([
     ...entities.walls, ...entities.columns, ...entities.beams,
   ]);
+  // ADR-396 v2 Φ5C — cross-floor slabs (αίθριο vs δωμάτιο), event-time read μέσω
+  // του non-React store (ίδιο SSoT με 2D `EnvelopeOverlay` → 2D⟷3D parity). Κενό
+  // snapshot → όλες οι τρύπες = δωμάτια (safe default).
+  const slabsSnap = getEnvelopeFloorSlabs();
+  const slabsAbove = resolveSlabsAboveForLevel(slabsSnap.slabs, slabsSnap.floors, slabsSnap.activeFloorId);
   const { chains } = computeEnvelopeShell(
-    entities.walls, entities.columns, entities.beams, spec, overrides, [], { sceneUnits },
+    entities.walls, entities.columns, entities.beams, spec, overrides, slabsAbove, { sceneUnits },
   );
   if (chains.length === 0) return;
   const materialId = spec.materialId;
