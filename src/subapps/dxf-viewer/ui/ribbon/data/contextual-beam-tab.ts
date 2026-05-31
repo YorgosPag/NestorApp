@@ -185,6 +185,22 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
                 options: ELEVATION_MM_OPTIONS,
               },
             },
+            {
+              // ADR-401 Phase E.2 — στάθμη άνω παρειάς στο τέλος (mm). Διαφορετική
+              // από topElevation → κεκλιμένη δοκός (Revit sloped beam). Free entry
+              // (ίδια elevation presets) — η διάχυση (applyBeamSlope/2D/BOQ/attach)
+              // είναι έτοιμη από Phase E(β).
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'beam.topElevationEnd',
+                labelKey: 'ribbon.commands.beamEditor.topElevationEnd',
+                tooltipKey: 'ribbon.commands.beamEditor.topElevationEndTooltip',
+                commandKey: BEAM_RIBBON_KEYS.params.topElevationEnd,
+                comboboxWidthPx: 80,
+                options: ELEVATION_MM_OPTIONS,
+              },
+            },
           ],
         },
       ],

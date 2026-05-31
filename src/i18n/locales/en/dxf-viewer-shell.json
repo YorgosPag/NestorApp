@@ -1330,6 +1330,8 @@
         "width": "Width",
         "depth": "Depth",
         "topElevation": "Level (Top)",
+        "topElevationEnd": "End Level",
+        "topElevationEndTooltip": "Top-face level at the beam end. If it differs from the start level, the beam slopes linearly (sloped beam).",
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete this beam? This action cannot be undone.",

@@ -82,9 +82,10 @@ const BEAM_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
 const NULL_TOGGLE: RibbonToggleState = false;
 
 const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof BeamParams>> = {
-  [BEAM_RIBBON_KEYS.params.width]:        'width',
-  [BEAM_RIBBON_KEYS.params.depth]:        'depth',
-  [BEAM_RIBBON_KEYS.params.topElevation]: 'topElevation',
+  [BEAM_RIBBON_KEYS.params.width]:           'width',
+  [BEAM_RIBBON_KEYS.params.depth]:           'depth',
+  [BEAM_RIBBON_KEYS.params.topElevation]:    'topElevation',
+  [BEAM_RIBBON_KEYS.params.topElevationEnd]: 'topElevationEnd',
 };
 
 const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof BeamParams>> = {
@@ -156,6 +157,15 @@ export function useRibbonBeamBridge(
       if (isBeamRibbonKey(commandKey)) {
         const field = NUMBER_KEY_TO_FIELD[commandKey];
         const raw = beam.params[field];
+        // ADR-401 Phase E.2 — `topElevationEnd` απών (flat δοκός) → surface το
+        // `topElevation` ώστε το πεδίο να δείχνει την τρέχουσα (flat) στάθμη·
+        // αλλαγή σε διαφορετική τιμή κάνει τη δοκό κεκλιμένη.
+        if (
+          commandKey === BEAM_RIBBON_KEYS.params.topElevationEnd &&
+          typeof raw !== 'number'
+        ) {
+          return { value: String(Math.round(beam.params.topElevation)), options: [] };
+        }
         if (typeof raw !== 'number') return null;
         return { value: String(Math.round(raw)), options: [] };
       }

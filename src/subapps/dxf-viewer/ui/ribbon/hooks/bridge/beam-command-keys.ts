@@ -28,13 +28,19 @@ export const BEAM_RIBBON_KEYS = {
     depth: 'beam.params.depth',
     /** mm — top face (top-of-beam) από project origin. ADR-369 §2.2. */
     topElevation: 'beam.params.topElevation',
+    /**
+     * mm — άνω παρειά στο τέλος (endPoint) της δοκού. ADR-401 Phase E.2.
+     * Όταν διαφέρει από `topElevation` → κεκλιμένη δοκός (Revit sloped beam).
+     */
+    topElevationEnd: 'beam.params.topElevationEnd',
   },
 } as const;
 
 export type BeamRibbonNumberCommandKey =
   | typeof BEAM_RIBBON_KEYS.params.width
   | typeof BEAM_RIBBON_KEYS.params.depth
-  | typeof BEAM_RIBBON_KEYS.params.topElevation;
+  | typeof BEAM_RIBBON_KEYS.params.topElevation
+  | typeof BEAM_RIBBON_KEYS.params.topElevationEnd;
 
 export type BeamRibbonStringCommandKey =
   | typeof BEAM_RIBBON_KEYS.stringParams.kind
@@ -48,6 +54,7 @@ export const BEAM_RIBBON_NUMBER_KEYS: readonly BeamRibbonNumberCommandKey[] = [
   BEAM_RIBBON_KEYS.params.width,
   BEAM_RIBBON_KEYS.params.depth,
   BEAM_RIBBON_KEYS.params.topElevation,
+  BEAM_RIBBON_KEYS.params.topElevationEnd,
 ];
 
 export const BEAM_RIBBON_STRING_KEYS: readonly BeamRibbonStringCommandKey[] = [
