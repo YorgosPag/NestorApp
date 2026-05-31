@@ -25,6 +25,17 @@ export interface HitUserData {
   readonly navTarget?: 'front' | 'back' | 'left' | 'right';
 }
 
+/**
+ * SSoT dark color for ALL ViewCube button/face outlines — the per-face frame
+ * stroke (every face, light or dark) AND the 3D cube edge lines. Single source:
+ * the hex number; the CSS string is derived from it so both renderers (canvas
+ * 2D stroke + THREE LineBasicMaterial) stay in sync from one value.
+ */
+const VIEWCUBE_OUTLINE_COLOR_HEX = 0x1a1a1a;
+const VIEWCUBE_OUTLINE_COLOR_CSS = `#${VIEWCUBE_OUTLINE_COLOR_HEX.toString(16).padStart(6, '0')}`;
+/** Width (px, texture space) of the per-face 3×3 button-zone grid lines. */
+const OUTLINE_LINE_WIDTH = 3;
+
 const LABEL_DARK_BG  = '#3c3c3c';
 const LABEL_TOP_BG   = '#e8e8e8';
 const LABEL_WHITE    = '#ffffff';
@@ -46,9 +57,17 @@ function drawBaseFace(ctx: CanvasRenderingContext2D, label: string, isTop: boole
   ctx.fillRect(size - border, size - border, border, border);
   ctx.fillStyle = isTop ? LABEL_TOP_BG : LABEL_DARK_BG;
   ctx.fillRect(border, border, size - 2 * border, size - 2 * border);
-  ctx.strokeStyle = isTop ? '#bbbbbb' : '#4a4a4a';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(border + 0.5, border + 0.5, size - 2 * border - 1, size - 2 * border - 1);
+  // 3×3 zone grid → outlines the clickable "buttons" of this face: the centre
+  // (face), the 4 edge strips and the 4 corner squares. Internal dividers ONLY
+  // (no outer perimeter) so the cube itself shows no silhouette outline. SSoT color.
+  ctx.strokeStyle = VIEWCUBE_OUTLINE_COLOR_CSS;
+  ctx.lineWidth = OUTLINE_LINE_WIDTH;
+  ctx.beginPath();
+  ctx.moveTo(border, 0); ctx.lineTo(border, size);
+  ctx.moveTo(size - border, 0); ctx.lineTo(size - border, size);
+  ctx.moveTo(0, border); ctx.lineTo(size, border);
+  ctx.moveTo(0, size - border); ctx.lineTo(size, size - border);
+  ctx.stroke();
   ctx.fillStyle = isTop ? LABEL_DARK_TXT : LABEL_WHITE;
   ctx.font = LABEL_FONT;
   ctx.textAlign = 'center';
@@ -67,7 +86,7 @@ export interface FaceLabels {
 
 export function createVisualCube(labels: FaceLabels): {
   mesh: THREE.Mesh;
-  materials: THREE.MeshPhongMaterial[];
+  materials: THREE.MeshBasicMaterial[];
   setHighlights: (highlights: ReadonlyMap<number, FaceZone> | null) => void;
 } {
   const geo = new THREE.BoxGeometry(1, 1, 1);
@@ -82,7 +101,11 @@ export function createVisualCube(labels: FaceLabels): {
     drawBaseFace(canvas.getContext('2d')!, label, i === topIndex);
     const texture = new THREE.CanvasTexture(canvas);
     canvases.push(canvas); textures.push(texture);
-    return new THREE.MeshPhongMaterial({ map: texture, shininess: 20 });
+    // Unlit: the highlight/label colors must render at their true value,
+    // independent of scene lighting (Phong dimmed orange highlights to a muddy
+    // tone on faces angled away from the directional light). Matches Autodesk
+    // ViewCube's flat-shaded faces.
+    return new THREE.MeshBasicMaterial({ map: texture });
   });
   function setHighlights(highlights: ReadonlyMap<number, FaceZone> | null): void {
     const newFaces = highlights ? new Set(highlights.keys()) : new Set<number>();
@@ -170,17 +193,29 @@ export interface CompassLabels {
   readonly w: string;
 }
 
+/** Default (un-hovered) color of the compass ring torus — reused as reset value. */
+export const COMPASS_RING_DEFAULT_COLOR = 0x8899aa;
+
 export function createCompassRing(labels: CompassLabels): {
   group: THREE.Group;
   hitMeshes: THREE.Mesh[];
   ringMaterial: THREE.MeshBasicMaterial;
+  /** The torus mesh itself — pickable so hovering the ring body (not just the
+   *  N/E/S/W letters) tints it. userData type 'compass' with no cardinal. */
+  ringMesh: THREE.Mesh;
+  /** Cardinal label sprite materials, parallel to hitMeshes — tinted on hover. */
+  labelMaterials: THREE.SpriteMaterial[];
 } {
   const group = new THREE.Group();
   const hitMeshes: THREE.Mesh[] = [];
+  const labelMaterials: THREE.SpriteMaterial[] = [];
   const ringGeo = new THREE.TorusGeometry(1.50, 0.16, 16, 64);
-  const ringMat = new THREE.MeshBasicMaterial({ color: 0x8899aa, opacity: 0.8, transparent: true });
+  const ringMat = new THREE.MeshBasicMaterial({ color: COMPASS_RING_DEFAULT_COLOR, opacity: 0.8, transparent: true });
   const ring = new THREE.Mesh(ringGeo, ringMat);
   ring.rotation.x = Math.PI / 2;
+  // Hover-only: no cardinal → handleClick's `ud.cardinal` guard makes a click inert.
+  const ringUd: HitUserData = { type: 'compass', faces: [] };
+  ring.userData = ringUd;
   group.add(ring);
   const cardinals: Array<{ label: string; cardinal: 'N' | 'E' | 'S' | 'W'; x: number; z: number }> = [
     { label: labels.n, cardinal: 'N', x:  0,    z: -1.72 },
@@ -199,6 +234,7 @@ export function createCompassRing(labels: CompassLabels): {
     ctx.fillText(label, 32, 32);
     const tex = new THREE.CanvasTexture(canvas);
     const spriteMat = new THREE.SpriteMaterial({ map: tex, depthTest: false });
+    labelMaterials.push(spriteMat);
     const sprite = new THREE.Sprite(spriteMat);
     sprite.scale.setScalar(0.6);
     sprite.position.set(x, 0, z);
@@ -213,7 +249,7 @@ export function createCompassRing(labels: CompassLabels): {
     hitMeshes.push(hitMesh);
     group.add(hitMesh);
   }
-  return { group, hitMeshes, ringMaterial: ringMat };
+  return { group, hitMeshes, ringMaterial: ringMat, ringMesh: ring, labelMaterials };
 }
 
 export function createHomeButton(): { sprite: THREE.Sprite; hitMesh: THREE.Mesh } {

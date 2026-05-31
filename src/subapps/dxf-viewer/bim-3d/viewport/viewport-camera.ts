@@ -243,6 +243,28 @@ export function createViewportCamera(
   }
 
   /**
+   * ViewCube roll arrows — roll the view ±90° around the viewing axis.
+   *
+   * A true roll rotates the camera's UP vector around the forward (view) axis,
+   * leaving position, target AND projection mode unchanged — so the scene simply
+   * appears to spin 90° on screen. (The previous wiring reused
+   * `snapToViewDirection`, which always forced perspective + moved the camera —
+   * hence the "flat → perspective" jump instead of a roll.) Instant, like the
+   * Autodesk ViewCube roll.
+   */
+  function rollView(dirSign: 1 | -1): void {
+    animation.cancel();
+    const target = controls.target;
+    const forward = _direction.subVectors(target, activeCamera.position).normalize();
+    if (forward.lengthSq() < 0.001) return;
+    const q = new THREE.Quaternion().setFromAxisAngle(forward, (dirSign * Math.PI) / 2);
+    activeCamera.up.applyQuaternion(q).normalize();
+    activeCamera.lookAt(target);
+    controls.update();
+    onRenderNeeded();
+  }
+
+  /**
    * ADR-366 Phase 4.5 / A.7.Q4 — Screen-space keyboard pan.
    *
    * `dxScreenPx` > 0 pans the view RIGHT, `dyScreenPx` > 0 pans UP (intuitive
@@ -393,7 +415,7 @@ export function createViewportCamera(
     setProjection, getZoom, setZoom, setZoomPreset,
     updateAspect, update, dispose,
     frameBounds, cancelAnimation, setSpeedModifier,
-    snapToViewDirection, goHome,
+    snapToViewDirection, rollView, goHome,
     applyTumble: (dx: number, dy: number) => tumble.applyExternalRotation(dx, dy),
     pan,
     setOrbitPivot,

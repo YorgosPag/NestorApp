@@ -58,6 +58,7 @@ export function initViewCube(deps: InitViewCubeDeps): ViewCubeEngine {
     getTarget: () => viewport.target,
     onFaceSnap: (mode) => viewport.setProjection(mode),
     onDirSnap: (dir) => viewport.snapToViewDirection(dir),
+    onRoll: (dirSign) => viewport.rollView(dirSign),
     onSnapToView: (id: CanonicalViewId) => canonicalViewService.snapTo(id),
     onHome: () => canonicalViewService.snapHome(),
     onDragRotate: (dx, dy) => viewport.applyTumble(dx, dy),

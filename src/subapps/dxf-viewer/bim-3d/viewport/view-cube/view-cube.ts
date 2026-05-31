@@ -9,10 +9,11 @@ import * as THREE from 'three';
 import type { ProjectionMode, CanonicalViewId } from '../viewport-types';
 import {
   createVisualCube, createHitTargets, createCompassRing, createHomeButton,
+  COMPASS_RING_DEFAULT_COLOR,
   FACE_DIRS, type HitUserData, type FaceLabels, type CompassLabels,
 } from './view-cube-mesh';
-import { createRollArrows, createFaceNavArrows, computeCompassDirection } from './view-cube-overlay';
-import { computeHighlights } from './view-cube-highlight';
+import { createRollArrows, createFaceNavArrows, computeCompassDirection, NAV_ARROW_COLOR } from './view-cube-overlay';
+import { computeHighlights, VIEWCUBE_HOVER_COLOR_HEX } from './view-cube-highlight';
 import { matchIsoCanonicalView } from '../canonical-views';
 
 const CUBE_CANVAS_SIZE = 160;
@@ -33,6 +34,8 @@ export interface ViewCubeOptions {
   readonly getTarget: () => THREE.Vector3;
   readonly onFaceSnap: (mode: ProjectionMode) => void;
   readonly onDirSnap: (dir: THREE.Vector3) => void;
+  /** Roll arrows — roll the view ±90° around the viewing axis (+1 cw, -1 ccw). */
+  readonly onRoll?: (dirSign: 1 | -1) => void;
   readonly onHome: () => void;
   readonly onDragRotate?: (dxPx: number, dyPx: number) => void;
   /**
@@ -68,7 +71,7 @@ export interface ViewCubeEngine {
 }
 
 export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
-  const { container, getCamera, getTarget, onFaceSnap, onDirSnap, onHome, onDragRotate, onSnapToView, getNorthAngleDeg, onContextMenuRequest } = opts;
+  const { container, getCamera, getTarget, onFaceSnap, onDirSnap, onRoll, onHome, onDragRotate, onSnapToView, getNorthAngleDeg, onContextMenuRequest } = opts;
 
   const canvas = document.createElement('canvas');
   const dpr = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
@@ -113,19 +116,17 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
 
   const { mesh: cubeMesh, materials: cubeMaterials, setHighlights: cubeSetHighlights } = createVisualCube(faceLabels);
   const hitTargets = createHitTargets();
-  const { group: compassGroup, hitMeshes: compassHitMeshes, ringMaterial } = createCompassRing(compassLabels);
+  const { group: compassGroup, hitMeshes: compassHitMeshes, ringMaterial, ringMesh, labelMaterials: compassLabelMats } = createCompassRing(compassLabels);
   const { sprite: homeSprite, hitMesh: homeHitMesh } = createHomeButton();
   const { sprites: rollSprites, hitMeshes: rollHitMeshes } = createRollArrows();
   const { group: faceNavGroup, hitMeshes: faceNavHitMeshes, materials: faceNavMats } = createFaceNavArrows();
 
-  const outlineGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.005, 1.005, 1.005));
-  const outlineMat = new THREE.LineBasicMaterial({ color: 0xaaaaaa, transparent: true, opacity: 0.15 });
-  const outlineLines = new THREE.LineSegments(outlineGeo, outlineMat);
-
+  // No cube silhouette outline: the cube itself must not be framed — only the
+  // per-face button zones carry outlines (drawn into the face textures). The
+  // old EdgesGeometry wireframe was removed for that reason.
   const cubeGroup = new THREE.Group();
   cubeGroup.add(cubeMesh);
   for (const t of hitTargets) cubeGroup.add(t);
-  cubeGroup.add(outlineLines);
   cubeGroup.add(compassGroup);
   cubeGroup.add(faceNavGroup);
   scene.add(cubeGroup);
@@ -137,7 +138,7 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
   homeSprite.visible = false; homeHitMesh.visible = false;
 
   const pickables: THREE.Object3D[] = [
-    ...hitTargets, ...compassHitMeshes, homeHitMesh,
+    ...hitTargets, ...compassHitMeshes, ringMesh, homeHitMesh,
     ...rollHitMeshes, ...faceNavHitMeshes,
   ];
 
@@ -176,13 +177,51 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
     getNormalizedMouse(e);
     _raycaster.setFromCamera(_mouse, miniCam);
     const hits = _raycaster.intersectObjects(pickables, false);
-    return hits.length > 0 ? hits[0]! : null;
+    if (hits.length === 0) return null;
+    // The N/E/S/W letter hit planes overlap the ring radius, so a ray can pierce
+    // both. Prefer the (closest) cardinal letter over the bare ring body so
+    // cardinal hover/click keeps working; the ring wins only away from letters.
+    const cardinalHit = hits.find(h => (h.object.userData as HitUserData).cardinal);
+    return cardinalHit ?? hits[0]!;
   }
 
   function computeDirection(faces: readonly number[]): THREE.Vector3 {
     const sum = new THREE.Vector3();
     for (const fi of faces) { const d = FACE_DIRS[fi]; if (d) sum.add(d); }
     return sum.normalize();
+  }
+
+  // Sprite materials default to white so their canvas texture shows untinted;
+  // setting an orange color multiplies the texture → orange hover feedback.
+  const SPRITE_DEFAULT_COLOR = 0xffffff;
+
+  /** Reset every non-cube control (ring, compass labels, arrows, home) to its base color. */
+  function resetControlHighlights(): void {
+    ringMaterial.color.setHex(COMPASS_RING_DEFAULT_COLOR);
+    for (const m of compassLabelMats) m.color.setHex(SPRITE_DEFAULT_COLOR);
+    for (const m of faceNavMats) m.color.setHex(NAV_ARROW_COLOR);
+    for (const s of rollSprites) s.material.color.setHex(NAV_ARROW_COLOR);
+    homeSprite.material.color.setHex(SPRITE_DEFAULT_COLOR);
+  }
+
+  /** Tint the hovered control (and the ring, for compass hits) orange. */
+  function applyControlHighlight(mesh: THREE.Mesh | null): void {
+    resetControlHighlights();
+    if (!mesh) return;
+    const ud = mesh.userData as HitUserData;
+    if (ud.type === 'compass') {
+      ringMaterial.color.setHex(VIEWCUBE_HOVER_COLOR_HEX);
+      const i = compassHitMeshes.indexOf(mesh);
+      compassLabelMats[i]?.color.setHex(VIEWCUBE_HOVER_COLOR_HEX);
+    } else if (ud.type === 'faceNav') {
+      const i = faceNavHitMeshes.indexOf(mesh);
+      faceNavMats[i]?.color.setHex(VIEWCUBE_HOVER_COLOR_HEX);
+    } else if (ud.type === 'roll') {
+      const i = rollHitMeshes.indexOf(mesh);
+      rollSprites[i]?.material.color.setHex(VIEWCUBE_HOVER_COLOR_HEX);
+    } else if (ud.type === 'home') {
+      homeSprite.material.color.setHex(VIEWCUBE_HOVER_COLOR_HEX);
+    }
   }
 
   function updateHover(e: PointerEvent): void {
@@ -198,11 +237,17 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
       } else {
         cubeSetHighlights(null);
       }
+      // Snap cube faces to full opacity immediately so the hover highlight reads
+      // crisp. The highlight is baked into the semi-transparent face texture
+      // (opacity 0.5 at rest); sync() only lerps toward 1.0 over many frames and
+      // stalls entirely when the 3D scene is idle → highlight would look faint.
+      for (const mat of cubeMaterials) mat.opacity = 1.0;
       canvas.style.cursor = 'pointer';
     } else {
       cubeSetHighlights(null);
       canvas.style.cursor = 'grab';
     }
+    applyControlHighlight(newMesh);
     miniRenderer.render(scene, miniCam);
   }
 
@@ -212,12 +257,7 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
     const ud = hit.object.userData as HitUserData;
     if (ud.type === 'home') { onHome(); return; }
     if (ud.type === 'roll' && ud.rollDir) {
-      const cam = getCamera(); const tgt = getTarget();
-      const fwd = new THREE.Vector3().subVectors(tgt, cam.position).normalize();
-      const q = new THREE.Quaternion().setFromAxisAngle(fwd, (ud.rollDir * Math.PI) / 2);
-      const offset = cam.position.clone().sub(tgt);
-      offset.applyQuaternion(q);
-      onDirSnap(offset.normalize());
+      onRoll?.(ud.rollDir);
       return;
     }
     // faceNav arrows (front/back/left/right only — never top/bottom)
@@ -313,7 +353,6 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
     const tgtAlpha = cubeHovered ? 1.0 : 0.5;
     const lerp = 0.15;
     for (const mat of cubeMaterials) { mat.opacity += (tgtAlpha - mat.opacity) * lerp; }
-    outlineMat.opacity += ((cubeHovered ? 0.35 : 0.15) - outlineMat.opacity) * lerp;
     ringMaterial.opacity += ((cubeHovered ? 0.8 : 0.4) - ringMaterial.opacity) * lerp;
     homeSprite.visible = cubeHovered; homeHitMesh.visible = cubeHovered;
     for (const s of rollSprites) s.visible = cubeHovered;
@@ -345,7 +384,6 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
     for (const mat of cubeMaterials) { mat.map?.dispose(); mat.dispose(); }
     for (const t of hitTargets) t.geometry.dispose();
     for (const hm of compassHitMeshes) hm.geometry.dispose();
-    outlineGeo.dispose(); outlineMat.dispose();
     homeHitMesh.geometry.dispose();
     homeSprite.material.map?.dispose(); homeSprite.material.dispose();
     for (const s of rollSprites) { s.material.map?.dispose(); s.material.dispose(); }

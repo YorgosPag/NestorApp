@@ -50,6 +50,12 @@ export interface ViewportCamera {
   readonly isAnimating: boolean;
   readonly setSpeedModifier: (modifier: SpeedModifier) => void;
   readonly snapToViewDirection: (dir: THREE.Vector3) => void;
+  /**
+   * ViewCube roll arrows — roll the camera ±90° around the viewing axis,
+   * keeping position/target/projection unchanged (the scene appears to rotate
+   * 90° on screen). `dirSign` +1 = clockwise, -1 = counter-clockwise.
+   */
+  readonly rollView: (dirSign: 1 | -1) => void;
   readonly goHome: () => void;
   readonly applyTumble: (dxPx: number, dyPx: number) => void;
   /** ADR-366 Phase 4.5 / A.7.Q4 — screen-space pan (positive dx = view right, positive dy = view up). */

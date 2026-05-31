@@ -393,6 +393,32 @@ src/subapps/dxf-viewer/bim-3d/
 
 **Firestore**: νέα collection `bim_3d_preferences` + enterprise ID `b3dpref_*` + owner-only rules
 
+##### Phase 4.5 — ViewCube Roll Arrows Fix ✅ DONE 2026-05-31
+
+**Bug**: τα 2 roll arrows (πάνω από τον κύβο) δεν περιέστρεφαν τη ματιά· η παλιά υλοποίηση υπολόγιζε νέα κατεύθυνση και καλούσε `snapToViewDirection`, που ΠΑΝΤΑ επιβάλλει perspective + μετακινεί κάμερα → ορατό αποτέλεσμα «flat → perspective» αντί για roll.
+
+**Fix — true roll**: νέα `viewport.rollView(dirSign)` που περιστρέφει το **up vector** της κάμερας κατά ±90° γύρω από τον άξονα θέασης, κρατώντας position/target/**projection** ίδια → το σχέδιο φαίνεται να γυρίζει 90° στην οθόνη (instant, Autodesk ViewCube parity). Νέο optional callback `onRoll` στο ViewCube· `handleClick` roll branch → `onRoll?.(rollDir)`· wiring στο `scene-setup.ts`. Files: `viewport-types.ts`, `viewport-camera.ts`, `view-cube/view-cube.ts`, `scene/scene-setup.ts`, `__tests__/canonical-views.test.ts` (mock).
+
+##### Phase 4.4 — ViewCube Hover Color Unification (cyan → orange) ✅ DONE 2026-05-31
+
+**Scope**: Ενοποίηση χρώματος hover σε ΟΛΑ τα interactive στοιχεία του ViewCube. Πριν: μόνο οι έδρες/ακμές/γωνίες του κύβου έδειχναν highlight (σιελ `#88ccee`)· δαχτυλίδι/πυξίδα/βέλη/home δεν είχαν per-element hover feedback. Τώρα: AutoCAD-style πορτοκαλί σε όλα.
+
+- **SSoT χρώμα**: `VIEWCUBE_HOVER_COLOR_HEX = 0xff8c00` στο `view-cube-highlight.ts` (+ canvas fill `#ffa733` / stroke `#b35900` για τις έδρες). Ένα σημείο αλλαγής για όλο το widget.
+- **Έδρες/ακμές/γωνίες κύβου**: canvas highlight σιελ → πορτοκαλί.
+- **Δαχτυλίδι (torus) + ετικέτες πυξίδας (Β/Α/Ν/Δ)**: hover σε cardinal → ring + label πορτοκαλί. **+Ring body hover**: το ίδιο το torus έγινε pickable (`ringMesh` με userData `compass`/χωρίς cardinal → click inert) → hover σε ΟΛΟ το σώμα του δαχτυλιδιού, όχι μόνο στα γράμματα. `getFirstHit` προτιμά cardinal letter έναντι ring (τα hit planes επικαλύπτονται ακτινικά) ώστε τα clicks κατευθύνσεων να μη σπάσουν.
+- **Βέλη face-nav, roll arrows, home button**: hover → πορτοκαλί (material `.color` tint· sprites multiply texture). **Roll arrows fix**: η υφή ήταν γκρι `#7A8288` → ×orange = μουντό (φαινόταν «δεν ακούει»)· ζωγραφίζονται πλέον **λευκές** + `SpriteMaterial.color = NAV_ARROW_COLOR` (rest) → hover swap σε orange = καθαρό πορτοκαλί. **+Redraw**: μικρό/άσχημο σχέδιο με αδιάκριτη μύτη → νέο 180° τόξο, lineWidth 13, ευδιάκριτη bold μύτη· sprite scale 0.65→0.9, y 1.70→1.60 (χωράει στο ±1.95 frustum), hit box 0.55→0.8.
+- **Περιγράμματα πλήκτρων (button zones), ΟΧΙ κύβου — SSoT**: ο κύβος δεν πρέπει να έχει silhouette outline· μόνο τα clickable «πλήκτρα» κάθε έδρας (κέντρο/4 ακμές/4 γωνίες = οι FaceZone ζώνες hover). Υλοποίηση: **3×3 zone grid** ζωγραφισμένο στην υφή κάθε έδρας (μόνο εσωτερικοί διαχωριστές, χωρίς εξωτερικό πλαίσιο → καμία ακμή κύβου). **Αφαιρέθηκε** το `EdgesGeometry` wireframe (outlineMat/outlineGeo/outlineLines + sync opacity + dispose). SSoT: `VIEWCUBE_OUTLINE_COLOR_HEX = 0x1a1a1a` (CSS derived) + `OUTLINE_LINE_WIDTH = 3` στο `view-cube-mesh.ts` (local consts — μόνο εσωτερική χρήση).
+- Reset σε base color όταν φεύγει το hover (`resetControlHighlights()`).
+- **«Αχνό highlight» root cause = φωτισμός**: οι έδρες ήταν `MeshPhongMaterial` → η υφή σκοτείνιαζε ανάλογα με το φως (faces μακριά από το directional light: μόνο ambient ×0.6 → πορτοκαλί μουντό· το ανοιχτό σιελ «επιβίωνε»). **Fix: `MeshBasicMaterial` (unlit)** — true-color render, ανεξάρτητο φωτός, όπως ο Autodesk ViewCube (flat-shaded faces). Δευτερεύον: snap `opacity = 1.0` στο hover (έδρες `opacity 0.5` σε ηρεμία· το `sync()` lerp δεν τρέχει σε idle scene).
+
+**Files (MODIFY)**:
+- `bim-3d/viewport/view-cube/view-cube-highlight.ts` — `VIEWCUBE_HOVER_COLOR_HEX` export + orange fill/stroke
+- `bim-3d/viewport/view-cube/view-cube-mesh.ts` — `createCompassRing` επιστρέφει `labelMaterials` + `COMPASS_RING_DEFAULT_COLOR` export
+- `bim-3d/viewport/view-cube/view-cube-overlay.ts` — `NAV_ARROW_COLOR` export (reset value)
+- `bim-3d/viewport/view-cube/view-cube.ts` — `applyControlHighlight()` / `resetControlHighlights()` στο hover path
+
+**Dependencies**: Phase 4.3
+
 ---
 
 ##### Phase 4.4 — Keyboard Shortcuts SSoT (~4h) [A.6.Q1-Q4]

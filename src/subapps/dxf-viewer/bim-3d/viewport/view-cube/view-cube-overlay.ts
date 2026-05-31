@@ -23,7 +23,8 @@ export function computeCompassDirection(
   );
 }
 
-const NAV_ARROW_COLOR = 0x7A8288;
+/** Default (un-hovered) color of the face-nav arrows — reused as reset value. */
+export const NAV_ARROW_COLOR = 0x7A8288;
 
 const FACE_NAV_DEFS: ReadonlyArray<{
   pos: readonly [number, number, number];
@@ -36,21 +37,58 @@ const FACE_NAV_DEFS: ReadonlyArray<{
   { pos: [-0.90, 0, 0],  dir: [1, 0, 0],  navTarget: 'left'  },
 ];
 
-function drawCurvedArrow(ctx: CanvasRenderingContext2D, cw: boolean): void {
-  const S = 128 / 100;
+const ROLL_ARROW_CANVAS_PX = 128;
+const ROLL_ARROW_SPRITE_SCALE = 0.9;
+/** Compass ring TorusGeometry radius (mirror of view-cube-mesh.ts). */
+const COMPASS_RING_RADIUS = 1.50;
+/** Roll arrows lie on a circle CONCENTRIC with the ring but larger, so each
+ *  arrow is a true arc of that circle (centre = cube centre). Kept < the 1.95
+ *  mini-frustum half-extent so the top of the circle stays visible. */
+const CONCENTRIC_RADIUS = COMPASS_RING_RADIUS * 1.28;   // ≈ 1.92
+/** Angular offset of each arrow from the top of the concentric circle. */
+const ROLL_ARROW_PHI = 0.34;                            // rad ≈ 19.5°
+
+/**
+ * Draws ONE roll arrow as an arc of the concentric circle. `phi` = the arrow's
+ * angular position from the top (signed). The arc centre is the cube centre
+ * projected into this sprite's canvas, so the arc is genuinely concentric with
+ * the ring (not a local bow). `cw` picks which terminus carries the arrowhead so
+ * the two arrows point in opposite roll directions.
+ */
+function drawCurvedArrow(ctx: CanvasRenderingContext2D, cw: boolean, phi: number): void {
+  const px = ROLL_ARROW_CANVAS_PX;
+  const pxPerWorld = px / ROLL_ARROW_SPRITE_SCALE;
+  const Rpx = CONCENTRIC_RADIUS * pxPerWorld;           // concentric radius in canvas px
+  const cx = px / 2, cy = px / 2;
+  // Cube centre projected into the canvas. Sprite world pos = (Rc·sinφ, Rc·cosφ);
+  // the centre lies Rc away toward (-sinφ, +cosφ) in canvas (canvas y is flipped).
+  const Cx = cx - Math.sin(phi) * Rpx;
+  const Cy = cy + Math.cos(phi) * Rpx;
+  const alpha = Math.atan2(cy - Cy, cx - Cx);          // sprite centre as seen from C
+  const delta = 40 / Rpx;                              // half arc length (px → rad)
+  // Drawn WHITE so the SpriteMaterial.color drives the visible tint (gray rest,
+  // orange hover; a gray texture × orange would be muddy).
   ctx.save();
-  if (cw) { ctx.translate(128, 0); ctx.scale(-1, 1); }
-  const cx = 50 * S, cy = 50 * S, r = 30 * S;
-  ctx.strokeStyle = '#7A8288';
-  ctx.lineWidth = 8 * S; ctx.lineCap = 'round';
+  ctx.strokeStyle = '#ffffff';
+  ctx.fillStyle = '#ffffff';
+  ctx.lineWidth = 13;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   ctx.beginPath();
-  ctx.arc(cx, cy, r, Math.PI, 3 * Math.PI / 2, false);
+  ctx.arc(Cx, Cy, Rpx, alpha - delta, alpha + delta, false);
   ctx.stroke();
-  ctx.fillStyle = '#7A8288';
+  // Arrowhead at one terminus, tangent to the circle.
+  const aEnd = cw ? alpha - delta : alpha + delta;
+  const dirSign = cw ? -1 : 1;
+  const ex = Cx + Rpx * Math.cos(aEnd);
+  const ey = Cy + Rpx * Math.sin(aEnd);
+  const tx = -Math.sin(aEnd) * dirSign, ty = Math.cos(aEnd) * dirSign;
+  const aLen = 20, aW = 13;
+  const pxn = -ty, pyn = tx;
   ctx.beginPath();
-  ctx.moveTo(12 * S, 48 * S);
-  ctx.lineTo(20 * S, 62 * S);
-  ctx.lineTo(28 * S, 48 * S);
+  ctx.moveTo(ex + tx * aLen, ey + ty * aLen);          // tip
+  ctx.lineTo(ex + pxn * aW, ey + pyn * aW);
+  ctx.lineTo(ex - pxn * aW, ey - pyn * aW);
   ctx.closePath();
   ctx.fill();
   ctx.restore();
@@ -59,24 +97,26 @@ function drawCurvedArrow(ctx: CanvasRenderingContext2D, cw: boolean): void {
 export function createRollArrows(): { sprites: THREE.Sprite[]; hitMeshes: THREE.Mesh[] } {
   const sprites: THREE.Sprite[] = [];
   const hitMeshes: THREE.Mesh[] = [];
-  const configs: Array<{ cw: boolean; x: number; rollDir: 1 | -1 }> = [
-    { cw: false, x: -0.70, rollDir: -1 },
-    { cw: true,  x:  0.70, rollDir:  1 },
+  const configs: Array<{ cw: boolean; phi: number; rollDir: 1 | -1 }> = [
+    { cw: false, phi:  ROLL_ARROW_PHI, rollDir: -1 },   // right side
+    { cw: true,  phi: -ROLL_ARROW_PHI, rollDir:  1 },   // left side
   ];
-  for (const { cw, x, rollDir } of configs) {
+  for (const { cw, phi, rollDir } of configs) {
     const canvas = document.createElement('canvas');
-    canvas.width = 128; canvas.height = 128;
+    canvas.width = ROLL_ARROW_CANVAS_PX; canvas.height = ROLL_ARROW_CANVAS_PX;
     const ctx = canvas.getContext('2d')!;
-    ctx.clearRect(0, 0, 128, 128);
-    drawCurvedArrow(ctx, cw);
+    ctx.clearRect(0, 0, ROLL_ARROW_CANVAS_PX, ROLL_ARROW_CANVAS_PX);
+    drawCurvedArrow(ctx, cw, phi);
     const tex = new THREE.CanvasTexture(canvas);
-    const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false });
+    // color = default gray tint; hover swaps it to orange (texture is white).
+    const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, color: NAV_ARROW_COLOR });
     const sprite = new THREE.Sprite(mat);
-    sprite.scale.setScalar(0.65);
-    sprite.position.set(x, 1.70, 0);
+    sprite.scale.setScalar(ROLL_ARROW_SPRITE_SCALE);
+    // Sit the sprite ON the concentric circle near the top.
+    sprite.position.set(CONCENTRIC_RADIUS * Math.sin(phi), CONCENTRIC_RADIUS * Math.cos(phi), 0);
     sprite.visible = false;
     sprites.push(sprite);
-    const hitGeo = new THREE.BoxGeometry(0.55, 0.55, 0.55);
+    const hitGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
     const hitMat = new THREE.MeshBasicMaterial({ visible: false });
     const hitMesh = new THREE.Mesh(hitGeo, hitMat);
     hitMesh.position.copy(sprite.position);

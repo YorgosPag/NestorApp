@@ -115,6 +115,7 @@ describe('CanonicalViewService', () => {
       isAnimating: false,
       setProjection,
       snapToViewDirection,
+      rollView: jest.fn(),
       getZoom: jest.fn(() => 1),
       setZoom: jest.fn(),
       setZoomPreset: jest.fn(),

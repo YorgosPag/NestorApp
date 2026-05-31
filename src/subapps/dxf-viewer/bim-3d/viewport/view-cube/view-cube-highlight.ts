@@ -70,8 +70,15 @@ export function computeHighlights(
   return result;
 }
 
-const HIGHLIGHT_FILL   = '#88ccee';
-const HIGHLIGHT_STROKE = '#2255aa';
+/**
+ * SSoT hover/highlight color for the whole ViewCube widget (faces, ring,
+ * compass labels, roll arrows, face-nav arrows, home button). AutoCAD-style
+ * orange instead of the previous cyan (#88ccee). Hex form for THREE materials.
+ */
+export const VIEWCUBE_HOVER_COLOR_HEX = 0xff8c00;
+
+const HIGHLIGHT_FILL   = '#ff8c00';
+const HIGHLIGHT_STROKE = '#803f00';
 const HL_LINE_W = 2;
 
 export function drawZoneHighlight(
