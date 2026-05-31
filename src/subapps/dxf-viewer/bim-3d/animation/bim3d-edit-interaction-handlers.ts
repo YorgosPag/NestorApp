@@ -60,7 +60,8 @@ type EditCommand =
   | UpdateColumnParamsCommand
   | UpdateWallParamsCommand
   | UpdateBeamParamsCommand
-  | UpdateSlabParamsCommand;
+  | UpdateSlabParamsCommand
+  | UpdateStairParamsCommand;
 type SceneManager = NonNullable<ReturnType<typeof createSceneManagerAdapter>>;
 type ResizeOutcome = Extract<BridgeOutcome, { kind: 'resize' }>;
 
