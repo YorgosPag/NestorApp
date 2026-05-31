@@ -24,8 +24,7 @@ import { useColorMenuState } from '../hooks/state/useColorMenuState';
 import { useOverlayStore } from '../overlays/overlay-store';
 import { useUniversalSelection } from '../systems/selection';
 import { useLevelManager } from '../systems/levels/useLevels';
-// ADR-375 Phase B.2 — sync per-level BIM render settings into the store
-import { useBimRenderSettingsSync } from '../state/hooks/useBimRenderSettingsSync';
+import { useBimRenderSettingsSync } from '../state/hooks/useBimRenderSettingsSync'; // ADR-375 B.2 — per-level BIM render settings
 // ADR-396 P7 — sync per-level thermal envelope spec into the store
 import { useThermalEnvelopeSync } from '../state/hooks/useThermalEnvelopeSync';
 // ADR-375 Phase C.1 — sync per-company pen table overrides into the resolver
@@ -60,6 +59,7 @@ import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/Cl
 import { useDxfViewerCallbacks } from './useDxfViewerCallbacks';
 import { useDxfViewerEffects } from './useDxfViewerEffects';
 import { useDxfViewerNotifications } from '../hooks/useDxfViewerNotifications';
+import { useStructuralAutoAttach } from '../hooks/useStructuralAutoAttach';
 import { useAutoFitOnFileChange } from './useAutoFitOnFileChange';
 import { useViewportUrlSync } from '../hooks/canvas/useViewportUrlSync';
 // 📐 ADR-345 Fase 4: i18n for the "Coming Soon" toast on unwired ribbon buttons.
@@ -111,8 +111,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const ribbonContextualTabs = RIBBON_CONTEXTUAL_TABS;
   // ADR-345 Fase 5.5 — text editor bridge (toggle/combobox state + handlers).
   const textEditorBridge = useRibbonTextEditorBridge();
-  // ADR-344 Phase 6.E — selection → toolbar populate (Layer 1) + toolbar → CommandHistory (Layer 2).
-  // Mounted here (always-on orchestrator) so ribbon + floating panel stay in sync on any UI surface.
+  // ADR-344 Phase 6.E — selection→toolbar (L1) + toolbar→CommandHistory (L2); always-on orchestrator.
   useTextToolbarSelectionSync();
   useTextToolbarCommandBridge();
   useDxfViewerNotifications(); // ADR-401 Phase C — decoupled host-missing warning toast bridge
@@ -294,6 +293,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
 
   // ADR-362 Phase J2 — Dimension associativity observer (auto-follow geometry).
   useDimAssociationObserver(levelManager.getLevelScene, levelManager.setLevelScene, () => levelManager.currentLevelId);
+  useStructuralAutoAttach({ levelManager }); // ADR-401 Phase D — auto-attach walls under new beam/slab
   // ADR-358 Phase 7a / ADR-363 — BIM contextual bridges (stair / wall / opening / slab / column / beam).
   const { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge } =
     useDxfBimBridges({ levelManager, universalSelection });

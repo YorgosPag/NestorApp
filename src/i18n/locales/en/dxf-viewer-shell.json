@@ -4,7 +4,8 @@
     "cancel": "Cancel"
   },
   "attachToStructural": {
-    "hostMissing": "Wall lost its top structural support (the supporting element was deleted)."
+    "hostMissing": "Wall lost its top structural support (the supporting element was deleted).",
+    "autoAttached": "Walls auto-attached their top to the structural element."
   },
   "bim": {
     "wallCascadeDelete": {

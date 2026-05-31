@@ -28,6 +28,14 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-401 Phase D — walls auto-attached their top to a just-created beam/slab
+    // placed over them. Non-blocking confirmation (Revit auto-attach feedback).
+    unsubs.push(
+      EventBus.on('bim:walls-auto-attached', () => {
+        toast.info(t('attachToStructural.autoAttached'));
+      }),
+    );
+
     return () => unsubs.forEach((u) => u());
   }, [t]);
 }

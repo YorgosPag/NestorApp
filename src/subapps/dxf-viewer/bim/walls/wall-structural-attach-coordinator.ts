@@ -28,8 +28,16 @@
 
 import type { ISceneManager, SceneEntity } from '../../core/commands/interfaces';
 import type { Entity } from '../../types/entities';
+import { isBeamEntity, isSlabEntity, isWallEntity } from '../../types/entities';
 import { findAttachedWalls } from '../cascade/bim-cascade-resolver';
 import { EventBus } from '../../systems/events/EventBus';
+import {
+  beamHostInput,
+  slabHostInput,
+  buildHostUndersidePlans,
+  type HostFootprintInput,
+} from '../geometry/wall-host-plan-builder';
+import { resolveWallBaseZmm } from '../geometry/wall-top-profile';
 
 /**
  * Minimal scene-manager surface the coordinator needs. `getEntities` is
@@ -69,4 +77,60 @@ export function notifyWallsOnHostDeletion(
     });
   }
   return wallIds;
+}
+
+// ─── ADR-401 Phase D — auto-attach detection (host → walls below) ─────────────
+
+/**
+ * mm. Ένας host μετράει ως «πάνω» από τον τοίχο μόνο αν η κάτω-παρειά του είναι
+ * τουλάχιστον τόσο πάνω από τη βάση του τοίχου — έτσι μια πλάκα-ΠΑΤΩΜΑ (κάτω-
+ * παρειά κάτω από τη βάση) ΔΕΝ προσελκύει την κορυφή προς τα κάτω.
+ */
+const AUTO_ATTACH_Z_GATE_MM = 1;
+
+/**
+ * Active level scene σύμβαση: όλα τα entity elevations είναι level-relative με
+ * datum 0 (ίδιο με `wall-boq-feed` / `envelope-boq-sync`). Άρα ο Z gate τρέχει
+ * με `floorElevationMm: 0`.
+ */
+const ACTIVE_LEVEL_FLOOR_MM = 0;
+
+/**
+ * ADR-401 Phase D — όταν δημιουργείται structural host (δοκάρι/πλάκα), βρες τους
+ * τοίχους που πρέπει να «κολλήσουν» αυτόματα την κορυφή τους από κάτω του. Pure
+ * detection (μηδέν mutation) — ο καλών εκτελεί `AttachWallsTopCommand`.
+ *
+ * Κριτήρια (Revit "Attach Top" parity, Z-gated — επιλογή Giorgio 2026-05-31):
+ *   1. Μόνο τοίχοι με `topBinding='storey-ceiling'` (το default) — δεν πειράζουμε
+ *      ήδη-attached / unconnected / absolute (ρητή πρόθεση χρήστη).
+ *   2. **Κάτοψη**: ο host περνά πάνω από τον άξονα του τοίχου (≥1 covered span,
+ *      μέσω `buildHostUndersidePlans` — ο ΙΔΙΟΣ projector με τον resolver).
+ *   3. **Ύψος (Z gate)**: η κάτω-παρειά του host είναι πάνω από τη βάση του τοίχου
+ *      (οροφή/δοκάρι, ΟΧΙ η πλάκα-πάτωμα από κάτω → §παράδειγμα δωματίου).
+ *
+ * Host που δεν είναι δοκάρι/πλάκα → κενό (early return, O(1)).
+ */
+export function findWallsToAutoAttachToHost(
+  host: Entity,
+  entities: readonly Entity[],
+): string[] {
+  let hostInput: HostFootprintInput;
+  if (isBeamEntity(host)) hostInput = beamHostInput(host);
+  else if (isSlabEntity(host)) hostInput = slabHostInput(host);
+  else return [];
+
+  const out: string[] = [];
+  for (const e of entities) {
+    if (!isWallEntity(e)) continue;
+    if (e.params.topBinding !== 'storey-ceiling') continue;
+    const start = { x: e.params.start.x, y: e.params.start.y };
+    const end = { x: e.params.end.x, y: e.params.end.y };
+    // (2) plan overlap — ο host πρέπει να καλύπτει τμήμα του άξονα.
+    if (buildHostUndersidePlans(start, end, [hostInput]).length === 0) continue;
+    // (3) Z gate — host πάνω από τη βάση του τοίχου (οροφή/δοκάρι, όχι πάτωμα).
+    const baseZmm = resolveWallBaseZmm(e.params, { floorElevationMm: ACTIVE_LEVEL_FLOOR_MM });
+    if (hostInput.undersideZmm <= baseZmm + AUTO_ATTACH_Z_GATE_MM) continue;
+    out.push(e.id);
+  }
+  return out;
 }

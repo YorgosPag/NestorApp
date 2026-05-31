@@ -256,6 +256,10 @@ export interface DrawingEventMap {
   // automatically (resolveWallTopProfile.missingHostIds); this signal lets the
   // UI surface a non-blocking warning (Revit "Top Constraint no longer valid").
   'bim:wall-attach-host-missing': { wallIds: string[]; deletedHostIds: string[] };
+  // ADR-401 Phase D — N walls auto-attached their top to a just-created
+  // structural host (beam/slab over them). Lets the UI surface a non-blocking
+  // info toast (Revit auto-attach feedback). Undoable via AttachWallsTopCommand.
+  'bim:walls-auto-attached': { wallIds: string[]; hostId: string };
   // ADR-363 fix — multi-entity move dirty-flag propagation.
   // Carries the post-move entities directly so listeners never call
   // getLevelScene() (which returns stale React state at emit time).

@@ -8,11 +8,16 @@
  * section-intersect / wall-boq-feed, not by this module.
  */
 
-import { notifyWallsOnHostDeletion } from '../wall-structural-attach-coordinator';
+import {
+  notifyWallsOnHostDeletion,
+  findWallsToAutoAttachToHost,
+} from '../wall-structural-attach-coordinator';
 import { findAttachedWalls } from '../../cascade/bim-cascade-resolver';
 import { EventBus, type DrawingEventPayload } from '../../../systems/events/EventBus';
 import type { ISceneManager } from '../../../core/commands/interfaces';
 import type { Entity } from '../../../types/entities';
+import type { BeamEntity } from '../../types/beam-types';
+import type { SlabEntity } from '../../types/slab-types';
 
 interface FakeEntity {
   id: string;
@@ -124,5 +129,78 @@ describe('notifyWallsOnHostDeletion', () => {
     expect(notifyWallsOnHostDeletion([], makeSceneManager([]))).toEqual([]);
     const bare = { getEntity: () => null } as unknown as ISceneManager;
     expect(notifyWallsOnHostDeletion(['beam1'], bare)).toEqual([]);
+  });
+});
+
+// ─── ADR-401 Phase D — auto-attach detection ─────────────────────────────────
+
+/** Beam axis (0,0)→(4000,0), width 250 → footprint band y∈[-125,125], underside 2500. */
+function beamOverWall(undersideTopElevation = 3000): BeamEntity {
+  return {
+    id: 'beam_1', type: 'beam', kind: 'straight',
+    params: {
+      kind: 'straight', startPoint: { x: 0, y: 0 }, endPoint: { x: 4000, y: 0 },
+      width: 250, depth: 500, topElevation: undersideTopElevation, zOffset: 0, sceneUnits: 'mm',
+    },
+  } as unknown as BeamEntity;
+}
+
+/** Slab footprint 5000×5000 at level `levelElevation`, thickness 150. */
+function slabAt(levelElevation: number): SlabEntity {
+  return {
+    id: 'slab_1', type: 'slab', kind: 'floor',
+    params: {
+      kind: 'floor',
+      outline: { vertices: [{ x: 0, y: 0 }, { x: 5000, y: 0 }, { x: 5000, y: 5000 }, { x: 0, y: 5000 }] },
+      levelElevation, heightOffsetFromLevel: 0, thickness: 150, geometryType: 'box',
+    },
+  } as unknown as SlabEntity;
+}
+
+/** storey-ceiling wall axis along y=`y`, base at FFL (baseOffset 0 → baseZ 0). */
+const ceilingWall = (id: string, y: number, sx = 1000, ex = 4000): Entity => ({
+  id, type: 'wall', kind: 'straight',
+  params: {
+    topBinding: 'storey-ceiling', baseBinding: 'storey-floor', baseOffset: 0,
+    start: { x: sx, y, z: 0 }, end: { x: ex, y, z: 0 }, height: 3000, thickness: 250,
+  },
+} as unknown as Entity);
+
+describe('findWallsToAutoAttachToHost (Phase D)', () => {
+  it('attaches a storey-ceiling wall under a beam (plan overlap + beam above base)', () => {
+    const beam = beamOverWall();
+    const wall = ceilingWall('w1', 0); // y=0 inside beam band [-125,125]
+    expect(findWallsToAutoAttachToHost(beam as unknown as Entity, [wall])).toEqual(['w1']);
+  });
+
+  it('attaches walls under a CEILING slab (underside above base)', () => {
+    const slab = slabAt(3000); // underside 2850 > base 0
+    const wall = ceilingWall('w1', 1000); // inside slab footprint
+    expect(findWallsToAutoAttachToHost(slab as unknown as Entity, [wall])).toEqual(['w1']);
+  });
+
+  it('does NOT attach to a FLOOR slab below the wall base (Z gate)', () => {
+    const slab = slabAt(0); // underside -150 <= base 0 → skip
+    const wall = ceilingWall('w1', 1000); // overlaps in plan, but slab is below
+    expect(findWallsToAutoAttachToHost(slab as unknown as Entity, [wall])).toEqual([]);
+  });
+
+  it('does NOT attach when the host does not overlap the wall in plan', () => {
+    const beam = beamOverWall();
+    const wall = ceilingWall('w1', 5000); // far from beam band
+    expect(findWallsToAutoAttachToHost(beam as unknown as Entity, [wall])).toEqual([]);
+  });
+
+  it('ignores walls whose topBinding is not "storey-ceiling"', () => {
+    const beam = beamOverWall();
+    const attached = { ...ceilingWall('w1', 0) } as unknown as { params: Record<string, unknown> };
+    attached.params.topBinding = 'unconnected';
+    expect(findWallsToAutoAttachToHost(beam as unknown as Entity, [attached as unknown as Entity])).toEqual([]);
+  });
+
+  it('returns [] for a non-host entity (not beam/slab)', () => {
+    const line = { id: 'l1', type: 'line', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } } as unknown as Entity;
+    const wall = ceilingWall('w1', 0);
+    expect(findWallsToAutoAttachToHost(line, [wall])).toEqual([]);
   });
 });
