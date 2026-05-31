@@ -134,6 +134,10 @@
     "latLabel": "Latitude",
     "lngLabel": "Longitude",
     "animateLabel": "Animate sun",
+    "autoPreview": {
+      "label": "Live photorealism",
+      "hint": "Path-traces on every camera pause (heavy)"
+    },
     "hdri": {
       "label": "HDRI Environment",
       "noonGrass": "Noon",

@@ -134,6 +134,10 @@
     "latLabel": "Γεωγρ. πλάτος",
     "lngLabel": "Γεωγρ. μήκος",
     "animateLabel": "Κινούμενος ήλιος",
+    "autoPreview": {
+      "label": "Ζωντανός φωτορεαλισμός",
+      "hint": "Path-tracing σε κάθε παύση κάμερας (βαρύ)"
+    },
     "hdri": {
       "label": "HDRI Περιβάλλον",
       "noonGrass": "Μεσημέρι",

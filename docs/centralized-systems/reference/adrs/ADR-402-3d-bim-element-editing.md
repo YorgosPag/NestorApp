@@ -129,6 +129,17 @@ view-agnostic commands (cascade κουφωμάτων + undo — που το GenA
 ---
 
 ## Changelog
+- **2026-05-31 (Opus 4.8)** — **🐛 FIX: column resize handles ήταν αόρατα → resize «δεν λειτουργούσε»**
+  (Giorgio runtime report). Root cause στο `gizmo-geometry.ts`: το resize octahedron visual καταχωρείται
+  σε **δύο** ids — `resize-x` ΚΑΙ τη mirror του `resize-m-x` — που δείχνουν στο **ίδιο** mesh. Το
+  `applyActiveHandles` (`bim-gizmo-overlay.ts`) έκανε per-id `visible = ids.has(id)`· επειδή το
+  `activeHandlesFor('column')` περιέχει `resize-x`/`resize-z` αλλά ΟΧΙ `resize-m-x`, λόγω σειράς
+  εισαγωγής στο Map το ανενεργό `resize-m-x` έσβηνε αμέσως το ίδιο mesh (`visible=false`) → το handle
+  έμενε αόρατο, άρα μη-χρησιμοποιήσιμο. Τα Phase B tests κάλυπταν projection/hit-test/bridge **όχι**
+  overlay visibility → ξέφυγε. **Fix**: `applyActiveHandles` → hide-all-then-reveal (OR-semantics: ένα
+  visual μένει ορατό αν ΟΠΟΙΟΔΗΠΟΤΕ id που δείχνει σ' αυτό είναι active)· το hitbox filter ήταν ήδη
+  σωστό. +NEW `bim-gizmo-overlay.test.ts` (3 tests: resize-x/z ορατά για column, κρυφά για base-only,
+  hitboxes hittable). 27/27 gizmo PASS, tsc clean. Η drag→command math ήταν ήδη σωστή/tested. 🔴 browser verify.
 - **2026-05-31 (Opus 4.8)** — **Phase B: resize scaffold + COLUMN resize** (pending commit, 🔴 browser
   verify). Γενικό resize pipeline: `projectConstrained` resize branch (slide κατά άξονα) ·
   `BridgeOutcome.resize{axis,mode,deltaMm,cursorMm}` + getOutcome branch · controller κρατά τον gizmo

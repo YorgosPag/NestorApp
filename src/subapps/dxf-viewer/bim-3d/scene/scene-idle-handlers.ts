@@ -17,6 +17,10 @@ export function createSceneIdleDetector(deps: {
     onIdle: () => {
       deps.qualityModulator.onCameraIdle();
       deps.ssaoModulator.onCameraIdle();
+      // ADR-366 — the auto idle photorealism preview is opt-in (default OFF). When
+      // disabled, idle keeps the light SSAO refine-on-idle pass and never kicks the
+      // path tracer, so ordinary editing never grinds on every camera pause.
+      if (!useViewMode3DStore.getState().autoPreviewEnabled) return;
       const hasBimMesh = deps.bimLayer.hasMesh;
       const hdriLoaded = useEnvironmentStore.getState().hdriUrl !== null;
       if (hasBimMesh && hdriLoaded) deps.pathTracerRenderer.start();

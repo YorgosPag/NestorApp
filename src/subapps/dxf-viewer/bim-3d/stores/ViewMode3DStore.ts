@@ -80,6 +80,13 @@ interface ViewMode3DState {
   mode: ViewMode3D;
   /** True during mode transitions (for loading states) */
   isTransitioning: boolean;
+  /**
+   * ADR-366 — auto idle-triggered photorealism preview. Default OFF: idle path
+   * tracing only runs when the user opts in (industry-standard live-render toggle,
+   * cf. Enscape / Twinmotion). Prevents the 256-sample path-trace burst from
+   * grinding the machine on every camera pause during ordinary editing.
+   */
+  autoPreviewEnabled: boolean;
   /** Whether ARIA live-region announcements are active (ADR-366 Phase 9 / C.5.Q1). */
   announcementsEnabled: boolean;
   /** Reduced-motion override (ADR-366 Phase 9 / C.5.Q5). Default: 'auto' (follow OS). */
@@ -114,6 +121,8 @@ interface ViewMode3DState {
 interface ViewMode3DActions {
   /** Toggle between '2d' ↔ '3d-raster' */
   toggle2D3D(): void;
+  /** Enable/disable the auto idle photorealism preview (ADR-366). */
+  setAutoPreviewEnabled(enabled: boolean): void;
   /** Transition to '3d-raster' mode */
   enterRasterMode(): void;
   /** Transition to '3d-preview' mode (IdleDetector trigger — Phase 5) */
@@ -161,6 +170,7 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
         // ── Initial state ─────────────────────────────────────────────────────
         mode: '2d',
         isTransitioning: false,
+        autoPreviewEnabled: false,
         announcementsEnabled: true,
         accessibilityReducedMotion: 'auto' as ReducedMotionOverride,
         accessibilityEntityNavOrder: 'spatial' as const,
@@ -184,6 +194,12 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
           set((draft) => {
             draft.mode = draft.mode === '2d' ? '3d-raster' : '2d';
             draft.isTransitioning = false;
+          });
+        },
+
+        setAutoPreviewEnabled(enabled) {
+          set((draft) => {
+            draft.autoPreviewEnabled = enabled;
           });
         },
 
@@ -332,6 +348,7 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
 // ── Selectors ─────────────────────────────────────────────────────────────────
 
 export const selectIs3D = (s: ViewMode3DState) => s.mode !== '2d';
+export const selectAutoPreviewEnabled = (s: ViewMode3DState) => s.autoPreviewEnabled;
 export const selectViewMode = (s: ViewMode3DState) => s.mode;
 export const selectVisibleFloors = (s: ViewMode3DState) => s.visibleFloors;
 export const selectFloor3DScope = (s: ViewMode3DState) => s.floor3DScope;

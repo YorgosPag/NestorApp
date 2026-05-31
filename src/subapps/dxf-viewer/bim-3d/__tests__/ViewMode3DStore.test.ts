@@ -5,8 +5,28 @@ beforeEach(() => {
   useViewMode3DStore.setState({
     mode: '2d',
     isTransitioning: false,
+    autoPreviewEnabled: false,
     visibleFloors: new Set(),
     showAllFloors: false,
+  });
+});
+
+describe('autoPreviewEnabled (ADR-366 idle photorealism opt-in)', () => {
+  it('defaults to false (no auto path-trace burst during editing)', () => {
+    expect(useViewMode3DStore.getState().autoPreviewEnabled).toBe(false);
+  });
+
+  it('setAutoPreviewEnabled flips the flag both ways', () => {
+    useViewMode3DStore.getState().setAutoPreviewEnabled(true);
+    expect(useViewMode3DStore.getState().autoPreviewEnabled).toBe(true);
+    useViewMode3DStore.getState().setAutoPreviewEnabled(false);
+    expect(useViewMode3DStore.getState().autoPreviewEnabled).toBe(false);
+  });
+
+  it('selectAutoPreviewEnabled reflects state', () => {
+    const { selectAutoPreviewEnabled } = require('../stores/ViewMode3DStore');
+    useViewMode3DStore.getState().setAutoPreviewEnabled(true);
+    expect(selectAutoPreviewEnabled(useViewMode3DStore.getState())).toBe(true);
   });
 });
 

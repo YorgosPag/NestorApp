@@ -139,7 +139,17 @@ export class BimGizmoOverlay {
 
   /** Apply a handle-id set: toggle visual visibility + rebuild the active hitboxes. */
   private applyActiveHandles(ids: ReadonlySet<GizmoHandleId>): void {
-    for (const [id, visual] of this.meshSet.visuals) visual.visible = ids.has(id);
+    // A visual can be shared by several handle ids — e.g. `resize-x` and its mirror
+    // `resize-m-x` map to the SAME octahedron. It must stay visible when ANY of its
+    // ids is active. A per-id `visible = ids.has(id)` assignment lets a later
+    // inactive id overwrite an earlier active one to false (Map insertion order),
+    // which hid every resize handle in Phase B. So: hide all, then reveal each
+    // visual referenced by an active id.
+    for (const visual of this.meshSet.visuals.values()) visual.visible = false;
+    for (const id of ids) {
+      const visual = this.meshSet.visuals.get(id);
+      if (visual) visual.visible = true;
+    }
     this.activeHitboxes = this.meshSet.hitboxes.filter((hb) => {
       const id = this.meshSet.hitboxToId.get(hb);
       return id !== undefined && ids.has(id);

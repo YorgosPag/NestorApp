@@ -11,7 +11,7 @@ import { computeSolarPosition, timeOfDayToDate } from '../lighting/solar-positio
 
 export function Lighting3DPanelTab() {
   const { t } = useTranslation('bim3d');
-  const { sunPreset, sunAnimating, solarDate, solarLatDeg, solarLngDeg } = useSyncExternalStore(
+  const { sunPreset, sunAnimating, solarDate, solarLatDeg, solarLngDeg, autoPreviewEnabled } = useSyncExternalStore(
     useViewMode3DStore.subscribe,
     useViewMode3DStore.getState,
     useViewMode3DStore.getState,
@@ -51,6 +51,24 @@ export function Lighting3DPanelTab() {
 
   return (
     <div className="space-y-3 p-3 text-xs text-white/80">
+      <div className="flex items-center justify-between rounded border border-white/10 px-2 py-1.5">
+        <div className="flex flex-col">
+          <span>{t('lighting.autoPreview.label')}</span>
+          <span className="text-[10px] text-white/40">{t('lighting.autoPreview.hint')}</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => useViewMode3DStore.getState().setAutoPreviewEnabled(!autoPreviewEnabled)}
+          aria-pressed={autoPreviewEnabled}
+          className={[
+            'rounded border px-2 py-0.5 transition-colors',
+            autoPreviewEnabled ? 'border-primary text-white' : 'border-white/20 text-white/40',
+          ].join(' ')}
+        >
+          {autoPreviewEnabled ? '◉' : '○'}
+        </button>
+      </div>
+
       <div className="grid grid-cols-3 gap-1">
         {PRESET_ORDER.map((id) => (
           <button

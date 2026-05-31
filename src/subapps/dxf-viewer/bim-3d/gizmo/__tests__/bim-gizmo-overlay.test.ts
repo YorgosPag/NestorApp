@@ -1,0 +1,65 @@
+/**
+ * ADR-402 Phase B — BimGizmoOverlay handle visibility.
+ *
+ * Regression lock: a resize visual is shared by two handle ids (`resize-x` and its
+ * mirror `resize-m-x` map to the SAME octahedron). `setActiveHandles` must keep it
+ * visible when only `resize-x` is active — a per-id assignment let the inactive
+ * mirror id overwrite it to false (Map insertion order), hiding every resize handle
+ * for columns. Verified through the scene graph (black-box).
+ */
+
+import * as THREE from 'three';
+import { BimGizmoOverlay, activeHandlesFor } from '../bim-gizmo-overlay';
+
+function findByName(scene: THREE.Scene, name: string): THREE.Object3D | null {
+  let found: THREE.Object3D | null = null;
+  scene.traverse((obj) => {
+    if (!found && obj.name === name) found = obj;
+  });
+  return found;
+}
+
+describe('BimGizmoOverlay — active-handle visibility', () => {
+  it('shows the resize-x / resize-z visuals for a column selection', () => {
+    const scene = new THREE.Scene();
+    const overlay = new BimGizmoOverlay(scene);
+
+    overlay.setActiveHandles(activeHandlesFor('column'));
+
+    expect(findByName(scene, 'gizmo-resize-x')?.visible).toBe(true);
+    expect(findByName(scene, 'gizmo-resize-z')?.visible).toBe(true);
+    // Base move handle stays visible too.
+    expect(findByName(scene, 'gizmo-arrow-x')?.visible).toBe(true);
+
+    overlay.dispose();
+  });
+
+  it('hides the resize visuals for a base-only (non-column) selection', () => {
+    const scene = new THREE.Scene();
+    const overlay = new BimGizmoOverlay(scene);
+
+    overlay.setActiveHandles(activeHandlesFor(null));
+
+    expect(findByName(scene, 'gizmo-resize-x')?.visible).toBe(false);
+    expect(findByName(scene, 'gizmo-resize-z')?.visible).toBe(false);
+    // Base move handle remains visible.
+    expect(findByName(scene, 'gizmo-arrow-x')?.visible).toBe(true);
+
+    overlay.dispose();
+  });
+
+  it('exposes the resize-x / resize-z hitboxes for a column (hittable)', () => {
+    const scene = new THREE.Scene();
+    const overlay = new BimGizmoOverlay(scene);
+
+    overlay.setActiveHandles(activeHandlesFor('column'));
+    const ids = new Set(
+      overlay.hitTestView.hitboxes.map((hb) => overlay.hitTestView.hitboxToId.get(hb)),
+    );
+
+    expect(ids.has('resize-x')).toBe(true);
+    expect(ids.has('resize-z')).toBe(true);
+
+    overlay.dispose();
+  });
+});
