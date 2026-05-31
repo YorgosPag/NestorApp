@@ -444,6 +444,62 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
       ],
     },
     {
+      // ADR-401 Phase F.3 — manual «Attach/Detach Top/Base to structural» (Revit
+      // parity, mirror του wall panel). Attach buttons activate a pick-host tool
+      // (commandKey = ToolType, no `action`); detach buttons fire a bridge action.
+      id: 'column-structural-attach',
+      labelKey: 'ribbon.panels.columnStructuralAttach',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'column.attachTop',
+                labelKey: 'ribbon.commands.columnEditor.attachTop',
+                icon: 'bim-wall-attach-top',
+                commandKey: 'column-attach-top',
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'column.attachBase',
+                labelKey: 'ribbon.commands.columnEditor.attachBase',
+                icon: 'bim-wall-attach-base',
+                commandKey: 'column-attach-base',
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'column.detachTop',
+                labelKey: 'ribbon.commands.columnEditor.detachTop',
+                icon: 'bim-wall-detach',
+                commandKey: COLUMN_RIBBON_KEYS_ACTIONS.detachTop,
+                action: COLUMN_RIBBON_KEYS_ACTIONS.detachTop,
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'column.detachBase',
+                labelKey: 'ribbon.commands.columnEditor.detachBase',
+                icon: 'bim-wall-detach',
+                commandKey: COLUMN_RIBBON_KEYS_ACTIONS.detachBase,
+                action: COLUMN_RIBBON_KEYS_ACTIONS.detachBase,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'column-actions',
       labelKey: 'ribbon.panels.columnActions',
       rows: [

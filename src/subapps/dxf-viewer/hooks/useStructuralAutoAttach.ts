@@ -25,14 +25,23 @@ import {
   findWallsToAutoAttachBaseToHost,
 } from '../bim/walls/wall-structural-attach-coordinator';
 import {
+  findColumnsToAutoAttachToHost,
+  findColumnsToAutoAttachBaseToHost,
+} from '../bim/columns/column-structural-attach-coordinator';
+import {
   AttachWallsTopCommand,
   type WallAttachTarget,
 } from '../core/commands/entity-commands/AttachWallsTopCommand';
 import { AttachWallsBaseCommand } from '../core/commands/entity-commands/AttachWallsBaseCommand';
-import { isWallEntity } from '../types/entities';
+import {
+  AttachColumnsCommand,
+  type ColumnAttachTarget,
+} from '../core/commands/entity-commands/AttachColumnsCommand';
+import { isWallEntity, isColumnEntity } from '../types/entities';
 import type { Entity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
 import type { WallEntity } from '../bim/types/wall-types';
+import type { ColumnEntity } from '../bim/types/column-types';
 
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
@@ -53,6 +62,19 @@ function buildAttachTargets(
   return targets;
 }
 
+/** Map column ids → attach targets ({columnId, kind}) από το live scene. */
+function buildColumnAttachTargets(
+  columnIds: readonly string[],
+  entities: readonly Entity[],
+): ColumnAttachTarget[] {
+  const targets: ColumnAttachTarget[] = [];
+  for (const id of columnIds) {
+    const c = entities.find((e) => e.id === id);
+    if (c && isColumnEntity(c)) targets.push({ columnId: id, kind: (c as ColumnEntity).kind });
+  }
+  return targets;
+}
+
 export function useStructuralAutoAttach(props: { levelManager: LevelManagerLike }): void {
   const { levelManager } = props;
   const { execute } = useCommandHistory();
@@ -68,7 +90,13 @@ export function useStructuralAutoAttach(props: { levelManager: LevelManagerLike 
       const host = entity as unknown as Entity;
       const topTargets = buildAttachTargets(findWallsToAutoAttachToHost(host, entities), entities);
       const baseTargets = buildAttachTargets(findWallsToAutoAttachBaseToHost(host, entities), entities);
-      if (topTargets.length === 0 && baseTargets.length === 0) return;
+      // ADR-401 Phase F.3 — same auto-attach for columns under the new host.
+      const colTopTargets = buildColumnAttachTargets(findColumnsToAutoAttachToHost(host, entities), entities);
+      const colBaseTargets = buildColumnAttachTargets(findColumnsToAutoAttachBaseToHost(host, entities), entities);
+      if (
+        topTargets.length === 0 && baseTargets.length === 0 &&
+        colTopTargets.length === 0 && colBaseTargets.length === 0
+      ) return;
 
       const sm = new LevelSceneManagerAdapter(
         levelManager.getLevelScene,
@@ -82,6 +110,14 @@ export function useStructuralAutoAttach(props: { levelManager: LevelManagerLike 
       if (baseTargets.length > 0) {
         execute(new AttachWallsBaseCommand(entity.id, baseTargets, sm));
         EventBus.emit('bim:walls-auto-attached-base', { wallIds: baseTargets.map((t) => t.wallId), hostId: entity.id });
+      }
+      if (colTopTargets.length > 0) {
+        execute(new AttachColumnsCommand('top', entity.id, colTopTargets, sm));
+        EventBus.emit('bim:columns-auto-attached', { columnIds: colTopTargets.map((t) => t.columnId), hostId: entity.id });
+      }
+      if (colBaseTargets.length > 0) {
+        execute(new AttachColumnsCommand('base', entity.id, colBaseTargets, sm));
+        EventBus.emit('bim:columns-auto-attached-base', { columnIds: colBaseTargets.map((t) => t.columnId), hostId: entity.id });
       }
     });
     return () => unsub();

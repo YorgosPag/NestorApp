@@ -18,8 +18,9 @@
  */
 
 import type { Entity } from '../../types/entities';
-import { isWallEntity, isBeamEntity, isSlabEntity } from '../../types/entities';
+import { isWallEntity, isBeamEntity, isSlabEntity, isColumnEntity } from '../../types/entities';
 import type { WallAttachTarget } from '../../core/commands/entity-commands/AttachWallsTopCommand';
+import type { ColumnAttachTarget } from '../../core/commands/entity-commands/AttachColumnsCommand';
 import type { Point2D } from '../../rendering/types/Types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 
@@ -32,6 +33,19 @@ export function resolveWallAttachTargets(
   for (const id of selectedIds) {
     const e = entities.find((x) => x.id === id);
     if (e && isWallEntity(e)) targets.push({ wallId: e.id, kind: e.kind });
+  }
+  return targets;
+}
+
+/** Selected entity ids → column attach targets (id + kind). Non-columns skipped. */
+export function resolveColumnAttachTargets(
+  selectedIds: readonly string[],
+  entities: readonly Entity[],
+): ColumnAttachTarget[] {
+  const targets: ColumnAttachTarget[] = [];
+  for (const id of selectedIds) {
+    const e = entities.find((x) => x.id === id);
+    if (e && isColumnEntity(e)) targets.push({ columnId: e.id, kind: e.kind });
   }
   return targets;
 }

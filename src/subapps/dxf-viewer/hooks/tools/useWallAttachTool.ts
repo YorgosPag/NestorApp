@@ -1,21 +1,26 @@
 /**
- * USE WALL ATTACH TOOL — ADR-401 Phase E.1 (manual attach pick-host).
+ * USE WALL ATTACH TOOL — ADR-401 Phase E.1 (wall) + F.3 (column) manual attach pick-host.
  *
- * Revit «Attach Top/Base to…» pick-host interaction:
- *   select walls → ribbon button activates 'wall-attach-top' / 'wall-attach-base'
- *     → snapshot the selected walls as targets (on activation)
- *     → click a structural host (beam/slab) → AttachWalls{Top|Base}Command → 'select'
+ * Revit «Attach Top/Base to…» pick-host interaction, for BOTH walls and columns:
+ *   select walls/columns → ribbon button activates the matching tool
+ *     ('wall-attach-top'/'-base' or 'column-attach-top'/'-base')
+ *     → snapshot the selected elements as targets (on activation)
+ *     → click a structural host (beam/slab) → AttachWalls{Top|Base}Command /
+ *       AttachColumnsCommand → 'select'
  *   ESC → exit to 'select'.
  *
+ * The element kind (wall/column) AND the side (top/base) are encoded in the tool
+ * type. Return prop names keep the `…WallAttach…` prefix (the canvas-click wiring
+ * is shared, ADR-040 — no churn there); the tool itself is element-agnostic.
+ *
  * Activation mirrors `useBimCopyTool` (snapshot selection on isActive transition);
- * click mirrors `useWallSplitTool`. The mode (top/base) is encoded in the tool
- * type. Host pick reuses the unit-correct `HoverStore` (`getHoveredEntity()`)
- * first; a mm-space geometry fallback covers the case where hover misses the
- * beam/slab (the click point is converted scene-units → mm at the boundary).
+ * click mirrors `useWallSplitTool`. Host pick reuses the unit-correct `HoverStore`
+ * (`getHoveredEntity()`) first; a mm-space geometry fallback covers the case where
+ * hover misses the beam/slab.
  *
  * @see bim/walls/wall-attach-pick.ts — pure target/host resolution SSoT
- * @see core/commands/entity-commands/AttachWallsTopCommand.ts
- * @see docs/centralized-systems/reference/adrs/ADR-401-bim-wall-top-base-constraints-attach-to-structural.md §2.5
+ * @see core/commands/entity-commands/AttachWallsTopCommand.ts / AttachColumnsCommand.ts
+ * @see docs/centralized-systems/reference/adrs/ADR-401-bim-wall-top-base-constraints-attach-to-structural.md §2.5 §5
  */
 'use client';
 
@@ -30,7 +35,12 @@ import {
 } from '../../core/commands/entity-commands/AttachWallsTopCommand';
 import { AttachWallsBaseCommand } from '../../core/commands/entity-commands/AttachWallsBaseCommand';
 import {
+  AttachColumnsCommand,
+  type ColumnAttachTarget,
+} from '../../core/commands/entity-commands/AttachColumnsCommand';
+import {
   resolveWallAttachTargets,
+  resolveColumnAttachTargets,
   resolveStructuralHostId,
   findStructuralHostAtPoint,
 } from '../../bim/walls/wall-attach-pick';
@@ -70,14 +80,17 @@ export function useWallAttachTool({
   transformScale,
   onToolChange,
 }: UseWallAttachToolProps): UseWallAttachToolReturn {
-  const isActive = activeTool === 'wall-attach-top' || activeTool === 'wall-attach-base';
-  const side: 'top' | 'base' = activeTool === 'wall-attach-base' ? 'base' : 'top';
+  const isWallTool = activeTool === 'wall-attach-top' || activeTool === 'wall-attach-base';
+  const isColumnTool = activeTool === 'column-attach-top' || activeTool === 'column-attach-base';
+  const isActive = isWallTool || isColumnTool;
+  const entityKind: 'wall' | 'column' = isColumnTool ? 'column' : 'wall';
+  const side: 'top' | 'base' = activeTool.endsWith('-base') ? 'base' : 'top';
 
   const transformScaleRef = useRef(transformScale);
   transformScaleRef.current = transformScale;
 
-  /** Snapshot of wall targets captured on activation — stable for the session. */
-  const targetsRef = useRef<WallAttachTarget[]>([]);
+  /** Snapshot of attach targets captured on activation — stable for the session. */
+  const targetsRef = useRef<WallAttachTarget[] | ColumnAttachTarget[]>([]);
   const wasActiveRef = useRef(false);
 
   const getSceneManager = useCallback(() => {
@@ -97,7 +110,9 @@ export function useWallAttachTool({
         ? levelManager.getLevelScene(levelManager.currentLevelId)
         : null;
       const targets = scene
-        ? resolveWallAttachTargets(selectedEntityIds, scene.entities)
+        ? entityKind === 'column'
+          ? resolveColumnAttachTargets(selectedEntityIds, scene.entities)
+          : resolveWallAttachTargets(selectedEntityIds, scene.entities)
         : [];
       targetsRef.current = targets;
       if (targets.length === 0) {
@@ -112,7 +127,7 @@ export function useWallAttachTool({
       toolHintOverrideStore.setOverride(null);
     }
     wasActiveRef.current = isActive;
-  }, [isActive, selectedEntityIds, levelManager, onToolChange]);
+  }, [isActive, entityKind, selectedEntityIds, levelManager, onToolChange]);
 
   // ── Host pick (hover SSoT first, mm-space geometry fallback) ──────────────
 
@@ -146,19 +161,30 @@ export function useWallAttachTool({
       const hostId = findHost(worldPoint);
       if (!hostId) return; // missed — stay in pick mode
 
-      const cmd = side === 'top'
-        ? new AttachWallsTopCommand(hostId, targets, sm)
-        : new AttachWallsBaseCommand(hostId, targets, sm);
-      executeCommand(cmd);
-      EventBus.emit('bim:walls-attached-manual', {
-        side,
-        hostId,
-        wallIds: targets.map((t) => t.wallId),
-      });
+      if (entityKind === 'column') {
+        const colTargets = targets as ColumnAttachTarget[];
+        executeCommand(new AttachColumnsCommand(side, hostId, colTargets, sm));
+        EventBus.emit('bim:columns-attached-manual', {
+          side,
+          hostId,
+          columnIds: colTargets.map((t) => t.columnId),
+        });
+      } else {
+        const wallTargets = targets as WallAttachTarget[];
+        const cmd = side === 'top'
+          ? new AttachWallsTopCommand(hostId, wallTargets, sm)
+          : new AttachWallsBaseCommand(hostId, wallTargets, sm);
+        executeCommand(cmd);
+        EventBus.emit('bim:walls-attached-manual', {
+          side,
+          hostId,
+          wallIds: wallTargets.map((t) => t.wallId),
+        });
+      }
       toolHintOverrideStore.setOverride(null);
       onToolChange?.('select');
     },
-    [isActive, side, getSceneManager, findHost, executeCommand, onToolChange],
+    [isActive, entityKind, side, getSceneManager, findHost, executeCommand, onToolChange],
   );
 
   // ── Escape: exit tool ─────────────────────────────────────────────────────

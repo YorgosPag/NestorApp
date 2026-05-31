@@ -75,6 +75,9 @@ export const COLUMN_RIBBON_STRING_KEYS: readonly ColumnRibbonStringCommandKey[] 
 export const COLUMN_RIBBON_KEYS_ACTIONS = {
   close: 'column.actions.close',
   delete: 'column.actions.delete',
+  // ADR-401 Phase F.3 — manual detach of column top/base from its structural host.
+  detachTop: 'column.actions.detachTop',
+  detachBase: 'column.actions.detachBase',
 } as const;
 
 const COLUMN_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

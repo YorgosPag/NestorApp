@@ -273,6 +273,14 @@ export interface DrawingEventMap {
   // non-blocking info toast (Revit Attach/Detach feedback).
   'bim:walls-attached-manual': { side: 'top' | 'base'; wallIds: string[]; hostId: string };
   'bim:walls-detached': { side: 'top' | 'base'; wallIds: string[] };
+  // ADR-401 Phase F.3 — column attach mirrors of the wall events above. N columns
+  // auto-attached their top/base to a just-created structural host. Undoable via
+  // AttachColumnsCommand. UI surfaces a non-blocking info toast (Revit parity).
+  'bim:columns-auto-attached': { columnIds: string[]; hostId: string };
+  'bim:columns-auto-attached-base': { columnIds: string[]; hostId: string };
+  // ADR-401 Phase F.3 — manual attach/detach of column top/base (ribbon pick-host).
+  'bim:columns-attached-manual': { side: 'top' | 'base'; columnIds: string[]; hostId: string };
+  'bim:columns-detached': { side: 'top' | 'base'; columnIds: string[] };
   // ADR-363 fix — multi-entity move dirty-flag propagation.
   // Carries the post-move entities directly so listeners never call
   // getLevelScene() (which returns stale React state at emit time).

@@ -48,6 +48,28 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-401 Phase F.3 — column attach mirrors (reuse the generic messages).
+    unsubs.push(
+      EventBus.on('bim:columns-auto-attached', () => {
+        toast.info(t('attachToStructural.autoAttached'));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:columns-auto-attached-base', () => {
+        toast.info(t('attachToStructural.autoAttached'));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:columns-attached-manual', () => {
+        toast.info(t('attachToStructural.attachedManual'));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:columns-detached', () => {
+        toast.info(t('attachToStructural.detached'));
+      }),
+    );
+
     return () => unsubs.forEach((u) => u());
   }, [t]);
 }

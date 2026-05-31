@@ -81,9 +81,11 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'mstretch': { id: 'mstretch', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   // ADR-363 Phase 5.6: Wall Split (Revit Split Element — continuous pick loop, exits on ESC)
   'wall-split': { id: 'wall-split', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
-  // ADR-401 Phase E.1: Wall Attach Top/Base (pick one host then act, exits on click/ESC)
+  // ADR-401 Phase E.1/F.3: Wall + Column Attach Top/Base (pick one host then act, exits on click/ESC)
   'wall-attach-top': { id: 'wall-attach-top', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'wall-attach-base': { id: 'wall-attach-base', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'column-attach-top': { id: 'column-attach-top', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'column-attach-base': { id: 'column-attach-base', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   // ADR-363 R1: BIM Copy (AutoCAD COPY: base + continuous target picks, exits on ESC)
   'bim-copy': { id: 'bim-copy', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-350: Trim (continuous pick loop, Quick mode default, exits on ENTER/ESC/right-click)

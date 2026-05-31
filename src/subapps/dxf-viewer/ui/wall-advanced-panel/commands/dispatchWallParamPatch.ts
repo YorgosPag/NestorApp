@@ -52,9 +52,10 @@ export function useWallParamsDispatcher(
       // ADR-401 Phase E.4 — a manual height/baseOffset edit breaks the matching
       // top/base structural attach first (Revit «edit breaks attach»), so the
       // explicit numeric value wins over the host follow. Detach + edit collapse
-      // into one undo step (prevParams below restores both).
-      const base = detachSidesAffectedByVerticalEdit(wall.params, patch);
-      const next: WallParams = { ...base, ...patch };
+      // into one undo step (prevParams below restores both). Merge first, then let
+      // the full-params SSoT reset any side whose driving scalar the patch changed.
+      const merged: WallParams = { ...wall.params, ...patch };
+      const next = detachSidesAffectedByVerticalEdit(wall.params, merged);
       const sm = new LevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,

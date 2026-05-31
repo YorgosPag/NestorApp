@@ -28,15 +28,12 @@ import type {
   ColumnIShapeParams,
   ColumnKind,
   ColumnParams,
-  ColumnPolygonParams,
-} from '../../../bim/types/column-types';
-import {
-  DEFAULT_I_FLANGE_THICKNESS_MM,
-  DEFAULT_I_WEB_THICKNESS_MM,
-  DEFAULT_POLYGON_SIDES,
 } from '../../../bim/types/column-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateColumnParamsCommand } from '../../../core/commands/entity-commands/UpdateColumnParamsCommand';
+import { DetachColumnsCommand, type ColumnDetachSide } from '../../../core/commands/entity-commands/DetachColumnsCommand';
+import { detachSidesAffectedByVerticalEdit } from '../../../bim/entities/entity-attach-detach';
+import { resolveColumnAttachTargets } from '../../../bim/walls/wall-attach-pick';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   COLUMN_RIBBON_KEYS,
@@ -59,6 +56,14 @@ import {
   catalogOwnsDimension,
   catalogOwnsNestedParam,
 } from './bridge/column-bridge-catalog-helpers';
+import {
+  NESTED_NUMBER_KEY_TO_PATH,
+  NUMBER_KEY_TO_FIELD,
+  STRING_KEY_TO_FIELD,
+  isNestedNumberKey,
+  patchNestedParams,
+  readNestedValue,
+} from './bridge/column-bridge-param-routing';
 import { CATALOG_CUSTOM_SENTINEL } from '../../../bim/columns/section-catalog';
 import { EventBus } from '../../../systems/events/EventBus';
 import type {
@@ -75,7 +80,7 @@ type LevelManagerLike = Pick<
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId'
+  'getPrimaryId' | 'getSelectedEntityIds'
 >;
 
 export interface UseRibbonColumnBridgeProps {
@@ -108,74 +113,6 @@ const COLUMN_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
 
 const NULL_TOGGLE: RibbonToggleState = false;
 
-const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof ColumnParams>> = {
-  [COLUMN_RIBBON_KEYS.params.width]:    'width',
-  [COLUMN_RIBBON_KEYS.params.depth]:    'depth',
-  [COLUMN_RIBBON_KEYS.params.height]:   'height',
-  [COLUMN_RIBBON_KEYS.params.rotation]: 'rotation',
-};
-
-const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof ColumnParams>> = {
-  [COLUMN_RIBBON_KEYS.stringParams.kind]:           'kind',
-  [COLUMN_RIBBON_KEYS.stringParams.anchor]:         'anchor',
-  [COLUMN_RIBBON_KEYS.stringParams.material]:       'material',
-  [COLUMN_RIBBON_KEYS.stringParams.catalogProfile]: 'catalogProfile',
-};
-
-/**
- * ADR-363 Phase 8D — Nested-param routing. Sides → polygon.sides;
- * flangeThickness/webThickness → ishape.{flange|web}Thickness.
- */
-type NestedGroup = 'polygon' | 'ishape';
-type NestedField = keyof ColumnPolygonParams | keyof ColumnIShapeParams;
-
-interface NestedPath {
-  readonly group: NestedGroup;
-  readonly field: NestedField;
-  readonly defaultValue: number;
-}
-
-const NESTED_NUMBER_KEY_TO_PATH: Readonly<Record<string, NestedPath>> = {
-  [COLUMN_RIBBON_KEYS.params.sides]: {
-    group: 'polygon',
-    field: 'sides',
-    defaultValue: DEFAULT_POLYGON_SIDES,
-  },
-  [COLUMN_RIBBON_KEYS.params.flangeThickness]: {
-    group: 'ishape',
-    field: 'flangeThickness',
-    defaultValue: DEFAULT_I_FLANGE_THICKNESS_MM,
-  },
-  [COLUMN_RIBBON_KEYS.params.webThickness]: {
-    group: 'ishape',
-    field: 'webThickness',
-    defaultValue: DEFAULT_I_WEB_THICKNESS_MM,
-  },
-};
-
-function isNestedNumberKey(commandKey: string): boolean {
-  return Object.prototype.hasOwnProperty.call(NESTED_NUMBER_KEY_TO_PATH, commandKey);
-}
-
-function readNestedValue(params: Readonly<ColumnParams>, path: NestedPath): number {
-  const group = path.group === 'polygon' ? params.polygon : params.ishape;
-  const raw = group ? (group as Record<string, unknown>)[path.field] : undefined;
-  return typeof raw === 'number' ? raw : path.defaultValue;
-}
-
-function patchNestedParams(
-  params: Readonly<ColumnParams>,
-  path: NestedPath,
-  nextValue: number,
-): ColumnParams {
-  if (path.group === 'polygon') {
-    const nextPolygon: ColumnPolygonParams = { ...(params.polygon ?? {}), [path.field]: nextValue };
-    return { ...params, polygon: nextPolygon };
-  }
-  const nextIshape: ColumnIShapeParams = { ...(params.ishape ?? {}), [path.field]: nextValue };
-  return { ...params, ishape: nextIshape };
-}
-
 export function useRibbonColumnBridge(
   props: UseRibbonColumnBridgeProps,
 ): RibbonColumnBridge {
@@ -207,13 +144,18 @@ export function useRibbonColumnBridge(
   const dispatchParams = useCallback(
     (column: ColumnEntity, nextParams: ColumnParams): void => {
       if (!levelManager.currentLevelId) return;
+      // ADR-401 Phase F.3 — a manual height/baseOffset edit breaks the matching
+      // top/base structural attach first (Revit «edit breaks attach»), so the
+      // explicit numeric value wins over the host follow. Detach + edit collapse
+      // into one undo step (column.params below restores both).
+      const next = detachSidesAffectedByVerticalEdit(column.params, nextParams);
       const sm = new LevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,
       );
       executeCommand(
-        new UpdateColumnParamsCommand(column.id, nextParams, column.params, sm, false),
+        new UpdateColumnParamsCommand(column.id, next, column.params, sm, false),
       );
       EventBus.emit('bim:column-params-updated', { columnId: column.id });
     },
@@ -407,6 +349,29 @@ export function useRibbonColumnBridge(
     return false;
   }, [resolveColumn]);
 
+  // ADR-401 Phase F.3 — manual detach of ALL selected columns' top/base from their
+  // structural host(s). Restores default binding + clears attach ids (one undo).
+  const handleDetach = useCallback(
+    (side: ColumnDetachSide): void => {
+      if (!levelManager.currentLevelId) return;
+      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
+      if (!scene) return;
+      const targets = resolveColumnAttachTargets(
+        universalSelection.getSelectedEntityIds(),
+        scene.entities,
+      );
+      if (targets.length === 0) return;
+      const sm = new LevelSceneManagerAdapter(
+        levelManager.getLevelScene,
+        levelManager.setLevelScene,
+        levelManager.currentLevelId,
+      );
+      executeCommand(new DetachColumnsCommand(side, targets, sm));
+      EventBus.emit('bim:columns-detached', { side, columnIds: targets.map((t) => t.columnId) });
+    },
+    [levelManager, universalSelection, executeCommand],
+  );
+
   const onAction = useCallback(
     (action: string): void => {
       if (action === PSET_RIBBON_ACTION) {
@@ -419,6 +384,8 @@ export function useRibbonColumnBridge(
         });
         return;
       }
+      if (action === COLUMN_RIBBON_KEYS_ACTIONS.detachTop) { handleDetach('top'); return; }
+      if (action === COLUMN_RIBBON_KEYS_ACTIONS.detachBase) { handleDetach('base'); return; }
       if (action !== COLUMN_RIBBON_KEYS_ACTIONS.delete) return;
       const column = resolveColumn();
       if (!column) return;
@@ -428,7 +395,7 @@ export function useRibbonColumnBridge(
       if (!confirmed) return;
       EventBus.emit('bim:column-delete-requested', { columnId: column.id });
     },
-    [resolveColumn, levelManager, t],
+    [resolveColumn, levelManager, t, handleDetach],
   );
 
   /**
