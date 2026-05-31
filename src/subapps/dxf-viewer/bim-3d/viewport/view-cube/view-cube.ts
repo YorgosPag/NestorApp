@@ -337,8 +337,21 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
   canvas.addEventListener('pointerup', onPointerUp);
   canvas.addEventListener('click', onCanvasClick);
   canvas.addEventListener('contextmenu', onCanvasContextMenu);
-  canvas.addEventListener('mouseenter', () => { cubeHovered = true; });
-  canvas.addEventListener('mouseleave', () => { cubeHovered = false; });
+  // Hover chrome (home button + roll arrows + face-nav arrows) is shown ONLY
+  // while the ViewCube is hovered. Applied from sync() AND directly here (+ an
+  // immediate render) so it appears/disappears the instant the pointer enters or
+  // leaves, even when the main render loop is idle and sync() isn't ticking.
+  function applyHoverChrome(): void {
+    homeSprite.visible = cubeHovered; homeHitMesh.visible = cubeHovered;
+    for (const s of rollSprites) s.visible = cubeHovered;
+    for (const hm of rollHitMeshes) hm.visible = cubeHovered;
+    for (const child of faceNavGroup.children) child.visible = cubeHovered;
+    for (const hm of faceNavHitMeshes) hm.visible = cubeHovered;
+    for (const m of faceNavMats) m.opacity = cubeHovered ? 0.7 : 0;
+  }
+
+  canvas.addEventListener('mouseenter', () => { cubeHovered = true; applyHoverChrome(); miniRenderer.render(scene, miniCam); });
+  canvas.addEventListener('mouseleave', () => { cubeHovered = false; applyHoverChrome(); miniRenderer.render(scene, miniCam); });
 
   const _q = new THREE.Quaternion();
 
@@ -354,13 +367,7 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
     const lerp = 0.15;
     for (const mat of cubeMaterials) { mat.opacity += (tgtAlpha - mat.opacity) * lerp; }
     ringMaterial.opacity += ((cubeHovered ? 0.8 : 0.4) - ringMaterial.opacity) * lerp;
-    homeSprite.visible = cubeHovered; homeHitMesh.visible = cubeHovered;
-    for (const s of rollSprites) s.visible = cubeHovered;
-    for (const hm of rollHitMeshes) hm.visible = cubeHovered;
-    for (const child of faceNavGroup.children) child.visible = cubeHovered;
-    for (const hm of faceNavHitMeshes) hm.visible = cubeHovered;
-    const navAlpha = cubeHovered ? 0.7 : 0;
-    for (const m of faceNavMats) m.opacity = navAlpha;
+    applyHoverChrome();
     miniRenderer.render(scene, miniCam);
   }
 
