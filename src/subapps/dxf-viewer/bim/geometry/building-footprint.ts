@@ -22,9 +22,9 @@
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §3.1
  */
 
-import polygonClipping from 'polygon-clipping';
 import type { MultiPolygon, Ring, Pair } from 'polygon-clipping';
 
+import { safeUnion } from './shared/safe-polygon-boolean';
 import type { Point3D, Polyline3D } from '../types/bim-base';
 import type { BeamParams } from '../types/beam-types';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -307,7 +307,7 @@ export function computeBuildingFootprint(
 
   // polygon-clipping geom: κάθε στοιχείο = Polygon (ένα ring). union(first, ...rest).
   const geoms = polygons.map((poly): Ring[] => [poly.map((p): Pair => [p.x, p.y])]);
-  const merged: MultiPolygon = polygonClipping.union(geoms[0], ...geoms.slice(1));
+  const merged: MultiPolygon = safeUnion(geoms[0], ...geoms.slice(1));
 
   const components: BuildingFootprintComponent[] = [];
   const outerRings: FootprintRing[] = [];

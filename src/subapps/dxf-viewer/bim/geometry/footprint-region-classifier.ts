@@ -26,9 +26,9 @@
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §3.1.2
  */
 
-import polygonClipping from 'polygon-clipping';
 import type { MultiPolygon, Pair, Polygon, Ring } from 'polygon-clipping';
 
+import { safeIntersection, safeUnion } from './shared/safe-polygon-boolean';
 import type { Point3D } from '../types/bim-base';
 import { ATRIUM_COVERAGE_THRESHOLD } from '../types/thermal-envelope-types';
 import { polygonArea } from './shared/polygon-utils';
@@ -155,8 +155,8 @@ function computeHoleCoverage(
 
   const holeGeom: Polygon = [toRing(holePts, ox, oy)];
   const slabGeoms = slabPolys.map((s): Polygon => [toRing(s.polygon, ox, oy)]);
-  const slabsUnion = polygonClipping.union(slabGeoms[0], ...slabGeoms.slice(1));
-  const covered = polygonClipping.intersection(holeGeom, slabsUnion);
+  const slabsUnion = safeUnion(slabGeoms[0], ...slabGeoms.slice(1));
+  const covered = safeIntersection(holeGeom, slabsUnion);
 
   return Math.min(1, multiPolygonArea(covered) / holeArea);
 }
