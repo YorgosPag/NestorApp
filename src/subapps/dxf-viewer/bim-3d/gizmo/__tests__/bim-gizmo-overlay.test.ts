@@ -124,3 +124,20 @@ describe('activeHandlesFor — per-type resize handles (ADR-402 Phase B, Revit)'
     expect(ids.has('resize-y')).toBe(false);
   });
 });
+
+describe('activeHandlesFor — vertical MOVE arrow (ADR-402 axis-Y)', () => {
+  it.each(['column', 'wall', 'beam', 'slab', 'stair'])(
+    'exposes the axis-Y (vertical) move arrow for %s — drag up/down changes elevation',
+    (bimType) => {
+      const ids = activeHandlesFor(bimType);
+      expect(ids.has('axis-y')).toBe(true);
+      // the two horizontal move arrows stay too.
+      expect(ids.has('axis-x')).toBe(true);
+      expect(ids.has('axis-z')).toBe(true);
+    },
+  );
+
+  it('the vertical move arrow is a BASE handle — present even with no resize (null selection)', () => {
+    expect(activeHandlesFor(null).has('axis-y')).toBe(true);
+  });
+});

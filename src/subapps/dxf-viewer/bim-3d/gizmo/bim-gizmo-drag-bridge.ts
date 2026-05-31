@@ -27,7 +27,10 @@ import type { SnapFn } from './bim3d-snap-bridge';
 
 /** Command-ready result of a finished gizmo drag. */
 export type BridgeOutcome =
-  | { readonly kind: 'move'; readonly deltaDxf: Point2D }
+  // ADR-402 — `deltaDxf` is the horizontal DXF-plan delta (X/Z arrows, plane, free);
+  // `deltaUpMm` is the vertical (world-Y) delta in mm (axis-Y arrow → elevation move).
+  // A horizontal drag carries `deltaUpMm: 0`; a pure vertical drag carries `deltaDxf` (0,0).
+  | { readonly kind: 'move'; readonly deltaDxf: Point2D; readonly deltaUpMm: number }
   | { readonly kind: 'rotate'; readonly pivotDxf: Point2D; readonly angleDeg: number }
   // ADR-402 Phase B — resize: the type-specific param patch is computed downstream
   // (`bim3d-resize-bridge`) from the axis + the DXF-mm slide delta (horizontal) +
@@ -146,6 +149,9 @@ export class BimGizmoDragBridge {
     if (!this.snapFn || !this.constraint) return;
     if (this.constraint.kind === 'rotate') return;
     if (this.constraint.kind === 'resize' && this.constraint.axis === 'y') return;
+    // ADR-402 — the axis-Y MOVE arrow is a vertical elevation drag; plan snapping
+    // is meaningless (the plan position does not change), mirror the resize-Y guard.
+    if (this.constraint.kind === 'axis' && this.constraint.axis === 'y') return;
     const endWorld = this.anchorWorld.clone().add(this.liveTranslation);
     const endPlan = worldToDxfPlan(endWorld);
     const res = this.snapFn({ x: endPlan.x, y: endPlan.y });
@@ -183,9 +189,12 @@ export class BimGizmoDragBridge {
         cursorMm: { x: c.x, y: c.y },
       };
     }
+    // ADR-402 — the axis-Y arrow yields a purely vertical slide (deltaDxf 0,0), so
+    // the move guard must also consider `deltaUpMm` (mirror of the resize guard above).
     const deltaDxf = worldDeltaToDxfDelta(this.anchorWorld, end);
-    if (deltaDxf.x === 0 && deltaDxf.y === 0) return { kind: 'none' };
-    return { kind: 'move', deltaDxf };
+    const deltaUpMm = worldUpDeltaToMm(this.anchorWorld, end);
+    if (deltaDxf.x === 0 && deltaDxf.y === 0 && deltaUpMm === 0) return { kind: 'none' };
+    return { kind: 'move', deltaDxf, deltaUpMm };
   }
 
   end(): void {

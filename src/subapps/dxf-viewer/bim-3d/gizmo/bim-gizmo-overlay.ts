@@ -28,9 +28,15 @@ import {
   SNAP_MARKER_COLOR, SNAP_MARKER_RADIUS, SNAP_MARKER_SCREEN_SCALE, SNAP_MARKER_RENDER_ORDER,
 } from './gizmo-constants';
 
-/** Move/rotate handles wired in Phase A — active for every selected entity. */
+/**
+ * Move/rotate handles active for every selected entity.
+ * ADR-402 — `axis-y` (green, world-up) is the VERTICAL move arrow: dragging it
+ * changes the element's elevation (per-type field, see `bim3d-vertical-move`).
+ * `axis-x`/`axis-z` are the horizontal (plan) move arrows; `plane-xz` the plan
+ * drag; `rotate-y` the plan rotation.
+ */
 const BASE_HANDLES: readonly GizmoHandleId[] = [
-  'axis-x', 'axis-z', 'plane-xz', 'center', 'rotate-y',
+  'axis-x', 'axis-y', 'axis-z', 'plane-xz', 'center', 'rotate-y',
 ];
 
 /**

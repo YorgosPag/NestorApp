@@ -37,6 +37,7 @@ import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/Upd
 import { UpdateBeamParamsCommand } from '../../core/commands/entity-commands/UpdateBeamParamsCommand';
 import { UpdateSlabParamsCommand } from '../../core/commands/entity-commands/UpdateSlabParamsCommand';
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
+import { CompoundCommand } from '../../core/commands/CompoundCommand';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import {
   computeColumnResizeParams,
@@ -46,6 +47,13 @@ import {
   computeStairResizeParams,
   type ResizeDragMm,
 } from '../gizmo/bim3d-resize-bridge';
+import {
+  computeWallVerticalMove,
+  computeColumnVerticalMove,
+  computeBeamVerticalMove,
+  computeSlabVerticalMove,
+  computeStairVerticalMove,
+} from '../gizmo/bim3d-vertical-move';
 import type { BimGizmoOverlay } from '../gizmo/bim-gizmo-overlay';
 import type { BimGizmoController } from '../gizmo/bim-gizmo-controller';
 import type { BridgeOutcome } from '../gizmo/bim-gizmo-drag-bridge';
@@ -61,7 +69,9 @@ type EditCommand =
   | UpdateWallParamsCommand
   | UpdateBeamParamsCommand
   | UpdateSlabParamsCommand
-  | UpdateStairParamsCommand;
+  | UpdateStairParamsCommand
+  // ADR-402 — multi-select vertical move batches per-entity elevation edits.
+  | CompoundCommand;
 type SceneManager = NonNullable<ReturnType<typeof createSceneManagerAdapter>>;
 type ResizeOutcome = Extract<BridgeOutcome, { kind: 'resize' }>;
 
@@ -119,6 +129,8 @@ function buildDragSnapFn(ctx: EditInteractionCtx): SnapFn | null {
   const constraint = ctx.controller.getActiveConstraint();
   if (!constraint || constraint.kind === 'rotate') return null;
   if (constraint.kind === 'resize' && constraint.axis === 'y') return null;
+  // ADR-402 — vertical (axis-Y) move is a pure elevation drag; plan snapping is moot.
+  if (constraint.kind === 'axis' && constraint.axis === 'y') return null;
   const engine = getGlobalSnapEngine();
   if (!engine.getSettings().enabled) return null;
   const targets = resolveEditEntities(ctx);
@@ -226,7 +238,10 @@ function dispatchOutcome(ctx: EditInteractionCtx, outcome: BridgeOutcome): void 
   const sm = createSceneManagerAdapter(buildDeps(levels, levelId));
   if (!sm) return;
   const cmd = buildEditCommand(outcome, { entityIds, entityId, edit, sm, levels, levelId });
-  if (!cmd || cmd.validate() !== null) return;
+  if (!cmd) return;
+  // `validate` is optional on ICommand (CompoundCommand has none — it validates each
+  // child at execute time and rolls back on failure). Only block on a real error.
+  if ('validate' in cmd && cmd.validate() !== null) return;
   getGlobalCommandHistory().execute(cmd);
   useBim3DEditStore.getState().setTargetLevel(levelId);
 }
@@ -234,6 +249,10 @@ function dispatchOutcome(ctx: EditInteractionCtx, outcome: BridgeOutcome): void 
 /** Map a drag outcome to its view-agnostic command (null = no-op / unsupported type). */
 function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): EditCommand | null {
   if (outcome.kind === 'move') {
+    // ADR-402 — the axis-Y arrow yields a purely vertical drag (deltaDxf ≈ 0,
+    // deltaUpMm ≠ 0): route it to the per-type elevation edit. The horizontal
+    // arrows / plane / free drag keep deltaUpMm 0 → fall through to the plan move.
+    if (outcome.deltaUpMm !== 0) return buildVerticalMoveCommand(outcome.deltaUpMm, c);
     const masked = maskByAxisLock(outcome.deltaDxf, c.edit.axisLock);
     if (c.entityIds.length > 1) {
       // Multi-select move keeps the mm delta (wall/column/beam/slab are raw mm). A
@@ -307,6 +326,56 @@ function buildResizeCommand(outcome: ResizeOutcome, c: CommandBuildCtx): EditCom
     // ADR-402 Sub-Phase 1 — stair needs the full entity (geometry is the anchor SSoT).
     const next = computeStairResizeParams(entity, drag);
     return next ? new UpdateStairParamsCommand(c.entityId, next, entity.params, c.sm, false) : null;
+  }
+  return null;
+}
+
+/**
+ * Vertical (axis-Y) move → per-type elevation edit (`bim3d-vertical-move` SSoT).
+ * Single selection → one `Update*ParamsCommand`; multi-select → a `CompoundCommand`
+ * batching each element's elevation edit into ONE undo step (mixed types each get
+ * their own canonical field — wall/column `baseOffset`, beam `topElevation`, slab
+ * `levelElevation`, stair `basePoint.z`). `null` = no-op / no eligible entity.
+ */
+function buildVerticalMoveCommand(deltaUpMm: number, c: CommandBuildCtx): EditCommand | null {
+  const scene = c.levels.getLevelScene(c.levelId);
+  if (!scene) return null;
+  if (c.entityIds.length <= 1) {
+    const entity = scene.entities.find((e) => e.id === c.entityId);
+    return entity ? verticalCommandForEntity(entity, deltaUpMm, c.sm) : null;
+  }
+  const commands: EditCommand[] = [];
+  for (const id of c.entityIds) {
+    const entity = scene.entities.find((e) => e.id === id);
+    const cmd = entity ? verticalCommandForEntity(entity, deltaUpMm, c.sm) : null;
+    if (cmd) commands.push(cmd);
+  }
+  return commands.length > 0 ? new CompoundCommand(`Vertical Move (${commands.length})`, commands) : null;
+}
+
+/** One element → its per-type elevation `Update*ParamsCommand` (null = no-op / unsupported type). */
+function verticalCommandForEntity(entity: Entity, deltaUpMm: number, sm: SceneManager): EditCommand | null {
+  if (entity.type === 'wall') {
+    const next = computeWallVerticalMove(entity.params, deltaUpMm);
+    return next
+      ? new UpdateWallParamsCommand(entity.id, next, entity.params, sm, false, entity.kind ?? 'straight')
+      : null;
+  }
+  if (entity.type === 'column') {
+    const next = computeColumnVerticalMove(entity.params, deltaUpMm);
+    return next ? new UpdateColumnParamsCommand(entity.id, next, entity.params, sm, false) : null;
+  }
+  if (entity.type === 'beam') {
+    const next = computeBeamVerticalMove(entity.params, deltaUpMm);
+    return next ? new UpdateBeamParamsCommand(entity.id, next, entity.params, sm, false) : null;
+  }
+  if (entity.type === 'slab') {
+    const next = computeSlabVerticalMove(entity.params, deltaUpMm);
+    return next ? new UpdateSlabParamsCommand(entity.id, next, entity.params, sm, false) : null;
+  }
+  if (entity.type === 'stair') {
+    const next = computeStairVerticalMove(entity, deltaUpMm);
+    return next ? new UpdateStairParamsCommand(entity.id, next, entity.params, sm, false) : null;
   }
   return null;
 }

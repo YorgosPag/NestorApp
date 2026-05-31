@@ -49,6 +49,35 @@ describe('BimGizmoDragBridge — move', () => {
     b.update(s.o, s.d, camDir);
     expect(b.getOutcome().kind).toBe('none');
   });
+
+  it('axis-Y drag → move outcome carries deltaUpMm (vertical elevation move; deltaDxf 0)', () => {
+    // Horizontal camera so axis-Y projects onto the vertical line (not top-down).
+    const camHoriz = new THREE.Vector3(0, 0, -1);
+    const dir = new THREE.Vector3(-1, 0, 0); // ray perpendicular to the Y axis
+    const b = new BimGizmoDragBridge();
+    expect(
+      b.start({ kind: 'axis', axis: 'y' }, anchor, new THREE.Vector3(10, 0, 0), dir, camHoriz),
+    ).toBe(true);
+    b.update(new THREE.Vector3(10, 5, 0), dir, camHoriz); // +5m world-up
+    const out = b.getOutcome();
+    // A purely vertical move has deltaDxf (0,0); the guard must NOT classify it none.
+    expect(out.kind).toBe('move');
+    if (out.kind !== 'move') return;
+    expect(out.deltaUpMm).toBeCloseTo(5000, 3);
+    expect(out.deltaDxf.x).toBeCloseTo(0, 3);
+    expect(out.deltaDxf.y).toBeCloseTo(0, 3);
+  });
+
+  it('a horizontal move carries deltaUpMm 0', () => {
+    const b = new BimGizmoDragBridge();
+    const s = vertRay(0, 0);
+    b.start({ kind: 'plane', plane: 'xz' }, anchor, s.o, s.d, camDir);
+    const u = vertRay(4, 6);
+    b.update(u.o, u.d, camDir);
+    const out = b.getOutcome();
+    if (out.kind !== 'move') throw new Error('expected move');
+    expect(out.deltaUpMm).toBeCloseTo(0, 3);
+  });
 });
 
 describe('BimGizmoDragBridge — resize (ADR-402 Phase B)', () => {
