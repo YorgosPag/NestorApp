@@ -59,6 +59,7 @@ import { MIN_WALL_THICKNESS_MM, MAX_WALL_THICKNESS_MM } from '../../bim/types/wa
 import { MIN_BEAM_DEPTH_MM } from '../../bim/types/beam-types';
 import { MIN_SLAB_THICKNESS_MM } from '../../bim/types/slab-types';
 import { perpUnit, unitVector } from '../../bim/grips/grip-math';
+import { detachWallSide, isWallSideAttached } from '../../bim/walls/wall-attach-detach';
 import { directionToUnitVector, perp as stairPerp } from '../../bim/geometry/stairs/stair-geometry-shared';
 import { mmScaleFor, mmToSceneUnits, inferSceneUnitsFromWidth } from '../../utils/scene-units';
 
@@ -125,16 +126,38 @@ export function computeColumnResizeParams(
 // ─── Wall ────────────────────────────────────────────────────────────────────
 
 /**
- * Wall resize → new `WallParams`. Axis-Y → height; axis-X/Z → thickness
- * (relative ±2·perpComponent, see file NOTE). `null` for a no-op / degenerate axis.
+ * Wall resize → new `WallParams`.
+ *
+ * Axis-Y has TWO grips (ADR-401 E.3, Revit-standard top/base faces):
+ *   • mode 'normal' (TOP octahedron) → `height` (top face moves, base fixed).
+ *   • mode 'mirror' (BASE octahedron below it) → `baseOffset` (base face moves),
+ *     with an inverse `height` adjustment so the TOP stays put for height-driven
+ *     walls (and the resolver pins it anyway for storey-ceiling / attached tops).
+ * Dragging a side that is attached to a structural host DETACHES it first (Revit
+ * "edit breaks attach", Giorgio-confirmed) — reusing the `detachWallSide` SSoT.
+ *
+ * Axis-X/Z → thickness (relative ±2·perpComponent, see file NOTE).
+ * `null` for a no-op / degenerate axis.
  */
 export function computeWallResizeParams(
   params: WallParams,
   drag: ResizeDragMm,
 ): WallParams | null {
   if (drag.axis === 'y') {
-    const height = clampMin(params.height + drag.deltaUpMm, MIN_BIM_HEIGHT_MM);
-    return height === params.height ? null : { ...params, height };
+    if (drag.deltaUpMm === 0) return null;
+    if (drag.mode === 'mirror') {
+      // BASE grip: base += Δ, height -= Δ (keep top fixed).
+      const base = isWallSideAttached(params, 'base') ? detachWallSide(params, 'base') : params;
+      const baseOffset = base.baseOffset + drag.deltaUpMm;
+      const height = clampMin(base.height - drag.deltaUpMm, MIN_BIM_HEIGHT_MM);
+      return base === params && baseOffset === params.baseOffset && height === params.height
+        ? null
+        : { ...base, baseOffset, height };
+    }
+    // TOP grip: height += Δ (base fixed).
+    const top = isWallSideAttached(params, 'top') ? detachWallSide(params, 'top') : params;
+    const height = clampMin(top.height + drag.deltaUpMm, MIN_BIM_HEIGHT_MM);
+    return top === params && height === params.height ? null : { ...top, height };
   }
   const axis = unitVector(params.start, params.end);
   if (!axis) return null; // degenerate wall (start === end)

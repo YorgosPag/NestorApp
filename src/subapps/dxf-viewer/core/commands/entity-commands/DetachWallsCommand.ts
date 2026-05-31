@@ -24,12 +24,9 @@ import { computeWallGeometry } from '../../../bim/geometry/wall-geometry';
 import { validateWallParams } from '../../../bim/validators/wall-validator';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
-import {
-  DEFAULT_WALL_TOP_BINDING,
-  DEFAULT_WALL_BASE_BINDING,
-} from '../../../bim/types/bim-binding';
+import { detachWallSide, type WallAttachSide } from '../../../bim/walls/wall-attach-detach';
 
-export type WallDetachSide = 'top' | 'base';
+export type WallDetachSide = WallAttachSide;
 
 /** A wall to detach + its `kind` (needed for the geometry recompute). */
 export interface WallDetachTarget {
@@ -42,13 +39,6 @@ interface WallDetachPatch {
   readonly kind: WallKind;
   readonly prev: WallParams;
   readonly next: WallParams;
-}
-
-/** Reset the side-specific binding + clear its host list. */
-function buildDetachedParams(prev: WallParams, side: WallDetachSide): WallParams {
-  return side === 'top'
-    ? { ...prev, topBinding: DEFAULT_WALL_TOP_BINDING, attachTopToIds: undefined }
-    : { ...prev, baseBinding: DEFAULT_WALL_BASE_BINDING, attachBaseToIds: undefined };
 }
 
 export class DetachWallsCommand implements ICommand {
@@ -93,7 +83,7 @@ export class DetachWallsCommand implements ICommand {
       const entity = this.sceneManager.getEntity(wallId) as unknown as { params?: WallParams } | undefined;
       const prev = entity?.params;
       if (!prev) continue;
-      this.patches.push({ wallId, kind, prev, next: buildDetachedParams(prev, this.side) });
+      this.patches.push({ wallId, kind, prev, next: detachWallSide(prev, this.side) });
     }
   }
 

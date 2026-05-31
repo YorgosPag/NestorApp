@@ -167,7 +167,12 @@ export function createGizmoMeshes(): GizmoMeshSet {
     const id: GizmoHandleId = `resize-${axis}`;
     const idMirror: GizmoHandleId = `resize-m-${axis}`;
     visuals.set(id, visual);
-    visuals.set(idMirror, visual);
+    // X/Z: the mirror corner-pick shares the SAME octahedron (in-plane ±2·symmetric
+    // resize via the opposite diagonal). Y is different: its mirror (`resize-m-y`) is
+    // a SEPARATE octahedron BELOW the centroid — the wall BASE grip (ADR-401 E.3),
+    // built after this loop. So for Y we do NOT alias the mirror to the top visual,
+    // and the top Y octahedron's mirror corners drive `resize-y` (TOP/height) too.
+    if (axis !== 'y') visuals.set(idMirror, visual);
     hitboxToId.set(hitbox, id);
     hitboxes.push(hitbox);
 
@@ -192,7 +197,35 @@ export function createGizmoMeshes(): GizmoMeshSet {
     }
     for (const hb of cornerHitboxes.mirror) {
       placeCornerHitbox(hb);
-      hitboxToId.set(hb, idMirror);
+      hitboxToId.set(hb, axis === 'y' ? id : idMirror);
+      hitboxes.push(hb);
+      root.add(hb);
+    }
+
+    root.add(visual, hitbox);
+  }
+
+  // --- Wall BASE grip: a second Y resize octahedron BELOW the centroid (ADR-401 E.3) -
+  // The top Y handle (above) edits the wall HEIGHT (top face); this one edits the
+  // BASE offset (bottom face). Only walls activate `resize-m-y`
+  // (see `RESIZE_HANDLES_BY_TYPE`), so it stays hidden for other element types.
+  {
+    const color = RESIZE_IDLE_COLORS['y'];
+    const { visual, hitbox, cornerHitboxes } = buildResizeHandle(color);
+    const py = -RESIZE_HANDLE_OFFSET;
+    visual.name = 'gizmo-resize-m-y';
+    visual.position.set(0, py, 0);
+    hitbox.position.set(0, py, 0);
+
+    const idBase: GizmoHandleId = 'resize-m-y';
+    visuals.set(idBase, visual);
+    hitboxToId.set(hitbox, idBase);
+    hitboxes.push(hitbox);
+
+    // No axis rotation for Y → corners (authored at y=0 around origin) just shift down.
+    for (const hb of [...cornerHitboxes.normal, ...cornerHitboxes.mirror]) {
+      hb.position.set(hb.position.x, py + hb.position.y, hb.position.z);
+      hitboxToId.set(hb, idBase);
       hitboxes.push(hb);
       root.add(hb);
     }

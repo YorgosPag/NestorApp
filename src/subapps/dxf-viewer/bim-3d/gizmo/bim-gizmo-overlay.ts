@@ -39,13 +39,16 @@ const BASE_HANDLES: readonly GizmoHandleId[] = [
  * plan handles are offered and the perpendicular one drives the dimension). The
  * mapping per type (Revit-standard, see `bim3d-resize-bridge`):
  *   - column → X width, Z depth, Y height
- *   - wall   → X/Z thickness, Y height (length stays an endpoint-grip edit)
+ *   - wall   → X/Z thickness, Y-top height + Y-base offset (ADR-401 E.3 — the top
+ *              octahedron edits HEIGHT, the base octahedron below it edits the base
+ *              offset; length stays an endpoint-grip edit)
  *   - beam   → X/Z width,     Y depth  (length stays an endpoint-grip edit)
  *   - slab   → Y thickness only (footprint is edited per-vertex in 2D)
  */
 const RESIZE_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {
   column: ['resize-x', 'resize-z', 'resize-y'],
-  wall: ['resize-x', 'resize-z', 'resize-y'],
+  // `resize-m-y` = the second (base) vertical grip below the centroid — wall only.
+  wall: ['resize-x', 'resize-z', 'resize-y', 'resize-m-y'],
   beam: ['resize-x', 'resize-z', 'resize-y'],
   slab: ['resize-y'],
   // ADR-402 Sub-Phase 1 — stair: plan-only handles. The bridge projects the slide

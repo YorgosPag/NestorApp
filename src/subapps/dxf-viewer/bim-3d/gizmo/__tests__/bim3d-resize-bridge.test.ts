@@ -54,8 +54,9 @@ function drag(
   axis: ResizeDragMm['axis'],
   deltaMm: { x: number; y: number },
   deltaUpMm = 0,
+  mode: ResizeDragMm['mode'] = 'normal',
 ): ResizeDragMm {
-  return { axis, mode: 'normal', deltaMm, deltaUpMm, cursorMm: deltaMm };
+  return { axis, mode, deltaMm, deltaUpMm, cursorMm: deltaMm };
 }
 
 describe('toCanvasDelta', () => {
@@ -155,6 +156,61 @@ describe('computeWallResizeParams (ADR-402 Phase B)', () => {
     expect(next).not.toBeNull();
     expect(next!.thickness).toBeGreaterThan(0);
     expect(next!.thickness).toBeLessThan(p.thickness);
+  });
+});
+
+describe('computeWallResizeParams — top/base vertical grips (ADR-401 E.3)', () => {
+  it("TOP grip (mode 'normal') → height += Δ, base fixed", () => {
+    const p = wallAlongX();
+    const next = computeWallResizeParams(p, drag('y', { x: 0, y: 0 }, 400, 'normal'));
+    expect(next).not.toBeNull();
+    expect(next!.height).toBeCloseTo(p.height + 400, 6);
+    expect(next!.baseOffset).toBe(p.baseOffset);
+  });
+
+  it("BASE grip (mode 'mirror') dragged DOWN (Δ<0) → base lowers, top stays (height grows)", () => {
+    const p = wallAlongX();
+    const next = computeWallResizeParams(p, drag('y', { x: 0, y: 0 }, -300, 'mirror'));
+    expect(next).not.toBeNull();
+    expect(next!.baseOffset).toBeCloseTo(p.baseOffset - 300, 6);
+    expect(next!.height).toBeCloseTo(p.height + 300, 6);
+  });
+
+  it("BASE grip dragged UP (Δ>0) → base rises, top stays (height shrinks)", () => {
+    const p = wallAlongX();
+    const next = computeWallResizeParams(p, drag('y', { x: 0, y: 0 }, 200, 'mirror'));
+    expect(next).not.toBeNull();
+    expect(next!.baseOffset).toBeCloseTo(p.baseOffset + 200, 6);
+    expect(next!.height).toBeCloseTo(p.height - 200, 6);
+  });
+
+  it('BASE grip with zero vertical delta → null', () => {
+    expect(computeWallResizeParams(wallAlongX(), drag('y', { x: 0, y: 0 }, 0, 'mirror'))).toBeNull();
+  });
+
+  it('dragging the TOP grip while top is attached → detaches top first (Revit), then edits height', () => {
+    const p = { ...wallAlongX(), topBinding: 'attached' as const, attachTopToIds: ['beam-1'] };
+    const next = computeWallResizeParams(p, drag('y', { x: 0, y: 0 }, 500, 'normal'));
+    expect(next).not.toBeNull();
+    expect(next!.topBinding).not.toBe('attached');
+    expect(next!.attachTopToIds).toBeUndefined();
+    expect(next!.height).toBeCloseTo(p.height + 500, 6);
+  });
+
+  it('dragging the BASE grip while base is attached → detaches base first, then edits baseOffset', () => {
+    const p = { ...wallAlongX(), baseBinding: 'attached' as const, attachBaseToIds: ['slab-1'] };
+    const next = computeWallResizeParams(p, drag('y', { x: 0, y: 0 }, -150, 'mirror'));
+    expect(next).not.toBeNull();
+    expect(next!.baseBinding).not.toBe('attached');
+    expect(next!.attachBaseToIds).toBeUndefined();
+    expect(next!.baseOffset).toBeCloseTo(p.baseOffset - 150, 6);
+  });
+
+  it('TOP grip on a non-attached wall leaves the top binding untouched', () => {
+    const p = wallAlongX();
+    const next = computeWallResizeParams(p, drag('y', { x: 0, y: 0 }, 100, 'normal'));
+    expect(next!.topBinding).toBe(p.topBinding);
+    expect(next!.attachTopToIds).toBe(p.attachTopToIds);
   });
 });
 

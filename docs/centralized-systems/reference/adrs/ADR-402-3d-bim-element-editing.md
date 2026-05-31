@@ -166,6 +166,7 @@ view-agnostic commands (cascade κουφωμάτων + undo — που το GenA
 ---
 
 ## Changelog
+- **2026-05-31 (Opus 4.8)** — **Wall axis-Y resize → ΔΥΟ grips (ADR-401 E.3 consumer)** (pending commit, 🔴 browser verify). Το `RESIZE_HANDLES_BY_TYPE.wall` axis-Y έσπασε σε **top** (`resize-y`, +Y → `height`) + **base** (`resize-m-y`, −Y → `baseOffset`, με αντίστροφο `height` ώστε η κορυφή να μένει σταθερή). Αξιοποιεί την υπάρχουσα `GizmoResizeMode 'normal'|'mirror'` (ήδη ρέει gizmo-types→parseHandleId→handleToConstraint→drag-bridge→`ResizeDragMm`) — **μηδέν νέο taxonomy**. `gizmo-geometry.ts`: δεύτερο Y octahedron @`−RESIZE_HANDLE_OFFSET` (όλα τα hitboxes του πάνω→`resize-y`, του κάτω→`resize-m-y`· X/Z αμετάβλητα). `bim3d-resize-bridge.computeWallResizeParams`: branch ανά `mode` + detach-on-drag (`detachWallSide` SSoT, Revit «edit breaks attach») — λεπτομέρειες στο **ADR-401 §5/§8**. Μόνο ο τοίχος (beam/column/slab κρατούν single vertical handle). Tests: `bim3d-resize-bridge.test.ts` +7, `bim-gizmo-overlay.test.ts` +2, `gizmo-hit-test` 3/3 αμετάβλητο, tsc 0.
 - **2026-06-02 (Opus 4.8, Developer A SOLO)** — **🐛 FIX (cross-cutting): 3Δ gizmo edit δεν persist-άρει →
   optimistic revert** (pending commit). Σύμπτωμα: σκάλα → 3Δ move → πάει στη σωστή νέα θέση, μετά **επιστρέφει
   ακαριαία στην αρχική + αποεπιλέγεται**. **Root cause (ΟΛΟΙ οι BIM τύποι, όχι μόνο σκάλα):** το per-type

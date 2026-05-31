@@ -107,6 +107,16 @@ describe('activeHandlesFor — per-type resize handles (ADR-402 Phase B, Revit)'
     expect(ids.has('resize-z')).toBe(false);
   });
 
+  it('wall exposes a SECOND (base) vertical grip resize-m-y (ADR-401 E.3 top/base faces)', () => {
+    expect(activeHandlesFor('wall').has('resize-m-y')).toBe(true);
+  });
+
+  it('only the wall gets the base grip — column/beam/slab have a single vertical handle', () => {
+    expect(activeHandlesFor('column').has('resize-m-y')).toBe(false);
+    expect(activeHandlesFor('beam').has('resize-m-y')).toBe(false);
+    expect(activeHandlesFor('slab').has('resize-m-y')).toBe(false);
+  });
+
   it('a base-only / unknown selection exposes no resize handles', () => {
     const ids = activeHandlesFor(null);
     expect(ids.has('resize-x')).toBe(false);
