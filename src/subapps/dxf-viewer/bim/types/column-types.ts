@@ -211,6 +211,20 @@ export interface ColumnParams {
   readonly topOffset: number;
   /** mm. Required ΟΤΑΝ topBinding='unconnected'. Free-standing height. */
   readonly unconnectedHeight?: number;
+  // ─── ADR-401 Phase F — Attach-to-structural (mirror WallParams) ─────────────
+  /**
+   * Host FKs (beam/slab/roof/wall ids) στα οποία «κολλάει» η ΚΟΡΥΦΗ της κολώνας
+   * όταν `topBinding='attached'`. Η κορυφή πέφτει στην κάτω-παρειά (lower-
+   * envelope) πάνω από το footprint — βλ. `column-vertical-profile.ts`. Required
+   * (≥1) όταν attached, αλλιώς undefined (Zod refinement, mirror wall).
+   */
+  readonly attachTopToIds?: readonly string[];
+  /**
+   * Host FKs στα οποία «κολλάει» η ΒΑΣΗ της κολώνας όταν `baseBinding='attached'`.
+   * Η βάση ανεβαίνει/κατεβαίνει στην άνω-παρειά (upper-envelope) — bidirectional,
+   * Revit «Attach Base». Required (≥1) όταν attached, αλλιώς undefined.
+   */
+  readonly attachBaseToIds?: readonly string[];
   /**
    * ADR-363 Phase 8E — Catalog profile ID (e.g. 'IPE-300', 'C25/30').
    * Persisted so BOQ and re-opened drawings show the standard section name.

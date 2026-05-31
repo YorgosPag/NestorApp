@@ -99,6 +99,9 @@ const ColumnParamsBaseSchema = z
     baseOffset: z.number().finite(),
     topOffset: z.number().finite(),
     unconnectedHeight: z.number().positive().optional(),
+    // ─── ADR-401 Phase F — Attach-to-structural (mirror wall.schemas.ts) ───────
+    attachTopToIds: z.array(z.string().min(1)).optional(),
+    attachBaseToIds: z.array(z.string().min(1)).optional(),
     // ─── ADR-396 P7 — ETICS exterior insulation layer (Z1) ───────────────────
     envelopeLayer: EnvelopeLayerSchema.optional(),
     // ─── ADR-396 v2 Φάση 4 — ETICS classification override (Στρ.3) ─────────────
@@ -122,6 +125,36 @@ export const ColumnParamsSchema = ColumnParamsBaseSchema.superRefine(
         path: ['unconnectedHeight'],
         message:
           "ColumnParams: unconnectedHeight επιτρέπεται μόνο όταν topBinding='unconnected'.",
+      });
+    }
+    // ─── ADR-401 Phase F — top attach refinement ──────────────────────────────
+    if (data.topBinding === 'attached' && (data.attachTopToIds === undefined || data.attachTopToIds.length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['attachTopToIds'],
+        message: "ColumnParams: topBinding='attached' απαιτεί ≥1 attachTopToIds (host FK).",
+      });
+    }
+    if (data.topBinding !== 'attached' && data.attachTopToIds !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['attachTopToIds'],
+        message: "ColumnParams: attachTopToIds επιτρέπεται μόνο όταν topBinding='attached'.",
+      });
+    }
+    // ─── ADR-401 Phase F (base) — base attach refinement ──────────────────────
+    if (data.baseBinding === 'attached' && (data.attachBaseToIds === undefined || data.attachBaseToIds.length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['attachBaseToIds'],
+        message: "ColumnParams: baseBinding='attached' απαιτεί ≥1 attachBaseToIds (host FK).",
+      });
+    }
+    if (data.baseBinding !== 'attached' && data.attachBaseToIds !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['attachBaseToIds'],
+        message: "ColumnParams: attachBaseToIds επιτρέπεται μόνο όταν baseBinding='attached'.",
       });
     }
   },
