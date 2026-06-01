@@ -4,6 +4,7 @@
 import { BimCopyCommand } from '../BimCopyCommand';
 import type { ISceneManager, SceneEntity } from '../../interfaces';
 import type { WallEntity } from '../../../../bim/types/wall-types';
+import { EventBus } from '../../../../systems/events/EventBus';
 
 function makeMockScene(initial: SceneEntity[] = []): {
   scene: Map<string, SceneEntity>;
@@ -112,6 +113,33 @@ describe('BimCopyCommand — ADR-363 Phase 7.2', () => {
     );
     cmd.execute();
     expect(cmd.getDescription()).toBe('Copy BIM entity');
+  });
+
+  // ADR-363 §7.2 — clones must broadcast create/delete/restore or the Firestore
+  // subscription drops them on the next snapshot ("copy flashes then vanishes").
+  it('execute → create, undo → delete, redo → restore broadcasts for the clone', () => {
+    const wall = makeWall();
+    const { sm } = makeMockScene([wall as unknown as SceneEntity]);
+    const created: string[] = [];
+    const deleted: string[] = [];
+    const restored: Array<{ id: string; source: string }> = [];
+    const offs = [
+      EventBus.on('drawing:entity-created', (p) => { if (p.tool === 'wall') created.push(p.entity.id); }),
+      EventBus.on('bim:wall-delete-requested', (p) => deleted.push(p.wallId)),
+      EventBus.on('bim:entity-restore-requested', (p) =>
+        restored.push({ id: p.entitySnapshot.id, source: p.source })),
+    ];
+
+    const cmd = new BimCopyCommand([wall.id], { kind: 'translate', delta: { x: 500, y: 0 } }, sm);
+    cmd.execute();
+    const cloneId = cmd.getAffectedEntityIds()[0];
+    cmd.undo();
+    cmd.redo();
+    offs.forEach((o) => o());
+
+    expect(created).toEqual([cloneId]);
+    expect(deleted).toEqual([cloneId]);
+    expect(restored).toEqual([{ id: cloneId, source: 'redo-restore' }]);
   });
 
   it('serialize includes sourceIds + transform + createdEntityIds', () => {

@@ -3,10 +3,14 @@
  *
  * Wraps `buildBimCopyClones` (SSoT) in an undoable `ICommand`. Handles the
  * scene-side of copy: addEntity on execute / redo, removeEntity on undo.
- * Firestore writes happen automatically via the existing per-type persistence
- * subscriptions (`useWallPersistence`, `useOpeningPersistence`, …) — the
- * clones carry kind-specific enterprise IDs (`wall_<ulid>`, `opening_<ulid>`,
- * …) so the subscriptions `setDoc()` them to the correct collection.
+ *
+ * Firestore writes require the create/delete/restore EventBus broadcasts (ADR-363
+ * §7.2 — `bim-clone-persistence`): a fresh enterprise ID alone is NOT enough,
+ * because the `use*Persistence` subscription drops any scene entity it has no
+ * Firestore doc / dirty / pending record for on the next snapshot (the "copy
+ * flashes then vanishes" bug). So execute emits `drawing:entity-created`, undo
+ * emits `bim:*-delete-requested`, redo emits `bim:entity-restore-requested` —
+ * exactly like the draw-tool + DeleteEntityCommand paths.
  *
  * Why a new command class (rather than extending `CopyEntityCommand`):
  *   The existing `CopyEntityCommand` is grip-flow specific (vertex-stretch +
@@ -29,6 +33,11 @@ import {
   buildBimCopyClones,
   type BimCopyTransform,
 } from '../../../bim/transforms/bim-copy-builder';
+import {
+  broadcastBimCloneCreated,
+  broadcastBimCloneDeleted,
+  broadcastBimCloneRestored,
+} from '../../../bim/transforms/bim-clone-persistence';
 
 export class BimCopyCommand implements ICommand {
   readonly id: string;
@@ -64,14 +73,18 @@ export class BimCopyCommand implements ICommand {
     for (const clone of result.clones) {
       this.sceneManager.addEntity(clone);
       this.createdEntityIds.push(clone.id);
+      // ADR-363 §7.2 — first Firestore save for the clone (else snapshot drops it).
+      broadcastBimCloneCreated(clone);
     }
     this.wasExecuted = this.createdEntityIds.length > 0;
   }
 
   undo(): void {
     if (!this.wasExecuted) return;
-    for (const id of this.createdEntityIds) {
-      this.sceneManager.removeEntity(id);
+    for (const clone of this.cloneSnapshots) {
+      this.sceneManager.removeEntity(clone.id);
+      // ADR-363 §7.2 — remove the clone's Firestore doc (+ tombstone).
+      broadcastBimCloneDeleted(clone);
     }
   }
 
@@ -82,6 +95,8 @@ export class BimCopyCommand implements ICommand {
     for (const clone of this.cloneSnapshots) {
       this.sceneManager.addEntity(clone);
       this.createdEntityIds.push(clone.id);
+      // ADR-363 §7.2 — re-create the clone's Firestore doc (clears tombstone).
+      broadcastBimCloneRestored(clone);
     }
   }
 

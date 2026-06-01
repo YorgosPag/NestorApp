@@ -24,6 +24,15 @@ import type { Entity } from '../../../types/entities';
 import { calculateBimMirroredGeometry } from '../../../bim/transforms/bim-mirror-geometry';
 // ADR-363 §5.4 — recompute hosted openings against mirrored walls (in-place mode).
 import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
+// ADR-363 §7.2 — copy+mirror clones of BIM entities need a fresh enterprise ID +
+// the create/delete/restore EventBus broadcasts the draw + delete paths use, or
+// the Firestore subscription drops the clone on the next snapshot.
+import {
+  mintBimCloneIdentity,
+  broadcastBimCloneCreated,
+  broadcastBimCloneDeleted,
+  broadcastBimCloneRestored,
+} from '../../../bim/transforms/bim-clone-persistence';
 
 export class MirrorEntityCommand implements ICommand {
   readonly id: string;
@@ -32,7 +41,13 @@ export class MirrorEntityCommand implements ICommand {
   readonly timestamp: number;
 
   private entitySnapshots: Map<string, SceneEntity> = new Map();
-  private createdEntityIds: string[] = [];
+  /**
+   * The mirrored clones added by this command (keepOriginals mode). Stored whole
+   * — not just ids — so undo/redo are id-STABLE (redo re-adds the same entity
+   * instead of minting a fresh id, which would orphan the previous Firestore
+   * doc) and so undo/redo can fire the matching BIM delete/restore broadcasts.
+   */
+  private createdEntities: SceneEntity[] = [];
   private wasExecuted = false;
 
   constructor(
@@ -47,32 +62,45 @@ export class MirrorEntityCommand implements ICommand {
 
   execute(): void {
     this.entitySnapshots.clear();
-    this.createdEntityIds = [];
+    this.createdEntities = [];
 
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId);
       if (!entity) continue;
 
-      const updates = this.computeMirrorUpdates(entity);
-
       if (this.keepOriginals) {
-        const newId = generateEntityId();
-        const newEntity: SceneEntity = { ...entity, ...updates, id: newId };
-        this.sceneManager.addEntity(newEntity);
-        this.createdEntityIds.push(newId);
+        const clone = this.buildMirroredClone(entity);
+        this.sceneManager.addEntity(clone);
+        this.createdEntities.push(clone);
+        // ADR-363 §7.2 — first Firestore save for BIM clones (no-op otherwise).
+        broadcastBimCloneCreated(clone);
       } else {
         this.entitySnapshots.set(entityId, deepClone(entity));
-        this.sceneManager.updateEntity(entityId, updates);
+        this.sceneManager.updateEntity(entityId, this.computeMirrorUpdates(entity));
       }
     }
 
     this.wasExecuted = this.keepOriginals
-      ? this.createdEntityIds.length > 0
+      ? this.createdEntities.length > 0
       : this.entitySnapshots.size > 0;
 
     // ADR-363 §5.4 — in-place mirror: hosted openings follow the mirrored wall.
     // (copy+mirror clones carry no hosted openings.)
     if (!this.keepOriginals) cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+  }
+
+  /**
+   * Builds the mirrored clone of `entity`: applies the mirror patch and assigns
+   * a fresh identity. BIM entities get a per-type enterprise ID + a NEW IFC
+   * GlobalId (ADR-363 §7.2 / N.6); other entities keep the generic id path.
+   */
+  private buildMirroredClone(entity: SceneEntity): SceneEntity {
+    const updates = this.computeMirrorUpdates(entity);
+    const identity = mintBimCloneIdentity((entity as { type?: string }).type);
+    const clone = identity
+      ? { ...entity, ...updates, id: identity.id, ifcGuid: identity.ifcGuid }
+      : { ...entity, ...updates, id: generateEntityId() };
+    return clone as unknown as SceneEntity;
   }
 
   /**
@@ -95,8 +123,10 @@ export class MirrorEntityCommand implements ICommand {
     if (!this.wasExecuted) return;
 
     if (this.keepOriginals) {
-      for (const id of this.createdEntityIds) {
-        this.sceneManager.removeEntity(id);
+      for (const clone of this.createdEntities) {
+        this.sceneManager.removeEntity(clone.id);
+        // ADR-363 §7.2 — drop the BIM clone's Firestore doc (+ tombstone).
+        broadcastBimCloneDeleted(clone);
       }
     } else {
       for (const [entityId, snapshot] of this.entitySnapshots) {
@@ -110,15 +140,11 @@ export class MirrorEntityCommand implements ICommand {
 
   redo(): void {
     if (this.keepOriginals) {
-      this.createdEntityIds = [];
-      for (const entityId of this.entityIds) {
-        const entity = this.sceneManager.getEntity(entityId);
-        if (!entity) continue;
-        const updates = this.computeMirrorUpdates(entity);
-        const newId = generateEntityId();
-        const newEntity: SceneEntity = { ...entity, ...updates, id: newId };
-        this.sceneManager.addEntity(newEntity);
-        this.createdEntityIds.push(newId);
+      // Re-add the SAME clones (id-stable) so undo/redo never orphan a Firestore
+      // doc. `broadcastBimCloneRestored` clears the delete tombstone + re-saves.
+      for (const clone of this.createdEntities) {
+        this.sceneManager.addEntity(clone);
+        broadcastBimCloneRestored(clone);
       }
     } else {
       for (const entityId of this.entityIds) {
@@ -135,7 +161,7 @@ export class MirrorEntityCommand implements ICommand {
 
   getDescription(): string {
     const count = this.keepOriginals
-      ? this.createdEntityIds.length
+      ? this.createdEntities.length
       : (this.entitySnapshots.size || this.entityIds.length);
     const mode = this.keepOriginals ? 'copy+mirror' : 'mirror';
     if (count === 1) return `Mirror entity (${mode})`;
@@ -144,7 +170,7 @@ export class MirrorEntityCommand implements ICommand {
 
   getAffectedEntityIds(): string[] {
     return this.keepOriginals
-      ? [...this.createdEntityIds]
+      ? this.createdEntities.map((e) => e.id)
       : [...this.entityIds];
   }
 
@@ -174,7 +200,7 @@ export class MirrorEntityCommand implements ICommand {
         mirrorAxis: this.mirrorAxis,
         keepOriginals: this.keepOriginals,
         entitySnapshots: snapshotsArray,
-        createdEntityIds: this.createdEntityIds,
+        createdEntityIds: this.createdEntities.map((e) => e.id),
       },
       version: 1,
     };

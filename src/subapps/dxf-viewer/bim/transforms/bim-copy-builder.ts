@@ -7,8 +7,8 @@
  * Responsibilities:
  *
  *   1. **ID regeneration (SOS N.6)** — every clone gets a kind-specific
- *      enterprise ID via `enterprise-id-convenience` (`generateWallId`,
- *      `generateOpeningId`, …). Inline UUID / timestamp IDs forbidden.
+ *      enterprise ID + a fresh IFC GlobalId via the shared `mintBimCloneIdentity`
+ *      SSoT (`bim-clone-persistence`). Inline UUID / timestamp IDs forbidden.
  *
  *   2. **Host rewire** — when a copied opening's host wall is ALSO in the
  *      selection, the clone opening's `wallId` is remapped to the clone wall.
@@ -21,11 +21,11 @@
  *      ensuring geometry is atomically recomputed.
  *
  *   4. **Per-type Firestore writes** — NOT handled here. The clones are
- *      returned as `SceneEntity[]`; the caller adds them to the scene. The
- *      existing per-type persistence subscriptions (`useWallPersistence`,
- *      `useOpeningPersistence`, …) detect the new entities and write them
- *      to their respective Firestore collections via `setDoc()` using the
- *      already-generated enterprise IDs.
+ *      returned as `SceneEntity[]`; the caller adds them to the scene AND must
+ *      broadcast `drawing:entity-created` per clone (`BimCopyCommand` does this
+ *      via `bim-clone-persistence`). A fresh enterprise ID alone is NOT enough —
+ *      the `use*Persistence` subscription drops any scene entity it has no doc /
+ *      dirty / pending record for on the next snapshot (ADR-363 §7.2).
  *
  * Pure function — no React, no IO. Imported by `BimCopyCommand`.
  *
@@ -40,15 +40,9 @@ import type { MirrorAxis } from '../../utils/mirror-math';
 import { calculateBimMovedGeometry } from '../utils/bim-move-geometry';
 import { calculateBimMirroredGeometry } from './bim-mirror-geometry';
 import { calculateBimRotatedGeometry } from './bim-rotate-geometry';
-import {
-  generateWallId,
-  generateOpeningId,
-  generateSlabId,
-  generateSlabOpeningId,
-  generateColumnId,
-  generateBeamId,
-  generateStairId,
-} from '@/services/enterprise-id-convenience';
+// N.0.2 — kind-specific enterprise ID + fresh IFC GlobalId minting is the shared
+// clone-identity SSoT (was a duplicate ID_GENERATORS map here before).
+import { mintBimCloneIdentity } from './bim-clone-persistence';
 
 // ─── Public types ───────────────────────────────────────────────────────────
 
@@ -65,22 +59,6 @@ export interface BimCopyResult {
   readonly sourceToCloneId: ReadonlyMap<string, string>;
   /** Source IDs that were skipped (entity missing, non-BIM, or unsupported kind). */
   readonly skipped: readonly string[];
-}
-
-// ─── ID generator dispatch ──────────────────────────────────────────────────
-
-const ID_GENERATORS: Readonly<Record<string, () => string>> = {
-  wall: generateWallId,
-  opening: generateOpeningId,
-  slab: generateSlabId,
-  'slab-opening': generateSlabOpeningId,
-  column: generateColumnId,
-  beam: generateBeamId,
-  stair: generateStairId,
-};
-
-function isBimType(type: EntityType): boolean {
-  return Object.prototype.hasOwnProperty.call(ID_GENERATORS, type);
 }
 
 // ─── Transform dispatch ─────────────────────────────────────────────────────
@@ -162,19 +140,22 @@ export function buildBimCopyClones(
   for (const id of ids) {
     const source = sceneManager.getEntity(id);
     if (!source) { skipped.push(id); continue; }
-    if (!isBimType(source.type as EntityType)) { skipped.push(id); continue; }
+
+    // Fresh per-type enterprise ID + NEW IFC GlobalId (null ⇒ non-BIM → skip).
+    const identity = mintBimCloneIdentity(source.type);
+    if (identity === null) { skipped.push(id); continue; }
 
     const patch = applyTransform(source as unknown as Entity, transform);
     if (patch === null) { skipped.push(id); continue; }
 
-    const newId = ID_GENERATORS[source.type]();
-    sourceToCloneId.set(id, newId);
+    sourceToCloneId.set(id, identity.id);
 
     const clone: SceneEntity = {
       ...source,
       ...patch,
-      id: newId,
-    };
+      id: identity.id,
+      ifcGuid: identity.ifcGuid,
+    } as unknown as SceneEntity;
     clones.push(clone);
   }
 
