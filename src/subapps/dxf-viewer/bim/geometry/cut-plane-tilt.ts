@@ -30,12 +30,6 @@ import { wallTiltShearAt, isWallTilted } from './wall-tilt';
 
 const NO_SHIFT: PlanShift = { dx: 0, dy: 0 };
 
-/** Screen-space μετατόπιση (px) — null όταν δεν υπάρχει ορατή κλίση (fast-path). */
-export interface ScreenDelta {
-  readonly x: number;
-  readonly y: number;
-}
-
 /** `heightAboveBase` του cut plane, clamped στο φυσικό ύψος `[0, height]`. */
 function cutHeightAboveBase(cutPlaneMm: number, baseOffsetMm: number, heightMm: number): number {
   const h = cutPlaneMm - baseOffsetMm;
@@ -58,38 +52,23 @@ export function wallCutPlaneShiftMm(params: WallParams, cutPlaneMm: number): Pla
 }
 
 /**
- * Μετατροπή plan-μετατόπισης (mm) → screen delta (px), αξιοποιώντας το affine
- * `worldToScreen` του renderer (linear part → delta ανεξάρτητο από base point).
- * `null` όταν η μετατόπιση είναι μηδέν → ο renderer παρακάμπτει το save/translate.
+ * Plan-μετατόπιση (mm) → **canvas-world units** (× `s`), στο ίδιο space με τα
+ * footprint vertices του renderer. `null` όταν η μετατόπιση είναι μηδέν (fast-path).
+ * Ο renderer ζωγραφίζει τη βάση κανονικά και προσθέτει το μετατοπισμένο cut-plane
+ * footprint + connecting lines (Revit slanted-column-in-plan).
  */
-function shiftToScreenDelta(
-  shiftMm: PlanShift,
-  sceneUnits: ColumnParams['sceneUnits'],
-  worldToScreen: (p: ScreenDelta) => ScreenDelta,
-): ScreenDelta | null {
+function shiftToCanvas(shiftMm: PlanShift, sceneUnits: ColumnParams['sceneUnits']): PlanShift | null {
   if (shiftMm.dx === 0 && shiftMm.dy === 0) return null;
   const s = mmToSceneUnits(sceneUnits ?? 'mm');
-  const o = worldToScreen({ x: 0, y: 0 });
-  const p = worldToScreen({ x: shiftMm.dx * s, y: shiftMm.dy * s });
-  const x = p.x - o.x;
-  const y = p.y - o.y;
-  return x === 0 && y === 0 ? null : { x, y };
+  return { dx: shiftMm.dx * s, dy: shiftMm.dy * s };
 }
 
-/** Screen delta (px) για 2Δ κάτοψη κολώνας — `null` αν δεν γέρνει (fast-path). */
-export function columnCutPlaneTiltScreenDelta(
-  params: ColumnParams,
-  cutPlaneMm: number,
-  worldToScreen: (p: ScreenDelta) => ScreenDelta,
-): ScreenDelta | null {
-  return shiftToScreenDelta(columnCutPlaneShiftMm(params, cutPlaneMm), params.sceneUnits, worldToScreen);
+/** Canvas-world μετατόπιση κολώνας στο cut plane — `null` αν δεν γέρνει (fast-path). */
+export function columnCutPlaneShiftCanvas(params: ColumnParams, cutPlaneMm: number): PlanShift | null {
+  return shiftToCanvas(columnCutPlaneShiftMm(params, cutPlaneMm), params.sceneUnits);
 }
 
-/** Screen delta (px) για 2Δ κάτοψη τοίχου — `null` αν δεν γέρνει (fast-path). */
-export function wallCutPlaneTiltScreenDelta(
-  params: WallParams,
-  cutPlaneMm: number,
-  worldToScreen: (p: ScreenDelta) => ScreenDelta,
-): ScreenDelta | null {
-  return shiftToScreenDelta(wallCutPlaneShiftMm(params, cutPlaneMm), params.sceneUnits, worldToScreen);
+/** Canvas-world μετατόπιση τοίχου στο cut plane — `null` αν δεν γέρνει (fast-path). */
+export function wallCutPlaneShiftCanvas(params: WallParams, cutPlaneMm: number): PlanShift | null {
+  return shiftToCanvas(wallCutPlaneShiftMm(params, cutPlaneMm), params.sceneUnits);
 }

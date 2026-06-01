@@ -154,8 +154,11 @@ baseOffset, 0, height)`). Η κεκλιμένη κολώνα/τοίχος εμφ
 BOQ) θα μετατοπίζονταν λάθος. → Το shift μπαίνει **render-time μόνο** (`ColumnRenderer`/
 `WallRenderer` μέσω `ctx.translate` ομοιόμορφα σε όλο το ορατό σύμβολο).
 
-- **Κολώνα/τοίχος:** render-time `ctx.translate` (κάτοψη) + ίδιο shift στα `toColumnPlan`/
-  `toWallPlan` (section parity, `cutPlaneMm` από `viewRange`).
+- **Κολώνα/τοίχος (κάτοψη, Revit slanted-in-plan):** το πλήρες σώμα (fill/hatch/**παχύ**
+  stroke = cut στυλ) μεταφέρεται στο **cut plane** (όπου κόβεται)· η **βάση** = **λεπτό**
+  projection outline (πραγματική θέση) + **connecting lines** στις γωνίες (κοινός helper
+  `cut-plane-tilt-projection.ts`). Section parity: ίδιο shift στα `toColumnPlan`/`toWallPlan`
+  (`cutPlaneMm` από `viewRange`).
 - **Δοκάρι/πλάκα = section-only** (κατακόρυφη κλίση → η **προβολή κάτοψης δεν
   μετατοπίζεται**, Revit: ίδιο footprint + slope arrows). Η τομή τους ήδη σωστή
   (`slopeYAt`, Phase E/E2) — μηδέν Phase-3 δουλειά.
@@ -183,15 +186,24 @@ lean — το `SectionRect` είναι rect· follow-up).
 - **🔴 Browser** (Phase 2): επίλεξε column/wall/beam/slab στο 3Δ → εμφανίζονται X/Z rings →
   σύρε → γέρνει **live** → release **μένει** γερμένο → **undo** επαναφέρει· snap στις 15°·
   **Shift** = ελεύθερη γωνία. Σκάλα = χωρίς tilt rings· multi-select = χωρίς tilt rings.
-- **🔴 Browser** (Phase 3): γείρε κολώνα/τοίχο στο 3Δ → γύρνα στην **2Δ κάτοψη** → το
-  footprint εμφανίζεται **μετατοπισμένο** στο cut plane (μεγαλύτερη γωνία/ύψος = μεγαλύτερη
-  μετατόπιση)· grips στο πραγματικό κέντρο. Δοκάρι/πλάκα = ίδιο footprint (μόνο τομή
-  αλλάζει). **Τομή (section panel):** το στοιχείο εμφανίζεται στην ίδια μετατοπισμένη θέση
-  με την κάτοψη. **BOQ αμετάβλητο** (length/area/volume ίδια πριν/μετά).
+- **🔴 Browser** (Phase 3): γείρε κολώνα/τοίχο στο 3Δ → γύρνα στην **2Δ κάτοψη** → φαίνονται
+  **ΔΥΟ περιγράμματα ενωμένα με γραμμές**: το **cut-plane footprint** (μετατοπισμένο,
+  **παχύ/cut** στυλ + hatch) και η **βάση** (πραγματική θέση, **λεπτό** outline)· grips στη
+  βάση. Δοκάρι/πλάκα = ίδιο footprint (μόνο τομή αλλάζει). **BOQ αμετάβλητο**.
 
 ---
 
 ## Changelog
+- **2026-06-01 (Opus 4.8) — Phase 3 fix ×2 (browser feedback Giorgio):** (1) αρχικά
+  μετατόπιζε ΟΛΟ το σύμβολο → η βάση χανόταν· (2) έδειχνε **δύο** περιγράμματα αλλά με
+  ανεστραμμένα line weights (βάση παχιά/cut λεπτό). **Τελικό σωστό Revit slanted-in-plan:**
+  το πλήρες σώμα (fill/hatch/**παχύ** stroke = cut στυλ) μεταφέρεται στο **cut plane** (όπου
+  κόβεται πραγματικά)· η **βάση** = **λεπτό** projection outline στην πραγματική θέση·
+  **connecting lines** στις γωνίες. ΝΕΟΣ κοινός helper `cut-plane-tilt-projection.ts`
+  (`drawCutPlaneTiltProjection` βάση+connectors + `cutPlaneShiftScreenDelta` για το body
+  translate· κολώνα ring=footprint, τοίχος ring=outer+inner.reversed)· screen-delta →
+  `columnCutPlaneShiftCanvas`/`wallCutPlaneShiftCanvas` (canvas-world shift). Grips στη βάση
+  (ευθυγραμμισμένα με το λεπτό base square). 32/32 tests, tsc 0.
 - **2026-06-01 (Opus 4.8, Plan Mode, Developer A SOLO)** — **Phase 3: 2Δ προβολή στο
   cut plane + section parity** (pending commit, 🔴 browser verify). ΝΕΟ SSoT
   `cut-plane-tilt.ts` (`columnCutPlaneShiftMm`/`wallCutPlaneShiftMm` + screen-delta helpers,

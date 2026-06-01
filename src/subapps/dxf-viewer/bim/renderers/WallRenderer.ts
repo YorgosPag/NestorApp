@@ -46,7 +46,8 @@ import {
   RC_DOT_RADIUS_PX,
   WALL_HATCH_LINE_WIDTH_PX,
 } from '../walls/wall-hatch-patterns';
-import { wallCutPlaneTiltScreenDelta } from '../geometry/cut-plane-tilt';
+import { wallCutPlaneShiftCanvas } from '../geometry/cut-plane-tilt';
+import { drawCutPlaneTiltProjection, cutPlaneShiftScreenDelta } from './cut-plane-tilt-projection';
 
 /** Translucent fill colour per category (CAD industry convention). */
 const CATEGORY_FILL: Readonly<Record<WallCategory, string>> = {
@@ -59,6 +60,9 @@ const CATEGORY_FILL: Readonly<Record<WallCategory, string>> = {
 
 
 const AXIS_DASH: readonly [number, number] = [6, 4];
+
+/** ADR-404 Phase 3 — muted slate για το cut-plane projection outline + connectors. */
+const TILT_PROJECTION_STROKE = '#5b6478';
 
 /** ADR-363 Phase 2.5 — per-frame opening index keyed by host wall id. */
 export type OpeningsByWall = ReadonlyMap<string, ReadonlyArray<OpeningEntity>>;
@@ -97,19 +101,18 @@ export class WallRenderer extends BaseEntityRenderer {
 
     if (!wall.geometry || !wall.params) return;
 
-    // ADR-404 Phase 3 — Revit cut-plane προβολή: ο battered τοίχος εμφανίζεται
-    // μετατοπισμένος (⟂ run) εκεί που τον κόβει το cut plane. Render-time
-    // `ctx.translate` ώστε ΟΛΟ το ορατό σύμβολο να μετατοπιστεί ομοιόμορφα — ΟΧΙ
-    // μέσα στο `computeWallGeometry` (μοιράζεται με 3Δ shear/grips/hit-test/BOQ).
-    // Μη-tilted → `null` → μηδέν overhead. Grips/hit-test στο πραγματικό footprint.
-    const _tiltDelta = wallCutPlaneTiltScreenDelta(
+    // ADR-404 Phase 3 — Revit cut-plane προβολή του battered τοίχου. Το πλήρες σώμα
+    // (cut στυλ) μεταφέρεται στο **cut plane** (⟂ run)· η **βάση** ζωγραφίζεται λεπτή
+    // + connecting lines μετά (cut=βαρύ/base=ελαφρύ). Render-time μόνο — ΟΧΙ μέσα στο
+    // `computeWallGeometry` (μοιράζεται με 3Δ/grips/hit/BOQ).
+    const _tiltShift = wallCutPlaneShiftCanvas(
       wall.params,
       useDrawingScaleStore.getState().viewRange.cutPlaneMm,
-      (p) => this.worldToScreen(p),
     );
-    if (_tiltDelta) {
+    if (_tiltShift) {
+      const d = cutPlaneShiftScreenDelta(_tiltShift, (p) => this.worldToScreen(p));
       this.ctx.save();
-      this.ctx.translate(_tiltDelta.x, _tiltDelta.y);
+      this.ctx.translate(d.x, d.y);
     }
 
     // Hover halo via OBB outline (stair pattern). Per-edge glow loses to the
@@ -142,9 +145,19 @@ export class WallRenderer extends BaseEntityRenderer {
     this.drawMaterialHatch(wall, _wLayerOverride);
     this.drawAxis(wall);
 
-    // ADR-404 Phase 3 — κλείσιμο του cut-plane translate πριν τα selection/grip
-    // overlays (finalizeRender), που μένουν αγκυρωμένα στο πραγματικό footprint.
-    if (_tiltDelta) this.ctx.restore();
+    // ADR-404 Phase 3 — κλείσιμο translate (cut σώμα)· βάση λεπτή + connecting lines.
+    // Το ring = outer (fwd) + inner (reversed), ίδιο με το footprint του τοίχου.
+    if (_tiltShift) {
+      this.ctx.restore();
+      const outer = wall.geometry.outerEdge.points;
+      const inner = wall.geometry.innerEdge.points;
+      if (outer.length >= 2 && inner.length >= 2) {
+        const ring = [...outer, ...[...inner].reverse()];
+        drawCutPlaneTiltProjection(
+          this.ctx, ring, _tiltShift, (p) => this.worldToScreen(p), TILT_PROJECTION_STROKE,
+        );
+      }
+    }
 
     this.finalizeRender(entity, options);
   }

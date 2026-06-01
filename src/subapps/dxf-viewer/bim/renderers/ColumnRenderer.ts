@@ -74,7 +74,8 @@ import {
   COLUMN_LABEL_MIN_FOOTPRINT_PX,
 } from '../columns/column-dim-labels';
 import { KIND_STROKE, KIND_FILL } from '../columns/column-render-palette';
-import { columnCutPlaneTiltScreenDelta } from '../geometry/cut-plane-tilt';
+import { columnCutPlaneShiftCanvas } from '../geometry/cut-plane-tilt';
+import { drawCutPlaneTiltProjection, cutPlaneShiftScreenDelta } from './cut-plane-tilt-projection';
 
 export class ColumnRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -94,20 +95,17 @@ export class ColumnRenderer extends BaseEntityRenderer {
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
-    // ADR-404 Phase 3 — Revit cut-plane προβολή: η κεκλιμένη κολώνα εμφανίζεται
-    // μετατοπισμένη εκεί που την κόβει το cut plane. Render-time `ctx.translate`
-    // ώστε ΟΛΟ το ορατό σύμβολο (halo/fill/hatch/stroke/labels) να μετατοπιστεί
-    // ομοιόμορφα — ΟΧΙ μέσα στο `computeColumnGeometry` (μοιράζεται με το 3Δ shear,
-    // grips, hit-test, BOQ). Μη-tilted → `null` → μηδέν overhead. Τα grips/hit-test
-    // μένουν στο πραγματικό footprint (η κλίση επεξεργάζεται μόνο μέσω 3Δ gizmo).
-    const _tiltDelta = columnCutPlaneTiltScreenDelta(
+    // ADR-404 Phase 3 — Revit cut-plane προβολή: το πλήρες σώμα (cut στυλ) μεταφέρεται
+    // στο cut plane· η βάση ζωγραφίζεται λεπτή + connecting lines μετά. Render-time μόνο
+    // (ΟΧΙ στο `computeColumnGeometry`: 3Δ/grips/hit/BOQ). Μη-tilted → `null` → no-op.
+    const _tiltShift = columnCutPlaneShiftCanvas(
       column.params,
       useDrawingScaleStore.getState().viewRange.cutPlaneMm,
-      (p) => this.worldToScreen(p),
     );
-    if (_tiltDelta) {
+    if (_tiltShift) {
+      const d = cutPlaneShiftScreenDelta(_tiltShift, (p) => this.worldToScreen(p));
       this.ctx.save();
-      this.ctx.translate(_tiltDelta.x, _tiltDelta.y);
+      this.ctx.translate(d.x, d.y);
     }
 
     // Hover halo via outline thicker glow.
@@ -172,9 +170,11 @@ export class ColumnRenderer extends BaseEntityRenderer {
       this.drawCenterDimLabel(column);
     }
 
-    // ADR-404 Phase 3 — κλείσιμο του cut-plane translate πριν τα selection/grip
-    // overlays (finalizeRender), που μένουν αγκυρωμένα στο πραγματικό footprint.
-    if (_tiltDelta) this.ctx.restore();
+    // ADR-404 Phase 3 — κλείσιμο translate (cut σώμα)· βάση λεπτή + connecting lines.
+    if (_tiltShift) {
+      this.ctx.restore();
+      drawCutPlaneTiltProjection(this.ctx, verts, _tiltShift, (p) => this.worldToScreen(p), KIND_STROKE[column.kind]);
+    }
 
     this.finalizeRender(entity, options);
   }
