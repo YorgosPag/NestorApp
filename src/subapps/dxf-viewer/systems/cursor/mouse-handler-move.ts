@@ -391,7 +391,8 @@ export function useMouseMoveHandler({
       regionDown.buttonHeld && regionDown.pos &&
       (activeTool === 'wall-in-region' ||
         activeTool === 'wall-from-perimeter' ||
-        activeTool === 'column-from-perimeter') &&
+        activeTool === 'column-from-perimeter' ||
+        activeTool === 'column-discrete-from-perimeter') &&
       !cursor.isSelecting
     ) {
       const rdx = screenPos.x - regionDown.pos.x;

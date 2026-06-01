@@ -23,6 +23,8 @@ export const OpeningSchedulePdfHost = React.lazy(() => import('../ui/components/
 export const ThermalEnvelopeHost = React.lazy(() => import('../ui/components/bim-envelope/ThermalEnvelopeHost').then(mod => ({ default: mod.ThermalEnvelopeHost })));
 // ADR-391 — AdminLayerManager dialog host
 export const AdminLayerManagerDialogHost = React.lazy(() => import('./AdminLayerManagerDialogHost').then(mod => ({ default: mod.AdminLayerManagerDialogHost })));
+// ADR-363 Φ3c — «Κολώνα από περίγραμμα» confirm dialog (self-subscribing, zero props)
+export const ColumnPerimeterConfirmDialog = React.lazy(() => import('../ui/dialogs/ColumnPerimeterConfirmDialog').then(mod => ({ default: mod.ColumnPerimeterConfirmDialog })));
 export const DxfImportModal = React.lazy(() => import('../components/DxfImportModal'));
 export const SimpleProjectDialog = React.lazy(() => import('../components/SimpleProjectDialog').then(mod => ({ default: mod.SimpleProjectDialog })));
 export const ConstructionLayerScaffoldDialog = React.lazy(() => import('../hooks/useConstructionLayerScaffold').then(mod => ({ default: mod.ConstructionLayerScaffoldDialog })));

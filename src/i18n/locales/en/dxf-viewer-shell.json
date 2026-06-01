@@ -20,6 +20,17 @@
     "builtWithIgnored": "Created {built} structural walls; ignored {ignored} shapes.",
     "noneBuilt": "No valid structural-wall perimeter found in the selection."
   },
+  "perimeterColumnDiscrete": {
+    "built": "Created {columns} columns from the perimeter.",
+    "builtMixed": "Created {columns} columns and {walls} structural walls from the perimeter.",
+    "noneBuilt": "No valid perimeter found in the selection."
+  },
+  "perimeterColumnConfirm": {
+    "title": "Section classification",
+    "message": "Based on the side ratios of the sections, {walls} structural walls and {columns} columns will be created. The ratios of some perimeters do not allow creating a column. Continue?",
+    "create": "Create",
+    "cancel": "Cancel"
+  },
   "bim": {
     "wallCascadeDelete": {
       "title": "Delete Wall",
@@ -437,6 +448,7 @@
     "column": {
       "statusPosition": "Click to place column — Tab cycles anchor",
       "statusPerimeterPick": "Box-select the faces of a structural element (rectangle/L/T/U/composite) → ONE structural wall per perimeter",
+      "statusDiscretePerimeterPick": "Box-select faces → each perimeter a separate column or structural wall (auto-classified from side ratios)",
       "errors": {
         "nonPositiveWidth": "Width must be greater than 0",
         "nonPositiveDepth": "Depth must be greater than 0",
@@ -451,6 +463,8 @@
       "statusEnd": "Pick beam end point",
       "statusCurveEnd": "Pick curved beam end point",
       "statusCurveControl": "Pick curve control point",
+      "statusPickWall": "Pick a wall to place a beam on it",
+      "errorNoWall": "No wall found at the picked point",
       "errors": {
         "nonPositiveWidth": "Width must be greater than 0",
         "nonPositiveDepth": "Depth must be greater than 0",
@@ -776,6 +790,7 @@
       "viewRange": "View Range",
       "objectStyles": "Object Styles",
       "visibilityGraphics": "Visibility/Graphics",
+      "hideBim": "DXF Only",
       "penTable": "Pen Table",
       "viewTemplates": "View Templates",
       "dimensions": "Dimensions",
@@ -887,6 +902,10 @@
           "label": "Structural wall from perimeter",
           "tooltip": "Box-select the faces of a structural element (rectangle/L/T/U/composite) → ONE RC structural wall per closed perimeter, geometry taken from the drawing"
         },
+        "columnDiscreteFromPerimeter": {
+          "label": "Column from perimeter",
+          "tooltip": "Box-select faces → each perimeter a separate element (NO union); auto-classified as column or structural wall from the side ratios, with an informative confirmation"
+        },
         "opening": {
           "label": "Opening",
           "tooltip": "Draw opening (shortcut OP)"
@@ -913,6 +932,10 @@
         "beam": {
           "label": "Beam",
           "tooltip": "Draw beam (shortcut BM)"
+        },
+        "beamFromWall": {
+          "label": "Beam from wall",
+          "tooltip": "Pick an existing wall → a beam is created on its axis (width = wall thickness); the wall auto-adjusts its top beneath the beam"
         },
         "group": {
           "label": "Structural Elements",
@@ -1667,6 +1690,13 @@
           "dashdot": "Dash Dot",
           "phantom": "Phantom"
         }
+      },
+      "hideBim": {
+        "label": "DXF Only",
+        "hide": "Hide BIM",
+        "show": "Show BIM",
+        "tooltipHide": "Hide all structural BIM elements — only the imported DXF entities remain visible",
+        "tooltipShow": "Restore visibility of structural BIM elements"
       },
       "viewTemplates": {
         "label": "Template",

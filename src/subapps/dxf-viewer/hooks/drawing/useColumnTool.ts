@@ -40,25 +40,21 @@ import {
   type AnchorGhost,
   type ColumnGhostOverrides,
 } from '../../bim/columns/column-anchor-ghosts';
-// ADR-363 Φάση 3 «Τοιχίο από περίγραμμα» — faces → ΕΝΑ ColumnEntity ανά περίμετρο.
-import {
-  perimeterFacesToColumns,
-  buildColumnsFromPerimeters,
-} from '../../bim/columns/column-from-faces';
-import { perimeterFacesToRects } from '../../bim/walls/perimeter-from-faces';
-import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
-import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
-import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+// ADR-363 Φάση 3/3c «από περίγραμμα» — box-select/click-inside commit helpers (split).
+import { useColumnPerimeterCommit } from './use-column-perimeter-commit';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { EventBus } from '../../systems/events/EventBus';
 
 /**
- * ADR-363 Φάση 3 — column placement mode:
- *   - 'freehand'        — single-click placement (default, Phase 4).
- *   - 'outer-perimeter' — box-select τις παρειές ενός δομικού στοιχείου → ΕΝΑ
- *                         τοιχίο (ColumnEntity) ανά κλειστή περίμετρο.
+ * ADR-363 Φάση 3 / 3c — column placement mode:
+ *   - 'freehand'          — single-click placement (default, Phase 4).
+ *   - 'outer-perimeter'   — box-select παρειές → ΕΝΑ τοιχίο (ColumnEntity) ανά
+ *                           κλειστή περίμετρο, ΜΕ ένωση γειτονικών (Φάση 3).
+ *   - 'discrete-perimeter'— box-select παρειές → ΧΩΡΙΣ ένωση (κάθε περίγραμμα
+ *                           ξεχωριστό)· αυτόματη ταξινόμηση κολώνα/τοιχίο ανά
+ *                           αναλογία πλευρών + ενημερωτικό confirm (Φάση 3c).
  */
-export type ColumnPlacementMode = 'freehand' | 'outer-perimeter';
+export type ColumnPlacementMode = 'freehand' | 'outer-perimeter' | 'discrete-perimeter';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -260,58 +256,16 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     [currentLevelId, onColumnCreated, getSceneUnits],
   );
 
-  // ── outer-perimeter helpers (ADR-363 Φάση 3 «Τοιχίο από περίγραμμα») ──────
-  // Live scene-units-agnostic hit-test tolerance (world units), ίδιος κανόνας
-  // SNAP_DEFAULT/scale με το «Τοίχος από περίγραμμα».
-  const regionTol = useCallback(
-    (): number => TOLERANCE_CONFIG.SNAP_DEFAULT / getImmediateTransform().scale,
-    [],
-  );
-
-  // Commit ΕΝΑ ColumnEntity ανά περίμετρο· broadcast summary toast event. Mirror
-  // του `commitPerimeterFaces` (walls): per-entity append via onColumnCreated.
-  const commitPerimeterColumns = useCallback(
-    (built: { columns: ColumnEntity[]; ignored: number }): boolean => {
-      for (const column of built.columns) onColumnCreatedRef.current?.(column);
-      EventBus.emit('bim:columns-from-perimeter', {
-        built: built.columns.length,
-        ignored: built.ignored,
-      });
-      return built.columns.length > 0;
-    },
-    [],
-  );
-
-  // Click μέσα σε κλειστή περίμετρο κάτω από τον κέρσορα → τοιχίο (box-select είναι
-  // η κύρια χειρονομία· αυτό είναι η single-click διευκόλυνση, mirror in-region).
-  const onPerimeterClick = useCallback(
-    (point: Readonly<Point2D>): boolean => {
-      const entities = getSceneEntitiesRef.current?.() ?? [];
-      const { perimeters } = perimeterFacesToRects(entities, regionTol());
-      const hit = perimeters.filter((p) => isPointInPolygon(point as Point2D, [...p.polygon]));
-      if (hit.length === 0) return false;
-      const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
-      return commitPerimeterColumns(buildColumnsFromPerimeters(hit, currentLevelId, sceneUnits));
-    },
-    [regionTol, currentLevelId, commitPerimeterColumns],
-  );
-
-  // Box-select listener (reuse κοινό 'bim:wall-region-box-select'). Inert εκτός
-  // outer-perimeter mode. Mirror του `useWallToolPerimeterBoxSelectListener`.
-  useEffect(
-    () =>
-      EventBus.on('bim:wall-region-box-select', ({ entityIds }) => {
-        const s = stateRef.current;
-        if (s.placementMode !== 'outer-perimeter' || s.phase === 'idle') return;
-        const idSet = new Set(entityIds);
-        const selected = (getSceneEntitiesRef.current?.() ?? []).filter((e) => idSet.has(e.id));
-        const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
-        commitPerimeterColumns(
-          perimeterFacesToColumns(selected, regionTol(), currentLevelId, sceneUnits),
-        );
-      }),
-    [regionTol, currentLevelId, commitPerimeterColumns],
-  );
+  // ── «από περίγραμμα» commit helpers (ADR-363 Φ3/Φ3c) — εξήχθησαν σε hook ────
+  // (N.7.1 file-size split). Box-select listener + click-inside για outer-perimeter
+  // (ΜΕ ένωση→τοιχία) και discrete-perimeter (ΧΩΡΙΣ ένωση→αυτόματη ταξινόμηση+confirm).
+  const { onPerimeterClick, onDiscretePerimeterClick } = useColumnPerimeterCommit({
+    stateRef,
+    onColumnCreatedRef,
+    getSceneEntitiesRef,
+    getSceneUnitsRef,
+    currentLevelId,
+  });
 
   // ── click pipeline ───────────────────────────────────────────────────────
   const onCanvasClick = useCallback(
@@ -322,10 +276,14 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       if (s.placementMode === 'outer-perimeter') {
         return onPerimeterClick(point);
       }
+      // ADR-363 Φάση 3c — discrete-perimeter: click μέσα σε περίμετρο (gated confirm).
+      if (s.placementMode === 'discrete-perimeter') {
+        return onDiscretePerimeterClick(point);
+      }
       if (s.phase !== 'awaitingPosition') return false;
       return commitColumnFromState(s, point);
     },
-    [commitColumnFromState, onPerimeterClick],
+    [commitColumnFromState, onPerimeterClick, onDiscretePerimeterClick],
   );
 
   // ── ADR-403 — 3D placement bridge ─────────────────────────────────────────
@@ -347,6 +305,9 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     if (s.phase === 'idle') return '';
     // ADR-363 Φάση 3 — outer-perimeter prompt (box-select τις παρειές).
     if (s.placementMode === 'outer-perimeter') return 'tools.column.statusPerimeterPick';
+    // ADR-363 Φάση 3c — discrete-perimeter prompt (box-select· αυτόματη ταξινόμηση).
+    if (s.placementMode === 'discrete-perimeter')
+      return 'tools.column.statusDiscretePerimeterPick';
     return s.phase === 'awaitingPosition' ? 'tools.column.statusPosition' : '';
   }, []);
 
@@ -354,8 +315,9 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   const getGhostFootprints = useCallback(
     (cursorPos: Readonly<Point2D> | null): readonly AnchorGhost[] | null => {
       const s = stateRef.current;
-      // ADR-363 Φάση 3 — outer-perimeter δεν έχει anchor ghost (box-select picks).
-      if (s.placementMode === 'outer-perimeter') return null;
+      // ADR-363 Φάση 3 / 3c — perimeter modes δεν έχουν anchor ghost (box-select picks).
+      if (s.placementMode === 'outer-perimeter' || s.placementMode === 'discrete-perimeter')
+        return null;
       if (s.phase !== 'awaitingPosition' || cursorPos === null) return null;
       // ColumnGhostOverrides is structurally a subset of ColumnParamOverrides
       // (kind+anchor flattened to args). Spread keeps width/depth/height/

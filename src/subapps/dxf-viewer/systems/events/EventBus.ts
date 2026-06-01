@@ -225,6 +225,12 @@ export interface DrawingEventMap {
   // Stairs} command for the already-captured target(s) — no logic duplicated
   // (mirror of the `bim:place-column-3d` bridge).
   'bim:attach-host-picked-3d': { hostId: string };
+  // ADR-363 «Δοκάρι από τοίχο» — 3D pick: the 3D viewport raycast a wall mesh
+  // while the `beam-from-wall` tool is active. The 2D `useBeamTool` listens and
+  // builds the beam on that wall's axis via its existing from-wall commit core
+  // (`buildBeamFromWall` + `onBeamCreated` → auto-attaches the wall top, ADR-401
+  // D) — no geometry/commit logic duplicated (mirror of `bim:place-column-3d`).
+  'bim:beam-from-wall-picked-3d': { wallId: string };
   // ADR-363 Phase 5 — BIM beam params + delete events
   'bim:beam-params-updated': { beamId: string };
   'bim:beam-delete-requested': { beamId: string };
@@ -287,6 +293,10 @@ export interface DrawingEventMap {
   // τις επιλεγμένες παρειές (ΕΝΑ ανά κλειστή περίμετρο)· `ignored` = validator-
   // rejected περιγράμματα. UI surfaces non-blocking summary toast.
   'bim:columns-from-perimeter': { built: number; ignored: number };
+  // ADR-363 Φάση 3c «Κολώνα από περίγραμμα» — ΧΩΡΙΣ ένωση· αυτόματη ταξινόμηση ανά
+  // αναλογία πλευρών: `columns` = κολώνες (aspect<4), `walls` = τοιχία (aspect≥4 ή
+  // σύνθετα), `ignored` = validator-rejected. UI: ενημερωτικό breakdown toast.
+  'bim:columns-discrete-from-perimeter': { columns: number; walls: number; ignored: number };
   // ADR-401 Phase F.3 — column attach mirrors of the wall events above. N columns
   // auto-attached their top/base to a just-created structural host. Undoable via
   // AttachColumnsCommand. UI surfaces a non-blocking info toast (Revit parity).

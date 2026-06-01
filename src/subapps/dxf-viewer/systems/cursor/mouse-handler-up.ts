@@ -332,7 +332,8 @@ function processMarqueeSelection(
   if (
     (activeTool === 'wall-in-region' ||
       activeTool === 'wall-from-perimeter' ||
-      activeTool === 'column-from-perimeter') &&
+      activeTool === 'column-from-perimeter' ||
+      activeTool === 'column-discrete-from-perimeter') &&
     marqueeSnap
   ) {
     const regionResult = UniversalMarqueeSelector.performSelection(

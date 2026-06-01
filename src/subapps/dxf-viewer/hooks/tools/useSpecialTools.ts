@@ -397,14 +397,20 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       return levelManager.getLevelScene(levelId)?.entities ?? [];
     },
   });
-  // ADR-363 Φάση 3 — ο freehand column ('column') και το «Τοιχίο από περίγραμμα»
-  // ('column-from-perimeter') μοιράζονται ΕΝΑ useColumnTool· το placement mode
-  // οδηγείται από το active tool id.
-  const isColumnTool = activeTool === 'column' || activeTool === 'column-from-perimeter';
+  // ADR-363 Φάση 3 / 3c — ο freehand column ('column'), το «Τοιχίο από περίγραμμα»
+  // ('column-from-perimeter') και η «Κολώνα από περίγραμμα» ('column-discrete-from-
+  // perimeter') μοιράζονται ΕΝΑ useColumnTool· το placement mode οδηγείται από το
+  // active tool id.
+  const isColumnTool =
+    activeTool === 'column' ||
+    activeTool === 'column-from-perimeter' ||
+    activeTool === 'column-discrete-from-perimeter';
   useToolLifecycle(isColumnTool, columnTool.activate, columnTool.deactivate);
   useEffect(() => {
     if (activeTool === 'column') columnTool.setPlacementMode('freehand');
     else if (activeTool === 'column-from-perimeter') columnTool.setPlacementMode('outer-perimeter');
+    else if (activeTool === 'column-discrete-from-perimeter')
+      columnTool.setPlacementMode('discrete-perimeter');
   }, [activeTool, columnTool.setPlacementMode]);
   // ============================================================================
   // ADR-363 Phase 5 — BEAM TOOL
@@ -422,9 +428,24 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       if (!levelId) return 'mm';
       return resolveSceneUnits(levelManager.getLevelScene(levelId));
     },
+    // ADR-363 «Δοκάρι από τοίχο» — live scene entities for the from-wall pick.
+    getSceneEntities: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return [];
+      return levelManager.getLevelScene(levelId)?.entities ?? [];
+    },
     onBeamCreated: (beamEntity) => appendAndBroadcast(levelManager, beamEntity, 'beam'),
   });
-  useToolLifecycle(activeTool === 'beam', beamTool.activate, beamTool.deactivate);
+  // ADR-363 — the freehand beam ('beam') and the from-wall variant
+  // ('beam-from-wall') share ONE useBeamTool instance; placement mode follows
+  // the active tool id. Creating the beam broadcasts `drawing:entity-created`,
+  // so `useStructuralAutoAttach` (ADR-401 D) auto-attaches the wall top.
+  const isBeamTool = activeTool === 'beam' || activeTool === 'beam-from-wall';
+  useToolLifecycle(isBeamTool, beamTool.activate, beamTool.deactivate);
+  useEffect(() => {
+    if (activeTool === 'beam') beamTool.setPlacementMode('freehand');
+    else if (activeTool === 'beam-from-wall') beamTool.setPlacementMode('from-wall');
+  }, [activeTool, beamTool.setPlacementMode]);
   // ADR-363 Phase 3.7 — SLAB-OPENING TOOL (resolvers extracted: useSpecialTools-slab-opening.ts)
   const slabOpeningTool = useSlabOpeningTool(buildSlabOpeningResolvers(levelManager));
   useToolLifecycle(activeTool === 'slab-opening', slabOpeningTool.activate, slabOpeningTool.deactivate);

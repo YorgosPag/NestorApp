@@ -122,7 +122,8 @@
   "contextMenu": {
     "flipArc": "Αντιστροφή",
     "entity": {
-      "splitWall": "Χωρισμός Τοίχου"
+      "splitWall": "Χωρισμός Τοίχου",
+      "selectSimilarColor": "Επιλογή όμοιων (ίδιο χρώμα)"
     },
     "snapOverride": {
       "title": "Προσωρινή Εστίαση Snap",

@@ -164,21 +164,6 @@ export function buildStraightWallWithOpenings(
   const pieces = computeWallOpeningPieces(wall, openings, clipWallTop, wallBase);
   if (!pieces) return null;
 
-  // [TILT-DIAG] ΠΡΟΣΩΡΙΝΟ — αφαιρείται μετά τη διάγνωση.
-  if (isWallTilted(wall.params)) {
-    const bbox = (pts: readonly { x: number; y: number }[]): string => {
-      const xs = pts.map((p) => p.x); const ys = pts.map((p) => p.y);
-      return `x[${Math.min(...xs).toFixed(2)},${Math.max(...xs).toFixed(2)}] y[${Math.min(...ys).toFixed(2)},${Math.max(...ys).toFixed(2)}]`;
-    };
-    const oe = wall.geometry.outerEdge.points; const ie = wall.geometry.innerEdge.points;
-    // eslint-disable-next-line no-console
-    console.warn('[TILT-DIAG] wall', wall.id, '| tiltAngle=', wall.params.tilt?.angle,
-      '| hasTopClip=', !!effTopClip, '| hosts=', effTopClip?.hosts?.length ?? 0,
-      '| pieces=', pieces.length, '| profileFollowing=', pieces.filter((p) => p.topFollowsProfile).length,
-      '| wallBand=', bbox([...oe, ...ie]),
-      '| host0(compensated)=', effTopClip?.hosts?.[0] ? bbox(effTopClip.hosts[0].footprint) : 'none');
-  }
-
   const floorY = floorElevationMm * MM_TO_M + buildingBaseElevationM;
   const group = new THREE.Group();
   const emit = (geo: THREE.BufferGeometry, yOffset: number): void => {
@@ -211,10 +196,6 @@ export function buildStraightWallWithOpenings(
         const { prisms, lofts } = clipWallBandTopRegionsTilted(
           pc.quad, effTopClip.hosts, effTopClip.nominalTopMm, floorElevationMm, pc.zBotAM, wall.params,
         );
-        // [TILT-DIAG v4-HASPOCKET] ΠΡΟΣΩΡΙΝΟ — αφαιρείται μετά τη διάγνωση.
-        // eslint-disable-next-line no-console
-        console.warn('[TILT-DIAG v4-HASPOCKET] tilted-clip piece | prisms=', prisms.length,
-          '| lofts=', lofts.length);
         if (prisms.length > 0 || lofts.length > 0) {
           for (const r of prisms) {
             const prism = buildColumnPrismGeometry(r.footprint, r.baseLocalM, r.topLocalM);

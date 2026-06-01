@@ -96,10 +96,16 @@ export function useActiveContextualTrigger({
       return WALL_CONTEXTUAL_TRIGGER;
     if (activeTool === 'opening') return OPENING_CONTEXTUAL_TRIGGER;
     if (activeTool === 'slab') return SLAB_CONTEXTUAL_TRIGGER;
-    // ADR-363 Φάση 3 — «Τοιχίο από περίγραμμα» μοιράζεται το column contextual tab.
-    if (activeTool === 'column' || activeTool === 'column-from-perimeter')
+    // ADR-363 Φάση 3 / 3c — «Τοιχίο/Κολώνα από περίγραμμα» μοιράζονται το column contextual tab.
+    if (
+      activeTool === 'column' ||
+      activeTool === 'column-from-perimeter' ||
+      activeTool === 'column-discrete-from-perimeter'
+    )
       return COLUMN_CONTEXTUAL_TRIGGER;
-    if (activeTool === 'beam') return BEAM_CONTEXTUAL_TRIGGER;
+    // ADR-363 «Δοκάρι από τοίχο» μοιράζεται το beam contextual tab (depth/elevation/
+    // width overrides feed the from-wall build· το width default = πάχος τοίχου).
+    if (activeTool === 'beam' || activeTool === 'beam-from-wall') return BEAM_CONTEXTUAL_TRIGGER;
     if (activeTool === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;
     // ADR-359 Phase 10.b: xline active → show mode selection panel.
     if (activeTool === 'xline') return XLINE_MODE_CONTEXTUAL_TRIGGER;

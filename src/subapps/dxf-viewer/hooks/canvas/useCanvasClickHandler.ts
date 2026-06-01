@@ -257,11 +257,13 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
     // PRIORITY 4.8: ADR-363 Phase 4 — Column tool single-click placement.
-    // Φάση 3 — 'column-from-perimeter' shares the same tool; click-inside a
-    // perimeter builds ΕΝΑ τοιχίο (RAW worldPoint — hit-tests existing geometry,
-    // ORTHO/POLAR must NOT shift the pick).
+    // Φάση 3 / 3c — 'column-from-perimeter' & 'column-discrete-from-perimeter' share
+    // the same tool; click-inside a perimeter builds (RAW worldPoint — hit-tests
+    // existing geometry, ORTHO/POLAR must NOT shift the pick).
     if (
-      (activeTool === 'column' || activeTool === 'column-from-perimeter') &&
+      (activeTool === 'column' ||
+        activeTool === 'column-from-perimeter' ||
+        activeTool === 'column-discrete-from-perimeter') &&
       columnTool?.isActive
     ) {
       columnTool.onCanvasClick(worldPoint);
@@ -270,6 +272,13 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 4.9: ADR-363 Phase 5 — Beam tool 2-click (straight/cantilever) or 3-click (curved).
     if (activeTool === 'beam' && beamTool?.isActive) {
       beamTool.onCanvasClick(bimPoint);
+      return;
+    }
+    // PRIORITY 4.91: ADR-363 «Δοκάρι από τοίχο» — 1-click pick of an existing
+    // wall. Uses the RAW worldPoint (hit-tests existing geometry, so ORTHO/POLAR
+    // must NOT shift the pick), mirroring 'wall-on-entity'.
+    if (activeTool === 'beam-from-wall' && beamTool?.isActive) {
+      beamTool.onCanvasClick(worldPoint);
       return;
     }
     // PRIORITY 4.95: ADR-363 Phase 3.7 — Slab-opening tool 2-click (host slab + position).

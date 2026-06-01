@@ -14,6 +14,25 @@
 import { renderHook, act } from '@testing-library/react';
 import { useBeamTool } from '../useBeamTool';
 import type { BeamEntity } from '../../../bim/types/beam-types';
+import type { Entity } from '../../../types/entities';
+import type { WallEntity } from '../../../bim/types/wall-types';
+import { EventBus } from '../../../systems/events/EventBus';
+
+const wallFixture = (id: string): WallEntity =>
+  ({
+    id,
+    type: 'wall',
+    kind: 'straight',
+    params: {
+      category: 'structural',
+      start: { x: 0, y: 0, z: 0 },
+      end: { x: 4000, y: 0, z: 0 },
+      height: 3000,
+      thickness: 300,
+      flip: false,
+    },
+    geometry: {},
+  } as unknown as WallEntity);
 
 describe('useBeamTool', () => {
   it('initial state is idle until activated', () => {
@@ -96,6 +115,28 @@ describe('useBeamTool', () => {
     expect(result.current.getStatusText()).toBe('tools.beam.statusStart');
     act(() => { result.current.onCanvasClick({ x: 0, y: 0 }); });
     expect(result.current.getStatusText()).toBe('tools.beam.statusEnd');
+  });
+
+  it('3D pick: bim:beam-from-wall-picked-3d builds a beam on the resolved wall', () => {
+    const onBeamCreated = jest.fn();
+    const wall = wallFixture('w-3d');
+    const getSceneEntities = (): readonly Entity[] => [wall as unknown as Entity];
+    renderHook(() => useBeamTool({ onBeamCreated, getSceneEntities }));
+    act(() => { EventBus.emit('bim:beam-from-wall-picked-3d', { wallId: 'w-3d' }); });
+    expect(onBeamCreated).toHaveBeenCalledTimes(1);
+    const entity = onBeamCreated.mock.calls[0][0] as BeamEntity;
+    expect(entity.type).toBe('beam');
+    // width = wall thickness; beam sits on top of the 3m wall (top 3000 / depth 500).
+    expect(entity.params.width).toBe(300);
+    expect(entity.params.topElevation).toBe(3000);
+  });
+
+  it('3D pick: unknown wallId is a no-op (no beam created)', () => {
+    const onBeamCreated = jest.fn();
+    const getSceneEntities = (): readonly Entity[] => [wallFixture('w-3d') as unknown as Entity];
+    renderHook(() => useBeamTool({ onBeamCreated, getSceneEntities }));
+    act(() => { EventBus.emit('bim:beam-from-wall-picked-3d', { wallId: 'does-not-exist' }); });
+    expect(onBeamCreated).not.toHaveBeenCalled();
   });
 
   it('deactivate returns to idle', () => {

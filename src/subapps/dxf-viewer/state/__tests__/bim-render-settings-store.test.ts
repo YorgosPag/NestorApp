@@ -6,7 +6,10 @@ import {
   DRAWING_SCALE_MAX,
 } from '../../config/bim-render-settings-types';
 import { DEFAULT_VIEW_RANGE } from '../../config/bim-view-range';
-import { DEFAULT_OBJECT_STYLES } from '../../config/bim-object-styles';
+import {
+  DEFAULT_OBJECT_STYLES,
+  STRUCTURAL_BIM_CATEGORIES,
+} from '../../config/bim-object-styles';
 
 // Mock saveBimRenderSettings to avoid real Firestore calls
 jest.mock('../../services/bim-render-settings.service', () => ({
@@ -25,6 +28,7 @@ beforeEach(() => {
       objectStyles: DEFAULT_OBJECT_STYLES as ReturnType<typeof useBimRenderSettingsStore.getState>['objectStyles'],
       rawSettings: null,
       currentLevelId: null,
+      bimVisibilitySnapshot: null,
     });
   });
 });
@@ -146,6 +150,56 @@ describe('useBimRenderSettingsStore', () => {
       expect(s.drawingScale).toBe(DEFAULT_DRAWING_SCALE);
       expect(s.viewRange).toEqual(DEFAULT_VIEW_RANGE);
       expect(s.objectStyles).toEqual(DEFAULT_OBJECT_STYLES);
+    });
+  });
+
+  describe('setBimObjectsVisibility (Hide BIM / Show only DXF isolate)', () => {
+    const isHidden = (cat: (typeof STRUCTURAL_BIM_CATEGORIES)[number]) =>
+      useBimRenderSettingsStore.getState().objectStyles[cat].visible === false;
+
+    it('hides every structural BIM category in one call', () => {
+      act(() => useBimRenderSettingsStore.getState().setBimObjectsVisibility(false));
+      for (const cat of STRUCTURAL_BIM_CATEGORIES) {
+        expect(isHidden(cat)).toBe(true);
+      }
+    });
+
+    it('leaves annotation/helper categories (dimension/hatch/grip) untouched', () => {
+      act(() => useBimRenderSettingsStore.getState().setBimObjectsVisibility(false));
+      const styles = useBimRenderSettingsStore.getState().objectStyles;
+      expect(styles.dimension.visible).not.toBe(false);
+      expect(styles.hatch.visible).not.toBe(false);
+      expect(styles.grip.visible).not.toBe(false);
+    });
+
+    it('restores all categories to visible when toggled back on', () => {
+      act(() => useBimRenderSettingsStore.getState().setBimObjectsVisibility(false));
+      act(() => useBimRenderSettingsStore.getState().setBimObjectsVisibility(true));
+      for (const cat of STRUCTURAL_BIM_CATEGORIES) {
+        expect(isHidden(cat)).toBe(false);
+      }
+      expect(useBimRenderSettingsStore.getState().bimVisibilitySnapshot).toBeNull();
+    });
+
+    it('preserves a manual per-category hide across an isolate cycle', () => {
+      // User manually hides only 'column' via the V/G panel.
+      act(() => useBimRenderSettingsStore.getState().setObjectStyleVisibility('column', false));
+      // Engage + release the BIM isolate.
+      act(() => useBimRenderSettingsStore.getState().setBimObjectsVisibility(false));
+      act(() => useBimRenderSettingsStore.getState().setBimObjectsVisibility(true));
+      // 'column' stays hidden, the rest are visible again.
+      expect(isHidden('column')).toBe(true);
+      expect(isHidden('wall')).toBe(false);
+    });
+
+    it('is idempotent — hiding twice keeps a single snapshot of the original state', () => {
+      act(() => useBimRenderSettingsStore.getState().setObjectStyleVisibility('beam', false));
+      act(() => useBimRenderSettingsStore.getState().setBimObjectsVisibility(false));
+      act(() => useBimRenderSettingsStore.getState().setBimObjectsVisibility(false));
+      act(() => useBimRenderSettingsStore.getState().setBimObjectsVisibility(true));
+      // The double-hide must not have overwritten the snapshot with all-false.
+      expect(isHidden('beam')).toBe(true);
+      expect(isHidden('wall')).toBe(false);
     });
   });
 

@@ -35,6 +35,7 @@ import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-inter
 import { useBim3DEditInteraction } from '../animation/use-bim3d-edit-interaction';
 import { useBim3DColumnPlacement } from '../placement/use-bim3d-column-placement';
 import { useBim3DAttachPick } from './use-bim3d-attach-pick';
+import { useBim3DBeamFromWallPick } from './use-bim3d-beam-from-wall-pick';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useBim3DStoreSync } from './use-bim3d-store-sync';
 import { useBim3DVgResync } from './use-bim3d-vg-resync';
@@ -303,6 +304,13 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // and emits `bim:attach-host-picked-3d`; the 2D `useWallAttachTool` commits the
   // existing Attach{Walls|Columns|Stairs} command for the captured target(s).
   useBim3DAttachPick({ managerRef, canvasEl });
+
+  // ADR-363 «Δοκάρι από τοίχο» — 3D from-wall pick. Armed only while the
+  // `beam-from-wall` tool is active AND the viewport is in 3D: pointer move shows
+  // a WYSIWYG beam ghost on the hovered wall's axis, and a click emits
+  // `bim:beam-from-wall-picked-3d`; the 2D `useBeamTool` builds the beam via its
+  // existing from-wall commit core (auto-attaches the wall top, ADR-401 D).
+  useBim3DBeamFromWallPick({ managerRef, canvasEl });
 
   // Phase 9 / C.1.c — Animation render queue driver. Mounted once; subscribes
   // to RenderQueueStore and drives the MP4 encode pipeline when a job is queued.

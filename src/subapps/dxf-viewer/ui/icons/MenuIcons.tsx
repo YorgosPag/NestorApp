@@ -244,6 +244,22 @@ export function SplitWallIcon({ className, color }: IconProps) {
 }
 
 /**
+ * Select-similar-by-color icon — three shapes sharing a fill swatch.
+ * Used in: EntityContextMenu "Select Similar (Color)".
+ */
+export function SelectSimilarColorIcon({ className, color }: IconProps) {
+  return (
+    <SvgWrapper className={className} color={color}>
+      <circle cx="6" cy="7" r="3" />
+      <rect x="13" y="4" width="6" height="6" rx="1" />
+      <path d="M6 14 L9 20 L3 20 Z" />
+      <line x1="14" y1="17" x2="20" y2="17" />
+      <line x1="14" y1="20" x2="20" y2="20" />
+    </SvgWrapper>
+  );
+}
+
+/**
  * Flip arc direction icon (two opposing arcs with arrows)
  * Used in: DrawingContextMenu for arc tools (arc-3p, arc-cse, arc-sce)
  *

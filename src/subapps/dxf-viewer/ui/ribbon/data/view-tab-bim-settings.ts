@@ -101,6 +101,30 @@ export const VISIBILITY_GRAPHICS_PANEL: RibbonPanelDef = {
   ],
 };
 
+/** ADR-375 Phase C.8 — one-click "Hide BIM / Show only DXF" isolate toggle. */
+export const HIDE_BIM_PANEL: RibbonPanelDef = {
+  id: 'hideBim',
+  labelKey: 'ribbon.panels.hideBim',
+  rows: [
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'widget',
+          size: 'small',
+          widgetId: 'hide-bim',
+          command: {
+            id: 'view.hideBim',
+            labelKey: 'ribbon.commands.hideBim.label',
+            icon: '',
+            commandKey: 'hide-bim',
+          },
+        },
+      ],
+    },
+  ],
+};
+
 /** ADR-375 Phase B.3 — reusable BIM render-settings presets (Revit Level 2). */
 export const VIEW_TEMPLATES_PANEL: RibbonPanelDef = {
   id: 'viewTemplates',

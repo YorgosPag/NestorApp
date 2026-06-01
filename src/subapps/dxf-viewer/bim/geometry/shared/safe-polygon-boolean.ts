@@ -66,6 +66,56 @@ function mapNode(node: CoordNode, fn: (p: Pair) => Pair): CoordNode {
 
 type ClipOp = (geom: ClipGeom, ...geoms: ClipGeom[]) => MultiPolygon;
 
+/** Στρογγυλοποίηση σε ακέραιο grid (στον scaled χώρο ~1e4). */
+function snapPair([x, y]: Pair): Pair {
+  return [Math.round(x), Math.round(y)];
+}
+
+/**
+ * Last-resort recovery για αποτυχίες της `polygon-clipping` σε N-way ops
+ * («Unable to complete output ring» — εύθραυστος sweep-line με πολλά
+ * σχεδόν-συνευθειακά/εφαπτόμενα edges, π.χ. 50 footprints τοίχων).
+ *
+ * Δύο τεχνικές, εφαρμόζονται ΜΟΝΟ αφού αποτύχει το happy-path op:
+ *   1. **Snap σε ακέραιο grid** (scaled χώρος ~1e4 → 1 unit = 0.01% ≈ sub-mm
+ *      φυσικά): εξαλείφει τα floating-point micro-segments που σπάνε τον
+ *      sweep-line. Πρώτα δοκιμάζει ξανά το ΙΔΙΟ N-way op στο snapped grid.
+ *   2. **Iterative left-fold**: `op(a,b,c) === op(op(a,b),c)` για
+ *      union/intersection/difference, άρα ισοδύναμο αλλά πολύ πιο εύρωστο
+ *      (κάθε βήμα = απλό 2-way op). Ένα μεμονωμένο geom που ακόμη πετάει
+ *      παραλείπεται (graceful degradation αντί για κενό σύνολο).
+ *
+ * Επιστρέφει `null` μόνο αν ούτε το πρώτο geom δεν είναι αξιοποιήσιμο.
+ */
+function recoverScaled(
+  op: ClipOp,
+  scaled: readonly ClipGeom[],
+): { out: MultiPolygon; skipped: number } | null {
+  const snapped = scaled.map((g) => mapNode(g, snapPair) as ClipGeom);
+  // A — ξαναδοκίμασε ολόκληρο το N-way op στο snapped grid.
+  try {
+    return { out: op(snapped[0], ...snapped.slice(1)), skipped: 0 };
+  } catch {
+    /* πέρασε στο iterative fold */
+  }
+  // B — iterative left-fold, παραλείποντας μεμονωμένα geoms που πετάνε.
+  let acc: ClipGeom;
+  try {
+    acc = op(snapped[0]); // normalise το πρώτο geom σε MultiPolygon
+  } catch {
+    return null;
+  }
+  let skipped = 0;
+  for (let i = 1; i < snapped.length; i++) {
+    try {
+      acc = op(acc, snapped[i]);
+    } catch {
+      skipped += 1; // ρίξε το μοναδικό προβληματικό operand
+    }
+  }
+  return { out: acc as MultiPolygon, skipped };
+}
+
 /**
  * Τρέχει ένα polygon-clipping op σε εύρωστη κλίμακα, με graceful fallback.
  * Όλα τα inputs μοιράζονται ΤΟΝ ΙΔΙΟ affine (υποχρεωτικό για σωστό boolean).
@@ -101,6 +151,20 @@ function runScaled(op: ClipOp, opName: string, geoms: readonly ClipGeom[]): Mult
     const out = op(scaled[0], ...scaled.slice(1));
     return mapNode(out, inverse) as MultiPolygon;
   } catch (err) {
+    // N-way op απέτυχε → δοκίμασε recovery (snapped grid + iterative fold)
+    // πριν παραιτηθούμε. Μόνο ολική αποτυχία πέφτει σε κενό αποτέλεσμα.
+    const recovered = recoverScaled(op, scaled);
+    if (recovered) {
+      if (recovered.skipped > 0) {
+        logger.warn(`${opName} N-way recovered via snapped iterative fold`, {
+          geomCount: geoms.length,
+          skipped: recovered.skipped,
+          span,
+          scale: s,
+        });
+      }
+      return mapNode(recovered.out, inverse) as MultiPolygon;
+    }
     logger.error(`${opName} failed — graceful fallback σε κενό αποτέλεσμα`, {
       err,
       geomCount: geoms.length,

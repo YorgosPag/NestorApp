@@ -122,7 +122,8 @@
   "contextMenu": {
     "flipArc": "Reverse",
     "entity": {
-      "splitWall": "Split Wall"
+      "splitWall": "Split Wall",
+      "selectSimilarColor": "Select Similar (Same Color)"
     },
     "snapOverride": {
       "title": "Snap Override",

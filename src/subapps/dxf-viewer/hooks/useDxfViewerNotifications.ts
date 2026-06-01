@@ -62,6 +62,19 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-363 Φάση 3c «Κολώνα από περίγραμμα» — breakdown feedback (κολώνες/τοιχία).
+    unsubs.push(
+      EventBus.on('bim:columns-discrete-from-perimeter', ({ columns, walls }) => {
+        if (columns === 0 && walls === 0) {
+          toast.warning(t('perimeterColumnDiscrete.noneBuilt'));
+        } else if (walls > 0) {
+          toast.info(t('perimeterColumnDiscrete.builtMixed', { columns, walls }));
+        } else {
+          toast.success(t('perimeterColumnDiscrete.built', { columns }));
+        }
+      }),
+    );
+
     // ADR-401 Phase E.1 — manual attach/detach from the contextual wall ribbon.
     unsubs.push(
       EventBus.on('bim:walls-attached-manual', () => {

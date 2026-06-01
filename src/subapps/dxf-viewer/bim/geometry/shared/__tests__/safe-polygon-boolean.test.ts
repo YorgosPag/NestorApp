@@ -77,6 +77,15 @@ describe('safe-polygon-boolean', () => {
     it('άδειο input → κενή MultiPolygon (χωρίς throw)', () => {
       expect(safeUnion([])).toEqual([]);
     });
+
+    it('ενώνει 50 εφαπτόμενα meter-scale τετράγωνα (N-way robustness)', () => {
+      // Mirror του failing case (geomCount 50, meter span): σειρά από 50
+      // εφαπτόμενα τετράγωνα πλάτους 0.25 → ΕΝΑ ορθογώνιο 12.5×0.25.
+      const squares = Array.from({ length: 50 }, (_, i) => square(i * 0.25, 0, 0.25));
+      const merged = safeUnion(squares[0], ...squares.slice(1));
+      expect(merged.length).toBeGreaterThanOrEqual(1); // δεν κατέρρευσε σε κενό
+      expect(multiPolygonArea(merged)).toBeCloseTo(50 * 0.25 * 0.25, 3); // 3.125
+    });
   });
 
   describe('safeIntersection', () => {

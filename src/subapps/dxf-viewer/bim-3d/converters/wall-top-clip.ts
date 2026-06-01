@@ -29,7 +29,6 @@
 
 import type { Pt2, HostFootprintInput } from '../../bim/geometry/wall-host-plan-builder';
 import { buildHostUndersidePlans } from '../../bim/geometry/wall-host-plan-builder';
-import { hostUndersideAt } from '../../bim/geometry/host-footprint-eval';
 import { wallTiltShearAt, isWallTilted } from '../../bim/geometry/wall-tilt';
 import type { WallParams } from '../../bim/types/wall-types';
 import {
@@ -38,11 +37,21 @@ import {
   safeDifference,
   type ClipGeom,
 } from '../../bim/geometry/shared/safe-polygon-boolean';
-import type { MultiPolygon, Ring } from 'polygon-clipping';
+import type { MultiPolygon } from 'polygon-clipping';
+// Low-level plan-geometry helpers (Google 500-line SRP split — ADR-404).
+import {
+  AREA_EPS,
+  toClipGeom,
+  ringArea,
+  ringToPts,
+  diffQuadMinusHostPieces,
+  centroid,
+  lowestHostAt,
+  hostUndersidePlaneMm,
+  buildTopFootprintFromBottom,
+} from './wall-top-clip-internal';
 
 const MM_TO_M = 0.001;
-/** Όριο εμβαδού (plan units²) κάτω από το οποίο μια περιοχή είναι sliver → skip. */
-const AREA_EPS = 1e-9;
 
 /**
  * Context κοπής που περνά ο `BimSceneLayer.syncWalls` στον converter: τα attach
@@ -133,6 +142,12 @@ export function tiltCompensateWallTopClip(
     const huLocalM = (h.undersideZmm - floorElevationMm) * MM_TO_M;
     const { dx, dy } = wallTiltShearAt(params, huLocalM);
     if (dx === 0 && dy === 0) return h;
+    // Approximation note (sloped-underside host): το footprint shift χρησιμοποιεί
+    // shear(undersideZmm), δηλ. το nominal/start-point ύψος. Για κεκλιμένη κάτω-παρειά
+    // το Hu μεταβάλλεται per-vertex, οπότε αυστηρά κάθε κορυφή θέλει δικό της shift· το
+    // σφάλμα = Δh·tan(tilt) σε plan (Δh = εύρος κλίσης) → sub-mm για τυπικά δοκάρια →
+    // αμελητέο. Η ακρίβεια που μετράει για watertightness καλύπτεται από το per-vertex
+    // dCut στο clipWallBandTopRegionsTilted.
     const footprint = h.footprint.map((p) => ({ x: p.x - dx, y: p.y - dy }));
     const atFn = h.undersideZmmAt;
     return {
@@ -156,86 +171,6 @@ export interface WallTopRegion {
   readonly baseLocalM: readonly number[];
 }
 
-/** plan polygon → polygon-clipping `Polygon` (single ring). */
-function toClipGeom(poly: readonly Pt2[]): ClipGeom {
-  return [poly.map((p) => [p.x, p.y] as [number, number])];
-}
-
-/** Signed εμβαδόν (shoelace): θετικό ⇒ CCW στο plan (x,y), αρνητικό ⇒ CW. */
-function signedRingArea(pts: readonly Pt2[]): number {
-  let a = 0;
-  for (let i = 0; i < pts.length; i++) {
-    const p = pts[i];
-    const q = pts[(i + 1) % pts.length];
-    a += p.x * q.y - q.x * p.y;
-  }
-  return a / 2;
-}
-
-/** Εμβαδόν (absolute) — για sliver filter. */
-function ringArea(pts: readonly Pt2[]): number {
-  return Math.abs(signedRingArea(pts));
-}
-
-/**
- * Outer ring ενός clipped polygon → `Pt2[]`, (α) αφαιρώντας **συνεχόμενες διπλές
- * κορυφές** (το polygon-clipping βγάζει περιστασιακά zero-length ακμές σε γωνιακές
- * τομές — π.χ. ένα τρίγωνο με την κάτω κορυφή διπλή) ΚΑΙ το closing vertex, και
- * (β) **κανονικοποιώντας σε CCW**. Το `buildColumnPrismGeometry` υποθέτει CCW
- * footprint για να βγάλει το πάνω καπάκι με normal **+Y** (κοιτά πάνω)· η
- * `polygon-clipping` ΔΕΝ εγγυάται σταθερό winding (intersection vs difference, ανά
- * region) → χωρίς αυτό μερικά regions έβγαζαν **ανεστραμμένο** καπάκι (normal −Y)
- * → ασυνεπής φωτισμός/σκιά στις οριζόντιες επιφάνειες (top/bottom) του τοίχου.
- */
-function ringToPts(ring: Ring): Pt2[] {
-  const pts: Pt2[] = [];
-  for (const [x, y] of ring) {
-    const prev = pts[pts.length - 1];
-    if (prev && Math.abs(prev.x - x) < 1e-12 && Math.abs(prev.y - y) < 1e-12) continue;
-    pts.push({ x, y });
-  }
-  if (pts.length > 1) {
-    const a = pts[0];
-    const b = pts[pts.length - 1];
-    if (Math.abs(a.x - b.x) < 1e-12 && Math.abs(a.y - b.y) < 1e-12) pts.pop();
-  }
-  if (pts.length >= 3 && signedRingArea(pts) < 0) pts.reverse();
-  return pts;
-}
-
-/** Κεντροειδές (μέσος όρος κορυφών — επαρκές για convex/simple regions). */
-function centroid(pts: readonly Pt2[]): Pt2 {
-  let x = 0;
-  let y = 0;
-  for (const p of pts) {
-    x += p.x;
-    y += p.y;
-  }
-  return { x: x / pts.length, y: y / pts.length };
-}
-
-/**
- * Ο host με τη **χαμηλότερη** κάτω-παρειά στο σημείο `pt` (lower-envelope winner), ή
- * `null` αν κανείς δεν καλύπτει το `pt`. Χρήση: επιλογή host για μια inside περιοχή
- * (μέσω του κεντροειδούς της — robust σε boundary vertices που το point-test απορρίπτει).
- */
-function lowestHostAt(hosts: readonly HostFootprintInput[], pt: Pt2): HostFootprintInput | null {
-  let best: HostFootprintInput | null = null;
-  let bestZ = Infinity;
-  for (const h of hosts) {
-    const z = hostUndersideAt(h, pt);
-    if (z !== null && z < bestZ) {
-      bestZ = z;
-      best = h;
-    }
-  }
-  return best;
-}
-
-/** Κάτω-παρειά host στο `pt` (flat scalar ή κεκλιμένο επίπεδο· χωρίς point-test). */
-function hostUndersidePlaneMm(h: HostFootprintInput, pt: Pt2): number {
-  return h.undersideZmmAt ? h.undersideZmmAt(pt) : h.undersideZmm;
-}
 
 /**
  * Κόβει το `quad` ενός profile-following κομματιού τοίχου με τα host footprints και
@@ -311,74 +246,107 @@ export interface WallTopLoftBand {
   readonly bottomFootprint: readonly Pt2[];
   /** footprint @nominal — πάνω δακτύλιος (= `quad − host_atNominal`), 1:1 με `bottomFootprint`. */
   readonly topFootprint: readonly Pt2[];
-  /** ύψος κάτω δακτυλίου (τοπικά m). */
-  readonly huLocalM: number;
+  /**
+   * Ύψος κάτω δακτυλίου **ανά κορυφή** (τοπικά m), `length === bottomFootprint.length`.
+   * Flat host → όλες οι τιμές ίσες (== Hu). Κεκλιμένη κάτω-παρειά host → ακολουθεί την
+   * παρειά per-vertex (sloped loft bottom). ADR-404 Phase 4.2 sloped-host support.
+   */
+  readonly bottomLocalM: readonly number[];
   /** ύψος πάνω δακτυλίου (τοπικά m). */
   readonly nominalLocalM: number;
 }
 
-/** Απόσταση σημείου από τμήμα `ab` < eps ΚΑΙ προβολή εντός [0,1] (endpoint-inclusive). */
-function pointOnSegment(p: Pt2, a: Pt2, b: Pt2, eps: number): boolean {
-  const abx = b.x - a.x, aby = b.y - a.y;
-  const len2 = abx * abx + aby * aby;
-  if (len2 < eps * eps) return Math.hypot(p.x - a.x, p.y - a.y) < eps;
-  let t = ((p.x - a.x) * abx + (p.y - a.y) * aby) / len2;
-  if (t < -eps || t > 1 + eps) return false;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(p.x - (a.x + t * abx), p.y - (a.y + t * aby)) < eps;
-}
 
-/** Τομή δύο **ευθειών** (όχι τμημάτων) p1p2 × p3p4· `null` αν ~παράλληλες. */
-function lineIntersect(p1: Pt2, p2: Pt2, p3: Pt2, p4: Pt2): Pt2 | null {
-  const d1x = p2.x - p1.x, d1y = p2.y - p1.y;
-  const d2x = p4.x - p3.x, d2y = p4.y - p3.y;
-  const denom = d1x * d2y - d1y * d2x;
-  if (Math.abs(denom) < 1e-12) return null;
-  const tt = ((p3.x - p1.x) * d2y - (p3.y - p1.y) * d2x) / denom;
-  return { x: p1.x + tt * d1x, y: p1.y + tt * d1y };
+/**
+ * ADR-404 Phase 4.3 — **critical heights** όπου αλλάζει η **τοπολογία** του
+ * `quad − host(t)`, με `host(t) = hostFootprint − t·dCut`, `t∈[0,1]` (γραμμική
+ * μετατόπιση της κοπής από `Hu` (t=0) στο `nominal` (t=1)).
+ *
+ * Καθώς η κοπή μετατοπίζεται, γωνίες/ακμές του host περνούν μέσα από το quad →
+ * η διατομή αποκτά/χάνει κορυφές **και σπάει σε πολλά πολύγωνα** (ακόμη και από
+ * edge-edge bridging, ΟΧΙ μόνο vertex incidences). Ένα single-ring loft σταθερού
+ * count δεν το αναπαριστά → τρύπες. Σπάμε τη ζώνη σε υπο-διαστήματα σταθερής
+ * τοπολογίας (όπου το constructive loft είναι exact).
+ *
+ * **Robust ανίχνευση = sampling + bisection** του «signature» (πλήθος πολυγώνων +
+ * ταξινομημένα vertex counts) — πιάνει ΚΑΘΕ τοπολογική μεταβολή ανεξαρτήτως αιτίας
+ * (το αναλυτικό vertex-on-edge μοντέλο χάνει τα edge-edge bridges). Επιστρέφει τα
+ * εσωτερικά boundary `t∈(0,1)` (refined ~1e-6) ταξινομημένα/dedup.
+ */
+export function computeTiltLoftCriticalTs(
+  quad: readonly Pt2[], host: readonly Pt2[], dCut: Pt2,
+): number[] {
+  // Topology signature του quad − host(t): «#polys:sorted vertex-counts». Η διαφορά
+  // υπολογίζεται robust (analytic half-plane peel για κυρτό host) → το sig ΠΟΤΕ δεν
+  // διαφθείρεται από clipper failure στα σχεδόν-εκφυλισμένα t (πρώην root cause των κενών).
+  const sig = (t: number): string => {
+    const hostT = host.map((p) => ({ x: p.x - t * dCut.x, y: p.y - t * dCut.y }));
+    const counts = diffQuadMinusHostPieces(quad, hostT).map((pts) => pts.length);
+    counts.sort((a, b) => a - b);
+    return `${counts.length}:${counts.join(',')}`;
+  };
+  const SAMPLES = 48;
+  const boundaries: number[] = [];
+  let prevT = 0;
+  let prevSig = sig(0);
+  for (let k = 1; k <= SAMPLES; k++) {
+    const t = k / SAMPLES;
+    const s = sig(t);
+    if (s !== prevSig) {
+      // bisect [prevT, t] για το boundary (όπου το sig αλλάζει από prevSig).
+      let lo = prevT, hi = t;
+      for (let iter = 0; iter < 26; iter++) {
+        const mid = (lo + hi) / 2;
+        if (sig(mid) === prevSig) lo = mid; else hi = mid;
+      }
+      if (hi > 1e-6 && hi < 1 - 1e-6) boundaries.push(hi);
+      prevSig = s;
+    }
+    prevT = t;
+  }
+  // dedup
+  const out: number[] = [];
+  for (const t of boundaries) if (!out.length || t - out[out.length - 1] > 1e-5) out.push(t);
+  return out;
 }
 
 /**
- * Χτίζει το **top footprint** (@nominal) **απευθείας από** το `bottom` (@Hu) ώστε να
- * εγγυηθεί **1:1 αντιστοιχία κορυφών** — robust σε διαφορετικό vertex count μεταξύ
- * ανεξάρτητων clip (η αιτία που το naive matching αποτύγχανε στο runtime). Κάθε κορυφή
- * `v` του `bottom` κατατάσσεται ως προς το `host_atHu` (`host`) + το `quad`:
- *   - **εκτός host** (quad corner) → αμετάβλητη (η κάτοψη του τοίχου δεν αλλάζει με ύψος).
- *   - **quad-edge ∩ host-edge** (cut crossing) → τομή της ΙΔΙΑΣ quad ακμής με την
- *     **μετατοπισμένη** host ακμή (`host − Δcut`) → κινείται κατά μήκος της παρειάς.
- *   - **host corner εντός quad** (notch tip) → μετατόπιση κατά `−Δcut` (κατακόρυφη ακμή
- *     δοκαριού).
- * Μετά τον `emit()` shear, η κοπή ξαναγίνεται **κατακόρυφη** στο `host_real`. Επιστρέφει
- * `null` (→ fallback) σε εκφυλισμό (παράλληλες ακμές).
+ * ADR-404 Phase 4.3 — **topology-aware** loft bands για μια outside μεταβατική ζώνη.
+ *
+ * Σπάει το `Hu→nominal` στα critical heights (`computeTiltLoftCriticalTs`) και χτίζει
+ * **ένα slab loft ανά υπο-διάστημα ανά sub-polygon**: σε κάθε slab η τοπολογία είναι
+ * σταθερή → η robust διαφορά (`diffQuadMinusHostPieces`, analytic peel για κυρτό host)
+ * δίνει τα σωστά convex κομμάτια (συμπεριλαμβανομένων splits) και το constructive
+ * `buildTopFootprintFromBottom` δίνει την **exact** πάνω κάτοψη (no
+ * topology change μέσα στο slab). Η παρειά δοκαριού είναι επίπεδη → τα slabs είναι
+ * **συνεπίπεδα** (μηδέν stepping). Z γραμμικά μεταξύ `Hu` (flat ref) και `nominal`· το
+ * slab-0 bottom ακολουθεί per-vertex την κεκλιμένη κάτω-παρειά (`huLocalMAt`).
  */
-function buildTopFootprintFromBottom(
-  bottom: readonly Pt2[], host: readonly Pt2[], quad: readonly Pt2[], dCut: Pt2, eps: number,
-): Pt2[] | null {
-  const out: Pt2[] = [];
-  for (const v of bottom) {
-    let hostEdge: readonly [Pt2, Pt2] | null = null;
-    for (let i = 0; i < host.length; i++) {
-      const a = host[i], b = host[(i + 1) % host.length];
-      if (pointOnSegment(v, a, b, eps)) { hostEdge = [a, b]; break; }
-    }
-    if (!hostEdge) { out.push({ x: v.x, y: v.y }); continue; } // εκτός host → quad corner
-    let quadEdge: readonly [Pt2, Pt2] | null = null;
-    for (let i = 0; i < quad.length; i++) {
-      const a = quad[i], b = quad[(i + 1) % quad.length];
-      if (pointOnSegment(v, a, b, eps)) { quadEdge = [a, b]; break; }
-    }
-    if (quadEdge) {
-      // cut crossing: τομή quad ακμής × μετατοπισμένης host ακμής.
-      const h0 = { x: hostEdge[0].x - dCut.x, y: hostEdge[0].y - dCut.y };
-      const h1 = { x: hostEdge[1].x - dCut.x, y: hostEdge[1].y - dCut.y };
-      const p = lineIntersect(quadEdge[0], quadEdge[1], h0, h1);
-      if (!p) return null;
-      out.push(p);
-    } else {
-      out.push({ x: v.x - dCut.x, y: v.y - dCut.y }); // host corner εντός quad
+function buildTiltTransitionLofts(
+  quad: readonly Pt2[], hostFootprint: readonly Pt2[], dCut: Pt2,
+  huLocalMFlat: number, nominalLocalM: number, huLocalMAt: (p: Pt2) => number, eps: number,
+): WallTopLoftBand[] {
+  const ts = [0, ...computeTiltLoftCriticalTs(quad, hostFootprint, dCut), 1];
+  const lofts: WallTopLoftBand[] = [];
+  const zAt = (t: number): number => huLocalMFlat + t * (nominalLocalM - huLocalMFlat);
+  for (let j = 0; j < ts.length - 1; j++) {
+    const tLo = ts[j], tHi = ts[j + 1];
+    if (tHi - tLo < 1e-9) continue;
+    const hostLo = hostFootprint.map((p) => ({ x: p.x - tLo * dCut.x, y: p.y - tLo * dCut.y }));
+    const slabDCut: Pt2 = { x: (tHi - tLo) * dCut.x, y: (tHi - tLo) * dCut.y };
+    const zHi = zAt(tHi);
+    // Robust διαφορά (analytic peel για κυρτό host) → ξένα convex κομμάτια ανά slab,
+    // ποτέ clipper failure. Σταθερή τοπολογία στο slab → constructive top == true top.
+    for (const b of diffQuadMinusHostPieces(quad, hostLo)) {
+      // Σταθερή τοπολογία στο slab → constructive top == true top (exact). Αν η κοπή δεν
+      // κινείται σε αυτό το sub-polygon (μακριά από host) → κατακόρυφο loft (top==bottom).
+      let top = buildTopFootprintFromBottom(b, hostLo, quad, () => slabDCut, eps);
+      if (!top || top.length !== b.length || ringArea(top) < AREA_EPS) top = b.map((p) => ({ x: p.x, y: p.y }));
+      const bottomLocalM = j === 0 ? b.map((p) => huLocalMAt(p)) : b.map(() => zAt(tLo));
+      lofts.push({ bottomFootprint: b, topFootprint: top, bottomLocalM, nominalLocalM: zHi });
     }
   }
-  return out;
+  return lofts;
 }
 
 /**
@@ -397,8 +365,11 @@ function buildTopFootprintFromBottom(
  *
  * Τα `inside` (pockets) μένουν ως single-footprint prisms (top = host underside).
  *
- * **Scope:** **single flat host** = ο καθαρός στόχος. Multi-host / sloped underside →
- * **fallback** στο vertical `clipWallBandTopRegions` (current behaviour) — follow-up.
+ * **Scope:** **single host** (flat **ή** κεκλιμένη κάτω-παρειά). Σε κεκλιμένο host
+ * (`undersideZmmAt` set, π.χ. δοκάρι με `topElevationEnd≠topElevation`) το `Hu` γίνεται
+ * **per-vertex** → sloped loft bottom + per-vertex `Δcut` (η πλαϊνή παρειά δοκαριού
+ * παραμένει κατακόρυφη, άρα η κοπή ξαναγίνεται κατακόρυφη σε **κάθε** ύψος της). Multi-host
+ * → **fallback** στο vertical `clipWallBandTopRegions` (follow-up).
  *
  * @param hosts  τα **ήδη αντισταθμισμένα** (`tiltCompensateWallTopClip`) host_atHu.
  * @returns `prisms` (inside pockets + lower-outside + far-end + fallback) + `lofts`
@@ -414,8 +385,9 @@ export function clipWallBandTopRegionsTilted(
   baseLocalM: number,
   params: WallParams,
 ): { prisms: WallTopRegion[]; lofts: WallTopLoftBand[] } {
-  // Fallback: μη-tilted / multi-host / κεκλιμένο host → vertical clip (μηδέν αλλαγή).
-  if (quad.length < 3 || hosts.length !== 1 || hosts[0].undersideZmmAt || !isWallTilted(params)) {
+  // Fallback: μη-tilted / multi-host → vertical clip (μηδέν αλλαγή). Κεκλιμένη κάτω-παρειά
+  // host (single) ΔΕΝ πέφτει πια εδώ — χειρίζεται per-vertex (sloped loft bottom).
+  if (quad.length < 3 || hosts.length !== 1 || !isWallTilted(params)) {
     return {
       prisms: clipWallBandTopRegions(quad, hosts, nominalTopMm, floorElevationMm, baseLocalM),
       lofts: [],
@@ -423,15 +395,22 @@ export function clipWallBandTopRegionsTilted(
   }
 
   const host = hosts[0];
+  const isSloped = !!host.undersideZmmAt;
   const nominalLocalM = (nominalTopMm - floorElevationMm) * MM_TO_M;
-  const huMm = Math.min(nominalTopMm, host.undersideZmm);
-  const huLocalM = (huMm - floorElevationMm) * MM_TO_M;
   const toLocal = (zmm: number): number => (zmm - floorElevationMm) * MM_TO_M;
 
-  // host_atNominal = host_atHu − Δcut· Δcut = shear(nominal) − shear(Hu) (plan).
+  // Hu (τοπικά m, clamp ≤ nominal): flat → σταθερό· κεκλιμένο → per-vertex από undersideZmmAt.
+  const huLocalMFlat = toLocal(Math.min(nominalTopMm, host.undersideZmm));
+  const huLocalMAt = (pt: Pt2): number =>
+    isSloped ? toLocal(Math.min(nominalTopMm, host.undersideZmmAt!(pt))) : huLocalMFlat;
+
+  // host_atNominal = host_atHu − Δcut· Δcut = shear(nominal) − shear(Hu) (plan). Scalar (flat
+  // Hu) για topology-ανάλυση + slab construction· η κεκλιμένη κάτω-παρειά (π.χ. 3.7mm) επηρεάζει
+  // ΜΟΝΟ το per-vertex bottom-Z (`huLocalMAt`), ΟΧΙ την plan-τοπολογία (το host footprint είναι
+  // σταθερό σε plan· μόνο το underside-Z γέρνει).
   const sNom = wallTiltShearAt(params, nominalLocalM);
-  const sHu = wallTiltShearAt(params, huLocalM);
-  const dCut: Pt2 = { x: sNom.dx - sHu.dx, y: sNom.dy - sHu.dy };
+  const sHuFlat = wallTiltShearAt(params, huLocalMFlat);
+  const dCut: Pt2 = { x: sNom.dx - sHuFlat.dx, y: sNom.dy - sHuFlat.dy };
 
   // Scale-robust eps για point-on-edge classification: βασισμένο στο **μέγεθος των
   // συντεταγμένων** (όχι στο span του κομματιού — τα μεταβατικά κομμάτια είναι λεπτές
@@ -458,23 +437,19 @@ export function clipWallBandTopRegionsTilted(
     hasPocket = true;
   }
 
-  // outside: σπάσε στο Hu **μόνο** όταν το κομμάτι έχει pocket (το δοκάρι το διασχίζει →
-  // genuine transition). Κριτήριο geometry-free & robust: ακριανό κομμάτι (καμία φωλιά)
-  // → ομοιόμορφο prism @nominal. Στο transition, το top footprint χτίζεται ΑΠΕΥΘΕΙΑΣ από
-  // το bottom (constructive, εγγυημένη 1:1 αντιστοιχία) → κάτω prism (base→Hu) + πάνω
-  // loft band (Hu→nominal, κατακόρυφη κοπή μετά τον emit shear).
-  for (const poly of safeDifference(quadGeom, hostHuGeom)) {
-    const b = ringToPts(poly[0]);
-    if (b.length < 3 || ringArea(b) < AREA_EPS) continue;
-    const t = hasPocket ? buildTopFootprintFromBottom(b, host.footprint, quad, dCut, edgeEps) : null;
-    const moved = t !== null && b.some((p, i) =>
-      Math.abs(p.x - t[i].x) > edgeEps || Math.abs(p.y - t[i].y) > edgeEps);
-    if (t && moved && ringArea(t) >= AREA_EPS) {
-      prisms.push({ footprint: b, topLocalM: b.map(() => huLocalM), baseLocalM: b.map(() => baseLocalM) });
-      lofts.push({ bottomFootprint: b, topFootprint: t, huLocalM, nominalLocalM });
-    } else {
-      prisms.push({ footprint: b, topLocalM: b.map(() => nominalLocalM), baseLocalM: b.map(() => baseLocalM) });
-    }
+  // outside: ακριανό κομμάτι (καμία φωλιά) → ομοιόμορφο prism @nominal. Transition (έχει
+  // pocket) → lower prisms (base→Hu, per-vertex) + **topology-aware** slab lofts (Hu→nominal,
+  // ADR-404 Phase 4.3): καθώς η κοπή μετατοπίζεται κατά Δcut ανεβαίνοντας, η διατομή αλλάζει
+  // τοπολογία (γωνίες/splits) → σπάμε σε slabs σταθερής τοπολογίας (constructive exact ανά
+  // slab, συνεπίπεδη παρειά δοκαριού). Lower prism @Hu == slab-0 loft bottom → watertight.
+  for (const b of diffQuadMinusHostPieces(quad, host.footprint)) {
+    const topLocalM = hasPocket ? b.map((p) => huLocalMAt(p)) : b.map(() => nominalLocalM);
+    prisms.push({ footprint: b, topLocalM, baseLocalM: b.map(() => baseLocalM) });
+  }
+  if (hasPocket) {
+    lofts.push(...buildTiltTransitionLofts(
+      quad, host.footprint, dCut, huLocalMFlat, nominalLocalM, huLocalMAt, edgeEps,
+    ));
   }
 
   return { prisms, lofts };

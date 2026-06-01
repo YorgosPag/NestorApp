@@ -269,13 +269,32 @@ export async function saveToStorageImpl(
 }
 
 /**
- * Try downloading bytes from a Storage path. Returns null on any error.
+ * Outcome of a Storage download attempt.
+ *  - `ok`        — bytes retrieved
+ *  - `not-found` — object does not exist (expected; e.g. a file linked to a
+ *                  floor whose scene was never saved/processed yet)
+ *  - `error`     — permission/network/unknown failure (a real problem)
  */
-async function tryGetBytes(path: string): Promise<ArrayBuffer | null> {
+type StorageFetchResult =
+  | { status: 'ok'; bytes: ArrayBuffer }
+  | { status: 'not-found' }
+  | { status: 'error'; error: unknown };
+
+/**
+ * Try downloading bytes from a Storage path. Distinguishes a benign
+ * object-not-found from a real (permission/network) error so callers can log at
+ * the right severity — see the `@enterprise` contract on `loadFromStorageImpl`.
+ */
+async function tryGetBytes(path: string): Promise<StorageFetchResult> {
   try {
-    return await getBytes(ref(storage, path));
-  } catch {
-    return null;
+    const bytes = await getBytes(ref(storage, path));
+    return { status: 'ok', bytes };
+  } catch (error) {
+    const code = (error as { code?: string } | null)?.code;
+    if (code === 'storage/object-not-found') {
+      return { status: 'not-found' };
+    }
+    return { status: 'error', error };
   }
 }
 
@@ -318,21 +337,28 @@ export async function loadFromStorageImpl(fileId: string): Promise<DxfFileRecord
 
     let scene: SceneModel | null = null;
     let source = '';
+    // Tracks a real (permission/network) failure across the 3 tiers so the
+    // final "no scene" branch can stay loud for real errors but quiet for the
+    // expected object-not-found case (file linked, scene never saved yet).
+    let realStorageError: unknown = null;
 
     // ── Tier 1: .scene.json (client auto-save) ──
-    const sceneBytes = await tryGetBytes(scenePath);
-    if (sceneBytes) {
-      const text = new TextDecoder().decode(sceneBytes);
+    const sceneResult = await tryGetBytes(scenePath);
+    if (sceneResult.status === 'ok') {
+      const text = new TextDecoder().decode(sceneResult.bytes);
       scene = parseAndValidateScene(text);
       if (scene) source = 'scene.json';
+    } else if (sceneResult.status === 'error') {
+      realStorageError = sceneResult.error;
     }
 
     // ── Tier 2: processedDataPath — gzip (.processed.json) or plain JSON (.scene.json) ──
     // .processed.json = server wizard output (gzip). .scene.json = auto-save (plain JSON).
     // A bug (fixed 2026-05-14) could write a .scene.json path here → must handle plain JSON.
     if (!scene && processedPath) {
-      const processedBytes = await tryGetBytes(processedPath);
-      if (processedBytes) {
+      const processedResult = await tryGetBytes(processedPath);
+      if (processedResult.status === 'ok') {
+        const processedBytes = processedResult.bytes;
         if (processedPath.endsWith('.scene.json')) {
           // Plain JSON — treat as Tier 1 equivalent
           const text = new TextDecoder().decode(processedBytes);
@@ -347,16 +373,20 @@ export async function loadFromStorageImpl(fileId: string): Promise<DxfFileRecord
             dxfLogger.warn('Failed to decompress processed scene', { fileId, processedPath });
           }
         }
+      } else if (processedResult.status === 'error') {
+        realStorageError = processedResult.error;
       }
     }
 
     // ── Tier 3: raw storagePath (legacy — if it happens to be scene JSON) ──
     if (!scene && scenePath !== rawPath) {
-      const rawBytes = await tryGetBytes(rawPath);
-      if (rawBytes) {
-        const text = new TextDecoder().decode(rawBytes);
+      const rawResult = await tryGetBytes(rawPath);
+      if (rawResult.status === 'ok') {
+        const text = new TextDecoder().decode(rawResult.bytes);
         scene = parseAndValidateScene(text);
         if (scene) source = 'raw-path';
+      } else if (rawResult.status === 'error') {
+        realStorageError = rawResult.error;
       }
     }
 
@@ -364,8 +394,17 @@ export async function loadFromStorageImpl(fileId: string): Promise<DxfFileRecord
       const isNonDxfFile = /\.(pdf|png|jpg|jpeg|webp|gif|bmp|svg)$/i.test(rawPath);
       if (isNonDxfFile) {
         dxfLogger.debug('File is PDF/image, not a DXF scene — skipping', { fileId });
+      } else if (realStorageError) {
+        // Permission/network/unknown failure — a real problem worth surfacing loudly.
+        dxfLogger.error('Failed to load scene from Storage (permission/network error)', {
+          fileId, scenePath, processedPath: processedPath ?? 'none', rawPath,
+          error: realStorageError instanceof Error ? realStorageError.message : String(realStorageError),
+        });
       } else {
-        dxfLogger.error('No valid scene found in any Storage path', {
+        // Every path returned object-not-found: the file is linked but its scene
+        // was never saved/processed yet. Expected — the level loader falls back to
+        // an empty scene. Honour the @enterprise "silent on expected failures" contract.
+        dxfLogger.debug('No scene blob in Storage yet (file linked, scene not saved)', {
           fileId, scenePath, processedPath: processedPath ?? 'none', rawPath,
         });
       }

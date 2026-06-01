@@ -36,6 +36,12 @@ import type { Point3D } from '../../bim/types/bim-base';
 import type { BeamParams } from '../../bim/types/beam-types';
 import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
 import type { SceneUnits } from '../../utils/scene-units';
+import { isWallEntity, type Entity } from '../../types/entities';
+import type { WallEntity } from '../../bim/types/wall-types';
+import { pickWallEntityAt, buildBeamFromWall } from '../../bim/beams/beam-from-wall';
+import { beamToolBridgeStore } from '../../bim/beams/beam-tool-bridge-store';
+import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+import { EventBus } from '../../systems/events/EventBus';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -45,9 +51,17 @@ export type BeamToolPhase =
   | 'awaitingEnd'
   | 'awaitingCurveControl';
 
+/**
+ * Placement mode (ADR-363):
+ *   - 'freehand'  — κλασικό 2-click straight/cantilever ή 3-click curved.
+ *   - 'from-wall' — «Δοκάρι από τοίχο»: 1 κλικ πάνω σε τοίχο → δοκάρι στον άξονά του.
+ */
+export type BeamPlacementMode = 'freehand' | 'from-wall';
+
 export interface BeamToolState {
   readonly phase: BeamToolPhase;
   readonly kind: BeamKind;
+  readonly placementMode: BeamPlacementMode;
   readonly startPoint: Point2D | null;
   readonly endPoint: Point2D | null;
   readonly overrides: BeamParamOverrides;
@@ -57,6 +71,7 @@ export interface BeamToolState {
 const INITIAL_STATE: BeamToolState = {
   phase: 'idle',
   kind: 'straight',
+  placementMode: 'freehand',
   startPoint: null,
   endPoint: null,
   overrides: {},
@@ -72,6 +87,11 @@ export interface UseBeamToolOptions {
   readonly currentLevelId?: string;
   /** Returns the active scene's coordinate units for threshold scaling. */
   readonly getSceneUnits?: () => SceneUnits;
+  /**
+   * Returns the active scene entities — required ONLY for placementMode
+   * 'from-wall' (hit-test the picked WallEntity). Mirrors `useWallTool`.
+   */
+  readonly getSceneEntities?: () => readonly Entity[];
 }
 
 export interface UseBeamToolResult {
@@ -79,6 +99,8 @@ export interface UseBeamToolResult {
   activate(): void;
   /** Switch active kind (3 kinds). Resets the state machine, preserves overrides. */
   setKind(kind: BeamKind): void;
+  /** Switch placement mode (freehand ⇄ from-wall). Resets the FSM, preserves overrides. */
+  setPlacementMode(mode: BeamPlacementMode): void;
   deactivate(): void;
   reset(): void;
   /** Returns true αν το click commit-άρισε νέο beam ή προήγαγε το FSM. */
@@ -96,7 +118,7 @@ export interface UseBeamToolResult {
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
 export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult {
-  const { onBeamCreated, currentLevelId = '0', getSceneUnits } = options;
+  const { onBeamCreated, currentLevelId = '0', getSceneUnits, getSceneEntities } = options;
 
   const [state, setState] = useState<BeamToolState>(INITIAL_STATE);
   const stateRef = useRef<BeamToolState>(state);
@@ -115,7 +137,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
   const activate = useCallback(() => {
     const prev = stateRef.current;
     beamPreviewStore.set({ startPoint: null, endPoint: null, kind: prev.kind, overrides: prev.overrides });
-    setState({ ...INITIAL_STATE, kind: prev.kind, overrides: prev.overrides, phase: 'awaitingStart' });
+    setState({ ...INITIAL_STATE, kind: prev.kind, placementMode: prev.placementMode, overrides: prev.overrides, phase: 'awaitingStart' });
   }, []);
 
   const setKind = useCallback((kind: BeamKind) => {
@@ -126,7 +148,21 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
     } else {
       beamPreviewStore.set({ startPoint: null, endPoint: null, kind, overrides: prev.overrides });
     }
-    setState({ ...INITIAL_STATE, kind, overrides: prev.overrides, phase: newPhase });
+    setState({ ...INITIAL_STATE, kind, placementMode: prev.placementMode, overrides: prev.overrides, phase: newPhase });
+  }, []);
+
+  // ADR-363 «Δοκάρι από τοίχο» — switch placement mode (freehand ⇄ from-wall).
+  // Mirrors useWallTool.setPlacementMode: resets the FSM, preserves kind/overrides.
+  const setPlacementMode = useCallback((mode: BeamPlacementMode) => {
+    const prev = stateRef.current;
+    if (prev.placementMode === mode) return;
+    const newPhase = prev.phase === 'idle' ? 'idle' : 'awaitingStart';
+    if (newPhase === 'idle') {
+      beamPreviewStore.reset();
+    } else {
+      beamPreviewStore.set({ startPoint: null, endPoint: null, kind: prev.kind, overrides: prev.overrides });
+    }
+    setState({ ...INITIAL_STATE, kind: prev.kind, placementMode: mode, overrides: prev.overrides, phase: newPhase });
   }, []);
 
   const deactivate = useCallback(() => {
@@ -142,7 +178,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
     } else {
       beamPreviewStore.set({ startPoint: null, endPoint: null, kind: prev.kind, overrides: prev.overrides });
     }
-    setState({ ...INITIAL_STATE, kind: prev.kind, overrides: prev.overrides, phase: newPhase });
+    setState({ ...INITIAL_STATE, kind: prev.kind, placementMode: prev.placementMode, overrides: prev.overrides, phase: newPhase });
   }, []);
 
   const setParamOverrides = useCallback((overrides: BeamParamOverrides) => {
@@ -174,6 +210,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
       setState({
         ...INITIAL_STATE,
         kind: s.kind,
+        placementMode: s.placementMode,
         overrides: s.overrides,
         phase: 'awaitingStart',
       });
@@ -200,6 +237,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
       setState({
         ...INITIAL_STATE,
         kind: s.kind,
+        placementMode: s.placementMode,
         overrides: s.overrides,
         phase: 'awaitingStart',
       });
@@ -208,11 +246,53 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
     [currentLevelId, getSceneUnits, onBeamCreated],
   );
 
+  // ── from-wall commit core (shared by 2D point-pick + 3D mesh-pick) ────────
+  // Builds ONE beam on the wall's axis via the SSoT `buildBeamFromWall` and
+  // appends it through `onBeamCreated`. The wall is resolved upstream (2D: by
+  // point hit-test; 3D: by raycast id), so this core never re-picks — ZERO
+  // duplication between the two entry points.
+  const commitForWall = useCallback(
+    (s: BeamToolState, wall: WallEntity): boolean => {
+      const sceneUnits = getSceneUnits?.() ?? 'mm';
+      const result = buildBeamFromWall(wall, s.overrides, currentLevelId, sceneUnits);
+      if (!result.ok) {
+        setState({ ...s, error: result.hardErrors[0] ?? null });
+        return false;
+      }
+      onBeamCreated?.(result.entity);
+      // Continuous: stay in awaitingStart for the next wall pick.
+      setState({ ...s, phase: 'awaitingStart', startPoint: null, endPoint: null, error: null });
+      return true;
+    },
+    [currentLevelId, getSceneUnits, onBeamCreated],
+  );
+
+  // ── from-wall commit (2D: 1-click pick a wall → beam on its axis) ─────────
+  const commitFromWall = useCallback(
+    (s: BeamToolState, point: Readonly<Point2D>): boolean => {
+      const entities = getSceneEntities?.() ?? [];
+      // Tolerance mirrors the click-time snap tolerance used elsewhere (world units).
+      const tol = TOLERANCE_CONFIG.HIT_TEST_FALLBACK;
+      const wall = pickWallEntityAt(point, entities, tol);
+      if (!wall) {
+        setState({ ...s, error: 'tools.beam.errorNoWall' });
+        return false;
+      }
+      return commitForWall(s, wall);
+    },
+    [getSceneEntities, commitForWall],
+  );
+
   // ── click pipeline ───────────────────────────────────────────────────────
   const onCanvasClick = useCallback(
     (point: Readonly<Point2D>): boolean => {
       const s = stateRef.current;
       if (s.phase === 'idle') return false;
+
+      // ADR-363 «Δοκάρι από τοίχο» — single-click pick, independent of the FSM kind.
+      if (s.placementMode === 'from-wall') {
+        return commitFromWall(s, point);
+      }
 
       if (s.kind === 'curved') {
         if (s.phase === 'awaitingStart') {
@@ -248,12 +328,44 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
       }
       return false;
     },
-    [commitTwoClickFromState, commitCurvedFromState],
+    [commitTwoClickFromState, commitCurvedFromState, commitFromWall],
   );
+
+  // ── ADR-363 «Δοκάρι από τοίχο» — 3D pick bridge ───────────────────────────
+  // The 3D viewport (`useBim3DBeamFromWallPick`) raycasts a wall mesh and emits
+  // its id; resolve the WallEntity from the live scene and run the SAME from-wall
+  // commit core (zero duplication, full append + auto-attach path, ADR-401 D).
+  // Refs keep the listener stable while always calling the latest core + getter.
+  // Mirror of the column `bim:place-column-3d` bridge.
+  const commitForWallRef = useRef(commitForWall);
+  commitForWallRef.current = commitForWall;
+  const getSceneEntitiesRef = useRef(getSceneEntities);
+  getSceneEntitiesRef.current = getSceneEntities;
+  useEffect(() => {
+    return EventBus.on('bim:beam-from-wall-picked-3d', ({ wallId }) => {
+      const wall = getSceneEntitiesRef.current?.().find(
+        (e): e is WallEntity => isWallEntity(e) && e.id === wallId,
+      );
+      if (wall) commitForWallRef.current(stateRef.current, wall);
+    });
+  }, []);
+
+  // Publish overrides + scene units so the 3D ghost previews the EXACT beam the
+  // commit will build (WYSIWYG). Single writer → single reader (BeamFromWallGhost).
+  useEffect(() => {
+    beamToolBridgeStore.set({
+      overrides: state.overrides,
+      getSceneUnits: () => getSceneUnits?.() ?? 'mm',
+    });
+    return () => beamToolBridgeStore.set(null);
+  }, [state.overrides, getSceneUnits]);
 
   // ── status text (i18n keys returned για caller-resolved translation) ─────
   const getStatusText = useCallback((): string => {
     const s = stateRef.current;
+    if (s.placementMode === 'from-wall') {
+      return s.phase === 'idle' ? '' : 'tools.beam.statusPickWall';
+    }
     switch (s.phase) {
       case 'awaitingStart':
         return 'tools.beam.statusStart';
@@ -275,9 +387,10 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
     state,
     activate,
     setKind,
+    setPlacementMode,
     deactivate,
-    reset,
     onCanvasClick,
+    reset,
     setParamOverrides,
     getStatusText,
     isActive: state.phase !== 'idle',

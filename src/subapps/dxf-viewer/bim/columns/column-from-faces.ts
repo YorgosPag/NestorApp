@@ -47,6 +47,16 @@ export interface PerimeterColumnsResult {
   readonly ignored: number;
 }
 
+/**
+ * Αποτέλεσμα ΧΩΡΙΣ ένωσης (Φ3c «Κολώνα από περίγραμμα») με στατικά τίμια
+ * ταξινόμηση ανά περίγραμμα: πόσα βγήκαν τοιχία (`wallCount`) και πόσα κολώνες
+ * (`columnCount`). Ο caller δείχνει ενημερωτικό dialog όταν `wallCount ≥ 1`.
+ */
+export interface PerimeterColumnClassification extends PerimeterColumnsResult {
+  readonly wallCount: number;
+  readonly columnCount: number;
+}
+
 // ─── bbox helpers ─────────────────────────────────────────────────────────────
 
 interface PolyBbox {
@@ -91,6 +101,36 @@ interface ColumnPlacement {
 }
 
 /**
+ * Στατικά τίμιο kind ορθογωνίου από την αναλογία πλευρών (scale-invariant):
+ * aspect ≥ SHEAR_WALL_MIN_ASPECT_RATIO (4) → `shear-wall` (τοιχίο, Eurocode 8
+ * §5.4.2.4), αλλιώς `rectangular` (κολώνα). SSoT — καλείται ΚΑΙ από το placement
+ * ΚΑΙ από το `perimeterColumnKind` (μηδέν duplication).
+ */
+function rectAspectKind(rect: DetectedRectangle): ColumnKind {
+  const aspect = rect.shortSide > 0 ? rect.longSide / rect.shortSide : 0;
+  return aspect >= SHEAR_WALL_MIN_ASPECT_RATIO ? 'shear-wall' : 'rectangular';
+}
+
+/**
+ * Στατικά τίμια ταξινόμηση kind μιας κλειστής περιμέτρου από ΜΟΝΟ τη γεωμετρία
+ * της (SSoT, χωρίς build entity):
+ *   - ορθογώνιο aspect < 4 → `rectangular` (κολώνα)
+ *   - ορθογώνιο aspect ≥ 4 → `shear-wall` (τοιχίο)
+ *   - U (Π) → `U-shape`· κάθε άλλο μη-ορθογωνικό (Γ/Τ/σύνθετο) → `composite` (τοιχίο)
+ */
+export function perimeterColumnKind(perimeter: ClosedPerimeter): ColumnKind {
+  if (perimeter.shape === 'rectangle' && perimeter.rects.length > 0) {
+    return rectAspectKind(perimeter.rects[0]);
+  }
+  return perimeter.shape === 'U' ? 'U-shape' : 'composite';
+}
+
+/** Τα kinds που στατικά είναι τοιχία (όχι σημειακές κολώνες). */
+export function isWallColumnKind(kind: ColumnKind): boolean {
+  return kind === 'shear-wall' || kind === 'composite' || kind === 'U-shape';
+}
+
+/**
  * Ορθογώνιο → ΠΑΡΑΜΕΤΡΙΚΟ rectangular/shear-wall. `position` = κέντρο rect,
  * `width`=longSide (mm), `depth`=shortSide (mm), `rotation` = γωνία μεγάλης ακμής.
  * aspect ≥ SHEAR_WALL_MIN_ASPECT_RATIO (4) → `shear-wall` (Eurocode 8 §5.4.2.4).
@@ -108,8 +148,7 @@ function rectColumnPlacement(rect: DetectedRectangle, s: number): ColumnPlacemen
       ? { x: c[1].x - c[0].x, y: c[1].y - c[0].y }
       : { x: c[2].x - c[1].x, y: c[2].y - c[1].y };
   const rotation = (Math.atan2(longEdge.y, longEdge.x) * 180) / Math.PI;
-  const aspect = rect.shortSide > 0 ? rect.longSide / rect.shortSide : 0;
-  const kind: ColumnKind = aspect >= SHEAR_WALL_MIN_ASPECT_RATIO ? 'shear-wall' : 'rectangular';
+  const kind = rectAspectKind(rect);
   return {
     center,
     overrides: { kind, width: rect.longSide / s, depth: rect.shortSide / s, rotation },
@@ -191,4 +230,50 @@ export function perimeterFacesToColumns(
   // σχεδιασμένο ως 3 ορθογώνια = ΕΝΑ φέρον στοιχείο (Eurocode 8), όχι τρία.
   const { perimeters } = perimeterFacesToRects(entities, tol, { unionTouching: true });
   return buildColumnsFromPerimeters(perimeters, layerId, sceneUnits);
+}
+
+/**
+ * Φ3c «Κολώνα από περίγραμμα» — ΧΩΡΙΣ ένωση γειτονικών (κάθε κλειστό περίγραμμα =
+ * ξεχωριστό στοιχείο, αντίθετα με το `perimeterFacesToColumns`). Ταξινομεί ΚΑΘΕ
+ * περίγραμμα στατικά τίμια (αναλογία πλευρών): κολώνα `rectangular` αν aspect < 4,
+ * αλλιώς τοιχίο (`shear-wall`/`composite`/`U-shape`). Επιστρέφει τα built columns +
+ * πλήθος τοιχίων/κολωνών ώστε ο caller να δείξει ενημερωτικό dialog (Giorgio: ΠΟΤΕ
+ * αυθαίρετη ισοπέδωση — η αναλογία ορίζει τον τύπο, μη αλλοίωση στατικών).
+ */
+export function classifyPerimeterFacesToColumns(
+  entities: readonly Entity[],
+  tol: number,
+  layerId: string,
+  sceneUnits: SceneUnits,
+): PerimeterColumnClassification {
+  const { perimeters } = perimeterFacesToRects(entities, tol, { unionTouching: false });
+  return classifyColumnsFromPerimeters(perimeters, layerId, sceneUnits);
+}
+
+/**
+ * Έτοιμα (ήδη φιλτραρισμένα) περιγράμματα → built columns + στατικά τίμια
+ * ταξινόμηση τοιχίων/κολωνών. Χρησιμοποιείται όταν ο caller έχει φιλτράρει μόνος
+ * του (π.χ. click-inside via `isPointInPolygon`), mirror του `buildColumnsFromPerimeters`.
+ */
+export function classifyColumnsFromPerimeters(
+  perimeters: readonly ClosedPerimeter[],
+  layerId: string,
+  sceneUnits: SceneUnits,
+): PerimeterColumnClassification {
+  const s = mmToSceneUnits(sceneUnits);
+  const columns: ColumnEntity[] = [];
+  let ignored = 0;
+  let wallCount = 0;
+  let columnCount = 0;
+  for (const perimeter of perimeters) {
+    const column = buildPerimeterColumn(perimeter, layerId, s, sceneUnits);
+    if (!column) {
+      ignored++;
+      continue;
+    }
+    columns.push(column);
+    if (isWallColumnKind(perimeterColumnKind(perimeter))) wallCount++;
+    else columnCount++;
+  }
+  return { columns, ignored, wallCount, columnCount };
 }

@@ -98,6 +98,20 @@ export const BIM_CATEGORIES: readonly BimCategory[] = [
   'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip', 'envelope',
 ] as const;
 
+/**
+ * Structural/placed BIM object categories — the model elements a user places on
+ * the canvas (Revit "Model Categories"), as opposed to annotation/helper
+ * categories (`dimension`, `hatch`, `grip`) that are not BIM objects per se.
+ *
+ * SSoT for the "Hide BIM / Show only DXF" ribbon toggle: hiding all of these
+ * leaves only the imported DXF entities visible. Consumed by
+ * `setBimObjectsVisibility` in `bim-render-settings-store`.
+ */
+export const STRUCTURAL_BIM_CATEGORIES: readonly BimCategory[] = [
+  'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening',
+  'stair', 'roof', 'ceiling', 'envelope',
+] as const;
+
 export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> = {
   wall:           { projectionPen: 5,  cutPen: 7  },
   column:         { projectionPen: 5,  cutPen: 9  },

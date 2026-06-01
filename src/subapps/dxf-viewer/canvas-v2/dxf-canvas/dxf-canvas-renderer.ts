@@ -188,7 +188,8 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
           activeTool === 'wall-on-entity' ||
           activeTool === 'wall-in-region' ||
           activeTool === 'wall-from-perimeter' ||
-          activeTool === 'column-from-perimeter';
+          activeTool === 'column-from-perimeter' ||
+          activeTool === 'column-discrete-from-perimeter';
         for (const selId of curRenderOptions.selectedEntityIds) {
           const ent = curEntityMap.get(selId);
           if (ent) {

@@ -28,7 +28,11 @@ import {
   type ResolvedBimSettings,
 } from '../config/bim-render-settings-types';
 import { type ViewRange } from '../config/bim-view-range';
-import { type BimCategory, type ObjectStyle } from '../config/bim-object-styles';
+import {
+  STRUCTURAL_BIM_CATEGORIES,
+  type BimCategory,
+  type ObjectStyle,
+} from '../config/bim-object-styles';
 import { type LinePatternKey } from '../config/bim-line-patterns';
 import { saveBimRenderSettings } from '../services/bim-render-settings.service';
 
@@ -63,6 +67,13 @@ interface BimRenderSettingsState extends ResolvedBimSettings {
    * changes). 0 = no local mutation since last `loadForLevel`.
    */
   lastLocalMutationAt: number;
+  /**
+   * Runtime-only (non-persisted) snapshot of structural categories' `visible`
+   * flags captured the moment the "Hide BIM" isolate is engaged, so toggling
+   * it off restores any manual per-category hides instead of force-showing all.
+   * null = isolate not currently engaged.
+   */
+  bimVisibilitySnapshot: Partial<Record<BimCategory, boolean>> | null;
 
   // ── Actions ─────────────────────────────────────────────────────────────
   /** Called when active level changes — syncs store from Level.bimRenderSettings. */
@@ -85,6 +96,13 @@ interface BimRenderSettingsState extends ResolvedBimSettings {
   // ── ADR-375 Phase C.4 — Visibility/Graphics per-view setters ────────────
   /** Toggle category visibility for the current view. */
   setObjectStyleVisibility: (category: BimCategory, visible: boolean) => void;
+  /**
+   * Batch-toggle visibility of all structural BIM object categories (Revit
+   * "Hide in View" isolate) — `false` hides every placed BIM element so only
+   * the imported DXF entities remain; `true` restores prior per-category
+   * visibility. Single state update + single debounced write (idempotent).
+   */
+  setBimObjectsVisibility: (visible: boolean) => void;
   /** Override projection or cut color for a category (null = canvas token). */
   setObjectStyleVgColor: (
     category: BimCategory,
@@ -126,6 +144,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
     rawSettings: null,
     currentLevelId: null,
     lastLocalMutationAt: 0,
+    bimVisibilitySnapshot: null,
 
     loadForLevel(levelId, settings) {
       const resolved = resolveBimSettings(settings ?? null);
@@ -136,6 +155,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         viewRange: resolved.viewRange,
         objectStyles: resolved.objectStyles,
         lastLocalMutationAt: 0,
+        bimVisibilitySnapshot: null,
       });
     },
 
@@ -177,6 +197,36 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       const nextCat: ObjectStyle = { ...prev, visible };
       const nextStyles = { ...state.objectStyles, [category]: nextCat };
       set({ objectStyles: nextStyles, lastLocalMutationAt: Date.now() });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
+    },
+
+    setBimObjectsVisibility(visible) {
+      const state = get();
+      const nextStyles = { ...state.objectStyles };
+      let snapshot = state.bimVisibilitySnapshot;
+
+      if (!visible) {
+        // Engage isolate: snapshot prior visibility once, then hide all.
+        if (snapshot === null) {
+          snapshot = {};
+          for (const cat of STRUCTURAL_BIM_CATEGORIES) {
+            snapshot[cat] = state.objectStyles[cat].visible ?? true;
+          }
+        }
+        for (const cat of STRUCTURAL_BIM_CATEGORIES) {
+          nextStyles[cat] = { ...nextStyles[cat], visible: false };
+        }
+      } else {
+        // Release isolate: restore snapshot (default-visible) then clear it.
+        for (const cat of STRUCTURAL_BIM_CATEGORIES) {
+          const restored = snapshot?.[cat] ?? true;
+          nextStyles[cat] = { ...nextStyles[cat], visible: restored };
+        }
+        snapshot = null;
+      }
+
+      set({ objectStyles: nextStyles, bimVisibilitySnapshot: snapshot, lastLocalMutationAt: Date.now() });
       if (state.currentLevelId)
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
     },

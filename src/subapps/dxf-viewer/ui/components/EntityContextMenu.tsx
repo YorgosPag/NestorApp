@@ -30,7 +30,7 @@ import {
   DxfMenuLabel,
   DxfMenuShortcut,
 } from './dxf-context-menu';
-import { JoinIcon, DeleteIcon, CancelIcon, SplitWallIcon } from '../icons/MenuIcons';
+import { JoinIcon, DeleteIcon, CancelIcon, SplitWallIcon, SelectSimilarColorIcon } from '../icons/MenuIcons';
 
 // ===== TYPES =====
 
@@ -66,6 +66,12 @@ interface EntityContextMenuProps {
   /** ADR-363 Phase 5.6 — shown only when a single wall is selected. */
   canSplit?: boolean;
   onSplit?: () => void;
+  /**
+   * AutoCAD "Select Similar" — select every entity sharing the clicked entity's
+   * resolved color. Shown when at least one entity is selected.
+   */
+  canSelectSimilar?: boolean;
+  onSelectSimilar?: () => void;
 }
 
 // ===== MAIN COMPONENT =====
@@ -84,6 +90,8 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
   onLayerLock,
   canSplit,
   onSplit,
+  canSelectSimilar,
+  onSelectSimilar,
 }, ref) => {
   const { t } = useTranslation('dxf-viewer');
   const triggerRef = useRef<HTMLSpanElement>(null);
@@ -108,6 +116,7 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
   const handleLayerFreeze = useCallback(() => { onLayerFreeze?.(); setIsOpen(false); }, [onLayerFreeze]);
   const handleLayerLock = useCallback(() => { onLayerLock?.(); setIsOpen(false); }, [onLayerLock]);
   const handleSplit = useCallback(() => { onSplit?.(); setIsOpen(false); }, [onSplit]);
+  const handleSelectSimilar = useCallback(() => { onSelectSimilar?.(); setIsOpen(false); }, [onSelectSimilar]);
 
   const showLayerCommands = !!(canApplyLayerCommands && (onLayerOff || onLayerFreeze || onLayerLock));
   const layerCommandsDisabled = !!isSystemLayer;
@@ -130,6 +139,16 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
             <DxfMenuItem onClick={handleSplit}>
               <DxfMenuIcon><SplitWallIcon /></DxfMenuIcon>
               <DxfMenuLabel>{t('contextMenu.entity.splitWall')}</DxfMenuLabel>
+            </DxfMenuItem>
+          </>
+        )}
+
+        {canSelectSimilar && (
+          <>
+            <DxfMenuSeparator />
+            <DxfMenuItem onClick={handleSelectSimilar}>
+              <DxfMenuIcon><SelectSimilarColorIcon /></DxfMenuIcon>
+              <DxfMenuLabel>{t('contextMenu.entity.selectSimilarColor')}</DxfMenuLabel>
             </DxfMenuItem>
           </>
         )}

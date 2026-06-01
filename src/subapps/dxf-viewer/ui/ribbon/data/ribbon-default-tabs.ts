@@ -14,7 +14,7 @@ import { VIEW_VISUAL_STYLES_PANEL } from './view-tab-visual-styles';
 import { VIEW_VIEWPORTS_PANEL } from './view-tab-viewports';
 import { VIEW_WINDOW_PANEL } from './view-tab-window';
 import { VIEW_DRAWING_SCALE_PANEL } from './view-tab-drawing-scale';
-import { VIEW_RANGE_PANEL, OBJECT_STYLES_PANEL, VIEW_TEMPLATES_PANEL, PEN_TABLE_PANEL, VISIBILITY_GRAPHICS_PANEL } from './view-tab-bim-settings';
+import { VIEW_RANGE_PANEL, OBJECT_STYLES_PANEL, VIEW_TEMPLATES_PANEL, PEN_TABLE_PANEL, VISIBILITY_GRAPHICS_PANEL, HIDE_BIM_PANEL } from './view-tab-bim-settings';
 import { VIEW_LAYER_MANAGER_PANEL } from './view-tab-layer-manager';
 import { ANNOTATE_MEASURE_PANEL } from './home-tab-measure';
 import { HOME_DIMENSIONS_PANEL } from './home-tab-dimensions';
@@ -65,6 +65,7 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
       VIEW_RANGE_PANEL,
       OBJECT_STYLES_PANEL,
       VISIBILITY_GRAPHICS_PANEL,
+      HIDE_BIM_PANEL,
       PEN_TABLE_PANEL,
       VIEW_TEMPLATES_PANEL,
     ],

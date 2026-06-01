@@ -131,8 +131,13 @@ export type ToolType =
   | 'column'
   // ADR-363 Φάση 3 «Τοιχίο από περίγραμμα»: box-select faces → ΕΝΑ ColumnEntity/περίμετρο
   | 'column-from-perimeter'
+  // ADR-363 Φάση 3c «Κολώνα από περίγραμμα»: box-select faces → ΧΩΡΙΣ ένωση, αυτόματη
+  // ταξινόμηση κολώνα/τοιχίο ανά αναλογία πλευρών + ενημερωτικό confirm dialog
+  | 'column-discrete-from-perimeter'
   // ADR-363 Phase 5: BIM Beam drawing tool (straight/curved/cantilever)
   | 'beam'
+  // ADR-363 «Δοκάρι από τοίχο» — 1-click pick wall → beam on its axis
+  | 'beam-from-wall'
   // ADR-363 Phase 3.7: BIM Slab-Opening drawing tool (shaft/well/duct/chimney)
   | 'slab-opening'
   // ADR-359 Phase 1: Auxiliary geometry tools (infinite/semi-infinite construction lines)

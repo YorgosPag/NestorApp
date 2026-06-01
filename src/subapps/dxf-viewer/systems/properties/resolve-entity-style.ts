@@ -282,3 +282,25 @@ export function entityToStyleInput(entity: {
     transparency: entity.transparency,
   };
 }
+
+/**
+ * Resolve the EFFECTIVE (rendered) color hex of an entity against its layer,
+ * normalized to lowercase for stable comparison. Thin SSoT wrapper around
+ * `resolveEntityStyle` so read-only consumers (e.g. "Select Similar by color")
+ * see the exact same ByLayer/ACI/TrueColor cascade as the canvas — without
+ * scattering `resolveEntityStyle()` call sites outside this module (ADR-358 §G7).
+ */
+export function resolveRenderedColorHex(
+  entity: {
+    color?: string;
+    colorAci?: number;
+    colorTrueColor?: number | null;
+    linetypeName?: string;
+    lineweightMm?: LineweightMm;
+    colorMode?: 'ByLayer' | 'ByBlock' | 'Concrete';
+    transparency?: number;
+  },
+  layer: SceneLayer,
+): string {
+  return resolveEntityStyle(entityToStyleInput(entity), layer).color.toLowerCase();
+}

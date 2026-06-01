@@ -1114,6 +1114,17 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   border-color: #b91c1c;
 }
 
+.dxf-modal-button-primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.dxf-modal-button-primary:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
 .dark .dxf-modal-card,
 [data-theme="dark"] .dxf-modal-card {
   background: #1e293b;

@@ -76,8 +76,9 @@ export function buildSlopedWallPieceGeometry(piece: WallOpeningPiece): THREE.Buf
  * γερμένου τοίχου κάτω από κατακόρυφο δοκάρι.
  *
  * Αντίθετα από τον `buildColumnPrismGeometry` (ΕΝΑ footprint + per-corner ύψη), εδώ
- * οι **δύο δακτύλιοι έχουν διαφορετική κάτοψη**: `bottomFootprint @huLocalM` και
- * `topFootprint @nominalLocalM` (1:1 αντιστοιχία κορυφών, βλ. `clipWallBandTopRegionsTilted`).
+ * οι **δύο δακτύλιοι έχουν διαφορετική κάτοψη**: `bottomFootprint @bottomLocalM` (per-vertex
+ * ύψος — flat host όλα ίσα, κεκλιμένη παρειά ακολουθεί την κλίση) και `topFootprint
+ * @nominalLocalM` (1:1 αντιστοιχία κορυφών, βλ. `clipWallBandTopRegionsTilted`).
  * Έτσι, μετά τον ομοιόμορφο `applyWallTilt` (emit), οι παρειές του τοίχου γέρνουν ενώ η
  * κοπή του δοκαριού ξαναγίνεται **κατακόρυφη** στο `host_real` (το `bottom`/`top` cut
  * vertices είναι pre-shifted κατά `−shear(Hu)`/`−shear(nominal)` αντίστοιχα).
@@ -92,18 +93,20 @@ export function buildSlopedWallPieceGeometry(piece: WallOpeningPiece): THREE.Buf
  * @see buildColumnPrismGeometry — ο δίδυμος (single-footprint prism)
  */
 export function buildWallLoftBandGeometry(band: WallTopLoftBand): THREE.BufferGeometry | null {
-  const { bottomFootprint, topFootprint, huLocalM, nominalLocalM } = band;
+  const { bottomFootprint, topFootprint, bottomLocalM, nominalLocalM } = band;
   const n = bottomFootprint.length;
-  if (n < 3 || topFootprint.length !== n) return null;
-  if (nominalLocalM - huLocalM <= LOFT_DEGENERATE_EPS) return null;
+  if (n < 3 || topFootprint.length !== n || bottomLocalM.length !== n) return null;
+  // Sloped-host-safe degenerate guard: ακόμη και η ψηλότερη κάτω-κορυφή πρέπει να είναι
+  // κάτω από το nominal (flat host → όλα ίσα → ίδιο με το παλιό `nominal − Hu ≤ eps`).
+  if (nominalLocalM - Math.max(...bottomLocalM) <= LOFT_DEGENERATE_EPS) return null;
 
-  // 2n κορυφές: [0..n) κάτω δακτύλιος @huLocalM, [n..2n) πάνω δακτύλιος @nominalLocalM.
+  // 2n κορυφές: [0..n) κάτω δακτύλιος @bottomLocalM[i] (per-vertex), [n..2n) πάνω @nominalLocalM.
   // plan (x, y) → world (x, Y, -y).
   const positions = new Float32Array(2 * n * 3);
   for (let i = 0; i < n; i++) {
     const b = bottomFootprint[i];
     positions[i * 3] = b.x;
-    positions[i * 3 + 1] = huLocalM;
+    positions[i * 3 + 1] = bottomLocalM[i];
     positions[i * 3 + 2] = -b.y;
     const t = (n + i) * 3;
     const tp = topFootprint[i];

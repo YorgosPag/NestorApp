@@ -344,6 +344,16 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               icon: 'bim-column',
               commandKey: 'column-from-perimeter',
             },
+            // ADR-363 Φάση 3c «Κολώνα από περίγραμμα» — box-select παρειές → ΧΩΡΙΣ ένωση,
+            // κάθε περίγραμμα ξεχωριστό· αυτόματη ταξινόμηση κολώνα/τοιχίο από αναλογία
+            // πλευρών + ενημερωτικό confirm dialog (στατικά τίμιο, μη αλλοίωση).
+            {
+              id: 'draw.bim.columnDiscreteFromPerimeter',
+              labelKey: 'ribbon.commands.bim.columnDiscreteFromPerimeter.label',
+              tooltipKey: 'ribbon.commands.bim.columnDiscreteFromPerimeter.tooltip',
+              icon: 'bim-column',
+              commandKey: 'column-discrete-from-perimeter',
+            },
             {
               id: 'draw.bim.beam',
               labelKey: 'ribbon.commands.bim.beam.label',
@@ -351,6 +361,16 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               icon: 'bim-beam',
               commandKey: 'beam',
               shortcut: 'BM',
+            },
+            // ADR-363 «Δοκάρι από τοίχο» — 1 κλικ σε υπάρχοντα τοίχο → δοκάρι στον
+            // άξονά του (πλάτος = πάχος τοίχου). Ο τοίχος auto-attach-άρει την κορυφή
+            // του στο κάτω μέρος του δοκαριού (ADR-401 D).
+            {
+              id: 'draw.bim.beamFromWall',
+              labelKey: 'ribbon.commands.bim.beamFromWall.label',
+              tooltipKey: 'ribbon.commands.bim.beamFromWall.tooltip',
+              icon: 'bim-beam',
+              commandKey: 'beam-from-wall',
             },
             // ADR-358 Phase 5a: Stair tool (useStairTool orchestrator),
             // folded into the BIM group (Giorgio 2026-05-29).

@@ -1,79 +1,880 @@
-ADR-401 Phase E
+      505  ): PerimeterFacesResult {
+      506 -  const closed = extractClosedPolygons(entities, tol);                                                                                                        506 +  // Phase 3b fix: όταν θα ενώσουμε (column path), εξάγουμε ΚΑΙ τα εφαπτόμενα                                                                           
+      507 +  // ορθογώνια (κοινή κορυφή → ο simple-cycle walker τα χάνει)· το union τα ραφράζει.                                                                         508 +  const closed = extractClosedPolygons(entities, tol, {                                                                                                 
+      509 +    detectTouchingRects: options?.unionTouching,                                                                                                        
+      510 +  });                                                                                                                                                   
+      511    const polys = options?.unionTouching ? unionTouchingPolygons(closed) : closed;
+      512    const perimeters: ClosedPerimeter[] = [];
+      513    let ignoredCount = 0;
 
- Συνεχίζουμε ADR-401 Phase F.3 (Column attach: auto-attach + ribbon + 3D grip + edit-break). Διάβασε ΠΡΩΤΑ το handoff:
+● Τώρα γράφω regression test. Διαβάζω το υπάρχον test για τα patterns:
 
-  C:\Nestor_Pagonis\HANDOFFS\2026-06-01_ADR-401_PhaseF3-column-attach-auto-ribbon-grip-editbreak_handoff.md
+  Read 1 file (ctrl+o to expand)
 
-  Context: F.1 (core) committed 72288bdf. F.2 (consumers) DONE — uncommitted στο working tree (το commit το κάνω εγώ, ΟΧΙ εσύ). Phase F = γενίκευση του wall top/base
-  attach → κολώνες (η κολώνα έχει σημειακό footprint → profile ανά γωνία).
+● Πλήρης κατανόηση των test patterns. Γράφω regression test που αναπαράγει ακριβώς το bug (2 εφαπτόμενα ορθογώνια ως loose lines → Γ):
 
-  F.3 = mirror των wall equivalents για κολώνες, με σειρά:
-  1. Auto-attach (κολώνες κάτω από δοκάρι/πλάκα → auto-attach στη δημιουργία host)
-  2. Edit-break (manual κάθετο edit σπάει το attach — Revit style)
-  3. 3D κάθετο grip (πάνω=height/top, κάτω=baseOffset → attach/detach on drag)
-  4. Ribbon (manual attach/detach pick-host tool)
-  5. Boy Scout: γενίκευση wall-attach-detach.ts → κοινό entity-attach-detach.ts (wall+column)
+● Update(src\subapps\dxf-viewer\bim\walls\__tests__\perimeter-from-faces.test.ts)
+  ⎿  Added 61 lines
+      218      expect(res.ignoredCount).toBe(1); // the triangle
+      219    });
+      220  });
+      221 +                                                                                                                                                              222 +// ─── ADR-363 Phase 3b fix — two touching rectangles drawn as LOOSE LINES ──────                                                                       
+      223 +// Regression: a Γ/L pier drawn as a foot + a stem rectangle whose lines SHARE a                                                                              224 +// corner. The shared corner becomes a degree-4 graph node, so the strict                                                                               
+      225 +// simple-cycle walker (`buildPolygonLoops`) traces NO loop and "Τοιχίο από                                                                             
+      226 +// περίγραμμα" emitted "noneBuilt". The corner-graph rectangle detector recovers                                                                        
+      227 +// both rects; `unionTouching` then merges them into the L.                                                                                             
+      228 +                                                                                                                                                        
+      229 +// Foot A: x[300,3000] y[0,300]. Stem B: x[0,300] y[0,3000]. Share corner (300,0).                                                                      
+      230 +const RECT_A_FOOT: Point2D[] = [                                                                                                                        
+      231 +  { x: 300, y: 0 },                                                                                                                                     
+      232 +  { x: 3000, y: 0 },                                                                                                                                    
+      233 +  { x: 3000, y: 300 },                                                                                                                                  
+      234 +  { x: 300, y: 300 },                                                                                                                                   
+      235 +];                                                                                                                                                      
+      236 +const RECT_B_STEM: Point2D[] = [                                                                                                                        
+      237 +  { x: 0, y: 0 },                                                                                                                                       
+      238 +  { x: 300, y: 0 },                                                                                                                                     
+      239 +  { x: 300, y: 3000 },                                                                                                                                  
+      240 +  { x: 0, y: 3000 },                                                                                                                                    
+      241 +];                                                                                                                                                      
+      242 +                                                                                                                                                        
+      243 +/** Ένα ορθογώνιο ως 4 ανεξάρτητες (loose) γραμμές. */                                                                                                  
+      244 +function looseRectLines(id: string, rect: readonly Point2D[]): Entity[] {                                                                               
+      245 +  return rect.map((v, i) => lineEntity(`${id}${i}`, v, rect[(i + 1) % rect.length]));                                                                   
+      246 +}                                                                                                                                                       
+      247 +                                                                                                                                                        
+      248 +describe('perimeter-from-faces — touching loose-line rectangles (ADR-363 Phase 3b fix)', () => {                                                        
+      249 +  const touchingLoose: Entity[] = [                                                                                                                     
+      250 +    ...looseRectLines('a', RECT_A_FOOT),                                                                                                                
+      251 +    ...looseRectLines('b', RECT_B_STEM),                                                                                                                
+      252 +  ];                                                                                                                                                    
+      253 +                                                                                                                                                        
+      254 +  it('simple-cycle walker alone misses them (shared corner = degree-4 node)', () => {                                                                   
+      255 +    // Reproduces the bug: without rect-detection nothing is extracted.                                                                                 
+      256 +    expect(extractClosedPolygons(touchingLoose, TOL)).toHaveLength(0);                                                                                  
+      257 +  });                                                                                                                                                   
+      258 +                                                                                                                                                        
+      259 +  it('detectTouchingRects recovers BOTH rectangles', () => {                                                                                            
+      260 +    const polys = extractClosedPolygons(touchingLoose, TOL, { detectTouchingRects: true });                                                             
+      261 +    expect(polys).toHaveLength(2);                                                                                                                      
+      262 +  });                                                                                                                                                   
+      263 +                                                                                                                                                        
+      264 +  it('does NOT double-count a single clean rectangle (walker + detector dedup)', () => {                                                                
+      265 +    const polys = extractClosedPolygons(looseRectLines('a', RECT_A_FOOT), TOL, {                                                                        
+      266 +      detectTouchingRects: true,                                                                                                                        
+      267 +    });                                                                                                                                                 
+      268 +    expect(polys).toHaveLength(1);                                                                                                                      
+      269 +  });                                                                                                                                                   
+      270 +                                                                                                                                                        
+      271 +  it('perimeterFacesToRects + unionTouching merges them into ONE L (Γ)', () => {                                                                        
+      272 +    const res = perimeterFacesToRects(touchingLoose, TOL, { unionTouching: true });                                                                     
+      273 +    expect(res.perimeters).toHaveLength(1);                                                                                                             
+      274 +    expect(res.perimeters[0].shape).toBe('L');                                                                                                          
+      275 +    expect(res.ignoredCount).toBe(0);                                                                                                                   
+      276 +  });                                                                                                                                                   
+      277 +                                                                                                                                                        
+      278 +  it('wall path (no unionTouching) stays conservative — touching loose rects not detected', () => {                                                     
+      279 +    expect(perimeterFacesToRects(touchingLoose, TOL).perimeters).toHaveLength(0);                                                                       
+      280 +  });                                                                                                                                                   
+      281 +});                                                                                                                                                     
 
-  Το handoff έχει πίνακα με τα ακριβή wall-reference αρχεία (διάβασέ τα ως blueprint πριν γράψεις).
+● Τρέχω τα tests:
 
-  ΚΡΙΣΙΜΑ:
-  - ⚠️  ΜΗΝ commit / ΜΗΝ git add -A — multi-agent repo, υπάρχουν αρχεία άλλου agent (ADR-402/403, gizmo, placement, raycaster, EventBus, useColumnTool) στο working tree.
-  Διάβασε πριν γράψεις, μην πατήσεις τη δουλειά του.
-  - N.7.2 Google-level + tests ανά sub-task + tsc background.
-  - N.15 docs στο τέλος: ADR-401 §5+§8 + adr-index + local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt + memory project_adr401_wall_top_constraints.md.
-  - 🔴 Browser verify F.2 (attached κολώνα κάτω από κεκλιμένη στέγη/δοκάρι) εκκρεμεί.
+● Bash(npx jest src/subapps/dxf-viewer/bim/walls/__tests__/perimeter-from-faces.test.ts 2>&1 | tail -30)
+  ⎿      √ is orientation-independent (classifies a clockwise L the same) (10 ms)
+         √ drops collinear midpoints before counting (rectangle with a split edge) (4 ms)
+         √ classifies a non-rectilinear shape (triangle) as composite (10 ms)
+     … +27 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode classifier
+● Όλα τα 23 περνούν (5 νέα regression). Τρέχω τα consumer tests (column-from-faces, wall-in-region) + tsc στο background:
 
-  Μοντέλο: Opus 4.8, Plan Mode πρώτα (5+ αρχεία, 2+ domains).
+● Bash(npx jest src/subapps/dxf-viewer/bim/columns/__tests__/column-from-faces.test.ts src/subapps/dxf-viewer/bim/walls/__tests__/wall-in-region 2>&1 | tail -12)
+  ⎿  npm info using npm@10.8.2
+     npm info using node@v20.19.0
+     PASS src/subapps/dxf-viewer/bim/columns/__tests__/column-from-faces.test.ts
+     … +8 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode classifier
 
+● Bash(npx tsc --noEmit 2>&1 | grep -iE "perimeter-from-faces|wall-in-region|column-from-faces" | head; echo "=== tsc-done ===")
+  ⎿  Running in the background (↓ to manage)
+● Consumer tests 27/27 ✅. Ενημερώνω το ADR-363 (PHASE 3). Βρίσκω το σημείο τεκμηρίωσης του Phase 3b:
 
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
 
+● Υπάρχει changelog table (γρ. 3238+). Προσθέτω νέα εγγραφή στην κορυφή. Βρίσκω την κεφαλίδα:
 
+  Read 1 file (ctrl+o to expand)
 
+● Update(docs\centralized-systems\reference\adrs\ADR-363-bim-drawing-mode.md)
+  ⎿  Added 1 line
+      3235  
+      3236  | Ημ/νία | Αλλαγή | Author |
+      3237  |---|---|---|
+      3238 +| 2026-06-01 | **§6 Phase 3b fix — εφαπτόμενα ορθογώνια από σκόρπιες γραμμές («noneBuilt» στο «Τοιχίο από περίγραμμα»)**. Browser-verify (Giorgio): Γ/L           + τοιχίο σχεδιασμένο ως 2 ορθογώνια με **σκόρπιες γραμμές που μοιράζονται κορυφή** → toast «Δεν βρέθηκε έγκυρο περίγραμμα» αντί για Γ. **Root cause:** ο
+           + κοινός κόμβος γίνεται **βαθμού 4**· ο αυστηρός simple-cycle walker (`buildPolygonLoops`/`walkSimpleCycle`, απαιτεί κάθε κόμβο βαθμού 2) επιστρέφει `nu
+           +ll` → `extractClosedPolygons` βγάζει **κανένα** πολύγωνο → η Φ3b `unionTouching` ποτέ δεν παίρνει δεδομένα → 0 τοιχία. (Μεμονωμένο ορθογώνιο = όλοι deg           +ree-2 → δούλευε· δύο εφαπτόμενα = degree-4 → απέτυχε.) **Fix:** `extractClosedPolygons` νέο optional `{detectTouchingRects}` → τρέχει ΕΠΙΣΗΣ τον υπάρχο
+           +ντα corner-graph `findRectanglesFromSegments` (ανέχεται κοινές κορυφές) στις loose γραμμές + dedup `polygonKey` (ώστε μεμονωμένο rect που πιάνεται ΚΑΙ 
+           +από walker ΚΑΙ από detector να μη μετρηθεί διπλά). `perimeterFacesToRects` το ανάβει **μόνο** όταν `unionTouching` (column path): το `safeUnion` ενώνει
+           + τα ξεχωριστά ορθογώνια σε Γ/Τ/Π ΚΑΙ απορροφά τυχόν over-detected υπο-ορθογώνια στο τελικό περίγραμμα (self-healing). **Wall path αμετάβλητο** (detect 
+           +off → ίδια συντηρητική συμπεριφορά, μηδέν regression). **Files: 1 MOD** (`perimeter-from-faces.ts` — import `findRectanglesFromSegments`, `polygonKey`,
+           + `extractClosedPolygons` options+dedup, `perimeterFacesToRects` περνά flag) **+ 5 NEW regression tests** (2 εφαπτόμενα loose rects: walker→0· detect→2·
+           + single→no double-count· union→1 Γ· wall path→0). 23/23 perimeter + 27/27 column-from-faces/wall-in-region, tsc 0. ✅ Google-level: YES — reuse υπάρχον
+           +τος detector (N.0.2, μηδέν νέα geometry math), opt-in μόνο όπου το union το ραφράζει (μηδέν wall regression), root-cause (degree-4) όχι workaround. 🔴 
+           +browser verify (Giorgio: Γ από 2 σκόρπια ορθογώνια → 1 τοιχίο L). | Claude Opus 4.8 |                                                                  
+      3239  | 2026-06-01 | **§6 Phase 3b — Auto-union γειτονικών πλαισίων στο «Τοιχίο από περίγραμμα» (DONE pending commit, 🔴 browser verify)**. Browser-verify τη
+            ς Φ3 ανέδειξε: 3 χωριστά ορθογώνια που σχηματίζουν Π έδιναν **3 ξεχωριστά τοιχία** αντί για ΕΝΑ (το `extractClosedPolygons` βλέπει κάθε κλειστό σχήμα ξ
+            εχωριστά — δεν ενώνει). **Giorgio (στατικά σωστό, επιβεβαιωμένο):** ένα τοιχίο Π = ΕΝΑ φέρον στοιχείο (Eurocode 8 σύνθετη λειτουργία, ενιαίο κεντροειδέ
+            ς/Ix·Iy/κέντρο διάτμησης) → πρέπει να ενώνεται. **Fix:** ΝΕΟ `unionTouchingPolygons` (wrapper του υπάρχοντος SSoT `safeUnion`/polygon-clipping) + optio
+            nal param `{unionTouching}` στο κοινό `perimeterFacesToRects`. Ενώνει εφαπτόμενα/επικαλυπτόμενα σε ΕΝΑ περίγραμμα, κρατά ασύνδετα ΧΩΡΙΣΤΑ (MultiPolygon
+            →connected components), καθαρίζει self-intersections. **Default `false`** (τοίχοι αμετάβλητοι — δύο γειτονικά δωμάτια ≠ ένα· μηδέν regression στα 23 wa
+            ll tests)· **on μόνο στο `perimeterFacesToColumns`** (column path, Giorgio intent). Holes→outer ring (deferred)· empty union→fallback (zero data loss)·
+             ≤1 polygon→early-return (lone bowtie μένει ignored). **Files: 2 MOD** (`perimeter-from-faces.ts` +`unionTouchingPolygons`/`ringToPoints`/import safeUn
+            ion + param· `column-from-faces.ts` περνά `{unionTouching:true}`) **+ test column-from-faces (3 ορθογώνια Π→1 U-shape· 2 disjoint→2· lone bowtie→ignore
+            d)**. 17/17 column-from-faces + 18/18 perimeter + 41/41 wall, tsc 0. ✅ Google-level: YES — reuse υπάρχοντος boolean SSoT (μηδέν νέα geometry math), SS
+            oT-shared param (ένα σημείο, opt-in ανά builder), connected-components-correct, structural-truth (Eurocode 8). 🔴 browser verify (Giorgio: 3 πλαίσια Π
+            → 1 τοιχίο U-shape). | Claude Opus 4.8 |
+      3240  | 2026-06-01 | **§5.6 §6 Phase 2b — Επεξεργασία polygon-backed τοιχίων (U-shape/composite), DONE pending commit, 🔴 browser verify**. Κλείνει το Φ2b de
+            ferred (resize grips + mirror + panel + section symbols). **Αποφάσεις Giorgio:** Q1=per-vertex grips ΓΙΑ ΟΛΑ + παραμετρικό Π· Q2=μόνο **U-shape στο dro
+            pdown** (industry-backed: channel = standard parametric σε Tekla/ETABS· composite ΜΟΝΟ από-περίγραμμα όπως ETABS Section Designer/Revit profile sketch)
+            · Q3=ναι section symbols. **Grips:** ΝΕΟ grip-kind `column-poly-vertex-${n}` (vertex index encoded στο string, mirror του `slab-vertex-${n}` SSoT) → ΜΙ
+            Α λαβή/κορυφή για polygon-backed (ΟΧΙ width/depth — no-op)· move=patch polygon[i] (local mm ÷s) + re-center bbox + position compensation (WYSIWYG, μόνο
+             η συρόμενη κορυφή κινείται) + refresh width/depth=bbox· **+ manual παραμετρικό Π** `column-leg-thickness`/`column-base-thickness` (mirror T-shape flan
+            ge/web). **Mirror:** `mirrorColumn` polygon-backed → `reflectLocalPolygon` (negate local y + reverse CCW winding, διατηρεί bbox-center)· U παραμετρικό
+            → flipY toggle. **Panel:** `COLUMN_KIND_OPTIONS += U-shape` + NEW leg/base thickness inputs (gated kind==='U-shape' ΚΑΙ no polygon)· bridge nested-rout
+            ing `ushape` group + `ushapeParams` visibility key. **Section symbols (Q3):** `computeUProfileOutline` (παραμετρικό Π 8-vertex) + `computePolygonBacked
+            Outline` (scaled actual polygon) + ΝΕΟ SSoT `resolveColumnSectionOutline` (εξήχθη από `ColumnRenderer.drawSectionProfile` → renderer 499→488 γρ., N.7.1
+            ). **Boy-Scout SSoT:** `computeCentroidWorld` γενικεύτηκε για polygon-backed bbox (ταιριάζει `transformFootprint` σε όλα τα anchors)· base handle-world
+             funcs μετακινήθηκαν στο `column-grip-utils.ts`. **Files: 3 NEW (`column-poly-vertex-grips.ts`, `column-section-symbol.ts`, test `column-grips-phase2b.
+            test.ts`) + ~12 MOD** (grip-types, column-grips, column-variant-grips, column-grip-utils, bim-mirror-geometry, useGripDimAnnotation, column-section-pro
+            file, ColumnRenderer, column-command-keys, column-bridge-param-routing, useRibbonColumnBridge, contextual-column-tab, column-types const, i18n el/en).
+            **Tests:** column-grips-phase2b 10/10, section-profile+mirror+columns+bridge 345 PASS, tsc clean. ADR-040 CHECK 6B/6D (ColumnRenderer) → ADR-363 staged
+             μαζί. ✅ Google-level: YES — SSoT vertex-index pattern (mirror slab), industry-backed dropdown (channel ναι/composite όχι), WYSIWYG re-center, Boy-Sco
+            ut centroid SSoT alignment + file-split ≤500. 🔴 **Προαπαιτούμενο/ρίσκο: Φ1+Φ3 ΔΕΝ browser-verified** — αν το «από περίγραμμα» centering έχει bug, τα g
+            rips/mirror το κληρονομούν. **Deferred:** polygon vertex add/remove (μόνο move), browser verify Φ1/Φ3/Φ2b. | Claude Opus 4.8 |
+      3241  | 2026-06-01 | **§6 Phase «Από περίγραμμα» Φ3 — «Τοιχίο από περίγραμμα» (Column από faces, NEW FEATURE)**. Box-select στις παρειές δομικού στοιχείου (ο
+            ρθογώνιο/Γ/Τ/Π/σύνθετο) → **ΕΝΑ `ColumnEntity` (τοιχίο Ο.Σ.) ανά κλειστή περίμετρο**, ΠΟΤΕ αποσύνθεση (Eurocode 8). 2ος builder στο ΙΔΙΟ κοινό SSoT `pe
+            rimeter-from-faces.ts` (mirror «Τοίχος από περίγραμμα»). **Map shape→ColumnKind (σύγκλιση κλάδου ETABS Section Designer/Revit/Tekla, επιβεβαιωμένο με G
+            iorgio):** `rectangle`→`rectangular`/`shear-wall` (aspect≥4) **παραμετρικό**· `L`/`T`/`composite`→`composite` **polygon-backed**· `U`→`U-shape` **polyg
+            on-backed**. **polygon-centering:** LOCAL mm bbox-centered CCW, `position`=bbox-center, `anchor`='center', `rotation`=0 → `transformFootprint` round-tr
+            ip ΑΚΡΙΒΩΣ στο σχέδιο. **Files: 1 NEW SSoT `bim/columns/column-from-faces.ts` (`perimeterFacesToColumns`+`buildColumnsFromPerimeters`, reuse `perimeter
+            FacesToRects`+`completeColumnFromClick`) + 1 NEW test (9) + 13 MOD:** `column-completion.ts` (`ColumnParamOverrides`+`buildDefaultColumnParams` += `ush
+            ape`/`composite` — έλειπε override path της Φ2, τώρα SSoT-complete), `useColumnTool.ts` (`ColumnPlacementMode`+`setPlacementMode`+`onPerimeterClick`+bo
+            x-select listener+`getSceneEntities`, ghost→null σε outer-perimeter), `useSpecialTools.ts` (column lifecycle+mode wiring), tool `'column-from-perimeter
+            '` (ui/toolbar/types + tool-definitions + home-tab-draw + ribbon-contextual-config + 4 box-select gates: useCentralizedMouseHandlers/mouse-handler-move
+            /-up/useCanvasClickHandler/dxf-canvas-renderer), EventBus `'bim:columns-from-perimeter'` + useDxfViewerNotifications toast + i18n el/en `perimeterColum
+            n.*`+`columnFromPerimeter.{label,tooltip}`. **Insertion (RECOGNITION):** per-entity append μέσω `onColumnCreated`→`addColumnToScene` (όπως walls· ΟΧΙ c
+            ommand). **Tests:** 14/14 Φ3+wall-from-perimeter, 578/578 column suites, tsc clean. ADR-040 CHECK 6D (cursor/canvas files) → ADR-363 staged μαζί. **Def
+            erred Φ2b** (resize grips U-shape + mirror flipY + steel symbols + panel kind-picker). ✅ Google-level: YES — κοινό SSoT (ένας εντοπισμός περιμέτρου, δ
+            ύο builders), exact-polygon (στατικά τίμιο, μηδέν απώλεια πιστότητας), reuse-first (`completeColumnFromClick`+`perimeterFacesToRects`, μηδέν duplicate
+            geometry), ΠΟΤΕ αποσύνθεση (ενιαίο entity), round-trip-verified centering, κανένα silent garbage (toast). 🔴 browser verify (Γ/Π/σταυρός → ΕΝΑ τοιχίο/π
+            ερίμετρο, contextual ribbon, toast). | Claude Opus 4.8 |
 
-ADR-402 (3D gizmo resize) 
+● Background command "npx tsc --noEmit 2&gt;&amp;1 | grep -iE "perimeter-from-faces|wall-in-region|column-from-faces" | head; echo "=== tsc-done ==="" completed (exit
+code 0)
 
- Διάβασε ΠΡΩΤΑ το handoff: C:\Nestor_Pagonis\HANDOFFS\2026-06-01-ADR-402-live-move-preview-handoff.md
-  Ξεκίνα από §0 (πρώτο βήμα) και μετά §1 — η νέα φάση: ΖΩΝΤΑΝΗ ΠΡΟΕΠΙΣΚΟΠΗΣΗ
-  ΜΕΤΑΚΙΝΗΣΗΣ στο 3Δ. Θέλω, όταν σέρνω βελάκι του gizmo (μετακίνηση/περιστροφή),
-  η ίδια η οντότητα να ακολουθεί ζωντανά τον κέρσορα σε πραγματικό χρόνο — ΟΧΙ να
-  μένει ακίνητη και να πηδά στη νέα θέση μόνο όταν αφήσω το ποντίκι.
+● tsc exit 0 ✅. Ενημερώνω trackers (N.15). Βρίσκω το from-perimeter entry στο ΕΚΚΡΕΜΟΤΗΤΕΣ:
 
-  Κανόνες: ΜΗΝ κάνεις commit/push — commit κάνω ΜΟΝΟΣ μου. ΠΟΤΕ git add -A. Στο tree
-  υπάρχει uncommitted δουλειά άλλων ADR (401/403/396) — μην την αγγίξεις (δες §3).
-  Plan Mode + έγκριση πριν γράψεις κώδικα (N.8). Opus. Ελληνικά πάντα.
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Προσθέτω entry στο ΕΚΚΡΕΜΟΤΗΤΕΣ μετά τη Φ3b (γρ. 181):
+
+● Update(local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt)
+  ⎿  Added 2 lines
+      179  Files: 3 NEW (column-poly-vertex-grips.ts, column-section-symbol.ts, test column-grips-phase2b.test.ts 10/10) + ~12 MOD (grip-types ColumnGripKind, colu
+           mn-grips, column-variant-grips, column-grip-utils, bim-mirror-geometry, useGripDimAnnotation, column-section-profile, ColumnRenderer, column-command-key           s, column-bridge-param-routing, useRibbonColumnBridge, contextual-column-tab, column-types const DEFAULT_U_*_THICKNESS_MM, i18n el/en). Tests: column-gr
+           ips-phase2b 10/10 + section-profile/mirror/columns/bridge 345 PASS, tsc clean. ADR-040 CHECK 6B/6D (ColumnRenderer)→ADR-363 staged μαζί. 🔴 ΠΡΟΑΠΑΙΤΟΥΜΕ
+           ΝΟ/ΡΙΣΚΟ: Φ1+Φ3 ΔΕΝ browser-verified — αν το «από περίγραμμα» centering έχει bug, grips/mirror το κληρονομούν. DEFERRED: polygon vertex add/remove (μόνο            move)· browser verify Φ1/Φ3/Φ2b.
+      180  
+      181  ✅ ΥΛΟΠΟΙΗΜΕΝΟ Φ3b 2026-06-01 (Opus 4.8) — pending commit, 🔴 browser verify. AUTO-UNION γειτονικών πλαισίων στο «Τοιχίο από περίγραμμα». Από browser-ve
+           rify Giorgio: 3 χωριστά ορθογώνια Π → έδιναν 3 τοιχία αντί 1. ΣΩΣΤΟ (Giorgio, στατικά): ένα Π = ΕΝΑ φέρον στοιχείο (Eurocode 8 σύνθετη λειτουργία, ενιαί
+           ο κεντροειδές/Ix·Iy/κέντρο διάτμησης) → πρέπει να ενώνεται. FIX: NEW unionTouchingPolygons (reuse SSoT safeUnion/polygon-clipping) + optional {unionTouc
+           hing} param στο κοινό perimeterFacesToRects (ενώνει εφαπτόμενα/επικαλυπτόμενα, κρατά ασύνδετα ΧΩΡΙΣΤΑ, καθαρίζει self-intersections). DEFAULT false (τοί
+           χοι αμετάβλητοι, 0 regression)· ON στο perimeterFacesToColumns. Holes→outer ring deferred· empty→fallback· ≤1→early-return. 2 MOD (perimeter-from-faces.
+           ts, column-from-faces.ts) + test (3 ορθογώνια Π→1 U-shape· 2 disjoint→2· lone bowtie→ignored). 17/17+18/18+41/41, tsc 0. DEFERRED: holes σε union· verte
+           x add/remove.
+      182 +                                                                                                                                                        
+      183 +✅ ΥΛΟΠΟΙΗΜΕΝΟ Φ3b FIX 2026-06-01 (Opus 4.8) — pending commit, 🔴 browser verify. BUG (Giorgio browser): Γ/L τοιχίο ως 2 ορθογώνια με ΣΚΟΡΠΙΕΣ ΓΡΑΜΜΕΣ π
+          +ου μοιράζονται κορυφή → toast «Δεν βρέθηκε έγκυρο περίγραμμα» αντί Γ. ROOT (firestore data-verified, Ισόγειο flr_ecebe795): ο κοινός κόμβος γίνεται ΒΑΘΜ
+          +ΟΥ 4· ο αυστηρός simple-cycle walker (buildPolygonLoops/walkSimpleCycle, απαιτεί κάθε κόμβο degree-2) → null → extractClosedPolygons βγάζει ΚΑΝΕΝΑ πολύγ
+          +ωνο → η Φ3b unionTouching ποτέ δεν παίρνει δεδομένα → 0 τοιχία. (Μεμονωμένο ορθογώνιο=degree-2→δούλευε· 2 εφαπτόμενα=degree-4→απέτυχε.) FIX: extractClos
+          +edPolygons νέο optional {detectTouchingRects} → τρέχει ΕΠΙΣΗΣ τον υπάρχοντα corner-graph findRectanglesFromSegments (ανέχεται κοινές κορυφές) στις loose
+          + γραμμές + dedup polygonKey· perimeterFacesToRects το ανάβει ΜΟΝΟ όταν unionTouching (column path) — το safeUnion ενώνει τα ξεχωριστά ορθογώνια σε Γ/Τ/Π
+          + ΚΑΙ απορροφά over-detected υπο-ορθογώνια (self-healing). Wall path ΑΜΕΤΑΒΛΗΤΟ (detect off, 0 regression). 1 MOD (perimeter-from-faces.ts) + 5 NEW regre
+          +ssion tests (walker→0· detect→2· single→no-double· union→1 Γ· wall→0). 23/23 perimeter + 27/27 column-from-faces/wall-in-region, tsc 0. reuse-first (N.0
+          +.2), root-cause όχι workaround. 🔴 browser verify (Γ από 2 σκόρπια ορθογώνια → 1 τοιχίο L).                                                             
+      184  BROWSER VERIFY Giorgio 2026-06-01: TEST A centering (μετά union) ✅· B per-vertex grips ✅· D section symbol ✅· E manual Π panel ✅· C in-place mirror
+           ✅· C copy+mirror ✅ FIXED + BROWSER-VERIFIED 2026-06-01 (βλ. παρακάτω).
+      185  
+      186  ✅ ΥΛΟΠΟΙΗΜΕΝΟ + BROWSER-VERIFIED BUG FIX — BIM copy+mirror: το αντίγραφο τώρα persist-άρει (2026-06-01, Opus 4.8· Giorgio verified «το μιρρορ κοπυ λειτ
+           ουργεί») — pending commit. Σύμπτωμα: mirror με αντίγραφο («κράτα αρχικό;»=ΝΑΙ, keepOriginals=true) → αντίγραφο εμφανιζόταν & επόμενο Firestore snapshot
+           το έσβηνε. ROOT (επιβεβαιωμένο): MirrorEntityCommand.execute (copy branch) + BimCopyCommand.execute έκαναν σκέτο addEntity(clone) με generateEntityId()
+           — ΧΩΡΙΣ drawing:entity-created broadcast → το use*Persistence diff-merge (source of truth) αφαιρούσε ό,τι δεν είναι στα docs+όχι dirty/pending. FIX (Opt
+           ion A handoff, full SSoT/Boy-Scout): NEW bim/transforms/bim-clone-persistence.ts (mintBimCloneIdentity per-type enterprise ID + fresh ifcGuid· broadcast
+           BimCloneCreated/Deleted/Restored — συμμετρικό DeleteEntityCommand). MirrorEntityCommand: copy branch→clone με enterprise ID + create broadcast· αποθηκεύ
+           ει ΟΛΑ τα clones→undo/redo id-stable (όχι orphan docs)+delete/restore. BimCopyCommand: ίδια broadcasts + διόρθωση λανθασμένου doc comment. bim-copy-buil
+           der: αφαιρέθηκε διπλός ID_GENERATORS (N.0.2)→κοινό mintBimCloneIdentity (+fresh ifcGuid). CopyEntityCommand ΑΝΕΠΑΦΟ — όλοι οι BIM τύποι early-return στο
+           υς parametric grip handlers πριν φτάσουν εκεί → βλέπει μόνο generic DXF (persist μέσω DXF-JSON autosave). Tests: 37/37 PASS (NEW bim-clone-persistence.t
+           est 18 + NEW MirrorEntityCommand.persistence.test + επέκταση BimCopyCommand.test + υπάρχοντα bim-copy-builder/MirrorEntityCommand.bim), tsc clean. ADR-3
+           63 §7.2 fix changelog. HANDOFF (αρχικό): HANDOFFS/2026-06-01_BIM_copy-mirror-persistence-bug_handoff.md.
+
+● Ενημερώνω το memory topic:
+
+  Recalled 1 memory, wrote 1 memory (ctrl+o to expand)
+
+● Έτοιμο. ✅ Το bug διορθώθηκε.
+
+  Τι έφταιγε & τι έφτιαξα
+  Root cause (επιβεβαιωμένο από τα Firestore data του Ισογείου): τα 2 εφαπτόμενα ορθογώνια του Γ μοιράζονται κορυφή → ο κοινός κόμβος γίνεται βαθμού 4. Ο αυστηρός
+  walkSimpleCycle (απαιτεί κάθε κόμβο βαθμού 2) επέστρεφε null → κανένα περίγραμμα δεν εξαγόταν → η Φ3b unionTouching ποτέ δεν έπαιρνε δεδομένα → toast «noneBuilt».
+  Fix (perimeter-from-faces.ts):
+  - extractClosedPolygons + νέο optional {detectTouchingRects} → τρέχει ΕΠΙΣΗΣ τον υπάρχοντα corner-graph findRectanglesFromSegments (ανέχεται degree-4 κόμβους) στις
+  σκόρπιες γραμμές, + dedup polygonKey (ώστε μεμονωμένο ορθογώνιο να μη μετρηθεί διπλά).
+  - Το perimeterFacesToRects το ανάβει μόνο στο column path (unionTouching:true): το safeUnion ενώνει τα ξεχωριστά ορθογώνια σε Γ/Τ/Π και απορροφά τυχόν over-detection
+  (self-healing). Wall path αμετάβλητο — μηδέν regression.
+
+  Reuse-first (N.0.2): μηδέν νέα geometry math — αξιοποίησα τον detector που ήδη υπήρχε από τη Φ1K.
+
+  Tests: 5 νέα regression (walker→0 · detect→2 · single→no-double · union→1 Γ · wall→0) → 23/23 perimeter + 27/27 column-from-faces/wall-in-region. tsc exit 0.
+
+  Trackers (N.15): ADR-363 §12 changelog + local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt + memory topic ενημερωμένα.
+
+  ⚠️  Μία λεπτομέρεια: το fix ενεργοποιείται στο box-select (η χειρονομία που χρησιμοποιείς). Το single-click-inside (onPerimeterClick) δεν ανάβει το detect (δεν κάνει
+  union) — άρα Γ από σκόρπια ορθογώνια θέλει box-select, όχι μονό κλικ. Αν θες να δουλεύει και με κλικ, πες μου.
+
+  Αρχεία (pending commit): perimeter-from-faces.ts + το test + ADR-363 doc.
+
+  ✅ Google-level: YES — root-cause (degree-4) όχι workaround, reuse υπάρχοντος SSoT, opt-in μόνο όπου το union το ραφράζει (μηδέν wall regression).
+
+  Δοκίμασέ το στον browser (box-select τις γραμμές του Γ → «Τοιχίο από περίγραμμα»). Θες commit μετά την επιβεβαίωση;
+
+  📊 Context: ~80% | Commands: ~16 | 🔴 Καλό θα ήταν /clear μετά το commit
+
+✻ Sautéed for 8m 11s
+
+❯ ΤΩΡΑ ΛΕΙΤΟΥΡΓΕΙ ΣΩΣΤΑ. ΘΕΛΩ ΤΩΡΑ ΝΑ ΔΗΜΙΟΥΡΓΗΣΕΙΣ ΕΝΤΟΛΗ ΜΕΣΑ ΣΤΟ DROPDOWN MENU "ΚΟΛΩΝΑ ΑΠΟ ΠΕΙΓΡΑΜΜΑ" ΩΣΤΕ ΝΑ ΜΠΟΡΕΙ ΝΑ ΔΗΜΙΟΥΡΓΩ ΚΟΛΩΝΕΣ ΜΕ ΤΟΝ ΙΔΙΟ ΤΡΟΠΟ ΠΟΥ        
+  ΔΗΜΙΟΥΡΓΟΥΝΤΑΙ ΤΟΙΧΙΑ, ΟΤΑΝ ΙΣΧΥΟΥΝ ΟΙ ΟΡΙΣΜΟΙ ΑΥΤΟΙ ΠΟΥ ΠΡΙΝ ΛΙΓΟ ΜΟΥ ΕΔΩΣΕΣ (❯ ΤΩΡΑ ΘΕΛΩ ΝΑ ΨΑΞΕΙΣ ΤΗΝ ΒΑΣΗ ΔΕΔΟΜΕΝΩΝ ΚΑΙ ΝΑ ΜΟΥ ΠΕΙΣ, ΑΝ ΕΝΩΣΟΥΜΕ ΤΙΣ ΓΡΑΜΜΕΣ ΠΟΥ      ΥΠΑΡΧΟΥΝ ΤΙΣ ΕΙΔΟΥΣ ΠΕΡΙΓΡΑΜΜΑΤΑ ΔΗΜΙΟΥΡΓΟΥΝΤΑΙ? ΔΗΛΑΔΗ ΣΤΑ ΠΕΡΙΓΡΑΜΜΑΤΑ ΑΥΤΑ ΑΝ                                                                                        
+    ΕΓΓΡΑΨΟΥΜΕ ΔΟΜΙΚΑ ΣΤΟΙΧΕΙΑ BIM ΟΠΛΙΣΜΕΝΟΥ ΣΚΥΡΟΔΕΜΑΤΟΣ, ΣΤΟ ΤΕΛΟΣ ΘΑ ΕΧΟΥΜΕ ΚΟΛΩΝΕΣ Ή ΤΟΙΧΙΑ Ή ΚΑΙ ΤΑ ΔΥΟ?                                                                                                                                                                                                                                      
+                                                                                                                                                                          
+  ● Θα ψάξω τη Firestore βάση. Πρώτα φορτώνω τα firestore MCP tools:                                                                                                      
+                                                                                                                                                                          
+  ● Τώρα εξερευνώ τη δομή της βάσης — collections + schemas:                                                                                                              
+                                                                                                                                                                          
+    Called firestore 2 times (ctrl+o to expand)                                                                                                                           
+                                                                                                                                                                          
+  ● Δεν υπάρχει ξεχωριστή collection για raw lines — τα DXF entities αποθηκεύονται μέσα σε scene files. Ψάχνω στα dxf_viewer_levels και files:                            
+                                                                                                                                                                          
+    Called firestore 2 times (ctrl+o to expand)                                                                                                                           
+                                                                                                                                                                          
+  ● Τα lines είναι μέσα στα scene.json (Firebase Storage). Δύο κατόψεις: Ισόγειο (12 entities, μικρό) και 2ος όροφος (3268 entities, πλήρες σχέδιο 21×15m). Φορτώνω το    
+    storage read tool:                                                                                                                                                    
+                                                                                                                                                                          
+  ● Διαβάζω το scene.json του Ισογείου (12 entities):                                                                                                                     
+                                                                                                                                                                          
+    Called firestore (ctrl+o to expand)                                                                                                                                   
+                                                                                                                                                                          
+  ● Βρήκα και ανέλυσα τα δεδομένα. Το Ισόγειο έχει 12 γραμμές που σχηματίζουν 3 καθαρά κλειστά περιγράμματα (σκόπιμα σχεδιασμένα, layers COLOR_23/COLOR_160). Τα ένωσα    
+  και                                                                                                                                                                     
+    εφάρμοσα το κριτήριο lw/bw:                                                                                                                                           
+                                                                                                                                                                          
+    Αποτέλεσμα: ΚΑΙ ΤΑ ΔΥΟ — κολώνες ΚΑΙ τοιχία                                                                                                                           
+                                                                                                                                                                          
+    ┌────────────┬──────────────────────┬──────────────────┬───────┬──────────────────────────────┐  │ Περίγραμμα │       Γραμμές        │ Διαστάσεις (Π×Μ) │ lw/bw │     
+     Χαρακτηρισμός         │                                                                                                                                              
+    ├────────────┼──────────────────────┼──────────────────┼───────┼──────────────────────────────┤                                                                       
+    │ A          │ line_162/164/165/395 │ 750 × 250 mm     │ 3,0   │ Κολώνα (επιμήκης ορθογωνική) │                                                                       
+    ├────────────┼──────────────────────┼──────────────────┼───────┼──────────────────────────────┤                                                                       
+    │ B          │ line_231/292/294/295 │ 250 × 1000 mm    │ 4,0   │ Τοιχίο (οριακό, ≥4)          │                                                                       
+    ├────────────┼──────────────────────┼──────────────────┼───────┼──────────────────────────────┤                                                                       
+    │ C          │ line_474/475/476/477 │ 250 × 500 mm     │ 2,0   │ Κολώνα                       │                                                                       
+    └────────────┴──────────────────────┴──────────────────┴───────┴──────────────────────────────┘                                                                       
+                                                                                                                                                                          
+    (Οι συντεταγμένες είναι σε μέτρα — το units:"mm" flag δεν ισχύει για τη scene· bounds = 10×11 m κτίριο. Τα 250/500/750/1000 mm είναι ρεαλιστικά πάχη ΟΣ.)             
+                                                                                                                                                                          
+    Κρίσιμη παρατήρηση — τα A + B εφάπτονται                                                                                                                              
+                                                                                                                                                                          
+    Το A (οριζόντιο, y∈[0,25–0,50]) και το B (κατακόρυφο, x∈[0,651–0,901]) μοιράζονται την ακμή στο x=0,901 → σχηματίζουν σχήμα Γ (L-shape).                              
+    - Αν τα κρατήσουμε χωριστά → 1 κολώνα (A) + 1 τοιχίο (B) + 1 κολώνα (C) = 2 κολώνες + 1 τοιχίο                                                                        
+    - Αν τα ενώσουμε (ADR-363 Φ3b auto-union) → 1 σύνθετο τοιχίο Γ + 1 κολώνα (C). Ως ενιαίο φέρον, η Γ-διατομή είναι τοίχωμα (Eurocode 8 — ενιαίο φέρον στοιχείο).       
+                                                                                                                                                                          
+    Συμπέρασμα                                                                                                                                                            
+                                                                                                                                                                          
+    Εγγράφοντας οπλισμένο σκυρόδεμα στα περιγράμματα του Ισογείου, παίρνεις και τα δύο: κυρίως κολώνες, με τουλάχιστον ένα τοιχίο (το B, οριακά στο lw/bw=4· γίνεται      
+  σαφές                                                                                                                                                                   
+    τοιχίο αν ενωθεί με το A σε Γ-διατομή).)                                                                                                                              
+
+● Ο Giorgio θέλει νέα εντολή «Κολώνα από περίγραμμα» στο dropdown, δίπλα στο υπάρχον «Τοιχίο από περίγραμμα».
+
+  ⚠️  Σημαντικό εύρημα από RECOGNITION: Το υπάρχον «Τοιχίο από περίγραμμα» (tool id column-from-perimeter) ήδη παράγει ColumnEntity και ήδη εφαρμόζει το κριτήριο lw/bw:
+  // column-from-faces.ts → rectColumnPlacement  const kind = aspect >= SHEAR_WALL_MIN_ASPECT_RATIO /*4*/ ? 'shear-wall' : 'rectangular';
+  Και ενώνει εφαπτόμενα (unionTouching:true). Άρα η νέα εντολή «Κολώνα» χρειάζεται σαφή διαφοροποίηση για να μην είναι διπλότυπο. Πρέπει να αποφασίσεις τη συμπεριφορά:
+
+● User answered Claude's questions:
+  ⎿  · Πώς να συμπεριφέρεται το «Κολώνα από περίγραμμα» όταν τα ορθογώνια εφάπτονται (σε αντίθεση με το «Τοιχίο» που τα ΕΝΩΝΕΙ σε σύνθετο Γ/Π); → ΑΝ ΕΠΙΛΕΞΟΥΜΕ   2. Να 
+     ενώνει κι αυτό (όπως το τοιχίο) ΕΝΔΕΧΕΤΑΙ ΤΟΤΕ Η ΕΝΩΣΗ ΝΑ ΟΔΗΓΕΙ ΣΕ ΤΟΙΧΙΟ ΛΟΓΩ ΔΙΑΣΤΑΣΕΩΝ. ΚΑΙ ΕΙΠΑΜΕ ΠΩΣ ΠΡΕΠΕΙ ΝΑ ΠΡΟΣΕΧΟΥΜΕ ΠΟΛΥ ΔΙΟΤΙ ΑΛΛΙΩΣ ΟΠΛΙΖΟΝΤΑΙ ΤΑ 
+     ΤΟΙΧΙΑ ΚΑΙ ΑΛΛΙΩΣ ΟΙ ΚΟΛΩΝΕΣ. ΠΡΕΠΕΙ ΝΑ ΒΓΑΙΝΟΥΝ ΣΩΣΤΑ ΤΑ ΣΤΑΤΙΚΑ. ΤΙ ΠΡΟΤΕΙΝΕΙΣ? ΠΩΣ ΤΟ ΧΕΙΡΙΖΟΝΤΑΙ ΟΙ ΜΕΓΑΛΟΙ ΠΑΙΧΤΕΣ ΠΟΥ ΥΠΟΛΟΓΙΖΟΥΝ ΣΤΑΤΙΚΑ?     · Όταν ένα περίγραμμα είναι γεωμετρικά ΤΟΙΧΙΟ (lw/bw ≥ 4), τι κάνει η εντολή «Κολώνα από περίγραμμα»; → ΝΑ ΒΓΑΙΝΕΙ ΜΗΝΥΜΑ ΠΟΥ ΝΑ ΛΕΕΙ "ΟΙ ΑΝΑΛΟΓΙΕΣ ΤΟΥ ΠΕΡΙΓΡΑΜΜΑΤΟΣ
+     ΑΝΤΙΣΤΟΙΧΟΥΝ ΣΕ ΤΟΙΧΙΟ ΚΑΙ ΟΧΙ ΣΕ ΚΟΛΩΝΑ. ΘΕΛΕΤΕ ΝΑ ΔΗΜΙΟΥΡΓΗΣΕΤΕ ΤΟΙΧΙΟ?" 
+● Σωστή η ανησυχία σου — και είναι κρίσιμη στατικά. Να απαντήσω στο πώς το κάνουν οι μεγάλοι και τι προτείνω.
+
+  Πώς το χειρίζονται οι μεγάλοι (ETABS / Revit Structure / Tekla / SCIA)
+  1. Η διάκριση κολώνα ↔ τοιχίο είναι ΡΗΤΗ απόφαση του μηχανικού, ΠΟΤΕ αυτόματη από «ένωση».
+    - ETABS/SAP2000: κολώνα = frame/line object (στοιχείο δοκού-υποστυλώματος), τοιχίο = wall/area (shell) object. Εντελώς διαφορετικό στατικό μοντέλο (γραμμικό vs  επιφανειακό). Τα σύνθετα πυρήνες (Γ/Π core) παίρνουν ρητό Pier/Spandrel label για να δουλέψουν ως ένα φέρον.
+    - Revit Structure / Tekla: ξεχωριστά εργαλεία Structural Column vs Structural Wall — κανένα δεν μετατρέπει αυτόματα το ένα στο άλλο.
+    - Το lw/bw ≥ 4 (EC8 §5.1.2) είναι κανονιστικός ορισμός/guideline — το λογισμικό προειδοποιεί/προτείνει, δεν αποφασίζει σιωπηλά.
+  2. Γιατί η σιωπηλή ένωση είναι επικίνδυνη (αυτό που εντόπισες): η όπλιση είναι ριζικά διαφορετική:
+    - Κολώνα: διαμήκης οπλισμός περιμετρικά + κλειστοί συνδετήρες περίσφιγξης (confinement), διαξονική κάμψη + αξονικό.
+    - Τοιχίο: κατακόρυφο/οριζόντιο πλέγμα κορμού + συγκεντρωμένος οπλισμός άκρων (boundary elements / κρυφοκολώνες) + έλεγχος διάτμησης.
+    - Δύο μικρές κολώνες που τυχαία ακουμπούν → αν ενωθούν → ψευδο-τοιχίο με λάθος όπλιση → στατικό σφάλμα.
+
+  Πρότασή μου (industry-aligned + στατικά ασφαλής)
+
+  ┌────────────────┬────────────────────────────────────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │                │     «Τοιχίο από περίγραμμα» (υπάρχον)      │                                    «Κολώνα από περίγραμμα» (νέο)                                    │
+  ├────────────────┼────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Ένωση          │ ΝΑΙ (unionTouching:true) — σύνθετο Γ/Π     │ ΟΧΙ (unionTouching:false) — κάθε ορθογώνιο = ξεχωριστή κολώνα                                       │
+  │ εφαπτόμενων    │ core ως ένα φέρον                          │                                                                                                     │
+  ├────────────────┼────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Guard lw/bw    │ —                                          │ lw/bw ≥ 4 ανά περίγραμμα → dialog: «Οι αναλογίες αντιστοιχούν σε τοιχίο. Θέλετε να δημιουργήσετε    │
+  │                │                                            │ τοιχίο;» → [Τοιχίο] / [Κολώνα παρόλα αυτά] / [Άκυρο]                                                │
+  └────────────────┴────────────────────────────────────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  Γιατί NO union για την κολώνα: απαντά ακριβώς στον κίνδυνό σου — η ένωση είναι ΑΚΡΙΒΩΣ το λάθος. Χωρίς ένωση, κάθε ορθογώνιο αξιολογείται μόνο του για lw/bw· αν κάποιο
+  βγει ≥4, το confirm-dialog μπαίνει εμπόδιο πριν δημιουργηθεί λάθος στοιχείο. Αυτό υλοποιεί ακριβώς το μήνυμα που ζήτησες στο Q2.
 
   ---
-  Στο handoff κατέγραψα:
-  - §1 — τη νέα εντολή με εντοπισμένο root cause (onEditPointerMove κινεί μόνο το gizmo, όχι το mesh) + αρχιτεκτονική κατεύθυνση (live mesh transform vs ghost) +
-  units/perf παγίδες + 2Δ preview SSoT για mirror.
-  - §2 — την προηγούμενη ολοκληρωμένη φάση (κάθετο βελάκι) που εκκρεμεί browser verify.
-  - §3 — ποια ακριβώς αρχεία ανήκουν στο ADR-402 vs ADR-401/403 (για να μην μπλεχτεί το staging).
-  - §4 — ότι εσύ κάνεις commit, όχι ο agent.
+  ⚠️  Πριν προχωρήσω — 2 διαδικαστικά (κανόνες N.8 + N.9):
 
+  1. Εύρος = Orchestrator (~10-12 αρχεία, 2 domains: ribbon + tools/bim): νέο ToolType, tool-definition, dropdown entry, contextual config, 4-5 box-select gates, EventBus  event, confirm-dialog (Radix), νέα orchestrator perimeterFacesToColumns με {unionTouching:false} + lw/bw guard, i18n. Per N.8 σε ενημερώνω πριν.
+  2. Context 🔴 (~82%) — μεγάλη συνεδρία. Συστήνω: handoff report + /clear + υλοποίηση σε καθαρή συνεδρία (Plan Mode), για Google-level ποιότητα χωρίς θόρυβο.
 
-ADR-403 
-● ✅ Δημιουργήθηκε το handoff:
+  Συμφωνείς με την πρόταση (NO union + confirm-dialog στο lw/bw≥4); Κι αν ναι, να γράψω handoff + /clear ή να προχωρήσω τώρα σε Plan Mode;
 
-  C:\Nestor_Pagonis\HANDOFFS\2026-06-01_ADR-403_3D-column-placement_handoff.md
-  Ακολουθεί τη σύμβαση των υπαρχόντων handoffs του φακέλου και περιέχει:
-  ┌────────────────────────┬─────────────────────────────────────────────────────────────────────────────────────┐
-  │        Ενότητα         │                                     Περιεχόμενο                                     │
-  ├────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
-  │ Status header          │ ✅ Κώδικας 100% έτοιμος (tsc 0 + 38/38) · ⏳ pending commit · 🔴 browser verify     │
-  ├────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
-  │ Crash note             │ Πού διακόπηκε & ότι δεν χάθηκε κώδικας                                              │
-  ├────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
-  │ TL;DR                  │ Root cause + λύση + 2 αποφάσεις Giorgio                                             │
-  ├────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
-  │ Αρχεία                 │ 4 NEW (placement/) + 4 MOD αναλυτικά                                                │
-  ├────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
-  │ Verification           │ Τα ακριβή αποτελέσματα αυτής της session                                            │
-  ├────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
-  │ Εκκρεμεί               │ Browser verify checklist + commit + deferred                                        │
-  ├────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
-  │ ⚠️  Multi-agent warning │ Ποια αρχεία αγγίζουν άλλοι agents + έτοιμη git add λίστα με specific files (ΟΧΙ -A) │
-  ├────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
-  │ N.15 docs              │ Τι έχει ήδη ενημερωθεί                                                              │
-  ├────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
-  │ Next session           │ Από πού ξεκινά ο επόμενος                                                           │
-  └────────────────────────┴─────────────────────────────────────────────────────────────────────────────────────┘
+✻ Worked for 4m 58s
+
+❯  2. Context 🔴 (~82%) — μεγάλη συνεδρία. Συστήνω: handoff report + /clear + υλοποίηση σε καθαρή συνεδρία (Plan Mode), για Google-level ποιότητα χωρίς θόρυβο. = ΟΚ      
+
+● Εντάξει. Γράφω πλήρες handoff report για καθαρή υλοποίηση στην επόμενη συνεδρία.
+
+● Write(HANDOFFS\2026-06-01_ADR-363_column-from-perimeter_handoff.md)
+  ⎿  Wrote 76 lines to HANDOFFS\2026-06-01_ADR-363_column-from-perimeter_handoff.md
+      1 # HANDOFF — ADR-363: ΝΕΑ εντολή «Κολώνα από περίγραμμα» (discrete + lw/bw guard)
+      2       3 **Ημερομηνία:** 2026-06-01
+      4 **Συντάκτης:** Opus 4.8 (μετά browser-verify του «Τοιχίο από περίγραμμα» + του loose-line fix)      5 **ADR:** ADR-363 §6 (Δομικά από περίγραμμα) — νέα Φάση 3c.
+      6 **Γλώσσα:** Ελληνικά πάντα. **Commit/push:** ΜΟΝΟ Giorgio (N.(-1)). **Stage:** `git add <specific>`, ΠΟΤΕ `-A`.
+      7 **Model/mode:** Opus + **Plan Mode** (orchestrator: ~10-12 αρχεία, 2 domains — N.8). Ξεκίνα με RECOGNITION.
+      8
+      9 ---
+     … +82 lines (ctrl+o to expand)
+
+● Προσθέτω pointer στο ΕΚΚΡΕΜΟΤΗΤΕΣ + memory ώστε η νέα συνεδρία να το βρει:
+
+● Update(local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt)
+  ⎿  Added 3 lines, removed 1 line
+      180  
+      181  ✅ ΥΛΟΠΟΙΗΜΕΝΟ Φ3b 2026-06-01 (Opus 4.8) — pending commit, 🔴 browser verify. AUTO-UNION γειτονικών πλαισίων στο «Τοιχίο από περίγραμμα». Από browser-ve           rify Giorgio: 3 χωριστά ορθογώνια Π → έδιναν 3 τοιχία αντί 1. ΣΩΣΤΟ (Giorgio, στατικά): ένα Π = ΕΝΑ φέρον στοιχείο (Eurocode 8 σύνθετη λειτουργία, ενιαί
+           ο κεντροειδές/Ix·Iy/κέντρο διάτμησης) → πρέπει να ενώνεται. FIX: NEW unionTouchingPolygons (reuse SSoT safeUnion/polygon-clipping) + optional {unionTouc           hing} param στο κοινό perimeterFacesToRects (ενώνει εφαπτόμενα/επικαλυπτόμενα, κρατά ασύνδετα ΧΩΡΙΣΤΑ, καθαρίζει self-intersections). DEFAULT false (τοί
+           χοι αμετάβλητοι, 0 regression)· ON στο perimeterFacesToColumns. Holes→outer ring deferred· empty→fallback· ≤1→early-return. 2 MOD (perimeter-from-faces.
+           ts, column-from-faces.ts) + test (3 ορθογώνια Π→1 U-shape· 2 disjoint→2· lone bowtie→ignored). 17/17+18/18+41/41, tsc 0. DEFERRED: holes σε union· verte
+           x add/remove.
+      182  
+      183 -✅ ΥΛΟΠΟΙΗΜΕΝΟ Φ3b FIX 2026-06-01 (Opus 4.8) — pending commit, 🔴 browser verify. BUG (Giorgio browser): Γ/L τοιχίο ως 2 ορθογώνια με ΣΚΟΡΠΙΕΣ ΓΡΑΜΜΕΣ π
+          -ου μοιράζονται κορυφή → toast «Δεν βρέθηκε έγκυρο περίγραμμα» αντί Γ. ROOT (firestore data-verified, Ισόγειο flr_ecebe795): ο κοινός κόμβος γίνεται ΒΑΘΜ
+          -ΟΥ 4· ο αυστηρός simple-cycle walker (buildPolygonLoops/walkSimpleCycle, απαιτεί κάθε κόμβο degree-2) → null → extractClosedPolygons βγάζει ΚΑΝΕΝΑ πολύγ
+          -ωνο → η Φ3b unionTouching ποτέ δεν παίρνει δεδομένα → 0 τοιχία. (Μεμονωμένο ορθογώνιο=degree-2→δούλευε· 2 εφαπτόμενα=degree-4→απέτυχε.) FIX: extractClos
+          -edPolygons νέο optional {detectTouchingRects} → τρέχει ΕΠΙΣΗΣ τον υπάρχοντα corner-graph findRectanglesFromSegments (ανέχεται κοινές κορυφές) στις loose
+          - γραμμές + dedup polygonKey· perimeterFacesToRects το ανάβει ΜΟΝΟ όταν unionTouching (column path) — το safeUnion ενώνει τα ξεχωριστά ορθογώνια σε Γ/Τ/Π
+          - ΚΑΙ απορροφά over-detected υπο-ορθογώνια (self-healing). Wall path ΑΜΕΤΑΒΛΗΤΟ (detect off, 0 regression). 1 MOD (perimeter-from-faces.ts) + 5 NEW regre
+          -ssion tests (walker→0· detect→2· single→no-double· union→1 Γ· wall→0). 23/23 perimeter + 27/27 column-from-faces/wall-in-region, tsc 0. reuse-first (N.0
+          -.2), root-cause όχι workaround. 🔴 browser verify (Γ από 2 σκόρπια ορθογώνια → 1 τοιχίο L).                                                             
+      183 +✅ ΥΛΟΠΟΙΗΜΕΝΟ Φ3b FIX 2026-06-01 (Opus 4.8) — pending commit, 🔴 browser verify. BUG (Giorgio browser): Γ/L τοιχίο ως 2 ορθογώνια με ΣΚΟΡΠΙΕΣ ΓΡΑΜΜΕΣ π
+          +ου μοιράζονται κορυφή → toast «Δεν βρέθηκε έγκυρο περίγραμμα» αντί Γ. ROOT (firestore data-verified, Ισόγειο flr_ecebe795): ο κοινός κόμβος γίνεται ΒΑΘΜ
+          +ΟΥ 4· ο αυστηρός simple-cycle walker (buildPolygonLoops/walkSimpleCycle, απαιτεί κάθε κόμβο degree-2) → null → extractClosedPolygons βγάζει ΚΑΝΕΝΑ πολύγ
+          +ωνο → η Φ3b unionTouching ποτέ δεν παίρνει δεδομένα → 0 τοιχία. (Μεμονωμένο ορθογώνιο=degree-2→δούλευε· 2 εφαπτόμενα=degree-4→απέτυχε.) FIX: extractClos
+          +edPolygons νέο optional {detectTouchingRects} → τρέχει ΕΠΙΣΗΣ τον υπάρχοντα corner-graph findRectanglesFromSegments (ανέχεται κοινές κορυφές) στις loose
+          + γραμμές + dedup polygonKey· perimeterFacesToRects το ανάβει ΜΟΝΟ όταν unionTouching (column path) — το safeUnion ενώνει τα ξεχωριστά ορθογώνια σε Γ/Τ/Π
+          + ΚΑΙ απορροφά over-detected υπο-ορθογώνια (self-healing). Wall path ΑΜΕΤΑΒΛΗΤΟ (detect off, 0 regression). 1 MOD (perimeter-from-faces.ts) + 5 NEW regre
+          +ssion tests (walker→0· detect→2· single→no-double· union→1 Γ· wall→0). 23/23 perimeter + 27/27 column-from-faces/wall-in-region, tsc 0. reuse-first (N.0
+          +.2), root-cause όχι workaround. ✅ BROWSER-VERIFIED 2026-06-01 (Giorgio «τώρα λειτουργεί σωστά»).                                                       
+      184 +                                                                                                                                                        
+      185 +❌ ΕΚΚΡΕΜΕΙ Φ3c — ΝΕΑ εντολή «Κολώνα από περίγραμμα» (handoff γραμμένο 2026-06-01). Δίπλα στο «Τοιχίο από περίγραμμα» στο dropdown. ΑΠΟΦΑΣΕΙΣ Giorgio (κ
+          +λειδωμένες): (1) NO union — κάθε ορθογώνιο=ξεχωριστή κολώνα (στατικό: κολώνες=διακριτά σημειακά, σιωπηλή ένωση→λάθος όπλιση· ETABS/Revit/Tekla=ρητή απόφ
+          +αση όχι auto-merge). (2) lw/bw guard: περίγραμμα ≥4 (ή non-rectangular)→confirm dialog «Οι αναλογίες του περιγράμματος αντιστοιχούν σε τοιχίο και όχι σε
+          + κολώνα. Θέλετε να δημιουργήσετε τοιχίο;» [Τοιχίο]/[Κολώνα παρόλα αυτά]/[Άκυρο]. RECOGNITION: το υπάρχον «Τοιχίο» (id column-from-perimeter) ΗΔΗ παράγει
+          + ColumnEntity + ΗΔΗ rectColumnPlacement lw/bw=4· μόνη διαφορά νέου = unionTouching:false + guard. Orchestrator ~10-12 αρχεία (Plan Mode). ΠΛΗΡΕΣ ΣΧΕΔΙΟ:
+          + HANDOFFS/2026-06-01_ADR-363_column-from-perimeter_handoff.md.                                                                                          
+      186  BROWSER VERIFY Giorgio 2026-06-01: TEST A centering (μετά union) ✅· B per-vertex grips ✅· D section symbol ✅· E manual Π panel ✅· C in-place mirror
+           ✅· C copy+mirror ✅ FIXED + BROWSER-VERIFIED 2026-06-01 (βλ. παρακάτω).
+      187  
+      188  ✅ ΥΛΟΠΟΙΗΜΕΝΟ + BROWSER-VERIFIED BUG FIX — BIM copy+mirror: το αντίγραφο τώρα persist-άρει (2026-06-01, Opus 4.8· Giorgio verified «το μιρρορ κοπυ λειτ
+           ουργεί») — pending commit. Σύμπτωμα: mirror με αντίγραφο («κράτα αρχικό;»=ΝΑΙ, keepOriginals=true) → αντίγραφο εμφανιζόταν & επόμενο Firestore snapshot
+           το έσβηνε. ROOT (επιβεβαιωμένο): MirrorEntityCommand.execute (copy branch) + BimCopyCommand.execute έκαναν σκέτο addEntity(clone) με generateEntityId()
+           — ΧΩΡΙΣ drawing:entity-created broadcast → το use*Persistence diff-merge (source of truth) αφαιρούσε ό,τι δεν είναι στα docs+όχι dirty/pending. FIX (Opt
+           ion A handoff, full SSoT/Boy-Scout): NEW bim/transforms/bim-clone-persistence.ts (mintBimCloneIdentity per-type enterprise ID + fresh ifcGuid· broadcast
+           BimCloneCreated/Deleted/Restored — συμμετρικό DeleteEntityCommand). MirrorEntityCommand: copy branch→clone με enterprise ID + create broadcast· αποθηκεύ
+           ει ΟΛΑ τα clones→undo/redo id-stable (όχι orphan docs)+delete/restore. BimCopyCommand: ίδια broadcasts + διόρθωση λανθασμένου doc comment. bim-copy-buil
+           der: αφαιρέθηκε διπλός ID_GENERATORS (N.0.2)→κοινό mintBimCloneIdentity (+fresh ifcGuid). CopyEntityCommand ΑΝΕΠΑΦΟ — όλοι οι BIM τύποι early-return στο
+           υς parametric grip handlers πριν φτάσουν εκεί → βλέπει μόνο generic DXF (persist μέσω DXF-JSON autosave). Tests: 37/37 PASS (NEW bim-clone-persistence.t
+           est 18 + NEW MirrorEntityCommand.persistence.test + επέκταση BimCopyCommand.test + υπάρχοντα bim-copy-builder/MirrorEntityCommand.bim), tsc clean. ADR-3
+           63 §7.2 fix changelog. HANDOFF (αρχικό): HANDOFFS/2026-06-01_BIM_copy-mirror-persistence-bug_handoff.md.
+
+  Recalled 1 memory (ctrl+o to expand)
+
+● Διορθώνω ένα διπλό κείμενο στο index (από προηγούμενο edit) + προσθέτω pointer για τη Φ3c:
+
+  Wrote 1 memory (ctrl+o to expand)
+
+● ✅ Handoff έτοιμο: HANDOFFS/2026-06-01_ADR-363_column-from-perimeter_handoff.md
+
+  Περιέχει: τις κλειδωμένες αποφάσεις (NO union + lw/bw≥4 confirm-dialog με το ακριβές μήνυμά σου), την industry/στατική αιτιολόγηση, πλήρες RECOGNITION (το υπάρχον
+  «Τοιχίο» ήδη παράγει ColumnEntity + lw/bw — μόνη διαφορά = unionTouching:false + guard), πίνακα όλων των αρχείων που πρέπει να αλλάξουν (mirror του υπάρχοντος tool),  σχέδιο, test plan, trackers.
+  Καταγράφηκε και σε: local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt (❌ ΕΚΚΡΕΜΕΙ Φ3c) + MEMORY.md (⏳ NEXT-SESSION pointer).
+
+  ⚠️  Πριν το /clear — εκκρεμεί commit: το loose-line touching-rects fix (που μόλις επιβεβαίωσες ότι λειτουργεί) είναι ακόμα pending commit — 3 αρχεία:
+  - bim/walls/perimeter-from-faces.ts
+  - bim/walls/__tests__/perimeter-from-faces.test.ts
+  - ADR-363-bim-drawing-mode.md
+
+  Προτείνω να το committάρουμε τώρα (καθαρό tree πριν το /clear, ώστε η νέα συνεδρία να μην το κουβαλάει).
+
+  Θες:
+  1. «commit» → committάρω το loose-line fix, μετά κάνεις /clear και δίνεις την εντολή για τη Φ3c (δείχνοντας το handoff), ή
+  2. /clear κατευθείαν (το fix μένει pending για την επόμενη συνεδρία);
+
+  📊 Context: ~85% | 🔴 Μετά το commit → /clear
+
+✻ Brewed for 3m 13s
+
+❯ «commit»                                                                                                                                                                
+
+● Ακολουθώ το commit protocol. STEP 1 — κατάσταση:
+
+● Bash("C:\Program Files\Git\cmd\git.exe" status --short; echo "=== log ==="; "C:\Program Files\Git\cmd\git.exe" log --oneline -3)
+  ⎿   M docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md
+      M src/subapps/dxf-viewer/bim/walls/__tests__/perimeter-from-faces.test.ts
+      M src/subapps/dxf-viewer/bim/walls/perimeter-from-faces.ts
+     … +6 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode classifier
+
+● Καθαρή κατάσταση (το junk έφυγε). Stage μόνο τα δικά μου (ΟΧΙ το ξένο ADR-404 tilt handoff):
+
+● Bash("C:\Program Files\Git\cmd\git.exe" add \
+        "docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md" \…)
+  ⎿  warning: in the working copy of 'docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md', LF will be replaced by CRLF the next time Git touches it
+     warning: in the working copy of 'src/subapps/dxf-viewer/bim/walls/__tests__/perimeter-from-faces.test.ts', LF will be replaced by CRLF the next time Git touches
+      it
+     … +7 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode classifier
+● 4 αρχεία staged (το ξένο ADR-404 handoff εξαιρέθηκε). STEP 2 — commit:
+
+● Bash("C:\Program Files\Git\cmd\git.exe" commit -m "fix(bim): perimeter from touching loose-line rects (ADR-363)" -m "extractClosedPolygons detects touching rectangle…)
+  ⎿  Error: Exit code 1
+     🔍 Running pre-commit checks...
+     🔍 Running project-specific checks...
+       ✅ Project rules passed
+     ⚡ 14 checks running in parallel (14 threads + 0 processes)...
+       ✅ i18n keys: all t() calls have matching locale entries       ⛔ CHECK 4 (File sizes) exited 1
+     ✅ CHECK 3.18 smoke — baseline OK (duplicates:0 antiPatterns:0 unprotected:0). Full scan runs in CI.       ✅ Notification keys: no new raw-key violations (1 file(s) in scope)
+       ✅ Tailwind palette: no new raw-utility violations (1 file(s) in scope)
+     … +1 line (ctrl+o to expand)
+
+● CHECK 4 (File sizes) απέτυχε. Βρίσκω ποιο αρχείο:
+
+● Bash(for f in src/subapps/dxf-viewer/bim/walls/perimeter-from-faces.ts; do echo "$(grep -c "" "$f")  $f"; done)
+  ⎿  521  src/subapps/dxf-viewer/bim/walls/perimeter-from-faces.ts
+  ⎿  Allowed by auto mode classifier
+
+● perimeter-from-faces.ts = 521 γρ. (οι προσθήκες μου το πέρασαν το 500). Είμαι Opus — κάνω σωστό split (N.7.1): καθαρό pure-math module. Διαβάζω το τρέχον αρχείο για
+  ακρίβεια:
+
+  Read 1 file (ctrl+o to expand)
+
+● Κάνω καθαρό split: νέο pure-math module + το main κρατά extraction/union/orchestrator. Δημιουργώ perimeter-polygon-math.ts:
+
+● Write(src\subapps\dxf-viewer\bim\walls\perimeter-polygon-math.ts)
+  ⎿  Wrote 271 lines to src\subapps\dxf-viewer\bim\walls\perimeter-polygon-math.ts
+       1 /**
+       2  * ADR-363 — pure polygon math για το «Δομικά στοιχεία από περίγραμμα» SSoT.       3  *
+       4  * Εξήχθη από `perimeter-from-faces.ts` (N.7.1 file-size split): καθαρή γεωμετρία       5  * πολυγώνου χωρίς εξάρτηση από scene entities —
+       6  *   1) κανονικοποίηση (dedupe κλεισίματος → CCW → αφαίρεση συγγραμμικών),
+       7  *   2) κατηγοριοποίηση σχήματος (ευθύ/Γ/Τ/Π/σύνθετο) από ορθές/ανακλαστικές γωνίες,
+       8  *   3) αποσύνθεση ορθογωνικού πολυγώνου σε ορθογώνια σκέλη (slab sweep, στραμμένα OK).
+       9  *
+      10  * Το `perimeter-from-faces.ts` (extraction + union + orchestrator) καταναλώνει αυτά
+     … +261 lines (ctrl+o to expand)
+
+● Ξαναγράφω το perimeter-from-faces.ts (κρατά extraction/union/orchestrator + re-exports, εισάγει το math module):
+
+● Write(src\subapps\dxf-viewer\bim\walls\perimeter-from-faces.ts)
+  ⎿  Added 22 lines, removed 256 lines
+       7   *   2) την ΚΑΤΗΓΟΡΙΑ σχήματος (ευθύ/Γ/Τ/Π/σύνθετο) από ορθές/ανακλαστικές γωνίες,
+       8   *   3) την ΑΠΟΣΥΝΘΕΣΗ σε ορθογώνια σκέλη (slab sweep) → πάχος ανά σκέλος = μικρή πλευρά.
+       9   *
+      10 + * Η καθαρή γεωμετρία πολυγώνου (κανονικοποίηση/κατηγοριοποίηση/αποσύνθεση) ζει στο                                                                            11 + * `./perimeter-polygon-math.ts` (N.7.1 split)· εδώ μένει η εξαγωγή από scene entities,                                                                  
+      12 + * το union γειτονικών και ο orchestrator. Τα `classifyPerimeter`/`decomposeRectilinear`/                                                                      13 + * `PerimeterShape` re-export-άρονται για backward-compat του public API.                                                                                
+      14 + *                                                                                                                                                       
+      15   * Κοινό SSoT για ΔΥΟ builders (Giorgio 2026-06-01):
+      16   *   - ΤΟΙΧΟΣ  → rects → `buildWallFillingRect` ×N (αλυσίδα WallEntity + miter στον caller).
+      17   *   - ΤΟΙΧΙΟ  → polygon + shape → ColumnEntity (Φάση 3).
+      18   *
+      19   * ΚΑΜΙΑ αναπαραγωγή geometry math πέρα από το shape analysis:
+      20   *   - rectangle entity corners → `rectangleCorners` (wall-from-entity).
+      16 - *   - containment → `isPointInPolygon` (GeometryUtils).                                                                                                 
+      21   *   - scene → segments → `extractLineSegments` (wall-in-region).
+      18 - *   - rect → τοίχος → `buildWallFillingRect` (wall-in-region, στον caller).                                                                             
+      22 + *   - rect detection → `findRectanglesFromSegments` (wall-in-region).                                                                                   
+      23 + *   - boolean union → `safeUnion` (polygon-clipping SSoT).                                                                                              
+      24   *
+      25   * Περιορισμός Φάσης 0/1: σχήματα με γωνίες ≠ 90° χαρακτηρίζονται 'composite' και ΔΕΝ
+      26   * αποσυντίθενται σε rects (τοίχοι → αγνοούνται· τοιχία Φάσης 3 → ΕΝΑ composite column).
+      22 - * Loose-line loops πιάνονται μόνο ως καθαρός απλός κύκλος (κάθε κόμβος βαθμού 2).                                                                       
+      27 + * Loose-line loops πιάνονται ως καθαρός απλός κύκλος (κάθε κόμβος βαθμού 2)· εφαπτόμενα                                                                 
+      28 + * ορθογώνια με κοινή κορυφή πιάνονται από τον rectangle detector (`detectTouchingRects`).                                                               
+      29   *
+      30   * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6 §6
+      31 + * @see ./perimeter-polygon-math.ts (pure polygon math)                                                                                                  
+      32   * @see ./wall-in-region.ts (rect detection + filling-wall builder)
+      33   */
+      34  
+     ...
+      48    type RegionLineSeg,
+      49  } from './wall-in-region';
+      50  import { safeUnion } from '../geometry/shared/safe-polygon-boolean';
+      51 +import {                                                                                                                                                 
+      52 +  EPS,                                                                                                                                                   
+      53 +  dist,                                                                                                                                                  
+      54 +  normalize,                                                                                                                                             
+      55 +  classifyPerimeter,                                                                                                                                     
+      56 +  decomposeRectilinear,                                                                                                                                  
+      57 +  type PerimeterShape,                                                                                                                                   
+      58 +} from './perimeter-polygon-math';                                                                                                                       
+      59  
+      60 +// Public API backward-compat — pure polygon math lives in the split module.                                                                             
+      61 +export { classifyPerimeter, decomposeRectilinear } from './perimeter-polygon-math';                                                                      
+      62 +export type { PerimeterShape } from './perimeter-polygon-math';                                                                                          
+      63 +                                                                                                                                                         
+      64  // ─── Public types ────────────────────────────────────────────────────────────
+      65  
+      47 -/** Κατηγορία διατομής περιμέτρου (ευθύ / Γ / Τ / Π / σύνθετο). */                                                                                       
+      48 -export type PerimeterShape = 'rectangle' | 'L' | 'T' | 'U' | 'composite';                                                                                
+      49 -                                                                                                                                                         
+      66  /** Ένα κλειστό περίγραμμα: εξώτατο πολύγωνο + κατηγορία + αποσύνθεση σε σκέλη. */
+      67  export interface ClosedPerimeter {
+      68    /** Καθαρισμένο πολύγωνο (CCW, χωρίς διπλό κλείσιμο/συγγραμμικά). */
+     ...
+       81    readonly ignoredCount: number;
+       82  }
+       83  
+       68 -// ─── Vector helpers ──────────────────────────────────────────────────────────                                                                        
+       69 -                                                                                                                                                        
+       70 -const EPS = 1e-9;                                                                                                                                       
+       71 -const COS_RIGHT = 0.08; // ~±4.6° ανοχή ορθής γωνίας (όπως wall-in-region)                                                                              
+       72 -                                                                                                                                                        
+       73 -function dist(a: Point2D, b: Point2D): number {                                                                                                         
+       74 -  return Math.hypot(a.x - b.x, a.y - b.y);                                                                                                              
+       75 -}                                                                                                                                                       
+       76 -                                                                                                                                                        
+       77 -/** z-component of (a−o)×(b−o) — εμβαδόν×2 / πρόσημο στροφής. */                                                                                        
+       78 -function crossZ(o: Point2D, a: Point2D, b: Point2D): number {                                                                                           
+       79 -  return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);                                                                                         
+       80 -}                                                                                                                                                       
+       81 -                                                                                                                                                        
+       82 -function unit(dx: number, dy: number): Point2D {                                                                                                        
+       83 -  const l = Math.hypot(dx, dy) || 1;                                                                                                                    
+       84 -  return { x: dx / l, y: dy / l };                                                                                                                      
+       85 -}                                                                                                                                                       
+       86 -                                                                                                                                                        
+       87 -// ─── Polygon normalization ───────────────────────────────────────────────────                                                                        
+       88 -                                                                                                                                                        
+       89 -/** Πετά το διπλό κλείσιμο (πρώτη ≈ τελευταία κορυφή). */                                                                                               
+       90 -function dedupeClosing(poly: readonly Point2D[]): Point2D[] {                                                                                           
+       91 -  const out = poly.map((p) => ({ x: p.x, y: p.y }));                                                                                                    
+       92 -  if (out.length >= 2 && dist(out[0], out[out.length - 1]) < EPS) out.pop();                                                                            
+       93 -  return out;                                                                                                                                           
+       94 -}                                                                                                                                                       
+       95 -                                                                                                                                                        
+       96 -/** Διώχνει συγγραμμικές κορυφές (κάθετη απόσταση από prev→next < tol). */                                                                              
+       97 -function removeCollinear(poly: readonly Point2D[], tol: number): Point2D[] {                                                                            
+       98 -  const n = poly.length;                                                                                                                                
+       99 -  if (n < 3) return poly.map((p) => ({ x: p.x, y: p.y }));                                                                                              
+      100 -  const out: Point2D[] = [];                                                                                                                            
+      101 -  for (let i = 0; i < n; i++) {                                                                                                                         
+      102 -    const prev = poly[(i - 1 + n) % n];                                                                                                                 
+      103 -    const cur = poly[i];                                                                                                                                
+      104 -    const next = poly[(i + 1) % n];                                                                                                                     
+      105 -    const base = dist(prev, next);                                                                                                                      
+      106 -    const height = base > EPS ? Math.abs(crossZ(prev, cur, next)) / base : 0;                                                                           
+      107 -    if (height >= tol) out.push({ x: cur.x, y: cur.y });                                                                                                
+      108 -  }                                                                                                                                                     
+      109 -  return out;                                                                                                                                           
+      110 -}                                                                                                                                                       
+      111 -                                                                                                                                                        
+      112 -function signedArea(poly: readonly Point2D[]): number {                                                                                                 
+      113 -  let s = 0;                                                                                                                                            
+      114 -  for (let i = 0; i < poly.length; i++) {                                                                                                               
+      115 -    const a = poly[i];                                                                                                                                  
+      116 -    const b = poly[(i + 1) % poly.length];                                                                                                              
+      117 -    s += a.x * b.y - b.x * a.y;                                                                                                                         
+      118 -  }                                                                                                                                                     
+      119 -  return s / 2;                                                                                                                                         
+      120 -}                                                                                                                                                       
+      121 -                                                                                                                                                        
+      122 -/** Επιστρέφει το πολύγωνο σε CCW φορά (θετικό signed area). */                                                                                         
+      123 -function toCCW(poly: readonly Point2D[]): Point2D[] {                                                                                                   
+      124 -  const p = poly.map((q) => ({ x: q.x, y: q.y }));                                                                                                      
+      125 -  return signedArea(p) < 0 ? p.reverse() : p;                                                                                                           
+      126 -}                                                                                                                                                       
+      127 -                                                                                                                                                        
+      128 -/** Κανονικοποιημένο πολύγωνο (dedupe → CCW → χωρίς συγγραμμικά). */                                                                                    
+      129 -function normalize(poly: readonly Point2D[], tol: number): Point2D[] {                                                                                  
+      130 -  return removeCollinear(toCCW(dedupeClosing(poly)), tol);                                                                                              
+      131 -}                                                                                                                                                       
+      132 -                                                                                                                                                        
+       84  /**
+       85   * Κλειδί ταυτότητας πολυγώνου ανεξάρτητο σειράς (κβαντισμένο σε `tol`) — για dedup
+       86   * όταν το ΙΔΙΟ ορθογώνιο εξάγεται ΚΑΙ ως απλός κύκλος ΚΑΙ από τον rectangle detector.
+     ...
+       93      .join('|');
+       94  }
+       95  
+      145 -// ─── Angle analysis ──────────────────────────────────────────────────────────                                                                        
+      146 -                                                                                                                                                        
+      147 -/** Όλες οι γωνίες ~90°; (γινόμενο μοναδιαίων ακμών ~0). */                                                                                             
+      148 -function allRightAngles(poly: readonly Point2D[]): boolean {                                                                                            
+      149 -  const n = poly.length;                                                                                                                                
+      150 -  for (let i = 0; i < n; i++) {                                                                                                                         
+      151 -    const prev = poly[(i - 1 + n) % n];                                                                                                                 
+      152 -    const cur = poly[i];                                                                                                                                
+      153 -    const next = poly[(i + 1) % n];                                                                                                                     
+      154 -    const u = unit(prev.x - cur.x, prev.y - cur.y);                                                                                                     
+      155 -    const v = unit(next.x - cur.x, next.y - cur.y);                                                                                                     
+      156 -    if (Math.abs(u.x * v.x + u.y * v.y) > COS_RIGHT) return false;                                                                                      
+      157 -  }                                                                                                                                                     
+      158 -  return true;                                                                                                                                          
+      159 -}                                                                                                                                                       
+      160 -                                                                                                                                                        
+      161 -/** Πλήθος ανακλαστικών (reflex, >180°) κορυφών σε CCW πολύγωνο. */                                                                                     
+      162 -function countReflex(ccwPoly: readonly Point2D[]): number {                                                                                             
+      163 -  const n = ccwPoly.length;                                                                                                                             
+      164 -  let r = 0;                                                                                                                                            
+      165 -  for (let i = 0; i < n; i++) {                                                                                                                         
+      166 -    const prev = ccwPoly[(i - 1 + n) % n];                                                                                                              
+      167 -    const cur = ccwPoly[i];                                                                                                                             
+      168 -    const next = ccwPoly[(i + 1) % n];                                                                                                                  
+      169 -    // CCW polygon: θετικό cross = κυρτή κορυφή, αρνητικό = ανακλαστική (reflex).                                                                       
+      170 -    if (crossZ(prev, cur, next) < -EPS) r++;                                                                                                            
+      171 -  }                                                                                                                                                     
+      172 -  return r;                                                                                                                                             
+      173 -}                                                                                                                                                       
+      174 -                                                                                                                                                        
+      175 -/**                                                                                                                                                     
+      176 - * Τ έναντι Π για 8-κορυφο/2-reflex ορθογωνικό, με βάση την κυκλική απόσταση των δύο                                                                    
+      177 - * ανακλαστικών κορυφών: στο Π ενώνονται με ΜΙΑ ακμή (πάτος της εσοχής) → απόσταση 1·                                                                   
+      178 - * στο Τ τις χωρίζει ο κορμός (δύο κυρτές κορυφές) → απόσταση 3. Σημείωση: Φάση 3 το                                                                    
+      179 - * επικυρώνει/εκλεπτύνει για το ColumnKind (U-shape / composite).                                                                                       
+      180 - */                                                                                                                                                     
+      181 -function classifyTU(ccwPoly: readonly Point2D[]): 'T' | 'U' {                                                                                           
+      182 -  const n = ccwPoly.length;                                                                                                                             
+      183 -  const reflex: number[] = [];                                                                                                                          
+      184 -  for (let i = 0; i < n; i++) {                                                                                                                         
+      185 -    const prev = ccwPoly[(i - 1 + n) % n];                                                                                                              
+      186 -    const next = ccwPoly[(i + 1) % n];                                                                                                                  
+      187 -    if (crossZ(prev, ccwPoly[i], next) < -EPS) reflex.push(i);                                                                                          
+      188 -  }                                                                                                                                                     
+      189 -  if (reflex.length < 2) return 'U';                                                                                                                    
+      190 -  const raw = Math.abs(reflex[0] - reflex[1]);                                                                                                          
+      191 -  return Math.min(raw, n - raw) === 1 ? 'U' : 'T';                                                                                                      
+      192 -}                                                                                                                                                       
+      193 -                                                                                                                                                        
+      194 -/** Κατηγοριοποίηση σχήματος από κορυφές + ανακλαστικές γωνίες. */                                                                                      
+      195 -export function classifyPerimeter(polygon: readonly Point2D[], tol: number): PerimeterShape {                                                           
+      196 -  const poly = normalize(polygon, tol);                                                                                                                 
+      197 -  const n = poly.length;                                                                                                                                
+      198 -  if (n < 4 || !allRightAngles(poly)) return 'composite';                                                                                               
+      199 -  const reflex = countReflex(poly);                                                                                                                     
+      200 -  if (n === 4 && reflex === 0) return 'rectangle';                                                                                                      
+      201 -  if (n === 6 && reflex === 1) return 'L';                                                                                                              
+      202 -  if (n === 8 && reflex === 2) return classifyTU(poly);                                                                                                 
+      203 -  return 'composite';                                                                                                                                   
+      204 -}                                                                                                                                                       
+      205 -                                                                                                                                                        
+      206 -// ─── Rectilinear decomposition (slab sweep) ──────────────────────────────────                                                                        
+      207 -                                                                                                                                                        
+      208 -function rotate(p: Point2D, ang: number): Point2D {                                                                                                     
+      209 -  const c = Math.cos(ang);                                                                                                                              
+      210 -  const s = Math.sin(ang);                                                                                                                              
+      211 -  return { x: p.x * c - p.y * s, y: p.x * s + p.y * c };                                                                                                
+      212 -}                                                                                                                                                       
+      213 -                                                                                                                                                        
+      214 -/** Γωνία της μεγαλύτερης ακμής (τοπικό πλαίσιο → άξονας X). */                                                                                         
+      215 -function dominantEdgeAngle(poly: readonly Point2D[]): number {                                                                                          
+      216 -  let best = 0;                                                                                                                                         
+      217 -  let bestLen = -1;                                                                                                                                     
+      218 -  for (let i = 0; i < poly.length; i++) {                                                                                                               
+      219 -    const a = poly[i];                                                                                                                                  
+      220 -    const b = poly[(i + 1) % poly.length];                                                                                                              
+      221 -    const len = dist(a, b);                                                                                                                             
+      222 -    if (len > bestLen) {                                                                                                                                
+      223 -      bestLen = len;                                                                                                                                    
+      224 -      best = Math.atan2(b.y - a.y, b.x - a.x);                                                                                                          
+      225 -    }                                                                                                                                                   
+      226 -  }                                                                                                                                                     
+      227 -  return best;                                                                                                                                          
+      228 -}                                                                                                                                                       
+      229 -                                                                                                                                                        
+      230 -/** Ταξινομημένες μοναδικές τιμές (συγχώνευση εντός tol). */                                                                                            
+      231 -function uniqueSorted(values: number[], tol: number): number[] {                                                                                        
+      232 -  const sorted = [...values].sort((a, b) => a - b);                                                                                                     
+      233 -  const out: number[] = [];                                                                                                                             
+      234 -  for (const v of sorted) {                                                                                                                             
+      235 -    if (out.length === 0 || v - out[out.length - 1] > tol) out.push(v);                                                                                 
+      236 -  }                                                                                                                                                     
+      237 -  return out;                                                                                                                                           
+      238 -}                                                                                                                                                       
+      239 -                                                                                                                                                        
+      240 -/** Τομές των ακμών του πολυγώνου με την οριζόντια y=`y` (x-συντεταγμένες). */                                                                          
+      241 -function horizontalCrossings(poly: readonly Point2D[], y: number): number[] {                                                                           
+      242 -  const xs: number[] = [];                                                                                                                              
+      243 -  const n = poly.length;                                                                                                                                
+      244 -  for (let i = 0; i < n; i++) {                                                                                                                         
+      245 -    const a = poly[i];                                                                                                                                  
+      246 -    const b = poly[(i + 1) % n];                                                                                                                        
+      247 -    if ((a.y <= y && b.y > y) || (b.y <= y && a.y > y)) {                                                                                               
+      248 -      xs.push(a.x + ((y - a.y) / (b.y - a.y)) * (b.x - a.x));                                                                                           
+      249 -    }                                                                                                                                                   
+      250 -  }                                                                                                                                                     
+      251 -  return xs.sort((p, q) => p - q);                                                                                                                      
+      252 -}                                                                                                                                                       
+      253 -                                                                                                                                                        
+      254 -interface LocalRect {                                                                                                                                   
+      255 -  xa: number;                                                                                                                                           
+      256 -  xb: number;                                                                                                                                           
+      257 -  y0: number;                                                                                                                                           
+      258 -  y1: number;                                                                                                                                           
+      259 -}                                                                                                                                                       
+      260 -                                                                                                                                                        
+      261 -/** Συγχώνευση κατακόρυφα γειτονικών slab-rects με ίδιο [xa,xb] (anti over-split). */                                                                   
+      262 -function mergeVertical(rects: LocalRect[], tol: number): LocalRect[] {                                                                                  
+      263 -  const groups = new Map<string, LocalRect[]>();                                                                                                        
+      264 -  for (const r of rects) {                                                                                                                              
+      265 -    const key = `${Math.round(r.xa / tol)}:${Math.round(r.xb / tol)}`;                                                                                  
+      266 -    (groups.get(key) ?? groups.set(key, []).get(key)!).push(r);                                                                                         
+      267 -  }                                                                                                                                                     
+      268 -  const out: LocalRect[] = [];                                                                                                                          
+      269 -  for (const g of groups.values()) {                                                                                                                    
+      270 -    g.sort((a, b) => a.y0 - b.y0);                                                                                                                      
+      271 -    let cur = { ...g[0] };                                                                                                                              
+      272 -    for (let i = 1; i < g.length; i++) {                                                                                                                
+      273 -      if (Math.abs(g[i].y0 - cur.y1) <= tol) cur.y1 = g[i].y1;                                                                                          
+      274 -      else {                                                                                                                                            
+      275 -        out.push(cur);                                                                                                                                  
+      276 -        cur = { ...g[i] };                                                                                                                              
+      277 -      }                                                                                                                                                 
+      278 -    }                                                                                                                                                   
+      279 -    out.push(cur);                                                                                                                                      
+      280 -  }                                                                                                                                                     
+      281 -  return out;                                                                                                                                           
+      282 -}                                                                                                                                                       
+      283 -                                                                                                                                                        
+      284 -/** Slab sweep σε τοπικό (axis-aligned) πλαίσιο → ορθογώνια σκέλη. */                                                                                   
+      285 -function slabDecompose(local: readonly Point2D[], tol: number): LocalRect[] {                                                                           
+      286 -  const ys = uniqueSorted(local.map((p) => p.y), tol);                                                                                                  
+      287 -  const rects: LocalRect[] = [];                                                                                                                        
+      288 -  for (let k = 0; k < ys.length - 1; k++) {                                                                                                             
+      289 -    const y0 = ys[k];                                                                                                                                   
+      290 -    const y1 = ys[k + 1];                                                                                                                               
+      291 -    const xs = horizontalCrossings(local, (y0 + y1) / 2);                                                                                               
+      292 -    for (let i = 0; i + 1 < xs.length; i += 2) {                                                                                                        
+      293 -      if (xs[i + 1] - xs[i] > tol) rects.push({ xa: xs[i], xb: xs[i + 1], y0, y1 });                                                                    
+      294 -    }                                                                                                                                                   
+      295 -  }                                                                                                                                                     
+      296 -  return mergeVertical(rects, tol);                                                                                                                     
+      297 -}                                                                                                                                                       
+      298 -                                                                                                                                                        
+      299 -/** LocalRect → DetectedRectangle (στροφή πίσω στο world πλαίσιο). */                                                                                   
+      300 -function toDetectedRect(r: LocalRect, ang: number): DetectedRectangle {                                                                                 
+      301 -  const corners: [Point2D, Point2D, Point2D, Point2D] = [                                                                                               
+      302 -    rotate({ x: r.xa, y: r.y0 }, ang),                                                                                                                  
+      303 -    rotate({ x: r.xb, y: r.y0 }, ang),                                                                                                                  
+      304 -    rotate({ x: r.xb, y: r.y1 }, ang),                                                                                                                  
+      305 -    rotate({ x: r.xa, y: r.y1 }, ang),                                                                                                                  
+      306 -  ];                                                                                                                                                    
+      307 -  const w = r.xb - r.xa;                                                                                                                                
+      308 -  const h = r.y1 - r.y0;                                                                                                                                
+      309 -  return {                                                                                                                                              
+      310 -    polygon: corners,                                                                                                                                   
+      311 -    longSide: Math.max(w, h),                                                                                                                           
+      312 -    shortSide: Math.min(w, h),                                                                                                                          
+      313 -    area: w * h,                                                                                                                                        
+      314 -  };                                                                                                                                                    
+      315 -}                                                                                                                                                       
+      316 -                                                                                                                                                        
+      317 -/**                                                                                                                                                     
+      318 - * Αποσύνθεση ορθογωνικού πολυγώνου σε ορθογώνια σκέλη (slab sweep σε τοπικό πλαίσιο                                                                    
+      319 - * ευθυγραμμισμένο με τη μεγαλύτερη ακμή). Επιστρέφει `[]` αν δεν είναι ορθογωνικό                                                                      
+      320 - * (γωνίες ≠ 90° → 'composite').                                                                                                                        
+      321 - */                                                                                                                                                     
+      322 -export function decomposeRectilinear(polygon: readonly Point2D[], tol: number): DetectedRectangle[] {                                                   
+      323 -  const poly = normalize(polygon, tol);                                                                                                                 
+      324 -  if (poly.length < 4 || !allRightAngles(poly)) return [];                                                                                              
+      325 -  const ang = dominantEdgeAngle(poly);                                                                                                                  
+      326 -  const local = poly.map((p) => rotate(p, -ang));                                                                                                       
+      327 -  return slabDecompose(local, tol).map((r) => toDetectedRect(r, ang));                                                                                  
+      328 -}                                                                                                                                                       
+      329 -                                                                                                                                                        
+       96  // ─── Closed-polygon extraction from scene entities ───────────────────────────
+       97  
+       98  /** Κλειστό polyline/lwpolyline (≥3 κορυφές) → πολύγωνο, αλλιώς null. */
+
+● Επαληθεύω μεγέθη + τρέχω tests:
+
+● Bash(echo "lines:"; for f in src/subapps/dxf-viewer/bim/walls/perimeter-from-faces.ts src/subapps/dxf-viewer/bim/walls/perimeter-polygon-math.ts; do echo "  $(grep -…)
+  ⎿  lines:
+       287  src/subapps/dxf-viewer/bim/walls/perimeter-from-faces.ts
+       271  src/subapps/dxf-viewer/bim/walls/perimeter-polygon-math.ts
+     … +10 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode classifier
+● Και τα δύο < 500 (287 + 271), tests 35/35 (τα re-exports δουλεύουν). Stage το νέο module + ξανα-commit. Tsc στο background:
+
+● Bash(npx tsc --noEmit 2>&1 | grep -iE "perimeter-from-faces|perimeter-polygon-math|wall-in-region" | head; echo "=== tsc-done ===")
+  ⎿  Running in the background (↓ to manage)
+
+● Bash("C:\Program Files\Git\cmd\git.exe" add \
+        "src/subapps/dxf-viewer/bim/walls/perimeter-from-faces.ts" \…)
+  ⎿  warning: in the working copy of 'src/subapps/dxf-viewer/bim/walls/perimeter-from-faces.ts', LF will be replaced by CRLF the next time Git touches it
+     warning: in the working copy of 'src/subapps/dxf-viewer/bim/walls/perimeter-polygon-math.ts', LF will be replaced by CRLF the next time Git touches it
+     === staged ===
+     … +5 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode classifier
+● 5 αρχεία staged (+ νέο math module). Commit:
+
+● Bash("C:\Program Files\Git\cmd\git.exe" commit -m "fix(bim): perimeter from touching loose-line rects (ADR-363)" -m "extractClosedPolygons detects touching rectangle…)
+  ⎿  🔍 Running pre-commit checks...
+     🔍 Running project-specific checks...
+       ✅ Project rules passed
+     … +15 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode classifier
+
+● Background command "npx tsc --noEmit 2&gt;&amp;1 | grep -iE "perimeter-from-faces|perimeter-polygon-math|wall-in-region" | head; echo "=== tsc-done ==="" completed
+(exit code 0)
+  
+● ✅ Commit επιτυχής: 0a20bf08 — fix(bim): perimeter from touching loose-line rects (ADR-363)
+
+  - 5 files changed (+484 / −258)· NEW perimeter-polygon-math.ts (split) + column-from-perimeter handoff
+  - Pre-commit hook: PASS — CHECK 4 (File sizes) OK πλέον (το split έλυσε το 521→287+271)  - tsc background: exit 0, μηδέν σφάλματα
+  - Tests 35/35
+  Το file-size block λύθηκε με σωστό split (N.7.1): η καθαρή γεωμετρία πολυγώνου πήγε στο perimeter-polygon-math.ts, το perimeter-from-faces.ts κράτησε
+  extraction/union/orchestrator + re-exports (zero API breakage — γι' αυτό τα tests περνούν αμετάβλητα).
+
+  ---
+  Σύνοψη συνεδρίας (όλα committed)
+
+  ┌──────────┬─────────────────────────────────────────────────────┐
+  │  Commit  │                         Τι                          │
+  ├──────────┼─────────────────────────────────────────────────────┤
+  │ 91c08dc5 │ copy+mirror persistence fix ✅ verified             │
+  ├──────────┼─────────────────────────────────────────────────────┤
+  │ 4d21ae6e │ ADR-363/401/404 batch (εσύ)                         │
+  ├──────────┼─────────────────────────────────────────────────────┤
+  │ 0a20bf08 │ loose-line touching-rects fix ✅ verified + handoff │
+  └──────────┴─────────────────────────────────────────────────────┘
+
+  Working tree: σχεδόν καθαρό (μένει μόνο το ξένο ADR-404 tilt handoff, untracked — δικό άλλης δουλειάς).

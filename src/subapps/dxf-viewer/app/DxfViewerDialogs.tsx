@@ -31,6 +31,7 @@ import {
   DxfImportModal, SimpleProjectDialog, FloorplanImportWizard, ConstructionLayerScaffoldDialog,
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
   OpeningSchedulePdfHost, ThermalEnvelopeHost, AdminLayerManagerDialogHost, DxfAiChatPanel,
+  ColumnPerimeterConfirmDialog,
 } from './dxf-viewer-lazy-components';
 
 type LevelManager = ReturnType<typeof useLevels>;
@@ -82,6 +83,10 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       </React.Suspense>
       <React.Suspense fallback={hiddenFallback}>
         <ReplaceConfirmDialog />
+      </React.Suspense>
+      {/* ADR-363 Φ3c — «Κολώνα από περίγραμμα» ενημερωτικό confirm (self-subscribing). */}
+      <React.Suspense fallback={hiddenFallback}>
+        <ColumnPerimeterConfirmDialog />
       </React.Suspense>
       <React.Suspense fallback={hiddenFallback}>
         <CalibrationDialog />
