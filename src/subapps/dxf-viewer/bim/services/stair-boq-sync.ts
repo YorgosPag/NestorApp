@@ -42,6 +42,8 @@ import {
 } from '../config/bim-to-atoe-mapping';
 import type { StairKind, StairParams } from '../types/stair-types';
 import { computeStairBoqQuantities } from '../stairs/stair-boq-quantities';
+import { resolveEffectiveStairParams } from '../geometry/stairs/stair-effective-params';
+import type { HostFootprintInput } from '../geometry/wall-host-plan-builder';
 
 const logger = createModuleLogger('StairBoqSync');
 
@@ -66,6 +68,13 @@ export interface StairBoqContext {
    * Επιμετρήσεις tab. Falls back to `scope: 'building'` / null when absent.
    */
   readonly floorId?: string;
+  /**
+   * ADR-401 Phase G.2 — host resolver (δοκάρια/πλάκες του ορόφου) ώστε οι ποσότητες
+   * μιας `attached` σκάλας να βγαίνουν από τα **effective** params (re-step στο host),
+   * ΙΔΙΑ SSoT με το 3D (`resolveEffectiveStairParams`). Revit-grade: schedule =
+   * resolved μοντέλο. Απών → nominal params (μη-attached / no host context).
+   */
+  readonly resolveHostInput?: (id: string) => HostFootprintInput | null;
 }
 
 // ============================================================================
@@ -197,7 +206,13 @@ export async function upsertStairBoq(
 ): Promise<void> {
   if (!context.companyId || !context.projectId || !context.buildingId) return;
 
-  const q = computeStairBoqQuantities(stair.params);
+  // ADR-401 Phase G.2 — profile-aware ποσότητες: όταν η σκάλα είναι `attached`, οι
+  // ποσότητες βγαίνουν από τα effective params (re-step), ΙΔΙΑ SSoT γέφυρα με το 3D.
+  // Μη-attached / χωρίς host resolver → identity (byte-for-byte τα nominal params).
+  const { params: effectiveParams } = resolveEffectiveStairParams(stair.params, {
+    resolveHostInput: context.resolveHostInput,
+  });
+  const q = computeStairBoqQuantities(effectiveParams);
   const byComponent: Readonly<Record<StairBoqComponent, number>> = {
     concrete: q.concreteVolumeM3,
     cladding: q.treadCladdingAreaM2,

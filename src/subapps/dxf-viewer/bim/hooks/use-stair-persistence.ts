@@ -32,6 +32,7 @@ import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { StairDoc, StairEntity } from '../types/stair-types';
+import { makeStairHostResolverFromScene } from '../geometry/stairs/stair-host-resolver';
 import { EventBus } from '../../systems/events/EventBus';
 import {
   createStairFirestoreService,
@@ -281,6 +282,17 @@ export function useStairPersistence(
     };
   }, [primarySelectedStair?.id, releaseLock]);
 
+  // ADR-401 Phase G.2 — profile-aware BOQ host resolver όταν η σκάλα είναι `attached`
+  // (ΙΔΙΟ SSoT με το 3D scene-sync → ποτέ δεν αποκλίνουν). Μη-attached → undefined.
+  const buildStairHostResolver = useCallback(
+    (entity: StairEntity) => {
+      if (entity.params.topBinding !== 'attached' && entity.params.baseBinding !== 'attached') return undefined;
+      const levelId = levelManager.currentLevelId;
+      return makeStairHostResolverFromScene(levelId ? levelManager.getLevelScene(levelId) : null);
+    },
+    [levelManager],
+  );
+
   // Immediate persist (used by both auto-save flush and explicit button).
   const persist = useCallback(async (entity: StairEntity) => {
     const svc = serviceRef.current;
@@ -305,7 +317,7 @@ export function useStairPersistence(
       if (companyId && projectId && buildingId) {
         void upsertStairBoq(
           { id: entity.id, kind: entity.kind, params: entity.params },
-          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined, resolveHostInput: buildStairHostResolver(entity) },
           isNew ? 'created' : 'updated',
         );
       }
@@ -313,7 +325,7 @@ export function useStairPersistence(
       setError(err instanceof Error ? err.message : 'STAIR_SAVE_ERROR');
       setSaveState('error');
     }
-  }, [acquireLock, companyId, projectId, buildingId, floorId]);
+  }, [acquireLock, companyId, projectId, buildingId, floorId, buildStairHostResolver]);
 
   // Auto-save debounce on selected stair params change.
   useEffect(() => {
@@ -409,7 +421,7 @@ export function useStairPersistence(
       if (companyId && projectId && buildingId) {
         void upsertStairBoq(
           { id: entity.id, kind: entity.kind, params: entity.params },
-          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined, resolveHostInput: buildStairHostResolver(entity) },
           'created',
         );
       }
@@ -417,7 +429,7 @@ export function useStairPersistence(
       setError(err instanceof Error ? err.message : 'STAIR_RESTORE_ERROR');
       setSaveState('error');
     }
-  }, [acquireLock, companyId, projectId, buildingId, floorId]);
+  }, [acquireLock, companyId, projectId, buildingId, floorId, buildStairHostResolver]);
 
   // Imperative save trigger (explicit "Αποθήκευση" button).
   const saveNow = useCallback(async () => {

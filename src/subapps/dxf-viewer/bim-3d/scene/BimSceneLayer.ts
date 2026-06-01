@@ -19,7 +19,11 @@ import { wallToMesh, columnToMesh, beamToMesh, slabToMesh } from '../converters/
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { resolveWallTopProfile } from '../../bim/geometry/wall-top-profile';
 import { resolveWallBaseProfile } from '../../bim/geometry/wall-base-profile';
-import { makeWallTopContext, makeWallBaseContext, buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
+import { makeWallTopContext, makeWallBaseContext, buildWallHostInputs, type HostFootprintInput } from '../../bim/geometry/wall-host-plan-builder';
+import { makeStairHostResolver } from '../../bim/geometry/stair-vertical-profile';
+import { resolveEffectiveStairParams } from '../../bim/geometry/stairs/stair-effective-params';
+import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometryService';
+import type { StairEntity } from '../../bim/types/stair-types';
 import {
   resolveColumnTopProfile,
   resolveColumnBaseProfile,
@@ -307,15 +311,50 @@ export class BimSceneLayer {
   }
 
   private syncStairs(entities: Bim3DEntities, ctx: SyncContext): void {
+    // ADR-401 Phase G.2 — host inputs (δοκάρια + πλάκες) για τις `attached` σκάλες
+    // (re-step στο host)· χτίζονται μόνο όταν υπάρχει ≥1 attached σκάλα (κοινό case
+    // = καμία → μηδέν κόστος). Mirror του `syncColumns`. Footprints στο ίδιο plan space.
+    const hasAttached = entities.stairs.some(
+      (s) => s.params?.topBinding === 'attached' || s.params?.baseBinding === 'attached',
+    );
+    const resolveHostInput = hasAttached
+      ? makeStairHostResolver(buildWallHostInputs(entities.beams, entities.slabs))
+      : undefined;
+
     for (const stair of entities.stairs) {
       const r = this.resolveEntity(stair, 'stair', ctx);
       if (!r) continue;
-      const meshes = stairToMeshes(stair, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      const meshes = stairToMeshes(
+        this.toEffectiveStair(stair, resolveHostInput),
+        ctx.floorElevationMm,
+        ctx.activeLevelId,
+        r.baseElevation,
+      );
       for (const mesh of meshes) {
         mesh.userData['buildingId'] = r.buildingId;
         this.group.add(mesh);
       }
     }
+  }
+
+  /**
+   * ADR-401 Phase G.2 — effective σκάλα όταν `attached`: το resolved κατακόρυφο
+   * προφίλ αλλάζει `basePoint.z`/`rise`/`stepCount`/`totalRise` (whole-step snap) →
+   * **ξαναγεννιέται όλη η γεωμετρία** (treads/risers/stringers/handrails/walkline)
+   * μέσω `computeStairGeometry`. Μη-attached / εκφυλισμένο host → byte-for-byte η
+   * αρχική σκάλα (fast path identity). SSoT: `resolveEffectiveStairParams` — ΙΔΙΑ
+   * effective params με το BOQ (`stair-boq-sync`).
+   */
+  private toEffectiveStair(
+    stair: StairEntity,
+    resolveHostInput: ((id: string) => HostFootprintInput | null) | undefined,
+  ): StairEntity {
+    const attached =
+      stair.params?.topBinding === 'attached' || stair.params?.baseBinding === 'attached';
+    if (!resolveHostInput || !attached || !stair.params) return stair;
+    const { params } = resolveEffectiveStairParams(stair.params, { resolveHostInput });
+    if (params === stair.params) return stair; // no-attach / degenerate → identity
+    return { ...stair, params, geometry: computeStairGeometry(params) };
   }
 
   /** Returns true if a mesh for buildingId should be added to the scene. */

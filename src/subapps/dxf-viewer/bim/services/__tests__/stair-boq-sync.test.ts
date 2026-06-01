@@ -12,6 +12,8 @@
 
 import { upsertStairBoq, deleteStairBoq, stairComponentBoqId } from '../stair-boq-sync';
 import type { StairParams, StairStructureType } from '../../types/stair-types';
+import { makeStairHostResolver } from '../../geometry/stair-vertical-profile';
+import type { HostFootprintInput } from '../../geometry/wall-host-plan-builder';
 
 // ---------------------------------------------------------------------------
 // Mock Firestore
@@ -49,6 +51,12 @@ function makeParams(overrides: Partial<{
 }> = {}): StairParams {
   const { inner = true, outer = true, structureType = 'monolithic' } = overrides;
   return {
+    // ADR-401 G.2 — basePoint/direction/totalRun/totalRise needed by the vertical
+    // resolver (`resolveEffectiveStairParams`); non-attached → identity fast path.
+    basePoint: { x: 0, y: 0, z: 0 },
+    direction: 0,
+    totalRun: 2520,
+    totalRise: 1750,
     stepCount: 10,
     tread: 280,
     rise: 175,
@@ -185,6 +193,60 @@ describe('upsertStairBoq', () => {
     await upsertStairBoq(makeStair(), { companyId: 'c1', projectId: 'p1', buildingId: '' }, 'created');
     expect(mockGetDoc).not.toHaveBeenCalled();
     expect(mockSetDoc).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ADR-401 Phase G.2 — profile-aware quantities (attached → effective re-step)
+// ---------------------------------------------------------------------------
+
+/** Host covering both base (x=0) + top (x=2520) samples; underside drives re-step. */
+function topHost(undersideZmm: number): HostFootprintInput {
+  return {
+    hostId: 'h1',
+    hostType: 'beam',
+    footprint: [
+      { x: -1000, y: -1000 },
+      { x: 4000, y: -1000 },
+      { x: 4000, y: 1000 },
+      { x: -1000, y: 1000 },
+    ],
+    undersideZmm,
+  };
+}
+
+describe('upsertStairBoq — ADR-401 attach-to-structural (profile-aware)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetDoc.mockResolvedValue(makeSnap(false));
+    mockSetDoc.mockResolvedValue(undefined);
+    mockDeleteDoc.mockResolvedValue(undefined);
+  });
+
+  it('non-attached + resolveHostInput present → nominal quantities (identity)', async () => {
+    await upsertStairBoq(
+      makeStair(),
+      { ...context, resolveHostInput: makeStairHostResolver([topHost(1400)]) },
+      'updated',
+    );
+    // cladding = stepCount(10) × tread(280) × width(1000) = 2.8 m² (αμετάβλητο)
+    expect(payloadById('boq_bim_stair-001_cladding')!.estimatedQuantity).toBeCloseTo(2.8, 6);
+  });
+
+  it('top-attached → re-step μειώνει stepCount → προσαρμοσμένες ποσότητες', async () => {
+    const stair = makeStair();
+    const attached = {
+      ...stair,
+      params: { ...stair.params, topBinding: 'attached', attachTopToIds: ['h1'] } as unknown as StairParams,
+    };
+    await upsertStairBoq(
+      attached,
+      // underside 1400 → totalRise 1400· round(1400/175)=8 σκαλοπάτια
+      { ...context, resolveHostInput: makeStairHostResolver([topHost(1400)]) },
+      'updated',
+    );
+    // cladding = effective stepCount(8) × 280 × 1000 = 2.24 m² (≠ nominal 2.8)
+    expect(payloadById('boq_bim_stair-001_cladding')!.estimatedQuantity).toBeCloseTo(2.24, 6);
   });
 });
 

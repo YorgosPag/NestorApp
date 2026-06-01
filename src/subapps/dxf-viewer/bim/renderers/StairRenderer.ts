@@ -73,6 +73,12 @@ export class StairRenderer extends BaseEntityRenderer {
     // rest of the scene renders normally; the entity is also dropped from
     // hit-testing via the matching guard in HitTestingService.
     if (!stair.geometry || !stair.params) return;
+    // ADR-401 Phase G.2 — attach-to-structural NO-OP στο 2D (mirror `ColumnRenderer`
+    // F.2). Ο 2D renderer είναι ADR-040 leaf — ΔΕΝ σκανάρει hosts (δοκάρια/πλάκες).
+    // Το re-step μιας `attached` σκάλας (resolved `stepCount`/`rise`) εφαρμόζεται
+    // στους consumers που έχουν host context: 3D (`BimSceneLayer.syncStairs`) +
+    // BOQ (`stair-boq-sync`), μέσω της SSoT `resolveEffectiveStairParams`. Η κάτοψη
+    // ζωγραφίζει το persisted (nominal) `geometry`. (Effective plan = G.3 αν χρειαστεί.)
     const { geometry } = stair;
 
     // ADR-358 Phase 8 — manual phase pipeline.
