@@ -152,6 +152,20 @@ export interface ColumnIShapeParams {
  *   - `material` — material library ID (Phase 6+).
  *   - `lshape` / `tshape` / `polygon` / `ishape` — variant-specific dims.
  */
+/**
+ * ADR-404 — Κλίση (tilt) κολώνας, slope-based (Revit/Tekla «Slanted Column»).
+ *   - `direction` — μοίρες CCW from +X (plan): η φορά προς την οποία γέρνει η
+ *     κορυφή.
+ *   - `angle` — μοίρες από την κατακόρυφο (0 = όρθια).
+ * Tilt-as-shear: η κορυφή μετατοπίζεται στην κάτοψη κατά `height·tan(angle)` στη
+ * `direction`, η βάση μένει σταθερή, το ύψος/elevation αμετάβλητο (ADR-369). ΟΧΙ
+ * quaternion — διατηρεί κάτοψη/τομές/BOQ.
+ */
+export interface ColumnTilt {
+  readonly direction: number;
+  readonly angle: number;
+}
+
 export interface ColumnParams {
   readonly kind: ColumnKind;
   readonly position: Point3D;
@@ -160,6 +174,11 @@ export interface ColumnParams {
   readonly depth: number;
   readonly height: number;
   readonly rotation: number;
+  /**
+   * ADR-404 — 3Δ κλίση (raking column). Absent / `angle===0` = κατακόρυφη
+   * (no-tilt fast-path, mirror `isBeamTilted`). Revit «Slanted Column».
+   */
+  readonly tilt?: ColumnTilt;
   readonly material?: string;
   readonly lshape?: ColumnLshapeParams;
   readonly tshape?: ColumnTshapeParams;

@@ -58,6 +58,18 @@ export type WallCategory = 'exterior' | 'interior' | 'partition' | 'parapet' | '
  *   - `polylineVertices` — present when `kind === 'polyline'`
  *   - `curveControl` — present when `kind === 'curved'` (quadratic Bezier ctrl pt)
  */
+/**
+ * ADR-404 — Κλίση (tilt) τοίχου, slope-based (Revit «Slanted wall / Angle From
+ * Vertical»). Lean **κάθετα στη φορά** `start → end` (battered wall, ένας DOF).
+ *   - `angle` — μοίρες από την κατακόρυφο, **signed**: το πρόσημο επιλέγει σε ποια
+ *     πλευρά (αριστερή/δεξιά κάθετη) γέρνει η κορυφή.
+ * Tilt-as-shear: η κορυφή μετατοπίζεται ⟂ στη run κατά `height·tan(angle)`, η βάση
+ * μένει σταθερή, το ύψος αμετάβλητο (ADR-369). Absent / `angle===0` = κατακόρυφος.
+ */
+export interface WallTilt {
+  readonly angle: number;
+}
+
 export interface WallParams {
   readonly category: WallCategory;
   /** Canvas world coordinates (DXF scene units). */
@@ -97,6 +109,11 @@ export interface WallParams {
   /** Material key for wall-level hatch (rc/masonry/aerated-concrete/gypsum).
    *  Ignored when `dna` is present — DNA layers govern per-layer materials. */
   readonly material?: string;
+  /**
+   * ADR-404 — 3Δ κλίση (battered wall). Absent / `angle===0` = κατακόρυφος
+   * (no-tilt fast-path). Lean ⟂ στη φορά `start → end`.
+   */
+  readonly tilt?: WallTilt;
   /**
    * DXF canvas coordinate unit. Always 'mm' for walls created after ADR-363 SSOT fix.
    * Used by computeWallGeometry to convert mm scalars (height/thickness) → canvas units

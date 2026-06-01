@@ -76,6 +76,15 @@ const ColumnTshapeParamsSchema = z
   })
   .strict();
 
+// ─── ADR-404 — tilt (raking column) ─────────────────────────────────────────
+
+const ColumnTiltSchema = z
+  .object({
+    direction: z.number().finite(),
+    angle: z.number().finite(),
+  })
+  .strict();
+
 // ─── Params schema ──────────────────────────────────────────────────────────
 
 const ColumnParamsBaseSchema = z
@@ -87,6 +96,8 @@ const ColumnParamsBaseSchema = z
     depth: z.number().positive(),
     height: z.number().positive(),
     rotation: z.number().finite(),
+    // ─── ADR-404 — 3Δ κλίση (optional, absent = κατακόρυφη) ───────────────────
+    tilt: ColumnTiltSchema.optional(),
     material: z.string().min(1).optional(),
     lshape: ColumnLshapeParamsSchema.optional(),
     tshape: ColumnTshapeParamsSchema.optional(),

@@ -58,6 +58,14 @@ export const WallCategorySchema = z.enum([
 /** Wall-specific IFC4 classes (subset of IfcEntityType). */
 export const WallIfcTypeSchema = z.enum(['IfcWall', 'IfcWallStandardCase']);
 
+// ─── ADR-404 — tilt (battered wall) ─────────────────────────────────────────
+
+const WallTiltSchema = z
+  .object({
+    angle: z.number().finite(),
+  })
+  .strict();
+
 // ─── Params schema ──────────────────────────────────────────────────────────
 
 const WallParamsBaseSchema = z
@@ -68,6 +76,8 @@ const WallParamsBaseSchema = z
     height: z.number().positive(),
     thickness: z.number().positive(),
     flip: z.boolean(),
+    // ─── ADR-404 — 3Δ κλίση (optional, absent = κατακόρυφος) ──────────────────
+    tilt: WallTiltSchema.optional(),
     measurementLength: z.number().positive().optional(),
     // dna: opaque pass-through (validated by wall-dna-types layer)
     dna: z.unknown().optional(),

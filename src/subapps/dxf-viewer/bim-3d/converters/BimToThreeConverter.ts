@@ -17,7 +17,7 @@ import * as THREE from 'three';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
-import type { SlabEntity, SlabParams } from '../../bim/types/slab-types';
+import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { Point3D } from '../../bim/types/bim-base';
@@ -29,8 +29,8 @@ import { buildColumnPrismGeometry } from './column-piece-geometry';
 import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
 import { evaluateWallTopAt, type WallTopProfile } from '../../bim/geometry/wall-top-profile';
 import { evaluateWallBaseAt, type WallBaseProfile } from '../../bim/geometry/wall-base-profile';
-import { slabSlopeOffsetZmm } from '../../bim/geometry/slab-slope';
-import { beamSlopeOffsetZmm, isBeamTilted } from '../../bim/geometry/beam-slope';
+// ADR-404 P1 — slope/tilt shear helpers (εξήχθησαν από εδώ για file-size, N.7.1).
+import { applyBeamSlope, applySlabSlope, applyColumnTilt, applyWallTilt } from './mesh-slope-shear';
 import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
 import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
 import type { BimCategory } from '../../config/bim-object-styles';
@@ -281,6 +281,8 @@ export function wallToMesh(
   if (!shape) return null;
 
   const geo = extrudeAndRotate(shape, wall.params.height * MM_TO_M);
+  // ADR-404 — battered wall: shear το X/Z βάσει ύψους (η κορυφή γέρνει). No-op flat.
+  applyWallTilt(geo, wall.params);
   const mesh = new THREE.Mesh(geo, material);
   // ADR-402 — `baseOffset` (mm, base face from storey FFL) lifts the whole wall so the
   // vertical (axis-Y) move arrow shows in 3D. ONLY on this flat solid path: the
@@ -325,6 +327,8 @@ export function columnToMesh(
   if (!shape) return null;
 
   const geo = extrudeAndRotate(shape, column.params.height * MM_TO_M);
+  // ADR-404 — raking column: shear το X/Z βάσει ύψους (η κορυφή γέρνει). No-op flat.
+  applyColumnTilt(geo, column.params);
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('column'));
   // ADR-402 — `baseOffset` lifts the whole column (vertical move). ONLY on this flat
   // path: the attached-prism path bakes baseOffset into its profile z. baseOffset=0 → no change.
@@ -363,33 +367,6 @@ function buildAttachedColumnPrism(
     cornerBaseLocalM,
     cornerTopLocalM,
   );
-}
-
-/**
- * ADR-401 Phase E/(β) — κεκλιμένη δοκός (sloped beam).
- *
- * Καθρέφτης του `applySlabSlope`: η πάνω παρειά γέρνει γραμμικά κατά μήκος του
- * άξονα (`topElevation`→`topElevationEnd`) → per-vertex shear στο world-Y που
- * καταναλώνει το `beamSlopeOffsetZmm` SSoT (την ΙΔΙΑ ποσότητα με τον
- * `wall-top-profile` resolver → ο attached τοίχος εφάπτεται). Top & bottom face
- * γέρνουν ίσα → σταθερό βάθος. Flat (μη-tilted) → no-op fast-path.
- *
- * Coords είναι μετα-rotation (ROT_X_NEG_90): shape(sx,sy) → world(sx, z, −sy),
- * άρα plan-point = `{x: worldX, y: −worldZ}`. Το offset (mm) × MM_TO_M δίνει
- * world-meters. Στο `startPoint` (f=0) → offset 0 → η `mesh.position.y`
- * (nominal, top-at-start) μένει αμετάβλητη· στο `endPoint` (f=1) → +Δ.
- */
-function applyBeamSlope(geo: THREE.BufferGeometry, params: BeamEntity['params']): void {
-  if (!isBeamTilted(params)) return;
-  const pos = geo.getAttribute('position') as THREE.BufferAttribute;
-  for (let i = 0; i < pos.count; i++) {
-    const sx = pos.getX(i);
-    const sy = -pos.getZ(i);
-    const offsetM = beamSlopeOffsetZmm(params, { x: sx, y: sy }) * MM_TO_M;
-    pos.setY(i, pos.getY(i) + offsetM);
-  }
-  pos.needsUpdate = true;
-  geo.computeVertexNormals();
 }
 
 export function beamToMesh(
@@ -435,34 +412,6 @@ function pushHoles(shape: THREE.Shape, openings: readonly SlabOpeningEntity[]): 
     path.closePath();
     shape.holes.push(path);
   }
-}
-
-/**
- * ADR-401 Phase E2 / ADR-369 §9 Q7 — κεκλιμένη πλάκα/στέγη (tilted).
- *
- * Η κλίση είναι **ένα affine επίπεδο** → η επίπεδη extruded πλάκα γίνεται
- * κεκλιμένο prism με per-vertex shear στο world-Y, καταναλώνοντας το
- * `slabSlopeOffsetZmm` SSoT (την ΙΔΙΑ ποσότητα με τον `wall-top-profile`
- * resolver → ο attached τοίχος εφάπτεται). Top & bottom face γέρνουν ίσα →
- * σταθερό πάχος· holes/openings διατηρούνται (shear στα κοινά vertices).
- *
- * Coords είναι μετα-rotation (ROT_X_NEG_90): shape(sx,sy) → world(sx, z, −sy),
- * άρα plan-point = `{x: worldX, y: −worldZ}`. Το offset (mm) × MM_TO_M δίνει
- * world-meters (ίδια μετατροπή με τον τοίχο). Pivot offset = 0 → η πλάκα γέρνει
- * γύρω από το pivot, η `mesh.position.y` (nominal) μένει αμετάβλητη.
- * `geometryType !== 'tilted'` → no-op fast-path (byte-for-byte η επίπεδη πλάκα).
- */
-function applySlabSlope(geo: THREE.BufferGeometry, params: SlabParams): void {
-  if (params.geometryType !== 'tilted' || !params.slope) return;
-  const pos = geo.getAttribute('position') as THREE.BufferAttribute;
-  for (let i = 0; i < pos.count; i++) {
-    const sx = pos.getX(i);
-    const sy = -pos.getZ(i);
-    const offsetM = slabSlopeOffsetZmm(params, { x: sx, y: sy }) * MM_TO_M;
-    pos.setY(i, pos.getY(i) + offsetM);
-  }
-  pos.needsUpdate = true;
-  geo.computeVertexNormals();
 }
 
 export function slabToMesh(
