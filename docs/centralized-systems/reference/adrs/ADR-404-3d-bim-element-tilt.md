@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | 🟢 ACCEPTED — **Phase 1 (data model + 3Δ converters) + Phase 2 (gizmo X/Z rings → tilt) + Phase 3 (2Δ cut-plane projection + section parity)** DONE (pending commit, 🔴 browser verify) |
+| Status | 🟢 ACCEPTED — **Phase 1 (data model + 3Δ converters) + Phase 2 (gizmo X/Z rings → tilt) + Phase 3 (2Δ cut-plane projection + section parity) + Phase 4 (pieces/prism 3Δ tilt — attached/με-ανοίγματα)** DONE (pending commit, 🔴 browser verify) |
 | Date | 2026-06-01 |
 | Owner | Giorgio / Claude (Opus 4.8) |
 | Related | ADR-402 (3D editing — αυτό ξεκλειδώνει τα X/Z rings του), ADR-401 (slope precedents beam/slab), ADR-369 (elevation convention), ADR-188 (rotation) |
@@ -172,6 +172,57 @@ lean — το `SectionRect` είναι rect· follow-up).
 
 ---
 
+## Phase 4 — Pieces/prism 3Δ tilt (attached / με ανοίγματα) (DONE)
+
+**Στόχος (3Δ === 2Δ):** ο **attached** τοίχος/κολώνα ή ο τοίχος **με ανοίγματα** πήγαινε
+**πάντα** στον pieces/prism path (`buildStraightWallWithOpenings` / `buildAttachedColumnPrism`),
+που ΔΕΝ καλούσε `applyWallTilt`/`applyColumnTilt` → η κλίση φαινόταν στην 2Δ κάτοψη
+(Phase 3, ανεξάρτητο read) **αλλά ο τοίχος έμενε κατακόρυφος στο 3Δ** (Giorgio live 2026-06-01).
+Αίρει το «**Flat path μόνο**» limitation των Phase 1/2.
+
+- **`mesh-slope-shear.ts` (SSoT):** `applyHorizontalTiltShear`/`applyWallTilt`/`applyColumnTilt`
+  παίρνουν optional `baseHeightM = 0`. Στον solid path το geometry Y=0 είναι ήδη στη βάση →
+  `baseHeightM=0` (byte-for-byte). Στον pieces/prism path τα vertices ζουν σε **floor-local Y**
+  και το mesh ανεβαίνει κατά `mesh.position.y = yOffset` → `baseHeightM = yOffset − floorY`
+  ώστε `heightAboveBase = pos.getY(i) + baseHeightM` (anchor=0 στο FFL — **ίδιο datum** με το
+  2Δ cut-plane & τον solid path).
+- **`BimToThreeConverter`:** το `emit()` του `buildStraightWallWithOpenings` καλεί
+  `applyWallTilt(geo, wall.params, yOffset − floorY)` **πριν** τα edges → καλύπτει και τα 3 piece
+  kinds (flat extrude `zBotAM` / wedge `0` / column-prism clip `0`) με ΕΝΑ σημείο. Ο attached
+  column prism path καλεί `applyColumnTilt(prism, column.params)` (prism σε floor-local Y, base
+  στο FFL → `baseHeightM=0`).
+- **Live preview αυτόματα:** το `bim3d-preview-rebuild.ts` ξαναχτίζει μέσω `wallToMesh`/
+  `columnToMesh` → το live tilt preview attached/με-ανοίγματα στοιχείου διορθώνεται χωρίς αλλαγή εκεί.
+- **No-op flat:** `isWallTilted`/`isColumnTilted` false → καμία αλλαγή (regression-safe). ADR-401
+  clip/wedge/prism άθικτα (το shear είναι τελικός μετασχηματισμός μετά το χτίσιμο των pieces).
+- **Tests:** ΝΕΟ `wall-tilt-pieces-3d.test.ts` (7: wall pieces flat-vs-tilted per-vertex shear +
+  βάση αγκυρωμένη + 3Δ===2Δ == `wallTiltShearAt`· column prism shear dir-0 + no-op flat) → 7/7 PASS·
+  regression `wall-top-angled-crossing`/`wall-opening-pieces`/`column-piece-geometry` 34/34,
+  `bim3d-edit-live-preview` 14/14, tsc 0.
+
+### Phase 4.1 — Tilt-aware attach clip (το pocket του δοκαριού ακολουθεί την κλίση)
+**Bug (Giorgio live + screenshot):** σε attached τοίχο με δοκάρι που «χωνεύει» στην κορυφή
+(ADR-401 `clipWallBandTopRegions`), δίνοντας κλίση η **εγκοπή** μετακινούνταν μαζί με τον
+γερμένο τοίχο ενώ το δοκάρι έμενε ακίνητο → ξεκρέμαστη «τρύπα», το δοκάρι δεν χωνεύει.
+**Root:** ο clip δουλεύει σε **plan** υποθέτοντας κατακόρυφη προβολή· το Phase-4 shear
+μετατοπίζει την κορυφή του pocket κατά `wallTiltShearAt(params, Hu)` (Hu = host underside),
+αλλά το host μένει.
+**Fix (geometrically exact):** η plan-θέση του pocket στο ύψος `Hu` στον sheared κόσμο =
+`(quad + shear(Hu)) ∩ host`· στον un-sheared frame (όπου χτίζεται + ξανα-shear-άρεται) =
+`quad ∩ (host − shear(Hu))`. Άρα **un-shear κάθε host footprint κατά `−shear(Hu)` ΠΡΙΝ το
+clip** (ΝΕΟ `tiltCompensateWallTopClip` στο `wall-top-clip.ts`· τα ύψη `undersideZmm` μένουν,
+breakpoints recompute). Ο converter το καλεί μόνο σε `isWallTilted` (no-op flat). ΝΕΟ
+`wall-tilt-attach-clip-3d.test.ts` 5/5 (host un-shear + breakpoints + pocket⊆host + e2e),
+tsc 0. Σημείωση: αν η κλίση είναι τόσο μεγάλη που η γερμένη κορυφή ξεπερνά το host, το pocket
+σωστά εξαφανίζεται (ο τοίχος έγειρε εκτός δοκαριού — Revit-correct).
+
+**Limitations (Phase 4):** base-attach pocket + tilt (follow-up)· attached **κολώνα** prism +
+tilt (ίδιο pattern, ξεχωριστά)· sloped-underside host (η αντιστάθμιση είναι uniform translate —
+exact για flat δοκάρι, approx για κεκλιμένο)· curved/polyline τοίχος με tilt
+(`buildWallMeshWithOpenings`). Δοκάρι/πλάκα = δικό slope (ανεπηρέαστα). Σκάλα = no tilt by design.
+
+---
+
 ## SSoT reuse (μηδέν διπλά μαθηματικά)
 - Shear loop: ΕΝΑ `applyHorizontalTiltShear` (κολώνα+τοίχος).
 - Tilt math: `columnTiltShearAt`/`wallTiltShearAt` (αδέλφια `beamSlopeOffsetZmm`/
@@ -194,6 +245,8 @@ lean — το `SectionRect` είναι rect· follow-up).
 ---
 
 ## Changelog
+- **2026-06-01 (Opus 4.8) — Phase 4.1: tilt-aware attach clip** (pending commit, 🔴 verify Giorgio). Μετά το Phase 4, σε attached τοίχο+δοκάρι (το δοκάρι χωνεύει στην κορυφή) η κλίση μετακινούσε την εγκοπή μαζί με τον τοίχο ενώ το δοκάρι έμενε → ξεκρέμαστη τρύπα. Root: ο ADR-401 clip είναι plan-based (κατακόρυφη προβολή). Fix: ΝΕΟ `tiltCompensateWallTopClip` (`wall-top-clip.ts`) που un-shear-άρει κάθε host footprint κατά `−wallTiltShearAt(params, Hu)` ΠΡΙΝ το clip (geometrically: `quad ∩ (host − shear(Hu))`)· breakpoints recompute· ύψη ανέπαφα. Ο converter το καλεί μόνο `isWallTilted` (no-op flat). ΝΕΟ `wall-tilt-attach-clip-3d.test.ts` 5/5 + regression 46/46, tsc 0.
+- **2026-06-01 (Opus 4.8) — Phase 4: pieces/prism 3Δ tilt** (pending commit, 🔴 verify Giorgio). Η κλίση τοίχου/κολώνας φαινόταν στην 2Δ κάτοψη αλλά ΟΧΙ στο 3Δ όταν το στοιχείο ήταν **attached** ή είχε **ανοίγματα** (πήγαινε στον pieces/prism path που δεν καλούσε `applyWallTilt`/`applyColumnTilt`). Fix: `mesh-slope-shear.ts` shear functions += optional `baseHeightM` (anchor=FFL για τα floor-local pieces· default 0 = solid path byte-for-byte)· `emit()` του `buildStraightWallWithOpenings` shear-άρει κάθε piece (`yOffset−floorY`)· ο attached column prism path καλεί `applyColumnTilt`. 3Δ === 2Δ (ίδιο `wallTiltShearAt`/`columnTiltShearAt` SSoT). Live preview διορθώνεται αυτόματα (περνά από `wallToMesh`/`columnToMesh`). ΝΕΟ `wall-tilt-pieces-3d.test.ts` 7/7· regression 34/34 + live-preview 14/14, tsc 0. Αίρει το «Flat path μόνο» limitation. Follow-up: curved/polyline τοίχος με tilt.
 - **2026-06-01 (Opus 4.8) — 🐛 FIX: περιστροφή ΚΕΚΛΙΜΕΝΗΣ κολώνας/πλάκας δεν περιέστρεφε τη φορά κλίσης** (pending commit, 🔴 verify Giorgio). Σύμπτωμα Giorgio: κεκλιμένη κολώνα (lean στην κάτοψη) → δεξιόστροφη περιστροφή → **preview σωστό** (βάση+κορυφή+κλίση στρέφονται γύρω από το κέντρο), αλλά στο **release** η βάση πάει στη νέα θέση **χωρίς να ολοκληρωθεί η περιστροφή** — «σαν μετακίνηση». **Root cause:** η `rotateColumn`/`rotateSlab` (`bim-rotate-geometry.ts`, ADR-363 Phase 7.2 — γράφτηκε **πριν** το ADR-404 tilt) περιέστρεφε `position`+`rotation` (κολώνα) / `outline` (πλάκα) αλλά **όχι** το `tilt.direction` / `slope.direction`, που είναι **ΑΠΟΛΥΤΗ plan-γωνία** (`columnTiltShearAt`/`slabSlopeOffsetZmm` = cos/sin(direction), ανεξάρτητο `rotation`/outline). Άρα η commit-γεωμετρία είχε το lean στην **παλιά** φορά → ≠ rigid preview (που στρέφει τα πάντα) → «snap» στο release. **Γιατί μόνο κολώνα/πλάκα:** ο τοίχος (`tilt {angle}` ⟂ run) + το δοκάρι (`topElevationEnd` κατά τον άξονα) παράγουν την κλίση τους από `start/end`, που **ήδη** περιστρέφονται → ακολουθούν αυτόματα. **Fix:** `rotateColumn`/`rotateSlab` → `tilt.direction`/`slope.direction` += `angleDeg` (normalizeAngleDeg) όταν υπάρχει tilt/slope· no-op για flat (byte-for-byte). +3 tests (`bim-rotate-geometry.test.ts`: column tilt.direction rotates / non-tilted no tilt field / slab slope.direction rotates) → 20/20 PASS, tsc 0. **Follow-up (flagged, ξεχωριστό):** το `bim-mirror-geometry.ts` (mirror transform) έχει ανάλογο κενό — η αντανάκλαση κεκλιμένου στοιχείου πρέπει να **ανακλά** το direction (όχι μόνο +angle)· δεν το άγγιξα (Giorgio δεν ανέφερε mirror).
 - **2026-06-01 (Opus 4.8) — Bug fix ADR-401↔402/404 (attached element vanish on gizmo
   commit), pending browser verify:** μετά το ADR-401 persistence fix (attached τοίχοι/κολώνες

@@ -17,9 +17,10 @@ import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from './multi-floor-3d-source';
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh } from '../converters/BimToThreeConverter';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
-import { resolveWallTopProfile } from '../../bim/geometry/wall-top-profile';
+import { resolveWallTopProfile, resolveWallNominalTopZmm } from '../../bim/geometry/wall-top-profile';
 import { resolveWallBaseProfile } from '../../bim/geometry/wall-base-profile';
 import { makeWallTopContext, makeWallBaseContext, buildWallHostInputs, type HostFootprintInput } from '../../bim/geometry/wall-host-plan-builder';
+import { wallTopFaceCrossingBreakpoints, type WallTopClipContext } from '../converters/wall-top-clip';
 import { makeStairHostResolver } from '../../bim/geometry/stair-vertical-profile';
 import { resolveEffectiveStairParams } from '../../bim/geometry/stairs/stair-effective-params';
 import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometryService';
@@ -235,11 +236,27 @@ export class BimSceneLayer {
       );
       const start = { x: wall.params.start.x, y: wall.params.start.y };
       const end = { x: wall.params.end.x, y: wall.params.end.y };
+      const topBase = { floorElevationMm: ctx.floorElevationMm };
       const profile = wall.params?.topBinding === 'attached'
-        ? resolveWallTopProfile(
-            wall.params,
-            makeWallTopContext(start, end, hostInputs, { floorElevationMm: ctx.floorElevationMm }),
-          )
+        ? resolveWallTopProfile(wall.params, makeWallTopContext(start, end, hostInputs, topBase))
+        : undefined;
+      // ADR-401 γωνιακή διασταύρωση — footprint clip: για **straight** attached τοίχο,
+      // ο 3D builder κόβει το αποτύπωμα κάθε κομματιού με τα host footprints σε επίπεδες
+      // περιοχές (κάτω-παρειά host / nominal) με κατακόρυφο σκαλοπάτι στην αληθινή ακμή
+      // του host → μηδέν τριγωνικά κενά. Curved/polyline → undefined (το extrude path
+      // δεν υποστηρίζει διαγώνια κορυφή — documented limitation, axis profile όπως πριν).
+      // ADR-401 face crossings: σπάμε τον τοίχο εκεί που τον τέμνουν οι ΠΑΡΕΙΕΣ
+      // (όχι ο άξονας) ώστε τα ακριανά κομμάτια να μένουν καθαρά ορθογώνια και τα
+      // transition κομμάτια καθαρά τρίγωνα μετά το clip (δες wall-top-clip §face).
+      const attachHosts = (wall.params?.topBinding === 'attached' && wall.kind === 'straight')
+        ? hostInputs.filter((h) => wall.params.attachTopToIds?.includes(h.hostId))
+        : null;
+      const topClip: WallTopClipContext | undefined = attachHosts
+        ? {
+            hosts: attachHosts,
+            nominalTopMm: resolveWallNominalTopZmm(wall.params, topBase),
+            breakpoints: wallTopFaceCrossingBreakpoints(wall.geometry, attachHosts),
+          }
         : undefined;
       // ADR-401 (γ) — base-attach: ο πάτος ακολουθεί την άνω-παρειά host(s).
       const baseProfile = wall.params?.baseBinding === 'attached'
@@ -249,7 +266,7 @@ export class BimSceneLayer {
           )
         : undefined;
       const mesh = wallToMesh(
-        wall, openingsForWall, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, profile, baseProfile,
+        wall, openingsForWall, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, profile, baseProfile, topClip,
       );
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }

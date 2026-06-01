@@ -26,6 +26,8 @@ import { buildWallMeshWithOpenings } from './wall-opening-extrude';
 import { computeWallOpeningPieces, type WallTopLocalFn, type WallBaseLocalFn } from './wall-opening-pieces';
 import { buildSlopedWallPieceGeometry } from './wall-piece-geometry';
 import { buildColumnPrismGeometry } from './column-piece-geometry';
+import { clipWallBandTopRegions, tiltCompensateWallTopClip, type WallTopClipContext } from './wall-top-clip';
+import { isWallTilted } from '../../bim/geometry/wall-tilt';
 import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
 import { evaluateWallTopAt, type WallTopProfile } from '../../bim/geometry/wall-top-profile';
 import { evaluateWallBaseAt, type WallBaseProfile } from '../../bim/geometry/wall-base-profile';
@@ -189,35 +191,38 @@ export function buildStraightWallWithOpenings(
   buildingBaseElevationM: number,
   wallTop?: WallTopLocalFn,
   wallBase?: WallBaseLocalFn,
+  topClip?: WallTopClipContext,
 ): THREE.Object3D | null {
   // Κάθετη παρειά κάθε ανοίγματος από το `outline` SSoT (collinear με wall punch
   // 2D + Z4 + Z1) — ΟΧΙ fraction-lerp ανά πλευρά (που έβγαζε λοξή παρειά σε miters).
   // ADR-401 B2: `wallTop` → κάθε κομμάτι παίρνει την κορυφή του από το προφίλ.
   // ADR-401 (γ): `wallBase` → ο πάτος ακολουθεί base-attach (επίπεδο/σκαλωτό →
   // ExtrudeGeometry· κεκλιμένο top ή base → custom wedge BufferGeometry).
-  const pieces = computeWallOpeningPieces(wall, openings, wallTop, wallBase);
+  // ADR-401 γωνιακή διασταύρωση: σε attached straight τοίχο σπάμε στα **face
+  // crossings** (τομές παρειών με τα host footprints), ΟΧΙ στις axis crossings —
+  // αλλιώς ένα ακριανό κομμάτι περιέχει την τριγωνική «μύτη» του host → πεντάγωνο
+  // μετά το clip. Το `at` αγνοείται (το clip ξαναϋπολογίζει την κορυφή ανά region)·
+  // δίνουμε nominal ώστε όποιο region δεν επικαλύπτεται host να βγει στο nominal.
+  // ADR-404 ↔ ADR-401 — tilt-aware clip: σε κεκλιμένο τοίχο, αντιστάθμισε τα host
+  // footprints κατά −shear(Hu) ΠΡΙΝ το clip ώστε μετά τον τελικό shear (emit) η εγκοπή
+  // να ξανακάθεται κάτω από το δοκάρι. Επίπεδος τοίχος → ίδιο topClip (no-op).
+  const effTopClip = topClip && isWallTilted(wall.params)
+    ? tiltCompensateWallTopClip(topClip, wall.params, floorElevationMm, wall.geometry)
+    : topClip;
+  const clipWallTop = effTopClip
+    ? { breakpoints: effTopClip.breakpoints, at: () => (effTopClip.nominalTopMm - floorElevationMm) * MM_TO_M }
+    : wallTop;
+  const pieces = computeWallOpeningPieces(wall, openings, clipWallTop, wallBase);
   if (!pieces) return null;
 
   const floorY = floorElevationMm * MM_TO_M + buildingBaseElevationM;
   const group = new THREE.Group();
-  for (const pc of pieces) {
-    let geo: THREE.BufferGeometry;
-    let yOffset: number;
-    if (Math.abs(pc.zTopAM - pc.zTopBM) < 1e-6 && Math.abs(pc.zBotAM - pc.zBotBM) < 1e-6) {
-      // Επίπεδη κορυφή ΚΑΙ επίπεδος πάτος → extrude κατά (zTop − zBot).
-      const depth = pc.zTopAM - pc.zBotAM;
-      if (depth <= 1e-6) continue;
-      const shape = buildShape(pc.quad);
-      if (!shape) continue;
-      geo = extrudeAndRotate(shape, depth);
-      yOffset = floorY + pc.zBotAM;
-    } else {
-      // Κεκλιμένη κορυφή ή/και πάτος → wedge με ρητές κορυφές σε floor-local Y.
-      const wedge = buildSlopedWallPieceGeometry(pc);
-      if (!wedge) continue;
-      geo = wedge;
-      yOffset = floorY;
-    }
+  const emit = (geo: THREE.BufferGeometry, yOffset: number): void => {
+    // ADR-404 — battered wall στον pieces path (Δρόμος Β): το ίδιο shear με τον solid
+    // path, αλλά αγκυρωμένο στο floor-local ύψος της βάσης του κομματιού (`yOffset −
+    // floorY`: flat piece → zBotAM· wedge/prism → 0). No-op flat → byte-for-byte.
+    // ΠΡΙΝ το mesh/edges ώστε τα attachEdgesProjection edges να ακολουθούν την κλίση.
+    applyWallTilt(geo, wall.params, yOffset - floorY);
     const mesh = new THREE.Mesh(geo, material);
     mesh.position.y = yOffset;
     mesh.userData['bimId'] = wall.id;
@@ -226,6 +231,40 @@ export function buildStraightWallWithOpenings(
     mesh.receiveShadow = true;
     attachEdgesProjection(mesh, 'wall');
     group.add(mesh);
+  };
+
+  for (const pc of pieces) {
+    const flatBase = Math.abs(pc.zBotAM - pc.zBotBM) < 1e-6;
+    // ADR-401 γωνιακή διασταύρωση: profile-following κομμάτι attached τοίχου με επίπεδο
+    // πάτο → κόψε το plan-quad με τα host footprints σε επίπεδες περιοχές (κάθε μία
+    // prism). Δίνει διαγώνιο κατακόρυφο σκαλοπάτι στην αληθινή ακμή του host → μηδέν
+    // τριγωνικά κενά. Curved/sloped-base/μη-attached → δεν μπαίνει εδώ (fast path κάτω).
+    if (effTopClip && pc.topFollowsProfile && flatBase) {
+      const regions = clipWallBandTopRegions(
+        pc.quad, effTopClip.hosts, effTopClip.nominalTopMm, floorElevationMm, pc.zBotAM,
+      );
+      if (regions.length > 0) {
+        for (const r of regions) {
+          const prism = buildColumnPrismGeometry(r.footprint, r.baseLocalM, r.topLocalM);
+          if (prism) emit(prism, floorY);
+        }
+        continue;
+      }
+      // regions κενό (clip απέτυχε/degenerate) → πέσε στο fast path παρακάτω.
+    }
+
+    if (Math.abs(pc.zTopAM - pc.zTopBM) < 1e-6 && flatBase) {
+      // Επίπεδη κορυφή ΚΑΙ επίπεδος πάτος → extrude κατά (zTop − zBot).
+      const depth = pc.zTopAM - pc.zBotAM;
+      if (depth <= 1e-6) continue;
+      const shape = buildShape(pc.quad);
+      if (!shape) continue;
+      emit(extrudeAndRotate(shape, depth), floorY + pc.zBotAM);
+    } else {
+      // Κεκλιμένη κορυφή ή/και πάτος → wedge με ρητές κορυφές σε floor-local Y.
+      const wedge = buildSlopedWallPieceGeometry(pc);
+      if (wedge) emit(wedge, floorY);
+    }
   }
   if (group.children.length === 0) return null;
   group.userData['bimId'] = wall.id;
@@ -243,6 +282,7 @@ export function wallToMesh(
   buildingBaseElevationM = 0,
   profile?: WallTopProfile,
   baseProfile?: WallBaseProfile,
+  topClip?: WallTopClipContext,
 ): THREE.Object3D | null {
   const coreLayer = wall.params.dna?.layers.find((l) => l.side === 'core');
   const matId = coreLayer?.materialId ?? CATEGORY_MAT_ID[wall.params.category] ?? 'mat-concrete';
@@ -264,7 +304,7 @@ export function wallToMesh(
   if (openings.length > 0 || wallTop || wallBase) {
     const group =
       wall.kind === 'straight'
-        ? buildStraightWallWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop, wallBase)
+        ? buildStraightWallWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop, wallBase, topClip)
         : buildWallMeshWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop, wallBase);
     if (group) {
       group.userData['matId'] = matId;
@@ -314,6 +354,9 @@ export function columnToMesh(
   if (topProfile?.hasAttach || baseProfile?.hasAttach) {
     const prism = buildAttachedColumnPrism(verts, floorElevationMm, topProfile, baseProfile);
     if (prism) {
+      // ADR-404 — raking column στον attached prism path: το prism ζει σε floor-local
+      // Y με βάση στο FFL → baseHeightM=0 (ίδιο datum με τον flat path & το 2Δ). No-op flat.
+      applyColumnTilt(prism, column.params);
       const mesh = new THREE.Mesh(prism, getElementMaterial3D('column'));
       mesh.position.y = floorElevationMm * MM_TO_M + buildingBaseElevationM;
       const tagged = tagMesh(mesh, column.id, 'column', matId, levelId);

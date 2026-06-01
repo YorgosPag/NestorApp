@@ -42,13 +42,23 @@ const MM_TO_M = 0.001;
  * `heightAboveBase = pos.getY(i)` είναι world-metres → το SSoT επιστρέφει την ίδια
  * μονάδα (unit-safe). `pos.getY(0 στη βάση)` → μηδέν → η βάση μένει αγκυρωμένη.
  */
+/**
+ * `baseHeightM` (ADR-404 — pieces/prism path): floor-local ύψος της **βάσης** του
+ * geometry (Y=0) πάνω από το pivot της κλίσης. Στον **solid path** το geometry Y=0
+ * είναι ήδη στη βάση του στοιχείου → `baseHeightM = 0` (default, byte-for-byte).
+ * Στον **pieces/prism path** το geometry ζει σε floor-local Y και το mesh ανεβαίνει
+ * κατά `mesh.position.y = yOffset`· εκεί `baseHeightM = yOffset − floorY`, ώστε το
+ * `heightAboveBase = pos.getY(i) + baseHeightM` να είναι το πραγματικό ύψος πάνω από
+ * τη βάση (anchor=0 στο FFL — ίδιο datum με το 2Δ cut-plane & τον solid path).
+ */
 function applyHorizontalTiltShear(
   geo: THREE.BufferGeometry,
   shearAt: (heightM: number) => { readonly dx: number; readonly dy: number },
+  baseHeightM = 0,
 ): void {
   const pos = geo.getAttribute('position') as THREE.BufferAttribute;
   for (let i = 0; i < pos.count; i++) {
-    const { dx, dy } = shearAt(pos.getY(i));
+    const { dx, dy } = shearAt(pos.getY(i) + baseHeightM);
     pos.setX(i, pos.getX(i) + dx);
     pos.setZ(i, pos.getZ(i) - dy);
   }
@@ -56,16 +66,30 @@ function applyHorizontalTiltShear(
   geo.computeVertexNormals();
 }
 
-/** Raking column shear (flat solid path only — attached prism path = follow-up). */
-export function applyColumnTilt(geo: THREE.BufferGeometry, params: ColumnEntity['params']): void {
+/**
+ * Raking column shear. `baseHeightM` (default 0 = solid path· >0 = attached prism /
+ * pieces piece το οποίο ζει σε floor-local Y, βλ. `applyHorizontalTiltShear`).
+ */
+export function applyColumnTilt(
+  geo: THREE.BufferGeometry,
+  params: ColumnEntity['params'],
+  baseHeightM = 0,
+): void {
   if (!isColumnTilted(params)) return;
-  applyHorizontalTiltShear(geo, (h) => columnTiltShearAt(params, h));
+  applyHorizontalTiltShear(geo, (h) => columnTiltShearAt(params, h), baseHeightM);
 }
 
-/** Battered wall shear (flat solid path only — pieces/attached path = follow-up). */
-export function applyWallTilt(geo: THREE.BufferGeometry, params: WallEntity['params']): void {
+/**
+ * Battered wall shear. `baseHeightM` (default 0 = solid path· >0 = piece το οποίο
+ * ξεκινά ψηλότερα στο floor-local Y, π.χ. πρέκι/wedge, βλ. `applyHorizontalTiltShear`).
+ */
+export function applyWallTilt(
+  geo: THREE.BufferGeometry,
+  params: WallEntity['params'],
+  baseHeightM = 0,
+): void {
   if (!isWallTilted(params)) return;
-  applyHorizontalTiltShear(geo, (h) => wallTiltShearAt(params, h));
+  applyHorizontalTiltShear(geo, (h) => wallTiltShearAt(params, h), baseHeightM);
 }
 
 /**

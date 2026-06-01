@@ -105,6 +105,12 @@ export function buildColumnPrismGeometry(
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geo.setIndex(index);
-  geo.computeVertexNormals();
-  return geo;
+  // FLAT shading (mirror του `ExtrudeGeometry` που χρησιμοποιεί ο κανονικός τοίχος):
+  // οι 2n κορυφές μοιράζονται καπάκια ΚΑΙ πλευρές· `computeVertexNormals` σε indexed
+  // geometry θα **μέσωνε** τα normals στις κοινές κορυφές → η οριζόντια κορυφή έπαιρνε
+  // σχεδόν οριζόντιο normal (φως σαν κάθετη παρειά, ασυνεπές ανά σχήμα κομματιού).
+  // `toNonIndexed` ξεχωρίζει κάθε τρίγωνο → per-face normals → επίπεδες, ομοιόχρωμες έδρες.
+  const flat = geo.toNonIndexed();
+  flat.computeVertexNormals();
+  return flat;
 }

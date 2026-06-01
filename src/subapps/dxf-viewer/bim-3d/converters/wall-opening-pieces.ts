@@ -57,6 +57,16 @@ export interface WallOpeningPiece {
   readonly zTopAM: number;
   /** Top (ΜΕΤΡΑ) στη boundary `b`. */
   readonly zTopBM: number;
+  /**
+   * ADR-401 (γωνιακή διασταύρωση) — `true` όταν η κορυφή αυτού του κομματιού
+   * **ακολουθεί το προφίλ** (jamb full-height / πρέκι· `pushTopPiece`), σε αντίθεση
+   * με τη **ποδιά** (`pushFlatPiece`, σταθερό χαμηλό top). Ο 3D builder κόβει ΜΟΝΟ
+   * τα profile-following κομμάτια ενός attached τοίχου με τα host footprints
+   * (`clipWallBandTopRegions`) → επίπεδες περιοχές + κατακόρυφο σκαλοπάτι στην
+   * αληθινή ακμή του host (μηδέν τριγωνικά κενά). Απουσία/false → flat top (ποδιά
+   * ή μη-attached) → καμία κοπή.
+   */
+  readonly topFollowsProfile?: boolean;
 }
 
 /**
@@ -205,7 +215,9 @@ export function computeWallOpeningPieces(
       const zA = Math.max(topAt(fa + ein), zBotA);
       const zB = Math.max(topAt(fb - ein), zBotB);
       if (zA - zBotA < 1e-6 && zB - zBotB < 1e-6) continue; // top κάτω/ίσο με base → κενό
-      pieces.push({ quad: [sa.outer, sb.outer, sb.inner, sa.inner], zBotAM: zBotA, zBotBM: zBotB, zTopAM: zA, zTopBM: zB });
+      // topFollowsProfile: η κορυφή ακολουθεί το προφίλ (jamb/πρέκι) → ο 3D builder
+      // την κόβει με τα host footprints σε attached τοίχο (γωνιακή διασταύρωση).
+      pieces.push({ quad: [sa.outer, sb.outer, sb.inner, sa.inner], zBotAM: zBotA, zBotBM: zBotB, zTopAM: zA, zTopBM: zB, topFollowsProfile: true });
     }
   };
 
