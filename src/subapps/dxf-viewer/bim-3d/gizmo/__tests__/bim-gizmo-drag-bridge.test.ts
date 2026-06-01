@@ -235,3 +235,57 @@ describe('BimGizmoDragBridge — rotate-Y', () => {
     expect(b.getLiveRotationRad()).toBe(0);
   });
 });
+
+describe('BimGizmoDragBridge — tilt (X/Z rotate rings, ADR-404 Phase 2)', () => {
+  // Ray that hits the plane (normal X, through origin) at (0, y, z): travels along -X.
+  function rayInYZ(y: number, z: number): { o: THREE.Vector3; d: THREE.Vector3 } {
+    return { o: new THREE.Vector3(5, y, z), d: new THREE.Vector3(-1, 0, 0) };
+  }
+  // Ray that hits the plane (normal Z, through origin) at (x, y, 0): travels along -Z.
+  function rayInXY(x: number, y: number): { o: THREE.Vector3; d: THREE.Vector3 } {
+    return { o: new THREE.Vector3(x, y, 5), d: new THREE.Vector3(0, 0, -1) };
+  }
+  const camHoriz = new THREE.Vector3(0, 0, -1);
+
+  it('rotate-x ring → tilt outcome (axis x), signed angle about +X', () => {
+    const b = new BimGizmoDragBridge();
+    const s = rayInYZ(1, 0); // start vector +Y
+    expect(b.start({ kind: 'rotate', axis: 'x' }, anchor, s.o, s.d, camHoriz)).toBe(true);
+    const u = rayInYZ(0, 1); // current vector +Z → +90° about +X
+    b.update(u.o, u.d, camHoriz);
+    const out = b.getOutcome();
+    expect(out.kind).toBe('tilt');
+    if (out.kind !== 'tilt') return;
+    expect(out.axis).toBe('x');
+    expect(out.angleDeg).toBeCloseTo(90, 3);
+  });
+
+  it('rotate-z ring → tilt outcome (axis z)', () => {
+    const b = new BimGizmoDragBridge();
+    const s = rayInXY(1, 0); // start vector +X
+    b.start({ kind: 'rotate', axis: 'z' }, anchor, s.o, s.d, camHoriz);
+    const u = rayInXY(0, 1); // current vector +Y → +90° about +Z
+    b.update(u.o, u.d, camHoriz);
+    const out = b.getOutcome();
+    if (out.kind !== 'tilt') throw new Error('expected tilt');
+    expect(out.axis).toBe('z');
+    expect(out.angleDeg).toBeCloseTo(90, 3);
+  });
+
+  it('getLiveTiltDeg tracks the in-progress (snapped) tilt angle', () => {
+    const b = new BimGizmoDragBridge();
+    expect(b.getLiveTiltDeg()).toBe(0);
+    const s = rayInYZ(1, 0);
+    b.start({ kind: 'rotate', axis: 'x' }, anchor, s.o, s.d, camHoriz);
+    b.update(rayInYZ(0, 1).o, rayInYZ(0, 1).d, camHoriz);
+    expect(b.getLiveTiltDeg()).toBeCloseTo(90, 3);
+  });
+
+  it('the Y rotate ring stays a plan rotation (NOT a tilt) — regression', () => {
+    const b = new BimGizmoDragBridge();
+    const s = vertRay(1, 0);
+    b.start({ kind: 'rotate', axis: 'y' }, anchor, s.o, s.d, camDir);
+    b.update(vertRay(0, 1).o, vertRay(0, 1).d, camDir);
+    expect(b.getOutcome().kind).toBe('rotate');
+  });
+});

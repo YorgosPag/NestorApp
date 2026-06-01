@@ -64,11 +64,28 @@ const RESIZE_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>>
   stair: ['resize-x', 'resize-z', 'resize-y', 'resize-m-y'],
 };
 
-/** Active handle id set for a selected entity: base move/rotate + any resize handles. */
+/**
+ * ADR-404 Phase 2 — X/Z rotate rings shown per entity type so the user can TILT
+ * (rake a column, batter a wall, ramp a beam, slope a slab). Both X and Z rings are
+ * offered; the drag bridge maps each to the type's tilt DOF and treats a roll ring
+ * (axis along the element) as a no-op. A stair has NO tilt (its incline is parametric
+ * via run/stepCount — Revit-correct), so it is absent here. Single-select only: a
+ * multi-selection reports `editBimType = null` → no tilt rings (mirror resize).
+ */
+const TILT_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {
+  column: ['rotate-x', 'rotate-z'],
+  wall: ['rotate-x', 'rotate-z'],
+  beam: ['rotate-x', 'rotate-z'],
+  slab: ['rotate-x', 'rotate-z'],
+};
+
+/** Active handle id set for a selected entity: base move/rotate + any resize + tilt handles. */
 export function activeHandlesFor(bimType: string | null): ReadonlySet<GizmoHandleId> {
   const ids = new Set<GizmoHandleId>(BASE_HANDLES);
   const resize = (bimType && RESIZE_HANDLES_BY_TYPE[bimType]) || [];
   for (const id of resize) ids.add(id);
+  const tilt = (bimType && TILT_HANDLES_BY_TYPE[bimType]) || [];
+  for (const id of tilt) ids.add(id);
   return ids;
 }
 

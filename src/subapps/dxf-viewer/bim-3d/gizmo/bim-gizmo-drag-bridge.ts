@@ -24,6 +24,7 @@ import { projectConstrained } from './gizmo-projection';
 import { worldDeltaToDxfDelta, worldUpDeltaToMm } from '../utils/bim3d-edit-math';
 import { worldToDxfPlan, dxfPlanToWorld } from '../viewport/coordinate-transforms';
 import type { SnapFn } from './bim3d-snap-bridge';
+import { snapTiltAngleDeg } from './bim3d-tilt-bridge';
 
 /** Command-ready result of a finished gizmo drag. */
 export type BridgeOutcome =
@@ -31,7 +32,11 @@ export type BridgeOutcome =
   // `deltaUpMm` is the vertical (world-Y) delta in mm (axis-Y arrow → elevation move).
   // A horizontal drag carries `deltaUpMm: 0`; a pure vertical drag carries `deltaDxf` (0,0).
   | { readonly kind: 'move'; readonly deltaDxf: Point2D; readonly deltaUpMm: number }
+  // The Y rotate ring → plan rotation (ADR-402).
   | { readonly kind: 'rotate'; readonly pivotDxf: Point2D; readonly angleDeg: number }
+  // ADR-404 Phase 2 — the X/Z rotate rings → 3D tilt (per-type patch computed
+  // downstream by `bim3d-tilt-bridge`). `angleDeg` is signed + already snapped.
+  | { readonly kind: 'tilt'; readonly axis: 'x' | 'z'; readonly angleDeg: number }
   // ADR-402 Phase B — resize: the type-specific param patch is computed downstream
   // (`bim3d-resize-bridge`) from the axis + the DXF-mm slide delta (horizontal) +
   // the vertical (world-Y) mm delta + the absolute cursor on the floor plane.
@@ -48,7 +53,12 @@ export type BridgeOutcome =
   | { readonly kind: 'none' };
 
 const DELTA_EPSILON = 1e-6;
-const ROTATE_AXIS_Y = new THREE.Vector3(0, 1, 0);
+/** World unit vector per ring axis (Y = plan rotate; X/Z = tilt, ADR-404). */
+const AXIS_VEC: Record<GizmoAxis, THREE.Vector3> = {
+  x: new THREE.Vector3(1, 0, 0),
+  y: new THREE.Vector3(0, 1, 0),
+  z: new THREE.Vector3(0, 0, 1),
+};
 
 export class BimGizmoDragBridge {
   private constraint: GizmoDragConstraint | null = null;
@@ -59,7 +69,11 @@ export class BimGizmoDragBridge {
   /** Raw (un-snapped) translation — used only for change detection in `update()`. */
   private readonly rawTranslation = new THREE.Vector3();
   private readonly rotateStartVec = new THREE.Vector3();
+  /** Axis the active rotate ring spins about (Y plan rotate, X/Z tilt — ADR-404). */
+  private readonly rotateAxis = new THREE.Vector3(0, 1, 0);
   private rotationRad = 0;
+  /** Shift held → free (un-snapped) tilt angle (ADR-404 Phase 2 snap 5/15/30/45°). */
+  private shiftHeld = false;
   /** Injected snap callback (ADR-402 Phase B). Null = free drag (OSNAP off / unsupported). */
   private snapFn: SnapFn | null = null;
   /** World position of the active snap target this frame (for the 3D marker), or null. */
@@ -82,6 +96,11 @@ export class BimGizmoDragBridge {
     this.snapFn = fn;
   }
 
+  /** Whether Shift is held — disables the tilt angle snap for the active drag (ADR-404). */
+  setShiftHeld(held: boolean): void {
+    this.shiftHeld = held;
+  }
+
   /** World position of the snap target hit this frame, or null when nothing snapped. */
   getActiveSnapWorld(): THREE.Vector3 | null {
     return this.activeSnapWorld ? this.activeSnapWorld.clone() : null;
@@ -98,6 +117,14 @@ export class BimGizmoDragBridge {
    */
   getLiveRotationRad(): number {
     return this.rotationRad;
+  }
+
+  /**
+   * Signed tilt angle (degrees, snapped unless Shift) for the in-progress X/Z ring
+   * drag — drives the live tilt preview (ADR-404 Phase 2). 0 for a non-rotate drag.
+   */
+  getLiveTiltDeg(): number {
+    return this.constraint?.kind === 'rotate' ? this.tiltAngleDeg() : 0;
   }
 
   /**
@@ -119,6 +146,8 @@ export class BimGizmoDragBridge {
     this.rotationRad = 0;
 
     if (constraint.kind === 'rotate') {
+      // ADR-404 — the ring axis (Y = plan rotate; X/Z = tilt) sets the rotation plane.
+      this.rotateAxis.copy(AXIS_VEC[constraint.axis]);
       const v0 = this.projectRotateVector(rayOrigin, rayDir);
       if (!v0) { this.constraint = null; return false; }
       this.rotateStartVec.copy(v0);
@@ -174,10 +203,16 @@ export class BimGizmoDragBridge {
   getOutcome(): BridgeOutcome {
     if (!this.constraint) return { kind: 'none' };
     if (this.constraint.kind === 'rotate') {
-      const angleDeg = THREE.MathUtils.radToDeg(this.rotationRad);
+      // Y ring → plan rotation; X/Z rings → 3D tilt (ADR-404 Phase 2, snapped angle).
+      if (this.constraint.axis === 'y') {
+        const angleDeg = THREE.MathUtils.radToDeg(this.rotationRad);
+        if (Math.abs(angleDeg) < 1e-4) return { kind: 'none' };
+        const p = worldToDxfPlan(this.anchorWorld);
+        return { kind: 'rotate', pivotDxf: { x: p.x, y: p.y }, angleDeg };
+      }
+      const angleDeg = this.tiltAngleDeg();
       if (Math.abs(angleDeg) < 1e-4) return { kind: 'none' };
-      const p = worldToDxfPlan(this.anchorWorld);
-      return { kind: 'rotate', pivotDxf: { x: p.x, y: p.y }, angleDeg };
+      return { kind: 'tilt', axis: this.constraint.axis, angleDeg };
     }
     const end = this.anchorWorld.clone().add(this.liveTranslation);
     // Resize handled FIRST: an axis-Y resize produces a purely vertical slide, so
@@ -227,24 +262,32 @@ export class BimGizmoDragBridge {
     if (!cur) return false;
     const cross = this.rotateStartVec.clone().cross(cur);
     const dot = THREE.MathUtils.clamp(this.rotateStartVec.dot(cur), -1, 1);
-    const signed = Math.atan2(ROTATE_AXIS_Y.dot(cross), dot);
+    const signed = Math.atan2(this.rotateAxis.dot(cross), dot);
     if (Math.abs(signed - this.rotationRad) <= DELTA_EPSILON) return false;
     this.rotationRad = signed;
     return true;
   }
 
-  /** Project the mouse ray onto the rotation plane (normal +Y) through the anchor. */
+  /** Snapped tilt angle (deg, signed) for an X/Z ring drag — free when Shift held (ADR-404). */
+  private tiltAngleDeg(): number {
+    const raw = THREE.MathUtils.radToDeg(this.rotationRad);
+    return this.shiftHeld ? raw : snapTiltAngleDeg(raw);
+  }
+
+  /** Project the mouse ray onto the rotation plane (normal = ring axis) through the anchor. */
   private projectRotateVector(rayOrigin: THREE.Vector3, rayDir: THREE.Vector3): THREE.Vector3 | null {
-    const denom = ROTATE_AXIS_Y.dot(rayDir);
+    const n = this.rotateAxis;
+    const denom = n.dot(rayDir);
     const v = new THREE.Vector3();
     if (Math.abs(denom) > 1e-8) {
-      const t = ROTATE_AXIS_Y.dot(this.anchorWorld.clone().sub(rayOrigin)) / denom;
+      const t = n.dot(this.anchorWorld.clone().sub(rayOrigin)) / denom;
       v.copy(rayOrigin).addScaledVector(rayDir, t).sub(this.anchorWorld);
     } else {
       const t = this.anchorWorld.clone().sub(rayOrigin).dot(rayDir);
       v.copy(rayOrigin).addScaledVector(rayDir, t).sub(this.anchorWorld);
     }
-    v.y = 0; // project onto the horizontal rotation plane
+    // Project onto the rotation plane: drop any component along the ring axis.
+    v.addScaledVector(n, -v.dot(n));
     return v.lengthSq() < 1e-10 ? null : v.normalize();
   }
 }

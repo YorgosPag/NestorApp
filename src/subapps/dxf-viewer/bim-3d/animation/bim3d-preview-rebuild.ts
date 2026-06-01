@@ -32,6 +32,13 @@ import {
   computeSlabResizeParams,
   computeStairResizeParams,
 } from '../gizmo/bim3d-resize-bridge';
+import {
+  computeColumnTiltParams,
+  computeWallTiltParams,
+  computeBeamTiltParams,
+  computeSlabTiltParams,
+  type TiltDragDeg,
+} from '../gizmo/bim3d-tilt-bridge';
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh } from '../converters/BimToThreeConverter';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
@@ -59,6 +66,52 @@ export function buildResizePreviewObject(entityId: string, drag: ResizeDragMm): 
   if (slab) return rebuildSlab(slab, drag, s, levelId);
   const stair = s.stairs.find((st) => st.id === entityId);
   if (stair) return rebuildStair(stair, drag, s, levelId);
+  return null;
+}
+
+/**
+ * Build the live tilt-preview object for `entityId`, or null (no-op / unsupported /
+ * multi-floor). ADR-404 Phase 2 — the tilt sibling of `buildResizePreviewObject`:
+ * apply the per-type tilt patch (`bim3d-tilt-bridge`) → recompute geometry → rebuild
+ * through the SAME converter the commit path uses, so the live preview === the
+ * committed shear (the converters read `tilt`/`topElevationEnd`/`slope`). Stair has
+ * no tilt → null. Flat-path limitation (attached/openings) mirrors resize (ADR-402).
+ */
+export function buildTiltPreviewObject(entityId: string, drag: TiltDragDeg): THREE.Object3D | null {
+  if (useViewMode3DStore.getState().floor3DScope === 'all') return null;
+  const s = useBim3DEntitiesStore.getState();
+  const levelId = s.activeLevelId ?? undefined;
+
+  const wall = s.walls.find((w) => w.id === entityId);
+  if (wall) {
+    const next = computeWallTiltParams(wall.params, drag);
+    if (!next) return null;
+    const preview = { ...wall, params: next, geometry: computeWallGeometry(next, wall.kind) };
+    const openings = s.openings.filter((o) => o.params.wallId === wall.id);
+    return wallToMesh(preview, openings, 0, levelId, baseElevationOf(wall, s));
+  }
+  const column = s.columns.find((c) => c.id === entityId);
+  if (column) {
+    const next = computeColumnTiltParams(column.params, drag);
+    if (!next) return null;
+    const preview = { ...column, params: next, geometry: computeColumnGeometry(next) };
+    return columnToMesh(preview, 0, levelId, baseElevationOf(column, s));
+  }
+  const beam = s.beams.find((b) => b.id === entityId);
+  if (beam) {
+    const next = computeBeamTiltParams(beam.params, drag);
+    if (!next) return null;
+    const preview = { ...beam, params: next, geometry: computeBeamGeometry(next) };
+    return beamToMesh(preview, levelId, baseElevationOf(beam, s));
+  }
+  const slab = s.slabs.find((sl) => sl.id === entityId);
+  if (slab) {
+    const next = computeSlabTiltParams(slab.params, drag);
+    if (!next) return null;
+    const preview = { ...slab, params: next };
+    const openings = s.slabOpenings.filter((o) => o.params.slabId === slab.id);
+    return slabToMesh(preview, openings, levelId, baseElevationOf(slab, s));
+  }
   return null;
 }
 

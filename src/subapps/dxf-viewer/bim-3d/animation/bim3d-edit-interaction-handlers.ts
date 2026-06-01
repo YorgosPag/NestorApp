@@ -19,63 +19,25 @@
  */
 
 import * as THREE from 'three';
-import type { Point2D } from '../../rendering/types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Entity } from '../../types/entities';
 import { computeDxfEntityGrips } from '../../hooks/grip-computation';
 import { getGlobalSnapEngine } from '../../snapping/global-snap-engine';
 import { worldToDxfPlan } from '../viewport/coordinate-transforms';
-import { mmToEntityUnitFactor } from '../utils/bim3d-edit-math';
 import { makeMoveSnapFn, makeResizeSnapFn, type SnapFn } from '../gizmo/bim3d-snap-bridge';
 import { createSceneManagerAdapter } from '../../hooks/grips/grip-commit-adapters';
 import type { DxfCommitDeps } from '../../hooks/grips/unified-grip-types';
 import { getGlobalCommandHistory } from '../../core/commands';
-import { MoveEntityCommand, MoveMultipleEntitiesCommand } from '../../core/commands/entity-commands/MoveEntityCommand';
-import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
-import { UpdateColumnParamsCommand } from '../../core/commands/entity-commands/UpdateColumnParamsCommand';
-import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/UpdateWallParamsCommand';
-import { UpdateBeamParamsCommand } from '../../core/commands/entity-commands/UpdateBeamParamsCommand';
-import { UpdateSlabParamsCommand } from '../../core/commands/entity-commands/UpdateSlabParamsCommand';
-import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
-import { CompoundCommand } from '../../core/commands/CompoundCommand';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
-import {
-  computeColumnResizeParams,
-  computeWallResizeParams,
-  computeBeamResizeParams,
-  computeSlabResizeParams,
-  computeStairResizeParams,
-  type ResizeDragMm,
-} from '../gizmo/bim3d-resize-bridge';
-import {
-  computeWallVerticalMove,
-  computeColumnVerticalMove,
-  computeBeamVerticalMove,
-  computeSlabVerticalMove,
-  computeStairVerticalMove,
-} from '../gizmo/bim3d-vertical-move';
 import type { BimGizmoOverlay } from '../gizmo/bim-gizmo-overlay';
 import type { BimGizmoController } from '../gizmo/bim-gizmo-controller';
 import type { BridgeOutcome } from '../gizmo/bim-gizmo-drag-bridge';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 import { Bim3DEditLivePreview } from './bim3d-edit-live-preview';
-import { buildResizePreviewObject } from './bim3d-preview-rebuild';
-
-/** Commands the gizmo can dispatch from a drag outcome (one undo step each). */
-type EditCommand =
-  | MoveEntityCommand
-  | MoveMultipleEntitiesCommand
-  | RotateEntityCommand
-  | UpdateColumnParamsCommand
-  | UpdateWallParamsCommand
-  | UpdateBeamParamsCommand
-  | UpdateSlabParamsCommand
-  | UpdateStairParamsCommand
-  // ADR-402 — multi-select vertical move batches per-entity elevation edits.
-  | CompoundCommand;
-type SceneManager = NonNullable<ReturnType<typeof createSceneManagerAdapter>>;
-type ResizeOutcome = Extract<BridgeOutcome, { kind: 'resize' }>;
+import { buildResizePreviewObject, buildTiltPreviewObject } from './bim3d-preview-rebuild';
+// ADR-404 — drag outcome → view-agnostic command (extracted for file size, N.7.1).
+import { buildEditCommand } from './bim3d-edit-command-builders';
 
 export interface EditInteractionCtx {
   readonly manager: ThreeJsSceneManager;
@@ -115,11 +77,15 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
   // ADR-402 Phase B — build the snap callback for this drag from the snap-engine
   // SSoT (null = OSNAP off / rotate / vertical resize → free drag).
   ctx.controller.setSnapFn(buildDragSnapFn(ctx));
+  // ADR-404 Phase 2 — Shift disables the tilt angle snap (free tilt).
+  ctx.controller.setShiftHeld(e.shiftKey);
   // ADR-402 — capture the edited meshes so the entity follows the cursor live.
-  // Move/rotate → rigid mesh transform; resize → per-frame geometry rebuild (single).
+  // Move/plan-rotate → rigid mesh transform; resize + tilt (X/Z rings, ADR-404) →
+  // per-frame geometry rebuild via the converter SSoT (shear ≠ rigid transform).
   const ids = useBim3DEditStore.getState().editEntityIds;
   const constraint = ctx.controller.getActiveConstraint();
-  if (constraint?.kind === 'resize') {
+  const isTilt = constraint?.kind === 'rotate' && constraint.axis !== 'y';
+  if (constraint?.kind === 'resize' || isTilt) {
     if (ids[0]) ctx.preview.captureResize(ctx.manager.bimLayer.group, ids[0]);
   } else {
     ctx.preview.captureTransform(ctx.manager.bimLayer.group, new Set(ids));
@@ -182,6 +148,8 @@ function resolveEditEntities(ctx: EditInteractionCtx): { entity: Entity; entityI
 
 export function onEditPointerMove(ctx: EditInteractionCtx, e: PointerEvent): void {
   if (ctx.controller.isDragging()) {
+    // ADR-404 — track Shift live so the tilt snap can be toggled mid-drag.
+    ctx.controller.setShiftHeld(e.shiftKey);
     const changed = ctx.controller.updateDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
     if (changed) {
       applyLivePreview(ctx);
@@ -245,6 +213,16 @@ function applyLivePreview(ctx: EditInteractionCtx): void {
     ctx.preview.applyRotate(live.pivot, live.angleRad);
     return;
   }
+  if (live.kind === 'tilt') {
+    // ADR-404 — tilt rebuilds the single entity via the converter SSoT (shear),
+    // swapped in through the same hide-and-replace path as resize. Skip a roll ring
+    // (X/Z axis = no-op for the type) → `buildTiltPreviewObject` returns null.
+    if (live.axis === 'y') return; // defensive: Y ring is plan rotate, not tilt
+    const tiltId = useBim3DEditStore.getState().editEntityIds[0];
+    if (!tiltId) return;
+    ctx.preview.applyResize(buildTiltPreviewObject(tiltId, { axis: live.axis, angleDeg: live.angleDeg }));
+    return;
+  }
   // resize — rebuild the single dragged entity's geometry via the converter SSoT.
   const id = useBim3DEditStore.getState().editEntityIds[0];
   if (!id) return;
@@ -264,17 +242,6 @@ export function onEditWheel(ctx: EditInteractionCtx): void {
   if (!ctx.overlay.visible || ctx.controller.isDragging()) return;
   ctx.overlay.updateScale(ctx.manager.getCamera());
   ctx.manager.markSceneDirty();
-}
-
-/** Inputs shared by every command builder for the active edit target. */
-interface CommandBuildCtx {
-  /** All edited ids ([0] = primary). Resize uses the primary; move/rotate use all. */
-  readonly entityIds: string[];
-  readonly entityId: string;
-  readonly edit: ReturnType<typeof useBim3DEditStore.getState>;
-  readonly sm: SceneManager;
-  readonly levels: LevelsHookReturn;
-  readonly levelId: string;
 }
 
 /**
@@ -304,152 +271,6 @@ function dispatchOutcome(ctx: EditInteractionCtx, outcome: BridgeOutcome): boole
   getGlobalCommandHistory().execute(cmd);
   useBim3DEditStore.getState().setTargetLevel(levelId);
   return true;
-}
-
-/** Map a drag outcome to its view-agnostic command (null = no-op / unsupported type). */
-function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): EditCommand | null {
-  if (outcome.kind === 'move') {
-    // ADR-402 — the axis-Y arrow yields a purely vertical drag (deltaDxf ≈ 0,
-    // deltaUpMm ≠ 0): route it to the per-type elevation edit. The horizontal
-    // arrows / plane / free drag keep deltaUpMm 0 → fall through to the plan move.
-    if (outcome.deltaUpMm !== 0) return buildVerticalMoveCommand(outcome.deltaUpMm, c);
-    const masked = maskByAxisLock(outcome.deltaDxf, c.edit.axisLock);
-    if (c.entityIds.length > 1) {
-      // Multi-select move keeps the mm delta (wall/column/beam/slab are raw mm). A
-      // stair in a non-mm drawing inside a mixed selection is a known limitation —
-      // one batch delta cannot honour two unit systems (ADR-402).
-      return new MoveMultipleEntitiesCommand([...c.entityIds], masked, c.sm, false);
-    }
-    // ADR-402: convert the mm gizmo delta into the entity's native units (1 for the
-    // mm-based types, the stair drawing-unit factor for stairs) so the shared
-    // `moveStair` SSoT relocates the stair by the right distance.
-    const entity = c.levels.getLevelScene(c.levelId)?.entities?.find((e) => e.id === c.entityId);
-    const f = entity ? mmToEntityUnitFactor(entity) : 1;
-    const delta = f === 1 ? masked : { x: masked.x * f, y: masked.y * f };
-    return new MoveEntityCommand(c.entityId, delta, c.sm, false);
-  }
-  if (outcome.kind === 'rotate') {
-    // ADR-402: the pivot is mm (worldToDxfPlan); a single stair stores its
-    // geometry in drawing units, so scale the pivot into the stair's units
-    // (same factor as move) — otherwise it orbits around an mm-scaled point.
-    // Multi-select keeps the mm pivot (mm-types are the common case; a stair in a
-    // mixed batch is the documented unit limitation).
-    let pivot = outcome.pivotDxf;
-    if (c.entityIds.length === 1) {
-      const entity = c.levels.getLevelScene(c.levelId)?.entities?.find((e) => e.id === c.entityId);
-      const f = entity ? mmToEntityUnitFactor(entity) : 1;
-      if (f !== 1) pivot = { x: pivot.x * f, y: pivot.y * f };
-    }
-    return new RotateEntityCommand([...c.entityIds], pivot, outcome.angleDeg, c.sm, false);
-  }
-  // Resize is single-entity only (multi-select hides the resize handles).
-  if (outcome.kind === 'resize') return c.entityIds.length === 1 ? buildResizeCommand(outcome, c) : null;
-  return null;
-}
-
-/**
- * Resize → per-type `Update*ParamsCommand`, bridging to the resize SSoT
- * (`bim3d-resize-bridge`, ADR-402 Phase B). Plan axes (X/Z) delegate to the 2D
- * grip-drag SSoT; axis-Y patches the element's vertical field. column/wall/beam/
- * slab ship in Phase B; stair (plan width / run, ADR-402 Sub-Phase 1) reuses the
- * 2D stair grip SSoT. `null` = no-op drag / unsupported axis for the type.
- */
-function buildResizeCommand(outcome: ResizeOutcome, c: CommandBuildCtx): EditCommand | null {
-  const entity = c.levels.getLevelScene(c.levelId)?.entities?.find((e) => e.id === c.entityId);
-  if (!entity) return null;
-  const drag: ResizeDragMm = {
-    axis: outcome.axis,
-    mode: outcome.mode,
-    deltaMm: outcome.deltaMm,
-    deltaUpMm: outcome.deltaUpMm,
-    cursorMm: outcome.cursorMm,
-  };
-  if (entity.type === 'column') {
-    const next = computeColumnResizeParams(entity.params, drag);
-    return next ? new UpdateColumnParamsCommand(c.entityId, next, entity.params, c.sm, false) : null;
-  }
-  if (entity.type === 'wall') {
-    const next = computeWallResizeParams(entity.params, drag);
-    return next
-      ? new UpdateWallParamsCommand(c.entityId, next, entity.params, c.sm, false, entity.kind ?? 'straight')
-      : null;
-  }
-  if (entity.type === 'beam') {
-    const next = computeBeamResizeParams(entity.params, drag);
-    return next ? new UpdateBeamParamsCommand(c.entityId, next, entity.params, c.sm, false) : null;
-  }
-  if (entity.type === 'slab') {
-    const next = computeSlabResizeParams(entity.params, drag);
-    return next ? new UpdateSlabParamsCommand(c.entityId, next, entity.params, c.sm, false) : null;
-  }
-  if (entity.type === 'stair') {
-    // ADR-402 Sub-Phase 1 — stair needs the full entity (geometry is the anchor SSoT).
-    const next = computeStairResizeParams(entity, drag);
-    return next ? new UpdateStairParamsCommand(c.entityId, next, entity.params, c.sm, false) : null;
-  }
-  return null;
-}
-
-/**
- * Vertical (axis-Y) move → per-type elevation edit (`bim3d-vertical-move` SSoT).
- * Single selection → one `Update*ParamsCommand`; multi-select → a `CompoundCommand`
- * batching each element's elevation edit into ONE undo step (mixed types each get
- * their own canonical field — wall/column `baseOffset`, beam `topElevation`, slab
- * `levelElevation`, stair `basePoint.z`). `null` = no-op / no eligible entity.
- */
-function buildVerticalMoveCommand(deltaUpMm: number, c: CommandBuildCtx): EditCommand | null {
-  const scene = c.levels.getLevelScene(c.levelId);
-  if (!scene) return null;
-  if (c.entityIds.length <= 1) {
-    const entity = scene.entities.find((e) => e.id === c.entityId);
-    return entity ? verticalCommandForEntity(entity, deltaUpMm, c.sm) : null;
-  }
-  const commands: EditCommand[] = [];
-  for (const id of c.entityIds) {
-    const entity = scene.entities.find((e) => e.id === id);
-    const cmd = entity ? verticalCommandForEntity(entity, deltaUpMm, c.sm) : null;
-    if (cmd) commands.push(cmd);
-  }
-  return commands.length > 0 ? new CompoundCommand(`Vertical Move (${commands.length})`, commands) : null;
-}
-
-/** One element → its per-type elevation `Update*ParamsCommand` (null = no-op / unsupported type). */
-function verticalCommandForEntity(entity: Entity, deltaUpMm: number, sm: SceneManager): EditCommand | null {
-  if (entity.type === 'wall') {
-    const next = computeWallVerticalMove(entity.params, deltaUpMm);
-    return next
-      ? new UpdateWallParamsCommand(entity.id, next, entity.params, sm, false, entity.kind ?? 'straight')
-      : null;
-  }
-  if (entity.type === 'column') {
-    const next = computeColumnVerticalMove(entity.params, deltaUpMm);
-    return next ? new UpdateColumnParamsCommand(entity.id, next, entity.params, sm, false) : null;
-  }
-  if (entity.type === 'beam') {
-    const next = computeBeamVerticalMove(entity.params, deltaUpMm);
-    return next ? new UpdateBeamParamsCommand(entity.id, next, entity.params, sm, false) : null;
-  }
-  if (entity.type === 'slab') {
-    const next = computeSlabVerticalMove(entity.params, deltaUpMm);
-    return next ? new UpdateSlabParamsCommand(entity.id, next, entity.params, sm, false) : null;
-  }
-  if (entity.type === 'stair') {
-    const next = computeStairVerticalMove(entity, deltaUpMm);
-    return next ? new UpdateStairParamsCommand(entity.id, next, entity.params, sm, false) : null;
-  }
-  return null;
-}
-
-/**
- * Apply the keyboard axis lock (X/Z) to a move delta: 'X' keeps the world-X
- * component (DXF x), 'Z' keeps the world-Z / north component (DXF y). The gizmo
- * axis arrows already constrain by projection; this makes the X/Z keys meaningful
- * for a free / plane drag too.
- */
-function maskByAxisLock(delta: Point2D, lock: 'X' | 'Z' | null): Point2D {
-  if (lock === 'X') return { x: delta.x, y: 0 };
-  if (lock === 'Z') return { x: 0, y: delta.y };
-  return delta;
 }
 
 /** Adapter deps for the target level — the adapter only reads currentLevelId/get/set. */

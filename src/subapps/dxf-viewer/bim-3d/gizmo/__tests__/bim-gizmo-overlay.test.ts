@@ -141,3 +141,25 @@ describe('activeHandlesFor — vertical MOVE arrow (ADR-402 axis-Y)', () => {
     expect(activeHandlesFor(null).has('axis-y')).toBe(true);
   });
 });
+
+describe('activeHandlesFor — tilt X/Z rings (ADR-404 Phase 2)', () => {
+  it.each(['column', 'wall', 'beam', 'slab'])('exposes both X/Z tilt rings for %s', (bimType) => {
+    const ids = activeHandlesFor(bimType);
+    expect(ids.has('rotate-x')).toBe(true);
+    expect(ids.has('rotate-z')).toBe(true);
+    // the Y plan-rotation ring stays (it is a BASE handle).
+    expect(ids.has('rotate-y')).toBe(true);
+  });
+
+  it('stair has NO tilt rings — its incline is parametric (run/stepCount)', () => {
+    const ids = activeHandlesFor('stair');
+    expect(ids.has('rotate-x')).toBe(false);
+    expect(ids.has('rotate-z')).toBe(false);
+  });
+
+  it('a multi-selection (editBimType null) shows no tilt rings — single-select only', () => {
+    const ids = activeHandlesFor(null);
+    expect(ids.has('rotate-x')).toBe(false);
+    expect(ids.has('rotate-z')).toBe(false);
+  });
+});

@@ -17,6 +17,7 @@
 import * as THREE from 'three';
 import { setNdcFromClient } from '../animation/waypoint-drag-controller';
 import { parseHandleId, handleToConstraint, type GizmoDragConstraint } from './gizmo-types';
+import type { GizmoAxis } from './gizmo-types';
 import { testGizmoHit } from './gizmo-hit-test';
 import { BimGizmoDragBridge, type BridgeOutcome } from './bim-gizmo-drag-bridge';
 import type { SnapFn } from './bim3d-snap-bridge';
@@ -32,7 +33,10 @@ type ResizeOutcome = Extract<BridgeOutcome, { kind: 'resize' }>;
 export type GizmoLivePreview =
   | { readonly kind: 'move'; readonly translation: THREE.Vector3 }
   | { readonly kind: 'rotate'; readonly pivot: THREE.Vector3; readonly angleRad: number }
-  | { readonly kind: 'resize'; readonly outcome: ResizeOutcome };
+  | { readonly kind: 'resize'; readonly outcome: ResizeOutcome }
+  // ADR-404 Phase 2 — tilt (X/Z rings). Like resize, the handler rebuilds the single
+  // entity's geometry via the converter SSoT (shear ≠ rigid rotate). `angleDeg` is snapped.
+  | { readonly kind: 'tilt'; readonly axis: GizmoAxis; readonly angleDeg: number };
 
 export class BimGizmoController {
   private readonly overlay: BimGizmoOverlay;
@@ -53,6 +57,11 @@ export class BimGizmoController {
   /** Inject the snap callback for the active drag (ADR-402 Phase B). */
   setSnapFn(fn: SnapFn | null): void {
     this.bridge.setSnapFn(fn);
+  }
+
+  /** Track Shift for the tilt angle snap (ADR-404 Phase 2 — Shift = free). */
+  setShiftHeld(held: boolean): void {
+    this.bridge.setShiftHeld(held);
   }
 
   /** The active drag constraint (null when idle) — lets the handler build the right snapFn. */
@@ -112,9 +121,15 @@ export class BimGizmoController {
    * end the drag). Null when idle or for a not-yet-meaningful drag.
    */
   getLivePreview(): GizmoLivePreview | null {
-    const kind = this.bridge.getActiveConstraint()?.kind;
+    const constraint = this.bridge.getActiveConstraint();
+    const kind = constraint?.kind;
     if (!kind) return null;
     if (kind === 'rotate') {
+      // ADR-404 — the Y ring is a rigid plan rotation; X/Z rings are a tilt (shear),
+      // rebuilt via the converter SSoT like resize (the entity is not rigidly rotated).
+      if (constraint && constraint.kind === 'rotate' && constraint.axis !== 'y') {
+        return { kind: 'tilt', axis: constraint.axis, angleDeg: this.bridge.getLiveTiltDeg() };
+      }
       return { kind: 'rotate', pivot: this.startAnchor.clone(), angleRad: this.bridge.getLiveRotationRad() };
     }
     if (kind === 'resize') {
