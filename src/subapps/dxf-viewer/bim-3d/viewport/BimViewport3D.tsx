@@ -34,6 +34,7 @@ import { useAnimationQueueProcessor } from '../animation/animation-queue-process
 import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-interaction';
 import { useBim3DEditInteraction } from '../animation/use-bim3d-edit-interaction';
 import { useBim3DColumnPlacement } from '../placement/use-bim3d-column-placement';
+import { useBim3DAttachPick } from './use-bim3d-attach-pick';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useBim3DStoreSync } from './use-bim3d-store-sync';
 import { useBim3DVgResync } from './use-bim3d-vg-resync';
@@ -296,6 +297,12 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // existing 2D column FSM (`useColumnTool.onCanvasClick`) via the
   // `bim:place-column-3d` EventBus bridge (zero duplication, full commit path).
   useBim3DColumnPlacement({ managerRef, canvasEl });
+
+  // ADR-401 — 3D manual attach pick-host. Armed only while a `*-attach-top/-base`
+  // tool is active AND the viewport is in 3D: a click raycasts a structural host
+  // and emits `bim:attach-host-picked-3d`; the 2D `useWallAttachTool` commits the
+  // existing Attach{Walls|Columns|Stairs} command for the captured target(s).
+  useBim3DAttachPick({ managerRef, canvasEl });
 
   // Phase 9 / C.1.c — Animation render queue driver. Mounted once; subscribes
   // to RenderQueueStore and drives the MP4 encode pipeline when a job is queued.

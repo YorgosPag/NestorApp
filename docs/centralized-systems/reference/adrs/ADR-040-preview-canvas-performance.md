@@ -71,6 +71,24 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-01 — ADR-401 E.1/F.3/G.3 attach-tool hover affordance fix (compliance note)
+
+**Status**: COMPLIANT — no ADR-040 invariants broken.
+
+Bugfix: το manual ribbon **attach** (τοίχος/κολώνα/σκάλα) δεν resolved-άριζε host. Το `useWallAttachTool`
+σχεδιάστηκε με primary host-pick μέσω `getHoveredEntity()` (proper hit-test, σέβεται entity transforms) +
+naive mm-fallback. Όμως το hover ενημερώνεται στο `mouse-handler-move.ts` **μόνο** όταν `activeTool === 'select'`
+ή `entityPickingActive` — και τα attach tools έλειπαν από το `entityPickingActive`, οπότε το hover ήταν
+suppressed → η primary path νεκρή, έμενε μόνο το fallback (που αγνοεί entity transforms → fail σε
+beams/slabs με offset).
+
+- `CanvasSection.tsx` — η `entityPickingActive` prop-έκφραση κερδίζει `|| wallAttachTool.isActive` (καλύπτει
+  και τα 6 ids: wall/column/stair × top/base, μέσω του hook `isActive`). Υπάρχον pass-through boolean που
+  ανάβει το hover hit-test στο `mouse-handler-move`· **καμία νέα `useSyncExternalStore`** στον orchestrator
+  (το `wallAttachTool.isActive` παράγεται από το ήδη-διαθέσιμο `activeTool`). CHECK 6C safe.
+- Καμία αλλαγή σε `gripsAllowed` (το attach δεν δείχνει grips στον host — μόνο hover highlight), σε
+  bitmap cache-key, ή σε micro-leaf δομή. Detail στο ADR-401 §8 changelog.
+
 ### 2026-05-31 — ADR-401 E.1 `wall-attach` tool pass-through (compliance note)
 
 **Status**: COMPLIANT — no ADR-040 invariants broken.

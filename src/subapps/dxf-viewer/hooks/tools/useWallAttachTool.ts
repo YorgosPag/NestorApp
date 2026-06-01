@@ -159,15 +159,20 @@ export function useWallAttachTool({
 
   // ── Click: pick host → build + execute attach command ─────────────────────
 
-  const handleWallAttachClick = useCallback(
-    (worldPoint: Point2D): void => {
-      if (!isActive) return;
+  // Build + execute the attach command for the captured target(s) against a
+  // structural host id. Shared by the 2D canvas pick (worldPoint → findHost) and
+  // the 3D viewport pick (raycast → host via `bim:attach-host-picked-3d`). The
+  // host id is re-validated against the live scene so both callers are safe.
+  const dispatchAttachToHost = useCallback(
+    (hostId: string): void => {
       const targets = targetsRef.current;
       if (targets.length === 0) return;
       const sm = getSceneManager();
       if (!sm) return;
-      const hostId = findHost(worldPoint);
-      if (!hostId) return; // missed — stay in pick mode
+      const scene = levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)
+        : null;
+      if (!scene || !resolveStructuralHostId(scene.entities, hostId)) return; // not a beam/slab
 
       if (entityKind === 'column') {
         const colTargets = targets as ColumnAttachTarget[];
@@ -200,8 +205,32 @@ export function useWallAttachTool({
       toolHintOverrideStore.setOverride(null);
       onToolChange?.('select');
     },
-    [isActive, entityKind, side, getSceneManager, findHost, executeCommand, onToolChange],
+    [entityKind, side, getSceneManager, levelManager, executeCommand, onToolChange],
   );
+
+  const handleWallAttachClick = useCallback(
+    (worldPoint: Point2D): void => {
+      if (!isActive) return;
+      if (targetsRef.current.length === 0) return;
+      const hostId = findHost(worldPoint);
+      if (!hostId) return; // missed — stay in pick mode
+      dispatchAttachToHost(hostId);
+    },
+    [isActive, findHost, dispatchAttachToHost],
+  );
+
+  // ── 3D viewport pick-host bridge (ADR-401) ────────────────────────────────
+  // The 3D attach-pick hook (`useBim3DAttachPick`) raycasts a structural host in
+  // the 3D overlay and emits its id. This 2D tool stays mounted and holds the
+  // captured target snapshot even while the 3D overlay is on top (the 3D↔2D
+  // selection bridge feeds `selectedEntityIds`), so it commits via the SAME path
+  // as a 2D pick. Mirror of the column `bim:place-column-3d` bridge.
+  useEffect(() => {
+    if (!isActive) return;
+    return EventBus.on('bim:attach-host-picked-3d', ({ hostId }) => {
+      dispatchAttachToHost(hostId);
+    });
+  }, [isActive, dispatchAttachToHost]);
 
   // ── Escape: exit tool ─────────────────────────────────────────────────────
 

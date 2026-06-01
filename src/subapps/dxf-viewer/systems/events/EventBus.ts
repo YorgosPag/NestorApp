@@ -219,6 +219,12 @@ export interface DrawingEventMap {
   // `useColumnTool` listens and runs its existing `onCanvasClick(point)` commit
   // path (enterprise id + scene append + auto 3D-resync) — no logic duplicated.
   'bim:place-column-3d': { point: Point2D };
+  // ADR-401 — 3D manual attach pick-host: the 3D viewport raycast a structural
+  // host (beam/slab) while a `*-attach-top/-base` tool is active. The 2D
+  // `useWallAttachTool` listens and dispatches the existing Attach{Walls|Columns|
+  // Stairs} command for the already-captured target(s) — no logic duplicated
+  // (mirror of the `bim:place-column-3d` bridge).
+  'bim:attach-host-picked-3d': { hostId: string };
   // ADR-363 Phase 5 — BIM beam params + delete events
   'bim:beam-params-updated': { beamId: string };
   'bim:beam-delete-requested': { beamId: string };
