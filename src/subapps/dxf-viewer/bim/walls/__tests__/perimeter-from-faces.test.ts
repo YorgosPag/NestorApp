@@ -218,3 +218,64 @@ describe('perimeter-from-faces — perimeterFacesToRects (orchestrator)', () => 
     expect(res.ignoredCount).toBe(1); // the triangle
   });
 });
+
+// ─── ADR-363 Phase 3b fix — two touching rectangles drawn as LOOSE LINES ──────
+// Regression: a Γ/L pier drawn as a foot + a stem rectangle whose lines SHARE a
+// corner. The shared corner becomes a degree-4 graph node, so the strict
+// simple-cycle walker (`buildPolygonLoops`) traces NO loop and "Τοιχίο από
+// περίγραμμα" emitted "noneBuilt". The corner-graph rectangle detector recovers
+// both rects; `unionTouching` then merges them into the L.
+
+// Foot A: x[300,3000] y[0,300]. Stem B: x[0,300] y[0,3000]. Share corner (300,0).
+const RECT_A_FOOT: Point2D[] = [
+  { x: 300, y: 0 },
+  { x: 3000, y: 0 },
+  { x: 3000, y: 300 },
+  { x: 300, y: 300 },
+];
+const RECT_B_STEM: Point2D[] = [
+  { x: 0, y: 0 },
+  { x: 300, y: 0 },
+  { x: 300, y: 3000 },
+  { x: 0, y: 3000 },
+];
+
+/** Ένα ορθογώνιο ως 4 ανεξάρτητες (loose) γραμμές. */
+function looseRectLines(id: string, rect: readonly Point2D[]): Entity[] {
+  return rect.map((v, i) => lineEntity(`${id}${i}`, v, rect[(i + 1) % rect.length]));
+}
+
+describe('perimeter-from-faces — touching loose-line rectangles (ADR-363 Phase 3b fix)', () => {
+  const touchingLoose: Entity[] = [
+    ...looseRectLines('a', RECT_A_FOOT),
+    ...looseRectLines('b', RECT_B_STEM),
+  ];
+
+  it('simple-cycle walker alone misses them (shared corner = degree-4 node)', () => {
+    // Reproduces the bug: without rect-detection nothing is extracted.
+    expect(extractClosedPolygons(touchingLoose, TOL)).toHaveLength(0);
+  });
+
+  it('detectTouchingRects recovers BOTH rectangles', () => {
+    const polys = extractClosedPolygons(touchingLoose, TOL, { detectTouchingRects: true });
+    expect(polys).toHaveLength(2);
+  });
+
+  it('does NOT double-count a single clean rectangle (walker + detector dedup)', () => {
+    const polys = extractClosedPolygons(looseRectLines('a', RECT_A_FOOT), TOL, {
+      detectTouchingRects: true,
+    });
+    expect(polys).toHaveLength(1);
+  });
+
+  it('perimeterFacesToRects + unionTouching merges them into ONE L (Γ)', () => {
+    const res = perimeterFacesToRects(touchingLoose, TOL, { unionTouching: true });
+    expect(res.perimeters).toHaveLength(1);
+    expect(res.perimeters[0].shape).toBe('L');
+    expect(res.ignoredCount).toBe(0);
+  });
+
+  it('wall path (no unionTouching) stays conservative — touching loose rects not detected', () => {
+    expect(perimeterFacesToRects(touchingLoose, TOL).perimeters).toHaveLength(0);
+  });
+});
