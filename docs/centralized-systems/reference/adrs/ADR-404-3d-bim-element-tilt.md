@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | 🟢 ACCEPTED — **Phase 1 (data model + 3Δ converters) + Phase 2 (gizmo X/Z rings → tilt)** DONE (pending commit, 🔴 browser verify) · Phase 3 (2Δ cut-plane projection) PENDING |
+| Status | 🟢 ACCEPTED — **Phase 1 (data model + 3Δ converters) + Phase 2 (gizmo X/Z rings → tilt) + Phase 3 (2Δ cut-plane projection + section parity)** DONE (pending commit, 🔴 browser verify) |
 | Date | 2026-06-01 |
 | Owner | Giorgio / Claude (Opus 4.8) |
 | Related | ADR-402 (3D editing — αυτό ξεκλειδώνει τα X/Z rings του), ADR-401 (slope precedents beam/slab), ADR-369 (elevation convention), ADR-188 (rotation) |
@@ -141,10 +141,31 @@ preview· snap 5/15/30/45° + Shift=free. (Η κάτοψη μένει flat — P
   (κολώνα) = follow-up (τώρα set-per-plane).
 - **2Δ κάτοψη ακόμα flat** (Phase 3).
 
-## Phase 3 — 2Δ προβολή στο cut plane + section parity (PENDING)
-Κοινό `cut-plane-tilt.ts` (`tiltPlanShift(tilt, cutPlaneMm, baseMm)`)· εφαρμογή στα
-`compute{Column,Wall,Beam,Slab}Geometry` + στα section adapters (`toSlabPlan`/`toWallPlan`
-διαβάζουν params απευθείας → parity). BOQ αμετάβλητο (Revit projected plan area).
+## Phase 3 — 2Δ προβολή στο cut plane + section parity (DONE)
+Κοινό SSoT `cut-plane-tilt.ts` (`columnCutPlaneShiftMm`/`wallCutPlaneShiftMm` — reuse
+Phase-1 `columnTiltShearAt`/`wallTiltShearAt` στο `heightAboveBase = clamp(cutPlaneMm −
+baseOffset, 0, height)`). Η κεκλιμένη κολώνα/τοίχος εμφανίζεται **μετατοπισμένη όπου την
+κόβει το cut plane** (Revit-style).
+
+**🔴 Recognition-driven απόκλιση από το αρχικό plan (code = source of truth, N.0.1):**
+Το plan πρότεινε shift μέσα στα `compute{Column,Wall}Geometry`. **Επιβεβαιώθηκε ότι
+σπάει το 3Δ**: ο `BimToThreeConverter` διαβάζει το ΙΔΙΟ footprint → extrude →
+`applyColumnTilt`/`applyWallTilt` ⇒ **διπλό shift**· επιπλέον 69 consumers (grips/hit-test/
+BOQ) θα μετατοπίζονταν λάθος. → Το shift μπαίνει **render-time μόνο** (`ColumnRenderer`/
+`WallRenderer` μέσω `ctx.translate` ομοιόμορφα σε όλο το ορατό σύμβολο).
+
+- **Κολώνα/τοίχος:** render-time `ctx.translate` (κάτοψη) + ίδιο shift στα `toColumnPlan`/
+  `toWallPlan` (section parity, `cutPlaneMm` από `viewRange`).
+- **Δοκάρι/πλάκα = section-only** (κατακόρυφη κλίση → η **προβολή κάτοψης δεν
+  μετατοπίζεται**, Revit: ίδιο footprint + slope arrows). Η τομή τους ήδη σωστή
+  (`slopeYAt`, Phase E/E2) — μηδέν Phase-3 δουλειά.
+- **BOQ αμετάβλητο** (το shift είναι render-only, εκτός `compute*Geometry`).
+- **+File-size split:** `KIND_STROKE`/`KIND_FILL` → ΝΕΟ `column-render-palette.ts`
+  (ColumnRenderer 498→498 <500).
+
+**Limitations:** grips/hit-test μένουν στο πραγματικό footprint (η κλίση επεξεργάζεται
+μόνο μέσω 3Δ gizmo)· section column/wall = single-slice shift (όχι πλήρες παραλληλόγραμμο
+lean — το `SectionRect` είναι rect· follow-up).
 
 ---
 
@@ -161,12 +182,27 @@ preview· snap 5/15/30/45° + Shift=free. (Η κάτοψη μένει flat — P
   κάτοψη ακόμα flat (Phase 3 pending).
 - **🔴 Browser** (Phase 2): επίλεξε column/wall/beam/slab στο 3Δ → εμφανίζονται X/Z rings →
   σύρε → γέρνει **live** → release **μένει** γερμένο → **undo** επαναφέρει· snap στις 15°·
-  **Shift** = ελεύθερη γωνία· η κάτοψη ακόμα flat (Phase 3). Σκάλα = χωρίς tilt rings·
-  multi-select = χωρίς tilt rings.
+  **Shift** = ελεύθερη γωνία. Σκάλα = χωρίς tilt rings· multi-select = χωρίς tilt rings.
+- **🔴 Browser** (Phase 3): γείρε κολώνα/τοίχο στο 3Δ → γύρνα στην **2Δ κάτοψη** → το
+  footprint εμφανίζεται **μετατοπισμένο** στο cut plane (μεγαλύτερη γωνία/ύψος = μεγαλύτερη
+  μετατόπιση)· grips στο πραγματικό κέντρο. Δοκάρι/πλάκα = ίδιο footprint (μόνο τομή
+  αλλάζει). **Τομή (section panel):** το στοιχείο εμφανίζεται στην ίδια μετατοπισμένη θέση
+  με την κάτοψη. **BOQ αμετάβλητο** (length/area/volume ίδια πριν/μετά).
 
 ---
 
 ## Changelog
+- **2026-06-01 (Opus 4.8, Plan Mode, Developer A SOLO)** — **Phase 3: 2Δ προβολή στο
+  cut plane + section parity** (pending commit, 🔴 browser verify). ΝΕΟ SSoT
+  `cut-plane-tilt.ts` (`columnCutPlaneShiftMm`/`wallCutPlaneShiftMm` + screen-delta helpers,
+  reuse Phase-1 `columnTiltShearAt`/`wallTiltShearAt`, clamp `[0,height]`). Render-time
+  `ctx.translate` σε `ColumnRenderer`/`WallRenderer` (κάτοψη) + ίδιο shift στα
+  `toColumnPlan`/`toWallPlan` (`section-intersect`) + `cutPlaneMm` feed από
+  `section-scene-sync`. **Recognition: ΟΧΙ shift στα `compute*Geometry`** (διπλό 3Δ shift +
+  69 consumers) — render-time μόνο. **Δοκάρι/πλάκα = section-only** (κατακόρυφη κλίση →
+  κάτοψη αμετάβλητη· τομή ήδη `slopeYAt`). BOQ αμετάβλητο. File-size split:
+  `column-render-palette.ts`. 32/32 tests (cut-plane 13 νέα + section 19), tsc 0.
+  Limitations: grips/hit-test στο πραγματικό footprint· section single-slice (όχι lean).
 - **2026-06-01 (Opus 4.8, Developer A SOLO)** — **Phase 2: gizmo X/Z rings → tilt**
   (pending commit, 🔴 browser verify). Drag bridge rotate→axis-generalized + ΝΕΟ `tilt`
   outcome + angle snap (`setShiftHeld`)· ΝΕΟ SSoT `bim3d-tilt-bridge.ts`

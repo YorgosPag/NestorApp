@@ -73,28 +73,8 @@ import {
   drawColumnDimPill,
   COLUMN_LABEL_MIN_FOOTPRINT_PX,
 } from '../columns/column-dim-labels';
-
-/** Stroke colour per kind. */
-const KIND_STROKE: Readonly<Record<ColumnKind, string>> = {
-  'rectangular': '#5b6478',
-  'circular':    '#3a3a40',
-  'L-shape':     '#a07a2b',
-  'T-shape':     '#3a5a78',
-  'polygon':     '#5c8a3a',
-  'shear-wall':  '#3a4048',
-  'I-shape':     '#4a4a52',
-};
-
-/** Translucent fill (rgba) per kind. ~22% opacity. */
-const KIND_FILL: Readonly<Record<ColumnKind, string>> = {
-  'rectangular': 'rgba(140, 158, 178, 0.22)',
-  'circular':    'rgba(96, 96, 102, 0.22)',
-  'L-shape':     'rgba(192, 148, 56, 0.22)',
-  'T-shape':     'rgba(110, 140, 178, 0.22)',
-  'polygon':     'rgba(120, 170, 90, 0.22)',
-  'shear-wall':  'rgba(70, 80, 90, 0.25)',
-  'I-shape':     'rgba(95, 95, 110, 0.20)',
-};
+import { KIND_STROKE, KIND_FILL } from '../columns/column-render-palette';
+import { columnCutPlaneTiltScreenDelta } from '../geometry/cut-plane-tilt';
 
 export class ColumnRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -113,6 +93,22 @@ export class ColumnRenderer extends BaseEntityRenderer {
     if (verts.length < 3) return;
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
+
+    // ADR-404 Phase 3 — Revit cut-plane προβολή: η κεκλιμένη κολώνα εμφανίζεται
+    // μετατοπισμένη εκεί που την κόβει το cut plane. Render-time `ctx.translate`
+    // ώστε ΟΛΟ το ορατό σύμβολο (halo/fill/hatch/stroke/labels) να μετατοπιστεί
+    // ομοιόμορφα — ΟΧΙ μέσα στο `computeColumnGeometry` (μοιράζεται με το 3Δ shear,
+    // grips, hit-test, BOQ). Μη-tilted → `null` → μηδέν overhead. Τα grips/hit-test
+    // μένουν στο πραγματικό footprint (η κλίση επεξεργάζεται μόνο μέσω 3Δ gizmo).
+    const _tiltDelta = columnCutPlaneTiltScreenDelta(
+      column.params,
+      useDrawingScaleStore.getState().viewRange.cutPlaneMm,
+      (p) => this.worldToScreen(p),
+    );
+    if (_tiltDelta) {
+      this.ctx.save();
+      this.ctx.translate(_tiltDelta.x, _tiltDelta.y);
+    }
 
     // Hover halo via outline thicker glow.
     if (phaseState.phase === 'highlighted') {
@@ -175,6 +171,10 @@ export class ColumnRenderer extends BaseEntityRenderer {
     if (phaseState.phase === 'highlighted' || options.selected) {
       this.drawCenterDimLabel(column);
     }
+
+    // ADR-404 Phase 3 — κλείσιμο του cut-plane translate πριν τα selection/grip
+    // overlays (finalizeRender), που μένουν αγκυρωμένα στο πραγματικό footprint.
+    if (_tiltDelta) this.ctx.restore();
 
     this.finalizeRender(entity, options);
   }

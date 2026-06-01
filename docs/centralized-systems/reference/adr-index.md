@@ -386,7 +386,7 @@
 | **ADR-401** | BIM Wall Top/Base Constraints + Attach-to-Structural (associative auto-height) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-401-bim-wall-top-base-constraints-attach-to-structural.md) |
 | **ADR-402** | 3D Viewport BIM Element Editing | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-402-3d-bim-element-editing.md) |
 | **ADR-403** | 3D Viewport BIM Element Placement (Column) | ✅ APPROVED | 2026-06-01 | Uncategorized | [📄](./adrs/ADR-403-3d-bim-element-placement.md) |
-| **ADR-404** | 3D BIM Element Tilt (Slope-Based, All Axes) | 🟢 Phase 1+2 DONE | 2026-06-01 | Uncategorized | [📄](./adrs/ADR-404-3d-bim-element-tilt.md) |
+| **ADR-404** | 3D BIM Element Tilt (Slope-Based, All Axes) | 🟢 Phase 1+2+3 DONE | 2026-06-01 | Uncategorized | [📄](./adrs/ADR-404-3d-bim-element-tilt.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -757,7 +757,7 @@
 | **ADR-401** | BIM Wall Top/Base Constraints + Attach-to-Structural (associative auto-height) | ✅ APPROVED | [View](./adrs/ADR-401-bim-wall-top-base-constraints-attach-to-structural.md) |
 | **ADR-402** | 3D Viewport BIM Element Editing | ✅ APPROVED | [View](./adrs/ADR-402-3d-bim-element-editing.md) |
 | **ADR-403** | 3D Viewport BIM Element Placement (Column) | ✅ APPROVED | [View](./adrs/ADR-403-3d-bim-element-placement.md) |
-| **ADR-404** | 3D BIM Element Tilt (Slope-Based, All Axes) | 🟢 Phase 1+2 DONE | [View](./adrs/ADR-404-3d-bim-element-tilt.md) |
+| **ADR-404** | 3D BIM Element Tilt (Slope-Based, All Axes) | 🟢 Phase 1+2+3 DONE | [View](./adrs/ADR-404-3d-bim-element-tilt.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

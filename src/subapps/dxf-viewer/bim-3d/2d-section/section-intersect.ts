@@ -39,6 +39,8 @@ import {
 } from '../../bim/geometry/wall-base-profile';
 import { slabSlopeOffsetZmm, type SlabPlanPoint } from '../../bim/geometry/slab-slope';
 import { beamSlopeOffsetZmm, isBeamTilted, type BeamPlanPoint } from '../../bim/geometry/beam-slope';
+import { columnCutPlaneShiftMm, wallCutPlaneShiftMm } from '../../bim/geometry/cut-plane-tilt';
+import { mmToSceneUnits } from '../../utils/scene-units';
 
 const MM_TO_M = 0.001;
 
@@ -151,16 +153,21 @@ export function toWallPlan(
   floorElevationM = 0,
   resolveHost?: (id: string) => HostUndersidePlan | null,
   resolveHostTopside?: (id: string) => HostTopsidePlan | null,
+  cutPlaneMm = 0,
 ): WallPlan {
   const ctx = { floorElevationMm: floorElevationM / MM_TO_M, resolveHost, resolveHostTopside };
   const topProfile = resolveWallTopProfile(wall.params, ctx);
   const baseProfile = resolveWallBaseProfile(wall.params, ctx);
+  // ADR-404 Phase 3 — section parity: ο battered τοίχος μετατοπίζεται (⟂ run) στο
+  // cut plane, ίδια προβολή με την 2Δ κάτοψη. shift(mm) × s → plan space των sx/sy.
+  const shift = wallCutPlaneShiftMm(wall.params, cutPlaneMm);
+  const ws = (shift.dx === 0 && shift.dy === 0) ? 0 : mmToSceneUnits(wall.params.sceneUnits ?? 'mm');
   return {
     id: wall.id,
-    sx: wall.params.start.x,
-    sy: wall.params.start.y,
-    ex: wall.params.end.x,
-    ey: wall.params.end.y,
+    sx: wall.params.start.x + shift.dx * ws,
+    sy: wall.params.start.y + shift.dy * ws,
+    ex: wall.params.end.x + shift.dx * ws,
+    ey: wall.params.end.y + shift.dy * ws,
     thicknessM: wall.params.thickness * MM_TO_M,
     baseY: baseProfile.minBaseZmm * MM_TO_M,
     topY: topProfile.maxTopZmm * MM_TO_M,
@@ -169,7 +176,7 @@ export function toWallPlan(
   };
 }
 
-export function toColumnPlan(column: ColumnEntity, floorElevationM = 0): ColumnPlan {
+export function toColumnPlan(column: ColumnEntity, floorElevationM = 0, cutPlaneMm = 0): ColumnPlan {
   const baseY = column.params.baseBinding === 'absolute'
     ? column.params.baseOffset * MM_TO_M
     : floorElevationM + column.params.baseOffset * MM_TO_M;
@@ -178,9 +185,13 @@ export function toColumnPlan(column: ColumnEntity, floorElevationM = 0): ColumnP
     : column.params.topBinding === 'absolute'
       ? column.params.topOffset * MM_TO_M
       : baseY + column.params.height * MM_TO_M;
+  // ADR-404 Phase 3 — section parity: η raking κολώνα μετατοπίζεται στο cut plane,
+  // ίδια προβολή με την 2Δ κάτοψη. shift(mm) × s → plan space του (canvas-unit) footprint.
+  const shift = columnCutPlaneShiftMm(column.params, cutPlaneMm);
+  const cs = (shift.dx === 0 && shift.dy === 0) ? 0 : mmToSceneUnits(column.params.sceneUnits ?? 'mm');
   return {
     id: column.id,
-    footprint: column.geometry.footprint.vertices.map((v) => [v.x, v.y] as const),
+    footprint: column.geometry.footprint.vertices.map((v) => [v.x + shift.dx * cs, v.y + shift.dy * cs] as const),
     baseY,
     topY,
   };

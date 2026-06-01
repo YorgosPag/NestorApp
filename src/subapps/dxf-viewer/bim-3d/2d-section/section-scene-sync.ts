@@ -25,6 +25,7 @@ import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { useSectionStore } from '../stores/SectionStore';
 import { useSection2DPanelStore } from '../stores/Section2DPanelStore';
+import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import {
   toWallPlan,
   toColumnPlan,
@@ -59,6 +60,9 @@ export function createSectionPanelSceneSync(): SectionPanelSceneSync {
     // για σκαλωτή/κεκλιμένη κορυφή ΚΑΙ βάση σε `attached` τοίχους. Footprints +
     // wall axis στο ίδιο plan space (canvas units).
     const hostInputs = buildWallHostInputs(beams, slabs);
+    // ADR-404 Phase 3 — section parity: το cut plane (mm πάνω από τη βάση ορόφου)
+    // μετατοπίζει τα κεκλιμένα στοιχεία, ίδια προβολή με την 2Δ κάτοψη.
+    const cutPlaneMm = useDrawingScaleStore.getState().viewRange.cutPlaneMm;
     const wallPlans = walls.map((w) => {
       const start = { x: w.params.start.x, y: w.params.start.y };
       const end = { x: w.params.end.x, y: w.params.end.y };
@@ -67,12 +71,13 @@ export function createSectionPanelSceneSync(): SectionPanelSceneSync {
         0,
         makeResolveHost(start, end, hostInputs),
         makeResolveHostTopside(start, end, hostInputs),
+        cutPlaneMm,
       );
     });
     return {
       entities: {
         walls: wallPlans,
-        columns: columns.map((c) => toColumnPlan(c)),
+        columns: columns.map((c) => toColumnPlan(c, 0, cutPlaneMm)),
         beams: beams.map((b) => toBeamPlan(b)),
         slabs: slabs.map((s) => toSlabPlan(s)),
         // Phase 7.0B: openings ΔΕΝ είναι στο Bim3DEntitiesStore feed.
