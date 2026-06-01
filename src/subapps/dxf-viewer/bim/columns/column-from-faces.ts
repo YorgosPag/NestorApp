@@ -187,6 +187,8 @@ export function perimeterFacesToColumns(
   layerId: string,
   sceneUnits: SceneUnits,
 ): PerimeterColumnsResult {
-  const { perimeters } = perimeterFacesToRects(entities, tol);
+  // ADR-363 Phase 3b — ένωσε γειτονικά πλαίσια σε ΕΝΑ περίγραμμα: ένα τοιχίο Π
+  // σχεδιασμένο ως 3 ορθογώνια = ΕΝΑ φέρον στοιχείο (Eurocode 8), όχι τρία.
+  const { perimeters } = perimeterFacesToRects(entities, tol, { unionTouching: true });
   return buildColumnsFromPerimeters(perimeters, layerId, sceneUnits);
 }

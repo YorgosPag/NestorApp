@@ -30,7 +30,7 @@
 import type { Pt2, HostFootprintInput } from '../../bim/geometry/wall-host-plan-builder';
 import { buildHostUndersidePlans } from '../../bim/geometry/wall-host-plan-builder';
 import { hostUndersideAt } from '../../bim/geometry/host-footprint-eval';
-import { wallTiltShearAt } from '../../bim/geometry/wall-tilt';
+import { wallTiltShearAt, isWallTilted } from '../../bim/geometry/wall-tilt';
 import type { WallParams } from '../../bim/types/wall-types';
 import {
   safeUnion,
@@ -296,4 +296,186 @@ export function clipWallBandTopRegions(
   }
 
   return regions;
+}
+
+/**
+ * ADR-404 ↔ ADR-401 — **tilt-aware** band split (7→9 κομμάτια) — SSoT.
+ *
+ * Loft band μιας **outside** μεταβατικής περιοχής στη ζώνη `Hu→nominal`: η κάτοψη
+ * **αλλάζει** με το ύψος (γερμένες παρειές τοίχου + **κατακόρυφη** κοπή δοκαριού),
+ * άρα `bottomFootprint(@Hu) ≠ topFootprint(@nominal)` με 1:1 αντιστοιχία κορυφών.
+ * Καταναλώνεται από `buildWallLoftBandGeometry` (wall-piece-geometry.ts).
+ */
+export interface WallTopLoftBand {
+  /** footprint @Hu — κάτω δακτύλιος (= `quad − host_atHu`). CCW. */
+  readonly bottomFootprint: readonly Pt2[];
+  /** footprint @nominal — πάνω δακτύλιος (= `quad − host_atNominal`), 1:1 με `bottomFootprint`. */
+  readonly topFootprint: readonly Pt2[];
+  /** ύψος κάτω δακτυλίου (τοπικά m). */
+  readonly huLocalM: number;
+  /** ύψος πάνω δακτυλίου (τοπικά m). */
+  readonly nominalLocalM: number;
+}
+
+/** Απόσταση σημείου από τμήμα `ab` < eps ΚΑΙ προβολή εντός [0,1] (endpoint-inclusive). */
+function pointOnSegment(p: Pt2, a: Pt2, b: Pt2, eps: number): boolean {
+  const abx = b.x - a.x, aby = b.y - a.y;
+  const len2 = abx * abx + aby * aby;
+  if (len2 < eps * eps) return Math.hypot(p.x - a.x, p.y - a.y) < eps;
+  let t = ((p.x - a.x) * abx + (p.y - a.y) * aby) / len2;
+  if (t < -eps || t > 1 + eps) return false;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (a.x + t * abx), p.y - (a.y + t * aby)) < eps;
+}
+
+/** Τομή δύο **ευθειών** (όχι τμημάτων) p1p2 × p3p4· `null` αν ~παράλληλες. */
+function lineIntersect(p1: Pt2, p2: Pt2, p3: Pt2, p4: Pt2): Pt2 | null {
+  const d1x = p2.x - p1.x, d1y = p2.y - p1.y;
+  const d2x = p4.x - p3.x, d2y = p4.y - p3.y;
+  const denom = d1x * d2y - d1y * d2x;
+  if (Math.abs(denom) < 1e-12) return null;
+  const tt = ((p3.x - p1.x) * d2y - (p3.y - p1.y) * d2x) / denom;
+  return { x: p1.x + tt * d1x, y: p1.y + tt * d1y };
+}
+
+/**
+ * Χτίζει το **top footprint** (@nominal) **απευθείας από** το `bottom` (@Hu) ώστε να
+ * εγγυηθεί **1:1 αντιστοιχία κορυφών** — robust σε διαφορετικό vertex count μεταξύ
+ * ανεξάρτητων clip (η αιτία που το naive matching αποτύγχανε στο runtime). Κάθε κορυφή
+ * `v` του `bottom` κατατάσσεται ως προς το `host_atHu` (`host`) + το `quad`:
+ *   - **εκτός host** (quad corner) → αμετάβλητη (η κάτοψη του τοίχου δεν αλλάζει με ύψος).
+ *   - **quad-edge ∩ host-edge** (cut crossing) → τομή της ΙΔΙΑΣ quad ακμής με την
+ *     **μετατοπισμένη** host ακμή (`host − Δcut`) → κινείται κατά μήκος της παρειάς.
+ *   - **host corner εντός quad** (notch tip) → μετατόπιση κατά `−Δcut` (κατακόρυφη ακμή
+ *     δοκαριού).
+ * Μετά τον `emit()` shear, η κοπή ξαναγίνεται **κατακόρυφη** στο `host_real`. Επιστρέφει
+ * `null` (→ fallback) σε εκφυλισμό (παράλληλες ακμές).
+ */
+function buildTopFootprintFromBottom(
+  bottom: readonly Pt2[], host: readonly Pt2[], quad: readonly Pt2[], dCut: Pt2, eps: number,
+): Pt2[] | null {
+  const out: Pt2[] = [];
+  for (const v of bottom) {
+    let hostEdge: readonly [Pt2, Pt2] | null = null;
+    for (let i = 0; i < host.length; i++) {
+      const a = host[i], b = host[(i + 1) % host.length];
+      if (pointOnSegment(v, a, b, eps)) { hostEdge = [a, b]; break; }
+    }
+    if (!hostEdge) { out.push({ x: v.x, y: v.y }); continue; } // εκτός host → quad corner
+    let quadEdge: readonly [Pt2, Pt2] | null = null;
+    for (let i = 0; i < quad.length; i++) {
+      const a = quad[i], b = quad[(i + 1) % quad.length];
+      if (pointOnSegment(v, a, b, eps)) { quadEdge = [a, b]; break; }
+    }
+    if (quadEdge) {
+      // cut crossing: τομή quad ακμής × μετατοπισμένης host ακμής.
+      const h0 = { x: hostEdge[0].x - dCut.x, y: hostEdge[0].y - dCut.y };
+      const h1 = { x: hostEdge[1].x - dCut.x, y: hostEdge[1].y - dCut.y };
+      const p = lineIntersect(quadEdge[0], quadEdge[1], h0, h1);
+      if (!p) return null;
+      out.push(p);
+    } else {
+      out.push({ x: v.x - dCut.x, y: v.y - dCut.y }); // host corner εντός quad
+    }
+  }
+  return out;
+}
+
+/**
+ * ADR-404 ↔ ADR-401 — **tilt-aware** attach clip (9-piece pocket split).
+ *
+ * Σε **κεκλιμένο** attached τοίχο κάτω από **κατακόρυφο** δοκάρι, ο ομοιόμορφος shear
+ * (`emit()` Phase 4) γέρνει ΚΑΙ τη διαγώνια κοπή του δοκαριού → η ζώνη `Hu→nominal`
+ * ξεφεύγει από την κατακόρυφη παρειά του δοκαριού (τρύπα/υπέρβαση). Fix: σπάσε κάθε
+ * **outside** περιοχή οριζόντια στο `Hu`:
+ *   - **κάτω prism** (`base→Hu`, σταθερό footprint `quad − host_atHu`) — γέρνει
+ *     ομοιόμορφα· watertight γιατί κάτω από το `Hu` συνυπάρχει το pocket.
+ *   - **πάνω loft band** (`Hu→nominal`): `bottomFootprint = quad − host_atHu`,
+ *     `topFootprint = quad − host_atNominal` όπου `host_atNominal = host_atHu − Δcut`,
+ *     `Δcut = shear(nominal) − shear(Hu)`. Μετά τον `emit()` shear η κοπή ξαναγίνεται
+ *     **κατακόρυφη** στο `host_real` (βλ. ADR-404 §Phase 4.2).
+ *
+ * Τα `inside` (pockets) μένουν ως single-footprint prisms (top = host underside).
+ *
+ * **Scope:** **single flat host** = ο καθαρός στόχος. Multi-host / sloped underside →
+ * **fallback** στο vertical `clipWallBandTopRegions` (current behaviour) — follow-up.
+ *
+ * @param hosts  τα **ήδη αντισταθμισμένα** (`tiltCompensateWallTopClip`) host_atHu.
+ * @returns `prisms` (inside pockets + lower-outside + far-end + fallback) + `lofts`
+ *          (upper bands `Hu→nominal`). Άδειο όταν τίποτα ορατό.
+ * @see buildWallLoftBandGeometry — ο builder των loft bands
+ * @see clipWallBandTopRegions — ο vertical (μη-tilted) clip
+ */
+export function clipWallBandTopRegionsTilted(
+  quad: readonly Pt2[],
+  hosts: readonly HostFootprintInput[],
+  nominalTopMm: number,
+  floorElevationMm: number,
+  baseLocalM: number,
+  params: WallParams,
+): { prisms: WallTopRegion[]; lofts: WallTopLoftBand[] } {
+  // Fallback: μη-tilted / multi-host / κεκλιμένο host → vertical clip (μηδέν αλλαγή).
+  if (quad.length < 3 || hosts.length !== 1 || hosts[0].undersideZmmAt || !isWallTilted(params)) {
+    return {
+      prisms: clipWallBandTopRegions(quad, hosts, nominalTopMm, floorElevationMm, baseLocalM),
+      lofts: [],
+    };
+  }
+
+  const host = hosts[0];
+  const nominalLocalM = (nominalTopMm - floorElevationMm) * MM_TO_M;
+  const huMm = Math.min(nominalTopMm, host.undersideZmm);
+  const huLocalM = (huMm - floorElevationMm) * MM_TO_M;
+  const toLocal = (zmm: number): number => (zmm - floorElevationMm) * MM_TO_M;
+
+  // host_atNominal = host_atHu − Δcut· Δcut = shear(nominal) − shear(Hu) (plan).
+  const sNom = wallTiltShearAt(params, nominalLocalM);
+  const sHu = wallTiltShearAt(params, huLocalM);
+  const dCut: Pt2 = { x: sNom.dx - sHu.dx, y: sNom.dy - sHu.dy };
+
+  // Scale-robust eps για point-on-edge classification: βασισμένο στο **μέγεθος των
+  // συντεταγμένων** (όχι στο span του κομματιού — τα μεταβατικά κομμάτια είναι λεπτές
+  // φέτες με μικρό span → απόλυτο/span eps ήταν μικροσκοπικό → η κοπή δεν αναγνωριζόταν).
+  // Ο θόρυβος του polygon-clipping κλιμακώνεται με το μέγεθος συντεταγμένων → mm & m safe.
+  let maxAbs = 0;
+  for (const p of quad) maxAbs = Math.max(maxAbs, Math.abs(p.x), Math.abs(p.y));
+  for (const p of host.footprint) maxAbs = Math.max(maxAbs, Math.abs(p.x), Math.abs(p.y));
+  const edgeEps = Math.max(1e-7, maxAbs * 1e-6);
+
+  const quadGeom = toClipGeom(quad);
+  const hostHuGeom = toClipGeom(host.footprint);
+
+  const prisms: WallTopRegion[] = [];
+  const lofts: WallTopLoftBand[] = [];
+
+  // inside (pocket): top = host underside (clamp ≤ nominal), base = baseLocalM.
+  let hasPocket = false;
+  for (const poly of safeIntersection(quadGeom, hostHuGeom)) {
+    const pts = ringToPts(poly[0]);
+    if (pts.length < 3 || ringArea(pts) < AREA_EPS) continue;
+    const topLocalM = pts.map((p) => toLocal(Math.min(nominalTopMm, hostUndersidePlaneMm(host, p))));
+    prisms.push({ footprint: pts, topLocalM, baseLocalM: pts.map(() => baseLocalM) });
+    hasPocket = true;
+  }
+
+  // outside: σπάσε στο Hu **μόνο** όταν το κομμάτι έχει pocket (το δοκάρι το διασχίζει →
+  // genuine transition). Κριτήριο geometry-free & robust: ακριανό κομμάτι (καμία φωλιά)
+  // → ομοιόμορφο prism @nominal. Στο transition, το top footprint χτίζεται ΑΠΕΥΘΕΙΑΣ από
+  // το bottom (constructive, εγγυημένη 1:1 αντιστοιχία) → κάτω prism (base→Hu) + πάνω
+  // loft band (Hu→nominal, κατακόρυφη κοπή μετά τον emit shear).
+  for (const poly of safeDifference(quadGeom, hostHuGeom)) {
+    const b = ringToPts(poly[0]);
+    if (b.length < 3 || ringArea(b) < AREA_EPS) continue;
+    const t = hasPocket ? buildTopFootprintFromBottom(b, host.footprint, quad, dCut, edgeEps) : null;
+    const moved = t !== null && b.some((p, i) =>
+      Math.abs(p.x - t[i].x) > edgeEps || Math.abs(p.y - t[i].y) > edgeEps);
+    if (t && moved && ringArea(t) >= AREA_EPS) {
+      prisms.push({ footprint: b, topLocalM: b.map(() => huLocalM), baseLocalM: b.map(() => baseLocalM) });
+      lofts.push({ bottomFootprint: b, topFootprint: t, huLocalM, nominalLocalM });
+    } else {
+      prisms.push({ footprint: b, topLocalM: b.map(() => nominalLocalM), baseLocalM: b.map(() => baseLocalM) });
+    }
+  }
+
+  return { prisms, lofts };
 }

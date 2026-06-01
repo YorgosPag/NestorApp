@@ -24,9 +24,14 @@ import type { Point3D } from '../../bim/types/bim-base';
 import { getMaterial3D, getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildWallMeshWithOpenings } from './wall-opening-extrude';
 import { computeWallOpeningPieces, type WallTopLocalFn, type WallBaseLocalFn } from './wall-opening-pieces';
-import { buildSlopedWallPieceGeometry } from './wall-piece-geometry';
+import { buildSlopedWallPieceGeometry, buildWallLoftBandGeometry } from './wall-piece-geometry';
 import { buildColumnPrismGeometry } from './column-piece-geometry';
-import { clipWallBandTopRegions, tiltCompensateWallTopClip, type WallTopClipContext } from './wall-top-clip';
+import {
+  clipWallBandTopRegions,
+  clipWallBandTopRegionsTilted,
+  tiltCompensateWallTopClip,
+  type WallTopClipContext,
+} from './wall-top-clip';
 import { isWallTilted } from '../../bim/geometry/wall-tilt';
 import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
 import { evaluateWallTopAt, type WallTopProfile } from '../../bim/geometry/wall-top-profile';
@@ -36,6 +41,8 @@ import { applyBeamSlope, applySlabSlope, applyColumnTilt, applyWallTilt } from '
 import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
 import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
 import type { BimCategory } from '../../config/bim-object-styles';
+// File-private geometry primitives (N.7.1 file-size split, 2026-06-01).
+import { buildShape, extrudeAndRotate, tagMesh, buildWallShape } from './bim-three-shape-helpers';
 
 // ADR-375 Phase C.7 — default 3D edge resolution context.
 // scaleDenominator 100 = 1:100 architectural plan, the most common BIM scale.
@@ -53,9 +60,6 @@ function attachEdgesProjection(mesh: THREE.Mesh, category: BimCategory): void {
   attachEdgeOverlay(mesh, buildEdgeOverlay(mesh, style));
 }
 
-// ── Shared rotation matrix: shape XY → Three.js Y-up ─────────────────────────
-const ROT_X_NEG_90 = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
-
 // BIM shape vertices (outerEdge, innerEdge, footprint, outline) are already in meters
 // (canvas world coordinates). Scalar params — slab thickness/elevation, beam depth/elevation,
 // column height, floorElevationMm — are stored in raw mm and MUST be multiplied by MM_TO_M.
@@ -70,61 +74,6 @@ const CATEGORY_MAT_ID: Record<WallEntity['params']['category'], string> = {
   parapet:   'mat-concrete',
   fence:     'mat-stone',
 };
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function toShapePoints(pts: readonly Point3D[]): { x: number; y: number }[] {
-  return pts.map((p) => ({ x: p.x, y: p.y }));
-}
-
-function buildShape(outer: readonly Point3D[], inner?: readonly Point3D[]): THREE.Shape | null {
-  if (outer.length < 2) return null;
-  const shape = new THREE.Shape();
-  const [first, ...rest] = toShapePoints(outer);
-  shape.moveTo(first.x, first.y);
-  for (const pt of rest) shape.lineTo(pt.x, pt.y);
-  shape.closePath();
-
-  if (inner && inner.length >= 2) {
-    const hole = new THREE.Path();
-    const [h0, ...hRest] = toShapePoints(inner);
-    hole.moveTo(h0.x, h0.y);
-    for (const pt of hRest) hole.lineTo(pt.x, pt.y);
-    hole.closePath();
-    shape.holes.push(hole);
-  }
-  return shape;
-}
-
-function extrudeAndRotate(shape: THREE.Shape, depthM: number): THREE.BufferGeometry {
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: depthM, bevelEnabled: false });
-  geo.applyMatrix4(ROT_X_NEG_90);
-  return geo;
-}
-
-function tagMesh(mesh: THREE.Mesh, id: string, type: string, matId: string, levelId?: string): THREE.Mesh {
-  mesh.userData['bimId'] = id;
-  mesh.userData['bimType'] = type;
-  mesh.userData['matId'] = matId;
-  if (levelId !== undefined) mesh.userData['levelId'] = levelId;
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  return mesh;
-}
-
-// Wall footprint: outerEdge and innerEdge are each open polylines (not closed polygons).
-// Combine: trace outer forward → inner backward → close to form a proper solid cross-section.
-function buildWallShape(outer: readonly Point3D[], inner: readonly Point3D[]): THREE.Shape | null {
-  if (outer.length < 2 || inner.length < 2) return null;
-  const outerPts = toShapePoints(outer);
-  const innerPts = toShapePoints(inner);
-  const shape = new THREE.Shape();
-  shape.moveTo(outerPts[0].x, outerPts[0].y);
-  for (let i = 1; i < outerPts.length; i++) shape.lineTo(outerPts[i].x, outerPts[i].y);
-  for (let i = innerPts.length - 1; i >= 0; i--) shape.lineTo(innerPts[i].x, innerPts[i].y);
-  shape.closePath();
-  return shape;
-}
 
 // ── ADR-401 Phase B2 — μεταβλητή κορυφή (σκαλωτή/κεκλιμένη) ────────────────────
 
@@ -215,6 +164,21 @@ export function buildStraightWallWithOpenings(
   const pieces = computeWallOpeningPieces(wall, openings, clipWallTop, wallBase);
   if (!pieces) return null;
 
+  // [TILT-DIAG] ΠΡΟΣΩΡΙΝΟ — αφαιρείται μετά τη διάγνωση.
+  if (isWallTilted(wall.params)) {
+    const bbox = (pts: readonly { x: number; y: number }[]): string => {
+      const xs = pts.map((p) => p.x); const ys = pts.map((p) => p.y);
+      return `x[${Math.min(...xs).toFixed(2)},${Math.max(...xs).toFixed(2)}] y[${Math.min(...ys).toFixed(2)},${Math.max(...ys).toFixed(2)}]`;
+    };
+    const oe = wall.geometry.outerEdge.points; const ie = wall.geometry.innerEdge.points;
+    // eslint-disable-next-line no-console
+    console.warn('[TILT-DIAG] wall', wall.id, '| tiltAngle=', wall.params.tilt?.angle,
+      '| hasTopClip=', !!effTopClip, '| hosts=', effTopClip?.hosts?.length ?? 0,
+      '| pieces=', pieces.length, '| profileFollowing=', pieces.filter((p) => p.topFollowsProfile).length,
+      '| wallBand=', bbox([...oe, ...ie]),
+      '| host0(compensated)=', effTopClip?.hosts?.[0] ? bbox(effTopClip.hosts[0].footprint) : 'none');
+  }
+
   const floorY = floorElevationMm * MM_TO_M + buildingBaseElevationM;
   const group = new THREE.Group();
   const emit = (geo: THREE.BufferGeometry, yOffset: number): void => {
@@ -240,15 +204,39 @@ export function buildStraightWallWithOpenings(
     // prism). Δίνει διαγώνιο κατακόρυφο σκαλοπάτι στην αληθινή ακμή του host → μηδέν
     // τριγωνικά κενά. Curved/sloped-base/μη-attached → δεν μπαίνει εδώ (fast path κάτω).
     if (effTopClip && pc.topFollowsProfile && flatBase) {
-      const regions = clipWallBandTopRegions(
-        pc.quad, effTopClip.hosts, effTopClip.nominalTopMm, floorElevationMm, pc.zBotAM,
-      );
-      if (regions.length > 0) {
-        for (const r of regions) {
-          const prism = buildColumnPrismGeometry(r.footprint, r.baseLocalM, r.topLocalM);
-          if (prism) emit(prism, floorY);
+      if (isWallTilted(wall.params)) {
+        // ADR-404 Phase 4.2 — γερμένος τοίχος: σπάσε τα outside regions οριζόντια στο
+        // Hu → κάτω prism (base→Hu) + πάνω loft band (Hu→nominal, κατακόρυφη κοπή
+        // δοκαριού μετά τον ομοιόμορφο emit shear). 7→9 κομμάτια στη μεταβατική ζώνη.
+        const { prisms, lofts } = clipWallBandTopRegionsTilted(
+          pc.quad, effTopClip.hosts, effTopClip.nominalTopMm, floorElevationMm, pc.zBotAM, wall.params,
+        );
+        // [TILT-DIAG v4-HASPOCKET] ΠΡΟΣΩΡΙΝΟ — αφαιρείται μετά τη διάγνωση.
+        // eslint-disable-next-line no-console
+        console.warn('[TILT-DIAG v4-HASPOCKET] tilted-clip piece | prisms=', prisms.length,
+          '| lofts=', lofts.length);
+        if (prisms.length > 0 || lofts.length > 0) {
+          for (const r of prisms) {
+            const prism = buildColumnPrismGeometry(r.footprint, r.baseLocalM, r.topLocalM);
+            if (prism) emit(prism, floorY);
+          }
+          for (const band of lofts) {
+            const loft = buildWallLoftBandGeometry(band);
+            if (loft) emit(loft, floorY);
+          }
+          continue;
         }
-        continue;
+      } else {
+        const regions = clipWallBandTopRegions(
+          pc.quad, effTopClip.hosts, effTopClip.nominalTopMm, floorElevationMm, pc.zBotAM,
+        );
+        if (regions.length > 0) {
+          for (const r of regions) {
+            const prism = buildColumnPrismGeometry(r.footprint, r.baseLocalM, r.topLocalM);
+            if (prism) emit(prism, floorY);
+          }
+          continue;
+        }
       }
       // regions κενό (clip απέτυχε/degenerate) → πέσε στο fast path παρακάτω.
     }

@@ -95,6 +95,11 @@ function lwPolyline(id: string, verts: Point2D[]): LWPolylineEntity {
   return { id, type: 'lwpolyline', layerId: 'lyr', vertices: verts, closed: true } as LWPolylineEntity;
 }
 
+/** Μετατόπιση πολυγώνου κατά (dx,dy) — για disjoint placement σε union tests. */
+function off(poly: Point2D[], dx: number, dy = 0): Point2D[] {
+  return poly.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+}
+
 function buildColumnsFrom(entities: Entity[]) {
   return perimeterFacesToColumns(entities, TOL, LEVEL, SU);
 }
@@ -162,11 +167,12 @@ describe('column-from-faces — polygon-centering round-trip', () => {
 });
 
 describe('column-from-faces — ΕΝΑ entity ανά περίμετρο (μη-αποσύνθεση)', () => {
-  it('πολλαπλά περιγράμματα → ΕΝΑ ColumnEntity το καθένα', () => {
+  it('πολλαπλά ΑΣΥΝΔΕΤΑ περιγράμματα → ΕΝΑ ColumnEntity το καθένα', () => {
+    // Disjoint placement: το auto-union (Phase 3b) κρατά τα ασύνδετα ΧΩΡΙΣΤΑ.
     const { columns } = buildColumnsFrom([
       lwPolyline('L', L_SHAPE),
-      lwPolyline('U', U_SHAPE),
-      lwPolyline('T', T_SHAPE),
+      lwPolyline('U', off(U_SHAPE, 6000)),
+      lwPolyline('T', off(T_SHAPE, 12000)),
     ]);
     expect(columns).toHaveLength(3);
     expect(columns.map((c) => c.params.kind).sort()).toEqual(
@@ -175,13 +181,58 @@ describe('column-from-faces — ΕΝΑ entity ανά περίμετρο (μη-α
   });
 });
 
-describe('column-from-faces — μικτή επιλογή', () => {
-  it('χτίζει το έγκυρο Γ και μετρά το αυτο-τεμνόμενο ως ignored', () => {
-    const { columns, ignored } = buildColumnsFrom([
-      lwPolyline('good', L_SHAPE),
-      lwPolyline('bad', BOWTIE),
+// ─── ADR-363 Phase 3b — auto-union γειτονικών πλαισίων ─────────────────────────
+
+// Π σχηματισμένο από 3 ΧΩΡΙΣΤΑ ορθογώνια (δύο πόδια + κορυφαία δοκός), που
+// μοιράζονται ακμές. Mirror του Giorgio test (3 πλαίσια → ένα Π στατικά).
+const PI_LEFT_LEG: Point2D[] = [
+  { x: 0, y: 0 }, { x: 300, y: 0 }, { x: 300, y: 3000 }, { x: 0, y: 3000 },
+];
+const PI_RIGHT_LEG: Point2D[] = [
+  { x: 2700, y: 0 }, { x: 3000, y: 0 }, { x: 3000, y: 3000 }, { x: 2700, y: 3000 },
+];
+const PI_CROSSBAR: Point2D[] = [
+  { x: 0, y: 2700 }, { x: 3000, y: 2700 }, { x: 3000, y: 3000 }, { x: 0, y: 3000 },
+];
+
+describe('column-from-faces — auto-union (Phase 3b)', () => {
+  it('3 ορθογώνια που σχηματίζουν Π → ΕΝΑ τοιχίο U-shape (όχι 3)', () => {
+    const { columns } = buildColumnsFrom([
+      lwPolyline('leg-L', PI_LEFT_LEG),
+      lwPolyline('leg-R', PI_RIGHT_LEG),
+      lwPolyline('bar', PI_CROSSBAR),
     ]);
     expect(columns).toHaveLength(1);
+    expect(columns[0].params.kind).toBe('U-shape');
+    expect(columns[0].params.ushape?.polygon?.length).toBe(8);
+  });
+
+  it('2 ασύνδετα (μακριά) ορθογώνια → παραμένουν 2 ξεχωριστά τοιχία', () => {
+    const { columns } = buildColumnsFrom([
+      lwPolyline('a', RECT),
+      lwPolyline('b', off(RECT, 20000)),
+    ]);
+    expect(columns).toHaveLength(2);
+  });
+});
+
+describe('column-from-faces — μικτή επιλογή', () => {
+  it('αυτο-τεμνόμενο μόνο του → 0 τοιχία, ignored=1', () => {
+    // Μόνο 1 περίγραμμα → το auto-union κάνει early-return (δεν «καθαρίζει» το
+    // bowtie), οπότε ο validator το απορρίπτει κανονικά (zero area).
+    const { columns, ignored } = buildColumnsFrom([lwPolyline('bad', BOWTIE)]);
+    expect(columns).toHaveLength(0);
     expect(ignored).toBe(1);
+  });
+
+  it('έγκυρο Γ + μακρινό αυτο-τεμνόμενο → το union επιλύει το bowtie σε στερεά', () => {
+    // Phase 3b side-effect (αποδεκτό): με ≥2 περιγράμματα το safeUnion
+    // κανονικοποιεί το αυτο-τεμνόμενο σε έγκυρα solids → δεν χάνεται ως «invalid».
+    const { columns } = buildColumnsFrom([
+      lwPolyline('good', L_SHAPE),
+      lwPolyline('bad', off(BOWTIE, 20000)),
+    ]);
+    expect(columns.length).toBeGreaterThanOrEqual(2);
+    expect(columns.some((c) => c.params.kind === 'composite')).toBe(true);
   });
 });

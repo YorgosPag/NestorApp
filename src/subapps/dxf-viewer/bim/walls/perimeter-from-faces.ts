@@ -35,6 +35,7 @@ import {
 } from '../../types/entities';
 import { rectangleCorners } from './wall-from-entity';
 import { extractLineSegments, type DetectedRectangle, type RegionLineSeg } from './wall-in-region';
+import { safeUnion } from '../geometry/shared/safe-polygon-boolean';
 
 // ─── Public types ────────────────────────────────────────────────────────────
 
@@ -403,19 +404,63 @@ export function extractClosedPolygons(entities: readonly Entity[], tol: number):
   return polygons;
 }
 
+// ─── Polygon union (ADR-363 Phase 3b — γειτονικά πλαίσια → ΕΝΑ σχήμα) ─────────
+
+/**
+ * Convert ένα ring polygon-clipping `[number,number][]` πίσω σε `Point2D[]`,
+ * αφαιρώντας το διπλό κλείσιμο (polygon-clipping κλείνει τα rings: first===last).
+ */
+function ringToPoints(ring: ReadonlyArray<readonly [number, number]>): Point2D[] {
+  const pts = ring.map(([x, y]) => ({ x, y }));
+  if (pts.length > 1) {
+    const a = pts[0];
+    const b = pts[pts.length - 1];
+    if (Math.abs(a.x - b.x) < 1e-9 && Math.abs(a.y - b.y) < 1e-9) pts.pop();
+  }
+  return pts;
+}
+
+/**
+ * Ενώνει γειτονικά/επικαλυπτόμενα κλειστά πολύγωνα σε ΕΝΑ περίγραμμα (ADR-363
+ * Phase 3b). Γιατί: ένα τοιχίο σχήματος Π σχεδιασμένο ως 3 χωριστά ορθογώνια
+ * είναι **ΕΝΑ φέρον στοιχείο** (Eurocode 8 — σύνθετη στατική λειτουργία, ενιαίο
+ * κεντροειδές/ροπές αδρανείας/κέντρο διάτμησης), όχι τρία. Το boolean `safeUnion`
+ * (polygon-clipping SSoT) ενώνει εφαπτόμενα/επικαλυπτόμενα και κρατά τα ασύνδετα
+ * ΧΩΡΙΣΤΑ (κάθε στοιχείο = δικό του τοιχίο). Holes αγνοούνται (μόνο outer ring)·
+ * empty union → fallback στα αρχικά (zero data loss). Pure — wrapper του SSoT.
+ */
+function unionTouchingPolygons(
+  polys: ReadonlyArray<readonly Point2D[]>,
+): Point2D[][] {
+  const copy = (p: readonly Point2D[]): Point2D[] => p.map((q) => ({ x: q.x, y: q.y }));
+  if (polys.length <= 1) return polys.map(copy);
+  const geoms = polys.map((p) => [p.map((q) => [q.x, q.y] as [number, number])]);
+  const merged = safeUnion(geoms[0], ...geoms.slice(1));
+  if (merged.length === 0) return polys.map(copy);
+  return merged.map((polygon) => ringToPoints(polygon[0]));
+}
+
 // ─── Orchestrator ────────────────────────────────────────────────────────────
 
 /**
  * Ανάλυση μιας επιλογής παρειών → περιγράμματα + σκέλη + πλήθος αγνοημένων.
  * Composite/άκυρα κλειστά σχήματα δεν παράγουν σκέλη (ignoredCount → toast).
+ *
+ * `options.unionTouching` (ADR-363 Phase 3b): ενώνει γειτονικά/επικαλυπτόμενα
+ * κλειστά σχήματα σε ΕΝΑ περίγραμμα ΠΡΙΝ την κατηγοριοποίηση (3 ορθογώνια Π → ΕΝΑ
+ * τοιχίο Π). Default `false` — οι τοίχοι κρατούν την ανά-σχήμα συμπεριφορά (δύο
+ * γειτονικά δωμάτια ≠ ένα). Το column path (`perimeterFacesToColumns`) το ανάβει.
  */
 export function perimeterFacesToRects(
   entities: readonly Entity[],
   tol: number,
+  options?: { readonly unionTouching?: boolean },
 ): PerimeterFacesResult {
+  const closed = extractClosedPolygons(entities, tol);
+  const polys = options?.unionTouching ? unionTouchingPolygons(closed) : closed;
   const perimeters: ClosedPerimeter[] = [];
   let ignoredCount = 0;
-  for (const polygon of extractClosedPolygons(entities, tol)) {
+  for (const polygon of polys) {
     const shape = classifyPerimeter(polygon, tol);
     const rects = shape === 'composite' ? [] : decomposeRectilinear(polygon, tol);
     perimeters.push({ polygon: normalize(polygon, tol), shape, rects });
