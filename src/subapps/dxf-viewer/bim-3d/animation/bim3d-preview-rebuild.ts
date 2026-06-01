@@ -42,6 +42,11 @@ import {
   type TiltDragDeg,
 } from '../gizmo/bim3d-tilt-bridge';
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh } from '../converters/BimToThreeConverter';
+// ADR-401 — wall-top footprint clip (γωνιακή διασταύρωση): the live preview MUST
+// pass the 8th `topClip` arg so attached walls preview with the same 5/7-piece
+// footprint clip + face-crossing breakpoints the commit path (`syncWalls`) builds.
+import { wallTopFaceCrossingBreakpoints, type WallTopClipContext } from '../converters/wall-top-clip';
+import { worldToDxfPlan } from '../viewport/coordinate-transforms';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
 import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
@@ -50,9 +55,15 @@ import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometrySer
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 // ADR-401 ↔ ADR-402/404 — attach profiles so the preview === the committed `syncWalls`/
 // `syncColumns` result for attached walls/columns (no flat-top drift → no vanish on commit).
-import { resolveWallTopProfile, type WallTopProfile } from '../../bim/geometry/wall-top-profile';
+import { resolveWallTopProfile, resolveWallNominalTopZmm, type WallTopProfile } from '../../bim/geometry/wall-top-profile';
 import { resolveWallBaseProfile, type WallBaseProfile } from '../../bim/geometry/wall-base-profile';
-import { buildWallHostInputs, makeWallTopContext, makeWallBaseContext } from '../../bim/geometry/wall-host-plan-builder';
+import {
+  buildWallHostInputs,
+  makeWallTopContext,
+  makeWallBaseContext,
+  type HostFootprintInput,
+  type Pt2,
+} from '../../bim/geometry/wall-host-plan-builder';
 import {
   resolveColumnTopProfile,
   resolveColumnBaseProfile,
@@ -103,7 +114,8 @@ export function buildTiltPreviewObject(entityId: string, drag: TiltDragDeg): THR
     const preview = { ...wall, params: next, geometry: computeWallGeometry(next, wall.kind) };
     const openings = s.openings.filter((o) => o.params.wallId === wall.id);
     const { profile, baseProfile } = wallPreviewProfiles(preview, s);
-    return wallToMesh(preview, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile);
+    const topClip = wallPreviewTopClip(preview, buildWallHostInputs(s.beams, s.slabs), 0);
+    return wallToMesh(preview, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile, topClip);
   }
   const column = s.columns.find((c) => c.id === entityId);
   if (column) {
@@ -166,6 +178,27 @@ function wallPreviewProfiles(wall: Wall, s: Snapshot): { profile?: WallTopProfil
 }
 
 /**
+ * Wall-top footprint clip for the preview wall — mirror of `BimSceneLayer.syncWalls`
+ * (ADR-401 γωνιακή διασταύρωση). Only `straight` top-attached walls clip; others →
+ * undefined (the extrude path does not support a diagonal top — documented limitation).
+ * Built from the SAME `wallTopFaceCrossingBreakpoints` + `resolveWallNominalTopZmm`
+ * SSoT the commit path uses, so the ghost === the committed footprint clip.
+ */
+function wallPreviewTopClip(
+  wall: Wall,
+  hostInputs: readonly HostFootprintInput[],
+  floorElevationMm: number,
+): WallTopClipContext | undefined {
+  if (wall.params?.topBinding !== 'attached' || wall.kind !== 'straight') return undefined;
+  const attachHosts = hostInputs.filter((h) => wall.params.attachTopToIds?.includes(h.hostId));
+  return {
+    hosts: attachHosts,
+    nominalTopMm: resolveWallNominalTopZmm(wall.params, { floorElevationMm }),
+    breakpoints: wallTopFaceCrossingBreakpoints(wall.geometry, attachHosts),
+  };
+}
+
+/**
  * Attach top/base profiles for the preview column — mirror of `BimSceneLayer.syncColumns`
  * (`floorElevationMm = 0`). Non-attached or geometry-less → `{}` (fast path).
  */
@@ -188,7 +221,71 @@ function rebuildWall(wall: Wall, drag: ResizeDragMm, s: Snapshot, levelId: strin
   const preview = { ...wall, params: next, geometry: computeWallGeometry(next, wall.kind) };
   const openings = s.openings.filter((o) => o.params.wallId === wall.id);
   const { profile, baseProfile } = wallPreviewProfiles(preview, s);
-  return wallToMesh(preview, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile);
+  // ADR-401 Κενό Β — pass the footprint clip so a resized attached wall previews
+  // with its real angled-crossing top (ghost === commit), not just the axis profile.
+  const topClip = wallPreviewTopClip(preview, buildWallHostInputs(s.beams, s.slabs), 0);
+  return wallToMesh(preview, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile, topClip);
+}
+
+/**
+ * ADR-401 — live re-clip of an attached dependent wall while its structural host
+ * (beam/slab) is being moved (3D move gizmo, ADR-402). The wall ITSELF does not
+ * move; only the hosts in `movedHostIds` shift by `liveTranslation` (world space),
+ * so the wall's top footprint clip must be rebuilt with the hosts at their preview
+ * position — otherwise the user sees the stale hole until pointer-up.
+ *
+ * Ghost === commit: the wall is rebuilt through the SAME converter SSoT as
+ * `BimSceneLayer.syncWalls` (profiles + `topClip` with face-crossing breakpoints),
+ * the only difference being the moved hosts' shifted footprints / undersides.
+ * `worldToDxfPlan` maps the world translation vector to a plan (mm) delta — it is a
+ * pure linear map (no affine offset), so it applies 1:1 to a delta (anti-1000×).
+ */
+export function buildDependentWallPreviewObject(
+  wallId: string,
+  movedHostIds: ReadonlySet<string>,
+  liveTranslation: THREE.Vector3,
+): THREE.Object3D | null {
+  if (useViewMode3DStore.getState().floor3DScope === 'all') return null;
+  const s = useBim3DEntitiesStore.getState();
+  const wall = s.walls.find((w) => w.id === wallId);
+  if (!wall) return null;
+  const levelId = s.activeLevelId ?? undefined;
+  const d = worldToDxfPlan(liveTranslation); // world (m) → plan (mm) delta
+  const hostInputs = buildWallHostInputs(s.beams, s.slabs).map((h) =>
+    movedHostIds.has(h.hostId) ? shiftHost(h, d.x, d.y, d.z) : h,
+  );
+  const start = { x: wall.params.start.x, y: wall.params.start.y };
+  const end = { x: wall.params.end.x, y: wall.params.end.y };
+  const profile =
+    wall.params?.topBinding === 'attached'
+      ? resolveWallTopProfile(wall.params, makeWallTopContext(start, end, hostInputs, { floorElevationMm: 0 }))
+      : undefined;
+  const baseProfile =
+    wall.params?.baseBinding === 'attached'
+      ? resolveWallBaseProfile(wall.params, makeWallBaseContext(start, end, hostInputs, { floorElevationMm: 0 }))
+      : undefined;
+  const topClip = wallPreviewTopClip(wall, hostInputs, 0);
+  const openings = s.openings.filter((o) => o.params.wallId === wall.id);
+  return wallToMesh(wall, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile, topClip);
+}
+
+/**
+ * Shift a host's footprint + under/top-side by a plan (mm) delta, modelling the
+ * host at its live-drag position. Sloped hosts keep their slope: the `*At(pt)`
+ * planes are re-anchored by querying the original plane at the un-shifted point
+ * and adding the elevation delta (`dz`).
+ */
+function shiftHost(h: HostFootprintInput, dx: number, dy: number, dz: number): HostFootprintInput {
+  const undersideAt = h.undersideZmmAt;
+  const topsideAt = h.topsideZmmAt;
+  return {
+    ...h,
+    footprint: h.footprint.map((p) => ({ x: p.x + dx, y: p.y + dy })),
+    undersideZmm: h.undersideZmm + dz,
+    topsideZmm: h.topsideZmm !== undefined ? h.topsideZmm + dz : undefined,
+    undersideZmmAt: undersideAt ? (pt: Pt2) => undersideAt({ x: pt.x - dx, y: pt.y - dy }) + dz : undefined,
+    topsideZmmAt: topsideAt ? (pt: Pt2) => topsideAt({ x: pt.x - dx, y: pt.y - dy }) + dz : undefined,
+  };
 }
 
 function rebuildColumn(column: Column, drag: ResizeDragMm, s: Snapshot, levelId: string | undefined): THREE.Object3D | null {

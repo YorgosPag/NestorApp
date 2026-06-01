@@ -138,3 +138,83 @@ describe('Bim3DEditLivePreview — resize swap', () => {
     expect(p.isActive).toBe(false);
   });
 });
+
+describe('Bim3DEditLivePreview — ADR-401 attached-dependent re-clip on host move', () => {
+  it('captures the dragged host (rigid) AND its dependent walls (hidden + ids) together', () => {
+    const host = taggedMesh('beam1', [0, 0, 0]); // dragged host (rigid move)
+    const wall = taggedMesh('wall1', [5, 0, 0]); // attached dependent (re-clipped)
+    const g = group(host, wall);
+    const p = new Bim3DEditLivePreview();
+
+    p.captureTransform(g, new Set(['beam1']));
+    p.captureDependents(g, ['wall1'], new Set(['beam1']));
+
+    expect(p.isActive).toBe(true);
+    expect(p.dependentWallIds).toEqual(['wall1']);
+    expect(p.movedHostIds.has('beam1')).toBe(true);
+
+    // The host still moves rigidly; the dependent is left to per-frame rebuild.
+    p.applyMove(new THREE.Vector3(10, 0, 0));
+    expect(host.position.x).toBe(10);
+    expect(wall.position.x).toBe(5);
+  });
+
+  it('applyDependents hides the originals and parents the rebuilt meshes', () => {
+    const wall = taggedMesh('wall1', [0, 0, 0]);
+    const g = group(wall);
+    const rebuilt = taggedMesh('wall1', [0, 0, 0]);
+    const p = new Bim3DEditLivePreview();
+
+    p.captureDependents(g, ['wall1'], new Set(['beam1']));
+    p.applyDependents([rebuilt]);
+    expect(wall.visible).toBe(false);
+    expect(g.children).toContain(rebuilt);
+  });
+
+  it('a new frame removes the previous frame dependents and skips null rebuilds', () => {
+    const wall = taggedMesh('wall1', [0, 0, 0]);
+    const g = group(wall);
+    const frame1 = taggedMesh('wall1', [0, 0, 0]);
+    const frame2 = taggedMesh('wall1', [0, 0, 0]);
+    const p = new Bim3DEditLivePreview();
+
+    p.captureDependents(g, ['wall1'], new Set(['beam1']));
+    p.applyDependents([frame1]);
+    p.applyDependents([frame2, null]); // null entry is skipped, frame1 replaced
+    expect(g.children).toContain(frame2);
+    expect(g.children).not.toContain(frame1);
+  });
+
+  it('reset() un-hides the dependents and removes the swapped meshes', () => {
+    const host = taggedMesh('beam1', [1, 0, 0]);
+    const wall = taggedMesh('wall1', [0, 0, 0]);
+    const g = group(host, wall);
+    const rebuilt = taggedMesh('wall1', [0, 0, 0]);
+    const p = new Bim3DEditLivePreview();
+
+    p.captureTransform(g, new Set(['beam1']));
+    p.captureDependents(g, ['wall1'], new Set(['beam1']));
+    p.applyMove(new THREE.Vector3(10, 0, 0));
+    p.applyDependents([rebuilt]);
+    p.reset();
+
+    expect(host.position.x).toBe(1); // host snapped back
+    expect(wall.visible).toBe(true); // dependent original restored
+    expect(g.children).not.toContain(rebuilt); // preview removed
+    expect(p.isActive).toBe(false);
+  });
+
+  it('commit() keeps the dependent preview (the command re-sync replaces it)', () => {
+    const wall = taggedMesh('wall1', [0, 0, 0]);
+    const g = group(wall);
+    const rebuilt = taggedMesh('wall1', [0, 0, 0]);
+    const p = new Bim3DEditLivePreview();
+
+    p.captureDependents(g, ['wall1'], new Set(['beam1']));
+    p.applyDependents([rebuilt]);
+    p.commit();
+    expect(g.children).toContain(rebuilt);
+    expect(wall.visible).toBe(false);
+    expect(p.isActive).toBe(false);
+  });
+});

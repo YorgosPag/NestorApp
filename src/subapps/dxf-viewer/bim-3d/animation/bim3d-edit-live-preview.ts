@@ -55,9 +55,35 @@ export class Bim3DEditLivePreview {
   /** The `bimLayer.group` the resize preview is parented to. */
   private parent: THREE.Object3D | null = null;
 
+  // ── ADR-401 — live attached-dependent re-clip (host move → attached wall) ──────
+  /** Original meshes of the attached dependents, hidden during a host move (restored on cancel). */
+  private dependentHidden: THREE.Object3D[] = [];
+  /** The swapped-in dependent preview objects (removed + disposed each frame / on cancel). */
+  private dependentObjects: THREE.Object3D[] = [];
+  /** Ids of the attached dependent walls to rebuild per frame (caller builds the meshes). */
+  private depWallIds: string[] = [];
+  /** Ids of the dragged structural hosts whose live transform the dependents must follow. */
+  private depHostIds: ReadonlySet<string> = new Set();
+
   /** True while a preview is in effect (capture done, not yet committed/reset). */
   get isActive(): boolean {
-    return this.transforms.length > 0 || this.hidden.length > 0 || this.previewObject !== null;
+    return (
+      this.transforms.length > 0 ||
+      this.hidden.length > 0 ||
+      this.previewObject !== null ||
+      this.dependentHidden.length > 0 ||
+      this.dependentObjects.length > 0
+    );
+  }
+
+  /** Attached dependent wall ids captured for this drag (empty when none / not a host move). */
+  get dependentWallIds(): readonly string[] {
+    return this.depWallIds;
+  }
+
+  /** Dragged host ids the dependents follow (the ones whose footprint moved). */
+  get movedHostIds(): ReadonlySet<string> {
+    return this.depHostIds;
   }
 
   /**
@@ -95,6 +121,46 @@ export class Bim3DEditLivePreview {
     for (const t of this.transforms) {
       t.obj.position.copy(t.position).sub(pivot).applyQuaternion(q).add(pivot);
       t.obj.quaternion.copy(q).multiply(t.quaternion);
+    }
+  }
+
+  /**
+   * ADR-401 — begin a live re-clip of the attached dependents of a moving host
+   * (beam/slab move → attached wall top-clip follows). Called AFTER
+   * `captureTransform` (the dragged host is captured there for the rigid move),
+   * so this does NOT reset: it only records the dependent walls' original meshes
+   * (to hide + restore) plus the ids the caller needs to rebuild them each frame.
+   * The fresh dependent meshes are supplied per-frame to `applyDependents` (built
+   * via the converter SSoT — kept out of this THREE-only class).
+   */
+  captureDependents(group: THREE.Object3D, wallIds: readonly string[], hostIds: ReadonlySet<string>): void {
+    this.parent = group;
+    this.depWallIds = [...wallIds];
+    this.depHostIds = hostIds;
+    const idSet = new Set(wallIds);
+    for (const child of group.children) {
+      const id = child.userData['bimId'] as string | undefined;
+      if (id !== undefined && idSet.has(id)) this.dependentHidden.push(child);
+    }
+  }
+
+  /**
+   * Swap in the freshly rebuilt dependent objects for this frame: hide the
+   * originals, remove + dispose the previous frame's dependents, parent the new
+   * ones. `null` entries (a dependent that could not be rebuilt) are skipped.
+   */
+  applyDependents(rebuilt: readonly (THREE.Object3D | null)[]): void {
+    if (!this.parent) return;
+    for (const o of this.dependentHidden) o.visible = false;
+    for (const o of this.dependentObjects) {
+      this.parent.remove(o);
+      disposeObject(o);
+    }
+    this.dependentObjects = [];
+    for (const o of rebuilt) {
+      if (!o) continue;
+      this.dependentObjects.push(o);
+      this.parent.add(o);
     }
   }
 
@@ -151,6 +217,12 @@ export class Bim3DEditLivePreview {
       this.parent?.remove(this.previewObject);
       disposeObject(this.previewObject);
     }
+    // ADR-401 — un-hide the dependents and drop their swapped-in preview meshes.
+    for (const o of this.dependentHidden) o.visible = true;
+    for (const o of this.dependentObjects) {
+      this.parent?.remove(o);
+      disposeObject(o);
+    }
     this.clearState();
   }
 
@@ -159,6 +231,10 @@ export class Bim3DEditLivePreview {
     this.hidden = [];
     this.previewObject = null;
     this.parent = null;
+    this.dependentHidden = [];
+    this.dependentObjects = [];
+    this.depWallIds = [];
+    this.depHostIds = new Set();
   }
 }
 

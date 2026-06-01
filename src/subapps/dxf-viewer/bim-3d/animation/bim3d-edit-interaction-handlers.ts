@@ -35,7 +35,14 @@ import type { BridgeOutcome } from '../gizmo/bim-gizmo-drag-bridge';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 import { Bim3DEditLivePreview } from './bim3d-edit-live-preview';
-import { buildResizePreviewObject, buildTiltPreviewObject } from './bim3d-preview-rebuild';
+import {
+  buildResizePreviewObject,
+  buildTiltPreviewObject,
+  buildDependentWallPreviewObject,
+} from './bim3d-preview-rebuild';
+// ADR-401 — host move → attached wall re-clip: find the dependent walls (reverse SSoT).
+import { findAttachedWalls } from '../../bim/cascade/bim-cascade-resolver';
+import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 // ADR-404 — drag outcome → view-agnostic command (extracted for file size, N.7.1).
 import { buildEditCommand } from './bim3d-edit-command-builders';
 
@@ -89,11 +96,29 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
     if (ids[0]) ctx.preview.captureResize(ctx.manager.bimLayer.group, ids[0]);
   } else {
     ctx.preview.captureTransform(ctx.manager.bimLayer.group, new Set(ids));
+    // ADR-401 — a MOVE of a structural host (beam/slab) must re-clip its attached
+    // walls live (not plan-rotate — that follow is a documented follow-up). Capture
+    // the dependents now so `applyLivePreview` can rebuild them every move frame.
+    if (constraint?.kind !== 'rotate') captureMoveDependents(ctx, ids);
   }
   e.preventDefault();
   e.stopPropagation();
   ctx.manager.viewport.setControlsEnabled(false);
   (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
+}
+
+/**
+ * ADR-401 — capture the attached walls that must re-clip live while the dragged
+ * structural hosts (beam/slab) move. `findAttachedWalls` is the reverse-lookup
+ * SSoT (host→attached-wall); only top-attached walls qualify (MVP scope). No
+ * dependents → no-op (fast path: a plain move stays a rigid mesh transform).
+ */
+function captureMoveDependents(ctx: EditInteractionCtx, ids: readonly string[]): void {
+  const hostIds = new Set(ids);
+  const dependentWallIds = findAttachedWalls(hostIds, useBim3DEntitiesStore.getState().walls);
+  if (dependentWallIds.length > 0) {
+    ctx.preview.captureDependents(ctx.manager.bimLayer.group, dependentWallIds, hostIds);
+  }
 }
 
 /**
@@ -207,6 +232,16 @@ function applyLivePreview(ctx: EditInteractionCtx): void {
     if (lock === 'X') t.z = 0;
     else if (lock === 'Z') t.x = 0;
     ctx.preview.applyMove(t);
+    // ADR-401 — re-clip the captured attached walls with the hosts at the preview
+    // position (host footprint shifted by `t`). Same converter SSoT as the commit
+    // re-sync (ghost === commit). No dependents → the array is empty (fast path).
+    const depWallIds = ctx.preview.dependentWallIds;
+    if (depWallIds.length > 0) {
+      const hostIds = ctx.preview.movedHostIds;
+      ctx.preview.applyDependents(
+        depWallIds.map((wid) => buildDependentWallPreviewObject(wid, hostIds, t)),
+      );
+    }
     return;
   }
   if (live.kind === 'rotate') {
