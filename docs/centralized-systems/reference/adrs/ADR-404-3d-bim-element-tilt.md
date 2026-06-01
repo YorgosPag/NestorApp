@@ -194,6 +194,19 @@ lean — το `SectionRect` είναι rect· follow-up).
 ---
 
 ## Changelog
+- **2026-06-01 (Opus 4.8) — 🐛 FIX: περιστροφή ΚΕΚΛΙΜΕΝΗΣ κολώνας/πλάκας δεν περιέστρεφε τη φορά κλίσης** (pending commit, 🔴 verify Giorgio). Σύμπτωμα Giorgio: κεκλιμένη κολώνα (lean στην κάτοψη) → δεξιόστροφη περιστροφή → **preview σωστό** (βάση+κορυφή+κλίση στρέφονται γύρω από το κέντρο), αλλά στο **release** η βάση πάει στη νέα θέση **χωρίς να ολοκληρωθεί η περιστροφή** — «σαν μετακίνηση». **Root cause:** η `rotateColumn`/`rotateSlab` (`bim-rotate-geometry.ts`, ADR-363 Phase 7.2 — γράφτηκε **πριν** το ADR-404 tilt) περιέστρεφε `position`+`rotation` (κολώνα) / `outline` (πλάκα) αλλά **όχι** το `tilt.direction` / `slope.direction`, που είναι **ΑΠΟΛΥΤΗ plan-γωνία** (`columnTiltShearAt`/`slabSlopeOffsetZmm` = cos/sin(direction), ανεξάρτητο `rotation`/outline). Άρα η commit-γεωμετρία είχε το lean στην **παλιά** φορά → ≠ rigid preview (που στρέφει τα πάντα) → «snap» στο release. **Γιατί μόνο κολώνα/πλάκα:** ο τοίχος (`tilt {angle}` ⟂ run) + το δοκάρι (`topElevationEnd` κατά τον άξονα) παράγουν την κλίση τους από `start/end`, που **ήδη** περιστρέφονται → ακολουθούν αυτόματα. **Fix:** `rotateColumn`/`rotateSlab` → `tilt.direction`/`slope.direction` += `angleDeg` (normalizeAngleDeg) όταν υπάρχει tilt/slope· no-op για flat (byte-for-byte). +3 tests (`bim-rotate-geometry.test.ts`: column tilt.direction rotates / non-tilted no tilt field / slab slope.direction rotates) → 20/20 PASS, tsc 0. **Follow-up (flagged, ξεχωριστό):** το `bim-mirror-geometry.ts` (mirror transform) έχει ανάλογο κενό — η αντανάκλαση κεκλιμένου στοιχείου πρέπει να **ανακλά** το direction (όχι μόνο +angle)· δεν το άγγιξα (Giorgio δεν ανέφερε mirror).
+- **2026-06-01 (Opus 4.8) — Bug fix ADR-401↔402/404 (attached element vanish on gizmo
+  commit), pending browser verify:** μετά το ADR-401 persistence fix (attached τοίχοι/κολώνες
+  μένουν `attached`), εκτέθηκε flat-path κενό στο gizmo preview. **Fix:** το `bim3d-preview-
+  rebuild.ts` re-resolve-άρει πλέον τα attach top/base profiles (mirror `BimSceneLayer.
+  syncWalls`/`syncColumns` — `buildWallHostInputs` + `resolveWall/ColumnTop/BaseProfile`,
+  `floorElevationMm=0`) στο tilt + resize preview → **preview === committed** (κανένα flat-top
+  drift). Non-attached → byte-for-byte fast path. 249/249 gizmo/animation tests, tsc 0.
+  ⚠️ **Επιφύλαξη:** το static analysis έδειξε ότι το `wallToMesh` έχει fall-back στο flat
+  solid (δεν θα έπρεπε να βγάζει null), οπότε το ακριβές vanish mechanism δεν επιβεβαιώθηκε
+  στατικά· ο **plan-rotate (Y-ring)** χρησιμοποιεί ξεχωριστό rigid path (captures το profiled
+  original) — αν συνεχίσει να εξαφανίζεται μετά απ' αυτό, το πρόβλημα είναι στο resync
+  trigger/timing, όχι στο preview. **ΜΗΝ πειραχθεί** το ADR-401 persist (`bim:entities-attached`).
 - **2026-06-01 (Opus 4.8) — Phase 3 fix ×2 (browser feedback Giorgio):** (1) αρχικά
   μετατόπιζε ΟΛΟ το σύμβολο → η βάση χανόταν· (2) έδειχνε **δύο** περιγράμματα αλλά με
   ανεστραμμένα line weights (βάση παχιά/cut λεπτό). **Τελικό σωστό Revit slanted-in-plan:**

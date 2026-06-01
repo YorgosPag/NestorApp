@@ -75,11 +75,31 @@ describe('worldDeltaToDxfDelta', () => {
   });
 });
 
-describe('mmToEntityUnitFactor (ADR-402 — stair move unit fix)', () => {
-  it('returns 1 for the raw-mm types (wall/column/beam/slab) — mm delta is native', () => {
-    expect(mmToEntityUnitFactor({ type: 'wall' } as unknown as Entity)).toBe(1);
-    expect(mmToEntityUnitFactor({ type: 'column' } as unknown as Entity)).toBe(1);
-    expect(mmToEntityUnitFactor({ type: 'slab' } as unknown as Entity)).toBe(1);
+describe('mmToEntityUnitFactor (ADR-402/404 — gizmo move/rotate unit fix)', () => {
+  it('returns 1 for an mm-scene wall/column/beam/slab — the mm gizmo delta is already native', () => {
+    const mm = { sceneUnits: 'mm' as const };
+    expect(mmToEntityUnitFactor({ type: 'wall', params: mm } as unknown as Entity)).toBe(1);
+    expect(mmToEntityUnitFactor({ type: 'column', params: mm } as unknown as Entity)).toBe(1);
+    expect(mmToEntityUnitFactor({ type: 'beam', params: mm } as unknown as Entity)).toBe(1);
+    expect(mmToEntityUnitFactor({ type: 'slab', params: mm } as unknown as Entity)).toBe(1);
+  });
+
+  it('defaults to 1 when sceneUnits is absent (legacy mm default → byte-for-byte)', () => {
+    expect(mmToEntityUnitFactor({ type: 'wall', params: {} } as unknown as Entity)).toBe(1);
+  });
+
+  it('scales mm → metres (0.001) for a metre-scene wall/column/beam/slab — the 1000× off-screen "vanish" fix', () => {
+    const m = { sceneUnits: 'm' as const };
+    expect(mmToEntityUnitFactor({ type: 'wall', params: m } as unknown as Entity)).toBeCloseTo(0.001, 9);
+    expect(mmToEntityUnitFactor({ type: 'column', params: m } as unknown as Entity)).toBeCloseTo(0.001, 9);
+    expect(mmToEntityUnitFactor({ type: 'beam', params: m } as unknown as Entity)).toBeCloseTo(0.001, 9);
+    expect(mmToEntityUnitFactor({ type: 'slab', params: m } as unknown as Entity)).toBeCloseTo(0.001, 9);
+  });
+
+  it('scales mm → cm (0.1) for a centimetre-scene element', () => {
+    expect(
+      mmToEntityUnitFactor({ type: 'wall', params: { sceneUnits: 'cm' } } as unknown as Entity),
+    ).toBeCloseTo(0.1, 9);
   });
 
   it('uses the stair grip SSoT factor (drawing units), matching getStairGrips / the resize bridge', () => {

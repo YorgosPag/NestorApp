@@ -18,7 +18,7 @@
 import * as THREE from 'three';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
-import { mmToSceneUnits, inferSceneUnitsFromWidth } from '../../utils/scene-units';
+import { mmToSceneUnits, mmScaleFor, inferSceneUnitsFromWidth } from '../../utils/scene-units';
 
 const MM_TO_M = 0.001;
 const M_TO_MM = 1000;
@@ -84,8 +84,15 @@ export function worldUpDeltaToMm(
  * both a delta (move) and a position (rotate pivot) alike — a 3D gizmo gesture
  * then transforms the entity by the right amount.
  *
- * - wall / column / beam / slab store **raw mm** (`BimToThreeConverter` scales by
- *   a fixed `MM_TO_M`) → factor `1` (the mm value is already native).
+ * - wall / column / beam / slab carry an optional `sceneUnits` field: their
+ *   `start`/`end`/`position`/`outline` plan coords live in the drawing's CANVAS
+ *   units (mm only when `sceneUnits` is mm — a meter/cm DXF stores them in m/cm).
+ *   → factor `mmScaleFor(params)` = `mmToSceneUnits(sceneUnits ?? 'mm')`. An mm
+ *   scene resolves to `1` (byte-for-byte the old behaviour, zero regression); a
+ *   meter scene resolves to `0.001`. WITHOUT this, the mm gizmo delta/pivot is
+ *   applied verbatim to a meter-scale entity → a 1000× off-screen fling on every
+ *   3D move/rotate in a non-mm drawing (ADR-402/404 "vanish" root cause, fixed
+ *   2026-06-01 — the entity rendered fine but landed kilometres away).
  * - **stairs** (ADR-358) store geometry + `basePoint` in **inferred drawing
  *   units** (`StairToThreeConverter` derives `sceneToM` from
  *   `inferSceneUnitsFromWidth`) → factor `mmToSceneUnits(inferSceneUnitsFromWidth(width))`,
@@ -97,6 +104,14 @@ export function worldUpDeltaToMm(
 export function mmToEntityUnitFactor(entity: Entity): number {
   if (entity.type === 'stair') {
     return mmToSceneUnits(inferSceneUnitsFromWidth(entity.params.width));
+  }
+  if (
+    entity.type === 'wall' ||
+    entity.type === 'column' ||
+    entity.type === 'beam' ||
+    entity.type === 'slab'
+  ) {
+    return mmScaleFor(entity.params);
   }
   return 1;
 }

@@ -278,6 +278,37 @@ describe('ADR-363 Phase 7.2 — calculateBimRotatedGeometry', () => {
     expect(patch.params.rotation).toBeCloseTo(20, 4);
   });
 
+  it('column (ADR-404 raking): rotates the absolute tilt.direction by the same angle', () => {
+    const col = makeColumn();
+    (col.params as { tilt?: { direction: number; angle: number } }).tilt = { direction: 10, angle: 5 };
+    const patch = calculateBimRotatedGeometry(col as unknown as Entity, ORIGIN, 60) as {
+      params: { tilt?: { direction: number; angle: number } };
+    };
+    // The lean must follow the rotation: 10° + 60° = 70° (angle magnitude unchanged).
+    expect(patch.params.tilt?.direction).toBeCloseTo(70, 4);
+    expect(patch.params.tilt?.angle).toBeCloseTo(5, 4);
+  });
+
+  it('column: a non-tilted column carries no tilt field after rotation', () => {
+    const patch = calculateBimRotatedGeometry(makeColumn() as unknown as Entity, ORIGIN, 60) as {
+      params: { tilt?: unknown };
+    };
+    expect(patch.params.tilt).toBeUndefined();
+  });
+
+  it('slab (ADR-404 tilted): rotates the absolute slope.direction by the same angle', () => {
+    const slab = makeSlab();
+    (slab.params as { geometryType?: string; slope?: { direction: number; angle: number; pivotEdge: string } }).geometryType = 'tilted';
+    (slab.params as { slope?: { direction: number; angle: number; pivotEdge: string } }).slope = {
+      direction: 10, angle: 2, pivotEdge: 'center',
+    };
+    const patch = calculateBimRotatedGeometry(slab as unknown as Entity, ORIGIN, 90) as {
+      params: { slope?: { direction: number; angle: number } };
+    };
+    expect(patch.params.slope?.direction).toBeCloseTo(100, 4);
+    expect(patch.params.slope?.angle).toBeCloseTo(2, 4);
+  });
+
   it('beam: rotates startPoint + endPoint + curveControl', () => {
     const patch = calculateBimRotatedGeometry(makeBeam() as unknown as Entity, ORIGIN, 90) as {
       params: {

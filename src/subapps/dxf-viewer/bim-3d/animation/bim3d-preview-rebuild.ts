@@ -18,9 +18,11 @@
  * (`bim3d-resync`); the "Όλοι οι όροφοι" multi-floor scope falls back to commit-on-
  * release (returns null) since per-floor elevation is not modelled here.
  *
- * Known minor drift (corrected by the release re-sync, documented in ADR-402):
- * attached-wall / attached-column top/base PROFILES are not re-resolved here, so an
- * attached element renders with a flat top/base during the drag.
+ * ADR-401 ↔ ADR-402/404 fix: attached-wall / attached-column top/base PROFILES ARE now
+ * re-resolved here (mirror `BimSceneLayer.syncWalls`/`syncColumns`), so an attached element
+ * previews with its real stepped/sloped top/base — and the kept-on-commit preview matches
+ * the release re-sync (no flat-top drift, no vanish). Non-attached → undefined profiles →
+ * byte-for-byte fast path. `floorElevationMm = 0` (single-floor resync convention).
  */
 
 import * as THREE from 'three';
@@ -46,6 +48,18 @@ import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
 import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
 import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometryService';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
+// ADR-401 ↔ ADR-402/404 — attach profiles so the preview === the committed `syncWalls`/
+// `syncColumns` result for attached walls/columns (no flat-top drift → no vanish on commit).
+import { resolveWallTopProfile, type WallTopProfile } from '../../bim/geometry/wall-top-profile';
+import { resolveWallBaseProfile, type WallBaseProfile } from '../../bim/geometry/wall-base-profile';
+import { buildWallHostInputs, makeWallTopContext, makeWallBaseContext } from '../../bim/geometry/wall-host-plan-builder';
+import {
+  resolveColumnTopProfile,
+  resolveColumnBaseProfile,
+  makeColumnHostResolver,
+  type ColumnTopProfile,
+  type ColumnBaseProfile,
+} from '../../bim/geometry/column-vertical-profile';
 import { useBim3DEntitiesStore, type Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 
@@ -88,14 +102,16 @@ export function buildTiltPreviewObject(entityId: string, drag: TiltDragDeg): THR
     if (!next) return null;
     const preview = { ...wall, params: next, geometry: computeWallGeometry(next, wall.kind) };
     const openings = s.openings.filter((o) => o.params.wallId === wall.id);
-    return wallToMesh(preview, openings, 0, levelId, baseElevationOf(wall, s));
+    const { profile, baseProfile } = wallPreviewProfiles(preview, s);
+    return wallToMesh(preview, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile);
   }
   const column = s.columns.find((c) => c.id === entityId);
   if (column) {
     const next = computeColumnTiltParams(column.params, drag);
     if (!next) return null;
     const preview = { ...column, params: next, geometry: computeColumnGeometry(next) };
-    return columnToMesh(preview, 0, levelId, baseElevationOf(column, s));
+    const { topProfile, baseProfile } = columnPreviewProfiles(preview, s);
+    return columnToMesh(preview, 0, levelId, baseElevationOf(column, s), topProfile, baseProfile);
   }
   const beam = s.beams.find((b) => b.id === entityId);
   if (beam) {
@@ -127,19 +143,60 @@ function baseElevationOf(entity: Wall | Column | Beam | Slab | Stair, s: Snapsho
   return resolveEntityBuilding(entity, s.floors, s.buildings)?.baseElevation ?? 0;
 }
 
+/**
+ * Attach top/base profiles for the preview wall — mirror of `BimSceneLayer.syncWalls`
+ * (`floorElevationMm = 0`). Non-attached → `{}` (fast path, byte-for-byte). Host inputs
+ * (beams + slabs) come from the SAME snapshot the resync reads.
+ */
+function wallPreviewProfiles(wall: Wall, s: Snapshot): { profile?: WallTopProfile; baseProfile?: WallBaseProfile } {
+  const topAttached = wall.params?.topBinding === 'attached';
+  const baseAttached = wall.params?.baseBinding === 'attached';
+  if (!topAttached && !baseAttached) return {};
+  const hostInputs = buildWallHostInputs(s.beams, s.slabs);
+  const start = { x: wall.params.start.x, y: wall.params.start.y };
+  const end = { x: wall.params.end.x, y: wall.params.end.y };
+  return {
+    profile: topAttached
+      ? resolveWallTopProfile(wall.params, makeWallTopContext(start, end, hostInputs, { floorElevationMm: 0 }))
+      : undefined,
+    baseProfile: baseAttached
+      ? resolveWallBaseProfile(wall.params, makeWallBaseContext(start, end, hostInputs, { floorElevationMm: 0 }))
+      : undefined,
+  };
+}
+
+/**
+ * Attach top/base profiles for the preview column — mirror of `BimSceneLayer.syncColumns`
+ * (`floorElevationMm = 0`). Non-attached or geometry-less → `{}` (fast path).
+ */
+function columnPreviewProfiles(column: Column, s: Snapshot): { topProfile?: ColumnTopProfile; baseProfile?: ColumnBaseProfile } {
+  const topAttached = column.params?.topBinding === 'attached';
+  const baseAttached = column.params?.baseBinding === 'attached';
+  const footVerts = column.geometry?.footprint?.vertices;
+  if ((!topAttached && !baseAttached) || !footVerts || footVerts.length < 3) return {};
+  const footprint = footVerts.map((v) => ({ x: v.x, y: v.y }));
+  const colCtx = { floorElevationMm: 0, resolveHostInput: makeColumnHostResolver(buildWallHostInputs(s.beams, s.slabs)) };
+  return {
+    topProfile: topAttached ? resolveColumnTopProfile(column.params, footprint, colCtx) : undefined,
+    baseProfile: baseAttached ? resolveColumnBaseProfile(column.params, footprint, colCtx) : undefined,
+  };
+}
+
 function rebuildWall(wall: Wall, drag: ResizeDragMm, s: Snapshot, levelId: string | undefined): THREE.Object3D | null {
   const next = computeWallResizeParams(wall.params, drag);
   if (!next) return null;
   const preview = { ...wall, params: next, geometry: computeWallGeometry(next, wall.kind) };
   const openings = s.openings.filter((o) => o.params.wallId === wall.id);
-  return wallToMesh(preview, openings, 0, levelId, baseElevationOf(wall, s));
+  const { profile, baseProfile } = wallPreviewProfiles(preview, s);
+  return wallToMesh(preview, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile);
 }
 
 function rebuildColumn(column: Column, drag: ResizeDragMm, s: Snapshot, levelId: string | undefined): THREE.Object3D | null {
   const next = computeColumnResizeParams(column.params, drag);
   if (!next) return null;
   const preview = { ...column, params: next, geometry: computeColumnGeometry(next) };
-  return columnToMesh(preview, 0, levelId, baseElevationOf(column, s));
+  const { topProfile, baseProfile } = columnPreviewProfiles(preview, s);
+  return columnToMesh(preview, 0, levelId, baseElevationOf(column, s), topProfile, baseProfile);
 }
 
 function rebuildBeam(beam: Beam, drag: ResizeDragMm, s: Snapshot, levelId: string | undefined): THREE.Object3D | null {

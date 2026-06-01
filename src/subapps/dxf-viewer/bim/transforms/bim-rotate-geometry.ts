@@ -124,6 +124,12 @@ function rotateSlab(
   const newParams: SlabParams = {
     ...entity.params,
     outline: rotatePolygon3D(entity.params.outline, pivot, angleDeg),
+    // ADR-404 — tilted πλάκα/στέγη: το `slope.direction` είναι ΑΠΟΛΥΤΗ plan-γωνία
+    // (CCW from +X, η φορά «ανηφόρας»)· η περιστροφή πρέπει να την περιστρέψει ώστε
+    // η κλίση να ακολουθεί το στραμμένο outline (ίδια ρίζα με την κεκλιμένη κολώνα).
+    slope: entity.params.slope
+      ? { ...entity.params.slope, direction: normalizeAngleDeg(entity.params.slope.direction + angleDeg) }
+      : entity.params.slope,
   };
   const geometry = computeSlabGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
@@ -151,6 +157,14 @@ function rotateColumn(
     ...entity.params,
     position: rotatePoint3D(entity.params.position, pivot, angleDeg),
     rotation: normalizeAngleDeg(entity.params.rotation + angleDeg),
+    // ADR-404 — η κλίση (raking) είναι ΑΠΟΛΥΤΗ plan-direction (`columnTiltShearAt`
+    // = cos/sin(direction), ΑΝΕΞΑΡΤΗΤΟ του `rotation`). Όταν περιστρέφεται η κολώνα,
+    // πρέπει να περιστραφεί ΚΑΙ η φορά κλίσης κατά `angleDeg`, αλλιώς το lean μένει
+    // στην παλιά φορά → η commit-γεωμετρία ≠ το rigid preview (η κεκλιμένη κολώνα
+    // φαίνεται «να μετακινείται» αντί να στρέφεται — Giorgio 2026-06-01).
+    tilt: entity.params.tilt
+      ? { ...entity.params.tilt, direction: normalizeAngleDeg(entity.params.tilt.direction + angleDeg) }
+      : entity.params.tilt,
   };
   const geometry = computeColumnGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;

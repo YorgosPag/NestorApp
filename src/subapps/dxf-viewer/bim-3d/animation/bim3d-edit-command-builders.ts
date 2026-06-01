@@ -89,32 +89,30 @@ export function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): Ed
     // arrows / plane / free drag keep deltaUpMm 0 → fall through to the plan move.
     if (outcome.deltaUpMm !== 0) return buildVerticalMoveCommand(outcome.deltaUpMm, c);
     const masked = maskByAxisLock(outcome.deltaDxf, c.edit.axisLock);
-    if (c.entityIds.length > 1) {
-      // Multi-select move keeps the mm delta (wall/column/beam/slab are raw mm). A
-      // stair in a non-mm drawing inside a mixed selection is a known limitation —
-      // one batch delta cannot honour two unit systems (ADR-402).
-      return new MoveMultipleEntitiesCommand([...c.entityIds], masked, c.sm, false);
-    }
-    // ADR-402: convert the mm gizmo delta into the entity's native units (1 for the
-    // mm-based types, the stair drawing-unit factor for stairs) so the shared
-    // `moveStair` SSoT relocates the stair by the right distance.
-    const entity = c.levels.getLevelScene(c.levelId)?.entities?.find((e) => e.id === c.entityId);
-    const f = entity ? mmToEntityUnitFactor(entity) : 1;
+    // ADR-402/404: convert the mm gizmo delta into the entity's native CANVAS units
+    // (1 for an mm drawing, 0.001 for a meter scene, the inferred factor for stairs)
+    // so the shared move SSoT relocates the entity by the right distance. Without
+    // this a non-mm drawing flings the element 1000× off-screen (the "vanish" bug).
+    // One delta serves the whole batch — every element in a drawing shares its units
+    // (a mixed-unit multi-select stays the documented limitation).
+    const primary = c.levels.getLevelScene(c.levelId)?.entities?.find((e) => e.id === c.entityId);
+    const f = primary ? mmToEntityUnitFactor(primary) : 1;
     const delta = f === 1 ? masked : { x: masked.x * f, y: masked.y * f };
+    if (c.entityIds.length > 1) {
+      return new MoveMultipleEntitiesCommand([...c.entityIds], delta, c.sm, false);
+    }
     return new MoveEntityCommand(c.entityId, delta, c.sm, false);
   }
   if (outcome.kind === 'rotate') {
-    // ADR-402: the pivot is mm (worldToDxfPlan); a single stair stores its
-    // geometry in drawing units, so scale the pivot into the stair's units
-    // (same factor as move) — otherwise it orbits around an mm-scaled point.
-    // Multi-select keeps the mm pivot (mm-types are the common case; a stair in a
-    // mixed batch is the documented unit limitation).
+    // ADR-402/404: the pivot is mm (worldToDxfPlan); scale it into the entity's
+    // native CANVAS units (mm scene → 1, meter scene → 0.001, the inferred factor
+    // for a stair) — otherwise it orbits around an mm-scaled point and the element
+    // is flung off-screen on a non-mm drawing (the "vanish" bug). The primary's
+    // factor applies to the whole batch (every element shares the drawing units).
     let pivot = outcome.pivotDxf;
-    if (c.entityIds.length === 1) {
-      const entity = c.levels.getLevelScene(c.levelId)?.entities?.find((e) => e.id === c.entityId);
-      const f = entity ? mmToEntityUnitFactor(entity) : 1;
-      if (f !== 1) pivot = { x: pivot.x * f, y: pivot.y * f };
-    }
+    const entity = c.levels.getLevelScene(c.levelId)?.entities?.find((e) => e.id === c.entityId);
+    const f = entity ? mmToEntityUnitFactor(entity) : 1;
+    if (f !== 1) pivot = { x: pivot.x * f, y: pivot.y * f };
     return new RotateEntityCommand([...c.entityIds], pivot, outcome.angleDeg, c.sm, false);
   }
   // Resize is single-entity only (multi-select hides the resize handles).
