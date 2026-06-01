@@ -86,8 +86,12 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
     // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
     const _soLayer = opening.layerId ? getLayer(opening.layerId) : null;
     if (!resolveIsEntityVisible(
-      { category: 'slab-opening', layerId: opening.layerId },
-      { objectStyles: useDrawingScaleStore.getState().objectStyles, layer: _soLayer },
+      { category: 'slab-opening', layerId: opening.layerId, discipline: opening.discipline },
+      {
+        objectStyles: useDrawingScaleStore.getState().objectStyles,
+        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
+        layer: _soLayer,
+      },
     )) return;
 
     if (!opening.geometry || !opening.params) return;

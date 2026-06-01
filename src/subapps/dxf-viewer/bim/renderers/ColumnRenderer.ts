@@ -84,8 +84,12 @@ export class ColumnRenderer extends BaseEntityRenderer {
     // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
     const _colLayer = column.layerId ? getLayer(column.layerId) : null;
     if (!resolveIsEntityVisible(
-      { category: 'column', layerId: column.layerId },
-      { objectStyles: useDrawingScaleStore.getState().objectStyles, layer: _colLayer },
+      { category: 'column', layerId: column.layerId, discipline: column.discipline },
+      {
+        objectStyles: useDrawingScaleStore.getState().objectStyles,
+        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
+        layer: _colLayer,
+      },
     )) return;
 
     if (!column.geometry || !column.params) return;

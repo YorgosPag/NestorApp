@@ -33,6 +33,7 @@ import {
   type BimCategory,
   type ObjectStyle,
 } from '../config/bim-object-styles';
+import type { Discipline } from '../bim/discipline/bim-discipline';
 import { type LinePatternKey } from '../config/bim-line-patterns';
 import { saveBimRenderSettings } from '../services/bim-render-settings.service';
 
@@ -103,6 +104,13 @@ interface BimRenderSettingsState extends ResolvedBimSettings {
    * visibility. Single state update + single debounced write (idempotent).
    */
   setBimObjectsVisibility: (visible: boolean) => void;
+  /**
+   * ADR-405 §4 — toggle visibility of an entire discipline (Revit "View
+   * Discipline"). Higher tier than the per-category `setObjectStyleVisibility`;
+   * composes with it via ANY-hides-wins in `resolveIsEntityVisible`. Single
+   * state update + single debounced write (idempotent).
+   */
+  setDisciplineVisibility: (discipline: Discipline, visible: boolean) => void;
   /** Override projection or cut color for a category (null = canvas token). */
   setObjectStyleVgColor: (
     category: BimCategory,
@@ -131,6 +139,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       drawingScale: state.drawingScale,
       viewRange: state.viewRange,
       objectStyles: state.objectStyles,
+      disciplineVisibility: state.disciplineVisibility,
     };
   }
 
@@ -154,6 +163,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         drawingScale: resolved.drawingScale,
         viewRange: resolved.viewRange,
         objectStyles: resolved.objectStyles,
+        disciplineVisibility: resolved.disciplineVisibility,
         lastLocalMutationAt: 0,
         bimVisibilitySnapshot: null,
       });
@@ -229,6 +239,17 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       set({ objectStyles: nextStyles, bimVisibilitySnapshot: snapshot, lastLocalMutationAt: Date.now() });
       if (state.currentLevelId)
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
+    },
+
+    setDisciplineVisibility(discipline, visible) {
+      const state = get();
+      const next: Partial<Record<Discipline, boolean>> = {
+        ...state.disciplineVisibility,
+        [discipline]: visible,
+      };
+      set({ disciplineVisibility: next, lastLocalMutationAt: Date.now() });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), disciplineVisibility: next }));
     },
 
     setObjectStyleVgColor(category, key, color) {

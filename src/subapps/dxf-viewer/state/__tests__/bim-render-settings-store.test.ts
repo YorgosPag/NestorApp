@@ -29,6 +29,7 @@ beforeEach(() => {
       rawSettings: null,
       currentLevelId: null,
       bimVisibilitySnapshot: null,
+      disciplineVisibility: {},
     });
   });
 });
@@ -200,6 +201,45 @@ describe('useBimRenderSettingsStore', () => {
       // The double-hide must not have overwritten the snapshot with all-false.
       expect(isHidden('beam')).toBe(true);
       expect(isHidden('wall')).toBe(false);
+    });
+  });
+
+  describe('setDisciplineVisibility (ADR-405 §4 — View Discipline)', () => {
+    it('defaults disciplineVisibility to {} (all visible)', () => {
+      expect(useBimRenderSettingsStore.getState().disciplineVisibility).toEqual({});
+    });
+
+    it('toggles a single discipline off without touching others', () => {
+      act(() => useBimRenderSettingsStore.getState().setDisciplineVisibility('structural', false));
+      const dv = useBimRenderSettingsStore.getState().disciplineVisibility;
+      expect(dv.structural).toBe(false);
+      expect(dv.architectural).toBeUndefined();
+    });
+
+    it('toggles back on (sets true)', () => {
+      act(() => useBimRenderSettingsStore.getState().setDisciplineVisibility('mechanical', false));
+      act(() => useBimRenderSettingsStore.getState().setDisciplineVisibility('mechanical', true));
+      expect(useBimRenderSettingsStore.getState().disciplineVisibility.mechanical).toBe(true);
+    });
+
+    it('accumulates multiple discipline toggles', () => {
+      act(() => {
+        useBimRenderSettingsStore.getState().setDisciplineVisibility('structural', false);
+        useBimRenderSettingsStore.getState().setDisciplineVisibility('plumbing', false);
+      });
+      const dv = useBimRenderSettingsStore.getState().disciplineVisibility;
+      expect(dv.structural).toBe(false);
+      expect(dv.plumbing).toBe(false);
+    });
+
+    it('loadForLevel rehydrates persisted disciplineVisibility', () => {
+      act(() => {
+        useBimRenderSettingsStore.getState().loadForLevel('lvl-disc', {
+          drawingScale: 100,
+          disciplineVisibility: { electrical: false },
+        });
+      });
+      expect(useBimRenderSettingsStore.getState().disciplineVisibility.electrical).toBe(false);
     });
   });
 

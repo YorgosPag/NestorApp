@@ -102,8 +102,12 @@ export class BeamRenderer extends BaseEntityRenderer {
     // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
     const _beamLayer = beam.layerId ? getLayer(beam.layerId) : null;
     if (!resolveIsEntityVisible(
-      { category: 'beam', layerId: beam.layerId },
-      { objectStyles: useDrawingScaleStore.getState().objectStyles, layer: _beamLayer },
+      { category: 'beam', layerId: beam.layerId, discipline: beam.discipline },
+      {
+        objectStyles: useDrawingScaleStore.getState().objectStyles,
+        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
+        layer: _beamLayer,
+      },
     )) return;
 
     if (!beam.geometry || !beam.params) return;

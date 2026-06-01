@@ -791,6 +791,7 @@
       "objectStyles": "Στυλ Αντικειμένων",
       "visibilityGraphics": "Ορατότητα/Γραφικά",
       "hideBim": "Μόνο DXF",
+      "discipline": "Πειθαρχίες",
       "penTable": "Πίνακας Πενών",
       "viewTemplates": "Πρότυπα Προβολής",
       "dimensions": "Διαστάσεις",
@@ -1697,6 +1698,23 @@
         "show": "Εμφάνιση BIM",
         "tooltipHide": "Απόκρυψη όλων των δομικών στοιχείων BIM — εμφανίζονται μόνο οι οντότητες του DXF",
         "tooltipShow": "Επαναφορά ορατότητας των δομικών στοιχείων BIM"
+      },
+      "discipline": {
+        "label": "Πειθαρχίες",
+        "tooltipShow": "Εμφάνιση πειθαρχίας",
+        "tooltipHide": "Απόκρυψη πειθαρχίας",
+        "names": {
+          "architectural": "Αρχιτεκτονικά",
+          "structural": "Φέροντα",
+          "mechanical": "Μηχανολογικά",
+          "electrical": "Ηλεκτρολογικά",
+          "plumbing": "Υδραυλικά",
+          "fire": "Πυρόσβεση",
+          "civil": "Έργα Υποδομής",
+          "telecom": "Τηλεπικοινωνίες",
+          "interior": "Εσωτερικοί Χώροι",
+          "general": "Γενικά"
+        }
       },
       "viewTemplates": {
         "label": "Πρότυπο",

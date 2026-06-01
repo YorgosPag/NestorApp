@@ -26,6 +26,7 @@ import { PenTablePanel } from '../panels/PenTablePanel';
 import { ViewTemplatesPanel } from '../panels/ViewTemplatesPanel';
 import { VisibilityGraphicsPanel } from '../panels/VisibilityGraphicsPanel';
 import { HideBimToggle } from './HideBimToggle';
+import { DisciplineVisibilityToggle } from './DisciplineVisibilityToggle';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 import { RibbonStairFloorInfoWidget } from './RibbonStairFloorInfoWidget';
 import { RibbonStairDimensionsWidget } from './RibbonStairDimensionsWidget';
@@ -83,6 +84,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'hide-bim') {
       return <HideBimToggle key="hide-bim-widget" />;
+    }
+    if (button.widgetId === 'discipline-visibility') {
+      return <DisciplineVisibilityToggle key="discipline-visibility-widget" />;
     }
     if (button.widgetId === 'insert-tokens') {
       return <RibbonInsertTokenWidget key="insert-tokens-widget" />;

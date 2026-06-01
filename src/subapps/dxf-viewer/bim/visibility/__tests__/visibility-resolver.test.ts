@@ -187,4 +187,86 @@ describe('ADR-382 resolveIsEntityVisible', () => {
       });
     }
   });
+
+  // ── ADR-405 §4 — Discipline filter (source #5) ─────────────────────────────
+  describe('Discipline hide (source #5)', () => {
+    it('hides a wall (architectural) when architectural discipline = false', () => {
+      expect(
+        resolveIsEntityVisible(
+          { category: 'wall' },
+          { disciplineVisibility: { architectural: false } },
+        ),
+      ).toBe(false);
+    });
+
+    it('hides a column (structural) when structural discipline = false', () => {
+      expect(
+        resolveIsEntityVisible(
+          { category: 'column' },
+          { disciplineVisibility: { structural: false } },
+        ),
+      ).toBe(false);
+    });
+
+    it('does NOT hide a wall when only structural is hidden (type-derived discipline)', () => {
+      expect(
+        resolveIsEntityVisible(
+          { category: 'wall' },
+          { disciplineVisibility: { structural: false } },
+        ),
+      ).toBe(true);
+    });
+
+    it('per-instance override wins over type-derived discipline', () => {
+      // A slab (structurally derived) reassigned to architectural is hidden by
+      // architectural=false, NOT by structural=false.
+      expect(
+        resolveIsEntityVisible(
+          { category: 'slab', discipline: 'architectural' },
+          { disciplineVisibility: { architectural: false } },
+        ),
+      ).toBe(false);
+      expect(
+        resolveIsEntityVisible(
+          { category: 'slab', discipline: 'architectural' },
+          { disciplineVisibility: { structural: false } },
+        ),
+      ).toBe(true);
+    });
+
+    it('never filters annotation categories (dimension/hatch/grip)', () => {
+      for (const cat of ['dimension', 'hatch', 'grip'] as const) {
+        expect(
+          resolveIsEntityVisible(
+            { category: cat },
+            // even an exhaustive hide map must not touch annotations
+            { disciplineVisibility: { architectural: false, structural: false } },
+          ),
+        ).toBe(true);
+      }
+    });
+
+    it('returns true when disciplineVisibility undefined (no constraint)', () => {
+      expect(resolveIsEntityVisible({ category: 'wall' }, {})).toBe(true);
+    });
+
+    it('returns true when the discipline key is absent (default visible)', () => {
+      expect(
+        resolveIsEntityVisible({ category: 'wall' }, { disciplineVisibility: {} }),
+      ).toBe(true);
+    });
+
+    it('composes with other sources (ANY-hides-wins)', () => {
+      // discipline says show, but V/G hides → hidden
+      expect(
+        resolveIsEntityVisible(
+          { category: 'wall' },
+          {
+            objectStyles: { wall: { projectionPen: 5, cutPen: 7, visible: false } },
+            disciplineVisibility: { architectural: true },
+          },
+        ),
+      ).toBe(false);
+    });
+  });
 });

@@ -111,8 +111,12 @@ export class SlabRenderer extends BaseEntityRenderer {
     // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
     const _slabLayer = slab.layerId ? getLayer(slab.layerId) : null;
     if (!resolveIsEntityVisible(
-      { category: 'slab', layerId: slab.layerId },
-      { objectStyles: useDrawingScaleStore.getState().objectStyles, layer: _slabLayer },
+      { category: 'slab', layerId: slab.layerId, discipline: slab.discipline },
+      {
+        objectStyles: useDrawingScaleStore.getState().objectStyles,
+        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
+        layer: _slabLayer,
+      },
     )) return;
 
     if (!slab.geometry || !slab.params) return;

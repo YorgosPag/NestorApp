@@ -1,5 +1,6 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { Entity } from './entities';
+import type { Discipline } from '../bim/discipline/bim-discipline';
 import { generateLayerId } from '@/services/enterprise-id-convenience';
 // ADR-362 Round 5 — SceneModel carries the DXF-parsed DIMSTYLE table so the
 // runtime DIMSTYLE registry can be seeded on import (canonical type lives next
@@ -19,10 +20,14 @@ export type LineweightMm =
 /** Source of a layer's creation — internal provenance, not DXF. */
 export type SceneLayerSource = 'dxf-import' | 'user-created' | 'system-default';
 
-/** AEC discipline taxonomy — ADR-358 §5.3.quinquies (Q7). AIA prefix per category. */
-export type AecLayerCategory =
-  | 'architectural' | 'structural' | 'electrical' | 'mechanical'
-  | 'plumbing' | 'fire' | 'civil' | 'telecom' | 'interior' | 'general';
+/**
+ * AEC discipline taxonomy — ADR-358 §5.3.quinquies (Q7). AIA prefix per category.
+ *
+ * ADR-405: now a **pure alias** of the canonical entity-level `Discipline`
+ * (bim/discipline/bim-discipline.ts) — ONE taxonomy shared by layers and
+ * entities. The 13 ADR-358 consumers continue unchanged (type-only, zero churn).
+ */
+export type AecLayerCategory = Discipline;
 
 /**
  * Q16 SCAFFOLD — VP overridable layer properties.

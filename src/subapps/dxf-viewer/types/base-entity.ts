@@ -10,6 +10,7 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { LineweightMm } from './scene-types';
+import type { Discipline } from '../bim/discipline/bim-discipline';
 
 export interface PreviewGripPoint {
   position: Point2D;
@@ -64,6 +65,14 @@ export interface BaseEntity {
   visible?: boolean;
   locked?: boolean;
   metadata?: Record<string, unknown>;
+
+  /**
+   * ADR-405 — per-instance Discipline override (Firestore-persisted). Absent ⇒
+   * discipline is type-derived via `DISCIPLINE_BY_CATEGORY` (BIM-native default).
+   * Mirrors Revit's per-element discipline reassignment. Non-destructive: every
+   * existing entity resolves to the correct discipline without migration.
+   */
+  discipline?: Discipline;
 
   lineweight?: number;
   opacity?: number;

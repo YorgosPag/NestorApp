@@ -99,18 +99,28 @@ export const BIM_CATEGORIES: readonly BimCategory[] = [
 ] as const;
 
 /**
- * Structural/placed BIM object categories — the model elements a user places on
- * the canvas (Revit "Model Categories"), as opposed to annotation/helper
- * categories (`dimension`, `hatch`, `grip`) that are not BIM objects per se.
+ * Model BIM object categories — the elements a user places on the canvas (Revit
+ * "Model Categories"), as opposed to annotation/helper categories (`dimension`,
+ * `hatch`, `grip`) that are not BIM objects per se.
  *
- * SSoT for the "Hide BIM / Show only DXF" ribbon toggle: hiding all of these
- * leaves only the imported DXF entities visible. Consumed by
+ * SSoT for the "Hide BIM / Show only DXF" ribbon toggle (ADR-375 C.8): hiding
+ * all of these leaves only the imported DXF entities visible. Consumed by
  * `setBimObjectsVisibility` in `bim-render-settings-store`.
+ *
+ * ADR-405: renamed from `STRUCTURAL_BIM_CATEGORIES` (misnomer — it includes BOTH
+ * architectural AND structural categories). The old name is kept below as a
+ * deprecated alias for zero-break.
  */
-export const STRUCTURAL_BIM_CATEGORIES: readonly BimCategory[] = [
+export const MODEL_BIM_CATEGORIES: readonly BimCategory[] = [
   'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening',
   'stair', 'roof', 'ceiling', 'envelope',
 ] as const;
+
+/**
+ * @deprecated ADR-405 — use {@link MODEL_BIM_CATEGORIES}. Kept as an alias so the
+ * ADR-375 C.8 consumers (store + HideBimToggle) keep working unchanged.
+ */
+export const STRUCTURAL_BIM_CATEGORIES = MODEL_BIM_CATEGORIES;
 
 export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> = {
   wall:           { projectionPen: 5,  cutPen: 7  },

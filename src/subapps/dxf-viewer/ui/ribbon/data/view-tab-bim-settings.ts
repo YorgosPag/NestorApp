@@ -125,6 +125,30 @@ export const HIDE_BIM_PANEL: RibbonPanelDef = {
   ],
 };
 
+/** ADR-405 §4 — discipline visibility multi-toggle (Revit "View Discipline"). */
+export const DISCIPLINE_PANEL: RibbonPanelDef = {
+  id: 'discipline',
+  labelKey: 'ribbon.panels.discipline',
+  rows: [
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'widget',
+          size: 'small',
+          widgetId: 'discipline-visibility',
+          command: {
+            id: 'view.disciplineVisibility',
+            labelKey: 'ribbon.commands.discipline.label',
+            icon: '',
+            commandKey: 'discipline-visibility',
+          },
+        },
+      ],
+    },
+  ],
+};
+
 /** ADR-375 Phase B.3 — reusable BIM render-settings presets (Revit Level 2). */
 export const VIEW_TEMPLATES_PANEL: RibbonPanelDef = {
   id: 'viewTemplates',

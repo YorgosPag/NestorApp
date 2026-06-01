@@ -37,6 +37,7 @@ import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import type { BuildingVisMode } from '../utils/building-visibility-state';
 import type { FloorVisMode } from '../utils/floor-visibility-state';
 import { resolveIsEntityVisible } from '../../bim/visibility/visibility-resolver';
+import type { Discipline } from '../../bim/discipline/bim-discipline';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { getLayer } from '../../stores/LayerStore';
 import type { OpeningEntity } from '../../bim/types/opening-types';
@@ -118,11 +119,11 @@ export class BimSceneLayer {
     buildingVisModes: ReadonlyMap<string, BuildingVisMode>,
     floorVisModes: ReadonlyMap<string, FloorVisMode>,
   ): SyncContext {
-    const objectStyles = useDrawingScaleStore.getState().objectStyles;
+    const { objectStyles, disciplineVisibility } = useDrawingScaleStore.getState();
     const useNewSystem = buildingVisModes.size > 0;
     const floorMode = activeLevelId ? floorVisModes.get(activeLevelId) : undefined;
     return {
-      objectStyles, floors, buildings, buildingVisModes,
+      objectStyles, disciplineVisibility, floors, buildings, buildingVisModes,
       floorMode, activeBuildingId, useNewSystem,
       floorElevationMm, activeLevelId,
     };
@@ -151,7 +152,7 @@ export class BimSceneLayer {
    * or active-building outside-of-view). Single SSoT for ADR-382 intersection.
    */
   private resolveEntity(
-    entity: { layerId?: string },
+    entity: { layerId?: string; discipline?: Discipline },
     category: BimCategory,
     ctx: SyncContext,
   ): EntityResolution | null {
@@ -165,8 +166,12 @@ export class BimSceneLayer {
     const buildingMode = ctx.buildingVisModes.get(buildingId);
 
     if (!resolveIsEntityVisible(
-      { category, layerId: entity.layerId },
-      { objectStyles: ctx.objectStyles, layer, floorMode: ctx.floorMode, buildingMode },
+      { category, layerId: entity.layerId, discipline: entity.discipline },
+      {
+        objectStyles: ctx.objectStyles,
+        disciplineVisibility: ctx.disciplineVisibility,
+        layer, floorMode: ctx.floorMode, buildingMode,
+      },
     )) return null;
 
     if (!this.shouldRender(buildingId, ctx.useNewSystem, ctx.buildingVisModes, ctx.activeBuildingId)) {
@@ -185,9 +190,10 @@ export class BimSceneLayer {
   ): readonly OpeningEntity[] {
     return openings.filter((o) =>
       o.params[hostKey] === hostId && resolveIsEntityVisible(
-        { category: 'opening', layerId: o.layerId },
+        { category: 'opening', layerId: o.layerId, discipline: o.discipline },
         {
           objectStyles: ctx.objectStyles,
+          disciplineVisibility: ctx.disciplineVisibility,
           layer: o.layerId ? getLayer(o.layerId) : null,
           floorMode: ctx.floorMode,
           buildingMode: parentBuildingMode,
@@ -204,9 +210,10 @@ export class BimSceneLayer {
   ): readonly SlabOpeningEntity[] {
     return slabOpenings.filter((o) =>
       o.params.slabId === slabId && resolveIsEntityVisible(
-        { category: 'slab-opening', layerId: o.layerId },
+        { category: 'slab-opening', layerId: o.layerId, discipline: o.discipline },
         {
           objectStyles: ctx.objectStyles,
+          disciplineVisibility: ctx.disciplineVisibility,
           layer: o.layerId ? getLayer(o.layerId) : null,
           floorMode: ctx.floorMode,
           buildingMode: parentBuildingMode,

@@ -95,8 +95,12 @@ export class WallRenderer extends BaseEntityRenderer {
     // uniformly even σε partially-loaded entities (mirror του ADR-375 v2.6 order).
     const _wLayer = wall.layerId ? getLayer(wall.layerId) : null;
     if (!resolveIsEntityVisible(
-      { category: 'wall', layerId: wall.layerId },
-      { objectStyles: useDrawingScaleStore.getState().objectStyles, layer: _wLayer },
+      { category: 'wall', layerId: wall.layerId, discipline: wall.discipline },
+      {
+        objectStyles: useDrawingScaleStore.getState().objectStyles,
+        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
+        layer: _wLayer,
+      },
     )) return;
 
     if (!wall.geometry || !wall.params) return;

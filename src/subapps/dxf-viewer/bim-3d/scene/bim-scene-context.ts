@@ -2,6 +2,7 @@ import type { BimCategory, ObjectStyle } from '../../config/bim-object-styles';
 import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import type { BuildingVisMode } from '../utils/building-visibility-state';
 import type { FloorVisMode } from '../utils/floor-visibility-state';
+import type { Discipline } from '../../bim/discipline/bim-discipline';
 
 /**
  * Per-floor sync context shared by `BimSceneLayer` and its envelope scene
@@ -10,6 +11,8 @@ import type { FloorVisMode } from '../utils/floor-visibility-state';
  */
 export interface SyncContext {
   readonly objectStyles: Partial<Record<BimCategory, ObjectStyle>>;
+  /** ADR-405 §4 — per-discipline visibility (Revit "View Discipline"). */
+  readonly disciplineVisibility: Partial<Record<Discipline, boolean>>;
   readonly floors: readonly FloorRef[];
   readonly buildings: readonly BuildingRef[];
   readonly buildingVisModes: ReadonlyMap<string, BuildingVisMode>;

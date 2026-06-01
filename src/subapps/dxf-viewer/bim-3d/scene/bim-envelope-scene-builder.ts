@@ -43,7 +43,11 @@ export function addEnvelopeToScene(
   // (envelope = floor-level, no layerId — mirror του 2D `EnvelopeOverlay`).
   if (!resolveIsEntityVisible(
     { category: 'envelope' },
-    { objectStyles: ctx.objectStyles, floorMode: ctx.floorMode },
+    {
+      objectStyles: ctx.objectStyles,
+      disciplineVisibility: ctx.disciplineVisibility,
+      floorMode: ctx.floorMode,
+    },
   )) return;
 
   // ADR-396 P6: ΟΧΙ auto-seed. Z1 spec-driven· Z2/Z3/Z4 per-element driven
@@ -210,9 +214,10 @@ function filterEnvelopeOpenings(
   const wallSet = new Set(wallIds);
   return openings.filter((o) =>
     wallSet.has(o.params.wallId) && resolveIsEntityVisible(
-      { category: 'opening', layerId: o.layerId },
+      { category: 'opening', layerId: o.layerId, discipline: o.discipline },
       {
         objectStyles: ctx.objectStyles,
+        disciplineVisibility: ctx.disciplineVisibility,
         layer: o.layerId ? getLayer(o.layerId) : null,
         floorMode: ctx.floorMode,
       },

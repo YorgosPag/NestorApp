@@ -791,6 +791,7 @@
       "objectStyles": "Object Styles",
       "visibilityGraphics": "Visibility/Graphics",
       "hideBim": "DXF Only",
+      "discipline": "Disciplines",
       "penTable": "Pen Table",
       "viewTemplates": "View Templates",
       "dimensions": "Dimensions",
@@ -1697,6 +1698,23 @@
         "show": "Show BIM",
         "tooltipHide": "Hide all structural BIM elements — only the imported DXF entities remain visible",
         "tooltipShow": "Restore visibility of structural BIM elements"
+      },
+      "discipline": {
+        "label": "Disciplines",
+        "tooltipShow": "Show discipline",
+        "tooltipHide": "Hide discipline",
+        "names": {
+          "architectural": "Architectural",
+          "structural": "Structural",
+          "mechanical": "Mechanical",
+          "electrical": "Electrical",
+          "plumbing": "Plumbing",
+          "fire": "Fire Protection",
+          "civil": "Civil",
+          "telecom": "Telecom",
+          "interior": "Interior",
+          "general": "General"
+        }
       },
       "viewTemplates": {
         "label": "Template",

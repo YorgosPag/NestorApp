@@ -13,6 +13,7 @@
 
 import { DEFAULT_VIEW_RANGE, type ViewRange } from './bim-view-range';
 import { DEFAULT_OBJECT_STYLES, type BimCategory, type ObjectStyle } from './bim-object-styles';
+import type { Discipline } from '../bim/discipline/bim-discipline';
 
 // ── Drawing scale constants (re-exported by drawing-scale-store for compat) ──
 export const DEFAULT_DRAWING_SCALE = 100;
@@ -30,12 +31,18 @@ export interface BimRenderSettings {
   viewRange?: Partial<ViewRange>;
   /** Partial ObjectStyles override. Absent categories fall back to DEFAULT_OBJECT_STYLES. */
   objectStyles?: Partial<Record<BimCategory, ObjectStyle>>;
+  /**
+   * ADR-405 §4 — per-discipline visibility (Revit "View Discipline"). Absent
+   * discipline keys ⇒ visible. Persisted per-view alongside the V/G overrides.
+   */
+  disciplineVisibility?: Partial<Record<Discipline, boolean>>;
 }
 
 export interface ResolvedBimSettings {
   drawingScale: number;
   viewRange: ViewRange;
   objectStyles: Record<BimCategory, ObjectStyle>;
+  disciplineVisibility: Partial<Record<Discipline, boolean>>;
 }
 
 // ── Resolver ───────────────────────────────────────────────────────────────
@@ -49,5 +56,7 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
     objectStyles: s?.objectStyles
       ? { ...DEFAULT_OBJECT_STYLES, ...s.objectStyles } as Record<BimCategory, ObjectStyle>
       : DEFAULT_OBJECT_STYLES as Record<BimCategory, ObjectStyle>,
+    // ADR-405 §4 — absent ⇒ {} (all disciplines visible).
+    disciplineVisibility: s?.disciplineVisibility ?? {},
   };
 }

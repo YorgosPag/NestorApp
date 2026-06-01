@@ -136,8 +136,12 @@ export function EnvelopeOverlay({
     getEnvelopeFloorSlabs,
   );
   const objectStyles = useDrawingScaleStore((s) => s.objectStyles);
+  const disciplineVisibility = useDrawingScaleStore((s) => s.disciplineVisibility);
   const viewRange = useDrawingScaleStore((s) => s.viewRange);
-  const visible = resolveIsEntityVisible({ category: 'envelope' }, { objectStyles });
+  const visible = resolveIsEntityVisible(
+    { category: 'envelope' },
+    { objectStyles, disciplineVisibility },
+  );
 
   // ADR-396 P6: ΟΧΙ auto-seed. Το envelope εμφανίζεται ΜΟΝΟ όταν ο χρήστης
   // τρέξει το command «Εφαρμογή Θερμοπρόσοψης» (ThermalEnvelopeHost → setEnvelopeSpec).

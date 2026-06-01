@@ -64,8 +64,12 @@ export class OpeningRenderer extends BaseEntityRenderer {
     // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
     const _opLayer = opening.layerId ? getLayer(opening.layerId) : null;
     if (!resolveIsEntityVisible(
-      { category: 'opening', layerId: opening.layerId },
-      { objectStyles: useDrawingScaleStore.getState().objectStyles, layer: _opLayer },
+      { category: 'opening', layerId: opening.layerId, discipline: opening.discipline },
+      {
+        objectStyles: useDrawingScaleStore.getState().objectStyles,
+        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
+        layer: _opLayer,
+      },
     )) return;
 
     if (!opening.geometry || !opening.params) return;
