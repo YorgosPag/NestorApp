@@ -25,6 +25,8 @@ import { validateWallParams } from '../../../bim/validators/wall-validator';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
 import { detachWallSide, type WallAttachSide } from '../../../bim/walls/wall-attach-detach';
+// ADR-401 — persist the binding change (detach-on-host-delete targets non-selected walls).
+import { signalEntitiesAttached } from './attach-persist-signal';
 
 export type WallDetachSide = WallAttachSide;
 
@@ -64,17 +66,20 @@ export class DetachWallsCommand implements ICommand {
     for (const p of this.patches) this.applyPatch(p.wallId, p.next, p.kind);
     this.wasExecuted = this.patches.length > 0;
     this.cascade();
+    this.signalPersist();
   }
 
   undo(): void {
     if (!this.wasExecuted) return;
     for (const p of this.patches) this.applyPatch(p.wallId, p.prev, p.kind);
     this.cascade();
+    this.signalPersist();
   }
 
   redo(): void {
     for (const p of this.patches) this.applyPatch(p.wallId, p.next, p.kind);
     this.cascade();
+    this.signalPersist();
   }
 
   /** Snapshot live params per target → {prev, next} (binding reset + ids cleared). */
@@ -100,6 +105,11 @@ export class DetachWallsCommand implements ICommand {
   private cascade(): void {
     if (this.patches.length === 0) return;
     cascadeHostedOpeningsForWalls(this.patches.map((p) => p.wallId), this.sceneManager);
+  }
+
+  /** ADR-401 — broadcast the patched walls so the persistence layer saves them. */
+  private signalPersist(): void {
+    signalEntitiesAttached(this.sceneManager, this.patches.map((p) => p.wallId));
   }
 
   canMergeWith(): boolean {

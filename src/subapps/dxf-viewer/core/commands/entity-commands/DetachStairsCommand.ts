@@ -24,6 +24,8 @@ import { validateStairParams } from '../../../bim/stairs/stair-validator';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { detachStairSide } from '../../../bim/stairs/stair-attach-detach';
 import type { EntityAttachSide } from '../../../bim/entities/entity-attach-detach';
+// ADR-401 — persist the binding change (detach-on-host-delete targets non-selected stairs).
+import { signalEntitiesAttached } from './attach-persist-signal';
 
 export type StairDetachSide = EntityAttachSide;
 
@@ -61,15 +63,18 @@ export class DetachStairsCommand implements ICommand {
     if (this.patches.length === 0) this.buildPatches();
     for (const p of this.patches) this.applyPatch(p.stairId, p.next);
     this.wasExecuted = this.patches.length > 0;
+    this.signalPersist();
   }
 
   undo(): void {
     if (!this.wasExecuted) return;
     for (const p of this.patches) this.applyPatch(p.stairId, p.prev);
+    this.signalPersist();
   }
 
   redo(): void {
     for (const p of this.patches) this.applyPatch(p.stairId, p.next);
+    this.signalPersist();
   }
 
   /** Snapshot live params per target → {prev, next} (binding reset + ids cleared). */
@@ -90,6 +95,11 @@ export class DetachStairsCommand implements ICommand {
       geometry,
       validation,
     } as unknown as Record<string, unknown>);
+  }
+
+  /** ADR-401 — broadcast the patched stairs so the persistence layer saves them. */
+  private signalPersist(): void {
+    signalEntitiesAttached(this.sceneManager, this.patches.map((p) => p.stairId));
   }
 
   canMergeWith(): boolean {

@@ -32,6 +32,8 @@ import { computeColumnGeometry } from '../../../bim/geometry/column-geometry';
 import { validateColumnParams } from '../../../bim/validators/column-validator';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import type { EntityAttachSide } from '../../../bim/entities/entity-attach-detach';
+// ADR-401 — persist the binding change (auto-attach targets non-selected columns).
+import { signalEntitiesAttached } from './attach-persist-signal';
 
 export type ColumnAttachSide = EntityAttachSide;
 
@@ -84,15 +86,18 @@ export class AttachColumnsCommand implements ICommand {
     if (this.patches.length === 0) this.buildPatches();
     for (const p of this.patches) this.applyPatch(p.columnId, p.next);
     this.wasExecuted = this.patches.length > 0;
+    this.signalPersist();
   }
 
   undo(): void {
     if (!this.wasExecuted) return;
     for (const p of this.patches) this.applyPatch(p.columnId, p.prev);
+    this.signalPersist();
   }
 
   redo(): void {
     for (const p of this.patches) this.applyPatch(p.columnId, p.next);
+    this.signalPersist();
   }
 
   /** Snapshot live params per target → {prev, next} (attached + host appended). */
@@ -114,6 +119,11 @@ export class AttachColumnsCommand implements ICommand {
       geometry,
       validation,
     } as unknown as Partial<SceneEntity>);
+  }
+
+  /** ADR-401 — broadcast the patched columns so the persistence layer saves them. */
+  private signalPersist(): void {
+    signalEntitiesAttached(this.sceneManager, this.patches.map((p) => p.columnId));
   }
 
   canMergeWith(): boolean {

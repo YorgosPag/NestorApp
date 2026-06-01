@@ -41,6 +41,7 @@ import {
 } from '../stairs/stair-firestore-service';
 import { recordStairChange } from '../stairs/stair-audit-client';
 import { useBimEntityRestoredPersistEffect } from '../../hooks/data/useBimEntityRestoredPersistEffect';
+import { useBimEntityAttachedPersistEffect } from '../../hooks/data/useBimEntityAttachedPersistEffect';
 import { stairDocToEntity } from '../stairs/stair-doc-hydration';
 import { upsertStairBoq, deleteStairBoq } from '../services/stair-boq-sync';
 
@@ -467,6 +468,9 @@ export function useStairPersistence(
     });
     return cleanup;
   }, [persist]);
+
+  // ADR-401 — persist stairs on attach binding change (see hook for WHY).
+  useBimEntityAttachedPersistEffect(isStair, serviceRef, dirtyIdsRef, persist);
 
   // ADR-390 — symmetric undo→Firestore restore.
   useBimEntityRestoredPersistEffect(

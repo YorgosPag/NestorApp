@@ -299,6 +299,15 @@ export interface DrawingEventMap {
   // so the existing persistence hooks (column/beam/slab via the shared moved
   // effect + opening via its own listener) save + audit + structural-BOQ them.
   'bim:envelope-applied': { entities: ReadonlyArray<AnySceneEntity> };
+  // ADR-401 — N walls/columns/stairs had their structural attach binding changed
+  // (auto-attach below a new host, manual attach/detach, detach-on-edit) by an
+  // Attach/Detach command. Carries the post-change entities directly (same
+  // stale-state guard as `bim:entities-moved`) so the shared persistence effect
+  // (`useBimEntityMovedPersistEffect` for wall/column + the stair listener) saves +
+  // audits them AND marks them dirty. WITHOUT this, a non-selected entity (the
+  // common auto-attach case) never persists and the next Firestore snapshot's
+  // diff-merge reverts the in-memory binding. Fires on execute/undo/redo.
+  'bim:entities-attached': { entities: ReadonlyArray<AnySceneEntity> };
   /** ADR-369 Q8.2 — ribbon IFC button → open PsetEditorHost dialog. */
   'bim:pset-editor-open': { entityId: string; levelId: string; entityType: string };
   /** ADR-369 Q8.3 — ribbon IFC Export button → IfcExportHost downloads .ifc file. */

@@ -50,9 +50,16 @@ export function useBimEntityMovedPersistEffect<T extends AnySceneEntity, S>(
     const offEnvelope = EventBus.on('bim:envelope-applied', ({ entities }) =>
       persistChanged(entities),
     );
+    // ADR-401 — attach/detach commands broadcast the entities whose structural
+    // binding changed (auto-attach below a new host hits NON-selected entities,
+    // which the selection-debounce auto-save never catches). Same persist path.
+    const offAttached = EventBus.on('bim:entities-attached', ({ entities }) =>
+      persistChanged(entities),
+    );
     return () => {
       offMoved();
       offEnvelope();
+      offAttached();
     };
   }, [isEntityType, serviceRef, dirtyIdsRef, persist]);
 }

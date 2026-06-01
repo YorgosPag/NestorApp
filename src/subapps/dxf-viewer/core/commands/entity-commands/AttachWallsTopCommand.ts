@@ -27,6 +27,8 @@ import { validateWallParams } from '../../../bim/validators/wall-validator';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 // ADR-363 §5.4 — after each wall geometry patch, recompute its hosted openings.
 import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
+// ADR-401 — persist the binding change (auto-attach targets non-selected walls).
+import { signalEntitiesAttached } from './attach-persist-signal';
 
 /** A wall to attach + its `kind` (needed for the geometry recompute). */
 export interface WallAttachTarget {
@@ -65,17 +67,20 @@ export class AttachWallsTopCommand implements ICommand {
     for (const p of this.patches) this.applyPatch(p.wallId, p.next, p.kind);
     this.wasExecuted = this.patches.length > 0;
     this.cascade();
+    this.signalPersist();
   }
 
   undo(): void {
     if (!this.wasExecuted) return;
     for (const p of this.patches) this.applyPatch(p.wallId, p.prev, p.kind);
     this.cascade();
+    this.signalPersist();
   }
 
   redo(): void {
     for (const p of this.patches) this.applyPatch(p.wallId, p.next, p.kind);
     this.cascade();
+    this.signalPersist();
   }
 
   /** Snapshot live params per target → {prev, next} (attached + host appended). */
@@ -104,6 +109,11 @@ export class AttachWallsTopCommand implements ICommand {
   private cascade(): void {
     if (this.patches.length === 0) return;
     cascadeHostedOpeningsForWalls(this.patches.map((p) => p.wallId), this.sceneManager);
+  }
+
+  /** ADR-401 — broadcast the patched walls so the persistence layer saves them. */
+  private signalPersist(): void {
+    signalEntitiesAttached(this.sceneManager, this.patches.map((p) => p.wallId));
   }
 
   canMergeWith(): boolean {
