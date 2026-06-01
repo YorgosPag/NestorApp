@@ -17,6 +17,7 @@ import type { Timestamp } from 'firebase/firestore';
 import type { Point2D, Point3D } from '../../rendering/types/Types';
 export type { Point2D, Point3D };
 import type { BimEntity, BimLock } from './bim-base';
+import type { StairTopBinding, StairBaseBinding } from './bim-binding';
 
 // ============================================================================
 // 3D GEOMETRY PRIMITIVES (stair-local; z required — uses rendering Point3D)
@@ -390,6 +391,31 @@ export interface StairParams {
   readonly storeyId?: string;
   /** ADR-369 — Elevation offset from storey reference (mm). Default 0. */
   readonly offsetFromStorey?: number;
+
+  // ─── ADR-401 Phase G — Attach-to-structural (top/base → πλάκα/δοκάρι/landing) ──
+  //
+  // Optional για back-compat (υπάρχουσες σκάλες χωρίς τα πεδία). Όταν λείπουν, η
+  // σκάλα συμπεριφέρεται όπως πριν: top = `unconnected` (ύψος από `totalRise` /
+  // `stepCount`), base = `storey-floor` (FFL + `offsetFromStorey`). Βλ.
+  // `DEFAULT_STAIR_TOP_BINDING` / `DEFAULT_STAIR_BASE_BINDING` (bim-binding.ts).
+  /**
+   * Πώς δένεται η ΚΟΡΥΦΗ της σκάλας. `'attached'` → η άφιξη ακολουθεί τη δομική
+   * κάτω-παρειά των `attachTopToIds` (lower-envelope) με **ακέραια σκαλοπάτια**
+   * (Revit risers): `totalRise = hostUnderside − base`, `stepCount =
+   * round(totalRise / rise)`. Resolved live από `resolveStairVerticalProfile`,
+   * ΔΕΝ αποθηκεύεται ως scalar. Default (undefined) = `'unconnected'`.
+   */
+  readonly topBinding?: StairTopBinding;
+  /**
+   * Πώς δένεται η ΒΑΣΗ της σκάλας. `'attached'` → η βάση «κάθεται» πάνω στην άνω
+   * παρειά των `attachBaseToIds` (upper-envelope: πλάκα/πεδιλοδοκός/landing από
+   * κάτω). Default (undefined) = `'storey-floor'`.
+   */
+  readonly baseBinding?: StairBaseBinding;
+  /** Host FK ids όταν `topBinding === 'attached'` (≥1, validated). */
+  readonly attachTopToIds?: readonly string[];
+  /** Host FK ids όταν `baseBinding === 'attached'` (≥1, validated). */
+  readonly attachBaseToIds?: readonly string[];
 }
 
 // ============================================================================

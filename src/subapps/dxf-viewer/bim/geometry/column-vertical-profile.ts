@@ -33,12 +33,23 @@
  * @see bim/geometry/wall-host-plan-builder.ts — HostFootprintInput + adapters
  */
 
-import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import type { ColumnBaseBinding, ColumnTopBinding } from '../types/bim-binding';
 import type { HostFootprintInput, Pt2 } from './wall-host-plan-builder';
+import {
+  HOST_Z_EPS,
+  hostUndersideAt,
+  hostTopsideAt,
+  collectHostFootprints,
+  makeHostFootprintResolver,
+} from './host-footprint-eval';
 
-/** Όριο για να θεωρηθούν δύο Z τιμές ίσες (mm). */
-export const COLUMN_Z_EPS = 1e-6;
+/**
+ * Όριο για να θεωρηθούν δύο Z τιμές ίσες (mm).
+ * Boy-Scout N.0.2: re-export του shared `HOST_Z_EPS` (πρώην private copy) — οι
+ * υπάρχοντες consumers (`column-structural-attach-coordinator`, `column-boq-feed`,
+ * `BimSceneLayer`) συνεχίζουν να εισάγουν `COLUMN_Z_EPS` αμετάβλητα.
+ */
+export const COLUMN_Z_EPS = HOST_Z_EPS;
 
 /** Δομικό υποσύνολο των ColumnParams που χρειάζεται ο resolver (ColumnParams assignable). */
 export interface ColumnVerticalParams {
@@ -123,37 +134,9 @@ export function resolveColumnNominalTopZmm(params: ColumnVerticalParams, ctx: Co
   return baseZ + params.height;
 }
 
-// ─── Per-corner host face evaluation ─────────────────────────────────────────
-
-/** Κάτω-παρειά host στο plan-point `pt` (απόλυτο mm), ή null αν δεν το καλύπτει. */
-function hostUndersideAt(h: HostFootprintInput, pt: Pt2): number | null {
-  if (h.footprint.length < 3) return null;
-  if (!isPointInPolygon(pt, [...h.footprint])) return null;
-  return h.undersideZmmAt ? h.undersideZmmAt(pt) : h.undersideZmm;
-}
-
-/** Άνω-παρειά host στο plan-point `pt` (απόλυτο mm), ή null αν δεν το καλύπτει / λείπει. */
-function hostTopsideAt(h: HostFootprintInput, pt: Pt2): number | null {
-  if (h.footprint.length < 3) return null;
-  if (!isPointInPolygon(pt, [...h.footprint])) return null;
-  if (h.topsideZmmAt) return h.topsideZmmAt(pt);
-  return h.topsideZmm ?? null;
-}
-
-/** Resolve attach-host inputs ανά id, μαζεύοντας τα missing. */
-function collectHosts(
-  ids: readonly string[],
-  resolve: ColumnVerticalContext['resolveHostInput'],
-): { hosts: HostFootprintInput[]; missingHostIds: string[] } {
-  const hosts: HostFootprintInput[] = [];
-  const missingHostIds: string[] = [];
-  for (const id of ids) {
-    const h = resolve?.(id) ?? null;
-    if (h) hosts.push(h);
-    else missingHostIds.push(id);
-  }
-  return { hosts, missingHostIds };
-}
+// ─── Per-corner host face evaluation (shared SSoT, host-footprint-eval.ts) ────
+// `hostUndersideAt` / `hostTopsideAt` / `collectHostFootprints` ζουν πλέον στο
+// `host-footprint-eval.ts` (Boy-Scout N.0.2 — η σκάλα τα μοιράζεται). Imported άνω.
 
 // ─── Resolvers ───────────────────────────────────────────────────────────────
 
@@ -178,7 +161,7 @@ export function resolveColumnTopProfile(
   if (params.topBinding !== 'attached' || ids.length === 0) {
     return flatTop(baseZmm, nominalTop, footprint.length, []);
   }
-  const { hosts, missingHostIds } = collectHosts(ids, ctx.resolveHostInput);
+  const { hosts, missingHostIds } = collectHostFootprints(ids, ctx.resolveHostInput);
 
   let hasAttach = false;
   const cornerTopZmm = footprint.map((pt) => {
@@ -230,7 +213,7 @@ export function resolveColumnBaseProfile(
   if (params.baseBinding !== 'attached' || ids.length === 0) {
     return flatBase(nominalBaseZmm, footprint.length, []);
   }
-  const { hosts, missingHostIds } = collectHosts(ids, ctx.resolveHostInput);
+  const { hosts, missingHostIds } = collectHostFootprints(ids, ctx.resolveHostInput);
 
   let hasAttach = false;
   const cornerBaseZmm = footprint.map((pt) => {
@@ -256,12 +239,8 @@ export function resolveColumnBaseProfile(
 
 /**
  * Convenience: lookup builder από host inputs (mirror `makeResolveHost`).
- * ΕΝΑΣ τόπος για το `Map<id, HostFootprintInput>` που τρώει ο resolver.
+ * Boy-Scout N.0.2: thin alias του shared `makeHostFootprintResolver` — οι
+ * υπάρχοντες consumers (`column-structural-attach-coordinator` κ.λπ.) εισάγουν
+ * `makeColumnHostResolver` αμετάβλητα.
  */
-export function makeColumnHostResolver(
-  hosts: readonly HostFootprintInput[],
-): (id: string) => HostFootprintInput | null {
-  const byId = new Map<string, HostFootprintInput>();
-  for (const h of hosts) byId.set(h.hostId, h);
-  return (id: string) => byId.get(id) ?? null;
-}
+export const makeColumnHostResolver = makeHostFootprintResolver;
