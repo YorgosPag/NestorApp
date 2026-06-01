@@ -16,8 +16,12 @@
  * bridge — reusing the whole commit path (enterprise id, scene append, auto
  * 3D-resync, hosted-opening cascade) with zero duplication.
  *
- * OSNAP during 3D placement is intentionally deferred (the 2D snap engine is
- * viewport-coupled); ghost == commit because both read the raw floor point.
+ * OSNAP (ADR-403 Phase 2): when snap is ON the floor point is resolved against
+ * the shared snap-engine SSoT in plan mm (`resolvePlacementSnap`) BEFORE the
+ * conversion to scene units, so the ghost — and the committed point — "click"
+ * onto the nearest corner/endpoint/midpoint of an existing element, with a 3D
+ * snap marker shown on the target. The SAME snap runs on move and on click, so
+ * ghost == commit (WYSIWYG); when snap misses (or is off) the raw point is used.
  */
 
 import { useEffect, type MutableRefObject } from 'react';
@@ -28,9 +32,12 @@ import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
+import { dxfPlanToWorld } from '../viewport/coordinate-transforms';
 import { ColumnPlacementGhost } from './ColumnPlacementGhost';
+import { PlacementSnapMarker } from './PlacementSnapMarker';
 import { raycastFloorPoint, resolveActiveFloorElevationMm } from './raycast-floor-point';
-import { worldToScenePoint } from './world-to-scene-point';
+import { worldToPlanMm, planMmToScenePoint } from './world-to-scene-point';
+import { resolvePlacementSnap } from './placement-snap';
 
 /** A click whose pointer moved more than this (px) since pointerdown was an
  *  orbit drag, not a placement — skip it (avoids accidental columns). */
@@ -47,28 +54,53 @@ export function useBim3DColumnPlacement({ managerRef, canvasEl }: UseBim3DColumn
     if (!canvasEl || !manager) return;
 
     const ghost = new ColumnPlacementGhost(manager.scene);
+    const snapMarker = new PlacementSnapMarker(manager.scene);
     let abort: AbortController | null = null;
     let downPos: { x: number; y: number } | null = null;
 
     const unitsNow = (): ReturnType<NonNullable<ReturnType<typeof columnToolBridgeStore.get>>['getSceneUnits']> =>
       columnToolBridgeStore.get()?.getSceneUnits() ?? 'mm';
 
+    /**
+     * Project a screen point to the active-floor plan point in **mm**, then apply
+     * OSNAP. Returns the (possibly snapped) plan-mm point plus the marker target,
+     * or `null` when the ray misses the floor. The SAME resolution feeds both the
+     * ghost (onMove) and the commit (onClick), so they cannot disagree (WYSIWYG).
+     */
+    const resolveFloorPlanMm = (
+      clientX: number,
+      clientY: number,
+      elev: number,
+    ): { planMm: { x: number; y: number }; markerMm: { x: number; y: number } | null } | null => {
+      const world = raycastFloorPoint(manager.getCamera(), canvasEl, clientX, clientY, elev);
+      if (!world) return null;
+      const rawMm = worldToPlanMm(world);
+      const snap = resolvePlacementSnap(rawMm);
+      return snap
+        ? { planMm: snap.snappedMm, markerMm: snap.markerMm }
+        : { planMm: rawMm, markerMm: null };
+    };
+
     const onMove = (e: PointerEvent): void => {
       const elev = resolveActiveFloorElevationMm();
-      const world = raycastFloorPoint(manager.getCamera(), canvasEl, e.clientX, e.clientY, elev);
-      if (!world) {
+      const hit = resolveFloorPlanMm(e.clientX, e.clientY, elev);
+      if (!hit) {
         ghost.setVisible(false);
+        snapMarker.hide();
         manager.markSceneDirty();
         return;
       }
       const levelId = useBim3DEntitiesStore.getState().activeLevelId ?? undefined;
-      ghost.update(worldToScenePoint(world, unitsNow()), elev, levelId);
+      ghost.update(planMmToScenePoint(hit.planMm, unitsNow()), elev, levelId);
       ghost.setVisible(true);
+      if (hit.markerMm) snapMarker.show(dxfPlanToWorld(hit.markerMm.x, hit.markerMm.y, elev), manager.getCamera());
+      else snapMarker.hide();
       manager.markSceneDirty();
     };
 
     const onLeave = (): void => {
       ghost.setVisible(false);
+      snapMarker.hide();
       manager.markSceneDirty();
     };
 
@@ -81,12 +113,13 @@ export function useBim3DColumnPlacement({ managerRef, canvasEl }: UseBim3DColumn
       downPos = null;
       if (moved > ORBIT_DRAG_PX) return; // orbit drag, not a place
       const elev = resolveActiveFloorElevationMm();
-      const world = raycastFloorPoint(manager.getCamera(), canvasEl, e.clientX, e.clientY, elev);
-      if (!world) return;
+      const hit = resolveFloorPlanMm(e.clientX, e.clientY, elev);
+      if (!hit) return;
       // Block the 3D selection handler underneath (React onClick on the overlay).
       e.preventDefault();
       e.stopPropagation();
-      EventBus.emit('bim:place-column-3d', { point: worldToScenePoint(world, unitsNow()) });
+      // SAME snapped point the ghost previewed → ghost == commit (WYSIWYG).
+      EventBus.emit('bim:place-column-3d', { point: planMmToScenePoint(hit.planMm, unitsNow()) });
     };
 
     const setup = (): void => {
@@ -113,6 +146,7 @@ export function useBim3DColumnPlacement({ managerRef, canvasEl }: UseBim3DColumn
       abort = null;
       downPos = null;
       ghost.setVisible(false);
+      snapMarker.hide();
       // Restore the orbit-grab cursor owned by the viewport overlay.
       canvasEl.style.cursor = '';
       manager.markSceneDirty();
@@ -135,6 +169,7 @@ export function useBim3DColumnPlacement({ managerRef, canvasEl }: UseBim3DColumn
       unsubView();
       teardown();
       ghost.dispose();
+      snapMarker.dispose();
     };
   }, [canvasEl, managerRef]);
 }

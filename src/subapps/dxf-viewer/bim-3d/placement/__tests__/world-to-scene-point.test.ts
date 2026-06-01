@@ -6,7 +6,34 @@
  */
 
 import * as THREE from 'three';
-import { worldToScenePoint } from '../world-to-scene-point';
+import { worldToScenePoint, worldToPlanMm, planMmToScenePoint } from '../world-to-scene-point';
+
+describe('worldToPlanMm (snap-engine space)', () => {
+  it('world metres → DXF plan mm with the north sign flip, Y dropped', () => {
+    const p = worldToPlanMm(new THREE.Vector3(3, 9.5, 2));
+    expect(p.x).toBeCloseTo(3000, 6);
+    expect(p.y).toBeCloseTo(-2000, 6); // -z·1000
+  });
+});
+
+describe('planMmToScenePoint', () => {
+  it('mm → metres scales by 0.001', () => {
+    const p = planMmToScenePoint({ x: 3000, y: -2000 }, 'm');
+    expect(p.x).toBeCloseTo(3, 6);
+    expect(p.y).toBeCloseTo(-2, 6);
+  });
+
+  it('mm → mm is identity', () => {
+    expect(planMmToScenePoint({ x: 1234, y: -56 }, 'mm')).toEqual({ x: 1234, y: -56 });
+  });
+
+  it('worldToScenePoint == worldToPlanMm ∘ planMmToScenePoint (snap-path equivalence)', () => {
+    const w = new THREE.Vector3(2.5, 1, -4);
+    const direct = worldToScenePoint(w, 'cm');
+    const chained = planMmToScenePoint(worldToPlanMm(w), 'cm');
+    expect(chained).toEqual(direct);
+  });
+});
 
 describe('worldToScenePoint', () => {
   it('metre scene: world XZ maps 1:1 to plan (with north sign flip)', () => {

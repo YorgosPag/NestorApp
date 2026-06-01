@@ -45,12 +45,30 @@ jest.mock('../ColumnPlacementGhost', () => ({
     dispose(): void {}
   },
 }));
+jest.mock('../PlacementSnapMarker', () => ({
+  PlacementSnapMarker: class {
+    show(): void {}
+    hide(): void {}
+    dispose(): void {}
+  },
+}));
 jest.mock('../raycast-floor-point', () => ({
   raycastFloorPoint: jest.fn(() => ({ x: 1, y: 2, z: 3 })),
   resolveActiveFloorElevationMm: jest.fn(() => 0),
 }));
 jest.mock('../world-to-scene-point', () => ({
-  worldToScenePoint: jest.fn(() => ({ x: 10, y: 20 })),
+  worldToPlanMm: jest.fn(() => ({ x: 1, y: 2 })),
+  // Identity so the emitted point reveals whether the raw or snapped mm flowed.
+  planMmToScenePoint: jest.fn((mm: { x: number; y: number }) => mm),
+}));
+// OSNAP off by default → raw point flows through (free-placement path under test).
+jest.mock('../placement-snap', () => ({
+  resolvePlacementSnap: jest.fn(() => null),
+}));
+import { resolvePlacementSnap } from '../placement-snap';
+const mockResolvePlacementSnap = resolvePlacementSnap as jest.MockedFunction<typeof resolvePlacementSnap>;
+jest.mock('../../viewport/coordinate-transforms', () => ({
+  dxfPlanToWorld: jest.fn(() => ({ x: 0, y: 0, z: 0 })),
 }));
 
 import { useBim3DColumnPlacement } from '../use-bim3d-column-placement';
@@ -72,6 +90,8 @@ describe('useBim3DColumnPlacement', () => {
     mockToolListeners.clear();
     mockViewListeners.clear();
     mockEmit.mockClear();
+    mockResolvePlacementSnap.mockReset();
+    mockResolvePlacementSnap.mockReturnValue(null);
   });
 
   it('does NOT wire click listener when inactive', () => {
@@ -91,13 +111,24 @@ describe('useBim3DColumnPlacement', () => {
     expect(types).toEqual(expect.arrayContaining(['pointermove', 'pointerdown', 'click']));
   });
 
-  it('click emits bim:place-column-3d with the converted point', () => {
+  it('click emits bim:place-column-3d with the raw point when OSNAP misses', () => {
     const canvas = document.createElement('canvas');
     mockState.activeTool = 'column';
     mockState.is3D = true;
     renderHook(() => useBim3DColumnPlacement(makeParams(canvas)));
     canvas.dispatchEvent(new MouseEvent('click', { clientX: 5, clientY: 5 }));
-    expect(mockEmit).toHaveBeenCalledWith('bim:place-column-3d', { point: { x: 10, y: 20 } });
+    // snap → null, so the raw worldToPlanMm point ({x:1,y:2}) is emitted verbatim.
+    expect(mockEmit).toHaveBeenCalledWith('bim:place-column-3d', { point: { x: 1, y: 2 } });
+  });
+
+  it('click emits the SNAPPED point when OSNAP hits (WYSIWYG ghost == commit)', () => {
+    const canvas = document.createElement('canvas');
+    mockState.activeTool = 'column';
+    mockState.is3D = true;
+    mockResolvePlacementSnap.mockReturnValue({ snappedMm: { x: 42, y: -7 }, markerMm: { x: 42, y: -7 } });
+    renderHook(() => useBim3DColumnPlacement(makeParams(canvas)));
+    canvas.dispatchEvent(new MouseEvent('click', { clientX: 5, clientY: 5 }));
+    expect(mockEmit).toHaveBeenCalledWith('bim:place-column-3d', { point: { x: 42, y: -7 } });
   });
 
   it('orbit drag (moved > threshold) does NOT place a column', () => {

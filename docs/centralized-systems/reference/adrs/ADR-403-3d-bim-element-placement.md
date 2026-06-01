@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | 🟢 ACCEPTED — Column placement DONE + ✅ browser-verified 2026-06-01 (pending commit) |
+| Status | 🟢 ACCEPTED — Column placement DONE + ✅ browser-verified 2026-06-01· **Phase 2 OSNAP DONE 2026-06-01 (pending commit, 🔴 browser verify)** |
 | Date | 2026-06-01 |
 | Owner | Giorgio / Claude (Opus 4.8) |
 | Related | ADR-402 (3Δ BIM editing), ADR-366 (3Δ viewport), ADR-363 (BIM column tool/FSM), ADR-399 (multi-floor 3Δ), ADR-398 (column corner snap), ADR-040 (micro-leaf), ADR-009 (3Δ units) |
@@ -73,10 +73,26 @@
 
 **WYSIWYG:** ghost == commit (και τα δύο διαβάζουν το raw floor point).
 
-### Deferred
-- **OSNAP σε 3Δ placement:** ο 2Δ snap engine (`findSnapPoint` / `findColumnDrawCornerSnap`)
-  είναι viewport-coupled· η ένταξή του σε 3Δ είναι Phase 2.
+### Phase 2 — OSNAP (✅ DONE 2026-06-01)
+Όταν το OSNAP είναι **ON**, το ghost (και το committed σημείο) **κουμπώνει** στο
+πλησιέστερο χαρακτηριστικό σημείο (corner/endpoint/midpoint/intersection) υπάρχοντος
+στοιχείου — ίδια εμπειρία με το 2Δ (ADR-398). Αρχιτεκτονική:
+- **`placement-snap.ts`** (νέο SSoT, δικός χώρος ADR-403): `resolvePlacementSnap(planMm)` —
+  ~6γραμμο wrap του κοινού snap engine (`getGlobalSnapEngine().findSnapPoint`), **σε plan mm**.
+  OSNAP off → `null` (free placement)· hit → `{ snappedMm, markerMm }`· no-feature → `null`.
+  **Χωρίς** `excludeEntityId` (η νέα κολώνα δεν υπάρχει ακόμα). Δεν κάνει import το ADR-402
+  `bim3d-snap-bridge.ts` (territory isolation) — αναπαράγει το `makeResizeSnapFn` pattern.
+- **`PlacementSnapMarker.ts`** (νέο): 3Δ κυανό wireframe square στο snap target (mirror του
+  ADR-402 gizmo drag marker — depth-test off, screen-constant scale· δεν κάνει import το gizmo).
+- **Units (anti-1000×):** ο snap engine δουλεύει σε **mm**· η μετατροπή σε scene units γίνεται
+  ΜΟΝΟ στο τέλος (`planMmToScenePoint`). Νέοι SSoT helpers `worldToPlanMm` + `planMmToScenePoint`
+  στο `world-to-scene-point.ts` (το `worldToScenePoint` = σύνθεσή τους — DRY).
+- **WYSIWYG:** το ΙΔΙΟ snap τρέχει σε `onMove` και `onClick` → ghost == commit.
+
+### Deferred (ΟΧΙ τώρα)
 - Τοποθέτηση τοίχου/δοκαριού/πλάκας (διαφορετικό FSM — τοίχος 2 κλικ, πλάκα πολλά).
+- Snap σε στοιχεία **άλλου** ορόφου (multi-floor «Όλοι»): μόνο ενεργού ορόφου (συνέπεια
+  με την elevation του Phase 1).
 
 ---
 
@@ -85,11 +101,13 @@
 ### Νέα — `bim-3d/placement/`
 | Αρχείο | Ρόλος |
 |---|---|
-| `world-to-scene-point.ts` | SSoT: 3D world (m) → 2Δ scene-units point (`worldToDxfPlan` × `mmToSceneUnits`). |
+| `world-to-scene-point.ts` | SSoT: 3D world (m) → 2Δ scene-units point (`worldToDxfPlan` × `mmToSceneUnits`)· **+Phase 2** `worldToPlanMm` (→ mm, snap space) + `planMmToScenePoint` (mm → scene). |
 | `raycast-floor-point.ts` | SSoT: screen → world point στο δάπεδο ενεργού ορόφου + `resolveActiveFloorElevationMm`. |
 | `ColumnPlacementGhost.ts` | Scene-side ημιδιαφανές ghost (reuse `columnToMesh`), pattern `BimGizmoOverlay`. |
-| `use-bim3d-column-placement.ts` | Orchestration hook (gate + listeners + EventBus bridge). |
-| `__tests__/*` (4 αρχεία) | 22 tests (conversion / raycast+elevation / ghost lifecycle / hook wiring). |
+| `use-bim3d-column-placement.ts` | Orchestration hook (gate + listeners + EventBus bridge + **Phase 2 snap+marker wiring**). |
+| **`placement-snap.ts`** (Phase 2) | SSoT OSNAP resolver (`resolvePlacementSnap`) σε plan mm· wrap κοινού snap engine. |
+| **`PlacementSnapMarker.ts`** (Phase 2) | 3Δ κυανό snap marker (mirror gizmo drag marker, χωρίς import ADR-402). |
+| `__tests__/*` (5 αρχεία) | 32 tests (conversion+snap-path / raycast+elevation / ghost lifecycle / hook wiring incl. snap / **placement-snap 5**). |
 
 ### Τροποποιημένα (μικρά)
 | Αρχείο | Αλλαγή |
@@ -105,8 +123,11 @@
 ---
 
 ## Verification
-- ✅ 22/22 placement tests PASS (`npx jest src/subapps/dxf-viewer/bim-3d/placement`).
+- ✅ 32/32 placement tests PASS — 5 suites (`npx jest src/subapps/dxf-viewer/bim-3d/placement`).
 - ✅ `npx tsc --noEmit` clean.
+- 🔴 **Phase 2 browser verify εκκρεμεί:** 3Δ → «Κολώνα» → πλησίασε γωνία υπάρχουσας κολώνας/τοίχου
+  → ghost **κουμπώνει** + κυανό marker → κλικ τοποθετεί ΑΚΡΙΒΩΣ στη γωνία (σύγκριση με 2Δ) →
+  OSNAP off → free placement.
 - ✅ Browser `/dxf/viewer` 2026-06-01 (Giorgio): 3Δ → «Κολώνα» → ghost ακολουθεί κέρσορα →
   σταυρόνημα cursor → κλικ τοποθετεί στον ενεργό όροφο. Επιλογή υπάρχουσας κολώνας →
   move gizmo· ενεργοποίηση εργαλείου → gizmo σβήνει (single-mode). Σωστή ροή place vs edit.
@@ -114,6 +135,12 @@
 ---
 
 ## Changelog
+- **2026-06-01 (Phase 2 — OSNAP, Opus 4.8)** — OSNAP στο 3Δ column placement. 2 νέα αρχεία
+  (`placement-snap.ts` SSoT resolver + `PlacementSnapMarker.ts` 3Δ marker) + 1 modified hook
+  (`use-bim3d-column-placement.ts` snap+marker wiring) + 2 νέοι SSoT helpers στο
+  `world-to-scene-point.ts` (`worldToPlanMm`/`planMmToScenePoint`, DRY refactor). Snap σε plan mm
+  (anti-1000×)· ΙΔΙΟ snap onMove+onClick (WYSIWYG)· territory isolation από ADR-402 (αναπαραγωγή
+  pattern, μηδέν import). 32/32 tests (5 suites), tsc clean. Pending commit, 🔴 browser verify.
 - **2026-06-01** — Column placement σε 3Δ (this document). 4 νέα αρχεία + 4 μικρά
   modified, 22 tests. Pending commit + browser verify.
 - **2026-06-01 (integration fixes, browser-verified)** — 3 διορθώσεις ενσωμάτωσης που

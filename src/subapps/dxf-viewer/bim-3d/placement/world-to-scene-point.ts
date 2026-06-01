@@ -28,6 +28,28 @@ import { worldToDxfPlan } from '../viewport/coordinate-transforms';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 /**
+ * Convert a Three.js world point (metres) to the DXF plan point in **mm** — the
+ * native space of the snap engine (`findSnapPoint`, ADR-403 Phase 2 OSNAP). The
+ * world-Y (elevation) is dropped because the floor plane already fixed the
+ * height. Step 1 of the two-conversion chain documented above.
+ */
+export function worldToPlanMm(worldPoint: THREE.Vector3): Point2D {
+  const planMm = worldToDxfPlan(worldPoint); // { x, y, z } in mm
+  return { x: planMm.x, y: planMm.y };
+}
+
+/**
+ * Convert a DXF plan point in **mm** to the active scene units — step 2 of the
+ * chain. Kept separate so the snap path can resolve a snap in mm (where the snap
+ * engine lives) and convert the corrected point to scene units exactly once,
+ * never re-multiplying. `valueMm · mmToSceneUnits(units)`.
+ */
+export function planMmToScenePoint(planMm: Readonly<Point2D>, units: SceneUnits): Point2D {
+  const factor = mmToSceneUnits(units);
+  return { x: planMm.x * factor, y: planMm.y * factor };
+}
+
+/**
  * Convert a Three.js world point (metres) to a 2D plan point in `units`.
  * Only the horizontal plane matters for placement; the world-Y (elevation) is
  * dropped because the floor plane already fixed the height.
@@ -36,7 +58,5 @@ export function worldToScenePoint(
   worldPoint: THREE.Vector3,
   units: SceneUnits,
 ): Point2D {
-  const planMm = worldToDxfPlan(worldPoint); // { x, y, z } in mm
-  const factor = mmToSceneUnits(units);
-  return { x: planMm.x * factor, y: planMm.y * factor };
+  return planMmToScenePoint(worldToPlanMm(worldPoint), units);
 }
