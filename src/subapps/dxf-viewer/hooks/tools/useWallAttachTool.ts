@@ -39,8 +39,13 @@ import {
   type ColumnAttachTarget,
 } from '../../core/commands/entity-commands/AttachColumnsCommand';
 import {
+  AttachStairsCommand,
+  type StairAttachTarget,
+} from '../../core/commands/entity-commands/AttachStairsCommand';
+import {
   resolveWallAttachTargets,
   resolveColumnAttachTargets,
+  resolveStairAttachTargets,
   resolveStructuralHostId,
   findStructuralHostAtPoint,
 } from '../../bim/walls/wall-attach-pick';
@@ -82,15 +87,16 @@ export function useWallAttachTool({
 }: UseWallAttachToolProps): UseWallAttachToolReturn {
   const isWallTool = activeTool === 'wall-attach-top' || activeTool === 'wall-attach-base';
   const isColumnTool = activeTool === 'column-attach-top' || activeTool === 'column-attach-base';
-  const isActive = isWallTool || isColumnTool;
-  const entityKind: 'wall' | 'column' = isColumnTool ? 'column' : 'wall';
+  const isStairTool = activeTool === 'stair-attach-top' || activeTool === 'stair-attach-base';
+  const isActive = isWallTool || isColumnTool || isStairTool;
+  const entityKind: 'wall' | 'column' | 'stair' = isColumnTool ? 'column' : isStairTool ? 'stair' : 'wall';
   const side: 'top' | 'base' = activeTool.endsWith('-base') ? 'base' : 'top';
 
   const transformScaleRef = useRef(transformScale);
   transformScaleRef.current = transformScale;
 
   /** Snapshot of attach targets captured on activation — stable for the session. */
-  const targetsRef = useRef<WallAttachTarget[] | ColumnAttachTarget[]>([]);
+  const targetsRef = useRef<WallAttachTarget[] | ColumnAttachTarget[] | StairAttachTarget[]>([]);
   const wasActiveRef = useRef(false);
 
   const getSceneManager = useCallback(() => {
@@ -109,11 +115,13 @@ export function useWallAttachTool({
       const scene = levelManager.currentLevelId
         ? levelManager.getLevelScene(levelManager.currentLevelId)
         : null;
-      const targets = scene
-        ? entityKind === 'column'
+      const targets = !scene
+        ? []
+        : entityKind === 'column'
           ? resolveColumnAttachTargets(selectedEntityIds, scene.entities)
-          : resolveWallAttachTargets(selectedEntityIds, scene.entities)
-        : [];
+          : entityKind === 'stair'
+            ? resolveStairAttachTargets(selectedEntityIds, scene.entities)
+            : resolveWallAttachTargets(selectedEntityIds, scene.entities);
       targetsRef.current = targets;
       if (targets.length === 0) {
         onToolChange?.('select');
@@ -168,6 +176,14 @@ export function useWallAttachTool({
           side,
           hostId,
           columnIds: colTargets.map((t) => t.columnId),
+        });
+      } else if (entityKind === 'stair') {
+        const stairTargets = targets as StairAttachTarget[];
+        executeCommand(new AttachStairsCommand(side, hostId, stairTargets, sm));
+        EventBus.emit('bim:stairs-attached-manual', {
+          side,
+          hostId,
+          stairIds: stairTargets.map((t) => t.stairId),
         });
       } else {
         const wallTargets = targets as WallAttachTarget[];

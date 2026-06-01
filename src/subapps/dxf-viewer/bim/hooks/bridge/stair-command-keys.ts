@@ -74,8 +74,21 @@ export const STAIR_RIBBON_KEYS = {
   },
   actions: {
     close: 'stair.actions.close',
+    // ADR-401 Phase G.3 — manual detach of stair top/base from its structural host.
+    detachTop: 'stair.actions.detachTop',
+    detachBase: 'stair.actions.detachBase',
   },
 } as const;
+
+const STAIR_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>([
+  STAIR_RIBBON_KEYS.actions.detachTop,
+  STAIR_RIBBON_KEYS.actions.detachBase,
+]);
+
+/** ADR-401 Phase G.3 — type guard used by `useRibbonCommands` to route stair detach actions. */
+export function isStairActionKey(action: string): boolean {
+  return STAIR_ACTION_KEY_SET.has(action);
+}
 
 /**
  * ADR-358 Phase 7b2b-β Stream F + Phase 9B-3 — panel visibility keys

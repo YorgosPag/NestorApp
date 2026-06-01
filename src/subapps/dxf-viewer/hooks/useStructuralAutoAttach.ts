@@ -29,6 +29,10 @@ import {
   findColumnsToAutoAttachBaseToHost,
 } from '../bim/columns/column-structural-attach-coordinator';
 import {
+  findStairsToAutoAttachToHost,
+  findStairsToAutoAttachBaseToHost,
+} from '../bim/stairs/stair-structural-attach-coordinator';
+import {
   AttachWallsTopCommand,
   type WallAttachTarget,
 } from '../core/commands/entity-commands/AttachWallsTopCommand';
@@ -37,11 +41,16 @@ import {
   AttachColumnsCommand,
   type ColumnAttachTarget,
 } from '../core/commands/entity-commands/AttachColumnsCommand';
-import { isWallEntity, isColumnEntity } from '../types/entities';
+import {
+  AttachStairsCommand,
+  type StairAttachTarget,
+} from '../core/commands/entity-commands/AttachStairsCommand';
+import { isWallEntity, isColumnEntity, isStairEntity } from '../types/entities';
 import type { Entity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
 import type { WallEntity } from '../bim/types/wall-types';
 import type { ColumnEntity } from '../bim/types/column-types';
+import type { StairEntity } from '../bim/types/stair-types';
 
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
@@ -75,6 +84,19 @@ function buildColumnAttachTargets(
   return targets;
 }
 
+/** Map stair ids → attach targets ({stairId, kind}) από το live scene. */
+function buildStairAttachTargets(
+  stairIds: readonly string[],
+  entities: readonly Entity[],
+): StairAttachTarget[] {
+  const targets: StairAttachTarget[] = [];
+  for (const id of stairIds) {
+    const s = entities.find((e) => e.id === id);
+    if (s && isStairEntity(s)) targets.push({ stairId: id, kind: (s as StairEntity).kind });
+  }
+  return targets;
+}
+
 export function useStructuralAutoAttach(props: { levelManager: LevelManagerLike }): void {
   const { levelManager } = props;
   const { execute } = useCommandHistory();
@@ -93,9 +115,13 @@ export function useStructuralAutoAttach(props: { levelManager: LevelManagerLike 
       // ADR-401 Phase F.3 — same auto-attach for columns under the new host.
       const colTopTargets = buildColumnAttachTargets(findColumnsToAutoAttachToHost(host, entities), entities);
       const colBaseTargets = buildColumnAttachTargets(findColumnsToAutoAttachBaseToHost(host, entities), entities);
+      // ADR-401 Phase G.3 — same auto-attach for stairs under the new host.
+      const stairTopTargets = buildStairAttachTargets(findStairsToAutoAttachToHost(host, entities), entities);
+      const stairBaseTargets = buildStairAttachTargets(findStairsToAutoAttachBaseToHost(host, entities), entities);
       if (
         topTargets.length === 0 && baseTargets.length === 0 &&
-        colTopTargets.length === 0 && colBaseTargets.length === 0
+        colTopTargets.length === 0 && colBaseTargets.length === 0 &&
+        stairTopTargets.length === 0 && stairBaseTargets.length === 0
       ) return;
 
       const sm = new LevelSceneManagerAdapter(
@@ -118,6 +144,14 @@ export function useStructuralAutoAttach(props: { levelManager: LevelManagerLike 
       if (colBaseTargets.length > 0) {
         execute(new AttachColumnsCommand('base', entity.id, colBaseTargets, sm));
         EventBus.emit('bim:columns-auto-attached-base', { columnIds: colBaseTargets.map((t) => t.columnId), hostId: entity.id });
+      }
+      if (stairTopTargets.length > 0) {
+        execute(new AttachStairsCommand('top', entity.id, stairTopTargets, sm));
+        EventBus.emit('bim:stairs-auto-attached', { stairIds: stairTopTargets.map((t) => t.stairId), hostId: entity.id });
+      }
+      if (stairBaseTargets.length > 0) {
+        execute(new AttachStairsCommand('base', entity.id, stairBaseTargets, sm));
+        EventBus.emit('bim:stairs-auto-attached-base', { stairIds: stairBaseTargets.map((t) => t.stairId), hostId: entity.id });
       }
     });
     return () => unsub();

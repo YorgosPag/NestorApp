@@ -18,9 +18,10 @@
  */
 
 import type { Entity } from '../../types/entities';
-import { isWallEntity, isBeamEntity, isSlabEntity, isColumnEntity } from '../../types/entities';
+import { isWallEntity, isBeamEntity, isSlabEntity, isColumnEntity, isStairEntity } from '../../types/entities';
 import type { WallAttachTarget } from '../../core/commands/entity-commands/AttachWallsTopCommand';
 import type { ColumnAttachTarget } from '../../core/commands/entity-commands/AttachColumnsCommand';
+import type { StairAttachTarget } from '../../core/commands/entity-commands/AttachStairsCommand';
 import type { Point2D } from '../../rendering/types/Types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 
@@ -46,6 +47,19 @@ export function resolveColumnAttachTargets(
   for (const id of selectedIds) {
     const e = entities.find((x) => x.id === id);
     if (e && isColumnEntity(e)) targets.push({ columnId: e.id, kind: e.kind });
+  }
+  return targets;
+}
+
+/** Selected entity ids → stair attach targets (id + kind). Non-stairs skipped. */
+export function resolveStairAttachTargets(
+  selectedIds: readonly string[],
+  entities: readonly Entity[],
+): StairAttachTarget[] {
+  const targets: StairAttachTarget[] = [];
+  for (const id of selectedIds) {
+    const e = entities.find((x) => x.id === id);
+    if (e && isStairEntity(e)) targets.push({ stairId: e.id, kind: e.kind });
   }
   return targets;
 }

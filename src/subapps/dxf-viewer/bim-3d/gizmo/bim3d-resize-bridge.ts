@@ -61,6 +61,8 @@ import { MIN_SLAB_THICKNESS_MM } from '../../bim/types/slab-types';
 import { perpUnit, unitVector } from '../../bim/grips/grip-math';
 import { detachWallSide, isWallSideAttached } from '../../bim/walls/wall-attach-detach';
 import { detachEntitySide, isEntitySideAttached } from '../../bim/entities/entity-attach-detach';
+import { detachStairSide, isStairSideAttached } from '../../bim/stairs/stair-attach-detach';
+import { snapTotalRiseToWholeSteps } from '../../bim/geometry/stair-vertical-profile';
 import { directionToUnitVector, perp as stairPerp } from '../../bim/geometry/stairs/stair-geometry-shared';
 import { mmScaleFor, mmToSceneUnits, inferSceneUnitsFromWidth } from '../../utils/scene-units';
 
@@ -237,6 +239,46 @@ export function computeSlabResizeParams(
 // ─── Stair ─────────────────────────────────────────────────────────────────────
 
 /**
+ * Stair axis-Y resize (ADR-401 Phase G.3 — Revit «Desired number of risers»). TOP
+ * grip grows `totalRise`; BASE grip lifts the base (top fixed) so `totalRise`
+ * shrinks. Both re-step via the shared whole-step snap SSoT (`snapTotalRiseToWholeSteps`
+ * — same formula as the attach resolver) and DETACH the affected side first if it
+ * was attached. `null` = no-op / degenerate (non-positive resulting totalRise).
+ */
+function computeStairVerticalResize(
+  params: StairParams,
+  deltaUpMm: number,
+  mode: GizmoResizeMode,
+): StairParams | null {
+  if (deltaUpMm === 0) return null;
+  if (mode === 'mirror') {
+    // BASE grip: base += Δ, totalRise -= Δ (top fixed).
+    const base = isStairSideAttached(params, 'base') ? detachStairSide(params, 'base') : params;
+    const newTotalRise = base.totalRise - deltaUpMm;
+    if (!(newTotalRise > 0) || base.rise <= 0) return null;
+    const snap = snapTotalRiseToWholeSteps(newTotalRise, base.rise);
+    return {
+      ...base,
+      basePoint: { ...base.basePoint, z: base.basePoint.z + deltaUpMm },
+      totalRise: snap.totalRise,
+      stepCount: snap.stepCount,
+      rise: snap.rise,
+    };
+  }
+  // TOP grip: totalRise += Δ (base fixed).
+  const top = isStairSideAttached(params, 'top') ? detachStairSide(params, 'top') : params;
+  const newTotalRise = top.totalRise + deltaUpMm;
+  if (!(newTotalRise > 0) || top.rise <= 0) return null;
+  const snap = snapTotalRiseToWholeSteps(newTotalRise, top.rise);
+  return {
+    ...top,
+    totalRise: snap.totalRise,
+    stepCount: snap.stepCount,
+    rise: snap.rise,
+  };
+}
+
+/**
  * Stair plan resize → new `StairParams`, reusing the 2D grip-drag SSoT
  * (`applyStairGripDrag`). ADR-402 Sub-Phase 1.
  *
@@ -259,15 +301,23 @@ export function computeSlabResizeParams(
  * delta`): the anchor is derived with the SAME formula each transform inverts
  * (`base ± dim`), and the mm slide is converted into the stair's drawing-unit space
  * via the stair grip SSoT factor (`mmToSceneUnits(inferSceneUnitsFromWidth)`), so it
- * is scene-correct in mm / cm / m drawings alike. Vertical (axis-Y) is intentionally
- * NOT a stair resize — the height is `rise × stepCount` (building-code driven), edited
- * from the properties panel, not by free dragging.
+ * is scene-correct in mm / cm / m drawings alike.
+ *
+ * Vertical (axis-Y) — ADR-401 Phase G.3 (Revit «Desired number of risers»): dragging
+ * the TOP/BASE octahedron changes the **step COUNT** to reach the new height with
+ * equal risers (the whole-step snap SSoT `snapTotalRiseToWholeSteps`, shared with the
+ * attach resolver — no duplicate formula), NOT a free riser-height stretch:
+ *   • mode 'normal' (TOP) → top face moves, base fixed → `totalRise += Δ` → re-step.
+ *   • mode 'mirror' (BASE) → base face moves, top fixed → `basePoint.z += Δ`,
+ *     `totalRise -= Δ` → re-step.
+ * Dragging a side attached to a structural host DETACHES it first (Revit "edit breaks
+ * attach", `detachStairSide`).
  */
 export function computeStairResizeParams(
   entity: StairEntity,
   drag: ResizeDragMm,
 ): StairParams | null {
-  if (drag.axis === 'y') return null;
+  if (drag.axis === 'y') return computeStairVerticalResize(entity.params, drag.deltaUpMm, drag.mode);
   const params = entity.params;
   const u = directionToUnitVector(params.direction);
   const p = stairPerp(u);

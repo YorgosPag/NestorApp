@@ -118,6 +118,9 @@ export type ToolType =
   // ADR-401 Phase F.3: BIM Column Attach Top/Base pick-host (Revit Attach Top/Base)
   | 'column-attach-top'
   | 'column-attach-base'
+  // ADR-401 Phase G.3: BIM Stair Attach Top/Base pick-host (Revit Attach Top/Base)
+  | 'stair-attach-top'
+  | 'stair-attach-base'
   // ADR-363 Phase 2: BIM Opening drawing tool (5 kinds — door/window/sliding/french/fixed)
   | 'opening'
   // ADR-363 Phase 3: BIM Slab drawing tool (polygon — floor/ceiling/roof/ground/foundation)

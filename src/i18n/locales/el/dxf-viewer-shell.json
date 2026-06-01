@@ -710,6 +710,7 @@
       "stairMultiStory": "Πολυώροφα",
       "stairMultiStoryHeight": "Ύψος Ορόφου",
       "stairMultiFlight": "Πολλαπλά Σκέλη",
+      "stairStructuralAttach": "Σύνδεση δομικού",
       "stairActions": "Ενέργειες",
       "wallCategory": "Κατηγορία",
       "wallGeometry": "Γεωμετρία",
@@ -1060,6 +1061,10 @@
         "flight3TurnDirection": "Στροφή Σκέλους 3",
         "turnDirectionLeft": "Αριστερά",
         "turnDirectionRight": "Δεξιά",
+        "attachTop": "Σύνδεση Κορυφής",
+        "attachBase": "Σύνδεση Βάσης",
+        "detachTop": "Αποσύνδεση Κορυφής",
+        "detachBase": "Αποσύνδεση Βάσης",
         "close": "Κλείσιμο",
         "floor": {
           "section": {

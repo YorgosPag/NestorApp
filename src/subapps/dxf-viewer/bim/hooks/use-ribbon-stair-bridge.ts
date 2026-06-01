@@ -26,11 +26,16 @@
 import { useCallback, useMemo } from 'react';
 import { useCommandHistory } from '../../core/commands';
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
+import { DetachStairsCommand, type StairDetachSide } from '../../core/commands/entity-commands/DetachStairsCommand';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { isStairEntity } from '../../types/entities';
 import type { StairEntity } from '../../types/entities';
 import type { StairParams } from '../types/stair-types';
+import { detachStairSidesAffectedByVerticalEdit } from '../stairs/stair-attach-detach';
+import { resolveStairAttachTargets } from '../walls/wall-attach-pick';
+import { EventBus } from '../../systems/events/EventBus';
 import {
+  STAIR_RIBBON_KEYS,
   STAIR_RIBBON_VISIBILITY_KEYS,
   isStairRibbonKey,
   isStairRibbonStringKey,
@@ -60,7 +65,7 @@ type LevelManagerLike = Pick<
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId'
+  'getPrimaryId' | 'getSelectedEntityIds'
 >;
 
 export interface UseRibbonStairBridgeProps {
@@ -86,6 +91,12 @@ export interface RibbonStairBridge {
    * outside `STAIR_RIBBON_VISIBILITY_KEYS` return `true` (no-op, panel shown).
    */
   readonly getPanelVisibility: (visibilityKey: string) => boolean;
+  /**
+   * ADR-401 Phase G.3 — handles stair detach simple-button actions
+   * (detachTop / detachBase). Other action keys are no-ops (composed in
+   * `useRibbonCommands`).
+   */
+  readonly onAction: (action: string) => void;
 }
 
 /**
@@ -146,13 +157,18 @@ export function useRibbonStairBridge(
   const dispatchParams = useCallback(
     (stair: StairEntity, next: StairParams): void => {
       if (!levelManager.currentLevelId) return;
+      // ADR-401 Phase G.3 — a manual rise/stepCount/elevation edit breaks the
+      // matching top/base structural attach first (Revit «edit breaks attach»),
+      // so the explicit value wins over the host follow. Detach + edit collapse
+      // into one undo step.
+      const broken = detachStairSidesAffectedByVerticalEdit(stair.params, next);
       const sm = new LevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,
       );
       executeCommand(
-        new UpdateStairParamsCommand(stair.id, next, stair.params, sm, false),
+        new UpdateStairParamsCommand(stair.id, broken, stair.params, sm, false),
       );
     },
     [executeCommand, levelManager],
@@ -249,12 +265,43 @@ export function useRibbonStairBridge(
     return true;
   }, [resolveStair]);
 
+  // ADR-401 Phase G.3 — manual detach of ALL selected stairs' top/base from their
+  // structural host(s). Restores stair default binding + clears attach ids (one undo).
+  const handleDetach = useCallback(
+    (side: StairDetachSide): void => {
+      if (!levelManager.currentLevelId) return;
+      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
+      if (!scene) return;
+      const targets = resolveStairAttachTargets(
+        universalSelection.getSelectedEntityIds(),
+        scene.entities,
+      );
+      if (targets.length === 0) return;
+      const sm = new LevelSceneManagerAdapter(
+        levelManager.getLevelScene,
+        levelManager.setLevelScene,
+        levelManager.currentLevelId,
+      );
+      executeCommand(new DetachStairsCommand(side, targets, sm));
+      EventBus.emit('bim:stairs-detached', { side, stairIds: targets.map((t) => t.stairId) });
+    },
+    [levelManager, universalSelection, executeCommand],
+  );
+
+  const onAction = useCallback(
+    (action: string): void => {
+      if (action === STAIR_RIBBON_KEYS.actions.detachTop) { handleDetach('top'); return; }
+      if (action === STAIR_RIBBON_KEYS.actions.detachBase) { handleDetach('base'); return; }
+    },
+    [handleDetach],
+  );
+
   // ADR-040 Phase XIX: memoize return so RibbonCommandProvider deps stay stable.
   // Non-memoized object literal here caused 14/28 commit re-render cascade in
   // RibbonRoot + RibbonCommandProvider + 30+ button consumers (profile 2026-05-16).
   return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, getPanelVisibility],
+    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, getPanelVisibility, onAction }),
+    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, getPanelVisibility, onAction],
   );
 }
 

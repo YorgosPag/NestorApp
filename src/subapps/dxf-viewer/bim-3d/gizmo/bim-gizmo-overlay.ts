@@ -58,10 +58,10 @@ const RESIZE_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>>
   wall: ['resize-x', 'resize-z', 'resize-y', 'resize-m-y'],
   beam: ['resize-x', 'resize-z', 'resize-y'],
   slab: ['resize-y'],
-  // ADR-402 Sub-Phase 1 — stair: plan-only handles. The bridge projects the slide
-  // onto the stair's local frame (perp → width, axial → run/stepCount); there is no
-  // vertical handle (height = rise × stepCount, building-code → properties panel).
-  stair: ['resize-x', 'resize-z'],
+  // ADR-402 Sub-Phase 1 — stair: plan handles (perp → width, axial → run/stepCount).
+  // ADR-401 Phase G.3 — + vertical top/base octahedra: dragging re-steps to the new
+  // height (Revit «Desired number of risers») and detaches the side if attached.
+  stair: ['resize-x', 'resize-z', 'resize-y', 'resize-m-y'],
 };
 
 /** Active handle id set for a selected entity: base move/rotate + any resize handles. */

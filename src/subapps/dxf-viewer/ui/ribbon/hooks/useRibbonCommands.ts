@@ -26,7 +26,7 @@ import type { RibbonSlabOpeningBridge } from './useRibbonSlabOpeningBridge';
 import { isSlabOpeningBadgeKey } from './useRibbonSlabOpeningBridge';
 import type { RibbonLineToolBridge } from './useRibbonLineToolBridge';
 import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
-import { isStairRibbonKey, isStairRibbonStringKey } from './bridge/stair-command-keys';
+import { isStairRibbonKey, isStairRibbonStringKey, isStairActionKey } from './bridge/stair-command-keys';
 import { isWallRibbonKey, isWallRibbonStringKey, isWallRibbonToggleKey, isWallActionKey } from './bridge/wall-command-keys';
 import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningActionKey, isOpeningTagStyleComboboxKey, isOpeningTagStyleToggleKey } from './bridge/opening-command-keys';
 import { isSlabRibbonKey, isSlabRibbonStringKey, isSlabActionKey } from './bridge/slab-command-keys';
@@ -263,9 +263,13 @@ export function useRibbonCommands({
         slabOpeningBridge.onAction(action);
         return;
       }
+      if (isStairActionKey(action)) {
+        stairBridge.onAction(action);
+        return;
+      }
       wrappedHandleAction(action, data);
     },
-    [wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, wrappedHandleAction],
+    [wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, wrappedHandleAction],
   );
 
   return React.useMemo(

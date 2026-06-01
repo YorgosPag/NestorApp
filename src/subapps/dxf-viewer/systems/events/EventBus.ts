@@ -281,6 +281,14 @@ export interface DrawingEventMap {
   // ADR-401 Phase F.3 — manual attach/detach of column top/base (ribbon pick-host).
   'bim:columns-attached-manual': { side: 'top' | 'base'; columnIds: string[]; hostId: string };
   'bim:columns-detached': { side: 'top' | 'base'; columnIds: string[] };
+  // ADR-401 Phase G.3 — stair attach mirrors of the wall/column events above. N
+  // stairs auto-attached their top/base to a just-created structural host (Revit
+  // «Desired number of risers» re-step at render). Undoable via AttachStairsCommand.
+  'bim:stairs-auto-attached': { stairIds: string[]; hostId: string };
+  'bim:stairs-auto-attached-base': { stairIds: string[]; hostId: string };
+  // ADR-401 Phase G.3 — manual attach/detach of stair top/base (ribbon pick-host).
+  'bim:stairs-attached-manual': { side: 'top' | 'base'; stairIds: string[]; hostId: string };
+  'bim:stairs-detached': { side: 'top' | 'base'; stairIds: string[] };
   // ADR-363 fix — multi-entity move dirty-flag propagation.
   // Carries the post-move entities directly so listeners never call
   // getLevelScene() (which returns stale React state at emit time).

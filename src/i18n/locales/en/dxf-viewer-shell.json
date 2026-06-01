@@ -710,6 +710,7 @@
       "stairMultiStory": "Multi-Story",
       "stairMultiStoryHeight": "Story Height",
       "stairMultiFlight": "Multi-Flight",
+      "stairStructuralAttach": "Structural Attach",
       "stairActions": "Actions",
       "wallCategory": "Category",
       "wallGeometry": "Geometry",
@@ -1060,6 +1061,10 @@
         "flight3TurnDirection": "Flight 3 Turn",
         "turnDirectionLeft": "Left",
         "turnDirectionRight": "Right",
+        "attachTop": "Attach Top",
+        "attachBase": "Attach Base",
+        "detachTop": "Detach Top",
+        "detachBase": "Detach Base",
         "close": "Close",
         "floor": {
           "section": {

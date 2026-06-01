@@ -31,36 +31,69 @@ import {
 export type EntityAttachSide = 'top' | 'base';
 
 /**
- * Structural subset of the params an attachable BIM entity exposes. Both
- * `WallParams` and `ColumnParams` satisfy this (same field names; binding types
- * are aliases). The detach helpers are generic over this shape so the binding
- * reset lives in ONE place.
+ * Minimal binding subset shared by EVERY attachable BIM entity. `WallParams`,
+ * `ColumnParams` (required bindings) AND `StairParams` (optional bindings, ADR-401
+ * Phase G) all satisfy this — the binding fields are identical, and the
+ * `Wall|Column|Stair{Top|Base}Binding` types are aliases in `bim-binding.ts`. The
+ * binding reset / attach test live here in ONE place, type-honest over this shape.
  */
-export interface VerticalAttachParams {
-  readonly topBinding: WallTopBinding;
-  readonly baseBinding: WallBaseBinding;
+export interface AttachBindingParams {
+  readonly topBinding?: WallTopBinding;
+  readonly baseBinding?: WallBaseBinding;
   readonly attachTopToIds?: readonly string[];
   readonly attachBaseToIds?: readonly string[];
+}
+
+/**
+ * Structural subset of the params a HEIGHT-driven attachable entity exposes
+ * (wall + column). Extends the binding subset with the vertical extent drivers
+ * (`height` / `baseOffset`) so `detachSidesAffectedByVerticalEdit` can detect a
+ * manual edit. Stairs use a step-count driver instead, so they DON'T satisfy this
+ * (they detach via `detachStairSidesAffectedByVerticalEdit`, stair-attach-detach.ts).
+ */
+export interface VerticalAttachParams extends AttachBindingParams {
+  readonly topBinding: WallTopBinding;
+  readonly baseBinding: WallBaseBinding;
   /** mm. Top extent driver (a manual edit of it breaks a top attach). */
   readonly height: number;
   /** mm. Base extent driver (a manual edit of it breaks a base attach). */
   readonly baseOffset: number;
 }
 
+/** Default bindings a side resets to on detach (differs per entity — stair top = 'unconnected'). */
+export interface AttachDetachDefaults {
+  readonly top: WallTopBinding;
+  readonly base: WallBaseBinding;
+}
+
+/** Wall/column defaults (top = 'storey-ceiling', base = 'storey-floor') — the back-compat fallback. */
+const WALL_ATTACH_DETACH_DEFAULTS: AttachDetachDefaults = {
+  top: DEFAULT_WALL_TOP_BINDING,
+  base: DEFAULT_WALL_BASE_BINDING,
+};
+
 /**
  * Reset the side-specific binding to its default + clear its host list.
  * UNCONDITIONAL — the manual «Detach» button always resets. Callers that should
  * only act when actually attached (the 3D grip's "edit breaks attach") guard
  * with `isEntitySideAttached` first. Returns a fresh object preserving `T`.
+ *
+ * `defaults` lets each entity reset to its own honest default (wall/column top =
+ * 'storey-ceiling'; stair top = 'unconnected', ADR-401 Phase G). Omitted → wall
+ * defaults, so the existing wall/column call-sites stay unchanged.
  */
-export function detachEntitySide<T extends VerticalAttachParams>(params: T, side: EntityAttachSide): T {
+export function detachEntitySide<T extends AttachBindingParams>(
+  params: T,
+  side: EntityAttachSide,
+  defaults: AttachDetachDefaults = WALL_ATTACH_DETACH_DEFAULTS,
+): T {
   return side === 'top'
-    ? { ...params, topBinding: DEFAULT_WALL_TOP_BINDING, attachTopToIds: undefined }
-    : { ...params, baseBinding: DEFAULT_WALL_BASE_BINDING, attachBaseToIds: undefined };
+    ? { ...params, topBinding: defaults.top, attachTopToIds: undefined }
+    : { ...params, baseBinding: defaults.base, attachBaseToIds: undefined };
 }
 
 /** True when the entity's given vertical side is currently attached to a structural host. */
-export function isEntitySideAttached(params: VerticalAttachParams, side: EntityAttachSide): boolean {
+export function isEntitySideAttached(params: AttachBindingParams, side: EntityAttachSide): boolean {
   return side === 'top' ? params.topBinding === 'attached' : params.baseBinding === 'attached';
 }
 

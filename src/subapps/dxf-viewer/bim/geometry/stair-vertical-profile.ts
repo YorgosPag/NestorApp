@@ -34,6 +34,7 @@
 
 import type { Point3D } from '../types/stair-types';
 import type { StairTopBinding, StairBaseBinding } from '../types/bim-binding';
+import type { EntityAttachSide } from '../entities/entity-attach-detach';
 import { directionToUnitVector, perp } from './stairs/stair-geometry-shared';
 import type { HostFootprintInput, Pt2 } from './wall-host-plan-builder';
 import {
@@ -90,6 +91,27 @@ export interface StairVerticalProfile {
   readonly missingHostIds: readonly string[];
 }
 
+// ─── Whole-step snap SSoT (Revit «Desired number of risers» — ίσα risers) ─────
+
+/** Αποτέλεσμα whole-step snap: ακέραια σκαλοπάτια που γεμίζουν ακριβώς το `totalRise`. */
+export interface WholeStepSnap {
+  readonly stepCount: number;
+  readonly rise: number;
+  readonly totalRise: number;
+}
+
+/**
+ * Whole-step snap SSoT: δοθέντος ενός raw `totalRise` (mm) και του nominal ύψους
+ * βαθμίδας, βρες τα ΑΚΕΡΑΙΑ σκαλοπάτια που το γεμίζουν με ίσα risers (Revit
+ * «Desired number of risers»): `stepCount = round(totalRise / nominalRise)`,
+ * `rise' = totalRise / stepCount`. ΕΝΑΣ τόπος για τη φόρμουλα — την καλούν τόσο ο
+ * attach resolver (παρακάτω) όσο και το 3D κάθετο grip (`bim3d-resize-bridge`).
+ */
+export function snapTotalRiseToWholeSteps(totalRiseRaw: number, nominalRise: number): WholeStepSnap {
+  const stepCount = Math.max(1, Math.round(totalRiseRaw / nominalRise));
+  return { stepCount, rise: totalRiseRaw / stepCount, totalRise: totalRiseRaw };
+}
+
 // ─── Plan sample points (κέντρο + γωνίες πλάτους στα άκρα του run) ─────────────
 
 function topSamples(p: StairVerticalParams): Pt2[] {
@@ -116,6 +138,16 @@ function baseSamples(p: StairVerticalParams): Pt2[] {
     { x: cx + q.x * half, y: cy + q.y * half },
     { x: cx - q.x * half, y: cy - q.y * half },
   ];
+}
+
+/**
+ * Public plan-sample SSoT για auto-attach detection (ADR-401 Phase G.3). Δίνει τα
+ * ίδια αντιπροσωπευτικά plan-points (κέντρο + γωνίες πλάτους) στο πάνω άκρο
+ * (`side='top'`) ή στο κάτω άκρο (`side='base'`) του run που χρησιμοποιεί ο resolver
+ * — ώστε ο coordinator να ελέγχει host coverage με ΤΗΝ ΙΔΙΑ γεωμετρία.
+ */
+export function stairPlanSamples(p: StairVerticalParams, side: EntityAttachSide): Pt2[] {
+  return side === 'top' ? topSamples(p) : baseSamples(p);
 }
 
 // ─── Base resolution (upper-envelope: ψηλότερη άνω-παρειά) ────────────────────
@@ -231,15 +263,14 @@ export function resolveStairVerticalProfile(
   }
 
   // Whole-step snap (Revit ίσα risers): ακέραια σκαλοπάτια, ακριβής συνάντηση top.
-  const stepCount = Math.max(1, Math.round(totalRiseRaw / params.rise));
-  const rise = totalRiseRaw / stepCount;
+  const snap = snapTotalRiseToWholeSteps(totalRiseRaw, params.rise);
 
   return {
     baseZmm: base.baseZmm,
     topZmm: top.topZmm,
-    totalRise: totalRiseRaw,
-    stepCount,
-    rise,
+    totalRise: snap.totalRise,
+    stepCount: snap.stepCount,
+    rise: snap.rise,
     topHasAttach: top.hasAttach,
     baseHasAttach: base.hasAttach,
     degenerate: false,

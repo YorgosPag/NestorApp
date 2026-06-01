@@ -546,6 +546,62 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
       ],
     },
     {
+      // ADR-401 Phase G.3 — manual «Attach/Detach Top/Base to structural» (Revit
+      // parity, mirror του wall/column panel). Attach buttons activate a pick-host
+      // tool (commandKey = ToolType, no `action`); detach buttons fire a bridge action.
+      id: 'stair-structural-attach',
+      labelKey: 'ribbon.panels.stairStructuralAttach',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'stair.attachTop',
+                labelKey: 'ribbon.commands.stairEditor.attachTop',
+                icon: 'bim-wall-attach-top',
+                commandKey: 'stair-attach-top',
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'stair.attachBase',
+                labelKey: 'ribbon.commands.stairEditor.attachBase',
+                icon: 'bim-wall-attach-base',
+                commandKey: 'stair-attach-base',
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'stair.detachTop',
+                labelKey: 'ribbon.commands.stairEditor.detachTop',
+                icon: 'bim-wall-detach',
+                commandKey: STAIR_RIBBON_KEYS.actions.detachTop,
+                action: STAIR_RIBBON_KEYS.actions.detachTop,
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'stair.detachBase',
+                labelKey: 'ribbon.commands.stairEditor.detachBase',
+                icon: 'bim-wall-detach',
+                commandKey: STAIR_RIBBON_KEYS.actions.detachBase,
+                action: STAIR_RIBBON_KEYS.actions.detachBase,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'stair-actions',
       labelKey: 'ribbon.panels.stairActions',
       rows: [

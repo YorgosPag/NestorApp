@@ -70,6 +70,28 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-401 Phase G.3 — stair attach mirrors (reuse the generic messages).
+    unsubs.push(
+      EventBus.on('bim:stairs-auto-attached', () => {
+        toast.info(t('attachToStructural.autoAttached'));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:stairs-auto-attached-base', () => {
+        toast.info(t('attachToStructural.autoAttached'));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:stairs-attached-manual', () => {
+        toast.info(t('attachToStructural.attachedManual'));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:stairs-detached', () => {
+        toast.info(t('attachToStructural.detached'));
+      }),
+    );
+
     return () => unsubs.forEach((u) => u());
   }, [t]);
 }
