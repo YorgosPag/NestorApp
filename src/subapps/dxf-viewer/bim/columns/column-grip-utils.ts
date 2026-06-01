@@ -47,12 +47,35 @@ export function projectDeltaToLocal(
 }
 
 /**
+ * Bounding-box dimensions (mm) of a polygon-backed cross-section (U-shape /
+ * composite, ADR-363 Phase 2b). The polygon is bbox-centred by invariant (the
+ * «από-περίγραμμα» generator + `resizePolyVertex` re-centre it), so the centre
+ * is 0 and only the spans matter for the anchor shift.
+ */
+export function polygonBackedBboxMm(
+  poly: readonly Point2D[],
+): { dimX: number; dimY: number } {
+  let minX = Number.POSITIVE_INFINITY, maxX = Number.NEGATIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY, maxY = Number.NEGATIVE_INFINITY;
+  for (const p of poly) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+  return { dimX: maxX - minX, dimY: maxY - minY };
+}
+
+/**
  * Compute the centroid (bbox centre) of the column footprint σε world coords.
  * For non-circular / non-polygon: `centroid = position + rotatedR(-dx*width, -dy*depth)`.
  * For circular: anchor effectively 'center', `centroid = position`.
  * For polygon (Phase 8C): uses actual N-gon bbox `dimX, dimY` (mirror του
  * `transformFootprint` geometry pipeline), since polygon `depth` is meaningless
  * και bbox depends on sides count.
+ * For polygon-backed U-shape / composite (Phase 2b): uses the actual polygon
+ * bbox (mirror της `transformFootprint` `computeLocalBboxCanvas` κλάδου) ώστε
+ * τα grips να ταιριάζουν με τη γεωμετρία σε ΟΛΑ τα anchors, όχι μόνο 'center'.
  */
 export function computeCentroidWorld(params: ColumnParams): Point2D {
   if (params.kind === 'circular') {
@@ -66,8 +89,14 @@ export function computeCentroidWorld(params: ColumnParams): Point2D {
   const { dx, dy } = ANCHOR_OFFSETS[params.anchor];
   let dimX: number;
   let dimY: number;
+  const uPoly = params.kind === 'U-shape' ? params.ushape?.polygon : undefined;
+  const cPoly = params.kind === 'composite' ? params.composite?.polygon : undefined;
   if (params.kind === 'polygon') {
     ({ dimX, dimY } = polygonBboxMm(params.width, params.polygon?.sides));
+  } else if (uPoly && uPoly.length >= 3) {
+    ({ dimX, dimY } = polygonBackedBboxMm(uPoly));
+  } else if (cPoly && cPoly.length >= 3) {
+    ({ dimX, dimY } = polygonBackedBboxMm(cPoly));
   } else {
     dimX = params.width;
     dimY = params.depth;
@@ -105,4 +134,52 @@ export function farEdgeSignX(dx: number): number {
  */
 export function farEdgeSignY(dy: number): number {
   return dy <= 0 ? +1 : -1;
+}
+
+// ─── Base grip handle positions (Phase 4.5 + 8C) ─────────────────────────────
+
+/**
+ * World position of the width grip handle (far edge midpoint along local X).
+ * Local coords (centered on centroid): `(signX*width/2, 0)`. Polygon uses
+ * symmetric +X point at (width/2, 0) τοπικού πλαισίου centroid (circumscribed
+ * radius representation — visually πέφτει στην περίμετρο του circumscribed
+ * circle, ελαφρώς εκτός polygon για N≠4).
+ *
+ * ADR-397 — handle positions go through `localToWorld`, which scales the mm
+ * local offset by `mmScaleFor(params)` so the handles stay on the column body in
+ * metre/cm scenes (the off-screen-grip bug). `localToWorld` already adds the
+ * centroid + applies rotation.
+ */
+export function widthHandleWorld(params: ColumnParams): Point2D {
+  if (params.kind === 'circular') {
+    // Circular handle sits on the world +X radius from `position` (no rotation).
+    return { x: params.position.x + (params.width / 2) * mmScaleFor(params), y: params.position.y };
+  }
+  if (params.kind === 'polygon') {
+    return localToWorld({ x: params.width / 2, y: 0 }, params);
+  }
+  const { dx } = ANCHOR_OFFSETS[params.anchor];
+  const signX = farEdgeSignX(dx);
+  return localToWorld({ x: (signX * params.width) / 2, y: 0 }, params);
+}
+
+/**
+ * World position of the depth grip handle (far edge midpoint along local Y).
+ */
+export function depthHandleWorld(params: ColumnParams): Point2D {
+  const { dy } = ANCHOR_OFFSETS[params.anchor];
+  const signY = farEdgeSignY(dy);
+  return localToWorld({ x: 0, y: (signY * params.depth) / 2 }, params);
+}
+
+/**
+ * World position of the rotation grip handle. Sits centroid + rotated(0,
+ * dimY/2 + offset) — visually πάνω από το north edge. Polygon uses actual
+ * N-gon bbox dimY (από `polygonBboxMm`) αντί για το meaningless `params.depth`.
+ */
+export function rotationHandleWorld(params: ColumnParams): Point2D {
+  const dimY = params.kind === 'polygon'
+    ? polygonBboxMm(params.width, params.polygon?.sides).dimY
+    : params.depth;
+  return localToWorld({ x: 0, y: dimY / 2 + ROTATION_HANDLE_OFFSET_MM }, params);
 }

@@ -71,6 +71,16 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-01 — ADR-363 «Δομικά από περίγραμμα» selection-highlight tool-gate (compliance note)
+
+**Status**: COMPLIANT — no ADR-040 invariants broken.
+
+Το `canvas-v2/dxf-canvas/dxf-canvas-renderer.ts` πρόσθεσε τα νέα tool ids `wall-from-perimeter`
+και `column-from-perimeter` στη λίστα που επιτρέπει το **selection-highlight** των επιλεγμένων 2Δ
+οντοτήτων (box-select των παρειών). Καθαρά προσθήκη tool-gate στο υπάρχον render branch — καμία
+αλλαγή στο bitmap-cache key, στο subscription model ή στο micro-leaf pattern (ADR-040 Cardinal Rules
+άθικτοι). Πλήρες feature: ADR-363 §«Από περίγραμμα».
+
 ### 2026-06-01 — ADR-401 E.1/F.3/G.3 attach-tool hover affordance fix (compliance note)
 
 **Status**: COMPLIANT — no ADR-040 invariants broken.

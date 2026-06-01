@@ -36,6 +36,32 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-363 «Τοίχος από περίγραμμα» — summary feedback after a box-select build.
+    unsubs.push(
+      EventBus.on('bim:walls-from-perimeter', ({ built, ignored }) => {
+        if (built === 0) {
+          toast.warning(t('perimeterWall.noneBuilt'));
+        } else if (ignored > 0) {
+          toast.info(t('perimeterWall.builtWithIgnored', { built, ignored }));
+        } else {
+          toast.success(t('perimeterWall.built', { built }));
+        }
+      }),
+    );
+
+    // ADR-363 Φάση 3 «Τοιχίο από περίγραμμα» — summary feedback (ΕΝΑ τοιχίο/περίμετρο).
+    unsubs.push(
+      EventBus.on('bim:columns-from-perimeter', ({ built, ignored }) => {
+        if (built === 0) {
+          toast.warning(t('perimeterColumn.noneBuilt'));
+        } else if (ignored > 0) {
+          toast.info(t('perimeterColumn.builtWithIgnored', { built, ignored }));
+        } else {
+          toast.success(t('perimeterColumn.built', { built }));
+        }
+      }),
+    );
+
     // ADR-401 Phase E.1 — manual attach/detach from the contextual wall ribbon.
     unsubs.push(
       EventBus.on('bim:walls-attached-manual', () => {

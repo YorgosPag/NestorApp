@@ -279,6 +279,14 @@ export interface DrawingEventMap {
   // non-blocking info toast (Revit Attach/Detach feedback).
   'bim:walls-attached-manual': { side: 'top' | 'base'; wallIds: string[]; hostId: string };
   'bim:walls-detached': { side: 'top' | 'base'; wallIds: string[] };
+  // ADR-363 «Τοίχος από περίγραμμα» — N filling walls built from selected faces;
+  // `ignored` counts garbage shapes + validator-rejected legs. UI surfaces a
+  // non-blocking Revit-style summary toast («Δημιουργήθηκαν N· αγνοήθηκαν X»).
+  'bim:walls-from-perimeter': { built: number; ignored: number };
+  // ADR-363 Φάση 3 «Τοιχίο από περίγραμμα» — N τοιχία (ColumnEntity) χτίστηκαν από
+  // τις επιλεγμένες παρειές (ΕΝΑ ανά κλειστή περίμετρο)· `ignored` = validator-
+  // rejected περιγράμματα. UI surfaces non-blocking summary toast.
+  'bim:columns-from-perimeter': { built: number; ignored: number };
   // ADR-401 Phase F.3 — column attach mirrors of the wall events above. N columns
   // auto-attached their top/base to a just-created structural host. Undoable via
   // AttachColumnsCommand. UI surfaces a non-blocking info toast (Revit parity).

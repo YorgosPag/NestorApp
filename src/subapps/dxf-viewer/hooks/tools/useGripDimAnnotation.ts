@@ -117,7 +117,13 @@ function buildColumnLabel(
       return `tf=${Math.round(p.ishape?.flangeThickness ?? 20)}`;
     case 'column-i-web-thickness':
       return `tw=${Math.round(p.ishape?.webThickness ?? 15)}`;
+    case 'column-leg-thickness':
+      return `lt=${Math.round(p.ushape?.legThickness ?? p.width / 4)}`;
+    case 'column-base-thickness':
+      return `bt=${Math.round(p.ushape?.baseThickness ?? p.depth / 3)}`;
     default:
+      // ADR-363 Phase 2b — `column-poly-vertex-${n}` per-vertex drags show no
+      // scalar dimension label (the moved vertex is free-form).
       return null;
   }
 }

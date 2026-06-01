@@ -10,6 +10,16 @@
     "attachedManual": "Walls attached to the structural element.",
     "detached": "Walls detached from the structural element."
   },
+  "perimeterWall": {
+    "built": "Created {built} walls from the perimeter.",
+    "builtWithIgnored": "Created {built} walls; ignored {ignored} shapes.",
+    "noneBuilt": "No valid wall perimeter found in the selection."
+  },
+  "perimeterColumn": {
+    "built": "Created {built} structural walls from the perimeter.",
+    "builtWithIgnored": "Created {built} structural walls; ignored {ignored} shapes.",
+    "noneBuilt": "No valid structural-wall perimeter found in the selection."
+  },
   "bim": {
     "wallCascadeDelete": {
       "title": "Delete Wall",
@@ -404,7 +414,8 @@
       "statusPickEntity": "Pick a line or rectangle to place a wall",
       "statusPickSide": "Click a side: line → wall extends toward it; rectangle → inside = interior walls, outside = exterior",
       "statusRegionPick": "Pick 4 lines that form a rectangle (or click inside the region)",
-      "statusRegionMore": "Pick more lines until the rectangle closes (ESC to cancel)"
+      "statusRegionMore": "Pick more lines until the rectangle closes (ESC to cancel)",
+      "statusPerimeterPick": "Box-select the faces of a structural element (rectangle/L/T/U) → one wall per leg"
     },
     "opening": {
       "statusHostWall": "Pick a host wall to place the opening",
@@ -425,6 +436,7 @@
     },
     "column": {
       "statusPosition": "Click to place column — Tab cycles anchor",
+      "statusPerimeterPick": "Box-select the faces of a structural element (rectangle/L/T/U/composite) → ONE structural wall per perimeter",
       "errors": {
         "nonPositiveWidth": "Width must be greater than 0",
         "nonPositiveDepth": "Depth must be greater than 0",
@@ -733,6 +745,7 @@
       "columnGeometry": "Geometry",
       "columnPolygon": "Polygon",
       "columnIshape": "I-shape",
+      "columnUshape": "U-shape",
       "columnMaterial": "Material",
       "columnActions": "Actions",
       "columnStructuralAttach": "Structural Attach",
@@ -865,6 +878,14 @@
         "wallInRegion": {
           "label": "Wall in region (4 lines)",
           "tooltip": "Pick 4 lines that form a rectangle (or click inside the region) → one filling wall"
+        },
+        "wallFromPerimeter": {
+          "label": "Wall from perimeter",
+          "tooltip": "Box-select the faces of a structural element (rectangle/L/T/U) → a chain of leg walls, thickness derived from the geometry"
+        },
+        "columnFromPerimeter": {
+          "label": "Structural wall from perimeter",
+          "tooltip": "Box-select the faces of a structural element (rectangle/L/T/U/composite) → ONE RC structural wall per closed perimeter, geometry taken from the drawing"
         },
         "opening": {
           "label": "Opening",
@@ -1407,6 +1428,8 @@
         "sides": "Sides",
         "flangeThickness": "Flange thickness",
         "webThickness": "Web thickness",
+        "legThickness": "Leg thickness",
+        "baseThickness": "Base thickness",
         "attachTop": "Attach Top",
         "attachBase": "Attach Base",
         "detachTop": "Detach Top",
@@ -1424,7 +1447,8 @@
           "tShape": "T-shape",
           "polygon": "Polygon",
           "shearWall": "Shear wall",
-          "iShape": "I-shape"
+          "iShape": "I-shape",
+          "uShape": "U-shape"
         },
         "anchor": {
           "section": {
@@ -2011,7 +2035,10 @@
         "invalidPolygonSides": "Sides must be an integer between 3 and 12",
         "invalidIShapePlateThickness": "Flange or web thickness below minimum (5mm)",
         "invalidIShapeFlangeOverlap": "Flanges overlap — section depth is too small",
-        "invalidIShapeWebOverflow": "Web exceeds flange width"
+        "invalidIShapeWebOverflow": "Web exceeds flange width",
+        "invalidUshapeLeg": "Invalid U-shape leg thickness — exceeds width",
+        "invalidUshapeBase": "Invalid U-shape base thickness — exceeds depth",
+        "invalidCompositePolygon": "Invalid composite section polygon — needs at least 3 vertices with non-zero area"
       },
       "codeViolations": {
         "widthTooSmall": "Width below Eurocode minimum (250mm)",

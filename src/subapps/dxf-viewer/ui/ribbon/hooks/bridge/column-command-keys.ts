@@ -35,6 +35,10 @@ export const COLUMN_RIBBON_KEYS = {
     flangeThickness: 'column.params.flangeThickness',
     /** ADR-363 Phase 8D — I-shape web thickness (mm, only meaningful αν kind='I-shape'). */
     webThickness: 'column.params.webThickness',
+    /** ADR-363 Phase 2b — U-shape (Π) leg thickness (mm, only meaningful αν kind='U-shape' χωρίς polygon). */
+    legThickness: 'column.params.legThickness',
+    /** ADR-363 Phase 2b — U-shape (Π) base thickness (mm, only meaningful αν kind='U-shape' χωρίς polygon). */
+    baseThickness: 'column.params.baseThickness',
   },
 } as const;
 
@@ -45,7 +49,9 @@ export type ColumnRibbonNumberCommandKey =
   | typeof COLUMN_RIBBON_KEYS.params.rotation
   | typeof COLUMN_RIBBON_KEYS.params.sides
   | typeof COLUMN_RIBBON_KEYS.params.flangeThickness
-  | typeof COLUMN_RIBBON_KEYS.params.webThickness;
+  | typeof COLUMN_RIBBON_KEYS.params.webThickness
+  | typeof COLUMN_RIBBON_KEYS.params.legThickness
+  | typeof COLUMN_RIBBON_KEYS.params.baseThickness;
 
 export type ColumnRibbonStringCommandKey =
   | typeof COLUMN_RIBBON_KEYS.stringParams.kind
@@ -62,6 +68,8 @@ export const COLUMN_RIBBON_NUMBER_KEYS: readonly ColumnRibbonNumberCommandKey[] 
   COLUMN_RIBBON_KEYS.params.sides,
   COLUMN_RIBBON_KEYS.params.flangeThickness,
   COLUMN_RIBBON_KEYS.params.webThickness,
+  COLUMN_RIBBON_KEYS.params.legThickness,
+  COLUMN_RIBBON_KEYS.params.baseThickness,
 ];
 
 export const COLUMN_RIBBON_STRING_KEYS: readonly ColumnRibbonStringCommandKey[] = [
@@ -105,19 +113,24 @@ export const COLUMN_RIBBON_VISIBILITY_KEYS = {
   ishapeParams:     'column.visibility.ishapeParams',
   shearWallCatalog: 'column.visibility.shearWallCatalog',
   ishapeCatalog:    'column.visibility.ishapeCatalog',
+  // ADR-363 Phase 2b — visible iff `kind === 'U-shape'` ΚΑΙ δεν υπάρχει polygon
+  // (manual παραμετρικό Π· polygon-backed επεξεργάζεται με per-vertex grips).
+  ushapeParams:     'column.visibility.ushapeParams',
 } as const;
 
 export type ColumnRibbonVisibilityKey =
   | typeof COLUMN_RIBBON_VISIBILITY_KEYS.polygonParams
   | typeof COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams
   | typeof COLUMN_RIBBON_VISIBILITY_KEYS.shearWallCatalog
-  | typeof COLUMN_RIBBON_VISIBILITY_KEYS.ishapeCatalog;
+  | typeof COLUMN_RIBBON_VISIBILITY_KEYS.ishapeCatalog
+  | typeof COLUMN_RIBBON_VISIBILITY_KEYS.ushapeParams;
 
 const COLUMN_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
   COLUMN_RIBBON_VISIBILITY_KEYS.polygonParams,
   COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams,
   COLUMN_RIBBON_VISIBILITY_KEYS.shearWallCatalog,
   COLUMN_RIBBON_VISIBILITY_KEYS.ishapeCatalog,
+  COLUMN_RIBBON_VISIBILITY_KEYS.ushapeParams,
 ]);
 
 export function isColumnVisibilityKey(key: string): key is ColumnRibbonVisibilityKey {

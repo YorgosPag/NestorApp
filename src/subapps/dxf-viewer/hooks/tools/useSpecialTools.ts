@@ -335,12 +335,16 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   // ('wall-on-entity') and the in-region variant ('wall-in-region') all share
   // ONE useWallTool instance; the placement mode is driven by the active tool id.
   const isWallTool =
-    activeTool === 'wall' || activeTool === 'wall-on-entity' || activeTool === 'wall-in-region';
+    activeTool === 'wall' ||
+    activeTool === 'wall-on-entity' ||
+    activeTool === 'wall-in-region' ||
+    activeTool === 'wall-from-perimeter';
   useToolLifecycle(isWallTool, wallTool.activate, wallTool.deactivate);
   useEffect(() => {
     if (activeTool === 'wall') wallTool.setPlacementMode('freehand');
     else if (activeTool === 'wall-on-entity') wallTool.setPlacementMode('on-entity');
     else if (activeTool === 'wall-in-region') wallTool.setPlacementMode('in-region');
+    else if (activeTool === 'wall-from-perimeter') wallTool.setPlacementMode('outer-perimeter');
   }, [activeTool, wallTool.setPlacementMode]);
   // ADR-363 Phase 2 — OPENING TOOL (resolvers extracted: useSpecialTools-opening.ts)
   const openingTool = useOpeningTool(buildOpeningResolvers(levelManager));
@@ -385,8 +389,23 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       if (!levelId) return 'mm';
       return resolveSceneUnits(levelManager.getLevelScene(levelId));
     },
+    // ADR-363 Φάση 3 — live scene entities για το «Τοιχίο από περίγραμμα» (ανάλυση
+    // των παρειών στο box-select / click-inside).
+    getSceneEntities: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return [];
+      return levelManager.getLevelScene(levelId)?.entities ?? [];
+    },
   });
-  useToolLifecycle(activeTool === 'column', columnTool.activate, columnTool.deactivate);
+  // ADR-363 Φάση 3 — ο freehand column ('column') και το «Τοιχίο από περίγραμμα»
+  // ('column-from-perimeter') μοιράζονται ΕΝΑ useColumnTool· το placement mode
+  // οδηγείται από το active tool id.
+  const isColumnTool = activeTool === 'column' || activeTool === 'column-from-perimeter';
+  useToolLifecycle(isColumnTool, columnTool.activate, columnTool.deactivate);
+  useEffect(() => {
+    if (activeTool === 'column') columnTool.setPlacementMode('freehand');
+    else if (activeTool === 'column-from-perimeter') columnTool.setPlacementMode('outer-perimeter');
+  }, [activeTool, columnTool.setPlacementMode]);
   // ============================================================================
   // ADR-363 Phase 5 — BEAM TOOL
   // ============================================================================

@@ -58,79 +58,41 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnGripKind, GripInfo } from '../../hooks/useGripMovement';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import { ANCHOR_OFFSETS, MIN_COLUMN_DIMENSION_MM } from '../types/column-types';
-import { polygonBboxMm } from './column-anchors';
 import { rotatePoint } from '../../utils/rotation-math';
 import {
   RAD_TO_DEG,
-  ROTATION_HANDLE_OFFSET_MM,
   computeCentroidWorld,
+  depthHandleWorld,
   farEdgeSignX,
   farEdgeSignY,
-  localToWorld,
   projectDeltaToLocal,
+  rotationHandleWorld,
+  widthHandleWorld,
 } from './column-grip-utils';
 import { mmScaleFor } from '../../utils/scene-units';
 import {
   armLengthHandlePosition,
   armWidthHandlePosition,
+  baseThicknessHandlePosition,
   flangeLengthHandlePosition,
   iFlangeThicknessHandlePosition,
   iWebThicknessHandlePosition,
+  legThicknessHandlePosition,
   resizeArmLength,
   resizeArmWidth,
+  resizeBaseThickness,
   resizeFlangeLength,
   resizeIFlangeThickness,
   resizeIWebThickness,
+  resizeLegThickness,
   resizeWebThickness,
   webThicknessHandlePosition,
 } from './column-variant-grips';
-
-// ─── Base grip handle positions (Phase 4.5 + 8C) ─────────────────────────────
-
-/**
- * World position of the width grip handle (far edge midpoint along local X).
- * Local coords (centered on centroid): `(signX*width/2, 0)`. Polygon uses
- * symmetric +X point at (width/2, 0) τοπικού πλαισίου centroid (circumscribed
- * radius representation — visually πέφτει στην περίμετρο του circumscribed
- * circle, ελαφρώς εκτός polygon για N≠4).
- */
-// ADR-397 — handle positions go through `localToWorld`, which scales the mm
-// local offset by `mmScaleFor(params)` so the handles stay on the column body in
-// metre/cm scenes (the off-screen-grip bug). `localToWorld` already adds the
-// centroid + applies rotation.
-function widthHandleWorld(params: ColumnParams): Point2D {
-  if (params.kind === 'circular') {
-    // Circular handle sits on the world +X radius from `position` (no rotation).
-    return { x: params.position.x + (params.width / 2) * mmScaleFor(params), y: params.position.y };
-  }
-  if (params.kind === 'polygon') {
-    return localToWorld({ x: params.width / 2, y: 0 }, params);
-  }
-  const { dx } = ANCHOR_OFFSETS[params.anchor];
-  const signX = farEdgeSignX(dx);
-  return localToWorld({ x: (signX * params.width) / 2, y: 0 }, params);
-}
-
-/**
- * World position of the depth grip handle (far edge midpoint along local Y).
- */
-function depthHandleWorld(params: ColumnParams): Point2D {
-  const { dy } = ANCHOR_OFFSETS[params.anchor];
-  const signY = farEdgeSignY(dy);
-  return localToWorld({ x: 0, y: (signY * params.depth) / 2 }, params);
-}
-
-/**
- * World position of the rotation grip handle. Sits centroid + rotated(0,
- * dimY/2 + offset) — visually πάνω από το north edge. Polygon uses actual
- * N-gon bbox dimY (από `polygonBboxMm`) αντί για το meaningless `params.depth`.
- */
-function rotationHandleWorld(params: ColumnParams): Point2D {
-  const dimY = params.kind === 'polygon'
-    ? polygonBboxMm(params.width, params.polygon?.sides).dimY
-    : params.depth;
-  return localToWorld({ x: 0, y: dimY / 2 + ROTATION_HANDLE_OFFSET_MM }, params);
-}
+import {
+  columnPolygon,
+  polyVertexHandlePosition,
+  resizePolyVertex,
+} from './column-poly-vertex-grips';
 
 // ─── Grip emission (ADR-363 §6 Phase 4.5 + 4.5b) ─────────────────────────────
 
@@ -203,6 +165,33 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
       position: widthHandleWorld(params),
       movesEntity: false,
       columnGripKind: 'column-width',
+    });
+    return grips;
+  }
+
+  // ADR-363 Phase 2b — polygon-backed U-shape / composite (από-περίγραμμα):
+  // center + rotation + ΜΙΑ λαβή ανά κορυφή. ΟΧΙ width/depth grips — είναι
+  // no-ops για polygon-backed (`buildUshapeLocal`/`buildCompositeLocal`
+  // αγνοούν width/depth όταν υπάρχει polygon).
+  const backingPoly = columnPolygon(params);
+  if (backingPoly && backingPoly.length >= 3) {
+    grips.push({
+      entityId: entity.id,
+      gripIndex: 1,
+      type: 'vertex',
+      position: rotationHandleWorld(params),
+      movesEntity: false,
+      columnGripKind: 'column-rotation',
+    });
+    backingPoly.forEach((_, i) => {
+      grips.push({
+        entityId: entity.id,
+        gripIndex: 10 + i,
+        type: 'vertex',
+        position: polyVertexHandlePosition(params, i),
+        movesEntity: false,
+        columnGripKind: `column-poly-vertex-${i}`,
+      });
     });
     return grips;
   }
@@ -283,6 +272,25 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
       movesEntity: false,
       columnGripKind: 'column-i-web-thickness',
     });
+  } else if (params.kind === 'U-shape') {
+    // ADR-363 Phase 2b — manual παραμετρικό Π (χωρίς polygon): base 4 grips +
+    // πάχος ποδιού + πάχος βάσης. (Το polygon-backed U επιστρέφει νωρίτερα.)
+    grips.push({
+      entityId: entity.id,
+      gripIndex: 4,
+      type: 'edge',
+      position: legThicknessHandlePosition(params),
+      movesEntity: false,
+      columnGripKind: 'column-leg-thickness',
+    });
+    grips.push({
+      entityId: entity.id,
+      gripIndex: 5,
+      type: 'edge',
+      position: baseThicknessHandlePosition(params),
+      movesEntity: false,
+      columnGripKind: 'column-base-thickness',
+    });
   }
   // shear-wall: falls through με 4 grips (rect parity — bbox = width × depth)
 
@@ -340,6 +348,14 @@ export function applyColumnGripDrag(
   if (gripKind === 'column-web-thickness') return resizeWebThickness(input);
   if (gripKind === 'column-i-flange-thickness') return resizeIFlangeThickness(input);
   if (gripKind === 'column-i-web-thickness') return resizeIWebThickness(input);
+  // ADR-363 Phase 2b — U-shape (Π) parametric + polygon-backed per-vertex grips.
+  if (gripKind === 'column-leg-thickness') return resizeLegThickness(input);
+  if (gripKind === 'column-base-thickness') return resizeBaseThickness(input);
+  if (gripKind.startsWith('column-poly-vertex-')) {
+    const idx = parseInt(gripKind.slice('column-poly-vertex-'.length), 10);
+    if (!Number.isFinite(idx) || idx < 0) return input.originalParams;
+    return resizePolyVertex(input, idx);
+  }
   return input.originalParams;
 }
 

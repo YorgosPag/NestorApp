@@ -43,6 +43,7 @@ import type {
   ColumnLshapeParams,
   ColumnParams,
   ColumnTshapeParams,
+  ColumnUshapeParams,
 } from '../types/column-types';
 import {
   DEFAULT_I_FLANGE_THICKNESS_MM,
@@ -51,6 +52,7 @@ import {
   MIN_I_PLATE_THICKNESS_MM,
 } from '../types/column-types';
 import { localToWorld, projectDeltaToLocal } from './column-grip-utils';
+import { mmScaleFor } from '../../utils/scene-units';
 import type { ColumnGripDragInput } from './column-grips';
 
 // ─── Variant defaults ────────────────────────────────────────────────────────
@@ -329,5 +331,99 @@ export function resizeIWebThickness(input: Readonly<ColumnGripDragInput>): Colum
   return {
     ...originalParams,
     ishape: mergeIshape(originalParams, { webThickness: newWebThickness }),
+  };
+}
+
+// ─── ADR-363 Phase 2b — U-shape (Π) parametric variant grips ─────────────────
+
+/**
+ * Materialize manual parametric U-shape (Π) variant params με defaults mirror
+ * των `buildUshapeLocal`: `legThickness = width/4`, `baseThickness = depth/3`.
+ * Only meaningful όταν δεν υπάρχει `ushape.polygon` (manual Π). Exported για
+ * unit-test reuse.
+ */
+export function materializeUshape(
+  params: ColumnParams,
+): { legThickness: number; baseThickness: number } {
+  return {
+    legThickness: params.ushape?.legThickness ?? params.width / 4,
+    baseThickness: params.ushape?.baseThickness ?? params.depth / 3,
+  };
+}
+
+/**
+ * Merge a partial U-shape patch με τα materialized defaults. Preserves `flipY`
+ * (set από mirror, ADR-363 Phase 7.2). Δεν αγγίζει `polygon` — οι λαβές αυτές
+ * αφορούν ΜΟΝΟ το manual παραμετρικό Π (το polygon-backed χρησιμοποιεί
+ * per-vertex grips).
+ */
+function mergeUshape(
+  original: ColumnParams,
+  patch: Partial<{ legThickness: number; baseThickness: number }>,
+): ColumnUshapeParams {
+  const base = materializeUshape(original);
+  const flipY = original.ushape?.flipY;
+  return {
+    legThickness: patch.legThickness ?? base.legThickness,
+    baseThickness: patch.baseThickness ?? base.baseThickness,
+    ...(flipY !== undefined ? { flipY } : {}),
+  };
+}
+
+/**
+ * World position του U-shape leg-thickness grip. Αριστερό πόδι inner edge
+ * midpoint (στο `x = -width/2 + legThickness`, y = 0). Drag κατά +X αυξάνει
+ * `legThickness` (1× factor — και τα δύο πόδια ίδιου πάχους μέσω geometry).
+ */
+export function legThicknessHandlePosition(params: ColumnParams): Point2D {
+  const { legThickness } = materializeUshape(params);
+  const local: Point2D = { x: -params.width / 2 + legThickness, y: 0 };
+  return localToWorld(local, params);
+}
+
+/**
+ * World position του U-shape base-thickness grip. Άνω ακμή της βάσης midpoint
+ * (στο `x = 0`, y = -depth/2 + baseThickness). Drag κατά +Y αυξάνει
+ * `baseThickness` (1× factor).
+ */
+export function baseThicknessHandlePosition(params: ColumnParams): Point2D {
+  const { baseThickness } = materializeUshape(params);
+  const local: Point2D = { x: 0, y: -params.depth / 2 + baseThickness };
+  return localToWorld(local, params);
+}
+
+/**
+ * U-shape legThickness resize (manual Π). Inner edge αριστερού ποδιού κατά
+ * τοπικό +X → 1× factor. Non-U-shape kinds: no-op. Clamp στο
+ * `MIN_I_PLATE_THICKNESS_MM` (degenerate guard — `buildUshapeLocal` clamps το
+ * άνω όριο σε μισό πλάτος).
+ */
+export function resizeLegThickness(input: Readonly<ColumnGripDragInput>): ColumnParams {
+  const { originalParams, delta } = input;
+  if (originalParams.kind !== 'U-shape') return originalParams;
+  const s = mmScaleFor(originalParams);
+  const base = materializeUshape(originalParams);
+  const { dxLocal } = projectDeltaToLocal(delta, originalParams.rotation);
+  const newLeg = Math.max(MIN_I_PLATE_THICKNESS_MM, base.legThickness + dxLocal / s);
+  return {
+    ...originalParams,
+    ushape: mergeUshape(originalParams, { legThickness: newLeg }),
+  };
+}
+
+/**
+ * U-shape baseThickness resize (manual Π). Άνω ακμή βάσης κατά τοπικό +Y → 1×
+ * factor. Non-U-shape kinds: no-op. Clamp στο `MIN_I_PLATE_THICKNESS_MM`.
+ */
+export function resizeBaseThickness(input: Readonly<ColumnGripDragInput>): ColumnParams {
+  const { originalParams, delta } = input;
+  if (originalParams.kind !== 'U-shape') return originalParams;
+  const s = mmScaleFor(originalParams);
+  const base = materializeUshape(originalParams);
+  const { dyLocal } = projectDeltaToLocal(delta, originalParams.rotation);
+  const newBase = Math.max(MIN_I_PLATE_THICKNESS_MM, base.baseThickness + dyLocal / s);
+  return {
+    ...originalParams,
+    ushape: mergeUshape(originalParams, { baseThickness: newBase }),
   };
 }

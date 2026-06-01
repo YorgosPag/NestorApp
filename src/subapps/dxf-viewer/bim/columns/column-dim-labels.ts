@@ -15,6 +15,8 @@
  *   polygon      → "Ø=400  N=6"
  *   L-shape      → "w=400  d=400"
  *   T-shape      → "w=400  d=400"
+ *   U-shape      → "w=400  d=400"   (τοιχείο ΟΣ, ADR-363 Phase 2)
+ *   composite    → "w=400  d=400"   (σύνθετη διατομή, ADR-363 Phase 2)
  *
  * When `params.catalogProfile` is set, it is prepended as the first line
  * (e.g. ["IPE-300", "b=150  h=300"]).
@@ -59,6 +61,9 @@ export function formatColumnDimLabels(params: ColumnParams): string[] {
     }
     case 'L-shape':     return [...prefix, `w=${w}  d=${d}`];
     case 'T-shape':     return [...prefix, `w=${w}  d=${d}`];
+    // ADR-363 Phase 2 «από περίγραμμα» — τοιχία ΟΣ· bbox w/d (πολύγωνο = SSoT γεωμετρίας).
+    case 'U-shape':     return [...prefix, `w=${w}  d=${d}`];
+    case 'composite':   return [...prefix, `w=${w}  d=${d}`];
     default:            return [];
   }
 }

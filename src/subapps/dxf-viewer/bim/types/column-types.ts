@@ -35,6 +35,7 @@ import type {
   Point3D,
   Polygon3D,
 } from './bim-base';
+import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { ColumnBaseBinding, ColumnTopBinding } from './bim-binding';
@@ -42,7 +43,7 @@ import type { EnvelopeFunction, EnvelopeLayer } from './thermal-envelope-types';
 
 // ─── Sub-type discriminator (ADR-363 §5.6) ───────────────────────────────────
 
-/** Column kind discriminator. 7 industry-standard τύποι κολώνας. */
+/** Column kind discriminator. 9 industry-standard τύποι κολώνας. */
 export type ColumnKind =
   | 'rectangular'
   | 'circular'
@@ -50,7 +51,9 @@ export type ColumnKind =
   | 'T-shape'
   | 'polygon'      // ADR-363 Phase 8 — regular N-gon (3–12 sides)
   | 'shear-wall'   // ADR-363 Phase 8 — μακρόστενη ορθογωνία (τοιχείο ΟΣ, Eurocode 8 §5.4.2.4)
-  | 'I-shape';     // ADR-363 Phase 8 — steel double-T (IPE/HEA family)
+  | 'I-shape'      // ADR-363 Phase 8 — steel double-T (IPE/HEA family)
+  | 'U-shape'      // ADR-363 Phase 2 «από περίγραμμα» — Π/κανάλι τοιχείο ΟΣ (polygon-backed)
+  | 'composite';   // ADR-363 Phase 2 «από περίγραμμα» — αυθαίρετη σύνθετη διατομή (πολύγωνο)
 
 /**
  * 9-position anchor — ποιο σημείο της διατομής εδράζεται στο `position`.
@@ -123,6 +126,48 @@ export interface ColumnIShapeParams {
   readonly flipY?: boolean;
 }
 
+/**
+ * U-shape (Π/κανάλι) geometry override. ADR-363 Phase 2 «από περίγραμμα».
+ * Polygon-backed (industry-standard, ETABS Section Designer / Revit / Tekla):
+ * αν `polygon` υπάρχει, ΕΙΝΑΙ το ακριβές SSoT της διατομής (από-περίγραμμα →
+ * διατηρεί πάχη ανά σκέλος, ώστε αργότερα να υπολογίζονται σωστά οι ιδιότητες
+ * διατομής — κεντροειδές / ροπές αδράνειας / κέντρο διάτμησης — για τη στατική
+ * μελέτη). Αν λείπει, παράγεται παραμετρικό Π σταθερού πάχους από το bbox
+ * (`width`×`depth`) — χειροκίνητη δημιουργία.
+ */
+export interface ColumnUshapeParams {
+  /** mm. Πάχος των δύο ποδιών (default `width/4`). Αγνοείται αν `polygon` υπάρχει. */
+  readonly legThickness?: number;
+  /** mm. Πάχος βάσης (default `depth/3`). Αγνοείται αν `polygon` υπάρχει. */
+  readonly baseThickness?: number;
+  /**
+   * Άνοιγμα προς τα κάτω αντί για πάνω. Set by mirror operations (ADR-363
+   * Phase 7.2). y-flip reverses CCW winding (mirror του L/T). Αγνοείται αν
+   * `polygon` υπάρχει.
+   */
+  readonly flipY?: boolean;
+  /**
+   * Ακριβές πολύγωνο διατομής σε LOCAL συντεταγμένες mm (κεντραρισμένο στο
+   * bbox-center, CCW). Αν υπάρχει υπερισχύει του παραμετρικού generator.
+   * Συμπληρώνεται από το εργαλείο «Τοιχίο από περίγραμμα» (Φάση 3).
+   */
+  readonly polygon?: readonly Point2D[];
+}
+
+/**
+ * Composite (αυθαίρετη σύνθετη διατομή) geometry. ADR-363 Phase 2 «από
+ * περίγραμμα». ΠΑΝΤΑ polygon-backed — το `polygon` είναι το ακριβές SSoT
+ * (σταυρός / ακανόνιστο τοιχείο ΟΣ). ΠΟΤΕ αυτόματη αποσύνθεση σε κομμάτια
+ * (Eurocode 8: σύνθετη στατική λειτουργία + boundary elements στις συμβολές).
+ */
+export interface ColumnCompositeParams {
+  /**
+   * Ακριβές πολύγωνο διατομής σε LOCAL συντεταγμένες mm (κεντραρισμένο στο
+   * bbox-center, CCW). Υποχρεωτικό — ≥3 κορυφές.
+   */
+  readonly polygon: readonly Point2D[];
+}
+
 // ─── Parameters (user-editable, SSoT for geometry derivation) ────────────────
 
 /**
@@ -139,6 +184,8 @@ export interface ColumnIShapeParams {
  *       polygon      → circumscribed-circle diameter
  *       shear-wall   → μήκος τοιχείου (length)
  *       I-shape      → flange width (b)
+ *       U-shape      → bbox width
+ *       composite    → bbox width
  *   - `depth` — mm. Semantic per kind:
  *       rectangular  → ύψος Y-axis
  *       circular     → αγνοείται
@@ -147,10 +194,13 @@ export interface ColumnIShapeParams {
  *       polygon      → αγνοείται
  *       shear-wall   → πάχος τοιχείου (thickness)
  *       I-shape      → section depth (h)
+ *       U-shape      → bbox depth
+ *       composite    → bbox depth
  *   - `height` — mm. Storey height (default 3000).
  *   - `rotation` — μοίρες CCW γύρω από το anchor. Αγνοείται αν circular.
  *   - `material` — material library ID (Phase 6+).
- *   - `lshape` / `tshape` / `polygon` / `ishape` — variant-specific dims.
+ *   - `lshape` / `tshape` / `polygon` / `ishape` / `ushape` / `composite` —
+ *     variant-specific dims.
  */
 /**
  * ADR-404 — Κλίση (tilt) κολώνας, slope-based (Revit/Tekla «Slanted Column»).
@@ -186,6 +236,10 @@ export interface ColumnParams {
   readonly polygon?: ColumnPolygonParams;
   /** ADR-363 Phase 8 — I-shape override (only meaningful αν kind='I-shape'). */
   readonly ishape?: ColumnIShapeParams;
+  /** ADR-363 Phase 2 — U-shape (Π) override (only meaningful αν kind='U-shape'). */
+  readonly ushape?: ColumnUshapeParams;
+  /** ADR-363 Phase 2 — composite διατομή (only meaningful αν kind='composite'). */
+  readonly composite?: ColumnCompositeParams;
   /**
    * ADR-396 Phase P2 — External thermal envelope (ETICS) exterior layer.
    * Zone Z1 (κατακόρυφη όψη). Optional/non-breaking: στήλες χωρίς
@@ -355,6 +409,16 @@ export const DEFAULT_I_WEB_THICKNESS_MM = 15;
  * collapse to line). Validator hard-error.
  */
 export const MIN_I_PLATE_THICKNESS_MM = 5;
+
+/**
+ * ADR-363 Phase 2b — Panel-display defaults για manual παραμετρικό Π (U-shape
+ * χωρίς polygon). Match οι τιμές που παράγει το `buildUshapeLocal` / grips
+ * `materializeUshape` σε default 400×400 διατομή (width/4, depth/3). Το
+ * geometry default παραμένει adaptive (width/4, depth/3) ώστε μικρές διατομές
+ * να μην εκφυλίζονται· αυτά τα static values είναι μόνο το initial ribbon label.
+ */
+export const DEFAULT_U_LEG_THICKNESS_MM = 100;
+export const DEFAULT_U_BASE_THICKNESS_MM = 130;
 
 /**
  * Anchor → unit-fraction offset within the (width × depth) bounding box,

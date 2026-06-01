@@ -482,6 +482,49 @@ describe('ADR-363 Phase 7.2 — calculateBimMirroredGeometry', () => {
     expect(patch.params.tshape).toBeUndefined();
   });
 
+  // ── ADR-363 Phase 2b — polygon-backed U-shape / composite mirror ──────
+  it('composite column: mirror reflects each polygon vertex (negate y) + reverses winding', () => {
+    const tri = [
+      { x: -100, y: -100 },
+      { x: 100, y: -100 },
+      { x: 0, y: 100 },
+    ];
+    const col = {
+      id: 'col_C', type: 'column', kind: 'composite', layerId: 'L',
+      params: {
+        kind: 'composite', position: { x: 1000, y: 500, z: 0 }, anchor: 'center',
+        width: 200, depth: 200, height: 3000, rotation: 0, sceneUnits: 'mm',
+        composite: { polygon: tri },
+      },
+      geometry: { bbox: { min: { x: 900, y: 400 }, max: { x: 1100, y: 600 } } },
+      validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+    } as unknown as Entity;
+    const patch = calculateBimMirroredGeometry(col, Y_AXIS) as {
+      params: { composite: { polygon: Array<{ x: number; y: number }> } };
+    };
+    expect(patch.params.composite.polygon).toEqual([
+      { x: 0, y: -100 },
+      { x: 100, y: 100 },
+      { x: -100, y: 100 },
+    ]);
+  });
+
+  it('U-shape parametric (no polygon): mirror toggles ushape.flipY', () => {
+    const col = {
+      id: 'col_U', type: 'column', kind: 'U-shape', layerId: 'L',
+      params: {
+        kind: 'U-shape', position: { x: 1000, y: 500, z: 0 }, anchor: 'center',
+        width: 400, depth: 400, height: 3000, rotation: 0, sceneUnits: 'mm',
+      },
+      geometry: { bbox: { min: { x: 800, y: 300 }, max: { x: 1200, y: 700 } } },
+      validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+    } as unknown as Entity;
+    const patch = calculateBimMirroredGeometry(col, Y_AXIS) as {
+      params: { ushape: { flipY: boolean } };
+    };
+    expect(patch.params.ushape.flipY).toBe(true);
+  });
+
   // ── Beam ────────────────────────────────────────────────────────────
   it('beam: reflects startPoint + endPoint + curveControl across Y-axis', () => {
     const patch = calculateBimMirroredGeometry(makeBeam() as unknown as Entity, Y_AXIS) as {

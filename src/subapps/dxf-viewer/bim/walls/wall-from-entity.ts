@@ -65,7 +65,7 @@ export type WallSource =
  * paths normalise so right-to-left / bottom-to-top draws still yield a valid CCW
  * outline. Returns `[]` when neither representation is present.
  */
-function rectangleCorners(e: {
+export function rectangleCorners(e: {
   x?: number;
   y?: number;
   width?: number;

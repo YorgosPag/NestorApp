@@ -125,3 +125,12 @@ export function safeUnion(geom: ClipGeom, ...geoms: ClipGeom[]): MultiPolygon {
 export function safeIntersection(geom: ClipGeom, ...geoms: ClipGeom[]): MultiPolygon {
   return runScaled(polygonClipping.intersection, 'polygon intersection', [geom, ...geoms]);
 }
+
+/**
+ * Robust boolean **difference** (`geom` ΜΕΙΟΝ τα `geoms`). Ίδιες εγγυήσεις με
+ * {@link safeUnion}. Χρήση: ADR-401 wall-top clip — η περιοχή του τοίχου **εκτός**
+ * των host footprints (κορυφή = nominal), συμπληρωματική του `safeIntersection`.
+ */
+export function safeDifference(geom: ClipGeom, ...geoms: ClipGeom[]): MultiPolygon {
+  return runScaled(polygonClipping.difference, 'polygon difference', [geom, ...geoms]);
+}

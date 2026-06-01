@@ -22,6 +22,7 @@ import {
   findRectanglesFromSegments,
   type DetectedRectangle,
 } from '../../bim/walls/wall-in-region';
+import { perimeterFacesToRects, type PerimeterFacesResult } from '../../bim/walls/perimeter-from-faces';
 import type { WallParamOverrides } from './wall-completion';
 import type { WallToolState } from './wall-tool-types';
 
@@ -182,5 +183,36 @@ export function useWallToolRegionBoxSelectListener(ctx: WallToolRegionBoxSelectC
         if (rects.length > 0) commitInRegionRects(s, rects);
       }),
     [stateRef, getSceneEntities, regionTol, commitInRegionRects],
+  );
+}
+
+export interface WallToolPerimeterBoxSelectCtx {
+  readonly stateRef: MutableRefObject<WallToolState>;
+  readonly getSceneEntities?: () => readonly Entity[];
+  readonly regionTol: () => number;
+  readonly commitPerimeterFaces: (s: WallToolState, result: PerimeterFacesResult) => boolean;
+}
+
+/**
+ * ADR-363 «Τοίχος από περίγραμμα» Mode — box-select the faces of a structural element:
+ * a drag-rectangle marquee collects the boundary entity ids (mouse-up → EventBus),
+ * the analyser finds the outer perimeter(s), classifies the shape (rectangle / Γ / Τ /
+ * Π / σύνθετο) and decomposes each into ορθογώνια σκέλη → one filling wall per leg
+ * (thickness from the geometry). Garbage shapes feed the «αγνοήθηκαν» toast count.
+ * Inert unless outer-perimeter placement is engaged.
+ */
+export function useWallToolPerimeterBoxSelectListener(ctx: WallToolPerimeterBoxSelectCtx): void {
+  const { stateRef, getSceneEntities, regionTol, commitPerimeterFaces } = ctx;
+  useEffect(
+    () =>
+      EventBus.on('bim:wall-region-box-select', ({ entityIds }) => {
+        const s = stateRef.current;
+        if (s.placementMode !== 'outer-perimeter' || s.phase === 'idle') return;
+        const idSet = new Set(entityIds);
+        const selected = (getSceneEntities?.() ?? []).filter((e) => idSet.has(e.id));
+        const result = perimeterFacesToRects(selected, regionTol());
+        if (result.perimeters.length > 0) commitPerimeterFaces(s, result);
+      }),
+    [stateRef, getSceneEntities, regionTol, commitPerimeterFaces],
   );
 }

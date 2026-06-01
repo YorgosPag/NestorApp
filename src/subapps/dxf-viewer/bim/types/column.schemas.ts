@@ -42,6 +42,13 @@ export const ColumnKindSchema = z.enum([
   'circular',
   'L-shape',
   'T-shape',
+  // ADR-363 Phase 8 — ευθυγραμμίστηκαν με τον type union (ήταν gap: valid columns απορρίπτονταν).
+  'polygon',
+  'shear-wall',
+  'I-shape',
+  // ADR-363 Phase 2 «από περίγραμμα».
+  'U-shape',
+  'composite',
 ]);
 
 export const ColumnAnchorSchema = z.enum([
@@ -76,6 +83,47 @@ const ColumnTshapeParamsSchema = z
   })
   .strict();
 
+// ─── ADR-363 Phase 8 variant schemas (ήταν unregistered — Boy-Scout fix) ──────
+
+const ColumnPolygonParamsSchema = z
+  .object({
+    sides: z.number().int().positive().optional(),
+  })
+  .strict();
+
+const ColumnIShapeParamsSchema = z
+  .object({
+    flangeThickness: z.number().positive().optional(),
+    webThickness: z.number().positive().optional(),
+    flipY: z.boolean().optional(),
+  })
+  .strict();
+
+// ─── ADR-363 Phase 2 «από περίγραμμα» — U-shape + composite (polygon-backed) ──
+
+/** Local-frame 2D point (mm) για polygon-backed διατομές. */
+const Point2DSchema = z
+  .object({
+    x: z.number().finite(),
+    y: z.number().finite(),
+  })
+  .strict();
+
+const ColumnUshapeParamsSchema = z
+  .object({
+    legThickness: z.number().positive().optional(),
+    baseThickness: z.number().positive().optional(),
+    flipY: z.boolean().optional(),
+    polygon: z.array(Point2DSchema).min(3).optional(),
+  })
+  .strict();
+
+const ColumnCompositeParamsSchema = z
+  .object({
+    polygon: z.array(Point2DSchema).min(3),
+  })
+  .strict();
+
 // ─── ADR-404 — tilt (raking column) ─────────────────────────────────────────
 
 const ColumnTiltSchema = z
@@ -101,6 +149,10 @@ const ColumnParamsBaseSchema = z
     material: z.string().min(1).optional(),
     lshape: ColumnLshapeParamsSchema.optional(),
     tshape: ColumnTshapeParamsSchema.optional(),
+    polygon: ColumnPolygonParamsSchema.optional(),
+    ishape: ColumnIShapeParamsSchema.optional(),
+    ushape: ColumnUshapeParamsSchema.optional(),
+    composite: ColumnCompositeParamsSchema.optional(),
     sceneUnits: z.string().optional(),
     storeyId: z.string().min(1).optional(),
     offsetFromStorey: z.number().finite().optional(),

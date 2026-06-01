@@ -76,6 +76,9 @@ const COLUMN_MAPPING: Readonly<Record<ColumnKind, AtoeMappingEntry>> = {
   'polygon':     { categoryCode: 'OIK-2.03', unit: 'm3', titleEL: 'Κολώνα RC πολυγωνική (BIM)' },
   'shear-wall':  { categoryCode: 'OIK-2.03', unit: 'm3', titleEL: 'Τοιχείο RC (BIM)' },
   'I-shape':     { categoryCode: 'OIK-12.10', unit: 'kg', titleEL: 'Κολώνα μεταλλική Ι-τομής (BIM)' },
+  // ADR-363 Phase 2 «από περίγραμμα» — σύνθετα τοιχία ΟΣ (RC, m³ — όπως shear-wall).
+  'U-shape':     { categoryCode: 'OIK-2.03', unit: 'm3', titleEL: 'Τοιχείο RC Π-τομής (BIM)' },
+  'composite':   { categoryCode: 'OIK-2.03', unit: 'm3', titleEL: 'Τοιχείο RC σύνθετης τομής (BIM)' },
 };
 
 /**

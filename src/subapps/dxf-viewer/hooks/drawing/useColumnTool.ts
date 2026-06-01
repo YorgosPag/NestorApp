@@ -22,6 +22,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import type { Entity } from '../../types/entities';
 import {
   ANCHOR_CYCLE_ORDER,
   type ColumnAnchor,
@@ -39,8 +40,25 @@ import {
   type AnchorGhost,
   type ColumnGhostOverrides,
 } from '../../bim/columns/column-anchor-ghosts';
+// ADR-363 Φάση 3 «Τοιχίο από περίγραμμα» — faces → ΕΝΑ ColumnEntity ανά περίμετρο.
+import {
+  perimeterFacesToColumns,
+  buildColumnsFromPerimeters,
+} from '../../bim/columns/column-from-faces';
+import { perimeterFacesToRects } from '../../bim/walls/perimeter-from-faces';
+import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { EventBus } from '../../systems/events/EventBus';
+
+/**
+ * ADR-363 Φάση 3 — column placement mode:
+ *   - 'freehand'        — single-click placement (default, Phase 4).
+ *   - 'outer-perimeter' — box-select τις παρειές ενός δομικού στοιχείου → ΕΝΑ
+ *                         τοιχίο (ColumnEntity) ανά κλειστή περίμετρο.
+ */
+export type ColumnPlacementMode = 'freehand' | 'outer-perimeter';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -53,6 +71,8 @@ export interface ColumnToolState {
   readonly phase: ColumnToolPhase;
   readonly kind: ColumnKind;
   readonly anchor: ColumnAnchor;
+  /** ADR-363 Φάση 3 — 'freehand' (single-click) ή 'outer-perimeter' (από περίγραμμα). */
+  readonly placementMode: ColumnPlacementMode;
   readonly overrides: ColumnParamOverrides;
   readonly error: string | null;
 }
@@ -61,6 +81,7 @@ const INITIAL_STATE: ColumnToolState = {
   phase: 'idle',
   kind: 'rectangular',
   anchor: 'center',
+  placementMode: 'freehand',
   overrides: {},
   error: null,
 };
@@ -74,6 +95,12 @@ export interface UseColumnToolOptions {
   readonly currentLevelId?: string;
   /** Returns the active scene's coordinate units for correct mm→canvas conversion. */
   readonly getSceneUnits?: () => SceneUnits;
+  /**
+   * ADR-363 Φάση 3 — live scene entities getter για το 'outer-perimeter' mode
+   * (ανάλυση των παρειών στο box-select / click-inside). Omit ⇒ το «από
+   * περίγραμμα» γίνεται no-op.
+   */
+  readonly getSceneEntities?: () => readonly Entity[];
 }
 
 export interface UseColumnToolResult {
@@ -81,6 +108,12 @@ export interface UseColumnToolResult {
   activate(): void;
   /** Switch active kind (4 kinds). Resets the state machine. */
   setKind(kind: ColumnKind): void;
+  /**
+   * ADR-363 Φάση 3 — switch placement mode ('freehand' ⇄ 'outer-perimeter').
+   * Resets the state machine (κρατά kind + anchor + overrides). Driven by the
+   * active tool id ('column' → freehand, 'column-from-perimeter' → outer-perimeter).
+   */
+  setPlacementMode(mode: ColumnPlacementMode): void;
   /** Explicit anchor selector (used από ribbon combobox). */
   setAnchor(anchor: ColumnAnchor): void;
   /** Tab cycles through 9-state ring (ANCHOR_CYCLE_ORDER). */
@@ -110,13 +143,17 @@ export interface UseColumnToolResult {
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
 export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnToolResult {
-  const { onColumnCreated, currentLevelId = '0', getSceneUnits } = options;
+  const { onColumnCreated, currentLevelId = '0', getSceneUnits, getSceneEntities } = options;
 
   const [state, setState] = useState<ColumnToolState>(INITIAL_STATE);
   const stateRef = useRef<ColumnToolState>(state);
   stateRef.current = state;
   const getSceneUnitsRef = useRef(getSceneUnits);
   getSceneUnitsRef.current = getSceneUnits;
+  const getSceneEntitiesRef = useRef(getSceneEntities);
+  getSceneEntitiesRef.current = getSceneEntities;
+  const onColumnCreatedRef = useRef(onColumnCreated);
+  onColumnCreatedRef.current = onColumnCreated;
 
   // ── lifecycle ────────────────────────────────────────────────────────────
   const activate = useCallback(() => {
@@ -124,6 +161,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       ...INITIAL_STATE,
       kind: prev.kind,
       anchor: prev.anchor,
+      placementMode: prev.placementMode,
       overrides: prev.overrides,
       phase: 'awaitingPosition',
     }));
@@ -134,9 +172,26 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       ...INITIAL_STATE,
       kind,
       anchor: prev.anchor,
+      placementMode: prev.placementMode,
       overrides: prev.overrides,
       phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
     }));
+  }, []);
+
+  // ADR-363 Φάση 3 — switch placement mode (freehand ⇄ outer-perimeter). Resets
+  // the state machine (κρατά kind + anchor + overrides). No-op όταν δεν αλλάζει.
+  const setPlacementMode = useCallback((mode: ColumnPlacementMode) => {
+    setState((prev) => {
+      if (prev.placementMode === mode) return prev;
+      return {
+        ...INITIAL_STATE,
+        kind: prev.kind,
+        anchor: prev.anchor,
+        overrides: prev.overrides,
+        placementMode: mode,
+        phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
+      };
+    });
   }, []);
 
   const setAnchor = useCallback((anchor: ColumnAnchor) => {
@@ -161,6 +216,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       ...INITIAL_STATE,
       kind: prev.kind,
       anchor: prev.anchor,
+      placementMode: prev.placementMode,
       overrides: prev.overrides,
       phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
     }));
@@ -195,6 +251,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         ...INITIAL_STATE,
         kind: s.kind,
         anchor: s.anchor,
+        placementMode: s.placementMode,
         overrides: s.overrides,
         phase: 'awaitingPosition',
       });
@@ -203,14 +260,72 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     [currentLevelId, onColumnCreated, getSceneUnits],
   );
 
+  // ── outer-perimeter helpers (ADR-363 Φάση 3 «Τοιχίο από περίγραμμα») ──────
+  // Live scene-units-agnostic hit-test tolerance (world units), ίδιος κανόνας
+  // SNAP_DEFAULT/scale με το «Τοίχος από περίγραμμα».
+  const regionTol = useCallback(
+    (): number => TOLERANCE_CONFIG.SNAP_DEFAULT / getImmediateTransform().scale,
+    [],
+  );
+
+  // Commit ΕΝΑ ColumnEntity ανά περίμετρο· broadcast summary toast event. Mirror
+  // του `commitPerimeterFaces` (walls): per-entity append via onColumnCreated.
+  const commitPerimeterColumns = useCallback(
+    (built: { columns: ColumnEntity[]; ignored: number }): boolean => {
+      for (const column of built.columns) onColumnCreatedRef.current?.(column);
+      EventBus.emit('bim:columns-from-perimeter', {
+        built: built.columns.length,
+        ignored: built.ignored,
+      });
+      return built.columns.length > 0;
+    },
+    [],
+  );
+
+  // Click μέσα σε κλειστή περίμετρο κάτω από τον κέρσορα → τοιχίο (box-select είναι
+  // η κύρια χειρονομία· αυτό είναι η single-click διευκόλυνση, mirror in-region).
+  const onPerimeterClick = useCallback(
+    (point: Readonly<Point2D>): boolean => {
+      const entities = getSceneEntitiesRef.current?.() ?? [];
+      const { perimeters } = perimeterFacesToRects(entities, regionTol());
+      const hit = perimeters.filter((p) => isPointInPolygon(point as Point2D, [...p.polygon]));
+      if (hit.length === 0) return false;
+      const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
+      return commitPerimeterColumns(buildColumnsFromPerimeters(hit, currentLevelId, sceneUnits));
+    },
+    [regionTol, currentLevelId, commitPerimeterColumns],
+  );
+
+  // Box-select listener (reuse κοινό 'bim:wall-region-box-select'). Inert εκτός
+  // outer-perimeter mode. Mirror του `useWallToolPerimeterBoxSelectListener`.
+  useEffect(
+    () =>
+      EventBus.on('bim:wall-region-box-select', ({ entityIds }) => {
+        const s = stateRef.current;
+        if (s.placementMode !== 'outer-perimeter' || s.phase === 'idle') return;
+        const idSet = new Set(entityIds);
+        const selected = (getSceneEntitiesRef.current?.() ?? []).filter((e) => idSet.has(e.id));
+        const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
+        commitPerimeterColumns(
+          perimeterFacesToColumns(selected, regionTol(), currentLevelId, sceneUnits),
+        );
+      }),
+    [regionTol, currentLevelId, commitPerimeterColumns],
+  );
+
   // ── click pipeline ───────────────────────────────────────────────────────
   const onCanvasClick = useCallback(
     (point: Readonly<Point2D>): boolean => {
       const s = stateRef.current;
+      if (s.phase === 'idle') return false;
+      // ADR-363 Φάση 3 — outer-perimeter: click μέσα σε περίμετρο (box-select primary).
+      if (s.placementMode === 'outer-perimeter') {
+        return onPerimeterClick(point);
+      }
       if (s.phase !== 'awaitingPosition') return false;
       return commitColumnFromState(s, point);
     },
-    [commitColumnFromState],
+    [commitColumnFromState, onPerimeterClick],
   );
 
   // ── ADR-403 — 3D placement bridge ─────────────────────────────────────────
@@ -229,6 +344,9 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   // ── status text (i18n keys returned για caller-resolved translation) ─────
   const getStatusText = useCallback((): string => {
     const s = stateRef.current;
+    if (s.phase === 'idle') return '';
+    // ADR-363 Φάση 3 — outer-perimeter prompt (box-select τις παρειές).
+    if (s.placementMode === 'outer-perimeter') return 'tools.column.statusPerimeterPick';
     return s.phase === 'awaitingPosition' ? 'tools.column.statusPosition' : '';
   }, []);
 
@@ -236,6 +354,8 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   const getGhostFootprints = useCallback(
     (cursorPos: Readonly<Point2D> | null): readonly AnchorGhost[] | null => {
       const s = stateRef.current;
+      // ADR-363 Φάση 3 — outer-perimeter δεν έχει anchor ghost (box-select picks).
+      if (s.placementMode === 'outer-perimeter') return null;
       if (s.phase !== 'awaitingPosition' || cursorPos === null) return null;
       // ColumnGhostOverrides is structurally a subset of ColumnParamOverrides
       // (kind+anchor flattened to args). Spread keeps width/depth/height/
@@ -316,6 +436,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     state,
     activate,
     setKind,
+    setPlacementMode,
     setAnchor,
     cycleAnchor,
     deactivate,

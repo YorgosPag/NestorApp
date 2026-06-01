@@ -325,11 +325,16 @@ function processMarqueeSelection(
   const canvas = canvasRef?.current ?? null;
   const marqueeSnap = getPointerSnapshotFromElement(canvas);
 
-  // ADR-363 Phase 1K Mode C — wall-in-region box-select: intercept the marquee →
-  // run window/crossing selection to collect line entities → hand their ids to
-  // the wall tool via EventBus (which detects enclosed rectangles + builds the
-  // filling wall(s)). MUST NOT mutate selection (mirrors crop-window below).
-  if (activeTool === 'wall-in-region' && marqueeSnap) {
+  // ADR-363 Phase 1K Mode C / «Τοίχος από περίγραμμα» — box-select: intercept the
+  // marquee → run window/crossing selection to collect entities → hand their ids to
+  // the wall tool via EventBus (in-region detects enclosed rectangles; outer-perimeter
+  // analyses the faces → leg walls). MUST NOT mutate selection (mirrors crop-window).
+  if (
+    (activeTool === 'wall-in-region' ||
+      activeTool === 'wall-from-perimeter' ||
+      activeTool === 'column-from-perimeter') &&
+    marqueeSnap
+  ) {
     const regionResult = UniversalMarqueeSelector.performSelection(
       cursor.selectionStart!,
       cursor.position!,

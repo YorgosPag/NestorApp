@@ -190,7 +190,10 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
     if (
       e.button === 0 &&
       !isGripDragging &&
-      ((activeTool === 'select' && !isToolInteractive) || activeTool === 'wall-in-region')
+      ((activeTool === 'select' && !isToolInteractive) ||
+        activeTool === 'wall-in-region' ||
+        activeTool === 'wall-from-perimeter' ||
+        activeTool === 'column-from-perimeter')
     ) {
       lassoDownRef.current = { pos: screenPos, buttonHeld: true };
     }

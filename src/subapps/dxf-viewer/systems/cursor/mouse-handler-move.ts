@@ -389,7 +389,10 @@ export function useMouseMoveHandler({
     const regionDown = refs.lassoDownRef.current;
     if (
       regionDown.buttonHeld && regionDown.pos &&
-      activeTool === 'wall-in-region' && !cursor.isSelecting
+      (activeTool === 'wall-in-region' ||
+        activeTool === 'wall-from-perimeter' ||
+        activeTool === 'column-from-perimeter') &&
+      !cursor.isSelecting
     ) {
       const rdx = screenPos.x - regionDown.pos.x;
       const rdy = screenPos.y - regionDown.pos.y;

@@ -110,6 +110,8 @@ export type ToolType =
   | 'wall-on-entity'
   // ADR-363 Phase 1K: BIM Wall in region (pick 4 lines / click inside / box → one filling wall)
   | 'wall-in-region'
+  // ADR-363 «Τοίχος από περίγραμμα»: box-select the faces of a structural element → leg walls
+  | 'wall-from-perimeter'
   // ADR-363 Phase 5.6: BIM Wall Split tool (Revit Split Element pattern)
   | 'wall-split'
   // ADR-401 Phase E.1: BIM Wall Attach Top/Base pick-host (Revit Attach Top/Base)
@@ -127,6 +129,8 @@ export type ToolType =
   | 'slab'
   // ADR-363 Phase 4: BIM Column drawing tool (rectangular/circular/L-shape/T-shape)
   | 'column'
+  // ADR-363 Φάση 3 «Τοιχίο από περίγραμμα»: box-select faces → ΕΝΑ ColumnEntity/περίμετρο
+  | 'column-from-perimeter'
   // ADR-363 Phase 5: BIM Beam drawing tool (straight/curved/cantilever)
   | 'beam'
   // ADR-363 Phase 3.7: BIM Slab-Opening drawing tool (shaft/well/duct/chimney)

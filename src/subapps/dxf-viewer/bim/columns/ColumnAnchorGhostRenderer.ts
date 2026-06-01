@@ -32,6 +32,9 @@ const KIND_STROKE: Readonly<Record<ColumnKind, string>> = {
   'polygon':     '#4a5566',
   'shear-wall':  '#5b6478',
   'I-shape':     '#2f3b4d',
+  // ADR-363 Phase 2 «από περίγραμμα» — τοιχία ΟΣ (ίδια απόχρωση με shear-wall).
+  'U-shape':     '#5b6478',
+  'composite':   '#5b6478',
 };
 
 /** Active-ghost fill (rgba @30% opacity). Mirror της `ColumnRenderer.KIND_FILL`
@@ -45,6 +48,9 @@ const KIND_FILL_ACTIVE: Readonly<Record<ColumnKind, string>> = {
   'polygon':     'rgba(120, 138, 158, 0.30)',
   'shear-wall':  'rgba(140, 158, 178, 0.30)',
   'I-shape':     'rgba(90, 110, 138, 0.30)',
+  // ADR-363 Phase 2 «από περίγραμμα» — τοιχία ΟΣ (ίδιο fill με shear-wall).
+  'U-shape':     'rgba(140, 158, 178, 0.30)',
+  'composite':   'rgba(140, 158, 178, 0.30)',
 };
 
 const INACTIVE_OPACITY = 0.15;

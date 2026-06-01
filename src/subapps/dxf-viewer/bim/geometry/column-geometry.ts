@@ -11,6 +11,8 @@
  *   - polygon     → N-vertex regular N-gon (Ø_circ = width, sides = 3..12)  [Phase 8]
  *   - shear-wall  → 4-vertex rect (length=width, thickness=depth)           [Phase 8]
  *   - I-shape     → 12-vertex CCW double-T (b=width, h=depth, tf/tw flanges)[Phase 8]
+ *   - U-shape     → 8-vertex CCW Π/κανάλι ή explicit polygon (polygon-backed) [Phase 2]
+ *   - composite   → αυθαίρετο polygon (polygon-backed σύνθετη διατομή)         [Phase 2]
  *
  * Pipeline για non-circular: build local-axis vertices (origin = centroid
  * BEFORE anchor shift) → applyAnchorTransform (offsets so anchor sits on
@@ -23,6 +25,7 @@
 
 import type {
   ColumnAnchor,
+  ColumnCompositeParams,
   ColumnGeometry,
   ColumnIShapeParams,
   ColumnKind,
@@ -30,6 +33,7 @@ import type {
   ColumnParams,
   ColumnPolygonParams,
   ColumnTshapeParams,
+  ColumnUshapeParams,
 } from '../types/column-types';
 import {
   ANCHOR_OFFSETS,
@@ -42,6 +46,7 @@ import {
   MIN_POLYGON_SIDES,
 } from '../types/column-types';
 import type { Point3D } from '../types/bim-base';
+import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnTopProfile, ColumnBaseProfile } from './column-vertical-profile';
 import { polygonArea, polygonBbox } from './shared/polygon-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -144,6 +149,9 @@ function buildLocalFootprint(params: ColumnParams, s: number): Point3D[] {
     case 'shear-wall':  return buildRectangularLocal(params.width, params.depth, s);
     case 'polygon':     return buildPolygonLocal(params.width, s, params.polygon);
     case 'I-shape':     return buildIShapeLocal(params.width, params.depth, s, params.ishape);
+    // ADR-363 Phase 2 «από περίγραμμα» — polygon-backed σύνθετες διατομές τοιχίου ΟΣ.
+    case 'U-shape':     return buildUshapeLocal(params.width, params.depth, s, params.ushape);
+    case 'composite':   return buildCompositeLocal(s, params.composite);
   }
 }
 
@@ -291,6 +299,71 @@ function buildIShapeLocal(width: number, depth: number, s: number, override?: Co
   return flipY ? [...verts].reverse() : verts;
 }
 
+/**
+ * Map ένα polygon-backed footprint (LOCAL mm, κεντραρισμένο στο bbox-center)
+ * σε canvas-unit `Point3D[]`. Pure scale × `s`. Χρησιμοποιείται από U-shape
+ * (explicit polygon) + composite (ADR-363 Phase 2 «από περίγραμμα»).
+ */
+function polygonToLocal(poly: readonly Point2D[], s: number): Point3D[] {
+  return poly.map((p) => ({ x: p.x * s, y: p.y * s, z: 0 }));
+}
+
+/**
+ * U-shape (Π/κανάλι) — 8-vertex CCW (math Y-up). ADR-363 Phase 2.
+ *
+ * Polygon-backed: αν `override.polygon` υπάρχει (από-περίγραμμα, Φάση 3), ΕΙΝΑΙ
+ * το ακριβές SSoT (πάχη ανά σκέλος). Αλλιώς παραμετρικό Π σταθερού πάχους:
+ *   - bbox `width` × `depth`, με αφαίρεση κεντρικού notch από την κορυφή
+ *   - `legThickness` = πάχος κάθε ποδιού (default width/4)
+ *   - `baseThickness` = πάχος βάσης (default depth/3)
+ *
+ * flipY=true: άνοιγμα προς τα κάτω· y-flip reverses CCW winding (mirror L/T).
+ */
+function buildUshapeLocal(width: number, depth: number, s: number, override?: ColumnUshapeParams): Point3D[] {
+  if (override?.polygon && override.polygon.length >= 3) {
+    return polygonToLocal(override.polygon, s);
+  }
+  const flipY = override?.flipY ?? false;
+  const hw = (width * s) / 2;
+  const hd = (depth * s) / 2;
+  // mm scalars → canvas units· clamp ώστε τα δύο πόδια να μην επικαλύπτονται
+  // (leg ≤ μισό πλάτος) και η βάση να μην ξεπερνά το βάθος.
+  const leg = Math.min(Math.max(s, (override?.legThickness ?? width / 4) * s), hw);
+  const base = Math.min(Math.max(s, (override?.baseThickness ?? depth / 3) * s), 2 * hd);
+  const ys = flipY ? -1 : 1;
+  const verts: Point3D[] = [
+    { x: -hw,       y: ys * -hd,          z: 0 },  // v0 bottom-left
+    { x:  hw,       y: ys * -hd,          z: 0 },  // v1 bottom-right
+    { x:  hw,       y: ys *  hd,          z: 0 },  // v2 top-right (right leg outer)
+    { x:  hw - leg, y: ys *  hd,          z: 0 },  // v3 right leg inner top
+    { x:  hw - leg, y: ys * (-hd + base), z: 0 },  // v4 notch right
+    { x: -hw + leg, y: ys * (-hd + base), z: 0 },  // v5 notch left
+    { x: -hw + leg, y: ys *  hd,          z: 0 },  // v6 left leg inner top
+    { x: -hw,       y: ys *  hd,          z: 0 },  // v7 top-left (left leg outer)
+  ];
+  return flipY ? [...verts].reverse() : verts;
+}
+
+/**
+ * Composite (αυθαίρετη σύνθετη διατομή τοιχίου ΟΣ) — ΠΑΝΤΑ polygon-backed.
+ * ADR-363 Phase 2. Το `polygon` (LOCAL mm, CCW, bbox-centered) είναι το ακριβές
+ * SSoT. Degenerate guard (<3 κορυφές) → μικρό τετράγωνο 100mm (ο validator
+ * μπλοκάρει κανονικά τέτοια params πριν φτάσουμε εδώ).
+ */
+function buildCompositeLocal(s: number, composite?: ColumnCompositeParams): Point3D[] {
+  const poly = composite?.polygon;
+  if (!poly || poly.length < 3) {
+    const h = 50 * s; // 100mm × 100mm fallback
+    return [
+      { x: -h, y: -h, z: 0 },
+      { x:  h, y: -h, z: 0 },
+      { x:  h, y:  h, z: 0 },
+      { x: -h, y:  h, z: 0 },
+    ];
+  }
+  return polygonToLocal(poly, s);
+}
+
 // ─── Anchor + rotation transform ────────────────────────────────────────────
 
 /**
@@ -330,7 +403,9 @@ function transformFootprint(
   }
   const { dx, dy } = ANCHOR_OFFSETS[anchor];
   // dx/dy are unit fractions of width/depth. Convert mm → canvas units via s.
-  const { dimX, dimY } = kind === 'polygon'
+  // polygon / U-shape / composite: η διατομή δεν είναι απλό width×depth → anchor
+  // dims από το πραγματικό bbox των local vertices (ADR-363 Phase 2/8).
+  const { dimX, dimY } = kind === 'polygon' || kind === 'U-shape' || kind === 'composite'
     ? computeLocalBboxCanvas(local)
     : { dimX: width * s, dimY: depth * s };
   const shiftX = -dx * dimX;

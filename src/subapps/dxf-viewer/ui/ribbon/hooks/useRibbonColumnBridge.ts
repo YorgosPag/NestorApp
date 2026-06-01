@@ -419,6 +419,12 @@ export function useRibbonColumnBridge(
       if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams) return kind === 'I-shape';
       if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.shearWallCatalog) return kind === 'shear-wall';
       if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.ishapeCatalog) return kind === 'I-shape';
+      if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.ushapeParams) {
+        // ADR-363 Phase 2b — leg/base thickness inputs μόνο για manual παραμετρικό
+        // Π· polygon-backed (από-περίγραμμα) επεξεργάζεται με per-vertex grips.
+        const poly = column?.params.ushape?.polygon;
+        return kind === 'U-shape' && !(poly && poly.length >= 3);
+      }
       return false;
     },
     [resolveColumn, toolHandle],

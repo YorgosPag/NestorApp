@@ -85,12 +85,20 @@ export function useActiveContextualTrigger({
     const fromSelection = entity ? resolveContextualTrigger(entity) : null;
     if (fromSelection) return fromSelection;
     if (activeTool === 'stair') return STAIR_CONTEXTUAL_TRIGGER;
-    // ADR-363 Phase 1K — in-region shares the wall contextual tab (category/height
-    // feed the filling wall; thickness is geometry-driven from the rectangle).
-    if (activeTool === 'wall' || activeTool === 'wall-in-region') return WALL_CONTEXTUAL_TRIGGER;
+    // ADR-363 Phase 1K / «από περίγραμμα» — in-region & outer-perimeter share the
+    // wall contextual tab (category/height feed the walls; thickness is geometry-
+    // driven from the faces).
+    if (
+      activeTool === 'wall' ||
+      activeTool === 'wall-in-region' ||
+      activeTool === 'wall-from-perimeter'
+    )
+      return WALL_CONTEXTUAL_TRIGGER;
     if (activeTool === 'opening') return OPENING_CONTEXTUAL_TRIGGER;
     if (activeTool === 'slab') return SLAB_CONTEXTUAL_TRIGGER;
-    if (activeTool === 'column') return COLUMN_CONTEXTUAL_TRIGGER;
+    // ADR-363 Φάση 3 — «Τοιχίο από περίγραμμα» μοιράζεται το column contextual tab.
+    if (activeTool === 'column' || activeTool === 'column-from-perimeter')
+      return COLUMN_CONTEXTUAL_TRIGGER;
     if (activeTool === 'beam') return BEAM_CONTEXTUAL_TRIGGER;
     if (activeTool === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;
     // ADR-359 Phase 10.b: xline active → show mode selection panel.

@@ -224,7 +224,10 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // inside / box). Uses the RAW worldPoint (hit-tests existing 2D geometry, so
     // ORTHO/POLAR must NOT shift the pick). Accumulated line picks are reflected
     // as a selection highlight; a commit clears the picks → selection clears.
-    if (activeTool === 'wall-in-region' && wallTool?.isActive) {
+    if (
+      (activeTool === 'wall-in-region' || activeTool === 'wall-from-perimeter') &&
+      wallTool?.isActive
+    ) {
       wallTool.onCanvasClick(worldPoint);
       universalSelection.replaceEntitySelection(wallTool.getRegionPickIds?.() ?? []);
       return;
@@ -254,7 +257,13 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
     // PRIORITY 4.8: ADR-363 Phase 4 — Column tool single-click placement.
-    if (activeTool === 'column' && columnTool?.isActive) {
+    // Φάση 3 — 'column-from-perimeter' shares the same tool; click-inside a
+    // perimeter builds ΕΝΑ τοιχίο (RAW worldPoint — hit-tests existing geometry,
+    // ORTHO/POLAR must NOT shift the pick).
+    if (
+      (activeTool === 'column' || activeTool === 'column-from-perimeter') &&
+      columnTool?.isActive
+    ) {
       columnTool.onCanvasClick(worldPoint);
       return;
     }

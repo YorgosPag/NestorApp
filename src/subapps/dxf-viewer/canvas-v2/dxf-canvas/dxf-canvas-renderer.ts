@@ -186,7 +186,9 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
           activeTool === 'select' ||
           activeTool === 'layering' ||
           activeTool === 'wall-on-entity' ||
-          activeTool === 'wall-in-region';
+          activeTool === 'wall-in-region' ||
+          activeTool === 'wall-from-perimeter' ||
+          activeTool === 'column-from-perimeter';
         for (const selId of curRenderOptions.selectedEntityIds) {
           const ent = curEntityMap.get(selId);
           if (ent) {

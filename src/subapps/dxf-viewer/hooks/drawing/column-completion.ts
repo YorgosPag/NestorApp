@@ -29,6 +29,7 @@ import {
   DEFAULT_SHEAR_WALL_LENGTH_MM,
   DEFAULT_SHEAR_WALL_THICKNESS_MM,
   type ColumnAnchor,
+  type ColumnCompositeParams,
   type ColumnEntity,
   type ColumnIShapeParams,
   type ColumnKind,
@@ -36,6 +37,7 @@ import {
   type ColumnParams,
   type ColumnPolygonParams,
   type ColumnTshapeParams,
+  type ColumnUshapeParams,
 } from '../../bim/types/column-types';
 import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
 import { validateColumnParams } from '../../bim/validators/column-validator';
@@ -74,6 +76,16 @@ export interface ColumnParamOverrides {
   readonly polygon?: ColumnPolygonParams;
   /** ADR-363 Phase 8 — I-shape flange/web thickness override. */
   readonly ishape?: ColumnIShapeParams;
+  /**
+   * ADR-363 Phase 2/3 «από περίγραμμα» — U-shape (Π) override. Polygon-backed
+   * όταν δοθεί `polygon` (LOCAL mm, bbox-centered) → ακριβές SSoT διατομής.
+   */
+  readonly ushape?: ColumnUshapeParams;
+  /**
+   * ADR-363 Phase 2/3 «από περίγραμμα» — composite (αυθαίρετη σύνθετη διατομή)
+   * override. ΠΑΝΤΑ polygon-backed (LOCAL mm, bbox-centered, CCW).
+   */
+  readonly composite?: ColumnCompositeParams;
   /** ADR-363 Phase 8E — catalog profile ID persisted with the column. */
   readonly catalogProfile?: string;
 }
@@ -139,6 +151,8 @@ export function buildDefaultColumnParams(
     ...(overrides.tshape !== undefined ? { tshape: overrides.tshape } : {}),
     ...(overrides.polygon !== undefined ? { polygon: overrides.polygon } : {}),
     ...(overrides.ishape !== undefined ? { ishape: overrides.ishape } : {}),
+    ...(overrides.ushape !== undefined ? { ushape: overrides.ushape } : {}),
+    ...(overrides.composite !== undefined ? { composite: overrides.composite } : {}),
     ...(overrides.catalogProfile !== undefined ? { catalogProfile: overrides.catalogProfile } : {}),
   };
   return params;

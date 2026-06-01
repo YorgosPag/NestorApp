@@ -28,6 +28,14 @@
  *       · shear-wall: length/thickness < SHEAR_WALL_MIN_ASPECT_RATIO (4) —
  *         κάτω από αυτό = κανονική κολώνα, ο user πρέπει να αλλάξει kind.
  *
+ * Phase 2 extension «από περίγραμμα» (U-shape / composite — polygon-backed τοιχία ΟΣ):
+ *   - **Hard errors**:
+ *       · composite / U-shape(polygon): polygon < 3 κορυφές ή εκφυλισμένο εμβαδόν
+ *       · U-shape(παραμετρικό): legThickness/baseThickness ≤ 0 ή εκτός bbox
+ *   - **Code violations**:
+ *       · U-shape: ελάχιστο πάχος μέλους < MIN_SHEAR_WALL_THICKNESS_MM (Eurocode 8)
+ *       · width/depth relaxed (τοιχώματα — όπως shear-wall)
+ *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6
  */
 
@@ -44,6 +52,7 @@ import {
   type ColumnParams,
 } from '../types/column-types';
 import { getColumnSlenderness } from '../geometry/column-geometry';
+import { polygonArea } from '../geometry/shared/polygon-utils';
 
 /** Result of a column validation pass — hard errors non-empty when invalid. */
 export interface ColumnValidationResult {
@@ -105,7 +114,9 @@ function validateDimensions(
  * is irrelevant — code-grade walls can be as wide as the user wants.
  */
 function isRelaxedWidth(params: ColumnParams): boolean {
-  return params.kind === 'shear-wall';
+  // shear-wall + τοιχία ΟΣ (U-shape/composite) είναι τοιχώματα: το 250mm column
+  // minimum δεν ισχύει — διέπονται από Eurocode 8 §5.4.2.4 (150mm).
+  return params.kind === 'shear-wall' || params.kind === 'U-shape' || params.kind === 'composite';
 }
 
 /**
@@ -113,7 +124,7 @@ function isRelaxedWidth(params: ColumnParams): boolean {
  * separately in `validateVariantParams`.
  */
 function isRelaxedDepth(params: ColumnParams): boolean {
-  return params.kind === 'shear-wall';
+  return params.kind === 'shear-wall' || params.kind === 'U-shape' || params.kind === 'composite';
 }
 
 function validateHeight(params: ColumnParams, hardErrors: string[]): void {
@@ -153,6 +164,12 @@ function validateVariantParams(
   }
   if (params.kind === 'I-shape') {
     validateIShapeParams(params, hardErrors);
+  }
+  if (params.kind === 'U-shape') {
+    validateUshapeParams(params, hardErrors, codeViolations);
+  }
+  if (params.kind === 'composite') {
+    validateCompositeParams(params, hardErrors);
   }
 }
 
@@ -202,6 +219,48 @@ function validateIShapeParams(params: ColumnParams, hardErrors: string[]): void 
   }
   if (tw !== undefined && params.width > 0 && tw >= params.width) {
     hardErrors.push('column.validation.hardErrors.invalidIShapeWebOverflow');
+  }
+}
+
+/**
+ * U-shape (Π/κανάλι τοιχείο ΟΣ) — ADR-363 Phase 2.
+ * Polygon-backed (explicit polygon) → έλεγχος εγκυρότητας πολυγώνου. Παραμετρικό
+ * → πάχη ποδιού/βάσης εντός bbox + Eurocode 8 §5.4.2.4 ελάχιστο πάχος 150mm.
+ */
+function validateUshapeParams(
+  params: ColumnParams,
+  hardErrors: string[],
+  codeViolations: string[],
+): void {
+  const u = params.ushape;
+  if (u?.polygon) {
+    if (u.polygon.length < 3 || Math.abs(polygonArea(u.polygon.map((p) => ({ ...p, z: 0 })))) <= 0) {
+      hardErrors.push('column.validation.hardErrors.invalidCompositePolygon');
+    }
+    return;
+  }
+  const { legThickness, baseThickness } = u ?? {};
+  if (legThickness !== undefined && (legThickness <= 0 || 2 * legThickness > params.width)) {
+    hardErrors.push('column.validation.hardErrors.invalidUshapeLeg');
+  }
+  if (baseThickness !== undefined && (baseThickness <= 0 || baseThickness > params.depth)) {
+    hardErrors.push('column.validation.hardErrors.invalidUshapeBase');
+  }
+  const legEff = legThickness ?? params.width / 4;
+  const baseEff = baseThickness ?? params.depth / 3;
+  if (Math.min(legEff, baseEff) < MIN_SHEAR_WALL_THICKNESS_MM) {
+    codeViolations.push('column.validation.codeViolations.shearWallThicknessTooSmall');
+  }
+}
+
+/**
+ * Composite (αυθαίρετη σύνθετη διατομή) — ADR-363 Phase 2. ΠΑΝΤΑ polygon-backed:
+ * έλεγχος ≥3 κορυφών + μη-εκφυλισμένο εμβαδόν (shoelace > 0).
+ */
+function validateCompositeParams(params: ColumnParams, hardErrors: string[]): void {
+  const poly = params.composite?.polygon;
+  if (!poly || poly.length < 3 || Math.abs(polygonArea(poly.map((p) => ({ ...p, z: 0 })))) <= 0) {
+    hardErrors.push('column.validation.hardErrors.invalidCompositePolygon');
   }
 }
 

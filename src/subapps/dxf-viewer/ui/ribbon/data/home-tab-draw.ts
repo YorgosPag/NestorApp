@@ -293,6 +293,15 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               icon: 'bim-wall',
               commandKey: 'wall-in-region',
             },
+            // ADR-363 «Τοίχος από περίγραμμα» — box-select the faces of a structural
+            // element (rectangle / Γ / Τ / Π) → chain of leg walls (thickness from geometry).
+            {
+              id: 'draw.bim.wallFromPerimeter',
+              labelKey: 'ribbon.commands.bim.wallFromPerimeter.label',
+              tooltipKey: 'ribbon.commands.bim.wallFromPerimeter.tooltip',
+              icon: 'bim-wall',
+              commandKey: 'wall-from-perimeter',
+            },
             {
               id: 'draw.bim.opening',
               labelKey: 'ribbon.commands.bim.opening.label',
@@ -324,6 +333,16 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               icon: 'bim-column',
               commandKey: 'column',
               shortcut: 'CL',
+            },
+            // ADR-363 Φάση 3 «Τοιχίο από περίγραμμα» — box-select the faces of a
+            // structural element (ορθογώνιο/Γ/Τ/Π/σύνθετο) → ΕΝΑ τοιχίο (ColumnEntity)
+            // ανά κλειστή περίμετρο (exact-polygon για μη-ορθογωνικά).
+            {
+              id: 'draw.bim.columnFromPerimeter',
+              labelKey: 'ribbon.commands.bim.columnFromPerimeter.label',
+              tooltipKey: 'ribbon.commands.bim.columnFromPerimeter.tooltip',
+              icon: 'bim-column',
+              commandKey: 'column-from-perimeter',
             },
             {
               id: 'draw.bim.beam',

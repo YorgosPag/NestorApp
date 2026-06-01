@@ -59,8 +59,6 @@ import {
   type HatchPlan,
 } from '../columns/column-hatch-patterns';
 import {
-  computeLProfileOutline,
-  computeTProfileOutline,
   COL_SECTION_OFFSET_PX,
   COL_SECTION_MIN_SCALE,
   COL_SECTION_MIN_FOOTPRINT_PX,
@@ -68,6 +66,7 @@ import {
   COL_SECTION_STROKE_COLOR,
   COL_SECTION_LINE_WIDTH_PX,
 } from '../columns/column-section-profile';
+import { resolveColumnSectionOutline } from '../columns/column-section-symbol';
 import {
   formatColumnDimLabels,
   drawColumnDimPill,
@@ -335,19 +334,18 @@ export class ColumnRenderer extends BaseEntityRenderer {
   }
 
   /**
-   * Phase 4.5c.6 — L/T section-profile symbol (hover + selection only).
+   * Phase 4.5c.6 / 8 / 2b — section-profile symbol (hover + selection only).
    *
-   * Draws a fixed-size section symbol (∟ for L-shape, ⊤ for T-shape) to the
-   * right of the column bbox, vertically centred on the column. Symbol shape
-   * follows `flipY` so it matches the mirrored orientation set by Phase 7.2.
-   * Steel material only (non-steel L/T columns show dimension labels from Phase
-   * 4.5c.3 — section symbol would add visual noise without structural meaning).
-   * ADR-040 compliant: ZERO new store subscriptions, pure ctx.
+   * Draws a fixed-size section symbol to the right of the column bbox, vertically
+   * centred. The per-kind outline + material gate live in the
+   * `resolveColumnSectionOutline` SSoT (∟/⊤ steel L/T, Π/σύνθετο RC τοιχία);
+   * this method owns only canvas placement + styling. ADR-040 compliant: ZERO
+   * new store subscriptions, pure ctx.
    */
   private drawSectionProfile(column: ColumnEntity): void {
-    if (column.kind !== 'L-shape' && column.kind !== 'T-shape') return;
-    if (resolveMaterialKey(column.params.material) !== 'steel') return;
     if (this.transform.scale < COL_SECTION_MIN_SCALE) return;
+    const outline = resolveColumnSectionOutline(column);
+    if (!outline || outline.length === 0) return;
 
     const _spDs = useDrawingScaleStore.getState();
     const _spLayer = column.layerId ? getLayer(column.layerId) : null;
@@ -377,14 +375,6 @@ export class ColumnRenderer extends BaseEntityRenderer {
     const centerY = (minS.y + maxS.y) / 2;
     const cx = rightX + COL_SECTION_OFFSET_PX;
     const cy = centerY;
-
-    const flipY = column.kind === 'L-shape'
-      ? (column.params.lshape?.flipY ?? false)
-      : (column.params.tshape?.flipY ?? false);
-
-    const outline = column.kind === 'L-shape'
-      ? computeLProfileOutline(undefined, undefined, undefined, flipY)
-      : computeTProfileOutline(undefined, undefined, undefined, undefined, flipY);
 
     this.ctx.save();
     this.ctx.translate(cx, cy);

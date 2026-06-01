@@ -11,12 +11,16 @@
  *   - Exported constants have expected values
  */
 
+import type { ColumnEntity } from '../../types/column-types';
+import { resolveColumnSectionOutline } from '../column-section-symbol';
 import {
   computeIProfileOutline,
   computeLProfileOutline,
+  computePolygonBackedOutline,
   computePolygonOutline,
   computeShearWallOutline,
   computeTProfileOutline,
+  computeUProfileOutline,
   COL_I_FLANGE_T_PX,
   COL_I_FLANGE_W_PX,
   COL_I_TOTAL_H_PX,
@@ -354,5 +358,74 @@ describe('column-section-profile Phase 8 constants', () => {
 
   it('COL_I_TOTAL_H_PX > 2 * COL_I_FLANGE_T_PX (web has room)', () => {
     expect(COL_I_TOTAL_H_PX).toBeGreaterThan(2 * COL_I_FLANGE_T_PX);
+  });
+});
+
+// ─── ADR-363 Phase 2b — U-shape (Π) + polygon-backed outlines ───────────────
+
+describe('computeUProfileOutline (Phase 2b)', () => {
+  it('returns 8 vertices by default', () => {
+    expect(computeUProfileOutline()).toHaveLength(8);
+  });
+
+  it('is bbox-centred (X/Y symmetric around 0)', () => {
+    const o = computeUProfileOutline();
+    const xs = o.map((p) => p.x);
+    const ys = o.map((p) => p.y);
+    expect(Math.min(...xs)).toBeCloseTo(-Math.max(...xs), 6);
+    expect(Math.min(...ys)).toBeCloseTo(-Math.max(...ys), 6);
+  });
+
+  it('flipY negates every Y-coord', () => {
+    const a = computeUProfileOutline();
+    const b = computeUProfileOutline(undefined, undefined, undefined, undefined, true);
+    a.forEach((p, i) => expect(b[i].y).toBeCloseTo(-p.y, 6));
+  });
+});
+
+describe('computePolygonBackedOutline (Phase 2b)', () => {
+  it('returns [] for degenerate polygon (<3 vertices)', () => {
+    expect(computePolygonBackedOutline([{ x: 0, y: 0 }, { x: 1, y: 1 }])).toEqual([]);
+  });
+
+  it('scales the polygon to fit the target box, preserving vertex count', () => {
+    const poly = [
+      { x: -400, y: -200 },
+      { x: 400, y: -200 },
+      { x: 400, y: 200 },
+      { x: -400, y: 200 },
+    ];
+    const out = computePolygonBackedOutline(poly, 16);
+    expect(out).toHaveLength(4);
+    // span = max(800, 400) = 800 → scale = 16/800 = 0.02 → x extent ±8.
+    const xs = out.map((p) => p.x);
+    expect(Math.max(...xs)).toBeCloseTo(8, 6);
+    expect(Math.min(...xs)).toBeCloseTo(-8, 6);
+  });
+});
+
+describe('resolveColumnSectionOutline (Phase 2b)', () => {
+  function col(params: Record<string, unknown>): ColumnEntity {
+    return { id: 'c', type: 'column', kind: params.kind, params } as unknown as ColumnEntity;
+  }
+
+  it('composite with polygon → scaled polygon outline', () => {
+    const poly = [
+      { x: -100, y: -100 },
+      { x: 100, y: -100 },
+      { x: 0, y: 100 },
+    ];
+    const out = resolveColumnSectionOutline(col({ kind: 'composite', composite: { polygon: poly } }));
+    expect(out).not.toBeNull();
+    expect(out).toHaveLength(3);
+  });
+
+  it('U-shape without polygon → parametric Π outline (8 vertices)', () => {
+    const out = resolveColumnSectionOutline(col({ kind: 'U-shape' }));
+    expect(out).toHaveLength(8);
+  });
+
+  it('rectangular → null (no section glyph)', () => {
+    expect(resolveColumnSectionOutline(col({ kind: 'rectangular' }))).toBeNull();
   });
 });

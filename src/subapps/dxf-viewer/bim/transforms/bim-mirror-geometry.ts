@@ -31,6 +31,10 @@
  *     handedness is flipped via `lshape.flipY` / `tshape.flipY` toggle.
  *     Proof: local transform T = R(-θ') × M × R(θ) always has T[1][1] = -1
  *     regardless of axisAngle or column rotation — zero runtime computation.
+ *     Polygon-backed U-shape (από-περίγραμμα) / composite reflect each local
+ *     polygon vertex (negate y) + reverse winding instead of `flipY`, because
+ *     `buildUshapeLocal`/`buildCompositeLocal` ignore `flipY` when a polygon is
+ *     present (ADR-363 Phase 2b). Manual parametric Π still toggles `flipY`.
  *
  *   - Beam: `startPoint`, `endPoint`, and `curveControl` (if present)
  *     reflected.
@@ -73,7 +77,7 @@ import {
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import type { StairEntity, StairParams } from '../types/stair-types';
 import type { Point3D as BimPoint3D, Polygon3D as BimPolygon3D } from '../types/bim-base';
-import type { Point3D as RenderPoint3D } from '../../rendering/types/Types';
+import type { Point2D, Point3D as RenderPoint3D } from '../../rendering/types/Types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { computeSlabGeometry } from '../geometry/slab-geometry';
 import { computeSlabOpeningGeometry } from '../geometry/slab-opening-geometry';
@@ -198,6 +202,20 @@ function mirrorSlabOpening(entity: SlabOpeningEntity, axis: MirrorAxis): Partial
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
+/**
+ * Reflect a polygon-backed cross-section (LOCAL mm, bbox-centered, CCW) for a
+ * mirror operation (ADR-363 Phase 2b). The canonical column mirror is a
+ * reflection of the local frame across its own X axis (T[1][1] = -1, proven
+ * invariant of axisAngle + rotation — see header). For L/T/U-parametric this is
+ * the `flipY` toggle; for polygon-backed U-shape/composite the local polygon
+ * carries the shape, so we negate each vertex's local y and reverse the winding
+ * to keep CCW order. Negating y preserves the bbox-centred invariant (the bbox
+ * stays symmetric about y=0).
+ */
+function reflectLocalPolygon(poly: readonly Point2D[]): Point2D[] {
+  return poly.map((p) => ({ x: p.x, y: -p.y })).reverse();
+}
+
 function mirrorColumn(entity: ColumnEntity, axis: MirrorAxis): Partial<SceneEntity> {
   const axisAngle = getAxisAngleDeg(axis);
   const base: ColumnParams = {
@@ -218,6 +236,19 @@ function mirrorColumn(entity: ColumnEntity, axis: MirrorAxis): Partial<SceneEnti
       ...base,
       tshape: { ...entity.params.tshape, flipY: !(entity.params.tshape?.flipY ?? false) },
     };
+  } else if (entity.params.kind === 'U-shape') {
+    // Polygon-backed (από-περίγραμμα) → reflect the exact local polygon. Manual
+    // parametric Π (no polygon) → flipY toggle, honoured by `buildUshapeLocal`.
+    const poly = entity.params.ushape?.polygon;
+    newParams = poly && poly.length >= 3
+      ? { ...base, ushape: { ...entity.params.ushape, polygon: reflectLocalPolygon(poly) } }
+      : { ...base, ushape: { ...entity.params.ushape, flipY: !(entity.params.ushape?.flipY ?? false) } };
+  } else if (entity.params.kind === 'composite') {
+    // Composite is ALWAYS polygon-backed (Eurocode 8 — no auto-decomposition).
+    const poly = entity.params.composite?.polygon;
+    newParams = poly && poly.length >= 3
+      ? { ...base, composite: { polygon: reflectLocalPolygon(poly) } }
+      : base;
   }
 
   const geometry = computeColumnGeometry(newParams);

@@ -33,8 +33,12 @@ export type WallToolPhase =
  *   - 'in-region' — (Phase 1K) pick 4 lines that close a rectangle (or click inside
  *                   a region / box-select) → ONE wall filling it (length = long side,
  *                   thickness = short side).
+ *   - 'outer-perimeter' — («από περίγραμμα») box-select the faces of a structural
+ *                   element (rectangle / Γ / Τ / Π) → chain of WallEntity, one per
+ *                   straight leg, thickness derived per-leg from the geometry, miter
+ *                   joins via the central trim recompute.
  */
-export type WallPlacementMode = 'freehand' | 'on-entity' | 'in-region';
+export type WallPlacementMode = 'freehand' | 'on-entity' | 'in-region' | 'outer-perimeter';
 
 export interface WallToolState {
   readonly phase: WallToolPhase;

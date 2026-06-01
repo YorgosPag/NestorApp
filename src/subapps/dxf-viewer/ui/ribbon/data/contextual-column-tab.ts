@@ -39,6 +39,9 @@ const COLUMN_KIND_OPTIONS = [
   { value: 'polygon',     labelKey: 'ribbon.commands.columnEditor.kind.polygon',     isLiteralLabel: false },
   { value: 'shear-wall',  labelKey: 'ribbon.commands.columnEditor.kind.shearWall',   isLiteralLabel: false },
   { value: 'I-shape',     labelKey: 'ribbon.commands.columnEditor.kind.iShape',      isLiteralLabel: false },
+  // ADR-363 Phase 2b — Π/κανάλι τοιχείο (channel). Industry-standard parametric
+  // section (Tekla/ETABS «Channel»). Composite ΔΕΝ μπαίνει εδώ — μόνο από-περίγραμμα.
+  { value: 'U-shape',     labelKey: 'ribbon.commands.columnEditor.kind.uShape',      isLiteralLabel: false },
 ] as const;
 
 // ADR-363 Phase 8D — polygon sides numeric input options (3-12 per MIN/MAX_POLYGON_SIDES).
@@ -73,6 +76,16 @@ const I_WEB_THICKNESS_OPTIONS = [
   { value: '15', labelKey: '15', isLiteralLabel: true },
   { value: '18', labelKey: '18', isLiteralLabel: true },
   { value: '20', labelKey: '20', isLiteralLabel: true },
+] as const;
+
+// ADR-363 Phase 2b — U-shape (Π) leg/base thickness presets (RC wall typical, mm).
+const U_PLATE_THICKNESS_OPTIONS = [
+  { value: '100', labelKey: '100', isLiteralLabel: true },
+  { value: '130', labelKey: '130', isLiteralLabel: true },
+  { value: '150', labelKey: '150', isLiteralLabel: true },
+  { value: '200', labelKey: '200', isLiteralLabel: true },
+  { value: '250', labelKey: '250', isLiteralLabel: true },
+  { value: '300', labelKey: '300', isLiteralLabel: true },
 ] as const;
 
 // ADR-363 Phase 8E — shear-wall RC concrete catalog (Eurocode 2 / EN 1992-1-1).
@@ -314,6 +327,43 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.webThickness,
                 comboboxWidthPx: 80,
                 options: I_WEB_THICKNESS_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-363 Phase 2b — U-shape (Π) manual parametric inputs (leg + base
+      // thickness). Visible iff `params.kind === 'U-shape'` ΚΑΙ δεν υπάρχει
+      // polygon (polygon-backed → per-vertex grips) via bridge.getPanelVisibility.
+      id: 'column-ushape-params',
+      labelKey: 'ribbon.panels.columnUshape',
+      visibilityKey: COLUMN_RIBBON_VISIBILITY_KEYS.ushapeParams,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.legThickness',
+                labelKey: 'ribbon.commands.columnEditor.legThickness',
+                commandKey: COLUMN_RIBBON_KEYS.params.legThickness,
+                comboboxWidthPx: 80,
+                options: U_PLATE_THICKNESS_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.baseThickness',
+                labelKey: 'ribbon.commands.columnEditor.baseThickness',
+                commandKey: COLUMN_RIBBON_KEYS.params.baseThickness,
+                comboboxWidthPx: 80,
+                options: U_PLATE_THICKNESS_OPTIONS,
               },
             },
           ],

@@ -12,11 +12,14 @@ import type {
   ColumnIShapeParams,
   ColumnParams,
   ColumnPolygonParams,
+  ColumnUshapeParams,
 } from '../../../../bim/types/column-types';
 import {
   DEFAULT_I_FLANGE_THICKNESS_MM,
   DEFAULT_I_WEB_THICKNESS_MM,
   DEFAULT_POLYGON_SIDES,
+  DEFAULT_U_BASE_THICKNESS_MM,
+  DEFAULT_U_LEG_THICKNESS_MM,
 } from '../../../../bim/types/column-types';
 import { COLUMN_RIBBON_KEYS } from './column-command-keys';
 
@@ -38,8 +41,11 @@ export const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof ColumnParams>> =
  * ADR-363 Phase 8D — Nested-param routing. Sides → polygon.sides;
  * flangeThickness/webThickness → ishape.{flange|web}Thickness.
  */
-type NestedGroup = 'polygon' | 'ishape';
-type NestedField = keyof ColumnPolygonParams | keyof ColumnIShapeParams;
+type NestedGroup = 'polygon' | 'ishape' | 'ushape';
+type NestedField =
+  | keyof ColumnPolygonParams
+  | keyof ColumnIShapeParams
+  | keyof ColumnUshapeParams;
 
 export interface NestedPath {
   readonly group: NestedGroup;
@@ -63,6 +69,17 @@ export const NESTED_NUMBER_KEY_TO_PATH: Readonly<Record<string, NestedPath>> = {
     field: 'webThickness',
     defaultValue: DEFAULT_I_WEB_THICKNESS_MM,
   },
+  // ADR-363 Phase 2b — manual παραμετρικό Π (U-shape χωρίς polygon).
+  [COLUMN_RIBBON_KEYS.params.legThickness]: {
+    group: 'ushape',
+    field: 'legThickness',
+    defaultValue: DEFAULT_U_LEG_THICKNESS_MM,
+  },
+  [COLUMN_RIBBON_KEYS.params.baseThickness]: {
+    group: 'ushape',
+    field: 'baseThickness',
+    defaultValue: DEFAULT_U_BASE_THICKNESS_MM,
+  },
 };
 
 export function isNestedNumberKey(commandKey: string): boolean {
@@ -70,7 +87,11 @@ export function isNestedNumberKey(commandKey: string): boolean {
 }
 
 export function readNestedValue(params: Readonly<ColumnParams>, path: NestedPath): number {
-  const group = path.group === 'polygon' ? params.polygon : params.ishape;
+  const group = path.group === 'polygon'
+    ? params.polygon
+    : path.group === 'ishape'
+      ? params.ishape
+      : params.ushape;
   const raw = group ? (group as Record<string, unknown>)[path.field] : undefined;
   return typeof raw === 'number' ? raw : path.defaultValue;
 }
@@ -83,6 +104,10 @@ export function patchNestedParams(
   if (path.group === 'polygon') {
     const nextPolygon: ColumnPolygonParams = { ...(params.polygon ?? {}), [path.field]: nextValue };
     return { ...params, polygon: nextPolygon };
+  }
+  if (path.group === 'ushape') {
+    const nextUshape: ColumnUshapeParams = { ...(params.ushape ?? {}), [path.field]: nextValue };
+    return { ...params, ushape: nextUshape };
   }
   const nextIshape: ColumnIShapeParams = { ...(params.ishape ?? {}), [path.field]: nextValue };
   return { ...params, ishape: nextIshape };

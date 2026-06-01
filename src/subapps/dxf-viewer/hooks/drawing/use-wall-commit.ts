@@ -16,6 +16,8 @@ import type { Point3D } from '../../bim/types/bim-base';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { buildWallForLine, buildWallsForClosed } from '../../bim/walls/wall-from-entity';
 import { buildWallFillingRect, type DetectedRectangle } from '../../bim/walls/wall-in-region';
+import type { PerimeterFacesResult } from '../../bim/walls/perimeter-from-faces';
+import { EventBus } from '../../systems/events/EventBus';
 import { buildDefaultWallParams, buildWallEntity, type SceneUnits } from './wall-completion';
 import { INITIAL_STATE, type WallToolState } from './wall-tool-types';
 
@@ -46,6 +48,13 @@ export interface WallCommitApi {
    * ≥1 wall was built.
    */
   commitInRegionRects(s: WallToolState, rects: readonly DetectedRectangle[]): boolean;
+  /**
+   * ADR-363 «Τοίχος από περίγραμμα»: build one filling wall per leg rect across all
+   * analysed perimeters (length = long side, thickness = short side) and surface a
+   * non-blocking toast («Δημιουργήθηκαν N· αγνοήθηκαν X») via EventBus. Reuses the
+   * in-region build + miter-recompute path. Returns true if ≥1 wall was built.
+   */
+  commitPerimeterFaces(s: WallToolState, result: PerimeterFacesResult): boolean;
 }
 
 /**
@@ -185,9 +194,12 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
     [currentLevelId, onWallCreated, getSceneUnits, setState],
   );
 
-  // ── commit (in-region, ADR-363 Phase 1K) ─────────────────────────────────
-  const commitInRegionRects = useCallback(
-    (s: WallToolState, rects: readonly DetectedRectangle[]): boolean => {
+  // ── shared rect→wall build (in-region + outer-perimeter) ─────────────────
+  // One filling wall per detected rectangle; returns how many passed the validator.
+  // Each `onWallCreated` recomputes neighbour miter trims (addWallToScene), so the
+  // whole batch is mitred/bevelled once the last leg lands.
+  const buildFillingWalls = useCallback(
+    (s: WallToolState, rects: readonly DetectedRectangle[]): number => {
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       let built = 0;
       for (const rect of rects) {
@@ -197,6 +209,15 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
           built++;
         }
       }
+      return built;
+    },
+    [currentLevelId, onWallCreated, getSceneUnits],
+  );
+
+  // ── commit (in-region, ADR-363 Phase 1K) ─────────────────────────────────
+  const commitInRegionRects = useCallback(
+    (s: WallToolState, rects: readonly DetectedRectangle[]): boolean => {
+      const built = buildFillingWalls(s, rects);
       if (built === 0) {
         // Validator rejected every rect (e.g. short side > MAX_WALL_THICKNESS_MM).
         setState({ ...s, regionPicks: [], error: 'wall.validation.hardErrors.thicknessExceedsMax' });
@@ -211,7 +232,31 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
       });
       return true;
     },
-    [currentLevelId, onWallCreated, getSceneUnits, setState],
+    [buildFillingWalls, setState],
+  );
+
+  // ── commit (outer-perimeter, ADR-363 «Τοίχος από περίγραμμα») ─────────────
+  const commitPerimeterFaces = useCallback(
+    (s: WallToolState, result: PerimeterFacesResult): boolean => {
+      const built = buildFillingWalls(s, result.rects);
+      // Garbage shapes (triangle/free line) + validator-rejected legs are surfaced
+      // as the "ignored" count so the user always gets Revit-style feedback.
+      const ignored = result.ignoredCount + (result.rects.length - built);
+      EventBus.emit('bim:walls-from-perimeter', { built, ignored });
+      if (built === 0) {
+        setState({ ...s, regionPicks: [], error: null });
+        return false;
+      }
+      setState({
+        ...INITIAL_STATE,
+        kind: s.kind,
+        placementMode: s.placementMode,
+        overrides: s.overrides,
+        phase: 'awaitingStart',
+      });
+      return true;
+    },
+    [buildFillingWalls, setState],
   );
 
   return {
@@ -220,5 +265,6 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
     commitPolylineFromState,
     commitOnEntity,
     commitInRegionRects,
+    commitPerimeterFaces,
   };
 }

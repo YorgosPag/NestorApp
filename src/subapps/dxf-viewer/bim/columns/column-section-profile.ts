@@ -81,6 +81,23 @@ export const COL_I_FLANGE_T_PX = 4;
 /** I-shape web width (X-axis). */
 export const COL_I_WEB_W_PX = 4;
 
+// ─── ADR-363 Phase 2b — U-shape (Π) / polygon-backed symbol sizes ──────────
+
+/** U-shape (Π) symbol total width (X-axis). */
+export const COL_U_SECTION_W_PX = 18;
+
+/** U-shape (Π) symbol total height (Y-axis). */
+export const COL_U_SECTION_H_PX = 18;
+
+/** U-shape (Π) leg thickness (each vertical leg). */
+export const COL_U_LEG_T_PX = 5;
+
+/** U-shape (Π) base thickness (bottom flange). */
+export const COL_U_BASE_T_PX = 5;
+
+/** Polygon-backed (composite / από-περίγραμμα U) symbol target box (px). */
+export const COL_POLY_BACKED_BOX_PX = 18;
+
 /** Offset from column bbox right-edge to symbol centre (px). */
 export const COL_SECTION_OFFSET_PX = 12;
 
@@ -294,4 +311,82 @@ export function computeIProfileOutline(
     { x: -hw, y: ys * ( hh - tfc) },     // v10 web BL
     { x: -hb, y: ys * ( hh - tfc) },     // v11 top of BL corner
   ];
+}
+
+/**
+ * Compute the outline polygon of a U-shape (Π/channel) section symbol.
+ * ADR-363 Phase 2b. For the MANUAL parametric Π (no `polygon`). Returns 8 CCW
+ * vertices in LOCAL symbol coords (centre = origin). Two vertical legs + bottom
+ * base; opening up for flipY=false (mirror `buildUshapeLocal`).
+ *
+ * Shape diagram (Y-down screen, flipY=false → opening at top):
+ *
+ *   ┌───┐     ┌───┐
+ *   │   │     │   │← legs (legT wide)
+ *   │   │     │   │
+ *   └───┴─────┴───┘← base (baseT tall)
+ *
+ * @param w      Total symbol width  (default COL_U_SECTION_W_PX)
+ * @param h      Total symbol height (default COL_U_SECTION_H_PX)
+ * @param legT   Leg thickness       (default COL_U_LEG_T_PX)
+ * @param baseT  Base thickness      (default COL_U_BASE_T_PX)
+ * @param flipY  Mirror vertically — opening at bottom (default false)
+ */
+export function computeUProfileOutline(
+  w: number = COL_U_SECTION_W_PX,
+  h: number = COL_U_SECTION_H_PX,
+  legT: number = COL_U_LEG_T_PX,
+  baseT: number = COL_U_BASE_T_PX,
+  flipY = false,
+): ReadonlyArray<SectionPoint> {
+  const hw = w / 2;
+  const hh = h / 2;
+  const lt = Math.min(legT, hw);
+  const bt = Math.min(baseT, h);
+  const ys = flipY ? -1 : 1;
+  // 8 vertices CCW (screen Y-down). Base at screen-bottom (+Y) for flipY=false.
+  return [
+    { x: -hw,      y: ys *  hh },          // v0 base bottom-left
+    { x:  hw,      y: ys *  hh },          // v1 base bottom-right
+    { x:  hw,      y: ys * -hh },          // v2 right leg outer-top
+    { x:  hw - lt, y: ys * -hh },          // v3 right leg inner-top
+    { x:  hw - lt, y: ys * ( hh - bt) },   // v4 right leg inner-bottom (base top)
+    { x: -hw + lt, y: ys * ( hh - bt) },   // v5 left leg inner-bottom (base top)
+    { x: -hw + lt, y: ys * -hh },          // v6 left leg inner-top
+    { x: -hw,      y: ys * -hh },          // v7 left leg outer-top
+  ];
+}
+
+/**
+ * Compute the outline of a polygon-backed section symbol (composite, or U-shape
+ * created «από περίγραμμα»). ADR-363 Phase 2b. Scales the actual cross-section
+ * polygon (LOCAL mm, bbox-centered) down to fit a `targetPx` box, preserving
+ * aspect ratio — so the symbol shows the REAL section shape (mirror του
+ * generic-polygon pattern του `beam-section-profile`). Returns `[]` για
+ * degenerate polygons (<3 κορυφές).
+ *
+ * @param poly     Cross-section polygon (LOCAL mm, ≥3 vertices)
+ * @param targetPx Target box size (default COL_POLY_BACKED_BOX_PX)
+ * @param flipY    Mirror vertically (parity-only)
+ */
+export function computePolygonBackedOutline(
+  poly: ReadonlyArray<{ readonly x: number; readonly y: number }>,
+  targetPx: number = COL_POLY_BACKED_BOX_PX,
+  flipY = false,
+): ReadonlyArray<SectionPoint> {
+  if (poly.length < 3) return [];
+  let minX = Number.POSITIVE_INFINITY, maxX = Number.NEGATIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY, maxY = Number.NEGATIVE_INFINITY;
+  for (const p of poly) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  const span = Math.max(maxX - minX, maxY - minY) || 1;
+  const scale = targetPx / span;
+  const ys = flipY ? -1 : 1;
+  return poly.map((p) => ({ x: (p.x - cx) * scale, y: ys * (p.y - cy) * scale }));
 }

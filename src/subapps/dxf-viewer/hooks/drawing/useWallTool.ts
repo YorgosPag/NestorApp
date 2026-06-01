@@ -35,14 +35,6 @@ import type { WallKind, WallCategory } from '../../bim/types/wall-types';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 // ADR-363 Phase 1J — «Τοίχος πάνω σε οντότητα 2Δ» geometry bridge.
 import { pickWallSourceFromEntity } from '../../bim/walls/wall-from-entity';
-// ADR-363 Phase 1K — «Τοίχος σε περιοχή (4 γραμμές)» geometry SSoT.
-import {
-  extractLineSegments,
-  pickSegmentAt,
-  findRectanglesFromSegments,
-  findEnclosingRectangle,
-  type RegionLineSeg,
-} from '../../bim/walls/wall-in-region';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import type { WallParamOverrides } from './wall-completion';
@@ -50,6 +42,7 @@ import {
   useWallToolDynamicInputListener,
   useWallToolEnterListener,
   useWallToolRegionBoxSelectListener,
+  useWallToolPerimeterBoxSelectListener,
 } from './use-wall-tool-event-listeners';
 import { EventBus } from '../../systems/events/EventBus';
 import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
@@ -62,6 +55,8 @@ import {
   type UseWallToolResult,
 } from './wall-tool-types';
 import { useWallCommit } from './use-wall-commit';
+// ADR-363 — in-region / perimeter click handlers extracted for N.7.1 (≤500 lines).
+import { useWallRegionClicks } from './use-wall-region-clicks';
 
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
@@ -82,9 +77,9 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       wallPreviewStore.reset();
       return;
     }
-    // ADR-363 Phase 1K — in-region: picked lines are surfaced via selection
-    // highlight (getRegionPickIds), not a rubber-band ghost. No preview shape.
-    if (state.placementMode === 'in-region') {
+    // ADR-363 Phase 1K / «από περίγραμμα» — region & perimeter picks are surfaced
+    // via selection highlight (box-select), not a rubber-band ghost. No preview shape.
+    if (state.placementMode === 'in-region' || state.placementMode === 'outer-perimeter') {
       wallPreviewStore.reset();
       return;
     }
@@ -240,60 +235,22 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     commitPolylineFromState,
     commitOnEntity,
     commitInRegionRects,
+    commitPerimeterFaces,
   } = useWallCommit({ currentLevelId, onWallCreated, getSceneUnits, setState });
 
-  // ── in-region helpers (ADR-363 Phase 1K) ─────────────────────────────────
-  // Live scene-units-agnostic endpoint-merge / hit-test tolerance (world units),
-  // derived from the same SNAP_DEFAULT/scale rule as the on-entity pick.
-  const regionTol = useCallback(
-    (): number => TOLERANCE_CONFIG.SNAP_DEFAULT / getImmediateTransform().scale,
-    [],
-  );
-
-  /** Same physical segment already picked? (id + endpoints, polyline-edge aware). */
-  const sameSeg = (a: RegionLineSeg, b: RegionLineSeg): boolean =>
-    a.id === b.id &&
-    Math.abs(a.start.x - b.start.x) < 1e-6 &&
-    Math.abs(a.start.y - b.start.y) < 1e-6 &&
-    Math.abs(a.end.x - b.end.x) < 1e-6 &&
-    Math.abs(a.end.y - b.end.y) < 1e-6;
-
-  // Click while in-region: hit a line → accumulate (commit when 4 close a rect);
-  // miss → treat the click as "inside a region" and fill the enclosing rectangle.
-  const onRegionClick = useCallback(
-    (s: WallToolState, point: Readonly<Point2D>): boolean => {
-      const segs = extractLineSegments(getSceneEntities?.() ?? []);
-      const tol = regionTol();
-      const hit = pickSegmentAt(point, segs, tol);
-      if (hit) {
-        const picks = s.regionPicks.some((p) => sameSeg(p, hit))
-          ? s.regionPicks
-          : [...s.regionPicks, hit];
-        const rects = findRectanglesFromSegments(picks, tol);
-        if (rects.length > 0) {
-          const ok = commitInRegionRects({ ...s, regionPicks: picks }, [rects[0]]);
-          // Keep the ref coherent for getRegionPickIds() read right after the click.
-          stateRef.current = { ...stateRef.current, regionPicks: [] };
-          return ok;
-        }
-        const next = { ...s, regionPicks: picks, error: null };
-        stateRef.current = next;
-        setState(next);
-        return true;
-      }
-      const rect = findEnclosingRectangle(segs, point, tol);
-      if (rect) {
-        const ok = commitInRegionRects(s, [rect]);
-        stateRef.current = { ...stateRef.current, regionPicks: [] };
-        return ok;
-      }
-      return false;
-    },
-    [getSceneEntities, regionTol, commitInRegionRects],
-  );
+  // ── in-region / perimeter click handlers (extracted for N.7.1) ───────────
+  const { regionTol, onRegionClick, onPerimeterClick, getRegionPickIds } = useWallRegionClicks({
+    stateRef,
+    setState,
+    getSceneEntities,
+    commitInRegionRects,
+    commitPerimeterFaces,
+  });
 
   // ADR-363 Phase 1K Mode C — box-select listener extracted for N.7.1 (≤500 lines).
   useWallToolRegionBoxSelectListener({ stateRef, getSceneEntities, regionTol, commitInRegionRects });
+  // ADR-363 «Τοίχος από περίγραμμα» — box-select listener (faces → leg walls).
+  useWallToolPerimeterBoxSelectListener({ stateRef, getSceneEntities, regionTol, commitPerimeterFaces });
 
   // ── click pipeline ───────────────────────────────────────────────────────
   const onCanvasClick = useCallback(
@@ -304,6 +261,11 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       // ADR-363 Phase 1K — in-region placement (pick 4 lines / click inside).
       if (s.placementMode === 'in-region') {
         return onRegionClick(s, point);
+      }
+
+      // ADR-363 «Τοίχος από περίγραμμα» — click inside a perimeter (box-select primary).
+      if (s.placementMode === 'outer-perimeter') {
+        return onPerimeterClick(s, point);
       }
 
       // ADR-363 Phase 1J — on-entity placement (pick entity → pick side).
@@ -399,7 +361,14 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       }
       return false;
     },
-    [commitStraightFromState, commitCurvedFromState, commitOnEntity, getSceneEntities, onRegionClick],
+    [
+      commitStraightFromState,
+      commitCurvedFromState,
+      commitOnEntity,
+      getSceneEntities,
+      onRegionClick,
+      onPerimeterClick,
+    ],
   );
 
   // ESC during in-region: drop accumulated picks (back to empty collecting)
@@ -430,6 +399,10 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       return s.regionPicks.length > 0
         ? 'tools.wall.statusRegionMore'
         : 'tools.wall.statusRegionPick';
+    }
+    // ADR-363 «Τοίχος από περίγραμμα» — box-select prompt.
+    if (s.placementMode === 'outer-perimeter') {
+      return 'tools.wall.statusPerimeterPick';
     }
     // ADR-363 Phase 1J — on-entity prompts.
     if (s.placementMode === 'on-entity') {
@@ -463,15 +436,6 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     commitCurvedFromState,
   });
   useWallToolEnterListener({ stateRef, commitPolylineFromState });
-
-  // ADR-363 Phase 1K — live ids of accumulated in-region picks (selection highlight).
-  const getRegionPickIds = useCallback(
-    (): string[] => {
-      const ids = stateRef.current.regionPicks.map((p) => p.id).filter((id): id is string => !!id);
-      return [...new Set(ids)];
-    },
-    [],
-  );
 
   return {
     state,

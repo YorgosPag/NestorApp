@@ -21,6 +21,9 @@ export const KIND_STROKE: Readonly<Record<ColumnKind, string>> = {
   'polygon':     '#5c8a3a',
   'shear-wall':  '#3a4048',
   'I-shape':     '#4a4a52',
+  // ADR-363 Phase 2 «από περίγραμμα» — τοιχία ΟΣ, ίδια RC απόχρωση με shear-wall.
+  'U-shape':     '#3a4048',
+  'composite':   '#3a4048',
 };
 
 /** Translucent fill (rgba) per kind. ~22% opacity. */
@@ -32,4 +35,7 @@ export const KIND_FILL: Readonly<Record<ColumnKind, string>> = {
   'polygon':     'rgba(120, 170, 90, 0.22)',
   'shear-wall':  'rgba(70, 80, 90, 0.25)',
   'I-shape':     'rgba(95, 95, 110, 0.20)',
+  // ADR-363 Phase 2 «από περίγραμμα» — τοιχία ΟΣ, ίδιο RC fill με shear-wall.
+  'U-shape':     'rgba(70, 80, 90, 0.25)',
+  'composite':   'rgba(70, 80, 90, 0.25)',
 };
