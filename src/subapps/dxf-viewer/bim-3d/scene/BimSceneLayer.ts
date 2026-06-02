@@ -40,6 +40,8 @@ import type { FloorVisMode } from '../utils/floor-visibility-state';
 import { resolveIsEntityVisible } from '../../bim/visibility/visibility-resolver';
 import type { Discipline } from '../../bim/discipline/bim-discipline';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
+import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
+import { buildEntitySystemColorIntIndex } from '../../bim/mep-systems/mep-system-color';
 import { getLayer } from '../../stores/LayerStore';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
@@ -123,8 +125,13 @@ export class BimSceneLayer {
     const { objectStyles, disciplineVisibility } = useDrawingScaleStore.getState();
     const useNewSystem = buildingVisModes.size > 0;
     const floorMode = activeLevelId ? floorVisModes.get(activeLevelId) : undefined;
+    // ADR-408 Φ5 — colour-by-system index (entity → THREE colour int), built once
+    // per floor sync; threaded into the fixture/panel converters.
+    const systemColorIndex = buildEntitySystemColorIntIndex(
+      useMepSystemStore.getState().getSystems(),
+    );
     return {
-      objectStyles, disciplineVisibility, floors, buildings, buildingVisModes,
+      objectStyles, disciplineVisibility, systemColorIndex, floors, buildings, buildingVisModes,
       floorMode, activeBuildingId, useNewSystem,
       floorElevationMm, activeLevelId,
     };
@@ -324,7 +331,10 @@ export class BimSceneLayer {
     for (const fixture of entities.fixtures ?? []) {
       const r = this.resolveEntity(fixture, 'light-fixture', ctx);
       if (!r) continue;
-      const mesh = fixtureToMesh(fixture, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      const mesh = fixtureToMesh(
+        fixture, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation,
+        ctx.systemColorIndex.get(fixture.id),
+      );
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }
@@ -336,7 +346,10 @@ export class BimSceneLayer {
     for (const panel of entities.panels ?? []) {
       const r = this.resolveEntity(panel, 'electrical-panel', ctx);
       if (!r) continue;
-      const mesh = panelToMesh(panel, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      const mesh = panelToMesh(
+        panel, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation,
+        ctx.systemColorIndex.get(panel.id),
+      );
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

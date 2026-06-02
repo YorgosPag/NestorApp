@@ -13,6 +13,8 @@ export interface SyncContext {
   readonly objectStyles: Partial<Record<BimCategory, ObjectStyle>>;
   /** ADR-405 §4 — per-discipline visibility (Revit "View Discipline"). */
   readonly disciplineVisibility: Partial<Record<Discipline, boolean>>;
+  /** ADR-408 Φ5 — colour-by-system: `entityId → THREE colour int` (panels/fixtures). */
+  readonly systemColorIndex: ReadonlyMap<string, number>;
   readonly floors: readonly FloorRef[];
   readonly buildings: readonly BuildingRef[];
   readonly buildingVisModes: ReadonlyMap<string, BuildingVisMode>;

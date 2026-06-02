@@ -105,6 +105,26 @@ export function getElementMaterial3D(
 }
 
 /**
+ * ADR-408 Φ5 — colour-by-system material: the element's base PBR (roughness /
+ * metalness / transparency) tinted with the System's colour. Cached per
+ * `${type}:${colorInt}` — never mutates the shared element singleton.
+ */
+export function getSystemTintedMaterial3D(
+  type: 'mep-fixture' | 'electrical-panel',
+  colorInt: number,
+): THREE.MeshStandardMaterial {
+  const baseKey = `elem-${type}`;
+  const cacheKey = `${baseKey}:${colorInt}`;
+  let mat = CACHE.get(cacheKey);
+  if (!mat) {
+    const def = MAT_DEFS[baseKey] ?? MAT_DEFS['mat-concrete']!;
+    mat = buildMat({ ...def, color: colorInt });
+    CACHE.set(cacheKey, mat);
+  }
+  return mat;
+}
+
+/**
  * Dispose all cached materials. Call only on full app teardown —
  * NOT on 3D→2D mode toggle (ThreeJsSceneManager.dispose only disposes geometries).
  */

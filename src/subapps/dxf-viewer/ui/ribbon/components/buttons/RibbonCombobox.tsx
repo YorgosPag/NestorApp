@@ -116,9 +116,16 @@ export const RibbonCombobox: React.FC<RibbonComboboxProps> = ({ command }) => {
         >
           <SelectValue placeholder={MIXED_PLACEHOLDER} />
         </SelectTrigger>
-        <SelectContent>
+        {/*
+         * The canonical SelectContent locks width to the (narrow) trigger
+         * (`w-[var(--radix-select-trigger-width)]`), which truncates long
+         * option labels (e.g. column catalog / anchor names). Override to
+         * size the popup to its content while never going below the trigger
+         * width; `whitespace-nowrap` items keep each label on one line.
+         */}
+        <SelectContent className="w-auto min-w-[var(--radix-select-trigger-width)] max-w-[28rem]">
           {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
+            <SelectItem key={opt.value} value={opt.value} className="whitespace-nowrap">
               {resolveLabel(opt, t)}
             </SelectItem>
           ))}

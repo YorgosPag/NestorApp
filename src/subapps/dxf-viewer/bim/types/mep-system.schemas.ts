@@ -28,6 +28,8 @@ export const MepSystemParamsSchema = z
     sourceEntityId: z.string().min(1),
     sourceConnectorId: z.string().min(1),
     members: z.array(MepSystemMemberSchema),
+    // ADR-408 Φ5 — System-owned colour-by-system hex (Revit "System Colour").
+    color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
     ratedVoltage: z.number().positive().optional(),
     poles: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
   })

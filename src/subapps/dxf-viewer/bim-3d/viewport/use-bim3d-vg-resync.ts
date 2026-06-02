@@ -5,6 +5,7 @@ import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store
 import { type Bim3DEntities, EMPTY_BIM_ENTITIES } from '../stores/Bim3DEntitiesStore';
 import { subscribeEnvelopeSpec } from '../../bim/stores/envelope-spec-store';
 import { subscribeEnvelopeFloorSlabs } from '../../bim/stores/envelope-floor-slabs-store';
+import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import { resyncBimScene } from '../scene/bim3d-resync';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 
@@ -48,10 +49,20 @@ export function useBim3DVgResync(
     // (τρύπα γίνεται αίθριο→μονώνεται γύρω) → rebuild για 2D⟷3D parity.
     const unsubFloorSlabs = subscribeEnvelopeFloorSlabs(resync);
 
+    // (d) ADR-408 Φ5 — colour-by-system: when circuits change (create / assign /
+    // dissolve), rebuild so the fixture/panel meshes pick up the System colour.
+    let prevSystems = useMepSystemStore.getState().systems;
+    const unsubSystems = useMepSystemStore.subscribe((state) => {
+      if (state.systems === prevSystems) return;
+      prevSystems = state.systems;
+      resync();
+    });
+
     return () => {
       unsubVg();
       unsubEnvelope();
       unsubFloorSlabs();
+      unsubSystems();
     };
   }, [managerRef, externalEntitiesMode, bimEntities]);
 }

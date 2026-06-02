@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
-import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
+import { getElementMaterial3D, getSystemTintedMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildShape, extrudeAndRotate, tagMesh } from './bim-three-shape-helpers';
 import { attachEdgesProjection } from './bim-three-edges';
 
@@ -30,6 +30,7 @@ export function fixtureToMesh(
   floorElevationMm = 0,
   levelId?: string,
   buildingBaseElevationM = 0,
+  systemColor?: number,
 ): THREE.Mesh | null {
   const verts = fixture.geometry.footprint.vertices;
   if (verts.length < 3) return null;
@@ -40,7 +41,11 @@ export function fixtureToMesh(
   const bodyHeightM = fixture.params.bodyHeightMm * MM_TO_M;
   const geo = extrudeAndRotate(shape, bodyHeightM);
   const matId = fixture.params.material ?? 'elem-mep-fixture';
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D('mep-fixture'));
+  // ADR-408 Φ5 — colour-by-system: tint when the fixture is wired to a circuit.
+  const material = systemColor !== undefined
+    ? getSystemTintedMaterial3D('mep-fixture', systemColor)
+    : getElementMaterial3D('mep-fixture');
+  const mesh = new THREE.Mesh(geo, material);
   // Top face at the mounting elevation; body hangs DOWN by bodyHeight.
   const topMm = floorElevationMm + fixture.params.mountingElevationMm;
   mesh.position.y = topMm * MM_TO_M - bodyHeightM + buildingBaseElevationM;
@@ -62,6 +67,7 @@ export function panelToMesh(
   floorElevationMm = 0,
   levelId?: string,
   buildingBaseElevationM = 0,
+  systemColor?: number,
 ): THREE.Mesh | null {
   const verts = panel.geometry.footprint.vertices;
   if (verts.length < 3) return null;
@@ -73,7 +79,11 @@ export function panelToMesh(
   const bodyHeightM = panel.params.bodyHeightMm * MM_TO_M;
   const geo = extrudeAndRotate(shape, bodyHeightM);
   const matId = panel.params.material ?? 'elem-electrical-panel';
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D('electrical-panel'));
+  // ADR-408 Φ5 — colour-by-system: tint when the panel is a circuit source.
+  const material = systemColor !== undefined
+    ? getSystemTintedMaterial3D('electrical-panel', systemColor)
+    : getElementMaterial3D('electrical-panel');
+  const mesh = new THREE.Mesh(geo, material);
   // Box centred vertically on the mounting elevation (wall-mounted): the extrusion
   // grows UP from mesh.position.y, so the bottom sits at centre − bodyHeight/2.
   const centerMm = floorElevationMm + panel.params.mountingElevationMm;
