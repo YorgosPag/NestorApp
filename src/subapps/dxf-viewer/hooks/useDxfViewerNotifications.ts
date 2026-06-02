@@ -112,6 +112,18 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-408 Φ5 — circuit creation feedback (create-from-selection ribbon).
+    unsubs.push(
+      EventBus.on('bim:mep-circuit-created', ({ memberCount }) => {
+        toast.success(t('mepCircuit.created', { count: memberCount }));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:mep-circuit-create-failed', ({ reason }) => {
+        toast.warning(t(`mepCircuit.failed.${reason}`));
+      }),
+    );
+
     // ADR-401 Phase G.3 — stair attach mirrors (reuse the generic messages).
     unsubs.push(
       EventBus.on('bim:stairs-auto-attached', () => {
