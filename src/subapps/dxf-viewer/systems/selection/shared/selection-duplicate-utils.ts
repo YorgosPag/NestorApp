@@ -211,6 +211,9 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
     // `geometry.bbox` (BoundingBox3D) onto the XY plan view. Without these
     // cases the switch fell through to `default → null` and marquee selection
     // silently excluded every wall/opening/slab/column/beam/stair.
+    // ADR-406 / ADR-408 Φ3 — mep-fixture + electrical-panel are point-based BIM
+    // entities; `calculateBimEntity2DBounds` already handles them, but they were
+    // missing from this switch so window/crossing marquee silently skipped them.
     case 'wall':
     case 'opening':
     case 'slab':
@@ -218,6 +221,8 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
     case 'column':
     case 'beam':
     case 'stair':
+    case 'mep-fixture':
+    case 'electrical-panel':
       return calculateBimEntity2DBounds(entity as unknown as Entity);
     case 'text':
     case 'mtext': {

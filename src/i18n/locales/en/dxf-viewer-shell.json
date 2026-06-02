@@ -37,8 +37,7 @@
     "cancel": "Cancel"
   },
   "mepCircuit": {
-    "created_one": "Created an electrical circuit with {count} fixture.",
-    "created_other": "Created an electrical circuit with {count} fixtures.",
+    "created": "Electrical circuit created — fixtures: {count}.",
     "failed": {
       "no-source": "Select an electrical panel as the circuit source.",
       "multiple-sources": "Select only one electrical panel as the source.",
