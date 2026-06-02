@@ -26,6 +26,13 @@ import type { RibbonSlabOpeningBridge } from './useRibbonSlabOpeningBridge';
 import { isSlabOpeningBadgeKey } from './useRibbonSlabOpeningBridge';
 import type { RibbonMepCircuitBridge } from './useRibbonMepCircuitBridge';
 import { isMepCircuitActionKey } from './bridge/mep-circuit-command-keys';
+import type { RibbonMepFixtureBridge } from './useRibbonMepFixtureBridge';
+import { isMepFixturePanelVisibilityKey } from './useRibbonMepFixtureBridge';
+import {
+  isMepFixtureRibbonKey,
+  isMepFixtureRibbonStringKey,
+  isMepFixtureActionKey,
+} from './bridge/mep-fixture-command-keys';
 import type { RibbonLineToolBridge } from './useRibbonLineToolBridge';
 import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
 import { isStairRibbonKey, isStairRibbonStringKey, isStairActionKey } from './bridge/stair-command-keys';
@@ -68,6 +75,8 @@ interface UseRibbonCommandsProps {
   slabOpeningBridge: RibbonSlabOpeningBridge;
   /** ADR-408 Φ5 — MEP circuit contextual tab bridge (create-from-selection). */
   mepCircuitBridge: RibbonMepCircuitBridge;
+  /** ADR-406 — MEP fixture (φωτιστικό) contextual tab bridge. */
+  mepFixtureBridge: RibbonMepFixtureBridge;
   /** ADR-357 Phase 17 — Line tool Quick Style bridge. */
   lineToolBridge: RibbonLineToolBridge;
   /** ADR-359 Phase 10.b — XLine mode bridge. */
@@ -97,6 +106,7 @@ export function useRibbonCommands({
   beamBridge,
   slabOpeningBridge,
   mepCircuitBridge,
+  mepFixtureBridge,
   lineToolBridge,
   xlineModeBridge,
 }: UseRibbonCommandsProps): RibbonCommandsApi {
@@ -144,6 +154,10 @@ export function useRibbonCommands({
         slabOpeningBridge.onComboboxChange(key, value);
         return;
       }
+      if (isMepFixtureRibbonKey(key) || isMepFixtureRibbonStringKey(key)) {
+        mepFixtureBridge.onComboboxChange(key, value);
+        return;
+      }
       if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) {
         arrayBridge.onComboboxChange(key, value);
         return;
@@ -158,7 +172,7 @@ export function useRibbonCommands({
       }
       textEditorBridge.onComboboxChange(key, value);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const getComboboxState = React.useCallback(
@@ -173,12 +187,13 @@ export function useRibbonCommands({
       if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key)) return columnBridge.getComboboxState(key);
       if (isBeamRibbonKey(key) || isBeamRibbonStringKey(key)) return beamBridge.getComboboxState(key);
       if (isSlabOpeningRibbonStringKey(key)) return slabOpeningBridge.getComboboxState(key);
+      if (isMepFixtureRibbonKey(key) || isMepFixtureRibbonStringKey(key)) return mepFixtureBridge.getComboboxState(key);
       if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) return arrayBridge.getComboboxState(key);
       if (isLineToolRibbonKey(key)) return lineToolBridge.getComboboxState(key);
       if (isXlineRibbonKey(key)) return xlineModeBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const onToggle = React.useCallback(
@@ -236,9 +251,10 @@ export function useRibbonCommands({
       if (isStairPanelVisibilityKey(visibilityKey)) return stairBridge.getPanelVisibility(visibilityKey);
       if (isColumnPanelVisibilityKey(visibilityKey)) return columnBridge.getPanelVisibility(visibilityKey);
       if (isBeamPanelVisibilityKey(visibilityKey)) return beamBridge.getPanelVisibility(visibilityKey);
+      if (isMepFixturePanelVisibilityKey(visibilityKey)) return mepFixtureBridge.getPanelVisibility(visibilityKey);
       return true;
     },
-    [stairBridge, columnBridge, beamBridge],
+    [stairBridge, columnBridge, beamBridge, mepFixtureBridge],
   );
 
   // ADR-363 Phase 1E — Wall action keys (delete) handled by bridge before
@@ -277,9 +293,13 @@ export function useRibbonCommands({
         mepCircuitBridge.onAction(action);
         return;
       }
+      if (isMepFixtureActionKey(action)) {
+        mepFixtureBridge.onAction(action);
+        return;
+      }
       wrappedHandleAction(action, data);
     },
-    [wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, wrappedHandleAction],
+    [wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepFixtureBridge, wrappedHandleAction],
   );
 
   return React.useMemo(

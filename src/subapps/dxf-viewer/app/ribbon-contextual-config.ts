@@ -17,6 +17,7 @@ import { CONTEXTUAL_LINE_TOOL_TAB, LINE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ri
 import { CONTEXTUAL_XLINE_MODE_TAB, XLINE_MODE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-xline-mode-tab';
 import { CONTEXTUAL_MULTI_SELECTION_TAB, MULTI_SELECTION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-multi-selection-tab';
 import { CONTEXTUAL_MEP_CIRCUIT_TAB, MEP_CIRCUIT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-circuit-tab';
+import { CONTEXTUAL_MEP_FIXTURE_TAB, MEP_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-tab';
 import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
 import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
 
@@ -41,6 +42,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_XLINE_MODE_TAB,
   CONTEXTUAL_MULTI_SELECTION_TAB,
   CONTEXTUAL_MEP_CIRCUIT_TAB,
+  CONTEXTUAL_MEP_FIXTURE_TAB,
   ANIMATION_CONTEXTUAL_TAB,
 ] as const;
 
@@ -155,6 +157,8 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
   if (entity.type === 'column') return COLUMN_CONTEXTUAL_TRIGGER;
   if (entity.type === 'beam') return BEAM_CONTEXTUAL_TRIGGER;
   if (entity.type === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;
+  // ADR-406 — φωτιστικό (point-based MEP fixture) → contextual properties tab.
+  if (entity.type === 'mep-fixture') return MEP_FIXTURE_CONTEXTUAL_TRIGGER;
   if (entity.type === 'text' || entity.type === 'mtext') return TEXT_EDITOR_CONTEXTUAL_TRIGGER;
   if (entity.type === 'array') {
     const kind = readArrayKind(entity.params);

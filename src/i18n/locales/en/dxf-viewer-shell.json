@@ -723,6 +723,7 @@
       "slabOpeningProperties": "Slab Opening Properties",
       "multiSelection": "Multi-Selection",
       "mepCircuit": "Electrical Circuit",
+      "mepFixtureProperties": "Fixture Properties",
       "validationBadge": "Code violation",
       "dimension": "Dimension",
       "lineToolStyle": "Line Style",
@@ -799,6 +800,10 @@
       "ifcProperties": "IFC Properties",
       "slabOpeningKind": "Type",
       "slabOpeningActions": "Actions",
+      "mepFixtureShape": "Shape",
+      "mepFixtureGeometry": "Geometry",
+      "mepFixtureRectParams": "Rectangular",
+      "mepFixtureActions": "Actions",
       "mepCircuit": "Circuit",
       "multiSelectionCommon": "Common Properties",
       "multiSelectionFilter": "Filter",
@@ -1565,6 +1570,23 @@
             "c3545": "C35/45 — 250mm thick",
             "c4050": "C40/50 — 300mm thick"
           }
+        }
+      },
+      "mepFixtureEditor": {
+        "width": "Width / Diameter",
+        "length": "Length",
+        "rotation": "Rotation",
+        "bodyHeight": "Body thickness",
+        "mountingElevation": "Mounting height",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete fixture? This action cannot be undone.",
+        "shape": {
+          "section": {
+            "title": "Shape"
+          },
+          "rectangular": "Rectangular",
+          "circular": "Circular"
         }
       },
       "psetEditor": {

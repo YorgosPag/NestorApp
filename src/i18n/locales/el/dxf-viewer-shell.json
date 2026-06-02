@@ -723,6 +723,7 @@
       "slabOpeningProperties": "Ιδιότητες Διάνοιξης Πλάκας",
       "multiSelection": "Πολλαπλή Επιλογή",
       "mepCircuit": "Ηλεκτρικό Κύκλωμα",
+      "mepFixtureProperties": "Ιδιότητες Φωτιστικού",
       "validationBadge": "Παραβίαση κανονισμών",
       "dimension": "Διάσταση",
       "lineToolStyle": "Στυλ Γραμμής",
@@ -799,6 +800,10 @@
       "ifcProperties": "IFC Ιδιότητες",
       "slabOpeningKind": "Τύπος",
       "slabOpeningActions": "Ενέργειες",
+      "mepFixtureShape": "Σχήμα",
+      "mepFixtureGeometry": "Γεωμετρία",
+      "mepFixtureRectParams": "Ορθογώνιο",
+      "mepFixtureActions": "Ενέργειες",
       "mepCircuit": "Κύκλωμα",
       "multiSelectionCommon": "Κοινές Ιδιότητες",
       "multiSelectionFilter": "Φιλτράρισμα",
@@ -1565,6 +1570,23 @@
             "c3545": "C35/45 — πάχος 250mm",
             "c4050": "C40/50 — πάχος 300mm"
           }
+        }
+      },
+      "mepFixtureEditor": {
+        "width": "Πλάτος / Διάμετρος",
+        "length": "Μήκος",
+        "rotation": "Στροφή",
+        "bodyHeight": "Πάχος σώματος",
+        "mountingElevation": "Ύψος τοποθέτησης",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή φωτιστικού; Η ενέργεια δεν μπορεί να αναιρεθεί.",
+        "shape": {
+          "section": {
+            "title": "Σχήμα"
+          },
+          "rectangular": "Ορθογώνιο",
+          "circular": "Κυκλικό"
         }
       },
       "psetEditor": {
