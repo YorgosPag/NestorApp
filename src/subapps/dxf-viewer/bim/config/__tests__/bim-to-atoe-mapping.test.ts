@@ -88,6 +88,15 @@ describe('resolveAtoeMapping', () => {
     });
   });
 
+  describe('railing (ADR-407)', () => {
+    it('maps railing to OIK-12.01 running length (m)', () => {
+      const result = resolveAtoeMapping('railing', 'railing');
+      expect(result).not.toBeNull();
+      expect(result!.categoryCode).toBe('OIK-12.01');
+      expect(result!.unit).toBe('m');
+    });
+  });
+
   describe('stair (ADR-395 Phase 2 / G1)', () => {
     it('resolveAtoeMapping returns null for stair — uses component resolver instead', () => {
       expect(resolveAtoeMapping('stair', 'straight')).toBeNull();
@@ -140,14 +149,18 @@ describe('resolveAtoeMapping', () => {
       expect(deriveAtoeQuantity('m3', { volume: 3.75 })).toBe(3.75);
     });
 
+    it('m → geometry.lengthM (ADR-407 — running length, e.g. railings)', () => {
+      expect(deriveAtoeQuantity('m', { lengthM: 4.2 })).toBe(4.2);
+    });
+
     it('returns 0 when the matching geometry dimension is missing', () => {
       expect(deriveAtoeQuantity('m2')).toBe(0);
       expect(deriveAtoeQuantity('m3', { area: 15 })).toBe(0);
       expect(deriveAtoeQuantity('m2', null)).toBe(0);
+      expect(deriveAtoeQuantity('m', { area: 5 })).toBe(0);
     });
 
-    it('returns 0 for unhandled units (m / kg)', () => {
-      expect(deriveAtoeQuantity('m', { area: 5 })).toBe(0);
+    it('returns 0 for unhandled units (kg)', () => {
       expect(deriveAtoeQuantity('kg', { volume: 5 })).toBe(0);
     });
   });
@@ -159,6 +172,7 @@ describe('resolveAtoeMapping', () => {
       expect(Object.keys(BIM_TO_ATOE_MAPPING.slab).length).toBeGreaterThan(0);
       expect(Object.keys(BIM_TO_ATOE_MAPPING.column).length).toBeGreaterThan(0);
       expect(Object.keys(BIM_TO_ATOE_MAPPING.beam).length).toBeGreaterThan(0);
+      expect(Object.keys(BIM_TO_ATOE_MAPPING.railing).length).toBeGreaterThan(0);
     });
 
     it('all categoryCode values use Latin OIK- prefix', () => {
@@ -168,6 +182,7 @@ describe('resolveAtoeMapping', () => {
         ...Object.values(BIM_TO_ATOE_MAPPING.slab),
         ...Object.values(BIM_TO_ATOE_MAPPING.column),
         ...Object.values(BIM_TO_ATOE_MAPPING.beam),
+        ...Object.values(BIM_TO_ATOE_MAPPING.railing),
       ];
       for (const entry of allEntries) {
         expect(entry.categoryCode).toMatch(/^OIK-/);

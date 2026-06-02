@@ -342,7 +342,7 @@ describe('computeWallGeometry — profile-aware (ADR-401 B3a)', () => {
     const flat = computeWallGeometry(wall5m());
     expect(withProfile.area).toBeCloseTo(flat.area, FLOAT_TOL);
     expect(withProfile.volume).toBeCloseTo(flat.volume, FLOAT_TOL);
-    expect(withProfile.bbox.max.z).toBeCloseTo(flat.bbox.max.z, FLOAT_TOL);
+    expect(withProfile.bbox.max.z).toBeCloseTo(flat.bbox.max.z ?? 0, FLOAT_TOL);
   });
 
   it('profile + openings → net = profile gross − Σ openings, clamped', () => {

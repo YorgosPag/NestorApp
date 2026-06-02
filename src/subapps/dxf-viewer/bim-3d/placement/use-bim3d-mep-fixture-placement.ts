@@ -34,6 +34,8 @@ import { PlacementSnapMarker } from './PlacementSnapMarker';
 import { raycastFloorPoint, resolveActiveFloorElevationMm } from './raycast-floor-point';
 import { worldToPlanMm, planMmToScenePoint } from './world-to-scene-point';
 import { resolvePlacementSnap } from './placement-snap';
+import { acquirePlacementCursor, releasePlacementCursor } from './placement-cursor';
+import { DEFAULT_FIXTURE_MOUNTING_ELEVATION_MM } from '../../bim/types/mep-fixture-types';
 
 const ORBIT_DRAG_PX = 5;
 
@@ -52,15 +54,31 @@ export function useBim3DMepFixturePlacement({ managerRef, canvasEl }: UseBim3DMe
     let abort: AbortController | null = null;
     let downPos: { x: number; y: number } | null = null;
 
+    // The visible cursor is owned by the viewport interaction surface (the
+    // `role="application"` overlay carries the Tailwind `cursor-grab`), NOT the
+    // renderer <canvas> underneath it. Setting an inline cursor on that exact
+    // element beats the class, so the placement crosshair actually shows.
+    const cursorEl = (canvasEl.closest('[role="application"]') as HTMLElement | null) ?? canvasEl;
+
     const unitsNow = (): ReturnType<NonNullable<ReturnType<typeof mepFixtureToolBridgeStore.get>>['getSceneUnits']> =>
       mepFixtureToolBridgeStore.get()?.getSceneUnits() ?? 'mm';
 
-    const resolveFloorPlanMm = (
+    // ADR-406 — Revit work-plane placement: a luminaire is CEILING-mounted, so the
+    // cursor must project onto the mounting-elevation plane (floor + mounting), NOT
+    // the floor. Otherwise the 3D ghost — drawn at `mountingElevationMm` above the
+    // floor by `fixtureToMesh` — floats far from the floor-projected cursor in an
+    // angled view (the column never showed this because it sits on the floor). The
+    // SAME elevation feeds the raycast (work-plane) and `fixtureToMesh` (FFL +
+    // mounting) so ghost == cursor (WYSIWYG).
+    const mountingElevationMmNow = (): number =>
+      mepFixtureToolBridgeStore.get()?.overrides.mountingElevationMm ?? DEFAULT_FIXTURE_MOUNTING_ELEVATION_MM;
+
+    const resolveWorkPlaneMm = (
       clientX: number,
       clientY: number,
-      elev: number,
+      planeElevMm: number,
     ): { planMm: { x: number; y: number }; markerMm: { x: number; y: number } | null } | null => {
-      const world = raycastFloorPoint(manager.getCamera(), canvasEl, clientX, clientY, elev);
+      const world = raycastFloorPoint(manager.getCamera(), canvasEl, clientX, clientY, planeElevMm);
       if (!world) return null;
       const rawMm = worldToPlanMm(world);
       const snap = resolvePlacementSnap(rawMm);
@@ -70,8 +88,9 @@ export function useBim3DMepFixturePlacement({ managerRef, canvasEl }: UseBim3DMe
     };
 
     const onMove = (e: PointerEvent): void => {
-      const elev = resolveActiveFloorElevationMm();
-      const hit = resolveFloorPlanMm(e.clientX, e.clientY, elev);
+      const floorElev = resolveActiveFloorElevationMm();
+      const planeElev = floorElev + mountingElevationMmNow();
+      const hit = resolveWorkPlaneMm(e.clientX, e.clientY, planeElev);
       if (!hit) {
         ghost.setVisible(false);
         snapMarker.hide();
@@ -79,9 +98,11 @@ export function useBim3DMepFixturePlacement({ managerRef, canvasEl }: UseBim3DMe
         return;
       }
       const levelId = useBim3DEntitiesStore.getState().activeLevelId ?? undefined;
-      ghost.update(planMmToScenePoint(hit.planMm, unitsNow()), elev, levelId);
+      // Pass the FLOOR elevation — `fixtureToMesh` re-adds `mountingElevationMm`, so
+      // the ghost top lands back on the work-plane the cursor was raycast against.
+      ghost.update(planMmToScenePoint(hit.planMm, unitsNow()), floorElev, levelId);
       ghost.setVisible(true);
-      if (hit.markerMm) snapMarker.show(dxfPlanToWorld(hit.markerMm.x, hit.markerMm.y, elev), manager.getCamera());
+      if (hit.markerMm) snapMarker.show(dxfPlanToWorld(hit.markerMm.x, hit.markerMm.y, planeElev), manager.getCamera());
       else snapMarker.hide();
       manager.markSceneDirty();
     };
@@ -100,8 +121,9 @@ export function useBim3DMepFixturePlacement({ managerRef, canvasEl }: UseBim3DMe
       const moved = downPos ? Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) : 0;
       downPos = null;
       if (moved > ORBIT_DRAG_PX) return;
-      const elev = resolveActiveFloorElevationMm();
-      const hit = resolveFloorPlanMm(e.clientX, e.clientY, elev);
+      const floorElev = resolveActiveFloorElevationMm();
+      const planeElev = floorElev + mountingElevationMmNow();
+      const hit = resolveWorkPlaneMm(e.clientX, e.clientY, planeElev);
       if (!hit) return;
       e.preventDefault();
       e.stopPropagation();
@@ -117,16 +139,21 @@ export function useBim3DMepFixturePlacement({ managerRef, canvasEl }: UseBim3DMe
       canvasEl.addEventListener('pointerleave', onLeave, { signal });
       canvasEl.addEventListener('pointerdown', onDown, { signal });
       canvasEl.addEventListener('click', onClick, { signal });
-      canvasEl.style.cursor = 'crosshair';
+      // Placement-mode cursor via the shared SSoT owner (mirrors the 2D DXF canvas
+      // `crosshair`). Ref-counted so the column hook's teardown can't reset the
+      // cursor while this tool is still armed (order-independent — placement-cursor.ts).
+      acquirePlacementCursor(cursorEl);
     };
 
     const teardown = (): void => {
+      const wasActive = abort !== null;
       abort?.abort();
       abort = null;
       downPos = null;
       ghost.setVisible(false);
       snapMarker.hide();
-      canvasEl.style.cursor = '';
+      // Release the placement cursor ONLY if we held it (balanced acquire/release).
+      if (wasActive) releasePlacementCursor(cursorEl);
       manager.markSceneDirty();
     };
 

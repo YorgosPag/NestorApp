@@ -40,7 +40,9 @@ export interface BoundingBox3D {
 export type BimElementType =
   | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam'
   // ADR-406 — point-based MEP fixture.
-  | 'mep-fixture';
+  | 'mep-fixture'
+  // ADR-407 — standalone path-based railing.
+  | 'railing';
 
 /**
  * Union of all BIM sub-type discriminators (one per element type).

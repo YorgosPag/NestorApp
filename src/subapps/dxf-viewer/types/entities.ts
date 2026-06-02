@@ -315,6 +315,16 @@ export type {
 } from '../bim/types/mep-fixture-types';
 import type { MepFixtureEntity } from '../bim/types/mep-fixture-types';
 
+// ADR-407: standalone path-based railing concrete types live in bim/types/railing-types.ts (SRP).
+export type {
+  RailingKind,
+  RailingType,
+  RailingParams,
+  RailingGeometry,
+  RailingEntity,
+} from '../bim/types/railing-types';
+import type { RailingEntity } from '../bim/types/railing-types';
+
 // ADR-363 Phase 5: Beam concrete types live in bim/types/beam-types.ts (SRP).
 export type {
   BeamKind,
@@ -474,6 +484,8 @@ export type Entity = (
   | BeamEntity
   // ADR-406 — point-based MEP fixture (light fixture first).
   | MepFixtureEntity
+  // ADR-407 — standalone path-based railing.
+  | RailingEntity
 ) & Pick<BaseEntity,
   // Required identifiers — needed everywhere (ADR-363 fix: BIM entities now in union)
   'id' | 'name' | 'layerId' |
@@ -621,11 +633,15 @@ export const isBeamEntity = (entity: Entity): entity is BeamEntity =>
 export const isMepFixtureEntity = (entity: Entity): entity is MepFixtureEntity =>
   entity.type === 'mep-fixture';
 
-/** True for any ADR-363/406 BIM parametric entity */
-export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity =>
+/** ADR-407 — standalone path-based railing. */
+export const isRailingEntity = (entity: Entity): entity is RailingEntity =>
+  entity.type === 'railing';
+
+/** True for any ADR-363/406/407 BIM parametric entity */
+export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity | RailingEntity =>
   entity.type === 'wall' || entity.type === 'opening' || entity.type === 'slab' ||
   entity.type === 'slab-opening' || entity.type === 'column' || entity.type === 'beam' ||
-  entity.type === 'mep-fixture';
+  entity.type === 'mep-fixture' || entity.type === 'railing';
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
 // Re-export from centralized location for backward compatibility

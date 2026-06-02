@@ -312,7 +312,7 @@ function mapSlabOpening(entity: AnyBimEntity, lookups: ScheduleLookups): Schedul
 // ─── Combined preset (cross-type geometry-derived roll-up) ───────────────────
 
 /** Entity types covered by the kind-dispatched ΑΤΟΕ table (stair + slab-opening excluded). */
-const COMBINED_ATOE_TYPES: ReadonlySet<string> = new Set(['wall', 'opening', 'slab', 'column', 'beam']);
+const COMBINED_ATOE_TYPES: ReadonlySet<string> = new Set(['wall', 'opening', 'slab', 'column', 'beam', 'railing']);
 
 interface CombinedPrimaryQuantity {
   readonly quantity: number;
@@ -345,7 +345,7 @@ function combinedPrimary(entity: AnyBimEntity): CombinedPrimaryQuantity {
       : undefined;
   const mapping = resolveAtoeMapping(entity.type as BimEntityType, entity.kind, category);
   if (!mapping) return { quantity: 0, unit: null, atoeCategory: null };
-  const geometry = entity.geometry as { area?: number; volume?: number } | undefined;
+  const geometry = entity.geometry as { area?: number; volume?: number; lengthM?: number } | undefined;
   return { quantity: deriveAtoeQuantity(mapping.unit, geometry), unit: mapping.unit, atoeCategory: mapping.categoryCode };
 }
 

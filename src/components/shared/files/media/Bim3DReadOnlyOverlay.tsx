@@ -32,6 +32,9 @@ export function Bim3DReadOnlyOverlay({ bimSnapshot, projectId, onClose }: Bim3DR
       // floorplan_mep_fixtures collection yet (deferred). Empty keeps the 3D
       // overlay valid; fixtures show in the full DXF viewer.
       fixtures: [],
+      // ADR-407 — same as fixtures: read-only preview does not load
+      // floorplan_railings yet (deferred). Empty keeps the bundle valid.
+      railings: [],
     }),
     [bimSnapshot.walls, bimSnapshot.columns, bimSnapshot.beams, bimSnapshot.slabs, bimSnapshot.slabOpenings, bimSnapshot.openings, bimSnapshot.stairs],
   );

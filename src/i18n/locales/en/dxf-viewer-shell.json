@@ -466,6 +466,10 @@
     "mepFixture": {
       "statusPosition": "Click to place light fixture"
     },
+    "railing": {
+      "statusStart": "Pick railing start",
+      "statusEnd": "Pick railing end"
+    },
     "beam": {
       "statusStart": "Pick beam start point",
       "statusEnd": "Pick beam end point",
@@ -949,6 +953,10 @@
         "mepFixture": {
           "label": "Light fixture",
           "tooltip": "Place a ceiling light fixture with a single click (discipline: electrical) (shortcut LF)"
+        },
+        "railing": {
+          "label": "Railing",
+          "tooltip": "Draw a railing with 2 clicks (shortcut RL)"
         },
         "group": {
           "label": "Structural Elements",
@@ -2116,6 +2124,20 @@
         "nonPositiveLength": "Length must be greater than 0",
         "nonPositiveBodyHeight": "Body thickness must be greater than 0",
         "dimensionTooSmall": "Dimension is below the minimum allowed"
+      }
+    }
+  },
+  "railing": {
+    "validation": {
+      "hardErrors": {
+        "pathTooShort": "The railing path must have at least 2 points",
+        "nonPositiveHeight": "Railing height must be greater than 0",
+        "nonPositiveSpacing": "Baluster spacing must be greater than 0",
+        "dimensionTooSmall": "Railing member cross-section is too small"
+      },
+      "codeViolations": {
+        "guardrailHeight": "Guardrail height is outside the 1000-1100mm range",
+        "balusterGap": "Baluster clear gap exceeds the 10cm ball rule"
       }
     }
   },

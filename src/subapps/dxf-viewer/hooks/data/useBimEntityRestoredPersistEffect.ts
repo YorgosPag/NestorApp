@@ -29,7 +29,9 @@ import type { AnySceneEntity } from '../../types/entities';
 type BimRestoreEntityType =
   | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
   // ADR-406 — point-based MEP fixture.
-  | 'mep-fixture';
+  | 'mep-fixture'
+  // ADR-407 — standalone path-based railing.
+  | 'railing';
 
 export function useBimEntityRestoredPersistEffect<T extends AnySceneEntity, S>(
   entityType: BimRestoreEntityType,

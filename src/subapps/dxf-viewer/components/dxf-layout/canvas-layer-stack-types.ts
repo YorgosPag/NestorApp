@@ -232,6 +232,13 @@ export interface CanvasLayerStackProps {
       cursorPos: Readonly<Point2D> | null,
     ) => readonly import('../../bim/columns/column-anchor-ghosts').AnchorGhost[] | null;
   };
+  // === ADR-406: MEP fixture 2D placement ghost preview payload ===
+  mepFixtureGhostPreview: {
+    isAwaitingPosition: boolean;
+    getGhostFootprint: (
+      cursorPos: Readonly<Point2D> | null,
+    ) => readonly import('../../bim/types/bim-base').Point3D[] | null;
+  };
   // === ADR-363 Phase 3.7b+: Slab-opening ghost preview payload ===
   slabOpeningGhostPreview: {
     isAwaitingPosition: boolean;

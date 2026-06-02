@@ -128,6 +128,8 @@ describe('CanonicalViewService', () => {
       goHome: jest.fn(),
       applyTumble: jest.fn(),
       pan: jest.fn(),
+      setOrbitPivot: jest.fn(),
+      setControlsEnabled: jest.fn(),
     };
     return { setProjection, snapToViewDirection, viewport };
   }

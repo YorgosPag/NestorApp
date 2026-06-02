@@ -68,9 +68,12 @@ export function useDxfViewerNotifications(): void {
         if (columns === 0 && walls === 0) {
           toast.warning(t('perimeterColumnDiscrete.noneBuilt'));
         } else if (walls > 0) {
-          toast.info(t('perimeterColumnDiscrete.builtMixed', { columns, walls }));
+          // Plural-correct σύνθετο μήνυμα (i18next _one/_other ανά αριθμό).
+          const columnsText = t('perimeterColumnDiscrete.nColumns', { count: columns });
+          const wallsText = t('perimeterColumnDiscrete.nWalls', { count: walls });
+          toast.info(t('perimeterColumnDiscrete.builtMixed', { columns: columnsText, walls: wallsText }));
         } else {
-          toast.success(t('perimeterColumnDiscrete.built', { columns }));
+          toast.success(t('perimeterColumnDiscrete.built', { count: columns }));
         }
       }),
     );

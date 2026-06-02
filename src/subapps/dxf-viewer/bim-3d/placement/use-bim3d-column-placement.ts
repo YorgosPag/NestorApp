@@ -38,6 +38,7 @@ import { PlacementSnapMarker } from './PlacementSnapMarker';
 import { raycastFloorPoint, resolveActiveFloorElevationMm } from './raycast-floor-point';
 import { worldToPlanMm, planMmToScenePoint } from './world-to-scene-point';
 import { resolvePlacementSnap } from './placement-snap';
+import { acquirePlacementCursor, releasePlacementCursor } from './placement-cursor';
 
 /** A click whose pointer moved more than this (px) since pointerdown was an
  *  orbit drag, not a placement — skip it (avoids accidental columns). */
@@ -57,6 +58,12 @@ export function useBim3DColumnPlacement({ managerRef, canvasEl }: UseBim3DColumn
     const snapMarker = new PlacementSnapMarker(manager.scene);
     let abort: AbortController | null = null;
     let downPos: { x: number; y: number } | null = null;
+
+    // The visible cursor is owned by the viewport interaction surface (the
+    // `role="application"` overlay carries the Tailwind `cursor-grab`), NOT the
+    // renderer <canvas> underneath it. Setting an inline cursor on that exact
+    // element beats the class, so the placement crosshair actually shows.
+    const cursorEl = (canvasEl.closest('[role="application"]') as HTMLElement | null) ?? canvasEl;
 
     const unitsNow = (): ReturnType<NonNullable<ReturnType<typeof columnToolBridgeStore.get>>['getSceneUnits']> =>
       columnToolBridgeStore.get()?.getSceneUnits() ?? 'mm';
@@ -135,20 +142,21 @@ export function useBim3DColumnPlacement({ managerRef, canvasEl }: UseBim3DColumn
       canvasEl.addEventListener('pointerleave', onLeave, { signal });
       canvasEl.addEventListener('pointerdown', onDown, { signal });
       canvasEl.addEventListener('click', onClick, { signal });
-      // Placement-mode cursor (mirrors the 2D DXF canvas `crosshair`) so the
-      // pointer signals "place a column", not the orbit-grab hand the 3D
-      // overlay shows by default.
-      canvasEl.style.cursor = 'crosshair';
+      // Placement-mode cursor via the shared SSoT owner (mirrors the 2D DXF canvas
+      // `crosshair`). Ref-counted so a sibling placement hook's teardown can't reset
+      // the cursor while this tool is still armed (order-independent — placement-cursor.ts).
+      acquirePlacementCursor(cursorEl);
     };
 
     const teardown = (): void => {
+      const wasActive = abort !== null;
       abort?.abort();
       abort = null;
       downPos = null;
       ghost.setVisible(false);
       snapMarker.hide();
-      // Restore the orbit-grab cursor owned by the viewport overlay.
-      canvasEl.style.cursor = '';
+      // Release the placement cursor ONLY if we held it (balanced acquire/release).
+      if (wasActive) releasePlacementCursor(cursorEl);
       manager.markSceneDirty();
     };
 

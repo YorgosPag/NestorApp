@@ -49,7 +49,9 @@ export type EntityType =
   | 'column'
   | 'beam'
   // ADR-406 — point-based MEP fixture (light fixture first; generic over kind).
-  | 'mep-fixture';
+  | 'mep-fixture'
+  // ADR-407 — standalone path-based railing (IfcRailing).
+  | 'railing';
 
 export interface BaseEntity {
   id: string;

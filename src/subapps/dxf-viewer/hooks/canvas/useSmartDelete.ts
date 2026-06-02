@@ -228,6 +228,10 @@ export function useSmartDelete({
       const slabOpeningIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'slab-opening',
       );
+      // ADR-406 — collect MEP fixture IDs so we can trigger Firestore deleteDoc.
+      const fixtureIdsInBatch = idsToDelete.filter(
+        (id) => adapter.getEntity(id)?.type === 'mep-fixture',
+      );
 
       if (idsToDelete.length === 1) {
         executeCommand(new DeleteEntityCommand(idsToDelete[0], adapter));
@@ -260,6 +264,10 @@ export function useSmartDelete({
       }
       for (const slabOpeningId of slabOpeningIdsInBatch) {
         eventBus.emit('bim:slab-opening-delete-requested', { slabOpeningId });
+      }
+      // ADR-406 — trigger Firestore deleteDoc + prevent subscription re-add for each fixture.
+      for (const fixtureId of fixtureIdsInBatch) {
+        eventBus.emit('bim:mep-fixture-delete-requested', { fixtureId });
       }
 
       return true;

@@ -116,6 +116,12 @@ export interface MepFixtureToolLike {
   onCanvasClick: (point: Point2D) => boolean;
 }
 
+/** ADR-407 — Minimal railing tool interface for click routing (2-click line). */
+export interface RailingToolLike {
+  readonly isActive: boolean;
+  onCanvasClick: (point: Point2D) => boolean;
+}
+
 /** ADR-363 Phase 3.7 — Minimal slab-opening tool interface for click routing. */
 export interface SlabOpeningToolLike {
   readonly isActive: boolean;
@@ -164,6 +170,8 @@ export interface UseCanvasClickHandlerParams {
   beamTool?: BeamToolLike;
   /** ADR-406 — MEP fixture tool click pipeline. */
   mepFixtureTool?: MepFixtureToolLike;
+  /** ADR-407 — Railing tool click pipeline (2-click straight guardrail). */
+  railingTool?: RailingToolLike;
   /** ADR-363 Phase 3.7 — Slab-opening tool click pipeline. */
   slabOpeningTool?: SlabOpeningToolLike;
   /** ADR-363 Phase 2 — Opening tool click pipeline. */

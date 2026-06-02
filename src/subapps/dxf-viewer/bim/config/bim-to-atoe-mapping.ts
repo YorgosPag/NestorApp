@@ -15,12 +15,13 @@ import type { OpeningKind } from '../types/opening-types';
 import type { SlabKind } from '../types/slab-types';
 import type { ColumnKind } from '../types/column-types';
 import type { BeamKind } from '../types/beam-types';
+import type { RailingKind } from '../types/railing-types';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type BimEntityType = 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair';
+export type BimEntityType = 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | 'railing';
 
 export interface AtoeMappingEntry {
   /** Latin OIK-x.xx code — must match boq_categories or be a valid subcategory. */
@@ -99,6 +100,13 @@ const BEAM_MAPPING: Readonly<Record<BeamKind, AtoeMappingEntry>> = {
   cantilever:  { categoryCode: 'OIK-2.04', unit: 'm3', titleEL: 'Πρόβολος RC (BIM)' },
 };
 
+// ADR-407 — railing → OIK-12 Μεταλλικά (master catalog: «κάγκελα, σκάλες»),
+// measured as running length (m), like the stair handrail. First path-length
+// BIM entity, so it introduces the `'m'` quantity branch in deriveAtoeQuantity.
+const RAILING_MAPPING: Readonly<Record<RailingKind, AtoeMappingEntry>> = {
+  railing: { categoryCode: 'OIK-12.01', unit: 'm', titleEL: 'Κιγκλίδωμα μεταλλικό (BIM)' },
+};
+
 /** Lookup map keyed by entity type for runtime dispatch. */
 export const BIM_TO_ATOE_MAPPING = {
   wall:    WALL_MAPPING,
@@ -106,6 +114,7 @@ export const BIM_TO_ATOE_MAPPING = {
   slab:    SLAB_MAPPING,
   column:  COLUMN_MAPPING,
   beam:    BEAM_MAPPING,
+  railing: RAILING_MAPPING,
 } as const;
 
 // ============================================================================
@@ -152,6 +161,7 @@ export function resolveStairComponentMapping(component: StairBoqComponent): Atoe
  *   - `pcs` → 1 (openings count as one piece)
  *   - `m2`  → `geometry.area`
  *   - `m3`  → `geometry.volume`
+ *   - `m`   → `geometry.lengthM` (ADR-407 — running length, e.g. railings)
  *
  * ADR-395 §4.6 (G5): geometry is the single source of truth for BIM
  * quantities — the legacy `entity.qto` field was never populated and was
@@ -159,10 +169,11 @@ export function resolveStairComponentMapping(component: StairBoqComponent): Atoe
  */
 export function deriveAtoeQuantity(
   unit: BOQMeasurementUnit,
-  geometry?: { readonly area?: number; readonly volume?: number } | null,
+  geometry?: { readonly area?: number; readonly volume?: number; readonly lengthM?: number } | null,
 ): number {
   if (unit === 'pcs') return 1;
   if (unit === 'm2') return geometry?.area ?? 0;
   if (unit === 'm3') return geometry?.volume ?? 0;
+  if (unit === 'm') return geometry?.lengthM ?? 0;
   return 0;
 }

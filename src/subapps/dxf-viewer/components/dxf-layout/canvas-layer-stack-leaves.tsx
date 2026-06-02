@@ -22,6 +22,7 @@ import { subscribeSnapResult, getFullSnapResult } from '../../systems/cursor/Imm
 import { useGuideWorkflowComputed } from '../../hooks/guides/useGuideWorkflowComputed';
 import { useDraftPolygonLayer } from '../../hooks/layers/useDraftPolygonLayer';
 import { ColumnGhostPreviewMount, type ColumnGhostPreviewMountProps } from './canvas-layer-stack-column-ghost';
+import { MepFixtureGhostPreviewMount, type MepFixtureGhostPreviewMountProps } from './canvas-layer-stack-mep-fixture-ghost';
 import { SlabOpeningGhostPreviewMount, type SlabOpeningGhostPreviewMountProps } from './canvas-layer-stack-slab-opening-ghost';
 import { OpeningGhostPreviewMount, type OpeningGhostPreviewMountProps } from './canvas-layer-stack-opening-ghost';
 import { OpeningTagDragMount } from './canvas-layer-stack-opening-tag-drag';
@@ -293,6 +294,8 @@ interface PreviewCanvasMountsProps {
   trim?: Record<string, never>;
   /** ADR-363 Phase 4.5c.1 — column anchor ghost preview payload. */
   columnGhost: Omit<ColumnGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  /** ADR-406 — MEP fixture 2D placement ghost payload. */
+  mepFixtureGhost: Omit<MepFixtureGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   slabOpeningGhost: Omit<SlabOpeningGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   openingGhost: Omit<OpeningGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   gripDragPreview: DxfGripDragPreview | null;
@@ -312,7 +315,7 @@ interface PreviewCanvasMountsProps {
 export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
   props: PreviewCanvasMountsProps,
 ) {
-  const { rotation, move, mirror, scale, stretch, columnGhost, slabOpeningGhost, openingGhost, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
+  const { rotation, move, mirror, scale, stretch, columnGhost, mepFixtureGhost, slabOpeningGhost, openingGhost, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
   return (
     <>
       <RotationPreviewMount
@@ -372,6 +375,12 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       />
       <ColumnGhostPreviewMount
         {...columnGhost}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <MepFixtureGhostPreviewMount
+        {...mepFixtureGhost}
         transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}

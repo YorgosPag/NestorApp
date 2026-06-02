@@ -69,7 +69,9 @@ export interface BimEntityForBoq {
     category?: string;
     [key: string]: unknown;
   }>;
-  readonly geometry?: Readonly<{ area?: number; volume?: number }>;
+  // ADR-407 — `lengthM` carries the running length for path-length entities
+  // (railings → ΑΤΟΕ unit 'm'); area/volume cover surface/solid entities.
+  readonly geometry?: Readonly<{ area?: number; volume?: number; lengthM?: number }>;
 }
 
 export interface BimBoqContext {

@@ -319,6 +319,8 @@ export const ENTITY_TYPE_MAPPING: Record<EntityType, EzdxfEntityType | null> = {
   'slab-opening': null,    // BIM slab opening — exported via composite
   'column': null,          // BIM column — exported via composite
   'beam': null,            // BIM beam — exported via composite
+  'railing': null,         // ADR-407 BIM railing — exported via composite
+  'mep-fixture': null,     // ADR-406 BIM MEP fixture — exported via composite
 } as const;
 
 /**

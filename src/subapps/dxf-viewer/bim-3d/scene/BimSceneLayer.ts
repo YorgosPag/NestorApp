@@ -17,6 +17,7 @@ import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from './multi-floor-3d-source';
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh } from '../converters/BimToThreeConverter';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
+import { railingToMesh } from '../converters/railing-to-three';
 import { resolveWallTopProfile, resolveWallNominalTopZmm } from '../../bim/geometry/wall-top-profile';
 import { resolveWallBaseProfile } from '../../bim/geometry/wall-base-profile';
 import { makeWallTopContext, makeWallBaseContext, buildWallHostInputs, type HostFootprintInput } from '../../bim/geometry/wall-host-plan-builder';
@@ -137,6 +138,7 @@ export class BimSceneLayer {
     this.syncSlabs(entities, ctx);
     this.syncStairs(entities, ctx);
     this.syncFixtures(entities, ctx);
+    this.syncRailings(entities, ctx);
     addEnvelopeToScene(this.group, entities, ctx, this.shouldRender.bind(this));
   }
 
@@ -322,6 +324,18 @@ export class BimSceneLayer {
       const r = this.resolveEntity(fixture, 'light-fixture', ctx);
       if (!r) continue;
       const mesh = fixtureToMesh(fixture, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
+  /** ADR-407 — standalone path-based railings (posts + balusters + rails). */
+  private syncRailings(entities: Bim3DEntities, ctx: SyncContext): void {
+    // Defensive: legacy floor-stack entries predating ADR-407 carry no `railings`
+    // array — never crash the whole floor sync over a missing slice.
+    for (const railing of entities.railings ?? []) {
+      const r = this.resolveEntity(railing, 'railing', ctx);
+      if (!r) continue;
+      const mesh = railingToMesh(railing, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

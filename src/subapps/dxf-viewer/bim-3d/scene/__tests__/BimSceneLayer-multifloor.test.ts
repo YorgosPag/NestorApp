@@ -50,6 +50,7 @@ function wallFloor(wallId: string): Bim3DEntities {
   return {
     walls: [{ id: wallId } as unknown as Bim3DEntities['walls'][number]],
     columns: [], beams: [], slabs: [], slabOpenings: [], openings: [], stairs: [],
+    fixtures: [], railings: [],
   };
 }
 

@@ -37,7 +37,7 @@ function makeMockScene(initial: SceneEntity[] = []): {
     getEntityIndex: () => -1,
     reorderEntity: () => {},
     moveEntityToIndex: () => {},
-  } as unknown as ISceneManager;
+  };
   return { scene, sm };
 }
 

@@ -74,6 +74,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     columnTool,
     beamTool,
     mepFixtureTool,
+    railingTool,
     slabOpeningTool,
     openingTool,
     rotationIsActive = false, handleRotationClick,
@@ -288,6 +289,13 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       mepFixtureTool.onCanvasClick(worldPoint);
       return;
     }
+    // PRIORITY 4.93: ADR-407 — Railing tool 2-click straight guardrail. Uses the
+    // ORTHO/POLAR-aware `bimPoint` (like the beam tool) so the path snaps to
+    // axis-locked angles during the 2-click chain.
+    if (activeTool === 'railing' && railingTool?.isActive) {
+      railingTool.onCanvasClick(bimPoint);
+      return;
+    }
     // PRIORITY 4.95: ADR-363 Phase 3.7 — Slab-opening tool 2-click (host slab + position).
     if (activeTool === 'slab-opening' && slabOpeningTool?.isActive) {
       slabOpeningTool.onCanvasClick(worldPoint);
@@ -374,6 +382,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     columnTool,
     beamTool,
     mepFixtureTool,
+    railingTool,
     slabOpeningTool,
     openingTool,
     rotationIsActive, handleRotationClick,

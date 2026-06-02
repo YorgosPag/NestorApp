@@ -45,6 +45,9 @@ const MAT_DEFS: Record<string, PbrDef> = {
   // ADR-406 — MEP light fixture default: bright diffuser white, low roughness
   // (frosted panel), slightly translucent so it reads as a luminaire.
   'elem-mep-fixture':    { color: 0xfff4d6, roughness: 0.35, metalness: 0.00, transparent: true, opacity: 0.85 },
+  // ADR-407 — railing (guardrail) default: brushed metal — mid grey, low
+  // roughness, high metalness (steel/aluminium posts, balusters, top rail).
+  'elem-railing':        { color: 0x999999, roughness: 0.30, metalness: 0.85 },
 };
 
 export type Stair3DComponent =
@@ -87,7 +90,7 @@ export function getMaterial3D(materialId: string): THREE.MeshStandardMaterial {
 
 /** Resolve MeshStandardMaterial for element types without DNA. */
 export function getElementMaterial3D(
-  type: 'column' | 'beam' | 'slab' | 'envelope' | 'mep-fixture' | Stair3DComponent,
+  type: 'column' | 'beam' | 'slab' | 'envelope' | 'mep-fixture' | 'railing' | Stair3DComponent,
 ): THREE.MeshStandardMaterial {
   const key = `elem-${type}`;
   let mat = CACHE.get(key);

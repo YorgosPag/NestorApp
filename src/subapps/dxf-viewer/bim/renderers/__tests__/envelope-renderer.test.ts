@@ -36,6 +36,7 @@ function squareChain(): EnvelopeChain {
     enclosesRegion: true,
     perimeterM: 4.8,
     wallIds: ['w1', 'w2', 'w3', 'w4'],
+    columnIds: [],
   };
 }
 

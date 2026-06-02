@@ -84,10 +84,14 @@ function makeOpening(id: string, wallId: string, overrides?: Partial<OpeningPara
 
 /** Mock ISceneManager backed by a Map; records updateEntities calls. */
 function makeSceneManager(
-  entities: SceneEntity[],
+  entities: ReadonlyArray<WallEntity | OpeningEntity>,
   opts: { withGetEntities?: boolean } = { withGetEntities: true },
 ): ISceneManager & { snapshot(id: string): SceneEntity | undefined } {
-  const map = new Map<string, SceneEntity>(entities.map((e) => [e.id, e]));
+  // BIM entities have `visible?` optional (BaseEntity) vs SceneEntity's required
+  // `visible`; the mocks always set it, so the cast is safe at this single point.
+  const map = new Map<string, SceneEntity>(
+    entities.map((e) => [e.id, e as unknown as SceneEntity]),
+  );
   const sm: Partial<ISceneManager> & { snapshot(id: string): SceneEntity | undefined } = {
     getEntity: (id) => map.get(id),
     updateEntities: (updates) => {

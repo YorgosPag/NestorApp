@@ -31,7 +31,9 @@ export type BimCategory =
   // ADR-396 P4 — ETICS εξωτερική θερμοπρόσοψη (floor-overlay, V/G κατηγορία).
   | 'envelope'
   // ADR-406 — MEP point-based fixtures (electrical lighting). Granular V/G per type.
-  | 'light-fixture';
+  | 'light-fixture'
+  // ADR-407 — standalone path-based railing (architectural).
+  | 'railing';
 
 /**
  * Per-subcategory style overrides (ADR-377).
@@ -98,7 +100,7 @@ export interface ObjectStyle {
 export const BIM_CATEGORIES: readonly BimCategory[] = [
   'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening',
   'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip', 'envelope',
-  'light-fixture',
+  'light-fixture', 'railing',
 ] as const;
 
 /**
@@ -119,6 +121,8 @@ export const MODEL_BIM_CATEGORIES: readonly BimCategory[] = [
   'stair', 'roof', 'ceiling', 'envelope',
   // ADR-406 — MEP point-based fixtures.
   'light-fixture',
+  // ADR-407 — standalone path-based railing.
+  'railing',
 ] as const;
 
 /**
@@ -153,4 +157,6 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   envelope:       { projectionPen: 3,  cutPen: 4  },
   // ADR-406 — MEP φωτιστικό: λεπτή γραμμή προβολής (annotation-grade family symbol).
   'light-fixture': { projectionPen: 3, cutPen: 3 },
+  // ADR-407 — κάγκελο: μεσαία γραμμή προβολής (metal members, plan symbol).
+  railing:        { projectionPen: 4, cutPen: 5 },
 } as const;

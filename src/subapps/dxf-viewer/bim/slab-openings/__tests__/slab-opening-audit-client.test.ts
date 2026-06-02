@@ -20,12 +20,14 @@ function baseEntity(): Pick<SlabOpeningEntity, 'id' | 'kind' | 'layerId' | 'para
     params: {
       kind: 'shaft',
       slabId: 'slab_host_1',
-      outline: [
-        { x: 0, y: 0, z: 0 },
-        { x: 1500, y: 0, z: 0 },
-        { x: 1500, y: 1500, z: 0 },
-        { x: 0, y: 1500, z: 0 },
-      ],
+      outline: {
+        vertices: [
+          { x: 0, y: 0, z: 0 },
+          { x: 1500, y: 0, z: 0 },
+          { x: 1500, y: 1500, z: 0 },
+          { x: 0, y: 1500, z: 0 },
+        ],
+      },
       fireRating: 90,
       sceneUnits: 'mm',
     },

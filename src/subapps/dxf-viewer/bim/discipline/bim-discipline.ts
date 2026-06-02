@@ -67,6 +67,8 @@ export const DISCIPLINE_BY_CATEGORY: Readonly<Record<BimCategory, DisciplineOrAn
   grip:           'annotation',
   // ADR-406 — MEP point-based fixtures (first placeable electrical category).
   'light-fixture': 'electrical',
+  // ADR-407 — railings ⊂ Architecture (Revit).
+  railing:         'architectural',
 } as const;
 
 /**

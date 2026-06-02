@@ -37,6 +37,7 @@ export type AuditEntityType =
   | 'column'
   | 'beam'
   | 'stair'
+  | 'mep-fixture'
   | 'performance_diagnostic'
   | 'performance_telemetry'
   | 'bim_dimension_3d'

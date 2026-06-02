@@ -81,8 +81,9 @@ export type StairSubcategoryKey =
 
 /**
  * All subcategory keys per BimCategory.
- * Categories without subcategory model (roof, ceiling, dimension, hatch, grip)
- * return empty arrays — no subcategory styling applies.
+ * Categories without subcategory model (roof, ceiling, dimension, hatch, grip,
+ * envelope, light-fixture, railing) return empty arrays — no subcategory
+ * styling applies.
  */
 export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<string>>> = {
   wall:  ['common-edges', 'cut-pattern', 'surface-pattern', 'hidden-lines', 'sweeps', 'reveals'],
@@ -107,6 +108,10 @@ export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<st
   dimension: [],
   hatch:     [],
   grip:      [],
+  // ADR-405/406/407 — no subcategory model yet.
+  envelope:        [],
+  'light-fixture': [],
+  railing:         [],
 };
 
 /**

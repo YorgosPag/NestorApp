@@ -692,6 +692,17 @@ const MEP_FIXTURE_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const MEP_FIXTURE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(MEP_FIXTURE_TRACKED_FIELDS_RAW, {});
 
+// ADR-407 — standalone path-based railing.
+const RAILING_TRACKED_FIELDS_RAW: Record<string, string> = {
+  layerId: 'layerId',
+  totalHeightMm: 'totalHeightMm',
+  baseElevationMm: 'baseElevationMm',
+  storeyId: 'storeyId',
+};
+
+export const RAILING_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(RAILING_TRACKED_FIELDS_RAW, {});
+
 const SLAB_TRACKED_FIELDS_RAW: Record<string, string> = {
   kind: 'kind',
   layerId: 'layerId',
@@ -861,6 +872,8 @@ export function getTrackedFieldsForEntityAuditType(
       return COLUMN_TRACKED_FIELDS;
     case 'mep-fixture':
       return MEP_FIXTURE_TRACKED_FIELDS;
+    case 'railing':
+      return RAILING_TRACKED_FIELDS;
     case 'slab':
       return SLAB_TRACKED_FIELDS;
     case 'beam':

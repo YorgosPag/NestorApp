@@ -21,11 +21,13 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 // ADR-363 Phase 4 — column direct entity for DXF render pipeline.
 import type { ColumnEntity } from '../../bim/types/column-types';
+// ADR-406 — MEP fixture direct entity for DXF render pipeline.
+import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'xline' | 'ray' | 'beam';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'xline' | 'ray' | 'beam' | 'mep-fixture';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -217,6 +219,18 @@ export interface DxfColumn extends DxfEntity {
   validation?: ColumnEntity['validation'];
 }
 
+/**
+ * ADR-406 — DxfMepFixture direct entity (same pattern as DxfColumn).
+ * MepFixtureRenderer reads geometry.footprint + kind + params fields at top level.
+ */
+export interface DxfMepFixture extends DxfEntity {
+  type: 'mep-fixture';
+  kind: MepFixtureEntity['kind'];
+  params: MepFixtureEntity['params'];
+  geometry: MepFixtureEntity['geometry'];
+  validation?: MepFixtureEntity['validation'];
+}
+
 /** ADR-359 Phase 11 — XLine wrapper for grip computation pipeline. */
 export interface DxfXLine extends DxfEntity {
   type: 'xline';
@@ -229,7 +243,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfBeam | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfMepFixture | DxfBeam | DxfXLine | DxfRay;
 
 // === DXF SCENE ===
 export interface DxfScene {

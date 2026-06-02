@@ -49,7 +49,10 @@ if (!window.globalCoordinateCopy) {
     const canvasY = Math.round(screenY - rect.top);
 
     // ✅ GET TRANSFORM: Use window.dxfTransform (updated by Context)
-    const transform = window.dxfTransform || { scale: 1, offsetX: 0, offsetY: 0 };
+    const debugWin = window as Window & {
+      dxfTransform?: { scale: number; offsetX: number; offsetY: number };
+    };
+    const transform = debugWin.dxfTransform || { scale: 1, offsetX: 0, offsetY: 0 };
 
     // ✅ VIEWPORT: Use CANVAS viewport (EXACTLY as live panel component - line 217!)
     const canvasViewport = { width: rect.width, height: rect.height };

@@ -34,6 +34,7 @@ function squareChain(): EnvelopeChain {
     enclosesRegion: true,
     perimeterM: 40.8,
     wallIds: ['w1', 'w2', 'w3', 'w4'],
+    columnIds: [],
   };
 }
 
@@ -126,6 +127,7 @@ describe('envelopeChainToMesh (ADR-396 P5)', () => {
       enclosesRegion: false,
       perimeterM: 0,
       wallIds: [],
+      columnIds: [],
     };
     expect(envelopeChainToMesh(degenerate, 3, 0, GRAPHITE_EPS_MATERIAL_ID)).toBeNull();
   });

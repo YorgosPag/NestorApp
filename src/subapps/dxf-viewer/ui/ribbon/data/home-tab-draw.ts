@@ -391,6 +391,16 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'mep-fixture',
               shortcut: 'LF',
             },
+            // ADR-407 — path-based railing (guardrail). 2-click straight sketch;
+            // discipline = architectural (ADR-405 discipline visibility).
+            {
+              id: 'draw.bim.railing',
+              labelKey: 'ribbon.commands.bim.railing.label',
+              tooltipKey: 'ribbon.commands.bim.railing.tooltip',
+              icon: 'bim-railing',
+              commandKey: 'railing',
+              shortcut: 'RL',
+            },
           ],
         },
       ],

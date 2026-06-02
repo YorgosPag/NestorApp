@@ -51,6 +51,8 @@ function makeEntities(): Bim3DEntities {
     slabOpenings: [{ id: 'so1', params: { slabId: 's1' } } as unknown as Bim3DEntities['slabOpenings'][number]],
     openings:     [{ id: 'o1', params: { wallId: 'w1' } } as unknown as Bim3DEntities['openings'][number]],
     stairs:       [{ id: 'st1' } as unknown as Bim3DEntities['stairs'][number]],
+    fixtures:     [],
+    railings:     [],
   };
 }
 

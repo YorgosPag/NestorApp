@@ -24,6 +24,7 @@ import { resolveEntityLayerName } from '../stores/LayerStore';
 // from Firestore is persisted without geometry, ADR §G6 re-derivable contract).
 import { computeStairGeometry } from '../bim/geometry/stairs/StairGeometryService';
 import { computeColumnGeometry } from '../bim/geometry/column-geometry';
+import { computeMepFixtureGeometry } from '../bim/mep-fixtures/mep-fixture-geometry';
 import { buildBimEntityModel } from '../bim/utils/bim-entity-passthrough';
 import type { BimElementType } from '../bim/types/bim-base';
 
@@ -319,6 +320,15 @@ export class HitTestingService {
         const col = entity as unknown as Partial<import('../bim/types/column-types').ColumnEntity>;
         const geometry = col.geometry ?? (col.params ? computeColumnGeometry(col.params) : undefined);
         return buildBimEntityModel('column', { ...(entity as object), geometry } as typeof entity, baseModel);
+      }
+      // ADR-406 — mep-fixture needs a geometry-recompute fallback (mirror column):
+      // a Firestore-loaded MepFixtureEntity may arrive before its geometry cache is
+      // hydrated; without `geometry.bbox` BoundsCalculator drops it from the spatial
+      // index → body-click selection silently fails.
+      case 'mep-fixture': {
+        const fx = entity as unknown as Partial<import('../bim/types/mep-fixture-types').MepFixtureEntity>;
+        const geometry = fx.geometry ?? (fx.params ? computeMepFixtureGeometry(fx.params) : undefined);
+        return buildBimEntityModel('mep-fixture', { ...(entity as object), geometry } as typeof entity, baseModel);
       }
       // ADR-363 Phases 1B/5 — wall/beam are direct entities (no DXF wrapper).
       // `geometry.bbox` powers spatial broad-phase via BoundsCalculator.calculateBimEntityBounds.

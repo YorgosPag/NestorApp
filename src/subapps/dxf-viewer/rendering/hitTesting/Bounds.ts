@@ -124,6 +124,8 @@ export class BoundsCalculator {
       case 'slab-opening':
       case 'column':
       case 'beam':
+      // ADR-406 — MEP fixture projects `geometry.bbox` to 2D (same as column/beam).
+      case 'mep-fixture':
         return this.calculateBimEntityBounds(entity, tolerance);
       // ADR-359 Phase 11 follow-up — XLINE/RAY bounds extracted to sibling module.
       case 'xline':

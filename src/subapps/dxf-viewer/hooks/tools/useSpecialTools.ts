@@ -27,9 +27,11 @@ import { useOpeningTool } from '../drawing/useOpeningTool';
 import { useSlabTool, SLAB_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useSlabTool';
 import { useColumnTool } from '../drawing/useColumnTool';
 import { useMepFixtureTool } from '../drawing/useMepFixtureTool';
+import { useRailingTool } from '../drawing/useRailingTool';
 import { useBeamTool } from '../drawing/useBeamTool';
 import { useSlabOpeningTool } from '../drawing/useSlabOpeningTool';
 import { buildSlabOpeningResolvers } from './useSpecialTools-slab-opening';
+import { useWallRetrimEffect } from './useSpecialTools-wall-retrim';
 import { buildOpeningResolvers } from './useSpecialTools-opening';
 import { useToolLifecycle } from './useToolLifecycle';
 import { resolveSceneUnits, mmToSceneUnits } from '../../utils/scene-units';
@@ -37,11 +39,10 @@ import { useFloorMetadata } from '../data/useFloorMetadata';
 import type { StairFloorLinkInput } from '../drawing/stair-completion';
 import { useAngleEntityMeasurement, type AngleEntityVariant } from './useAngleEntityMeasurement';
 import type { AngleMeasurementEntity } from '../../types/entities';
-import { isWallEntity } from '../../types/entities';
-import { computeWallTrims, applyTrimPatches } from '../../bim/walls/wall-trims';
 import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
 import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
 import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-scene';
+import { addRailingToScene } from '../../bim/railings/add-railing-to-scene';
 import { appendEntityToScene } from '../../bim/scene/append-entity-to-scene';
 // 🏢 ENTERPRISE: Import actual level system types for type safety
 import type { LevelsHookReturn } from '../../systems/levels';
@@ -81,6 +82,7 @@ export interface UseSpecialToolsReturn {
   slabTool: ReturnType<typeof useSlabTool>;
   columnTool: ReturnType<typeof useColumnTool>;
   mepFixtureTool: ReturnType<typeof useMepFixtureTool>; // ADR-406
+  railingTool: ReturnType<typeof useRailingTool>; // ADR-407
   beamTool: ReturnType<typeof useBeamTool>;
   slabOpeningTool: ReturnType<typeof useSlabOpeningTool>;
 }
@@ -412,6 +414,17 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   });
   useToolLifecycle(activeTool === 'mep-fixture', mepFixtureTool.activate, mepFixtureTool.deactivate);
 
+  // ADR-407 — RAILING TOOL: 2-click straight guardrail; entity appended+broadcast.
+  const railingTool = useRailingTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onRailingCreated: (railingEntity) => addRailingToScene(railingEntity, levelManager),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  useToolLifecycle(activeTool === 'railing', railingTool.activate, railingTool.deactivate);
+
   // ============================================================================
   // ADR-363 Phase 5 — BEAM TOOL
   // ============================================================================
@@ -449,30 +462,8 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   // ADR-363 Phase 3.7 — SLAB-OPENING TOOL (resolvers extracted: useSpecialTools-slab-opening.ts)
   const slabOpeningTool = useSlabOpeningTool(buildSlabOpeningResolvers(levelManager));
   useToolLifecycle(activeTool === 'slab-opening', slabOpeningTool.activate, slabOpeningTool.deactivate);
-  // ADR-363 Phase 1E — Re-trim all walls after a grip commit settles (200 ms).
-  // Only runs when ≥2 walls exist and at least one bevel is needed.
-  useEffect(() => {
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    const cleanup = EventBus.on('bim:wall-params-updated', () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        const levelId = levelManager.currentLevelId;
-        if (!levelId) return;
-        const scene = levelManager.getLevelScene(levelId);
-        if (!scene) return;
-        const allWalls = scene.entities.filter(isWallEntity);
-        if (allWalls.length < 2) return;
-        const trims = computeWallTrims(allWalls);
-        if (trims.size === 0) return;
-        const patched = applyTrimPatches(scene.entities, trims);
-        levelManager.setLevelScene(levelId, { ...scene, entities: patched });
-      }, 200);
-    });
-    return () => {
-      cleanup();
-      if (debounceTimer) clearTimeout(debounceTimer);
-    };
-  }, [levelManager]);
+  // ADR-363 Phase 1E — Re-trim all walls after a grip commit settles (extracted helper).
+  useWallRetrimEffect(levelManager);
   // AUTO AREA — clear result panel when tool changes away
   useEffect(() => {
     if (activeTool !== 'auto-measure-area') {
@@ -492,6 +483,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     slabTool,
     columnTool,
     mepFixtureTool,
+    railingTool,
     beamTool,
     slabOpeningTool,
   };

@@ -97,6 +97,7 @@ const PARAMS = {
   projectId: 'proj-1',
   floorplanId: 'fp-1',
   buildingId: 'bld-1',
+  floorId: 'floor-1',
   userId: 'user-1',
 };
 

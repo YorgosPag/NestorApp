@@ -2691,3 +2691,13 @@ Bugfix-only αλλαγή στο `EnvelopeOverlay.tsx`: μετά το `renderOpen
 
 - **`dxf-canvas-renderer.ts`** — προστέθηκε το νέο tool id `'column-discrete-from-perimeter'` (ADR-363 Φ3c «Κολώνα από περίγραμμα») στο υπάρχον gate επιλεγμένων-παρειών highlight (δίπλα στα `wall-from-perimeter`/`column-from-perimeter`). Μηδέν αλλαγή σε bitmap cache key (rule 3) ή σε orchestrator subscriptions.
 - **`CanvasSection.tsx`** — (α) `entityPickingActive` += `activeTool==='beam-from-wall'` (ADR-363 «Δοκάρι από τοίχο», 1-click pick τοίχου, mirror του `wall-on-entity`)· (β) νέα context-action `onSelectSimilar`/`canSelectSimilar` (AutoCAD «Select Similar» κατά χρώμα — καλεί `findEntitiesWithSimilarColor` + `universalSelection.replaceEntitySelection`). Καθαρά event-time handlers· **κανένα νέο `useSyncExternalStore`** στον orchestrator (CHECK 6C safe). Καμία αλλαγή στο micro-leaf subscriber pattern.
+
+## 2026-06-02: ADR-406 MEP fixture 2Δ ghost + ADR-407 railing tool wiring (non-architectural, CHECK 6B stage)
+
+Καθαρά **non-architectural** αγγίγματα του micro-leaf perimeter για το vertical slice δύο νέων BIM εργαλείων (ADR-406 φωτιστικό, ADR-407 κάγκελα). Ακολουθούν το ΥΠΑΡΧΟΝ leaf-pattern — **καμία νέα `useSyncExternalStore` σε orchestrator** (CHECK 6C safe), καμία αλλαγή σε bitmap cache key (rule 3):
+
+- **`canvas-layer-stack-leaves.tsx`** — προστέθηκε το νέο always-on read-only leaf `MepFixtureGhostLeaf` (2Δ placement ghost, mirror του υπάρχοντος `ColumnGhostLeaf`)· subscribe μόνο σε cursor-world-position + OSNAP (όχι high-freq orchestrator state). Το railing tool δεν προσθέτει νέο ghost leaf (deferred — βλ. ADR-407 §Deferred).
+- **`canvas-layer-stack-types.ts`** — νέα optional prop για το mep-fixture ghost leaf (mirror της column-ghost prop· pass-through, δεν εισάγει subscription).
+- **`CanvasLayerStack.tsx`** — pass-through wiring του νέου leaf (shell, ΟΧΙ subscriber).
+- **`CanvasSection.tsx`** — orchestrator wiring των δύο νέων tools (`mep-fixture`, `railing`) μέσω `useSpecialTools` + railing click-time `bimPoint` ORTHO-aware· event-time reads μόνο, κανένα νέο high-freq subscription.
+- **`canvas-click-types.ts`** — type-only επέκταση του click-handler payload για τα νέα point-based tools.

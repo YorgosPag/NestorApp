@@ -10,7 +10,7 @@ import {
   findStairsToAutoAttachToHost,
   findStairsToAutoAttachBaseToHost,
 } from '../stair-structural-attach-coordinator';
-import type { Entity } from '../../types/entities';
+import type { Entity } from '../../../types/entities';
 import type { BeamEntity } from '../../types/beam-types';
 import type { SlabEntity } from '../../types/slab-types';
 import { buildDefaultStairParams } from '../../../hooks/drawing/stair-completion';
