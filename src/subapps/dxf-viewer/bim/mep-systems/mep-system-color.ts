@@ -80,11 +80,17 @@ export function pickNextSystemColor(existing: readonly MepSystemEntity[]): strin
 }
 
 /**
- * Build the `entityId → colour` index from the live systems. An entity gets a
- * colour if it is a system's source (panel) or a member (fixture). If an entity
- * appears in more than one system the last one wins — same precedence as the
- * connector cache (`buildConnectorSystemIndex`); the single-circuit guard lives
- * in the assignment UI.
+ * Build the `entityId → colour` index from the live systems. Only a system's
+ * **members** (the loads — light fixtures) are coloured by circuit. The
+ * **source equipment** (the panel) is deliberately NOT coloured: it is the
+ * shared feed of many circuits, so a single circuit colour would be arbitrary —
+ * exactly how the industry tools behave (Revit: an Electrical Equipment panel
+ * carries no Circuit Number / Panel parameter and never takes a circuit colour;
+ * only the connected devices do). The panel keeps its equipment default.
+ *
+ * A fixture in more than one circuit takes the last one's colour — same
+ * precedence as the connector cache (`buildConnectorSystemIndex`); the
+ * single-circuit guard lives in the assignment UI so this is normally moot.
  */
 export function buildEntitySystemColorIndex(
   systems: readonly MepSystemEntity[],
@@ -92,7 +98,6 @@ export function buildEntitySystemColorIndex(
   const index = new Map<string, string>();
   for (const system of systems) {
     const c = systemColor(system);
-    index.set(system.params.sourceEntityId, c);
     for (const m of system.params.members) index.set(m.entityId, c);
   }
   return index;

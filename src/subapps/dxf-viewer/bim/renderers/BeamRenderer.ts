@@ -30,6 +30,7 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import { isBeamEntity } from '../../types/entities';
 import type { BeamEntity, BeamKind } from '../types/beam-types';
+import { DEFAULT_I_FLANGE_THICKNESS_MM, DEFAULT_I_WEB_THICKNESS_MM } from '../types/column-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
@@ -317,7 +318,12 @@ export class BeamRenderer extends BaseEntityRenderer {
    * scale uniformly with the computed width.
    */
   private drawSectionProfile(beam: BeamEntity): void {
-    if (resolveBeamMaterialKey(beam.params.material) !== 'steel') return;
+    // ADR-363 Φ2 — το σύμβολο διατομής εμφανίζεται για μεταλλικό υλικό Ή όταν η
+    // διατομή είναι ρητά I-shape (catalog) — ανεξάρτητα από το material ID.
+    const isSteelSection =
+      beam.params.sectionKind === 'I-shape' ||
+      resolveBeamMaterialKey(beam.params.material) === 'steel';
+    if (!isSteelSection) return;
     if (this.transform.scale < SECTION_MIN_SCALE) return;
 
     const _spDs = useDrawingScaleStore.getState();
@@ -370,10 +376,27 @@ export class BeamRenderer extends BaseEntityRenderer {
     const cy = midS.y + perpY * (beamHalfWidthPx + symOffset);
 
     const screenAngle = Math.atan2(dy, dx);
-    const isHBeam = (beam.params.sectionType ?? 'I') === 'H';
-    const outline = isHBeam
-      ? computeHProfileOutline(symW, symH, symWebW, symHFlangeT)
-      : computeIProfileOutline(symW, symH, symWebW, symFlangeT);
+    // ADR-363 Φ2 — όταν υπάρχουν πραγματικά I-shape params (από catalog), το glyph
+    // αποτυπώνει τις αληθινές αναλογίες h/b, tf/h, tw/b (clamped για ευκρίνεια).
+    // Αλλιώς: το σχηματικό I/H hint βάσει sectionType.
+    const ish = beam.params.ishape;
+    let outline: ReadonlyArray<{ x: number; y: number }>;
+    if (beam.params.sectionKind === 'I-shape' && ish && beam.params.width > 0 && beam.params.depth > 0) {
+      const b = beam.params.width;
+      const h = beam.params.depth;
+      const tf = ish.flangeThickness ?? DEFAULT_I_FLANGE_THICKNESS_MM;
+      const tw = ish.webThickness ?? DEFAULT_I_WEB_THICKNESS_MM;
+      const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
+      const realH = symW * clamp(h / b, 0.5, 4);
+      const realWebW = symW * clamp(tw / b, 0.05, 0.5);
+      const realFlangeT = realH * clamp(tf / h, 0.05, 0.45);
+      outline = computeIProfileOutline(symW, realH, realWebW, realFlangeT);
+    } else {
+      const isHBeam = (beam.params.sectionType ?? 'I') === 'H';
+      outline = isHBeam
+        ? computeHProfileOutline(symW, symH, symWebW, symHFlangeT)
+        : computeIProfileOutline(symW, symH, symWebW, symFlangeT);
+    }
 
     this.ctx.save();
     this.ctx.translate(cx, cy);

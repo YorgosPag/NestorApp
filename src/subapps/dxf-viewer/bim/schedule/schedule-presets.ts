@@ -339,11 +339,18 @@ function combinedPrimary(entity: AnyBimEntity): CombinedPrimaryQuantity {
   if (!COMBINED_ATOE_TYPES.has(entity.type)) {
     return { quantity: 0, unit: null, atoeCategory: null };
   }
+  const hasParams =
+    'params' in entity && entity.params !== null && typeof entity.params === 'object';
   const category =
-    'params' in entity && entity.params !== null && typeof entity.params === 'object' && 'category' in entity.params
+    hasParams && 'category' in entity.params
       ? (entity.params as { category?: string }).category
       : undefined;
-  const mapping = resolveAtoeMapping(entity.type as BimEntityType, entity.kind, category);
+  // ADR-363 Φ2 — beam steel discriminator.
+  const sectionKind =
+    hasParams && 'sectionKind' in entity.params
+      ? (entity.params as { sectionKind?: string }).sectionKind
+      : undefined;
+  const mapping = resolveAtoeMapping(entity.type as BimEntityType, entity.kind, category, sectionKind);
   if (!mapping) return { quantity: 0, unit: null, atoeCategory: null };
   const geometry = entity.geometry as { area?: number; volume?: number; lengthM?: number } | undefined;
   return { quantity: deriveAtoeQuantity(mapping.unit, geometry), unit: mapping.unit, atoeCategory: mapping.categoryCode };

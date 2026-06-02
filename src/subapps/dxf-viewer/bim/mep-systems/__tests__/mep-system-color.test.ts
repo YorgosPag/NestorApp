@@ -40,10 +40,10 @@ describe('pickNextSystemColor', () => {
 });
 
 describe('buildEntitySystemColorIndex', () => {
-  it('maps source + members to the system colour', () => {
+  it('colours members only — NOT the source panel (Revit: equipment has no circuit colour)', () => {
     const color = '#2563eb';
     const index = buildEntitySystemColorIndex([sys('s1', color, ['fx1', 'fx2'], 'pnl1')]);
-    expect(resolveEntitySystemColor('pnl1', index)).toBe(color);
+    expect(resolveEntitySystemColor('pnl1', index)).toBeNull(); // source panel stays neutral
     expect(resolveEntitySystemColor('fx1', index)).toBe(color);
     expect(resolveEntitySystemColor('fx2', index)).toBe(color);
     expect(resolveEntitySystemColor('unrelated', index)).toBeNull();
@@ -64,10 +64,10 @@ describe('colour conversions', () => {
     expect(hexToThreeInt('nope')).toBeNull();
   });
 
-  it('buildEntitySystemColorIntIndex yields THREE ints', () => {
+  it('buildEntitySystemColorIntIndex yields THREE ints for members only', () => {
     const intIndex = buildEntitySystemColorIntIndex([sys('s1', '#2563eb', ['fx1'], 'pnl1')]);
     expect(intIndex.get('fx1')).toBe(0x2563eb);
-    expect(intIndex.get('pnl1')).toBe(0x2563eb);
+    expect(intIndex.get('pnl1')).toBeUndefined(); // source panel not coloured
   });
 
   it('hexToRgba builds an rgba string', () => {

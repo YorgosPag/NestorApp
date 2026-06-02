@@ -100,6 +100,22 @@ const BEAM_MAPPING: Readonly<Record<BeamKind, AtoeMappingEntry>> = {
   cantilever:  { categoryCode: 'OIK-2.04', unit: 'm3', titleEL: 'Πρόβολος RC (BIM)' },
 };
 
+/**
+ * ADR-363 Φ2 — μεταλλικό δοκάρι διατομής Ι/H → OIK-12 Μεταλλικά (kg), ίδιο με τη
+ * μεταλλική κολώνα Ι-τομής. Το `BeamKind` (straight/curved/cantilever) είναι
+ * δομική μορφή — ΔΕΝ φέρει steel· ο διαχωριστής είναι `params.sectionKind`, οπότε
+ * το override λύνεται στο `resolveAtoeMapping` (εκτός του kind-table).
+ */
+const BEAM_ISHAPE_MAPPING: AtoeMappingEntry = {
+  categoryCode: 'OIK-12.10', unit: 'kg', titleEL: 'Δοκός μεταλλική Ι-τομής (BIM)',
+};
+
+/**
+ * Πυκνότητα δομικού χάλυβα (kg/m³) για BOQ βάρος μεταλλικών στοιχείων (EN 1991
+ * / ISO: ~7850). Τροφοδοτεί το `'kg'` branch του `deriveAtoeQuantity`.
+ */
+export const STEEL_DENSITY_KGM3 = 7850;
+
 // ADR-407 — railing → OIK-12 Μεταλλικά (master catalog: «κάγκελα, σκάλες»),
 // measured as running length (m), like the stair handrail. First path-length
 // BIM entity, so it introduces the `'m'` quantity branch in deriveAtoeQuantity.
@@ -127,17 +143,25 @@ export const BIM_TO_ATOE_MAPPING = {
  * @param entityType  'wall' | 'opening' | 'slab' | 'column' | 'beam'
  * @param kind        entity.kind (e.g. 'straight', 'door', 'floor')
  * @param category    entity.params.category — required for walls (WallCategory discriminator)
+ * @param sectionKind entity.params.sectionKind — ADR-363 Φ2 beam steel discriminator
  * @returns AtoeMappingEntry or null when entityType/kind is unknown
  */
 export function resolveAtoeMapping(
   entityType: BimEntityType,
   kind: string,
   category?: string,
+  sectionKind?: string,
 ): AtoeMappingEntry | null {
   if (entityType === 'wall') {
     const wallCategory = category as WallCategory | undefined;
     if (!wallCategory) return null;
     return WALL_MAPPING[wallCategory] ?? null;
+  }
+
+  // ADR-363 Φ2 — μεταλλικό δοκάρι Ι/H: ο διαχωριστής είναι το sectionKind (όχι το
+  // BeamKind), οπότε λύνεται πριν το kind-table lookup.
+  if (entityType === 'beam' && sectionKind === 'I-shape') {
+    return BEAM_ISHAPE_MAPPING;
   }
 
   // Stair is multi-row (concrete/cladding/handrail) — resolved per component,
@@ -162,6 +186,8 @@ export function resolveStairComponentMapping(component: StairBoqComponent): Atoe
  *   - `m2`  → `geometry.area`
  *   - `m3`  → `geometry.volume`
  *   - `m`   → `geometry.lengthM` (ADR-407 — running length, e.g. railings)
+ *   - `kg`  → `geometry.volume × STEEL_DENSITY_KGM3` (ADR-363 Φ2 — μεταλλικά
+ *     στοιχεία· ο όγκος είναι το πραγματικό εμβαδόν διατομής × μήκος/ύψος)
  *
  * ADR-395 §4.6 (G5): geometry is the single source of truth for BIM
  * quantities — the legacy `entity.qto` field was never populated and was
@@ -175,5 +201,7 @@ export function deriveAtoeQuantity(
   if (unit === 'm2') return geometry?.area ?? 0;
   if (unit === 'm3') return geometry?.volume ?? 0;
   if (unit === 'm') return geometry?.lengthM ?? 0;
+  // ADR-363 Φ2 — μεταλλικά στοιχεία (μεταλλική κολώνα/δοκάρι Ι): βάρος = όγκος × ρ.
+  if (unit === 'kg') return (geometry?.volume ?? 0) * STEEL_DENSITY_KGM3;
   return 0;
 }

@@ -27,8 +27,10 @@ import type { BeamGeometry, BeamParams } from '../types/beam-types';
 import { CURVED_BEAM_SUBDIVISIONS } from '../types/beam-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { offsetPolyline } from './shared/polygon-utils';
+import { iShapeCrossSectionAreaMm2 } from './shared/i-shape-profile';
 
 const MM_TO_M = 1 / 1000;
+const MM2_TO_M2 = 1e-6;
 
 /**
  * Compute `BeamGeometry` από `BeamParams`. Pure SSoT για beam-derived
@@ -51,7 +53,17 @@ export function computeBeamGeometry(params: BeamParams): BeamGeometry {
   const widthM = params.width * MM_TO_M;
   const depthM = params.depth * MM_TO_M;
   const area = lengthM * widthM;
-  const volume = area * depthM;
+  // ADR-363 Φ2 — μεταλλικό δοκάρι Ι/H: ο όγκος = πραγματικό εμβαδόν διατομής Ι
+  // (πέλματα+κορμός) × μήκος (ΟΧΙ bounding box width×depth) → σωστό BOQ kg.
+  // Ορθογώνιο RC (default/absent) → width×depth×length (byte-for-byte back-compat).
+  const volume = params.sectionKind === 'I-shape'
+    ? iShapeCrossSectionAreaMm2(
+        params.width,
+        params.depth,
+        params.ishape?.flangeThickness,
+        params.ishape?.webThickness,
+      ) * MM2_TO_M2 * lengthM
+    : area * depthM;
 
   // ADR-401 Phase E/(β): κεκλιμένη δοκός → η κορυφή κυμαίνεται [topElevation,
   // topElevationEnd]· το bbox κρατά το ακραίο high/low ώστε fit-to-view (ADR-394)

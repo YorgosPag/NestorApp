@@ -31,6 +31,7 @@ import {
   type BeamParams,
 } from '../types/beam-types';
 import { getBeamSpanDepthRatio } from '../geometry/beam-geometry';
+import { MIN_I_PLATE_THICKNESS_MM } from '../types/column-types';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 /** Result of a beam validation pass — hard errors non-empty when invalid. */
@@ -62,6 +63,9 @@ export function validateBeamParams(
   validateAxis(params, hardErrors, s);
   validateCurveControl(params, hardErrors);
   validateSlenderness(params, codeViolations);
+  if (params.sectionKind === 'I-shape') {
+    validateIShapeParams(params, hardErrors);
+  }
 
   const bimValidation: BimValidation = {
     hasCodeViolations: codeViolations.length > 0,
@@ -102,6 +106,29 @@ function validateAxis(params: BeamParams, hardErrors: string[], s: number): void
 function validateCurveControl(params: BeamParams, hardErrors: string[]): void {
   if (params.kind === 'curved' && !params.curveControl) {
     hardErrors.push('beam.validation.hardErrors.missingCurveControl');
+  }
+}
+
+/**
+ * ADR-363 Φ2 — I-shape διατομή δοκαριού (mirror column-validator). Hard errors:
+ *   · tf/tw < MIN_I_PLATE_THICKNESS_MM (εκφυλισμένο πλάκα)
+ *   · 2·tf ≥ depth (πέλματα επικαλύπτονται)
+ *   · tw ≥ width (κορμός βγαίνει εκτός πέλματος)
+ */
+function validateIShapeParams(params: BeamParams, hardErrors: string[]): void {
+  const tf = params.ishape?.flangeThickness;
+  const tw = params.ishape?.webThickness;
+  if (tf !== undefined && tf < MIN_I_PLATE_THICKNESS_MM) {
+    hardErrors.push('beam.validation.hardErrors.invalidIShapePlateThickness');
+  }
+  if (tw !== undefined && tw < MIN_I_PLATE_THICKNESS_MM) {
+    hardErrors.push('beam.validation.hardErrors.invalidIShapePlateThickness');
+  }
+  if (tf !== undefined && params.depth > 0 && 2 * tf >= params.depth) {
+    hardErrors.push('beam.validation.hardErrors.invalidIShapeFlangeOverlap');
+  }
+  if (tw !== undefined && params.width > 0 && tw >= params.width) {
+    hardErrors.push('beam.validation.hardErrors.invalidIShapeWebOverflow');
   }
 }
 

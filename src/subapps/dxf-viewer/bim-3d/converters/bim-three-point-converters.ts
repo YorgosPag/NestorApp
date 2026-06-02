@@ -67,7 +67,6 @@ export function panelToMesh(
   floorElevationMm = 0,
   levelId?: string,
   buildingBaseElevationM = 0,
-  systemColor?: number,
 ): THREE.Mesh | null {
   const verts = panel.geometry.footprint.vertices;
   if (verts.length < 3) return null;
@@ -79,11 +78,9 @@ export function panelToMesh(
   const bodyHeightM = panel.params.bodyHeightMm * MM_TO_M;
   const geo = extrudeAndRotate(shape, bodyHeightM);
   const matId = panel.params.material ?? 'elem-electrical-panel';
-  // ADR-408 Φ5 — colour-by-system: tint when the panel is a circuit source.
-  const material = systemColor !== undefined
-    ? getSystemTintedMaterial3D('electrical-panel', systemColor)
-    : getElementMaterial3D('electrical-panel');
-  const mesh = new THREE.Mesh(geo, material);
+  // ADR-408 Φ5 — a panel is a circuit source, not a member, so it is NOT coloured
+  // by system (Revit Electrical Equipment carries no circuit colour).
+  const mesh = new THREE.Mesh(geo, getElementMaterial3D('electrical-panel'));
   // Box centred vertically on the mounting elevation (wall-mounted): the extrusion
   // grows UP from mesh.position.y, so the bottom sits at centre − bodyHeight/2.
   const centerMm = floorElevationMm + panel.params.mountingElevationMm;

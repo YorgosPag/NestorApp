@@ -39,6 +39,18 @@ export const BeamSupportTypeSchema = z.enum(['simple', 'fixed', 'cantilever']);
 
 export const BeamSectionTypeSchema = z.enum(['I', 'H']);
 
+/** ADR-363 Φ2 — σχήμα διατομής (ορθογώνιο RC vs μεταλλικό Ι). */
+export const BeamSectionKindSchema = z.enum(['rectangular', 'I-shape']);
+
+/** ADR-363 Φ2 — I-shape override (mirror ColumnIShapeParams). */
+export const BeamIShapeParamsSchema = z
+  .object({
+    flangeThickness: z.number().positive().optional(),
+    webThickness: z.number().positive().optional(),
+    flipY: z.boolean().optional(),
+  })
+  .strict();
+
 /** Beam-specific IFC4 class. */
 export const BeamIfcTypeSchema = z.literal('IfcBeam');
 
@@ -59,6 +71,10 @@ export const BeamParamsSchema = z
     material: z.string().min(1).optional(),
     supportType: BeamSupportTypeSchema.optional(),
     sectionType: BeamSectionTypeSchema.optional(),
+    // ─── ADR-363 Φ2 — μεταλλική διατομή Ι/H ──────────────────────────────────
+    sectionKind: BeamSectionKindSchema.optional(),
+    ishape: BeamIShapeParamsSchema.optional(),
+    catalogProfile: z.string().min(1).optional(),
     profileDesignation: z.string().min(1).optional(),
     sceneUnits: z.string().optional(),
     storeyId: z.string().min(1).optional(),

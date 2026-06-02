@@ -40,6 +40,7 @@ import { evaluateWallBaseAt, type WallBaseProfile } from '../../bim/geometry/wal
 import { applyBeamSlope, applySlabSlope, applyColumnTilt, applyWallTilt } from './mesh-slope-shear';
 // File-private geometry primitives (N.7.1 file-size split, 2026-06-01).
 import { buildShape, extrudeAndRotate, tagMesh, buildWallShape } from './bim-three-shape-helpers';
+import { buildSweptIBeamGeometry } from './beam-ishape-geometry';
 // Shared 3D edge overlay + point-based converters (N.7.1 file-size split, 2026-06-02).
 import { attachEdgesProjection } from './bim-three-edges';
 
@@ -373,14 +374,21 @@ export function beamToMesh(
   levelId?: string,
   buildingBaseElevationM = 0,
 ): THREE.Mesh | null {
-  const verts = beam.geometry.outline.vertices;
-  if (verts.length < 3) return null;
-
-  const shape = buildShape(verts);
-  if (!shape) return null;
-
   const beamDepthM = beam.params.depth * MM_TO_M;
-  const geo = extrudeAndRotate(shape, beamDepthM);
+
+  // ADR-363 Φ2 — μεταλλικό δοκάρι Ι/H: πραγματική διατομή σαρωμένη κατά τον άξονα
+  // (όχι κουτί). Curved/degenerate → null ⇒ fallback στο ίσιο box extrude παρακάτω.
+  let geo: THREE.BufferGeometry | null =
+    beam.params.sectionKind === 'I-shape' ? buildSweptIBeamGeometry(beam) : null;
+
+  if (!geo) {
+    const verts = beam.geometry.outline.vertices;
+    if (verts.length < 3) return null;
+    const shape = buildShape(verts);
+    if (!shape) return null;
+    geo = extrudeAndRotate(shape, beamDepthM);
+  }
+
   applyBeamSlope(geo, beam.params);
   const matId = beam.params.material ?? 'elem-beam';
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('beam'));

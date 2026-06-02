@@ -346,10 +346,9 @@ export class BimSceneLayer {
     for (const panel of entities.panels ?? []) {
       const r = this.resolveEntity(panel, 'electrical-panel', ctx);
       if (!r) continue;
-      const mesh = panelToMesh(
-        panel, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation,
-        ctx.systemColorIndex.get(panel.id),
-      );
+      // ADR-408 Φ5 — panels are circuit sources, not members: not coloured by
+      // system (only the member fixtures are; the index excludes panels).
+      const mesh = panelToMesh(panel, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

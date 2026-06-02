@@ -38,17 +38,15 @@ import type {
 import {
   ANCHOR_OFFSETS,
   CIRCULAR_COLUMN_SEGMENTS,
-  DEFAULT_I_FLANGE_THICKNESS_MM,
-  DEFAULT_I_WEB_THICKNESS_MM,
   DEFAULT_POLYGON_SIDES,
   MAX_POLYGON_SIDES,
-  MIN_I_PLATE_THICKNESS_MM,
   MIN_POLYGON_SIDES,
 } from '../types/column-types';
 import type { Point3D } from '../types/bim-base';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnTopProfile, ColumnBaseProfile } from './column-vertical-profile';
 import { polygonArea, polygonBbox } from './shared/polygon-utils';
+import { buildIShapeProfile } from './shared/i-shape-profile';
 import { mmToSceneUnits } from '../../utils/scene-units';
 
 const MM_TO_M = 1 / 1000;
@@ -257,46 +255,13 @@ function buildPolygonLocal(diameter: number, s: number, override?: ColumnPolygon
 }
 
 /**
- * I-shape (double-T, steel IPE/HEA family) — 12-vertex CCW (math Y-up).
- *
- *   - `width` (b)  = flange total width  (X-axis)
- *   - `depth` (h)  = section depth       (Y-axis)
- *   - `flangeThickness` (tf) = vertical thickness of top/bottom flanges
- *   - `webThickness`    (tw) = horizontal thickness of central web
- *
- * Vertices traverse outer outline starting bottom-left of bottom flange,
- * going right along bottom, up the web, left along top, and back down.
- *
- * flipY=true reverses winding (parity with L/T mirror transform). Visually
- * symmetric for I, but kept for transform-pipeline consistency.
+ * I-shape (double-T, steel IPE/HEA family) footprint — thin wrapper γύρω από το
+ * κοινό SSoT `buildIShapeProfile` (ADR-363 Φ2 — N.0.2 centralization). Η κολώνα
+ * extrude-άρει αυτό το footprint κατακόρυφα· το δοκάρι σαρώνει το ίδιο προφίλ ως
+ * κάθετη τομή κατά τον άξονα.
  */
 function buildIShapeLocal(width: number, depth: number, s: number, override?: ColumnIShapeParams): Point3D[] {
-  const tfMm = override?.flangeThickness ?? DEFAULT_I_FLANGE_THICKNESS_MM;
-  const twMm = override?.webThickness ?? DEFAULT_I_WEB_THICKNESS_MM;
-  const tfRaw = Math.max(MIN_I_PLATE_THICKNESS_MM, tfMm) * s;
-  const twRaw = Math.max(MIN_I_PLATE_THICKNESS_MM, twMm) * s;
-  const hb = (width * s) / 2;
-  const hh = (depth * s) / 2;
-  // Clamp tf ≤ h/2 (else flanges overlap) and tw ≤ b (else web exits flange).
-  const tf = Math.min(tfRaw, hh);
-  const halfWeb = Math.min(twRaw / 2, hb);
-  const flipY = override?.flipY ?? false;
-  const ys = flipY ? -1 : 1;
-  const verts: Point3D[] = [
-    { x: -hb,      y: ys * -hh,        z: 0 },  // v0  bottom flange BL
-    { x:  hb,      y: ys * -hh,        z: 0 },  // v1  bottom flange BR
-    { x:  hb,      y: ys * (-hh + tf), z: 0 },  // v2  top of BR corner
-    { x:  halfWeb, y: ys * (-hh + tf), z: 0 },  // v3  web BR
-    { x:  halfWeb, y: ys * ( hh - tf), z: 0 },  // v4  web TR
-    { x:  hb,      y: ys * ( hh - tf), z: 0 },  // v5  bottom of TR corner
-    { x:  hb,      y: ys *  hh,        z: 0 },  // v6  top flange TR
-    { x: -hb,      y: ys *  hh,        z: 0 },  // v7  top flange TL
-    { x: -hb,      y: ys * ( hh - tf), z: 0 },  // v8  bottom of TL corner
-    { x: -halfWeb, y: ys * ( hh - tf), z: 0 },  // v9  web TL
-    { x: -halfWeb, y: ys * (-hh + tf), z: 0 },  // v10 web BL
-    { x: -hb,      y: ys * (-hh + tf), z: 0 },  // v11 top of BL corner
-  ];
-  return flipY ? [...verts].reverse() : verts;
+  return buildIShapeProfile(width, depth, s, override);
 }
 
 /**

@@ -275,7 +275,10 @@ class BimToBoqBridgeImpl {
     action: 'created' | 'updated',
   ): Promise<void> {
     const category = entity.params?.category;
-    const mapping = resolveAtoeMapping(entityType, entity.kind, category);
+    // ADR-363 Φ2 — beam steel discriminator (params index-typed → narrow to string).
+    const rawSectionKind = entity.params?.['sectionKind'];
+    const sectionKind = typeof rawSectionKind === 'string' ? rawSectionKind : undefined;
+    const mapping = resolveAtoeMapping(entityType, entity.kind, category, sectionKind);
     if (!mapping) return;
 
     const deterministicId = parentBoqId(entity.id);

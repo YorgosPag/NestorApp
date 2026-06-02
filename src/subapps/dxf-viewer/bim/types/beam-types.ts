@@ -62,8 +62,35 @@ export type BeamSupportType = 'simple' | 'fixed' | 'cantilever';
  *   - `'I'` → standard I-beam (IPE series, flangeT/h ≈ 0.15)
  *   - `'H'` → broad-flange H-beam (HEA/HEB series, flangeT/h ≈ 0.33)
  * Only relevant when `material === 'steel'`. Ignored for rc/glulam.
+ * ADR-363 Φ2: hint μόνο για το 2D glyph· ΔΕΝ οδηγεί γεωμετρία (αυτό κάνει το
+ * `sectionKind` + `ishape`).
  */
 export type BeamSectionType = 'I' | 'H';
+
+/**
+ * ADR-363 Φ2 — διαχωριστής **σχήματος διατομής** δοκαριού, ΟΡΘΟΓΩΝΙΟΣ στο
+ * `BeamKind` (δομική μορφή). Έτσι ένα δοκάρι μπορεί να είναι π.χ. straight +
+ * I-shape ή cantilever + I-shape.
+ *   - `'rectangular'` → ορθογωνική RC διατομή (default / absent — back-compat).
+ *   - `'I-shape'`     → πραγματική μεταλλική διατομή Ι/H (EN 10365 catalog),
+ *     swept κατά τον άξονα σε 3D, BOQ σε kg (OIK-12.10).
+ */
+export type BeamSectionKind = 'rectangular' | 'I-shape';
+
+/**
+ * ADR-363 Φ2 — I-shape override παραμέτρων διατομής δοκαριού (mirror
+ * `ColumnIShapeParams`). Όλα optional· τα `flangeThickness`/`webThickness`
+ * default σε `DEFAULT_I_FLANGE_THICKNESS_MM`/`DEFAULT_I_WEB_THICKNESS_MM` όταν
+ * απουσιάζουν (SSoT defaults στο `shared/i-shape-profile`).
+ */
+export interface BeamIShapeParams {
+  /** mm. Πάχος πέλματος (tf). */
+  readonly flangeThickness?: number;
+  /** mm. Πάχος κορμού (tw). */
+  readonly webThickness?: number;
+  /** Mirror Y handedness (transform-pipeline parity· no-op visually για symmetric I). */
+  readonly flipY?: boolean;
+}
 
 // ─── Parameters (user-editable, SSoT for geometry derivation) ────────────────
 
@@ -109,6 +136,19 @@ export interface BeamParams {
   readonly supportType?: BeamSupportType;
   /** Steel section profile type ('I' or 'H'). Ignored for rc/glulam. Default: 'I'. */
   readonly sectionType?: BeamSectionType;
+  /**
+   * ADR-363 Φ2 — σχήμα διατομής. Default/absent = `'rectangular'` (RC, back-compat).
+   * `'I-shape'` → πραγματική μεταλλική διατομή (γεωμετρία + BOQ kg).
+   */
+  readonly sectionKind?: BeamSectionKind;
+  /** ADR-363 Φ2 — I-shape override (meaningful μόνο αν `sectionKind==='I-shape'`). */
+  readonly ishape?: BeamIShapeParams;
+  /**
+   * ADR-363 Φ2 — Catalog profile ID (π.χ. 'IPE-300', 'HEA-200'). Persisted ώστε
+   * BOQ + re-opened drawings να δείχνουν το πρότυπο όνομα διατομής. Absent /
+   * `CATALOG_CUSTOM_SENTINEL` = user-defined ("Custom"). Revit-style.
+   */
+  readonly catalogProfile?: string;
   /** Free-text profile designation shown on canvas (e.g. "IPE 300", "HEA 200"). */
   readonly profileDesignation?: string;
   /**
