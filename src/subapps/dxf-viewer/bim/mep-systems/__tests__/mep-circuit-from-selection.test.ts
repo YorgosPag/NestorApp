@@ -22,6 +22,15 @@ function fixture(id: string): Entity {
   } as unknown as Entity;
 }
 
+/** Legacy fixture/panel placed before the Φ1 connector retrofit — no connectors. */
+function legacyFixture(id: string): Entity {
+  return { type: 'mep-fixture', id, params: {} } as unknown as Entity;
+}
+
+function legacyPanel(id: string): Entity {
+  return { type: 'electrical-panel', id, params: {} } as unknown as Entity;
+}
+
 function sys(id: string, members: Array<[string, string]>, source = 'pnlX'): MepSystemEntity {
   const params: MepSystemParams = {
     systemType: 'electrical-circuit',
@@ -61,6 +70,14 @@ describe('resolveCircuitFromSelection', () => {
   it('errors when no fixture is selected', () => {
     const res = resolveCircuitFromSelection([panel('pnl1')], []);
     expect(res).toEqual({ ok: false, reason: 'no-members' });
+  });
+
+  it('legacy panel + fixture (no embedded connectors) fall back to canonical ids', () => {
+    const res = resolveCircuitFromSelection([legacyPanel('pnl1'), legacyFixture('fx1')], []);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.draft.sourceConnectorId).toBe('c1');           // PANEL_OUT_CONNECTOR_ID
+    expect(res.draft.members).toEqual([{ entityId: 'fx1', connectorId: 'c1' }]); // FIXTURE_POWER_CONNECTOR_ID
   });
 
   it('produces a reassign removal for a fixture already wired elsewhere', () => {

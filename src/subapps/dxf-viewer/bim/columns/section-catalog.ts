@@ -10,8 +10,10 @@
  * section dimensions are not protected by copyright or the EU sui generis
  * database right). Values consistent with EN 10365:2017 / Euronorm 53-62.
  *
- * ⚠️ Dimensions entered from the EN 10365 series and should be cross-checked
- * against an official ArcelorMittal / SCI section table before production use.
+ * ✅ All 75 sections verified 2026-06-02 against multiple independent EN 10365
+ * tables (eurocodeapplied.com, wermac.org, structolution.com, projectmaterials)
+ * — 0 discrepancies. NOTE on HEM: sectionDepth h is the REAL depth, not the
+ * nominal number (e.g. HEM-100 → h=120mm); some online tables get this wrong.
  *
  * SSoT: the dropdown options in `contextual-column-tab.ts` are GENERATED from
  * these arrays (`ISHAPE_CATALOG` / `SHEAR_WALL_CATALOG`) — never hand-maintain

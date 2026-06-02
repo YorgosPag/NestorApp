@@ -20,6 +20,10 @@
 import type { Entity } from '../../types/entities';
 import { isElectricalPanelEntity, isMepFixtureEntity } from '../../types/entities';
 import type { MepSystemEntity, MepSystemMember } from '../types/mep-system-types';
+import {
+  FIXTURE_POWER_CONNECTOR_ID,
+  PANEL_OUT_CONNECTOR_ID,
+} from '../types/mep-connector-types';
 import { getEntityConnectors } from './connector-access';
 import {
   buildConnectorSystemIndex,
@@ -43,16 +47,35 @@ export type CircuitResolution =
   | { readonly ok: true; readonly draft: CircuitDraft }
   | { readonly ok: false; readonly reason: CircuitResolveError };
 
-/** First outgoing (`flow:'out'`) connector on a panel — the circuit source. */
-function findSourceConnectorId(panel: Entity): string | null {
-  const out = getEntityConnectors(panel).find((c) => c.flow === 'out');
-  return out?.connectorId ?? null;
+/**
+ * The panel's source connector id: the outgoing (`flow:'out'`) connector, else
+ * any connector, else the canonical `PANEL_OUT_CONNECTOR_ID`. A panel placed
+ * before the Φ1 connector retrofit (or via a path that did not seed the default
+ * connector) carries no embedded connector — it is still a valid power source,
+ * so we fall back to the canonical id rather than refuse the circuit.
+ */
+function findSourceConnectorId(panel: Entity): string {
+  const conns = getEntityConnectors(panel);
+  return (
+    conns.find((c) => c.flow === 'out')?.connectorId
+    ?? conns[0]?.connectorId
+    ?? PANEL_OUT_CONNECTOR_ID
+  );
 }
 
-/** First incoming (`flow:'in'`) connector on a fixture — the circuit member. */
-function findMemberConnectorId(fixture: Entity): string | null {
-  const inbound = getEntityConnectors(fixture).find((c) => c.flow === 'in');
-  return inbound?.connectorId ?? null;
+/**
+ * The fixture's member connector id: the incoming (`flow:'in'`) connector, else
+ * any electrical connector, else the canonical `FIXTURE_POWER_CONNECTOR_ID`. A
+ * light fixture is always a connectable load (Revit), so a legacy fixture with
+ * no embedded connector still joins the circuit via the canonical fallback.
+ */
+function findMemberConnectorId(fixture: Entity): string {
+  const conns = getEntityConnectors(fixture);
+  return (
+    conns.find((c) => c.flow === 'in')?.connectorId
+    ?? conns.find((c) => c.domain === 'electrical')?.connectorId
+    ?? FIXTURE_POWER_CONNECTOR_ID
+  );
 }
 
 /**
@@ -67,21 +90,16 @@ export function resolveCircuitFromSelection(
   if (panels.length === 0) return { ok: false, reason: 'no-source' };
   if (panels.length > 1) return { ok: false, reason: 'multiple-sources' };
 
-  const sourceConnectorId = findSourceConnectorId(panels[0]!);
-  if (!sourceConnectorId) return { ok: false, reason: 'no-source' };
-
-  const members: MepSystemMember[] = [];
-  for (const fixture of selected.filter(isMepFixtureEntity)) {
-    const connectorId = findMemberConnectorId(fixture);
-    if (connectorId) members.push({ entityId: fixture.id, connectorId });
-  }
+  const members: MepSystemMember[] = selected
+    .filter(isMepFixtureEntity)
+    .map((fixture) => ({ entityId: fixture.id, connectorId: findMemberConnectorId(fixture) }));
   if (members.length === 0) return { ok: false, reason: 'no-members' };
 
   return {
     ok: true,
     draft: {
       sourceEntityId: panels[0]!.id,
-      sourceConnectorId,
+      sourceConnectorId: findSourceConnectorId(panels[0]!),
       members,
       reassignRemovals: computeReassignRemovals(members, existingSystems),
     },
