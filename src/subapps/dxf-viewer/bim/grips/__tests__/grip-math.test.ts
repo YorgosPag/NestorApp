@@ -5,10 +5,19 @@
  *   - project2D drops Z.
  *   - perpUnit CCW 90°.
  *   - unitVector normalizes + null on degenerate.
- *   (Point rotation lives in utils/rotation-math.rotatePoint — ADR-188 SSoT.)
+ *   - rotateVector / projectToLocalFrame (local-frame rotation, delegate to
+ *     canonical rotatePoint — shared by column + mep-fixture grips).
+ *   - sweptAngleDegAboutPivot (6-click ROTATE→Reference, shared by wall/column/fixture).
  */
 
-import { project2D, perpUnit, unitVector } from '../grip-math';
+import {
+  project2D,
+  perpUnit,
+  unitVector,
+  rotateVector,
+  projectToLocalFrame,
+  sweptAngleDegAboutPivot,
+} from '../grip-math';
 
 const near = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) < eps;
 
@@ -39,5 +48,60 @@ describe('unitVector', () => {
 
   it('null on coincident (degenerate) points', () => {
     expect(unitVector({ x: 2, y: 2 }, { x: 2, y: 2 })).toBeNull();
+  });
+});
+
+describe('rotateVector (local-frame → world, about origin)', () => {
+  it('rotates (1,0) by +90° → (0,1)', () => {
+    const r = rotateVector({ x: 1, y: 0 }, 90);
+    expect(near(r.x, 0)).toBe(true);
+    expect(near(r.y, 1)).toBe(true);
+  });
+
+  it('rotates (0,1) by +90° → (-1,0)', () => {
+    const r = rotateVector({ x: 0, y: 1 }, 90);
+    expect(near(r.x, -1)).toBe(true);
+    expect(near(r.y, 0)).toBe(true);
+  });
+
+  it('0° is identity', () => {
+    expect(rotateVector({ x: 3, y: 7 }, 0)).toEqual({ x: 3, y: 7 });
+  });
+});
+
+describe('projectToLocalFrame (world → local axes, inverse rotation)', () => {
+  it('is the inverse of rotateVector', () => {
+    const v = { x: 4, y: -2 };
+    const back = projectToLocalFrame(rotateVector(v, 37), 37);
+    expect(near(back.x, v.x)).toBe(true);
+    expect(near(back.y, v.y)).toBe(true);
+  });
+
+  it('projects a +Y world delta onto local +X when the frame is rotated +90°', () => {
+    // Frame rotated +90°: local +X points to world +Y → a world (0,1) delta is pure local +X.
+    const local = projectToLocalFrame({ x: 0, y: 1 }, 90);
+    expect(near(local.x, 1)).toBe(true);
+    expect(near(local.y, 0)).toBe(true);
+  });
+});
+
+describe('sweptAngleDegAboutPivot (6-click ROTATE→Reference)', () => {
+  const pivot = { x: 0, y: 0 };
+
+  it('measures the CCW swept angle from anchor to current', () => {
+    // anchor along +X, current along +Y → +90°.
+    expect(sweptAngleDegAboutPivot(pivot, { x: 10, y: 0 }, { x: 0, y: 10 })).toBeCloseTo(90, 6);
+  });
+
+  it('is sign-aware (CW → negative)', () => {
+    expect(sweptAngleDegAboutPivot(pivot, { x: 0, y: 10 }, { x: 10, y: 0 })).toBeCloseTo(-90, 6);
+  });
+
+  it('returns null when the current vector is degenerate (cursor on pivot)', () => {
+    expect(sweptAngleDegAboutPivot(pivot, { x: 10, y: 0 }, { x: 0, y: 0 })).toBeNull();
+  });
+
+  it('returns null when the anchor vector is degenerate', () => {
+    expect(sweptAngleDegAboutPivot(pivot, { x: 0, y: 0 }, { x: 10, y: 0 })).toBeNull();
   });
 });

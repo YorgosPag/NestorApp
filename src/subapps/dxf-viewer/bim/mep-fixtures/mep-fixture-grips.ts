@@ -31,12 +31,12 @@ import type { GripInfo, MepFixtureGripKind } from '../../hooks/grip-types';
 import type { MepFixtureEntity, MepFixtureParams } from '../types/mep-fixture-types';
 import { MIN_FIXTURE_DIMENSION_MM } from '../types/mep-fixture-types';
 import { mmScaleFor } from '../../utils/scene-units';
-// ADR-397 §D3 — rotate-about-pivot is shared SSoT: swept angle from grip-math,
-// point rotation from the canonical rotatePoint (ADR-188). No re-implemented cos/sin.
-import { sweptAngleDegAboutPivot } from '../grips/grip-math';
+// ADR-397 §D3 — ALL rotation math is shared SSoT: local-frame `rotateVector` /
+// `projectToLocalFrame` + anchor-relative `sweptAngleDegAboutPivot` from grip-math
+// (which delegate to the canonical `rotatePoint`, ADR-188). No re-implemented cos/sin.
+import { rotateVector, projectToLocalFrame, sweptAngleDegAboutPivot } from '../grips/grip-math';
 import { rotatePoint } from '../../utils/rotation-math';
 
-const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
 
 /** mm — rotation handle stand-off beyond the +Y (length) edge (visual separation). */
@@ -61,22 +61,8 @@ const CORNER_ORDER: readonly MepFixtureGripKind[] = [
 ];
 
 // ─── Local-frame helpers ─────────────────────────────────────────────────────
-
-/** Rotate vector `v` by `rotDeg` (CCW) about the origin. */
-function rotate(v: Point2D, rotDeg: number): Point2D {
-  const r = rotDeg * DEG_TO_RAD;
-  const c = Math.cos(r);
-  const s = Math.sin(r);
-  return { x: v.x * c - v.y * s, y: v.x * s + v.y * c };
-}
-
-/** Project a world delta onto the fixture's local rotated axes (+X width, +Y length). */
-function projectToLocal(delta: Point2D, rotDeg: number): Point2D {
-  const r = rotDeg * DEG_TO_RAD;
-  const c = Math.cos(r);
-  const s = Math.sin(r);
-  return { x: delta.x * c + delta.y * s, y: -delta.x * s + delta.y * c };
-}
+// Rotation primitives (`rotateVector` = local→world, `projectToLocalFrame` =
+// world→local) live in the shared SSoT `bim/grips/grip-math.ts` (ADR-397 §D3).
 
 function centre(params: MepFixtureParams): Point2D {
   return { x: params.position.x, y: params.position.y };
@@ -87,7 +73,7 @@ function cornerWorld(params: MepFixtureParams, sx: number, sy: number): Point2D 
   const s = mmScaleFor(params);
   const local = { x: (sx * params.width * s) / 2, y: (sy * params.length * s) / 2 };
   const c = centre(params);
-  const rot = rotate(local, params.rotation);
+  const rot = rotateVector(local, params.rotation);
   return { x: c.x + rot.x, y: c.y + rot.y };
 }
 
@@ -96,7 +82,7 @@ function rotationHandleWorld(params: MepFixtureParams): Point2D {
   const s = mmScaleFor(params);
   const local = { x: 0, y: (params.length / 2 + ROTATION_HANDLE_OFFSET_MM) * s };
   const c = centre(params);
-  const rot = rotate(local, params.rotation);
+  const rot = rotateVector(local, params.rotation);
   return { x: c.x + rot.x, y: c.y + rot.y };
 }
 
@@ -282,14 +268,14 @@ function resizeCorner(
 
   // Anchor = opposite corner, fixed in world.
   const anchorLocal = { x: (-sx * originalParams.width * s) / 2, y: (-sy * originalParams.length * s) / 2 };
-  const anchorRot = rotate(anchorLocal, rot);
+  const anchorRot = rotateVector(anchorLocal, rot);
   const anchorWorld = { x: c.x + anchorRot.x, y: c.y + anchorRot.y };
 
   // anchor → dragged corner vector in the local frame (scene units).
   const baseLocal = { x: sx * originalParams.width * s, y: sy * originalParams.length * s };
 
   // Drag projected to local axes; ORTHO zeroes the smaller component.
-  let dLocal = projectToLocal(delta, rot);
+  let dLocal = projectToLocalFrame(delta, rot);
   if (ortho) {
     dLocal = Math.abs(dLocal.x) >= Math.abs(dLocal.y)
       ? { x: dLocal.x, y: 0 }
@@ -302,7 +288,7 @@ function resizeCorner(
   // Re-form the anchor→dragged vector with the original signs + clamped span, so
   // the dragged corner stays diagonally opposite the anchor. New centre = midpoint.
   const clampedLocal = { x: sx * newWidth * s, y: sy * newLength * s };
-  const halfRot = rotate({ x: clampedLocal.x / 2, y: clampedLocal.y / 2 }, rot);
+  const halfRot = rotateVector({ x: clampedLocal.x / 2, y: clampedLocal.y / 2 }, rot);
   const newCentre = { x: anchorWorld.x + halfRot.x, y: anchorWorld.y + halfRot.y };
 
   return {

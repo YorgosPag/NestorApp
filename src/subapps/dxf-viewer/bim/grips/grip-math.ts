@@ -20,9 +20,33 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../types/bim-base';
+import { rotatePoint } from '../../utils/rotation-math';
 
 /** Below this length a direction vector is treated as degenerate (no axis). */
 export const DEGENERATE_EPS = 0.001;
+
+/** Reused zero-vector for local-frame rotations (rotate about the origin). */
+const ORIGIN: Point2D = { x: 0, y: 0 };
+
+/**
+ * ADR-397 §D3 — rotate a vector about the ORIGIN by `angleDeg` (CCW). The
+ * local-frame → world primitive for centre-anchored grips (column / mep-fixture
+ * footprint offsets, rotation/corner handle positions). Delegates to the
+ * canonical `rotatePoint` SSoT (ADR-188) so there is exactly one cos/sin
+ * implementation in the codebase — never re-implement the rotation matrix.
+ */
+export function rotateVector(v: Point2D, angleDeg: number): Point2D {
+  return rotatePoint(v, ORIGIN, angleDeg);
+}
+
+/**
+ * ADR-397 §D3 — project a world-space vector onto an entity's local axes rotated
+ * by `angleDeg` (the inverse rotation). Returns the components along the local
+ * +X / +Y axes. Equivalent to `rotateVector(v, -angleDeg)`.
+ */
+export function projectToLocalFrame(v: Point2D, angleDeg: number): Point2D {
+  return rotateVector(v, -angleDeg);
+}
 
 /** Drop the Z component — BIM plan grips operate in the 2D footprint plane. */
 export function project2D(p: Point3D): Point2D {

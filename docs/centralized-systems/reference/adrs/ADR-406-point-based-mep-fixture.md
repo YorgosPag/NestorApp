@@ -259,6 +259,14 @@ Toggle «Ηλεκτρολογικά» (ADR-405 multi-toggle) κρύβει/δεί
     `sweptAngleDegAboutPivot(pivot, anchor, current)` στο SSoT `bim/grips/grip-math.ts` (anchor-relative swept
     angle + degenerate guard)· **και οι 3** καλούν πλέον αυτό + το canonical `rotatePoint` (ADR-188).
     Αφαιρέθηκαν 2 τοπικά `ROTATE_EPS` + η re-implemented spin του τοίχου. Files: +`grip-math.ts`,
-    `column-grips.ts`, `wall-grip-transforms.ts`. 158/158 grip tests PASS, tsc 0. (Pre-existing local-frame
-    `rotate()` σε mep-fixture/column για offset-vectors = χαμηλής προτεραιότητας follow-up — local-frame, όχι
-    rotate-about-pivot.)
+    `column-grips.ts`, `wall-grip-transforms.ts`. 158/158 grip tests PASS, tsc 0.
+  - **🧹 SSoT dedup #2 (full enterprise, αίτημα Giorgio):** το pivot-rotate ήταν μόνο η μισή ιστορία —
+    υπήρχε ΚΑΙ **local-frame** διπλότυπο: το `rotate(v,deg)` (rotate offset-vector about origin) + το
+    `projectToLocal`/`projectDeltaToLocal` (world→local inverse rotation) ξαναγράφονταν με raw cos/sin **και**
+    στο `mep-fixture-grips.ts` **και** στο `column-grip-utils.ts` (πανομοιότυπα). Διόρθωση: NEW `rotateVector`
+    + `projectToLocalFrame` στο SSoT `grip-math.ts` (delegate στο canonical `rotatePoint` — ΜΙΑ cos/sin
+    υλοποίηση σε όλο το codebase). Το φωτιστικό εισάγει από grip-math (αφαιρέθηκαν τα τοπικά + το `DEG_TO_RAD`)·
+    το `column-grip-utils.ts` κρατά τα ονόματα `rotate`/`projectDeltaToLocal` ως thin wrappers (zero churn σε
+    column-grips/column-variant-grips). Πλέον **κανένα** `Math.cos/Math.sin` στα BIM grip modules εκτός του
+    canonical `rotatePoint`. +direct grip-math tests (rotateVector/projectToLocalFrame/sweptAngleDegAboutPivot,
+    13/13). Files: `grip-math.ts`, `column-grip-utils.ts`, `mep-fixture-grips.ts` + test. tsc 0.

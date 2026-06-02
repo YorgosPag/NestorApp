@@ -18,6 +18,7 @@ import type { FloorStackEntry } from './multi-floor-3d-source';
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh, panelToMesh } from '../converters/BimToThreeConverter';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
+import { syncCircuitWires } from './sync-circuit-wires';
 import { resolveWallTopProfile, resolveWallNominalTopZmm } from '../../bim/geometry/wall-top-profile';
 import { resolveWallBaseProfile } from '../../bim/geometry/wall-base-profile';
 import { makeWallTopContext, makeWallBaseContext, buildWallHostInputs, type HostFootprintInput } from '../../bim/geometry/wall-host-plan-builder';
@@ -146,6 +147,7 @@ export class BimSceneLayer {
     this.syncStairs(entities, ctx);
     this.syncFixtures(entities, ctx);
     this.syncPanels(entities, ctx);
+    syncCircuitWires(this.group, entities, ctx, (entity, category) => this.resolveEntity(entity, category, ctx));
     this.syncRailings(entities, ctx);
     addEnvelopeToScene(this.group, entities, ctx, this.shouldRender.bind(this));
   }

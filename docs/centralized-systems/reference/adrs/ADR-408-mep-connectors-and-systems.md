@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | 🟢 **Φ1 + Φ2 + Φ3 + Φ4 DONE** — κορμός + πρώτη «πηγή» + ακεραιότητα δικτύου (2026-06-02, Opus 4.8). Φ1+Φ2: connector model (embedded) + MepSystem (persisted, geometry-less) + coordinator. **Φ3: ηλεκτρικός πίνακας** = full point-based BIM element (mirror ADR-406 fixture pipeline· IfcElectricDistributionBoard· outgoing power connector· units-safe panelToMesh) ✅ **BROWSER-VERIFIED 2026-06-02**. **Φ4: cascade/integrity** — delete πίνακα-πηγής→διαλύει τα κυκλώματά του· delete μέλους→βγαίνει από το κύκλωμα· **coherent single-undo** (CompoundCommand bundle) + 2 SSoT commands (Update/Dissolve) μέσω mutator port. **Φ5 DONE + ✅ BROWSER-VERIFIED + COMMITTED** (Circuit UI + colour-by-system + reconciliation). **Φ6 DONE** (2026-06-02, Opus 4.8): Circuit-Management Panel — rename/colour (κεντρικός ColorDialogTrigger)/add-remove member μέσω έτοιμου `UpdateMepSystemParamsCommand`· panel-centric trigger· 144/144 MEP PASS, tsc 0. Φ7 (ορατά καλώδια) = roadmap. 🔴 Εκκρεμεί commit (Giorgio) + browser verify Φ6 |
+| Status | 🟢 **Φ1 + Φ2 + Φ3 + Φ4 DONE** — κορμός + πρώτη «πηγή» + ακεραιότητα δικτύου (2026-06-02, Opus 4.8). Φ1+Φ2: connector model (embedded) + MepSystem (persisted, geometry-less) + coordinator. **Φ3: ηλεκτρικός πίνακας** = full point-based BIM element (mirror ADR-406 fixture pipeline· IfcElectricDistributionBoard· outgoing power connector· units-safe panelToMesh) ✅ **BROWSER-VERIFIED 2026-06-02**. **Φ4: cascade/integrity** — delete πίνακα-πηγής→διαλύει τα κυκλώματά του· delete μέλους→βγαίνει από το κύκλωμα· **coherent single-undo** (CompoundCommand bundle) + 2 SSoT commands (Update/Dissolve) μέσω mutator port. **Φ5 DONE + ✅ BROWSER-VERIFIED + COMMITTED** (Circuit UI + colour-by-system + reconciliation). **Φ6 DONE** (2026-06-02, Opus 4.8): Circuit-Management Panel — rename/colour (κεντρικός ColorDialogTrigger)/add-remove member μέσω έτοιμου `UpdateMepSystemParamsCommand`· panel-centric trigger· 144/144 MEP PASS, tsc 0. **Φ7 DONE** (2026-06-03, Opus 4.8): ορατά καλώδια / home-run wires — παράγωγη γεωμετρία (ΟΧΙ persisted), 2D annotation overlay (ADR-040 micro-leaf) + 3D conduit (units-safe TubeGeometry)· daisy-chain + home-run· routing SSoT `computeCircuitWirePaths` (κοινό 2D+3D)· νέα κατηγορία `mep-wire` + View toggle· 115/115 MEP PASS, tsc 0. 🔴 Εκκρεμεί commit (Giorgio) + browser verify Φ6/Φ7 |
 | Date | 2026-06-02 |
 | Owner | Giorgio / Claude (Opus 4.8) |
 | Related | ADR-405 (discipline taxonomy & MEP foundation — **θεμέλιο**), ADR-406 (point-based MEP fixture — **πρότυπο pipeline + ο πρώτος connector host**), ADR-401 (wall attach-to-structural — **πρότυπο coordinator: reference-list + warning event, no mutation**), ADR-195 (entity audit), ADR-355/361 (Firestore service SSoT) |
@@ -246,15 +246,57 @@ contextual ribbon tab (απόφαση Giorgio), **panel-centric** (Revit-faithfu
 - **Tests:** `mep-circuit-editor` (15) + `mep-circuit-editor-store` (3)· `tsc` 0· 144/144 MEP regression
   PASS. (25 pre-existing wall-fixture 3D failures = ΟΧΙ regression.)
 
+## Implementation (Φ7 — Ορατά καλώδια / Home-Run Wires)
+
+Η **οπτική** αναπαράσταση του κυκλώματος (Revit home-run wiring) — ο χρήστης «βλέπει» ποιο φωτιστικό
+τροφοδοτεί ποιος πίνακας. **Παράγωγη γεωμετρία, ΟΧΙ persisted** (το `MepSystem` παραμένει geometry-less):
+υπολογίζεται render-time από τα live host transforms, οπότε ακολουθεί move/rotate πίνακα/φωτιστικών δωρεάν.
+Scope = 2D annotation + 3D conduit· τοπολογία = **daisy-chain + home-run** (nearest-neighbor, πίνακας πρώτος).
+
+- **Routing SSoT (καρδιά):** NEW `bim/mep-systems/mep-wire-routing.ts` — `computeCircuitWirePaths(systems,
+  resolve)` (greedy nearest-neighbor αλυσίδα από τον πίνακα, ντετερμινιστικό tie-break = σειρά members,
+  skip off-scene hosts)· `WireHostPoint {x,y (canvas units), zMm (mm above FFL)}` ώστε **ΜΙΑ** υπολογιστική
+  διαδρομή να τροφοδοτεί ΚΑΙ το 2D (x/y) ΚΑΙ το 3D (x/y/zMm)· `WireStyle` seam (`'straight'` ships,
+  `'orthogonal'`/`'arc'` plug μέσω `expandSegment`/`buildWirePolyline` χωρίς αλλαγή renderers). Χρώμα =
+  `systemColor` (το System κατέχει το χρώμα). Pure (no store/React/Date/Math.random).
+- **2D micro-leaf (ADR-040):** NEW `components/dxf-layout/HomeRunWiresOverlay.tsx` (clone `EnvelopeOverlay`) +
+  NEW pure `bim/renderers/MepWireRenderer.ts` (`drawCircuitWires`: polyline σε system colour + **home-run
+  arrowhead** στον πίνακα). Leaf subscriptions ΜΟΝΟ εδώ (`useMepSystemStore` + objectStyles slice)· ο shell
+  `CanvasLayerStack` δεν αποκτά νέο `useSyncExternalStore` (CHECK 6C safe)· mount inline (όπως EnvelopeOverlay).
+- **3D conduit (units-safe):** NEW `bim-3d/converters/mep-wire-to-three.ts` (`wirePathToMesh`: `CurvePath` of
+  `LineCurve3` → `TubeGeometry`, **stair/railing pattern** `sceneUnitsToMeters` — ΟΧΙ το buggy fixture path·
+  χρώμα = `getSystemTintedMaterial3D('mep-wire', int)` no-singleton-mutation) + `BimSceneLayer.syncWires`
+  (μετά το `syncPanels`· resolver από **ορατούς** hosts μόνο → hide φωτιστικού κόβει το leg, hide πίνακα κόβει
+  όλο το κύκλωμα) + `MaterialCatalog3D` `elem-mep-wire`. Αυτόματο resync: το Φ5 `use-bim3d-vg-resync`
+  (systems + V/G) ξαναχτίζει και τα wires — μηδέν νέα subscription.
+- **Visibility (reuse SSoT):** NEW `BimCategory 'mep-wire'` (`bim-object-styles` + `MODEL_BIM_CATEGORIES` →
+  το «Μόνο DXF» το κρύβει) + `DISCIPLINE_BY_CATEGORY['mep-wire']='electrical'` (το electrical toggle το κρύβει).
+  NEW View-tab toggle `MepWireToggle` (mirror `HideBimToggle`, flips `objectStyles['mep-wire'].visible` μέσω
+  του έτοιμου `setObjectStyleVisibility` — κανένας bespoke flag). i18n `ribbon.commands.mepWire.*`.
+- **SSoT διατηρείται:** καμία νέα persisted οντότητα/command/rule/index· το χρώμα ανήκει στο System·
+  ο πίνακας-πηγή ΔΕΝ χρωματίζεται (μόνο τα καλώδια+μέλη).
+- **Tests:** `mep-wire-routing` (15) + `mep-wire-to-three` (5, units-safe mm/m parity)· `tsc` 0· 115/115 MEP
+  PASS. (25 pre-existing wall-fixture 3D failures = ΟΧΙ regression.)
+
 ## Roadmap (επόμενο push)
 
-- «colour by system» view toggle (τώρα always-on)· per-circuit edit από φωτιστικό (system-browser panel)·
-  ορατά καλώδια/home-run (Φ7).
+- «colour by system» view toggle (τώρα always-on)· per-circuit edit από φωτιστικό (system-browser panel).
+- Φ7 follow-ups: `orthogonal`/`arc` wire styles (seam έτοιμο)· conductor-count ticks στο home-run· waypoints.
 - duct/pipe domains & systems — reserved στα types, no pipeline.
 
 ---
 
 ## Changelog
+- **2026-06-03 (Opus 4.8)** — **Φ7 DONE** (ορατά καλώδια / home-run wires, 2D + 3D). Παράγωγη γεωμετρία
+  (ΟΧΙ persisted· το `MepSystem` μένει geometry-less). Routing SSoT NEW `mep-wire-routing.ts`
+  (`computeCircuitWirePaths` daisy-chain + home-run, nearest-neighbor· `WireHostPoint` x/y/zMm κοινό 2D+3D·
+  `WireStyle` seam straight/orthogonal/arc). 2D: NEW `HomeRunWiresOverlay` (ADR-040 micro-leaf, clone
+  EnvelopeOverlay) + NEW `MepWireRenderer` (polyline + home-run arrow), mount στο `CanvasLayerStack`
+  (**stage ADR-040**, CHECK 6B/6D). 3D: NEW `mep-wire-to-three.ts` (`CurvePath`→`TubeGeometry`, units-safe
+  `sceneUnitsToMeters`) + `BimSceneLayer.syncWires` (ορατοί hosts μόνο) + `MaterialCatalog3D` `elem-mep-wire`·
+  resync μέσω του Φ5 `use-bim3d-vg-resync`. Visibility: NEW `BimCategory 'mep-wire'` (+MODEL/DISCIPLINE) +
+  View-tab `MepWireToggle` (reuse `setObjectStyleVisibility`). 115/115 MEP PASS, tsc 0. Pending commit (Giorgio)
+  + browser verify. Follow-ups: orthogonal/arc styles (seam), conductor ticks, waypoints.
 - **2026-06-02 (Opus 4.8)** — **Φ6 DONE** (Circuit-Management Panel — rename / colour / add-remove member).
   Διαχείριση υπάρχοντος κυκλώματος μέσω του ΕΤΟΙΜΟΥ `UpdateMepSystemParamsCommand` (zero νέα command/
   mutator/rules). NEW `mep-circuit-editor` (pure: `resolveManagedCircuits` + add/remove builders) +

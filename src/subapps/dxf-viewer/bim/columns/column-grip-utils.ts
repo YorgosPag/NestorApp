@@ -14,6 +14,10 @@ import type { ColumnParams } from '../types/column-types';
 import { ANCHOR_OFFSETS } from '../types/column-types';
 import { polygonBboxMm } from './column-anchors';
 import { mmScaleFor } from '../../utils/scene-units';
+// ADR-397 §D3 — local-frame rotation primitives are shared SSoT (grip-math →
+// canonical rotatePoint, ADR-188). This module keeps the column-named exports as
+// thin wrappers so callers (column-grips / column-variant-grips) stay unchanged.
+import { rotateVector, projectToLocalFrame } from '../grips/grip-math';
 
 export const DEG_TO_RAD = Math.PI / 180;
 export const RAD_TO_DEG = 180 / Math.PI;
@@ -22,13 +26,12 @@ export const RAD_TO_DEG = 180 / Math.PI;
 export const ROTATION_HANDLE_OFFSET_MM = 200;
 
 /**
- * Rotate vector `v` by `rotDeg` (CCW) around the origin. Returns new vector.
+ * Rotate vector `v` by `rotDeg` (CCW) around the origin. Thin wrapper over the
+ * shared SSoT `rotateVector` (grip-math → canonical `rotatePoint`). Kept under
+ * the column-local name so existing callers need no churn.
  */
 export function rotate(v: Point2D, rotDeg: number): Point2D {
-  const r = rotDeg * DEG_TO_RAD;
-  const c = Math.cos(r);
-  const s = Math.sin(r);
-  return { x: v.x * c - v.y * s, y: v.x * s + v.y * c };
+  return rotateVector(v, rotDeg);
 }
 
 /**
@@ -40,10 +43,9 @@ export function projectDeltaToLocal(
   delta: Point2D,
   rotDeg: number,
 ): { dxLocal: number; dyLocal: number } {
-  const r = rotDeg * DEG_TO_RAD;
-  const c = Math.cos(r);
-  const s = Math.sin(r);
-  return { dxLocal: delta.x * c + delta.y * s, dyLocal: -delta.x * s + delta.y * c };
+  // SSoT: inverse rotation onto the local axes via shared `projectToLocalFrame`.
+  const local = projectToLocalFrame(delta, rotDeg);
+  return { dxLocal: local.x, dyLocal: local.y };
 }
 
 /**
