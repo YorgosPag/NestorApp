@@ -10,15 +10,18 @@
  * @since 2025-01-25
  */
 
-import React, { createContext, useContext, useRef, useState, useMemo, useCallback, type ReactNode } from 'react';
+import React, { createContext, useContext, useRef, useMemo, useCallback, type ReactNode } from 'react';
 // ✅ ENTERPRISE MIGRATION: Using DxfCanvasRef from canvas-v2 (modern API)
 import type { DxfCanvasRef } from '../canvas-v2';
 // 🏢 ENTERPRISE FIX (2026-01-27): Use canonical ViewTransform from centralized types
 // REMOVED duplicate type definition - using Single Source of Truth
 import type { ViewTransform } from '../rendering/types/Types';
-// ADR-040 Phase XXII.A: setTransform writes through to ImmediateTransformStore (SSoT).
-// Keeps useState in sync for legacy consumers; primary read path is the store.
-import { updateImmediateTransform } from '../systems/cursor/ImmediateTransformStore';
+// ADR-040 Phase XXII.B: setTransform writes ONLY to ImmediateTransformStore (SSoT).
+// The legacy `useState<transform>` was removed — it re-rendered CanvasProvider (a
+// high-up ancestor of DxfViewerContent) on every wheel notch, cascading 2502 fibers
+// (ribbon + 34 tooltips + sidebar). Reactive readers use useTransformValue() /
+// useTransformScale(); the volatile contexts below expose a one-shot snapshot only.
+import { updateImmediateTransform, getImmediateTransform } from '../systems/cursor/ImmediateTransformStore';
 
 // Mock missing types
 type OverlayCanvasImperativeAPI = {
@@ -78,14 +81,12 @@ interface CanvasProviderProps {
 export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
   const dxfRef = useRef<DxfCanvasRef>(null);
   const overlayRef = useRef<OverlayCanvasImperativeAPI>(null);
-  const [transform, setTransformInternal] = useState<ViewTransform>({ scale: 1, offsetX: 0, offsetY: 0 });
 
-  // ADR-040 Phase VII + XXII.A: stable callback — writes BOTH to ImmediateTransformStore
-  // (SSoT, sole authoritative source) AND legacy useState (backward compat for any
-  // remaining consumer that still subscribes to the merged context).
+  // ADR-040 Phase VII + XXII.B: stable callback — writes ONLY to the
+  // ImmediateTransformStore SSoT. No React state update → CanvasProvider stays
+  // inert on wheel zoom/pan (was the 2502-fiber cascade root, ADR-040 §Phase XXII.B).
   const setTransform = useCallback((newTransform: ViewTransform) => {
     updateImmediateTransform(newTransform);
-    setTransformInternal(newTransform);
   }, []);
 
   // ADR-040 Phase VII: stable refs value — never recreated (empty deps)
@@ -96,13 +97,17 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
     setTransform,
   }), [setTransform]);
 
-  // Transform context — recreated only when transform changes
+  // ADR-040 Phase XXII.B: volatile transform contexts retained for the legacy
+  // public API surface only (zero runtime consumers after Phase XXII.A). They
+  // expose a one-shot snapshot of the SSoT and intentionally do NOT re-render on
+  // zoom/pan — reactive readers must use useTransformValue() / useTransformScale().
+  const transform = getImmediateTransform();
   const transformValue = useMemo<CanvasTransformContextType>(
     () => ({ transform }),
     [transform],
   );
 
-  // Legacy merged context — for CanvasSection which needs both
+  // Legacy merged context — stable snapshot (see note above)
   const contextValue = useMemo<CanvasContextType>(
     () => ({ ...refsValue, transform }),
     [refsValue, transform],

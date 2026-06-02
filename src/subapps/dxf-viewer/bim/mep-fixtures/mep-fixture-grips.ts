@@ -31,6 +31,10 @@ import type { GripInfo, MepFixtureGripKind } from '../../hooks/grip-types';
 import type { MepFixtureEntity, MepFixtureParams } from '../types/mep-fixture-types';
 import { MIN_FIXTURE_DIMENSION_MM } from '../types/mep-fixture-types';
 import { mmScaleFor } from '../../utils/scene-units';
+// ADR-397 §D3 — rotate-about-pivot is shared SSoT: swept angle from grip-math,
+// point rotation from the canonical rotatePoint (ADR-188). No re-implemented cos/sin.
+import { sweptAngleDegAboutPivot } from '../grips/grip-math';
+import { rotatePoint } from '../../utils/rotation-math';
 
 const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
@@ -227,15 +231,17 @@ function rotateAboutCentre(input: Readonly<MepFixtureGripDragInput>): MepFixture
   // angle(currentPos−pivot) − angle(anchor−pivot). Mirrors the wall/column rotate.
   if (pivot && currentPos) {
     const anchor = { x: currentPos.x - delta.x, y: currentPos.y - delta.y };
-    const a0 = Math.atan2(anchor.y - pivot.y, anchor.x - pivot.x);
-    const a1 = Math.atan2(currentPos.y - pivot.y, currentPos.x - pivot.x);
-    const sweepDeg = (a1 - a0) * RAD_TO_DEG;
-    const rel = { x: originalParams.position.x - pivot.x, y: originalParams.position.y - pivot.y };
-    const rotated = rotate(rel, sweepDeg);
+    const sweepDeg = sweptAngleDegAboutPivot(pivot, anchor, currentPos);
+    if (sweepDeg === null) return originalParams;
+    const newPos = rotatePoint(
+      { x: originalParams.position.x, y: originalParams.position.y },
+      pivot,
+      sweepDeg,
+    );
     return {
       ...originalParams,
       rotation: originalParams.rotation + sweepDeg,
-      position: { x: pivot.x + rotated.x, y: pivot.y + rotated.y, z: originalParams.position.z ?? 0 },
+      position: { x: newPos.x, y: newPos.y, z: originalParams.position.z ?? 0 },
     };
   }
 

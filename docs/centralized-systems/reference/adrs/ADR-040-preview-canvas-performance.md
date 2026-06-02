@@ -71,6 +71,27 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-02 — Phase XXII.B (part 1) — dead `CanvasProvider` transform `useState` removed (wheel-zoom freeze fix)
+
+**Status**: IMPLEMENTED 2026-06-02. Closes the transitional debt flagged in Phase XXII.A (§ "What still writes to the legacy useState … removed in Phase XXII.B").
+
+**Bug (reported as "η εφαρμογή κολλάει")**: wheel zoom froze the app to 1-2 FPS. Firefox profile: ~76% time in `performSyncWorkOnRoot`, 25% in `Msg_MouseWheelEvent`, forced reflow (`getElement.clientWidth`) at flame top. React DevTools profile (`profiling-data.02-06-2026.23-24-46.json`, 54 commits) confirmed: **~11 wheel commits each re-rendered 2502 fibers (64-162ms)** — `Context.Provider` 7617 renders, `Tooltip` 1830×, `Popper` 2053×, whole ribbon (`RibbonButtonIcon` 943×, `RibbonLargeButton`/`Small`/`TabsTrigger`). Same signature as the 2026-?? incident (56× Tooltip + 1× CanvasProvider, see §"Incident 121-234ms per zoom").
+
+**Root cause**: re-render-root analysis of a wheel commit showed `CanvasProvider` as a top-most re-render root, sitting ABOVE `OverlayStoreProvider < LevelsSystem < ToolbarsSystem < SelectionSystem` → its `setTransformInternal(useState)` on every wheel notch cascaded the entire `DxfViewerContent` subtree (ribbon + 34 tooltips + sidebar = 2502 fibers). Phase XXII.A migrated all *readers* to `ImmediateTransformStore` (zero consumers of the volatile contexts remained) but kept the `useState` as transitional "backward compat" — it was pure dead weight that still fired the cascade.
+
+**Fix** (1 file, `contexts/CanvasContext.tsx`):
+- Removed `useState<ViewTransform>` + `setTransformInternal`. `CanvasProvider.setTransform` now writes ONLY to `updateImmediateTransform()` (SSoT). CanvasProvider stays inert on wheel zoom/pan.
+- Volatile `CanvasTransformContext` / merged `CanvasContext` retained for the legacy public API surface (zero runtime consumers — verified: every `useCanvasContext()` / `useCanvasTransformContext()` reference is a comment/doc) but now expose a one-shot `getImmediateTransform()` snapshot; reactive readers use `useTransformValue()` / `useTransformScale()` (unchanged).
+- `useViewportManager.setTransform` already calls `updateImmediateTransform` then `externalSetTransform` (→ this same store) — the double write is a guarded no-op (`updateImmediateTransform` early-returns when scale+offset unchanged).
+
+**Result**: wheel commits collapse from 2502-fiber / 64-162ms to the legit leaf-only subscribers (`ZoomDisplayLeaf`, `CanvasLayerStackTransformBridge`, `OriginMarkerIcon` ≈ 24-fiber / 2-10ms). Ribbon/tooltips no longer re-render on zoom.
+
+**Not done here** (remains for Phase XXII.B part 2 / C): `dxf-bitmap-cache.ts` CSS-transform live-zoom + idle re-raster (Figma pattern); `React.memo(CadStatusBar)` + Tooltip audit.
+
+✅ Google-level: YES — root cause proven via React DevTools re-render-root analysis (not guessed); SSoT-aligned (single write target = ImmediateTransformStore); zero public-API breakage; no functionality removed (zoom% live via `useTransformScale`).
+
+---
+
 ### 2026-06-02 — ADR-408 Φ5 colour-by-system (micro-leaf compliance note)
 
 **Status**: COMPLIANT — no ADR-040 invariants broken.

@@ -26,6 +26,10 @@ import {
 import type { Point3D } from '../types/bim-base';
 import { mmScaleFor } from '../../utils/scene-units';
 import { unitAxis, perpUnit } from './wall-grip-math';
+// ADR-397 §D3 — rotate-about-pivot is shared SSoT: swept angle from grip-math,
+// point rotation from the canonical rotatePoint (ADR-188). No re-implemented cos/sin.
+import { sweptAngleDegAboutPivot } from '../grips/grip-math';
+import { rotatePoint } from '../../utils/rotation-math';
 
 // ─── Thickness unit floor (scene-unit-aware) ─────────────────────────────────
 
@@ -138,9 +142,6 @@ function moveMidpoint(input: Readonly<WallGripDragInput>): WallParams {
   return { ...originalParams, start: newStart, end: newEnd };
 }
 
-/** Below this magnitude a pivot→cursor vector is treated as degenerate. */
-const ROTATE_EPS = 1e-9;
-
 /**
  * Phase 1C-ter — rotate the whole wall around its midpoint. Mirror of the stair
  * `rotateDirection` (anchor-relative): the handle sits just outside the end
@@ -148,30 +149,26 @@ const ROTATE_EPS = 1e-9;
  * would snap the wall the instant the handle is grabbed. Instead we rotate by
  * the angle SWEPT from the anchor (the grip world position at mousedown =
  * `currentPos − delta`) about the midpoint, then spin both endpoints by it.
+ *
+ * ADR-397 §D3 — swept angle + point rotation are shared SSoT (`grip-math`
+ * `sweptAngleDegAboutPivot` + canonical `rotatePoint`), the same primitives the
+ * column rotation grip uses. No re-implemented cos/sin.
  */
 function rotateWall(input: Readonly<WallGripDragInput>): WallParams {
   const { originalParams, currentPos, delta, pivot } = input;
   // ADR-363 Phase 1G — rotate around the picked pivot when supplied, else the
   // wall midpoint (legacy drag-handle behaviour).
-  const cx = pivot ? pivot.x : (originalParams.start.x + originalParams.end.x) / 2;
-  const cy = pivot ? pivot.y : (originalParams.start.y + originalParams.end.y) / 2;
-  const curDx = currentPos.x - cx;
-  const curDy = currentPos.y - cy;
-  const anchorDx = currentPos.x - delta.x - cx;
-  const anchorDy = currentPos.y - delta.y - cy;
-  if (Math.hypot(curDx, curDy) < ROTATE_EPS || Math.hypot(anchorDx, anchorDy) < ROTATE_EPS) {
-    return originalParams;
-  }
-  const swept = Math.atan2(curDy, curDx) - Math.atan2(anchorDy, anchorDx);
-  const cos = Math.cos(swept);
-  const sin = Math.sin(swept);
-  const spin = (px: number, py: number): Point2D => {
-    const dx = px - cx;
-    const dy = py - cy;
-    return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
-  };
-  const ns = spin(originalParams.start.x, originalParams.start.y);
-  const ne = spin(originalParams.end.x, originalParams.end.y);
+  const centre: Point2D = pivot
+    ? pivot
+    : {
+        x: (originalParams.start.x + originalParams.end.x) / 2,
+        y: (originalParams.start.y + originalParams.end.y) / 2,
+      };
+  const anchor = { x: currentPos.x - delta.x, y: currentPos.y - delta.y };
+  const sweptDeg = sweptAngleDegAboutPivot(centre, anchor, currentPos);
+  if (sweptDeg === null) return originalParams;
+  const ns = rotatePoint({ x: originalParams.start.x, y: originalParams.start.y }, centre, sweptDeg);
+  const ne = rotatePoint({ x: originalParams.end.x, y: originalParams.end.y }, centre, sweptDeg);
   return {
     ...originalParams,
     start: { x: ns.x, y: ns.y, z: originalParams.start.z },

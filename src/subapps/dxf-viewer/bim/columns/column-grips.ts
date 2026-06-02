@@ -59,6 +59,7 @@ import type { ColumnGripKind, GripInfo } from '../../hooks/useGripMovement';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import { ANCHOR_OFFSETS, MIN_COLUMN_DIMENSION_MM } from '../types/column-types';
 import { rotatePoint } from '../../utils/rotation-math';
+import { sweptAngleDegAboutPivot } from '../grips/grip-math';
 import {
   RAD_TO_DEG,
   computeCentroidWorld,
@@ -319,9 +320,6 @@ export interface ColumnGripDragInput {
   readonly pivot?: Point2D;
 }
 
-/** Below this radius the rotate reference/align arm is degenerate → no rotation. */
-const ROTATE_EPS = 1e-6;
-
 /**
  * Pure transform: column grip kind + drag input → new `ColumnParams`. Geometry
  * is NOT recomputed here — ο caller (`UpdateColumnParamsCommand.execute`) είναι
@@ -405,14 +403,9 @@ function rotateAroundPosition(input: Readonly<ColumnGripDragInput>): ColumnParam
 function rotateAroundPivot(input: Readonly<ColumnGripDragInput>): ColumnParams {
   const { originalParams, delta, currentPos, pivot } = input;
   if (!currentPos || !pivot) return originalParams;
-  const curDx = currentPos.x - pivot.x;
-  const curDy = currentPos.y - pivot.y;
-  const anchorDx = currentPos.x - delta.x - pivot.x;
-  const anchorDy = currentPos.y - delta.y - pivot.y;
-  if (Math.hypot(curDx, curDy) < ROTATE_EPS || Math.hypot(anchorDx, anchorDy) < ROTATE_EPS) {
-    return originalParams;
-  }
-  const sweptDeg = (Math.atan2(curDy, curDx) - Math.atan2(anchorDy, anchorDx)) * RAD_TO_DEG;
+  const anchor = { x: currentPos.x - delta.x, y: currentPos.y - delta.y };
+  const sweptDeg = sweptAngleDegAboutPivot(pivot, anchor, currentPos);
+  if (sweptDeg === null) return originalParams;
   const newPos = rotatePoint(
     { x: originalParams.position.x, y: originalParams.position.y },
     pivot,

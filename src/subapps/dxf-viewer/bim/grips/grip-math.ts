@@ -46,3 +46,31 @@ export function unitVector(
   return { x: dx / len, y: dy / len };
 }
 
+/**
+ * ADR-397 §D3 — anchor-relative swept angle (degrees, CCW) about `pivot`, from
+ * `anchor` to `current`. SSoT for the 6-click ROTATE→Reference grip math shared
+ * by wall / column / mep-fixture: the rotation handle sits OFF the rotation axis,
+ * so the cursor's absolute bearing would snap the entity the instant the handle
+ * is grabbed. Instead we measure the angle SWEPT since mousedown — callers pass
+ * `anchor = current − dragDelta` (the grip world position at mousedown).
+ *
+ * Returns `null` when either pivot→point vector is degenerate (cursor on the
+ * pivot) so callers no-op instead of producing a NaN/garbage rotation. Pair with
+ * the canonical `rotatePoint` (utils/rotation-math.ts, ADR-188) to apply it — do
+ * NOT re-implement cos/sin.
+ */
+export function sweptAngleDegAboutPivot(
+  pivot: Point2D,
+  anchor: Point2D,
+  current: Point2D,
+): number | null {
+  const curDx = current.x - pivot.x;
+  const curDy = current.y - pivot.y;
+  const anDx = anchor.x - pivot.x;
+  const anDy = anchor.y - pivot.y;
+  if (Math.hypot(curDx, curDy) < DEGENERATE_EPS || Math.hypot(anDx, anDy) < DEGENERATE_EPS) {
+    return null;
+  }
+  return (Math.atan2(curDy, curDx) - Math.atan2(anDy, anDx)) * (180 / Math.PI);
+}
+

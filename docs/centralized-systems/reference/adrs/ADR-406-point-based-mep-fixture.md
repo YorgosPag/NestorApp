@@ -221,3 +221,34 @@ Toggle «Ηλεκτρολογικά» (ADR-405 multi-toggle) κρύβει/δεί
   Το `params.material` (lamp-type/catalog, Phase 6+) ΔΕΝ εκτίθεται — δεν υπάρχει κατάλογος ακόμη (no κενό
   dropdown, N.1). NEW test `__tests__/useRibbonMepFixtureBridge.test.tsx` (13). tsc 0. 🔴 pending browser
   verify + commit.
+
+- **v0.8 (2026-06-02, Opus 4.8, Plan Mode) — ✨ ΠΛΗΡΗΣ wall-parity στις λαβές: hot-grip move (3-click) +
+  rotate (6-click ROTATE→Reference) + corners (2-click) + live ghost + status-bar μηνύματα + οδηγητικές
+  γραμμές + Ctrl-copy (αίτημα Giorgio «ίδιος κώδικας με τον τοίχο, full SSoT»):** Το hot-grip σύστημα
+  (`wall-hot-grip-fsm.ts`) + τα μηνύματα (`grip-hotgrip-actions.ts hotGripHintKey(op,step)` →
+  `toolHintOverrideStore`) + οι dashed οδηγητικές/rubber-band γραμμές (`useGripGhostPreview.ts`) είναι **ήδη
+  entity-agnostic** — ο τοίχος συμμετέχει μέσω **εγγραφής**, όχι δικού κώδικα. Το φωτιστικό εγγράφηκε στις
+  ΙΔΙΕΣ κοινές πύλες (μηδέν διπλασιασμός):
+  - **Hot-grip συμμετοχή:** `HOT_GRIP_OP_REGISTRY` += `mep-fixture-move:'move'`, `mep-fixture-rotation:'rotate'`,
+    4× `mep-fixture-corner-*:'corner'` (το `mep-fixture-diameter` μένει press-drag)· `hotGripKindOf` +=
+    `?? grip.mepFixtureGripKind`. → μηνύματα status bar («Κάντε κλικ για σημείο βάσης/κέντρο περιστροφής/γραμμή
+    αναφοράς…») + dashed γραμμές **δωρεάν** (γενικά, keyed σε `op`+`step`).
+  - **Rotate-about-pivot (όπως ο τοίχος):** `MepFixtureGripDragInput` += `pivot?`+`currentPos?`·
+    `rotateAboutCentre` νέο pivot branch (το φωτιστικό orbit-άρει το picked centre — ΚΑΙ `position` ΚΑΙ
+    `rotation` σαρώνουν κατά angle(align)−angle(ref), mirror `applyWallGripDrag('wall-rotation',{pivot})`)·
+    `commitMepFixtureGripDrag` διαβάζει `BimRotateHotGripStore` → pivot (mirror `commitWallGripDrag`).
+  - **Live ghost (ήταν σπασμένο — ΠΟΤΕ δεν ζωγραφιζόταν):** root cause = το `useGripGhostPreview` (γρ. 126-145)
+    ΔΕΝ προωθούσε το `mepFixtureGripKind` στο `EntityPreviewTransform` → η (υπαρκτή από v0.6) branch στο
+    `apply-entity-preview.ts` ήταν **unreachable**· επιπλέον το `draw-ghost-entity.ts` ΔΕΝ είχε `case
+    'mep-fixture'`. Fix: forward `mepFixtureGripKind` (useGripGhostPreview)· NEW `case 'mep-fixture'` →
+    footprint polygon (draw-ghost-entity, mirror column)· `apply-entity-preview` mep-fixture branch περνά
+    `currentPos`+`rotatePivot`· `buildRotateReferencePreview` (grip-projections) forward `mepFixtureGripKind`
+    (rotating ghost στο 6-click)· +`case 'mep-fixture'` στο `movesEntity` switch (toolbar Move tool ghost).
+  - **Ctrl-copy (όπως ο τοίχος):** NEW `commitMepFixtureCopy` (`grip-parametric-copy.ts`, mirror
+    `commitWallCopy`/`commitColumnCopy`: `buildMepFixtureEntity`+`addMepFixtureToScene`, fresh enterprise ID
+    N.6) + register στο entity-agnostic `commitHotGripCopy`.
+  - **Files (8 MOD + 2 test):** `wall-hot-grip-fsm.ts`, `mep-fixture-grips.ts`, `grip-parametric-commits.ts`,
+    `grip-parametric-copy.ts`, `apply-entity-preview.ts`, `draw-ghost-entity.ts`, `useGripGhostPreview.ts`,
+    `grip-projections.ts` + tests `mep-fixture-grips.test.ts` (+3 pivot) & `wall-hot-grip-fsm.test.ts` (+4).
+    **383/383 PASS (27 suites), tsc 0.** ⚠️ Stage ADR-406 (CHECK 6D — ghost renderers). 🔴 pending browser
+    verify + commit. Deferred (γωνίες full parity = έγιναν): circular full hot-grip rotate.
