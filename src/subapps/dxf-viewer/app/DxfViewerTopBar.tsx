@@ -148,6 +148,8 @@ export function DxfViewerTopBar({
       <MepSystemPersistenceHost
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
+        currentScene={currentScene}
+        levelManager={levelManager}
       />
       <RailingPersistenceHost
         primarySelectedId={primarySelectedId}
