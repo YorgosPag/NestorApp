@@ -252,3 +252,13 @@ Toggle «Ηλεκτρολογικά» (ADR-405 multi-toggle) κρύβει/δεί
     `grip-projections.ts` + tests `mep-fixture-grips.test.ts` (+3 pivot) & `wall-hot-grip-fsm.test.ts` (+4).
     **383/383 PASS (27 suites), tsc 0.** ⚠️ Stage ADR-406 (CHECK 6D — ghost renderers). 🔴 pending browser
     verify + commit. Deferred (γωνίες full parity = έγιναν): circular full hot-grip rotate.
+  - **🧹 SSoT dedup (Boy-Scout N.0.2, μετά από αυτο-έλεγχο):** το pivot-rotate math που γράφτηκε αρχικά στο
+    `rotateAboutCentre` ήταν **διπλότυπο** — ξανα-υλοποιούσε cos/sin περιστροφή σημείου (παράβαση ADR-397 §D3
+    «import rotatePoint, no re-implemented cos/sin») + το swept-angle ήταν **τριπλό** (wall `rotateWall` —
+    που ξανάγραφε κι αυτό cos/sin pre-existing, column `rotateAroundPivot`, fixture). Διόρθωση: NEW
+    `sweptAngleDegAboutPivot(pivot, anchor, current)` στο SSoT `bim/grips/grip-math.ts` (anchor-relative swept
+    angle + degenerate guard)· **και οι 3** καλούν πλέον αυτό + το canonical `rotatePoint` (ADR-188).
+    Αφαιρέθηκαν 2 τοπικά `ROTATE_EPS` + η re-implemented spin του τοίχου. Files: +`grip-math.ts`,
+    `column-grips.ts`, `wall-grip-transforms.ts`. 158/158 grip tests PASS, tsc 0. (Pre-existing local-frame
+    `rotate()` σε mep-fixture/column για offset-vectors = χαμηλής προτεραιότητας follow-up — local-frame, όχι
+    rotate-about-pivot.)
