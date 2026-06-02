@@ -18,6 +18,7 @@ import type { BeamEntity } from '../bim/types/beam-types';
 import type { ColumnEntity } from '../bim/types/column-types';
 import type { StairEntity } from '../bim/types/stair-types';
 import type { SlabEntity } from '../bim/types/slab-types';
+import type { MepFixtureEntity } from '../bim/types/mep-fixture-types';
 import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
 import { getStairGrips } from '../bim/stairs/stair-grips';
 import { getWallGrips } from '../bim/walls/wall-grips';
@@ -26,6 +27,7 @@ import { getColumnGrips } from '../bim/columns/column-grips';
 import { getSlabGrips } from '../bim/slabs/slab-grips';
 import { getSlabOpeningGrips } from '../bim/slab-openings/slab-opening-grips';
 import { getOpeningGrips } from '../bim/walls/opening-grips';
+import { getMepFixtureGrips } from '../bim/mep-fixtures/mep-fixture-grips';
 import { getDimensionGrips } from './dimensions/useDimensionGrips';
 import { getXLineGrips } from '../systems/xline/xline-grips';
 import { getRayGrips } from '../systems/ray/ray-grips';
@@ -309,6 +311,13 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
 
     case 'opening': {
       grips.push(...getOpeningGrips(entity.openingEntity));
+      break;
+    }
+
+    case 'mep-fixture': {
+      // ADR-406 — parametric light-fixture grips (move + rotation + 4 corner
+      // resize). DxfMepFixture carries params at top level (mirror DxfColumn).
+      grips.push(...getMepFixtureGrips(entity as unknown as MepFixtureEntity));
       break;
     }
   }

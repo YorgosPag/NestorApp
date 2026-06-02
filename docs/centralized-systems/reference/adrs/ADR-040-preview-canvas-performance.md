@@ -75,10 +75,11 @@ Mouse Event → DxfCanvas.onMouseMove
 
 **Status**: COMPLIANT — no ADR-040 invariants broken.
 
-Το ADR-408 Φ5 (colour-by-system) πρόσθεσε χρωματισμό ανά κύκλωμα στους entity renderers
-`MepFixtureRenderer` + `ElectricalPanelRenderer`. **Συμμόρφωση:** zero νέα subscription — το χρώμα
-διαβάζεται **draft-time** μέσω `useMepSystemStore.getState()` (ίδιο pattern με το `useDrawingScaleStore.
-getState()` του visibility check), όχι `useSyncExternalStore`. Ο index μνημονεύεται κατά reference
+Το ADR-408 Φ5 (colour-by-system) πρόσθεσε χρωματισμό ανά κύκλωμα στον entity renderer
+`MepFixtureRenderer` (μόνο τα φωτιστικά-μέλη· ο `ElectricalPanelRenderer` ΔΕΝ χρωματίζεται — Revit
+equipment, μένει teal). **Συμμόρφωση:** zero νέα subscription — το χρώμα διαβάζεται **draft-time** μέσω
+`useMepSystemStore.getState()` (ίδιο pattern με το `useDrawingScaleStore.getState()` του visibility
+check), όχι `useSyncExternalStore`. Ο index μνημονεύεται κατά reference
 (`getEntitySystemColorIndexCached`) ώστε να μη χτίζεται ανά-entity ανά-frame. Το `systemId`/χρώμα **ΔΕΝ**
 μπαίνει σε bitmap cache key (Cardinal Rule 3 — δεν αγγίχτηκε ο cache key· τα MEP entities δεν περνούν από
 το bitmap cache). 3D: `BimSceneLayer.buildContext` χτίζει `systemColorIndex` μία φορά/floor-sync (όχι

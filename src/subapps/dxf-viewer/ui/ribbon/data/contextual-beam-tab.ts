@@ -16,14 +16,20 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7
  */
 
-import type { RibbonTab } from '../types/ribbon-types';
+import type { RibbonTab, RibbonComboboxOption } from '../types/ribbon-types';
 import {
   BEAM_RIBBON_KEYS,
   BEAM_RIBBON_KEYS_ACTIONS,
   BEAM_RIBBON_BADGE_KEYS,
+  BEAM_RIBBON_VISIBILITY_KEYS,
 } from '../hooks/bridge/beam-command-keys';
 import { ENVELOPE_FUNCTION_OPTIONS } from '../hooks/bridge/envelope-function-param';
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
+import {
+  CATALOG_CUSTOM_SENTINEL,
+  ISHAPE_CATALOG,
+  formatIShapePresetLabel,
+} from '../../../bim/columns/section-catalog';
 
 export const BEAM_CONTEXTUAL_TRIGGER = 'beam-selected';
 
@@ -67,32 +73,55 @@ const BEAM_MATERIAL_OPTIONS = [
   { value: 'glulam', labelKey: 'ribbon.commands.beamEditor.material.glulam', isLiteralLabel: false },
 ] as const;
 
-// ADR-363 Phase 5.5i+ — steel section type (I / H). Shown only for steel
-// material but always visible (bridge returns null for non-steel, combobox
-// stays in unset/placeholder state — consistent with material picker pattern).
+// ADR-363 Phase 5.5i+ — steel section type (I / H). Hint για το 2D glyph όταν
+// δεν υπάρχουν catalog ishape params (manual I-shape). Στο ishape-params panel.
 const BEAM_SECTION_TYPE_OPTIONS = [
   { value: 'I', labelKey: 'ribbon.commands.beamEditor.sectionType.I', isLiteralLabel: false },
   { value: 'H', labelKey: 'ribbon.commands.beamEditor.sectionType.H', isLiteralLabel: false },
 ] as const;
 
-// ADR-363 Phase 5.5i+ — common IPE + HEA/HEB designations as preset options.
-// User can also type freely (combobox with free entry).
-const BEAM_PROFILE_DESIGNATION_OPTIONS = [
-  { value: 'IPE 100', labelKey: 'IPE 100', isLiteralLabel: true },
-  { value: 'IPE 160', labelKey: 'IPE 160', isLiteralLabel: true },
-  { value: 'IPE 200', labelKey: 'IPE 200', isLiteralLabel: true },
-  { value: 'IPE 240', labelKey: 'IPE 240', isLiteralLabel: true },
-  { value: 'IPE 270', labelKey: 'IPE 270', isLiteralLabel: true },
-  { value: 'IPE 300', labelKey: 'IPE 300', isLiteralLabel: true },
-  { value: 'IPE 360', labelKey: 'IPE 360', isLiteralLabel: true },
-  { value: 'IPE 400', labelKey: 'IPE 400', isLiteralLabel: true },
-  { value: 'HEA 200', labelKey: 'HEA 200', isLiteralLabel: true },
-  { value: 'HEA 240', labelKey: 'HEA 240', isLiteralLabel: true },
-  { value: 'HEA 300', labelKey: 'HEA 300', isLiteralLabel: true },
-  { value: 'HEB 200', labelKey: 'HEB 200', isLiteralLabel: true },
-  { value: 'HEB 240', labelKey: 'HEB 240', isLiteralLabel: true },
-  { value: 'HEB 300', labelKey: 'HEB 300', isLiteralLabel: true },
+// ADR-363 Φ2 — σχήμα διατομής (ορθογώνιο RC vs μεταλλικό Ι). Πάντα ορατό· η
+// επιλογή 'I-shape' εμφανίζει τα catalog + flange/web panels (bridge visibility).
+const BEAM_SECTION_KIND_OPTIONS = [
+  { value: 'rectangular', labelKey: 'ribbon.commands.beamEditor.sectionKind.rectangular', isLiteralLabel: false },
+  { value: 'I-shape',     labelKey: 'ribbon.commands.beamEditor.sectionKind.iShape',      isLiteralLabel: false },
 ] as const;
+
+// ADR-363 Φ2 — I-shape flange/web thickness presets (IPE/HEA typical range,
+// ίδιες τιμές με την κολώνα). Manual fine-tune· catalog τις γράφει αυτόματα.
+const I_FLANGE_THICKNESS_OPTIONS = [
+  { value: '8',  labelKey: '8',  isLiteralLabel: true },
+  { value: '10', labelKey: '10', isLiteralLabel: true },
+  { value: '12', labelKey: '12', isLiteralLabel: true },
+  { value: '15', labelKey: '15', isLiteralLabel: true },
+  { value: '20', labelKey: '20', isLiteralLabel: true },
+  { value: '30', labelKey: '30', isLiteralLabel: true },
+] as const;
+
+const I_WEB_THICKNESS_OPTIONS = [
+  { value: '6',  labelKey: '6',  isLiteralLabel: true },
+  { value: '8',  labelKey: '8',  isLiteralLabel: true },
+  { value: '10', labelKey: '10', isLiteralLabel: true },
+  { value: '12', labelKey: '12', isLiteralLabel: true },
+  { value: '15', labelKey: '15', isLiteralLabel: true },
+  { value: '20', labelKey: '20', isLiteralLabel: true },
+] as const;
+
+// ADR-363 Φ2 — custom sentinel (Revit-style: «user deviated from standard»).
+// Translatable label (έχει κείμενο). FULL SSOT: τα options παράγονται από το
+// `ISHAPE_CATALOG` — προσθήκη preset εκεί εμφανίζεται εδώ αυτόματα.
+const CATALOG_CUSTOM_OPTION: RibbonComboboxOption = {
+  value: CATALOG_CUSTOM_SENTINEL,
+  labelKey: 'ribbon.commands.beamEditor.catalogProfile.custom',
+  isLiteralLabel: false,
+};
+
+// EN 10365 IPE/HEA/HEB/HEM — literal labels derived από τα δεδομένα (code+dims,
+// μη μεταφράσιμα). ΙΔΙΟΣ κατάλογος με την κολώνα (κοινό SSoT).
+const ISHAPE_CATALOG_OPTIONS: readonly RibbonComboboxOption[] = [
+  CATALOG_CUSTOM_OPTION,
+  ...ISHAPE_CATALOG.map((p) => ({ value: p.id, labelKey: formatIShapePresetLabel(p), isLiteralLabel: true })),
+];
 
 const ELEVATION_MM_OPTIONS = [
   { value: '2400', labelKey: '2400', isLiteralLabel: true },
@@ -228,7 +257,58 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
           ],
         },
         {
-          // ADR-363 Phase 5.5i+ — section type (I/H) + profile designation.
+          // ADR-363 Φ2 — σχήμα διατομής (ορθογώνιο RC ↔ μεταλλικό Ι). Η επιλογή
+          // 'I-shape' εμφανίζει τα catalog + flange/web panels (bridge visibility).
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'beam.sectionKind',
+                labelKey: 'ribbon.commands.beamEditor.sectionKind.section.title',
+                commandKey: BEAM_RIBBON_KEYS.stringParams.sectionKind,
+                comboboxWidthPx: 150,
+                options: BEAM_SECTION_KIND_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-363 Φ2 — EN 10365 IPE/HEA/HEB/HEM profile catalog. Ορατό iff
+      // `params.sectionKind === 'I-shape'` via bridge.getPanelVisibility.
+      id: 'beam-ishape-catalog',
+      labelKey: 'ribbon.panels.beamIshapeCatalog',
+      visibilityKey: BEAM_RIBBON_VISIBILITY_KEYS.ishapeCatalog,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'beam.ishapeCatalog',
+                labelKey: 'ribbon.commands.beamEditor.catalogProfile.section.title',
+                commandKey: BEAM_RIBBON_KEYS.stringParams.catalogProfile,
+                comboboxWidthPx: 190,
+                options: ISHAPE_CATALOG_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-363 Φ2 — I-shape variant inputs (section type hint + flange tf + web
+      // tw). Ορατό iff `params.sectionKind === 'I-shape'` via bridge.getPanelVisibility.
+      id: 'beam-ishape-params',
+      labelKey: 'ribbon.panels.beamIshape',
+      visibilityKey: BEAM_RIBBON_VISIBILITY_KEYS.ishapeParams,
+      rows: [
+        {
           isInFlyout: false,
           buttons: [
             {
@@ -246,11 +326,22 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
               type: 'combobox',
               size: 'small',
               command: {
-                id: 'beam.profileDesignation',
-                labelKey: 'ribbon.commands.beamEditor.profileDesignation.section.title',
-                commandKey: BEAM_RIBBON_KEYS.stringParams.profileDesignation,
-                comboboxWidthPx: 110,
-                options: BEAM_PROFILE_DESIGNATION_OPTIONS,
+                id: 'beam.flangeThickness',
+                labelKey: 'ribbon.commands.beamEditor.flangeThickness',
+                commandKey: BEAM_RIBBON_KEYS.params.flangeThickness,
+                comboboxWidthPx: 80,
+                options: I_FLANGE_THICKNESS_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'beam.webThickness',
+                labelKey: 'ribbon.commands.beamEditor.webThickness',
+                commandKey: BEAM_RIBBON_KEYS.params.webThickness,
+                comboboxWidthPx: 80,
+                options: I_WEB_THICKNESS_OPTIONS,
               },
             },
           ],

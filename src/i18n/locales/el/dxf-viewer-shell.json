@@ -792,6 +792,8 @@
       "beamKind": "Τύπος",
       "beamGeometry": "Γεωμετρία",
       "beamMaterial": "Υλικό",
+      "beamIshape": "Διατομή Ι",
+      "beamIshapeCatalog": "Κατάλογος Προφίλ",
       "beamActions": "Ενέργειες",
       "envelopeFunction": "Θερμοπρόσοψη ETICS",
       "ifcProperties": "IFC Ιδιότητες",
@@ -1461,7 +1463,22 @@
           "section": {
             "title": "Χαρακτηρισμός"
           }
-        }
+        },
+        "sectionKind": {
+          "section": {
+            "title": "Σχήμα Διατομής"
+          },
+          "rectangular": "Ορθογωνική (RC)",
+          "iShape": "Μεταλλική Ι/H"
+        },
+        "catalogProfile": {
+          "section": {
+            "title": "Κατάλογος Προφίλ"
+          },
+          "custom": "Προσαρμοσμένο"
+        },
+        "flangeThickness": "Πάχος πέλματος",
+        "webThickness": "Πάχος κορμού"
       },
       "slabOpeningEditor": {
         "close": "Κλείσιμο",
@@ -2104,6 +2121,15 @@
     "validation": {
       "codeViolations": {
         "tooSmallForKind": "Η διάνοιξη είναι μικρότερη από το ελάχιστο για τον τύπο"
+      }
+    }
+  },
+  "beam": {
+    "validation": {
+      "hardErrors": {
+        "invalidIShapePlateThickness": "Το πάχος πέλματος ή κορμού είναι κάτω από το ελάχιστο (5mm)",
+        "invalidIShapeFlangeOverlap": "Τα πέλματα επικαλύπτονται — το ύψος διατομής είναι πολύ μικρό",
+        "invalidIShapeWebOverflow": "Ο κορμός υπερβαίνει το πλάτος πέλματος"
       }
     }
   },

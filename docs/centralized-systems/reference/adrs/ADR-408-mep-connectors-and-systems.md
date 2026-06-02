@@ -198,14 +198,19 @@ side-effects).
   Firestore)** — derived cache, ξαναχτίζεται από truth σε κάθε load. Mount στο `MepSystemPersistenceHost`.
 
 ### Φ5.C — Colour-by-system (2D + 3D)
-- **2D (ADR-040 micro-leaves)** — `MepFixtureRenderer`/`ElectricalPanelRenderer`: μετά το visibility
-  guard, read `useMepSystemStore.getState()` (zero-subscription), override stroke/fill με το χρώμα του
-  system (`getEntitySystemColorIndexCached` + `hexToRgba`)· unassigned → default amber/teal.
+- **Industry-faithful rule (research-backed):** χρωματίζονται **ΜΟΝΟ τα μέλη/φορτία (φωτιστικά)**· ο
+  **πίνακας-πηγή ΔΕΝ** παίρνει χρώμα κυκλώματος (κοινή πηγή πολλών — Revit: το Electrical Equipment δεν
+  φέρει Circuit Number/Panel parameter, τα filters το πιάνουν με `Supply From`). SSoT:
+  `buildEntitySystemColorIndex` χαρτογραφεί **μόνο** `members[].entityId` (ΟΧΙ `sourceEntityId`).
+- **2D (ADR-040 micro-leaf)** — `MepFixtureRenderer`: μετά το visibility guard, read
+  `useMepSystemStore.getState()` (zero-subscription), override stroke/fill με το χρώμα του system
+  (`getEntitySystemColorIndexCached` + `hexToRgba`)· unassigned → amber default. `ElectricalPanelRenderer`
+  ΔΕΝ χρωματίζεται (μένει equipment teal).
 - **3D** — `SyncContext += systemColorIndex` (entityId→THREE int)· `BimSceneLayer.buildContext` το χτίζει
-  (`buildEntitySystemColorIntIndex`)· `syncFixtures`/`syncPanels` το περνούν στους converters·
-  `fixtureToMesh`/`panelToMesh += systemColor?`· **NEW** `getSystemTintedMaterial3D` (cache per
-  `${type}:${colorInt}`, **ΠΟΤΕ** mutate singleton)· `use-bim3d-vg-resync` subscription (d) →
-  resync σε αλλαγή systems.
+  (`buildEntitySystemColorIntIndex`)· `syncFixtures` το περνά στον `fixtureToMesh += systemColor?` →
+  **NEW** `getSystemTintedMaterial3D` (cache per `${type}:${colorInt}`, **ΠΟΤΕ** mutate singleton)·
+  `syncPanels`/`panelToMesh` ΔΕΝ χρωματίζονται· `use-bim3d-vg-resync` subscription (d) → resync σε αλλαγή
+  systems.
 - **Always-on** (assigned vs unassigned)· toggle «colour by system» = roadmap.
 - **Tests:** `mep-circuit-from-selection` (6) + `mep-system-color` (8) + `CreateMepSystemCommand` (3) +
   `useMepConnectorReconciliation` (3) + `MaterialCatalog3D-system-tint` (2)· `tsc` 0· 124/124 MEP
@@ -230,6 +235,12 @@ side-effects).
   leaves) + 3D (`SyncContext.systemColorIndex` + `getSystemTintedMaterial3D` no-singleton-mutation +
   resync sub). 22 νέα tests, tsc 0, 124/124 MEP regression PASS. Pending commit· browser verify. **Stage
   ADR-040 (CHECK 6B/6D).** Roadmap: per-circuit edit panel + colour-by-system toggle.
+  **Post-verify διορθώσεις (browser):** (1) **legacy-safe create** — `resolveCircuitFromSelection`
+  canonical-id fallback (φωτιστικό/πίνακας χωρίς embedded connector γίνεται member/source με
+  `FIXTURE_POWER_CONNECTOR_ID`/`PANEL_OUT_CONNECTOR_ID`)· (2) **toast i18n** — το `created` έγινε απλό
+  key (το plural `_one`/`_other` δεν resolve-άρισε runtime)· (3) **panel ΟΧΙ χρωματισμένος** — research
+  (Revit Electrical Equipment δεν φέρει circuit colour): `buildEntitySystemColorIndex` χαρτογραφεί μόνο
+  members· καθαρίστηκαν `ElectricalPanelRenderer`/`panelToMesh`/`syncPanels`.
 - **2026-06-02 (Opus 4.8)** — **Φ4 DONE** (cascade / integrity). Delete πίνακα-πηγής→διαλύει τα
   κυκλώματά του· delete μέλους→βγαίνει από το κύκλωμα. **Coherent single-undo** μέσω `CompoundCommand`
   bundle (entity delete + system commands). NEW pure `resolveMepCascadeOnDelete` (coordinator, reuse

@@ -250,6 +250,33 @@ export type ColumnGripKind =
   | `column-poly-vertex-${number}`;
 
 /**
+ * ADR-406 — MEP fixture (light fixture) grip kind (parametric grip type).
+ * Routes commit through `applyMepFixtureGripDrag()` + `UpdateMepFixtureParamsCommand`
+ * instead of the standard `StretchEntityCommand` vertex path.
+ *
+ * Grips exposed by `MepFixtureEntity` (`bim/mep-fixtures/mep-fixture-grips.ts`):
+ *   - `mep-fixture-move`     → translate `position` (whole-entity MOVE glyph).
+ *   - `mep-fixture-rotation` → rotate about `position` (curved ROTATION glyph;
+ *                              rectangular only).
+ *   - `mep-fixture-corner-{ne,nw,sw,se}` → two-direction resize of width × length.
+ *     The DIAGONALLY-OPPOSITE corner stays pinned (anchor); the body grows/shrinks
+ *     toward the dragged corner and `position` re-centres to the new box centre.
+ *     ORTHO (F8) constrains the drag to the dominant local axis (pure width OR
+ *     pure length). Clamped to `MIN_FIXTURE_DIMENSION_MM`.
+ *   - `mep-fixture-diameter` → circular kind only: resize diameter (symmetric 2×,
+ *                              centre fixed). Minimal fallback for the non-live
+ *                              circular shape.
+ */
+export type MepFixtureGripKind =
+  | 'mep-fixture-move'
+  | 'mep-fixture-rotation'
+  | 'mep-fixture-diameter'
+  | 'mep-fixture-corner-ne'
+  | 'mep-fixture-corner-nw'
+  | 'mep-fixture-corner-sw'
+  | 'mep-fixture-corner-se';
+
+/**
  * ADR-359 Phase 11 — XLine grip kind.
  * Routes commit through `applyXLineGripDrag()` + direct scene patch instead of
  * the standard `StretchEntityCommand` vertex path.
@@ -327,6 +354,13 @@ export interface GripInfo {
    * rotation + width/depth resize).
    */
   columnGripKind?: ColumnGripKind;
+  /**
+   * ADR-406 — parametric MEP fixture grip discriminator. Present only when the
+   * grip belongs to a `MepFixtureEntity`; routes the commit through
+   * `applyMepFixtureGripDrag()` + `UpdateMepFixtureParamsCommand` (center
+   * translate + rotation + opposite-corner-anchored width/length resize).
+   */
+  mepFixtureGripKind?: MepFixtureGripKind;
   /**
    * ADR-359 Phase 11 — XLine grip discriminator. Present only when the grip
    * belongs to an `XLineEntity`; routes commit through `applyXLineGripDrag()` +

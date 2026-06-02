@@ -23,11 +23,18 @@ import { useTranslation } from 'react-i18next';
 import { isBeamEntity } from '../../../types/entities';
 import type {
   BeamEntity,
+  BeamIShapeParams,
   BeamKind,
   BeamParams,
+  BeamSectionKind,
   BeamSectionType,
   BeamSupportType,
 } from '../../../bim/types/beam-types';
+import {
+  DEFAULT_I_FLANGE_THICKNESS_MM,
+  DEFAULT_I_WEB_THICKNESS_MM,
+} from '../../../bim/types/column-types';
+import { CATALOG_CUSTOM_SENTINEL } from '../../../bim/columns/section-catalog';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateBeamParamsCommand } from '../../../core/commands/entity-commands/UpdateBeamParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -35,9 +42,16 @@ import {
   BEAM_RIBBON_KEYS,
   BEAM_RIBBON_KEYS_ACTIONS,
   BEAM_RIBBON_BADGE_KEYS,
+  BEAM_RIBBON_VISIBILITY_KEYS,
   isBeamRibbonKey,
   isBeamRibbonStringKey,
+  isBeamVisibilityKey,
 } from './bridge/beam-command-keys';
+import {
+  applyEntityBeamCatalogPreset,
+  catalogOwnsDimension,
+  catalogOwnsNestedParam,
+} from './bridge/beam-bridge-catalog-helpers';
 import {
   readEnvelopeFunctionValue,
   parseEnvelopeFunctionValue,
@@ -73,6 +87,12 @@ export interface RibbonBeamBridge {
   readonly getToggleState: (commandKey: string) => RibbonToggleState;
   readonly getBadgeState: (badgeKey: string) => boolean;
   readonly onAction: (action: string) => void;
+  /**
+   * ADR-363 Φ2 — panel visibility resolver. `true` όταν το panel πρέπει να
+   * εμφανίζεται· keys εκτός `BEAM_RIBBON_VISIBILITY_KEYS` → `true` (no-op).
+   * ishapeCatalog/ishapeParams → ορατά μόνο όταν `sectionKind === 'I-shape'`.
+   */
+  readonly getPanelVisibility: (visibilityKey: string) => boolean;
 }
 
 const BEAM_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
@@ -94,6 +114,7 @@ const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof BeamParams>> = {
   [BEAM_RIBBON_KEYS.stringParams.material]:            'material',
   [BEAM_RIBBON_KEYS.stringParams.sectionType]:         'sectionType',
   [BEAM_RIBBON_KEYS.stringParams.profileDesignation]:  'profileDesignation',
+  [BEAM_RIBBON_KEYS.stringParams.sectionKind]:         'sectionKind',
 };
 
 export function useRibbonBeamBridge(
@@ -142,6 +163,10 @@ export function useRibbonBeamBridge(
       if (commandKey === BEAM_RIBBON_KEYS.stringParams.envelopeFunction) {
         return { value: readEnvelopeFunctionValue(beam.params.envelopeFunction), options: [] };
       }
+      // ADR-363 Φ2 — catalog profile: absent → 'custom' sentinel (Revit-style).
+      if (commandKey === BEAM_RIBBON_KEYS.stringParams.catalogProfile) {
+        return { value: beam.params.catalogProfile ?? CATALOG_CUSTOM_SENTINEL, options: [] };
+      }
       if (isBeamRibbonStringKey(commandKey)) {
         const field = STRING_KEY_TO_FIELD[commandKey];
         const raw = beam.params[field];
@@ -150,9 +175,24 @@ export function useRibbonBeamBridge(
         // fallback used by `BeamRenderer.drawMaterialHatch`.
         if (raw == null) {
           if (field === 'material') return { value: 'rc', options: [] };
+          // ADR-363 Φ2 — sectionKind absent → 'rectangular' (default διατομή).
+          if (field === 'sectionKind') return { value: 'rectangular', options: [] };
           return null;
         }
         return { value: String(raw), options: [] };
+      }
+      // ADR-363 Φ2 — nested I-shape thickness (params.ishape.*) → τρέχουσα ή default.
+      if (commandKey === BEAM_RIBBON_KEYS.params.flangeThickness) {
+        return {
+          value: String(Math.round(beam.params.ishape?.flangeThickness ?? DEFAULT_I_FLANGE_THICKNESS_MM)),
+          options: [],
+        };
+      }
+      if (commandKey === BEAM_RIBBON_KEYS.params.webThickness) {
+        return {
+          value: String(Math.round(beam.params.ishape?.webThickness ?? DEFAULT_I_WEB_THICKNESS_MM)),
+          options: [],
+        };
       }
       if (isBeamRibbonKey(commandKey)) {
         const field = NUMBER_KEY_TO_FIELD[commandKey];
@@ -187,10 +227,44 @@ export function useRibbonBeamBridge(
         return;
       }
 
+      // ADR-363 Φ2 — EN 10365 catalog preset: batch-write dims + ishape +
+      // sectionKind='I-shape' σε ΕΝΑ command (single undo). 'custom' → no-op.
+      if (commandKey === BEAM_RIBBON_KEYS.stringParams.catalogProfile) {
+        applyEntityBeamCatalogPreset(beam, value, dispatchParams);
+        return;
+      }
+
+      // ADR-363 Φ2 — nested I-shape thickness (params.ishape.*) → clear catalog (Custom).
+      if (
+        commandKey === BEAM_RIBBON_KEYS.params.flangeThickness ||
+        commandKey === BEAM_RIBBON_KEYS.params.webThickness
+      ) {
+        const numeric = Number.parseFloat(value);
+        if (Number.isNaN(numeric)) return;
+        const nextIshape: BeamIShapeParams = {
+          ...(beam.params.ishape ?? {}),
+          ...(commandKey === BEAM_RIBBON_KEYS.params.flangeThickness
+            ? { flangeThickness: numeric }
+            : { webThickness: numeric }),
+        };
+        const clearsCatalog = catalogOwnsNestedParam(commandKey, beam.params.sectionKind);
+        dispatchParams(beam, {
+          ...beam.params,
+          ishape: nextIshape,
+          ...(clearsCatalog ? { catalogProfile: undefined } : {}),
+        });
+        return;
+      }
+
       if (isBeamRibbonStringKey(commandKey)) {
         const field = STRING_KEY_TO_FIELD[commandKey];
         if (field === 'kind') {
           const nextParams: BeamParams = { ...beam.params, kind: value as BeamKind };
+          dispatchParams(beam, nextParams);
+          return;
+        }
+        if (field === 'sectionKind') {
+          const nextParams: BeamParams = { ...beam.params, sectionKind: value as BeamSectionKind };
           dispatchParams(beam, nextParams);
           return;
         }
@@ -221,7 +295,13 @@ export function useRibbonBeamBridge(
         const numeric = Number.parseFloat(value);
         if (Number.isNaN(numeric)) return;
         const field = NUMBER_KEY_TO_FIELD[commandKey];
-        const nextParams: BeamParams = { ...beam.params, [field]: numeric } as BeamParams;
+        // ADR-363 Φ2 — χειροκίνητη αλλαγή width/depth σε I-shape → catalog «Custom».
+        const clearsCatalog = catalogOwnsDimension(commandKey, beam.params.sectionKind);
+        const nextParams: BeamParams = {
+          ...beam.params,
+          [field]: numeric,
+          ...(clearsCatalog ? { catalogProfile: undefined } : {}),
+        } as BeamParams;
         dispatchParams(beam, nextParams);
       }
     },
@@ -268,15 +348,41 @@ export function useRibbonBeamBridge(
     [resolveBeam, levelManager, t],
   );
 
+  /**
+   * ADR-363 Φ2 — panel visibility resolver (mirror column). ishapeCatalog +
+   * ishapeParams ορατά μόνο όταν το επιλεγμένο δοκάρι έχει `sectionKind ===
+   * 'I-shape'`. Default 'rectangular' (απών) → κρυφά.
+   */
+  const getPanelVisibility = useCallback(
+    (visibilityKey: string): boolean => {
+      if (!isBeamVisibilityKey(visibilityKey)) return true;
+      const beam = resolveBeam();
+      const sectionKind: BeamSectionKind = beam?.params.sectionKind ?? 'rectangular';
+      if (
+        visibilityKey === BEAM_RIBBON_VISIBILITY_KEYS.ishapeCatalog ||
+        visibilityKey === BEAM_RIBBON_VISIBILITY_KEYS.ishapeParams
+      ) {
+        return sectionKind === 'I-shape';
+      }
+      return true;
+    },
+    [resolveBeam],
+  );
+
   return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction],
+    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility }),
+    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility],
   );
 }
 
 /** Type guard used by `useRibbonCommands` composer. */
 export function isBeamBadgeKey(badgeKey: string): boolean {
   return BEAM_OWNED_BADGE_KEYS.has(badgeKey);
+}
+
+/** ADR-363 Φ2 — type guard used by `useRibbonCommands` composer (panel visibility). */
+export function isBeamPanelVisibilityKey(visibilityKey: string): boolean {
+  return isBeamVisibilityKey(visibilityKey);
 }
 
 /** Exposed so action interceptor μπορεί να αναγνωρίσει `beam.actions.close`. */

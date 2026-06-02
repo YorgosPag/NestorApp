@@ -21,7 +21,7 @@ import { isSlabBadgeKey } from './useRibbonSlabBridge';
 import type { RibbonColumnBridge } from './useRibbonColumnBridge';
 import { isColumnBadgeKey, isColumnPanelVisibilityKey } from './useRibbonColumnBridge';
 import type { RibbonBeamBridge } from './useRibbonBeamBridge';
-import { isBeamBadgeKey } from './useRibbonBeamBridge';
+import { isBeamBadgeKey, isBeamPanelVisibilityKey } from './useRibbonBeamBridge';
 import type { RibbonSlabOpeningBridge } from './useRibbonSlabOpeningBridge';
 import { isSlabOpeningBadgeKey } from './useRibbonSlabOpeningBridge';
 import type { RibbonMepCircuitBridge } from './useRibbonMepCircuitBridge';
@@ -235,9 +235,10 @@ export function useRibbonCommands({
     (visibilityKey: string): boolean => {
       if (isStairPanelVisibilityKey(visibilityKey)) return stairBridge.getPanelVisibility(visibilityKey);
       if (isColumnPanelVisibilityKey(visibilityKey)) return columnBridge.getPanelVisibility(visibilityKey);
+      if (isBeamPanelVisibilityKey(visibilityKey)) return beamBridge.getPanelVisibility(visibilityKey);
       return true;
     },
-    [stairBridge, columnBridge],
+    [stairBridge, columnBridge, beamBridge],
   );
 
   // ADR-363 Phase 1E — Wall action keys (delete) handled by bridge before

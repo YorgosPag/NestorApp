@@ -20,6 +20,10 @@ export const BEAM_RIBBON_KEYS = {
     profileDesignation: 'beam.params.profileDesignation',
     /** ADR-396 v2 Φ6a — ETICS envelope-function override (auto/exterior/interior). */
     envelopeFunction: 'beam.params.envelopeFunction',
+    /** ADR-363 Φ2 — σχήμα διατομής (rectangular / I-shape). */
+    sectionKind: 'beam.params.sectionKind',
+    /** ADR-363 Φ2 — EN 10365 catalog profile ID (π.χ. 'IPE-300'). */
+    catalogProfile: 'beam.params.catalogProfile',
   },
   params: {
     /** mm — beam cross-section width. */
@@ -33,14 +37,43 @@ export const BEAM_RIBBON_KEYS = {
      * Όταν διαφέρει από `topElevation` → κεκλιμένη δοκός (Revit sloped beam).
      */
     topElevationEnd: 'beam.params.topElevationEnd',
+    /** ADR-363 Φ2 — mm. Πάχος πέλματος (tf) — nested `ishape.flangeThickness`. */
+    flangeThickness: 'beam.params.flangeThickness',
+    /** ADR-363 Φ2 — mm. Πάχος κορμού (tw) — nested `ishape.webThickness`. */
+    webThickness: 'beam.params.webThickness',
   },
 } as const;
+
+/**
+ * ADR-363 Φ2 — panel visibility keys (mirror COLUMN_RIBBON_VISIBILITY_KEYS).
+ *   - `ishapeCatalog`: visible iff `params.sectionKind === 'I-shape'` — EN 10365 dropdown.
+ *   - `ishapeParams`:  visible iff `params.sectionKind === 'I-shape'` — flange/web + I/H hint.
+ */
+export const BEAM_RIBBON_VISIBILITY_KEYS = {
+  ishapeCatalog: 'beam.visibility.ishapeCatalog',
+  ishapeParams:  'beam.visibility.ishapeParams',
+} as const;
+
+export type BeamRibbonVisibilityKey =
+  | typeof BEAM_RIBBON_VISIBILITY_KEYS.ishapeCatalog
+  | typeof BEAM_RIBBON_VISIBILITY_KEYS.ishapeParams;
+
+const BEAM_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
+  BEAM_RIBBON_VISIBILITY_KEYS.ishapeCatalog,
+  BEAM_RIBBON_VISIBILITY_KEYS.ishapeParams,
+]);
+
+export function isBeamVisibilityKey(key: string): key is BeamRibbonVisibilityKey {
+  return BEAM_VISIBILITY_KEY_SET.has(key);
+}
 
 export type BeamRibbonNumberCommandKey =
   | typeof BEAM_RIBBON_KEYS.params.width
   | typeof BEAM_RIBBON_KEYS.params.depth
   | typeof BEAM_RIBBON_KEYS.params.topElevation
-  | typeof BEAM_RIBBON_KEYS.params.topElevationEnd;
+  | typeof BEAM_RIBBON_KEYS.params.topElevationEnd
+  | typeof BEAM_RIBBON_KEYS.params.flangeThickness
+  | typeof BEAM_RIBBON_KEYS.params.webThickness;
 
 export type BeamRibbonStringCommandKey =
   | typeof BEAM_RIBBON_KEYS.stringParams.kind
@@ -48,13 +81,17 @@ export type BeamRibbonStringCommandKey =
   | typeof BEAM_RIBBON_KEYS.stringParams.material
   | typeof BEAM_RIBBON_KEYS.stringParams.sectionType
   | typeof BEAM_RIBBON_KEYS.stringParams.profileDesignation
-  | typeof BEAM_RIBBON_KEYS.stringParams.envelopeFunction;
+  | typeof BEAM_RIBBON_KEYS.stringParams.envelopeFunction
+  | typeof BEAM_RIBBON_KEYS.stringParams.sectionKind
+  | typeof BEAM_RIBBON_KEYS.stringParams.catalogProfile;
 
 export const BEAM_RIBBON_NUMBER_KEYS: readonly BeamRibbonNumberCommandKey[] = [
   BEAM_RIBBON_KEYS.params.width,
   BEAM_RIBBON_KEYS.params.depth,
   BEAM_RIBBON_KEYS.params.topElevation,
   BEAM_RIBBON_KEYS.params.topElevationEnd,
+  BEAM_RIBBON_KEYS.params.flangeThickness,
+  BEAM_RIBBON_KEYS.params.webThickness,
 ];
 
 export const BEAM_RIBBON_STRING_KEYS: readonly BeamRibbonStringCommandKey[] = [
@@ -64,6 +101,8 @@ export const BEAM_RIBBON_STRING_KEYS: readonly BeamRibbonStringCommandKey[] = [
   BEAM_RIBBON_KEYS.stringParams.sectionType,
   BEAM_RIBBON_KEYS.stringParams.profileDesignation,
   BEAM_RIBBON_KEYS.stringParams.envelopeFunction,
+  BEAM_RIBBON_KEYS.stringParams.sectionKind,
+  BEAM_RIBBON_KEYS.stringParams.catalogProfile,
 ];
 
 export const BEAM_RIBBON_KEYS_ACTIONS = {
