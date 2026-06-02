@@ -49,7 +49,7 @@ export const MepWireToggle: React.FC = () => {
         className={`flex items-center gap-1 ${PANEL_LAYOUT.SPACING.COMPACT} ${colors.bg.backgroundSecondary} ${isWiresHidden ? colors.text.secondary : colors.text.info} ${PANEL_LAYOUT.TYPOGRAPHY.XS} rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS} select-none`}
       >
         {isWiresHidden
-          ? <CableCar className="w-3 h-3 opacity-60" />
+          ? <EyeOff className="w-3 h-3 opacity-60" />
           : <Cable className="w-3 h-3 opacity-80" />}
         <span>{isWiresHidden ? t('ribbon.commands.mepWire.show') : t('ribbon.commands.mepWire.hide')}</span>
       </button>

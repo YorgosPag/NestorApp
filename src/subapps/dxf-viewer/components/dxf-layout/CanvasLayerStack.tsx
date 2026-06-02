@@ -43,6 +43,7 @@ import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleBu
 import { useDxfOverlay3DSync } from './useDxfOverlay3DSync'; import { useLevelId3DSync } from './useLevelId3DSync';
 // ADR-396 P4 — ETICS θερμοπρόσοψη 2D overlay (dedicated floor-overlay micro-leaf).
 import { EnvelopeOverlay } from './EnvelopeOverlay';
+import { HomeRunWiresOverlay } from './HomeRunWiresOverlay';
 // ADR-399 Phase D — 2D «Όλοι οι όροφοι» read-only underlay (other floors, faded, behind active).
 import { FloorUnderlayOverlay } from './FloorUnderlayOverlay';
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
@@ -464,6 +465,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           <Focus2DOverlayLeaf scene={dxfScene} transform={transform} viewport={viewport} />
           {/* ADR-396 P4 — ETICS θερμοπρόσοψη: συνεχές offset περίγραμμα + insulation hatch band. */}
           <EnvelopeOverlay scene={dxfScene} transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} />
+          {/* ADR-408 Φ7 — home-run circuit wires (derived panel→fixtures annotation). */}
+          <HomeRunWiresOverlay scene={dxfScene} transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} />
           {/* ADR-366 §A.7.Q3 Phase 4.7 — cross-mode cursor modifier badge (fixed, single instance) */}
           <SelectionCursorIcon />
           <ViewMode3DToggleButton />

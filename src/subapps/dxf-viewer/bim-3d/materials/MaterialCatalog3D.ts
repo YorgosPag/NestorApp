@@ -51,6 +51,10 @@ const MAT_DEFS: Record<string, PbrDef> = {
   // ADR-407 — railing (guardrail) default: brushed metal — mid grey, low
   // roughness, high metalness (steel/aluminium posts, balusters, top rail).
   'elem-railing':        { color: 0x999999, roughness: 0.30, metalness: 0.85 },
+  // ADR-408 Φ7 — home-run conduit/wire default. Always tinted by the circuit's
+  // system colour (via getSystemTintedMaterial3D), so this base colour is only a
+  // fallback; matte plastic-insulation look (low metalness, mid roughness).
+  'elem-mep-wire':       { color: 0xb45309, roughness: 0.60, metalness: 0.00 },
 };
 
 export type Stair3DComponent =
@@ -93,7 +97,7 @@ export function getMaterial3D(materialId: string): THREE.MeshStandardMaterial {
 
 /** Resolve MeshStandardMaterial for element types without DNA. */
 export function getElementMaterial3D(
-  type: 'column' | 'beam' | 'slab' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | Stair3DComponent,
+  type: 'column' | 'beam' | 'slab' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | Stair3DComponent,
 ): THREE.MeshStandardMaterial {
   const key = `elem-${type}`;
   let mat = CACHE.get(key);
@@ -110,7 +114,7 @@ export function getElementMaterial3D(
  * `${type}:${colorInt}` — never mutates the shared element singleton.
  */
 export function getSystemTintedMaterial3D(
-  type: 'mep-fixture' | 'electrical-panel',
+  type: 'mep-fixture' | 'electrical-panel' | 'mep-wire',
   colorInt: number,
 ): THREE.MeshStandardMaterial {
   const baseKey = `elem-${type}`;

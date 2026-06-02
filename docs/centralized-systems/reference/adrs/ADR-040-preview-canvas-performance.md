@@ -71,6 +71,14 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-03 — ADR-408 Φ7 home-run wires overlay (micro-leaf compliance note)
+
+**Status**: IMPLEMENTED 2026-06-03. New read-only 2D micro-leaf `HomeRunWiresOverlay` mounted in `CanvasLayerStack` next to `EnvelopeOverlay`, rendering the derived panel→fixtures home-run wire annotation (ADR-408 Φ7). Follows the established micro-leaf contract: receives `scene`/`transform`/`viewport`/`currentLevelId` as props from the shell, owns ≤1 canvas element, no high-frequency store subscription added to `CanvasLayerStack` itself. No subscription, bitmap cache-key, or orchestrator change — pure additive leaf. Detail in ADR-408 Φ7 changelog.
+
+✅ Google-level: YES — mirrors the existing `EnvelopeOverlay` leaf pattern; Cardinal Rules #1/#4 respected (leaf-only subscriber, no orchestrator subscription).
+
+---
+
 ### 2026-06-02 — Phase XXII.B (part 1) — dead `CanvasProvider` transform `useState` removed (wheel-zoom freeze fix)
 
 **Status**: IMPLEMENTED 2026-06-02. Closes the transitional debt flagged in Phase XXII.A (§ "What still writes to the legacy useState … removed in Phase XXII.B"). **Two independent wheel-zoom re-render roots were found and both fixed** (see "Root cause" + "Root cause #2").

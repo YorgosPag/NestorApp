@@ -26,6 +26,7 @@ import { PenTablePanel } from '../panels/PenTablePanel';
 import { ViewTemplatesPanel } from '../panels/ViewTemplatesPanel';
 import { VisibilityGraphicsPanel } from '../panels/VisibilityGraphicsPanel';
 import { HideBimToggle } from './HideBimToggle';
+import { MepWireToggle } from './MepWireToggle';
 import { DisciplineVisibilityToggle } from './DisciplineVisibilityToggle';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 import { RibbonStairFloorInfoWidget } from './RibbonStairFloorInfoWidget';
@@ -87,6 +88,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'hide-bim') {
       return <HideBimToggle key="hide-bim-widget" />;
+    }
+    if (button.widgetId === 'mep-wire-toggle') {
+      return <MepWireToggle key="mep-wire-toggle-widget" />;
     }
     if (button.widgetId === 'discipline-visibility') {
       return <DisciplineVisibilityToggle key="discipline-visibility-widget" />;

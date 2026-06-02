@@ -83,6 +83,19 @@ const HIDE_BIM_BUTTON: RibbonButton = {
   },
 };
 
+/** ADR-408 Φ7 — show/hide derived home-run circuit wires (Revit "Wires" sub-cat). */
+const MEP_WIRE_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'mep-wire-toggle',
+  command: {
+    id: 'view.mepWire',
+    labelKey: 'ribbon.commands.mepWire.label',
+    icon: '',
+    commandKey: 'mep-wire-toggle',
+  },
+};
+
 /** ADR-405 §4 — discipline visibility multi-toggle (Revit "View Discipline"). */
 const DISCIPLINE_BUTTON: RibbonButton = {
   type: 'widget',
@@ -123,7 +136,7 @@ export const BIM_GRAPHICS_PANEL: RibbonPanelDef = {
     // Visibility/Graphics → DXF only → Disciplines.
     {
       isInFlyout: false,
-      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, DISCIPLINE_BUTTON],
+      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DISCIPLINE_BUTTON],
     },
   ],
 };
