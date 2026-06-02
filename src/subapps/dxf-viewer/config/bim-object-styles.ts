@@ -35,7 +35,9 @@ export type BimCategory =
   // ADR-408 Φ3 — electrical panel / distribution board (circuit source).
   | 'electrical-panel'
   // ADR-407 — standalone path-based railing (architectural).
-  | 'railing';
+  | 'railing'
+  // ADR-408 Φ7 — home-run circuit wires (derived electrical annotation overlay).
+  | 'mep-wire';
 
 /**
  * Per-subcategory style overrides (ADR-377).
@@ -102,7 +104,7 @@ export interface ObjectStyle {
 export const BIM_CATEGORIES: readonly BimCategory[] = [
   'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening',
   'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip', 'envelope',
-  'light-fixture', 'electrical-panel', 'railing',
+  'light-fixture', 'electrical-panel', 'railing', 'mep-wire',
 ] as const;
 
 /**
@@ -127,6 +129,8 @@ export const MODEL_BIM_CATEGORIES: readonly BimCategory[] = [
   'electrical-panel',
   // ADR-407 — standalone path-based railing.
   'railing',
+  // ADR-408 Φ7 — home-run circuit wires (hidden by "Show only DXF" with the rest).
+  'mep-wire',
 ] as const;
 
 /**
@@ -165,4 +169,7 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   'electrical-panel': { projectionPen: 4, cutPen: 5 },
   // ADR-407 — κάγκελο: μεσαία γραμμή προβολής (metal members, plan symbol).
   railing:        { projectionPen: 4, cutPen: 5 },
+  // ADR-408 Φ7 — καλώδιο κυκλώματος: λεπτή γραμμή annotation (το χρώμα έρχεται
+  // per-system από το `systemColor`, όχι από εδώ — η κατηγορία δίνει μόνο V/G).
+  'mep-wire':     { projectionPen: 3, cutPen: 3 },
 } as const;

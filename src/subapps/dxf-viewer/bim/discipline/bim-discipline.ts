@@ -71,6 +71,8 @@ export const DISCIPLINE_BY_CATEGORY: Readonly<Record<BimCategory, DisciplineOrAn
   'electrical-panel': 'electrical',
   // ADR-407 — railings ⊂ Architecture (Revit).
   railing:         'architectural',
+  // ADR-408 Φ7 — home-run circuit wires ⊂ electrical (hidden by the electrical toggle).
+  'mep-wire':      'electrical',
 } as const;
 
 /**

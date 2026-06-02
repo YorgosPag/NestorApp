@@ -1786,6 +1786,13 @@
         "tooltipHide": "Hide all structural BIM elements — only the imported DXF entities remain visible",
         "tooltipShow": "Restore visibility of structural BIM elements"
       },
+      "mepWire": {
+        "label": "Wires",
+        "hide": "Hide Wires",
+        "show": "Show Wires",
+        "tooltipHide": "Hide the MEP circuit wires from the view",
+        "tooltipShow": "Show the MEP circuit wires"
+      },
       "discipline": {
         "label": "Disciplines",
         "tooltipShow": "Show discipline",

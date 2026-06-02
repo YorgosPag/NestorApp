@@ -73,7 +73,7 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ### 2026-06-02 — Phase XXII.B (part 1) — dead `CanvasProvider` transform `useState` removed (wheel-zoom freeze fix)
 
-**Status**: IMPLEMENTED 2026-06-02. Closes the transitional debt flagged in Phase XXII.A (§ "What still writes to the legacy useState … removed in Phase XXII.B").
+**Status**: IMPLEMENTED 2026-06-02. Closes the transitional debt flagged in Phase XXII.A (§ "What still writes to the legacy useState … removed in Phase XXII.B"). **Two independent wheel-zoom re-render roots were found and both fixed** (see "Root cause" + "Root cause #2").
 
 **Bug (reported as "η εφαρμογή κολλάει")**: wheel zoom froze the app to 1-2 FPS. Firefox profile: ~76% time in `performSyncWorkOnRoot`, 25% in `Msg_MouseWheelEvent`, forced reflow (`getElement.clientWidth`) at flame top. React DevTools profile (`profiling-data.02-06-2026.23-24-46.json`, 54 commits) confirmed: **~11 wheel commits each re-rendered 2502 fibers (64-162ms)** — `Context.Provider` 7617 renders, `Tooltip` 1830×, `Popper` 2053×, whole ribbon (`RibbonButtonIcon` 943×, `RibbonLargeButton`/`Small`/`TabsTrigger`). Same signature as the 2026-?? incident (56× Tooltip + 1× CanvasProvider, see §"Incident 121-234ms per zoom").
 
@@ -84,7 +84,13 @@ Mouse Event → DxfCanvas.onMouseMove
 - Volatile `CanvasTransformContext` / merged `CanvasContext` retained for the legacy public API surface (zero runtime consumers — verified: every `useCanvasContext()` / `useCanvasTransformContext()` reference is a comment/doc) but now expose a one-shot `getImmediateTransform()` snapshot; reactive readers use `useTransformValue()` / `useTransformScale()` (unchanged).
 - `useViewportManager.setTransform` already calls `updateImmediateTransform` then `externalSetTransform` (→ this same store) — the double write is a guarded no-op (`updateImmediateTransform` early-returns when scale+offset unchanged).
 
-**Result**: wheel commits collapse from 2502-fiber / 64-162ms to the legit leaf-only subscribers (`ZoomDisplayLeaf`, `CanvasLayerStackTransformBridge`, `OriginMarkerIcon` ≈ 24-fiber / 2-10ms). Ribbon/tooltips no longer re-render on zoom.
+**Result (root cause #1)**: `CanvasProvider` removed as a re-render root. Confirmed in the follow-up profile (`profiling-data.02-06-2026.23-35-13.json`) — CanvasProvider no longer appears in updaters/roots.
+
+**Root cause #2 (uncovered by the #1 fix)**: the follow-up profile still showed ~11 wheel commits re-rendering **2486 fibers** — re-render-root analysis pinned the root to `DxfViewerContent` (the `React.memo` "Anonymous" orchestrator at depth 163, direct child of the CanvasContext providers; it carries `DxfViewerTopBar`→ribbon + `SidebarSection` + tooltips). It was the *shallowest updater* in every wheel commit. Cause: `DxfViewerContent.tsx:201` calls `useOverlayDrawing(...)`, and `hooks/useOverlayDrawing.ts:76` called `useTransformScale()` (`useSyncExternalStore`) **in the orchestrator render scope** → re-render on every scale change → 2486-fiber cascade. Direct **Cardinal Rule #1 violation** ("orchestrators MUST NOT call useSyncExternalStore"), masked until now because the #1 CanvasProvider cascade sat above it.
+
+**Fix #2** (1 file, `hooks/useOverlayDrawing.ts`): removed `useTransformScale()`. Both consumers read scale **live at event time** via `getImmediateTransform().scale` — the polygon-close check (click time) and the `useSnapManager({ scale })` prop. `useSnapManager` already reads its own `scaleRef.current` inside `findSnapPoint` (event-time), and the orchestrator still re-renders on the many non-zoom interactions (tool/selection/draft changes) that keep the snap engine's scale sync fresh; only the pure-zoom-while-drawing-overlay micro-window is non-reactive (acceptable — niche tool, forgiving tolerance). No `useSnapManager` API change.
+
+**Result**: wheel commits collapse from 2486-2502-fiber / 64-162ms to leaf-only subscribers (`ZoomDisplayLeaf`, `CanvasLayerStackTransformBridge`, `OriginMarkerIcon` ≈ 1-fiber roots). Ribbon/tooltips no longer re-render on zoom. Diagnosis method: React DevTools profile → per-commit re-render-root + subtree-size + shallowest-updater analysis (scripted over the exported JSON).
 
 **Not done here** (remains for Phase XXII.B part 2 / C): `dxf-bitmap-cache.ts` CSS-transform live-zoom + idle re-raster (Figma pattern); `React.memo(CadStatusBar)` + Tooltip audit.
 

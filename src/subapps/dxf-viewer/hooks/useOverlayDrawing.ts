@@ -5,7 +5,7 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useTransformScale } from "../systems/cursor/ImmediateTransformStore";
+import { getImmediateTransform } from "../systems/cursor/ImmediateTransformStore";
 import { useSnapManager } from "../snapping/hooks/useSnapManager";
 import { calculateDistance } from "../rendering/entities/shared/geometry-rendering-utils";
 import { MIN_POLY_POINTS } from "../overlays/types";
@@ -71,10 +71,13 @@ export const useOverlayDrawing = ({
   levelManager,
   onOverlaySelect,
 }: UseOverlayDrawingConfig) => {
-  // ADR-040 Phase XIII: subscribe to scale via TransformStore selector — only
-  // re-renders when scale changes (not on offset/pan).
-  const transformScale = useTransformScale();
-  // Overlay canvas ref for snap manager
+  // ADR-040 Phase XXII.B: this hook runs in the DxfViewerContent ORCHESTRATOR
+  // render scope. Subscribing to scale here (the old `useTransformScale()`) made
+  // the whole orchestrator + ribbon + 34 tooltips re-render on every wheel notch
+  // (2486-fiber cascade — Cardinal Rule #1 violation). Scale is read live at
+  // event time instead: the snap close-check below and useSnapManager's
+  // findSnapPoint (which reads its own scaleRef) get the fresh value without a
+  // high-frequency subscription on the orchestrator.
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Draft polygon state for overlay drawing
@@ -88,7 +91,7 @@ export const useOverlayDrawing = ({
   // Snap manager
   // 🏢 FIX (2026-02-20): Pass current zoom scale for correct pixel→world tolerance conversion
   const snapManager = useSnapManager(overlayCanvasRef, {
-    scale: transformScale,
+    scale: getImmediateTransform().scale,
     onSnapPoint: (point: { x: number; y: number } | null) => {
       setSnapPoint(point);
     },
@@ -108,9 +111,10 @@ export const useOverlayDrawing = ({
           y: firstPoint[1],
         });
 
-        // 🏢 ADR-099: Centralized polygon close tolerance - converts pixels to world units
+        // 🏢 ADR-099: Centralized polygon close tolerance - converts pixels to world units.
+        // ADR-040 Phase XXII.B: read scale live at click time (no orchestrator subscription).
         const worldTolerance =
-          POLYGON_TOLERANCES.OVERLAY_CLOSE_PIXELS / transformScale;
+          POLYGON_TOLERANCES.OVERLAY_CLOSE_PIXELS / getImmediateTransform().scale;
 
         if (distance < worldTolerance) {
           finishDrawing();
@@ -121,7 +125,7 @@ export const useOverlayDrawing = ({
       // Add new point to draft polygon
       setDraftPolygon((prev) => [...prev, [point.x, point.y]]);
     },
-    [overlayMode, activeTool, draftPolygon, transformScale],
+    [overlayMode, activeTool, draftPolygon],
   );
 
   // Finish drawing function
