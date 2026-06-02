@@ -5,6 +5,7 @@
 
 import { UpdateMepSystemParamsCommand } from '../UpdateMepSystemParamsCommand';
 import { DissolveMepSystemCommand } from '../DissolveMepSystemCommand';
+import { CreateMepSystemCommand } from '../CreateMepSystemCommand';
 import { CompoundCommand } from '../../CompoundCommand';
 import {
   setMepSystemMutator,
@@ -33,6 +34,7 @@ function system(id: string, p: MepSystemParams): MepSystemEntity {
 }
 
 interface MockMutator {
+  createSystem: jest.Mock;
   updateSystemParams: jest.Mock;
   dissolveSystem: jest.Mock;
   restoreSystem: jest.Mock;
@@ -40,6 +42,7 @@ interface MockMutator {
 
 function installMutator(): MockMutator {
   const mock: MockMutator = {
+    createSystem: jest.fn(),
     updateSystemParams: jest.fn(),
     dissolveSystem: jest.fn(),
     restoreSystem: jest.fn(),
@@ -116,6 +119,37 @@ describe('DissolveMepSystemCommand', () => {
     const cmd = new DissolveMepSystemCommand(system('sys1', params('A')));
     expect(cmd.canMergeWith()).toBe(false);
     expect(cmd.validate()).toBeNull();
+  });
+});
+
+describe('CreateMepSystemCommand', () => {
+  it('execute / redo create the entity, undo dissolves it (id-stable)', () => {
+    const mock = installMutator();
+    const entity = system('sys9', params('Circuit 1', [['fx1', 'c1']]));
+    const cmd = new CreateMepSystemCommand(entity);
+
+    cmd.execute();
+    expect(mock.createSystem).toHaveBeenLastCalledWith(entity);
+
+    cmd.undo();
+    expect(mock.dissolveSystem).toHaveBeenCalledWith('sys9');
+
+    cmd.redo();
+    expect(mock.createSystem).toHaveBeenCalledTimes(2);
+  });
+
+  it('validate guards id + source + members; never merges', () => {
+    const ok = new CreateMepSystemCommand(system('sys9', params('A', [['fx1', 'c1']])));
+    expect(ok.validate()).toBeNull();
+    expect(ok.canMergeWith()).toBe(false);
+    const bad = new CreateMepSystemCommand(system('', params('A')));
+    expect(bad.validate()).toMatch(/id is required/);
+  });
+
+  it('no-op (no throw) when no mutator is registered', () => {
+    setMepSystemMutator(null);
+    const cmd = new CreateMepSystemCommand(system('sys9', params('A')));
+    expect(() => { cmd.execute(); cmd.undo(); }).not.toThrow();
   });
 });
 

@@ -35,6 +35,8 @@ export interface UseMepSystemPersistenceParams {
 
 export interface UseMepSystemPersistenceResult {
   readonly createSystem: (params: MepSystemParams) => Promise<MepSystemEntity | null>;
+  /** ADR-408 Φ5 — id-preserving create (the circuit UI mints the id up-front). */
+  readonly createSystemEntity: (entity: MepSystemEntity) => Promise<void>;
   readonly updateSystem: (systemId: string, params: MepSystemParams) => Promise<void>;
   readonly deleteSystem: (systemId: string) => Promise<void>;
   /** ADR-408 Φ4 — undo of a dissolve: id-preserving re-create. */
@@ -107,35 +109,54 @@ export function useMepSystemPersistence(
     }
   }, []);
 
+  // Shared id-preserving write (saveSystem accepts an explicit id). Optimistic
+  // store upsert + un-suppress + audit. Backs both the Φ5 create-circuit command
+  // and the Φ4 dissolve undo — same path, only the audit action differs.
+  const persistSystemEntity = useCallback(
+    async (entity: MepSystemEntity, action: 'created' | 'restored') => {
+      const svc = serviceRef.current;
+      if (!svc) return;
+      deletedIdsRef.current.delete(entity.id);
+      useMepSystemStore.getState().upsertSystem(entity);
+      try {
+        await svc.saveSystem({ id: entity.id, params: entity.params });
+        void recordMepSystemChange(action, { id: entity.id, params: entity.params });
+        EventBus.emit('bim:mep-system-changed', { systemId: entity.id });
+      } catch {
+        // Non-fatal: write failure silent — the optimistic store entry stands.
+      }
+    },
+    [],
+  );
+
+  // ADR-408 Φ5 — id-preserving create from the circuit UI (id minted by the
+  // command so undo/redo are id-stable).
+  const createSystemEntity = useCallback(
+    (entity: MepSystemEntity) => persistSystemEntity(entity, 'created'),
+    [persistSystemEntity],
+  );
+
   // ADR-408 Φ4 — undo of a dissolve. Re-create the system id-preserving and
   // un-suppress it so the server echo is honoured again.
-  const restoreSystem = useCallback(async (entity: MepSystemEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    deletedIdsRef.current.delete(entity.id);
-    useMepSystemStore.getState().upsertSystem(entity);
-    try {
-      await svc.saveSystem({ id: entity.id, params: entity.params });
-      void recordMepSystemChange('restored', { id: entity.id, params: entity.params });
-      EventBus.emit('bim:mep-system-changed', { systemId: entity.id });
-    } catch {
-      // Non-fatal: restore failure silent — the optimistic store entry stands.
-    }
-  }, []);
+  const restoreSystem = useCallback(
+    (entity: MepSystemEntity) => persistSystemEntity(entity, 'restored'),
+    [persistSystemEntity],
+  );
 
-  // ADR-408 Φ4 — expose the imperative api to the command layer (cascade
-  // dissolve / member-removal commands). Registered while the host is mounted.
+  // ADR-408 Φ4/Φ5 — expose the imperative api to the command layer (create /
+  // cascade dissolve / member-removal commands). Registered while mounted.
   useEffect(() => {
     setMepSystemMutator({
+      createSystem: (entity) => { void createSystemEntity(entity); },
       updateSystemParams: (id, params) => { void updateSystem(id, params); },
       dissolveSystem: (id) => { void deleteSystem(id); },
       restoreSystem: (entity) => { void restoreSystem(entity); },
     });
     return () => setMepSystemMutator(null);
-  }, [updateSystem, deleteSystem, restoreSystem]);
+  }, [createSystemEntity, updateSystem, deleteSystem, restoreSystem]);
 
   return useMemo(
-    () => ({ createSystem, updateSystem, deleteSystem, restoreSystem }),
-    [createSystem, updateSystem, deleteSystem, restoreSystem],
+    () => ({ createSystem, createSystemEntity, updateSystem, deleteSystem, restoreSystem }),
+    [createSystem, createSystemEntity, updateSystem, deleteSystem, restoreSystem],
   );
 }
