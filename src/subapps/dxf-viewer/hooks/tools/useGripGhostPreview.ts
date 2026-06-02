@@ -29,9 +29,10 @@ import {
   applyEntityPreview,
   drawGhostEntity,
   GHOST_DEFAULTS,
-  type EntityPreviewTransform,
 } from '../../rendering/ghost';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+// ADR-408 Φ7 P2 — SSoT snapshot→transform map (shared with HomeRunWiresOverlay).
+import { toEntityPreviewTransform } from './grip-drag-preview-transform';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -123,33 +124,9 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     const rect = viewportEl.getBoundingClientRect();
     const vp = { width: rect.width, height: rect.height };
 
-    const preview: EntityPreviewTransform = {
-      entityId: dragPreview.entityId,
-      gripIndex: dragPreview.gripIndex,
-      delta: dragPreview.delta,
-      movesEntity: dragPreview.movesEntity,
-      edgeVertexIndices: dragPreview.edgeVertexIndices,
-      // ADR-358 Phase 5d — stair parametric ghost discriminator pass-through.
-      ...(dragPreview.stairGripKind       ? { stairGripKind:       dragPreview.stairGripKind }       : {}),
-      // ADR-363 Phase 1C — wall parametric ghost discriminator pass-through.
-      ...(dragPreview.wallGripKind        ? { wallGripKind:        dragPreview.wallGripKind }         : {}),
-      // ADR-363 Phase 5.5 / 3.5 / 3.7a — beam / slab / slab-opening parametric ghost.
-      ...(dragPreview.beamGripKind        ? { beamGripKind:        dragPreview.beamGripKind }         : {}),
-      // ADR-397 — column parametric ghost (move/rotation/resize) pass-through.
-      ...(dragPreview.columnGripKind      ? { columnGripKind:      dragPreview.columnGripKind }       : {}),
-      ...(dragPreview.slabGripKind        ? { slabGripKind:        dragPreview.slabGripKind }         : {}),
-      ...(dragPreview.slabOpeningGripKind ? { slabOpeningGripKind: dragPreview.slabOpeningGripKind }  : {}),
-      // ADR-406 — MEP fixture parametric ghost (move / rotation / corner resize).
-      // Without this the apply-entity-preview mep-fixture branch is unreachable
-      // and the live drag ghost never paints.
-      ...(dragPreview.mepFixtureGripKind  ? { mepFixtureGripKind:  dragPreview.mepFixtureGripKind }   : {}),
-      // ADR-408 Φ3 — electrical panel parametric ghost (move / rotation / corner resize).
-      // Without this the apply-entity-preview electrical-panel branch is unreachable.
-      ...(dragPreview.electricalPanelGripKind ? { electricalPanelGripKind: dragPreview.electricalPanelGripKind } : {}),
-      ...(dragPreview.anchorPos           ? { anchorPos:           dragPreview.anchorPos }            : {}),
-      // ADR-363 Phase 1G — rotation centre for the wall-rotation hot-grip ghost.
-      ...(dragPreview.rotatePivot         ? { rotatePivot:         dragPreview.rotatePivot }          : {}),
-    };
+    // ADR-408 Φ7 P2 — snapshot→transform map is now the shared SSoT helper, so the
+    // ghost and the live home-run wire derive the SAME previewed entity.
+    const preview = toEntityPreviewTransform(dragPreview);
 
     const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview);
 
