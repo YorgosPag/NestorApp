@@ -20,7 +20,6 @@ import type { BeamEntity } from '../../bim/types/beam-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
-import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { getMaterial3D, getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildWallMeshWithOpenings } from './wall-opening-extrude';
@@ -39,27 +38,14 @@ import { evaluateWallTopAt, type WallTopProfile } from '../../bim/geometry/wall-
 import { evaluateWallBaseAt, type WallBaseProfile } from '../../bim/geometry/wall-base-profile';
 // ADR-404 P1 — slope/tilt shear helpers (εξήχθησαν από εδώ για file-size, N.7.1).
 import { applyBeamSlope, applySlabSlope, applyColumnTilt, applyWallTilt } from './mesh-slope-shear';
-import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
-import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
-import type { BimCategory } from '../../config/bim-object-styles';
 // File-private geometry primitives (N.7.1 file-size split, 2026-06-01).
 import { buildShape, extrudeAndRotate, tagMesh, buildWallShape } from './bim-three-shape-helpers';
+// Shared 3D edge overlay + point-based converters (N.7.1 file-size split, 2026-06-02).
+import { attachEdgesProjection } from './bim-three-edges';
 
-// ADR-375 Phase C.7 — default 3D edge resolution context.
-// scaleDenominator 100 = 1:100 architectural plan, the most common BIM scale.
-// dpi 96 = standard CSS pixel density.
-const EDGE_DEFAULT_SCALE = 100;
-const EDGE_DEFAULT_DPI = 96;
-
-function attachEdgesProjection(mesh: THREE.Mesh, category: BimCategory): void {
-  const style = resolve3DEdgeStyle({
-    category,
-    cutState: 'projection',
-    scaleDenominator: EDGE_DEFAULT_SCALE,
-    dpi: EDGE_DEFAULT_DPI,
-  });
-  attachEdgeOverlay(mesh, buildEdgeOverlay(mesh, style));
-}
+// ADR-406 / ADR-408 Φ3 — point-based converters re-exported from their own module
+// (file-size SSoT, N.7.1). Importers keep `from '.../BimToThreeConverter'`.
+export { fixtureToMesh, panelToMesh } from './bim-three-point-converters';
 
 // BIM shape vertices (outerEdge, innerEdge, footprint, outline) are already in meters
 // (canvas world coordinates). Scalar params — slab thickness/elevation, beam depth/elevation,
@@ -404,37 +390,6 @@ export function beamToMesh(
   mesh.position.y = beamTopMm * MM_TO_M - beamDepthM + buildingBaseElevationM;
   const tagged = tagMesh(mesh, beam.id, 'beam', matId, levelId);
   attachEdgesProjection(tagged, 'beam');
-  return tagged;
-}
-
-/**
- * ADR-406 — point-based MEP fixture → solid mesh. The footprint is extruded by
- * the body thickness; the solid is positioned so its TOP face sits at the
- * mounting elevation (ceiling-relative, Revit work-plane placement) — i.e. it
- * hangs down from the ceiling by `bodyHeightMm`. Mirror of `beamToMesh` (which
- * also hangs down from a top elevation).
- */
-export function fixtureToMesh(
-  fixture: MepFixtureEntity,
-  floorElevationMm = 0,
-  levelId?: string,
-  buildingBaseElevationM = 0,
-): THREE.Mesh | null {
-  const verts = fixture.geometry.footprint.vertices;
-  if (verts.length < 3) return null;
-
-  const shape = buildShape(verts);
-  if (!shape) return null;
-
-  const bodyHeightM = fixture.params.bodyHeightMm * MM_TO_M;
-  const geo = extrudeAndRotate(shape, bodyHeightM);
-  const matId = fixture.params.material ?? 'elem-mep-fixture';
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D('mep-fixture'));
-  // Top face at the mounting elevation; body hangs DOWN by bodyHeight.
-  const topMm = floorElevationMm + fixture.params.mountingElevationMm;
-  mesh.position.y = topMm * MM_TO_M - bodyHeightM + buildingBaseElevationM;
-  const tagged = tagMesh(mesh, fixture.id, 'mep-fixture', matId, levelId);
-  attachEdgesProjection(tagged, 'light-fixture');
   return tagged;
 }
 

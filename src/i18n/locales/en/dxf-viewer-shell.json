@@ -466,6 +466,9 @@
     "mepFixture": {
       "statusPosition": "Click to place light fixture"
     },
+    "electricalPanel": {
+      "statusPosition": "Click to place electrical panel"
+    },
     "railing": {
       "statusStart": "Pick railing start",
       "statusEnd": "Pick railing end"
@@ -953,6 +956,10 @@
         "mepFixture": {
           "label": "Light fixture",
           "tooltip": "Place a ceiling light fixture with a single click (discipline: electrical) (shortcut LF)"
+        },
+        "electricalPanel": {
+          "label": "Electrical panel",
+          "tooltip": "Place an electrical panel with a single click — the circuit source (discipline: electrical) (shortcut EP)"
         },
         "railing": {
           "label": "Railing",
@@ -2123,6 +2130,16 @@
         "nonPositiveWidth": "Width must be greater than 0",
         "nonPositiveLength": "Length must be greater than 0",
         "nonPositiveBodyHeight": "Body thickness must be greater than 0",
+        "dimensionTooSmall": "Dimension is below the minimum allowed"
+      }
+    }
+  },
+  "electricalPanel": {
+    "validation": {
+      "hardErrors": {
+        "nonPositiveWidth": "Width must be greater than 0",
+        "nonPositiveLength": "Depth must be greater than 0",
+        "nonPositiveBodyHeight": "Body height must be greater than 0",
         "dimensionTooSmall": "Dimension is below the minimum allowed"
       }
     }

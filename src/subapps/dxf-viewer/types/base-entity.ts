@@ -50,6 +50,8 @@ export type EntityType =
   | 'beam'
   // ADR-406 — point-based MEP fixture (light fixture first; generic over kind).
   | 'mep-fixture'
+  // ADR-408 Φ3 — point-based electrical panel (circuit source, IfcElectricDistributionBoard).
+  | 'electrical-panel'
   // ADR-407 — standalone path-based railing (IfcRailing).
   | 'railing';
 

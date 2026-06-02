@@ -74,6 +74,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     columnTool,
     beamTool,
     mepFixtureTool,
+    electricalPanelTool,
     railingTool,
     slabOpeningTool,
     openingTool,
@@ -289,6 +290,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       mepFixtureTool.onCanvasClick(worldPoint);
       return;
     }
+    // PRIORITY 4.92b: ADR-408 Φ3 — Electrical panel tool single-click placement
+    // (RAW worldPoint; free-point placement, no existing-geometry hit-test).
+    if (activeTool === 'electrical-panel' && electricalPanelTool?.isActive) {
+      electricalPanelTool.onCanvasClick(worldPoint);
+      return;
+    }
     // PRIORITY 4.93: ADR-407 — Railing tool 2-click straight guardrail. Uses the
     // ORTHO/POLAR-aware `bimPoint` (like the beam tool) so the path snaps to
     // axis-locked angles during the 2-click chain.
@@ -382,6 +389,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     columnTool,
     beamTool,
     mepFixtureTool,
+    electricalPanelTool,
     railingTool,
     slabOpeningTool,
     openingTool,

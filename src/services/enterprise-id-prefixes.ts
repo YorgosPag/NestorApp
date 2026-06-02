@@ -247,6 +247,8 @@ export const ENTERPRISE_ID_PREFIXES = {
   COLUMN: 'col',               // floorplan_columns collection — rectangular/circular/L-shape/T-shape (4 kinds)
   BEAM: 'beam',                // floorplan_beams collection — straight/curved/cantilever (3 kinds)
   MEP_FIXTURE: 'mepfix',       // floorplan_mep_fixtures collection — point-based MEP fixture (ADR-406, light fixture first)
+  MEP_SYSTEM: 'mepsys',        // floorplan_mep_systems collection — logical MEP network (ADR-408, electrical circuit first)
+  ELECTRICAL_PANEL: 'elecpnl', // floorplan_electrical_panels collection — point-based electrical panel / circuit source (ADR-408 Φ3)
   RAILING: 'ral',              // floorplan_railings collection — standalone path-based railing (ADR-407)
   BIM_PRESET: 'bpst',          // bim_presets collection — element type presets (system/company/project/user scope)
   BIM_MATERIAL: 'bmat',        // bim_materials collection — material library (Phase 6+)

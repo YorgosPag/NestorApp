@@ -31,6 +31,7 @@ import type {
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
+import type { MepConnectorHostParams } from './mep-component-types';
 
 // ─── Sub-type discriminator (ADR-406) ────────────────────────────────────────
 
@@ -51,7 +52,7 @@ export type MepFixtureShape = 'rectangular' | 'circular';
 
 // ─── Parameters (user-editable SSoT) ─────────────────────────────────────────
 
-export interface MepFixtureParams {
+export interface MepFixtureParams extends MepConnectorHostParams {
   readonly kind: MepFixtureKind;
   readonly shape: MepFixtureShape;
   /** Insertion point (plan). `z` is derived from `mountingElevationMm`. */

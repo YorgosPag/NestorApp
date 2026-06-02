@@ -35,6 +35,8 @@ import { ColumnRenderer } from '../../bim/renderers/ColumnRenderer';
 import { BeamRenderer } from '../../bim/renderers/BeamRenderer';
 // ADR-406 — MEP fixture leaf (point-based light fixture).
 import { MepFixtureRenderer } from '../../bim/renderers/MepFixtureRenderer';
+// ADR-408 Φ3 — electrical panel leaf (point-based circuit source).
+import { ElectricalPanelRenderer } from '../../bim/renderers/ElectricalPanelRenderer';
 // ADR-407 — railing leaf (path-based guardrail, posts + balusters + top rail).
 import { RailingRenderer } from '../../bim/renderers/RailingRenderer';
 // ADR-362 Phase C1 — persistent dimension leaf (consumes DimGeometry discriminated union).
@@ -92,6 +94,7 @@ export class EntityRendererComposite {
     const beamRenderer = new BeamRenderer(this.ctx);
     // ADR-406 — MEP fixture renderer (point-based light fixture, family symbol).
     const mepFixtureRenderer = new MepFixtureRenderer(this.ctx);
+    const electricalPanelRenderer = new ElectricalPanelRenderer(this.ctx);
     // ADR-407 — railing renderer (path-based guardrail, posts + balusters + rail).
     const railingRenderer = new RailingRenderer(this.ctx);
     // ADR-362 Phase C1 — dimension renderer (10 variants via DimGeometry union).
@@ -122,6 +125,7 @@ export class EntityRendererComposite {
     this.renderers.set('column', columnRenderer);
     this.renderers.set('beam', beamRenderer);
     this.renderers.set('mep-fixture', mepFixtureRenderer);
+    this.renderers.set('electrical-panel', electricalPanelRenderer);
     this.renderers.set('railing', railingRenderer);
     this.renderers.set('dimension', dimensionRenderer);
     this.renderers.set('xline', xlineRenderer);

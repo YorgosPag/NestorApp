@@ -21,7 +21,6 @@ import { BimEntityCardPanel } from '../properties/BimEntityCardPanel';
 import { Section2DPanel } from '../panels/Section2DPanel';
 import { RenderFinalDialog } from '../render/RenderFinalDialog';
 import { RenderProgressOverlay } from '../render/RenderProgressOverlay';
-import type { FinalRenderConfig } from '../stores/ViewMode3DStore';
 import { ViewCubeContextMenu } from './view-cube/view-cube-context-menu';
 import { Bim3DPreferencesService } from '../services/Bim3DPreferencesService';
 import { use3DShortcuts } from '../shortcuts/use3DShortcuts';
@@ -35,6 +34,7 @@ import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-inter
 import { useBim3DEditInteraction } from '../animation/use-bim3d-edit-interaction';
 import { useBim3DColumnPlacement } from '../placement/use-bim3d-column-placement';
 import { useBim3DMepFixturePlacement } from '../placement/use-bim3d-mep-fixture-placement';
+import { useBim3DElectricalPanelPlacement } from '../placement/use-bim3d-electrical-panel-placement';
 import { useBim3DAttachPick } from './use-bim3d-attach-pick';
 import { useBim3DBeamFromWallPick } from './use-bim3d-beam-from-wall-pick';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -43,6 +43,7 @@ import { useBim3DVgResync } from './use-bim3d-vg-resync';
 import { useBim3DMultiFloorSync } from './use-bim3d-multifloor-sync';
 import { resyncBimScene } from '../scene/bim3d-resync';
 import { useBim3DPointerHandlers } from './use-bim3d-pointer-handlers';
+import { useBim3DRenderControls } from './use-bim3d-render-controls';
 import { UnifiedFrameScheduler, RENDER_PRIORITIES } from '../../rendering/core/UnifiedFrameScheduler';
 
 // ── BimViewport3D ─────────────────────────────────────────────────────────────
@@ -232,35 +233,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // ADR-399 Phase B — multi-floor ("Όλοι οι όροφοι") aggregation + sync wiring.
   useBim3DMultiFloorSync(managerRef, externalEntitiesMode, bimEntities);
 
-  const handleRenderConfirm = useCallback((config: FinalRenderConfig) => {
-    const manager = managerRef.current;
-    if (!manager || !user || !projectId) return;
-    const store = useViewMode3DStore.getState();
-    store.startFinalRender(config);
-    manager.startFinalRender(
-      config,
-      { projectId, companyId: user.companyId ?? '', userId: user.uid },
-      (pct) => store.updateFinalRenderProgress(pct),
-      (result) => {
-        store.completeFinalRender();
-        if (result.uploadError) {
-          // Toast fires from parent app notification — upload error logged silently
-          console.warn('[BimViewport3D] render upload failed — fallback disk save applied');
-        }
-      },
-    );
-  }, [user, projectId]);
-
-  const handleRenderCancel = useCallback(() => {
-    managerRef.current?.cancelFinalRender();
-    useViewMode3DStore.getState().completeFinalRender();
-  }, []);
-
-  const handleCalibrateSample = useCallback(() => {
-    // No-op: GPU calibration uses its own timed loop inside render-cost-estimator.
-    // PathTracerRenderer.renderSample() is only called from the RAF loop.
-    // We use performance.now() inside calibrateGpu with a lightweight JS loop.
-  }, []);
+  // ADR-366 §B.4/§B.6 — final-render control callbacks (extracted hook, N.7.1).
+  const { handleRenderConfirm, handleRenderCancel, handleCalibrateSample } =
+    useBim3DRenderControls({ managerRef, user, projectId });
 
   // Phase 4.3: compass ring toggle — optimistic update + Firestore persistence
   const handleToggleCompass = useCallback(() => {
@@ -302,6 +277,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
 
   // ADR-406 — 3D MEP fixture placement (mirror of column placement above).
   useBim3DMepFixturePlacement({ managerRef, canvasEl });
+
+  // ADR-408 Φ3 — 3D electrical panel placement (mirror of MEP fixture placement).
+  useBim3DElectricalPanelPlacement({ managerRef, canvasEl });
 
   // ADR-401 — 3D manual attach pick-host. Armed only while a `*-attach-top/-base`
   // tool is active AND the viewport is in 3D: a click raycasts a structural host

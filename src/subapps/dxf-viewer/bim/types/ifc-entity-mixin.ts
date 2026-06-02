@@ -28,7 +28,9 @@ export type IfcEntityType =
   // ADR-406 — MEP point-based fixtures (IfcFlowTerminal family).
   | 'IfcLightFixture'
   // ADR-407 — path-based railing (handrail/guardrail/balustrade).
-  | 'IfcRailing';
+  | 'IfcRailing'
+  // ADR-408 Φ3 — electrical panel (panelboard / consumer unit).
+  | 'IfcElectricDistributionBoard';
 
 export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcWall',
@@ -42,6 +44,8 @@ export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcLightFixture',
   // ADR-407 — path-based railing.
   'IfcRailing',
+  // ADR-408 Φ3 — electrical panel.
+  'IfcElectricDistributionBoard',
 ] as const;
 
 export type IfcPropertySetValue = string | number | boolean | null;
@@ -79,6 +83,8 @@ export const IfcEntityTypeSchema = z.enum([
   'IfcLightFixture',
   // ADR-407 — path-based railing.
   'IfcRailing',
+  // ADR-408 Φ3 — electrical panel.
+  'IfcElectricDistributionBoard',
 ]);
 
 export const IfcPropertySetValueSchema = z.union([

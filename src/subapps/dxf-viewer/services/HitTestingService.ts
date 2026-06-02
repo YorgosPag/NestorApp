@@ -25,6 +25,7 @@ import { resolveEntityLayerName } from '../stores/LayerStore';
 import { computeStairGeometry } from '../bim/geometry/stairs/StairGeometryService';
 import { computeColumnGeometry } from '../bim/geometry/column-geometry';
 import { computeMepFixtureGeometry } from '../bim/mep-fixtures/mep-fixture-geometry';
+import { computeElectricalPanelGeometry } from '../bim/electrical-panels/electrical-panel-geometry';
 import { buildBimEntityModel } from '../bim/utils/bim-entity-passthrough';
 import type { BimElementType } from '../bim/types/bim-base';
 
@@ -329,6 +330,12 @@ export class HitTestingService {
         const fx = entity as unknown as Partial<import('../bim/types/mep-fixture-types').MepFixtureEntity>;
         const geometry = fx.geometry ?? (fx.params ? computeMepFixtureGeometry(fx.params) : undefined);
         return buildBimEntityModel('mep-fixture', { ...(entity as object), geometry } as typeof entity, baseModel);
+      }
+      // ADR-408 Φ3 — electrical panel needs the same geometry-recompute fallback.
+      case 'electrical-panel': {
+        const pnl = entity as unknown as Partial<import('../bim/types/electrical-panel-types').ElectricalPanelEntity>;
+        const geometry = pnl.geometry ?? (pnl.params ? computeElectricalPanelGeometry(pnl.params) : undefined);
+        return buildBimEntityModel('electrical-panel', { ...(entity as object), geometry } as typeof entity, baseModel);
       }
       // ADR-363 Phases 1B/5 — wall/beam are direct entities (no DXF wrapper).
       // `geometry.bbox` powers spatial broad-phase via BoundsCalculator.calculateBimEntityBounds.

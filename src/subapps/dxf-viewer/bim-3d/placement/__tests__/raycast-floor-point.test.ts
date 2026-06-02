@@ -13,7 +13,7 @@ const viewState = { floor3DScope: 'single' as 'single' | 'all' };
 const entitiesState = { activeLevelId: null as string | null };
 const EMPTY_BIM_ENTITIES = {
   walls: [], columns: [], beams: [], slabs: [], slabOpenings: [], openings: [], stairs: [],
-  fixtures: [], railings: [],
+  fixtures: [], panels: [], railings: [],
 };
 
 jest.mock('../../stores/ViewMode3DStore', () => ({

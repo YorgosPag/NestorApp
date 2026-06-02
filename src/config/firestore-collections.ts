@@ -360,6 +360,10 @@ export const COLLECTIONS = {
   FLOORPLAN_MEP_FIXTURES: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_FIXTURES_COLLECTION || 'floorplan_mep_fixtures',
   /** ADR-407 — standalone path-based railings. IDs via ral_* prefix. */
   FLOORPLAN_RAILINGS: process.env.NEXT_PUBLIC_FLOORPLAN_RAILINGS_COLLECTION || 'floorplan_railings',
+  /** ADR-408 — logical MEP systems (electrical circuits first; geometry-less). IDs via mepsys_* prefix. */
+  FLOORPLAN_MEP_SYSTEMS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_SYSTEMS_COLLECTION || 'floorplan_mep_systems',
+  /** ADR-408 Φ3 — point-based electrical panels (circuit sources). IDs via elecpnl_* prefix. */
+  FLOORPLAN_ELECTRICAL_PANELS: process.env.NEXT_PUBLIC_FLOORPLAN_ELECTRICAL_PANELS_COLLECTION || 'floorplan_electrical_panels',
   /** BIM element presets (system/company/project/user scope). IDs via bpst_* prefix. */
   BIM_PRESETS: process.env.NEXT_PUBLIC_BIM_PRESETS_COLLECTION || 'bim_presets',
   /** Material library — 25 seeded generics (Phase 6+). IDs via bmat_* prefix. */

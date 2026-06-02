@@ -175,6 +175,7 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'beam-from-wall': { id: 'beam-from-wall', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 «Δοκάρι από τοίχο» — 1-click pick wall → beam on its axis (auto-attaches wall top, ADR-401 D)
   'slab-opening': { id: 'slab-opening', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 3.7 — 2-click (host slab + position), continuous chain
   'mep-fixture': { id: 'mep-fixture', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-406 — single-click point-based MEP fixture (light fixture first)
+  'electrical-panel': { id: 'electrical-panel', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-408 Φ3 — single-click point-based electrical panel (circuit source)
   'railing': { id: 'railing', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-407 — 2-click path-based railing (straight guardrail), continuous chain
   // ADR-359 Phase 1: Auxiliary geometry tools (XLINE = infinite, RAY = semi-infinite)
   'xline': { id: 'xline', category: 'drawing', requiresCanvas: true, canInterrupt: false, allowsContinuous: true, preservesOverlayMode: false, allowsChain: true },

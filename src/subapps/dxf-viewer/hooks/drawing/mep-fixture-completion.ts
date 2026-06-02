@@ -33,6 +33,7 @@ import {
   computeMepFixtureGeometry,
   validateMepFixtureParams,
 } from '../../bim/mep-fixtures/mep-fixture-geometry';
+import { buildDefaultLightingConnector } from '../../bim/types/mep-connector-types';
 import { createMepFixture } from '@/services/factories/mep-fixture.factory';
 import type { SceneUnits } from '../../utils/scene-units';
 
@@ -92,6 +93,10 @@ export function buildDefaultMepFixtureParams(
     bodyHeightMm,
     mountingElevationMm,
     sceneUnits,
+    // ADR-408 Φ1 — a light fixture is an electrical load: carry a default
+    // lighting power-in connector so it can join a circuit (nothing reads it
+    // for logic until Φ2+ Systems exist).
+    connectors: [buildDefaultLightingConnector()],
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
   };
 }

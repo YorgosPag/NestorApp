@@ -239,6 +239,13 @@ export interface CanvasLayerStackProps {
       cursorPos: Readonly<Point2D> | null,
     ) => readonly import('../../bim/types/bim-base').Point3D[] | null;
   };
+  // === ADR-408 Φ3: Electrical panel 2D placement ghost preview payload ===
+  electricalPanelGhostPreview: {
+    isAwaitingPosition: boolean;
+    getGhostFootprint: (
+      cursorPos: Readonly<Point2D> | null,
+    ) => readonly import('../../bim/types/bim-base').Point3D[] | null;
+  };
   // === ADR-363 Phase 3.7b+: Slab-opening ghost preview payload ===
   slabOpeningGhostPreview: {
     isAwaitingPosition: boolean;

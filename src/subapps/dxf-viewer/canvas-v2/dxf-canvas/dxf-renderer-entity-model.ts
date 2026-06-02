@@ -109,6 +109,10 @@ export function buildEntityModelFromDxf(
       return { ...base, type: 'column', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'mep-fixture':
       return { ...base, type: 'mep-fixture', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
+    case 'electrical-panel':
+      return { ...base, type: 'electrical-panel', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
+    case 'railing':
+      return { ...base, type: 'railing', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'xline':
       return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
     case 'ray':

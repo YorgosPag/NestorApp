@@ -81,6 +81,10 @@ const ENTITY_TYPE_TO_COLLECTION_KEY: Record<AuditEntityType, string> = {
   stair: '',
   // MEP fixtures (ADR-406) — not backed up via this service at this stage
   'mep-fixture': '',
+  // MEP systems (ADR-408) — not backed up via this service at this stage
+  'mep-system': '',
+  // Electrical panels (ADR-408 Φ3) — not backed up via this service at this stage
+  'electrical-panel': '',
   // Performance / 3D BIM telemetry (ADR-366) — not backed up via this service
   performance_diagnostic: '',
   performance_telemetry: '',

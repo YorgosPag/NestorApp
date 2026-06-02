@@ -3784,6 +3784,83 @@ service cloud.firestore {
                         || isCompanyAdminOfCompany(resource.data.companyId));
     }
 
+    // ADR-407 — path-based railings (guardrails). Mirror of
+    // floorplan_mep_fixtures (company-scoped, owner/admin writes).
+    match /floorplan_railings/{railingId} {
+      allow read: if isAuthenticated()
+                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
+      allow create: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || (request.resource.data.companyId == getUserCompanyId()
+                            && request.resource.data.createdBy == request.auth.uid
+                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
+      allow update: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
+                            && request.resource.data.companyId == resource.data.companyId
+                            && request.resource.data.projectId == resource.data.projectId
+                            && request.resource.data.floorplanId == resource.data.floorplanId
+                            && request.resource.data.createdBy == resource.data.createdBy
+                            && request.resource.data.createdAt == resource.data.createdAt
+                            && (!request.resource.data.keys().hasAny(['editingBy'])
+                                || request.resource.data.editingBy.userId == request.auth.uid)));
+      allow delete: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || resource.data.createdBy == request.auth.uid
+                        || isCompanyAdminOfCompany(resource.data.companyId));
+    }
+
+    // ADR-408 Φ3 — point-based electrical panels (circuit sources). Mirror of
+    // floorplan_mep_fixtures (company-scoped, owner/admin writes).
+    match /floorplan_electrical_panels/{panelId} {
+      allow read: if isAuthenticated()
+                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
+      allow create: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || (request.resource.data.companyId == getUserCompanyId()
+                            && request.resource.data.createdBy == request.auth.uid
+                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
+      allow update: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
+                            && request.resource.data.companyId == resource.data.companyId
+                            && request.resource.data.projectId == resource.data.projectId
+                            && request.resource.data.floorplanId == resource.data.floorplanId
+                            && request.resource.data.createdBy == resource.data.createdBy
+                            && request.resource.data.createdAt == resource.data.createdAt
+                            && (!request.resource.data.keys().hasAny(['editingBy'])
+                                || request.resource.data.editingBy.userId == request.auth.uid)));
+      allow delete: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || resource.data.createdBy == request.auth.uid
+                        || isCompanyAdminOfCompany(resource.data.companyId));
+    }
+
+    // ADR-408 — logical MEP systems (electrical circuits; geometry-less). Mirror
+    // of floorplan_mep_fixtures (company-scoped, owner/admin writes). `kind` is
+    // N/A for a system; the create allowlist requires params instead.
+    match /floorplan_mep_systems/{systemId} {
+      allow read: if isAuthenticated()
+                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
+      allow create: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || (request.resource.data.companyId == getUserCompanyId()
+                            && request.resource.data.createdBy == request.auth.uid
+                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'params'])));
+      allow update: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
+                            && request.resource.data.companyId == resource.data.companyId
+                            && request.resource.data.projectId == resource.data.projectId
+                            && request.resource.data.floorplanId == resource.data.floorplanId
+                            && request.resource.data.createdBy == resource.data.createdBy
+                            && request.resource.data.createdAt == resource.data.createdAt));
+      allow delete: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || resource.data.createdBy == request.auth.uid
+                        || isCompanyAdminOfCompany(resource.data.companyId));
+    }
+
     match /bim_presets/{presetId} {
       // System-scope presets readable by all authenticated; company-scope by tenant members
       allow read: if isAuthenticated()

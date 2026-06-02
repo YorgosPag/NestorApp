@@ -692,6 +692,40 @@ const MEP_FIXTURE_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const MEP_FIXTURE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(MEP_FIXTURE_TRACKED_FIELDS_RAW, {});
 
+// ADR-408 — logical MEP system (electrical circuit first; geometry-less). The
+// `members` array serializes as a JSON scalar (mirror slab `slope`).
+const MEP_SYSTEM_TRACKED_FIELDS_RAW: Record<string, string> = {
+  systemType: 'systemType',
+  name: 'name',
+  systemClassification: 'systemClassification',
+  sourceEntityId: 'sourceEntityId',
+  sourceConnectorId: 'sourceConnectorId',
+  members: 'members',
+  ratedVoltage: 'ratedVoltage',
+  poles: 'poles',
+};
+
+export const MEP_SYSTEM_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(MEP_SYSTEM_TRACKED_FIELDS_RAW, {});
+
+// ADR-408 Φ3 — point-based electrical panel (circuit source).
+const ELECTRICAL_PANEL_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  shape: 'shape',
+  width: 'width',
+  length: 'length',
+  bodyHeightMm: 'bodyHeightMm',
+  mountingElevationMm: 'mountingElevationMm',
+  rotation: 'rotation',
+  material: 'material',
+  storeyId: 'storeyId',
+  hostId: 'hostId',
+};
+
+export const ELECTRICAL_PANEL_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(ELECTRICAL_PANEL_TRACKED_FIELDS_RAW, {});
+
 // ADR-407 — standalone path-based railing.
 const RAILING_TRACKED_FIELDS_RAW: Record<string, string> = {
   layerId: 'layerId',
@@ -872,6 +906,10 @@ export function getTrackedFieldsForEntityAuditType(
       return COLUMN_TRACKED_FIELDS;
     case 'mep-fixture':
       return MEP_FIXTURE_TRACKED_FIELDS;
+    case 'mep-system':
+      return MEP_SYSTEM_TRACKED_FIELDS;
+    case 'electrical-panel':
+      return ELECTRICAL_PANEL_TRACKED_FIELDS;
     case 'railing':
       return RAILING_TRACKED_FIELDS;
     case 'slab':

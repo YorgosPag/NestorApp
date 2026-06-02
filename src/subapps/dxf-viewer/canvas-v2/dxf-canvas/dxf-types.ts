@@ -23,11 +23,15 @@ import type { BeamEntity } from '../../bim/types/beam-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
 // ADR-406 — MEP fixture direct entity for DXF render pipeline.
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
+// ADR-408 Φ3 — electrical panel direct entity for DXF render pipeline.
+import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
+// ADR-407 — railing direct entity for DXF render pipeline.
+import type { RailingEntity } from '../../bim/types/railing-types';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'xline' | 'ray' | 'beam' | 'mep-fixture';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -231,6 +235,30 @@ export interface DxfMepFixture extends DxfEntity {
   validation?: MepFixtureEntity['validation'];
 }
 
+/**
+ * ADR-408 Φ3 — DxfElectricalPanel direct entity (same pattern as DxfMepFixture).
+ * ElectricalPanelRenderer reads geometry.footprint + kind + params at top level.
+ */
+export interface DxfElectricalPanel extends DxfEntity {
+  type: 'electrical-panel';
+  kind: ElectricalPanelEntity['kind'];
+  params: ElectricalPanelEntity['params'];
+  geometry: ElectricalPanelEntity['geometry'];
+  validation?: ElectricalPanelEntity['validation'];
+}
+
+/**
+ * ADR-407 — DxfRailing direct entity (same pattern as DxfMepFixture).
+ * RailingRenderer reads geometry.resolvedPath + params fields at top level.
+ */
+export interface DxfRailing extends DxfEntity {
+  type: 'railing';
+  kind: RailingEntity['kind'];
+  params: RailingEntity['params'];
+  geometry: RailingEntity['geometry'];
+  validation?: RailingEntity['validation'];
+}
+
 /** ADR-359 Phase 11 — XLine wrapper for grip computation pipeline. */
 export interface DxfXLine extends DxfEntity {
   type: 'xline';
@@ -243,7 +271,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfMepFixture | DxfBeam | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfBeam | DxfXLine | DxfRay;
 
 // === DXF SCENE ===
 export interface DxfScene {

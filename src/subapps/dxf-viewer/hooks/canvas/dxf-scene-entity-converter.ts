@@ -13,7 +13,7 @@ import type { DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dx
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity } from '../../types/entities';
-import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isXLineEntity, isRayEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
@@ -27,6 +27,9 @@ import type { BeamEntity } from '../../bim/types/beam-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
 // ADR-406 — MEP fixture direct entity for DXF render pipeline.
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
+import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
+// ADR-407 — railing direct entity for DXF render pipeline.
+import type { RailingEntity } from '../../bim/types/railing-types';
 import type { DimensionEntity } from '../../types/dimension';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
 import { extractFlatText } from '../../utils/text-node-utils';
@@ -307,6 +310,24 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       if (!isMepFixtureEntity(entity)) return null;
       const fx = entity as MepFixtureEntity;
       return { ...base, type: 'mep-fixture' as const, kind: fx.kind, params: fx.params, geometry: fx.geometry, validation: fx.validation } as DxfEntityUnion;
+    }
+    case 'electrical-panel': {
+      // ADR-408 Φ3 — direct entity (same pattern as mep-fixture). ElectricalPanelRenderer
+      // reads geometry.footprint + kind + params fields at top level. Without this case,
+      // freshly-committed panels were silently dropped here → invisible on 2D canvas
+      // (visible only in 3D which reads params directly).
+      if (!isElectricalPanelEntity(entity)) return null;
+      const pnl = entity as ElectricalPanelEntity;
+      return { ...base, type: 'electrical-panel' as const, kind: pnl.kind, params: pnl.params, geometry: pnl.geometry, validation: pnl.validation } as DxfEntityUnion;
+    }
+    case 'railing': {
+      // ADR-407 — direct entity (same pattern as wall/beam/column/mep-fixture).
+      // RailingRenderer reads geometry.resolvedPath + params fields at top level.
+      // Without this case, freshly-committed railings were silently dropped here →
+      // invisible on 2D canvas (visible only in 3D which reads params directly).
+      if (!isRailingEntity(entity)) return null;
+      const rl = entity as RailingEntity;
+      return { ...base, type: 'railing' as const, kind: rl.kind, params: rl.params, geometry: rl.geometry, validation: rl.validation } as DxfEntityUnion;
     }
     case 'xline': {
       // ADR-359 Phase 11 — wrap XLineEntity for grip computation pipeline.

@@ -104,7 +104,65 @@ function buildPosts(
   });
 }
 
-/** One continuous rail (top / intermediate / handrail) → swept TubeGeometry. */
+/** Post depth measured ALONG the path (round → diameter, rectangular → heightMm). */
+function postDepthAlongPathMm(type: RailingEntity['params']['type']): number {
+  const p = type.balusterPlacement.posts;
+  if (!p.enabled) return 0;
+  return p.profile.shape === 'round' ? p.profile.widthMm : p.profile.heightMm;
+}
+
+/**
+ * Extend the rail's free ends outward (along the terminal tangent) so the tube
+ * reaches the OUTER FACE of the end post instead of dying at its centre — the
+ * Revit handrail-over-newel detail. Extension = half the post depth at each end
+ * that carries a post (`atStart` / `atEnd`). xy is canvas units → convert the mm
+ * extension via `MM_TO_M / sceneToM`. Returns a fresh array; never mutates.
+ */
+function extendRailEndsToPosts(
+  path: readonly Point3D[],
+  type: RailingEntity['params']['type'],
+  sceneToM: number,
+): Point3D[] {
+  const out = path.map((p) => ({ ...p }));
+  const posts = type.balusterPlacement.posts;
+  const halfDepthMm = postDepthAlongPathMm(type) / 2;
+  if (!posts.enabled || halfDepthMm <= 0 || out.length < 2) return out;
+  const extCanvas = (halfDepthMm * MM_TO_M) / sceneToM; // mm → canvas units
+  const push = (a: Point3D, b: Point3D): Point3D => {
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    const len = Math.hypot(dx, dy) || 1;
+    return { x: a.x + (dx / len) * extCanvas, y: a.y + (dy / len) * extCanvas, z: a.z };
+  };
+  if (posts.atStart) out[0] = push(out[0], out[1]);
+  if (posts.atEnd) out[out.length - 1] = push(out[out.length - 1], out[out.length - 2]);
+  return out;
+}
+
+/**
+ * Disc cap closing one open tube end so the hollow swept tube reads as a solid
+ * member. `at` = the end point, `from` = the previous point — the cap normal
+ * points outward (away from the tube), perpendicular to the terminal tangent.
+ */
+function buildTubeCap(at: THREE.Vector3, from: THREE.Vector3, radiusM: number): THREE.Mesh {
+  const normal = new THREE.Vector3().subVectors(at, from).normalize();
+  const cap = new THREE.Mesh(
+    new THREE.CircleGeometry(radiusM, TUBE_RADIAL_SEGMENTS),
+    getElementMaterial3D('railing'),
+  );
+  cap.position.copy(at);
+  cap.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+  cap.castShadow = true;
+  cap.receiveShadow = true;
+  return cap;
+}
+
+/**
+ * One continuous rail (top / intermediate / handrail) → swept `TubeGeometry`
+ * PLUS two end caps (`THREE.Group`), so the hollow tube closes at the ends and
+ * the rail covers the end posts (extended to their outer face). Null for a
+ * degenerate (<2-point) path.
+ */
 function buildRailTube(
   rail: RailSweep,
   railing: RailingEntity,
@@ -112,9 +170,10 @@ function buildRailTube(
   floorElevationMm: number,
   buildingBaseElevationM: number,
   levelId?: string,
-): THREE.Mesh | null {
+): THREE.Object3D | null {
   if (rail.path.length < 2) return null;
-  const pts = rail.path.map((p: Point3D) =>
+  const extended = extendRailEndsToPosts(rail.path, railing.params.type, sceneToM);
+  const pts = extended.map((p: Point3D) =>
     new THREE.Vector3(
       p.x * sceneToM,
       worldY(p.z ?? 0, floorElevationMm, buildingBaseElevationM),
@@ -124,11 +183,18 @@ function buildRailTube(
   const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0);
   const radiusM = Math.max(0.001, (rail.profile.widthMm / 2) * MM_TO_M);
   const geo = new THREE.TubeGeometry(curve, Math.max(1, pts.length - 1), radiusM, TUBE_RADIAL_SEGMENTS, false);
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D('railing'));
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  tagComponent(mesh, railing.id, 'rail', levelId);
-  return mesh;
+  const tube = new THREE.Mesh(geo, getElementMaterial3D('railing'));
+  tube.castShadow = true;
+  tube.receiveShadow = true;
+
+  const out = new THREE.Group();
+  out.add(tube);
+  out.add(buildTubeCap(pts[0], pts[1], radiusM));
+  out.add(buildTubeCap(pts[pts.length - 1], pts[pts.length - 2], radiusM));
+  // Tag the group + every child so picking resolves any sub-mesh to the railing.
+  tagComponent(out, railing.id, 'rail', levelId);
+  out.children.forEach((c) => tagComponent(c, railing.id, 'rail', levelId));
+  return out;
 }
 
 /** Tag a railing sub-mesh so picking / sync resolves it back to the entity. */

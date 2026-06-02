@@ -142,6 +142,8 @@ export type ToolType =
   | 'slab-opening'
   // ADR-406: point-based MEP fixture drawing tool (light fixture first)
   | 'mep-fixture'
+  // ADR-408 Φ3: point-based electrical panel drawing tool (circuit source)
+  | 'electrical-panel'
   // ADR-407: path-based railing drawing tool (2-click straight guardrail)
   | 'railing'
   // ADR-359 Phase 1: Auxiliary geometry tools (infinite/semi-infinite construction lines)

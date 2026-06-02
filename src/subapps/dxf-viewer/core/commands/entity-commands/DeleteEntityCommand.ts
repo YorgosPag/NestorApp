@@ -20,13 +20,15 @@ const BIM_ENTITY_TYPES = new Set<string>([
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair',
   // ADR-406 — point-based MEP fixture.
   'mep-fixture',
+  // ADR-408 Φ3 — point-based electrical panel.
+  'electrical-panel',
   // ADR-407 — standalone path-based railing.
   'railing',
 ]);
 
 type BimEntityType =
   | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
-  | 'mep-fixture' | 'railing';
+  | 'mep-fixture' | 'electrical-panel' | 'railing';
 
 function emitBimRestoreIfApplicable(snapshot: SceneEntity): void {
   const type = (snapshot as { type?: string }).type;

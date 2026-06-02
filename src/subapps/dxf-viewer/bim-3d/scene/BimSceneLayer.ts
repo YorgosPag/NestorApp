@@ -15,7 +15,7 @@
 import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from './multi-floor-3d-source';
-import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh } from '../converters/BimToThreeConverter';
+import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh, panelToMesh } from '../converters/BimToThreeConverter';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
 import { resolveWallTopProfile, resolveWallNominalTopZmm } from '../../bim/geometry/wall-top-profile';
@@ -138,6 +138,7 @@ export class BimSceneLayer {
     this.syncSlabs(entities, ctx);
     this.syncStairs(entities, ctx);
     this.syncFixtures(entities, ctx);
+    this.syncPanels(entities, ctx);
     this.syncRailings(entities, ctx);
     addEnvelopeToScene(this.group, entities, ctx, this.shouldRender.bind(this));
   }
@@ -324,6 +325,18 @@ export class BimSceneLayer {
       const r = this.resolveEntity(fixture, 'light-fixture', ctx);
       if (!r) continue;
       const mesh = fixtureToMesh(fixture, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
+  /** ADR-408 Φ3 — point-based electrical panels (circuit sources). */
+  private syncPanels(entities: Bim3DEntities, ctx: SyncContext): void {
+    // Defensive: legacy floor-stack entries predating ADR-408 Φ3 carry no `panels`
+    // array — never crash the whole floor sync over a missing slice.
+    for (const panel of entities.panels ?? []) {
+      const r = this.resolveEntity(panel, 'electrical-panel', ctx);
+      if (!r) continue;
+      const mesh = panelToMesh(panel, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

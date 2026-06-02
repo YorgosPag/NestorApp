@@ -16,17 +16,15 @@
  */
 import { useEffect } from 'react';
 import { EventBus } from '../../systems/events/EventBus';
-import { useCircleTTT } from '../drawing/useCircleTTT';
 import { clearAutoAreaState } from '../../systems/auto-area/AutoAreaResultStore';
 import { clearAutoAreaPreview } from '../../systems/auto-area/AutoAreaPreviewStore';
-import { useLinePerpendicular } from '../drawing/useLinePerpendicular';
-import { useLineParallel } from '../drawing/useLineParallel';
 import { useStairTool } from '../drawing/useStairTool';
 import { useWallTool } from '../drawing/useWallTool';
 import { useOpeningTool } from '../drawing/useOpeningTool';
 import { useSlabTool, SLAB_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useSlabTool';
 import { useColumnTool } from '../drawing/useColumnTool';
 import { useMepFixtureTool } from '../drawing/useMepFixtureTool';
+import { useElectricalPanelTool } from '../drawing/useElectricalPanelTool';
 import { useRailingTool } from '../drawing/useRailingTool';
 import { useBeamTool } from '../drawing/useBeamTool';
 import { useSlabOpeningTool } from '../drawing/useSlabOpeningTool';
@@ -37,11 +35,11 @@ import { useToolLifecycle } from './useToolLifecycle';
 import { resolveSceneUnits, mmToSceneUnits } from '../../utils/scene-units';
 import { useFloorMetadata } from '../data/useFloorMetadata';
 import type { StairFloorLinkInput } from '../drawing/stair-completion';
-import { useAngleEntityMeasurement, type AngleEntityVariant } from './useAngleEntityMeasurement';
-import type { AngleMeasurementEntity } from '../../types/entities';
+import { useSpecialToolsSelectionTools, type SelectionToolsReturn } from './useSpecialTools-selection-tools';
 import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
 import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
 import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-scene';
+import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-electrical-panel-to-scene';
 import { addRailingToScene } from '../../bim/railings/add-railing-to-scene';
 import { appendEntityToScene } from '../../bim/scene/append-entity-to-scene';
 // 🏢 ENTERPRISE: Import actual level system types for type safety
@@ -70,18 +68,16 @@ export interface UseSpecialToolsProps {
  * Return type of useSpecialTools hook
  * Uses ReturnType to automatically match the actual hook return types
  */
-export interface UseSpecialToolsReturn {
-  // Each field mirrors the corresponding hook's return type (ReturnType<…>).
-  circleTTT: ReturnType<typeof useCircleTTT>;
-  linePerpendicular: ReturnType<typeof useLinePerpendicular>;
-  lineParallel: ReturnType<typeof useLineParallel>;
-  angleEntityMeasurement: ReturnType<typeof useAngleEntityMeasurement>;
+export interface UseSpecialToolsReturn extends SelectionToolsReturn {
+  // SelectionToolsReturn provides: circleTTT, linePerpendicular, lineParallel,
+  // angleEntityMeasurement (extracted to useSpecialTools-selection-tools.ts).
   stairTool: ReturnType<typeof useStairTool>;
   wallTool: ReturnType<typeof useWallTool>;
   openingTool: ReturnType<typeof useOpeningTool>;
   slabTool: ReturnType<typeof useSlabTool>;
   columnTool: ReturnType<typeof useColumnTool>;
   mepFixtureTool: ReturnType<typeof useMepFixtureTool>; // ADR-406
+  electricalPanelTool: ReturnType<typeof useElectricalPanelTool>; // ADR-408 Φ3
   railingTool: ReturnType<typeof useRailingTool>; // ADR-407
   beamTool: ReturnType<typeof useBeamTool>;
   slabOpeningTool: ReturnType<typeof useSlabOpeningTool>;
@@ -114,128 +110,11 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   // builder falls back to Phase 7a behavior (no auto-init).
   const floorIdForStair = levelManager.saveContext?.floorId ?? null;
   const floorForStair = useFloorMetadata(floorIdForStair);
-  // CIRCLE TTT TOOL
-  /**
-   * Circle tangent to 3 lines tool
-   */
-  const circleTTT = useCircleTTT({
-    currentLevelId: levelManager.currentLevelId || '0',
-    onCircleCreated: (circleEntity) => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return;
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return;
 
-      const updatedScene = {
-        ...scene,
-        entities: [...(scene.entities || []), circleEntity]
-      };
-      levelManager.setLevelScene(levelId, updatedScene);
-      console.debug('🎯 [CircleTTT] Circle added to scene:', circleEntity.id);
-    }
-  });
-
-  // Auto-activate/deactivate based on activeTool
-  const { activate: activateCircleTTT, deactivate: deactivateCircleTTT } = circleTTT;
-  useEffect(() => {
-    if (activeTool === 'circle-ttt') {
-      activateCircleTTT();
-    } else {
-      deactivateCircleTTT();
-    }
-  }, [activeTool, activateCircleTTT, deactivateCircleTTT]);
-
-  // LINE PERPENDICULAR TOOL
-
-  /**
-   * Line perpendicular to reference line tool
-   */
-  const linePerpendicular = useLinePerpendicular({
-    currentLevelId: levelManager.currentLevelId || '0',
-    onLineCreated: (lineEntity) => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return;
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return;
-      const updatedScene = {
-        ...scene,
-        entities: [...(scene.entities || []), lineEntity]
-      };
-      levelManager.setLevelScene(levelId, updatedScene);
-      console.debug('🎯 [LinePerpendicular] Line added to scene:', lineEntity.id);
-    }
-  });
-
-  // Auto-activate/deactivate based on activeTool
-  const { activate: activateLinePerpendicular, deactivate: deactivateLinePerpendicular } = linePerpendicular;
-  useEffect(() => {
-    if (activeTool === 'line-perpendicular') {
-      activateLinePerpendicular();
-    } else {
-      deactivateLinePerpendicular();
-    }
-  }, [activeTool, activateLinePerpendicular, deactivateLinePerpendicular]);
-
-  // LINE PARALLEL TOOL
-
-  /**
-   * Line parallel to reference line tool
-   */
-  const lineParallel = useLineParallel({
-    currentLevelId: levelManager.currentLevelId || '0',
-    onLineCreated: (lineEntity) => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return;
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return;
-      const updatedScene = {
-        ...scene,
-        entities: [...(scene.entities || []), lineEntity]
-      };
-      levelManager.setLevelScene(levelId, updatedScene);
-      console.debug('🎯 [LineParallel] Line added to scene:', lineEntity.id);
-    }
-  });
-
-  // Auto-activate/deactivate based on activeTool
-  const { activate: activateLineParallel, deactivate: deactivateLineParallel } = lineParallel;
-  useEffect(() => {
-    if (activeTool === 'line-parallel') {
-      activateLineParallel();
-    } else {
-      deactivateLineParallel();
-    }
-  }, [activeTool, activateLineParallel, deactivateLineParallel]);
-
-  // ANGLE ENTITY MEASUREMENT TOOL (constraint, line-arc, two-arcs)
-
-  const angleEntityMeasurement = useAngleEntityMeasurement({
-    onMeasurementCreated: (measurementEntity: AngleMeasurementEntity) => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return;
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return;
-      const updatedScene = {
-        ...scene,
-        entities: [...(scene.entities || []), measurementEntity]
-      };
-      levelManager.setLevelScene(levelId, updatedScene);
-      console.debug('📐 [AngleEntityMeasurement] Angle added to scene:', measurementEntity.id);
-    }
-  });
-
-  // Auto-activate/deactivate based on activeTool
-  const ANGLE_ENTITY_TOOLS: ReadonlySet<string> = new Set([
-    'measure-angle-constraint', 'measure-angle-line-arc', 'measure-angle-two-arcs'
-  ]);
-  const { activate: activateAngle, deactivate: deactivateAngle } = angleEntityMeasurement;
-  useEffect(() => {
-    if (ANGLE_ENTITY_TOOLS.has(activeTool)) {
-      activateAngle(activeTool as AngleEntityVariant);
-    } else {
-      deactivateAngle();
-    }
-  }, [activeTool, activateAngle, deactivateAngle]);
+  // Selection-based geometry tools (CircleTTT / LinePerpendicular / LineParallel /
+  // AngleEntityMeasurement) — extracted to useSpecialTools-selection-tools.ts (N.7.1).
+  const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement } =
+    useSpecialToolsSelectionTools({ activeTool, levelManager });
 
   // ADR-358 Phase 5a — STAIR TOOL
 
@@ -414,6 +293,17 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   });
   useToolLifecycle(activeTool === 'mep-fixture', mepFixtureTool.activate, mepFixtureTool.deactivate);
 
+  // ADR-408 Φ3 — ELECTRICAL PANEL TOOL: single-click placement; entity appended+broadcast.
+  const electricalPanelTool = useElectricalPanelTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onElectricalPanelCreated: (panelEntity) => addElectricalPanelToScene(panelEntity, levelManager),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  useToolLifecycle(activeTool === 'electrical-panel', electricalPanelTool.activate, electricalPanelTool.deactivate);
+
   // ADR-407 — RAILING TOOL: 2-click straight guardrail; entity appended+broadcast.
   const railingTool = useRailingTool({
     currentLevelId: levelManager.currentLevelId || '0',
@@ -483,6 +373,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     slabTool,
     columnTool,
     mepFixtureTool,
+    electricalPanelTool,
     railingTool,
     beamTool,
     slabOpeningTool,

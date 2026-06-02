@@ -14,6 +14,7 @@
 
 import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from './ifc-entity-mixin';
+import { MepConnectorSchema } from './mep-connector.schemas';
 
 // ─── Point3D ────────────────────────────────────────────────────────────────
 
@@ -49,6 +50,8 @@ export const MepFixtureParamsSchema = z
     storeyId: z.string().min(1).optional(),
     material: z.string().min(1).optional(),
     hostId: z.string().min(1).optional(),
+    // ADR-408 Φ1 — embedded MEP connectors (host-local). Optional/additive.
+    connectors: z.array(MepConnectorSchema).optional(),
   })
   .strict();
 

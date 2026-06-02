@@ -232,6 +232,10 @@ export function useSmartDelete({
       const fixtureIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'mep-fixture',
       );
+      // ADR-408 Φ3 — collect electrical panel IDs so we can trigger Firestore deleteDoc.
+      const panelIdsInBatch = idsToDelete.filter(
+        (id) => adapter.getEntity(id)?.type === 'electrical-panel',
+      );
 
       if (idsToDelete.length === 1) {
         executeCommand(new DeleteEntityCommand(idsToDelete[0], adapter));
@@ -268,6 +272,10 @@ export function useSmartDelete({
       // ADR-406 — trigger Firestore deleteDoc + prevent subscription re-add for each fixture.
       for (const fixtureId of fixtureIdsInBatch) {
         eventBus.emit('bim:mep-fixture-delete-requested', { fixtureId });
+      }
+      // ADR-408 Φ3 — trigger Firestore deleteDoc + prevent subscription re-add for each panel.
+      for (const panelId of panelIdsInBatch) {
+        eventBus.emit('bim:electrical-panel-delete-requested', { panelId });
       }
 
       return true;

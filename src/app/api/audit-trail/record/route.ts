@@ -32,7 +32,7 @@ const logger = createModuleLogger('AuditTrailRecord');
 // ============================================================================
 
 const VALID_ENTITY_TYPES: ReadonlySet<string> = new Set<AuditEntityType>([
-  'contact', 'building', 'property', 'project', 'parking', 'storage', 'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair', 'mep-fixture',
+  'contact', 'building', 'property', 'project', 'parking', 'storage', 'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair', 'mep-fixture', 'mep-system', 'electrical-panel',
 ]);
 
 const VALID_ACTIONS: ReadonlySet<string> = new Set<AuditAction>([
@@ -56,6 +56,12 @@ const ENTITY_COLLECTION_MAP: Record<string, string> = {
   column: COLLECTIONS.FLOORPLAN_COLUMNS,
   beam: COLLECTIONS.FLOORPLAN_BEAMS,
   stair: COLLECTIONS.FLOORPLAN_STAIRS,
+  // ADR-406 — was missing (fixture audit 400'd silently via fire-and-forget). Fixed alongside ADR-408.
+  'mep-fixture': COLLECTIONS.FLOORPLAN_MEP_FIXTURES,
+  // ADR-408 — logical MEP systems.
+  'mep-system': COLLECTIONS.FLOORPLAN_MEP_SYSTEMS,
+  // ADR-408 Φ3 — point-based electrical panels.
+  'electrical-panel': COLLECTIONS.FLOORPLAN_ELECTRICAL_PANELS,
 };
 
 // ============================================================================

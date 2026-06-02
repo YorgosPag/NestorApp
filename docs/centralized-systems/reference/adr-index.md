@@ -390,6 +390,7 @@
 | **ADR-405** | BIM Discipline Taxonomy & MEP Foundation (Step 1 + §4) | ✅ DONE | 2026-06-02 | Uncategorized | [📄](./adrs/ADR-405-bim-discipline-taxonomy-and-mep-foundation.md) |
 | **ADR-406** | Point-Based MEP Fixture (Light Fixture) — Vertical Slice (Step 3) | ✅ DONE | 2026-06-02 | Uncategorized | [📄](./adrs/ADR-406-point-based-mep-fixture.md) |
 | **ADR-407** | BIM Railings (Κάγκελα/Κιγκλιδώματα) — Standalone Path-Based Entity | 🟢 Φ1 DONE | 2026-06-02 | Uncategorized | [📄](./adrs/ADR-407-bim-railings.md) |
+| **ADR-408** | MEP Connectors & Systems — Connectivity Backbone (electrical circuit first) | 🟢 Φ1+Φ2+Φ3 DONE (Φ3 = ηλεκτρικός πίνακας) | 2026-06-02 | Uncategorized | [📄](./adrs/ADR-408-mep-connectors-and-systems.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -764,6 +765,7 @@
 | **ADR-405** | BIM Discipline Taxonomy & MEP Foundation (Step 1 + §4) | ✅ DONE | [View](./adrs/ADR-405-bim-discipline-taxonomy-and-mep-foundation.md) |
 | **ADR-406** | Point-Based MEP Fixture (Light Fixture) — Vertical Slice (Step 3) | ✅ DONE | [View](./adrs/ADR-406-point-based-mep-fixture.md) |
 | **ADR-407** | BIM Railings (Κάγκελα/Κιγκλιδώματα) — Standalone Path-Based Entity | 🟢 Φ1 DONE | [View](./adrs/ADR-407-bim-railings.md) |
+| **ADR-408** | MEP Connectors & Systems — Connectivity Backbone (electrical circuit first) | 🟢 Φ1+Φ2+Φ3 DONE | [View](./adrs/ADR-408-mep-connectors-and-systems.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

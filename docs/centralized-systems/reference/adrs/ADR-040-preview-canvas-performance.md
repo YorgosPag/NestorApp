@@ -71,6 +71,19 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-02 — ADR-408 Φ3 electrical-panel 2D ghost micro-leaf (compliance note)
+
+**Status**: COMPLIANT — no ADR-040 invariants broken.
+
+Το ADR-408 Φ3 (ηλεκτρικός πίνακας) πρόσθεσε το `electricalPanelTool` ως **pass-through** στον
+orchestrator (`CanvasSection.tsx`) + `canvas-click-types.ts` (`ElectricalPanelToolLike` click
+routing) + `CanvasLayerStack.tsx`/`canvas-layer-stack-types.ts`/`canvas-layer-stack-leaves.tsx`
+(νέο `electricalPanelGhost` payload → νέος **micro-leaf** `ElectricalPanelGhostPreviewMount`),
+ακριβώς όπως τα υπάρχοντα `columnGhost`/`mepFixtureGhost` ghost leaves. Το νέο leaf διαβάζει
+transform via wrapper, render-άρει ≤1 element, **καμία** νέα `useSyncExternalStore` στους
+orchestrators, καμία αλλαγή στο bitmap-cache key ή στο subscription model. CHECK 6B/6C/6D
+invariants ανέπαφα. Πλήρες feature: ADR-408 Φ3.
+
 ### 2026-06-02 — ADR-406 MEP fixture tool wiring (compliance note)
 
 **Status**: COMPLIANT — no ADR-040 invariants broken.

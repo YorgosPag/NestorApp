@@ -391,6 +391,16 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'mep-fixture',
               shortcut: 'LF',
             },
+            // ADR-408 Φ3 — point-based electrical panel (circuit source). Single-click
+            // placement; discipline = electrical (ADR-405 discipline visibility).
+            {
+              id: 'draw.bim.electricalPanel',
+              labelKey: 'ribbon.commands.bim.electricalPanel.label',
+              tooltipKey: 'ribbon.commands.bim.electricalPanel.tooltip',
+              icon: 'bim-electrical-panel',
+              commandKey: 'electrical-panel',
+              shortcut: 'EP',
+            },
             // ADR-407 — path-based railing (guardrail). 2-click straight sketch;
             // discipline = architectural (ADR-405 discipline visibility).
             {

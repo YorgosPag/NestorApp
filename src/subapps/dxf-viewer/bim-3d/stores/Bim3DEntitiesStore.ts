@@ -18,6 +18,7 @@ import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
+import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
 import type { RailingEntity } from '../../bim/types/railing-types';
 import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import { applyBuildingsPreset } from '../utils/building-visibility-state';
@@ -45,6 +46,8 @@ export interface Bim3DEntities {
   readonly stairs: readonly StairEntity[];
   /** ADR-406 — point-based MEP fixtures (light fixtures first). */
   readonly fixtures: readonly MepFixtureEntity[];
+  /** ADR-408 Φ3 — point-based electrical panels (circuit sources). */
+  readonly panels: readonly ElectricalPanelEntity[];
   /** ADR-407 — standalone path-based railings. */
   readonly railings: readonly RailingEntity[];
 }
@@ -64,6 +67,7 @@ export const EMPTY_BIM_ENTITIES: Bim3DEntities = {
   openings: [],
   stairs: [],
   fixtures: [],
+  panels: [],
   railings: [],
 };
 
@@ -88,6 +92,7 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   setOpenings: (openings: readonly OpeningEntity[]) => void;
   setStairs: (stairs: readonly StairEntity[]) => void;
   setFixtures: (fixtures: readonly MepFixtureEntity[]) => void;
+  setPanels: (panels: readonly ElectricalPanelEntity[]) => void;
   setRailings: (railings: readonly RailingEntity[]) => void;
   setActiveLevelId: (id: string | null) => void;
   setBuildings: (buildings: readonly BuildingRef[]) => void;
@@ -108,6 +113,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     openings: [],
     stairs: [],
     fixtures: [],
+    panels: [],
     railings: [],
     activeLevelId: null,
     buildings: [],
@@ -123,6 +129,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     setOpenings: (openings) => set({ openings }),
     setStairs: (stairs) => set({ stairs }),
     setFixtures: (fixtures) => set({ fixtures }),
+    setPanels: (panels) => set({ panels }),
     setRailings: (railings) => set({ railings }),
     setActiveLevelId: (activeLevelId) => set({ activeLevelId }),
     setBuildings: (buildings) => set({ buildings }),
@@ -155,6 +162,7 @@ export function selectBim3DEntities(state: Bim3DEntitiesStoreState): Bim3DEntiti
     openings: state.openings,
     stairs: state.stairs,
     fixtures: state.fixtures,
+    panels: state.panels,
     railings: state.railings,
   };
 }
