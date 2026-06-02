@@ -36,6 +36,15 @@
     "create": "Create",
     "cancel": "Cancel"
   },
+  "mepCircuit": {
+    "created_one": "Created an electrical circuit with {count} fixture.",
+    "created_other": "Created an electrical circuit with {count} fixtures.",
+    "failed": {
+      "no-source": "Select an electrical panel as the circuit source.",
+      "multiple-sources": "Select only one electrical panel as the source.",
+      "no-members": "Select at least one light fixture for the circuit."
+    }
+  },
   "bim": {
     "wallCascadeDelete": {
       "title": "Delete Wall",
@@ -714,6 +723,7 @@
       "beamProperties": "Beam Properties",
       "slabOpeningProperties": "Slab Opening Properties",
       "multiSelection": "Multi-Selection",
+      "mepCircuit": "Electrical Circuit",
       "validationBadge": "Code violation",
       "dimension": "Dimension",
       "lineToolStyle": "Line Style",
@@ -788,6 +798,7 @@
       "ifcProperties": "IFC Properties",
       "slabOpeningKind": "Type",
       "slabOpeningActions": "Actions",
+      "mepCircuit": "Circuit",
       "multiSelectionCommon": "Common Properties",
       "multiSelectionFilter": "Filter",
       "placeholder": "Coming soon",
@@ -1537,23 +1548,17 @@
             "c3037": "C30/37 — 250mm thick",
             "c3545": "C35/45 — 250mm thick",
             "c4050": "C40/50 — 300mm thick"
-          },
-          "iShape": {
-            "ipe200": "IPE 200 (b=100, h=200mm)",
-            "ipe240": "IPE 240 (b=120, h=240mm)",
-            "ipe300": "IPE 300 (b=150, h=300mm)",
-            "ipe360": "IPE 360 (b=170, h=360mm)",
-            "ipe400": "IPE 400 (b=180, h=400mm)",
-            "ipe500": "IPE 500 (b=200, h=500mm)",
-            "hea200": "HEA 200 (b=200, h=190mm)",
-            "hea240": "HEA 240 (b=240, h=230mm)",
-            "hea300": "HEA 300 (b=300, h=290mm)",
-            "hea400": "HEA 400 (b=300, h=390mm)"
           }
         }
       },
       "psetEditor": {
         "open": "IFC Properties (Pset)"
+      },
+      "mepCircuit": {
+        "create": "Create Circuit",
+        "createTooltip": "Create an electrical circuit from the selected panel (source) and fixtures (members).",
+        "close": "Close",
+        "defaultName": "Circuit {n}"
       },
       "measureAngle": "Angle",
       "measureAngleVariants": {
