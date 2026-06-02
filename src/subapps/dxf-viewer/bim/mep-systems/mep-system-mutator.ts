@@ -26,6 +26,12 @@ import type { MepSystemEntity, MepSystemParams } from '../types/mep-system-types
 
 /** Imperative system-mutation surface the command layer depends on. */
 export interface MepSystemMutator {
+  /**
+   * Create a system **id-preserving** (the entity carries a pre-minted
+   * enterprise id) — optimistic store + Firestore write. Used by
+   * `CreateMepSystemCommand` (Φ5 circuit UI) so create/undo/redo are id-stable.
+   */
+  createSystem(entity: MepSystemEntity): void;
   /** Patch a system's params (optimistic store update + Firestore update). */
   updateSystemParams(systemId: string, params: MepSystemParams): void;
   /** Delete a system (dissolve a circuit) — optimistic store + Firestore delete. */
