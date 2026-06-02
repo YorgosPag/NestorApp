@@ -10,6 +10,7 @@ import { useRibbonSlabBridge, type UseRibbonSlabBridgeProps } from '../ui/ribbon
 import { useRibbonColumnBridge, type UseRibbonColumnBridgeProps } from '../ui/ribbon/hooks/useRibbonColumnBridge';
 import { useRibbonBeamBridge, type UseRibbonBeamBridgeProps } from '../ui/ribbon/hooks/useRibbonBeamBridge';
 import { useRibbonSlabOpeningBridge, type UseRibbonSlabOpeningBridgeProps } from '../ui/ribbon/hooks/useRibbonSlabOpeningBridge';
+import { useRibbonMepCircuitBridge, type UseRibbonMepCircuitBridgeProps } from '../ui/ribbon/hooks/useRibbonMepCircuitBridge';
 import { useBimMaterialCycler } from '../hooks/useBimMaterialCycler';
 
 export type UseDxfBimBridgesProps =
@@ -19,7 +20,8 @@ export type UseDxfBimBridgesProps =
   & UseRibbonSlabBridgeProps
   & UseRibbonColumnBridgeProps
   & UseRibbonBeamBridgeProps
-  & UseRibbonSlabOpeningBridgeProps;
+  & UseRibbonSlabOpeningBridgeProps
+  & UseRibbonMepCircuitBridgeProps;
 
 export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const stairBridge = useRibbonStairBridge(p);
@@ -29,7 +31,9 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const columnBridge = useRibbonColumnBridge(p);
   const beamBridge = useRibbonBeamBridge(p);
   const slabOpeningBridge = useRibbonSlabOpeningBridge(p);
+  // ADR-408 Φ5 — MEP circuit contextual bridge (create-from-selection).
+  const mepCircuitBridge = useRibbonMepCircuitBridge(p);
   // ADR-363 Phase 4.5e+ — Tab/Shift+Tab material cycling for selected BIM entities.
   useBimMaterialCycler(p);
-  return { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge };
+  return { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge };
 }

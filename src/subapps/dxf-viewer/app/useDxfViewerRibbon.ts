@@ -90,8 +90,8 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
     handleToolChange, fallback: wrappedHandleAction,
   });
 
-  // ADR-358 Phase 7a / ADR-363 — BIM contextual bridges.
-  const { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge } =
+  // ADR-358 Phase 7a / ADR-363 — BIM contextual bridges. ADR-408 Φ5 — MEP circuit.
+  const { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge } =
     useDxfBimBridges({ levelManager, universalSelection });
   const lineToolBridge = useRibbonLineToolBridge();
   const xlineModeBridge = useRibbonXlineModeBridge();
@@ -101,7 +101,7 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
     wrappedHandleAction: arrayActionInterceptor,
     canUndo, canRedo,
     textEditorBridge, arrayBridge, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge,
-    slabOpeningBridge, lineToolBridge, xlineModeBridge,
+    slabOpeningBridge, mepCircuitBridge, lineToolBridge, xlineModeBridge,
   });
 
   return { ribbonCommands, ribbonContextualTabs, activeContextualTrigger };
