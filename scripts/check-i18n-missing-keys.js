@@ -54,20 +54,32 @@ function loadLocaleJson(namespace) {
   }
 }
 
+// i18next CLDR plural suffixes: a key referenced as t('foo', { count }) is
+// defined in the locale JSON as foo_one / foo_other (etc.), NOT as a bare `foo`.
+// The static checker must accept such a key as existing when any plural form is
+// present — otherwise legitimate pluralized strings read as "missing".
+const I18NEXT_PLURAL_SUFFIXES = ['_zero', '_one', '_two', '_few', '_many', '_other', '_plural'];
+
 /**
  * Check if a dotted key exists in a nested JSON object
  * e.g. 'share.close' → obj.share.close
+ *
+ * Plural-aware: if the final segment is absent as a bare key, the key still
+ * counts as existing when a CLDR plural variant (foo_one/foo_other/…) is present.
  */
 function keyExists(obj, dottedKey) {
   if (!obj) return false;
   const parts = dottedKey.split('.');
+  const last = parts.pop();
   let current = obj;
   for (const part of parts) {
     if (current === null || current === undefined || typeof current !== 'object') return false;
     if (!(part in current)) return false;
     current = current[part];
   }
-  return true;
+  if (current === null || current === undefined || typeof current !== 'object') return false;
+  if (last in current) return true;
+  return I18NEXT_PLURAL_SUFFIXES.some((sfx) => `${last}${sfx}` in current);
 }
 
 /**
