@@ -224,6 +224,9 @@ export interface DrawingEventMap {
   // ADR-408 — MEP system (electrical circuit) lifecycle + integrity events.
   'bim:mep-system-changed': { systemId: string };
   'bim:mep-system-member-missing': { systemId: string; entityId: string; connectorId: string };
+  // ADR-408 Φ5 — circuit creation feedback (create-from-selection UI).
+  'bim:mep-circuit-created': { memberCount: number };
+  'bim:mep-circuit-create-failed': { reason: 'no-source' | 'multiple-sources' | 'no-members' };
   // ADR-407 — BIM railing params + delete events
   'bim:railing-params-updated': { railingId: string };
   'bim:railing-delete-requested': { railingId: string };

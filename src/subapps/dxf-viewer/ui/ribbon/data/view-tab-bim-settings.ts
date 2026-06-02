@@ -117,12 +117,14 @@ export const BIM_GRAPHICS_PANEL: RibbonPanelDef = {
   id: 'bimGraphics',
   labelKey: 'ribbon.panels.bimGraphics',
   rows: [
-    // Each `small` row renders as a vertical column (ribbon-tokens.css
-    // `.dxf-ribbon-panel-row[data-row-size="small"] { flex-direction: column }`);
-    // rows sit side-by-side. Column 2 stacks discipline over "DXF only" so the
-    // isolate toggle reads directly under the discipline filter.
-    { isInFlyout: false, buttons: [VISIBILITY_GRAPHICS_BUTTON] },
-    { isInFlyout: false, buttons: [DISCIPLINE_BUTTON, HIDE_BIM_BUTTON] },
+    // A `small` row renders as a single vertical column (ribbon-tokens.css
+    // `.dxf-ribbon-panel-row[data-row-size="small"] { flex-direction: column }`).
+    // All three visibility controls stack in one column, in order:
+    // Visibility/Graphics → DXF only → Disciplines.
+    {
+      isInFlyout: false,
+      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, DISCIPLINE_BUTTON],
+    },
   ],
 };
 
@@ -134,7 +136,11 @@ export const BIM_STYLES_PANEL: RibbonPanelDef = {
   id: 'bimStyles',
   labelKey: 'ribbon.panels.bimStyles',
   rows: [
-    { isInFlyout: false, buttons: [OBJECT_STYLES_BUTTON, PEN_TABLE_BUTTON] },
-    { isInFlyout: false, buttons: [VIEW_RANGE_BUTTON, VIEW_TEMPLATES_BUTTON] },
+    // Single vertical column (small row stacks its buttons), in order:
+    // Object Styles → Pen Table → View Range → View Templates.
+    {
+      isInFlyout: false,
+      buttons: [OBJECT_STYLES_BUTTON, PEN_TABLE_BUTTON, VIEW_RANGE_BUTTON, VIEW_TEMPLATES_BUTTON],
+    },
   ],
 };
