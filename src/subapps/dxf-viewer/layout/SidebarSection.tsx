@@ -42,7 +42,9 @@ import { CentralizedAutoSaveStatus } from '../ui/components/CentralizedAutoSaveS
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
-// ADR-040 Phase VII: subscribe to ZoomStore directly — no prop drilling through DxfViewerContent
+// ADR-040 Phase XXII.B: ZoomStore subscription lives in a 1-fiber leaf (SidebarZoomLeaf),
+// NOT in the SidebarSection orchestrator. Subscribing in the orchestrator re-rendered the
+// whole sidebar subtree (~426 fibers) on every wheel notch — the #3 wheel-zoom freeze root cause.
 import { useCurrentZoom } from '../systems/zoom/ZoomStore';
 
 // ============================================================================
@@ -80,6 +82,24 @@ interface SidebarSectionProps {
 }
 
 // ============================================================================
+// 🍃 MICRO-LEAF (ADR-040)
+// ============================================================================
+
+/**
+ * SidebarZoomLeaf — sole ZoomStore subscriber in the sidebar footer.
+ *
+ * ADR-040 Cardinal Rule #1: high-frequency stores (zoom/transform) must be
+ * subscribed ONLY by leaf renderers, never by orchestrators. Isolating the
+ * `useCurrentZoom()` subscription here means a wheel notch re-renders this single
+ * `<span>` (1 fiber) instead of the whole SidebarSection subtree (~426 fibers).
+ */
+const SidebarZoomLeaf = React.memo(function SidebarZoomLeaf() {
+  const currentZoom = useCurrentZoom();
+  return <span>Zoom: {Math.round(currentZoom * 100)}%</span>;
+});
+SidebarZoomLeaf.displayName = 'SidebarZoomLeaf';
+
+// ============================================================================
 // 🏗️ COMPONENT IMPLEMENTATION
 // ============================================================================
 
@@ -99,8 +119,6 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
   floorplanId,
   primarySelectedId,
 }) => {
-  // ADR-040 Phase VII: subscribe to ZoomStore — re-renders only this leaf on zoom
-  const currentZoom = useCurrentZoom();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
@@ -145,7 +163,6 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
           <FloatingPanelContainer
             ref={floatingRef}
             sceneModel={currentScene}
-            zoomLevel={currentZoom}
             currentTool={activeTool as ToolType}
             onSceneImported={onSceneImported}
             projectId={projectId}
@@ -174,7 +191,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
 
           <div className={`flex justify-between items-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
             <span>Sidebar Status</span>
-            <span>Zoom: {Math.round(currentZoom * 100)}%</span>
+            <SidebarZoomLeaf />
           </div>
         </footer>
       </section>

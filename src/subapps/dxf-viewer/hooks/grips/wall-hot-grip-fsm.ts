@@ -69,6 +69,14 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   'mep-fixture-corner-nw': 'corner',
   'mep-fixture-corner-sw': 'corner',
   'mep-fixture-corner-se': 'corner',
+  // Electrical panels (ADR-408 Φ3) — full wall parity (rectangular-only): move
+  // MOVE (3-click), rotation REFERENCE (6-click), 4 corners 2-click.
+  'electrical-panel-move': 'move',
+  'electrical-panel-rotation': 'rotate',
+  'electrical-panel-corner-ne': 'corner',
+  'electrical-panel-corner-nw': 'corner',
+  'electrical-panel-corner-sw': 'corner',
+  'electrical-panel-corner-se': 'corner',
 } as const;
 
 /** Map any grip kind to its hot-grip operation, or null if it stays drag. */
@@ -89,7 +97,7 @@ export function isWallHotGripKind(kind: string | undefined | null): boolean {
  */
 export function hotGripKindOf(grip: UnifiedGripInfo | null | undefined): string | undefined {
   if (!grip) return undefined;
-  return grip.wallGripKind ?? grip.columnGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind;
+  return grip.wallGripKind ?? grip.columnGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind;
 }
 
 /**

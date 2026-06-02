@@ -27,6 +27,10 @@ import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
 import { buildMepFixtureEntity } from '../drawing/mep-fixture-completion';
 import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-scene';
+import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
+import { applyElectricalPanelGripDrag } from '../../bim/electrical-panels/electrical-panel-grips';
+import { buildElectricalPanelEntity } from '../drawing/electrical-panel-completion';
+import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-electrical-panel-to-scene';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
 /**
@@ -120,6 +124,35 @@ export function commitMepFixtureCopy(
 }
 
 /**
+ * ADR-408 Φ3 — Ctrl-COPY at the terminal click of an electrical panel MOVE
+ * hot-grip (AutoCAD MOVE→COPY). Mirror of `commitMepFixtureCopy`: builds a NEW
+ * `ElectricalPanelEntity` whose params are the original shifted by `delta` (the
+ * same `electrical-panel-move` whole-panel translate the MOVE uses) and inserts
+ * it via the shared `addElectricalPanelToScene` SSoT — fresh enterprise ID (N.6,
+ * via `buildElectricalPanelEntity` → `createElectricalPanel`),
+ * `drawing:entity-created` broadcast so persistence saves the copy. Original
+ * untouched; single copy.
+ */
+export function commitElectricalPanelCopy(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || grip.electricalPanelGripKind !== 'electrical-panel-move') return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<ElectricalPanelEntity>;
+  if (candidate.type !== 'electrical-panel' || !candidate.params) return;
+  const panel = candidate as ElectricalPanelEntity;
+  const translated = applyElectricalPanelGripDrag('electrical-panel-move', { originalParams: panel.params, delta });
+  const built = buildElectricalPanelEntity(translated, panel.layerId);
+  if (!built.ok) return;
+  addElectricalPanelToScene(built.entity, deps);
+}
+
+/**
  * ADR-397 — entity-agnostic Ctrl-COPY dispatch for the MOVE hot-grip terminal
  * click. Routes to the per-entity copy SSoT by the grip's kind. Returns `true`
  * when a copy was made (caller skips the translate), `false` when the kind has
@@ -141,6 +174,10 @@ export function commitHotGripCopy(
   }
   if (grip.mepFixtureGripKind === 'mep-fixture-move') {
     commitMepFixtureCopy(grip, delta, deps);
+    return true;
+  }
+  if (grip.electricalPanelGripKind === 'electrical-panel-move') {
+    commitElectricalPanelCopy(grip, delta, deps);
     return true;
   }
   return false;

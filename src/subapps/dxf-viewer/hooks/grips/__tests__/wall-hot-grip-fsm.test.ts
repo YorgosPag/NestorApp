@@ -155,6 +155,33 @@ describe('ADR-406 — MEP fixture hot-grip kinds (full wall parity)', () => {
   });
 });
 
+describe('ADR-408 Φ3 — electrical panel hot-grip kinds (full wall parity)', () => {
+  it("electrical-panel-move → 'move', -rotation → 'rotate', corners → 'corner'", () => {
+    expect(hotGripOpForKind('electrical-panel-move')).toBe('move');
+    expect(hotGripOpForKind('electrical-panel-rotation')).toBe('rotate');
+    for (const k of [
+      'electrical-panel-corner-ne',
+      'electrical-panel-corner-nw',
+      'electrical-panel-corner-sw',
+      'electrical-panel-corner-se',
+    ]) {
+      expect(hotGripOpForKind(k)).toBe('corner');
+      expect(isWallHotGripKind(k)).toBe(true);
+    }
+  });
+
+  it('electrical panel move/rotation/corner enter hot-grip on mousedown', () => {
+    expect(resolveHotGripMouseDown('idle', 'electrical-panel-move')).toBe('enter');
+    expect(resolveHotGripMouseDown('warm', 'electrical-panel-rotation')).toBe('enter');
+    expect(resolveHotGripMouseDown('idle', 'electrical-panel-corner-ne')).toBe('enter');
+  });
+
+  it('hotGripKindOf reads the electricalPanelGripKind discriminator', () => {
+    const panel = { electricalPanelGripKind: 'electrical-panel-rotation' } as unknown as UnifiedGripInfo;
+    expect(hotGripKindOf(panel)).toBe('electrical-panel-rotation');
+  });
+});
+
 describe('resolveHotGripMouseDown', () => {
   const NON_HOT: UnifiedGripPhase[] = ['idle', 'hovering', 'warm', 'dragging'];
 

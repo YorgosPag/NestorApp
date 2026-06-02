@@ -23,6 +23,8 @@ import { isElectricalPanelEntity } from '../../types/entities';
 import type { ElectricalPanelEntity } from '../types/electrical-panel-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { buildPanelSymbol } from '../electrical-panels/electrical-panel-symbol';
+import { getElectricalPanelGrips } from '../electrical-panels/electrical-panel-grips';
+import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -104,17 +106,22 @@ export class ElectricalPanelRenderer extends BaseEntityRenderer {
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
+    // ADR-408 Φ3 — parametric grips (wall-parity): move (centre) + rotation + 4
+    // corner resize (rectangular-only). Mirror of `MepFixtureRenderer.getGrips`;
+    // the move/rotation handles get their icon glyph from the shared
+    // `gripGlyphShape` registry SSoT, corners stay square. Drag is routed through
+    // `applyElectricalPanelGripDrag()` + `UpdateElectricalPanelParamsCommand` by
+    // `commitElectricalPanelGripDrag` (grip-parametric-commits).
     if (!isElectricalPanelEntity(entity)) return [];
-    const panel = entity as ElectricalPanelEntity;
-    const p = panel.params.position;
-    return [{
-      id: `${panel.id}-grip-0`,
-      position: { x: p.x, y: p.y },
-      type: 'center' as const,
-      entityId: panel.id,
+    return getElectricalPanelGrips(entity as ElectricalPanelEntity).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      position: g.position,
+      type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
+      entityId: g.entityId,
       isVisible: true,
-      gripIndex: 0,
-    }];
+      gripIndex: g.gripIndex,
+      shape: gripGlyphShape(g.electricalPanelGripKind),
+    }));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {

@@ -302,6 +302,7 @@ import {
   commitBeamGripDrag,
   commitColumnGripDrag,
   commitMepFixtureGripDrag,
+  commitElectricalPanelGripDrag,
   commitXLineGripDrag,
   commitRayGripDrag,
   commitDimensionGripDrag,
@@ -394,6 +395,14 @@ export function commitDxfGripDragModeAware(
   // fixture is params-driven; UpdateMepFixtureParamsCommand recomputes geometry.
   if (grip.mepFixtureGripKind) {
     commitMepFixtureGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-408 Φ3 — electrical panel parametric grip path (center translate +
+  // rotation + opposite-corner-anchored width/length resize). Bypasses stretch
+  // because the panel is params-driven; UpdateElectricalPanelParamsCommand
+  // recomputes geometry.
+  if (grip.electricalPanelGripKind) {
+    commitElectricalPanelGripDrag(grip, delta, deps);
     return;
   }
   // ADR-359 Phase 11 — XLine grip path (basePoint translate or direction rotate).

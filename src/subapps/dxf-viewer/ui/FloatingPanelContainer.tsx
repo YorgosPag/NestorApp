@@ -9,7 +9,6 @@ import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PanelTabs } from './components/PanelTabs';
 // REMOVED: PropertiesPanel - καρτέλα πλέον αφαιρέθηκε εντελώς
-import { useOverlayManager } from '../state/overlay-manager';
 // REMOVED: LayerManagementPanel - replaced with unified overlay system
 import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
@@ -23,14 +22,12 @@ import { useFloatingPanelHandle, type FloatingPanelHandle as FloatingPanelHandle
 export type { FloatingPanelHandleType as FloatingPanelHandle };
 import { usePanelNavigation } from './hooks/usePanelNavigation';
 import { usePanelContentRenderer } from './hooks/usePanelContentRenderer';
-import { usePanelDescription } from './hooks/usePanelDescription';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { DxfBreadcrumb } from './components/DxfBreadcrumb';
 
 interface FloatingPanelContainerProps {
   sceneModel: SceneModel | null;
-  zoomLevel: number;
   currentTool: ToolType;
   // ADR-309 Phase 2: Wizard button in LevelPanel
   onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
@@ -43,7 +40,6 @@ interface FloatingPanelContainerProps {
 
 const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, FloatingPanelContainerProps>(function FloatingPanelContainer({
   sceneModel: scene,
-  zoomLevel,
   currentTool,
   onSceneImported,
   projectId,
@@ -58,10 +54,6 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
 
   // ✅ ΒΗΜΑ 1: Extracted state to custom hook
   const { activePanel, expandedKeys, setActivePanel, setExpandedKeys } = useFloatingPanelState();
-
-  const overlayManager = useOverlayManager();
-  const selectedRegions = overlayManager?.selectedRegionIds || [];
-  const visibleRegions = overlayManager?.visibleRegions || [];
 
   const { currentLevelId, setLevelScene, getLevelScene } = useLevels();
 
@@ -111,13 +103,6 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
     }
   }, [primarySelectedId, scene, activePanel, setActivePanel]);
 
-  // ✅ ΒΗΜΑ 6: Extracted panel description logic to custom hook
-  const { description, zoomText } = usePanelDescription({
-    activePanel,
-    visibleRegions,
-    zoomLevel
-  });
-
   // Imperative handle for parent control
   useImperativeHandle(ref, () => handleMethods, [handleMethods]);
 
@@ -165,7 +150,6 @@ export const FloatingPanelContainer = React.memo(FloatingPanelContainerInner, (p
   // Custom comparison for performance optimization
   return (
     prevProps.sceneModel === nextProps.sceneModel &&
-    prevProps.zoomLevel === nextProps.zoomLevel &&
     prevProps.currentTool === nextProps.currentTool &&
     prevProps.onSceneImported === nextProps.onSceneImported &&
     prevProps.projectId === nextProps.projectId &&
