@@ -22,6 +22,8 @@
 import React, { useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useEscapeHandler } from '../../systems/escape-bus/useEscapeHandler';
+import { ESC_PRIORITY } from '../../systems/escape-bus/escape-priority';
 import {
   subscribeColumnPerimeterConfirm,
   getColumnPerimeterConfirmState,
@@ -36,14 +38,33 @@ export const ColumnPerimeterConfirmDialog: React.FC = () => {
     getColumnPerimeterConfirmState,
   );
 
+  // ESC = Άκυρο, μέσω του κεντρικού EscapeCommandBus (ADR-364 SSoT — όχι inline
+  // keydown listener). Προτεραιότητα MODAL_DIALOG (1000) ώστε να κερδίζει το global
+  // command bus· το `return true` διεκδικεί το ESC, άρα το ενεργό εργαλείο (DRAW_TOOL
+  // 500) ΔΕΝ απενεργοποιείται ταυτόχρονα. `canHandle` το κάνει inert όταν κλειστό.
+  useEscapeHandler({
+    id: 'column-perimeter-confirm',
+    priority: ESC_PRIORITY.MODAL_DIALOG,
+    canHandle: () => state.open,
+    handle: () => {
+      resolveColumnPerimeterConfirm('cancel');
+      return true;
+    },
+  });
+
   if (!state.open || typeof document === 'undefined') return null;
+
+  // Plural-correct noun phrases (i18next _one/_other) → σωστή γραμματική («1 τοιχίο»
+  // / «2 τοιχία», «1 κολώνα» / «3 κολώνες») στο σύνθετο μήνυμα.
+  const wallsText = t('perimeterColumnDiscrete.nWalls', { count: state.walls });
+  const columnsText = t('perimeterColumnDiscrete.nColumns', { count: state.columns });
 
   return createPortal(
     <div className="dxf-modal-overlay" role="dialog" aria-modal="true">
       <div className="dxf-modal-card">
         <h2 className="dxf-modal-title">{t('perimeterColumnConfirm.title')}</h2>
         <p className="dxf-modal-body">
-          {t('perimeterColumnConfirm.message', { walls: state.walls, columns: state.columns })}
+          {t('perimeterColumnConfirm.message', { walls: wallsText, columns: columnsText })}
         </p>
         <div className="dxf-modal-actions">
           <button

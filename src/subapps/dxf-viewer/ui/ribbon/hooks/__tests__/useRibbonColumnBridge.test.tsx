@@ -222,6 +222,7 @@ describe('useRibbonColumnBridge — drawing-mode synthetic resolver', () => {
       setKind,
       setAnchor,
       setParamOverrides,
+      getSceneUnits: () => 'mm',
     });
     return { setKind, setAnchor, setParamOverrides };
   }
