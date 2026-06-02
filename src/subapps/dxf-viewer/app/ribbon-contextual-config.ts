@@ -16,6 +16,7 @@ import { DIMENSION_CONTEXTUAL_TAB, DIMENSION_CONTEXTUAL_TRIGGER } from '../ui/ri
 import { CONTEXTUAL_LINE_TOOL_TAB, LINE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-line-tool-tab';
 import { CONTEXTUAL_XLINE_MODE_TAB, XLINE_MODE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-xline-mode-tab';
 import { CONTEXTUAL_MULTI_SELECTION_TAB, MULTI_SELECTION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-multi-selection-tab';
+import { CONTEXTUAL_MEP_CIRCUIT_TAB, MEP_CIRCUIT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-circuit-tab';
 import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
 import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
 
@@ -39,6 +40,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_LINE_TOOL_TAB,
   CONTEXTUAL_XLINE_MODE_TAB,
   CONTEXTUAL_MULTI_SELECTION_TAB,
+  CONTEXTUAL_MEP_CIRCUIT_TAB,
   ANIMATION_CONTEXTUAL_TAB,
 ] as const;
 
@@ -67,6 +69,20 @@ export function useActiveContextualTrigger({
   const animationToolActive = useAnimationStore(selectAnimationToolActive);
   return React.useMemo<string | null>(() => {
     if (animationToolActive) return ANIMATION_CONTEXTUAL_TRIGGER;
+    // ADR-408 Φ5: mixed MEP selection (≥1 electrical panel = source + ≥1 light
+    // fixture = members) → circuit-creation tab. Checked before the generic
+    // structural multi-select since panels/fixtures are not in BIM_KIND_TYPES.
+    if (selectedEntityIds && selectedEntityIds.length >= 2 && currentScene) {
+      let hasPanel = false;
+      let hasFixture = false;
+      for (const id of selectedEntityIds) {
+        const e = currentScene.entities.find((x) => x.id === id);
+        if (e?.type === 'electrical-panel') hasPanel = true;
+        else if (e?.type === 'mep-fixture') hasFixture = true;
+        if (hasPanel && hasFixture) break;
+      }
+      if (hasPanel && hasFixture) return MEP_CIRCUIT_CONTEXTUAL_TRIGGER;
+    }
     // ADR-363 Phase 7.1: multi-selection of BIM entities → dedicated tab.
     if (selectedEntityIds && selectedEntityIds.length >= 2 && currentScene) {
       let bimCount = 0;

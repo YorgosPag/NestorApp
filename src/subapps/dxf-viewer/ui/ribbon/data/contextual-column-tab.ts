@@ -16,7 +16,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6
  */
 
-import type { RibbonTab } from '../types/ribbon-types';
+import type { RibbonTab, RibbonComboboxOption } from '../types/ribbon-types';
 import {
   COLUMN_RIBBON_KEYS,
   COLUMN_RIBBON_KEYS_ACTIONS,
@@ -25,6 +25,12 @@ import {
 } from '../hooks/bridge/column-command-keys';
 import { ENVELOPE_FUNCTION_OPTIONS } from '../hooks/bridge/envelope-function-param';
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
+import {
+  CATALOG_CUSTOM_SENTINEL,
+  ISHAPE_CATALOG,
+  SHEAR_WALL_CATALOG,
+  formatIShapePresetLabel,
+} from '../../../bim/columns/section-catalog';
 
 export const COLUMN_CONTEXTUAL_TRIGGER = 'column-selected';
 
@@ -88,30 +94,28 @@ const U_PLATE_THICKNESS_OPTIONS = [
   { value: '300', labelKey: '300', isLiteralLabel: true },
 ] as const;
 
-// ADR-363 Phase 8E — shear-wall RC concrete catalog (Eurocode 2 / EN 1992-1-1).
-const SHEAR_WALL_CATALOG_OPTIONS = [
-  { value: 'custom',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.custom',              isLiteralLabel: false },
-  { value: 'C20/25',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.shearWall.c2025',     isLiteralLabel: false },
-  { value: 'C25/30',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.shearWall.c2530',     isLiteralLabel: false },
-  { value: 'C30/37',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.shearWall.c3037',     isLiteralLabel: false },
-  { value: 'C35/45',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.shearWall.c3545',     isLiteralLabel: false },
-  { value: 'C40/50',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.shearWall.c4050',     isLiteralLabel: false },
-] as const;
+// ADR-363 Phase 8E / ADR-409 §C — SSoT: dropdown options GENERATED from the
+// section catalog. Adding a preset in `section-catalog.ts` surfaces it here
+// automatically — never hand-maintain a parallel list.
+const CATALOG_CUSTOM_OPTION: RibbonComboboxOption = {
+  value: CATALOG_CUSTOM_SENTINEL,
+  labelKey: 'ribbon.commands.columnEditor.catalogProfile.custom',
+  isLiteralLabel: false,
+};
 
-// ADR-363 Phase 8E — I-shape steel section catalog (EN 10025-2 IPE + HEA families).
-const ISHAPE_CATALOG_OPTIONS = [
-  { value: 'custom',   labelKey: 'ribbon.commands.columnEditor.catalogProfile.custom',            isLiteralLabel: false },
-  { value: 'IPE-200',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.ipe200',     isLiteralLabel: false },
-  { value: 'IPE-240',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.ipe240',     isLiteralLabel: false },
-  { value: 'IPE-300',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.ipe300',     isLiteralLabel: false },
-  { value: 'IPE-360',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.ipe360',     isLiteralLabel: false },
-  { value: 'IPE-400',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.ipe400',     isLiteralLabel: false },
-  { value: 'IPE-500',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.ipe500',     isLiteralLabel: false },
-  { value: 'HEA-200',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.hea200',     isLiteralLabel: false },
-  { value: 'HEA-240',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.hea240',     isLiteralLabel: false },
-  { value: 'HEA-300',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.hea300',     isLiteralLabel: false },
-  { value: 'HEA-400',  labelKey: 'ribbon.commands.columnEditor.catalogProfile.iShape.hea400',     isLiteralLabel: false },
-] as const;
+// Shear-wall RC concrete catalog (Eurocode 2 / EN 1992-1-1). i18n labels —
+// contain translatable text ("πάχος"/"thickness").
+const SHEAR_WALL_CATALOG_OPTIONS: readonly RibbonComboboxOption[] = [
+  CATALOG_CUSTOM_OPTION,
+  ...SHEAR_WALL_CATALOG.map((p) => ({ value: p.id, labelKey: p.labelKey, isLiteralLabel: false })),
+];
+
+// I-shape steel section catalog (EN 10365 IPE/HEA/HEB/HEM). Literal labels
+// derived from the data (code + dims, not translatable).
+const ISHAPE_CATALOG_OPTIONS: readonly RibbonComboboxOption[] = [
+  CATALOG_CUSTOM_OPTION,
+  ...ISHAPE_CATALOG.map((p) => ({ value: p.id, labelKey: formatIShapePresetLabel(p), isLiteralLabel: true })),
+];
 
 const COLUMN_ANCHOR_OPTIONS = [
   { value: 'center', labelKey: 'ribbon.commands.columnEditor.anchor.center', isLiteralLabel: false },
