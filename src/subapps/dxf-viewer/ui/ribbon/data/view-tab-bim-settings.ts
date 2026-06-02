@@ -1,174 +1,140 @@
 /**
- * ADR-375 Phase B.2 — View tab: View Range + Object Styles panels.
+ * ADR-375 — View tab BIM graphics/style settings.
  *
- * ViewRange: 4 mm-inputs for cut plane / top / bottom / view depth.
- * ObjectStyles: 12 categories × projection/cut pen dropdowns.
+ * Compaction (View tab redesign, 2026-06-02): the original 7 single-widget
+ * panels (viewRange, objectStyles, penTable, visibilityGraphics, hideBim,
+ * discipline, viewTemplates) wasted ribbon width — each panel rendered one
+ * `widget` button plus its own label + divider. Following Revit/AutoCAD, the
+ * seven widgets are regrouped into TWO dense multi-row panels using the
+ * existing `RibbonPanelDef.rows` / multi-button system (no render/types
+ * change — pure data reorg, FULL SSoT):
+ *
+ *   BIM_GRAPHICS_PANEL  «Ορατότητα/Γραφικά»  — per-view visibility controls.
+ *   BIM_STYLES_PANEL    «Στυλ & Πρότυπα»     — appearance/style/preset settings.
+ *
+ * Each widget keeps its own visible label (rendered by the widget component
+ * via `ribbon.commands.X.label`); the panel `labelKey` is only the header.
  */
 
-import type { RibbonPanelDef } from '../types/ribbon-types';
+import type { RibbonButton, RibbonPanelDef } from '../types/ribbon-types';
 
-export const VIEW_RANGE_PANEL: RibbonPanelDef = {
-  id: 'viewRange',
-  labelKey: 'ribbon.panels.viewRange',
-  rows: [
-    {
-      isInFlyout: false,
-      buttons: [
-        {
-          type: 'widget',
-          size: 'small',
-          widgetId: 'view-range',
-          command: {
-            id: 'view.viewRange',
-            labelKey: 'ribbon.commands.viewRange.label',
-            icon: '',
-            commandKey: 'view-range',
-          },
-        },
-      ],
-    },
-  ],
+/** ADR-375 Phase B.2 — 4 ViewRange plane inputs (cut plane / top / bottom / depth). */
+const VIEW_RANGE_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'view-range',
+  command: {
+    id: 'view.viewRange',
+    labelKey: 'ribbon.commands.viewRange.label',
+    icon: '',
+    commandKey: 'view-range',
+  },
 };
 
-export const OBJECT_STYLES_PANEL: RibbonPanelDef = {
-  id: 'objectStyles',
-  labelKey: 'ribbon.panels.objectStyles',
-  rows: [
-    {
-      isInFlyout: false,
-      buttons: [
-        {
-          type: 'widget',
-          size: 'small',
-          widgetId: 'object-styles',
-          command: {
-            id: 'view.objectStyles',
-            labelKey: 'ribbon.commands.objectStyles.label',
-            icon: '',
-            commandKey: 'object-styles',
-          },
-        },
-      ],
-    },
-  ],
+/** ADR-375 Phase B.2 — per-category projection/cut pen assignments. */
+const OBJECT_STYLES_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'object-styles',
+  command: {
+    id: 'view.objectStyles',
+    labelKey: 'ribbon.commands.objectStyles.label',
+    icon: '',
+    commandKey: 'object-styles',
+  },
 };
 
 /** ADR-375 Phase C.1 — per-company editable 16×6 pen table. */
-export const PEN_TABLE_PANEL: RibbonPanelDef = {
-  id: 'penTable',
-  labelKey: 'ribbon.panels.penTable',
-  rows: [
-    {
-      isInFlyout: false,
-      buttons: [
-        {
-          type: 'widget',
-          size: 'small',
-          widgetId: 'pen-table',
-          command: {
-            id: 'view.penTable',
-            labelKey: 'ribbon.commands.penTable.label',
-            icon: '',
-            commandKey: 'pen-table',
-          },
-        },
-      ],
-    },
-  ],
+const PEN_TABLE_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'pen-table',
+  command: {
+    id: 'view.penTable',
+    labelKey: 'ribbon.commands.penTable.label',
+    icon: '',
+    commandKey: 'pen-table',
+  },
 };
 
 /** ADR-375 Phase C.4 — Visibility/Graphics per-view override dialog (Revit V/G equivalent). */
-export const VISIBILITY_GRAPHICS_PANEL: RibbonPanelDef = {
-  id: 'visibilityGraphics',
-  labelKey: 'ribbon.panels.visibilityGraphics',
-  rows: [
-    {
-      isInFlyout: false,
-      buttons: [
-        {
-          type: 'widget',
-          size: 'small',
-          widgetId: 'visibility-graphics',
-          command: {
-            id: 'view.visibilityGraphics',
-            labelKey: 'ribbon.commands.visibilityGraphics.label',
-            icon: '',
-            commandKey: 'visibility-graphics',
-          },
-        },
-      ],
-    },
-  ],
+const VISIBILITY_GRAPHICS_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'visibility-graphics',
+  command: {
+    id: 'view.visibilityGraphics',
+    labelKey: 'ribbon.commands.visibilityGraphics.label',
+    icon: '',
+    commandKey: 'visibility-graphics',
+  },
 };
 
 /** ADR-375 Phase C.8 — one-click "Hide BIM / Show only DXF" isolate toggle. */
-export const HIDE_BIM_PANEL: RibbonPanelDef = {
-  id: 'hideBim',
-  labelKey: 'ribbon.panels.hideBim',
-  rows: [
-    {
-      isInFlyout: false,
-      buttons: [
-        {
-          type: 'widget',
-          size: 'small',
-          widgetId: 'hide-bim',
-          command: {
-            id: 'view.hideBim',
-            labelKey: 'ribbon.commands.hideBim.label',
-            icon: '',
-            commandKey: 'hide-bim',
-          },
-        },
-      ],
-    },
-  ],
+const HIDE_BIM_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'hide-bim',
+  command: {
+    id: 'view.hideBim',
+    labelKey: 'ribbon.commands.hideBim.label',
+    icon: '',
+    commandKey: 'hide-bim',
+  },
 };
 
 /** ADR-405 §4 — discipline visibility multi-toggle (Revit "View Discipline"). */
-export const DISCIPLINE_PANEL: RibbonPanelDef = {
-  id: 'discipline',
-  labelKey: 'ribbon.panels.discipline',
-  rows: [
-    {
-      isInFlyout: false,
-      buttons: [
-        {
-          type: 'widget',
-          size: 'small',
-          widgetId: 'discipline-visibility',
-          command: {
-            id: 'view.disciplineVisibility',
-            labelKey: 'ribbon.commands.discipline.label',
-            icon: '',
-            commandKey: 'discipline-visibility',
-          },
-        },
-      ],
-    },
-  ],
+const DISCIPLINE_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'discipline-visibility',
+  command: {
+    id: 'view.disciplineVisibility',
+    labelKey: 'ribbon.commands.discipline.label',
+    icon: '',
+    commandKey: 'discipline-visibility',
+  },
 };
 
 /** ADR-375 Phase B.3 — reusable BIM render-settings presets (Revit Level 2). */
-export const VIEW_TEMPLATES_PANEL: RibbonPanelDef = {
-  id: 'viewTemplates',
-  labelKey: 'ribbon.panels.viewTemplates',
+const VIEW_TEMPLATES_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'view-templates',
+  command: {
+    id: 'view.viewTemplates',
+    labelKey: 'ribbon.commands.viewTemplates.label',
+    icon: '',
+    commandKey: 'view-templates',
+  },
+};
+
+/**
+ * View tab — «Ορατότητα/Γραφικά»: per-view visibility controls grouped into
+ * one dense panel (V/G overrides + discipline filter + DXF-only isolate).
+ */
+export const BIM_GRAPHICS_PANEL: RibbonPanelDef = {
+  id: 'bimGraphics',
+  labelKey: 'ribbon.panels.bimGraphics',
   rows: [
-    {
-      isInFlyout: false,
-      buttons: [
-        {
-          type: 'widget',
-          size: 'small',
-          widgetId: 'view-templates',
-          command: {
-            id: 'view.viewTemplates',
-            labelKey: 'ribbon.commands.viewTemplates.label',
-            icon: '',
-            commandKey: 'view-templates',
-          },
-        },
-      ],
-    },
+    // Each `small` row renders as a vertical column (ribbon-tokens.css
+    // `.dxf-ribbon-panel-row[data-row-size="small"] { flex-direction: column }`);
+    // rows sit side-by-side. Column 2 stacks discipline over "DXF only" so the
+    // isolate toggle reads directly under the discipline filter.
+    { isInFlyout: false, buttons: [VISIBILITY_GRAPHICS_BUTTON] },
+    { isInFlyout: false, buttons: [DISCIPLINE_BUTTON, HIDE_BIM_BUTTON] },
+  ],
+};
+
+/**
+ * View tab — «Στυλ & Πρότυπα»: appearance/style/preset settings grouped into
+ * one dense panel (object styles + pen table + view range + view templates).
+ */
+export const BIM_STYLES_PANEL: RibbonPanelDef = {
+  id: 'bimStyles',
+  labelKey: 'ribbon.panels.bimStyles',
+  rows: [
+    { isInFlyout: false, buttons: [OBJECT_STYLES_BUTTON, PEN_TABLE_BUTTON] },
+    { isInFlyout: false, buttons: [VIEW_RANGE_BUTTON, VIEW_TEMPLATES_BUTTON] },
   ],
 };
