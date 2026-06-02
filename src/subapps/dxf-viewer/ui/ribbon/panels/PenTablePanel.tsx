@@ -27,9 +27,9 @@ import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { useBimPenTableStore } from '../../../state/bim-pen-table-store';
 import { isOverridden } from '../../../config/bim-pen-table-types';
 import { SCALE_COLUMNS, PEN_COUNT, type PenIndex } from '../../../config/bim-pen-table';
-import { LINEWEIGHT_ISO_VALUES } from '../../../config/lineweight-iso-catalog';
 import { PEN_SET_NAMES, type PenSetName } from '../../../config/bim-pen-sets';
 import type { ConcreteLineweightMm } from '../../../config/lineweight-iso-catalog';
+import { BimLineweightSelect } from '../components/BimStyleSelects';
 
 const PEN_INDICES = Array.from({ length: PEN_COUNT }, (_, i) => (i + 1) as PenIndex);
 
@@ -47,8 +47,7 @@ export const PenTablePanel: React.FC = () => {
   const applyPreset = useBimPenTableStore((s) => s.applyPreset);
 
   const handleChange = useCallback(
-    (penIdx: PenIndex, colIdx: number, value: string) => {
-      const mm = parseFloat(value);
+    (penIdx: PenIndex, colIdx: number, mm: number) => {
       if (!isNaN(mm)) setCell(penIdx, colIdx, mm);
     },
     [setCell],
@@ -155,33 +154,20 @@ export const PenTablePanel: React.FC = () => {
                 const val = effectivePenTable[penIdx - 1][colIdx] as ConcreteLineweightMm;
                 const modified = isOverridden(overrides ?? null, penIdx, colIdx);
                 return (
-                  <div key={colIdx} className="relative">
-                    <select
-                      value={val}
-                      onChange={(e) => handleChange(penIdx, colIdx, e.target.value)}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        if (modified) resetCell(penIdx, colIdx);
-                      }}
-                      className={`w-full ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${
-                        modified
-                          ? `${colors.bg.warningLight} ${colors.text.warningLight}`
-                          : `${colors.bg.secondary} ${colors.text.inverted}`
-                      } rounded px-0.5 py-0.5 border-0 focus:outline-none font-mono text-center cursor-pointer`}
-                      aria-label={t('ribbon.commands.penTable.cellAriaLabel', {
-                        pen: penIdx,
-                        scale: SCALE_COLUMNS[colIdx],
-                      })}
-                    >
-                      {(LINEWEIGHT_ISO_VALUES as readonly number[])
-                        .filter((v) => v > 0)
-                        .map((v) => (
-                          <option key={v} value={v}>
-                            {v.toFixed(2)}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
+                  <BimLineweightSelect
+                    key={colIdx}
+                    value={val}
+                    onChange={(mm) => handleChange(penIdx, colIdx, mm)}
+                    modified={modified}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      if (modified) resetCell(penIdx, colIdx);
+                    }}
+                    aria-label={t('ribbon.commands.penTable.cellAriaLabel', {
+                      pen: penIdx,
+                      scale: SCALE_COLUMNS[colIdx],
+                    })}
+                  />
                 );
               })}
             </div>

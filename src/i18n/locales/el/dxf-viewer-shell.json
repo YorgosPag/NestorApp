@@ -1693,6 +1693,8 @@
       "visibilityGraphics": {
         "label": "Ορατότητα",
         "openAriaLabel": "Άνοιγμα πίνακα Ορατότητας/Γραφικών",
+        "closeAriaLabel": "Κλείσιμο πίνακα Ορατότητας/Γραφικών",
+        "panelTitle": "Ορατότητα & Γραφικά",
         "allVisible": "Όλα ορατά",
         "hiddenCount": "{count} κρυφά",
         "visibleHeader": "Ορατότητα",

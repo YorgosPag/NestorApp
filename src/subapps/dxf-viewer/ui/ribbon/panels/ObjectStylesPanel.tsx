@@ -25,8 +25,7 @@ import { BIM_CATEGORIES, type BimCategory } from '../../../config/bim-object-sty
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
-
-const PEN_OPTIONS = Array.from({ length: 16 }, (_, i) => i + 1);
+import { BimPenSelect } from '../components/BimStyleSelects';
 
 export const ObjectStylesPanel: React.FC = () => {
   const { t } = useTranslation('dxf-viewer-shell');
@@ -38,8 +37,7 @@ export const ObjectStylesPanel: React.FC = () => {
   const resetToDefaults = useBimRenderSettingsStore((s) => s.resetToDefaults);
 
   const handlePenChange = useCallback(
-    (category: BimCategory, key: 'projectionPen' | 'cutPen', value: string) => {
-      const pen = parseInt(value, 10);
+    (category: BimCategory, key: 'projectionPen' | 'cutPen', pen: number) => {
       if (pen >= 1 && pen <= 16) setObjectStyleField(category, key, pen);
     },
     [setObjectStyleField],
@@ -80,24 +78,18 @@ export const ObjectStylesPanel: React.FC = () => {
                 <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.secondary} truncate`}>
                   {t(`ribbon.commands.objectStyles.categories.${cat}`)}
                 </span>
-                <select
+                <BimPenSelect
                   value={objectStyles[cat].projectionPen}
-                  onChange={(e) => handlePenChange(cat, 'projectionPen', e.target.value)}
-                  className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.secondary} ${colors.text.inverted} rounded px-1 py-0.5 border-0 focus:outline-none font-mono`}
-                >
-                  {PEN_OPTIONS.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-                <select
+                  onChange={(pen) => handlePenChange(cat, 'projectionPen', pen)}
+                  className="min-w-[3.25rem]"
+                  aria-label={t('ribbon.commands.objectStyles.projectionPen')}
+                />
+                <BimPenSelect
                   value={objectStyles[cat].cutPen}
-                  onChange={(e) => handlePenChange(cat, 'cutPen', e.target.value)}
-                  className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.secondary} ${colors.text.inverted} rounded px-1 py-0.5 border-0 focus:outline-none font-mono`}
-                >
-                  {PEN_OPTIONS.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
+                  onChange={(pen) => handlePenChange(cat, 'cutPen', pen)}
+                  className="min-w-[3.25rem]"
+                  aria-label={t('ribbon.commands.objectStyles.cutPen')}
+                />
               </React.Fragment>
             ))}
           </div>

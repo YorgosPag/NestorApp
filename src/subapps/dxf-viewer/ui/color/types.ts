@@ -185,6 +185,15 @@ export interface EnterpriseColorPickerProps {
   /** Picker display variant (default: "popover") */
   variant?: PickerVariant;
 
+  /**
+   * Layout orientation of the picker sections (default: "vertical").
+   * - "vertical": single column (color area + sliders → mode/field → eyedropper
+   *   → swatches → contrast), stacked top-to-bottom.
+   * - "horizontal": two columns side-by-side (left = color area + sliders +
+   *   mode/field + eyedropper, right = swatches + contrast) — wider, no scroll.
+   */
+  orientation?: 'vertical' | 'horizontal';
+
   /** Disabled state */
   disabled?: boolean;
 

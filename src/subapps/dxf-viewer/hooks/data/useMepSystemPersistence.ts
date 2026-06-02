@@ -23,6 +23,7 @@ import {
   type MepSystemDoc,
 } from '../../bim/mep-systems/mep-system-firestore-service';
 import { recordMepSystemChange } from '../../bim/mep-systems/mep-system-audit-client';
+import { setMepSystemMutator } from '../../bim/mep-systems/mep-system-mutator';
 import type { MepSystemEntity, MepSystemParams } from '../../bim/types/mep-system-types';
 
 export interface UseMepSystemPersistenceParams {
@@ -36,6 +37,8 @@ export interface UseMepSystemPersistenceResult {
   readonly createSystem: (params: MepSystemParams) => Promise<MepSystemEntity | null>;
   readonly updateSystem: (systemId: string, params: MepSystemParams) => Promise<void>;
   readonly deleteSystem: (systemId: string) => Promise<void>;
+  /** ADR-408 Φ4 — undo of a dissolve: id-preserving re-create. */
+  readonly restoreSystem: (entity: MepSystemEntity) => Promise<void>;
 }
 
 export function useMepSystemPersistence(
@@ -104,8 +107,35 @@ export function useMepSystemPersistence(
     }
   }, []);
 
+  // ADR-408 Φ4 — undo of a dissolve. Re-create the system id-preserving and
+  // un-suppress it so the server echo is honoured again.
+  const restoreSystem = useCallback(async (entity: MepSystemEntity) => {
+    const svc = serviceRef.current;
+    if (!svc) return;
+    deletedIdsRef.current.delete(entity.id);
+    useMepSystemStore.getState().upsertSystem(entity);
+    try {
+      await svc.saveSystem({ id: entity.id, params: entity.params });
+      void recordMepSystemChange('restored', { id: entity.id, params: entity.params });
+      EventBus.emit('bim:mep-system-changed', { systemId: entity.id });
+    } catch {
+      // Non-fatal: restore failure silent — the optimistic store entry stands.
+    }
+  }, []);
+
+  // ADR-408 Φ4 — expose the imperative api to the command layer (cascade
+  // dissolve / member-removal commands). Registered while the host is mounted.
+  useEffect(() => {
+    setMepSystemMutator({
+      updateSystemParams: (id, params) => { void updateSystem(id, params); },
+      dissolveSystem: (id) => { void deleteSystem(id); },
+      restoreSystem: (entity) => { void restoreSystem(entity); },
+    });
+    return () => setMepSystemMutator(null);
+  }, [updateSystem, deleteSystem, restoreSystem]);
+
   return useMemo(
-    () => ({ createSystem, updateSystem, deleteSystem }),
-    [createSystem, updateSystem, deleteSystem],
+    () => ({ createSystem, updateSystem, deleteSystem, restoreSystem }),
+    [createSystem, updateSystem, deleteSystem, restoreSystem],
   );
 }

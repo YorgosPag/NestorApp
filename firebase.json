@@ -8,8 +8,9 @@
     }
   ],
   "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
+    "rules": "firestore.rules.compiled",
+    "indexes": "firestore.indexes.json",
+    "predeploy": ["node scripts/build-firestore-rules.js"]
   },
   "storage": {
     "rules": "storage.rules"

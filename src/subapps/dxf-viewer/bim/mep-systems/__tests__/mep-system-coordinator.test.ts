@@ -13,6 +13,7 @@ import {
   findSystemMembershipsByEntity,
   detectMissingSystemMembers,
   notifyMissingSystemMembers,
+  resolveMepCascadeOnDelete,
   memberKey,
 } from '../mep-system-coordinator';
 import { EventBus } from '../../../systems/events/EventBus';
@@ -140,5 +141,56 @@ describe('notifyMissingSystemMembers', () => {
     notifyMissingSystemMembers([circuit('sys1', 'pnl1', [['fx1', 'c1']])], new Set(['pnl1', 'fx1']));
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
+  });
+});
+
+describe('resolveMepCascadeOnDelete (Φ4 cascade plan)', () => {
+  it('dissolves circuits whose source was deleted', () => {
+    const systems = [
+      circuit('sys1', 'pnl1', [['fx1', 'c1']]),
+      circuit('sys2', 'pnl2', [['fx2', 'c1']]),
+    ];
+    const plan = resolveMepCascadeOnDelete(new Set(['pnl1']), systems);
+    expect(plan.dissolve.map((s) => s.id)).toEqual(['sys1']);
+    expect(plan.memberRemovals).toEqual([]);
+  });
+
+  it('removes a deleted member from a surviving circuit (correct nextParams)', () => {
+    const systems = [circuit('sys1', 'pnl1', [['fx1', 'c1'], ['fx2', 'c1']])];
+    const plan = resolveMepCascadeOnDelete(new Set(['fx1']), systems);
+    expect(plan.dissolve).toEqual([]);
+    expect(plan.memberRemovals).toHaveLength(1);
+    const removal = plan.memberRemovals[0];
+    expect(removal.systemId).toBe('sys1');
+    expect(removal.prevParams.members).toHaveLength(2);
+    expect(removal.nextParams.members).toEqual([{ entityId: 'fx2', connectorId: 'c1' }]);
+  });
+
+  it('dissolves (not member-edits) when the entity is BOTH source and member', () => {
+    // pnl1 is the source of sys1 AND a member of sys2.
+    const systems = [
+      circuit('sys1', 'pnl1', [['fx1', 'c1']]),
+      circuit('sys2', 'pnl2', [['pnl1', 'cIn'], ['fx9', 'c1']]),
+    ];
+    const plan = resolveMepCascadeOnDelete(new Set(['pnl1']), systems);
+    // sys1 dissolved (source); sys2 survives minus pnl1.
+    expect(plan.dissolve.map((s) => s.id)).toEqual(['sys1']);
+    expect(plan.memberRemovals.map((r) => r.systemId)).toEqual(['sys2']);
+    expect(plan.memberRemovals[0].nextParams.members).toEqual([{ entityId: 'fx9', connectorId: 'c1' }]);
+  });
+
+  it('does not member-edit a system that is also being dissolved', () => {
+    // fxX is the source of sysA and also a member of sysA — sysA only dissolves.
+    const systems = [circuit('sysA', 'fxX', [['fxX', 'c1'], ['fy', 'c1']])];
+    const plan = resolveMepCascadeOnDelete(new Set(['fxX']), systems);
+    expect(plan.dissolve.map((s) => s.id)).toEqual(['sysA']);
+    expect(plan.memberRemovals).toEqual([]);
+  });
+
+  it('no-op when no system references the deleted entities', () => {
+    const systems = [circuit('sys1', 'pnl1', [['fx1', 'c1']])];
+    const plan = resolveMepCascadeOnDelete(new Set(['ghost']), systems);
+    expect(plan.dissolve).toEqual([]);
+    expect(plan.memberRemovals).toEqual([]);
   });
 });

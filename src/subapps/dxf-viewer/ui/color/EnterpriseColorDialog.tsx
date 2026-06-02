@@ -23,6 +23,8 @@ import { useTranslation } from 'react-i18next';
 import { useDialog } from '@react-aria/dialog';
 import { useOverlay, usePreventScroll } from '@react-aria/overlays';
 import { FocusScope } from '@react-aria/focus';
+// 🏢 SSoT: centralized draggable hook (same one FloatingPanel uses) — ADR-001/N.12
+import { useDraggable } from '@/hooks/useDraggable';
 import { EnterpriseColorPicker } from './EnterpriseColorPicker';
 import type { EnterpriseColorDialogProps } from './types';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
@@ -33,60 +35,6 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: Centralized z-index values
 import { MODAL_Z_INDEX } from '../../config/modal-config';
-
-// ✅ ENTERPRISE: Custom hook για draggable functionality
-function useDraggable(initialPosition = { x: 0, y: 0 }) {
-  const [position, setPosition] = useState(initialPosition);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
-  const positionStartRef = useRef({ x: 0, y: 0 });
-  // ✅ FIX: Store initial position in ref to avoid recreating resetPosition
-  const initialPositionRef = useRef(initialPosition);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // Only drag from header area (check if target or parent has data-drag-handle)
-    const target = e.target as HTMLElement;
-    if (!target.closest('[data-drag-handle]')) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-    dragStartRef.current = { x: e.clientX, y: e.clientY };
-    positionStartRef.current = { ...position };
-  }, [position]);
-
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const dx = e.clientX - dragStartRef.current.x;
-      const dy = e.clientY - dragStartRef.current.y;
-      setPosition({
-        x: positionStartRef.current.x + dx,
-        y: positionStartRef.current.y + dy
-      });
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging]);
-
-  // ✅ FIX: Stable resetPosition function using useCallback
-  const resetPosition = useCallback(() => {
-    setPosition(initialPositionRef.current);
-  }, []);
-
-  return { position, isDragging, handleMouseDown, resetPosition };
-}
 
 /**
  * Enterprise Color Dialog Component
@@ -124,17 +72,38 @@ export function EnterpriseColorDialog({
   const { quick, getStatusBorder, getDirectionalBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
 
-  // ✅ ENTERPRISE: Draggable functionality
-  const { position, isDragging, handleMouseDown, resetPosition } = useDraggable({ x: 0, y: 0 });
+  // Color dialogs default to the horizontal (two-column) layout — wider, no
+  // scroll. Callers can still force vertical via `orientation="vertical"`.
+  const effectiveOrientation = pickerProps.orientation ?? 'horizontal';
+  const dialogMaxWidth =
+    effectiveOrientation === 'horizontal'
+      ? PANEL_LAYOUT.LAYOUT_DIMENSIONS.PANEL_MAX_WIDTH_XL
+      : PANEL_LAYOUT.LAYOUT_DIMENSIONS.PANEL_MAX_WIDTH_LG;
 
-  // Sync local state when dialog opens
+  // ✅ ENTERPRISE: Draggable functionality — centralized SSoT hook (the same one
+  // FloatingPanel uses). Offset-based: the dialog is flex-centered and `position`
+  // is a translate offset, so bounds are left unconstrained (the header can never
+  // leave the viewport because it starts centered). ADR-001 / N.12 de-duplication.
+  const { position, isDragging, handleMouseDown, setPosition } = useDraggable(isOpen, {
+    initialPosition: { x: 0, y: 0 },
+    autoCenter: false,
+    minPosition: { x: -100000, y: -100000 },
+    maxPosition: { x: 100000, y: 100000 },
+  });
+
+  // Sync local state + recenter when the dialog opens.
+  // ⚠️ deps = [isOpen] ONLY: `setPosition` from the centralized useDraggable is a
+  // fresh function every render (not memoized), and `value`/setters are excluded
+  // intentionally so this runs once per open. Including `setPosition`/`resetPosition`
+  // would re-run every render → setPosition(new {0,0}) → re-render → infinite loop.
   React.useEffect(() => {
     if (isOpen) {
       setLocalColor(value);
       setOriginalValue(value);
-      resetPosition();
+      setPosition({ x: 0, y: 0 });
     }
-  }, [isOpen, resetPosition]); // value intentionally excluded: only sync on open
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync only when dialog opens
+  }, [isOpen]);
 
   // Cleanup pending RAF on unmount
   useEffect(() => {
@@ -226,10 +195,7 @@ export function EnterpriseColorDialog({
               {...overlayProps}
               {...dialogProps}
               ref={overlayRef}
-              onMouseDown={(e) => {
-                handleMouseDown(e);
-                handleDialogEvents(e);
-              }}
+              onMouseDown={handleDialogEvents}
               onClick={handleDialogEvents}
               onPointerDown={handleDialogEvents}
               onMouseMove={handleDialogEvents}
@@ -238,11 +204,13 @@ export function EnterpriseColorDialog({
                 cursor: isDragging ? 'grabbing' : 'default',
                 zIndex: MODAL_Z_INDEX.COLOR_DIALOG,
               }}
-              className={`relative pointer-events-auto isolate ${colors.bg.accent} ${getStatusBorder('default')} ${quick.card} ${PANEL_LAYOUT.SHADOW['2XL']} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.MODAL_MAX_HEIGHT} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.PANEL_MAX_WIDTH_LG} ${PANEL_LAYOUT.SELECT.NONE}`}
+              className={`relative pointer-events-auto isolate ${colors.bg.accent} ${getStatusBorder('default')} ${quick.card} ${PANEL_LAYOUT.SHADOW['2XL']} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.MODAL_MAX_HEIGHT} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${dialogMaxWidth} ${PANEL_LAYOUT.SELECT.NONE}`}
             >
-              {/* Header - ✅ ENTERPRISE: Draggable handle */}
+              {/* Header - ✅ ENTERPRISE: Draggable handle (centralized useDraggable
+                  matches `[data-drag-handle="true"]`) */}
               <div
-                data-drag-handle
+                data-drag-handle="true"
+                onMouseDown={handleMouseDown}
                 className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'bottom')} ${PANEL_LAYOUT.CURSOR.GRAB} active:${PANEL_LAYOUT.CURSOR.GRABBING}`}
               >
                 <h2
@@ -278,6 +246,7 @@ export function EnterpriseColorDialog({
               <div className={`${PANEL_LAYOUT.SPACING.NONE} cursor-default pointer-events-auto`}>
                 <EnterpriseColorPicker
                   {...pickerProps}
+                  orientation={effectiveOrientation}
                   value={localColor}
                   onChange={handleColorChange}
                   className="border-0"

@@ -1693,6 +1693,8 @@
       "visibilityGraphics": {
         "label": "Visibility",
         "openAriaLabel": "Open Visibility/Graphics panel",
+        "closeAriaLabel": "Close Visibility/Graphics panel",
+        "panelTitle": "Visibility & Graphics",
         "allVisible": "All visible",
         "hiddenCount": "{count} hidden",
         "visibleHeader": "Visibility",

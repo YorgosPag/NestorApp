@@ -25,10 +25,18 @@ import {
   DeleteMultipleOverlayVerticesCommand,
   DeleteEntityCommand,
   DeleteMultipleEntitiesCommand,
+  CompoundCommand,
   type ICommand,
 } from '../../core/commands';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { requestWallCascadeDelete } from '../../bim/walls/wall-cascade-delete-store';
+// ADR-408 Φ4 — MEP cascade: dissolve circuits whose source is deleted + drop
+// deleted members from surviving circuits, bundled with the entity delete into
+// one CompoundCommand for a single coherent undo.
+import { resolveMepCascadeOnDelete } from '../../bim/mep-systems/mep-system-coordinator';
+import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
+import { UpdateMepSystemParamsCommand } from '../../core/commands/entity-commands/UpdateMepSystemParamsCommand';
+import { DissolveMepSystemCommand } from '../../core/commands/entity-commands/DissolveMepSystemCommand';
 // ADR-363 Phase 7A — centralized cascade resolver SSoT (Boy Scout N.0.2:
 // replaces the inline wall→opening sweep that previously lived here; adds
 // slab→slab-opening cascade alongside).
@@ -237,10 +245,29 @@ export function useSmartDelete({
         (id) => adapter.getEntity(id)?.type === 'electrical-panel',
       );
 
-      if (idsToDelete.length === 1) {
-        executeCommand(new DeleteEntityCommand(idsToDelete[0], adapter));
+      const deleteCommand: ICommand = idsToDelete.length === 1
+        ? new DeleteEntityCommand(idsToDelete[0], adapter)
+        : new DeleteMultipleEntitiesCommand(idsToDelete, adapter);
+
+      // ADR-408 Φ4 — plan the MEP integrity cascade for the deleted panels /
+      // fixtures (the only entities that can be a circuit source or member) and
+      // bundle the dissolve / member-removal commands with the entity delete so
+      // a single Ctrl+Z reverses everything.
+      const deletedMepIds = new Set<string>([...panelIdsInBatch, ...fixtureIdsInBatch]);
+      const cascade = deletedMepIds.size > 0
+        ? resolveMepCascadeOnDelete(deletedMepIds, useMepSystemStore.getState().getSystems())
+        : { dissolve: [], memberRemovals: [] };
+      const cascadeCommands: ICommand[] = [
+        ...cascade.dissolve.map((s) => new DissolveMepSystemCommand(s)),
+        ...cascade.memberRemovals.map(
+          (r) => new UpdateMepSystemParamsCommand(r.systemId, r.nextParams, r.prevParams),
+        ),
+      ];
+
+      if (cascadeCommands.length > 0) {
+        executeCommand(new CompoundCommand('Delete MEP', [deleteCommand, ...cascadeCommands]));
       } else {
-        executeCommand(new DeleteMultipleEntitiesCommand(idsToDelete, adapter));
+        executeCommand(deleteCommand);
       }
       universalSelectionRef.current.clearByType('dxf-entity');
       setSelectedEntityIds([]);

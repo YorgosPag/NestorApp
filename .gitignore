@@ -173,3 +173,6 @@ firebase-service-account*
 google-credentials*
 gcp-key*
 .env*.local
+
+# Generated Firestore rules deploy artifact (SSoT = firestore.rules; built by scripts/build-firestore-rules.js)
+firestore.rules.compiled

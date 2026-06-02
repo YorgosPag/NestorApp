@@ -3,7 +3,7 @@
 /**
  * ADR-375 Phase C.4 — Visibility/Graphics Panel (Revit V/G equivalent).
  *
- * Per-view override table: 12 BIM categories × columns:
+ * Per-view override table: 16 BIM categories × columns:
  *   Visibility toggle | Projection Pen | Projection Color | Projection Pattern
  *                     | Cut Pen        | Cut Color        | Cut Pattern
  *
@@ -12,31 +12,40 @@
  *   `setObjectStyleVgColor`, `setObjectStyleVgPattern` (500ms debounce → Firestore).
  *
  * Priority stack: per-element > per-view (this panel) > global ObjectStyles > DEFAULT.
+ *
+ * ADR-375 v2.15 (2026-06-02): ported from a Radix `DropdownMenu` to the
+ * centralized `FloatingPanel` SSoT (`@/components/ui/floating`). The table is
+ * now a larger (`text-sm`, wider columns), draggable floating panel that stays
+ * open while the user edits the canvas — Revit/AutoCAD palette behaviour — and
+ * is toggled from the ribbon trigger. The previous Radix nested-overlay
+ * focus-trap workaround is no longer needed: `FloatingPanel` does not contain
+ * focus (`aria-modal="false"`), so the nested `UnifiedColorPicker` dialog opens
+ * without recursion.
  */
 
 import React, { useState, useCallback } from 'react';
 import { ChevronDown, Eye, EyeOff, RotateCcw } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { FloatingPanel } from '@/components/ui/floating';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-store';
 import { BIM_CATEGORIES, type BimCategory } from '../../../config/bim-object-styles';
-import { BIM_LINE_PATTERNS, type LinePatternKey } from '../../../config/bim-line-patterns';
+import { type LinePatternKey } from '../../../config/bim-line-patterns';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { UnifiedColorPicker } from '../../color/UnifiedColorPicker';
+import { BimPenSelect, BimPatternSelect } from '../components/BimStyleSelects';
 
-const PEN_OPTIONS = Array.from({ length: 16 }, (_, i) => i + 1);
+/**
+ * Shared grid template for the header and every category row (8 columns):
+ *   label | visibility | proj-pen | proj-color | proj-pattern | cut-pen | cut-color | cut-pattern.
+ * Wider than the legacy dropdown for a comfortable, palette-style table.
+ */
+const GRID_TEMPLATE = '150px 32px 58px 86px 140px 58px 86px 140px';
 
-const PATTERN_OPTIONS: LinePatternKey[] = [
-  'solid', 'dashed', 'dashed2', 'dotted', 'center', 'hidden', 'dashdot', 'phantom',
-];
+/** Floating panel size — fits all 16 categories + header + reset without overflow. */
+const PANEL_DIMENSIONS = { width: 880, height: 640 } as const;
 
 export const VisibilityGraphicsPanel: React.FC = () => {
   const { t } = useTranslation('dxf-viewer-shell');
@@ -51,8 +60,7 @@ export const VisibilityGraphicsPanel: React.FC = () => {
   const resetToDefaults = useBimRenderSettingsStore((s) => s.resetToDefaults);
 
   const handlePen = useCallback(
-    (cat: BimCategory, key: 'projectionPen' | 'cutPen', v: string) => {
-      const pen = parseInt(v, 10);
+    (cat: BimCategory, key: 'projectionPen' | 'cutPen', pen: number) => {
       if (pen >= 1 && pen <= 16) setObjectStyleField(cat, key, pen);
     },
     [setObjectStyleField],
@@ -82,7 +90,6 @@ export const VisibilityGraphicsPanel: React.FC = () => {
 
   const handleReset = useCallback(() => {
     resetToDefaults();
-    setOpen(false);
   }, [resetToDefaults]);
 
   const hiddenCount = BIM_CATEGORIES.filter(
@@ -94,173 +101,166 @@ export const VisibilityGraphicsPanel: React.FC = () => {
       <span className="dxf-ribbon-combobox-label">
         {t('ribbon.commands.visibilityGraphics.label')}
       </span>
-      {/*
-        ADR-375 v2.9: modal={false} + onInteractOutside preserve για nested
-        EnterpriseColorDialog. Default modal={true} έβαζε Radix FocusScope
-        contain που συγκρουόταν με το React Aria FocusScope του dialog →
-        focusin/focusout recursion crash (browser freeze). Industry-standard
-        Radix nested-overlay pattern: disable dropdown focus trap, preserve
-        open state όταν click target = portaled dialog.
-      */}
-      <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
-        <DropdownMenuTrigger asChild>
-          <button
-            aria-label={t('ribbon.commands.visibilityGraphics.openAriaLabel')}
-            className={`flex items-center gap-1 ${PANEL_LAYOUT.SPACING.COMPACT} ${colors.bg.backgroundSecondary} ${colors.text.secondary} ${PANEL_LAYOUT.TYPOGRAPHY.XS} rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS} select-none`}
-          >
-            {hiddenCount > 0 ? (
-              <EyeOff className="w-3 h-3 opacity-80" />
-            ) : (
-              <Eye className="w-3 h-3 opacity-60" />
-            )}
-            <span>{hiddenCount > 0 ? t('ribbon.commands.visibilityGraphics.hiddenCount', { count: hiddenCount }) : t('ribbon.commands.visibilityGraphics.allVisible')}</span>
-            <ChevronDown className="w-3 h-3 opacity-60" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="start"
-          className="p-2"
-          style={{ minWidth: '640px' }}
-          onInteractOutside={(e) => {
-            const target = e.target as HTMLElement | null;
-            if (target?.closest('[role="dialog"]')) e.preventDefault();
+
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-label={t('ribbon.commands.visibilityGraphics.openAriaLabel')}
+        aria-expanded={open}
+        className={`flex items-center gap-1 ${PANEL_LAYOUT.SPACING.COMPACT} ${colors.bg.backgroundSecondary} ${colors.text.secondary} ${PANEL_LAYOUT.TYPOGRAPHY.XS} rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS} select-none`}
+      >
+        {hiddenCount > 0 ? (
+          <EyeOff className="w-3 h-3 opacity-80" />
+        ) : (
+          <Eye className="w-3 h-3 opacity-60" />
+        )}
+        <span>{hiddenCount > 0 ? t('ribbon.commands.visibilityGraphics.hiddenCount', { count: hiddenCount }) : t('ribbon.commands.visibilityGraphics.allVisible')}</span>
+        <ChevronDown className="w-3 h-3 opacity-60" />
+      </button>
+
+      {open && (
+        <FloatingPanel
+          isVisible={open}
+          onClose={() => setOpen(false)}
+          dimensions={PANEL_DIMENSIONS}
+          draggableOptions={{
+            getClientPosition: () => ({
+              x: Math.max(16, window.innerWidth - PANEL_DIMENSIONS.width - 24),
+              y: 96,
+            }),
           }}
+          className="z-50"
+          data-testid="visibility-graphics-floating-panel"
         >
-          {/* Header row */}
-          <div className={`grid gap-x-1.5 gap-y-0.5 items-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} font-medium mb-1`}
-            style={{ gridTemplateColumns: '100px 22px 44px 64px 56px 44px 64px 56px' }}>
-            <span></span>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-center">{t('ribbon.commands.visibilityGraphics.visibleHeaderShort')}</span>
-              </TooltipTrigger>
-              <TooltipContent>{t('ribbon.commands.visibilityGraphics.visibleHeader')}</TooltipContent>
-            </Tooltip>
-            <span className="text-center">{t('ribbon.commands.visibilityGraphics.projPen')}</span>
-            <span className="text-center">{t('ribbon.commands.visibilityGraphics.projColor')}</span>
-            <span className="text-center">{t('ribbon.commands.visibilityGraphics.projPattern')}</span>
-            <span className="text-center">{t('ribbon.commands.visibilityGraphics.cutPen')}</span>
-            <span className="text-center">{t('ribbon.commands.visibilityGraphics.cutColor')}</span>
-            <span className="text-center">{t('ribbon.commands.visibilityGraphics.cutPattern')}</span>
-          </div>
+          <FloatingPanel.Header
+            title={t('ribbon.commands.visibilityGraphics.panelTitle')}
+            icon={hiddenCount > 0 ? <EyeOff /> : <Eye />}
+          />
+          <FloatingPanel.Content className={`max-h-[70vh] overflow-y-auto ${colors.text.secondary}`}>
+            {/* Header row */}
+            <div
+              className={`grid gap-x-2 gap-y-0.5 items-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} font-medium mb-1`}
+              style={{ gridTemplateColumns: GRID_TEMPLATE }}
+            >
+              <span></span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-center">{t('ribbon.commands.visibilityGraphics.visibleHeaderShort')}</span>
+                </TooltipTrigger>
+                <TooltipContent>{t('ribbon.commands.visibilityGraphics.visibleHeader')}</TooltipContent>
+              </Tooltip>
+              <span className="text-center">{t('ribbon.commands.visibilityGraphics.projPen')}</span>
+              <span className="text-center">{t('ribbon.commands.visibilityGraphics.projColor')}</span>
+              <span className="text-center">{t('ribbon.commands.visibilityGraphics.projPattern')}</span>
+              <span className="text-center">{t('ribbon.commands.visibilityGraphics.cutPen')}</span>
+              <span className="text-center">{t('ribbon.commands.visibilityGraphics.cutColor')}</span>
+              <span className="text-center">{t('ribbon.commands.visibilityGraphics.cutPattern')}</span>
+            </div>
 
-          {/* Category rows */}
-          {BIM_CATEGORIES.map((cat) => {
-            const style = objectStyles[cat];
-            const isHidden = style.visible === false;
-            return (
-              <div
-                key={cat}
-                className={`grid gap-x-1.5 gap-y-0.5 items-center py-0.5 ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${isHidden ? colors.text.muted : colors.text.secondary}`}
-                style={{ gridTemplateColumns: '100px 22px 44px 64px 56px 44px 64px 56px' }}
-              >
-                <span className="truncate font-medium">
-                  {t(`ribbon.commands.objectStyles.categories.${cat}`)}
-                </span>
-
-                {/* Visibility toggle */}
-                <button
-                  onClick={() => handleVisibility(cat)}
-                  aria-label={t('ribbon.commands.visibilityGraphics.toggleVisibility', { cat })}
-                  aria-pressed={!isHidden}
-                  className={`flex justify-center items-center w-5 h-5 rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
+            {/* Category rows */}
+            {BIM_CATEGORIES.map((cat) => {
+              const style = objectStyles[cat];
+              const isHidden = style.visible === false;
+              return (
+                <div
+                  key={cat}
+                  className={`grid gap-x-2 gap-y-0.5 items-center py-0.5 ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${isHidden ? colors.text.muted : colors.text.secondary}`}
+                  style={{ gridTemplateColumns: GRID_TEMPLATE }}
                 >
-                  {isHidden
-                    ? <EyeOff className="w-3 h-3 opacity-60" />
-                    : <Eye className="w-3 h-3 opacity-80" />}
-                </button>
+                  <span className="truncate font-medium">
+                    {t(`ribbon.commands.objectStyles.categories.${cat}`)}
+                  </span>
 
-                {/* Projection Pen */}
-                <select
-                  value={style.projectionPen}
-                  onChange={(e) => handlePen(cat, 'projectionPen', e.target.value)}
-                  disabled={isHidden}
-                  className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.secondary} ${colors.text.inverted} rounded px-1 py-0.5 border-0 focus:outline-none font-mono`}
-                >
-                  {PEN_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
+                  {/* Visibility toggle */}
+                  <button
+                    onClick={() => handleVisibility(cat)}
+                    aria-label={t('ribbon.commands.visibilityGraphics.toggleVisibility', { cat })}
+                    aria-pressed={!isHidden}
+                    className={`flex justify-center items-center w-6 h-6 rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
+                  >
+                    {isHidden
+                      ? <EyeOff className="w-3.5 h-3.5 opacity-60" />
+                      : <Eye className="w-3.5 h-3.5 opacity-80" />}
+                  </button>
 
-                {/* Projection Color — ADR-375 v2.7: UnifiedColorPicker (Enterprise dialog) αντί native Windows input */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="inline-flex">
-                      <UnifiedColorPicker
-                        variant="modal"
-                        value={style.projectionColor ?? '#888888'}
-                        onChange={(v) => handleColor(cat, 'projectionColor', v)}
-                        disabled={isHidden}
-                        title={t('ribbon.commands.visibilityGraphics.projColorTitle')}
-                      />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('ribbon.commands.visibilityGraphics.projColorTitle')}</TooltipContent>
-                </Tooltip>
+                  {/* Projection Pen */}
+                  <BimPenSelect
+                    value={style.projectionPen}
+                    onChange={(pen) => handlePen(cat, 'projectionPen', pen)}
+                    disabled={isHidden}
+                    aria-label={t('ribbon.commands.visibilityGraphics.projPen')}
+                  />
 
-                {/* Projection Pattern */}
-                <select
-                  value={style.projectionPattern ?? 'solid'}
-                  onChange={(e) => handlePattern(cat, 'projectionPattern', e.target.value)}
-                  disabled={isHidden}
-                  className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.secondary} ${colors.text.inverted} rounded px-1 py-0.5 border-0 focus:outline-none`}
-                >
-                  {PATTERN_OPTIONS.map((p) => (
-                    <option key={p} value={p}>{t(`ribbon.commands.visibilityGraphics.patterns.${p}`)}</option>
-                  ))}
-                </select>
+                  {/* Projection Color — ADR-375 v2.7: UnifiedColorPicker (Enterprise dialog) αντί native Windows input */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex">
+                        <UnifiedColorPicker
+                          variant="modal"
+                          value={style.projectionColor ?? '#888888'}
+                          onChange={(v) => handleColor(cat, 'projectionColor', v)}
+                          disabled={isHidden}
+                          title={t('ribbon.commands.visibilityGraphics.projColorTitle')}
+                        />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('ribbon.commands.visibilityGraphics.projColorTitle')}</TooltipContent>
+                  </Tooltip>
 
-                {/* Cut Pen */}
-                <select
-                  value={style.cutPen}
-                  onChange={(e) => handlePen(cat, 'cutPen', e.target.value)}
-                  disabled={isHidden}
-                  className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.secondary} ${colors.text.inverted} rounded px-1 py-0.5 border-0 focus:outline-none font-mono`}
-                >
-                  {PEN_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
+                  {/* Projection Pattern */}
+                  <BimPatternSelect
+                    value={style.projectionPattern ?? 'solid'}
+                    onChange={(p) => handlePattern(cat, 'projectionPattern', p)}
+                    disabled={isHidden}
+                    aria-label={t('ribbon.commands.visibilityGraphics.projPattern')}
+                  />
 
-                {/* Cut Color — ADR-375 v2.7: UnifiedColorPicker (Enterprise dialog) αντί native Windows input */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="inline-flex">
-                      <UnifiedColorPicker
-                        variant="modal"
-                        value={style.cutColor ?? '#000000'}
-                        onChange={(v) => handleColor(cat, 'cutColor', v)}
-                        disabled={isHidden}
-                        title={t('ribbon.commands.visibilityGraphics.cutColorTitle')}
-                        showModalFooter={false}
-                      />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('ribbon.commands.visibilityGraphics.cutColorTitle')}</TooltipContent>
-                </Tooltip>
+                  {/* Cut Pen */}
+                  <BimPenSelect
+                    value={style.cutPen}
+                    onChange={(pen) => handlePen(cat, 'cutPen', pen)}
+                    disabled={isHidden}
+                    aria-label={t('ribbon.commands.visibilityGraphics.cutPen')}
+                  />
 
-                {/* Cut Pattern */}
-                <select
-                  value={style.cutPattern ?? 'solid'}
-                  onChange={(e) => handlePattern(cat, 'cutPattern', e.target.value)}
-                  disabled={isHidden}
-                  className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.secondary} ${colors.text.inverted} rounded px-1 py-0.5 border-0 focus:outline-none`}
-                >
-                  {PATTERN_OPTIONS.map((p) => (
-                    <option key={p} value={p}>{t(`ribbon.commands.visibilityGraphics.patterns.${p}`)}</option>
-                  ))}
-                </select>
-              </div>
-            );
-          })}
+                  {/* Cut Color — ADR-375 v2.7: UnifiedColorPicker (Enterprise dialog) αντί native Windows input */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex">
+                        <UnifiedColorPicker
+                          variant="modal"
+                          value={style.cutColor ?? '#000000'}
+                          onChange={(v) => handleColor(cat, 'cutColor', v)}
+                          disabled={isHidden}
+                          title={t('ribbon.commands.visibilityGraphics.cutColorTitle')}
+                          showModalFooter={false}
+                        />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('ribbon.commands.visibilityGraphics.cutColorTitle')}</TooltipContent>
+                  </Tooltip>
 
-          <DropdownMenuSeparator className="my-2" />
-          <button
-            onClick={handleReset}
-            aria-label={t('ribbon.commands.visibilityGraphics.resetAriaLabel')}
-            className={`flex items-center gap-1.5 w-full ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.secondary} rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
-          >
-            <RotateCcw className="w-3 h-3" />
-            {t('ribbon.commands.visibilityGraphics.reset')}
-          </button>
-        </DropdownMenuContent>
-      </DropdownMenu>
+                  {/* Cut Pattern */}
+                  <BimPatternSelect
+                    value={style.cutPattern ?? 'solid'}
+                    onChange={(p) => handlePattern(cat, 'cutPattern', p)}
+                    disabled={isHidden}
+                    aria-label={t('ribbon.commands.visibilityGraphics.cutPattern')}
+                  />
+                </div>
+              );
+            })}
+
+            <button
+              onClick={handleReset}
+              aria-label={t('ribbon.commands.visibilityGraphics.resetAriaLabel')}
+              className={`flex items-center gap-1.5 w-full mt-2 ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary} rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              {t('ribbon.commands.visibilityGraphics.reset')}
+            </button>
+          </FloatingPanel.Content>
+        </FloatingPanel>
+      )}
     </span>
   );
 };

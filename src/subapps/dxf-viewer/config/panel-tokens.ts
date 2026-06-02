@@ -919,6 +919,7 @@ export const PANEL_LAYOUT = {
     PANEL_MIN_WIDTH_SM: 'min-w-[220px]', // Small panel minimum width
     // Max-width variants
     PANEL_MAX_WIDTH_LG: 'max-w-[400px]', // Large panel maximum width (dialogs)
+    PANEL_MAX_WIDTH_XL: 'max-w-[840px]', // Extra-large panel max width (horizontal color dialog)
     // Dropdown dimensions
     DROPDOWN_MIN_WIDTH: 'min-w-[150px]', // Standard dropdown min width
     // Text sizes (arbitrary)

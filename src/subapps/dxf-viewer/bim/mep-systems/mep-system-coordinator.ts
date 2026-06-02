@@ -17,7 +17,7 @@
  */
 
 import type { MepConnector } from '../types/mep-connector-types';
-import type { MepSystemEntity } from '../types/mep-system-types';
+import type { MepSystemEntity, MepSystemParams } from '../types/mep-system-types';
 import { EventBus } from '../../systems/events/EventBus';
 
 const KEY_SEP = '::';
@@ -142,4 +142,57 @@ export function notifyMissingSystemMembers(
     EventBus.emit('bim:mep-system-member-missing', m);
   }
   return missing;
+}
+
+// ─── Φ4 cascade planning (pure) ───────────────────────────────────────────────
+
+/** One surviving system that loses a deleted member from `params.members`. */
+export interface MepMemberRemoval {
+  readonly systemId: string;
+  readonly prevParams: MepSystemParams;
+  readonly nextParams: MepSystemParams;
+}
+
+/**
+ * The integrity plan produced when one or more entities are deleted:
+ *   - `dissolve` — systems whose **source** (base equipment) was deleted: the
+ *     whole circuit is gone (Revit "deleting the panel deletes its circuits").
+ *   - `memberRemovals` — surviving systems that simply lose a deleted member
+ *     from `params.members` (the circuit stays, minus that connection).
+ * Pure data — the caller turns it into undoable commands (Φ4 `useSmartDelete`).
+ */
+export interface MepCascadePlan {
+  readonly dissolve: readonly MepSystemEntity[];
+  readonly memberRemovals: readonly MepMemberRemoval[];
+}
+
+/**
+ * Compute the cascade plan for a set of deleted entity ids. Pure (no store /
+ * Firestore / EventBus side effect) — the single SSoT for "what happens to the
+ * systems when these entities vanish". Reuses `findSystemsBySource`.
+ *
+ * A system whose source is deleted is **dissolved**, and is therefore excluded
+ * from `memberRemovals` (no point editing a doc we are about to delete — even
+ * if the deleted entity was also one of its members).
+ */
+export function resolveMepCascadeOnDelete(
+  deletedEntityIds: ReadonlySet<string>,
+  systems: readonly MepSystemEntity[],
+): MepCascadePlan {
+  const dissolveIds = new Set(findSystemsBySource(deletedEntityIds, systems));
+  const dissolve = systems.filter((s) => dissolveIds.has(s.id));
+
+  const memberRemovals: MepMemberRemoval[] = [];
+  for (const s of systems) {
+    if (dissolveIds.has(s.id)) continue;
+    const nextMembers = s.params.members.filter((m) => !deletedEntityIds.has(m.entityId));
+    if (nextMembers.length === s.params.members.length) continue;
+    memberRemovals.push({
+      systemId: s.id,
+      prevParams: s.params,
+      nextParams: { ...s.params, members: nextMembers },
+    });
+  }
+
+  return { dissolve, memberRemovals };
 }

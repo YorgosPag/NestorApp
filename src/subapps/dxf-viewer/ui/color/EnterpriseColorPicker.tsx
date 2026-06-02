@@ -60,6 +60,7 @@ export function EnterpriseColorPicker({
   recent = true,
   eyedropper = true,
   variant = 'inline',
+  orientation = 'vertical',
   disabled = false,
   readOnly = false,
   labels = {},
@@ -105,134 +106,165 @@ export function EnterpriseColorPicker({
   // Hybrid eyedropper — native API or DOM/canvas fallback, always available
   // when `eyedropper` prop is true. See `eyedropper.ts`.
   const showEyedropper = eyedropper;
+  const isHorizontal = orientation === 'horizontal';
 
-  return (
-    <div
-      className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.SPACING.LG} ${colors.bg.primary} border ${getStatusBorder('muted')} ${quick.card} ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}` : ''} ${className}`}
-    >
-      {/* === COLOR AREA + HUE SLIDER === */}
-      <div className={PANEL_LAYOUT.SPACING.GAP_MD}>
-        <EnterpriseColorArea
-          value={value}
-          onChange={handleChange}
-          onChangeEnd={handleChangeEnd}
-          disabled={disabled}
-          size={192}
-        />
+  // === SECTIONS (rendered once, arranged per orientation) ===
 
-        <div className={`flex items-end ${PANEL_LAYOUT.GAP.SM}`}>
-          <HueSlider
-            value={value}
-            onChange={handleChange}
-            onChangeEnd={handleChangeEnd}
-            disabled={disabled}
-            width={192}
-            label={t('colorPicker.channels.hue')}
-          />
-          {/* Color preview swatch */}
-          <div
-            className={`${PANEL_LAYOUT.ICON.SWATCH} flex-shrink-0 ${PANEL_LAYOUT.ROUNDED.DEFAULT} border border-white/20`}
-            style={{ backgroundColor: value }}
-            role="img"
-            aria-label={t('colorPicker.colorPreview')}
-          />
-        </div>
-
-        <BrightnessSlider
-          value={value}
-          onChange={handleChange}
-          onChangeEnd={handleChangeEnd}
-          disabled={disabled}
-          width={192}
-          label={t('colorPicker.channels.brightness')}
-        />
-
-        <SaturationSlider
-          value={value}
-          onChange={handleChange}
-          onChangeEnd={handleChangeEnd}
-          disabled={disabled}
-          width={192}
-          label={t('colorPicker.channels.saturation')}
-        />
-
-        {alpha && (
-          <AlphaSlider
-            value={value}
-            onChange={handleChange}
-            onChangeEnd={handleChangeEnd}
-            disabled={disabled}
-            width={192}
-            label={t('colorPicker.channels.alpha')}
-          />
-        )}
-      </div>
-
-      {/* === MODE TABS + COLOR FIELD === */}
-      <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-        {/* Mode tabs */}
-        {modes.length > 1 && (
-          <div className={`flex ${PANEL_LAYOUT.GAP.XS} ${getDirectionalBorder('muted', 'bottom')}`}>
-            {modes.map((mode) => (
-              <button
-                key={mode}
-                onClick={() => handleModeChange(mode)}
-                disabled={disabled || readOnly}
-                className={`
-                  ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TRANSITION.COLORS}
-                  ${currentMode === mode
-                    ? `${colors.text.info} ${getDirectionalBorder('info', 'bottom')}`
-                    : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.GRAY_LIGHT}`
-                  }
-                `}
-              >
-                {mode.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Color field */}
-        <EnterpriseColorField
-          value={value}
-          onChange={handleChange}
-          mode={currentMode}
-          alpha={alpha}
-          disabled={disabled}
-          readOnly={readOnly}
-          labels={labels}
-        />
-      </div>
-
-      {/* === EYEDROPPER BUTTON === */}
-      {showEyedropper && (
-        <EyedropperButton
-          onChange={handleChange}
-          onChangeEnd={handleChangeEnd}
-          disabled={disabled}
-        />
-      )}
-
-      {/* === SWATCHES PALETTE === */}
-      <SwatchesPalette
-        paletteIds={palettes}
-        showRecent={recent}
-        value={deferredValue}
-        onChange={(color) => {
-          handleChange(color);
-          handleChangeEnd(color);
-        }}
-        swatchSize={32}
-        columns={6}
+  const colorAreaSection = (
+    <div className={PANEL_LAYOUT.SPACING.GAP_MD}>
+      <EnterpriseColorArea
+        value={value}
+        onChange={handleChange}
+        onChangeEnd={handleChangeEnd}
+        disabled={disabled}
+        size={192}
       />
 
-      {/* === CONTRAST PANEL === */}
-      {showContrast && (
-        <ContrastPanel
-          foreground={deferredValue}
-          background={contrastBackground}
+      <div className={`flex items-end ${PANEL_LAYOUT.GAP.SM}`}>
+        <HueSlider
+          value={value}
+          onChange={handleChange}
+          onChangeEnd={handleChangeEnd}
+          disabled={disabled}
+          width={192}
+          label={t('colorPicker.channels.hue')}
+        />
+        {/* Color preview swatch */}
+        <div
+          className={`${PANEL_LAYOUT.ICON.SWATCH} flex-shrink-0 ${PANEL_LAYOUT.ROUNDED.DEFAULT} border border-white/20`}
+          style={{ backgroundColor: value }}
+          role="img"
+          aria-label={t('colorPicker.colorPreview')}
+        />
+      </div>
+
+      <BrightnessSlider
+        value={value}
+        onChange={handleChange}
+        onChangeEnd={handleChangeEnd}
+        disabled={disabled}
+        width={192}
+        label={t('colorPicker.channels.brightness')}
+      />
+
+      <SaturationSlider
+        value={value}
+        onChange={handleChange}
+        onChangeEnd={handleChangeEnd}
+        disabled={disabled}
+        width={192}
+        label={t('colorPicker.channels.saturation')}
+      />
+
+      {alpha && (
+        <AlphaSlider
+          value={value}
+          onChange={handleChange}
+          onChangeEnd={handleChangeEnd}
+          disabled={disabled}
+          width={192}
+          label={t('colorPicker.channels.alpha')}
         />
       )}
+    </div>
+  );
+
+  const modeFieldSection = (
+    // Fixed width (w-48 = 192px, matching the color area) so switching
+    // HEX → RGB → HSL never changes the picker width (RGB/HSL use a 4-col grid
+    // of number inputs whose intrinsic width would otherwise widen the panel).
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} w-48`}>
+      {/* Mode tabs */}
+      {modes.length > 1 && (
+        <div className={`flex ${PANEL_LAYOUT.GAP.XS} ${getDirectionalBorder('muted', 'bottom')}`}>
+          {modes.map((mode) => (
+            <button
+              key={mode}
+              onClick={() => handleModeChange(mode)}
+              disabled={disabled || readOnly}
+              className={`
+                ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TRANSITION.COLORS}
+                ${currentMode === mode
+                  ? `${colors.text.info} ${getDirectionalBorder('info', 'bottom')}`
+                  : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.GRAY_LIGHT}`
+                }
+              `}
+            >
+              {mode.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Color field */}
+      <EnterpriseColorField
+        value={value}
+        onChange={handleChange}
+        mode={currentMode}
+        alpha={alpha}
+        disabled={disabled}
+        readOnly={readOnly}
+        labels={labels}
+      />
+    </div>
+  );
+
+  const eyedropperSection = showEyedropper ? (
+    <EyedropperButton
+      onChange={handleChange}
+      onChangeEnd={handleChangeEnd}
+      disabled={disabled}
+    />
+  ) : null;
+
+  const swatchesSection = (
+    <SwatchesPalette
+      paletteIds={palettes}
+      showRecent={recent}
+      value={deferredValue}
+      onChange={(color) => {
+        handleChange(color);
+        handleChangeEnd(color);
+      }}
+      swatchSize={32}
+      columns={6}
+    />
+  );
+
+  const contrastSection = showContrast ? (
+    <ContrastPanel
+      foreground={deferredValue}
+      background={contrastBackground}
+    />
+  ) : null;
+
+  const rootBase = `${PANEL_LAYOUT.SPACING.LG} ${colors.bg.primary} border ${getStatusBorder('muted')} ${quick.card} ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}` : ''} ${className}`;
+
+  // Horizontal: two columns side-by-side (controls | palettes) — wider, no scroll.
+  if (isHorizontal) {
+    return (
+      <div className={`flex flex-row items-start ${PANEL_LAYOUT.GAP.LG} ${rootBase}`}>
+        <div className={`flex flex-col ${PANEL_LAYOUT.GAP.LG} flex-shrink-0`}>
+          {colorAreaSection}
+          {modeFieldSection}
+          {eyedropperSection}
+        </div>
+        <div className={`flex flex-col ${PANEL_LAYOUT.GAP.LG} flex-shrink-0`}>
+          {swatchesSection}
+          {contrastSection}
+        </div>
+      </div>
+    );
+  }
+
+  // Vertical (default): single stacked column.
+  return (
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${rootBase}`}>
+      {colorAreaSection}
+      {modeFieldSection}
+      {eyedropperSection}
+      {swatchesSection}
+      {contrastSection}
     </div>
   );
 }

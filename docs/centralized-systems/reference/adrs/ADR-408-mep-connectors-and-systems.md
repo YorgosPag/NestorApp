@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | 🟢 **Φ1 + Φ2 + Φ3 DONE** — κορμός + πρώτη «πηγή» (2026-06-02, Opus 4.8). Φ1+Φ2: connector model (embedded) + MepSystem (persisted, geometry-less) + coordinator. **Φ3: ηλεκτρικός πίνακας** = full point-based BIM element (mirror ADR-406 fixture pipeline· IfcElectricDistributionBoard· outgoing power connector· units-safe panelToMesh). ✅ **BROWSER-VERIFIED 2026-06-02** (2D place→3D· persistence/refresh· delete/refresh· 3D place· click-select· ribbon/discipline visibility). Φ4–Φ5 = roadmap. 🔴 Εκκρεμεί commit (Giorgio) |
+| Status | 🟢 **Φ1 + Φ2 + Φ3 + Φ4 DONE** — κορμός + πρώτη «πηγή» + ακεραιότητα δικτύου (2026-06-02, Opus 4.8). Φ1+Φ2: connector model (embedded) + MepSystem (persisted, geometry-less) + coordinator. **Φ3: ηλεκτρικός πίνακας** = full point-based BIM element (mirror ADR-406 fixture pipeline· IfcElectricDistributionBoard· outgoing power connector· units-safe panelToMesh) ✅ **BROWSER-VERIFIED 2026-06-02**. **Φ4: cascade/integrity** — delete πίνακα-πηγής→διαλύει τα κυκλώματά του· delete μέλους→βγαίνει από το κύκλωμα· **coherent single-undo** (CompoundCommand bundle) + 2 SSoT commands (Update/Dissolve) μέσω mutator port. Φ5 = roadmap. 🔴 Εκκρεμεί commit (Giorgio) |
 | Date | 2026-06-02 |
 | Owner | Giorgio / Claude (Opus 4.8) |
 | Related | ADR-405 (discipline taxonomy & MEP foundation — **θεμέλιο**), ADR-406 (point-based MEP fixture — **πρότυπο pipeline + ο πρώτος connector host**), ADR-401 (wall attach-to-structural — **πρότυπο coordinator: reference-list + warning event, no mutation**), ADR-195 (entity audit), ADR-355/361 (Firestore service SSoT) |
@@ -131,17 +131,56 @@ classification `power`) — τροφοδοτεί κύκλωμα· (2) είναι
   backup/propagate/dxf-export maps· ribbon (Server icon, shortcut EP)+i18n el/en· firestore.rules+coverage-manifest+indexes.
 - **Tests:** geometry/symbol/schemas/completion/panel-mesh (units-safe assertion) PASS.
 
-## Roadmap (Φ4–Φ5, επόμενα push)
+## Implementation (Φ4 — Cascade / Integrity)
 
-- **Φ4** Cascade/integrity — διαγραφή πίνακα→διαλύει τα κυκλώματά του· διαγραφή μέλους→βγαίνει
-  από το κύκλωμα· `UpdateMepSystemParamsCommand` (undo/redo)· επέκταση `bim-cascade-resolver`.
-- **Φ5** UI ανάθεσης («Δημιουργία ηλεκτρικού κυκλώματος» από selection) + color-by-system +
-  scene-time reconciliation wiring (γράφει `connector.systemId` στα fixtures).
+Κλείδωμα ακεραιότητας του δικτύου **πριν** το UI ανάθεσης (Φ5). Δύο κανόνες «σαν Revit»:
+**delete πίνακα-πηγής → διαλύει τα κυκλώματά του**· **delete μέλους → βγαίνει από το κύκλωμα**
+(αφαίρεση από `MepSystem.params.members`). Απόφαση Giorgio: **coherent single-undo** (ένα Ctrl+Z
+επαναφέρει ΚΑΙ entity ΚΑΙ κυκλώματα) + **full enterprise / full SSoT** (command-based, όχι
+side-effects).
+
+- **Detection (pure SSoT)** — **NEW** `resolveMepCascadeOnDelete(deletedIds, systems): MepCascadePlan`
+  στον `mep-system-coordinator.ts` (reuse `findSystemsBySource`). Επιστρέφει `{ dissolve[],
+  memberRemovals[] }`· system που διαλύεται εξαιρείται από member-edits (δεν πειράζουμε doomed doc).
+  Καμία side effect.
+- **Mutator port (SSoT bridge)** — **NEW** `bim/mep-systems/mep-system-mutator.ts`
+  (`setMepSystemMutator`/`getMepSystemMutator` + `MepSystemMutator` interface). Module-level bridge
+  hook↔command (mirror `wall-cascade-delete-store`). Τα commands ΔΕΝ γράφουν Firestore — καλούν τον
+  port, που προωθεί στο `useMepSystemPersistence` (sole writer). Null-safe → headless no-op.
+- **Commands (undoable, SSoT primitives)** — **NEW** `UpdateMepSystemParamsCommand`
+  (member-removal τώρα· rename/assign Φ5· drag-merge) + `DissolveMepSystemCommand` (κρατά πλήρες
+  `MepSystemEntity` snapshot· undo = **id-preserving** `restoreSystem` αφού `saveSystem` δέχεται `id`).
+  Target = mutator port, ΟΧΙ `ISceneManager` (το System δεν είναι scene entity).
+- **Coherent undo (CompoundCommand)** — στο `useSmartDelete` η διαγραφή MEP entity + τα cascade
+  commands τυλίγονται σε ΕΝΑ `CompoundCommand('Delete MEP', …)` → ένα atomic undo unit. Τα
+  υπάρχοντα `bim:*-delete-requested` emits (Firestore delete panel/fixture) μένουν ανέπαφα·
+  `bim:entity-restore-requested` (undo) επαναφέρει το entity, η `CompoundCommand.undo` επαναφέρει τα
+  systems — coherent.
+- **Persistence** — `useMepSystemPersistence` + `restoreSystem` (id-preserving `saveSystem` + audit
+  `'restored'` + un-suppress deletedIds) + register/unregister του mutator port (useEffect).
+- **Safety net (belt-and-suspenders)** — το resync-time `notifyMissingSystemMembers` παραμένει για
+  τυχόν dangling references εκτός cascade path.
+- **Tests:** coordinator cascade-plan (5) + commands/compound integration (10) PASS· `tsc` 0·
+  zero νέα Firestore query (καμία αλλαγή rules/indexes/coverage).
+
+## Roadmap (Φ5, επόμενο push)
+
+- **Φ5** UI ανάθεσης («Δημιουργία ηλεκτρικού κυκλώματος» από selection — καταναλώνει το
+  `UpdateMepSystemParamsCommand` για rename/assign) + color-by-system + scene-time reconciliation
+  wiring (γράφει `connector.systemId` στα fixtures/panels).
 - duct/pipe domains & systems — reserved στα types, no pipeline.
 
 ---
 
 ## Changelog
+- **2026-06-02 (Opus 4.8)** — **Φ4 DONE** (cascade / integrity). Delete πίνακα-πηγής→διαλύει τα
+  κυκλώματά του· delete μέλους→βγαίνει από το κύκλωμα. **Coherent single-undo** μέσω `CompoundCommand`
+  bundle (entity delete + system commands). NEW pure `resolveMepCascadeOnDelete` (coordinator, reuse
+  `findSystemsBySource`)· NEW `mep-system-mutator` port (hook↔command bridge, SSoT-preserving)· NEW
+  `UpdateMepSystemParamsCommand` + `DissolveMepSystemCommand` (target mutator port, id-preserving
+  restore)· `useMepSystemPersistence.restoreSystem` + mutator registration· `useSmartDelete` compound
+  wiring. 15 νέα tests (cascade-plan 5 + commands/compound 10), tsc 0, zero νέα Firestore query.
+  Pending commit. Φ5 roadmap.
 - **2026-06-02 (Opus 4.8)** — **Φ3 DONE** (ηλεκτρικός πίνακας — η πρώτη circuit «πηγή»). Full
   point-based BIM element mirror του ADR-406 fixture pipeline: ~20 νέα αρχεία + ~40 registration
   touch-points (EntityType→rules→ribbon→3D). `IfcElectricDistributionBoard`, outgoing power
