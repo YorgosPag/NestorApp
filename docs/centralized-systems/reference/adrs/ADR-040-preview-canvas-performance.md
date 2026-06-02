@@ -71,6 +71,19 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-02 — ADR-408 Φ5 colour-by-system (micro-leaf compliance note)
+
+**Status**: COMPLIANT — no ADR-040 invariants broken.
+
+Το ADR-408 Φ5 (colour-by-system) πρόσθεσε χρωματισμό ανά κύκλωμα στους entity renderers
+`MepFixtureRenderer` + `ElectricalPanelRenderer`. **Συμμόρφωση:** zero νέα subscription — το χρώμα
+διαβάζεται **draft-time** μέσω `useMepSystemStore.getState()` (ίδιο pattern με το `useDrawingScaleStore.
+getState()` του visibility check), όχι `useSyncExternalStore`. Ο index μνημονεύεται κατά reference
+(`getEntitySystemColorIndexCached`) ώστε να μη χτίζεται ανά-entity ανά-frame. Το `systemId`/χρώμα **ΔΕΝ**
+μπαίνει σε bitmap cache key (Cardinal Rule 3 — δεν αγγίχτηκε ο cache key· τα MEP entities δεν περνούν από
+το bitmap cache). 3D: `BimSceneLayer.buildContext` χτίζει `systemColorIndex` μία φορά/floor-sync (όχι
+high-freq)· resync σε αλλαγή systems μέσω `use-bim3d-vg-resync` (mirror του objectStyles sub).
+
 ### 2026-06-02 — ADR-408 Φ3 electrical-panel 2D ghost micro-leaf (compliance note)
 
 **Status**: COMPLIANT — no ADR-040 invariants broken.

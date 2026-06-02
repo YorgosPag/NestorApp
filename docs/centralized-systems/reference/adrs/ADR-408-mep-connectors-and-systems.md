@@ -163,16 +163,73 @@ side-effects).
 - **Tests:** coordinator cascade-plan (5) + commands/compound integration (10) PASS· `tsc` 0·
   zero νέα Firestore query (καμία αλλαγή rules/indexes/coverage).
 
-## Roadmap (Φ5, επόμενο push)
+## Implementation (Φ5 — Circuit UI + colour-by-system + reconciliation)
 
-- **Φ5** UI ανάθεσης («Δημιουργία ηλεκτρικού κυκλώματος» από selection — καταναλώνει το
-  `UpdateMepSystemParamsCommand` για rename/assign) + color-by-system + scene-time reconciliation
-  wiring (γράφει `connector.systemId` στα fixtures/panels).
+Εδώ «καταναλώνεται» ο κορμός: ο χρήστης φτιάχνει κυκλώματα από το UI, τα βλέπει χρωματισμένα (2D+3D),
+και το `connector.systemId` cache συγχρονίζεται («System always wins»). Απόφαση Giorgio:
+**full enterprise / full SSoT, Revit-grade** → το **System κατέχει το χρώμα του** (persisted, editable).
+
+### Φ5.A — Create-circuit UI από selection
+- **Colour SSoT** — `MepSystemParams.color?` (persisted hex· `.strict()` Zod schema + `regex`). **NEW**
+  `bim/mep-systems/mep-system-color.ts`: `MEP_SYSTEM_PALETTE` + `pickNextSystemColor` (least-used,
+  deterministic) + `buildEntitySystemColorIndex`/`resolveEntitySystemColor` (entityId→colour, source+
+  members) + `hexToThreeInt`/`buildEntitySystemColorIntIndex`/`hexToRgba` + reference-memo
+  `getEntitySystemColorIndexCached`. Firestore rules valid-άρουν μόνο top-level keys → **zero** αλλαγή
+  rules/indexes.
+- **Resolution (pure SSoT)** — **NEW** `bim/mep-systems/mep-circuit-from-selection.ts`:
+  `resolveCircuitFromSelection(selected, systems)` → source (πίνακας `flow:'out'`) + members (φωτιστικά
+  `flow:'in'`) + **reassignRemovals** (Revit single-circuit rule: μέλος ήδη σε κύκλωμα → **μεταφέρεται**,
+  βγαίνει από το παλιό). Typed errors (`no-source`/`multiple-sources`/`no-members`).
+- **Command (undoable)** — **NEW** `CreateMepSystemCommand` (inverse του `DissolveMepSystemCommand`:
+  pre-minted enterprise id· `execute/redo → mutator.createSystem`· `undo → dissolveSystem`).
+  `MepSystemMutator += createSystem(entity)`· `useMepSystemPersistence` shared `persistSystemEntity`
+  (id-preserving, audit `'created'`/`'restored'`) + `createSystemEntity` + port register.
+- **Ribbon UI (clone beam pattern)** — **NEW** contextual tab `contextual-mep-circuit-tab.ts`
+  (trigger όταν selection έχει ≥1 πίνακα ΚΑΙ ≥1 φωτιστικό, `ribbon-contextual-config.ts`) +
+  `mep-circuit-command-keys.ts` + `useRibbonMepCircuitBridge` (resolve→`CompoundCommand(create +
+  reassign UpdateMepSystemParamsCommand)`→`executeCommand`)· wired σε `useDxfBimBridges`/
+  `useDxfViewerRibbon`/`useRibbonCommands`. Feedback = EventBus → `useDxfViewerNotifications` toasts
+  (decoupled). i18n el+en.
+
+### Φ5.B — Scene-time reconciliation
+- **NEW** `hooks/data/useMepConnectorReconciliation.ts`: subscribe `useMepSystemStore` + scene change →
+  `buildConnectorSystemIndex` → `reconcileEntityConnectors` ανά fixture/panel → ΕΝΑ `setLevelScene` μόνο
+  σε πραγματική αλλαγή (idempotent, referential-stable → κανένα render loop). **Scene-only (όχι
+  Firestore)** — derived cache, ξαναχτίζεται από truth σε κάθε load. Mount στο `MepSystemPersistenceHost`.
+
+### Φ5.C — Colour-by-system (2D + 3D)
+- **2D (ADR-040 micro-leaves)** — `MepFixtureRenderer`/`ElectricalPanelRenderer`: μετά το visibility
+  guard, read `useMepSystemStore.getState()` (zero-subscription), override stroke/fill με το χρώμα του
+  system (`getEntitySystemColorIndexCached` + `hexToRgba`)· unassigned → default amber/teal.
+- **3D** — `SyncContext += systemColorIndex` (entityId→THREE int)· `BimSceneLayer.buildContext` το χτίζει
+  (`buildEntitySystemColorIntIndex`)· `syncFixtures`/`syncPanels` το περνούν στους converters·
+  `fixtureToMesh`/`panelToMesh += systemColor?`· **NEW** `getSystemTintedMaterial3D` (cache per
+  `${type}:${colorInt}`, **ΠΟΤΕ** mutate singleton)· `use-bim3d-vg-resync` subscription (d) →
+  resync σε αλλαγή systems.
+- **Always-on** (assigned vs unassigned)· toggle «colour by system» = roadmap.
+- **Tests:** `mep-circuit-from-selection` (6) + `mep-system-color` (8) + `CreateMepSystemCommand` (3) +
+  `useMepConnectorReconciliation` (3) + `MaterialCatalog3D-system-tint` (2)· `tsc` 0· 124/124 MEP
+  regression PASS. (25 pre-existing wall-fixture 3D failures = ΟΧΙ regression.)
+
+## Roadmap (επόμενο push)
+
+- Per-circuit **rename / colour-edit / add-remove member** panel (καταναλώνει το έτοιμο
+  `UpdateMepSystemParamsCommand`)· «colour by system» view toggle.
 - duct/pipe domains & systems — reserved στα types, no pipeline.
 
 ---
 
 ## Changelog
+- **2026-06-02 (Opus 4.8)** — **Φ5 DONE** (Circuit UI + colour-by-system + scene-time reconciliation).
+  «Καταναλώνεται» ο κορμός. **Φ5.A:** persisted `MepSystemParams.color` (Revit System Colour, zero αλλαγή
+  rules)· NEW `mep-system-color` (palette/pick/index SSoT) + `mep-circuit-from-selection` (source+members+
+  Revit single-circuit reassign) + `CreateMepSystemCommand` (mutator `createSystem`, undoable) +
+  contextual ribbon tab «Δημιουργία κυκλώματος» (clone beam, trigger=πίνακας+φωτιστικά) + EventBus toasts.
+  **Φ5.B:** NEW `useMepConnectorReconciliation` (scene-only, idempotent, System→connector «System wins»),
+  mount στο `MepSystemPersistenceHost`. **Φ5.C:** colour-by-system 2D (Mep/Panel renderers, ADR-040
+  leaves) + 3D (`SyncContext.systemColorIndex` + `getSystemTintedMaterial3D` no-singleton-mutation +
+  resync sub). 22 νέα tests, tsc 0, 124/124 MEP regression PASS. Pending commit· browser verify. **Stage
+  ADR-040 (CHECK 6B/6D).** Roadmap: per-circuit edit panel + colour-by-system toggle.
 - **2026-06-02 (Opus 4.8)** — **Φ4 DONE** (cascade / integrity). Delete πίνακα-πηγής→διαλύει τα
   κυκλώματά του· delete μέλους→βγαίνει από το κύκλωμα. **Coherent single-undo** μέσω `CompoundCommand`
   bundle (entity delete + system commands). NEW pure `resolveMepCascadeOnDelete` (coordinator, reuse
