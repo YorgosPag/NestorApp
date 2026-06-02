@@ -71,6 +71,9 @@ export function useActiveContextualTrigger({
 }): string | null {
   // ADR-366 §C.1.b — surface animation contextual tab when AnimationStore.toolActive flips.
   const animationToolActive = useAnimationStore(selectAnimationToolActive);
+  // ADR-408 Φ6 — the circuit tab also surfaces when the selection touches an
+  // existing circuit (manage mode), so subscribe to the systems store.
+  const mepSystems = useMepSystemStore((s) => s.systems);
   return React.useMemo<string | null>(() => {
     if (animationToolActive) return ANIMATION_CONTEXTUAL_TRIGGER;
     // ADR-408 Φ5: mixed MEP selection (≥1 electrical panel = source + ≥1 light
@@ -86,6 +89,20 @@ export function useActiveContextualTrigger({
         if (hasPanel && hasFixture) break;
       }
       if (hasPanel && hasFixture) return MEP_CIRCUIT_CONTEXTUAL_TRIGGER;
+    }
+    // ADR-408 Φ6: selecting an electrical panel that feeds ≥1 circuit surfaces
+    // the circuit tab in manage mode (picker → its circuits). Panel-centric so a
+    // selected fixture keeps its own fixture-properties tab (Revit shows the
+    // circuit from the panel / system browser, not in place of device props).
+    // Resolved from the primary selection to match `useMepCircuitEditorSync`.
+    if (primarySelectedId && currentScene && mepSystems.length > 0) {
+      const primary = currentScene.entities.find((e) => e.id === primarySelectedId);
+      if (
+        primary?.type === 'electrical-panel' &&
+        resolveManagedCircuits([primary], mepSystems).length > 0
+      ) {
+        return MEP_CIRCUIT_CONTEXTUAL_TRIGGER;
+      }
     }
     // ADR-363 Phase 7.1: multi-selection of BIM entities → dedicated tab.
     if (selectedEntityIds && selectedEntityIds.length >= 2 && currentScene) {
@@ -147,7 +164,7 @@ export function useActiveContextualTrigger({
       activeTool === 'ellipse'
     ) return LINE_TOOL_CONTEXTUAL_TRIGGER;
     return null;
-  }, [primarySelectedId, selectedEntityIds, currentScene, activeTool, animationToolActive]);
+  }, [primarySelectedId, selectedEntityIds, currentScene, activeTool, animationToolActive, mepSystems]);
 }
 
 export function resolveContextualTrigger(entity: EntityLike): string | null {

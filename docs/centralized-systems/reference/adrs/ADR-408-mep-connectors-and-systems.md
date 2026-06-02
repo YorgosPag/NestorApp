@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | 🟢 **Φ1 + Φ2 + Φ3 + Φ4 DONE** — κορμός + πρώτη «πηγή» + ακεραιότητα δικτύου (2026-06-02, Opus 4.8). Φ1+Φ2: connector model (embedded) + MepSystem (persisted, geometry-less) + coordinator. **Φ3: ηλεκτρικός πίνακας** = full point-based BIM element (mirror ADR-406 fixture pipeline· IfcElectricDistributionBoard· outgoing power connector· units-safe panelToMesh) ✅ **BROWSER-VERIFIED 2026-06-02**. **Φ4: cascade/integrity** — delete πίνακα-πηγής→διαλύει τα κυκλώματά του· delete μέλους→βγαίνει από το κύκλωμα· **coherent single-undo** (CompoundCommand bundle) + 2 SSoT commands (Update/Dissolve) μέσω mutator port. Φ5 = roadmap. 🔴 Εκκρεμεί commit (Giorgio) |
+| Status | 🟢 **Φ1 + Φ2 + Φ3 + Φ4 DONE** — κορμός + πρώτη «πηγή» + ακεραιότητα δικτύου (2026-06-02, Opus 4.8). Φ1+Φ2: connector model (embedded) + MepSystem (persisted, geometry-less) + coordinator. **Φ3: ηλεκτρικός πίνακας** = full point-based BIM element (mirror ADR-406 fixture pipeline· IfcElectricDistributionBoard· outgoing power connector· units-safe panelToMesh) ✅ **BROWSER-VERIFIED 2026-06-02**. **Φ4: cascade/integrity** — delete πίνακα-πηγής→διαλύει τα κυκλώματά του· delete μέλους→βγαίνει από το κύκλωμα· **coherent single-undo** (CompoundCommand bundle) + 2 SSoT commands (Update/Dissolve) μέσω mutator port. **Φ5 DONE + ✅ BROWSER-VERIFIED + COMMITTED** (Circuit UI + colour-by-system + reconciliation). **Φ6 DONE** (2026-06-02, Opus 4.8): Circuit-Management Panel — rename/colour (κεντρικός ColorDialogTrigger)/add-remove member μέσω έτοιμου `UpdateMepSystemParamsCommand`· panel-centric trigger· 144/144 MEP PASS, tsc 0. Φ7 (ορατά καλώδια) = roadmap. 🔴 Εκκρεμεί commit (Giorgio) + browser verify Φ6 |
 | Date | 2026-06-02 |
 | Owner | Giorgio / Claude (Opus 4.8) |
 | Related | ADR-405 (discipline taxonomy & MEP foundation — **θεμέλιο**), ADR-406 (point-based MEP fixture — **πρότυπο pipeline + ο πρώτος connector host**), ADR-401 (wall attach-to-structural — **πρότυπο coordinator: reference-list + warning event, no mutation**), ADR-195 (entity audit), ADR-355/361 (Firestore service SSoT) |
@@ -216,15 +216,54 @@ side-effects).
   `useMepConnectorReconciliation` (3) + `MaterialCatalog3D-system-tint` (2)· `tsc` 0· 124/124 MEP
   regression PASS. (25 pre-existing wall-fixture 3D failures = ΟΧΙ regression.)
 
+## Implementation (Φ6 — Circuit-Management Panel)
+
+Διαχείριση **υπάρχοντος** κυκλώματος (Revit "Electrical Circuits" properties) — όλα μέσω του ΕΤΟΙΜΟΥ
+undoable `UpdateMepSystemParamsCommand` (καμία νέα command/mutator/rules αλλαγή). UI = επέκταση του Φ5
+contextual ribbon tab (απόφαση Giorgio), **panel-centric** (Revit-faithful: το φωτιστικό κρατά το δικό
+του fixture tab· το κύκλωμα διαχειρίζεται από τον πίνακα/system browser).
+
+- **Active managed circuit (SSoT):** NEW `mep-circuit-editor-store.ts` (zustand `activeSystemId`) — γνήσια
+  ephemeral UI state (δεν παράγεται όταν ένας πίνακας τροφοδοτεί >1 κύκλωμα → ο χρήστης διαλέγει).
+  NEW `useMepCircuitEditorSync` (always-on, mount στο `MepSystemPersistenceHost`): από το primary selection
+  → `resolveManagedCircuits` → reconcile `activeSystemId` (κρατά έγκυρη επιλογή, αλλιώς πρώτος candidate).
+- **Pure SSoT:** NEW `mep-circuit-editor.ts` — `resolveManagedCircuits` (member-of ∪ source-of, reuse
+  `findSystemMembershipsByEntity` + `findSystemsBySource`)· `buildAddMembersUpdate` (union + Revit reassign)
+  · `buildRemoveMembersUpdate` (idempotent). **Boy-scout:** το `computeReassignRemovals` εξήχθη στον
+  `mep-system-coordinator` (SSoT) και το `mep-circuit-from-selection` το κάνει reuse (dedupe).
+- **UI:** 3 leaf widgets (ADR-040) — `RibbonMepCircuitPickerWidget` (1 candidate → read-only label· >1 →
+  dropdown → `setActiveSystemId`)· `RibbonMepCircuitNameWidget` (rename, debounced `isDragging` merge σε 1
+  undo, blur/Enter flush, ESC revert· μοτίβο `RibbonWallDimensionWidget`)· `RibbonMepCircuitColorWidget`
+  (**κεντρικός** `ColorDialogTrigger`/`EnterpriseColorDialog` hex in/out, ίδιος picker με opening-tag/grid).
+  Νέο panel `mep-circuit-properties` στο tab + actions `addMembers`/`removeMembers` (bridge handlers,
+  selection-driven, CompoundCommand update+reassign). EventBus `bim:mep-circuit-members-added/-removed/
+  -edit-failed` → toasts.
+- **Trigger:** `useActiveContextualTrigger` subscribe `useMepSystemStore`· surfaces το tab όταν primary =
+  electrical-panel που τροφοδοτεί ≥1 κύκλωμα (πέρα από το Φ5 create-case πίνακας+φωτιστικά). Colour edit →
+  αυτόματο resync (2D leaf store-read· 3D `use-bim3d-vg-resync`), μηδέν νέο render code.
+- **SSoT διατηρείται:** System κατέχει `members[]`+`color`· πίνακας-πηγή ΔΕΝ χρωματίζεται· colour resolver =
+  ένα SSoT· connector cache διορθώνεται από το Φ5 reconciliation.
+- **Tests:** `mep-circuit-editor` (15) + `mep-circuit-editor-store` (3)· `tsc` 0· 144/144 MEP regression
+  PASS. (25 pre-existing wall-fixture 3D failures = ΟΧΙ regression.)
+
 ## Roadmap (επόμενο push)
 
-- Per-circuit **rename / colour-edit / add-remove member** panel (καταναλώνει το έτοιμο
-  `UpdateMepSystemParamsCommand`)· «colour by system» view toggle.
+- «colour by system» view toggle (τώρα always-on)· per-circuit edit από φωτιστικό (system-browser panel)·
+  ορατά καλώδια/home-run (Φ7).
 - duct/pipe domains & systems — reserved στα types, no pipeline.
 
 ---
 
 ## Changelog
+- **2026-06-02 (Opus 4.8)** — **Φ6 DONE** (Circuit-Management Panel — rename / colour / add-remove member).
+  Διαχείριση υπάρχοντος κυκλώματος μέσω του ΕΤΟΙΜΟΥ `UpdateMepSystemParamsCommand` (zero νέα command/
+  mutator/rules). NEW `mep-circuit-editor` (pure: `resolveManagedCircuits` + add/remove builders) +
+  `mep-circuit-editor-store` (active circuit) + `useMepCircuitEditorSync` (selection→active, mount στο
+  `MepSystemPersistenceHost`). Boy-scout: `computeReassignRemovals` → SSoT στον coordinator (reuse από
+  `mep-circuit-from-selection`). 3 leaf widgets (picker/name/**κεντρικός** `ColorDialogTrigger`/color) +
+  properties panel + addMembers/removeMembers bridge actions (CompoundCommand) + EventBus toasts + i18n
+  el+en. Trigger panel-centric (electrical-panel που τροφοδοτεί ≥1 κύκλωμα). `tsc` 0· 144/144 MEP PASS
+  (20 νέα). 🔴 Pending commit (Giorgio) + browser verify.
 - **2026-06-02 (Opus 4.8)** — **Φ5 DONE** (Circuit UI + colour-by-system + scene-time reconciliation).
   «Καταναλώνεται» ο κορμός. **Φ5.A:** persisted `MepSystemParams.color` (Revit System Colour, zero αλλαγή
   rules)· NEW `mep-system-color` (palette/pick/index SSoT) + `mep-circuit-from-selection` (source+members+
