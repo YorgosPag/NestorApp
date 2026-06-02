@@ -214,11 +214,16 @@ export interface DrawingEventMap {
   // ADR-363 Phase 4 — BIM column params + delete events
   'bim:column-params-updated': { columnId: string };
   'bim:column-delete-requested': { columnId: string };
+  // ADR-406 — BIM MEP fixture params + delete events
+  'bim:mep-fixture-params-updated': { fixtureId: string };
+  'bim:mep-fixture-delete-requested': { fixtureId: string };
   // ADR-403 — 3D column placement: the 3D viewport projected a click onto the
   // active floor plane and converted it to the active scene units. The 2D
   // `useColumnTool` listens and runs its existing `onCanvasClick(point)` commit
   // path (enterprise id + scene append + auto 3D-resync) — no logic duplicated.
   'bim:place-column-3d': { point: Point2D };
+  // ADR-406 — 3D MEP fixture placement (mirror of bim:place-column-3d).
+  'bim:place-mep-fixture-3d': { point: Point2D };
   // ADR-401 — 3D manual attach pick-host: the 3D viewport raycast a structural
   // host (beam/slab) while a `*-attach-top/-base` tool is active. The 2D
   // `useWallAttachTool` listens and dispatches the existing Attach{Walls|Columns|
@@ -241,7 +246,8 @@ export interface DrawingEventMap {
   // via `payload.entityType` + `isXType(snapshot)`. Emitted by
   // DeleteEntityCommand.undo() and DeleteMultipleEntitiesCommand.undo().
   'bim:entity-restore-requested': {
-    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair';
+    // ADR-406 — 'mep-fixture' appended.
+    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture';
     entitySnapshot: AnySceneEntity;
     source: 'undo-delete' | 'redo-restore';
   };

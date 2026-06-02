@@ -388,6 +388,7 @@
 | **ADR-403** | 3D Viewport BIM Element Placement (Column) | ✅ APPROVED | 2026-06-01 | Uncategorized | [📄](./adrs/ADR-403-3d-bim-element-placement.md) |
 | **ADR-404** | 3D BIM Element Tilt (Slope-Based, All Axes) | 🟢 Phase 1+2+3 DONE | 2026-06-01 | Uncategorized | [📄](./adrs/ADR-404-3d-bim-element-tilt.md) |
 | **ADR-405** | BIM Discipline Taxonomy & MEP Foundation (Step 1 + §4) | ✅ DONE | 2026-06-02 | Uncategorized | [📄](./adrs/ADR-405-bim-discipline-taxonomy-and-mep-foundation.md) |
+| **ADR-406** | Point-Based MEP Fixture (Light Fixture) — Vertical Slice (Step 3) | ✅ DONE | 2026-06-02 | Uncategorized | [📄](./adrs/ADR-406-point-based-mep-fixture.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -760,6 +761,7 @@
 | **ADR-403** | 3D Viewport BIM Element Placement (Column) | ✅ APPROVED | [View](./adrs/ADR-403-3d-bim-element-placement.md) |
 | **ADR-404** | 3D BIM Element Tilt (Slope-Based, All Axes) | 🟢 Phase 1+2+3 DONE | [View](./adrs/ADR-404-3d-bim-element-tilt.md) |
 | **ADR-405** | BIM Discipline Taxonomy & MEP Foundation (Step 1 + §4) | ✅ DONE | [View](./adrs/ADR-405-bim-discipline-taxonomy-and-mep-foundation.md) |
+| **ADR-406** | Point-Based MEP Fixture (Light Fixture) — Vertical Slice (Step 3) | ✅ DONE | [View](./adrs/ADR-406-point-based-mep-fixture.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

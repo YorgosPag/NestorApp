@@ -27,7 +27,9 @@ import { EventBus } from '../../systems/events/EventBus';
 import type { AnySceneEntity } from '../../types/entities';
 
 type BimRestoreEntityType =
-  | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair';
+  | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
+  // ADR-406 — point-based MEP fixture.
+  | 'mep-fixture';
 
 export function useBimEntityRestoredPersistEffect<T extends AnySceneEntity, S>(
   entityType: BimRestoreEntityType,

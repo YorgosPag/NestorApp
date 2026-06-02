@@ -35,7 +35,7 @@ import {
 } from '../../bim-3d/scene/multi-floor-3d-source';
 import {
   isWallEntity, isColumnEntity, isBeamEntity, isSlabEntity,
-  isSlabOpeningEntity, isOpeningEntity, isStairEntity,
+  isSlabOpeningEntity, isOpeningEntity, isStairEntity, isMepFixtureEntity,
 } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
 
@@ -57,6 +57,7 @@ function extractBim3DEntities(scene: SceneModel): Bim3DEntities {
     slabOpenings: e.filter(isSlabOpeningEntity),
     openings: e.filter(isOpeningEntity),
     stairs: e.filter(isStairEntity),
+    fixtures: e.filter(isMepFixtureEntity),
   };
 }
 
@@ -87,13 +88,14 @@ export function useFloors3DAggregator(active: boolean): void {
   const slabOpenings = useBim3DEntitiesStore((s) => s.slabOpenings);
   const openings = useBim3DEntitiesStore((s) => s.openings);
   const stairs = useBim3DEntitiesStore((s) => s.stairs);
+  const fixtures = useBim3DEntitiesStore((s) => s.fixtures);
 
   // Firestore snapshots for floors the user has not visited this session.
   const [loaded, setLoaded] = useState<ReadonlyMap<string, Bim3DEntities>>(new Map());
 
   const liveActive = useMemo<Bim3DEntities>(
-    () => ({ walls, columns, beams, slabs, slabOpenings, openings, stairs }),
-    [walls, columns, beams, slabs, slabOpenings, openings, stairs],
+    () => ({ walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures }),
+    [walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures],
   );
 
   // One target per building floor (first level wins for a floor with duplicates).

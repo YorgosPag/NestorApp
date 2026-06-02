@@ -28,6 +28,10 @@ export function Bim3DReadOnlyOverlay({ bimSnapshot, projectId, onClose }: Bim3DR
       slabOpenings: bimSnapshot.slabOpenings,
       openings: bimSnapshot.openings,
       stairs: bimSnapshot.stairs,
+      // ADR-406 — the read-only media preview loader does not query the
+      // floorplan_mep_fixtures collection yet (deferred). Empty keeps the 3D
+      // overlay valid; fixtures show in the full DXF viewer.
+      fixtures: [],
     }),
     [bimSnapshot.walls, bimSnapshot.columns, bimSnapshot.beams, bimSnapshot.slabs, bimSnapshot.slabOpenings, bimSnapshot.openings, bimSnapshot.stairs],
   );

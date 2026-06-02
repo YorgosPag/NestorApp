@@ -27,6 +27,12 @@ describe('ADR-405 DISCIPLINE_BY_CATEGORY', () => {
     expect(DISCIPLINE_BY_CATEGORY.slab).toBe('structural');
   });
 
+  it('ADR-406: light-fixture → electrical (first MEP placeable category)', () => {
+    expect(DISCIPLINE_BY_CATEGORY['light-fixture']).toBe('electrical');
+    // and the inverse map lists it under electrical.
+    expect(CATEGORIES_BY_DISCIPLINE.electrical).toContain('light-fixture');
+  });
+
   it('locked decision: column/beam/stair → structural', () => {
     expect(DISCIPLINE_BY_CATEGORY.column).toBe('structural');
     expect(DISCIPLINE_BY_CATEGORY.beam).toBe('structural');
@@ -62,9 +68,11 @@ describe('ADR-405 CATEGORIES_BY_DISCIPLINE (inverse)', () => {
   });
 
   it('disciplines with no placeable category yet map to []', () => {
+    // ADR-406 added the first electrical placeable category (light-fixture);
+    // mechanical/plumbing remain reserved for the rest of the MEP roadmap.
     expect(CATEGORIES_BY_DISCIPLINE.mechanical).toEqual([]);
-    expect(CATEGORIES_BY_DISCIPLINE.electrical).toEqual([]);
     expect(CATEGORIES_BY_DISCIPLINE.plumbing).toEqual([]);
+    expect(CATEGORIES_BY_DISCIPLINE.electrical).toEqual(['light-fixture']);
   });
 });
 

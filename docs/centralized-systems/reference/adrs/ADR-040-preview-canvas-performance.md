@@ -71,6 +71,18 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-02 — ADR-406 MEP fixture tool wiring (compliance note)
+
+**Status**: COMPLIANT — no ADR-040 invariants broken.
+
+Το `CanvasSection.tsx` (orchestrator) και το `canvas-click-types.ts` πρόσθεσαν το νέο
+`mepFixtureTool` (ADR-406) ως **pass-through**: destructure από `useSpecialTools` + προώθηση
+στο `useCanvasClickHandler` (click routing), όπως ακριβώς τα υπάρχοντα `columnTool`/`beamTool`.
+**Καμία** νέα `useSyncExternalStore` στον orchestrator, καμία αλλαγή στο bitmap-cache key ή στο
+subscription model. Ο νέος `MepFixtureRenderer` είναι pure micro-leaf (ZERO subscriptions, state
+read event-time via `useDrawingScaleStore.getState()`), mirror του `ColumnRenderer`. CHECK 6B/6C/6D
+invariants ανέπαφα.
+
 ### 2026-06-01 — ADR-363 «Δομικά από περίγραμμα» selection-highlight tool-gate (compliance note)
 
 **Status**: COMPLIANT — no ADR-040 invariants broken.

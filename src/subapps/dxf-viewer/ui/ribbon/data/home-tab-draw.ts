@@ -381,6 +381,16 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'stair',
               shortcut: 'ST',
             },
+            // ADR-406 — point-based MEP fixture (light fixture first). Single-click
+            // placement; discipline = electrical (ADR-405 discipline visibility).
+            {
+              id: 'draw.bim.mepFixture',
+              labelKey: 'ribbon.commands.bim.mepFixture.label',
+              tooltipKey: 'ribbon.commands.bim.mepFixture.tooltip',
+              icon: 'bim-light-fixture',
+              commandKey: 'mep-fixture',
+              shortcut: 'LF',
+            },
           ],
         },
       ],

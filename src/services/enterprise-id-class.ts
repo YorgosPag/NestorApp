@@ -346,6 +346,7 @@ export class EnterpriseIdService {
   generateBimStackGroupId(): string { return this.generateId(P.BIM_STACK_GROUP).id; }
   generateColumnId(): string { return this.generateId(P.COLUMN).id; }
   generateBeamId(): string { return this.generateId(P.BEAM).id; }
+  generateMepFixtureId(): string { return this.generateId(P.MEP_FIXTURE).id; }
   generateBimPresetId(): string { return this.generateId(P.BIM_PRESET).id; }
   generateBimMaterialId(): string { return this.generateId(P.BIM_MATERIAL).id; }
   generateBimSettingsId(): string { return this.generateId(P.BIM_SETTINGS).id; }

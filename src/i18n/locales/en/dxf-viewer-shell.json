@@ -21,13 +21,18 @@
     "noneBuilt": "No valid structural-wall perimeter found in the selection."
   },
   "perimeterColumnDiscrete": {
-    "built": "Created {columns} columns from the perimeter.",
-    "builtMixed": "Created {columns} columns and {walls} structural walls from the perimeter.",
+    "nColumns_one": "{count} column",
+    "nColumns_other": "{count} columns",
+    "nWalls_one": "{count} structural wall",
+    "nWalls_other": "{count} structural walls",
+    "built_one": "Created {count} column from the perimeter.",
+    "built_other": "Created {count} columns from the perimeter.",
+    "builtMixed": "Created {columns} and {walls} from the perimeter.",
     "noneBuilt": "No valid perimeter found in the selection."
   },
   "perimeterColumnConfirm": {
     "title": "Section classification",
-    "message": "Based on the side ratios of the sections, {walls} structural walls and {columns} columns will be created. The ratios of some perimeters do not allow creating a column. Continue?",
+    "message": "Based on the side ratios of the sections, {walls} and {columns} will be created. The ratios of some perimeters do not allow creating a column. Continue?",
     "create": "Create",
     "cancel": "Cancel"
   },
@@ -457,6 +462,9 @@
         "invalidTshapeWeb": "Invalid T-shape web thickness",
         "invalidTshapeFlange": "Invalid T-shape flange length"
       }
+    },
+    "mepFixture": {
+      "statusPosition": "Click to place light fixture"
     },
     "beam": {
       "statusStart": "Pick beam start point",
@@ -938,9 +946,13 @@
           "label": "Beam from wall",
           "tooltip": "Pick an existing wall → a beam is created on its axis (width = wall thickness); the wall auto-adjusts its top beneath the beam"
         },
+        "mepFixture": {
+          "label": "Light fixture",
+          "tooltip": "Place a ceiling light fixture with a single click (discipline: electrical) (shortcut LF)"
+        },
         "group": {
           "label": "Structural Elements",
-          "tooltip": "BIM structural elements (wall, opening, slab, slab opening, column, beam, stair)"
+          "tooltip": "BIM structural elements (wall, opening, slab, slab opening, column, beam, stair, light fixture)"
         }
       },
       "select": "Select",
@@ -2094,6 +2106,16 @@
         "maxSlendernessExceeded": "Slenderness ratio above 30 — Eurocode check",
         "shearWallThicknessTooSmall": "Wall thickness below Eurocode 8 minimum (150mm)",
         "shearWallAspectRatioBelow": "Length-to-thickness ratio below 4 — not a shear wall"
+      }
+    }
+  },
+  "mepFixture": {
+    "validation": {
+      "hardErrors": {
+        "nonPositiveWidth": "Width must be greater than 0",
+        "nonPositiveLength": "Length must be greater than 0",
+        "nonPositiveBodyHeight": "Body thickness must be greater than 0",
+        "dimensionTooSmall": "Dimension is below the minimum allowed"
       }
     }
   },

@@ -20,6 +20,7 @@ import type { BeamEntity } from '../../bim/types/beam-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
+import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { getMaterial3D, getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildWallMeshWithOpenings } from './wall-opening-extrude';
@@ -403,6 +404,37 @@ export function beamToMesh(
   mesh.position.y = beamTopMm * MM_TO_M - beamDepthM + buildingBaseElevationM;
   const tagged = tagMesh(mesh, beam.id, 'beam', matId, levelId);
   attachEdgesProjection(tagged, 'beam');
+  return tagged;
+}
+
+/**
+ * ADR-406 — point-based MEP fixture → solid mesh. The footprint is extruded by
+ * the body thickness; the solid is positioned so its TOP face sits at the
+ * mounting elevation (ceiling-relative, Revit work-plane placement) — i.e. it
+ * hangs down from the ceiling by `bodyHeightMm`. Mirror of `beamToMesh` (which
+ * also hangs down from a top elevation).
+ */
+export function fixtureToMesh(
+  fixture: MepFixtureEntity,
+  floorElevationMm = 0,
+  levelId?: string,
+  buildingBaseElevationM = 0,
+): THREE.Mesh | null {
+  const verts = fixture.geometry.footprint.vertices;
+  if (verts.length < 3) return null;
+
+  const shape = buildShape(verts);
+  if (!shape) return null;
+
+  const bodyHeightM = fixture.params.bodyHeightMm * MM_TO_M;
+  const geo = extrudeAndRotate(shape, bodyHeightM);
+  const matId = fixture.params.material ?? 'elem-mep-fixture';
+  const mesh = new THREE.Mesh(geo, getElementMaterial3D('mep-fixture'));
+  // Top face at the mounting elevation; body hangs DOWN by bodyHeight.
+  const topMm = floorElevationMm + fixture.params.mountingElevationMm;
+  mesh.position.y = topMm * MM_TO_M - bodyHeightM + buildingBaseElevationM;
+  const tagged = tagMesh(mesh, fixture.id, 'mep-fixture', matId, levelId);
+  attachEdgesProjection(tagged, 'light-fixture');
   return tagged;
 }
 

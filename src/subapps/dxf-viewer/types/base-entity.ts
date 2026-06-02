@@ -47,7 +47,9 @@ export type EntityType =
   | 'slab'
   | 'slab-opening'
   | 'column'
-  | 'beam';
+  | 'beam'
+  // ADR-406 — point-based MEP fixture (light fixture first; generic over kind).
+  | 'mep-fixture';
 
 export interface BaseEntity {
   id: string;

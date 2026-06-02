@@ -17,6 +17,7 @@ import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { StairEntity } from '../../bim/types/stair-types';
+import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import { applyBuildingsPreset } from '../utils/building-visibility-state';
 import type { BuildingVisMode, BuildingPreset } from '../utils/building-visibility-state';
@@ -41,6 +42,8 @@ export interface Bim3DEntities {
   /** ADR-363 Bug 2 — opening (door/window) entities for wall cutouts σε 3D. */
   readonly openings: readonly OpeningEntity[];
   readonly stairs: readonly StairEntity[];
+  /** ADR-406 — point-based MEP fixtures (light fixtures first). */
+  readonly fixtures: readonly MepFixtureEntity[];
 }
 
 /**
@@ -57,6 +60,7 @@ export const EMPTY_BIM_ENTITIES: Bim3DEntities = {
   slabOpenings: [],
   openings: [],
   stairs: [],
+  fixtures: [],
 };
 
 interface Bim3DEntitiesStoreState extends Bim3DEntities {
@@ -79,6 +83,7 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   setSlabOpenings: (slabOpenings: readonly SlabOpeningEntity[]) => void;
   setOpenings: (openings: readonly OpeningEntity[]) => void;
   setStairs: (stairs: readonly StairEntity[]) => void;
+  setFixtures: (fixtures: readonly MepFixtureEntity[]) => void;
   setActiveLevelId: (id: string | null) => void;
   setBuildings: (buildings: readonly BuildingRef[]) => void;
   setFloors: (floors: readonly FloorRef[]) => void;
@@ -97,6 +102,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     slabOpenings: [],
     openings: [],
     stairs: [],
+    fixtures: [],
     activeLevelId: null,
     buildings: [],
     floors: [],
@@ -110,6 +116,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     setSlabOpenings: (slabOpenings) => set({ slabOpenings }),
     setOpenings: (openings) => set({ openings }),
     setStairs: (stairs) => set({ stairs }),
+    setFixtures: (fixtures) => set({ fixtures }),
     setActiveLevelId: (activeLevelId) => set({ activeLevelId }),
     setBuildings: (buildings) => set({ buildings }),
     setFloors: (floors) => set({ floors }),
@@ -140,5 +147,6 @@ export function selectBim3DEntities(state: Bim3DEntitiesStoreState): Bim3DEntiti
     slabOpenings: state.slabOpenings,
     openings: state.openings,
     stairs: state.stairs,
+    fixtures: state.fixtures,
   };
 }

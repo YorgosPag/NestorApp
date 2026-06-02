@@ -271,6 +271,7 @@ export const generateSlabOpeningId = () => enterpriseIdService.generateSlabOpeni
 export const generateBimStackGroupId = () => enterpriseIdService.generateBimStackGroupId();
 export const generateColumnId = () => enterpriseIdService.generateColumnId();
 export const generateBeamId = () => enterpriseIdService.generateBeamId();
+export const generateMepFixtureId = () => enterpriseIdService.generateMepFixtureId();
 export const generateBimPresetId = () => enterpriseIdService.generateBimPresetId();
 export const generateBimMaterialId = () => enterpriseIdService.generateBimMaterialId();
 export const generateBimSettingsId = () => enterpriseIdService.generateBimSettingsId();

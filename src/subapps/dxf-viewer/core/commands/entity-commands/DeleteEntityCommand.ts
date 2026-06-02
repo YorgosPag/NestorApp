@@ -18,10 +18,13 @@ import { notifyWallsOnHostDeletion } from '../../../bim/walls/wall-structural-at
 // ADR-390 — BIM entity types eligible για symmetric undo→Firestore restore.
 const BIM_ENTITY_TYPES = new Set<string>([
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair',
+  // ADR-406 — point-based MEP fixture.
+  'mep-fixture',
 ]);
 
 type BimEntityType =
-  | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair';
+  | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
+  | 'mep-fixture';
 
 function emitBimRestoreIfApplicable(snapshot: SceneEntity): void {
   const type = (snapshot as { type?: string }).type;

@@ -140,6 +140,8 @@ export type ToolType =
   | 'beam-from-wall'
   // ADR-363 Phase 3.7: BIM Slab-Opening drawing tool (shaft/well/duct/chimney)
   | 'slab-opening'
+  // ADR-406: point-based MEP fixture drawing tool (light fixture first)
+  | 'mep-fixture'
   // ADR-359 Phase 1: Auxiliary geometry tools (infinite/semi-infinite construction lines)
   | 'xline'             // Infinite line through basePoint in direction (AutoCAD XLINE)
   | 'ray'               // Semi-infinite line from basePoint in direction (AutoCAD RAY)

@@ -28,6 +28,7 @@ import { WallPersistenceHost } from './WallPersistenceHost';
 import { OpeningPersistenceHost } from './OpeningPersistenceHost';
 import { SlabPersistenceHost } from './SlabPersistenceHost';
 import { ColumnPersistenceHost } from './ColumnPersistenceHost';
+import { MepFixturePersistenceHost } from './MepFixturePersistenceHost';
 import { BeamPersistenceHost } from './BeamPersistenceHost';
 import { SlabOpeningPersistenceHost } from './SlabOpeningPersistenceHost';
 import { StairPersistenceHost } from './StairPersistenceHost';
@@ -126,6 +127,13 @@ export function DxfViewerTopBar({
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
         floorId={floorId}
+      />
+      <MepFixturePersistenceHost
+        primarySelectedId={primarySelectedId}
+        currentScene={currentScene}
+        levelManager={levelManager}
+        projectId={levelManager.saveContext?.projectId ?? undefined}
+        floorplanId={levelManager.fileRecordId ?? undefined}
       />
       <SlabOpeningPersistenceHost
         primarySelectedId={primarySelectedId}

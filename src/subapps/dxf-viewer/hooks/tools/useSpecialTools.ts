@@ -26,6 +26,7 @@ import { useWallTool } from '../drawing/useWallTool';
 import { useOpeningTool } from '../drawing/useOpeningTool';
 import { useSlabTool, SLAB_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useSlabTool';
 import { useColumnTool } from '../drawing/useColumnTool';
+import { useMepFixtureTool } from '../drawing/useMepFixtureTool';
 import { useBeamTool } from '../drawing/useBeamTool';
 import { useSlabOpeningTool } from '../drawing/useSlabOpeningTool';
 import { buildSlabOpeningResolvers } from './useSpecialTools-slab-opening';
@@ -40,6 +41,7 @@ import { isWallEntity } from '../../types/entities';
 import { computeWallTrims, applyTrimPatches } from '../../bim/walls/wall-trims';
 import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
 import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
+import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-scene';
 import { appendEntityToScene } from '../../bim/scene/append-entity-to-scene';
 // 🏢 ENTERPRISE: Import actual level system types for type safety
 import type { LevelsHookReturn } from '../../systems/levels';
@@ -68,27 +70,18 @@ export interface UseSpecialToolsProps {
  * Uses ReturnType to automatically match the actual hook return types
  */
 export interface UseSpecialToolsReturn {
-  /** Circle TTT hook return */
+  // Each field mirrors the corresponding hook's return type (ReturnType<…>).
   circleTTT: ReturnType<typeof useCircleTTT>;
-  /** Line Perpendicular hook return */
   linePerpendicular: ReturnType<typeof useLinePerpendicular>;
-  /** Line Parallel hook return */
   lineParallel: ReturnType<typeof useLineParallel>;
-  /** Angle entity measurement hook return */
   angleEntityMeasurement: ReturnType<typeof useAngleEntityMeasurement>;
-  /** ADR-358 Phase 5a — Stair tool hook return */
   stairTool: ReturnType<typeof useStairTool>;
-  /** ADR-363 Phase 1B — Wall tool hook return */
   wallTool: ReturnType<typeof useWallTool>;
-  /** ADR-363 Phase 2 — Opening tool hook return */
   openingTool: ReturnType<typeof useOpeningTool>;
-  /** ADR-363 Phase 3 — Slab tool hook return */
   slabTool: ReturnType<typeof useSlabTool>;
-  /** ADR-363 Phase 4 — Column tool hook return */
   columnTool: ReturnType<typeof useColumnTool>;
-  /** ADR-363 Phase 5 — Beam tool hook return */
+  mepFixtureTool: ReturnType<typeof useMepFixtureTool>; // ADR-406
   beamTool: ReturnType<typeof useBeamTool>;
-  /** ADR-363 Phase 3.7 — Slab-Opening tool hook return */
   slabOpeningTool: ReturnType<typeof useSlabOpeningTool>;
 }
 // HOOK IMPLEMENTATION
@@ -397,14 +390,10 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       return levelManager.getLevelScene(levelId)?.entities ?? [];
     },
   });
-  // ADR-363 Φάση 3 / 3c — ο freehand column ('column'), το «Τοιχίο από περίγραμμα»
-  // ('column-from-perimeter') και η «Κολώνα από περίγραμμα» ('column-discrete-from-
-  // perimeter') μοιράζονται ΕΝΑ useColumnTool· το placement mode οδηγείται από το
-  // active tool id.
+  // ADR-363 Φ3/3c — freehand + «από περίγραμμα» (outer/discrete) μοιράζονται ΕΝΑ
+  // useColumnTool· το placement mode οδηγείται από το active tool id.
   const isColumnTool =
-    activeTool === 'column' ||
-    activeTool === 'column-from-perimeter' ||
-    activeTool === 'column-discrete-from-perimeter';
+    activeTool === 'column' || activeTool === 'column-from-perimeter' || activeTool === 'column-discrete-from-perimeter';
   useToolLifecycle(isColumnTool, columnTool.activate, columnTool.deactivate);
   useEffect(() => {
     if (activeTool === 'column') columnTool.setPlacementMode('freehand');
@@ -412,6 +401,17 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     else if (activeTool === 'column-discrete-from-perimeter')
       columnTool.setPlacementMode('discrete-perimeter');
   }, [activeTool, columnTool.setPlacementMode]);
+  // ADR-406 — MEP FIXTURE TOOL: single-click placement; entity appended+broadcast.
+  const mepFixtureTool = useMepFixtureTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onMepFixtureCreated: (fixtureEntity) => addMepFixtureToScene(fixtureEntity, levelManager),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  useToolLifecycle(activeTool === 'mep-fixture', mepFixtureTool.activate, mepFixtureTool.deactivate);
+
   // ============================================================================
   // ADR-363 Phase 5 — BEAM TOOL
   // ============================================================================
@@ -491,6 +491,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     openingTool,
     slabTool,
     columnTool,
+    mepFixtureTool,
     beamTool,
     slabOpeningTool,
   };

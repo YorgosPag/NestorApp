@@ -70,7 +70,8 @@ export function resyncBimScene(
 
   manager.syncBimEntities(
     { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs,
-      slabOpenings: s.slabOpenings, openings: s.openings, stairs: s.stairs },
+      slabOpenings: s.slabOpenings, openings: s.openings, stairs: s.stairs,
+      fixtures: s.fixtures },
     0,
     s.activeLevelId ?? undefined,
     s.floors,

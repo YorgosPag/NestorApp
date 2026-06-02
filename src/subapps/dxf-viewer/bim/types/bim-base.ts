@@ -36,8 +36,11 @@ export interface BoundingBox3D {
 
 // ─── BIM Element taxonomy ────────────────────────────────────────────────────
 
-/** Discriminator for the 6 BIM entity types (ADR-363 §5.2) */
-export type BimElementType = 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam';
+/** Discriminator for the BIM entity types (ADR-363 §5.2 + ADR-406 MEP fixture) */
+export type BimElementType =
+  | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam'
+  // ADR-406 — point-based MEP fixture.
+  | 'mep-fixture';
 
 /**
  * Union of all BIM sub-type discriminators (one per element type).

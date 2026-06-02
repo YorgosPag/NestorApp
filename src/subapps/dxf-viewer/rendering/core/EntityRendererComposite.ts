@@ -33,6 +33,8 @@ import { SlabOpeningRenderer } from '../../bim/renderers/SlabOpeningRenderer';
 import { ColumnRenderer } from '../../bim/renderers/ColumnRenderer';
 // ADR-363 Phase 5 — beam leaf (straight/curved/cantilever).
 import { BeamRenderer } from '../../bim/renderers/BeamRenderer';
+// ADR-406 — MEP fixture leaf (point-based light fixture).
+import { MepFixtureRenderer } from '../../bim/renderers/MepFixtureRenderer';
 // ADR-362 Phase C1 — persistent dimension leaf (consumes DimGeometry discriminated union).
 import { DimensionRenderer } from '../entities/DimensionRenderer';
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
@@ -86,6 +88,8 @@ export class EntityRendererComposite {
     const columnRenderer = new ColumnRenderer(this.ctx);
     // ADR-363 Phase 5 — beam renderer (3 kinds, dashed outline + axis centerline).
     const beamRenderer = new BeamRenderer(this.ctx);
+    // ADR-406 — MEP fixture renderer (point-based light fixture, family symbol).
+    const mepFixtureRenderer = new MepFixtureRenderer(this.ctx);
     // ADR-362 Phase C1 — dimension renderer (10 variants via DimGeometry union).
     const dimensionRenderer = new DimensionRenderer(this.ctx);
     // ADR-359 Phase 4.b — Liang-Barsky clipped construction line renderers.
@@ -113,6 +117,7 @@ export class EntityRendererComposite {
     this.renderers.set('slab-opening', slabOpeningRenderer);
     this.renderers.set('column', columnRenderer);
     this.renderers.set('beam', beamRenderer);
+    this.renderers.set('mep-fixture', mepFixtureRenderer);
     this.renderers.set('dimension', dimensionRenderer);
     this.renderers.set('xline', xlineRenderer);
     this.renderers.set('ray', rayRenderer);

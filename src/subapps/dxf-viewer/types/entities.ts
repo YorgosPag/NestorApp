@@ -305,6 +305,16 @@ export type {
 } from '../bim/types/column-types';
 import type { ColumnEntity } from '../bim/types/column-types';
 
+// ADR-406: MEP point-based fixture concrete types live in bim/types/mep-fixture-types.ts (SRP).
+export type {
+  MepFixtureKind,
+  MepFixtureShape,
+  MepFixtureParams,
+  MepFixtureGeometry,
+  MepFixtureEntity,
+} from '../bim/types/mep-fixture-types';
+import type { MepFixtureEntity } from '../bim/types/mep-fixture-types';
+
 // ADR-363 Phase 5: Beam concrete types live in bim/types/beam-types.ts (SRP).
 export type {
   BeamKind,
@@ -462,6 +472,8 @@ export type Entity = (
   | SlabOpeningEntity
   | ColumnEntity
   | BeamEntity
+  // ADR-406 — point-based MEP fixture (light fixture first).
+  | MepFixtureEntity
 ) & Pick<BaseEntity,
   // Required identifiers — needed everywhere (ADR-363 fix: BIM entities now in union)
   'id' | 'name' | 'layerId' |
@@ -605,10 +617,15 @@ export const isColumnEntity = (entity: Entity): entity is ColumnEntity =>
 export const isBeamEntity = (entity: Entity): entity is BeamEntity =>
   entity.type === 'beam';
 
-/** True for any ADR-363 BIM parametric entity */
-export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity =>
+/** ADR-406 — point-based MEP fixture (light fixture first). */
+export const isMepFixtureEntity = (entity: Entity): entity is MepFixtureEntity =>
+  entity.type === 'mep-fixture';
+
+/** True for any ADR-363/406 BIM parametric entity */
+export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity =>
   entity.type === 'wall' || entity.type === 'opening' || entity.type === 'slab' ||
-  entity.type === 'slab-opening' || entity.type === 'column' || entity.type === 'beam';
+  entity.type === 'slab-opening' || entity.type === 'column' || entity.type === 'beam' ||
+  entity.type === 'mep-fixture';
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
 // Re-export from centralized location for backward compatibility

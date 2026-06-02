@@ -15,7 +15,7 @@
 import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from './multi-floor-3d-source';
-import { wallToMesh, columnToMesh, beamToMesh, slabToMesh } from '../converters/BimToThreeConverter';
+import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh } from '../converters/BimToThreeConverter';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { resolveWallTopProfile, resolveWallNominalTopZmm } from '../../bim/geometry/wall-top-profile';
 import { resolveWallBaseProfile } from '../../bim/geometry/wall-base-profile';
@@ -136,6 +136,7 @@ export class BimSceneLayer {
     this.syncBeams(entities, ctx);
     this.syncSlabs(entities, ctx);
     this.syncStairs(entities, ctx);
+    this.syncFixtures(entities, ctx);
     addEnvelopeToScene(this.group, entities, ctx, this.shouldRender.bind(this));
   }
 
@@ -309,6 +310,18 @@ export class BimSceneLayer {
       const mesh = columnToMesh(
         column, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, topProfile, baseProfile,
       );
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
+  /** ADR-406 — point-based MEP fixtures (light fixtures first). */
+  private syncFixtures(entities: Bim3DEntities, ctx: SyncContext): void {
+    // Defensive: legacy floor-stack entries / snapshots predating ADR-406 carry
+    // no `fixtures` array — never crash the whole floor sync over a missing slice.
+    for (const fixture of entities.fixtures ?? []) {
+      const r = this.resolveEntity(fixture, 'light-fixture', ctx);
+      if (!r) continue;
+      const mesh = fixtureToMesh(fixture, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

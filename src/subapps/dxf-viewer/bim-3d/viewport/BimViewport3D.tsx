@@ -34,6 +34,7 @@ import { useAnimationQueueProcessor } from '../animation/animation-queue-process
 import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-interaction';
 import { useBim3DEditInteraction } from '../animation/use-bim3d-edit-interaction';
 import { useBim3DColumnPlacement } from '../placement/use-bim3d-column-placement';
+import { useBim3DMepFixturePlacement } from '../placement/use-bim3d-mep-fixture-placement';
 import { useBim3DAttachPick } from './use-bim3d-attach-pick';
 import { useBim3DBeamFromWallPick } from './use-bim3d-beam-from-wall-pick';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -298,6 +299,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // existing 2D column FSM (`useColumnTool.onCanvasClick`) via the
   // `bim:place-column-3d` EventBus bridge (zero duplication, full commit path).
   useBim3DColumnPlacement({ managerRef, canvasEl });
+
+  // ADR-406 — 3D MEP fixture placement (mirror of column placement above).
+  useBim3DMepFixturePlacement({ managerRef, canvasEl });
 
   // ADR-401 — 3D manual attach pick-host. Armed only while a `*-attach-top/-base`
   // tool is active AND the viewport is in 3D: a click raycasts a structural host

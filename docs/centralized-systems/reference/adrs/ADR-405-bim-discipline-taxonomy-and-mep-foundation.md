@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | ✅ **DONE** — Step 1 + §4 υλοποιημένα (2026-06-02, Opus 4.8). Discipline taxonomy SSoT + entity→discipline mapping + inverse + 5η visibility source + discipline multi-toggle (συνύπαρξη με «Μόνο DXF»). 74/74 νέα tests PASS, tsc clean. 🔴 Εκκρεμεί browser verify. Steps 3-5 (MEP) = μελλοντικά ADRs |
+| Status | ✅ **DONE** — Step 1 + §4 υλοποιημένα (2026-06-02, Opus 4.8). Discipline taxonomy SSoT + entity→discipline mapping + inverse + 5η visibility source + discipline multi-toggle (συνύπαρξη με «Μόνο DXF»). 74/74 νέα tests PASS, tsc clean. 🔴 Εκκρεμεί browser verify. **Step 3 (1ο MEP στοιχείο) = ✅ ADR-406** (point-based φωτιστικό, 2026-06-02). Steps 4-5 (MEP systems/routing) = μελλοντικά ADRs |
 | Date | 2026-06-02 |
 | Owner | Giorgio / Claude (Opus 4.8) |
 | Related | ADR-358 (AEC layer category taxonomy — **reuse SSoT**), ADR-375 (V/G + Phase C.8 «Μόνο DXF» toggle — **γενικεύεται εδώ**), ADR-382 (visibility resolver SSoT — **επεκτείνεται**), ADR-363 (hosted-opening cascade — πρόδρομος του ΗΜ hosting), ADR-377 (BIM-native type-driven styling) |

@@ -674,6 +674,24 @@ const COLUMN_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const COLUMN_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(COLUMN_TRACKED_FIELDS_RAW, {});
 
+// ADR-406 — point-based MEP fixture (light fixture first).
+const MEP_FIXTURE_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  shape: 'shape',
+  width: 'width',
+  length: 'length',
+  bodyHeightMm: 'bodyHeightMm',
+  mountingElevationMm: 'mountingElevationMm',
+  rotation: 'rotation',
+  material: 'material',
+  storeyId: 'storeyId',
+  hostId: 'hostId',
+};
+
+export const MEP_FIXTURE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(MEP_FIXTURE_TRACKED_FIELDS_RAW, {});
+
 const SLAB_TRACKED_FIELDS_RAW: Record<string, string> = {
   kind: 'kind',
   layerId: 'layerId',
@@ -841,6 +859,8 @@ export function getTrackedFieldsForEntityAuditType(
       return WALL_TRACKED_FIELDS;
     case 'column':
       return COLUMN_TRACKED_FIELDS;
+    case 'mep-fixture':
+      return MEP_FIXTURE_TRACKED_FIELDS;
     case 'slab':
       return SLAB_TRACKED_FIELDS;
     case 'beam':

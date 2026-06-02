@@ -1,0 +1,205 @@
+/**
+ * ADR-406 — MEP Fixture Tool React Hook Orchestrator.
+ *
+ * State machine:
+ *   idle → awaitingPosition → committed → awaitingPosition (continuous)
+ *
+ * Single-click placement (Revit/ArchiCAD family placement): user picks the
+ * fixture tool → clicks to place at the cursor point → continuous chain. ESC
+ * resets (handled centrally by EscapeCommandBus, like the column tool).
+ *
+ * SSoT alignment:
+ *   - Entity build via `buildMepFixtureEntity` / `buildDefaultMepFixtureParams`
+ *     (`hooks/drawing/mep-fixture-completion.ts`). ZERO duplicate construction.
+ *   - 3D placement bridge via `bim:place-mep-fixture-3d` → same `onCanvasClick`.
+ *   - ADR-040 micro-leaf compliance: hook owns React state, no
+ *     `useSyncExternalStore` against high-frequency stores.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-406-point-based-mep-fixture.md
+ */
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Point2D } from '../../rendering/types/Types';
+import type { Point3D } from '../../bim/types/bim-base';
+import {
+  buildDefaultMepFixtureParams,
+  buildMepFixtureEntity,
+  type MepFixtureParamOverrides,
+  type SceneUnits,
+} from './mep-fixture-completion';
+import {
+  computeMepFixtureGeometry,
+} from '../../bim/mep-fixtures/mep-fixture-geometry';
+import type { MepFixtureEntity, MepFixtureShape } from '../../bim/types/mep-fixture-types';
+import { mepFixtureToolBridgeStore } from '../../ui/ribbon/hooks/bridge/mep-fixture-tool-bridge-store';
+import { EventBus } from '../../systems/events/EventBus';
+
+// ─── State machine types ─────────────────────────────────────────────────────
+
+export type MepFixtureToolPhase = 'idle' | 'awaitingPosition' | 'committed';
+
+export interface MepFixtureToolState {
+  readonly phase: MepFixtureToolPhase;
+  readonly shape: MepFixtureShape;
+  readonly overrides: MepFixtureParamOverrides;
+  readonly error: string | null;
+}
+
+const INITIAL_STATE: MepFixtureToolState = {
+  phase: 'idle',
+  shape: 'rectangular',
+  overrides: {},
+  error: null,
+};
+
+// ─── Hook options + return ───────────────────────────────────────────────────
+
+export interface UseMepFixtureToolOptions {
+  readonly onMepFixtureCreated?: (entity: MepFixtureEntity) => void;
+  readonly currentLevelId?: string;
+  readonly getSceneUnits?: () => SceneUnits;
+}
+
+export interface UseMepFixtureToolResult {
+  readonly state: MepFixtureToolState;
+  activate(): void;
+  setShape(shape: MepFixtureShape): void;
+  setParamOverrides(overrides: MepFixtureParamOverrides): void;
+  deactivate(): void;
+  reset(): void;
+  /** Returns true when the click committed a new fixture. */
+  onCanvasClick(point: Readonly<Point2D>): boolean;
+  getStatusText(): string;
+  /**
+   * Footprint preview at `cursorPos` (world canvas units), or null when not
+   * awaiting a position. Pure projection — no state mutation, no cursor-store
+   * subscription (ADR-040). Consumed by the placement ghost leaf.
+   */
+  getGhostFootprint(cursorPos: Readonly<Point2D> | null): readonly Point3D[] | null;
+  readonly isActive: boolean;
+  readonly isAwaitingPosition: boolean;
+}
+
+// ─── Hook implementation ─────────────────────────────────────────────────────
+
+export function useMepFixtureTool(options: UseMepFixtureToolOptions = {}): UseMepFixtureToolResult {
+  const { onMepFixtureCreated, currentLevelId = '0', getSceneUnits } = options;
+
+  const [state, setState] = useState<MepFixtureToolState>(INITIAL_STATE);
+  const stateRef = useRef<MepFixtureToolState>(state);
+  stateRef.current = state;
+  const getSceneUnitsRef = useRef(getSceneUnits);
+  getSceneUnitsRef.current = getSceneUnits;
+  const onCreatedRef = useRef(onMepFixtureCreated);
+  onCreatedRef.current = onMepFixtureCreated;
+
+  const activate = useCallback(() => {
+    setState((prev) => ({ ...INITIAL_STATE, shape: prev.shape, overrides: prev.overrides, phase: 'awaitingPosition' }));
+  }, []);
+
+  const setShape = useCallback((shape: MepFixtureShape) => {
+    setState((prev) => ({ ...prev, shape, error: null }));
+  }, []);
+
+  const setParamOverrides = useCallback((overrides: MepFixtureParamOverrides) => {
+    setState((prev) => ({ ...prev, overrides: { ...prev.overrides, ...overrides } }));
+  }, []);
+
+  const deactivate = useCallback(() => {
+    setState(INITIAL_STATE);
+  }, []);
+
+  const reset = useCallback(() => {
+    setState((prev) => ({
+      ...INITIAL_STATE,
+      shape: prev.shape,
+      overrides: prev.overrides,
+      phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
+    }));
+  }, []);
+
+  const commitFromState = useCallback(
+    (s: MepFixtureToolState, clickPoint: Readonly<Point2D>): boolean => {
+      const overrides: MepFixtureParamOverrides = { ...s.overrides, shape: s.shape };
+      const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
+      const params = buildDefaultMepFixtureParams(clickPoint, overrides, sceneUnits);
+      const result = buildMepFixtureEntity(params, currentLevelId);
+      if (!result.ok) {
+        setState({ ...s, error: result.hardErrors[0] ?? null });
+        return false;
+      }
+      onCreatedRef.current?.(result.entity);
+      setState({ ...INITIAL_STATE, shape: s.shape, overrides: s.overrides, phase: 'awaitingPosition' });
+      return true;
+    },
+    [currentLevelId],
+  );
+
+  const onCanvasClick = useCallback(
+    (point: Readonly<Point2D>): boolean => {
+      const s = stateRef.current;
+      if (s.phase !== 'awaitingPosition') return false;
+      return commitFromState(s, point);
+    },
+    [commitFromState],
+  );
+
+  // 3D placement bridge — same commit path as the 2D click (zero duplication).
+  const onCanvasClickRef = useRef(onCanvasClick);
+  onCanvasClickRef.current = onCanvasClick;
+  useEffect(() => {
+    return EventBus.on('bim:place-mep-fixture-3d', ({ point }) => {
+      onCanvasClickRef.current(point);
+    });
+  }, []);
+
+  const getStatusText = useCallback((): string => {
+    const s = stateRef.current;
+    if (s.phase === 'idle') return '';
+    return s.phase === 'awaitingPosition' ? 'tools.mepFixture.statusPosition' : '';
+  }, []);
+
+  const getGhostFootprint = useCallback(
+    (cursorPos: Readonly<Point2D> | null): readonly Point3D[] | null => {
+      const s = stateRef.current;
+      if (s.phase !== 'awaitingPosition' || cursorPos === null) return null;
+      const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
+      const params = buildDefaultMepFixtureParams(cursorPos, { ...s.overrides, shape: s.shape }, sceneUnits);
+      return computeMepFixtureGeometry(params).footprint.vertices;
+    },
+    [],
+  );
+
+  // Publish handle to the ribbon/3D bridge (single-writer, mirror column).
+  useEffect(() => {
+    const isActive = state.phase !== 'idle';
+    mepFixtureToolBridgeStore.set({
+      isActive,
+      kind: 'light-fixture',
+      shape: state.shape,
+      overrides: state.overrides,
+      setShape,
+      setParamOverrides,
+      getSceneUnits: () => getSceneUnitsRef.current?.() ?? 'mm',
+    });
+    return () => {
+      if (mepFixtureToolBridgeStore.get()?.setShape === setShape) {
+        mepFixtureToolBridgeStore.set(null);
+      }
+    };
+  }, [state, setShape, setParamOverrides]);
+
+  return {
+    state,
+    activate,
+    setShape,
+    setParamOverrides,
+    deactivate,
+    reset,
+    onCanvasClick,
+    getStatusText,
+    getGhostFootprint,
+    isActive: state.phase !== 'idle',
+    isAwaitingPosition: state.phase === 'awaitingPosition',
+  };
+}

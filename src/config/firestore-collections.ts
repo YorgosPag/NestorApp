@@ -356,6 +356,8 @@ export const COLLECTIONS = {
   FLOORPLAN_COLUMNS: process.env.NEXT_PUBLIC_FLOORPLAN_COLUMNS_COLLECTION || 'floorplan_columns',
   /** Straight/curved/cantilever beams. IDs via beam_* prefix. */
   FLOORPLAN_BEAMS: process.env.NEXT_PUBLIC_FLOORPLAN_BEAMS_COLLECTION || 'floorplan_beams',
+  /** ADR-406 — point-based MEP fixtures (light fixtures first). IDs via mepfix_* prefix. */
+  FLOORPLAN_MEP_FIXTURES: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_FIXTURES_COLLECTION || 'floorplan_mep_fixtures',
   /** BIM element presets (system/company/project/user scope). IDs via bpst_* prefix. */
   BIM_PRESETS: process.env.NEXT_PUBLIC_BIM_PRESETS_COLLECTION || 'bim_presets',
   /** Material library — 25 seeded generics (Phase 6+). IDs via bmat_* prefix. */
