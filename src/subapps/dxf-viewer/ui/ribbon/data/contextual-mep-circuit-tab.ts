@@ -41,6 +41,7 @@ export const CONTEXTUAL_MEP_CIRCUIT_TAB: RibbonTab = {
       labelKey: 'ribbon.panels.mepCircuitProperties',
       rows: [
         {
+          // Row 1 — circuit selector (spans the panel width).
           isInFlyout: false,
           buttons: [
             {
@@ -53,6 +54,12 @@ export const CONTEXTUAL_MEP_CIRCUIT_TAB: RibbonTab = {
                 commandKey: 'mepCircuit.picker',
               },
             },
+          ],
+        },
+        {
+          // Row 2 — name (left column) + add-members action (right column).
+          isInFlyout: false,
+          buttons: [
             {
               type: 'widget',
               size: 'small',
@@ -61,16 +68,6 @@ export const CONTEXTUAL_MEP_CIRCUIT_TAB: RibbonTab = {
                 id: 'mepCircuit.name',
                 labelKey: 'ribbon.commands.mepCircuit.name',
                 commandKey: 'mepCircuit.name',
-              },
-            },
-            {
-              type: 'widget',
-              size: 'small',
-              widgetId: 'mep-circuit-color',
-              command: {
-                id: 'mepCircuit.color',
-                labelKey: 'ribbon.commands.mepCircuit.color',
-                commandKey: 'mepCircuit.color',
               },
             },
             {
@@ -83,6 +80,22 @@ export const CONTEXTUAL_MEP_CIRCUIT_TAB: RibbonTab = {
                 icon: 'bim-mep-fixture',
                 commandKey: MEP_CIRCUIT_RIBBON_ACTIONS.addMembers,
                 action: MEP_CIRCUIT_RIBBON_ACTIONS.addMembers,
+              },
+            },
+          ],
+        },
+        {
+          // Row 3 — colour (left column) + remove-members action (right column).
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'mep-circuit-color',
+              command: {
+                id: 'mepCircuit.color',
+                labelKey: 'ribbon.commands.mepCircuit.color',
+                commandKey: 'mepCircuit.color',
               },
             },
             {

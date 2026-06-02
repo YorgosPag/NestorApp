@@ -117,3 +117,44 @@ describe('applyMepFixtureGripDrag', () => {
     expect(next.width).toBe(300); // 200 + 2*50
   });
 });
+
+// ADR-397 / ADR-406 — 6-click ROTATE→Reference about an arbitrary picked centre.
+describe('applyMepFixtureGripDrag — pivot rotate (hot-grip 6-click)', () => {
+  // Fixture at (1000, 0); pivot at origin. Reference dir = +X, alignment dir = +Y
+  // → swept 90° CCW. delta = alignDir − refDir; currentPos = pivot + alignDir.
+  const pivotParams: MepFixtureParams = { ...baseParams, position: { x: 1000, y: 0, z: 0 }, rotation: 0 };
+
+  it('orbits position about the pivot AND sweeps rotation by the same angle', () => {
+    const next = applyMepFixtureGripDrag('mep-fixture-rotation', {
+      originalParams: pivotParams,
+      delta: { x: -100, y: 100 },        // alignDir(0,100) − refDir(100,0)
+      currentPos: { x: 0, y: 100 },      // pivot + alignDir
+      pivot: { x: 0, y: 0 },
+    });
+    expect(next.rotation).toBeCloseTo(90, 5);
+    expect(next.position.x).toBeCloseTo(0, 5);
+    expect(next.position.y).toBeCloseTo(1000, 5);
+    expect(next.position.z).toBe(0);
+  });
+
+  it('falls back to own-centre rotation when no pivot is supplied (legacy drag)', () => {
+    // Position must NOT orbit (no pivot) — only the angle changes (handle-relative).
+    const next = applyMepFixtureGripDrag('mep-fixture-rotation', {
+      originalParams: pivotParams,
+      delta: { x: -500, y: -500 },
+    });
+    expect(next.position).toEqual({ x: 1000, y: 0, z: 0 });
+    expect(next.rotation).toBeCloseTo(90, 5);
+  });
+
+  it('circular fixture ignores rotation (pivot path no-op)', () => {
+    const circ: MepFixtureParams = { ...pivotParams, shape: 'circular' };
+    const next = applyMepFixtureGripDrag('mep-fixture-rotation', {
+      originalParams: circ,
+      delta: { x: -100, y: 100 },
+      currentPos: { x: 0, y: 100 },
+      pivot: { x: 0, y: 0 },
+    });
+    expect(next).toBe(circ);
+  });
+});

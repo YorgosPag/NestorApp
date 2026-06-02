@@ -248,6 +248,18 @@ export function drawGhostEntity(
       return;
     }
 
+    // ADR-406 — MEP fixture ghost: footprint polygon (scene-units, from
+    // MepFixtureGeometry). Mirror column so the live move/rotation/resize ghost paints.
+    case 'mep-fixture': {
+      const fix = entity as unknown as {
+        geometry?: { footprint?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+      };
+      const verts = fix.geometry?.footprint?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
     // ADR-363 Phase 2.5 — opening ghost: cutout rectangle outline from raw OpeningEntity.geometry.
     case 'opening': {
       const opening = entity as unknown as {

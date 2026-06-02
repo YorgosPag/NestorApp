@@ -139,6 +139,10 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       ...(dragPreview.columnGripKind      ? { columnGripKind:      dragPreview.columnGripKind }       : {}),
       ...(dragPreview.slabGripKind        ? { slabGripKind:        dragPreview.slabGripKind }         : {}),
       ...(dragPreview.slabOpeningGripKind ? { slabOpeningGripKind: dragPreview.slabOpeningGripKind }  : {}),
+      // ADR-406 — MEP fixture parametric ghost (move / rotation / corner resize).
+      // Without this the apply-entity-preview mep-fixture branch is unreachable
+      // and the live drag ghost never paints.
+      ...(dragPreview.mepFixtureGripKind  ? { mepFixtureGripKind:  dragPreview.mepFixtureGripKind }   : {}),
       ...(dragPreview.anchorPos           ? { anchorPos:           dragPreview.anchorPos }            : {}),
       // ADR-363 Phase 1G — rotation centre for the wall-rotation hot-grip ghost.
       ...(dragPreview.rotatePivot         ? { rotatePivot:         dragPreview.rotatePivot }          : {}),

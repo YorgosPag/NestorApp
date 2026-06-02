@@ -123,6 +123,38 @@ describe('ADR-397 — column hot-grip kinds (shared registry)', () => {
   });
 });
 
+describe('ADR-406 — MEP fixture hot-grip kinds (full wall parity)', () => {
+  it("mep-fixture-move → 'move', mep-fixture-rotation → 'rotate', corners → 'corner'", () => {
+    expect(hotGripOpForKind('mep-fixture-move')).toBe('move');
+    expect(hotGripOpForKind('mep-fixture-rotation')).toBe('rotate');
+    for (const k of [
+      'mep-fixture-corner-ne',
+      'mep-fixture-corner-nw',
+      'mep-fixture-corner-sw',
+      'mep-fixture-corner-se',
+    ]) {
+      expect(hotGripOpForKind(k)).toBe('corner');
+      expect(isWallHotGripKind(k)).toBe(true);
+    }
+  });
+
+  it('mep-fixture-diameter (circular) stays press-drag (null op)', () => {
+    expect(hotGripOpForKind('mep-fixture-diameter')).toBeNull();
+    expect(isWallHotGripKind('mep-fixture-diameter')).toBe(false);
+  });
+
+  it('mep-fixture move/rotation/corner enter hot-grip on mousedown', () => {
+    expect(resolveHotGripMouseDown('idle', 'mep-fixture-move')).toBe('enter');
+    expect(resolveHotGripMouseDown('warm', 'mep-fixture-rotation')).toBe('enter');
+    expect(resolveHotGripMouseDown('idle', 'mep-fixture-corner-ne')).toBe('enter');
+  });
+
+  it('hotGripKindOf reads the mepFixtureGripKind discriminator', () => {
+    const fix = { mepFixtureGripKind: 'mep-fixture-rotation' } as unknown as UnifiedGripInfo;
+    expect(hotGripKindOf(fix)).toBe('mep-fixture-rotation');
+  });
+});
+
 describe('resolveHotGripMouseDown', () => {
   const NON_HOT: UnifiedGripPhase[] = ['idle', 'hovering', 'warm', 'dragging'];
 

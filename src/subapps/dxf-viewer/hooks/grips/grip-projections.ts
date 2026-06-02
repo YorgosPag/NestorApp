@@ -95,10 +95,12 @@ export function buildRotateReferencePreview(
     entityId: activeGrip.entityId!,
     gripIndex: activeGrip.gripIndex,
     movesEntity: activeGrip.movesEntity,
-    // ADR-397 — forward whichever parametric kind owns the rotation handle so the
-    // live ghost reaches the right `apply*GripDrag` (wall OR column 6-click rotate).
+    // ADR-397 / ADR-406 — forward whichever parametric kind owns the rotation
+    // handle so the live ghost reaches the right `apply*GripDrag` (wall / column /
+    // mep-fixture 6-click rotate).
     ...(activeGrip.wallGripKind ? { wallGripKind: activeGrip.wallGripKind } : {}),
     ...(activeGrip.columnGripKind ? { columnGripKind: activeGrip.columnGripKind } : {}),
+    ...(activeGrip.mepFixtureGripKind ? { mepFixtureGripKind: activeGrip.mepFixtureGripKind } : {}),
     hotGrip: true as const,
     rotatePivot: pivot,
     delta: { x: 0, y: 0 },
