@@ -51,7 +51,12 @@ import type { SlabEntity } from '../../bim/types/slab-types';
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
-import type { BeamGripKind, SlabGripKind, SlabOpeningGripKind } from '../../hooks/grip-types';
+import type { BeamGripKind, SlabGripKind, SlabOpeningGripKind, MepFixtureGripKind } from '../../hooks/grip-types';
+// ADR-406 — parametric MEP fixture drag preview (move / rotation / corner resize).
+import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
+import { computeMepFixtureGeometry } from '../../bim/mep-fixtures/mep-fixture-geometry';
+import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
+import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -98,6 +103,12 @@ export interface EntityPreviewTransform {
   readonly columnGripKind?: ColumnGripKind;
   readonly slabGripKind?: SlabGripKind;
   readonly slabOpeningGripKind?: SlabOpeningGripKind;
+  /**
+   * ADR-406 — parametric MEP fixture discriminator. Routes preview through
+   * `applyMepFixtureGripDrag` + `computeMepFixtureGeometry`. ORTHO (F8) is read
+   * from `cadToggleState` so the corner-resize ghost matches the commit.
+   */
+  readonly mepFixtureGripKind?: MepFixtureGripKind;
   readonly anchorPos?: Point2D;
 }
 
@@ -144,7 +155,7 @@ export function applyEntityPreview(
   preview: EntityPreviewTransform | undefined,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, slabGripKind, slabOpeningGripKind, anchorPos, rotatePivot } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, slabGripKind, slabOpeningGripKind, mepFixtureGripKind, anchorPos, rotatePivot } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
@@ -179,6 +190,22 @@ export function applyEntityPreview(
     const newParams = applyBeamGripDrag(beamGripKind, { originalParams: beam.params, delta });
     if (newParams === beam.params) return entity;
     const newGeometry = computeBeamGeometry(newParams);
+    return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-406 — parametric MEP fixture live preview (move / rotation / corner) ──
+  // Mirror of the beam branch; ORTHO (F8) is read from `cadToggleState` so the
+  // corner-resize ghost matches the commit. Without this branch the fixture only
+  // updated on release (no live feedback).
+  if (mepFixtureGripKind && entity.type === 'mep-fixture') {
+    const fixture = entity as unknown as MepFixtureEntity;
+    const newParams = applyMepFixtureGripDrag(mepFixtureGripKind, {
+      originalParams: fixture.params,
+      delta,
+      ortho: cadToggleState.isOrthoOn(),
+    });
+    if (newParams === fixture.params) return entity;
+    const newGeometry = computeMepFixtureGeometry(newParams);
     return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
   }
 

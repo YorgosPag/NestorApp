@@ -19,6 +19,7 @@ import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
+import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { XLineEntity, RayEntity, DimensionEntity } from '../../types/entities';
 import type { DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
@@ -36,6 +37,9 @@ import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
+import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
+import { UpdateMepFixtureParamsCommand } from '../../core/commands/entity-commands/UpdateMepFixtureParamsCommand';
+import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { applyXLineGripDrag } from '../../systems/xline/xline-grips';
 import { applyRayGripDrag } from '../../systems/ray/ray-grips';
 import { applyDimensionGripDrag } from '../dimensions/useDimensionGrips';
@@ -377,6 +381,46 @@ export function commitColumnGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   EventBus.emit('bim:column-params-updated', { columnId: grip.entityId });
+}
+
+/**
+ * ADR-406 — Parametric MEP fixture grip commit (centre translate + rotation +
+ * opposite-corner-anchored width/length resize). Bypasses stretch/move because
+ * `MepFixtureEntity` is params-driven; `UpdateMepFixtureParamsCommand` recomputes
+ * geometry + validation atomically. Merge window enabled (isDragging=true) so a
+ * continuous drag collapses into one undo entry (ADR-031). ORTHO (F8) is read
+ * from the non-React `cadToggleState` snapshot (same source as the BIM drawing
+ * commit path) and constrains corner drags to the dominant local axis.
+ */
+export function commitMepFixtureGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.mepFixtureGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<MepFixtureEntity>;
+  if (candidate.type !== 'mep-fixture' || !candidate.params) return;
+  const originalParams = candidate.params;
+  const newParams = applyMepFixtureGripDrag(grip.mepFixtureGripKind, {
+    originalParams,
+    delta,
+    ortho: cadToggleState.isOrthoOn(),
+  });
+  if (newParams === originalParams) return;
+  const command = new UpdateMepFixtureParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+  EventBus.emit('bim:mep-fixture-params-updated', { fixtureId: grip.entityId });
 }
 
 /**

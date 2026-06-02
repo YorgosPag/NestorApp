@@ -160,8 +160,35 @@ describe('resolveAtoeMapping', () => {
       expect(deriveAtoeQuantity('m', { area: 5 })).toBe(0);
     });
 
-    it('returns 0 for unhandled units (kg)', () => {
-      expect(deriveAtoeQuantity('kg', { volume: 5 })).toBe(0);
+    // ADR-363 Φ2 — kg = volume(m³) × steel density (7850). Fixes the prior
+    // 0-quantity gap that affected steel I-shape columns too.
+    it('derives kg from volume × steel density (7850)', () => {
+      expect(deriveAtoeQuantity('kg', { volume: 0.01 })).toBeCloseTo(78.5, 3);
+    });
+
+    it('returns 0 kg for missing geometry', () => {
+      expect(deriveAtoeQuantity('kg', null)).toBe(0);
+    });
+  });
+
+  // ADR-363 Φ2 — steel I-shape beam → OIK-12.10 kg (sectionKind discriminator).
+  describe('beam steel I-shape (ADR-363 Φ2)', () => {
+    it('maps a straight I-shape beam to OIK-12.10 kg', () => {
+      const result = resolveAtoeMapping('beam', 'straight', undefined, 'I-shape');
+      expect(result).not.toBeNull();
+      expect(result!.categoryCode).toBe('OIK-12.10');
+      expect(result!.unit).toBe('kg');
+    });
+
+    it('keeps a rectangular beam as RC m3 (no sectionKind)', () => {
+      const result = resolveAtoeMapping('beam', 'straight');
+      expect(result!.categoryCode).toBe('OIK-2.04');
+      expect(result!.unit).toBe('m3');
+    });
+
+    it('keeps RC mapping when sectionKind is rectangular', () => {
+      const result = resolveAtoeMapping('beam', 'cantilever', undefined, 'rectangular');
+      expect(result!.unit).toBe('m3');
     });
   });
 

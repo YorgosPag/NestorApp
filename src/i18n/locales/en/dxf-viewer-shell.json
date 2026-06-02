@@ -790,6 +790,8 @@
       "columnShearWallCatalog": "Concrete Catalog",
       "columnIshapeCatalog": "Profile Catalog",
       "beamKind": "Type",
+      "beamIshape": "I-Section",
+      "beamIshapeCatalog": "Profile Catalog",
       "beamGeometry": "Geometry",
       "beamMaterial": "Material",
       "beamActions": "Actions",
@@ -1461,7 +1463,22 @@
           "section": {
             "title": "Designation"
           }
-        }
+        },
+        "sectionKind": {
+          "section": {
+            "title": "Section Shape"
+          },
+          "rectangular": "Rectangular (RC)",
+          "iShape": "Steel I/H"
+        },
+        "catalogProfile": {
+          "section": {
+            "title": "Profile Catalog"
+          },
+          "custom": "Custom"
+        },
+        "flangeThickness": "Flange thickness",
+        "webThickness": "Web thickness"
       },
       "slabOpeningEditor": {
         "close": "Close",
@@ -2104,6 +2121,15 @@
     "validation": {
       "codeViolations": {
         "tooSmallForKind": "Opening is smaller than the minimum for this type"
+      }
+    }
+  },
+  "beam": {
+    "validation": {
+      "hardErrors": {
+        "invalidIShapePlateThickness": "Flange or web thickness is below the minimum (5mm)",
+        "invalidIShapeFlangeOverlap": "Flanges overlap — section depth is too small",
+        "invalidIShapeWebOverflow": "Web exceeds the flange width"
       }
     }
   },

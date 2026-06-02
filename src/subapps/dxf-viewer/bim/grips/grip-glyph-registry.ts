@@ -39,6 +39,9 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // Columns (ADR-397)
   'column-center': 'move',
   'column-rotation': 'rotation',
+  // MEP fixtures (ADR-406) — corners render the default 'square' glyph.
+  'mep-fixture-move': 'move',
+  'mep-fixture-rotation': 'rotation',
 } as const;
 
 /**

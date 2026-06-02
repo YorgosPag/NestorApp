@@ -10,7 +10,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, BeamGripKind, ColumnGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -186,6 +186,13 @@ export interface UnifiedGripInfo {
    * resize).
    */
   readonly columnGripKind?: ColumnGripKind;
+  /**
+   * ADR-406 — parametric MEP fixture grip discriminator (forwarded from
+   * `GripInfo.mepFixtureGripKind`). Routes commit through
+   * `applyMepFixtureGripDrag()` + `UpdateMepFixtureParamsCommand` (center
+   * translate + rotation + opposite-corner-anchored width/length resize).
+   */
+  readonly mepFixtureGripKind?: MepFixtureGripKind;
   /**
    * ADR-359 Phase 11 — XLine grip discriminator (forwarded from
    * `GripInfo.xlineGripKind`). Routes commit through `applyXLineGripDrag()` +

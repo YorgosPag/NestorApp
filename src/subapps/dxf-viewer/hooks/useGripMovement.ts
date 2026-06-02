@@ -71,7 +71,7 @@ const DEBUG_MODE = process.env.NODE_ENV === 'development';
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (extracted to grip-types.ts — SRP)
 // ============================================================================
-export type { GripType, StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, BeamGripKind, ColumnGripKind, XLineGripKind, RayGripKind, GripInfo, GripDragState } from './grip-types';
+export type { GripType, StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, XLineGripKind, RayGripKind, GripInfo, GripDragState } from './grip-types';
 import type { GripInfo, GripDragState } from './grip-types';
 /**
  * Options for useGripMovement hook
