@@ -287,6 +287,27 @@ Scope = 2D annotation + 3D conduit· τοπολογία = **daisy-chain + home-r
 ---
 
 ## Changelog
+- **2026-06-03 (Opus 4.8)** — **Φ3 grip UX «wall-parity» DONE** (Ηλεκτρικός Πίνακας — πλήρες 2D grip UX
+  «όπως ο τοίχος/φωτιστικό/κολώνα»). Ο πίνακας απέκτησε παραμετρικές λαβές (move-κέντρο + rotation-handle +
+  4 γωνίες resize opposite-corner-anchored) + hot-grip UX (move 3-click, rotation 6-click ROTATE→Reference,
+  γωνίες 2-click) + status-bar μηνύματα + οδηγητικές/rubber-band γραμμές + live ghost + Ctrl-copy.
+  **ΚΡΙΣΙΜΗ ΑΡΧΗ:** μηδέν fork — ΕΓΓΡΑΦΗ στις ίδιες entity-agnostic πύλες grip (κανένα παράλληλο pipeline).
+  **FULL SSOT, μηδέν raw cos/sin:** reuse `grip-math` (`rotateVector`/`projectToLocalFrame`/
+  `sweptAngleDegAboutPivot`) + canonical `rotatePoint` (ADR-188). 1:1 mirror του `mep-fixture-grips`
+  ΜΕΙΟΝ circular (ο πίνακας είναι **μόνο rectangular** → ΟΧΙ diameter grip). **NEW:**
+  `bim/electrical-panels/electrical-panel-grips.ts` (`getElectricalPanelGrips` + `applyElectricalPanelGripDrag`) +
+  `commitElectricalPanelGripDrag` (grip-parametric-commits, `UpdateElectricalPanelParamsCommand` + emit
+  `bim:electrical-panel-params-updated`) + `commitElectricalPanelCopy` (grip-parametric-copy, fresh
+  enterprise id N.6 via `buildElectricalPanelEntity`+`addElectricalPanelToScene`) + 2 test files. **MOD
+  (πρόσθεσε panel row, δεν έσβησε άλλες):** `grip-types` (`ElectricalPanelGripKind` + field) +
+  `useGripMovement` re-export + `unified-grip-types` + `grip-computation` (case + DxfGripDragPreview field) +
+  `grip-registry` (forward) + `grip-projections` (buildDxfDragPreview + buildRotateReferencePreview) +
+  `useGripGhostPreview` + `apply-entity-preview` (interface + grip branch + movesEntity case) +
+  `draw-ghost-entity` (footprint polygon) + `grip-glyph-registry` (move/rotation rows) +
+  `ElectricalPanelRenderer.getGrips` (rewrite mirror MepFixtureRenderer) + `grip-commit-adapters` (branch) +
+  `wall-hot-grip-fsm` (6 rows + `?? electricalPanelGripKind`). 58/58 grip/ghost tests PASS, `tsc` 0, grep
+  cos/sin = 0. **Stage ADR-408 (+ ADR-397)** — CHECK 6D (ghost renderers). 🔴 Pending commit (Giorgio) +
+  browser verify (move/rotate/corners/copy/ghost).
 - **2026-06-03 (Opus 4.8)** — **Φ7 DONE** (ορατά καλώδια / home-run wires, 2D + 3D). Παράγωγη γεωμετρία
   (ΟΧΙ persisted· το `MepSystem` μένει geometry-less). Routing SSoT NEW `mep-wire-routing.ts`
   (`computeCircuitWirePaths` daisy-chain + home-run, nearest-neighbor· `WireHostPoint` x/y/zMm κοινό 2D+3D·

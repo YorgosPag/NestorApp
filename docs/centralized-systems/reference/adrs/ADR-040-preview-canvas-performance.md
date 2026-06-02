@@ -81,7 +81,7 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ### 2026-06-02 — Phase XXII.B (part 1) — dead `CanvasProvider` transform `useState` removed (wheel-zoom freeze fix)
 
-**Status**: IMPLEMENTED 2026-06-02. Closes the transitional debt flagged in Phase XXII.A (§ "What still writes to the legacy useState … removed in Phase XXII.B"). **Two independent wheel-zoom re-render roots were found and both fixed** (see "Root cause" + "Root cause #2").
+**Status**: IMPLEMENTED 2026-06-02 (#1+#2), extended 2026-06-03 (#3). Closes the transitional debt flagged in Phase XXII.A (§ "What still writes to the legacy useState … removed in Phase XXII.B"). **Three independent wheel-zoom re-render roots were found and all fixed** (see "Root cause" + "Root cause #2" + "Root cause #3"): each was an orchestrator subscribing to the transform/scale store, peeled back one layer at a time as each fix unmasked the next (2502 → 2486 → 503 → <30 fibers per wheel notch).
 
 **Bug (reported as "η εφαρμογή κολλάει")**: wheel zoom froze the app to 1-2 FPS. Firefox profile: ~76% time in `performSyncWorkOnRoot`, 25% in `Msg_MouseWheelEvent`, forced reflow (`getElement.clientWidth`) at flame top. React DevTools profile (`profiling-data.02-06-2026.23-24-46.json`, 54 commits) confirmed: **~11 wheel commits each re-rendered 2502 fibers (64-162ms)** — `Context.Provider` 7617 renders, `Tooltip` 1830×, `Popper` 2053×, whole ribbon (`RibbonButtonIcon` 943×, `RibbonLargeButton`/`Small`/`TabsTrigger`). Same signature as the 2026-?? incident (56× Tooltip + 1× CanvasProvider, see §"Incident 121-234ms per zoom").
 
@@ -100,9 +100,19 @@ Mouse Event → DxfCanvas.onMouseMove
 
 **Result**: wheel commits collapse from 2486-2502-fiber / 64-162ms to leaf-only subscribers (`ZoomDisplayLeaf`, `CanvasLayerStackTransformBridge`, `OriginMarkerIcon` ≈ 1-fiber roots). Ribbon/tooltips no longer re-render on zoom. Diagnosis method: React DevTools profile → per-commit re-render-root + subtree-size + shallowest-updater analysis (scripted over the exported JSON).
 
+**Root cause #3 (uncovered by the #1+#2 fixes)**: the third profile (`profiling-data.03-06-2026.02-03-41.json`, 60 commits) showed wheel commits had dropped from 2502 → **503 fibers**, but the shallowest-updater set of those 503-fiber wheel commits was `SidebarSection, StandaloneStatusBar, CanvasLayerStackTransformBridge, CoordinateDebugOverlay, ZoomDisplayLeaf` — i.e. `SidebarSection` (the sidebar orchestrator, `React.memo`) was STILL a wheel re-render root. Cause: `layout/SidebarSection.tsx:103` called `useCurrentZoom()` (`= useTransformScale()` `useSyncExternalStore`, via `systems/zoom/ZoomStore`) **in the orchestrator render scope** → every wheel notch re-rendered the whole sidebar subtree (`FloatingPanelContainer` + footer ≈ 426 fibers, 20-66ms). Same Cardinal Rule #1 violation as #2, in a different orchestrator.
+
+**Fix #3** (2 files + 1 deletion):
+- `layout/SidebarSection.tsx`: removed `useCurrentZoom()` from the orchestrator body. The footer zoom readout moved into a new 1-fiber micro-leaf `SidebarZoomLeaf` (sole `useCurrentZoom()` subscriber). The orchestrator now stays inert on wheel zoom.
+- The `currentZoom` value was ALSO drilled into `FloatingPanelContainer` as `zoomLevel` → `usePanelDescription` → `{ description, zoomText }`, **neither of which is rendered anywhere** (the status bar that consumed them was moved out long ago; comment "STATUS BAR ΜΕΤΑΚΙΝΗΘΗΚΕ"). The entire `zoomLevel` prop chain was dead. Boy-Scout removal (N.0.2): dropped the `zoomLevel` prop from `FloatingPanelContainer` (interface + destructure + `React.memo` comparator), removed the dead `usePanelDescription` call and its now-orphaned inputs (`useOverlayManager()` / `selectedRegions` / `visibleRegions`), and **deleted** the orphaned `ui/hooks/usePanelDescription.ts`.
+
+**Result #3**: `SidebarSection` removed as a wheel re-render root; the footer zoom % now updates via `SidebarZoomLeaf` only. Expected post-fix wheel commit = leaf subscribers only (`SidebarZoomLeaf`, `StandaloneStatusBar`, `CanvasLayerStackTransformBridge`, `CoordinateDebugOverlay`, `ZoomDisplayLeaf` ≈ <30 fibers).
+
+**Note — the 2490-fiber `LevelsSystem` commits in profile #3 are NOT wheel-related**: in that profile, 16 of 60 commits re-rendered ~2490 fibers with shallowest updater `LevelsSystem` (alone, or with `CurrentLayerPicker` / `BimViewport3D` / `PropertiesPalette` / `Select` / `ThermalEnvelopeHost`). None list a transform leaf — they are level/layer/selection-driven (Giorgio interacted with layers/selection while recording), a separate concern from wheel zoom. To be confirmed with a wheel-only profile after the #3 fix.
+
 **Not done here** (remains for Phase XXII.B part 2 / C): `dxf-bitmap-cache.ts` CSS-transform live-zoom + idle re-raster (Figma pattern); `React.memo(CadStatusBar)` + Tooltip audit.
 
-✅ Google-level: YES — root cause proven via React DevTools re-render-root analysis (not guessed); SSoT-aligned (single write target = ImmediateTransformStore); zero public-API breakage; no functionality removed (zoom% live via `useTransformScale`).
+✅ Google-level: YES — root cause proven via React DevTools re-render-root analysis (not guessed); SSoT-aligned (single write target = ImmediateTransformStore, zoom read only in leaves); zero public-API breakage; no functionality removed (zoom% live via leaf); dead `zoomLevel`/`usePanelDescription` chain removed (Boy-Scout).
 
 ---
 
