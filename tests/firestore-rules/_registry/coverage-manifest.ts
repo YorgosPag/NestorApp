@@ -1173,6 +1173,7 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'floorplan_slab_openings',    // lines 3608-3630 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
   'floorplan_columns',          // lines 3632-3654 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
   'floorplan_beams',            // lines 3656-3678 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
+  'floorplan_mep_fixtures',     // ADR-406 — tenant-scoped CRUD (mirror columns/beams); full matrix with the BIM batch
   'bim_presets',                // lines 3680-3702 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
   'bim_materials',              // lines 3704-3723 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
   'bim_settings',               // lines 3725-3737 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
