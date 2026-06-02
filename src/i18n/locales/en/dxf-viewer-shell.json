@@ -1429,7 +1429,7 @@
         "deleteConfirm": "Delete this beam? This action cannot be undone.",
         "kind": {
           "section": {
-            "title": "Type"
+            "title": "Form"
           },
           "straight": "Straight",
           "curved": "Curved",
@@ -1466,7 +1466,7 @@
         },
         "sectionKind": {
           "section": {
-            "title": "Section Shape"
+            "title": "Type"
           },
           "rectangular": "Rectangular (RC)",
           "iShape": "Steel I/H"

@@ -149,6 +149,20 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
           isInFlyout: false,
           buttons: [
             {
+              // ADR-363 Φ2 — «Τύπος» = ΣΧΗΜΑ διατομής (mirror κολώνας «Τύπος»):
+              // η επιλογή «Μεταλλική Ι/H» αποκαλύπτει Κατάλογο + πέλμα/κορμός.
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'beam.sectionKind',
+                labelKey: 'ribbon.commands.beamEditor.sectionKind.section.title',
+                commandKey: BEAM_RIBBON_KEYS.stringParams.sectionKind,
+                comboboxWidthPx: 150,
+                options: BEAM_SECTION_KIND_OPTIONS,
+              },
+            },
+            {
+              // «Μορφή» = δομική μορφή δοκαριού (beam-specific — η κολώνα δεν την έχει).
               type: 'combobox',
               size: 'small',
               command: {
@@ -235,75 +249,9 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
       ],
     },
     {
-      // ADR-363 Phase 5.5c + 5.5i+ — material picker + section type + designation.
-      // Visual grouping: kind → geometry → material → actions.
-      id: 'beam-material',
-      labelKey: 'ribbon.panels.beamMaterial',
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'beam.material',
-                labelKey: 'ribbon.commands.beamEditor.material.section.title',
-                commandKey: BEAM_RIBBON_KEYS.stringParams.material,
-                comboboxWidthPx: 180,
-                options: BEAM_MATERIAL_OPTIONS,
-              },
-            },
-          ],
-        },
-        {
-          // ADR-363 Φ2 — σχήμα διατομής (ορθογώνιο RC ↔ μεταλλικό Ι). Η επιλογή
-          // 'I-shape' εμφανίζει τα catalog + flange/web panels (bridge visibility).
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'beam.sectionKind',
-                labelKey: 'ribbon.commands.beamEditor.sectionKind.section.title',
-                commandKey: BEAM_RIBBON_KEYS.stringParams.sectionKind,
-                comboboxWidthPx: 150,
-                options: BEAM_SECTION_KIND_OPTIONS,
-              },
-            },
-          ],
-        },
-      ],
-    },
-    {
-      // ADR-363 Φ2 — EN 10365 IPE/HEA/HEB/HEM profile catalog. Ορατό iff
-      // `params.sectionKind === 'I-shape'` via bridge.getPanelVisibility.
-      id: 'beam-ishape-catalog',
-      labelKey: 'ribbon.panels.beamIshapeCatalog',
-      visibilityKey: BEAM_RIBBON_VISIBILITY_KEYS.ishapeCatalog,
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'beam.ishapeCatalog',
-                labelKey: 'ribbon.commands.beamEditor.catalogProfile.section.title',
-                commandKey: BEAM_RIBBON_KEYS.stringParams.catalogProfile,
-                comboboxWidthPx: 190,
-                options: ISHAPE_CATALOG_OPTIONS,
-              },
-            },
-          ],
-        },
-      ],
-    },
-    {
       // ADR-363 Φ2 — I-shape variant inputs (section type hint + flange tf + web
-      // tw). Ορατό iff `params.sectionKind === 'I-shape'` via bridge.getPanelVisibility.
+      // tw). Ορατό iff `sectionKind === 'I-shape'` via bridge.getPanelVisibility.
+      // Σειρά mirror κολώνας: variant-params → catalog → material.
       id: 'beam-ishape-params',
       labelKey: 'ribbon.panels.beamIshape',
       visibilityKey: BEAM_RIBBON_VISIBILITY_KEYS.ishapeParams,
@@ -342,6 +290,55 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
                 commandKey: BEAM_RIBBON_KEYS.params.webThickness,
                 comboboxWidthPx: 80,
                 options: I_WEB_THICKNESS_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-363 Φ2 — EN 10365 IPE/HEA/HEB/HEM profile catalog. Ορατό iff
+      // `sectionKind === 'I-shape'` via bridge.getPanelVisibility.
+      id: 'beam-ishape-catalog',
+      labelKey: 'ribbon.panels.beamIshapeCatalog',
+      visibilityKey: BEAM_RIBBON_VISIBILITY_KEYS.ishapeCatalog,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'beam.ishapeCatalog',
+                labelKey: 'ribbon.commands.beamEditor.catalogProfile.section.title',
+                commandKey: BEAM_RIBBON_KEYS.stringParams.catalogProfile,
+                comboboxWidthPx: 190,
+                options: ISHAPE_CATALOG_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-363 Phase 5.5c — material picker. Σειρά mirror κολώνας (μετά τα
+      // ishape panels). Το «Σχήμα Διατομής» μετακινήθηκε στο πρώτο panel ως «Τύπος».
+      id: 'beam-material',
+      labelKey: 'ribbon.panels.beamMaterial',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'beam.material',
+                labelKey: 'ribbon.commands.beamEditor.material.section.title',
+                commandKey: BEAM_RIBBON_KEYS.stringParams.material,
+                comboboxWidthPx: 180,
+                options: BEAM_MATERIAL_OPTIONS,
               },
             },
           ],
