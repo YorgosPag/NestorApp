@@ -20,6 +20,8 @@ import { CONTEXTUAL_MEP_CIRCUIT_TAB, MEP_CIRCUIT_CONTEXTUAL_TRIGGER } from '../u
 import { CONTEXTUAL_MEP_FIXTURE_TAB, MEP_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-tab';
 import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
 import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
+import { useMepSystemStore } from '../bim/mep-systems/mep-system-store';
+import { resolveManagedCircuits } from '../bim/mep-systems/mep-circuit-editor';
 
 const BIM_KIND_TYPES: ReadonlySet<string> = new Set([
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair',

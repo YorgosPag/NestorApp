@@ -22,14 +22,21 @@
 import { useCallback, useMemo } from 'react';
 
 import type { Entity } from '../../../types/entities';
+import { isMepFixtureEntity } from '../../../types/entities';
 import { useCommandHistory, CompoundCommand, type ICommand } from '../../../core/commands';
 import { CreateMepSystemCommand } from '../../../core/commands/entity-commands/CreateMepSystemCommand';
 import { UpdateMepSystemParamsCommand } from '../../../core/commands/entity-commands/UpdateMepSystemParamsCommand';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
+import { useMepCircuitEditorStore } from '../../../bim/mep-systems/mep-circuit-editor-store';
 import {
   resolveCircuitFromSelection,
   type CircuitDraft,
 } from '../../../bim/mep-systems/mep-circuit-from-selection';
+import {
+  buildAddMembersUpdate,
+  buildRemoveMembersUpdate,
+  type MepSystemParamsUpdate,
+} from '../../../bim/mep-systems/mep-circuit-editor';
 import { pickNextSystemColor } from '../../../bim/mep-systems/mep-system-color';
 import {
   buildDefaultCircuitParams,
@@ -90,20 +97,68 @@ export function useRibbonMepCircuitBridge(
     });
   }, [resolveSelectedEntities, executeCommand, t]);
 
+  // ADR-408 Φ6 — the circuit the properties panel is editing (selection-synced).
+  const resolveActiveSystem = useCallback((): MepSystemEntity | null => {
+    const id = useMepCircuitEditorStore.getState().activeSystemId;
+    if (!id) return null;
+    return useMepSystemStore.getState().getSystems().find((s) => s.id === id) ?? null;
+  }, []);
+
+  const handleAddMembers = useCallback((): void => {
+    const active = resolveActiveSystem();
+    if (!active) {
+      EventBus.emit('bim:mep-circuit-edit-failed', { reason: 'noActiveCircuit' });
+      return;
+    }
+    const systems = useMepSystemStore.getState().getSystems();
+    const fixtures = resolveSelectedEntities().filter(isMepFixtureEntity);
+    const plan = buildAddMembersUpdate(active, fixtures, systems);
+    if (!plan) {
+      EventBus.emit('bim:mep-circuit-edit-failed', { reason: 'addFailed' });
+      return;
+    }
+    const updates: MepSystemParamsUpdate[] = [plan.update, ...plan.reassignRemovals];
+    executeCommand(buildUpdateCommand('Add MEP circuit members', updates));
+    EventBus.emit('bim:mep-circuit-members-added', { memberCount: plan.addedCount });
+  }, [resolveActiveSystem, resolveSelectedEntities, executeCommand]);
+
+  const handleRemoveMembers = useCallback((): void => {
+    const active = resolveActiveSystem();
+    if (!active) {
+      EventBus.emit('bim:mep-circuit-edit-failed', { reason: 'noActiveCircuit' });
+      return;
+    }
+    const ids = new Set(universalSelection.getSelectedEntityIds());
+    const plan = buildRemoveMembersUpdate(active, ids);
+    if (!plan) {
+      EventBus.emit('bim:mep-circuit-edit-failed', { reason: 'removeFailed' });
+      return;
+    }
+    executeCommand(buildUpdateCommand('Remove MEP circuit members', [plan.update]));
+    EventBus.emit('bim:mep-circuit-members-removed', { memberCount: plan.removedCount });
+  }, [resolveActiveSystem, universalSelection, executeCommand]);
+
   const onAction = useCallback(
     (action: string): void => {
-      if (action === MEP_CIRCUIT_RIBBON_ACTIONS.create) {
-        handleCreate();
-        return;
-      }
+      if (action === MEP_CIRCUIT_RIBBON_ACTIONS.create) return handleCreate();
+      if (action === MEP_CIRCUIT_RIBBON_ACTIONS.addMembers) return handleAddMembers();
+      if (action === MEP_CIRCUIT_RIBBON_ACTIONS.removeMembers) return handleRemoveMembers();
       if (action === MEP_CIRCUIT_RIBBON_ACTIONS.close) {
         universalSelection.clearAll();
       }
     },
-    [handleCreate, universalSelection],
+    [handleCreate, handleAddMembers, handleRemoveMembers, universalSelection],
   );
 
   return useMemo(() => ({ onAction }), [onAction]);
+}
+
+/** Turn one or more param updates into a single (compound) undoable command. */
+function buildUpdateCommand(name: string, updates: readonly MepSystemParamsUpdate[]): ICommand {
+  const commands = updates.map(
+    (u) => new UpdateMepSystemParamsCommand(u.systemId, u.nextParams, u.prevParams),
+  );
+  return commands.length === 1 ? commands[0]! : new CompoundCommand(name, commands);
 }
 
 /** Build the (compound) create command, bundling Revit single-circuit reassigns. */

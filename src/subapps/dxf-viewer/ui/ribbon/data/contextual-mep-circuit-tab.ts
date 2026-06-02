@@ -6,13 +6,18 @@
  * electrical panel AND ≥1 light fixture — a panel = the circuit source, the
  * fixtures = its members, Revit "Power → Create Circuit").
  *
- * Panel (opening slice — action only):
+ * Panels:
+ *   Ιδιότητες Κυκλώματος (Φ6) → circuit picker + όνομα + χρώμα + προσθήκη/
+ *     αφαίρεση μελών (εμφανίζεται όταν η επιλογή αγγίζει υπάρχον κύκλωμα)
  *   Circuit → «Δημιουργία κυκλώματος» + close
  *
  * Behaviour: bridge (`useRibbonMepCircuitBridge`) resolves the source/members
  * from the selection and dispatches a `CreateMepSystemCommand` (undoable). The
  * new circuit owns a deterministic palette colour; colour-by-system (Φ5.C)
- * paints the members.
+ * paints the members. The Φ6 properties panel edits the **active circuit**
+ * (`useMepCircuitEditorStore`, synced from the selection) — rename / colour via
+ * leaf widgets, add/remove members via the bridge — all through the undoable
+ * `UpdateMepSystemParamsCommand`.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
@@ -28,6 +33,74 @@ export const CONTEXTUAL_MEP_CIRCUIT_TAB: RibbonTab = {
   isContextual: true,
   contextualTrigger: MEP_CIRCUIT_CONTEXTUAL_TRIGGER,
   panels: [
+    {
+      // ADR-408 Φ6 — manage the active circuit (rename / colour / members). The
+      // widgets self-hide (return null) when there is no active circuit, so the
+      // panel is inert in the pure create case (panel + fixtures, no circuit yet).
+      id: 'mep-circuit-properties',
+      labelKey: 'ribbon.panels.mepCircuitProperties',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'mep-circuit-picker',
+              command: {
+                id: 'mepCircuit.picker',
+                labelKey: 'ribbon.commands.mepCircuit.circuitPicker',
+                commandKey: 'mepCircuit.picker',
+              },
+            },
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'mep-circuit-name',
+              command: {
+                id: 'mepCircuit.name',
+                labelKey: 'ribbon.commands.mepCircuit.name',
+                commandKey: 'mepCircuit.name',
+              },
+            },
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'mep-circuit-color',
+              command: {
+                id: 'mepCircuit.color',
+                labelKey: 'ribbon.commands.mepCircuit.color',
+                commandKey: 'mepCircuit.color',
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'mepCircuit.addMembers',
+                labelKey: 'ribbon.commands.mepCircuit.addMembers',
+                tooltipKey: 'ribbon.commands.mepCircuit.addMembersTooltip',
+                icon: 'bim-mep-fixture',
+                commandKey: MEP_CIRCUIT_RIBBON_ACTIONS.addMembers,
+                action: MEP_CIRCUIT_RIBBON_ACTIONS.addMembers,
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'mepCircuit.removeMembers',
+                labelKey: 'ribbon.commands.mepCircuit.removeMembers',
+                tooltipKey: 'ribbon.commands.mepCircuit.removeMembersTooltip',
+                icon: 'trash',
+                commandKey: MEP_CIRCUIT_RIBBON_ACTIONS.removeMembers,
+                action: MEP_CIRCUIT_RIBBON_ACTIONS.removeMembers,
+              },
+            },
+          ],
+        },
+      ],
+    },
     {
       id: 'mep-circuit-actions',
       labelKey: 'ribbon.panels.mepCircuit',

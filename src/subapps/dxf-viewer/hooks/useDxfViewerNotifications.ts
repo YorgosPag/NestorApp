@@ -124,6 +124,23 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-408 Φ6 — circuit member-management feedback (properties panel).
+    unsubs.push(
+      EventBus.on('bim:mep-circuit-members-added', ({ memberCount }) => {
+        toast.success(t('mepCircuit.membersAdded', { count: memberCount }));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:mep-circuit-members-removed', ({ memberCount }) => {
+        toast.success(t('mepCircuit.membersRemoved', { count: memberCount }));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:mep-circuit-edit-failed', ({ reason }) => {
+        toast.warning(t(`mepCircuit.${reason}`));
+      }),
+    );
+
     // ADR-401 Phase G.3 — stair attach mirrors (reuse the generic messages).
     unsubs.push(
       EventBus.on('bim:stairs-auto-attached', () => {

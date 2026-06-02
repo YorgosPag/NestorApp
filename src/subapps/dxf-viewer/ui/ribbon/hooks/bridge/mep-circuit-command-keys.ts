@@ -12,6 +12,10 @@ export const MEP_CIRCUIT_RIBBON_ACTIONS = {
   create: 'mepCircuit.actions.create',
   /** Clear the selection (dismiss the contextual tab). */
   close: 'mepCircuit.actions.close',
+  /** ADR-408 Φ6 — add the selected fixtures to the active circuit. */
+  addMembers: 'mepCircuit.actions.addMembers',
+  /** ADR-408 Φ6 — remove the selected member fixtures from the active circuit. */
+  removeMembers: 'mepCircuit.actions.removeMembers',
 } as const;
 
 const MEP_CIRCUIT_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

@@ -227,6 +227,10 @@ export interface DrawingEventMap {
   // ADR-408 Φ5 — circuit creation feedback (create-from-selection UI).
   'bim:mep-circuit-created': { memberCount: number };
   'bim:mep-circuit-create-failed': { reason: 'no-source' | 'multiple-sources' | 'no-members' };
+  // ADR-408 Φ6 — circuit member-management feedback (properties panel).
+  'bim:mep-circuit-members-added': { memberCount: number };
+  'bim:mep-circuit-members-removed': { memberCount: number };
+  'bim:mep-circuit-edit-failed': { reason: 'noActiveCircuit' | 'addFailed' | 'removeFailed' };
   // ADR-407 — BIM railing params + delete events
   'bim:railing-params-updated': { railingId: string };
   'bim:railing-delete-requested': { railingId: string };

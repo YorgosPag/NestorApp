@@ -31,6 +31,9 @@ import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 import { RibbonStairFloorInfoWidget } from './RibbonStairFloorInfoWidget';
 import { RibbonStairDimensionsWidget } from './RibbonStairDimensionsWidget';
 import { RibbonWallDimensionWidget } from './RibbonWallDimensionWidget';
+import { RibbonMepCircuitPickerWidget } from './RibbonMepCircuitPickerWidget';
+import { RibbonMepCircuitNameWidget } from './RibbonMepCircuitNameWidget';
+import { RibbonMepCircuitColorWidget } from './RibbonMepCircuitColorWidget';
 import { MultiSelectionCommonPropertiesPanel } from './MultiSelectionCommonPropertiesPanel';
 import { MultiSelectionFilterPanel } from './MultiSelectionFilterPanel';
 import { CurrentLayerPicker } from '../../components/layer-picker/CurrentLayerPicker';
@@ -120,6 +123,15 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'opening-tag-leader-color') {
       return <OpeningTagLeaderColorWidget key="opening-tag-leader-color-widget" />;
+    }
+    if (button.widgetId === 'mep-circuit-picker') {
+      return <RibbonMepCircuitPickerWidget key="mep-circuit-picker-widget" />;
+    }
+    if (button.widgetId === 'mep-circuit-name') {
+      return <RibbonMepCircuitNameWidget key="mep-circuit-name-widget" />;
+    }
+    if (button.widgetId === 'mep-circuit-color') {
+      return <RibbonMepCircuitColorWidget key="mep-circuit-color-widget" />;
     }
     return null;
   }
