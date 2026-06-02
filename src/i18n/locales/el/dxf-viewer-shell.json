@@ -1766,6 +1766,7 @@
       },
       "penTable": {
         "label": "Πίνακας Πενών",
+        "panelTitle": "Πίνακας Πενών (16×6)",
         "openAriaLabel": "Άνοιγμα πίνακα πενών 16×6",
         "cellAriaLabel": "Πένα {pen} κλίμακα {scale}",
         "rightClickHint": "Δεξί κλικ σε κελί → επαναφορά σε προεπιλογή",
