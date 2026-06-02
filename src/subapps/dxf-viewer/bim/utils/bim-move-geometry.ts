@@ -47,6 +47,8 @@ import type {
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import type { StairEntity, StairParams } from '../types/stair-types';
+import type { MepFixtureEntity, MepFixtureParams } from '../types/mep-fixture-types';
+import type { ElectricalPanelEntity, ElectricalPanelParams } from '../types/electrical-panel-types';
 import type { Point3D, Polygon3D } from '../types/bim-base';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { computeSlabGeometry } from '../geometry/slab-geometry';
@@ -54,6 +56,8 @@ import { computeSlabOpeningGeometry } from '../geometry/slab-opening-geometry';
 import { computeColumnGeometry } from '../geometry/column-geometry';
 import { computeBeamGeometry } from '../geometry/beam-geometry';
 import { computeStairGeometry } from '../geometry/stairs/StairGeometryService';
+import { computeMepFixtureGeometry } from '../mep-fixtures/mep-fixture-geometry';
+import { computeElectricalPanelGeometry } from '../electrical-panels/electrical-panel-geometry';
 
 // ─── Point3D delta helpers ──────────────────────────────────────────────────
 
@@ -135,6 +139,27 @@ function moveStair(entity: StairEntity, delta: Point2D): Partial<SceneEntity> {
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
+// ADR-406 / ADR-408 Φ3 — point-based MEP hosts: shift the single `position`
+// anchor (same shape as the column). Connectors are host-local → they follow for
+// free; the embedded home-run wire is recomputed at render time (ADR-408 Φ7).
+function moveMepFixture(entity: MepFixtureEntity, delta: Point2D): Partial<SceneEntity> {
+  const newParams: MepFixtureParams = {
+    ...entity.params,
+    position: shiftPoint3D(entity.params.position, delta),
+  };
+  const geometry = computeMepFixtureGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
+function moveElectricalPanel(entity: ElectricalPanelEntity, delta: Point2D): Partial<SceneEntity> {
+  const newParams: ElectricalPanelParams = {
+    ...entity.params,
+    position: shiftPoint3D(entity.params.position, delta),
+  };
+  const geometry = computeElectricalPanelGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
 /**
  * Returns the partial entity patch (`{params, geometry}`) for moving a BIM
  * entity by a 2D delta. Returns `null` if the entity is not a BIM type
@@ -168,6 +193,10 @@ export function calculateBimMovedGeometry(
       return moveBeam(entity, delta);
     case 'stair':
       return moveStair(entity, delta);
+    case 'mep-fixture':
+      return moveMepFixture(entity, delta);
+    case 'electrical-panel':
+      return moveElectricalPanel(entity, delta);
     default:
       return null;
   }

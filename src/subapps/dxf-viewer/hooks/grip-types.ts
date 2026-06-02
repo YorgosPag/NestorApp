@@ -277,6 +277,31 @@ export type MepFixtureGripKind =
   | 'mep-fixture-corner-se';
 
 /**
+ * ADR-408 Φ3 — Electrical panel grip kind (parametric grip type).
+ * Routes commit through `applyElectricalPanelGripDrag()` +
+ * `UpdateElectricalPanelParamsCommand` instead of the standard
+ * `StretchEntityCommand` vertex path.
+ *
+ * Grips exposed by `ElectricalPanelEntity`
+ * (`bim/electrical-panels/electrical-panel-grips.ts`) — full wall-parity mirror
+ * of the rectangular MEP fixture (the panel is rectangular-only → no diameter):
+ *   - `electrical-panel-move`     → translate `position` (whole-entity MOVE glyph).
+ *   - `electrical-panel-rotation` → rotate about `position` (curved ROTATION glyph).
+ *   - `electrical-panel-corner-{ne,nw,sw,se}` → two-direction resize of width ×
+ *     length. The DIAGONALLY-OPPOSITE corner stays pinned (anchor); the body
+ *     grows/shrinks toward the dragged corner and `position` re-centres. ORTHO
+ *     (F8) constrains the drag to the dominant local axis (pure width OR pure
+ *     length). Clamped to `MIN_PANEL_DIMENSION_MM`.
+ */
+export type ElectricalPanelGripKind =
+  | 'electrical-panel-move'
+  | 'electrical-panel-rotation'
+  | 'electrical-panel-corner-ne'
+  | 'electrical-panel-corner-nw'
+  | 'electrical-panel-corner-sw'
+  | 'electrical-panel-corner-se';
+
+/**
  * ADR-359 Phase 11 — XLine grip kind.
  * Routes commit through `applyXLineGripDrag()` + direct scene patch instead of
  * the standard `StretchEntityCommand` vertex path.
@@ -361,6 +386,13 @@ export interface GripInfo {
    * translate + rotation + opposite-corner-anchored width/length resize).
    */
   mepFixtureGripKind?: MepFixtureGripKind;
+  /**
+   * ADR-408 Φ3 — parametric electrical panel grip discriminator. Present only
+   * when the grip belongs to an `ElectricalPanelEntity`; routes the commit
+   * through `applyElectricalPanelGripDrag()` + `UpdateElectricalPanelParamsCommand`
+   * (center translate + rotation + opposite-corner-anchored width/length resize).
+   */
+  electricalPanelGripKind?: ElectricalPanelGripKind;
   /**
    * ADR-359 Phase 11 — XLine grip discriminator. Present only when the grip
    * belongs to an `XLineEntity`; routes commit through `applyXLineGripDrag()` +

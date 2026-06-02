@@ -260,6 +260,19 @@ export function drawGhostEntity(
       return;
     }
 
+    // ADR-408 Φ3 — electrical panel ghost: footprint polygon (scene-units, from
+    // ElectricalPanelGeometry). Mirror mep-fixture so the live move/rotation/resize
+    // ghost paints.
+    case 'electrical-panel': {
+      const panel = entity as unknown as {
+        geometry?: { footprint?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+      };
+      const verts = panel.geometry?.footprint?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
     // ADR-363 Phase 2.5 — opening ghost: cutout rectangle outline from raw OpeningEntity.geometry.
     case 'opening': {
       const opening = entity as unknown as {

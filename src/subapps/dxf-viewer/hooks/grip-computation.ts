@@ -12,13 +12,14 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo, StairGripKind, WallGripKind } from './useGripMovement';
-import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, OpeningGripKind, MepFixtureGripKind } from './grip-types';
+import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind } from './grip-types';
 import type { WallEntity } from '../bim/types/wall-types';
 import type { BeamEntity } from '../bim/types/beam-types';
 import type { ColumnEntity } from '../bim/types/column-types';
 import type { StairEntity } from '../bim/types/stair-types';
 import type { SlabEntity } from '../bim/types/slab-types';
 import type { MepFixtureEntity } from '../bim/types/mep-fixture-types';
+import type { ElectricalPanelEntity } from '../bim/types/electrical-panel-types';
 import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
 import { getStairGrips } from '../bim/stairs/stair-grips';
 import { getWallGrips } from '../bim/walls/wall-grips';
@@ -28,6 +29,7 @@ import { getSlabGrips } from '../bim/slabs/slab-grips';
 import { getSlabOpeningGrips } from '../bim/slab-openings/slab-opening-grips';
 import { getOpeningGrips } from '../bim/walls/opening-grips';
 import { getMepFixtureGrips } from '../bim/mep-fixtures/mep-fixture-grips';
+import { getElectricalPanelGrips } from '../bim/electrical-panels/electrical-panel-grips';
 import { getDimensionGrips } from './dimensions/useDimensionGrips';
 import { getXLineGrips } from '../systems/xline/xline-grips';
 import { getRayGrips } from '../systems/ray/ray-grips';
@@ -83,6 +85,11 @@ export interface DxfGripDragPreview {
    * through `applyMepFixtureGripDrag` + `computeMepFixtureGeometry`.
    */
   mepFixtureGripKind?: MepFixtureGripKind;
+  /**
+   * ADR-408 Φ3 — parametric electrical panel grip discriminator. Routes the live
+   * ghost through `applyElectricalPanelGripDrag` + `computeElectricalPanelGeometry`.
+   */
+  electricalPanelGripKind?: ElectricalPanelGripKind;
   /**
    * ADR-363 Phase 1G — set when the active grip is a wall corner being moved via
    * the hot-grip (click-click) state. Consumed by `useGripGhostPreview` to draw
@@ -323,6 +330,13 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
       // ADR-406 — parametric light-fixture grips (move + rotation + 4 corner
       // resize). DxfMepFixture carries params at top level (mirror DxfColumn).
       grips.push(...getMepFixtureGrips(entity as unknown as MepFixtureEntity));
+      break;
+    }
+
+    case 'electrical-panel': {
+      // ADR-408 Φ3 — parametric electrical panel grips (move + rotation + 4 corner
+      // resize, rectangular-only). Carries params at top level (mirror mep-fixture).
+      grips.push(...getElectricalPanelGrips(entity as unknown as ElectricalPanelEntity));
       break;
     }
   }

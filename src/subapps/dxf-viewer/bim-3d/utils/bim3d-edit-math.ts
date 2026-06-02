@@ -109,7 +109,12 @@ export function mmToEntityUnitFactor(entity: Entity): number {
     entity.type === 'wall' ||
     entity.type === 'column' ||
     entity.type === 'beam' ||
-    entity.type === 'slab'
+    entity.type === 'slab' ||
+    // ADR-406 / ADR-408 Φ3 — point-based MEP hosts also carry `params.sceneUnits`;
+    // without this their meter-scene gizmo move delta is 1000× off (entity flies
+    // away then snaps back on resync). Same fix as the structural types above.
+    entity.type === 'mep-fixture' ||
+    entity.type === 'electrical-panel'
   ) {
     return mmScaleFor(entity.params);
   }

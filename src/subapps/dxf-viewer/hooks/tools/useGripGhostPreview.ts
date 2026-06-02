@@ -143,6 +143,9 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       // Without this the apply-entity-preview mep-fixture branch is unreachable
       // and the live drag ghost never paints.
       ...(dragPreview.mepFixtureGripKind  ? { mepFixtureGripKind:  dragPreview.mepFixtureGripKind }   : {}),
+      // ADR-408 Φ3 — electrical panel parametric ghost (move / rotation / corner resize).
+      // Without this the apply-entity-preview electrical-panel branch is unreachable.
+      ...(dragPreview.electricalPanelGripKind ? { electricalPanelGripKind: dragPreview.electricalPanelGripKind } : {}),
       ...(dragPreview.anchorPos           ? { anchorPos:           dragPreview.anchorPos }            : {}),
       // ADR-363 Phase 1G — rotation centre for the wall-rotation hot-grip ghost.
       ...(dragPreview.rotatePivot         ? { rotatePivot:         dragPreview.rotatePivot }          : {}),

@@ -51,11 +51,15 @@ import type { SlabEntity } from '../../bim/types/slab-types';
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
-import type { BeamGripKind, SlabGripKind, SlabOpeningGripKind, MepFixtureGripKind } from '../../hooks/grip-types';
+import type { BeamGripKind, SlabGripKind, SlabOpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind } from '../../hooks/grip-types';
 // ADR-406 — parametric MEP fixture drag preview (move / rotation / corner resize).
 import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
 import { computeMepFixtureGeometry } from '../../bim/mep-fixtures/mep-fixture-geometry';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
+// ADR-408 Φ3 — parametric electrical panel drag preview (move / rotation / corner resize).
+import { applyElectricalPanelGripDrag } from '../../bim/electrical-panels/electrical-panel-grips';
+import { computeElectricalPanelGeometry } from '../../bim/electrical-panels/electrical-panel-geometry';
+import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -109,6 +113,14 @@ export interface EntityPreviewTransform {
    * from `cadToggleState` so the corner-resize ghost matches the commit.
    */
   readonly mepFixtureGripKind?: MepFixtureGripKind;
+  /**
+   * ADR-408 Φ3 — parametric electrical panel discriminator. Routes preview
+   * through `applyElectricalPanelGripDrag` + `computeElectricalPanelGeometry`.
+   * ORTHO (F8) is read from `cadToggleState` so the corner-resize ghost matches
+   * the commit. With `rotatePivot` set (panel-rotation 6-click) the ghost orbits
+   * the picked centre.
+   */
+  readonly electricalPanelGripKind?: ElectricalPanelGripKind;
   readonly anchorPos?: Point2D;
 }
 
@@ -155,7 +167,7 @@ export function applyEntityPreview(
   preview: EntityPreviewTransform | undefined,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, slabGripKind, slabOpeningGripKind, mepFixtureGripKind, anchorPos, rotatePivot } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, slabGripKind, slabOpeningGripKind, mepFixtureGripKind, electricalPanelGripKind, anchorPos, rotatePivot } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
@@ -214,6 +226,27 @@ export function applyEntityPreview(
     });
     if (newParams === fixture.params) return entity;
     const newGeometry = computeMepFixtureGeometry(newParams);
+    return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-408 Φ3 — parametric electrical panel live preview (move/rotation/corner) ──
+  // Mirror of the MEP fixture branch; ORTHO (F8) is read from `cadToggleState` so
+  // the corner-resize ghost matches the commit. `rotatePivot` (panel-rotation
+  // 6-click) orbits the picked centre; move/corner ignore it (delta-driven).
+  if (electricalPanelGripKind && entity.type === 'electrical-panel') {
+    const panel = entity as unknown as ElectricalPanelEntity;
+    const currentPos: Point2D = anchorPos
+      ? { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y }
+      : { x: delta.x, y: delta.y };
+    const newParams = applyElectricalPanelGripDrag(electricalPanelGripKind, {
+      originalParams: panel.params,
+      delta,
+      currentPos,
+      ortho: cadToggleState.isOrthoOn(),
+      ...(rotatePivot ? { pivot: rotatePivot } : {}),
+    });
+    if (newParams === panel.params) return entity;
+    const newGeometry = computeElectricalPanelGeometry(newParams);
     return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
   }
 
@@ -320,6 +353,14 @@ export function applyEntityPreview(
         const fix = entity as unknown as MepFixtureEntity;
         const newParams = applyMepFixtureGripDrag('mep-fixture-move', { originalParams: fix.params, delta });
         const newGeometry = computeMepFixtureGeometry(newParams);
+        return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+      }
+      case 'electrical-panel': {
+        // ADR-408 Φ3 — toolbar Move-tool ghost (no electricalPanelGripKind):
+        // translate via the `electrical-panel-move` SSoT, mirror mep-fixture.
+        const panel = entity as unknown as ElectricalPanelEntity;
+        const newParams = applyElectricalPanelGripDrag('electrical-panel-move', { originalParams: panel.params, delta });
+        const newGeometry = computeElectricalPanelGeometry(newParams);
         return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
       }
       case 'slab': {

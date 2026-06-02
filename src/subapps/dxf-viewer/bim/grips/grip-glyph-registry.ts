@@ -42,6 +42,9 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // MEP fixtures (ADR-406) — corners render the default 'square' glyph.
   'mep-fixture-move': 'move',
   'mep-fixture-rotation': 'rotation',
+  // Electrical panels (ADR-408 Φ3) — corners render the default 'square' glyph.
+  'electrical-panel-move': 'move',
+  'electrical-panel-rotation': 'rotation',
 } as const;
 
 /**

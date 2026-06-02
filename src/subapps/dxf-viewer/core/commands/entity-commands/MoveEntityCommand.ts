@@ -71,6 +71,14 @@ export class MoveEntityCommand implements ICommand {
       this.sceneManager.updateEntity(this.entityId, updates);
       cascadeHostedOpeningsForWalls([this.entityId], this.sceneManager);
       this.wasExecuted = true;
+      // Symmetry with MoveMultipleEntitiesCommand: emit so BIM persistence hooks
+      // (useBimEntityMovedPersistEffect — fixture/panel/wall/…) save the new
+      // position to Firestore. Without this a single-entity 3D gizmo move was
+      // applied to the scene but never persisted (reverted on refresh). Built
+      // from snapshot+updates (no getLevelScene — stale at synchronous emit time).
+      const movedEntity = { ...this.entitySnapshot, ...updates } as SceneEntity;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      EventBus.emit('bim:entities-moved', { movedEntities: [movedEntity] as any });
     }
   }
 
@@ -85,6 +93,10 @@ export class MoveEntityCommand implements ICommand {
         const reversedUpdates = calculateMovedGeometry(entity, reverseDelta(this.delta));
         this.sceneManager.updateEntity(this.entityId, reversedUpdates);
         cascadeHostedOpeningsForWalls([this.entityId], this.sceneManager);
+        // Persist the reverted position (mirror execute + MoveMultiple.undo).
+        const revertedEntity = { ...entity, ...reversedUpdates } as SceneEntity;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        EventBus.emit('bim:entities-moved', { movedEntities: [revertedEntity] as any });
       }
     }
   }
