@@ -91,6 +91,21 @@ Profile #3 (`profiling-data.03-06-2026.02-03-41.json`) → «καλύτερα α
 
 ---
 
+## ✅✅ UPDATE 2026-06-03 #2 — wheel-only profile ΕΠΙΒΕΒΑΙΩΣΕ #3 + αποκάλυψε ΞΕΧΩΡΙΣΤΟ loop
+
+**Profile `profiling-data.03-06-2026.02-28-17.json` (49 commits, wheel-only recording, μετά Ctrl+Shift+R).** Χρονική ανάλυση (script `seq-profile.mjs`):
+
+### ✅ WHEEL-ZOOM ΚΑΘΑΡΟ — #1+#2+#3 ΔΟΥΛΕΥΟΥΝ
+- Commits **15-30** (η συνεχόμενη ριπή wheel) = **78 fibers / 15-65ms**, signature `SidebarZoomLeaf, StandaloneStatusBar, CanvasLayerStackTransformBridge, CoordinateDebugOverlay, ZoomDisplayLeaf`. **Μηδέν `LevelsSystem`, μηδέν `SidebarSection`.** Πορεία: 2502 → 2486 → 503 → **78 fibers**/notch. **Δεν υπάρχει wheel-triggered #4.**
+
+### ⚠️ ΝΕΟ ΕΥΡΗΜΑ — `LevelsSystem` 2490-fiber cascade (ΟΧΙ wheel)
+- 14 commits ~**2490 fibers, 2-4 ΔΕΥΤΕΡΟΛΕΠΤΑ** το καθένα, updater `LevelsSystem`. Εμφανίζονται **ΠΡΙΝ** (0-14) και **ΜΕΤΑ** (31-48) τη ριπή wheel — **ΠΟΤΕ κατά** το wheel (1501-1677ms). Άρα ΟΧΙ wheel-triggered.
+- **Quartet pattern** επαναλαμβανόμενο ~7×: A=`LevelsSystem` μόνο (2490) → B=`LevelsSystem`+ThermalEnvelopeHost+...+CurrentLayerPicker+PropertiesPalette+BimViewport3D+Select (2490) → C=ThermalEnvelopeHost+selection (123) → D=`EnvelopeOverlay`,Tooltip (10). Μυρίζει **render→effect→setState loop** ψηλά (LevelsSystem context Provider + BIM envelope + selection/properties).
+- **Πηγή προς διερεύνηση:** ένα hook μέσα στο `useLevelsSystemState` (`systems/levels/LevelsSystem.tsx`) κάνει setState επαναλαμβανόμενα → σπάει το memoized context `value` → cascade σε όλους τους consumers. `useSceneManager`/`useAutoSaveSceneManager` ΑΠΟΚΛΕΙΣΤΗΚΑΝ (σταθερά σε ηρεμία). Ύποπτα: `useLevelsFirestoreSync`, `useLevelSceneLoader`, `useLevelFloorplanSync`, ή envelope/selection feedback (`ThermalEnvelopeHost`/`EnvelopeOverlay`).
+- **❓ ΑΝΟΙΧΤΟ:** χρειάζεται επιβεβαίωση αν στο recording ο Giorgio ήταν idle (→ catastrophic idle loop) ή έκανε selection/layer changes (→ ακριβό selection re-render). Οι B/C commits περιέχουν `Select`/`CurrentLayerPicker`/`PropertiesPalette` → πιθανώς selection-related.
+
+---
+
 ## 📝 ΣΗΜΕΙΩΣΕΙΣ
 - Phase XXII.B **μέρος 2** (μη-ξεκινημένο, ξεχωριστό): `dxf-bitmap-cache.ts` CSS-transform live-zoom + idle re-raster (Figma pattern) — δες ADR-040 §Phase XXII.A/B.
 - ΜΗΝ αγγίξεις: railing (ADR-407), MEP/fixture-grips/electrical-panel (ADR-406/408).
