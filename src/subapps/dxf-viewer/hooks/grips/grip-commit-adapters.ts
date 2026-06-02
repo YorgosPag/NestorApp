@@ -301,6 +301,7 @@ import {
   commitSlabOpeningGripDrag,
   commitBeamGripDrag,
   commitColumnGripDrag,
+  commitMepFixtureGripDrag,
   commitXLineGripDrag,
   commitRayGripDrag,
   commitDimensionGripDrag,
@@ -386,6 +387,13 @@ export function commitDxfGripDragModeAware(
   // by UpdateColumnParamsCommand.
   if (grip.columnGripKind) {
     commitColumnGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-406 — MEP fixture parametric grip path (center translate + rotation +
+  // opposite-corner-anchored width/length resize). Bypasses stretch because the
+  // fixture is params-driven; UpdateMepFixtureParamsCommand recomputes geometry.
+  if (grip.mepFixtureGripKind) {
+    commitMepFixtureGripDrag(grip, delta, deps);
     return;
   }
   // ADR-359 Phase 11 — XLine grip path (basePoint translate or direction rotate).

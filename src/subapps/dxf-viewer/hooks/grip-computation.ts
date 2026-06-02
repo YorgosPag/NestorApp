@@ -12,7 +12,7 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo, StairGripKind, WallGripKind } from './useGripMovement';
-import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, OpeningGripKind } from './grip-types';
+import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, OpeningGripKind, MepFixtureGripKind } from './grip-types';
 import type { WallEntity } from '../bim/types/wall-types';
 import type { BeamEntity } from '../bim/types/beam-types';
 import type { ColumnEntity } from '../bim/types/column-types';
@@ -78,6 +78,11 @@ export interface DxfGripDragPreview {
   slabGripKind?: SlabGripKind;
   slabOpeningGripKind?: SlabOpeningGripKind;
   openingGripKind?: OpeningGripKind;
+  /**
+   * ADR-406 — parametric MEP fixture grip discriminator. Routes the live ghost
+   * through `applyMepFixtureGripDrag` + `computeMepFixtureGeometry`.
+   */
+  mepFixtureGripKind?: MepFixtureGripKind;
   /**
    * ADR-363 Phase 1G — set when the active grip is a wall corner being moved via
    * the hot-grip (click-click) state. Consumed by `useGripGhostPreview` to draw

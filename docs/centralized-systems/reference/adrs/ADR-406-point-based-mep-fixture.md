@@ -177,3 +177,22 @@ Toggle «Ηλεκτρολογικά» (ADR-405 multi-toggle) κρύβει/δεί
   Wiring (4 layers, mirror columnGhost): `canvas-layer-stack-types.ts` (`mepFixtureGhostPreview` payload)
   → `CanvasSection` (`mepFixtureTool.getGhostFootprint`) → `CanvasLayerStack` → `PreviewCanvasMounts`. NEW
   test `MepFixtureGhostRenderer.test.ts` (2). 58/58 PASS, tsc 0. 🔴 pending browser verify + commit.
+
+- **v0.6 (2026-06-02, Opus 4.8) — ✨ 2D parametric grips (move + rotation + 4-corner resize):** επιλεγμένο
+  φωτιστικό δείχνει πλέον στην κάτοψη **4 γωνιακές λαβές + σημάδι περιστροφής + σημάδι μετακίνησης** (αίτημα
+  Giorgio). Επαναχρησιμοποιεί ΠΛΗΡΩΣ το column parametric-grip μοτίβο (ADR-397) — zero νέα υποδομή:
+  `UpdateMepFixtureParamsCommand` (ήδη υπήρχε, merge→single-undo), grip render leaf + glyph registry, ADR-040
+  micro-leaf. **Συμπεριφορά:** κάθε γωνιακή λαβή κάνει **resize σε δύο διευθύνσεις** με τη **διαγώνια απέναντι
+  γωνία πακτωμένη** (anchor)· `width`/`length` μεγαλώνουν προς τη συρόμενη γωνία και το `position` re-centre-άρει
+  στο νέο κέντρο· clamp στο `MIN_FIXTURE_DIMENSION_MM` (20mm)· σέβεται το `rotation`. **ORTHO (F8)** περιορίζει
+  το corner-drag στον κυρίαρχο τοπικό άξονα (καθαρό width Ή length) — διαβάζεται από το non-React
+  `cadToggleState.isOrthoOn()` (ίδια πηγή με το BIM drawing commit path). Σημάδι περιστροφής = swept-angle γύρω
+  από το κέντρο (mirror `wall-rotation`)· σημάδι μετακίνησης = translate `position`. Circular kind (μη-ζωντανό):
+  ελάχιστο fallback κέντρο + διάμετρος. **Files:** NEW `bim/mep-fixtures/mep-fixture-grips.ts` (pure SSoT:
+  `getMepFixtureGrips` + `applyMepFixtureGripDrag`) + NEW `__tests__/mep-fixture-grips.test.ts` (10)· core grip
+  system (κοινό): `grip-types.ts` (+`MepFixtureGripKind` + `mepFixtureGripKind` σε GripInfo/UnifiedGripInfo),
+  `useGripMovement.ts` (re-export), `grip-computation.ts` (case + DxfGripDragPreview field), `grip-glyph-registry.ts`
+  (move/rotation glyphs), `grip-registry.ts` + `grip-projections.ts` (forward discriminator), `grip-parametric-commits.ts`
+  (`commitMepFixtureGripDrag`), `grip-commit-adapters.ts` (dispatch), `apply-entity-preview.ts` (live ghost branch).
+  **Δεν** άλλαξαν τα `mep-fixture-types.ts`/`-geometry.ts` (width/length/rotation/position ήδη υπήρχαν). tsc 0.
+  🔴 pending browser verify + commit. Deferred: circular full grips, snap-during-resize.

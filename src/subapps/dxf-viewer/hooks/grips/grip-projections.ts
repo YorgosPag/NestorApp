@@ -58,6 +58,8 @@ export function buildDxfDragPreview(
     ...(activeGrip.columnGripKind ? { columnGripKind: activeGrip.columnGripKind } : {}),
     ...(activeGrip.beamGripKind   ? { beamGripKind:   activeGrip.beamGripKind }   : {}),
     ...((activeGrip.columnGripKind ?? activeGrip.beamGripKind) ? { anchorPos } : {}),
+    // ADR-406 — MEP fixture grip kind + anchor for the live corner/move/rotate ghost.
+    ...(activeGrip.mepFixtureGripKind ? { mepFixtureGripKind: activeGrip.mepFixtureGripKind, anchorPos } : {}),
     // ADR-363 Phase 3.5 / 3.7a / 2.5 — slab / slab-opening / opening grip kinds.
     ...(activeGrip.slabGripKind        ? { slabGripKind:        activeGrip.slabGripKind,        anchorPos } : {}),
     ...(activeGrip.slabOpeningGripKind ? { slabOpeningGripKind: activeGrip.slabOpeningGripKind, anchorPos } : {}),
