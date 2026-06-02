@@ -50,6 +50,13 @@ export interface MepSystemParams {
   readonly sourceConnectorId: string;
   /** MEMBERSHIP TRUTH — ordered list of downstream members. */
   readonly members: readonly MepSystemMember[];
+  /**
+   * The System **owns** its display colour (Revit "System Colour"): the hex
+   * applied to every member + source when colour-by-system renders (ADR-408 Φ5).
+   * SSoT truth — `MepConnector.systemId` is the membership cache, this is the
+   * paint. Assigned a deterministic palette default at creation; user-editable.
+   */
+  readonly color?: string;
   /** Optional electrical rollups (derivable from member connectedLoadVa). */
   readonly ratedVoltage?: number;
   readonly poles?: 1 | 2 | 3;
@@ -80,6 +87,7 @@ export function buildDefaultCircuitParams(
   sourceEntityId: string,
   sourceConnectorId: string,
   members: readonly MepSystemMember[] = [],
+  color?: string,
 ): MepSystemParams {
   return {
     systemType: 'electrical-circuit',
@@ -88,5 +96,6 @@ export function buildDefaultCircuitParams(
     sourceEntityId,
     sourceConnectorId,
     members,
+    ...(color ? { color } : {}),
   };
 }
