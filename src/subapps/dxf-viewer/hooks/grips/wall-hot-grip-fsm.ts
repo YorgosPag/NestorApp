@@ -61,6 +61,14 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   // Columns (ADR-397) — center MOVE (3-click), rotation REFERENCE (6-click)
   'column-center': 'move',
   'column-rotation': 'rotate',
+  // MEP fixtures (ADR-406) — full wall parity: move MOVE (3-click), rotation
+  // REFERENCE (6-click), 4 corners 2-click. Diameter (circular) stays press-drag.
+  'mep-fixture-move': 'move',
+  'mep-fixture-rotation': 'rotate',
+  'mep-fixture-corner-ne': 'corner',
+  'mep-fixture-corner-nw': 'corner',
+  'mep-fixture-corner-sw': 'corner',
+  'mep-fixture-corner-se': 'corner',
 } as const;
 
 /** Map any grip kind to its hot-grip operation, or null if it stays drag. */
@@ -81,7 +89,7 @@ export function isWallHotGripKind(kind: string | undefined | null): boolean {
  */
 export function hotGripKindOf(grip: UnifiedGripInfo | null | undefined): string | undefined {
   if (!grip) return undefined;
-  return grip.wallGripKind ?? grip.columnGripKind ?? grip.stairGripKind;
+  return grip.wallGripKind ?? grip.columnGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind;
 }
 
 /**

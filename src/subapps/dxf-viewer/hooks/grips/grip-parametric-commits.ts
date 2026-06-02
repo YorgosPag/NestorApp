@@ -405,10 +405,22 @@ export function commitMepFixtureGripDrag(
   const candidate = raw as unknown as Partial<MepFixtureEntity>;
   if (candidate.type !== 'mep-fixture' || !candidate.params) return;
   const originalParams = candidate.params;
+  // ADR-406 / ADR-397 — the `mep-fixture-rotation` 6-click hot-grip orbits a picked
+  // centre. The hook publishes {pivot, anchor} in BimRotateHotGripStore; the delta
+  // here is `alignDir − refDir`, so `currentPos = anchor + delta` is the live align
+  // point and `pivot` is the rotation centre (mirror `commitWallGripDrag`). All
+  // other grips use the grip position as anchor (currentPos ignored downstream).
+  const rotateCtx = BimRotateHotGripStore.getSnapshot();
+  const useRotatePivot =
+    grip.mepFixtureGripKind === 'mep-fixture-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
+  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
   const newParams = applyMepFixtureGripDrag(grip.mepFixtureGripKind, {
     originalParams,
     delta,
+    currentPos,
     ortho: cadToggleState.isOrthoOn(),
+    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
   });
   if (newParams === originalParams) return;
   const command = new UpdateMepFixtureParamsCommand(

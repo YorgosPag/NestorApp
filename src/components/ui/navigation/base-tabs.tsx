@@ -75,10 +75,14 @@ export function BaseTabs({
   const iconSizes = useIconSizes();
   const themeConfig = getThemeVariant(theme) || getThemeVariant('default');
 
+  // Use loose `!= null` so that a deliberately-passed `null` (e.g. triggers-only
+  // wrappers like `TabsOnlyTriggers` send `children ?? null`) or `content: null`
+  // tabs are treated as "not provided" and never trip a false-positive warning.
+  // Only a genuine conflict — real children AND real tab.content — should warn.
   if (
     process.env.NODE_ENV !== 'production' &&
-    children !== undefined &&
-    tabs.some((t) => 'content' in t && (t as { content: unknown }).content !== undefined)
+    children != null &&
+    tabs.some((t) => 'content' in t && (t as { content: unknown }).content != null)
   ) {
     // eslint-disable-next-line no-console
     console.warn(

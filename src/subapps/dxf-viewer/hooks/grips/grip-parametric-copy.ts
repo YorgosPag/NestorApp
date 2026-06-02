@@ -23,6 +23,10 @@ import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { buildColumnEntity } from '../drawing/column-completion';
 import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
+import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
+import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
+import { buildMepFixtureEntity } from '../drawing/mep-fixture-completion';
+import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-scene';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
 /**
@@ -88,6 +92,34 @@ export function commitColumnCopy(
 }
 
 /**
+ * ADR-406 — Ctrl-COPY at the terminal click of a MEP fixture MOVE hot-grip
+ * (AutoCAD MOVE→COPY). Mirror of `commitWallCopy`/`commitColumnCopy`: builds a
+ * NEW `MepFixtureEntity` whose params are the original shifted by `delta` (the
+ * same `mep-fixture-move` whole-fixture translate the MOVE uses) and inserts it
+ * via the shared `addMepFixtureToScene` SSoT — fresh enterprise ID (N.6, via
+ * `buildMepFixtureEntity` → `createMepFixture`), `drawing:entity-created`
+ * broadcast so persistence saves the copy. Original untouched; single copy.
+ */
+export function commitMepFixtureCopy(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || grip.mepFixtureGripKind !== 'mep-fixture-move') return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<MepFixtureEntity>;
+  if (candidate.type !== 'mep-fixture' || !candidate.params) return;
+  const fixture = candidate as MepFixtureEntity;
+  const translated = applyMepFixtureGripDrag('mep-fixture-move', { originalParams: fixture.params, delta });
+  const built = buildMepFixtureEntity(translated, fixture.layerId);
+  if (!built.ok) return;
+  addMepFixtureToScene(built.entity, deps);
+}
+
+/**
  * ADR-397 — entity-agnostic Ctrl-COPY dispatch for the MOVE hot-grip terminal
  * click. Routes to the per-entity copy SSoT by the grip's kind. Returns `true`
  * when a copy was made (caller skips the translate), `false` when the kind has
@@ -105,6 +137,10 @@ export function commitHotGripCopy(
   }
   if (grip.columnGripKind === 'column-center') {
     commitColumnCopy(grip, delta, deps);
+    return true;
+  }
+  if (grip.mepFixtureGripKind === 'mep-fixture-move') {
+    commitMepFixtureCopy(grip, delta, deps);
     return true;
   }
   return false;

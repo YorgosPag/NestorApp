@@ -168,6 +168,19 @@ export interface MepFixtureGripDragInput {
    * (pure width OR pure length). Ignored for move/rotation/diameter.
    */
   readonly ortho?: boolean;
+  /**
+   * ADR-406 / ADR-397 — rotation centre for the `mep-fixture-rotation` 6-click
+   * hot-grip (AutoCAD ROTATE→Reference). When set together with `currentPos`, the
+   * fixture orbits this picked centre (both `position` AND `rotation` change),
+   * mirroring `applyWallGripDrag('wall-rotation', { pivot })`. Absent → the legacy
+   * rotate-about-own-centre path runs (handle-relative `delta`).
+   */
+  readonly pivot?: Point2D;
+  /**
+   * World cursor position (= grip anchor + `delta`). Required only for the
+   * pivot-rotate path so the swept angle can be measured around `pivot`.
+   */
+  readonly currentPos?: Point2D;
 }
 
 /**
@@ -203,8 +216,30 @@ function moveCentre(input: Readonly<MepFixtureGripDragInput>): MepFixtureParams 
 }
 
 function rotateAboutCentre(input: Readonly<MepFixtureGripDragInput>): MepFixtureParams {
-  const { originalParams, delta } = input;
+  const { originalParams, delta, pivot, currentPos } = input;
   if (originalParams.shape === 'circular') return originalParams;
+
+  // ── Pivot path (ADR-397 6-click ROTATE→Reference) ──────────────────────────
+  // The hot-grip flow publishes {pivot, anchor} in BimRotateHotGripStore and
+  // passes the swept `delta = alignDir − refDir`, so `currentPos = anchor + delta`
+  // = pivot + alignDir and `anchor = currentPos − delta` = pivot + refDir. The
+  // fixture orbits `pivot`: BOTH its centre `position` and its `rotation` sweep by
+  // angle(currentPos−pivot) − angle(anchor−pivot). Mirrors the wall/column rotate.
+  if (pivot && currentPos) {
+    const anchor = { x: currentPos.x - delta.x, y: currentPos.y - delta.y };
+    const a0 = Math.atan2(anchor.y - pivot.y, anchor.x - pivot.x);
+    const a1 = Math.atan2(currentPos.y - pivot.y, currentPos.x - pivot.x);
+    const sweepDeg = (a1 - a0) * RAD_TO_DEG;
+    const rel = { x: originalParams.position.x - pivot.x, y: originalParams.position.y - pivot.y };
+    const rotated = rotate(rel, sweepDeg);
+    return {
+      ...originalParams,
+      rotation: originalParams.rotation + sweepDeg,
+      position: { x: pivot.x + rotated.x, y: pivot.y + rotated.y, z: originalParams.position.z ?? 0 },
+    };
+  }
+
+  // ── Legacy own-centre path (handle-relative drag; e.g. non-hot-grip fallback) ──
   const c = centre(originalParams);
   const oldHandle = rotationHandleWorld(originalParams);
   const oldVec = { x: oldHandle.x - c.x, y: oldHandle.y - c.y };

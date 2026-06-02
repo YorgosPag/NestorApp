@@ -132,18 +132,6 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
     );
   }
 
-  // Throttled logging for dev - reduce spam
-  if (process.env.NODE_ENV === 'development') {
-    const now = Date.now();
-    (window as Window & { _glog?: { t: number } })._glog ??= { t: 0 };
-    if (now - ((window as Window & { _glog?: { t: number } })._glog?.t || 0) > 1000) {
-
-      if ((window as Window & { _glog?: { t: number } })._glog) {
-        ((window as unknown) as Window & { _glog: { t: number } })._glog.t = now;
-      }
-    }
-  }
-
   return (
     // 🏢 ENTERPRISE: bg.card for consistency with ListCard backgrounds
     // 🧪 TEST: Removed quick.card to hide outer border

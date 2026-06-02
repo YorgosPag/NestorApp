@@ -90,7 +90,9 @@ export function useWallAttachTool({
   const isStairTool = activeTool === 'stair-attach-top' || activeTool === 'stair-attach-base';
   const isActive = isWallTool || isColumnTool || isStairTool;
   const entityKind: 'wall' | 'column' | 'stair' = isColumnTool ? 'column' : isStairTool ? 'stair' : 'wall';
-  const side: 'top' | 'base' = activeTool.endsWith('-base') ? 'base' : 'top';
+  // `activeTool` can be undefined on the initial render (no tool selected yet);
+  // `side` is only meaningful when `isActive`, so default to 'top' defensively.
+  const side: 'top' | 'base' = activeTool?.endsWith('-base') ? 'base' : 'top';
 
   const transformScaleRef = useRef(transformScale);
   transformScaleRef.current = transformScale;

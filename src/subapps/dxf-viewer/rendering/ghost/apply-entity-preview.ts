@@ -199,10 +199,18 @@ export function applyEntityPreview(
   // updated on release (no live feedback).
   if (mepFixtureGripKind && entity.type === 'mep-fixture') {
     const fixture = entity as unknown as MepFixtureEntity;
+    // ADR-397 — `rotatePivot` (set only for the mep-fixture-rotation 6-click
+    // hot-grip) orbits the ghost around the picked centre; `currentPos` lets the
+    // pivot-rotate measure the swept angle. Move/corner ignore both (delta-driven).
+    const currentPos: Point2D = anchorPos
+      ? { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y }
+      : { x: delta.x, y: delta.y };
     const newParams = applyMepFixtureGripDrag(mepFixtureGripKind, {
       originalParams: fixture.params,
       delta,
+      currentPos,
       ortho: cadToggleState.isOrthoOn(),
+      ...(rotatePivot ? { pivot: rotatePivot } : {}),
     });
     if (newParams === fixture.params) return entity;
     const newGeometry = computeMepFixtureGeometry(newParams);
@@ -304,6 +312,14 @@ export function applyEntityPreview(
         const col = entity as unknown as ColumnEntity;
         const newParams = applyColumnGripDrag('column-center', { originalParams: col.params, delta });
         const newGeometry = computeColumnGeometry(newParams);
+        return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+      }
+      case 'mep-fixture': {
+        // ADR-406 — toolbar Move-tool ghost (no mepFixtureGripKind): translate via
+        // the `mep-fixture-move` SSoT, mirror column/wall/beam.
+        const fix = entity as unknown as MepFixtureEntity;
+        const newParams = applyMepFixtureGripDrag('mep-fixture-move', { originalParams: fix.params, delta });
+        const newGeometry = computeMepFixtureGeometry(newParams);
         return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
       }
       case 'slab': {
