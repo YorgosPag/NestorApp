@@ -196,3 +196,11 @@ Toggle «Ηλεκτρολογικά» (ADR-405 multi-toggle) κρύβει/δεί
   (`commitMepFixtureGripDrag`), `grip-commit-adapters.ts` (dispatch), `apply-entity-preview.ts` (live ghost branch).
   **Δεν** άλλαξαν τα `mep-fixture-types.ts`/`-geometry.ts` (width/length/rotation/position ήδη υπήρχαν). tsc 0.
   🔴 pending browser verify + commit. Deferred: circular full grips, snap-during-resize.
+
+- **v0.6.1 (2026-06-02, Opus 4.8) — 🐛 fix: εμφανιζόταν ΜΟΝΟ μία λαβή:** οι ορατές λαβές κάθε BIM entity
+  ζωγραφίζονται από τη `renderer.getGrips()` (όχι μόνο από το interactive grip registry — δύο μονοπάτια, όπως
+  το «render-loop move glyph» της κολώνας). Ο `MepFixtureRenderer.getGrips()` επέστρεφε **hard-coded μία**
+  κεντρική λαβή → ο χρήστης έβλεπε μόνο αυτή. Fix: τώρα καλεί `getMepFixtureGrips()` και map-άρει σε render
+  `GripInfo[]` με `shape: gripGlyphShape(mepFixtureGripKind)` (mirror `ColumnRenderer.getGrips`) → εμφανίζονται
+  και οι 6 (move + rotation + 4 corners). Το drag/registry path ήταν ήδη σωστό (v0.6). 1 αρχείο
+  (`bim/renderers/MepFixtureRenderer.ts`), tsc 0. 🔴 browser verify.

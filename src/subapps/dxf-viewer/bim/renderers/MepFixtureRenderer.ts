@@ -23,6 +23,8 @@ import { isMepFixtureEntity } from '../../types/entities';
 import type { MepFixtureEntity } from '../types/mep-fixture-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { buildFixtureSymbol } from '../mep-fixtures/mep-fixture-symbol';
+import { getMepFixtureGrips } from '../mep-fixtures/mep-fixture-grips';
+import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -116,17 +118,22 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
+    // ADR-406 v0.6 — parametric grips: move (centre) + rotation + 4 corner
+    // resize (rectangular) or move + diameter (circular). Mirror of
+    // `ColumnRenderer.getGrips`; the move/rotation handles get their icon glyph
+    // from the shared `gripGlyphShape` registry SSoT, corners stay square.
+    // Drag is routed through `applyMepFixtureGripDrag()` + `UpdateMepFixtureParamsCommand`
+    // by `commitMepFixtureGripDrag` (grip-parametric-commits).
     if (!isMepFixtureEntity(entity)) return [];
-    const fixture = entity as MepFixtureEntity;
-    const p = fixture.params.position;
-    return [{
-      id: `${fixture.id}-grip-0`,
-      position: { x: p.x, y: p.y },
-      type: 'center' as const,
-      entityId: fixture.id,
+    return getMepFixtureGrips(entity as MepFixtureEntity).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      position: g.position,
+      type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
+      entityId: g.entityId,
       isVisible: true,
-      gripIndex: 0,
-    }];
+      gripIndex: g.gripIndex,
+      shape: gripGlyphShape(g.mepFixtureGripKind),
+    }));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
