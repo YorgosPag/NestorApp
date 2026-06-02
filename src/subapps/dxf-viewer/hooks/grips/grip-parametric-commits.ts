@@ -9,7 +9,6 @@
  * slab so a continuous drag collapses into a single undo entry.
  */
 import type { Point2D } from '../../rendering/types/Types';
-import type { SceneEntity } from '../../core/commands/interfaces';
 import type { UnifiedGripInfo } from './unified-grip-types';
 import type { DxfCommitDeps } from './unified-grip-types';
 import type { StairEntity } from '../../bim/types/stair-types';
@@ -20,8 +19,6 @@ import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
-import type { XLineEntity, RayEntity, DimensionEntity } from '../../types/entities';
-import type { DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
 import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/UpdateWallParamsCommand';
 import { UpdateOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateOpeningParamsCommand';
@@ -40,9 +37,6 @@ import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
 import { UpdateMepFixtureParamsCommand } from '../../core/commands/entity-commands/UpdateMepFixtureParamsCommand';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
-import { applyXLineGripDrag } from '../../systems/xline/xline-grips';
-import { applyRayGripDrag } from '../../systems/ray/ray-grips';
-import { applyDimensionGripDrag } from '../dimensions/useDimensionGrips';
 import { EventBus } from '../../systems/events/EventBus';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
@@ -50,6 +44,15 @@ import { createSceneManagerAdapter } from './grip-commit-adapters';
 // ADR-397 — MOVE→COPY hot-grip handlers live in grip-parametric-copy.ts
 // (N.7.1 file-size split). Re-exported here so the commit API stays one import.
 export { commitWallCopy, commitColumnCopy, commitHotGripCopy } from './grip-parametric-copy';
+
+// Linear / non-parametric grip commits (xline / ray / dimension) live in
+// grip-linear-commits.ts (N.7.1 file-size split). Re-exported here so the
+// commit API stays one import.
+export {
+  commitXLineGripDrag,
+  commitRayGripDrag,
+  commitDimensionGripDrag,
+} from './grip-linear-commits';
 
 /**
  * ADR-358 Phase 5b — Parametric stair grip commit. Bypasses the standard
@@ -433,76 +436,5 @@ export function commitMepFixtureGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   EventBus.emit('bim:mep-fixture-params-updated', { fixtureId: grip.entityId });
-}
-
-/**
- * ADR-359 Phase 11 — XLine grip commit via `applyXLineGripDrag` + direct scene
- * patch. Bypasses stretch/move because XLine has no vertex array: only
- * `basePoint` (translate) and `direction` (rotate) fields. Follows the
- * dimension-grip pattern (scene patch without a dedicated command).
- */
-export function commitXLineGripDrag(
-  grip: UnifiedGripInfo,
-  delta: Point2D,
-  deps: DxfCommitDeps,
-): void {
-  if (!grip.entityId || !grip.xlineGripKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw || (raw as Record<string, unknown>).type !== 'xline') return;
-  const entity = raw as unknown as XLineEntity;
-  const currentPos: Point2D = { x: grip.position.x + delta.x, y: grip.position.y + delta.y };
-  const updates = applyXLineGripDrag(grip.xlineGripKind, { entity, delta, currentPos });
-  if (Object.keys(updates).length === 0) return;
-  sceneManager.updateEntity(grip.entityId, updates as unknown as Partial<SceneEntity>);
-}
-
-/**
- * ADR-359 Phase 11 — Ray grip commit via `applyRayGripDrag` + direct scene
- * patch. Mirrors `commitXLineGripDrag` for semi-infinite lines.
- */
-export function commitRayGripDrag(
-  grip: UnifiedGripInfo,
-  delta: Point2D,
-  deps: DxfCommitDeps,
-): void {
-  if (!grip.entityId || !grip.rayGripKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw || (raw as Record<string, unknown>).type !== 'ray') return;
-  const entity = raw as unknown as RayEntity;
-  const currentPos: Point2D = { x: grip.position.x + delta.x, y: grip.position.y + delta.y };
-  const updates = applyRayGripDrag(grip.rayGripKind, { entity, delta, currentPos });
-  if (Object.keys(updates).length === 0) return;
-  sceneManager.updateEntity(grip.entityId, updates as unknown as Partial<SceneEntity>);
-}
-
-/** ADR-362 Phase I2 — Dimension grip commit via `applyDimensionGripDrag` + scene patch. */
-export function commitDimensionGripDrag(
-  grip: UnifiedGripInfo,
-  delta: Point2D,
-  deps: DxfCommitDeps,
-): void {
-  if (!grip.entityId || !grip.dimGripKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw || (raw as Record<string, unknown>).type !== 'dimension') return;
-  // SceneModel stores DimensionEntity directly (no DxfDimension wrapper).
-  // useDxfSceneConversion wraps it in DxfDimension only for the rendering
-  // pipeline — it is NOT persisted back to the scene model.
-  const asWrapper = raw as unknown as DxfDimension;
-  const dimEntity: DimensionEntity = asWrapper.dimensionEntity ?? (raw as unknown as DimensionEntity);
-  const newDimEntity = applyDimensionGripDrag(grip.dimGripKind, dimEntity, delta, grip.position);
-  if (newDimEntity === dimEntity) return;
-  if (asWrapper.dimensionEntity) {
-    // Rare: entity was stored as a DxfDimension wrapper — update nested field.
-    sceneManager.updateEntity(grip.entityId, { dimensionEntity: newDimEntity } as unknown as Partial<SceneEntity>);
-  } else {
-    // Common: entity is a raw DimensionEntity — patch its fields directly.
-    sceneManager.updateEntity(grip.entityId, newDimEntity as unknown as Partial<SceneEntity>);
-  }
 }
 
