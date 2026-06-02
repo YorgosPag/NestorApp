@@ -76,14 +76,12 @@ export function useFloatingPanelHandle({
         }
       });
 
-      console.debug('[FPC] expandForSelection ids=', ids, 'expandedKeys=', Array.from(next));
       setExpandedKeys(next);
 
       // ❂ Scroll στο πρώτο selected στοιχείο μέσα στη λίστα Properties
       requestAnimationFrame(() => {
         const first = ids[0];
         const el = document.querySelector(`[data-entity-id="${first}"]`) as HTMLElement | null;
-        console.debug('[FPC] scrollIntoView element found:', !!el, 'for id:', first);
         el?.scrollIntoView({ block: 'nearest' });
       });
     },

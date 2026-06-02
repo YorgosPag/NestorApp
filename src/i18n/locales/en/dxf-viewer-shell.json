@@ -42,7 +42,12 @@
       "no-source": "Select an electrical panel as the circuit source.",
       "multiple-sources": "Select only one electrical panel as the source.",
       "no-members": "Select at least one light fixture for the circuit."
-    }
+    },
+    "membersAdded": "Fixtures added to the circuit — members: {count}.",
+    "membersRemoved": "Fixtures removed from the circuit — members: {count}.",
+    "noActiveCircuit": "No active circuit to edit.",
+    "addFailed": "Select at least one light fixture to add to the circuit.",
+    "removeFailed": "Select at least one member fixture to remove."
   },
   "bim": {
     "wallCascadeDelete": {
@@ -805,6 +810,7 @@
       "mepFixtureRectParams": "Rectangular",
       "mepFixtureActions": "Actions",
       "mepCircuit": "Circuit",
+      "mepCircuitProperties": "Circuit Properties",
       "multiSelectionCommon": "Common Properties",
       "multiSelectionFilter": "Filter",
       "placeholder": "Coming soon",
@@ -1596,7 +1602,14 @@
         "create": "Create Circuit",
         "createTooltip": "Create an electrical circuit from the selected panel (source) and fixtures (members).",
         "close": "Close",
-        "defaultName": "Circuit {n}"
+        "defaultName": "Circuit {n}",
+        "name": "Name",
+        "color": "Color",
+        "circuitPicker": "Circuit",
+        "addMembers": "Add selected",
+        "addMembersTooltip": "Add the selected fixtures to the current circuit (moved from another circuit if already assigned).",
+        "removeMembers": "Remove selected",
+        "removeMembersTooltip": "Remove the selected member fixtures from the current circuit."
       },
       "measureAngle": "Angle",
       "measureAngleVariants": {

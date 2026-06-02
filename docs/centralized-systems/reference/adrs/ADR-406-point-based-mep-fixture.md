@@ -106,7 +106,7 @@ Toggle «Ηλεκτρολογικά» (ADR-405 multi-toggle) κρύβει/δεί
 - ✅ Generic `mep-fixture` type → επόμενα MEP families (στόμια/sprinklers/sockets) χωρίς νέο EntityType.
 - ✅ Discipline visibility «δωρεάν» (ADR-405).
 - ⚠️ **Deferred:** (α) host-attach cascade (φωτιστικό ακολουθεί ceiling/slab) — hook `params.hostId`·
-  (β) contextual ribbon tab για επεξεργασία shape/dims εν ώρα placement (το bridge store υπάρχει)·
+  (β) ~~contextual ribbon tab για επεξεργασία shape/dims~~ ✅ DONE v0.7 (selected-entity properties tab)·
   (γ) ~~2D ghost leaf wiring~~ ✅ DONE v0.5· (δ) Firestore composite
   index για `floorplan_mep_fixtures` (projectId+floorplanId) — αν το pre-commit CHECK 3.15 το ζητήσει.
 - ⚠️ Steps 4-5 (MEP routing/systems με connectors) = μελλοντικά ADRs.
@@ -204,3 +204,20 @@ Toggle «Ηλεκτρολογικά» (ADR-405 multi-toggle) κρύβει/δεί
   `GripInfo[]` με `shape: gripGlyphShape(mepFixtureGripKind)` (mirror `ColumnRenderer.getGrips`) → εμφανίζονται
   και οι 6 (move + rotation + 4 corners). Το drag/registry path ήταν ήδη σωστό (v0.6). 1 αρχείο
   (`bim/renderers/MepFixtureRenderer.ts`), tsc 0. 🔴 browser verify.
+
+- **v0.7 (2026-06-02, Opus 4.8) — ✨ contextual ribbon tab «Ιδιότητες Φωτιστικού» (ήταν DEFERRED β):**
+  επιλεγμένο φωτιστικό ανοίγει πλέον contextual tab (mirror «Ιδιότητες Κολώνας») με ζωντανά επεξεργάσιμες
+  ιδιότητες → κάθε combobox change → `UpdateMepFixtureParamsCommand` (undoable, geometry/validation
+  recompute atomically) → `useMepFixturePersistence` debounced auto-save. **Panels:** Σχήμα
+  (rectangular/circular) · Γεωμετρία (πλάτος/διάμετρος + πάχος σώματος + ύψος τοποθέτησης, πάντα ορατά) ·
+  Ορθογώνιο (μήκος + στροφή, ορατό **iff** `shape==='rectangular'` μέσω `visibilityKey`) · Ενέργειες
+  (close + delete· delete → υπάρχον `bim:mep-fixture-delete-requested`). **Full SSoT — επέκταση υπάρχοντος
+  contextual συστήματος, ΟΧΙ παράλληλο.** Files: NEW `ui/ribbon/hooks/bridge/mep-fixture-command-keys.ts`
+  (keys + type guards) · NEW `ui/ribbon/data/contextual-mep-fixture-tab.ts` (trigger `mep-fixture-selected`)
+  · NEW `ui/ribbon/hooks/useRibbonMepFixtureBridge.ts` (selected-entity branch· χωρίς tool/catalog/pset).
+  Εγγραφές: `app/ribbon-contextual-config.ts` (tab + `resolveContextualTrigger`: `mep-fixture`→trigger) ·
+  `app/useDxfBimBridges.ts` + `app/useDxfViewerRibbon.ts` (wire bridge) · `ui/ribbon/hooks/useRibbonCommands.ts`
+  (compose combobox/visibility/action routing) · i18n `el`+`en` `dxf-viewer-shell.json` (keys ΠΡΩΤΑ, N.11).
+  Το `params.material` (lamp-type/catalog, Phase 6+) ΔΕΝ εκτίθεται — δεν υπάρχει κατάλογος ακόμη (no κενό
+  dropdown, N.1). NEW test `__tests__/useRibbonMepFixtureBridge.test.tsx` (13). tsc 0. 🔴 pending browser
+  verify + commit.

@@ -17,7 +17,7 @@
  */
 
 import type { MepConnector } from '../types/mep-connector-types';
-import type { MepSystemEntity, MepSystemParams } from '../types/mep-system-types';
+import type { MepSystemEntity, MepSystemMember, MepSystemParams } from '../types/mep-system-types';
 import { EventBus } from '../../systems/events/EventBus';
 
 const KEY_SEP = '::';
@@ -43,6 +43,43 @@ export function buildConnectorSystemIndex(
     }
   }
   return index;
+}
+
+/**
+ * For every member already wired to an existing system, produce the removal that
+ * drops it from that system's `members[]` (so each fixture lives in exactly one
+ * circuit — the Revit single-circuit rule). One removal per affected system,
+ * even if it loses several members at once. SSoT for "move these members out of
+ * whatever circuits currently own them" — consumed by both circuit creation
+ * (`mep-circuit-from-selection.ts`) and the Φ6 add-member edit
+ * (`mep-circuit-editor.ts`). Pure; returns `[]` when nothing is reassigned.
+ */
+export function computeReassignRemovals(
+  members: readonly MepSystemMember[],
+  existingSystems: readonly MepSystemEntity[],
+): MepMemberRemoval[] {
+  const index = buildConnectorSystemIndex(existingSystems);
+  const claimed = new Set(members.map((m) => memberKey(m.entityId, m.connectorId)));
+  const affectedSystemIds = new Set<string>();
+  for (const m of members) {
+    const owner = index.get(memberKey(m.entityId, m.connectorId));
+    if (owner) affectedSystemIds.add(owner);
+  }
+
+  const removals: MepMemberRemoval[] = [];
+  for (const system of existingSystems) {
+    if (!affectedSystemIds.has(system.id)) continue;
+    const nextMembers = system.params.members.filter(
+      (m) => !claimed.has(memberKey(m.entityId, m.connectorId)),
+    );
+    if (nextMembers.length === system.params.members.length) continue;
+    removals.push({
+      systemId: system.id,
+      prevParams: system.params,
+      nextParams: { ...system.params, members: nextMembers },
+    });
+  }
+  return removals;
 }
 
 /**

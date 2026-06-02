@@ -17,6 +17,7 @@ import type { SceneModel } from '../types/scene';
 import type { useLevels } from '../systems/levels';
 import { useMepSystemPersistence } from '../hooks/data/useMepSystemPersistence';
 import { useMepConnectorReconciliation } from '../hooks/data/useMepConnectorReconciliation';
+import { useMepCircuitEditorSync } from '../hooks/data/useMepCircuitEditorSync';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -29,6 +30,8 @@ export interface MepSystemPersistenceHostProps {
   /** ADR-408 Φ5 — needed by the connector-reconciliation pass (scene-time cache). */
   readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
+  /** ADR-408 Φ6 — drives the "active managed circuit" sync for the editing UI. */
+  readonly primarySelectedId: string | null;
 }
 
 export function MepSystemPersistenceHost({
@@ -36,6 +39,7 @@ export function MepSystemPersistenceHost({
   floorplanId,
   currentScene,
   levelManager,
+  primarySelectedId,
 }: MepSystemPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -49,6 +53,10 @@ export function MepSystemPersistenceHost({
   // ADR-408 Φ5 — keep each fixture/panel connector's `systemId` cache in sync
   // with the System membership truth (scene-only, idempotent, "System wins").
   useMepConnectorReconciliation({ currentScene, levelManager });
+
+  // ADR-408 Φ6 — keep the contextual editor's active circuit in sync with the
+  // selection (fixture → its circuit, panel → the circuits it feeds).
+  useMepCircuitEditorSync({ primarySelectedId, currentScene });
 
   return null;
 }

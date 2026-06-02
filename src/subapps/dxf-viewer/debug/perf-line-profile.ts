@@ -8,7 +8,7 @@
  * Toggle off (set to false) before commit unless explicitly profiling.
  */
 
-export const PERF_LINE_PROFILE = true;
+export const PERF_LINE_PROFILE = false;
 const THRESHOLD_MS = 1;
 
 export function perfMark<T>(label: string, fn: () => T): T {

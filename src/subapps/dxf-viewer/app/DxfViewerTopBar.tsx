@@ -150,6 +150,7 @@ export function DxfViewerTopBar({
         floorplanId={levelManager.fileRecordId ?? undefined}
         currentScene={currentScene}
         levelManager={levelManager}
+        primarySelectedId={primarySelectedId}
       />
       <RailingPersistenceHost
         primarySelectedId={primarySelectedId}

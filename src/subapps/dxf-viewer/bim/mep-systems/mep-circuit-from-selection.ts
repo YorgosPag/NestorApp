@@ -26,8 +26,7 @@ import {
 } from '../types/mep-connector-types';
 import { getEntityConnectors } from './connector-access';
 import {
-  buildConnectorSystemIndex,
-  memberKey,
+  computeReassignRemovals,
   type MepMemberRemoval,
 } from './mep-system-coordinator';
 
@@ -69,7 +68,7 @@ function findSourceConnectorId(panel: Entity): string {
  * light fixture is always a connectable load (Revit), so a legacy fixture with
  * no embedded connector still joins the circuit via the canonical fallback.
  */
-function findMemberConnectorId(fixture: Entity): string {
+export function findMemberConnectorId(fixture: Entity): string {
   const conns = getEntityConnectors(fixture);
   return (
     conns.find((c) => c.flow === 'in')?.connectorId
@@ -104,37 +103,4 @@ export function resolveCircuitFromSelection(
       reassignRemovals: computeReassignRemovals(members, existingSystems),
     },
   };
-}
-
-/**
- * For every member already wired to an existing system, produce the removal that
- * drops it from that system's `members[]` (so it lives in exactly one circuit).
- * One removal per affected system, even if it loses several members at once.
- */
-function computeReassignRemovals(
-  members: readonly MepSystemMember[],
-  existingSystems: readonly MepSystemEntity[],
-): MepMemberRemoval[] {
-  const index = buildConnectorSystemIndex(existingSystems);
-  const claimed = new Set(members.map((m) => memberKey(m.entityId, m.connectorId)));
-  const affectedSystemIds = new Set<string>();
-  for (const m of members) {
-    const owner = index.get(memberKey(m.entityId, m.connectorId));
-    if (owner) affectedSystemIds.add(owner);
-  }
-
-  const removals: MepMemberRemoval[] = [];
-  for (const system of existingSystems) {
-    if (!affectedSystemIds.has(system.id)) continue;
-    const nextMembers = system.params.members.filter(
-      (m) => !claimed.has(memberKey(m.entityId, m.connectorId)),
-    );
-    if (nextMembers.length === system.params.members.length) continue;
-    removals.push({
-      systemId: system.id,
-      prevParams: system.params,
-      nextParams: { ...system.params, members: nextMembers },
-    });
-  }
-  return removals;
 }
