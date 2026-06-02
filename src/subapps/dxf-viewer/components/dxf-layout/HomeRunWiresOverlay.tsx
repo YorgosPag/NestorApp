@@ -22,7 +22,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { DxfEntityUnion, DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import {
@@ -34,6 +34,11 @@ import { connectorWorldPosition, type MepConnector } from '../../bim/types/mep-c
 import { drawCircuitWires } from '../../bim/renderers/MepWireRenderer';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { resolveIsEntityVisible } from '../../bim/visibility/visibility-resolver';
+// ADR-408 Φ7 P2 — live drag follow: the dragged host's wire endpoint reads the
+// PREVIEWED entity (same SSoT the ghost uses), so the wire tracks the cursor.
+import type { DxfGripDragPreview } from '../../hooks/grip-computation';
+import { applyEntityPreview } from '../../rendering/ghost';
+import { toEntityPreviewTransform } from '../../hooks/tools/grip-drag-preview-transform';
 
 export interface HomeRunWiresOverlayProps {
   readonly scene: DxfScene | null;
@@ -41,6 +46,12 @@ export interface HomeRunWiresOverlayProps {
   readonly viewport: Viewport;
   /** Τρέχων BIM όροφος — μέρος του repaint key (αλλαγή ορόφου ⇒ νέο scene). */
   readonly currentLevelId: string | null;
+  /**
+   * ADR-408 Φ7 P2 — live grip drag snapshot (null when idle). When the dragged
+   * entity is a fixture/panel, its circuit wire follows the drag live: the
+   * resolver reads the previewed host transform instead of the committed one.
+   */
+  readonly gripDragPreview: DxfGripDragPreview | null;
 }
 
 interface WireHostXform {
@@ -53,16 +64,29 @@ interface WireHostXform {
 /**
  * Build the host-resolver from the render scene's connector hosts (fixtures +
  * panels). Returns the connector's world plan point; `zMm` is irrelevant in 2D.
+ *
+ * ADR-408 Φ7 P2 — when `dragPreview` targets a fixture/panel host, that host is
+ * resolved from the PREVIEWED entity (`applyEntityPreview`, the same SSoT the live
+ * ghost uses), so the wire endpoint follows the drag (move / rotation / corner)
+ * frame-by-frame while the committed scene still holds the old transform.
  */
-function buildResolver(scene: DxfScene): ResolveWireHost {
+export function buildResolver(scene: DxfScene, dragPreview: DxfGripDragPreview | null): ResolveWireHost {
   const hosts = new Map<string, WireHostXform>();
   for (const e of scene.entities) {
     if (e.type !== 'mep-fixture' && e.type !== 'electrical-panel') continue;
+    let params = e.params;
+    if (dragPreview && dragPreview.entityId === e.id) {
+      const previewed = applyEntityPreview(e as unknown as DxfEntityUnion, toEntityPreviewTransform(dragPreview));
+      // `applyEntityPreview` returns the same ref for a zero/identity drag → keep committed.
+      if (previewed !== (e as unknown as DxfEntityUnion)) {
+        params = (previewed as unknown as { params: typeof e.params }).params;
+      }
+    }
     hosts.set(e.id, {
-      x: e.params.position.x,
-      y: e.params.position.y,
-      rotation: e.params.rotation,
-      connectors: e.params.connectors ?? [],
+      x: params.position.x,
+      y: params.position.y,
+      rotation: params.rotation,
+      connectors: params.connectors ?? [],
     });
   }
   return (entityId, connectorId): WireHostPoint | null => {
@@ -80,6 +104,7 @@ export function HomeRunWiresOverlay({
   scene,
   transform,
   viewport,
+  gripDragPreview,
 }: HomeRunWiresOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -100,10 +125,12 @@ export function HomeRunWiresOverlay({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (!visible || !scene || systems.length === 0) return;
-    const paths = computeCircuitWirePaths(systems, buildResolver(scene));
+    const paths = computeCircuitWirePaths(systems, buildResolver(scene, gripDragPreview));
     if (paths.length === 0) return;
     drawCircuitWires(ctx, paths, transform, viewport);
-  }, [scene, transform, viewport, systems, visible]);
+    // ADR-408 Φ7 P2 — `gripDragPreview` in deps ⇒ repaint each drag frame so the
+    // wire tracks the previewed host (the snapshot changes on every mousemove).
+  }, [scene, transform, viewport, systems, visible, gripDragPreview]);
 
   return (
     <canvas
