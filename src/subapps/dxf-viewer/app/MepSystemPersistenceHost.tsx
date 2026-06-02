@@ -13,16 +13,29 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
+import type { SceneModel } from '../types/scene';
+import type { useLevels } from '../systems/levels';
 import { useMepSystemPersistence } from '../hooks/data/useMepSystemPersistence';
+import { useMepConnectorReconciliation } from '../hooks/data/useMepConnectorReconciliation';
+
+type LevelManagerLike = Pick<
+  ReturnType<typeof useLevels>,
+  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
+>;
 
 export interface MepSystemPersistenceHostProps {
   readonly projectId?: string;
   readonly floorplanId?: string;
+  /** ADR-408 Φ5 — needed by the connector-reconciliation pass (scene-time cache). */
+  readonly currentScene: SceneModel | null;
+  readonly levelManager: LevelManagerLike;
 }
 
 export function MepSystemPersistenceHost({
   projectId,
   floorplanId,
+  currentScene,
+  levelManager,
 }: MepSystemPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -32,6 +45,10 @@ export function MepSystemPersistenceHost({
     floorplanId,
     userId: user?.uid ?? null,
   });
+
+  // ADR-408 Φ5 — keep each fixture/panel connector's `systemId` cache in sync
+  // with the System membership truth (scene-only, idempotent, "System wins").
+  useMepConnectorReconciliation({ currentScene, levelManager });
 
   return null;
 }
