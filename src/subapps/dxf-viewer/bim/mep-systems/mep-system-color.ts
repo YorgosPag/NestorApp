@@ -106,6 +106,22 @@ export function resolveEntitySystemColor(
   return index.get(entityId) ?? null;
 }
 
+// Memo so the ADR-040 micro-leaf renderers (which read the store at draw time,
+// once per entity per frame) rebuild the index only when the systems array
+// reference actually changes — zustand keeps it stable between mutations.
+let _idxKey: readonly MepSystemEntity[] | null = null;
+let _idxVal: ReadonlyMap<string, string> = new Map();
+
+/** Reference-memoised `buildEntitySystemColorIndex` for per-entity draw paths. */
+export function getEntitySystemColorIndexCached(
+  systems: readonly MepSystemEntity[],
+): ReadonlyMap<string, string> {
+  if (systems === _idxKey) return _idxVal;
+  _idxKey = systems;
+  _idxVal = buildEntitySystemColorIndex(systems);
+  return _idxVal;
+}
+
 /** Parse a `#rrggbb` hex into a THREE colour int (0xrrggbb). Returns null if invalid. */
 export function hexToThreeInt(hex: string): number | null {
   const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
