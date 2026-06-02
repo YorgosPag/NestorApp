@@ -28,10 +28,18 @@ import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
+import { useMepSystemStore } from '../mep-systems/mep-system-store';
+import {
+  getEntitySystemColorIndexCached,
+  resolveEntitySystemColor,
+  hexToRgba,
+} from '../mep-systems/mep-system-color';
 
-/** Family-symbol palette — electrical luminaire (amber projection). */
+/** Family-symbol palette — electrical luminaire (amber projection, unassigned). */
 const FIXTURE_STROKE = '#d97706';
 const FIXTURE_FILL = 'rgba(251, 191, 36, 0.18)';
+/** Translucent fill alpha for the colour-by-system (ADR-408 Φ5) override. */
+const SYSTEM_FILL_ALPHA = 0.18;
 
 export class MepFixtureRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -54,6 +62,15 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
     const verts = fixture.geometry.footprint.vertices;
     if (verts.length < 3) return;
 
+    // ADR-408 Φ5 — colour-by-system: a fixture wired into a circuit paints with
+    // the System's colour; unassigned fixtures keep the amber default.
+    const systems = useMepSystemStore.getState().getSystems();
+    const systemColor = systems.length > 0
+      ? resolveEntitySystemColor(fixture.id, getEntitySystemColorIndexCached(systems))
+      : null;
+    const strokeColor = systemColor ?? FIXTURE_STROKE;
+    const fillColor = systemColor ? hexToRgba(systemColor, SYSTEM_FILL_ALPHA) : FIXTURE_FILL;
+
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     if (phaseState.phase === 'highlighted') {
@@ -71,11 +88,11 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.ctx.setLineDash([]);
 
-    // Fill + outline.
-    this.ctx.fillStyle = FIXTURE_FILL;
+    // Fill + outline (colour-by-system override, ADR-408 Φ5).
+    this.ctx.fillStyle = fillColor;
     this.drawPolygonPath(verts);
     this.ctx.fill();
-    this.ctx.strokeStyle = FIXTURE_STROKE;
+    this.ctx.strokeStyle = strokeColor;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
     this.drawPolygonPath(verts);
     this.ctx.stroke();

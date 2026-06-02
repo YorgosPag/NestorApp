@@ -28,10 +28,18 @@ import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
+import { useMepSystemStore } from '../mep-systems/mep-system-store';
+import {
+  getEntitySystemColorIndexCached,
+  resolveEntitySystemColor,
+  hexToRgba,
+} from '../mep-systems/mep-system-color';
 
-/** Panel palette — electrical distribution board (teal projection). */
+/** Panel palette — electrical distribution board (teal projection, unassigned). */
 const PANEL_STROKE = '#0d9488';
 const PANEL_FILL = 'rgba(13, 148, 136, 0.18)';
+/** Translucent fill alpha for the colour-by-system (ADR-408 Φ5) override. */
+const SYSTEM_FILL_ALPHA = 0.18;
 
 export class ElectricalPanelRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -54,6 +62,15 @@ export class ElectricalPanelRenderer extends BaseEntityRenderer {
     const verts = panel.geometry.footprint.vertices;
     if (verts.length < 3) return;
 
+    // ADR-408 Φ5 — colour-by-system: a panel that is a circuit source paints with
+    // that circuit's colour; a panel feeding no circuit keeps the teal default.
+    const systems = useMepSystemStore.getState().getSystems();
+    const systemColor = systems.length > 0
+      ? resolveEntitySystemColor(panel.id, getEntitySystemColorIndexCached(systems))
+      : null;
+    const strokeColor = systemColor ?? PANEL_STROKE;
+    const fillColor = systemColor ? hexToRgba(systemColor, SYSTEM_FILL_ALPHA) : PANEL_FILL;
+
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     if (phaseState.phase === 'highlighted') {
@@ -71,11 +88,11 @@ export class ElectricalPanelRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.ctx.setLineDash([]);
 
-    // Fill + outline.
-    this.ctx.fillStyle = PANEL_FILL;
+    // Fill + outline (colour-by-system override, ADR-408 Φ5).
+    this.ctx.fillStyle = fillColor;
     this.drawPolygonPath(verts);
     this.ctx.fill();
-    this.ctx.strokeStyle = PANEL_STROKE;
+    this.ctx.strokeStyle = strokeColor;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
     this.drawPolygonPath(verts);
     this.ctx.stroke();
