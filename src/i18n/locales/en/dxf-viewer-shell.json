@@ -809,6 +809,8 @@
       "discipline": "Disciplines",
       "penTable": "Pen Table",
       "viewTemplates": "View Templates",
+      "bimGraphics": "Visibility/Graphics",
+      "bimStyles": "Styles & Templates",
       "dimensions": "Dimensions",
       "dimStyle": "Style",
       "dimOverride": "Override",

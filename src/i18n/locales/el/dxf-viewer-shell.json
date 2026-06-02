@@ -36,6 +36,15 @@
     "create": "Δημιουργία",
     "cancel": "Άκυρο"
   },
+  "mepCircuit": {
+    "created_one": "Δημιουργήθηκε ηλεκτρικό κύκλωμα με {count} φωτιστικό.",
+    "created_other": "Δημιουργήθηκε ηλεκτρικό κύκλωμα με {count} φωτιστικά.",
+    "failed": {
+      "no-source": "Επίλεξε έναν ηλεκτρικό πίνακα ως πηγή του κυκλώματος.",
+      "multiple-sources": "Επίλεξε μόνο έναν ηλεκτρικό πίνακα ως πηγή.",
+      "no-members": "Επίλεξε τουλάχιστον ένα φωτιστικό για το κύκλωμα."
+    }
+  },
   "bim": {
     "wallCascadeDelete": {
       "title": "Διαγραφή Τοιχώματος",
@@ -714,6 +723,7 @@
       "beamProperties": "Ιδιότητες Δοκαριού",
       "slabOpeningProperties": "Ιδιότητες Διάνοιξης Πλάκας",
       "multiSelection": "Πολλαπλή Επιλογή",
+      "mepCircuit": "Ηλεκτρικό Κύκλωμα",
       "validationBadge": "Παραβίαση κανονισμών",
       "dimension": "Διάσταση",
       "lineToolStyle": "Στυλ Γραμμής",
@@ -809,6 +819,8 @@
       "discipline": "Πειθαρχίες",
       "penTable": "Πίνακας Πενών",
       "viewTemplates": "Πρότυπα Προβολής",
+      "bimGraphics": "Ορατότητα/Γραφικά",
+      "bimStyles": "Στυλ & Πρότυπα",
       "dimensions": "Διαστάσεις",
       "dimStyle": "Στυλ",
       "dimOverride": "Παράκαμψη",
