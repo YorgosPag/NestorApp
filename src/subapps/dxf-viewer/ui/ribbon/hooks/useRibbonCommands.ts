@@ -24,6 +24,8 @@ import type { RibbonBeamBridge } from './useRibbonBeamBridge';
 import { isBeamBadgeKey } from './useRibbonBeamBridge';
 import type { RibbonSlabOpeningBridge } from './useRibbonSlabOpeningBridge';
 import { isSlabOpeningBadgeKey } from './useRibbonSlabOpeningBridge';
+import type { RibbonMepCircuitBridge } from './useRibbonMepCircuitBridge';
+import { isMepCircuitActionKey } from './bridge/mep-circuit-command-keys';
 import type { RibbonLineToolBridge } from './useRibbonLineToolBridge';
 import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
 import { isStairRibbonKey, isStairRibbonStringKey, isStairActionKey } from './bridge/stair-command-keys';
@@ -64,6 +66,8 @@ interface UseRibbonCommandsProps {
   beamBridge: RibbonBeamBridge;
   /** ADR-363 Phase 3.7 — Slab-opening contextual tab bridge. */
   slabOpeningBridge: RibbonSlabOpeningBridge;
+  /** ADR-408 Φ5 — MEP circuit contextual tab bridge (create-from-selection). */
+  mepCircuitBridge: RibbonMepCircuitBridge;
   /** ADR-357 Phase 17 — Line tool Quick Style bridge. */
   lineToolBridge: RibbonLineToolBridge;
   /** ADR-359 Phase 10.b — XLine mode bridge. */
@@ -92,6 +96,7 @@ export function useRibbonCommands({
   columnBridge,
   beamBridge,
   slabOpeningBridge,
+  mepCircuitBridge,
   lineToolBridge,
   xlineModeBridge,
 }: UseRibbonCommandsProps): RibbonCommandsApi {
@@ -267,9 +272,13 @@ export function useRibbonCommands({
         stairBridge.onAction(action);
         return;
       }
+      if (isMepCircuitActionKey(action)) {
+        mepCircuitBridge.onAction(action);
+        return;
+      }
       wrappedHandleAction(action, data);
     },
-    [wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, wrappedHandleAction],
+    [wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, wrappedHandleAction],
   );
 
   return React.useMemo(
