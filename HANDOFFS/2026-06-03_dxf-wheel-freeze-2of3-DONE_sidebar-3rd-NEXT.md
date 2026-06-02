@@ -69,6 +69,28 @@ Profile #3 (`profiling-data.03-06-2026.02-03-41.json`) → «καλύτερα α
 ## 🔴 BROWSER VERIFY
 Μετά **Ctrl+Shift+R** (hard reload — το Turbopack HMR κρατά παλιά modules· το προηγούμενο profile #2 ήταν αρχικά μερικώς stale): wheel-zoom + νέο React DevTools profile. Με τον #1+#2: wheel commits ~503 fibers (από 2502). Με τον #3: στόχος <30 fibers.
 
+---
+
+## ✅ UPDATE 2026-06-03 (Opus 4.8) — Root cause #3 DONE (pending commit, 🔴 browser verify)
+
+### #3 SidebarSection — ΔΙΟΡΘΩΘΗΚΕ
+- **Επιβεβαίωση από profile #3 (`profiling-data.03-06-2026.02-03-41.json`, 60 commits):** τα **503-fiber wheel commits** (12×) είχαν shallowest updaters `SidebarSection, StandaloneStatusBar, CanvasLayerStackTransformBridge, CoordinateDebugOverlay, ZoomDisplayLeaf` → ο `SidebarSection` ΗΤΑΝ όντως wheel re-render root (όπως προβλέφθηκε).
+- **Fix:** αφαιρέθηκε το `useCurrentZoom()` από το σώμα του orchestrator. Το zoom% του footer μετακινήθηκε σε νέο 1-fiber micro-leaf **`SidebarZoomLeaf`** (μόνος subscriber). 
+- **Boy-Scout (N.0.2):** το `currentZoom` περνούσε ΚΑΙ ως `zoomLevel` prop → `FloatingPanelContainer` → `usePanelDescription` → `{description, zoomText}` **που ΔΕΝ εμφανίζονται πουθενά** (dead, το status bar είχε μετακινηθεί). Αφαιρέθηκε όλη η dead αλυσίδα: `zoomLevel` prop (interface+destructure+memo comparator), η κλήση `usePanelDescription` + τα orphaned `useOverlayManager()`/`selectedRegions`/`visibleRegions`, και **διαγράφηκε** το `ui/hooks/usePanelDescription.ts`.
+- **tsc:** 0 errors (εξαιρώντας grip-parametric-commits άλλου agent). 
+
+### LevelsSystem 2490-fiber commits = ΟΧΙ wheel (επιβεβαιωμένο από ανάλυση profile #3)
+- 16/60 commits ~2490 fibers με shallowest updater **`LevelsSystem`** (μόνο του, ή με `CurrentLayerPicker`/`BimViewport3D`/`PropertiesPalette`/`Select`/`ThermalEnvelopeHost`). **Κανένα δεν περιέχει transform leaf** → είναι level/layer/selection-driven (ο Giorgio άλλαζε επιλογή/layer κατά το recording), ΟΧΙ wheel. Δεν υπάρχει ένδειξη για #4 από wheel.
+- **🔴 ΑΠΑΙΤΕΙΤΑΙ wheel-only profile** μετά τον #3 για 100% επιβεβαίωση: hard reload (Ctrl+Shift+R) → ΜΟΝΟ wheel-zoom (καμία άλλη αλληλεπίδραση) → record. Αναμενόμενο καθαρό wheel commit = μόνο leaves (`SidebarZoomLeaf`, `StandaloneStatusBar`, `CanvasLayerStackTransformBridge`, `CoordinateDebugOverlay`, `ZoomDisplayLeaf`) ≈ <30 fibers. Αν εμφανιστεί `LevelsSystem` σε καθαρό wheel → υπάρχει #4.
+
+### Αρχεία αυτού του update (staging από Giorgio — `git add` ΜΟΝΟ αυτά)
+6. `src/subapps/dxf-viewer/layout/SidebarSection.tsx` — #3 + leaf
+7. `src/subapps/dxf-viewer/ui/FloatingPanelContainer.tsx` — αφαίρεση dead `zoomLevel` chain
+8. `src/subapps/dxf-viewer/ui/hooks/usePanelDescription.ts` — **ΔΙΑΓΡΑΦΗ** (dead)
+9. `docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md` — changelog #3 (ίδιο commit)
+
+---
+
 ## 📝 ΣΗΜΕΙΩΣΕΙΣ
 - Phase XXII.B **μέρος 2** (μη-ξεκινημένο, ξεχωριστό): `dxf-bitmap-cache.ts` CSS-transform live-zoom + idle re-raster (Figma pattern) — δες ADR-040 §Phase XXII.A/B.
 - ΜΗΝ αγγίξεις: railing (ADR-407), MEP/fixture-grips/electrical-panel (ADR-406/408).
