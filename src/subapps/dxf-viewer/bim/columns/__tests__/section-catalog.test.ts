@@ -8,6 +8,7 @@ import {
   SHEAR_WALL_CATALOG,
   findIShapePreset,
   findShearWallPreset,
+  formatIShapePresetLabel,
 } from '../section-catalog';
 
 // ─── Shear-wall catalog ───────────────────────────────────────────────────────
@@ -49,12 +50,16 @@ describe('SHEAR_WALL_CATALOG', () => {
 // ─── I-shape catalog ─────────────────────────────────────────────────────────
 
 describe('ISHAPE_CATALOG', () => {
-  it('has 10 sections (6 IPE + 4 HEA)', () => {
-    expect(ISHAPE_CATALOG).toHaveLength(10);
+  it('has the full EN 10365 European series (18 IPE + 19 HEA/HEB/HEM each)', () => {
+    expect(ISHAPE_CATALOG).toHaveLength(75);
     const ipe = ISHAPE_CATALOG.filter((p) => p.id.startsWith('IPE'));
     const hea = ISHAPE_CATALOG.filter((p) => p.id.startsWith('HEA'));
-    expect(ipe).toHaveLength(6);
-    expect(hea).toHaveLength(4);
+    const heb = ISHAPE_CATALOG.filter((p) => p.id.startsWith('HEB'));
+    const hem = ISHAPE_CATALOG.filter((p) => p.id.startsWith('HEM'));
+    expect(ipe).toHaveLength(18);
+    expect(hea).toHaveLength(19);
+    expect(heb).toHaveLength(19);
+    expect(hem).toHaveLength(19);
   });
 
   it('all preset IDs are unique', () => {
@@ -86,13 +91,38 @@ describe('ISHAPE_CATALOG', () => {
     expect(p?.webThickness).toBe(7.1);
   });
 
-  it('HEA-300 matches EN 10025-2 table values', () => {
+  it('HEA-300 matches EN 10365 table values', () => {
     const p = ISHAPE_CATALOG.find((x) => x.id === 'HEA-300');
     expect(p).toBeDefined();
     expect(p?.flangeWidth).toBe(300);
     expect(p?.sectionDepth).toBe(290);
     expect(p?.flangeThickness).toBe(14.0);
     expect(p?.webThickness).toBe(8.5);
+  });
+
+  it('HEB-300 matches EN 10365 table values (square flange/depth)', () => {
+    const p = ISHAPE_CATALOG.find((x) => x.id === 'HEB-300');
+    expect(p).toBeDefined();
+    expect(p?.flangeWidth).toBe(300);
+    expect(p?.sectionDepth).toBe(300);
+    expect(p?.flangeThickness).toBe(19.0);
+    expect(p?.webThickness).toBe(11.0);
+  });
+});
+
+// ─── formatIShapePresetLabel ──────────────────────────────────────────────────
+
+describe('formatIShapePresetLabel', () => {
+  it('derives a literal label from id + dimensions', () => {
+    const p = findIShapePreset('IPE-300');
+    expect(p).not.toBeNull();
+    expect(formatIShapePresetLabel(p!)).toBe('IPE 300 (b=150, h=300mm)');
+  });
+
+  it('formats every catalog entry without throwing', () => {
+    for (const p of ISHAPE_CATALOG) {
+      expect(formatIShapePresetLabel(p)).toContain(p.id.replace('-', ' '));
+    }
   });
 });
 
@@ -133,8 +163,14 @@ describe('findIShapePreset', () => {
     expect(p?.id).toBe('HEA-200');
   });
 
+  it('returns preset for known HEB ID', () => {
+    const p = findIShapePreset('HEB-400');
+    expect(p).not.toBeNull();
+    expect(p?.id).toBe('HEB-400');
+  });
+
   it('returns null for unknown ID', () => {
-    expect(findIShapePreset('IPE-600')).toBeNull();
+    expect(findIShapePreset('IPE-999')).toBeNull();
   });
 
   it('returns null for custom sentinel', () => {
