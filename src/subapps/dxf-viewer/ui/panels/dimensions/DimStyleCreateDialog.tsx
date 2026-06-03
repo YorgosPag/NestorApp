@@ -64,9 +64,9 @@ export function DimStyleCreateDialog({
     onConfirm(name.trim());
   };
 
+  // ADR-364: Escape handled by Radix Dialog onEscapeKeyDown → onOpenChange → onCancel.
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleConfirm();
-    if (e.key === 'Escape') onCancel();
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
