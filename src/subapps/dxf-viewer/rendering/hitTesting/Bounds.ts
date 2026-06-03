@@ -130,6 +130,8 @@ export class BoundsCalculator {
       case 'electrical-panel':
       // ADR-407 — railing projects `geometry.bbox` (RailingGeometry) to 2D (same).
       case 'railing':
+      // ADR-410 — furniture projects `geometry.bbox` (FurnitureGeometry) to 2D (same).
+      case 'furniture':
         return this.calculateBimEntityBounds(entity, tolerance);
       // ADR-359 Phase 11 follow-up — XLINE/RAY bounds extracted to sibling module.
       case 'xline':

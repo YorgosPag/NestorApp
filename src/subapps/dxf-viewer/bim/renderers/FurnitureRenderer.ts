@@ -29,6 +29,10 @@ import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
+import { mmToSceneUnits } from '../../utils/scene-units';
+import { furnitureGltfCache } from '../../bim-3d/library/furniture-gltf-cache';
+
+const M_TO_MM = 1000;
 
 /** Plan-symbol palette — interior furniture (neutral tan outline). */
 const FURNITURE_STROKE = '#8b5e34';
@@ -68,21 +72,29 @@ export class FurnitureRenderer extends BaseEntityRenderer {
       this.ctx.restore();
     }
 
+    // ADR-410 — prefer the per-asset top-view silhouette derived from the 3D mesh
+    // (representative plan footprint). Falls back to the authored rectangle + glyph
+    // until the glTF (and its silhouette) has loaded.
+    const silhouette = this.resolveSilhouetteWorld(furniture);
+
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
     this.ctx.setLineDash([]);
 
+    const outline = silhouette ?? verts;
+
     // Fill + outline.
     this.ctx.fillStyle = FURNITURE_FILL;
-    this.drawPolygonPath(verts);
+    this.drawPolygonPath(outline);
     this.ctx.fill();
     this.ctx.strokeStyle = FURNITURE_STROKE;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    this.drawPolygonPath(verts);
+    this.drawPolygonPath(outline);
     this.ctx.stroke();
 
-    // Diagonal plan glyph (generic furniture cross) — corner-to-corner.
-    this.drawDiagonals(verts);
+    // Generic glyph (diagonal cross) only on the placeholder rectangle — the
+    // real silhouette is descriptive enough on its own.
+    if (!silhouette) this.drawDiagonals(verts);
 
     this.ctx.restore();
     this.finalizeRender(entity, options);
@@ -111,6 +123,29 @@ export class FurnitureRenderer extends BaseEntityRenderer {
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────
+
+  /**
+   * Resolve the per-asset top-view silhouette (cached in plan meters relative to
+   * the placement origin) into WORLD canvas-unit points, transformed onto the
+   * entity's position + rotation. Returns null when no silhouette is cached yet
+   * (renderer then falls back to the authored rectangle).
+   */
+  private resolveSilhouetteWorld(furniture: FurnitureEntity): Array<{ x: number; y: number }> | null {
+    const sil = furnitureGltfCache.getSilhouette(furniture.params.assetId);
+    if (!sil || sil.length < 3) return null;
+    const { position, rotationDeg, sceneUnits } = furniture.params;
+    // plan meters → mm → scene/canvas units (same space as geometry.footprint).
+    const s = mmToSceneUnits(sceneUnits ?? 'mm') * M_TO_MM;
+    const rad = (rotationDeg * Math.PI) / 180;
+    const cos = Math.cos(rad), sin = Math.sin(rad);
+    return sil.map((p) => {
+      const lx = p.x * s, ly = p.y * s;
+      return {
+        x: position.x + (lx * cos - ly * sin),
+        y: position.y + (lx * sin + ly * cos),
+      };
+    });
+  }
 
   private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
     if (vertices.length < 3) return;

@@ -26,6 +26,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { resolveFurnitureMeshUrl } from './furniture-gltf-library';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
+import { computeTopSilhouette, type SilPoint } from '../../bim/furniture/furniture-silhouette';
+import { markAllCanvasDirty } from '../../rendering/core/frame-scheduler-api';
 
 type CacheState = 'loading' | 'error';
 
@@ -35,6 +37,8 @@ const loader = new GLTFLoader();
 const templates = new Map<string, THREE.Group>();
 /** assetId → in-flight / error marker (so we never double-load). */
 const status = new Map<string, CacheState>();
+/** assetId → top-view silhouette (plan meters) for the 2D footprint (ADR-410). */
+const silhouettes = new Map<string, readonly SilPoint[]>();
 
 /**
  * Synchronously read the cached template group for an asset, or `null` on a
@@ -57,9 +61,21 @@ function preload(assetId: string): void {
     .then((url) => loader.loadAsync(url))
     .then((gltf) => {
       templates.set(assetId, gltf.scene);
+      // Derive the 2D plan silhouette from the actual mesh (ADR-410 — per-asset
+      // representative footprint). Computed once; failures fall back to the
+      // authored rectangle in the renderer.
+      try {
+        const sil = computeTopSilhouette(gltf.scene);
+        if (sil.length >= 3) silhouettes.set(assetId, sil);
+      } catch {
+        /* non-fatal — renderer falls back to the catalog rectangle */
+      }
       status.delete(assetId);
-      // Trigger a 3D resync so the bbox placeholder is replaced by the mesh.
+      // Trigger a 3D resync (bbox placeholder → real mesh) AND a 2D repaint
+      // (rectangle → silhouette). The 2D canvas is dirtied directly since it does
+      // not subscribe to the entities store.
       useBim3DEntitiesStore.getState().bumpFurnitureAssetVersion();
+      markAllCanvasDirty();
     })
     .catch(() => {
       // Leave an 'error' marker so we don't hammer Storage on every resync; the
@@ -74,14 +90,21 @@ function getInstance(assetId: string): THREE.Group | null {
   return template ? (template.clone(true) as THREE.Group) : null;
 }
 
+/** Top-view silhouette (plan meters) for an asset, or null if not yet computed. */
+function getSilhouette(assetId: string): readonly SilPoint[] | null {
+  return silhouettes.get(assetId) ?? null;
+}
+
 export const furnitureGltfCache = {
   preload,
   get,
   getInstance,
+  getSilhouette,
 };
 
 /** Test-only — reset cache between specs. */
 export function __resetFurnitureGltfCacheForTests(): void {
   templates.clear();
   status.clear();
+  silhouettes.clear();
 }
