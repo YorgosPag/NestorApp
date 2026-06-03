@@ -131,6 +131,7 @@ const RAILING_MAPPING: Readonly<Record<RailingKind, AtoeMappingEntry>> = {
  */
 const FURNITURE_MAPPING: Readonly<Record<FurnitureKind, AtoeMappingEntry>> = {
   chair: { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — καρέκλα (BIM)' },
+  table: { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — τραπέζι (BIM)' },
 };
 
 /** Lookup map keyed by entity type for runtime dispatch. */

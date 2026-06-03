@@ -2357,7 +2357,11 @@
       "chair01": "Chair",
       "diningChair02": "Dining chair",
       "paintedWoodenChair01": "Painted wooden chair",
-      "plasticMonoblocChair01": "Plastic chair"
+      "plasticMonoblocChair01": "Plastic chair",
+      "coffeeTableRound01": "Round coffee table",
+      "modernCoffeeTable01": "Modern coffee table",
+      "modernCoffeeTable02": "Modern coffee table II",
+      "sideTable01": "Side table"
     },
     "validation": {
       "hardErrors": {

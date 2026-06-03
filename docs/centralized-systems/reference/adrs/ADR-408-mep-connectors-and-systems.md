@@ -283,14 +283,31 @@ Scope = 2D annotation + 3D conduit· τοπολογία = **daisy-chain + home-r
 
 ## Roadmap (επόμενο push)
 
-- ✅ «colour by system» view toggle **DONE** (2026-06-03)· ✅ per-circuit edit από φωτιστικό **DONE** (2026-06-03) — μένει seed legacy connectors.
+- ✅ «colour by system» view toggle **DONE** (2026-06-03)· ✅ per-circuit edit από φωτιστικό **DONE** (2026-06-03)· ✅ seed legacy connectors **DONE** (2026-06-03) — **ο κορμός ADR-408 «MEP σαν Revit» (electrical) πλήρης.**
 - Φ7 follow-ups: ✅ `orthogonal`/`arc` wire styles **DONE** (#1, 2026-06-03)· ✅ waypoints **DONE** (#3,
-  2026-06-03)· ✅ conductor-count ticks **DONE** (2026-06-03)· ✅ colour-by-system toggle **DONE** (2026-06-03)· ✅ per-circuit edit από φωτιστικό **DONE** (2026-06-03)· ❌ seed legacy connectors.
-- duct/pipe domains & systems — reserved στα types, no pipeline.
+  2026-06-03)· ✅ conductor-count ticks **DONE** (2026-06-03)· ✅ colour-by-system toggle **DONE** (2026-06-03)· ✅ per-circuit edit από φωτιστικό **DONE** (2026-06-03)· ✅ seed legacy connectors **DONE** (2026-06-03).
+- duct/pipe domains & systems — reserved στα types, no pipeline (επόμενο frontier).
 
 ---
 
 ## Changelog
+- **2026-06-03 (Opus 4.8)** — **Φ5 roadmap — SEED LEGACY CONNECTORS DONE** (pending commit, 🔴 browser verify).
+  Κλείνει το τελευταίο Φ5 caveat: φωτιστικά/πίνακες που φτιάχτηκαν **πριν** το connector model (Φ1/Φ2) δεν είχαν
+  `params.connectors`, οπότε δεν συμμετείχαν πλήρως σε reconciliation / wire-routing / `connector.systemId` cache.
+  **Απόφαση Giorgio:** «όπως οι μεγάλοι παίκτες (Revit), FULL ENTERPRISE + FULL SSOT» → **scene-only seed**: σε Revit
+  οι connectors είναι μέρος του **family definition** — υλοποιούνται ντετερμινιστικά από τον τύπο κατά το load, **δεν**
+  αποθηκεύονται ως per-instance mutable data. Persisted backfill θα δημιουργούσε **δεύτερο αντίγραφο** στο Firestore
+  που μπορεί να αποκλίνει (drift) → παραβίαση SSoT. **Υλοποίηση:** NEW pure SSoT `bim/mep-systems/mep-connector-seed.ts`
+  → `seedDefaultConnectors(entity)` re-materialises τον default connector του host type από τους builders
+  (`buildDefaultLightingConnector` / `buildDefaultPanelOutgoingConnector` — η ΜΟΝΑΔΙΚΗ πηγή του default connector
+  shape)· same ref όταν ο host έχει ήδη connectors ή δεν είναι connector host (idempotent, pure). **Folded σε ΕΝΑ
+  scene pass** μέσα στο `useMepConnectorReconciliation` (seed-then-reconcile → ένα `setLevelScene` diff): κάθε host
+  πρώτα seed-άρεται, μετά reconcile-άρεται το `systemId` cache του. Scene-only — μηδέν Firestore write / migration /
+  companyId-rules / idle ping-pong κίνδυνος, ακριβώς όπως το `systemId` cache που τροφοδοτεί. **ΕΚΤΟΣ ADR-040** (state
+  hook + pure helper, όχι canvas micro-leaf). Tests: NEW `mep-connector-seed.test` (5: fixture→c1 in· panel→c1 out·
+  host-με-connector→same ref· non-host→same ref· no-mutation) + integration `useMepConnectorReconciliation.test` (+4:
+  seed-then-reconcile σε ένα pass· seed χωρίς systems· idempotent μετά το seed) → 11/11 νέα, 322/322 MEP+types+data
+  PASS, tsc 0. ⚠️ SHARED TREE — `git add` ΜΟΝΟ specific, ΠΟΤΕ -A.
 - **2026-06-03 (Opus 4.8, Plan Mode)** — **Φ7 roadmap — PER-CIRCUIT EDIT ΑΠΟ ΦΩΤΙΣΤΙΚΟ DONE** (pending commit, 🔴
   browser verify). Revit «device → Electrical Circuits»: επιλέγεις φωτιστικό → βλέπεις σε ποιο κύκλωμα ανήκει + jump
   στη διαχείρισή του. Giorgio (AskUserQuestion): **«Select Panel → jump»** (όχι in-place tab switch) → σέβεται την

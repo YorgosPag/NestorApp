@@ -1,20 +1,29 @@
 'use client';
 
 /**
- * ADR-408 Φ5 — scene-time MEP connector reconciliation.
+ * ADR-408 Φ5 — scene-time MEP connector seeding + reconciliation.
  *
- * Writes the derived `MepConnector.systemId` cache onto the fixture/panel scene
- * entities so it always reflects the System membership truth ("System always
- * wins"). The System owns `members[]`; this hook re-derives the per-connector
- * back-reference whenever the systems list or the scene changes, via the pure
- * `reconcileEntityConnectors` coordinator (ADR-401 pattern C).
+ * One scene pass that keeps every connector host (fixture / panel) network-ready:
+ *   1. **Seed** — a legacy host placed before the connector model has no
+ *      `params.connectors`; `seedDefaultConnectors` re-materialises the host
+ *      type's default connector from the builder SSoT (Revit: a family always
+ *      declares its connectors). Scene-only, no Firestore write — re-derived on
+ *      every load, exactly like the cache below.
+ *   2. **Reconcile** — writes the derived `MepConnector.systemId` cache onto the
+ *      (now seeded) connectors so it always reflects the System membership truth
+ *      ("System always wins"). The System owns `members[]`; this re-derives the
+ *      per-connector back-reference via the pure `reconcileEntityConnectors`
+ *      coordinator (ADR-401 pattern C).
  *
- * **Scene-only, not persisted**: the cache is rebuilt from truth on every load,
+ * **Scene-only, not persisted**: both steps are rebuilt from truth on every load,
  * so there is no extra Firestore write (the type contract says a stale
- * `systemId` is harmless). Idempotent — `reconcileEntityConnectors` returns the
- * same array reference when nothing changed, so `setLevelScene` only fires on a
- * real diff and the `currentScene` effect converges without a render loop.
+ * `systemId` is harmless, and the default connector is a deterministic property
+ * of the host type). Idempotent — both `seedDefaultConnectors` and
+ * `reconcileEntityConnectors` return the same reference when nothing changed, so
+ * `setLevelScene` only fires on a real diff and the `currentScene` effect
+ * converges without a render loop.
  *
+ * @see ../../bim/mep-systems/mep-connector-seed.ts
  * @see ../../bim/mep-systems/mep-system-coordinator.ts
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
@@ -31,6 +40,7 @@ import {
   buildConnectorSystemIndex,
   reconcileEntityConnectors,
 } from '../../bim/mep-systems/mep-system-coordinator';
+import { seedDefaultConnectors } from '../../bim/mep-systems/mep-connector-seed';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -70,17 +80,21 @@ export function useMepConnectorReconciliation(
     const index = buildConnectorSystemIndex(useMepSystemStore.getState().getSystems());
     let changed = false;
     const nextEntities = scene.entities.map((e) => {
-      if (isMepFixtureEntity(e)) {
-        const next = reconcileHost(e, index);
+      // Seed a legacy host's default connector first, then reconcile its cache —
+      // one pass, one diff. Both steps are referentially stable when unchanged,
+      // so `next !== e` is true iff the seed OR the reconcile touched the host.
+      const seeded = seedDefaultConnectors(e);
+      if (isMepFixtureEntity(seeded)) {
+        const next = reconcileHost(seeded, index);
         if (next !== e) changed = true;
         return next;
       }
-      if (isElectricalPanelEntity(e)) {
-        const next = reconcileHost(e, index);
+      if (isElectricalPanelEntity(seeded)) {
+        const next = reconcileHost(seeded, index);
         if (next !== e) changed = true;
         return next;
       }
-      return e;
+      return seeded;
     });
 
     if (changed) lm.setLevelScene(levelId, { ...scene, entities: nextEntities });

@@ -24,6 +24,14 @@ function fixture(id: string, systemId?: string) {
   };
 }
 
+/** A legacy fixture/panel placed before the connector model — no `connectors`. */
+function legacyFixture(id: string) {
+  return { type: 'mep-fixture', id, params: {} };
+}
+function legacyPanel(id: string) {
+  return { type: 'electrical-panel', id, params: {} };
+}
+
 function makeScene(...entities: unknown[]): SceneModel {
   return { entities } as unknown as SceneModel;
 }
@@ -88,5 +96,49 @@ describe('useMepConnectorReconciliation', () => {
     expect(lm.setLevelScene).toHaveBeenCalledTimes(1);
     const written = lm.getScene().entities[0] as ReturnType<typeof fixture>;
     expect(written.params.connectors[0].systemId).toBeUndefined();
+  });
+
+  it('seeds a legacy fixture then reconciles its systemId in one pass', () => {
+    useMepSystemStore.getState().setSystems([sys('sys1', [['fx1', 'c1']])]);
+    const scene = makeScene(legacyFixture('fx1'));
+    const lm = makeLevelManager(scene);
+
+    renderHook(() => useMepConnectorReconciliation({ currentScene: scene, levelManager: lm }));
+
+    expect(lm.setLevelScene).toHaveBeenCalledTimes(1);
+    const written = lm.getScene().entities[0] as ReturnType<typeof fixture>;
+    expect(written.params.connectors).toHaveLength(1);
+    expect(written.params.connectors[0].connectorId).toBe('c1');
+    expect(written.params.connectors[0].systemId).toBe('sys1');
+  });
+
+  it('seeds a legacy panel even with no systems (connector materialised, no systemId)', () => {
+    useMepSystemStore.getState().setSystems([]);
+    const scene = makeScene(legacyPanel('pnl1'));
+    const lm = makeLevelManager(scene);
+
+    renderHook(() => useMepConnectorReconciliation({ currentScene: scene, levelManager: lm }));
+
+    expect(lm.setLevelScene).toHaveBeenCalledTimes(1);
+    const written = lm.getScene().entities[0] as { params: { connectors: Array<{ connectorId: string; flow: string; systemId?: string }> } };
+    expect(written.params.connectors).toHaveLength(1);
+    expect(written.params.connectors[0].flow).toBe('out');
+    expect(written.params.connectors[0].systemId).toBeUndefined();
+  });
+
+  it('is idempotent after seeding — no second write once materialised + reconciled', () => {
+    useMepSystemStore.getState().setSystems([sys('sys1', [['fx1', 'c1']])]);
+    const scene = makeScene(legacyFixture('fx1'));
+    const lm = makeLevelManager(scene);
+
+    // First mount seeds + reconciles (one write); re-running against the now
+    // materialised scene must be a no-op.
+    renderHook(() => useMepConnectorReconciliation({ currentScene: scene, levelManager: lm }));
+    expect(lm.setLevelScene).toHaveBeenCalledTimes(1);
+
+    const seededScene = lm.getScene();
+    lm.setLevelScene.mockClear();
+    renderHook(() => useMepConnectorReconciliation({ currentScene: seededScene, levelManager: lm }));
+    expect(lm.setLevelScene).not.toHaveBeenCalled();
   });
 });

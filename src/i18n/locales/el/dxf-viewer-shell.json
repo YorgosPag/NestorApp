@@ -2357,7 +2357,11 @@
       "chair01": "Καρέκλα",
       "diningChair02": "Καρέκλα τραπεζαρίας",
       "paintedWoodenChair01": "Βαμμένη ξύλινη καρέκλα",
-      "plasticMonoblocChair01": "Πλαστική καρέκλα"
+      "plasticMonoblocChair01": "Πλαστική καρέκλα",
+      "coffeeTableRound01": "Στρογγυλό τραπεζάκι σαλονιού",
+      "modernCoffeeTable01": "Μοντέρνο τραπεζάκι σαλονιού",
+      "modernCoffeeTable02": "Μοντέρνο τραπεζάκι σαλονιού II",
+      "sideTable01": "Βοηθητικό τραπεζάκι"
     },
     "validation": {
       "hardErrors": {
