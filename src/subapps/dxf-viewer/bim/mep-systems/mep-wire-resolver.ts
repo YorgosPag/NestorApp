@@ -22,14 +22,22 @@ export interface WireHostXform {
   readonly x: number;
   readonly y: number;
   readonly rotation: number;
+  /**
+   * Host mounting elevation (mm above FFL) — the conduit run height. Optional:
+   * the 2D overlay omits it (the 2D space ignores `zMm`); the 3D consumers supply
+   * `params.mountingElevationMm` so the conduit + handles sit at the right height.
+   */
+  readonly zMm?: number;
   readonly connectors: readonly MepConnector[];
 }
 
 /**
  * Build a {@link ResolveWireHost} from an already-collected host map. The map's
  * key is the host `entityId`; each caller populates it from its own scene source
- * (optionally applying a live drag preview). `zMm` is 0 — the 2D space; the 3D
- * converter supplies real elevations via its own resolver.
+ * (optionally applying a live drag preview). The resolved `zMm` = the host's
+ * mounting elevation + the connector's local Z (0 for 2D hosts that omit `zMm`),
+ * so this is the SINGLE resolver glue shared by the 2D overlay, the 3D conduit
+ * sync, and the 3D waypoint editor.
  */
 export function resolverFromHosts(hosts: ReadonlyMap<string, WireHostXform>): ResolveWireHost {
   return (entityId, connectorId) => {
@@ -39,6 +47,6 @@ export function resolverFromHosts(hosts: ReadonlyMap<string, WireHostXform>): Re
     const pos = conn
       ? connectorWorldPosition(conn, { x: host.x, y: host.y, z: 0 }, host.rotation)
       : { x: host.x, y: host.y, z: 0 };
-    return { x: pos.x, y: pos.y, zMm: 0 };
+    return { x: pos.x, y: pos.y, zMm: (host.zMm ?? 0) + (conn?.localPosition.z ?? 0) };
   };
 }
