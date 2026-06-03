@@ -34,9 +34,10 @@ export const CONTEXTUAL_MEP_CIRCUIT_TAB: RibbonTab = {
   contextualTrigger: MEP_CIRCUIT_CONTEXTUAL_TRIGGER,
   panels: [
     {
-      // ADR-408 Φ6 — manage the active circuit (rename / colour / members). The
-      // widgets self-hide (return null) when there is no active circuit, so the
-      // panel is inert in the pure create case (panel + fixtures, no circuit yet).
+      // ADR-408 Φ6/Φ7 — manage the active circuit (rename / colour / members /
+      // wire style). The widgets self-hide (return null) when there is no active
+      // circuit, so the panel is inert in the pure create case (panel + fixtures,
+      // no circuit yet).
       id: 'mep-circuit-properties',
       labelKey: 'ribbon.panels.mepCircuitProperties',
       rows: [
@@ -108,6 +109,22 @@ export const CONTEXTUAL_MEP_CIRCUIT_TAB: RibbonTab = {
                 icon: 'trash',
                 commandKey: MEP_CIRCUIT_RIBBON_ACTIONS.removeMembers,
                 action: MEP_CIRCUIT_RIBBON_ACTIONS.removeMembers,
+              },
+            },
+          ],
+        },
+        {
+          // Row 4 — wire style ("Wiring Type"): straight / orthogonal / arc (Φ7).
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'mep-circuit-wire-style',
+              command: {
+                id: 'mepCircuit.wireStyle',
+                labelKey: 'ribbon.commands.mepWireStyle.label',
+                commandKey: 'mepCircuit.wireStyle',
               },
             },
           ],

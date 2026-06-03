@@ -1793,6 +1793,12 @@
         "tooltipHide": "Hide the MEP circuit wires from the view",
         "tooltipShow": "Show the MEP circuit wires"
       },
+      "mepWireStyle": {
+        "label": "Wire Style",
+        "straight": "Straight",
+        "orthogonal": "Orthogonal",
+        "arc": "Arc"
+      },
       "discipline": {
         "label": "Disciplines",
         "tooltipShow": "Show discipline",

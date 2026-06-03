@@ -7,6 +7,7 @@ import {
   expandSegment,
   buildWirePolyline,
   type WireHostPoint,
+  type WireStyle,
   type ResolveWireHost,
   type CircuitWirePath,
 } from '../mep-wire-routing';
@@ -23,6 +24,12 @@ function sys(id: string, color: string | undefined, members: string[], source: s
     ...(color ? { color } : {}),
   };
   return { id, params };
+}
+
+/** A system carrying an explicit per-circuit wire style. */
+function sysWithStyle(id: string, wireStyle: WireStyle, members: string[], source: string): MepSystemEntity {
+  const base = sys(id, undefined, members, source);
+  return { ...base, params: { ...base.params, wireStyle } };
 }
 
 /** A resolver backed by a fixed id→point map (null for anything absent). */
@@ -97,6 +104,20 @@ describe('computeCircuitWirePaths', () => {
   it('returns nothing for an empty systems list', () => {
     expect(computeCircuitWirePaths([], resolverFrom({}))).toEqual([]);
   });
+
+  it('carries the per-circuit wireStyle onto the path (absent ⇒ straight)', () => {
+    const def = computeCircuitWirePaths(
+      [sys('s1', undefined, ['fx1'], 'pnl')],
+      resolverFrom({ pnl: P(0, 0), fx1: P(10, 0) }),
+    );
+    expect(def[0]!.style).toBe('straight');
+
+    const ortho = computeCircuitWirePaths(
+      [sysWithStyle('s2', 'orthogonal', ['fx1'], 'pnl')],
+      resolverFrom({ pnl: P(0, 0), fx1: P(10, 0) }),
+    );
+    expect(ortho[0]!.style).toBe('orthogonal');
+  });
 });
 
 describe('expandSegment (style seam)', () => {
@@ -116,25 +137,43 @@ describe('expandSegment (style seam)', () => {
     ]);
   });
 
-  it('arc falls back to straight until the curved annotation lands', () => {
-    expect(expandSegment(P(0, 0), P(10, 5), 'arc')).toEqual([P(0, 0), P(10, 5)]);
+  it('arc samples a curved Bézier polyline (endpoints exact, interior bulged)', () => {
+    const pts = expandSegment(P(0, 0), P(10, 0), 'arc');
+    expect(pts.length).toBeGreaterThan(2);
+    expect(pts[0]).toEqual(P(0, 0));
+    expect(pts[pts.length - 1]).toEqual(P(10, 0));
+    // The control point pushes the midpoint perpendicular off the straight line.
+    const mid = pts[Math.floor(pts.length / 2)]!;
+    expect(Math.abs(mid.y)).toBeGreaterThan(0);
+  });
+
+  it('arc collapses a zero-length segment to the direct two points', () => {
+    expect(expandSegment(P(5, 5), P(5, 5), 'arc')).toEqual([P(5, 5), P(5, 5)]);
   });
 });
 
 describe('buildWirePolyline', () => {
-  const straightPath: CircuitWirePath = {
-    systemId: 's1',
-    colorHex: '#000000',
-    points: [P(0, 0), P(10, 0), P(10, 10)],
-  };
-
-  it('flattens a straight path with de-duplicated joins', () => {
-    expect(buildWirePolyline(straightPath, 'straight')).toEqual([P(0, 0), P(10, 0), P(10, 10)]);
+  it('flattens a straight path (default style) with de-duplicated joins', () => {
+    const straightPath: CircuitWirePath = {
+      systemId: 's1',
+      colorHex: '#000000',
+      points: [P(0, 0), P(10, 0), P(10, 10)],
+    };
+    expect(buildWirePolyline(straightPath)).toEqual([P(0, 0), P(10, 0), P(10, 10)]);
   });
 
-  it('expands a diagonal segment into an L-elbow for orthogonal', () => {
-    const diag: CircuitWirePath = { systemId: 's', colorHex: '#000000', points: [P(0, 0), P(10, 5)] };
-    expect(buildWirePolyline(diag, 'orthogonal')).toEqual([P(0, 0), P(10, 0), P(10, 5)]);
+  it('expands diagonals into L-elbows when the path style is orthogonal', () => {
+    const diag: CircuitWirePath = {
+      systemId: 's', colorHex: '#000000', style: 'orthogonal', points: [P(0, 0), P(10, 5)],
+    };
+    expect(buildWirePolyline(diag)).toEqual([P(0, 0), P(10, 0), P(10, 5)]);
+  });
+
+  it('samples a curve when the path style is arc', () => {
+    const arc: CircuitWirePath = {
+      systemId: 's', colorHex: '#000000', style: 'arc', points: [P(0, 0), P(10, 0)],
+    };
+    expect(buildWirePolyline(arc).length).toBeGreaterThan(2);
   });
 
   it('returns empty for a path with no points', () => {
