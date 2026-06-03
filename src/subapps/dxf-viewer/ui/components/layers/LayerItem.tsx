@@ -5,6 +5,7 @@
  */
 
 import React, { useState } from 'react';
+import { useEscapeHandler, ESC_PRIORITY } from '@/subapps/dxf-viewer/systems/escape-bus';
 import { Eye, EyeOff, Trash2, Edit2, ChevronRight, ChevronDown, Lock } from 'lucide-react';
 import { EntityCard } from './components/EntityCard';
 import type { AnySceneEntity, SceneModel } from '../../../types/scene';
@@ -127,6 +128,20 @@ export function LayerItem({
   const isEditing = editingLayer === layerName;
   const [renameValidation, setRenameValidation] =
     useState<LayerNameValidationResult | null>(null);
+
+  // ADR-364: Esc cancels rename via centralized Escape Command Bus.
+  useEscapeHandler({
+    id: 'layer-item-rename',
+    priority: ESC_PRIORITY.POPOVER_DROPDOWN,
+    allowWhenEditable: true,
+    canHandle: () => editingLayer === layerName,
+    handle: () => {
+      setEditingLayer(null);
+      setEditingName('');
+      setRenameValidation(null);
+      return true;
+    },
+  });
   const existingLayers = Object.values(scene.layersById);
   const showColorPicker = colorPickerLayer === layerName;
   
@@ -186,11 +201,8 @@ export function LayerItem({
       setEditingLayer(null);
       setEditingName('');
       setRenameValidation(null);
-    } else if (e.key === 'Escape') {
-      setEditingLayer(null);
-      setEditingName('');
-      setRenameValidation(null);
     }
+    // ADR-364: Escape handled by useEscapeHandler above.
   };
 
   const handleNameBlur = () => {
