@@ -21,6 +21,7 @@ import React, {
   useCallback,
 } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useEscapeHandler, ESC_PRIORITY } from '@/subapps/dxf-viewer/systems/escape-bus';
 import { PropertiesPaletteStore } from './PropertiesPaletteStore';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
 import { LevelSceneManagerAdapter } from '../entity-creation/LevelSceneManagerAdapter';
@@ -99,15 +100,14 @@ export function PropertiesPalette({
   // Close when palette loses focus to a non-select tool (optional — palette stays open)
   // Per industry standard, Properties Palette persists across tool changes.
 
-  // Esc → close
-  useEffect(() => {
-    if (!paletteSnap.open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { PropertiesPaletteStore.close(); }
-    };
-    window.addEventListener('keydown', handler, { capture: true });
-    return () => window.removeEventListener('keydown', handler, { capture: true });
-  }, [paletteSnap.open]);
+  // ADR-364: Esc → close via centralized Escape Command Bus.
+  useEscapeHandler({
+    id: 'properties-palette',
+    priority: ESC_PRIORITY.POPOVER_DROPDOWN,
+    allowWhenEditable: true,
+    canHandle: () => paletteSnap.open,
+    handle: () => { PropertiesPaletteStore.close(); return true; },
+  });
 
   const handleApply = useCallback(() => {
     if (!entityId || !dxfScene || !levelManager.currentLevelId) return;
