@@ -32,6 +32,11 @@ export const MepSystemParamsSchema = z
     color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
     // ADR-408 Φ7 — per-circuit wire-drawing style (Revit "Wiring Type").
     wireStyle: z.enum(['straight', 'orthogonal', 'arc']).optional(),
+    // ADR-408 Φ7 FU#3 — per-segment user waypoints (Revit "Wire Vertex"),
+    // keyed order-independently by the segment's host pair.
+    wireWaypoints: z
+      .record(z.string(), z.array(z.object({ x: z.number(), y: z.number() }).strict()))
+      .optional(),
     ratedVoltage: z.number().positive().optional(),
     poles: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
   })
