@@ -13,8 +13,8 @@
 import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { wirePathToMesh } from '../converters/mep-wire-to-three';
-import { computeCircuitWirePaths, type ResolveWireHost } from '../../bim/mep-systems/mep-wire-routing';
-import { connectorWorldPosition, type MepConnector } from '../../bim/types/mep-connector-types';
+import { computeCircuitWirePaths } from '../../bim/mep-systems/mep-wire-routing';
+import { resolverFromHosts, type WireHostXform } from '../../bim/mep-systems/mep-wire-resolver';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
@@ -22,16 +22,6 @@ import { resolveIsEntityVisible } from '../../bim/visibility/visibility-resolver
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import type { SyncContext } from './bim-scene-context';
 import type { BimCategory } from '../../config/bim-object-styles';
-
-/** A wire host's transform + connectors (3D resolver state). */
-interface WireHost3D {
-  readonly x: number;
-  readonly y: number;
-  readonly rotation: number;
-  /** Host mounting elevation (mm above FFL) — the conduit run height. */
-  readonly zMm: number;
-  readonly connectors: readonly MepConnector[];
-}
 
 /** Minimal slice of the host resolution `syncCircuitWires` consumes. */
 export interface WireHostResolution {
@@ -61,7 +51,7 @@ export function syncCircuitWires(
     { objectStyles: ctx.objectStyles, disciplineVisibility: ctx.disciplineVisibility },
   )) return;
 
-  const hosts = new Map<string, WireHost3D>();
+  const hosts = new Map<string, WireHostXform>();
   let sceneToM = 1;
   let baseElevationM = 0;
   let haveScene = false;
@@ -85,17 +75,7 @@ export function syncCircuitWires(
   for (const p of entities.panels ?? []) addHost(p, 'electrical-panel');
   if (!haveScene) return;
 
-  const resolve: ResolveWireHost = (entityId, connectorId) => {
-    const host = hosts.get(entityId);
-    if (!host) return null;
-    const conn = host.connectors.find((c) => c.connectorId === connectorId) ?? host.connectors[0];
-    const pos = conn
-      ? connectorWorldPosition(conn, { x: host.x, y: host.y, z: 0 }, host.rotation)
-      : { x: host.x, y: host.y, z: 0 };
-    return { x: pos.x, y: pos.y, zMm: host.zMm + (conn?.localPosition.z ?? 0) };
-  };
-
-  const paths = computeCircuitWirePaths(useMepSystemStore.getState().getSystems(), resolve);
+  const paths = computeCircuitWirePaths(useMepSystemStore.getState().getSystems(), resolverFromHosts(hosts));
   for (const path of paths) {
     const mesh = wirePathToMesh(path, sceneToM, ctx.floorElevationMm, baseElevationM);
     if (mesh) group.add(mesh);
