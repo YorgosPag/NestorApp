@@ -21,17 +21,22 @@
  * @see ../../bim/renderers/MepWireRenderer (drawCircuitWires — draw)
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import type { DxfEntityUnion, DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import {
   computeCircuitWirePaths,
+  computeCircuitHostSegments,
   type ResolveWireHost,
-  type WireHostPoint,
 } from '../../bim/mep-systems/mep-wire-routing';
-import { connectorWorldPosition, type MepConnector } from '../../bim/types/mep-connector-types';
-import { drawCircuitWires } from '../../bim/renderers/MepWireRenderer';
+import { resolverFromHosts, type WireHostXform } from '../../bim/mep-systems/mep-wire-resolver';
+import { drawCircuitWires, drawWaypointHandles } from '../../bim/renderers/MepWireRenderer';
+import { useMepCircuitEditorStore } from '../../bim/mep-systems/mep-circuit-editor-store';
+import {
+  getWireWaypointHover,
+  subscribeWireWaypointHover,
+} from '../../bim/mep-systems/mep-wire-waypoint-ui-store';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { resolveIsEntityVisible } from '../../bim/visibility/visibility-resolver';
 // ADR-408 Φ7 P2 — live drag follow: the dragged host's wire endpoint reads the
@@ -54,16 +59,10 @@ export interface HomeRunWiresOverlayProps {
   readonly gripDragPreview: DxfGripDragPreview | null;
 }
 
-interface WireHostXform {
-  readonly x: number;
-  readonly y: number;
-  readonly rotation: number;
-  readonly connectors: readonly MepConnector[];
-}
-
 /**
  * Build the host-resolver from the render scene's connector hosts (fixtures +
- * panels). Returns the connector's world plan point; `zMm` is irrelevant in 2D.
+ * panels). Collects each host's transform into a map, then delegates the
+ * connector→world math to the shared `resolverFromHosts` SSoT (`mep-wire-resolver`).
  *
  * ADR-408 Φ7 P2 — when `dragPreview` targets a fixture/panel host, that host is
  * resolved from the PREVIEWED entity (`applyEntityPreview`, the same SSoT the live
@@ -89,15 +88,7 @@ export function buildResolver(scene: DxfScene, dragPreview: DxfGripDragPreview |
       connectors: params.connectors ?? [],
     });
   }
-  return (entityId, connectorId): WireHostPoint | null => {
-    const host = hosts.get(entityId);
-    if (!host) return null;
-    const conn = host.connectors.find((c) => c.connectorId === connectorId) ?? host.connectors[0];
-    const pos = conn
-      ? connectorWorldPosition(conn, { x: host.x, y: host.y, z: 0 }, host.rotation)
-      : { x: host.x, y: host.y, z: 0 };
-    return { x: pos.x, y: pos.y, zMm: 0 };
-  };
+  return resolverFromHosts(hosts);
 }
 
 export function HomeRunWiresOverlay({
@@ -112,6 +103,11 @@ export function HomeRunWiresOverlay({
   const systems = useMepSystemStore((s) => s.systems);
   const objectStyles = useDrawingScaleStore((s) => s.objectStyles);
   const disciplineVisibility = useDrawingScaleStore((s) => s.disciplineVisibility);
+  // ADR-408 Φ7 FU#3 — editable waypoints: which circuit is active (shows handles)
+  // + the cursor hover affordance (highlight node / insert ghost). Both are leaf
+  // subscriptions — orchestrators stay untouched (CHECK 6C safe).
+  const activeSystemId = useMepCircuitEditorStore((s) => s.activeSystemId);
+  const waypointHover = useSyncExternalStore(subscribeWireWaypointHover, getWireWaypointHover);
   const visible = resolveIsEntityVisible(
     { category: 'mep-wire' },
     { objectStyles, disciplineVisibility },
@@ -132,12 +128,31 @@ export function HomeRunWiresOverlay({
     if (viewport.width <= 0 || viewport.height <= 0) return;
 
     if (!visible || !scene || systems.length === 0) return;
-    const paths = computeCircuitWirePaths(systems, buildResolver(scene, gripDragPreview));
+    const resolve = buildResolver(scene, gripDragPreview);
+    const paths = computeCircuitWirePaths(systems, resolve);
     if (paths.length === 0) return;
     drawCircuitWires(ctx, paths, transform, viewport);
+
+    // ADR-408 Φ7 FU#3 — editable handles for the active circuit only (Revit: grips
+    // appear on the selected wire). Drawn on top of the wire so the user can grab
+    // existing vertices or insert a new one on a segment.
+    const active = activeSystemId ? systems.find((s) => s.id === activeSystemId) ?? null : null;
+    if (active) {
+      const segments = computeCircuitHostSegments([active], resolve);
+      const path = paths.find((p) => p.systemId === active.id);
+      drawWaypointHandles(
+        ctx,
+        segments,
+        active.params.wireWaypoints,
+        path?.colorHex ?? '#1e88e5',
+        waypointHover,
+        transform,
+        viewport,
+      );
+    }
     // ADR-408 Φ7 P2 — `gripDragPreview` in deps ⇒ repaint each drag frame so the
     // wire tracks the previewed host (the snapshot changes on every mousemove).
-  }, [scene, transform, viewport, systems, visible, gripDragPreview]);
+  }, [scene, transform, viewport, systems, visible, gripDragPreview, activeSystemId, waypointHover]);
 
   return (
     <canvas
