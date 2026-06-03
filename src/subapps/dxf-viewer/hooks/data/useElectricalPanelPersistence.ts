@@ -28,6 +28,7 @@ import {
   type ElectricalPanelDoc,
 } from '../../bim/electrical-panels/electrical-panel-firestore-service';
 import { recordElectricalPanelChange } from '../../bim/electrical-panels/electrical-panel-audit-client';
+import { projectConnectorSystemIds } from '../../bim/mep-systems/mep-system-coordinator';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -174,8 +175,18 @@ export function useElectricalPanelPersistence(
             nextPanels.push(existing);
             continue;
           }
-          if (!dequal(existing.params, doc.params)) {
-            nextPanels.push(docToEntity(doc));
+          // Project the live (reconciler-owned) systemId cache onto the fresh
+          // doc entity, ignoring the doc's non-authoritative systemId — same
+          // ping-pong guard as the fixture hook (ADR-408 idle-loop fix).
+          const fresh = docToEntity(doc);
+          const freshConnectors = fresh.params.connectors ?? [];
+          const projected = projectConnectorSystemIds(freshConnectors, existing.params.connectors);
+          const candidate =
+            projected === freshConnectors
+              ? fresh
+              : { ...fresh, params: { ...fresh.params, connectors: projected } };
+          if (!dequal(existing.params, candidate.params)) {
+            nextPanels.push(candidate);
             mutated = true;
           } else {
             nextPanels.push(existing);

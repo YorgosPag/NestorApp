@@ -13,6 +13,7 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { dequal } from 'dequal';
 import type { MepSystemEntity } from '../types/mep-system-types';
 
 export interface MepSystemStoreState {
@@ -26,7 +27,15 @@ export interface MepSystemStoreState {
 export const useMepSystemStore = create<MepSystemStoreState>()(
   subscribeWithSelector((set, get) => ({
     systems: [],
-    setSystems: (systems) => set({ systems }),
+    setSystems: (systems) =>
+      set((s) => {
+        // Idempotent bail: a Firestore re-delivery maps the same docs to fresh
+        // entity references via `docToSystemEntity`, so compare by value — skip
+        // the notify so reconcile() (a Zustand subscriber) doesn't fire on
+        // identical data (ADR-408 idle-loop defense-in-depth).
+        if (dequal(s.systems, systems)) return s;
+        return { systems };
+      }),
     upsertSystem: (system) =>
       set((s) => {
         const idx = s.systems.findIndex((x) => x.id === system.id);

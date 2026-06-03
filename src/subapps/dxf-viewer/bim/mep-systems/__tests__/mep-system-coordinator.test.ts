@@ -9,6 +9,7 @@
 import {
   buildConnectorSystemIndex,
   reconcileEntityConnectors,
+  projectConnectorSystemIds,
   findSystemsBySource,
   findSystemMembershipsByEntity,
   detectMissingSystemMembers,
@@ -82,6 +83,49 @@ describe('reconcileEntityConnectors (System wins)', () => {
     const idx = buildConnectorSystemIndex([circuit('sys1', 'pnl1', [['fx1', 'c1']])]);
     const input = [conn('c1', 'sys1')];
     expect(reconcileEntityConnectors('fx1', input, idx)).toBe(input);
+  });
+});
+
+describe('projectConnectorSystemIds (persistence never owns the cache)', () => {
+  it('projects the live systemId onto a fresh doc connector that lacks it', () => {
+    // primary idle-loop case: reconciler stamped systemId on the scene, the
+    // persisted doc carries none → the projected candidate keeps the live value
+    // so the caller's dequal stays a no-op (no setLevelScene, no ping-pong).
+    const next = projectConnectorSystemIds([conn('c1')], [conn('c1', 'sysLive')]);
+    expect(next[0].systemId).toBe('sysLive');
+  });
+
+  it('drops a stale doc systemId when the live connector is unassigned', () => {
+    const next = projectConnectorSystemIds([conn('c1', 'OLD')], [conn('c1')]);
+    expect(next[0].systemId).toBeUndefined();
+  });
+
+  it('ignores the doc systemId entirely — live always wins', () => {
+    const next = projectConnectorSystemIds([conn('c1', 'OLD')], [conn('c1', 'NEW')]);
+    expect(next[0].systemId).toBe('NEW');
+  });
+
+  it('drops the doc systemId when the connector is absent from live', () => {
+    const next = projectConnectorSystemIds([conn('c1', 'OLD')], []);
+    expect(next[0].systemId).toBeUndefined();
+  });
+
+  it('matches per connectorId, not by position', () => {
+    const fresh = [conn('c2'), conn('c1')];
+    const live = [conn('c1', 'sysA'), conn('c2', 'sysB')];
+    const next = projectConnectorSystemIds(fresh, live);
+    expect(next.find((c) => c.connectorId === 'c1')?.systemId).toBe('sysA');
+    expect(next.find((c) => c.connectorId === 'c2')?.systemId).toBe('sysB');
+  });
+
+  it('returns the same array reference when every connector already matches', () => {
+    const fresh = [conn('c1', 'sys1')];
+    expect(projectConnectorSystemIds(fresh, [conn('c1', 'sys1')])).toBe(fresh);
+  });
+
+  it('returns the same reference when live is undefined and fresh is unassigned', () => {
+    const fresh = [conn('c1')];
+    expect(projectConnectorSystemIds(fresh, undefined)).toBe(fresh);
   });
 });
 
