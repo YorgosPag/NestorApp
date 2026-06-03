@@ -227,7 +227,7 @@ Deep-research PASS 3 (102 agents, 6 angles → 19 πηγές → 68 claims → t
 1. **UB/UC (βρετανικές) permissive πηγή:** κανείς verified candidate (eurocodepy/sectionproperties) ΔΕΝ φέρνει UB/UC named-section catalog. Αν χρειαστούν → ανεξάρτητη re-transcription (facts, δρόμος C.4-Α) από non-Blue-Book πηγή. **Δεν είναι blocker** — ο κατάλογός μας έχει τις 4 ευρωπαϊκές οικογένειες.
 2. **eurocodepy properties ορθότητα:** πραγματικό cross-check των Iy/Iz/Wpl με επίσημες EN 10365 / ECCS τιμές (το PASS 3 επαλήθευσε **άδεια**, ΟΧΙ αριθμητική ακρίβεια). Απαιτείται πριν επέκταση σε properties.
 3. **eurocodepy data provenance:** ο maker δηλώνει «not affiliated with CEN» — από ποια public πηγή· υπάρχει μεταβιβαζόμενο ToS/provenance ρίσκο;
-4. **CC0 app-ready λίστα:** ποια συγκεκριμένα CC0 μοντέλα (glTF-Sample-Assets κ.ά.) clean/low-poly για BIM viewer χωρίς decimation.
+4. **CC0 app-ready λίστα:** ποια συγκεκριμένα CC0 μοντέλα (glTF-Sample-Assets κ.ά.) clean/low-poly για BIM viewer χωρίς decimation. → **ΕΞΕΛΙΞΗ (2026-06-03):** ο δρόμος §D.1 ενεργοποιείται μέσω **ADR-410** (mesh-import subsystem για CC0 έπιπλα από Poly Haven). Το ADR-410 αντιμετωπίζει το poly-count caveat με build-time decimation + manual «hero» επιλογή (ξεκινώντας με λίγα). Η εξαντλητική app-ready λίστα παραμένει ανοιχτή — το ADR-410 ξεκινά per-asset (vertical slice: 1 καρέκλα).
 5. **Smithsonian / Wikimedia / ambientCG:** επιβεβαίωσε ανά-asset CC0.
 6. **AISC paid Commercial License:** όροι & κόστος — αξίζει ως καθαρή εναλλακτική;
 7. **Απόφαση Giorgio (εκκρεμεί):** Δεχόμαστε weak-copyleft engines (web-ifc=MPL) που νόμιμα bundle-άρονται *unmodified* — ή κρατάμε αυστηρά permissive-only;

@@ -392,6 +392,7 @@
 | **ADR-407** | Κάγκελα / Κιγκλιδώματα (Railings) ως πλήρες BIM στοιχείο | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-407-bim-railings.md) |
 | **ADR-408** | MEP Connectors & Systems (Connectivity Backbone) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-408-mep-connectors-and-systems.md) |
 | **ADR-409** | Πολιτική αδειοδότησης & redistribution εξωτερικών BIM βιβλιοθηκών/περιεχομένου | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-409-third-party-bim-library-licensing-policy.md) |
+| **ADR-410** | Εισαγωγή CC0 επίπλων ως mesh-based BIM στοιχείο (mesh-import subsystem) | 🟡 PROPOSED — αναμονή έγκρισης (6 αποφάσεις κλειστές, vertical slice: 1 καρέκλα) | 2026-06-03 | Uncategorized | [📄](./adrs/ADR-410-cc0-mesh-furniture-import.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -768,6 +769,7 @@
 | **ADR-407** | Κάγκελα / Κιγκλιδώματα (Railings) ως πλήρες BIM στοιχείο | ✅ APPROVED | [View](./adrs/ADR-407-bim-railings.md) |
 | **ADR-408** | MEP Connectors & Systems (Connectivity Backbone) | ✅ APPROVED | [View](./adrs/ADR-408-mep-connectors-and-systems.md) |
 | **ADR-409** | Πολιτική αδειοδότησης & redistribution εξωτερικών BIM βιβλιοθηκών/περιεχομένου | ✅ APPROVED | [View](./adrs/ADR-409-third-party-bim-library-licensing-policy.md) |
+| **ADR-410** | Εισαγωγή CC0 επίπλων ως mesh-based BIM στοιχείο (mesh-import subsystem) | 🟡 PROPOSED | [View](./adrs/ADR-410-cc0-mesh-furniture-import.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
