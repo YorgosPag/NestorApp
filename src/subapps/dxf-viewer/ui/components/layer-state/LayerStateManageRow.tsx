@@ -147,7 +147,7 @@ function InlineInput({
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter') onCommit();
-          if (e.key === 'Escape') onCancel();
+          // ADR-364: Escape handled by useEscapeHandler in LayerStateManagePanel parent.
         }}
         className="flex-1 h-5 px-1.5 rounded border border-primary text-xs focus:outline-none min-w-0"
         autoFocus
