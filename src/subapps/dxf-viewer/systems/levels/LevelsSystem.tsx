@@ -345,41 +345,6 @@ function useLevelsSystemState({
     [sceneManager],
   );
 
-  // 🔬🔬🔬 TEMPORARY DIAGNOSTIC (idle render-loop hunt 2026-06-03) — REMOVE AFTER DIAGNOSIS.
-  // Logs, per commit, which LevelsSystem context-value dep changed identity. At idle this
-  // must stay silent; whatever key prints repeatedly (~4×/sec) is the loop driver.
-  const __diagPrevRef = React.useRef<Record<string, unknown> | null>(null);
-  const __diagCountRef = React.useRef(0);
-  React.useEffect(() => {
-    const curr: Record<string, unknown> = {
-      levels,
-      currentLevelId,
-      floorplans,
-      importWizard,
-      settings,
-      isLoading,
-      sceneLoading,
-      error,
-      sceneManager,
-      'sceneManager.levelScenes': sceneManager.levelScenes,
-      'sceneManager.fileRecordId': sceneManager.fileRecordId,
-      'sceneManager.saveContext': sceneManager.saveContext,
-      'sceneManager.saveStatus': sceneManager.saveStatus,
-      'sceneManager.lastSaveTime': sceneManager.lastSaveTime,
-      'sceneManager.currentFileName': sceneManager.currentFileName,
-    };
-    const prev = __diagPrevRef.current;
-    if (prev) {
-      const changed = Object.keys(curr).filter((k) => curr[k] !== prev[k]);
-      if (changed.length > 0) {
-        __diagCountRef.current += 1;
-        // eslint-disable-next-line no-console
-        console.log(`[LevelsLoop #${__diagCountRef.current}] changed:`, changed.join(', '));
-      }
-    }
-    __diagPrevRef.current = curr;
-  });
-
   // ADR-040 Phase XVI — memoize the Context value so consumers don't re-render
   // on every Provider render. Root cause of idle render-loop (2026-05-16):
   // the bare object literal `value` caused every consumer (CanvasSection,
