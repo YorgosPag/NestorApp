@@ -16,7 +16,10 @@ import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Typ
 import {
   buildWirePolyline,
   type CircuitWirePath,
+  type CircuitHostSegment,
 } from '../mep-systems/mep-wire-routing';
+import { getOrientedWaypoints, type WireWaypointMap } from '../mep-systems/mep-wire-waypoints';
+import type { WireWaypointHover } from '../mep-systems/mep-wire-waypoint-ui-store';
 
 const WIRE_LINE_WIDTH = 1.5;
 const HOME_RUN_ARROW_LEN = 11; // px — arrowhead size in screen space (zoom-independent)
@@ -75,5 +78,72 @@ export function drawCircuitWires(
   ctx.lineCap = 'round';
   ctx.setLineDash([]);
   for (const path of paths) drawOneWire(ctx, path, transform, viewport);
+  ctx.restore();
+}
+
+// ─── Waypoint handles (ADR-408 Φ7 FU#3 — editable «Wire Vertex») ────────────────
+
+const HANDLE_RADIUS_PX = 4; // screen-space node dot radius (zoom-independent)
+const HANDLE_HOVER_RADIUS_PX = 6; // highlighted node ring
+const HANDLE_STROKE_PX = 1.5;
+const INSERT_GHOST_RADIUS_PX = 5; // hollow "+" preview where a vertex would be born
+
+/** A filled white-cored dot in the circuit colour — a draggable waypoint handle. */
+function drawNodeHandle(ctx: CanvasRenderingContext2D, p: Point2D, color: string, radius: number): void {
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.lineWidth = HANDLE_STROKE_PX;
+  ctx.strokeStyle = color;
+  ctx.stroke();
+}
+
+/** Hollow ring + "+" ghost marking where a new vertex would be inserted on hover. */
+function drawInsertGhost(ctx: CanvasRenderingContext2D, p: Point2D, color: string): void {
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, INSERT_GHOST_RADIUS_PX, 0, Math.PI * 2);
+  ctx.lineWidth = HANDLE_STROKE_PX;
+  ctx.strokeStyle = color;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(p.x - INSERT_GHOST_RADIUS_PX + 1, p.y);
+  ctx.lineTo(p.x + INSERT_GHOST_RADIUS_PX - 1, p.y);
+  ctx.moveTo(p.x, p.y - INSERT_GHOST_RADIUS_PX + 1);
+  ctx.lineTo(p.x, p.y + INSERT_GHOST_RADIUS_PX - 1);
+  ctx.stroke();
+}
+
+/**
+ * Draw the editable waypoint handles of the **active** circuit (Revit shows wire
+ * grips only on the selected wire): a dot at every existing vertex, plus the hover
+ * affordance — a highlight ring on the hovered vertex (`'node'`) or an insert "+"
+ * ghost on a hovered segment (`'insert'`). Screen-space, style-agnostic.
+ */
+export function drawWaypointHandles(
+  ctx: CanvasRenderingContext2D,
+  segments: readonly CircuitHostSegment[],
+  waypoints: WireWaypointMap | undefined,
+  color: string,
+  hover: WireWaypointHover | null,
+  transform: ViewTransform,
+  viewport: Viewport,
+): void {
+  ctx.save();
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.setLineDash([]);
+  for (const seg of segments) {
+    const wps = getOrientedWaypoints(waypoints, seg.keyA, seg.keyB);
+    for (const wp of wps) {
+      const s = CoordinateTransforms.worldToScreen({ x: wp.x, y: wp.y }, transform, viewport);
+      drawNodeHandle(ctx, s, color, HANDLE_RADIUS_PX);
+    }
+  }
+  if (hover) {
+    const s = CoordinateTransforms.worldToScreen({ x: hover.x, y: hover.y }, transform, viewport);
+    if (hover.kind === 'node') drawNodeHandle(ctx, s, color, HANDLE_HOVER_RADIUS_PX);
+    else drawInsertGhost(ctx, s, color);
+  }
   ctx.restore();
 }
