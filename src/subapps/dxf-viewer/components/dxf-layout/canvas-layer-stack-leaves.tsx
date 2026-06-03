@@ -27,6 +27,7 @@ import { ElectricalPanelGhostPreviewMount, type ElectricalPanelGhostPreviewMount
 import { SlabOpeningGhostPreviewMount, type SlabOpeningGhostPreviewMountProps } from './canvas-layer-stack-slab-opening-ghost';
 import { OpeningGhostPreviewMount, type OpeningGhostPreviewMountProps } from './canvas-layer-stack-opening-ghost';
 import { OpeningTagDragMount } from './canvas-layer-stack-opening-tag-drag';
+import { MepWireWaypointDragMount } from './canvas-layer-stack-mep-wire-waypoint';
 import { GripDimAnnotationMount } from './canvas-layer-stack-grip-dim-annotation';
 import { TrimPreviewMount } from './TrimPreviewMount';
 import { ExtendPreviewOverlay } from './ExtendPreviewOverlay';
@@ -403,6 +404,13 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         currentLevelId={levelManager.currentLevelId}
         getLevelScene={levelManager.getLevelScene}
         setLevelScene={levelManager.setLevelScene}
+      />
+      {/* ADR-408 Φ7 FU#3 — editable home-run wire waypoints (active circuit). */}
+      <MepWireWaypointDragMount
+        transform={transform}
+        getViewportElement={getViewportElement}
+        currentLevelId={levelManager.currentLevelId}
+        getLevelScene={levelManager.getLevelScene}
       />
     </>
   );

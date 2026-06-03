@@ -71,6 +71,14 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-03 — ADR-408 Φ7 FU#3 editable wire waypoints (micro-leaf compliance note)
+
+**Status**: IMPLEMENTED 2026-06-03. New render-nothing micro-leaf `MepWireWaypointDragMount` mounted in `PreviewCanvasMounts` (`canvas-layer-stack-leaves.tsx`), making the **active** circuit's derived home-run wire directly editable (insert / move / delete vertices — Revit "Wire Vertex"). It owns only capture-phase pointer listeners on the viewport element (`useMepWireWaypointInteraction`) and adds **no `useSyncExternalStore` to any orchestrator** (Cardinal Rule #1 / CHECK 6C respected): during a drag the system is optimistically upserted into `mep-system-store`, so the existing `HomeRunWiresOverlay` leaf re-routes + repaints — no new render path or bitmap cache-key. The mount receives `transform` + viewport/level getters as props from the shell. The hover affordance lives in a HoverStore-mirror singleton (`mep-wire-waypoint-ui-store`) read only by the overlay leaf. No orchestrator change — pure additive leaf. Detail in ADR-408 Φ7 FU#3 changelog.
+
+✅ Google-level: YES — reuses the optimistic system store + existing overlay leaf (zero new render path); pointer listeners on the viewport only, no shell subscription.
+
+---
+
 ### 2026-06-03 — ADR-408 Φ7 P2/P2b home-run wire live-drag follow (micro-leaf compliance note)
 
 **Status**: IMPLEMENTED 2026-06-03. `HomeRunWiresOverlay` gained a `gripDragPreview` prop so the derived wire follows a fixture/panel **live** during a 2D grip drag (move/rotation/corner): when the preview targets a host, the resolver reads its PREVIEWED transform via `applyEntityPreview` (same SSoT as the live ghost). The prop is the SHELL's already-held `dxfGripInteraction.dragPreview` (passed down from `CanvasLayerStack` — the shell re-render on drag already exists for `PreviewCanvasMounts`), so **no new `useSyncExternalStore` is added to `CanvasLayerStack`** (Cardinal Rule #1 / CHECK 6C respected). The overlay stays a leaf with ≤1 canvas element; `gripDragPreview` joins its repaint deps. No bitmap cache-key or orchestrator change. Detail in ADR-408 Φ7 P2/P2b changelog. (3D rotate/move wire follow lives in `bim-3d/animation`, outside the 2D micro-leaf scope.)
