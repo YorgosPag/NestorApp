@@ -32,6 +32,7 @@ import { useBimEntityProxyAccessibility } from '../accessibility/use-bim-entity-
 import { useAnimationQueueProcessor } from '../animation/animation-queue-processor';
 import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-interaction';
 import { useBim3DEditInteraction } from '../animation/use-bim3d-edit-interaction';
+import { useBim3DWireWaypointInteraction } from '../animation/use-bim3d-wire-waypoint-interaction-3d';
 import { useBim3DColumnPlacement } from '../placement/use-bim3d-column-placement';
 import { useBim3DMepFixturePlacement } from '../placement/use-bim3d-mep-fixture-placement';
 import { useBim3DElectricalPanelPlacement } from '../placement/use-bim3d-electrical-panel-placement';
@@ -293,6 +294,11 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // `bim:beam-from-wall-picked-3d`; the 2D `useBeamTool` builds the beam via its
   // existing from-wall commit core (auto-attaches the wall top, ADR-401 D).
   useBim3DBeamFromWallPick({ managerRef, canvasEl });
+
+  // ADR-408 Φ7 FU#3 — 3D wire waypoint editing. Armed in 3D + `select` tool:
+  // sphere handles on the active circuit's waypoints; drag a node / a segment to
+  // insert+move, right-click a node to delete — reusing the 2D plan-space SSoT.
+  useBim3DWireWaypointInteraction({ managerRef, canvasEl });
 
   // Phase 9 / C.1.c — Animation render queue driver. Mounted once; subscribes
   // to RenderQueueStore and drives the MP4 encode pipeline when a job is queued.
