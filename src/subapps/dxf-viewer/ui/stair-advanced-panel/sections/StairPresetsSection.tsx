@@ -15,6 +15,7 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useEscapeHandler, ESC_PRIORITY } from '@/subapps/dxf-viewer/systems/escape-bus';
 import type { StairEntity } from '../../../types/entities';
 import type { StairPresetDoc, StairPresetScope } from '../../../bim/types/stair-types';
 import { useStairPresets } from '../hooks/useStairPresets';
@@ -60,6 +61,15 @@ export function StairPresetsSection({
   const [pendingName, setPendingName] = useState<string>('');
   const [pendingScope, setPendingScope] = useState<StairPresetScope>('user');
 
+  // ADR-364: Esc cancels save mode via centralized Escape Command Bus.
+  useEscapeHandler({
+    id: 'stair-preset-save',
+    priority: ESC_PRIORITY.POPOVER_DROPDOWN,
+    allowWhenEditable: true,
+    canHandle: () => saveMode,
+    handle: () => { onSaveCancel(); return true; },
+  });
+
   const grouped = useMemo(() => {
     const buckets: Record<StairPresetScope, StairPresetDoc[]> = {
       user: [],
@@ -98,12 +108,10 @@ export function StairPresetsSection({
       if (event.key === 'Enter') {
         event.preventDefault();
         void onSaveConfirm();
-      } else if (event.key === 'Escape') {
-        event.preventDefault();
-        onSaveCancel();
       }
+      // ADR-364: Escape handled by useEscapeHandler above.
     },
-    [onSaveConfirm, onSaveCancel],
+    [onSaveConfirm],
   );
 
   return (
