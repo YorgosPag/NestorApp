@@ -29,6 +29,7 @@ import {
   type MepFixtureDoc,
 } from '../../bim/mep-fixtures/mep-fixture-firestore-service';
 import { recordMepFixtureChange } from '../../bim/mep-fixtures/mep-fixture-audit-client';
+import { projectConnectorSystemIds } from '../../bim/mep-systems/mep-system-coordinator';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -175,8 +176,19 @@ export function useMepFixturePersistence(
             nextFixtures.push(existing);
             continue;
           }
-          if (!dequal(existing.params, doc.params)) {
-            nextFixtures.push(docToEntity(doc));
+          // Project the live (reconciler-owned) systemId cache onto the fresh
+          // doc entity, ignoring the doc's non-authoritative systemId. Without
+          // this the diff disagrees with the reconciler on every snapshot and
+          // ping-pongs `setLevelScene` forever (ADR-408 idle-loop fix).
+          const fresh = docToEntity(doc);
+          const freshConnectors = fresh.params.connectors ?? [];
+          const projected = projectConnectorSystemIds(freshConnectors, existing.params.connectors);
+          const candidate =
+            projected === freshConnectors
+              ? fresh
+              : { ...fresh, params: { ...fresh.params, connectors: projected } };
+          if (!dequal(existing.params, candidate.params)) {
+            nextFixtures.push(candidate);
             mutated = true;
           } else {
             nextFixtures.push(existing);

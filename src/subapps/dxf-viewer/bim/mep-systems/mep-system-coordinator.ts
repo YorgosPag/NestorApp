@@ -107,6 +107,45 @@ export function reconcileEntityConnectors(
   return changed ? next : connectors;
 }
 
+/**
+ * Project the **live** scene `systemId` cache onto a fresh connector set rebuilt
+ * from a persisted doc — the persistence-side sibling of
+ * {@link reconcileEntityConnectors}, driven by the live scene connectors instead
+ * of the system index. The doc's own `systemId` is **ignored entirely** (it is a
+ * non-authoritative derived cache that may be stale or absent — the System is
+ * truth, see `mep-connector-types.ts`); the live value the reconciler last wrote
+ * always wins. Matched by `connectorId`.
+ *
+ * This is what stops the persistence ↔ reconciler ping-pong: the diff-merge in
+ * the persistence hooks must NOT strip a `systemId` the reconciler owns, nor
+ * re-introduce a stale persisted one — otherwise every Firestore snapshot
+ * disagrees with the scene and triggers an endless `setLevelScene` loop. Pure;
+ * returns the same `fresh` reference when every connector already carries the
+ * live value (so the caller's `dequal` diff stays a no-op on an unchanged host).
+ */
+export function projectConnectorSystemIds(
+  fresh: readonly MepConnector[],
+  live: readonly MepConnector[] | undefined,
+): readonly MepConnector[] {
+  const liveById = new Map<string, string | undefined>();
+  if (live) for (const c of live) liveById.set(c.connectorId, c.systemId);
+
+  let changed = false;
+  const next = fresh.map((c) => {
+    // `undefined` covers both "connector absent from live" and "present but
+    // unassigned" — in both cases the projected connector must carry no systemId.
+    const desired = liveById.get(c.connectorId);
+    if (desired === c.systemId) return c;
+    changed = true;
+    if (desired === undefined) {
+      const { systemId: _drop, ...rest } = c;
+      return rest;
+    }
+    return { ...c, systemId: desired };
+  });
+  return changed ? next : fresh;
+}
+
 // ─── Integrity reverse-lookups (pure) ─────────────────────────────────────────
 
 /** System ids whose source (base equipment) is one of the given entity ids. */
