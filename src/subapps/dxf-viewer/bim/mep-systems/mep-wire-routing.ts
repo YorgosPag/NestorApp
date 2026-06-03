@@ -27,6 +27,7 @@
 
 import type { MepSystemEntity } from '../types/mep-system-types';
 import { systemColor } from './mep-system-color';
+import { endpointKey, getOrientedWaypoints } from './mep-wire-waypoints';
 
 /**
  * A routed host point. `x`/`y` are in **canvas units** (the same space as
@@ -73,6 +74,26 @@ export interface CircuitWirePath {
  */
 export type ResolveWireHost = (entityId: string, connectorId: string) => WireHostPoint | null;
 
+/** A resolved host carrying its `entityId:connectorId` identity for waypoint keys. */
+interface RoutedHost {
+  readonly key: string;
+  readonly point: WireHostPoint;
+}
+
+/**
+ * One host-level segment of a circuit (a daisy-chain leg between two consecutive
+ * hosts), BEFORE any user waypoints are spliced in. The interaction layer hit-
+ * tests against these to know which segment a click lands on (`keyA`/`keyB` build
+ * the order-independent waypoint key) and to project an insertion point.
+ */
+export interface CircuitHostSegment {
+  readonly systemId: string;
+  readonly keyA: string;
+  readonly keyB: string;
+  readonly a: WireHostPoint;
+  readonly b: WireHostPoint;
+}
+
 /** Squared plan distance (x/y only) — routing ignores elevation. */
 function planDistSq(a: WireHostPoint, b: WireHostPoint): number {
   const dx = a.x - b.x;
@@ -81,22 +102,19 @@ function planDistSq(a: WireHostPoint, b: WireHostPoint): number {
 }
 
 /**
- * Order member points as a greedy nearest-neighbour chain starting from `origin`
+ * Order member hosts as a greedy nearest-neighbour chain starting from `origin`
  * (the panel). Deterministic: strict `<` keeps the first-listed member on ties,
  * so the result is replay-stable. Returns the ordered members (origin excluded).
  */
-function orderDaisyChain(
-  origin: WireHostPoint,
-  members: readonly WireHostPoint[],
-): WireHostPoint[] {
+function orderDaisyChain(origin: RoutedHost, members: readonly RoutedHost[]): RoutedHost[] {
   const remaining = [...members];
-  const chain: WireHostPoint[] = [];
+  const chain: RoutedHost[] = [];
   let last = origin;
   while (remaining.length > 0) {
     let bestIdx = 0;
-    let bestDist = planDistSq(last, remaining[0]!);
+    let bestDist = planDistSq(last.point, remaining[0]!.point);
     for (let i = 1; i < remaining.length; i++) {
-      const d = planDistSq(last, remaining[i]!);
+      const d = planDistSq(last.point, remaining[i]!.point);
       if (d < bestDist) {
         bestDist = d;
         bestIdx = i;
@@ -109,9 +127,75 @@ function orderDaisyChain(
 }
 
 /**
+ * Resolve + order the hosts of one system into a daisy chain `[panel, …members]`,
+ * or `null` when the system has no resolvable source / member. Shared by both the
+ * routed-path builder and the host-segment builder so they never diverge.
+ */
+function routeHosts(system: MepSystemEntity, resolve: ResolveWireHost): RoutedHost[] | null {
+  const { sourceEntityId, sourceConnectorId, members } = system.params;
+  const originPoint = resolve(sourceEntityId, sourceConnectorId);
+  if (!originPoint) return null;
+  const origin: RoutedHost = { key: endpointKey(sourceEntityId, sourceConnectorId), point: originPoint };
+  const memberHosts = members
+    .map((m): RoutedHost | null => {
+      const point = resolve(m.entityId, m.connectorId);
+      return point ? { key: endpointKey(m.entityId, m.connectorId), point } : null;
+    })
+    .filter((h): h is RoutedHost => h !== null);
+  if (memberHosts.length === 0) return null;
+  return [origin, ...orderDaisyChain(origin, memberHosts)];
+}
+
+/**
+ * The host-level segments (daisy-chain legs) of every system — the geometry the
+ * waypoint interaction hit-tests. No waypoints spliced in: each segment is the
+ * raw `a→b` between two hosts, with the keys needed to look up / edit its
+ * waypoints via {@link buildSegmentKey}.
+ */
+export function computeCircuitHostSegments(
+  systems: readonly MepSystemEntity[],
+  resolve: ResolveWireHost,
+): CircuitHostSegment[] {
+  const segments: CircuitHostSegment[] = [];
+  for (const system of systems) {
+    const hosts = routeHosts(system, resolve);
+    if (!hosts) continue;
+    for (let i = 1; i < hosts.length; i++) {
+      const a = hosts[i - 1]!;
+      const b = hosts[i]!;
+      segments.push({ systemId: system.id, keyA: a.key, keyB: b.key, a: a.point, b: b.point });
+    }
+  }
+  return segments;
+}
+
+/**
+ * Splice the user waypoints of segment `a→b` between its endpoints, assigning each
+ * an interpolated `zMm` by its position along the broken `a→wps→b` polyline
+ * (linear in plan length → smooth conduit in 3D). Returns the interior draw
+ * points (waypoints only, endpoints excluded).
+ */
+function splicedSegmentInterior(a: RoutedHost, b: RoutedHost, wps: readonly { x: number; y: number }[]): WireHostPoint[] {
+  if (wps.length === 0) return [];
+  const verts = [a.point, ...wps.map((w) => ({ x: w.x, y: w.y, zMm: 0 })), b.point];
+  const cum: number[] = [0];
+  for (let i = 1; i < verts.length; i++) {
+    cum.push(cum[i - 1]! + Math.hypot(verts[i]!.x - verts[i - 1]!.x, verts[i]!.y - verts[i - 1]!.y));
+  }
+  const total = cum[cum.length - 1]!;
+  return wps.map((w, i) => {
+    const t = total < 1e-9 ? 0 : cum[i + 1]! / total;
+    return { x: w.x, y: w.y, zMm: a.point.zMm + (b.point.zMm - a.point.zMm) * t };
+  });
+}
+
+/**
  * Compute the home-run wire path for every system. A system is skipped when its
  * panel source cannot be resolved (no anchor for the home run) or it has no
  * resolvable member (nothing to wire). Off-scene members are dropped silently.
+ * Any persisted per-segment waypoints (`params.wireWaypoints`) are spliced into
+ * `points`, so `buildWirePolyline` applies the path `style` per sub-segment and
+ * both 2D + 3D renderers consume the waypoints with no change.
  */
 export function computeCircuitWirePaths(
   systems: readonly MepSystemEntity[],
@@ -119,18 +203,21 @@ export function computeCircuitWirePaths(
 ): CircuitWirePath[] {
   const paths: CircuitWirePath[] = [];
   for (const system of systems) {
-    const { sourceEntityId, sourceConnectorId, members } = system.params;
-    const origin = resolve(sourceEntityId, sourceConnectorId);
-    if (!origin) continue;
-    const memberPoints = members
-      .map((m) => resolve(m.entityId, m.connectorId))
-      .filter((p): p is WireHostPoint => p !== null);
-    if (memberPoints.length === 0) continue;
+    const hosts = routeHosts(system, resolve);
+    if (!hosts) continue;
+    const waypointMap = system.params.wireWaypoints;
+    const points: WireHostPoint[] = [hosts[0]!.point];
+    for (let i = 1; i < hosts.length; i++) {
+      const a = hosts[i - 1]!;
+      const b = hosts[i]!;
+      const wps = getOrientedWaypoints(waypointMap, a.key, b.key);
+      points.push(...splicedSegmentInterior(a, b, wps), b.point);
+    }
     paths.push({
       systemId: system.id,
       colorHex: systemColor(system),
       style: system.params.wireStyle ?? 'straight',
-      points: [origin, ...orderDaisyChain(origin, memberPoints)],
+      points,
     });
   }
   return paths;
