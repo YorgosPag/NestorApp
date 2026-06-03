@@ -6,13 +6,18 @@
  *
  * I-shape (steel): EN 10365 hot-rolled European sections — IPE (narrow
  * flange) + HEA/HEB/HEM (wide flange, HE series). Nominal dimensions are
- * uncopyrightable facts published in the standard (see ADR-409 §C.1: numeric
- * section dimensions are not protected by copyright or the EU sui generis
- * database right). Values consistent with EN 10365:2017 / Euronorm 53-62.
+ * uncopyrightable facts published in the standard (see ADR-409 §C.1/§C.4:
+ * numeric section dimensions are not protected by copyright or the EU sui
+ * generis database right — CJEU C-46/02, C-203/02). Values consistent with
+ * EN 10365:2017 / Euronorm 53-62.
  *
- * ✅ All 75 sections verified 2026-06-02 against multiple independent EN 10365
- * tables (eurocodeapplied.com, wermac.org, structolution.com, projectmaterials)
- * — 0 discrepancies. NOTE on HEM: sectionDepth h is the REAL depth, not the
+ * PROVENANCE: independently re-transcribed nominal FACTS from multiple public
+ * EN 10365 sources (wermac.org, structolution.com, projectmaterials) — no
+ * single proprietary compilation copied verbatim, no ToS-restricted source.
+ * ✅ All 75 sections verified 2026-06-02 — 0 discrepancies. Cross-checked
+ * 2026-06-03 against the MIT-licensed `eurocodepy` dataset (b/h/tf/tw):
+ * 75/75 exact match, 0 mismatch (independent third-party confirmation —
+ * ADR-409 §C.4). NOTE on HEM: sectionDepth h is the REAL depth, not the
  * nominal number (e.g. HEM-100 → h=120mm); some online tables get this wrong.
  *
  * SSoT: the dropdown options in `contextual-column-tab.ts` are GENERATED from

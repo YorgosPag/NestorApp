@@ -131,7 +131,9 @@ export function HomeRunWiresOverlay({
     const resolve = buildResolver(scene, gripDragPreview);
     const paths = computeCircuitWirePaths(systems, resolve);
     if (paths.length === 0) return;
-    drawCircuitWires(ctx, paths, transform, viewport);
+    // Hovering the active circuit's wire lights up the whole run (mirror of the
+    // 2D DXF entity hover): pass the hovered systemId so its path strokes a halo.
+    drawCircuitWires(ctx, paths, transform, viewport, waypointHover?.systemId ?? null);
 
     // ADR-408 Φ7 FU#3 — editable handles for the active circuit only (Revit: grips
     // appear on the selected wire). Drawn on top of the wire so the user can grab

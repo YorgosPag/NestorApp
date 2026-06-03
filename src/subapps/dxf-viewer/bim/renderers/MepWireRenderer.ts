@@ -22,25 +22,48 @@ import { getOrientedWaypoints, type WireWaypointMap } from '../mep-systems/mep-w
 import type { WireWaypointHover } from '../mep-systems/mep-wire-waypoint-ui-store';
 
 const WIRE_LINE_WIDTH = 1.5;
+const WIRE_HIGHLIGHT_WIDTH = 3; // hovered circuit core stroke (px)
+const WIRE_HALO_WIDTH = 8; // hovered circuit translucent glow under the core (px)
+const WIRE_HALO_ALPHA = 0.3;
 const HOME_RUN_ARROW_LEN = 11; // px — arrowhead size in screen space (zoom-independent)
 const HOME_RUN_ARROW_HALF_RAD = 0.42; // half-angle of the arrowhead wings (rad)
 
-/** Stroke a single circuit's polyline + its home-run arrowhead. */
+/** Stroke the polyline through `screen` (assumes ≥2 points). */
+function strokePolyline(ctx: CanvasRenderingContext2D, screen: readonly Point2D[]): void {
+  ctx.beginPath();
+  ctx.moveTo(screen[0]!.x, screen[0]!.y);
+  for (let i = 1; i < screen.length; i++) ctx.lineTo(screen[i]!.x, screen[i]!.y);
+  ctx.stroke();
+}
+
+/**
+ * Stroke a single circuit's polyline + its home-run arrowhead. When `highlight`
+ * is set (cursor hovering this circuit, mirror of the 2D DXF entity hover) the run
+ * is drawn with a translucent halo under a thicker core, so the whole wire lights
+ * up — not just the node handles.
+ */
 function drawOneWire(
   ctx: CanvasRenderingContext2D,
   path: CircuitWirePath,
   transform: ViewTransform,
   viewport: Viewport,
+  highlight: boolean,
 ): void {
   const pts = buildWirePolyline(path);
   if (pts.length < 2) return;
   const screen = pts.map((p) => CoordinateTransforms.worldToScreen({ x: p.x, y: p.y }, transform, viewport));
   ctx.strokeStyle = path.colorHex;
   ctx.fillStyle = path.colorHex;
-  ctx.beginPath();
-  ctx.moveTo(screen[0]!.x, screen[0]!.y);
-  for (let i = 1; i < screen.length; i++) ctx.lineTo(screen[i]!.x, screen[i]!.y);
-  ctx.stroke();
+  if (highlight) {
+    ctx.save();
+    ctx.globalAlpha = WIRE_HALO_ALPHA;
+    ctx.lineWidth = WIRE_HALO_WIDTH;
+    strokePolyline(ctx, screen);
+    ctx.restore();
+    ctx.lineWidth = WIRE_HIGHLIGHT_WIDTH;
+  }
+  strokePolyline(ctx, screen);
+  if (highlight) ctx.lineWidth = WIRE_LINE_WIDTH;
   drawHomeRunArrow(ctx, screen[0]!, screen[1]!);
 }
 
@@ -71,13 +94,14 @@ export function drawCircuitWires(
   paths: readonly CircuitWirePath[],
   transform: ViewTransform,
   viewport: Viewport,
+  highlightSystemId?: string | null,
 ): void {
   ctx.save();
   ctx.lineWidth = WIRE_LINE_WIDTH;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   ctx.setLineDash([]);
-  for (const path of paths) drawOneWire(ctx, path, transform, viewport);
+  for (const path of paths) drawOneWire(ctx, path, transform, viewport, path.systemId === highlightSystemId);
   ctx.restore();
 }
 

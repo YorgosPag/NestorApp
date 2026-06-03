@@ -57,8 +57,11 @@ import {
 import { MepWireWaypointDragController } from '../../bim/services/mep-wire-waypoint-drag-controller';
 import { setWireWaypointHover } from '../../bim/mep-systems/mep-wire-waypoint-ui-store';
 
-/** Pixel tolerance for hover / hit-testing a node or segment (converted to world). */
-const HIT_TOL_PX = 8;
+/** Pixel tolerance for grabbing an existing node (tight — must be on the dot). */
+const NODE_TOL_PX = 8;
+/** Pixel tolerance for hovering / inserting on a wire segment (generous, like
+ * DXF entity hover — the whole line lights up well before pixel-perfect). */
+const WIRE_TOL_PX = 14;
 
 export interface UseMepWireWaypointInteractionParams {
   readonly transform: ViewTransform;
@@ -134,7 +137,7 @@ export function useMepWireWaypointInteraction(
       return { system, segments, resolve };
     }
 
-    function toWorld(e: PointerEvent | MouseEvent): { world: Point2D; tol: number } {
+    function toWorld(e: PointerEvent | MouseEvent): { world: Point2D; scale: number } {
       const rect = el!.getBoundingClientRect();
       const viewport = { width: rect.width, height: rect.height };
       const world = CoordinateTransforms.screenToWorld(
@@ -142,8 +145,7 @@ export function useMepWireWaypointInteraction(
         transformRef.current,
         viewport,
       );
-      const scale = transformRef.current.scale || 1;
-      return { world, tol: HIT_TOL_PX / scale };
+      return { world, scale: transformRef.current.scale || 1 };
     }
 
     function pushOptimistic(point: WirePlanPoint): void {
@@ -169,16 +171,16 @@ export function useMepWireWaypointInteraction(
     function beginGesture(e: PointerEvent): boolean {
       const ctx = getActiveContext();
       if (!ctx) return false;
-      const { world, tol } = toWorld(e);
+      const { world, scale } = toWorld(e);
       const map = ctx.system.params.wireWaypoints;
-      const node = hitTestWaypointNode(world, ctx.segments, map, tol);
+      const node = hitTestWaypointNode(world, ctx.segments, map, NODE_TOL_PX / scale);
       let gesture: WaypointGesture;
       let startPoint: WirePlanPoint;
       if (node) {
         gesture = { mode: 'move', system: ctx.system, startParams: ctx.system.params, keyA: node.keyA, keyB: node.keyB, orientedIndex: node.orientedIndex };
         startPoint = node.point;
       } else {
-        const ins = hitTestInsertion(world, ctx.segments, map, tol);
+        const ins = hitTestInsertion(world, ctx.segments, map, WIRE_TOL_PX / scale);
         if (!ins) return false;
         gesture = { mode: 'insert', system: ctx.system, startParams: ctx.system.params, keyA: ins.keyA, keyB: ins.keyB, orientedIndex: ins.orientedInsertIndex };
         startPoint = ins.point;
@@ -195,8 +197,8 @@ export function useMepWireWaypointInteraction(
     function deleteNodeAt(e: PointerEvent | MouseEvent): boolean {
       const ctx = getActiveContext();
       if (!ctx) return false;
-      const { world, tol } = toWorld(e);
-      const node = hitTestWaypointNode(world, ctx.segments, ctx.system.params.wireWaypoints, tol);
+      const { world, scale } = toWorld(e);
+      const node = hitTestWaypointNode(world, ctx.segments, ctx.system.params.wireWaypoints, NODE_TOL_PX / scale);
       if (!node) return false;
       const nextMap = deleteWaypointOriented(ctx.system.params.wireWaypoints, node.keyA, node.keyB, node.orientedIndex);
       const nextParams: MepSystemParams = { ...ctx.system.params, wireWaypoints: nextMap };
@@ -237,14 +239,16 @@ export function useMepWireWaypointInteraction(
         setWireWaypointHover(null);
         return;
       }
-      const { world, tol } = toWorld(e);
+      const { world, scale } = toWorld(e);
       const map = ctx.system.params.wireWaypoints;
-      const node = hitTestWaypointNode(world, ctx.segments, map, tol);
+      const node = hitTestWaypointNode(world, ctx.segments, map, NODE_TOL_PX / scale);
       if (node) {
         setWireWaypointHover({ systemId: ctx.system.id, x: node.point.x, y: node.point.y, kind: 'node' });
         return;
       }
-      const ins = hitTestInsertion(world, ctx.segments, map, tol);
+      // Generous wire-hover: the whole circuit lights up + a "+" ghost appears
+      // anywhere along the run (not just pixel-perfect on a sub-segment).
+      const ins = hitTestInsertion(world, ctx.segments, map, WIRE_TOL_PX / scale);
       setWireWaypointHover(ins ? { systemId: ctx.system.id, x: ins.point.x, y: ins.point.y, kind: 'insert' } : null);
     }
 
@@ -295,8 +299,8 @@ export function useMepWireWaypointInteraction(
       // the right-click delete already fired on pointerdown.
       const ctx = getActiveContext();
       if (!ctx) return;
-      const { world, tol } = toWorld(e);
-      if (hitTestWaypointNode(world, ctx.segments, ctx.system.params.wireWaypoints, tol)) {
+      const { world, scale } = toWorld(e);
+      if (hitTestWaypointNode(world, ctx.segments, ctx.system.params.wireWaypoints, NODE_TOL_PX / scale)) {
         e.preventDefault();
         e.stopPropagation();
       }

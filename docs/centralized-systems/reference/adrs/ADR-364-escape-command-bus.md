@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟢 **APPROVED** 2026-05-18 — Group 1+2 implemented; Group 3 (BIM tools) migrated 2026-05-19, awaiting commit |
+| **Status** | 🟢 **APPROVED** 2026-05-18 — Group 1+2+3 (BIM tools) implemented; Boy-Scout Group 4 (10 secondary components) migrated 2026-06-03 |
 | **Date** | 2026-05-18 |
 | **Category** | DXF Viewer — Tools & Keyboard |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-364-escape-command-bus.md` |
@@ -170,21 +170,24 @@ Per-handler check, εκτελούμενο **εντός** της iteration του
 >
 > Αποτέλεσμα: ESC = exit tool to select για ΟΛΑ τα drawing tools. Tool's `deactivate()` καλείται από το `useToolLifecycle` όταν `activeTool` αλλάζει σε 'select' — επαναφέρει state σε `INITIAL_STATE` (idle phase). AutoCAD/Revit/ArchiCAD parity επιτυγχάνεται.
 
-Τα παρακάτω components έχουν τοπικά ESC handlers και μεταναστεύουν στο bus την επόμενη φορά που τα αγγίξουμε (Boy Scout rule):
+### Boy-Scout Group 4 — Migrated 2026-06-03
 
-- `ui/components/layer-state/LayerStateDropdown.tsx`
-- `ui/components/layer-state/LayerStateDropdownPopover.tsx`
-- `components/grip/GripContextMenu.tsx` + `hooks/grips/useGripContextMenuController.ts`
-- `systems/properties/PropertiesPalette.tsx`
-- `systems/properties/QuickPropertiesMiniPanel.tsx`
-- `ui/panels/dimensions/DimStyleCreateDialog.tsx`
-- `ui/panels/dimensions/TextOverrideEditor.tsx`
-- `ui/components/layer-state/LayerStateManageRow.tsx`
-- `ui/components/layers/LayerItem.tsx`
-- `ui/components/layers/ColorGroupItem.tsx`
-- `ui/stair-advanced-panel/sections/StairPresetsSection.tsx`
+| # | Αρχείο | Στρατηγική | canHandle gate | id |
+|---|---|---|---|---|
+| 1 | `systems/properties/PropertiesPalette.tsx` | bus hook (A) | `paletteSnap.open` | `'properties-palette'` |
+| 2 | `systems/properties/QuickPropertiesMiniPanel.tsx` | bus hook (A) — Enter listener stays | `open` | `'quick-properties-mini-panel'` |
+| 3 | `ui/panels/dimensions/DimStyleCreateDialog.tsx` | Radix Dialog onEscapeKeyDown → onOpenChange (B) | — | — |
+| 4 | `ui/components/layer-state/LayerStateDropdown.tsx` | Radix Popover onEscapeKeyDown → onOpenChange (B) | — | — |
+| 5 | `ui/components/layers/LayerItem.tsx` | bus hook (C) | `editingLayer === layerName` | `'layer-item-rename'` |
+| 6 | `ui/components/layers/ColorGroupItem.tsx` | bus hook (C) | `isEditingColorGroup` | `'color-group-rename'` |
+| 7 | `ui/components/layer-state/LayerStateDropdownPopover.tsx` | bus hook in parent (C) — consumes ESC so Radix Popover stays open | `renameId !== null` | `'layer-state-rename'` |
+| 8 | `ui/components/layer-state/LayerStateManageRow.tsx` + `LayerStateManagePanel.tsx` | bus hook in parent LayerStateManagePanel (C) — consumes ESC so Radix Dialog stays open | `editingId !== null \|\| editingCategoryId !== null` | `'layer-state-manage-rename'` |
+| 9 | `ui/panels/dimensions/TextOverrideEditor.tsx` | bus hook in FieldTokenInput sub-component (C) | `openAngle !== null && suggestions.length > 0` | `'text-override-suggestions'` |
+| 10 | `ui/stair-advanced-panel/sections/StairPresetsSection.tsx` | bus hook (C) | `saveMode` | `'stair-preset-save'` |
 
-Όλα αυτά είναι secondary (component-scoped, low-risk) και θα μεταναστεύσουν χωρίς ξεχωριστό ADR — απλώς προσθέτουν `useEscapeHandler({ priority: ESC_PRIORITY.POPOVER_DROPDOWN | MODAL_DIALOG, ... })`.
+**Εκτός scope**: `components/grip/GripContextMenu.tsx` + `hooks/grips/useGripContextMenuController.ts` — ελέγχθηκαν και δεν έχουν `keydown`/`Escape` handler, μόνο `contextmenu` (right-click) listener. Δεν υπάρχει τίποτα να μεταναστεύσει.
+
+Όλα Group 4 handlers χρησιμοποιούν `priority: ESC_PRIORITY.POPOVER_DROPDOWN` + `allowWhenEditable: true` (όλα φωτίζονται ενώ ένα input/panel έχει focus).
 
 ---
 
@@ -266,11 +269,10 @@ Baseline: `npm run ssot:baseline` μετά το commit του Group 2 → κατ
 
 ## 9. Future work
 
-1. **Boy-Scout migrations** (§4.1) — 11 secondary components.
-2. **Per-tool registrations εντός tool hooks** — μετακίνηση των MODIFY_TOOL × 9 από `useCanvasEscapeRegistrations` στους ίδιους τους `useXxxTool` (max SRP). Optional refactor.
-3. **DevTools panel** — `escapeBus.inspect()` ήδη επιστρέφει sorted snapshot — προσθήκη React DevTools panel για live debug.
-4. **Telemetry** — αν χρειαστεί, log `EscapeDispatchResult.consumedBy` για production analytics μέσω structured logging (ADR-036).
-5. **Extension προς other keys** — αν αποδειχθεί χρήσιμο, ο ίδιος patrón γενικεύεται σε `CommandKeyBus` για Enter/Tab/Delete με δικό του priority chain. Εκτός scope ADR-364.
+1. **Per-tool registrations εντός tool hooks** — μετακίνηση των MODIFY_TOOL × 9 από `useCanvasEscapeRegistrations` στους ίδιους τους `useXxxTool` (max SRP). Optional refactor.
+2. **DevTools panel** — `escapeBus.inspect()` ήδη επιστρέφει sorted snapshot — προσθήκη React DevTools panel για live debug.
+3. **Telemetry** — αν χρειαστεί, log `EscapeDispatchResult.consumedBy` για production analytics μέσω structured logging (ADR-036).
+4. **Extension προς other keys** — αν αποδειχθεί χρήσιμο, ο ίδιος patrón γενικεύεται σε `CommandKeyBus` για Enter/Tab/Delete με δικό του priority chain. Εκτός scope ADR-364.
 
 ---
 
@@ -282,3 +284,4 @@ Baseline: `npm run ssot:baseline` μετά το commit του Group 2 → κατ
 | 2026-05-19 | Group 3 — BIM tools migration (column/beam/slab/opening/slab-opening). 5 per-tool window listeners removed, all 5 added to `DRAWING_TOOLS_WITH_CANCEL`. ESC now exits BIM tools to 'select' (AutoCAD/Revit/ArchiCAD parity), aligning with Group 2 line/polyline/rectangle behavior. Bug fix: `ΟΤΑΝ ΔΙΝΩ ΕΝΤΟΛΗ ΓΙΑ ΝΑ ΣΧΕΔΙΑΣΩ ΟΠΟΙΑΔΗΠΟΤΕ ΟΝΤΟΤΗΤΑ, ΤΟ ESCAPE ΔΕΝ ΛΕΙΤΟΥΡΓΕΙ` — reported by Giorgio, fixed same session. | Claude Opus 4.7 + Γιώργος Παγώνης |
 | 2026-05-19 | Group 3 follow-up #2 — **SSoT alignment** (Γιώργος SSoT audit). (1) `DRAWING_TOOLS_WITH_CANCEL` Set στο `useKeyboardShortcuts.ts` ΑΦΑΙΡΕΘΗΚΕ — αντικαθίσταται με `isInteractiveTool(activeTool)` από `systems/tools/ToolStateManager.ts` (ADR-036 SSoT για tool categories). Νέα BIM tools / measurement variants δεν χρειάζονται πλέον εγγραφή σε 2 μέρη — μόνο στο `TOOL_DEFINITIONS`. (2) DI cleanup duplication ΑΦΑΙΡΕΘΗΚΕ — νέο `keyboard-handlers/dynamic-input-actions.ts` με exported `closeDynamicInput(actions)` SSoT. Χρησιμοποιείται από: (a) `handleDefaultEscape` (default strategy) και (b) DYNAMIC_INPUT bus slot στο `useDynamicInputKeyboard`. Καθαρίζει ΟΛΑ τα 9 fields (x/y/angle/length/radius/diameter + stair rise/tread/width). Idempotent. **Files modified (3)**: `useKeyboardShortcuts.ts`, `default-keyboard-handler.ts`, `useDynamicInputKeyboard.ts`. **Files created (1)**: `dynamic-input-actions.ts`. **Files updated (1 barrel)**: `keyboard-handlers/index.ts` (+ `closeDynamicInput` export). | Claude Opus 4.7 + Γιώργος Παγώνης |
 | 2026-05-19 | Group 3 follow-up — **Dynamic Input cascade fix**. Bug report από Γιώργο: `ΟΤΑΝ ΤΟ DYNAMIC ΕΙΝΑΙ ΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΔΕΝ ΛΕΙΤΟΥΡΓΕΙ ΤΟ ESCAPE, ΟΤΑΝ ΔΕΝ ΕΙΝΑΙ ΛΕΙΤΟΥΡΓΕΙ`. Root cause: DYNAMIC_INPUT slot (priority 900, `allowWhenEditable: true`) πάντα consume με `return true` αφού η Strategy `getKeyboardHandler(activeTool)` καλείται για cleanup. Line/circle/stair strategy handlers επιστρέφουν `false` για Escape (μόνο default κάνει clear), αλλά ο wrapper πάντα `return true`. Άρα DRAW_TOOL (priority 500) δεν τρέχει ποτέ → tool παραμένει active. Plus: ακόμα κι αν DI επέστρεφε `false`, ο bus cached το `editable=true` στην αρχή του dispatch και skip-άρε το DRAW_TOOL (allowWhenEditable: false). **Fix (2 αρχεία)**: (1) `EscapeCommandBus.runHandlerChain` — `isEditableFocus()` επανυπολογίζεται per-iteration αντί cached prior to the loop, ώστε ένας handler που blur-άρει + return false να μπορεί να αφήσει τον bus να συνεχίσει σε editable-blocked handler χαμηλότερης priority. (2) `useDynamicInputKeyboard` DYNAMIC_INPUT bus slot — μετά τη Strategy call καθαρίζει explicitly όλα τα DI fields (belt-and-suspenders για line/circle/stair που δεν χειρίζονται Escape), κρύβει το overlay, blur-άρει το `document.activeElement`, και επιστρέφει `false` ώστε ο bus να συνεχίσει στο DRAW_TOOL → `onDrawingCancel` → `handleToolCompletion(activeTool, true)` → exit to 'select'. AutoCAD/Revit/ArchiCAD parity. Test: `EscapeCommandBus.test.ts` — νέο case `editable-allowed handler blurs + returns false → editable-blocked handler at lower priority runs` (case #25). ADR-364 §3.4 ενημερωμένο με per-iteration re-evaluation semantic. | Claude Opus 4.7 + Γιώργος Παγώνης |
+| 2026-06-03 | **Boy-Scout Group 4 — 10 secondary components migrated.** PropertiesPalette + QuickPropertiesMiniPanel: window listeners αντικαταστάθηκαν με `useEscapeHandler` (bus, GROUP A). DimStyleCreateDialog + LayerStateDropdown (LayerStateSaveButton): τοπικό `e.key==='Escape'` αφαιρέθηκε — Radix Dialog/Popover onEscapeKeyDown → onOpenChange αρκεί (GROUP B). LayerItem, ColorGroupItem, LayerStateDropdownPopover, LayerStateManageRow (hook στο LayerStateManagePanel parent), TextOverrideEditor (FieldTokenInput sub-component), StairPresetsSection: bus hook με `allowWhenEditable: true` + `canHandle` gate (GROUP C). GripContextMenu + useGripContextMenuController ελέγχθηκαν — μόνο `contextmenu` listener, χωρίς `keydown`/Escape — εκτός scope. SSoT baseline: 149→129 violations (−20), 99→88 files (−11). tsc: 0 errors. Jest EscapeCommandBus: 24/24 PASS. | Claude Sonnet 4.6 |
