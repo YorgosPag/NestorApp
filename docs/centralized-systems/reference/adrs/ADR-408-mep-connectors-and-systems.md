@@ -291,6 +291,24 @@ Scope = 2D annotation + 3D conduit· τοπολογία = **daisy-chain + home-r
 ---
 
 ## Changelog
+- **2026-06-03 (Opus 4.8)** — **Φ7 follow-up #3 — 3D EDITING DONE** (pending commit, 🔴 browser verify). Giorgio
+  (AskUserQuestion): πρόσθεσε editing και μέσα στο 3D viewport (όχι μόνο κάτοψη). Πλήρης επαναχρησιμοποίηση
+  του 2D plan-space SSoT — **μηδέν** νέα routing/persistence/command λογική: NEW hook
+  `use-bim3d-wire-waypoint-interaction-3d.ts` (mirror των placement hooks: AbortController listeners στο renderer
+  canvas, store reads at event time, OrbitControls off μόνο κατά το drag, armed σε 3D + `select` tool) + NEW
+  `WireWaypointHandles3D.ts` (σφαίρες-λαβές screen-constant + insert «+» ghost, mirror `PlacementSnapMarker`,
+  added στο `manager.scene` ΕΚΤΟΣ bimLayer group). Raycast: σφαίρες για node grab/delete· conduit tube για insert.
+  Μετατροπή world↔plan με τα ADR-403 SSoT (`worldToPlanMm`/`planMmToScenePoint`/`resolveActiveFloorElevationMm`)
+  → reuse `computeCircuitHostSegments`/`hitTestInsertion`/`deleteWaypointOriented`/`applyWaypointGesture` +
+  optimistic `upsertSystem` (live resync μέσω `use-bim3d-vg-resync`) + undoable `UpdateMepSystemParamsCommand`.
+  **Boy-Scout (N.0.2):** εξαγωγή `applyWaypointGesture` σε NEW `mep-wire-waypoint-gesture.ts` (κοινό 2D+3D)· και
+  ενοποίηση του resolver — `resolverFromHosts` πήρε optional `zMm` ώστε ΕΝΑ SSoT να σερβίρει 2D overlay + 3D
+  conduit sync + 3D editor (το `sync-circuit-wires` σταμάτησε να διπλασιάζει το resolver lambda). Mount στο
+  `BimViewport3D`. **Εκτός ADR-040 scope** (bim-3d/ files, όχι CHECK 6B/6D). 123/123 MEP + 13/13 overlay/preview
+  regression PASS, tsc 0. Αρχεία: NEW `bim-3d/animation/use-bim3d-wire-waypoint-interaction-3d.ts` +
+  `bim-3d/animation/WireWaypointHandles3D.ts` + `bim/mep-systems/mep-wire-waypoint-gesture.ts` + gesture test· MOD
+  `bim/mep-systems/mep-wire-resolver.ts` (+zMm) + `bim-3d/scene/sync-circuit-wires.ts` (reuse resolver) +
+  `bim-3d/viewport/BimViewport3D.tsx` (mount) + `hooks/canvas/use-mep-wire-waypoint-interaction.ts` (reuse gesture).
 - **2026-06-03 (Opus 4.8, Plan Mode)** — **Φ7 follow-up #3: WAYPOINTS DONE** (pending commit, 🔴 browser verify).
   Χειροκίνητα ενδιάμεσα σημεία στη διαδρομή ενός κυκλώματος (Revit «Wire Vertex») — direct-manipulation:
   **drag** πάνω σε segment → γεννά + σέρνει νέο vertex· **drag** υπάρχον vertex → move· **right-click** vertex →
