@@ -23,14 +23,8 @@
  */
 
 import React, { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Pencil } from 'lucide-react';
+import { FloatingPanel } from '@/components/ui/floating';
 import {
   Select,
   SelectContent,
@@ -40,6 +34,7 @@ import {
 } from '@/components/ui/select';
 import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { PanelPositionCalculator } from '../../../config/panel-tokens';
 import { useWallFamilyTypeController } from '../hooks/useWallFamilyTypeController';
 import { WallDnaEditor } from '../../wall-advanced-panel/sections/WallDnaEditor';
 import { WallTypePreviewPanel } from './WallTypePreviewPanel';
@@ -48,6 +43,7 @@ import { asWallFamilyType, resolveTypeDisplayName } from '../../../bim/family-ty
 import {
   closeEditWallType,
   getEditWallTypeState,
+  openEditWallType,
   subscribeEditWallType,
 } from '../../../bim/family-types/edit-wall-type-store';
 import type { WallCategory } from '../../../bim/types/wall-types';
@@ -70,6 +66,14 @@ const MATERIAL_OPTIONS: readonly { value: string; key: string }[] = [
   { value: 'gypsum', key: 'gypsum' },
 ] as const;
 
+/** Floating-panel size (px) — used for drag-bounds + top-right anchoring. */
+const PANEL_DIMENSIONS = { width: 1010, height: 620 } as const;
+/** SSR-safe fallback; the real spot is computed client-side (top-right). */
+const SSR_FALLBACK_POSITION = { x: 220, y: 80 } as const;
+/** SSoT top-right anchor (same calculator as the other floating panels). */
+const getClientPosition = (): { x: number; y: number } =>
+  PanelPositionCalculator.getTopRightPosition(PANEL_DIMENSIONS.width);
+
 export function EditWallTypeDialog(): React.ReactElement | null {
   const state = useSyncExternalStore(subscribeEditWallType, getEditWallTypeState, getEditWallTypeState);
   if (!state.open || !state.typeId) return null;
@@ -78,13 +82,23 @@ export function EditWallTypeDialog(): React.ReactElement | null {
 
 function EditWallTypeDialogContent({ typeId }: { typeId: string }): React.ReactElement | null {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { updateTypeParams } = useWallFamilyTypeController();
+  const { updateTypeParams, wall } = useWallFamilyTypeController();
   const getType = useBimFamilyTypeStore((s) => s.getType);
   const type = asWallFamilyType(getType(typeId));
 
   const [draft, setDraft] = useState<WallTypeParams | null>(type ? type.typeParams : null);
   // ADR-414 — shared bidirectional highlight between the preview + the editor rows.
   const [highlightLayerId, setHighlightLayerId] = useState<string | null>(null);
+
+  // ADR-414 — the panel is non-modal (floating), so the user can keep selecting
+  // walls on the canvas. Follow the selection (Revit Properties-palette idiom):
+  // when the selected wall carries a different family type, retarget the panel to
+  // it. Untyped/ad-hoc walls (no typeId) leave the panel on its current type.
+  const selectedTypeId = wall?.typeId ?? null;
+  useEffect(() => {
+    if (selectedTypeId && selectedTypeId !== typeId) openEditWallType(selectedTypeId);
+  }, [selectedTypeId, typeId]);
+
   // (Re)seed the draft when the target type changes.
   useEffect(() => {
     setDraft(type ? type.typeParams : null);
@@ -109,14 +123,21 @@ function EditWallTypeDialogContent({ typeId }: { typeId: string }): React.ReactE
   const title = `${t('ribbon.commands.bimFamilyType.editTypeTitle')} · ${resolveTypeDisplayName(type, t)}`;
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent size="2xl">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{t('ribbon.commands.bimFamilyType.editTypeDescription')}</DialogDescription>
-        </DialogHeader>
+    <FloatingPanel
+      defaultPosition={SSR_FALLBACK_POSITION}
+      dimensions={PANEL_DIMENSIONS}
+      onClose={onClose}
+      draggableOptions={{ getClientPosition }}
+      className="w-[1010px] max-w-[95vw]"
+      data-testid="edit-wall-type-panel"
+    >
+      <FloatingPanel.Header title={title} icon={<Pencil />} />
+      <FloatingPanel.Content className="max-h-[80vh] overflow-y-auto">
+        <p className="mb-2 text-xs text-muted-foreground">
+          {t('ribbon.commands.bimFamilyType.editTypeDescription')}
+        </p>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,34rem)_1fr]">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_25rem]">
           <WallTypePreviewPanel
             dna={draft.dna}
             highlightLayerId={highlightLayerId}
@@ -202,7 +223,7 @@ function EditWallTypeDialogContent({ typeId }: { typeId: string }): React.ReactE
           </div>
         </div>
 
-        <DialogFooter>
+        <footer className="mt-3 flex justify-end gap-2 border-t border-border pt-3">
           <button
             type="button"
             onClick={onClose}
@@ -217,8 +238,8 @@ function EditWallTypeDialogContent({ typeId }: { typeId: string }): React.ReactE
           >
             {t('ribbon.commands.bimFamilyType.save')}
           </button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </footer>
+      </FloatingPanel.Content>
+    </FloatingPanel>
   );
 }

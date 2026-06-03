@@ -158,19 +158,27 @@ export class WallTypePreviewRenderer {
   }
 
   /**
-   * Fit the whole stub in view at the current aspect. Uses the bounding-sphere
-   * radius and the TIGHTER of the vertical/horizontal FOV, so a narrow panel
-   * (small horizontal FOV) still frames the full wall length — never clipped.
+   * Fit the whole stub in view, fully centered. Solves the exact camera distance
+   * so all 8 box corners sit inside the frustum (both H and V FOV) — a tight fit
+   * that fills the panel WITHOUT clipping any corner (the bounding-sphere
+   * approximation over-zoomed an asymmetric view and clipped the near corner).
    */
   private fitCamera(): void {
     const totalM = this.dna ? this.dna.totalThickness / 1000 : 0.25;
-    const radius = Math.hypot(STUB_LENGTH_M / 2, STUB_HEIGHT_M / 2, totalM / 2);
-    const vFov = (this.camera.fov * Math.PI) / 180;
-    const hFov = 2 * Math.atan(Math.tan(vFov / 2) * this.camera.aspect);
-    const fitFov = Math.min(vFov, hFov);
-    const dist = (radius / Math.sin(fitFov / 2)) * 0.92; // fills the panel, no corner clip
-    // Aim at the wall's geometric center (origin) → fully centered in the panel.
-    this.camera.position.copy(VIEW_DIR).multiplyScalar(dist);
+    const [hx, hy, hz] = [STUB_LENGTH_M / 2, STUB_HEIGHT_M / 2, totalM / 2];
+    const dir = VIEW_DIR; // unit, origin → camera
+    const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), dir).normalize();
+    const up = new THREE.Vector3().crossVectors(dir, right);
+    const tanV = Math.tan((this.camera.fov * Math.PI) / 180 / 2);
+    const tanH = tanV * this.camera.aspect;
+    let dist = 0;
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) {
+      const p = new THREE.Vector3(sx * hx, sy * hy, sz * hz);
+      const depthAt = p.dot(dir); // corner's offset toward the camera
+      dist = Math.max(dist, depthAt + Math.abs(p.dot(right)) / tanH, depthAt + Math.abs(p.dot(up)) / tanV);
+    }
+    dist *= 1.04; // small breathing margin
+    this.camera.position.copy(dir).multiplyScalar(dist);
     this.camera.lookAt(0, 0, 0);
     this.camera.updateProjectionMatrix();
   }

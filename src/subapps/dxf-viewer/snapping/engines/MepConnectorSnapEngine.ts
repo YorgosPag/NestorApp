@@ -40,30 +40,14 @@ import {
 import { getEntityConnectors } from '../../bim/mep-systems/connector-access';
 import { connectorWorldPosition } from '../../bim/types/mep-connector-types';
 
-// 🔍 TEMP DEBUG (ADR-408 Φ9 snap-not-engaging) — REMOVE before commit.
-// Set false to silence. Separates the failure hypotheses at runtime:
-//   • no "constructed" log after hard refresh → engine not in registry (stale HMR singleton / build)
-//   • "constructed" but no "initialize"       → engine never initialised (type disabled at scene-sync)
-//   • "initialize segments=0"                 → segments not in the entity feed
-//   • "initialize segments=N pts=M" + no "find" → BIM_MEP_CONNECTOR not in enabledTypes at query time (persisted-settings)
-//   • "find radius=… raw=0"                   → tolerance / cursor-position issue
-const MEP_SNAP_DEBUG = true;
-
 export class MepConnectorSnapEngine extends BaseSnapEngine {
   private spatialIndex: ISpatialIndex | null = null;
 
   constructor() {
     super(ExtendedSnapType.BIM_MEP_CONNECTOR);
-    if (MEP_SNAP_DEBUG) console.log('🔍 [MEP-SNAP] engine constructed (registered in registry)');
   }
 
   initialize(entities: EntityModel[]): void {
-    if (MEP_SNAP_DEBUG) {
-      const segments = entities.filter(isMepSegmentEntity);
-      let pts = 0;
-      for (const e of entities) pts += extractMepConnectorPoints(e).length;
-      console.log(`🔍 [MEP-SNAP] initialize: total=${entities.length} segments=${segments.length} connectorPts=${pts}`);
-    }
     this.spatialIndex = this.initializeSpatialIndex(
       entities,
       extractMepConnectorPoints,
@@ -72,10 +56,7 @@ export class MepConnectorSnapEngine extends BaseSnapEngine {
   }
 
   findSnapCandidates(cursorPoint: Point2D, context: SnapEngineContext): SnapEngineResult {
-    if (!this.spatialIndex) {
-      if (MEP_SNAP_DEBUG) console.log('🔍 [MEP-SNAP] find: spatialIndex=null (initialize never ran while enabled)');
-      return { candidates: [] };
-    }
+    if (!this.spatialIndex) return { candidates: [] };
 
     const priority = SNAP_ENGINE_PRIORITIES.BIM_MEP_CONNECTOR;
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.BIM_MEP_CONNECTOR);
@@ -83,10 +64,6 @@ export class MepConnectorSnapEngine extends BaseSnapEngine {
     const results = this.normalizeSnapResults(
       this.spatialIndex.querySnap(cursorPoint, radius, 'mep_connector'),
     );
-
-    if (MEP_SNAP_DEBUG) {
-      console.log(`🔍 [MEP-SNAP] find: cursor=(${cursorPoint.x.toFixed(1)},${cursorPoint.y.toFixed(1)}) radius=${radius.toFixed(2)} raw=${results.length}`);
-    }
 
     const candidates: SnapCandidate[] = [];
     for (const result of results) {

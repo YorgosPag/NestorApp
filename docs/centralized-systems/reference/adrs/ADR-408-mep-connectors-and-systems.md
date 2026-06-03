@@ -291,6 +291,7 @@ Scope = 2D annotation + 3D conduit· τοπολογία = **daisy-chain + home-r
 ---
 
 ## Changelog
+- **2026-06-04 (Opus 4.8)** — **🐛 FIX Φ9 — MEP connector snap «δεν κουμπώνει» → ✅ browser-verified.** Ο snap engine έπαιρνε scene **χωρίς** τα mep-segments (`initialize segments=0`) και δεν ξανα-αρχικοποιούνταν ποτέ μετά το σχεδίασμα. **Root cause ήταν στο ADR-040 SSoT `useGlobalSnapSceneSync`** (όχι στον MEP κώδικα): το deferred `requestIdleCallback` re-init ακυρωνόταν από το per-run effect cleanup σε κάθε benign no-op re-render (Firestore `subscribeSegments` echo). Fix: cleanup μόνο σε unmount· superseding μέσω cancel-before-schedule. **Γενικό fix — αφορά όλα τα BIM snap.** Λεπτομέρειες: ADR-040 changelog 2026-06-04. Τα Φ9 leaves (connector resolver/engine/registry/types/tolerances) ήταν σωστά εξ αρχής. Snap τώρα κουμπώνει (◇), endpoints ενώνονται, «Δίκτυα σωλήνων» → δίκτυα:N. 8/8 MepConnectorSnap PASS, tsc 0. ❌ ΕΠΟΜΕΝΟ (απόφαση Giorgio): Φ11 auto-fittings **σαν Revit** (persisted elements — elbow/coupling/tee/reducer) ώστε οι ενώσεις να μη φαίνονται «άσχημες».
 - **2026-06-04 (Opus 4.8)** — **Φ9/Φ10 ΣΤΡΩΜΑ Β — Plumbing network leaves (connectors + snap + auto-system + colour + UI)** (pending commit, 🔴 browser verify).
   Ολοκλήρωση του φυσικού δικτύου πάνω στο θεμέλιο τύπων του Στρώματος Α. **5 leaves, full SSOT, 196/196 MEP PASS, tsc 0 νέα.** ΕΚΤΟΣ ADR-040
   ΕΚΤΟΣ τα 3D-scene αρχεία (BimSceneLayer = CHECK 6B → STAGE ADR-040· SnapIndicatorOverlay = CHECK 6D → STAGE ADR-040).
