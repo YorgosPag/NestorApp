@@ -33,6 +33,7 @@ import { getGlobalCommandHistory } from '../../core/commands';
 import { UpdateMepSystemParamsCommand } from '../../core/commands/entity-commands/UpdateMepSystemParamsCommand';
 import {
   computeCircuitHostSegments,
+  splicedSegmentInterior,
   type CircuitHostSegment,
 } from '../../bim/mep-systems/mep-wire-routing';
 import { resolverFromHosts, type WireHostXform } from '../../bim/mep-systems/mep-wire-resolver';
@@ -120,12 +121,14 @@ export function useBim3DWireWaypointInteraction({ managerRef, canvasEl }: UseBim
       const out: WireHandleNode[] = [];
       for (const seg of ctx.segments) {
         const wps = getOrientedWaypoints(ctx.system.params.wireWaypoints, seg.keyA, seg.keyB);
-        for (let i = 0; i < wps.length; i++) {
-          const wp = wps[i]!;
-          const frac = (i + 1) / (wps.length + 1);
-          const zMm = seg.a.zMm + (seg.b.zMm - seg.a.zMm) * frac;
+        // SSoT: the SAME spliced points the conduit is built from (arc-length z),
+        // so the sphere sits exactly on the wire — not a separate index-fraction z
+        // that floats off the line when the segment endpoints differ in height.
+        const interior = splicedSegmentInterior(seg.a, seg.b, wps);
+        for (let i = 0; i < interior.length; i++) {
+          const p = interior[i]!;
           out.push({
-            worldPos: planToWorld(wp.x, wp.y, zMm, ctx),
+            worldPos: planToWorld(p.x, p.y, p.zMm, ctx),
             systemId: ctx.system.id,
             keyA: seg.keyA,
             keyB: seg.keyB,

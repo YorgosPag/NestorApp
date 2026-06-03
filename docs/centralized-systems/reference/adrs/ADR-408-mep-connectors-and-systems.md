@@ -291,6 +291,30 @@ Scope = 2D annotation + 3D conduit· τοπολογία = **daisy-chain + home-r
 ---
 
 ## Changelog
+- **2026-06-03 (Opus 4.8)** — **🐛 Φ7 FU#3 3D — waypoint handle ξεκολλά από το καλώδιο FIX** (pending commit,
+  🔴 browser verify). Bug (Giorgio): η λευκή σφαίρα-λαβή ενός waypoint, όταν περιστρέφεις τη θέα 3D, σε πολλές
+  περιπτώσεις δεν κάθεται πάνω στη γραμμή του καλωδίου. ROOT CAUSE: **δύο διαφορετικές z-interpolations** για το
+  ΙΔΙΟ σημείο. Ο conduit (`splicedSegmentInterior`) δίνει το `zMm` του waypoint με **arc-length** fraction
+  (`cum[i+1]/total` = πραγματικό μήκος polyline)· ο handle (`collectHandleNodes` στο 3D hook) χρησιμοποιούσε
+  **ομοιόμορφο index fraction** `(i+1)/(N+1)`. Όταν τα άκρα του segment διαφέρουν σε ύψος (φωτιστικό@οροφή vs
+  πίνακας@τοίχο), τα δύο z αποκλίνουν → η σφαίρα επιπλέει πάνω/κάτω· το orbit αποκαλύπτει το κάθετο offset.
+  FIX (FULL SSOT): εξαγωγή `splicedSegmentInterior` (τώρα δέχεται `WireHostPoint` αντί `RoutedHost`) από το
+  `mep-wire-routing.ts`· το `collectHandleNodes` καλεί ΤΗΝ ΙΔΙΑ συνάρτηση → handle z === wire z πάντα, για όλα
+  τα styles (straight/orthogonal/arc — η σφαίρα κάθεται σε vertex της polyline). **Εκτός ADR-040 scope.** +3
+  routing regression tests (arc-length vs index-fraction) → 27/27 routing + 62/62 MEP-wire PASS, tsc 0. Αρχεία:
+  MOD `bim/mep-systems/mep-wire-routing.ts` (export + signature) + `bim-3d/animation/use-bim3d-wire-waypoint-interaction-3d.ts`
+  (reuse) + `mep-wire-routing.test.ts`.
+- **2026-06-03 (Opus 4.8)** — **🐛 Φ7 P2 live-move — meter-scene 1000× fly-off FIX** (pending commit, 🔴 browser
+  verify). Bug (Giorgio): σε live drag του 3D gizmo πάνω σε φωτιστικό/πίνακα, το καλώδιο του κυκλώματος
+  «πετάγεται στο άπειρο» κατά το drag και επανέρχεται σωστά στο release. ROOT CAUSE = ίδια κλάση με το
+  ADR-402/404 meter-scale fix: στο `bim3d-wire-preview-rebuild.applyDragXform` η live μετατόπιση (`worldToDxfPlan`
+  → **mm**) προστίθεται κατευθείαν στα plan points που είναι σε **scene units** (mm/cm/m, ό,τι σκαλώνει το
+  `wirePathToMesh` με `sceneToM`). Σε σχέδιο μέτρων → +5m έδινε +5000 → εκτόξευση ×1000· το release ήταν σωστό
+  γιατί το committed `sync-circuit-wires` διαβάζει consistent units. FIX: μετατροπή του X/Y delta + του rotate
+  pivot mm→scene units μέσω του SSoT `mmToSceneUnits(units)` (`mmScale`· mm→1/cm→0.1/m→0.001) πριν αγγίξουν το
+  point· το `zMm` μένει πάντα mm (καμία μετατροπή). Καλύπτει ΚΑΙ move ΚΑΙ plan-rotate (ίδιος root). **Εκτός
+  ADR-040 scope** (bim-3d/animation, όχι CHECK 6B/6D). +1 meter-scene regression test → 10/10 PASS, tsc 0.
+  Αρχείο: MOD `bim-3d/animation/bim3d-wire-preview-rebuild.ts` (+test).
 - **2026-06-03 (Opus 4.8)** — **Φ7 follow-up #3 — 3D EDITING DONE** (pending commit, 🔴 browser verify). Giorgio
   (AskUserQuestion): πρόσθεσε editing και μέσα στο 3D viewport (όχι μόνο κάτοψη). Πλήρης επαναχρησιμοποίηση
   του 2D plan-space SSoT — **μηδέν** νέα routing/persistence/command λογική: NEW hook

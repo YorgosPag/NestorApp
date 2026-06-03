@@ -174,10 +174,21 @@ export function computeCircuitHostSegments(
  * an interpolated `zMm` by its position along the broken `a→wps→b` polyline
  * (linear in plan length → smooth conduit in 3D). Returns the interior draw
  * points (waypoints only, endpoints excluded).
+ *
+ * SSoT: the 3D waypoint **handle** layer (`use-bim3d-wire-waypoint-interaction-3d`)
+ * also calls this so the sphere sits at the EXACT point the conduit passes
+ * through. A naive `(i+1)/(N+1)` index fraction would put the handle at a
+ * different elevation than the arc-length-interpolated wire whenever the segment
+ * endpoints differ in height — the sphere then floats off the line (visible when
+ * orbiting). Both consume this ONE interpolation, so they never diverge.
  */
-function splicedSegmentInterior(a: RoutedHost, b: RoutedHost, wps: readonly { x: number; y: number }[]): WireHostPoint[] {
+export function splicedSegmentInterior(
+  a: WireHostPoint,
+  b: WireHostPoint,
+  wps: readonly { x: number; y: number }[],
+): WireHostPoint[] {
   if (wps.length === 0) return [];
-  const verts = [a.point, ...wps.map((w) => ({ x: w.x, y: w.y, zMm: 0 })), b.point];
+  const verts = [a, ...wps.map((w) => ({ x: w.x, y: w.y, zMm: 0 })), b];
   const cum: number[] = [0];
   for (let i = 1; i < verts.length; i++) {
     cum.push(cum[i - 1]! + Math.hypot(verts[i]!.x - verts[i - 1]!.x, verts[i]!.y - verts[i - 1]!.y));
@@ -185,7 +196,7 @@ function splicedSegmentInterior(a: RoutedHost, b: RoutedHost, wps: readonly { x:
   const total = cum[cum.length - 1]!;
   return wps.map((w, i) => {
     const t = total < 1e-9 ? 0 : cum[i + 1]! / total;
-    return { x: w.x, y: w.y, zMm: a.point.zMm + (b.point.zMm - a.point.zMm) * t };
+    return { x: w.x, y: w.y, zMm: a.zMm + (b.zMm - a.zMm) * t };
   });
 }
 
@@ -211,7 +222,7 @@ export function computeCircuitWirePaths(
       const a = hosts[i - 1]!;
       const b = hosts[i]!;
       const wps = getOrientedWaypoints(waypointMap, a.key, b.key);
-      points.push(...splicedSegmentInterior(a, b, wps), b.point);
+      points.push(...splicedSegmentInterior(a.point, b.point, wps), b.point);
     }
     paths.push({
       systemId: system.id,

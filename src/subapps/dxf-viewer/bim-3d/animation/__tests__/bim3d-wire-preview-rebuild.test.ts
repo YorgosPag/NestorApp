@@ -19,14 +19,14 @@ import type { ElectricalPanelEntity } from '../../../bim/types/electrical-panel-
 import type { MepSystemEntity } from '../../../bim/types/mep-system-types';
 
 /** Minimal point host (only the fields the resolver reads), cast to the entity type. */
-function host<T>(id: string, x: number, y: number): T {
+function host<T>(id: string, x: number, y: number, sceneUnits: 'mm' | 'cm' | 'm' = 'mm'): T {
   return {
     id,
     params: {
       position: { x, y, z: 0 },
       rotation: 0,
       mountingElevationMm: 2700,
-      sceneUnits: 'mm',
+      sceneUnits,
       connectors: [{ connectorId: 'c1', localPosition: { x: 0, y: 0, z: 0 } }],
     },
   } as unknown as T;
@@ -93,6 +93,25 @@ describe('bim3d-wire-preview-rebuild', () => {
       const moved = buildCircuitWirePreviewObjects(new Set(['fx1']), move(5, 0));
       // The fixture leg of the home run extends further East when dragged +X.
       expect(bbox(moved[0]!).max.x).toBeGreaterThan(bbox(at0[0]!).max.x);
+    });
+
+    it('scales the live move delta to scene units in a metre-scene (ADR-402/404 — no 1000× fly-off)', () => {
+      // Metre-scene: panel + fixture positions are in metres. A +5 m world drag
+      // must shift the endpoint by 5 scene-units (m), NOT 5000 — the pre-fix bug
+      // added the mm delta straight onto a metres coordinate → conduit to infinity.
+      useBim3DEntitiesStore.setState({
+        fixtures: [host<MepFixtureEntity>('fx1', 10, 0, 'm')],
+        panels: [host<ElectricalPanelEntity>('pnl1', 0, 0, 'm')],
+        floors: [],
+        buildings: [],
+      });
+      const at0 = buildCircuitWirePreviewObjects(new Set(['fx1']), move(0, 0));
+      const moved = buildCircuitWirePreviewObjects(new Set(['fx1']), move(5, 0));
+      // sceneToM = 1 for metres, so bbox is in metres directly: a 5 m drag ⇒ ~5 m
+      // shift. The pre-fix value would be ~5000 m.
+      const shift = bbox(moved[0]!).max.x - bbox(at0[0]!).max.x;
+      expect(shift).toBeGreaterThan(4.9);
+      expect(shift).toBeLessThan(5.1);
     });
 
     it('orbits the dragged fixture endpoint about the pivot on plan-rotate (P2b)', () => {

@@ -31,7 +31,7 @@ import {
   type WireHostPoint,
 } from '../../bim/mep-systems/mep-wire-routing';
 import { connectorWorldPosition, type MepConnector } from '../../bim/types/mep-connector-types';
-import { sceneUnitsToMeters } from '../../utils/scene-units';
+import { sceneUnitsToMeters, mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 import { wirePathToMesh } from '../converters/mep-wire-to-three';
 import { worldToDxfPlan } from '../viewport/coordinate-transforms';
@@ -65,14 +65,26 @@ interface WireHost3D {
  * point is a rigid point of the entity, so orbiting it about the pivot reproduces
  * both the host orbit AND the connector-offset rotation (ghost === commit). A move
  * shifts it by the plan delta; vertical (Y) rotation leaves the elevation `zMm`.
+ *
+ * UNITS (ADR-402/404 meter-scale fix): the plan points `pt.x/pt.y` are in the
+ * host's **scene/canvas units** (mm / cm / m), exactly what `wirePathToMesh`
+ * scales by `sceneToM`. `worldToDxfPlan` returns **mm**, so the X/Y delta + the
+ * rotate pivot must be converted mm → scene units via `mmScale` before they touch
+ * `pt` — otherwise a metre-scene drawing shifts the endpoint by 1000× and the
+ * conduit flies off-screen during the drag (the elevation `zMm` is always mm, so
+ * `d.z` is added as-is, no conversion).
  */
-function applyDragXform(pt: WireHostPoint, xform: WireDragXform): WireHostPoint {
+function applyDragXform(pt: WireHostPoint, xform: WireDragXform, mmScale: number): WireHostPoint {
   if (xform.kind === 'move') {
-    const d = worldToDxfPlan(xform.translation); // world (m) → plan (mm) delta (linear)
-    return { x: pt.x + d.x, y: pt.y + d.y, zMm: pt.zMm + d.z };
+    const d = worldToDxfPlan(xform.translation); // world (m) → mm delta (linear)
+    return { x: pt.x + d.x * mmScale, y: pt.y + d.y * mmScale, zMm: pt.zMm + d.z };
   }
-  const pivot = worldToDxfPlan(xform.pivot); // linear map → valid on a point too
-  const r = rotatePoint({ x: pt.x, y: pt.y }, { x: pivot.x, y: pivot.y }, xform.angleRad);
+  const pivot = worldToDxfPlan(xform.pivot); // linear map → valid on a point too (mm)
+  const r = rotatePoint(
+    { x: pt.x, y: pt.y },
+    { x: pivot.x * mmScale, y: pivot.y * mmScale },
+    xform.angleRad,
+  );
   return { x: r.x, y: r.y, zMm: pt.zMm };
 }
 
@@ -110,6 +122,7 @@ export function buildCircuitWirePreviewObjects(
   const s = useBim3DEntitiesStore.getState();
   const hosts = new Map<string, WireHost3D>();
   let sceneToM = 1;
+  let mmScale = 1;
   let baseElevationM = 0;
   let haveScene = false;
   const addHost = (entity: MepFixtureEntity | ElectricalPanelEntity): void => {
@@ -121,7 +134,9 @@ export function buildCircuitWirePreviewObjects(
       connectors: entity.params.connectors ?? [],
     });
     if (!haveScene) {
-      sceneToM = sceneUnitsToMeters(entity.params.sceneUnits ?? 'mm');
+      const units: SceneUnits = entity.params.sceneUnits ?? 'mm';
+      sceneToM = sceneUnitsToMeters(units);
+      mmScale = mmToSceneUnits(units); // mm → scene units (mm→1, cm→0.1, m→0.001)
       baseElevationM = resolveEntityBuilding(entity, s.floors, s.buildings)?.baseElevation ?? 0;
       haveScene = true;
     }
@@ -139,7 +154,7 @@ export function buildCircuitWirePreviewObjects(
       : { x: host.x, y: host.y, z: 0 };
     const zMm = host.zMm + (conn?.localPosition.z ?? 0);
     const point: WireHostPoint = { x: pos.x, y: pos.y, zMm };
-    return draggedHostIds.has(entityId) ? applyDragXform(point, xform) : point;
+    return draggedHostIds.has(entityId) ? applyDragXform(point, xform, mmScale) : point;
   };
 
   const systems = useMepSystemStore.getState().getSystems().filter((sys) => affected.has(sys.id));

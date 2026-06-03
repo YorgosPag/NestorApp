@@ -5,6 +5,7 @@
 import {
   computeCircuitWirePaths,
   computeCircuitHostSegments,
+  splicedSegmentInterior,
   expandSegment,
   buildWirePolyline,
   type WireHostPoint,
@@ -255,5 +256,32 @@ describe('computeCircuitHostSegments', () => {
 
   it('skips systems with no resolvable source / members', () => {
     expect(computeCircuitHostSegments([sys('s1', undefined, ['fx1'], 'gone')], resolverFrom({ fx1: P(1, 1) }))).toEqual([]);
+  });
+});
+
+describe('splicedSegmentInterior (arc-length zMm — shared by conduit + 3D handle)', () => {
+  it('interpolates a waypoint zMm by plan arc-length, NOT by index fraction', () => {
+    // a@z=0 → b@z=100, single waypoint near a (10% of the run). Arc-length gives
+    // z≈10; an index fraction (1/(1+1)=0.5) would wrongly give z=50. This is the
+    // gap that made the 3D handle sphere float off the conduit when orbiting.
+    const interior = splicedSegmentInterior(P(0, 0, 0), P(100, 0, 100), [{ x: 10, y: 0 }]);
+    expect(interior).toHaveLength(1);
+    expect(interior[0]!.x).toBe(10);
+    expect(interior[0]!.zMm).toBeCloseTo(10, 6);
+  });
+
+  it('matches the conduit point the wire is built from (handle === wire, same z)', () => {
+    // The routed path splices the identical interior; the handle must read the
+    // SAME function so the sphere sits on the line.
+    const a = P(0, 0, 0);
+    const b = P(40, 0, 80);
+    const wps = [{ x: 30, y: 0 }];
+    const interior = splicedSegmentInterior(a, b, wps);
+    // 30/40 = 0.75 of the run → z = 60 (arc-length), not 40 (index 0.5).
+    expect(interior[0]!.zMm).toBeCloseTo(60, 6);
+  });
+
+  it('is empty when the segment has no waypoints', () => {
+    expect(splicedSegmentInterior(P(0, 0, 0), P(10, 0, 50), [])).toEqual([]);
   });
 });
