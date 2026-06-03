@@ -4,6 +4,7 @@
 
 import {
   computeCircuitWirePaths,
+  computeCircuitHostSegments,
   expandSegment,
   buildWirePolyline,
   type WireHostPoint,
@@ -11,6 +12,7 @@ import {
   type ResolveWireHost,
   type CircuitWirePath,
 } from '../mep-wire-routing';
+import { buildSegmentKey, endpointKey, type WireWaypointMap } from '../mep-wire-waypoints';
 import type { MepSystemEntity, MepSystemParams } from '../../types/mep-system-types';
 
 function sys(id: string, color: string | undefined, members: string[], source: string): MepSystemEntity {
@@ -178,5 +180,80 @@ describe('buildWirePolyline', () => {
 
   it('returns empty for a path with no points', () => {
     expect(buildWirePolyline({ systemId: 's', colorHex: '#000000', points: [] })).toEqual([]);
+  });
+});
+
+describe('computeCircuitWirePaths (waypoints — Φ7 FU#3)', () => {
+  /** Attach a waypoint map (keyed by host pair) to a system's params. */
+  function withWaypoints(s: MepSystemEntity, map: WireWaypointMap): MepSystemEntity {
+    return { ...s, params: { ...s.params, wireWaypoints: map } };
+  }
+
+  it('splices a per-segment waypoint between the two hosts', () => {
+    const system = withWaypoints(sys('s1', undefined, ['fx1'], 'pnl'), {
+      [buildSegmentKey(endpointKey('pnl', 'c1'), endpointKey('fx1', 'c1'))]: [{ x: 5, y: 3 }],
+    });
+    const paths = computeCircuitWirePaths(
+      [system],
+      resolverFrom({ pnl: P(0, 0), fx1: P(10, 0) }),
+    );
+    expect(paths[0]!.points).toEqual([P(0, 0), P(5, 3), P(10, 0)]);
+  });
+
+  it('interpolates waypoint zMm linearly along the broken polyline', () => {
+    const system = withWaypoints(sys('s1', undefined, ['fx1'], 'pnl'), {
+      [buildSegmentKey(endpointKey('pnl', 'c1'), endpointKey('fx1', 'c1'))]: [{ x: 5, y: 0 }],
+    });
+    const paths = computeCircuitWirePaths(
+      [system],
+      resolverFrom({ pnl: P(0, 0, 0), fx1: P(10, 0, 100) }),
+    );
+    // Midpoint at half the chord length ⇒ z = 50.
+    expect(paths[0]!.points[1]).toEqual({ x: 5, y: 0, zMm: 50 });
+  });
+
+  it('composes per-circuit style across each sub-segment created by a waypoint', () => {
+    const system = withWaypoints(sysWithStyle('s1', 'orthogonal', ['fx1'], 'pnl'), {
+      [buildSegmentKey(endpointKey('pnl', 'c1'), endpointKey('fx1', 'c1'))]: [{ x: 5, y: 5 }],
+    });
+    const [path] = computeCircuitWirePaths(
+      [system],
+      resolverFrom({ pnl: P(0, 0), fx1: P(10, 10) }),
+    );
+    // Each leg (panel→wp, wp→fixture) gets its own L-elbow.
+    expect(buildWirePolyline(path!)).toEqual([
+      P(0, 0), P(5, 0), P(5, 5),   // panel → waypoint, elbow at waypoint.x
+      P(10, 5), P(10, 10),          // waypoint → fixture, elbow at fixture.x
+    ]);
+  });
+
+  it('keeps waypoints attached to the host pair when the daisy chain re-orders', () => {
+    const segKey = buildSegmentKey(endpointKey('near', 'c1'), endpointKey('far', 'c1'));
+    const map: WireWaypointMap = { [segKey]: [{ x: 15, y: 9 }] };
+    const system = withWaypoints(sys('s1', undefined, ['near', 'far'], 'pnl'), map);
+
+    // Layout A: chain pnl→near→far. Layout B: positions swap ⇒ chain pnl→far→near.
+    const a = computeCircuitWirePaths([system], resolverFrom({ pnl: P(0, 0), near: P(10, 0), far: P(20, 0) }));
+    const b = computeCircuitWirePaths([system], resolverFrom({ pnl: P(0, 0), near: P(20, 0), far: P(10, 0) }));
+
+    // The waypoint survives both orderings (orientation may flip, presence must not).
+    expect(a[0]!.points).toContainEqual({ x: 15, y: 9, zMm: 0 });
+    expect(b[0]!.points).toContainEqual({ x: 15, y: 9, zMm: 0 });
+  });
+});
+
+describe('computeCircuitHostSegments', () => {
+  it('returns host-level legs with order-independent endpoint keys (no waypoints)', () => {
+    const segs = computeCircuitHostSegments(
+      [sys('s1', undefined, ['fx1', 'fx2'], 'pnl')],
+      resolverFrom({ pnl: P(0, 0), fx1: P(10, 0), fx2: P(20, 0) }),
+    );
+    expect(segs).toHaveLength(2);
+    expect(segs[0]).toMatchObject({ systemId: 's1', keyA: 'pnl:c1', keyB: 'fx1:c1', a: P(0, 0), b: P(10, 0) });
+    expect(segs[1]).toMatchObject({ keyA: 'fx1:c1', keyB: 'fx2:c1' });
+  });
+
+  it('skips systems with no resolvable source / members', () => {
+    expect(computeCircuitHostSegments([sys('s1', undefined, ['fx1'], 'gone')], resolverFrom({ fx1: P(1, 1) }))).toEqual([]);
   });
 });
