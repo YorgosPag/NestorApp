@@ -15,6 +15,7 @@ import * as React from 'react';
 import { Check, FileText, Pencil, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n';
+import { useEscapeHandler, ESC_PRIORITY } from '@/subapps/dxf-viewer/systems/escape-bus';
 import type {
   LayerStateDropdownActions,
   LayerStateDropdownState,
@@ -41,6 +42,21 @@ export function LayerStateDropdownPopover({
   const [renameId, setRenameId] = React.useState<string | null>(null);
   const [draftRename, setDraftRename] = React.useState('');
   const [draftSaveName, setDraftSaveName] = React.useState('');
+
+  // ADR-364: Esc cancels active rename — must consume so Radix Popover does NOT close
+  // the whole popover (bus stopPropagation prevents Radix from seeing the key).
+  const isRenaming = renameId !== null;
+  useEscapeHandler({
+    id: 'layer-state-rename',
+    priority: ESC_PRIORITY.POPOVER_DROPDOWN,
+    allowWhenEditable: true,
+    canHandle: () => isRenaming,
+    handle: () => {
+      setRenameId(null);
+      setDraftRename('');
+      return true;
+    },
+  });
   const states = state.snapshot.states;
   const isReady = state.isReady;
   const currentId = state.snapshot.currentStateId;
@@ -197,7 +213,7 @@ function LayerStateRow({
           onChange={(e) => onChangeRename(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') onCommitRename();
-            if (e.key === 'Escape') onCancelRename();
+            // ADR-364: Escape handled by useEscapeHandler in LayerStateDropdownPopover parent.
           }}
           className={INPUT_CLASS}
           autoFocus
