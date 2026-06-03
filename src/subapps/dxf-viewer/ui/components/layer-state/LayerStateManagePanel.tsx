@@ -4,6 +4,7 @@ import * as React from 'react';
 import { ChevronDown, ChevronUp, Search, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from '@/i18n';
+import { useEscapeHandler, ESC_PRIORITY } from '@/subapps/dxf-viewer/systems/escape-bus';
 import {
   Dialog,
   DialogContent,
@@ -79,6 +80,20 @@ export function LayerStateManagePanel({
       selectedIds.size === filtered.length ? new Set() : new Set(filtered.map((s) => s.id)),
     );
   };
+
+  // ADR-364: Esc cancels active rename/category edit — consume so Radix Dialog does NOT close.
+  // Only one field can be editing at a time (name XOR category); gated accordingly.
+  useEscapeHandler({
+    id: 'layer-state-manage-rename',
+    priority: ESC_PRIORITY.POPOVER_DROPDOWN,
+    allowWhenEditable: true,
+    canHandle: () => editingId !== null || editingCategoryId !== null,
+    handle: () => {
+      setEditingId(null);
+      setEditingCategoryId(null);
+      return true;
+    },
+  });
 
   const commitRename = (id: string): void => {
     if (draftName.trim()) actions.rename(id, draftName.trim());
