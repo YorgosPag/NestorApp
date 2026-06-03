@@ -284,13 +284,36 @@ Scope = 2D annotation + 3D conduit· τοπολογία = **daisy-chain + home-r
 ## Roadmap (επόμενο push)
 
 - «colour by system» view toggle (τώρα always-on)· per-circuit edit από φωτιστικό (system-browser panel).
-- Φ7 follow-ups: ✅ `orthogonal`/`arc` wire styles **DONE** (#1, 2026-06-03)· ❌ conductor-count ticks στο
-  home-run· ❌ waypoints· ❌ seed legacy connectors.
+- Φ7 follow-ups: ✅ `orthogonal`/`arc` wire styles **DONE** (#1, 2026-06-03)· ✅ waypoints **DONE** (#3,
+  2026-06-03)· ❌ conductor-count ticks στο home-run· ❌ seed legacy connectors.
 - duct/pipe domains & systems — reserved στα types, no pipeline.
 
 ---
 
 ## Changelog
+- **2026-06-03 (Opus 4.8, Plan Mode)** — **Φ7 follow-up #3: WAYPOINTS DONE** (pending commit, 🔴 browser verify).
+  Χειροκίνητα ενδιάμεσα σημεία στη διαδρομή ενός κυκλώματος (Revit «Wire Vertex») — direct-manipulation:
+  **drag** πάνω σε segment → γεννά + σέρνει νέο vertex· **drag** υπάρχον vertex → move· **right-click** vertex →
+  delete. **FULL SSoT, Revit-grade:** τα waypoints persist-άρουν ως `MepSystemParams.wireWaypoints` (+ Zod, mirror
+  του `wireStyle`/`color`), **per-segment topology με order-independent key** (sorted host-pair `entityId:connectorId`)
+  → επιβιώνουν όταν η nearest-neighbour daisy-chain ξανα-σειροθετείται. **Μία ένεση στο routing:** το
+  `computeCircuitWirePaths` κάνει splice τα oriented waypoints (+ **linear zMm interpolate** κατά μήκος του
+  σπασμένου polyline) στα `points[]`, ώστε `buildWirePolyline`/`expandSegment` εφαρμόζουν το `wireStyle` **per
+  sub-segment** δωρεάν — **2D + 3D αμετάβλητα** (`mep-wire-to-three` δεν αγγίχτηκε· διαβάζει `buildWirePolyline`).
+  Interaction = mirror του ADR-376 C.1 opening-tag drag: null-render leaf `MepWireWaypointDragMount` +
+  `useMepWireWaypointInteraction` (raw pointer listeners στο viewport, capture + setPointerCapture + RAF), pure FSM
+  `MepWireWaypointDragController`· **optimistic** `upsertSystem` κατά το drag (overlay re-routes) + undoable
+  `UpdateMepSystemParamsCommand` στο release (μηδέν νέο command). Επεξεργάσιμο **μόνο το ενεργό κύκλωμα**
+  (`activeSystemId`). NEW pure SSoT: `mep-wire-waypoints.ts` (key/orientation/builders) + `mep-wire-waypoint-hit.ts`
+  + `mep-wire-resolver.ts` (Boy-Scout: εξαγωγή του host-resolver glue, κοινό overlay + interaction) +
+  `mep-wire-waypoint-ui-store.ts` (hover highlight leaf). Handles+hover ζωγραφίζονται στο `MepWireRenderer`
+  (`drawWaypointHandles`). **STAGE ADR-040** (αγγίχτηκαν `HomeRunWiresOverlay` 6D + `canvas-layer-stack-leaves` 6B·
+  μηδέν `useSyncExternalStore` σε orchestrator). 132/132 MEP+overlay+preview regression PASS (incl. 3 νέα suites),
+  tsc 0. Αρχεία: NEW `mep-wire-waypoints.ts`/`mep-wire-waypoint-hit.ts`/`mep-wire-resolver.ts`/
+  `mep-wire-waypoint-ui-store.ts`/`mep-wire-waypoint-drag-controller.ts`/`use-mep-wire-waypoint-interaction.ts`/
+  `canvas-layer-stack-mep-wire-waypoint.tsx` + 3 test files· MOD `mep-wire-routing.ts`/`mep-system-types.ts`/
+  `mep-system.schemas.ts`/`MepWireRenderer.ts`/`HomeRunWiresOverlay.tsx`/`canvas-layer-stack-leaves.tsx`/
+  `mep-wire-routing.test.ts`.
 - **2026-06-03 (Opus 4.8, Plan Mode)** — **Φ7 follow-up #1: orthogonal/arc wire styles DONE** (pending commit,
   🔴 browser verify). Per-circuit «Wiring Type» (Revit) — ο χρήστης επιλέγει `straight`/`orthogonal`/`arc`
   ανά κύκλωμα, εφαρμόζεται ταυτόχρονα 2D + 3D. **FULL SSoT, μηδέν διπλασιασμός geometry:** το style ζει ως
