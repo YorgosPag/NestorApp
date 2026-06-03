@@ -144,7 +144,7 @@ export function LayerStateSaveButton({
           onChange={(e) => setDraftName(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleSave();
-            if (e.key === 'Escape') setIsOpen(false);
+            // ADR-364: Escape handled by Radix Popover onEscapeKeyDown → onOpenChange.
           }}
           placeholder={t('layerState.namePlaceholder')}
           className={INPUT_CLASS}
