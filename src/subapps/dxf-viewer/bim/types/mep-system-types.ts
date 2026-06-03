@@ -28,6 +28,7 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { ElectricalSystemClassification } from './mep-connector-types';
 import type { WireStyle } from '../mep-systems/mep-wire-routing';
+import type { WireWaypointMap } from '../mep-systems/mep-wire-waypoints';
 
 /** System type discriminator. First slice ships `electrical-circuit`. */
 export type MepSystemType = 'electrical-circuit';
@@ -65,6 +66,13 @@ export interface MepSystemParams {
    * via `buildWirePolyline` (ADR-408 Φ7). Absent ⇒ `'straight'`.
    */
   readonly wireStyle?: WireStyle;
+  /**
+   * Per-segment user waypoints (Revit "Wire Vertex") for the derived home-run
+   * run, keyed order-independently by the segment's host pair (ADR-408 Φ7 FU#3).
+   * SSoT user data — `computeCircuitWirePaths` splices them into the routed
+   * polyline so 2D + 3D follow. Absent ⇒ pure auto-routed daisy chain.
+   */
+  readonly wireWaypoints?: WireWaypointMap;
   /** Optional electrical rollups (derivable from member connectedLoadVa). */
   readonly ratedVoltage?: number;
   readonly poles?: 1 | 2 | 3;
