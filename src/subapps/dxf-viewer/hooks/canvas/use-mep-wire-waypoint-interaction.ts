@@ -47,11 +47,13 @@ import {
   hitTestInsertion,
 } from '../../bim/mep-systems/mep-wire-waypoint-hit';
 import {
-  insertWaypointOriented,
-  moveWaypointOriented,
   deleteWaypointOriented,
   type WirePlanPoint,
 } from '../../bim/mep-systems/mep-wire-waypoints';
+import {
+  applyWaypointGesture,
+  type WaypointGesture,
+} from '../../bim/mep-systems/mep-wire-waypoint-gesture';
 import { MepWireWaypointDragController } from '../../bim/services/mep-wire-waypoint-drag-controller';
 import { setWireWaypointHover } from '../../bim/mep-systems/mep-wire-waypoint-ui-store';
 
@@ -63,16 +65,6 @@ export interface UseMepWireWaypointInteractionParams {
   readonly getViewportElement: () => HTMLElement | null;
   readonly getCurrentLevelId: () => string | null;
   readonly getLevelScene: (levelId: string) => SceneModel | null;
-}
-
-/** A gesture in flight: the segment + draw index being inserted/moved. */
-interface WaypointGesture {
-  readonly mode: 'insert' | 'move';
-  readonly system: MepSystemEntity;
-  readonly startParams: MepSystemParams;
-  readonly keyA: string;
-  readonly keyB: string;
-  readonly orientedIndex: number;
 }
 
 interface ActiveContext {
@@ -99,16 +91,6 @@ function collectHosts(scene: SceneModel): Map<string, WireHostXform> {
     });
   }
   return hosts;
-}
-
-/** Recompute `params` with the gesture's waypoint applied at `point` (idempotent). */
-function applyGesture(gesture: WaypointGesture, point: WirePlanPoint): MepSystemParams {
-  const base = gesture.startParams.wireWaypoints;
-  const next =
-    gesture.mode === 'insert'
-      ? insertWaypointOriented(base, gesture.keyA, gesture.keyB, gesture.orientedIndex, point)
-      : moveWaypointOriented(base, gesture.keyA, gesture.keyB, gesture.orientedIndex, point);
-  return { ...gesture.startParams, wireWaypoints: next };
 }
 
 export function useMepWireWaypointInteraction(
@@ -167,7 +149,7 @@ export function useMepWireWaypointInteraction(
     function pushOptimistic(point: WirePlanPoint): void {
       const gesture = gestureRef.current;
       if (!gesture) return;
-      const nextParams = applyGesture(gesture, point);
+      const nextParams = applyWaypointGesture(gesture, point);
       useMepSystemStore.getState().upsertSystem({ ...gesture.system, params: nextParams });
     }
 
@@ -277,7 +259,7 @@ export function useMepWireWaypointInteraction(
       }
       pendingPointRef.current = null;
       if (!gesture || !result) return;
-      const nextParams = applyGesture(gesture, result.point);
+      const nextParams = applyWaypointGesture(gesture, result.point);
       executeRef.current(new UpdateMepSystemParamsCommand(gesture.system.id, nextParams, gesture.startParams));
     }
 
