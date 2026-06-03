@@ -123,6 +123,30 @@ describe('ADR-397 — column hot-grip kinds (shared registry)', () => {
   });
 });
 
+describe('ADR-363 Phase 5.5d — beam hot-grip kinds (axis-based wall parity)', () => {
+  it("beam-midpoint → 'move', beam-rotation → 'rotate'", () => {
+    expect(hotGripOpForKind('beam-midpoint')).toBe('move');
+    expect(hotGripOpForKind('beam-rotation')).toBe('rotate');
+  });
+
+  it('beam start/end/curve/width/depth stay press-drag (null op)', () => {
+    for (const k of ['beam-start', 'beam-end', 'beam-curve', 'beam-width', 'beam-depth']) {
+      expect(hotGripOpForKind(k)).toBeNull();
+      expect(isWallHotGripKind(k)).toBe(false);
+    }
+  });
+
+  it('beam-midpoint/rotation enter hot-grip on mousedown', () => {
+    expect(resolveHotGripMouseDown('idle', 'beam-midpoint')).toBe('enter');
+    expect(resolveHotGripMouseDown('warm', 'beam-rotation')).toBe('enter');
+  });
+
+  it('hotGripKindOf reads the beamGripKind discriminator', () => {
+    const beam = { beamGripKind: 'beam-rotation' } as unknown as UnifiedGripInfo;
+    expect(hotGripKindOf(beam)).toBe('beam-rotation');
+  });
+});
+
 describe('ADR-406 — MEP fixture hot-grip kinds (full wall parity)', () => {
   it("mep-fixture-move → 'move', mep-fixture-rotation → 'rotate', corners → 'corner'", () => {
     expect(hotGripOpForKind('mep-fixture-move')).toBe('move');

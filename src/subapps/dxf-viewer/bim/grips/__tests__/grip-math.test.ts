@@ -17,6 +17,7 @@ import {
   rotateVector,
   projectToLocalFrame,
   sweptAngleDegAboutPivot,
+  rotateAxisPointsAboutPivot,
 } from '../grip-math';
 
 const near = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) < eps;
@@ -103,5 +104,44 @@ describe('sweptAngleDegAboutPivot (6-click ROTATE→Reference)', () => {
 
   it('returns null when the anchor vector is degenerate', () => {
     expect(sweptAngleDegAboutPivot(pivot, { x: 0, y: 0 }, { x: 10, y: 0 })).toBeNull();
+  });
+});
+
+describe('rotateAxisPointsAboutPivot (shared axis-rotation SSoT — wall + beam)', () => {
+  const pivot = { x: 2000, y: 0 };
+
+  it('rotates every point by the anchor→current swept angle (90° CCW)', () => {
+    // anchor at pivot+(1,0) → 0°, current at pivot+(0,1) → +90°.
+    const out = rotateAxisPointsAboutPivot(
+      [{ x: 0, y: 0 }, { x: 4000, y: 0 }],
+      { pivot, anchor: { x: 2001, y: 0 }, currentPos: { x: 2000, y: 1 } },
+    );
+    expect(out).not.toBeNull();
+    // (0,0) rel (−2000,0) → (0,−2000) → (2000,−2000); (4000,0) → (2000,2000).
+    expect(near(out![0].x, 2000)).toBe(true);
+    expect(near(out![0].y, -2000)).toBe(true);
+    expect(near(out![1].x, 2000)).toBe(true);
+    expect(near(out![1].y, 2000)).toBe(true);
+  });
+
+  it('preserves point count + distance to pivot (rigid rotation)', () => {
+    const pts = [{ x: 100, y: 200 }, { x: -50, y: 80 }, { x: 300, y: -90 }];
+    const out = rotateAxisPointsAboutPivot(pts, {
+      pivot, anchor: { x: 2010, y: 5 }, currentPos: { x: 2003, y: 17 },
+    })!;
+    expect(out).toHaveLength(3);
+    for (let i = 0; i < pts.length; i++) {
+      const d0 = Math.hypot(pts[i].x - pivot.x, pts[i].y - pivot.y);
+      const d1 = Math.hypot(out[i].x - pivot.x, out[i].y - pivot.y);
+      expect(near(d0, d1, 1e-6)).toBe(true);
+    }
+  });
+
+  it('returns null on a degenerate swept angle (cursor on pivot) → caller no-ops', () => {
+    expect(
+      rotateAxisPointsAboutPivot([{ x: 0, y: 0 }], {
+        pivot, anchor: { x: 2010, y: 0 }, currentPos: { x: 2000, y: 0 },
+      }),
+    ).toBeNull();
   });
 });

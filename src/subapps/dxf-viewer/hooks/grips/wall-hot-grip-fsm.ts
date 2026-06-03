@@ -58,6 +58,10 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   'wall-corner-end-neg': 'corner',
   'wall-midpoint': 'move',
   'wall-rotation': 'rotate',
+  // Beams (ADR-363 Phase 5.5d) — axis-based wall parity: midpoint MOVE (3-click),
+  // rotation REFERENCE (6-click). Start/end/curve/width/depth stay press-drag.
+  'beam-midpoint': 'move',
+  'beam-rotation': 'rotate',
   // Columns (ADR-397) — center MOVE (3-click), rotation REFERENCE (6-click)
   'column-center': 'move',
   'column-rotation': 'rotate',
@@ -97,7 +101,7 @@ export function isWallHotGripKind(kind: string | undefined | null): boolean {
  */
 export function hotGripKindOf(grip: UnifiedGripInfo | null | undefined): string | undefined {
   if (!grip) return undefined;
-  return grip.wallGripKind ?? grip.columnGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind;
+  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind;
 }
 
 /**

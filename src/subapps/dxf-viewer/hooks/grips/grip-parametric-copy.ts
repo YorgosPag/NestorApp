@@ -23,6 +23,10 @@ import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { buildColumnEntity } from '../drawing/column-completion';
 import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
+import type { BeamEntity } from '../../bim/types/beam-types';
+import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
+import { buildBeamEntity } from '../drawing/beam-completion';
+import { addBeamToScene } from '../../bim/beams/add-beam-to-scene';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
 import { buildMepFixtureEntity } from '../drawing/mep-fixture-completion';
@@ -93,6 +97,36 @@ export function commitColumnCopy(
   const built = buildColumnEntity(translated, column.layerId, sceneUnits);
   if (!built.ok) return;
   addColumnToScene(built.entity, deps);
+}
+
+/**
+ * ADR-363 Phase 5.5d — Ctrl-COPY at the terminal click of a beam MOVE hot-grip
+ * (AutoCAD MOVE→COPY). Mirror of `commitWallCopy`/`commitColumnCopy`: builds a NEW
+ * `BeamEntity` whose params are the original shifted by `delta` (the same
+ * `beam-midpoint` whole-beam translate the MOVE uses — moves startPoint + endPoint
+ * + curveControl) and inserts it via the shared `addBeamToScene` SSoT — fresh
+ * enterprise ID (N.6, via `buildBeamEntity` → `createBeam`), `drawing:entity-created`
+ * broadcast so persistence saves the copy. Original untouched; single copy.
+ */
+export function commitBeamCopy(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || grip.beamGripKind !== 'beam-midpoint') return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<BeamEntity>;
+  if (candidate.type !== 'beam' || !candidate.params) return;
+  const beam = candidate as BeamEntity;
+  const originalParams = beam.params;
+  const translated = applyBeamGripDrag('beam-midpoint', { originalParams, delta });
+  const sceneUnits = originalParams.sceneUnits ?? 'mm';
+  const built = buildBeamEntity(translated, beam.layerId, sceneUnits);
+  if (!built.ok) return;
+  addBeamToScene(built.entity, deps);
 }
 
 /**
@@ -170,6 +204,10 @@ export function commitHotGripCopy(
   }
   if (grip.columnGripKind === 'column-center') {
     commitColumnCopy(grip, delta, deps);
+    return true;
+  }
+  if (grip.beamGripKind === 'beam-midpoint') {
+    commitBeamCopy(grip, delta, deps);
     return true;
   }
   if (grip.mepFixtureGripKind === 'mep-fixture-move') {

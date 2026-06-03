@@ -43,6 +43,7 @@ import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getBeamGrips, beamDepthHandlePosition } from '../beams/beam-grips';
+import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
 import {
   computeBeamHatchPlan,
@@ -287,6 +288,10 @@ export class BeamRenderer extends BaseEntityRenderer {
       entityId: g.entityId,
       isVisible: true,
       gripIndex: g.gripIndex,
+      // ADR-363 Phase 5.5d / ADR-397 — move (midpoint) + rotation handles get
+      // their icon glyph from the shared `gripGlyphShape` registry SSoT; all
+      // other beam grips render the default 'square' (mirror MepFixtureRenderer).
+      shape: gripGlyphShape(g.beamGripKind),
     }));
   }
 

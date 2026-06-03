@@ -76,36 +76,38 @@ function makeCurvedWithoutControl(): BeamEntity {
 describe('beam-grips (Phase 5.5a)', () => {
   // ─── getBeamGrips ──────────────────────────────────────────────────────────
 
-  it('1. straight beam emits 5 grips (start / end / midpoint / width / depth)', () => {
+  it('1. straight beam emits 6 grips (start / end / midpoint / width / depth / rotation)', () => {
     const beam = makeStraight();
     const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(5);
+    expect(grips).toHaveLength(6);
     expect(grips.map((g) => g.beamGripKind)).toEqual([
       'beam-start',
       'beam-end',
       'beam-midpoint',
       'beam-width',
       'beam-depth',
+      'beam-rotation',
     ]);
   });
 
-  it('2. cantilever beam emits 5 grips (same layout as straight)', () => {
+  it('2. cantilever beam emits 6 grips (same layout as straight)', () => {
     const beam = makeCantilever();
     const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(5);
+    expect(grips).toHaveLength(6);
     expect(grips.map((g) => g.beamGripKind)).toEqual([
       'beam-start',
       'beam-end',
       'beam-midpoint',
       'beam-width',
       'beam-depth',
+      'beam-rotation',
     ]);
   });
 
-  it('3. curved beam emits 6 grips (start / end / midpoint / curve / width / depth)', () => {
+  it('3. curved beam emits 7 grips (start / end / midpoint / curve / width / depth / rotation)', () => {
     const beam = makeCurvedWithControl();
     const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(6);
+    expect(grips).toHaveLength(7);
     expect(grips.map((g) => g.beamGripKind)).toEqual([
       'beam-start',
       'beam-end',
@@ -113,6 +115,7 @@ describe('beam-grips (Phase 5.5a)', () => {
       'beam-curve',
       'beam-width',
       'beam-depth',
+      'beam-rotation',
     ]);
   });
 
@@ -128,14 +131,15 @@ describe('beam-grips (Phase 5.5a)', () => {
   it('5. curved beam without curveControl seeds curve grip at axis midpoint', () => {
     const beam = makeCurvedWithoutControl();
     const grips = getBeamGrips(beam);
-    // start + end + midpoint + curve + width + depth (Phase 5.5b/5.5c added the
-    // width/depth dimension handles for every non-degenerate beam, incl. curved).
-    expect(grips).toHaveLength(6);
+    // start + end + midpoint + curve + width + depth + rotation (Phase 5.5b/5.5c
+    // added the width/depth handles, Phase 5.5d the rotation handle).
+    expect(grips).toHaveLength(7);
     expect(grips[3].beamGripKind).toBe('beam-curve');
     // Axis midpoint of (0,0)→(4000,0) is (2000,0).
     expect(grips[3].position).toEqual({ x: 2000, y: 0 });
     expect(grips[4].beamGripKind).toBe('beam-width');
     expect(grips[5].beamGripKind).toBe('beam-depth');
+    expect(grips[6].beamGripKind).toBe('beam-rotation');
   });
 
   it('6. midpoint grip carries movesEntity=true, others false (incl. width + depth)', () => {
@@ -365,5 +369,99 @@ describe('beam-grips (Phase 5.5a)', () => {
     });
     expect(next.width).toBe(300);
     expect(next.depth).toBe(600);
+  });
+
+  // ─── Phase 5.5d — rotation grip (wall parity) ──────────────────────────────
+
+  it('26. rotation grip stands at axis 0.75 fraction, renders rotation glyph kind', () => {
+    const beam = makeStraight(); // (0,0)→(4000,0)
+    const grips = getBeamGrips(beam);
+    const rot = grips.find((g) => g.beamGripKind === 'beam-rotation');
+    expect(rot).toBeDefined();
+    // lerp(start, end, 0.75) of (0,0)→(4000,0) = (3000, 0). Scale-free fraction.
+    expect(rot!.position).toEqual({ x: 3000, y: 0 });
+    expect(rot!.movesEntity).toBe(false);
+  });
+
+  it('27. degenerate axis (start === end) emits NO rotation grip', () => {
+    const beam = makeBeamEntity(
+      buildDefaultBeamParams({ x: 1000, y: 1000 }, { x: 1000, y: 1000 }, 'straight'),
+    );
+    const grips = getBeamGrips(beam);
+    expect(grips.some((g) => g.beamGripKind === 'beam-rotation')).toBe(false);
+  });
+
+  it('28. beam-rotation 90° CCW about the axis midpoint spins both endpoints', () => {
+    const beam = makeStraight(); // (0,0)→(4000,0), midpoint (2000,0)
+    // anchor-relative swept angle: anchor at pivot+(1,0) → 0°, current at
+    // pivot+(0,1) → 90°. delta = current − anchor. No pivot ⇒ axis midpoint.
+    const currentPos = { x: 2000, y: 1 };
+    const delta = { x: currentPos.x - 2001, y: currentPos.y - 0 }; // anchor=(2001,0)
+    const next = applyBeamGripDrag('beam-rotation', {
+      originalParams: beam.params,
+      delta,
+      currentPos,
+    });
+    // 90° CCW about (2000,0): start (0,0)→(2000,−2000), end (4000,0)→(2000,2000).
+    expect(next.startPoint.x).toBeCloseTo(2000, 6);
+    expect(next.startPoint.y).toBeCloseTo(-2000, 6);
+    expect(next.endPoint.x).toBeCloseTo(2000, 6);
+    expect(next.endPoint.y).toBeCloseTo(2000, 6);
+  });
+
+  it('29. beam-rotation about a picked pivot rotates the whole beam around it', () => {
+    const beam = makeStraight(); // (0,0)→(4000,0)
+    const pivot = { x: 0, y: 0 }; // rotate about the start endpoint
+    const currentPos = { x: 0, y: 1 }; // pivot+(0,1) → 90°
+    const delta = { x: currentPos.x - 1, y: currentPos.y - 0 }; // anchor=(1,0) → 0°
+    const next = applyBeamGripDrag('beam-rotation', {
+      originalParams: beam.params,
+      delta,
+      currentPos,
+      pivot,
+    });
+    // 90° CCW about (0,0): start stays (0,0); end (4000,0)→(0,4000).
+    expect(next.startPoint.x).toBeCloseTo(0, 6);
+    expect(next.startPoint.y).toBeCloseTo(0, 6);
+    expect(next.endPoint.x).toBeCloseTo(0, 6);
+    expect(next.endPoint.y).toBeCloseTo(4000, 6);
+  });
+
+  it('30. beam-rotation also rotates curveControl when present', () => {
+    const beam = makeCurvedWithControl(); // control (2000,800)
+    const pivot = { x: 2000, y: 0 }; // axis midpoint
+    const currentPos = { x: 2000, y: 1 };
+    const delta = { x: currentPos.x - 2001, y: currentPos.y - 0 };
+    const next = applyBeamGripDrag('beam-rotation', {
+      originalParams: beam.params,
+      delta,
+      currentPos,
+      pivot,
+    });
+    // 90° CCW about (2000,0): control (2000,800) rel (0,800) → (−800,0) → (1200,0).
+    expect(next.curveControl!.x).toBeCloseTo(1200, 6);
+    expect(next.curveControl!.y).toBeCloseTo(0, 6);
+  });
+
+  it('31. beam-rotation without currentPos is a no-op (referential identity)', () => {
+    const beam = makeStraight();
+    const next = applyBeamGripDrag('beam-rotation', {
+      originalParams: beam.params,
+      delta: { x: 10, y: 10 },
+    });
+    expect(next).toBe(beam.params);
+  });
+
+  it('32. beam-rotation with cursor on the pivot is a no-op (degenerate swept angle)', () => {
+    const beam = makeStraight();
+    const pivot = { x: 2000, y: 0 };
+    // currentPos === pivot → degenerate → null swept → originalParams unchanged.
+    const next = applyBeamGripDrag('beam-rotation', {
+      originalParams: beam.params,
+      delta: { x: 5, y: 5 },
+      currentPos: { x: 2000, y: 0 },
+      pivot,
+    });
+    expect(next).toBe(beam.params);
   });
 });

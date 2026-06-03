@@ -197,9 +197,21 @@ export function applyEntityPreview(
   }
 
   // ── ADR-363 Phase 5.5 — parametric beam live preview ──────────────────────
+  // ADR-363 Phase 5.5d — `rotatePivot` (set only for the beam-rotation 6-click
+  // hot-grip) orbits the ghost around the picked centre; `currentPos` lets the
+  // pivot-rotate measure the swept angle. Move/start/end/curve/width/depth ignore
+  // both (delta-driven). Mirror of the wall/column branch.
   if (beamGripKind && entity.type === 'beam') {
     const beam = entity as unknown as BeamEntity;
-    const newParams = applyBeamGripDrag(beamGripKind, { originalParams: beam.params, delta });
+    const currentPos: Point2D = anchorPos
+      ? { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y }
+      : { x: delta.x, y: delta.y };
+    const newParams = applyBeamGripDrag(beamGripKind, {
+      originalParams: beam.params,
+      delta,
+      currentPos,
+      ...(rotatePivot ? { pivot: rotatePivot } : {}),
+    });
     if (newParams === beam.params) return entity;
     const newGeometry = computeBeamGeometry(newParams);
     return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;

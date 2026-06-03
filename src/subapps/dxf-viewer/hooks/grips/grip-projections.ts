@@ -98,9 +98,10 @@ export function buildRotateReferencePreview(
     gripIndex: activeGrip.gripIndex,
     movesEntity: activeGrip.movesEntity,
     // ADR-397 / ADR-406 — forward whichever parametric kind owns the rotation
-    // handle so the live ghost reaches the right `apply*GripDrag` (wall / column /
-    // mep-fixture 6-click rotate).
+    // handle so the live ghost reaches the right `apply*GripDrag` (wall / beam /
+    // column / mep-fixture 6-click rotate).
     ...(activeGrip.wallGripKind ? { wallGripKind: activeGrip.wallGripKind } : {}),
+    ...(activeGrip.beamGripKind ? { beamGripKind: activeGrip.beamGripKind } : {}),
     ...(activeGrip.columnGripKind ? { columnGripKind: activeGrip.columnGripKind } : {}),
     ...(activeGrip.mepFixtureGripKind ? { mepFixtureGripKind: activeGrip.mepFixtureGripKind } : {}),
     ...(activeGrip.electricalPanelGripKind ? { electricalPanelGripKind: activeGrip.electricalPanelGripKind } : {}),

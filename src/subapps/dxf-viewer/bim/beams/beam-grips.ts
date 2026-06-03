@@ -43,7 +43,7 @@ import type { Point3D } from '../types/bim-base';
 // ADR-397 §12 D3 — shared BIM grip math SSoT (no per-entity copies of
 // project2D / perpUnit / axis-unit). Replaces the local duplicates flagged in
 // ADR-393 §8.2.
-import { project2D, perpUnit, unitVector } from '../grips/grip-math';
+import { project2D, perpUnit, unitVector, rotateAxisPointsAboutPivot } from '../grips/grip-math';
 
 /**
  * Phase 5.5c — Extra perpendicular offset (mm) πέρα από `width/2` ώστε το
@@ -188,6 +188,7 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
   // του width handle, με extra offset (`DEPTH_GRIP_OFFSET_MM`) ώστε ο user να
   // καταλαβαίνει ότι είναι out-of-plane indicator. Skip σε degenerate axis.
   const depthPos = beamDepthHandlePosition(params);
+  let rotationGripIndex = depthGripIndex;
   if (depthPos) {
     grips.push({
       entityId: entity.id,
@@ -196,6 +197,30 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
       position: depthPos,
       movesEntity: false,
       beamGripKind: 'beam-depth',
+    });
+    rotationGripIndex = depthGripIndex + 1;
+  }
+
+  // last — rotation handle. Full wall-parity (mirror `wall-rotation`): renders the
+  // curved ROTATION glyph and arms the 6-click ROTATE→Reference hot-grip that spins
+  // the whole beam. Position is read as an axis fraction (`lerp(start, end, 0.75)`)
+  // — scale-free (an interpolation of two existing axis points), so it never drifts
+  // off-screen in metre scenes (the grip-positions-read-geometry rule), sits ON the
+  // beam body, and is distinct from the move glyph at the midpoint (0.5) and the
+  // start/end vertex grips. The handle position is only a click target; the actual
+  // rotation comes from the picked centre + reference/alignment lines. Skipped on a
+  // degenerate axis (start === end) where there is nothing to rotate.
+  if (unitAxis(params)) {
+    grips.push({
+      entityId: entity.id,
+      gripIndex: rotationGripIndex,
+      type: 'vertex',
+      position: {
+        x: start.x + 0.75 * (end.x - start.x),
+        y: start.y + 0.75 * (end.y - start.y),
+      },
+      movesEntity: false,
+      beamGripKind: 'beam-rotation',
     });
   }
 
@@ -209,6 +234,18 @@ export interface BeamGripDragInput {
   readonly originalParams: BeamParams;
   /** World-space delta from drag anchor to current cursor position. */
   readonly delta: Point2D;
+  /**
+   * ADR-363 — current world cursor position. Required only by `beam-rotation`
+   * (the anchor-relative swept-angle rotate); every other beam grip is purely
+   * delta-driven and ignores it. Undefined → rotation no-ops.
+   */
+  readonly currentPos?: Point2D;
+  /**
+   * ADR-363 — optional rotation pivot for `beam-rotation`. When set the beam
+   * rotates around this picked centre (the AutoCAD ROTATE "specify centre" flow);
+   * undefined → the axis midpoint. Mirror of `WallGripDragInput.pivot`.
+   */
+  readonly pivot?: Point2D;
 }
 
 /**
@@ -228,10 +265,50 @@ export function applyBeamGripDrag(
   if (gripKind === 'beam-start') return moveStart(input);
   if (gripKind === 'beam-end') return moveEnd(input);
   if (gripKind === 'beam-midpoint') return moveMidpoint(input);
+  if (gripKind === 'beam-rotation') return rotateBeam(input);
   if (gripKind === 'beam-curve') return moveCurveControl(input);
   if (gripKind === 'beam-width') return resizeWidth(input);
   if (gripKind === 'beam-depth') return resizeDepth(input);
   return input.originalParams;
+}
+
+/**
+ * Rotate the whole beam (startPoint + endPoint + curveControl) about a picked
+ * centre or the axis midpoint. Mirror of the wall `rotateWall`: anchor-relative
+ * swept angle (`anchor = currentPos − delta`) so grabbing the off-axis handle does
+ * not snap the beam. ADR-397 §D3 — delegates to the shared
+ * `rotateAxisPointsAboutPivot` SSoT (swept angle + canonical `rotatePoint`), the
+ * SAME primitive the wall rotation grip uses. NEVER raw cos/sin.
+ *
+ * Returns `originalParams` unchanged when `currentPos` is absent or the swept
+ * angle is degenerate (cursor on the pivot), so the caller short-circuits the
+ * commit (no-op).
+ */
+function rotateBeam(input: Readonly<BeamGripDragInput>): BeamParams {
+  const { originalParams, delta, currentPos, pivot } = input;
+  if (!currentPos) return originalParams;
+  const centre: Point2D = pivot ?? axisMidpoint2D(originalParams);
+  const anchor: Point2D = { x: currentPos.x - delta.x, y: currentPos.y - delta.y };
+  const hasCurve = originalParams.curveControl !== undefined;
+  const pts: Point2D[] = [
+    project2D(originalParams.startPoint),
+    project2D(originalParams.endPoint),
+  ];
+  if (hasCurve) pts.push(project2D(originalParams.curveControl!));
+  const rotated = rotateAxisPointsAboutPivot(pts, { pivot: centre, anchor, currentPos });
+  if (!rotated) return originalParams;
+  const next: BeamParams = {
+    ...originalParams,
+    startPoint: { x: rotated[0].x, y: rotated[0].y, z: originalParams.startPoint.z ?? 0 },
+    endPoint: { x: rotated[1].x, y: rotated[1].y, z: originalParams.endPoint.z ?? 0 },
+  };
+  if (hasCurve) {
+    return {
+      ...next,
+      curveControl: { x: rotated[2].x, y: rotated[2].y, z: originalParams.curveControl!.z ?? 0 },
+    };
+  }
+  return next;
 }
 
 function moveStart(input: Readonly<BeamGripDragInput>): BeamParams {

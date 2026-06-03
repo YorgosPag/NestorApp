@@ -2546,6 +2546,39 @@ Closes the two open items from the Phase 5.5h deferred list: H-beam visual varia
 
 ---
 
+### Phase 5.5k — Beam Move + Rotation Grip UX «Wall-Parity» *(✅ IMPLEMENTED 2026-06-03)*
+
+Δίνει στο δοκάρι (`beam`) το ΙΔΙΟ grip UX μετακίνησης + περιστροφής «όπως ο τοίχος» (axis-based, ΟΧΙ centred-box όπως φωτιστικό/πίνακας). Πλήρης parity με `wall-midpoint`/`wall-rotation`:
+1. **Μετακίνηση** — hot-grip 3-click στο `beam-midpoint` (point βάσης → προορισμός, **Ctrl=copy**). Glyph 4-βέλη.
+2. **Περιστροφή** — ΝΕΟ grip `beam-rotation` + hot-grip 6-click ROTATE→Reference (κέντρο → γραμμή αναφοράς 2σημ → γραμμή ευθυγράμμισης 2σημ). Περιστρέφει `startPoint`+`endPoint`+`curveControl` γύρω από picked pivot ή axis midpoint. Curved ROTATION glyph.
+3. **ΔΩΡΕΑΝ (generic)** — status-bar hints, οδηγητικές/rubber-band/ref-align γραμμές, live ghost (όλα μέσω των ΗΔΗ entity-agnostic πυλών).
+
+**ΚΡΙΣΙΜΗ ΑΡΧΗ**: ΔΕΝ υπάρχει «κώδικας δοκαριού» στο grip pipeline — το σύστημα είναι entity-agnostic SSoT· το δοκάρι συμμετέχει με **ΕΓΓΡΑΦΗ σε κοινούς πίνακες** (glyph registry, hot-grip FSM registry, commit dispatch), ΟΧΙ με δικό κώδικα/παράλληλο pipeline.
+
+**N.0.2 ΠΡΩΤΑ (μάθημα από D3.1 πίνακα):** Πριν γράψω τη rotation λογική, εντόπισα ότι το `rotateWall` έκανε το ΙΔΙΟ «rotate axis points about pivot». **Έγκριση Giorgio (AskUserQuestion)** → εξαγωγή shared **`bim/grips/grip-math.ts → rotateAxisPointsAboutPivot(points[], {pivot, anchor, currentPos})`** (`Point2D[] | null`, βλ. ADR-397 §D3.2)· **refactor ΚΑΙ ο τοίχος** να το καταναλώνει (αλλιώς μισό-SSoT)· το νέο `rotateBeam` το καλεί. Μηδέν raw cos/sin (delegate σε `sweptAngleDegAboutPivot` + canonical `rotatePoint`).
+
+**Files created (2):**
+- `bim/grips/grip-math.ts` → νέα export `rotateAxisPointsAboutPivot` (shared axis-rotation SSoT, D3.2).
+- `bim/beams/add-beam-to-scene.ts` — thin wrapper πάνω στο `appendEntityToScene` SSoT (mirror `add-mep-fixture-to-scene`· το δοκάρι δεν έχει trims). Insertion SSoT για draw tool + Ctrl-COPY.
+
+**Files modified (10):**
+- `hooks/grip-types.ts` — `BeamGripKind` += `'beam-rotation'`.
+- `bim/beams/beam-grips.ts` — `getBeamGrips` εκπέμπει `beam-rotation` σε axis-fraction 0.75 (scale-free, skip σε degenerate axis)· `BeamGripDragInput` += `currentPos?`/`pivot?`· νέα `rotateBeam` (delegate στο shared SSoT).
+- `bim/grips/grip-glyph-registry.ts` — += `beam-midpoint:'move'`, `beam-rotation:'rotation'`.
+- `bim/renderers/BeamRenderer.ts` — `getGrips` += `shape: gripGlyphShape(g.beamGripKind)`.
+- `hooks/grips/wall-hot-grip-fsm.ts` — `HOT_GRIP_OP_REGISTRY` += beam rows· `hotGripKindOf` += `?? grip.beamGripKind`.
+- `hooks/grips/grip-parametric-commits.ts` — `commitBeamGripDrag` διαβάζει `BimRotateHotGripStore` (pivot+currentPos για `beam-rotation`)· re-export `commitBeamCopy`.
+- `hooks/grips/grip-parametric-copy.ts` — νέα `commitBeamCopy` + register στο `commitHotGripCopy`.
+- `rendering/ghost/apply-entity-preview.ts` — beam branch handle `anchorPos`+`currentPos`+`rotatePivot` (live rotation ghost). **CHECK 6D — ghost renderer (ADR staged).**
+- `hooks/grips/grip-projections.ts` — `buildRotateReferencePreview` forward `beamGripKind`.
+- `bim/walls/wall-grip-transforms.ts` — `rotateWall` refactor να καταναλώνει το shared `rotateAxisPointsAboutPivot` (N.0.2 full-SSoT).
+
+**Tests:** `beam-grips.test.ts` (+7 rotation cases: glyph kind, degenerate skip, 90° CCW about midpoint + picked pivot, curveControl rotate, no-currentPos no-op, cursor-on-pivot no-op)· `wall-hot-grip-fsm.test.ts` (+beam rows describe)· `grip-math.test.ts` (+3 `rotateAxisPointsAboutPivot`: swept rotate, rigid distance-preserving, degenerate null). 114 grip-suite + 16 grip-math PASS, tsc 0.
+
+✅ Google-level: YES — entity-agnostic SSoT (εγγραφή σε πύλες, μηδέν fork), N.0.2 shared rotation SSoT (wall+beam ΕΝΑΣ helper), idempotent (`applyBeamGripDrag` referential-identity no-ops), undoable (`UpdateBeamParamsCommand` merge-window), ADR-040 micro-leaf compliant, μηδέν raw cos/sin. 🔴 pending browser verify + commit.
+
+---
+
 ### Phase 5.6 — Wall Split Tool *(✅ IMPLEMENTED 2026-05-19)*
 
 **Pattern**: Revit "Split Element" — dedicated tool mode (`wall-split`), continuous pick loop (multi-split, stays active until ESC), hover preview με perpendicular indicator line across wall at projected split point.

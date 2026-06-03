@@ -282,12 +282,21 @@ Scope = 2D annotation + 3D conduit· τοπολογία = **daisy-chain + home-r
 
 - «colour by system» view toggle (τώρα always-on)· per-circuit edit από φωτιστικό (system-browser panel).
 - Φ7 follow-ups: `orthogonal`/`arc` wire styles (seam έτοιμο)· conductor-count ticks στο home-run· waypoints.
-- Φ7 P2 follow-up: **3D rotate-follow** του καλωδίου (τώρα move-only live· rotate = commit-on-release).
 - duct/pipe domains & systems — reserved στα types, no pipeline.
 
 ---
 
 ## Changelog
+- **2026-06-03 (Opus 4.8, Plan Mode)** — **Φ7 P2b DONE** (3D **rotate**-follow — κλείνει την ιστορία του
+  live-follow). Το καλώδιο ακολουθούσε live μόνο στο 3D **move** gizmo· τώρα ακολουθεί και στο **plan-rotate**
+  (Y-ring). Generalize NEW `bim3d-wire-preview-rebuild.ts`: `buildCircuitWirePreviewObjects(draggedIds, xform)`
+  με discriminated `WireDragXform` (`move`{translation} | `rotate`{pivot, angleRad})· για rotate, η resolved
+  connector plan-θέση **orbit-άρει** το pivot μέσω canonical `rotatePoint` (geometry-vector-utils, ADR-188,
+  μηδέν raw cos/sin)· world +Y ↔ DXF-plan CCW 1:1 (επαληθεύτηκε με `applyRotate`)· `worldToDxfPlan` linear
+  (μηδέν offset) → valid και σε point pivot. `interaction-handlers`: `captureCircuitWires` (πρώην
+  `captureMoveWires`) καλείται τώρα **και** στο rotate· νέο rotate re-route block στο `applyLivePreview`. +1
+  rotate test (orbit bbox). 28/28 (rebuild+live-preview) + 141/141 regression PASS, `tsc` 0. 🔴 Pending commit
+  (Giorgio) + browser verify (rotate φωτιστικό/πίνακα gizmo 3D → καλώδιο ακολουθεί live).
 - **2026-06-03 (Opus 4.8, Plan Mode)** — **Φ7 P2 DONE** (το καλώδιο ακολουθεί **LIVE** το drag, 2D + 3D —
   πριν ενημερωνόταν μόνο στο release). Root: το live move ζωγραφιζόταν μέσω preview/ghost ξεχωριστά από το
   committed scene· η λύση ξαναϋπολογίζει τη διαδρομή ανά frame με resolver που, για τους dragged hosts,
@@ -306,8 +315,8 @@ Scope = 2D annotation + 3D conduit· τοπολογία = **daisy-chain + home-r
   pointerDown move branch + `applyWires` per-frame στο `applyLivePreview`). **Stage ADR-040** (CHECK 6B/6D —
   `HomeRunWiresOverlay`/`CanvasLayerStack`). Tests: NEW `bim3d-wire-preview-rebuild` (9) + `grip-drag-preview-
   transform` (4) + `HomeRunWiresOverlay.resolver` (4) + wire cases στο `bim3d-edit-live-preview` (5)·
-  116/116 MEP + 130/130 move/grip regression PASS, `tsc` 0. **3D rotate-follow = follow-up** (commit-on-release,
-  όπως τα wall dependents· το 2D καλύπτει rotate δωρεάν). 🔴 Pending commit (Giorgio) + browser verify (drag
+  116/116 MEP + 130/130 move/grip regression PASS, `tsc` 0. **3D rotate-follow = P2b** (βλ. entry παραπάνω·
+  το 2D καλύπτει rotate δωρεάν μέσω `applyEntityPreview`). 🔴 Pending commit (Giorgio) + browser verify (drag
   φωτιστικό/πίνακα gizmo 3D + 2D → καλώδιο ακολουθεί live).
 - **2026-06-03 (Opus 4.8, Giorgio review)** — **Φ3 grip SSoT κεντρικοποίηση** (follow-up στο «wall-parity»).
   Ο Giorgio εντόπισε σε review ότι το `electrical-panel-grips.ts` ήταν ~90% διπλότυπο του

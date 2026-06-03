@@ -124,6 +124,13 @@ export function HomeRunWiresOverlay({
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // ADR-408 Φ7 perf guard: skip the (non-trivial) routing recompute + draw when
+    // the overlay canvas has no usable size. Without this, an idle 0×0 viewport
+    // (layout not yet settled / collapsed shell) makes every parent re-render run
+    // `computeCircuitWirePaths` + `drawCircuitWires`, and `worldToScreen` floods the
+    // console with "Invalid viewport dimensions" — burning CPU for zero pixels.
+    if (viewport.width <= 0 || viewport.height <= 0) return;
+
     if (!visible || !scene || systems.length === 0) return;
     const paths = computeCircuitWirePaths(systems, buildResolver(scene, gripDragPreview));
     if (paths.length === 0) return;

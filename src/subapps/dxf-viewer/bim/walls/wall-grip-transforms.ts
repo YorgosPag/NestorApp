@@ -26,10 +26,10 @@ import {
 import type { Point3D } from '../types/bim-base';
 import { mmScaleFor } from '../../utils/scene-units';
 import { unitAxis, perpUnit } from './wall-grip-math';
-// ADR-397 §D3 — rotate-about-pivot is shared SSoT: swept angle from grip-math,
-// point rotation from the canonical rotatePoint (ADR-188). No re-implemented cos/sin.
-import { sweptAngleDegAboutPivot } from '../grips/grip-math';
-import { rotatePoint } from '../../utils/rotation-math';
+// ADR-397 §D3 — rotate-about-pivot is shared SSoT: `rotateAxisPointsAboutPivot`
+// (swept angle from grip-math + canonical rotatePoint, ADR-188) is consumed by
+// both the wall and beam rotation grips. No re-implemented cos/sin here.
+import { rotateAxisPointsAboutPivot } from '../grips/grip-math';
 
 // ─── Thickness unit floor (scene-unit-aware) ─────────────────────────────────
 
@@ -150,9 +150,10 @@ function moveMidpoint(input: Readonly<WallGripDragInput>): WallParams {
  * the angle SWEPT from the anchor (the grip world position at mousedown =
  * `currentPos − delta`) about the midpoint, then spin both endpoints by it.
  *
- * ADR-397 §D3 — swept angle + point rotation are shared SSoT (`grip-math`
- * `sweptAngleDegAboutPivot` + canonical `rotatePoint`), the same primitives the
- * column rotation grip uses. No re-implemented cos/sin.
+ * ADR-397 §D3 — swept angle + point rotation are the shared
+ * `rotateAxisPointsAboutPivot` SSoT (`grip-math` `sweptAngleDegAboutPivot` +
+ * canonical `rotatePoint`), the same primitive the beam + column rotation grips
+ * use. No re-implemented cos/sin.
  */
 function rotateWall(input: Readonly<WallGripDragInput>): WallParams {
   const { originalParams, currentPos, delta, pivot } = input;
@@ -165,10 +166,15 @@ function rotateWall(input: Readonly<WallGripDragInput>): WallParams {
         y: (originalParams.start.y + originalParams.end.y) / 2,
       };
   const anchor = { x: currentPos.x - delta.x, y: currentPos.y - delta.y };
-  const sweptDeg = sweptAngleDegAboutPivot(centre, anchor, currentPos);
-  if (sweptDeg === null) return originalParams;
-  const ns = rotatePoint({ x: originalParams.start.x, y: originalParams.start.y }, centre, sweptDeg);
-  const ne = rotatePoint({ x: originalParams.end.x, y: originalParams.end.y }, centre, sweptDeg);
+  const rotated = rotateAxisPointsAboutPivot(
+    [
+      { x: originalParams.start.x, y: originalParams.start.y },
+      { x: originalParams.end.x, y: originalParams.end.y },
+    ],
+    { pivot: centre, anchor, currentPos },
+  );
+  if (!rotated) return originalParams;
+  const [ns, ne] = rotated;
   return {
     ...originalParams,
     start: { x: ns.x, y: ns.y, z: originalParams.start.z },

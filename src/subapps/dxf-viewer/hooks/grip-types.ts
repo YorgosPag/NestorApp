@@ -157,6 +157,12 @@ export type SlabOpeningGripKind =
  *   - `beam-end`      → translate axis end endpoint
  *   - `beam-midpoint` → translate whole beam (axis midpoint anchor, moves
  *                       startPoint + endPoint + curveControl όπου υπάρχει)
+ *   - `beam-rotation` → rotate the whole beam (startPoint + endPoint +
+ *                       curveControl) about a picked centre / the axis midpoint.
+ *                       Curved ROTATION glyph + 6-click ROTATE→Reference hot-grip,
+ *                       full wall parity (mirror `wall-rotation`). Anchor-relative
+ *                       swept angle via the shared `rotateAxisPointsAboutPivot`
+ *                       SSoT (NEVER raw cos/sin).
  *   - `beam-curve`    → move quadratic Bezier control point (curved kind only;
  *                       seeded από axis midpoint όταν undefined)
  *   - `beam-width`    → resize width perpendicular to axis (symmetric γύρω από
@@ -176,6 +182,7 @@ export type BeamGripKind =
   | 'beam-start'
   | 'beam-end'
   | 'beam-midpoint'
+  | 'beam-rotation'
   | 'beam-curve'
   | 'beam-width'
   | 'beam-depth';

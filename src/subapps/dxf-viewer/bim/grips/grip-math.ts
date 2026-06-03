@@ -98,3 +98,30 @@ export function sweptAngleDegAboutPivot(
   return (Math.atan2(curDy, curDx) - Math.atan2(anDy, anDx)) * (180 / Math.PI);
 }
 
+/**
+ * ADR-397 §D3 — rotate a set of axis points about `pivot` by the anchor-relative
+ * swept angle (`anchor → currentPos`). The single SSoT for every axis-based
+ * rotation grip (wall start/end, beam start/end/curveControl, future stair
+ * direction): callers pass the entity's defining points + the picked rotation
+ * centre, anchor (= grip world position at mousedown = `currentPos − dragDelta`)
+ * and the live cursor; the helper measures the swept angle via
+ * `sweptAngleDegAboutPivot` and rotates each point with the canonical
+ * `rotatePoint` (ADR-188) — there is no re-implemented cos/sin anywhere.
+ *
+ * Returns `null` (so callers can no-op and keep referential identity of the
+ * original params) when the swept angle is degenerate (cursor on the pivot).
+ * Z is intentionally NOT handled here: these are plan-footprint points; callers
+ * graft the original z back onto each rotated coordinate.
+ *
+ * @see wall-grip-transforms.ts `rotateWall` — consumer
+ * @see bim/beams/beam-grips.ts `rotateBeam` — consumer
+ */
+export function rotateAxisPointsAboutPivot(
+  points: readonly Point2D[],
+  opts: { pivot: Point2D; anchor: Point2D; currentPos: Point2D },
+): Point2D[] | null {
+  const sweptDeg = sweptAngleDegAboutPivot(opts.pivot, opts.anchor, opts.currentPos);
+  if (sweptDeg === null) return null;
+  return points.map((p) => rotatePoint(p, opts.pivot, sweptDeg));
+}
+

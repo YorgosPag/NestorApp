@@ -33,6 +33,9 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // Walls (ADR-363 Phase 1C-ter)
   'wall-midpoint': 'move',
   'wall-rotation': 'rotation',
+  // Beams (ADR-363 Phase 5.5d) — axis-based move + rotation (wall parity).
+  'beam-midpoint': 'move',
+  'beam-rotation': 'rotation',
   // Stairs (ADR-393 v2)
   'stair-base': 'move',
   'stair-direction': 'rotation',
