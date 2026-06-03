@@ -35,6 +35,7 @@ import { RibbonWallDimensionWidget } from './RibbonWallDimensionWidget';
 import { RibbonMepCircuitPickerWidget } from './RibbonMepCircuitPickerWidget';
 import { RibbonMepCircuitNameWidget } from './RibbonMepCircuitNameWidget';
 import { RibbonMepCircuitColorWidget } from './RibbonMepCircuitColorWidget';
+import { RibbonMepCircuitWireStyleWidget } from './RibbonMepCircuitWireStyleWidget';
 import { MultiSelectionCommonPropertiesPanel } from './MultiSelectionCommonPropertiesPanel';
 import { MultiSelectionFilterPanel } from './MultiSelectionFilterPanel';
 import { CurrentLayerPicker } from '../../components/layer-picker/CurrentLayerPicker';
@@ -136,6 +137,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'mep-circuit-color') {
       return <RibbonMepCircuitColorWidget key="mep-circuit-color-widget" />;
+    }
+    if (button.widgetId === 'mep-circuit-wire-style') {
+      return <RibbonMepCircuitWireStyleWidget key="mep-circuit-wire-style-widget" />;
     }
     return null;
   }

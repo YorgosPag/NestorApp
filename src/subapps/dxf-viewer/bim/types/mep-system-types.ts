@@ -27,6 +27,7 @@
 
 import type { Timestamp } from 'firebase/firestore';
 import type { ElectricalSystemClassification } from './mep-connector-types';
+import type { WireStyle } from '../mep-systems/mep-wire-routing';
 
 /** System type discriminator. First slice ships `electrical-circuit`. */
 export type MepSystemType = 'electrical-circuit';
@@ -57,6 +58,13 @@ export interface MepSystemParams {
    * paint. Assigned a deterministic palette default at creation; user-editable.
    */
   readonly color?: string;
+  /**
+   * Per-circuit wire-drawing style (Revit "Wiring Type") for the derived
+   * home-run run: `'straight'` (default) / `'orthogonal'` / `'arc'`. SSoT lives
+   * here on the System; the path carries it and both 2D + 3D renderers read it
+   * via `buildWirePolyline` (ADR-408 Φ7). Absent ⇒ `'straight'`.
+   */
+  readonly wireStyle?: WireStyle;
   /** Optional electrical rollups (derivable from member connectedLoadVa). */
   readonly ratedVoltage?: number;
   readonly poles?: 1 | 2 | 3;
