@@ -440,14 +440,17 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               shortcut: 'PP',
             },
             // ADR-408 Φ10 — auto-derive pipe networks from physical connectivity.
-            // Action (not a tool): routed to the MEP circuit bridge via the
-            // `mepCircuit.actions.deriveNetworks` key (isMepCircuitActionKey).
+            // Action (NOT a tool): `action` makes the button fire `onAction(...)`
+            // → routed to the MEP circuit bridge via `isMepCircuitActionKey`.
+            // Without `action`, the small button would call `onToolChange` and
+            // treat the key as a (non-existent) tool → silent no-op.
             {
               id: 'draw.bim.mepPipeNetwork',
               labelKey: 'ribbon.commands.bim.mepPipeNetwork.label',
               tooltipKey: 'ribbon.commands.bim.mepPipeNetwork.tooltip',
               icon: 'bim-pipe',
               commandKey: 'mepCircuit.actions.deriveNetworks',
+              action: 'mepCircuit.actions.deriveNetworks',
             },
           ],
         },

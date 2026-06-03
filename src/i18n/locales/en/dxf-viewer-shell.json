@@ -1322,6 +1322,10 @@
         "editType": "Edit type…",
         "editTypeTitle": "Edit wall type",
         "editTypeDescription": "Changes apply to every instance of this type, on all floors.",
+        "preview": {
+          "title": "Preview",
+          "emptyHint": "Load a preset or add layers to see the preview."
+        },
         "duplicateAndEdit": "Duplicate & edit",
         "deleteType": "Delete type…",
         "deleteTypeTitle": "Delete wall type?",

@@ -71,6 +71,13 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-04 — File-size split (N.7.1, pure extractions — no behaviour change)
+
+**Status**: IMPLEMENTED 2026-06-04. Three perf-path files crossed the 500-line limit after the ADR-408 Φ9/Φ10 + ADR-414 batch; split by extracting pure, stateless helpers — **zero control-flow / subscription change**, so all Cardinal Rules + CHECK 6B/6C remain satisfied:
+- `bim-3d/scene/BimSceneLayer.ts` (524→481, CHECK 6B) — the two `filterHostedOpenings` / `filterHostedSlabOpenings` private methods (no `this`) moved to new `bim-3d/scene/bim-scene-hosted-opening-filters.ts` as free functions. Same ADR-382 visibility intersection, called identically.
+- `rendering/ghost/apply-entity-preview.ts` (569→450) — `EntityPreviewTransform` interface → `entity-preview-types.ts` (types-only); pure geometry helpers (`getCircleQuadrant` / `getArcPoint` / `unwrapStair`) → `apply-entity-preview-helpers.ts`. Re-exported for caller compat.
+- `hooks/canvas/useCanvasClickHandler.ts` (506→433) — the two priority handlers `handleRotationEntitySelection` (1.3) + `handleAutoAreaClick` (1.7) → `hooks/canvas/canvas-click-tool-handlers.ts`. Live SSoT transform reads (Phase XXII.A) preserved verbatim.
+
 ### 2026-06-04 — ADR-408 Φ9/Φ10 plumbing network leaves (micro-leaf compliance note)
 
 **Status**: IMPLEMENTED 2026-06-04. ADR-408 Στρώμα Β touches two perf-sensitive files, both additive:

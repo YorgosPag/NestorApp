@@ -42,6 +42,7 @@ import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useWallFamilyTypeController } from '../hooks/useWallFamilyTypeController';
 import { WallDnaEditor } from '../../wall-advanced-panel/sections/WallDnaEditor';
+import { WallTypePreviewPanel } from './WallTypePreviewPanel';
 import { useBimFamilyTypeStore } from '../../../bim/family-types/bim-family-type-store';
 import { asWallFamilyType, resolveTypeDisplayName } from '../../../bim/family-types/family-type-ui-helpers';
 import {
@@ -82,9 +83,12 @@ function EditWallTypeDialogContent({ typeId }: { typeId: string }): React.ReactE
   const type = asWallFamilyType(getType(typeId));
 
   const [draft, setDraft] = useState<WallTypeParams | null>(type ? type.typeParams : null);
+  // ADR-414 — shared bidirectional highlight between the preview + the editor rows.
+  const [highlightLayerId, setHighlightLayerId] = useState<string | null>(null);
   // (Re)seed the draft when the target type changes.
   useEffect(() => {
     setDraft(type ? type.typeParams : null);
+    setHighlightLayerId(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeId]);
 
@@ -106,13 +110,20 @@ function EditWallTypeDialogContent({ typeId }: { typeId: string }): React.ReactE
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent size="lg">
+      <DialogContent size="2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{t('ribbon.commands.bimFamilyType.editTypeDescription')}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,34rem)_1fr]">
+          <WallTypePreviewPanel
+            dna={draft.dna}
+            highlightLayerId={highlightLayerId}
+            onHighlightLayer={setHighlightLayerId}
+          />
+
+          <div className="flex flex-col gap-3">
           <label className="flex items-center gap-2 text-xs text-foreground">
             <span className="w-24 shrink-0">{t('ribbon.commands.bimFamilyType.paramCategory')}</span>
             <Select
@@ -180,12 +191,15 @@ function EditWallTypeDialogContent({ typeId }: { typeId: string }): React.ReactE
             )}
           </label>
 
-          <WallDnaEditor
-            dna={draft.dna}
-            category={draft.category}
-            fallbackThickness={draft.thickness}
-            onChange={onDnaChange}
-          />
+            <WallDnaEditor
+              dna={draft.dna}
+              category={draft.category}
+              fallbackThickness={draft.thickness}
+              onChange={onDnaChange}
+              highlightLayerId={highlightLayerId}
+              onHighlightLayer={setHighlightLayerId}
+            />
+          </div>
         </div>
 
         <DialogFooter>

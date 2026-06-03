@@ -57,6 +57,13 @@ export interface WallDnaEditorProps {
   readonly onChange: (next: WallDna | undefined) => void;
   readonly libraryMaterials?: readonly BimMaterial[];
   readonly libraryLoading?: boolean;
+  /**
+   * ADR-414 — bidirectional layer highlight (live preview). The layer id whose
+   * row should read as active, and a setter to broadcast hover/focus to the
+   * preview. Both optional → instance panel (no preview) keeps prior behaviour.
+   */
+  readonly highlightLayerId?: string | null;
+  readonly onHighlightLayer?: (layerId: string | null) => void;
 }
 
 export function WallDnaEditor({
@@ -66,6 +73,8 @@ export function WallDnaEditor({
   onChange,
   libraryMaterials = [],
   libraryLoading = false,
+  highlightLayerId = null,
+  onHighlightLayer,
 }: WallDnaEditorProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
   const materialOptions = defaultWallMaterialCatalog.listMaterialIds();
@@ -103,6 +112,8 @@ export function WallDnaEditor({
           libraryMaterials={libraryMaterials}
           libraryLoading={libraryLoading}
           onChange={onChange}
+          highlightLayerId={highlightLayerId}
+          onHighlightLayer={onHighlightLayer}
         />
       )}
     </section>
@@ -200,6 +211,8 @@ interface DnaLayerListProps {
   readonly libraryMaterials: readonly BimMaterial[];
   readonly libraryLoading: boolean;
   readonly onChange: (next: WallDna) => void;
+  readonly highlightLayerId: string | null;
+  readonly onHighlightLayer?: (layerId: string | null) => void;
 }
 
 function DnaLayerList({
@@ -208,6 +221,8 @@ function DnaLayerList({
   libraryMaterials,
   libraryLoading,
   onChange,
+  highlightLayerId,
+  onHighlightLayer,
 }: DnaLayerListProps): React.ReactElement {
   return (
     <ol className="flex flex-col gap-2">
@@ -220,6 +235,8 @@ function DnaLayerList({
             materialOptions={materialOptions}
             libraryMaterials={libraryMaterials}
             libraryLoading={libraryLoading}
+            isHighlighted={highlightLayerId === layer.id}
+            onHighlight={onHighlightLayer}
             onRemove={() => onChange(removeLayer(dna, layer.id))}
             onUpdate={(patch) => onChange(updateLayer(dna, layer.id, patch))}
             onMoveUp={() => onChange(reorderLayer(dna, index, -1))}
@@ -240,6 +257,10 @@ interface DnaLayerRowProps {
   readonly materialOptions: readonly WallMaterialOption[];
   readonly libraryMaterials: readonly BimMaterial[];
   readonly libraryLoading: boolean;
+  /** ADR-414 — this row matches the active preview band. */
+  readonly isHighlighted: boolean;
+  /** ADR-414 — broadcast hover/focus to the preview (no-op when absent). */
+  readonly onHighlight?: (layerId: string | null) => void;
   readonly onRemove: () => void;
   readonly onUpdate: (patch: Partial<Omit<WallDnaLayer, 'id'>>) => void;
   readonly onMoveUp: () => void;
@@ -250,10 +271,18 @@ function DnaLayerRow(props: DnaLayerRowProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
   const {
     layer, index, count, materialOptions, libraryMaterials, libraryLoading,
-    onRemove, onUpdate, onMoveUp, onMoveDown,
+    isHighlighted, onHighlight, onRemove, onUpdate, onMoveUp, onMoveDown,
   } = props;
+  const highlightClass = isHighlighted
+    ? 'border-[hsl(var(--ring))] ring-1 ring-[hsl(var(--ring))]'
+    : 'border-border';
   return (
-    <div className="flex flex-col gap-1 rounded border border-border bg-card/40 p-2">
+    <div
+      onPointerEnter={() => onHighlight?.(layer.id)}
+      onPointerLeave={() => onHighlight?.(null)}
+      onFocusCapture={() => onHighlight?.(layer.id)}
+      className={`flex flex-col gap-1 rounded border bg-card/40 p-2 ${highlightClass}`}
+    >
       <div className="flex items-center gap-2">
         <select
           aria-label={t('wallAdvancedPanel.sections.dna.fields.side')}

@@ -44,6 +44,8 @@ const ALL_MODES: ExtendedSnapType[] = [
   ExtendedSnapType.BIM_SLAB_CORNER,
   ExtendedSnapType.BIM_COLUMN_CORNER,
   ExtendedSnapType.BIM_OPENING_CORNER,
+  // ADR-408 Φ9: MEP connector attach-point snap
+  ExtendedSnapType.BIM_MEP_CONNECTOR,
 ];
 
 interface SnapContextType {
@@ -84,7 +86,8 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
         type === ExtendedSnapType.BIM_BEAM_CORNER ||
         type === ExtendedSnapType.BIM_SLAB_CORNER ||
         type === ExtendedSnapType.BIM_COLUMN_CORNER ||
-        type === ExtendedSnapType.BIM_OPENING_CORNER
+        type === ExtendedSnapType.BIM_OPENING_CORNER ||
+        type === ExtendedSnapType.BIM_MEP_CONNECTOR // ADR-408 Φ9: enabled by default
       );
     });
     return initialState;

@@ -111,6 +111,7 @@ export function useGlobalSnapSceneSync({
     }
     setLastSnapEntityFingerprint(fingerprint);
 
+    // Supersede any still-pending init scheduled by an earlier genuine change.
     if (pendingIdleHandleRef.current !== null) {
       scheduler.cancel(pendingIdleHandleRef.current);
       pendingIdleHandleRef.current = null;
@@ -123,11 +124,25 @@ export function useGlobalSnapSceneSync({
       });
     }, { timeout: 250 });
 
+    // 🐛 FIX (ADR-408 Φ9, 2026-06-04): NO per-run cleanup-cancel here.
+    // A benign no-op re-render (same fingerprint → early-return above, fired e.g.
+    // by the Firestore subscribe echo that rebuilds the scene object with identical
+    // entities) makes React run THIS effect's cleanup before the next run. If that
+    // cleanup cancelled the pending idle, the deferred initialize() — carrying a
+    // freshly-added BIM entity (mep-segment, wall, …) — was killed before it ran,
+    // so the snap engine never indexed it. Superseding on a *genuine* change is
+    // already handled by the cancel-before-schedule block above; final teardown is
+    // handled by the unmount-only effect below.
+  }, [dxfLen, overlayLen, scene, overlays, scheduler]);
+
+  // Cancel a still-pending init only when the owner unmounts (a fire-after-unmount
+  // would harmlessly re-initialize the singleton, but we avoid the wasted work).
+  useEffect(() => {
     return () => {
       if (pendingIdleHandleRef.current !== null) {
         scheduler.cancel(pendingIdleHandleRef.current);
         pendingIdleHandleRef.current = null;
       }
     };
-  }, [dxfLen, overlayLen, scene, overlays, scheduler]);
+  }, [scheduler]);
 }
