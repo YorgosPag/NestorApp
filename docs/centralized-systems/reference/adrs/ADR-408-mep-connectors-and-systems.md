@@ -282,11 +282,41 @@ Scope = 2D annotation + 3D conduit· τοπολογία = **daisy-chain + home-r
 
 - «colour by system» view toggle (τώρα always-on)· per-circuit edit από φωτιστικό (system-browser panel).
 - Φ7 follow-ups: `orthogonal`/`arc` wire styles (seam έτοιμο)· conductor-count ticks στο home-run· waypoints.
+- Φ7 P2 follow-up: **3D rotate-follow** του καλωδίου (τώρα move-only live· rotate = commit-on-release).
 - duct/pipe domains & systems — reserved στα types, no pipeline.
 
 ---
 
 ## Changelog
+- **2026-06-03 (Opus 4.8, Plan Mode)** — **Φ7 P2 DONE** (το καλώδιο ακολουθεί **LIVE** το drag, 2D + 3D —
+  πριν ενημερωνόταν μόνο στο release). Root: το live move ζωγραφιζόταν μέσω preview/ghost ξεχωριστά από το
+  committed scene· η λύση ξαναϋπολογίζει τη διαδρομή ανά frame με resolver που, για τους dragged hosts,
+  επιστρέφει τη **live preview** θέση (override) — **πλήρες SSoT, μηδέν διπλασιασμός routing**
+  (`computeCircuitWirePaths`/`wirePathToMesh` αμετάβλητα). **2D (store-free):** ο `HomeRunWiresOverlay` παίρνει
+  νέο prop `gripDragPreview` (ήδη διαθέσιμο στο `CanvasLayerStack` γρ.410 → μηδέν νέο subscription, CHECK 6C
+  safe)· ο resolver λύνει τον dragged host από το **previewed entity** μέσω `applyEntityPreview` (ΙΔΙΑ SSoT με
+  το ghost → wire endpoint === ghost, **move + rotation + corner** ομοιόμορφα). Boy-Scout: εξαγωγή NEW
+  `hooks/tools/grip-drag-preview-transform.ts` (`toEntityPreviewTransform`) — το snapshot→transform mapping που
+  διπλασιαζόταν inline στο `useGripGhostPreview`, τώρα κοινό SSoT ghost+wire. **3D (mirror ADR-401 dependent
+  re-clip, move-first):** NEW `bim-3d/animation/bim3d-wire-preview-rebuild.ts` (`affectedWireSystemIds` +
+  `buildCircuitWirePreviewObjects`: resolver με `worldToDxfPlan` delta override μόνο στους dragged → reuse
+  routing+converter SSoT· rebuild ΜΟΝΟ τα affected circuits· 'all' scope → commit-on-release) + νέο wire
+  channel στο `Bim3DEditLivePreview` (`captureWires` by `mepWireSystemId` / `applyWires` swap, mirror του
+  dependent μηχανισμού· reset/commit/isActive) + `bim3d-edit-interaction-handlers` (`captureMoveWires` στο
+  pointerDown move branch + `applyWires` per-frame στο `applyLivePreview`). **Stage ADR-040** (CHECK 6B/6D —
+  `HomeRunWiresOverlay`/`CanvasLayerStack`). Tests: NEW `bim3d-wire-preview-rebuild` (9) + `grip-drag-preview-
+  transform` (4) + `HomeRunWiresOverlay.resolver` (4) + wire cases στο `bim3d-edit-live-preview` (5)·
+  116/116 MEP + 130/130 move/grip regression PASS, `tsc` 0. **3D rotate-follow = follow-up** (commit-on-release,
+  όπως τα wall dependents· το 2D καλύπτει rotate δωρεάν). 🔴 Pending commit (Giorgio) + browser verify (drag
+  φωτιστικό/πίνακα gizmo 3D + 2D → καλώδιο ακολουθεί live).
+- **2026-06-03 (Opus 4.8, Giorgio review)** — **Φ3 grip SSoT κεντρικοποίηση** (follow-up στο «wall-parity»).
+  Ο Giorgio εντόπισε σε review ότι το `electrical-panel-grips.ts` ήταν ~90% διπλότυπο του
+  `mep-fixture-grips.ts`. **Boy-Scout N.0.2:** εξαγωγή NEW `bim/grips/centred-box-grips.ts` (entity-agnostic
+  centred rotatable-box grip SSoT — `getCentredBoxGrips` + `applyCentredBoxGripDrag`, role-based, παραμετρικό
+  `minDimensionMm`)· **ΚΑΙ** fixture (ADR-406) **ΚΑΙ** panel γίνανε thin role↔kind adapters (το fixture κρατά
+  μόνο το `circular`/`diameter` extension που δεν έχει box equivalent). ~200 γρ. διπλότυπο → ΕΝΑΣ SSoT. Βλ.
+  ADR-397 §D3.1. 11 νέα SSoT tests + 118 PASS regression (fixture circular+rectangular / panel / hot-grip /
+  ghost / glyph), tsc 0, μηδέν raw cos/sin. Pending commit (Giorgio).
 - **2026-06-03 (Opus 4.8)** — **Φ3 grip UX «wall-parity» DONE** (Ηλεκτρικός Πίνακας — πλήρες 2D grip UX
   «όπως ο τοίχος/φωτιστικό/κολώνα»). Ο πίνακας απέκτησε παραμετρικές λαβές (move-κέντρο + rotation-handle +
   4 γωνίες resize opposite-corner-anchored) + hot-grip UX (move 3-click, rotation 6-click ROTATE→Reference,

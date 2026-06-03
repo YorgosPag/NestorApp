@@ -466,7 +466,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           {/* ADR-396 P4 — ETICS θερμοπρόσοψη: συνεχές offset περίγραμμα + insulation hatch band. */}
           <EnvelopeOverlay scene={dxfScene} transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} />
           {/* ADR-408 Φ7 — home-run circuit wires (derived panel→fixtures annotation). */}
-          <HomeRunWiresOverlay scene={dxfScene} transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} />
+          <HomeRunWiresOverlay scene={dxfScene} transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} gripDragPreview={dxfGripInteraction.dragPreview} />
           {/* ADR-366 §A.7.Q3 Phase 4.7 — cross-mode cursor modifier badge (fixed, single instance) */}
           <SelectionCursorIcon />
           <ViewMode3DToggleButton />

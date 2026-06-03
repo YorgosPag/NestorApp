@@ -106,6 +106,30 @@ Profile #3 (`profiling-data.03-06-2026.02-03-41.json`) → «καλύτερα α
 
 ---
 
+## 🔬 UPDATE 2026-06-03 #3 — LevelsSystem idle loop: διερεύνηση (driver ΑΝΑΠΟΔΕΙΚΤΟΣ στατικά, amplifiers ΕΝΤΟΠΙΣΜΕΝΟΙ)
+
+**Giorgio επιβεβαίωσε: ΗΤΑΝ εντελώς idle στο recording.** Άρα τα 2490-fiber/~250ms commits = **catastrophic idle render loop** (το πραγματικό freeze). 3 παράλληλοι Explore agents + manual reads.
+
+### ✅ ΑΠΟΚΛΕΙΣΤΗΚΑΝ (συγκλίνουν, ΔΕΝ είναι ο driver)
+- **Και τα 10 BIM persistence hooks** (wall/column/beam/slab/opening/slab-opening/railing/mep-fixture/electrical-panel/stair): όλα έχουν `if (mutated)` + `dequal` guard → setLevelScene μόνο σε πραγματικό diff.
+- **`useMepConnectorReconciliation`**: `reconcileEntityConnectors` ΟΝΤΩΣ idempotent (ίδιο ref όταν δεν αλλάζει) → συγκλίνει.
+- **`useSceneManager`/`useAutoSaveSceneManager`**: σταθερά σε ηρεμία. **`useLevelSceneLoader`**: όλα τα paths με guards. **`useLevelFloorplanSync`/`useLevelOperations`/`useImportWizard`**: event/action-driven, μηδέν idle setState.
+- **`resyncBimScene`/`use-bim3d-vg-resync`**: μόνο Three.js writes, ΔΕΝ γράφουν React state.
+
+### ⚠️ AMPLIFIERS (πραγματικά bugs — πολλαπλασιάζουν το κόστος ΑΝΑ render, ΟΧΙ ο driver)
+Missing equality guards που κάνουν ΚΑΘΕ render να προκαλεί store-churn + **πλήρες 3D rebuild**:
+1. `app/SlabPersistenceHost.tsx:60-63` — `setSlabs(currentScene.entities.filter(...))` = νέο array πάντα· `Bim3DEntitiesStore.setSlabs` χωρίς guard → Zustand notify. (Ίδιο pattern σε Wall/Column/Beam hosts.)
+2. `hooks/data/useEnvelopeFloorSlabs.ts:180-192` — `snapshot` useMemo πάντα νέο object → `useEffect([snapshot]) → setEnvelopeFloorSlabs`.
+3. `bim/stores/envelope-floor-slabs-store.ts:~46` — `setEnvelopeFloorSlabs` μόνο `===` guard (όχι deep-equal) → notify πάντα → `use-bim3d-vg-resync` subscribeEnvelopeFloorSlabs → `resyncBimScene` (ΠΛΗΡΗΣ 3D rebuild) σε κάθε χτύπημα → εξηγεί `BimViewport3D` στο cascade.
+4. `components/dxf-layout/EnvelopeOverlay.tsx:~125` — inline `getSnapshot` arrow στο `useSyncExternalStore`.
+
+### ❓ ΑΝΑΠΟΔΕΙΚΤΟΣ DRIVER
+Ο profiler λέει updater = `LevelsSystem` fiber (id 1713), συχνά ΜΟΝΟ αυτός → ένα setState που ανήκει στο `useLevelsSystemState` χτυπά κάθε ~250ms. **Δεν εντοπίστηκε στατικά.** Agent #2 υπέθεσε `useLevelsFirestoreSync` setLevels μέσω Firestore re-delivery, αλλά ο service-layer `dequal` guard θα έπρεπε να μπλοκάρει idle metadata snapshots — αναπόδεικτο.
+
+**ΟΡΙΣΤΙΚΟ ΕΠΟΜΕΝΟ ΒΗΜΑ:** re-record profile ΜΕ React DevTools Profiler setting **«Record why each component rendered»** ON (gear icon στο Profiler tab). Τότε το `changeDescriptions` ανά commit θα δείξει ΑΚΡΙΒΩΣ ποιο hook/state/context άλλαξε στο `LevelsSystem` → μηδέν μαντεψιά πριν αγγίξω levels/envelope (shared tree). Εναλλακτικά: temporary console instrumentation στο `useLevelsSystemState`.
+
+---
+
 ## 📝 ΣΗΜΕΙΩΣΕΙΣ
 - Phase XXII.B **μέρος 2** (μη-ξεκινημένο, ξεχωριστό): `dxf-bitmap-cache.ts` CSS-transform live-zoom + idle re-raster (Figma pattern) — δες ADR-040 §Phase XXII.A/B.
 - ΜΗΝ αγγίξεις: railing (ADR-407), MEP/fixture-grips/electrical-panel (ADR-406/408).

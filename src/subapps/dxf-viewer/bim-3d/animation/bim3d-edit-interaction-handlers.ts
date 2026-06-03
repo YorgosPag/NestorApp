@@ -40,6 +40,8 @@ import {
   buildTiltPreviewObject,
   buildDependentWallPreviewObject,
 } from './bim3d-preview-rebuild';
+// ADR-408 Φ7 P2 — host move → live circuit-wire re-route (mirror of the ADR-401 wall path).
+import { affectedWireSystemIds, buildCircuitWirePreviewObjects } from './bim3d-wire-preview-rebuild';
 // ADR-401 — host move → attached wall re-clip: find the dependent walls (reverse SSoT).
 import { findAttachedWalls } from '../../bim/cascade/bim-cascade-resolver';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
@@ -100,6 +102,9 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
     // walls live (not plan-rotate — that follow is a documented follow-up). Capture
     // the dependents now so `applyLivePreview` can rebuild them every move frame.
     if (constraint?.kind !== 'rotate') captureMoveDependents(ctx, ids);
+    // ADR-408 Φ7 P2/P2b — a wired fixture/panel re-routes its circuit conduit live on
+    // BOTH move and plan-rotate (the resolver applies either gizmo transform per frame).
+    captureCircuitWires(ctx, ids);
   }
   e.preventDefault();
   e.stopPropagation();
@@ -118,6 +123,19 @@ function captureMoveDependents(ctx: EditInteractionCtx, ids: readonly string[]):
   const dependentWallIds = findAttachedWalls(hostIds, useBim3DEntitiesStore.getState().walls);
   if (dependentWallIds.length > 0) {
     ctx.preview.captureDependents(ctx.manager.bimLayer.group, dependentWallIds, hostIds);
+  }
+}
+
+/**
+ * ADR-408 Φ7 P2/P2b — capture the home-run conduits to re-route live while the
+ * dragged fixtures/panels (`ids`) move OR plan-rotate. `affectedWireSystemIds` is
+ * the membership SSoT (dragged host = circuit source/member). No affected circuit
+ * → no-op (fast path: the drag stays a plain rigid mesh transform).
+ */
+function captureCircuitWires(ctx: EditInteractionCtx, ids: readonly string[]): void {
+  const systemIds = affectedWireSystemIds(new Set(ids));
+  if (systemIds.length > 0) {
+    ctx.preview.captureWires(ctx.manager.bimLayer.group, systemIds);
   }
 }
 
@@ -242,10 +260,25 @@ function applyLivePreview(ctx: EditInteractionCtx): void {
         depWallIds.map((wid) => buildDependentWallPreviewObject(wid, hostIds, t)),
       );
     }
+    // ADR-408 Φ7 P2 — re-route the captured circuit conduits with the dragged
+    // fixtures/panels at the preview position (`t`). Same routing + converter SSoT
+    // as the commit re-sync (ghost === commit). No wired host → array is empty.
+    if (ctx.preview.circuitWireSystemIds.length > 0) {
+      const draggedIds = new Set(useBim3DEditStore.getState().editEntityIds);
+      ctx.preview.applyWires(buildCircuitWirePreviewObjects(draggedIds, { kind: 'move', translation: t }));
+    }
     return;
   }
   if (live.kind === 'rotate') {
     ctx.preview.applyRotate(live.pivot, live.angleRad);
+    // ADR-408 Φ7 P2b — re-route the captured conduits with the dragged hosts orbited
+    // about the gizmo pivot (world +Y ↔ DXF-plan CCW, 1:1). Same routing SSoT as move.
+    if (ctx.preview.circuitWireSystemIds.length > 0) {
+      const draggedIds = new Set(useBim3DEditStore.getState().editEntityIds);
+      ctx.preview.applyWires(
+        buildCircuitWirePreviewObjects(draggedIds, { kind: 'rotate', pivot: live.pivot, angleRad: live.angleRad }),
+      );
+    }
     return;
   }
   if (live.kind === 'tilt') {

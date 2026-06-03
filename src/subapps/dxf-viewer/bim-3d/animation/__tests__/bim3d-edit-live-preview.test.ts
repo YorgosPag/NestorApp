@@ -23,6 +23,13 @@ function group(...children: THREE.Object3D[]): THREE.Group {
   return g;
 }
 
+/** ADR-408 Φ7 P2 — a conduit mesh tagged with its circuit (`mepWireSystemId`). */
+function wireMesh(systemId: string): THREE.Mesh {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+  m.userData['mepWireSystemId'] = systemId;
+  return m;
+}
+
 describe('Bim3DEditLivePreview — rigid move/rotate', () => {
   it('captureTransform picks only the edited direct children (by bimId)', () => {
     const a = taggedMesh('a', [0, 0, 0]);
@@ -215,6 +222,86 @@ describe('Bim3DEditLivePreview — ADR-401 attached-dependent re-clip on host mo
     p.commit();
     expect(g.children).toContain(rebuilt);
     expect(wall.visible).toBe(false);
+    expect(p.isActive).toBe(false);
+  });
+});
+
+describe('Bim3DEditLivePreview — ADR-408 Φ7 P2 live circuit-wire re-route on host move', () => {
+  it('captures the dragged fixture (rigid) AND its affected conduits (by systemId) together', () => {
+    const host = taggedMesh('fx1', [0, 0, 0]); // dragged fixture (rigid move)
+    const wire = wireMesh('sys1');             // its circuit conduit (re-routed)
+    const g = group(host, wire);
+    const p = new Bim3DEditLivePreview();
+
+    p.captureTransform(g, new Set(['fx1']));
+    p.captureWires(g, ['sys1']);
+
+    expect(p.isActive).toBe(true);
+    expect(p.circuitWireSystemIds).toEqual(['sys1']);
+
+    // Host still moves rigidly; the conduit is left to per-frame rebuild.
+    p.applyMove(new THREE.Vector3(10, 0, 0));
+    expect(host.position.x).toBe(10);
+  });
+
+  it('captureWires only hides conduits whose systemId is affected', () => {
+    const keep = wireMesh('other');
+    const hit = wireMesh('sys1');
+    const g = group(keep, hit);
+    const rebuilt = wireMesh('sys1');
+    const p = new Bim3DEditLivePreview();
+
+    p.captureWires(g, ['sys1']);
+    p.applyWires([rebuilt]);
+    expect(hit.visible).toBe(false);
+    expect(keep.visible).toBe(true); // untouched circuit keeps its committed mesh
+    expect(g.children).toContain(rebuilt);
+  });
+
+  it('a new frame removes the previous frame conduits and parents the new ones', () => {
+    const orig = wireMesh('sys1');
+    const g = group(orig);
+    const frame1 = wireMesh('sys1');
+    const frame2 = wireMesh('sys1');
+    const p = new Bim3DEditLivePreview();
+
+    p.captureWires(g, ['sys1']);
+    p.applyWires([frame1]);
+    p.applyWires([frame2]);
+    expect(g.children).toContain(frame2);
+    expect(g.children).not.toContain(frame1);
+  });
+
+  it('reset() un-hides the conduits and removes the re-routed meshes', () => {
+    const host = taggedMesh('fx1', [1, 0, 0]);
+    const orig = wireMesh('sys1');
+    const g = group(host, orig);
+    const rebuilt = wireMesh('sys1');
+    const p = new Bim3DEditLivePreview();
+
+    p.captureTransform(g, new Set(['fx1']));
+    p.captureWires(g, ['sys1']);
+    p.applyMove(new THREE.Vector3(10, 0, 0));
+    p.applyWires([rebuilt]);
+    p.reset();
+
+    expect(host.position.x).toBe(1);          // host snapped back
+    expect(orig.visible).toBe(true);          // committed conduit restored
+    expect(g.children).not.toContain(rebuilt); // preview removed
+    expect(p.isActive).toBe(false);
+  });
+
+  it('commit() keeps the re-routed conduit (the command re-sync replaces it)', () => {
+    const orig = wireMesh('sys1');
+    const g = group(orig);
+    const rebuilt = wireMesh('sys1');
+    const p = new Bim3DEditLivePreview();
+
+    p.captureWires(g, ['sys1']);
+    p.applyWires([rebuilt]);
+    p.commit();
+    expect(g.children).toContain(rebuilt);
+    expect(orig.visible).toBe(false);
     expect(p.isActive).toBe(false);
   });
 });

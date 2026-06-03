@@ -2773,3 +2773,9 @@ Bugfix-only αλλαγή στο `EnvelopeOverlay.tsx`: μετά το `renderOpen
 - **`CanvasLayerStack.tsx`** — pass-through wiring του νέου leaf (shell, ΟΧΙ subscriber).
 - **`CanvasSection.tsx`** — orchestrator wiring των δύο νέων tools (`mep-fixture`, `railing`) μέσω `useSpecialTools` + railing click-time `bimPoint` ORTHO-aware· event-time reads μόνο, κανένα νέο high-freq subscription.
 - **`canvas-click-types.ts`** — type-only επέκταση του click-handler payload για τα νέα point-based tools.
+
+## 2026-06-03: ADR-408 Φ7 — `HomeRunWiresOverlay` grip-drag-preview passthrough (non-architectural, CHECK 6B stage)
+
+Καθαρά **non-architectural** άγγιγμα ενός αρχείου του micro-leaf perimeter. Το home-run wires overlay (παραγόμενα καλώδια πίνακα→φωτιστικά, ADR-408 Φ7) δέχεται πλέον το `gripDragPreview` (από `dxfGripInteraction.dragPreview`) ώστε τα καλώδια να ακολουθούν **live** το ghost transform όταν σύρεται η λαβή ενός host (φωτιστικού/πίνακα) — WYSIWYG με το υπόλοιπο grip-drag preview.
+
+- **`CanvasLayerStack.tsx`** — pass-through της `gripDragPreview` prop στο υπάρχον always-on leaf `HomeRunWiresOverlay` (shell, **ΟΧΙ** subscriber). Το ίδιο το overlay παραμένει read-only micro-leaf· **καμία νέα `useSyncExternalStore` σε orchestrator** (CHECK 6C safe), καμία αλλαγή σε bitmap cache key (rule 3). Η preview transform είναι render-time annotation — μηδέν persisted geometry.

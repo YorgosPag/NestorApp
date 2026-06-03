@@ -10,12 +10,10 @@ import {
   DEFAULT_LEVEL_SETTINGS,
   LEVELS_EXPORT_VERSION,
 } from './config';
-import type { SceneUnits } from '../../utils/scene-units';
 import { FloorplanOperations, CalibrationOperations, LevelOperations } from './utils';
 import { type LevelsHookReturn } from './useLevels';
 import { useAutoSaveSceneManager } from '../../hooks/scene/useAutoSaveSceneManager';
 import type { SceneModel } from '../../types/scene';
-import { useImportWizard } from '../../hooks/common/useImportWizard';
 import { StorageErrorHandler } from '../../utils/storage-utils';
 import { getErrorMessage } from '@/lib/error-utils';
 import { LevelsSystemProps, DEFAULT_IMPORT_WIZARD_STATE } from './LevelsSystem.types';
@@ -23,6 +21,7 @@ import { useLevelSceneLoader } from './hooks/useLevelSceneLoader';
 import { useLevelsFirestoreSync } from './hooks/useLevelsFirestoreSync';
 import { useLevelOperations } from './hooks/useLevelOperations';
 import { useLevelFloorplanSync } from './hooks/useLevelFloorplanSync';
+import { useLevelImportWizardOps } from './hooks/useLevelImportWizardOps';
 import { useAuth } from '@/auth';
 import { readViewportFromUrl } from '../../services/viewport-persistence';
 
@@ -70,7 +69,6 @@ function useLevelsSystemState({
   const sceneManager = useAutoSaveSceneManager();
   const sceneManagerRef = useRef(sceneManager);
   sceneManagerRef.current = sceneManager;
-  const importWizardHook = useImportWizard();
 
   // Auth claims for tenant-scoped Firestore query
   const { user: firebaseUser } = useAuth();
@@ -259,63 +257,23 @@ function useLevelsSystemState({
     }
   }, [levels, currentLevelId, setCurrentLevelId]);
 
-  // Import wizard operations
-  const startImportWizard = useCallback(
-    (file: File) => {
-      setImportWizard(prev => ({ ...prev, file, step: 'level' }));
-      importWizardHook.startImportWizard(file);
-    },
-    [importWizardHook]
-  );
-
-  const setImportWizardStep = useCallback(
-    (step: ImportWizardState['step']) => {
-      setImportWizard(prev => ({ ...prev, step }));
-      importWizardHook.setImportWizardStep(step);
-    },
-    [importWizardHook]
-  );
-
-  const setSelectedLevel = useCallback(
-    (levelId?: string, newLevelName?: string) => {
-      setImportWizard(prev => ({ ...prev, selectedLevelId: levelId, newLevelName }));
-      importWizardHook.setSelectedLevel(levelId, newLevelName);
-    },
-    [importWizardHook]
-  );
-
-  const setUserDrawingUnits = useCallback(
-    (units: SceneUnits | 'auto') => {
-      setImportWizard(prev => ({ ...prev, userDrawingUnits: units }));
-      importWizardHook.setUserDrawingUnits?.(units);
-    },
-    [importWizardHook]
-  );
-
-  const setCalibration = useCallback(
-    (calibration: CalibrationData) => {
-      setImportWizard(prev => ({ ...prev, calibration }));
-      importWizardHook.setCalibration(calibration);
-    },
-    [importWizardHook]
-  );
-
-  const completeImport = useCallback((): FloorplanDoc | null => {
-    const result = importWizardHook.completeImport(levels, floorplans);
-    if (result) {
-      setLevels(result.updatedLevels);
-      setFloorplans(result.updatedFloorplans);
-      setCurrentLevelId(result.levelId);
-      setImportWizard(DEFAULT_IMPORT_WIZARD_STATE);
-      return result.floorplan;
-    }
-    return null;
-  }, [importWizardHook, levels, floorplans]);
-
-  const cancelImportWizard = useCallback(() => {
-    setImportWizard(DEFAULT_IMPORT_WIZARD_STATE);
-    importWizardHook.cancelImportWizard();
-  }, [importWizardHook]);
+  // Import wizard operations (extracted to a dedicated hook — SRP / N.7.1)
+  const {
+    startImportWizard,
+    setImportWizardStep,
+    setSelectedLevel,
+    setUserDrawingUnits,
+    setCalibration,
+    completeImport,
+    cancelImportWizard,
+  } = useLevelImportWizardOps({
+    levels,
+    floorplans,
+    setLevels,
+    setFloorplans,
+    setCurrentLevelId,
+    setImportWizard,
+  });
 
   // Settings operations
   const updateSettings = useCallback((newSettings: Partial<LevelSystemSettings>) => {
@@ -386,6 +344,41 @@ function useLevelsSystemState({
     () => ({ lastSaveTime: sceneManager.lastSaveTime, saveStatus: sceneManager.saveStatus }),
     [sceneManager],
   );
+
+  // 🔬🔬🔬 TEMPORARY DIAGNOSTIC (idle render-loop hunt 2026-06-03) — REMOVE AFTER DIAGNOSIS.
+  // Logs, per commit, which LevelsSystem context-value dep changed identity. At idle this
+  // must stay silent; whatever key prints repeatedly (~4×/sec) is the loop driver.
+  const __diagPrevRef = React.useRef<Record<string, unknown> | null>(null);
+  const __diagCountRef = React.useRef(0);
+  React.useEffect(() => {
+    const curr: Record<string, unknown> = {
+      levels,
+      currentLevelId,
+      floorplans,
+      importWizard,
+      settings,
+      isLoading,
+      sceneLoading,
+      error,
+      sceneManager,
+      'sceneManager.levelScenes': sceneManager.levelScenes,
+      'sceneManager.fileRecordId': sceneManager.fileRecordId,
+      'sceneManager.saveContext': sceneManager.saveContext,
+      'sceneManager.saveStatus': sceneManager.saveStatus,
+      'sceneManager.lastSaveTime': sceneManager.lastSaveTime,
+      'sceneManager.currentFileName': sceneManager.currentFileName,
+    };
+    const prev = __diagPrevRef.current;
+    if (prev) {
+      const changed = Object.keys(curr).filter((k) => curr[k] !== prev[k]);
+      if (changed.length > 0) {
+        __diagCountRef.current += 1;
+        // eslint-disable-next-line no-console
+        console.log(`[LevelsLoop #${__diagCountRef.current}] changed:`, changed.join(', '));
+      }
+    }
+    __diagPrevRef.current = curr;
+  });
 
   // ADR-040 Phase XVI — memoize the Context value so consumers don't re-render
   // on every Provider render. Root cause of idle render-loop (2026-05-16):

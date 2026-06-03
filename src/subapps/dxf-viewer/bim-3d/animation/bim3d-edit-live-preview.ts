@@ -65,6 +65,14 @@ export class Bim3DEditLivePreview {
   /** Ids of the dragged structural hosts whose live transform the dependents must follow. */
   private depHostIds: ReadonlySet<string> = new Set();
 
+  // ── ADR-408 Φ7 P2 — live circuit-wire follow (host move → conduit re-route) ───
+  /** Original conduit meshes of the affected circuits, hidden during the move (restored on cancel). */
+  private wireHidden: THREE.Object3D[] = [];
+  /** The swapped-in wire preview meshes (removed + disposed each frame / on cancel). */
+  private wireObjects: THREE.Object3D[] = [];
+  /** Ids of the circuits to rebuild per frame (a dragged host is their source/member). */
+  private wireSystemIds: string[] = [];
+
   /** True while a preview is in effect (capture done, not yet committed/reset). */
   get isActive(): boolean {
     return (
@@ -72,8 +80,15 @@ export class Bim3DEditLivePreview {
       this.hidden.length > 0 ||
       this.previewObject !== null ||
       this.dependentHidden.length > 0 ||
-      this.dependentObjects.length > 0
+      this.dependentObjects.length > 0 ||
+      this.wireSystemIds.length > 0 ||
+      this.wireObjects.length > 0
     );
+  }
+
+  /** Affected circuit ids captured for this drag (empty when no dragged host is wired). */
+  get circuitWireSystemIds(): readonly string[] {
+    return this.wireSystemIds;
   }
 
   /** Attached dependent wall ids captured for this drag (empty when none / not a host move). */
@@ -165,6 +180,41 @@ export class Bim3DEditLivePreview {
   }
 
   /**
+   * ADR-408 Φ7 P2 — begin a live re-route of the affected circuit conduits of a
+   * moving fixture/panel. Called AFTER `captureTransform` (so it does NOT reset):
+   * records the conduit meshes of `systemIds` (the direct children tagged with
+   * `mepWireSystemId`) to hide + restore. Fresh meshes are supplied per-frame to
+   * `applyWires` (built via the routing + converter SSoT — kept out of this class).
+   */
+  captureWires(group: THREE.Object3D, systemIds: readonly string[]): void {
+    this.parent = group;
+    this.wireSystemIds = [...systemIds];
+    const idSet = new Set(systemIds);
+    for (const child of group.children) {
+      const sid = child.userData['mepWireSystemId'] as string | undefined;
+      if (sid !== undefined && idSet.has(sid)) this.wireHidden.push(child);
+    }
+  }
+
+  /**
+   * Swap in the freshly re-routed conduit meshes for this frame: hide the
+   * originals, remove + dispose the previous frame's wires, parent the new ones.
+   */
+  applyWires(rebuilt: readonly THREE.Object3D[]): void {
+    if (!this.parent) return;
+    for (const o of this.wireHidden) o.visible = false;
+    for (const o of this.wireObjects) {
+      this.parent.remove(o);
+      disposeObject(o);
+    }
+    this.wireObjects = [];
+    for (const o of rebuilt) {
+      this.wireObjects.push(o);
+      this.parent.add(o);
+    }
+  }
+
+  /**
    * Begin a resize preview: remember (and prepare to hide) the original direct
    * children that render `entityId` under `group`. The fresh geometry is supplied
    * per-frame to `applyResize` by the caller (built via the converter SSoT).
@@ -223,6 +273,12 @@ export class Bim3DEditLivePreview {
       this.parent?.remove(o);
       disposeObject(o);
     }
+    // ADR-408 Φ7 P2 — un-hide the circuit conduits and drop their re-routed meshes.
+    for (const o of this.wireHidden) o.visible = true;
+    for (const o of this.wireObjects) {
+      this.parent?.remove(o);
+      disposeObject(o);
+    }
     this.clearState();
   }
 
@@ -235,6 +291,9 @@ export class Bim3DEditLivePreview {
     this.dependentObjects = [];
     this.depWallIds = [];
     this.depHostIds = new Set();
+    this.wireHidden = [];
+    this.wireObjects = [];
+    this.wireSystemIds = [];
   }
 }
 

@@ -115,6 +115,13 @@ Toggle «Ηλεκτρολογικά» (ADR-405 multi-toggle) κρύβει/δεί
 
 ## Changelog
 
+- **v0.9 (2026-06-03, Opus 4.8, Giorgio review) — box-grips SSoT κεντρικοποίηση:** Το `mep-fixture-grips.ts`
+  γίνεται thin adapter πάνω στο NEW shared `bim/grips/centred-box-grips.ts` (entity-agnostic centred
+  rotatable-box grip SSoT, μοιραζόμενο με τον ηλεκτρικό πίνακα ADR-408 Φ3). Το rectangular path delegate-άρει
+  100% στον SSoT· κρατιέται μόνο το fixture-specific `circular`/`diameter` extension (δεν έχει box equivalent).
+  ~200 γρ. διπλότυπο fixture↔panel → ΕΝΑΣ SSoT. Υπογραφές `getMepFixtureGrips`/`applyMepFixtureGripDrag`
+  αμετάβλητες → consumers ανέπαφοι. 118 PASS (fixture circular+rectangular regression + 11 νέα SSoT tests),
+  tsc 0. Βλ. ADR-397 §D3.1. Pending commit.
 - **v0.1 (2026-06-02, Opus 4.8):** Αρχική υλοποίηση — full vertical slice (φωτιστικό οροφής).
   43/43 tests PASS, tsc clean. Pending browser verify + commit.
 - **v0.2 (2026-06-02, Opus 4.8) — 🐛 canvas-invisible fix:** Το φωτιστικό committed-άριζε (audit
