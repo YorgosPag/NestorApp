@@ -11,10 +11,11 @@
  * Coordinate convention (see BimToThreeConverter header):
  *   DXF plan: X = East, Y = North → Three.js world x = East, y = Up, z = -North.
  *
- * The tube follows a piecewise-**straight** `CurvePath` (one `LineCurve3` per
- * daisy-chain segment), so the 3D run is geometrically identical to the 2D
- * overlay polyline (same `buildWirePolyline` source). Colour = the circuit's
- * system colour, via the cached `getSystemTintedMaterial3D` (no singleton mutation).
+ * The tube follows a piecewise-`LineCurve3` `CurvePath` over the points of
+ * `buildWirePolyline` — which already applies the path's `style` (straight /
+ * orthogonal L-elbow / arc-sampled Bézier), so the 3D run is geometrically
+ * identical to the 2D overlay polyline. Colour = the circuit's system colour,
+ * via the cached `getSystemTintedMaterial3D` (no singleton mutation).
  *
  * @see ../../bim/mep-systems/mep-wire-routing.ts
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
@@ -24,7 +25,6 @@ import * as THREE from 'three';
 import {
   buildWirePolyline,
   type CircuitWirePath,
-  type WireStyle,
 } from '../../bim/mep-systems/mep-wire-routing';
 import { hexToThreeInt } from '../../bim/mep-systems/mep-system-color';
 import { getElementMaterial3D, getSystemTintedMaterial3D } from '../materials/MaterialCatalog3D';
@@ -48,9 +48,8 @@ export function wirePathToMesh(
   sceneToM: number,
   floorElevationMm: number,
   baseElevationM: number,
-  style: WireStyle = 'straight',
 ): THREE.Mesh | null {
-  const pts = buildWirePolyline(path, style);
+  const pts = buildWirePolyline(path);
   if (pts.length < 2) return null;
   const vecs = pts.map(
     (p) => new THREE.Vector3(p.x * sceneToM, worldY(p.zMm, floorElevationMm, baseElevationM), -p.y * sceneToM),

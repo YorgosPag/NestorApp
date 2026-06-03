@@ -73,8 +73,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Resilient buildx setup — routes Docker Hub traffic through mirror.gcr.io
+      # with retry/backoff. SSOT: .github/actions/setup-buildx-resilient.
+      # Fixes transient "registry-1.docker.io ... Client.Timeout" deploy failures.
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: ./.github/actions/setup-buildx-resilient
 
       - name: Extract metadata
         id: meta

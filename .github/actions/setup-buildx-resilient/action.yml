@@ -1,0 +1,62 @@
+name: Resilient Docker Buildx Setup
+description: >
+  Single source of truth for setting up Docker Buildx resiliently against
+  transient Docker Hub (registry-1.docker.io) timeouts and anonymous
+  rate-limits. Routes the BuildKit driver image AND all docker.io base-image
+  pulls through the public Google Container Registry mirror (mirror.gcr.io),
+  and pre-pulls the BuildKit image with retry + exponential backoff so a single
+  registry hiccup never fails the deploy. No secrets, no third-party actions.
+
+# WHY this exists (incident 2026-06-03, run 26856638582):
+#   "Set up Docker Buildx" failed with
+#     ERROR: Get "https://registry-1.docker.io/v2/": net/http: request canceled
+#            while waiting for connection (Client.Timeout exceeded while awaiting headers)
+#   The Next.js build had already succeeded — only the BuildKit container image
+#   pull from Docker Hub timed out. mirror.gcr.io + retry removes the root cause.
+
+inputs:
+  buildkit-image:
+    description: BuildKit image used as the buildx driver container (mirror-pinned).
+    required: false
+    default: mirror.gcr.io/moby/buildkit:buildx-stable-1
+  retries:
+    description: Number of pre-pull attempts before failing.
+    required: false
+    default: '3'
+
+runs:
+  using: composite
+  steps:
+    - name: Pre-pull BuildKit image (GCR mirror + retry/backoff)
+      shell: bash
+      env:
+        BUILDKIT_IMAGE: ${{ inputs.buildkit-image }}
+        RETRIES: ${{ inputs.retries }}
+      run: |
+        set -euo pipefail
+        for attempt in $(seq 1 "${RETRIES}"); do
+          echo "::group::Pull ${BUILDKIT_IMAGE} (attempt ${attempt}/${RETRIES})"
+          if docker pull "${BUILDKIT_IMAGE}"; then
+            echo "✅ BuildKit image available locally — buildx setup will be offline."
+            echo "::endgroup::"
+            exit 0
+          fi
+          echo "::endgroup::"
+          backoff=$(( attempt * 10 ))
+          echo "⚠️ Pull failed (transient registry error); retrying in ${backoff}s..."
+          sleep "${backoff}"
+        done
+        echo "❌ Could not pull ${BUILDKIT_IMAGE} after ${RETRIES} attempts."
+        exit 1
+
+    - name: Set up Docker Buildx (mirror-pinned driver)
+      uses: docker/setup-buildx-action@v3
+      with:
+        # Driver runs the image we just pre-pulled locally → no Docker Hub hit.
+        driver-opts: |
+          image=${{ inputs.buildkit-image }}
+        # Route Dockerfile base-image pulls (FROM ...) through the GCR mirror too,
+        # so the build itself is immune to Docker Hub rate-limits.
+        buildkitd-config-inline: |
+          [registry."docker.io"]
+            mirrors = ["mirror.gcr.io"]

@@ -16,7 +16,6 @@ import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Typ
 import {
   buildWirePolyline,
   type CircuitWirePath,
-  type WireStyle,
 } from '../mep-systems/mep-wire-routing';
 
 const WIRE_LINE_WIDTH = 1.5;
@@ -29,9 +28,8 @@ function drawOneWire(
   path: CircuitWirePath,
   transform: ViewTransform,
   viewport: Viewport,
-  style: WireStyle,
 ): void {
-  const pts = buildWirePolyline(path, style);
+  const pts = buildWirePolyline(path);
   if (pts.length < 2) return;
   const screen = pts.map((p) => CoordinateTransforms.worldToScreen({ x: p.x, y: p.y }, transform, viewport));
   ctx.strokeStyle = path.colorHex;
@@ -60,19 +58,22 @@ function drawHomeRunArrow(ctx: CanvasRenderingContext2D, tip: Point2D, from: Poi
   ctx.fill();
 }
 
-/** Draw every circuit wire path onto the overlay canvas. */
+/**
+ * Draw every circuit wire path onto the overlay canvas. Each path carries its own
+ * `style` (Revit "Wiring Type"), read inside {@link buildWirePolyline} — the
+ * renderer stays style-agnostic.
+ */
 export function drawCircuitWires(
   ctx: CanvasRenderingContext2D,
   paths: readonly CircuitWirePath[],
   transform: ViewTransform,
   viewport: Viewport,
-  style: WireStyle = 'straight',
 ): void {
   ctx.save();
   ctx.lineWidth = WIRE_LINE_WIDTH;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   ctx.setLineDash([]);
-  for (const path of paths) drawOneWire(ctx, path, transform, viewport, style);
+  for (const path of paths) drawOneWire(ctx, path, transform, viewport);
   ctx.restore();
 }

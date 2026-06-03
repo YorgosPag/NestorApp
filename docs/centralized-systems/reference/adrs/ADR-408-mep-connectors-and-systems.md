@@ -287,6 +287,24 @@ Scope = 2D annotation + 3D conduit· τοπολογία = **daisy-chain + home-r
 ---
 
 ## Changelog
+- **2026-06-03 (Opus 4.8, Plan Mode)** — **🐛 IDLE PING-PONG FIX DONE** (pending commit, 🔴 browser verify).
+  Σε ηρεμία ο viewer εκτελούσε ~2490 React fibers/idle commit. **Root cause:** ping-pong δύο writers που
+  διαφωνούσαν για το derived `MepConnector.systemId`. Ο `useMepConnectorReconciliation` (Φ5) σφραγίζει
+  `systemId` στα scene fixtures/panels («System wins»)· το `useMepFixturePersistence` diff-merge έκανε
+  `dequal(existing.params, doc.params)` — το Firestore doc **δεν** φέρει authoritative `systemId` (type
+  contract `mep-connector-types.ts`), άρα existing(με)≠doc(χωρίς) → `docToEntity` **έσβηνε** το systemId →
+  `setLevelScene` → νέα `LevelsContext` identity → re-subscribe ΟΛΩΝ των listeners → re-deliver → ∞ (+δεύτερη
+  ακμή: stale persisted systemId). Ο τοίχος δεν loop-άρει γιατί δεν έχει derived-field divergence (ο
+  `mutated`/`dequal` guard επιστρέφει σωστά `false` στο echo). **Fix (System-wins, persistence ΠΟΤΕ δεν
+  κατέχει το cache):** NEW pure SSoT `projectConnectorSystemIds(fresh, live)` στον `mep-system-coordinator`
+  (συμμετρικός αδελφός του `reconcileEntityConnectors` — οδηγείται από το **live scene cache** αντί system
+  index· αγνοεί τελείως το doc's systemId· referential-stable). Καλείται στο diff-merge των fixture + panel
+  persistence hooks πριν το `dequal` → echo γίνεται no-op → ο loop σπάει. **Defense-in-depth:** idempotent
+  `setSystems` στο `mep-system-store` (dequal bail σε identical Firestore re-deliveries → δεν ειδοποιεί
+  reconcile subscribers). 7 νέα coordinator tests / 66 MEP PASS, tsc 0. ΟΧΙ ADR-040 staging (κανένα micro-leaf
+  αρχείο). RC-1/RC-3 (re-subscribe identity churn / per-render reconcile) = out-of-scope pre-existing,
+  αβλαβή με σωστό guard. 5 αρχεία: `mep-system-coordinator.ts` + `useMepFixturePersistence.ts` +
+  `useElectricalPanelPersistence.ts` + `mep-system-store.ts` + coordinator test.
 - **2026-06-03 (Opus 4.8, Plan Mode)** — **Φ7 P2b DONE** (3D **rotate**-follow — κλείνει την ιστορία του
   live-follow). Το καλώδιο ακολουθούσε live μόνο στο 3D **move** gizmo· τώρα ακολουθεί και στο **plan-rotate**
   (Y-ring). Generalize NEW `bim3d-wire-preview-rebuild.ts`: `buildCircuitWirePreviewObjects(draggedIds, xform)`

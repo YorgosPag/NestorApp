@@ -14,8 +14,9 @@
  * Topology = **daisy-chain + home-run** (Giorgio): the panel is the first point,
  * then the nearest fixture, then the next nearest from there, … (greedy
  * nearest-neighbour). The panel→first-fixture leg is the "home run". Segment
- * style is a forward seam (`WireStyle`): `'straight'` ships; `'orthogonal'`/`'arc'`
- * plug in via {@link expandSegment} without touching either renderer.
+ * style (`WireStyle`, per-circuit Revit "Wiring Type") is resolved here: all of
+ * `'straight'`/`'orthogonal'`/`'arc'` expand to plain points via
+ * {@link expandSegment}, so neither renderer carries any style maths.
  *
  * Pure — no store / React / Date / Math.random (survives workflow replay).
  *
@@ -39,13 +40,28 @@ export interface WireHostPoint {
   readonly zMm: number;
 }
 
-/** Segment-rendering style. `'straight'` is implemented; the rest are a seam. */
+/**
+ * Segment-rendering style (Revit "Wiring Type"). All three ship:
+ *   - `'straight'`   — direct line between consecutive hosts (default).
+ *   - `'orthogonal'` — L-elbow (horizontal-then-vertical) at each segment.
+ *   - `'arc'`        — true curved run: each segment is a quadratic Bézier
+ *                      **sampled into a polyline** here, so both renderers (2D
+ *                      `lineTo`, 3D `LineCurve3` tube) draw the identical curve
+ *                      from this ONE source — no curve maths leaks into either.
+ */
 export type WireStyle = 'straight' | 'orthogonal' | 'arc';
 
 /** A fully-routed circuit wire: panel-first daisy chain carrying the circuit colour. */
 export interface CircuitWirePath {
   readonly systemId: string;
   readonly colorHex: string;
+  /**
+   * Per-circuit segment style (Revit "Wiring Type"), derived from
+   * `system.params.wireStyle`. Optional → consumers treat absent as `'straight'`.
+   * SSoT mirror of `colorHex`: the System owns it, the path carries it, both
+   * renderers read it (never a renderer-local default).
+   */
+  readonly style?: WireStyle;
   /** Ordered host points: `[panel, nearest fixture, next nearest, …]`. */
   readonly points: readonly WireHostPoint[];
 }
@@ -113,18 +129,58 @@ export function computeCircuitWirePaths(
     paths.push({
       systemId: system.id,
       colorHex: systemColor(system),
+      style: system.params.wireStyle ?? 'straight',
       points: [origin, ...orderDaisyChain(origin, memberPoints)],
     });
   }
   return paths;
 }
 
+/** Number of straight chords used to approximate one `'arc'` segment. */
+const ARC_SAMPLES = 16;
+/** Arc bulge as a fraction of the segment length (control-point offset). */
+const ARC_BULGE_FRACTION = 0.18;
+
+/**
+ * Sample the segment `a→b` as a quadratic Bézier into `ARC_SAMPLES` chords. The
+ * control point sits at the segment midpoint, pushed perpendicular (to the left
+ * of `a→b`) by `ARC_BULGE_FRACTION × length`, so the run bows out like a Revit
+ * arc wire. `zMm` rides the same Bézier (control z = midpoint z → linear in z).
+ * Degenerate (zero-length) segments collapse to the direct two points.
+ */
+function arcSegment(a: WireHostPoint, b: WireHostPoint): WireHostPoint[] {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-9) return [a, b];
+  const bulge = len * ARC_BULGE_FRACTION;
+  const cx = (a.x + b.x) / 2 + (-dy / len) * bulge;
+  const cy = (a.y + b.y) / 2 + (dx / len) * bulge;
+  const cz = (a.zMm + b.zMm) / 2;
+  const out: WireHostPoint[] = [a];
+  for (let i = 1; i < ARC_SAMPLES; i++) {
+    const t = i / ARC_SAMPLES;
+    const mt = 1 - t;
+    const w0 = mt * mt;
+    const w1 = 2 * mt * t;
+    const w2 = t * t;
+    out.push({
+      x: w0 * a.x + w1 * cx + w2 * b.x,
+      y: w0 * a.y + w1 * cy + w2 * b.y,
+      zMm: w0 * a.zMm + w1 * cz + w2 * b.zMm,
+    });
+  }
+  out.push(b);
+  return out;
+}
+
 /**
  * Expand one segment `a→b` into draw points (inclusive of both ends) per
  * `style`. `'straight'` is the direct line; `'orthogonal'` inserts an L-elbow
- * (horizontal-then-vertical, elbow at `b`'s elevation); `'arc'` falls back to
- * straight until the curved annotation lands. The seam that lets future styles
- * arrive without changing the routing engine or either renderer.
+ * (horizontal-then-vertical, elbow at `b`'s elevation); `'arc'` samples a
+ * quadratic Bézier ({@link arcSegment}) so the curve lives in this ONE place and
+ * both renderers consume it as plain points. The seam that lets styles change
+ * without touching the routing engine or either renderer.
  */
 export function expandSegment(
   a: WireHostPoint,
@@ -134,20 +190,22 @@ export function expandSegment(
   if (style === 'orthogonal') {
     return [a, { x: b.x, y: a.y, zMm: b.zMm }, b];
   }
+  if (style === 'arc') {
+    return arcSegment(a, b);
+  }
   return [a, b];
 }
 
 /**
  * Flatten a circuit path into a single draw polyline, expanding every segment by
- * `style` and de-duplicating the shared joins. Both renderers call this so the
- * drawn shape is identical in 2D and 3D.
+ * the path's own `style` (Revit "Wiring Type") and de-duplicating the shared
+ * joins. Both renderers call this so the drawn shape is identical in 2D and 3D —
+ * and the `path.style ?? 'straight'` default lives here, the ONE place.
  */
-export function buildWirePolyline(
-  path: CircuitWirePath,
-  style: WireStyle = 'straight',
-): WireHostPoint[] {
+export function buildWirePolyline(path: CircuitWirePath): WireHostPoint[] {
   const pts = path.points;
   if (pts.length === 0) return [];
+  const style = path.style ?? 'straight';
   const out: WireHostPoint[] = [pts[0]!];
   for (let i = 1; i < pts.length; i++) {
     const seg = expandSegment(pts[i - 1]!, pts[i]!, style);
