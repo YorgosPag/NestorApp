@@ -10,6 +10,7 @@
  */
 
 import React from 'react';
+import { useEscapeHandler, ESC_PRIORITY } from '@/subapps/dxf-viewer/systems/escape-bus';
 import { Eye, EyeOff, Trash2, ChevronRight, ChevronDown } from 'lucide-react';
 import { LayerItem } from './LayerItem';
 import { createColorGroupKey, type ColorGroupCommonProps } from './utils';
@@ -78,6 +79,19 @@ export function ColorGroupItem({
   // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
   const colorBgClass = useDynamicBackgroundClass(representativeColor);
 
+  // ADR-364: Esc cancels color group rename via centralized Escape Command Bus.
+  useEscapeHandler({
+    id: 'color-group-rename',
+    priority: ESC_PRIORITY.POPOVER_DROPDOWN,
+    allowWhenEditable: true,
+    canHandle: () => isEditingColorGroup,
+    handle: () => {
+      setEditingColorGroup(null);
+      setEditingColorGroupName('');
+      return true;
+    },
+  });
+
   // undefined treated as visible (canvas defaults entity.visible ?? true)
   const allVisible = layerNames.every((layerName: string) => getSceneLayerByName(scene, layerName)?.visible !== false);
   const someVisible = layerNames.some((layerName: string) => getSceneLayerByName(scene, layerName)?.visible !== false);
@@ -136,10 +150,8 @@ export function ColorGroupItem({
     if (e.key === 'Enter') {
       setEditingColorGroup(null);
       setEditingColorGroupName('');
-    } else if (e.key === 'Escape') {
-      setEditingColorGroup(null);
-      setEditingColorGroupName('');
     }
+    // ADR-364: Escape handled by useEscapeHandler above.
   };
 
   const handleNameBlur = () => {
