@@ -31,11 +31,12 @@
 
 ---
 
-## Decision — η πολιτική σε 3 γραμμές
+## Decision — η πολιτική σε 4 γραμμές
 
 1. **Engine:** Χρησιμοποιούμε **web-ifc / ThatOpen (MPL-2.0)** *unmodified* — νόμιμο bundling σε κλειστό app χωρίς δημοσίευση δικού μας κώδικα. ΑΠΑΓΟΡΕΥΟΝΤΑΙ: xeokit (AGPL), IfcOpenShell (LGPL), Open CASCADE/occt-import-js (LGPL).
 2. **Έτοιμο περιεχόμενο (3D αρχεία):** ΑΠΑΓΟΡΕΥΕΤΑΙ από BIMobject / SketchUp 3D Warehouse / Polantis — τα ToS τους απαγορεύουν ρητά την αναδιανομή σε προϊόν μας. Επιτρέπεται **μόνο** CC0/public-domain περιεχόμενο: **Poly Haven = CC0, redistribution σε προϊόν που πουλάς ✅ χωρίς attribution (PASS 2 verified)**· Khronos glTF-Sample-Assets = mixed per-model (μόνο CC0 subset). ⚠️ Κανένα δεν είναι BIM-grade (μόνο geometry). Επίσης ❌ Autodesk Forge/APS = proprietary metered SaaS (A.1).
-3. **Κατάλογος «ο χρήστης επιλέγει» (ΠΡΟΤΙΜΩΜΕΝΟΣ ΔΡΟΜΟΣ):** **Παραμετρικά presets** από public-domain μηχανική γνώση (τυποποιημένες διατομές HEA/HEB/IPE κ.λπ.). Είναι **δεδομένα/facts** → μηδέν νομικό ρίσκο (νομική βάση: C.1). Αντλούμε από **steelpy (Apache-2.0)** / **sectionproperties (MIT)**, ΟΧΙ verbatim από το AISC spreadsheet (C.3). Είναι ήδη η αρχιτεκτονική μας (ADR-407 RailingType, parametric columns/beams).
+3. **Κατάλογος «ο χρήστης επιλέγει» (ΠΡΟΤΙΜΩΜΕΝΟΣ ΔΡΟΜΟΣ):** **Παραμετρικά presets** από public-domain μηχανική γνώση (τυποποιημένες διατομές HEA/HEB/IPE κ.λπ.). Είναι **δεδομένα/facts** → μηδέν νομικό ρίσκο (νομική βάση: C.1). Αντλούμε από **steelpy (Apache-2.0)** / **sectionproperties (MIT)** (US/AISC) ή **eurocodepy (MIT)** (EN/DIN), ΟΧΙ verbatim από το AISC spreadsheet (C.3/C.4). Είναι ήδη η αρχιτεκτονική μας (ADR-407 RailingType, parametric columns/beams).
+4. **🔒 ΚΑΝΟΝΑΣ «facts vs derived works» (PASS 3, ΔΕΣΜΕΥΤΙΚΟΣ):** Οι **ονομαστικές διαστάσεις** (b/h/tf/tw) = facts → ελεύθερη ανατρανσκριβή/αναδιανομή από οποιαδήποτε δημόσια πηγή (ΟΧΙ verbatim compilation, ΟΧΙ ToS-restricted πηγή). ΟΜΩΣ οι **υπολογισμένες structural properties** (A, mass, Iy, Iz, Wel, Wpl) = **derived/computed works** με μεγαλύτερο copyright/sui-generis ρίσκο → επιτρέπεται να ενσωματωθούν **ΜΟΝΟ από permissive-licensed πηγή** (MIT/Apache/BSD/CC0, π.χ. eurocodepy), **ΠΟΤΕ** από Blue Book (SCI © all-rights-reserved) ή eurocodeapplied (ToS). Αιτιολογία/πηγές: C.4.
 
 ---
 
@@ -131,9 +132,58 @@
 
 > ❗ **REFUTED (0-3):** Ο ισχυρισμός ότι το `steelpy` αντλεί ειδικά από «AISC Shapes Database v16.0» **ΔΕΝ** επιβεβαιώθηκε. Επικαλούμαστε ΜΟΝΟ το verified wording «**consistent with the 16th Ed. Manual**» — ΟΧΙ άμεση database-file provenance.
 
-> ⚠️ **EN/DIN ΕΚΚΡΕΜΕΣ:** Το PASS 2 επαλήθευσε US/AISC-oriented πακέτα (steelpy/sectionproperties). Δεν βρέθηκε/επαληθεύτηκε permissive npm `steel-section` ή confirmed-license πηγή για **EN/DIN** διατομές (HEA/HEB/IPE/UB/UC, EN 10025, DIN 1025). Η νομική ανάλυση C.1 ισχύει εξίσου (facts), αλλά χρειάζεται ξεχωριστή verified code-πηγή. Βλ. §Open Questions.
+> ✅ **EN/DIN ΕΚΛΕΙΣΕ στο PASS 3 (2026-06-03):** Βρέθηκε & επαληθεύτηκε permissive EN πηγή — **`eurocodepy` (MIT)**. Βλ. **§C.4** για πλήρη ανάλυση + verdict στον υπάρχοντα `ISHAPE_CATALOG`.
 
-**📌 Πρακτική σύσταση:** Αντλούμε τις παραμετρικές διαστάσεις από **`steelpy` (Apache-2.0)** ή/και **`sectionproperties` (MIT)** — κράτημα του LICENSE/NOTICE — και τις αποθηκεύουμε ως δικά μας parametric presets. ΟΧΙ verbatim copy του AISC spreadsheet.
+**📌 Πρακτική σύσταση (US/AISC):** Αντλούμε τις παραμετρικές διαστάσεις από **`steelpy` (Apache-2.0)** ή/και **`sectionproperties` (MIT)** — κράτημα του LICENSE/NOTICE — και τις αποθηκεύουμε ως δικά μας parametric presets. ΟΧΙ verbatim copy του AISC spreadsheet. **Για EN/DIN → βλ. §C.4 (`eurocodepy`).**
+
+### C.4 — EN/DIN διατομές: VERIFY υπάρχοντος καταλόγου + permissive πηγή (PASS 3 verified, 2026-06-03)
+
+Deep-research PASS 3 (102 agents, 6 angles → 19 πηγές → 68 claims → top-25 με 3-vote, 23 confirmed / 2 killed, ~44 λεπτά). Δύο στόχοι: **(Α)** νομική στερεότητα του **υπάρχοντος** `ISHAPE_CATALOG` (75 EN 10365 διατομές, hand-curated, `src/subapps/dxf-viewer/bim/columns/section-catalog.ts`) και **(Β)** permissive EN/DIN πηγή για cross-check + επέκταση.
+
+#### Α) VERDICT στον υπάρχοντα `ISHAPE_CATALOG` → ✅ **ΝΟΜΙΚΑ ΑΣΦΑΛΗΣ — ΚΡΑΤΑ ΤΟΝ ΩΣ ΕΧΕΙ**
+
+Η αποθήκευση/αναδιανομή των **ονομαστικών αριθμητικών διαστάσεων** (b, h, tf, tw) είναι νομικά ασφαλής στην ΕΕ, σε τρία επίπεδα — και τα τρία ευνοϊκά:
+
+| Επίπεδο | Πόρισμα | Πηγή (primary) | Verify |
+|---|---|---|---|
+| **Copyright περιεχομένου** | Το copyright βάσης προστατεύει **μόνο τη δομή** (επιλογή/διάταξη), **ΟΧΙ το περιεχόμενο** — οι μεμονωμένες αριθμητικές τιμές = μη-προστατεύσιμα γεγονότα | Οδηγία 96/9/ΕΚ **Art. 3(2)** («copyright protection… shall not extend to their contents») + europa.eu | 3-0 |
+| **EU sui generis** | Προστατεύει επένδυση στην **ΑΠΟΚΤΗΣΗ/επαλήθευση/παρουσίαση** προϋπαρχόντων δεδομένων, **ΟΧΙ στη ΔΗΜΙΟΥΡΓΙΑ** τους· η ανεξάρτητη ανατρανσκριβή γεγονότων δεν εμπίπτει | CJEU **C-203/02** (BHB v William Hill, Grand Chamber 9.11.2004) + **C-46/02** (Fixtures Marketing)· **C-762/19** (CV-Online Latvia, 2021) εκλεπτύνει αλλά **ΔΕΝ** ανατρέπει τη διάκριση obtaining-vs-creating | 3-0 |
+| **CEN/DIN/SCI** | Διεκδικούν copyright **ΜΟΝΟ στο κείμενο/έγγραφο/layout** του προτύπου (μέσω συμβάσεων μεταβίβασης), **ΟΧΙ** στις ανεξάρτητα ξαναπληκτρολογημένες αριθμητικές τιμές (idea/expression dichotomy) | din.de/…/standards-and-copyright· EU General Court **T-185/19** (Public.Resource.Org, 14.7.2021) | 3-0 |
+
+> 🔑 **Μόνος υπολειπόμενος κίνδυνος = ΣΥΜΒΑΤΙΚΟΣ (ToS), ΟΧΙ copyright:** το **eurocodeapplied.com** (μία από τις 4 πηγές που χρησιμοποιήθηκαν) φέρει «© All rights reserved» + Terms: *«You must not republish the material… without prior written permission.»* Αυτή η συμβατική απαγόρευση είναι ανεξάρτητη από το copyright (που δεν καλύπτει τα γεγονότα), αλλά παραμένει μη-μηδενική έκθεση για ό,τι αντλήθηκε ΑΠΟ ΕΚΕΙ. **Μετριασμός (ήδη ισχύει):** οι τιμές αντλήθηκαν από **πολλαπλές ανεξάρτητες πηγές** (wermac.org, structolution.com, projectmaterials, eurocodeapplied) → ανεξάρτητη φύση των γεγονότων· οι ίδιες τιμές βρίσκονται σε δεκάδες πηγές. **Σύσταση:** τεκμηρίωσε την προέλευση στο doc-header ως «ανεξάρτητη ανατρανσκριβή ονομαστικών γεγονότων από πολλαπλές δημόσιες πηγές» (ήδη γίνεται) — προαιρετικά αφαίρεσε το eurocodeapplied από τη λίστα πηγών για μηδενισμό και της συμβατικής έκθεσης (οι τιμές υπάρχουν στις άλλες 3).
+
+> ⚠️ **ΚΡΙΣΙΜΗ ΔΙΑΚΡΙΣΗ — ονομαστικές διαστάσεις vs structural properties:** Το «facts» επιχείρημα είναι **ισχυρό** για τις bare ονομαστικές διαστάσεις (b, h, tf, tw) που ΗΔΗ έχει ο κατάλογος. Οι **υπολογισμένες ιδιότητες** (Iy, Iz, Wel, Wpl, A, mass) είναι **derived/computed works** → φέρουν **μεγαλύτερο** επιχείρημα copyright/sui-generis (π.χ. SCI-computed Blue Book). Άρα η μελλοντική **επέκταση σε properties** πρέπει να γίνει **ΜΟΝΟ από MIT πηγή** (eurocodepy), **ΟΧΙ** από Blue Book / eurocodeapplied.
+
+#### Β) Permissive EN/DIN πηγή → ✅ **ΝΙΚΗΤΗΣ: `eurocodepy` (MIT)**
+
+| Πηγή | Άδεια | Redistribution closed app; | Δεδομένα | Verify |
+|---|---|---|---|---|
+| **`eurocodepy`** (pcachim) | **MIT** ✅ (LICENSE.md verbatim + PyPI classifier «OSI Approved :: MIT») | ✅ ΝΑΙ — closed-source εμπορικό bundling, μόνη υποχρέωση = διατήρηση notice | **IPE / HEA / HEB / HEM** + CHS/RHS/SHS ως named dataclasses με **A, Iy, Iz, Wpl_y, It, Iw** (JSON `eurocodes.json`, παράγωγο EN 10365) | 3-0 |
+| **`sectionproperties`** (robbievanleeuwen) | **MIT** ✅ | ✅ ΝΑΙ | ⚠️ **ΥΠΟΛΟΓΙΖΕΙ** properties από user-geometry (FEM)· **ΔΕΝ** φέρνει named-section lookup (κανένα `IPE300 → dims`) | 3-0 |
+
+> 🔑 **Σύσταση Β:** Χρησιμοποίησε το **`eurocodepy` (MIT)** ως **ανεξάρτητη τρίτη πηγή cross-check** των 75 υπαρχουσών τιμών, και ως πηγή για μελλοντική επέκταση σε structural properties (A/Iy/Iz/Wpl). Κράτημα του MIT notice. Το `sectionproperties` (MIT) είναι χρήσιμο για **επαλήθευση properties μέσω FEM** από geometry, ΟΧΙ ως catalog.
+
+> ✅ **CROSS-CHECK ΕΚΤΕΛΕΣΤΗΚΕ 2026-06-03:** Σύγκριση και των 75 τιμών του `ISHAPE_CATALOG` (b/h/tf/tw) έναντι του dataset `src/eurocodepy/data/i_profiles_euro.json` (MIT, σε εκατοστά → ×10 mm) → **75/75 ακριβής ταύτιση, 0 mismatch, 0 missing.** Ανεξάρτητη τρίτη επιβεβαίωση ορθότητας + κατοχύρωση «multiple independent sources» για το facts επιχείρημα. **+Provenance fix στον κώδικα:** αφαιρέθηκε το `eurocodeapplied.com` (μόνη ToS-restricted πηγή) από το doc-header → μηδενισμός συμβατικής έκθεσης.
+
+**⚠️ Caveats `eurocodepy`:**
+1. **GitHub auto-detector → «NOASSERTION/Other»** (cosmetic artifact: header `# License` + curly quotes) — το LICENSE.md είναι **verbatim MIT**· ίσως χρειαστεί manual confirmation σε SBOM/license-scan.
+2. «Copyright **2026**» = future-dated notice (cosmetic).
+3. Το repo δηλώνει *«not affiliated with CEN — verify against official Eurocode»* → η **ορθότητα** των τιμών χρειάζεται πραγματικό cross-check (όχι μόνο license verification· βλ. §Open Questions).
+4. **ΠΕΡΙΟΡΙΣΜΟΣ:** ΔΕΝ περιέχει βρετανικά **UB/UC** (universal beams/columns) — καλύπτει μόνο τις 4 ευρωπαϊκές οικογένειες (που είναι ακριβώς αυτές που έχει ο κατάλογός μας).
+
+#### ❌ ΑΠΟΚΛΕΙΣΤΗΚΑΝ (verified)
+
+| Πηγή | Λόγος | Verify |
+|---|---|---|
+| **Blue Book** (steelforlifebluebook.co.uk) | © SCI «All rights reserved»· «may not be reproduced… without prior permission in writing»· οι structural properties = SCI-computed derived works (πραγματικό copyright/DB-right ρίσκο, ΟΧΙ απλά γεγονότα). «Freely available» = δωρεάν ΘΕΑΣΗ, ΟΧΙ άδεια αναδιανομής | 3-0 |
+| **FreeCAD `profiles.csv`** | **LGPL-2.1** (copyleft) → εκτός permissive φίλτρου. (Οι raw τιμές μπορεί να είναι γεγονότα, αλλά το **πακέτο/αρχείο** δεν είναι permissive candidate) | 3-0 |
+| **eurocodeapplied.com** | ToS: ρητή απαγόρευση republication (συμβατικός φραγμός — βλ. Α παραπάνω) | 3-0 |
+
+#### 🔪 2 REFUTED claims (3-vote kill — η συνολική ασφάλεια ΔΕΝ εξαρτάται από αυτά)
+- **(0-3)** «Η σελίδα DIN *αφήνει ρητά ανοιχτό* το fact-argument» → απορρίφθηκε: απλώς **δεν το θίγει** (δεν το επιβεβαιώνει ρητά).
+- **(0-3)** «Το sui generis *συνεπάγεται* ότι μη-ουσιώδη μέρη είναι αυτομάτως ελεύθερα» → απορρίφθηκε ως overreach (το δικαίωμα αφορά εξαγωγή **ουσιώδους** μέρους· δεν «νομιμοποιεί αυτόματα» τα insubstantial).
+
+> ⚠️ **Disclaimer:** technical/legal research, ΟΧΙ formal legal advice. Για εμπορική προϊοντική απόφαση → έλεγχος από νομικό IP της ΕΕ.
 
 ---
 
@@ -169,12 +219,18 @@
 - ~~Είναι κανένα CC0 BIM-grade;~~ → **ΟΧΙ** (επιβεβαιώθηκε)· μόνο geometry/PBR.
 - ~~Autodesk Forge/APS~~ → ❌ proprietary metered SaaS, ΟΧΙ redistributable (A.1).
 
+### ✅ ΕΚΛΕΙΣΑΝ στο PASS 3 (2026-06-03)
+- ~~(C) EN/DIN verified permissive code-πηγή~~ → ✅ **`eurocodepy` = MIT** (IPE/HEA/HEB/HEM + properties)· `sectionproperties`=MIT (compute-only)· **Blue Book ❌ SCI all-rights-reserved**, FreeCAD profiles.csv ❌ LGPL-2.1, eurocodeapplied ❌ ToS (C.4).
+- ~~(C) VERIFY υπάρχοντος `ISHAPE_CATALOG`~~ → ✅ **ΝΟΜΙΚΑ ΑΣΦΑΛΗΣ, ΚΡΑΤΑ ΤΟΝ ΩΣ ΕΧΕΙ** (facts, 3 επίπεδα ευνοϊκά)· μόνος υπολειπόμενος = συμβατικός ToS του eurocodeapplied (μετριασμένος από πολλαπλές πηγές) (C.4-Α).
+
 ### 🔴 ΑΚΟΜΗ ΕΚΚΡΕΜΗ
-1. **EN/DIN verified code-πηγή:** βρες/επαλήθευσε permissive (MIT/BSD/CC0) npm ή lib με **EN/DIN** διατομές (HEA/HEB/IPE/UB/UC, EN 10025, DIN 1025) — το PASS 2 επαλήθευσε μόνο US/AISC (steelpy/sectionproperties). Ο `steel-section` (npm) & StructPy ΔΕΝ επαληθεύτηκαν με license.
-2. **CC0 app-ready λίστα:** ποια συγκεκριμένα CC0 μοντέλα (glTF-Sample-Assets κ.ά.) είναι clean/low-poly έτοιμα για BIM viewer χωρίς decimation.
-3. **Smithsonian / Wikimedia / ambientCG:** επιβεβαίωσε ανά-asset CC0 (κατέβηκαν αλλά όχι 3-vote verified).
-4. **AISC paid Commercial License:** όροι & κόστος — αξίζει ως καθαρή εναλλακτική του facts-extraction δρόμου;
-5. **Απόφαση Giorgio (εκκρεμεί):** Δεχόμαστε weak-copyleft engines (web-ifc=MPL) που νόμιμα bundle-άρονται *unmodified* — ή κρατάμε αυστηρά permissive-only;
+1. **UB/UC (βρετανικές) permissive πηγή:** κανείς verified candidate (eurocodepy/sectionproperties) ΔΕΝ φέρνει UB/UC named-section catalog. Αν χρειαστούν → ανεξάρτητη re-transcription (facts, δρόμος C.4-Α) από non-Blue-Book πηγή. **Δεν είναι blocker** — ο κατάλογός μας έχει τις 4 ευρωπαϊκές οικογένειες.
+2. **eurocodepy properties ορθότητα:** πραγματικό cross-check των Iy/Iz/Wpl με επίσημες EN 10365 / ECCS τιμές (το PASS 3 επαλήθευσε **άδεια**, ΟΧΙ αριθμητική ακρίβεια). Απαιτείται πριν επέκταση σε properties.
+3. **eurocodepy data provenance:** ο maker δηλώνει «not affiliated with CEN» — από ποια public πηγή· υπάρχει μεταβιβαζόμενο ToS/provenance ρίσκο;
+4. **CC0 app-ready λίστα:** ποια συγκεκριμένα CC0 μοντέλα (glTF-Sample-Assets κ.ά.) clean/low-poly για BIM viewer χωρίς decimation.
+5. **Smithsonian / Wikimedia / ambientCG:** επιβεβαίωσε ανά-asset CC0.
+6. **AISC paid Commercial License:** όροι & κόστος — αξίζει ως καθαρή εναλλακτική;
+7. **Απόφαση Giorgio (εκκρεμεί):** Δεχόμαστε weak-copyleft engines (web-ifc=MPL) που νόμιμα bundle-άρονται *unmodified* — ή κρατάμε αυστηρά permissive-only;
 
 ---
 
@@ -204,6 +260,16 @@
 - CJEU C-203/02 (British Horseracing Board v William Hill) — https://eur-lex.europa.eu/legal-content/EN/ALL/?uri=CELEX:62002CJ0203
 - CJEU C-46/02 (Fixtures Marketing) — https://eur-lex.europa.eu/legal-content/EN/ALL/?uri=CELEX:62002CJ0046
 
+**(C.4) EN/DIN — PASS 3 verified (2026-06-03):**
+- **`eurocodepy` (MIT ✅)** — https://github.com/pcachim/eurocodepy · https://raw.githubusercontent.com/pcachim/eurocodepy/master/LICENSE.md · https://pypi.org/project/eurocodepy/
+- **`sectionproperties` (MIT ✅, compute-only)** — https://github.com/robbievanleeuwen/section-properties · https://pypi.org/project/sectionproperties/
+- Blue Book (❌ SCI All Rights Reserved) — https://www.steelforlifebluebook.co.uk/about/ · https://www.steelforlifebluebook.co.uk/explanatory-notes/
+- FreeCAD profiles.csv (❌ LGPL-2.1) — https://github.com/FreeCAD/FreeCAD/blob/master/src/Mod/Arch/Presets/profiles.csv · https://github.com/FreeCAD/FreeCAD/blob/main/LICENSE
+- eurocodeapplied.com (❌ ToS no-republish) — https://eurocodeapplied.com/faq
+- DIN copyright — https://www.din.de/en/about-standards/standards-and-the-law/standards-and-copyright
+- EU sui generis scope (secondary) — https://legalblogs.wolterskluwer.com/copyright-blog/databases-sui-generis-protection-and-copyright-protection/ · https://europa.eu/youreurope/business/running-business/intellectual-property/database-protection/index_en.htm
+- EU General Court T-185/19 (Public.Resource.Org v Commission, harmonised standards copyright)
+
 **(B-θετικό) CC0 content — PASS 2 verified:**
 - **Poly Haven (CC0 ✅)** — https://polyhaven.com/license · https://github.com/Poly-Haven/polyhaven.com/blob/master/LICENSE
 - **Khronos glTF Sample Assets (mixed per-model ⚠️)** — https://github.com/KhronosGroup/glTF-Sample-Assets
@@ -220,6 +286,8 @@
 
 **PASS 2** (C structural data + B-θετικό CC0 + Forge/APS): 6 search angles → 24 πηγές → 71 claims → top 25 με 3-vote verification. **23 confirmed / 2 killed.** 107 agents, ~41 λεπτά, 2026-06-02. Killed: steelpy «v16.0 provenance» (0-3), «AISC page no-EULA» (0-3). Νομική βάση C.1 = primary CJEU/EUR-Lex (3-0).
 
+**PASS 3** (C.4 — EN/DIN VERIFY υπάρχοντος καταλόγου + permissive πηγή): 6 search angles → 19 πηγές → 68 claims → top 25 με 3-vote. **23 confirmed / 2 killed.** 102 agents, ~44 λεπτά, 2026-06-03. Verdict Α: `ISHAPE_CATALOG` νομικά ασφαλής (facts, 3 επίπεδα 3-0). Verdict Β: `eurocodepy`=MIT (3-0). Killed: «DIN page αφήνει ρητά ανοιχτό fact-arg» (0-3), «sui generis συνεπάγεται insubstantial-free» (0-3).
+
 ---
 
 ## Changelog
@@ -228,4 +296,5 @@
 |---|---|---|
 | v1.0 | 2026-06-02 | Αρχική δημιουργία. Τεκμηρίωση deep-research: engine licenses (A), content-ToS trap (B), parametric-presets δρόμος (C). Πολιτική: web-ifc (MPL) OK· content platforms ΑΠΑΓΟΡΕΥΜΕΝΕΣ· parametric presets = προτιμώμενος δρόμος. (C) & (B-θετικό) εκκρεμούν 2ο pass. Opus 4.8. |
 | v1.1 | 2026-06-02 | +Κατηγορία (D) ΥΒΡΙΔΙΚΟΣ ΚΑΤΑΛΟΓΟΣ (επίσημη κατεύθυνση μετά συζήτηση Giorgio): Δ.1 «CC0 σχήμα + δικά μας δεδομένα» για fixed-shape στοιχεία (είδη υγιεινής/φωτιστικά/έπιπλα/MEP εξοπλισμός — νομικά καθαρό, εμείς ο BIM δημιουργός)· Δ.2 parametric presets για structural (τεντώνουν)· ενιαίο UI κατάλογος· caveat ποιότητας (app-ready vs high-poly scans). Opus 4.8. |
+| v1.3 | 2026-06-03 | **PASS 3 deep-research (102 agents, 23 confirmed / 2 killed, 19 sources).** Έκλεισε το Open Question #1 (EN/DIN). **+§C.4:** (Α) VERDICT στον υπάρχοντα `ISHAPE_CATALOG` (75 EN 10365 διατομές) = ✅ **ΝΟΜΙΚΑ ΑΣΦΑΛΗΣ — ΚΡΑΤΑ ΩΣ ΕΧΕΙ**· τρία επίπεδα ευνοϊκά (copyright δεν καλύπτει content 96/9/EC Art.3· sui generis καλύπτει obtaining ΟΧΙ creation per C-203/02 & C-46/02, C-762/19 δεν ανατρέπει· CEN/DIN/SCI copyright μόνο στο έγγραφο per T-185/19)· μόνος υπολειπόμενος = **συμβατικός ToS eurocodeapplied** (μετριασμένος: πολλαπλές πηγές)· ΚΡΙΣΙΜΗ διάκριση: ονομαστικές διαστάσεις=facts ισχυρό, computed properties=derived works→επέκταση ΜΟΝΟ από MIT πηγή. (Β) ✅ **`eurocodepy`=MIT** (IPE/HEA/HEB/HEM+A/Iy/Iz/Wpl) ως cross-check + expansion source· `sectionproperties`=MIT compute-only· ❌ Blue Book (SCI all-rights-reserved), FreeCAD profiles.csv (LGPL-2.1), eurocodeapplied (ToS). Killed: DIN «αφήνει ανοιχτό fact-arg» (0-3), sui generis «insubstantial-free» (0-3). Εκκρεμή: UB/UC πηγή, eurocodepy properties ορθότητα/provenance. **+Decision 3→4 γραμμές: νέος ΔΕΣΜΕΥΤΙΚΟΣ κανόνας #4 «facts vs derived works» (ονομαστικές διαστάσεις=facts ελεύθερα· computed properties=ΜΟΝΟ από permissive πηγή, ΠΟΤΕ Blue Book/eurocodeapplied).** **+CROSS-CHECK εκτελέστηκε: 75/75 ακριβής ταύτιση των τιμών μας με eurocodepy MIT dataset (0 mismatch).** **+Provenance fix στον `section-catalog.ts` doc-header: αφαίρεση eurocodeapplied (ToS-restricted) → μηδενισμός συμβατικής έκθεσης.** Opus 4.8. |
 | v1.2 | 2026-06-02 | **PASS 2 deep-research (107 agents, 23 confirmed / 2 killed, 24 sources).** Έκλεισε τα Open Questions των κατηγοριών (C) & (B-θετικό) + Forge/APS: **(C)** νομική ανάλυση 3 επιπέδων (C.1: facts μη-προστατεύσιμα EU 96/9/EC Art.3· sui generis ΔΕΝ καλύπτει creation per CJEU C-46/02 & C-203/02· μόνο ToS-φραγμός στη verbatim compilation)· **C.2** AISC Shapes DB = ❌ All Rights Reserved/paid· **C.3** ✅ steelpy (Apache-2.0) + sectionproperties (MIT) ως αξιοποιήσιμες code-πηγές, civilpy (AGPL) ❌· REFUTED η «v16.0 provenance» του steelpy (μόνο «consistent w/ 16th Ed.»). **(B-θετικό)** ✅ Poly Haven = CC0 no-attribution redistributable· glTF-Sample-Assets = mixed per-model ⚠️· επιβεβαιώθηκε «κανένα CC0 δεν είναι BIM-grade». **(A.1)** ❌ Autodesk Forge/APS = proprietary metered SaaS, ΟΧΙ redistributable. Εκκρεμή: EN/DIN verified code-πηγή, CC0 app-ready λίστα, Smithsonian/Wikimedia/ambientCG per-asset. Opus 4.8. |
