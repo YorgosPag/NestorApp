@@ -22,6 +22,7 @@ import React, {
   useCallback,
 } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useEscapeHandler, ESC_PRIORITY } from '@/subapps/dxf-viewer/systems/escape-bus';
 import { QuickPropertiesMiniPanelStore } from './QuickPropertiesMiniPanelStore';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
 import { LevelSceneManagerAdapter } from '../entity-creation/LevelSceneManagerAdapter';
@@ -118,11 +119,19 @@ export function QuickPropertiesMiniPanel({
     }
   }, [activeTool, open]);
 
-  // Close on Esc / Enter
+  // ADR-364: Esc → close via centralized Escape Command Bus.
+  useEscapeHandler({
+    id: 'quick-properties-mini-panel',
+    priority: ESC_PRIORITY.POPOVER_DROPDOWN,
+    allowWhenEditable: true,
+    canHandle: () => open,
+    handle: () => { QuickPropertiesMiniPanelStore.close(); return true; },
+  });
+
+  // Enter → apply
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.stopPropagation(); QuickPropertiesMiniPanelStore.close(); }
       if (e.key === 'Enter') { e.stopPropagation(); handleApply(); }
     };
     window.addEventListener('keydown', onKeyDown, true);
