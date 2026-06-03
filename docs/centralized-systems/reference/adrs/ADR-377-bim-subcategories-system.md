@@ -1,6 +1,6 @@
 # ADR-377: BIM Subcategories System
 
-**Status**: 🟡 ACTIVE v0.8 — Phase A + B + C (C.1+C.2+C.3) + D implemented, E + F pending
+**Status**: 🟢 COMPLETE v1.0 — Phase A + B + C (C.1+C.2+C.3) + D + E + F implemented (all phases done)
 **Date**: 2026-05-26
 **Author**: Giorgio Pagonis (orchestrated via Claude)
 **Related**:
@@ -508,32 +508,97 @@ empty entries (pre-existing `Record<BimCategory>` completeness gap from ADR-408/
 
 Commit: `feat(bim/subcategories): ADR-377 Phase D — Subcategories ribbon panel`
 
-### Phase E — 3D parity (~5-8h)
+### Phase E — 3D parity (~5-8h) — ✅ IMPLEMENTED 2026-06-03
 
-THREE.js renderer (ADR-370) reads the same `objectStyles.{cat}.subcategories` SSoT and applies:
-- `lineWidthPx` → `LineMaterial.linewidth` (with `WebGLRenderer.getPixelRatio()` correction)
-- `linePattern` → `LineDashedMaterial.dashSize` + `gapSize` (via `linePatternToDashArray` + scaling)
-- `color` → `material.color` (THREE.Color from hex)
+THREE.js 3D edge overlay (ADR-375 Phase C.7 `Line2`/`LineMaterial` silhouette stack)
+reads the same `objectStyles.{cat}.subcategories` SSoT the 2D renderers read and applies:
+- `lineWidthPx` → `LineMaterial.linewidth × devicePixelRatio` (already wired in C.7)
+- `color` → `LineMaterial.color` (already wired in C.7)
+- `linePattern` → dashed `LineMaterial` (`dashed`/`dashSize`/`gapSize`, **NEW** this phase)
 
-Files MODIFIED:
-- `src/subapps/dxf-viewer/three/renderers/*` — material assembly per BIM entity 3D mesh (matching 2D subcategory wiring exactly)
-- Shared bridge: `src/subapps/dxf-viewer/three/bim-3d-style-bridge.ts` — adapter `from2DSubcategoryStyle()` → THREE.Material instance
+**⚠️ RECOGNITION deviation from the v0.1 plan (N.0.1 — code is source of truth):**
+The plan proposed a NEW `three/bim-3d-style-bridge.ts` with `from2DSubcategoryStyle()`.
+That bridge **already existed** as `bim-3d/edges/bim-3d-edge-resolver.ts` +
+`bim-3d/edges/bim-3d-edge-overlay-builder.ts` (landed in ADR-375 C.7). No new bridge
+file was created — the existing SSoT was extended instead. Also, the 3D pipeline lives
+under `bim-3d/`, **not** the `three/renderers/*` path the plan named (out of date).
 
-Tests: ~15 (material assembly + dash array conversion + light/dark canvas-token bridging).
+**The real gap the plan had not captured** (and the core of this phase): the edge-attach
+helper `attachEdgesProjection(mesh, category)` resolved the style **without** passing
+`objectStyles` or a `subcategoryKey`, so the 3D edges always used `DEFAULT_OBJECT_STYLES`
+— **no** user V/G category or subcategory override (pen/colour/pattern) reached the 3D
+viewport at all, regardless of what the Phase D panel persisted.
+
+**Implementation (3 changes + 1 Boy-Scout unification):**
+1. `bim-3d/edges/bim-3d-edge-resolver.ts` — `Resolved3DEdgeStyle` gained `linePattern`
+   (pure pass-through from the 2D `resolveSubcategoryStyle`).
+2. `bim-3d/edges/bim-3d-edge-overlay-builder.ts` — `EdgeOverlayOptions.linePattern` →
+   dashed `LineMaterial` when the pattern is non-solid. Dash sizes derived from
+   `linePatternToDashArray` (single dash+gap, multi-segment patterns approximate) and
+   scaled px→world by `DASH_WORLD_SCALE_M = 0.01` (1px → 1cm; `dashed` [8,4] → 8cm/4cm).
+   Zero-length-dash patterns (`dot`) fall back to solid (LineMaterial has no 3D caps).
+3. `bim-3d/converters/bim-three-edges.ts` — `attachEdgesProjection(mesh, category,
+   subcategoryKey?)` now reads `useBimRenderSettingsStore.getState().objectStyles` (the
+   SAME source the 2D renderers read at draw time) and threads the per-geometry
+   `subcategoryKey`. This is the SOLE 3D edge-attach SSoT. A rebuild on every
+   `objectStyles` mutation is already wired by `useBim3DVgResync`, so the build-time read
+   is always fresh — no new subscription needed.
+4. **Boy-Scout (N.0.2):** `StairToThreeConverter` had a local `attachStairEdges` clone of
+   the resolve+build+attach pattern. It now delegates to the shared
+   `attachEdgesProjection(mesh, 'stair', key)` — one edge-attach routine for all converters.
+
+**Per-geometry `subcategoryKey` wiring (mirrors the 2D Phase C wiring exactly):**
+- wall / slab → `'common-edges'`
+- stair → `'treads'` / `'risers'` / `'outlines'` (landing → parent style, no key)
+- column / beam / point-fixtures / panels → **parent style (no key)** — their 3D
+  silhouette is the parent outline, and the taxonomy has no `common-edges` for them; this
+  also avoids the `beam.hidden-lines`=dashed default leaking into 3D (§7.3 zero-regression).
+
+**Zero default regression (§7.3):** wall/slab `common-edges` and stair `treads`/`risers`/
+`outlines` have no DEFAULT pattern → solid, identical to pre-ADR-377. Patterns/colours
+appear only when the user sets them in the Phase D panel. Threading `objectStyles` also
+makes **category-level V/G pen/colour** (ADR-375 C.4) reach the 3D edges for the first
+time — intended parity (ADR-382 "any view, same model"), not a regression.
+
+Files MODIFIED (5) + tests (3): `bim-3d-edge-resolver.ts`, `bim-3d-edge-overlay-builder.ts`,
+`bim-three-edges.ts`, `BimToThreeConverter.ts`, `StairToThreeConverter.ts` +
+`bim-3d-edge-resolver.test.ts` (+linePattern), `bim-3d-edge-overlay-builder.test.ts`
+(+dashed material), NEW `bim-three-edges.test.ts` (store-read parity + subcategoryKey
+routing + unification). **54 tests PASS** (resolver + overlay + edges), tsc 0 errors. The
+25 pre-existing `BimSceneLayer` 3D scene-fixture failures (`wall.params.start`) are
+unchanged (verified identical with/without this phase — not a regression).
 
 Commit: `feat(bim/subcategories): ADR-377 Phase E — 3D parity`
 
-### Phase F — Stub UX + polish + ratchet (~3-5h)
+### Phase F — Stub UX + polish + ratchet — ✅ IMPLEMENTED 2026-06-03
 
-UI polish:
-- Stub badge component (🔒 lock icon + greyed-out row + tooltip "Δεν ρεντάρει ακόμη")
-- Tooltip i18n keys
-- Pre-commit ratchet entry in `.ssot-registry.json` for `bim-subcategories` module (forbid duplicate registry, ensure all 47 keys present)
-- ADR-040 verification: bitmap cache invalidates on subcategory style change (manual + automated test)
+**RECOGNITION deviation (N.0.1, code wins):** the plan over-estimated scope (~3-5h → actual ~1h).
+Grep on 2026-06-03 confirmed the stub-badge UX was **already shipped in Phase D**, so only the
+SSoT ratchet entry + an explicit cache-invalidation test remained.
 
-Tests: ~5 (stub badge rendering + tooltip text + ratchet wrapper).
+- ✅ **Stub badge** — already present in `ui/ribbon/panels/SubcategoryRow.tsx` (🔒 `Lock` icon +
+  greyed row + `isWiredSubcategory` gate + `ribbon.commands.subcategories.stubTooltip` i18n).
+  Shipped in Phase D; not re-built.
+- ✅ **`.ssot-registry.json` ratchet entry** — NEW Tier 3 module `bim-subcategories` (canonical:
+  `config/bim-subcategories.ts` + `config/bim-line-patterns.ts`). Forbids re-declaration of
+  `SUBCATEGORY_TAXONOMY` / `WIRED_SUBCATEGORIES` / `isWiredSubcategory` /
+  `getAllSubcategoryKeysForCategory` and the line-pattern catalog (`BIM_LINE_PATTERNS` /
+  `BUILT_IN_DASH_ARRAYS` / `linePatternToDashArray`) outside the two allowlisted canonical files
+  (`export const`/`export function` declaration form — re-exports allowed). Patterns verified via
+  real `grep -E` to match ONLY the canonical files (zero collateral) and pass the registry-golden
+  ERE-syntax suite (56/56). Zero new violations vs `.ssot-violations-baseline.json` (baseline
+  unchanged — the module only matches allowlisted files).
+- ✅ **ADR-040 cache-invalidation test** — NEW
+  `canvas-v2/dxf-canvas/__tests__/dxf-bitmap-cache-subcategory-invalidation.test.ts` (5 tests)
+  pins, through the public `DxfBitmapCache.rebuild()`/`isDirty()` API, that a subcategory
+  pen/colour/pattern set OR clear busts the bitmap cache (via the `bimSettingsHash` `objectStyles`
+  snapshot), plus a control case guarding against over-invalidation. Test-only — does NOT modify
+  the ADR-040 source (`dxf-bitmap-cache.ts` already folds `objectStyles` into its key, so no new
+  mechanism was needed).
 
-Commit: `feat(bim/subcategories): ADR-377 Phase F — polish + ratchet`
+Verification: registry-golden 56/56 PASS · new cache test 5/5 PASS · tsc 0 (own files).
+
+Commit: `feat(bim/subcategories): ADR-377 Phase F — ratchet entry + cache-invalidation test`
 
 ### Summary
 
@@ -698,10 +763,11 @@ Deferred to draft review (best-guess in this doc):
 │  2D Renderers    │    │   3D Renderer        │
 │  (Canvas2D)      │    │   (THREE.js)         │
 │                  │    │                      │
-│ resolveSubStyle  │    │  bim-3d-style-bridge │
-│   → lineWidthPx  │    │   → LineMaterial     │
-│   → setLineDash  │    │   → linewidth        │
-│   → strokeStyle  │    │   → dashSize         │
+│ resolveSubStyle  │    │  bim-3d-edge-resolver│
+│   → lineWidthPx  │    │  + edge-overlay-bldr │
+│   → setLineDash  │    │   → LineMaterial     │
+│   → strokeStyle  │    │   → linewidth/color  │
+│                  │    │   → dashSize/gapSize │
 └──────────────────┘    └──────────────────────┘
 ```
 
@@ -709,6 +775,8 @@ Deferred to draft review (best-guess in this doc):
 
 ## 11. Changelog
 
+- **v1.0 (2026-06-03)** — Phase F IMPLEMENTED → **ADR-377 ALL PHASES COMPLETE** (status 🟢). RECOGNITION (N.0.1) shrank scope ~3-5h → ~1h: the stub badge (🔒 `Lock` + `isWiredSubcategory` gate + `stubTooltip` i18n) was **already shipped in Phase D** (`SubcategoryRow.tsx`) — not re-built. Two items remained: (1) NEW `.ssot-registry.json` Tier 3 module `bim-subcategories` forbidding re-declaration of `SUBCATEGORY_TAXONOMY`/`WIRED_SUBCATEGORIES`/`isWiredSubcategory`/`getAllSubcategoryKeysForCategory` + the line-pattern catalog (`BIM_LINE_PATTERNS`/`BUILT_IN_DASH_ARRAYS`/`linePatternToDashArray`) outside the two canonical files (`config/bim-subcategories.ts` + `config/bim-line-patterns.ts`; `export const`/`export function` form, re-exports allowed) — patterns verified via real `grep -E` to match ONLY the allowlisted canonical files (zero collateral), registry-golden 56/56 PASS, zero new violations (baseline unchanged, so the timestamp-only `ssot:baseline` churn was reverted per N.0.2); (2) NEW test-only `canvas-v2/dxf-canvas/__tests__/dxf-bitmap-cache-subcategory-invalidation.test.ts` (5 tests) pinning the ADR-040 guarantee that a subcategory style set/clear busts the bitmap cache through the public `rebuild()`/`isDirty()` API (does NOT touch `dxf-bitmap-cache.ts` — it already folds `objectStyles` into `bimSettingsHash`, no new mechanism). tsc 0 (own files). | Claude (Opus 4.8)
+- **v0.9 (2026-06-03)** — Phase E IMPLEMENTED (3D parity). The 3D edge overlay (ADR-375 C.7 `Line2`/`LineMaterial`) now reads the SAME `objectStyles.{cat}.subcategories` SSoT the 2D renderers read, so user V/G category + subcategory pen/colour/pattern overrides reach the 3D viewport. **RECOGNITION deviation (N.0.1, code wins):** no new `three/bim-3d-style-bridge.ts` was created — the existing `bim-3d/edges/bim-3d-edge-resolver.ts` + `bim-3d-edge-overlay-builder.ts` ARE the bridge; the plan's `three/renderers/*` path was out of date. **Core fix the plan missed:** `attachEdgesProjection` resolved style WITHOUT `objectStyles`/`subcategoryKey` → 3D always used `DEFAULT_OBJECT_STYLES` (no override reached 3D at all). 5 MOD: (1) `bim-3d-edge-resolver.ts` `Resolved3DEdgeStyle += linePattern` (pure pass-through); (2) `bim-3d-edge-overlay-builder.ts` dashed `LineMaterial` via `linePatternToDashArray` × `DASH_WORLD_SCALE_M=0.01` (px→m, single dash+gap, `dot` → solid fallback); (3) `bim-three-edges.ts` `attachEdgesProjection(mesh, cat, subcategoryKey?)` reads `useBimRenderSettingsStore.getState().objectStyles` (resync already wired by `useBim3DVgResync`) — SOLE 3D edge SSoT; (4+5) wall/slab call sites → `'common-edges'`, **Boy-Scout** `StairToThreeConverter.attachStairEdges` → delegates to the shared helper (clone removed). column/beam/fixtures/panels keep parent style (no key) → `beam.hidden-lines`=dashed default does NOT leak to 3D (§7.3 zero-regression). Threading also makes category-level V/G pen/colour reach 3D edges for the first time (intended ADR-382 parity). 54 tests PASS (resolver +linePattern, overlay +dashed, NEW `bim-three-edges.test.ts` store-read parity + subcategoryKey routing + unification), tsc 0. 25 pre-existing `BimSceneLayer` scene-fixture failures unchanged (verified identical via stash — not a regression). Phase F (stub-badge polish + `.ssot-registry.json` ratchet) remains. | Claude (Opus 4.8)
 - **v0.8 (2026-06-03)** — Phase D IMPLEMENTED. Subcategories ribbon panel (Revit Object Styles dialog). 5 NEW (`SubcategoriesPanel` widget→Radix Dialog + per-category Tabs, `SubcategoryRow` dual projection/cut pen+color + line pattern + clear[×] + stub 🔒, `SubcategoriesPanelFooter` per-category/global reset + Apply-to-All-Levels, `subcategory-tabs.ts` pure tab-model SSoT with Door/Window/Cutout split of `opening`, `subcategory-propagation.service.ts` fan-out + pure `mergeSubcategoriesInto`) + 4 MODIFIED (`bim-render-settings-store.ts` 4 new actions `setSubcategoryStyleField`/`clearSubcategoryStyle`/`resetCategorySubcategories`/`resetAllSubcategories` sharing the 500ms debounce; `RibbonPanel.tsx` widget-registry `'subcategories'`; `view-tab-bim-settings.ts` `SUBCATEGORIES_BUTTON`; i18n el+en `ribbon.commands.subcategories.*`). SSoT reuse — `BimPenSelect`/`BimPatternSelect`/`UnifiedColorPicker` (no new `LinePatternPicker`). Persistence end-to-end via the v0.7-confirmed `SubcategoryStyleSchema`. Boy-Scout: `SUBCATEGORY_TAXONOMY` gained `'mep-wire'`/`'furniture'` empty entries (pre-existing `Record<BimCategory>` gap). 22 new tests PASS, tsc 0 (own files). Phase E (3D parity) + Phase F (stub-badge polish + ratchet entry) remain. | Claude (Opus 4.8)
 - **v0.7 (2026-05-27)** — Cross-reference / latent persistence gap closed via ADR-375 v2.13. The Phase A→C resolver + renderer wiring landed fully tested at unit level (45/45 PASS) but the **server-side persistence layer was silently stripping the `subcategories` field** from every `/api/dxf-levels` PATCH: `UpdateDxfLevelSchema.objectStyles[category]` only validated `{projectionPen, cutPen}` and Zod's default `.strip()` mode dropped the entire `subcategories?: Partial<Record<string, SubcategoryStyle>>` block before reaching Firestore. Zero production impact (Phase D UI not built yet, so no user could persist subcategory overrides through the ribbon), but a latent gap that would have surfaced as soon as Phase D shipped. The ADR-375 v2.13 root-cause fix introduced reusable named sub-schemas — `SubcategoryStyleSchema` (cutPen?/projectionPen?/linePattern?/cutColor?/projectionColor? — exact 1:1 mirror of the TS `SubcategoryStyle` interface defined in `bim-object-styles.ts`) and `ObjectStyleSchema.subcategories?: z.record(SubcategoryStyleSchema).optional()` — so the persistence path is now end-to-end correct ahead of Phase D. **No code changes required in ADR-377 scope**; this entry exists for traceability. See ADR-375 §8 v2.13 + `dxf-levels.schemas.test.ts` (test 4: "preserves ADR-377 subcategories block"). | Claude (Sonnet 4.6)
 - **v0.6 (2026-05-26)** — Phase C.3 IMPLEMENTED. Opening + Stair 2D renderers wired. `OpeningRenderer`: per-kind subcategory key routing via `openingOutlineSubcat()` + `openingOverlaySubcat()` helpers (door-opening / window-opening / wall-cutout-jambs / sliding-track / door-plan-swing / window-glass). `StairRenderer`: all 5 draw methods wired (`drawWalkline`, `drawHandrails`, `drawArrow`, treads/stringers via extended `StairStyleContext`). `StairStyleContext` extended with `treadsLineWidth?` + `stringersLineWidth?`. `stair-render-structure-style.ts` updated to use per-subcategory widths. `DEFAULT_OBJECT_STYLES.stair` gets default subcategories: walkline='dashed' [8,4] + handrails='dashed2' [4,2] (visual non-regression). 11 new tests (OpeningRenderer-subcategory-wiring 6 + StairRenderer-subcategory-wiring 5). 26/26 PASS (new C.2+C.3) + 19/19 PASS (C.1 regression). TSC pending.

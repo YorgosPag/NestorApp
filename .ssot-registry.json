@@ -395,6 +395,21 @@
       ],
       "tier": 3
     },
+    "_comment_adr377": "=== TIER 3 — ADR-377 (2026-06-03): BIM subcategories taxonomy + line-pattern SSoT ===",
+    "bim-subcategories": {
+      "ssotFile": "src/subapps/dxf-viewer/config/bim-subcategories.ts",
+      "description": "ADR-377 — BIM subcategory taxonomy + per-subcategory line patterns are a closed SSoT. The per-category subcategory keys (SUBCATEGORY_TAXONOMY), the wired-vs-stub gate (WIRED_SUBCATEGORIES / isWiredSubcategory), the lookup helper (getAllSubcategoryKeysForCategory), and the line-pattern catalog (BIM_LINE_PATTERNS / BUILT_IN_DASH_ARRAYS / linePatternToDashArray) live ONLY in config/bim-subcategories.ts and config/bim-line-patterns.ts. The 2D resolver (resolveSubcategoryStyle) and the 3D edge resolver (resolve3DEdgeStyle + buildEdgeOverlay + attachEdgesProjection) both read the same objectStyles[cat].subcategories SSoT — they must consume these tables, not re-declare them. Re-exports (export { X }) are allowed; re-declaring any of these constants/functions outside the canonical files is forbidden (would fork the taxonomy and desync 2D↔3D styling).",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(SUBCATEGORY_TAXONOMY|WIRED_SUBCATEGORIES)\\b",
+        "export\\s+const\\s+(BIM_LINE_PATTERNS|BUILT_IN_DASH_ARRAYS)\\b",
+        "export\\s+function\\s+(isWiredSubcategory|getAllSubcategoryKeysForCategory|linePatternToDashArray)\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/config/bim-subcategories.ts",
+        "src/subapps/dxf-viewer/config/bim-line-patterns.ts"
+      ],
+      "tier": 3
+    },
     "entity-audit-trail": {
       "ssotFile": "src/services/entity-audit.service.ts",
       "description": "Entity audit trail is a closed SSoT (ADR-195 Phase 10). Server writes go through EntityAuditService.recordChange(). Client reads go through EntityAuditClientService.subscribeGlobal()/subscribeEntity(), which compose firestoreQueryService. The canonical hooks are useEntityAudit + useGlobalAuditTrail. Forbidden (reader-side, enforced by regex below): direct writes to entity_audit_trail, inline collection() queries on ENTITY_AUDIT_TRAIL, re-implementation of either hook, manual RealtimeService event lists like GLOBAL_AUDIT_WATCH_EVENTS/ENTITY_EVENT_MAP, or bypassing firestoreQueryService with raw onSnapshot on the collection. Writer-side coverage (positive requirement — any write to a tracked entity must also call recordChange) is enforced by CHECK 3.17 via scripts/check-entity-audit-coverage.js + .entity-audit-coverage-baseline.json. The two together guarantee the audit trail is both untamperable (reader gate) and complete (writer gate).",

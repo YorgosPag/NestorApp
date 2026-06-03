@@ -36,6 +36,13 @@ export interface BimRenderSettings {
    * discipline keys ⇒ visible. Persisted per-view alongside the V/G overrides.
    */
   disciplineVisibility?: Partial<Record<Discipline, boolean>>;
+  /**
+   * ADR-408 Φ7 — colour-by-system master toggle (Revit "Color circuits by
+   * system" view option). Absent ⇒ `true` (circuits/fixtures/panels/wires paint
+   * with their owning System's colour). `false` ⇒ they fall back to the renderer
+   * default colour. Persisted per-view.
+   */
+  colorBySystem?: boolean;
 }
 
 export interface ResolvedBimSettings {
@@ -43,6 +50,7 @@ export interface ResolvedBimSettings {
   viewRange: ViewRange;
   objectStyles: Record<BimCategory, ObjectStyle>;
   disciplineVisibility: Partial<Record<Discipline, boolean>>;
+  colorBySystem: boolean;
 }
 
 // ── Resolver ───────────────────────────────────────────────────────────────
@@ -58,5 +66,7 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
       : DEFAULT_OBJECT_STYLES as Record<BimCategory, ObjectStyle>,
     // ADR-405 §4 — absent ⇒ {} (all disciplines visible).
     disciplineVisibility: s?.disciplineVisibility ?? {},
+    // ADR-408 Φ7 — absent ⇒ true (colour-by-system on, the legacy behaviour).
+    colorBySystem: s?.colorBySystem ?? true,
   };
 }

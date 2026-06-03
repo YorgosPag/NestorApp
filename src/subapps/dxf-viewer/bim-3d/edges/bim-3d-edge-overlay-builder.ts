@@ -24,21 +24,55 @@ import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { bimEdgeResolutionStore } from './bim-edge-resolution-store';
+import { linePatternToDashArray, type LinePatternKey } from '../../config/bim-line-patterns';
 
 /** Fallback color when the resolver returns null (= token-driven). */
 const DEFAULT_EDGE_COLOR = '#1a1a1a';
+
+/**
+ * ADR-377 Phase E — px-dash → world-units (meters) conversion for 3D dashes.
+ *
+ * `linePatternToDashArray` yields canvas px values at the 1:100 / 96-dpi
+ * reference. `LineMaterial.dashSize`/`gapSize` are in **world units** (meters,
+ * measured along the edge via `computeLineDistances()`). This factor maps the
+ * px reference to a metric dash that reads cleanly on architectural solids:
+ * 1px → 1cm, so `dashed` [8,4] → 8cm dash / 4cm gap. Visual distinction only —
+ * not a metric guarantee (LineMaterial supports a single dash+gap, so multi-
+ * segment patterns approximate to their first dash/gap pair).
+ */
+const DASH_WORLD_SCALE_M = 0.01;
 
 export interface EdgeOverlayOptions {
   /** Screen-space line width in CSS pixels (pre-DPR). */
   lineWidthPx: number;
   /** Hex color or null (null → DEFAULT_EDGE_COLOR). */
   color: string | null;
+  /**
+   * ADR-377 Phase E — line pattern. 'solid' / undefined → continuous edge.
+   * Any dashed/dotted/etc. key → a dashed `LineMaterial` (single dash+gap
+   * derived from `linePatternToDashArray`, scaled to world units).
+   */
+  linePattern?: LinePatternKey;
   /** EdgesGeometry threshold angle in degrees. Default 30° (Revit silhouette). */
   thresholdAngle: number;
   /** false → returns null (caller skips attach). */
   visible: boolean;
   /** Pre-resolved devicePixelRatio (test injection). Default: window.devicePixelRatio. */
   devicePixelRatio?: number;
+}
+
+/**
+ * Resolve the world-unit dash for a pattern key. Returns null for solid (or any
+ * pattern whose first dash is zero-length, e.g. pure-dot — LineMaterial cannot
+ * render zero-length caps in 3D, so we fall back to solid).
+ */
+function resolveWorldDash(
+  linePattern: LinePatternKey | undefined,
+): { dashSize: number; gapSize: number } | null {
+  if (!linePattern || linePattern === 'solid') return null;
+  const arr = linePatternToDashArray(linePattern);
+  if (arr.length < 2 || arr[0]! <= 0) return null;
+  return { dashSize: arr[0]! * DASH_WORLD_SCALE_M, gapSize: arr[1]! * DASH_WORLD_SCALE_M };
 }
 
 /**
@@ -70,6 +104,7 @@ export function buildEdgeOverlay(
       : 1
   );
 
+  const dash = resolveWorldDash(opts.linePattern);
   const material = new LineMaterial({
     color: new THREE.Color(opts.color ?? DEFAULT_EDGE_COLOR).getHex(),
     linewidth: opts.lineWidthPx * dpr,
@@ -77,6 +112,9 @@ export function buildEdgeOverlay(
     depthWrite: false,
     transparent: false,
     alphaToCoverage: true,
+    // ADR-377 Phase E — dashed edges (gaps discarded in the shader via USE_DASH).
+    // computeLineDistances() below provides the along-edge distance the dash reads.
+    ...(dash ? { dashed: true, dashSize: dash.dashSize, gapSize: dash.gapSize } : null),
   });
 
   const { width, height } = bimEdgeResolutionStore.getSize();

@@ -53,6 +53,12 @@ export const MEP_FIXTURE_RIBBON_STRING_KEYS: readonly MepFixtureRibbonStringComm
 export const MEP_FIXTURE_RIBBON_KEYS_ACTIONS = {
   close: 'mepFixture.actions.close',
   delete: 'mepFixture.actions.delete',
+  /**
+   * ADR-408 Φ7 — jump to the fixture's circuit (Revit "Select Panel" / "Edit
+   * Circuit"): selects the circuit's source panel so the panel-centric circuit
+   * tab surfaces in manage mode with the fixture's circuit active.
+   */
+  editCircuit: 'mepFixture.actions.editCircuit',
 } as const;
 
 const MEP_FIXTURE_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
@@ -70,13 +76,17 @@ export function isMepFixtureActionKey(action: string): boolean {
  */
 export const MEP_FIXTURE_RIBBON_VISIBILITY_KEYS = {
   rectangularParams: 'mepFixture.visibility.rectangularParams',
+  /** ADR-408 Φ7 — circuit panel visible iff the fixture belongs to a circuit. */
+  hasCircuit: 'mepFixture.visibility.hasCircuit',
 } as const;
 
 export type MepFixtureRibbonVisibilityKey =
-  typeof MEP_FIXTURE_RIBBON_VISIBILITY_KEYS.rectangularParams;
+  | typeof MEP_FIXTURE_RIBBON_VISIBILITY_KEYS.rectangularParams
+  | typeof MEP_FIXTURE_RIBBON_VISIBILITY_KEYS.hasCircuit;
 
 const MEP_FIXTURE_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_FIXTURE_RIBBON_VISIBILITY_KEYS.rectangularParams,
+  MEP_FIXTURE_RIBBON_VISIBILITY_KEYS.hasCircuit,
 ]);
 
 export function isMepFixtureVisibilityKey(

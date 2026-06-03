@@ -52,4 +52,11 @@ describe('wirePathToMesh', () => {
     const mat = mesh.material as THREE.MeshStandardMaterial;
     expect(mat.color.getHex()).toBe(0xff0000);
   });
+
+  it('ADR-408 Φ7 — colorBySystem=false falls back to the default wire material (not system-tinted)', () => {
+    const mesh = wirePathToMesh(path(0, 0, 10, 0, 0, '#ff0000'), 1, 0, 0, false)!;
+    const mat = mesh.material as THREE.MeshStandardMaterial;
+    // The default `elem-mep-wire` material colour, NOT the circuit's #ff0000.
+    expect(mat.color.getHex()).toBe(0xb45309);
+  });
 });

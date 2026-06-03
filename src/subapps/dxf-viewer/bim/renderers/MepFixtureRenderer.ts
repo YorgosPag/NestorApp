@@ -24,6 +24,8 @@ import type { MepFixtureEntity } from '../types/mep-fixture-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { buildFixtureSymbol } from '../mep-fixtures/mep-fixture-symbol';
 import { getMepFixtureGrips } from '../mep-fixtures/mep-fixture-grips';
+import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
+import { drawMeshSilhouette } from './mesh-silhouette-draw';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
@@ -42,6 +44,8 @@ const FIXTURE_STROKE = '#d97706';
 const FIXTURE_FILL = 'rgba(251, 191, 36, 0.18)';
 /** Translucent fill alpha for the colour-by-system (ADR-408 Φ5) override. */
 const SYSTEM_FILL_ALPHA = 0.18;
+/** BIM category → Storage library folder for light-fixture meshes (ADR-411). */
+const LIGHT_FIXTURE_MESH_CATEGORY = 'light-fixture';
 
 export class MepFixtureRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -66,8 +70,11 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
 
     // ADR-408 Φ5 — colour-by-system: a fixture wired into a circuit paints with
     // the System's colour; unassigned fixtures keep the amber default.
+    // ADR-408 Φ7 — gated by the per-view `colorBySystem` master toggle: OFF ⇒
+    // every fixture keeps the amber default regardless of circuit assignment.
+    const colorBySystem = useDrawingScaleStore.getState().colorBySystem;
     const systems = useMepSystemStore.getState().getSystems();
-    const systemColor = systems.length > 0
+    const systemColor = colorBySystem && systems.length > 0
       ? resolveEntitySystemColor(fixture.id, getEntitySystemColorIndexCached(systems))
       : null;
     const strokeColor = systemColor ?? FIXTURE_STROKE;
@@ -90,27 +97,50 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.ctx.setLineDash([]);
 
-    // Fill + outline (colour-by-system override, ADR-408 Φ5).
-    this.ctx.fillStyle = fillColor;
-    this.drawPolygonPath(verts);
-    this.ctx.fill();
-    this.ctx.strokeStyle = strokeColor;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    this.drawPolygonPath(verts);
-    this.ctx.stroke();
+    // ADR-411 — a fixture carrying an `assetId` paints the per-asset top-view
+    // silhouette + interior detail lines (shared SSoT); the colour-by-system
+    // stroke/fill still tints it. Falls back to the parametric family-symbol
+    // until the glTF (and its silhouette) has loaded, or when no asset is set.
+    const assetId = fixture.params.assetId;
+    const meshDrew = assetId
+      ? drawMeshSilhouette({
+          ctx: this.ctx,
+          worldToScreen: (p) => this.worldToScreen(p),
+          silhouette: bimMeshCache.getSilhouette(LIGHT_FIXTURE_MESH_CATEGORY, assetId),
+          edges: bimMeshCache.getTopEdges(LIGHT_FIXTURE_MESH_CATEGORY, assetId),
+          transform: {
+            position: fixture.params.position,
+            rotationDeg: fixture.params.rotation,
+            sceneUnits: fixture.params.sceneUnits ?? 'mm',
+          },
+          palette: { stroke: strokeColor, fill: fillColor, edge: hexToRgba(strokeColor, 0.55) },
+          lineWidth: RENDER_LINE_WIDTHS.NORMAL,
+        })
+      : false;
 
-    // Family symbol strokes (the luminaire "X").
-    const symbol = buildFixtureSymbol(fixture.params, fixture.geometry);
-    for (const stroke of symbol.strokes) {
-      if (stroke.length < 2) continue;
-      this.ctx.beginPath();
-      const start = this.worldToScreen({ x: stroke[0].x, y: stroke[0].y });
-      this.ctx.moveTo(start.x, start.y);
-      for (let i = 1; i < stroke.length; i++) {
-        const s = this.worldToScreen({ x: stroke[i].x, y: stroke[i].y });
-        this.ctx.lineTo(s.x, s.y);
-      }
+    if (!meshDrew) {
+      // Fill + outline (colour-by-system override, ADR-408 Φ5).
+      this.ctx.fillStyle = fillColor;
+      this.drawPolygonPath(verts);
+      this.ctx.fill();
+      this.ctx.strokeStyle = strokeColor;
+      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+      this.drawPolygonPath(verts);
       this.ctx.stroke();
+
+      // Family symbol strokes (the luminaire "X").
+      const symbol = buildFixtureSymbol(fixture.params, fixture.geometry);
+      for (const stroke of symbol.strokes) {
+        if (stroke.length < 2) continue;
+        this.ctx.beginPath();
+        const start = this.worldToScreen({ x: stroke[0].x, y: stroke[0].y });
+        this.ctx.moveTo(start.x, start.y);
+        for (let i = 1; i < stroke.length; i++) {
+          const s = this.worldToScreen({ x: stroke[i].x, y: stroke[i].y });
+          this.ctx.lineTo(s.x, s.y);
+        }
+        this.ctx.stroke();
+      }
     }
 
     this.ctx.restore();

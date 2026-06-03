@@ -30,6 +30,7 @@ beforeEach(() => {
       currentLevelId: null,
       bimVisibilitySnapshot: null,
       disciplineVisibility: {},
+      colorBySystem: true,
     });
   });
 });
@@ -240,6 +241,43 @@ describe('useBimRenderSettingsStore', () => {
         });
       });
       expect(useBimRenderSettingsStore.getState().disciplineVisibility.electrical).toBe(false);
+    });
+  });
+
+  describe('setColorBySystem (ADR-408 Φ7 — colour-by-system master toggle)', () => {
+    it('defaults colorBySystem to true', () => {
+      expect(useBimRenderSettingsStore.getState().colorBySystem).toBe(true);
+    });
+
+    it('toggles the flag off and back on', () => {
+      act(() => useBimRenderSettingsStore.getState().setColorBySystem(false));
+      expect(useBimRenderSettingsStore.getState().colorBySystem).toBe(false);
+      act(() => useBimRenderSettingsStore.getState().setColorBySystem(true));
+      expect(useBimRenderSettingsStore.getState().colorBySystem).toBe(true);
+    });
+
+    it('is idempotent — setting the current value is a no-op (no mutation timestamp bump)', () => {
+      act(() => useBimRenderSettingsStore.getState().loadForLevel('lvl-cbs'));
+      const before = useBimRenderSettingsStore.getState().lastLocalMutationAt;
+      act(() => useBimRenderSettingsStore.getState().setColorBySystem(true)); // already true
+      expect(useBimRenderSettingsStore.getState().lastLocalMutationAt).toBe(before);
+    });
+
+    it('loadForLevel rehydrates persisted colorBySystem=false', () => {
+      act(() => {
+        useBimRenderSettingsStore.getState().loadForLevel('lvl-cbs2', {
+          drawingScale: 100,
+          colorBySystem: false,
+        });
+      });
+      expect(useBimRenderSettingsStore.getState().colorBySystem).toBe(false);
+    });
+
+    it('loadForLevel with absent colorBySystem defaults to true (legacy views)', () => {
+      act(() => {
+        useBimRenderSettingsStore.getState().loadForLevel('lvl-cbs3', { drawingScale: 100 });
+      });
+      expect(useBimRenderSettingsStore.getState().colorBySystem).toBe(true);
     });
   });
 

@@ -77,7 +77,8 @@ export function syncCircuitWires(
 
   const paths = computeCircuitWirePaths(useMepSystemStore.getState().getSystems(), resolverFromHosts(hosts));
   for (const path of paths) {
-    const mesh = wirePathToMesh(path, sceneToM, ctx.floorElevationMm, baseElevationM);
+    // ADR-408 Φ7 — colour-by-system master toggle: OFF ⇒ default wire material.
+    const mesh = wirePathToMesh(path, sceneToM, ctx.floorElevationMm, baseElevationM, ctx.colorBySystem);
     if (mesh) group.add(mesh);
   }
 }

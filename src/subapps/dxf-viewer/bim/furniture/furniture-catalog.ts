@@ -57,6 +57,36 @@ export const FURNITURE_CATALOG: readonly FurnitureCatalogPreset[] = [
     atoeCode: 'ΟΙΚ-12',
     source: 'Poly Haven (CC0)',
   },
+  {
+    id: 'dining_chair_02',
+    kind: 'chair',
+    labelKey: 'furniture.catalog.diningChair02',
+    widthMm: 434,
+    depthMm: 576,
+    heightMm: 973,
+    atoeCode: 'ΟΙΚ-12',
+    source: 'Poly Haven (CC0)',
+  },
+  {
+    id: 'painted_wooden_chair_01',
+    kind: 'chair',
+    labelKey: 'furniture.catalog.paintedWoodenChair01',
+    widthMm: 432,
+    depthMm: 540,
+    heightMm: 956,
+    atoeCode: 'ΟΙΚ-12',
+    source: 'Poly Haven (CC0)',
+  },
+  {
+    id: 'plastic_monobloc_chair_01',
+    kind: 'chair',
+    labelKey: 'furniture.catalog.plasticMonoblocChair01',
+    widthMm: 642,
+    depthMm: 628,
+    heightMm: 880,
+    atoeCode: 'ΟΙΚ-12',
+    source: 'Poly Haven (CC0)',
+  },
 ] as const;
 
 /** Default asset id picked by the placement tool when none is chosen. */

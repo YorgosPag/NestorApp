@@ -109,6 +109,19 @@ const MEP_WIRE_BUTTON: RibbonButton = {
   },
 };
 
+/** ADR-408 Φ7 — colour-by-system master toggle (Revit "Color circuits by system"). */
+const COLOR_BY_SYSTEM_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'color-by-system-toggle',
+  command: {
+    id: 'view.colorBySystem',
+    labelKey: 'ribbon.commands.colorBySystem.label',
+    icon: '',
+    commandKey: 'color-by-system-toggle',
+  },
+};
+
 /** ADR-405 §4 — discipline visibility multi-toggle (Revit "View Discipline"). */
 const DISCIPLINE_BUTTON: RibbonButton = {
   type: 'widget',
@@ -149,7 +162,7 @@ export const BIM_GRAPHICS_PANEL: RibbonPanelDef = {
     // Visibility/Graphics → DXF only → Disciplines.
     {
       isInFlyout: false,
-      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DISCIPLINE_BUTTON],
+      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, COLOR_BY_SYSTEM_BUTTON, DISCIPLINE_BUTTON],
     },
   ],
 };

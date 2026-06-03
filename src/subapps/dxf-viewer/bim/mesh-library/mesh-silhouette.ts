@@ -1,22 +1,24 @@
 /**
- * Furniture top-view silhouette (ADR-410) — automatic 2D plan footprint.
+ * Mesh top-view silhouette (ADR-411, generalised from ADR-410) — automatic 2D
+ * plan footprint for ANY mesh-based BIM entity (furniture, light fixture, …).
  *
- * Derives a REPRESENTATIVE 2D plan outline from the loaded 3D mesh, per asset:
- * project every triangle straight down onto the plan plane, rasterise the union
- * into a binary grid, trace the outer contour (Moore boundary), simplify
- * (Douglas–Peucker). The result is the actual top-down silhouette of the item
- * (chair seat/back/arms) — what Revit/ArchiCAD show as the family plan symbol.
+ * Derives a REPRESENTATIVE 2D plan outline from a loaded 3D mesh: project every
+ * triangle straight down onto the plan plane, rasterise the union into a binary
+ * grid, trace the outer contour (Moore boundary), simplify (Douglas–Peucker).
+ * The result is the actual top-down silhouette of the item — what Revit/ArchiCAD
+ * show as the family plan symbol. `computeTopEdges` adds the interior feature
+ * lines (crease/boundary edges seen from directly above).
  *
  * Pure geometry — NO WebGL render-to-texture (deterministic + testable). Runs
- * ONCE per asset when the glTF loads (cached in `FurnitureGltfCache`).
+ * ONCE per asset when the glTF loads (cached in `bimMeshCache`).
  *
  * Coordinate frame: input is the mesh's LOCAL space (the un-placed template);
  * output points are in **plan meters relative to the placement origin**, mapping
  * three world (x, z) → plan (x = worldX, y = -worldZ) — the same convention as
- * `furniture-to-three.ts`. The renderer scales meters→scene-units, rotates and
- * translates onto `params.position`.
+ * the mesh converters. The renderer scales meters→scene-units, rotates and
+ * translates onto the entity position.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-410-cc0-mesh-furniture-import.md
+ * @see docs/centralized-systems/reference/adrs/ADR-411-bim-mesh-library.md
  */
 
 import * as THREE from 'three';
@@ -29,6 +31,53 @@ const GRID_LONG = 110;
 const SIMPLIFY_FRAC = 0.012;
 /** Minimum triangles to attempt a silhouette (else fall back to the rectangle). */
 const MIN_TRIS = 2;
+
+/** A projected plan line segment (plan meters, relative to placement origin). */
+export interface SilSegment { readonly x1: number; readonly y1: number; readonly x2: number; readonly y2: number }
+
+/** Feature-edge crease threshold (deg) + min segment length (m) + hard cap. */
+const EDGE_THRESHOLD_DEG = 30;
+const EDGE_MIN_LEN_M = 0.006;
+const EDGE_MAX_SEGMENTS = 6000;
+
+/**
+ * Compute top-view feature edges of `obj` (a loaded glTF group, un-placed):
+ * project the mesh's crease/boundary edges (THREE.EdgesGeometry) straight down
+ * onto the plan plane → a line drawing as seen from directly above. Plan meters,
+ * relative to origin (same frame as `computeTopSilhouette`). Empty when geometry
+ * is absent.
+ */
+export function computeTopEdges(obj: THREE.Object3D): SilSegment[] {
+  obj.updateMatrixWorld(true);
+  const segs: SilSegment[] = [];
+  const a = new THREE.Vector3(), b = new THREE.Vector3();
+  obj.traverse((child) => {
+    if (segs.length >= EDGE_MAX_SEGMENTS) return;
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.geometry) return;
+    let eg: THREE.EdgesGeometry | null = null;
+    try {
+      eg = new THREE.EdgesGeometry(mesh.geometry as THREE.BufferGeometry, EDGE_THRESHOLD_DEG);
+    } catch {
+      return;
+    }
+    const pos = eg.getAttribute('position') as THREE.BufferAttribute | undefined;
+    if (pos) {
+      const m = mesh.matrixWorld;
+      for (let i = 0; i + 1 < pos.count && segs.length < EDGE_MAX_SEGMENTS; i += 2) {
+        a.fromBufferAttribute(pos, i).applyMatrix4(m);
+        b.fromBufferAttribute(pos, i + 1).applyMatrix4(m);
+        // three world (x, z) → plan (x = worldX, y = -worldZ).
+        const x1 = a.x, y1 = -a.z, x2 = b.x, y2 = -b.z;
+        if (Math.hypot(x2 - x1, y2 - y1) >= EDGE_MIN_LEN_M) {
+          segs.push({ x1, y1, x2, y2 });
+        }
+      }
+    }
+    eg.dispose();
+  });
+  return segs;
+}
 
 /**
  * Compute the top-view silhouette of `obj` (a loaded glTF group, un-placed).

@@ -31,7 +31,7 @@ import {
   type ResolveWireHost,
 } from '../../bim/mep-systems/mep-wire-routing';
 import { resolverFromHosts, type WireHostXform } from '../../bim/mep-systems/mep-wire-resolver';
-import { drawCircuitWires, drawWaypointHandles } from '../../bim/renderers/MepWireRenderer';
+import { drawCircuitWires, drawWaypointHandles, DEFAULT_WIRE_COLOR } from '../../bim/renderers/MepWireRenderer';
 import { useMepCircuitEditorStore } from '../../bim/mep-systems/mep-circuit-editor-store';
 import {
   getWireWaypointHover,
@@ -103,6 +103,9 @@ export function HomeRunWiresOverlay({
   const systems = useMepSystemStore((s) => s.systems);
   const objectStyles = useDrawingScaleStore((s) => s.objectStyles);
   const disciplineVisibility = useDrawingScaleStore((s) => s.disciplineVisibility);
+  // ADR-408 Φ7 — colour-by-system master toggle (leaf subscription). OFF ⇒ wires +
+  // handles fall back to DEFAULT_WIRE_COLOR (2D/3D parity).
+  const colorBySystem = useDrawingScaleStore((s) => s.colorBySystem);
   // ADR-408 Φ7 FU#3 — editable waypoints: which circuit is active (shows handles)
   // + the cursor hover affordance (highlight node / insert ghost). Both are leaf
   // subscriptions — orchestrators stay untouched (CHECK 6C safe).
@@ -133,7 +136,7 @@ export function HomeRunWiresOverlay({
     if (paths.length === 0) return;
     // Hovering the active circuit's wire lights up the whole run (mirror of the
     // 2D DXF entity hover): pass the hovered systemId so its path strokes a halo.
-    drawCircuitWires(ctx, paths, transform, viewport, waypointHover?.systemId ?? null);
+    drawCircuitWires(ctx, paths, transform, viewport, waypointHover?.systemId ?? null, colorBySystem);
 
     // ADR-408 Φ7 FU#3 — editable handles for the active circuit only (Revit: grips
     // appear on the selected wire). Drawn on top of the wire so the user can grab
@@ -146,7 +149,7 @@ export function HomeRunWiresOverlay({
         ctx,
         segments,
         active.params.wireWaypoints,
-        path?.colorHex ?? '#1e88e5',
+        colorBySystem ? (path?.colorHex ?? '#1e88e5') : DEFAULT_WIRE_COLOR,
         waypointHover,
         transform,
         viewport,
@@ -154,7 +157,7 @@ export function HomeRunWiresOverlay({
     }
     // ADR-408 Φ7 P2 — `gripDragPreview` in deps ⇒ repaint each drag frame so the
     // wire tracks the previewed host (the snapshot changes on every mousemove).
-  }, [scene, transform, viewport, systems, visible, gripDragPreview, activeSystemId, waypointHover]);
+  }, [scene, transform, viewport, systems, visible, gripDragPreview, activeSystemId, waypointHover, colorBySystem]);
 
   return (
     <canvas

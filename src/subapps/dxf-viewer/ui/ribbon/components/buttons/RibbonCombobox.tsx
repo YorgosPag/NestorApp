@@ -83,6 +83,10 @@ export const RibbonCombobox: React.FC<RibbonComboboxProps> = ({ command }) => {
     : [{ value, labelKey: value, isLiteralLabel: true as const }, ...baseOptions];
 
   const ariaLabel = t(command.labelKey);
+  // ADR-410 — when the selected option carries a preview thumbnail, render it in
+  // the (collapsed) trigger too, and let the trigger grow to fit it.
+  const selectedOption = value !== null ? options.find((o) => o.value === value) : undefined;
+  const selectedImageUrl = selectedOption?.imageUrl;
 
   const handleValueChange = useCallback(
     (next: string) => {
@@ -109,12 +113,26 @@ export const RibbonCombobox: React.FC<RibbonComboboxProps> = ({ command }) => {
           ref={triggerRef}
           size="sm"
           aria-label={ariaLabel}
-          className="dxf-ribbon-combobox-trigger"
+          className={`dxf-ribbon-combobox-trigger${selectedImageUrl ? ' h-auto min-h-20 py-1' : ''}`}
           data-command-id={command.id}
           data-mixed={isMixed ? 'true' : undefined}
           data-coming-soon={command.comingSoon ? 'true' : undefined}
         >
-          <SelectValue placeholder={MIXED_PLACEHOLDER} />
+          {selectedImageUrl ? (
+            <span className="flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={selectedImageUrl}
+                alt=""
+                aria-hidden="true"
+                className="h-16 w-16 shrink-0 rounded object-contain bg-white/5 p-0.5"
+                loading="lazy"
+              />
+              <span className="truncate">{resolveLabel(selectedOption!, t)}</span>
+            </span>
+          ) : (
+            <SelectValue placeholder={MIXED_PLACEHOLDER} />
+          )}
         </SelectTrigger>
         {/*
          * The canonical SelectContent locks width to the (narrow) trigger
@@ -126,7 +144,21 @@ export const RibbonCombobox: React.FC<RibbonComboboxProps> = ({ command }) => {
         <SelectContent className="w-auto min-w-[var(--radix-select-trigger-width)] max-w-[28rem]">
           {options.map((opt) => (
             <SelectItem key={opt.value} value={opt.value} className="whitespace-nowrap">
-              {resolveLabel(opt, t)}
+              {opt.imageUrl ? (
+                <span className="flex items-center gap-3 py-1">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={opt.imageUrl}
+                    alt=""
+                    aria-hidden="true"
+                    className="h-16 w-16 shrink-0 rounded object-contain bg-white/5 p-0.5"
+                    loading="lazy"
+                  />
+                  <span>{resolveLabel(opt, t)}</span>
+                </span>
+              ) : (
+                resolveLabel(opt, t)
+              )}
             </SelectItem>
           ))}
         </SelectContent>

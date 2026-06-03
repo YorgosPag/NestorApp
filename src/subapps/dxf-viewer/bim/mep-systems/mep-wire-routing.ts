@@ -25,7 +25,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import type { MepSystemEntity } from '../types/mep-system-types';
+import type { MepSystemEntity, ConductorBreakdown } from '../types/mep-system-types';
+import { DEFAULT_CONDUCTORS } from '../types/mep-system-types';
 import { systemColor } from './mep-system-color';
 import { endpointKey, getOrientedWaypoints } from './mep-wire-waypoints';
 
@@ -63,6 +64,13 @@ export interface CircuitWirePath {
    * renderers read it (never a renderer-local default).
    */
   readonly style?: WireStyle;
+  /**
+   * Per-circuit conductor breakdown (Revit "#wires"), mirror of `colorHex`/
+   * `style`: the System owns it, the path carries it, the 2D renderer draws the
+   * home-run tick marks from it (`buildConductorTicks`). Always populated by
+   * {@link computeCircuitWirePaths} (defaults to `DEFAULT_CONDUCTORS`).
+   */
+  readonly conductors?: ConductorBreakdown;
   /** Ordered host points: `[panel, nearest fixture, next nearest, …]`. */
   readonly points: readonly WireHostPoint[];
 }
@@ -228,6 +236,7 @@ export function computeCircuitWirePaths(
       systemId: system.id,
       colorHex: systemColor(system),
       style: system.params.wireStyle ?? 'straight',
+      conductors: system.params.conductors ?? DEFAULT_CONDUCTORS,
       points,
     });
   }

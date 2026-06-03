@@ -115,6 +115,14 @@ Toggle «Ηλεκτρολογικά» (ADR-405 multi-toggle) κρύβει/δεί
 
 ## Changelog
 
+- **v1.0 (2026-06-03, Opus 4.8) — ✨ ADR-411 mesh opt-in (CC0 φωτιστικό «σαν Revit»):** το `MepFixtureParams`
+  απέκτησε optional `assetId?` + `scaleOverride?`. Όταν υπάρχει `assetId` → το φωτιστικό αποδίδεται ως
+  πραγματικό CC0 glTF mesh στο 3D (anchor `top` — κρέμεται από οροφή) + αυτόματη 2D σιλουέτα/top-edges
+  μέσω του entity-agnostic `bim-mesh-library` (ADR-411)· όταν λείπει → υπάρχον parametric family-symbol +
+  extruded solid (**full back-compat**, μηδέν regression). NEW `light-fixture-catalog.ts` (1 CC0 pendant) +
+  `mep-fixture-to-mesh.ts` + drawing-tool library picker με thumbnails (`useRibbonMepFixtureLibraryBridge`,
+  trigger `activeTool==='mep-fixture'`). 71/71 mep-fixture regression PASS, tsc 0. Βλ. **ADR-411**.
+
 - **v0.9 (2026-06-03, Opus 4.8, Giorgio review) — box-grips SSoT κεντρικοποίηση:** Το `mep-fixture-grips.ts`
   γίνεται thin adapter πάνω στο NEW shared `bim/grips/centred-box-grips.ts` (entity-agnostic centred
   rotatable-box grip SSoT, μοιραζόμενο με τον ηλεκτρικό πίνακα ADR-408 Φ3). Το rectangular path delegate-άρει

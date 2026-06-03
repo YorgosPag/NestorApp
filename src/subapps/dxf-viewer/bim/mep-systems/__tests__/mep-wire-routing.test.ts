@@ -14,7 +14,7 @@ import {
   type CircuitWirePath,
 } from '../mep-wire-routing';
 import { buildSegmentKey, endpointKey, type WireWaypointMap } from '../mep-wire-waypoints';
-import type { MepSystemEntity, MepSystemParams } from '../../types/mep-system-types';
+import { DEFAULT_CONDUCTORS, type MepSystemEntity, type MepSystemParams } from '../../types/mep-system-types';
 
 function sys(id: string, color: string | undefined, members: string[], source: string): MepSystemEntity {
   const params: MepSystemParams = {
@@ -283,5 +283,28 @@ describe('splicedSegmentInterior (arc-length zMm — shared by conduit + 3D hand
 
   it('is empty when the segment has no waypoints', () => {
     expect(splicedSegmentInterior(P(0, 0, 0), P(10, 0, 50), [])).toEqual([]);
+  });
+});
+
+describe('computeCircuitWirePaths (conductors — Φ7)', () => {
+  it('defaults a path conductor breakdown when the system has none', () => {
+    const paths = computeCircuitWirePaths(
+      [sys('s1', undefined, ['fx1'], 'pnl')],
+      resolverFrom({ pnl: P(0, 0), fx1: P(10, 0) }),
+    );
+    expect(paths[0]!.conductors).toEqual(DEFAULT_CONDUCTORS);
+  });
+
+  it('carries the system\'s explicit conductor breakdown onto the path', () => {
+    const base = sys('s1', undefined, ['fx1'], 'pnl');
+    const withConductors: MepSystemEntity = {
+      ...base,
+      params: { ...base.params, conductors: { hot: 2, neutral: 1, ground: 1 } },
+    };
+    const paths = computeCircuitWirePaths(
+      [withConductors],
+      resolverFrom({ pnl: P(0, 0), fx1: P(10, 0) }),
+    );
+    expect(paths[0]!.conductors).toEqual({ hot: 2, neutral: 1, ground: 1 });
   });
 });

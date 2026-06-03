@@ -24,8 +24,15 @@ export interface MepFixtureToolBridgeHandle {
   readonly isActive: boolean;
   readonly kind: MepFixtureKind;
   readonly shape: MepFixtureShape;
+  /**
+   * ADR-411 — selected CC0 mesh asset id, or `''` for the parametric fixture
+   * (no mesh). Drives the drawing-tool library picker.
+   */
+  readonly assetId: string;
   readonly overrides: MepFixtureParamOverrides;
   setShape(shape: MepFixtureShape): void;
+  /** ADR-411 — pick a library model (`''` ⇒ parametric, no mesh). */
+  setAssetId(assetId: string): void;
   setParamOverrides(overrides: MepFixtureParamOverrides): void;
   /** Active scene units, so the 3D ghost builds with correct mm→scene conversion. */
   getSceneUnits(): SceneUnits;

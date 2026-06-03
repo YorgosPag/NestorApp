@@ -202,6 +202,43 @@ export const CONTEXTUAL_MEP_FIXTURE_TAB: RibbonTab = {
       ],
     },
     {
+      // ADR-408 Φ7 — circuit awareness on the device tab (Revit "Electrical
+      // Circuits" panel). Self-hides (visibilityKey hasCircuit) when the fixture
+      // belongs to no circuit. Read-only circuit name + jump to manage it.
+      id: 'mep-fixture-circuit',
+      labelKey: 'ribbon.panels.mepFixtureCircuit',
+      visibilityKey: MEP_FIXTURE_RIBBON_VISIBILITY_KEYS.hasCircuit,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'mep-fixture-circuit-info',
+              command: {
+                id: 'mepFixture.circuitInfo',
+                labelKey: 'ribbon.commands.mepFixtureEditor.circuit.label',
+                commandKey: 'mep-fixture-circuit-info',
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'mepFixture.editCircuit',
+                labelKey: 'ribbon.commands.mepFixtureEditor.editCircuit',
+                tooltipKey: 'ribbon.commands.mepFixtureEditor.editCircuitTooltip',
+                icon: 'bim-electrical-panel',
+                commandKey: MEP_FIXTURE_RIBBON_KEYS_ACTIONS.editCircuit,
+                action: MEP_FIXTURE_RIBBON_KEYS_ACTIONS.editCircuit,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'mep-fixture-actions',
       labelKey: 'ribbon.panels.mepFixtureActions',
       rows: [

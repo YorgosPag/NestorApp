@@ -19,6 +19,7 @@ import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh, panelT
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
 import { furnitureToObject3D } from '../converters/furniture-to-three';
+import { mepFixtureToObject3D } from '../converters/mep-fixture-to-mesh';
 import { syncCircuitWires } from './sync-circuit-wires';
 import { resolveWallTopProfile, resolveWallNominalTopZmm } from '../../bim/geometry/wall-top-profile';
 import { resolveWallBaseProfile } from '../../bim/geometry/wall-base-profile';
@@ -124,16 +125,18 @@ export class BimSceneLayer {
     buildingVisModes: ReadonlyMap<string, BuildingVisMode>,
     floorVisModes: ReadonlyMap<string, FloorVisMode>,
   ): SyncContext {
-    const { objectStyles, disciplineVisibility } = useDrawingScaleStore.getState();
+    const { objectStyles, disciplineVisibility, colorBySystem } = useDrawingScaleStore.getState();
     const useNewSystem = buildingVisModes.size > 0;
     const floorMode = activeLevelId ? floorVisModes.get(activeLevelId) : undefined;
-    // ADR-408 Φ5 — colour-by-system index (entity → THREE colour int), built once
-    // per floor sync; threaded into the fixture/panel converters.
-    const systemColorIndex = buildEntitySystemColorIntIndex(
-      useMepSystemStore.getState().getSystems(),
-    );
+    // ADR-408 Φ5/Φ7 — colour-by-system index (entity → THREE colour int), built
+    // once per floor sync; threaded into the fixture/panel converters. When the
+    // per-view `colorBySystem` master toggle is OFF the index is left empty, so
+    // every panel/fixture falls back to its default material (no converter change).
+    const systemColorIndex = colorBySystem
+      ? buildEntitySystemColorIntIndex(useMepSystemStore.getState().getSystems())
+      : new Map<string, number>();
     return {
-      objectStyles, disciplineVisibility, systemColorIndex, floors, buildings, buildingVisModes,
+      objectStyles, disciplineVisibility, systemColorIndex, colorBySystem, floors, buildings, buildingVisModes,
       floorMode, activeBuildingId, useNewSystem,
       floorElevationMm, activeLevelId,
     };
@@ -335,10 +338,15 @@ export class BimSceneLayer {
     for (const fixture of entities.fixtures ?? []) {
       const r = this.resolveEntity(fixture, 'light-fixture', ctx);
       if (!r) continue;
-      const mesh = fixtureToMesh(
-        fixture, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation,
-        ctx.systemColorIndex.get(fixture.id),
-      );
+      // ADR-411 — a fixture carrying an `assetId` renders as a real CC0 mesh
+      // (top-anchored, hanging from the ceiling); otherwise the parametric
+      // family-symbol solid (colour-by-system aware). One falls through to the
+      // other so existing parametric fixtures are unaffected.
+      const mesh = mepFixtureToObject3D(fixture, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation)
+        ?? fixtureToMesh(
+          fixture, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation,
+          ctx.systemColorIndex.get(fixture.id),
+        );
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

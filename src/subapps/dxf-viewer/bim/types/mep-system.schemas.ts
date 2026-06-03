@@ -37,6 +37,16 @@ export const MepSystemParamsSchema = z
     wireWaypoints: z
       .record(z.string(), z.array(z.object({ x: z.number(), y: z.number() }).strict()))
       .optional(),
+    // ADR-408 Φ7 — per-circuit conductor breakdown (Revit "#wires" / home-run
+    // tick marks): hot (long ticks) / neutral (short) / ground (short + dot).
+    conductors: z
+      .object({
+        hot: z.number().int().min(0).max(12),
+        neutral: z.number().int().min(0).max(12),
+        ground: z.number().int().min(0).max(12),
+      })
+      .strict()
+      .optional(),
     ratedVoltage: z.number().positive().optional(),
     poles: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
   })

@@ -1,20 +1,16 @@
 /**
- * FurnitureRenderer — ADR-410.
+ * FurnitureRenderer — ADR-410 (mesh silhouette via ADR-411 shared helper).
  *
- * 2D plan-view renderer for `FurnitureEntity`. Reads `entity.geometry`
- * (populated by `computeFurnitureGeometry()` — SSoT) and draws:
- *   - the authored footprint outline (rectangle)
- *   - a translucent fill
- *   - a diagonal plan glyph (the generic furniture cross)
- *   - a hover halo when highlighted
- *
- * The 2D representation is authored (footprint from the catalog) — it never
- * needs the glTF mesh to be loaded (ADR-410 decision 5).
+ * 2D plan-view renderer for `FurnitureEntity`. Prefers the per-asset top-view
+ * silhouette derived from the loaded 3D mesh (representative plan footprint +
+ * interior detail lines), painted by the shared `drawMeshSilhouette` SSoT. Falls
+ * back to the authored catalog rectangle + generic glyph until the glTF (and its
+ * silhouette) has loaded.
  *
  * ADR-040 micro-leaf compliance: pure renderer class with ZERO subscriptions —
  * state read synchronously at draw time via `useDrawingScaleStore.getState()`.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-410-cc0-mesh-furniture-import.md
+ * @see docs/centralized-systems/reference/adrs/ADR-411-bim-mesh-library.md
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
@@ -29,14 +25,18 @@ import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
-import { mmToSceneUnits } from '../../utils/scene-units';
-import { furnitureGltfCache } from '../../bim-3d/library/furniture-gltf-cache';
+import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
+import { drawMeshSilhouette } from './mesh-silhouette-draw';
 
-const M_TO_MM = 1000;
+/** BIM category → Storage library folder for furniture meshes. */
+const FURNITURE_MESH_CATEGORY = 'furniture';
 
-/** Plan-symbol palette — interior furniture (neutral tan outline). */
-const FURNITURE_STROKE = '#8b5e34';
-const FURNITURE_FILL = 'rgba(180, 130, 80, 0.16)';
+/** Plan-symbol palette — interior furniture (neutral tan). */
+const FURNITURE_PALETTE = {
+  stroke: '#8b5e34',
+  fill: 'rgba(180, 130, 80, 0.16)',
+  edge: 'rgba(139, 94, 52, 0.55)',
+} as const;
 
 export class FurnitureRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -72,29 +72,34 @@ export class FurnitureRenderer extends BaseEntityRenderer {
       this.ctx.restore();
     }
 
-    // ADR-410 — prefer the per-asset top-view silhouette derived from the 3D mesh
-    // (representative plan footprint). Falls back to the authored rectangle + glyph
-    // until the glTF (and its silhouette) has loaded.
-    const silhouette = this.resolveSilhouetteWorld(furniture);
-
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
     this.ctx.setLineDash([]);
 
-    const outline = silhouette ?? verts;
+    // ADR-411 — prefer the per-asset top-view silhouette + interior detail lines
+    // (shared SSoT). Falls back to the authored rectangle + glyph until loaded.
+    const { assetId, position, rotationDeg, sceneUnits } = furniture.params;
+    const drew = drawMeshSilhouette({
+      ctx: this.ctx,
+      worldToScreen: (p) => this.worldToScreen(p),
+      silhouette: bimMeshCache.getSilhouette(FURNITURE_MESH_CATEGORY, assetId),
+      edges: bimMeshCache.getTopEdges(FURNITURE_MESH_CATEGORY, assetId),
+      transform: { position, rotationDeg, sceneUnits: sceneUnits ?? 'mm' },
+      palette: FURNITURE_PALETTE,
+      lineWidth: RENDER_LINE_WIDTHS.NORMAL,
+    });
 
-    // Fill + outline.
-    this.ctx.fillStyle = FURNITURE_FILL;
-    this.drawPolygonPath(outline);
-    this.ctx.fill();
-    this.ctx.strokeStyle = FURNITURE_STROKE;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    this.drawPolygonPath(outline);
-    this.ctx.stroke();
-
-    // Generic glyph (diagonal cross) only on the placeholder rectangle — the
-    // real silhouette is descriptive enough on its own.
-    if (!silhouette) this.drawDiagonals(verts);
+    if (!drew) {
+      // Authored footprint rectangle + generic glyph (diagonal cross).
+      this.ctx.fillStyle = FURNITURE_PALETTE.fill;
+      this.drawPolygonPath(verts);
+      this.ctx.fill();
+      this.ctx.strokeStyle = FURNITURE_PALETTE.stroke;
+      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+      this.drawPolygonPath(verts);
+      this.ctx.stroke();
+      this.drawDiagonals(verts);
+    }
 
     this.ctx.restore();
     this.finalizeRender(entity, options);
@@ -123,29 +128,6 @@ export class FurnitureRenderer extends BaseEntityRenderer {
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────
-
-  /**
-   * Resolve the per-asset top-view silhouette (cached in plan meters relative to
-   * the placement origin) into WORLD canvas-unit points, transformed onto the
-   * entity's position + rotation. Returns null when no silhouette is cached yet
-   * (renderer then falls back to the authored rectangle).
-   */
-  private resolveSilhouetteWorld(furniture: FurnitureEntity): Array<{ x: number; y: number }> | null {
-    const sil = furnitureGltfCache.getSilhouette(furniture.params.assetId);
-    if (!sil || sil.length < 3) return null;
-    const { position, rotationDeg, sceneUnits } = furniture.params;
-    // plan meters → mm → scene/canvas units (same space as geometry.footprint).
-    const s = mmToSceneUnits(sceneUnits ?? 'mm') * M_TO_MM;
-    const rad = (rotationDeg * Math.PI) / 180;
-    const cos = Math.cos(rad), sin = Math.sin(rad);
-    return sil.map((p) => {
-      const lx = p.x * s, ly = p.y * s;
-      return {
-        x: position.x + (lx * cos - ly * sin),
-        y: position.y + (lx * sin + ly * cos),
-      };
-    });
-  }
 
   private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
     if (vertices.length < 3) return;

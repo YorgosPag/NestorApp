@@ -80,6 +80,15 @@ export interface MepFixtureParams extends MepConnectorHostParams {
   /** Optional fixture catalog / lamp-type id (Phase 6+). */
   readonly material?: string;
   /**
+   * ADR-411 — optional CC0 mesh asset id (FK → `light-fixture-catalog.ts`).
+   * When set, the fixture renders as a real glTF mesh in 3D + an automatic
+   * top-view silhouette in 2D; when ABSENT it keeps the parametric family-symbol
+   * (2D) + extruded solid (3D). Full back-compat for existing fixtures.
+   */
+  readonly assetId?: string;
+  /** ADR-411 — uniform scale multiplier applied to the loaded mesh (default 1). */
+  readonly scaleOverride?: number;
+  /**
    * ADR-406 deferred hook — host element FK (ceiling/slab) for future hosted
    * placement (Revit "Host"). Unused in the free-point slice; reserved so the
    * hosted-cascade sub-step is non-breaking.

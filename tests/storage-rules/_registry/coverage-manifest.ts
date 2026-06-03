@@ -240,4 +240,8 @@ export const STORAGE_RULES_PENDING: readonly string[] = [
   // ADR-410 CC0 furniture mesh library (shared read-only catalog; super_admin curates writes/deletes).
   // Test suite to be added in follow-up: tests/storage-rules/suites/furniture-library.storage.test.ts
   '/furniture-library/{assetFile}',
+  // ADR-411 unified BIM mesh library (entity-agnostic Revit-style content server; shared read-only,
+  // super_admin curates writes/deletes). Supersedes /furniture-library/.
+  // Test suite to be added in follow-up: tests/storage-rules/suites/bim-mesh-library.storage.test.ts
+  '/bim-mesh-library/{assetFile=**}',
 ] as const;

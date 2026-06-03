@@ -23,20 +23,15 @@ import * as THREE from 'three';
 import type { StairEntity, Polygon3D, Polyline3D, Segment3D } from '../../bim/types/stair-types';
 import { resolveStairMaterial } from '../materials/stair-material-resolver';
 import { inferSceneUnitsFromWidth, sceneUnitsToMeters } from '../../utils/scene-units';
-import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
-import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
+import { attachEdgesProjection } from './bim-three-edges';
 
 // ADR-375 Phase C.7 — stair subcategory wiring (ADR-377 SUBCATEGORY_TAXONOMY).
-// landing has no canonical subcategory key → falls back to parent stair style.
+// ADR-377 Phase E — unified onto the shared `attachEdgesProjection` SSoT (was a
+// local clone). `category` is always 'stair'; subcategoryKey selects the part
+// (treads/risers/outlines). landing has no canonical subcategory key → omit →
+// falls back to parent stair style.
 function attachStairEdges(mesh: THREE.Mesh, subcategoryKey?: string): void {
-  const style = resolve3DEdgeStyle({
-    category: 'stair',
-    cutState: 'projection',
-    scaleDenominator: 100,
-    dpi: 96,
-    subcategoryKey,
-  });
-  attachEdgeOverlay(mesh, buildEdgeOverlay(mesh, style));
+  attachEdgesProjection(mesh, 'stair', subcategoryKey);
 }
 
 const ROT_X_NEG_90 = new THREE.Matrix4().makeRotationX(-Math.PI / 2);

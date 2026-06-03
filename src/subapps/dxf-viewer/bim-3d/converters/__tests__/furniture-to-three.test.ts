@@ -9,11 +9,12 @@ import * as THREE from 'three';
 
 const getInstance = jest.fn();
 const preload = jest.fn();
-jest.mock('../../library/furniture-gltf-cache', () => ({
-  furnitureGltfCache: {
+jest.mock('../../library/bim-mesh-library/bim-mesh-cache', () => ({
+  bimMeshCache: {
     getInstance: (...a: unknown[]) => getInstance(...a),
     preload: (...a: unknown[]) => preload(...a),
-    get: jest.fn(),
+    getSilhouette: jest.fn(),
+    getTopEdges: jest.fn(),
   },
 }));
 
@@ -48,7 +49,7 @@ describe('furnitureToObject3D — cache miss (placeholder)', () => {
     getInstance.mockReturnValue(null);
     const obj = furnitureToObject3D(makeEntity(), 0, 'L0', 0);
     expect(obj).toBeInstanceOf(THREE.Mesh);
-    expect(preload).toHaveBeenCalledWith('chair_01');
+    expect(preload).toHaveBeenCalledWith('furniture', 'chair_01');
     expect(obj?.userData['bimType']).toBe('furniture');
   });
 

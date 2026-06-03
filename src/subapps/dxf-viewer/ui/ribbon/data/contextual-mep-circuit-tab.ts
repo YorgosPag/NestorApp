@@ -129,6 +129,23 @@ export const CONTEXTUAL_MEP_CIRCUIT_TAB: RibbonTab = {
             },
           ],
         },
+        {
+          // Row 5 — conductor counts ("#wires"): hot / neutral / ground → home-run
+          // tick marks (Φ7).
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'mep-circuit-conductors',
+              command: {
+                id: 'mepCircuit.conductors',
+                labelKey: 'ribbon.commands.mepConductors.label',
+                commandKey: 'mepCircuit.conductors',
+              },
+            },
+          ],
+        },
       ],
     },
     {

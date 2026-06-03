@@ -166,7 +166,7 @@ export function buildStraightWallWithOpenings(
     mesh.userData['bimType'] = 'wall';
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    attachEdgesProjection(mesh, 'wall');
+    attachEdgesProjection(mesh, 'wall', 'common-edges');
     group.add(mesh);
   };
 
@@ -287,7 +287,7 @@ export function wallToMesh(
   // geometry z, so adding it here too would double-count. baseOffset=0 → no change.
   mesh.position.y = (floorElevationMm + wall.params.baseOffset) * MM_TO_M + buildingBaseElevationM;
   const tagged = tagMesh(mesh, wall.id, 'wall', matId, levelId);
-  attachEdgesProjection(tagged, 'wall');
+  attachEdgesProjection(tagged, 'wall', 'common-edges');
   return tagged;
 }
 
@@ -444,6 +444,6 @@ export function slabToMesh(
   const slabTopMm = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
   mesh.position.y = (slabTopMm - slab.params.thickness) * MM_TO_M + buildingBaseElevationM;
   const tagged = tagMesh(mesh, slab.id, 'slab', matId, levelId);
-  attachEdgesProjection(tagged, 'slab');
+  attachEdgesProjection(tagged, 'slab', 'common-edges');
   return tagged;
 }

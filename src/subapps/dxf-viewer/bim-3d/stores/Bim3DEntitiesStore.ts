@@ -89,12 +89,13 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   /** Elevation reference system for Floors tab display (ADR-369 §9.2 Q3). */
   elevationReference: ElevationReference;
   /**
-   * ADR-410 — monotonic counter bumped when a furniture glTF asset finishes
-   * loading into the `FurnitureGltfCache`. Any change triggers the entities-store
-   * subscriber in `BimViewport3D` → `resyncBimScene`, so the cache-miss bbox
-   * placeholder is replaced by the real mesh on the next sync pass.
+   * ADR-411 — monotonic counter bumped when ANY mesh-based BIM asset (furniture,
+   * light fixture, …) finishes loading into the `bimMeshCache`. Any change
+   * triggers the entities-store subscriber in `BimViewport3D` → `resyncBimScene`,
+   * so the cache-miss bbox placeholder is replaced by the real mesh on the next
+   * sync pass. One shared resync signal for every mesh category (ADR-411 Δ5).
    */
-  furnitureAssetVersion: number;
+  meshAssetVersion: number;
   setWalls: (walls: readonly WallEntity[]) => void;
   setColumns: (columns: readonly ColumnEntity[]) => void;
   setBeams: (beams: readonly BeamEntity[]) => void;
@@ -106,8 +107,8 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   setPanels: (panels: readonly ElectricalPanelEntity[]) => void;
   setRailings: (railings: readonly RailingEntity[]) => void;
   setFurnitures: (furnitures: readonly FurnitureEntity[]) => void;
-  /** ADR-410 — bump after a furniture glTF load resolves (triggers 3D resync). */
-  bumpFurnitureAssetVersion: () => void;
+  /** ADR-411 — bump after any mesh glTF load resolves (triggers 3D resync). */
+  bumpMeshAssetVersion: () => void;
   setActiveLevelId: (id: string | null) => void;
   setBuildings: (buildings: readonly BuildingRef[]) => void;
   setFloors: (floors: readonly FloorRef[]) => void;
@@ -130,7 +131,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     panels: [],
     railings: [],
     furnitures: [],
-    furnitureAssetVersion: 0,
+    meshAssetVersion: 0,
     activeLevelId: null,
     buildings: [],
     floors: [],
@@ -148,7 +149,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     setPanels: (panels) => set({ panels }),
     setRailings: (railings) => set({ railings }),
     setFurnitures: (furnitures) => set({ furnitures }),
-    bumpFurnitureAssetVersion: () => set((s) => ({ furnitureAssetVersion: s.furnitureAssetVersion + 1 })),
+    bumpMeshAssetVersion: () => set((s) => ({ meshAssetVersion: s.meshAssetVersion + 1 })),
     setActiveLevelId: (activeLevelId) => set({ activeLevelId }),
     setBuildings: (buildings) => set({ buildings }),
     setFloors: (floors) => set({ floors }),

@@ -1,9 +1,10 @@
 /**
- * ADR-410 — top-view silhouette unit tests (pure geometry, no GL).
+ * ADR-411 (generalised from ADR-410) — top-view silhouette unit tests
+ * (pure geometry, no GL).
  */
 
 import * as THREE from 'three';
-import { computeTopSilhouette } from '../furniture-silhouette';
+import { computeTopSilhouette, computeTopEdges } from '../mesh-silhouette';
 
 function bboxOf(pts: { x: number; y: number }[]) {
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -50,5 +51,24 @@ describe('computeTopSilhouette', () => {
     const sil = computeTopSilhouette(g);
     // An L-outline needs more than the 4 corners of a pure rectangle.
     expect(sil.length).toBeGreaterThan(4);
+  });
+});
+
+describe('computeTopEdges', () => {
+  it('returns projected feature-edge segments for a box (interior detail)', () => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.0, 0.4));
+    const segs = computeTopEdges(mesh);
+    // A box yields its silhouette + vertical-edge projections → ≥4 segments.
+    expect(segs.length).toBeGreaterThanOrEqual(4);
+    // Every segment is finite and within the footprint extents (±0.3 / ±0.2).
+    for (const s of segs) {
+      expect(Number.isFinite(s.x1) && Number.isFinite(s.y2)).toBe(true);
+      expect(Math.abs(s.x1)).toBeLessThanOrEqual(0.31);
+      expect(Math.abs(s.y1)).toBeLessThanOrEqual(0.21);
+    }
+  });
+
+  it('returns empty for an empty object', () => {
+    expect(computeTopEdges(new THREE.Group())).toEqual([]);
   });
 });

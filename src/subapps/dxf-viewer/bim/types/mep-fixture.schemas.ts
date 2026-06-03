@@ -50,6 +50,9 @@ export const MepFixtureParamsSchema = z
     storeyId: z.string().min(1).optional(),
     material: z.string().min(1).optional(),
     hostId: z.string().min(1).optional(),
+    // ADR-411 — optional CC0 mesh representation (back-compat: absent = parametric).
+    assetId: z.string().min(1).optional(),
+    scaleOverride: z.number().positive().optional(),
     // ADR-408 Φ1 — embedded MEP connectors (host-local). Optional/additive.
     connectors: z.array(MepConnectorSchema).optional(),
   })

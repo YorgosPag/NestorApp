@@ -28,15 +28,18 @@ import { ViewTemplatesPanel } from '../panels/ViewTemplatesPanel';
 import { VisibilityGraphicsPanel } from '../panels/VisibilityGraphicsPanel';
 import { HideBimToggle } from './HideBimToggle';
 import { MepWireToggle } from './MepWireToggle';
+import { ColorBySystemToggle } from './ColorBySystemToggle';
 import { DisciplineVisibilityToggle } from './DisciplineVisibilityToggle';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 import { RibbonStairFloorInfoWidget } from './RibbonStairFloorInfoWidget';
 import { RibbonStairDimensionsWidget } from './RibbonStairDimensionsWidget';
 import { RibbonWallDimensionWidget } from './RibbonWallDimensionWidget';
 import { RibbonMepCircuitPickerWidget } from './RibbonMepCircuitPickerWidget';
+import { RibbonMepFixtureCircuitWidget } from './RibbonMepFixtureCircuitWidget';
 import { RibbonMepCircuitNameWidget } from './RibbonMepCircuitNameWidget';
 import { RibbonMepCircuitColorWidget } from './RibbonMepCircuitColorWidget';
 import { RibbonMepCircuitWireStyleWidget } from './RibbonMepCircuitWireStyleWidget';
+import { RibbonMepCircuitConductorsWidget } from './RibbonMepCircuitConductorsWidget';
 import { MultiSelectionCommonPropertiesPanel } from './MultiSelectionCommonPropertiesPanel';
 import { MultiSelectionFilterPanel } from './MultiSelectionFilterPanel';
 import { CurrentLayerPicker } from '../../components/layer-picker/CurrentLayerPicker';
@@ -97,6 +100,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     if (button.widgetId === 'mep-wire-toggle') {
       return <MepWireToggle key="mep-wire-toggle-widget" />;
     }
+    if (button.widgetId === 'color-by-system-toggle') {
+      return <ColorBySystemToggle key="color-by-system-toggle-widget" />;
+    }
     if (button.widgetId === 'discipline-visibility') {
       return <DisciplineVisibilityToggle key="discipline-visibility-widget" />;
     }
@@ -133,6 +139,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     if (button.widgetId === 'opening-tag-leader-color') {
       return <OpeningTagLeaderColorWidget key="opening-tag-leader-color-widget" />;
     }
+    if (button.widgetId === 'mep-fixture-circuit-info') {
+      return <RibbonMepFixtureCircuitWidget key="mep-fixture-circuit-info-widget" />;
+    }
     if (button.widgetId === 'mep-circuit-picker') {
       return <RibbonMepCircuitPickerWidget key="mep-circuit-picker-widget" />;
     }
@@ -144,6 +153,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'mep-circuit-wire-style') {
       return <RibbonMepCircuitWireStyleWidget key="mep-circuit-wire-style-widget" />;
+    }
+    if (button.widgetId === 'mep-circuit-conductors') {
+      return <RibbonMepCircuitConductorsWidget key="mep-circuit-conductors-widget" />;
     }
     return null;
   }

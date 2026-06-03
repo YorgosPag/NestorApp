@@ -39,6 +39,9 @@ import {
   isMepFixtureVisibilityKey,
 } from './bridge/mep-fixture-command-keys';
 import { EventBus } from '../../../systems/events/EventBus';
+import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
+import { useMepCircuitEditorStore } from '../../../bim/mep-systems/mep-circuit-editor-store';
+import { resolveManagedCircuits } from '../../../bim/mep-systems/mep-circuit-editor';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -53,7 +56,7 @@ type LevelManagerLike = Pick<
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId' | 'getSelectedEntityIds'
+  'getPrimaryId' | 'getSelectedEntityIds' | 'select'
 >;
 
 export interface UseRibbonMepFixtureBridgeProps {
@@ -172,8 +175,31 @@ export function useRibbonMepFixtureBridge(
 
   const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
 
+  // ADR-408 Φ7 — the circuit the selected fixture belongs to (Revit single-
+  // circuit ⇒ at most one). Honours the synced `activeSystemId` so it matches the
+  // read-only indicator widget, falling back to the first candidate.
+  const resolveFixtureCircuit = useCallback(() => {
+    const fixture = resolveFixture();
+    if (!fixture) return null;
+    const systems = useMepSystemStore.getState().getSystems();
+    const candidates = resolveManagedCircuits([fixture], systems);
+    if (candidates.length === 0) return null;
+    const activeId = useMepCircuitEditorStore.getState().activeSystemId;
+    return candidates.find((c) => c.id === activeId) ?? candidates[0]!;
+  }, [resolveFixture]);
+
   const onAction = useCallback(
     (action: string): void => {
+      if (action === MEP_FIXTURE_RIBBON_KEYS_ACTIONS.editCircuit) {
+        // Revit "Select Panel" / "Edit Circuit": select the circuit's source
+        // panel so the panel-centric circuit tab surfaces in manage mode. The
+        // active circuit stays the fixture's (reconciled by useMepCircuitEditorSync).
+        const circuit = resolveFixtureCircuit();
+        if (!circuit) return;
+        useMepCircuitEditorStore.getState().setActiveSystemId(circuit.id);
+        universalSelection.select(circuit.params.sourceEntityId, 'dxf-entity');
+        return;
+      }
       if (action !== MEP_FIXTURE_RIBBON_KEYS_ACTIONS.delete) return;
       const fixture = resolveFixture();
       if (!fixture) return;
@@ -183,7 +209,7 @@ export function useRibbonMepFixtureBridge(
       if (!confirmed) return;
       EventBus.emit('bim:mep-fixture-delete-requested', { fixtureId: fixture.id });
     },
-    [resolveFixture, t],
+    [resolveFixture, resolveFixtureCircuit, universalSelection, t],
   );
 
   const getPanelVisibility = useCallback(
@@ -194,9 +220,13 @@ export function useRibbonMepFixtureBridge(
       if (visibilityKey === MEP_FIXTURE_RIBBON_VISIBILITY_KEYS.rectangularParams) {
         return fixture.params.shape === 'rectangular';
       }
+      if (visibilityKey === MEP_FIXTURE_RIBBON_VISIBILITY_KEYS.hasCircuit) {
+        // ADR-408 Φ7 — circuit panel visible iff the fixture is wired to a circuit.
+        return resolveFixtureCircuit() !== null;
+      }
       return false;
     },
-    [resolveFixture],
+    [resolveFixture, resolveFixtureCircuit],
   );
 
   return useMemo(

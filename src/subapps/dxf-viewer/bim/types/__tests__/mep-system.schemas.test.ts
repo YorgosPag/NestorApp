@@ -35,6 +35,26 @@ describe('MepSystemParamsSchema', () => {
     const bad = { ...buildDefaultCircuitParams('C', 'pnl1', 'src'), bogus: 1 };
     expect(MepSystemParamsSchema.safeParse(bad).success).toBe(false);
   });
+
+  it('accepts a valid conductor breakdown (Φ7)', () => {
+    const params = { ...buildDefaultCircuitParams('C', 'pnl1', 'src'), conductors: { hot: 2, neutral: 1, ground: 1 } };
+    expect(MepSystemParamsSchema.safeParse(params).success).toBe(true);
+  });
+
+  it('rejects a negative conductor count', () => {
+    const bad = { ...buildDefaultCircuitParams('C', 'pnl1', 'src'), conductors: { hot: -1, neutral: 1, ground: 1 } };
+    expect(MepSystemParamsSchema.safeParse(bad).success).toBe(false);
+  });
+
+  it('rejects a conductor count above the max', () => {
+    const bad = { ...buildDefaultCircuitParams('C', 'pnl1', 'src'), conductors: { hot: 99, neutral: 1, ground: 1 } };
+    expect(MepSystemParamsSchema.safeParse(bad).success).toBe(false);
+  });
+
+  it('rejects a conductor breakdown missing a role (strict)', () => {
+    const bad = { ...buildDefaultCircuitParams('C', 'pnl1', 'src'), conductors: { hot: 1, neutral: 1 } };
+    expect(MepSystemParamsSchema.safeParse(bad).success).toBe(false);
+  });
 });
 
 describe('MepSystemEntitySchema', () => {

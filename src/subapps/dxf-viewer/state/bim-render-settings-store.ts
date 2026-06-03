@@ -114,6 +114,13 @@ interface BimRenderSettingsState extends ResolvedBimSettings {
    * state update + single debounced write (idempotent).
    */
   setDisciplineVisibility: (discipline: Discipline, visible: boolean) => void;
+  /**
+   * ADR-408 Φ7 — toggle the colour-by-system master switch (Revit "Color
+   * circuits by system"). `false` ⇒ circuits/fixtures/panels/wires fall back to
+   * the renderer default colour; `true` ⇒ they paint with their System's colour.
+   * Single state update + single debounced write (idempotent).
+   */
+  setColorBySystem: (colorBySystem: boolean) => void;
   /** Override projection or cut color for a category (null = canvas token). */
   setObjectStyleVgColor: (
     category: BimCategory,
@@ -163,6 +170,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       viewRange: state.viewRange,
       objectStyles: state.objectStyles,
       disciplineVisibility: state.disciplineVisibility,
+      colorBySystem: state.colorBySystem,
     };
   }
 
@@ -187,6 +195,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         viewRange: resolved.viewRange,
         objectStyles: resolved.objectStyles,
         disciplineVisibility: resolved.disciplineVisibility,
+        colorBySystem: resolved.colorBySystem,
         lastLocalMutationAt: 0,
         bimVisibilitySnapshot: null,
       });
@@ -275,6 +284,14 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), disciplineVisibility: next }));
     },
 
+    setColorBySystem(colorBySystem) {
+      const state = get();
+      if (state.colorBySystem === colorBySystem) return; // idempotent — no-op write
+      set({ colorBySystem, lastLocalMutationAt: Date.now() });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), colorBySystem }));
+    },
+
     setObjectStyleVgColor(category, key, color) {
       const state = get();
       const prev = state.objectStyles[category];
@@ -357,6 +374,7 @@ function commitObjectStyles(
       viewRange: get().viewRange,
       objectStyles: nextStyles,
       disciplineVisibility: get().disciplineVisibility,
+      colorBySystem: get().colorBySystem,
     });
   }
 }

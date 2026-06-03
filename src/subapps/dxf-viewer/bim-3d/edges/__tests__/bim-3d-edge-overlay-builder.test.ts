@@ -210,6 +210,62 @@ describe('ADR-375 C.7 — buildEdgeOverlay', () => {
       expect(hex).toBe(0xff0000);
     });
   });
+
+  // ── ADR-377 Phase E — line pattern → dashed LineMaterial ─────────────────────
+  describe('linePattern → dashed material (ADR-377 Phase E)', () => {
+    it('solid (default) → material.dashed=false', () => {
+      const overlay = buildEdgeOverlay(makeBoxMesh(), {
+        lineWidthPx: 1.0, color: '#000', thresholdAngle: 30, visible: true,
+      });
+      expect((overlay?.material as LineMaterial).dashed).toBe(false);
+    });
+
+    it("linePattern='solid' explicit → material.dashed=false", () => {
+      const overlay = buildEdgeOverlay(makeBoxMesh(), {
+        lineWidthPx: 1.0, color: '#000', thresholdAngle: 30, visible: true,
+        linePattern: 'solid',
+      });
+      expect((overlay?.material as LineMaterial).dashed).toBe(false);
+    });
+
+    it("linePattern='dashed' → dashed=true, dashSize/gapSize from [8,4] × 0.01m", () => {
+      const overlay = buildEdgeOverlay(makeBoxMesh(), {
+        lineWidthPx: 1.0, color: '#000', thresholdAngle: 30, visible: true,
+        linePattern: 'dashed',
+      });
+      const mat = overlay?.material as LineMaterial;
+      expect(mat.dashed).toBe(true);
+      expect(mat.dashSize).toBeCloseTo(0.08, 6);
+      expect(mat.gapSize).toBeCloseTo(0.04, 6);
+    });
+
+    it("linePattern='hidden' → dashed=true ([4,2] × 0.01m)", () => {
+      const overlay = buildEdgeOverlay(makeBoxMesh(), {
+        lineWidthPx: 1.0, color: '#000', thresholdAngle: 30, visible: true,
+        linePattern: 'hidden',
+      });
+      const mat = overlay?.material as LineMaterial;
+      expect(mat.dashed).toBe(true);
+      expect(mat.dashSize).toBeCloseTo(0.04, 6);
+      expect(mat.gapSize).toBeCloseTo(0.02, 6);
+    });
+
+    it("linePattern='dot' (zero-length dash) → falls back to solid", () => {
+      const overlay = buildEdgeOverlay(makeBoxMesh(), {
+        lineWidthPx: 1.0, color: '#000', thresholdAngle: 30, visible: true,
+        linePattern: 'dot',
+      });
+      expect((overlay?.material as LineMaterial).dashed).toBe(false);
+    });
+
+    it('dashed overlay still computes line distances (no crash)', () => {
+      const overlay = buildEdgeOverlay(makeBoxMesh(), {
+        lineWidthPx: 1.0, color: '#000', thresholdAngle: 30, visible: true,
+        linePattern: 'dashed',
+      });
+      expect(overlay).toBeInstanceOf(LineSegments2);
+    });
+  });
 });
 
 describe('ADR-375 C.7 — attachEdgeOverlay', () => {

@@ -24,6 +24,9 @@ import {
 import { UpdateMepFixtureParamsCommand } from '../../../../core/commands/entity-commands/UpdateMepFixtureParamsCommand';
 import { EventBus } from '../../../../systems/events/EventBus';
 import { resetGlobalCommandHistory } from '../../../../core/commands';
+import { useMepSystemStore } from '../../../../bim/mep-systems/mep-system-store';
+import { useMepCircuitEditorStore } from '../../../../bim/mep-systems/mep-circuit-editor-store';
+import type { MepSystemEntity } from '../../../../bim/types/mep-system-types';
 
 // ── Mock UpdateMepFixtureParamsCommand to capture writes (avoids geometry calc) ──
 jest.mock(
@@ -81,12 +84,29 @@ function makeSelection(id: string | null) {
   return {
     getPrimaryId: jest.fn(() => id),
     getSelectedEntityIds: jest.fn(() => (id ? [id] : [])),
+    select: jest.fn(),
   } as unknown as Parameters<typeof useRibbonMepFixtureBridge>[0]['universalSelection'];
+}
+
+/** A circuit (`MepSystemEntity`) sourced by `panel-1`, with `fix-rect-1` as a member. */
+function circuitWithMember(memberId: string): MepSystemEntity {
+  return {
+    id: 'sys-1',
+    params: {
+      name: 'L1',
+      systemClassification: 'lighting',
+      sourceEntityId: 'panel-1',
+      sourceConnectorId: 'panel-out',
+      members: [{ entityId: memberId, connectorId: 'fixture-power' }],
+    },
+  } as unknown as MepSystemEntity;
 }
 
 beforeEach(() => {
   resetGlobalCommandHistory();
   (UpdateMepFixtureParamsCommand as jest.Mock).mockClear();
+  useMepSystemStore.setState({ systems: [] });
+  useMepCircuitEditorStore.setState({ activeSystemId: null });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -254,5 +274,60 @@ describe('useRibbonMepFixtureBridge — onAction delete', () => {
     expect(emitSpy).not.toHaveBeenCalledWith('bim:mep-fixture-delete-requested', expect.anything());
     confirmSpy.mockRestore();
     emitSpy.mockRestore();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADR-408 Φ7 — circuit awareness on the fixture tab (hasCircuit + editCircuit)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('useRibbonMepFixtureBridge — hasCircuit visibility', () => {
+  it('hidden when the fixture belongs to no circuit', () => {
+    const { result } = renderHook(() =>
+      useRibbonMepFixtureBridge({
+        levelManager: makeLevelManager(rectFixture),
+        universalSelection: makeSelection('fix-rect-1'),
+      }),
+    );
+    expect(result.current.getPanelVisibility(MEP_FIXTURE_RIBBON_VISIBILITY_KEYS.hasCircuit)).toBe(false);
+  });
+
+  it('visible when the selected fixture is a circuit member', () => {
+    act(() => useMepSystemStore.setState({ systems: [circuitWithMember('fix-rect-1')] }));
+    const { result } = renderHook(() =>
+      useRibbonMepFixtureBridge({
+        levelManager: makeLevelManager(rectFixture),
+        universalSelection: makeSelection('fix-rect-1'),
+      }),
+    );
+    expect(result.current.getPanelVisibility(MEP_FIXTURE_RIBBON_VISIBILITY_KEYS.hasCircuit)).toBe(true);
+  });
+});
+
+describe('useRibbonMepFixtureBridge — onAction editCircuit (Select Panel → jump)', () => {
+  it('selects the circuit source panel and activates the circuit', () => {
+    act(() => useMepSystemStore.setState({ systems: [circuitWithMember('fix-rect-1')] }));
+    const selection = makeSelection('fix-rect-1');
+    const { result } = renderHook(() =>
+      useRibbonMepFixtureBridge({
+        levelManager: makeLevelManager(rectFixture),
+        universalSelection: selection,
+      }),
+    );
+    act(() => result.current.onAction(MEP_FIXTURE_RIBBON_KEYS_ACTIONS.editCircuit));
+    expect(selection.select).toHaveBeenCalledWith('panel-1', 'dxf-entity');
+    expect(useMepCircuitEditorStore.getState().activeSystemId).toBe('sys-1');
+  });
+
+  it('is a no-op when the fixture belongs to no circuit', () => {
+    const selection = makeSelection('fix-rect-1');
+    const { result } = renderHook(() =>
+      useRibbonMepFixtureBridge({
+        levelManager: makeLevelManager(rectFixture),
+        universalSelection: selection,
+      }),
+    );
+    act(() => result.current.onAction(MEP_FIXTURE_RIBBON_KEYS_ACTIONS.editCircuit));
+    expect(selection.select).not.toHaveBeenCalled();
   });
 });

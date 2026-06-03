@@ -42,12 +42,17 @@ function worldY(elevationMm: number, floorElevationMm: number, buildingBaseEleva
 /**
  * Build the conduit mesh for one circuit, or `null` when the path has < 2 points
  * (nothing to sweep). `sceneToM` = `sceneUnitsToMeters(units)` of the floor.
+ *
+ * ADR-408 Φ7 — `colorBySystem` (default `true`) gates the per-view colour-by-system
+ * master toggle: OFF ⇒ the conduit uses the default `elem-mep-wire` material instead
+ * of the System-tinted one (mirrors the 2D overlay fallback).
  */
 export function wirePathToMesh(
   path: CircuitWirePath,
   sceneToM: number,
   floorElevationMm: number,
   baseElevationM: number,
+  colorBySystem = true,
 ): THREE.Mesh | null {
   const pts = buildWirePolyline(path);
   if (pts.length < 2) return null;
@@ -58,7 +63,7 @@ export function wirePathToMesh(
   for (let i = 1; i < vecs.length; i++) curvePath.add(new THREE.LineCurve3(vecs[i - 1]!, vecs[i]!));
   const radiusM = Math.max(0.001, CONDUIT_RADIUS_MM * MM_TO_M);
   const geo = new THREE.TubeGeometry(curvePath, Math.max(1, vecs.length - 1), radiusM, TUBE_RADIAL_SEGMENTS, false);
-  const colorInt = hexToThreeInt(path.colorHex);
+  const colorInt = colorBySystem ? hexToThreeInt(path.colorHex) : null;
   const mat = colorInt !== null
     ? getSystemTintedMaterial3D('mep-wire', colorInt)
     : getElementMaterial3D('mep-wire');

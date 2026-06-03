@@ -725,7 +725,8 @@
       "lineToolStyle": "Στυλ Γραμμής",
       "xlineMode": "Γραμμή Κατασκευής",
       "analyze": "Ανάλυση",
-      "furnitureProperties": "Ιδιότητες Επίπλου"
+      "furnitureProperties": "Ιδιότητες Επίπλου",
+      "mepFixtureLibrary": "Βιβλιοθήκη Φωτιστικών"
     },
     "panels": {
       "draw": "Σχεδίαση",
@@ -801,6 +802,7 @@
       "mepFixtureGeometry": "Γεωμετρία",
       "mepFixtureRectParams": "Ορθογώνιο",
       "mepFixtureActions": "Ενέργειες",
+      "mepFixtureCircuit": "Κύκλωμα",
       "mepCircuit": "Κύκλωμα",
       "mepCircuitProperties": "Ιδιότητες Κυκλώματος",
       "multiSelectionCommon": "Κοινές Ιδιότητες",
@@ -840,7 +842,9 @@
       "thermalEnvelope": "Θερμοπρόσοψη",
       "furnitureCatalog": "Κατάλογος",
       "furnitureGeometry": "Γεωμετρία",
-      "furnitureActions": "Ενέργειες"
+      "furnitureActions": "Ενέργειες",
+      "mepFixtureLibrary": "Βιβλιοθήκη",
+      "mepFixtureLibraryPlacement": "Τοποθέτηση"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -1589,6 +1593,11 @@
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή φωτιστικού; Η ενέργεια δεν μπορεί να αναιρεθεί.",
+        "circuit": {
+          "label": "Κύκλωμα"
+        },
+        "editCircuit": "Επεξεργασία Κυκλώματος",
+        "editCircuitTooltip": "Επιλογή του πίνακα-πηγής για διαχείριση του κυκλώματος αυτού του φωτιστικού (μετονομασία / χρώμα / μέλη).",
         "shape": {
           "section": {
             "title": "Σχήμα"
@@ -1863,11 +1872,25 @@
         "tooltipHide": "Απόκρυψη των καλωδίων των κυκλωμάτων MEP από την προβολή",
         "tooltipShow": "Εμφάνιση των καλωδίων των κυκλωμάτων MEP"
       },
+      "colorBySystem": {
+        "label": "Χρώμα ανά Σύστημα",
+        "enable": "Ενεργοποίηση Χρώματος",
+        "disable": "Απενεργοποίηση Χρώματος",
+        "tooltipEnable": "Χρωματισμός φωτιστικών, πινάκων και καλωδίων ανά κύκλωμα (σύστημα)",
+        "tooltipDisable": "Απενεργοποίηση χρωματισμού ανά σύστημα — χρήση προεπιλεγμένου χρώματος"
+      },
       "mepWireStyle": {
         "label": "Στυλ Καλωδίου",
         "straight": "Ευθύ",
         "orthogonal": "Ορθογώνιο",
         "arc": "Τόξο"
+      },
+      "mepConductors": {
+        "label": "Αγωγοί",
+        "hot": "Φάση",
+        "neutral": "Ουδέτερος",
+        "ground": "Γείωση",
+        "tooltip": "Πλήθος αγωγών (φάση/ουδέτερος/γείωση) — εμφανίζονται ως γραμμές στο home-run"
       },
       "discipline": {
         "label": "Πειθαρχίες",
@@ -2012,6 +2035,12 @@
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή επίπλου; Η ενέργεια δεν αναιρείται."
+      },
+      "mepFixtureLibrary": {
+        "asset": "Μοντέλο",
+        "parametric": "Παραμετρικό (χωρίς μοντέλο)",
+        "rotation": "Περιστροφή",
+        "scale": "Κλίμακα"
       }
     },
     "tooltips": {
@@ -2264,6 +2293,9 @@
     }
   },
   "mepFixture": {
+    "catalog": {
+      "pendantLamp01": "Κρεμαστό Φωτιστικό"
+    },
     "validation": {
       "hardErrors": {
         "nonPositiveWidth": "Το πλάτος πρέπει να είναι μεγαλύτερο από 0",
@@ -2322,7 +2354,10 @@
   },
   "furniture": {
     "catalog": {
-      "chair01": "Καρέκλα"
+      "chair01": "Καρέκλα",
+      "diningChair02": "Καρέκλα τραπεζαρίας",
+      "paintedWoodenChair01": "Βαμμένη ξύλινη καρέκλα",
+      "plasticMonoblocChair01": "Πλαστική καρέκλα"
     },
     "validation": {
       "hardErrors": {

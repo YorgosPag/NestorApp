@@ -15,6 +15,12 @@ export interface SyncContext {
   readonly disciplineVisibility: Partial<Record<Discipline, boolean>>;
   /** ADR-408 Φ5 — colour-by-system: `entityId → THREE colour int` (panels/fixtures). */
   readonly systemColorIndex: ReadonlyMap<string, number>;
+  /**
+   * ADR-408 Φ7 — colour-by-system master toggle (per-view). When `false`, the
+   * `systemColorIndex` is empty (fixtures/panels fall back to default material)
+   * and `syncCircuitWires` paints conduits in the default wire material.
+   */
+  readonly colorBySystem: boolean;
   readonly floors: readonly FloorRef[];
   readonly buildings: readonly BuildingRef[];
   readonly buildingVisModes: ReadonlyMap<string, BuildingVisMode>;

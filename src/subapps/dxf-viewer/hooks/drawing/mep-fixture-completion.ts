@@ -60,6 +60,10 @@ export interface MepFixtureParamOverrides {
   /** Degrees CCW. Ignored when circular. */
   readonly rotation?: number;
   readonly material?: string;
+  /** ADR-411 — CC0 mesh asset id (mesh representation when set). */
+  readonly assetId?: string;
+  /** ADR-411 — uniform mesh scale multiplier. */
+  readonly scaleOverride?: number;
 }
 
 // ─── Defaults factory ────────────────────────────────────────────────────────
@@ -98,6 +102,9 @@ export function buildDefaultMepFixtureParams(
     // for logic until Φ2+ Systems exist).
     connectors: [buildDefaultLightingConnector()],
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
+    // ADR-411 — optional mesh representation (omitted ⇒ parametric, back-compat).
+    ...(overrides.assetId ? { assetId: overrides.assetId } : {}),
+    ...(overrides.scaleOverride !== undefined ? { scaleOverride: overrides.scaleOverride } : {}),
   };
 }
 

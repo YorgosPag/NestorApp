@@ -19,7 +19,16 @@ import {
   type CircuitHostSegment,
 } from '../mep-systems/mep-wire-routing';
 import { getOrientedWaypoints, type WireWaypointMap } from '../mep-systems/mep-wire-waypoints';
+import { buildConductorTicks, GROUND_DOT_R } from '../mep-systems/mep-wire-conductor-ticks';
+import { DEFAULT_CONDUCTORS, type ConductorBreakdown } from '../types/mep-system-types';
 import type { WireWaypointHover } from '../mep-systems/mep-wire-waypoint-ui-store';
+
+/**
+ * ADR-408 Φ7 — default wire colour when the per-view `colorBySystem` toggle is
+ * OFF. Mirrors the 3D `elem-mep-wire` fallback material (`0xb45309`) so the 2D
+ * overlay and the 3D conduit agree on the un-systematised colour.
+ */
+export const DEFAULT_WIRE_COLOR = '#b45309';
 
 const WIRE_LINE_WIDTH = 1.5;
 const WIRE_HIGHLIGHT_WIDTH = 3; // hovered circuit core stroke (px)
@@ -27,6 +36,7 @@ const WIRE_HALO_WIDTH = 8; // hovered circuit translucent glow under the core (p
 const WIRE_HALO_ALPHA = 0.3;
 const HOME_RUN_ARROW_LEN = 11; // px — arrowhead size in screen space (zoom-independent)
 const HOME_RUN_ARROW_HALF_RAD = 0.42; // half-angle of the arrowhead wings (rad)
+const CONDUCTOR_TICK_WIDTH = 1; // px — home-run conductor slash stroke width
 
 /** Stroke the polyline through `screen` (assumes ≥2 points). */
 function strokePolyline(ctx: CanvasRenderingContext2D, screen: readonly Point2D[]): void {
@@ -48,12 +58,13 @@ function drawOneWire(
   transform: ViewTransform,
   viewport: Viewport,
   highlight: boolean,
+  color: string,
 ): void {
   const pts = buildWirePolyline(path);
   if (pts.length < 2) return;
   const screen = pts.map((p) => CoordinateTransforms.worldToScreen({ x: p.x, y: p.y }, transform, viewport));
-  ctx.strokeStyle = path.colorHex;
-  ctx.fillStyle = path.colorHex;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
   if (highlight) {
     ctx.save();
     ctx.globalAlpha = WIRE_HALO_ALPHA;
@@ -65,6 +76,36 @@ function drawOneWire(
   strokePolyline(ctx, screen);
   if (highlight) ctx.lineWidth = WIRE_LINE_WIDTH;
   drawHomeRunArrow(ctx, screen[0]!, screen[1]!);
+  drawConductorTicks(ctx, screen[0]!, screen[1]!, path.conductors ?? DEFAULT_CONDUCTORS);
+}
+
+/**
+ * Stroke the home-run conductor tick marks (Revit "#wires"): the geometry comes
+ * from the SSoT {@link buildConductorTicks} — long slash per hot, short per
+ * neutral, short + dot per ground — so this only strokes the returned segments.
+ */
+function drawConductorTicks(
+  ctx: CanvasRenderingContext2D,
+  tip: Point2D,
+  from: Point2D,
+  conductors: ConductorBreakdown,
+): void {
+  const ticks = buildConductorTicks(tip, from, conductors);
+  if (ticks.length === 0) return;
+  ctx.save();
+  ctx.lineWidth = CONDUCTOR_TICK_WIDTH;
+  for (const tick of ticks) {
+    ctx.beginPath();
+    ctx.moveTo(tick.a.x, tick.a.y);
+    ctx.lineTo(tick.b.x, tick.b.y);
+    ctx.stroke();
+    if (tick.kind === 'ground') {
+      ctx.beginPath();
+      ctx.arc(tick.b.x, tick.b.y, GROUND_DOT_R, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
 }
 
 /**
@@ -88,6 +129,10 @@ function drawHomeRunArrow(ctx: CanvasRenderingContext2D, tip: Point2D, from: Poi
  * Draw every circuit wire path onto the overlay canvas. Each path carries its own
  * `style` (Revit "Wiring Type"), read inside {@link buildWirePolyline} — the
  * renderer stays style-agnostic.
+ *
+ * ADR-408 Φ7 — `colorBySystem` (default `true`) gates the per-view colour-by-system
+ * master toggle: OFF ⇒ every wire strokes in {@link DEFAULT_WIRE_COLOR} instead of
+ * its System's colour (matching the 3D conduit fallback).
  */
 export function drawCircuitWires(
   ctx: CanvasRenderingContext2D,
@@ -95,13 +140,17 @@ export function drawCircuitWires(
   transform: ViewTransform,
   viewport: Viewport,
   highlightSystemId?: string | null,
+  colorBySystem = true,
 ): void {
   ctx.save();
   ctx.lineWidth = WIRE_LINE_WIDTH;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   ctx.setLineDash([]);
-  for (const path of paths) drawOneWire(ctx, path, transform, viewport, path.systemId === highlightSystemId);
+  for (const path of paths) {
+    const color = colorBySystem ? path.colorHex : DEFAULT_WIRE_COLOR;
+    drawOneWire(ctx, path, transform, viewport, path.systemId === highlightSystemId, color);
+  }
   ctx.restore();
 }
 

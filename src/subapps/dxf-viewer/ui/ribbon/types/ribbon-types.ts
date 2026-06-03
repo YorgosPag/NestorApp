@@ -21,6 +21,8 @@ export interface RibbonComboboxOption {
   labelKey: string;
   /** When true, `labelKey` is already a literal — do NOT pass through t(). */
   isLiteralLabel?: boolean;
+  /** Optional preview thumbnail URL (ADR-410 furniture library picker). */
+  imageUrl?: string;
 }
 
 export interface RibbonCommand {

@@ -73,9 +73,30 @@ export interface MepSystemParams {
    * polyline so 2D + 3D follow. Absent ⇒ pure auto-routed daisy chain.
    */
   readonly wireWaypoints?: WireWaypointMap;
+  /**
+   * Per-circuit conductor breakdown (Revit "#wires" / home-run tick marks): how
+   * many ungrounded (`hot`), grounded (`neutral`) and equipment-ground (`ground`)
+   * conductors run on the home-run leg. Drives the 2D tick annotation
+   * (`buildConductorTicks` → `MepWireRenderer`) — long ticks for hots, short for
+   * neutrals, short+dot for grounds. SSoT annotation data, INDEPENDENT of the
+   * electrical `poles` rollup below (this is the drawn wire count, not load calc).
+   * Absent ⇒ {@link DEFAULT_CONDUCTORS}.
+   */
+  readonly conductors?: ConductorBreakdown;
   /** Optional electrical rollups (derivable from member connectedLoadVa). */
   readonly ratedVoltage?: number;
   readonly poles?: 1 | 2 | 3;
+}
+
+/**
+ * Conductor counts of a circuit's home-run, by NEC/Revit role. Each conductor
+ * draws one tick across the home-run leg: `hot` = long tick (ungrounded), `neutral`
+ * = short tick (grounded), `ground` = short tick with a dot (equipment ground).
+ */
+export interface ConductorBreakdown {
+  readonly hot: number;
+  readonly neutral: number;
+  readonly ground: number;
 }
 
 /**
@@ -96,6 +117,12 @@ export interface MepSystemEntity {
 }
 
 // ─── Defaults ──────────────────────────────────────────────────────────────────
+
+/**
+ * Default conductor count for a circuit's home-run when none is set: a standard
+ * 2-wire-plus-ground lighting branch (1 hot + 1 neutral + 1 equipment ground).
+ */
+export const DEFAULT_CONDUCTORS: ConductorBreakdown = { hot: 1, neutral: 1, ground: 1 };
 
 /** Default electrical circuit params (members/source filled by the caller). */
 export function buildDefaultCircuitParams(

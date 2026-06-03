@@ -12,6 +12,8 @@ import { useRibbonBeamBridge, type UseRibbonBeamBridgeProps } from '../ui/ribbon
 import { useRibbonSlabOpeningBridge, type UseRibbonSlabOpeningBridgeProps } from '../ui/ribbon/hooks/useRibbonSlabOpeningBridge';
 import { useRibbonMepCircuitBridge, type UseRibbonMepCircuitBridgeProps } from '../ui/ribbon/hooks/useRibbonMepCircuitBridge';
 import { useRibbonMepFixtureBridge, type UseRibbonMepFixtureBridgeProps } from '../ui/ribbon/hooks/useRibbonMepFixtureBridge';
+import { useRibbonFurnitureBridge } from '../ui/ribbon/hooks/useRibbonFurnitureBridge';
+import { useRibbonMepFixtureLibraryBridge } from '../ui/ribbon/hooks/useRibbonMepFixtureLibraryBridge';
 import { useBimMaterialCycler } from '../hooks/useBimMaterialCycler';
 
 export type UseDxfBimBridgesProps =
@@ -37,7 +39,11 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const mepCircuitBridge = useRibbonMepCircuitBridge(p);
   // ADR-406 — MEP fixture (φωτιστικό) contextual properties bridge.
   const mepFixtureBridge = useRibbonMepFixtureBridge(p);
+  // ADR-410 — furniture library contextual bridge (tool-active picker).
+  const furnitureBridge = useRibbonFurnitureBridge();
+  // ADR-411 — light-fixture library contextual bridge (tool-active picker).
+  const mepFixtureLibraryBridge = useRibbonMepFixtureLibraryBridge();
   // ADR-363 Phase 4.5e+ — Tab/Shift+Tab material cycling for selected BIM entities.
   useBimMaterialCycler(p);
-  return { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepFixtureBridge };
+  return { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepFixtureBridge, furnitureBridge, mepFixtureLibraryBridge };
 }

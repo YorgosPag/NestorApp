@@ -41,6 +41,8 @@ export type MepFixtureToolPhase = 'idle' | 'awaitingPosition' | 'committed';
 export interface MepFixtureToolState {
   readonly phase: MepFixtureToolPhase;
   readonly shape: MepFixtureShape;
+  /** ADR-411 — chosen CC0 mesh asset (`''` ⇒ parametric fixture). */
+  readonly assetId: string;
   readonly overrides: MepFixtureParamOverrides;
   readonly error: string | null;
 }
@@ -48,6 +50,7 @@ export interface MepFixtureToolState {
 const INITIAL_STATE: MepFixtureToolState = {
   phase: 'idle',
   shape: 'rectangular',
+  assetId: '',
   overrides: {},
   error: null,
 };
@@ -64,6 +67,8 @@ export interface UseMepFixtureToolResult {
   readonly state: MepFixtureToolState;
   activate(): void;
   setShape(shape: MepFixtureShape): void;
+  /** ADR-411 — pick a library mesh (`''` ⇒ parametric). */
+  setAssetId(assetId: string): void;
   setParamOverrides(overrides: MepFixtureParamOverrides): void;
   deactivate(): void;
   reset(): void;
@@ -94,11 +99,15 @@ export function useMepFixtureTool(options: UseMepFixtureToolOptions = {}): UseMe
   onCreatedRef.current = onMepFixtureCreated;
 
   const activate = useCallback(() => {
-    setState((prev) => ({ ...INITIAL_STATE, shape: prev.shape, overrides: prev.overrides, phase: 'awaitingPosition' }));
+    setState((prev) => ({ ...INITIAL_STATE, shape: prev.shape, assetId: prev.assetId, overrides: prev.overrides, phase: 'awaitingPosition' }));
   }, []);
 
   const setShape = useCallback((shape: MepFixtureShape) => {
     setState((prev) => ({ ...prev, shape, error: null }));
+  }, []);
+
+  const setAssetId = useCallback((assetId: string) => {
+    setState((prev) => ({ ...prev, assetId, error: null }));
   }, []);
 
   const setParamOverrides = useCallback((overrides: MepFixtureParamOverrides) => {
@@ -113,6 +122,7 @@ export function useMepFixtureTool(options: UseMepFixtureToolOptions = {}): UseMe
     setState((prev) => ({
       ...INITIAL_STATE,
       shape: prev.shape,
+      assetId: prev.assetId,
       overrides: prev.overrides,
       phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
     }));
@@ -120,7 +130,11 @@ export function useMepFixtureTool(options: UseMepFixtureToolOptions = {}): UseMe
 
   const commitFromState = useCallback(
     (s: MepFixtureToolState, clickPoint: Readonly<Point2D>): boolean => {
-      const overrides: MepFixtureParamOverrides = { ...s.overrides, shape: s.shape };
+      const overrides: MepFixtureParamOverrides = {
+        ...s.overrides,
+        shape: s.shape,
+        ...(s.assetId ? { assetId: s.assetId } : {}),
+      };
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
       const params = buildDefaultMepFixtureParams(clickPoint, overrides, sceneUnits);
       const result = buildMepFixtureEntity(params, currentLevelId);
@@ -129,7 +143,7 @@ export function useMepFixtureTool(options: UseMepFixtureToolOptions = {}): UseMe
         return false;
       }
       onCreatedRef.current?.(result.entity);
-      setState({ ...INITIAL_STATE, shape: s.shape, overrides: s.overrides, phase: 'awaitingPosition' });
+      setState({ ...INITIAL_STATE, shape: s.shape, assetId: s.assetId, overrides: s.overrides, phase: 'awaitingPosition' });
       return true;
     },
     [currentLevelId],
@@ -164,7 +178,11 @@ export function useMepFixtureTool(options: UseMepFixtureToolOptions = {}): UseMe
       const s = stateRef.current;
       if (s.phase !== 'awaitingPosition' || cursorPos === null) return null;
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
-      const params = buildDefaultMepFixtureParams(cursorPos, { ...s.overrides, shape: s.shape }, sceneUnits);
+      const params = buildDefaultMepFixtureParams(
+        cursorPos,
+        { ...s.overrides, shape: s.shape, ...(s.assetId ? { assetId: s.assetId } : {}) },
+        sceneUnits,
+      );
       return computeMepFixtureGeometry(params).footprint.vertices;
     },
     [],
@@ -177,8 +195,10 @@ export function useMepFixtureTool(options: UseMepFixtureToolOptions = {}): UseMe
       isActive,
       kind: 'light-fixture',
       shape: state.shape,
+      assetId: state.assetId,
       overrides: state.overrides,
       setShape,
+      setAssetId,
       setParamOverrides,
       getSceneUnits: () => getSceneUnitsRef.current?.() ?? 'mm',
     });
@@ -187,12 +207,13 @@ export function useMepFixtureTool(options: UseMepFixtureToolOptions = {}): UseMe
         mepFixtureToolBridgeStore.set(null);
       }
     };
-  }, [state, setShape, setParamOverrides]);
+  }, [state, setShape, setAssetId, setParamOverrides]);
 
   return {
     state,
     activate,
     setShape,
+    setAssetId,
     setParamOverrides,
     deactivate,
     reset,

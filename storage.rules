@@ -330,7 +330,31 @@ service firebase.storage {
     // metadata (ADR-409 §D.1) → safe to host + redistribute in-app.
     // =========================================================================
 
-    match /furniture-library/{assetFile} {
+    // Recursive (`=**`) so it also covers `furniture-library/thumbnails/<id>.png`
+    // (ADR-410 picker previews), not just the top-level `.glb` meshes.
+    // LEGACY path — superseded by the unified `bim-mesh-library/` tree (ADR-411);
+    // kept so any pre-migration furniture asset URL still resolves.
+    match /furniture-library/{assetFile=**} {
+
+      // 📖 READ: any authenticated user (shared catalog)
+      allow read: if isAuthenticated();
+
+      // ✍️ WRITE / 🗑️ DELETE: super_admin only (library curation)
+      allow write: if isSuperAdmin() && isValidFileSize();
+      allow delete: if isSuperAdmin();
+    }
+
+    // =========================================================================
+    // 🗂️ BIM MESH LIBRARY (ADR-411 — entity-agnostic CC0 mesh content library)
+    // =========================================================================
+    // Path: /bim-mesh-library/<bimCategory>/{assetId}.glb (+ thumbnails/<id>.png)
+    // Unified, hierarchical content library (like a Revit content server) shared
+    // by every mesh-based BIM entity (furniture, light-fixture, …). The meshes are
+    // CC0 (Poly Haven) enriched with our own BIM metadata (ADR-409 §D.1) → safe to
+    // host + redistribute in-app. Recursive (`=**`) so it covers every category +
+    // its `thumbnails/` subfolder.
+    // =========================================================================
+    match /bim-mesh-library/{assetFile=**} {
 
       // 📖 READ: any authenticated user (shared catalog)
       allow read: if isAuthenticated();

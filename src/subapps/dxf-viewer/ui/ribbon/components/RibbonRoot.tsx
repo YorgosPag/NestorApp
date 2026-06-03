@@ -77,15 +77,26 @@ const RibbonRootInner: React.FC<RibbonRootProps> = ({
   useEffect(() => {
     const ids = visibleContextualTabs.map((t) => t.id).join(',');
     const prev = prevContextualIdsRef.current;
-    if (ids && !prev) {
+    if (ids === prev) return; // contextual set unchanged → respect manual tab choice
+    prevContextualIdsRef.current = ids;
+
+    if (ids) {
+      // The visible contextual set changed and is non-empty → follow the
+      // selection: activate the first visible contextual tab unless it is
+      // already active. Covers persistent→contextual (e.g. select a fixture)
+      // AND contextual→different-contextual (e.g. the fixture tab's "Edit
+      // Circuit" jump selects the source panel → the circuit tab replaces the
+      // now-gone fixture tab; ADR-408 Φ7). Without this, `activeTabId` would
+      // point at the vanished tab and the body would fall back to Home.
       const firstId = visibleContextualTabs[0]?.id;
-      if (firstId) state.setActiveTabId(firstId);
-    } else if (!ids && prev) {
-      const active = state.activeTabId;
-      const stillExists = DEFAULT_RIBBON_TABS.some((tab) => tab.id === active);
+      if (firstId && !visibleContextualTabs.some((tab) => tab.id === state.activeTabId)) {
+        state.setActiveTabId(firstId);
+      }
+    } else if (prev) {
+      // contextual → none: revert to home only if the active tab no longer exists.
+      const stillExists = DEFAULT_RIBBON_TABS.some((tab) => tab.id === state.activeTabId);
       if (!stillExists) state.setActiveTabId('home');
     }
-    prevContextualIdsRef.current = ids;
   }, [visibleContextualTabs, state]);
 
   const activeTab = findRibbonTabById(orderedTabs, state.activeTabId) ?? orderedTabs[0];

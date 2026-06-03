@@ -725,7 +725,8 @@
       "lineToolStyle": "Line Style",
       "xlineMode": "Construction Line",
       "analyze": "Analyze",
-      "furnitureProperties": "Furniture Properties"
+      "furnitureProperties": "Furniture Properties",
+      "mepFixtureLibrary": "Light Fixture Library"
     },
     "panels": {
       "draw": "Draw",
@@ -801,6 +802,7 @@
       "mepFixtureGeometry": "Geometry",
       "mepFixtureRectParams": "Rectangular",
       "mepFixtureActions": "Actions",
+      "mepFixtureCircuit": "Circuit",
       "mepCircuit": "Circuit",
       "mepCircuitProperties": "Circuit Properties",
       "multiSelectionCommon": "Common Properties",
@@ -840,7 +842,9 @@
       "thermalEnvelope": "Thermal Envelope",
       "furnitureCatalog": "Catalog",
       "furnitureGeometry": "Geometry",
-      "furnitureActions": "Actions"
+      "furnitureActions": "Actions",
+      "mepFixtureLibrary": "Library",
+      "mepFixtureLibraryPlacement": "Placement"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -1589,6 +1593,11 @@
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete fixture? This action cannot be undone.",
+        "circuit": {
+          "label": "Circuit"
+        },
+        "editCircuit": "Edit Circuit",
+        "editCircuitTooltip": "Select the source panel to manage this fixture's circuit (rename / colour / members).",
         "shape": {
           "section": {
             "title": "Shape"
@@ -1863,11 +1872,25 @@
         "tooltipHide": "Hide the MEP circuit wires from the view",
         "tooltipShow": "Show the MEP circuit wires"
       },
+      "colorBySystem": {
+        "label": "Colour by System",
+        "enable": "Enable Colour",
+        "disable": "Disable Colour",
+        "tooltipEnable": "Colour fixtures, panels and wires by their circuit (system)",
+        "tooltipDisable": "Turn off colour-by-system — use the default colour"
+      },
       "mepWireStyle": {
         "label": "Wire Style",
         "straight": "Straight",
         "orthogonal": "Orthogonal",
         "arc": "Arc"
+      },
+      "mepConductors": {
+        "label": "Conductors",
+        "hot": "Hot",
+        "neutral": "Neutral",
+        "ground": "Ground",
+        "tooltip": "Number of conductors (hot/neutral/ground) — drawn as home-run tick marks"
       },
       "discipline": {
         "label": "Disciplines",
@@ -2012,6 +2035,12 @@
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete furniture? This action cannot be undone."
+      },
+      "mepFixtureLibrary": {
+        "asset": "Model",
+        "parametric": "Parametric (no model)",
+        "rotation": "Rotation",
+        "scale": "Scale"
       }
     },
     "tooltips": {
@@ -2264,6 +2293,9 @@
     }
   },
   "mepFixture": {
+    "catalog": {
+      "pendantLamp01": "Pendant Lamp"
+    },
     "validation": {
       "hardErrors": {
         "nonPositiveWidth": "Width must be greater than 0",
@@ -2322,7 +2354,10 @@
   },
   "furniture": {
     "catalog": {
-      "chair01": "Chair"
+      "chair01": "Chair",
+      "diningChair02": "Dining chair",
+      "paintedWoodenChair01": "Painted wooden chair",
+      "plasticMonoblocChair01": "Plastic chair"
     },
     "validation": {
       "hardErrors": {

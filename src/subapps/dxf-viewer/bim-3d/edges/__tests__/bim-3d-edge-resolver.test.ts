@@ -161,4 +161,55 @@ describe('ADR-375 C.7 — resolve3DEdgeStyle', () => {
       expect(result.lineWidthPx).toBeGreaterThan(0);
     });
   });
+
+  // ── ADR-377 Phase E — linePattern propagation to 3D ──────────────────────────
+  describe('linePattern propagation (ADR-377 Phase E)', () => {
+    it('default (no subcategory) → solid', () => {
+      const result = resolve3DEdgeStyle(BASE_CTX);
+      expect(result.linePattern).toBe('solid');
+    });
+
+    it('user projection pattern override → propagated', () => {
+      const result = resolve3DEdgeStyle({
+        ...BASE_CTX,
+        objectStyles: {
+          wall: { projectionPen: 5, cutPen: 7, projectionPattern: 'dashed' },
+        },
+      });
+      expect(result.linePattern).toBe('dashed');
+    });
+
+    it('subcategory linePattern override (projection) → propagated', () => {
+      const result = resolve3DEdgeStyle({
+        ...BASE_CTX,
+        category: 'stair',
+        subcategoryKey: 'treads',
+        objectStyles: {
+          stair: {
+            projectionPen: 3,
+            cutPen: 5,
+            subcategories: { treads: { linePattern: 'hidden' } },
+          },
+        },
+      });
+      expect(result.linePattern).toBe('hidden');
+    });
+
+    it('elementOverride.linePattern wins over subcategory', () => {
+      const result = resolve3DEdgeStyle({
+        ...BASE_CTX,
+        category: 'stair',
+        subcategoryKey: 'treads',
+        elementOverride: { linePattern: 'dotted' },
+        objectStyles: {
+          stair: {
+            projectionPen: 3,
+            cutPen: 5,
+            subcategories: { treads: { linePattern: 'hidden' } },
+          },
+        },
+      });
+      expect(result.linePattern).toBe('dotted');
+    });
+  });
 });

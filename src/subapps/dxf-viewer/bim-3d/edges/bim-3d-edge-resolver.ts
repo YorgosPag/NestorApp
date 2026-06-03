@@ -22,6 +22,7 @@ import {
   resolveSubcategoryStyle,
   type SubcategoryResolutionContext,
 } from '../../config/bim-line-weight-resolver';
+import { type LinePatternKey } from '../../config/bim-line-patterns';
 
 /** Revit silhouette default. ArchiCAD contour default. */
 export const DEFAULT_EDGE_THRESHOLD_DEG = 30;
@@ -31,6 +32,12 @@ export interface Resolved3DEdgeStyle {
   lineWidthPx: number;
   /** Color hex or null (null = caller decides default). */
   color: string | null;
+  /**
+   * Line pattern key (ADR-377 Phase E). 'solid' → continuous edge overlay;
+   * dashed/dotted/etc. → caller maps to LineMaterial dash via
+   * `linePatternToDashArray`. Mirrors the 2D resolver's `linePattern` output.
+   */
+  linePattern: LinePatternKey;
   /** false → caller should skip building the edge overlay entirely. */
   visible: boolean;
   /** EdgesGeometry threshold angle in degrees. */
@@ -59,6 +66,7 @@ export function resolve3DEdgeStyle(
   return {
     lineWidthPx: style.lineWidthPx,
     color: style.color,
+    linePattern: style.linePattern,
     visible,
     thresholdAngle: opts.thresholdAngleDeg ?? DEFAULT_EDGE_THRESHOLD_DEG,
   };

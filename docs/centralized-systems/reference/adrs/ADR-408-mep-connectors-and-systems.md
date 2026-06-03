@@ -283,14 +283,86 @@ Scope = 2D annotation + 3D conduit· τοπολογία = **daisy-chain + home-r
 
 ## Roadmap (επόμενο push)
 
-- «colour by system» view toggle (τώρα always-on)· per-circuit edit από φωτιστικό (system-browser panel).
+- ✅ «colour by system» view toggle **DONE** (2026-06-03)· ✅ per-circuit edit από φωτιστικό **DONE** (2026-06-03) — μένει seed legacy connectors.
 - Φ7 follow-ups: ✅ `orthogonal`/`arc` wire styles **DONE** (#1, 2026-06-03)· ✅ waypoints **DONE** (#3,
-  2026-06-03)· ❌ conductor-count ticks στο home-run· ❌ seed legacy connectors.
+  2026-06-03)· ✅ conductor-count ticks **DONE** (2026-06-03)· ✅ colour-by-system toggle **DONE** (2026-06-03)· ✅ per-circuit edit από φωτιστικό **DONE** (2026-06-03)· ❌ seed legacy connectors.
 - duct/pipe domains & systems — reserved στα types, no pipeline.
 
 ---
 
 ## Changelog
+- **2026-06-03 (Opus 4.8, Plan Mode)** — **Φ7 roadmap — PER-CIRCUIT EDIT ΑΠΟ ΦΩΤΙΣΤΙΚΟ DONE** (pending commit, 🔴
+  browser verify). Revit «device → Electrical Circuits»: επιλέγεις φωτιστικό → βλέπεις σε ποιο κύκλωμα ανήκει + jump
+  στη διαχείρισή του. Giorgio (AskUserQuestion): **«Select Panel → jump»** (όχι in-place tab switch) → σέβεται την
+  panel-centric αρχή του Φ6. **FULL SSOT, μηδέν νέα command/routing.** Νέο panel **«Κύκλωμα»** στο
+  `contextual-mep-fixture-tab` (self-hides μέσω `visibilityKey hasCircuit`): (1) read-only info widget NEW
+  `RibbonMepFixtureCircuitWidget` (όνομα κυκλώματος + colour swatch· διαβάζει το **ήδη συγχρονισμένο** `activeSystemId`
+  + `resolveManagedCircuits([fixture])`· self-hide null)· (2) action button «Επεξεργασία Κυκλώματος» → bridge
+  `editCircuit` → `setActiveSystemId(circuit.id)` + `universalSelection.select(circuit.params.sourceEntityId,
+  'dxf-entity')` → ο πίνακας-πηγή επιλέγεται → το panel-centric circuit tab (Φ6) εμφανίζεται σε manage mode με ενεργό
+  το κύκλωμα του φωτιστικού (το `useMepCircuitEditorSync` κρατά το `activeSystemId` έγκυρο). **Reuse:** το
+  `resolveManagedCircuits` ήδη χειρίζεται member-of (fixture → το ένα του κύκλωμα, Revit single-circuit)· `select`
+  ήδη στο `useUniversalSelection`· `sourceEntityId` ήδη στα `MepSystemParams`. Bridge: widen `universalSelection`
+  slice +`select`· νέο action `editCircuit`· `getPanelVisibility('hasCircuit')`. i18n el/en
+  `ribbon.panels.mepFixtureCircuit` + `ribbon.commands.mepFixtureEditor.{circuit.label,editCircuit,editCircuitTooltip}`.
+  **ΕΚΤΟΣ ADR-040** (ribbon data/components/bridge — όχι CHECK 6B/6D micro-leaf). Tests: +4 στο
+  `useRibbonMepFixtureBridge.test` (hasCircuit visible/hidden· editCircuit selects source panel + sets active· no-op
+  χωρίς κύκλωμα) → 17/17 + 128/128 MEP regression PASS, tsc 0. **🐛 BROWSER-VERIFY FIX (Giorgio): το "Edit Circuit"
+  πήγαινε στην «Αρχική» αντί στο circuit tab.** ROOT = **γενικό ribbon bug** στο `RibbonRoot` auto-activation effect
+  (ADR-345 §5.4): χειριζόταν μόνο persistent→contextual & contextual→none· σε **contextual→ΑΛΛΟ contextual** (fixture
+  tab → circuit tab) καμία branch δεν έτρεχε → το `activeTabId` έμενε στο εξαφανισμένο `mep-fixture-editor` →
+  `findRibbonTabById`→undefined→`orderedTabs[0]`=home. FIX: όταν το visible contextual set αλλάζει σε μη-κενό,
+  activate το πρώτο visible contextual tab εκτός αν είναι ήδη ενεργό (καλύπτει ΚΑΙ persistent→contextual ΚΑΙ
+  contextual→contextual)· διορθώνει επίσης κάθε entity→entity contextual μετάβαση (π.χ. wall→column). ΕΚΤΟΣ ADR-040
+  (ribbon shell, όχι canvas micro-leaf). ⚠️ SHARED TREE — `git add` ΜΟΝΟ specific, ΠΟΤΕ -A.
+  Αρχεία: NEW `ui/ribbon/components/RibbonMepFixtureCircuitWidget.tsx`· MOD `ui/ribbon/hooks/bridge/mep-fixture-command-keys.ts`
+  + `ui/ribbon/data/contextual-mep-fixture-tab.ts` + `ui/ribbon/hooks/useRibbonMepFixtureBridge.ts`
+  + `ui/ribbon/components/RibbonPanel.tsx` + `ui/ribbon/components/RibbonRoot.tsx` + i18n el/en + `useRibbonMepFixtureBridge.test.tsx`.
+- **2026-06-03 (Opus 4.8, Plan Mode)** — **Φ7 roadmap — COLOUR-BY-SYSTEM TOGGLE DONE** (pending commit, 🔴 browser
+  verify). View-tab ON/OFF master switch για το colour-by-system (Revit "Color circuits by system") — μέχρι τώρα
+  **πάντα ON, χωρίς flag**. OFF → φωτιστικά/πίνακες/καλώδια πέφτουν στο default χρώμα. **FULL ENTERPRISE + FULL SSOT.**
+  **ΜΙΑ SSoT πηγή:** νέο `colorBySystem: boolean` (default `true`) στο `ResolvedBimSettings`/`BimRenderSettings`
+  (`config/bim-render-settings-types.ts`, resolver `?? true` → legacy views παραμένουν χρωματισμένα) + στο
+  `useBimRenderSettingsStore` (state + `buildRaw` persist + idempotent `setColorBySystem` setter, mirror
+  `setDisciplineVisibility`· Firestore-persisted per-view· `commitObjectStyles` helper +`colorBySystem` ώστε
+  subcategory writes να μην το χάνουν). **4 gate points διαβάζουν το ΙΔΙΟ flag** (τα 3 του handoff + το 3D-wire που
+  προστέθηκε για πλήρες 2D/3D parity): (1) **2D φωτιστικό** `MepFixtureRenderer` — gate του `resolveEntitySystemColor`
+  (OFF → amber default)· (2) **2D καλώδια** `MepWireRenderer.drawCircuitWires(..., colorBySystem=true)` + νέα export
+  `DEFAULT_WIRE_COLOR='#b45309'` (mirror του 3D `elem-mep-wire` material)· `HomeRunWiresOverlay` leaf-subscribe το flag
+  & το περνά (+waypoint handle colour)· **το pure routing SSoT `mep-wire-routing.ts` ΔΕΝ άλλαξε** (gate στον renderer)·
+  (3) **3D φωτιστικά/πίνακες** `BimSceneLayer.buildContext` — OFF → **κενό** `systemColorIndex` (converters πέφτουν σε
+  default material, μηδέν αλλαγή converter)· (4) **3D καλώδια** `SyncContext.colorBySystem` → `sync-circuit-wires` →
+  `wirePathToMesh(..., colorBySystem)` → OFF: `getElementMaterial3D('mep-wire')` αντί system-tinted. **UI:** NEW
+  `ColorBySystemToggle.tsx` (1:1 mirror `MepWireToggle`, Palette/Ban icon) + `view-tab-bim-settings.ts`
+  (`COLOR_BY_SYSTEM_BUTTON` στο `BIM_GRAPHICS_PANEL`) + `RibbonPanel.tsx` dispatch. i18n el/en
+  `ribbon.commands.colorBySystem.{label,enable,disable,tooltipEnable,tooltipDisable}`. **STAGE ADR-040**
+  (`HomeRunWiresOverlay` overlay CHECK 6D + `BimSceneLayer` critical CHECK 6B). Tests: store default/toggle/idempotent/
+  rehydrate (5 νέα) + `mep-wire-to-three` OFF→default-material + νέο `MepWireRenderer.color` suite (4) → 41/41 PASS,
+  tsc 0 (δικά μου). ⚠️ 25 pre-existing wall-attach 3D failures (`syncWalls` topBinding, ADR-401/404 άλλου agent) =
+  ΟΧΙ regression. Αρχεία: NEW `ui/ribbon/components/ColorBySystemToggle.tsx` + `MepWireRenderer.color.test.ts`· MOD
+  `config/bim-render-settings-types.ts` + `state/bim-render-settings-store.ts` + `bim/renderers/MepFixtureRenderer.ts`
+  + `bim/renderers/MepWireRenderer.ts` + `components/dxf-layout/HomeRunWiresOverlay.tsx` + `bim-3d/scene/bim-scene-context.ts`
+  + `bim-3d/scene/BimSceneLayer.ts` + `bim-3d/scene/sync-circuit-wires.ts` + `bim-3d/converters/mep-wire-to-three.ts`
+  + `ui/ribbon/data/view-tab-bim-settings.ts` + `ui/ribbon/components/RibbonPanel.tsx` + i18n el/en + 2 test files.
+- **2026-06-03 (Opus 4.8, Plan Mode)** — **Φ7 roadmap — CONDUCTOR-COUNT TICKS DONE** (pending commit, 🔴 browser
+  verify). Giorgio (AskUserQuestion): πλήρης Revit προσέγγιση — ξεχωριστά hot/neutral/ground με long/short ticks,
+  FULL ENTERPRISE + FULL SSOT. Τα home-run «tick marks» του Revit: λοξές γραμμές που διασχίζουν το home-run leg
+  κοντά στο βελάκι, μία ανά αγωγό — **μακριά** ανά φάση (hot/ungrounded), **κοντή** ανά ουδέτερο (neutral/grounded),
+  **κοντή + κουκκίδα** ανά γείωση (equipment ground). SSoT ροή: `MepSystemParams.conductors` (persisted, +Zod
+  0–12 strict· ΑΝΕΞΑΡΤΗΤΟ από το `poles` rollup — annotation, όχι load calc· `DEFAULT_CONDUCTORS={hot:1,neutral:1,
+  ground:1}`) → `computeCircuitWirePaths` το βάζει στο `CircuitWirePath.conductors` (mirror `colorHex`/`style`) →
+  NEW pure SSoT `mep-wire-conductor-ticks.ts` (`buildConductorTicks(tip,from,conductors)` → screen-space tick
+  segments + kind, zoom-independent όπως το βελάκι· ticks march panel→fixture, hots→neutrals→grounds) → ο
+  `MepWireRenderer` μόνο στρώνει (+ κουκκίδα ground). Επεξεργασία: NEW `RibbonMepCircuitConductorsWidget`
+  (hot/neutral/ground number inputs, mirror name-widget lifecycle: debounced isDragging merge / blur-Enter flush /
+  Esc revert) → υπάρχον undoable `UpdateMepSystemParamsCommand` (μηδέν νέο command). **2D annotation μόνο** (όπως
+  το home-run βελάκι — Revit τα δείχνει σε κάτοψη). **Εκτός ADR-040 scope** (`bim/renderers/`, όχι CHECK 6B/6D).
+  +1 NEW test suite (conductor ticks) + extend routing/schema tests → 76/76 MEP-wire + 4/4 overlay PASS, tsc 0.
+  Αρχεία: NEW `bim/mep-systems/mep-wire-conductor-ticks.ts` + `ui/ribbon/components/RibbonMepCircuitConductorsWidget.tsx`
+  + tick test· MOD `bim/types/mep-system-types.ts` (ConductorBreakdown+DEFAULT_CONDUCTORS) + `mep-system.schemas.ts`
+  + `bim/mep-systems/mep-wire-routing.ts` (path.conductors) + `bim/renderers/MepWireRenderer.ts` (draw) +
+  `ui/ribbon/components/RibbonPanel.tsx` (wiring) + `ui/ribbon/data/contextual-mep-circuit-tab.ts` (Row 5) + i18n
+  el/en (`ribbon.commands.mepConductors.*`) + routing/schema tests.
 - **2026-06-03 (Opus 4.8)** — **🐛 Φ7 FU#3 3D — waypoint handle ξεκολλά από το καλώδιο FIX** (pending commit,
   🔴 browser verify). Bug (Giorgio): η λευκή σφαίρα-λαβή ενός waypoint, όταν περιστρέφεις τη θέα 3D, σε πολλές
   περιπτώσεις δεν κάθεται πάνω στη γραμμή του καλωδίου. ROOT CAUSE: **δύο διαφορετικές z-interpolations** για το
