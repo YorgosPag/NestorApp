@@ -21,6 +21,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useTranslation } from '@/i18n';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useEscapeHandler, ESC_PRIORITY } from '@/subapps/dxf-viewer/systems/escape-bus';
 import { parseFieldAST, FIELD_TOKEN_NAMES, type FieldTokenName } from '../../../systems/dimensions/dim-text-field-parser';
 import styles from './TextOverrideEditor.module.css';
 
@@ -89,6 +90,15 @@ function FieldTokenInput({ value, onChange, disabled, placeholder, className, to
 
   useEffect(() => { setActiveIdx(0); }, [suggestions.length]);
 
+  // ADR-364: Esc closes the suggestions dropdown via centralized Escape Command Bus.
+  useEscapeHandler({
+    id: 'text-override-suggestions',
+    priority: ESC_PRIORITY.POPOVER_DROPDOWN,
+    allowWhenEditable: true,
+    canHandle: () => openAngle !== null && suggestions.length > 0,
+    handle: () => { setOpenAngle(null); return true; },
+  });
+
   const insertToken = useCallback((option: TokenOption) => {
     const cursor = inputRef.current?.selectionStart ?? value.length;
     const anchor = openAngle ?? cursor;
@@ -125,9 +135,8 @@ function FieldTokenInput({ value, onChange, disabled, placeholder, className, to
         e.preventDefault();
         insertToken(suggestions[activeIdx]);
       }
-    } else if (e.key === 'Escape') {
-      setOpenAngle(null);
     }
+    // ADR-364: Escape handled by useEscapeHandler above.
   }
 
   function handleBlur() {
