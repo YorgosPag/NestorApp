@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-03 — ADR-410 furniture tool wiring (compliance note)
+
+**Status**: IMPLEMENTED 2026-06-03. The new ADR-410 `furniture` placement tool is threaded through the orchestrator exactly like the existing `mep-fixture`/`electrical-panel`/`railing` tools: `CanvasSection.tsx` destructures `furnitureTool` from `useSpecialTools` and passes it into the click-handler bundle, and `canvas-click-types.ts` adds the `furnitureTool` field to the handler-args type. Pure additive pass-through — **no `useSyncExternalStore` added to any orchestrator** (Cardinal Rule #1 / CHECK 6C respected), no bitmap cache-key change, no micro-leaf structural change. 2D furniture render is a `FurnitureRenderer` leaf in the existing entity-render pipeline. Detail in ADR-410 changelog.
+
 ### 2026-06-03 — ADR-408 Φ7 FU#3 editable wire waypoints (micro-leaf compliance note)
 
 **Status**: IMPLEMENTED 2026-06-03. New render-nothing micro-leaf `MepWireWaypointDragMount` mounted in `PreviewCanvasMounts` (`canvas-layer-stack-leaves.tsx`), making the **active** circuit's derived home-run wire directly editable (insert / move / delete vertices — Revit "Wire Vertex"). It owns only capture-phase pointer listeners on the viewport element (`useMepWireWaypointInteraction`) and adds **no `useSyncExternalStore` to any orchestrator** (Cardinal Rule #1 / CHECK 6C respected): during a drag the system is optimistically upserted into `mep-system-store`, so the existing `HomeRunWiresOverlay` leaf re-routes + repaints — no new render path or bitmap cache-key. The mount receives `transform` + viewport/level getters as props from the shell. The hover affordance lives in a HoverStore-mirror singleton (`mep-wire-waypoint-ui-store`) read only by the overlay leaf. No orchestrator change — pure additive leaf. Detail in ADR-408 Φ7 FU#3 changelog.

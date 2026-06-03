@@ -20,6 +20,7 @@ import type { StairEntity } from '../../bim/types/stair-types';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
 import type { RailingEntity } from '../../bim/types/railing-types';
+import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import { applyBuildingsPreset } from '../utils/building-visibility-state';
 import type { BuildingVisMode, BuildingPreset } from '../utils/building-visibility-state';
@@ -50,6 +51,8 @@ export interface Bim3DEntities {
   readonly panels: readonly ElectricalPanelEntity[];
   /** ADR-407 — standalone path-based railings. */
   readonly railings: readonly RailingEntity[];
+  /** ADR-410 — mesh-based CC0 furniture (chair first). */
+  readonly furnitures: readonly FurnitureEntity[];
 }
 
 /**
@@ -69,6 +72,7 @@ export const EMPTY_BIM_ENTITIES: Bim3DEntities = {
   fixtures: [],
   panels: [],
   railings: [],
+  furnitures: [],
 };
 
 interface Bim3DEntitiesStoreState extends Bim3DEntities {
@@ -84,6 +88,13 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   buildingVisibilityModes: ReadonlyMap<string, BuildingVisMode>;
   /** Elevation reference system for Floors tab display (ADR-369 §9.2 Q3). */
   elevationReference: ElevationReference;
+  /**
+   * ADR-410 — monotonic counter bumped when a furniture glTF asset finishes
+   * loading into the `FurnitureGltfCache`. Any change triggers the entities-store
+   * subscriber in `BimViewport3D` → `resyncBimScene`, so the cache-miss bbox
+   * placeholder is replaced by the real mesh on the next sync pass.
+   */
+  furnitureAssetVersion: number;
   setWalls: (walls: readonly WallEntity[]) => void;
   setColumns: (columns: readonly ColumnEntity[]) => void;
   setBeams: (beams: readonly BeamEntity[]) => void;
@@ -94,6 +105,9 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   setFixtures: (fixtures: readonly MepFixtureEntity[]) => void;
   setPanels: (panels: readonly ElectricalPanelEntity[]) => void;
   setRailings: (railings: readonly RailingEntity[]) => void;
+  setFurnitures: (furnitures: readonly FurnitureEntity[]) => void;
+  /** ADR-410 — bump after a furniture glTF load resolves (triggers 3D resync). */
+  bumpFurnitureAssetVersion: () => void;
   setActiveLevelId: (id: string | null) => void;
   setBuildings: (buildings: readonly BuildingRef[]) => void;
   setFloors: (floors: readonly FloorRef[]) => void;
@@ -115,6 +129,8 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     fixtures: [],
     panels: [],
     railings: [],
+    furnitures: [],
+    furnitureAssetVersion: 0,
     activeLevelId: null,
     buildings: [],
     floors: [],
@@ -131,6 +147,8 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     setFixtures: (fixtures) => set({ fixtures }),
     setPanels: (panels) => set({ panels }),
     setRailings: (railings) => set({ railings }),
+    setFurnitures: (furnitures) => set({ furnitures }),
+    bumpFurnitureAssetVersion: () => set((s) => ({ furnitureAssetVersion: s.furnitureAssetVersion + 1 })),
     setActiveLevelId: (activeLevelId) => set({ activeLevelId }),
     setBuildings: (buildings) => set({ buildings }),
     setFloors: (floors) => set({ floors }),
@@ -164,5 +182,6 @@ export function selectBim3DEntities(state: Bim3DEntitiesStoreState): Bim3DEntiti
     fixtures: state.fixtures,
     panels: state.panels,
     railings: state.railings,
+    furnitures: state.furnitures,
   };
 }

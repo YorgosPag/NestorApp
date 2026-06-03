@@ -364,6 +364,8 @@ export const COLLECTIONS = {
   FLOORPLAN_MEP_SYSTEMS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_SYSTEMS_COLLECTION || 'floorplan_mep_systems',
   /** ADR-408 Φ3 — point-based electrical panels (circuit sources). IDs via elecpnl_* prefix. */
   FLOORPLAN_ELECTRICAL_PANELS: process.env.NEXT_PUBLIC_FLOORPLAN_ELECTRICAL_PANELS_COLLECTION || 'floorplan_electrical_panels',
+  /** ADR-410 — mesh-based CC0 furniture (chair first). IDs via furn_* prefix. */
+  FLOORPLAN_FURNITURE: process.env.NEXT_PUBLIC_FLOORPLAN_FURNITURE_COLLECTION || 'floorplan_furniture',
   /** BIM element presets (system/company/project/user scope). IDs via bpst_* prefix. */
   BIM_PRESETS: process.env.NEXT_PUBLIC_BIM_PRESETS_COLLECTION || 'bim_presets',
   /** Material library — 25 seeded generics (Phase 6+). IDs via bmat_* prefix. */

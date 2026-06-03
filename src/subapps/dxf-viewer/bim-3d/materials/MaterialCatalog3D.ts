@@ -55,6 +55,10 @@ const MAT_DEFS: Record<string, PbrDef> = {
   // system colour (via getSystemTintedMaterial3D), so this base colour is only a
   // fallback; matte plastic-insulation look (low metalness, mid roughness).
   'elem-mep-wire':       { color: 0xb45309, roughness: 0.60, metalness: 0.00 },
+  // ADR-410 — furniture fallback (used for the bbox placeholder + when a loaded
+  // glTF carries no own materials). Warm wood-tan, matte. The real CC0 mesh keeps
+  // its own glTF materials; this only paints the placeholder box.
+  'elem-furniture':      { color: 0xb48250, roughness: 0.65, metalness: 0.05 },
 };
 
 export type Stair3DComponent =
@@ -97,7 +101,7 @@ export function getMaterial3D(materialId: string): THREE.MeshStandardMaterial {
 
 /** Resolve MeshStandardMaterial for element types without DNA. */
 export function getElementMaterial3D(
-  type: 'column' | 'beam' | 'slab' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | Stair3DComponent,
+  type: 'column' | 'beam' | 'slab' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | Stair3DComponent,
 ): THREE.MeshStandardMaterial {
   const key = `elem-${type}`;
   let mat = CACHE.get(key);

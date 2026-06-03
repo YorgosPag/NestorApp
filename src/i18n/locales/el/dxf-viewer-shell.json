@@ -108,36 +108,25 @@
     }
   },
   "layerPicker": {
-    "toastChanged": "Επίπεδο άλλαξε σε \"{name}\"",
-    "toastLocked": "Το επίπεδο \"{name}\" είναι κλειδωμένο — δεν επιτρέπεται σχεδίαση",
-    "toastFrozen": "Το επίπεδο \"{name}\" είναι παγωμένο — ξεπαγώστε το για σχεδίαση",
+    "placeholder": "Επιλέξτε επίπεδο",
     "tooltipCurrent": "Τρέχον επίπεδο: {name}",
-    "tooltipEmpty": "Χωρίς ενεργό επίπεδο",
-    "placeholder": "Χωρίς επίπεδο",
-    "searchPlaceholder": "Αναζήτηση επιπέδων…",
+    "tooltipEmpty": "Δεν έχει επιλεγεί επίπεδο",
+    "searchPlaceholder": "Αναζήτηση επιπέδου…",
     "empty": "Δεν βρέθηκαν επίπεδα",
-    "mostUsed": "Πιο πρόσφατα",
+    "mostUsed": "Πρόσφατα",
     "newLayer": "Νέο Επίπεδο",
     "openManager": "Διαχείριση Επιπέδων",
-    "disabledHint": "Μη επεξεργάσιμο επίπεδο",
-    "contextMenu": {
-      "setCurrent": "Ορισμός ως τρέχον",
-      "toggleVisibility": "Εναλλαγή ορατότητας",
-      "toggleLock": "Εναλλαγή κλειδώματος",
-      "toggleFreeze": "Εναλλαγή παγώματος",
-      "openProperties": "Ιδιότητες…"
-    },
+    "toastChanged": "Τρέχον επίπεδο: {name}",
     "category": {
-      "all": "Όλα",
       "architectural": "Αρχιτεκτονικά",
       "structural": "Στατικά",
       "electrical": "Ηλεκτρολογικά",
       "mechanical": "Μηχανολογικά",
       "plumbing": "Υδραυλικά",
       "fire": "Πυρόσβεση",
-      "civil": "Έργα Πολιτικού Μηχανικού",
+      "civil": "Έργα Υποδομής",
       "telecom": "Τηλεπικοινωνίες",
-      "interior": "Εσωτερικά",
+      "interior": "Εσωτερικός Σχεδιασμός",
       "general": "Γενικά"
     }
   },
@@ -160,7 +149,44 @@
     "restoreAriaLabel": "Επαναφορά κατάστασης \"{name}\"",
     "importLas": "Εισαγωγή .las",
     "exportLas": "Εξαγωγή .las",
-    "manage": "Διαχείριση…",
+    "manage": {
+      "title": "Διαχείριση Καταστάσεων Επιπέδων",
+      "searchPlaceholder": "Αναζήτηση…",
+      "categoryFilterAll": "Όλες οι κατηγορίες",
+      "empty": "Δεν υπάρχουν καταστάσεις επιπέδων",
+      "loading": "Φόρτωση…",
+      "column": {
+        "name": "Όνομα",
+        "category": "Κατηγορία",
+        "tags": "Ετικέτες",
+        "updated": "Ενημέρωση",
+        "createdBy": "Δημιουργός",
+        "actions": "Ενέργειες"
+      },
+      "bulkBar": {
+        "selected": "{count} επιλεγμένα",
+        "delete": "Διαγραφή"
+      },
+      "contextMenu": {
+        "rename": "Μετονομασία",
+        "editCategory": "Επεξεργασία κατηγορίας",
+        "duplicate": "Δημιουργία αντιγράφου",
+        "delete": "Διαγραφή"
+      },
+      "restoreDialog": {
+        "title": "Επαναφορά Κατάστασης",
+        "description": "Εφαρμογή αυτής της αποθηκευμένης κατάστασης στο τρέχον σχέδιο.",
+        "createMissingLayersLabel": "Δημιουργία επιπέδων που λείπουν",
+        "createMissingLayersHint": "Τα επίπεδα της κατάστασης που δεν υπάρχουν θα δημιουργηθούν",
+        "unmatchedWarning": "{count} επίπεδο/α δεν υπάρχουν στο τρέχον σχέδιο",
+        "entryCount": "{count} επίπεδα",
+        "apply": "Εφαρμογή",
+        "cancel": "Ακύρωση"
+      },
+      "toastDuplicated": "Αντίγραφο: \"{name}\"",
+      "toastBulkDeleted": "Διαγράφηκαν {count} κατάσταση/εις",
+      "errorBulkDelete": "Αποτυχία διαγραφής ορισμένων καταστάσεων"
+    },
     "phase13Hint": "Διαθέσιμο σε επόμενη φάση",
     "importLasHint": "Φόρτωση καταστάσεων από αρχείο .las",
     "exportLasHint": "Αποθήκευση όλων των καταστάσεων σε αρχείο .las",
@@ -220,44 +246,6 @@
         "working": "Εργασίας",
         "custom": "Προσαρμοσμένο"
       }
-    },
-    "manage": {
-      "title": "Διαχείριση Καταστάσεων Επιπέδων",
-      "searchPlaceholder": "Αναζήτηση…",
-      "categoryFilterAll": "Όλες οι κατηγορίες",
-      "empty": "Δεν υπάρχουν καταστάσεις επιπέδων",
-      "loading": "Φόρτωση…",
-      "column": {
-        "name": "Όνομα",
-        "category": "Κατηγορία",
-        "tags": "Ετικέτες",
-        "updated": "Ενημέρωση",
-        "createdBy": "Δημιουργός",
-        "actions": "Ενέργειες"
-      },
-      "bulkBar": {
-        "selected": "{count} επιλεγμένα",
-        "delete": "Διαγραφή"
-      },
-      "contextMenu": {
-        "rename": "Μετονομασία",
-        "editCategory": "Επεξεργασία κατηγορίας",
-        "duplicate": "Δημιουργία αντιγράφου",
-        "delete": "Διαγραφή"
-      },
-      "restoreDialog": {
-        "title": "Επαναφορά Κατάστασης",
-        "description": "Εφαρμογή αυτής της αποθηκευμένης κατάστασης στο τρέχον σχέδιο.",
-        "createMissingLayersLabel": "Δημιουργία επιπέδων που λείπουν",
-        "createMissingLayersHint": "Τα επίπεδα της κατάστασης που δεν υπάρχουν θα δημιουργηθούν",
-        "unmatchedWarning": "{count} επίπεδο/α δεν υπάρχουν στο τρέχον σχέδιο",
-        "entryCount": "{count} επίπεδα",
-        "apply": "Εφαρμογή",
-        "cancel": "Ακύρωση"
-      },
-      "toastDuplicated": "Αντίγραφο: \"{name}\"",
-      "toastBulkDeleted": "Διαγράφηκαν {count} κατάσταση/εις",
-      "errorBulkDelete": "Αποτυχία διαγραφής ορισμένων καταστάσεων"
     }
   },
   "toolbar": {
@@ -616,6 +604,9 @@
       "create": "Δημιουργία και χρήση",
       "skip": "Όχι ευχαριστώ",
       "neverAsk": "Μην ξαναρωτήσεις"
+    },
+    "furniture": {
+      "statusPosition": "Κάνε κλικ για τοποθέτηση επίπλου"
     }
   },
   "snapModes": {
@@ -681,11 +672,11 @@
       "guide": "Οδηγός - Snap σε οδηγούς κατασκευής (G)",
       "constructionPoint": "Σημείο - Snap σε σημεία κατασκευής",
       "bim": {
-        "columnAxis":    "Άξονας Κολώνας - Snap στον κεντρικό άξονα κολώνας",
-        "wallCorner":    "Γωνία Τοίχου - Snap στη γωνία πρόσοψης τοίχου",
-        "beamCorner":    "Γωνία Δοκαριού - Snap στη γωνία άκρης δοκαριού",
-        "slabCorner":    "Γωνία Πλάκας - Snap στη γωνία περιγράμματος πλάκας",
-        "columnCorner":  "Γωνία Κολώνας - Snap στη γωνία περιμέτρου κολώνας",
+        "columnAxis": "Άξονας Κολώνας - Snap στον κεντρικό άξονα κολώνας",
+        "wallCorner": "Γωνία Τοίχου - Snap στη γωνία πρόσοψης τοίχου",
+        "beamCorner": "Γωνία Δοκαριού - Snap στη γωνία άκρης δοκαριού",
+        "slabCorner": "Γωνία Πλάκας - Snap στη γωνία περιγράμματος πλάκας",
+        "columnCorner": "Γωνία Κολώνας - Snap στη γωνία περιμέτρου κολώνας",
         "openingCorner": "Γωνία Κουφώματος - Snap στη γωνία κουφώματος"
       },
       "text": "Κείμενο - Snap σε σημεία εισαγωγής, γωνίες, κέντρο και μέσα ακμών κειμένου (TEXT/MTEXT)"
@@ -733,14 +724,15 @@
       "dimension": "Διάσταση",
       "lineToolStyle": "Στυλ Γραμμής",
       "xlineMode": "Γραμμή Κατασκευής",
-      "analyze": "Ανάλυση"
+      "analyze": "Ανάλυση",
+      "furnitureProperties": "Ιδιότητες Επίπλου"
     },
     "panels": {
       "draw": "Σχεδίαση",
       "modify": "Τροποποίηση",
       "modifyEdit": "Επεξεργασία",
       "annotation": "Επισημείωση",
-      "layerManager": "Διαχειριστής Επιπέδων",
+      "layerManager": "Διαχειριστής Στρώσεων",
       "navigate": "Πλοήγηση",
       "visualStyles": "Στυλ Προβολής",
       "viewports": "Παράθυρα Προβολής",
@@ -845,8 +837,10 @@
       "lineToolQuickStyle": "Γρήγορο Στυλ",
       "xlineMode": "Λειτουργία",
       "bimSchedule": "Πίνακας BIM",
-      "layerManager": "Διαχειριστής Στρώσεων",
-      "thermalEnvelope": "Θερμοπρόσοψη"
+      "thermalEnvelope": "Θερμοπρόσοψη",
+      "furnitureCatalog": "Κατάλογος",
+      "furnitureGeometry": "Γεωμετρία",
+      "furnitureActions": "Ενέργειες"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -993,6 +987,10 @@
         "group": {
           "label": "Δομικά Στοιχεία",
           "tooltip": "Δομικά στοιχεία BIM (τοίχος, κούφωμα, πλάκα, διάνοιξη πλάκας, κολώνα, δοκός, σκάλα, φωτιστικό)"
+        },
+        "furniture": {
+          "label": "Έπιπλο",
+          "tooltip": "Τοποθέτησε έπιπλο (CC0) με ένα κλικ (κατηγορία: εσωτερικά) (συντόμευση FN)"
         }
       },
       "select": "Επιλογή",
@@ -1497,14 +1495,18 @@
         "deleteConfirm": "Διαγραφή διάνοιξης; Η ενέργεια δεν μπορεί να αναιρεθεί.",
         "copyToFloors": "Αντιγραφή σε ορόφους",
         "kind": {
-          "section": { "title": "Τύπος" },
+          "section": {
+            "title": "Τύπος"
+          },
           "shaft": "Φρέαρ",
           "well": "Κλιμακοστάσιο",
           "duct": "Αεραγωγός",
           "chimney": "Καπνοδόχος"
         },
         "fireRating": {
-          "section": { "title": "Πυραντοχή" },
+          "section": {
+            "title": "Πυραντοχή"
+          },
           "none": "Χωρίς",
           "60": "60 λεπτά",
           "90": "90 λεπτά",
@@ -1664,8 +1666,6 @@
       "dimBreak": "Σπάσιμο Διάστασης",
       "dimSpace": "Απόσταση Διαστάσεων",
       "dimTfillToggle": "Μάσκα Κειμένου",
-      "dimCenterMark": "Σταυρός Κέντρου",
-      "dimCenterLine": "Κεντρική Γραμμή",
       "dimContextual": {
         "styleOptions": {
           "iso": "ISO 129",
@@ -1746,6 +1746,76 @@
           "hatch": "Διαγράμμιση",
           "grip": "Λαβή",
           "envelope": "Θερμοπρόσοψη"
+        }
+      },
+      "subcategories": {
+        "label": "Υποκατηγορίες",
+        "dialogTitle": "Στυλ Υποκατηγοριών",
+        "projectionPen": "Προβολή",
+        "cutPen": "Τομή",
+        "pattern": "Μοτίβο",
+        "projectionColor": "Χρώμα Προβολής",
+        "cutColor": "Χρώμα Τομής",
+        "resetRow": "Επαναφορά γραμμής",
+        "resetCategory": "Επαναφορά {category}",
+        "resetAll": "Επαναφορά Όλων",
+        "resetAllConfirmTitle": "Επαναφορά όλων των υποκατηγοριών;",
+        "resetAllConfirmBody": "Όλες οι υποκατηγορίες όλων των κατηγοριών θα επανέλθουν στις προεπιλογές. Η ενέργεια δεν αναιρείται από εδώ.",
+        "applyToAllLevels": "Εφαρμογή σε όλους τους ορόφους",
+        "cancel": "Άκυρο",
+        "stubTooltip": "Δεν αποτυπώνεται ακόμη",
+        "tabs": {
+          "wall": "Τοίχωμα",
+          "slab": "Πλάκα",
+          "column": "Υποστύλωμα",
+          "beam": "Δοκός",
+          "door": "Θύρα",
+          "window": "Παράθυρο",
+          "cutout": "Άνοιγμα Τοίχου",
+          "stair": "Κλίμακα",
+          "slab-opening": "Άνοιγμα Πλάκας"
+        },
+        "keys": {
+          "common-edges": "Ακμές",
+          "cut-pattern": "Μοτίβο Τομής",
+          "surface-pattern": "Μοτίβο Επιφάνειας",
+          "hidden-lines": "Κρυφές Γραμμές",
+          "sweeps": "Διαμορφώσεις",
+          "reveals": "Εσοχές",
+          "slab-edges": "Ακμές Πλάκας",
+          "interior-edges": "Εσωτερικές Ακμές",
+          "stick-symbols": "Σχηματικά Σύμβολα",
+          "reference-lines": "Γραμμές Αναφοράς",
+          "section-profile": "Διατομή",
+          "rigid-links": "Άκαμπτοι Σύνδεσμοι",
+          "door-panel": "Φύλλο Θύρας",
+          "door-frame": "Κάσα Θύρας",
+          "door-glass": "Υαλοπίνακας Θύρας",
+          "door-opening": "Άνοιγμα Θύρας",
+          "door-plan-swing": "Φορά Ανοίγματος (Κάτοψη)",
+          "door-elevation-swing": "Φορά Ανοίγματος (Όψη)",
+          "door-frame-elevation": "Κάσα Θύρας (Όψη)",
+          "window-frame": "Κάσα Παραθύρου",
+          "window-sash": "Φύλλο Παραθύρου",
+          "window-glass": "Υαλοπίνακας Παραθύρου",
+          "window-opening": "Άνοιγμα Παραθύρου",
+          "window-plan-swing": "Φορά Ανοίγματος Παραθύρου",
+          "wall-cutout-sill-head": "Ποδιά/Πρέκι Ανοίγματος",
+          "wall-cutout-jambs": "Παραστάδες Ανοίγματος",
+          "sliding-track": "Οδηγός Συρόμενου",
+          "edges": "Ακμές",
+          "hidden": "Κρυφές",
+          "treads": "Πατήματα",
+          "risers": "Ρίχτια",
+          "outlines": "Περιγράμματα",
+          "walkline": "Γραμμή Πορείας",
+          "cut-marks": "Γραμμές Τομής",
+          "down-arrows": "Βέλη Καθόδου",
+          "up-arrows": "Βέλη Ανόδου",
+          "boundary": "Όριο",
+          "support": "Στήριξη",
+          "handrails": "Κουπαστές",
+          "tread-labels": "Αρίθμηση Βαθμίδων"
         }
       },
       "visibilityGraphics": {
@@ -1933,6 +2003,15 @@
           "applyAllFloors": "Σε όλους τους ορόφους",
           "close": "Κλείσιμο"
         }
+      },
+      "furnitureEditor": {
+        "asset": "Μοντέλο",
+        "rotation": "Περιστροφή",
+        "mountingElevation": "Ύψος τοποθέτησης",
+        "scale": "Κλίμακα",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή επίπλου; Η ενέργεια δεν αναιρείται."
       }
     },
     "tooltips": {
@@ -1943,29 +2022,6 @@
       "title": "Επιλογή Συμβόλου",
       "hint": "Κλικ για εισαγωγή συμβόλου στη θέση του cursor",
       "close": "Κλείσιμο"
-    }
-  },
-  "layerPicker": {
-    "placeholder": "Επιλέξτε επίπεδο",
-    "tooltipCurrent": "Τρέχον επίπεδο: {name}",
-    "tooltipEmpty": "Δεν έχει επιλεγεί επίπεδο",
-    "searchPlaceholder": "Αναζήτηση επιπέδου…",
-    "empty": "Δεν βρέθηκαν επίπεδα",
-    "mostUsed": "Πρόσφατα",
-    "newLayer": "Νέο Επίπεδο",
-    "openManager": "Διαχείριση Επιπέδων",
-    "toastChanged": "Τρέχον επίπεδο: {name}",
-    "category": {
-      "architectural": "Αρχιτεκτονικά",
-      "structural": "Στατικά",
-      "electrical": "Ηλεκτρολογικά",
-      "mechanical": "Μηχανολογικά",
-      "plumbing": "Υδραυλικά",
-      "fire": "Πυρόσβεση",
-      "civil": "Έργα Υποδομής",
-      "telecom": "Τηλεπικοινωνίες",
-      "interior": "Εσωτερικός Σχεδιασμός",
-      "general": "Γενικά"
     }
   },
   "array": {
@@ -2263,5 +2319,18 @@
   "layerManagerDialog": {
     "title": "Διαχειριστής Στρώσεων",
     "description": "Διαχείριση ορατότητας, χρώματος και ιδιοτήτων κάθε στρώσης (Ctrl+L)."
+  },
+  "furniture": {
+    "catalog": {
+      "chair01": "Καρέκλα"
+    },
+    "validation": {
+      "hardErrors": {
+        "missingAsset": "Λείπει το μοντέλο επίπλου",
+        "nonPositiveDimension": "Οι διαστάσεις πρέπει να είναι μεγαλύτερες από 0",
+        "dimensionTooSmall": "Η διάσταση είναι κάτω από το ελάχιστο επιτρεπτό",
+        "nonPositiveHeight": "Το ύψος πρέπει να είναι μεγαλύτερο από 0"
+      }
+    }
   }
 }

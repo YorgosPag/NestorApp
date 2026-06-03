@@ -68,18 +68,20 @@ describe('ADR-405 CATEGORIES_BY_DISCIPLINE (inverse)', () => {
   });
 
   it('disciplines with no placeable category yet map to []', () => {
-    // ADR-406 added the first electrical placeable category (light-fixture);
-    // mechanical/plumbing remain reserved for the rest of the MEP roadmap.
+    // ADR-406/408 populated electrical (light-fixture + electrical-panel + mep-wire);
+    // ADR-410 populated interior (furniture). mechanical/plumbing remain reserved.
     expect(CATEGORIES_BY_DISCIPLINE.mechanical).toEqual([]);
     expect(CATEGORIES_BY_DISCIPLINE.plumbing).toEqual([]);
-    expect(CATEGORIES_BY_DISCIPLINE.electrical).toEqual(['light-fixture']);
+    expect(CATEGORIES_BY_DISCIPLINE.electrical).toEqual(['light-fixture', 'electrical-panel', 'mep-wire']);
+    // ADR-410 — furniture is the first (and only) placeable interior category.
+    expect(CATEGORIES_BY_DISCIPLINE.interior).toEqual(['furniture']);
   });
 });
 
 describe('ADR-405 MODEL_DISCIPLINES', () => {
-  it('contains the 5 placeable model disciplines', () => {
+  it('contains the placeable model disciplines (ADR-410 added interior)', () => {
     expect([...MODEL_DISCIPLINES]).toEqual([
-      'architectural', 'structural', 'mechanical', 'electrical', 'plumbing',
+      'architectural', 'structural', 'mechanical', 'electrical', 'plumbing', 'interior',
     ]);
   });
 });

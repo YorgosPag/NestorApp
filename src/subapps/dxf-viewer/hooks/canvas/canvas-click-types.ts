@@ -122,6 +122,12 @@ export interface ElectricalPanelToolLike {
   onCanvasClick: (point: Point2D) => boolean;
 }
 
+/** ADR-410 — Minimal furniture tool interface for click routing. */
+export interface FurnitureToolLike {
+  readonly isActive: boolean;
+  onCanvasClick: (point: Point2D) => boolean;
+}
+
 /** ADR-407 — Minimal railing tool interface for click routing (2-click line). */
 export interface RailingToolLike {
   readonly isActive: boolean;
@@ -178,6 +184,8 @@ export interface UseCanvasClickHandlerParams {
   mepFixtureTool?: MepFixtureToolLike;
   /** ADR-408 Φ3 — Electrical panel tool click pipeline. */
   electricalPanelTool?: ElectricalPanelToolLike;
+  /** ADR-410 — Furniture tool click pipeline (single-click placement). */
+  furnitureTool?: FurnitureToolLike;
   /** ADR-407 — Railing tool click pipeline (2-click straight guardrail). */
   railingTool?: RailingToolLike;
   /** ADR-363 Phase 3.7 — Slab-opening tool click pipeline. */

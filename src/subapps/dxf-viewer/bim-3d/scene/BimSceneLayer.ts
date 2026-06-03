@@ -18,6 +18,7 @@ import type { FloorStackEntry } from './multi-floor-3d-source';
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh, panelToMesh } from '../converters/BimToThreeConverter';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
+import { furnitureToObject3D } from '../converters/furniture-to-three';
 import { syncCircuitWires } from './sync-circuit-wires';
 import { resolveWallTopProfile, resolveWallNominalTopZmm } from '../../bim/geometry/wall-top-profile';
 import { resolveWallBaseProfile } from '../../bim/geometry/wall-base-profile';
@@ -149,6 +150,7 @@ export class BimSceneLayer {
     this.syncPanels(entities, ctx);
     syncCircuitWires(this.group, entities, ctx, (entity, category) => this.resolveEntity(entity, category, ctx));
     this.syncRailings(entities, ctx);
+    this.syncFurnitures(entities, ctx);
     addEnvelopeToScene(this.group, entities, ctx, this.shouldRender.bind(this));
   }
 
@@ -364,6 +366,18 @@ export class BimSceneLayer {
       if (!r) continue;
       const mesh = railingToMesh(railing, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
+  /** ADR-410 — mesh-based CC0 furniture (glTF cache; bbox placeholder on miss). */
+  private syncFurnitures(entities: Bim3DEntities, ctx: SyncContext): void {
+    // Defensive: legacy floor-stack entries predating ADR-410 carry no `furnitures`
+    // array — never crash the whole floor sync over a missing slice.
+    for (const furniture of entities.furnitures ?? []) {
+      const r = this.resolveEntity(furniture, 'furniture', ctx);
+      if (!r) continue;
+      const obj = furnitureToObject3D(furniture, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      if (obj) { obj.userData['buildingId'] = r.buildingId; this.group.add(obj); }
     }
   }
 

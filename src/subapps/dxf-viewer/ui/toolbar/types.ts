@@ -146,6 +146,8 @@ export type ToolType =
   | 'electrical-panel'
   // ADR-407: path-based railing drawing tool (2-click straight guardrail)
   | 'railing'
+  // ADR-410: mesh-based CC0 furniture drawing tool (single-click placement)
+  | 'furniture'
   // ADR-359 Phase 1: Auxiliary geometry tools (infinite/semi-infinite construction lines)
   | 'xline'             // Infinite line through basePoint in direction (AutoCAD XLINE)
   | 'ray'               // Semi-infinite line from basePoint in direction (AutoCAD RAY)

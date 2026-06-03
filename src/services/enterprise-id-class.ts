@@ -350,6 +350,7 @@ export class EnterpriseIdService {
   generateMepSystemId(): string { return this.generateId(P.MEP_SYSTEM).id; }
   generateElectricalPanelId(): string { return this.generateId(P.ELECTRICAL_PANEL).id; }
   generateRailingId(): string { return this.generateId(P.RAILING).id; }
+  generateFurnitureId(): string { return this.generateId(P.FURNITURE).id; }
   generateBimPresetId(): string { return this.generateId(P.BIM_PRESET).id; }
   generateBimMaterialId(): string { return this.generateId(P.BIM_MATERIAL).id; }
   generateBimSettingsId(): string { return this.generateId(P.BIM_SETTINGS).id; }

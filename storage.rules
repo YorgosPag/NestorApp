@@ -320,5 +320,25 @@ service firebase.storage {
       allow delete: if isOwner(userId);
     }
 
+    // =========================================================================
+    // 🪑 FURNITURE LIBRARY (ADR-410 — CC0 mesh content library)
+    // =========================================================================
+    // Path: /furniture-library/{assetId}.glb
+    // Shared, read-only content library (like a Revit content server): every
+    // authenticated user may READ the CC0 meshes; only super_admin may curate
+    // (write/delete). The meshes are CC0 (Poly Haven) enriched with our own BIM
+    // metadata (ADR-409 §D.1) → safe to host + redistribute in-app.
+    // =========================================================================
+
+    match /furniture-library/{assetFile} {
+
+      // 📖 READ: any authenticated user (shared catalog)
+      allow read: if isAuthenticated();
+
+      // ✍️ WRITE / 🗑️ DELETE: super_admin only (library curation)
+      allow write: if isSuperAdmin() && isValidFileSize();
+      allow delete: if isSuperAdmin();
+    }
+
   }
 }

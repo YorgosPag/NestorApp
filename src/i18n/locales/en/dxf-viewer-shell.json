@@ -108,27 +108,16 @@
     }
   },
   "layerPicker": {
-    "toastChanged": "Layer changed to \"{name}\"",
-    "toastLocked": "Layer \"{name}\" is locked — cannot draw here",
-    "toastFrozen": "Layer \"{name}\" is frozen — thaw to draw",
+    "placeholder": "Select layer",
     "tooltipCurrent": "Current layer: {name}",
-    "tooltipEmpty": "No active layer",
-    "placeholder": "No layer",
+    "tooltipEmpty": "No layer selected",
     "searchPlaceholder": "Search layers…",
     "empty": "No layers found",
-    "mostUsed": "Most used",
+    "mostUsed": "Recent",
     "newLayer": "New Layer",
-    "openManager": "Manage Layers",
-    "disabledHint": "Layer not editable",
-    "contextMenu": {
-      "setCurrent": "Set as current",
-      "toggleVisibility": "Toggle visibility",
-      "toggleLock": "Toggle lock",
-      "toggleFreeze": "Toggle freeze",
-      "openProperties": "Properties…"
-    },
+    "openManager": "Layer Manager",
+    "toastChanged": "Current layer: {name}",
     "category": {
-      "all": "All",
       "architectural": "Architectural",
       "structural": "Structural",
       "electrical": "Electrical",
@@ -160,7 +149,44 @@
     "restoreAriaLabel": "Restore state \"{name}\"",
     "importLas": "Import .las",
     "exportLas": "Export .las",
-    "manage": "Manage…",
+    "manage": {
+      "title": "Manage Layer States",
+      "searchPlaceholder": "Search…",
+      "categoryFilterAll": "All categories",
+      "empty": "No layer states",
+      "loading": "Loading…",
+      "column": {
+        "name": "Name",
+        "category": "Category",
+        "tags": "Tags",
+        "updated": "Updated",
+        "createdBy": "Created by",
+        "actions": "Actions"
+      },
+      "bulkBar": {
+        "selected": "{count} selected",
+        "delete": "Delete"
+      },
+      "contextMenu": {
+        "rename": "Rename",
+        "editCategory": "Edit category",
+        "duplicate": "Duplicate",
+        "delete": "Delete"
+      },
+      "restoreDialog": {
+        "title": "Restore State",
+        "description": "Apply this saved state to the current scene.",
+        "createMissingLayersLabel": "Create missing layers",
+        "createMissingLayersHint": "Layers in this state that don't exist will be created",
+        "unmatchedWarning": "{count} layer(s) from this state are not in the current scene",
+        "entryCount": "{count} layers",
+        "apply": "Apply",
+        "cancel": "Cancel"
+      },
+      "toastDuplicated": "Duplicated: \"{name}\"",
+      "toastBulkDeleted": "Deleted {count} state(s)",
+      "errorBulkDelete": "Failed to delete some states"
+    },
     "phase13Hint": "Available in a future phase",
     "importLasHint": "Load layer states from a .las file",
     "exportLasHint": "Save all layer states to a .las file",
@@ -220,44 +246,6 @@
         "working": "Working",
         "custom": "Custom"
       }
-    },
-    "manage": {
-      "title": "Manage Layer States",
-      "searchPlaceholder": "Search…",
-      "categoryFilterAll": "All categories",
-      "empty": "No layer states",
-      "loading": "Loading…",
-      "column": {
-        "name": "Name",
-        "category": "Category",
-        "tags": "Tags",
-        "updated": "Updated",
-        "createdBy": "Created by",
-        "actions": "Actions"
-      },
-      "bulkBar": {
-        "selected": "{count} selected",
-        "delete": "Delete"
-      },
-      "contextMenu": {
-        "rename": "Rename",
-        "editCategory": "Edit category",
-        "duplicate": "Duplicate",
-        "delete": "Delete"
-      },
-      "restoreDialog": {
-        "title": "Restore State",
-        "description": "Apply this saved state to the current scene.",
-        "createMissingLayersLabel": "Create missing layers",
-        "createMissingLayersHint": "Layers in this state that don't exist will be created",
-        "unmatchedWarning": "{count} layer(s) from this state are not in the current scene",
-        "entryCount": "{count} layers",
-        "apply": "Apply",
-        "cancel": "Cancel"
-      },
-      "toastDuplicated": "Duplicated: \"{name}\"",
-      "toastBulkDeleted": "Deleted {count} state(s)",
-      "errorBulkDelete": "Failed to delete some states"
     }
   },
   "toolbar": {
@@ -616,6 +604,9 @@
       "create": "Create and use",
       "skip": "No thanks",
       "neverAsk": "Don't ask again"
+    },
+    "furniture": {
+      "statusPosition": "Click to place furniture"
     }
   },
   "snapModes": {
@@ -681,11 +672,11 @@
       "guide": "Guide - Snap to construction guide lines (G)",
       "constructionPoint": "Point - Snap to construction snap points",
       "bim": {
-        "columnAxis":    "Column Axis - Snap to structural column center axis",
-        "wallCorner":    "Wall Corner - Snap to wall face corner (outer/inner edge)",
-        "beamCorner":    "Beam Corner - Snap to beam end face corner",
-        "slabCorner":    "Slab Corner - Snap to slab outline vertex",
-        "columnCorner":  "Column Corner - Snap to column perimeter corner",
+        "columnAxis": "Column Axis - Snap to structural column center axis",
+        "wallCorner": "Wall Corner - Snap to wall face corner (outer/inner edge)",
+        "beamCorner": "Beam Corner - Snap to beam end face corner",
+        "slabCorner": "Slab Corner - Snap to slab outline vertex",
+        "columnCorner": "Column Corner - Snap to column perimeter corner",
         "openingCorner": "Opening Corner - Snap to door/window face corner"
       },
       "text": "Text - Snap to insertion point, corners, center and edge midpoints of TEXT/MTEXT"
@@ -733,7 +724,8 @@
       "dimension": "Dimension",
       "lineToolStyle": "Line Style",
       "xlineMode": "Construction Line",
-      "analyze": "Analyze"
+      "analyze": "Analyze",
+      "furnitureProperties": "Furniture Properties"
     },
     "panels": {
       "draw": "Draw",
@@ -845,8 +837,10 @@
       "lineToolQuickStyle": "Quick Style",
       "xlineMode": "Mode",
       "bimSchedule": "BIM Schedule",
-      "layerManager": "Layer Manager",
-      "thermalEnvelope": "Thermal Envelope"
+      "thermalEnvelope": "Thermal Envelope",
+      "furnitureCatalog": "Catalog",
+      "furnitureGeometry": "Geometry",
+      "furnitureActions": "Actions"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -993,6 +987,10 @@
         "group": {
           "label": "Structural Elements",
           "tooltip": "BIM structural elements (wall, opening, slab, slab opening, column, beam, stair, light fixture)"
+        },
+        "furniture": {
+          "label": "Furniture",
+          "tooltip": "Place furniture (CC0) with a single click (discipline: interior) (shortcut FN)"
         }
       },
       "select": "Select",
@@ -1497,14 +1495,18 @@
         "deleteConfirm": "Delete slab opening? This action cannot be undone.",
         "copyToFloors": "Copy to Floors",
         "kind": {
-          "section": { "title": "Type" },
+          "section": {
+            "title": "Type"
+          },
           "shaft": "Shaft",
           "well": "Stair Well",
           "duct": "Duct",
           "chimney": "Chimney"
         },
         "fireRating": {
-          "section": { "title": "Fire Rating" },
+          "section": {
+            "title": "Fire Rating"
+          },
           "none": "None",
           "60": "60 minutes",
           "90": "90 minutes",
@@ -1664,8 +1666,6 @@
       "dimBreak": "Dimension Break",
       "dimSpace": "Dimension Space",
       "dimTfillToggle": "Text Mask",
-      "dimCenterMark": "Center Mark",
-      "dimCenterLine": "Centerline",
       "dimContextual": {
         "styleOptions": {
           "iso": "ISO 129",
@@ -1746,6 +1746,76 @@
           "hatch": "Hatch",
           "grip": "Grip",
           "envelope": "Thermal Envelope"
+        }
+      },
+      "subcategories": {
+        "label": "Subcategories",
+        "dialogTitle": "Subcategory Styles",
+        "projectionPen": "Projection",
+        "cutPen": "Cut",
+        "pattern": "Pattern",
+        "projectionColor": "Projection Color",
+        "cutColor": "Cut Color",
+        "resetRow": "Reset row",
+        "resetCategory": "Reset {category}",
+        "resetAll": "Reset All",
+        "resetAllConfirmTitle": "Reset all subcategories?",
+        "resetAllConfirmBody": "All subcategories across every category will revert to defaults. This cannot be undone from here.",
+        "applyToAllLevels": "Apply to All Levels",
+        "cancel": "Cancel",
+        "stubTooltip": "Not rendered yet",
+        "tabs": {
+          "wall": "Wall",
+          "slab": "Slab",
+          "column": "Column",
+          "beam": "Beam",
+          "door": "Door",
+          "window": "Window",
+          "cutout": "Wall Cutout",
+          "stair": "Stair",
+          "slab-opening": "Slab Opening"
+        },
+        "keys": {
+          "common-edges": "Common Edges",
+          "cut-pattern": "Cut Pattern",
+          "surface-pattern": "Surface Pattern",
+          "hidden-lines": "Hidden Lines",
+          "sweeps": "Sweeps",
+          "reveals": "Reveals",
+          "slab-edges": "Slab Edges",
+          "interior-edges": "Interior Edges",
+          "stick-symbols": "Stick Symbols",
+          "reference-lines": "Reference Lines",
+          "section-profile": "Section Profile",
+          "rigid-links": "Rigid Links",
+          "door-panel": "Door Panel",
+          "door-frame": "Door Frame",
+          "door-glass": "Door Glass",
+          "door-opening": "Door Opening",
+          "door-plan-swing": "Plan Swing",
+          "door-elevation-swing": "Elevation Swing",
+          "door-frame-elevation": "Door Frame (Elevation)",
+          "window-frame": "Window Frame",
+          "window-sash": "Window Sash",
+          "window-glass": "Window Glass",
+          "window-opening": "Window Opening",
+          "window-plan-swing": "Window Plan Swing",
+          "wall-cutout-sill-head": "Sill / Head",
+          "wall-cutout-jambs": "Jambs",
+          "sliding-track": "Sliding Track",
+          "edges": "Edges",
+          "hidden": "Hidden",
+          "treads": "Treads",
+          "risers": "Risers",
+          "outlines": "Outlines",
+          "walkline": "Walkline",
+          "cut-marks": "Cut Marks",
+          "down-arrows": "Down Arrows",
+          "up-arrows": "Up Arrows",
+          "boundary": "Boundary",
+          "support": "Support",
+          "handrails": "Handrails",
+          "tread-labels": "Tread Labels"
         }
       },
       "visibilityGraphics": {
@@ -1933,6 +2003,15 @@
           "applyAllFloors": "All floors",
           "close": "Close"
         }
+      },
+      "furnitureEditor": {
+        "asset": "Model",
+        "rotation": "Rotation",
+        "mountingElevation": "Mounting height",
+        "scale": "Scale",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete furniture? This action cannot be undone."
       }
     },
     "tooltips": {
@@ -1943,29 +2022,6 @@
       "title": "Symbol Picker",
       "hint": "Click to insert symbol at current position",
       "close": "Close"
-    }
-  },
-  "layerPicker": {
-    "placeholder": "Select layer",
-    "tooltipCurrent": "Current layer: {name}",
-    "tooltipEmpty": "No layer selected",
-    "searchPlaceholder": "Search layers…",
-    "empty": "No layers found",
-    "mostUsed": "Recent",
-    "newLayer": "New Layer",
-    "openManager": "Layer Manager",
-    "toastChanged": "Current layer: {name}",
-    "category": {
-      "architectural": "Architectural",
-      "structural": "Structural",
-      "electrical": "Electrical",
-      "mechanical": "Mechanical",
-      "plumbing": "Plumbing",
-      "fire": "Fire",
-      "civil": "Civil",
-      "telecom": "Telecom",
-      "interior": "Interior",
-      "general": "General"
     }
   },
   "array": {
@@ -2263,5 +2319,18 @@
   "layerManagerDialog": {
     "title": "Layer Manager",
     "description": "Manage layer visibility, color and properties (Ctrl+L)."
+  },
+  "furniture": {
+    "catalog": {
+      "chair01": "Chair"
+    },
+    "validation": {
+      "hardErrors": {
+        "missingAsset": "Furniture model is missing",
+        "nonPositiveDimension": "Dimensions must be greater than 0",
+        "dimensionTooSmall": "Dimension is below the minimum allowed",
+        "nonPositiveHeight": "Height must be greater than 0"
+      }
+    }
   }
 }

@@ -335,6 +335,15 @@ export type {
 } from '../bim/types/railing-types';
 import type { RailingEntity } from '../bim/types/railing-types';
 
+// ADR-410: mesh-based CC0 furniture concrete types live in bim/types/furniture-types.ts (SRP).
+export type {
+  FurnitureKind,
+  FurnitureParams,
+  FurnitureGeometry,
+  FurnitureEntity,
+} from '../bim/types/furniture-types';
+import type { FurnitureEntity } from '../bim/types/furniture-types';
+
 // ADR-363 Phase 5: Beam concrete types live in bim/types/beam-types.ts (SRP).
 export type {
   BeamKind,
@@ -498,6 +507,8 @@ export type Entity = (
   | ElectricalPanelEntity
   // ADR-407 — standalone path-based railing.
   | RailingEntity
+  // ADR-410 — mesh-based CC0 furniture.
+  | FurnitureEntity
 ) & Pick<BaseEntity,
   // Required identifiers — needed everywhere (ADR-363 fix: BIM entities now in union)
   'id' | 'name' | 'layerId' |
@@ -653,11 +664,16 @@ export const isElectricalPanelEntity = (entity: Entity): entity is ElectricalPan
 export const isRailingEntity = (entity: Entity): entity is RailingEntity =>
   entity.type === 'railing';
 
-/** True for any ADR-363/406/407/408 BIM parametric entity */
-export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity | ElectricalPanelEntity | RailingEntity =>
+/** ADR-410 — mesh-based CC0 furniture (chair first). */
+export const isFurnitureEntity = (entity: Entity): entity is FurnitureEntity =>
+  entity.type === 'furniture';
+
+/** True for any ADR-363/406/407/408/410 BIM parametric entity */
+export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity | ElectricalPanelEntity | RailingEntity | FurnitureEntity =>
   entity.type === 'wall' || entity.type === 'opening' || entity.type === 'slab' ||
   entity.type === 'slab-opening' || entity.type === 'column' || entity.type === 'beam' ||
-  entity.type === 'mep-fixture' || entity.type === 'electrical-panel' || entity.type === 'railing';
+  entity.type === 'mep-fixture' || entity.type === 'electrical-panel' || entity.type === 'railing' ||
+  entity.type === 'furniture';
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
 // Re-export from centralized location for backward compatibility

@@ -411,6 +411,16 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'railing',
               shortcut: 'RL',
             },
+            // ADR-410 — mesh-based CC0 furniture (chair first). Single-click
+            // placement; discipline = interior (ADR-405 discipline visibility).
+            {
+              id: 'draw.bim.furniture',
+              labelKey: 'ribbon.commands.bim.furniture.label',
+              tooltipKey: 'ribbon.commands.bim.furniture.tooltip',
+              icon: 'bim-furniture',
+              commandKey: 'furniture',
+              shortcut: 'FN',
+            },
           ],
         },
       ],

@@ -692,6 +692,25 @@ const MEP_FIXTURE_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const MEP_FIXTURE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(MEP_FIXTURE_TRACKED_FIELDS_RAW, {});
 
+// ADR-410 — mesh-based CC0 furniture (chair first).
+const FURNITURE_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  assetId: 'assetId',
+  widthMm: 'widthMm',
+  depthMm: 'depthMm',
+  heightMm: 'heightMm',
+  mountingElevationMm: 'mountingElevationMm',
+  rotationDeg: 'rotationDeg',
+  scaleOverride: 'scaleOverride',
+  material: 'material',
+  storeyId: 'storeyId',
+  hostId: 'hostId',
+};
+
+export const FURNITURE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(FURNITURE_TRACKED_FIELDS_RAW, {});
+
 // ADR-408 — logical MEP system (electrical circuit first; geometry-less). The
 // `members` array serializes as a JSON scalar (mirror slab `slope`).
 const MEP_SYSTEM_TRACKED_FIELDS_RAW: Record<string, string> = {

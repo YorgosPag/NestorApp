@@ -24,6 +24,7 @@ import { useOpeningTool } from '../drawing/useOpeningTool';
 import { useSlabTool, SLAB_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useSlabTool';
 import { useColumnTool } from '../drawing/useColumnTool';
 import { useMepFixtureTool } from '../drawing/useMepFixtureTool';
+import { useFurnitureTool } from '../drawing/useFurnitureTool';
 import { useElectricalPanelTool } from '../drawing/useElectricalPanelTool';
 import { useRailingTool } from '../drawing/useRailingTool';
 import { useBeamTool } from '../drawing/useBeamTool';
@@ -39,6 +40,7 @@ import { useSpecialToolsSelectionTools, type SelectionToolsReturn } from './useS
 import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
 import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
 import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-scene';
+import { addFurnitureToScene } from '../../bim/furniture/add-furniture-to-scene';
 import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-electrical-panel-to-scene';
 import { addRailingToScene } from '../../bim/railings/add-railing-to-scene';
 import { appendEntityToScene } from '../../bim/scene/append-entity-to-scene';
@@ -77,6 +79,7 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn {
   slabTool: ReturnType<typeof useSlabTool>;
   columnTool: ReturnType<typeof useColumnTool>;
   mepFixtureTool: ReturnType<typeof useMepFixtureTool>; // ADR-406
+  furnitureTool: ReturnType<typeof useFurnitureTool>; // ADR-410
   electricalPanelTool: ReturnType<typeof useElectricalPanelTool>; // ADR-408 Φ3
   railingTool: ReturnType<typeof useRailingTool>; // ADR-407
   beamTool: ReturnType<typeof useBeamTool>;
@@ -293,6 +296,17 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   });
   useToolLifecycle(activeTool === 'mep-fixture', mepFixtureTool.activate, mepFixtureTool.deactivate);
 
+  // ADR-410 — FURNITURE TOOL: single-click placement; entity appended+broadcast.
+  const furnitureTool = useFurnitureTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onFurnitureCreated: (furnitureEntity) => addFurnitureToScene(furnitureEntity, levelManager),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  useToolLifecycle(activeTool === 'furniture', furnitureTool.activate, furnitureTool.deactivate);
+
   // ADR-408 Φ3 — ELECTRICAL PANEL TOOL: single-click placement; entity appended+broadcast.
   const electricalPanelTool = useElectricalPanelTool({
     currentLevelId: levelManager.currentLevelId || '0',
@@ -373,6 +387,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     slabTool,
     columnTool,
     mepFixtureTool,
+    furnitureTool,
     electricalPanelTool,
     railingTool,
     beamTool,

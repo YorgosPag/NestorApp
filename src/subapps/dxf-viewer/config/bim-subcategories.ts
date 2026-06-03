@@ -108,11 +108,13 @@ export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<st
   dimension: [],
   hatch:     [],
   grip:      [],
-  // ADR-405/406/407/408 — no subcategory model yet.
+  // ADR-405/406/407/408/410 — no subcategory model yet.
   envelope:        [],
   'light-fixture': [],
   'electrical-panel': [],
   railing:         [],
+  'mep-wire':      [],
+  furniture:       [],
 };
 
 /**

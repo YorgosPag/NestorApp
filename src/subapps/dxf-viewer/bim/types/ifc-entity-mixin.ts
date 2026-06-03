@@ -30,7 +30,9 @@ export type IfcEntityType =
   // ADR-407 — path-based railing (handrail/guardrail/balustrade).
   | 'IfcRailing'
   // ADR-408 Φ3 — electrical panel (panelboard / consumer unit).
-  | 'IfcElectricDistributionBoard';
+  | 'IfcElectricDistributionBoard'
+  // ADR-410 — mesh-based furniture (IfcFurnishingElement family, IFC4 ADD2).
+  | 'IfcFurniture';
 
 export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcWall',
@@ -46,6 +48,8 @@ export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcRailing',
   // ADR-408 Φ3 — electrical panel.
   'IfcElectricDistributionBoard',
+  // ADR-410 — mesh-based furniture.
+  'IfcFurniture',
 ] as const;
 
 export type IfcPropertySetValue = string | number | boolean | null;
@@ -85,6 +89,8 @@ export const IfcEntityTypeSchema = z.enum([
   'IfcRailing',
   // ADR-408 Φ3 — electrical panel.
   'IfcElectricDistributionBoard',
+  // ADR-410 — mesh-based furniture.
+  'IfcFurniture',
 ]);
 
 export const IfcPropertySetValueSchema = z.union([

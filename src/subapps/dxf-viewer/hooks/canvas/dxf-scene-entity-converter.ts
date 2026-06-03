@@ -13,7 +13,7 @@ import type { DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dx
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity } from '../../types/entities';
-import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isXLineEntity, isRayEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
@@ -30,6 +30,7 @@ import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
 // ADR-407 — railing direct entity for DXF render pipeline.
 import type { RailingEntity } from '../../bim/types/railing-types';
+import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import type { DimensionEntity } from '../../types/dimension';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
 import { extractFlatText } from '../../utils/text-node-utils';
@@ -328,6 +329,15 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       if (!isRailingEntity(entity)) return null;
       const rl = entity as RailingEntity;
       return { ...base, type: 'railing' as const, kind: rl.kind, params: rl.params, geometry: rl.geometry, validation: rl.validation } as DxfEntityUnion;
+    }
+    case 'furniture': {
+      // ADR-410 — direct entity (same pattern as mep-fixture). FurnitureRenderer
+      // reads geometry.footprint + kind + params fields at top level. Without this
+      // case, freshly-committed furniture was silently dropped here → invisible on
+      // 2D canvas (visible only in 3D which reads params directly).
+      if (!isFurnitureEntity(entity)) return null;
+      const fn = entity as FurnitureEntity;
+      return { ...base, type: 'furniture' as const, kind: fn.kind, params: fn.params, geometry: fn.geometry, validation: fn.validation } as DxfEntityUnion;
     }
     case 'xline': {
       // ADR-359 Phase 11 — wrap XLineEntity for grip computation pipeline.

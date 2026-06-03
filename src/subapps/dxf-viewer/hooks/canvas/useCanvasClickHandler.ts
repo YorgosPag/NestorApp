@@ -74,6 +74,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     columnTool,
     beamTool,
     mepFixtureTool,
+    furnitureTool,
     electricalPanelTool,
     railingTool,
     slabOpeningTool,
@@ -290,6 +291,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       mepFixtureTool.onCanvasClick(worldPoint);
       return;
     }
+    // PRIORITY 4.92a: ADR-410 — Furniture tool single-click placement (RAW
+    // worldPoint; free-point placement, no existing-geometry hit-test).
+    if (activeTool === 'furniture' && furnitureTool?.isActive) {
+      furnitureTool.onCanvasClick(worldPoint);
+      return;
+    }
     // PRIORITY 4.92b: ADR-408 Φ3 — Electrical panel tool single-click placement
     // (RAW worldPoint; free-point placement, no existing-geometry hit-test).
     if (activeTool === 'electrical-panel' && electricalPanelTool?.isActive) {
@@ -389,6 +396,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     columnTool,
     beamTool,
     mepFixtureTool,
+    furnitureTool,
     electricalPanelTool,
     railingTool,
     slabOpeningTool,

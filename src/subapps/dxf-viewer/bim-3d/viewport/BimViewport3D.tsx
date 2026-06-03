@@ -35,6 +35,7 @@ import { useBim3DEditInteraction } from '../animation/use-bim3d-edit-interaction
 import { useBim3DWireWaypointInteraction } from '../animation/use-bim3d-wire-waypoint-interaction-3d';
 import { useBim3DColumnPlacement } from '../placement/use-bim3d-column-placement';
 import { useBim3DMepFixturePlacement } from '../placement/use-bim3d-mep-fixture-placement';
+import { useBim3DFurniturePlacement } from '../placement/use-bim3d-furniture-placement';
 import { useBim3DElectricalPanelPlacement } from '../placement/use-bim3d-electrical-panel-placement';
 import { useBim3DAttachPick } from './use-bim3d-attach-pick';
 import { useBim3DBeamFromWallPick } from './use-bim3d-beam-from-wall-pick';
@@ -278,6 +279,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
 
   // ADR-406 — 3D MEP fixture placement (mirror of column placement above).
   useBim3DMepFixturePlacement({ managerRef, canvasEl });
+
+  // ADR-410 — 3D furniture placement (mirror of MEP fixture placement).
+  useBim3DFurniturePlacement({ managerRef, canvasEl });
 
   // ADR-408 Φ3 — 3D electrical panel placement (mirror of MEP fixture placement).
   useBim3DElectricalPanelPlacement({ managerRef, canvasEl });

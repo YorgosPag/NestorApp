@@ -177,6 +177,7 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'mep-fixture': { id: 'mep-fixture', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-406 — single-click point-based MEP fixture (light fixture first)
   'electrical-panel': { id: 'electrical-panel', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-408 Φ3 — single-click point-based electrical panel (circuit source)
   'railing': { id: 'railing', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-407 — 2-click path-based railing (straight guardrail), continuous chain
+  'furniture': { id: 'furniture', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-410 — single-click mesh-based CC0 furniture (chair first)
   // ADR-359 Phase 1: Auxiliary geometry tools (XLINE = infinite, RAY = semi-infinite)
   'xline': { id: 'xline', category: 'drawing', requiresCanvas: true, canInterrupt: false, allowsContinuous: true, preservesOverlayMode: false, allowsChain: true },
   'ray':   { id: 'ray',   category: 'drawing', requiresCanvas: true, canInterrupt: false, allowsContinuous: true, preservesOverlayMode: false, allowsChain: true },

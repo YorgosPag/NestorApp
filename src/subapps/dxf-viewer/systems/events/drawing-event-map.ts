@@ -218,6 +218,9 @@ export interface DrawingEventMap {
   // ADR-406 — BIM MEP fixture params + delete events
   'bim:mep-fixture-params-updated': { fixtureId: string };
   'bim:mep-fixture-delete-requested': { fixtureId: string };
+  // ADR-410 — BIM furniture params + delete events
+  'bim:furniture-params-updated': { furnitureId: string };
+  'bim:furniture-delete-requested': { furnitureId: string };
   // ADR-408 Φ3 — BIM electrical panel params + delete events
   'bim:electrical-panel-params-updated': { panelId: string };
   'bim:electrical-panel-delete-requested': { panelId: string };
@@ -245,6 +248,8 @@ export interface DrawingEventMap {
   'bim:place-electrical-panel-3d': { point: Point2D };
   // ADR-407 — 3D railing placement (mirror of bim:place-column-3d).
   'bim:place-railing-3d': { point: Point2D };
+  // ADR-410 — 3D furniture placement (mirror of bim:place-column-3d).
+  'bim:place-furniture-3d': { point: Point2D };
   // ADR-401 — 3D manual attach pick-host: the 3D viewport raycast a structural
   // host (beam/slab) while a `*-attach-top/-base` tool is active. The 2D
   // `useWallAttachTool` listens and dispatches the existing Attach{Walls|Columns|

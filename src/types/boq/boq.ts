@@ -191,7 +191,7 @@ export interface BOQItem {
    * γραμμή θερμοπρόσοψης ανά ζώνη+όροφο (δεν αντιστοιχεί σε ένα entity — id
    * `boq_env_<floorId>_<zone>`). sourceType παραμένει `'bim-auto'`.
    */
-  sourceEntityType?: 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | 'envelope' | 'railing' | null;
+  sourceEntityType?: 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | 'envelope' | 'railing' | 'furniture' | null;
 
   /** Αν true: ο χρήστης το αποσύνδεσε από BIM — δεν ενημερώνεται αυτόματα πλέον. */
   detached?: boolean | null;

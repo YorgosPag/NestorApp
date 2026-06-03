@@ -1,0 +1,87 @@
+'use client';
+
+/**
+ * ADR-410 — Fire-and-forget audit client for furniture create / update /
+ * delete / restore. Mirrors `mep-fixture-audit-client.ts` (ADR-195 entity audit).
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-410-cc0-mesh-furniture-import.md
+ * @see docs/centralized-systems/reference/adrs/ADR-195-entity-audit-trail.md
+ */
+
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
+import { FURNITURE_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
+import type { FurnitureEntity } from '../types/furniture-types';
+import {
+  buildBimCreationChanges,
+  buildBimDeletionChanges,
+  buildBimUpdateChanges,
+  ensureNonEmptyChanges,
+  type BimAuditSnapshot,
+} from '../utils/bim-audit-helpers';
+
+export type FurnitureAuditAction = 'created' | 'updated' | 'deleted' | 'restored';
+
+export type FurnitureAuditSnapshot = Pick<FurnitureEntity, 'id' | 'kind'> & {
+  readonly layerId?: string;
+  readonly params?: Partial<FurnitureEntity['params']>;
+};
+
+export interface RecordFurnitureChangeOptions {
+  readonly entityName?: string | null;
+  readonly prevParams?: Partial<FurnitureEntity['params']> | null;
+}
+
+export function recordFurnitureChange(
+  action: FurnitureAuditAction,
+  entity: FurnitureAuditSnapshot,
+  options?: RecordFurnitureChangeOptions,
+): void {
+  const changes = buildChanges(action, entity, options?.prevParams ?? null);
+  if (changes === null) return;
+
+  apiClient
+    .post('/api/audit-trail/record', {
+      entityType: 'furniture',
+      entityId: entity.id,
+      entityName: options?.entityName ?? null,
+      action: action as AuditAction,
+      changes,
+    })
+    .catch(() => { /* fire-and-forget */ });
+}
+
+function buildChanges(
+  action: FurnitureAuditAction,
+  entity: FurnitureAuditSnapshot,
+  prevParams: Partial<FurnitureEntity['params']> | null,
+): AuditFieldChange[] | null {
+  const snapshot: BimAuditSnapshot = {
+    kind: entity.kind,
+    layerId: entity.layerId,
+    params: entity.params as Record<string, unknown> | undefined,
+  };
+
+  if (action === 'created' || action === 'restored') {
+    return ensureNonEmptyChanges(
+      buildBimCreationChanges(snapshot, FURNITURE_TRACKED_FIELDS),
+      { field: 'kind', oldValue: null, newValue: entity.kind },
+    );
+  }
+
+  if (action === 'deleted') {
+    return ensureNonEmptyChanges(
+      buildBimDeletionChanges(snapshot, FURNITURE_TRACKED_FIELDS),
+      { field: 'kind', oldValue: entity.kind, newValue: null },
+    );
+  }
+
+  if (!prevParams) return null;
+  const prevSnapshot: BimAuditSnapshot = {
+    kind: entity.kind,
+    layerId: entity.layerId,
+    params: prevParams as Record<string, unknown>,
+  };
+  const changes = buildBimUpdateChanges(prevSnapshot, snapshot, FURNITURE_TRACKED_FIELDS);
+  return changes.length > 0 ? changes : null;
+}

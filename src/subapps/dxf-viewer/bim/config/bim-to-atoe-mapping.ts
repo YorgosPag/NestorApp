@@ -16,12 +16,13 @@ import type { SlabKind } from '../types/slab-types';
 import type { ColumnKind } from '../types/column-types';
 import type { BeamKind } from '../types/beam-types';
 import type { RailingKind } from '../types/railing-types';
+import type { FurnitureKind } from '../types/furniture-types';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type BimEntityType = 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | 'railing';
+export type BimEntityType = 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | 'railing' | 'furniture';
 
 export interface AtoeMappingEntry {
   /** Latin OIK-x.xx code — must match boq_categories or be a valid subcategory. */
@@ -123,6 +124,15 @@ const RAILING_MAPPING: Readonly<Record<RailingKind, AtoeMappingEntry>> = {
   railing: { categoryCode: 'OIK-12.01', unit: 'm', titleEL: 'Κιγκλίδωμα μεταλλικό (BIM)' },
 };
 
+/**
+ * ADR-410 — έπιπλο (mesh-based CC0): μετριέται ανά τεμάχιο (pcs, qty=1), όπως τα
+ * κουφώματα. Loose equipment — δεν φέρει δομικό όγκο/μήκος. Πρώτο entity που
+ * τροφοδοτεί BOQ ως καθαρό count από το `interior` discipline.
+ */
+const FURNITURE_MAPPING: Readonly<Record<FurnitureKind, AtoeMappingEntry>> = {
+  chair: { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — καρέκλα (BIM)' },
+};
+
 /** Lookup map keyed by entity type for runtime dispatch. */
 export const BIM_TO_ATOE_MAPPING = {
   wall:    WALL_MAPPING,
@@ -131,6 +141,7 @@ export const BIM_TO_ATOE_MAPPING = {
   column:  COLUMN_MAPPING,
   beam:    BEAM_MAPPING,
   railing: RAILING_MAPPING,
+  furniture: FURNITURE_MAPPING,
 } as const;
 
 // ============================================================================

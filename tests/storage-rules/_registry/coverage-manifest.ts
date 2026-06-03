@@ -237,4 +237,7 @@ export const STORAGE_RULES_PENDING: readonly string[] = [
   // ADR-366 Group B custom HDRI environments (company-scoped, .hdr/.exr ≤ 50 MB).
   // Test suite to be added in follow-up: tests/storage-rules/suites/bim-environments.storage.test.ts
   '/companies/{companyId}/bim_environments/{fileName}',
+  // ADR-410 CC0 furniture mesh library (shared read-only catalog; super_admin curates writes/deletes).
+  // Test suite to be added in follow-up: tests/storage-rules/suites/furniture-library.storage.test.ts
+  '/furniture-library/{assetFile}',
 ] as const;

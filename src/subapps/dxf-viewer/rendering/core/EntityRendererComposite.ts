@@ -39,6 +39,8 @@ import { MepFixtureRenderer } from '../../bim/renderers/MepFixtureRenderer';
 import { ElectricalPanelRenderer } from '../../bim/renderers/ElectricalPanelRenderer';
 // ADR-407 — railing leaf (path-based guardrail, posts + balusters + top rail).
 import { RailingRenderer } from '../../bim/renderers/RailingRenderer';
+// ADR-410 — furniture leaf (mesh-based CC0 item; 2D footprint + glyph).
+import { FurnitureRenderer } from '../../bim/renderers/FurnitureRenderer';
 // ADR-362 Phase C1 — persistent dimension leaf (consumes DimGeometry discriminated union).
 import { DimensionRenderer } from '../entities/DimensionRenderer';
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
@@ -97,6 +99,8 @@ export class EntityRendererComposite {
     const electricalPanelRenderer = new ElectricalPanelRenderer(this.ctx);
     // ADR-407 — railing renderer (path-based guardrail, posts + balusters + rail).
     const railingRenderer = new RailingRenderer(this.ctx);
+    // ADR-410 — furniture renderer (mesh-based CC0 item; 2D footprint + glyph).
+    const furnitureRenderer = new FurnitureRenderer(this.ctx);
     // ADR-362 Phase C1 — dimension renderer (10 variants via DimGeometry union).
     const dimensionRenderer = new DimensionRenderer(this.ctx);
     // ADR-359 Phase 4.b — Liang-Barsky clipped construction line renderers.
@@ -127,6 +131,7 @@ export class EntityRendererComposite {
     this.renderers.set('mep-fixture', mepFixtureRenderer);
     this.renderers.set('electrical-panel', electricalPanelRenderer);
     this.renderers.set('railing', railingRenderer);
+    this.renderers.set('furniture', furnitureRenderer);
     this.renderers.set('dimension', dimensionRenderer);
     this.renderers.set('xline', xlineRenderer);
     this.renderers.set('ray', rayRenderer);

@@ -44,7 +44,9 @@ export type BimElementType =
   // ADR-408 Φ3 — point-based electrical panel.
   | 'electrical-panel'
   // ADR-407 — standalone path-based railing.
-  | 'railing';
+  | 'railing'
+  // ADR-410 — mesh-based CC0 furniture.
+  | 'furniture';
 
 /**
  * Union of all BIM sub-type discriminators (one per element type).

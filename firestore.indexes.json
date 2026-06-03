@@ -3966,6 +3966,23 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_furniture",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "projectId", "order": "ASCENDING" },
+        { "fieldPath": "floorplanId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_furniture",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "projectId", "order": "ASCENDING" },
+        { "fieldPath": "floorplanId", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "floorplan_mep_systems",
       "queryScope": "COLLECTION",
       "fields": [

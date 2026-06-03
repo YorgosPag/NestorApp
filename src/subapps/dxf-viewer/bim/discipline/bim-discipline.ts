@@ -36,11 +36,14 @@ export type DisciplineOrAnnotation = Discipline | 'annotation';
 /**
  * The model disciplines a user actively places/filters in the viewport (Revit
  * "View Discipline" set). Drives the discipline visibility multi-toggle UI. The
- * remaining disciplines (`fire`/`civil`/`telecom`/`interior`/`general`) exist in
- * the taxonomy for layer classification but have no placeable categories yet.
+ * remaining disciplines (`fire`/`civil`/`telecom`/`general`) exist in the
+ * taxonomy for layer classification but have no placeable categories yet.
+ * ADR-410: `interior` became placeable (furniture is its first category).
  */
 export const MODEL_DISCIPLINES: readonly Discipline[] = [
   'architectural', 'structural', 'mechanical', 'electrical', 'plumbing',
+  // ADR-410 — furniture made `interior` a placeable, filterable discipline.
+  'interior',
 ] as const;
 
 /**
@@ -73,6 +76,8 @@ export const DISCIPLINE_BY_CATEGORY: Readonly<Record<BimCategory, DisciplineOrAn
   railing:         'architectural',
   // ADR-408 Φ7 — home-run circuit wires ⊂ electrical (hidden by the electrical toggle).
   'mep-wire':      'electrical',
+  // ADR-410 — furniture (first placeable `interior` category).
+  furniture:       'interior',
 } as const;
 
 /**

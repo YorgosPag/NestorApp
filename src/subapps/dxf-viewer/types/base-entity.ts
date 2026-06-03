@@ -53,7 +53,9 @@ export type EntityType =
   // ADR-408 Φ3 — point-based electrical panel (circuit source, IfcElectricDistributionBoard).
   | 'electrical-panel'
   // ADR-407 — standalone path-based railing (IfcRailing).
-  | 'railing';
+  | 'railing'
+  // ADR-410 — mesh-based CC0 furniture (chair first; generic over kind).
+  | 'furniture';
 
 export interface BaseEntity {
   id: string;

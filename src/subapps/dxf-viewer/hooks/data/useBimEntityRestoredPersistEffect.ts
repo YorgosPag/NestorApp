@@ -33,7 +33,9 @@ type BimRestoreEntityType =
   // ADR-408 Φ3 — point-based electrical panel.
   | 'electrical-panel'
   // ADR-407 — standalone path-based railing.
-  | 'railing';
+  | 'railing'
+  // ADR-410 — mesh-based CC0 furniture.
+  | 'furniture';
 
 export function useBimEntityRestoredPersistEffect<T extends AnySceneEntity, S>(
   entityType: BimRestoreEntityType,

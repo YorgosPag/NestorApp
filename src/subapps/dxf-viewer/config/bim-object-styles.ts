@@ -37,7 +37,9 @@ export type BimCategory =
   // ADR-407 — standalone path-based railing (architectural).
   | 'railing'
   // ADR-408 Φ7 — home-run circuit wires (derived electrical annotation overlay).
-  | 'mep-wire';
+  | 'mep-wire'
+  // ADR-410 — mesh-based CC0 furniture (interior discipline).
+  | 'furniture';
 
 /**
  * Per-subcategory style overrides (ADR-377).
@@ -104,7 +106,7 @@ export interface ObjectStyle {
 export const BIM_CATEGORIES: readonly BimCategory[] = [
   'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening',
   'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip', 'envelope',
-  'light-fixture', 'electrical-panel', 'railing', 'mep-wire',
+  'light-fixture', 'electrical-panel', 'railing', 'mep-wire', 'furniture',
 ] as const;
 
 /**
@@ -131,6 +133,8 @@ export const MODEL_BIM_CATEGORIES: readonly BimCategory[] = [
   'railing',
   // ADR-408 Φ7 — home-run circuit wires (hidden by "Show only DXF" with the rest).
   'mep-wire',
+  // ADR-410 — mesh-based CC0 furniture.
+  'furniture',
 ] as const;
 
 /**
@@ -172,4 +176,6 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   // ADR-408 Φ7 — καλώδιο κυκλώματος: λεπτή γραμμή annotation (το χρώμα έρχεται
   // per-system από το `systemColor`, όχι από εδώ — η κατηγορία δίνει μόνο V/G).
   'mep-wire':     { projectionPen: 3, cutPen: 3 },
+  // ADR-410 — έπιπλο: λεπτή γραμμή footprint (interior plan symbol).
+  furniture:      { projectionPen: 3, cutPen: 3 },
 } as const;
